@@ -1,0 +1,19 @@
+# golangci-lint v2. The standard set plus a few opinionated linters; the
+# formatters mirror the checks in AGENTS.md so `golangci-lint fmt` and
+# `gofumpt -l .` agree.
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    - gocritic
+    - misspell
+    - revive
+  settings:
+    misspell:
+      locale: US
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports

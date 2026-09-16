@@ -51,13 +51,21 @@ documentation is part of every change, not a task after it:
 ## Checks
 
 ```bash
-gofmt -l .        # empty
+gofumpt -l .                    # empty (stricter than gofmt, so gofmt is covered)
 go vet ./...
-go test ./...
+staticcheck ./...
+golangci-lint run ./...         # config in .golangci.yml; golangci-lint fmt formats
+go test -race -shuffle=on ./...
 ```
 
-All three green is the condition for a commit. A red check is never somebody
-else's: everything in the working tree belongs to the current work.
+All five green is the condition for a commit. A red check is never somebody
+else's: everything in the working tree belongs to the current work. The tools
+are installed with `go install` into `~/go/bin`, which has to be on `PATH`:
+
+```bash
+go install honnef.co/go/tools/cmd/staticcheck@latest mvdan.cc/gofumpt@latest \
+  github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+```
 
 Live runs happen in a separate `/tmp` directory with its own `REWAKE_DIR`. Never
 touch the harness sessions the owner is working in. Codex runs spend
