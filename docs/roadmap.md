@@ -369,7 +369,30 @@ The pre-link check for a read that landed between the unlocked status check and
 the lock has no test of its own: that window cannot be reached without a hook
 in the server.
 
-## Review round five — open, September 16, 2026
+## Review round five — closed, September 16, 2026
+
+The nine findings, fixed on the branch `fix/round-five`:
+
+- Ctrl+C: the keyboard signals are caught rather than ignored, so the harness
+  starts with them at their defaults. Checked in a real PTY.
+- Ctrl+Z and `fg`: the wrapper follows a harness into a stop only while the
+  harness is stopped. Checked in a real PTY, for Ctrl+Z and for a job stopped
+  on terminal input.
+- Shutdown lifts the retry limit, so an outcome known only in memory is
+  written on the way out.
+- The Codex configuration is no longer parsed. A key mentioned in any form is
+  left alone with a note; the sandbox roots are never replaced.
+- The socket path carries the run, so a wrapper removes its own socket and
+  cannot reach the next run's.
+- A closed watch channel is set aside instead of spinning, and a watch whose
+  mailbox disappeared keeps asking until it comes back.
+- `send` re-reads the status before calling a result lost.
+- The shim — see below.
+
+A test that staged a takeover without the name lock failed one run in many; it
+takes the lock now.
+
+## Review round five — findings, September 16, 2026
 
 Run against `1d276de`, asked "what did these fixes break" rather than "is it
 fixed". Nine defects, all reproduced by running: six regressions of round

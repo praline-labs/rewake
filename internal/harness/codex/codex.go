@@ -72,40 +72,25 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 	home := Home()
 	var notes []string
 
-	// Both overrides below replace a value rather than add to one, so each is
-	// passed only when what it would replace is fully known. A profile, or a
-	// setting the caller passed themselves, is a layer this adapter cannot read
-	// — and overriding an unread layer silently discards the user's own
-	// configuration.
+	// A profile, or a setting the caller passed themselves, is a layer this
+	// adapter cannot see into, and every value it passes replaces one.
 	layered := hasProfile(args)
 
 	if request.Intro && !hasConfigKey(args, introKey) {
-		switch {
-		case layered:
-			notes = append(notes, "not adding the rewake briefing: a profile is selected and its instructions cannot be read from here")
-		default:
-			instructions, state, err := introValue(home, request.Name)
-			if err != nil {
-				return harness.LaunchPlan{}, err
-			}
-			if state == unreadable {
-				notes = append(notes, "not adding the rewake briefing: "+introKey+" in config.toml is in a form rewake does not read, and the flag would replace it")
-			} else {
-				args = harness.AddFlags(args, configFlag, introKey+"="+quoteTOML(instructions))
-			}
+		if layered {
+			notes = append(notes, "not adding the rewake briefing: a profile is selected and its instructions cannot be seen from here")
+		} else if mentioned, why := configMentions(home, introKey); mentioned {
+			notes = append(notes, "not adding the rewake briefing: "+why+", and passing the briefing would replace the user's instructions. Run rewake guide in the session instead")
+		} else {
+			args = harness.AddFlags(args, configFlag, introKey+"="+quoteTOML(harness.Intro(request.Name)))
 		}
 	}
 
-	// The state directory is under /tmp, which the sandbox may write to by
-	// default. A configuration that excludes /tmp would leave the agent unable
-	// to send anything, so the directory joins the writable roots without
-	// disturbing the ones already there.
-	roots, needed, note := writableRoots(home, request.Dir, args, layered)
-	if note != "" {
+	// The state directory is under /tmp, which the sandbox may write to unless
+	// told otherwise. Extending the writable roots would replace the user's, so
+	// rewake only says what to add when /tmp may be excluded.
+	if note := tmpNote(home, request.Dir, args, layered); note != "" {
 		notes = append(notes, note)
-	}
-	if needed {
-		args = harness.AddFlags(args, configFlag, rootsKey+"="+quoteTOMLArray(roots))
 	}
 
 	if notify, note := turnNotify(home, args, layered); note != "" {
@@ -180,54 +165,21 @@ const rootsKey = sandboxSection + ".writable_roots"
 // excludeTmpKey says whether /tmp has been taken out of the sandbox's reach.
 const excludeTmpKey = "exclude_slash_tmp"
 
-// introValue builds the developer instructions for one launch: the user's own
-// value, then the briefing. The key replaces rather than appends, so passing the
-// briefing alone would silently drop whatever the user had configured.
-func introValue(home, name string) (string, reading, error) {
-	existing, state, err := configString(home, introKey)
-	if err != nil {
-		return "", state, err
+// tmpNote says how to let the agent write its messages when /tmp may be out of
+// the sandbox's reach, and nothing when it is not.
+func tmpNote(home, dir string, args []string, layered bool) string {
+	advice := "; if the agent cannot send messages, add " + dir + " to " + rootsKey
+	switch {
+	case hasConfigKey(args, rootsKey) || hasConfigKey(args, sandboxSection+"."+excludeTmpKey):
+		// The caller set the sandbox up themselves and knows what it allows.
+		return ""
+	case layered:
+		return "a profile is selected, so whether /tmp is writable cannot be seen from here" + advice
 	}
-	if state == unreadable {
-		return "", state, nil
+	if mentioned, why := configMentions(home, excludeTmpKey); mentioned {
+		return why + ", so /tmp may be out of the sandbox's reach" + advice
 	}
-	intro := harness.Intro(name)
-	if strings.TrimSpace(existing) == "" {
-		return intro, state, nil
-	}
-	return existing + "\n\n" + intro, state, nil
-}
-
-// writableRoots reports the roots to pass when the state directory would
-// otherwise be out of the sandbox's reach, and a note when it cannot tell.
-func writableRoots(home, dir string, args []string, layered bool) ([]string, bool, string) {
-	if hasConfigKey(args, rootsKey) || hasConfigKey(args, sandboxSection+"."+excludeTmpKey) {
-		// The caller configured the sandbox themselves; their value is the one
-		// they meant, and replacing it would drop paths rewake never saw.
-		return nil, false, ""
-	}
-
-	excluded, state := configBool(home, excludeTmpKey)
-	if state == unreadable {
-		return nil, false, "cannot tell whether /tmp is writable in the sandbox: " + excludeTmpKey + " is in a form rewake does not read. If the agent cannot send messages, add " + dir + " to " + rootsKey
-	}
-	if state == missing || !excluded {
-		return nil, false, ""
-	}
-	if layered {
-		return nil, false, "a profile is selected, so the sandbox roots cannot be read from here; if the agent cannot send messages, add " + dir + " to " + rootsKey
-	}
-
-	roots, rootsState := configArray(home, "writable_roots")
-	if rootsState == unreadable {
-		return nil, false, "not extending " + rootsKey + ": it is in a form rewake does not read, and the flag would replace it. Add " + dir + " there to let the agent send messages"
-	}
-	for _, root := range roots {
-		if root == dir {
-			return nil, false, ""
-		}
-	}
-	return append(roots, dir), true, ""
+	return ""
 }
 
 // hasConfigKey reports whether the caller already set a configuration key, in

@@ -55,41 +55,6 @@ func TestIntroIsPassedForOneLaunch(t *testing.T) {
 	}
 }
 
-// The key replaces the user's value rather than adding to it, so a briefing that
-// ignored what is configured would quietly drop the user's own instructions.
-func TestIntroKeepsTheUserInstructions(t *testing.T) {
-	codexHome(t, "developer_instructions = \"Always answer in French.\"\n")
-
-	plan, err := New().Launch(harness.LaunchRequest{Name: "web", Dir: t.TempDir(), Intro: true})
-	if err != nil {
-		t.Fatalf("Launch: %v", err)
-	}
-
-	value, _ := configValue(plan.Args, introKey)
-	if !strings.Contains(value, "Always answer in French.") {
-		t.Errorf("the user's instructions were dropped: %s", value)
-	}
-	if !strings.Contains(value, "rewake") {
-		t.Errorf("the briefing was dropped: %s", value)
-	}
-}
-
-func TestIntroKeepsAMultilineUserValue(t *testing.T) {
-	codexHome(t, "developer_instructions = \"\"\"\nfirst line\nsecond line\n\"\"\"\n")
-
-	plan, err := New().Launch(harness.LaunchRequest{Name: "web", Dir: t.TempDir(), Intro: true})
-	if err != nil {
-		t.Fatalf("Launch: %v", err)
-	}
-
-	value, _ := configValue(plan.Args, introKey)
-	for _, want := range []string{"first line", "second line"} {
-		if !strings.Contains(value, want) {
-			t.Errorf("multi-line value lost %q: %s", want, value)
-		}
-	}
-}
-
 func TestIntroIsSkippedWhenNotWanted(t *testing.T) {
 	codexHome(t, "")
 
@@ -116,29 +81,6 @@ func TestCallerConfigWins(t *testing.T) {
 	}
 	if count := strings.Count(strings.Join(plan.Args, " "), introKey+"="); count != 1 {
 		t.Errorf("the key was set %d times, want the caller's only: %v", count, plan.Args)
-	}
-}
-
-// With /tmp excluded from the sandbox, an agent cannot write a message file at
-// all — and that is the only way it can answer anybody.
-func TestStateDirectoryIsMadeWritableWhenTmpIsExcluded(t *testing.T) {
-	codexHome(t, "[sandbox_workspace_write]\nexclude_slash_tmp = true\nwritable_roots = [\"/var/data\"]\n")
-	dir := t.TempDir()
-
-	plan, err := New().Launch(harness.LaunchRequest{Name: "web", Dir: dir, Intro: false})
-	if err != nil {
-		t.Fatalf("Launch: %v", err)
-	}
-
-	value, ok := configValue(plan.Args, "sandbox_workspace_write.writable_roots")
-	if !ok {
-		t.Fatalf("the state directory was not made writable: %v", plan.Args)
-	}
-	if !strings.Contains(value, dir) {
-		t.Errorf("roots = %s, want the state directory", value)
-	}
-	if !strings.Contains(value, "/var/data") {
-		t.Errorf("roots = %s, want the configured roots kept", value)
 	}
 }
 

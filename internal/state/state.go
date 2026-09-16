@@ -100,8 +100,15 @@ func AwaitingPath(dir, name string) string {
 
 // SocketPath is where the wrapper asks a harness to put its inbox socket. It is
 // kept short: a unix socket path may not exceed 103 bytes.
-func SocketPath(dir, name string) string {
-	return filepath.Join(dir, socketsDir, name+".sock")
+//
+// The path carries the run as well as the name. A name changes hands, and a
+// socket shared by every run of it could be removed by a wrapper on its way out
+// just after the next run had bound it; a path of its own belongs to one run.
+func SocketPath(dir, name, run string) string {
+	if run == "" {
+		return filepath.Join(dir, socketsDir, name+".sock")
+	}
+	return filepath.Join(dir, socketsDir, name+"."+run+".sock")
 }
 
 // ensureDir creates a directory and refuses one that somebody else could write.

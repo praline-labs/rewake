@@ -3,8 +3,10 @@ package wrap
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -289,4 +291,67 @@ func processState(pid int) (string, error) {
 		return "", nil
 	}
 	return fields[0], nil
+}
+
+// bindSocket leaves a socket file at a path, as a harness that bound it does.
+func bindSocket(t *testing.T, path string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	listener, err := net.Listen("unix", path)
+	if err != nil {
+		t.Fatalf("listen %s: %v", path, err)
+	}
+	listener.(*net.UnixListener).SetUnlinkOnClose(false)
+	_ = listener.Close()
+}
+
+func isSocket(path string) bool {
+	info, err := os.Lstat(path)
+	return err == nil && info.Mode()&os.ModeSocket != 0
+}
+
+// The name changed hands while this session ran. Its own socket still goes when
+// it ends, and the next holder's socket — at a path of its own — stays.
+func TestEachRunCleansOnlyItsOwnSocket(t *testing.T) {
+	dir := stateDir(t)
+	ours := registry.SocketFor(dir, "api", strconv.Itoa(os.Getpid())+"."+strconv.FormatUint(selfStart(t), 10))
+	theirs := registry.SocketFor(dir, "api", "999.1")
+	if ours == theirs {
+		t.Fatalf("two runs of a name share the socket path %s", ours)
+	}
+	bindSocket(t, theirs)
+
+	fake := &fakeHarness{script: "sleep 0.5", socket: true}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		deadline := time.Now().Add(3 * time.Second)
+		for time.Now().Before(deadline) {
+			if held, err := registry.Load(dir, "api"); err == nil && held.HarnessPID != 0 {
+				bindSocket(t, ours)
+				successor := held
+				successor.ServiceStart++
+				encoded, _ := json.MarshalIndent(successor, "", "  ")
+				_ = state.WithNameLock(dir, "api", func() error {
+					return state.WriteAtomic(state.SessionPath(dir, "api"), encoded)
+				})
+				return
+			}
+			time.Sleep(20 * time.Millisecond)
+		}
+	}()
+
+	if _, err := Run(context.Background(), Request{Harness: fake, Dir: dir, Name: "api"}); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	<-done
+
+	if isSocket(ours) {
+		t.Error("the ended run left its socket behind")
+	}
+	if !isSocket(theirs) {
+		t.Error("the ended run removed the socket of the next holder of the name")
+	}
 }

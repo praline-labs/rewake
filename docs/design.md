@@ -68,7 +68,7 @@ Created with 0700.
   inbox/<name>/unread/       announced, waiting for the agent to read it
   inbox/<name>/done/         read and failed, for diagnostics (cleaned up by age)
   inbox/<name>/awaiting/<epoch>/<peer>   per run: who waits for its turn to end, and which run of them
-  sock/<name>.sock           Claude Code inbound socket, path set by the wrapper
+  sock/<name>.<epoch>.sock   Claude Code inbound socket, one path per run
 ```
 
 The socket path is deliberately short: the limit is 103 bytes.
@@ -131,8 +131,12 @@ The common part of the wrapper:
    terminal and process group. Arguments after the harness name are passed
    through as-is.
 3. Add the harness's pid and start time to the record.
-4. Ignore `SIGINT`, `SIGQUIT` (the harness handles them, being in the same
-   foreground group); forward `SIGTERM`, `SIGHUP` to the harness.
+4. Catch and drop `SIGINT`, `SIGQUIT` (the harness handles them, being in the
+   same foreground group). Caught, not ignored: an ignored signal stays ignored
+   across exec, and the harness would lose Ctrl+C. Forward `SIGTERM`, `SIGHUP`
+   to the harness. Follow a harness that stops on its own into the stop — but
+   only while it is stopped: after Ctrl+Z and `fg` the report of the stop is
+   read late, and following it then stopped the wrapper a second time.
 5. Service the inbox (below) until the harness exits.
 6. Remove the record, close the inbox (pending messages get the status `failed:
    session ended`), exit with the harness's code.
@@ -158,19 +162,20 @@ The common part of the wrapper:
 
 ### Codex
 
-- Intro: `-c developer_instructions=<text>`. This key **replaces** the user's
-  value instead of adding to it, so the wrapper reads
-  `$CODEX_HOME/config.toml`, takes the existing value if any, and passes the
-  concatenation of "the user's value, a blank line, the intro". If there's no
-  existing key, it passes just the intro. The `additional_developer_instructions`
-  key doesn't work for this: it belongs to the managed-requirements layer, not
-  the user config.
+- rewake does not read `config.toml`; it only asks whether a key is mentioned
+  in it at all, in any form (escapes included). Every value it could pass for
+  these keys replaces the user's, and two rounds of a hand-written reader each
+  missed valid TOML that dropped instructions or turned prose into sandbox
+  permissions.
+- Intro: `-c developer_instructions=<text>`. The key **replaces** the user's
+  value, so it is passed only when the configuration does not mention it and no
+  profile is selected; otherwise rewake says on stderr that the briefing was
+  skipped.
 - Permissions: the state directory lives in `/tmp`, where the sandbox writes by
-  default. If the user's config excludes `/tmp` from
-  `sandbox_workspace_write` (`exclude_slash_tmp = true`), the wrapper adds the
-  directory to `writable_roots` via `-c`, keeping the paths already listed there.
-  No confirmation is needed to run `rewake`: the command runs inside the
-  sandbox.
+  default. The writable roots are never replaced. When the configuration
+  mentions `exclude_slash_tmp`, or a profile is selected, rewake says on stderr
+  which directory to add to `writable_roots` if the agent cannot send. No
+  confirmation is needed to run `rewake`: the command runs inside the sandbox.
 - End of a turn: `-c notify=["<rewake>","turn-ended"]`. Codex runs that program
   after every turn, outside the sandbox and without the trust a Stop hook needs.
   The key replaces the user's program, so it is passed only when neither the

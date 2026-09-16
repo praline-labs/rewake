@@ -396,7 +396,7 @@ func sortByStart(sessions []Session) {
 }
 
 // SocketFor is where the wrapper asks a harness to place its inbox socket.
-func SocketFor(dir, name string) string { return state.SocketPath(dir, name) }
+func SocketFor(dir, name, epoch string) string { return state.SocketPath(dir, name, epoch) }
 
 // RecordPath is the file holding a session record.
 func RecordPath(dir, name string) string { return filepath.Clean(state.SessionPath(dir, name)) }

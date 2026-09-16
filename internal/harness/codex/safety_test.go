@@ -3,6 +3,7 @@ package codex
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -20,71 +21,6 @@ func launchWith(t *testing.T, config string, args []string) harness.LaunchPlan {
 	return plan
 }
 
-// The override replaces the user's value, so a value this reader does not
-// understand must stop it. Every one of these is valid TOML that the reader
-// cannot take apart.
-func TestUnreadableInstructionsAreNotOverridden(t *testing.T) {
-	cases := map[string]string{
-		"trailing comment": "developer_instructions = \"Keep my rules\" # required\n",
-		"literal string":   "developer_instructions = 'Keep my rules'\n",
-		"unclosed block":   "developer_instructions = \"\"\"\nKeep my rules\n",
-	}
-
-	for name, config := range cases {
-		t.Run(name, func(t *testing.T) {
-			plan := launchWith(t, config, nil)
-			value, passed := configValue(plan.Args, introKey)
-
-			if !passed {
-				if len(plan.Notes) == 0 {
-					t.Fatal("the briefing was skipped without saying so")
-				}
-				return
-			}
-			if !strings.Contains(value, "Keep my rules") {
-				t.Fatalf("the user's instructions were replaced by %s", value)
-			}
-		})
-	}
-}
-
-// Same for the sandbox: replacing a list that could not be read whole would drop
-// the paths that were not seen.
-func TestUnreadableSandboxRootsAreNotOverridden(t *testing.T) {
-	config := "[sandbox_workspace_write]\nexclude_slash_tmp = true\nwritable_roots = [\n  \"/var/data\",\n]\n"
-	plan := launchWith(t, config, nil)
-
-	if _, passed := configValue(plan.Args, rootsKey); passed {
-		t.Fatalf("a multi-line list was replaced: %v", plan.Args)
-	}
-	if len(plan.Notes) == 0 {
-		t.Fatal("nothing was said about the sandbox setting rewake could not extend")
-	}
-}
-
-// A comma inside a path is not a separator.
-func TestCommaInsideAPathIsKept(t *testing.T) {
-	config := "[sandbox_workspace_write]\nexclude_slash_tmp = true\nwritable_roots = [\"/work/a,b\"]\n"
-	plan := launchWith(t, config, nil)
-
-	value, passed := configValue(plan.Args, rootsKey)
-	if !passed {
-		t.Fatalf("the state directory was not added: %v", plan.Args)
-	}
-	if !strings.Contains(value, "/work/a,b") {
-		t.Errorf("roots = %s, want the configured path intact", value)
-	}
-}
-
-func TestCommentAfterABooleanIsNotPartOfIt(t *testing.T) {
-	config := "[sandbox_workspace_write]\nexclude_slash_tmp = true # required\n"
-	plan := launchWith(t, config, nil)
-
-	if _, passed := configValue(plan.Args, rootsKey); !passed {
-		t.Fatalf("the state directory was not made writable: %v %v", plan.Args, plan.Notes)
-	}
-}
-
 // A profile and a caller's own override are layers this adapter cannot read, and
 // replacing what it has not read discards the user's configuration.
 func TestLayeredConfigurationIsLeftAlone(t *testing.T) {
@@ -100,21 +36,6 @@ func TestLayeredConfigurationIsLeftAlone(t *testing.T) {
 	}
 }
 
-func TestCallerSandboxOverrideIsLeftAlone(t *testing.T) {
-	config := "[sandbox_workspace_write]\nexclude_slash_tmp = true\n"
-	plan := launchWith(t, config, []string{"-c", rootsKey + `=["/cli/work"]`})
-
-	count := 0
-	for index, arg := range plan.Args {
-		if arg == "-c" && index+1 < len(plan.Args) && strings.HasPrefix(plan.Args[index+1], rootsKey+"=") {
-			count++
-		}
-	}
-	if count != 1 {
-		t.Errorf("the sandbox roots were set %d times, want the caller's only: %v", count, plan.Args)
-	}
-}
-
 // Go's quoting is not TOML's: \xNN is undefined there, and Codex then falls back
 // to reading the argument as a raw string — the agent gets quotes and escapes
 // instead of its instructions.
@@ -124,7 +45,7 @@ func TestQuotingIsTOMLNotGo(t *testing.T) {
 		if strings.Contains(quoted, `\x`) {
 			t.Errorf("%q was quoted with a Go escape TOML does not define: %s", value, quoted)
 		}
-		decoded, ok := basicString(quoted)
+		decoded, ok := unquoteBasic(quoted)
 		if !ok {
 			t.Errorf("%q produced something this reader cannot read back: %s", value, quoted)
 			continue
@@ -188,68 +109,6 @@ func TestNestedCodexThreadIsNotTaken(t *testing.T) {
 	}
 }
 
-// TOML lets a key be quoted, and "developer_instructions" is the same key as the
-// bare one. Not recognising that meant the value was never found — and then
-// replaced by the briefing.
-func TestQuotedKeyIsTheSameKey(t *testing.T) {
-	plan := launchWith(t, "\"developer_instructions\" = \"Keep my rules\"\n", nil)
-
-	value, passed := configValue(plan.Args, introKey)
-	if passed && !strings.Contains(value, "Keep my rules") {
-		t.Fatalf("a quoted key was overridden: %s", value)
-	}
-}
-
-// A key that comes after other settings has to be found too: stopping at the
-// first line that is not it would lose the value and then replace it.
-func TestKeyIsFoundAfterOtherSettings(t *testing.T) {
-	config := "model = \"gpt-5.6-terra\"\napproval_policy = \"never\"\ndeveloper_instructions = \"Keep my rules\"\n"
-	plan := launchWith(t, config, nil)
-
-	value, passed := configValue(plan.Args, introKey)
-	if !passed {
-		t.Fatalf("the briefing was skipped: %v", plan.Notes)
-	}
-	if !strings.Contains(value, "Keep my rules") {
-		t.Errorf("instructions further down the file were dropped: %s", value)
-	}
-}
-
-// A multi-line literal is not a finished single-line one. Taking it for one
-// turned the user's instructions into a lone apostrophe.
-func TestMultilineLiteralIsNotMistakenForAShortOne(t *testing.T) {
-	plan := launchWith(t, "developer_instructions = '''\nKeep my rules\n'''\n", nil)
-
-	if value, passed := configValue(plan.Args, introKey); passed {
-		t.Fatalf("a multi-line literal was replaced by %s", value)
-	}
-	if len(plan.Notes) == 0 {
-		t.Error("the briefing was skipped without saying so")
-	}
-}
-
-// The escapes of a multi-line basic string have to be resolved: a value holding
-// \n otherwise reaches the harness as those two characters, quoted correctly and
-// wrong.
-func TestMultilineEscapesAreDecoded(t *testing.T) {
-	plan := launchWith(t, "developer_instructions = \"\"\"\nfirst\\nsecond\n\"\"\"\n", nil)
-
-	value, passed := configValue(plan.Args, introKey)
-	if !passed {
-		t.Fatalf("the briefing was skipped: %v", plan.Notes)
-	}
-	decoded, ok := basicString(value)
-	if !ok {
-		t.Fatalf("the override is not a readable TOML string: %s", value)
-	}
-	if strings.Contains(decoded, `\n`) {
-		t.Errorf("an escape survived as text: %q", decoded)
-	}
-	if !strings.Contains(decoded, "first\nsecond") {
-		t.Errorf("value = %q, want the escape resolved into a line break", decoded)
-	}
-}
-
 // Both spellings and both shapes of the flags Codex accepts count as the
 // caller's own setting; missing one means overriding what they configured.
 func TestEveryFormOfACallerOverrideIsSeen(t *testing.T) {
@@ -280,66 +139,78 @@ func TestCallerArgumentsSurviveALaunch(t *testing.T) {
 	}
 }
 
-// A section header and a setting written inside somebody's instructions are
-// text, not configuration. Reading them as configuration let an example in the
-// instructions decide the sandbox permissions of the run.
-func TestSettingsInsideInstructionsAreText(t *testing.T) {
-	config := "developer_instructions = \"\"\"\n" +
-		"For example, a sandbox section looks like this:\n" +
-		"[sandbox_workspace_write]\n" +
-		"writable_roots = [\"/example\"]\n" +
-		"\"\"\"\n" +
-		"[sandbox_workspace_write]\n" +
-		"exclude_slash_tmp = true\n" +
-		"writable_roots = [\"/actual\"]\n"
-	plan := launchWith(t, config, nil)
-
-	value, passed := configValue(plan.Args, rootsKey)
-	if !passed {
-		t.Fatalf("the state directory was not made writable: %v %v", plan.Args, plan.Notes)
-	}
-	if strings.Contains(value, "/example") {
-		t.Errorf("a path from the instructions became a sandbox permission: %s", value)
-	}
-	if !strings.Contains(value, "/actual") {
-		t.Errorf("the configured roots were lost: %s", value)
-	}
-}
-
-// The same on the other side: a key inside a multi-line value is not a key.
-func TestKeyInsideInstructionsIsNotAKey(t *testing.T) {
-	config := "developer_instructions = '''\nmodel = \"pretend\"\n'''\n" +
-		"[sandbox_workspace_write]\nexclude_slash_tmp = true\nwritable_roots = [\"/actual\"]\n"
-	plan := launchWith(t, config, nil)
-
-	value, passed := configValue(plan.Args, rootsKey)
-	if !passed || !strings.Contains(value, "/actual") {
-		t.Errorf("the real configuration was not read past the instructions: %v %v", plan.Args, plan.Notes)
-	}
-}
-
-// A triple-quoted string that closes on its own line has its escapes resolved
-// too: skipping that left \n reaching the harness as two characters.
-func TestInlineMultilineEscapesAreDecoded(t *testing.T) {
-	plan := launchWith(t, "developer_instructions = \"\"\"first\\nsecond\"\"\"\n", nil)
-
-	value, passed := configValue(plan.Args, introKey)
-	if !passed {
-		t.Fatalf("the briefing was skipped: %v", plan.Notes)
-	}
-	decoded, ok := basicString(value)
-	if !ok {
-		t.Fatalf("the override is not a readable TOML string: %s", value)
-	}
-	if strings.Contains(decoded, `\n`) {
-		t.Errorf("an escape survived as text: %q", decoded)
-	}
-}
-
 func TestJoinedShortConfigFormIsSeen(t *testing.T) {
 	plan := launchWith(t, "", []string{"-c=" + introKey + `="mine"`})
 
 	if value, passed := configValue(plan.Args, introKey); passed && !strings.Contains(value, "mine") {
 		t.Errorf("rewake overrode a setting the caller had made: %s", value)
+	}
+}
+
+// unquoteBasic reads back a basic string this adapter wrote.
+func unquoteBasic(value string) (string, bool) {
+	text, err := strconv.Unquote(value)
+	return text, err == nil
+}
+
+// The keys rewake would replace are left alone whenever the configuration
+// mentions them — in any form, valid TOML or not, including the forms a
+// hand-written reader got wrong: prose inside instructions, a string inside an
+// array, an escaped quote, a comment after a quote.
+func TestAnyMentionKeepsTheBriefingOut(t *testing.T) {
+	for name, config := range map[string]string{
+		"plain":           "developer_instructions = \"Keep my rules\"\n",
+		"after a comment": "other = \"\"\"a \" # b\"\"\"\ndeveloper_instructions = \"Keep these\"\n",
+		"inside an array": "other = [\"\"\"\ndeveloper_instructions = 'x'\n\"\"\"]\n",
+		"escaped key":     "\"developer_instruction\\u0073\" = \"x\"\n",
+		"in a profile":    "[profiles.work]\ndeveloper_instructions = \"x\"\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			plan := launchWith(t, config, nil)
+			if _, passed := configValue(plan.Args, introKey); passed {
+				t.Errorf("the briefing replaced configured instructions: %v", plan.Args)
+			}
+			if len(plan.Notes) == 0 {
+				t.Error("the briefing was skipped without saying so")
+			}
+		})
+	}
+}
+
+func TestTheBriefingGoesInWhenNothingIsConfigured(t *testing.T) {
+	plan := launchWith(t, "model = \"gpt-5\"\n[sandbox_workspace_write]\nwritable_roots = [\"/var/data\"]\n", nil)
+	value, passed := configValue(plan.Args, introKey)
+	if !passed || !strings.Contains(value, "rewake guide") {
+		t.Errorf("briefing = %q (passed %v), want it", value, passed)
+	}
+	if len(plan.Notes) != 0 {
+		t.Errorf("notes = %v, want none for a configuration that does not touch these keys", plan.Notes)
+	}
+}
+
+// The sandbox roots are never replaced. When /tmp may be excluded, the note says
+// what to add, and the roots the user listed stay the only ones.
+func TestTheSandboxIsNeverRewritten(t *testing.T) {
+	for name, config := range map[string]string{
+		"excluded":      "[sandbox_workspace_write]\nexclude_slash_tmp = true\nwritable_roots = [\"/var/data\"]\n",
+		"inside prose":  "developer_instructions = \"\"\"\n[sandbox_workspace_write]\nexclude_slash_tmp = true\n\"\"\"\n",
+		"default roots": "[sandbox_workspace_write]\nwritable_roots = [\"/var/data\"]\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			codexHome(t, config)
+			plan, err := New().Launch(harness.LaunchRequest{Name: "web", Dir: dir, Intro: false})
+			if err != nil {
+				t.Fatalf("Launch: %v", err)
+			}
+			if _, passed := configValue(plan.Args, rootsKey); passed {
+				t.Errorf("the sandbox roots were replaced: %v", plan.Args)
+			}
+			mentions := strings.Contains(config, "exclude_slash_tmp")
+			said := strings.Contains(strings.Join(plan.Notes, " "), dir)
+			if mentions != said {
+				t.Errorf("notes = %v; want the directory to add named exactly when /tmp may be excluded", plan.Notes)
+			}
+		})
 	}
 }

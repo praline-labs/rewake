@@ -67,12 +67,11 @@ func Run(ctx context.Context, request Request) (int, error) {
 		// Ownership is settled once, before anything is removed. Asking again
 		// afterwards always answered no — the record had just been deleted — so
 		// the socket of a session that ended was left behind for good.
-		// One answer decides both: the record goes only while it is still ours,
-		// and the socket only if that removal actually happened. Asking twice
-		// left a window in which the name changed hands in between, and the
-		// socket of a live session was deleted.
-		removed, err := registry.RemoveOwned(request.Dir, name, epoch)
-		if err == nil && removed && session.OwnsSocket {
+		// The record goes only while it is still ours. The socket is ours
+		// whatever happened to the name: its path names this run, so the next
+		// holder of the name has a socket of its own that this cannot reach.
+		_, _ = registry.RemoveOwned(request.Dir, name, epoch)
+		if session.OwnsSocket {
 			removeSocket(session.Socket)
 		}
 	}()
@@ -82,7 +81,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 		Dir:    request.Dir,
 		Args:   request.Args,
 		Intro:  request.Intro,
-		Socket: registry.SocketFor(request.Dir, name),
+		Socket: registry.SocketFor(request.Dir, name, epoch),
 		Epoch:  epoch,
 	})
 	if err != nil {

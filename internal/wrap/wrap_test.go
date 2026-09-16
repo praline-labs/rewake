@@ -21,6 +21,9 @@ import (
 // asked to deliver. The wrapper is what is under test here, not a harness.
 type fakeHarness struct {
 	script string
+	// socket makes the launch claim the socket path it is given, as Claude
+	// Code's does.
+	socket bool
 
 	mu        sync.Mutex
 	delivered []inbox.Message
@@ -34,11 +37,15 @@ func (f *fakeHarness) Examples() []string { return []string{"rewake fake"} }
 func (f *fakeHarness) Notes() []string    { return nil }
 
 func (f *fakeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, error) {
-	return harness.LaunchPlan{
+	plan := harness.LaunchPlan{
 		Command: "/bin/sh",
 		Args:    []string{"-c", f.script},
 		Env:     harness.SessionEnv(request, nil),
-	}, nil
+	}
+	if f.socket {
+		plan.Socket, plan.OwnsSocket = request.Socket, true
+	}
+	return plan, nil
 }
 
 func (f *fakeHarness) Deliver(_ context.Context, _ registry.Session, message inbox.Message) inbox.Result {

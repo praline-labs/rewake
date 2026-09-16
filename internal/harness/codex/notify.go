@@ -1,9 +1,6 @@
 package codex
 
 import (
-	"os"
-	"strings"
-
 	"github.com/iiiokojiadbi/rewake/internal/harness"
 )
 
@@ -28,17 +25,8 @@ func turnNotify(home string, args []string, layered bool) (string, string) {
 	case hasConfigKey(args, notifyKey):
 		return "", skipped + "notify is already given on the command line"
 	}
-	raw, err := os.ReadFile(configPath(home))
-	if err != nil && !os.IsNotExist(err) {
-		return "", skipped + "config.toml could not be read: " + err.Error()
-	}
-	if strings.Contains(string(raw), notifyKey) {
-		return "", skipped + "config.toml mentions notify, and passing rewake's own would replace it"
-	}
-	// A quoted key may spell notify with escapes. Decoding TOML is not this
-	// reader's job, so any escape at all counts as a possible notify.
-	if strings.Contains(string(raw), `\u`) || strings.Contains(string(raw), `\U`) {
-		return "", skipped + "config.toml has escaped characters rewake does not decode, and one of them could spell notify"
+	if mentioned, why := configMentions(home, notifyKey); mentioned {
+		return "", skipped + why + ", and passing rewake's own would replace it"
 	}
 	argv, err := harness.TurnEndedArgv()
 	if err != nil {
