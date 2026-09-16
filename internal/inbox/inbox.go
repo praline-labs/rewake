@@ -111,6 +111,11 @@ func ReadStatus(dir, to, id string) (Status, bool) {
 	return status, true
 }
 
+// statusPoll is how often a sender looks for its answer. It is short because the
+// wait is short and bounded by --wait: the server's own tick is the slow one, and
+// borrowing it here made every delivery look like it took a second.
+const statusPoll = 25 * time.Millisecond
+
 // Await waits for a status until the deadline, and returns the last one seen.
 // A message with no status yet is not lost: the mailbox is durable, and the
 // serving process writes one as soon as it can.
@@ -125,7 +130,7 @@ func Await(dir, to, id string, timeout time.Duration) (Status, bool) {
 		if time.Now().After(deadline) {
 			return Status{}, false
 		}
-		time.Sleep(pollInterval)
+		time.Sleep(statusPoll)
 	}
 }
 

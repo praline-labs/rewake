@@ -2,13 +2,19 @@ package inbox
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
+
+	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
 const (
-	// pollInterval is how often a mailbox is looked at. A quarter of a second is
-	// below what a person notices and far below what a model turn costs.
-	pollInterval = 250 * time.Millisecond
+	// pollInterval is how often a mailbox is looked at when nothing has woken
+	// the server. It is the safety net behind the watch — it retries pending
+	// messages and covers a watch that could not be set up — so it can be slow.
+	pollInterval = time.Second
 	// retryInterval is how long a pending message waits before the next attempt.
 	// Pending means the receiver cannot take it yet — a Codex session with no
 	// conversation, a socket not created yet — so retrying fast buys nothing.
@@ -16,6 +22,13 @@ const (
 	// defaultTTL is how long a message may stay undelivered before it is called
 	// failed. A message older than this describes a situation that has passed.
 	defaultTTL = 30 * time.Minute
+	// keepFinished is how long a delivered or refused message and its status are
+	// kept. Long enough for a sender that came back late to read the answer,
+	// short enough that a machine running for weeks does not collect a mailbox
+	// full of last month's conversations.
+	keepFinished = 24 * time.Hour
+	// sweepInterval is how often the finished ones are looked over.
+	sweepInterval = 10 * time.Minute
 )
 
 // Deliverer hands one message to the harness of this session.
@@ -51,16 +64,55 @@ func (s *Server) Serve(ctx context.Context) {
 	s.attempts = map[string]time.Time{}
 	s.outcomes = map[string]Result{}
 	s.sweepForeign()
+	s.sweepFinished()
+
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
+	sweeper := time.NewTicker(sweepInterval)
+	defer sweeper.Stop()
+
+	// The watch makes the common case immediate; the ticker still runs, because
+	// a pending message has to be retried on time and a watch may not exist.
+	changed := watchMailbox(ctx, s.Dir, s.Name)
 
 	for {
 		select {
 		case <-ctx.Done():
 			s.refuseWaiting("the session ended before this message could be delivered")
 			return
+		case <-changed:
+			s.drain(ctx)
 		case <-ticker.C:
 			s.drain(ctx)
+		case <-sweeper.C:
+			s.sweepFinished()
+		}
+	}
+}
+
+// sweepFinished removes the messages and statuses that have been answered long
+// enough ago that nobody is coming back for them.
+func (s *Server) sweepFinished() {
+	cutoff := time.Now().Add(-keepFinished)
+	for _, directory := range []string{state.DonePath(s.Dir, s.Name), state.InboxPath(s.Dir, s.Name)} {
+		entries, err := os.ReadDir(directory)
+		if err != nil {
+			continue
+		}
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+			// In the mailbox itself only statuses are old news; a message still
+			// waiting there is answered by the TTL, not by this.
+			if directory != state.DonePath(s.Dir, s.Name) && !strings.HasSuffix(entry.Name(), ".status") {
+				continue
+			}
+			info, err := entry.Info()
+			if err != nil || info.ModTime().After(cutoff) {
+				continue
+			}
+			_ = os.Remove(filepath.Join(directory, entry.Name()))
 		}
 	}
 }
