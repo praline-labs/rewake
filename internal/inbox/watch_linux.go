@@ -1,9 +1,12 @@
 package inbox
 
 import (
+	"bytes"
 	"context"
+	"strings"
 	"syscall"
 	"time"
+	"unsafe"
 
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
@@ -24,6 +27,16 @@ common case no longer waits for it.
 // happened when it was written the other way.
 const watchPatience = 250 * time.Millisecond
 
+// events are what the kernel is asked to report. A message is written to a
+// temporary file and renamed into place, so the move is the one that matters;
+// the rest cover a sender that writes differently and a mailbox that is removed
+// or replaced underneath the watch.
+const events = syscall.IN_MOVED_TO | syscall.IN_CLOSE_WRITE | syscall.IN_CREATE |
+	syscall.IN_DELETE_SELF | syscall.IN_MOVE_SELF
+
+// fdSetSize is how many descriptors select can wait on.
+const fdSetSize = 1024
+
 // watchMailbox reports each change to a mailbox until the context ends. It
 // returns nil when the kernel cannot give a watch, and the caller then lives on
 // its ticker alone.
@@ -36,10 +49,13 @@ func watchMailbox(ctx context.Context, dir, name string) <-chan struct{} {
 	if err != nil {
 		return nil
 	}
-	// A message is written to a temporary file and renamed into place, so the
-	// event that matters is the move. The others are here for a sender that
-	// writes differently, and for a mailbox that is recreated under us.
-	const events = syscall.IN_MOVED_TO | syscall.IN_CLOSE_WRITE | syscall.IN_CREATE | syscall.IN_DELETE_SELF | syscall.IN_MOVE_SELF
+	if descriptor >= fdSetSize {
+		// select cannot wait on a descriptor this high, and reaching past the
+		// end of the set is a panic that takes the whole wrapper with it. The
+		// poll is the answer here, not a crash.
+		syscall.Close(descriptor)
+		return nil
+	}
 	if _, err := syscall.InotifyAddWatch(descriptor, state.InboxPath(dir, name), events); err != nil {
 		syscall.Close(descriptor)
 		return nil
@@ -48,9 +64,9 @@ func watchMailbox(ctx context.Context, dir, name string) <-chan struct{} {
 	changed := make(chan struct{}, 1)
 	go func() {
 		defer close(changed)
-		defer syscall.Close(descriptor)
+		defer func() { syscall.Close(descriptor) }()
 
-		buffer := make([]byte, 8*syscall.SizeofInotifyEvent+syscall.NAME_MAX+1)
+		buffer := make([]byte, 16*(syscall.SizeofInotifyEvent+syscall.NAME_MAX+1))
 		for ctx.Err() == nil {
 			ready, err := waitReadable(descriptor, watchPatience)
 			if err != nil {
@@ -59,11 +75,26 @@ func watchMailbox(ctx context.Context, dir, name string) <-chan struct{} {
 			if !ready {
 				continue
 			}
-			if _, err := syscall.Read(descriptor, buffer); err != nil {
+			read, err := syscall.Read(descriptor, buffer)
+			if err != nil {
 				if err == syscall.EAGAIN || err == syscall.EINTR {
 					continue
 				}
 				return
+			}
+
+			interesting, lost := readEvents(buffer[:read])
+			if lost {
+				// The directory this watch was on is gone or has been replaced.
+				// Without asking for a new one the watch is over, and delivery
+				// silently falls back to the poll for good.
+				if _, err := syscall.InotifyAddWatch(descriptor, state.InboxPath(dir, name), events); err != nil {
+					return
+				}
+				interesting = true
+			}
+			if !interesting {
+				continue
 			}
 			select {
 			case changed <- struct{}{}:
@@ -74,6 +105,39 @@ func watchMailbox(ctx context.Context, dir, name string) <-chan struct{} {
 	}()
 
 	return changed
+}
+
+// readEvents says whether anything worth a pass happened, and whether the watch
+// itself is gone.
+//
+// The server writes into this directory too — statuses, temporary files — and
+// reacting to its own writes turned one unarchivable message into a loop:
+// status written, event, pass, status written again, hundreds of times a second.
+// Only a message file counts.
+func readEvents(buffer []byte) (interesting bool, lost bool) {
+	for offset := 0; offset+syscall.SizeofInotifyEvent <= len(buffer); {
+		raw := (*syscall.InotifyEvent)(unsafe.Pointer(&buffer[offset]))
+		if raw.Mask&(syscall.IN_IGNORED|syscall.IN_DELETE_SELF|syscall.IN_MOVE_SELF) != 0 {
+			lost = true
+		}
+		if raw.Mask&syscall.IN_Q_OVERFLOW != 0 {
+			// Events were dropped, so what is in the mailbox is unknown: look.
+			interesting = true
+		}
+
+		nameBytes := buffer[offset+syscall.SizeofInotifyEvent : offset+int(syscall.SizeofInotifyEvent)+int(raw.Len)]
+		if name := string(bytes.TrimRight(nameBytes, "\x00")); isMessage(name) {
+			interesting = true
+		}
+		offset += int(syscall.SizeofInotifyEvent) + int(raw.Len)
+	}
+	return interesting, lost
+}
+
+// isMessage reports whether this file name is a waiting message rather than
+// something the server itself wrote.
+func isMessage(name string) bool {
+	return strings.HasSuffix(name, ".json") && !strings.HasPrefix(name, ".")
 }
 
 // waitReadable reports whether the descriptor has something to read, waiting at

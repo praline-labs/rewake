@@ -29,7 +29,11 @@ for target in linux-amd64:linux-x64 linux-arm64:linux-arm64; do
 
   dir="$out/rewake-$npm_name"
   mkdir -p "$dir/bin"
-  CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -C "$root" -trimpath -o "$dir/bin/rewake" ./cmd/rewake
+  # The version reaches the binary too: a package that says 0.9.9 while its
+  # rewake --version says something else is a package nobody can place.
+  CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -C "$root" -trimpath \
+    -ldflags "-X github.com/iiiokojiadbi/rewake/internal/cli.Version=$version" \
+    -o "$dir/bin/rewake" ./cmd/rewake
 
   cat > "$dir/package.json" <<JSON
 {
@@ -92,9 +96,12 @@ while [ -L "$self" ]; do
 done
 here="$(cd "$(dirname "$self")" && pwd -P)"
 package="rewake-$platform-$architecture"
+# The package's own dependency comes first. A platform package left over from an
+# earlier install sits beside this one, and preferring it means an updated rewake
+# quietly keeps running the old binary.
 for candidate in \
-  "$here/../../$package/bin/rewake" \
   "$here/../node_modules/@iiiokojiadbi/$package/bin/rewake" \
+  "$here/../../$package/bin/rewake" \
   "$here/../../../@iiiokojiadbi/$package/bin/rewake"
 do
   if [ -x "$candidate" ]; then

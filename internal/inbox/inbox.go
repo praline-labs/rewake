@@ -98,6 +98,18 @@ func Put(dir string, message Message) error {
 	return state.WriteAtomic(filepath.Join(mailbox, message.ID+".json"), append(encoded, '\n'))
 }
 
+// Answered reports whether this message has left the mailbox — delivered or
+// refused — even if its status is no longer kept. Answers are swept after a
+// while, and a sender that came back later would otherwise be told its message
+// is still on its way.
+func Answered(dir, to, id string) bool {
+	if _, err := os.Stat(filepath.Join(state.InboxPath(dir, to), id+".json")); err == nil {
+		return false
+	}
+	_, err := os.Stat(filepath.Join(state.DonePath(dir, to), id+".json"))
+	return err == nil || os.IsNotExist(err)
+}
+
 // ReadStatus returns the status of a message, if one has been written.
 func ReadStatus(dir, to, id string) (Status, bool) {
 	raw, err := os.ReadFile(statusPath(dir, to, id))
@@ -200,6 +212,12 @@ func archive(dir, to, id string) error {
 		}
 		return err
 	}
+	// The age that matters is the age of the answer, not of the message: a
+	// rename keeps the original time, and an old message refused at startup was
+	// swept away in the same breath.
+	now := time.Now()
+	_ = os.Chtimes(filepath.Join(done, id+".json"), now, now)
+
 	// Both ends of the move are flushed: after a crash the message must be in
 	// one of the two places, never in both and never in neither.
 	_ = state.SyncDir(mailbox)

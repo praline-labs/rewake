@@ -111,6 +111,14 @@ func handleSend(ctx *Context, call Call) error {
 			model.Detail = "the session ended and another one took its name before the message was delivered"
 			break
 		}
+		if !known && inbox.Answered(dir, session.Name, message.ID) {
+			// The message is out of the mailbox but has no status: it was
+			// answered long enough ago that the answer is no longer kept.
+			// Saying "pending" here would promise a delivery that has happened.
+			model.State = string(inbox.Failed)
+			model.Detail = "this message was answered earlier and the result is no longer kept"
+			break
+		}
 		model.State = string(inbox.Pending)
 		if known && status.Detail != "" {
 			model.Detail = status.Detail

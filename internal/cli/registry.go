@@ -7,8 +7,9 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/harness"
 )
 
-// Version is the released version of the tool.
-const Version = "0.0.1"
+// Version is the released version of the tool. A release build sets it from the
+// package version, so the two cannot disagree.
+var Version = "0.0.1"
 
 var jsonOption = Option{
 	Flag:    "--json",

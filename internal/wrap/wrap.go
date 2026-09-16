@@ -67,9 +67,12 @@ func Run(ctx context.Context, request Request) (int, error) {
 		// Ownership is settled once, before anything is removed. Asking again
 		// afterwards always answered no — the record had just been deleted — so
 		// the socket of a session that ended was left behind for good.
-		ours := registry.OwnsName(request.Dir, name, epoch)
-		_ = registry.RemoveOwned(request.Dir, name, epoch)
-		if ours && session.OwnsSocket {
+		// One answer decides both: the record goes only while it is still ours,
+		// and the socket only if that removal actually happened. Asking twice
+		// left a window in which the name changed hands in between, and the
+		// socket of a live session was deleted.
+		removed, err := registry.RemoveOwned(request.Dir, name, epoch)
+		if err == nil && removed && session.OwnsSocket {
 			removeSocket(session.Socket)
 		}
 	}()
@@ -140,6 +143,10 @@ func Run(ctx context.Context, request Request) (int, error) {
 			Dir:   request.Dir,
 			Name:  name,
 			Epoch: epoch,
+			// Asked before the mailbox is touched at all: a serving goroutine
+			// that starts late, after its harness is gone and the name has
+			// changed hands, has no business in there.
+			Owns: func() bool { return registry.OwnsName(request.Dir, name, epoch) },
 			Deliver: func(ctx context.Context, message inbox.Message) inbox.Result {
 				return request.Harness.Deliver(ctx, current(request.Dir, name, session), message)
 			},
@@ -147,7 +154,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 		server.Serve(serveCtx)
 	}()
 
-	waitErr := command.Wait()
+	code := waitForHarness(command.Process.Pid)
 
 	// Stop serving before the record goes away, and let the server refuse what
 	// is still waiting: a sender blocked on a status should be told the session
@@ -155,7 +162,41 @@ func Run(ctx context.Context, request Request) (int, error) {
 	stopServing()
 	<-served
 
-	return exitCode(waitErr), nil
+	return code, nil
+}
+
+// waitForHarness waits for the harness and follows it into a stop.
+//
+// A harness that stops itself — Ctrl+Z reaches it through the group, but it can
+// also do it on its own — would leave the shell waiting on a wrapper that is
+// still running, with no prompt and no way to bring the job back. So the wrapper
+// stops with it and continues with it, which is what a shell expects of a job.
+func waitForHarness(pid int) int {
+	for {
+		var status syscall.WaitStatus
+		_, err := syscall.Wait4(pid, &status, syscall.WUNTRACED|syscall.WCONTINUED, nil)
+		if err == syscall.EINTR {
+			continue
+		}
+		if err != nil {
+			return 1
+		}
+
+		switch {
+		case status.Stopped():
+			// Stop this process too, so the shell sees the whole job stop. Being
+			// continued brings the harness back with it.
+			_ = syscall.Kill(os.Getpid(), syscall.SIGSTOP)
+			_ = syscall.Kill(pid, syscall.SIGCONT)
+		case status.Continued():
+			// Both are running again; nothing to do.
+		case status.Signaled():
+			// No exit code of its own: report what a shell would.
+			return 128 + int(status.Signal())
+		case status.Exited():
+			return status.ExitStatus()
+		}
+	}
 }
 
 // current re-reads the session record so delivery sees the latest one. The
@@ -208,7 +249,15 @@ func claimName(request Request, self int, selfStart uint64, cwd string) (registr
 func catchSignals() (chan os.Signal, func()) {
 	incoming := make(chan os.Signal, 8)
 	signal.Notify(incoming, syscall.SIGTERM, syscall.SIGHUP)
-	return incoming, func() { signal.Stop(incoming) }
+	// The keyboard signals are caught and dropped rather than left to their
+	// default. The wrapper shares the harness's group, so Ctrl+C reaches it too,
+	// and dying from it left the agent running with nobody serving its mailbox:
+	// interrupting a turn must not end the session.
+	signal.Ignore(syscall.SIGINT, syscall.SIGQUIT)
+	return incoming, func() {
+		signal.Stop(incoming)
+		signal.Reset(syscall.SIGINT, syscall.SIGQUIT)
+	}
 }
 
 // forwardGrace is how long the harness is given to act on a signal it may have
@@ -249,24 +298,4 @@ func removeSocket(path string) {
 		return
 	}
 	_ = os.Remove(path)
-}
-
-// exitCode turns the result of Wait into the code the harness exited with. A
-// harness killed by a signal has no exit code of its own, so it gets the one a
-// shell would report: 128 plus the signal number, rather than the -1 that would
-// otherwise reach os.Exit and arrive as 255.
-func exitCode(err error) int {
-	if err == nil {
-		return 0
-	}
-	var exit *exec.ExitError
-	if errors.As(err, &exit) {
-		if status, ok := exit.Sys().(syscall.WaitStatus); ok && status.Signaled() {
-			return 128 + int(status.Signal())
-		}
-		if code := exit.ExitCode(); code >= 0 {
-			return code
-		}
-	}
-	return 1
 }

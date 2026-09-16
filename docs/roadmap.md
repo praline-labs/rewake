@@ -332,3 +332,43 @@ Two things the live run caught that the tests did not:
 - after the server's tick was slowed to a second, every delivery took exactly
   that long. The server was immediate; the *sender* was polling for its answer at
   the same slow interval. Measured on a live session: 0.03 s instead of 1.0 s.
+
+## Review round four — done, September 16, 2026
+
+Fourteen findings, four of them High, and the first was a regression from the
+round before it: narrowing the signal handler to SIGTERM and SIGHUP left SIGINT
+at its default, so Ctrl+C killed the wrapper while the harness carried on. An
+interrupted turn ended the session's mailbox with it. The keyboard signals are
+ignored explicitly now, and a live run confirms it: Ctrl+C into the session, then
+`list` still shows it and the next message is delivered in 0.04 s.
+
+Also closed:
+
+- **Ownership was asked once and acted on later.** The record and its socket are
+  now decided by a single answer: the socket goes only if the removal actually
+  happened, so a name that changed hands in between no longer costs a live
+  session its socket.
+- **A serving goroutine that started late** — after its harness was gone and the
+  name had changed hands — refused the new session's mail on its way past. It now
+  asks whether it still owns the name before touching the mailbox at all.
+- **A section header written inside somebody's instructions was read as
+  configuration.** An example in `developer_instructions` could set the sandbox
+  permissions of the run. Multi-line values are now stepped over rather than
+  parsed.
+- **A high file descriptor crashed the wrapper**: `select` cannot wait past 1024
+  and the index was not checked. That is the case for falling back to the poll,
+  not for a panic.
+- **The watch answered its own writes.** With `done/` unwritable, each status
+  write produced an event, which produced a pass, which wrote the status again —
+  186 times in 600 ms. Only a message file counts as a change now, and rewriting
+  an outcome waits its retry interval.
+- **A harness that stopped itself** left the shell waiting on a wrapper that was
+  still running. The wrapper follows it into the stop and back out of it.
+- **A swept answer was reported as pending**, promising a delivery that had
+  already happened; the sender now says the result is no longer kept.
+- **The archived message kept the age it was written at**, so an old message
+  refused at startup was swept in the same breath.
+- Smaller: `-c=key=value`, escapes in a triple-quoted string that closes on its
+  own line, a watch that never came back after the mailbox was replaced, the
+  shim preferring a stale sibling package over its own dependency, and a package
+  version that did not reach `rewake --version`.

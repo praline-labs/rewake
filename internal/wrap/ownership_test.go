@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"os"
 	"os/exec"
+	"strconv"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -198,4 +200,87 @@ func TestSignalAimedAtTheWrapperIsPassedOn(t *testing.T) {
 		t.Fatal("the harness never received the signal the wrapper was sent")
 	}
 	close(incoming)
+}
+
+// Ctrl+C reaches the wrapper as well as the harness, and dying from it left the
+// agent running with nobody serving its mailbox: interrupting a turn must not
+// end the session.
+func TestInterruptDoesNotEndTheSession(t *testing.T) {
+	dir := stateDir(t)
+	// The harness ignores the interrupt and keeps running, the way an agent
+	// that is merely cancelling a turn does.
+	fake := &fakeHarness{script: "trap '' INT; for _ in $(seq 1 20); do sleep 0.1; done"}
+
+	go func() {
+		deadline := time.Now().Add(3 * time.Second)
+		for time.Now().Before(deadline) {
+			session, err := registry.Lookup(dir, "api")
+			if err != nil || session.HarnessPID == 0 {
+				time.Sleep(20 * time.Millisecond)
+				continue
+			}
+			// To the group, the way the terminal delivers Ctrl+C.
+			group, err := syscall.Getpgid(session.HarnessPID)
+			if err == nil && group != 0 {
+				_ = syscall.Kill(session.HarnessPID, syscall.SIGINT)
+				_ = syscall.Kill(os.Getpid(), syscall.SIGINT)
+			}
+			return
+		}
+	}()
+
+	code, err := Run(context.Background(), Request{Harness: fake, Dir: dir, Name: "api"})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if code != 0 {
+		t.Errorf("exit = %d, want the harness's own 0: the interrupt should not have ended anything", code)
+	}
+}
+
+// A harness that stops itself leaves the shell waiting on a wrapper that is
+// still running, with no prompt and no way to bring the job back. The wrapper
+// stops with it — which is why the continue has to come from outside: this
+// process is the wrapper, and a stopped process cannot wake itself.
+func TestWrapperStopsWithTheHarness(t *testing.T) {
+	dir := stateDir(t)
+	fake := &fakeHarness{script: "kill -STOP $$; sleep 0.2"}
+
+	self := strconv.Itoa(os.Getpid())
+	continuer := exec.Command("/bin/sh", "-c",
+		"for _ in $(seq 1 200); do "+
+			"state=$(cut -d' ' -f3 /proc/"+self+"/stat 2>/dev/null); "+
+			"if [ \"$state\" = T ]; then kill -CONT "+self+"; exit 0; fi; "+
+			"sleep 0.05; done")
+	if err := continuer.Start(); err != nil {
+		t.Fatalf("start the continuer: %v", err)
+	}
+	defer func() {
+		_ = continuer.Process.Kill()
+		_ = continuer.Wait()
+	}()
+
+	began := time.Now()
+	if _, err := Run(context.Background(), Request{Harness: fake, Dir: dir, Name: "api"}); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	// Being stopped and continued is the point: a wrapper that ignored the stop
+	// would have returned without ever pausing.
+	if waited := time.Since(began); waited < 100*time.Millisecond {
+		t.Errorf("the run took %v: the wrapper did not follow the harness into its stop", waited)
+	}
+}
+
+// processState reads the single-letter state of a process.
+func processState(pid int) (string, error) {
+	raw, err := os.ReadFile("/proc/" + strconv.Itoa(pid) + "/stat")
+	if err != nil {
+		return "", err
+	}
+	fields := strings.Fields(string(raw)[strings.LastIndex(string(raw), ")")+1:])
+	if len(fields) == 0 {
+		return "", nil
+	}
+	return fields[0], nil
 }

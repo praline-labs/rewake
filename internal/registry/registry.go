@@ -233,16 +233,20 @@ func OwnsName(dir, name, epoch string) bool {
 	return err == nil && existing.Epoch() == epoch
 }
 
-// RemoveOwned deletes a record only while it still describes this session.
+// RemoveOwned deletes a record only while it still describes this session, and
+// reports whether it did.
 //
 // A wrapper that is stopped, whose harness then exits, wakes up to a name that
 // may already belong to somebody else. Removing it by name would delete a live
-// session's record — seen happening — so the epoch decides.
-func RemoveOwned(dir, name, epoch string) error {
+// session's record — seen happening — so the epoch decides. The answer comes
+// back rather than being asked for separately: between a question and an action
+// the name can change hands, and then the action lands on the wrong session.
+func RemoveOwned(dir, name, epoch string) (bool, error) {
 	if !state.ValidName(name) {
-		return nil
+		return false, nil
 	}
-	return state.WithNameLock(dir, name, func() error {
+	removed := false
+	err := state.WithNameLock(dir, name, func() error {
 		existing, err := Load(dir, name)
 		if err != nil {
 			if errors.Is(err, ErrNotFound) {
@@ -257,8 +261,12 @@ func RemoveOwned(dir, name, epoch string) error {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil
 		}
+		if err == nil {
+			removed = true
+		}
 		return err
 	})
+	return removed, err
 }
 
 // Load reads one record without judging whether it is alive.
@@ -294,7 +302,7 @@ func Lookup(dir, name string) (Session, error) {
 			// Reading is also when leftovers are cleaned: nobody else will. It
 			// is the record that was read that goes, not whatever holds the
 			// name by the time the lock is taken.
-			_ = RemoveOwned(dir, name, session.Epoch())
+			_, _ = RemoveOwned(dir, name, session.Epoch())
 		}
 		return Session{}, ErrNotFound
 	}
@@ -324,7 +332,7 @@ func List(dir string) ([]Session, error) {
 		}
 		if !session.Alive() {
 			if session.Judgeable() {
-				_ = RemoveOwned(dir, name, session.Epoch())
+				_, _ = RemoveOwned(dir, name, session.Epoch())
 			}
 			continue
 		}

@@ -69,7 +69,15 @@ func configString(home, key string) (string, reading, error) {
 			continue
 		}
 		name, value, ok := keyValue(line)
-		if !ok || section != "" || !sameKey(name, key) {
+		if !ok {
+			continue
+		}
+		if section != "" || !sameKey(name, key) {
+			// Step over a multi-line value of some other key, so its contents
+			// are never read as configuration of their own.
+			if skip, multi := multilineSpan(lines, index, value); multi {
+				index = skip
+			}
 			continue
 		}
 
@@ -203,18 +211,52 @@ func sectionValue(home, key string) (string, bool) {
 	}
 
 	section := ""
-	for _, raw := range lines {
-		line := strings.TrimSpace(raw)
+	for index := 0; index < len(lines); index++ {
+		line := strings.TrimSpace(lines[index])
 		if next, ok := sectionOf(line); ok {
 			section = next
 			continue
 		}
 		name, value, ok := keyValue(line)
-		if ok && section == sandboxSection && sameKey(name, key) {
+		if !ok {
+			continue
+		}
+		// A value that opens a multi-line string swallows the lines that follow
+		// until it closes. Reading them as configuration meant an example
+		// written inside somebody's instructions — a section header and a
+		// setting, quoted as text — became the sandbox permissions of the run.
+		if skip, multi := multilineSpan(lines, index, value); multi {
+			index = skip
+			continue
+		}
+		if section == sandboxSection && sameKey(name, key) {
 			return value, true
 		}
 	}
 	return "", false
+}
+
+// multilineSpan reports the last line of a multi-line string started by this
+// value, and whether the value starts one at all.
+func multilineSpan(lines []string, index int, value string) (int, bool) {
+	var marker string
+	switch {
+	case strings.HasPrefix(value, `"""`):
+		marker = `"""`
+	case strings.HasPrefix(value, "'''"):
+		marker = "'''"
+	default:
+		return index, false
+	}
+	if strings.Contains(strings.TrimPrefix(value, marker), marker) {
+		return index, true
+	}
+	for offset := index + 1; offset < len(lines); offset++ {
+		if strings.Contains(lines[offset], marker) {
+			return offset, true
+		}
+	}
+	return len(lines) - 1, true
 }
 
 // sameKey compares a key from the file with the one being looked for. TOML lets
@@ -333,7 +375,10 @@ func decodeMultiline(raw string) (string, bool) {
 func multiline(lines []string, first string) (string, int, bool) {
 	body := strings.TrimPrefix(strings.TrimSpace(first), `"""`)
 	if closing := strings.Index(body, `"""`); closing >= 0 {
-		return body[:closing], 0, true
+		// Closed on the same line, and its escapes still have to be resolved:
+		// skipping that here left \n reaching the harness as two characters.
+		text, ok := decodeMultiline(body[:closing])
+		return text, 0, ok
 	}
 
 	collected := []string{}

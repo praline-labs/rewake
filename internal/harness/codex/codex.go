@@ -398,7 +398,9 @@ func hasConfigKey(args []string, key string) bool {
 				return true
 			}
 		case strings.HasPrefix(arg, "-c") && len(arg) > 2:
-			if strings.HasPrefix(arg[2:], key+"=") {
+			// Both "-ckey=value" and "-c=key=value": the CLI takes either, and
+			// missing one of them means overriding a setting the caller made.
+			if strings.HasPrefix(strings.TrimPrefix(arg[2:], "="), key+"=") {
 				return true
 			}
 		}

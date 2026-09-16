@@ -47,6 +47,10 @@ type Server struct {
 	// Epoch identifies this run of the session name. Mail addressed to an
 	// earlier run is refused rather than handed to the current one.
 	Epoch string
+	// Owns reports whether this session still holds its name. A server that
+	// starts late — after its harness is gone and somebody else took the name —
+	// must not touch that mailbox at all.
+	Owns func() bool
 
 	// attempts remembers when each pending message was last tried.
 	attempts map[string]time.Time
@@ -63,6 +67,11 @@ type Server struct {
 func (s *Server) Serve(ctx context.Context) {
 	s.attempts = map[string]time.Time{}
 	s.outcomes = map[string]Result{}
+	if ctx.Err() != nil || !s.owned() {
+		// Cancelled before it began, or the name already belongs to somebody
+		// else: refusing their mail on the way past is not this session's to do.
+		return
+	}
 	s.sweepForeign()
 	s.sweepFinished()
 
@@ -175,7 +184,16 @@ func (s *Server) finish(message Message, result Result) {
 // publish writes the outcome down and takes the message out of the waiting set.
 // Both steps are retried on later passes until they hold: a message whose
 // outcome is known is never delivered again, only recorded again.
+//
+// The retry waits, though. Writing the status is itself a change to the mailbox,
+// and a directory that cannot be archived into turned that into a loop: write,
+// event, pass, write again, hundreds of times a second.
 func (s *Server) publish(id string, result Result) {
+	if last, tried := s.attempts[id]; tried && time.Since(last) < retryInterval {
+		return
+	}
+	s.attempts[id] = time.Now()
+
 	if err := writeStatus(s.Dir, s.Name, id, result); err != nil {
 		return
 	}
@@ -217,6 +235,11 @@ func (s *Server) refuseWaiting(reason string) {
 		s.finish(message, Result{State: Failed, Detail: reason})
 	}
 }
+
+// owned reports whether this session still holds its name. With no check given
+// it is taken to hold it, which is the case for every caller that has one
+// wrapper per mailbox.
+func (s *Server) owned() bool { return s.Owns == nil || s.Owns() }
 
 // sweepForeign refuses mail left in this mailbox for a session that used the
 // name before. It runs once, at the start: this session took the name, so

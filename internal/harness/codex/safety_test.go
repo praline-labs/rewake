@@ -279,3 +279,67 @@ func TestCallerArgumentsSurviveALaunch(t *testing.T) {
 		}
 	}
 }
+
+// A section header and a setting written inside somebody's instructions are
+// text, not configuration. Reading them as configuration let an example in the
+// instructions decide the sandbox permissions of the run.
+func TestSettingsInsideInstructionsAreText(t *testing.T) {
+	config := "developer_instructions = \"\"\"\n" +
+		"For example, a sandbox section looks like this:\n" +
+		"[sandbox_workspace_write]\n" +
+		"writable_roots = [\"/example\"]\n" +
+		"\"\"\"\n" +
+		"[sandbox_workspace_write]\n" +
+		"exclude_slash_tmp = true\n" +
+		"writable_roots = [\"/actual\"]\n"
+	plan := launchWith(t, config, nil)
+
+	value, passed := configValue(plan.Args, rootsKey)
+	if !passed {
+		t.Fatalf("the state directory was not made writable: %v %v", plan.Args, plan.Notes)
+	}
+	if strings.Contains(value, "/example") {
+		t.Errorf("a path from the instructions became a sandbox permission: %s", value)
+	}
+	if !strings.Contains(value, "/actual") {
+		t.Errorf("the configured roots were lost: %s", value)
+	}
+}
+
+// The same on the other side: a key inside a multi-line value is not a key.
+func TestKeyInsideInstructionsIsNotAKey(t *testing.T) {
+	config := "developer_instructions = '''\nmodel = \"pretend\"\n'''\n" +
+		"[sandbox_workspace_write]\nexclude_slash_tmp = true\nwritable_roots = [\"/actual\"]\n"
+	plan := launchWith(t, config, nil)
+
+	value, passed := configValue(plan.Args, rootsKey)
+	if !passed || !strings.Contains(value, "/actual") {
+		t.Errorf("the real configuration was not read past the instructions: %v %v", plan.Args, plan.Notes)
+	}
+}
+
+// A triple-quoted string that closes on its own line has its escapes resolved
+// too: skipping that left \n reaching the harness as two characters.
+func TestInlineMultilineEscapesAreDecoded(t *testing.T) {
+	plan := launchWith(t, "developer_instructions = \"\"\"first\\nsecond\"\"\"\n", nil)
+
+	value, passed := configValue(plan.Args, introKey)
+	if !passed {
+		t.Fatalf("the briefing was skipped: %v", plan.Notes)
+	}
+	decoded, ok := basicString(value)
+	if !ok {
+		t.Fatalf("the override is not a readable TOML string: %s", value)
+	}
+	if strings.Contains(decoded, `\n`) {
+		t.Errorf("an escape survived as text: %q", decoded)
+	}
+}
+
+func TestJoinedShortConfigFormIsSeen(t *testing.T) {
+	plan := launchWith(t, "", []string{"-c=" + introKey + `="mine"`})
+
+	if value, passed := configValue(plan.Args, introKey); passed && !strings.Contains(value, "mine") {
+		t.Errorf("rewake overrode a setting the caller had made: %s", value)
+	}
+}
