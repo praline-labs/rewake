@@ -77,7 +77,15 @@ func (s Session) Reachable() bool { return s.Alive() }
 // deleted their records. Found by running it.
 func (s Session) Judgeable() bool {
 	here := namespace()
-	return s.PIDNamespace == "" || here == "" || s.PIDNamespace == here
+	if here == "" {
+		// This reader cannot even tell which namespace it is in, so it cannot
+		// tell whether a pid means anything here. Guessing the other way
+		// deleted the record of a session that was running.
+		return false
+	}
+	// A record without a namespace comes from a version that did not record
+	// one; the reader's own is the best it has.
+	return s.PIDNamespace == "" || s.PIDNamespace == here
 }
 
 // Alive reports whether this session can still be reached: both the process
@@ -175,14 +183,32 @@ func (e *NameTakenError) Error() string {
 	return fmt.Sprintf("the name %q was claimed by another session while starting", e.Name)
 }
 
-// Update rewrites an existing record, for example once the harness process is
-// known. The name must already belong to this session.
+// Update rewrites the record of a session that still owns its name.
+//
+// Under the lock and behind an ownership check, like every other change to a
+// name: an update that was slow to arrive would otherwise land after the name
+// changed hands and replace the new owner's record with a stale one.
 func Update(dir string, session Session) error {
+	if !state.ValidName(session.Name) {
+		return fmt.Errorf("%w: %q", ErrUnusableName, session.Name)
+	}
 	encoded, err := encode(session)
 	if err != nil {
 		return err
 	}
-	return state.WriteAtomic(state.SessionPath(dir, session.Name), encoded)
+	return state.WithNameLock(dir, session.Name, func() error {
+		existing, err := Load(dir, session.Name)
+		if err != nil {
+			if errors.Is(err, ErrNotFound) {
+				return ErrNotFound
+			}
+			return err
+		}
+		if existing.Epoch() != session.Epoch() {
+			return ErrNotFound
+		}
+		return state.WriteAtomic(state.SessionPath(dir, session.Name), encoded)
+	})
 }
 
 // Remove deletes the record of a name, whoever owns it. Use RemoveOwned unless

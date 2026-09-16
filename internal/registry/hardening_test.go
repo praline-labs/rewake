@@ -240,3 +240,58 @@ func TestReaderInTheSameNamespaceStillPrunes(t *testing.T) {
 		t.Error("the leftover record was not cleaned up")
 	}
 }
+
+// An update that was slow to arrive must not land after the name changed hands:
+// it would replace the new owner's record with a stale one.
+func TestUpdateRefusesAfterTheNameChangedHands(t *testing.T) {
+	living := map[int]uint64{10: 100, 11: 110}
+	dir := stateDir(t, living)
+
+	ours := session("api", 10, 100)
+	if err := Publish(dir, ours); err != nil {
+		t.Fatalf("publish: %v", err)
+	}
+
+	// The session ends and another takes the name.
+	delete(living, 10)
+	successor := session("api", 11, 110)
+	if err := Publish(dir, successor); err != nil {
+		t.Fatalf("takeover: %v", err)
+	}
+
+	ours.HarnessPID = 42
+	if err := Update(dir, ours); err == nil {
+		t.Fatal("a stale update was accepted")
+	}
+
+	held, err := Lookup(dir, "api")
+	if err != nil {
+		t.Fatalf("lookup: %v", err)
+	}
+	if held.ServicePID != 11 {
+		t.Errorf("record = %+v, want the successor's", held)
+	}
+}
+
+// A namespace that cannot be read is not a namespace that matches. Guessing the
+// other way deleted the record of a session that was running.
+func TestUnknownNamespaceIsNotJudged(t *testing.T) {
+	dir := stateDir(t, map[int]uint64{})
+
+	record := session("web", 10, 100)
+	record.PIDNamespace = "pid:[4026531836]"
+	if err := Publish(dir, record); err != nil {
+		t.Fatalf("publish: %v", err)
+	}
+
+	previous := namespace
+	namespace = func() string { return "" } // /proc unreadable from here
+	t.Cleanup(func() { namespace = previous })
+
+	if _, err := Lookup(dir, "web"); err != nil {
+		t.Fatalf("Lookup with an unknown namespace: %v", err)
+	}
+	if _, err := os.Stat(state.SessionPath(dir, "web")); err != nil {
+		t.Fatalf("the record was deleted by a reader that could not judge: %v", err)
+	}
+}

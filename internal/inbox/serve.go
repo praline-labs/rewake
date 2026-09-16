@@ -50,6 +50,7 @@ type Server struct {
 func (s *Server) Serve(ctx context.Context) {
 	s.attempts = map[string]time.Time{}
 	s.outcomes = map[string]Result{}
+	s.sweepForeign()
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
 
@@ -78,12 +79,10 @@ func (s *Server) drain(ctx context.Context) {
 			continue
 		}
 		if s.Epoch != "" && message.ToEpoch != s.Epoch {
-			// A message with no epoch at all counts too: it was written for a
-			// session this one only shares a name with.
-			s.finish(message, Result{
-				State:  Failed,
-				Detail: "addressed to an earlier session that used this name",
-			})
+			// Somebody else's mail. It is left exactly where it is: the epoch it
+			// names may belong to the session that takes this name next, and a
+			// wrapper on its way out refusing that session's messages is how a
+			// live conversation was killed by a dead one.
 			continue
 		}
 		if last, tried := s.attempts[message.ID]; tried && time.Since(last) < retryInterval {
@@ -147,19 +146,47 @@ func (s *Server) alreadySettled(message Message) bool {
 	return true
 }
 
-// refuseWaiting marks everything still waiting as failed when the session ends.
+// refuseWaiting marks this session's own waiting mail as failed when it ends.
 // A message that already has an outcome is not one of them: turning a delivered
-// message into a failed one sends its sender to say the whole thing again.
+// message into a failed one sends its sender to say the whole thing again. Nor
+// is mail addressed to another epoch — that belongs to somebody else.
 func (s *Server) refuseWaiting(reason string) {
 	messages, err := list(s.Dir, s.Name)
 	if err != nil {
 		return
 	}
 	for _, message := range messages {
+		if s.Epoch != "" && message.ToEpoch != s.Epoch {
+			continue
+		}
 		if s.alreadySettled(message) {
 			continue
 		}
 		s.finish(message, Result{State: Failed, Detail: reason})
+	}
+}
+
+// sweepForeign refuses mail left in this mailbox for a session that used the
+// name before. It runs once, at the start: this session took the name, so
+// whatever was addressed to an earlier one will never be delivered. Later
+// arrivals for another epoch are a different matter — they belong to whoever
+// takes the name next — and those are left alone.
+func (s *Server) sweepForeign() {
+	if s.Epoch == "" {
+		return
+	}
+	messages, err := list(s.Dir, s.Name)
+	if err != nil {
+		return
+	}
+	for _, message := range messages {
+		if message.ToEpoch == s.Epoch || s.alreadySettled(message) {
+			continue
+		}
+		s.finish(message, Result{
+			State:  Failed,
+			Detail: "addressed to an earlier session that used this name",
+		})
 	}
 }
 

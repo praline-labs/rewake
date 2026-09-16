@@ -187,3 +187,95 @@ func TestNestedCodexThreadIsNotTaken(t *testing.T) {
 		t.Errorf("thread = %q, want the session's own even though the nested one is newer", thread)
 	}
 }
+
+// TOML lets a key be quoted, and "developer_instructions" is the same key as the
+// bare one. Not recognising that meant the value was never found — and then
+// replaced by the briefing.
+func TestQuotedKeyIsTheSameKey(t *testing.T) {
+	plan := launchWith(t, "\"developer_instructions\" = \"Keep my rules\"\n", nil)
+
+	value, passed := configValue(plan.Args, introKey)
+	if passed && !strings.Contains(value, "Keep my rules") {
+		t.Fatalf("a quoted key was overridden: %s", value)
+	}
+}
+
+// A key that comes after other settings has to be found too: stopping at the
+// first line that is not it would lose the value and then replace it.
+func TestKeyIsFoundAfterOtherSettings(t *testing.T) {
+	config := "model = \"gpt-5.6-terra\"\napproval_policy = \"never\"\ndeveloper_instructions = \"Keep my rules\"\n"
+	plan := launchWith(t, config, nil)
+
+	value, passed := configValue(plan.Args, introKey)
+	if !passed {
+		t.Fatalf("the briefing was skipped: %v", plan.Notes)
+	}
+	if !strings.Contains(value, "Keep my rules") {
+		t.Errorf("instructions further down the file were dropped: %s", value)
+	}
+}
+
+// A multi-line literal is not a finished single-line one. Taking it for one
+// turned the user's instructions into a lone apostrophe.
+func TestMultilineLiteralIsNotMistakenForAShortOne(t *testing.T) {
+	plan := launchWith(t, "developer_instructions = '''\nKeep my rules\n'''\n", nil)
+
+	if value, passed := configValue(plan.Args, introKey); passed {
+		t.Fatalf("a multi-line literal was replaced by %s", value)
+	}
+	if len(plan.Notes) == 0 {
+		t.Error("the briefing was skipped without saying so")
+	}
+}
+
+// The escapes of a multi-line basic string have to be resolved: a value holding
+// \n otherwise reaches the harness as those two characters, quoted correctly and
+// wrong.
+func TestMultilineEscapesAreDecoded(t *testing.T) {
+	plan := launchWith(t, "developer_instructions = \"\"\"\nfirst\\nsecond\n\"\"\"\n", nil)
+
+	value, passed := configValue(plan.Args, introKey)
+	if !passed {
+		t.Fatalf("the briefing was skipped: %v", plan.Notes)
+	}
+	decoded, ok := basicString(value)
+	if !ok {
+		t.Fatalf("the override is not a readable TOML string: %s", value)
+	}
+	if strings.Contains(decoded, `\n`) {
+		t.Errorf("an escape survived as text: %q", decoded)
+	}
+	if !strings.Contains(decoded, "first\nsecond") {
+		t.Errorf("value = %q, want the escape resolved into a line break", decoded)
+	}
+}
+
+// Both spellings and both shapes of the flags Codex accepts count as the
+// caller's own setting; missing one means overriding what they configured.
+func TestEveryFormOfACallerOverrideIsSeen(t *testing.T) {
+	for _, args := range [][]string{
+		{"--config=" + introKey + `="mine"`},
+		{"-c" + introKey + `="mine"`},
+		{"-pwork"},
+		{"-p", "work"},
+	} {
+		plan := launchWith(t, "", args)
+		if value, passed := configValue(plan.Args, introKey); passed && !strings.Contains(value, "mine") {
+			t.Errorf("%v: rewake overrode a setting the caller had made: %s", args, value)
+		}
+	}
+}
+
+// What the caller passed has to survive: dropping their arguments while
+// declining to add ours would be the same loss by another route.
+func TestCallerArgumentsSurviveALaunch(t *testing.T) {
+	args := []string{"--model", "gpt-5.6-terra", "-pwork", "--", "write the notes"}
+	plan := launchWith(t, "", args)
+
+	joined := strings.Join(plan.Args, " ")
+	for _, want := range args {
+		if !strings.Contains(joined, want) {
+			t.Errorf("%q was dropped from the launch: %v", want, plan.Args)
+		}
+	}
+}

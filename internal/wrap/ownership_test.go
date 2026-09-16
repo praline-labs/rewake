@@ -2,7 +2,9 @@ package wrap
 
 import (
 	"context"
+	"encoding/json"
 	"os"
+	"os/exec"
 	"syscall"
 	"testing"
 	"time"
@@ -10,6 +12,7 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/proc"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
+	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
 // A wrapper whose harness has ended wakes up to a name that may already belong
@@ -37,9 +40,14 @@ func TestCleanupLeavesTheNextOwnerAlone(t *testing.T) {
 		deadline := time.Now().Add(3 * time.Second)
 		for time.Now().Before(deadline) {
 			if _, err := registry.Lookup(dir, "api"); err == nil {
-				// Replace the record the way a takeover would, while the old
-				// wrapper is still running and about to clean up.
-				_ = registry.Update(dir, successor)
+				// Put the successor's record in place the way a takeover does,
+				// while the old wrapper is still running and about to clean up.
+				// Written directly: Update now refuses to write over a record
+				// that belongs to somebody else, which is the neighbouring fix.
+				encoded, marshalErr := json.MarshalIndent(successor, "", "  ")
+				if marshalErr == nil {
+					_ = state.WriteAtomic(state.SessionPath(dir, "api"), encoded)
+				}
 				return
 			}
 			time.Sleep(20 * time.Millisecond)
@@ -91,9 +99,12 @@ func TestShutdownOnlyRefusesItsOwnMail(t *testing.T) {
 	}
 }
 
-// The harness runs in a process group of its own. That is what makes Ctrl+C
-// reach it and nothing else, and a forwarded signal exactly one signal.
-func TestHarnessRunsInItsOwnProcessGroup(t *testing.T) {
+// The harness shares the wrapper's process group, and that is the point: the
+// terminal then treats it as the program it is, so Ctrl+C, Ctrl+Z and job
+// control work exactly as they would without rewake in between. Giving it a
+// group of its own was tried; it left a stopped harness holding the terminal
+// and let a backgrounded rewake steal the terminal from the shell.
+func TestHarnessSharesTheTerminalGroup(t *testing.T) {
 	dir := stateDir(t)
 	fake := &fakeHarness{script: "sleep 1"}
 
@@ -125,9 +136,66 @@ func TestHarnessRunsInItsOwnProcessGroup(t *testing.T) {
 	if !ok {
 		t.Fatal("the harness process was never visible")
 	}
-	if own, err := syscall.Getpgid(os.Getpid()); err != nil {
+	own, err := syscall.Getpgid(os.Getpid())
+	if err != nil {
 		t.Fatalf("getpgid: %v", err)
-	} else if group == own {
-		t.Error("the harness shares the wrapper's process group, so one Ctrl+C would reach it twice")
 	}
+	if group != own {
+		t.Errorf("harness group = %d, wrapper group = %d: the terminal would stop treating the harness as the foreground program", group, own)
+	}
+}
+
+// A signal the harness already got through the shared process group is not
+// repeated: for many programs the second one means "stop cleaning up and die".
+// Both processes are in one group, so the wrapper cannot tell a copy of a group
+// signal from one aimed at itself — it asks the harness instead, and a harness
+// that is already gone is not signalled again.
+func TestSignalIsNotRepeatedToAHarnessThatGotIt(t *testing.T) {
+	command := exec.Command("/bin/sh", "-c", "sleep 5")
+	if err := command.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	defer func() {
+		_ = command.Process.Kill()
+		_ = command.Wait()
+	}()
+
+	incoming := make(chan os.Signal, 1)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		forward(incoming, command.Process, func() bool { return false })
+	}()
+
+	incoming <- syscall.SIGTERM
+	time.Sleep(forwardGrace + 200*time.Millisecond)
+	close(incoming)
+	<-done
+
+	if err := command.Process.Signal(syscall.Signal(0)); err != nil {
+		t.Fatalf("the harness was signalled although it had already acted on one: %v", err)
+	}
+}
+
+// A signal aimed at the wrapper alone reaches nobody else, so it is passed on.
+func TestSignalAimedAtTheWrapperIsPassedOn(t *testing.T) {
+	command := exec.Command("/bin/sh", "-c", "sleep 5")
+	if err := command.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+
+	exited := make(chan error, 1)
+	go func() { exited <- command.Wait() }()
+
+	incoming := make(chan os.Signal, 1)
+	go forward(incoming, command.Process, func() bool { return true })
+	incoming <- syscall.SIGTERM
+
+	select {
+	case <-exited:
+	case <-time.After(forwardGrace + 3*time.Second):
+		_ = command.Process.Kill()
+		t.Fatal("the harness never received the signal the wrapper was sent")
+	}
+	close(incoming)
 }

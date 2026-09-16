@@ -69,10 +69,16 @@ func configString(home, key string) (string, reading, error) {
 			continue
 		}
 		name, value, ok := keyValue(line)
-		if !ok || section != "" || name != key {
+		if !ok || section != "" || !sameKey(name, key) {
 			continue
 		}
 
+		if strings.HasPrefix(value, "'''") {
+			// A multi-line literal. Reading it would be easy enough; taking it
+			// for a finished single-line one — which is what happened — turns
+			// the user's instructions into a lone apostrophe.
+			return "", unreadable, nil
+		}
 		if strings.HasPrefix(value, `"""`) {
 			text, consumed, ok := multiline(lines[index:], value)
 			index += consumed
@@ -204,11 +210,25 @@ func sectionValue(home, key string) (string, bool) {
 			continue
 		}
 		name, value, ok := keyValue(line)
-		if ok && section == sandboxSection && name == key {
+		if ok && section == sandboxSection && sameKey(name, key) {
 			return value, true
 		}
 	}
 	return "", false
+}
+
+// sameKey compares a key from the file with the one being looked for. TOML lets
+// a key be quoted — "developer_instructions" is the same key as the bare one —
+// and treating those as different meant the value was never found, and then
+// replaced.
+func sameKey(found, wanted string) bool {
+	if text, ok := basicString(found); ok {
+		return text == wanted
+	}
+	if text, ok := literalString(found); ok {
+		return text == wanted
+	}
+	return found == wanted
 }
 
 // sectionOf recognises a section header.
@@ -256,6 +276,58 @@ func stripComment(value string) string {
 	return value
 }
 
+// decodeMultiline resolves the escapes of a multi-line basic string. Without
+// this the block is passed on raw, and a value that contained \n reaches the
+// harness as those two characters rather than as a line break — quoted
+// correctly, and wrong.
+func decodeMultiline(raw string) (string, bool) {
+	var out strings.Builder
+	for index := 0; index < len(raw); index++ {
+		if raw[index] != '\\' || index+1 >= len(raw) {
+			out.WriteByte(raw[index])
+			continue
+		}
+		index++
+		switch raw[index] {
+		case 'n':
+			out.WriteByte('\n')
+		case 't':
+			out.WriteByte('\t')
+		case 'r':
+			out.WriteByte('\r')
+		case '"':
+			out.WriteByte('"')
+		case '\\':
+			out.WriteByte('\\')
+		case '\n':
+			// A line ending in a backslash joins the next line, minus its
+			// leading whitespace.
+			for index+1 < len(raw) && (raw[index+1] == ' ' || raw[index+1] == '\t' || raw[index+1] == '\n') {
+				index++
+			}
+		case 'u', 'U':
+			width := 4
+			if raw[index] == 'U' {
+				width = 8
+			}
+			if index+width >= len(raw) {
+				return "", false
+			}
+			value, err := strconv.ParseUint(raw[index+1:index+1+width], 16, 32)
+			if err != nil {
+				return "", false
+			}
+			out.WriteRune(rune(value))
+			index += width
+		default:
+			// An escape TOML does not define: the file is not what this reader
+			// takes it for, and guessing would replace it with a guess.
+			return "", false
+		}
+	}
+	return out.String(), true
+}
+
 // multiline reads a """ quoted block and returns it with the lines it consumed.
 // The third result says whether the block was closed at all.
 func multiline(lines []string, first string) (string, int, bool) {
@@ -274,7 +346,8 @@ func multiline(lines []string, first string) (string, int, bool) {
 			if trimmed := line[:closing]; trimmed != "" {
 				collected = append(collected, trimmed)
 			}
-			return strings.Join(collected, "\n"), offset, true
+			text, ok := decodeMultiline(strings.Join(collected, "\n"))
+			return text, offset, ok
 		}
 		collected = append(collected, line)
 	}

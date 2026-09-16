@@ -23,7 +23,6 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/proc"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
-	"github.com/iiiokojiadbi/rewake/internal/term"
 )
 
 // Request is one launch.
@@ -65,12 +64,12 @@ func Run(ctx context.Context, request Request) (int, error) {
 	name := session.Name
 	epoch := session.Epoch()
 	defer func() {
-		// Only this session's record goes, and only its own socket. A wrapper
-		// stopped while its harness died wakes up to a name that may already
-		// belong to somebody else, and removing it by name deletes a live
-		// session's record — seen happening.
+		// Ownership is settled once, before anything is removed. Asking again
+		// afterwards always answered no — the record had just been deleted — so
+		// the socket of a session that ended was left behind for good.
+		ours := registry.OwnsName(request.Dir, name, epoch)
 		_ = registry.RemoveOwned(request.Dir, name, epoch)
-		if session.OwnsSocket && registry.OwnsName(request.Dir, name, epoch) {
+		if ours && session.OwnsSocket {
 			removeSocket(session.Socket)
 		}
 	}()
@@ -109,14 +108,12 @@ func Run(ctx context.Context, request Request) (int, error) {
 	command := exec.Command(plan.Command, plan.Args...)
 	command.Env = plan.Env
 	command.Stdin, command.Stdout, command.Stderr = os.Stdin, os.Stdout, os.Stderr
-	// The harness gets a process group of its own, and that group is handed the
-	// terminal. This is what a shell does with a job, and it is what keeps the
-	// signals honest: Ctrl+C reaches the harness and nothing else, and a
-	// termination request aimed at the wrapper is forwarded exactly once. With
-	// both in one group, a single Ctrl+C arrived twice — once from the terminal,
-	// once forwarded — and for many programs the second one means "stop cleaning
-	// up and die".
-	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	// The harness stays in the wrapper's process group, which is what makes the
+	// terminal treat it as the program it is: Ctrl+C, Ctrl+Z, window size and
+	// job control all work as they would without rewake in between. Giving it a
+	// group of its own and handing over the terminal was tried, and it broke
+	// exactly that — Ctrl+Z left the terminal with a stopped harness, and
+	// starting rewake in the background took the terminal away from the shell.
 	if err := command.Start(); err != nil {
 		if errors.Is(err, exec.ErrNotFound) {
 			return 0, fmt.Errorf("%s is not installed or not in PATH", plan.Command)
@@ -124,15 +121,15 @@ func Run(ctx context.Context, request Request) (int, error) {
 		return 0, err
 	}
 
-	restoreTerminal := giveTerminal(command.Process.Pid)
-	defer restoreTerminal()
-
 	if start, err := proc.StartTime(command.Process.Pid); err == nil {
 		session.HarnessPID = command.Process.Pid
 		session.HarnessStart = start
 		_ = registry.Update(request.Dir, session)
 	}
-	go forward(signals, command.Process)
+	harnessStart := session.HarnessStart
+	go forward(signals, command.Process, func() bool {
+		return proc.Alive(command.Process.Pid, harnessStart)
+	})
 
 	serveCtx, stopServing := context.WithCancel(ctx)
 	defer stopServing()
@@ -208,52 +205,37 @@ func claimName(request Request, self int, selfStart uint64, cwd string) (registr
 }
 
 // catchSignals starts listening before there is a child to forward to.
-//
-// SIGTTOU is ignored throughout: handing the terminal to another process group
-// stops a background process that tries it, and the wrapper is exactly that for
-// the moment in between.
 func catchSignals() (chan os.Signal, func()) {
 	incoming := make(chan os.Signal, 8)
-	signal.Notify(incoming, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGHUP)
-	signal.Ignore(syscall.SIGTTOU, syscall.SIGTTIN)
-	return incoming, func() {
-		signal.Stop(incoming)
-		signal.Reset(syscall.SIGTTOU, syscall.SIGTTIN)
-	}
+	signal.Notify(incoming, syscall.SIGTERM, syscall.SIGHUP)
+	return incoming, func() { signal.Stop(incoming) }
 }
 
-// forward passes on every signal the wrapper receives. The harness is in its own
-// group now, so what arrives here was aimed at the wrapper — not a copy of what
-// the harness already got.
-func forward(incoming chan os.Signal, process *os.Process) {
+// forwardGrace is how long the harness is given to act on a signal it may have
+// received directly before the wrapper repeats it.
+const forwardGrace = 300 * time.Millisecond
+
+// forward passes a termination request on to the harness — once, and only if it
+// has not already acted on one.
+//
+// Both processes are in the same group, so a signal sent to the group reaches
+// the harness by itself; repeating it turns one request into two, and for many
+// programs the second one means "stop cleaning up and die". A signal sent to the
+// wrapper alone reaches nobody else, and that is the case this covers. The
+// difference between them is not visible in the signal, so the answer comes from
+// the harness: if it is still running a moment later, it did not get one.
+func forward(incoming chan os.Signal, process *os.Process, alive func() bool) {
 	for received := range incoming {
-		signal, ok := received.(syscall.Signal)
+		signalValue, ok := received.(syscall.Signal)
 		if !ok {
 			continue
 		}
-		// To the group, so a harness that spawned children takes them with it.
-		if err := syscall.Kill(-process.Pid, signal); err != nil {
-			_ = process.Signal(received)
+		time.Sleep(forwardGrace)
+		if !alive() {
+			continue
 		}
+		_ = process.Signal(signalValue)
 	}
-}
-
-// giveTerminal makes the harness's process group the foreground one, so the
-// terminal sends it Ctrl+C, Ctrl+Z and window changes directly. It returns the
-// call that takes the terminal back; without that, the shell that started
-// rewake would be left in the background of its own terminal.
-func giveTerminal(pid int) func() {
-	if !term.IsTerminal(os.Stdin) {
-		return func() {}
-	}
-	previous, err := term.ForegroundGroup(os.Stdin)
-	if err != nil {
-		return func() {}
-	}
-	if err := term.SetForegroundGroup(os.Stdin, pid); err != nil {
-		return func() {}
-	}
-	return func() { _ = term.SetForegroundGroup(os.Stdin, previous) }
 }
 
 // removeSocket clears the socket file of a session that has ended. The harness

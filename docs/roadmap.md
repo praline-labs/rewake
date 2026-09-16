@@ -192,6 +192,50 @@ goroutines, the traversal test puts its victim where the name actually points,
 and the Codex adapter is checked against configurations that are valid TOML but
 outside what the reader takes apart.
 
+## Review round three — done, September 16, 2026
+
+The reviewer ran the previous round's fixes against real PTYs, separate
+processes and the built CLI. Eight of the fifteen held outright; the rest had
+edges left, and three of the new findings were caused by the previous fixes.
+
+**The terminal handover was a mistake and is gone.** Giving the harness its own
+process group and handing it the terminal fixed the doubled Ctrl+C and broke
+everything around it: Ctrl+Z left a stopped harness holding the terminal with no
+way back to the shell, `rewake claude &` took the terminal away from the shell
+that started it, and with stdin from a pipe the harness could not read `/dev/tty`
+at all. The harness is in the wrapper's group again, which is what makes the
+terminal treat it as the program it is. The doubled signal is instead answered by
+asking the harness: a termination request is repeated only if the harness is
+still running a moment later, which it is not when the signal came to the group.
+
+Also closed in this round:
+
+- **A wrapper on its way out refused the next session's mail.** Foreign mail is
+  now left where it is; a session refuses only what is addressed to it, and
+  sweeps mail for the session that came before once, at startup.
+- **The wrapper stopped cleaning up its own socket** — ownership was checked
+  after the record had been removed, so the answer was always no.
+- **`Update` went around the lock and the ownership check**, so a slow update
+  could overwrite the record of whoever took the name next.
+- **A reader that cannot tell which pid namespace it is in** now judges nothing
+  rather than judging wrongly.
+- **Valid TOML that the Codex reader still misread:** a quoted key, a key further
+  down the file, a multi-line literal taken for a finished short one, and the
+  escapes inside a multi-line string.
+- **Flag forms that slipped past the same protection:** `--config=…`, `-ckey=…`
+  and `-pwork`.
+- **A relative `CODEX_HOME`** never matched the absolute paths `/proc` reports.
+- **The thread search picked a nested `codex exec`** when the command was a
+  launcher holding no lock of its own; it now goes outwards one generation at a
+  time and stops at the first that holds a thread.
+- **A thread change during delivery queued the message twice.** It is reported as
+  failed with the reason instead: a repeated instruction is worse than a missing
+  one, and the sender decides.
+- **The queue call left a child running past its deadline**; it now runs in its
+  own process group and the deadline reaches all of it.
+- **Message ids were ordered by millisecond**, so two messages written in the
+  same one could be delivered in the wrong order.
+
 ## Milestone 5. Intro and permissions
 
 - The intro for both harnesses, plus the `--no-intro` flag.

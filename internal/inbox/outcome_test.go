@@ -151,3 +151,115 @@ func TestSettledMessageIsNotDeliveredTwice(t *testing.T) {
 		t.Fatalf("the message was delivered %d times, want once", deliveries)
 	}
 }
+
+// Mail that arrives for another epoch while this session is running belongs to
+// whoever takes the name next — a wrapper on its way out refusing it is how a
+// live conversation was killed by a dead one.
+func TestMailForTheNextOwnerIsLeftAlone(t *testing.T) {
+	dir := stateDir(t)
+
+	ours := message("for us")
+	ours.ToEpoch = "42.100"
+	if err := Put(dir, ours); err != nil {
+		t.Fatalf("put: %v", err)
+	}
+
+	server := &Server{Dir: dir, Name: "api", Epoch: "42.100", Deliver: func(context.Context, Message) Result {
+		return Result{State: Delivered, Via: "socket"}
+	}}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	finished := make(chan struct{})
+	go func() {
+		defer close(finished)
+		server.Serve(ctx)
+	}()
+
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		if status, ok := ReadStatus(dir, "api", ours.ID); ok && status.State == Delivered {
+			break
+		}
+		if time.Now().After(deadline) {
+			cancel()
+			<-finished
+			t.Fatal("our own message was never delivered")
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	// Written after this session started, for a session that is not it.
+	theirs := message("for whoever takes the name next")
+	theirs.ToEpoch = "43.200"
+	if err := Put(dir, theirs); err != nil {
+		t.Fatalf("put: %v", err)
+	}
+	time.Sleep(600 * time.Millisecond)
+
+	if status, ok := ReadStatus(dir, "api", theirs.ID); ok {
+		t.Fatalf("somebody else's message was answered while this session ran: %+v", status)
+	}
+
+	// Shutting down must not touch it either.
+	cancel()
+	<-finished
+
+	if status, ok := ReadStatus(dir, "api", theirs.ID); ok {
+		t.Fatalf("somebody else's message was refused on the way out: %+v", status)
+	}
+	waiting, err := list(dir, "api")
+	if err != nil || len(waiting) != 1 || waiting[0].ID != theirs.ID {
+		t.Fatalf("mailbox holds %v (%v), want the other session's message still waiting", waiting, err)
+	}
+}
+
+// Mail addressed to a session that used this name before will never be
+// delivered — this one took the name. It is refused once, at the start, rather
+// than left to expire in silence.
+func TestMailOfAPreviousSessionIsRefusedAtStartup(t *testing.T) {
+	dir := stateDir(t)
+	old := message("for the session that came before")
+	old.ToEpoch = "41.50"
+	if err := Put(dir, old); err != nil {
+		t.Fatalf("put: %v", err)
+	}
+
+	server := &Server{Dir: dir, Name: "api", Epoch: "42.100", Deliver: func(context.Context, Message) Result {
+		t.Error("somebody else's message was handed to the session")
+		return Result{State: Delivered}
+	}}
+	serveUntil(t, server, func() bool {
+		status, ok := ReadStatus(dir, "api", old.ID)
+		return ok && status.State == Failed
+	})
+}
+
+// Two messages written one after the other are delivered in that order, even
+// when they land in the same millisecond: "do it" must not arrive before "here
+// is what to do".
+func TestOrderSurvivesTheSameMillisecond(t *testing.T) {
+	dir := stateDir(t)
+
+	var sent []Message
+	for _, text := range []string{"first", "second", "third"} {
+		one := message(text)
+		if err := Put(dir, one); err != nil {
+			t.Fatalf("put: %v", err)
+		}
+		sent = append(sent, one)
+	}
+
+	var order []string
+	server := &Server{Dir: dir, Name: "api", Deliver: func(_ context.Context, m Message) Result {
+		order = append(order, m.Text)
+		return Result{State: Delivered}
+	}}
+	serveUntil(t, server, func() bool {
+		status, ok := ReadStatus(dir, "api", sent[len(sent)-1].ID)
+		return ok && status.State == Delivered
+	})
+
+	if len(order) != 3 || order[0] != "first" || order[1] != "second" || order[2] != "third" {
+		t.Fatalf("delivered in the order %v, want them as they were written", order)
+	}
+}

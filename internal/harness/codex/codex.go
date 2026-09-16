@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/harness"
@@ -140,13 +141,13 @@ func (codexHarness) Deliver(ctx context.Context, session registry.Session, messa
 	}
 
 	// The session can change threads while the message is on its way: /new in
-	// the middle of this leaves the text queued for a conversation nobody is
-	// looking at. Saying so and trying again puts it where the agent is, at the
-	// price of a stray copy in the abandoned thread.
+	// the middle leaves the text queued for a conversation nobody is looking at.
+	// Queueing it again would put a copy in both, and a repeated instruction is
+	// worse than a missing one — so the sender is told instead, and decides.
 	if now, err := CurrentThread(session.HarnessPID, home); err == nil && now != thread {
 		return inbox.Result{
-			State:  inbox.Pending,
-			Detail: "the codex session started a new conversation while this was being queued; delivering again",
+			State:  inbox.Failed,
+			Detail: "the codex session started a new conversation while this was being queued; it went to the previous one. Send it again if it still applies",
 		}
 	}
 	return inbox.Result{State: inbox.Delivered, Via: "codex queue", Detail: pollNotice}
@@ -162,6 +163,19 @@ var queue = func(ctx context.Context, home, thread, text string) (string, error)
 	command := exec.CommandContext(ctx, "codex", "queue", "--thread", thread, "--message", text)
 	command.Env = append(os.Environ(), "CODEX_HOME="+home)
 	command.WaitDelay = 2 * time.Second
+	// Its own process group, so the deadline reaches whatever it started. The
+	// command may be a launcher, and killing only the launcher left a child that
+	// went on to queue the message after delivery had been reported failed.
+	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	command.Cancel = func() error {
+		if command.Process == nil {
+			return nil
+		}
+		if err := syscall.Kill(-command.Process.Pid, syscall.SIGKILL); err != nil {
+			return command.Process.Kill()
+		}
+		return nil
+	}
 
 	var output strings.Builder
 	command.Stdout, command.Stderr = &output, &output
@@ -217,24 +231,44 @@ func CurrentThread(harnessPID int, home string) (string, error) {
 	// never matches the prefix unless it is resolved here too. Without this the
 	// lock is found and rejected, and every message sits pending until it expires.
 	resolved := home
-	if link, err := filepath.EvalSymlinks(home); err == nil {
+	if absolute, err := filepath.Abs(resolved); err == nil {
+		// /proc reports absolute, resolved paths. A relative CODEX_HOME never
+		// matched, and every message sat pending until it expired.
+		resolved = absolute
+	}
+	if link, err := filepath.EvalSymlinks(resolved); err == nil {
 		resolved = link
 	}
 	prefix := filepath.Join(resolved, lockDir) + string(filepath.Separator)
 
-	// The session's own process is asked first. Its children may be Codex runs of
-	// their own — a tool calling `codex exec` — and their threads belong to them,
-	// not to the session somebody addressed.
-	processes := []int{harnessPID}
-	if thread, err := threadOf(processes, prefix); err == nil {
-		return thread, nil
-	}
+	// The search goes outwards one generation at a time and stops at the first
+	// one holding a thread. A child may be a Codex run of its own — a tool
+	// calling `codex exec` — and its thread belongs to it, not to the session
+	// somebody addressed. Taking the newest lock in the whole tree picked that
+	// nested run whenever the command was a launcher without a lock of its own.
+	generation := []int{harnessPID}
+	seen := map[int]bool{harnessPID: true}
+	for depth := 0; depth < 8 && len(generation) > 0; depth++ {
+		if thread, err := threadOf(generation, prefix); err == nil {
+			return thread, nil
+		}
 
-	processes, err := proc.Descendants(harnessPID)
-	if err != nil {
-		return "", fmt.Errorf("could not read the process tree of codex: %w", err)
+		var next []int
+		for _, pid := range generation {
+			children, err := proc.Children(pid)
+			if err != nil {
+				continue
+			}
+			for _, child := range children {
+				if !seen[child] {
+					seen[child] = true
+					next = append(next, child)
+				}
+			}
+		}
+		generation = next
 	}
-	return threadOf(processes, prefix)
+	return "", fmt.Errorf("codex has not opened a thread yet")
 }
 
 // threadOf picks the most recently touched thread lock held by these processes.
@@ -349,12 +383,24 @@ func writableRoots(home, dir string, args []string, layered bool) ([]string, boo
 // either spelling of the flag. Anything after "--" is input for the harness,
 // not a flag.
 func hasConfigKey(args []string, key string) bool {
-	for index, arg := range harness.BeforeTerminator(args) {
-		if arg != configFlag && arg != "--config" {
-			continue
-		}
-		if index+1 < len(args) && strings.HasPrefix(args[index+1], key+"=") {
-			return true
+	visible := harness.BeforeTerminator(args)
+	for index, arg := range visible {
+		// Both spellings, and both shapes: "-c key=value" and "--config=key=value"
+		// are the same instruction, and missing one of them means overriding a
+		// setting the caller had already made.
+		switch {
+		case arg == configFlag || arg == "--config":
+			if index+1 < len(visible) && strings.HasPrefix(visible[index+1], key+"=") {
+				return true
+			}
+		case strings.HasPrefix(arg, "--config="):
+			if strings.HasPrefix(strings.TrimPrefix(arg, "--config="), key+"=") {
+				return true
+			}
+		case strings.HasPrefix(arg, "-c") && len(arg) > 2:
+			if strings.HasPrefix(arg[2:], key+"=") {
+				return true
+			}
 		}
 	}
 	return false
@@ -365,7 +411,10 @@ func hasConfigKey(args []string, key string) bool {
 // replace something it never saw.
 func hasProfile(args []string) bool {
 	for _, arg := range harness.BeforeTerminator(args) {
-		if arg == "-p" || arg == "--profile" || strings.HasPrefix(arg, "--profile=") {
+		// Including the joined short form: "-pwork" selects a profile as surely
+		// as "-p work" does.
+		if arg == "-p" || arg == "--profile" || strings.HasPrefix(arg, "--profile=") ||
+			(strings.HasPrefix(arg, "-p") && len(arg) > 2) {
 			return true
 		}
 	}

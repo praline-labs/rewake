@@ -79,7 +79,10 @@ type Status struct {
 func NewID() string {
 	var tail [6]byte
 	_, _ = rand.Read(tail[:])
-	return fmt.Sprintf("%013d-%s", time.Now().UnixMilli(), hex.EncodeToString(tail[:]))
+	// Nanoseconds, not milliseconds: two messages written in the same
+	// millisecond would otherwise be ordered by the random tail, and a mailbox
+	// served in that order delivers "do it" before "here is what to do".
+	return fmt.Sprintf("%019d-%s", time.Now().UnixNano(), hex.EncodeToString(tail[:]))
 }
 
 // Put writes a message into the mailbox of its receiver.

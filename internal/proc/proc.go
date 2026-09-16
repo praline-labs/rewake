@@ -40,6 +40,9 @@ func Alive(pid int, startTime uint64) bool { return Default.Alive(pid, startTime
 // Descendants returns the process and everything below it.
 func Descendants(pid int) ([]int, error) { return Default.Descendants(pid) }
 
+// Children returns the direct children of a process.
+func Children(pid int) ([]int, error) { return Default.Children(pid) }
+
 // OpenFiles returns what the process holds open, resolved to paths.
 func OpenFiles(pid int) ([]string, error) { return Default.OpenFiles(pid) }
 
@@ -130,6 +133,27 @@ func (r Reader) Parent(pid int) (int, error) {
 		return 0, fmt.Errorf("stat line for pid %d has no parent field", pid)
 	}
 	return strconv.Atoi(fields[1])
+}
+
+// Children returns the processes whose parent is this one.
+func (r Reader) Children(pid int) ([]int, error) {
+	entries, err := os.ReadDir(r.Root)
+	if err != nil {
+		return nil, err
+	}
+	var out []int
+	for _, entry := range entries {
+		candidate, err := strconv.Atoi(entry.Name())
+		if err != nil {
+			continue
+		}
+		parent, err := r.Parent(candidate)
+		if err != nil || parent != pid {
+			continue
+		}
+		out = append(out, candidate)
+	}
+	return out, nil
 }
 
 // Descendants returns pid and every process below it, breadth first.
