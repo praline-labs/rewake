@@ -41,14 +41,20 @@ func TestCleanupLeavesTheNextOwnerAlone(t *testing.T) {
 		defer close(done)
 		deadline := time.Now().Add(3 * time.Second)
 		for time.Now().Before(deadline) {
-			if _, err := registry.Lookup(dir, "api"); err == nil {
-				// Put the successor's record in place the way a takeover does,
-				// while the old wrapper is still running and about to clean up.
-				// Written directly: Update now refuses to write over a record
-				// that belongs to somebody else, which is the neighbouring fix.
+			// Wait until the wrapper has finished writing its own record — it
+			// knows the harness pid then — so the takeover lands after that and
+			// before the cleanup, as it would in life.
+			if ours, err := registry.Load(dir, "api"); err == nil && ours.HarnessPID != 0 {
+				// Put the successor's record in place the way a takeover does:
+				// under the name lock. Written directly, because Publish would
+				// refuse a name whose holder is alive, and without the lock a
+				// write between the wrapper's own read and write was lost to it,
+				// which made this test fail one run in many.
 				encoded, marshalErr := json.MarshalIndent(successor, "", "  ")
 				if marshalErr == nil {
-					_ = state.WriteAtomic(state.SessionPath(dir, "api"), encoded)
+					_ = state.WithNameLock(dir, "api", func() error {
+						return state.WriteAtomic(state.SessionPath(dir, "api"), encoded)
+					})
 				}
 				return
 			}
