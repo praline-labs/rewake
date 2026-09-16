@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
@@ -60,17 +61,12 @@ func readAll(t *testing.T, dir, epoch string) []Message {
 	if err != nil {
 		t.Fatalf("PeekUnread: %v", err)
 	}
-	read := make([]Message, 0, len(messages))
 	for _, m := range messages {
-		moved, err := MarkRead(dir, "api", epoch, m)
-		if err != nil {
+		if err := MarkRead(dir, "api", epoch, m); err != nil {
 			t.Fatalf("MarkRead: %v", err)
 		}
-		if moved {
-			read = append(read, m)
-		}
 	}
-	return read
+	return messages
 }
 
 func TestReadingHandsEachMessageOnce(t *testing.T) {
@@ -84,9 +80,6 @@ func TestReadingHandsEachMessageOnce(t *testing.T) {
 	}
 	if again := readAll(t, dir, "5.5"); len(again) != 0 {
 		t.Fatalf("second read = %v, want nothing: a message is read once", again)
-	}
-	if moved, _ := MarkRead(dir, "api", "5.5", sent); moved {
-		t.Error("a second reader was told it moved a message already read")
 	}
 
 	status, ok := ReadStatus(dir, "api", sent.ID)
@@ -115,8 +108,9 @@ func TestReadingKeepsToItsOwnEpoch(t *testing.T) {
 }
 
 // Reading a message is what makes its sender wait for the end of the turn. A
-// finished notice or a reply is an answer, not a request: waiting on it would
-// have two sessions wake each other for nothing.
+// finished notice is an answer, not a request: waiting on it would have two
+// sessions report their turns to each other forever. An ordinary answer is not
+// exempt: it may carry a new request, and its sender is owed the report.
 func TestReadingRecordsWhoWaits(t *testing.T) {
 	dir := stateDir(t)
 	note := message("please look")
@@ -124,20 +118,23 @@ func TestReadingRecordsWhoWaits(t *testing.T) {
 	done := message("all green")
 	done.From, done.FromEpoch, done.Kind = "ops", "41.4", Finished
 	answer := message("42")
-	answer.From, answer.FromEpoch, answer.Reply = "dev", "42.4", true
+	answer.From, answer.FromEpoch = "dev", "42.4"
 	note.ToEpoch, done.ToEpoch, answer.ToEpoch = "5.5", "5.5", "5.5"
 	unread(t, dir, note, done, answer)
 
 	readAll(t, dir, "5.5")
 	waiting := Waiters(dir, "api", "5.5")
-	if len(waiting) != 1 || waiting[0] != (Waiter{Name: "web", Epoch: "40.4"}) {
-		t.Fatalf("waiting = %v, want only the run of web that sent the note", waiting)
+	want := []Waiter{{Name: "dev", Epoch: "42.4"}, {Name: "web", Epoch: "40.4"}}
+	if len(waiting) != 2 || waiting[0] != want[0] || waiting[1] != want[1] {
+		t.Fatalf("waiting = %v, want %v and nobody for the finished notice", waiting, want)
 	}
 	if other := Waiters(dir, "api", "6.6"); len(other) != 0 {
 		t.Errorf("another run of api sees waiters %v", other)
 	}
 
-	ClearAwaiting(dir, "api", "5.5", "web")
+	for _, waiter := range want {
+		ClearAwaiting(dir, "api", "5.5", waiter)
+	}
 	if waiting := Waiters(dir, "api", "5.5"); len(waiting) != 0 {
 		t.Errorf("waiting = %v after clearing, want nobody", waiting)
 	}
@@ -184,5 +181,75 @@ func TestNoticeGoesOutOnceTheMessageIsReadable(t *testing.T) {
 	})
 	if !seen {
 		t.Error("the notice went out before the message could be read")
+	}
+}
+
+// A message linked for an earlier attempt can be read before the next notice
+// goes out. The read stands: the task is not announced, or handed out, again.
+func TestAReadDuringAPendingNoticeStands(t *testing.T) {
+	dir := stateDir(t)
+	sent := message("execute once")
+	sent.ToEpoch = "5.5"
+	if err := Put(dir, sent); err != nil {
+		t.Fatalf("Put: %v", err)
+	}
+	reads, notices := 0, 0
+	server := &Server{Dir: dir, Name: "api", Epoch: "5.5", attempts: map[string]time.Time{}, outcomes: map[string]Result{}}
+	server.Deliver = func(context.Context, Message) Result {
+		notices++
+		reads += len(readAll(t, dir, "5.5"))
+		return Result{State: Pending, Detail: "queue not ready"}
+	}
+
+	server.drain(context.Background())
+	server.attempts[sent.ID] = time.Now().Add(-2 * retryInterval)
+	server.drain(context.Background())
+
+	if reads != 1 || notices != 1 {
+		t.Errorf("reads = %d, notices = %d; want the task read once and announced once", reads, notices)
+	}
+	if status, _ := ReadStatus(dir, "api", sent.ID); status.State != Read {
+		t.Errorf("status = %s, want read", status.State)
+	}
+}
+
+// Whatever the harness says after the agent has read the message — even that
+// the notice failed — the message was read, and its sender must hear that.
+func TestAReadIsNotUndoneByTheNoticeResult(t *testing.T) {
+	for _, outcome := range []State{Failed, Delivered} {
+		t.Run(string(outcome), func(t *testing.T) {
+			dir := stateDir(t)
+			sent := message("already acted on")
+			if err := Put(dir, sent); err != nil {
+				t.Fatalf("Put: %v", err)
+			}
+			server := &Server{Dir: dir, Name: "api", attempts: map[string]time.Time{}, outcomes: map[string]Result{}}
+			server.Deliver = func(context.Context, Message) Result {
+				readAll(t, dir, "")
+				return Result{State: outcome, Detail: "said after the read"}
+			}
+			server.drain(context.Background())
+			if status, _ := ReadStatus(dir, "api", sent.ID); status.State != Read {
+				t.Errorf("status = %s, want read", status.State)
+			}
+		})
+	}
+}
+
+// Clearing the report owed to an ended run of a name must not clear the one
+// owed to the run that wrote since.
+func TestClearingAnOldRunKeepsTheNewOne(t *testing.T) {
+	dir := stateDir(t)
+	if err := markAwaiting(dir, "api", "5.5", "web", "40.4"); err != nil {
+		t.Fatalf("markAwaiting: %v", err)
+	}
+	old := Waiters(dir, "api", "5.5")[0]
+	if err := markAwaiting(dir, "api", "5.5", "web", "41.4"); err != nil {
+		t.Fatalf("markAwaiting: %v", err)
+	}
+
+	ClearAwaiting(dir, "api", "5.5", old)
+	if remaining := Waiters(dir, "api", "5.5"); len(remaining) != 1 || remaining[0].Epoch != "41.4" {
+		t.Errorf("waiting = %v, want the newer run of web still owed", remaining)
 	}
 }

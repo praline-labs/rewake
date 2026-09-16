@@ -42,20 +42,33 @@ func handleInbox(ctx *Context, call Call) error {
 		return failf("%v; its mail cannot be read", err)
 	}
 
-	messages, err := inbox.PeekUnread(dir, session.Name, epoch)
-	if err != nil {
-		return failf("could not read the inbox of %s: %v", session.Name, err)
-	}
-
-	if err := writeInbox(ctx, inboxModel{Session: session.Name, Messages: messages}); err != nil {
-		return failf("could not print the messages, so none were marked read: %v", err)
-	}
-	for _, message := range messages {
-		if _, err := inbox.MarkRead(dir, session.Name, epoch, message); err != nil {
-			return failf("the messages were shown, but recording that failed: %v", err)
+	// Held from looking to marking. Two readers at once — parallel tool calls,
+	// a command run again while the first still prints — would otherwise both
+	// show the same task, and the server must not record a delivery over a read
+	// that is half done.
+	var failure error
+	err = state.WithMailboxLock(dir, session.Name, func() error {
+		messages, err := inbox.PeekUnread(dir, session.Name, epoch)
+		if err != nil {
+			failure = failf("could not read the inbox of %s: %v", session.Name, err)
+			return nil
 		}
+		if err := writeInbox(ctx, inboxModel{Session: session.Name, Messages: messages}); err != nil {
+			failure = failf("could not print the messages, so none were marked read: %v", err)
+			return nil
+		}
+		for _, message := range messages {
+			if err := inbox.MarkRead(dir, session.Name, epoch, message); err != nil {
+				failure = failf("the messages were shown, but recording that failed, so they stay unread and show again next time: %v", err)
+				return nil
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return failf("could not lock the inbox of %s: %v", session.Name, err)
 	}
-	return nil
+	return failure
 }
 
 // writeInbox prints the messages and reports whether the output got through.

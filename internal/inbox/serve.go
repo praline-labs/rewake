@@ -162,10 +162,24 @@ func (s *Server) drain(ctx context.Context) {
 		}
 
 		// Readable first, announced second: an agent that runs rewake inbox the
-		// moment it is told has to find the message there.
-		if err := linkUnread(s.Dir, s.Name, message.ID); err != nil {
+		// moment it is told has to find the message there. A message linked on an
+		// earlier attempt may have been read since; then there is nothing left
+		// to announce.
+		read := false
+		err := state.WithMailboxLock(s.Dir, s.Name, func() error {
+			if status, ok := ReadStatus(s.Dir, s.Name, message.ID); ok && status.State == Read {
+				read = true
+				return nil
+			}
+			return linkUnread(s.Dir, s.Name, message.ID)
+		})
+		if read {
+			s.finish(message, Result{State: Read})
+			continue
+		}
+		if err != nil {
 			s.attempts[message.ID] = time.Now()
-			_ = writeStatus(s.Dir, s.Name, message.ID, Result{
+			s.record(message.ID, Result{
 				State:  Pending,
 				Detail: "the message could not be made readable yet: " + err.Error(),
 			})
@@ -177,8 +191,11 @@ func (s *Server) drain(ctx context.Context) {
 		s.attempts[message.ID] = time.Now()
 		if result.State == Pending {
 			// A pending result is written too: a sender that is waiting should
-			// learn the reason now, not when the message finally lands.
-			_ = writeStatus(s.Dir, s.Name, message.ID, result)
+			// learn the reason now, not when the message finally lands. The
+			// agent may have read it meanwhile, and that outcome stands.
+			if s.record(message.ID, result) == Read {
+				s.finish(message, Result{State: Read})
+			}
 			continue
 		}
 		s.finish(message, result)
@@ -210,10 +227,41 @@ func (s *Server) publish(id string, result Result) {
 	}
 	s.attempts[id] = time.Now()
 
-	if err := writeStatus(s.Dir, s.Name, id, result); err != nil {
-		return
+	_ = state.WithMailboxLock(s.Dir, s.Name, func() error {
+		outcome, err := s.recordLocked(id, result)
+		if err != nil {
+			return err
+		}
+		settle(s.Dir, s.Name, id, outcome)
+		return nil
+	})
+}
+
+// record writes what delivery did, unless the agent has read the message
+// already, and returns the outcome that stands.
+func (s *Server) record(id string, result Result) State {
+	var outcome State
+	_ = state.WithMailboxLock(s.Dir, s.Name, func() error {
+		var err error
+		outcome, err = s.recordLocked(id, result)
+		return err
+	})
+	return outcome
+}
+
+// recordLocked is record under a lock the caller holds. Read is final: the
+// agent has the text, so whatever the harness said about the notice afterwards
+// — pending, failed, even delivered — must not undo that, or the task is handed
+// out again or its sender told it was refused.
+func (s *Server) recordLocked(id string, result Result) (State, error) {
+	if current, ok := ReadStatus(s.Dir, s.Name, id); ok && current.State == Read {
+		s.outcomes[id] = Result{State: Read, Via: current.Via}
+		return Read, nil
 	}
-	settle(s.Dir, s.Name, id, result.State)
+	if err := writeStatus(s.Dir, s.Name, id, result); err != nil {
+		return "", err
+	}
+	return result.State, nil
 }
 
 // removeWaiting drops the waiting copy of an announced message; replaceable in
@@ -248,7 +296,10 @@ func (s *Server) alreadySettled(message Message) bool {
 		return false
 	}
 	s.outcomes[message.ID] = Result{State: status.State, Via: status.Via, Detail: status.Detail}
-	settle(s.Dir, s.Name, message.ID, status.State)
+	_ = state.WithMailboxLock(s.Dir, s.Name, func() error {
+		settle(s.Dir, s.Name, message.ID, status.State)
+		return nil
+	})
 	return true
 }
 

@@ -231,15 +231,26 @@ one line rather than a pasted block.
    stdin). Extra positional arguments are the error "Quote the text as one
    argument".
 2. Look up a live session; if there's none, fail and list the live names.
-3. The message: `{"id","from","to","toEpoch","kind","reply","text","createdAt"}`.
+3. The message: `{"id","from","fromEpoch","to","toEpoch","kind","text","createdAt"}`.
    `id` is time-sortable (nanosecond timestamp plus a random tail). `from` is
    `REWAKE_SESSION` or `shell`, and `fromEpoch` its run — both only when the
-   run in `REWAKE_EPOCH` still holds the name. `kind` is `notify`, or `question` with
-   `--question`. `reply` is set when the recipient was waiting for the end of
-   the sender's turn (below): the message answers it.
+   run in `REWAKE_EPOCH` still holds the name. `kind` is `notify`, or
+   `question` with `--question`. Sending settles nothing the sender owes the
+   recipient: a message sent mid-turn is not the end of the turn.
 4. Write `inbox/<name>/<id>.json.tmp`, rename it to `.json`.
 5. Wait for `.status` up to `--wait` (5 seconds by default) and print the
    result. `delivered` means the notice went out; `read` counts as delivered.
+
+### One lock per mailbox
+
+The server, `rewake inbox`, and `turn-ended` are separate processes acting on
+the same messages and waiters. Every change of state happens under the
+mailbox's `flock` (`inbox/<name>/.lock`): making a message readable, recording
+what delivery did, reading, and reporting a turn. The call into the harness is
+not under it — `codex queue` can take seconds — so a message can be read while
+its notice is on the way. For that, `read` is final: whatever the harness says
+afterwards, the status stays `read` and the message is not linked or announced
+again. The Codex sandbox allows `flock` on files in `/tmp`.
 
 ### Servicing process (the wrapper)
 
@@ -315,23 +326,28 @@ message goes to the current thread, not the one from when the session started.
 ### Reading (`rewake inbox`)
 
 Run by the agent inside its session: `REWAKE_SESSION` names the mailbox and
-`REWAKE_EPOCH` the run; a run that no longer holds the name is refused, and
-mail for an earlier run is not shown. The text is printed first, and only once
-the output got through is each message moved to `done/` and its status set to
-`read` — a message marked first and lost on the way would be gone; shown twice,
-it is merely shown twice. The sender run of every message read, unless the
-message is a reply or a `finished` notice or has no `fromEpoch`, is recorded in
-`awaiting/<own epoch>/`.
+`REWAKE_EPOCH` the run. A run that no longer holds the name is refused, and so
+is a process with a name and no run — by its name alone, a leftover of an ended
+session cannot be told from the current one. Mail for an earlier run is not
+shown.
+
+Under the mailbox lock, the text is printed first. Only once the output got
+through is each message recorded: its sender run in `awaiting/<own epoch>/`
+(unless it is a `finished` notice or has no `fromEpoch`), then the `read`
+status, then the move to `done/`, which is the commit. A failure at any step
+leaves the message unread, and the next `inbox` shows and records it again.
+Two readers at once are serialized: the second finds nothing new.
 
 ### The end of a turn
 
 When a turn ends, the harness runs `rewake turn-ended` — a Stop hook in Claude
 Code, the notify program in Codex — with the last reply of the turn in its
 payload (`last_assistant_message` on stdin, `last-assistant-message` as the last
-argument). For every run in `awaiting/<own epoch>/` it leaves a `finished`
-message whose text is that reply, addressed to that run — not to whoever holds
-the name now — and forgets the waiter only once the message is written. A waiter
-whose run has ended is forgotten without a message. A payload that does not
+argument). Under the mailbox lock, for every run in `awaiting/<own epoch>/` it
+leaves a `finished` message whose text is that reply, addressed to that run —
+not to whoever holds the name now — and forgets the waiter only once the message
+is written, and only if the waiter still names that run. A waiter whose run has
+ended is forgotten without a message. A payload that does not
 arrive within three seconds is treated as no payload. Their wrappers announce it:
 `rewake: cx finished, 1 new message`.
 
@@ -339,13 +355,17 @@ The hook only records; waking is the recipient wrapper's job, through the same
 notice as any message. A hook cannot wake anything out of deep idle, and it
 runs while its own session is still awake anyway.
 
-Three rules keep this from turning into a loop:
+Two rules keep this from turning into a loop:
 
 - reading a `finished` notice asks for nothing back;
-- a message sent to a run that is waiting for this turn is a `reply`, clears
-  the wait once written, and reading it asks for nothing back — the answer says
-  more than a notice that the turn ended;
 - each waiting run is told once; a new run of the name starts with no waiters.
+
+So an exchange ends: A writes to B; B reads, answers, ends its turn and reports
+to A; A reads both, ends its turn and reports to B; B reads the report, which
+asks for nothing, and the exchange is over. The cost is that last wake of B. An
+earlier version spared it by treating any message to a waiting run as the
+answer, and lost the report whenever that message was a new request or a note
+sent mid-turn.
 
 `turn-ended` is hidden from the guide and never fails loudly: it runs inside the
 harness's own machinery, where an error is noise at best.

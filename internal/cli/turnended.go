@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"strings"
@@ -58,32 +59,44 @@ func handleTurnEnded(_ *Context, call Call) error {
 		reply = silentEnd
 	}
 
-	for _, waiter := range inbox.Waiters(dir, self.Name, epoch) {
-		peer, err := registry.Lookup(dir, waiter.Name)
-		if err != nil || peer.Epoch() != waiter.Epoch {
-			// The run that wrote has ended, whether or not its name lives on:
-			// nobody is left to tell.
-			if err == nil || err == registry.ErrNotFound {
-				inbox.ClearAwaiting(dir, self.Name, epoch, waiter.Name)
+	// Under the mailbox lock, so two ends of a turn reported at once tell each
+	// waiter once, and a waiter recorded by a read in the meantime is not taken
+	// for the one reported.
+	_ = state.WithMailboxLock(dir, self.Name, func() error {
+		waiters := inbox.Waiters(dir, self.Name, epoch)
+		beforeReports()
+		for _, waiter := range waiters {
+			peer, err := registry.Lookup(dir, waiter.Name)
+			if err != nil || peer.Epoch() != waiter.Epoch {
+				// The run that wrote has ended, whether or not its name lives
+				// on: nobody is left to tell.
+				if err == nil || errors.Is(err, registry.ErrNotFound) {
+					inbox.ClearAwaiting(dir, self.Name, epoch, waiter)
+				}
+				continue
 			}
-			continue
+			err = inbox.Put(dir, inbox.Message{
+				ID:        inbox.NewID(),
+				From:      self.Name,
+				FromEpoch: epoch,
+				To:        peer.Name,
+				ToEpoch:   waiter.Epoch,
+				Kind:      inbox.Finished,
+				Text:      reply,
+				CreatedAt: time.Now(),
+			})
+			if err == nil {
+				inbox.ClearAwaiting(dir, self.Name, epoch, waiter)
+			}
 		}
-		err = inbox.Put(dir, inbox.Message{
-			ID:        inbox.NewID(),
-			From:      self.Name,
-			FromEpoch: epoch,
-			To:        peer.Name,
-			ToEpoch:   waiter.Epoch,
-			Kind:      inbox.Finished,
-			Text:      reply,
-			CreatedAt: time.Now(),
-		})
-		if err == nil {
-			inbox.ClearAwaiting(dir, self.Name, epoch, waiter.Name)
-		}
-	}
+		return nil
+	})
 	return nil
 }
+
+// beforeReports runs between reading the waiters and reporting to them. It
+// does nothing; a test widens that window through it.
+var beforeReports = func() {}
 
 // readPayload reads stdin, but not forever, and never from a person.
 func readPayload(input *os.File) []byte {

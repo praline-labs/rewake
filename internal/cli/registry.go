@@ -97,7 +97,7 @@ func buildGroups() {
 				Notes: []string{
 					"Run it when a \"rewake: <session> <kind>\" line says messages are waiting.",
 					"A finished message is sent by the system, not typed: it says a session you wrote to has ended its turn, and carries its last reply.",
-					"Reading a message tells its sender when your turn ends, unless you answer it with rewake send first.",
+					"Reading a message tells its sender when your turn ends, with your last reply, even if you also wrote to it.",
 				},
 				Handler: handleInbox,
 			},

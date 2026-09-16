@@ -1,12 +1,15 @@
 package cli
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -214,22 +217,145 @@ func TestTurnEndDoesNotWaitOnAnOpenPipe(t *testing.T) {
 	}
 }
 
-// A direct answer that could not be written leaves the report owed.
-func TestAFailedAnswerKeepsTheWait(t *testing.T) {
+// Recording a read can fail after the text was shown. The message then stays
+// unread, and the report its sender is owed is recorded on the next read.
+func TestAFailedReadRecordIsRetried(t *testing.T) {
+	dir := liveSession(t, "api")
+	web := otherRun(t, dir, "web")
+	t.Setenv(state.SessionEnv, "api")
+	rawUnread(t, dir, "api", map[string]any{"from": "web", "fromEpoch": web.Epoch(), "toEpoch": epochOf(t, dir, "api"), "text": "report back"})
+
+	blocked := state.AwaitingPath(dir, "api")
+	if err := os.WriteFile(blocked, nil, 0o600); err != nil {
+		t.Fatalf("block: %v", err)
+	}
+	if code, _, _ := run("inbox"); code == ExitOK {
+		t.Error("inbox reported success although the read could not be recorded")
+	}
+	if err := os.Remove(blocked); err != nil {
+		t.Fatalf("unblock: %v", err)
+	}
+	if _, out, _ := run("inbox"); !strings.Contains(out, "report back") {
+		t.Errorf("second read = %q, want the message shown again", out)
+	}
+
+	run("turn-ended", turnPayload)
+	if found := finishedFor(t, dir, "web"); len(found) != 1 {
+		t.Errorf("web holds %v, want the report it was owed", found)
+	}
+}
+
+func TestAFailedReadStatusIsReported(t *testing.T) {
+	dir := liveSession(t, "api")
+	t.Setenv(state.SessionEnv, "api")
+	id := rawUnread(t, dir, "api", map[string]any{"from": "web", "toEpoch": epochOf(t, dir, "api"), "text": "task"})
+	if err := os.Mkdir(filepath.Join(state.InboxPath(dir, "api"), id+".status"), 0o700); err != nil {
+		t.Fatalf("block: %v", err)
+	}
+
+	if code, _, _ := run("inbox"); code == ExitOK {
+		t.Error("inbox reported success although the read status could not be written")
+	}
+	if _, err := os.Stat(filepath.Join(state.UnreadPath(dir, "api"), id+".json")); err != nil {
+		t.Errorf("the message left the unread set: %v", err)
+	}
+}
+
+// A process with a session name and no run cannot be told from a leftover of
+// an ended session, so it reads nothing.
+func TestInboxWithoutARunIsRefused(t *testing.T) {
+	dir := liveSession(t, "api")
+	t.Setenv(state.SessionEnv, "api")
+	t.Setenv(epochEnv, "")
+	rawUnread(t, dir, "api", map[string]any{"from": "web", "toEpoch": epochOf(t, dir, "api"), "text": "for the current run"})
+
+	code, out, _ := run("inbox")
+	if code == ExitOK || strings.Contains(out, "for the current run") {
+		t.Errorf("exit = %d, out = %q; a process without a run read the mail", code, out)
+	}
+}
+
+// gate is a writer that holds the first write until released.
+type gate struct {
+	mu       sync.Mutex
+	output   bytes.Buffer
+	entered  chan struct{}
+	release  chan struct{}
+	waitOnce sync.Once
+}
+
+func (g *gate) Write(data []byte) (int, error) {
+	g.waitOnce.Do(func() {
+		close(g.entered)
+		<-g.release
+	})
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.output.Write(data)
+}
+
+func (g *gate) String() string {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.output.String()
+}
+
+// Two readers at once — parallel tool calls, or a command run again while the
+// first still prints — must not both be handed the same task.
+func TestTwoReadersAtOnceShowATaskOnce(t *testing.T) {
+	dir := liveSession(t, "api")
+	t.Setenv(state.SessionEnv, "api")
+	rawUnread(t, dir, "api", map[string]any{"from": "web", "toEpoch": epochOf(t, dir, "api"), "text": "execute once"})
+
+	first := &gate{entered: make(chan struct{}), release: make(chan struct{})}
+	second := &gate{entered: make(chan struct{}), release: make(chan struct{})}
+	close(second.release)
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() { defer wg.Done(); Run([]string{"inbox"}, first, io.Discard) }()
+	<-first.entered
+	go func() { defer wg.Done(); Run([]string{"inbox"}, second, io.Discard) }()
+	// The second reader gets as far as it can while the first is mid-print.
+	time.Sleep(300 * time.Millisecond)
+	close(first.release)
+	wg.Wait()
+
+	copies := strings.Count(first.String()+second.String(), "execute once")
+	if copies != 1 {
+		t.Errorf("the task was shown %d times: first %q, second %q", copies, first.String(), second.String())
+	}
+}
+
+// Two ends of a turn reported at once — a hook run twice — tell each waiter once.
+func TestTwoTurnEndsAtOnceReportOnce(t *testing.T) {
 	dir := liveSession(t, "api")
 	web := otherRun(t, dir, "web")
 	readFrom(t, dir, web)
 
-	mailbox := state.InboxPath(dir, "web")
-	_ = os.RemoveAll(mailbox)
-	if err := os.WriteFile(mailbox, nil, 0o600); err != nil {
-		t.Fatalf("block: %v", err)
+	second := make(chan struct{})
+	first := true
+	previous := beforeReports
+	beforeReports = func() {
+		if !first {
+			return
+		}
+		first = false
+		go func() {
+			run("turn-ended", turnPayload)
+			close(second)
+		}()
+		// Give the second call every chance to get through first.
+		select {
+		case <-second:
+		case <-time.After(300 * time.Millisecond):
+		}
 	}
-	if code, _, _ := run("send", "web", "green", "--wait", "0"); code == ExitOK {
-		t.Fatal("send succeeded into a mailbox that cannot exist")
-	}
-	current, _ := registry.Lookup(dir, "api")
-	if waiting := inboxWaiters(dir, current.Epoch()); len(waiting) != 1 {
-		t.Errorf("waiting = %v after a failed answer, want web still owed", waiting)
+	t.Cleanup(func() { beforeReports = previous })
+
+	run("turn-ended", turnPayload)
+	<-second
+	if found := finishedFor(t, dir, "web"); len(found) != 1 {
+		t.Errorf("web holds %d reports, want one", len(found))
 	}
 }

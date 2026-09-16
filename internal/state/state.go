@@ -237,7 +237,23 @@ func PublishExclusive(path string, data []byte) error {
 // The lock is an open file plus flock, so it is released even if the process is
 // killed, and a leftover lock file locks nothing.
 func WithNameLock(dir, name string, fn func() error) error {
-	path := filepath.Join(SessionsPath(dir), "."+name+".lock")
+	return withLock(filepath.Join(SessionsPath(dir), "."+name+".lock"), "the name "+name, fn)
+}
+
+// WithMailboxLock runs fn while holding the lock of one mailbox. Every change to
+// a message's state — making it readable, recording what delivery did, reading
+// it, reporting a turn — happens under it: those are separate processes, and
+// two of them acting on the same message at once is how a read task was handed
+// out a second time. The lock is not reentrant: fn must not take it again.
+func WithMailboxLock(dir, name string, fn func() error) error {
+	mailbox := InboxPath(dir, name)
+	if err := EnsureSubdir(mailbox); err != nil {
+		return err
+	}
+	return withLock(filepath.Join(mailbox, ".lock"), "the mailbox of "+name, fn)
+}
+
+func withLock(path, what string, fn func() error) error {
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
 	if err != nil {
 		return err
@@ -245,7 +261,7 @@ func WithNameLock(dir, name string, fn func() error) error {
 	defer file.Close()
 
 	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX); err != nil {
-		return fmt.Errorf("could not lock the name %q: %w", name, err)
+		return fmt.Errorf("could not lock %s: %w", what, err)
 	}
 	defer syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
 

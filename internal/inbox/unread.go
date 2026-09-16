@@ -64,27 +64,31 @@ func PeekUnread(dir, name, epoch string) ([]Message, error) {
 	return mine, nil
 }
 
-// MarkRead records that a message was read by this run of the session. It
-// reports false when the message had already left unread/, which happens only
-// when two readers raced for it.
-func MarkRead(dir, name, epoch string, message Message) (bool, error) {
-	if err := move(message.ID, state.UnreadPath(dir, name), state.DonePath(dir, name)); err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return false, nil
-		}
-		return false, err
-	}
-	_ = writeStatus(dir, name, message.ID, Result{State: Read})
-	// A finished notice or a reply is an answer already, and waiting on it would
-	// have two sessions wake each other for nothing. A sender without a run of
-	// its own — a shell, or mail from before runs were recorded — has nowhere a
-	// report could go.
-	if KindOf(message) != Finished && !message.Reply && message.FromEpoch != "" {
+// MarkRead records that this run of the session has read a message. The caller
+// holds the mailbox lock and has already shown the text.
+//
+// Everything reading implies is written before the message leaves unread/, and
+// leaving it is the last step. A failure anywhere keeps the message unread, so
+// the next read shows it again and records it again; the other order lost the
+// report its sender was owed.
+func MarkRead(dir, name, epoch string, message Message) error {
+	// A finished notice is an answer already, and waiting on it would have two
+	// sessions report their turns to each other forever. A sender without a run
+	// of its own — a shell, or mail from before runs were recorded — has nowhere
+	// a report could go.
+	if KindOf(message) != Finished && message.FromEpoch != "" {
 		if err := markAwaiting(dir, name, epoch, message.From, message.FromEpoch); err != nil {
-			return true, err
+			return err
 		}
 	}
-	return true, nil
+	if err := writeStatus(dir, name, message.ID, Result{State: Read}); err != nil {
+		return err
+	}
+	err := move(message.ID, state.UnreadPath(dir, name), state.DonePath(dir, name))
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	return err
 }
 
 // Waiter is a session run waiting for the end of this turn.
@@ -144,23 +148,21 @@ func Waiters(dir, name, epoch string) []Waiter {
 	return waiters
 }
 
-// Awaits reports whether this run owes a report to the given run of a session.
-func Awaits(dir, name, epoch string, peer Waiter) bool {
-	for _, waiter := range Waiters(dir, name, epoch) {
-		if waiter == peer {
-			return true
-		}
-	}
-	return false
-}
-
-// ClearAwaiting forgets a waiter, once it has been answered or reported to.
-func ClearAwaiting(dir, name, epoch, peer string) {
+// ClearAwaiting forgets a waiter once it has been reported to, or once its run
+// has ended. Only that run is forgotten: a newer run of the same name that
+// wrote in the meantime is still owed its report. The caller holds the mailbox
+// lock, which is what keeps the check and the removal together.
+func ClearAwaiting(dir, name, epoch string, peer Waiter) {
 	path, ok := awaitingPath(dir, name, epoch)
-	if !ok || !state.ValidName(peer) {
+	if !ok || !state.ValidName(peer.Name) {
 		return
 	}
-	_ = os.Remove(filepath.Join(path, peer))
+	file := filepath.Join(path, peer.Name)
+	raw, err := os.ReadFile(file)
+	if err != nil || strings.TrimSpace(string(raw)) != peer.Epoch {
+		return
+	}
+	_ = os.Remove(file)
 }
 
 // sweepAwaiting forgets what earlier runs of this name were waited on for.

@@ -41,10 +41,6 @@ type Message struct {
 	// names: a plain note, a question waiting for an answer, or the end of the
 	// sender's turn.
 	Kind Kind `json:"kind,omitempty"`
-	// Reply marks an answer to a message the receiver sent. Reading an answer
-	// does not ask for a report back: the conversation already went both ways,
-	// and a report would wake the receiver for nothing.
-	Reply bool `json:"reply,omitempty"`
 	// Text is what the receiving agent will read.
 	Text string `json:"text"`
 	// CreatedAt is when the sender wrote it.

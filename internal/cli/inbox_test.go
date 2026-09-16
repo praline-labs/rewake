@@ -115,22 +115,20 @@ func TestTurnEndTellsTheSessionsThatWrote(t *testing.T) {
 	}
 }
 
-func TestTurnEndAfterAnAnswerSaysNothing(t *testing.T) {
+// A direct message does not settle what a turn owes: it may be a note sent
+// mid-turn or a new request, and the other side still waits for the end.
+func TestTurnEndReportsEvenAfterADirectMessage(t *testing.T) {
 	dir := liveSession(t, "api")
 	web := otherRun(t, dir, "web")
 	t.Setenv(state.SessionEnv, "api")
 	leaveUnread(t, dir, inbox.Message{From: "web", FromEpoch: web.Epoch(), To: "api", ToEpoch: epochOf(t, dir, "api"), Text: "rerun the smoke"})
 	run("inbox")
-	run("send", "web", "green", "--wait", "0")
+	run("send", "web", "started", "--wait", "0")
 
 	run("turn-ended", turnPayload)
 	waiting, _ := filepath.Glob(filepath.Join(state.InboxPath(dir, "web"), "*.json"))
-	if len(waiting) != 1 {
-		t.Fatalf("web holds %d messages, want only the direct answer", len(waiting))
-	}
-	raw, _ := os.ReadFile(waiting[0])
-	if !strings.Contains(string(raw), `"reply": true`) {
-		t.Errorf("answer = %s, want it marked as a reply", raw)
+	if len(waiting) != 2 {
+		t.Errorf("web holds %d messages, want the note and the report", len(waiting))
 	}
 }
 
@@ -175,8 +173,4 @@ func TestInternalCommandsStayOutOfTheGuide(t *testing.T) {
 	if !strings.Contains(out, "rewake inbox") {
 		t.Error("the guide does not say how to read a message")
 	}
-}
-
-func inboxWaiters(dir, epoch string) []inbox.Waiter {
-	return inbox.Waiters(dir, "api", epoch)
 }

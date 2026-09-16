@@ -342,6 +342,8 @@ func liveSession(t *testing.T, name string) string {
 	if err := registry.Publish(resolved, session); err != nil {
 		t.Fatalf("publish: %v", err)
 	}
+	// A process of the session carries its run, as one started by the wrapper does.
+	t.Setenv(state.EpochEnv, session.Epoch())
 	return resolved
 }
 

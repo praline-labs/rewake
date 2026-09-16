@@ -90,24 +90,18 @@ func handleSend(ctx *Context, call Call) error {
 		CreatedAt: time.Now(),
 	}
 	// Signed with this session's name and run only when both are known to be
-	// current: an answer then reaches this run, and a process left over from an
+	// current: a report then reaches this run, and a process left over from an
 	// earlier run cannot speak for the next one.
-	self, epoch, selfErr := ownRun(dir)
-	peer := inbox.Waiter{Name: session.Name, Epoch: session.Epoch()}
-	if selfErr == nil {
+	//
+	// Writing to a session does not settle what this one owes it. A message
+	// sent mid-turn — "started", or a new task in answer to "ready" — is not the
+	// end of the turn, and taking it for one lost the report the other side was
+	// waiting for.
+	if self, epoch, err := ownRun(dir); err == nil {
 		message.From, message.FromEpoch = self.Name, epoch
-		// Writing to a session that waits for this turn answers it: the answer
-		// says more than a notice that the turn ended, and reading it must not
-		// ask for a notice back.
-		message.Reply = inbox.Awaits(dir, self.Name, epoch, peer)
 	}
 	if err := inbox.Put(dir, message); err != nil {
 		return failf("could not write the message into the mailbox of %s: %v", session.Name, err)
-	}
-	if message.Reply {
-		// Forgotten only once the answer is written: a failed write leaves the
-		// report owed.
-		inbox.ClearAwaiting(dir, self.Name, epoch, peer.Name)
 	}
 
 	status, known := inbox.Await(dir, session.Name, message.ID, wait)

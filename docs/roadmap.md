@@ -336,6 +336,39 @@ Five tests were passing for the wrong reason — blocking `done/`, which a
 delivered message no longer goes to, or measuring after the server stopped —
 and now fail when the step they name is broken.
 
+## Review round seven — done, September 16, 2026
+
+The first round Codex ran as a rewake session, and so the first with write
+access to `/tmp`: every finding came with a run. Six: one High, five Medium.
+Five of them were one cause — the server, `rewake inbox`, `turn-ended` and
+`send` each changing the same message or waiter with nothing ordering them —
+and each round's fix had moved the race rather than removed it.
+
+- **A read undone by the notice result.** A message linked before its notice
+  could be read while `codex queue` ran; a pending result then relinked it and
+  handed the task out again, a failed one reported a read message as refused.
+- **Two readers showed one task**, since printing moved ahead of marking.
+- **Two ends of a turn reported twice**, since waiters were no longer taken
+  before reporting.
+- **Clearing an ended run's wait cleared the new run's** of the same name.
+- **A failed read record lost the owed report**: the message was in `done/`
+  before its waiter was written.
+- **A process with no `REWAKE_EPOCH` was given the current run.**
+
+Fixed at the cause: one `flock` per mailbox for every change of state, with the
+harness call left outside it; `read` as a final status; the move to `done/` as
+the last step of reading; clearing a waiter only if it still names the run
+reported to; and no run, no access.
+
+The owner found a seventh by using it: a task sent to Codex in answer to its
+"ready" went out marked as a reply, so Codex's report never came. The reply
+mark is gone, and so is clearing a wait on a direct message — both lost reports
+that were owed. One more wake per exchange is the price.
+
+The pre-link check for a read that landed between the unlocked status check and
+the lock has no test of its own: that window cannot be reached without a hook
+in the server.
+
 ## Review round five — open, September 16, 2026
 
 Run against `1d276de`, asked "what did these fixes break" rather than "is it

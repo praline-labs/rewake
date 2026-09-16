@@ -12,6 +12,10 @@ import (
 // errNotASession means this process was not started by a rewake wrapper.
 var errNotASession = errors.New("this shell is not part of a rewake session")
 
+// errNoRun means the process has a session name but no run: its wrapper came
+// from a version that did not pass one down.
+var errNoRun = errors.New("this shell was started by an older rewake that did not record which run it belongs to; restart the session")
+
 // errEarlierRun means the name now belongs to a later run than this process.
 var errEarlierRun = errors.New("this shell belongs to a session that has ended; its name is used by another one now")
 
@@ -19,8 +23,9 @@ var errEarlierRun = errors.New("this shell belongs to a session that has ended; 
 //
 // The name comes from the environment, and so does the run. A name outlives its
 // session, and a process left behind by one run — a background job, a stray
-// shell — would otherwise read and answer for the next. A wrapper from before
-// runs were passed down sets no epoch; its record's epoch is taken then.
+// shell — would otherwise read and answer for the next. A process without a run
+// is refused rather than given the current one: by its name alone, a leftover
+// from an ended session cannot be told from the session that holds it now.
 func ownRun(dir string) (registry.Session, string, error) {
 	name := os.Getenv(state.SessionEnv)
 	if name == "" {
@@ -35,7 +40,7 @@ func ownRun(dir string) (registry.Session, string, error) {
 	}
 	epoch := os.Getenv(state.EpochEnv)
 	if epoch == "" {
-		return session, session.Epoch(), nil
+		return session, "", errNoRun
 	}
 	if epoch != session.Epoch() {
 		return session, epoch, errEarlierRun
