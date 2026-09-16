@@ -97,9 +97,18 @@ func handleSend(ctx *Context, call Call) error {
 		// No final answer. Promising a later delivery is only honest while the
 		// session is still there to make one; a session that ended between the
 		// lookup and now leaves the message with nobody to take it.
-		if _, err := registry.Lookup(dir, session.Name); errors.Is(err, registry.ErrNotFound) {
+		// The name is not enough: it may already belong to a session that
+		// started after this message was written, and that session will refuse
+		// it. Promising a later delivery then would be a promise nobody keeps.
+		current, err := registry.Lookup(dir, session.Name)
+		if errors.Is(err, registry.ErrNotFound) {
 			model.State = string(inbox.Failed)
 			model.Detail = "the session ended before the message was delivered"
+			break
+		}
+		if err == nil && current.Epoch() != session.Epoch() {
+			model.State = string(inbox.Failed)
+			model.Detail = "the session ended and another one took its name before the message was delivered"
 			break
 		}
 		model.State = string(inbox.Pending)

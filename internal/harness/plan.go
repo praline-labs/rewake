@@ -44,6 +44,10 @@ type LaunchPlan struct {
 	OwnsSocket bool
 	// CodexHome, when set, is recorded so delivery uses the same state.
 	CodexHome string
+	// Notes are things the caller should know about this launch: a setting that
+	// could not be read, a briefing that was skipped. They are printed once, to
+	// stderr, and do not stop the launch.
+	Notes []string
 }
 
 // Harness describes one coding-agent CLI: how it is presented, how it is
@@ -173,11 +177,23 @@ func AddFlags(args []string, added ...string) []string {
 	return append(out, args[terminator:]...)
 }
 
+// BeforeTerminator returns the arguments up to "--". What follows is input for
+// the harness — a prompt, most often — and a flag-looking word in it is text,
+// not a setting.
+func BeforeTerminator(args []string) []string {
+	for index, arg := range args {
+		if arg == "--" {
+			return args[:index]
+		}
+	}
+	return args
+}
+
 // HasFlag reports whether the caller already passed a flag, in either the
 // "--flag value" or the "--flag=value" form. A harness adds its own only when
 // the caller has not: their flag is the one they meant.
 func HasFlag(args []string, flag string) bool {
-	for _, arg := range args {
+	for _, arg := range BeforeTerminator(args) {
 		if arg == flag || strings.HasPrefix(arg, flag+"=") {
 			return true
 		}

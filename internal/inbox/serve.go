@@ -37,9 +37,11 @@ type Server struct {
 
 	// attempts remembers when each pending message was last tried.
 	attempts map[string]time.Time
-	// settled remembers messages that already have a final status, so a failure
-	// to archive one does not turn into delivering it a second time.
-	settled map[string]bool
+	// outcomes remembers what happened to a message the moment it happened, not
+	// once the status file was written. Delivery is the part that cannot be
+	// undone: if writing the status fails, the outcome has to survive anyway, or
+	// the next pass delivers the same message a second time.
+	outcomes map[string]Result
 }
 
 // Serve drains the mailbox until the context is cancelled, then refuses whatever
@@ -47,7 +49,7 @@ type Server struct {
 // a sender waiting on a status deserves to hear that rather than time out.
 func (s *Server) Serve(ctx context.Context) {
 	s.attempts = map[string]time.Time{}
-	s.settled = map[string]bool{}
+	s.outcomes = map[string]Result{}
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
 
@@ -75,7 +77,9 @@ func (s *Server) drain(ctx context.Context) {
 		if s.alreadySettled(message) {
 			continue
 		}
-		if message.ToEpoch != "" && s.Epoch != "" && message.ToEpoch != s.Epoch {
+		if s.Epoch != "" && message.ToEpoch != s.Epoch {
+			// A message with no epoch at all counts too: it was written for a
+			// session this one only shares a name with.
 			s.finish(message, Result{
 				State:  Failed,
 				Detail: "addressed to an earlier session that used this name",
@@ -112,40 +116,49 @@ func (s *Server) drain(ctx context.Context) {
 // left in the mailbox with nothing remembered about it is delivered again on
 // the next pass, four times a second, long after its sender was told it landed.
 func (s *Server) finish(message Message, result Result) {
-	if err := writeStatus(s.Dir, s.Name, message.ID, result); err != nil {
-		// Without a status the sender learns nothing, so the message stays in
-		// the mailbox and the next pass tries the whole step again.
-		return
-	}
-	s.settled[message.ID] = true
+	s.outcomes[message.ID] = result
 	delete(s.attempts, message.ID)
-	_ = archive(s.Dir, s.Name, message.ID)
+	s.publish(message.ID, result)
 }
 
-// alreadySettled reports whether this message has a final status, either from
-// this run or from a previous one whose archiving did not complete.
+// publish writes the outcome down and takes the message out of the waiting set.
+// Both steps are retried on later passes until they hold: a message whose
+// outcome is known is never delivered again, only recorded again.
+func (s *Server) publish(id string, result Result) {
+	if err := writeStatus(s.Dir, s.Name, id, result); err != nil {
+		return
+	}
+	_ = archive(s.Dir, s.Name, id)
+}
+
+// alreadySettled reports whether this message has an outcome, from this run or
+// from a previous one whose status or archiving did not complete.
 func (s *Server) alreadySettled(message Message) bool {
-	if s.settled[message.ID] {
-		// The archive step is retried until the mailbox is clear again.
-		_ = archive(s.Dir, s.Name, message.ID)
+	if result, known := s.outcomes[message.ID]; known {
+		s.publish(message.ID, result)
 		return true
 	}
 	status, ok := ReadStatus(s.Dir, s.Name, message.ID)
 	if !ok || status.State == Pending {
 		return false
 	}
-	s.settled[message.ID] = true
+	s.outcomes[message.ID] = Result{State: status.State, Via: status.Via, Detail: status.Detail}
 	_ = archive(s.Dir, s.Name, message.ID)
 	return true
 }
 
-// refuseWaiting marks everything still in the mailbox as failed.
+// refuseWaiting marks everything still waiting as failed when the session ends.
+// A message that already has an outcome is not one of them: turning a delivered
+// message into a failed one sends its sender to say the whole thing again.
 func (s *Server) refuseWaiting(reason string) {
 	messages, err := list(s.Dir, s.Name)
 	if err != nil {
 		return
 	}
 	for _, message := range messages {
+		if s.alreadySettled(message) {
+			continue
+		}
 		s.finish(message, Result{State: Failed, Detail: reason})
 	}
 }

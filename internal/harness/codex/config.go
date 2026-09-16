@@ -39,11 +39,26 @@ func readConfig(home string) ([]string, error) {
 	return strings.Split(string(raw), "\n"), nil
 }
 
+// Reading has three outcomes, and the third one is the point: a value that is
+// there but not understood. Treating that as absent would be fine if rewake only
+// added to what it reads, but it passes a replacing override — so an unread
+// value must stop the override, not become an empty string.
+type reading int
+
+const (
+	// missing means the key is not in the file.
+	missing reading = iota
+	// read means the value was understood.
+	read
+	// unreadable means the key is there in a form this reader does not parse.
+	unreadable
+)
+
 // configString reads a top-level string value.
-func configString(home, key string) (string, error) {
+func configString(home, key string) (string, reading, error) {
 	lines, err := readConfig(home)
 	if err != nil {
-		return "", err
+		return "", missing, err
 	}
 
 	section := ""
@@ -59,55 +74,119 @@ func configString(home, key string) (string, error) {
 		}
 
 		if strings.HasPrefix(value, `"""`) {
-			text, consumed := multiline(lines[index:], value)
+			text, consumed, ok := multiline(lines[index:], value)
 			index += consumed
-			return text, nil
+			if !ok {
+				return "", unreadable, nil
+			}
+			return text, read, nil
 		}
-		if unquoted, err := strconv.Unquote(value); err == nil {
-			return unquoted, nil
+		if text, ok := basicString(value); ok {
+			return text, read, nil
 		}
-		// A form this reader does not recognise: say nothing rather than a guess.
-		return "", nil
+		if text, ok := literalString(value); ok {
+			return text, read, nil
+		}
+		return "", unreadable, nil
 	}
-	return "", nil
+	return "", missing, nil
 }
 
 // configBool reads a boolean from the sandbox section.
-func configBool(home, key string) bool {
+func configBool(home, key string) (bool, reading) {
 	value, ok := sectionValue(home, key)
 	if !ok {
-		return false
+		return false, missing
 	}
-	parsed, err := strconv.ParseBool(value)
-	return err == nil && parsed
+	parsed, err := strconv.ParseBool(strings.TrimSpace(value))
+	if err != nil {
+		return false, unreadable
+	}
+	return parsed, read
 }
 
-// configArray reads a flat array of strings from the sandbox section.
-func configArray(home, key string) []string {
+// configArray reads a flat array of strings from the sandbox section. A comma
+// inside a quoted path is not a separator, so the array is scanned rather than
+// split.
+func configArray(home, key string) ([]string, reading) {
 	value, ok := sectionValue(home, key)
 	if !ok {
-		return nil
+		return nil, missing
 	}
 	value = strings.TrimSpace(value)
 	if !strings.HasPrefix(value, "[") || !strings.HasSuffix(value, "]") {
-		// A multi-line array, or something else; adding to what we cannot read
-		// whole would drop the part we did not see.
-		return nil
+		// A multi-line array, or something else: adding to what cannot be read
+		// whole would drop the part that was not seen.
+		return nil, unreadable
 	}
 
 	var out []string
-	for _, item := range strings.Split(strings.TrimSuffix(strings.TrimPrefix(value, "["), "]"), ",") {
+	body := strings.TrimSuffix(strings.TrimPrefix(value, "["), "]")
+	for _, item := range splitTopLevel(body) {
 		item = strings.TrimSpace(item)
 		if item == "" {
 			continue
 		}
-		unquoted, err := strconv.Unquote(item)
-		if err != nil {
-			return nil
+		text, ok := basicString(item)
+		if !ok {
+			if text, ok = literalString(item); !ok {
+				return nil, unreadable
+			}
 		}
-		out = append(out, unquoted)
+		out = append(out, text)
 	}
-	return out
+	return out, read
+}
+
+// splitTopLevel splits on commas that are not inside a quoted string.
+func splitTopLevel(body string) []string {
+	var parts []string
+	var current strings.Builder
+	var quote rune
+	escaped := false
+
+	for _, symbol := range body {
+		switch {
+		case escaped:
+			escaped = false
+		case quote == '"' && symbol == '\\':
+			escaped = true
+		case quote != 0:
+			if symbol == quote {
+				quote = 0
+			}
+		case symbol == '"' || symbol == '\'':
+			quote = symbol
+		case symbol == ',':
+			parts = append(parts, current.String())
+			current.Reset()
+			continue
+		}
+		current.WriteRune(symbol)
+	}
+	return append(parts, current.String())
+}
+
+// basicString decodes a TOML basic string: "..." with escapes.
+func basicString(value string) (string, bool) {
+	value = strings.TrimSpace(value)
+	if len(value) < 2 || !strings.HasPrefix(value, `"`) || !strings.HasSuffix(value, `"`) {
+		return "", false
+	}
+	text, err := strconv.Unquote(value)
+	if err != nil {
+		return "", false
+	}
+	return text, true
+}
+
+// literalString decodes a TOML literal string: '...' with no escapes at all.
+func literalString(value string) (string, bool) {
+	value = strings.TrimSpace(value)
+	if len(value) < 2 || !strings.HasPrefix(value, "'") || !strings.HasSuffix(value, "'") {
+		return "", false
+	}
+	return value[1 : len(value)-1], true
 }
 
 // sectionValue reads a raw value from the sandbox section.
@@ -140,7 +219,9 @@ func sectionOf(line string) (string, bool) {
 	return strings.Trim(line, "[]"), true
 }
 
-// keyValue splits a "key = value" line, ignoring comments and blank lines.
+// keyValue splits a "key = value" line, ignoring comments and blank lines. A
+// trailing comment is cut from the value — but only outside quotes, where a #
+// is part of the text rather than the end of it.
 func keyValue(line string) (string, string, bool) {
 	if line == "" || strings.HasPrefix(line, "#") {
 		return "", "", false
@@ -149,14 +230,38 @@ func keyValue(line string) (string, string, bool) {
 	if !found {
 		return "", "", false
 	}
-	return strings.TrimSpace(name), strings.TrimSpace(value), true
+	return strings.TrimSpace(name), strings.TrimSpace(stripComment(value)), true
+}
+
+// stripComment removes a trailing comment that starts outside a quoted string.
+func stripComment(value string) string {
+	var quote rune
+	escaped := false
+	for index, symbol := range value {
+		switch {
+		case escaped:
+			escaped = false
+		case quote == '"' && symbol == '\\':
+			escaped = true
+		case quote != 0:
+			if symbol == quote {
+				quote = 0
+			}
+		case symbol == '"' || symbol == '\'':
+			quote = symbol
+		case symbol == '#':
+			return value[:index]
+		}
+	}
+	return value
 }
 
 // multiline reads a """ quoted block and returns it with the lines it consumed.
-func multiline(lines []string, first string) (string, int) {
+// The third result says whether the block was closed at all.
+func multiline(lines []string, first string) (string, int, bool) {
 	body := strings.TrimPrefix(strings.TrimSpace(first), `"""`)
 	if closing := strings.Index(body, `"""`); closing >= 0 {
-		return body[:closing], 0
+		return body[:closing], 0, true
 	}
 
 	collected := []string{}
@@ -169,11 +274,11 @@ func multiline(lines []string, first string) (string, int) {
 			if trimmed := line[:closing]; trimmed != "" {
 				collected = append(collected, trimmed)
 			}
-			return strings.Join(collected, "\n"), offset
+			return strings.Join(collected, "\n"), offset, true
 		}
 		collected = append(collected, line)
 	}
 	// No closing marker: the file is not what it claims to be, so nothing is
 	// reported rather than half a value.
-	return "", len(lines) - 1
+	return "", len(lines) - 1, false
 }

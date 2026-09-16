@@ -64,6 +64,11 @@ var alive = proc.Alive
 // namespace reports the pid namespace of this process, replaceable in tests.
 var namespace = proc.Namespace
 
+// Reachable reports whether a session may still be sent to. It is not the same
+// question as Alive: a reader that cannot see the processes says yes, because
+// the wrapper that can see them is the one that will deliver.
+func (s Session) Reachable() bool { return s.Alive() }
+
 // Judgeable reports whether this reader can tell if the session is running.
 //
 // Only a reader in the same pid namespace can. A Codex agent runs its commands
@@ -112,9 +117,13 @@ var ErrNotFound = errors.New("no such session")
 // call rather than a failure of the target.
 var ErrUnusableName = errors.New("unusable session name")
 
-// Publish claims a name for a session. When the name is taken by a session that
-// is no longer alive, the stale record is removed and the claim retried; a live
-// one refuses.
+// Publish claims a name for a session.
+//
+// Every change to a name happens under that name's lock — claiming it, taking it
+// over from a session that has ended, removing it. A lock around only part of
+// that was no lock at all: a reader pruning the old record, or a second claimant
+// on the free path, still slipped between the steps of a takeover and the two
+// ended up serving one mailbox.
 func Publish(dir string, session Session) error {
 	if !state.ValidName(session.Name) {
 		return fmt.Errorf("%w: %q. Use lower-case letters, digits, dot, dash or underscore, up to 32 characters", ErrUnusableName, session.Name)
@@ -125,24 +134,15 @@ func Publish(dir string, session Session) error {
 	}
 	path := state.SessionPath(dir, session.Name)
 
-	// Claiming a free name is one atomic link. Taking over the name of a session
-	// that has ended is three steps — read, judge, remove — and those run under
-	// a lock: two claimants racing through them both delete what the other just
-	// published and end up serving one mailbox from two processes.
-	err = state.PublishExclusive(path, encoded)
-	if !errors.Is(err, state.ErrNameTaken) {
-		return err
-	}
-
 	return state.WithNameLock(dir, session.Name, func() error {
 		existing, loadErr := Load(dir, session.Name)
 		switch {
 		case loadErr == nil && existing.Alive():
 			return &NameTakenError{Name: session.Name, PID: existing.ServicePID}
 		case loadErr == nil, errors.Is(loadErr, ErrNotFound):
-			// Either a leftover record of a session that ended, or a record
-			// that cannot be read at all; both are safe to replace here,
-			// because nothing else may touch the name while the lock is held.
+			// Either free, a leftover of a session that ended, or a record that
+			// cannot be read at all. All three are ours to replace: nothing else
+			// may touch this name while the lock is held.
 		default:
 			return loadErr
 		}
@@ -185,17 +185,54 @@ func Update(dir string, session Session) error {
 	return state.WriteAtomic(state.SessionPath(dir, session.Name), encoded)
 }
 
-// Remove deletes a record. A record that is already gone is not an error: the
-// caller wanted it gone.
+// Remove deletes the record of a name, whoever owns it. Use RemoveOwned unless
+// the caller really means "this name, whatever is behind it".
 func Remove(dir, name string) error {
 	if !state.ValidName(name) {
 		return nil
 	}
-	err := os.Remove(state.SessionPath(dir, name))
-	if errors.Is(err, os.ErrNotExist) {
+	return state.WithNameLock(dir, name, func() error {
+		err := os.Remove(state.SessionPath(dir, name))
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return err
+	})
+}
+
+// OwnsName reports whether the record of this name still describes the session
+// with this epoch.
+func OwnsName(dir, name, epoch string) bool {
+	existing, err := Load(dir, name)
+	return err == nil && existing.Epoch() == epoch
+}
+
+// RemoveOwned deletes a record only while it still describes this session.
+//
+// A wrapper that is stopped, whose harness then exits, wakes up to a name that
+// may already belong to somebody else. Removing it by name would delete a live
+// session's record — seen happening — so the epoch decides.
+func RemoveOwned(dir, name, epoch string) error {
+	if !state.ValidName(name) {
 		return nil
 	}
-	return err
+	return state.WithNameLock(dir, name, func() error {
+		existing, err := Load(dir, name)
+		if err != nil {
+			if errors.Is(err, ErrNotFound) {
+				return nil
+			}
+			return err
+		}
+		if existing.Epoch() != epoch {
+			return nil
+		}
+		err = os.Remove(state.SessionPath(dir, name))
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return err
+	})
 }
 
 // Load reads one record without judging whether it is alive.
@@ -228,8 +265,10 @@ func Lookup(dir, name string) (Session, error) {
 	}
 	if !session.Alive() {
 		if session.Judgeable() {
-			// Reading is also when leftovers are cleaned: nobody else will.
-			_ = Remove(dir, name)
+			// Reading is also when leftovers are cleaned: nobody else will. It
+			// is the record that was read that goes, not whatever holds the
+			// name by the time the lock is taken.
+			_ = RemoveOwned(dir, name, session.Epoch())
 		}
 		return Session{}, ErrNotFound
 	}
@@ -259,7 +298,7 @@ func List(dir string) ([]Session, error) {
 		}
 		if !session.Alive() {
 			if session.Judgeable() {
-				_ = Remove(dir, name)
+				_ = RemoveOwned(dir, name, session.Epoch())
 			}
 			continue
 		}

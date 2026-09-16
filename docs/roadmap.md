@@ -148,6 +148,50 @@ of the session that was running it. Records now carry the namespace their pids
 belong to, and a reader in a different one neither reports a session gone nor
 removes anything.
 
+## Review round two — done, September 16, 2026
+
+The same reviewer checked the fixes by running them rather than reading them, and
+twelve of the twenty-two held. What the second round found, and what was done:
+
+- **The name lock covered only part of the work.** Claiming a free name, removing
+  a record and pruning a dead one all went around it, so two claimants could
+  still cross inside a takeover. Every change to a name now happens under its
+  lock, and a record is removed only while it still describes the session that is
+  removing it.
+- **A stopped wrapper whose harness had died deleted the record of whoever held
+  the name next**, and refused that session's mail on the way out. Both are now
+  decided by the epoch, not by the name.
+- **A failed status write re-delivered a message that had already arrived.** The
+  outcome is remembered when it happens, not when it is written down; writing and
+  archiving are retried, delivery is not.
+- **Shutdown turned a delivered message into a failed one.** It now refuses only
+  what has no outcome yet.
+- **A message with no epoch at all** — from a version before epochs — is refused
+  rather than handed to whoever shares the name.
+- **One Ctrl+C reached the harness twice**: it shared the wrapper's process group
+  and also got the forwarded copy. The harness now runs in its own group and is
+  given the terminal, the way a shell runs a job, so signals arrive once.
+- **The Codex configuration reader replaced settings it could not read.** It now
+  tells "absent" from "present but not understood", and an override is passed
+  only when what it replaces is fully known — otherwise rewake says on stderr what
+  it did not do. A selected profile or a `-c` from the caller counts as unread.
+- **Quoting was Go's, not TOML's**: a control character came out as `\xNN`, which
+  Codex cannot parse, and it fell back to reading the argument as a raw string.
+- **A symlinked `CODEX_HOME`** never matched the resolved paths `/proc` reports,
+  so every message sat pending. **A nested `codex exec`** could win the thread
+  lookup over the session that was addressed. **`/new` while a message was being
+  queued** put it in an abandoned conversation; that is now reported as pending
+  and delivered again.
+- **The queue call could outlast its timeout** by two seconds, waiting on pipes a
+  grandchild still held.
+- **`HasFlag` searched past `--`**, so a prompt that looked like a flag disabled
+  the socket flag that belongs with it.
+
+Tests came too: the name lock is now proven between two processes rather than two
+goroutines, the traversal test puts its victim where the name actually points,
+and the Codex adapter is checked against configurations that are valid TOML but
+outside what the reader takes apart.
+
 ## Milestone 5. Intro and permissions
 
 - The intro for both harnesses, plus the `--no-intro` flag.

@@ -184,12 +184,17 @@ func archive(dir, to, id string) error {
 	if err := state.EnsureSubdir(done); err != nil {
 		return err
 	}
-	from := filepath.Join(state.InboxPath(dir, to), id+".json")
+	mailbox := state.InboxPath(dir, to)
+	from := filepath.Join(mailbox, id+".json")
 	if err := os.Rename(from, filepath.Join(done, id+".json")); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil
 		}
 		return err
 	}
+	// Both ends of the move are flushed: after a crash the message must be in
+	// one of the two places, never in both and never in neither.
+	_ = state.SyncDir(mailbox)
+	_ = state.SyncDir(done)
 	return nil
 }

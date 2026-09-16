@@ -192,10 +192,42 @@ func threadFixture(t *testing.T, home string, threads map[string]time.Time) int 
 		descriptor++
 	}
 
+	swapProcRoot(t, root)
+	return pid
+}
+
+// swapProcRoot points the process reader at a fixture for the test's lifetime.
+func swapProcRoot(t *testing.T, root string) {
+	t.Helper()
 	previous := proc.Default
 	proc.Default = proc.Reader{Root: root}
 	t.Cleanup(func() { proc.Default = previous })
-	return pid
+}
+
+// writeProcess adds one process to a /proc fixture, holding one lock file open.
+func writeProcess(t *testing.T, root string, pid, parent int, lock string, touched time.Time) {
+	t.Helper()
+	dir := filepath.Join(root, strconv.Itoa(pid))
+	if err := os.MkdirAll(filepath.Join(dir, "fd"), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	line := strconv.Itoa(pid) + " (codex) S " + strconv.Itoa(parent)
+	for field := 5; field <= 21; field++ {
+		line += " 0"
+	}
+	line += " 100 0 0\n"
+	if err := os.WriteFile(filepath.Join(dir, "stat"), []byte(line), 0o644); err != nil {
+		t.Fatalf("write stat: %v", err)
+	}
+	if err := os.WriteFile(lock, nil, 0o600); err != nil {
+		t.Fatalf("write lock: %v", err)
+	}
+	if err := os.Chtimes(lock, touched, touched); err != nil {
+		t.Fatalf("chtimes: %v", err)
+	}
+	if err := os.Symlink(lock, filepath.Join(dir, "fd", "3")); err != nil {
+		t.Fatalf("symlink: %v", err)
+	}
 }
 
 func itoa(value int) string { return strconv.Itoa(value) }

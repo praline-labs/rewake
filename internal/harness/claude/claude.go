@@ -213,9 +213,10 @@ func removeStaleSocket(path string) error {
 	return os.Remove(path)
 }
 
-// flagValue reads the value of a flag the caller passed.
+// flagValue reads the value of a flag the caller passed. Only before "--": what
+// follows is input for the harness, where a flag-looking word is text.
 func flagValue(args []string, flag string) string {
-	for index, arg := range args {
+	for index, arg := range harness.BeforeTerminator(args) {
 		if arg == flag && index+1 < len(args) {
 			return args[index+1]
 		}

@@ -87,9 +87,17 @@ func SocketPath(dir, name string) string {
 }
 
 // ensureDir creates a directory and refuses one that somebody else could write.
+// A new directory is flushed to its parent: a mailbox that exists only in the
+// page cache takes messages that a crash then takes away.
 func ensureDir(path string) error {
+	_, err := os.Stat(path)
+	fresh := err != nil
+
 	if err := os.MkdirAll(path, dirMode); err != nil {
 		return fmt.Errorf("could not create the state directory %s: %w", path, err)
+	}
+	if fresh {
+		_ = syncDir(filepath.Dir(path))
 	}
 	return Verify(path)
 }
@@ -165,6 +173,9 @@ func writeTemp(dir string, data []byte) (string, error) {
 	}
 	return name, nil
 }
+
+// SyncDir flushes a directory entry, so a rename or a link survives a crash.
+func SyncDir(path string) error { return syncDir(path) }
 
 // syncDir flushes a directory entry, so a rename or a link survives a crash.
 func syncDir(path string) error {

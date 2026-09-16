@@ -133,6 +133,10 @@ The common part of the wrapper:
 
 ### Claude Code
 
+- Everything after the harness name is passed through untouched, with one
+  exception: a `--help` written first asks rewake for the command's help page
+  instead of starting the harness. `rewake claude --model x --help` still reaches
+  the harness.
 - Add `--messaging-socket-path <dir>/sock/<name>.sock` unless the user passed
   their own; before launch, remove a stale socket file at the same path.
 - Add `--append-system-prompt <intro>` (turned off by `--no-intro`).

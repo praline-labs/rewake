@@ -57,6 +57,16 @@ func TestPublishClaimsNameOnce(t *testing.T) {
 	if err == nil {
 		t.Fatal("second publish took a name held by a live session")
 	}
+
+	// Refusing is only half of it: the owner's record has to be intact
+	// afterwards, or the refusal came at the price of the session it protected.
+	held, loadErr := Lookup(dir, "api")
+	if loadErr != nil {
+		t.Fatalf("the owner's record did not survive the refusal: %v", loadErr)
+	}
+	if held.ServicePID != 10 {
+		t.Errorf("record = %+v, want the first owner", held)
+	}
 }
 
 func TestPublishReplacesDeadRecord(t *testing.T) {

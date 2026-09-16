@@ -14,18 +14,30 @@ import (
 // state directory that has nothing to do with rewake.
 func TestTraversalNameTouchesNothing(t *testing.T) {
 	dir := stateDir(t, map[int]uint64{})
-	outside := filepath.Join(filepath.Dir(dir), "victim.json")
-	if err := os.WriteFile(outside, []byte("{}"), 0o600); err != nil {
-		t.Fatalf("write: %v", err)
+
+	// Records live in <dir>/sessions, so "../victim" lands in <dir> and
+	// "../../victim" one level above it. Both are written here: a test whose
+	// victim sits anywhere else proves nothing, because the name it passes never
+	// pointed at the file it checks.
+	victims := []string{
+		filepath.Join(dir, "victim.json"),
+		filepath.Join(filepath.Dir(dir), "victim.json"),
+	}
+	for _, victim := range victims {
+		if err := os.WriteFile(victim, []byte("{}"), 0o600); err != nil {
+			t.Fatalf("write: %v", err)
+		}
 	}
 
-	for _, name := range []string{"../victim", "../../etc/passwd", "sub/dir"} {
+	for _, name := range []string{"../victim", "../../victim", "sub/dir", "../../etc/passwd"} {
 		if _, err := Lookup(dir, name); err == nil {
 			t.Errorf("Lookup(%q) found something", name)
 		}
 	}
-	if _, err := os.Stat(outside); err != nil {
-		t.Fatalf("a file outside the state directory was deleted: %v", err)
+	for _, victim := range victims {
+		if _, err := os.Stat(victim); err != nil {
+			t.Fatalf("a file outside the sessions directory was deleted: %v", err)
+		}
 	}
 }
 
@@ -91,6 +103,18 @@ func TestSessionNeedsBothProcesses(t *testing.T) {
 	if _, err := Lookup(dir, "api"); err == nil {
 		t.Error("a session whose harness is gone was reported reachable")
 	}
+
+	// And the other way round: a wrapper that died leaves the harness with
+	// nobody to deliver for it, which is just as unreachable.
+	living[20] = 200
+	delete(living, 10)
+	record.Name = "web"
+	if err := Publish(dir, record); err != nil {
+		t.Fatalf("publish: %v", err)
+	}
+	if _, err := Lookup(dir, "web"); err == nil {
+		t.Error("a session whose wrapper is gone was reported reachable")
+	}
 }
 
 func TestEpochChangesWithEveryRun(t *testing.T) {
@@ -98,6 +122,13 @@ func TestEpochChangesWithEveryRun(t *testing.T) {
 	again := Session{ServicePID: 10, ServiceStart: 200}
 	if first.Epoch() == again.Epoch() {
 		t.Fatal("a reused pid produces the same epoch, so old mail would reach a new session")
+	}
+
+	// Two processes can start within the same clock tick, so the pid belongs in
+	// the epoch as well.
+	neighbour := Session{ServicePID: 11, ServiceStart: 100}
+	if first.Epoch() == neighbour.Epoch() {
+		t.Fatal("two processes started in the same tick share an epoch")
 	}
 }
 
@@ -112,6 +143,12 @@ func TestNameLockFileIsNotASession(t *testing.T) {
 	delete(living, 11)
 	if err := Publish(dir, session("api", 10, 100)); err != nil {
 		t.Fatalf("takeover: %v", err)
+	}
+
+	// The lock is a file next to the records; a lock that leaves no file behind
+	// is not a lock between processes at all.
+	if _, err := os.Stat(filepath.Join(state.SessionsPath(dir), ".api.lock")); err != nil {
+		t.Fatalf("no lock file was created: %v", err)
 	}
 
 	sessions, err := List(dir)
