@@ -13,15 +13,16 @@ import (
 )
 
 // readFrom has api read a message from the given run of web.
-func readFrom(t *testing.T, dir string, web registry.Session) {
+func readFrom(t *testing.T, dir string, web registry.Session) string {
 	t.Helper()
 	current, _ := registry.Lookup(dir, "api")
 	t.Setenv(state.SessionEnv, "api")
 	t.Setenv(epochEnv, current.Epoch())
-	rawUnread(t, dir, "api", map[string]any{"from": "web", "fromEpoch": web.Epoch(), "toEpoch": current.Epoch(), "text": "rerun"})
+	id := rawUnread(t, dir, "api", map[string]any{"from": "web", "fromEpoch": web.Epoch(), "toEpoch": current.Epoch(), "text": "rerun"})
 	if code, _, errOut := run("inbox"); code != ExitOK {
 		t.Fatalf("inbox: %d %s", code, errOut)
 	}
+	return id
 }
 
 func finishedFor(t *testing.T, dir, name string) []string {
@@ -221,7 +222,7 @@ func TestAReportToOneselfDoesNotDeadlock(t *testing.T) {
 func TestAReportNamesWhatItAnswers(t *testing.T) {
 	dir := liveSession(t, "api")
 	web := otherRun(t, dir, "web")
-	readFrom(t, dir, web)
+	questionID := readFrom(t, dir, web)
 	run("turn-ended", turnPayload)
 
 	found := finishedFor(t, dir, "web")
@@ -230,7 +231,7 @@ func TestAReportNamesWhatItAnswers(t *testing.T) {
 	}
 	raw, _ := os.ReadFile(found[0])
 	var report inbox.Message
-	if err := json.Unmarshal(raw, &report); err != nil || len(report.InReplyTo) != 1 {
+	if err := json.Unmarshal(raw, &report); err != nil || len(report.InReplyTo) != 1 || report.InReplyTo[0] != questionID {
 		t.Errorf("report = %s, want it to name the message it answers", raw)
 	}
 }

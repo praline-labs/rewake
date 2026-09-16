@@ -39,57 +39,33 @@ func awaitedHere(dir, name string, message Message) bool {
 	return false
 }
 
-// AwaitAnswer blocks until the report answering a question arrives in this
-// run's mailbox, or ctx ends. The answer is marked read and returned. At the end
-// the mark goes and the mailbox is looked at once more, under the lock: an
-// answer that arrived just then was not announced, so it must be taken here.
-func AwaitAnswer(ctx context.Context, dir, name, epoch, question string) (Message, bool, error) {
-	marks := state.AnsweringPath(dir, name)
-	if err := state.EnsureSubdir(marks); err != nil {
-		return Message{}, false, err
-	}
-	mark := filepath.Join(marks, question)
-	if err := os.WriteFile(mark, nil, 0o600); err != nil {
-		return Message{}, false, err
-	}
-
+// AwaitAnswer shows the matching report under the mailbox lock, then records
+// receipt. ReserveAnswer must precede publishing the question and its release
+// must be deferred by the caller through the entire delivery and output path.
+func AwaitAnswer(ctx context.Context, dir, name, epoch, question string, show func(Message) error) (Message, bool, error) {
 	for {
-		answer, found, err := takeAnswer(ctx, dir, name, epoch, question, "")
+		answer, found, err := takeAnswer(ctx, dir, name, epoch, question, show)
 		if err != nil || found {
-			removeMark(dir, name, mark)
 			return answer, found, err
 		}
 		select {
 		case <-ctx.Done():
 			beforeGivingUp()
-			return takeAnswerAtTheEnd(dir, name, epoch, question, mark)
+			last, cancel := context.WithTimeout(context.Background(), 2*answeringFresh)
+			defer cancel()
+			return takeAnswer(last, dir, name, epoch, question, show)
 		case <-time.After(answerPoll):
-			now := time.Now()
-			_ = os.Chtimes(mark, now, now)
 		}
 	}
 }
 
-// beforeGivingUp runs when the wait has ended and before the last look. It does
-// nothing; a test lands an answer there.
+// beforeGivingUp lets a test land an answer immediately before the final look.
 var beforeGivingUp = func() {}
 
-// takeAnswerAtTheEnd removes the mark and takes an answer that got in first.
-func takeAnswerAtTheEnd(dir, name, epoch, question, mark string) (Message, bool, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*answeringFresh)
-	defer cancel()
-	return takeAnswer(ctx, dir, name, epoch, question, mark)
-}
-
-// takeAnswer looks for the answer under the lock and marks it read. Given a
-// mark, it removes the mark in the same step: this is the last look.
-func takeAnswer(ctx context.Context, dir, name, epoch, question, mark string) (Message, bool, error) {
+func takeAnswer(ctx context.Context, dir, name, epoch, question string, show func(Message) error) (Message, bool, error) {
 	var answer Message
 	found := false
 	err := state.WithMailboxLock(ctx, dir, name, func() error {
-		if mark != "" {
-			_ = os.Remove(mark)
-		}
 		messages, err := PeekUnread(dir, name, epoch)
 		if err != nil {
 			return err
@@ -98,8 +74,10 @@ func takeAnswer(ctx context.Context, dir, name, epoch, question, mark string) (M
 			if !answers(message, question) {
 				continue
 			}
-			// An answer is a report, and a report owes nothing.
-			if err := MarkRead(dir, name, epoch, message, false); err != nil {
+			if err := show(message); err != nil {
+				return err
+			}
+			if err := receiveAnswer(dir, name, epoch, question, message); err != nil {
 				return err
 			}
 			answer, found = message, true
@@ -107,8 +85,7 @@ func takeAnswer(ctx context.Context, dir, name, epoch, question, mark string) (M
 		}
 		return nil
 	})
-	if errors.Is(err, state.ErrMailboxBusy) && mark == "" {
-		// Somebody else is reading; the next look will do.
+	if errors.Is(err, state.ErrMailboxBusy) {
 		return Message{}, false, nil
 	}
 	return answer, found, err
@@ -127,7 +104,7 @@ func answers(message Message, question string) bool {
 	return false
 }
 
-// removeMark takes the mark away once the answer is in hand.
+// removeMark releases a reservation after receipt or after the command ends.
 func removeMark(dir, name, mark string) {
 	_ = os.Remove(mark)
 	_ = state.SyncDir(state.AnsweringPath(dir, name))

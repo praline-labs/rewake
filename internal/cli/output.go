@@ -13,10 +13,13 @@ model, the default prints the lines. Going through one function is what makes
 */
 
 // emit prints result lines to stdout.
-func emit(ctx *Context, lines ...string) {
+func emit(ctx *Context, lines ...string) error {
 	for _, line := range lines {
-		fmt.Fprintln(ctx.Stdout, line)
+		if _, err := fmt.Fprintln(ctx.Stdout, line); err != nil {
+			return failf("could not print the result: %v", err)
+		}
 	}
+	return nil
 }
 
 // warn prints to stderr: a side note that does not turn a success into a
@@ -32,11 +35,9 @@ func printValue(ctx *Context, model any, lines func() []string) error {
 		if err != nil {
 			return failf("could not encode the result as JSON: %v", err)
 		}
-		emit(ctx, string(encoded))
-		return nil
+		return emit(ctx, string(encoded))
 	}
-	emit(ctx, lines()...)
-	return nil
+	return emit(ctx, lines()...)
 }
 
 // printText prints a block that has no model of its own, such as the guide.

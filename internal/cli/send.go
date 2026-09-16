@@ -12,6 +12,7 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/harness"
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
+	"github.com/iiiokojiadbi/rewake/internal/role"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
@@ -70,6 +71,9 @@ func handleSend(ctx *Context, call Call) error {
 	if err != nil {
 		return err
 	}
+	if kind.kind == inbox.Question && role.Of(session.Role).Silent {
+		return &UsageError{Command: command, Message: fmt.Sprintf("Session %s does not report its turns, so it cannot answer --question; use plain send or --notify instead.", session.Name)}
+	}
 	wait, err := waitDuration(call, kind.wait)
 	if err != nil {
 		return err
@@ -109,6 +113,13 @@ func handleSend(ctx *Context, call Call) error {
 	// waiting for.
 	if selfErr == nil {
 		message.From, message.FromEpoch = self.Name, epoch
+	}
+	if kind.kind == inbox.Question {
+		release, err := inbox.ReserveAnswer(dir, self.Name, message.ID)
+		if err != nil {
+			return failf("could not reserve the answer: %v", err)
+		}
+		defer release()
 	}
 	if err := inbox.Put(dir, message); err != nil {
 		return failf("could not write the message into the mailbox of %s: %v", session.Name, err)

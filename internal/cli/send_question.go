@@ -32,9 +32,14 @@ func answerQuestion(ctx *Context, question sent) error {
 	wait, cancel := context.WithDeadline(context.Background(), question.deadline)
 	defer cancel()
 
-	answer, found, err := inbox.AwaitAnswer(wait, question.dir, question.self.Name, question.epoch, model.ID)
+	_, found, err := inbox.AwaitAnswer(wait, question.dir, question.self.Name, question.epoch, model.ID, func(answer inbox.Message) error {
+		model.State, model.Answer = string(inbox.Read), answer.Text
+		return printValue(ctx, model, func() []string {
+			return []string{fmt.Sprintf("answer from %s:", target.Name), answer.Text}
+		})
+	})
 	if err != nil {
-		return failf("asked %s, but its answer could not be read: %v", target.Name, err)
+		return failf("asked %s, but its answer could not be handed over: %v", target.Name, err)
 	}
 	if !found {
 		model.State = string(inbox.Pending)
@@ -47,8 +52,5 @@ func answerQuestion(ctx *Context, question sent) error {
 		return &PendingError{Message: line}
 	}
 
-	model.State, model.Answer = string(inbox.Read), answer.Text
-	return printValue(ctx, model, func() []string {
-		return []string{fmt.Sprintf("answer from %s:", target.Name), answer.Text}
-	})
+	return nil
 }

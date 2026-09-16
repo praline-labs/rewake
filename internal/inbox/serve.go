@@ -133,7 +133,7 @@ func (s *Server) sweepFinishedLocked() {
 	// Unread mail goes by age too: a notice nobody acted on for a day describes
 	// a conversation that has moved on, and the mailbox of a name reused for
 	// weeks would otherwise keep every one of them.
-	finished := []string{state.DonePath(s.Dir, s.Name), state.UnreadPath(s.Dir, s.Name)}
+	finished := []string{state.DonePath(s.Dir, s.Name), state.UnreadPath(s.Dir, s.Name), answerReceiptsPath(s.Dir, s.Name), state.AnsweringPath(s.Dir, s.Name)}
 	for _, directory := range append(finished, state.InboxPath(s.Dir, s.Name)) {
 		entries, err := os.ReadDir(directory)
 		if err != nil {
@@ -180,30 +180,27 @@ func (s *Server) drain(ctx context.Context) {
 		if last, tried := s.attempts[message.ID]; tried && time.Since(last) < retryInterval {
 			continue
 		}
-		if s.expired(message) {
-			s.finish(message, Result{
-				State:  Failed,
-				Detail: "expired before the session could take it",
-			})
-			continue
-		}
 
 		// Readable first, announced second: an agent that runs rewake inbox the
 		// moment it is told has to find the message there. A message linked on an
 		// earlier attempt may have been read since; then there is nothing left
 		// to announce.
-		read, answered := false, false
+		read, answered, expired := false, false, false
 		err := s.lock(func() error {
 			if status, ok := ReadStatus(s.Dir, s.Name, message.ID); ok && status.State == Read {
 				read = true
 				return nil
 			}
+			// A lease keeps the report queued, but ordinary expired mail
+			// must never become visible to a reader in the first place.
+			answered = awaitedHere(s.Dir, s.Name, message)
+			expired = s.expired(message) && !answered
+			if expired {
+				return nil
+			}
 			if err := linkUnread(s.Dir, s.Name, message.ID); err != nil {
 				return err
 			}
-			// Decided under the lock, where a send that gives up removes its
-			// mark: either that send takes the answer, or the agent is told.
-			answered = awaitedHere(s.Dir, s.Name, message)
 			return nil
 		})
 		if read {
@@ -224,7 +221,15 @@ func (s *Server) drain(ctx context.Context) {
 			continue
 		}
 		if answered {
-			s.finish(message, Result{State: Delivered, Via: "the rewake send waiting for it"})
+			// Reservation is provisional: keep the queue entry and check its
+			// lease again next tick, including after a crashed sender.
+			continue
+		}
+		if expired {
+			s.finish(message, Result{
+				State:  Failed,
+				Detail: "expired before the session could take it",
+			})
 			continue
 		}
 		// The notice names how many messages wait, this one included.

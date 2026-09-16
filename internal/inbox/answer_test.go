@@ -37,10 +37,9 @@ func TestAnAnswerAwaitedBySendIsNotAnnounced(t *testing.T) {
 				notices++
 				return Result{State: Delivered, Via: "socket"}
 			}}
-			serveUntil(t, server, func() bool {
-				status, ok := ReadStatus(dir, "api", report.ID)
-				return ok && status.State == Delivered
-			})
+			server.attempts, server.outcomes = map[string]time.Time{}, map[string]Result{}
+			server.drain(context.Background())
+
 			if want := map[bool]int{true: 0, false: 1}[age == 0]; notices != want {
 				t.Errorf("notices = %d, want %d", notices, want)
 			}
@@ -63,7 +62,7 @@ func TestAnAnswerAtTheLastMomentIsTaken(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
-	got, found, err := AwaitAnswer(ctx, dir, "api", "5.5", "q1")
+	got, found, err := AwaitAnswer(ctx, dir, "api", "5.5", "q1", func(Message) error { return nil })
 	if err != nil || !found || got.ID != report.ID {
 		t.Errorf("AwaitAnswer = %v, %v, %v; want the answer taken", got.ID, found, err)
 	}

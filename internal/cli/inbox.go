@@ -53,7 +53,7 @@ func handleInbox(ctx *Context, call Call) error {
 	wait, cancel := context.WithTimeout(context.Background(), readerLockWait)
 	defer cancel()
 	err = state.WithMailboxLock(wait, dir, session.Name, func() error {
-		messages, err := inbox.PeekUnread(dir, session.Name, epoch)
+		messages, err := inbox.AvailableUnread(dir, session.Name, epoch)
 		if err != nil {
 			failure = failf("could not read the inbox of %s: %v", session.Name, err)
 			return nil

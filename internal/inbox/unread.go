@@ -44,7 +44,7 @@ func dropUnread(dir, to, id string) {
 
 // countUnread is how many messages of this run are waiting to be read.
 func countUnread(dir, to, epoch string) int {
-	messages, err := PeekUnread(dir, to, epoch)
+	messages, err := AvailableUnread(dir, to, epoch)
 	if err != nil {
 		return 0
 	}
