@@ -19,6 +19,9 @@ type Role struct {
 	// is the exception, so the zero value is a session that reports: a caller
 	// that forgets the role must not switch reports off.
 	Silent bool
+	// GitWrite permits a launch to grant writes to the working repository metadata.
+	// It is separate from reporting: a writer reports, while main stays silent.
+	GitWrite bool
 	// Brief is what the agent is told about its part, after who it is.
 	Brief string
 }
@@ -33,14 +36,23 @@ var Worker = Role{
 // Main hands out work. It reads every report, so its own turns are reported to
 // nobody: reporting back to the sessions that reported to it would never end.
 var Main = Role{
-	ID:      "main",
-	Summary: "The session that hands out work: it gets reports, and its own turns are reported to nobody.",
-	Silent:  true,
-	Brief:   "You are the main session: sessions you give work to report back to you when their turn ends, and your own turns are reported to nobody.",
+	ID:       "main",
+	Summary:  "The session that hands out work: it gets reports, reports no turns, and requests permission to commit in the working repository.",
+	Silent:   true,
+	GitWrite: true,
+	Brief:    "You are the main session: sessions you give work to report back to you when their turn ends, and your own turns are reported to nobody.",
+}
+
+// Write takes work and can commit changes in its working repository.
+var Write = Role{
+	ID:       "write",
+	Summary:  "Takes work and reports its turns, with permission to commit in the working repository.",
+	GitWrite: true,
+	Brief:    Worker.Brief + " You can commit changes in the repository of your working directory.",
 }
 
 // all lists the roles, the default first.
-var all = []Role{Worker, Main}
+var all = []Role{Worker, Main, Write}
 
 // All returns the roles, the default first.
 func All() []Role { return append([]Role{}, all...) }

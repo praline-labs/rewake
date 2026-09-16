@@ -43,3 +43,15 @@ func TestTheZeroRoleReports(t *testing.T) {
 		t.Error("a role left unset would switch reports off")
 	}
 }
+
+func TestOnlyMainAndWriteCanCommit(t *testing.T) {
+	for _, part := range append(All(), Role{}) {
+		if want := part.ID == "main" || part.ID == "write"; part.GitWrite != want {
+			t.Errorf("role=%+v, want GitWrite=%v", part, want)
+		}
+	}
+	writer, ok := Find("write")
+	if !ok || writer.Silent {
+		t.Errorf("writer must report: %+v %v", writer, ok)
+	}
+}

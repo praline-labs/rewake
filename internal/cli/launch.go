@@ -86,3 +86,16 @@ func roleOptions() []Option {
 	}
 	return options
 }
+
+// roleSummary keeps the guide on the same catalogue as launch flags and help.
+func roleSummary() string {
+	var descriptions []string
+	for _, candidate := range role.All() {
+		label := "--" + candidate.ID
+		if candidate.ID == role.Default().ID {
+			label = candidate.ID + " (default)"
+		}
+		descriptions = append(descriptions, label+": "+candidate.Summary)
+	}
+	return strings.Join(descriptions, " ") + " A silent coordinator prevents reports from waking each other indefinitely."
+}

@@ -194,7 +194,7 @@ The nine findings, fixed on the branch `fix/round-five`:
 - Shutdown lifts the retry limit, so an outcome known only in memory is
   written on the way out.
 - The Codex configuration is no longer parsed. A key mentioned in any form is
-  left alone with a note; the sandbox roots are never replaced.
+  left alone with a note; user-defined sandbox roots are left alone.
 - The socket path carries the run, so a wrapper removes its own socket and
   cannot reach the next run's.
 - A closed watch channel is set aside instead of spinning, and a watch whose

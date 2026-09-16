@@ -50,11 +50,26 @@ The common part of the wrapper:
   value, so it is passed only when the configuration does not mention it and no
   profile is selected; otherwise rewake says on stderr that the briefing was
   skipped.
-- Permissions: the state directory lives in `/tmp`, where the sandbox writes by
-  default. The writable roots are never replaced. When the configuration
-  mentions `exclude_slash_tmp`, or a profile is selected, rewake says on stderr
-  which directory to add to `writable_roots` if the agent cannot send. No
-  confirmation is needed to run `rewake`: the command runs inside the sandbox.
+- Permissions: main and write request Git metadata access through repeated
+  `--add-dir <metadata directory>` flags. Worker and the zero role receive no
+  extra roots. The flag adds to the user's roots; no `writable_roots` array,
+  permission profile, sandbox mode, approval policy, network or tmp setting is
+  replaced. A caller's existing `--add-dir` flags remain, including duplicates.
+  The selected sandbox policy still decides whether added roots are writable.
+- The effective cwd honors `-C`/`--cd`, including joined forms, before `--`.
+  For an ordinary repository, the added directory is `<cwd>/.git`. A worktree
+  or submodule has a `.git` file: rewake reads its `gitdir: <path>` relative to
+  the checkout, then reads `commondir` relative to that metadata directory when
+  present. Both per-worktree and shared metadata are added, without granting
+  their parent directories or other checkouts. Discovery does not invoke Git.
+- A missing or malformed pointer, a non-directory target or a symlink in the
+  metadata path leaves the grant out with a one-line reason and a suggestion
+  to pass the actual directories through `--add-dir`. Resume, fork, remote
+  execution and `--worktree` can select a repository after launch, so their
+  metadata is also left for the caller. Existing worktrees are supported.
+- When `/tmp` may be excluded, rewake still says which directory to add to the
+  writable paths if messages cannot be sent. Granting Git access does not grant
+  the message directory or override a user's temporary-directory exclusions.
 - End of a turn: `-c notify=["<rewake>","turn-ended"]`. Codex runs that program
   after every turn, outside the sandbox and without the trust a Stop hook needs.
   The key replaces the user's program, so it is passed only when neither the

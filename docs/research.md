@@ -174,11 +174,83 @@ Checked with `codex sandbox -P :workspace -C <dir> -- <cmd>`, without calling th
 | variable | `CODEX_SANDBOX_NETWORK_DISABLED=1` |
 
 **[verified live]** The network seccomp filter cuts off any socket domain,
-including AF_UNIX, when the network is disabled; with
-`sandbox_workspace_write.network_access = true` in the config, the network is
-allowed, but `~/.codex` stays read-only. Conclusion: a Codex agent can neither
-connect to the Claude Code socket nor call `codex queue`, but it can write files
-to `/tmp`.
+including AF_UNIX, when the network is disabled. In legacy workspace-write,
+`sandbox_workspace_write.network_access = true` allows the network while
+`~/.codex` stays read-only. An explicit `-P :workspace` ignores that legacy
+setting and uses its profile's network policy. With the default restricted
+network the agent cannot connect to the delivery socket or call the queue,
+but it can write files to `/tmp`.
+
+### Git metadata writes by role
+
+**[source: snapshot `44b9011`, September 13, 2026; live checks: CLI 0.154.0,
+September 16, 2026]** The source workspace has version `0.0.0` in its Cargo
+manifest; that placeholder does not identify the installed release's commit.
+
+- `.git`, `.agents` and `.codex` are protected by default:
+  `codex-rs/protocol/src/permissions.rs:799–854`. The Linux runtime binds writable
+  roots, then reapplies protected subpaths with `--ro-bind`:
+  `codex-rs/linux-sandbox/src/bwrap.rs:594–627,1039–1088`.
+- The legacy override
+  `-c 'sandbox_workspace_write.writable_roots=["<cwd>/.git"]'` permits commits
+  but **replaces the array**. A sandbox check with an existing configured root
+  confirmed that root was lost. The tmp and network fields are unaffected.
+  Rewake does not use this override for Git access.
+- **`--add-dir <gitdir>` adds to the configured roots.** A live `codex exec`
+  run committed successfully with this flag and `-s workspace-write`; its
+  sandbox header included both the added `.git` and all previously configured
+  roots. This is the flag rewake passes for main and write.
+- The flag is shared with TUI and repeatable: `add_dir` is a `Vec<PathBuf>` in
+  `codex-rs/utils/cli/src/shared_options.rs:74–76`. TUI forwards it as
+  `additional_writable_roots` in `codex-rs/tui/src/startup_orchestration.rs:128–143`.
+  `codex-rs/core/src/config/mod.rs:3454–3468` combines cwd, additional and
+  configured roots, then deduplicates them. Both interactive and exec argument
+  parsers accepted repeated identical flags with `--help`, without a model call.
+- Explicit permission profiles ignore legacy roots, network and tmp settings:
+  `codex-rs/core/src/config/mod.rs:3438–3468,3510–3547`. Rewake leaves the selected
+  profile intact and adds runtime roots. A restrictive selected policy can still
+  refuse writes; the adapter does not change it to workspace-write.
+- `codex sandbox` does **not** forward root-level `--add-dir`: its dispatch and
+  config overrides omit `additional_writable_roots`
+  (`codex-rs/cli/src/main.rs:1698–1740`, `debug_sandbox.rs:629–633`). An EROFS from
+  that command with `--add-dir` does not describe TUI or exec behavior.
+
+The baseline and legacy comparison need no model call:
+
+```bash
+mkdir -p /tmp/git-permission-check/{repo,home,tmp}
+git -C /tmp/git-permission-check/repo init -q
+export CODEX_HOME=/tmp/git-permission-check/home
+export TMPDIR=/tmp/git-permission-check/tmp
+codex sandbox -P :workspace -C /tmp/git-permission-check/repo -- \
+  git -c user.name=Test -c user.email=test@example.invalid \
+  commit --allow-empty -m 'Check default metadata protection'
+# exit 128: .git/index.lock: Read-only file system
+cd /tmp/git-permission-check/repo
+codex sandbox -c 'sandbox_mode="workspace-write"' \
+  -c 'sandbox_workspace_write.writable_roots=["/tmp/git-permission-check/repo/.git"]' -- \
+  git -c user.name=Test -c user.email=test@example.invalid \
+  commit --allow-empty -m 'Check scoped metadata access'
+# exit 0; this demonstrates the legacy override, not the rewake launch path
+```
+
+The positive legacy check uses shell cwd: sandbox's `-C` requires `-P`, which
+selects a profile and ignores the legacy grant. Its legacy default is read-only,
+so that check chooses workspace-write explicitly. A separate live exec turn
+verified the actual additive launch path from the same temporary repository:
+
+```bash
+codex exec --add-dir /tmp/git-permission-check/repo/.git -s workspace-write \
+  'Run git -c user.name=Test -c user.email=test@example.invalid commit --allow-empty -m "Check additive metadata access" and report its exit code.'
+```
+
+Unlike the sandbox probes, this invokes a model; the September 16 verification
+was performed by the orchestrating session. Rewake's automated checks use
+launch plans and temporary Git fixtures instead. The metadata resolver reads
+`.git` and `commondir` without invoking Git; tests compare it with
+`git rev-parse --path-format=absolute --git-dir --git-common-dir` for ordinary
+repositories, worktrees and submodules. Both worktree metadata directories are
+needed: Git writes per-worktree state and shared repository state.
 
 ### The sandbox has its own pid namespace
 

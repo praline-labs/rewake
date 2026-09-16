@@ -93,3 +93,34 @@ func TestTheMainSessionReportsNothing(t *testing.T) {
 		t.Errorf("web holds %v, want no report from the main session", found)
 	}
 }
+
+func TestWriteIsALaunchRole(t *testing.T) {
+	result, err := parse([]string{"--write", "codex"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	part, err := chosenRole(result.Call)
+	if err != nil || part.ID != "write" || !part.GitWrite || part.Silent {
+		t.Fatalf("role=%+v err=%v", part, err)
+	}
+	code, _, errOut := run("--write", "list")
+	if code != ExitUsage || !strings.Contains(errOut, "list does not take --write") {
+		t.Errorf("write accepted on list: %d %s", code, errOut)
+	}
+	for _, args := range [][]string{{"guide"}, {"codex", "--help"}} {
+		code, out, errOut := run(args...)
+		if code != 0 || !strings.Contains(out, "--write") {
+			t.Errorf("help lacks write: %d %s %s", code, out, errOut)
+		}
+	}
+}
+
+func TestAWriterCannotAlsoBeMain(t *testing.T) {
+	result, err := parse([]string{"--write", "--main", "codex"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := chosenRole(result.Call); err == nil {
+		t.Fatal("conflicting roles were accepted")
+	}
+}

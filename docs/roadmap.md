@@ -195,8 +195,9 @@ The owner, after restarting under the new build: the session handing out work
 got a report of its own turn back at its worker, and the two would wake each
 other forever. Roles now live in a catalogue, `internal/role`, and the one that
 hands out work is started with `--main`: it gets every report and reports
-nothing. Every other session is a `worker`, the default. More roles are meant to
-follow as single entries.
+nothing. The default is `worker`. The `write` role now reports like a worker
+and requests Git metadata access; main requests the same access independently
+of its reporting policy.
 
 ## Milestone 8. Three kinds of message — done, September 16, 2026
 
@@ -234,6 +235,7 @@ Codex also showed that three tests passed with delivery held under the lock:
 their reader skipped the lock. The test reader takes the real one now.
 
 ## Later, as needed
+
 
 - pi, opencode, grok — their delivery paths are already covered in
   `docs/research.md`.
@@ -322,3 +324,24 @@ Regression tests reproduce all six failures. Each has a failing mutation check;
 answer matching also rejects a report for a different question, and the report
 identity test compares the exact original id. Shared replies with abandoned
 consumers and renewal during delivery are covered separately.
+
+## Git metadata access by role — done, September 16, 2026
+
+Main and the new `--write` role append `--add-dir` for the working repository's
+Git metadata. Write reports turns like worker; main stays silent. Worker and
+an unset role receive no extra roots. The flag adds to existing writable roots
+without replacing configuration or selecting a different permission profile.
+
+Ordinary repositories use `.git`; worktrees and submodules resolve its `gitdir`
+pointer, plus the worktree's `commondir`. Missing, malformed or symlinked metadata
+and repositories selected after launch are skipped with actionable advice.
+
+**Owner decision, September 16, 2026:** use the additive flag. A live 0.154.0
+`codex exec --add-dir <gitdir> -s workspace-write` committed successfully while
+retaining the owner's configured roots. The earlier sandbox-only experiment
+could not verify `--add-dir` because that subcommand does not forward it.
+
+Role, argument, configuration and metadata tests cover the launch plan. Pointer
+resolution is compared with Git's output for temporary repositories, worktrees
+and submodules. Repeated flags are accepted by the CLI and roots are deduplicated
+by its config loader. See research for versioned evidence and reproduction.

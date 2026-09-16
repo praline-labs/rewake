@@ -86,9 +86,16 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 		}
 	}
 
-	// The state directory is under /tmp, which the sandbox may write to unless
-	// told otherwise. Extending the writable roots would replace the user's, so
-	// rewake only says what to add when /tmp may be excluded.
+	if request.Role.GitWrite {
+		if flags, note := gitWriteFlags(args); note != "" {
+			notes = append(notes, note)
+		} else {
+			args = harness.AddFlags(args, flags...)
+		}
+	}
+
+	// The state directory uses the caller's existing temporary-directory
+	// permissions. Granting Git writes changes neither tmp nor network policy.
 	if note := tmpNote(home, request.Dir, args, layered); note != "" {
 		notes = append(notes, note)
 	}

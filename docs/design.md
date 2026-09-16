@@ -112,18 +112,26 @@ and a line in its list, the way a harness is added. The launch flag `--<id>`,
 the help line, the sentence the role adds to the intro and whether its turns
 are reported all come from that value. The record keeps the role's id.
 
-| role | flag | turns reported | intro adds |
-|---|---|---|---|
-| `worker` | none (default) | yes | end your turn with the result |
-| `main` | `--main` | no | you get reports, yours go to nobody |
+| role | flag | turns reported | Git metadata writes requested for the sandbox | intro adds |
+|---|---|---|---|---|
+| `worker` | none (default) | yes | no | end your turn with the result |
+| `main` | `--main` | no | yes | you get reports, yours go to nobody |
+| `write` | `--write` | yes | yes | end your turn with the result; you can commit |
+
+Git writes are a separate role capability from reporting. The sandbox adapter
+appends `--add-dir` for the discovered metadata directories. Ordinary repos,
+worktrees and submodules are supported; configuration and existing roots remain
+intact. Unresolved or symlinked metadata is skipped with a reason. See
+[launch permissions](launch.md). A role does not revoke permissions the user
+already granted; worker receives no extra Git access from rewake.
 
 The main session exists to stop a loop: it reads the reports of its workers,
 and if its own turns were reported to them, each report would wake the other
 side for good. So a silent role gets no end-of-turn hook at launch (no Stop
 hook, no `notify`), records no waits when it reads, and `turn-ended` does
-nothing for it. The default must be the reporting one — the flag is written
-out only for the one session that hands out work — and the zero value of a role
-reports too, so a caller that forgets the role cannot switch reports off.
+nothing for it. The default and zero value report turns without requesting extra Git access.
+The write role reports like a worker; main stays silent whether its Git grant
+was applied or skipped.
 
 ### Names
 

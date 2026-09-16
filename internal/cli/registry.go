@@ -206,8 +206,8 @@ func notes() []Note {
 			Body:  "task: work to do. question: the same, with the sender waiting for it. notify: a heads-up that needs no answer. finished: a session's final message after work you gave it. Answer a task or a question by ending your turn with the result as your final message and stopping — rewake delivers that message to the sender. Do not answer with rewake send; do not answer a notify at all.",
 		},
 		{
-			Title: "One main session, the rest workers",
-			Body:  "Start the session that hands out work with --main: it gets every report, and its own turns are reported to nobody. Every other session is a worker and reports the end of each turn to the sessions that gave it work. Without --main, two sessions reporting to each other would never stop.",
+			Title: "Choose a session role",
+			Body:  roleSummary(),
 		},
 		{
 			Title: "A message from shell cannot be answered with send",

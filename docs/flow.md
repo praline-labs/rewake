@@ -36,7 +36,7 @@ sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
 
 ## Act 1. A session starts
 
-`rewake --name write codex` (or `rewake --main claude`, or plain `rewake claude`).
+`rewake --write --name write codex` (or `rewake --main claude`, or plain `rewake claude`).
 
 1. **The directory.** The wrapper opens `REWAKE_DIR`, creating it 0700 if it is
    missing, and refuses a symlink, a foreign owner or loose permissions.
@@ -46,8 +46,10 @@ sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
 3. **The run.** The wrapper's pid and start time make the **epoch**
    (`<pid>.<ticks>`). A name can be started many times; the epoch says which
    start this is.
-4. **The role.** `--main` selects the silent role; no flag is the worker. The
-   record keeps the role id.
+4. **The role.** `--main` selects the silent role; `--write` selects a writer
+   that reports like a worker. Both request Git metadata access from the sandbox
+   adapter. No flag is the worker, with no extra Git grant. The record keeps the
+   role id.
 5. **The harness command line.** The user's arguments go through untouched.
    rewake adds, for one launch only and never into a config file:
    - Claude Code: `--messaging-socket-path sock/<name>.<epoch>.sock`,
@@ -57,7 +59,12 @@ sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
    - Codex: `-c developer_instructions=<intro>` and
      `-c notify=["rewake","turn-ended"]` — each only when `config.toml` does not
      mention the key at all, because these keys replace rather than add. A
-     silent role gets no `notify`.
+     silent role gets no `notify`. Main and write also append `--add-dir` for
+     the repository's Git metadata. `-C`/`--cd` chooses the effective cwd; a
+     `.git` pointer and `commondir` identify worktree and submodule metadata.
+     Existing roots, selected profiles and the caller's `--add-dir` flags stay
+     intact. If the metadata cannot be resolved, a note says which directories
+     the caller must supply. Sandbox mode, tmp and network policy are unchanged.
 6. **The environment.** `REWAKE_SESSION=<name>`, `REWAKE_EPOCH=<epoch>`,
    `REWAKE_DIR`; inherited Claude Code markers are stripped so a session
    started from inside another does not borrow its socket.
@@ -72,8 +79,8 @@ sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
    second as the safety net, sweeps old mail every ten minutes, and waits for
    the harness to exit.
 
-`rewake list` now shows the session: name, harness, age, cwd, and `(main)` for
-the silent role. It reads the records, checks that both pids are alive with
+`rewake list` now shows the session: name, harness, age, cwd, and the non-default role
+(`main` or `write`). It reads the records, checks that both pids are alive with
 matching start times, and deletes any record whose session is dead.
 
 ## Act 2. A task is sent
