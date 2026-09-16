@@ -236,7 +236,7 @@ Also closed in this round:
 - **Message ids were ordered by millisecond**, so two messages written in the
   same one could be delivered in the wrong order.
 
-## Milestone 5. Intro and permissions
+## Milestone 5. Intro and permissions — done, September 16, 2026
 
 - The intro for both harnesses, plus the `--no-intro` flag.
 - `--allowedTools "Bash(rewake:*)"` for Claude Code.
@@ -247,6 +247,10 @@ Also closed in this round:
 **Live criterion:** an agent launched through the wrapper, asked "who are you
 in rewake", answers with its own name, and runs `rewake send` without
 confirmation. For Codex, the same question in one cheap turn.
+
+Met on September 16, 2026, as a side effect of the milestone 3 and 4 runs: both
+agents answered through `rewake send` without being told how and without a
+confirmation prompt, the Codex one from inside its sandbox.
 
 ## Milestone 6. Ready for daily use
 

@@ -178,6 +178,30 @@ Incoming messages start with "[rewake] message from: <name>" and end with the
 exact command to answer them.
 ```
 
+## Signals, and what the wrapper does not do
+
+The wrapper does not take part in the agent's work: it does not type into its
+screen, edit its configuration or read its transcript. Signals are the one place
+where it has to act at all, and only because of how they arrive.
+
+A signal from the keyboard — Ctrl+C, Ctrl+Z, Ctrl+\ — goes to the whole
+foreground process group. The harness is in it, so it gets them directly and the
+wrapper passes on nothing. A `kill` aimed at the wrapper's pid, from a script or
+a supervisor, reaches nobody else: without the wrapper acting, the harness would
+keep running with its mailbox unserved and its record gone — an agent still alive
+and no longer addressable.
+
+The two cases are indistinguishable from the signal itself: the kernel does not
+say whether it went to the group or to one process. So the answer comes from the
+harness. A termination request is repeated to it only if it is still running a
+moment later, which after a group signal it usually is not.
+
+**Decision, September 16, 2026:** forwarding stays. It exists to avoid leaving a
+session unreachable, not to interfere. The residual case is a harness that
+deliberately takes longer than the grace period to shut down — it receives a
+second signal. Tools of this kind (`tini`, `dumb-init`) forward unconditionally;
+this is that, with one question asked first.
+
 ## Delivery
 
 ### Sender (`rewake send <name> <text>`)
