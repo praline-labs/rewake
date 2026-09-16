@@ -54,7 +54,7 @@ func buildGroups() {
 
 	talk := Group{
 		Title:   "TALK",
-		Summary: "Sessions address each other by name. The receiver is told a message is waiting, in one line, \"rewake: <session> <kind>, <n> new message(s)\", and reads it with rewake inbox.",
+		Summary: "Sessions address each other by name. The receiver is told a message is waiting, in one line, \"Rewake: <session> <kind>, <n> new message(s)\", and reads it with rewake inbox.",
 		Commands: []*Command{
 			{
 				Name:           "list",
@@ -82,7 +82,7 @@ func buildGroups() {
 				},
 				Next: []string{"rewake inbox"},
 				Notes: []string{
-					"A task is the default: the session reads it, works, and ends its turn with a final message, which comes back to you as a \"rewake: <session> finished\" line.",
+					"A task is the default: the session reads it, works, and ends its turn with a final message, which comes back to you as a \"Rewake: <session> finished\" line.",
 					"A question blocks until that final message and prints it. A long one is better run in the background.",
 					"Quote the text as one argument: loose words are refused rather than silently joined.",
 				},
@@ -96,7 +96,7 @@ func buildGroups() {
 				Examples:       []string{"rewake inbox", "rewake inbox --json"},
 				Next:           []string{"rewake send <name> \"text\""},
 				Notes: []string{
-					"Run it when a \"rewake: <session> <kind>\" line says messages are waiting.",
+					"Run it when a \"Rewake: <session> <kind>\" line says messages are waiting.",
 					"A task or a question you read is answered by ending your turn: your final message goes back to the sender by itself. Put the result there.",
 					"A notify needs no answer. A finished message is a session's final message after work you gave it.",
 				},
@@ -176,7 +176,7 @@ func flow() []FlowStep {
 	}
 	return append(steps,
 		FlowStep{Command: "rewake list", Summary: "See who is running and can be reached."},
-		FlowStep{Command: "rewake send api \"pull and rerun the smoke\"", Summary: "Give api a task; its final message comes back as a \"rewake: api finished\" line."},
+		FlowStep{Command: "rewake send api \"pull and rerun the smoke\"", Summary: "Give api a task; its final message comes back as a \"Rewake: api finished\" line."},
 		FlowStep{Command: "rewake inbox", Summary: "When a \"rewake:\" line says messages are waiting, read them here. Answer a task by finishing your turn with the result."},
 		FlowStep{Command: "rewake <command> --help", Summary: "Flags, examples and notes for that command."},
 	)
@@ -199,7 +199,7 @@ func notes() []Note {
 		},
 		{
 			Title: "A waiting message is announced, not pasted",
-			Body:  "It shows up as one line: \"rewake: <session> <kind>, <n> new message(s)\", with a 🟢 in front where the harness shows it as plain text. The text is never in that line: run rewake inbox to read it.",
+			Body:  "It shows up as one line: \"Rewake: <session> <kind>, <n> new message(s)\", with a 🟢 in front where the harness shows it as plain text. The text is never in that line: run rewake inbox to read it.",
 		},
 		{
 			Title: "Four kinds, one rule for answering",

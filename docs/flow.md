@@ -73,7 +73,7 @@ sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
    session is alive only while both processes are.
 8. **The intro.** The agent's first context says: you are session `<name>`
    under rewake, a waiting message is announced by a line starting with
-   `rewake:`, run `rewake guide` before sending or reading. Everything else the
+   `Rewake:`, run `rewake guide` before sending or reading. Everything else the
    agent needs is in the guide, which always matches the binary.
 9. **Serving.** The wrapper watches `inbox/<name>/` with inotify, polls every
    second as the safety net, sweeps old mail every ten minutes, and waits for
@@ -110,12 +110,12 @@ The recipient's wrapper sees the rename and, under the mailbox lock:
    about mail may run `rewake inbox` at once, so the text is there before the
    notice goes out.
 2. **The notice.** One line, the same for every harness:
-   `rewake: claude task, 1 new message(s)`. The count is this run's unread
+   `Rewake: claude task, 1 new message(s)`. The count is this run's unread
    mail. The text of the message is never in it.
 3. **The adapter**, outside the lock because it can take seconds:
    - Claude Code: connect to the session's socket and write one JSON line
      whose content is a `<task-notification>` block with that summary. The
-     interface draws it as a single green `● rewake: claude task, 1 new
+     interface draws it as a single green `● Rewake: claude task, 1 new
      message(s)` line — the same line its own background tasks get — and the
      model wakes if it was idle.
    - Codex: find the current thread through `/proc` (the
@@ -165,7 +165,7 @@ turn in the payload.
 3. **Forget the wait** only after the report is written, and only if the
    waiter still names that run.
 4. **The sender is woken** by its own wrapper, through Act 3, with
-   `rewake: write finished, 1 new message(s)`. The sender reads it with
+   `Rewake: write finished, 1 new message(s)`. The sender reads it with
    `rewake inbox`; a `finished` asks for nothing back, so the exchange ends
    here. The main session, being silent, never reports its own turns, which is
    what keeps two sessions from waking each other forever.

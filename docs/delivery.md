@@ -118,7 +118,7 @@ Status: `{"state":"delivered|read|pending|failed","via":"socket|codex queue","de
 One line, the same for every harness:
 
 ```
-rewake: <sender> <kind>, <n> new message(s)
+Rewake: <sender> <kind>, <n> new message(s)
 ```
 
 `n` counts this run's unread mail, the new message included. The notice carries
@@ -202,7 +202,7 @@ the next turn. A read retried after its last step failed does not record the
 wait a second time: the `read` status, written after the wait, says it is a
 retry. A payload that does not
 arrive within three seconds is treated as no payload. Their wrappers announce it:
-`rewake: cx finished, 1 new message`.
+`Rewake: cx finished, 1 new message`.
 
 The hook only records; waking is the recipient wrapper's job, through the same
 notice as any message. A hook cannot wake anything out of deep idle, and it

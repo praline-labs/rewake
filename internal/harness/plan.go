@@ -84,14 +84,14 @@ func Intro(name string, part role.Role) string {
 	}
 	return strings.Join([]string{
 		fmt.Sprintf("You are running inside rewake as the session %q.", name),
-		"rewake lets agent sessions on this machine message each other; a message waiting for you is announced by a line with \"rewake: <session> <kind>\".",
+		"rewake lets agent sessions on this machine message each other; a message waiting for you is announced by a line with \"Rewake: <session> <kind>\".",
 		"Run `rewake guide` before you send or read messages: it explains how.",
 		part.Brief,
 	}, "\n")
 }
 
 // Notice is the one line that announces waiting mail, the same for every
-// harness: "rewake: codex finished, 1 new message". It carries no text of the
+// harness: "Rewake: codex finished, 1 new message". It carries no text of the
 // message on purpose. The agent fetches that itself, so it knows the message
 // came through a tool, not from the person at the keyboard.
 func Notice(message inbox.Message) string {
@@ -103,7 +103,7 @@ func Notice(message inbox.Message) string {
 	if count == 1 {
 		noun = "message"
 	}
-	return fmt.Sprintf("rewake: %s %s, %d new %s", message.From, inbox.KindOf(message), count, noun)
+	return fmt.Sprintf("Rewake: %s %s, %d new %s", message.From, inbox.KindOf(message), count, noun)
 }
 
 // NoticeID is the part of the message id a notice carries. Claude Code drops

@@ -10,7 +10,7 @@ other. A human launches a harness through the tool — `rewake claude`, `rewake
 codex` — and gets an ordinary program in their terminal. The session registers
 itself, and any other session, or a human from a shell, can write to it with
 `rewake send <name> "text"`. The recipient is told in one line that a message is
-waiting — `rewake: api notify, 1 new message` — which wakes it if it is idle,
+waiting — `Rewake: api notify, 1 new message` — which wakes it if it is idle,
 and fetches the text itself with `rewake inbox`.
 
 The primary user of these commands is an agent calling them from its own shell.
@@ -313,7 +313,7 @@ messages.
 4. A session without a wrapper is not supported; `register` is dropped from the
    first version.
 5. A harness is told that mail is waiting, never handed the text; the agent reads
-   it with `rewake inbox`. The notice pattern is `rewake: <sender> <kind>, <n> new
+   it with `rewake inbox`. The notice pattern is `Rewake: <sender> <kind>, <n> new
    message(s)`, with the kinds `notify`, `question` and `finished`.
 6. The intro is minimal — what rewake is, and to run `rewake guide` — and the
    instructions live in the guide. Nothing is added to a notice that the person

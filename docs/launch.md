@@ -88,7 +88,7 @@ binary and costs context only when read:
 ```
 You are running inside rewake as the session "<name>".
 rewake lets agent sessions on this machine message each other; a message waiting
-for you is announced by a line starting with "rewake:".
+for you is announced by a line starting with "Rewake:".
 Run `rewake guide` before you send or read messages: it explains how.
 ```
 

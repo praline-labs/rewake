@@ -61,7 +61,7 @@ func TestAnUnansweredQuestionStaysOpen(t *testing.T) {
 	t.Setenv(epochEnv, web.Epoch())
 
 	code, out, _ := run("send", "api", "which port?", "--question", "--wait", "0.5")
-	if code != ExitPending || !strings.Contains(out, "rewake: api finished") {
+	if code != ExitPending || !strings.Contains(out, "Rewake: api finished") {
 		t.Errorf("exit = %d, out = %q; want pending with how the answer will come", code, out)
 	}
 	waiting, _ := filepath.Glob(filepath.Join(state.InboxPath(dir, "api"), "*.json"))
