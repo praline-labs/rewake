@@ -225,11 +225,11 @@ func TestVersion(t *testing.T) {
 }
 
 func TestUnbuiltCommandFailsWithReason(t *testing.T) {
-	code, _, errOut := run("list")
+	code, _, errOut := run("send", "api", "text")
 	if code != ExitFailed {
 		t.Fatalf("exit = %d, want %d", code, ExitFailed)
 	}
-	if !strings.Contains(errOut, "milestone 2") {
+	if !strings.Contains(errOut, "milestone 3") {
 		t.Errorf("stub failure does not say what is missing: %s", errOut)
 	}
 }

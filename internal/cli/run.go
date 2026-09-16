@@ -132,14 +132,6 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 	}
 }
 
-func handleList(_ *Context, _ Call) error {
-	return failf("list is not built yet (milestone 2).")
-}
-
 func handleSend(_ *Context, _ Call) error {
 	return failf("send is not built yet (milestone 3).")
-}
-
-func handleWhoami(_ *Context, _ Call) error {
-	return failf("whoami is not built yet (milestone 2).")
 }
