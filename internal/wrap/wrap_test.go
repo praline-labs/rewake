@@ -14,6 +14,7 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/proc"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
+	"github.com/iiiokojiadbi/rewake/internal/role"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
@@ -262,4 +263,27 @@ func selfStart(t *testing.T) uint64 {
 		t.Fatalf("start time: %v", err)
 	}
 	return start
+}
+
+func TestTheRoleIsRecorded(t *testing.T) {
+	dir := stateDir(t)
+	fake := &fakeHarness{script: "sleep 0.5"}
+	recorded := make(chan string, 1)
+	go func() {
+		deadline := time.Now().Add(3 * time.Second)
+		for time.Now().Before(deadline) {
+			if session, err := registry.Load(dir, "lead"); err == nil {
+				recorded <- session.Role
+				return
+			}
+			time.Sleep(20 * time.Millisecond)
+		}
+		recorded <- "never"
+	}()
+	if _, err := Run(context.Background(), Request{Harness: fake, Dir: dir, Name: "lead", Role: role.Main}); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if got := <-recorded; got != role.Main.ID {
+		t.Errorf("recorded role = %q, want main", got)
+	}
 }

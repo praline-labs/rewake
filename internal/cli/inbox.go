@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
+	"github.com/iiiokojiadbi/rewake/internal/role"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
@@ -62,7 +63,7 @@ func handleInbox(ctx *Context, call Call) error {
 			return nil
 		}
 		for _, message := range messages {
-			if err := inbox.MarkRead(dir, session.Name, epoch, message); err != nil {
+			if err := inbox.MarkRead(dir, session.Name, epoch, message, !role.Of(session.Role).Silent); err != nil {
 				failure = failf("the messages were shown, but recording that failed, so they stay unread and show again next time: %v", err)
 				return nil
 			}

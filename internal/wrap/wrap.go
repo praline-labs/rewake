@@ -23,6 +23,7 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/proc"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
+	"github.com/iiiokojiadbi/rewake/internal/role"
 )
 
 // Request is one launch.
@@ -37,6 +38,8 @@ type Request struct {
 	Args []string
 	// Intro asks for the briefing that tells the agent it runs under rewake.
 	Intro bool
+	// Role is what the session is for.
+	Role role.Role
 }
 
 // Run starts the harness, serves its mailbox until it exits, and returns the
@@ -83,6 +86,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 		Intro:  request.Intro,
 		Socket: registry.SocketFor(request.Dir, name, epoch),
 		Epoch:  epoch,
+		Role:   request.Role,
 	})
 	if err != nil {
 		return 0, err
@@ -249,6 +253,7 @@ func claimName(request Request, self int, selfStart uint64, cwd string) (registr
 			ServicePID:   self,
 			ServiceStart: selfStart,
 			PIDNamespace: proc.Namespace(),
+			Role:         request.Role.ID,
 			CWD:          cwd,
 			StartedAt:    time.Now(),
 		}

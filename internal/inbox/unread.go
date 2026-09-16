@@ -75,7 +75,9 @@ func PeekUnread(dir, name, epoch string) ([]Message, error) {
 // leaving it is the last step. A failure anywhere keeps the message unread, so
 // the next read shows it again and records it again; the other order lost the
 // report its sender was owed.
-func MarkRead(dir, name, epoch string, message Message) error {
+//
+// A reader that owes nobody — the main session — records no waits at all.
+func MarkRead(dir, name, epoch string, message Message, reports bool) error {
 	// A read status is written only after the waiter, so finding one means
 	// this is a retry of a read whose last step failed: the waiter was recorded
 	// then, and may have been reported to since. Recording it again owed a
@@ -87,7 +89,7 @@ func MarkRead(dir, name, epoch string, message Message) error {
 	// A note or a report owes nothing, and a sender without a run of its own —
 	// a shell, or mail from before runs were recorded — has nowhere a report
 	// could go.
-	if !retry && Owed(message) {
+	if reports && !retry && Owed(message) {
 		if err := markAwaiting(dir, name, epoch, message.From, message.FromEpoch, message.ID); err != nil {
 			return err
 		}

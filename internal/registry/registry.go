@@ -51,6 +51,9 @@ type Session struct {
 	// CodexHome is the CODEX_HOME the session runs with, for harnesses that
 	// keep their state there.
 	CodexHome string `json:"codexHome,omitempty"`
+	// Role is what the session is for, an id from package role. Empty means
+	// the default role.
+	Role string `json:"role,omitempty"`
 	// PIDNamespace is the pid namespace the two pids above belong to. A reader
 	// in a different one cannot judge whether they are alive.
 	PIDNamespace string `json:"pidNamespace,omitempty"`

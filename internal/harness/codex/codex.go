@@ -82,7 +82,7 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 		} else if mentioned, why := configMentions(home, introKey); mentioned {
 			notes = append(notes, "not adding the rewake briefing: "+why+", and passing the briefing would replace the user's instructions. Run rewake guide in the session instead")
 		} else {
-			args = harness.AddFlags(args, configFlag, introKey+"="+quoteTOML(harness.Intro(request.Name)))
+			args = harness.AddFlags(args, configFlag, introKey+"="+quoteTOML(harness.Intro(request.Name, request.Role)))
 		}
 	}
 
@@ -93,10 +93,13 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 		notes = append(notes, note)
 	}
 
-	if notify, note := turnNotify(home, args, layered); note != "" {
-		notes = append(notes, note)
-	} else {
-		args = harness.AddFlags(args, configFlag, notifyKey+"="+notify)
+	if !request.Role.Silent {
+		// A role whose turns are reported to nobody gets no notify.
+		if notify, note := turnNotify(home, args, layered); note != "" {
+			notes = append(notes, note)
+		} else {
+			args = harness.AddFlags(args, configFlag, notifyKey+"="+notify)
+		}
 	}
 
 	return harness.LaunchPlan{

@@ -49,6 +49,12 @@ page, the step in FLOW, the `harnesses` field of the machine form. A harness
 cannot be half-registered — either it is in the catalogue and fully described, or
 it does not exist.
 
+## Adding a role or a message kind
+
+Also one move each. A role is a value in `internal/role/role.go` plus its line in
+the list; the launch flag, help and briefing follow. A message kind is a file
+`internal/cli/send_<kind>.go` with a `messageKind` plus its line in `sendKinds`.
+
 ## How the CLI is organised
 
 The reference is `i-plane` (`~/code/self/free-plane/i-plane`), which took these

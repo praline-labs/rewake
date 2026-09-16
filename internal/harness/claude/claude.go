@@ -112,17 +112,22 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 	}
 
 	if request.Intro && !harness.HasFlag(args, introFlag) {
-		args = harness.AddFlags(args, introFlag, harness.Intro(request.Name))
+		args = harness.AddFlags(args, introFlag, harness.Intro(request.Name, request.Role))
 	}
 	var notes []string
-	if harness.HasFlag(args, settingsFlag) {
+	switch {
+	case request.Role.Silent:
+		// A role whose turns are reported to nobody gets no hook at all.
+	case harness.HasFlag(args, settingsFlag):
 		// Only one --settings is read, and replacing the caller's would drop
 		// whatever they layered on purpose.
 		notes = append(notes, "not reporting the end of turns to the sessions that wrote here: --settings is already given, and a second one would replace it")
-	} else if hooks, err := turnHookSettings(); err == nil {
-		args = harness.AddFlags(args, settingsFlag, hooks)
-	} else {
-		notes = append(notes, "not reporting the end of turns: "+err.Error())
+	default:
+		if hooks, err := turnHookSettings(); err == nil {
+			args = harness.AddFlags(args, settingsFlag, hooks)
+		} else {
+			notes = append(notes, "not reporting the end of turns: "+err.Error())
+		}
 	}
 	if !harness.HasFlag(args, toolFlag) {
 		args = harness.AddFlags(args, toolFlag, "Bash(rewake:*)")

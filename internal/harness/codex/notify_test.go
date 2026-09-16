@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/iiiokojiadbi/rewake/internal/harness"
+	"github.com/iiiokojiadbi/rewake/internal/role"
 )
 
 func launchPlan(t *testing.T, args []string) harness.LaunchPlan {
@@ -62,5 +63,16 @@ func TestTurnNotifyLeavesTheCallersValue(t *testing.T) {
 	}
 	if count != 1 {
 		t.Errorf("args = %v, want only the caller's notify", plan.Args)
+	}
+}
+
+func TestTheMainSessionGetsNoNotify(t *testing.T) {
+	codexHome(t, "")
+	plan, err := New().Launch(harness.LaunchRequest{Name: "lead", Dir: t.TempDir(), Role: role.Main})
+	if err != nil {
+		t.Fatalf("Launch: %v", err)
+	}
+	if _, ok := configValue(plan.Args, notifyKey); ok {
+		t.Errorf("args = %v, want no notify for the main session", plan.Args)
 	}
 }

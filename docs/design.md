@@ -103,6 +103,26 @@ The socket path is deliberately short: the limit is 103 bytes.
 - Updating one's own record (for example, the harness pid after launch) uses a
   temp file and `rename()`.
 
+### Roles
+
+A session has a role, from the catalogue in `internal/role`: one value per role
+and a line in its list, the way a harness is added. The launch flag `--<id>`,
+the help line, the sentence the role adds to the intro and whether its turns
+are reported all come from that value. The record keeps the role's id.
+
+| role | flag | turns reported | intro adds |
+|---|---|---|---|
+| `worker` | none (default) | yes | end your turn with the result |
+| `main` | `--main` | no | you get reports, yours go to nobody |
+
+The main session exists to stop a loop: it reads the reports of its workers,
+and if its own turns were reported to them, each report would wake the other
+side for good. So a silent role gets no end-of-turn hook at launch (no Stop
+hook, no `notify`), records no waits when it reads, and `turn-ended` does
+nothing for it. The default must be the reporting one — the flag is written
+out only for the one session that hands out work — and the zero value of a role
+reports too, so a caller that forgets the role cannot switch reports off.
+
 ### Names
 
 `[a-z0-9][a-z0-9._-]{0,31}`. The default is the harness name; if that's taken,
@@ -436,8 +456,8 @@ proven them out.
 
 ```
 rewake                                  overview (command map, workflow, behavior notes)
-rewake [--name N] claude [args...]      launch a Claude Code session under rewake
-rewake [--name N] codex [args...]       launch a Codex session under rewake
+rewake [--name N] [--main] claude [args...]   launch a Claude Code session under rewake
+rewake [--name N] [--main] codex [args...]    launch a Codex session under rewake
 rewake list [--json]                    live sessions
 rewake send <name> <text|-> [--question] [--wait S] [--json]
 rewake inbox [--json]                   read the messages waiting for this session

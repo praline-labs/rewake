@@ -369,6 +369,15 @@ The pre-link check for a read that landed between the unlocked status check and
 the lock has no test of its own: that window cannot be reached without a hook
 in the server.
 
+## Milestone 9. Roles — done, September 16, 2026
+
+The owner, after restarting under the new build: the session handing out work
+got a report of its own turn back at its worker, and the two would wake each
+other forever. Roles now live in a catalogue, `internal/role`, and the one that
+hands out work is started with `--main`: it gets every report and reports
+nothing. Every other session is a `worker`, the default. More roles are meant to
+follow as single entries.
+
 ## Milestone 8. Three kinds of message — done, September 16, 2026
 
 The owner's call after the first real rounds with Codex: a heads-up should not

@@ -5,6 +5,9 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+
+	"github.com/iiiokojiadbi/rewake/internal/harness"
+	"github.com/iiiokojiadbi/rewake/internal/role"
 )
 
 // The end of a turn is reported through a Stop hook in a settings layer passed
@@ -60,5 +63,21 @@ func TestCallerSettingsAreNotReplaced(t *testing.T) {
 	}
 	if len(plan.Notes) == 0 || !strings.Contains(plan.Notes[0], "--settings") {
 		t.Errorf("notes = %v, want a word on the turn reports that were skipped", plan.Notes)
+	}
+}
+
+// The main session's turns are reported to nobody, so it gets no hook, and its
+// briefing says what it is.
+func TestTheMainSessionGetsNoTurnHook(t *testing.T) {
+	plan, err := New().Launch(harness.LaunchRequest{Name: "lead", Dir: t.TempDir(), Intro: true, Role: role.Main})
+	if err != nil {
+		t.Fatalf("Launch: %v", err)
+	}
+	if indexOf(plan.Args, settingsFlag) >= 0 {
+		t.Errorf("args = %v, want no settings layer for the main session", plan.Args)
+	}
+	at := indexOf(plan.Args, introFlag)
+	if at < 0 || !strings.Contains(plan.Args[at+1], "main session") {
+		t.Errorf("args = %v, want a briefing that says this is the main session", plan.Args)
 	}
 }

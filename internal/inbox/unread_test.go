@@ -69,7 +69,7 @@ func readAll(t *testing.T, dir, epoch string) []Message {
 			return err
 		}
 		for _, m := range messages {
-			if err := MarkRead(dir, "api", epoch, m); err != nil {
+			if err := MarkRead(dir, "api", epoch, m, true); err != nil {
 				return err
 			}
 		}

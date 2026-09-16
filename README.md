@@ -7,8 +7,8 @@ flags, same login, same screen. rewake only registers the session and carries
 messages:
 
 ```bash
-rewake --name api claude        # terminal one
-rewake --name web codex         # terminal two
+rewake --main --name lead claude   # terminal one: hands out work
+rewake --name web codex            # terminal two: a worker
 rewake list                     # who is running
 rewake send api "the migration is merged, pull and rerun the smoke"
 ```

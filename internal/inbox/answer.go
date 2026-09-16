@@ -98,7 +98,8 @@ func takeAnswer(ctx context.Context, dir, name, epoch, question, mark string) (M
 			if !answers(message, question) {
 				continue
 			}
-			if err := MarkRead(dir, name, epoch, message); err != nil {
+			// An answer is a report, and a report owes nothing.
+			if err := MarkRead(dir, name, epoch, message, false); err != nil {
 				return err
 			}
 			answer, found = message, true

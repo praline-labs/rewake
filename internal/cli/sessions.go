@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/registry"
+	"github.com/iiiokojiadbi/rewake/internal/role"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
@@ -35,10 +36,11 @@ func handleList(ctx *Context, _ Call) error {
 		}
 		rows := make([]column, 0, len(sessions))
 		for _, session := range sessions {
-			rows = append(rows, column{
-				Name: session.Name,
-				Text: fmt.Sprintf("%-7s %-8s %s", session.Harness, age(session.Age()), session.CWD),
-			})
+			text := fmt.Sprintf("%-7s %-8s %s", session.Harness, age(session.Age()), session.CWD)
+			if session.Role != "" && session.Role != role.Default().ID {
+				text += "  (" + session.Role + ")"
+			}
+			rows = append(rows, column{Name: session.Name, Text: text})
 		}
 		return printColumns(rows, "")
 	})

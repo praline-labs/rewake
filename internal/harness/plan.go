@@ -9,6 +9,7 @@ import (
 
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
+	"github.com/iiiokojiadbi/rewake/internal/role"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
@@ -28,6 +29,9 @@ type LaunchRequest struct {
 	Socket string
 	// Epoch identifies this run of the name.
 	Epoch string
+	// Role is what the session is for. A role that reports nothing gets no
+	// end-of-turn hook.
+	Role role.Role
 }
 
 // LaunchPlan is how the wrapper starts the harness.
@@ -74,12 +78,15 @@ type Harness interface {
 // Intro is the briefing handed to an agent at launch. It says what rewake is and
 // where the instructions are, nothing more: it costs context in every turn, and
 // the guide is one command away and always matches the binary.
-func Intro(name string) string {
+func Intro(name string, part role.Role) string {
+	if part.ID == "" {
+		part = role.Default()
+	}
 	return strings.Join([]string{
 		fmt.Sprintf("You are running inside rewake as the session %q.", name),
 		"rewake lets agent sessions on this machine message each other; a message waiting for you is announced by a line with \"rewake: <session> <kind>\".",
 		"Run `rewake guide` before you send or read messages: it explains how.",
-		"When you finish work another session gave you, end your turn with the result as your final message and stop: rewake delivers that message to it.",
+		part.Brief,
 	}, "\n")
 }
 

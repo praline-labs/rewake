@@ -153,13 +153,15 @@ func launchCommand(h harness.Harness) *Command {
 		Args:           "[" + h.ID() + " args...]",
 		MaxPositionals: Variadic,
 		Summary:        h.Summary(),
-		Options:        []Option{nameOption, {Flag: "--no-intro", Summary: "Do not tell the agent it runs under rewake."}},
-		Examples:       h.Examples(),
-		Next:           []string{"rewake list", "rewake send <name> \"text\""},
-		Notes:          notes,
-		Raw:            true,
-		Harness:        h,
-		Handler:        handleLaunch(h),
+		Options: append(append([]Option{nameOption}, roleOptions()...),
+			Option{Flag: "--no-intro", Summary: "Do not tell the agent it runs under rewake."},
+		),
+		Examples: h.Examples(),
+		Next:     []string{"rewake list", "rewake send <name> \"text\""},
+		Notes:    notes,
+		Raw:      true,
+		Harness:  h,
+		Handler:  handleLaunch(h),
 	}
 }
 
@@ -169,7 +171,7 @@ func flow() []FlowStep {
 	for _, h := range harness.All() {
 		steps = append(steps, FlowStep{
 			Command: fmt.Sprintf("rewake --name <name> %s", h.ID()),
-			Summary: fmt.Sprintf("Start %s in this terminal under a name others can address.", h.Title()),
+			Summary: fmt.Sprintf("Start %s in this terminal under a name others can address; add --main to the one that hands out work.", h.Title()),
 		})
 	}
 	return append(steps,
@@ -202,6 +204,10 @@ func notes() []Note {
 		{
 			Title: "Four kinds, one rule for answering",
 			Body:  "task: work to do. question: the same, with the sender waiting for it. notify: a heads-up that needs no answer. finished: a session's final message after work you gave it. Answer a task or a question by ending your turn with the result as your final message and stopping — rewake delivers that message to the sender. Do not answer with rewake send; do not answer a notify at all.",
+		},
+		{
+			Title: "One main session, the rest workers",
+			Body:  "Start the session that hands out work with --main: it gets every report, and its own turns are reported to nobody. Every other session is a worker and reports the end of each turn to the sessions that gave it work. Without --main, two sessions reporting to each other would never stop.",
 		},
 		{
 			Title: "A message from shell cannot be answered with send",

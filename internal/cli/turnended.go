@@ -11,6 +11,7 @@ import (
 
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
+	"github.com/iiiokojiadbi/rewake/internal/role"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
@@ -40,7 +41,9 @@ func handleTurnEnded(_ *Context, call Call) error {
 		return nil
 	}
 	self, epoch, err := ownRun(dir)
-	if err != nil {
+	if err != nil || role.Of(self.Role).Silent {
+		// A role that reports nothing — the main session — gets no hook at
+		// launch, but a caller's own hook may still call this.
 		return nil
 	}
 
