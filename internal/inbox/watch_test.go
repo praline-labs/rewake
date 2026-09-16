@@ -19,11 +19,9 @@ func TestOwnWritesDoNotFeedTheWatch(t *testing.T) {
 	if err := Put(dir, sent); err != nil {
 		t.Fatalf("put: %v", err)
 	}
-	// A file where done/ belongs: archiving can only fail, so the message stays
-	// visible and every pass writes its status again.
-	if err := os.WriteFile(filepath.Join(state.InboxPath(dir, "api"), "done"), nil, 0o600); err != nil {
-		t.Fatalf("write: %v", err)
-	}
+	// Settling can only fail, so the message stays visible and every pass that
+	// is allowed to writes its status again.
+	attempts := stuckWaiting(t)
 
 	server := &Server{Dir: dir, Name: "api", Deliver: func(context.Context, Message) Result {
 		return Result{State: Delivered, Via: "socket"}
@@ -35,39 +33,20 @@ func TestOwnWritesDoNotFeedTheWatch(t *testing.T) {
 		defer close(finished)
 		server.Serve(ctx)
 	}()
-	time.Sleep(2 * time.Second)
+	// Passes run once a second; a retry is allowed every two. Four and a half
+	// seconds hold one delivery and one retry, against four without the limit.
+	time.Sleep(4500 * time.Millisecond)
+	// Counted while the server still runs: a loop stops with the server.
+	settles := attempts.Load()
 	cancel()
 	<-finished
 
-	// Every rewrite of the status touches the file, so its own history is the
-	// count: at one retry every two seconds there can only be a couple.
-	writes := countStatusWrites(t, dir, sent.ID)
-	if writes > 4 {
-		t.Fatalf("the status was rewritten %d times in two seconds: the server is answering its own events", writes)
+	if settles == 0 {
+		t.Fatal("settling was never attempted, so the test proved nothing")
 	}
-}
-
-// countStatusWrites re-reads the status file repeatedly and counts how often its
-// modification time changes.
-func countStatusWrites(t *testing.T, dir, id string) int {
-	t.Helper()
-	path := statusPath(dir, "api", id)
-	info, err := os.Stat(path)
-	if err != nil {
-		t.Fatalf("no status was written at all: %v", err)
+	if settles > 2 {
+		t.Fatalf("settling ran %d times in four and a half seconds: the retry limit is not holding", settles)
 	}
-	// One sample is enough to tell a loop from a retry: a loop leaves the file
-	// changing while nothing else does.
-	first := info.ModTime()
-	time.Sleep(600 * time.Millisecond)
-	again, err := os.Stat(path)
-	if err != nil {
-		t.Fatalf("stat: %v", err)
-	}
-	if again.ModTime().Equal(first) {
-		return 1
-	}
-	return 10
 }
 
 // A mailbox that is removed and recreated leaves the watch pointing at nothing.

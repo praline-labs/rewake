@@ -2,6 +2,7 @@ package claude
 
 import (
 	"encoding/json"
+	"os/exec"
 	"strings"
 	"testing"
 )
@@ -32,6 +33,12 @@ func TestTurnHookIsLayeredForOneLaunch(t *testing.T) {
 	hook := stop[0].Hooks[0]
 	if hook.Kind != "command" || !strings.HasSuffix(hook.Command, "'turn-ended'") {
 		t.Errorf("hook = %+v, want a command running rewake turn-ended", hook)
+	}
+	// The command runs through a shell; running it for real is the only check
+	// that the quoting holds and the path is the binary that exists.
+	shell := exec.Command("sh", "-c", "set -- "+hook.Command+"; test -x \"$1\" && test \"$2\" = turn-ended")
+	if out, err := shell.CombinedOutput(); err != nil {
+		t.Errorf("the hook command does not name an executable followed by turn-ended: %v %s", err, out)
 	}
 	if len(layer.Hooks) != 1 {
 		t.Errorf("hooks = %v, want only Stop: the layer must not add anything else", layer.Hooks)

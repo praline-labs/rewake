@@ -29,6 +29,11 @@ const DirEnv = "REWAKE_DIR"
 // environment of the commands its agent runs.
 const SessionEnv = "REWAKE_SESSION"
 
+// EpochEnv names the variable carrying the run of that name, the session
+// record's epoch. A name outlives its session; a process left behind by one run
+// must not read or answer for the next.
+const EpochEnv = "REWAKE_EPOCH"
+
 // dirMode is used for every directory rewake creates.
 const dirMode os.FileMode = 0o700
 

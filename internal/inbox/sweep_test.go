@@ -66,6 +66,10 @@ func TestFinishedMessagesAreSweptByAge(t *testing.T) {
 		t.Fatalf("mkdir: %v", err)
 	}
 	mailbox := state.InboxPath(dir, "api")
+	unread := state.UnreadPath(dir, "api")
+	if err := state.EnsureSubdir(unread); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
 
 	old := time.Now().Add(-keepFinished - time.Hour)
 	recent := time.Now().Add(-time.Minute)
@@ -74,6 +78,8 @@ func TestFinishedMessagesAreSweptByAge(t *testing.T) {
 		filepath.Join(done, "recent.json"):     recent,
 		filepath.Join(mailbox, "old.status"):   old,
 		filepath.Join(mailbox, "fresh.status"): recent,
+		filepath.Join(unread, "old.json"):      old,
+		filepath.Join(unread, "recent.json"):   recent,
 	}
 	for path, when := range files {
 		if err := os.WriteFile(path, []byte("{}"), 0o600); err != nil {

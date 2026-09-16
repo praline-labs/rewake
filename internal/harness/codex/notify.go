@@ -35,6 +35,11 @@ func turnNotify(home string, args []string, layered bool) (string, string) {
 	if strings.Contains(string(raw), notifyKey) {
 		return "", skipped + "config.toml mentions notify, and passing rewake's own would replace it"
 	}
+	// A quoted key may spell notify with escapes. Decoding TOML is not this
+	// reader's job, so any escape at all counts as a possible notify.
+	if strings.Contains(string(raw), `\u`) || strings.Contains(string(raw), `\U`) {
+		return "", skipped + "config.toml has escaped characters rewake does not decode, and one of them could spell notify"
+	}
 	argv, err := harness.TurnEndedArgv()
 	if err != nil {
 		return "", skipped + err.Error()

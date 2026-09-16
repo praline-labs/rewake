@@ -67,7 +67,7 @@ Created with 0700.
   inbox/<name>/<id>.status   status: pending, delivered (notice sent), read, failed
   inbox/<name>/unread/       announced, waiting for the agent to read it
   inbox/<name>/done/         read and failed, for diagnostics (cleaned up by age)
-  inbox/<name>/awaiting/     one empty-ish file per session waiting for this turn to end
+  inbox/<name>/awaiting/<epoch>/<peer>   per run: who waits for its turn to end, and which run of them
   sock/<name>.sock           Claude Code inbound socket, path set by the wrapper
 ```
 
@@ -112,6 +112,9 @@ its address, so a live name is never reused.
 ### Environment the harness receives
 
 - `REWAKE_SESSION=<name>` — who I am; `send` uses it to sign the sender.
+- `REWAKE_EPOCH=<epoch>` — which run of that name I am. A process left over
+  from an ended run keeps its environment; with this, it can neither read the
+  next run's mail nor sign or report for it.
 - `REWAKE_DIR=<directory>`.
 - Inherited Claude Code markers are stripped (list in research): otherwise
   `rewake claude` launched from inside another session would inherit that
@@ -230,12 +233,13 @@ one line rather than a pasted block.
 2. Look up a live session; if there's none, fail and list the live names.
 3. The message: `{"id","from","to","toEpoch","kind","reply","text","createdAt"}`.
    `id` is time-sortable (nanosecond timestamp plus a random tail). `from` is
-   `REWAKE_SESSION` or `shell`. `kind` is `notify`, or `question` with
+   `REWAKE_SESSION` or `shell`, and `fromEpoch` its run — both only when the
+   run in `REWAKE_EPOCH` still holds the name. `kind` is `notify`, or `question` with
    `--question`. `reply` is set when the recipient was waiting for the end of
    the sender's turn (below): the message answers it.
 4. Write `inbox/<name>/<id>.json.tmp`, rename it to `.json`.
 5. Wait for `.status` up to `--wait` (5 seconds by default) and print the
-   result. `delivered` means the notice went out.
+   result. `delivered` means the notice went out; `read` counts as delivered.
 
 ### Servicing process (the wrapper)
 
@@ -244,9 +248,12 @@ kernel reports it, so delivery does not wait for a tick. A one-second poll runs
 alongside as the safety net — it retries pending messages and covers a watch the
 kernel would not give — and every ten minutes answered and unread mail older
 than a day is swept away. Messages are processed in `id` order. For each one:
-count the unread mail, call the adapter with the notice, write the status
-(`.status.tmp`, then rename). `delivered` moves the message to `unread/`,
-`failed` to `done/`; `pending` stays and is retried every 2 seconds. A message
+hard-link it into `unread/` — readable before it is announced, because an agent
+told about it may run `rewake inbox` at once — count the unread mail, call the
+adapter with the notice, write the status (`.status.tmp`, then rename).
+`delivered` removes the waiting copy, leaving the one in `unread/`; `failed`
+removes the `unread/` copy and archives the message in `done/`; `pending`
+stays and is retried every 2 seconds. A message
 older than `--ttl` (30 minutes by default) gets `failed: expired`.
 
 Status: `{"state":"delivered|read|pending|failed","via":"socket|codex queue","detail":"...","at":"..."}`.
@@ -305,20 +312,25 @@ message goes to the current thread, not the one from when the session started.
 
 ### Reading (`rewake inbox`)
 
-Run by the agent inside its session: `REWAKE_SESSION` names the mailbox, and the
-session record gives the epoch, so mail left for an earlier session with the same
-name is not shown. Each unread message is moved to `done/` — a message is shown
-only by the call that moved it — and its status becomes `read`. The sender of
-every message read, unless the message is a reply or a `finished` notice, is
-recorded in `awaiting/`.
+Run by the agent inside its session: `REWAKE_SESSION` names the mailbox and
+`REWAKE_EPOCH` the run; a run that no longer holds the name is refused, and
+mail for an earlier run is not shown. The text is printed first, and only once
+the output got through is each message moved to `done/` and its status set to
+`read` — a message marked first and lost on the way would be gone; shown twice,
+it is merely shown twice. The sender run of every message read, unless the
+message is a reply or a `finished` notice or has no `fromEpoch`, is recorded in
+`awaiting/<own epoch>/`.
 
 ### The end of a turn
 
 When a turn ends, the harness runs `rewake turn-ended` — a Stop hook in Claude
 Code, the notify program in Codex — with the last reply of the turn in its
 payload (`last_assistant_message` on stdin, `last-assistant-message` as the last
-argument). The command takes the sessions in `awaiting/` and leaves each of them
-a `finished` message whose text is that reply. Their wrappers announce it:
+argument). For every run in `awaiting/<own epoch>/` it leaves a `finished`
+message whose text is that reply, addressed to that run — not to whoever holds
+the name now — and forgets the waiter only once the message is written. A waiter
+whose run has ended is forgotten without a message. A payload that does not
+arrive within three seconds is treated as no payload. Their wrappers announce it:
 `rewake: cx finished, 1 new message`.
 
 The hook only records; waking is the recipient wrapper's job, through the same
@@ -328,10 +340,10 @@ runs while its own session is still awake anyway.
 Three rules keep this from turning into a loop:
 
 - reading a `finished` notice asks for nothing back;
-- a message sent to a session that is waiting for this turn is a `reply`, clears
-  the wait, and reading it asks for nothing back — the answer says more than a
-  notice that the turn ended;
-- each waiting session is told once per turn.
+- a message sent to a run that is waiting for this turn is a `reply`, clears
+  the wait once written, and reading it asks for nothing back — the answer says
+  more than a notice that the turn ended;
+- each waiting run is told once; a new run of the name starts with no waiters.
 
 `turn-ended` is hidden from the guide and never fails loudly: it runs inside the
 harness's own machinery, where an error is noise at best.

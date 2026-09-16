@@ -9,31 +9,9 @@ import (
 	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
-	"github.com/iiiokojiadbi/rewake/internal/proc"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
-
-// addSession publishes one more live session into the same state directory.
-func addSession(t *testing.T, dir, name string) registry.Session {
-	t.Helper()
-	start, err := proc.StartTime(os.Getpid())
-	if err != nil {
-		t.Fatalf("start time: %v", err)
-	}
-	session := registry.Session{
-		Name: name, Harness: "codex", ServicePID: os.Getpid(), ServiceStart: start,
-		CWD: dir, StartedAt: time.Now(),
-	}
-	if err := registry.Publish(dir, session); err != nil {
-		t.Fatalf("publish: %v", err)
-	}
-	found, err := registry.Lookup(dir, name)
-	if err != nil {
-		t.Fatalf("lookup: %v", err)
-	}
-	return found
-}
 
 // leaveUnread puts a message where a serving process puts one it has announced.
 func leaveUnread(t *testing.T, dir string, message inbox.Message) {
@@ -107,9 +85,9 @@ const turnPayload = `{"type":"agent-turn-complete","thread-id":"t","last-assista
 // and only once.
 func TestTurnEndTellsTheSessionsThatWrote(t *testing.T) {
 	dir := liveSession(t, "api")
-	web := addSession(t, dir, "web")
+	web := otherRun(t, dir, "web")
 	t.Setenv(state.SessionEnv, "api")
-	leaveUnread(t, dir, inbox.Message{From: "web", To: "api", ToEpoch: epochOf(t, dir, "api"), Text: "rerun the smoke"})
+	leaveUnread(t, dir, inbox.Message{From: "web", FromEpoch: web.Epoch(), To: "api", ToEpoch: epochOf(t, dir, "api"), Text: "rerun the smoke"})
 	if code, _, errOut := run("inbox"); code != ExitOK {
 		t.Fatalf("inbox exit = %d (%s)", code, errOut)
 	}
@@ -139,9 +117,9 @@ func TestTurnEndTellsTheSessionsThatWrote(t *testing.T) {
 
 func TestTurnEndAfterAnAnswerSaysNothing(t *testing.T) {
 	dir := liveSession(t, "api")
-	addSession(t, dir, "web")
+	web := otherRun(t, dir, "web")
 	t.Setenv(state.SessionEnv, "api")
-	leaveUnread(t, dir, inbox.Message{From: "web", To: "api", ToEpoch: epochOf(t, dir, "api"), Text: "rerun the smoke"})
+	leaveUnread(t, dir, inbox.Message{From: "web", FromEpoch: web.Epoch(), To: "api", ToEpoch: epochOf(t, dir, "api"), Text: "rerun the smoke"})
 	run("inbox")
 	run("send", "web", "green", "--wait", "0")
 
@@ -160,10 +138,13 @@ func TestTurnEndAfterAnAnswerSaysNothing(t *testing.T) {
 // is one.
 func TestTurnEndIgnoresOtherEvents(t *testing.T) {
 	dir := liveSession(t, "api")
-	addSession(t, dir, "web")
+	web := otherRun(t, dir, "web")
 	t.Setenv(state.SessionEnv, "api")
-	leaveUnread(t, dir, inbox.Message{From: "web", To: "api", ToEpoch: epochOf(t, dir, "api"), Text: "rerun"})
+	leaveUnread(t, dir, inbox.Message{From: "web", FromEpoch: web.Epoch(), To: "api", ToEpoch: epochOf(t, dir, "api"), Text: "rerun"})
 	run("inbox")
+	if waiting := inbox.Waiters(dir, "api", epochOf(t, dir, "api")); len(waiting) != 1 {
+		t.Fatalf("waiting = %v; without a waiter this test proves nothing", waiting)
+	}
 
 	run("turn-ended", `{"type":"approval-requested"}`)
 	waiting, _ := filepath.Glob(filepath.Join(state.InboxPath(dir, "web"), "*.json"))
@@ -194,4 +175,8 @@ func TestInternalCommandsStayOutOfTheGuide(t *testing.T) {
 	if !strings.Contains(out, "rewake inbox") {
 		t.Error("the guide does not say how to read a message")
 	}
+}
+
+func inboxWaiters(dir, epoch string) []inbox.Waiter {
+	return inbox.Waiters(dir, "api", epoch)
 }

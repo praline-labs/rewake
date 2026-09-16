@@ -26,6 +26,8 @@ type LaunchRequest struct {
 	// Socket is the path the harness should use for its inbox socket, when it
 	// has one.
 	Socket string
+	// Epoch identifies this run of the name.
+	Epoch string
 }
 
 // LaunchPlan is how the wrapper starts the harness.
@@ -149,6 +151,7 @@ func shortID(id string) string {
 func SessionEnv(request LaunchRequest, strip []string) []string {
 	drop := map[string]bool{
 		state.SessionEnv: true,
+		state.EpochEnv:   true,
 		state.DirEnv:     true,
 	}
 	for _, name := range strip {
@@ -168,6 +171,7 @@ func SessionEnv(request LaunchRequest, strip []string) []string {
 	}
 	return append(env,
 		state.SessionEnv+"="+request.Name,
+		state.EpochEnv+"="+request.Epoch,
 		state.DirEnv+"="+request.Dir,
 	)
 }

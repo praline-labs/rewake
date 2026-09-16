@@ -2,6 +2,7 @@ package wrap
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -198,7 +199,9 @@ func TestMailOfAPreviousSessionIsRefused(t *testing.T) {
 func TestSessionEnvironmentReachesTheHarness(t *testing.T) {
 	dir := stateDir(t)
 	out := filepath.Join(t.TempDir(), "env.txt")
-	fake := &fakeHarness{script: "printf '%s %s' \"$REWAKE_SESSION\" \"$REWAKE_DIR\" > " + out}
+	fake := &fakeHarness{script: "printf '%s %s %s' \"$REWAKE_SESSION\" \"$REWAKE_DIR\" \"$REWAKE_EPOCH\" > " + out}
+	// Inherited from a parent session, these must not leak into this one.
+	t.Setenv("REWAKE_EPOCH", "1.1")
 
 	if _, err := Run(context.Background(), Request{Harness: fake, Dir: dir, Name: "api"}); err != nil {
 		t.Fatalf("Run: %v", err)
@@ -208,8 +211,10 @@ func TestSessionEnvironmentReachesTheHarness(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read: %v", err)
 	}
-	if got := string(content); got != "api "+dir {
-		t.Errorf("environment = %q, want %q", got, "api "+dir)
+	// The run is this wrapper's: its pid and start time.
+	want := fmt.Sprintf("api %s %d.%d", dir, os.Getpid(), selfStart(t))
+	if got := string(content); got != want {
+		t.Errorf("environment = %q, want %q", got, want)
 	}
 }
 

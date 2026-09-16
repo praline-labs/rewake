@@ -12,104 +12,168 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
-// A delivered message is not archived. The harness was only told that it is
-// waiting, so it moves to unread/ and stays there until the agent fetches it.
-// Reading moves it on to done/ and records the read, which is also what tells a
-// session who is waiting for the end of its turn.
+// A harness is told that mail is waiting, not handed the text, so the message
+// has to be readable before the notice goes out: an agent that runs rewake inbox
+// the moment it is told must find it. It is linked into unread/ first and leaves
+// the waiting set once its notice is out. Reading moves it on to done/, records
+// the read, and notes who waits for the end of the reader's turn.
 
-// markUnread moves a message whose notice went out into unread/.
-func markUnread(dir, to, id string) error {
-	return move(id, state.InboxPath(dir, to), state.UnreadPath(dir, to))
+// linkUnread makes a waiting message readable. The link is the same file, so
+// nothing can be read that was not written, and linking twice is harmless.
+func linkUnread(dir, to, id string) error {
+	unread := state.UnreadPath(dir, to)
+	if err := state.EnsureSubdir(unread); err != nil {
+		return err
+	}
+	err := os.Link(filepath.Join(state.InboxPath(dir, to), id+".json"), filepath.Join(unread, id+".json"))
+	if err != nil && !errors.Is(err, os.ErrExist) {
+		return err
+	}
+	_ = state.SyncDir(unread)
+	return nil
+}
+
+// dropUnread takes back a message that will not be announced after all.
+func dropUnread(dir, to, id string) {
+	_ = os.Remove(filepath.Join(state.UnreadPath(dir, to), id+".json"))
 }
 
 // countUnread is how many messages of this run are waiting to be read.
 func countUnread(dir, to, epoch string) int {
-	messages, err := listIn(state.UnreadPath(dir, to))
+	messages, err := PeekUnread(dir, to, epoch)
 	if err != nil {
 		return 0
 	}
-	count := 0
-	for _, message := range messages {
-		if epoch == "" || message.ToEpoch == epoch {
-			count++
-		}
-	}
-	return count
+	return len(messages)
 }
 
-// TakeUnread returns the unread messages of one run of a session, oldest first,
-// and marks them read. A message is returned only if this call moved it: two
-// readers at once each get their own share, never the same message twice.
-func TakeUnread(dir, name, epoch string) ([]Message, error) {
+// PeekUnread returns the unread messages of one run of a session, oldest first,
+// without marking anything. The caller shows them, then marks each one read: a
+// message marked before its text reached anybody would be lost.
+func PeekUnread(dir, name, epoch string) ([]Message, error) {
 	messages, err := listIn(state.UnreadPath(dir, name))
 	if err != nil {
 		return nil, err
 	}
-	taken := make([]Message, 0, len(messages))
+	mine := make([]Message, 0, len(messages))
 	for _, message := range messages {
-		if epoch != "" && message.ToEpoch != epoch {
-			continue
+		if epoch == "" || message.ToEpoch == epoch {
+			mine = append(mine, message)
 		}
-		if err := move(message.ID, state.UnreadPath(dir, name), state.DonePath(dir, name)); err != nil {
-			if errors.Is(err, os.ErrNotExist) {
-				continue
-			}
-			return taken, err
-		}
-		_ = writeStatus(dir, name, message.ID, Result{State: Read})
-		if message.From != "" && KindOf(message) != Finished && !message.Reply {
-			// A finished notice or a reply is an answer already; waiting on it
-			// would have two sessions wake each other for nothing.
-			_ = markAwaiting(dir, name, message.From)
-		}
-		taken = append(taken, message)
 	}
-	return taken, nil
+	return mine, nil
 }
 
-// markAwaiting records that a session is waiting for the end of this turn.
-func markAwaiting(dir, name, from string) error {
-	if !state.ValidName(from) {
+// MarkRead records that a message was read by this run of the session. It
+// reports false when the message had already left unread/, which happens only
+// when two readers raced for it.
+func MarkRead(dir, name, epoch string, message Message) (bool, error) {
+	if err := move(message.ID, state.UnreadPath(dir, name), state.DonePath(dir, name)); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return false, nil
+		}
+		return false, err
+	}
+	_ = writeStatus(dir, name, message.ID, Result{State: Read})
+	// A finished notice or a reply is an answer already, and waiting on it would
+	// have two sessions wake each other for nothing. A sender without a run of
+	// its own — a shell, or mail from before runs were recorded — has nowhere a
+	// report could go.
+	if KindOf(message) != Finished && !message.Reply && message.FromEpoch != "" {
+		if err := markAwaiting(dir, name, epoch, message.From, message.FromEpoch); err != nil {
+			return true, err
+		}
+	}
+	return true, nil
+}
+
+// Waiter is a session run waiting for the end of this turn.
+type Waiter struct {
+	Name  string
+	Epoch string
+}
+
+// awaitingPath holds the waiters of one run. Keyed by run, because a name can
+// be taken over, and what the previous run read is not the next one's to report.
+func awaitingPath(dir, name, epoch string) (string, bool) {
+	if epoch == "" || strings.ContainsAny(epoch, `/\`) || strings.HasPrefix(epoch, ".") {
+		return "", false
+	}
+	return filepath.Join(state.AwaitingPath(dir, name), epoch), true
+}
+
+// markAwaiting records that a run of another session waits for this turn.
+func markAwaiting(dir, name, epoch, from, fromEpoch string) error {
+	path, ok := awaitingPath(dir, name, epoch)
+	if !ok || !state.ValidName(from) {
 		return nil
 	}
-	awaiting := state.AwaitingPath(dir, name)
-	if err := state.EnsureSubdir(awaiting); err != nil {
+	if err := state.EnsureSubdir(state.AwaitingPath(dir, name)); err != nil {
 		return err
 	}
-	return state.WriteAtomic(filepath.Join(awaiting, from), []byte(time.Now().UTC().Format(time.RFC3339)+"\n"))
-}
-
-// ClearAwaiting clears a waiting session once this one has written to it
-// directly, and reports whether it was waiting: the message is then an answer,
-// and it says more than a notice that the turn ended would.
-func ClearAwaiting(dir, name, to string) bool {
-	if !state.ValidName(to) {
-		return false
+	if err := state.EnsureSubdir(path); err != nil {
+		return err
 	}
-	return os.Remove(filepath.Join(state.AwaitingPath(dir, name), to)) == nil
+	return state.WriteAtomic(filepath.Join(path, from), []byte(fromEpoch))
 }
 
-// TakeAwaiting returns the sessions waiting for the end of this turn and forgets
-// them, so each is told once.
-func TakeAwaiting(dir, name string) []string {
-	awaiting := state.AwaitingPath(dir, name)
-	entries, err := os.ReadDir(awaiting)
+// Waiters lists who waits for the end of this run's turn. Nothing is forgotten
+// here: a waiter is cleared only once the report to it is written.
+func Waiters(dir, name, epoch string) []Waiter {
+	path, ok := awaitingPath(dir, name, epoch)
+	if !ok {
+		return nil
+	}
+	entries, err := os.ReadDir(path)
 	if err != nil {
 		return nil
 	}
-	names := make([]string, 0, len(entries))
+	waiters := make([]Waiter, 0, len(entries))
 	for _, entry := range entries {
 		peer := entry.Name()
 		if entry.IsDir() || !state.ValidName(peer) {
 			continue
 		}
-		if err := os.Remove(filepath.Join(awaiting, peer)); err != nil {
+		raw, err := os.ReadFile(filepath.Join(path, peer))
+		if err != nil {
 			continue
 		}
-		names = append(names, peer)
+		waiters = append(waiters, Waiter{Name: peer, Epoch: strings.TrimSpace(string(raw))})
 	}
-	sort.Strings(names)
-	return names
+	sort.Slice(waiters, func(i, j int) bool { return waiters[i].Name < waiters[j].Name })
+	return waiters
+}
+
+// Awaits reports whether this run owes a report to the given run of a session.
+func Awaits(dir, name, epoch string, peer Waiter) bool {
+	for _, waiter := range Waiters(dir, name, epoch) {
+		if waiter == peer {
+			return true
+		}
+	}
+	return false
+}
+
+// ClearAwaiting forgets a waiter, once it has been answered or reported to.
+func ClearAwaiting(dir, name, epoch, peer string) {
+	path, ok := awaitingPath(dir, name, epoch)
+	if !ok || !state.ValidName(peer) {
+		return
+	}
+	_ = os.Remove(filepath.Join(path, peer))
+}
+
+// sweepAwaiting forgets what earlier runs of this name were waited on for.
+func sweepAwaiting(dir, name, epoch string) {
+	entries, err := os.ReadDir(state.AwaitingPath(dir, name))
+	if err != nil {
+		return
+	}
+	for _, entry := range entries {
+		if entry.Name() != epoch {
+			_ = os.RemoveAll(filepath.Join(state.AwaitingPath(dir, name), entry.Name()))
+		}
+	}
 }
 
 // move renames a message file between two directories of one mailbox.

@@ -161,8 +161,18 @@ func (s *Server) drain(ctx context.Context) {
 			continue
 		}
 
-		// The notice names how many messages will be waiting, this one included.
-		message.Unread = countUnread(s.Dir, s.Name, s.Epoch) + 1
+		// Readable first, announced second: an agent that runs rewake inbox the
+		// moment it is told has to find the message there.
+		if err := linkUnread(s.Dir, s.Name, message.ID); err != nil {
+			s.attempts[message.ID] = time.Now()
+			_ = writeStatus(s.Dir, s.Name, message.ID, Result{
+				State:  Pending,
+				Detail: "the message could not be made readable yet: " + err.Error(),
+			})
+			continue
+		}
+		// The notice names how many messages wait, this one included.
+		message.Unread = countUnread(s.Dir, s.Name, s.Epoch)
 		result := s.Deliver(ctx, message)
 		s.attempts[message.ID] = time.Now()
 		if result.State == Pending {
@@ -206,14 +216,24 @@ func (s *Server) publish(id string, result Result) {
 	settle(s.Dir, s.Name, id, result.State)
 }
 
+// removeWaiting drops the waiting copy of an announced message; replaceable in
+// tests, which need that step to fail.
+var removeWaiting = os.Remove
+
 // settle takes a message with an outcome out of the waiting set. One the harness
-// was told about waits in unread/ for the agent to fetch; anything else is done.
+// was told about stays readable in unread/ — or has been read already — so only
+// the waiting copy goes. A refused one is taken back from unread/ and archived.
 func settle(dir, name, id string, outcome State) {
-	if outcome == Delivered {
-		_ = markUnread(dir, name, id)
-		return
+	switch outcome {
+	case Delivered, Read:
+		waiting := filepath.Join(state.InboxPath(dir, name), id+".json")
+		if err := removeWaiting(waiting); err == nil {
+			_ = state.SyncDir(state.InboxPath(dir, name))
+		}
+	default:
+		dropUnread(dir, name, id)
+		_ = archive(dir, name, id)
 	}
-	_ = archive(dir, name, id)
 }
 
 // alreadySettled reports whether this message has an outcome, from this run or
@@ -266,6 +286,7 @@ func (s *Server) sweepForeign() {
 	if s.Epoch == "" {
 		return
 	}
+	sweepAwaiting(s.Dir, s.Name, s.Epoch)
 	messages, err := list(s.Dir, s.Name)
 	if err != nil {
 		return

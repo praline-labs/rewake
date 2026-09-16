@@ -83,6 +83,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 		Args:   request.Args,
 		Intro:  request.Intro,
 		Socket: registry.SocketFor(request.Dir, name),
+		Epoch:  epoch,
 	})
 	if err != nil {
 		return 0, err

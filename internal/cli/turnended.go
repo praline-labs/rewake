@@ -2,7 +2,6 @@ package cli
 
 import (
 	"encoding/json"
-	"errors"
 	"io"
 	"os"
 	"strings"
@@ -17,20 +16,29 @@ import (
 // object; anything much larger is not one.
 const maxPayload = 4 << 20
 
+// payloadWait bounds the wait for a payload on stdin. A hook gets its payload
+// at once and the pipe closed; one that stays open with nothing on it would
+// otherwise hold the end of the turn for as long as the harness allows.
+const payloadWait = 3 * time.Second
+
 // silentEnd is the text of a finished notice when the turn ended without a reply.
 const silentEnd = "(the turn ended without a final message)"
 
 // handleTurnEnded is called by a harness at the end of every turn of its
-// session. It tells each session whose message was read during that turn that
-// the turn is over, and passes the last reply along.
+// session. It tells each session run whose message was read during that turn
+// that the turn is over, and passes the last reply along.
 //
 // It never fails loudly. It runs inside the harness's own machinery — a Claude
 // Code Stop hook, a Codex notify program — where an error is at best noise on
-// the screen and at worst a turn that will not end.
-func handleTurnEnded(ctx *Context, call Call) error {
-	name := os.Getenv(state.SessionEnv)
+// the screen and at worst a turn that will not end. What it could not do stays
+// owed and is tried again at the end of the next turn.
+func handleTurnEnded(_ *Context, call Call) error {
 	dir, err := state.Dir()
-	if name == "" || err != nil {
+	if err != nil {
+		return nil
+	}
+	self, epoch, err := ownRun(dir)
+	if err != nil {
 		return nil
 	}
 
@@ -38,9 +46,9 @@ func handleTurnEnded(ctx *Context, call Call) error {
 	if len(call.Positionals) > 0 {
 		// Codex passes the payload as the last argument.
 		payload = []byte(call.Positionals[len(call.Positionals)-1])
-	} else if !isTerminal(os.Stdin) {
+	} else {
 		// A Claude Code hook gets it on stdin.
-		payload, _ = io.ReadAll(io.LimitReader(os.Stdin, maxPayload))
+		payload = readPayload(os.Stdin)
 	}
 	reply, ok := lastReply(payload)
 	if !ok {
@@ -50,22 +58,49 @@ func handleTurnEnded(ctx *Context, call Call) error {
 		reply = silentEnd
 	}
 
-	for _, peer := range inbox.TakeAwaiting(dir, name) {
-		session, err := registry.Lookup(dir, peer)
-		if errors.Is(err, registry.ErrNotFound) || err != nil {
+	for _, waiter := range inbox.Waiters(dir, self.Name, epoch) {
+		peer, err := registry.Lookup(dir, waiter.Name)
+		if err != nil || peer.Epoch() != waiter.Epoch {
+			// The run that wrote has ended, whether or not its name lives on:
+			// nobody is left to tell.
+			if err == nil || err == registry.ErrNotFound {
+				inbox.ClearAwaiting(dir, self.Name, epoch, waiter.Name)
+			}
 			continue
 		}
-		_ = inbox.Put(dir, inbox.Message{
+		err = inbox.Put(dir, inbox.Message{
 			ID:        inbox.NewID(),
-			From:      name,
-			To:        session.Name,
-			ToEpoch:   session.Epoch(),
+			From:      self.Name,
+			FromEpoch: epoch,
+			To:        peer.Name,
+			ToEpoch:   waiter.Epoch,
 			Kind:      inbox.Finished,
 			Text:      reply,
 			CreatedAt: time.Now(),
 		})
+		if err == nil {
+			inbox.ClearAwaiting(dir, self.Name, epoch, waiter.Name)
+		}
 	}
 	return nil
+}
+
+// readPayload reads stdin, but not forever, and never from a person.
+func readPayload(input *os.File) []byte {
+	if isTerminal(input) {
+		return nil
+	}
+	read := make(chan []byte, 1)
+	go func() {
+		data, _ := io.ReadAll(io.LimitReader(input, maxPayload))
+		read <- data
+	}()
+	select {
+	case data := <-read:
+		return data
+	case <-time.After(payloadWait):
+		return nil
+	}
 }
 
 // lastReply reads the last reply of the turn from a hook payload. The two

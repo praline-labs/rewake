@@ -35,6 +35,7 @@ func TestTurnNotifyLeavesTheUsersProgram(t *testing.T) {
 		"a top-level key": "notify = [\"notify-send\", \"codex\"]\n",
 		"a quoted key":    "\"notify\" = [\"x\"]\n",
 		"a nested table":  "[profiles.work]\nnotify = [\"x\"]\n",
+		"an escaped key":  "\"not\\u0069fy\" = [\"mine\"]\n",
 	} {
 		t.Run(name, func(t *testing.T) {
 			codexHome(t, config)

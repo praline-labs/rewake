@@ -34,6 +34,9 @@ type Message struct {
 	// can be reused once its session ends, and mail addressed to the previous
 	// tenant must not be handed to the next one.
 	ToEpoch string `json:"toEpoch,omitempty"`
+	// FromEpoch names the run of the sending session, so an answer to it — a
+	// report that the receiver's turn ended — reaches that run and no other.
+	FromEpoch string `json:"fromEpoch,omitempty"`
 	// Kind says what the message is about, and it is what the receiver's notice
 	// names: a plain note, a question waiting for an answer, or the end of the
 	// sender's turn.

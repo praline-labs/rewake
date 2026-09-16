@@ -4,8 +4,11 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
 // Delivery is the step that cannot be undone. If the status write fails, the
@@ -44,7 +47,21 @@ func TestFailedStatusWriteDoesNotRedeliver(t *testing.T) {
 	}
 }
 
-// A delivered message whose archiving fails must not be turned into a failure
+// stuckWaiting makes the last step of settling a delivered message fail, and
+// counts the attempts so a test can tell the step was really reached.
+func stuckWaiting(t *testing.T) *atomic.Int64 {
+	t.Helper()
+	attempts := &atomic.Int64{}
+	previous := removeWaiting
+	removeWaiting = func(string) error {
+		attempts.Add(1)
+		return os.ErrPermission
+	}
+	t.Cleanup(func() { removeWaiting = previous })
+	return attempts
+}
+
+// A delivered message whose settling fails must not be turned into a failure
 // when the session ends: its sender would say the whole thing again.
 func TestShutdownKeepsADeliveredStatus(t *testing.T) {
 	dir := stateDir(t)
@@ -52,10 +69,7 @@ func TestShutdownKeepsADeliveredStatus(t *testing.T) {
 	if err := Put(dir, sent); err != nil {
 		t.Fatalf("put: %v", err)
 	}
-	// A file where the done/ directory belongs: archiving can only fail.
-	if err := os.WriteFile(filepath.Join(dir, "inbox", "api", "done"), nil, 0o600); err != nil {
-		t.Fatalf("write: %v", err)
-	}
+	attempts := stuckWaiting(t)
 
 	server := &Server{Dir: dir, Name: "api", Deliver: func(context.Context, Message) Result {
 		return Result{State: Delivered, Via: "socket"}
@@ -85,6 +99,12 @@ func TestShutdownKeepsADeliveredStatus(t *testing.T) {
 	status, ok := ReadStatus(dir, "api", sent.ID)
 	if !ok || status.State != Delivered {
 		t.Fatalf("status after shutdown = %+v, want it to stay delivered", status)
+	}
+	if attempts.Load() == 0 {
+		t.Fatal("settling was never attempted, so the test proved nothing")
+	}
+	if _, err := os.Stat(filepath.Join(state.UnreadPath(dir, "api"), sent.ID+".json")); err != nil {
+		t.Errorf("a delivered message is no longer readable after shutdown: %v", err)
 	}
 }
 
@@ -125,11 +145,8 @@ func TestSettledMessageIsNotDeliveredTwice(t *testing.T) {
 	if err := Put(dir, sent); err != nil {
 		t.Fatalf("put: %v", err)
 	}
-	// Archiving is blocked, so the message stays visible in the mailbox and the
-	// next pass sees it again.
-	if err := os.WriteFile(filepath.Join(dir, "inbox", "api", "done"), nil, 0o600); err != nil {
-		t.Fatalf("write: %v", err)
-	}
+	// The waiting copy cannot be removed, so the next pass sees it again.
+	attempts := stuckWaiting(t)
 
 	deliveries := 0
 	server := &Server{Dir: dir, Name: "api", Deliver: func(context.Context, Message) Result {
@@ -149,6 +166,12 @@ func TestSettledMessageIsNotDeliveredTwice(t *testing.T) {
 
 	if deliveries != 1 {
 		t.Fatalf("the message was delivered %d times, want once", deliveries)
+	}
+	if attempts.Load() == 0 {
+		t.Fatal("settling was never attempted, so the test proved nothing")
+	}
+	if waiting, _ := list(dir, "api"); len(waiting) != 1 {
+		t.Fatalf("mailbox holds %v; the message left it, so no later pass could see it again", waiting)
 	}
 }
 

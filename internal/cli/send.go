@@ -82,27 +82,41 @@ func handleSend(ctx *Context, call Call) error {
 	}
 	message := inbox.Message{
 		ID:        inbox.NewID(),
-		From:      sender(),
+		From:      harness.ShellSender,
 		To:        session.Name,
 		ToEpoch:   session.Epoch(),
 		Kind:      kind,
 		Text:      text,
 		CreatedAt: time.Now(),
 	}
-	if message.From != harness.ShellSender {
-		// Writing to a session that waits for this turn answers it. The answer
+	// Signed with this session's name and run only when both are known to be
+	// current: an answer then reaches this run, and a process left over from an
+	// earlier run cannot speak for the next one.
+	self, epoch, selfErr := ownRun(dir)
+	peer := inbox.Waiter{Name: session.Name, Epoch: session.Epoch()}
+	if selfErr == nil {
+		message.From, message.FromEpoch = self.Name, epoch
+		// Writing to a session that waits for this turn answers it: the answer
 		// says more than a notice that the turn ended, and reading it must not
-		// ask for a notice back. Cleared before the message exists, so a turn
-		// that ends in between reports nothing twice.
-		message.Reply = inbox.ClearAwaiting(dir, message.From, session.Name)
+		// ask for a notice back.
+		message.Reply = inbox.Awaits(dir, self.Name, epoch, peer)
 	}
 	if err := inbox.Put(dir, message); err != nil {
 		return failf("could not write the message into the mailbox of %s: %v", session.Name, err)
+	}
+	if message.Reply {
+		// Forgotten only once the answer is written: a failed write leaves the
+		// report owed.
+		inbox.ClearAwaiting(dir, self.Name, epoch, peer.Name)
 	}
 
 	status, known := inbox.Await(dir, session.Name, message.ID, wait)
 	model := sendModel{ID: message.ID, To: session.Name, From: message.From}
 	switch {
+	case known && status.State == inbox.Read:
+		// Read already, which is delivered and then some.
+		model.State, model.Via = string(inbox.Delivered), status.Via
+		model.Detail = "already read"
 	case known && status.State != inbox.Pending:
 		model.State, model.Via, model.Detail = string(status.State), status.Via, status.Detail
 	default:
@@ -192,12 +206,4 @@ func waitDuration(call Call) (time.Duration, error) {
 		}
 	}
 	return time.Duration(seconds * float64(time.Second)), nil
-}
-
-// sender is the name this message is signed with.
-func sender() string {
-	if name := os.Getenv(state.SessionEnv); name != "" {
-		return name
-	}
-	return harness.ShellSender
 }

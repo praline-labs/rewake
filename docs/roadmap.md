@@ -304,6 +304,38 @@ The run found two things no test had:
 
 The review round five findings (see below) are still open.
 
+## Review round six — done, September 16, 2026
+
+Codex read `a2241e1` asking what it broke. Its sandbox could not write even to
+`/tmp`, so the round was read-only; every finding was reproduced here by a test
+that fails on `a2241e1` before being fixed, and every fix was checked by a
+mutation its test catches.
+
+- **A read message made `send` fail.** Reading sets the status to `read`, and
+  `send` treated anything but `delivered` as a failure. Read now counts as
+  delivered.
+- **The notice could arrive before the message was readable.** It went out
+  first and the message moved to `unread/` after. The message is now linked
+  into `unread/` before the notice, and the waiting copy removed after.
+- **A report went to whoever held the name when the turn ended**, and a new run
+  of a name inherited its predecessor's waiters. Messages carry `fromEpoch`,
+  waiters are kept per run of the reader with the run of the writer, and a new
+  run sweeps the old ones.
+- **A process left over from an ended run could read the next run's mail.**
+  The wrapper passes `REWAKE_EPOCH`; `inbox`, `send` and `turn-ended` act only
+  for the run that still holds the name.
+- **Reading marked messages before printing them**, so a failed write lost them.
+  Printing comes first now.
+- **Waiters were forgotten before the report or the answer was written.** They
+  are forgotten after.
+- **`turn-ended` waited forever on an open pipe** with no payload. Three seconds.
+- **An escaped TOML key could spell `notify`** past the substring check. Any
+  escape now keeps rewake's `notify` out.
+
+Five tests were passing for the wrong reason — blocking `done/`, which a
+delivered message no longer goes to, or measuring after the server stopped —
+and now fail when the step they name is broken.
+
 ## Review round five — open, September 16, 2026
 
 Run against `1d276de`, asked "what did these fixes break" rather than "is it
