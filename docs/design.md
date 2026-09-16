@@ -219,7 +219,11 @@ this is that, with one question asked first.
 
 ### Servicing process (wrapper or watchdog)
 
-Polls the inbox every 250 ms. Messages are processed in `id` order. For each
+Watches the inbox: a message arrives as a rename into the directory and the
+kernel reports it, so delivery does not wait for a tick. A one-second poll runs
+alongside as the safety net — it retries pending messages and covers a watch the
+kernel would not give — and every ten minutes answered mail older than a day is
+swept away. Messages are processed in `id` order. For each
 one: call the delivery adapter, write the status (`.status.tmp`, then rename).
 `delivered` and `failed` are moved to `done/`; `pending` stays and is retried
 every 2 seconds. A message older than `--ttl` (30 minutes by default) gets
