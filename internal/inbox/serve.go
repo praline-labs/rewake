@@ -31,6 +31,9 @@ const (
 	sweepInterval = 10 * time.Minute
 )
 
+// watch is how the server hears about new mail; replaceable in tests.
+var watch = watchMailbox
+
 // Deliverer hands one message to the harness of this session.
 type Deliverer func(ctx context.Context, message Message) Result
 
@@ -54,6 +57,11 @@ type Server struct {
 
 	// attempts remembers when each pending message was last tried.
 	attempts map[string]time.Time
+	// stopping lifts the retry limit. Shutdown is the last chance to write down
+	// an outcome that is only in memory: a status write that failed a moment
+	// ago would otherwise be skipped, and the next session with this name would
+	// refuse a message that was delivered.
+	stopping bool
 	// outcomes remembers what happened to a message the moment it happened, not
 	// once the status file was written. Delivery is the part that cannot be
 	// undone: if writing the status fails, the outcome has to survive anyway, or
@@ -82,14 +90,21 @@ func (s *Server) Serve(ctx context.Context) {
 
 	// The watch makes the common case immediate; the ticker still runs, because
 	// a pending message has to be retried on time and a watch may not exist.
-	changed := watchMailbox(ctx, s.Dir, s.Name)
+	changed := watch(ctx, s.Dir, s.Name)
 
 	for {
 		select {
 		case <-ctx.Done():
 			s.refuseWaiting("the session ended before this message could be delivered")
 			return
-		case <-changed:
+		case _, open := <-changed:
+			if !open {
+				// The watch has ended. A closed channel is always ready, and
+				// reading it again and again spun a core; the ticker carries
+				// on alone.
+				changed = nil
+				continue
+			}
 			s.drain(ctx)
 		case <-ticker.C:
 			s.drain(ctx)
@@ -222,7 +237,7 @@ func (s *Server) finish(message Message, result Result) {
 // and a directory that cannot be archived into turned that into a loop: write,
 // event, pass, write again, hundreds of times a second.
 func (s *Server) publish(id string, result Result) {
-	if last, tried := s.attempts[id]; tried && time.Since(last) < retryInterval {
+	if last, tried := s.attempts[id]; tried && time.Since(last) < retryInterval && !s.stopping {
 		return
 	}
 	s.attempts[id] = time.Now()
@@ -308,6 +323,7 @@ func (s *Server) alreadySettled(message Message) bool {
 // message into a failed one sends its sender to say the whole thing again. Nor
 // is mail addressed to another epoch — that belongs to somebody else.
 func (s *Server) refuseWaiting(reason string) {
+	s.stopping = true
 	messages, err := list(s.Dir, s.Name)
 	if err != nil {
 		return

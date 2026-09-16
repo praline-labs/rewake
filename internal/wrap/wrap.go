@@ -185,10 +185,7 @@ func waitForHarness(pid int) int {
 
 		switch {
 		case status.Stopped():
-			// Stop this process too, so the shell sees the whole job stop. Being
-			// continued brings the harness back with it.
-			_ = syscall.Kill(os.Getpid(), syscall.SIGSTOP)
-			_ = syscall.Kill(pid, syscall.SIGCONT)
+			followStop(pid, stillStopped, stopSelf)
 		case status.Continued():
 			// Both are running again; nothing to do.
 		case status.Signaled():
@@ -199,6 +196,30 @@ func waitForHarness(pid int) int {
 		}
 	}
 }
+
+// followStop stops the wrapper with a harness that stopped on its own, and
+// brings the harness back when the wrapper is continued.
+//
+// The report of a stop can be old news. Ctrl+Z stops the whole job, wrapper
+// included, and the report is read only after "fg" has continued both — stopping
+// again then handed the shell a stopped job while the harness ran on its own.
+// So the wrapper follows only a harness that is stopped right now.
+func followStop(pid int, stopped func(int) bool, stop func()) {
+	if !stopped(pid) {
+		return
+	}
+	stop()
+	_ = syscall.Kill(pid, syscall.SIGCONT)
+}
+
+// stillStopped reports whether a process is in a job-control stop now.
+func stillStopped(pid int) bool {
+	state, err := proc.State(pid)
+	return err == nil && state == "T"
+}
+
+// stopSelf stops the wrapper the way a job is stopped.
+func stopSelf() { _ = syscall.Kill(os.Getpid(), syscall.SIGSTOP) }
 
 // current re-reads the session record so delivery sees the latest one. The
 // harness may have moved on — a new Codex thread, a recreated socket — and the
@@ -254,10 +275,21 @@ func catchSignals() (chan os.Signal, func()) {
 	// default. The wrapper shares the harness's group, so Ctrl+C reaches it too,
 	// and dying from it left the agent running with nobody serving its mailbox:
 	// interrupting a turn must not end the session.
-	signal.Ignore(syscall.SIGINT, syscall.SIGQUIT)
+	//
+	// Caught, not ignored. An ignored signal stays ignored across exec, so the
+	// harness and every command it ran would have lost Ctrl+C too; a caught one
+	// is reset to its default in the child.
+	keyboard := make(chan os.Signal, 8)
+	signal.Notify(keyboard, syscall.SIGINT, syscall.SIGQUIT)
+	go func() {
+		for range keyboard {
+		}
+	}()
 	return incoming, func() {
 		signal.Stop(incoming)
-		signal.Reset(syscall.SIGINT, syscall.SIGQUIT)
+		// Stop guarantees nothing more is sent, so closing ends the drain.
+		signal.Stop(keyboard)
+		close(keyboard)
 	}
 }
 

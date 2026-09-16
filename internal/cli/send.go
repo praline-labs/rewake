@@ -104,8 +104,14 @@ func handleSend(ctx *Context, call Call) error {
 		return failf("could not write the message into the mailbox of %s: %v", session.Name, err)
 	}
 
-	status, known := inbox.Await(dir, session.Name, message.ID, wait)
+	status, known := awaitStatus(dir, session.Name, message.ID, wait)
 	model := sendModel{ID: message.ID, To: session.Name, From: message.From}
+	if !known && inbox.Answered(dir, session.Name, message.ID) {
+		// The message left the mailbox, and a status may have been written
+		// after the wait gave up. Absent a moment ago is not absent now:
+		// calling a fresh delivery lost sends the sender to do it twice.
+		status, known = inbox.ReadStatus(dir, session.Name, message.ID)
+	}
 	switch {
 	case known && status.State == inbox.Read:
 		// Read already, which is delivered and then some.
@@ -165,6 +171,9 @@ func handleSend(ctx *Context, call Call) error {
 		return &FailedError{Message: line}
 	}
 }
+
+// awaitStatus waits for the status of a message; replaceable in tests.
+var awaitStatus = inbox.Await
 
 // sendLine is the one line a caller reads: what happened, by which path, and
 // what it means when the answer is not "delivered".

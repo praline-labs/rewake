@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/proc"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/state"
@@ -357,5 +358,25 @@ func TestTwoTurnEndsAtOnceReportOnce(t *testing.T) {
 	<-second
 	if found := finishedFor(t, dir, "web"); len(found) != 1 {
 		t.Errorf("web holds %d reports, want one", len(found))
+	}
+}
+
+// The status can land after the wait gave up and before the message is looked
+// for: a fresh delivery then must not be called a lost one.
+func TestSendRereadsAStatusThatLandedLate(t *testing.T) {
+	liveSession(t, "api")
+	previous := awaitStatus
+	awaitStatus = func(dir, to, id string, _ time.Duration) (inbox.Status, bool) {
+		// What the server does in that gap: announce, record, clear the copy.
+		status := filepath.Join(state.InboxPath(dir, to), id+".status")
+		_ = os.WriteFile(status, []byte(`{"state":"delivered","via":"socket","at":"2026-09-16T00:00:00Z"}`), 0o600)
+		_ = os.Remove(filepath.Join(state.InboxPath(dir, to), id+".json"))
+		return inbox.Status{}, false
+	}
+	t.Cleanup(func() { awaitStatus = previous })
+
+	code, out, errOut := run("send", "api", "hello", "--wait", "0")
+	if code != ExitOK || !strings.Contains(out, "delivered") {
+		t.Errorf("exit = %d, out = %q, err = %q; want the late delivery reported", code, out, errOut)
 	}
 }

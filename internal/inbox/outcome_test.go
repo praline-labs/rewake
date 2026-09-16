@@ -286,3 +286,45 @@ func TestOrderSurvivesTheSameMillisecond(t *testing.T) {
 		t.Fatalf("delivered in the order %v, want them as they were written", order)
 	}
 }
+
+// A status write that failed a moment before the session ended is written on
+// the way out, not skipped for being too soon after the last try: after exit
+// the outcome exists nowhere else, and the next session with the name would
+// refuse a message that was delivered.
+func TestShutdownWritesAnOutcomeKeptOnlyInMemory(t *testing.T) {
+	dir := stateDir(t)
+	sent := message("the migration is merged")
+	sent.ToEpoch = "5.5"
+	if err := Put(dir, sent); err != nil {
+		t.Fatalf("put: %v", err)
+	}
+	blocked := statusPath(dir, "api", sent.ID)
+	if err := os.MkdirAll(blocked, 0o700); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+
+	delivered := make(chan struct{})
+	server := &Server{Dir: dir, Name: "api", Epoch: "5.5", Deliver: func(context.Context, Message) Result {
+		close(delivered)
+		return Result{State: Delivered, Via: "socket"}
+	}}
+	ctx, cancel := context.WithCancel(context.Background())
+	finished := make(chan struct{})
+	go func() {
+		defer close(finished)
+		server.Serve(ctx)
+	}()
+	<-delivered
+	// The write has failed by now; clear the way and stop well inside the
+	// retry interval.
+	time.Sleep(100 * time.Millisecond)
+	if err := os.Remove(blocked); err != nil {
+		t.Fatalf("unblock: %v", err)
+	}
+	cancel()
+	<-finished
+
+	if status, ok := ReadStatus(dir, "api", sent.ID); !ok || status.State != Delivered {
+		t.Errorf("status after shutdown = %+v, want delivered", status)
+	}
+}

@@ -37,6 +37,9 @@ func Namespace() string { return Default.Namespace() }
 // Alive reports whether the process is the one that was started.
 func Alive(pid int, startTime uint64) bool { return Default.Alive(pid, startTime) }
 
+// State returns the one-letter state of a process in the default /proc.
+func State(pid int) (string, error) { return Default.State(pid) }
+
 // Descendants returns the process and everything below it.
 func Descendants(pid int) ([]int, error) { return Default.Descendants(pid) }
 

@@ -67,10 +67,22 @@ func watchMailbox(ctx context.Context, dir, name string) <-chan struct{} {
 		defer func() { syscall.Close(descriptor) }()
 
 		buffer := make([]byte, 16*(syscall.SizeofInotifyEvent+syscall.NAME_MAX+1))
+		watching := true
 		for ctx.Err() == nil {
 			ready, err := waitReadable(descriptor, watchPatience)
 			if err != nil {
 				return
+			}
+			if !watching {
+				// The mailbox went away and has not come back yet. Asked again
+				// every wait, so the watch returns with it; giving up here left
+				// delivery on the poll for the rest of the session.
+				if _, err := syscall.InotifyAddWatch(descriptor, state.InboxPath(dir, name), events); err != nil {
+					continue
+				}
+				watching = true
+				notify(changed)
+				continue
 			}
 			if !ready {
 				continue
@@ -89,22 +101,26 @@ func watchMailbox(ctx context.Context, dir, name string) <-chan struct{} {
 				// Without asking for a new one the watch is over, and delivery
 				// silently falls back to the poll for good.
 				if _, err := syscall.InotifyAddWatch(descriptor, state.InboxPath(dir, name), events); err != nil {
-					return
+					watching = false
+					continue
 				}
 				interesting = true
 			}
-			if !interesting {
-				continue
-			}
-			select {
-			case changed <- struct{}{}:
-			default:
-				// A pass is already due; one is enough for any number of events.
+			if interesting {
+				notify(changed)
 			}
 		}
 	}()
 
 	return changed
+}
+
+// notify asks for a pass. One pending is enough for any number of events.
+func notify(changed chan struct{}) {
+	select {
+	case changed <- struct{}{}:
+	default:
+	}
 }
 
 // readEvents says whether anything worth a pass happened, and whether the watch
