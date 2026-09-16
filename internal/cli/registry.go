@@ -54,7 +54,7 @@ func buildGroups() {
 
 	talk := Group{
 		Title:   "TALK",
-		Summary: "Sessions address each other by name. The receiver is told a message is waiting, in one line starting with \"rewake:\", and reads it with rewake inbox.",
+		Summary: "Sessions address each other by name. The receiver is told a message is waiting, in one line, \"rewake: <session> <kind>, <n> new message(s)\", and reads it with rewake inbox.",
 		Commands: []*Command{
 			{
 				Name:           "list",
@@ -95,7 +95,7 @@ func buildGroups() {
 				Examples:       []string{"rewake inbox", "rewake inbox --json"},
 				Next:           []string{"rewake send <name> \"text\""},
 				Notes: []string{
-					"Run it when a line starting with \"rewake:\" says messages are waiting.",
+					"Run it when a \"rewake: <session> <kind>\" line says messages are waiting.",
 					"A finished message is sent by the system, not typed: it says a session you wrote to has ended its turn, and carries its last reply.",
 					"Reading a message tells its sender when your turn ends, unless you answer it with rewake send first.",
 				},
@@ -196,7 +196,7 @@ func notes() []Note {
 		},
 		{
 			Title: "A waiting message is announced, not pasted",
-			Body:  "It shows up as one line: \"rewake: <session> <kind>, <n> new message(s)\". The kind is notify, question, or finished. The text is never in that line: run rewake inbox to read it. A finished message comes from the system when a session you wrote to ends its turn, and carries that session's last reply.",
+			Body:  "It shows up as one line: \"rewake: <session> <kind>, <n> new message(s)\", with a 🟢 in front where the harness shows it as plain text. The kind is notify, question, or finished. The text is never in that line: run rewake inbox to read it. A finished message comes from the system when a session you wrote to ends its turn, and carries that session's last reply.",
 		},
 		{
 			Title: "A message from shell cannot be answered with send",

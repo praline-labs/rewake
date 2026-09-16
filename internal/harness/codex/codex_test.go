@@ -296,7 +296,7 @@ func TestDeliverySaysTheQueueIsNotInstant(t *testing.T) {
 	if sawThread != "01a0-thread" {
 		t.Errorf("thread = %q, want the open one", sawThread)
 	}
-	if sawText != "rewake: api notify, 1 new message" {
+	if sawText != "🟢 rewake: api notify, 1 new message" {
 		t.Errorf("queued text = %q, want only the notice: the agent reads the text with rewake inbox", sawText)
 	}
 }

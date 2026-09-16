@@ -278,14 +278,15 @@ followed by `\n`, then close. The content is
 ```
 <task-notification>
 <task-id>rewake-<short id></task-id>
-<status>notify|question|completed</status>
+<status>completed</status>
 <summary><the notice></summary>
 </task-notification>
 ```
 
 Claude Code picks how to draw a user message from its text, and draws this one
 as a single `● <summary>` line — the line its own background tasks get. The
-status colours it: `completed` (for `finished`) is green. The short id keeps
+status colours the circle, and `completed` is the one drawn green; the kind is
+named in the summary. The short id keeps
 two identical notices apart: Claude Code drops identical text from the same
 sender within 30 seconds.
 
@@ -301,7 +302,8 @@ recreated); otherwise `failed`.
    latest mtime. None found: `pending: codex has not opened a thread yet`.
 2. `codex queue --thread <uuid> --message <notice>` with the session's
    `CODEX_HOME`, 15-second timeout. Codex has no drawing of its own for this,
-   so the notice arrives as an ordinary message.
+   so the notice arrives as an ordinary message, prefixed with 🟢 to stand out
+   when the conversation is scrolled.
 3. Exit code 0 means `delivered`, noted with "codex checks its queue about every
    ten seconds". `no rollout found` means `pending: the codex session has no
    conversation yet; delivers after its first turn`. Anything else is `failed`

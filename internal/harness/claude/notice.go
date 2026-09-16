@@ -19,19 +19,13 @@ func notification(message inbox.Message) string {
 	return strings.Join([]string{
 		"<task-notification>",
 		fmt.Sprintf("<task-id>%s</task-id>", harness.NoticeID(message)),
-		fmt.Sprintf("<status>%s</status>", status(message)),
+		// Completed is the status the interface draws green, and it is true: the
+		// delivery is done. The kind is named in the summary already, and any
+		// other value draws the circle in the plain text colour.
+		"<status>completed</status>",
 		fmt.Sprintf("<summary>%s</summary>", escape(harness.Notice(message))),
 		"</task-notification>",
 	}, "\n")
-}
-
-// status colours the line. A finished turn reads as a completed task; the other
-// kinds keep their own name, which the interface draws in the plain colour.
-func status(message inbox.Message) string {
-	if inbox.KindOf(message) == inbox.Finished {
-		return "completed"
-	}
-	return string(inbox.KindOf(message))
 }
 
 // escape keeps a sender name from closing the tag early. Names are already

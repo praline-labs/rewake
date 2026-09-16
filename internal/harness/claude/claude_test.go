@@ -201,6 +201,9 @@ func TestDeliveryWritesOneProtocolLine(t *testing.T) {
 		if !strings.Contains(content, "<summary>rewake: web notify, 1 new message</summary>") {
 			t.Errorf("content = %q, want the notice as its summary", content)
 		}
+		if !strings.Contains(content, "<status>completed</status>") {
+			t.Errorf("content = %q, want the status the interface draws green", content)
+		}
 		if !strings.Contains(content, "<task-id>rewake-4b10aaaa</task-id>") {
 			t.Errorf("content = %q, want the short id that keeps two notices apart", content)
 		}

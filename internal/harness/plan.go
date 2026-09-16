@@ -77,7 +77,7 @@ type Harness interface {
 func Intro(name string) string {
 	return strings.Join([]string{
 		fmt.Sprintf("You are running inside rewake as the session %q.", name),
-		"rewake lets agent sessions on this machine message each other; a message waiting for you is announced by a line starting with \"rewake:\".",
+		"rewake lets agent sessions on this machine message each other; a message waiting for you is announced by a line with \"rewake: <session> <kind>\".",
 		"Run `rewake guide` before you send or read messages: it explains how.",
 	}, "\n")
 }

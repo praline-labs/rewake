@@ -317,6 +317,10 @@ func liveSession(t *testing.T, name string) string {
 		t.Fatalf("chmod: %v", err)
 	}
 	t.Setenv(state.DirEnv, dir)
+	// The tests may run inside a rewake session themselves; its name and run
+	// must not leak into the sessions they make up.
+	t.Setenv(state.SessionEnv, "")
+	t.Setenv(state.EpochEnv, "")
 	resolved, err := state.Dir()
 	if err != nil {
 		t.Fatalf("state.Dir: %v", err)

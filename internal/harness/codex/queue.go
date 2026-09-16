@@ -11,6 +11,12 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 )
 
+// noticeMark opens a notice in a Codex session. Codex shows it as an ordinary
+// message, and in a long conversation a plain line is easy to scroll past; a
+// coloured circle is not. Green matches the circle Claude Code draws in front of
+// the same notice, so rewake looks the same in both.
+const noticeMark = "🟢"
+
 // queue is the call to the Codex CLI, replaceable in tests.
 //
 // The deadline has to bind the wait as well as the process. CombinedOutput waits

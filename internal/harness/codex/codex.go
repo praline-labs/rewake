@@ -137,7 +137,7 @@ func (codexHarness) Deliver(ctx context.Context, session registry.Session, messa
 	callCtx, cancel := context.WithTimeout(ctx, queueTimeout)
 	defer cancel()
 
-	output, err := queue(callCtx, home, thread, harness.Notice(message))
+	output, err := queue(callCtx, home, thread, noticeMark+" "+harness.Notice(message))
 	if err != nil {
 		return classify(output, err)
 	}
