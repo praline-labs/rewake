@@ -236,3 +236,32 @@ message silently getting lost.
 | a message to a fresh Codex thread sits `pending` | exit code 3 and text explaining it delivers after the first turn |
 | the wrapper died, the harness is alive | the session is treated as dead; delivery fails with a reason instead of going silent |
 | identical text in a row gets dropped by the recipient | a short id in every message's header |
+
+## Local install, without publishing
+
+Two ways, and they answer different questions.
+
+**To use it.** `go build -o ~/.local/bin/rewake ./cmd/rewake` puts the real
+command in PATH. Nothing else is involved, so this is the honest way to live
+with the tool for a while and see what it is like.
+
+**To test how it will be installed.** `scripts/pack.sh [version]` builds the npm
+packages into `dist/npm` — one per platform plus the entry package — and
+publishes nothing. Then:
+
+```bash
+cd dist/npm/rewake-linux-x64 && npm pack && npm install -g ./*.tgz
+cd ../rewake && npm pack && npm install -g --omit=optional ./*.tgz
+rewake --version
+```
+
+That exercises everything a registry release would except the registry itself:
+the package contents, the platform split, the shim resolving its binary, and the
+command landing in PATH. Uninstall with
+`npm uninstall -g @iiiokojiadbi/rewake @iiiokojiadbi/rewake-linux-x64`.
+
+The entry package's `bin` is a POSIX script rather than a Node shim: it execs the
+binary and disappears, so the terminal, the signals and the exit code belong to
+rewake rather than to a process in between. It follows the symlink npm installs
+first — resolving the link is the difference between finding the binary and
+reporting it missing.
