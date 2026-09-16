@@ -19,11 +19,11 @@ func TestDirHonoursTheEnvironment(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Dir: %v", err)
 	}
-	if dir != base {
-		t.Fatalf("Dir = %q, want %q", dir, base)
+	if dir != filepath.Join(base, DefaultRoom) {
+		t.Fatalf("Dir = %q, want the default room under %q", dir, base)
 	}
 	for _, sub := range []string{"sessions", "inbox", "sock"} {
-		if _, err := os.Stat(filepath.Join(base, sub)); err != nil {
+		if _, err := os.Stat(filepath.Join(dir, sub)); err != nil {
 			t.Errorf("missing %s: %v", sub, err)
 		}
 	}

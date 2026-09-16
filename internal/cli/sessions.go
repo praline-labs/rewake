@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 // listModel is the machine form of the session list.
 type listModel struct {
 	Directory string             `json:"directory"`
+	Room      string             `json:"room"`
 	Sessions  []registry.Session `json:"sessions"`
 }
 
@@ -27,19 +29,21 @@ func handleList(ctx *Context, _ Call) error {
 		return failf("could not read the sessions in %s: %v", dir, err)
 	}
 
-	return printValue(ctx, listModel{Directory: dir, Sessions: sessions}, func() []string {
+	room := filepath.Base(dir)
+	for index := range sessions {
+		sessions[index].Room = room
+		sessions[index].Role = role.Of(sessions[index].Role).ID
+	}
+	return printValue(ctx, listModel{Directory: filepath.Dir(dir), Room: room, Sessions: sessions}, func() []string {
 		if len(sessions) == 0 {
 			return []string{
-				"No sessions are running.",
+				fmt.Sprintf("No sessions are running in room %s.", room),
 				"Start one: rewake --name api claude",
 			}
 		}
 		rows := make([]column, 0, len(sessions))
 		for _, session := range sessions {
-			text := fmt.Sprintf("%-7s %-8s %s", session.Harness, age(session.Age()), session.CWD)
-			if session.Role != "" && session.Role != role.Default().ID {
-				text += "  (" + session.Role + ")"
-			}
+			text := fmt.Sprintf("%-7s %-8s %s  room=%s  (%s)", session.Harness, age(session.Age()), session.CWD, room, session.Role)
 			rows = append(rows, column{Name: session.Name, Text: text})
 		}
 		return printColumns(rows, "")
@@ -49,6 +53,8 @@ func handleList(ctx *Context, _ Call) error {
 // whoamiModel is the machine form of the session's own identity.
 type whoamiModel struct {
 	Name      string `json:"name,omitempty"`
+	Room      string `json:"room"`
+	Role      string `json:"role,omitempty"`
 	Harness   string `json:"harness,omitempty"`
 	Directory string `json:"directory"`
 	Managed   bool   `json:"managed"`
@@ -61,21 +67,23 @@ func handleWhoami(ctx *Context, _ Call) error {
 	}
 
 	name := os.Getenv(state.SessionEnv)
-	model := whoamiModel{Name: name, Directory: dir, Managed: name != ""}
+	model := whoamiModel{Name: name, Room: filepath.Base(dir), Directory: filepath.Dir(dir), Managed: name != ""}
 	if name != "" {
-		if session, err := registry.Lookup(dir, name); err == nil {
-			model.Harness = session.Harness
+		session, _, err := ownRun(dir)
+		if err != nil {
+			return failf("cannot identify this session in room %s: %v", model.Room, err)
 		}
+		model.Harness, model.Role = session.Harness, role.Of(session.Role).ID
 	}
 
 	return printValue(ctx, model, func() []string {
 		if name == "" {
 			return []string{
-				"This shell is not part of a rewake session.",
+				"This shell is not part of a rewake session. Room: " + model.Room + ".",
 				"Others cannot address it; start an agent with rewake to give it a name.",
 			}
 		}
-		line := name
+		line := name + "  room=" + model.Room + "  (" + model.Role + ")"
 		if model.Harness != "" {
 			line += "  " + model.Harness
 		}

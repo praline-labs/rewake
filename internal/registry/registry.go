@@ -28,6 +28,8 @@ import (
 type Session struct {
 	// Name is the address of this session.
 	Name string `json:"name"`
+	// Room scopes the name and all mailbox paths.
+	Room string `json:"room"`
 	// Harness is the id of the harness being run, such as "claude".
 	Harness string `json:"harness"`
 	// ServicePID is the rewake process that serves this session's inbox, and
@@ -53,7 +55,9 @@ type Session struct {
 	CodexHome string `json:"codexHome,omitempty"`
 	// Role is what the session is for, an id from package role. Empty means
 	// the default role.
-	Role string `json:"role,omitempty"`
+	Role string `json:"role"`
+	// RoleReason records why this launch received its role.
+	RoleReason string `json:"roleReason,omitempty"`
 	// PIDNamespace is the pid namespace the two pids above belong to. A reader
 	// in a different one cannot judge whether they are alive.
 	PIDNamespace string `json:"pidNamespace,omitempty"`

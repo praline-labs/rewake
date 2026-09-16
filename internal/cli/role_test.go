@@ -28,13 +28,13 @@ func TestMainIsALaunchFlag(t *testing.T) {
 	}
 }
 
-func TestWithoutAFlagASessionIsAWorker(t *testing.T) {
+func TestWithoutAFlagTheRoomChoosesTheRole(t *testing.T) {
 	result, err := parse([]string{"claude"})
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	if part, _ := chosenRole(result.Call); part.ID != role.Worker.ID {
-		t.Errorf("role = %s, want worker", part.ID)
+	if part, _ := chosenRole(result.Call); part.ID != "" {
+		t.Errorf("role = %s, want automatic selection", part.ID)
 	}
 }
 

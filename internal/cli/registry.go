@@ -30,6 +30,11 @@ var nameOption = Option{
 	Summary: "Name this session. Default: the harness name, then claude-2, claude-3.",
 }
 
+var roomOption = Option{
+	Flag: "--room", Value: "<name>",
+	Summary: "Join this room at launch. Default: default. Names are unique within a room.",
+}
+
 var (
 	groupsOnce sync.Once
 	groups     []Group
@@ -59,7 +64,7 @@ func buildGroups() {
 			{
 				Name:           "list",
 				MaxPositionals: 0,
-				Summary:        "Sessions running under rewake right now.",
+				Summary:        "Live sessions in this room, with their room and role.",
 				Options:        []Option{jsonOption},
 				Examples:       []string{"rewake list", "rewake list --json"},
 				Next:           []string{"rewake send <name> \"text\""},
@@ -105,7 +110,7 @@ func buildGroups() {
 			{
 				Name:           "whoami",
 				MaxPositionals: 0,
-				Summary:        "The name of this session, when it runs under rewake.",
+				Summary:        "The name, room and role of this session, when it runs under rewake.",
 				Options:        []Option{jsonOption},
 				Examples:       []string{"rewake whoami"},
 				Handler:        handleWhoami,
@@ -153,10 +158,10 @@ func launchCommand(h harness.Harness) *Command {
 		Args:           "[" + h.ID() + " args...]",
 		MaxPositionals: Variadic,
 		Summary:        h.Summary(),
-		Options: append(append([]Option{nameOption}, roleOptions()...),
+		Options: append(append([]Option{nameOption, roomOption}, roleOptions()...),
 			Option{Flag: "--no-intro", Summary: "Do not tell the agent it runs under rewake."},
 		),
-		Examples: h.Examples(),
+		Examples: append(h.Examples(), "rewake --room work --worker --name helper "+h.ID()),
 		Next:     []string{"rewake list", "rewake send <name> \"text\""},
 		Notes:    notes,
 		Raw:      true,
@@ -171,13 +176,13 @@ func flow() []FlowStep {
 	for _, h := range harness.All() {
 		steps = append(steps, FlowStep{
 			Command: fmt.Sprintf("rewake --name <name> %s", h.ID()),
-			Summary: fmt.Sprintf("Start %s in this terminal under a name others can address; add --main to the one that hands out work.", h.Title()),
+			Summary: fmt.Sprintf("Start %s in this terminal under a name others can address; the room elects main automatically, or use --worker, --write or --main.", h.Title()),
 		})
 	}
 	return append(steps,
 		FlowStep{Command: "rewake list", Summary: "See who is running and can be reached."},
 		FlowStep{Command: "rewake send api \"pull and rerun the smoke\"", Summary: "Give api a task; its final message comes back as a \"Rewake: api finished\" line."},
-		FlowStep{Command: "rewake inbox", Summary: "When a \"rewake:\" line says messages are waiting, read them here. Answer a task by finishing your turn with the result."},
+		FlowStep{Command: "rewake inbox", Summary: "When a \"Rewake:\" line says messages are waiting, read them here. Answer a task by finishing your turn with the result."},
 		FlowStep{Command: "rewake <command> --help", Summary: "Flags, examples and notes for that command."},
 	)
 }
@@ -204,6 +209,10 @@ func notes() []Note {
 		{
 			Title: "Four kinds, one rule for answering",
 			Body:  "task: work to do. question: the same, with the sender waiting for it. notify: a heads-up that needs no answer. finished: a session's final message after work you gave it. Answer a task or a question by ending your turn with the result as your final message and stopping — rewake delivers that message to the sender. Do not answer with rewake send; do not answer a notify at all.",
+		},
+		{
+			Title: "Rooms isolate conversations",
+			Body:  "Choose --room <name> before the harness name; without it, launches use default. Sessions see only their room. Commands inherit REWAKE_ROOM; a shell without it uses default. Names can repeat across rooms. There is no cross-room address or --room flag on messaging commands.",
 		},
 		{
 			Title: "Choose a session role",

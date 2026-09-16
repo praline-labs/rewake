@@ -11,6 +11,7 @@ package state
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"os"
@@ -46,8 +47,8 @@ var nameShape = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,31}$`)
 // ValidName reports whether a name may address a session.
 func ValidName(name string) bool { return nameShape.MatchString(name) }
 
-// Dir returns the state directory, creating it when needed.
-func Dir() (string, error) {
+// Root returns the shared state root, without reading legacy records there.
+func Root() (string, error) {
 	path := os.Getenv(DirEnv)
 	if path == "" {
 		path = filepath.Join(os.TempDir(), "rewake-"+strconv.Itoa(os.Getuid()))
@@ -58,11 +59,7 @@ func Dir() (string, error) {
 	if err := ensureDir(path); err != nil {
 		return "", err
 	}
-	for _, sub := range []string{sessionsDir, inboxDir, socketsDir} {
-		if err := ensureDir(filepath.Join(path, sub)); err != nil {
-			return "", err
-		}
-	}
+
 	return path, nil
 }
 
@@ -115,10 +112,16 @@ func AwaitingPath(dir, name string) string {
 // socket shared by every run of it could be removed by a wrapper on its way out
 // just after the next run had bound it; a path of its own belongs to one run.
 func SocketPath(dir, name, run string) string {
-	if run == "" {
-		return filepath.Join(dir, socketsDir, name+".sock")
+	basename := name
+	if run != "" {
+		basename += "." + run
 	}
-	return filepath.Join(dir, socketsDir, name+"."+run+".sock")
+	path := filepath.Join(dir, socketsDir, basename+".sock")
+	if len(path) > 103 {
+		sum := sha256.Sum256([]byte(name + "\x00" + run))
+		path = filepath.Join(dir, socketsDir, fmt.Sprintf("%x.sock", sum[:12]))
+	}
+	return path
 }
 
 // ensureDir creates a directory and refuses one that somebody else could write.

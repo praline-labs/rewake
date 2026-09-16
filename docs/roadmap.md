@@ -194,8 +194,9 @@ The review round five findings (see below) are still open.
 The owner, after restarting under the new build: the session handing out work
 got a report of its own turn back at its worker, and the two would wake each
 other forever. Roles now live in a catalogue, `internal/role`, and the one that
-hands out work is started with `--main`: it gets every report and reports
-nothing. The default is `worker`. The `write` role now reports like a worker
+hands out work has role `main`: it gets every report and reports
+nothing. Rooms now select main automatically when none is alive; an explicit
+`--worker` always keeps reporting behavior. The `write` role now reports like a worker
 and requests Git metadata access; main requests the same access independently
 of its reporting policy.
 
@@ -345,3 +346,22 @@ Role, argument, configuration and metadata tests cover the launch plan. Pointer
 resolution is compared with Git's output for temporary repositories, worktrees
 and submodules. Repeated flags are accepted by the CLI and roots are deduplicated
 by its config loader. See research for versioned evidence and reproduction.
+
+## Milestone 10. Rooms — done, September 16, 2026
+
+**Owner decision:** rooms isolate session discovery, addressing and delivery.
+`--room <name>` is launch-only and defaults to `default`; agent commands inherit
+`REWAKE_ROOM`. `REWAKE_DIR` remains the shared root and each room has its own
+sessions, mailboxes and sockets. Old root-level records are ignored.
+
+Role choice and name publication share a room lock. Without an explicit role,
+the next launch becomes main when none is alive, otherwise worker. `--worker`
+and `--write` can start first; `--main` refuses with the live main's name and a
+hint when occupied. Main and write retain their Git metadata capability. List,
+whoami, the launch note and the intro identify the room and selected role.
+
+**Acceptance, verified:** two rooms with identical session names cannot see or
+message each other; task notices and final reports stay in their originating
+room. The first automatic launch becomes main. An occupied explicit main is
+refused. Concurrent wrappers elect exactly one main. Checks use isolated state
+and a fake harness, plus regression and mutation tests.

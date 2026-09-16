@@ -17,12 +17,17 @@ import (
 // not hide what the program said.
 func handleLaunch(h harness.Harness) func(*Context, Call) error {
 	return func(_ *Context, call Call) error {
-		dir, err := state.Dir()
+		root, err := state.Root()
 		if err != nil {
 			// An unusable state directory is something about this call and its
 			// environment, not about a target that refused: code 2, so a caller
 			// branching on the code tries to fix the call.
 			return &UsageError{Message: err.Error()}
+		}
+
+		dir, err := state.RoomDir(root, call.Flag("room", state.DefaultRoom))
+		if err != nil {
+			return &UsageError{Command: call.Command, Message: err.Error()}
 		}
 
 		part, err := chosenRole(call)
@@ -39,6 +44,10 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 			Role:    part,
 		})
 		if err != nil {
+			var mainTaken *wrap.MainTakenError
+			if errors.As(err, &mainTaken) {
+				return &UsageError{Command: call.Command, Message: mainTaken.Error()}
+			}
 			var taken *registry.NameTakenError
 			if errors.As(err, &taken) {
 				return &UsageError{Command: call.Command, Message: taken.Error() + " Pick another name, or omit --name to get the next free one."}
@@ -55,14 +64,13 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 	}
 }
 
-// chosenRole reads the role from the flags. A session is the default role unless
-// another is written out: every worker must report its turns, so that is what
-// happens without a word.
+// chosenRole leaves an omitted role unset so the wrapper can elect under the
+// room lock, in the same transaction that publishes the session.
 func chosenRole(call Call) (role.Role, error) {
-	chosen := role.Default()
+	chosen := role.Role{}
 	var flags []string
 	for _, candidate := range role.All() {
-		if candidate.ID != role.Default().ID && call.Switch(candidate.ID) {
+		if call.Switch(candidate.ID) {
 			chosen = candidate
 			flags = append(flags, "--"+candidate.ID)
 		}
@@ -80,9 +88,7 @@ func chosenRole(call Call) (role.Role, error) {
 func roleOptions() []Option {
 	var options []Option
 	for _, candidate := range role.All() {
-		if candidate.ID != role.Default().ID {
-			options = append(options, Option{Flag: "--" + candidate.ID, Summary: candidate.Summary})
-		}
+		options = append(options, Option{Flag: "--" + candidate.ID, Summary: candidate.Summary})
 	}
 	return options
 }
@@ -92,10 +98,7 @@ func roleSummary() string {
 	var descriptions []string
 	for _, candidate := range role.All() {
 		label := "--" + candidate.ID
-		if candidate.ID == role.Default().ID {
-			label = candidate.ID + " (default)"
-		}
 		descriptions = append(descriptions, label+": "+candidate.Summary)
 	}
-	return strings.Join(descriptions, " ") + " A silent coordinator prevents reports from waking each other indefinitely."
+	return "Without a role flag, a room with no live main elects this session main; otherwise it becomes worker. An explicit --main refuses if main is occupied. " + strings.Join(descriptions, " ") + " A silent coordinator prevents reports from waking each other indefinitely."
 }

@@ -82,7 +82,7 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 		} else if mentioned, why := configMentions(home, introKey); mentioned {
 			notes = append(notes, "not adding the rewake briefing: "+why+", and passing the briefing would replace the user's instructions. Run rewake guide in the session instead")
 		} else {
-			args = harness.AddFlags(args, configFlag, introKey+"="+quoteTOML(harness.Intro(request.Name, request.Role)))
+			args = harness.AddFlags(args, configFlag, introKey+"="+quoteTOML(harness.Intro(request)))
 		}
 	}
 

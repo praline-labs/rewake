@@ -16,6 +16,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -30,7 +31,7 @@ import (
 type Request struct {
 	// Harness is what to run.
 	Harness harness.Harness
-	// Dir is the state directory.
+	// Dir is the room-scoped state directory.
 	Dir string
 	// Name is the requested session name; empty picks a free one.
 	Name string
@@ -38,7 +39,7 @@ type Request struct {
 	Args []string
 	// Intro asks for the briefing that tells the agent it runs under rewake.
 	Intro bool
-	// Role is what the session is for.
+	// Role is explicit when its ID is set; empty chooses a role for the room.
 	Role role.Role
 }
 
@@ -80,17 +81,20 @@ func Run(ctx context.Context, request Request) (int, error) {
 	}()
 
 	plan, err := request.Harness.Launch(harness.LaunchRequest{
-		Name:   name,
-		Dir:    request.Dir,
-		Args:   request.Args,
-		Intro:  request.Intro,
-		Socket: registry.SocketFor(request.Dir, name, epoch),
-		Epoch:  epoch,
-		Role:   request.Role,
+		Name:       name,
+		Dir:        filepath.Dir(request.Dir),
+		Room:       session.Room,
+		RoleReason: session.RoleReason,
+		Args:       request.Args,
+		Intro:      request.Intro,
+		Socket:     registry.SocketFor(request.Dir, name, epoch),
+		Epoch:      epoch,
+		Role:       role.Of(session.Role),
 	})
 	if err != nil {
 		return 0, err
 	}
+	fmt.Fprintf(os.Stderr, "rewake: room %s, role %s: %s\n", session.Room, session.Role, session.RoleReason)
 	for _, note := range plan.Notes {
 		// Said once, on stderr, before the harness takes over the screen: these
 		// are things rewake decided not to do, and silence about them would look
@@ -234,41 +238,6 @@ func current(dir, name string, fallback registry.Session) registry.Session {
 		return fallback
 	}
 	return session
-}
-
-// claimName publishes the session, retrying under an automatic name: two plain
-// "rewake claude" starting together would otherwise pick the same free name and
-// one of them would refuse instead of becoming claude-2. An explicit name is
-// never changed — the caller is about to hand that address to somebody else.
-func claimName(request Request, self int, selfStart uint64, cwd string) (registry.Session, error) {
-	for attempt := 0; attempt < 16; attempt++ {
-		name, err := registry.ChooseName(request.Dir, request.Name, request.Harness.ID())
-		if err != nil {
-			return registry.Session{}, err
-		}
-
-		session := registry.Session{
-			Name:         name,
-			Harness:      request.Harness.ID(),
-			ServicePID:   self,
-			ServiceStart: selfStart,
-			PIDNamespace: proc.Namespace(),
-			Role:         request.Role.ID,
-			CWD:          cwd,
-			StartedAt:    time.Now(),
-		}
-		err = registry.Publish(request.Dir, session)
-		if err == nil {
-			return session, nil
-		}
-
-		var taken *registry.NameTakenError
-		if request.Name == "" && errors.As(err, &taken) {
-			continue
-		}
-		return registry.Session{}, err
-	}
-	return registry.Session{}, fmt.Errorf("could not claim a name for this session: every candidate was taken while starting")
 }
 
 // catchSignals starts listening before there is a child to forward to.

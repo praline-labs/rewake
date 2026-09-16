@@ -61,35 +61,58 @@ uid, with no group or other access; otherwise it fails with an explanation.
 Created with 0700.
 
 ```
-/tmp/rewake-<uid>/
-  sessions/<name>.json       session record
-  inbox/<name>/<id>.json     message whose notice has not gone out yet
-  inbox/<name>/<id>.status   status: pending, delivered (notice sent), read, failed
-  inbox/<name>/unread/       announced, waiting for the agent to read it
-  inbox/<name>/done/         read and failed, for diagnostics (cleaned up by age)
-  inbox/<name>/answering/<id>   renewable reservation for a question
-  inbox/<name>/received/<id>    successful answer output for a question
-  inbox/<name>/awaiting/<epoch>/<peer>   per run: who waits for its turn to end, and which run of them
-  sock/<name>.<epoch>.sock   Claude Code inbound socket, one path per run
+<REWAKE_DIR>/
+  <room>/
+    .launch.lock              serializes role choice and name publication
+    sessions/<name>.json       session record
+    inbox/<name>/<id>.json     waiting for delivery
+    inbox/<name>/<id>.status   pending, delivered, read or failed
+    inbox/<name>/unread/       readable messages
+    inbox/<name>/done/         read and failed messages
+    inbox/<name>/answering/<id> renewable question reservation
+    inbox/<name>/received/<id> successful answer output
+    inbox/<name>/awaiting/<epoch>/<peer> reports owed by this run
+    sock/<name>.<epoch>.sock   one inbound socket per run
 ```
 
-The socket path is deliberately short: the limit is 103 bytes.
+All mailbox paths in the delivery specification are relative to the room.
+Socket names fall back to a digest of name and epoch when the expanded path
+would exceed 103 bytes; an excessively long state root still needs shortening.
+
+### Rooms
+
+**Owner decision, September 16, 2026:** `--room <name>` selects a room at launch.
+Without the flag, a launch uses `default`, including when invoked from a session
+in another room. Commands inherit `REWAKE_ROOM`; a shell without it uses
+`default`. `REWAKE_DIR` always remains the shared root passed to children.
+
+Room names use the session-name syntax. Names are unique within a room and can
+repeat in different rooms. List, send, inbox, whoami, turn reports and delivery
+open only that room's state tree. There is no cross-room address and no `--room`
+option on messaging or identity commands. List shows room and role on every
+row; its JSON records include both. Whoami includes the room and verifies its
+session epoch before describing a registered identity.
+
+Old `sessions`, `inbox` and `sock` entries directly in the shared root are
+ignored. There is no compatibility scan or fallback: the owner restarts those
+sessions, and an old record must not appear in a new room by accident.
 
 ### Session record
 
 ```json
 {
   "name": "claude-2",
+  "room": "default",
+  "role": "worker",
+  "roleReason": "selected explicitly with --worker",
   "harness": "claude",
-  "managed": true,
   "servicePid": 12345,
   "serviceStart": 1671399,
   "harnessPid": 12346,
   "harnessStart": 1671402,
   "cwd": "/home/u/code/x",
   "startedAt": "2026-09-16T00:08:03Z",
-  "claude": { "socket": "/tmp/rewake-1000/sock/claude-2.sock" },
-  "codex": { "home": "/home/u/.codex" }
+  "socket": "/tmp/rewake-1000/default/sock/claude-2.12345.1671399.sock"
 }
 ```
 
@@ -114,9 +137,22 @@ are reported all come from that value. The record keeps the role's id.
 
 | role | flag | turns reported | Git metadata writes requested for the sandbox | intro adds |
 |---|---|---|---|---|
-| `worker` | none (default) | yes | no | end your turn with the result |
+| `worker` | `--worker` | yes | no | end your turn with the result |
 | `main` | `--main` | no | yes | you get reports, yours go to nobody |
 | `write` | `--write` | yes | yes | end your turn with the result; you can commit |
+
+Without an explicit role, a room with no live main elects the new session main;
+otherwise it becomes worker. Liveness uses the same pid/start-time and namespace
+checks as list. Explicit `--main` refuses with the occupying session's name and
+advice to stop/restart it or omit the role flag. `--worker` and `--write` are
+honored even in an empty room. If only workers remain, the next automatic launch
+becomes main; existing sessions are never promoted in place.
+
+The room's `.launch.lock` covers inspection of live sessions, role choice and
+name publication. A starting wrapper is already a live claimant before its
+harness starts. Concurrent launches cannot elect two mains. The lock is released
+before preparing or running the harness. The record, launch note and intro say
+which role was chosen and why.
 
 Git writes are a separate role capability from reporting. The sandbox adapter
 appends `--add-dir` for the discovered metadata directories. Ordinary repos,
@@ -129,7 +165,8 @@ The main session exists to stop a loop: it reads the reports of its workers,
 and if its own turns were reported to them, each report would wake the other
 side for good. So a silent role gets no end-of-turn hook at launch (no Stop
 hook, no `notify`), records no waits when it reads, and `turn-ended` does
-nothing for it. The default and zero value report turns without requesting extra Git access.
+nothing for it. The zero role value remains a reporting fallback inside the
+catalogue; an omitted launch role is resolved separately under the room lock.
 The write role reports like a worker; main stays silent whether its Git grant
 was applied or skipped.
 
@@ -137,7 +174,7 @@ was applied or skipped.
 
 `[a-z0-9][a-z0-9._-]{0,31}`. The default is the harness name; if that's taken,
 `claude-2`, `claude-3`. Explicit: `rewake --name api claude`. A session's name is
-its address, so a live name is never reused.
+its address within its room, so a live name is never reused there.
 
 ### Environment the harness receives
 
@@ -145,7 +182,9 @@ its address, so a live name is never reused.
 - `REWAKE_EPOCH=<epoch>` — which run of that name I am. A process left over
   from an ended run keeps its environment; with this, it can neither read the
   next run's mail nor sign or report for it.
-- `REWAKE_DIR=<directory>`.
+- `REWAKE_DIR=<root>` — the shared state root, not the room subdirectory.
+- `REWAKE_ROOM=<room>` — the room for every child command. Inherited room,
+  session and epoch markers are replaced with this launch's values.
 - Inherited Claude Code markers are stripped (list in research): otherwise
   `rewake claude` launched from inside another session would inherit that
   session's socket and have transcript saving disabled.
@@ -181,12 +220,12 @@ proven them out.
 
 ```
 rewake                                  overview (command map, workflow, behavior notes)
-rewake [--name N] [--main] claude [args...]   launch a Claude Code session under rewake
-rewake [--name N] [--main] codex [args...]    launch a Codex session under rewake
-rewake list [--json]                    live sessions
+rewake [--room R] [--name N] [--main|--worker|--write] claude [args...]   launch a Claude Code session under rewake
+rewake [--room R] [--name N] [--main|--worker|--write] codex [args...]    launch a Codex session under rewake
+rewake list [--json]                    live sessions in this room
 rewake send <name> <text|-> [--question] [--wait S] [--json]
 rewake inbox [--json]                   read the messages waiting for this session
-rewake whoami [--json]                  this session's name and directory
+rewake whoami [--json]                  this session's name, room, role and state root
 rewake <command> --help
 ```
 

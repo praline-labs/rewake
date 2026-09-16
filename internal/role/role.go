@@ -26,10 +26,10 @@ type Role struct {
 	Brief string
 }
 
-// Worker takes work and reports when its turn ends. It is the default.
+// Worker takes work and reports when its turn ends. It is also the fallback role.
 var Worker = Role{
 	ID:      "worker",
-	Summary: "Takes work from other sessions and reports the end of each turn to them. The default.",
+	Summary: "Takes work from other sessions and reports the end of each turn to them. Can start before a main session.",
 	Brief:   "When you finish work another session gave you, end your turn with the result as your final message and stop: rewake delivers that message to it.",
 }
 
@@ -57,7 +57,7 @@ var all = []Role{Worker, Main, Write}
 // All returns the roles, the default first.
 func All() []Role { return append([]Role{}, all...) }
 
-// Default is the role of a session started without a role flag.
+// Default is the reporting fallback for old or unknown role records.
 func Default() Role { return all[0] }
 
 // Find returns the role with this id. An empty id is the default: records

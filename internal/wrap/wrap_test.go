@@ -220,7 +220,7 @@ func TestSessionEnvironmentReachesTheHarness(t *testing.T) {
 		t.Fatalf("read: %v", err)
 	}
 	// The run is this wrapper's: its pid and start time.
-	want := fmt.Sprintf("api %s %d.%d", dir, os.Getpid(), selfStart(t))
+	want := fmt.Sprintf("api %s %d.%d", filepath.Dir(dir), os.Getpid(), selfStart(t))
 	if got := string(content); got != want {
 		t.Errorf("environment = %q, want %q", got, want)
 	}

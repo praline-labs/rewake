@@ -17,8 +17,12 @@ import (
 type LaunchRequest struct {
 	// Name is the session name already claimed for this run.
 	Name string
-	// Dir is the state directory.
+	// Dir is the shared state root, never a room subdirectory.
 	Dir string
+	// Room is the isolated conversation this launch belongs to.
+	Room string
+	// RoleReason explains the explicit or automatic role selection.
+	RoleReason string
 	// Args are the caller's arguments, to be passed through untouched.
 	Args []string
 	// Intro asks for the short briefing that tells the agent it runs under
@@ -75,15 +79,25 @@ type Harness interface {
 	Deliver(ctx context.Context, session registry.Session, message inbox.Message) inbox.Result
 }
 
-// Intro is the briefing handed to an agent at launch. It says what rewake is and
-// where the instructions are, nothing more: it costs context in every turn, and
-// the guide is one command away and always matches the binary.
-func Intro(name string, part role.Role) string {
+// Intro gives the agent its room and selected role before pointing it to the
+// guide. The reason matters when a launch without a flag becomes main.
+func Intro(request LaunchRequest) string {
+	part := request.Role
 	if part.ID == "" {
 		part = role.Default()
 	}
+	room := request.Room
+	if room == "" {
+		room = state.DefaultRoom
+	}
+	reason := request.RoleReason
+	if reason == "" {
+		reason = "requested by the launcher"
+	}
 	return strings.Join([]string{
-		fmt.Sprintf("You are running inside rewake as the session %q.", name),
+		fmt.Sprintf("You are running inside rewake as session %q in room %q.", request.Name, room),
+		fmt.Sprintf("Your role is %s: %s.", part.ID, reason),
+		"Only sessions in this room can see and message each other.",
 		"rewake lets agent sessions on this machine message each other; a message waiting for you is announced by a line with \"Rewake: <session> <kind>\".",
 		"Run `rewake guide` before you send or read messages: it explains how.",
 		part.Brief,
@@ -161,6 +175,7 @@ func SessionEnv(request LaunchRequest, strip []string) []string {
 		state.SessionEnv: true,
 		state.EpochEnv:   true,
 		state.DirEnv:     true,
+		state.RoomEnv:    true,
 	}
 	for _, name := range strip {
 		drop[name] = true
@@ -177,7 +192,12 @@ func SessionEnv(request LaunchRequest, strip []string) []string {
 		}
 		env = append(env, entry)
 	}
+	room := request.Room
+	if room == "" {
+		room = state.DefaultRoom
+	}
 	return append(env,
+		state.RoomEnv+"="+room,
 		state.SessionEnv+"="+request.Name,
 		state.EpochEnv+"="+request.Epoch,
 		state.DirEnv+"="+request.Dir,

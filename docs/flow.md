@@ -19,10 +19,12 @@ from the code.
 
 There is no daemon. Each wrapper services exactly one mailbox: its own
 session's. Everything the processes share is files under the state directory,
-`/tmp/rewake-<uid>` (`REWAKE_DIR`), 0700, checked on every open:
+`REWAKE_DIR`, 0700, checked on every open. Each room has its own subdirectory;
+the paths below are relative to `<REWAKE_DIR>/<room>/`:
 
 ```
-sessions/<name>.json             who is running: pids, start times, cwd, role, harness details
+sessions/<name>.json             who is running: room, role, reason, pids, cwd, harness details
+.launch.lock                    role selection and name publication
 inbox/<name>/<id>.json           a message the wrapper still has to announce
 inbox/<name>/<id>.status         pending | delivered | read | failed
 inbox/<name>/unread/<id>.json    announced, not yet read by the agent
@@ -38,18 +40,23 @@ sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
 
 `rewake --write --name write codex` (or `rewake --main claude`, or plain `rewake claude`).
 
-1. **The directory.** The wrapper opens `REWAKE_DIR`, creating it 0700 if it is
-   missing, and refuses a symlink, a foreign owner or loose permissions.
+1. **The directory.** The wrapper opens the `REWAKE_DIR` root and the room
+   selected by `--room`, or `default` when omitted. Both are 0700; a symlink,
+   foreign owner or loose permissions is refused. Legacy root-level records
+   are ignored.
 2. **The name.** Explicit from `--name`, else the harness name, else `claude-2`,
    `claude-3`. The record is published with `link()`: a taken name stays taken
-   while its session is alive; a dead record is evicted and the attempt retried.
+   while its session is alive in this room; a dead record is evicted and retried.
+   Other rooms may use the same name.
 3. **The run.** The wrapper's pid and start time make the **epoch**
    (`<pid>.<ticks>`). A name can be started many times; the epoch says which
    start this is.
-4. **The role.** `--main` selects the silent role; `--write` selects a writer
-   that reports like a worker. Both request Git metadata access from the sandbox
-   adapter. No flag is the worker, with no extra Git grant. The record keeps the
-   role id.
+4. **The role.** Under the same room lock as publication, no live main means
+   an automatic main; otherwise an unflagged launch becomes worker. Explicit
+   `--worker` and `--write` are honored even in an empty room. `--main` refuses
+   if a live main already occupies the room. Main stays silent; write reports
+   like worker. Both main and write request Git metadata access. The record
+   keeps the role and its selection reason.
 5. **The harness command line.** The user's arguments go through untouched.
    rewake adds, for one launch only and never into a config file:
    - Claude Code: `--messaging-socket-path sock/<name>.<epoch>.sock`,
@@ -66,32 +73,33 @@ sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
      intact. If the metadata cannot be resolved, a note says which directories
      the caller must supply. Sandbox mode, tmp and network policy are unchanged.
 6. **The environment.** `REWAKE_SESSION=<name>`, `REWAKE_EPOCH=<epoch>`,
-   `REWAKE_DIR`; inherited Claude Code markers are stripped so a session
+   `REWAKE_DIR=<root>` and `REWAKE_ROOM=<room>`; inherited Claude Code markers are stripped so a session
    started from inside another does not borrow its socket.
 7. **Launch.** The harness starts with the wrapper's terminal and process
    group. Its pid and start time are added to the record. From now on the
    session is alive only while both processes are.
-8. **The intro.** The agent's first context says: you are session `<name>`
-   under rewake, a waiting message is announced by a line starting with
+8. **The intro.** The agent's first context names its session, room, selected
+   role and the reason for that role. A waiting message is announced with
    `Rewake:`, run `rewake guide` before sending or reading. Everything else the
    agent needs is in the guide, which always matches the binary.
 9. **Serving.** The wrapper watches `inbox/<name>/` with inotify, polls every
    second as the safety net, sweeps old mail every ten minutes, and waits for
    the harness to exit.
 
-`rewake list` now shows the session: name, harness, age, cwd, and the non-default role
-(`main` or `write`). It reads the records, checks that both pids are alive with
+`rewake list` shows only this room: name, harness, age, cwd, room and role
+for every session. It reads the records, checks that both pids are alive with
 matching start times, and deletes any record whose session is dead.
 
 ## Act 2. A task is sent
 
 `rewake send write "run the smoke and report what failed"` — from the main
-session's shell, or from a person's.
+session's shell, or from a person's shell in the same room. A shell without
+`REWAKE_ROOM` uses `default`. Commands cannot name a different room.
 
 1. **Who is sending.** `from` is `REWAKE_SESSION` when the run in
    `REWAKE_EPOCH` still holds that name, else `shell`. A leftover process of an
    ended run cannot sign as the new one.
-2. **Who receives.** The recipient must be alive; otherwise exit 2 with the live
+2. **Who receives.** The recipient must be alive in this room; otherwise exit 2 with the live
    names listed.
 3. **The kind.** Plain `send` is a `task`; `--question` and `--notify` are the
    other two. A question to a silent recipient is refused here, before anything

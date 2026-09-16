@@ -2,6 +2,11 @@
 
 [Back to the design](design.md).
 
+Every path and lookup below is relative to the current room's state directory,
+`<REWAKE_DIR>/<REWAKE_ROOM>/` (`default` when the room variable is absent).
+Send, read, identity and turn reports never fall back to another room or to
+legacy records directly under the state root.
+
 ## Delivery
 
 A harness is never handed the text of a message. It is told that mail is

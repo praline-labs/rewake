@@ -112,7 +112,7 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 	}
 
 	if request.Intro && !harness.HasFlag(args, introFlag) {
-		args = harness.AddFlags(args, introFlag, harness.Intro(request.Name, request.Role))
+		args = harness.AddFlags(args, introFlag, harness.Intro(request))
 	}
 	var notes []string
 	switch {

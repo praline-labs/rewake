@@ -5,7 +5,9 @@
 ## Launching a harness
 
 The common part of the wrapper:
-1. Check the directory, pick and publish a name (the harness pid is still empty).
+1. Check the shared state root and selected room directory. Under the room's
+   launch lock, choose the role and publish the name (the harness pid is still
+   empty). The lock is released before preparing the child.
 2. Launch the harness: `exec.Cmd` with inherited stdin/stdout/stderr, the same
    terminal and process group. Arguments after the harness name are passed
    through as-is.
@@ -20,13 +22,32 @@ The common part of the wrapper:
 6. Remove the record, close the inbox (pending messages get the status `failed:
    session ended`), exit with the harness's code.
 
+### Room and role flags
+
+Launch flags precede the harness name. `--room <name>` selects the room and
+otherwise defaults to `default`; it does not inherit the launching process's
+room. `--name` chooses a name unique within that room. Both use the same
+lower-case name syntax, up to 32 characters.
+
+`--main`, `--worker` and `--write` explicitly select one role and cannot be
+combined. Without a role flag, no live main in the room means main; an existing
+main means worker. Explicit main refuses when the room already has one, naming
+its occupant and suggesting a restart or a launch without `--main`. An explicit
+worker or writer can be the room's first session. There is no running-session
+promotion when main exits: the next automatic launch can become main.
+
+The wrapper passes the shared root as `REWAKE_DIR` and its room as `REWAKE_ROOM`,
+replacing the parent's room marker alongside session and epoch. The room lock
+covers role choice and name publication together, preventing concurrent mains.
+List and identity commands use the inherited room and accept no `--room` flag.
+
 ### Claude Code
 
 - Everything after the harness name is passed through untouched, with one
   exception: a `--help` written first asks rewake for the command's help page
   instead of starting the harness. `rewake claude --model x --help` still reaches
   the harness.
-- Add `--messaging-socket-path <dir>/sock/<name>.sock` unless the user passed
+- Add `--messaging-socket-path <root>/<room>/sock/<name>.<epoch>.sock` unless the user passed
   their own; before launch, remove a stale socket file at the same path.
 - Add `--append-system-prompt <intro>` (turned off by `--no-intro`).
 - Add `--settings` with a Stop hook that runs `rewake turn-ended` (see "The end
@@ -81,15 +102,18 @@ The common part of the wrapper:
 
 ### The intro
 
-Three lines, in English. It says what rewake is and where the instructions are;
-the instructions themselves live in `rewake guide`, which always matches the
-binary and costs context only when read:
+The briefing names the session and room, the selected role and why it was
+selected, then points to the guide and adds that role's instructions. The
+wrapper also prints the role decision once before starting the harness, so the
+choice remains visible even when the user disabled or supplied the briefing.
 
 ```
-You are running inside rewake as the session "<name>".
-rewake lets agent sessions on this machine message each other; a message waiting
-for you is announced by a line starting with "Rewake:".
+You are running inside rewake as session "<name>" in room "<room>".
+Your role is main: selected automatically because this room has no live main session.
+Only sessions in this room can see and message each other.
+rewake lets agent sessions on this machine message each other; a message waiting for you is announced by a line with "Rewake: <session> <kind>".
 Run `rewake guide` before you send or read messages: it explains how.
+<the selected role's briefing>
 ```
 
 ## Signals, and what the wrapper does not do
