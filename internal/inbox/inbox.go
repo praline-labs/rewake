@@ -130,6 +130,22 @@ func Put(dir string, message Message) error {
 	return state.WriteAtomic(filepath.Join(mailbox, message.ID+".json"), append(encoded, '\n'))
 }
 
+// PutOnce writes a message unless one with its id already exists in the
+// mailbox, whatever became of it since. A message moves forward only — waiting,
+// unread, done — so looking in that order cannot miss one on its way.
+func PutOnce(dir string, message Message) error {
+	for _, directory := range []string{
+		state.InboxPath(dir, message.To),
+		state.UnreadPath(dir, message.To),
+		state.DonePath(dir, message.To),
+	} {
+		if _, err := os.Stat(filepath.Join(directory, message.ID+".json")); err == nil {
+			return nil
+		}
+	}
+	return Put(dir, message)
+}
+
 // Answered reports whether this message has left the mailbox — delivered or
 // refused — even if its status is no longer kept. Answers are swept after a
 // while, and a sender that came back later would otherwise be told its message

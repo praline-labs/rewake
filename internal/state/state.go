@@ -10,6 +10,7 @@ sockets: anything running as this user can read and write it.
 package state
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -17,6 +18,7 @@ import (
 	"regexp"
 	"strconv"
 	"syscall"
+	"time"
 )
 
 // DirEnv names the environment variable that overrides the state directory.
@@ -247,18 +249,62 @@ func WithNameLock(dir, name string, fn func() error) error {
 	return withLock(filepath.Join(SessionsPath(dir), "."+name+".lock"), "the name "+name, fn)
 }
 
+// ErrMailboxBusy means the mailbox lock was held by somebody else for longer
+// than the caller was willing to wait.
+var ErrMailboxBusy = errors.New("the mailbox is busy")
+
+// LockUnusableError means the mailbox lock could not be taken at all — its file
+// cannot be opened or locked. Nobody can hold such a lock, which is what lets
+// the one process that must keep working carry on without it.
+type LockUnusableError struct{ Err error }
+
+func (e *LockUnusableError) Error() string {
+	return "the mailbox lock cannot be used: " + e.Err.Error()
+}
+func (e *LockUnusableError) Unwrap() error { return e.Err }
+
 // WithMailboxLock runs fn while holding the lock of one mailbox. Every change to
 // a message's state — making it readable, recording what delivery did, reading
 // it, reporting a turn — happens under it: those are separate processes, and
 // two of them acting on the same message at once is how a read task was handed
 // out a second time. The lock is not reentrant: fn must not take it again.
-func WithMailboxLock(dir, name string, fn func() error) error {
+//
+// The wait ends with ctx, as ErrMailboxBusy. A holder can be stuck for as long
+// as a reader's stdout is — a pager, a pipe nobody drains — and waiting without
+// an end let that stop delivery, the end of turns and the wrapper's own exit.
+func WithMailboxLock(ctx context.Context, dir, name string, fn func() error) error {
 	mailbox := InboxPath(dir, name)
 	if err := EnsureSubdir(mailbox); err != nil {
-		return err
+		return &LockUnusableError{Err: err}
 	}
-	return withLock(filepath.Join(mailbox, ".lock"), "the mailbox of "+name, fn)
+	path := filepath.Join(mailbox, ".lock")
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
+	if err != nil {
+		return &LockUnusableError{Err: err}
+	}
+	defer file.Close()
+
+	for {
+		err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+		if err == nil {
+			break
+		}
+		if err != syscall.EWOULDBLOCK && err != syscall.EINTR {
+			return &LockUnusableError{Err: err}
+		}
+		select {
+		case <-ctx.Done():
+			return ErrMailboxBusy
+		case <-time.After(lockPoll):
+		}
+	}
+	defer syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
+	return fn()
 }
+
+// lockPoll is how often a busy mailbox lock is tried again. Holders keep it for
+// a file operation or two, so the wait is short in the common case.
+const lockPoll = 10 * time.Millisecond
 
 func withLock(path, what string, fn func() error) error {
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)

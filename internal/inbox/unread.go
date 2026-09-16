@@ -1,11 +1,15 @@
 package inbox
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -72,11 +76,19 @@ func PeekUnread(dir, name, epoch string) ([]Message, error) {
 // the next read shows it again and records it again; the other order lost the
 // report its sender was owed.
 func MarkRead(dir, name, epoch string, message Message) error {
+	// A read status is written only after the waiter, so finding one means
+	// this is a retry of a read whose last step failed: the waiter was recorded
+	// then, and may have been reported to since. Recording it again owed a
+	// second report for one message.
+	retry := false
+	if status, ok := ReadStatus(dir, name, message.ID); ok && status.State == Read {
+		retry = true
+	}
 	// A finished notice is an answer already, and waiting on it would have two
 	// sessions report their turns to each other forever. A sender without a run
 	// of its own — a shell, or mail from before runs were recorded — has nowhere
 	// a report could go.
-	if KindOf(message) != Finished && message.FromEpoch != "" {
+	if !retry && KindOf(message) != Finished && message.FromEpoch != "" {
 		if err := markAwaiting(dir, name, epoch, message.From, message.FromEpoch); err != nil {
 			return err
 		}
@@ -95,6 +107,18 @@ func MarkRead(dir, name, epoch string, message Message) error {
 type Waiter struct {
 	Name  string
 	Epoch string
+	// Since is when the wait was recorded, in nanoseconds. It tells one wait
+	// from the next for the same run, and names the report that settles it.
+	Since int64
+}
+
+// ReportID is the id of the report that settles a wait. The same wait always
+// gets the same id, so a report written and not yet forgotten — the waiter
+// could not be removed, or the hook died in between — is not written again.
+// The time prefix keeps reports in the order their waits began.
+func ReportID(name, epoch string, waiter Waiter) string {
+	sum := sha256.Sum256([]byte(strings.Join([]string{name, epoch, waiter.Name, waiter.Epoch, strconv.FormatInt(waiter.Since, 10)}, "\x00")))
+	return fmt.Sprintf("%019d-%s", waiter.Since, hex.EncodeToString(sum[:6]))
 }
 
 // awaitingPath holds the waiters of one run. Keyed by run, because a name can
@@ -118,7 +142,8 @@ func markAwaiting(dir, name, epoch, from, fromEpoch string) error {
 	if err := state.EnsureSubdir(path); err != nil {
 		return err
 	}
-	return state.WriteAtomic(filepath.Join(path, from), []byte(fromEpoch))
+	record := fromEpoch + " " + strconv.FormatInt(time.Now().UnixNano(), 10)
+	return state.WriteAtomic(filepath.Join(path, from), []byte(record))
 }
 
 // Waiters lists who waits for the end of this run's turn. Nothing is forgotten
@@ -142,10 +167,24 @@ func Waiters(dir, name, epoch string) []Waiter {
 		if err != nil {
 			continue
 		}
-		waiters = append(waiters, Waiter{Name: peer, Epoch: strings.TrimSpace(string(raw))})
+		waiters = append(waiters, parseWaiter(peer, string(raw)))
 	}
 	sort.Slice(waiters, func(i, j int) bool { return waiters[i].Name < waiters[j].Name })
 	return waiters
+}
+
+// parseWaiter reads a wait record: the run, then when the wait began. A record
+// with the run alone comes from before the time was kept.
+func parseWaiter(name, raw string) Waiter {
+	fields := strings.Fields(raw)
+	waiter := Waiter{Name: name}
+	if len(fields) > 0 {
+		waiter.Epoch = fields[0]
+	}
+	if len(fields) > 1 {
+		waiter.Since, _ = strconv.ParseInt(fields[1], 10, 64)
+	}
+	return waiter
 }
 
 // ClearAwaiting forgets a waiter once it has been reported to, or once its run
@@ -159,7 +198,7 @@ func ClearAwaiting(dir, name, epoch string, peer Waiter) {
 	}
 	file := filepath.Join(path, peer.Name)
 	raw, err := os.ReadFile(file)
-	if err != nil || strings.TrimSpace(string(raw)) != peer.Epoch {
+	if err != nil || parseWaiter(peer.Name, string(raw)) != peer {
 		return
 	}
 	_ = os.Remove(file)

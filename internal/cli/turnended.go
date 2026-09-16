@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -62,7 +63,9 @@ func handleTurnEnded(_ *Context, call Call) error {
 	// Under the mailbox lock, so two ends of a turn reported at once tell each
 	// waiter once, and a waiter recorded by a read in the meantime is not taken
 	// for the one reported.
-	_ = state.WithMailboxLock(dir, self.Name, func() error {
+	ctx, cancel := context.WithTimeout(context.Background(), hookLockWait)
+	defer cancel()
+	_ = state.WithMailboxLock(ctx, dir, self.Name, func() error {
 		waiters := inbox.Waiters(dir, self.Name, epoch)
 		beforeReports()
 		for _, waiter := range waiters {
@@ -75,8 +78,11 @@ func handleTurnEnded(_ *Context, call Call) error {
 				}
 				continue
 			}
-			err = inbox.Put(dir, inbox.Message{
-				ID:        inbox.NewID(),
+			// The id is the wait's own, so a report already written for it —
+			// its waiter could not be removed, or this hook died before that —
+			// is not written a second time.
+			err = inbox.PutOnce(dir, inbox.Message{
+				ID:        inbox.ReportID(self.Name, epoch, waiter),
 				From:      self.Name,
 				FromEpoch: epoch,
 				To:        peer.Name,
@@ -93,6 +99,10 @@ func handleTurnEnded(_ *Context, call Call) error {
 	})
 	return nil
 }
+
+// hookLockWait is how long the end of a turn waits for the mailbox. What it
+// could not report stays owed until the next turn ends.
+const hookLockWait = 5 * time.Second
 
 // beforeReports runs between reading the waiters and reporting to them. It
 // does nothing; a test widens that window through it.

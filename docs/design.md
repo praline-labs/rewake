@@ -257,6 +257,14 @@ its notice is on the way. For that, `read` is final: whatever the harness says
 afterwards, the status stays `read` and the message is not linked or announced
 again. The Codex sandbox allows `flock` on files in `/tmp`.
 
+No wait for the lock is endless: a reader holds it while it prints, and its
+stdout can block for as long as nobody drains the pipe. The server waits while
+its session lives and gives its last writes two seconds; `turn-ended` waits
+five and leaves the rest owed; `inbox` waits ten and says the mailbox is busy.
+A lock nobody can take — its file cannot be opened — stops nobody but the
+readers, who say why: the server is then the only writer and carries on
+without it. Sweeping old mail happens under the lock too.
+
 ### Servicing process (the wrapper)
 
 Watches the inbox: a message arrives as a rename into the directory and the
@@ -351,8 +359,16 @@ payload (`last_assistant_message` on stdin, `last-assistant-message` as the last
 argument). Under the mailbox lock, for every run in `awaiting/<own epoch>/` it
 leaves a `finished` message whose text is that reply, addressed to that run —
 not to whoever holds the name now — and forgets the waiter only once the message
-is written, and only if the waiter still names that run. A waiter whose run has
-ended is forgotten without a message. A payload that does not
+is written, and only if the waiter still names that run and that wait. A waiter
+whose run has ended is forgotten without a message.
+
+The report's id is derived from the wait — the reporting run, the waiting run,
+and when the wait began — and a report whose id is already in the recipient's
+mailbox, in any stage, is not written again. A waiter that could not be removed,
+or a hook that died between writing and forgetting, therefore costs nothing at
+the next turn. A read retried after its last step failed does not record the
+wait a second time: the `read` status, written after the wait, says it is a
+retry. A payload that does not
 arrive within three seconds is treated as no payload. Their wrappers announce it:
 `rewake: cx finished, 1 new message`.
 

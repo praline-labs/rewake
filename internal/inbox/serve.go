@@ -2,6 +2,7 @@ package inbox
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,6 +31,30 @@ const (
 	// sweepInterval is how often the finished ones are looked over.
 	sweepInterval = 10 * time.Minute
 )
+
+// shutdownLockWait is how long the last writes wait for the mailbox lock.
+const shutdownLockWait = 2 * time.Second
+
+// lock runs fn under the mailbox lock, waiting no longer than the server's
+// lock context allows.
+//
+// A lock nobody can take — its file unopenable, say — does not stop the
+// server: fn runs without it. That is safe because every other user of the
+// lock fails on it too and says so, which leaves the server the only writer.
+// Stopping instead left senders with a pending that explained nothing and a
+// status that could not be written.
+func (s *Server) lock(fn func() error) error {
+	ctx := s.lockContext
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	err := state.WithMailboxLock(ctx, s.Dir, s.Name, fn)
+	var unusable *state.LockUnusableError
+	if errors.As(err, &unusable) {
+		return fn()
+	}
+	return err
+}
 
 // watch is how the server hears about new mail; replaceable in tests.
 var watch = watchMailbox
@@ -62,6 +87,9 @@ type Server struct {
 	// ago would otherwise be skipped, and the next session with this name would
 	// refuse a message that was delivered.
 	stopping bool
+	// lockContext bounds every wait for the mailbox lock: the serving context
+	// while serving, a short deadline on the way out.
+	lockContext context.Context
 	// outcomes remembers what happened to a message the moment it happened, not
 	// once the status file was written. Delivery is the part that cannot be
 	// undone: if writing the status fails, the outcome has to survive anyway, or
@@ -75,6 +103,7 @@ type Server struct {
 func (s *Server) Serve(ctx context.Context) {
 	s.attempts = map[string]time.Time{}
 	s.outcomes = map[string]Result{}
+	s.lockContext = ctx
 	if ctx.Err() != nil || !s.owned() {
 		// Cancelled before it began, or the name already belongs to somebody
 		// else: refusing their mail on the way past is not this session's to do.
@@ -117,6 +146,13 @@ func (s *Server) Serve(ctx context.Context) {
 // sweepFinished removes the messages and statuses that have been answered long
 // enough ago that nobody is coming back for them.
 func (s *Server) sweepFinished() {
+	_ = s.lock(func() error {
+		s.sweepFinishedLocked()
+		return nil
+	})
+}
+
+func (s *Server) sweepFinishedLocked() {
 	cutoff := time.Now().Add(-keepFinished)
 	// Unread mail goes by age too: a notice nobody acted on for a day describes
 	// a conversation that has moved on, and the mailbox of a name reused for
@@ -181,7 +217,7 @@ func (s *Server) drain(ctx context.Context) {
 		// earlier attempt may have been read since; then there is nothing left
 		// to announce.
 		read := false
-		err := state.WithMailboxLock(s.Dir, s.Name, func() error {
+		err := s.lock(func() error {
 			if status, ok := ReadStatus(s.Dir, s.Name, message.ID); ok && status.State == Read {
 				read = true
 				return nil
@@ -190,6 +226,11 @@ func (s *Server) drain(ctx context.Context) {
 		})
 		if read {
 			s.finish(message, Result{State: Read})
+			continue
+		}
+		if errors.Is(err, state.ErrMailboxBusy) {
+			// A reader holds the mailbox; this message waits for the next pass.
+			s.attempts[message.ID] = time.Now()
 			continue
 		}
 		if err != nil {
@@ -242,7 +283,7 @@ func (s *Server) publish(id string, result Result) {
 	}
 	s.attempts[id] = time.Now()
 
-	_ = state.WithMailboxLock(s.Dir, s.Name, func() error {
+	_ = s.lock(func() error {
 		outcome, err := s.recordLocked(id, result)
 		if err != nil {
 			return err
@@ -256,7 +297,7 @@ func (s *Server) publish(id string, result Result) {
 // already, and returns the outcome that stands.
 func (s *Server) record(id string, result Result) State {
 	var outcome State
-	_ = state.WithMailboxLock(s.Dir, s.Name, func() error {
+	_ = s.lock(func() error {
 		var err error
 		outcome, err = s.recordLocked(id, result)
 		return err
@@ -311,7 +352,7 @@ func (s *Server) alreadySettled(message Message) bool {
 		return false
 	}
 	s.outcomes[message.ID] = Result{State: status.State, Via: status.Via, Detail: status.Detail}
-	_ = state.WithMailboxLock(s.Dir, s.Name, func() error {
+	_ = s.lock(func() error {
 		settle(s.Dir, s.Name, message.ID, status.State)
 		return nil
 	})
@@ -324,6 +365,12 @@ func (s *Server) alreadySettled(message Message) bool {
 // is mail addressed to another epoch — that belongs to somebody else.
 func (s *Server) refuseWaiting(reason string) {
 	s.stopping = true
+	// The serving context has ended by now. The last writes get a deadline of
+	// their own: long enough for a reader to finish, short enough that a stuck
+	// one cannot keep the wrapper from exiting.
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownLockWait)
+	defer cancel()
+	s.lockContext = ctx
 	messages, err := list(s.Dir, s.Name)
 	if err != nil {
 		return
@@ -353,7 +400,10 @@ func (s *Server) sweepForeign() {
 	if s.Epoch == "" {
 		return
 	}
-	sweepAwaiting(s.Dir, s.Name, s.Epoch)
+	_ = s.lock(func() error {
+		sweepAwaiting(s.Dir, s.Name, s.Epoch)
+		return nil
+	})
 	messages, err := list(s.Dir, s.Name)
 	if err != nil {
 		return

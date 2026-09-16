@@ -380,3 +380,83 @@ func TestSendRereadsAStatusThatLandedLate(t *testing.T) {
 		t.Errorf("exit = %d, out = %q, err = %q; want the late delivery reported", code, out, errOut)
 	}
 }
+
+// A read whose last step failed is retried. The retry must not owe the sender
+// a second report for the same message.
+func TestARetriedReadReportsOnce(t *testing.T) {
+	dir := liveSession(t, "api")
+	web := otherRun(t, dir, "web")
+	t.Setenv(state.SessionEnv, "api")
+	rawUnread(t, dir, "api", map[string]any{"from": "web", "fromEpoch": web.Epoch(), "toEpoch": epochOf(t, dir, "api"), "text": "execute once"})
+	blocked := state.DonePath(dir, "api")
+	if err := os.WriteFile(blocked, nil, 0o600); err != nil {
+		t.Fatalf("block: %v", err)
+	}
+	run("inbox")
+	run("turn-ended", turnPayload)
+	if err := os.Remove(blocked); err != nil {
+		t.Fatalf("unblock: %v", err)
+	}
+	run("inbox")
+	run("turn-ended", turnPayload)
+
+	if found := finishedFor(t, dir, "web"); len(found) != 1 {
+		t.Errorf("one message produced %d reports", len(found))
+	}
+}
+
+// A waiter that cannot be removed after its report was written must not be
+// reported to again at every following turn.
+func TestAStuckWaiterIsReportedOnce(t *testing.T) {
+	dir := liveSession(t, "api")
+	web := otherRun(t, dir, "web")
+	readFrom(t, dir, web)
+	waits := filepath.Join(state.AwaitingPath(dir, "api"), epochOf(t, dir, "api"))
+	if err := os.Chmod(waits, 0o500); err != nil {
+		t.Fatalf("chmod: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(waits, 0o700) })
+
+	run("turn-ended", turnPayload)
+	// The report is delivered and read before the next turn ends, as it would
+	// be: it has left the waiting set by then.
+	reports := finishedFor(t, dir, "web")
+	if len(reports) != 1 {
+		t.Fatalf("web holds %v after the first turn, want one report", reports)
+	}
+	done := state.DonePath(dir, "web")
+	if err := os.MkdirAll(done, 0o700); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.Rename(reports[0], filepath.Join(done, filepath.Base(reports[0]))); err != nil {
+		t.Fatalf("move: %v", err)
+	}
+
+	run("turn-ended", turnPayload)
+	everywhere := 0
+	for _, directory := range []string{state.InboxPath(dir, "web"), state.UnreadPath(dir, "web"), done} {
+		found, _ := filepath.Glob(filepath.Join(directory, "*.json"))
+		everywhere += len(found)
+	}
+	if everywhere != 1 {
+		t.Errorf("one wait produced %d reports", everywhere)
+	}
+}
+
+// A session can write to itself; its report goes into its own mailbox, which
+// the hook already holds. Nothing may take that lock a second time.
+func TestAReportToOneselfDoesNotDeadlock(t *testing.T) {
+	dir := liveSession(t, "api")
+	t.Setenv(state.SessionEnv, "api")
+	epoch := epochOf(t, dir, "api")
+	rawUnread(t, dir, "api", map[string]any{"from": "api", "fromEpoch": epoch, "toEpoch": epoch, "text": "note to self"})
+	if code, _, errOut := run("inbox"); code != ExitOK {
+		t.Fatalf("inbox: %s", errOut)
+	}
+	if code, _, errOut := run("turn-ended", turnPayload); code != ExitOK {
+		t.Fatalf("turn-ended: %s", errOut)
+	}
+	if found := finishedFor(t, dir, "api"); len(found) != 1 {
+		t.Errorf("the report to oneself was written %d times", len(found))
+	}
+}

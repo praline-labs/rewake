@@ -369,6 +369,23 @@ The pre-link check for a read that landed between the unlocked status check and
 the lock has no test of its own: that window cannot be reached without a hook
 in the server.
 
+## Review round eight — done, September 16, 2026
+
+Four findings, three of them regressions of round seven's lock:
+
+- **A reader stuck on its stdout held the mailbox**, and with it delivery, the
+  end of turns and the wrapper's exit. Every wait for the lock now ends: the
+  server's with its session, the hook's and the reader's after a few seconds.
+- **An unusable `.lock` left senders with a pending that said nothing.** The
+  server now works without a lock nobody can take; readers fail and say why.
+- **A read retried after a failed last step reported twice.** The `read`
+  status marks the retry, and the wait is not recorded again.
+- **A waiter that could not be removed was reported at every turn.** Reports
+  now carry an id derived from the wait and are written once.
+
+Codex also showed that three tests passed with delivery held under the lock:
+their reader skipped the lock. The test reader takes the real one now.
+
 ## Review round five — closed, September 16, 2026
 
 The nine findings, fixed on the branch `fix/round-five`:

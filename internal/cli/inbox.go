@@ -1,11 +1,13 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/state"
@@ -47,7 +49,9 @@ func handleInbox(ctx *Context, call Call) error {
 	// show the same task, and the server must not record a delivery over a read
 	// that is half done.
 	var failure error
-	err = state.WithMailboxLock(dir, session.Name, func() error {
+	wait, cancel := context.WithTimeout(context.Background(), readerLockWait)
+	defer cancel()
+	err = state.WithMailboxLock(wait, dir, session.Name, func() error {
 		messages, err := inbox.PeekUnread(dir, session.Name, epoch)
 		if err != nil {
 			failure = failf("could not read the inbox of %s: %v", session.Name, err)
@@ -65,11 +69,18 @@ func handleInbox(ctx *Context, call Call) error {
 		}
 		return nil
 	})
+	if errors.Is(err, state.ErrMailboxBusy) {
+		return failf("the inbox of %s is being read by another command right now; run rewake inbox again in a moment", session.Name)
+	}
 	if err != nil {
 		return failf("could not lock the inbox of %s: %v", session.Name, err)
 	}
 	return failure
 }
+
+// readerLockWait is how long a reader waits for another reader, or for the
+// server, to let go of the mailbox.
+const readerLockWait = 10 * time.Second
 
 // writeInbox prints the messages and reports whether the output got through.
 func writeInbox(ctx *Context, model inboxModel) error {
