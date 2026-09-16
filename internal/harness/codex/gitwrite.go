@@ -16,7 +16,7 @@ func gitWriteFlags(args []string) ([]string, string) {
 	if err != nil {
 		return nil, gitWriteSkipped(err.Error())
 	}
-	if reason := gitRepositorySelection(args); reason != "" {
+	if reason := gitWriteSkipReason(args); reason != "" {
 		return nil, gitWriteSkipped(reason)
 	}
 	directories, err := gitMetadataDirectories(cwd)
@@ -71,9 +71,9 @@ func gitWorkingDirectory(args []string) (string, error) {
 	return resolved, nil
 }
 
-// A resumed, remote or newly created worktree can run somewhere other than
-// the launch cwd. Existing worktrees are handled through their .git pointer.
-func gitRepositorySelection(args []string) string {
+// Local continuations keep source metadata access. A new managed worktree
+// also needs its not-yet-allocated private gitdir; remote paths are not local.
+func gitWriteSkipReason(args []string) string {
 	visible := harness.BeforeTerminator(args)
 	for index := 0; index < len(visible); index++ {
 		arg := visible[index]
@@ -81,7 +81,9 @@ func gitRepositorySelection(args []string) string {
 		case "-c", "--config", "-C", "--cd", "-p", "--profile", "--add-dir", "-m", "--model":
 			index++
 			continue
-		case "resume", "fork", "--worktree", "--remote":
+		case "--worktree":
+			return "the new worktree's private Git metadata path is allocated later; create the worktree first and launch from its directory"
+		case "--remote":
 			return "the working repository is selected by " + arg
 		}
 		if strings.HasPrefix(arg, "--remote=") {

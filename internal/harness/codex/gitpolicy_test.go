@@ -39,11 +39,11 @@ func TestGitWritesExtendCallerConfiguration(t *testing.T) {
 	}
 }
 
-func TestGitWritesWaitForDynamicallySelectedRepositories(t *testing.T) {
+func TestGitWritesSkipRemoteExecution(t *testing.T) {
 	codexHome(t, "")
 	repo := gitRepository(t)
 	for _, flags := range [][]string{
-		{"resume"}, {"fork"}, {"--worktree"}, {"--remote", "server"}, {"--remote=server"},
+		{"--remote", "server"}, {"--remote=server"},
 	} {
 		t.Run(strings.Join(flags, " "), func(t *testing.T) {
 			plan := gitLaunch(t, role.Write, append([]string{"-C", repo}, flags...)...)

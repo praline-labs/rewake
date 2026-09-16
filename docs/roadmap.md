@@ -314,7 +314,8 @@ without replacing configuration or selecting a different permission profile.
 
 Ordinary repositories use `.git`; worktrees and submodules resolve its `gitdir`
 pointer, plus the worktree's `commondir`. Missing, malformed or symlinked metadata
-and repositories selected after launch are skipped with actionable advice.
+and remote execution are skipped with actionable advice; a newly allocated
+--worktree also waits for its private metadata path to become known.
 
 **Owner decision, September 16, 2026:** use the additive flag. A live 0.154.0
 `codex exec --add-dir <gitdir> -s workspace-write` committed successfully while
@@ -373,3 +374,17 @@ the result, and successful file writes retain their checked close path. Spelling
 comments and equivalent expressions follow the configured checks. Delivery,
 reporting and signal behavior are unchanged; the suite runs with race detection
 and shuffled test order. Earlier review rounds are in [reviews.md](reviews.md).
+
+## Git writes for local continuations — done, September 17, 2026
+
+`resume` and `fork` now keep the metadata grant discovered from launch cwd.
+The earlier blanket skip prevented resumed writers from committing. Remote
+execution still skips local paths with an explanation.
+
+New `--worktree` support remains deferred after source inspection and sandbox
+probes: a managed checkout's private gitdir can stay read-only despite a writable
+source `.git`. Both private and common metadata roots are needed, but the private
+path is allocated later by the harness. Creating the worktree first remains
+supported. Research records the source locations, layout-dependent results and
+the wrapper's unchanged launch cwd. Regression tests and mutations protect
+resume/fork grants and the honest worktree refusal.

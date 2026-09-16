@@ -261,6 +261,58 @@ launch plans and temporary Git fixtures instead. The metadata resolver reads
 repositories, worktrees and submodules. Both worktree metadata directories are
 needed: Git writes per-worktree state and shared repository state.
 
+### Managed worktrees and continuation permissions
+
+**[source: snapshot `44b9011`; sandbox verification with CLI 0.154.0,
+September 17, 2026; no model call]** Local `resume` and `fork` keep the extra
+metadata root discovered from launch cwd. They may choose another conversation
+cwd; the extra source root is still useful and does not replace the workspace.
+
+Managed worktree allocation uses `$CODEX_HOME/worktrees/<four-character id>/<repo>`
+by default, or `desktop.git-worktree-root` when configured
+(`worktree/src/settings.rs:43–56`, `worktree/src/paths.rs:13–30`, relative to
+`codex-rs`). `worktree/src/lib.rs:85–99` runs a detached `git worktree add`;
+`:147–159` preserves the source cwd's relative subdirectory within the checkout.
+The TUI retains additional writable roots, sets overrides.cwd to the new
+checkout cwd, and rebuilds config (`tui/src/worktree_startup.rs:217–221,277–286`).
+That cwd becomes a workspace root (`core/src/config/mod.rs:3454–3468`).
+
+The checkout is writable as cwd, but the parent metadata grant alone is not
+reliable. A sibling checkout succeeded with only the source `.git`; a checkout
+in the deeper managed layout (`<home>/worktrees/abcd/<repo>`) failed to create
+`<source>/.git/worktrees/<name>/index.lock`. Adding that exact private gitdir
+alongside the common `.git` made the commit succeed. Granting only the private
+gitdir failed to write objects. Both tmp write exclusions were enabled, so the
+probe did not borrow broad access to `/tmp`.
+
+The source explains the observed layout sensitivity: worktree pointer targets
+are protected subpaths (`protocol/src/permissions.rs:2212–2231`), while Linux
+sorts writable roots by depth and reapplies read-only subpaths after each bind
+(`linux-sandbox/src/bwrap.rs:559–560,583–627`). A parent root alone does not
+reliably override the later private-metadata carveout.
+
+The sandbox subcommand ignores root-level `--add-dir`, as noted above. The
+model-free probes therefore compared effective writable-root lists from an
+already-created worktree cwd. Parent-only failed in the managed layout; this
+form, with both roots, succeeded:
+
+```bash
+codex sandbox -c 'sandbox_mode="workspace-write"' \
+  -c 'sandbox_workspace_write.exclude_slash_tmp=true' \
+  -c 'sandbox_workspace_write.exclude_tmpdir_env_var=true' \
+  -c 'sandbox_workspace_write.writable_roots=["<source-repo>/.git","<source-repo>/.git/worktrees/<name>"]' -- \
+  sh -c 'printf "fixture\n" > probe.txt && git add probe.txt && git -c user.name=Test -c user.email=test@example.invalid commit -m "Check worktree access"'
+```
+
+Rewake grants metadata on local resume/fork but retains the new `--worktree`
+skip: it cannot know that private gitdir before the harness allocates it. A
+supported alternative is to create the worktree first, then launch from its
+checkout; metadata discovery can then add both directories. Future automatic
+support needs the allocated path before sandbox permissions are finalized, or
+a reliable upstream carveout override. Rewake's session record retains the
+wrapper's original cwd, not the dynamically chosen checkout path, and it does
+not read saved transcripts to predict where a continuation will run.
+
 ### The sandbox has its own pid namespace
 
 The commands a Codex agent runs are started under `bwrap --as-pid-1`, so inside

@@ -88,9 +88,19 @@ List and identity commands use the inherited room and accept no `--room` flag.
   their parent directories or other checkouts. Discovery does not invoke Git.
 - A missing or malformed pointer, a non-directory target or a symlink in the
   metadata path leaves the grant out with a one-line reason and a suggestion
-  to pass the actual directories through `--add-dir`. Resume, fork, remote
-  execution and `--worktree` can select a repository after launch, so their
-  metadata is also left for the caller. Existing worktrees are supported.
+  to pass the actual directories through `--add-dir`.
+- `resume` and `fork` retain the metadata grant discovered from effective launch
+  cwd. The extra root does not replace the resumed conversation's workspace.
+  `--remote` still skips local metadata: those paths belong to this machine.
+- A new `--worktree` also needs its private gitdir, allocated after launch.
+  Granting only the source `.git` is insufficient in the managed checkout
+  layout: the sandbox can reapply a read-only mount to its private metadata.
+  Rewake therefore keeps this skip with an explanation. Create the worktree
+  first and launch from its directory; existing worktrees are supported through
+  their known gitdir and commondir pointers.
+- The session record's cwd remains the wrapper's launch directory. It is not
+  updated when the harness changes the agent's working directory for a managed
+  worktree, a continuation or `-C`.
 - When `/tmp` may be excluded, rewake still says which directory to add to the
   writable paths if messages cannot be sent. Granting Git access does not grant
   the message directory or override a user's temporary-directory exclusions.
