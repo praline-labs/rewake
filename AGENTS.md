@@ -25,6 +25,29 @@ forever.
 3. `docs/research.md` — facts about each harness, marked with where they were
    verified. They age with harness versions: re-check before touching an adapter.
 
+## Keeping the documentation true
+
+The documents above are the memory of the project; the code is not. Whatever
+is not written there has to be recovered from the code next time, and that is
+slower and less reliable than writing it down while it is fresh. So the
+documentation is part of every change, not a task after it:
+
+- A change of behaviour or contract lands in the same commit as the code:
+  `docs/flow.md` when the path of a message changes, `docs/design.md`,
+  `docs/launch.md` or `docs/delivery.md` when the mechanism does,
+  `docs/research.md` when a fact about a harness is learned or found wrong.
+- Every review round and every milestone is recorded in `docs/roadmap.md` as
+  soon as it closes: what was found, what was done, what stays open. Older
+  rounds move to `docs/reviews.md`.
+- An owner decision is written down where it applies, dated, in their words
+  where it matters.
+- Before a commit, ask what the change taught that the documents do not yet
+  say — and what they say that is no longer true. Rewriting what has gone
+  stale is part of the same change: outdated text is corrected or removed,
+  never left beside the new and never postponed to a clean-up later.
+- A fact about a harness carries where it was verified (which version, live or
+  read in the source), because these facts age.
+
 ## Checks
 
 ```bash
