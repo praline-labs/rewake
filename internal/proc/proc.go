@@ -31,6 +31,9 @@ var Default = Reader{Root: "/proc"}
 // StartTime returns the start time of a process in clock ticks since boot.
 func StartTime(pid int) (uint64, error) { return Default.StartTime(pid) }
 
+// Namespace identifies the pid namespace this process can see.
+func Namespace() string { return Default.Namespace() }
+
 // Alive reports whether the process is the one that was started.
 func Alive(pid int, startTime uint64) bool { return Default.Alive(pid, startTime) }
 
@@ -186,6 +189,20 @@ func (r Reader) OpenFiles(pid int) ([]string, error) {
 		out = append(out, target)
 	}
 	return out, nil
+}
+
+// Namespace identifies the pid namespace of the reading process.
+//
+// It matters because a pid means nothing outside the namespace it came from. A
+// sandboxed agent — Codex runs its commands in one — sees only its own
+// processes, so every other pid looks dead to it. Comparing namespaces is how a
+// reader knows it cannot judge rather than concluding the session has ended.
+func (r Reader) Namespace() string {
+	link, err := os.Readlink(filepath.Join(r.Root, "self", "ns", "pid"))
+	if err != nil {
+		return ""
+	}
+	return link
 }
 
 // Signal sends a signal to a process, reporting whether it was still there.

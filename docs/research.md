@@ -133,6 +133,15 @@ allowed, but `~/.codex` stays read-only. Conclusion: a Codex agent can neither
 connect to the Claude Code socket nor call `codex queue`, but it can write files
 to `/tmp`.
 
+### The sandbox has its own pid namespace
+
+The commands a Codex agent runs are started under `bwrap --as-pid-1`, so inside
+them `/proc` holds only the sandboxed process itself. `/tmp` is the real one —
+a file written there appears outside — but every pid from outside is missing.
+**[verified live]** Anything judging "is that process alive" from inside the
+sandbox therefore concludes "no" about every session but its own. A reader has to
+compare `/proc/self/ns/pid` before believing a pid it did not create.
+
 ### Environment and instructions
 
 - `shell_environment_policy` inherits the environment by default, excluding names

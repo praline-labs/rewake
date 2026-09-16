@@ -147,3 +147,59 @@ func TestAgeIsMeasuredFromTheStart(t *testing.T) {
 		t.Errorf("age = %v, want about 90s", age)
 	}
 }
+
+// A sandboxed agent — Codex runs its commands in one — sees its own pid
+// namespace only, where every other process is missing. Reading a session from
+// there must neither report it gone nor delete its record: found by running
+// `rewake list` inside the sandbox, which wiped a live session.
+func TestReaderInAnotherNamespaceDoesNotJudge(t *testing.T) {
+	dir := stateDir(t, map[int]uint64{})
+
+	record := session("web", 10, 100)
+	record.PIDNamespace = "pid:[4026531836]"
+	if err := Publish(dir, record); err != nil {
+		t.Fatalf("publish: %v", err)
+	}
+
+	previous := namespace
+	namespace = func() string { return "pid:[4026533194]" }
+	t.Cleanup(func() { namespace = previous })
+
+	found, err := Lookup(dir, "web")
+	if err != nil {
+		t.Fatalf("Lookup from another namespace: %v", err)
+	}
+	if found.Name != "web" {
+		t.Errorf("session = %+v, want the published one", found)
+	}
+
+	sessions, err := List(dir)
+	if err != nil || len(sessions) != 1 {
+		t.Fatalf("List = %v (%v), want the session listed", sessions, err)
+	}
+	if _, err := os.Stat(state.SessionPath(dir, "web")); err != nil {
+		t.Fatalf("the record was deleted by a reader that cannot see the processes: %v", err)
+	}
+}
+
+// In the namespace the pids came from, the same record is judged as before.
+func TestReaderInTheSameNamespaceStillPrunes(t *testing.T) {
+	dir := stateDir(t, map[int]uint64{})
+
+	record := session("web", 10, 100)
+	record.PIDNamespace = "pid:[4026531836]"
+	if err := Publish(dir, record); err != nil {
+		t.Fatalf("publish: %v", err)
+	}
+
+	previous := namespace
+	namespace = func() string { return "pid:[4026531836]" }
+	t.Cleanup(func() { namespace = previous })
+
+	if _, err := Lookup(dir, "web"); err == nil {
+		t.Fatal("a dead session was reported alive in its own namespace")
+	}
+	if _, err := os.Stat(state.SessionPath(dir, "web")); !os.IsNotExist(err) {
+		t.Error("the leftover record was not cleaned up")
+	}
+}

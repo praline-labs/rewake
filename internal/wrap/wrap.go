@@ -166,6 +166,7 @@ func claimName(request Request, self int, selfStart uint64, cwd string) (registr
 			Harness:      request.Harness.ID(),
 			ServicePID:   self,
 			ServiceStart: selfStart,
+			PIDNamespace: proc.Namespace(),
 			CWD:          cwd,
 			StartedAt:    time.Now(),
 		}

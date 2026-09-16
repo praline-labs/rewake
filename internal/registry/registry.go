@@ -52,17 +52,40 @@ type Session struct {
 	// CodexHome is the CODEX_HOME the session runs with, for harnesses that
 	// keep their state there.
 	CodexHome string `json:"codexHome,omitempty"`
+	// PIDNamespace is the pid namespace the two pids above belong to. A reader
+	// in a different one cannot judge whether they are alive.
+	PIDNamespace string `json:"pidNamespace,omitempty"`
 }
 
 // alive is the liveness check, replaceable so tests can describe a machine
 // instead of running processes on the real one.
 var alive = proc.Alive
 
+// namespace reports the pid namespace of this process, replaceable in tests.
+var namespace = proc.Namespace
+
+// Judgeable reports whether this reader can tell if the session is running.
+//
+// Only a reader in the same pid namespace can. A Codex agent runs its commands
+// in a sandbox with its own namespace, where every pid but its own is missing —
+// and a reader that mistook that for death reported live sessions as gone and
+// deleted their records. Found by running it.
+func (s Session) Judgeable() bool {
+	here := namespace()
+	return s.PIDNamespace == "" || here == "" || s.PIDNamespace == here
+}
+
 // Alive reports whether this session can still be reached: both the process
 // serving the mailbox and the harness itself have to be running. A wrapper that
 // outlives its harness has nothing to deliver to, and a harness whose wrapper is
 // gone has nobody to deliver for it.
 func (s Session) Alive() bool {
+	if !s.Judgeable() {
+		// Cannot see those processes from here. Saying "alive" leaves delivery
+		// to the wrapper, which can see them; saying "dead" would drop mail and
+		// remove a record belonging to a session that is running.
+		return true
+	}
 	if !alive(s.ServicePID, s.ServiceStart) {
 		return false
 	}
@@ -204,8 +227,10 @@ func Lookup(dir, name string) (Session, error) {
 		return Session{}, err
 	}
 	if !session.Alive() {
-		// Reading is also when leftovers are cleaned: nobody else will.
-		_ = Remove(dir, name)
+		if session.Judgeable() {
+			// Reading is also when leftovers are cleaned: nobody else will.
+			_ = Remove(dir, name)
+		}
 		return Session{}, ErrNotFound
 	}
 	return session, nil
@@ -233,7 +258,9 @@ func List(dir string) ([]Session, error) {
 			continue
 		}
 		if !session.Alive() {
-			_ = Remove(dir, name)
+			if session.Judgeable() {
+				_ = Remove(dir, name)
+			}
 			continue
 		}
 		sessions = append(sessions, session)
