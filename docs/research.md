@@ -47,6 +47,36 @@ Facts age with harness versions: recheck before changing the adapter.
     directory fails;
   - slash commands from incoming messages are not executed. **[binary source, docs]**
 
+### How a socket message is drawn
+
+- The interface picks the drawing of a user message from its text, not from a
+  protocol field. Content that contains `<task-notification>` with a
+  `<summary>` is drawn as one line, `● <summary>`, coloured by `<status>`
+  (`completed` green, `failed` red, `killed` yellow, anything else plain) — the
+  line a finished background task gets. The model still receives the peer
+  wrapper around it ("Another Claude session sent a message…"); only the screen
+  is clean. **[verified live, 2.1.270; source: `UserTextMessage.tsx` →
+  `UserAgentNotificationMessage` in an older published build]**
+- The protocol has `type: "control"` frames too: `rename`,
+  `peer_message_status`, `notify_when_idle` and `peer_idle_notice`, among
+  others. `peer_idle_notice` also draws as a "finished" line, but it is accepted
+  only as the answer to a `notify_when_idle` the receiving session sent itself
+  through its own `SendMessage`; an unsolicited one is dropped as
+  "uncorrelated". An outside process cannot use it. **[binary source 2.1.270]**
+- `ListAgents`/`SendMessage` see every interactive Claude Code session on the
+  machine through its socket, not only subagents. **[verified live]**
+
+### Hooks for one launch
+
+- `--settings <file-or-json>` adds a settings layer for the run. Layers are
+  merged (`mergeWith`), so hooks in it run next to the user's own. Only one
+  `--settings` is read. **[source, older published build; verified live that the
+  hook runs]**
+- The Stop hook receives `last_assistant_message` on stdin. **[source; verified
+  live]**
+- A hook runs while its session is awake; it cannot wake anything from deep idle.
+  Waking goes through the socket. **[owner]**
+
 ### Claude Code's own session registry
 
 `~/.claude/sessions/<pid>.json`: `pid`, `sessionId`, `cwd`, `messagingSocketPath`,
@@ -114,6 +144,23 @@ twelve variables:
   work. **[source, docs]**
 - The `CODEX_SESSION_ID`/`CODEX_THREAD_ID` variables are only set for commands
   that the agent itself executes. **[source]**
+
+### End of a turn
+
+- `notify = ["prog", ...]` runs the program after every turn with a JSON
+  argument appended last: `type: "agent-turn-complete"`, `thread-id`,
+  `turn-id`, `cwd`, `client`, `input-messages`, `last-assistant-message`. It can
+  be set with `-c` for one launch, needs no feature flag and no trust, and runs
+  outside the sandbox with the session's environment. The TUI fires it too. It
+  replaces the user's own `notify`. **[source; verified live 0.154.0]**
+- Lifecycle hooks (`hooks.Stop` and others, `features.hooks` on by default) from
+  the user, the project or `-c` are registered only when their
+  `hooks.state."<key>".trusted_hash` matches or the launch passes
+  `--dangerously-bypass-hook-trust`; otherwise they are skipped silently. That
+  is why a `SessionStart` hook passed with `-c` never ran. `SessionStart` also
+  runs at the start of the first turn, not at launch. **[source]**
+- A queued message arrives as an ordinary user message: Codex has no drawing of
+  its own for a notice. **[verified live]**
 
 ### Sandbox (Linux)
 

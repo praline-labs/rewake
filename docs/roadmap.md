@@ -265,6 +265,63 @@ confirmation prompt, the Codex one from inside its sandbox.
 Acceptance: a week of use without manual intervention; not one case of a
 message silently getting lost.
 
+## Milestone 7. Notices instead of pasted text — done, September 16, 2026
+
+The owner's call after living with milestone 6 for an hour: a message pasted
+into a session looked like something the user typed, drowned the screen in a
+block of text plus two lines of rewake hints plus Claude Code's own paragraph,
+and gave the agent no sense that a tool was involved.
+
+- A harness is told that mail is waiting — `rewake: api notify, 1 new message` —
+  and the agent reads it with the new `rewake inbox`. Claude Code draws the
+  notice as a single `● …` line because it is wrapped in `<task-notification>`;
+  Codex gets the same line as a plain message.
+- Messages have a kind: `notify`, `question` (`send --question`), `finished`.
+- The end of a turn is reported to whoever wrote during it, with the last reply:
+  a Stop hook passed in `--settings` for Claude Code, `-c notify` for Codex. A
+  direct answer replaces that report, and reading an answer or a report asks
+  for nothing back.
+- The intro shrank to what rewake is and "run `rewake guide`"; the instructions
+  moved into the guide.
+
+**Live criterion, met:** two Claude Code sessions on Sonnet — one asked the other
+a question on a shell's instruction, both read the guide on their own, the
+question and the answer each arrived as one line, and the end of the asking
+session's turn came back as `● rewake: web finished`. Then Claude Code and
+Codex: a task sent to Codex arrived as a plain `rewake: api notify` line, Codex
+read it with `rewake inbox`, answered in its final message only, and the notify
+program turned that into `● rewake: cx finished` on the Claude side with `42`
+in the inbox.
+
+The run found two things no test had:
+
+- an agent tried to answer a message from `shell` with `rewake send shell`; the
+  old message text used to say that cannot work, and nothing said it any more.
+  The guide says it now;
+- an answer read by the asking session put the answering one on its waiting
+  list, so the answering session woke up once more only to read that its answer
+  had been read. Messages to a waiting session are now marked as replies.
+
+The review round five findings (see below) are still open.
+
+## Review round five — open, September 16, 2026
+
+Run against `1d276de`, asked "what did these fixes break" rather than "is it
+fixed". Nine defects, all reproduced by running: six regressions of round
+four's fixes and three causes left in place.
+
+- High: `signal.Ignore` is inherited through exec, so Ctrl+C no longer reaches
+  a harness without handlers of its own; Ctrl+Z then `fg` stops the wrapper
+  again while the harness runs; shutdown within the retry window loses a
+  delivered status; the multi-line skip swallows real instructions after
+  `other = """a " # b"""`; socket removal still happens outside the name lock;
+  an escaped `\"""` or a string inside an array still becomes sandbox roots.
+- Medium: a mailbox replaced with a gap closes the watch channel and spins a
+  core; `send` reports a fresh delivery as a lost result; the shim misses a
+  hoisted platform package.
+- Eleven tests stay green on the broken code, one of them a false oracle
+  (`TestWatchSurvivesAReplacedMailbox` takes a closed channel for an event).
+
 ## Later, as needed
 
 - pi, opencode, grok — their delivery paths are already covered in
@@ -272,8 +329,8 @@ message silently getting lost.
 - A busy/idle signal for the recipient, and choosing delivery priority from it.
 - A status column in `list` sourced from the Claude Code registry.
 - macOS: replacements for `/proc` (`lsof`, `ps -o lstart`).
-- Read receipts: the recipient confirms not delivery but that it read the
-  message.
+- Read receipts: `rewake inbox` already writes a `read` status; `send` does not
+  report it yet.
 
 ## Risks
 

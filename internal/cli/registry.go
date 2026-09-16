@@ -54,7 +54,7 @@ func buildGroups() {
 
 	talk := Group{
 		Title:   "TALK",
-		Summary: "Sessions address each other by name. A message arrives as a user message and starts a turn when the receiver is idle.",
+		Summary: "Sessions address each other by name. The receiver is told a message is waiting, in one line starting with \"rewake:\", and reads it with rewake inbox.",
 		Commands: []*Command{
 			{
 				Name:           "list",
@@ -69,18 +69,37 @@ func buildGroups() {
 				Name:           "send",
 				Args:           "<name> <text>",
 				MaxPositionals: 2,
-				Summary:        "Deliver text to a session. Use - as the text to read it from stdin.",
+				Summary:        "Leave a message for a session and tell it. Use - as the text to read it from stdin.",
 				Options: []Option{
+					{Flag: "--question", Summary: "Mark the message as a question you expect an answer to."},
 					{Flag: "--wait", Value: "<seconds>", Summary: "How long to wait for a delivery result. Default: 5."},
 					jsonOption,
 				},
 				Examples: []string{
 					"rewake send api \"the migration is merged, pull and rerun the smoke\"",
+					"rewake send web \"which port does the dev server use?\" --question",
 					"rewake send web - --wait 20",
 				},
-				Next:    []string{"rewake list"},
-				Notes:   []string{"Quote the text as one argument: loose words are refused rather than silently joined."},
+				Next: []string{"rewake inbox"},
+				Notes: []string{
+					"Quote the text as one argument: loose words are refused rather than silently joined.",
+					"Delivered means the receiver was told; it reads the text itself with rewake inbox.",
+				},
 				Handler: handleSend,
+			},
+			{
+				Name:           "inbox",
+				MaxPositionals: 0,
+				Summary:        "Read the messages waiting for this session. Each is shown once.",
+				Options:        []Option{jsonOption},
+				Examples:       []string{"rewake inbox", "rewake inbox --json"},
+				Next:           []string{"rewake send <name> \"text\""},
+				Notes: []string{
+					"Run it when a line starting with \"rewake:\" says messages are waiting.",
+					"A finished message is sent by the system, not typed: it says a session you wrote to has ended its turn, and carries its last reply.",
+					"Reading a message tells its sender when your turn ends, unless you answer it with rewake send first.",
+				},
+				Handler: handleInbox,
 			},
 			{
 				Name:           "whoami",
@@ -107,7 +126,22 @@ func buildGroups() {
 		},
 	}
 
-	groups = []Group{run, talk, help}
+	internal := Group{
+		Title: "INTERNAL",
+		Commands: []*Command{
+			{
+				Name:           "turn-ended",
+				Args:           "[payload]",
+				MaxPositionals: 1,
+				Summary:        "Called by a harness when a turn ends; tells the sessions that wrote here.",
+				Examples:       []string{"rewake turn-ended"},
+				Hidden:         true,
+				Handler:        handleTurnEnded,
+			},
+		},
+	}
+
+	groups = []Group{run, talk, help, internal}
 }
 
 // launchCommand builds the command that starts one harness.
@@ -139,7 +173,8 @@ func flow() []FlowStep {
 	}
 	return append(steps,
 		FlowStep{Command: "rewake list", Summary: "See who is running and can be reached."},
-		FlowStep{Command: "rewake send api \"pull and rerun the smoke\"", Summary: "Deliver text; the receiver answers with rewake send."},
+		FlowStep{Command: "rewake send api \"pull and rerun the smoke\"", Summary: "Leave a message; api is told, and reads it with rewake inbox."},
+		FlowStep{Command: "rewake inbox", Summary: "When a \"rewake:\" line says messages are waiting, read them here, then answer with rewake send."},
 		FlowStep{Command: "rewake <command> --help", Summary: "Flags, examples and notes for that command."},
 	)
 }
@@ -158,6 +193,14 @@ func notes() []Note {
 		{
 			Title: "Only sessions started through rewake take part",
 			Body:  "An agent started by hand in another terminal is not reachable: rewake has no way into it. Start it with rewake and it appears in list.",
+		},
+		{
+			Title: "A waiting message is announced, not pasted",
+			Body:  "It shows up as one line: \"rewake: <session> <kind>, <n> new message(s)\". The kind is notify, question, or finished. The text is never in that line: run rewake inbox to read it. A finished message comes from the system when a session you wrote to ends its turn, and carries that session's last reply.",
+		},
+		{
+			Title: "A message from shell cannot be answered with send",
+			Body:  "shell means it was typed in a plain terminal, not sent by a session. Answer it in your own reply; rewake has no way to deliver to it.",
 		},
 		{
 			Title: "Delivery speed differs by harness",

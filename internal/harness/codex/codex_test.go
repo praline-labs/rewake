@@ -50,8 +50,8 @@ func TestIntroIsPassedForOneLaunch(t *testing.T) {
 	if !ok {
 		t.Fatalf("the briefing was not passed: %v", plan.Args)
 	}
-	if !strings.Contains(value, `web`) || !strings.Contains(value, "rewake send") {
-		t.Errorf("briefing = %s, want the session name and how to answer", value)
+	if !strings.Contains(value, `web`) || !strings.Contains(value, "rewake guide") {
+		t.Errorf("briefing = %s, want the session name and where the instructions are", value)
 	}
 }
 
@@ -296,8 +296,8 @@ func TestDeliverySaysTheQueueIsNotInstant(t *testing.T) {
 	if sawThread != "01a0-thread" {
 		t.Errorf("thread = %q, want the open one", sawThread)
 	}
-	if !strings.Contains(sawText, "pull and rerun the smoke") || !strings.Contains(sawText, "rewake send api") {
-		t.Errorf("queued text = %q, want the message and how to answer", sawText)
+	if sawText != "rewake: api notify, 1 new message" {
+		t.Errorf("queued text = %q, want only the notice: the agent reads the text with rewake inbox", sawText)
 	}
 }
 

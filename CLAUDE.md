@@ -3,8 +3,9 @@
 A tool that lets interactive coding-agent harnesses on one machine talk to each
 other. A person starts an agent through it — `rewake claude`, `rewake codex` —
 and gets the ordinary program in their terminal; the session is registered, and
-any other session writes to it with `rewake send <name> "text"`. The text
-arrives as a user message and wakes the receiver when it is idle.
+any other session writes to it with `rewake send <name> "text"`. The receiver
+is told in one line that a message is waiting, which wakes it when it is idle,
+and reads the text with `rewake inbox`.
 
 The caller of these commands is an agent running them from its own shell. So the
 machine-readable form matters more than the pretty one, a refusal must name the

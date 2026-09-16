@@ -52,7 +52,7 @@ func serveUntil(t *testing.T, server *Server, done func() bool) {
 	<-finished
 }
 
-func TestDeliveredMessageIsArchivedWithItsStatus(t *testing.T) {
+func TestDeliveredMessageWaitsToBeRead(t *testing.T) {
 	dir := stateDir(t)
 	sent := message("pull and rerun the smoke")
 	if err := Put(dir, sent); err != nil {
@@ -85,8 +85,8 @@ func TestDeliveredMessageIsArchivedWithItsStatus(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(state.InboxPath(dir, "api"), sent.ID+".json")); !os.IsNotExist(err) {
 		t.Error("a delivered message is still waiting in the mailbox")
 	}
-	if _, err := os.Stat(filepath.Join(state.DonePath(dir, "api"), sent.ID+".json")); err != nil {
-		t.Errorf("a delivered message was not archived: %v", err)
+	if _, err := os.Stat(filepath.Join(state.UnreadPath(dir, "api"), sent.ID+".json")); err != nil {
+		t.Errorf("a delivered message is not waiting to be read: %v", err)
 	}
 }
 

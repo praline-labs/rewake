@@ -103,7 +103,11 @@ func (s *Server) Serve(ctx context.Context) {
 // enough ago that nobody is coming back for them.
 func (s *Server) sweepFinished() {
 	cutoff := time.Now().Add(-keepFinished)
-	for _, directory := range []string{state.DonePath(s.Dir, s.Name), state.InboxPath(s.Dir, s.Name)} {
+	// Unread mail goes by age too: a notice nobody acted on for a day describes
+	// a conversation that has moved on, and the mailbox of a name reused for
+	// weeks would otherwise keep every one of them.
+	finished := []string{state.DonePath(s.Dir, s.Name), state.UnreadPath(s.Dir, s.Name)}
+	for _, directory := range append(finished, state.InboxPath(s.Dir, s.Name)) {
 		entries, err := os.ReadDir(directory)
 		if err != nil {
 			continue
@@ -114,7 +118,7 @@ func (s *Server) sweepFinished() {
 			}
 			// In the mailbox itself only statuses are old news; a message still
 			// waiting there is answered by the TTL, not by this.
-			if directory != state.DonePath(s.Dir, s.Name) && !strings.HasSuffix(entry.Name(), ".status") {
+			if directory == state.InboxPath(s.Dir, s.Name) && !strings.HasSuffix(entry.Name(), ".status") {
 				continue
 			}
 			info, err := entry.Info()
@@ -157,6 +161,8 @@ func (s *Server) drain(ctx context.Context) {
 			continue
 		}
 
+		// The notice names how many messages will be waiting, this one included.
+		message.Unread = countUnread(s.Dir, s.Name, s.Epoch) + 1
 		result := s.Deliver(ctx, message)
 		s.attempts[message.ID] = time.Now()
 		if result.State == Pending {
@@ -197,7 +203,17 @@ func (s *Server) publish(id string, result Result) {
 	if err := writeStatus(s.Dir, s.Name, id, result); err != nil {
 		return
 	}
-	_ = archive(s.Dir, s.Name, id)
+	settle(s.Dir, s.Name, id, result.State)
+}
+
+// settle takes a message with an outcome out of the waiting set. One the harness
+// was told about waits in unread/ for the agent to fetch; anything else is done.
+func settle(dir, name, id string, outcome State) {
+	if outcome == Delivered {
+		_ = markUnread(dir, name, id)
+		return
+	}
+	_ = archive(dir, name, id)
 }
 
 // alreadySettled reports whether this message has an outcome, from this run or
@@ -212,7 +228,7 @@ func (s *Server) alreadySettled(message Message) bool {
 		return false
 	}
 	s.outcomes[message.ID] = Result{State: status.State, Via: status.Via, Detail: status.Detail}
-	_ = archive(s.Dir, s.Name, message.ID)
+	settle(s.Dir, s.Name, message.ID, status.State)
 	return true
 }
 

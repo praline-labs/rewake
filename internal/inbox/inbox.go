@@ -17,8 +17,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
-	"strings"
 	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/state"
@@ -36,18 +34,53 @@ type Message struct {
 	// can be reused once its session ends, and mail addressed to the previous
 	// tenant must not be handed to the next one.
 	ToEpoch string `json:"toEpoch,omitempty"`
+	// Kind says what the message is about, and it is what the receiver's notice
+	// names: a plain note, a question waiting for an answer, or the end of the
+	// sender's turn.
+	Kind Kind `json:"kind,omitempty"`
+	// Reply marks an answer to a message the receiver sent. Reading an answer
+	// does not ask for a report back: the conversation already went both ways,
+	// and a report would wake the receiver for nothing.
+	Reply bool `json:"reply,omitempty"`
 	// Text is what the receiving agent will read.
 	Text string `json:"text"`
 	// CreatedAt is when the sender wrote it.
 	CreatedAt time.Time `json:"createdAt"`
+	// Unread is how many messages the receiver will hold once this one lands. It is
+	// computed by the serving process right before delivery and never stored.
+	Unread int `json:"-"`
+}
+
+// Kind is the subject of a message.
+type Kind string
+
+const (
+	// Note is an ordinary message. It is the default.
+	Note Kind = "notify"
+	// Question is a message the sender expects an answer to.
+	Question Kind = "question"
+	// Finished tells the receiver that a session it wrote to has ended its turn.
+	// The text is that session's last reply.
+	Finished Kind = "finished"
+)
+
+// KindOf returns the kind of a message, reading a missing one as a note: mail
+// written before kinds existed is exactly that.
+func KindOf(message Message) Kind {
+	if message.Kind == "" {
+		return Note
+	}
+	return message.Kind
 }
 
 // State is what happened to a message.
 type State string
 
 const (
-	// Delivered means the harness has it.
+	// Delivered means the harness was told the message is waiting.
 	Delivered State = "delivered"
+	// Read means the receiving agent fetched the text.
+	Read State = "read"
 	// Pending means it is accepted and still waiting for a chance to land.
 	Pending State = "pending"
 	// Failed means it will not be delivered.
@@ -162,65 +195,15 @@ func statusPath(dir, to, id string) string {
 
 // list returns the waiting messages of a mailbox, oldest first.
 func list(dir, to string) ([]Message, error) {
-	entries, err := os.ReadDir(state.InboxPath(dir, to))
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	names := make([]string, 0, len(entries))
-	for _, entry := range entries {
-		name := entry.Name()
-		if entry.IsDir() || !strings.HasSuffix(name, ".json") || strings.HasPrefix(name, ".") {
-			continue
-		}
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	messages := make([]Message, 0, len(names))
-	for _, name := range names {
-		raw, err := os.ReadFile(filepath.Join(state.InboxPath(dir, to), name))
-		if err != nil {
-			continue
-		}
-		var message Message
-		if err := json.Unmarshal(raw, &message); err != nil {
-			// A file that is not a message is not ours to interpret; leave it
-			// where it is rather than deleting somebody else's data.
-			continue
-		}
-		messages = append(messages, message)
-	}
-	return messages, nil
+	return listIn(state.InboxPath(dir, to))
 }
 
 // archive moves a finished message out of the waiting set, keeping it for
 // diagnosis rather than deleting it.
 func archive(dir, to, id string) error {
-	done := state.DonePath(dir, to)
-	if err := state.EnsureSubdir(done); err != nil {
-		return err
+	err := move(id, state.InboxPath(dir, to), state.DonePath(dir, to))
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
 	}
-	mailbox := state.InboxPath(dir, to)
-	from := filepath.Join(mailbox, id+".json")
-	if err := os.Rename(from, filepath.Join(done, id+".json")); err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil
-		}
-		return err
-	}
-	// The age that matters is the age of the answer, not of the message: a
-	// rename keeps the original time, and an old message refused at startup was
-	// swept away in the same breath.
-	now := time.Now()
-	_ = os.Chtimes(filepath.Join(done, id+".json"), now, now)
-
-	// Both ends of the move are flushed: after a crash the message must be in
-	// one of the two places, never in both and never in neither.
-	_ = state.SyncDir(mailbox)
-	_ = state.SyncDir(done)
-	return nil
+	return err
 }

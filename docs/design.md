@@ -9,8 +9,9 @@ building and how.
 other. A human launches a harness through the tool — `rewake claude`, `rewake
 codex` — and gets an ordinary program in their terminal. The session registers
 itself, and any other session, or a human from a shell, can write to it with
-`rewake send <name> "text"`. The text arrives at the recipient as an incoming
-message and wakes it if it's idle.
+`rewake send <name> "text"`. The recipient is told in one line that a message is
+waiting — `rewake: api notify, 1 new message` — which wakes it if it is idle,
+and fetches the text itself with `rewake inbox`.
 
 The primary user of these commands is an agent calling them from its own shell.
 That's where the requirements on output and failure messages come from (see the
@@ -19,7 +20,7 @@ That's where the requirements on output and failure messages come from (see the
 ## Scope of the first version
 
 In scope: Claude Code and Codex, the commands `claude`, `codex`, `list`, `send`,
-`whoami`, the no-argument overview, `--json`. Linux.
+`inbox`, `whoami`, the no-argument overview, `--json`. Linux.
 
 Out of scope: pi, opencode, grok (their delivery paths are covered in research);
 macOS (needs replacements for `/proc`); delivery receipts from the recipient;
@@ -62,9 +63,11 @@ Created with 0700.
 ```
 /tmp/rewake-<uid>/
   sessions/<name>.json       session record
-  inbox/<name>/<id>.json     message awaiting delivery
-  inbox/<name>/<id>.status   status written by the servicing process
-  inbox/<name>/done/         delivered and failed, for diagnostics (cleaned up by age)
+  inbox/<name>/<id>.json     message whose notice has not gone out yet
+  inbox/<name>/<id>.status   status: pending, delivered (notice sent), read, failed
+  inbox/<name>/unread/       announced, waiting for the agent to read it
+  inbox/<name>/done/         read and failed, for diagnostics (cleaned up by age)
+  inbox/<name>/awaiting/     one empty-ish file per session waiting for this turn to end
   sock/<name>.sock           Claude Code inbound socket, path set by the wrapper
 ```
 
@@ -140,6 +143,10 @@ The common part of the wrapper:
 - Add `--messaging-socket-path <dir>/sock/<name>.sock` unless the user passed
   their own; before launch, remove a stale socket file at the same path.
 - Add `--append-system-prompt <intro>` (turned off by `--no-intro`).
+- Add `--settings` with a Stop hook that runs `rewake turn-ended` (see "The end
+  of a turn"). Claude Code merges settings layers, so the hook runs next to the
+  user's own. If the caller passed `--settings`, nothing is added — only one is
+  read — and rewake says on stderr that turns will not be reported.
 - Allow the tool's own commands without confirmation:
   `--allowedTools "Bash(rewake:*)"`. This adds a rule for the run without
   touching the user's settings. **Verify live** that the flag adds to the user's
@@ -161,21 +168,26 @@ The common part of the wrapper:
   directory to `writable_roots` via `-c`, keeping the paths already listed there.
   No confirmation is needed to run `rewake`: the command runs inside the
   sandbox.
+- End of a turn: `-c notify=["<rewake>","turn-ended"]`. Codex runs that program
+  after every turn, outside the sandbox and without the trust a Stop hook needs.
+  The key replaces the user's program, so it is passed only when neither the
+  command line nor `config.toml` mentions `notify` at all; otherwise rewake says
+  on stderr that turns will not be reported.
 - Record `CODEX_HOME` in the session (the environment value, or `~/.codex`).
 - **Verify live**, with one cheap turn, that the intro from `-c
   developer_instructions` actually reaches the model.
 
 ### The intro
 
-Short text, in English:
+Three lines, in English. It says what rewake is and where the instructions are;
+the instructions themselves live in `rewake guide`, which always matches the
+binary and costs context only when read:
 
 ```
-You are running inside rewake as session "<name>". Other agent sessions on this
-machine can message you, and you can message them.
-- rewake list — who is running
-- rewake send <name> "text" — deliver text to a session
-Incoming messages start with "[rewake] message from: <name>" and end with the
-exact command to answer them.
+You are running inside rewake as the session "<name>".
+rewake lets agent sessions on this machine message each other; a message waiting
+for you is announced by a line starting with "rewake:".
+Run `rewake guide` before you send or read messages: it explains how.
 ```
 
 ## Signals, and what the wrapper does not do
@@ -204,51 +216,75 @@ this is that, with one question asked first.
 
 ## Delivery
 
+A harness is never handed the text of a message. It is told that mail is
+waiting, and the agent fetches the text with `rewake inbox`. Two reasons, both
+the owner's: the agent should know the message came through a tool rather than
+from the person at the keyboard, and the person watching the session should see
+one line rather than a pasted block.
+
 ### Sender (`rewake send <name> <text>`)
 
 1. Parse arguments: exactly one name and one text (`-` reads the text from
    stdin). Extra positional arguments are the error "Quote the text as one
    argument".
 2. Look up a live session; if there's none, fail and list the live names.
-3. The message: `{"id","from","to","text","createdAt"}`. `id` is time-sortable
-   (nanosecond timestamp plus a random tail). `from` is `REWAKE_SESSION` or
-   `shell`.
+3. The message: `{"id","from","to","toEpoch","kind","reply","text","createdAt"}`.
+   `id` is time-sortable (nanosecond timestamp plus a random tail). `from` is
+   `REWAKE_SESSION` or `shell`. `kind` is `notify`, or `question` with
+   `--question`. `reply` is set when the recipient was waiting for the end of
+   the sender's turn (below): the message answers it.
 4. Write `inbox/<name>/<id>.json.tmp`, rename it to `.json`.
 5. Wait for `.status` up to `--wait` (5 seconds by default) and print the
-   result.
+   result. `delivered` means the notice went out.
 
-### Servicing process (wrapper or watchdog)
+### Servicing process (the wrapper)
 
 Watches the inbox: a message arrives as a rename into the directory and the
 kernel reports it, so delivery does not wait for a tick. A one-second poll runs
 alongside as the safety net — it retries pending messages and covers a watch the
-kernel would not give — and every ten minutes answered mail older than a day is
-swept away. Messages are processed in `id` order. For each
-one: call the delivery adapter, write the status (`.status.tmp`, then rename).
-`delivered` and `failed` are moved to `done/`; `pending` stays and is retried
-every 2 seconds. A message older than `--ttl` (30 minutes by default) gets
-`failed: expired`.
+kernel would not give — and every ten minutes answered and unread mail older
+than a day is swept away. Messages are processed in `id` order. For each one:
+count the unread mail, call the adapter with the notice, write the status
+(`.status.tmp`, then rename). `delivered` moves the message to `unread/`,
+`failed` to `done/`; `pending` stays and is retried every 2 seconds. A message
+older than `--ttl` (30 minutes by default) gets `failed: expired`.
 
-Status: `{"state":"delivered|pending|failed","via":"socket|codex-queue","detail":"...","at":"..."}`.
+Status: `{"state":"delivered|read|pending|failed","via":"socket|codex queue","detail":"...","at":"..."}`.
 
-### Text the recipient sees
+### The notice
+
+One line, the same for every harness:
 
 ```
-[rewake] from <sender> · <short id>
-<text>
+rewake: <sender> <kind>, <n> new message(s)
 ```
 
-The short id makes the text unique: Claude Code drops identical text from the
-same sender within 30 seconds. If the sender is `shell`, the header line reads
-`[rewake] from shell`.
+`n` counts this run's unread mail, the new message included. The notice carries
+no text of the message and no instructions: those are in the guide.
 
 ### Claude Code adapter
 
 Connect to `claude.socket` with a 2-second timeout, write the line
-`{"type":"user","message":{"role":"user","content":<text>},"priority":"next"}`
-followed by `\n`, then close. A successful write means `delivered`. `ENOENT` and
-`ECONNREFUSED` mean `pending` as long as the harness is alive (the socket hasn't
-been created yet, or is being recreated); otherwise `failed`.
+`{"type":"user","message":{"role":"user","content":<notification>},"priority":"next"}`
+followed by `\n`, then close. The content is
+
+```
+<task-notification>
+<task-id>rewake-<short id></task-id>
+<status>notify|question|completed</status>
+<summary><the notice></summary>
+</task-notification>
+```
+
+Claude Code picks how to draw a user message from its text, and draws this one
+as a single `● <summary>` line — the line its own background tasks get. The
+status colours it: `completed` (for `finished`) is green. The short id keeps
+two identical notices apart: Claude Code drops identical text from the same
+sender within 30 seconds.
+
+A successful write means `delivered`. `ENOENT` and `ECONNREFUSED` mean `pending`
+as long as the harness is alive (the socket hasn't been created yet, or is being
+recreated); otherwise `failed`.
 
 ### Codex adapter
 
@@ -256,15 +292,49 @@ been created yet, or is being recreated); otherwise `failed`.
    `/proc/<pid>/fd/*` links pointing at
    `<CODEX_HOME>/thread-writer-locks/<uuid>.lock`, and pick the lock with the
    latest mtime. None found: `pending: codex has not opened a thread yet`.
-2. `codex queue --thread <uuid> --message <text>` with the session's
-   `CODEX_HOME`, 15-second timeout.
-3. Exit code 0 means `delivered`, noted with "Codex will start a turn within
-   ~10s". `no rollout found` means `pending: the codex session has no
+2. `codex queue --thread <uuid> --message <notice>` with the session's
+   `CODEX_HOME`, 15-second timeout. Codex has no drawing of its own for this,
+   so the notice arrives as an ordinary message.
+3. Exit code 0 means `delivered`, noted with "codex checks its queue about every
+   ten seconds". `no rollout found` means `pending: the codex session has no
    conversation yet; delivers after its first turn`. Anything else is `failed`
    with Codex's error text.
 
 The thread is chosen fresh on every attempt: after `/new` or `/resume`, the
 message goes to the current thread, not the one from when the session started.
+
+### Reading (`rewake inbox`)
+
+Run by the agent inside its session: `REWAKE_SESSION` names the mailbox, and the
+session record gives the epoch, so mail left for an earlier session with the same
+name is not shown. Each unread message is moved to `done/` — a message is shown
+only by the call that moved it — and its status becomes `read`. The sender of
+every message read, unless the message is a reply or a `finished` notice, is
+recorded in `awaiting/`.
+
+### The end of a turn
+
+When a turn ends, the harness runs `rewake turn-ended` — a Stop hook in Claude
+Code, the notify program in Codex — with the last reply of the turn in its
+payload (`last_assistant_message` on stdin, `last-assistant-message` as the last
+argument). The command takes the sessions in `awaiting/` and leaves each of them
+a `finished` message whose text is that reply. Their wrappers announce it:
+`rewake: cx finished, 1 new message`.
+
+The hook only records; waking is the recipient wrapper's job, through the same
+notice as any message. A hook cannot wake anything out of deep idle, and it
+runs while its own session is still awake anyway.
+
+Three rules keep this from turning into a loop:
+
+- reading a `finished` notice asks for nothing back;
+- a message sent to a session that is waiting for this turn is a `reply`, clears
+  the wait, and reading it asks for nothing back — the answer says more than a
+  notice that the turn ended;
+- each waiting session is told once per turn.
+
+`turn-ended` is hidden from the guide and never fails loudly: it runs inside the
+harness's own machinery, where an error is noise at best.
 
 ## A session without a wrapper
 
@@ -284,7 +354,8 @@ rewake                                  overview (command map, workflow, behavio
 rewake [--name N] claude [args...]      launch a Claude Code session under rewake
 rewake [--name N] codex [args...]       launch a Codex session under rewake
 rewake list [--json]                    live sessions
-rewake send <name> <text|-> [--wait S] [--json]
+rewake send <name> <text|-> [--question] [--wait S] [--json]
+rewake inbox [--json]                   read the messages waiting for this session
 rewake whoami [--json]                  this session's name and directory
 rewake <command> --help
 ```
@@ -309,7 +380,7 @@ belongs to the harness.
 - `send` prints the result as one line:
   ```
   delivered to claude-2 via socket
-  delivered to codex via codex queue; codex starts a turn within ~10s
+  delivered to codex via codex queue; codex checks its queue about every ten seconds
   pending for codex: the codex session has no conversation yet; delivers after its first turn
   ```
 - `--json` on every command prints the full model; the text form is deliberately
@@ -347,15 +418,22 @@ internal/harness/codex/         launch arguments, thread lookup, delivery via co
 internal/wrap/                  wrapper: launch, signals, lifecycle
 ```
 
-The harness adapter is an interface:
+The harness adapter is an interface (`internal/harness/plan.go`):
 
 ```go
 type Harness interface {
-    Name() string
-    PrepareLaunch(s *registry.Session, args []string) (argv []string, env []string, err error)
-    Deliver(ctx context.Context, s registry.Session, text string) inbox.Result
+    ID() string
+    Title() string
+    Summary() string
+    Examples() []string
+    Notes() []string
+    Launch(request LaunchRequest) (LaunchPlan, error)
+    Deliver(ctx context.Context, session registry.Session, message inbox.Message) inbox.Result
 }
 ```
+
+`Deliver` sends the notice for `message`, built by `harness.Notice`; it never
+sends `message.Text`.
 
 ## Testing
 
@@ -404,3 +482,12 @@ messages.
    accepted.
 4. A session without a wrapper is not supported; `register` is dropped from the
    first version.
+5. A harness is told that mail is waiting, never handed the text; the agent reads
+   it with `rewake inbox`. The notice pattern is `rewake: <sender> <kind>, <n> new
+   message(s)`, with the kinds `notify`, `question` and `finished`.
+6. The intro is minimal — what rewake is, and to run `rewake guide` — and the
+   instructions live in the guide. Nothing is added to a notice that the person
+   watching the session would not see.
+7. Whatever rewake passes to a harness adds to the user's settings and never
+   replaces them. Where a key can only replace (`notify`), it is passed only when
+   the user certainly has none.

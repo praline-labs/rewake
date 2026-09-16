@@ -57,6 +57,9 @@ type Command struct {
 	// Raw means everything after the command name belongs to the program this
 	// command starts, and rewake must not interpret it.
 	Raw bool
+	// Hidden keeps a command out of the guide and out of "did you mean". It is
+	// for the ones a harness calls on its own; an agent has no reason to.
+	Hidden bool
 	// Harness is what this command starts, for the commands that start one. It
 	// is here so the table can be checked against the catalogue: a launch
 	// command that starts the wrong harness is otherwise indistinguishable.
@@ -74,6 +77,17 @@ func (c *Command) Label() string {
 		return c.Name
 	}
 	return c.Name + " " + c.Args
+}
+
+// visibleCommands are the commands of a group the guide shows.
+func visibleCommands(group Group) []*Command {
+	out := make([]*Command, 0, len(group.Commands))
+	for _, command := range group.Commands {
+		if !command.Hidden {
+			out = append(out, command)
+		}
+	}
+	return out
 }
 
 // Group is a titled section of the guide.
@@ -187,7 +201,9 @@ func commandNames() []string {
 	var names []string
 	for _, group := range Groups() {
 		for _, command := range group.Commands {
-			names = append(names, command.Name)
+			if !command.Hidden {
+				names = append(names, command.Name)
+			}
 		}
 	}
 	return names

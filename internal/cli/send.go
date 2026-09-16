@@ -76,13 +76,25 @@ func handleSend(ctx *Context, call Call) error {
 		return unknownSessionError(dir, target)
 	}
 
+	kind := inbox.Note
+	if call.Switch("question") {
+		kind = inbox.Question
+	}
 	message := inbox.Message{
 		ID:        inbox.NewID(),
 		From:      sender(),
 		To:        session.Name,
 		ToEpoch:   session.Epoch(),
+		Kind:      kind,
 		Text:      text,
 		CreatedAt: time.Now(),
+	}
+	if message.From != harness.ShellSender {
+		// Writing to a session that waits for this turn answers it. The answer
+		// says more than a notice that the turn ended, and reading it must not
+		// ask for a notice back. Cleared before the message exists, so a turn
+		// that ends in between reports nothing twice.
+		message.Reply = inbox.ClearAwaiting(dir, message.From, session.Name)
 	}
 	if err := inbox.Put(dir, message); err != nil {
 		return failf("could not write the message into the mailbox of %s: %v", session.Name, err)

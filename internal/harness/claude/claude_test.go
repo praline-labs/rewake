@@ -189,37 +189,23 @@ func TestDeliveryWritesOneProtocolLine(t *testing.T) {
 		if envelope.Type != "user" || envelope.Message.Role != "user" || envelope.Priority != "next" {
 			t.Errorf("envelope = %+v, want a user message at priority next", envelope)
 		}
-		if !strings.Contains(envelope.Message.Content, message.Text) {
-			t.Errorf("the text did not survive delivery: %q", envelope.Message.Content)
+		// The harness gets a notice, never the text: the agent fetches that with
+		// rewake inbox, and the interface draws this tag as a single line.
+		content := envelope.Message.Content
+		if strings.Contains(content, message.Text) {
+			t.Errorf("the text of the message was pasted into the session: %q", content)
 		}
-		if !strings.Contains(envelope.Message.Content, "rewake send web") {
-			t.Errorf("the reply command is missing: %q", envelope.Message.Content)
+		if !strings.HasPrefix(content, "<task-notification>") || !strings.HasSuffix(content, "</task-notification>") {
+			t.Errorf("content = %q, want a task-notification the interface draws as one line", content)
+		}
+		if !strings.Contains(content, "<summary>rewake: web notify, 1 new message</summary>") {
+			t.Errorf("content = %q, want the notice as its summary", content)
+		}
+		if !strings.Contains(content, "<task-id>rewake-4b10aaaa</task-id>") {
+			t.Errorf("content = %q, want the short id that keeps two notices apart", content)
 		}
 	case <-time.After(3 * time.Second):
 		t.Fatal("nothing arrived on the socket")
-	}
-}
-
-// A write that succeeds tells us nothing when the receiver drops the line for
-// being too long: reporting that as delivered loses the message silently.
-func TestOversizeMessageIsRefusedBeforeSending(t *testing.T) {
-	socket := filepath.Join(t.TempDir(), "api.sock")
-	received := listenOnce(t, socket)
-
-	session := registry.Session{Name: "api", Socket: socket}
-	message := inbox.Message{ID: inboxID, From: "web", To: "api", Text: strings.Repeat("x", 2<<20)}
-
-	result := New().Deliver(context.Background(), session, message)
-	if result.State != inbox.Failed {
-		t.Fatalf("result = %+v, want failed", result)
-	}
-	if !strings.Contains(result.Detail, "limit") {
-		t.Errorf("the refusal does not explain the limit: %q", result.Detail)
-	}
-	select {
-	case line := <-received:
-		t.Fatalf("an oversize message was sent anyway (%d bytes)", len(line))
-	case <-time.After(300 * time.Millisecond):
 	}
 }
 

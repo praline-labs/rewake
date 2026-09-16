@@ -13,9 +13,10 @@ rewake list                     # who is running
 rewake send api "the migration is merged, pull and rerun the smoke"
 ```
 
-The text arrives as a user message. An idle session wakes up and starts a turn;
-a busy one takes it when the current turn ends. The receiver answers the same
-way: `rewake send web "done, 42 tests green"`.
+The receiver is told in one line — `rewake: web notify, 1 new message` — and
+reads the text itself with `rewake inbox`. An idle session wakes up for it; a
+busy one sees it when the current turn ends. It answers the same way, and when
+its turn ends the sender hears `rewake: api finished` with its last reply.
 
 Delivery uses what each harness already offers — the session inbox socket of
 Claude Code, the message queue of Codex — so nothing is typed into anyone's

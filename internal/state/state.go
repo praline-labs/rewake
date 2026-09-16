@@ -64,6 +64,8 @@ const (
 	inboxDir    = "inbox"
 	socketsDir  = "sock"
 	doneDir     = "done"
+	unreadDir   = "unread"
+	awaitingDir = "awaiting"
 )
 
 // SessionPath is the record of one session.
@@ -77,8 +79,19 @@ func SessionsPath(dir string) string { return filepath.Join(dir, sessionsDir) }
 // InboxPath is the mailbox of one session.
 func InboxPath(dir, name string) string { return filepath.Join(dir, inboxDir, name) }
 
-// DonePath holds messages that have been delivered or refused, for diagnosis.
+// DonePath holds messages that have been read or refused, for diagnosis.
 func DonePath(dir, name string) string { return filepath.Join(dir, inboxDir, name, doneDir) }
+
+// UnreadPath holds messages the session has been told about and has not read
+// yet. The harness is handed a notice, not the text: the agent fetches the text
+// itself, so it knows the message came through a tool and not from its user.
+func UnreadPath(dir, name string) string { return filepath.Join(dir, inboxDir, name, unreadDir) }
+
+// AwaitingPath lists the sessions whose messages this session has read since its
+// last turn ended. Each of them is told when that turn ends.
+func AwaitingPath(dir, name string) string {
+	return filepath.Join(dir, inboxDir, name, awaitingDir)
+}
 
 // SocketPath is where the wrapper asks a harness to put its inbox socket. It is
 // kept short: a unix socket path may not exceed 103 bytes.

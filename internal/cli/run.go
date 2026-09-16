@@ -111,8 +111,12 @@ func guideModel() map[string]any {
 
 	groupModels := make([]groupModel, 0, len(Groups()))
 	for _, group := range Groups() {
-		commands := make([]commandModel, 0, len(group.Commands))
-		for _, command := range group.Commands {
+		shown := visibleCommands(group)
+		if len(shown) == 0 {
+			continue
+		}
+		commands := make([]commandModel, 0, len(shown))
+		for _, command := range shown {
 			commands = append(commands, commandModel{
 				Name:     command.Name,
 				Args:     command.Args,

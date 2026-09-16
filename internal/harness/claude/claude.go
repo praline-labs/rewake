@@ -29,6 +29,11 @@ const socketFlag = "--messaging-socket-path"
 // own configuration is untouched.
 const introFlag = "--append-system-prompt"
 
+// settingsFlag layers a settings object over the user's for one launch. Claude
+// Code merges the layers, so the Stop hook it carries runs next to the user's
+// own hooks rather than instead of them.
+const settingsFlag = "--settings"
+
 // toolFlag allows the rewake commands without a confirmation prompt for this
 // launch. Without it the agent can be messaged but cannot answer until a person
 // approves each reply.
@@ -109,6 +114,16 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 	if request.Intro && !harness.HasFlag(args, introFlag) {
 		args = harness.AddFlags(args, introFlag, harness.Intro(request.Name))
 	}
+	var notes []string
+	if harness.HasFlag(args, settingsFlag) {
+		// Only one --settings is read, and replacing the caller's would drop
+		// whatever they layered on purpose.
+		notes = append(notes, "not reporting the end of turns to the sessions that wrote here: --settings is already given, and a second one would replace it")
+	} else if hooks, err := turnHookSettings(); err == nil {
+		args = harness.AddFlags(args, settingsFlag, hooks)
+	} else {
+		notes = append(notes, "not reporting the end of turns: "+err.Error())
+	}
 	if !harness.HasFlag(args, toolFlag) {
 		args = harness.AddFlags(args, toolFlag, "Bash(rewake:*)")
 	}
@@ -119,14 +134,36 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 		Env:        harness.SessionEnv(request, childMarkers),
 		Socket:     socket,
 		OwnsSocket: owns,
+		Notes:      notes,
 	}, nil
+}
+
+// turnHookSettings is the settings layer that reports the end of every turn.
+// The Stop hook runs while the session is still awake, so it only records the
+// event; waking the sessions that wait for it is their own wrappers' job.
+func turnHookSettings() (string, error) {
+	command, err := harness.TurnEndedCommand()
+	if err != nil {
+		return "", err
+	}
+	type hook struct {
+		Kind    string `json:"type"`
+		Command string `json:"command"`
+		Timeout int    `json:"timeout"`
+	}
+	type matcher struct {
+		Hooks []hook `json:"hooks"`
+	}
+	encoded, err := json.Marshal(map[string]any{
+		"hooks": map[string][]matcher{
+			"Stop": {{Hooks: []hook{{Kind: "command", Command: command, Timeout: 10}}}},
+		},
+	})
+	return string(encoded), err
 }
 
 // maxSocketPath is the limit the kernel puts on a unix socket path.
 const maxSocketPath = 103
-
-// maxLine is the longest line the session socket accepts, protocol side.
-const maxLine = 1 << 20
 
 func (claudeHarness) Deliver(ctx context.Context, session registry.Session, message inbox.Message) inbox.Result {
 	if session.Socket == "" {
@@ -135,24 +172,12 @@ func (claudeHarness) Deliver(ctx context.Context, session registry.Session, mess
 
 	line, err := json.Marshal(envelope{
 		Type:     "user",
-		Message:  payload{Role: "user", Content: harness.MessageText(message)},
+		Message:  payload{Role: "user", Content: notification(message)},
 		Priority: "next",
 	})
 	if err != nil {
 		return inbox.Result{State: inbox.Failed, Detail: "the message could not be encoded: " + err.Error()}
 	}
-	// Claude Code drops a line longer than this and closes the connection, so a
-	// write that succeeds would otherwise be reported as delivered while the
-	// receiver never saw it. The limit is on the encoded line, not the text: JSON
-	// escaping can grow a message several times over.
-	if len(line)+1 > maxLine {
-		return inbox.Result{
-			State: inbox.Failed,
-			Detail: fmt.Sprintf("the message is %d bytes once encoded, over the %d byte limit of the session socket; send less text or a path to a file",
-				len(line)+1, maxLine),
-		}
-	}
-
 	dialer := net.Dialer{Timeout: dialTimeout}
 	connection, err := dialer.DialContext(ctx, "unix", session.Socket)
 	if err != nil {

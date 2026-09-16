@@ -72,13 +72,17 @@ func formatGuide() string {
 	lines = append(lines, "rewake — let coding agents on this machine message each other.", "")
 
 	for _, group := range Groups() {
+		shown := visibleCommands(group)
+		if len(shown) == 0 {
+			continue
+		}
 		lines = append(lines, group.Title)
 		if group.Summary != "" {
 			lines = append(lines, wrapText(group.Summary, "  ")...)
 			lines = append(lines, "")
 		}
-		rows := make([]column, 0, len(group.Commands))
-		for _, command := range group.Commands {
+		rows := make([]column, 0, len(shown))
+		for _, command := range shown {
 			rows = append(rows, column{Name: command.Label(), Text: command.Summary})
 		}
 		lines = append(lines, printColumns(rows, "  ")...)

@@ -69,33 +69,65 @@ type Harness interface {
 	Deliver(ctx context.Context, session registry.Session, message inbox.Message) inbox.Result
 }
 
-// Intro is the briefing handed to an agent at launch. It is short on purpose: it
-// costs context in every turn of the session, so it says who you are, how to
-// reach the others, and what an incoming message looks like — nothing else.
+// Intro is the briefing handed to an agent at launch. It says what rewake is and
+// where the instructions are, nothing more: it costs context in every turn, and
+// the guide is one command away and always matches the binary.
 func Intro(name string) string {
 	return strings.Join([]string{
 		fmt.Sprintf("You are running inside rewake as the session %q.", name),
-		"Other agent sessions on this machine can message you, and you can message them.",
-		"- rewake list — who is running",
-		`- rewake send <name> "text" — deliver text to a session`,
-		`Incoming messages start with "[rewake] message from: <name>" and end with the exact command to answer them.`,
+		"rewake lets agent sessions on this machine message each other; a message waiting for you is announced by a line starting with \"rewake:\".",
+		"Run `rewake guide` before you send or read messages: it explains how.",
 	}, "\n")
 }
 
-// MessageText is what the receiving agent reads.
-//
-// The shape is dictated by how agents misread the first version: a header of
-// "from <name> · <id>" was copied whole into the reply, which then addressed a
-// session called "shell · 33f2". So the name stands alone on its own line, the
-// id sits in brackets, and the reply line is a command that can be run as
-// written. The id is there because Claude Code drops a repeat of identical text
-// from the same sender within thirty seconds, and a dropped message is silence.
-func MessageText(message inbox.Message) string {
-	body := fmt.Sprintf("[rewake] message from: %s (id %s)\n\n%s", message.From, shortID(message.ID), message.Text)
-	if message.From == ShellSender {
-		return body + "\n\n[rewake] The sender is a plain shell, not a session, and cannot be replied to."
+// Notice is the one line that announces waiting mail, the same for every
+// harness: "rewake: codex finished, 1 new message". It carries no text of the
+// message on purpose. The agent fetches that itself, so it knows the message
+// came through a tool, not from the person at the keyboard.
+func Notice(message inbox.Message) string {
+	count := message.Unread
+	if count < 1 {
+		count = 1
 	}
-	return body + fmt.Sprintf("\n\n[rewake] To answer, run: rewake send %s \"your reply\"", message.From)
+	noun := "messages"
+	if count == 1 {
+		noun = "message"
+	}
+	return fmt.Sprintf("rewake: %s %s, %d new %s", message.From, inbox.KindOf(message), count, noun)
+}
+
+// NoticeID is the part of the message id a notice carries. Claude Code drops
+// identical text from the same sender within thirty seconds, and two notices of
+// the same kind from the same session would otherwise be the same text.
+func NoticeID(message inbox.Message) string {
+	return "rewake-" + shortID(message.ID)
+}
+
+// TurnEnded is the hidden command a harness calls when a turn of its session
+// ends. It is not in the guide: agents have no reason to run it.
+const TurnEnded = "turn-ended"
+
+// TurnEndedArgv is the command a harness runs at the end of a turn, by absolute
+// path: the hook runs with whatever PATH the harness has at that moment.
+func TurnEndedArgv() ([]string, error) {
+	executable, err := os.Executable()
+	if err != nil {
+		return nil, fmt.Errorf("could not find the rewake binary: %w", err)
+	}
+	return []string{executable, TurnEnded}, nil
+}
+
+// TurnEndedCommand is TurnEndedArgv as one shell command line.
+func TurnEndedCommand() (string, error) {
+	argv, err := TurnEndedArgv()
+	if err != nil {
+		return "", err
+	}
+	quoted := make([]string, 0, len(argv))
+	for _, arg := range argv {
+		quoted = append(quoted, "'"+strings.ReplaceAll(arg, "'", `'\''`)+"'")
+	}
+	return strings.Join(quoted, " "), nil
 }
 
 // ShellSender is the sender name used when a message comes from a shell that is
