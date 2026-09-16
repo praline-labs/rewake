@@ -387,7 +387,11 @@ The nine findings, fixed on the branch `fix/round-five`:
 - A closed watch channel is set aside instead of spinning, and a watch whose
   mailbox disappeared keeps asking until it comes back.
 - `send` re-reads the status before calling a result lost.
-- The shim — see below.
+- The shim finds the platform package the way Node does — nearest
+  `node_modules` first, from inside the entry package upwards — instead of from
+  three fixed places. It lives in `scripts/shim.sh` now, with tests over the
+  nested, hoisted and linked layouts; a real `npm install` with a hoisted
+  platform package runs `rewake --version` from the nested entry.
 
 A test that staged a takeover without the name lock failed one run in many; it
 takes the lock now.
