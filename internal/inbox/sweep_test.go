@@ -103,10 +103,10 @@ func TestFinishedMessagesAreSweptByAge(t *testing.T) {
 
 	for path, when := range files {
 		_, err := os.Stat(path)
-		if when == old && !os.IsNotExist(err) {
+		if when.Equal(old) && !os.IsNotExist(err) {
 			t.Errorf("%s survived the sweep", filepath.Base(path))
 		}
-		if when == recent && err != nil {
+		if when.Equal(recent) && err != nil {
 			t.Errorf("%s was swept too early: %v", filepath.Base(path), err)
 		}
 	}

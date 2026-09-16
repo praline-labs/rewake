@@ -69,12 +69,12 @@ func TestArrayQuotingIsAnArray(t *testing.T) {
 // /proc reports resolved paths. A CODEX_HOME that goes through a symlink would
 // otherwise never match, and every message would sit pending until it expired.
 func TestThreadIsFoundThroughASymlinkedHome(t *testing.T) {
-	real := t.TempDir()
+	actualHome := t.TempDir()
 	link := filepath.Join(t.TempDir(), "home-link")
-	if err := os.Symlink(real, link); err != nil {
+	if err := os.Symlink(actualHome, link); err != nil {
 		t.Fatalf("symlink: %v", err)
 	}
-	pid := threadFixture(t, real, map[string]time.Time{"01a0-thread": time.Now()})
+	pid := threadFixture(t, actualHome, map[string]time.Time{"01a0-thread": time.Now()})
 
 	thread, err := CurrentThread(pid, link)
 	if err != nil {

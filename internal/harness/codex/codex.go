@@ -263,7 +263,7 @@ func quoteTOML(value string) string {
 			out.WriteString(`\t`)
 		default:
 			if symbol < 0x20 || symbol == 0x7f {
-				out.WriteString(fmt.Sprintf(`\u%04X`, symbol))
+				_, _ = fmt.Fprintf(&out, `\u%04X`, symbol)
 				continue
 			}
 			out.WriteRune(symbol)

@@ -2,11 +2,12 @@ package inbox
 
 import (
 	"context"
-	"github.com/iiiokojiadbi/rewake/internal/state"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
 func TestAReleasedOldAnswerIsStillAnnounced(t *testing.T) {

@@ -15,11 +15,11 @@ func TestAnAbandonedAnswerIsAnnounced(t *testing.T) {
 		t.Run(release, func(t *testing.T) {
 			dir := stateDir(t)
 			marks := state.AnsweringPath(dir, "api")
-			if err := os.MkdirAll(marks, 0700); err != nil {
+			if err := os.MkdirAll(marks, 0o700); err != nil {
 				t.Fatal(err)
 			}
 			mark := filepath.Join(marks, "question")
-			if err := os.WriteFile(mark, nil, 0600); err != nil {
+			if err := os.WriteFile(mark, nil, 0o600); err != nil {
 				t.Fatal(err)
 			}
 			report := message("recover me")

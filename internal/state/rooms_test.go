@@ -46,7 +46,7 @@ func TestInvalidRoomsCannotEscapeTheStateRoot(t *testing.T) {
 func TestRoomDirectoriesRefuseSymlinks(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "state")
 	t.Setenv(DirEnv, root)
-	if err := os.MkdirAll(filepath.Join(root, "rooms"), 0700); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, "rooms"), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Symlink(t.TempDir(), filepath.Join(root, "rooms", "red")); err != nil {

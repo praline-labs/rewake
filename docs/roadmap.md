@@ -304,27 +304,6 @@ Two things the live run caught that the tests did not:
   that long. The server was immediate; the *sender* was polling for its answer at
   the same slow interval. Measured on a live session: 0.03 s instead of 1.0 s.
 
-## Review round nine — done, September 16, 2026
-
-Six findings closed through one answer reservation protocol and a role check:
-
-- **Failed stdout consumed the answer and returned success (1).** Output now
-  precedes acknowledgement; write errors fail the command and preserve the reply.
-- **An abandoned send suppressed notification permanently (2).** Reserved
-  reports stay queued, and the server checks the lease on every tick.
-- **One reader consumed a shared answer (3).** Each question records successful
-  receipt; the report stays unread until every consumer has received it.
-- **Ordinary inbox stole a reserved reply (4).** Reads and notice counts skip
-  answers reserved by a fresh lease.
-- **Silent sessions accepted questions they could not answer (5).** Refused
-  before publication, with an explanation and a plain-send or notify hint.
-- **Fast replies were announced before send reserved them (6).** Reservation
-  and its heartbeat now start before publication and last through output.
-
-Regression tests reproduce all six failures. Each has a failing mutation check;
-answer matching also rejects a report for a different question, and the report
-identity test compares the exact original id. Shared replies with abandoned
-consumers and renewal during delivery are covered separately.
 
 ## Git metadata access by role — done, September 16, 2026
 
@@ -385,3 +364,12 @@ and a fake harness, plus regression and mutation tests.
 Each regression has a failing mutation check. Structural Git checks are compared
 with real repositories, worktrees and submodules; delivery is exercised with
 isolated state and fake harnesses.
+
+## Expanded checks — done, September 17, 2026
+
+The stricter formatter and all configured linters now pass. Unused helpers were
+removed, cleanup errors are explicitly discarded only where they cannot change
+the result, and successful file writes retain their checked close path. Spelling,
+comments and equivalent expressions follow the configured checks. Delivery,
+reporting and signal behavior are unchanged; the suite runs with race detection
+and shuffled test order. Earlier review rounds are in [reviews.md](reviews.md).

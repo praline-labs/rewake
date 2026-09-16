@@ -104,7 +104,7 @@ func TestLiveSocketIsNeverRemoved(t *testing.T) {
 	if err != nil {
 		t.Fatalf("listen: %v", err)
 	}
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 
 	_, err = New().Launch(harness.LaunchRequest{Name: "api", Dir: t.TempDir(), Socket: socket})
 	if err == nil {
@@ -125,7 +125,7 @@ func TestStaleSocketIsReplaced(t *testing.T) {
 	if unix, ok := listener.(*net.UnixListener); ok {
 		unix.SetUnlinkOnClose(false)
 	}
-	listener.Close()
+	_ = listener.Close()
 
 	if _, err := New().Launch(harness.LaunchRequest{Name: "api", Dir: t.TempDir(), Socket: socket}); err != nil {
 		t.Fatalf("Launch over a stale socket: %v", err)
@@ -144,13 +144,13 @@ func listenOnce(t *testing.T, socket string) <-chan string {
 	}
 	received := make(chan string, 1)
 	go func() {
-		defer listener.Close()
+		defer func() { _ = listener.Close() }()
 		connection, err := listener.Accept()
 		if err != nil {
 			received <- ""
 			return
 		}
-		defer connection.Close()
+		defer func() { _ = connection.Close() }()
 		buffer := make([]byte, 1<<16)
 		read, _ := connection.Read(buffer)
 		received <- string(buffer[:read])

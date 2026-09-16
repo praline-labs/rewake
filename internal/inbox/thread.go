@@ -7,6 +7,7 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
+// ThreadChangedWarning lets the caller decide whether an old task needs resending.
 const ThreadChangedWarning = "the reader's thread changed after delivery; the report may not answer it, resend the message"
 
 func threadPath(dir, name string) string { return filepath.Join(state.InboxPath(dir, name), "threads") }

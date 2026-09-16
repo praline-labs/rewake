@@ -42,7 +42,7 @@ type Message struct {
 	Kind Kind `json:"kind,omitempty"`
 	// InReplyTo lists the messages a finished report settles: the tasks and
 	// questions its sender read during the turn that ended. A sender blocked on
-	// a question recognises its answer by this.
+	// a question recognizes its answer by this.
 	InReplyTo []string `json:"inReplyTo,omitempty"`
 	// ThreadChanged warns that a report may belong to a different conversation.
 	ThreadChanged bool `json:"threadChanged,omitempty"`

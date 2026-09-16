@@ -75,7 +75,7 @@ type Server struct {
 	outcomes map[string]Result
 }
 
-// Serve drains the mailbox until the context is cancelled, then refuses whatever
+// Serve drains the mailbox until the context is canceled, then refuses whatever
 // is still waiting: once the session is gone, nothing will ever deliver it, and
 // a sender waiting on a status deserves to hear that rather than time out.
 func (s *Server) Serve(ctx context.Context) {
@@ -83,7 +83,7 @@ func (s *Server) Serve(ctx context.Context) {
 	s.outcomes = map[string]Result{}
 	s.lockContext = ctx
 	if ctx.Err() != nil || !s.owned() {
-		// Cancelled before it began, or the name already belongs to somebody
+		// Canceled before it began, or the name already belongs to somebody
 		// else: refusing their mail on the way past is not this session's to do.
 		return
 	}

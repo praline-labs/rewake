@@ -71,7 +71,6 @@ func CurrentThread(harnessPID int, home string) (string, error) {
 
 // threadOf picks the most recently touched thread lock held by these processes.
 func threadOf(processes []int, prefix string) (string, error) {
-
 	type candidate struct {
 		thread string
 		at     time.Time

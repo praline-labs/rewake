@@ -17,7 +17,7 @@ func ReserveAnswer(dir, name, question string) (func(), error) {
 		return nil, err
 	}
 	mark := filepath.Join(marks, question)
-	if err := os.WriteFile(mark, nil, 0600); err != nil {
+	if err := os.WriteFile(mark, nil, 0o600); err != nil {
 		return nil, err
 	}
 	stop, done := make(chan struct{}), make(chan struct{})

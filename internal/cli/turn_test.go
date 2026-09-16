@@ -88,7 +88,7 @@ func TestTurnEndDoesNotWaitOnAnOpenPipe(t *testing.T) {
 	if err != nil {
 		t.Fatalf("pipe: %v", err)
 	}
-	defer writer.Close()
+	defer func() { _ = writer.Close() }()
 	previous := os.Stdin
 	os.Stdin = reader
 	defer func() { os.Stdin = previous }()

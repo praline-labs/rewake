@@ -259,7 +259,7 @@ func TestIDsSortByTime(t *testing.T) {
 	first := NewID()
 	time.Sleep(2 * time.Millisecond)
 	second := NewID()
-	if !(first < second) {
+	if first >= second {
 		t.Errorf("ids do not sort by time: %q then %q", first, second)
 	}
 

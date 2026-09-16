@@ -126,8 +126,8 @@ func TestEpochChangesWithEveryRun(t *testing.T) {
 
 	// Two processes can start within the same clock tick, so the pid belongs in
 	// the epoch as well.
-	neighbour := Session{ServicePID: 11, ServiceStart: 100}
-	if first.Epoch() == neighbour.Epoch() {
+	neighbor := Session{ServicePID: 11, ServiceStart: 100}
+	if first.Epoch() == neighbor.Epoch() {
 		t.Fatal("two processes started in the same tick share an epoch")
 	}
 }

@@ -12,7 +12,7 @@ func TestListingForeignJSONNeverDeletesIt(t *testing.T) {
 	dir := stateDir(t, map[int]uint64{})
 	for _, raw := range []string{`{"id":"task","text":"keep"}`, `{"name":"foreign","servicePid":123}`, `{"name":"foreign","serviceStart":12}`} {
 		path := filepath.Join(state.SessionsPath(dir), "foreign.json")
-		if err := os.WriteFile(path, []byte(raw), 0600); err != nil {
+		if err := os.WriteFile(path, []byte(raw), 0o600); err != nil {
 			t.Fatal(err)
 		}
 		sessions, err := List(dir)

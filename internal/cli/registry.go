@@ -41,7 +41,7 @@ var (
 )
 
 // Groups returns the command table in guide order. Launch commands are derived
-// from the harness catalogue, so a registered harness is always runnable and
+// from the harness catalog, so a registered harness is always runnable and
 // always documented.
 func Groups() []Group {
 	groupsOnce.Do(buildGroups)
@@ -187,7 +187,7 @@ func flow() []FlowStep {
 	)
 }
 
-// notes describe behaviour that changes how the tool should be called.
+// notes describe behavior that changes how the tool should be called.
 func notes() []Note {
 	return []Note{
 		{

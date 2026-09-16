@@ -175,7 +175,7 @@ func WriteAtomic(path string, data []byte) error {
 	if err != nil {
 		return err
 	}
-	defer os.Remove(name)
+	defer func() { _ = os.Remove(name) }()
 
 	if err := os.Rename(name, path); err != nil {
 		return err
@@ -192,21 +192,21 @@ func writeTemp(dir string, data []byte) (string, error) {
 	name := temp.Name()
 
 	if _, err := temp.Write(data); err != nil {
-		temp.Close()
-		os.Remove(name)
+		_ = temp.Close()
+		_ = os.Remove(name)
 		return "", err
 	}
 	if err := temp.Sync(); err != nil {
-		temp.Close()
-		os.Remove(name)
+		_ = temp.Close()
+		_ = os.Remove(name)
 		return "", err
 	}
 	if err := temp.Close(); err != nil {
-		os.Remove(name)
+		_ = os.Remove(name)
 		return "", err
 	}
 	if err := os.Chmod(name, 0o600); err != nil {
-		os.Remove(name)
+		_ = os.Remove(name)
 		return "", err
 	}
 	return name, nil
@@ -221,7 +221,7 @@ func syncDir(path string) error {
 	if err != nil {
 		return err
 	}
-	defer dir.Close()
+	defer func() { _ = dir.Close() }()
 	return dir.Sync()
 }
 
@@ -237,7 +237,7 @@ func PublishExclusive(path string, data []byte) error {
 	if err != nil {
 		return err
 	}
-	defer os.Remove(name)
+	defer func() { _ = os.Remove(name) }()
 
 	if err := os.Link(name, path); err != nil {
 		if errors.Is(err, os.ErrExist) {
@@ -293,7 +293,7 @@ func WithMailboxLock(ctx context.Context, dir, name string, fn func() error) err
 	if err != nil {
 		return &LockUnusableError{Err: err}
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	for {
 		err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
@@ -309,7 +309,7 @@ func WithMailboxLock(ctx context.Context, dir, name string, fn func() error) err
 		case <-time.After(lockPoll):
 		}
 	}
-	defer syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
+	defer func() { _ = syscall.Flock(int(file.Fd()), syscall.LOCK_UN) }()
 	return fn()
 }
 
@@ -322,12 +322,12 @@ func withLock(path, what string, fn func() error) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX); err != nil {
 		return fmt.Errorf("could not lock %s: %w", what, err)
 	}
-	defer syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
+	defer func() { _ = syscall.Flock(int(file.Fd()), syscall.LOCK_UN) }()
 
 	return fn()
 }

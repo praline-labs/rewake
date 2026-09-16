@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -159,7 +158,7 @@ func TestHarnessSharesTheTerminalGroup(t *testing.T) {
 // repeated: for many programs the second one means "stop cleaning up and die".
 // Both processes are in one group, so the wrapper cannot tell a copy of a group
 // signal from one aimed at itself — it asks the harness instead, and a harness
-// that is already gone is not signalled again.
+// that is already gone is not signaled again.
 func TestSignalIsNotRepeatedToAHarnessThatGotIt(t *testing.T) {
 	command := exec.Command("/bin/sh", "-c", "sleep 5")
 	if err := command.Start(); err != nil {
@@ -183,7 +182,7 @@ func TestSignalIsNotRepeatedToAHarnessThatGotIt(t *testing.T) {
 	<-done
 
 	if err := command.Process.Signal(syscall.Signal(0)); err != nil {
-		t.Fatalf("the harness was signalled although it had already acted on one: %v", err)
+		t.Fatalf("the harness was signaled although it had already acted on one: %v", err)
 	}
 }
 
@@ -216,7 +215,7 @@ func TestSignalAimedAtTheWrapperIsPassedOn(t *testing.T) {
 func TestInterruptDoesNotEndTheSession(t *testing.T) {
 	dir := stateDir(t)
 	// The harness ignores the interrupt and keeps running, the way an agent
-	// that is merely cancelling a turn does.
+	// that is merely canceling a turn does.
 	fake := &fakeHarness{script: "trap '' INT; for _ in $(seq 1 20); do sleep 0.1; done"}
 
 	go func() {
@@ -278,19 +277,6 @@ func TestWrapperStopsWithTheHarness(t *testing.T) {
 	if waited := time.Since(began); waited < 100*time.Millisecond {
 		t.Errorf("the run took %v: the wrapper did not follow the harness into its stop", waited)
 	}
-}
-
-// processState reads the single-letter state of a process.
-func processState(pid int) (string, error) {
-	raw, err := os.ReadFile("/proc/" + strconv.Itoa(pid) + "/stat")
-	if err != nil {
-		return "", err
-	}
-	fields := strings.Fields(string(raw)[strings.LastIndex(string(raw), ")")+1:])
-	if len(fields) == 0 {
-		return "", nil
-	}
-	return fields[0], nil
 }
 
 // bindSocket leaves a socket file at a path, as a harness that bound it does.

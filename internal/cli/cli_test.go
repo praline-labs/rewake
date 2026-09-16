@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	// The command table is derived from the harness catalogue, so every test
+	// The command table is derived from the harness catalog, so every test
 	// here needs it registered.
 	_ "github.com/iiiokojiadbi/rewake/internal/harness/catalog"
 )

@@ -55,10 +55,10 @@ func TestInboxLeavesAReservedAnswerForSend(t *testing.T) {
 		// Existing waits also reserve their answer, independently of when send
 		// first creates the mark.
 		marks := state.AnsweringPath(dir, "web")
-		if err := os.MkdirAll(marks, 0700); err != nil {
+		if err := os.MkdirAll(marks, 0o700); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(marks, id), nil, 0600); err != nil {
+		if err := os.WriteFile(filepath.Join(marks, id), nil, 0o600); err != nil {
 			t.Fatal(err)
 		}
 		rawUnread(t, dir, "web", map[string]any{"from": "api", "kind": "finished", "toEpoch": web.Epoch(), "inReplyTo": []string{id}, "text": "reserved answer"})

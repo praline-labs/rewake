@@ -98,10 +98,10 @@ func TestLegacyRootRecordsAreIgnored(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "state")
 	t.Setenv(state.DirEnv, root)
 	t.Setenv("REWAKE_ROOM", "")
-	if err := os.MkdirAll(filepath.Join(root, "sessions"), 0700); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, "sessions"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "sessions", "bad.json"), []byte("not json"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "sessions", "bad.json"), []byte("not json"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	otherRun(t, root, "legacy-only")

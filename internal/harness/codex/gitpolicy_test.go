@@ -82,7 +82,7 @@ func TestGitWritesDoNotReplaceAnyConfigSpelling(t *testing.T) {
 func TestGitWritesDoNotNeedToReadConfig(t *testing.T) {
 	home := codexHome(t, "")
 	// A directory at the file path fails even when the tests run as root.
-	if err := os.Mkdir(filepath.Join(home, "config.toml"), 0700); err != nil {
+	if err := os.Mkdir(filepath.Join(home, "config.toml"), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	repo := gitRepository(t)
@@ -96,7 +96,7 @@ func TestGitWritesKeepProjectConfiguration(t *testing.T) {
 			codexHome(t, "")
 			base := t.TempDir()
 			repo := filepath.Join(base, "repo")
-			if err := os.MkdirAll(filepath.Join(repo, ".git"), 0700); err != nil {
+			if err := os.MkdirAll(filepath.Join(repo, ".git"), 0o700); err != nil {
 				t.Fatal(err)
 			}
 			populateGitMetadata(t, filepath.Join(repo, ".git"), true)
@@ -107,10 +107,10 @@ func TestGitWritesKeepProjectConfiguration(t *testing.T) {
 			if location == "ancestor" {
 				path = filepath.Join(base, ".codex", "config.toml")
 			}
-			if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+			if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 				t.Fatal(err)
 			}
-			if err := os.WriteFile(path, []byte("[sandbox_workspace_write]\nwritable_roots=[]\n"), 0600); err != nil {
+			if err := os.WriteFile(path, []byte("[sandbox_workspace_write]\nwritable_roots=[]\n"), 0o600); err != nil {
 				t.Fatal(err)
 			}
 			plan := gitLaunch(t, role.Write, "-C", repo)

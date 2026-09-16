@@ -102,11 +102,11 @@ func TestConcurrentLaunchesElectOneMain(t *testing.T) {
 
 func TestRoleElectionWaitsForTheRoomLock(t *testing.T) {
 	dir := stateDir(t)
-	file, err := os.OpenFile(filepath.Join(dir, ".launch.lock"), os.O_CREATE|os.O_RDWR, 0600)
+	file, err := os.OpenFile(filepath.Join(dir, ".launch.lock"), os.O_CREATE|os.O_RDWR, 0o600)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX); err != nil {
 		t.Fatal(err)
 	}

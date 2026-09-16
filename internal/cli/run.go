@@ -20,7 +20,7 @@ func Run(argv []string, stdout, stderr io.Writer) int {
 
 	switch {
 	case result.Version:
-		emit(ctx, "rewake "+Version)
+		_ = emit(ctx, "rewake "+Version)
 		return ExitOK
 	case result.Help && result.Call.Command != nil:
 		printText(ctx, formatCommandHelp(result.Call.Command, true))
@@ -48,9 +48,9 @@ func Run(argv []string, stdout, stderr io.Writer) int {
 func report(ctx *Context, err error) int {
 	var usage *UsageError
 	if errors.As(err, &usage) {
-		fmt.Fprintln(ctx.Stderr, usage.Message)
+		_, _ = fmt.Fprintln(ctx.Stderr, usage.Message)
 		if hint := formatHint(usage.Command); hint != "" {
-			fmt.Fprintln(ctx.Stderr, hint)
+			_, _ = fmt.Fprintln(ctx.Stderr, hint)
 		}
 		return ExitUsage
 	}
@@ -62,11 +62,11 @@ func report(ctx *Context, err error) int {
 
 	var pending *PendingError
 	if errors.As(err, &pending) {
-		fmt.Fprintln(ctx.Stdout, pending.Message)
+		_, _ = fmt.Fprintln(ctx.Stdout, pending.Message)
 		return ExitPending
 	}
 
-	fmt.Fprintln(ctx.Stderr, err.Error())
+	_, _ = fmt.Fprintln(ctx.Stderr, err.Error())
 	return ExitFailed
 }
 
@@ -104,7 +104,7 @@ func guideModel() map[string]any {
 	renderOptions := func(options []Option) []optionModel {
 		out := make([]optionModel, 0, len(options))
 		for _, option := range options {
-			out = append(out, optionModel{Flag: option.Flag, Value: option.Value, Summary: option.Summary, Required: option.Required})
+			out = append(out, optionModel(option))
 		}
 		return out
 	}

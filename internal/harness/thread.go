@@ -8,6 +8,8 @@ type ThreadTracker interface {
 	Thread(registry.Session) (string, error)
 }
 
+// SessionThread returns a known conversation identity without requiring every
+// harness to implement thread tracking.
 func SessionThread(session registry.Session) (string, error) {
 	for _, candidate := range All() {
 		if candidate.ID() == session.Harness {

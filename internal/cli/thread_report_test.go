@@ -16,14 +16,14 @@ import (
 func holdThread(t *testing.T, home, thread string, at time.Time) {
 	t.Helper()
 	path := filepath.Join(home, "thread-writer-locks", thread+".lock")
-	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	file, err := os.Create(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { file.Close() })
+	t.Cleanup(func() { _ = file.Close() })
 	if err := os.Chtimes(path, at, at); err != nil {
 		t.Fatal(err)
 	}
@@ -59,10 +59,10 @@ func TestReportsMarkOnlyKnownThreadChanges(t *testing.T) {
 					thread = "now"
 				}
 				path := filepath.Join(state.InboxPath(dir, "api"), "threads", id)
-				if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+				if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 					t.Fatal(err)
 				}
-				if err := os.WriteFile(path, []byte(thread), 0600); err != nil {
+				if err := os.WriteFile(path, []byte(thread), 0o600); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -136,5 +136,4 @@ func TestAQuestionPreservesTheThreadWarning(t *testing.T) {
 			}
 		})
 	}
-
 }

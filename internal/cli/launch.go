@@ -93,7 +93,7 @@ func roleOptions() []Option {
 	return options
 }
 
-// roleSummary keeps the guide on the same catalogue as launch flags and help.
+// roleSummary keeps the guide on the same catalog as launch flags and help.
 func roleSummary() string {
 	var descriptions []string
 	for _, candidate := range role.All() {

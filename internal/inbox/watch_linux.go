@@ -53,18 +53,18 @@ func watchMailbox(ctx context.Context, dir, name string) <-chan struct{} {
 		// select cannot wait on a descriptor this high, and reaching past the
 		// end of the set is a panic that takes the whole wrapper with it. The
 		// poll is the answer here, not a crash.
-		syscall.Close(descriptor)
+		_ = syscall.Close(descriptor)
 		return nil
 	}
 	if _, err := syscall.InotifyAddWatch(descriptor, state.InboxPath(dir, name), events); err != nil {
-		syscall.Close(descriptor)
+		_ = syscall.Close(descriptor)
 		return nil
 	}
 
 	changed := make(chan struct{}, 1)
 	go func() {
 		defer close(changed)
-		defer func() { syscall.Close(descriptor) }()
+		defer func() { _ = syscall.Close(descriptor) }()
 
 		buffer := make([]byte, 16*(syscall.SizeofInotifyEvent+syscall.NAME_MAX+1))
 		watching := true

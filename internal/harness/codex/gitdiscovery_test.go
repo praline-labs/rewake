@@ -21,13 +21,16 @@ func fixtureGit(t *testing.T, cwd string, args ...string) string {
 	}
 	return strings.TrimSpace(string(out))
 }
+
 func TestGitPointersCannotGrantOrdinaryDirectories(t *testing.T) {
 	for _, kind := range []string{"gitdir", "commondir"} {
 		t.Run(kind, func(t *testing.T) {
 			codexHome(t, "")
 			base := t.TempDir()
 			repo := filepath.Join(base, "checkout")
-			os.Mkdir(repo, 0700)
+			if err := os.Mkdir(repo, 0o700); err != nil {
+				t.Fatal(err)
+			}
 			if kind == "gitdir" {
 				writeGitPointer(t, filepath.Join(repo, ".git"), "gitdir: ..\n")
 			} else {
@@ -49,12 +52,15 @@ func TestGitPointersCannotGrantOrdinaryDirectories(t *testing.T) {
 		})
 	}
 }
+
 func TestGitMetadataIsFoundFromSubdirectories(t *testing.T) {
 	codexHome(t, "")
 	repo := t.TempDir()
 	fixtureGit(t, repo, "init", "-q")
 	nested := filepath.Join(repo, "src")
-	os.Mkdir(nested, 0700)
+	if err := os.Mkdir(nested, 0o700); err != nil {
+		t.Fatal(err)
+	}
 	want := fixtureGit(t, nested, "rev-parse", "--absolute-git-dir")
 	plan := gitLaunch(t, role.Write, "-C", nested)
 	roots := gitRoots(plan.Args)

@@ -13,7 +13,7 @@ import (
 func gitRepository(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
-	if err := os.Mkdir(filepath.Join(dir, ".git"), 0700); err != nil {
+	if err := os.Mkdir(filepath.Join(dir, ".git"), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	populateGitMetadata(t, filepath.Join(dir, ".git"), true)
@@ -84,7 +84,7 @@ func TestGitWritesFollowTheEffectiveWorkingDirectory(t *testing.T) {
 	base := t.TempDir()
 	t.Chdir(base)
 	repo := filepath.Join(base, "repo with \"quotes\"")
-	if err := os.MkdirAll(filepath.Join(repo, ".git"), 0700); err != nil {
+	if err := os.MkdirAll(filepath.Join(repo, ".git"), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	populateGitMetadata(t, filepath.Join(repo, ".git"), true)
@@ -117,7 +117,7 @@ func TestUnresolvedGitMetadataGetsNoGrant(t *testing.T) {
 			gitDir := filepath.Join(repo, ".git")
 			switch kind {
 			case "file":
-				if err := os.WriteFile(gitDir, []byte("gitdir: ../elsewhere"), 0600); err != nil {
+				if err := os.WriteFile(gitDir, []byte("gitdir: ../elsewhere"), 0o600); err != nil {
 					t.Fatal(err)
 				}
 			case "symlink":
@@ -126,7 +126,7 @@ func TestUnresolvedGitMetadataGetsNoGrant(t *testing.T) {
 				}
 			case "directory symlink inside":
 				target := filepath.Join(repo, "metadata")
-				if err := os.Mkdir(target, 0700); err != nil {
+				if err := os.Mkdir(target, 0o700); err != nil {
 					t.Fatal(err)
 				}
 				if err := os.Symlink(target, gitDir); err != nil {

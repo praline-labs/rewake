@@ -13,13 +13,13 @@ package harness
 // the guide. This slice is the single place a new harness is added.
 var registered []Harness
 
-// Register adds a harness to the catalogue. Called from each harness package's
-// init so the catalogue cannot drift from what is compiled in.
+// Register adds a harness to the catalog. Called from each harness package's
+// init so the catalog cannot drift from what is compiled in.
 func Register(h Harness) {
 	registered = append(registered, h)
 }
 
-// All returns the catalogue in guide order.
+// All returns the catalog in guide order.
 func All() []Harness {
 	out := make([]Harness, len(registered))
 	copy(out, registered)

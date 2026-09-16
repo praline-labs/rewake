@@ -1,7 +1,7 @@
 /*
 Package catalog is the one place that says which harnesses exist.
 
-Import it for side effects wherever the catalogue must be populated:
+Import it for side effects wherever the catalog must be populated:
 
 	import _ "github.com/iiiokojiadbi/rewake/internal/harness/catalog"
 

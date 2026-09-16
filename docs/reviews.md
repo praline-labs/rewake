@@ -266,3 +266,25 @@ Also closed:
   own line, a watch that never came back after the mailbox was replaced, the
   shim preferring a stale sibling package over its own dependency, and a package
   version that did not reach `rewake --version`.
+
+## Review round nine — done, September 16, 2026
+
+Six findings closed through one answer reservation protocol and a role check:
+
+- **Failed stdout consumed the answer and returned success (1).** Output now
+  precedes acknowledgement; write errors fail the command and preserve the reply.
+- **An abandoned send suppressed notification permanently (2).** Reserved
+  reports stay queued, and the server checks the lease on every tick.
+- **One reader consumed a shared answer (3).** Each question records successful
+  receipt; the report stays unread until every consumer has received it.
+- **Ordinary inbox stole a reserved reply (4).** Reads and notice counts skip
+  answers reserved by a fresh lease.
+- **Silent sessions accepted questions they could not answer (5).** Refused
+  before publication, with an explanation and a plain-send or notify hint.
+- **Fast replies were announced before send reserved them (6).** Reservation
+  and its heartbeat now start before publication and last through output.
+
+Regression tests reproduce all six failures. Each has a failing mutation check;
+answer matching also rejects a report for a different question, and the report
+identity test compares the exact original id. Shared replies with abandoned
+consumers and renewal during delivery are covered separately.

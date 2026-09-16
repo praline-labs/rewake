@@ -194,7 +194,7 @@ func (claudeHarness) Deliver(ctx context.Context, session registry.Session, mess
 		}
 		return inbox.Result{State: inbox.Failed, Detail: "could not reach the session: " + err.Error()}
 	}
-	defer connection.Close()
+	defer func() { _ = connection.Close() }()
 
 	_ = connection.SetWriteDeadline(time.Now().Add(dialTimeout))
 	if _, err := connection.Write(append(line, '\n')); err != nil {
@@ -234,7 +234,7 @@ func removeStaleSocket(path string) error {
 
 	connection, err := net.DialTimeout("unix", path, 200*time.Millisecond)
 	if err == nil {
-		connection.Close()
+		_ = connection.Close()
 		return fmt.Errorf("%s is a live socket; another session is using this name", path)
 	}
 	if !errors.Is(err, syscall.ECONNREFUSED) {

@@ -12,10 +12,10 @@ import (
 
 func writeGitPointer(t *testing.T, path, text string) {
 	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(path, []byte(text), 0600); err != nil {
+	if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -28,7 +28,7 @@ func TestGitPointersGrantTheActualMetadataDirectories(t *testing.T) {
 			cwd := filepath.Join(base, "checkout")
 			common := filepath.Join(base, "main.git")
 			metadata := filepath.Join(common, "worktrees", "branch")
-			if err := os.MkdirAll(metadata, 0700); err != nil {
+			if err := os.MkdirAll(metadata, 0o700); err != nil {
 				t.Fatal(err)
 			}
 			populateGitMetadata(t, common, true)
@@ -65,7 +65,7 @@ func TestMalformedGitPointersNeverGrantPartialAccess(t *testing.T) {
 			base := t.TempDir()
 			cwd := filepath.Join(base, "checkout")
 			metadata := filepath.Join(base, "metadata")
-			if err := os.Mkdir(metadata, 0700); err != nil {
+			if err := os.Mkdir(metadata, 0o700); err != nil {
 				t.Fatal(err)
 			}
 			populateGitMetadata(t, metadata, true)
@@ -99,7 +99,7 @@ func TestMalformedGitPointersNeverGrantPartialAccess(t *testing.T) {
 			case "symlink then parent":
 				outside := t.TempDir()
 				for _, name := range []string{"child", "metadata"} {
-					if err := os.Mkdir(filepath.Join(outside, name), 0700); err != nil {
+					if err := os.Mkdir(filepath.Join(outside, name), 0o700); err != nil {
 						t.Fatal(err)
 					}
 				}
@@ -108,7 +108,7 @@ func TestMalformedGitPointersNeverGrantPartialAccess(t *testing.T) {
 				}
 				pointer = "gitdir: ../linked/../metadata\n"
 			case "parent symlink":
-				if err := os.Mkdir(filepath.Join(metadata, "child"), 0700); err != nil {
+				if err := os.Mkdir(filepath.Join(metadata, "child"), 0o700); err != nil {
 					t.Fatal(err)
 				}
 				if err := os.Symlink(metadata, filepath.Join(base, "linked")); err != nil {
@@ -150,7 +150,7 @@ func TestMetadataResolutionMatchesGitLayouts(t *testing.T) {
 	main := filepath.Join(base, "main")
 	source := filepath.Join(base, "source")
 	for _, dir := range []string{main, source} {
-		if err := os.Mkdir(dir, 0700); err != nil {
+		if err := os.Mkdir(dir, 0o700); err != nil {
 			t.Fatal(err)
 		}
 		git(dir, "init", "-q")
@@ -162,7 +162,7 @@ func TestMetadataResolutionMatchesGitLayouts(t *testing.T) {
 	checkouts := []string{main, linked, filepath.Join(main, "child")}
 	for _, checkout := range append([]string{}, checkouts...) {
 		nested := filepath.Join(checkout, "src", "nested")
-		if err := os.MkdirAll(nested, 0700); err != nil {
+		if err := os.MkdirAll(nested, 0o700); err != nil {
 			t.Fatal(err)
 		}
 		checkouts = append(checkouts, nested)
@@ -185,7 +185,7 @@ func populateGitMetadata(t *testing.T, directory string, shared bool) {
 	writeGitPointer(t, filepath.Join(directory, "HEAD"), "ref: refs/heads/main\n")
 	if shared {
 		for _, name := range []string{"objects", "refs"} {
-			if err := os.MkdirAll(filepath.Join(directory, name), 0700); err != nil {
+			if err := os.MkdirAll(filepath.Join(directory, name), 0o700); err != nil {
 				t.Fatal(err)
 			}
 		}

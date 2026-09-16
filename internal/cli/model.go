@@ -61,7 +61,7 @@ type Command struct {
 	// for the ones a harness calls on its own; an agent has no reason to.
 	Hidden bool
 	// Harness is what this command starts, for the commands that start one. It
-	// is here so the table can be checked against the catalogue: a launch
+	// is here so the table can be checked against the catalog: a launch
 	// command that starts the wrong harness is otherwise indistinguishable.
 	Harness harness.Harness
 	// Handler runs the command.

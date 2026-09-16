@@ -94,12 +94,12 @@ func Run(ctx context.Context, request Request) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	fmt.Fprintf(os.Stderr, "rewake: room %s, role %s: %s\n", session.Room, session.Role, session.RoleReason)
+	_, _ = fmt.Fprintf(os.Stderr, "rewake: room %s, role %s: %s\n", session.Room, session.Role, session.RoleReason)
 	for _, note := range plan.Notes {
 		// Said once, on stderr, before the harness takes over the screen: these
 		// are things rewake decided not to do, and silence about them would look
 		// like it had done them.
-		fmt.Fprintln(os.Stderr, "rewake: "+note)
+		_, _ = fmt.Fprintln(os.Stderr, "rewake: "+note)
 	}
 
 	session.Socket = plan.Socket
@@ -260,7 +260,11 @@ func catchSignals() (chan os.Signal, func()) {
 	keyboard := make(chan os.Signal, 8)
 	signal.Notify(keyboard, syscall.SIGINT, syscall.SIGQUIT)
 	go func() {
-		for range keyboard {
+		for {
+			// Keyboard signals belong to the harness; consume until the channel closes.
+			if _, open := <-keyboard; !open {
+				return
+			}
 		}
 	}()
 	return incoming, func() {

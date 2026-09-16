@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/iiiokojiadbi/rewake/internal/cli"
-	// The catalogue registers every harness rewake can run.
+	// The catalog registers every harness rewake can run.
 	_ "github.com/iiiokojiadbi/rewake/internal/harness/catalog"
 )
 

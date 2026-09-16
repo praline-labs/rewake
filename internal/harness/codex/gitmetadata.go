@@ -73,14 +73,14 @@ func realGitDirectory(path string) (string, error) {
 		return "", fmt.Errorf("cannot resolve Git metadata directory %s: %w", path, err)
 	}
 	if resolved != filepath.Clean(path) {
-		return "", fmt.Errorf("Git metadata directory %s crosses a symlink", path)
+		return "", fmt.Errorf("git metadata directory %s crosses a symlink", path)
 	}
 	info, err := os.Stat(resolved)
 	if err != nil {
 		return "", fmt.Errorf("cannot inspect Git metadata directory %s: %w", path, err)
 	}
 	if !info.IsDir() {
-		return "", fmt.Errorf("Git metadata path %s is not a directory", path)
+		return "", fmt.Errorf("git metadata path %s is not a directory", path)
 	}
 	return resolved, nil
 }
@@ -93,14 +93,14 @@ func readGitPath(path, prefix string) (string, error) {
 		return "", fmt.Errorf("cannot inspect %s: %w", path, err)
 	}
 	if !info.Mode().IsRegular() {
-		return "", fmt.Errorf("Git pointer %s is not a regular file (symlinks are not followed)", path)
+		return "", fmt.Errorf("git pointer %s is not a regular file (symlinks are not followed)", path)
 	}
 	const maximum = 64 * 1024
 	file, err := os.Open(path)
 	if err != nil {
 		return "", fmt.Errorf("cannot read %s: %w", path, err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	raw, err := io.ReadAll(io.LimitReader(file, maximum+1))
 	if err != nil {
 		return "", fmt.Errorf("cannot read %s: %w", path, err)
@@ -108,7 +108,7 @@ func readGitPath(path, prefix string) (string, error) {
 	text := strings.TrimRight(string(raw), "\r\n")
 	value, ok := strings.CutPrefix(text, prefix)
 	if len(raw) > maximum || !ok || value == "" || strings.ContainsAny(value, "\x00\r\n") {
-		return "", fmt.Errorf("Git pointer %s has an invalid path", path)
+		return "", fmt.Errorf("git pointer %s has an invalid path", path)
 	}
 	return value, nil
 }
@@ -136,7 +136,7 @@ func findGitEntry(cwd string) (string, os.FileInfo, error) {
 func validateGitMetadata(directory string, shared bool) error {
 	head, err := os.Lstat(filepath.Join(directory, "HEAD"))
 	if err != nil || !head.Mode().IsRegular() {
-		return fmt.Errorf("Git metadata directory %s has no regular HEAD file", directory)
+		return fmt.Errorf("git metadata directory %s has no regular HEAD file", directory)
 	}
 	if shared {
 		for _, name := range []string{"objects", "refs"} {

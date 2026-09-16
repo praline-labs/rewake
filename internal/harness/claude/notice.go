@@ -21,7 +21,7 @@ func notification(message inbox.Message) string {
 		fmt.Sprintf("<task-id>%s</task-id>", harness.NoticeID(message)),
 		// Completed is the status the interface draws green, and it is true: the
 		// delivery is done. The kind is named in the summary already, and any
-		// other value draws the circle in the plain text colour.
+		// other value draws the circle in the plain text color.
 		"<status>completed</status>",
 		fmt.Sprintf("<summary>%s</summary>", escape(harness.Notice(message))),
 		"</task-notification>",

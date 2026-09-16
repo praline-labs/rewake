@@ -22,12 +22,6 @@ func emit(ctx *Context, lines ...string) error {
 	return nil
 }
 
-// warn prints to stderr: a side note that does not turn a success into a
-// failure, such as a message delivered while something optional did not happen.
-func warn(ctx *Context, line string) {
-	fmt.Fprintln(ctx.Stderr, line)
-}
-
 // printValue prints the model as JSON, or the formatted lines.
 func printValue(ctx *Context, model any, lines func() []string) error {
 	if ctx.JSON {
@@ -42,5 +36,5 @@ func printValue(ctx *Context, model any, lines func() []string) error {
 
 // printText prints a block that has no model of its own, such as the guide.
 func printText(ctx *Context, text string) {
-	emit(ctx, strings.Split(text, "\n")...)
+	_ = emit(ctx, strings.Split(text, "\n")...)
 }
