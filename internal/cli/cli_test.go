@@ -2,8 +2,15 @@ package cli
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/iiiokojiadbi/rewake/internal/proc"
+	"github.com/iiiokojiadbi/rewake/internal/registry"
+	"github.com/iiiokojiadbi/rewake/internal/state"
 
 	// The command table is derived from the harness catalogue, so every test
 	// here needs it registered.
@@ -224,12 +231,107 @@ func TestVersion(t *testing.T) {
 	}
 }
 
-func TestUnbuiltCommandFailsWithReason(t *testing.T) {
-	code, _, errOut := run("send", "api", "text")
-	if code != ExitFailed {
-		t.Fatalf("exit = %d, want %d", code, ExitFailed)
+// liveSession publishes a session served by nobody, in an isolated state
+// directory. This process stands in for the wrapper: it is alive, so the record
+// is alive, which is all the sender needs to accept a message.
+func liveSession(t *testing.T, name string) string {
+	t.Helper()
+	dir := t.TempDir()
+	if err := os.Chmod(dir, 0o700); err != nil {
+		t.Fatalf("chmod: %v", err)
 	}
-	if !strings.Contains(errOut, "milestone 3") {
-		t.Errorf("stub failure does not say what is missing: %s", errOut)
+	t.Setenv(state.DirEnv, dir)
+	resolved, err := state.Dir()
+	if err != nil {
+		t.Fatalf("state.Dir: %v", err)
+	}
+
+	start, err := proc.StartTime(os.Getpid())
+	if err != nil {
+		t.Fatalf("start time: %v", err)
+	}
+	session := registry.Session{
+		Name:         name,
+		Harness:      "claude",
+		ServicePID:   os.Getpid(),
+		ServiceStart: start,
+		CWD:          resolved,
+		StartedAt:    time.Now(),
+		Socket:       filepath.Join(resolved, "sock", name+".sock"),
+	}
+	if err := registry.Publish(resolved, session); err != nil {
+		t.Fatalf("publish: %v", err)
+	}
+	return resolved
+}
+
+func TestListShowsALiveSession(t *testing.T) {
+	liveSession(t, "api")
+
+	code, out, errOut := run("list")
+	if code != ExitOK {
+		t.Fatalf("exit = %d (stderr: %s)", code, errOut)
+	}
+	if !strings.Contains(out, "api") || !strings.Contains(out, "claude") {
+		t.Errorf("list does not show the session: %q", out)
+	}
+}
+
+func TestSendToUnknownSessionNamesTheLiveOnes(t *testing.T) {
+	liveSession(t, "api")
+
+	code, _, errOut := run("send", "web", "hello")
+	if code != ExitUsage {
+		t.Fatalf("exit = %d, want %d", code, ExitUsage)
+	}
+	if !strings.Contains(errOut, "No session named \"web\"") {
+		t.Errorf("refusal does not name the target: %s", errOut)
+	}
+	if !strings.Contains(errOut, "Running now: api") {
+		t.Errorf("refusal does not say who is reachable: %s", errOut)
+	}
+}
+
+// Nothing serves the mailbox here, so the message is accepted and stays
+// pending: exit code 3, and the message waiting on disk for whoever serves it.
+func TestSendWithoutAServerIsPending(t *testing.T) {
+	dir := liveSession(t, "api")
+
+	code, out, errOut := run("send", "api", "hello", "--wait", "0.3")
+	if code != ExitPending {
+		t.Fatalf("exit = %d, want %d (stderr: %s)", code, ExitPending, errOut)
+	}
+	if !strings.Contains(out, "pending for api") {
+		t.Errorf("stdout does not explain the pending result: %q", out)
+	}
+
+	waiting, err := filepath.Glob(filepath.Join(state.InboxPath(dir, "api"), "*.json"))
+	if err != nil || len(waiting) != 1 {
+		t.Fatalf("mailbox holds %v, want exactly one message (%v)", waiting, err)
+	}
+}
+
+func TestSendRefusesEmptyText(t *testing.T) {
+	liveSession(t, "api")
+
+	code, _, errOut := run("send", "api", "   ")
+	if code != ExitUsage {
+		t.Fatalf("exit = %d, want %d", code, ExitUsage)
+	}
+	if !strings.Contains(errOut, "The message is empty.") {
+		t.Errorf("unexpected refusal: %s", errOut)
+	}
+}
+
+func TestWhoamiOutsideASession(t *testing.T) {
+	liveSession(t, "api")
+	t.Setenv(state.SessionEnv, "")
+
+	code, out, _ := run("whoami")
+	if code != ExitOK {
+		t.Fatalf("exit = %d", code)
+	}
+	if !strings.Contains(out, "not part of a rewake session") {
+		t.Errorf("whoami does not say the shell is unnamed: %q", out)
 	}
 }

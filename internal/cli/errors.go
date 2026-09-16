@@ -37,7 +37,17 @@ type FailedError struct {
 
 func (e *FailedError) Error() string { return e.Message }
 
+// ExitCodeError carries the exit code of a program rewake ran on the caller's
+// behalf, so the wrapper does not replace what the harness said with its own.
+type ExitCodeError struct {
+	Code int
+}
+
+func (e *ExitCodeError) Error() string { return "exit code " + itoa(e.Code) }
+
 // failf builds a FailedError.
 func failf(format string, args ...any) error {
 	return &FailedError{Message: sprintf(format, args...)}
 }
+
+func itoa(value int) string { return sprintf("%d", value) }

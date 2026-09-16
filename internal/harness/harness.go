@@ -9,21 +9,6 @@ described, or it does not exist.
 */
 package harness
 
-// Harness describes one coding-agent CLI: how it is presented to the caller and
-// (from milestone 3 on) how a message reaches a running session of it.
-type Harness interface {
-	// ID is the launch command and the value stored in a session record.
-	ID() string
-	// Title is the human name, used in prose.
-	Title() string
-	// Summary is the one-line guide entry. Says what starting it gives you.
-	Summary() string
-	// Examples are real invocations, copied verbatim by whoever reads help.
-	Examples() []string
-	// Notes are decisions and limits worth knowing before starting it.
-	Notes() []string
-}
-
 // registered lists every harness rewake supports, in the order they appear in
 // the guide. This slice is the single place a new harness is added.
 var registered []Harness

@@ -42,8 +42,8 @@ func printColumns(rows []column, indent string) []string {
 	return out
 }
 
-// wrap breaks prose at wrapWidth, indenting every line.
-func wrap(text, indent string) []string {
+// wrapText breaks prose at wrapWidth, indenting every line.
+func wrapText(text, indent string) []string {
 	words := strings.Fields(text)
 	if len(words) == 0 {
 		return nil
@@ -74,7 +74,7 @@ func formatGuide() string {
 	for _, group := range Groups() {
 		lines = append(lines, group.Title)
 		if group.Summary != "" {
-			lines = append(lines, wrap(group.Summary, "  ")...)
+			lines = append(lines, wrapText(group.Summary, "  ")...)
 			lines = append(lines, "")
 		}
 		rows := make([]column, 0, len(group.Commands))
@@ -99,7 +99,7 @@ func formatGuide() string {
 	lines = append(lines, "HOW THIS TOOL BEHAVES")
 	for _, note := range notes() {
 		lines = append(lines, "  "+note.Title)
-		lines = append(lines, wrap(note.Body, "    ")...)
+		lines = append(lines, wrapText(note.Body, "    ")...)
 		lines = append(lines, "")
 	}
 
@@ -119,7 +119,7 @@ func formatGlobalOptions() []string {
 // formatCommandHelp renders the help page of one command.
 func formatCommandHelp(command *Command, includeGlobals bool) string {
 	lines := []string{"rewake " + command.Label(), ""}
-	lines = append(lines, wrap(command.Summary, "  ")...)
+	lines = append(lines, wrapText(command.Summary, "  ")...)
 
 	local := make([]column, 0, len(command.Options))
 	for _, option := range command.Options {
@@ -140,7 +140,7 @@ func formatCommandHelp(command *Command, includeGlobals bool) string {
 	if len(command.Notes) > 0 {
 		lines = append(lines, "", "USAGE NOTES")
 		for _, note := range command.Notes {
-			lines = append(lines, wrap(note, "  ")...)
+			lines = append(lines, wrapText(note, "  ")...)
 		}
 	}
 

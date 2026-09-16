@@ -1,185 +1,194 @@
-# Разведка: как доставить сообщение в живую сессию harness
+# Research: how to deliver a message to a live harness session
 
-Собрано 15–16 сентября 2026. Версии: Claude Code 2.1.270, Codex CLI 0.154.0.
-Факты помечены источником: **[живьем]** — проверено запуском на этих версиях,
-**[исходники]** — прочитано в коде, **[документация]** — официальные страницы.
-Факты стареют с версиями harness: перед изменением адаптера перепроверять.
+Gathered September 15-16, 2026. Versions: Claude Code 2.1.270, Codex CLI 0.154.0.
+Facts are tagged by source: **[verified live]** — checked by running these versions,
+**[source]** — read in the code, **[docs]** — official pages.
+Facts age with harness versions: recheck before changing the adapter.
 
 ## Claude Code
 
-### Входящий сокет сессии
+### Session inbound socket
 
-- Каждая интерактивная сессия слушает unix-сокет. Путь по умолчанию —
-  `$XDG_RUNTIME_DIR/cc-socks/<pid>.sock`; скрытый флаг
-  `--messaging-socket-path <path>` задает его явно. **[живьем]**
-- Требования к явному пути: абсолютный, без `..`, не длиннее 103 байт, родительский
-  каталог принадлежит пользователю с правами 0700. Если на пути уже слушает живой
-  сокет — ошибка запуска. **[исходники бинаря 2.1.270]**
-- Сокет создается до хуков; сессия экспортирует `CLAUDE_CODE_MESSAGING_SOCKET` и
-  `CLAUDE_CODE_MESSAGING_TOKEN` в окружение своих детей (Bash, хуки). **[живьем]**
-- При закрытии (в том числе по SIGHUP) сокет и запись реестра удаляются. **[живьем]**
-- Протокол: одна JSON-строка на `\n`, соединение закрыть, ответа нет.
+- Every interactive session listens on a unix socket. The default path is
+  `$XDG_RUNTIME_DIR/cc-socks/<pid>.sock`; the hidden flag
+  `--messaging-socket-path <path>` sets it explicitly. **[verified live]**
+- Requirements for an explicit path: absolute, no `..`, no longer than 103 bytes, the
+  parent directory owned by the user with 0700 permissions. If a live socket is
+  already listening on that path, startup fails. **[binary source 2.1.270]**
+- The socket is created before hooks run; the session exports `CLAUDE_CODE_MESSAGING_SOCKET`
+  and `CLAUDE_CODE_MESSAGING_TOKEN` into the environment of its children (Bash, hooks). **[verified live]**
+- On shutdown (including via SIGHUP) the socket and the registry entry are removed. **[verified live]**
+- Protocol: one JSON line terminated by `\n`, then close the connection — no reply.
   ```json
-  {"type":"user","message":{"role":"user","content":"текст"},"priority":"next"}
+  {"type":"user","message":{"role":"user","content":"text"},"priority":"next"}
   ```
-  `priority`: `now` прерывает ход, `next` (по умолчанию) — после результата
-  текущего инструмента, `later` — в конце хода. Предел строки 1 МиБ. **[исходники
-  бинаря]** Поле `priority` официально не документировано.
-- **Будит простаивающую сессию**: ход начинается сам. Проверено дважды — сообщение
-  в сокет сессии, простаивавшей 90 секунд, и сообщение в сессию, запущенную с
-  явным `--messaging-socket-path`: ответ через 3 секунды. **[живьем]**
-  Официально: «When the receiving session is idle, Claude Code starts a new turn
-  with the message». **[документация: code.claude.com/docs/en/cross-session-messaging]**
-- Модель видит текст с заголовком «Another Claude session sent a message» и
-  абзацем о том, что сосед не может выдать повышение прав. **[живьем]**
-- Токен на Linux и macOS необязателен; доверие держится на каталоге 0700, сокете
-  0600 и проверке uid отправителя. На Windows — named pipe и обязательный токен.
-  **[исходники бинаря, документация]**
-- Ограничения:
-  - одинаковый текст от того же отправителя в течение 30 секунд отбрасывается;
-  - в очереди получателя не больше 50 сообщений, отправителю дают около 30 подряд;
-  - `crossSessionInbound` (`accept|hold|refuse`) в настройках может задерживать или
-    отклонять входящие; без него сессия в `bypassPermissions` держит сообщение
-    диалогом, пока отправитель не заявит тот же режим;
-  - механизм можно выключить удаленно (флаг `tengu_harbor_kite`) или переменной
-    окружения; при сбое создания каталога сокета он молча выключается;
-  - slash-команды из входящих не исполняются. **[исходники бинаря, документация]**
+  `priority`: `now` interrupts the turn, `next` (default) — after the current
+  tool's result, `later` — at the end of the turn. Line limit is 1 MiB. **[binary
+  source]** The `priority` field is not officially documented.
+- **Wakes an idle session**: the turn starts on its own. Checked twice — a message
+  to the socket of a session that had been idle for 90 seconds, and a message to a
+  session started with an explicit `--messaging-socket-path`: response after 3
+  seconds. **[verified live]**
+  Officially: "When the receiving session is idle, Claude Code starts a new turn
+  with the message". **[docs: code.claude.com/docs/en/cross-session-messaging]**
+- The model sees text headed "Another Claude session sent a message", followed by
+  a paragraph noting that the peer session cannot grant elevated permissions. **[verified live]**
+- The token is optional on Linux and macOS; trust rests on the 0700 directory, the
+  0600 socket, and checking the sender's uid. On Windows it's a named pipe with a
+  mandatory token. **[binary source, docs]**
+- Limits:
+  - identical text from the same sender within 30 seconds is dropped;
+  - the recipient's queue holds at most 50 messages, and a sender gets about 30 in a row;
+  - `crossSessionInbound` (`accept|hold|refuse`) in settings can delay or refuse
+    incoming messages; without it, a session in `bypassPermissions` holds the
+    message as a dialog until the sender declares the same mode;
+  - the mechanism can be disabled remotely (the `tengu_harbor_kite` flag) or via an
+    environment variable; it disables itself silently if creating the socket
+    directory fails;
+  - slash commands from incoming messages are not executed. **[binary source, docs]**
 
-### Реестр сессий самого Claude Code
+### Claude Code's own session registry
 
 `~/.claude/sessions/<pid>.json`: `pid`, `sessionId`, `cwd`, `messagingSocketPath`,
 `status` (`busy|idle|waiting`), `kind`, `version`, `peerProtocol`, `procStart`.
-**[живьем]** Формат приватный и версионируется — читать как подсказку, не как
-контракт.
+**[verified live]** The format is private and versioned — read it as a hint, not
+a contract.
 
-### Окружение ребенка
+### Child process environment
 
-Процесс, запущенный из-под сессии Claude Code, наследует ее маркеры
+A process launched from under a Claude Code session inherits its markers
 (`CLAUDECODE`, `CLAUDE_CODE_CHILD_SESSION`, `CLAUDE_CODE_SESSION_ID`,
-`CLAUDE_CODE_MESSAGING_SOCKET`, `CLAUDE_CODE_MESSAGING_TOKEN`, `CLAUDE_PID` и
-другие). **[живьем]** Дочерний Claude Code с `CLAUDE_CODE_CHILD_SESSION` выключает
-сохранение транскрипта. В соседнем проекте адаптер снимает двенадцать переменных:
+`CLAUDE_CODE_MESSAGING_SOCKET`, `CLAUDE_CODE_MESSAGING_TOKEN`, `CLAUDE_PID`, and
+others). **[verified live]** A child Claude Code with `CLAUDE_CODE_CHILD_SESSION`
+set disables transcript saving. In a neighboring project, the adapter strips
+twelve variables:
 `CLAUDECODE`, `CLAUDE_CODE_CHILD_SESSION`, `CLAUDE_CODE_SESSION_ID`,
 `CLAUDE_CODE_BRIDGE_SESSION_ID`, `CLAUDE_CODE_ENTRYPOINT`, `CLAUDE_CODE_EXECPATH`,
 `CLAUDE_CODE_MESSAGING_SOCKET`, `CLAUDE_CODE_MESSAGING_TOKEN`, `CLAUDE_PID`,
 `CLAUDE_PLUGIN_DATA`, `CLAUDE_EFFORT`, `CLAUDE_CODE_SUBAGENT_MODEL`.
 
-### Прочее полезное
+### Other useful bits
 
-- `--append-system-prompt <text>` добавляет текст к системному промпту на один
-  запуск. **[справка CLI]**
-- Хук `SessionStart` может экспортировать переменные в Bash сессии, дописав
-  `export K=V` в файл `$CLAUDE_ENV_FILE` (так делает официальный плагин codex).
-  **[исходники плагина]**
-- Первый запуск в новой папке показывает диалог доверия: умолчание «No, exit»,
-  подтверждение — стрелка вниз и Enter. **[живьем]**
-- В режиме по умолчанию вызов Bash агентом требует подтверждения человеком.
+- `--append-system-prompt <text>` appends text to the system prompt for a single
+  run. **[CLI help]**
+- The `SessionStart` hook can export variables into the Bash session by appending
+  `export K=V` to the file at `$CLAUDE_ENV_FILE` (this is how the official codex
+  plugin does it). **[source: plugin]**
+- The first run in a new folder shows a trust dialog: default is "No, exit",
+  confirming takes down-arrow then Enter. **[verified live]**
+- In the default mode, the agent calling Bash requires human confirmation.
 
 ## Codex CLI
 
-### Доставка: `codex queue`
+### Delivery: `codex queue`
 
-- `codex queue --thread <id|точное имя> --message <text>` из любого процесса
-  кладет сообщение в durable-очередь (`$CODEX_HOME/queue_1.sqlite`, метод
-  `thread/queue/add`). Каждый процесс Codex, включая обычный TUI, опрашивает
-  очередь раз в 10 секунд и сам начинает ход, если тред простаивает.
-  **[исходники: ext/queue/src/service.rs]**
-- Простаивающий TUI будит без daemon и без `--remote`, задержка около 10 секунд.
-  **[живьем]**
-- Посреди хода сообщение ждет и запускает следующий ход по завершении текущего;
-  после явного interrupt автостарта нет. **[исходники]** Живьем не проверено.
-- **Свежий тред без единого сообщения принять не может**: rollout-файл создается
-  лениво, и `queue` отвечает
-  `no rollout found for thread id <id> (code -32603)`, код выхода 1. **[живьем]**
-- Неизвестное имя: `No active session found matching '<name>'`, код выхода 1.
-  **[живьем]**
+- `codex queue --thread <id|exact name> --message <text>`, run from any process,
+  places the message in a durable queue (`$CODEX_HOME/queue_1.sqlite`, method
+  `thread/queue/add`). Every Codex process, including a plain TUI, polls the
+  queue once every 10 seconds and starts a turn on its own if the thread is idle.
+  **[source: ext/queue/src/service.rs]**
+- An idle TUI wakes up without a daemon and without `--remote`, with a delay of
+  about 10 seconds. **[verified live]**
+- Mid-turn, the message waits and triggers the next turn once the current one
+  finishes; after an explicit interrupt there's no auto-start. **[source]** Not
+  verified live.
+- **A brand-new thread with no messages yet cannot accept one**: the rollout file
+  is created lazily, and `queue` responds with
+  `no rollout found for thread id <id> (code -32603)`, exit code 1. **[verified live]**
+- Unknown name: `No active session found matching '<name>'`, exit code 1.
+  **[verified live]**
 
-### Id треда живого TUI
+### Thread id of a live TUI
 
-- Флага, назначающего id при старте, нет. **[исходники]**
-- Процесс TUI с момента старта держит открытым
-  `$CODEX_HOME/thread-writer-locks/<thread-id>.lock`, rollout еще может не
-  существовать. Видно через `/proc/<pid>/fd`. **[живьем]**
-- После `/new` процесс держит открытыми **оба** lock-файла, старый и новый;
-  текущий отличается более поздним временем изменения lock-файла. **[живьем]**
+- There is no flag to assign an id at startup. **[source]**
+- From the moment it starts, the TUI process holds
+  `$CODEX_HOME/thread-writer-locks/<thread-id>.lock` open; the rollout file may not
+  exist yet. Visible via `/proc/<pid>/fd`. **[verified live]**
+- After `/new`, the process holds **both** lock files open, the old one and the
+  new one; the current one is the one whose lock file has the later mtime.
+  **[verified live]**
 - rollout: `$CODEX_HOME/sessions/YYYY/MM/DD/rollout-<timestamp>-<thread-id>.jsonl`,
-  id в имени. **[исходники, живьем]**
-- Хук `SessionStart` получает `session_id` на stdin. Непроверенный хук Codex не
-  запускает без одобрения пользователем; живьем завести через `-c` не удалось.
-  **[исходники, документация]**
-- Переменные `CODEX_SESSION_ID`/`CODEX_THREAD_ID` получают только команды, которые
-  выполняет сам агент. **[исходники]**
+  the id is in the filename. **[source, verified live]**
+- The `SessionStart` hook receives `session_id` on stdin. Codex won't run an
+  unverified hook without user approval; getting it to run live via `-c` did not
+  work. **[source, docs]**
+- The `CODEX_SESSION_ID`/`CODEX_THREAD_ID` variables are only set for commands
+  that the agent itself executes. **[source]**
 
-### Песочница (Linux)
+### Sandbox (Linux)
 
-Проверено `codex sandbox -P :workspace -C <dir> -- <cmd>` без обращения к модели:
+Checked with `codex sandbox -P :workspace -C <dir> -- <cmd>`, without calling the model:
 
-| действие изнутри песочницы | результат |
+| action from inside the sandbox | result |
 |---|---|
-| запись в `/tmp/...` | разрешена |
-| `connect()` к unix-сокету | `EPERM` |
-| запись в `~/.codex` | read-only file system |
-| переменная | `CODEX_SANDBOX_NETWORK_DISABLED=1` |
+| write to `/tmp/...` | allowed |
+| `connect()` to a unix socket | `EPERM` |
+| write to `~/.codex` | read-only file system |
+| variable | `CODEX_SANDBOX_NETWORK_DISABLED=1` |
 
-**[живьем]** Сетевой seccomp режет любой домен сокета, включая AF_UNIX, когда сеть
-выключена; при `sandbox_workspace_write.network_access = true` в конфиге сеть
-разрешена, но `~/.codex` остается только для чтения. Вывод: агент Codex не может
-ни подключиться к сокету Claude Code, ни вызвать `codex queue`; писать файлы в
-`/tmp` может.
+**[verified live]** The network seccomp filter cuts off any socket domain,
+including AF_UNIX, when the network is disabled; with
+`sandbox_workspace_write.network_access = true` in the config, the network is
+allowed, but `~/.codex` stays read-only. Conclusion: a Codex agent can neither
+connect to the Claude Code socket nor call `codex queue`, but it can write files
+to `/tmp`.
 
-### Окружение и инструкции
+### Environment and instructions
 
-- `shell_environment_policy` по умолчанию наследует окружение, исключая имена по
-  маскам `*KEY*`, `*SECRET*`, `*TOKEN*`. **[исходники]** Имена переменных
-  утилиты не должны совпадать с этими масками.
-- Ключ конфигурации `developer_instructions` задается на запуск через
-  `-c developer_instructions="..."`; перекрывает значение пользователя, если оно
-  есть. **[исходники]**
-- Первый запуск в новой папке — диалог доверия, подтверждение Enter; решение
-  записывается в `~/.codex/config.toml`. **[живьем]**
+- `shell_environment_policy` inherits the environment by default, excluding names
+  matching the patterns `*KEY*`, `*SECRET*`, `*TOKEN*`. **[source]** The tool's
+  variable names must not match these patterns.
+- The `developer_instructions` config key can be set per run via
+  `-c developer_instructions="..."`; it overrides the user's value if one is set.
+  **[source]**
+- The first run in a new folder shows a trust dialog, confirmed with Enter; the
+  decision is written to `~/.codex/config.toml`. **[verified live]**
 
-### app-server (запасной путь)
+### app-server (fallback path)
 
-`codex app-server --listen unix://<path>` и `codex --remote unix://<path>`: TUI
-как клиент своего сервера. Методы `thread/start`, `thread/resume`,
-`thread/name/set`, `thread/queue/add`, `turn/start` (будит простаивающий тред или
-вклинивается в идущий ход без 10-секундной задержки), `turn/steer`,
-`turn/interrupt`. Авторизация unix-сокета — только права файла. Свой app-server
-без отдельного `CODEX_HOME` открывает те же файлы состояния, что и остальные
-процессы. **[исходники]** Официальный плагин codex для Claude Code держит
-headless app-server за брокером на unix-сокете: один владелец потокового хода,
-остальным `-32001 busy`. **[исходники плагина]** Живьем не проверено, видит ли TUI
-с `--remote` ходы, начатые другим клиентом.
+`codex app-server --listen unix://<path>` and `codex --remote unix://<path>`: the
+TUI acts as a client of its own server. Methods: `thread/start`, `thread/resume`,
+`thread/name/set`, `thread/queue/add`, `turn/start` (wakes an idle thread or
+steps into a running turn without the 10-second delay), `turn/steer`,
+`turn/interrupt`. The unix socket's authorization is file permissions only. A
+standalone app-server without its own `CODEX_HOME` opens the same state files as
+every other process. **[source]** The official codex plugin for Claude Code keeps
+a headless app-server behind a broker on a unix socket: one owner of the
+streaming turn, everyone else gets `-32001 busy`. **[source: plugin]** Not
+verified live whether a TUI with `--remote` sees turns started by another
+client.
 
-## Другие harness (на будущее)
+## Other harnesses (for later)
 
-- **pi** — нативного входа нет. Свое расширение, загруженное флагом `-e`, слушает
-  сокет и вызывает `pi.sendUserMessage(text, {deliverAs})`: из простоя начинает
-  ход, посреди хода без `deliverAs` падает, во время ручного `/compact` отказывает.
-  `--session-id` задается заранее, `PI_SESSION_ID` виден в bash агента, конец хода —
-  событие `agent_settled`. **[исходники]**
-- **opencode** — `POST /session/<id>/prompt_async` с
-  `{"parts":[{"type":"text","text":"..."}]}` будит из простоя, посреди хода ставит в
-  очередь. TUI слушает сеть только с `--port`; сессию создать заранее
-  (`POST /session`) и открыть `--session ses_…`; защита —
-  `OPENCODE_SERVER_PASSWORD`. **[исходники]**
-- **grok** — вход только в скрытом leader-режиме (`--leader`,
-  `~/.grok/leader.sock`); в режиме по умолчанию внешнего входа нет. **[исходники]**
+- **pi** — no native entry point. A custom extension, loaded with the `-e` flag,
+  listens on a socket and calls `pi.sendUserMessage(text, {deliverAs})`: it starts
+  a turn from idle, crashes mid-turn without `deliverAs`, and refuses during a
+  manual `/compact`. `--session-id` is set up front, `PI_SESSION_ID` is visible in
+  the agent's bash, and the end of a turn is the `agent_settled` event. **[source]**
+- **opencode** — `POST /session/<id>/prompt_async` with
+  `{"parts":[{"type":"text","text":"..."}]}` wakes it from idle, and queues
+  mid-turn. The TUI only listens on the network with `--port`; a session can be
+  created ahead of time (`POST /session`) and opened with `--session ses_…`;
+  protected by `OPENCODE_SERVER_PASSWORD`. **[source]**
+- **grok** — entry only in the hidden leader mode (`--leader`,
+  `~/.grok/leader.sock`); the default mode has no external entry point. **[source]**
 
-## Чужие решения
+## Prior art
 
-- Готовые инструменты доставляют сообщения тремя способами: tmux `send-keys`
-  (cli-agent-orchestrator, cyclops, agent-mux), свой брокер (Agent Intercom,
-  claw-orchestrator, agent-bridge), MCP как почтовый ящик (cross-agent-teams-mcp,
-  mailbox-mcp). Нативный сокет Claude Code не использует ни один. **[поиск в сети]**
-- agent-deck держит harness в tmux и доставляет `send-keys`/`paste-buffer` с
-  разбором экрана; почти вся его история дефектов — от этого (проглоченный Enter,
-  склейка с черновиком, хрупкие regex приглашения). Полезное: свой id сессии в
-  окружении, Claude Code с заранее заданным `--session-id`, id треда Codex по
-  открытым файлам процесса, машинный статус доставки. **[исходники]**
-- Реестр живых сессий grok: один JSON под exclusive flock, запись через tmp и
-  rename, идемпотентность по id. Слабые места, которых избегать: живость только по
-  pid без времени старта, битый файл стирает чужие записи. **[исходники]**
-- Семантика доставки deepseek-harness: простаивающего получателя будить, занятого
-  не прерывать, а ставить в очередь. Признак простоя без разбора экрана на Linux —
-  `/proc/<pid>/task/<tid>/syscall`. **[исходники]**
+- Existing tools deliver messages three ways: tmux `send-keys`
+  (cli-agent-orchestrator, cyclops, agent-mux), a custom broker (Agent Intercom,
+  claw-orchestrator, agent-bridge), or MCP as a mailbox (cross-agent-teams-mcp,
+  mailbox-mcp). None of them use Claude Code's native socket. **[web search]**
+- agent-deck keeps the harness in tmux and delivers via `send-keys`/`paste-buffer`
+  with screen scraping; nearly its entire defect history traces back to that
+  (swallowed Enter, merging with a draft, brittle prompt regexes). Worth keeping:
+  its own session id in the environment, Claude Code with a pre-assigned
+  `--session-id`, deriving the Codex thread id from the process's open files, and
+  a machine-readable delivery status. **[source]**
+- grok's live-session registry: one JSON file under an exclusive flock, written
+  via tmp-and-rename, idempotent by id. Weak points to avoid: liveness checked by
+  pid alone with no start time, and a corrupt file wipes out other entries.
+  **[source]**
+- deepseek-harness's delivery semantics: wake an idle recipient, and for a busy
+  one, queue instead of interrupting. Its idle signal, without screen scraping, on
+  Linux is `/proc/<pid>/task/<tid>/syscall`. **[source]**

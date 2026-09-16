@@ -1,68 +1,76 @@
-# rewake: устройство первой версии
+# rewake: first-version design
 
-Факты, на которых стоит решение, — `docs/research.md`. Здесь — что строим и как.
+The facts behind this design live in `docs/research.md`. This document covers what we're
+building and how.
 
-## Цель
+## Goal
 
-`rewake` дает интерактивным coding-agent harness на одной машине говорить друг с
-другом. Человек запускает harness через утилиту — `rewake claude`, `rewake codex` —
-и получает обычную программу в своем терминале. Сессия регистрируется, и любая
-другая сессия или человек из shell пишет ей `rewake send <имя> "текст"`. Текст
-приходит получателю как входящее сообщение и будит его, если он простаивает.
+`rewake` lets interactive coding-agent harnesses on one machine talk to each
+other. A human launches a harness through the tool — `rewake claude`, `rewake
+codex` — and gets an ordinary program in their terminal. The session registers
+itself, and any other session, or a human from a shell, can write to it with
+`rewake send <name> "text"`. The text arrives at the recipient as an incoming
+message and wakes it if it's idle.
 
-Основной пользователь команд — агент, вызывающий их из своего shell. Отсюда
-требования к выводу и отказам (раздел «Интерфейс»).
+The primary user of these commands is an agent calling them from its own shell.
+That's where the requirements on output and failure messages come from (see the
+"Interface" section).
 
-## Границы первой версии
+## Scope of the first version
 
-Входит: Claude Code и Codex, команды `claude`, `codex`, `list`, `send`, `whoami`,
-`register`, обзор без аргументов, `--json`. Linux.
+In scope: Claude Code and Codex, the commands `claude`, `codex`, `list`, `send`,
+`whoami`, the no-argument overview, `--json`. Linux.
 
-Не входит: pi, opencode, grok (пути доставки разобраны в research); macOS (нужны
-замены `/proc`); ответы с квитанциями от получателя; история переписки; UI.
+Out of scope: pi, opencode, grok (their delivery paths are covered in research);
+macOS (needs replacements for `/proc`); delivery receipts from the recipient;
+message history; a UI.
 
-Не делаем никогда: прокси псевдотерминала и ввод текста в чужой экран; правку
-конфигов harness пользователя; чтение содержимого транскриптов.
+Never doing: a pseudo-terminal proxy or typing text into someone else's screen;
+editing the user's harness configs; reading transcript contents.
 
-## Устройство
+## Design
 
-### Процессы
+### Processes
 
-**Обертка** — процесс `rewake claude|codex`. Остается родителем harness всю его
-жизнь: запускает его с унаследованным терминалом, регистрирует сессию, обслуживает
-ее входящий ящик, при выходе снимает регистрацию и возвращает код выхода harness.
-Демона нет: каждая обертка — точка доставки только своей сессии.
+**Wrapper** — the `rewake claude|codex` process. It stays the harness's parent
+for its whole life: launches it with an inherited terminal, registers the
+session, services its inbox, and on exit deregisters the session and returns the
+harness's exit code. There's no daemon: each wrapper is the delivery point for
+its own session only.
 
-**Отправитель** — любой процесс, вызвавший `rewake send`. Сам ничего не доставляет:
-кладет файл во входящий ящик получателя и ждет статус. Так отправка одинаково
-работает из обычного shell, из Bash Claude Code и из песочницы Codex, которой
-доступна запись в `/tmp`, но запрещены сокеты и `~/.codex`.
+**Sender** — any process that calls `rewake send`. It doesn't deliver anything
+itself: it drops a file into the recipient's inbox and waits for a status. This
+way sending works the same from a plain shell, from Claude Code's Bash, and from
+a Codex sandbox, which can write to `/tmp` but is denied sockets and `~/.codex`.
 
-Отдельного демона нет: нечего поднимать, гасить и восстанавливать, и не бывает
-состояния «сессии есть, а демон умер». Живет ровно столько процессов обертки,
-сколько открыто сессий; сессия без обертки в переписке не участвует.
+There's no separate daemon: nothing to start, stop, or recover, and there's no
+state where "the sessions exist but the daemon is dead". Exactly as many wrapper
+processes run as there are open sessions; a session without a wrapper doesn't
+take part in messaging.
 
-### Каталог состояния
+### State directory
 
-`$REWAKE_DIR`, по умолчанию `/tmp/rewake-<uid>`. Именно `/tmp`: песочница Codex
-пишет туда по умолчанию, а `$XDG_RUNTIME_DIR` ей недоступен. Обертка передает
-`REWAKE_DIR` детям явно, чтобы песочница с другим `TMPDIR` нашла тот же каталог.
+`$REWAKE_DIR`, defaulting to `/tmp/rewake-<uid>`. It has to be `/tmp`: the Codex
+sandbox writes there by default, and `$XDG_RUNTIME_DIR` isn't reachable from it.
+The wrapper passes `REWAKE_DIR` to children explicitly, so a sandbox with a
+different `TMPDIR` still finds the same directory.
 
-Проверка при каждом открытии: каталог, не симлинк, владелец — текущий uid, права
-без доступа группы и остальных; иначе отказ с объяснением. Создается с 0700.
+Checked on every open: it's a directory, not a symlink, owned by the current
+uid, with no group or other access; otherwise it fails with an explanation.
+Created with 0700.
 
 ```
 /tmp/rewake-<uid>/
-  sessions/<имя>.json        запись сессии
-  inbox/<имя>/<id>.json      сообщение, ждущее доставки
-  inbox/<имя>/<id>.status    статус, который пишет обслуживающий процесс
-  inbox/<имя>/done/          доставленные и отказанные, для диагностики (чистить по возрасту)
-  sock/<имя>.sock            входящий сокет Claude Code, путь задает обертка
+  sessions/<name>.json       session record
+  inbox/<name>/<id>.json     message awaiting delivery
+  inbox/<name>/<id>.status   status written by the servicing process
+  inbox/<name>/done/         delivered and failed, for diagnostics (cleaned up by age)
+  sock/<name>.sock           Claude Code inbound socket, path set by the wrapper
 ```
 
-Путь сокета короткий намеренно: предел 103 байта.
+The socket path is deliberately short: the limit is 103 bytes.
 
-### Запись сессии
+### Session record
 
 ```json
 {
@@ -80,222 +88,234 @@
 }
 ```
 
-- `serviceStart`, `harnessStart` — поле 22 `/proc/<pid>/stat` (время старта в
-  тиках). Живость = процесс существует и время старта совпадает: pid
-  переиспользуются.
-- Сессия жива, пока жив обслуживающий процесс и harness. Мертвую запись удаляет
-  любой читатель реестра.
-- Публикация записи атомарна и исключительна: пишем во временный файл, затем
-  `link()` в итоговое имя — `link` падает, если имя занято. Существующая запись
-  мертвой сессии удаляется и попытка повторяется; живой — имя занято.
-- Обновление своей записи (например, pid harness после запуска) — временный файл и
-  `rename()`.
+- `serviceStart`, `harnessStart` — field 22 of `/proc/<pid>/stat` (start time in
+  ticks). Liveness = the process exists and the start time matches: pids get
+  reused.
+- A session is alive as long as both the servicing process and the harness are
+  alive. Any reader of the registry deletes a dead record.
+- Publishing a record is atomic and exclusive: write a temp file, then `link()`
+  it to the final name — `link` fails if the name is taken. If the existing
+  record belongs to a dead session, it's removed and the attempt retried; for a
+  live one, the name stays taken.
+- Updating one's own record (for example, the harness pid after launch) uses a
+  temp file and `rename()`.
 
-### Имена
+### Names
 
-`[a-z0-9][a-z0-9._-]{0,31}`. По умолчанию — имя harness, при занятости `claude-2`,
-`claude-3`. Явное — `rewake --name api claude`. Имя сессии — ее адрес, поэтому
-живое имя не переиспользуется.
+`[a-z0-9][a-z0-9._-]{0,31}`. The default is the harness name; if that's taken,
+`claude-2`, `claude-3`. Explicit: `rewake --name api claude`. A session's name is
+its address, so a live name is never reused.
 
-### Окружение, которое получает harness
+### Environment the harness receives
 
-- `REWAKE_SESSION=<имя>` — кто я; по нему `send` подписывает отправителя.
-- `REWAKE_DIR=<каталог>`.
-- Снимаются унаследованные маркеры Claude Code (список в research): иначе
-  `rewake claude`, запущенный из-под другой сессии, получит чужой сокет и
-  выключенный транскрипт.
+- `REWAKE_SESSION=<name>` — who I am; `send` uses it to sign the sender.
+- `REWAKE_DIR=<directory>`.
+- Inherited Claude Code markers are stripped (list in research): otherwise
+  `rewake claude` launched from inside another session would inherit that
+  session's socket and have transcript saving disabled.
 
-Имена переменных не содержат `KEY`, `SECRET`, `TOKEN`: Codex вырезает такие из
-окружения команд агента.
+None of the variable names contain `KEY`, `SECRET`, or `TOKEN`: Codex strips
+those from the agent's command environment.
 
-## Запуск harness
+## Launching a harness
 
-Общая часть обертки:
-1. Проверить каталог, выбрать и опубликовать имя (pid harness пока пуст).
-2. Запустить harness: `exec.Cmd` с унаследованными stdin/stdout/stderr, тем же
-   терминалом и группой процессов. Аргументы после имени harness передаются как
-   есть.
-3. Дописать в запись pid и время старта harness.
-4. Игнорировать `SIGINT`, `SIGQUIT` (их обработает harness, он в той же группе
-   переднего плана); `SIGTERM`, `SIGHUP` пересылать harness.
-5. Обслуживать ящик (ниже) до выхода harness.
-6. Снять запись, закрыть ящик (ожидающие сообщения получают статус `failed:
-   session ended`), выйти с кодом harness.
+The common part of the wrapper:
+1. Check the directory, pick and publish a name (the harness pid is still empty).
+2. Launch the harness: `exec.Cmd` with inherited stdin/stdout/stderr, the same
+   terminal and process group. Arguments after the harness name are passed
+   through as-is.
+3. Add the harness's pid and start time to the record.
+4. Ignore `SIGINT`, `SIGQUIT` (the harness handles them, being in the same
+   foreground group); forward `SIGTERM`, `SIGHUP` to the harness.
+5. Service the inbox (below) until the harness exits.
+6. Remove the record, close the inbox (pending messages get the status `failed:
+   session ended`), exit with the harness's code.
 
 ### Claude Code
 
-- Добавить `--messaging-socket-path <каталог>/sock/<имя>.sock`, если пользователь
-  не передал свой; перед запуском удалить протухший файл сокета с тем же путем.
-- Добавить `--append-system-prompt <вводная>` (выключается `--no-intro`).
-- Разрешить команды утилиты без подтверждения:
-  `--allowedTools "Bash(rewake:*)"`. Добавляет правило на запуск, настройки
-  пользователя не трогает. **Проверить живьем**, что флаг дополняет, а не
-  заменяет разрешения пользователя; если заменяет — отказаться от флага и
-  сказать в обзоре, какое правило добавить в настройки один раз.
+- Add `--messaging-socket-path <dir>/sock/<name>.sock` unless the user passed
+  their own; before launch, remove a stale socket file at the same path.
+- Add `--append-system-prompt <intro>` (turned off by `--no-intro`).
+- Allow the tool's own commands without confirmation:
+  `--allowedTools "Bash(rewake:*)"`. This adds a rule for the run without
+  touching the user's settings. **Verify live** that the flag adds to the user's
+  permissions rather than replacing them; if it replaces them, drop the flag and
+  have the overview say which rule to add to settings once.
 
 ### Codex
 
-- Вводная: `-c developer_instructions=<текст>`. Ключ **заменяет** значение
-  пользователя, а не дополняет его, поэтому обертка читает
-  `$CODEX_HOME/config.toml`, берет существующее значение и передает склейку
-  «значение пользователя, пустая строка, вводная». Ключа нет — передает только
-  вводную. Ключ `additional_developer_instructions` для этого не годится: он
-  принадлежит слою управляемых требований, а не пользовательскому конфигу.
-- Разрешения: каталог состояния лежит в `/tmp`, куда песочница пишет по
-  умолчанию. Если в конфиге пользователя `sandbox_workspace_write` исключает
-  `/tmp` (`exclude_slash_tmp = true`), обертка добавляет каталог в
-  `writable_roots` через `-c`, сохраняя уже перечисленные пути. Подтверждения на
-  запуск `rewake` не нужно: команда идет внутри песочницы.
-- `CODEX_HOME` записать в сессию (значение окружения или `~/.codex`).
-- **Проверить живьем** одним дешевым ходом, что вводная из `-c
-  developer_instructions` действительно доходит до модели.
+- Intro: `-c developer_instructions=<text>`. This key **replaces** the user's
+  value instead of adding to it, so the wrapper reads
+  `$CODEX_HOME/config.toml`, takes the existing value if any, and passes the
+  concatenation of "the user's value, a blank line, the intro". If there's no
+  existing key, it passes just the intro. The `additional_developer_instructions`
+  key doesn't work for this: it belongs to the managed-requirements layer, not
+  the user config.
+- Permissions: the state directory lives in `/tmp`, where the sandbox writes by
+  default. If the user's config excludes `/tmp` from
+  `sandbox_workspace_write` (`exclude_slash_tmp = true`), the wrapper adds the
+  directory to `writable_roots` via `-c`, keeping the paths already listed there.
+  No confirmation is needed to run `rewake`: the command runs inside the
+  sandbox.
+- Record `CODEX_HOME` in the session (the environment value, or `~/.codex`).
+- **Verify live**, with one cheap turn, that the intro from `-c
+  developer_instructions` actually reaches the model.
 
-### Вводная
+### The intro
 
-Короткий текст на английском:
+Short text, in English:
 
 ```
-You are running inside rewake as session "<имя>". Other agent sessions on this
+You are running inside rewake as session "<name>". Other agent sessions on this
 machine can message you, and you can message them.
 - rewake list — who is running
 - rewake send <name> "text" — deliver text to a session
-Incoming messages start with "[rewake] from <name>". Answer with rewake send when
-the sender asks for a reply.
+Incoming messages start with "[rewake] message from: <name>" and end with the
+exact command to answer them.
 ```
 
-## Доставка
+## Delivery
 
-### Отправитель (`rewake send <имя> <текст>`)
+### Sender (`rewake send <name> <text>`)
 
-1. Разобрать аргументы: ровно одно имя и один текст (`-` — читать текст из stdin).
-   Лишние позиционные — ошибка «Quote the text as one argument».
-2. Найти живую сессию; нет — отказ с перечнем живых имен.
-3. Сообщение: `{"id","from","to","text","createdAt"}`. `id` сортируемый по
-   времени (время в наносекундах плюс случайный хвост). `from` — `REWAKE_SESSION`
-   или `shell`.
-4. Записать `inbox/<имя>/<id>.json.tmp`, переименовать в `.json`.
-5. Ждать `.status` до `--wait` (по умолчанию 5 секунд) и напечатать итог.
+1. Parse arguments: exactly one name and one text (`-` reads the text from
+   stdin). Extra positional arguments are the error "Quote the text as one
+   argument".
+2. Look up a live session; if there's none, fail and list the live names.
+3. The message: `{"id","from","to","text","createdAt"}`. `id` is time-sortable
+   (nanosecond timestamp plus a random tail). `from` is `REWAKE_SESSION` or
+   `shell`.
+4. Write `inbox/<name>/<id>.json.tmp`, rename it to `.json`.
+5. Wait for `.status` up to `--wait` (5 seconds by default) and print the
+   result.
 
-### Обслуживающий процесс (обертка или сторож)
+### Servicing process (wrapper or watchdog)
 
-Опрос ящика каждые 250 мс. Сообщения обрабатываются по порядку `id`. Для каждого:
-вызвать адаптер доставки, записать статус (`.status.tmp` и rename). `delivered` и
-`failed` переносятся в `done/`; `pending` остается и повторяется каждые 2 секунды.
-Сообщение старше `--ttl` (по умолчанию 30 минут) получает `failed: expired`.
+Polls the inbox every 250 ms. Messages are processed in `id` order. For each
+one: call the delivery adapter, write the status (`.status.tmp`, then rename).
+`delivered` and `failed` are moved to `done/`; `pending` stays and is retried
+every 2 seconds. A message older than `--ttl` (30 minutes by default) gets
+`failed: expired`.
 
-Статус: `{"state":"delivered|pending|failed","via":"socket|codex-queue","detail":"...","at":"..."}`.
+Status: `{"state":"delivered|pending|failed","via":"socket|codex-queue","detail":"...","at":"..."}`.
 
-### Текст, который видит получатель
-
-```
-[rewake] from <отправитель> · <короткий id>
-<текст>
-```
-
-Короткий id делает текст уникальным: Claude Code отбрасывает одинаковый текст от
-одного отправителя в течение 30 секунд. Если отправитель — `shell`, строка
-заголовка `[rewake] from shell`.
-
-### Адаптер Claude Code
-
-Подключиться к `claude.socket` с таймаутом 2 секунды, записать строку
-`{"type":"user","message":{"role":"user","content":<текст>},"priority":"next"}`
-и `\n`, закрыть. Успех записи — `delivered`. `ENOENT`, `ECONNREFUSED` — `pending`
-пока жив harness (сокет еще не создан или пересоздается), иначе `failed`.
-
-### Адаптер Codex
-
-1. Найти текущий тред: обойти дерево процессов от `harnessPid`, собрать ссылки
-   `/proc/<pid>/fd/*`, указывающие на `<CODEX_HOME>/thread-writer-locks/<uuid>.lock`,
-   выбрать lock с самым поздним временем изменения. Нет ни одного — `pending:
-   codex has not opened a thread yet`.
-2. `codex queue --thread <uuid> --message <текст>` с `CODEX_HOME` сессии, таймаут
-   15 секунд.
-3. Код 0 — `delivered` с пометкой, что Codex начнет ход в пределах ~10 секунд.
-   `no rollout found` — `pending: the codex session has no conversation yet;
-   delivers after its first turn`. Прочее — `failed` с текстом ошибки Codex.
-
-Тред выбирается при каждой попытке заново: после `/new` или `/resume` сообщение
-уходит в текущий тред, а не в тот, что был при запуске.
-
-## Сессия без обертки
-
-Не поддерживается: решение владельца. Участвует только то, что запущено через
-`rewake`. Обычный `claude` в соседнем терминале в `list` не появляется и сообщений
-не получает — его надо перезапустить через обертку.
-
-## Интерфейс
-
-Приемы перенесены из i-plane, где они проверены агентами.
-
-### Команды
+### Text the recipient sees
 
 ```
-rewake                                  обзор (карта, порядок работы, поведение)
-rewake [--name N] claude [args...]      запустить Claude Code сессией rewake
-rewake [--name N] codex [args...]       запустить Codex сессией rewake
-rewake list [--json]                    живые сессии
+[rewake] from <sender> · <short id>
+<text>
+```
+
+The short id makes the text unique: Claude Code drops identical text from the
+same sender within 30 seconds. If the sender is `shell`, the header line reads
+`[rewake] from shell`.
+
+### Claude Code adapter
+
+Connect to `claude.socket` with a 2-second timeout, write the line
+`{"type":"user","message":{"role":"user","content":<text>},"priority":"next"}`
+followed by `\n`, then close. A successful write means `delivered`. `ENOENT` and
+`ECONNREFUSED` mean `pending` as long as the harness is alive (the socket hasn't
+been created yet, or is being recreated); otherwise `failed`.
+
+### Codex adapter
+
+1. Find the current thread: walk the process tree from `harnessPid`, collect the
+   `/proc/<pid>/fd/*` links pointing at
+   `<CODEX_HOME>/thread-writer-locks/<uuid>.lock`, and pick the lock with the
+   latest mtime. None found: `pending: codex has not opened a thread yet`.
+2. `codex queue --thread <uuid> --message <text>` with the session's
+   `CODEX_HOME`, 15-second timeout.
+3. Exit code 0 means `delivered`, noted with "Codex will start a turn within
+   ~10s". `no rollout found` means `pending: the codex session has no
+   conversation yet; delivers after its first turn`. Anything else is `failed`
+   with Codex's error text.
+
+The thread is chosen fresh on every attempt: after `/new` or `/resume`, the
+message goes to the current thread, not the one from when the session started.
+
+## A session without a wrapper
+
+Not supported: an owner decision. Only what's launched through `rewake` takes
+part. A plain `claude` in another terminal doesn't show up in `list` and doesn't
+receive messages — it has to be restarted through the wrapper.
+
+## Interface
+
+The conventions are carried over from i-plane, where agents have already
+proven them out.
+
+### Commands
+
+```
+rewake                                  overview (command map, workflow, behavior notes)
+rewake [--name N] claude [args...]      launch a Claude Code session under rewake
+rewake [--name N] codex [args...]       launch a Codex session under rewake
+rewake list [--json]                    live sessions
 rewake send <name> <text|-> [--wait S] [--json]
-rewake whoami [--json]                  имя своей сессии и каталог
+rewake whoami [--json]                  this session's name and directory
 rewake <command> --help
 ```
 
-Флаги утилиты — только до имени harness; все после него принадлежит harness.
+The tool's own flags only work before the harness name; everything after it
+belongs to the harness.
 
-### Вывод
+### Output
 
-- Без аргументов — обзор, код 0: группы команд, порядок работы настоящими вызовами,
-  заметки о поведении (коды выхода, отказ ничего не спрашивать, задержка Codex).
-- Одна строка на объект, выровненные колонки, пустые значения не печатаются.
+- With no arguments — the overview, exit code 0: command groups, the workflow as
+  real invocations, and behavior notes (exit codes, the refusal to ever prompt
+  interactively, the Codex delay).
+- One line per object, aligned columns, empty values are omitted.
   ```
   claude-2  claude  idle  /home/u/code/api  started 12m ago
   codex     codex         /home/u/code/web  started 3m ago
   ```
-  Состояние занятости берется только там, где harness сообщает его сам: у Claude
-  Code — поле `status` из `~/.claude/sessions/<pid>.json` (формат приватный,
-  отсутствие поля — пустая колонка). У Codex признака без разбора экрана нет.
-- `send` печатает итог одной строкой:
+  Busy/idle state is shown only where the harness reports it itself: for Claude
+  Code, the `status` field from `~/.claude/sessions/<pid>.json` (private format;
+  a missing field means an empty column). Codex has no such signal without
+  screen scraping.
+- `send` prints the result as one line:
   ```
   delivered to claude-2 via socket
   delivered to codex via codex queue; codex starts a turn within ~10s
   pending for codex: the codex session has no conversation yet; delivers after its first turn
   ```
-- `--json` на каждой команде печатает модель целиком; текстовая форма урезана
-  намеренно. Цвета и зависимости от TTY нет.
-- Одна таблица команд (имя, аргументы, флаги, summary, examples, next) — источник
-  разбора, обзора, `--help` и подсказки при ошибке. Тест сверяет таблицу с
-  обработчиками и прогоняет примеры.
+- `--json` on every command prints the full model; the text form is deliberately
+  trimmed down. No colors, no TTY-dependent behavior.
+- A single command table (name, arguments, flags, summary, examples, next) is
+  the source for parsing, the overview, `--help`, and the hint shown on error. A
+  test checks the table against the handlers and runs the examples.
 
-### Отказы и коды выхода
+### Failures and exit codes
 
-| код | смысл |
+| code | meaning |
 |---|---|
-| 0 | сделано; для `send` — доставлено |
-| 1 | цель отказала или недоступна: доставка `failed`, сессия умерла во время ожидания |
-| 2 | неверный вызов: неизвестная команда или флаг, лишний аргумент, нет такой сессии, занятое имя, небезопасный каталог |
-| 3 | `send`: принято, но еще не доставлено (`pending` к концу `--wait`); сообщение доставится само |
+| 0 | done; for `send` — delivered |
+| 1 | the target failed or is unreachable: delivery `failed`, or the session died while waiting |
+| 2 | invalid invocation: unknown command or flag, extra argument, no such session, name taken, unsafe directory |
+| 3 | `send`: accepted but not yet delivered (`pending` at the end of `--wait`); the message will still deliver on its own |
 
-Отказ вызова: причина, синтаксис, пример, флаги, `full help: rewake <cmd> --help`.
-Неизвестная команда — ближайшее имя («did you mean»), если расстояние мало. Ничего
-не спрашивать интерактивно.
+An invocation failure shows: the reason, the syntax, an example, the flags, and
+`full help: rewake <cmd> --help`. An unknown command gets the closest name ("did
+you mean") if the edit distance is small. Never prompt interactively.
 
-## Код
+## Code
 
-Go 1.25, без внешних зависимостей (только стандартная библиотека и `syscall`).
+Go 1.25, no external dependencies (standard library and `syscall` only).
 
 ```
-cmd/rewake/main.go            точка входа, разбор верхнего уровня
-internal/cli/                 таблица команд, разбор, обзор, help, отказы, печать
-internal/state/               каталог: проверка, пути, атомарная запись
-internal/registry/            запись сессии, публикация имени, живость, список
-internal/proc/                /proc: время старта, дерево процессов, ссылки fd
-internal/inbox/               сообщение, статус, запись отправителем, цикл обслуживания
-internal/harness/claude/      аргументы запуска, окружение, доставка в сокет
-internal/harness/codex/       аргументы запуска, поиск треда, доставка через codex queue
-internal/wrap/                обертка: запуск, сигналы, жизненный цикл
+cmd/rewake/main.go            entry point, top-level parsing
+internal/cli/                 command table, parsing, overview, help, failures, printing
+internal/state/                directory: checks, paths, atomic writes
+internal/registry/             session record, name publishing, liveness, listing
+internal/proc/                  /proc: start time, process tree, fd links
+internal/inbox/                 message, status, sender-side write, servicing loop
+internal/harness/claude/        launch arguments, environment, socket delivery
+internal/harness/codex/         launch arguments, thread lookup, delivery via codex queue
+internal/wrap/                  wrapper: launch, signals, lifecycle
 ```
 
-Адаптер harness — интерфейс:
+The harness adapter is an interface:
 
 ```go
 type Harness interface {
@@ -305,42 +325,50 @@ type Harness interface {
 }
 ```
 
-## Проверки
+## Testing
 
-Модульные (`go test`):
-- публикация имени: гонка двух публикаций одного имени — одна выигрывает;
-  мертвая запись вытесняется; живая — нет;
-- живость: переиспользованный pid с другим временем старта — мертв;
-- ящик: порядок доставки, `pending` повторяется, TTL, статус пишется атомарно;
-- поиск треда Codex на фикстуре `/proc`-подобного дерева (корень `/proc`
-  параметризован);
-- разбор аргументов и таблица команд: примеры из таблицы разбираются.
+Unit tests (`go test`):
+- name publishing: a race between two publishes of the same name — one wins; a
+  dead record gets evicted; a live one doesn't;
+- liveness: a reused pid with a different start time counts as dead;
+- inbox: delivery order, `pending` retries, TTL, the status is written
+  atomically;
+- Codex thread lookup on a fixture of a `/proc`-like tree (the `/proc` root is
+  parameterized);
+- argument parsing and the command table: the table's examples parse cleanly.
 
-Живые, скриптом под tmux, в отдельном `/tmp`-каталоге:
-1. `rewake claude --model haiku` и `rewake codex`, `rewake list` видит обе.
-2. Из shell: `send claude "reply pong"` — ответ на экране Claude за секунды.
-3. Из песочницы Codex (`codex sandbox -P :workspace -- rewake send ...`) — доставка
-   в Claude через ящик. Без обращения к модели.
-4. `send codex` до первого сообщения — `pending`, код 3; после первого хода — ход
-   начинается сам.
-5. Агент Claude отвечает `rewake send` без подтверждения (проверка `--allowedTools`).
-6. Выход harness — запись и сокет исчезли, ожидающие получили `failed`.
+Live tests, scripted under tmux, in a separate `/tmp` directory:
+1. `rewake claude --model haiku` and `rewake codex`, `rewake list` sees both.
+2. From a shell: `send claude "reply pong"` — a reply shows up on Claude's screen
+   within seconds.
+3. From the Codex sandbox (`codex sandbox -P :workspace -- rewake send ...`) —
+   delivery to Claude through the inbox, without calling the model.
+4. `send codex` before the first message — `pending`, exit code 3; after the
+   first turn — the turn starts on its own.
+5. The Claude agent runs `rewake send` without confirmation (checks
+   `--allowedTools`).
+6. Harness exit — the record and socket are gone, pending messages got
+   `failed`.
 
-Живые проверки Codex тратят квоту подписки: гонять на дешевой модели и коротких
-сообщениях.
+Live Codex tests spend subscription quota: run them on a cheap model with short
+messages.
 
-## Распространение
+## Distribution
 
-- Сборка: `CGO_ENABLED=0 GOOS=linux GOARCH=amd64|arm64 go build`, бинарь несколько МБ.
-- npm: `@iiiokojiadbi/rewake` с шимом и платформенными пакетами
-  `@iiiokojiadbi/rewake-linux-x64`, `-linux-arm64` в `optionalDependencies` (схема
-  esbuild). Scoped-пакет публикуется с `--access public`.
-- Альтернатива без npm: `go install`.
+- Build: `CGO_ENABLED=0 GOOS=linux GOARCH=amd64|arm64 go build`, a binary a few
+  MB in size.
+- npm: `@iiiokojiadbi/rewake` with a shim, plus platform packages
+  `@iiiokojiadbi/rewake-linux-x64`, `-linux-arm64` in `optionalDependencies` (the
+  esbuild pattern). The scoped package is published with `--access public`.
+- A non-npm alternative: `go install`.
 
-## Решения владельца, 16 сентября 2026
+## Owner decisions, September 16, 2026
 
-1. Вводная подставляется при запуске обоим harness, по умолчанию включена;
-   выключается `--no-intro`.
-2. Разрешения на команды утилиты выдаются обоим harness, а не только Claude Code.
-3. Каталог состояния в `/tmp` с правами 0700 — граница доверия принята.
-4. Сессия без обертки не поддерживается; `register` из первой версии убран.
+1. The intro is injected at launch for both harnesses, on by default; turned off
+   with `--no-intro`.
+2. Permissions for the tool's own commands are granted for both harnesses, not
+   just Claude Code.
+3. The state directory in `/tmp` with 0700 permissions — this trust boundary is
+   accepted.
+4. A session without a wrapper is not supported; `register` is dropped from the
+   first version.

@@ -47,6 +47,11 @@ func report(ctx *Context, err error) int {
 		return ExitUsage
 	}
 
+	var exitCode *ExitCodeError
+	if errors.As(err, &exitCode) {
+		return exitCode.Code
+	}
+
 	var pending *PendingError
 	if errors.As(err, &pending) {
 		fmt.Fprintln(ctx.Stdout, pending.Message)
@@ -121,17 +126,4 @@ func guideModel() map[string]any {
 		"globalOptions": renderOptions(globalOptions),
 		"harnesses":     harness.IDs(),
 	}
-}
-
-// The handlers below are filled in by later milestones; the table, the parser
-// and the refusals are already the real ones.
-
-func handleLaunch(h harness.Harness) func(*Context, Call) error {
-	return func(_ *Context, _ Call) error {
-		return failf("starting %s is not built yet (milestone 3 for claude, 4 for codex).", h.Title())
-	}
-}
-
-func handleSend(_ *Context, _ Call) error {
-	return failf("send is not built yet (milestone 3).")
 }
