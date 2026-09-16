@@ -14,6 +14,8 @@ forever.
 
 ## Where to start a session
 
+0. `docs/flow.md` — the whole path in one read: a session starts, a message is
+   sent, announced, read, and the report comes back.
 1. `docs/roadmap.md` — what is done and what comes next. A milestone is closed by
    its acceptance criterion, not by code existing. Findings and fixes of the
    earlier review rounds are in `docs/reviews.md`.
