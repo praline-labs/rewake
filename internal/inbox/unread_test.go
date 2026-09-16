@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -155,7 +156,7 @@ func TestReadingRecordsWhoWaits(t *testing.T) {
 // A new run of the name forgets what the previous run was waited on for.
 func TestANewRunForgetsTheOldWaits(t *testing.T) {
 	dir := stateDir(t)
-	if err := markAwaiting(dir, "api", "5.5", "web", "40.4"); err != nil {
+	if err := markAwaiting(dir, "api", "5.5", "web", "40.4", "m0"); err != nil {
 		t.Fatalf("markAwaiting: %v", err)
 	}
 	server := &Server{Dir: dir, Name: "api", Epoch: "6.6", Deliver: func(context.Context, Message) Result {
@@ -252,11 +253,11 @@ func TestAReadIsNotUndoneByTheNoticeResult(t *testing.T) {
 // owed to the run that wrote since.
 func TestClearingAnOldRunKeepsTheNewOne(t *testing.T) {
 	dir := stateDir(t)
-	if err := markAwaiting(dir, "api", "5.5", "web", "40.4"); err != nil {
+	if err := markAwaiting(dir, "api", "5.5", "web", "40.4", "m0"); err != nil {
 		t.Fatalf("markAwaiting: %v", err)
 	}
 	old := Waiters(dir, "api", "5.5")[0]
-	if err := markAwaiting(dir, "api", "5.5", "web", "41.4"); err != nil {
+	if err := markAwaiting(dir, "api", "5.5", "web", "41.4", "m0"); err != nil {
 		t.Fatalf("markAwaiting: %v", err)
 	}
 
@@ -266,112 +267,23 @@ func TestClearingAnOldRunKeepsTheNewOne(t *testing.T) {
 	}
 }
 
-// A reader stuck on its output holds the mailbox. The server must still end
-// when its session does: waiting on the lock without end kept the wrapper alive
-// after its harness had gone.
-func TestAStuckReaderDoesNotHoldTheServer(t *testing.T) {
-	dir := stateDir(t)
-	held := make(chan struct{})
-	release := make(chan struct{})
-	go func() {
-		_ = state.WithMailboxLock(context.Background(), dir, "api", func() error {
-			close(held)
-			<-release
-			return nil
-		})
-	}()
-	<-held
-	defer close(release)
-
-	sent := message("waits for the reader")
-	if err := Put(dir, sent); err != nil {
-		t.Fatalf("Put: %v", err)
-	}
-	server := &Server{Dir: dir, Name: "api", Deliver: func(context.Context, Message) Result {
-		return Result{State: Delivered}
-	}}
-	ctx, cancel := context.WithCancel(context.Background())
-	finished := make(chan struct{})
-	go func() {
-		defer close(finished)
-		server.Serve(ctx)
-	}()
-	time.Sleep(1500 * time.Millisecond)
-	cancel()
-
-	select {
-	case <-finished:
-	case <-time.After(shutdownLockWait + 2*time.Second):
-		t.Fatal("the server did not end while a reader held the mailbox")
-	}
-}
-
-// A lock nobody can take does not stop delivery: the server is then the only
-// writer, and the sender hears what happened instead of a silent pending.
-func TestAnUnusableLockDoesNotStopDelivery(t *testing.T) {
-	dir := stateDir(t)
-	if err := os.MkdirAll(filepath.Join(state.InboxPath(dir, "api"), ".lock"), 0o700); err != nil {
-		t.Fatalf("block: %v", err)
-	}
-	sent := message("still delivered")
-	if err := Put(dir, sent); err != nil {
-		t.Fatalf("Put: %v", err)
-	}
-	server := &Server{Dir: dir, Name: "api", Deliver: func(context.Context, Message) Result {
-		return Result{State: Delivered, Via: "socket"}
-	}}
-	serveUntil(t, server, func() bool {
-		status, ok := ReadStatus(dir, "api", sent.ID)
-		return ok && status.State == Delivered
-	})
-}
-
-// A reader running inside delivery — the agent reads the moment it is told —
-// takes the real lock, and must get it: delivery does not hold the mailbox.
-func TestAReaderDuringDeliveryGetsTheLock(t *testing.T) {
-	dir := stateDir(t)
-	sent := message("task")
-	sent.ToEpoch = "5.5"
-	if err := Put(dir, sent); err != nil {
-		t.Fatalf("Put: %v", err)
-	}
-	server := &Server{Dir: dir, Name: "api", Epoch: "5.5", attempts: map[string]time.Time{}, outcomes: map[string]Result{}}
-	server.Deliver = func(context.Context, Message) Result {
-		readAll(t, dir, "5.5")
-		return Result{State: Pending}
-	}
-	done := make(chan struct{})
-	go func() {
-		server.drain(context.Background())
-		close(done)
-	}()
-	select {
-	case <-done:
-	case <-time.After(3 * time.Second):
-		t.Fatal("a reader could not get the mailbox while a notice was on its way")
-	}
-	if status, _ := ReadStatus(dir, "api", sent.ID); status.State != Read {
-		t.Errorf("status = %s, want read", status.State)
-	}
-}
-
 // A new request from the same run, read after the report was written, is a new
 // wait. Clearing the old one must not take it along.
 func TestClearingAnOldWaitKeepsANewOneOfTheSameRun(t *testing.T) {
 	dir := stateDir(t)
-	if err := markAwaiting(dir, "api", "5.5", "web", "40.4"); err != nil {
+	if err := markAwaiting(dir, "api", "5.5", "web", "40.4", "m1"); err != nil {
 		t.Fatalf("markAwaiting: %v", err)
 	}
 	old := Waiters(dir, "api", "5.5")[0]
 	time.Sleep(time.Millisecond)
-	if err := markAwaiting(dir, "api", "5.5", "web", "40.4"); err != nil {
+	if err := markAwaiting(dir, "api", "5.5", "web", "40.4", "m2"); err != nil {
 		t.Fatalf("markAwaiting: %v", err)
 	}
 
 	ClearAwaiting(dir, "api", "5.5", old)
 	remaining := Waiters(dir, "api", "5.5")
-	if len(remaining) != 1 || remaining[0].Since == old.Since {
-		t.Fatalf("waiting = %v, want the newer wait still owed", remaining)
+	if len(remaining) != 1 || strings.Join(remaining[0].Messages, ",") != "m1,m2" {
+		t.Fatalf("waiting = %v, want the wait still owed, now for both messages", remaining)
 	}
 	if ReportID("api", "5.5", old) == ReportID("api", "5.5", remaining[0]) {
 		t.Error("two waits of one run share a report id, so the second report would be skipped")

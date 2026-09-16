@@ -84,12 +84,11 @@ func MarkRead(dir, name, epoch string, message Message) error {
 	if status, ok := ReadStatus(dir, name, message.ID); ok && status.State == Read {
 		retry = true
 	}
-	// A finished notice is an answer already, and waiting on it would have two
-	// sessions report their turns to each other forever. A sender without a run
-	// of its own — a shell, or mail from before runs were recorded — has nowhere
-	// a report could go.
-	if !retry && KindOf(message) != Finished && message.FromEpoch != "" {
-		if err := markAwaiting(dir, name, epoch, message.From, message.FromEpoch); err != nil {
+	// A note or a report owes nothing, and a sender without a run of its own —
+	// a shell, or mail from before runs were recorded — has nowhere a report
+	// could go.
+	if !retry && Owed(message) {
+		if err := markAwaiting(dir, name, epoch, message.From, message.FromEpoch, message.ID); err != nil {
 			return err
 		}
 	}
@@ -110,6 +109,14 @@ type Waiter struct {
 	// Since is when the wait was recorded, in nanoseconds. It tells one wait
 	// from the next for the same run, and names the report that settles it.
 	Since int64
+	// Messages are the ids of what was read from that run since its last report.
+	Messages []string
+}
+
+// same reports whether two records describe the same wait.
+func (w Waiter) same(other Waiter) bool {
+	return w.Name == other.Name && w.Epoch == other.Epoch && w.Since == other.Since &&
+		strings.Join(w.Messages, ",") == strings.Join(other.Messages, ",")
 }
 
 // ReportID is the id of the report that settles a wait. The same wait always
@@ -117,7 +124,7 @@ type Waiter struct {
 // could not be removed, or the hook died in between — is not written again.
 // The time prefix keeps reports in the order their waits began.
 func ReportID(name, epoch string, waiter Waiter) string {
-	sum := sha256.Sum256([]byte(strings.Join([]string{name, epoch, waiter.Name, waiter.Epoch, strconv.FormatInt(waiter.Since, 10)}, "\x00")))
+	sum := sha256.Sum256([]byte(strings.Join([]string{name, epoch, waiter.Name, waiter.Epoch, strconv.FormatInt(waiter.Since, 10), strings.Join(waiter.Messages, ",")}, "\x00")))
 	return fmt.Sprintf("%019d-%s", waiter.Since, hex.EncodeToString(sum[:6]))
 }
 
@@ -130,8 +137,10 @@ func awaitingPath(dir, name, epoch string) (string, bool) {
 	return filepath.Join(state.AwaitingPath(dir, name), epoch), true
 }
 
-// markAwaiting records that a run of another session waits for this turn.
-func markAwaiting(dir, name, epoch, from, fromEpoch string) error {
+// markAwaiting records that a run of another session waits for this turn, and
+// for which message. A run that already waits gets the message added to its
+// wait; a different run of that name replaces it.
+func markAwaiting(dir, name, epoch, from, fromEpoch, messageID string) error {
 	path, ok := awaitingPath(dir, name, epoch)
 	if !ok || !state.ValidName(from) {
 		return nil
@@ -142,8 +151,23 @@ func markAwaiting(dir, name, epoch, from, fromEpoch string) error {
 	if err := state.EnsureSubdir(path); err != nil {
 		return err
 	}
-	record := fromEpoch + " " + strconv.FormatInt(time.Now().UnixNano(), 10)
-	return state.WriteAtomic(filepath.Join(path, from), []byte(record))
+	file := filepath.Join(path, from)
+	waiter := Waiter{Name: from, Epoch: fromEpoch, Since: time.Now().UnixNano()}
+	if raw, err := os.ReadFile(file); err == nil {
+		if existing := parseWaiter(from, string(raw)); existing.Epoch == fromEpoch {
+			waiter = existing
+		}
+	}
+	for _, id := range waiter.Messages {
+		if id == messageID {
+			return nil
+		}
+	}
+	if messageID != "" {
+		waiter.Messages = append(waiter.Messages, messageID)
+	}
+	record := waiter.Epoch + " " + strconv.FormatInt(waiter.Since, 10) + " " + strings.Join(waiter.Messages, ",")
+	return state.WriteAtomic(file, []byte(strings.TrimSpace(record)))
 }
 
 // Waiters lists who waits for the end of this run's turn. Nothing is forgotten
@@ -184,6 +208,9 @@ func parseWaiter(name, raw string) Waiter {
 	if len(fields) > 1 {
 		waiter.Since, _ = strconv.ParseInt(fields[1], 10, 64)
 	}
+	if len(fields) > 2 {
+		waiter.Messages = strings.Split(fields[2], ",")
+	}
 	return waiter
 }
 
@@ -198,7 +225,7 @@ func ClearAwaiting(dir, name, epoch string, peer Waiter) {
 	}
 	file := filepath.Join(path, peer.Name)
 	raw, err := os.ReadFile(file)
-	if err != nil || parseWaiter(peer.Name, string(raw)) != peer {
+	if err != nil || !parseWaiter(peer.Name, string(raw)).same(peer) {
 		return
 	}
 	_ = os.Remove(file)

@@ -79,6 +79,7 @@ func Intro(name string) string {
 		fmt.Sprintf("You are running inside rewake as the session %q.", name),
 		"rewake lets agent sessions on this machine message each other; a message waiting for you is announced by a line with \"rewake: <session> <kind>\".",
 		"Run `rewake guide` before you send or read messages: it explains how.",
+		"When you finish work another session gave you, end your turn with the result as your final message and stop: rewake delivers that message to it.",
 	}, "\n")
 }
 

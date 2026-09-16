@@ -151,17 +151,40 @@ func TestTurnEndIgnoresOtherEvents(t *testing.T) {
 	}
 }
 
-func TestSendMarksAQuestion(t *testing.T) {
-	dir := liveSession(t, "api")
-	run("send", "api", "which port?", "--question", "--wait", "0")
-
-	waiting, _ := filepath.Glob(filepath.Join(state.InboxPath(dir, "api"), "*.json"))
-	if len(waiting) != 1 {
-		t.Fatalf("mailbox holds %v, want one message", waiting)
+func TestAQuestionFromAShellIsRefused(t *testing.T) {
+	liveSession(t, "api")
+	t.Setenv(state.SessionEnv, "")
+	code, _, errOut := run("send", "api", "which port?", "--question", "--wait", "0")
+	if code != ExitUsage || !strings.Contains(errOut, "needs a rewake session") {
+		t.Errorf("exit = %d, stderr = %q; want a refusal that says a question needs a session", code, errOut)
 	}
-	raw, _ := os.ReadFile(waiting[0])
-	if !strings.Contains(string(raw), `"kind": "question"`) {
-		t.Errorf("message = %s, want the question kind", raw)
+}
+
+func TestTheKindFlagsExcludeEachOther(t *testing.T) {
+	liveSession(t, "api")
+	code, _, errOut := run("send", "api", "hm", "--question", "--notify")
+	if code != ExitUsage || !strings.Contains(errOut, "exclude each other") {
+		t.Errorf("exit = %d, stderr = %q; want a refusal", code, errOut)
+	}
+}
+
+// The kind reaches the message: a task by default, the others by flag.
+func TestSendWritesTheKind(t *testing.T) {
+	for flag, want := range map[string]string{"": "task", "--notify": "notify"} {
+		dir := liveSession(t, "api")
+		args := []string{"send", "api", "hello", "--wait", "0"}
+		if flag != "" {
+			args = append(args, flag)
+		}
+		run(args...)
+		waiting, _ := filepath.Glob(filepath.Join(state.InboxPath(dir, "api"), "*.json"))
+		if len(waiting) != 1 {
+			t.Fatalf("%s: mailbox holds %v, want one message", flag, waiting)
+		}
+		raw, _ := os.ReadFile(waiting[0])
+		if !strings.Contains(string(raw), `"kind": "`+want+`"`) {
+			t.Errorf("%s: message = %s, want kind %s", flag, raw, want)
+		}
 	}
 }
 

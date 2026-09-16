@@ -198,7 +198,7 @@ func TestDeliveryWritesOneProtocolLine(t *testing.T) {
 		if !strings.HasPrefix(content, "<task-notification>") || !strings.HasSuffix(content, "</task-notification>") {
 			t.Errorf("content = %q, want a task-notification the interface draws as one line", content)
 		}
-		if !strings.Contains(content, "<summary>rewake: web notify, 1 new message</summary>") {
+		if !strings.Contains(content, "<summary>rewake: web task, 1 new message</summary>") {
 			t.Errorf("content = %q, want the notice as its summary", content)
 		}
 		if !strings.Contains(content, "<status>completed</status>") {

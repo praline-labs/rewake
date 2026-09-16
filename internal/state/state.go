@@ -67,12 +67,13 @@ func Dir() (string, error) {
 }
 
 const (
-	sessionsDir = "sessions"
-	inboxDir    = "inbox"
-	socketsDir  = "sock"
-	doneDir     = "done"
-	unreadDir   = "unread"
-	awaitingDir = "awaiting"
+	sessionsDir  = "sessions"
+	inboxDir     = "inbox"
+	socketsDir   = "sock"
+	doneDir      = "done"
+	unreadDir    = "unread"
+	awaitingDir  = "awaiting"
+	answeringDir = "answering"
 )
 
 // SessionPath is the record of one session.
@@ -93,6 +94,13 @@ func DonePath(dir, name string) string { return filepath.Join(dir, inboxDir, nam
 // yet. The harness is handed a notice, not the text: the agent fetches the text
 // itself, so it knows the message came through a tool and not from its user.
 func UnreadPath(dir, name string) string { return filepath.Join(dir, inboxDir, name, unreadDir) }
+
+// AnsweringPath holds one mark per question a send in this session is blocked
+// on. While a mark is fresh, the answer is handed to that send rather than
+// announced to the agent.
+func AnsweringPath(dir, name string) string {
+	return filepath.Join(dir, inboxDir, name, answeringDir)
+}
 
 // AwaitingPath lists the sessions whose messages this session has read since its
 // last turn ended. Each of them is told when that turn ends.

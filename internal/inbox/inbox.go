@@ -38,9 +38,12 @@ type Message struct {
 	// report that the receiver's turn ended — reaches that run and no other.
 	FromEpoch string `json:"fromEpoch,omitempty"`
 	// Kind says what the message is about, and it is what the receiver's notice
-	// names: a plain note, a question waiting for an answer, or the end of the
-	// sender's turn.
+	// names: a task, a note, a question, or the end of the sender's turn.
 	Kind Kind `json:"kind,omitempty"`
+	// InReplyTo lists the messages a finished report settles: the tasks and
+	// questions its sender read during the turn that ended. A sender blocked on
+	// a question recognises its answer by this.
+	InReplyTo []string `json:"inReplyTo,omitempty"`
 	// Text is what the receiving agent will read.
 	Text string `json:"text"`
 	// CreatedAt is when the sender wrote it.
@@ -54,22 +57,37 @@ type Message struct {
 type Kind string
 
 const (
-	// Note is an ordinary message. It is the default.
+	// Task is work for the receiver. Its sender is told when the receiver's
+	// turn ends, with the last reply. It is the default.
+	Task Kind = "task"
+	// Note is a heads-up. It asks for nothing back.
 	Note Kind = "notify"
-	// Question is a message the sender expects an answer to.
+	// Question is a task its sender waits for: send blocks until the receiver's
+	// turn ends and prints the last reply.
 	Question Kind = "question"
 	// Finished tells the receiver that a session it wrote to has ended its turn.
 	// The text is that session's last reply.
 	Finished Kind = "finished"
 )
 
-// KindOf returns the kind of a message, reading a missing one as a note: mail
-// written before kinds existed is exactly that.
+// KindOf returns the kind of a message, reading a missing one as a task: mail
+// written before kinds existed asked for work and was owed a report.
 func KindOf(message Message) Kind {
 	if message.Kind == "" {
-		return Note
+		return Task
 	}
 	return message.Kind
+}
+
+// Owed reports whether reading a message owes its sender a report when the
+// reader's turn ends. A note asks for nothing, and a report is an answer
+// already: waiting on one would have two sessions report to each other forever.
+func Owed(message Message) bool {
+	switch KindOf(message) {
+	case Note, Finished:
+		return false
+	}
+	return message.FromEpoch != ""
 }
 
 // State is what happened to a message.

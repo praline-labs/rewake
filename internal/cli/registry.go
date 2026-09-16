@@ -69,21 +69,22 @@ func buildGroups() {
 				Name:           "send",
 				Args:           "<name> <text>",
 				MaxPositionals: 2,
-				Summary:        "Leave a message for a session and tell it. Use - as the text to read it from stdin.",
-				Options: []Option{
-					{Flag: "--question", Summary: "Mark the message as a question you expect an answer to."},
-					{Flag: "--wait", Value: "<seconds>", Summary: "How long to wait for a delivery result. Default: 5."},
+				Summary:        "Give a session a task, a question or a heads-up. Use - as the text to read it from stdin.",
+				Options: append(kindOptions(),
+					Option{Flag: "--wait", Value: "<seconds>", Summary: "How long to wait. Default: 5 for the delivery, 600 for a question's answer."},
 					jsonOption,
-				},
+				),
 				Examples: []string{
-					"rewake send api \"the migration is merged, pull and rerun the smoke\"",
+					"rewake send api \"rerun the smoke and report what failed\"",
 					"rewake send web \"which port does the dev server use?\" --question",
+					"rewake send api \"the migration is merged\" --notify",
 					"rewake send web - --wait 20",
 				},
 				Next: []string{"rewake inbox"},
 				Notes: []string{
+					"A task is the default: the session reads it, works, and ends its turn with a final message, which comes back to you as a \"rewake: <session> finished\" line.",
+					"A question blocks until that final message and prints it. A long one is better run in the background.",
 					"Quote the text as one argument: loose words are refused rather than silently joined.",
-					"Delivered means the receiver was told; it reads the text itself with rewake inbox.",
 				},
 				Handler: handleSend,
 			},
@@ -96,8 +97,8 @@ func buildGroups() {
 				Next:           []string{"rewake send <name> \"text\""},
 				Notes: []string{
 					"Run it when a \"rewake: <session> <kind>\" line says messages are waiting.",
-					"A finished message is sent by the system, not typed: it says a session you wrote to has ended its turn, and carries its last reply.",
-					"Reading a message tells its sender when your turn ends, with your last reply, even if you also wrote to it.",
+					"A task or a question you read is answered by ending your turn: your final message goes back to the sender by itself. Put the result there.",
+					"A notify needs no answer. A finished message is a session's final message after work you gave it.",
 				},
 				Handler: handleInbox,
 			},
@@ -173,8 +174,8 @@ func flow() []FlowStep {
 	}
 	return append(steps,
 		FlowStep{Command: "rewake list", Summary: "See who is running and can be reached."},
-		FlowStep{Command: "rewake send api \"pull and rerun the smoke\"", Summary: "Leave a message; api is told, and reads it with rewake inbox."},
-		FlowStep{Command: "rewake inbox", Summary: "When a \"rewake:\" line says messages are waiting, read them here, then answer with rewake send."},
+		FlowStep{Command: "rewake send api \"pull and rerun the smoke\"", Summary: "Give api a task; its final message comes back as a \"rewake: api finished\" line."},
+		FlowStep{Command: "rewake inbox", Summary: "When a \"rewake:\" line says messages are waiting, read them here. Answer a task by finishing your turn with the result."},
 		FlowStep{Command: "rewake <command> --help", Summary: "Flags, examples and notes for that command."},
 	)
 }
@@ -196,7 +197,11 @@ func notes() []Note {
 		},
 		{
 			Title: "A waiting message is announced, not pasted",
-			Body:  "It shows up as one line: \"rewake: <session> <kind>, <n> new message(s)\", with a 🟢 in front where the harness shows it as plain text. The kind is notify, question, or finished. The text is never in that line: run rewake inbox to read it. A finished message comes from the system when a session you wrote to ends its turn, and carries that session's last reply.",
+			Body:  "It shows up as one line: \"rewake: <session> <kind>, <n> new message(s)\", with a 🟢 in front where the harness shows it as plain text. The text is never in that line: run rewake inbox to read it.",
+		},
+		{
+			Title: "Four kinds, one rule for answering",
+			Body:  "task: work to do. question: the same, with the sender waiting for it. notify: a heads-up that needs no answer. finished: a session's final message after work you gave it. Answer a task or a question by ending your turn with the result as your final message and stopping — rewake delivers that message to the sender. Do not answer with rewake send; do not answer a notify at all.",
 		},
 		{
 			Title: "A message from shell cannot be answered with send",

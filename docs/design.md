@@ -239,12 +239,41 @@ one line rather than a pasted block.
 3. The message: `{"id","from","fromEpoch","to","toEpoch","kind","text","createdAt"}`.
    `id` is time-sortable (nanosecond timestamp plus a random tail). `from` is
    `REWAKE_SESSION` or `shell`, and `fromEpoch` its run — both only when the
-   run in `REWAKE_EPOCH` still holds the name. `kind` is `notify`, or
-   `question` with `--question`. Sending settles nothing the sender owes the
-   recipient: a message sent mid-turn is not the end of the turn.
+   run in `REWAKE_EPOCH` still holds the name. `kind` is `task` by default,
+   `question` with `--question`, `notify` with `--notify` (see "Kinds").
+   Sending settles nothing the sender owes the recipient: a message sent
+   mid-turn is not the end of the turn.
 4. Write `inbox/<name>/<id>.json.tmp`, rename it to `.json`.
 5. Wait for `.status` up to `--wait` (5 seconds by default) and print the
    result. `delivered` means the notice went out; `read` counts as delivered.
+   A question then waits for its answer (below).
+
+### Kinds
+
+Each kind is a file of its own in `internal/cli` (`send_task.go`,
+`send_question.go`, `send_notify.go`) and a line in `sendKinds`; the flags,
+refusals and help come from there.
+
+| kind | sent with | the reader owes | send returns |
+|---|---|---|---|
+| `task` | plain `send` | a report at the end of its turn | once delivered |
+| `question` | `--question` | the same | with the answer, up to `--wait` (600 s by default) |
+| `notify` | `--notify` | nothing | once delivered |
+| `finished` | the end of a turn | nothing | — |
+
+The rule for agents, stated in the intro and the guide: a task or a question is
+answered by ending the turn with the result as the final message, and stopping.
+rewake delivers that message. A notify is not answered at all.
+
+A question needs a session to send it: the answer comes to its mailbox. `send`
+leaves a mark in `inbox/<self>/answering/<question id>`, touches it every second,
+and polls its own `unread/` for a `finished` report whose `inReplyTo` names the
+question. The wrapper of the asking session, deciding under the mailbox lock,
+does not announce a report a fresh mark waits for: the waiting send takes it and
+prints it, and the agent is not told twice. When the wait ends, the send removes
+the mark and looks once more under the same lock, so an answer that arrived in
+that moment is taken rather than left unannounced. Without an answer, send exits
+3 and the answer arrives later as an ordinary `finished` line.
 
 ### One lock per mailbox
 
@@ -357,7 +386,8 @@ When a turn ends, the harness runs `rewake turn-ended` — a Stop hook in Claude
 Code, the notify program in Codex — with the last reply of the turn in its
 payload (`last_assistant_message` on stdin, `last-assistant-message` as the last
 argument). Under the mailbox lock, for every run in `awaiting/<own epoch>/` it
-leaves a `finished` message whose text is that reply, addressed to that run —
+leaves a `finished` message whose text is that reply, and whose `inReplyTo`
+lists the messages read from that run since its last report, addressed to that run —
 not to whoever holds the name now — and forgets the waiter only once the message
 is written, and only if the waiter still names that run and that wait. A waiter
 whose run has ended is forgotten without a message.
@@ -378,7 +408,7 @@ runs while its own session is still awake anyway.
 
 Two rules keep this from turning into a loop:
 
-- reading a `finished` notice asks for nothing back;
+- reading a `finished` notice or a `notify` asks for nothing back;
 - each waiting run is told once; a new run of the name starts with no waiters.
 
 So an exchange ends: A writes to B; B reads, answers, ends its turn and reports

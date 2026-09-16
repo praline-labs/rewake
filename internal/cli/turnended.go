@@ -88,6 +88,7 @@ func handleTurnEnded(_ *Context, call Call) error {
 				To:        peer.Name,
 				ToEpoch:   waiter.Epoch,
 				Kind:      inbox.Finished,
+				InReplyTo: waiter.Messages,
 				Text:      reply,
 				CreatedAt: time.Now(),
 			})

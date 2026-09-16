@@ -28,6 +28,8 @@ type sendModel struct {
 	State  string `json:"state"`
 	Via    string `json:"via,omitempty"`
 	Detail string `json:"detail,omitempty"`
+	// Answer is the receiver's last reply, for a question that got one.
+	Answer string `json:"answer,omitempty"`
 }
 
 func handleSend(ctx *Context, call Call) error {
@@ -64,9 +66,25 @@ func handleSend(ctx *Context, call Call) error {
 		return &UsageError{Command: command, Message: "The message is empty."}
 	}
 
-	wait, err := waitDuration(call)
+	kind, err := chosenKind(call)
 	if err != nil {
 		return err
+	}
+	wait, err := waitDuration(call, kind.wait)
+	if err != nil {
+		return err
+	}
+	started := time.Now()
+
+	// Signed with this session's name and run only when both are known to be
+	// current: a report then reaches this run, and a process left over from an
+	// earlier run cannot speak for the next one.
+	self, epoch, selfErr := ownRun(dir)
+	if kind.needsSession != "" && selfErr != nil {
+		return &UsageError{
+			Command: command,
+			Message: kind.needsSession + " (" + selfErr.Error() + ").",
+		}
 	}
 
 	// Reading stdin can take a while, and a session can end in that time. The
@@ -76,35 +94,29 @@ func handleSend(ctx *Context, call Call) error {
 		return unknownSessionError(dir, target)
 	}
 
-	kind := inbox.Note
-	if call.Switch("question") {
-		kind = inbox.Question
-	}
 	message := inbox.Message{
 		ID:        inbox.NewID(),
 		From:      harness.ShellSender,
 		To:        session.Name,
 		ToEpoch:   session.Epoch(),
-		Kind:      kind,
+		Kind:      kind.kind,
 		Text:      text,
 		CreatedAt: time.Now(),
 	}
-	// Signed with this session's name and run only when both are known to be
-	// current: a report then reaches this run, and a process left over from an
-	// earlier run cannot speak for the next one.
-	//
 	// Writing to a session does not settle what this one owes it. A message
 	// sent mid-turn — "started", or a new task in answer to "ready" — is not the
 	// end of the turn, and taking it for one lost the report the other side was
 	// waiting for.
-	if self, epoch, err := ownRun(dir); err == nil {
+	if selfErr == nil {
 		message.From, message.FromEpoch = self.Name, epoch
 	}
 	if err := inbox.Put(dir, message); err != nil {
 		return failf("could not write the message into the mailbox of %s: %v", session.Name, err)
 	}
 
-	status, known := awaitStatus(dir, session.Name, message.ID, wait)
+	// The delivery result is worth a few seconds at most; a kind that waits
+	// longer waits for something else, after it.
+	status, known := awaitStatus(dir, session.Name, message.ID, min(wait, defaultWait))
 	model := sendModel{ID: message.ID, To: session.Name, From: message.From}
 	if !known && inbox.Answered(dir, session.Name, message.ID) {
 		// The message left the mailbox, and a status may have been written
@@ -153,6 +165,14 @@ func handleSend(ctx *Context, call Call) error {
 		}
 	}
 
+	if inbox.State(model.State) != inbox.Failed && kind.after != nil {
+		return kind.after(ctx, sent{dir: dir, self: self, epoch: epoch, target: session, model: model, deadline: started.Add(wait)})
+	}
+	return printDelivery(ctx, session, model)
+}
+
+// printDelivery prints the delivery result and turns it into the exit code.
+func printDelivery(ctx *Context, session registry.Session, model sendModel) error {
 	line := sendLine(session, model)
 	switch inbox.State(model.State) {
 	case inbox.Delivered:
@@ -196,10 +216,10 @@ func sendLine(session registry.Session, model sendModel) string {
 }
 
 // waitDuration reads --wait, in seconds.
-func waitDuration(call Call) (time.Duration, error) {
+func waitDuration(call Call, fallback time.Duration) (time.Duration, error) {
 	raw := call.Flag("wait", "")
 	if raw == "" {
-		return defaultWait, nil
+		return fallback, nil
 	}
 	seconds, err := strconv.ParseFloat(raw, 64)
 	if err != nil || seconds < 0 {
