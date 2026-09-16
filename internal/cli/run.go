@@ -26,6 +26,14 @@ func Run(argv []string, stdout, stderr io.Writer) int {
 		printText(ctx, formatCommandHelp(result.Call.Command, true))
 		return ExitOK
 	case result.Help, result.Guide:
+		// The guide has a machine form too: an agent's first call may well be
+		// "rewake --json", and it must not get prose back.
+		if ctx.JSON {
+			if err := printValue(ctx, guideModel(), func() []string { return nil }); err != nil {
+				return report(ctx, err)
+			}
+			return ExitOK
+		}
 		printText(ctx, formatGuide())
 		return ExitOK
 	}

@@ -3,6 +3,7 @@ package proc
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -102,20 +103,47 @@ func TestOpenFilesResolvesLinks(t *testing.T) {
 	if err := os.MkdirAll(fdDir, 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
-	target := filepath.Join(t.TempDir(), "thread.lock")
-	if err := os.WriteFile(target, nil, 0o600); err != nil {
-		t.Fatalf("write: %v", err)
-	}
-	if err := os.Symlink(target, filepath.Join(fdDir, "3")); err != nil {
-		t.Fatalf("symlink: %v", err)
+	// Two descriptors, because the caller looks for the newest of several lock
+	// files: stopping at the first one would answer with the wrong thread.
+	base := t.TempDir()
+	first := filepath.Join(base, "first.lock")
+	second := filepath.Join(base, "second.lock")
+	for index, target := range []string{first, second} {
+		if err := os.WriteFile(target, nil, 0o600); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		if err := os.Symlink(target, filepath.Join(fdDir, itoa(3+index))); err != nil {
+			t.Fatalf("symlink: %v", err)
+		}
 	}
 
 	files, err := reader.OpenFiles(7)
 	if err != nil {
 		t.Fatalf("OpenFiles: %v", err)
 	}
-	if len(files) != 1 || files[0] != target {
-		t.Errorf("files = %v, want [%s]", files, target)
+	found := map[string]bool{}
+	for _, file := range files {
+		found[file] = true
+	}
+	if !found[first] || !found[second] {
+		t.Errorf("files = %v, want both descriptors", files)
+	}
+}
+
+func TestZombieIsNotAlive(t *testing.T) {
+	reader := fixture(t, map[int][2]int{7: {1, 100}})
+	// A zombie keeps its entry and its start time until the parent reaps it.
+	stat := filepath.Join(reader.Root, "7", "stat")
+	raw, err := os.ReadFile(stat)
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	if err := os.WriteFile(stat, []byte(strings.Replace(string(raw), ") S ", ") Z ", 1)), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	if reader.Alive(7, 100) {
+		t.Error("a zombie was reported alive; its session would keep accepting messages")
 	}
 }
 

@@ -38,6 +38,10 @@ type LaunchPlan struct {
 	Env []string
 	// Socket, when set, is recorded in the session so senders can reach it.
 	Socket string
+	// OwnsSocket says this run created the socket path and may remove it when
+	// the session ends. A path the caller named belongs to the caller: deleting
+	// it could cut off a session that is still running on it.
+	OwnsSocket bool
 	// CodexHome, when set, is recorded so delivery uses the same state.
 	CodexHome string
 }
@@ -94,11 +98,14 @@ func MessageText(message inbox.Message) string {
 // not a rewake session.
 const ShellSender = "shell"
 
+// shortID is the part of the id the receiver sees. Eight hex characters of the
+// random tail, not four: the id only has to make otherwise identical messages
+// different, and a four-character tail repeats often enough to matter.
 func shortID(id string) string {
-	if len(id) <= 4 {
+	if len(id) <= 8 {
 		return id
 	}
-	return id[len(id)-4:]
+	return id[len(id)-8:]
 }
 
 // SessionEnv returns the environment for a harness: the current one, with the
@@ -144,6 +151,26 @@ func pathWithSelf(path string) string {
 		}
 	}
 	return dir + string(os.PathListSeparator) + path
+}
+
+// AddFlags inserts flags rewake adds into the caller's argument list, in front
+// of a "--" terminator when there is one. Everything after that terminator is a
+// positional argument of the harness, so appending there would turn a flag into
+// part of a prompt.
+func AddFlags(args []string, added ...string) []string {
+	terminator := -1
+	for index, arg := range args {
+		if arg == "--" {
+			terminator = index
+			break
+		}
+	}
+	if terminator < 0 {
+		return append(append([]string{}, args...), added...)
+	}
+	out := append([]string{}, args[:terminator]...)
+	out = append(out, added...)
+	return append(out, args[terminator:]...)
 }
 
 // HasFlag reports whether the caller already passed a flag, in either the

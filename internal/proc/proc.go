@@ -43,17 +43,10 @@ func OpenFiles(pid int) ([]string, error) { return Default.OpenFiles(pid) }
 // StartTime returns field 22 of /proc/<pid>/stat: the moment the process
 // started, in clock ticks since boot.
 func (r Reader) StartTime(pid int) (uint64, error) {
-	raw, err := os.ReadFile(filepath.Join(r.Root, strconv.Itoa(pid), "stat"))
+	fields, err := r.statFields(pid)
 	if err != nil {
 		return 0, err
 	}
-	// The second field is the executable name in parentheses and may itself
-	// contain spaces and parentheses, so fields are counted after the last one.
-	closeParen := strings.LastIndex(string(raw), ")")
-	if closeParen < 0 {
-		return 0, fmt.Errorf("unreadable stat line for pid %d", pid)
-	}
-	fields := strings.Fields(string(raw)[closeParen+1:])
 	// Field 3 of the whole line is the first one after the name, so field 22 is
 	// index 19 here.
 	const startTimeIndex = 19
@@ -67,8 +60,40 @@ func (r Reader) StartTime(pid int) (uint64, error) {
 	return value, nil
 }
 
+// State returns the single-letter process state: R, S, D, Z and the rest.
+func (r Reader) State(pid int) (string, error) {
+	fields, err := r.statFields(pid)
+	if err != nil {
+		return "", err
+	}
+	if len(fields) == 0 {
+		return "", fmt.Errorf("stat line for pid %d has no state field", pid)
+	}
+	return fields[0], nil
+}
+
+// statFields returns the fields of /proc/<pid>/stat that follow the command
+// name, which is the only part that can be split on spaces safely.
+func (r Reader) statFields(pid int) ([]string, error) {
+	raw, err := os.ReadFile(filepath.Join(r.Root, strconv.Itoa(pid), "stat"))
+	if err != nil {
+		return nil, err
+	}
+	// The second field is the executable name in parentheses and may itself
+	// contain spaces and parentheses, so fields are counted after the last one.
+	closeParen := strings.LastIndex(string(raw), ")")
+	if closeParen < 0 {
+		return nil, fmt.Errorf("unreadable stat line for pid %d", pid)
+	}
+	return strings.Fields(string(raw)[closeParen+1:]), nil
+}
+
 // Alive reports whether pid is running and started at startTime. A start time of
 // zero means it was never recorded, and then the pid alone has to do.
+//
+// A zombie does not count. Its entry in /proc survives with the same start time
+// until the parent reaps it, so treating it as alive keeps a session listed and
+// accepting messages that nothing will ever deliver.
 func (r Reader) Alive(pid int, startTime uint64) bool {
 	if pid <= 0 {
 		return false
@@ -77,10 +102,13 @@ func (r Reader) Alive(pid int, startTime uint64) bool {
 	if err != nil {
 		return false
 	}
-	if startTime == 0 {
-		return true
+	if startTime != 0 && current != startTime {
+		return false
 	}
-	return current == startTime
+	if state, err := r.State(pid); err == nil && state == "Z" {
+		return false
+	}
+	return true
 }
 
 // Parent returns the parent pid of a process.

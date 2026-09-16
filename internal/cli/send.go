@@ -42,7 +42,7 @@ func handleSend(ctx *Context, call Call) error {
 
 	dir, err := state.Dir()
 	if err != nil {
-		return &FailedError{Message: err.Error()}
+		return &UsageError{Command: command, Message: err.Error()}
 	}
 
 	session, err := registry.Lookup(dir, target)
@@ -69,10 +69,18 @@ func handleSend(ctx *Context, call Call) error {
 		return err
 	}
 
+	// Reading stdin can take a while, and a session can end in that time. The
+	// epoch pins the message to this run of the name, so a later session that
+	// takes the same name does not receive somebody else's mail.
+	if _, err := registry.Lookup(dir, session.Name); errors.Is(err, registry.ErrNotFound) {
+		return unknownSessionError(dir, target)
+	}
+
 	message := inbox.Message{
 		ID:        inbox.NewID(),
 		From:      sender(),
 		To:        session.Name,
+		ToEpoch:   session.Epoch(),
 		Text:      text,
 		CreatedAt: time.Now(),
 	}
@@ -82,11 +90,24 @@ func handleSend(ctx *Context, call Call) error {
 
 	status, known := inbox.Await(dir, session.Name, message.ID, wait)
 	model := sendModel{ID: message.ID, To: session.Name, From: message.From}
-	if known {
+	switch {
+	case known && status.State != inbox.Pending:
 		model.State, model.Via, model.Detail = string(status.State), status.Via, status.Detail
-	} else {
+	default:
+		// No final answer. Promising a later delivery is only honest while the
+		// session is still there to make one; a session that ended between the
+		// lookup and now leaves the message with nobody to take it.
+		if _, err := registry.Lookup(dir, session.Name); errors.Is(err, registry.ErrNotFound) {
+			model.State = string(inbox.Failed)
+			model.Detail = "the session ended before the message was delivered"
+			break
+		}
 		model.State = string(inbox.Pending)
-		model.Detail = fmt.Sprintf("no result yet after %s; the session has it and will take it", wait)
+		if known && status.Detail != "" {
+			model.Detail = status.Detail
+		} else {
+			model.Detail = fmt.Sprintf("no result yet after %s; the session has it and will take it", wait)
+		}
 	}
 
 	line := sendLine(session, model)

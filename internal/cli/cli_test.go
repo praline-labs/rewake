@@ -2,8 +2,10 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -81,7 +83,7 @@ func TestLoosePositionalsAreRefused(t *testing.T) {
 }
 
 func TestHarnessArgumentsStayRaw(t *testing.T) {
-	result, err := parse([]string{"--name", "api", "claude", "--model", "haiku", "--", "--json"})
+	result, err := parse([]string{"--name", "api", "claude", "--model", "haiku", "--", "write the notes", "", "--json"})
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -91,9 +93,16 @@ func TestHarnessArgumentsStayRaw(t *testing.T) {
 	if got := result.Call.Flag("name", ""); got != "api" {
 		t.Errorf("name = %q, want api", got)
 	}
-	want := []string{"--model", "haiku", "--", "--json"}
-	if strings.Join(result.Call.Raw, " ") != strings.Join(want, " ") {
-		t.Errorf("raw = %v, want %v", result.Call.Raw, want)
+	// Compared element by element: joining them would hide a lost argument
+	// boundary and a dropped empty argument, which is how a prompt gets mangled.
+	want := []string{"--model", "haiku", "--", "write the notes", "", "--json"}
+	if len(result.Call.Raw) != len(want) {
+		t.Fatalf("raw = %q, want %q", result.Call.Raw, want)
+	}
+	for index := range want {
+		if result.Call.Raw[index] != want[index] {
+			t.Errorf("raw[%d] = %q, want %q", index, result.Call.Raw[index], want[index])
+		}
 	}
 	// A flag meant for the harness must not become a rewake flag.
 	if result.Call.Switch("json") {
@@ -154,6 +163,26 @@ func TestTableIsComplete(t *testing.T) {
 			t.Errorf("command %q is missing from the table", name)
 		}
 	}
+
+	// Two commands sharing one handler means one of them does the other's work.
+	// Launch commands are the exception: they share one closure and differ by
+	// the harness they carry, which is checked instead.
+	handlers := map[uintptr]string{}
+	for _, group := range Groups() {
+		for _, command := range group.Commands {
+			if command.Harness != nil {
+				if command.Harness.ID() != command.Name {
+					t.Errorf("command %q starts the harness %q", command.Name, command.Harness.ID())
+				}
+				continue
+			}
+			pointer := reflect.ValueOf(command.Handler).Pointer()
+			if other, taken := handlers[pointer]; taken {
+				t.Errorf("commands %q and %q share a handler", other, command.Name)
+			}
+			handlers[pointer] = command.Name
+		}
+	}
 }
 
 // Examples are copied verbatim by whoever reads them, so every example must be
@@ -174,6 +203,18 @@ func TestExamplesParse(t *testing.T) {
 				}
 				if result.Call.Command == nil || result.Call.Command.Name != command.Name {
 					t.Errorf("%s: example %q selects another command", command.Name, example)
+					continue
+				}
+				// The arguments have to survive the parse as well: an example
+				// that loses its target teaches a call that does nothing.
+				positionals := len(fields) - 2
+				for _, field := range fields[2:] {
+					if strings.HasPrefix(field, "--") {
+						positionals--
+					}
+				}
+				if !command.Raw && positionals > 0 && len(result.Call.Positionals) == 0 {
+					t.Errorf("%s: example %q lost its arguments in parsing", command.Name, example)
 				}
 			}
 		}
@@ -210,13 +251,48 @@ func splitExample(example string) []string {
 }
 
 func TestGuideJSONCarriesTheTable(t *testing.T) {
-	code, out, errOut := run("guide", "--json")
-	if code != ExitOK {
-		t.Fatalf("exit = %d (stderr: %s)", code, errOut)
-	}
-	for _, want := range []string{`"groups"`, `"flow"`, `"globalOptions"`, `"harnesses"`, `"claude"`, `"codex"`} {
-		if !strings.Contains(out, want) {
-			t.Errorf("guide --json is missing %q", want)
+	for _, argv := range [][]string{{"guide", "--json"}, {"--json"}} {
+		code, out, errOut := run(argv...)
+		if code != ExitOK {
+			t.Fatalf("%v: exit = %d (stderr: %s)", argv, code, errOut)
+		}
+
+		var model struct {
+			Groups []struct {
+				Commands []struct {
+					Name    string `json:"name"`
+					Options []struct {
+						Flag string `json:"flag"`
+					} `json:"options"`
+				} `json:"commands"`
+			} `json:"groups"`
+			Harnesses []string `json:"harnesses"`
+		}
+		if err := json.Unmarshal([]byte(out), &model); err != nil {
+			t.Fatalf("%v: the machine form is not JSON: %v", argv, err)
+		}
+
+		flags := map[string]bool{}
+		found := false
+		for _, group := range model.Groups {
+			for _, command := range group.Commands {
+				if command.Name != "send" {
+					continue
+				}
+				found = true
+				for _, option := range command.Options {
+					flags[option.Flag] = true
+				}
+			}
+		}
+		if !found {
+			t.Errorf("%v: the command table is missing from the machine form", argv)
+		}
+		if !flags["--wait"] {
+			t.Errorf("%v: send is listed without its flags", argv)
+		}
+		if len(model.Harnesses) == 0 {
+			t.Errorf("%v: no harnesses listed", argv)
 		}
 	}
 }
@@ -272,8 +348,14 @@ func TestListShowsALiveSession(t *testing.T) {
 	if code != ExitOK {
 		t.Fatalf("exit = %d (stderr: %s)", code, errOut)
 	}
-	if !strings.Contains(out, "api") || !strings.Contains(out, "claude") {
-		t.Errorf("list does not show the session: %q", out)
+	// The empty answer names a session too, in its hint, so the test asks for
+	// the line that only a listed session produces.
+	if strings.Contains(out, "No sessions are running") {
+		t.Fatalf("list reported nothing running: %q", out)
+	}
+	first := strings.Fields(strings.Split(out, "\n")[0])
+	if len(first) < 2 || first[0] != "api" || first[1] != "claude" {
+		t.Errorf("first line = %q, want the session name and its harness", out)
 	}
 }
 
@@ -308,6 +390,25 @@ func TestSendWithoutAServerIsPending(t *testing.T) {
 	waiting, err := filepath.Glob(filepath.Join(state.InboxPath(dir, "api"), "*.json"))
 	if err != nil || len(waiting) != 1 {
 		t.Fatalf("mailbox holds %v, want exactly one message (%v)", waiting, err)
+	}
+	raw, err := os.ReadFile(waiting[0])
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	var written struct {
+		To      string `json:"to"`
+		From    string `json:"from"`
+		Text    string `json:"text"`
+		ToEpoch string `json:"toEpoch"`
+	}
+	if err := json.Unmarshal(raw, &written); err != nil {
+		t.Fatalf("the waiting message is not readable: %v", err)
+	}
+	if written.Text != "hello" || written.To != "api" {
+		t.Errorf("message = %+v, want the text and target as sent", written)
+	}
+	if written.ToEpoch == "" {
+		t.Error("the message carries no epoch, so a later session with this name would receive it")
 	}
 }
 

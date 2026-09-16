@@ -36,7 +36,7 @@ func (codexHarness) Notes() []string {
 	return []string{
 		"Codex polls for queued messages every ten seconds, so delivery is not instant; the send command says so in its result.",
 		"A Codex session that has not exchanged a single message yet cannot accept one: such a message stays pending and lands after its first turn.",
-		"Arguments after the harness name are passed to codex untouched.",
+		"Arguments after the harness name are passed to codex untouched, with one exception: a --help written first asks rewake for this page instead of starting the harness.",
 	}
 }
 

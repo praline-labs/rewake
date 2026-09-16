@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"syscall"
 )
 
 // DirEnv names the environment variable that overrides the state directory.
@@ -120,27 +121,59 @@ func Verify(path string) error {
 func EnsureSubdir(path string) error { return ensureDir(path) }
 
 // WriteAtomic replaces a file in one step: a reader sees either the previous
-// content or the new one, never a half-written file.
+// content or the new one, never a half-written file. The content is flushed
+// before it is published and the directory after, so a crash cannot leave a
+// name pointing at bytes that were never written.
 func WriteAtomic(path string, data []byte) error {
-	dir := filepath.Dir(path)
-	temp, err := os.CreateTemp(dir, ".tmp-*")
+	name, err := writeTemp(filepath.Dir(path), data)
 	if err != nil {
 		return err
 	}
-	name := temp.Name()
 	defer os.Remove(name)
+
+	if err := os.Rename(name, path); err != nil {
+		return err
+	}
+	return syncDir(filepath.Dir(path))
+}
+
+// writeTemp writes data to a new file in dir and returns its name.
+func writeTemp(dir string, data []byte) (string, error) {
+	temp, err := os.CreateTemp(dir, ".tmp-*")
+	if err != nil {
+		return "", err
+	}
+	name := temp.Name()
 
 	if _, err := temp.Write(data); err != nil {
 		temp.Close()
-		return err
+		os.Remove(name)
+		return "", err
+	}
+	if err := temp.Sync(); err != nil {
+		temp.Close()
+		os.Remove(name)
+		return "", err
 	}
 	if err := temp.Close(); err != nil {
-		return err
+		os.Remove(name)
+		return "", err
 	}
 	if err := os.Chmod(name, 0o600); err != nil {
+		os.Remove(name)
+		return "", err
+	}
+	return name, nil
+}
+
+// syncDir flushes a directory entry, so a rename or a link survives a crash.
+func syncDir(path string) error {
+	dir, err := os.Open(path)
+	if err != nil {
 		return err
 	}
-	return os.Rename(name, path)
+	defer dir.Close()
+	return dir.Sync()
 }
 
 // ErrNameTaken is returned when a name is already published.
@@ -151,28 +184,41 @@ var ErrNameTaken = errors.New("name taken")
 // processes claiming one name cannot both believe they won.
 func PublishExclusive(path string, data []byte) error {
 	dir := filepath.Dir(path)
-	temp, err := os.CreateTemp(dir, ".tmp-*")
+	name, err := writeTemp(dir, data)
 	if err != nil {
 		return err
 	}
-	name := temp.Name()
 	defer os.Remove(name)
 
-	if _, err := temp.Write(data); err != nil {
-		temp.Close()
-		return err
-	}
-	if err := temp.Close(); err != nil {
-		return err
-	}
-	if err := os.Chmod(name, 0o600); err != nil {
-		return err
-	}
 	if err := os.Link(name, path); err != nil {
 		if errors.Is(err, os.ErrExist) {
 			return ErrNameTaken
 		}
 		return err
 	}
-	return nil
+	return syncDir(dir)
+}
+
+// WithNameLock runs fn while holding an exclusive lock on one session name.
+//
+// Claiming a name is not a single step when the previous owner is gone: the
+// record has to be read, judged dead and removed before a new one is linked in.
+// Without a lock two claimants can both pass that sequence, each deleting what
+// the other just published, and end up serving one mailbox from two processes.
+// The lock is an open file plus flock, so it is released even if the process is
+// killed, and a leftover lock file locks nothing.
+func WithNameLock(dir, name string, fn func() error) error {
+	path := filepath.Join(SessionsPath(dir), "."+name+".lock")
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX); err != nil {
+		return fmt.Errorf("could not lock the name %q: %w", name, err)
+	}
+	defer syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
+
+	return fn()
 }

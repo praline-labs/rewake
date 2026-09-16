@@ -122,6 +122,7 @@ func launchCommand(h harness.Harness) *Command {
 		Next:           []string{"rewake list", "rewake send <name> \"text\""},
 		Notes:          notes,
 		Raw:            true,
+		Harness:        h,
 		Handler:        handleLaunch(h),
 	}
 }

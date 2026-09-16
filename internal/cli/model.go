@@ -12,6 +12,8 @@ package cli
 import (
 	"io"
 	"strings"
+
+	"github.com/iiiokojiadbi/rewake/internal/harness"
 )
 
 // Option is a flag of a command, or a global flag.
@@ -55,6 +57,10 @@ type Command struct {
 	// Raw means everything after the command name belongs to the program this
 	// command starts, and rewake must not interpret it.
 	Raw bool
+	// Harness is what this command starts, for the commands that start one. It
+	// is here so the table can be checked against the catalogue: a launch
+	// command that starts the wrong harness is otherwise indistinguishable.
+	Harness harness.Harness
 	// Handler runs the command.
 	Handler func(*Context, Call) error
 }

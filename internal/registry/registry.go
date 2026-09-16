@@ -46,6 +46,9 @@ type Session struct {
 	StartedAt time.Time `json:"startedAt"`
 	// Socket is the inbox socket of harnesses that have one.
 	Socket string `json:"socket,omitempty"`
+	// OwnsSocket says this session created the socket path, and so may remove
+	// it when it ends.
+	OwnsSocket bool `json:"ownsSocket,omitempty"`
 	// CodexHome is the CODEX_HOME the session runs with, for harnesses that
 	// keep their state there.
 	CodexHome string `json:"codexHome,omitempty"`
@@ -55,9 +58,25 @@ type Session struct {
 // instead of running processes on the real one.
 var alive = proc.Alive
 
-// Alive reports whether the process serving this session is still running.
+// Alive reports whether this session can still be reached: both the process
+// serving the mailbox and the harness itself have to be running. A wrapper that
+// outlives its harness has nothing to deliver to, and a harness whose wrapper is
+// gone has nobody to deliver for it.
 func (s Session) Alive() bool {
-	return alive(s.ServicePID, s.ServiceStart)
+	if !alive(s.ServicePID, s.ServiceStart) {
+		return false
+	}
+	if s.HarnessPID != 0 && !alive(s.HarnessPID, s.HarnessStart) {
+		return false
+	}
+	return true
+}
+
+// Epoch identifies this run of a session name. A message carries the epoch of
+// the session it was written for, so a later session that happens to take the
+// same name does not receive somebody else's mail.
+func (s Session) Epoch() string {
+	return strconv.Itoa(s.ServicePID) + "." + strconv.FormatUint(s.ServiceStart, 10)
 }
 
 // Age is how long the session has been published.
@@ -66,12 +85,16 @@ func (s Session) Age() time.Duration { return time.Since(s.StartedAt) }
 // ErrNotFound is returned when no session answers to a name.
 var ErrNotFound = errors.New("no such session")
 
+// ErrUnusableName marks a name that cannot address a session, which is a wrong
+// call rather than a failure of the target.
+var ErrUnusableName = errors.New("unusable session name")
+
 // Publish claims a name for a session. When the name is taken by a session that
 // is no longer alive, the stale record is removed and the claim retried; a live
 // one refuses.
 func Publish(dir string, session Session) error {
 	if !state.ValidName(session.Name) {
-		return fmt.Errorf("%q is not a usable session name: use lower-case letters, digits, dot, dash or underscore, up to 32 characters", session.Name)
+		return fmt.Errorf("%w: %q. Use lower-case letters, digits, dot, dash or underscore, up to 32 characters", ErrUnusableName, session.Name)
 	}
 	encoded, err := encode(session)
 	if err != nil {
@@ -79,22 +102,54 @@ func Publish(dir string, session Session) error {
 	}
 	path := state.SessionPath(dir, session.Name)
 
+	// Claiming a free name is one atomic link. Taking over the name of a session
+	// that has ended is three steps — read, judge, remove — and those run under
+	// a lock: two claimants racing through them both delete what the other just
+	// published and end up serving one mailbox from two processes.
 	err = state.PublishExclusive(path, encoded)
-	if errors.Is(err, state.ErrNameTaken) {
+	if !errors.Is(err, state.ErrNameTaken) {
+		return err
+	}
+
+	return state.WithNameLock(dir, session.Name, func() error {
 		existing, loadErr := Load(dir, session.Name)
-		if loadErr == nil && existing.Alive() {
-			return fmt.Errorf("the name %q is taken by a live session (pid %d)", session.Name, existing.ServicePID)
+		switch {
+		case loadErr == nil && existing.Alive():
+			return &NameTakenError{Name: session.Name, PID: existing.ServicePID}
+		case loadErr == nil, errors.Is(loadErr, ErrNotFound):
+			// Either a leftover record of a session that ended, or a record
+			// that cannot be read at all; both are safe to replace here,
+			// because nothing else may touch the name while the lock is held.
+		default:
+			return loadErr
 		}
-		// The previous owner is gone: its record is a leftover, not an owner.
+
 		if removeErr := os.Remove(path); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
 			return removeErr
 		}
-		err = state.PublishExclusive(path, encoded)
-		if errors.Is(err, state.ErrNameTaken) {
-			return fmt.Errorf("the name %q was claimed by another session while starting", session.Name)
+		if err := state.PublishExclusive(path, encoded); err != nil {
+			if errors.Is(err, state.ErrNameTaken) {
+				return &NameTakenError{Name: session.Name}
+			}
+			return err
 		}
+		return nil
+	})
+}
+
+// NameTakenError says a session name belongs to somebody else. It is a distinct
+// type because the caller can act on it: an automatic name simply tries the next
+// one, while an explicit name is a wrong call and has to be reported as such.
+type NameTakenError struct {
+	Name string
+	PID  int
+}
+
+func (e *NameTakenError) Error() string {
+	if e.PID != 0 {
+		return fmt.Sprintf("the name %q is taken by a live session (pid %d)", e.Name, e.PID)
 	}
-	return err
+	return fmt.Sprintf("the name %q was claimed by another session while starting", e.Name)
 }
 
 // Update rewrites an existing record, for example once the harness process is
@@ -110,6 +165,9 @@ func Update(dir string, session Session) error {
 // Remove deletes a record. A record that is already gone is not an error: the
 // caller wanted it gone.
 func Remove(dir, name string) error {
+	if !state.ValidName(name) {
+		return nil
+	}
 	err := os.Remove(state.SessionPath(dir, name))
 	if errors.Is(err, os.ErrNotExist) {
 		return nil
@@ -119,6 +177,12 @@ func Remove(dir, name string) error {
 
 // Load reads one record without judging whether it is alive.
 func Load(dir, name string) (Session, error) {
+	// A name becomes a file path, so an unusable one must never reach the file
+	// system: "../../victim" would otherwise read — and, through Lookup, delete
+	// — a file outside the state directory.
+	if !state.ValidName(name) {
+		return Session{}, ErrNotFound
+	}
 	raw, err := os.ReadFile(state.SessionPath(dir, name))
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -199,7 +263,7 @@ func Names(dir string) []string {
 func ChooseName(dir, explicit, base string) (string, error) {
 	if explicit != "" {
 		if !state.ValidName(explicit) {
-			return "", fmt.Errorf("%q is not a usable session name: use lower-case letters, digits, dot, dash or underscore, up to 32 characters", explicit)
+			return "", fmt.Errorf("%w: %q. Use lower-case letters, digits, dot, dash or underscore, up to 32 characters", ErrUnusableName, explicit)
 		}
 		return explicit, nil
 	}

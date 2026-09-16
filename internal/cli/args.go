@@ -93,7 +93,7 @@ func parse(argv []string) (parsed, error) {
 	for index < len(argv) {
 		token := argv[index]
 		switch {
-		case token == "--":
+		case token == "--" && !endOfFlags:
 			endOfFlags = true
 			index++
 		case !endOfFlags && strings.HasPrefix(token, "--"):

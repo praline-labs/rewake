@@ -32,6 +32,10 @@ type Message struct {
 	From string `json:"from"`
 	// To is the receiving session.
 	To string `json:"to"`
+	// ToEpoch names the run of that session the message was written for. A name
+	// can be reused once its session ends, and mail addressed to the previous
+	// tenant must not be handed to the next one.
+	ToEpoch string `json:"toEpoch,omitempty"`
 	// Text is what the receiving agent will read.
 	Text string `json:"text"`
 	// CreatedAt is when the sender wrote it.
@@ -69,9 +73,11 @@ type Status struct {
 
 // NewID returns an identifier that sorts by time and never repeats. The time
 // prefix gives mailbox order; the random tail keeps two senders in the same
-// millisecond apart.
+// millisecond apart. The tail is six bytes rather than four because a short
+// piece of it is shown to the receiver, and that piece is what keeps two
+// identical messages from being taken for a repeat.
 func NewID() string {
-	var tail [4]byte
+	var tail [6]byte
 	_, _ = rand.Read(tail[:])
 	return fmt.Sprintf("%013d-%s", time.Now().UnixMilli(), hex.EncodeToString(tail[:]))
 }
@@ -179,5 +185,11 @@ func archive(dir, to, id string) error {
 		return err
 	}
 	from := filepath.Join(state.InboxPath(dir, to), id+".json")
-	return os.Rename(from, filepath.Join(done, id+".json"))
+	if err := os.Rename(from, filepath.Join(done, id+".json")); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return err
+	}
+	return nil
 }

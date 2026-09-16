@@ -19,7 +19,7 @@ type listModel struct {
 func handleList(ctx *Context, _ Call) error {
 	dir, err := state.Dir()
 	if err != nil {
-		return &FailedError{Message: err.Error()}
+		return &UsageError{Message: err.Error()}
 	}
 	sessions, err := registry.List(dir)
 	if err != nil {
@@ -55,7 +55,7 @@ type whoamiModel struct {
 func handleWhoami(ctx *Context, _ Call) error {
 	dir, err := state.Dir()
 	if err != nil {
-		return &FailedError{Message: err.Error()}
+		return &UsageError{Message: err.Error()}
 	}
 
 	name := os.Getenv(state.SessionEnv)

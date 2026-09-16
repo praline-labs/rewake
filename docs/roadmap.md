@@ -90,6 +90,33 @@ defects that no test had:
   the reply, which then addressed a session called `shell · 33f2`. The header now
   keeps the name on a line of its own and spells out the command to answer with.
 
+## Review round after milestone 3 — done, September 16, 2026
+
+An external reviewer read the three commits and reported twenty-two defects and
+eighteen tests that would stay green if what they claim to check were broken.
+All of it is fixed; the round is worth recording because of what it found that
+neither the tests nor the live run did:
+
+- a session name reached the file system unchecked, so `send ../../victim`
+  deleted a JSON file outside the state directory while reporting no such
+  session;
+- `.gitignore` excluded `cmd/rewake`, so none of the three commits contained the
+  program's entry point — the local build worked only because the file was there
+  untracked;
+- taking over the name of a session that had ended was three unsynchronised
+  steps, and two wrappers could both win it and serve one mailbox;
+- a mailbox belonged to a name rather than to a run of it, so mail for a session
+  that had ended was handed to the next session taking that name;
+- a failed launch removed the socket of a live session, and any connection error
+  at all was taken as proof its owner was gone;
+- signals were caught after the child was started, so a SIGTERM in that window
+  killed the wrapper and left the harness without a mailbox.
+
+Fixing these added the per-name lock, the session epoch carried by every
+message, socket ownership, and tests for `internal/wrap` and the Claude Code
+adapter, which had none. One fix — the epoch — was itself broken: a scripted
+edit had silently not applied, and the new test caught it.
+
 ## Milestone 4. Codex: launch and delivery
 
 - `internal/harness/codex`: finding the current thread from open lock files,

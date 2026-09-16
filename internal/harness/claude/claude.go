@@ -78,7 +78,7 @@ func (claudeHarness) Examples() []string {
 func (claudeHarness) Notes() []string {
 	return []string{
 		"Delivery goes through the session inbox socket, so a message arrives within seconds and wakes an idle session.",
-		"Arguments after the harness name are passed to claude untouched, including --help.",
+		"Arguments after the harness name are passed to claude untouched, with one exception: a --help written first asks rewake for this page instead of starting the harness.",
 		"An identical message from the same sender within thirty seconds is dropped by Claude Code itself; rewake puts a short id in every message to keep them apart.",
 	}
 }
@@ -86,10 +86,12 @@ func (claudeHarness) Notes() []string {
 func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, error) {
 	args := append([]string{}, request.Args...)
 	socket := request.Socket
+	owns := false
 
 	if harness.HasFlag(args, socketFlag) {
 		// The caller named their own socket. Their flag wins, and delivery has
-		// to find it from the record, so read it back rather than guess.
+		// to find it from the record, so read it back rather than guess. It is
+		// theirs, not ours: this session never removes that file.
 		socket = flagValue(args, socketFlag)
 	} else {
 		if len(socket) > maxSocketPath {
@@ -100,26 +102,31 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 		if err := removeStaleSocket(socket); err != nil {
 			return harness.LaunchPlan{}, err
 		}
-		args = append(args, socketFlag, socket)
+		owns = true
+		args = harness.AddFlags(args, socketFlag, socket)
 	}
 
 	if request.Intro && !harness.HasFlag(args, introFlag) {
-		args = append(args, introFlag, harness.Intro(request.Name))
+		args = harness.AddFlags(args, introFlag, harness.Intro(request.Name))
 	}
 	if !harness.HasFlag(args, toolFlag) {
-		args = append(args, toolFlag, "Bash(rewake:*)")
+		args = harness.AddFlags(args, toolFlag, "Bash(rewake:*)")
 	}
 
 	return harness.LaunchPlan{
-		Command: "claude",
-		Args:    args,
-		Env:     harness.SessionEnv(request, childMarkers),
-		Socket:  socket,
+		Command:    "claude",
+		Args:       args,
+		Env:        harness.SessionEnv(request, childMarkers),
+		Socket:     socket,
+		OwnsSocket: owns,
 	}, nil
 }
 
 // maxSocketPath is the limit the kernel puts on a unix socket path.
 const maxSocketPath = 103
+
+// maxLine is the longest line the session socket accepts, protocol side.
+const maxLine = 1 << 20
 
 func (claudeHarness) Deliver(ctx context.Context, session registry.Session, message inbox.Message) inbox.Result {
 	if session.Socket == "" {
@@ -133,6 +140,17 @@ func (claudeHarness) Deliver(ctx context.Context, session registry.Session, mess
 	})
 	if err != nil {
 		return inbox.Result{State: inbox.Failed, Detail: "the message could not be encoded: " + err.Error()}
+	}
+	// Claude Code drops a line longer than this and closes the connection, so a
+	// write that succeeds would otherwise be reported as delivered while the
+	// receiver never saw it. The limit is on the encoded line, not the text: JSON
+	// escaping can grow a message several times over.
+	if len(line)+1 > maxLine {
+		return inbox.Result{
+			State: inbox.Failed,
+			Detail: fmt.Sprintf("the message is %d bytes once encoded, over the %d byte limit of the session socket; send less text or a path to a file",
+				len(line)+1, maxLine),
+		}
 	}
 
 	dialer := net.Dialer{Timeout: dialTimeout}
@@ -169,9 +187,12 @@ type payload struct {
 	Content string `json:"content"`
 }
 
-// removeStaleSocket clears a socket file left by a session that is gone. A live
-// one is left alone: Claude Code refuses to bind over it, and that refusal is
-// the right outcome.
+// removeStaleSocket clears a socket file left by a session that is gone.
+//
+// Only one error proves the owner is gone: connection refused, which the kernel
+// returns when a socket file has no listener behind it. Every other failure —
+// a full backlog, a timeout, a permission error — describes this moment, not the
+// owner, and deleting the file then cuts off a session that is still running.
 func removeStaleSocket(path string) error {
 	info, err := os.Lstat(path)
 	if err != nil {
@@ -180,10 +201,14 @@ func removeStaleSocket(path string) error {
 	if info.Mode()&os.ModeSocket == 0 {
 		return fmt.Errorf("%s exists and is not a socket; remove it or use another session name", path)
 	}
+
 	connection, err := net.DialTimeout("unix", path, 200*time.Millisecond)
 	if err == nil {
 		connection.Close()
 		return fmt.Errorf("%s is a live socket; another session is using this name", path)
+	}
+	if !errors.Is(err, syscall.ECONNREFUSED) {
+		return fmt.Errorf("%s exists and could not be checked (%v); leaving it alone", path, err)
 	}
 	return os.Remove(path)
 }

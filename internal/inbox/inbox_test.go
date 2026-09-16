@@ -64,11 +64,21 @@ func TestDeliveredMessageIsArchivedWithItsStatus(t *testing.T) {
 		seen = m.Text
 		return Result{State: Delivered, Via: "socket"}
 	}}
+	// The status is captured while the server runs: stopping it refuses whatever
+	// is still waiting, which would rewrite the status this test is about.
+	var status Status
 	serveUntil(t, server, func() bool {
-		status, ok := ReadStatus(dir, "api", sent.ID)
-		return ok && status.State == Delivered
+		captured, ok := ReadStatus(dir, "api", sent.ID)
+		if ok && captured.State == Delivered {
+			status = captured
+			return true
+		}
+		return false
 	})
 
+	if status.Via != "socket" {
+		t.Errorf("status = %+v, want the delivery path recorded", status)
+	}
 	if seen != sent.Text {
 		t.Errorf("delivered text = %q, want %q", seen, sent.Text)
 	}
@@ -99,7 +109,7 @@ func TestPendingMessageStaysAndIsRetried(t *testing.T) {
 		return Result{State: Delivered, Via: "socket"}
 	}}
 
-	// The retry interval is two seconds, so this also proves the wait is real.
+	began := time.Now()
 	serveUntil(t, server, func() bool {
 		status, ok := ReadStatus(dir, "api", sent.ID)
 		return ok && status.State == Delivered
@@ -107,6 +117,11 @@ func TestPendingMessageStaysAndIsRetried(t *testing.T) {
 
 	if attempts < 2 {
 		t.Errorf("attempts = %d, want the message retried", attempts)
+	}
+	// Pending means the receiver cannot take it yet, so retrying four times a
+	// second buys nothing and costs a connection attempt each time.
+	if waited := time.Since(began); waited < retryInterval {
+		t.Errorf("the retry came after %v, want it to wait at least %v", waited, retryInterval)
 	}
 }
 
@@ -143,13 +158,15 @@ func TestPendingReasonIsReadableBeforeDelivery(t *testing.T) {
 func TestExpiredMessageFails(t *testing.T) {
 	dir := stateDir(t)
 	old := message("stale")
-	old.CreatedAt = time.Now().Add(-time.Hour)
+	// Older than the TTL under test, younger than the default: a server that
+	// ignored its own TTL would still call this one fresh.
+	old.CreatedAt = time.Now().Add(-5 * time.Second)
 	if err := Put(dir, old); err != nil {
 		t.Fatalf("put: %v", err)
 	}
 
 	delivered := false
-	server := &Server{Dir: dir, Name: "api", TTL: time.Minute, Deliver: func(context.Context, Message) Result {
+	server := &Server{Dir: dir, Name: "api", TTL: time.Second, Deliver: func(context.Context, Message) Result {
 		delivered = true
 		return Result{State: Delivered}
 	}}
@@ -194,6 +211,12 @@ func TestWaitingMessagesFailWhenTheSessionEnds(t *testing.T) {
 	if !ok || status.State != Failed {
 		t.Fatalf("status = %+v, want failed", status)
 	}
+	// It also has to leave the mailbox: a refused message left waiting is
+	// delivered by the next session that takes this name.
+	waiting, err := list(dir, "api")
+	if err != nil || len(waiting) != 0 {
+		t.Fatalf("mailbox holds %v (%v), want it cleared", waiting, err)
+	}
 }
 
 func TestAwaitReturnsTheFinalStatus(t *testing.T) {
@@ -203,6 +226,11 @@ func TestAwaitReturnsTheFinalStatus(t *testing.T) {
 		t.Fatalf("put: %v", err)
 	}
 
+	// A pending status is written first: Await must keep waiting for the final
+	// one rather than return the first thing it sees.
+	if err := writeStatus(dir, "api", sent.ID, Result{State: Pending, Detail: "not listening yet"}); err != nil {
+		t.Fatalf("status: %v", err)
+	}
 	go func() {
 		time.Sleep(200 * time.Millisecond)
 		_ = writeStatus(dir, "api", sent.ID, Result{State: Delivered, Via: "socket"})
@@ -216,8 +244,14 @@ func TestAwaitReturnsTheFinalStatus(t *testing.T) {
 
 func TestAwaitGivesUpWithoutAStatus(t *testing.T) {
 	dir := stateDir(t)
-	if _, ok := Await(dir, "api", "missing", 200*time.Millisecond); ok {
+	began := time.Now()
+	if _, ok := Await(dir, "api", "missing", 500*time.Millisecond); ok {
 		t.Error("Await reported a status that was never written")
+	}
+	// It has to wait out the time it was given: returning at once would report
+	// a healthy delivery as no answer.
+	if waited := time.Since(began); waited < 400*time.Millisecond {
+		t.Errorf("Await gave up after %v, want it to wait the full timeout", waited)
 	}
 }
 
@@ -227,5 +261,16 @@ func TestIDsSortByTime(t *testing.T) {
 	second := NewID()
 	if !(first < second) {
 		t.Errorf("ids do not sort by time: %q then %q", first, second)
+	}
+
+	// Two senders in the same millisecond must still get different ids: equal
+	// ones would have one message overwrite the other in the mailbox.
+	seen := map[string]bool{}
+	for range 1000 {
+		id := NewID()
+		if seen[id] {
+			t.Fatalf("id %q was produced twice", id)
+		}
+		seen[id] = true
 	}
 }
