@@ -34,7 +34,7 @@ func handleList(ctx *Context, _ Call) error {
 		sessions[index].Room = room
 		sessions[index].Role = role.Of(sessions[index].Role).ID
 	}
-	return printValue(ctx, listModel{Directory: filepath.Dir(dir), Room: room, Sessions: sessions}, func() []string {
+	return printValue(ctx, listModel{Directory: state.RootForRoom(dir), Room: room, Sessions: sessions}, func() []string {
 		if len(sessions) == 0 {
 			return []string{
 				fmt.Sprintf("No sessions are running in room %s.", room),
@@ -67,7 +67,7 @@ func handleWhoami(ctx *Context, _ Call) error {
 	}
 
 	name := os.Getenv(state.SessionEnv)
-	model := whoamiModel{Name: name, Room: filepath.Base(dir), Directory: filepath.Dir(dir), Managed: name != ""}
+	model := whoamiModel{Name: name, Room: filepath.Base(dir), Directory: state.RootForRoom(dir), Managed: name != ""}
 	if name != "" {
 		session, _, err := ownRun(dir)
 		if err != nil {

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/proc"
+	"github.com/iiiokojiadbi/rewake/internal/registry"
 )
 
 // lockDir holds one file per thread a Codex process is writing to.
@@ -106,4 +107,12 @@ func threadOf(processes []int, prefix string) (string, error) {
 	}
 	sort.Slice(candidates, func(i, j int) bool { return candidates[i].at.After(candidates[j].at) })
 	return candidates[0].thread, nil
+}
+
+func (codexHarness) Thread(session registry.Session) (string, error) {
+	home := session.CodexHome
+	if home == "" {
+		home = Home()
+	}
+	return CurrentThread(session.HarnessPID, home)
 }

@@ -12,10 +12,9 @@ import (
 // Git in PATH at launch, and grants only the per-worktree and common metadata
 // directories rather than their parent or the other worktrees' checkouts.
 func gitMetadataDirectories(cwd string) ([]string, error) {
-	entry := filepath.Join(cwd, ".git")
-	info, err := os.Lstat(entry)
+	entry, info, err := findGitEntry(cwd)
 	if err != nil {
-		return nil, fmt.Errorf("cannot inspect %s: %w", entry, err)
+		return nil, err
 	}
 	directory := entry
 	if !info.IsDir() {
@@ -23,15 +22,21 @@ func gitMetadataDirectories(cwd string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		directory = resolveGitPath(cwd, pointer)
+		directory = resolveGitPath(filepath.Dir(entry), pointer)
 	}
 	directory, err = realGitDirectory(directory)
 	if err != nil {
 		return nil, err
 	}
+	if err := validateGitMetadata(directory, false); err != nil {
+		return nil, err
+	}
 	directories := []string{directory}
 	commonFile := filepath.Join(directory, "commondir")
 	if _, err := os.Lstat(commonFile); os.IsNotExist(err) {
+		if err := validateGitMetadata(directory, true); err != nil {
+			return nil, err
+		}
 		return directories, nil
 	} else if err != nil {
 		return nil, fmt.Errorf("cannot inspect %s: %w", commonFile, err)
@@ -42,6 +47,9 @@ func gitMetadataDirectories(cwd string) ([]string, error) {
 	}
 	common, err := realGitDirectory(resolveGitPath(directory, commonPath))
 	if err != nil {
+		return nil, err
+	}
+	if err := validateGitMetadata(common, true); err != nil {
 		return nil, err
 	}
 	if common != directory {
@@ -103,4 +111,39 @@ func readGitPath(path, prefix string) (string, error) {
 		return "", fmt.Errorf("Git pointer %s has an invalid path", path)
 	}
 	return value, nil
+}
+
+// Stop at the nearest .git, including an invalid pointer: falling back to an
+// outer repository would grant unrelated metadata to a broken nested checkout.
+func findGitEntry(cwd string) (string, os.FileInfo, error) {
+	for directory := cwd; ; directory = filepath.Dir(directory) {
+		entry := filepath.Join(directory, ".git")
+		info, err := os.Lstat(entry)
+		if err == nil {
+			return entry, info, nil
+		}
+		if !os.IsNotExist(err) {
+			return "", nil, fmt.Errorf("cannot inspect %s: %w", entry, err)
+		}
+		if filepath.Dir(directory) == directory {
+			return "", nil, fmt.Errorf("no repository metadata found above %s", cwd)
+		}
+	}
+}
+
+// Worktree-private metadata has HEAD, but objects and refs live in commondir.
+// Merely existing is not enough: a pointer to .. must not grant its whole parent.
+func validateGitMetadata(directory string, shared bool) error {
+	head, err := os.Lstat(filepath.Join(directory, "HEAD"))
+	if err != nil || !head.Mode().IsRegular() {
+		return fmt.Errorf("Git metadata directory %s has no regular HEAD file", directory)
+	}
+	if shared {
+		for _, name := range []string{"objects", "refs"} {
+			if _, err := realGitDirectory(filepath.Join(directory, name)); err != nil {
+				return fmt.Errorf("invalid shared Git metadata: %w", err)
+			}
+		}
+	}
+	return nil
 }

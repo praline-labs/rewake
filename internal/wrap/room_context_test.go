@@ -36,7 +36,7 @@ func TestTheHarnessReceivesItsRoomAndElectedRole(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(raw) != filepath.Dir(dir)+"\nred\n" {
+	if string(raw) != state.RootForRoom(dir)+"\nred\n" {
 		t.Errorf("child environment=%q", raw)
 	}
 	if fake.launch.Room != "red" || fake.launch.Role.ID != "main" || !fake.launch.Role.Silent || !fake.launch.Role.GitWrite {
@@ -68,7 +68,7 @@ func TestEachRoomHasItsOwnMain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	other, err := state.RoomDir(filepath.Dir(dir), "other")
+	other, err := state.RoomDir(state.RootForRoom(dir), "other")
 	if err != nil {
 		t.Fatal(err)
 	}

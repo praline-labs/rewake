@@ -20,7 +20,7 @@ from the code.
 There is no daemon. Each wrapper services exactly one mailbox: its own
 session's. Everything the processes share is files under the state directory,
 `REWAKE_DIR`, 0700, checked on every open. Each room has its own subdirectory;
-the paths below are relative to `<REWAKE_DIR>/<room>/`:
+the paths below are relative to `<REWAKE_DIR>/rooms/<room>/`:
 
 ```
 sessions/<name>.json             who is running: room, role, reason, pids, cwd, harness details
@@ -32,6 +32,7 @@ inbox/<name>/done/<id>.json      read or failed; swept after a day
 inbox/<name>/awaiting/<epoch>/<peer>   who is owed a report by this run
 inbox/<name>/answering/<id>      a send --question is waiting for this answer
 inbox/<name>/received/<id>       that question's answer was printed
+inbox/<name>/threads/<id>        selected delivery thread, when supported
 inbox/<name>/.lock               the mailbox lock, one flock for every state change
 sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
 ```
@@ -67,8 +68,10 @@ sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
      `-c notify=["rewake","turn-ended"]` — each only when `config.toml` does not
      mention the key at all, because these keys replace rather than add. A
      silent role gets no `notify`. Main and write also append `--add-dir` for
-     the repository's Git metadata. `-C`/`--cd` chooses the effective cwd; a
-     `.git` pointer and `commondir` identify worktree and submodule metadata.
+     the repository's Git metadata. `-C`/`--cd` chooses the effective cwd; the
+     nearest parent `.git` identifies the repository. Its pointer and
+     `commondir` resolve worktree/submodule metadata; structural Git markers are
+     checked before any directory is added.
      Existing roots, selected profiles and the caller's `--add-dir` flags stay
      intact. If the metadata cannot be resolved, a note says which directories
      the caller must supply. Sandbox mode, tmp and network policy are unchanged.
@@ -249,3 +252,18 @@ question to a silent role.
 | the main session is asked a question | refused before publication | exit 2 with a hint |
 | a process of an ended run | its epoch no longer holds the name | `inbox` and `send` refuse |
 | Claude Code's socket not yet up | `ENOENT` while the harness lives | `pending`, then delivered |
+
+## Reports across conversation changes
+
+A delivery thread is recorded before an owed task becomes readable, then used
+for the actual queue target. This covers readers that fetch mail before the
+notice call returns. The context stays alongside the task across read/status
+updates and remains while a report is owed.
+
+A `/new` changes the conversation without changing the wrapper epoch. At turn
+end, the hook compares the current thread with the delivery thread of every
+message in `inReplyTo`. Any known mismatch adds `threadChanged: true` to the
+report. Inbox prints a warning beneath the result; a waiting question preserves
+it too. No message is automatically resent and no wait is discarded because of
+the change. Missing context cannot prove a change; harnesses without thread
+tracking omit the field.

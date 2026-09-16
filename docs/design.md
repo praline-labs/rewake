@@ -62,7 +62,7 @@ Created with 0700.
 
 ```
 <REWAKE_DIR>/
-  <room>/
+  rooms/<room>/
     .launch.lock              serializes role choice and name publication
     sessions/<name>.json       session record
     inbox/<name>/<id>.json     waiting for delivery
@@ -71,6 +71,7 @@ Created with 0700.
     inbox/<name>/done/         read and failed messages
     inbox/<name>/answering/<id> renewable question reservation
     inbox/<name>/received/<id> successful answer output
+    inbox/<name>/threads/<id>  selected delivery thread, when supported
     inbox/<name>/awaiting/<epoch>/<peer> reports owed by this run
     sock/<name>.<epoch>.sock   one inbound socket per run
 ```
@@ -88,13 +89,15 @@ in another room. Commands inherit `REWAKE_ROOM`; a shell without it uses
 
 Room names use the session-name syntax. Names are unique within a room and can
 repeat in different rooms. List, send, inbox, whoami, turn reports and delivery
-open only that room's state tree. There is no cross-room address and no `--room`
+open only that room's state tree below `rooms/`. There is no cross-room address and no `--room`
 option on messaging or identity commands. List shows room and role on every
 row; its JSON records include both. Whoami includes the room and verifies its
 session epoch before describing a registered identity.
 
-Old `sessions`, `inbox` and `sock` entries directly in the shared root are
-ignored. There is no compatibility scan or fallback: the owner restarts those
+The `rooms/` namespace keeps even rooms named `inbox`, `sessions` or `sock`
+separate from old root-level state. Old entries directly in the shared root are
+ignored. Registry readers also reject JSON without a process pid and start time;
+such files are neither treated as sessions nor pruned. There is no compatibility scan or fallback: the owner restarts those
 sessions, and an old record must not appear in a new room by accident.
 
 ### Session record
@@ -112,7 +115,7 @@ sessions, and an old record must not appear in a new room by accident.
   "harnessStart": 1671402,
   "cwd": "/home/u/code/x",
   "startedAt": "2026-09-16T00:08:03Z",
-  "socket": "/tmp/rewake-1000/default/sock/claude-2.12345.1671399.sock"
+  "socket": "/tmp/rewake-1000/rooms/default/sock/claude-2.12345.1671399.sock"
 }
 ```
 

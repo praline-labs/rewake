@@ -124,9 +124,13 @@ func (codexHarness) Deliver(ctx context.Context, session registry.Session, messa
 		home = Home()
 	}
 
-	thread, err := CurrentThread(session.HarnessPID, home)
-	if err != nil {
-		return inbox.Result{State: inbox.Pending, Detail: err.Error()}
+	thread := message.DeliveryThread
+	if thread == "" {
+		var err error
+		thread, err = CurrentThread(session.HarnessPID, home)
+		if err != nil {
+			return inbox.Result{State: inbox.Pending, Detail: err.Error()}
+		}
 	}
 
 	callCtx, cancel := context.WithTimeout(ctx, queueTimeout)

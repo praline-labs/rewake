@@ -47,7 +47,7 @@ List and identity commands use the inherited room and accept no `--room` flag.
   exception: a `--help` written first asks rewake for the command's help page
   instead of starting the harness. `rewake claude --model x --help` still reaches
   the harness.
-- Add `--messaging-socket-path <root>/<room>/sock/<name>.<epoch>.sock` unless the user passed
+- Add `--messaging-socket-path <root>/rooms/<room>/sock/<name>.<epoch>.sock` unless the user passed
   their own; before launch, remove a stale socket file at the same path.
 - Add `--append-system-prompt <intro>` (turned off by `--no-intro`).
 - Add `--settings` with a Stop hook that runs `rewake turn-ended` (see "The end
@@ -78,10 +78,13 @@ List and identity commands use the inherited room and accept no `--room` flag.
   replaced. A caller's existing `--add-dir` flags remain, including duplicates.
   The selected sandbox policy still decides whether added roots are writable.
 - The effective cwd honors `-C`/`--cd`, including joined forms, before `--`.
-  For an ordinary repository, the added directory is `<cwd>/.git`. A worktree
-  or submodule has a `.git` file: rewake reads its `gitdir: <path>` relative to
-  the checkout, then reads `commondir` relative to that metadata directory when
-  present. Both per-worktree and shared metadata are added, without granting
+  The search walks from cwd towards the filesystem root, stopping at the first
+  `.git`, even when it is invalid. For an ordinary repository the added directory
+  is `<repository>/.git`. A worktree or submodule has a `.git` file: rewake
+  reads its `gitdir: <path>` relative to the directory containing that pointer, then reads `commondir` relative to that metadata directory when
+  present. The gitdir must have a regular `HEAD`; shared metadata must also have `HEAD`,
+  `objects/` and `refs/`. A worktree-private gitdir need not have objects or refs.
+  Both per-worktree and shared metadata are added, without granting
   their parent directories or other checkouts. Discovery does not invoke Git.
 - A missing or malformed pointer, a non-directory target or a symlink in the
   metadata path leaves the grant out with a one-line reason and a suggestion

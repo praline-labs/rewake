@@ -31,6 +31,8 @@ func TestGitPointersGrantTheActualMetadataDirectories(t *testing.T) {
 			if err := os.MkdirAll(metadata, 0700); err != nil {
 				t.Fatal(err)
 			}
+			populateGitMetadata(t, common, true)
+			populateGitMetadata(t, metadata, true)
 			pointer := "../main.git/worktrees/branch"
 			if kind == "absolute worktree" {
 				pointer = metadata
@@ -66,6 +68,7 @@ func TestMalformedGitPointersNeverGrantPartialAccess(t *testing.T) {
 			if err := os.Mkdir(metadata, 0700); err != nil {
 				t.Fatal(err)
 			}
+			populateGitMetadata(t, metadata, true)
 			pointer := "gitdir: ../metadata\n"
 			switch kind {
 			case "bad prefix":
@@ -156,7 +159,15 @@ func TestMetadataResolutionMatchesGitLayouts(t *testing.T) {
 	linked := filepath.Join(base, "linked")
 	git(main, "worktree", "add", "-b", "linked", linked)
 	git(main, "submodule", "add", source, "child")
-	for _, cwd := range []string{main, linked, filepath.Join(main, "child")} {
+	checkouts := []string{main, linked, filepath.Join(main, "child")}
+	for _, checkout := range append([]string{}, checkouts...) {
+		nested := filepath.Join(checkout, "src", "nested")
+		if err := os.MkdirAll(nested, 0700); err != nil {
+			t.Fatal(err)
+		}
+		checkouts = append(checkouts, nested)
+	}
+	for _, cwd := range checkouts {
 		paths := strings.Split(git(cwd, "rev-parse", "--path-format=absolute", "--git-dir", "--git-common-dir"), "\n")
 		expected := paths[:1]
 		if paths[1] != paths[0] {
@@ -165,6 +176,18 @@ func TestMetadataResolutionMatchesGitLayouts(t *testing.T) {
 		plan := gitLaunch(t, role.Write, "-C", cwd)
 		if got := gitRoots(plan.Args); strings.Join(got, "\x00") != strings.Join(expected, "\x00") {
 			t.Errorf("cwd=%s roots=%q want=%q notes=%q", cwd, got, expected, plan.Notes)
+		}
+	}
+}
+
+func populateGitMetadata(t *testing.T, directory string, shared bool) {
+	t.Helper()
+	writeGitPointer(t, filepath.Join(directory, "HEAD"), "ref: refs/heads/main\n")
+	if shared {
+		for _, name := range []string{"objects", "refs"} {
+			if err := os.MkdirAll(filepath.Join(directory, name), 0700); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 }

@@ -147,6 +147,15 @@ twelve variables:
 
 ### End of a turn
 
+- `/new` changes the active thread without restarting the wrapper or changing
+  its epoch. The old and new thread locks may remain open; the existing tracker
+  chooses the newest lock in the nearest process generation. A live owner run
+  on September 16, 2026 showed that an old task's wait can survive `/new` and
+  receive the new thread's first final reply. The hook now marks known delivery
+  versus current-thread mismatches; it never clears waits or resends work.
+  **[source: snapshot 44b9011; owner-observed conversation switch; fake-harness
+  regression verifies the warning without a model call]**
+
 - `notify = ["prog", ...]` runs the program after every turn with a JSON
   argument appended last: `type: "agent-turn-complete"`, `thread-id`,
   `turn-id`, `cwd`, `client`, `input-messages`, `last-assistant-message`. It can

@@ -44,6 +44,10 @@ type Message struct {
 	// questions its sender read during the turn that ended. A sender blocked on
 	// a question recognises its answer by this.
 	InReplyTo []string `json:"inReplyTo,omitempty"`
+	// ThreadChanged warns that a report may belong to a different conversation.
+	ThreadChanged bool `json:"threadChanged,omitempty"`
+	// DeliveryThread is pinned before readability and used by the adapter.
+	DeliveryThread string `json:"-"`
 	// Text is what the receiving agent will read.
 	Text string `json:"text"`
 	// CreatedAt is when the sender wrote it.

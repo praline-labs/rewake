@@ -19,7 +19,7 @@ func TestRoomsHaveSeparateStateTrees(t *testing.T) {
 		if want == "" {
 			want = "default"
 		}
-		if dir != filepath.Join(root, want) {
+		if dir != filepath.Join(root, "rooms", want) {
 			t.Errorf("room=%q dir=%q", room, dir)
 		}
 		for _, sub := range []string{"sessions", "inbox", "sock"} {
@@ -46,10 +46,10 @@ func TestInvalidRoomsCannotEscapeTheStateRoot(t *testing.T) {
 func TestRoomDirectoriesRefuseSymlinks(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "state")
 	t.Setenv(DirEnv, root)
-	if err := os.Mkdir(root, 0700); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, "rooms"), 0700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink(t.TempDir(), filepath.Join(root, "red")); err != nil {
+	if err := os.Symlink(t.TempDir(), filepath.Join(root, "rooms", "red")); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv(RoomEnv, "red")

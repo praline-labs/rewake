@@ -39,7 +39,11 @@ func RoomDir(root, room string) (string, error) {
 	if err := Verify(root); err != nil {
 		return "", err
 	}
-	path := filepath.Join(root, room)
+	rooms := filepath.Join(root, "rooms")
+	if err := EnsureSubdir(rooms); err != nil {
+		return "", err
+	}
+	path := filepath.Join(rooms, room)
 	if err := EnsureSubdir(path); err != nil {
 		return "", err
 	}
@@ -56,3 +60,7 @@ func RoomDir(root, room string) (string, error) {
 func WithRoomLock(dir string, fn func() error) error {
 	return withLock(filepath.Join(dir, ".launch.lock"), "the room launch", fn)
 }
+
+// RootForRoom reverses the rooms/<name> namespace without consulting ambient
+// environment, so a wrapper always passes its original root to children.
+func RootForRoom(directory string) string { return filepath.Dir(filepath.Dir(directory)) }

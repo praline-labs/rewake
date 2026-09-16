@@ -3,7 +3,7 @@
 [Back to the design](design.md).
 
 Every path and lookup below is relative to the current room's state directory,
-`<REWAKE_DIR>/<REWAKE_ROOM>/` (`default` when the room variable is absent).
+`<REWAKE_DIR>/rooms/<REWAKE_ROOM>/` (`default` when the room variable is absent).
 Send, read, identity and turn reports never fall back to another room or to
 legacy records directly under the state root.
 
@@ -112,9 +112,12 @@ told about it may run `rewake inbox` at once — count the unread mail, call the
 adapter with the notice, write the status (`.status.tmp`, then rename).
 `delivered` removes the waiting copy, leaving the one in `unread/`; `failed`
 removes the `unread/` copy and archives the message in `done/`; `pending`
-stays and is retried every 2 seconds. A message
-older than `--ttl` (30 minutes by default) gets `failed: expired`, unless a
-fresh answer reservation is still holding it.
+stays and is retried every 2 seconds. Undelivered tasks and notifications older
+than `--ttl` (30 minutes by default) get `failed: expired`. A fresh reservation
+protects its answer; a report already linked into `unread/` has been accepted
+and does not expire when its reservation ends. Its queued readable copy is protected
+from age-based sweeping, including across server restarts; ordinary retention
+starts again when it becomes available for notification.
 
 Status: `{"state":"delivered|read|pending|failed","via":"socket|codex queue","detail":"...","at":"..."}`.
 
@@ -228,3 +231,28 @@ sent mid-turn.
 `turn-ended` is hidden from the guide and never fails loudly: it runs inside the
 harness's own machinery, where an error is noise at best.
 
+
+### Reports after a thread change
+
+Some harnesses can change conversations inside one wrapper run. Before an owed
+message is made readable, the wrapper records the selected thread in
+`inbox/<name>/threads/<message id>` under the mailbox lock. The queue uses that
+same thread. The context survives reads and status rewrites, and is retained
+while the message is queued, unread or included in an unsettled wait.
+
+At the end of a turn the hook resolves the current thread using the harness's
+thread tracker. If any known delivery thread in the wait's message ids differs,
+the finished report carries `threadChanged: true`. Otherwise the field is
+omitted, including when either identity is unavailable or the harness has no
+thread tracker. This is an advisory comparison, not a change to report routing
+or the wrapper epoch. A new conversation does not clear waits or resend tasks.
+
+`rewake inbox` prints this line beneath a marked report:
+
+```
+the reader's thread changed after delivery; the report may not answer it, resend the message
+```
+
+A waiting `send --question` also prints the warning and preserves the boolean in
+its JSON result. The caller decides whether to resend. Existing idempotent
+report publication still applies.

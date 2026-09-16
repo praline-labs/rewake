@@ -34,8 +34,13 @@ func answerQuestion(ctx *Context, question sent) error {
 
 	_, found, err := inbox.AwaitAnswer(wait, question.dir, question.self.Name, question.epoch, model.ID, func(answer inbox.Message) error {
 		model.State, model.Answer = string(inbox.Read), answer.Text
+		model.ThreadChanged = answer.ThreadChanged
 		return printValue(ctx, model, func() []string {
-			return []string{fmt.Sprintf("answer from %s:", target.Name), answer.Text}
+			lines := []string{fmt.Sprintf("answer from %s:", target.Name), answer.Text}
+			if answer.ThreadChanged {
+				lines = append(lines, inbox.ThreadChangedWarning)
+			}
+			return lines
 		})
 	})
 	if err != nil {

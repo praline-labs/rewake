@@ -112,6 +112,9 @@ func inboxLines(messages []inbox.Message) []string {
 			fmt.Sprintf("from %s · %s · %s", message.From, inbox.KindOf(message), message.CreatedAt.Local().Format("15:04:05")),
 			message.Text,
 		)
+		if message.ThreadChanged {
+			lines = append(lines, inbox.ThreadChangedWarning)
+		}
 	}
 	return lines
 }

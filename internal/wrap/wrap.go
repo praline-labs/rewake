@@ -16,7 +16,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 	"time"
 
@@ -25,6 +24,7 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/proc"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/role"
+	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
 // Request is one launch.
@@ -82,7 +82,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 
 	plan, err := request.Harness.Launch(harness.LaunchRequest{
 		Name:       name,
-		Dir:        filepath.Dir(request.Dir),
+		Dir:        state.RootForRoom(request.Dir),
 		Room:       session.Room,
 		RoleReason: session.RoleReason,
 		Args:       request.Args,
@@ -147,10 +147,15 @@ func Run(ctx context.Context, request Request) (int, error) {
 	served := make(chan struct{})
 	go func() {
 		defer close(served)
+		var thread func() (string, error)
+		if tracker, ok := request.Harness.(harness.ThreadTracker); ok {
+			thread = func() (string, error) { return tracker.Thread(current(request.Dir, name, session)) }
+		}
 		server := &inbox.Server{
-			Dir:   request.Dir,
-			Name:  name,
-			Epoch: epoch,
+			Dir:    request.Dir,
+			Thread: thread,
+			Name:   name,
+			Epoch:  epoch,
 			// Asked before the mailbox is touched at all: a serving goroutine
 			// that starts late, after its harness is gone and the name has
 			// changed hands, has no business in there.

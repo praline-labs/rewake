@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/iiiokojiadbi/rewake/internal/harness"
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/role"
@@ -63,6 +64,8 @@ func handleTurnEnded(_ *Context, call Call) error {
 		reply = silentEnd
 	}
 
+	currentThread, _ := harness.SessionThread(self)
+
 	// Under the mailbox lock, so two ends of a turn reported at once tell each
 	// waiter once, and a waiter recorded by a read in the meantime is not taken
 	// for the one reported.
@@ -85,15 +88,16 @@ func handleTurnEnded(_ *Context, call Call) error {
 			// its waiter could not be removed, or this hook died before that —
 			// is not written a second time.
 			err = inbox.PutOnce(dir, inbox.Message{
-				ID:        inbox.ReportID(self.Name, epoch, waiter),
-				From:      self.Name,
-				FromEpoch: epoch,
-				To:        peer.Name,
-				ToEpoch:   waiter.Epoch,
-				Kind:      inbox.Finished,
-				InReplyTo: waiter.Messages,
-				Text:      reply,
-				CreatedAt: time.Now(),
+				ID:            inbox.ReportID(self.Name, epoch, waiter),
+				From:          self.Name,
+				FromEpoch:     epoch,
+				To:            peer.Name,
+				ToEpoch:       waiter.Epoch,
+				Kind:          inbox.Finished,
+				InReplyTo:     waiter.Messages,
+				ThreadChanged: inbox.ReportThreadChanged(dir, self.Name, waiter.Messages, currentThread),
+				Text:          reply,
+				CreatedAt:     time.Now(),
 			})
 			if err == nil {
 				inbox.ClearAwaiting(dir, self.Name, epoch, waiter)

@@ -16,6 +16,7 @@ func gitRepository(t *testing.T) string {
 	if err := os.Mkdir(filepath.Join(dir, ".git"), 0700); err != nil {
 		t.Fatal(err)
 	}
+	populateGitMetadata(t, filepath.Join(dir, ".git"), true)
 	return dir
 }
 
@@ -86,6 +87,7 @@ func TestGitWritesFollowTheEffectiveWorkingDirectory(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(repo, ".git"), 0700); err != nil {
 		t.Fatal(err)
 	}
+	populateGitMetadata(t, filepath.Join(repo, ".git"), true)
 	for _, args := range [][]string{
 		{"-C", repo}, {"--cd", repo}, {"--cd=" + repo}, {"-C" + repo}, {"-C=" + repo}, {"-C", filepath.Base(repo)},
 	} {

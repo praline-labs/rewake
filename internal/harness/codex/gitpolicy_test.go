@@ -99,6 +99,7 @@ func TestGitWritesKeepProjectConfiguration(t *testing.T) {
 			if err := os.MkdirAll(filepath.Join(repo, ".git"), 0700); err != nil {
 				t.Fatal(err)
 			}
+			populateGitMetadata(t, filepath.Join(repo, ".git"), true)
 			path := filepath.Join(repo, "config.toml")
 			if location == "project" {
 				path = filepath.Join(repo, ".codex", "config.toml")

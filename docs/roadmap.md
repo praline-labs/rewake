@@ -351,7 +351,7 @@ by its config loader. See research for versioned evidence and reproduction.
 
 **Owner decision:** rooms isolate session discovery, addressing and delivery.
 `--room <name>` is launch-only and defaults to `default`; agent commands inherit
-`REWAKE_ROOM`. `REWAKE_DIR` remains the shared root and each room has its own
+`REWAKE_ROOM`. `REWAKE_DIR` remains the shared root; `rooms/<room>/` holds each room's
 sessions, mailboxes and sockets. Old root-level records are ignored.
 
 Role choice and name publication share a room lock. Without an explicit role,
@@ -365,3 +365,23 @@ message each other; task notices and final reports stay in their originating
 room. The first automatic launch becomes main. An occupied explicit main is
 refused. Concurrent wrappers elect exactly one main. Checks use isolated state
 and a fake harness, plus regression and mutation tests.
+
+## Review round ten — done, September 16, 2026
+
+- **Git pointers granted ordinary directories (1).** Gitdir must have HEAD;
+  shared metadata must also have objects and refs. Invalid pointers grant nothing.
+- **Room names collided with old state (2).** Rooms now live under `rooms/`;
+  registry readers preserve JSON that has no session process identity.
+- **Nested checkout directories missed Git metadata (3).** Discovery walks up
+  to the nearest .git, validates it, and never falls back past an invalid one.
+- **Released old answers expired without a notice (4).** Accepted reports
+  survive their reservation, restarts and queued-mail sweeping.
+- **The pointer size test passed without a bound (5).** A short valid path with
+  oversized newline padding now distinguishes bounded from unbounded reading.
+- **Owner decision (6): mark reports after a thread change.** Delivery context
+  is recorded before readability. A known mismatch at turn end adds
+  threadChanged and a visible warning. No automatic reset or resend is performed.
+
+Each regression has a failing mutation check. Structural Git checks are compared
+with real repositories, worktrees and submodules; delivery is exercised with
+isolated state and fake harnesses.

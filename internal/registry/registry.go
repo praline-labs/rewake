@@ -294,6 +294,9 @@ func Load(dir, name string) (Session, error) {
 	if err := json.Unmarshal(raw, &session); err != nil {
 		return Session{}, fmt.Errorf("the record of session %q is unreadable: %w", name, err)
 	}
+	if session.ServicePID <= 0 || session.ServiceStart == 0 {
+		return Session{}, fmt.Errorf("the record of session %q has no process identity", name)
+	}
 	return session, nil
 }
 
