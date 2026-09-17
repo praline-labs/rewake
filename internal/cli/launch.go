@@ -36,12 +36,13 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 		}
 
 		code, err := wrap.Run(context.Background(), wrap.Request{
-			Harness: h,
-			Dir:     dir,
-			Name:    call.Flag("name", ""),
-			Args:    call.Raw,
-			Intro:   !call.Switch("no-intro"),
-			Role:    part,
+			Harness:  h,
+			Dir:      dir,
+			Name:     call.Flag("name", ""),
+			Args:     call.Raw,
+			Intro:    !call.Switch("no-intro"),
+			Greeting: !call.Switch("no-greeting"),
+			Role:     part,
 		})
 		if err != nil {
 			var mainTaken *wrap.MainTakenError

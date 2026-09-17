@@ -132,7 +132,15 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 		args = harness.AddFlags(args, toolFlag, "Bash(rewake:*)")
 	}
 
+	greeting, note := harness.GreetingPrompt(request, harness.GreetingPolicy{Values: "--model --settings --append-system-prompt --system-prompt --allowedTools --allowed-tools --disallowedTools --tools --permission-mode --mcp-config --add-dir --session-id --max-budget-usd --output-format --input-format --effort --messaging-socket-path", Switches: "--verbose --dangerously-skip-permissions --no-session-persistence", Continued: "--resume -r --continue -c --fork-session --print -p"})
+	if note != "" {
+		notes = append(notes, note)
+	}
+	if greeting != "" {
+		args = append(args, greeting)
+	}
 	return harness.LaunchPlan{
+		Greeting:   greeting != "",
 		Command:    "claude",
 		Args:       args,
 		Env:        harness.SessionEnv(request, childMarkers),

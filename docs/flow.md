@@ -32,6 +32,9 @@ inbox/<name>/done/<id>.json      read or failed; swept after a day
 inbox/<name>/awaiting/<epoch>/<peer>   who is owed a report by this run
 inbox/<name>/answering/<id>      a send --question is waiting for this answer
 inbox/<name>/received/<id>       that question's answer was printed
+inbox/<name>/retention/<id>      fixed release time for a reserved report
+inbox/<name>/turns/<id>          completion retry receipt
+inbox/<name>/greeting            bootstrap marker for this run
 inbox/<name>/threads/<id>        selected delivery thread, when supported
 inbox/<name>/.lock               the mailbox lock, one flock for every state change
 sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
@@ -56,14 +59,14 @@ sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
    an automatic main; otherwise an unflagged launch becomes general. Explicit
    `--general` and `--write` are honored even in an empty room. `--main` refuses
    if a live main already occupies the room. Main stays silent; write reports
-   like worker. Both main and write request Git metadata access. The record
+   like general. Both main and write request Git metadata access. The record
    keeps the role and its selection reason.
 5. **The harness command line.** The user's arguments go through untouched.
    rewake adds, for one launch only and never into a config file:
    - Claude Code: `--messaging-socket-path sock/<name>.<epoch>.sock`,
      `--append-system-prompt <intro>`, `--allowedTools "Bash(rewake:*)"`, and
-     `--settings` with a Stop hook running `rewake turn-ended` — unless the
-     role is silent, or the user passed their own `--settings`;
+     `--settings` with StopFailure for every role and Stop for reporting roles,
+     both running `rewake turn-ended`, unless the user passed `--settings`;
    - Codex: `-c developer_instructions=<intro>` and
      `-c notify=["rewake","turn-ended"]` — each only when `config.toml` does not
      mention the key at all, because these keys replace rather than add. A
@@ -78,14 +81,19 @@ sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
 6. **The environment.** `REWAKE_SESSION=<name>`, `REWAKE_EPOCH=<epoch>`,
    `REWAKE_DIR=<root>` and `REWAKE_ROOM=<room>`; inherited Claude Code markers are stripped so a session
    started from inside another does not borrow its socket.
-7. **Launch.** The harness starts with the wrapper's terminal and process
+7. **Greeting.** Unless --no-greeting or caller input prevents it, a fresh
+   harness receives the same positional prompt: run guide and reply ready.
+   Continuations keep their existing turn. This is separate from --no-intro.
+   The wrapper records an epoch-scoped bootstrap marker before starting the
+   child, so ready is not reported to other sessions or used to settle work.
+8. **Launch.** The harness starts with the wrapper's terminal and process
    group. Its pid and start time are added to the record. From now on the
    session is alive only while both processes are.
-8. **The intro.** The agent's first context names its session, room, selected
+9. **The intro.** The agent's first context names its session, room, selected
    role and the reason for that role. A waiting message is announced with
    `Rewake:`, run `rewake guide` before sending or reading. Everything else the
    agent needs is in the guide, which always matches the binary.
-9. **Serving.** The wrapper watches `inbox/<name>/` with inotify, polls every
+10. **Serving.** The wrapper watches `inbox/<name>/` with inotify, polls every
    second as the safety net, sweeps old mail every ten minutes, and waits for
    the harness to exit.
 

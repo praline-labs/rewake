@@ -110,7 +110,15 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 		}
 	}
 
+	greeting, note := harness.GreetingPrompt(request, harness.GreetingPolicy{Values: "--model -m --config -c --cd -C --profile -p --sandbox -s --add-dir --enable --disable --image -i --local-provider --remote", Switches: "--oss --strict-config --no-alt-screen --worktree --search --approve-for-me --dangerously-bypass-approvals-and-sandbox", Continued: "resume fork"})
+	if note != "" {
+		notes = append(notes, note)
+	}
+	if greeting != "" {
+		args = append(args, greeting)
+	}
 	return harness.LaunchPlan{
+		Greeting:  greeting != "",
 		Command:   "codex",
 		Args:      args,
 		Env:       harness.SessionEnv(request, nil),

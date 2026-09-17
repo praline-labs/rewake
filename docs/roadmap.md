@@ -347,30 +347,7 @@ refused. Concurrent wrappers elect exactly one main. Checks use isolated state
 and a fake harness, plus regression and mutation tests.
 
 
-## Expanded checks — done, September 17, 2026
-
-The stricter formatter and all configured linters now pass. Unused helpers were
-removed, cleanup errors are explicitly discarded only where they cannot change
-the result, and successful file writes retain their checked close path. Spelling,
-comments and equivalent expressions follow the configured checks. Delivery,
-reporting and signal behavior are unchanged; the suite runs with race detection
-and shuffled test order. Earlier review rounds are in [reviews.md](reviews.md).
-
-## Git writes for local continuations — done, September 17, 2026
-
-`resume` and `fork` now keep the metadata grant discovered from launch cwd.
-The earlier blanket skip prevented resumed writers from committing. Remote
-execution still skips local paths with an explanation.
-
-New `--worktree` support remains deferred after source inspection and sandbox
-probes: a managed checkout's private gitdir can stay read-only despite a writable
-source `.git`. Both private and common metadata roots are needed, but the private
-path is allocated later by the harness. Creating the worktree first remains
-supported. Research records the source locations, layout-dependent results and
-the wrapper's unchanged launch cwd. Regression tests and mutations protect
-resume/fork grants and the honest worktree refusal.
-
-## Review round eleven — in progress, September 17, 2026
+## Review round eleven — done, September 17, 2026
 
 Retention now distinguishes a reserved answer from an ordinary report. Release
 starts one finite delivery window, never renewed by retry; receipts outlive the
@@ -393,3 +370,13 @@ failure-observation gap is documented, without reading transcripts.
 Notices now include a bounded first-line preview authored by the sender. The
 latest available letter supplies the preview and error color; full text remains
 in inbox. Empty first lines are not skipped in search of a summary.
+
+Fresh interactive launches now get the shared guide-and-ready positional prompt.
+Existing prompts and continuations are preserved; --no-greeting is independent
+of --no-intro. Bootstrap ready never settles early work. Callback availability
+for failed turns remains a documented harness limitation.
+
+Validation: all five repository checks pass. Twenty targeted mutations are
+caught. Isolated fake-process runs cover greeting switches, preserved caller
+arguments, early work during ready, both notice transports, error routing and
+blocking error replies. No real harness or model turn was launched.

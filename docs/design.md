@@ -71,6 +71,9 @@ Created with 0700.
     inbox/<name>/done/         read and failed messages
     inbox/<name>/answering/<id> renewable question reservation
     inbox/<name>/received/<id> successful answer output
+    inbox/<name>/retention/<id> reservation release time for reports
+    inbox/<name>/turns/<id>    completion retry receipts
+    inbox/<name>/greeting      bootstrap marker scoped to the run epoch
     inbox/<name>/threads/<id>  selected delivery thread, when supported
     inbox/<name>/awaiting/<epoch>/<peer> reports owed by this run
     sock/<name>.<epoch>.sock   one inbound socket per run
@@ -106,7 +109,7 @@ sessions, and an old record must not appear in a new room by accident.
 {
   "name": "claude-2",
   "room": "default",
-  "role": "worker",
+  "role": "general",
   "roleReason": "selected explicitly with --general",
   "harness": "claude",
   "servicePid": 12345,
@@ -149,7 +152,7 @@ Without an explicit role, a room with no live main elects the new session main;
 otherwise it becomes general. Liveness uses the same pid/start-time and namespace
 checks as list. Explicit `--main` refuses with the occupying session's name and
 advice to stop/restart it or omit the role flag. `--general` and `--write` are
-honored even in an empty room. If only workers remain, the next automatic launch
+honored even in an empty room. If only non-main sessions remain, the next automatic launch
 becomes main; existing sessions are never promoted in place.
 
 The room's `.launch.lock` covers inspection of live sessions, role choice and
@@ -163,7 +166,7 @@ appends `--add-dir` for the discovered metadata directories. Ordinary repos,
 worktrees and submodules are supported; configuration and existing roots remain
 intact. Unresolved or symlinked metadata is skipped with a reason. See
 [launch permissions](launch.md). A role does not revoke permissions the user
-already granted; worker receives no extra Git access from rewake.
+already granted; general receives no extra Git access from rewake.
 
 The main session exists to stop a loop: it reads the reports of its workers,
 and if its own turns were reported to them, each report would wake the other
@@ -173,7 +176,7 @@ for the queued harness. An error from main stays in its own unread mailbox
 without waking the same failing conversation. Old records with role `worker` are read as `general`; only --general creates
 new reporting sessions without Git access. The zero role value remains a reporting fallback inside the
 catalogue; an omitted launch role is resolved separately under the room lock.
-The write role reports like a worker; main stays silent whether its Git grant
+The write role reports like general; main stays silent whether its Git grant
 was applied or skipped.
 
 ### Names

@@ -159,7 +159,8 @@ func launchCommand(h harness.Harness) *Command {
 		MaxPositionals: Variadic,
 		Summary:        h.Summary(),
 		Options: append(append([]Option{nameOption, roomOption}, roleOptions()...),
-			Option{Flag: "--no-intro", Summary: "Do not tell the agent it runs under rewake."},
+			Option{Flag: "--no-intro", Summary: "Do not add the system-layer briefing."},
+			Option{Flag: "--no-greeting", Summary: "Do not start a fresh conversation with the guide-and-ready prompt."},
 		),
 		Examples: append(h.Examples(), "rewake --room work --general --name helper "+h.ID()),
 		Next:     []string{"rewake list", "rewake send <name> \"text\""},
@@ -212,7 +213,7 @@ func notes() []Note {
 		},
 		{
 			Title: "Rooms isolate conversations",
-			Body:  "Choose --room <name> before the harness name; without it, launches use default. Sessions see only their room. Commands inherit REWAKE_ROOM; a shell without it uses default. Names can repeat across rooms. There is no cross-room address or --room flag on messaging commands.",
+			Body:  "Choose --room <name> before the harness name; without it, launches use default. Fresh conversations first run rewake guide and reply ready; --no-greeting disables that first turn independently of --no-intro. Sessions see only their room. Commands inherit REWAKE_ROOM; a shell without it uses default. Names can repeat across rooms. There is no cross-room address or --room flag on messaging commands.",
 		},
 		{
 			Title: "Choose a session role",

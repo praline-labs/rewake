@@ -124,10 +124,11 @@ Status: `{"state":"delivered|read|pending|failed","via":"socket|codex queue","de
 
 ### The notice
 
-One line, the same for every harness:
+A header and optional preview, the same for every harness:
 
 ```
 Rewake: <sender> <kind>, <n> new message(s)
+  ↳ <first line of the latest available letter>
 ```
 
 `n` counts this run's unread mail, the new message included. The notice carries
@@ -153,9 +154,9 @@ followed by `\n`, then close. The content is
 ```
 
 Claude Code picks how to draw a user message from its text, and draws this one
-as a single `● <summary>` line — the line its own background tasks get. The
-status colours the circle, and `completed` is the one drawn green; the kind is
-named in the summary. The short id keeps
+as `● <summary>`, with the preview on the next line. The status colors the
+circle: `completed` is green and `failed` is red; the kind is named in the
+summary. The short id keeps
 two identical notices apart: Claude Code drops identical text from the same
 sender within 30 seconds.
 
@@ -171,8 +172,8 @@ recreated); otherwise `failed`.
    latest mtime. None found: `pending: codex has not opened a thread yet`.
 2. `codex queue --thread <uuid> --message <notice>` with the session's
    `CODEX_HOME`, 15-second timeout. Codex has no drawing of its own for this,
-   so the notice arrives as an ordinary message, prefixed with 🟢 to stand out
-   when the conversation is scrolled.
+   so the notice arrives as an ordinary message, prefixed with 🟢 or 🔴 for an
+   error to stand out when the conversation is scrolled.
 3. Exit code 0 means `delivered`, noted with "codex checks its queue about every
    ten seconds". `no rollout found` means `pending: the codex session has no
    conversation yet; delivers after its first turn`. Anything else is `failed`

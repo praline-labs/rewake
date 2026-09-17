@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/harness"
@@ -59,6 +60,13 @@ func handleTurnEnded(_ *Context, call Call) error {
 	ctx, cancel := context.WithTimeout(context.Background(), hookLockWait)
 	defer cancel()
 	_ = state.WithMailboxLock(ctx, dir, self.Name, func() error {
+		greeting, err := inbox.TakeGreeting(dir, self.Name, self.Epoch())
+		if err != nil {
+			return err
+		}
+		if greeting && !event.Failed && strings.TrimSpace(event.Text) == "ready" {
+			return nil
+		}
 		waiters := inbox.Waiters(dir, self.Name, self.Epoch())
 		beforeReports()
 		return publishTurn(dir, self, event, currentThread, waiters)

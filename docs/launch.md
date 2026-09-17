@@ -31,9 +31,9 @@ lower-case name syntax, up to 32 characters.
 
 `--main`, `--general` and `--write` explicitly select one role and cannot be
 combined. Without a role flag, no live main in the room means main; an existing
-main means worker. Explicit main refuses when the room already has one, naming
+main means general. Explicit main refuses when the room already has one, naming
 its occupant and suggesting a restart or a launch without `--main`. An explicit
-worker or writer can be the room's first session. There is no running-session
+general or write session can be the room's first session. There is no running-session
 promotion when main exits: the next automatic launch can become main.
 
 The wrapper passes the shared root as `REWAKE_DIR` and its room as `REWAKE_ROOM`,
@@ -123,6 +123,23 @@ explains the commands that role needs, and points to guide for the full contract
 General receives no Git metadata grant; write may commit; main delegates and
 reads results. All ask for the point of a message in its first line. Per-role
 snapshots make wording changes reviewable.
+
+### First-turn greeting
+
+Fresh launches append a positional prompt from `internal/brief/greeting.go`:
+identify the session, room and role; run rewake guide, read it, then reply with
+only ready. `--no-greeting` disables this turn independently of `--no-intro`.
+A supplied positional prompt is preserved, never merged with the greeting.
+Resume/continue/fork and noninteractive commands receive no greeting; unknown
+option arity also opts out with a note rather than guessing which word is input.
+A bare trailing -- can receive the greeting after that delimiter.
+
+The adapter reports whether it appended the prompt. Before starting the child,
+the wrapper marks that bootstrap for its epoch. Its ready completion consumes
+the marker without publishing a report, even if work was read unusually early;
+those waits remain for the actual result. An explicit startup error still uses
+the normal error route. The greeting primes a fresh queued conversation without
+an operator typing the first word. Disable it when supplying input through stdin.
 
 ## Signals, and what the wrapper does not do
 

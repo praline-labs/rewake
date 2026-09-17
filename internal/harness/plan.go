@@ -24,6 +24,8 @@ type LaunchRequest struct {
 	// Intro asks for the short briefing that tells the agent it runs under
 	// rewake and how to answer.
 	Intro bool
+	// Greeting asks for a first-turn guide bootstrap when no prompt is supplied.
+	Greeting bool
 	// Socket is the path the harness should use for its inbox socket, when it
 	// has one.
 	Socket string
@@ -54,6 +56,8 @@ type LaunchPlan struct {
 	// could not be read, a briefing that was skipped. They are printed once, to
 	// stderr, and do not stop the launch.
 	Notes []string
+	// Greeting records whether the adapter actually appended the bootstrap prompt.
+	Greeting bool
 }
 
 // Harness describes one coding-agent CLI: how it is presented, how it is
