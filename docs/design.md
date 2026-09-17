@@ -80,7 +80,6 @@ Created with 0700.
     inbox/<name>/received/<id> id of the report successfully printed
     inbox/<name>/retention/<id> reservation release time for reports
     inbox/<name>/turns/<id>    completion retry receipts
-    inbox/<name>/greeting      bootstrap marker scoped to the run epoch
     inbox/<name>/threads/<id>  selected delivery thread, when supported
     inbox/<name>/awaiting/<epoch>/<peer> reports owed by this run
     sock/<name>.<epoch>.sock   one inbound socket per run
@@ -146,7 +145,7 @@ sessions, and an old record must not appear in a new room by accident.
 A session has a role, from the catalogue in `internal/role`: one value per role
 and a line in its list, the way a harness is added. The launch flag `--<id>`,
 the help line and whether its turns are reported come from that value.
-System and greeting text lives in `internal/brief`, with a reviewed snapshot
+System text lives in `internal/brief`, with a reviewed snapshot
 for each role; harness adapters only pass the rendered strings. The record keeps the role's id.
 
 | role | flag | turns reported | Git metadata writes requested for the sandbox | intro adds |
@@ -339,7 +338,7 @@ Live tests, scripted under tmux, in a separate `/tmp` directory:
 3. From the Codex sandbox (`codex sandbox -P :workspace -- rewake send ...`) —
    delivery to Claude through the inbox, without calling the model.
 4. `send codex` during work steers that turn; a fresh /new thread accepts its
-   first input without an operator bootstrap. Interrupts report stopped.
+   first input without prior operator input. Interrupts report stopped.
 5. The Claude agent runs `rewake send` without confirmation (checks
    `--allowedTools`).
 6. Harness exit — the record and socket are gone, pending messages got

@@ -40,13 +40,12 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 			OnTurn: func(self registry.Session, result harness.Completion) error {
 				return completeTurn(dir, self, turnResult{ID: result.ID, Text: result.Text, Failed: result.Kind == inbox.Error, Stopped: result.Kind == inbox.Stopped}, result.Thread)
 			},
-			Harness:  h,
-			Dir:      dir,
-			Name:     call.Flag("name", ""),
-			Args:     call.Raw,
-			Intro:    !call.Switch("no-intro"),
-			Greeting: !call.Switch("no-greeting"),
-			Role:     part,
+			Harness: h,
+			Dir:     dir,
+			Name:    call.Flag("name", ""),
+			Args:    call.Raw,
+			Intro:   !call.Switch("no-intro"),
+			Role:    part,
 		})
 		if err != nil {
 			var mainTaken *wrap.MainTakenError

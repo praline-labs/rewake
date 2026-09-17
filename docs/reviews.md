@@ -339,7 +339,7 @@ starts one finite delivery window, never renewed by retry; receipts outlive the
 reports that reference them. Mixed thread comparison checks later deliveries,
 and the publication test waits for the harness pid before checking removal.
 
-Agent system text and greeting text now live in internal/brief, with per-role
+Agent system text now lives in internal/brief, with per-role
 snapshots. Role data no longer carries injected prose; harness helpers are
 split into plans, flags, environment, hooks and notices.
 
@@ -356,15 +356,9 @@ Notices now include a bounded first-line preview authored by the sender. The
 latest available letter supplies the preview and error color; full text remains
 in inbox. Empty first lines are not skipped in search of a summary.
 
-Fresh interactive launches now get the shared guide-and-ready positional prompt.
-Existing prompts and continuations are preserved; --no-greeting is independent
-of --no-intro. Bootstrap ready never settles early work. Callback availability
-for failed turns remains a documented harness limitation.
-
-Validation: all five repository checks pass. Twenty targeted mutations are
-caught. Isolated fake-process runs cover greeting switches, preserved caller
-arguments, early work during ready, both notice transports, error routing and
-blocking error replies. No real harness or model turn was launched.
+Validation: all five repository checks pass. Twenty targeted mutations were
+caught. Isolated fake-process runs covered caller arguments, both notice
+transports, error routing and blocking error replies. No real harness ran.
 
 ## Review round twelve — done, September 17, 2026
 
@@ -376,18 +370,9 @@ Identified turns persist their complete report batch and waiter/message snapshot
 before the first publication. Retries reuse recipients, content and report ids;
 cleanup removes only that snapshot, retaining later work for its own result.
 
-Both adapters now delimit the greeting with one -- after transport flags.
-Tests check its position after variadic options, not only its presence in argv.
-
-Bootstrap ready now persists its identified completion before removing the
-greeting marker. Both a replay and a retry after a receipt write failure leave
-early work owed until its real result.
-
 Preview coverage now measures CJK terminal columns independently of the production
 width estimator. A mutation treating wide glyphs as narrow fails at 102 columns.
 
 Validation: all five repository checks, callback regressions, targeted mutations,
-and isolated fake-process delivery pass. The external Commander parser confirms
-that both a fresh launch and an existing -- keep the greeting positional.
-Failed-turn observation still depends on the harness emitting a callback; the
+and isolated fake-process delivery pass. Failed-turn observation still depends on the harness emitting a callback; the
 previous legacy-notify limitation remains unchanged. No real harness was run.

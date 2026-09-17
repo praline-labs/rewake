@@ -12,7 +12,7 @@ import (
 
 func TestLaunchOwnsServerAndKeepsPromptOnTUI(t *testing.T) {
 	codexHome(t, "")
-	plan, err := New().Launch(harness.LaunchRequest{Name: "writer", Dir: t.TempDir(), Socket: "/tmp/session.sock", Intro: true, Greeting: true, Epoch: "1.2", Room: "work", Args: []string{"-c", `notify=["user-hook"]`}})
+	plan, err := New().Launch(harness.LaunchRequest{Name: "writer", Dir: t.TempDir(), Socket: "/tmp/session.sock", Intro: true, Epoch: "1.2", Room: "work", Args: []string{"-c", `notify=["user-hook"]`, "--", "caller prompt"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -23,11 +23,11 @@ func TestLaunchOwnsServerAndKeepsPromptOnTUI(t *testing.T) {
 	if !strings.Contains(strings.Join(server.args, " "), introKey+"=") || !strings.Contains(strings.Join(server.args, " "), "app-server --listen unix:///tmp/session.sock") {
 		t.Fatalf("server args=%q", server.args)
 	}
-	if !strings.Contains(strings.Join(plan.Args, " "), "--remote unix:///tmp/session.sock") || !strings.Contains(plan.Args[len(plan.Args)-1], "single word ready") {
+	if !strings.Contains(strings.Join(plan.Args, " "), "--remote unix:///tmp/session.sock") || plan.Args[len(plan.Args)-1] != "caller prompt" {
 		t.Fatalf("TUI args=%q", plan.Args)
 	}
 	if plan.Args[len(plan.Args)-2] != "--" {
-		t.Fatal("greeting was consumed by an option")
+		t.Fatal("caller prompt was consumed by an option")
 	}
 	if strings.Contains(strings.Join(server.args, " "), "turn-ended") {
 		t.Fatal("legacy notify was installed")

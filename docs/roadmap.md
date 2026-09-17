@@ -388,3 +388,10 @@ newer lifecycle events still win over discovery snapshots.
 All four requested regressions and the generation coverage gap pass, including
 strict fake resume and the stopped/shared-final process scenario. Full milestone
 acceptance remains open, including the separate fresh-root subscription boundary.
+
+## First input — done, September 17, 2026
+
+Launch adds the role and flow only through the system briefing. The agent reads
+guide on its first task; caller input and continuation arguments stay intact.
+No automatic model turn or special startup receipt is created. Both adapters
+preserve `--` for caller prompts. All five repository checks pass.

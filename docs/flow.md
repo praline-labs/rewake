@@ -34,7 +34,6 @@ inbox/<name>/answering/<id>      a send --question is waiting for this answer
 inbox/<name>/received/<id>       id of the report printed for this question
 inbox/<name>/retention/<id>      fixed release time for a reserved report
 inbox/<name>/turns/<id>          completion retry receipt
-inbox/<name>/greeting            bootstrap marker for this run
 inbox/<name>/threads/<id>        selected delivery thread, when supported
 inbox/<name>/.lock               the mailbox lock, one flock for every state change
 sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
@@ -75,21 +74,14 @@ sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
 6. **The environment.** `REWAKE_SESSION=<name>`, `REWAKE_EPOCH=<epoch>`,
    `REWAKE_DIR=<root>` and `REWAKE_ROOM=<room>`; inherited Claude Code markers are stripped so a session
    started from inside another does not borrow its socket.
-7. **Greeting.** Unless --no-greeting or caller input prevents it, a fresh
-   harness receives the same positional prompt: run guide and reply ready. A
-   single `--`, after all injected flags, protects it from variadic options.
-   Continuations keep their existing turn. This is separate from --no-intro.
-   The wrapper records an epoch-scoped bootstrap marker before starting the
-   child. An identified ready completion records a done receipt before removing
-   the marker, so neither ready nor its retries report or settle early work.
-8. **Launch.** The harness starts with the wrapper's terminal and process
+7. **Launch.** The harness starts with the wrapper's terminal and process
    group. Its pid and start time are added to the record. From now on the
    session is alive only while both processes are.
-9. **The intro.** The agent's first context names its session, room, selected
+8. **The intro.** The agent's first context names its session, room, selected
    role and the reason for that role. A waiting message is announced with
    `Rewake:`, run `rewake guide` before sending or reading. Everything else the
    agent needs is in the guide, which always matches the binary.
-10. **Serving.** The wrapper watches `inbox/<name>/` with inotify, polls every
+9. **Serving.** The wrapper watches `inbox/<name>/` with inotify, polls every
    second as the safety net, sweeps old mail every ten minutes, and waits for
    the harness to exit.
 
@@ -166,7 +158,7 @@ The notice wakes the agent, which runs `rewake inbox` in its shell.
 The harness itself says when a turn is over: Claude Code through Stop or StopFailure,
 Codex through turn/completed. The hook and server events use the same internal
 reporting function and turn receipts. A callback with `agent_id` is from a nested agent and is
-ignored without changing the parent session's waits or bootstrap state.
+ignored without changing the parent session's waits.
 
 1. **Who is owed.** Under the lock, `turn-ended` reads
    `awaiting/<own epoch>/`. A silent role emits no successful reports;

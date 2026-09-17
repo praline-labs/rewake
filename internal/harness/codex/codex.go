@@ -84,13 +84,6 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 		notes = append(notes, note)
 	}
 
-	greeting, note := harness.GreetingPrompt(request, harness.GreetingPolicy{Values: "--model -m --config -c --cd -C --profile -p --sandbox -s --add-dir --enable --disable --image -i --local-provider --remote", Switches: "--oss --strict-config --no-alt-screen --worktree --search --approve-for-me --dangerously-bypass-approvals-and-sandbox", Continued: "resume fork"})
-	if note != "" {
-		notes = append(notes, note)
-	}
-	if greeting != "" {
-		args = harness.AppendGreeting(args, greeting)
-	}
 	if harness.HasFlag(request.Args, "--remote") || hasProfile(request.Args) || harness.HasFlag(request.Args, "--worktree") || harness.HasFlag(request.Args, "--oss") || harness.HasFlag(request.Args, "--local-provider") {
 		return harness.LaunchPlan{}, fmt.Errorf("session-owned app-server requires local arguments without --remote, --profile, --worktree or --oss/--local-provider; select a checkout and configuration explicitly before launching")
 	}
@@ -107,7 +100,6 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 	serverArgs = append(serverArgs, "app-server", "--listen", "unix://"+socket)
 	args = harness.AddFlags(args, "--remote", "unix://"+socket)
 	return harness.LaunchPlan{
-		Greeting:   greeting != "",
 		Backend:    newServer(socket, serverArgs, append(append([]string{}, env...), "CODEX_INTERNAL_APP_SERVER_REMOTE_CONTROL_DISABLED=1"), cwd),
 		Socket:     socket,
 		OwnsSocket: true,

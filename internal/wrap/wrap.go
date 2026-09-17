@@ -38,8 +38,8 @@ type Request struct {
 	// Args are the caller's arguments for the harness.
 	Args []string
 	// Intro asks for the briefing that tells the agent it runs under rewake.
-	Intro    bool
-	Greeting bool
+	Intro bool
+
 	// Role is explicit when its ID is set; empty chooses a role for the room.
 	Role   role.Role
 	OnTurn func(registry.Session, harness.Completion) error
@@ -89,7 +89,6 @@ func Run(ctx context.Context, request Request) (int, error) {
 		RoleReason: session.RoleReason,
 		Args:       request.Args,
 		Intro:      request.Intro,
-		Greeting:   request.Greeting,
 		Socket:     registry.SocketFor(request.Dir, name, epoch),
 		Epoch:      epoch,
 		Role:       role.Of(session.Role),
@@ -110,12 +109,6 @@ func Run(ctx context.Context, request Request) (int, error) {
 	session.CodexHome = plan.CodexHome
 	if err := registry.Update(request.Dir, session); err != nil {
 		return 0, err
-	}
-
-	if plan.Greeting {
-		if err := inbox.MarkGreeting(request.Dir, name, epoch); err != nil {
-			return 0, err
-		}
 	}
 
 	// Signals are caught before the child exists. In the gap between starting it

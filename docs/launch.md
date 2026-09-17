@@ -87,7 +87,7 @@ gets no extra roots. Sandbox, approval, network and tmp policies are not replace
 The existing warning about excluded temporary directories remains relevant.
 
 -C/--cd selects the effective server cwd as well as the TUI request. Resume and
-fork retain their arguments and skip the bootstrap prompt. The registry keeps
+fork retain their arguments. The registry keeps
 the wrapper's original cwd. Existing --remote, --profile, --worktree and --oss/--local-provider launches
 are refused with advice: they cannot safely share this owned server topology or
 forward all configuration. Create the checkout first and use explicit settings.
@@ -106,25 +106,15 @@ General receives no Git metadata grant; write may commit; main delegates and
 reads results. All ask for the point of a message in its first line. Per-role
 snapshots make wording changes reviewable.
 
-### First-turn greeting
+### First input
 
-Fresh launches append a positional prompt from `internal/brief/greeting.go`:
-identify the session, room and role; run rewake guide, read it, then reply with
-only ready. `--no-greeting` disables this turn independently of `--no-intro`.
-A supplied positional prompt is preserved, never merged with the greeting.
-Resume/continue/fork and noninteractive commands receive no greeting; unknown
-option arity also opts out with a note rather than guessing which word is input.
-Every appended greeting follows a `--` delimiter after all transport flags.
-An existing trailing `--` is reused. This stops variadic options such as
-`--allowedTools <tools...>` and `--image` from consuming the positional prompt.
+Launch supplies only the system briefing; the first task prompts the agent to
+read rewake guide. Caller prompts, continuations and their `--` delimiter stay
+intact, with injected transport flags placed before the delimiter. A fresh
+server thread accepts turn/start before any operator input.
 
-The adapter reports whether it appended the prompt. Before starting the child,
-the wrapper marks that bootstrap for its epoch. Its identified ready completion
-records a done turn receipt before consuming the marker without publishing a
-report, even if work was read unusually early;
-those waits remain for the actual result. An explicit startup error still uses
-the normal error route. The greeting primes a fresh server conversation without
-an operator typing the first word. Disable it when supplying input through stdin.
+**Owner decision, September 17, 2026:** startup must not create an empty dialogue
+or add automatic messages to resumed conversations.
 
 ## Signals, and what the wrapper does not do
 
