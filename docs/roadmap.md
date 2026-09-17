@@ -329,23 +329,10 @@ Live acceptance, on the owner's sessions with CLI 0.154.0 and Claude Code
 | stopped after a keyboard interrupt | passed: a yellow `stopped` line, the wait was kept |
 | delivery to a thread opened with /new | passed: the new thread started a turn; its `finished` answered both the stopped task and the new one, marked `threadChanged` |
 
-## First input — done, September 17, 2026
+## First input and fresh-thread observation
 
-Launch adds the role and flow only through the system briefing. The agent reads
-guide on its first task; caller input and continuation arguments stay intact.
-No automatic model turn or special startup receipt is created. Both adapters
-preserve `--` for caller prompts. All five repository checks pass.
-
-## Fresh-thread observation — done, September 17, 2026
-
-Identity no longer implies subscription. Global active starts history-free resume
-attempts every 50 ms while the rollout is absent; idle and lifecycle changes stop
-them. A short turn can finish before subscription: observed idle without completion
-after 500 ms reports "completion not observed", never an invented assistant result.
-The fake scopes turn/item events to subscribed clients and delays rollout creation.
-Tests cover first input, /new, retries, normal idle ordering and the short-turn gap.
-Source evidence and remaining transport limits are in server-observation.md.
-All five checks pass. Real-model milestone acceptance stays with the owner.
+Completed changes are recorded in [the later history](reviews-later.md).
+Round fourteen found the still-open discovery-gap defect R14-2 in observation.
 
 ## Remote continuation startup — fixed, September 17, 2026
 
@@ -396,4 +383,17 @@ Custom prefixes never select roles; existing names, permissions and reporting st
 Targeted review (`6436874..9aedd0f`): no reproduced defects; targeted tests passed three times.
 All 72 synchronized process claims passed; the automatic-main mutation was detected.
 Main's exact archive passed all five checks; binary: `9aedd0f`, `vcs.modified=false`.
-Live acceptance, ownership ambiguity and the broad fourteenth review remain open.
+Live acceptance and ownership ambiguity remain open; round fourteen is recorded below.
+
+## Round fourteen — review complete, September 17, 2026
+
+Reviewed `adbb6c2..b1b9d2b`; two P2 defects remain **open**: R14-1 retains closed
+observer clients during repeated failed reconnects; R14-2 drops observed active
+state during discovery and omits completion-gap reporting. Baseline five-check
+results are green; the new isolated reproductions fail. No fixes have landed.
+[Findings and reproductions](reviews-later.md#review-round-fourteen--complete-with-open-findings-september-17-2026).
+
+Ownership research is complete; the mechanism remains undecided. Only rewake may
+change, with existing hooks allowed; native selection extensions are outside the
+owner's scope. The owner-managed empty-session/manual-new metadata probe is
+pending. See [research and constraints](thread-ownership-investigation.md).

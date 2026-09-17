@@ -9,6 +9,12 @@ terminal ownership. Obsolete observer subscriptions are now released on establis
 root changes; the server may still retain detached roots during its unload delay.
 See [ownership investigation and mitigation](thread-ownership-investigation.md).
 
+Round fourteen found open P2 defect R14-2: active metadata observed during
+discovery can be discarded when idle/systemError arrives before subscription
+finishes, leaving no observation to expire. The tests below did not cover this
+ordering; [review findings](reviews-later.md#review-round-fourteen--complete-with-open-findings-september-17-2026)
+record the failing reproduction. This is not a missed-whole-interval limitation.
+
 ## Subscription is separate from identity
 
 `app-server/src/request_processors/thread_processor.rs:1549,1621` attaches the

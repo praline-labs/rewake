@@ -71,21 +71,87 @@ detach/disconnect, and generation-bound delivery. Observer subscriptions must
 follow that evidence and release obsolete and late subscriptions. Missing
 evidence must refuse delivery, never resume an arbitrary persisted thread.
 
+## Completed research and current owner scope, September 17, 2026
+
+**Owner decision after research:** only rewake may be changed. Native Codex TUI
+and app-server modifications are not available. Registering existing hooks is
+permitted. The researched explicit selection/generation extension is therefore
+a theoretical design outside the approved scope, not a recommendation to
+implement. No ownership architecture has been selected or implemented.
+
+The following findings were verified in source at the pinned version above,
+then independently checked during round fourteen. They extend the original
+incident investigation without a new live metadata capture:
+
+- Primary and displayed conversations differ. The TUI assigns primary_thread_id
+  locally in `tui/src/app/thread_routing.rs:1519`; child/side navigation changes
+  active_thread_id separately (`app/session_lifecycle.rs:673`). Its subscription
+  set can legitimately retain several running or blank roots
+  (`app/agents_overview.rs:534–566,643–650`).
+- A successful start/resume response precedes local primary installation.
+  `app/session_lifecycle.rs:1028–1063` calls fallible terminal reset before setting
+  the new primary; terminal I/O can fail at `:761–779`. Thus a gateway can observe
+  the same successful control exchange before different local switch outcomes.
+  RPC intention, connection subscriptions and a quiet interval are not a TUI
+  selection acknowledgement. A read followed by turn/start also has a selection
+  race; observing metadata alone does not make admission atomic.
+- parentThreadId, source and originator are provenance, not present selection.
+  A saved child can be explicitly opened as primary. Direct input is a separate
+  capability: `app-server/src/request_processors/thread_input.rs:12–35` rejects
+  parent-owned V2 children while allowing other source/version combinations;
+  `tui/src/app_server_session.rs:377–381` honors canAcceptDirectInput.
+- Ordinary turn/start already uses an in-memory get_thread lookup
+  (`app-server/src/request_processors/turn_processor.rs:371–386,527–533`;
+  `core/src/thread_manager.rs:1552–1558`). It does not cold-resume a missing
+  thread. Observer thread/resume can load persisted state and is a different
+  operation; neither supplies authoritative TUI selection.
+- SessionStart is queued during backend initialization
+  (`core/src/session/session.rs:1790–1817`) and consumed by run_turn
+  (`core/src/session/turn.rs:320`; `core/src/hook_runtime.rs:126–175`). It cannot
+  identify a fresh UI-selected conversation before its first turn, nor does it
+  attest cached UI switches. Its name must not be read as a UI-ready hook.
+- CODEX_THREAD_ID comes from the producing command's thread
+  (`core/src/unified_exec/process_manager.rs:1364–1375`). That command may outlive
+  a switch or run in a background thread. It does not attest current primary.
+
+The research audited startup, resume/fork, /new, return to earlier roots, side and
+nested navigation, command-center roots, background helpers and reconnect paths.
+Twelve synthetic state/source-order checks passed and three protocol-model
+mutations were detected. The identical-control-trace counterexample was synthetic,
+not captured native traffic; no native extension was built or tested. These
+results support the technical limits, not a repaired or live-accepted transport.
+Version-string agreement does not establish installed-binary equivalence to the
+source snapshot. The pinned unload default remains 60 seconds; documentation for
+other versions must not replace that evidence.
+
+Explicit rebinding and registration through a first-turn hook remain unselected
+options within rewake's scope, not features or complete ownership contracts.
+No latest/active/arbitrary-root heuristic is accepted as a reliable substitute.
+
+### Pending owner-managed metadata probe
+
+The owner offered an empty session in a separate probe room and a manual /new.
+The experiment will compare observable PID, FD, lock and other service metadata.
+It awaits the owner's readiness signal; no results are claimed here. Only the
+owner controls that session and its restart. The researcher must not operate it
+or inspect other agents' intermediate work; coordination waits for final results.
+
 ## Authorized bounded mitigation
 
 The orchestrator selected bounded mitigation on September 17, 2026: preserve
 report visibility and clean up this observer's obsolete subscriptions. No RPC
 gateway or upstream change belongs to this patch. The ownership issue remains
-open; a future solution needs an explicit terminal selection signal or a
-separately verified transport design that distinguishes primary selection from
-side-thread and background requests without inspecting history.
+open. Later research and the owner's rewake-only constraint are recorded below;
+no native selection extension or replacement ownership design is approved.
 
 The observer tracks resume attempts by connection, thread and generation.
 Cleanup shares the discovery gate with resume; a selected root change wakes it
 even if the replacement is idle without a rollout. Successful late replies do
 not establish the current subscription when the generation changed, but their
 attachments remain tracked for removal. Definite unsubscribe refusals retry
-with backoff. Only the observer's connection sends unsubscribe.
+with backoff. Only the observer's connection sends unsubscribe. Round fourteen
+found an open closed-client retention case during failed reconnects (R14-1);
+the mitigation does not cover that case yet.
 
 A timeout or cancellation leaves the RPC's server-side outcome uncertain: a
 resume could attach after an unsubscribe, or a late unsubscribe could detach
@@ -140,3 +206,12 @@ Targeted mutations remove report preservation, durable recovery, idle cleanup,
 late-resume bookkeeping and the uncertain-connection fence. Each must fail its
 corresponding regression. Full repository checks remain the commit gate; these
 local protocol tests do not close live ownership acceptance.
+
+## Round fourteen follow-up
+
+The review of `adbb6c2..b1b9d2b` is complete, with open P2 findings R14-1
+(closed observer clients retained during failed reconnects) and R14-2 (an active
+snapshot discarded during discovery suppresses completion-gap reporting).
+Both reproduce with isolated fixtures and do not require ownership ambiguity.
+Baseline checks remain green; the new failing reproductions are not fixes.
+See [detailed findings](reviews-later.md#review-round-fourteen--complete-with-open-findings-september-17-2026).
