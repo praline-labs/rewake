@@ -137,6 +137,13 @@ Keep a file under 400 lines; split by subject, not by size.
 
 ## Commits
 
-Author the commit as the owner and keep the agent as co-author: every commit
-here ends with the `Co-Authored-By` trailer of the agent that wrote it, plus the
-session link. The work is shared, so the record says so.
+Author the commit as the owner and keep both agents as co-authors: every commit
+here ends with two `Co-Authored-By` trailers, one for Codex and one for Claude,
+whichever of them wrote the change — the orchestrator sets the work and checks
+it, the executor writes it, so the record names both. Never one without the
+other. The current lines:
+
+```
+Co-Authored-By: Codex (gpt-6-astra) <noreply@openai.com>
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+```
