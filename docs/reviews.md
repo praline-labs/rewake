@@ -2,6 +2,8 @@
 
 [Back to the roadmap](roadmap.md).
 
+Work of September 17, 2026 is in [the later review rounds](reviews-later.md).
+
 ## Review round after milestone 3 — done, September 16, 2026
 
 An external reviewer read the three commits and reported twenty-two defects and
@@ -117,6 +119,91 @@ Also closed in this round:
 - **Message ids were ordered by millisecond**, so two messages written in the
   same one could be delivered in the wrong order.
 
+## Review round four — done, September 16, 2026
+
+Fourteen findings, four of them High, and the first was a regression from the
+round before it: narrowing the signal handler to SIGTERM and SIGHUP left SIGINT
+at its default, so Ctrl+C killed the wrapper while the harness carried on. An
+interrupted turn ended the session's mailbox with it. The keyboard signals are
+ignored explicitly now, and a live run confirms it: Ctrl+C into the session, then
+`list` still shows it and the next message is delivered in 0.04 s.
+
+Also closed:
+
+- **Ownership was asked once and acted on later.** The record and its socket are
+  now decided by a single answer: the socket goes only if the removal actually
+  happened, so a name that changed hands in between no longer costs a live
+  session its socket.
+- **A serving goroutine that started late** — after its harness was gone and the
+  name had changed hands — refused the new session's mail on its way past. It now
+  asks whether it still owns the name before touching the mailbox at all.
+- **A section header written inside somebody's instructions was read as
+  configuration.** An example in `developer_instructions` could set the sandbox
+  permissions of the run. Multi-line values are now stepped over rather than
+  parsed.
+- **A high file descriptor crashed the wrapper**: `select` cannot wait past 1024
+  and the index was not checked. That is the case for falling back to the poll,
+  not for a panic.
+- **The watch answered its own writes.** With `done/` unwritable, each status
+  write produced an event, which produced a pass, which wrote the status again —
+  186 times in 600 ms. Only a message file counts as a change now, and rewriting
+  an outcome waits its retry interval.
+- **A harness that stopped itself** left the shell waiting on a wrapper that was
+  still running. The wrapper follows it into the stop and back out of it.
+- **A swept answer was reported as pending**, promising a delivery that had
+  already happened; the sender now says the result is no longer kept.
+- **The archived message kept the age it was written at**, so an old message
+  refused at startup was swept in the same breath.
+- Smaller: `-c=key=value`, escapes in a triple-quoted string that closes on its
+  own line, a watch that never came back after the mailbox was replaced, the
+  shim preferring a stale sibling package over its own dependency, and a package
+  version that did not reach `rewake --version`.
+
+## Review round five — findings, September 16, 2026
+
+Run against `1d276de`, asked "what did these fixes break" rather than "is it
+fixed". Nine defects, all reproduced by running: six regressions of round
+four's fixes and three causes left in place.
+
+- High: `signal.Ignore` is inherited through exec, so Ctrl+C no longer reaches
+  a harness without handlers of its own; Ctrl+Z then `fg` stops the wrapper
+  again while the harness runs; shutdown within the retry window loses a
+  delivered status; the multi-line skip swallows real instructions after
+  `other = """a " # b"""`; socket removal still happens outside the name lock;
+  an escaped `\"""` or a string inside an array still becomes sandbox roots.
+- Medium: a mailbox replaced with a gap closes the watch channel and spins a
+  core; `send` reports a fresh delivery as a lost result; the shim misses a
+  hoisted platform package.
+- Eleven tests stay green on the broken code, one of them a false oracle
+  (`TestWatchSurvivesAReplacedMailbox` takes a closed channel for an event).
+
+## Review round five — closed, September 16, 2026
+
+The nine findings, fixed on the branch `fix/round-five`:
+
+- Ctrl+C: the keyboard signals are caught rather than ignored, so the harness
+  starts with them at their defaults. Checked in a real PTY.
+- Ctrl+Z and `fg`: the wrapper follows a harness into a stop only while the
+  harness is stopped. Checked in a real PTY, for Ctrl+Z and for a job stopped
+  on terminal input.
+- Shutdown lifts the retry limit, so an outcome known only in memory is
+  written on the way out.
+- The Codex configuration is no longer parsed. A key mentioned in any form is
+  left alone with a note; user-defined sandbox roots are left alone.
+- The socket path carries the run, so a wrapper removes its own socket and
+  cannot reach the next run's.
+- A closed watch channel is set aside instead of spinning, and a watch whose
+  mailbox disappeared keeps asking until it comes back.
+- `send` re-reads the status before calling a result lost.
+- The shim finds the platform package the way Node does — nearest
+  `node_modules` first, from inside the entry package upwards — instead of from
+  three fixed places. It lives in `scripts/shim.sh` now, with tests over the
+  nested, hoisted and linked layouts; a real `npm install` with a hoisted
+  platform package runs `rewake --version` from the nested entry.
+
+A test that staged a takeover without the name lock failed one run in many; it
+takes the lock now.
+
 ## Review round six — done, September 16, 2026
 
 Codex read `a2241e1` asking what it broke. Its sandbox could not write even to
@@ -182,90 +269,22 @@ The pre-link check for a read that landed between the unlocked status check and
 the lock has no test of its own: that window cannot be reached without a hook
 in the server.
 
-## Review round five — closed, September 16, 2026
+## Review round eight — done, September 16, 2026
 
-The nine findings, fixed on the branch `fix/round-five`:
+Four findings, three of them regressions of round seven's lock:
 
-- Ctrl+C: the keyboard signals are caught rather than ignored, so the harness
-  starts with them at their defaults. Checked in a real PTY.
-- Ctrl+Z and `fg`: the wrapper follows a harness into a stop only while the
-  harness is stopped. Checked in a real PTY, for Ctrl+Z and for a job stopped
-  on terminal input.
-- Shutdown lifts the retry limit, so an outcome known only in memory is
-  written on the way out.
-- The Codex configuration is no longer parsed. A key mentioned in any form is
-  left alone with a note; user-defined sandbox roots are left alone.
-- The socket path carries the run, so a wrapper removes its own socket and
-  cannot reach the next run's.
-- A closed watch channel is set aside instead of spinning, and a watch whose
-  mailbox disappeared keeps asking until it comes back.
-- `send` re-reads the status before calling a result lost.
-- The shim finds the platform package the way Node does — nearest
-  `node_modules` first, from inside the entry package upwards — instead of from
-  three fixed places. It lives in `scripts/shim.sh` now, with tests over the
-  nested, hoisted and linked layouts; a real `npm install` with a hoisted
-  platform package runs `rewake --version` from the nested entry.
+- **A reader stuck on its stdout held the mailbox**, and with it delivery, the
+  end of turns and the wrapper's exit. Every wait for the lock now ends: the
+  server's with its session, the hook's and the reader's after a few seconds.
+- **An unusable `.lock` left senders with a pending that said nothing.** The
+  server now works without a lock nobody can take; readers fail and say why.
+- **A read retried after a failed last step reported twice.** The `read`
+  status marks the retry, and the wait is not recorded again.
+- **A waiter that could not be removed was reported at every turn.** Reports
+  now carry an id derived from the wait and are written once.
 
-A test that staged a takeover without the name lock failed one run in many; it
-takes the lock now.
-
-## Review round five — findings, September 16, 2026
-
-Run against `1d276de`, asked "what did these fixes break" rather than "is it
-fixed". Nine defects, all reproduced by running: six regressions of round
-four's fixes and three causes left in place.
-
-- High: `signal.Ignore` is inherited through exec, so Ctrl+C no longer reaches
-  a harness without handlers of its own; Ctrl+Z then `fg` stops the wrapper
-  again while the harness runs; shutdown within the retry window loses a
-  delivered status; the multi-line skip swallows real instructions after
-  `other = """a " # b"""`; socket removal still happens outside the name lock;
-  an escaped `\"""` or a string inside an array still becomes sandbox roots.
-- Medium: a mailbox replaced with a gap closes the watch channel and spins a
-  core; `send` reports a fresh delivery as a lost result; the shim misses a
-  hoisted platform package.
-- Eleven tests stay green on the broken code, one of them a false oracle
-  (`TestWatchSurvivesAReplacedMailbox` takes a closed channel for an event).
-
-## Review round four — done, September 16, 2026
-
-Fourteen findings, four of them High, and the first was a regression from the
-round before it: narrowing the signal handler to SIGTERM and SIGHUP left SIGINT
-at its default, so Ctrl+C killed the wrapper while the harness carried on. An
-interrupted turn ended the session's mailbox with it. The keyboard signals are
-ignored explicitly now, and a live run confirms it: Ctrl+C into the session, then
-`list` still shows it and the next message is delivered in 0.04 s.
-
-Also closed:
-
-- **Ownership was asked once and acted on later.** The record and its socket are
-  now decided by a single answer: the socket goes only if the removal actually
-  happened, so a name that changed hands in between no longer costs a live
-  session its socket.
-- **A serving goroutine that started late** — after its harness was gone and the
-  name had changed hands — refused the new session's mail on its way past. It now
-  asks whether it still owns the name before touching the mailbox at all.
-- **A section header written inside somebody's instructions was read as
-  configuration.** An example in `developer_instructions` could set the sandbox
-  permissions of the run. Multi-line values are now stepped over rather than
-  parsed.
-- **A high file descriptor crashed the wrapper**: `select` cannot wait past 1024
-  and the index was not checked. That is the case for falling back to the poll,
-  not for a panic.
-- **The watch answered its own writes.** With `done/` unwritable, each status
-  write produced an event, which produced a pass, which wrote the status again —
-  186 times in 600 ms. Only a message file counts as a change now, and rewriting
-  an outcome waits its retry interval.
-- **A harness that stopped itself** left the shell waiting on a wrapper that was
-  still running. The wrapper follows it into the stop and back out of it.
-- **A swept answer was reported as pending**, promising a delivery that had
-  already happened; the sender now says the result is no longer kept.
-- **The archived message kept the age it was written at**, so an old message
-  refused at startup was swept in the same breath.
-- Smaller: `-c=key=value`, escapes in a triple-quoted string that closes on its
-  own line, a watch that never came back after the mailbox was replaced, the
-  shim preferring a stale sibling package over its own dependency, and a package
-  version that did not reach `rewake --version`.
+Codex also showed that three tests passed with delivery held under the lock:
+their reader skipped the lock. The test reader takes the real one now.
 
 ## Review round nine — done, September 16, 2026
 
@@ -309,80 +328,24 @@ Each regression has a failing mutation check. Structural Git checks are compared
 with real repositories, worktrees and submodules; delivery is exercised with
 isolated state and fake harnesses.
 
-## Expanded checks — done, September 17, 2026
+## Git metadata access by role — done, September 16, 2026
 
-The stricter formatter and all configured linters now pass. Unused helpers were
-removed, cleanup errors are explicitly discarded only where they cannot change
-the result, and successful file writes retain their checked close path. Spelling,
-comments and equivalent expressions follow the configured checks. Delivery,
-reporting and signal behavior are unchanged; the suite runs with race detection
-and shuffled test order. Earlier review rounds are in [reviews.md](reviews.md).
+Main and the new `--write` role append `--add-dir` for the working repository's
+Git metadata. Write reports turns like worker; main stays silent. Worker and
+an unset role receive no extra roots. The flag adds to existing writable roots
+without replacing configuration or selecting a different permission profile.
 
-## Git writes for local continuations — done, September 17, 2026
+Ordinary repositories use `.git`; worktrees and submodules resolve its `gitdir`
+pointer, plus the worktree's `commondir`. Missing, malformed or symlinked metadata
+and remote execution are skipped with actionable advice; a newly allocated
+--worktree also waits for its private metadata path to become known.
 
-`resume` and `fork` now keep the metadata grant discovered from launch cwd.
-The earlier blanket skip prevented resumed writers from committing. Remote
-execution still skips local paths with an explanation.
+**Owner decision, September 16, 2026:** use the additive flag. A live 0.154.0
+`codex exec --add-dir <gitdir> -s workspace-write` committed successfully while
+retaining the owner's configured roots. The earlier sandbox-only experiment
+could not verify `--add-dir` because that subcommand does not forward it.
 
-New `--worktree` support remains deferred after source inspection and sandbox
-probes: a managed checkout's private gitdir can stay read-only despite a writable
-source `.git`. Both private and common metadata roots are needed, but the private
-path is allocated later by the harness. Creating the worktree first remains
-supported. Research records the source locations, layout-dependent results and
-the wrapper's unchanged launch cwd. Regression tests and mutations protect
-resume/fork grants and the honest worktree refusal.
-
-## Review round eleven — done, September 17, 2026
-
-Retention now distinguishes a reserved answer from an ordinary report. Release
-starts one finite delivery window, never renewed by retry; receipts outlive the
-reports that reference them. Mixed thread comparison checks later deliveries,
-and the publication test waits for the harness pid before checking removal.
-
-Agent system text now lives in internal/brief, with per-role
-snapshots. Role data no longer carries injected prose; harness helpers are
-split into plans, flags, environment, hooks and notices.
-
-The reporting role is now general (--general). Legacy worker records normalize
-to general. General, write and main have independent short system briefings
-with reviewed snapshots instead of a shared paragraph plus suffixes.
-
-Failed turns now use hook-only error reports, with fallback to the room's main
-and local retention for main's own failure. Explicit reasons stay unchanged;
-empty received completions after work are textless errors. The legacy notify
-failure-observation gap is documented, without reading transcripts.
-
-Notices now include a bounded first-line preview authored by the sender. The
-latest available letter supplies the preview and error color; full text remains
-in inbox. Empty first lines are not skipped in search of a summary.
-
-Validation: all five repository checks pass. Twenty targeted mutations were
-caught. Isolated fake-process runs covered caller arguments, both notice
-transports, error routing and blocking error replies. No real harness ran.
-
-## Review round twelve — done, September 17, 2026
-
-Nested-agent completions no longer settle parent tasks: agent_id filters both
-success and failure before any mailbox state changes. A root agent_type still
-reports normally. The regression covers both child events and the parent result.
-
-Identified turns persist their complete report batch and waiter/message snapshot
-before the first publication. Retries reuse recipients, content and report ids;
-cleanup removes only that snapshot, retaining later work for its own result.
-
-Preview coverage now measures CJK terminal columns independently of the production
-width estimator. A mutation treating wide glyphs as narrow fails at 102 columns.
-
-Validation: all five repository checks, callback regressions, targeted mutations,
-and isolated fake-process delivery pass. Failed-turn observation still depends on the harness emitting a callback; the
-previous legacy-notify limitation remains unchanged. No real harness was run.
-
-## Review round thirteen — requested fixes complete, September 17, 2026
-
-Reconnect omits the initial pagination cursor and preserves generation guards.
-RPC cancellation covers writer contention and frame I/O, with no automatic resend.
-Answer receipts identify the printed report, so stopped cannot archive a later
-shared finished. Resume discovery uses metadata hints and loaded-list fallback,
-without thread/started or history. All four requested regressions and the
-generation coverage gap pass, including strict resume and shared-final scenarios.
-Full milestone acceptance remains open for the owner.
+Role, argument, configuration and metadata tests cover the launch plan. Pointer
+resolution is compared with Git's output for temporary repositories, worktrees
+and submodules. Repeated flags are accepted by the CLI and roots are deduplicated
+by its config loader. See research for versioned evidence and reproduction.

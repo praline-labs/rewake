@@ -216,24 +216,7 @@ reported by ending the turn with the result rather than by another send.
 In Codex the notice keeps the 🟢: Codex strips control characters from a user
 message, so a coloured `●` like Claude Code's is not possible there.
 
-Earlier findings and fixes are in the [review history](reviews.md).
-
-## Review round eight — done, September 16, 2026
-
-Four findings, three of them regressions of round seven's lock:
-
-- **A reader stuck on its stdout held the mailbox**, and with it delivery, the
-  end of turns and the wrapper's exit. Every wait for the lock now ends: the
-  server's with its session, the hook's and the reader's after a few seconds.
-- **An unusable `.lock` left senders with a pending that said nothing.** The
-  server now works without a lock nobody can take; readers fail and say why.
-- **A read retried after a failed last step reported twice.** The `read`
-  status marks the retry, and the wait is not recorded again.
-- **A waiter that could not be removed was reported at every turn.** Reports
-  now carry an id derived from the wait and are written once.
-
-Codex also showed that three tests passed with delivery held under the lock:
-their reader skipped the lock. The test reader takes the real one now.
+Earlier findings and fixes are in the [review history](reviews.md) and [its later part](reviews-later.md).
 
 ## Later, as needed
 
@@ -245,6 +228,16 @@ their reader skipped the lock. The test reader takes the real one now.
 - macOS: replacements for `/proc` (`lsof`, `ps -o lstart`).
 - Read receipts: `rewake inbox` already writes a `read` status; `send` does not
   report it yet.
+- Permissions on request (owner idea, September 17, 2026): "grant permissions
+  for actions on request — say review cannot reach a folder in /tmp", and
+  "restrict the worker and grant it rights dynamically". The mechanism already
+  exists for Git metadata: `turn/start.runtimeWorkspaceRoots` travels with a
+  delivered task. A general form would be `rewake send <name> --grant <path>`,
+  accepted only from the main role, with paths checked (existing, no symlink
+  escape) and the thread's roots only ever extended; a general session would
+  start with its working directory alone. Limits: Codex through its app-server
+  only (Claude Code needs its own research), a turn the person starts in the
+  TUI uses the stored roots, and the sandbox has to be workspace-write.
 
 ## Risks
 
@@ -305,28 +298,6 @@ Two things the live run caught that the tests did not:
   the same slow interval. Measured on a live session: 0.03 s instead of 1.0 s.
 
 
-## Git metadata access by role — done, September 16, 2026
-
-Main and the new `--write` role append `--add-dir` for the working repository's
-Git metadata. Write reports turns like worker; main stays silent. Worker and
-an unset role receive no extra roots. The flag adds to existing writable roots
-without replacing configuration or selecting a different permission profile.
-
-Ordinary repositories use `.git`; worktrees and submodules resolve its `gitdir`
-pointer, plus the worktree's `commondir`. Missing, malformed or symlinked metadata
-and remote execution are skipped with actionable advice; a newly allocated
---worktree also waits for its private metadata path to become known.
-
-**Owner decision, September 16, 2026:** use the additive flag. A live 0.154.0
-`codex exec --add-dir <gitdir> -s workspace-write` committed successfully while
-retaining the owner's configured roots. The earlier sandbox-only experiment
-could not verify `--add-dir` because that subcommand does not forward it.
-
-Role, argument, configuration and metadata tests cover the launch plan. Pointer
-resolution is compared with Git's output for temporary repositories, worktrees
-and submodules. Repeated flags are accepted by the CLI and roots are deduplicated
-by its config loader. See research for versioned evidence and reproduction.
-
 ## Milestone 10. Rooms — done, September 16, 2026
 
 **Owner decision:** rooms isolate session discovery, addressing and delivery.
@@ -364,6 +335,18 @@ The obsolete queue subprocess, lock-file tracker and unused process-tree/fd
 helpers are removed. The complete fake-process smoke covers delivery, stopped
 and continuation, /new, API errors, closed-thread refusal and server death.
 The full wrapper's real-model acceptance remains open for the owner.
+
+Live acceptance so far, on the owner's sessions with CLI 0.154.0 and Claude Code
+(September 17, 2026):
+
+| criterion | result |
+|---|---|
+| delivery to a fresh thread without a first word | passed: the turn started on its own |
+| a report from a fresh thread's turn | passed: `finished` arrived |
+| same-turn delivery during work | passed: a mid-turn note was followed in that turn |
+| error after a failed turn | passed on Claude Code (a usage-limit stop); Codex only on the fake server |
+| stopped after a keyboard interrupt | open |
+| delivery to a thread opened with /new | open |
 
 ## First input — done, September 17, 2026
 
