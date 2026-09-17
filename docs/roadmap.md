@@ -393,7 +393,7 @@ state during discovery and omits completion-gap reporting. Baseline five-check
 results are green; the new isolated reproductions fail. No fixes have landed.
 [Findings and reproductions](reviews-later.md#review-round-fourteen--complete-with-open-findings-september-17-2026).
 
-Ownership research and owner-run metadata probes are complete; selection remains
-unresolved. [Probe evidence](thread-lock-probes.md) rejects latest-lock-mtime routing;
-further tracing is optional and unperformed. Only rewake may change; existing hooks
-are allowed and native extensions remain outside [scope](thread-ownership-investigation.md).
+[Native resume matrix and probes](thread-lock-probes.md) confirm conditional runtime
+recreation on the fingerprinted build, without attributing the earlier live event.
+The [rewake-only intent gateway](thread-ownership-investigation.md#practical-rewake-only-intent-gateway-research)
+remains unselected research. Existing hooks are allowed; native changes remain forbidden.

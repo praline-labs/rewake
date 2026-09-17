@@ -395,5 +395,5 @@ thread/loaded/list starts with an omitted or null cursor. For a nonempty loaded
 set, an empty string is an invalid ThreadId, not the first page. Only a returned
 nextCursor belongs in the next request (`thread_processor.rs:2732–2777`).
 
-Fresh-thread subscription ordering and the short-turn race are documented in
-[server event observation](server-observation.md) and [ownership investigation](thread-ownership-investigation.md), against the same snapshot.
+[Server observation](server-observation.md) and [ownership research](thread-ownership-investigation.md) cover ordering, selection and the unselected intent gateway.
+The [native resume matrix](thread-lock-probes.md) verifies conditional recreation on the fingerprinted 0.154.0 build; original live-event attribution remains open.

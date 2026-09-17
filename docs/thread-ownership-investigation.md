@@ -2,9 +2,10 @@
 
 Investigation on September 17, 2026. Installed CLI: 0.154.0. Source snapshot:
 `44b9011611e1f4213ef34bd51b33476475803a94`. Source paths below are relative to
-the upstream Rust workspace. No model or native harness was launched; live
-inspection used initialization, loaded-list and metadata-only thread/read.
-No live subscription, resume, history read or state repair was performed.
+the upstream Rust workspace. The original investigation launched no native harness;
+its live inspection used initialization, loaded-list and metadata-only thread/read,
+without subscription, resume, history reads or state repair. Later isolated native
+execution and the narrow test-service metadata exception are recorded below.
 
 ## What the incident establishes
 
@@ -128,6 +129,57 @@ Explicit rebinding and registration through a first-turn hook remain unselected
 options within rewake's scope, not features or complete ownership contracts.
 No latest/active/arbitrary-root heuristic is accepted as a reliable substitute.
 
+### Practical rewake-only intent gateway research
+
+Research completed September 17, 2026; this option is **unselected and
+unimplemented**. Its restricted contract would bind to the last successfully
+accepted ordinary startup/new/clear/resume intent on the wrapper-owned TUI
+connection. It would not attest the currently rendered screen. Existing hooks
+remain allowed; native changes remain forbidden under the owner's scope.
+
+Source at `44b901161` distinguishes ordinary TUI request construction from helper
+traffic: fresh startup uses startup-thread-start-* IDs; ordinary requests use
+integer IDs, while dynamic/temporary helpers have separate prefixes
+(`tui/src/app_server_session.rs:1699–1717,2054–2161`;
+`tui/src/dynamic_tools.rs:638–648,1230–1236`;
+`tui/src/temporary_structured_request.rs:101,131,185`).
+Normal resume includes config and runtimeWorkspaceRoots; PreserveExistingThread
+starts mostly with defaults, but later MCP configuration can add config. Config
+presence alone is therefore not a primary-intent classifier. These implementation
+conventions require supported-binary validation, not just a matching version string.
+
+A possible gateway would project method/request/thread IDs, source, non-null field
+flags, direct-input capability and errors, forwarding other payload bytes without
+inspecting or storing prompts, history or config values. It would track wrapper
+epoch, connection incarnation and intent generation: a new recognized request
+invalidates readiness; only its matching latest successful reply binds a writable
+target. Failed, unknown, read-only or disconnected states stay unavailable. Late
+replies cannot restore an old target. Returning by ordinary resume to an earlier
+root remains supported; no permanent retired-root blacklist is appropriate.
+
+Delivery admission and TUI lifecycle requests would need shared ordering, with a
+bounded wait for turn/start acknowledgement, not model completion. An independent
+read-then-send client retains the race. External clients/runtime changes still
+prevent a universal atomic ownership guarantee. No uncertain model work should
+be automatically resent, and no newest/active/arbitrary-root fallback is accepted.
+
+Cached command-center selection, side/child navigation, fork and reconnect remain
+ambiguous: PreserveExistingThread serves selection and non-selection paths;
+cached blank roots may switch after only thread/read. Unexplained different-root
+activity must invalidate restricted binding, accepting false unavailability.
+Same-thread resume can be a local no-op; reconnect can resume a viewed child.
+Successful RPC still precedes fallible local rendering. These gaps require separate
+classification or explicit rebinding, not an implied screen-selection guarantee
+(`tui/src/app/agents_overview.rs:478–513,596–604`;
+`tui/src/app/thread_routing.rs:202–225,1636`;
+`tui/src/app/session_lifecycle.rs:383`; `tui/src/app/reconnect.rs:65`).
+
+Six synthetic metadata classifier checks passed; no native TUI gateway, WebSocket
+proxy or delivery scheduler was tested. Transport/report/permission regressions
+would need separate coverage before adoption. Explicit binding and first-turn
+hooks remain alternatives; hooks do not cover every empty or cached selection.
+No policy approval, implementation or automatically queued diagnostic follows.
+
 ### Completed owner-managed metadata probes
 
 The owner-run /new, cold-resume and loaded-endpoint B-to-A probes are complete.
@@ -136,9 +188,16 @@ captures from the incomplete initial collector. Latest lock mtime selected A
 while the owner confirmed visible B. Unchanged B is not evidence of a failed
 update during a genuine earlier switch: its initial /resume may have been a no-op.
 A's later birth time and isolated inode/FD reuse controls support lock replacement;
-its exact native cause remains untraced. These are lifecycle observations, not a
-reliable selected-dialogue contract. Further watcher/strace recipes have not run
-and are optional, not automatically queued. No binding option or repair is selected.
+its original native cause remains untraced. The later
+[native four-cell matrix](thread-lock-probes.md#native-resume-matrix-september-17-2026)
+confirmed conditional runtime/lock recreation for the fingerprinted 0.154.0 binary:
+only empty config with no retained subscriber recreated it. Original live request,
+subscriber state and process fingerprint were not captured, so attribution remains
+open. These lifecycle observations do not establish selected-dialogue ownership.
+The narrow test-service metadata exception and unresolved checkpoint discrepancy
+are recorded with the matrix; production transcript-reading boundaries remain.
+Further watcher/strace recipes are optional and unperformed, not queued work.
+No binding option or repair is selected.
 
 ## Authorized bounded mitigation
 
