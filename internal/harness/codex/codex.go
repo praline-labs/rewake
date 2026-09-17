@@ -70,7 +70,14 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 		}
 	}
 
-	if request.Role.GitWrite {
+	continuation, permissionOverride := continuationOptions(request.Args)
+	if continuation && permissionOverride {
+		notes = append(notes, "permission overrides cannot be used with resume/fork under rewake: the remote TUI rejects them; remove the permission flags or start a new thread; caller arguments are unchanged")
+	}
+	if continuation && request.Role.GitWrite {
+		notes = append(notes, "resumed thread keeps its stored permissions; commits need a thread started under --write")
+	}
+	if request.Role.GitWrite && !continuation {
 		if flags, note := gitWriteFlags(args); note != "" {
 			notes = append(notes, note)
 		} else {

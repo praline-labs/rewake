@@ -392,3 +392,8 @@ The fake scopes turn/item events to subscribed clients and delays rollout creati
 Tests cover first input, /new, retries, normal idle ordering and the short-turn gap.
 Source evidence and remaining transport limits are in server-observation.md.
 All five checks pass. Real-model milestone acceptance stays with the owner.
+
+## Remote continuation startup — fixed, September 17, 2026
+
+Resume/fork omit generated permission grants; caller overrides stay intact with a warning.
+Fake TUI checks cover all roles; all five checks pass. [API limits](continuation-permissions.md) prevent an idle root grant. Saved roots may be superseded; live acceptance stays open.

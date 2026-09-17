@@ -177,7 +177,7 @@ manifest; that placeholder does not identify the installed release's commit.
 - **`--add-dir <gitdir>` adds to the configured roots.** A live `codex exec`
   run committed successfully with this flag and `-s workspace-write`; its
   sandbox header included both the added `.git` and all previously configured
-  roots. This is the flag rewake passes for main and write.
+  roots. This is the flag rewake passes for fresh main and write launches.
 - The flag is shared with TUI and repeatable: `add_dir` is a `Vec<PathBuf>` in
   `codex-rs/utils/cli/src/shared_options.rs:74–76`. TUI forwards it as
   `additional_writable_roots` in `codex-rs/tui/src/startup_orchestration.rs:128–143`.
@@ -233,9 +233,9 @@ needed: Git writes per-worktree state and shared repository state.
 ### Managed worktrees and continuation permissions
 
 **[source: snapshot `44b9011`; sandbox verification with CLI 0.154.0,
-September 17, 2026; no model call]** Local `resume` and `fork` keep the extra
-metadata root discovered from launch cwd. They may choose another conversation
-cwd; the extra source root is still useful and does not replace the workspace.
+September 17, 2026; no model call]** These worktree checks concern local
+launches. Rewake now uses a remote TUI, whose continuation permission boundary
+is documented below; the local behavior does not establish remote behavior.
 
 Managed worktree allocation uses `$CODEX_HOME/worktrees/<four-character id>/<repo>`
 by default, or `desktop.git-worktree-root` when configured
@@ -273,14 +273,22 @@ codex sandbox -c 'sandbox_mode="workspace-write"' \
   sh -c 'printf "fixture\n" > probe.txt && git add probe.txt && git -c user.name=Test -c user.email=test@example.invalid commit -m "Check worktree access"'
 ```
 
-Rewake grants metadata on local resume/fork but retains the new `--worktree`
-skip: it cannot know that private gitdir before the harness allocates it. A
+Rewake refuses managed `--worktree` launches under its owned server: it cannot
+know that private gitdir before the harness allocates it. A
 supported alternative is to create the worktree first, then launch from its
 checkout; metadata discovery can then add both directories. Future automatic
 support needs the allocated path before sandbox permissions are finalized, or
 a reliable upstream carveout override. Rewake's session record retains the
 wrapper's original cwd, not the dynamically chosen checkout path, and it does
 not read saved transcripts to predict where a continuation will run.
+
+### Remote continuation permissions
+
+**[snapshot `44b901161`; CLI 0.154.0; September 17, 2026]** Remote resume/fork
+reject permission overrides, including `--add-dir`. Rewake omits generated grants
+and warns; caller flags stay intact. Current TUI roots can supersede saved roots.
+[Source evidence and API limits](continuation-permissions.md) explain why no
+policy-preserving root grant is made at idle attachment.
 
 ### The sandbox has its own pid namespace
 
@@ -386,14 +394,6 @@ child callbacks. Rewake ignores completions carrying a child identity.
 thread/loaded/list starts with an omitted or null cursor. For a nonempty loaded
 set, an empty string is an invalid ThreadId, not the first page. Only a returned
 nextCursor belongs in the next request (`thread_processor.rs:2732–2777`).
-
-**[resume, snapshot 44b9011; CLI 0.154.0; September 17, 2026]**
-Cold resume returns ThreadResumeResponse only to its caller, without thread/started
-(`thread_processor.rs:4083–4133`). Its upsert at :4008 can broadcast
-thread/status/changed via `thread_status.rs:223–251` and
-`outgoing_message.rs:737–746`, without a thread subscription. Name changes also
-broadcast thread/name/updated (:672), but are not guaranteed on resume. Discovery
-therefore uses metadata hints plus loaded-list polling, never history.
 
 Fresh-thread subscription ordering and the short-turn race are documented in
 [server event observation](server-observation.md), against the same snapshot.

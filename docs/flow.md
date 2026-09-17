@@ -69,8 +69,9 @@ sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
    - Codex: an owned foreground app-server on a private socket, initialized before
      the TUI starts with --remote. Explicit configuration and the briefing reach
      the server; main/write metadata roots reach its thread through TUI
-     runtimeWorkspaceRoots. No notify program is installed. Resume/fork keep
-     caller input; incompatible remote/profile/managed-worktree/local-provider launches refuse.
+     runtimeWorkspaceRoots on fresh launches. No notify program is installed.
+     Resume/fork keep caller input, omit generated permission flags and warn
+     committing roles about stored permissions; incompatible remote/profile/managed-worktree/local-provider launches refuse.
 6. **The environment.** `REWAKE_SESSION=<name>`, `REWAKE_EPOCH=<epoch>`,
    `REWAKE_DIR=<root>` and `REWAKE_ROOM=<room>`; inherited Claude Code markers are stripped so a session
    started from inside another does not borrow its socket.

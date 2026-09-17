@@ -79,7 +79,7 @@ the session's REWAKE_* environment, which the default shell policy inherits.
 Its remote-control startup is disabled with the version-specific internal marker.
 Rewake does not install notify; a caller's own configured program stays theirs.
 
-Main and write retain additive --add-dir Git metadata roots on the TUI. Its
+On fresh launches, main and write add --add-dir Git metadata roots on the TUI. Its
 thread/start runtimeWorkspaceRoots passes them to the server; synthesizing a
 replacement writable_roots setting would lose the user's roots. Discovery still
 validates ordinary repositories, worktrees, submodules and commondir. General
@@ -87,7 +87,19 @@ gets no extra roots. Sandbox, approval, network and tmp policies are not replace
 The existing warning about excluded temporary directories remains relevant.
 
 -C/--cd selects the effective server cwd as well as the TUI request. Resume and
-fork retain their arguments. The registry keeps
+fork retain their arguments but receive no generated permission overrides: the
+remote TUI refuses these before attaching. Committing roles print
+`resumed thread keeps its stored permissions; commits need a thread started under --write`.
+This is not a guarantee that a previously added metadata root survives: the TUI
+passes its current workspace roots even when restoring saved permission settings.
+No additive, policy-preserving root update exists without starting a turn in the
+verified API, so startup does not attempt a permission RPC or automatic input.
+See [continuation permission evidence](research.md#remote-continuation-permissions).
+
+Caller permission flags and permission-related -c overrides stay untouched.
+For resume/fork, a separate stderr note explains that the remote TUI rejects
+them and advises removing them or starting a new thread. Arguments after -- are
+prompt text, not permission flags. The registry keeps
 the wrapper's original cwd. Existing --remote, --profile, --worktree and --oss/--local-provider launches
 are refused with advice: they cannot safely share this owned server topology or
 forward all configuration. Create the checkout first and use explicit settings.

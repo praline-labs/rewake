@@ -168,7 +168,9 @@ before preparing or running the harness. The record, launch note and intro say
 which role was chosen and why.
 
 Git writes are a separate role capability from reporting. The sandbox adapter
-appends `--add-dir` for the discovered metadata directories. Ordinary repos,
+appends `--add-dir` for the discovered metadata directories on fresh launches.
+Remote resume/fork omit that flag and warn committing roles about stored
+permissions; they cannot safely add roots without starting a turn. Ordinary repos,
 worktrees and submodules are supported; configuration and existing roots remain
 intact. Unresolved or symlinked metadata is skipped with a reason. See
 [launch permissions](launch.md). A role does not revoke permissions the user

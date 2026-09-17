@@ -71,8 +71,8 @@ func gitWorkingDirectory(args []string) (string, error) {
 	return resolved, nil
 }
 
-// Local continuations keep source metadata access. A new managed worktree
-// also needs its not-yet-allocated private gitdir; remote paths are not local.
+// A new managed worktree needs its not-yet-allocated private gitdir; remote
+// paths are not local. Continuations are handled before requesting these flags.
 func gitWriteSkipReason(args []string) string {
 	visible := harness.BeforeTerminator(args)
 	for index := 0; index < len(visible); index++ {
