@@ -220,6 +220,11 @@ only successful output records receipt. Every question sharing a report must
 receive it before it is archived. Missing or stale reservations return unread
 reports to ordinary notification. Silent roles refuse questions before sending.
 
+The server backend tracks thread identity separately from its event subscription.
+First delivery may precede persistence. Active status triggers bounded resume
+attempts; idle without an observed completion produces an explicit observation
+error after a grace period. See [ordering evidence](server-observation.md).
+
 ## A session without a wrapper
 
 Not supported: an owner decision. Only what's launched through `rewake` takes

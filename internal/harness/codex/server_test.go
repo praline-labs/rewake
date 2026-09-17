@@ -113,6 +113,7 @@ func TestOwnedServerDeliversAndTracksOnlyTheTUI(t *testing.T) {
 
 func TestServerReportsTerminalEventsAndReconnects(t *testing.T) {
 	s, outcomes := runtimeFixture(t)
+	beginSubscribedTurn(t, s, fixtureRoot)
 	emitFixture(t, s, "error", map[string]any{"threadId": fixtureRoot, "willRetry": true})
 	emitFixture(t, s, "turn/completed", map[string]any{"threadId": "child", "turn": map[string]string{"id": "child-turn", "status": "failed"}})
 	select {

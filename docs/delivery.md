@@ -174,8 +174,23 @@ RPC lookups run outside the socket reader so responses can still be read. Parent
 ids, non-user sources and unrelated originators are excluded. Discovery binds only a unique
 loaded root; ambiguity refuses delivery. Early terminal notifications
 wait for metadata validation before entering the reporting path. Discovered or
-reconnected roots are explicitly rejoined with excludeTurns=true. Closing the
+reconnected roots are rejoined with excludeTurns=true when persistence permits. Closing the
 selected thread clears it. No process-tree scan or queue command selects a target.
+
+Identity and subscription are separate: thread/started does not subscribe the
+observer. A fresh thread can accept its first turn/start before it has a rollout.
+For an observed active turn without a confirmed subscription, the backend tries
+thread/resume with excludeTurns=true every 50 ms, with a 500 ms RPC limit.
+Only -32600 no-rollout refusals retry; idle, closure, /new or session shutdown
+stop attempts. Successful subscriptions are tied to both connection and thread.
+
+Global idle precedes scoped completion. If an observed active interval becomes
+idle without turn/completed after a 500 ms grace, emit error with the diagnostic
+"completion not observed" and no assistant result. This reports an observation
+gap, not a model failure. Normal completions cancel that fallback. An unknown
+turn id uses a run-local observation id; late completion for that interval is
+suppressed while it remains identifiable. No transcript or history is read.
+See [source ordering and limits](server-observation.md).
 
 An owed message records that thread before becoming readable. Delivery calls
 turn/start with only threadId, clientUserMessageId and the notice as text input.

@@ -156,7 +156,10 @@ The notice wakes the agent, which runs `rewake inbox` in its shell.
 ## Act 5. The turn ends and the report goes back
 
 The harness itself says when a turn is over: Claude Code through Stop or StopFailure,
-Codex through turn/completed. The hook and server events use the same internal
+Codex through turn/completed. The server observer subscribes during the first
+active turn once the rollout exists. An observed active-to-idle interval missing
+completion after a short grace produces error with "completion not observed",
+without an assistant result. The hook and server events use the same internal
 reporting function and turn receipts. A callback with `agent_id` is from a nested agent and is
 ignored without changing the parent session's waits.
 

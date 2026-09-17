@@ -14,37 +14,44 @@ import (
 )
 
 type serverSession struct {
-	closeOnce    sync.Once
-	generation   uint64
-	hintSequence uint64
-	dirty        bool
-	discoveryErr error
-	discoverGate chan struct{}
-	discoverWake chan struct{}
-	ignored      map[string]bool
-	delayed      []serverNotice
-	scope        context.Context
-	path         string
-	args         []string
-	env          []string
-	cwd          string
-	mu           sync.Mutex
-	client       *rpcClient
-	current      string
-	changed      chan struct{}
-	messages     map[string]string
-	outcomes     []harness.Completion
-	wake         chan struct{}
-	process      *exec.Cmd
-	exited       chan struct{}
-	stopped      chan struct{}
-	cancel       context.CancelFunc
-	emit         func(harness.Completion) error
-	note         func(string)
+	subscribedClient    *rpcClient
+	subscribedThread    string
+	subscriptionWake    chan struct{}
+	statusSequence      uint64
+	observationSequence uint64
+	observation         *turnObservation
+	observations        []*turnObservation
+	closeOnce           sync.Once
+	generation          uint64
+	hintSequence        uint64
+	dirty               bool
+	discoveryErr        error
+	discoverGate        chan struct{}
+	discoverWake        chan struct{}
+	ignored             map[string]bool
+	delayed             []serverNotice
+	scope               context.Context
+	path                string
+	args                []string
+	env                 []string
+	cwd                 string
+	mu                  sync.Mutex
+	client              *rpcClient
+	current             string
+	changed             chan struct{}
+	messages            map[string]string
+	outcomes            []harness.Completion
+	wake                chan struct{}
+	process             *exec.Cmd
+	exited              chan struct{}
+	stopped             chan struct{}
+	cancel              context.CancelFunc
+	emit                func(harness.Completion) error
+	note                func(string)
 }
 
 func newServer(path string, args, env []string, cwd string) *serverSession {
-	return &serverSession{path: path, args: args, env: env, cwd: cwd, changed: make(chan struct{}), discoverGate: make(chan struct{}, 1), discoverWake: make(chan struct{}, 1), ignored: make(map[string]bool), messages: make(map[string]string), wake: make(chan struct{}, 1), exited: make(chan struct{}), stopped: make(chan struct{})}
+	return &serverSession{subscriptionWake: make(chan struct{}, 1), path: path, args: args, env: env, cwd: cwd, changed: make(chan struct{}), discoverGate: make(chan struct{}, 1), discoverWake: make(chan struct{}, 1), ignored: make(map[string]bool), messages: make(map[string]string), wake: make(chan struct{}, 1), exited: make(chan struct{}), stopped: make(chan struct{})}
 }
 
 func (s *serverSession) Start(ctx context.Context, emit func(harness.Completion) error, note func(string)) error {
@@ -91,6 +98,7 @@ func (s *serverSession) Start(ctx context.Context, emit func(harness.Completion)
 	s.mu.Unlock()
 	go s.report(runCtx)
 	go s.discover(runCtx)
+	go s.subscribe(runCtx)
 	go s.maintain(runCtx, client)
 	return nil
 }

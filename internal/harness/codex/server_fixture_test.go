@@ -106,19 +106,24 @@ func TestServerProcessHelper(_ *testing.T) {
 	}
 	var mu sync.Mutex
 	clients := make(map[net.Conn]bool)
+	subscribers := make(map[net.Conn]map[string]bool)
 	root := serverThread{ID: fixtureRoot, Source: json.RawMessage(`"vscode"`), Originator: "rewake"}
 	loaded := false
+	var rolloutAt time.Time
+	resumeAttempts := 0
+	delay, _ := time.ParseDuration(os.Getenv("RW_SERVER_ROLLOUT_DELAY"))
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		conn, rw, err := w.(http.Hijacker).Hijack()
 		if err != nil {
 			return
 		}
-		defer func() { mu.Lock(); delete(clients, conn); mu.Unlock(); _ = conn.Close() }()
+		defer func() { mu.Lock(); delete(clients, conn); delete(subscribers, conn); mu.Unlock(); _ = conn.Close() }()
 		sum := sha1.Sum([]byte(r.Header.Get("Sec-WebSocket-Key") + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"))
 		_, _ = fmt.Fprintf(rw, "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %s\r\n\r\n", base64.StdEncoding.EncodeToString(sum[:]))
 		_ = rw.Flush()
 		mu.Lock()
 		clients[conn] = false
+		subscribers[conn] = make(map[string]bool)
 		mu.Unlock()
 		for {
 			_, data, masked, err := readClientFrame(rw)
@@ -142,7 +147,10 @@ func TestServerProcessHelper(_ *testing.T) {
 				mu.Unlock()
 				continue
 			case "thread/start":
+				rolloutAt = time.Time{}
+				root.Status.Kind = "idle"
 				loaded = true
+				subscribers[conn][root.ID] = true
 				result = map[string]any{"thread": root}
 				for peer, ready := range clients {
 					if ready {
@@ -150,6 +158,30 @@ func TestServerProcessHelper(_ *testing.T) {
 					}
 				}
 			case "thread/resume":
+				resumeAttempts++
+				var params struct {
+					ExcludeTurns bool `json:"excludeTurns"`
+				}
+				_ = json.Unmarshal(request.Params, &params)
+				if !params.ExcludeTurns {
+					serverMessage(conn, map[string]any{"id": request.ID, "error": map[string]any{"code": -32600, "message": "fixture forbids history"}})
+					mu.Unlock()
+					continue
+				}
+				if reason := os.Getenv("RW_SERVER_RESUME_ERROR"); loaded && reason != "" {
+					serverMessage(conn, map[string]any{"id": request.ID, "error": map[string]any{"code": -32600, "message": reason}})
+					mu.Unlock()
+					continue
+				}
+				if loaded && (rolloutAt.IsZero() || time.Now().Before(rolloutAt)) {
+					serverMessage(conn, map[string]any{"id": request.ID, "error": map[string]any{"code": -32600, "message": "no rollout found for thread id " + root.ID}})
+					mu.Unlock()
+					continue
+				}
+				if !loaded {
+					rolloutAt = time.Now()
+				}
+				subscribers[conn][root.ID] = true
 				wasLoaded := loaded
 				loaded = true
 				result = map[string]any{"thread": root}
@@ -170,6 +202,15 @@ func TestServerProcessHelper(_ *testing.T) {
 					mu.Unlock()
 					continue
 				}
+				if rolloutAt.IsZero() {
+					rolloutAt = time.Now().Add(delay)
+				}
+				root.Status.Kind = "active"
+				for peer, ready := range clients {
+					if ready {
+						serverMessage(peer, map[string]any{"method": "thread/status/changed", "params": map[string]any{"threadId": root.ID, "status": root.Status}})
+					}
+				}
 				result = map[string]any{"turn": map[string]string{"id": "active-turn"}}
 			case "thread/loaded/list":
 				ids := []string{}
@@ -184,20 +225,31 @@ func TestServerProcessHelper(_ *testing.T) {
 				}
 				result = page
 			case "thread/read":
+				var params map[string]any
+				_ = json.Unmarshal(request.Params, &params)
+				if params["includeTurns"] != false {
+					serverMessage(conn, map[string]any{"id": request.ID, "error": map[string]any{"code": -32600, "message": "fixture forbids history"}})
+					mu.Unlock()
+					continue
+				}
 				result = map[string]any{"thread": root}
 			case "fixture/replace-disconnect":
 				root.ID = "after-disconnect"
+				rolloutAt = time.Now()
 				mu.Unlock()
 				return
 			case "fixture/disconnect":
 				mu.Unlock()
 				return
+			case "fixture/inspect":
+				result = map[string]any{"resumeAttempts": resumeAttempts, "subscribed": subscribers[conn][root.ID]}
 			case "fixture/emit":
 				var event any
 				_ = json.Unmarshal(request.Params, &event)
 				var metadata struct {
 					Method string `json:"method"`
 					Params struct {
+						Status   threadStatus `json:"status"`
 						Thread   serverThread `json:"thread"`
 						ThreadID string       `json:"threadId"`
 					} `json:"params"`
@@ -205,13 +257,21 @@ func TestServerProcessHelper(_ *testing.T) {
 				_ = json.Unmarshal(request.Params, &metadata)
 				if metadata.Method == "thread/started" && tuiThread(metadata.Params.Thread) {
 					root = metadata.Params.Thread
+					rolloutAt = time.Time{}
 					loaded = true
 				}
 				if metadata.Method == "thread/closed" && metadata.Params.ThreadID == root.ID {
 					loaded = false
 				}
+				if metadata.Method == "thread/status/changed" && metadata.Params.ThreadID == root.ID {
+					root.Status = metadata.Params.Status
+					if root.Status.Kind == "active" && rolloutAt.IsZero() {
+						rolloutAt = time.Now().Add(delay)
+					}
+				}
+				scoped := strings.HasPrefix(metadata.Method, "turn/") || strings.HasPrefix(metadata.Method, "item/") || metadata.Method == "error"
 				for peer, ready := range clients {
-					if ready {
+					if ready && (!scoped || subscribers[peer][metadata.Params.ThreadID]) {
 						serverMessage(peer, event)
 					}
 				}

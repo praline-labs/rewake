@@ -367,27 +367,13 @@ The full wrapper's real-model acceptance remains open for the owner.
 
 ## Review round thirteen — requested fixes complete, September 17, 2026
 
-Reconnect omits the initial pagination cursor and forwards only nextCursor from
-an actual page. The fake server validates UUID cursors like the pinned server.
-Recovery tests also protect newer events from an older snapshot and refuse
-ambiguous loaded roots before resuming any of them.
-
-RPC cancellation now precedes any send; writer contention and frame I/O share
-the request deadline. A partial or failed write ends that connection, without
-automatically repeating a possibly accepted command.
-
-Answer receipts now identify the report actually printed. A stopped receipt
-cannot archive a later shared finished when another question receives it.
-The later result remains available to the question whose send already stopped.
-
-Resume now discovers the TUI through thread-id metadata hints and loaded-list
-fallback, without requesting history. The fake initializes without a thread and
-models resume without thread/started. Early completions wait for root validation;
-newer lifecycle events still win over discovery snapshots.
-
-All four requested regressions and the generation coverage gap pass, including
-strict fake resume and the stopped/shared-final process scenario. Full milestone
-acceptance remains open, including the separate fresh-root subscription boundary.
+Reconnect omits the initial pagination cursor and preserves generation guards.
+RPC cancellation covers writer contention and frame I/O, with no automatic resend.
+Answer receipts identify the printed report, so stopped cannot archive a later
+shared finished. Resume discovery uses metadata hints and loaded-list fallback,
+without thread/started or history. All four requested regressions and the
+generation coverage gap pass, including strict resume and shared-final scenarios.
+Full milestone acceptance remains open for the owner.
 
 ## First input — done, September 17, 2026
 
@@ -395,3 +381,14 @@ Launch adds the role and flow only through the system briefing. The agent reads
 guide on its first task; caller input and continuation arguments stay intact.
 No automatic model turn or special startup receipt is created. Both adapters
 preserve `--` for caller prompts. All five repository checks pass.
+
+## Fresh-thread observation — done, September 17, 2026
+
+Identity no longer implies subscription. Global active starts history-free resume
+attempts every 50 ms while the rollout is absent; idle and lifecycle changes stop
+them. A short turn can finish before subscription: observed idle without completion
+after 500 ms reports "completion not observed", never an invented assistant result.
+The fake scopes turn/item events to subscribed clients and delays rollout creation.
+Tests cover first input, /new, retries, normal idle ordering and the short-turn gap.
+Source evidence and remaining transport limits are in server-observation.md.
+All five checks pass. Real-model milestone acceptance stays with the owner.

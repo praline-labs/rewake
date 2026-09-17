@@ -18,6 +18,7 @@ func (s *serverSession) restore(ctx context.Context, client *rpcClient) (resultE
 	s.mu.Lock()
 	generation := s.generation
 	hints := s.hintSequence
+	statusSequence := s.statusSequence
 	s.mu.Unlock()
 	defer func() {
 		s.mu.Lock()
@@ -31,6 +32,7 @@ func (s *serverSession) restore(ctx context.Context, client *rpcClient) (resultE
 		}
 	}()
 	var roots []string
+	var rootStatus string
 	cursor := ""
 	for {
 		var list struct {
@@ -53,6 +55,7 @@ func (s *serverSession) restore(ctx context.Context, client *rpcClient) (resultE
 			}
 			if tuiThread(response.Thread) {
 				roots = append(roots, id)
+				rootStatus = response.Thread.Status.Kind
 			} else {
 				s.mu.Lock()
 				s.ignored[id] = true
@@ -86,17 +89,23 @@ func (s *serverSession) restore(ctx context.Context, client *rpcClient) (resultE
 	if len(roots) == 1 {
 		thread = roots[0]
 		s.mu.Lock()
-		subscribed := s.current == thread && s.client == client
+		subscribed := s.subscribedThread == thread && s.subscribedClient == client
 		s.mu.Unlock()
 		if !subscribed {
-			if err := client.call(ctx, "thread/resume", map[string]any{"threadId": thread, "excludeTurns": true}, nil); err != nil {
+			if err := s.resumeSubscription(ctx, client, thread, generation); err != nil && !noRollout(err) {
 				return err
 			}
 		}
 	}
 	s.mu.Lock()
 	if s.generation == generation {
+		if s.current != thread {
+			s.resetObservation()
+		}
 		s.current = thread
+		if rootStatus == "active" && s.statusSequence == statusSequence {
+			s.observeStatus(rootStatus)
+		}
 	}
 	s.signal()
 	s.mu.Unlock()

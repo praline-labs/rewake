@@ -395,5 +395,5 @@ thread/status/changed via `thread_status.rs:223–251` and
 broadcast thread/name/updated (:672), but are not guaranteed on resume. Discovery
 therefore uses metadata hints plus loaded-list polling, never history.
 
-Fresh-root subscriptions remain open: terminal events are scoped
-(`thread_lifecycle.rs:335–344`); the empty-resume refusal is in the owner probe.
+Fresh-thread subscription ordering and the short-turn race are documented in
+[server event observation](server-observation.md), against the same snapshot.

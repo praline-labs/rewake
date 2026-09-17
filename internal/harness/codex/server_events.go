@@ -10,6 +10,7 @@ import (
 )
 
 type serverThread struct {
+	Status       threadStatus    `json:"status"`
 	ID           string          `json:"id"`
 	Source       json.RawMessage `json:"source"`
 	Originator   string          `json:"originator"`
@@ -42,6 +43,7 @@ type serverItem struct {
 
 func (s *serverSession) event(method string, raw json.RawMessage) {
 	var params struct {
+		Status   threadStatus `json:"status"`
 		Thread   serverThread `json:"thread"`
 		ThreadID string       `json:"threadId"`
 		TurnID   string       `json:"turnId"`
@@ -60,6 +62,9 @@ func (s *serverSession) event(method string, raw json.RawMessage) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if method == "thread/status/changed" {
+		s.statusSequence++
+	}
 	if method == "thread/started" {
 		if tuiThread(params.Thread) {
 			s.generation++
@@ -68,8 +73,10 @@ func (s *serverSession) event(method string, raw json.RawMessage) {
 			delete(s.ignored, params.Thread.ID)
 			if s.current != params.Thread.ID {
 				s.messages = make(map[string]string)
+				s.resetObservation()
 			}
 			s.current = params.Thread.ID
+			s.observeStatus(params.Thread.Status.Kind)
 			s.signal()
 			s.wakeDiscovery()
 		} else {
@@ -81,7 +88,7 @@ func (s *serverSession) event(method string, raw json.RawMessage) {
 		if params.ThreadID != "" && !s.ignored[params.ThreadID] {
 			s.hintSequence++
 			s.dirty = true
-			if method == "turn/completed" || method == "item/completed" {
+			if method == "turn/completed" || method == "item/completed" || method == "thread/status/changed" {
 				s.delayed = append(s.delayed, serverNotice{method: method, raw: raw, thread: params.ThreadID})
 			}
 			s.wakeDiscovery()
@@ -91,8 +98,19 @@ func (s *serverSession) event(method string, raw json.RawMessage) {
 	if method == "thread/closed" {
 		s.generation++
 		s.current = ""
+		s.resetObservation()
 		s.signal()
 		s.wakeDiscovery()
+		return
+	}
+	if method == "thread/status/changed" {
+		s.observeStatus(params.Status.Kind)
+		return
+	}
+	if method == "turn/started" {
+		if watch := s.observation; watch != nil && watch.active {
+			watch.turn = params.Turn.ID
+		}
 		return
 	}
 	if method == "item/completed" {
@@ -126,10 +144,8 @@ func (s *serverSession) event(method string, raw json.RawMessage) {
 		return
 	}
 	delete(s.messages, result.ID)
-	s.outcomes = append(s.outcomes, result)
-	select {
-	case s.wake <- struct{}{}:
-	default:
+	if !s.finishObservation(params.Turn.ID) {
+		s.queueCompletion(result)
 	}
 }
 
