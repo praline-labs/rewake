@@ -82,7 +82,8 @@ sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
    `REWAKE_DIR=<root>` and `REWAKE_ROOM=<room>`; inherited Claude Code markers are stripped so a session
    started from inside another does not borrow its socket.
 7. **Greeting.** Unless --no-greeting or caller input prevents it, a fresh
-   harness receives the same positional prompt: run guide and reply ready.
+   harness receives the same positional prompt: run guide and reply ready. A
+   single `--`, after all injected flags, protects it from variadic options.
    Continuations keep their existing turn. This is separate from --no-intro.
    The wrapper records an epoch-scoped bootstrap marker before starting the
    child, so ready is not reported to other sessions or used to settle work.

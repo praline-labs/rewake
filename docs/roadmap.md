@@ -356,3 +356,6 @@ reports normally. The regression covers both child events and the parent result.
 Identified turns persist their complete report batch and waiter/message snapshot
 before the first publication. Retries reuse recipients, content and report ids;
 cleanup removes only that snapshot, retaining later work for its own result.
+
+Both adapters now delimit the greeting with one -- after transport flags.
+Tests check its position after variadic options, not only its presence in argv.

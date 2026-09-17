@@ -36,3 +36,25 @@ func TestContinuationsAndUserPromptsKeepTheirInput(t *testing.T) {
 		}
 	}
 }
+
+func TestGreetingIsPositionalAfterVariadicImages(t *testing.T) {
+	codexHome(t, "")
+	for _, args := range [][]string{nil, {"--"}, {"--image", "image.png"}, {"-c", `notify=["user-notify"]`, "--image", "image.png"}, {"-iimage.png", "--"}} {
+		plan, err := New().Launch(harness.LaunchRequest{Name: "api", Dir: t.TempDir(), Role: role.General, Greeting: true, Args: args})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !plan.Greeting || len(plan.Args) < 2 || plan.Args[len(plan.Args)-2] != "--" {
+			t.Fatalf("variadic option can consume greeting: %q", plan.Args)
+		}
+		separators := 0
+		for _, arg := range plan.Args {
+			if arg == "--" {
+				separators++
+			}
+		}
+		if separators != 1 {
+			t.Fatalf("want one prompt separator, got %d: %q", separators, plan.Args)
+		}
+	}
+}

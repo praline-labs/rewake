@@ -62,3 +62,12 @@ func GreetingPrompt(request LaunchRequest, policy GreetingPolicy) (string, strin
 	}
 	return brief.Greeting(request.BriefContext()), ""
 }
+
+// AppendGreeting terminates option parsing after all transport flags. Both
+// single-value and variadic options must leave the bootstrap text positional.
+func AppendGreeting(args []string, greeting string) []string {
+	if len(BeforeTerminator(args)) == len(args) {
+		args = append(args, "--")
+	}
+	return append(args, greeting)
+}

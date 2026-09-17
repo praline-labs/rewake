@@ -115,7 +115,7 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 		notes = append(notes, note)
 	}
 	if greeting != "" {
-		args = append(args, greeting)
+		args = harness.AppendGreeting(args, greeting)
 	}
 	return harness.LaunchPlan{
 		Greeting:  greeting != "",

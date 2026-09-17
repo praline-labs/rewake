@@ -25,3 +25,24 @@ func TestFreshSocketSessionsGetTheSameGuideGreeting(t *testing.T) {
 		}
 	}
 }
+
+func TestGreetingIsPositionalAfterVariadicTools(t *testing.T) {
+	for _, args := range [][]string{nil, {"--"}, {"--allowedTools", "Read"}, {"--allowedTools", "Read", "--"}, {"--tools", "Read"}} {
+		plan, err := New().Launch(harness.LaunchRequest{Name: "api", Dir: t.TempDir(), Greeting: true, Args: args})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !plan.Greeting || len(plan.Args) < 2 || plan.Args[len(plan.Args)-2] != "--" {
+			t.Fatalf("variadic option can consume greeting: %q", plan.Args)
+		}
+		separators := 0
+		for _, arg := range plan.Args {
+			if arg == "--" {
+				separators++
+			}
+		}
+		if separators != 1 {
+			t.Fatalf("want one prompt separator, got %d: %q", separators, plan.Args)
+		}
+	}
+}

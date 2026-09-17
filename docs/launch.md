@@ -132,7 +132,9 @@ only ready. `--no-greeting` disables this turn independently of `--no-intro`.
 A supplied positional prompt is preserved, never merged with the greeting.
 Resume/continue/fork and noninteractive commands receive no greeting; unknown
 option arity also opts out with a note rather than guessing which word is input.
-A bare trailing -- can receive the greeting after that delimiter.
+Every appended greeting follows a `--` delimiter after all transport flags.
+An existing trailing `--` is reused. This stops variadic options such as
+`--allowedTools <tools...>` and `--image` from consuming the positional prompt.
 
 The adapter reports whether it appended the prompt. Before starting the child,
 the wrapper marks that bootstrap for its epoch. Its ready completion consumes

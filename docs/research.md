@@ -392,3 +392,8 @@ summary itself. The queued transport uses a second line in the same message.
 distinguish inherited hooks inside a subagent by `agent_id`. `agent_type` also
 appears on a root session launched with an agent profile, so it cannot filter
 child callbacks. Rewake ignores completions carrying a child identity.
+
+**[CLI declarations: 2.1.270 source `main.tsx:988`; snapshot `44b9011`]**
+`--allowedTools <tools...>` is variadic. The queued CLI also has a variadic
+`--image` (`utils/cli/src/shared_options.rs:11–19`, `num_args = 1..`). A trailing
+`--` separates the bootstrap prompt from either option's values.
