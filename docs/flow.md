@@ -53,8 +53,8 @@ sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
    (`<pid>.<ticks>`). A name can be started many times; the epoch says which
    start this is.
 4. **The role.** Under the same room lock as publication, no live main means
-   an automatic main; otherwise an unflagged launch becomes worker. Explicit
-   `--worker` and `--write` are honored even in an empty room. `--main` refuses
+   an automatic main; otherwise an unflagged launch becomes general. Explicit
+   `--general` and `--write` are honored even in an empty room. `--main` refuses
    if a live main already occupies the room. Main stays silent; write reports
    like worker. Both main and write request Git metadata access. The record
    keeps the role and its selection reason.

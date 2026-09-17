@@ -44,7 +44,7 @@ func TestTheHarnessReceivesItsRoomAndElectedRole(t *testing.T) {
 		t.Errorf("launch context=%+v", fake.launch)
 	}
 	intro := brief.Intro(fake.launch.BriefContext())
-	for _, text := range []string{`room "red"`, "role is main", "automatically", "no live main"} {
+	for _, text := range []string{`room "red"`, "main session", "automatically", "no live main"} {
 		if !strings.Contains(intro, text) {
 			t.Errorf("intro lacks %q: %s", text, intro)
 		}

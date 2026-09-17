@@ -54,7 +54,7 @@ func assertGitGrant(t *testing.T, plan harness.LaunchPlan, directory string) {
 func TestOnlyCommittingRolesReceiveGitWrites(t *testing.T) {
 	codexHome(t, "")
 	repo := gitRepository(t)
-	for _, part := range []role.Role{role.Worker, {}, role.Main, role.Write} {
+	for _, part := range []role.Role{role.General, {}, role.Main, role.Write} {
 		t.Run(part.ID, func(t *testing.T) {
 			plan := gitLaunch(t, part, "-C", repo)
 			granted := len(gitRoots(plan.Args)) > 0

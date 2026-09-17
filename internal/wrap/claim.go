@@ -16,7 +16,7 @@ import (
 type MainTakenError struct{ Room, Name string }
 
 func (e *MainTakenError) Error() string {
-	return fmt.Sprintf("room %q already has live main session %q; stop or restart that session, or launch without --main to join as a worker", e.Room, e.Name)
+	return fmt.Sprintf("room %q already has live main session %q; stop or restart that session, or launch without --main to join as general", e.Room, e.Name)
 }
 
 // claimName elects a role and publishes while holding one room lock. A pending
@@ -42,7 +42,7 @@ func claimName(request Request, self int, selfStart uint64, cwd string) (registr
 			chosen = role.Main
 			reason = "selected automatically because this room has no live main session"
 			if main != "" {
-				chosen = role.Worker
+				chosen = role.General
 				reason = fmt.Sprintf("selected automatically because %q is this room's live main", main)
 			}
 		} else if chosen.ID == role.Main.ID && main != "" {

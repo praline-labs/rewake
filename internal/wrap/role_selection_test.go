@@ -31,7 +31,7 @@ func TestARoomChoosesOneMainAndHonorsExplicitRoles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if second.Role != "worker" {
+	if second.Role != "general" {
 		t.Errorf("next role=%q", second.Role)
 	}
 	writer, err := claimRole(t, dir, "writer", role.Write)
@@ -52,8 +52,8 @@ func TestARoomChoosesOneMainAndHonorsExplicitRoles(t *testing.T) {
 
 func TestAnExplicitWorkerCanStartBeforeMain(t *testing.T) {
 	dir := stateDir(t)
-	first, err := claimRole(t, dir, "helper", role.Worker)
-	if err != nil || first.Role != "worker" {
+	first, err := claimRole(t, dir, "helper", role.General)
+	if err != nil || first.Role != "general" {
 		t.Fatalf("worker=%+v err=%v", first, err)
 	}
 	next, err := claimRole(t, dir, "lead", role.Role{})

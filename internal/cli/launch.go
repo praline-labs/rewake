@@ -100,5 +100,5 @@ func roleSummary() string {
 		label := "--" + candidate.ID
 		descriptions = append(descriptions, label+": "+candidate.Summary)
 	}
-	return "Without a role flag, a room with no live main elects this session main; otherwise it becomes worker. An explicit --main refuses if main is occupied. " + strings.Join(descriptions, " ") + " A silent coordinator prevents reports from waking each other indefinitely."
+	return "Without a role flag, a room with no live main elects this session main; otherwise it becomes general. An explicit --main refuses if main is occupied. " + strings.Join(descriptions, " ") + " A silent coordinator prevents reports from waking each other indefinitely."
 }

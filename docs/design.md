@@ -107,7 +107,7 @@ sessions, and an old record must not appear in a new room by accident.
   "name": "claude-2",
   "room": "default",
   "role": "worker",
-  "roleReason": "selected explicitly with --worker",
+  "roleReason": "selected explicitly with --general",
   "harness": "claude",
   "servicePid": 12345,
   "serviceStart": 1671399,
@@ -141,14 +141,14 @@ for each role; harness adapters only pass the rendered strings. The record keeps
 
 | role | flag | turns reported | Git metadata writes requested for the sandbox | intro adds |
 |---|---|---|---|---|
-| `worker` | `--worker` | yes | no | end your turn with the result |
+| `general` | `--general` | yes | no | end your turn with the result |
 | `main` | `--main` | no | yes | you get reports, yours go to nobody |
 | `write` | `--write` | yes | yes | end your turn with the result; you can commit |
 
 Without an explicit role, a room with no live main elects the new session main;
-otherwise it becomes worker. Liveness uses the same pid/start-time and namespace
+otherwise it becomes general. Liveness uses the same pid/start-time and namespace
 checks as list. Explicit `--main` refuses with the occupying session's name and
-advice to stop/restart it or omit the role flag. `--worker` and `--write` are
+advice to stop/restart it or omit the role flag. `--general` and `--write` are
 honored even in an empty room. If only workers remain, the next automatic launch
 becomes main; existing sessions are never promoted in place.
 
@@ -169,7 +169,8 @@ The main session exists to stop a loop: it reads the reports of its workers,
 and if its own turns were reported to them, each report would wake the other
 side for good. So a silent role gets no end-of-turn hook at launch (no Stop
 hook, no `notify`), records no waits when it reads, and `turn-ended` does
-nothing for it. The zero role value remains a reporting fallback inside the
+nothing for it. Old records with role `worker` are read as `general`; only --general creates
+new reporting sessions without Git access. The zero role value remains a reporting fallback inside the
 catalogue; an omitted launch role is resolved separately under the room lock.
 The write role reports like a worker; main stays silent whether its Git grant
 was applied or skipped.
@@ -224,8 +225,8 @@ proven them out.
 
 ```
 rewake                                  overview (command map, workflow, behavior notes)
-rewake [--room R] [--name N] [--main|--worker|--write] claude [args...]   launch a Claude Code session under rewake
-rewake [--room R] [--name N] [--main|--worker|--write] codex [args...]    launch a Codex session under rewake
+rewake [--room R] [--name N] [--main|--general|--write] claude [args...]   launch a Claude Code session under rewake
+rewake [--room R] [--name N] [--main|--general|--write] codex [args...]    launch a Codex session under rewake
 rewake list [--json]                    live sessions in this room
 rewake send <name> <text|-> [--question] [--wait S] [--json]
 rewake inbox [--json]                   read the messages waiting for this session

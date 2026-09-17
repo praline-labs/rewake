@@ -29,7 +29,7 @@ otherwise defaults to `default`; it does not inherit the launching process's
 room. `--name` chooses a name unique within that room. Both use the same
 lower-case name syntax, up to 32 characters.
 
-`--main`, `--worker` and `--write` explicitly select one role and cannot be
+`--main`, `--general` and `--write` explicitly select one role and cannot be
 combined. Without a role flag, no live main in the room means main; an existing
 main means worker. Explicit main refuses when the room already has one, naming
 its occupant and suggesting a restart or a launch without `--main`. An explicit
@@ -115,19 +115,12 @@ List and identity commands use the inherited room and accept no `--room` flag.
 
 ### The intro
 
-The briefing names the session and room, the selected role and why it was
-selected, then points to the guide and adds that role's instructions. The
-wrapper also prints the role decision once before starting the harness, so the
-choice remains visible even when the user disabled or supplied the briefing.
-
-```
-You are running inside rewake as session "<name>" in room "<room>".
-Your role is main: selected automatically because this room has no live main session.
-Only sessions in this room can see and message each other.
-rewake lets agent sessions on this machine message each other; a message waiting for you is announced by a line with "Rewake: <session> <kind>".
-Run `rewake guide` before you send or read messages: it explains how.
-<the selected role's briefing>
-```
+The system layer uses an independent six-line briefing for general, write or
+main from `internal/brief/roles.go`. Each names its identity and selection reason,
+explains the commands that role needs, and points to guide for the full contract.
+General receives no Git metadata grant; write may commit; main delegates and
+reads results. All ask for the point of a message in its first line. Per-role
+snapshots make wording changes reviewable.
 
 ## Signals, and what the wrapper does not do
 

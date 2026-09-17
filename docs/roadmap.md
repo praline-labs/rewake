@@ -196,7 +196,7 @@ got a report of its own turn back at its worker, and the two would wake each
 other forever. Roles now live in a catalogue, `internal/role`, and the one that
 hands out work has role `main`: it gets every report and reports
 nothing. Rooms now select main automatically when none is alive; an explicit
-`--worker` always keeps reporting behavior. The `write` role now reports like a worker
+`--general` always keeps reporting behavior. The `write` role now reports like a worker
 and requests Git metadata access; main requests the same access independently
 of its reporting policy.
 
@@ -335,7 +335,7 @@ by its config loader. See research for versioned evidence and reproduction.
 sessions, mailboxes and sockets. Old root-level records are ignored.
 
 Role choice and name publication share a room lock. Without an explicit role,
-the next launch becomes main when none is alive, otherwise worker. `--worker`
+the next launch becomes main when none is alive, otherwise general. `--general`
 and `--write` can start first; `--main` refuses with the live main's name and a
 hint when occupied. Main and write retain their Git metadata capability. List,
 whoami, the launch note and the intro identify the room and selected role.
@@ -380,3 +380,7 @@ and the publication test waits for the harness pid before checking removal.
 Agent system text and greeting text now live in internal/brief, with per-role
 snapshots. Role data no longer carries injected prose; harness helpers are
 split into plans, flags, environment, hooks and notices.
+
+The reporting role is now general (--general). Legacy worker records normalize
+to general. General, write and main have independent short system briefings
+with reviewed snapshots instead of a shared paragraph plus suffixes.

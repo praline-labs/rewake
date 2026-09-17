@@ -75,14 +75,14 @@ func TestRoomAndRoleAreVisibleInIdentity(t *testing.T) {
 		if command == "list" {
 			model = model["sessions"].([]any)[0].(map[string]any)
 		}
-		if model["room"] != "red" || model["role"] != "worker" {
+		if model["room"] != "red" || model["role"] != "general" {
 			t.Errorf("%s identity=%s", command, out)
 		}
 	}
 }
 
 func TestRoomsAndWorkerAreLaunchFlagsOnly(t *testing.T) {
-	for _, args := range [][]string{{"--room", "red", "--worker", "codex"}, {"--room=blue", "--main", "claude"}} {
+	for _, args := range [][]string{{"--room", "red", "--general", "codex"}, {"--room=blue", "--main", "claude"}} {
 		if _, err := parse(args); err != nil {
 			t.Errorf("launch %q: %v", args, err)
 		}

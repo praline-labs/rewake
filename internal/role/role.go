@@ -24,9 +24,9 @@ type Role struct {
 	GitWrite bool
 }
 
-// Worker takes work and reports when its turn ends. It is also the fallback role.
-var Worker = Role{
-	ID:      "worker",
+// General takes work and reports when its turn ends. It is also the fallback role.
+var General = Role{
+	ID:      "general",
 	Summary: "Takes work from other sessions and reports the end of each turn to them. Can start before a main session.",
 }
 
@@ -47,7 +47,7 @@ var Write = Role{
 }
 
 // all lists the roles, the default first.
-var all = []Role{Worker, Main, Write}
+var all = []Role{General, Main, Write}
 
 // All returns the roles, the default first.
 func All() []Role { return append([]Role{}, all...) }
@@ -58,7 +58,7 @@ func Default() Role { return all[0] }
 // Find returns the role with this id. An empty id is the default: records
 // written before roles existed have none.
 func Find(id string) (Role, bool) {
-	if id == "" {
+	if id == "" || id == "worker" {
 		return Default(), true
 	}
 	for _, candidate := range all {

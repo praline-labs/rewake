@@ -161,7 +161,7 @@ func launchCommand(h harness.Harness) *Command {
 		Options: append(append([]Option{nameOption, roomOption}, roleOptions()...),
 			Option{Flag: "--no-intro", Summary: "Do not tell the agent it runs under rewake."},
 		),
-		Examples: append(h.Examples(), "rewake --room work --worker --name helper "+h.ID()),
+		Examples: append(h.Examples(), "rewake --room work --general --name helper "+h.ID()),
 		Next:     []string{"rewake list", "rewake send <name> \"text\""},
 		Notes:    notes,
 		Raw:      true,
@@ -176,7 +176,7 @@ func flow() []FlowStep {
 	for _, h := range harness.All() {
 		steps = append(steps, FlowStep{
 			Command: fmt.Sprintf("rewake --name <name> %s", h.ID()),
-			Summary: fmt.Sprintf("Start %s in this terminal under a name others can address; the room elects main automatically, or use --worker, --write or --main.", h.Title()),
+			Summary: fmt.Sprintf("Start %s in this terminal under a name others can address; the room elects main automatically, or use --general, --write or --main.", h.Title()),
 		})
 	}
 	return append(steps,
