@@ -200,6 +200,6 @@ The reviewer independently confirmed the ownership research's primary/focus and
 local-switch ordering claims. Synthetic selection models remain specifications,
 not native/live acceptance. Under the owner's later constraint, only rewake may
 change and existing hooks may be registered; native TUI/server extensions are
-outside scope. Ownership selection and the offered metadata probe remain open;
-see [the investigation](thread-ownership-investigation.md). Review completion
-closes the review activity, not these defects or the live acceptance boundary.
+outside scope. Ownership selection remains open; the later owner-run metadata
+probes are complete, with [evidence and limits](thread-lock-probes.md). Review
+completion closes the review activity, not these defects or live acceptance.

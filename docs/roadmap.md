@@ -393,7 +393,7 @@ state during discovery and omits completion-gap reporting. Baseline five-check
 results are green; the new isolated reproductions fail. No fixes have landed.
 [Findings and reproductions](reviews-later.md#review-round-fourteen--complete-with-open-findings-september-17-2026).
 
-Ownership research is complete; the mechanism remains undecided. Only rewake may
-change, with existing hooks allowed; native selection extensions are outside the
-owner's scope. The owner-managed empty-session/manual-new metadata probe is
-pending. See [research and constraints](thread-ownership-investigation.md).
+Ownership research and owner-run metadata probes are complete; selection remains
+unresolved. [Probe evidence](thread-lock-probes.md) rejects latest-lock-mtime routing;
+further tracing is optional and unperformed. Only rewake may change; existing hooks
+are allowed and native extensions remain outside [scope](thread-ownership-investigation.md).

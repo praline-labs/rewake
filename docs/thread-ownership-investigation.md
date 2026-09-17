@@ -128,20 +128,24 @@ Explicit rebinding and registration through a first-turn hook remain unselected
 options within rewake's scope, not features or complete ownership contracts.
 No latest/active/arbitrary-root heuristic is accepted as a reliable substitute.
 
-### Pending owner-managed metadata probe
+### Completed owner-managed metadata probes
 
-The owner offered an empty session in a separate probe room and a manual /new.
-The experiment will compare observable PID, FD, lock and other service metadata.
-It awaits the owner's readiness signal; no results are claimed here. Only the
-owner controls that session and its restart. The researcher must not operate it
-or inspect other agents' intermediate work; coordination waits for final results.
+The owner-run /new, cold-resume and loaded-endpoint B-to-A probes are complete.
+[Probe evidence and build limits](thread-lock-probes.md) distinguish corrected FD
+captures from the incomplete initial collector. Latest lock mtime selected A
+while the owner confirmed visible B. Unchanged B is not evidence of a failed
+update during a genuine earlier switch: its initial /resume may have been a no-op.
+A's later birth time and isolated inode/FD reuse controls support lock replacement;
+its exact native cause remains untraced. These are lifecycle observations, not a
+reliable selected-dialogue contract. Further watcher/strace recipes have not run
+and are optional, not automatically queued. No binding option or repair is selected.
 
 ## Authorized bounded mitigation
 
 The orchestrator selected bounded mitigation on September 17, 2026: preserve
 report visibility and clean up this observer's obsolete subscriptions. No RPC
 gateway or upstream change belongs to this patch. The ownership issue remains
-open. Later research and the owner's rewake-only constraint are recorded below;
+open. The completed research and owner's rewake-only constraint are recorded above;
 no native selection extension or replacement ownership design is approved.
 
 The observer tracks resume attempts by connection, thread and generation.
