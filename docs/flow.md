@@ -176,14 +176,17 @@ ignored without changing the parent session's waits or bootstrap state.
 
 1. **Who is owed.** Under the lock, `turn-ended` reads
    `awaiting/<own epoch>/`. A silent role emits no successful reports;
-   failure callbacks still route errors.
+   failure callbacks still route errors. An identified turn persists its exact
+   waiter/message snapshot and full report batch before publishing any report.
 2. **The report.** For each waiting run, a `finished` message into that
    sender's mailbox: text is the final reply, `inReplyTo` lists the messages
    read from that run since the last report, `toEpoch` is that run — not
    whoever holds the name now. The id is derived from the wait, so a retried
-   hook writes the same report once.
-3. **Forget the wait** only after the report is written, and only if the
-   waiter still names that run.
+   hook writes the same report once. Retries use the stored text, recipients
+   and message ids even when new work arrived between attempts.
+3. **Forget the reported messages** after all reports are written and the turn
+   receipt is marked done. Cleanup matches the original run and wait; newly
+   read messages remain owed to the next result.
 4. **The sender is woken** by its own wrapper, through Act 3, with
    `Rewake: write finished, 1 new message(s)`. The sender reads it with
    `rewake inbox`; a `finished` asks for nothing back, so the exchange ends

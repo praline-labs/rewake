@@ -209,12 +209,17 @@ payload (`last_assistant_message` on stdin, `last-assistant-message` as the last
 argument). Under the mailbox lock, for every run in `awaiting/<own epoch>/` it
 leaves a `finished` message whose text is that reply, and whose `inReplyTo`
 lists the messages read from that run since its last report, addressed to that run —
-not to whoever holds the name now — and forgets the waiter only once the message
-is written, and only if the waiter still names that run and that wait. A waiter
-whose run has ended is forgotten without a message.
+not to whoever holds the name now. Before publishing an identified turn, its
+receipt in `turns/` stores the waiter/message snapshot and complete report batch:
+recipient epochs, ids, kind, text, timestamps and thread-change annotations.
+Retries load this batch, even if the callback payload or current waits changed.
+All reports must be published before the receipt is marked done. Cleanup removes
+only the recorded message ids from the same run and wait; later messages remain
+owed to the next result. A recipient whose run ended is skipped. The fallback
+target is also fixed before publication, never selected again on retry.
 
 The report's id is derived from the wait — the reporting run, the waiting run,
-and when the wait began — and a report whose id is already in the recipient's
+when the wait began, and its message ids — and a report whose id is already in the recipient's
 mailbox, in any stage, is not written again. A waiter that could not be removed,
 or a hook that died between writing and forgetting, therefore costs nothing at
 the next turn. A read retried after its last step failed does not record the

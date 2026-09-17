@@ -282,8 +282,8 @@ func TestClearingAnOldWaitKeepsANewOneOfTheSameRun(t *testing.T) {
 
 	ClearAwaiting(dir, "api", "5.5", old)
 	remaining := Waiters(dir, "api", "5.5")
-	if len(remaining) != 1 || strings.Join(remaining[0].Messages, ",") != "m1,m2" {
-		t.Fatalf("waiting = %v, want the wait still owed, now for both messages", remaining)
+	if len(remaining) != 1 || strings.Join(remaining[0].Messages, ",") != "m2" {
+		t.Fatalf("waiting = %v, want only the later message still owed", remaining)
 	}
 	if ReportID("api", "5.5", old) == ReportID("api", "5.5", remaining[0]) {
 		t.Error("two waits of one run share a report id, so the second report would be skipped")

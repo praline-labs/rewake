@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -176,6 +177,10 @@ func markAwaiting(dir, name, epoch, from, fromEpoch, messageID string) error {
 	if messageID != "" {
 		waiter.Messages = append(waiter.Messages, messageID)
 	}
+	return writeWaiter(file, waiter)
+}
+
+func writeWaiter(file string, waiter Waiter) error {
 	record := waiter.Epoch + " " + strconv.FormatInt(waiter.Since, 10) + " " + strings.Join(waiter.Messages, ",")
 	return state.WriteAtomic(file, []byte(strings.TrimSpace(record)))
 }
@@ -226,7 +231,8 @@ func parseWaiter(name, raw string) Waiter {
 
 // ClearAwaiting forgets a waiter once it has been reported to, or once its run
 // has ended. Only that run is forgotten: a newer run of the same name that
-// wrote in the meantime is still owed its report. The caller holds the mailbox
+// wrote in the meantime is still owed its report. Later messages from the same
+// wait are retained; only the published subset is removed. The caller holds the mailbox
 // lock, which is what keeps the check and the removal together.
 func ClearAwaiting(dir, name, epoch string, peer Waiter) {
 	path, ok := awaitingPath(dir, name, epoch)
@@ -235,10 +241,32 @@ func ClearAwaiting(dir, name, epoch string, peer Waiter) {
 	}
 	file := filepath.Join(path, peer.Name)
 	raw, err := os.ReadFile(file)
-	if err != nil || !parseWaiter(peer.Name, string(raw)).same(peer) {
+	if err != nil {
 		return
 	}
-	_ = os.Remove(file)
+	current := parseWaiter(peer.Name, string(raw))
+	if current.same(peer) {
+		_ = os.Remove(file)
+		return
+	}
+	if current.Epoch != peer.Epoch || current.Since != peer.Since {
+		return
+	}
+	remaining := make([]string, 0, len(current.Messages))
+	for _, id := range current.Messages {
+		if !slices.Contains(peer.Messages, id) {
+			remaining = append(remaining, id)
+		}
+	}
+	if len(remaining) == len(current.Messages) {
+		return
+	}
+	if len(remaining) == 0 {
+		_ = os.Remove(file)
+		return
+	}
+	current.Messages = remaining
+	_ = writeWaiter(file, current)
 }
 
 // sweepAwaiting forgets what earlier runs of this name were waited on for.

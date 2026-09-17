@@ -347,42 +347,12 @@ refused. Concurrent wrappers elect exactly one main. Checks use isolated state
 and a fake harness, plus regression and mutation tests.
 
 
-## Review round eleven — done, September 17, 2026
-
-Retention now distinguishes a reserved answer from an ordinary report. Release
-starts one finite delivery window, never renewed by retry; receipts outlive the
-reports that reference them. Mixed thread comparison checks later deliveries,
-and the publication test waits for the harness pid before checking removal.
-
-Agent system text and greeting text now live in internal/brief, with per-role
-snapshots. Role data no longer carries injected prose; harness helpers are
-split into plans, flags, environment, hooks and notices.
-
-The reporting role is now general (--general). Legacy worker records normalize
-to general. General, write and main have independent short system briefings
-with reviewed snapshots instead of a shared paragraph plus suffixes.
-
-Failed turns now use hook-only error reports, with fallback to the room's main
-and local retention for main's own failure. Explicit reasons stay unchanged;
-empty received completions after work are textless errors. The legacy notify
-failure-observation gap is documented, without reading transcripts.
-
-Notices now include a bounded first-line preview authored by the sender. The
-latest available letter supplies the preview and error color; full text remains
-in inbox. Empty first lines are not skipped in search of a summary.
-
-Fresh interactive launches now get the shared guide-and-ready positional prompt.
-Existing prompts and continuations are preserved; --no-greeting is independent
-of --no-intro. Bootstrap ready never settles early work. Callback availability
-for failed turns remains a documented harness limitation.
-
-Validation: all five repository checks pass. Twenty targeted mutations are
-caught. Isolated fake-process runs cover greeting switches, preserved caller
-arguments, early work during ready, both notice transports, error routing and
-blocking error replies. No real harness or model turn was launched.
-
 ## Review round twelve — in progress, September 17, 2026
 
 Nested-agent completions no longer settle parent tasks: agent_id filters both
 success and failure before any mailbox state changes. A root agent_type still
 reports normally. The regression covers both child events and the parent result.
+
+Identified turns persist their complete report batch and waiter/message snapshot
+before the first publication. Retries reuse recipients, content and report ids;
+cleanup removes only that snapshot, retaining later work for its own result.
