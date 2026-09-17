@@ -151,8 +151,8 @@ for each role; harness adapters only pass the rendered strings. The record keeps
 | role | flag | turns reported | Git metadata writes requested for the sandbox | intro adds |
 |---|---|---|---|---|
 | `general` | `--general` | yes | no | end your turn with the result |
-| `main` | `--main` | no | yes | you get reports, yours go to nobody |
-| `write` | `--write` | yes | yes | end your turn with the result; you can commit |
+| `main` | `--main` | no | fresh launch and delivered tasks/questions | you get reports, yours go to nobody |
+| `write` | `--write` | yes | fresh launch and delivered tasks/questions | end your turn with the result; you can commit |
 
 Without an explicit role, a room with no live main elects the new session main;
 otherwise it becomes general. Liveness uses the same pid/start-time and namespace
@@ -169,8 +169,10 @@ which role was chosen and why.
 
 Git writes are a separate role capability from reporting. The sandbox adapter
 appends `--add-dir` for the discovered metadata directories on fresh launches.
-Remote resume/fork omit that flag and warn committing roles about stored
-permissions; they cannot safely add roots without starting a turn. Ordinary repos,
+Remote resume/fork omit that flag. Delivered tasks/questions read current local
+roots and append only missing metadata for main/write in turn/start; unreadable
+roots skip the grant with a status note. Steer affects subsequent turns, and TUI
+input may replace roots again. Sandbox policy and approval stay intact. Ordinary repos,
 worktrees and submodules are supported; configuration and existing roots remain
 intact. Unresolved or symlinked metadata is skipped with a reason. See
 [launch permissions](launch.md). A role does not revoke permissions the user

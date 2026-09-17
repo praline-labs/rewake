@@ -71,7 +71,8 @@ sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
      the server; main/write metadata roots reach its thread through TUI
      runtimeWorkspaceRoots on fresh launches. No notify program is installed.
      Resume/fork keep caller input, omit generated permission flags and warn
-     committing roles about stored permissions; incompatible remote/profile/managed-worktree/local-provider launches refuse.
+     committing roles about grants accompanying delivered work; incompatible
+     remote/profile/managed-worktree/local-provider launches refuse.
 6. **The environment.** `REWAKE_SESSION=<name>`, `REWAKE_EPOCH=<epoch>`,
    `REWAKE_DIR=<root>` and `REWAKE_ROOM=<room>`; inherited Claude Code markers are stripped so a session
    started from inside another does not borrow its socket.
@@ -126,8 +127,12 @@ The recipient's wrapper sees the rename and, under the mailbox lock:
      interface draws it as a single green `● Rewake: claude task, 1 new
      message(s)` line — the same line its own background tasks get — and the
      model wakes if it was idle.
-   - Codex: call turn/start on the tracked TUI thread. It starts idle work or
-     steers the active turn. A successful RPC result means delivered. A stale
+   - Codex: call turn/start on the tracked TUI thread. For tasks/questions to
+     main/write, read current local runtime roots without history and append only
+     missing Git metadata from the thread's working repository. If roots cannot
+     be read, omit the field and explain that in delivery status. General and
+     reports never get this grant. It starts idle work or steers the active turn;
+     on steer, new roots apply only to subsequent turns. A successful RPC result means delivered. A stale
      or unavailable thread fails; it is not silently retargeted or queued.
 
 4. **The status.** `delivered` (the waiting copy is removed, `unread/` keeps

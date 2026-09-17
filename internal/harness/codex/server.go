@@ -14,6 +14,7 @@ import (
 )
 
 type serverSession struct {
+	gitWrite            bool
 	subscribedClient    *rpcClient
 	subscribedThread    string
 	subscriptionWake    chan struct{}

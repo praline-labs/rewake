@@ -286,9 +286,9 @@ not read saved transcripts to predict where a continuation will run.
 
 **[snapshot `44b901161`; CLI 0.154.0; September 17, 2026]** Remote resume/fork
 reject permission overrides, including `--add-dir`. Rewake omits generated grants
-and warns; caller flags stay intact. Current TUI roots can supersede saved roots.
-[Source evidence and API limits](continuation-permissions.md) explain why no
-policy-preserving root grant is made at idle attachment.
+and warns; caller flags stay intact. Delivered work can add missing Git metadata.
+[Source evidence and API limits](continuation-permissions.md) cover that grant,
+steering, manual TUI replacement and the lack of a grant at idle attachment.
 
 ### The sandbox has its own pid namespace
 

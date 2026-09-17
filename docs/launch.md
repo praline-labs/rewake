@@ -89,12 +89,15 @@ The existing warning about excluded temporary directories remains relevant.
 -C/--cd selects the effective server cwd as well as the TUI request. Resume and
 fork retain their arguments but receive no generated permission overrides: the
 remote TUI refuses these before attaching. Committing roles print
-`resumed thread keeps its stored permissions; commits need a thread started under --write`.
-This is not a guarantee that a previously added metadata root survives: the TUI
-passes its current workspace roots even when restoring saved permission settings.
-No additive, policy-preserving root update exists without starting a turn in the
-verified API, so startup does not attempt a permission RPC or automatic input.
-See [continuation permission evidence](research.md#remote-continuation-permissions).
+`resumed thread gets Git metadata access with each rewake task; turns you start yourself use the thread's stored roots`.
+Startup sends no automatic input or permission RPC. On each delivered task or
+question, committing roles read the current local workspace roots and append only
+missing Git metadata directories to that turn/start request. General and reports
+receive no grant. Unreadable roots leave the request unchanged with a delivery
+status note. The selected policy still applies; a steered turn retains its current
+permissions and the new roots affect subsequent turns. A manual TUI turn can
+replace these roots again, so the next task reads them afresh.
+See [continuation permission evidence](continuation-permissions.md).
 
 Caller permission flags and permission-related -c overrides stay untouched.
 For resume/fork, a separate stderr note explains that the remote TUI rejects

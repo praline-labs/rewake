@@ -193,7 +193,16 @@ suppressed while it remains identifiable. No transcript or history is read.
 See [source ordering and limits](server-observation.md).
 
 An owed message records that thread before becoming readable. Delivery calls
-turn/start with only threadId, clientUserMessageId and the notice as text input.
+turn/start with threadId, clientUserMessageId and the notice as text input.
+For tasks/questions to main/write, a fresh history-free thread/read supplies the
+single local environment's roots and cwd. If Git metadata roots are missing,
+runtimeWorkspaceRoots contains all existing roots followed by only the missing
+gitdir/commondir paths. Already present roots, general, notify and reports omit
+the field. A failed or ambiguous roots read omits the field and adds one line to
+the delivery status; ordinary delivery continues. Policy, approval and profile
+are untouched. On steer the server stores these roots for subsequent turns while
+the active context keeps its permissions. Manual TUI input may replace the list,
+so grants never rely on a cached snapshot. See [source evidence and limits](continuation-permissions.md).
 The server starts an idle turn or steers the current one. A result with a turn id
 means delivered via app-server. A server refusal is failed with its text; transport
 errors and ambiguous results are not automatically resent. RPC cancellation

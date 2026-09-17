@@ -376,3 +376,13 @@ width estimator. A mutation treating wide glyphs as narrow fails at 102 columns.
 Validation: all five repository checks, callback regressions, targeted mutations,
 and isolated fake-process delivery pass. Failed-turn observation still depends on the harness emitting a callback; the
 previous legacy-notify limitation remains unchanged. No real harness was run.
+
+## Review round thirteen — requested fixes complete, September 17, 2026
+
+Reconnect omits the initial pagination cursor and preserves generation guards.
+RPC cancellation covers writer contention and frame I/O, with no automatic resend.
+Answer receipts identify the printed report, so stopped cannot archive a later
+shared finished. Resume discovery uses metadata hints and loaded-list fallback,
+without thread/started or history. All four requested regressions and the
+generation coverage gap pass, including strict resume and shared-final scenarios.
+Full milestone acceptance remains open for the owner.

@@ -23,12 +23,23 @@ func (s *serverSession) Deliver(ctx context.Context, message inbox.Message) inbo
 				return inbox.Result{State: inbox.Failed, Detail: "the conversation changed before delivery; read the task and resend if it still applies"}
 			}
 			input := []map[string]string{{"type": "text", "text": noticePrefix(message) + " " + harness.Notice(message)}}
+			params := map[string]any{"threadId": thread, "clientUserMessageId": message.ID, "input": input}
+			roots, note := s.taskGitRoots(ctx, client, thread, inbox.KindOf(message))
+			if roots != nil {
+				params["runtimeWorkspaceRoots"] = roots
+			}
+			s.mu.Lock()
+			ready := s.current == thread && s.client == client && !s.dirty && s.discoveryErr == nil
+			s.mu.Unlock()
+			if !ready {
+				return inbox.Result{State: inbox.Failed, Detail: "the conversation changed before delivery; read the task and resend if it still applies"}
+			}
 			var result struct {
 				Turn struct {
 					ID string `json:"id"`
 				} `json:"turn"`
 			}
-			err := client.call(ctx, "turn/start", map[string]any{"threadId": thread, "clientUserMessageId": message.ID, "input": input}, &result)
+			err := client.call(ctx, "turn/start", params, &result)
 			if err != nil {
 				return inbox.Result{State: inbox.Failed, Detail: err.Error() + "; delivery was not retried automatically"}
 			}
@@ -41,7 +52,7 @@ func (s *serverSession) Deliver(ctx context.Context, message inbox.Message) inbo
 			if result.Turn.ID == "" {
 				return inbox.Result{State: inbox.Failed, Detail: "app-server returned no turn id"}
 			}
-			return inbox.Result{State: inbox.Delivered, Via: "app-server"}
+			return inbox.Result{State: inbox.Delivered, Via: "app-server", Detail: note}
 		}
 		select {
 		case <-ctx.Done():

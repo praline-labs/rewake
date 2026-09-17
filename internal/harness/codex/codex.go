@@ -75,7 +75,7 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 		notes = append(notes, "permission overrides cannot be used with resume/fork under rewake: the remote TUI rejects them; remove the permission flags or start a new thread; caller arguments are unchanged")
 	}
 	if continuation && request.Role.GitWrite {
-		notes = append(notes, "resumed thread keeps its stored permissions; commits need a thread started under --write")
+		notes = append(notes, "resumed thread gets Git metadata access with each rewake task; turns you start yourself use the thread's stored roots")
 	}
 	if request.Role.GitWrite && !continuation {
 		if flags, note := gitWriteFlags(args); note != "" {
@@ -106,8 +106,10 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 	serverArgs := serverConfigArgs(args)
 	serverArgs = append(serverArgs, "app-server", "--listen", "unix://"+socket)
 	args = harness.AddFlags(args, "--remote", "unix://"+socket)
+	server := newServer(socket, serverArgs, append(append([]string{}, env...), "CODEX_INTERNAL_APP_SERVER_REMOTE_CONTROL_DISABLED=1"), cwd)
+	server.gitWrite = request.Role.GitWrite
 	return harness.LaunchPlan{
-		Backend:    newServer(socket, serverArgs, append(append([]string{}, env...), "CODEX_INTERNAL_APP_SERVER_REMOTE_CONTROL_DISABLED=1"), cwd),
+		Backend:    server,
 		Socket:     socket,
 		OwnsSocket: true,
 		Command:    "codex",

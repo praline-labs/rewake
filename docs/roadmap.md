@@ -365,16 +365,6 @@ helpers are removed. The complete fake-process smoke covers delivery, stopped
 and continuation, /new, API errors, closed-thread refusal and server death.
 The full wrapper's real-model acceptance remains open for the owner.
 
-## Review round thirteen — requested fixes complete, September 17, 2026
-
-Reconnect omits the initial pagination cursor and preserves generation guards.
-RPC cancellation covers writer contention and frame I/O, with no automatic resend.
-Answer receipts identify the printed report, so stopped cannot archive a later
-shared finished. Resume discovery uses metadata hints and loaded-list fallback,
-without thread/started or history. All four requested regressions and the
-generation coverage gap pass, including strict resume and shared-final scenarios.
-Full milestone acceptance remains open for the owner.
-
 ## First input — done, September 17, 2026
 
 Launch adds the role and flow only through the system briefing. The agent reads
@@ -397,3 +387,12 @@ All five checks pass. Real-model milestone acceptance stays with the owner.
 
 Resume/fork omit generated permission grants; caller overrides stay intact with a warning.
 Fake TUI checks cover all roles; all five checks pass. [API limits](continuation-permissions.md) prevent an idle root grant. Saved roots may be superseded; live acceptance stays open.
+
+## Git metadata grants with tasks — done, September 17, 2026
+
+Owner decision: grant metadata with delivered tasks/questions to main/write.
+Fresh history-free roots are preserved and only missing gitdir/commondir paths
+are appended; unreadable roots skip the grant with a status note. Steer updates
+future turns, and manual TUI turns may replace roots. Fake-server tests cover
+roles, worktrees, repeated tasks and failures; all three requested mutations
+are detected. All five checks pass. Live acceptance remains with the owner.

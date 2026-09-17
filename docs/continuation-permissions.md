@@ -44,12 +44,62 @@ idle attachment:
   profile (`core/src/session/session.rs:469–485`); projecting a named profile into
   it would change the policy contract.
 
-Consequently committing roles emit the requested startup note:
-`resumed thread keeps its stored permissions; commits need a thread started under --write`.
-The note describes the absence of a new grant, not a verification of the resumed
-thread's effective roots. No permission mutation or model turn is injected.
-Fake TUI argv tests cover both continuations and all three roles; live acceptance
-remains with the owner.
+## Grant with delivered work
+
+**Owner decision, September 17, 2026:** this is an "unplanned feature to grant
+permissions": Git metadata roots accompany delivered work, not attachment or
+an automatic startup turn. On resume/fork, main and write print:
+`resumed thread gets Git metadata access with each rewake task; turns you start yourself use the thread's stored roots`.
+
+For each task or question, committing roles call `thread/read` with
+`includeTurns=false`. Loaded metadata includes current `environments`, each with
+`environmentId`, `cwd` and `runtimeWorkspaceRoots`
+(`app-server-protocol/src/protocol/v2/thread_data.rs:204–212`,
+`protocol/v2/environment.rs:13–17`; the loaded metadata path is
+`request_processors/thread_processor.rs:2799–2855,6201–6218`). No transcript or
+turn history is requested. The permission read has a 500 ms budget within the
+existing delivery deadline; a failed read must not consume that entire deadline.
+
+The adapter supports one local environment. Missing, null, malformed, multiple
+or remote selections cannot safely supply a complete replacement list: delivery
+continues without the field and records one line explaining the skipped grant.
+It resolves the thread environment's cwd, not the wrapper's launch cwd, through
+the existing metadata resolver. It preserves every returned root in its original
+order and appends only missing gitdir/commondir paths. A broad ancestor does not
+prove access to protected Git metadata; the exact metadata roots are required.
+Already present metadata needs no field. General, notify and completion reports
+never trigger this feature. No sandbox policy, profile, approval, cwd or other
+permission setting is sent. Effective access remains subject to the selected
+policy; adding a root does not turn a read-only profile into a writable one.
+
+**Steering, source `44b901161`:** `turn/start` builds the runtime-root update
+before `start_or_steer_turn` (`request_processors/turn_processor.rs:586–651`).
+Core accepts persistent settings on both Started and Steered
+(`core/src/session/turn_input.rs:8–9,95–113,242–281`). On Started they apply before
+creating the new context (:119–165). On Steered they update persistent settings
+only: the active context retains its permissions (:190–198). Rewake therefore
+sends the field on steer too and notes that the grant is for subsequent turns.
+It does not retry rejected requests or initiate another turn to acquire access.
+
+**Manual TUI turns, same snapshot:** `tui/src/app/thread_routing.rs:864–873`
+passes the TUI's local workspace roots to `app_server_session.rs:1339–1350`,
+which always sends `runtimeWorkspaceRoots`. `thread/settings/updated` lacks that
+field (`protocol/v2/thread.rs:296–318`); TUI sync updates policy and retargets cwd
+but does not replace its roots (`tui/src/app/thread_settings.rs:247–262`,
+`chatwidget/settings.rs:454–487,507–524`). Consequently a human-started turn can
+replace the adapter's grant with the TUI's older list. Every delivered task reads
+a new snapshot and restores missing metadata if needed. The startup wording
+summarizes the lack of an unconditional launch grant, not a promise that the TUI
+preserves server roots.
+
+The API has no atomic append or revision precondition. The adapter preserves its
+fresh snapshot, but another client's simultaneous root change between read and
+turn/start cannot be merged atomically. A detected conversation change refuses
+delivery rather than applying a prior thread's roots to its replacement.
+Fake-server tests cover roles, exact unions, worktrees, unreadable snapshots,
+steer, repeated tasks, manual replacement and thread changes. Mutations that
+narrow roots, grant general access or add other directories must fail these tests.
+Live permission and transport acceptance remains with the owner.
 
 ## Continuation discovery
 
