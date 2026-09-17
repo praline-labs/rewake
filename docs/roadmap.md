@@ -318,7 +318,7 @@ refused. Concurrent wrappers elect exactly one main. Checks use isolated state
 and a fake harness, plus regression and mutation tests.
 
 
-## Milestone 10. Session-owned server transport — in progress, September 17, 2026
+## Milestone 10. Session-owned server transport — done, September 17, 2026
 
 The owned server and TUI share the wrapper lifetime. An optional Backend keeps
 all process/RPC mechanics inside the adapter. Delivery uses start-or-steer,
@@ -334,9 +334,9 @@ separately by the owner; protocol tests use a fake local server.
 The obsolete queue subprocess, lock-file tracker and unused process-tree/fd
 helpers are removed. The complete fake-process smoke covers delivery, stopped
 and continuation, /new, API errors, closed-thread refusal and server death.
-The full wrapper's real-model acceptance remains open for the owner.
+The milestone is closed by the live acceptance below. One criterion was not provoked live: a failed Codex turn; the fake server covers it, and a real one is recorded when it happens.
 
-Live acceptance so far, on the owner's sessions with CLI 0.154.0 and Claude Code
+Live acceptance, on the owner's sessions with CLI 0.154.0 and Claude Code
 (September 17, 2026):
 
 | criterion | result |
@@ -345,8 +345,8 @@ Live acceptance so far, on the owner's sessions with CLI 0.154.0 and Claude Code
 | a report from a fresh thread's turn | passed: `finished` arrived |
 | same-turn delivery during work | passed: a mid-turn note was followed in that turn |
 | error after a failed turn | passed on Claude Code (a usage-limit stop); Codex only on the fake server |
-| stopped after a keyboard interrupt | open |
-| delivery to a thread opened with /new | open |
+| stopped after a keyboard interrupt | passed: a yellow `stopped` line, the wait was kept |
+| delivery to a thread opened with /new | passed: the new thread started a turn; its `finished` answered both the stopped task and the new one, marked `threadChanged` |
 
 ## First input — done, September 17, 2026
 
