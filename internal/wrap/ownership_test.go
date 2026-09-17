@@ -28,7 +28,7 @@ func TestCleanupLeavesTheNextOwnerAlone(t *testing.T) {
 	// While ours runs, publish what will become the next owner of the name once
 	// ours is gone: same name, another epoch.
 	successor := registry.Session{
-		Name:         "api",
+		Name:         "api-fake",
 		Harness:      "claude",
 		ServicePID:   os.Getpid(),
 		ServiceStart: selfStart(t) + 1, // a different epoch, still this process
@@ -45,7 +45,7 @@ func TestCleanupLeavesTheNextOwnerAlone(t *testing.T) {
 			// Wait until the wrapper has finished writing its own record — it
 			// knows the harness pid then — so the takeover lands after that and
 			// before the cleanup, as it would in life.
-			if ours, err := registry.Load(dir, "api"); err == nil && ours.HarnessPID != 0 {
+			if ours, err := registry.Load(dir, "api-fake"); err == nil && ours.HarnessPID != 0 {
 				// Put the successor's record in place the way a takeover does:
 				// under the name lock. Written directly, because Publish would
 				// refuse a name whose holder is alive, and without the lock a
@@ -53,8 +53,8 @@ func TestCleanupLeavesTheNextOwnerAlone(t *testing.T) {
 				// which made this test fail one run in many.
 				encoded, marshalErr := json.MarshalIndent(successor, "", "  ")
 				if marshalErr == nil {
-					_ = state.WithNameLock(dir, "api", func() error {
-						return state.WriteAtomic(state.SessionPath(dir, "api"), encoded)
+					_ = state.WithNameLock(dir, "api-fake", func() error {
+						return state.WriteAtomic(state.SessionPath(dir, "api-fake"), encoded)
 					})
 				}
 				return
@@ -68,7 +68,7 @@ func TestCleanupLeavesTheNextOwnerAlone(t *testing.T) {
 	}
 	<-done
 
-	held, err := registry.Load(dir, "api")
+	held, err := registry.Load(dir, "api-fake")
 	if err != nil {
 		t.Fatalf("the next owner's record was deleted by the previous wrapper: %v", err)
 	}
@@ -86,7 +86,7 @@ func TestShutdownOnlyRefusesItsOwnMail(t *testing.T) {
 	foreign := inbox.Message{
 		ID:        inbox.NewID(),
 		From:      "web",
-		To:        "api",
+		To:        "api-fake",
 		ToEpoch:   "999.999",
 		Text:      "for a session that came before",
 		CreatedAt: time.Now(),
@@ -99,7 +99,7 @@ func TestShutdownOnlyRefusesItsOwnMail(t *testing.T) {
 		t.Fatalf("Run: %v", err)
 	}
 
-	status, ok := inbox.ReadStatus(dir, "api", foreign.ID)
+	status, ok := inbox.ReadStatus(dir, "api-fake", foreign.ID)
 	if !ok || status.State != inbox.Failed {
 		t.Fatalf("status = %+v, want a refusal written while the session ran", status)
 	}
@@ -121,7 +121,7 @@ func TestHarnessSharesTheTerminalGroup(t *testing.T) {
 	go func() {
 		deadline := time.Now().Add(3 * time.Second)
 		for time.Now().Before(deadline) {
-			session, err := registry.Lookup(dir, "api")
+			session, err := registry.Lookup(dir, "api-fake")
 			if err != nil || session.HarnessPID == 0 {
 				time.Sleep(20 * time.Millisecond)
 				continue
@@ -221,7 +221,7 @@ func TestInterruptDoesNotEndTheSession(t *testing.T) {
 	go func() {
 		deadline := time.Now().Add(3 * time.Second)
 		for time.Now().Before(deadline) {
-			session, err := registry.Lookup(dir, "api")
+			session, err := registry.Lookup(dir, "api-fake")
 			if err != nil || session.HarnessPID == 0 {
 				time.Sleep(20 * time.Millisecond)
 				continue
@@ -302,8 +302,8 @@ func isSocket(path string) bool {
 // it ends, and the next holder's socket — at a path of its own — stays.
 func TestEachRunCleansOnlyItsOwnSocket(t *testing.T) {
 	dir := stateDir(t)
-	ours := registry.SocketFor(dir, "api", strconv.Itoa(os.Getpid())+"."+strconv.FormatUint(selfStart(t), 10))
-	theirs := registry.SocketFor(dir, "api", "999.1")
+	ours := registry.SocketFor(dir, "api-fake", strconv.Itoa(os.Getpid())+"."+strconv.FormatUint(selfStart(t), 10))
+	theirs := registry.SocketFor(dir, "api-fake", "999.1")
 	if ours == theirs {
 		t.Fatalf("two runs of a name share the socket path %s", ours)
 	}
@@ -315,13 +315,13 @@ func TestEachRunCleansOnlyItsOwnSocket(t *testing.T) {
 		defer close(done)
 		deadline := time.Now().Add(3 * time.Second)
 		for time.Now().Before(deadline) {
-			if held, err := registry.Load(dir, "api"); err == nil && held.HarnessPID != 0 {
+			if held, err := registry.Load(dir, "api-fake"); err == nil && held.HarnessPID != 0 {
 				bindSocket(t, ours)
 				successor := held
 				successor.ServiceStart++
 				encoded, _ := json.MarshalIndent(successor, "", "  ")
-				_ = state.WithNameLock(dir, "api", func() error {
-					return state.WriteAtomic(state.SessionPath(dir, "api"), encoded)
+				_ = state.WithNameLock(dir, "api-fake", func() error {
+					return state.WriteAtomic(state.SessionPath(dir, "api-fake"), encoded)
 				})
 				return
 			}

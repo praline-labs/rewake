@@ -121,7 +121,7 @@ func TestSessionIsPublishedWhileRunningAndRemovedAfter(t *testing.T) {
 	go func() {
 		deadline := time.Now().Add(3 * time.Second)
 		for time.Now().Before(deadline) {
-			if session, err := registry.Lookup(dir, "api"); err == nil && session.HarnessPID != 0 {
+			if session, err := registry.Lookup(dir, "api-fake"); err == nil && session.HarnessPID != 0 {
 				seen <- session
 				return
 			}
@@ -141,7 +141,7 @@ func TestSessionIsPublishedWhileRunningAndRemovedAfter(t *testing.T) {
 	if session.HarnessPID == 0 || session.ServicePID != os.Getpid() {
 		t.Errorf("record = %+v, want both the wrapper and the harness recorded", session)
 	}
-	if _, err := registry.Load(dir, "api"); err == nil {
+	if _, err := registry.Load(dir, "api-fake"); err == nil {
 		t.Error("the record outlived the session")
 	}
 }
@@ -154,7 +154,7 @@ func TestMailboxIsServedWhileTheHarnessRuns(t *testing.T) {
 		// Wait for the session, then write into its mailbox the way a sender does.
 		deadline := time.Now().Add(3 * time.Second)
 		for time.Now().Before(deadline) {
-			session, err := registry.Lookup(dir, "api")
+			session, err := registry.Lookup(dir, "api-fake")
 			if err != nil {
 				time.Sleep(20 * time.Millisecond)
 				continue
@@ -162,7 +162,7 @@ func TestMailboxIsServedWhileTheHarnessRuns(t *testing.T) {
 			_ = inbox.Put(dir, inbox.Message{
 				ID:        inbox.NewID(),
 				From:      "web",
-				To:        "api",
+				To:        "api-fake",
 				ToEpoch:   session.Epoch(),
 				Text:      "hello",
 				CreatedAt: time.Now(),
@@ -188,7 +188,7 @@ func TestMailOfAPreviousSessionIsRefused(t *testing.T) {
 	if err := inbox.Put(dir, inbox.Message{
 		ID:        inbox.NewID(),
 		From:      "web",
-		To:        "api",
+		To:        "api-fake",
 		ToEpoch:   "999.999",
 		Text:      "for whoever was called api yesterday",
 		CreatedAt: time.Now(),
@@ -222,7 +222,7 @@ func TestSessionEnvironmentReachesTheHarness(t *testing.T) {
 		t.Fatalf("read: %v", err)
 	}
 	// The run is this wrapper's: its pid and start time.
-	want := fmt.Sprintf("api %s %d.%d", state.RootForRoom(dir), os.Getpid(), selfStart(t))
+	want := fmt.Sprintf("api-fake %s %d.%d", state.RootForRoom(dir), os.Getpid(), selfStart(t))
 	if got := string(content); got != want {
 		t.Errorf("environment = %q, want %q", got, want)
 	}
@@ -233,7 +233,7 @@ func TestSessionEnvironmentReachesTheHarness(t *testing.T) {
 func TestTakenNameIsRefusedOnlyWhenExplicit(t *testing.T) {
 	dir := stateDir(t)
 	blocker := registry.Session{
-		Name:         "fake",
+		Name:         "main-fake",
 		Harness:      "fake",
 		ServicePID:   os.Getpid(),
 		ServiceStart: selfStart(t),
@@ -249,7 +249,7 @@ func TestTakenNameIsRefusedOnlyWhenExplicit(t *testing.T) {
 		t.Fatalf("an automatic name did not step aside: %v", err)
 	}
 
-	_, err := Run(context.Background(), Request{Harness: fake, Dir: dir, Name: "fake"})
+	_, err := Run(context.Background(), Request{Harness: fake, Dir: dir, Name: "main"})
 	if err == nil {
 		t.Fatal("an explicit taken name was accepted")
 	}
@@ -274,7 +274,7 @@ func TestTheRoleIsRecorded(t *testing.T) {
 	go func() {
 		deadline := time.Now().Add(3 * time.Second)
 		for time.Now().Before(deadline) {
-			if session, err := registry.Load(dir, "lead"); err == nil {
+			if session, err := registry.Load(dir, "lead-fake"); err == nil {
 				recorded <- session.Role
 				return
 			}

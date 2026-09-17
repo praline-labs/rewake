@@ -18,6 +18,9 @@ import (
 // not hide what the program said.
 func handleLaunch(h harness.Harness) func(*Context, Call) error {
 	return func(_ *Context, call Call) error {
+		if prefix, present := call.Flags["name"]; present && prefix == "" {
+			return &UsageError{Command: call.Command, Message: "--name needs a nonempty prefix; omit --name to use the selected role."}
+		}
 		root, err := state.Root()
 		if err != nil {
 			// An unusable state directory is something about this call and its
@@ -54,7 +57,7 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 			}
 			var taken *registry.NameTakenError
 			if errors.As(err, &taken) {
-				return &UsageError{Command: call.Command, Message: taken.Error() + " Pick another name, or omit --name to get the next free one."}
+				return &UsageError{Command: call.Command, Message: taken.Error() + " Pick another prefix with --name, or omit --name to get the next free role-based address."}
 			}
 			if errors.Is(err, registry.ErrUnusableName) {
 				return &UsageError{Command: call.Command, Message: err.Error()}

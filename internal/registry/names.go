@@ -38,6 +38,9 @@ func ChooseName(dir, explicit, base string) (string, error) {
 		if attempt > 1 {
 			candidate = base + "-" + strconv.Itoa(attempt)
 		}
+		if !state.ValidName(candidate) {
+			return "", fmt.Errorf("%w: automatic name %q must fit 32 characters and the session-name syntax; choose a shorter valid prefix with --name", ErrUnusableName, candidate)
+		}
 		if _, err := Lookup(dir, candidate); errors.Is(err, ErrNotFound) {
 			return candidate, nil
 		}

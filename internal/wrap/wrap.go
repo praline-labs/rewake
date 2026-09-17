@@ -33,7 +33,7 @@ type Request struct {
 	Harness harness.Harness
 	// Dir is the room-scoped state directory.
 	Dir string
-	// Name is the requested session name; empty picks a free one.
+	// Name is the requested prefix; empty uses the role and picks a free address.
 	Name string
 	// Args are the caller's arguments for the harness.
 	Args []string

@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/iiiokojiadbi/rewake/internal/harness"
+	"github.com/iiiokojiadbi/rewake/internal/role"
 )
 
 // Version is the released version of the tool. A release build sets it from the
@@ -26,8 +27,8 @@ var globalOptions = []Option{
 // after the harness name belongs to the harness.
 var nameOption = Option{
 	Flag:    "--name",
-	Value:   "<name>",
-	Summary: "Name this session. Default: the harness name, then claude-2, claude-3.",
+	Value:   "<prefix>",
+	Summary: "Session prefix (default: selected role). Address: <prefix>-<harness>, up to 32 characters. Automatic conflicts add -2, -3; explicit conflicts refuse.",
 }
 
 var roomOption = Option{
@@ -79,13 +80,8 @@ func buildGroups() {
 					Option{Flag: "--wait", Value: "<seconds>", Summary: "How long to wait. Default: 5 for the delivery, 600 for a question's answer."},
 					jsonOption,
 				),
-				Examples: []string{
-					"rewake send api \"rerun the smoke and report what failed\"",
-					"rewake send web \"which port does the dev server use?\" --question",
-					"rewake send api \"the migration is merged\" --notify",
-					"rewake send web - --wait 20",
-				},
-				Next: []string{"rewake inbox"},
+				Examples: sendExamples(),
+				Next:     []string{"rewake inbox"},
 				Notes: []string{
 					"A task is the default: the session reads it, works, and ends its turn with a final message, which comes back to you as a \"Rewake: <session> finished\" line.",
 					"A question blocks until that final message and prints it. A long one is better run in the background.",
@@ -175,13 +171,15 @@ func flow() []FlowStep {
 	steps := []FlowStep{}
 	for _, h := range harness.All() {
 		steps = append(steps, FlowStep{
-			Command: fmt.Sprintf("rewake --name <name> %s", h.ID()),
-			Summary: fmt.Sprintf("Start %s in this terminal under a name others can address; the room elects main automatically, or use --general, --write or --main.", h.Title()),
+			Command: fmt.Sprintf("rewake --%s --name helper %s", role.General.ID, h.ID()),
+			Summary: fmt.Sprintf("Start %s as helper-%s with role %s; --name sets only the prefix.", h.Title(), h.ID(), role.General.ID),
+		}, FlowStep{
+			Command: fmt.Sprintf("rewake send helper-%s \"pull and rerun the smoke\"", h.ID()),
+			Summary: "Give that exact address a task; its final message comes back when the turn ends.",
 		})
 	}
 	return append(steps,
 		FlowStep{Command: "rewake list", Summary: "See who is running and can be reached."},
-		FlowStep{Command: "rewake send api \"pull and rerun the smoke\"", Summary: "Give api a task; its final message comes back as a \"Rewake: api finished\" line."},
 		FlowStep{Command: "rewake inbox", Summary: "When a \"Rewake:\" line says messages are waiting, read them here. Answer a task by finishing your turn with the result."},
 		FlowStep{Command: "rewake <command> --help", Summary: "Flags, examples and notes for that command."},
 	)
@@ -213,6 +211,10 @@ func notes() []Note {
 		{
 			Title: "Rooms isolate conversations",
 			Body:  "Choose --room <name> before the harness name; without it, launches use default. The system briefing names the role and directs the agent to rewake guide on its first task. Sessions see only their room. Commands inherit REWAKE_ROOM; a shell without it uses default. Names can repeat across rooms. There is no cross-room address or --room flag on messaging commands.",
+		},
+		{
+			Title: "Session addresses come from launch prefixes",
+			Body:  "The selected role is the default prefix; --name replaces that prefix without changing the role. Launch always appends -<harness>, even if the prefix already ends with that suffix. Automatic conflicts add -2, -3 after the harness; explicit conflicts refuse. Prefixes start with a lower-case letter or digit and use lower-case letters, digits, dots, dashes or underscores; the complete address must fit 32 characters. Send uses the exact address shown by list. Existing running sessions keep their names.",
 		},
 		{
 			Title: "Choose a session role",

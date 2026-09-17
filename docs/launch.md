@@ -27,8 +27,14 @@ The common part of the wrapper:
 
 Launch flags precede the harness name. `--room <name>` selects the room and
 otherwise defaults to `default`; it does not inherit the launching process's
-room. `--name` chooses a name unique within that room. Both use the same
-lower-case name syntax, up to 32 characters.
+room. After role selection under the room lock, the address is
+`<role ID>-<harness ID>`. `--name <prefix>` replaces only the role prefix;
+it always receives the harness suffix, without suffix deduplication.
+Automatic conflicts add -2, -3 after the harness ID; explicit conflicts refuse
+with the final address. Prefix and complete address use the lower-case name
+syntax, and the complete address must fit 32 characters. Choose a shorter
+prefix if appending the harness or a collision number would exceed it.
+Existing session records and direct messaging addresses are not rewritten.
 
 `--main`, `--general` and `--write` explicitly select one role and cannot be
 combined. Without a role flag, no live main in the room means main; an existing
@@ -154,4 +160,3 @@ session unreachable, not to interfere. The residual case is a harness that
 deliberately takes longer than the grace period to shut down — it receives a
 second signal. Tools of this kind (`tini`, `dumb-init`) forward unconditionally;
 this is that, with one question asked first.
-

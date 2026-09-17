@@ -41,16 +41,19 @@ sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
 
 ## Act 1. A session starts
 
-`rewake --write --name write codex` (or `rewake --main claude`, or plain `rewake claude`).
+`rewake --write codex` starts write-codex. The sender in this example starts
+with `rewake --main --name lead claude`, becoming lead-claude.
 
 1. **The directory.** The wrapper opens the `REWAKE_DIR` root and the room
    selected by `--room`, or `default` when omitted. Both are 0700; a symlink,
    foreign owner or loose permissions is refused. Legacy root-level records
    are ignored.
-2. **The name.** Explicit from `--name`, else the harness name, else `claude-2`,
-   `claude-3`. The record is published with `link()`: a taken name stays taken
-   while its session is alive in this room; a dead record is evicted and retried.
-   Other rooms may use the same name.
+2. **The name and role.** Under the room lock, first select the role (step 4),
+   then append the harness ID to the role prefix or explicit `--name` prefix.
+   Automatic collisions add -2, -3 after the harness suffix; explicit conflicts
+   refuse with the full address. Prefix and final name must fit the name syntax
+   and 32-character limit. Publication uses `link()`: live names remain taken,
+   dead records can be replaced, and other rooms may use the same address.
 3. **The run.** The wrapper's pid and start time make the **epoch**
    (`<pid>.<ticks>`). A name can be started many times; the epoch says which
    start this is.
@@ -93,7 +96,7 @@ matching start times, and deletes any record whose session is dead.
 
 ## Act 2. A task is sent
 
-`rewake send write "run the smoke and report what failed"` — from the main
+`rewake send write-codex "run the smoke and report what failed"` — from the main
 session's shell, or from a person's shell in the same room. A shell without
 `REWAKE_ROOM` uses `default`. Commands cannot name a different room.
 
@@ -105,11 +108,11 @@ session's shell, or from a person's shell in the same room. A shell without
 3. **The kind.** Plain `send` is a `task`; `--question` and `--notify` are the
    other two. A question to a silent recipient is refused here, before anything
    is written: that role never reports, so it could never answer.
-4. **The file.** `inbox/write/<id>.json.tmp`, renamed to `.json`. The id is
+4. **The file.** `inbox/write-codex/<id>.json.tmp`, renamed to `.json`. The id is
    time-sortable. Nothing else is touched: the sender does not deliver.
 5. **The wait.** The sender polls `<id>.status` for up to `--wait` seconds (5
-   by default) and prints one line: `delivered to write via app-server`,
-   `pending for write: …` (exit 3), or `failed` (exit 1).
+   by default) and prints one line: `delivered to write-codex via app-server`,
+   `pending for write-codex: …` (exit 3), or `failed` (exit 1).
 
 ## Act 3. The wrapper announces it
 
@@ -119,12 +122,12 @@ The recipient's wrapper sees the rename and, under the mailbox lock:
    about mail may run `rewake inbox` at once, so the text is there before the
    notice goes out.
 2. **The notice.** One line, the same for every harness:
-   `Rewake: claude task, 1 new message(s)`. The count is this run's unread
+   `Rewake: lead-claude task, 1 new message(s)`. The count is this run's unread
    mail. Its next line previews the author's first line.
 3. **The adapter**, outside the lock because it can take seconds:
    - Claude Code: connect to the session's socket and write one JSON line
      whose content is a `<task-notification>` block with that summary. The
-     interface draws it as a single green `● Rewake: claude task, 1 new
+     interface draws it as a single green `● Rewake: lead-claude task, 1 new
      message(s)` line — the same line its own background tasks get — and the
      model wakes if it was idle.
    - Codex: call turn/start on the tracked TUI thread. For tasks/questions to
@@ -186,7 +189,7 @@ ignored without changing the parent session's waits.
    receipt is marked done. Cleanup matches the original run and wait; newly
    read messages remain owed to the next result.
 4. **The sender is woken** by its own wrapper, through Act 3, with
-   `Rewake: write finished, 1 new message(s)`. The sender reads it with
+   `Rewake: write-codex finished, 1 new message(s)`. The sender reads it with
    `rewake inbox`; a `finished` asks for nothing back, so the exchange ends
    here. The main session never reports successful turns, which is
    what keeps two sessions from waking each other forever.
@@ -197,7 +200,7 @@ Reading it still owes no report; a failure is not converted into another task.
 
 ## Act 6. A question, when the sender wants to block
 
-`rewake send review "which port?" --question` is a task whose sender waits for
+`rewake send write-codex "which port?" --question` is a task whose sender waits for
 the answer in the same command.
 
 1. **Reserve before publishing.** The sender creates `answering/<id>` in its
@@ -219,7 +222,7 @@ the answer in the same command.
 
 ## Act 7. A notify, when nothing is owed
 
-`rewake send write "the migration is merged" --notify` goes through Acts 2–4
+`rewake send write-codex "the migration is merged" --notify` goes through Acts 2–4
 and stops there: reading it records no wait, so no report comes back. It is the
 right kind for a heads-up and for a probe.
 
@@ -241,16 +244,16 @@ evicts it.
 
 ## One exchange, as files
 
-`claude` (main) gives `write` a task and gets the result back.
+`lead-claude` (main) gives `write-codex` a task and gets the result back.
 
-| step | inbox/write | inbox/claude |
+| step | inbox/write-codex | inbox/lead-claude |
 |---|---|---|
 | send | `<id>.json`, `<id>.status: pending` | |
 | wrapper announces | `unread/<id>.json`, status `delivered` | |
-| write reads | `awaiting/<epoch-w>/claude`, status `read`, `done/<id>.json` | |
-| write's turn ends | `awaiting/` emptied | `<rid>.json` (finished, inReplyTo: id) |
-| claude's wrapper announces | | `unread/<rid>.json`, status `delivered` |
-| claude reads | | status `read`, `done/<rid>.json`; no wait recorded |
+| write-codex reads | `awaiting/<epoch-w>/lead-claude`, status `read`, `done/<id>.json` | |
+| write-codex's turn ends | `awaiting/` emptied | `<rid>.json` (finished, inReplyTo: id) |
+| lead-claude's wrapper announces | | `unread/<rid>.json`, status `delivered` |
+| lead-claude reads | | status `read`, `done/<rid>.json`; no wait recorded |
 
 Exit codes the sender sees along the way: 0 delivered, 3 accepted and still
 pending, 1 failed or unreachable, 2 wrong call — unknown session, bad flag, a

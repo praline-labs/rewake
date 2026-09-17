@@ -41,7 +41,7 @@ func TestARoomChoosesOneMainAndHonorsExplicitRoles(t *testing.T) {
 	if _, err := claimRole(t, dir, "other", role.Main); err == nil || !strings.Contains(err.Error(), "lead") {
 		t.Errorf("occupied main refusal=%v", err)
 	}
-	if _, err := registry.RemoveOwned(dir, "lead", first.Epoch()); err != nil {
+	if _, err := registry.RemoveOwned(dir, first.Name, first.Epoch()); err != nil {
 		t.Fatal(err)
 	}
 	replacement, err := claimRole(t, dir, "replacement", role.Role{})

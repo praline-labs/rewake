@@ -112,7 +112,7 @@ func unknownSessionError(dir, name string) error {
 	if names := registry.Names(dir); len(names) > 0 {
 		message += " Running now: " + strings.Join(names, ", ") + "."
 	} else {
-		message += " No sessions are running; start one with rewake --name " + name + " claude."
+		message += " No sessions are running. Run rewake for launch commands, then use the exact address from rewake list."
 	}
 	return &UsageError{Command: findCommand("send"), Message: message}
 }

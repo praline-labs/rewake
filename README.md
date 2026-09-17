@@ -7,19 +7,24 @@ flags, same login, same screen. rewake only registers the session and carries
 messages:
 
 ```bash
-rewake --main --name lead claude   # terminal one: hands out work
-rewake --name web codex            # terminal two: a worker
-rewake list                     # who is running
-rewake send api "the migration is merged, pull and rerun the smoke"
+rewake --main --name lead claude   # terminal one: lead-claude hands out work
+rewake --write codex              # terminal two: write-codex takes tasks
+rewake list                       # exact addresses in this room
+rewake send write-codex "the migration is merged, pull and rerun the smoke"
 ```
 
-The receiver is told in one line — `Rewake: web notify, 1 new message` — and
-reads the text itself with `rewake inbox`. An idle session wakes up for it; a
-busy one sees it when the current turn ends. It answers the same way, and when
-its turn ends the sender hears `Rewake: api finished` with its last reply.
+Run the send command from lead-claude. The receiver sees
+`Rewake: lead-claude task, 1 new message(s)` and reads the text with `rewake inbox`.
+An idle session wakes up; the server transport can steer an active turn. The
+receiver ends its turn with the result, which returns as `Rewake: write-codex finished`.
+
+Names use the selected role as a prefix, followed by the harness ID. `--name`
+replaces only the prefix: `rewake --write --name megamozg codex` starts
+megamozg-codex. Automatic collisions add -2, -3; explicit conflicts refuse.
+The complete address must fit 32 characters. Existing sessions keep their names.
 
 Delivery uses what each harness already offers — the session inbox socket of
-Claude Code, the message queue of Codex — so nothing is typed into anyone's
+Claude Code, the owned app-server of Codex — so nothing is typed into anyone's
 screen and no terminal is proxied.
 
 Run `rewake` with no arguments for the map of commands, the usual order of work,

@@ -113,7 +113,7 @@ sessions, and an old record must not appear in a new room by accident.
 
 ```json
 {
-  "name": "claude-2",
+  "name": "general-claude-2",
   "room": "default",
   "role": "general",
   "roleReason": "selected explicitly with --general",
@@ -124,7 +124,7 @@ sessions, and an old record must not appear in a new room by accident.
   "harnessStart": 1671402,
   "cwd": "/home/u/code/x",
   "startedAt": "2026-09-16T00:08:03Z",
-  "socket": "/tmp/rewake-1000/rooms/default/sock/claude-2.12345.1671399.sock"
+  "socket": "/tmp/rewake-1000/rooms/default/sock/general-claude-2.12345.1671399.sock"
 }
 ```
 
@@ -191,9 +191,18 @@ was applied or skipped.
 
 ### Names
 
-`[a-z0-9][a-z0-9._-]{0,31}`. The default is the harness name; if that's taken,
-`claude-2`, `claude-3`. Explicit: `rewake --name api claude`. A session's name is
-its address within its room, so a live name is never reused there.
+**Owner decision, September 17, 2026:** one rule for every role and harness.
+Select the actual role under the room lock, use its ID as the default prefix,
+then append `-<harness ID>`. `--name <prefix>` replaces only the prefix:
+`rewake --write codex` starts write-codex; adding `--name megamozg` starts
+megamozg-codex. Automatic roles produce main-codex or general-codex.
+
+Automatic conflicts add -2, -3 after the harness suffix; explicit conflicts
+refuse with the complete address. Prefix and result must match
+`[a-z0-9][a-z0-9._-]{0,31}`, including the 32-character address limit after any
+collision suffix. Overlength names require a shorter prefix; nothing is
+truncated or deduplicated. Existing records, room isolation and send addresses
+stay unchanged: send uses the exact name from list, never an inferred suffix.
 
 ### Environment the harness receives
 
@@ -248,8 +257,8 @@ proven them out.
 
 ```
 rewake                                  overview (command map, workflow, behavior notes)
-rewake [--room R] [--name N] [--main|--general|--write] claude [args...]   launch a Claude Code session under rewake
-rewake [--room R] [--name N] [--main|--general|--write] codex [args...]    launch a Codex session under rewake
+rewake [--room R] [--name PREFIX] [--main|--general|--write] claude [args...]   launch a Claude Code session under rewake
+rewake [--room R] [--name PREFIX] [--main|--general|--write] codex [args...]    launch a Codex session under rewake
 rewake list [--json]                    live sessions in this room
 rewake send <name> <text|-> [--question] [--wait S] [--json]
 rewake inbox [--json]                   read the messages waiting for this session
@@ -264,21 +273,18 @@ belongs to the harness.
 
 - With no arguments — the overview, exit code 0: command groups, the workflow as
   real invocations, and behavior notes (exit codes, the refusal to ever prompt
-  interactively, the Codex delay).
+  interactively, and delivery outcomes).
 - One line per object, aligned columns, empty values are omitted.
   ```
-  claude-2  claude  idle  /home/u/code/api  started 12m ago
-  codex     codex         /home/u/code/web  started 3m ago
+  general-claude-2  claude  12m  /workspace/api  room=default  (general)
+  write-codex       codex   3m   /workspace/web  room=default  (write)
   ```
-  Busy/idle state is shown only where the harness reports it itself: for Claude
-  Code, the `status` field from `~/.claude/sessions/<pid>.json` (private format;
-  a missing field means an empty column). Codex has no such signal without
-  screen scraping.
+  List shows addresses, harnesses, ages, working directories, rooms and roles.
 - `send` prints the result as one line:
   ```
-  delivered to claude-2 via socket
-  delivered to codex via app-server
-  failed for codex: delivery thread is unavailable
+  delivered to general-claude-2 via socket
+  delivered to write-codex via app-server
+  failed for write-codex: delivery thread is unavailable
   ```
 - `--json` on every command prints the full model; the text form is deliberately
   trimmed down. No colors, no TTY-dependent behavior.

@@ -10,8 +10,9 @@ September 17, 2026 and cleared by restarting the recipient.
 ## How the work is run
 
 - One step, one commit; commit message short, subject line only, in English.
-- Before every commit: `gofmt -l .` is empty, `go vet ./...` and `go test ./...`
-  are green. No commit goes in with a failing check.
+- Before every commit: `gofumpt -l .` is empty; `go vet ./...`,
+  `staticcheck ./...`, `golangci-lint run ./...`, and
+  `go test -race -shuffle=on ./...` are green. No failing check is waived.
 - Live runs happen in a separate `/tmp` directory, with their own `REWAKE_DIR`.
   The user's working harness sessions are left untouched.
 - Live Codex runs spend subscription quota: cheap model, short messages, no
@@ -248,39 +249,14 @@ Earlier findings and fixes are in the [review history](reviews.md) and [its late
 | risk | mitigation |
 |---|---|
 | Claude Code's private socket protocol changes or gets disabled remotely | delivery is isolated in the adapter; on socket failure, a clear `failed`, not silence |
-| Codex's ~10-second delay confuses the sender | stated plainly in the result line; an own app-server later |
-| a message to a fresh Codex thread sits `pending` | exit code 3 and text explaining it delivers after the first turn |
+| owned-server thread identity is unavailable or ambiguous | fail explicitly; retain accepted reports when their notification fails; terminal ownership remains open |
+| a fresh thread finishes before observer subscription | first input can start immediately; an observation gap reports an error without inventing a result |
 | the wrapper died, the harness is alive | the session is treated as dead; delivery fails with a reason instead of going silent |
 | identical text in a row gets dropped by the recipient | a short id in every message's header |
 
-## Local install, without publishing
+## Local installation
 
-Two ways, and they answer different questions.
-
-**To use it.** `go build -o ~/.local/bin/rewake ./cmd/rewake` puts the real
-command in PATH. Nothing else is involved, so this is the honest way to live
-with the tool for a while and see what it is like.
-
-**To test how it will be installed.** `scripts/pack.sh [version]` builds the npm
-packages into `dist/npm` — one per platform plus the entry package — and
-publishes nothing. Then:
-
-```bash
-cd dist/npm/rewake-linux-x64 && npm pack && npm install -g ./*.tgz
-cd ../rewake && npm pack && npm install -g --omit=optional ./*.tgz
-rewake --version
-```
-
-That exercises everything a registry release would except the registry itself:
-the package contents, the platform split, the shim resolving its binary, and the
-command landing in PATH. Uninstall with
-`npm uninstall -g @iiiokojiadbi/rewake @iiiokojiadbi/rewake-linux-x64`.
-
-The entry package's `bin` is a POSIX script rather than a Node shim: it execs the
-binary and disappears, so the terminal, the signals and the exit code belong to
-rewake rather than to a process in between. It follows the symlink npm installs
-first — resolving the link is the difference between finding the binary and
-reporting it missing.
+See [local installation without publishing](install.md) for source and package checks.
 
 ## Milestone 6 progress, September 16, 2026
 
@@ -395,3 +371,19 @@ roots do not establish terminal ownership, /resume can revisit earlier roots,
 and ambiguity still refuses. Regression and mutation checks cover the bounded
 fix; this does not close live ownership acceptance.
 All five repository checks pass; all five targeted mutations are detected.
+
+## Launch naming — done, September 17, 2026
+
+Owner decision: one uniform rule for every role, explicitly confirmed after
+clarification. Select the role under the room lock, use its ID or --name as the
+prefix, then always append the harness ID. Thus --write codex starts write-codex;
+--write --name megamozg codex starts megamozg-codex. Automatic conflicts append
+-2, -3 after the harness; explicit conflicts refuse. Prefix and assembled address
+must satisfy the existing syntax and 32-character limit. Existing sessions and
+messaging addresses remain unchanged. See [names](design.md#names).
+Claim-path and CLI regressions cover roles, conflicts, room isolation,
+concurrency, literal suffixes and length boundaries. All five checks pass.
+
+The broad review of the current transport and naming has not run. The unfinished
+[ownership investigation](thread-ownership-investigation.md) remains open;
+this naming change does not alter its scope or acceptance.

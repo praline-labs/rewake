@@ -20,9 +20,9 @@ func TestTheWrapperPinsDeliveryToTheHarnessThread(t *testing.T) {
 	go func() {
 		end := time.Now().Add(time.Second)
 		for time.Now().Before(end) {
-			session, err := registry.Lookup(dir, "api")
+			session, err := registry.Lookup(dir, "api-fake")
 			if err == nil {
-				sent <- inbox.Put(dir, inbox.Message{ID: inbox.NewID(), From: "sender", FromEpoch: "2.2", To: "api", ToEpoch: session.Epoch(), Text: "task", CreatedAt: time.Now()})
+				sent <- inbox.Put(dir, inbox.Message{ID: inbox.NewID(), From: "sender", FromEpoch: "2.2", To: "api-fake", ToEpoch: session.Epoch(), Text: "task", CreatedAt: time.Now()})
 				return
 			}
 			time.Sleep(10 * time.Millisecond)

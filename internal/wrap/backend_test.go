@@ -64,7 +64,7 @@ func TestBackendStartsBeforeTUIAndSharesItsLifetime(t *testing.T) {
 			observed := false
 			started := time.Now()
 			code, err := Run(context.Background(), Request{Harness: fake, Dir: dir, Name: "api", OnTurn: func(self registry.Session, result harness.Completion) error {
-				observed = self.Name == "api" && result.Text == "result"
+				observed = self.Name == "api-fake" && result.Text == "result"
 				return nil
 			}})
 			if err != nil || !observed || !backend.closed {

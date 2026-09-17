@@ -48,8 +48,16 @@ func claimName(request Request, self int, selfStart uint64, cwd string) (registr
 		} else if chosen.ID == role.Main.ID && main != "" {
 			return &MainTakenError{Room: filepath.Base(request.Dir), Name: main}
 		}
+		base, err := launchName(request.Name, chosen.ID, request.Harness.ID())
+		if err != nil {
+			return err
+		}
+		explicit := ""
+		if request.Name != "" {
+			explicit = base
+		}
 		for attempt := 0; attempt < 16; attempt++ {
-			name, err := registry.ChooseName(request.Dir, request.Name, request.Harness.ID())
+			name, err := registry.ChooseName(request.Dir, explicit, base)
 			if err != nil {
 				return err
 			}
