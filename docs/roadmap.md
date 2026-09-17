@@ -372,3 +372,15 @@ and isolated fake-process delivery pass. The external Commander parser confirms
 that both a fresh launch and an existing -- keep the greeting positional.
 Failed-turn observation still depends on the harness emitting a callback; the
 previous legacy-notify limitation remains unchanged. No real harness was run.
+
+## Milestone 10. Session-owned server transport — in progress, September 17, 2026
+
+The transport client is local to the adapter: bounded WebSocket frames over a
+private Unix socket, masked writes, ping/pong, fragmentation and correlated
+JSON-RPC responses. It uses only the standard library and requests experimental
+capabilities during initialization. Launch integration follows separately.
+
+Acceptance requires same-turn delivery during work, delivery to a fresh /new
+thread, stopped after a keyboard interrupt, error after an API failure, and no
+persistent pending delivery to a live, ready session. Model runs are performed
+separately by the owner; protocol tests use a fake local server.
