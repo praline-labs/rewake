@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/iiiokojiadbi/rewake/internal/inbox"
 )
 
 func TestReconnectOmitsTheInitialCursor(t *testing.T) {
@@ -61,7 +63,7 @@ func TestReconnectOmitsTheInitialCursor(t *testing.T) {
 }
 
 func TestRecoveryKeepsNewerEventsAndRejectsAmbiguity(t *testing.T) {
-	for _, mode := range []string{"newer event", "two roots"} {
+	for _, mode := range []string{"newer event", "newer event after resume", "two roots"} {
 		t.Run(mode, func(t *testing.T) {
 			s := newServer("", nil, nil, "")
 			s.current = "old"
@@ -101,6 +103,9 @@ func TestRecoveryKeepsNewerEventsAndRejectsAmbiguity(t *testing.T) {
 						result = map[string]any{"thread": map[string]any{"id": q.Params["threadId"], "source": "cli", "originator": "codex_cli_rs"}}
 					case "thread/resume":
 						resumed.Add(1)
+						if mode == "newer event after resume" {
+							serverMessage(c, map[string]any{"method": "thread/started", "params": map[string]any{"thread": map[string]string{"id": "new", "source": "cli", "originator": "codex_cli_rs"}}})
+						}
 					}
 					serverMessage(c, map[string]any{"id": q.ID, "result": result})
 				}
@@ -111,10 +116,22 @@ func TestRecoveryKeepsNewerEventsAndRejectsAmbiguity(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			if mode == "two roots" {
+				s.client = client
+			}
 			err = s.restore(ctx, client)
+			if mode == "two roots" {
+				if result := s.Deliver(ctx, inbox.Message{}); result.State != inbox.Failed {
+					t.Fatal("ambiguous discovery delivered to the old root")
+				}
+			}
 			client.close()
-			if mode == "newer event" {
-				if err != nil || s.current != "new" || resumed.Load() != 0 {
+			if strings.HasPrefix(mode, "newer event") {
+				wantResumed := int32(0)
+				if mode == "newer event after resume" {
+					wantResumed = 1
+				}
+				if err != nil || s.current != "new" || resumed.Load() != wantResumed {
 					t.Fatalf("new thread lost: current=%s resumed=%d err=%v", s.current, resumed.Load(), err)
 				}
 			} else if err == nil || !strings.Contains(err.Error(), "2 loaded root") || resumed.Load() != 0 {

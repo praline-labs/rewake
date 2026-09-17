@@ -37,6 +37,9 @@ func TestCanceledRPCNeverStartsATurn(t *testing.T) {
 	cancel()
 	err = client.call(ctx, "turn/start", map[string]string{"threadId": "thread"}, nil)
 	t.Logf("call error=%v", err)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("pre-canceled call returned %v", err)
+	}
 	select {
 	case method := <-received:
 		t.Fatalf("already canceled operation reached server: %s", method)

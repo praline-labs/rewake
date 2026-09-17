@@ -365,7 +365,7 @@ helpers are removed. The complete fake-process smoke covers delivery, stopped
 and continuation, /new, API errors, closed-thread refusal and server death.
 The full wrapper's real-model acceptance remains open for the owner.
 
-## Review round thirteen — in progress, September 17, 2026
+## Review round thirteen — requested fixes complete, September 17, 2026
 
 Reconnect omits the initial pagination cursor and forwards only nextCursor from
 an actual page. The fake server validates UUID cursors like the pinned server.
@@ -379,3 +379,12 @@ automatically repeating a possibly accepted command.
 Answer receipts now identify the report actually printed. A stopped receipt
 cannot archive a later shared finished when another question receives it.
 The later result remains available to the question whose send already stopped.
+
+Resume now discovers the TUI through thread-id metadata hints and loaded-list
+fallback, without requesting history. The fake initializes without a thread and
+models resume without thread/started. Early completions wait for root validation;
+newer lifecycle events still win over discovery snapshots.
+
+All four requested regressions and the generation coverage gap pass, including
+strict fake resume and the stopped/shared-final process scenario. Full milestone
+acceptance remains open, including the separate fresh-root subscription boundary.

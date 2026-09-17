@@ -55,11 +55,6 @@ func (s *serverSession) event(method string, raw json.RawMessage) {
 			} `json:"error"`
 		} `json:"turn"`
 	}
-	switch method {
-	case "thread/started", "thread/closed", "turn/completed", "item/completed":
-	default:
-		return
-	}
 	if json.Unmarshal(raw, &params) != nil {
 		return
 	}
@@ -68,21 +63,36 @@ func (s *serverSession) event(method string, raw json.RawMessage) {
 	if method == "thread/started" {
 		if tuiThread(params.Thread) {
 			s.generation++
+			s.dirty = false
+			s.discoveryErr = nil
+			delete(s.ignored, params.Thread.ID)
 			if s.current != params.Thread.ID {
 				s.messages = make(map[string]string)
 			}
 			s.current = params.Thread.ID
 			s.signal()
+			s.wakeDiscovery()
+		} else {
+			s.ignored[params.Thread.ID] = true
 		}
 		return
 	}
 	if params.ThreadID != s.current || s.current == "" {
+		if params.ThreadID != "" && !s.ignored[params.ThreadID] {
+			s.hintSequence++
+			s.dirty = true
+			if method == "turn/completed" || method == "item/completed" {
+				s.delayed = append(s.delayed, serverNotice{method: method, raw: raw, thread: params.ThreadID})
+			}
+			s.wakeDiscovery()
+		}
 		return
 	}
 	if method == "thread/closed" {
 		s.generation++
 		s.current = ""
 		s.signal()
+		s.wakeDiscovery()
 		return
 	}
 	if method == "item/completed" {
@@ -91,7 +101,7 @@ func (s *serverSession) event(method string, raw json.RawMessage) {
 		}
 		return
 	}
-	if params.Turn.ID == "" {
+	if method != "turn/completed" || params.Turn.ID == "" {
 		return
 	}
 	result := harness.Completion{ID: params.ThreadID + "/" + params.Turn.ID, Thread: params.ThreadID}

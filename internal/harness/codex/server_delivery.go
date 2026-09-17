@@ -11,6 +11,9 @@ import (
 func (s *serverSession) Deliver(ctx context.Context, message inbox.Message) inbox.Result {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
+	if err := s.ensureThread(ctx); err != nil {
+		return inbox.Result{State: inbox.Failed, Detail: "app-server has no ready TUI thread: " + err.Error()}
+	}
 	for {
 		s.mu.Lock()
 		client, thread, changed := s.client, s.current, s.changed

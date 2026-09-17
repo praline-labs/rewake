@@ -386,3 +386,14 @@ child callbacks. Rewake ignores completions carrying a child identity.
 thread/loaded/list starts with an omitted or null cursor. For a nonempty loaded
 set, an empty string is an invalid ThreadId, not the first page. Only a returned
 nextCursor belongs in the next request (`thread_processor.rs:2732–2777`).
+
+**[resume, snapshot 44b9011; CLI 0.154.0; September 17, 2026]**
+Cold resume returns ThreadResumeResponse only to its caller, without thread/started
+(`thread_processor.rs:4083–4133`). Its upsert at :4008 can broadcast
+thread/status/changed via `thread_status.rs:223–251` and
+`outgoing_message.rs:737–746`, without a thread subscription. Name changes also
+broadcast thread/name/updated (:672), but are not guaranteed on resume. Discovery
+therefore uses metadata hints plus loaded-list polling, never history.
+
+Fresh-root subscriptions remain open: terminal events are scoped
+(`thread_lifecycle.rs:335–344`); the empty-resume refusal is in the owner probe.

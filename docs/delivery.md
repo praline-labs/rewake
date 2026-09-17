@@ -167,8 +167,14 @@ recreated); otherwise `failed`.
 ### Codex adapter
 
 The session-owned backend maintains one initialized WebSocket connection to its
-private Unix socket. Root TUI thread/started selects the thread; parent ids,
-non-user thread sources and unrelated originators are excluded. Closing the
+private Unix socket. Root TUI thread/started selects the thread. Resume can omit
+that event: an unknown threadId in a notification triggers metadata discovery,
+with loaded-list polling until a root is known and a check before first delivery.
+RPC lookups run outside the socket reader so responses can still be read. Parent
+ids, non-user sources and unrelated originators are excluded. Discovery binds only a unique
+loaded root; ambiguity refuses delivery. Early terminal notifications
+wait for metadata validation before entering the reporting path. Discovered or
+reconnected roots are explicitly rejoined with excludeTurns=true. Closing the
 selected thread clears it. No process-tree scan or queue command selects a target.
 
 An owed message records that thread before becoming readable. Delivery calls

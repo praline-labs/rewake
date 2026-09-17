@@ -14,35 +14,44 @@ import (
 )
 
 type serverSession struct {
-	closeOnce  sync.Once
-	generation uint64
-	path       string
-	args       []string
-	env        []string
-	cwd        string
-	mu         sync.Mutex
-	client     *rpcClient
-	current    string
-	changed    chan struct{}
-	messages   map[string]string
-	outcomes   []harness.Completion
-	wake       chan struct{}
-	process    *exec.Cmd
-	exited     chan struct{}
-	stopped    chan struct{}
-	cancel     context.CancelFunc
-	emit       func(harness.Completion) error
-	note       func(string)
+	closeOnce    sync.Once
+	generation   uint64
+	hintSequence uint64
+	dirty        bool
+	discoveryErr error
+	discoverGate chan struct{}
+	discoverWake chan struct{}
+	ignored      map[string]bool
+	delayed      []serverNotice
+	scope        context.Context
+	path         string
+	args         []string
+	env          []string
+	cwd          string
+	mu           sync.Mutex
+	client       *rpcClient
+	current      string
+	changed      chan struct{}
+	messages     map[string]string
+	outcomes     []harness.Completion
+	wake         chan struct{}
+	process      *exec.Cmd
+	exited       chan struct{}
+	stopped      chan struct{}
+	cancel       context.CancelFunc
+	emit         func(harness.Completion) error
+	note         func(string)
 }
 
 func newServer(path string, args, env []string, cwd string) *serverSession {
-	return &serverSession{path: path, args: args, env: env, cwd: cwd, changed: make(chan struct{}), messages: make(map[string]string), wake: make(chan struct{}, 1), exited: make(chan struct{}), stopped: make(chan struct{})}
+	return &serverSession{path: path, args: args, env: env, cwd: cwd, changed: make(chan struct{}), discoverGate: make(chan struct{}, 1), discoverWake: make(chan struct{}, 1), ignored: make(map[string]bool), messages: make(map[string]string), wake: make(chan struct{}, 1), exited: make(chan struct{}), stopped: make(chan struct{})}
 }
 
 func (s *serverSession) Start(ctx context.Context, emit func(harness.Completion) error, note func(string)) error {
 	s.emit, s.note = emit, note
 	runCtx, cancel := context.WithCancel(ctx)
 	s.cancel = cancel
+	s.scope = runCtx
 	versionCtx, stopVersion := context.WithTimeout(ctx, 2*time.Second)
 	version := exec.CommandContext(versionCtx, "codex", "--version")
 	version.Env = s.env
@@ -81,6 +90,7 @@ func (s *serverSession) Start(ctx context.Context, emit func(harness.Completion)
 	s.signal()
 	s.mu.Unlock()
 	go s.report(runCtx)
+	go s.discover(runCtx)
 	go s.maintain(runCtx, client)
 	return nil
 }
@@ -116,6 +126,8 @@ func (s *serverSession) maintain(ctx context.Context, client *rpcClient) {
 		}
 		s.mu.Lock()
 		s.client = nil
+		s.generation++
+		s.ignored = make(map[string]bool)
 		s.signal()
 		s.mu.Unlock()
 		client.close()
@@ -148,16 +160,26 @@ func (s *serverSession) maintain(ctx context.Context, client *rpcClient) {
 		s.signal()
 		s.mu.Unlock()
 		s.note("app-server connection restored")
+		s.wakeDiscovery()
 	}
 }
 
 func (s *serverSession) signal()               { close(s.changed); s.changed = make(chan struct{}) }
 func (s *serverSession) Done() <-chan struct{} { return s.exited }
 func (s *serverSession) Thread() (string, error) {
+	scope := s.scope
+	if scope == nil {
+		scope = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(scope, 2*time.Second)
+	defer cancel()
+	if err := s.ensureThread(ctx); err != nil {
+		return "", fmt.Errorf("%w: %v", inbox.ErrThreadUnavailable, err)
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.current == "" || s.client == nil {
-		return "", fmt.Errorf("%w: app-server has no ready TUI thread; wait for the TUI or connection to recover", inbox.ErrThreadUnavailable)
+	if s.client == nil || s.current == "" || s.dirty || s.discoveryErr != nil {
+		return "", fmt.Errorf("%w: thread identity changed during discovery", inbox.ErrThreadUnavailable)
 	}
 	return s.current, nil
 }
