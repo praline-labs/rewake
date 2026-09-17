@@ -79,3 +79,15 @@ shared finished. Resume discovery uses metadata hints and loaded-list fallback,
 without thread/started or history. All four requested regressions and the
 generation coverage gap pass, including strict resume and shared-final scenarios.
 Full milestone acceptance remains open for the owner.
+
+## Targeted review — done, September 17, 2026
+
+Scope: `5d4d370..d5335d3`, report mitigation and launch naming only. No reproduced
+defects. Targeted race tests passed three times; three independent lifecycle/epoch
+regressions passed ten times. Answer/receipt/retention tests passed, and all three
+review mutations were detected. Six CLI report-preservation scenarios failed on
+baseline and passed on `d5335d3`. Main independently passed all five checks on an
+exact archive; the built binary records `d5335d3` and `vcs.modified=false`.
+The [ownership limitation](thread-ownership-investigation.md) and new-binary live
+acceptance remain open. The broad fourteenth review round has not run.
+Installation and session restarts remain with the owner.

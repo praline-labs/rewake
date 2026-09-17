@@ -24,7 +24,7 @@ func (h *contextHarness) Launch(request harness.LaunchRequest) (harness.LaunchPl
 	return h.fakeHarness.Launch(request)
 }
 
-func TestTheHarnessReceivesItsRoomAndElectedRole(t *testing.T) {
+func TestTheHarnessReceivesItsRoomAndDefaultGeneral(t *testing.T) {
 	t.Setenv(state.RoomEnv, "red")
 	dir := stateDir(t)
 	out := filepath.Join(t.TempDir(), "environment")
@@ -40,26 +40,26 @@ func TestTheHarnessReceivesItsRoomAndElectedRole(t *testing.T) {
 	if string(raw) != state.RootForRoom(dir)+"\nred\n" {
 		t.Errorf("child environment=%q", raw)
 	}
-	if fake.launch.Room != "red" || fake.launch.Role.ID != "main" || !fake.launch.Role.Silent || !fake.launch.Role.GitWrite {
+	if fake.launch.Room != "red" || fake.launch.Role.ID != "general" || fake.launch.Role.Silent || fake.launch.Role.GitWrite {
 		t.Errorf("launch context=%+v", fake.launch)
 	}
 	intro := brief.Intro(fake.launch.BriefContext())
-	for _, text := range []string{`room "red"`, "main session", "automatically", "no live main"} {
+	for _, text := range []string{`room "red"`, "role general", "default general", "no role flag"} {
 		if !strings.Contains(intro, text) {
 			t.Errorf("intro lacks %q: %s", text, intro)
 		}
 	}
 }
 
-func TestADeadMainDoesNotBlockElection(t *testing.T) {
+func TestADeadMainDoesNotSelectAnImplicitMain(t *testing.T) {
 	dir := stateDir(t)
 	dead := registry.Session{Name: "old", Role: "main", ServicePID: 999999999, ServiceStart: 1}
 	if err := registry.Publish(dir, dead); err != nil {
 		t.Fatal(err)
 	}
 	session, err := claimRole(t, dir, "new", role.Role{})
-	if err != nil || session.Role != "main" {
-		t.Fatalf("election=%+v %v", session, err)
+	if err != nil || session.Role != "general" {
+		t.Fatalf("default role=%+v %v", session, err)
 	}
 }
 

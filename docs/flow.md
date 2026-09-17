@@ -57,12 +57,13 @@ with `rewake --main --name lead claude`, becoming lead-claude.
 3. **The run.** The wrapper's pid and start time make the **epoch**
    (`<pid>.<ticks>`). A name can be started many times; the epoch says which
    start this is.
-4. **The role.** Under the same room lock as publication, no live main means
-   an automatic main; otherwise an unflagged launch becomes general. Explicit
-   `--general` and `--write` are honored even in an empty room. `--main` refuses
-   if a live main already occupies the room. Main stays silent; write reports
-   like general. Both main and write request Git metadata access. The record
-   keeps the role and its selection reason.
+4. **The role.** An unflagged launch always becomes general, even in an empty
+   room or after main exits. Only explicit `--main` creates main, and it refuses
+   under the room lock if a live main already occupies the room. Explicit
+   `--general` and `--write` remain unchanged; a --name prefix never selects a
+   role. Main stays silent; write reports like general. Main and write request
+   Git metadata access. The record and intro say default general for an omitted
+   role flag, or identify the explicit flag.
 5. **The harness command line.** The user's arguments go through untouched.
    rewake adds, for one launch only and never into a config file:
    - Claude Code: `--messaging-socket-path sock/<name>.<epoch>.sock`,

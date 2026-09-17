@@ -28,13 +28,13 @@ func TestMainIsALaunchFlag(t *testing.T) {
 	}
 }
 
-func TestWithoutAFlagTheRoomChoosesTheRole(t *testing.T) {
+func TestOmittedRoleStaysUnsetUntilDefaultResolution(t *testing.T) {
 	result, err := parse([]string{"claude"})
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
 	if part, _ := chosenRole(result.Call); part.ID != "" {
-		t.Errorf("role = %s, want automatic selection", part.ID)
+		t.Errorf("role = %s, want omission preserved for the default-general reason", part.ID)
 	}
 }
 

@@ -34,7 +34,7 @@ func TestLaunchNamesFollowSelectedRoleAndHarness(t *testing.T) {
 		}
 	}
 	dir := stateDir(t)
-	for _, want := range []string{"main-fake", "general-fake", "general-fake-2", "general-fake-3"} {
+	for _, want := range []string{"general-fake", "general-fake-2", "general-fake-3", "general-fake-4"} {
 		session, err := claimRole(t, dir, "", role.Role{})
 		if err != nil || session.Name != want {
 			t.Fatalf("claim=%+v err=%v want=%s", session, err, want)
@@ -114,7 +114,7 @@ func TestGenericHarnessAndAutomaticSuffixLength(t *testing.T) {
 	}
 }
 
-func TestConcurrentAutomaticNamesUseRoleElection(t *testing.T) {
+func TestConcurrentAutomaticNamesUseDefaultGeneral(t *testing.T) {
 	dir := stateDir(t)
 	start := selfStart(t)
 	results := make(chan registry.Session, 8)
@@ -137,23 +137,17 @@ func TestConcurrentAutomaticNamesUseRoleElection(t *testing.T) {
 		t.Error(err)
 	}
 	names := map[string]bool{}
-	mains := 0
 	for session := range results {
 		if names[session.Name] {
 			t.Fatalf("duplicate address %s", session.Name)
 		}
 		names[session.Name] = true
-		if session.Role == role.Main.ID {
-			mains++
-			if session.Name != "main-fake" {
-				t.Fatal(session)
-			}
-		} else if !strings.HasPrefix(session.Name, "general-fake") {
+		if session.Role != role.General.ID || !strings.HasPrefix(session.Name, "general-fake") {
 			t.Fatal(session)
 		}
 	}
-	if mains != 1 || len(names) != 8 {
-		t.Fatalf("mains=%d names=%v", mains, names)
+	if len(names) != 8 {
+		t.Fatalf("names=%v", names)
 	}
 }
 

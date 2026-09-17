@@ -37,11 +37,12 @@ prefix if appending the harness or a collision number would exceed it.
 Existing session records and direct messaging addresses are not rewritten.
 
 `--main`, `--general` and `--write` explicitly select one role and cannot be
-combined. Without a role flag, no live main in the room means main; an existing
-main means general. Explicit main refuses when the room already has one, naming
-its occupant and suggesting a restart or a launch without `--main`. An explicit
-general or write session can be the room's first session. There is no running-session
-promotion when main exits: the next automatic launch can become main.
+combined. Without a role flag, every launch is general, regardless of the room's
+occupants. Only explicit --main creates main; it refuses when the room already
+has one, naming its occupant and suggesting a launch without `--main`. General
+or write sessions can start first. No session is promoted when main exits, and
+subsequent unflagged launches still use general. A --name prefix never selects
+main or changes reporting and permissions.
 
 The wrapper passes the shared root as `REWAKE_DIR` and its room as `REWAKE_ROOM`,
 replacing the parent's room marker alongside session and epoch. The room lock

@@ -200,8 +200,8 @@ The owner, after restarting under the new build: the session handing out work
 got a report of its own turn back at its worker, and the two would wake each
 other forever. Roles now live in a catalogue, `internal/role`, and the one that
 hands out work has role `main`: it gets every report and reports
-nothing. Rooms now select main automatically when none is alive; an explicit
-`--general` always keeps reporting behavior. The `write` role now reports like a worker
+nothing. Main now requires explicit `--main`; omitted flags and explicit
+`--general` keep reporting behavior. The `write` role now reports like a worker
 and requests Git metadata access; main requests the same access independently
 of its reporting policy.
 
@@ -285,17 +285,18 @@ Two things the live run caught that the tests did not:
 `REWAKE_ROOM`. `REWAKE_DIR` remains the shared root; `rooms/<room>/` holds each room's
 sessions, mailboxes and sockets. Old root-level records are ignored.
 
-Role choice and name publication share a room lock. Without an explicit role,
-the next launch becomes main when none is alive, otherwise general. `--general`
-and `--write` can start first; `--main` refuses with the live main's name and a
-hint when occupied. Main and write retain their Git metadata capability. List,
-whoami, the launch note and the intro identify the room and selected role.
+Role choice and name publication share a room lock. Without a role flag,
+launches now always use general; the September 17 decision supersedes automatic
+main selection. Explicit --main refuses with the live main's name when occupied.
+General and write can start first. Main and write retain Git metadata access;
+list, whoami, the launch note and intro identify the room and resolved role.
 
 **Acceptance, verified:** two rooms with identical session names cannot see or
 message each other; task notices and final reports stay in their originating
-room. The first automatic launch becomes main. An occupied explicit main is
-refused. Concurrent wrappers elect exactly one main. Checks use isolated state
-and a fake harness, plus regression and mutation tests.
+room. The original first-session election checks are historical and superseded.
+Current checks require every unflagged launch to use general and concurrent
+explicit --main claims to have one winner. They use isolated state and fake
+harnesses, plus regression and mutation tests.
 
 
 ## Milestone 10. Session-owned server transport — done, September 17, 2026
@@ -384,14 +385,15 @@ messaging addresses remain unchanged. See [names](design.md#names).
 Claim-path and CLI regressions cover roles, conflicts, room isolation,
 concurrency, literal suffixes and length boundaries. All five checks pass.
 
-## Targeted review — done, September 17, 2026
+[The review history](reviews-later.md#targeted-review--done-september-17-2026) records the completed review of report delivery and naming.
 
-Scope: `5d4d370..d5335d3`, report mitigation and launch naming only. No reproduced
-defects. Targeted race tests passed three times; three independent lifecycle/epoch
-regressions passed ten times. Answer/receipt/retention tests passed, and all three
-review mutations were detected. Six CLI report-preservation scenarios failed on
-baseline and passed on `d5335d3`. Main independently passed all five checks on an
-exact archive; the built binary records `d5335d3` and `vcs.modified=false`.
-The [ownership limitation](thread-ownership-investigation.md) and new-binary live
-acceptance remain open. The broad fourteenth review round has not run.
-Installation and session restarts remain with the owner.
+## Explicit main only — implemented, September 17, 2026
+
+Owner decision: remove inconvenient first-session promotion. Omitted roles always
+mean general, including after main exits; only --main creates main. The room lock
+preserves explicit-main uniqueness during concurrent and incomplete launches.
+Custom prefixes never select roles; existing names, permissions and reporting stay intact.
+All five checks pass; a mutation restoring automatic main is detected.
+
+Targeted review and live acceptance of this change remain pending. Terminal
+ownership ambiguity and the unperformed broad fourteenth review remain open.

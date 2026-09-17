@@ -19,9 +19,9 @@ func (e *MainTakenError) Error() string {
 	return fmt.Sprintf("room %q already has live main session %q; stop or restart that session, or launch without --main to join as general", e.Room, e.Name)
 }
 
-// claimName elects a role and publishes while holding one room lock. A pending
+// claimName resolves a role and publishes while holding one room lock. A pending
 // launch is already alive through its wrapper pid, so a second launch cannot
-// also elect itself main while the first prepares its harness.
+// also claim explicit main while the first prepares its harness.
 func claimName(request Request, self int, selfStart uint64, cwd string) (registry.Session, error) {
 	var session registry.Session
 	err := state.WithRoomLock(request.Dir, func() error {
@@ -39,12 +39,8 @@ func claimName(request Request, self int, selfStart uint64, cwd string) (registr
 		chosen := request.Role
 		reason := "selected explicitly with --" + chosen.ID
 		if chosen.ID == "" {
-			chosen = role.Main
-			reason = "selected automatically because this room has no live main session"
-			if main != "" {
-				chosen = role.General
-				reason = fmt.Sprintf("selected automatically because %q is this room's live main", main)
-			}
+			chosen = role.General
+			reason = "default general because no role flag was supplied"
 		} else if chosen.ID == role.Main.ID && main != "" {
 			return &MainTakenError{Room: filepath.Base(request.Dir), Name: main}
 		}

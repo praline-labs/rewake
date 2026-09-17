@@ -154,16 +154,17 @@ for each role; harness adapters only pass the rendered strings. The record keeps
 | `main` | `--main` | no | fresh launch and delivered tasks/questions | you get reports, yours go to nobody |
 | `write` | `--write` | yes | fresh launch and delivered tasks/questions | end your turn with the result; you can commit |
 
-Without an explicit role, a room with no live main elects the new session main;
-otherwise it becomes general. Liveness uses the same pid/start-time and namespace
-checks as list. Explicit `--main` refuses with the occupying session's name and
-advice to stop/restart it or omit the role flag. `--general` and `--write` are
-honored even in an empty room. If only non-main sessions remain, the next automatic launch
-becomes main; existing sessions are never promoted in place.
+**Owner decision, September 17, 2026:** omitted role flags always mean general,
+even in an empty room or after main exits. This supersedes automatic main
+selection. Only explicit `--main` creates an orchestrator; it refuses with the
+occupying session's name when main is already live. The same pid/start-time and
+namespace checks as list determine liveness. `--general` and `--write` remain
+explicit alternatives. A name prefix never chooses a role, and no session is
+promoted when a main leaves.
 
 The room's `.launch.lock` covers inspection of live sessions, role choice and
 name publication. A starting wrapper is already a live claimant before its
-harness starts. Concurrent launches cannot elect two mains. The lock is released
+harness starts. Concurrent explicit launches cannot claim two mains. The lock is released
 before preparing or running the harness. The record, launch note and intro say
 which role was chosen and why.
 
@@ -183,8 +184,8 @@ and if its own turns were reported to them, each report would wake the other
 side for good. A silent role records no waits and emits no successful turn reports. Failure
 observation remains installed: StopFailure for the socket harness and terminal
 server events for the owned-server harness. An error from main stays in its own unread mailbox
-without waking the same failing conversation. Old records with role `worker` are read as `general`; only --general creates
-new reporting sessions without Git access. The zero role value remains a reporting fallback inside the
+without waking the same failing conversation. Old records with role `worker` are read as `general`; omitted role flags and --general create
+reporting sessions without Git access. The zero role value remains a reporting fallback inside the
 catalogue; an omitted launch role is resolved separately under the room lock.
 The write role reports like general; main stays silent whether its Git grant
 was applied or skipped.
@@ -195,7 +196,7 @@ was applied or skipped.
 Select the actual role under the room lock, use its ID as the default prefix,
 then append `-<harness ID>`. `--name <prefix>` replaces only the prefix:
 `rewake --write codex` starts write-codex; adding `--name megamozg` starts
-megamozg-codex. Automatic roles produce main-codex or general-codex.
+megamozg-codex. No role flag produces general-codex; explicit --main produces main-codex.
 
 Automatic conflicts add -2, -3 after the harness suffix; explicit conflicts
 refuse with the complete address. Prefix and result must match

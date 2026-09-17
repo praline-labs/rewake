@@ -28,7 +28,7 @@ var globalOptions = []Option{
 var nameOption = Option{
 	Flag:    "--name",
 	Value:   "<prefix>",
-	Summary: "Session prefix (default: selected role). Address: <prefix>-<harness>, up to 32 characters. Automatic conflicts add -2, -3; explicit conflicts refuse.",
+	Summary: "Session prefix (default: selected role, general without a role flag). Address: <prefix>-<harness>, up to 32 characters. Automatic conflicts add -2, -3; explicit conflicts refuse.",
 }
 
 var roomOption = Option{

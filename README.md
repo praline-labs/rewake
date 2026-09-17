@@ -18,6 +18,10 @@ Run the send command from lead-claude. The receiver sees
 An idle session wakes up; the server transport can steer an active turn. The
 receiver ends its turn with the result, which returns as `Rewake: write-codex finished`.
 
+Without a role flag, every session starts as general, even in an empty room.
+`rewake codex` starts general-codex, then general-codex-2. Only `--main` creates
+an orchestrator; `--name main` changes the address, not the role.
+
 Names use the selected role as a prefix, followed by the harness ID. `--name`
 replaces only the prefix: `rewake --write --name megamozg codex` starts
 megamozg-codex. Automatic collisions add -2, -3; explicit conflicts refuse.

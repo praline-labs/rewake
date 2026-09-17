@@ -71,8 +71,8 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 	}
 }
 
-// chosenRole leaves an omitted role unset so the wrapper can elect under the
-// room lock, in the same transaction that publishes the session.
+// chosenRole leaves an omitted role unset so the wrapper can distinguish
+// default general from an explicit --general in its recorded reason.
 func chosenRole(call Call) (role.Role, error) {
 	chosen := role.Role{}
 	var flags []string
@@ -107,5 +107,5 @@ func roleSummary() string {
 		label := "--" + candidate.ID
 		descriptions = append(descriptions, label+": "+candidate.Summary)
 	}
-	return "Without a role flag, a room with no live main elects this session main; otherwise it becomes general. An explicit --main refuses if main is occupied. " + strings.Join(descriptions, " ") + " A silent coordinator prevents reports from waking each other indefinitely."
+	return "Without a role flag, every launch uses general, even in an empty room. Only --main creates main, and it refuses if main is occupied. A name prefix never selects a role. " + strings.Join(descriptions, " ") + " A silent coordinator prevents reports from waking each other indefinitely."
 }

@@ -11,7 +11,7 @@ package role
 // Role is what a session is for.
 type Role struct {
 	// ID names the role in a session record and, as --<id>, selects it at
-	// launch. The default role is chosen by giving no role flag at all.
+	// launch. Omitting a role flag always uses general.
 	ID string
 	// Summary is the help line of the launch flag.
 	Summary string
@@ -27,7 +27,7 @@ type Role struct {
 // General takes work and reports when its turn ends. It is also the fallback role.
 var General = Role{
 	ID:      "general",
-	Summary: "Takes work from other sessions and reports the end of each turn to them. Can start before a main session.",
+	Summary: "Default when no role flag is supplied. Takes work from other sessions and reports the end of each turn to them. Can start before a main session.",
 }
 
 // Main hands out work. It reads every report, so its own turns are reported to

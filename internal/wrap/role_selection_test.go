@@ -18,9 +18,9 @@ func claimRole(t *testing.T, dir, name string, part role.Role) (registry.Session
 	return claimName(Request{Dir: dir, Name: name, Harness: &fakeHarness{}, Role: part}, os.Getpid(), selfStart(t), dir)
 }
 
-func TestARoomChoosesOneMainAndHonorsExplicitRoles(t *testing.T) {
+func TestARoomReservesExplicitMainAndHonorsOtherRoles(t *testing.T) {
 	dir := stateDir(t)
-	first, err := claimRole(t, dir, "lead", role.Role{})
+	first, err := claimRole(t, dir, "lead", role.Main)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +45,7 @@ func TestARoomChoosesOneMainAndHonorsExplicitRoles(t *testing.T) {
 		t.Fatal(err)
 	}
 	replacement, err := claimRole(t, dir, "replacement", role.Role{})
-	if err != nil || replacement.Role != "main" {
+	if err != nil || replacement.Role != "general" {
 		t.Errorf("replacement=%+v err=%v", replacement, err)
 	}
 }
@@ -56,13 +56,13 @@ func TestAnExplicitWorkerCanStartBeforeMain(t *testing.T) {
 	if err != nil || first.Role != "general" {
 		t.Fatalf("worker=%+v err=%v", first, err)
 	}
-	next, err := claimRole(t, dir, "lead", role.Role{})
+	next, err := claimRole(t, dir, "lead", role.Main)
 	if err != nil || next.Role != "main" {
 		t.Errorf("main=%+v err=%v", next, err)
 	}
 }
 
-func TestConcurrentLaunchesElectOneMain(t *testing.T) {
+func TestConcurrentDefaultLaunchesStayGeneral(t *testing.T) {
 	dir := stateDir(t)
 	start := selfStart(t)
 	gate := make(chan struct{})
@@ -89,18 +89,19 @@ func TestConcurrentLaunchesElectOneMain(t *testing.T) {
 	for err := range failures {
 		t.Error(err)
 	}
-	mains := 0
+	count := 0
 	for session := range results {
-		if session.Role == "main" {
-			mains++
+		count++
+		if session.Role != role.General.ID {
+			t.Errorf("default launch selected %s", session.Role)
 		}
 	}
-	if mains != 1 {
-		t.Errorf("main count=%d, want one", mains)
+	if count != 16 {
+		t.Errorf("published %d default sessions, want 16", count)
 	}
 }
 
-func TestRoleElectionWaitsForTheRoomLock(t *testing.T) {
+func TestRolePublicationWaitsForTheRoomLock(t *testing.T) {
 	dir := stateDir(t)
 	file, err := os.OpenFile(filepath.Join(dir, ".launch.lock"), os.O_CREATE|os.O_RDWR, 0o600)
 	if err != nil {

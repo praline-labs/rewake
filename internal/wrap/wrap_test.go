@@ -233,7 +233,7 @@ func TestSessionEnvironmentReachesTheHarness(t *testing.T) {
 func TestTakenNameIsRefusedOnlyWhenExplicit(t *testing.T) {
 	dir := stateDir(t)
 	blocker := registry.Session{
-		Name:         "main-fake",
+		Name:         "general-fake",
 		Harness:      "fake",
 		ServicePID:   os.Getpid(),
 		ServiceStart: selfStart(t),
@@ -249,7 +249,7 @@ func TestTakenNameIsRefusedOnlyWhenExplicit(t *testing.T) {
 		t.Fatalf("an automatic name did not step aside: %v", err)
 	}
 
-	_, err := Run(context.Background(), Request{Harness: fake, Dir: dir, Name: "main"})
+	_, err := Run(context.Background(), Request{Harness: fake, Dir: dir, Name: "general"})
 	if err == nil {
 		t.Fatal("an explicit taken name was accepted")
 	}

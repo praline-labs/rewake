@@ -40,7 +40,7 @@ type Request struct {
 	// Intro asks for the briefing that tells the agent it runs under rewake.
 	Intro bool
 
-	// Role is explicit when its ID is set; empty chooses a role for the room.
+	// Role is explicit when its ID is set; empty always uses general.
 	Role   role.Role
 	OnTurn func(registry.Session, harness.Completion) error
 }

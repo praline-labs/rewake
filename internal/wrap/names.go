@@ -7,8 +7,8 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
-// Role selection precedes naming under the room lock, so the first automatic
-// launch is named for the role it actually claimed, not a guessed default.
+// Role resolution precedes naming under the room lock, so an automatic name
+// uses the resolved role while a custom prefix cannot select a role.
 func launchName(prefix, selectedRole, harnessID string) (string, error) {
 	if prefix == "" {
 		prefix = selectedRole
