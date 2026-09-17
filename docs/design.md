@@ -135,8 +135,9 @@ sessions, and an old record must not appear in a new room by accident.
 
 A session has a role, from the catalogue in `internal/role`: one value per role
 and a line in its list, the way a harness is added. The launch flag `--<id>`,
-the help line, the sentence the role adds to the intro and whether its turns
-are reported all come from that value. The record keeps the role's id.
+the help line and whether its turns are reported come from that value.
+System and greeting text lives in `internal/brief`, with a reviewed snapshot
+for each role; harness adapters only pass the rendered strings. The record keeps the role's id.
 
 | role | flag | turns reported | Git metadata writes requested for the sandbox | intro adds |
 |---|---|---|---|---|

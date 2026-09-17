@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/iiiokojiadbi/rewake/internal/brief"
 	"github.com/iiiokojiadbi/rewake/internal/harness"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/role"
@@ -42,7 +43,7 @@ func TestTheHarnessReceivesItsRoomAndElectedRole(t *testing.T) {
 	if fake.launch.Room != "red" || fake.launch.Role.ID != "main" || !fake.launch.Role.Silent || !fake.launch.Role.GitWrite {
 		t.Errorf("launch context=%+v", fake.launch)
 	}
-	intro := harness.Intro(fake.launch)
+	intro := brief.Intro(fake.launch.BriefContext())
 	for _, text := range []string{`room "red"`, "role is main", "automatically", "no live main"} {
 		if !strings.Contains(intro, text) {
 			t.Errorf("intro lacks %q: %s", text, intro)

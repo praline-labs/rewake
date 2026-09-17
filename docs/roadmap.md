@@ -376,3 +376,7 @@ Retention now distinguishes a reserved answer from an ordinary report. Release
 starts one finite delivery window, never renewed by retry; receipts outlive the
 reports that reference them. Mixed thread comparison checks later deliveries,
 and the publication test waits for the harness pid before checking removal.
+
+Agent system text and greeting text now live in internal/brief, with per-role
+snapshots. Role data no longer carries injected prose; harness helpers are
+split into plans, flags, environment, hooks and notices.

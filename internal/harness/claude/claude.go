@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/iiiokojiadbi/rewake/internal/brief"
 	"github.com/iiiokojiadbi/rewake/internal/harness"
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
@@ -112,7 +113,7 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 	}
 
 	if request.Intro && !harness.HasFlag(args, introFlag) {
-		args = harness.AddFlags(args, introFlag, harness.Intro(request))
+		args = harness.AddFlags(args, introFlag, brief.Intro(request.BriefContext()))
 	}
 	var notes []string
 	switch {

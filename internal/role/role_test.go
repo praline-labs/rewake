@@ -28,7 +28,7 @@ func TestUnknownOrMissingRolesAreTheDefault(t *testing.T) {
 func TestEveryRoleIsDescribed(t *testing.T) {
 	seen := map[string]bool{}
 	for _, candidate := range All() {
-		if candidate.ID == "" || candidate.Summary == "" || candidate.Brief == "" {
+		if candidate.ID == "" || candidate.Summary == "" {
 			t.Errorf("role %+v is not fully described", candidate)
 		}
 		if seen[candidate.ID] {
