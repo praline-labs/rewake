@@ -11,14 +11,18 @@ func (s *serverSession) restore(ctx context.Context, client *rpcClient) error {
 	s.mu.Lock()
 	generation := s.generation
 	s.mu.Unlock()
-	var list struct {
-		Data []string `json:"data"`
-		Next *string  `json:"nextCursor"`
-	}
 	var roots []string
 	cursor := ""
 	for {
-		if err := client.call(ctx, "thread/loaded/list", map[string]any{"cursor": cursor, "limit": 100}, &list); err != nil {
+		var list struct {
+			Data []string `json:"data"`
+			Next *string  `json:"nextCursor"`
+		}
+		params := map[string]any{"limit": 100}
+		if cursor != "" {
+			params["cursor"] = cursor
+		}
+		if err := client.call(ctx, "thread/loaded/list", params, &list); err != nil {
 			return err
 		}
 		for _, id := range list.Data {

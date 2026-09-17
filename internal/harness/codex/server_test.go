@@ -144,7 +144,13 @@ func TestServerProcessHelper(_ *testing.T) {
 				}
 				result = map[string]any{"turn": map[string]string{"id": "active-turn"}}
 			case "thread/loaded/list":
-				result = map[string]any{"data": []string{root.ID}}
+				page, err := fixtureLoadedPage([]string{root.ID}, request.Params)
+				if err != nil {
+					serverMessage(conn, map[string]any{"id": request.ID, "error": map[string]any{"code": -32600, "message": err.Error()}})
+					mu.Unlock()
+					continue
+				}
+				result = page
 			case "thread/read":
 				result = map[string]any{"thread": root}
 			case "fixture/replace-disconnect":

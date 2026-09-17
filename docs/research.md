@@ -381,3 +381,8 @@ child callbacks. Rewake ignores completions carrying a child identity.
 `--allowedTools <tools...>` is variadic. The TUI CLI also has a variadic
 `--image` (`utils/cli/src/shared_options.rs:11–19`, `num_args = 1..`). A trailing
 `--` separates the bootstrap prompt from either option's values.
+
+**[snapshot 44b9011; CLI 0.154.0; September 17, 2026]**
+thread/loaded/list starts with an omitted or null cursor. For a nonempty loaded
+set, an empty string is an invalid ThreadId, not the first page. Only a returned
+nextCursor belongs in the next request (`thread_processor.rs:2732–2777`).

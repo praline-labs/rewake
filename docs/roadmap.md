@@ -347,32 +347,6 @@ refused. Concurrent wrappers elect exactly one main. Checks use isolated state
 and a fake harness, plus regression and mutation tests.
 
 
-## Review round twelve — done, September 17, 2026
-
-Nested-agent completions no longer settle parent tasks: agent_id filters both
-success and failure before any mailbox state changes. A root agent_type still
-reports normally. The regression covers both child events and the parent result.
-
-Identified turns persist their complete report batch and waiter/message snapshot
-before the first publication. Retries reuse recipients, content and report ids;
-cleanup removes only that snapshot, retaining later work for its own result.
-
-Both adapters now delimit the greeting with one -- after transport flags.
-Tests check its position after variadic options, not only its presence in argv.
-
-Bootstrap ready now persists its identified completion before removing the
-greeting marker. Both a replay and a retry after a receipt write failure leave
-early work owed until its real result.
-
-Preview coverage now measures CJK terminal columns independently of the production
-width estimator. A mutation treating wide glyphs as narrow fails at 102 columns.
-
-Validation: all five repository checks, callback regressions, targeted mutations,
-and isolated fake-process delivery pass. The external Commander parser confirms
-that both a fresh launch and an existing -- keep the greeting positional.
-Failed-turn observation still depends on the harness emitting a callback; the
-previous legacy-notify limitation remains unchanged. No real harness was run.
-
 ## Milestone 10. Session-owned server transport — in progress, September 17, 2026
 
 The owned server and TUI share the wrapper lifetime. An optional Backend keeps
@@ -390,3 +364,10 @@ The obsolete queue subprocess, lock-file tracker and unused process-tree/fd
 helpers are removed. The complete fake-process smoke covers delivery, stopped
 and continuation, /new, API errors, closed-thread refusal and server death.
 The full wrapper's real-model acceptance remains open for the owner.
+
+## Review round thirteen — in progress, September 17, 2026
+
+Reconnect omits the initial pagination cursor and forwards only nextCursor from
+an actual page. The fake server validates UUID cursors like the pinned server.
+Recovery tests also protect newer events from an older snapshot and refuse
+ambiguous loaded roots before resuming any of them.
