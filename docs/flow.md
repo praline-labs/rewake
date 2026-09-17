@@ -171,7 +171,8 @@ The notice wakes the agent, which runs `rewake inbox` in its shell.
 
 The harness itself says when a turn is over: Claude Code through Stop or StopFailure,
 Codex through `notify`. Both run `rewake turn-ended` with the last reply of the
-turn in the payload.
+turn in the payload. A callback with `agent_id` is from a nested agent and is
+ignored without changing the parent session's waits or bootstrap state.
 
 1. **Who is owed.** Under the lock, `turn-ended` reads
    `awaiting/<own epoch>/`. A silent role emits no successful reports;

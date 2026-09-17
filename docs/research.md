@@ -386,3 +386,9 @@ schema/documentation verification; no live model turn was used for this change.
 task-notification summary renders an indented second line. Extra sibling fields
 are discarded by the interface, so the authored first-line preview belongs in
 summary itself. The queued transport uses a second line in the same message.
+
+**[hook schema checked September 17, 2026; installed version 2.1.270; no live run]**
+[Common hook fields](https://code.claude.com/docs/en/hooks#common-input-fields)
+distinguish inherited hooks inside a subagent by `agent_id`. `agent_type` also
+appears on a root session launched with an agent profile, so it cannot filter
+child callbacks. Rewake ignores completions carrying a child identity.

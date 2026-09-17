@@ -199,6 +199,10 @@ Two readers at once are serialized: the second finds nothing new.
 
 ### The end of a turn
 
+Callbacks with a nonempty `agent_id` belong to a nested agent and are ignored
+before touching greeting markers, turn receipts or waits. `agent_type` alone
+does not imply nesting: a root session can select an agent profile.
+
 When a turn ends, the harness runs `rewake turn-ended` — a Stop hook in Claude
 Code, the notify program in Codex — with the last reply of the turn in its
 payload (`last_assistant_message` on stdin, `last-assistant-message` as the last

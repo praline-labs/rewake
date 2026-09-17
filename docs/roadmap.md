@@ -380,3 +380,9 @@ Validation: all five repository checks pass. Twenty targeted mutations are
 caught. Isolated fake-process runs cover greeting switches, preserved caller
 arguments, early work during ready, both notice transports, error routing and
 blocking error replies. No real harness or model turn was launched.
+
+## Review round twelve — in progress, September 17, 2026
+
+Nested-agent completions no longer settle parent tasks: agent_id filters both
+success and failure before any mailbox state changes. A root agent_type still
+reports normally. The regression covers both child events and the parent result.

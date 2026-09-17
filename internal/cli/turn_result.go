@@ -16,6 +16,10 @@ func completedTurn(payload []byte) (turnResult, bool) {
 		return turnResult{}, false
 	}
 	text := func(key string) string { var s string; _ = json.Unmarshal(fields[key], &s); return s }
+	// Inherited hooks also run in children; their completion cannot settle the parent.
+	if text("agent_id") != "" {
+		return turnResult{}, false
+	}
 	event := text("type")
 	if event != "" && event != "agent-turn-complete" && event != "task_complete" {
 		return turnResult{}, false
