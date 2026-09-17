@@ -86,7 +86,8 @@ sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
    single `--`, after all injected flags, protects it from variadic options.
    Continuations keep their existing turn. This is separate from --no-intro.
    The wrapper records an epoch-scoped bootstrap marker before starting the
-   child, so ready is not reported to other sessions or used to settle work.
+   child. An identified ready completion records a done receipt before removing
+   the marker, so neither ready nor its retries report or settle early work.
 8. **Launch.** The harness starts with the wrapper's terminal and process
    group. Its pid and start time are added to the record. From now on the
    session is alive only while both processes are.

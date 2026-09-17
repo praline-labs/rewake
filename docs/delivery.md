@@ -283,8 +283,10 @@ still produce finished. Error is in the kind catalog but has no send flag;
 Errors go to all live waiters for this run; with none, they go to the room's
 main. A failing main, or a room with no main, retains the error in the failing
 session's own unread mailbox without announcing it to itself. Identified turns
-are idempotent; callbacks without turn ids are separate invocations. Delivery
-uses failed task-notification status on the socket path and a red circle on
+are idempotent; callbacks without turn ids are separate invocations. Bootstrap
+ready also stores a done turn receipt before consuming its greeting marker; replaying it
+cannot report ready or clear early work. A failed receipt write keeps the marker
+pending so a retry can finish recording it. Delivery uses failed task-notification status on the socket path and a red circle on
 the queued path. A waiting question consumes the error and exits 1.
 
 Failure observation depends on the harness providing a callback. The current

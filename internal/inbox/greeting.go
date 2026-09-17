@@ -15,20 +15,23 @@ func MarkGreeting(dir, name, epoch string) error {
 	return state.WriteAtomic(filepath.Join(state.InboxPath(dir, name), "greeting"), []byte(epoch))
 }
 
-// TakeGreeting consumes only this run's marker under the caller's mailbox lock.
-func TakeGreeting(dir, name, epoch string) (bool, error) {
-	path := filepath.Join(state.InboxPath(dir, name), "greeting")
-	raw, err := os.ReadFile(path)
+// GreetingPending checks this run's marker without consuming it. The caller
+// can persist a completion receipt before removing the bootstrap state.
+func GreetingPending(dir, name, epoch string) (bool, error) {
+	raw, err := os.ReadFile(filepath.Join(state.InboxPath(dir, name), "greeting"))
 	if os.IsNotExist(err) {
 		return false, nil
 	}
-	if err != nil {
+	return string(raw) == epoch, err
+}
+
+// TakeGreeting consumes only this run's marker under the caller's mailbox lock.
+func TakeGreeting(dir, name, epoch string) (bool, error) {
+	pending, err := GreetingPending(dir, name, epoch)
+	if err != nil || !pending {
 		return false, err
 	}
-	if string(raw) != epoch {
-		return false, nil
-	}
-	if err := os.Remove(path); err != nil {
+	if err := os.Remove(filepath.Join(state.InboxPath(dir, name), "greeting")); err != nil {
 		return false, err
 	}
 	return true, nil

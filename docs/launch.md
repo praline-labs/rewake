@@ -137,8 +137,9 @@ An existing trailing `--` is reused. This stops variadic options such as
 `--allowedTools <tools...>` and `--image` from consuming the positional prompt.
 
 The adapter reports whether it appended the prompt. Before starting the child,
-the wrapper marks that bootstrap for its epoch. Its ready completion consumes
-the marker without publishing a report, even if work was read unusually early;
+the wrapper marks that bootstrap for its epoch. Its identified ready completion
+records a done turn receipt before consuming the marker without publishing a
+report, even if work was read unusually early;
 those waits remain for the actual result. An explicit startup error still uses
 the normal error route. The greeting primes a fresh queued conversation without
 an operator typing the first word. Disable it when supplying input through stdin.

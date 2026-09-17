@@ -359,3 +359,7 @@ cleanup removes only that snapshot, retaining later work for its own result.
 
 Both adapters now delimit the greeting with one -- after transport flags.
 Tests check its position after variadic options, not only its presence in argv.
+
+Bootstrap ready now persists its identified completion before removing the
+greeting marker. Both a replay and a retry after a receipt write failure leave
+early work owed until its real result.

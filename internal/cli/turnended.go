@@ -60,11 +60,27 @@ func handleTurnEnded(_ *Context, call Call) error {
 	ctx, cancel := context.WithTimeout(context.Background(), hookLockWait)
 	defer cancel()
 	_ = state.WithMailboxLock(ctx, dir, self.Name, func() error {
-		greeting, err := inbox.TakeGreeting(dir, self.Name, self.Epoch())
+		greeting, err := inbox.GreetingPending(dir, self.Name, self.Epoch())
 		if err != nil {
 			return err
 		}
-		if greeting && !event.Failed && strings.TrimSpace(event.Text) == "ready" {
+		bootstrap := greeting && !event.Failed && strings.TrimSpace(event.Text) == "ready"
+		if bootstrap {
+			// Save before consuming the marker: retries must remain harmless even
+			// when an early task is already owed or the marker removal fails.
+			receipt, path, err := loadTurnReceipt(dir, self, event)
+			if err != nil {
+				return err
+			}
+			receipt.Done = true
+			if err := saveTurnReceipt(path, receipt); err != nil {
+				return err
+			}
+		}
+		if _, err := inbox.TakeGreeting(dir, self.Name, self.Epoch()); err != nil {
+			return err
+		}
+		if bootstrap {
 			return nil
 		}
 		waiters := inbox.Waiters(dir, self.Name, self.Epoch())
