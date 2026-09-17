@@ -384,6 +384,14 @@ messaging addresses remain unchanged. See [names](design.md#names).
 Claim-path and CLI regressions cover roles, conflicts, room isolation,
 concurrency, literal suffixes and length boundaries. All five checks pass.
 
-The broad review of the current transport and naming has not run. The unfinished
-[ownership investigation](thread-ownership-investigation.md) remains open;
-this naming change does not alter its scope or acceptance.
+## Targeted review — done, September 17, 2026
+
+Scope: `5d4d370..d5335d3`, report mitigation and launch naming only. No reproduced
+defects. Targeted race tests passed three times; three independent lifecycle/epoch
+regressions passed ten times. Answer/receipt/retention tests passed, and all three
+review mutations were detected. Six CLI report-preservation scenarios failed on
+baseline and passed on `d5335d3`. Main independently passed all five checks on an
+exact archive; the built binary records `d5335d3` and `vcs.modified=false`.
+The [ownership limitation](thread-ownership-investigation.md) and new-binary live
+acceptance remain open. The broad fourteenth review round has not run.
+Installation and session restarts remain with the owner.
