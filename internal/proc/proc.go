@@ -1,16 +1,8 @@
-/*
-Package proc answers three questions about running processes: is this one still
-the process I started, what did it spawn, and which files does it hold open.
-
-A pid alone answers none of them. Pids are reused, so a session record carries
-the process start time as well; the pair is what makes "alive" an honest answer.
-The open files matter because Codex publishes the id of its current thread
-nowhere else: the process holds a lock file whose name is the id.
-*/
+// Package proc checks process identity, liveness and job-control state. A pid
+// alone is not an identity: records also carry its start time and namespace.
 package proc
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -39,15 +31,6 @@ func Alive(pid int, startTime uint64) bool { return Default.Alive(pid, startTime
 
 // State returns the one-letter state of a process in the default /proc.
 func State(pid int) (string, error) { return Default.State(pid) }
-
-// Descendants returns the process and everything below it.
-func Descendants(pid int) ([]int, error) { return Default.Descendants(pid) }
-
-// Children returns the direct children of a process.
-func Children(pid int) ([]int, error) { return Default.Children(pid) }
-
-// OpenFiles returns what the process holds open, resolved to paths.
-func OpenFiles(pid int) ([]string, error) { return Default.OpenFiles(pid) }
 
 // StartTime returns field 22 of /proc/<pid>/stat: the moment the process
 // started, in clock ticks since boot.
@@ -118,104 +101,6 @@ func (r Reader) Alive(pid int, startTime uint64) bool {
 		return false
 	}
 	return true
-}
-
-// Parent returns the parent pid of a process.
-func (r Reader) Parent(pid int) (int, error) {
-	raw, err := os.ReadFile(filepath.Join(r.Root, strconv.Itoa(pid), "stat"))
-	if err != nil {
-		return 0, err
-	}
-	closeParen := strings.LastIndex(string(raw), ")")
-	if closeParen < 0 {
-		return 0, fmt.Errorf("unreadable stat line for pid %d", pid)
-	}
-	fields := strings.Fields(string(raw)[closeParen+1:])
-	// Field 4 of the line, the parent pid, is index 1 after the name.
-	if len(fields) < 2 {
-		return 0, fmt.Errorf("stat line for pid %d has no parent field", pid)
-	}
-	return strconv.Atoi(fields[1])
-}
-
-// Children returns the processes whose parent is this one.
-func (r Reader) Children(pid int) ([]int, error) {
-	entries, err := os.ReadDir(r.Root)
-	if err != nil {
-		return nil, err
-	}
-	var out []int
-	for _, entry := range entries {
-		candidate, err := strconv.Atoi(entry.Name())
-		if err != nil {
-			continue
-		}
-		parent, err := r.Parent(candidate)
-		if err != nil || parent != pid {
-			continue
-		}
-		out = append(out, candidate)
-	}
-	return out, nil
-}
-
-// Descendants returns pid and every process below it, breadth first.
-func (r Reader) Descendants(pid int) ([]int, error) {
-	entries, err := os.ReadDir(r.Root)
-	if err != nil {
-		return nil, err
-	}
-
-	children := map[int][]int{}
-	for _, entry := range entries {
-		candidate, err := strconv.Atoi(entry.Name())
-		if err != nil {
-			continue
-		}
-		parent, err := r.Parent(candidate)
-		if err != nil {
-			// A process that exited between listing and reading is not an error.
-			continue
-		}
-		children[parent] = append(children[parent], candidate)
-	}
-
-	var out []int
-	seen := map[int]bool{}
-	queue := []int{pid}
-	for len(queue) > 0 {
-		current := queue[0]
-		queue = queue[1:]
-		if seen[current] {
-			continue
-		}
-		seen[current] = true
-		out = append(out, current)
-		queue = append(queue, children[current]...)
-	}
-	return out, nil
-}
-
-// OpenFiles returns the paths the process holds open. Entries that disappear
-// while reading are skipped: the answer describes a moving target either way.
-func (r Reader) OpenFiles(pid int) ([]string, error) {
-	fdDir := filepath.Join(r.Root, strconv.Itoa(pid), "fd")
-	entries, err := os.ReadDir(fdDir)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) || errors.Is(err, os.ErrPermission) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	var out []string
-	for _, entry := range entries {
-		target, err := os.Readlink(filepath.Join(fdDir, entry.Name()))
-		if err != nil {
-			continue
-		}
-		out = append(out, target)
-	}
-	return out, nil
 }
 
 // Namespace identifies the pid namespace of the reading process.

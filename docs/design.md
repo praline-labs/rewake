@@ -296,7 +296,7 @@ cmd/rewake/main.go            entry point, top-level parsing
 internal/cli/                 command table, parsing, overview, help, failures, printing
 internal/state/                directory: checks, paths, atomic writes
 internal/registry/             session record, name publishing, liveness, listing
-internal/proc/                  /proc: start time, process tree, fd links
+internal/proc/                  /proc: identity, liveness and job-control state
 internal/inbox/                 message, status, sender-side write, servicing loop
 internal/harness/claude/        launch arguments, environment, socket delivery
 internal/harness/codex/         owned app-server, WebSocket RPC, thread events and delivery

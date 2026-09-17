@@ -385,3 +385,8 @@ Acceptance requires same-turn delivery during work, delivery to a fresh /new
 thread, stopped after a keyboard interrupt, error after an API failure, and no
 persistent pending delivery to a live, ready session. Model runs are performed
 separately by the owner; protocol tests use a fake local server.
+
+The obsolete queue subprocess, lock-file tracker and unused process-tree/fd
+helpers are removed. The complete fake-process smoke covers delivery, stopped
+and continuation, /new, API errors, closed-thread refusal and server death.
+The full wrapper's real-model acceptance remains open for the owner.

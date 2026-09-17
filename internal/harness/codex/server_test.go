@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -229,6 +230,9 @@ func emitFixture(t *testing.T, s *serverSession, method string, params any) {
 
 func TestOwnedServerDeliversAndTracksOnlyTheTUI(t *testing.T) {
 	s, _ := runtimeFixture(t)
+	if group, err := syscall.Getpgid(s.process.Process.Pid); err != nil || group != s.process.Process.Pid || group == syscall.Getpgrp() {
+		t.Fatalf("server shares terminal signals: group=%d err=%v", group, err)
+	}
 	raw, err := os.ReadFile(s.path + ".env")
 	if err != nil {
 		t.Fatal(err)

@@ -46,7 +46,7 @@ func (codexHarness) Examples() []string {
 func (codexHarness) Notes() []string {
 	return []string{
 		"A private app-server starts or steers a turn when a notice arrives; no queue polling is needed.",
-		"The server lives only for this session. Existing --remote, --profile and --worktree arguments require a separate checkout or explicit configuration instead.",
+		"The server lives only for this session. Existing --remote, --profile, --worktree and --oss/--local-provider arguments require a separate checkout or explicit configuration instead.",
 		"Arguments after the harness name are passed to codex untouched, with one exception: a --help written first asks rewake for this page instead of starting the harness.",
 	}
 }
