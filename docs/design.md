@@ -77,7 +77,7 @@ Created with 0700.
     inbox/<name>/unread/       readable messages
     inbox/<name>/done/         read and failed messages
     inbox/<name>/answering/<id> renewable question reservation
-    inbox/<name>/received/<id> successful answer output
+    inbox/<name>/received/<id> id of the report successfully printed
     inbox/<name>/retention/<id> reservation release time for reports
     inbox/<name>/turns/<id>    completion retry receipts
     inbox/<name>/greeting      bootstrap marker scoped to the run epoch

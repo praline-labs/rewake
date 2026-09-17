@@ -63,14 +63,16 @@ func answerReceiptsPath(dir, name string) string {
 
 // A missing lease can mean either successful output or an abandoned command.
 // Receipts distinguish the two so one consumer cannot archive a shared report
-// before all its questions have received it. Unclaimed ids leave the report
+// before all its questions have received that specific report. A stopped
+// receipt cannot confirm the later finished outcome for the same question.
+// Unclaimed ids leave the report
 // available to ordinary inbox delivery when no active lease remains.
 func receiveAnswer(dir, name, epoch, question string, message Message) error {
 	receipts := answerReceiptsPath(dir, name)
 	if err := state.EnsureSubdir(receipts); err != nil {
 		return err
 	}
-	if err := state.WriteAtomic(filepath.Join(receipts, question), nil); err != nil {
+	if err := state.WriteAtomic(filepath.Join(receipts, question), []byte(message.ID)); err != nil {
 		return err
 	}
 	removeMark(dir, name, filepath.Join(state.AnsweringPath(dir, name), question))
@@ -78,7 +80,8 @@ func receiveAnswer(dir, name, epoch, question string, message Message) error {
 		return nil
 	}
 	for _, id := range message.InReplyTo {
-		if _, err := os.Stat(filepath.Join(receipts, id)); err != nil {
+		received, err := os.ReadFile(filepath.Join(receipts, id))
+		if err != nil || string(received) != message.ID {
 			return nil
 		}
 	}

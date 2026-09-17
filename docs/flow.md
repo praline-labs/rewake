@@ -31,7 +31,7 @@ inbox/<name>/unread/<id>.json    announced, not yet read by the agent
 inbox/<name>/done/<id>.json      read or failed; swept after a day
 inbox/<name>/awaiting/<epoch>/<peer>   who is owed a report by this run
 inbox/<name>/answering/<id>      a send --question is waiting for this answer
-inbox/<name>/received/<id>       that question's answer was printed
+inbox/<name>/received/<id>       id of the report printed for this question
 inbox/<name>/retention/<id>      fixed release time for a reserved report
 inbox/<name>/turns/<id>          completion retry receipt
 inbox/<name>/greeting            bootstrap marker for this run
@@ -202,7 +202,7 @@ the answer in the same command.
    leaves it there without a notice and without a final status, checking the
    reservation on every tick. Ordinary `inbox` skips it.
 4. **The waiting send takes it.** Under the lock: print the answer, write
-   `received/<id>`, remove the mark. The report moves to `done/` only once
+   `received/<id>` with the exact report id, remove the mark. The report moves to `done/` only once
    every question it answers has a receipt and no fresh reservation remains.
    Output failure exits 1 without a receipt, so the answer is kept.
 5. **When the sender is gone** — timeout (exit 3), kill, or crash — the mark

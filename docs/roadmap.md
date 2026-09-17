@@ -375,3 +375,7 @@ ambiguous loaded roots before resuming any of them.
 RPC cancellation now precedes any send; writer contention and frame I/O share
 the request deadline. A partial or failed write ends that connection, without
 automatically repeating a possibly accepted command.
+
+Answer receipts now identify the report actually printed. A stopped receipt
+cannot archive a later shared finished when another question receives it.
+The later result remains available to the question whose send already stopped.

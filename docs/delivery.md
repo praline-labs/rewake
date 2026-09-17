@@ -65,7 +65,7 @@ Ordinary `inbox` and notice counts skip reports with a fresh reservation.
 
 The waiting send matches the exact question id in a report's `inReplyTo`.
 Under the mailbox lock it prints the answer, writes a receipt to
-`received/<question id>`, then removes its mark. Output failure exits 1 without
+`received/<question id>` containing this report's id, then removes its mark. Output failure exits 1 without
 a receipt or a read status; cleanup releases the mark, leaving the answer for
 ordinary delivery. The same release runs after a failed send or a timeout. A
 killed process leaves its mark to expire and the queued report is announced.
@@ -308,3 +308,8 @@ publish finished with the same inReplyTo and settle those waits. Main waits for
 the person instead of resending. A waiting question prints stopped and exits 1;
 the later result remains an ordinary inbox report. Socket notices use killed
 status; server-delivered text notices use a yellow circle.
+
+Answer receipts store the report id in received/<question id>. Only an exact
+match confirms that report; stopped does not acknowledge a later finished with
+the same inReplyTo. Empty legacy receipts are unqualified and do not confirm a
+new outcome. Their existing reference-based retention and expiry still apply.
