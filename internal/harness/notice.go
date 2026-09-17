@@ -6,10 +6,8 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 )
 
-// Notice is the one line that announces waiting mail, the same for every
-// harness: "Rewake: codex finished, 1 new message". It carries no text of the
-// message on purpose. The agent fetches that itself, so it knows the message
-// came through a tool, not from the person at the keyboard.
+// Notice announces unread mail and shows the author's bounded first line.
+// The full message stays in inbox; retries retain their original notice id.
 func Notice(message inbox.Message) string {
 	count := message.Unread
 	if count < 1 {
@@ -19,7 +17,15 @@ func Notice(message inbox.Message) string {
 	if count == 1 {
 		noun = "message"
 	}
-	return fmt.Sprintf("Rewake: %s %s, %d new %s", message.From, inbox.KindOf(message), count, noun)
+	shown := message
+	if message.Latest != nil {
+		shown = *message.Latest
+	}
+	line := fmt.Sprintf("Rewake: %s %s, %d new %s", shown.From, inbox.KindOf(shown), count, noun)
+	if first := preview(shown.Text); first != "" {
+		line += "\n  ↳ " + first
+	}
+	return line
 }
 
 // NoticeID is the part of the message id a notice carries. Claude Code drops
@@ -41,4 +47,12 @@ func shortID(id string) string {
 		return id
 	}
 	return id[len(id)-8:]
+}
+
+// NoticeKind follows the displayed latest letter, including its failure color.
+func NoticeKind(message inbox.Message) inbox.Kind {
+	if message.Latest != nil {
+		return inbox.KindOf(*message.Latest)
+	}
+	return inbox.KindOf(message)
 }

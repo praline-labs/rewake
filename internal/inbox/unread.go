@@ -42,13 +42,21 @@ func dropUnread(dir, to, id string) {
 	_ = os.Remove(filepath.Join(state.UnreadPath(dir, to), id+".json"))
 }
 
-// countUnread is how many messages of this run are waiting to be read.
-func countUnread(dir, to, epoch string) int {
-	messages, err := AvailableUnread(dir, to, epoch)
+// noticeContext chooses the newest available letter; active reservations stay
+// invisible to ordinary notifications just as they do to inbox reads.
+func noticeContext(dir, name, epoch string, message Message) Message {
+	messages, err := AvailableUnread(dir, name, epoch)
 	if err != nil {
-		return 0
+		return message
 	}
-	return len(messages)
+	message.Unread = len(messages)
+	for _, candidate := range messages {
+		if message.Latest == nil || candidate.CreatedAt.After(message.Latest.CreatedAt) || candidate.CreatedAt.Equal(message.Latest.CreatedAt) && candidate.ID > message.Latest.ID {
+			latest := candidate
+			message.Latest = &latest
+		}
+	}
+	return message
 }
 
 // PeekUnread returns the unread messages of one run of a session, oldest first,

@@ -59,7 +59,7 @@ func buildGroups() {
 
 	talk := Group{
 		Title:   "TALK",
-		Summary: "Sessions address each other by name. The receiver is told a message is waiting, in one line, \"Rewake: <session> <kind>, <n> new message(s)\", and reads it with rewake inbox.",
+		Summary: "Sessions address each other by name. The receiver sees a message notice and a bounded first-line preview, \"Rewake: <session> <kind>, <n> new message(s)\", and reads it with rewake inbox.",
 		Commands: []*Command{
 			{
 				Name:           "list",
@@ -204,7 +204,7 @@ func notes() []Note {
 		},
 		{
 			Title: "A waiting message is announced, not pasted",
-			Body:  "It shows up as one line: \"Rewake: <session> <kind>, <n> new message(s)\", with a 🟢 in front where the harness shows it as plain text. The text is never in that line: run rewake inbox to read it.",
+			Body:  "It shows up as one line: \"Rewake: <session> <kind>, <n> new message(s)\", with a 🟢 in front where the harness shows it as plain text. The following line previews the author's first line, limited to about 100 columns. Run rewake inbox for the full text. Start every message and final reply with one line stating its point. Errors use a red circle.",
 		},
 		{
 			Title: "Kinds and replies",

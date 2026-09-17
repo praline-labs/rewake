@@ -17,7 +17,7 @@ import (
 // person watching the session should see exactly what the agent is told.
 func notification(message inbox.Message) string {
 	status := "completed"
-	if inbox.KindOf(message) == inbox.Error {
+	if harness.NoticeKind(message) == inbox.Error {
 		status = "failed"
 	}
 	return strings.Join([]string{

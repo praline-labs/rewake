@@ -97,3 +97,25 @@ func TestAWaitingReportKeepsItsDeliveryThread(t *testing.T) {
 		t.Fatalf("settled thread record was not swept: %v", err)
 	}
 }
+
+func TestNoticeContextUsesTheLatestAvailableLetter(t *testing.T) {
+	dir := stateDir(t)
+	old := message("old")
+	latest := message("latest")
+	latest.Kind = Error
+	unread(t, dir, old, latest)
+	shown := noticeContext(dir, "api", "", old)
+	if shown.Unread != 2 || shown.Latest == nil || shown.Latest.Text != "latest" || shown.Text != "old" {
+		t.Fatalf("context=%+v", shown)
+	}
+	release := reserve(t, dir, "q")
+	defer release()
+	reserved := message("reserved")
+	reserved.Kind = Finished
+	reserved.InReplyTo = []string{"q"}
+	unread(t, dir, reserved)
+	shown = noticeContext(dir, "api", "", old)
+	if shown.Unread != 2 || shown.Latest.Text != "latest" {
+		t.Fatalf("reserved answer entered preview: %+v", shown)
+	}
+}

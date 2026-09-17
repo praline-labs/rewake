@@ -9,7 +9,7 @@ building and how.
 other. A human launches a harness through the tool — `rewake claude`, `rewake
 codex` — and gets an ordinary program in their terminal. The session registers
 itself, and any other session, or a human from a shell, can write to it with
-`rewake send <name> "text"`. The recipient is told in one line that a message is
+`rewake send <name> "text"`. The recipient sees a notice with a first-line preview when a message is
 waiting — `Rewake: api notify, 1 new message` — which wakes it if it is idle,
 and fetches the text itself with `rewake inbox`.
 

@@ -114,7 +114,7 @@ func TestReadingKeepsToItsOwnEpoch(t *testing.T) {
 	if taken := readAll(t, dir, "100.1"); len(taken) != 1 || taken[0].Text != "mine" {
 		t.Fatalf("read = %v, want only this epoch's message", taken)
 	}
-	if n := countUnread(dir, "api", "100.1"); n != 0 {
+	if n := noticeContext(dir, "api", "100.1", Message{}).Unread; n != 0 {
 		t.Errorf("countUnread = %d for this epoch, want 0", n)
 	}
 }

@@ -55,6 +55,8 @@ type Message struct {
 	// Unread is how many messages the receiver will hold once this one lands. It is
 	// computed by the serving process right before delivery and never stored.
 	Unread int `json:"-"`
+	// Latest is the newest available letter shown by an aggregate notification.
+	Latest *Message `json:"-"`
 }
 
 // Kind is the subject of a message.

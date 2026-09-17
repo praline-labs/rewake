@@ -381,3 +381,8 @@ specifies StopFailure instead of Stop for API failures. Its rendered
 last_assistant_message is the error text, with error_details and error as
 fallbacks. Rewake installs StopFailure for every role, including main. This is
 schema/documentation verification; no live model turn was used for this change.
+
+**[owner socket probe: 2.1.270, September 17, 2026]** A newline inside the
+task-notification summary renders an indented second line. Extra sibling fields
+are discarded by the interface, so the authored first-line preview belongs in
+summary itself. The queued transport uses a second line in the same message.

@@ -274,3 +274,9 @@ error stays in its inbox without a self-notice. Reading error owes no reply.
 Empty received completion after read work is a textless error. A waiting
 question returns the failure directly. Callback availability is a harness
 boundary; rewake never infers a cause from missing callbacks or reads rollouts.
+
+Notifications show the latest available letter's first line beneath the header,
+prefixed by an indented ↳. They never substitute the preview for inbox content.
+Empty first lines stay empty; long ones are clipped with an ellipsis to about
+100 columns. Error notices use failed/red status. Active question reservations
+are excluded from ordinary counts and previews.

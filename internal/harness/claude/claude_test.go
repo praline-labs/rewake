@@ -163,7 +163,7 @@ func TestDeliveryWritesOneProtocolLine(t *testing.T) {
 	received := listenOnce(t, socket)
 
 	session := registry.Session{Name: "api", Socket: socket}
-	message := inbox.Message{ID: "1789544450793-34464b10aaaa", From: "web", To: "api", Text: "pull and rerun the smoke"}
+	message := inbox.Message{ID: "1789544450793-34464b10aaaa", From: "web", To: "api", Text: "pull and rerun the smoke\nprivate full details"}
 
 	result := New().Deliver(context.Background(), session, message)
 	if result.State != inbox.Delivered || result.Via != "socket" {
@@ -189,16 +189,15 @@ func TestDeliveryWritesOneProtocolLine(t *testing.T) {
 		if envelope.Type != "user" || envelope.Message.Role != "user" || envelope.Priority != "next" {
 			t.Errorf("envelope = %+v, want a user message at priority next", envelope)
 		}
-		// The harness gets a notice, never the text: the agent fetches that with
-		// rewake inbox, and the interface draws this tag as a single line.
+		// The first line is previewed; the remaining body stays in inbox.
 		content := envelope.Message.Content
-		if strings.Contains(content, message.Text) {
+		if strings.Contains(content, "private full details") {
 			t.Errorf("the text of the message was pasted into the session: %q", content)
 		}
 		if !strings.HasPrefix(content, "<task-notification>") || !strings.HasSuffix(content, "</task-notification>") {
 			t.Errorf("content = %q, want a task-notification the interface draws as one line", content)
 		}
-		if !strings.Contains(content, "<summary>Rewake: web task, 1 new message</summary>") {
+		if !strings.Contains(content, "<summary>Rewake: web task, 1 new message\n  ↳ pull and rerun the smoke</summary>") {
 			t.Errorf("content = %q, want the notice as its summary", content)
 		}
 		if !strings.Contains(content, "<status>completed</status>") {

@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/iiiokojiadbi/rewake/internal/harness"
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 )
 
@@ -72,7 +73,7 @@ func classify(output string, err error) inbox.Result {
 }
 
 func noticePrefix(message inbox.Message) string {
-	if inbox.KindOf(message) == inbox.Error {
+	if harness.NoticeKind(message) == inbox.Error {
 		return "🔴"
 	}
 	return noticeMark

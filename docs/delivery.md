@@ -13,7 +13,7 @@ A harness is never handed the text of a message. It is told that mail is
 waiting, and the agent fetches the text with `rewake inbox`. Two reasons, both
 the owner's: the agent should know the message came through a tool rather than
 from the person at the keyboard, and the person watching the session should see
-one line rather than a pasted block.
+a short notice and preview rather than the full body.
 
 ### Sender (`rewake send <name> <text>`)
 
@@ -131,7 +131,12 @@ Rewake: <sender> <kind>, <n> new message(s)
 ```
 
 `n` counts this run's unread mail, the new message included. The notice carries
-no text of the message and no instructions: those are in the guide.
+the bounded first line of the latest available letter on a second line.
+The author writes that line; rewake does not summarize. The full text remains
+in inbox. An empty first line produces no preview. Control characters are
+removed; the indent and preview fit a conservative 100-column budget, ending
+with an ellipsis when truncated. Start messages and final replies with their
+point on the first line.
 
 ### Claude Code adapter
 

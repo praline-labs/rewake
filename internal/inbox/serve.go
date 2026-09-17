@@ -210,7 +210,7 @@ func (s *Server) drain(ctx context.Context) {
 			continue
 		}
 		// The notice names how many messages wait, this one included.
-		message.Unread = countUnread(s.Dir, s.Name, s.Epoch)
+		message = noticeContext(s.Dir, s.Name, s.Epoch, message)
 		result := s.Deliver(ctx, message)
 		s.attempts[message.ID] = time.Now()
 		if result.State == Pending {

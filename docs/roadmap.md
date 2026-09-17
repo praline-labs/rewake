@@ -389,3 +389,7 @@ Failed turns now use hook-only error reports, with fallback to the room's main
 and local retention for main's own failure. Explicit reasons stay unchanged;
 empty received completions after work are textless errors. The legacy notify
 failure-observation gap is documented, without reading transcripts.
+
+Notices now include a bounded first-line preview authored by the sender. The
+latest available letter supplies the preview and error color; full text remains
+in inbox. Empty first lines are not skipped in search of a summary.
