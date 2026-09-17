@@ -393,7 +393,7 @@ Owner decision: remove inconvenient first-session promotion. Omitted roles alway
 mean general, including after main exits; only --main creates main. The room lock
 preserves explicit-main uniqueness during concurrent and incomplete launches.
 Custom prefixes never select roles; existing names, permissions and reporting stay intact.
-All five checks pass; a mutation restoring automatic main is detected.
-
-Targeted review and live acceptance of this change remain pending. Terminal
-ownership ambiguity and the unperformed broad fourteenth review remain open.
+Targeted review (`6436874..9aedd0f`): no reproduced defects; targeted tests passed three times.
+All 72 synchronized process claims passed; the automatic-main mutation was detected.
+Main's exact archive passed all five checks; binary: `9aedd0f`, `vcs.modified=false`.
+Live acceptance, ownership ambiguity and the broad fourteenth review remain open.
