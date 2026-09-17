@@ -22,9 +22,10 @@ import (
 const maxFrame = 4 << 20
 
 type socketClient struct {
-	conn    net.Conn
-	reader  *bufio.Reader
-	writeMu sync.Mutex
+	conn      net.Conn
+	reader    *bufio.Reader
+	writeOnce sync.Once
+	writeGate chan struct{}
 }
 
 func dialSocket(ctx context.Context, path string) (*socketClient, error) {
@@ -81,12 +82,43 @@ func dialSocket(ctx context.Context, path string) (*socketClient, error) {
 }
 
 func (s *socketClient) writeFrame(op byte, data []byte) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	return s.writeFrameContext(ctx, op, data)
+}
+
+// The gate and the write share the caller's budget. Once a frame write begins,
+// failure closes the connection: appending another frame could corrupt the stream.
+func (s *socketClient) writeFrameContext(ctx context.Context, op byte, data []byte) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if len(data) > maxFrame {
 		return errors.New("websocket message too large")
 	}
-	s.writeMu.Lock()
-	defer s.writeMu.Unlock()
-	_ = s.conn.SetWriteDeadline(time.Now().Add(3 * time.Second))
+	s.writeOnce.Do(func() { s.writeGate = make(chan struct{}, 1) })
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case s.writeGate <- struct{}{}:
+	}
+	defer func() { <-s.writeGate }()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	deadline, _ := ctx.Deadline()
+	if err := s.conn.SetWriteDeadline(deadline); err != nil {
+		return err
+	}
+	interrupted := make(chan struct{})
+	stop := context.AfterFunc(ctx, func() { _ = s.conn.SetWriteDeadline(time.Now()); close(interrupted) })
+	defer func() {
+		// An old cancellation must finish before the next writer sets its deadline.
+		if !stop() {
+			<-interrupted
+		}
+		_ = s.conn.SetWriteDeadline(time.Time{})
+	}()
 	var mask [4]byte
 	if _, err := rand.Read(mask[:]); err != nil {
 		return err
@@ -105,12 +137,23 @@ func (s *socketClient) writeFrame(op byte, data []byte) error {
 	for i, value := range data {
 		frame = append(frame, value^mask[i%4])
 	}
+
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	for len(frame) > 0 {
 		n, err := s.conn.Write(frame)
-		if err != nil {
-			return err
-		}
-		if n == 0 {
+		if err != nil || n == 0 {
+			_ = s.conn.Close()
+			if cause := ctx.Err(); cause != nil {
+				return cause
+			}
+			if !deadline.IsZero() && !time.Now().Before(deadline) {
+				return context.DeadlineExceeded
+			}
+			if err != nil {
+				return err
+			}
 			return io.ErrShortWrite
 		}
 		frame = frame[n:]

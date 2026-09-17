@@ -371,3 +371,7 @@ Reconnect omits the initial pagination cursor and forwards only nextCursor from
 an actual page. The fake server validates UUID cursors like the pinned server.
 Recovery tests also protect newer events from an older snapshot and refuse
 ambiguous loaded roots before resuming any of them.
+
+RPC cancellation now precedes any send; writer contention and frame I/O share
+the request deadline. A partial or failed write ends that connection, without
+automatically repeating a possibly accepted command.

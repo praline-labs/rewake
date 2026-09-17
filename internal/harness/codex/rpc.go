@@ -45,29 +45,32 @@ func connectRPC(ctx context.Context, path string, onEvent func(string, json.RawM
 		client.close()
 		return nil, err
 	}
-	if err := client.send(map[string]string{"method": "initialized"}); err != nil {
+	if err := client.send(ctx, map[string]string{"method": "initialized"}); err != nil {
 		client.close()
 		return nil, err
 	}
 	return client, nil
 }
 
-func (c *rpcClient) send(value any) error {
+func (c *rpcClient) send(ctx context.Context, value any) error {
 	raw, err := json.Marshal(value)
 	if err != nil {
 		return err
 	}
-	return c.socket.writeFrame(1, raw)
+	return c.socket.writeFrameContext(ctx, 1, raw)
 }
 
 func (c *rpcClient) call(ctx context.Context, method string, params, result any) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	id := c.next.Add(1)
 	reply := make(chan rpcReply, 1)
 	c.mu.Lock()
 	c.pending[id] = reply
 	c.mu.Unlock()
 	defer func() { c.mu.Lock(); delete(c.pending, id); c.mu.Unlock() }()
-	if err := c.send(map[string]any{"id": id, "method": method, "params": params}); err != nil {
+	if err := c.send(ctx, map[string]any{"id": id, "method": method, "params": params}); err != nil {
 		return err
 	}
 	select {

@@ -175,7 +175,10 @@ An owed message records that thread before becoming readable. Delivery calls
 turn/start with only threadId, clientUserMessageId and the notice as text input.
 The server starts an idle turn or steers the current one. A result with a turn id
 means delivered via app-server. A server refusal is failed with its text; transport
-errors and ambiguous results are not automatically resent. A conversation change
+errors and ambiguous results are not automatically resent. RPC cancellation
+covers waiting for the writer and writing the frame; a pre-canceled call sends
+nothing. A failed frame write closes the connection before another writer can
+append to a partial frame. A conversation change
 before or during the call refuses that delivery instead of silently retargeting it.
 An unavailable thread fails before readability rather than staying pending.
 
