@@ -205,7 +205,7 @@ func notes() []Note {
 		},
 		{
 			Title: "A waiting message is announced, not pasted",
-			Body:  "It shows up as one line: \"Rewake: <session> <kind>, <n> new message(s)\", with a 🟢 in front where the harness shows it as plain text. The following line previews the author's first line, limited to about 100 columns. Run rewake inbox for the full text. Start every message and final reply with one line stating its point. Errors use a red circle.",
+			Body:  "It shows up as one line: \"Rewake: <session> <kind>, <n> new message(s)\", with a 🟢 in front where the harness shows it as plain text. The following line previews the author's first line, limited to about 100 columns. Run rewake inbox for the full text. Start every message and final reply with one line stating its point. Errors use a red circle; keyboard stops use yellow.",
 		},
 		{
 			Title: "Kinds and replies",
@@ -225,7 +225,7 @@ func notes() []Note {
 		},
 		{
 			Title: "Delivery speed differs by harness",
-			Body:  "Claude Code receives within seconds. Codex polls its queue every ten seconds, and a Codex session that has not exchanged a message yet takes one only after its first turn. Every send says which of these happened.",
+			Body:  "Claude Code receives through its inbox socket. Codex uses an owned app-server to start or steer a turn, including in a fresh conversation. Every send reports acceptance or the reason delivery failed.",
 		},
 	}
 }

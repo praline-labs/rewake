@@ -17,16 +17,12 @@ func launchPlan(t *testing.T, args []string) harness.LaunchPlan {
 	return plan
 }
 
-func TestTurnNotifyIsPassedWhenTheUserHasNone(t *testing.T) {
+func TestServerReportsWithoutInstallingNotify(t *testing.T) {
 	codexHome(t, "model = \"gpt-5\"\n")
 	plan := launchPlan(t, nil)
 
-	value, ok := configValue(plan.Args, notifyKey)
-	if !ok {
-		t.Fatalf("notify was not passed: %v", plan.Args)
-	}
-	if !strings.HasPrefix(value, "[") || !strings.HasSuffix(value, `"turn-ended"]`) {
-		t.Errorf("notify = %s, want an array running rewake turn-ended", value)
+	if _, ok := configValue(plan.Args, notifyKey); ok || plan.Backend == nil {
+		t.Fatal("reporting must use the owned server, without adding notify")
 	}
 }
 
@@ -43,9 +39,6 @@ func TestTurnNotifyLeavesTheUsersProgram(t *testing.T) {
 			plan := launchPlan(t, nil)
 			if _, ok := configValue(plan.Args, notifyKey); ok {
 				t.Errorf("notify was passed over %q: %v", config, plan.Args)
-			}
-			if len(plan.Notes) == 0 {
-				t.Error("nothing says the end of turns will not be reported")
 			}
 		})
 	}
@@ -66,13 +59,13 @@ func TestTurnNotifyLeavesTheCallersValue(t *testing.T) {
 	}
 }
 
-func TestMainKeepsTheHookForFailureObservation(t *testing.T) {
+func TestMainObservesServerOutcomes(t *testing.T) {
 	codexHome(t, "")
 	plan, err := New().Launch(harness.LaunchRequest{Name: "lead", Dir: t.TempDir(), Role: role.Main})
 	if err != nil {
 		t.Fatalf("Launch: %v", err)
 	}
-	if _, ok := configValue(plan.Args, notifyKey); !ok {
+	if plan.Backend == nil {
 		t.Errorf("args = %v, want failures observed for main", plan.Args)
 	}
 }

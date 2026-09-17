@@ -1,12 +1,9 @@
 package codex
 
 import (
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/harness"
 )
@@ -25,8 +22,6 @@ func launchWith(t *testing.T, config string, args []string) harness.LaunchPlan {
 // replacing what it has not read discards the user's configuration.
 func TestLayeredConfigurationIsLeftAlone(t *testing.T) {
 	for _, args := range [][]string{
-		{"-p", "work"},
-		{"--profile=work"},
 		{"--config", introKey + `="mine"`},
 	} {
 		plan := launchWith(t, "", args)
@@ -56,67 +51,12 @@ func TestQuotingIsTOMLNotGo(t *testing.T) {
 	}
 }
 
-func TestArrayQuotingIsAnArray(t *testing.T) {
-	quoted := quoteTOMLArray([]string{"/one", "/two"})
-	if !strings.HasPrefix(quoted, "[") || !strings.HasSuffix(quoted, "]") {
-		t.Fatalf("roots were not rendered as an array: %s", quoted)
-	}
-	if strings.Count(quoted, `"`) != 4 {
-		t.Errorf("array = %s, want two quoted items", quoted)
-	}
-}
-
-// /proc reports resolved paths. A CODEX_HOME that goes through a symlink would
-// otherwise never match, and every message would sit pending until it expired.
-func TestThreadIsFoundThroughASymlinkedHome(t *testing.T) {
-	actualHome := t.TempDir()
-	link := filepath.Join(t.TempDir(), "home-link")
-	if err := os.Symlink(actualHome, link); err != nil {
-		t.Fatalf("symlink: %v", err)
-	}
-	pid := threadFixture(t, actualHome, map[string]time.Time{"01a0-thread": time.Now()})
-
-	thread, err := CurrentThread(pid, link)
-	if err != nil {
-		t.Fatalf("CurrentThread through a symlink: %v", err)
-	}
-	if thread != "01a0-thread" {
-		t.Errorf("thread = %q, want the one the process holds", thread)
-	}
-}
-
-// A tool inside the session can run Codex of its own. That nested run has its own
-// thread, and it is not the one somebody addressed by the session's name.
-func TestNestedCodexThreadIsNotTaken(t *testing.T) {
-	home := t.TempDir()
-	root := t.TempDir()
-	locks := filepath.Join(home, lockDir)
-	if err := os.MkdirAll(locks, 0o700); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
-
-	// The session holds an older lock; its child holds a newer one.
-	writeProcess(t, root, 7, 1, filepath.Join(locks, "session.lock"), time.Now().Add(-time.Hour))
-	writeProcess(t, root, 8, 7, filepath.Join(locks, "nested.lock"), time.Now())
-	swapProcRoot(t, root)
-
-	thread, err := CurrentThread(7, home)
-	if err != nil {
-		t.Fatalf("CurrentThread: %v", err)
-	}
-	if thread != "session" {
-		t.Errorf("thread = %q, want the session's own even though the nested one is newer", thread)
-	}
-}
-
 // Both spellings and both shapes of the flags Codex accepts count as the
 // caller's own setting; missing one means overriding what they configured.
 func TestEveryFormOfACallerOverrideIsSeen(t *testing.T) {
 	for _, args := range [][]string{
 		{"--config=" + introKey + `="mine"`},
 		{"-c" + introKey + `="mine"`},
-		{"-pwork"},
-		{"-p", "work"},
 	} {
 		plan := launchWith(t, "", args)
 		if value, passed := configValue(plan.Args, introKey); passed && !strings.Contains(value, "mine") {
@@ -128,7 +68,7 @@ func TestEveryFormOfACallerOverrideIsSeen(t *testing.T) {
 // What the caller passed has to survive: dropping their arguments while
 // declining to add ours would be the same loss by another route.
 func TestCallerArgumentsSurviveALaunch(t *testing.T) {
-	args := []string{"--model", "gpt-5.6-terra", "-pwork", "--", "write the notes"}
+	args := []string{"--model", "gpt-5.6-terra", "--", "write the notes"}
 	plan := launchWith(t, "", args)
 
 	joined := strings.Join(plan.Args, " ")

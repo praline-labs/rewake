@@ -8,7 +8,8 @@ The common part of the wrapper:
 1. Check the shared state root and selected room directory. Under the room's
    launch lock, choose the role and publish the name (the harness pid is still
    empty). The lock is released before preparing the child.
-2. Launch the harness: `exec.Cmd` with inherited stdin/stdout/stderr, the same
+2. Start an optional session-owned backend and wait for its connection. Then
+   launch the harness: `exec.Cmd` with inherited stdin/stdout/stderr, the same
    terminal and process group. Arguments after the harness name are passed
    through as-is.
 3. Add the harness's pid and start time to the record.
@@ -62,58 +63,39 @@ List and identity commands use the inherited room and accept no `--room` flag.
 
 ### Codex
 
-- rewake does not read `config.toml`; it only asks whether a key is mentioned
-  in it at all, in any form (escapes included). Every value it could pass for
-  these keys replaces the user's, and two rounds of a hand-written reader each
-  missed valid TOML that dropped instructions or turned prose into sandbox
-  permissions.
-- Intro: `-c developer_instructions=<text>`. The key **replaces** the user's
-  value, so it is passed only when the configuration does not mention it and no
-  profile is selected; otherwise rewake says on stderr that the briefing was
-  skipped.
-- Permissions: main and write request Git metadata access through repeated
-  `--add-dir <metadata directory>` flags. Worker and the zero role receive no
-  extra roots. The flag adds to the user's roots; no `writable_roots` array,
-  permission profile, sandbox mode, approval policy, network or tmp setting is
-  replaced. A caller's existing `--add-dir` flags remain, including duplicates.
-  The selected sandbox policy still decides whether added roots are writable.
-- The effective cwd honors `-C`/`--cd`, including joined forms, before `--`.
-  The search walks from cwd towards the filesystem root, stopping at the first
-  `.git`, even when it is invalid. For an ordinary repository the added directory
-  is `<repository>/.git`. A worktree or submodule has a `.git` file: rewake
-  reads its `gitdir: <path>` relative to the directory containing that pointer, then reads `commondir` relative to that metadata directory when
-  present. The gitdir must have a regular `HEAD`; shared metadata must also have `HEAD`,
-  `objects/` and `refs/`. A worktree-private gitdir need not have objects or refs.
-  Both per-worktree and shared metadata are added, without granting
-  their parent directories or other checkouts. Discovery does not invoke Git.
-- A missing or malformed pointer, a non-directory target or a symlink in the
-  metadata path leaves the grant out with a one-line reason and a suggestion
-  to pass the actual directories through `--add-dir`.
-- `resume` and `fork` retain the metadata grant discovered from effective launch
-  cwd. The extra root does not replace the resumed conversation's workspace.
-  `--remote` still skips local metadata: those paths belong to this machine.
-- A new `--worktree` also needs its private gitdir, allocated after launch.
-  Granting only the source `.git` is insufficient in the managed checkout
-  layout: the sandbox can reapply a read-only mount to its private metadata.
-  Rewake therefore keeps this skip with an explanation. Create the worktree
-  first and launch from its directory; existing worktrees are supported through
-  their known gitdir and commondir pointers.
-- The session record's cwd remains the wrapper's launch directory. It is not
-  updated when the harness changes the agent's working directory for a managed
-  worktree, a continuation or `-C`.
-- When `/tmp` may be excluded, rewake still says which directory to add to the
-  writable paths if messages cannot be sent. Granting Git access does not grant
-  the message directory or override a user's temporary-directory exclusions.
-- End of a turn: `-c notify=["<rewake>","turn-ended"]`, including main so
-  supplied failures remain observable. Successful main turns are filtered out.
-  Codex runs that program
-  after every turn, outside the sandbox and without the trust a Stop hook needs.
-  The key replaces the user's program, so it is passed only when neither the
-  command line nor `config.toml` mentions `notify` at all; otherwise rewake says
-  on stderr that turns will not be reported.
-- Record `CODEX_HOME` in the session (the environment value, or `~/.codex`).
-- **Verify live**, with one cheap turn, that the intro from `-c
-  developer_instructions` actually reaches the model.
+The wrapper owns two children: a foreground app-server on a private Unix socket
+and the ordinary TUI connected with --remote. The socket uses the existing
+per-run digest fallback and 103-byte limit. The server has its own process group,
+so keyboard interrupts reach the TUI without killing its transport. Both children
+end with the session; no daemon lifecycle command is used. Server stderr goes
+to the adjacent private .log file. Server death terminates the TUI and refuses
+pending mail as session ended.
+
+The adapter connects and initializes its WebSocket client before starting the
+TUI. Explicit -c overrides and the generated developer_instructions are passed
+to the server. A mention of developer_instructions in user configuration still
+suppresses the generated value; user files are never edited. The server receives
+the session's REWAKE_* environment, which the default shell policy inherits.
+Its remote-control startup is disabled with the version-specific internal marker.
+Rewake does not install notify; a caller's own configured program stays theirs.
+
+Main and write retain additive --add-dir Git metadata roots on the TUI. Its
+thread/start runtimeWorkspaceRoots passes them to the server; synthesizing a
+replacement writable_roots setting would lose the user's roots. Discovery still
+validates ordinary repositories, worktrees, submodules and commondir. General
+gets no extra roots. Sandbox, approval, network and tmp policies are not replaced.
+The existing warning about excluded temporary directories remains relevant.
+
+-C/--cd selects the effective server cwd as well as the TUI request. Resume and
+fork retain their arguments and skip the bootstrap prompt. The registry keeps
+the wrapper's original cwd. Existing --remote, --profile, --worktree and --oss/--local-provider launches
+are refused with advice: they cannot safely share this owned server topology or
+forward all configuration. Create the checkout first and use explicit settings.
+Unknown TUI arguments are preserved, not interpreted as server configuration.
+
+Startup checks codex --version against 0.154.0 and warns, without refusing a
+different version. A fake executable and socket server cover the process and
+protocol contract. Real-model acceptance remains a separate owner-run check.
 
 ### The intro
 
@@ -141,7 +123,7 @@ the wrapper marks that bootstrap for its epoch. Its identified ready completion
 records a done turn receipt before consuming the marker without publishing a
 report, even if work was read unusually early;
 those waits remain for the actual result. An explicit startup error still uses
-the normal error route. The greeting primes a fresh queued conversation without
+the normal error route. The greeting primes a fresh server conversation without
 an operator typing the first word. Disable it when supplying input through stdin.
 
 ## Signals, and what the wrapper does not do

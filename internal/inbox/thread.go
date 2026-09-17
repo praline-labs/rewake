@@ -1,11 +1,15 @@
 package inbox
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
+
+// ErrThreadUnavailable refuses delivery without making a task readable in an unknown conversation.
+var ErrThreadUnavailable = errors.New("delivery thread is unavailable")
 
 // ThreadChangedWarning lets the caller decide whether an old task needs resending.
 const ThreadChangedWarning = "the reader's thread changed after delivery; the report may not answer it, resend the message"

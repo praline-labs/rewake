@@ -67,17 +67,11 @@ sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
      `--append-system-prompt <intro>`, `--allowedTools "Bash(rewake:*)"`, and
      `--settings` with StopFailure for every role and Stop for reporting roles,
      both running `rewake turn-ended`, unless the user passed `--settings`;
-   - Codex: `-c developer_instructions=<intro>` and
-     `-c notify=["rewake","turn-ended"]` — each only when `config.toml` does not
-     mention the key at all, because these keys replace rather than add. A
-     silent role still observes failure callbacks but emits no successful reports. Main and write also append `--add-dir` for
-     the repository's Git metadata. `-C`/`--cd` chooses the effective cwd; the
-     nearest parent `.git` identifies the repository. Its pointer and
-     `commondir` resolve worktree/submodule metadata; structural Git markers are
-     checked before any directory is added.
-     Existing roots, selected profiles and the caller's `--add-dir` flags stay
-     intact. If the metadata cannot be resolved, a note says which directories
-     the caller must supply. Sandbox mode, tmp and network policy are unchanged.
+   - Codex: an owned foreground app-server on a private socket, initialized before
+     the TUI starts with --remote. Explicit configuration and the briefing reach
+     the server; main/write metadata roots reach its thread through TUI
+     runtimeWorkspaceRoots. No notify program is installed. Resume/fork keep
+     caller input; incompatible remote/profile/managed-worktree/local-provider launches refuse.
 6. **The environment.** `REWAKE_SESSION=<name>`, `REWAKE_EPOCH=<epoch>`,
    `REWAKE_DIR=<root>` and `REWAKE_ROOM=<room>`; inherited Claude Code markers are stripped so a session
    started from inside another does not borrow its socket.
@@ -120,7 +114,7 @@ session's shell, or from a person's shell in the same room. A shell without
 4. **The file.** `inbox/write/<id>.json.tmp`, renamed to `.json`. The id is
    time-sortable. Nothing else is touched: the sender does not deliver.
 5. **The wait.** The sender polls `<id>.status` for up to `--wait` seconds (5
-   by default) and prints one line: `delivered to write via codex queue; …`,
+   by default) and prints one line: `delivered to write via app-server`,
    `pending for write: …` (exit 3), or `failed` (exit 1).
 
 ## Act 3. The wrapper announces it
@@ -132,19 +126,17 @@ The recipient's wrapper sees the rename and, under the mailbox lock:
    notice goes out.
 2. **The notice.** One line, the same for every harness:
    `Rewake: claude task, 1 new message(s)`. The count is this run's unread
-   mail. The text of the message is never in it.
+   mail. Its next line previews the author's first line.
 3. **The adapter**, outside the lock because it can take seconds:
    - Claude Code: connect to the session's socket and write one JSON line
      whose content is a `<task-notification>` block with that summary. The
      interface draws it as a single green `● Rewake: claude task, 1 new
      message(s)` line — the same line its own background tasks get — and the
      model wakes if it was idle.
-   - Codex: find the current thread through `/proc` (the
-     `thread-writer-locks/<uuid>.lock` the harness holds open, newest first) and
-     run `codex queue --thread <uuid> --message "🟢 <notice>"`. Codex takes the
-     queue on its next idle check, about ten seconds. A thread that has not
-     had its first turn answers `no rollout found`: the message stays
-     `pending` and is retried until it lands or its TTL (30 minutes) expires.
+   - Codex: call turn/start on the tracked TUI thread. It starts idle work or
+     steers the active turn. A successful RPC result means delivered. A stale
+     or unavailable thread fails; it is not silently retargeted or queued.
+
 4. **The status.** `delivered` (the waiting copy is removed, `unread/` keeps
    the message), `pending` (retried every two seconds), or `failed` (the message
    moves to `done/`). Written atomically; the sender is reading it.
@@ -172,8 +164,8 @@ The notice wakes the agent, which runs `rewake inbox` in its shell.
 ## Act 5. The turn ends and the report goes back
 
 The harness itself says when a turn is over: Claude Code through Stop or StopFailure,
-Codex through `notify`. Both run `rewake turn-ended` with the last reply of the
-turn in the payload. A callback with `agent_id` is from a nested agent and is
+Codex through turn/completed. The hook and server events use the same internal
+reporting function and turn receipts. A callback with `agent_id` is from a nested agent and is
 ignored without changing the parent session's waits or bootstrap state.
 
 1. **Who is owed.** Under the lock, `turn-ended` reads
@@ -259,8 +251,8 @@ question to a silent role.
 
 | situation | what happens | what the sender sees |
 |---|---|---|
-| fresh Codex thread, no turn yet | `codex queue` has no rollout; retried until the first turn | `pending`, exit 3; expires after the TTL |
-| Codex interrupted with Ctrl+C | the queue is not taken until a person continues the thread | `delivered`, then silence |
+| fresh server thread, no turn yet | turn/start begins its first turn | delivered after RPC acceptance |
+| Codex interrupted with Ctrl+C | stopped advises peers to wait; original work stays owed | yellow notice; human continuation reports its result |
 | recipient's wrapper gone | record evicted on the next read | exit 2, no such session |
 | a reader's stdout blocks | it holds the lock; server waits, `turn-ended` five seconds, `inbox` ten | delays, then "mailbox is busy" |
 | the main session is asked a question | refused before publication | exit 2 with a hint |
@@ -270,7 +262,7 @@ question to a silent role.
 ## Reports across conversation changes
 
 A delivery thread is recorded before an owed task becomes readable, then used
-for the actual queue target. This covers readers that fetch mail before the
+for the actual RPC target. This covers readers that fetch mail before the
 notice call returns. The context stays alongside the task across read/status
 updates and remains while a report is owed.
 
@@ -292,5 +284,5 @@ boundary; rewake never infers a cause from missing callbacks or reads rollouts.
 Notifications show the latest available letter's first line beneath the header,
 prefixed by an indented ↳. They never substitute the preview for inbox content.
 Empty first lines stay empty; long ones are clipped with an ellipsis to about
-100 columns. Error notices use failed/red status. Active question reservations
+100 columns. Errors use failed/red status; keyboard stops use killed/yellow. Active question reservations
 are excluded from ordinary counts and previews.

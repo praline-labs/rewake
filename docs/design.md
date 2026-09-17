@@ -39,6 +39,13 @@ session, services its inbox, and on exit deregisters the session and returns the
 harness's exit code. There's no daemon: each wrapper is the delivery point for
 its own session only.
 
+The server adapter has three processes: wrapper, app-server and TUI. The wrapper
+starts and stops both children, owns the RPC client and routes reports; the server
+owns thread execution and sandboxing; the TUI keeps the inherited terminal.
+An optional Backend in LaunchPlan encapsulates this lifecycle, delivery, thread
+identity and completion events. A new harness can implement it independently.
+The socket adapter continues using its existing direct delivery and hook path.
+
 **Sender** — any process that calls `rewake send`. It doesn't deliver anything
 itself: it drops a file into the recipient's inbox and waits for a status. This
 way sending works the same from a plain shell, from Claude Code's Bash, and from
@@ -171,8 +178,8 @@ already granted; general receives no extra Git access from rewake.
 The main session exists to stop a loop: it reads the reports of its workers,
 and if its own turns were reported to them, each report would wake the other
 side for good. A silent role records no waits and emits no successful turn reports. Failure
-observation remains installed: StopFailure for the socket harness and notify
-for the queued harness. An error from main stays in its own unread mailbox
+observation remains installed: StopFailure for the socket harness and terminal
+server events for the owned-server harness. An error from main stays in its own unread mailbox
 without waking the same failing conversation. Old records with role `worker` are read as `general`; only --general creates
 new reporting sessions without Git access. The zero role value remains a reporting fallback inside the
 catalogue; an omitted launch role is resolved separately under the room lock.
@@ -258,8 +265,8 @@ belongs to the harness.
 - `send` prints the result as one line:
   ```
   delivered to claude-2 via socket
-  delivered to codex via codex queue; codex checks its queue about every ten seconds
-  pending for codex: the codex session has no conversation yet; delivers after its first turn
+  delivered to codex via app-server
+  failed for codex: delivery thread is unavailable
   ```
 - `--json` on every command prints the full model; the text form is deliberately
   trimmed down. No colors, no TTY-dependent behavior.
@@ -292,7 +299,7 @@ internal/registry/             session record, name publishing, liveness, listin
 internal/proc/                  /proc: start time, process tree, fd links
 internal/inbox/                 message, status, sender-side write, servicing loop
 internal/harness/claude/        launch arguments, environment, socket delivery
-internal/harness/codex/         launch arguments, thread lookup, delivery via codex queue
+internal/harness/codex/         owned app-server, WebSocket RPC, thread events and delivery
 internal/wrap/                  wrapper: launch, signals, lifecycle
 ```
 
@@ -321,8 +328,8 @@ Unit tests (`go test`):
 - liveness: a reused pid with a different start time counts as dead;
 - inbox: delivery order, `pending` retries, TTL, the status is written
   atomically;
-- Codex thread lookup on a fixture of a `/proc`-like tree (the `/proc` root is
-  parameterized);
+- owned-server process lifetime, framing, RPC correlation, thread selection,
+  reconnects and terminal outcomes on a fake Unix-socket server;
 - argument parsing and the command table: the table's examples parse cleanly.
 
 Live tests, scripted under tmux, in a separate `/tmp` directory:
@@ -331,8 +338,8 @@ Live tests, scripted under tmux, in a separate `/tmp` directory:
    within seconds.
 3. From the Codex sandbox (`codex sandbox -P :workspace -- rewake send ...`) —
    delivery to Claude through the inbox, without calling the model.
-4. `send codex` before the first message — `pending`, exit code 3; after the
-   first turn — the turn starts on its own.
+4. `send codex` during work steers that turn; a fresh /new thread accepts its
+   first input without an operator bootstrap. Interrupts report stopped.
 5. The Claude agent runs `rewake send` without confirmation (checks
    `--allowedTools`).
 6. Harness exit — the record and socket are gone, pending messages got
@@ -367,5 +374,5 @@ messages.
    instructions live in the guide. Nothing is added to a notice that the person
    watching the session would not see.
 7. Whatever rewake passes to a harness adds to the user's settings and never
-   replaces them. Where a key can only replace (`notify`), it is passed only when
-   the user certainly has none.
+   replaces them. A replacement-only briefing key is passed only when it cannot overwrite
+   the user's instructions. Rewake never installs a notify program.

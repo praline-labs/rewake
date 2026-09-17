@@ -131,3 +131,26 @@ func TestSocketRejectsOversizedFrames(t *testing.T) {
 		t.Fatalf("unbounded frame: %v", err)
 	}
 }
+
+func TestSocketRejectsUnexpectedUpgrade(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "s.sock")
+	listener, err := net.Listen("unix", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = listener.Close() }()
+	go func() {
+		conn, err := listener.Accept()
+		if err != nil {
+			return
+		}
+		defer func() { _ = conn.Close() }()
+		_ = conn.SetDeadline(time.Now().Add(time.Second))
+		_, _ = http.ReadRequest(bufio.NewReader(conn))
+		_, _ = io.WriteString(conn, "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: wrong\r\n\r\n")
+	}()
+	if client, err := dialSocket(context.Background(), path); err == nil {
+		_ = client.conn.Close()
+		t.Fatal("accepted an invalid WebSocket handshake")
+	}
+}

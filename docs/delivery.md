@@ -88,7 +88,7 @@ The server, `rewake inbox`, and `turn-ended` are separate processes acting on
 the same messages and waiters. Every change of state happens under the
 mailbox's `flock` (`inbox/<name>/.lock`): making a message readable, recording
 what delivery did, reading, and reporting a turn. The call into the harness is
-not under it — `codex queue` can take seconds — so a message can be read while
+not under it — an RPC can take seconds — so a message can be read while
 its notice is on the way. For that, `read` is final: whatever the harness says
 afterwards, the status stays `read` and the message is not linked or announced
 again. The Codex sandbox allows `flock` on files in `/tmp`.
@@ -120,7 +120,7 @@ one deadline origin. Retries never extend it; ordinary reports keep their
 original TTL. This state survives server restarts. Receipts remain while any
 queued, unread or archived report still refers to their questions.
 
-Status: `{"state":"delivered|read|pending|failed","via":"socket|codex queue","detail":"...","at":"..."}`.
+Status: `{"state":"delivered|read|pending|failed","via":"socket|app-server","detail":"...","at":"..."}`.
 
 ### The notice
 
@@ -166,21 +166,24 @@ recreated); otherwise `failed`.
 
 ### Codex adapter
 
-1. Find the current thread: walk the process tree from `harnessPid`, collect the
-   `/proc/<pid>/fd/*` links pointing at
-   `<CODEX_HOME>/thread-writer-locks/<uuid>.lock`, and pick the lock with the
-   latest mtime. None found: `pending: codex has not opened a thread yet`.
-2. `codex queue --thread <uuid> --message <notice>` with the session's
-   `CODEX_HOME`, 15-second timeout. Codex has no drawing of its own for this,
-   so the notice arrives as an ordinary message, prefixed with 🟢 or 🔴 for an
-   error to stand out when the conversation is scrolled.
-3. Exit code 0 means `delivered`, noted with "codex checks its queue about every
-   ten seconds". `no rollout found` means `pending: the codex session has no
-   conversation yet; delivers after its first turn`. Anything else is `failed`
-   with Codex's error text.
+The session-owned backend maintains one initialized WebSocket connection to its
+private Unix socket. Root TUI thread/started selects the thread; parent ids,
+non-user thread sources and unrelated originators are excluded. Closing the
+selected thread clears it. No process-tree scan or queue command selects a target.
 
-The thread is chosen fresh on every attempt: after `/new` or `/resume`, the
-message goes to the current thread, not the one from when the session started.
+An owed message records that thread before becoming readable. Delivery calls
+turn/start with only threadId, clientUserMessageId and the notice as text input.
+The server starts an idle turn or steers the current one. A result with a turn id
+means delivered via app-server. A server refusal is failed with its text; transport
+errors and ambiguous results are not automatically resent. A conversation change
+before or during the call refuses that delivery instead of silently retargeting it.
+An unavailable thread fails before readability rather than staying pending.
+
+A lost connection produces a note, never a turn outcome. Reconnection discovers
+loaded root threads and rejoins the unique candidate without requesting history.
+It refuses ambiguity instead of resuming a cached, possibly closed conversation.
+Events missed while disconnected cannot be reconstructed without a replay API;
+no error cause or successful result is inferred from their absence.
 
 ### Reading (`rewake inbox`)
 
@@ -203,10 +206,9 @@ Callbacks with a nonempty `agent_id` belong to a nested agent and are ignored
 before touching greeting markers, turn receipts or waits. `agent_type` alone
 does not imply nesting: a root session can select an agent profile.
 
-When a turn ends, the harness runs `rewake turn-ended` — a Stop hook in Claude
-Code, the notify program in Codex — with the last reply of the turn in its
-payload (`last_assistant_message` on stdin, `last-assistant-message` as the last
-argument). Under the mailbox lock, for every run in `awaiting/<own epoch>/` it
+A hook runs `rewake turn-ended` with the last reply in its payload. The owned
+server backend sends completion events directly to the same internal reporting
+function, with explicit session epoch and thread identity. Under the mailbox lock, for every run in `awaiting/<own epoch>/` it
 leaves a `finished` message whose text is that reply, and whose `inReplyTo`
 lists the messages read from that run since its last report, addressed to that run —
 not to whoever holds the name now. Before publishing an identified turn, its
@@ -234,7 +236,7 @@ runs while its own session is still awake anyway.
 
 Two rules keep this from turning into a loop:
 
-- reading finished, error or notify asks for nothing back;
+- reading finished, error, stopped or notify asks for nothing back;
 - each waiting run is told once; a new run of the name starts with no waiters.
 
 So an exchange ends: A writes to B; B reads, answers, ends its turn and reports
@@ -252,7 +254,7 @@ harness's own machinery, where an error is noise at best.
 
 Some harnesses can change conversations inside one wrapper run. Before an owed
 message is made readable, the wrapper records the selected thread in
-`inbox/<name>/threads/<message id>` under the mailbox lock. The queue uses that
+`inbox/<name>/threads/<message id>` under the mailbox lock. The server call uses that
 same thread. The context survives reads and status rewrites, and is retained
 while the message is queued, unread or included in an unsettled wait.
 
@@ -287,10 +289,11 @@ are idempotent; callbacks without turn ids are separate invocations. Bootstrap
 ready also stores a done turn receipt before consuming its greeting marker; replaying it
 cannot report ready or clear early work. A failed receipt write keeps the marker
 pending so a retry can finish recording it. Delivery uses failed task-notification status on the socket path and a red circle on
-the queued path. A waiting question consumes the error and exits 1.
+the server path. A waiting question consumes the error and exits 1.
 
 Failure observation depends on the harness providing a callback. The current
-legacy notify schema cannot expose every failure; see the research boundary.
+server backend observes terminal failures directly. Hooks on other transports
+still depend on the harness providing a callback.
 
 ### Keyboard stops
 
@@ -301,4 +304,4 @@ Its turn receipt keeps the original waits intact. Human continuation can then
 publish finished with the same inReplyTo and settle those waits. Main waits for
 the person instead of resending. A waiting question prints stopped and exits 1;
 the later result remains an ordinary inbox report. Socket notices use killed
-status; queued-text notices use a yellow circle.
+status; server-delivered text notices use a yellow circle.

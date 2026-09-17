@@ -74,19 +74,28 @@ func (c *rpcClient) call(ctx context.Context, method string, params, result any)
 	case <-ctx.Done():
 		return ctx.Err()
 	case <-c.done:
+		select {
+		case value := <-reply:
+			return rpcResult(value, result)
+		default:
+		}
 		c.mu.Lock()
 		err := c.err
 		c.mu.Unlock()
 		return err
 	case value := <-reply:
-		if value.Error != nil {
-			return value.Error
-		}
-		if result != nil {
-			return json.Unmarshal(value.Result, result)
-		}
-		return nil
+		return rpcResult(value, result)
 	}
+}
+
+func rpcResult(value rpcReply, result any) error {
+	if value.Error != nil {
+		return value.Error
+	}
+	if result != nil {
+		return json.Unmarshal(value.Result, result)
+	}
+	return nil
 }
 
 func (c *rpcClient) read() {
@@ -124,6 +133,7 @@ func (c *rpcClient) read() {
 }
 
 func (c *rpcClient) close() {
+	_ = c.socket.writeFrame(8, []byte{3, 232})
 	_ = c.socket.conn.Close()
 	<-c.done
 }

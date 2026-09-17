@@ -128,48 +128,17 @@ twelve variables:
 - Unknown name: `No active session found matching '<name>'`, exit code 1.
   **[verified live]**
 
-### Thread id of a live TUI
+### Thread identity and terminal events
 
-- There is no flag to assign an id at startup. **[source]**
-- From the moment it starts, the TUI process holds
-  `$CODEX_HOME/thread-writer-locks/<thread-id>.lock` open; the rollout file may not
-  exist yet. Visible via `/proc/<pid>/fd`. **[verified live]**
-- After `/new`, the process holds **both** lock files open, the old one and the
-  new one; the current one is the one whose lock file has the later mtime.
-  **[verified live]**
-- rollout: `$CODEX_HOME/sessions/YYYY/MM/DD/rollout-<timestamp>-<thread-id>.jsonl`,
-  the id is in the filename. **[source, verified live]**
-- The `SessionStart` hook receives `session_id` on stdin. Codex won't run an
-  unverified hook without user approval; getting it to run live via `-c` did not
-  work. **[source, docs]**
-- The `CODEX_SESSION_ID`/`CODEX_THREAD_ID` variables are only set for commands
-  that the agent itself executes. **[source]**
+The server adapter uses thread/started and thread/closed, not TUI file
+descriptors. Locks remain a fact of the standalone TUI, but under --remote the
+server owns them. A root thread source/originator and absent parent id distinguish
+TUI work from nested agents. The message sidecar still carries the delivery id.
 
-### End of a turn
-
-- `/new` changes the active thread without restarting the wrapper or changing
-  its epoch. The old and new thread locks may remain open; the existing tracker
-  chooses the newest lock in the nearest process generation. A live owner run
-  on September 16, 2026 showed that an old task's wait can survive `/new` and
-  receive the new thread's first final reply. The hook now marks known delivery
-  versus current-thread mismatches; it never clears waits or resends work.
-  **[source: snapshot 44b9011; owner-observed conversation switch; fake-harness
-  regression verifies the warning without a model call]**
-
-- `notify = ["prog", ...]` runs the program after every turn with a JSON
-  argument appended last: `type: "agent-turn-complete"`, `thread-id`,
-  `turn-id`, `cwd`, `client`, `input-messages`, `last-assistant-message`. It can
-  be set with `-c` for one launch, needs no feature flag and no trust, and runs
-  outside the sandbox with the session's environment. The TUI fires it too. It
-  replaces the user's own `notify`. **[source; verified live 0.154.0]**
-- Lifecycle hooks (`hooks.Stop` and others, `features.hooks` on by default) from
-  the user, the project or `-c` are registered only when their
-  `hooks.state."<key>".trusted_hash` matches or the launch passes
-  `--dangerously-bypass-hook-trust`; otherwise they are skipped silently. That
-  is why a `SessionStart` hook passed with `-c` never ran. `SessionStart` also
-  runs at the start of the first turn, not at launch. **[source]**
-- A queued message arrives as an ordinary user message: Codex has no drawing of
-  its own for a notice. **[verified live]**
+Legacy notify emits normal completions but skips some error branches. The
+adapter now consumes turn/completed: completed, failed with error.message, or
+interrupted. Intermediate error notifications with willRetry=true are not final.
+No transcript is read to obtain the result or infer a missing failure.
 
 ### Sandbox (Linux)
 
@@ -333,19 +302,33 @@ compare `/proc/self/ns/pid` before believing a pid it did not create.
 - The first run in a new folder shows a trust dialog, confirmed with Enter; the
   decision is written to `~/.codex/config.toml`. **[verified live]**
 
-### app-server (fallback path)
+### Session-owned app-server
 
-`codex app-server --listen unix://<path>` and `codex --remote unix://<path>`: the
-TUI acts as a client of its own server. Methods: `thread/start`, `thread/resume`,
-`thread/name/set`, `thread/queue/add`, `turn/start` (wakes an idle thread or
-steps into a running turn without the 10-second delay), `turn/steer`,
-`turn/interrupt`. The unix socket's authorization is file permissions only. A
-standalone app-server without its own `CODEX_HOME` opens the same state files as
-every other process. **[source]** The official codex plugin for Claude Code keeps
-a headless app-server behind a broker on a unix socket: one owner of the
-streaming turn, everyone else gets `-32001 busy`. **[source: plugin]** Not
-verified live whether a TUI with `--remote` sees turns started by another
-client.
+**[snapshot 44b9011; CLI 0.154.0; September 17, 2026]** Foreground
+app-server --listen unix://PATH supports a TUI via --remote. The listener uses
+WebSocket frames, not JSONL; proxy is only a byte relay. turn/start calls
+start_or_steer_turn (request_processors/turn_processor.rs:646–677), including
+after an interruption. Basic turn/steer is stable and requires expectedTurnId;
+queue/start is experimental and is not needed for immediate delivery.
+
+**[owner live probes, 0.154.0]** [Same-turn steering](/tmp/rw13/live-steer-ok.jsonl)
+and [fresh /new delivery](/tmp/rw13/live-new-ok.jsonl) reached the TUI and model.
+A closed old thread can absorb input without a visible answer, and resuming an
+empty thread did not reliably reply. Track closure; never deliver to a cached
+id after losing evidence that it remains current.
+
+**[source and no-model probes]** [Research report](/tmp/rw13/report.md) records
+RPC initialization, failed and interrupted outcomes, owned locks and the remote
+configuration boundary. TUI notify is not forwarded; developer instructions are
+conditional on a feature there, so launch configuration reaches the server too.
+TUI --add-dir is carried as runtimeWorkspaceRoots; -C and positional input are
+forwarded. REWAKE_* survives default shell environment filtering.
+
+The owned server uses CODEX_INTERNAL_APP_SERVER_REMOTE_CONTROL_DISABLED=1
+(transport/remote_control/mod.rs:87) to keep this local launch off the persisted
+remote-control path. This internal marker and the remote configuration rules
+are version-specific. The full rewake launch still needs owner acceptance after
+its fake-server checks; raw protocol probes alone do not close the milestone.
 
 ## Other harnesses (for later)
 
@@ -373,7 +356,8 @@ branches at `:742–783` bypass it. `core/src/tasks/mod.rs:798–810` puts the e
 on TurnComplete instead. Therefore a rollout task_complete error is not evidence
 that legacy notify received that reason. Rewake accepts that event if supplied,
 and emits a textless error for a received empty completion after read work, but
-cannot observe a failure callback that the harness never invokes. It does not
+legacy notify alone cannot observe a callback that the harness never invokes.
+The server transport replaces that dependency for the server-backed harness. It does not
 read transcripts or invent a cause.
 
 The [official hook reference](https://code.claude.com/docs/en/hooks#stopfailure)
@@ -385,7 +369,7 @@ schema/documentation verification; no live model turn was used for this change.
 **[owner socket probe: 2.1.270, September 17, 2026]** A newline inside the
 task-notification summary renders an indented second line. Extra sibling fields
 are discarded by the interface, so the authored first-line preview belongs in
-summary itself. The queued transport uses a second line in the same message.
+summary itself. The server transport uses a second line in the same message.
 
 **[hook schema checked September 17, 2026; installed version 2.1.270; no live run]**
 [Common hook fields](https://code.claude.com/docs/en/hooks#common-input-fields)
@@ -394,6 +378,6 @@ appears on a root session launched with an agent profile, so it cannot filter
 child callbacks. Rewake ignores completions carrying a child identity.
 
 **[CLI declarations: 2.1.270 source `main.tsx:988`; snapshot `44b9011`]**
-`--allowedTools <tools...>` is variadic. The queued CLI also has a variadic
+`--allowedTools <tools...>` is variadic. The TUI CLI also has a variadic
 `--image` (`utils/cli/src/shared_options.rs:11–19`, `num_args = 1..`). A trailing
 `--` separates the bootstrap prompt from either option's values.

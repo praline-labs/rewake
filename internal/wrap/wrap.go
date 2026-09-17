@@ -125,6 +125,19 @@ func Run(ctx context.Context, request Request) (int, error) {
 	signals, restore := catchSignals()
 	defer restore()
 
+	if plan.Backend != nil {
+		reportSession := session
+		if err := plan.Backend.Start(ctx, func(result harness.Completion) error {
+			if request.OnTurn != nil {
+				return request.OnTurn(reportSession, result)
+			}
+			return nil
+		}, func(note string) { _, _ = fmt.Fprintln(os.Stderr, "rewake: "+note) }); err != nil {
+			return 0, err
+		}
+		defer plan.Backend.Close()
+	}
+
 	command := exec.Command(plan.Command, plan.Args...)
 	command.Env = plan.Env
 	command.Stdin, command.Stdout, command.Stderr = os.Stdin, os.Stdout, os.Stderr
@@ -146,6 +159,11 @@ func Run(ctx context.Context, request Request) (int, error) {
 		session.HarnessStart = start
 		_ = registry.Update(request.Dir, session)
 	}
+	if plan.Backend != nil {
+		watchCtx, stopWatching := context.WithCancel(ctx)
+		defer stopWatching()
+		go stopWithBackend(watchCtx, plan.Backend, command.Process, session.HarnessStart)
+	}
 	harnessStart := session.HarnessStart
 	go forward(signals, command.Process, func() bool {
 		return proc.Alive(command.Process.Pid, harnessStart)
@@ -160,6 +178,9 @@ func Run(ctx context.Context, request Request) (int, error) {
 		if tracker, ok := request.Harness.(harness.ThreadTracker); ok {
 			thread = func() (string, error) { return tracker.Thread(current(request.Dir, name, session)) }
 		}
+		if plan.Backend != nil {
+			thread = plan.Backend.Thread
+		}
 		server := &inbox.Server{
 			Dir:    request.Dir,
 			Thread: thread,
@@ -170,6 +191,9 @@ func Run(ctx context.Context, request Request) (int, error) {
 			// changed hands, has no business in there.
 			Owns: func() bool { return registry.OwnsName(request.Dir, name, epoch) },
 			Deliver: func(ctx context.Context, message inbox.Message) inbox.Result {
+				if plan.Backend != nil {
+					return plan.Backend.Deliver(ctx, message)
+				}
 				return request.Harness.Deliver(ctx, current(request.Dir, name, session), message)
 			},
 		}

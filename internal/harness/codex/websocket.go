@@ -145,7 +145,7 @@ func (s *socketClient) readMessage() ([]byte, error) {
 			}
 			size = binary.BigEndian.Uint64(raw[:])
 		}
-		if size > maxFrame || uint64(len(message))+size > maxFrame {
+		if size > maxFrame || op < 8 && uint64(len(message))+size > maxFrame {
 			return nil, errors.New("websocket message too large")
 		}
 		if op >= 8 && (!final || size > 125) {

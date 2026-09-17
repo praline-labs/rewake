@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/iiiokojiadbi/rewake/internal/harness"
 	"github.com/iiiokojiadbi/rewake/internal/role"
 )
 
@@ -32,20 +33,8 @@ func TestResumedAndForkedSessionsKeepGitWrites(t *testing.T) {
 
 func TestManagedWorktreesExplainTheUnknownPrivateMetadata(t *testing.T) {
 	codexHome(t, "")
-	repo := gitRepository(t)
-	for _, part := range []role.Role{role.Main, role.Write} {
-		t.Run(part.ID, func(t *testing.T) {
-			plan := gitLaunch(t, part, "-C", repo, "--worktree")
-			if roots := gitRoots(plan.Args); len(roots) != 0 {
-				t.Fatalf("unknown worktree metadata granted: %q", roots)
-			}
-			note := strings.Join(plan.Notes, " ")
-			if !strings.Contains(note, "private") || !strings.Contains(note, "create the worktree first") {
-				t.Fatalf("skip lacks the concrete limitation and remedy: %q", plan.Notes)
-			}
-			if !strings.Contains(strings.Join(plan.Args, " "), "--worktree") {
-				t.Fatalf("worktree flag lost: %q", plan.Args)
-			}
-		})
+	_, err := New().Launch(harness.LaunchRequest{Dir: t.TempDir(), Args: []string{"--worktree"}})
+	if err == nil || !strings.Contains(err.Error(), "checkout") {
+		t.Fatalf("unknown server checkout accepted: %v", err)
 	}
 }

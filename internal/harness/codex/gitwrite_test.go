@@ -66,7 +66,7 @@ func TestOnlyCommittingRolesReceiveGitWrites(t *testing.T) {
 				assertGitGrant(t, plan, repo)
 			}
 			_, notify := configValue(plan.Args, notifyKey)
-			if !notify {
+			if notify {
 				t.Errorf("role=%s notify=%v", part.ID, notify)
 			}
 			if part.ID == "write" {
@@ -147,12 +147,8 @@ func TestUnresolvedGitMetadataGetsNoGrant(t *testing.T) {
 func TestAnUnresolvedWorkingDirectoryGetsNoGitGrant(t *testing.T) {
 	codexHome(t, "")
 	for _, args := range [][]string{{"-C"}, {"--cd="}, {"-C", "/path/that/does/not/exist"}} {
-		plan := gitLaunch(t, role.Write, args...)
-		if len(gitRoots(plan.Args)) > 0 {
-			t.Errorf("granted for %q", args)
-		}
-		if len(plan.Notes) == 0 {
-			t.Errorf("no explanation for %q", args)
+		if _, err := New().Launch(harness.LaunchRequest{Dir: t.TempDir(), Args: args, Role: role.Write}); err == nil {
+			t.Fatalf("server accepted an unresolved working directory: %q", args)
 		}
 	}
 }

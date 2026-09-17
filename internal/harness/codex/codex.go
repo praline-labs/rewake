@@ -1,12 +1,4 @@
-/*
-Package codex runs Codex as a rewake session and delivers messages to it through
-the message queue every Codex process polls.
-
-Two facts shape this adapter. Codex has no flag that names a session at startup,
-so the thread id is read from the lock file the process holds open. And delivery
-goes through `codex queue`, which every Codex process picks up within about ten
-seconds — including a plain TUI, with no daemon and no extra flags.
-*/
+// Package codex owns a session-local server and connects its terminal client.
 package codex
 
 import (
@@ -15,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/brief"
 	"github.com/iiiokojiadbi/rewake/internal/harness"
@@ -33,14 +24,6 @@ const configFlag = "-c"
 // instructions, so this one replaces them and the wrapper concatenates.
 const introKey = "developer_instructions"
 
-// queueTimeout bounds one call to codex queue. It talks to a local database, so
-// a call that takes longer than this is stuck, not slow.
-const queueTimeout = 15 * time.Second
-
-// pollNotice is said in the result: delivery is not instant, and a sender that
-// does not hear this assumes silence means failure.
-const pollNotice = "codex checks its queue about every ten seconds"
-
 type codexHarness struct{}
 
 // New returns the Codex harness.
@@ -50,7 +33,7 @@ func (codexHarness) ID() string    { return ID }
 func (codexHarness) Title() string { return "Codex" }
 
 func (codexHarness) Summary() string {
-	return "Start Codex as a rewake session. Messages reach it within about ten seconds."
+	return "Start Codex with a session-owned server for immediate delivery."
 }
 
 func (codexHarness) Examples() []string {
@@ -62,8 +45,8 @@ func (codexHarness) Examples() []string {
 
 func (codexHarness) Notes() []string {
 	return []string{
-		"Codex polls for queued messages every ten seconds, so delivery is not instant; the send command says so in its result.",
-		"A Codex session that has not exchanged a single message yet cannot accept one: such a message stays pending and lands after its first turn.",
+		"A private app-server starts or steers a turn when a notice arrives; no queue polling is needed.",
+		"The server lives only for this session. Existing --remote, --profile and --worktree arguments require a separate checkout or explicit configuration instead.",
 		"Arguments after the harness name are passed to codex untouched, with one exception: a --help written first asks rewake for this page instead of starting the harness.",
 	}
 }
@@ -101,15 +84,6 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 		notes = append(notes, note)
 	}
 
-	{
-		// Silent roles still need failures reported; successful turns are filtered by the hook.
-		if notify, note := turnNotify(home, args, layered); note != "" {
-			notes = append(notes, note)
-		} else {
-			args = harness.AddFlags(args, configFlag, notifyKey+"="+notify)
-		}
-	}
-
 	greeting, note := harness.GreetingPrompt(request, harness.GreetingPolicy{Values: "--model -m --config -c --cd -C --profile -p --sandbox -s --add-dir --enable --disable --image -i --local-provider --remote", Switches: "--oss --strict-config --no-alt-screen --worktree --search --approve-for-me --dangerously-bypass-approvals-and-sandbox", Continued: "resume fork"})
 	if note != "" {
 		notes = append(notes, note)
@@ -117,57 +91,36 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 	if greeting != "" {
 		args = harness.AppendGreeting(args, greeting)
 	}
+	if harness.HasFlag(request.Args, "--remote") || hasProfile(request.Args) || harness.HasFlag(request.Args, "--worktree") || harness.HasFlag(request.Args, "--oss") || harness.HasFlag(request.Args, "--local-provider") {
+		return harness.LaunchPlan{}, fmt.Errorf("session-owned app-server requires local arguments without --remote, --profile, --worktree or --oss/--local-provider; select a checkout and configuration explicitly before launching")
+	}
+	cwd, err := gitWorkingDirectory(request.Args)
+	if err != nil {
+		return harness.LaunchPlan{}, err
+	}
+	socket := request.Socket
+	if socket == "" {
+		socket = filepath.Join(request.Dir, "server.sock")
+	}
+	env := harness.SessionEnv(request, nil)
+	serverArgs := serverConfigArgs(args)
+	serverArgs = append(serverArgs, "app-server", "--listen", "unix://"+socket)
+	args = harness.AddFlags(args, "--remote", "unix://"+socket)
 	return harness.LaunchPlan{
-		Greeting:  greeting != "",
-		Command:   "codex",
-		Args:      args,
-		Env:       harness.SessionEnv(request, nil),
-		CodexHome: home,
-		Notes:     notes,
+		Greeting:   greeting != "",
+		Backend:    newServer(socket, serverArgs, append(append([]string{}, env...), "CODEX_INTERNAL_APP_SERVER_REMOTE_CONTROL_DISABLED=1"), cwd),
+		Socket:     socket,
+		OwnsSocket: true,
+		Command:    "codex",
+		Args:       args,
+		Env:        env,
+		CodexHome:  home,
+		Notes:      notes,
 	}, nil
 }
 
-func (codexHarness) Deliver(ctx context.Context, session registry.Session, message inbox.Message) inbox.Result {
-	home := session.CodexHome
-	if home == "" {
-		home = Home()
-	}
-
-	thread := message.DeliveryThread
-	if thread == "" {
-		var err error
-		thread, err = CurrentThread(session.HarnessPID, home)
-		if err != nil {
-			return inbox.Result{State: inbox.Pending, Detail: err.Error()}
-		}
-	}
-
-	callCtx, cancel := context.WithTimeout(ctx, queueTimeout)
-	defer cancel()
-
-	output, err := queue(callCtx, home, thread, noticePrefix(message)+" "+harness.Notice(message))
-	if err != nil {
-		return classify(output, err)
-	}
-
-	// The session can change threads while the message is on its way: /new in
-	// the middle leaves the text queued for a conversation nobody is looking at.
-	// Queueing it again would put a copy in both, and a repeated instruction is
-	// worse than a missing one — so the sender is told instead, and decides.
-	if now, err := CurrentThread(session.HarnessPID, home); err == nil && now != thread {
-		return inbox.Result{
-			State:  inbox.Failed,
-			Detail: "the codex session started a new conversation while this was being queued; it went to the previous one. Send it again if it still applies",
-		}
-	}
-	return inbox.Result{State: inbox.Delivered, Via: "codex queue", Detail: pollNotice}
-}
-
-func firstLine(text string) string {
-	if index := strings.IndexByte(text, '\n'); index >= 0 {
-		return text[:index]
-	}
-	return text
+func (codexHarness) Deliver(_ context.Context, _ registry.Session, _ inbox.Message) inbox.Result {
+	return inbox.Result{State: inbox.Failed, Detail: "this session needs an owned app-server; restart it through rewake"}
 }
 
 // Home is where Codex keeps its state, and where delivery has to look.
@@ -280,12 +233,4 @@ func quoteTOML(value string) string {
 	}
 	out.WriteByte('"')
 	return out.String()
-}
-
-func quoteTOMLArray(values []string) string {
-	quoted := make([]string, 0, len(values))
-	for _, value := range values {
-		quoted = append(quoted, quoteTOML(value))
-	}
-	return "[" + strings.Join(quoted, ",") + "]"
 }

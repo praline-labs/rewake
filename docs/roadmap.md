@@ -375,10 +375,11 @@ previous legacy-notify limitation remains unchanged. No real harness was run.
 
 ## Milestone 10. Session-owned server transport — in progress, September 17, 2026
 
-The transport client is local to the adapter: bounded WebSocket frames over a
-private Unix socket, masked writes, ping/pong, fragmentation and correlated
-JSON-RPC responses. It uses only the standard library and requests experimental
-capabilities during initialization. Launch integration follows separately.
+The owned server and TUI share the wrapper lifetime. An optional Backend keeps
+all process/RPC mechanics inside the adapter. Delivery uses start-or-steer,
+tracks root thread events and refuses closed or ambiguous targets. Completion
+callbacks share the existing receipt path; stopped keeps work owed to a human
+continuation. Fake-process and mutation checks cover these mechanisms.
 
 Acceptance requires same-turn delivery during work, delivery to a fresh /new
 thread, stopped after a keyboard interrupt, error after an API failure, and no

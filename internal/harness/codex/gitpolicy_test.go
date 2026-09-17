@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/iiiokojiadbi/rewake/internal/harness"
 	"github.com/iiiokojiadbi/rewake/internal/role"
 )
 
@@ -41,19 +42,10 @@ func TestGitWritesExtendCallerConfiguration(t *testing.T) {
 
 func TestGitWritesSkipRemoteExecution(t *testing.T) {
 	codexHome(t, "")
-	repo := gitRepository(t)
-	for _, flags := range [][]string{
-		{"--remote", "server"}, {"--remote=server"},
-	} {
-		t.Run(strings.Join(flags, " "), func(t *testing.T) {
-			plan := gitLaunch(t, role.Write, append([]string{"-C", repo}, flags...)...)
-			if len(gitRoots(plan.Args)) > 0 {
-				t.Fatalf("overrode layered session: %q", plan.Args)
-			}
-			if !strings.Contains(strings.Join(plan.Notes, " "), "--add-dir") {
-				t.Errorf("no advice: %q", plan.Notes)
-			}
-		})
+	for _, args := range [][]string{{"--remote", "server"}, {"--remote=server"}} {
+		if _, err := New().Launch(harness.LaunchRequest{Dir: t.TempDir(), Args: args, Role: role.Write}); err == nil {
+			t.Fatalf("unsupported server configuration accepted: %q", args)
+		}
 	}
 }
 
@@ -125,10 +117,10 @@ func TestGitWritesKeepProjectConfiguration(t *testing.T) {
 
 func TestGitWritesExtendSelectedProfiles(t *testing.T) {
 	codexHome(t, "")
-	repo := gitRepository(t)
-	for _, flags := range [][]string{{"-p", "work"}, {"-pwork"}, {"-p=work"}, {"--profile", "work"}, {"--profile=work"}} {
-		plan := gitLaunch(t, role.Write, append([]string{"-C", repo}, flags...)...)
-		assertGitGrant(t, plan, repo)
+	for _, args := range [][]string{{"-p", "work"}, {"-pwork"}, {"-p=work"}, {"--profile", "work"}, {"--profile=work"}} {
+		if _, err := New().Launch(harness.LaunchRequest{Dir: t.TempDir(), Args: args, Role: role.Write}); err == nil {
+			t.Fatalf("unsupported server configuration accepted: %q", args)
+		}
 	}
 }
 

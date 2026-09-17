@@ -119,3 +119,22 @@ func TestNoticeContextUsesTheLatestAvailableLetter(t *testing.T) {
 		t.Fatalf("reserved answer entered preview: %+v", shown)
 	}
 }
+
+func TestUnavailableThreadFailsWithoutBecomingReadable(t *testing.T) {
+	dir := stateDir(t)
+	task := message("work")
+	task.FromEpoch = "2.2"
+	task.ToEpoch = "1.1"
+	if err := Put(dir, task); err != nil {
+		t.Fatal(err)
+	}
+	server := &Server{Dir: dir, Name: "api", Epoch: "1.1", attempts: map[string]time.Time{}, outcomes: map[string]Result{}, Thread: func() (string, error) { return "", ErrThreadUnavailable }, Deliver: func(context.Context, Message) Result { t.Fatal("unknown thread was delivered"); return Result{} }}
+	server.drain(context.Background())
+	status, _ := ReadStatus(dir, "api", task.ID)
+	if status.State != Failed {
+		t.Fatalf("unavailable conversation left status %s", status.State)
+	}
+	if unread, _ := PeekUnread(dir, "api", "1.1"); len(unread) != 0 {
+		t.Fatal("task was readable without a delivery thread")
+	}
+}

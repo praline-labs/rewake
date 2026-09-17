@@ -31,13 +31,13 @@ type LaunchRequest struct {
 	Socket string
 	// Epoch identifies this run of the name.
 	Epoch string
-	// Role is what the session is for. A role that reports nothing gets no
-	// end-of-turn hook.
+	// Role determines reporting and additive permission requests.
 	Role role.Role
 }
 
 // LaunchPlan is how the wrapper starts the harness.
 type LaunchPlan struct {
+	Backend Backend
 	// Command is the executable to run, looked up in PATH.
 	Command string
 	// Args is the full argument list.

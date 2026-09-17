@@ -189,6 +189,10 @@ func (s *Server) drain(ctx context.Context) {
 			s.attempts[message.ID] = time.Now()
 			continue
 		}
+		if errors.Is(err, ErrThreadUnavailable) {
+			s.finish(message, Result{State: Failed, Detail: err.Error()})
+			continue
+		}
 		if err != nil {
 			s.attempts[message.ID] = time.Now()
 			s.record(message.ID, Result{

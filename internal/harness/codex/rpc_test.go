@@ -95,3 +95,24 @@ func TestRPCRequestIsBoundedWhenServerDoesNotReply(t *testing.T) {
 		t.Fatalf("unbounded request: %v", err)
 	}
 }
+
+func TestRPCServerCloseUnblocksPendingRequests(t *testing.T) {
+	path := socketFixture(t, func(c net.Conn, r *bufio.Reader) {
+		_, _, _, _ = readClientFrame(r)
+		serverMessage(c, map[string]any{"id": 1, "result": map[string]any{}})
+		_, _, _, _ = readClientFrame(r)
+		_, _, _, _ = readClientFrame(r)
+		_, _ = c.Write([]byte{0x88, 0})
+		_, _, _, _ = readClientFrame(r)
+	})
+	client, err := connectRPC(context.Background(), path, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.close()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if err := client.call(ctx, "pending", struct{}{}, nil); err == nil || errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("close did not unblock the request: %v", err)
+	}
+}
