@@ -76,6 +76,8 @@ const (
 	Finished Kind = "finished"
 	// Error reports a failed turn and never owes another report.
 	Error Kind = "error"
+	// Stopped reports a keyboard interruption without settling the work.
+	Stopped Kind = "stopped"
 )
 
 // KindOf returns the kind of a message, reading a missing one as a task: mail
@@ -92,7 +94,7 @@ func KindOf(message Message) Kind {
 // already: waiting on one would have two sessions report to each other forever.
 func Owed(message Message) bool {
 	switch KindOf(message) {
-	case Note, Finished, Error:
+	case Note, Finished, Error, Stopped:
 		return false
 	}
 	return message.FromEpoch != ""
@@ -250,4 +252,6 @@ func archive(dir, to, id string) error {
 }
 
 // IsReport includes successful and failed turn outcomes.
-func IsReport(message Message) bool { return KindOf(message) == Finished || KindOf(message) == Error }
+func IsReport(message Message) bool {
+	return KindOf(message) == Finished || KindOf(message) == Error || KindOf(message) == Stopped
+}

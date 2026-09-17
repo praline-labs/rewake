@@ -5,9 +5,10 @@ import (
 )
 
 type turnResult struct {
-	Text   string
-	Failed bool
-	ID     string
+	Text    string
+	Failed  bool
+	Stopped bool
+	ID      string
 }
 
 func completedTurn(payload []byte) (turnResult, bool) {

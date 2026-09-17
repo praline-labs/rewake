@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/iiiokojiadbi/rewake/internal/harness"
+	"github.com/iiiokojiadbi/rewake/internal/inbox"
 )
 
 func TestFreshSocketSessionsGetTheSameGuideGreeting(t *testing.T) {
@@ -44,5 +45,11 @@ func TestGreetingIsPositionalAfterVariadicTools(t *testing.T) {
 		if separators != 1 {
 			t.Fatalf("want one prompt separator, got %d: %q", separators, plan.Args)
 		}
+	}
+}
+
+func TestStoppedNoticeUsesKilledStatus(t *testing.T) {
+	if got := notification(inbox.Message{Kind: inbox.Stopped}); !strings.Contains(got, "<status>killed</status>") {
+		t.Fatal(got)
 	}
 }

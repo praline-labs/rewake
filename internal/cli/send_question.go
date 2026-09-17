@@ -37,13 +37,13 @@ func answerQuestion(ctx *Context, question sent) error {
 		model.State, model.Answer = string(inbox.Read), answer.Text
 		model.ThreadChanged = answer.ThreadChanged
 		model.Kind = inbox.KindOf(answer)
-		if model.Kind == inbox.Error {
+		if model.Kind == inbox.Error || model.Kind == inbox.Stopped {
 			model.State = string(inbox.Failed)
 		}
 		return printValue(ctx, model, func() []string {
 			heading := "answer"
-			if model.Kind == inbox.Error {
-				heading = "error"
+			if model.Kind == inbox.Error || model.Kind == inbox.Stopped {
+				heading = string(model.Kind)
 			}
 			lines := []string{fmt.Sprintf("%s from %s:", heading, target.Name), answer.Text}
 			if answer.ThreadChanged {
@@ -66,7 +66,7 @@ func answerQuestion(ctx *Context, question sent) error {
 		return &PendingError{Message: line}
 	}
 
-	if model.Kind == inbox.Error {
+	if model.Kind == inbox.Error || model.Kind == inbox.Stopped {
 		return &ExitCodeError{Code: ExitFailed}
 	}
 	return nil

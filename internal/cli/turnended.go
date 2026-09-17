@@ -9,6 +9,7 @@ import (
 
 	"github.com/iiiokojiadbi/rewake/internal/harness"
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
+	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
@@ -54,17 +55,26 @@ func handleTurnEnded(_ *Context, call Call) error {
 	}
 	currentThread, _ := harness.SessionThread(self)
 
+	_ = completeTurn(dir, self, event, currentThread)
+	return nil
+}
+
+func completeTurn(dir string, self registry.Session, event turnResult, currentThread string) error {
+	if !registry.OwnsName(dir, self.Name, self.Epoch()) {
+		return nil
+	}
+
 	// Under the mailbox lock, so two ends of a turn reported at once tell each
 	// waiter once, and a waiter recorded by a read in the meantime is not taken
 	// for the one reported.
 	ctx, cancel := context.WithTimeout(context.Background(), hookLockWait)
 	defer cancel()
-	_ = state.WithMailboxLock(ctx, dir, self.Name, func() error {
+	return state.WithMailboxLock(ctx, dir, self.Name, func() error {
 		greeting, err := inbox.GreetingPending(dir, self.Name, self.Epoch())
 		if err != nil {
 			return err
 		}
-		bootstrap := greeting && !event.Failed && strings.TrimSpace(event.Text) == "ready"
+		bootstrap := greeting && !event.Failed && !event.Stopped && strings.TrimSpace(event.Text) == "ready"
 		if bootstrap {
 			// Save before consuming the marker: retries must remain harmless even
 			// when an early task is already owed or the marker removal fails.
@@ -87,7 +97,6 @@ func handleTurnEnded(_ *Context, call Call) error {
 		beforeReports()
 		return publishTurn(dir, self, event, currentThread, waiters)
 	})
-	return nil
 }
 
 // hookLockWait is how long the end of a turn waits for the mailbox. What it

@@ -73,6 +73,9 @@ func classify(output string, err error) inbox.Result {
 }
 
 func noticePrefix(message inbox.Message) string {
+	if harness.NoticeKind(message) == inbox.Stopped {
+		return "🟡"
+	}
 	if harness.NoticeKind(message) == inbox.Error {
 		return "🔴"
 	}

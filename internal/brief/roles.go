@@ -8,7 +8,7 @@ func roleText(c Context) string {
 		return fmt.Sprintf(`You are the main session %q in room %q: %s.
 Delegate with rewake send <name> "text"; start each message and final reply with one line stating its point.
 --question waits for an answer; --notify sends a note that needs no answer.
-Reports arrive as "Rewake: <name> finished" and failures as "Rewake: <name> error"; read rewake inbox.
+Reports arrive as "Rewake: <name> finished" and failures as "Rewake: <name> error"; read rewake inbox. On stopped, wait for the person; do not resend.
 Your own successful turns are not reported. Run rewake list to see who is in this room.
 Run rewake guide for the complete rules.`, c.Name, c.Room, c.Reason)
 	case "write":

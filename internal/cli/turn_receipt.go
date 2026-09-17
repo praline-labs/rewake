@@ -13,11 +13,12 @@ import (
 )
 
 type turnReceipt struct {
-	ID       string
-	Done     bool
-	Prepared bool
-	Waiters  []inbox.Waiter
-	Reports  []inbox.Message
+	ID          string
+	Done        bool
+	Prepared    bool
+	KeepWaiters bool
+	Waiters     []inbox.Waiter
+	Reports     []inbox.Message
 }
 
 func loadTurnReceipt(dir string, self registry.Session, event turnResult) (turnReceipt, string, error) {

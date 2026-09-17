@@ -41,7 +41,8 @@ type Request struct {
 	Intro    bool
 	Greeting bool
 	// Role is explicit when its ID is set; empty chooses a role for the room.
-	Role role.Role
+	Role   role.Role
+	OnTurn func(registry.Session, harness.Completion) error
 }
 
 // Run starts the harness, serves its mailbox until it exits, and returns the

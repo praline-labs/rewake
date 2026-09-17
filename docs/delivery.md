@@ -291,3 +291,14 @@ the queued path. A waiting question consumes the error and exits 1.
 
 Failure observation depends on the harness providing a callback. The current
 legacy notify schema cannot expose every failure; see the research boundary.
+
+### Keyboard stops
+
+A stopped outcome is advisory and hook-only. It goes to the current waiters,
+otherwise to main, using the text "the person at the keyboard stopped this turn".
+It owes no reply and has its own report id, separate from the eventual result.
+Its turn receipt keeps the original waits intact. Human continuation can then
+publish finished with the same inReplyTo and settle those waits. Main waits for
+the person instead of resending. A waiting question prints stopped and exits 1;
+the later result remains an ordinary inbox report. Socket notices use killed
+status; queued-text notices use a yellow circle.

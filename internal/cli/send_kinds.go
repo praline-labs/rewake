@@ -37,7 +37,7 @@ type sent struct {
 }
 
 // sendKinds lists every kind send can write, the default first.
-var sendKinds = []messageKind{taskKind, questionKind, noteKind, errorKind}
+var sendKinds = []messageKind{taskKind, questionKind, noteKind, errorKind, stoppedKind}
 
 // chosenKind reads the kind from the flags: at most one may be given.
 func chosenKind(call Call) (messageKind, error) {

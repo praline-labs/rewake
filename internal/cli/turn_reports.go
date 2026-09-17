@@ -24,6 +24,7 @@ func publishTurn(dir string, self registry.Session, event turnResult, currentThr
 				return err
 			}
 			receipt.Prepared = true
+			receipt.KeepWaiters = event.Stopped
 			if err := saveTurnReceipt(path, receipt); err != nil {
 				return err
 			}
@@ -51,6 +52,9 @@ func publishTurn(dir string, self registry.Session, event turnResult, currentThr
 			return err
 		}
 	}
+	if receipt.KeepWaiters {
+		return nil
+	}
 	for _, waiter := range receipt.Waiters {
 		inbox.ClearAwaiting(dir, self.Name, self.Epoch(), waiter)
 	}
@@ -58,18 +62,20 @@ func publishTurn(dir string, self registry.Session, event turnResult, currentThr
 }
 
 func prepareTurnReports(dir string, self registry.Session, event turnResult, currentThread string, waiters []inbox.Waiter, fallbackID string) ([]inbox.Message, []inbox.Waiter, error) {
-	if !event.Failed && strings.TrimSpace(event.Text) == "" {
+	if !event.Failed && !event.Stopped && strings.TrimSpace(event.Text) == "" {
 		if len(waiters) == 0 {
 			return nil, nil, nil
 		}
 		event.Failed = true
 		event.Text = ""
 	}
-	if !event.Failed && (role.Of(self.Role).Silent || len(waiters) == 0) {
+	if !event.Failed && !event.Stopped && (role.Of(self.Role).Silent || len(waiters) == 0) {
 		return nil, nil, nil
 	}
 	kind := inbox.Finished
-	if event.Failed {
+	if event.Stopped {
+		kind = inbox.Stopped
+	} else if event.Failed {
 		kind = errorKind.kind
 	}
 	var reports []inbox.Message
@@ -81,9 +87,13 @@ func prepareTurnReports(dir string, self registry.Session, event turnResult, cur
 		if err != nil || peer.Epoch() != waiter.Epoch {
 			continue
 		}
-		reports = append(reports, inbox.Message{ID: inbox.ReportID(self.Name, self.Epoch(), waiter), From: self.Name, FromEpoch: self.Epoch(), To: peer.Name, ToEpoch: peer.Epoch(), Kind: kind, Text: event.Text, InReplyTo: waiter.Messages, CreatedAt: time.Now(), ThreadChanged: inbox.ReportThreadChanged(dir, self.Name, waiter.Messages, currentThread)})
+		id := inbox.ReportID(self.Name, self.Epoch(), waiter)
+		if event.Stopped {
+			id += "-stopped-" + fallbackID
+		}
+		reports = append(reports, inbox.Message{ID: id, From: self.Name, FromEpoch: self.Epoch(), To: peer.Name, ToEpoch: peer.Epoch(), Kind: kind, Text: event.Text, InReplyTo: waiter.Messages, CreatedAt: time.Now(), ThreadChanged: inbox.ReportThreadChanged(dir, self.Name, waiter.Messages, currentThread)})
 	}
-	if event.Failed && len(reports) == 0 {
+	if (event.Failed || event.Stopped) && len(reports) == 0 {
 		target := self
 		if role.Of(self.Role).ID != role.Main.ID {
 			sessions, err := registry.List(dir)
