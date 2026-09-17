@@ -347,7 +347,7 @@ refused. Concurrent wrappers elect exactly one main. Checks use isolated state
 and a fake harness, plus regression and mutation tests.
 
 
-## Review round twelve — in progress, September 17, 2026
+## Review round twelve — done, September 17, 2026
 
 Nested-agent completions no longer settle parent tasks: agent_id filters both
 success and failure before any mailbox state changes. A root agent_type still
@@ -363,3 +363,12 @@ Tests check its position after variadic options, not only its presence in argv.
 Bootstrap ready now persists its identified completion before removing the
 greeting marker. Both a replay and a retry after a receipt write failure leave
 early work owed until its real result.
+
+Preview coverage now measures CJK terminal columns independently of the production
+width estimator. A mutation treating wide glyphs as narrow fails at 102 columns.
+
+Validation: all five repository checks, callback regressions, targeted mutations,
+and isolated fake-process delivery pass. The external Commander parser confirms
+that both a fresh launch and an existing -- keep the greeting positional.
+Failed-turn observation still depends on the harness emitting a callback; the
+previous legacy-notify limitation remains unchanged. No real harness was run.
