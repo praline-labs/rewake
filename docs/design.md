@@ -167,9 +167,10 @@ already granted; worker receives no extra Git access from rewake.
 
 The main session exists to stop a loop: it reads the reports of its workers,
 and if its own turns were reported to them, each report would wake the other
-side for good. So a silent role gets no end-of-turn hook at launch (no Stop
-hook, no `notify`), records no waits when it reads, and `turn-ended` does
-nothing for it. Old records with role `worker` are read as `general`; only --general creates
+side for good. A silent role records no waits and emits no successful turn reports. Failure
+observation remains installed: StopFailure for the socket harness and notify
+for the queued harness. An error from main stays in its own unread mailbox
+without waking the same failing conversation. Old records with role `worker` are read as `general`; only --general creates
 new reporting sessions without Git access. The zero role value remains a reporting fallback inside the
 catalogue; an omitted launch role is resolved separately under the room lock.
 The write role reports like a worker; main stays silent whether its Git grant

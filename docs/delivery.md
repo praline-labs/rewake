@@ -44,7 +44,8 @@ refusals and help come from there.
 | `task` | plain `send` | a report at the end of its turn | once delivered |
 | `question` | `--question` | the same | with the answer, up to `--wait` (600 s by default) |
 | `notify` | `--notify` | nothing | once delivered |
-| `finished` | the end of a turn | nothing | — |
+| `finished` | successful turn end | nothing | — |
+| `error` | failed turn hook only | nothing | failure, exit 1 for a waiting question |
 
 The rule for agents, stated in the intro and the guide: a task or a question is
 answered by ending the turn with the result as the final message, and stopping.
@@ -218,7 +219,7 @@ runs while its own session is still awake anyway.
 
 Two rules keep this from turning into a loop:
 
-- reading a `finished` notice or a `notify` asks for nothing back;
+- reading finished, error or notify asks for nothing back;
 - each waiting run is told once; a new run of the name starts with no waiters.
 
 So an exchange ends: A writes to B; B reads, answers, ends its turn and reports
@@ -256,3 +257,20 @@ the reader's thread changed after delivery; the report may not answer it, resend
 A waiting `send --question` also prints the warning and preserves the boolean in
 its JSON result. The caller decides whether to resend. Existing idempotent
 report publication still applies.
+
+### Failed turns
+
+The hidden hook emits error with the harness reason unchanged. Received empty
+completion after read work produces an error with empty text. Successful turns
+still produce finished. Error is in the kind catalog but has no send flag;
+`send --error` is refused. It creates no reply obligation.
+
+Errors go to all live waiters for this run; with none, they go to the room's
+main. A failing main, or a room with no main, retains the error in the failing
+session's own unread mailbox without announcing it to itself. Identified turns
+are idempotent; callbacks without turn ids are separate invocations. Delivery
+uses failed task-notification status on the socket path and a red circle on
+the queued path. A waiting question consumes the error and exits 1.
+
+Failure observation depends on the harness providing a callback. The current
+legacy notify schema cannot expose every failure; see the research boundary.

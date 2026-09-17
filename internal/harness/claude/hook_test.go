@@ -43,8 +43,8 @@ func TestTurnHookIsLayeredForOneLaunch(t *testing.T) {
 	if out, err := shell.CombinedOutput(); err != nil {
 		t.Errorf("the hook command does not name an executable followed by turn-ended: %v %s", err, out)
 	}
-	if len(layer.Hooks) != 1 {
-		t.Errorf("hooks = %v, want only Stop: the layer must not add anything else", layer.Hooks)
+	if len(layer.Hooks) != 2 || len(layer.Hooks["StopFailure"]) != 1 {
+		t.Errorf("hooks = %v, want Stop and StopFailure", layer.Hooks)
 	}
 }
 
@@ -68,13 +68,23 @@ func TestCallerSettingsAreNotReplaced(t *testing.T) {
 
 // The main session's turns are reported to nobody, so it gets no hook, and its
 // briefing says what it is.
-func TestTheMainSessionGetsNoTurnHook(t *testing.T) {
+func TestMainObservesOnlyFailedTurns(t *testing.T) {
 	plan, err := New().Launch(harness.LaunchRequest{Name: "lead", Dir: t.TempDir(), Intro: true, Role: role.Main})
 	if err != nil {
 		t.Fatalf("Launch: %v", err)
 	}
-	if indexOf(plan.Args, settingsFlag) >= 0 {
-		t.Errorf("args = %v, want no settings layer for the main session", plan.Args)
+	pos := indexOf(plan.Args, settingsFlag)
+	if pos < 0 {
+		t.Fatal("main has no failure hook")
+	}
+	var settings struct {
+		Hooks map[string]json.RawMessage `json:"hooks"`
+	}
+	if err := json.Unmarshal([]byte(plan.Args[pos+1]), &settings); err != nil {
+		t.Fatal(err)
+	}
+	if len(settings.Hooks) != 1 || settings.Hooks["StopFailure"] == nil {
+		t.Fatalf("unexpected main hooks: %s", plan.Args[pos+1])
 	}
 	at := indexOf(plan.Args, introFlag)
 	if at < 0 || !strings.Contains(plan.Args[at+1], "main session") {

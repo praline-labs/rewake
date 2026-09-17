@@ -66,7 +66,7 @@ func TestOnlyCommittingRolesReceiveGitWrites(t *testing.T) {
 				assertGitGrant(t, plan, repo)
 			}
 			_, notify := configValue(plan.Args, notifyKey)
-			if notify == part.Silent {
+			if !notify {
 				t.Errorf("role=%s notify=%v", part.ID, notify)
 			}
 			if part.ID == "write" {

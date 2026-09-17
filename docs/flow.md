@@ -67,7 +67,7 @@ sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
    - Codex: `-c developer_instructions=<intro>` and
      `-c notify=["rewake","turn-ended"]` — each only when `config.toml` does not
      mention the key at all, because these keys replace rather than add. A
-     silent role gets no `notify`. Main and write also append `--add-dir` for
+     silent role still observes failure callbacks but emits no successful reports. Main and write also append `--add-dir` for
      the repository's Git metadata. `-C`/`--cd` chooses the effective cwd; the
      nearest parent `.git` identifies the repository. Its pointer and
      `commondir` resolve worktree/submodule metadata; structural Git markers are
@@ -161,13 +161,13 @@ The notice wakes the agent, which runs `rewake inbox` in its shell.
 
 ## Act 5. The turn ends and the report goes back
 
-The harness itself says when a turn is over: Claude Code through the Stop hook,
+The harness itself says when a turn is over: Claude Code through Stop or StopFailure,
 Codex through `notify`. Both run `rewake turn-ended` with the last reply of the
 turn in the payload.
 
 1. **Who is owed.** Under the lock, `turn-ended` reads
-   `awaiting/<own epoch>/`. A silent role has none and the hook was never
-   installed; the command then does nothing.
+   `awaiting/<own epoch>/`. A silent role emits no successful reports;
+   failure callbacks still route errors.
 2. **The report.** For each waiting run, a `finished` message into that
    sender's mailbox: text is the final reply, `inReplyTo` lists the messages
    read from that run since the last report, `toEpoch` is that run — not
@@ -178,7 +178,7 @@ turn in the payload.
 4. **The sender is woken** by its own wrapper, through Act 3, with
    `Rewake: write finished, 1 new message(s)`. The sender reads it with
    `rewake inbox`; a `finished` asks for nothing back, so the exchange ends
-   here. The main session, being silent, never reports its own turns, which is
+   here. The main session never reports successful turns, which is
    what keeps two sessions from waking each other forever.
 
 ## Act 6. A question, when the sender wants to block
@@ -267,3 +267,10 @@ report. Inbox prints a warning beneath the result; a waiting question preserves
 it too. No message is automatically resent and no wait is discarded because of
 the change. Missing context cannot prove a change; harnesses without thread
 tracking omit the field.
+
+A failed turn uses error instead of finished and preserves the harness reason.
+All live waiters receive it; with none, the room's main receives it. Main's own
+error stays in its inbox without a self-notice. Reading error owes no reply.
+Empty received completion after read work is a textless error. A waiting
+question returns the failure directly. Callback availability is a harness
+boundary; rewake never infers a cause from missing callbacks or reads rollouts.

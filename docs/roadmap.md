@@ -384,3 +384,8 @@ split into plans, flags, environment, hooks and notices.
 The reporting role is now general (--general). Legacy worker records normalize
 to general. General, write and main have independent short system briefings
 with reviewed snapshots instead of a shared paragraph plus suffixes.
+
+Failed turns now use hook-only error reports, with fallback to the room's main
+and local retention for main's own failure. Explicit reasons stay unchanged;
+empty received completions after work are textless errors. The legacy notify
+failure-observation gap is documented, without reading transcripts.

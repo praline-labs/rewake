@@ -12,7 +12,8 @@ import (
 // its own and is listed in sendKinds; the flags, the refusal and the help come
 // from here.
 type messageKind struct {
-	kind inbox.Kind
+	kind    inbox.Kind
+	summary string
 	// flag selects the kind. The default kind has none.
 	flag Option
 	// wait is how long send waits when --wait is not given.
@@ -36,7 +37,7 @@ type sent struct {
 }
 
 // sendKinds lists every kind send can write, the default first.
-var sendKinds = []messageKind{taskKind, questionKind, noteKind}
+var sendKinds = []messageKind{taskKind, questionKind, noteKind, errorKind}
 
 // chosenKind reads the kind from the flags: at most one may be given.
 func chosenKind(call Call) (messageKind, error) {
@@ -66,4 +67,12 @@ func kindOptions() []Option {
 		}
 	}
 	return options
+}
+
+func kindSummary() string {
+	var descriptions []string
+	for _, kind := range sendKinds {
+		descriptions = append(descriptions, string(kind.kind)+": "+kind.summary)
+	}
+	return strings.Join(descriptions, " ") + " finished: a successful final report, owing no reply. Answer tasks and questions by ending the turn with a final result, not by rewake send. Do not answer notify, finished or error messages."
 }

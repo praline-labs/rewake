@@ -117,14 +117,12 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 	}
 	var notes []string
 	switch {
-	case request.Role.Silent:
-		// A role whose turns are reported to nobody gets no hook at all.
 	case harness.HasFlag(args, settingsFlag):
 		// Only one --settings is read, and replacing the caller's would drop
 		// whatever they layered on purpose.
 		notes = append(notes, "not reporting the end of turns to the sessions that wrote here: --settings is already given, and a second one would replace it")
 	default:
-		if hooks, err := turnHookSettings(); err == nil {
+		if hooks, err := turnHookSettings(request.Role.Silent); err == nil {
 			args = harness.AddFlags(args, settingsFlag, hooks)
 		} else {
 			notes = append(notes, "not reporting the end of turns: "+err.Error())
@@ -147,7 +145,7 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 // turnHookSettings is the settings layer that reports the end of every turn.
 // The Stop hook runs while the session is still awake, so it only records the
 // event; waking the sessions that wait for it is their own wrappers' job.
-func turnHookSettings() (string, error) {
+func turnHookSettings(silent bool) (string, error) {
 	command, err := harness.TurnEndedCommand()
 	if err != nil {
 		return "", err
@@ -160,11 +158,11 @@ func turnHookSettings() (string, error) {
 	type matcher struct {
 		Hooks []hook `json:"hooks"`
 	}
-	encoded, err := json.Marshal(map[string]any{
-		"hooks": map[string][]matcher{
-			"Stop": {{Hooks: []hook{{Kind: "command", Command: command, Timeout: 10}}}},
-		},
-	})
+	hooks := map[string][]matcher{"StopFailure": {{Hooks: []hook{{Kind: "command", Command: command, Timeout: 10}}}}}
+	if !silent {
+		hooks["Stop"] = []matcher{{Hooks: []hook{{Kind: "command", Command: command, Timeout: 10}}}}
+	}
+	encoded, err := json.Marshal(map[string]any{"hooks": hooks})
 	return string(encoded), err
 }
 

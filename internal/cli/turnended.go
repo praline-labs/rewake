@@ -2,17 +2,12 @@ package cli
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"io"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/harness"
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
-	"github.com/iiiokojiadbi/rewake/internal/registry"
-	"github.com/iiiokojiadbi/rewake/internal/role"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
@@ -24,9 +19,6 @@ const maxPayload = 4 << 20
 // at once and the pipe closed; one that stays open with nothing on it would
 // otherwise hold the end of the turn for as long as the harness allows.
 const payloadWait = 3 * time.Second
-
-// silentEnd is the text of a finished notice when the turn ended without a reply.
-const silentEnd = "(the turn ended without a final message)"
 
 // handleTurnEnded is called by a harness at the end of every turn of its
 // session. It tells each session run whose message was read during that turn
@@ -41,10 +33,9 @@ func handleTurnEnded(_ *Context, call Call) error {
 	if err != nil {
 		return nil
 	}
-	self, epoch, err := ownRun(dir)
-	if err != nil || role.Of(self.Role).Silent {
-		// A role that reports nothing — the main session — gets no hook at
-		// launch, but a caller's own hook may still call this.
+	self, _, err := ownRun(dir)
+	if err != nil {
+		// A stale hook cannot report for a newer run of the same name.
 		return nil
 	}
 
@@ -56,14 +47,10 @@ func handleTurnEnded(_ *Context, call Call) error {
 		// A Claude Code hook gets it on stdin.
 		payload = readPayload(os.Stdin)
 	}
-	reply, ok := lastReply(payload)
+	event, ok := completedTurn(payload)
 	if !ok {
 		return nil
 	}
-	if strings.TrimSpace(reply) == "" {
-		reply = silentEnd
-	}
-
 	currentThread, _ := harness.SessionThread(self)
 
 	// Under the mailbox lock, so two ends of a turn reported at once tell each
@@ -72,38 +59,9 @@ func handleTurnEnded(_ *Context, call Call) error {
 	ctx, cancel := context.WithTimeout(context.Background(), hookLockWait)
 	defer cancel()
 	_ = state.WithMailboxLock(ctx, dir, self.Name, func() error {
-		waiters := inbox.Waiters(dir, self.Name, epoch)
+		waiters := inbox.Waiters(dir, self.Name, self.Epoch())
 		beforeReports()
-		for _, waiter := range waiters {
-			peer, err := registry.Lookup(dir, waiter.Name)
-			if err != nil || peer.Epoch() != waiter.Epoch {
-				// The run that wrote has ended, whether or not its name lives
-				// on: nobody is left to tell.
-				if err == nil || errors.Is(err, registry.ErrNotFound) {
-					inbox.ClearAwaiting(dir, self.Name, epoch, waiter)
-				}
-				continue
-			}
-			// The id is the wait's own, so a report already written for it —
-			// its waiter could not be removed, or this hook died before that —
-			// is not written a second time.
-			err = inbox.PutOnce(dir, inbox.Message{
-				ID:            inbox.ReportID(self.Name, epoch, waiter),
-				From:          self.Name,
-				FromEpoch:     epoch,
-				To:            peer.Name,
-				ToEpoch:       waiter.Epoch,
-				Kind:          inbox.Finished,
-				InReplyTo:     waiter.Messages,
-				ThreadChanged: inbox.ReportThreadChanged(dir, self.Name, waiter.Messages, currentThread),
-				Text:          reply,
-				CreatedAt:     time.Now(),
-			})
-			if err == nil {
-				inbox.ClearAwaiting(dir, self.Name, epoch, waiter)
-			}
-		}
-		return nil
+		return publishTurn(dir, self, event, currentThread, waiters)
 	})
 	return nil
 }
@@ -132,25 +90,6 @@ func readPayload(input *os.File) []byte {
 	case <-time.After(payloadWait):
 		return nil
 	}
-}
-
-// lastReply reads the last reply of the turn from a hook payload. The two
-// harnesses name the field differently, and Codex also calls its program for
-// events that are not the end of a turn.
-func lastReply(payload []byte) (string, bool) {
-	var fields map[string]any
-	if err := json.Unmarshal(payload, &fields); err != nil {
-		return "", false
-	}
-	if event, present := fields["type"]; present && event != "agent-turn-complete" {
-		return "", false
-	}
-	for _, key := range []string{"last_assistant_message", "last-assistant-message"} {
-		if text, ok := fields[key].(string); ok {
-			return text, true
-		}
-	}
-	return "", true
 }
 
 // isTerminal reports whether a file is a character device, which is what an

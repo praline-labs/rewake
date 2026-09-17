@@ -50,7 +50,7 @@ List and identity commands use the inherited room and accept no `--room` flag.
 - Add `--messaging-socket-path <root>/rooms/<room>/sock/<name>.<epoch>.sock` unless the user passed
   their own; before launch, remove a stale socket file at the same path.
 - Add `--append-system-prompt <intro>` (turned off by `--no-intro`).
-- Add `--settings` with a Stop hook that runs `rewake turn-ended` (see "The end
+- Add `--settings` with Stop and StopFailure hooks that run `rewake turn-ended` (see "The end
   of a turn"). Claude Code merges settings layers, so the hook runs next to the
   user's own. If the caller passed `--settings`, nothing is added — only one is
   read — and rewake says on stderr that turns will not be reported.
@@ -104,7 +104,9 @@ List and identity commands use the inherited room and accept no `--room` flag.
 - When `/tmp` may be excluded, rewake still says which directory to add to the
   writable paths if messages cannot be sent. Granting Git access does not grant
   the message directory or override a user's temporary-directory exclusions.
-- End of a turn: `-c notify=["<rewake>","turn-ended"]`. Codex runs that program
+- End of a turn: `-c notify=["<rewake>","turn-ended"]`, including main so
+  supplied failures remain observable. Successful main turns are filtered out.
+  Codex runs that program
   after every turn, outside the sandbox and without the trust a Stop hook needs.
   The key replaces the user's program, so it is passed only when neither the
   command line nor `config.toml` mentions `notify` at all; otherwise rewake says

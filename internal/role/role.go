@@ -15,7 +15,7 @@ type Role struct {
 	ID string
 	// Summary is the help line of the launch flag.
 	Summary string
-	// Silent says the end of this session's turns is reported to nobody. It
+	// Silent says successful turns are reported to nobody. Failures stay visible. It
 	// is the exception, so the zero value is a session that reports: a caller
 	// that forgets the role must not switch reports off.
 	Silent bool
@@ -34,7 +34,7 @@ var General = Role{
 // nobody: reporting back to the sessions that reported to it would never end.
 var Main = Role{
 	ID:       "main",
-	Summary:  "The session that hands out work: it gets reports, reports no turns, and requests permission to commit in the working repository.",
+	Summary:  "The session that hands out work: it gets reports, reports no successful turns, and requests permission to commit in the working repository.",
 	Silent:   true,
 	GitWrite: true,
 }

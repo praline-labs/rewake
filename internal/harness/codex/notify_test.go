@@ -66,13 +66,13 @@ func TestTurnNotifyLeavesTheCallersValue(t *testing.T) {
 	}
 }
 
-func TestTheMainSessionGetsNoNotify(t *testing.T) {
+func TestMainKeepsTheHookForFailureObservation(t *testing.T) {
 	codexHome(t, "")
 	plan, err := New().Launch(harness.LaunchRequest{Name: "lead", Dir: t.TempDir(), Role: role.Main})
 	if err != nil {
 		t.Fatalf("Launch: %v", err)
 	}
-	if _, ok := configValue(plan.Args, notifyKey); ok {
-		t.Errorf("args = %v, want no notify for the main session", plan.Args)
+	if _, ok := configValue(plan.Args, notifyKey); !ok {
+		t.Errorf("args = %v, want failures observed for main", plan.Args)
 	}
 }

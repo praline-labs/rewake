@@ -70,3 +70,10 @@ func classify(output string, err error) inbox.Result {
 		return inbox.Result{State: inbox.Failed, Detail: "codex queue failed: " + err.Error()}
 	}
 }
+
+func noticePrefix(message inbox.Message) string {
+	if inbox.KindOf(message) == inbox.Error {
+		return "🔴"
+	}
+	return noticeMark
+}

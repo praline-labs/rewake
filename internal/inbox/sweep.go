@@ -23,7 +23,7 @@ func (s *Server) sweepFinishedLocked() {
 	// Unread mail goes by age too: a notice nobody acted on for a day describes
 	// a conversation that has moved on, and the mailbox of a name reused for
 	// weeks would otherwise keep every one of them.
-	finished := []string{state.DonePath(s.Dir, s.Name), state.UnreadPath(s.Dir, s.Name), answerReceiptsPath(s.Dir, s.Name), state.AnsweringPath(s.Dir, s.Name), threadPath(s.Dir, s.Name), retentionPath(s.Dir, s.Name)}
+	finished := []string{state.DonePath(s.Dir, s.Name), state.UnreadPath(s.Dir, s.Name), answerReceiptsPath(s.Dir, s.Name), state.AnsweringPath(s.Dir, s.Name), threadPath(s.Dir, s.Name), retentionPath(s.Dir, s.Name), filepath.Join(state.InboxPath(s.Dir, s.Name), "turns")}
 	for _, directory := range append(finished, state.InboxPath(s.Dir, s.Name)) {
 		entries, err := os.ReadDir(directory)
 		if err != nil {

@@ -30,8 +30,9 @@ type sendModel struct {
 	Via    string `json:"via,omitempty"`
 	Detail string `json:"detail,omitempty"`
 	// Answer is the receiver's last reply, for a question that got one.
-	Answer        string `json:"answer,omitempty"`
-	ThreadChanged bool   `json:"threadChanged,omitempty"`
+	Answer        string     `json:"answer,omitempty"`
+	Kind          inbox.Kind `json:"kind,omitempty"`
+	ThreadChanged bool       `json:"threadChanged,omitempty"`
 }
 
 func handleSend(ctx *Context, call Call) error {

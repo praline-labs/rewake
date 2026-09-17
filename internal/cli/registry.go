@@ -207,8 +207,8 @@ func notes() []Note {
 			Body:  "It shows up as one line: \"Rewake: <session> <kind>, <n> new message(s)\", with a 🟢 in front where the harness shows it as plain text. The text is never in that line: run rewake inbox to read it.",
 		},
 		{
-			Title: "Four kinds, one rule for answering",
-			Body:  "task: work to do. question: the same, with the sender waiting for it. notify: a heads-up that needs no answer. finished: a session's final message after work you gave it. Answer a task or a question by ending your turn with the result as your final message and stopping — rewake delivers that message to the sender. Do not answer with rewake send; do not answer a notify at all.",
+			Title: "Kinds and replies",
+			Body:  kindSummary(),
 		},
 		{
 			Title: "Rooms isolate conversations",

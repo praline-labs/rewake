@@ -101,8 +101,8 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 		notes = append(notes, note)
 	}
 
-	if !request.Role.Silent {
-		// A role whose turns are reported to nobody gets no notify.
+	{
+		// Silent roles still need failures reported; successful turns are filtered by the hook.
 		if notify, note := turnNotify(home, args, layered); note != "" {
 			notes = append(notes, note)
 		} else {
@@ -137,7 +137,7 @@ func (codexHarness) Deliver(ctx context.Context, session registry.Session, messa
 	callCtx, cancel := context.WithTimeout(ctx, queueTimeout)
 	defer cancel()
 
-	output, err := queue(callCtx, home, thread, noticeMark+" "+harness.Notice(message))
+	output, err := queue(callCtx, home, thread, noticePrefix(message)+" "+harness.Notice(message))
 	if err != nil {
 		return classify(output, err)
 	}

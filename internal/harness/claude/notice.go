@@ -16,13 +16,14 @@ import (
 // Only the summary and the status are shown, and nothing else goes in: the
 // person watching the session should see exactly what the agent is told.
 func notification(message inbox.Message) string {
+	status := "completed"
+	if inbox.KindOf(message) == inbox.Error {
+		status = "failed"
+	}
 	return strings.Join([]string{
 		"<task-notification>",
 		fmt.Sprintf("<task-id>%s</task-id>", harness.NoticeID(message)),
-		// Completed is the status the interface draws green, and it is true: the
-		// delivery is done. The kind is named in the summary already, and any
-		// other value draws the circle in the plain text color.
-		"<status>completed</status>",
+		"<status>" + status + "</status>",
 		fmt.Sprintf("<summary>%s</summary>", escape(harness.Notice(message))),
 		"</task-notification>",
 	}, "\n")

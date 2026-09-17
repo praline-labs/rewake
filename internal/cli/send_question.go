@@ -12,6 +12,7 @@ import (
 // ends its turn and prints its final message.
 var questionKind = messageKind{
 	kind:         inbox.Question,
+	summary:      "work whose sender waits for the outcome.",
 	flag:         Option{Flag: "--question", Summary: "Wait for the answer: block until the session ends its turn, and print its final message."},
 	wait:         defaultQuestionWait,
 	needsSession: "A question needs a rewake session to receive its answer, and this shell is not one; send it as a task instead, without --question",
@@ -35,8 +36,16 @@ func answerQuestion(ctx *Context, question sent) error {
 	_, found, err := inbox.AwaitAnswer(wait, question.dir, question.self.Name, question.epoch, model.ID, func(answer inbox.Message) error {
 		model.State, model.Answer = string(inbox.Read), answer.Text
 		model.ThreadChanged = answer.ThreadChanged
+		model.Kind = inbox.KindOf(answer)
+		if model.Kind == inbox.Error {
+			model.State = string(inbox.Failed)
+		}
 		return printValue(ctx, model, func() []string {
-			lines := []string{fmt.Sprintf("answer from %s:", target.Name), answer.Text}
+			heading := "answer"
+			if model.Kind == inbox.Error {
+				heading = "error"
+			}
+			lines := []string{fmt.Sprintf("%s from %s:", heading, target.Name), answer.Text}
 			if answer.ThreadChanged {
 				lines = append(lines, inbox.ThreadChangedWarning)
 			}
@@ -57,5 +66,8 @@ func answerQuestion(ctx *Context, question sent) error {
 		return &PendingError{Message: line}
 	}
 
+	if model.Kind == inbox.Error {
+		return &ExitCodeError{Code: ExitFailed}
+	}
 	return nil
 }

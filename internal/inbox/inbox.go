@@ -72,6 +72,8 @@ const (
 	// Finished tells the receiver that a session it wrote to has ended its turn.
 	// The text is that session's last reply.
 	Finished Kind = "finished"
+	// Error reports a failed turn and never owes another report.
+	Error Kind = "error"
 )
 
 // KindOf returns the kind of a message, reading a missing one as a task: mail
@@ -88,7 +90,7 @@ func KindOf(message Message) Kind {
 // already: waiting on one would have two sessions report to each other forever.
 func Owed(message Message) bool {
 	switch KindOf(message) {
-	case Note, Finished:
+	case Note, Finished, Error:
 		return false
 	}
 	return message.FromEpoch != ""
@@ -244,3 +246,6 @@ func archive(dir, to, id string) error {
 	}
 	return err
 }
+
+// IsReport includes successful and failed turn outcomes.
+func IsReport(message Message) bool { return KindOf(message) == Finished || KindOf(message) == Error }

@@ -6,6 +6,7 @@ import "github.com/iiiokojiadbi/rewake/internal/inbox"
 // session is told; the session's final message comes back later as a
 // "Rewake: <session> finished" line.
 var taskKind = messageKind{
-	kind: inbox.Task,
-	wait: defaultWait,
+	kind:    inbox.Task,
+	summary: "work to do, with a report when the turn ends.",
+	wait:    defaultWait,
 }
