@@ -21,7 +21,8 @@ import (
 // fakeHarness runs a shell command instead of an agent, and records what it was
 // asked to deliver. The wrapper is what is under test here, not a harness.
 type fakeHarness struct {
-	script string
+	script      string
+	launchDelay time.Duration
 	// socket makes the launch claim the socket path it is given, as Claude
 	// Code's does.
 	socket bool
@@ -38,6 +39,7 @@ func (f *fakeHarness) Examples() []string { return []string{"rewake fake"} }
 func (f *fakeHarness) Notes() []string    { return nil }
 
 func (f *fakeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, error) {
+	time.Sleep(f.launchDelay)
 	plan := harness.LaunchPlan{
 		Command: "/bin/sh",
 		Args:    []string{"-c", f.script},
@@ -113,13 +115,13 @@ func TestSignalledHarnessReportsShellStyleCode(t *testing.T) {
 
 func TestSessionIsPublishedWhileRunningAndRemovedAfter(t *testing.T) {
 	dir := stateDir(t)
-	fake := &fakeHarness{script: "sleep 2"}
+	fake := &fakeHarness{script: "sleep 2", launchDelay: 100 * time.Millisecond}
 
 	seen := make(chan registry.Session, 1)
 	go func() {
 		deadline := time.Now().Add(3 * time.Second)
 		for time.Now().Before(deadline) {
-			if session, err := registry.Lookup(dir, "api"); err == nil {
+			if session, err := registry.Lookup(dir, "api"); err == nil && session.HarnessPID != 0 {
 				seen <- session
 				return
 			}

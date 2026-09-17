@@ -113,11 +113,11 @@ adapter with the notice, write the status (`.status.tmp`, then rename).
 `delivered` removes the waiting copy, leaving the one in `unread/`; `failed`
 removes the `unread/` copy and archives the message in `done/`; `pending`
 stays and is retried every 2 seconds. Undelivered tasks and notifications older
-than `--ttl` (30 minutes by default) get `failed: expired`. A fresh reservation
-protects its answer; a report already linked into `unread/` has been accepted
-and does not expire when its reservation ends. Its queued readable copy is protected
-from age-based sweeping, including across server restarts; ordinary retention
-starts again when it becomes available for notification.
+than `--ttl` (30 minutes by default) get `failed: expired`. Only an answer accepted under a fresh reservation receives a new delivery
+window. `retention/<report id>` records that reservation and, on release, fixes
+one deadline origin. Retries never extend it; ordinary reports keep their
+original TTL. This state survives server restarts. Receipts remain while any
+queued, unread or archived report still refers to their questions.
 
 Status: `{"state":"delivered|read|pending|failed","via":"socket|codex queue","detail":"...","at":"..."}`.
 

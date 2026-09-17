@@ -288,3 +288,23 @@ Regression tests reproduce all six failures. Each has a failing mutation check;
 answer matching also rejects a report for a different question, and the report
 identity test compares the exact original id. Shared replies with abandoned
 consumers and renewal during delivery are covered separately.
+
+## Review round ten — done, September 16, 2026
+
+- **Git pointers granted ordinary directories (1).** Gitdir must have HEAD;
+  shared metadata must also have objects and refs. Invalid pointers grant nothing.
+- **Room names collided with old state (2).** Rooms now live under `rooms/`;
+  registry readers preserve JSON that has no session process identity.
+- **Nested checkout directories missed Git metadata (3).** Discovery walks up
+  to the nearest .git, validates it, and never falls back past an invalid one.
+- **Released old answers expired without a notice (4).** Accepted reports
+  survive their reservation, restarts and queued-mail sweeping.
+- **The pointer size test passed without a bound (5).** A short valid path with
+  oversized newline padding now distinguishes bounded from unbounded reading.
+- **Owner decision (6): mark reports after a thread change.** Delivery context
+  is recorded before readability. A known mismatch at turn end adds
+  threadChanged and a visible warning. No automatic reset or resend is performed.
+
+Each regression has a failing mutation check. Structural Git checks are compared
+with real repositories, worktrees and submodules; delivery is exercised with
+isolated state and fake harnesses.
