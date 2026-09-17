@@ -117,6 +117,8 @@ const (
 // Result is what a delivery attempt says about itself.
 type Result struct {
 	State State
+	// ReportAvailable preserves an accepted report when only its notice failed.
+	ReportAvailable bool
 	// Via names the path used, such as "socket" or "codex queue".
 	Via string
 	// Detail explains a pending or failed result in one sentence.
@@ -125,10 +127,11 @@ type Result struct {
 
 // Status is the Result as the sender reads it back.
 type Status struct {
-	State  State     `json:"state"`
-	Via    string    `json:"via,omitempty"`
-	Detail string    `json:"detail,omitempty"`
-	At     time.Time `json:"at"`
+	ReportAvailable bool      `json:"reportAvailable,omitempty"`
+	State           State     `json:"state"`
+	Via             string    `json:"via,omitempty"`
+	Detail          string    `json:"detail,omitempty"`
+	At              time.Time `json:"at"`
 }
 
 // NewID returns an identifier that sorts by time and never repeats. The time
@@ -224,7 +227,7 @@ func Await(dir, to, id string, timeout time.Duration) (Status, bool) {
 
 // writeStatus records what happened to a message.
 func writeStatus(dir, to, id string, result Result) error {
-	status := Status{State: result.State, Via: result.Via, Detail: result.Detail, At: time.Now()}
+	status := Status{State: result.State, Via: result.Via, Detail: result.Detail, ReportAvailable: result.ReportAvailable, At: time.Now()}
 	encoded, err := json.MarshalIndent(status, "", "  ")
 	if err != nil {
 		return err

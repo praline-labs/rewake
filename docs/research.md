@@ -396,4 +396,4 @@ set, an empty string is an invalid ThreadId, not the first page. Only a returned
 nextCursor belongs in the next request (`thread_processor.rs:2732–2777`).
 
 Fresh-thread subscription ordering and the short-turn race are documented in
-[server event observation](server-observation.md), against the same snapshot.
+[server event observation](server-observation.md) and [ownership investigation](thread-ownership-investigation.md), against the same snapshot.

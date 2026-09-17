@@ -71,11 +71,7 @@ func (s *serverSession) event(method string, raw json.RawMessage) {
 			s.dirty = false
 			s.discoveryErr = nil
 			delete(s.ignored, params.Thread.ID)
-			if s.current != params.Thread.ID {
-				s.messages = make(map[string]string)
-				s.resetObservation()
-			}
-			s.current = params.Thread.ID
+			s.selectRoot(params.Thread.ID)
 			s.observeStatus(params.Thread.Status.Kind)
 			s.signal()
 			s.wakeDiscovery()
@@ -97,8 +93,7 @@ func (s *serverSession) event(method string, raw json.RawMessage) {
 	}
 	if method == "thread/closed" {
 		s.generation++
-		s.current = ""
-		s.resetObservation()
+		s.selectRoot("")
 		s.signal()
 		s.wakeDiscovery()
 		return

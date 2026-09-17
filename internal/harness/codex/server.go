@@ -14,41 +14,42 @@ import (
 )
 
 type serverSession struct {
-	gitWrite            bool
-	subscribedClient    *rpcClient
-	subscribedThread    string
-	subscriptionWake    chan struct{}
-	statusSequence      uint64
-	observationSequence uint64
-	observation         *turnObservation
-	observations        []*turnObservation
-	closeOnce           sync.Once
-	generation          uint64
-	hintSequence        uint64
-	dirty               bool
-	discoveryErr        error
-	discoverGate        chan struct{}
-	discoverWake        chan struct{}
-	ignored             map[string]bool
-	delayed             []serverNotice
-	scope               context.Context
-	path                string
-	args                []string
-	env                 []string
-	cwd                 string
-	mu                  sync.Mutex
-	client              *rpcClient
-	current             string
-	changed             chan struct{}
-	messages            map[string]string
-	outcomes            []harness.Completion
-	wake                chan struct{}
-	process             *exec.Cmd
-	exited              chan struct{}
-	stopped             chan struct{}
-	cancel              context.CancelFunc
-	emit                func(harness.Completion) error
-	note                func(string)
+	observerSubscriptions map[observerSubscription]observerLease
+	gitWrite              bool
+	subscribedClient      *rpcClient
+	subscribedThread      string
+	subscriptionWake      chan struct{}
+	statusSequence        uint64
+	observationSequence   uint64
+	observation           *turnObservation
+	observations          []*turnObservation
+	closeOnce             sync.Once
+	generation            uint64
+	hintSequence          uint64
+	dirty                 bool
+	discoveryErr          error
+	discoverGate          chan struct{}
+	discoverWake          chan struct{}
+	ignored               map[string]bool
+	delayed               []serverNotice
+	scope                 context.Context
+	path                  string
+	args                  []string
+	env                   []string
+	cwd                   string
+	mu                    sync.Mutex
+	client                *rpcClient
+	current               string
+	changed               chan struct{}
+	messages              map[string]string
+	outcomes              []harness.Completion
+	wake                  chan struct{}
+	process               *exec.Cmd
+	exited                chan struct{}
+	stopped               chan struct{}
+	cancel                context.CancelFunc
+	emit                  func(harness.Completion) error
+	note                  func(string)
 }
 
 func newServer(path string, args, env []string, cwd string) *serverSession {

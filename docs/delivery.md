@@ -112,15 +112,25 @@ hard-link it into `unread/` — readable before it is announced, because an agen
 told about it may run `rewake inbox` at once — count the unread mail, call the
 adapter with the notice, write the status (`.status.tmp`, then rename).
 `delivered` removes the waiting copy, leaving the one in `unread/`; `failed`
-removes the `unread/` copy and archives the message in `done/`; `pending`
-stays and is retried every 2 seconds. Undelivered tasks and notifications older
+normally removes the `unread/` copy and archives the message in `done/`;
+`pending` stays and is retried every 2 seconds. An accepted finished/error/stopped
+report whose notification fails keeps its readable copy and failed diagnostic,
+with `reportAvailable: true` in its status. Only its waiting copy is removed;
+there is no automatic notice retry. Durable recovery respects this flag, and a
+concurrent read takes precedence. Expired reports never gain readability through
+this exception; task/notify failure behavior is unchanged. Undelivered tasks and notifications older
 than `--ttl` (30 minutes by default) get `failed: expired`. Only an answer accepted under a fresh reservation receives a new delivery
 window. `retention/<report id>` records that reservation and, on release, fixes
 one deadline origin. Retries never extend it; ordinary reports keep their
 original TTL. This state survives server restarts. Receipts remain while any
 queued, unread or archived report still refers to their questions.
 
-Status: `{"state":"delivered|read|pending|failed","via":"socket|app-server","detail":"...","at":"..."}`.
+Status: `{"state":"delivered|read|pending|failed","via":"socket|app-server","detail":"...","at":"..."}`,
+plus optional `reportAvailable: true` for retained notification failures.
+Shutdown preserves unexpired reports for the addressed epoch, including those
+not yet announced. A reserved report stays queued for its waiting send; ordinary
+inbox still skips it until release. Retention and exact report receipts apply
+unchanged. Previously archived failed reports are not automatically recovered.
 
 ### The notice
 
@@ -182,7 +192,20 @@ observer. A fresh thread can accept its first turn/start before it has a rollout
 For an observed active turn without a confirmed subscription, the backend tries
 thread/resume with excludeTurns=true every 50 ms, with a 500 ms RPC limit.
 Only -32600 no-rollout refusals retry; idle, closure, /new or session shutdown
-stop attempts. Successful subscriptions are tied to both connection and thread.
+stop retries. An in-flight call retains its bounded budget; a generation change
+makes its late attachment obsolete. Subscriptions are tied to connection and thread.
+
+Established root changes wake a cleanup pass serialized with discovery/resume.
+It releases only this observer's obsolete subscriptions, even when the new root
+is idle without a rollout. Resume attempts are tracked before the call, so late
+acknowledgements cannot hide an obsolete attachment. Definite unsubscribe refusals
+retry with backoff; an uncertain canceled/timed-out observer RPC closes only that
+observer connection to fence late operations, then uses normal reconnection.
+The TUI connection is untouched. This does not establish terminal ownership:
+detached roots may stay loaded through the server's default 60-second delay.
+Old root hints still trigger discovery because /resume may return to one without
+thread/started. Ambiguity continues to refuse instead of choosing by activity,
+age or a permanent exclusion. See [ownership limits](thread-ownership-investigation.md).
 
 Global idle precedes scoped completion. If an observed active interval becomes
 idle without turn/completed after a 500 ms grace, emit error with the diagnostic

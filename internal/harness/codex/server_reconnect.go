@@ -14,6 +14,7 @@ func (s *serverSession) restore(ctx context.Context, client *rpcClient) (resultE
 	case s.discoverGate <- struct{}{}:
 	}
 	defer func() { <-s.discoverGate }()
+	s.releaseObsoleteSubscriptions(ctx)
 
 	s.mu.Lock()
 	generation := s.generation
@@ -99,10 +100,7 @@ func (s *serverSession) restore(ctx context.Context, client *rpcClient) (resultE
 	}
 	s.mu.Lock()
 	if s.generation == generation {
-		if s.current != thread {
-			s.resetObservation()
-		}
-		s.current = thread
+		s.selectRoot(thread)
 		if rootStatus == "active" && s.statusSequence == statusSequence {
 			s.observeStatus(rootStatus)
 		}

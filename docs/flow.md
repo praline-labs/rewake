@@ -136,8 +136,11 @@ The recipient's wrapper sees the rename and, under the mailbox lock:
      or unavailable thread fails; it is not silently retargeted or queued.
 
 4. **The status.** `delivered` (the waiting copy is removed, `unread/` keeps
-   the message), `pending` (retried every two seconds), or `failed` (the message
-   moves to `done/`). Written atomically; the sender is reading it.
+   the message), `pending` (retried every two seconds), or `failed`. Failed
+   task/notify notices and expired mail move to `done/`. An accepted report
+   whose notice fails stays in `unread/`, with `reportAvailable: true` in its
+   failed status; the notice is not retried. Written atomically; the sender
+   is reading it.
 
 ## Act 4. The agent reads
 
@@ -188,6 +191,10 @@ ignored without changing the parent session's waits.
    here. The main session never reports successful turns, which is
    what keeps two sessions from waking each other forever.
 
+If that wake-up fails, the report remains available to ordinary `rewake inbox`
+in the addressed epoch. Its failed notification status keeps the diagnostic.
+Reading it still owes no report; a failure is not converted into another task.
+
 ## Act 6. A question, when the sender wants to block
 
 `rewake send review "which port?" --question` is a task whose sender waits for
@@ -221,8 +228,9 @@ right kind for a heads-up and for a probe.
 The harness exits, or Ctrl+C reaches the foreground group, or `kill` reaches the
 wrapper (which then forwards it to a harness still alive a moment later).
 
-1. The wrapper closes the inbox: every message still `pending` gets
-   `failed: session ended`.
+1. The wrapper closes the inbox: waiting mail gets `failed: session ended`.
+   Unexpired reports stay readable for their epoch. A reserved answer keeps
+   its queue entry and lease semantics so its waiting command can consume it.
 2. The record and the socket are removed; a later `list` will not show the
    name, and a `send` to it gets exit 2.
 3. The wrapper exits with the harness's exit code.

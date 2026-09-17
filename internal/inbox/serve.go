@@ -216,6 +216,7 @@ func (s *Server) drain(ctx context.Context) {
 		// The notice names how many messages wait, this one included.
 		message = noticeContext(s.Dir, s.Name, s.Epoch, message)
 		result := s.Deliver(ctx, message)
+		result.ReportAvailable = result.State == Failed && IsReport(message)
 		s.attempts[message.ID] = time.Now()
 		if result.State == Pending {
 			// A pending result is written too: a sender that is waiting should
@@ -253,7 +254,31 @@ func (s *Server) refuseWaiting(reason string) {
 		if s.alreadySettled(message) {
 			continue
 		}
-		s.finish(message, Result{State: Failed, Detail: reason})
+		result := Result{State: Failed, Detail: reason}
+		reserved := false
+		if IsReport(message) {
+			// Shutdown may precede the first drain. Admission still respects
+			// expiry and reservations before making the report readable.
+			err := s.lock(func() error {
+				if status, ok := ReadStatus(s.Dir, s.Name, message.ID); ok && status.State == Read {
+					return nil
+				}
+				reserved = awaitedHere(s.Dir, s.Name, message)
+				expired, err := s.answerExpired(message, reserved)
+				if err != nil || expired {
+					return err
+				}
+				if err := linkUnread(s.Dir, s.Name, message.ID); err != nil {
+					return err
+				}
+				result.ReportAvailable = true
+				return nil
+			})
+			if err != nil || reserved {
+				continue
+			}
+		}
+		s.finish(message, result)
 	}
 }
 

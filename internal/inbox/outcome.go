@@ -64,7 +64,7 @@ func (s *Server) publish(id string, result Result) {
 		if err != nil {
 			return err
 		}
-		settle(s.Dir, s.Name, id, outcome)
+		s.settleOutcome(id, outcome, result.ReportAvailable)
 		return nil
 	})
 }
@@ -100,6 +100,16 @@ func (s *Server) recordLocked(id string, result Result) (State, error) {
 // tests, which need that step to fail.
 var removeWaiting = os.Remove
 
+// The durable flag distinguishes a failed wake-up from expired or foreign
+// mail. Recovery never manufactures an unread copy for an old failed status.
+func (s *Server) settleOutcome(id string, outcome State, reportAvailable bool) {
+	if outcome == Failed && reportAvailable {
+		settle(s.Dir, s.Name, id, Delivered)
+		return
+	}
+	settle(s.Dir, s.Name, id, outcome)
+}
+
 // settle takes a message with an outcome out of the waiting set. One the harness
 // was told about stays readable in unread/ — or has been read already — so only
 // the waiting copy goes. A refused one is taken back from unread/ and archived.
@@ -127,9 +137,9 @@ func (s *Server) alreadySettled(message Message) bool {
 	if !ok || status.State == Pending {
 		return false
 	}
-	s.outcomes[message.ID] = Result{State: status.State, Via: status.Via, Detail: status.Detail}
+	s.outcomes[message.ID] = Result{State: status.State, Via: status.Via, Detail: status.Detail, ReportAvailable: status.ReportAvailable}
 	_ = s.lock(func() error {
-		settle(s.Dir, s.Name, message.ID, status.State)
+		s.settleOutcome(message.ID, status.State, status.ReportAvailable)
 		return nil
 	})
 	return true

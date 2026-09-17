@@ -192,6 +192,12 @@ func TestServerProcessHelper(_ *testing.T) {
 						}
 					}
 				}
+			case "thread/unsubscribe":
+				var params struct {
+					ThreadID string `json:"threadId"`
+				}
+				_ = json.Unmarshal(request.Params, &params)
+				delete(subscribers[conn], params.ThreadID)
 			case "turn/start":
 				var params struct {
 					ThreadID string `json:"threadId"`

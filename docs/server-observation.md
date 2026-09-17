@@ -4,6 +4,11 @@ Verified September 17, 2026 against CLI 0.154.0, source snapshot
 `44b9011611e1f4213ef34bd51b33476475803a94`. Paths below are inside codex-rs.
 No native harness or model was started for this follow-up.
 
+Known limitation found later the same day: loaded-root metadata does not establish
+terminal ownership. Obsolete observer subscriptions are now released on established
+root changes; the server may still retain detached roots during its unload delay.
+See [ownership investigation and mitigation](thread-ownership-investigation.md).
+
 ## Subscription is separate from identity
 
 `app-server/src/request_processors/thread_processor.rs:1549,1621` attaches the
@@ -47,8 +52,10 @@ subscription succeed. Even a successful resume can arrive after the terminal
 event captured its recipient list. History-free observation cannot recover it.
 
 The backend retries every 50 ms during an observed active interval, limits each
-RPC to 500 ms, and cancels on idle, closure, /new or shutdown. Other refusals stop
-retries for that interval. Subscription success records the connection, thread
+RPC to 500 ms, and stops retries on idle, closure, /new or shutdown. An in-flight
+RPC keeps its bounded budget across a thread change; generation guards route a
+late attachment to cleanup. Other refusals stop retries for that interval.
+Subscription success records the connection, thread
 and generation, preventing an old acknowledgement from selecting a new target.
 
 Idle starts a 500 ms completion grace. If no completion arrives, the backend

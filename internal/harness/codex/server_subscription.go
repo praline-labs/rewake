@@ -28,7 +28,6 @@ type turnObservation struct {
 	done   bool
 	retry  bool
 	idleAt time.Time
-	cancel context.CancelFunc
 }
 
 func noRollout(err error) bool {
@@ -39,7 +38,29 @@ func noRollout(err error) bool {
 // Identity is enough to deliver the first input. Subscription becomes possible
 // only after that input materializes the rollout; never gate delivery on it.
 func (s *serverSession) resumeSubscription(ctx context.Context, client *rpcClient, thread string, generation uint64) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	s.mu.Lock()
+	if s.generation != generation {
+		s.mu.Unlock()
+		return errors.New("thread changed before observer subscription")
+	}
+	if s.observerSubscriptions == nil {
+		s.observerSubscriptions = make(map[observerSubscription]observerLease)
+	}
+	key := observerSubscription{client: client, thread: thread}
+	// A timeout can hide a successful attach. Track the attempt before sending
+	// so a later switch can release it even without an acknowledgement.
+	s.observerSubscriptions[key] = observerLease{generation: generation}
+	s.mu.Unlock()
 	if err := client.call(ctx, "thread/resume", map[string]any{"threadId": thread, "excludeTurns": true}, nil); err != nil {
+		if noRollout(err) {
+			s.mu.Lock()
+			delete(s.observerSubscriptions, key)
+			s.mu.Unlock()
+		}
+		closeUncertainObserver(client, err)
 		return err
 	}
 	s.mu.Lock()
@@ -47,6 +68,7 @@ func (s *serverSession) resumeSubscription(ctx context.Context, client *rpcClien
 	if s.generation == generation {
 		s.subscribedClient, s.subscribedThread = client, thread
 	}
+	s.wakeSubscription()
 	return nil
 }
 
@@ -64,20 +86,12 @@ func (s *serverSession) observeStatus(kind string) {
 		if watch := s.observation; watch != nil && watch.active {
 			watch.active = false
 			watch.idleAt = time.Now()
-			if watch.cancel != nil {
-				watch.cancel()
-			}
 			s.wakeSubscription()
 		}
 	}
 }
 
 func (s *serverSession) resetObservation() {
-	for _, watch := range s.observations {
-		if watch.cancel != nil {
-			watch.cancel()
-		}
-	}
 	s.observation, s.observations = nil, nil
 }
 
@@ -114,9 +128,6 @@ func (s *serverSession) finishObservation(turn string) bool {
 	}
 	already := watch.done
 	watch.turn, watch.done = turn, true
-	if watch.cancel != nil {
-		watch.cancel()
-	}
 	return already
 }
 
@@ -157,6 +168,9 @@ func (s *serverSession) subscriptionAttempt(ctx context.Context) {
 	default:
 		return
 	}
+	// Release the old observer even when the new thread is idle and has no
+	// rollout. Waiting for its next resume would retain the old root forever.
+	s.releaseObsoleteSubscriptions(ctx)
 	s.mu.Lock()
 	s.expireObservations(time.Now())
 	watch, client, generation := s.observation, s.client, s.generation
@@ -165,12 +179,12 @@ func (s *serverSession) subscriptionAttempt(ctx context.Context) {
 		return
 	}
 	attempt, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
-	watch.cancel = cancel
+	// A lifecycle change stops retries but lets an already sent RPC settle.
+	// Canceling it here would make every /new race retire a healthy connection.
 	s.mu.Unlock()
 	err := s.resumeSubscription(attempt, client, watch.thread, generation)
 	cancel()
 	s.mu.Lock()
-	watch.cancel = nil
 	// Only the documented persistence race is retried within this active turn.
 	if err != nil && !noRollout(err) {
 		watch.retry = false

@@ -75,7 +75,7 @@ Created with 0700.
     inbox/<name>/<id>.json     waiting for delivery
     inbox/<name>/<id>.status   pending, delivered, read or failed
     inbox/<name>/unread/       readable messages
-    inbox/<name>/done/         read and failed messages
+    inbox/<name>/done/         read messages and archived delivery failures
     inbox/<name>/answering/<id> renewable question reservation
     inbox/<name>/received/<id> id of the report successfully printed
     inbox/<name>/retention/<id> reservation release time for reports
@@ -223,11 +223,15 @@ reservation keeps the report queued and excludes it from ordinary inbox reads;
 only successful output records receipt. Every question sharing a report must
 receive it before it is archived. Missing or stale reservations return unread
 reports to ordinary notification. Silent roles refuse questions before sending.
+An accepted report survives a failed notification in unread, with the failed
+diagnostic and durable reportAvailable flag. Task/notify failures still archive.
 
 The server backend tracks thread identity separately from its event subscription.
 First delivery may precede persistence. Active status triggers bounded resume
 attempts; idle without an observed completion produces an explicit observation
 error after a grace period. See [ordering evidence](server-observation.md).
+Observer cleanup follows established root changes, including fresh idle roots;
+it does not resolve [terminal ownership ambiguity](thread-ownership-investigation.md).
 
 ## A session without a wrapper
 

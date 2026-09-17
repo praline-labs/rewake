@@ -3,6 +3,10 @@
 Work order for `docs/design.md`. A milestone counts as closed only once its
 acceptance criterion is met — not once the code is written.
 
+Open [intermittent bugs](intermittent-bugs.md) track live failures whose triggers
+remain unknown, including the two-root-thread delivery refusal observed on
+September 17, 2026 and cleared by restarting the recipient.
+
 ## How the work is run
 
 - One step, one commit; commit message short, subject line only, in English.
@@ -379,3 +383,15 @@ are appended; unreadable roots skip the grant with a status note. Steer updates
 future turns, and manual TUI turns may replace roots. Fake-server tests cover
 roles, worktrees, repeated tasks and failures; all three requested mutations
 are detected. All five checks pass. Live acceptance remains with the owner.
+
+## Lost report mitigation — September 17, 2026; ownership remains open
+
+Failed report notices retain their accepted text and diagnostics in unread;
+expiry, reservations and task failure semantics remain intact. Established root
+changes release obsolete observer subscriptions, including fresh idle targets
+and late acknowledgements. Uncertain observer RPCs retire only that connection.
+[Investigation and remaining limits](thread-ownership-investigation.md): loaded
+roots do not establish terminal ownership, /resume can revisit earlier roots,
+and ambiguity still refuses. Regression and mutation checks cover the bounded
+fix; this does not close live ownership acceptance.
+All five repository checks pass; all five targeted mutations are detected.
