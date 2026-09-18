@@ -62,8 +62,8 @@ and checks registry/socket cleanup. The native executable is pinned in the repai
 evidence; source inspection is not asserted to match that executable exactly.
 
 A passing synthetic-client run is not terminal or registered-peer acceptance.
-The later owner acceptance record below distinguishes proven startup/report smoke
-behavior from the remaining main/side check. This repair does not infer focus,
+The later owner acceptance record below distinguishes startup and installed
+primary/side evidence from untested workflows. This repair does not infer focus,
 replay work, change owner configuration or recover missed events.
 
 ## Confirmed native message-size failure and repair
@@ -129,6 +129,7 @@ owner-tested paths, not every native workflow.
 
 The owner then installed the reviewed build and restarted all three sessions.
 A short reviewer task returned the automatic final report `NEW-REVIEW-OK`.
-The complete main-delivery/main-finished check while side stays open is still
-pending. Side output must not settle main waits. No claim of that acceptance is
-made from the startup checks or single short-task report.
+A separate [installed primary/side check](gateway-native-evidence.md#installed-primaryside-delivery-acceptance--september-19-2026)
+then confirmed a primary task/report while side stayed visible, and another after
+Ctrl+C closed side without resume or restart. Side output did not settle those
+tasks. The startup checks alone did not establish this; the explicit owner check did.

@@ -93,7 +93,7 @@ fixture exercises CLI and ordinary fork, an active primary, a synthetic side ans
 primary steering during and after side, and the original primary completion.
 A separate mailbox integration test checks primary waits and durable publication.
 These are integration evidence. Independent review and installation completed;
-main delivery/completion with an open side still awaits the full owner-run check.
+the installed primary/side check below separately verifies the exercised live path.
 
 Explicit permission profiles can replace runtime roots in native request shapes
 (`app_server_session.rs:818,994`). The same primary start/fork evidence accepts that
@@ -101,10 +101,28 @@ profile field without reading or replacing its value. Generation and direct-inpu
 ACK checks remain mandatory; role-gated root grants still obey the selected policy.
 
 
-## Production startup and report smoke — September 19, 2026
+## Installed primary/side delivery acceptance — September 19, 2026
 
 The reviewed integration and startup fixes passed all five checks. Owner fresh
 and resume runs with the usual configuration were stable; [startup evidence](startup-transport.md#owner-acceptance-and-installation--september-19-2026)
-records the tested binary and subsequent installation. All three sessions restarted
-and a short task returned its automatic final report. Full main delivery and final
-publication while side remains open still require the planned owner check.
+records the installed binary. All three sessions restarted. The orchestrator sent
+a short task to the general session and received automatic `NEW-REVIEW-OK` / `1.25`.
+The write session then committed and pushed `e465729` and returned automatic
+finished, verifying ordinary task/report exchange and the delivered Git grant.
+
+For the decisive side check, the owner kept the general session's side view visible.
+The orchestrator sent a new task to its primary conversation and received automatic
+`MAIN-WITH-SIDE-02` / `1.25` through inbox. The owner confirmed they were still in
+side when that result arrived. The owner then closed side with Ctrl+C; a new task
+returned automatic `MAIN-AFTER-SIDE-OK`, without resume, restart or repair. No side
+answer settled either primary task. This accepts the concrete installed-build path:
+new primary work and its report while side stays visible, then another task/report
+after side closes.
+
+An earlier attempt returned its correct primary result after a delay and a view
+switch. The owner reported possible upstream API trouble; that observation does
+not prove side paused execution. Neither the successful repeat nor the close test
+establishes the cause of every older missing report or warning. Prototype fork,
+steer/error/stop evidence keeps its separate scope; untested native workflows are
+not accepted by this check. Full facts remain in `outputs/installed-peer-acceptance.md`
+in the persistent task package.

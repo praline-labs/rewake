@@ -397,4 +397,4 @@ address INT-1/2/3/4 and passed focused re-review. Subsequent owner installation
 failed startup. [Transport repair and evidence limits](startup-transport.md):
 queue repair passed review and isolated owner startup; the usual environment then
 confirmed nine size-guard closes. The size repair passed review and owner fresh/resume
-checks; installation and an automatic short-task report passed. Full main/side acceptance remains open.
+checks. Installed task/report exchange passed with side visible and after close, without resume/restart; [scope](gateway-native-evidence.md#installed-primaryside-delivery-acceptance--september-19-2026).

@@ -167,5 +167,7 @@ The isolated prototype's owner-run terminal acceptance is not production peer
 acceptance. By September 19, independent integration/report/startup reviews passed,
 the owner accepted fresh/resume startup with the usual configuration, and the new
 build was installed with all three sessions restarted. A short task returned its
-automatic final report. Main delivery and completion while side remains open still
-need the full owner-run check; broader peer acceptance is not inferred.
+automatic final report. The owner then confirmed primary work and its automatic
+report while side stayed visible, followed by another task/report after closing
+side without resume or restart. [Installed acceptance](gateway-native-evidence.md#installed-primaryside-delivery-acceptance--september-19-2026)
+closes that concrete scenario; untested workflows and older delay causes remain separate.

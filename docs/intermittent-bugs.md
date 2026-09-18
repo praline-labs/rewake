@@ -50,12 +50,28 @@ Read-only loaded-thread metadata confirmed two persisted user roots, both create
 before the recipient wrapper started. Neither was a fresh ephemeral startup
 thread. Observer subscriptions surviving a thread switch are independently
 reproduced; their participation in this particular live sequence is not proven.
-The current API does not identify the terminal's selected thread.
+Loaded-thread metadata did not identify the terminal's selected thread.
 
-The bounded fix preserves accepted reports after notification failure and releases
-this observer's obsolete subscriptions after established root changes. Regressions
-cover both mechanisms. Terminal ownership remains unresolved: two qualifying
-roots still cause a refusal, and unsubscribe does not prove which root is selected.
+The bounded fix preserved accepted reports after notification failure and released
+the observer's obsolete subscriptions after established root changes. Regressions
+covered both mechanisms. Ownership remained unresolved in that implementation:
+two qualifying roots still caused refusal; unsubscribe did not prove selection.
 See [ownership investigation](thread-ownership-investigation.md) for evidence,
 contracts and remaining limits. Previously archived reports are not rewritten;
 the original result was recovered by reading its archived evidence.
+
+
+## Installed primary/side continuity — verified September 19, 2026
+
+The gateway integration replaces loaded-root discovery with observed primary
+intent; the historical two-root sequence above was not reconstructed. The owner
+verified the installed build's concrete primary/side path separately: a new primary
+task returned automatic `MAIN-WITH-SIDE-02` / `1.25` while side remained visible.
+After Ctrl+C closed side, another task returned `MAIN-AFTER-SIDE-OK` without resume
+or restart. No side answer settled either task. [Acceptance evidence](gateway-native-evidence.md#installed-primaryside-delivery-acceptance--september-19-2026)
+records the installed-build scope.
+
+The first slower attempt included a view switch before its correct report arrived.
+Possible upstream API delay remains unresolved; it is not proof that side pauses
+primary work. This successful continuity check does not establish the cause of all
+older missing reports or warnings, or accept workflows that were not exercised.
