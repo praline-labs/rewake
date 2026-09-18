@@ -2,13 +2,16 @@ package cli
 
 import (
 	"encoding/json"
+
+	"github.com/iiiokojiadbi/rewake/internal/inbox"
 )
 
 type turnResult struct {
-	Text    string
-	Failed  bool
-	Stopped bool
-	ID      string
+	Boundary *inbox.ReadBoundary
+	Text     string
+	Failed   bool
+	Stopped  bool
+	ID       string
 }
 
 func completedTurn(payload []byte) (turnResult, bool) {

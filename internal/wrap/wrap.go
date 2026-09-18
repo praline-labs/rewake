@@ -42,7 +42,7 @@ type Request struct {
 
 	// Role is explicit when its ID is set; empty always uses general.
 	Role   role.Role
-	OnTurn func(registry.Session, harness.Completion) error
+	OnTurn func(context.Context, registry.Session, harness.Completion) error
 }
 
 // Run starts the harness, serves its mailbox until it exits, and returns the
@@ -120,12 +120,17 @@ func Run(ctx context.Context, request Request) (int, error) {
 
 	if plan.Backend != nil {
 		reportSession := session
-		if err := plan.Backend.Start(ctx, func(result harness.Completion) error {
+		clock, err := inbox.OpenReadClock(ctx, request.Dir, name, epoch)
+		if err != nil {
+			return 0, err
+		}
+		defer clock.Close()
+		if err := plan.Backend.Start(ctx, harness.CompletionHandler{Capture: clock.Snapshot, Publish: func(ctx context.Context, result harness.Completion) error {
 			if request.OnTurn != nil {
-				return request.OnTurn(reportSession, result)
+				return request.OnTurn(ctx, reportSession, result)
 			}
 			return nil
-		}, func(note string) { _, _ = fmt.Fprintln(os.Stderr, "rewake: "+note) }); err != nil {
+		}}, func(note string) { _, _ = fmt.Fprintln(os.Stderr, "rewake: "+note) }); err != nil {
 			return 0, err
 		}
 		defer plan.Backend.Close()
@@ -189,6 +194,9 @@ func Run(ctx context.Context, request Request) (int, error) {
 				}
 				return request.Harness.Deliver(ctx, current(request.Dir, name, session), message)
 			},
+		}
+		if backend, ok := plan.Backend.(harness.ReservingBackend); ok {
+			server.Reserve = backend.Reserve
 		}
 		server.Serve(serveCtx)
 	}()

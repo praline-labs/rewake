@@ -120,7 +120,7 @@ The original five repository checks passed on the pristine archive. New tests
 in the isolated review fixture intentionally fail; green baseline checks do not
 establish that either defect is fixed. No live model or transcript read was used.
 
-### R14-1 — P2, open: failed reconnects retain closed observer clients
+### R14-1 — P2, replacement regression passes: failed reconnects retain closed observer clients
 
 At `b1b9d2b`, `internal/harness/codex/server_observer_cleanup.go:38` only considers
 leases whose generation or thread differs. `server.go:139` advances generation
@@ -144,7 +144,7 @@ Review-only files: `review_round14_reconnect_test.go` and
 maintain/restore; the latter uses a 150 ms fixture budget rather than production's
 3-second reconnect budget. Neither starts a native harness.
 
-### R14-2 — P2, open: discovery loses an observed active interval
+### R14-2 — P2, replacement regression passes: discovery loses an observed active interval
 
 At `b1b9d2b`, `server_reconnect.go:102–106` discards an active metadata snapshot
 when statusSequence changed during subscription. A subsequent idle/systemError
@@ -201,5 +201,6 @@ local-switch ordering claims. Synthetic selection models remain specifications,
 not native/live acceptance. Under the owner's later constraint, only rewake may
 change and existing hooks may be registered; native TUI/server extensions are
 outside scope. Ownership selection remains open; the later owner-run metadata
-probes are complete, with [evidence and limits](thread-lock-probes.md). Review
-completion closes the review activity, not these defects or live acceptance.
+probes are complete, with [evidence and limits](thread-lock-probes.md). The September 18 gateway replacement passes dedicated closed-connection cleanup
+and pre-reply active/idle regressions for R14-1/R14-2. Independent integration review
+and real peer acceptance remain open; see [gateway integration](gateway.md).

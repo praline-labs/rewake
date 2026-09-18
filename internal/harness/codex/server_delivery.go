@@ -2,64 +2,71 @@ package codex
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/harness"
+	"github.com/iiiokojiadbi/rewake/internal/harness/codex/gateway"
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 )
 
-func (s *serverSession) Deliver(ctx context.Context, message inbox.Message) inbox.Result {
+type reservedDelivery struct {
+	session     *serverSession
+	reservation *gateway.Reservation
+	ctx         context.Context
+	cancel      context.CancelFunc
+}
+
+func (s *serverSession) Reserve(ctx context.Context, _ inbox.Message) (inbox.Reservation, error) {
+	if s.gateway == nil {
+		return nil, inbox.ErrThreadUnavailable
+	}
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-	if err := s.ensureThread(ctx); err != nil {
-		return inbox.Result{State: inbox.Failed, Detail: "app-server has no ready TUI thread: " + err.Error()}
+	reserved, err := s.gateway.Reserve(ctx)
+	if err != nil {
+		cancel()
+		return nil, err
 	}
-	for {
-		s.mu.Lock()
-		client, thread, changed := s.client, s.current, s.changed
-		s.mu.Unlock()
-		if client != nil && thread != "" {
-			if message.DeliveryThread != "" && message.DeliveryThread != thread {
-				return inbox.Result{State: inbox.Failed, Detail: "the conversation changed before delivery; read the task and resend if it still applies"}
+	return &reservedDelivery{session: s, reservation: reserved, ctx: ctx, cancel: cancel}, nil
+}
+func (r *reservedDelivery) Close() { r.reservation.Close(); r.cancel() }
+func (r *reservedDelivery) Prepare(fn func(string) error) error {
+	entered := false
+	err := r.reservation.Prepare(func(thread string) error { entered = true; return fn(thread) })
+	if err != nil && !entered {
+		return fmt.Errorf("%w: %v", inbox.ErrThreadUnavailable, err)
+	}
+	return err
+}
+
+func (r *reservedDelivery) Deliver(_ context.Context, message inbox.Message) inbox.Result {
+	var thread string
+	if err := r.Prepare(func(value string) error { thread = value; return nil }); err != nil {
+		return inbox.Result{State: inbox.Failed, Detail: err.Error()}
+	}
+	roots, note := r.session.taskGitRoots(r.ctx, r.reservation.ReadThread, thread, inbox.KindOf(message))
+	_, err := r.reservation.Deliver(r.ctx, message.ID, noticePrefix(message)+" "+harness.Notice(message), roots)
+	if err != nil {
+		return inbox.Result{State: inbox.Failed, Detail: err.Error() + "; delivery was not retried automatically"}
+	}
+	return inbox.Result{State: inbox.Delivered, Via: "app-server", Detail: note}
+}
+
+func (s *serverSession) Deliver(ctx context.Context, message inbox.Message) inbox.Result {
+	reserved, err := s.Reserve(ctx, message)
+	if err != nil {
+		return inbox.Result{State: inbox.Failed, Detail: err.Error()}
+	}
+	defer reserved.Close()
+	if message.DeliveryThread != "" {
+		if err := reserved.Prepare(func(thread string) error {
+			if thread != message.DeliveryThread {
+				return inbox.ErrThreadUnavailable
 			}
-			input := []map[string]string{{"type": "text", "text": noticePrefix(message) + " " + harness.Notice(message)}}
-			params := map[string]any{"threadId": thread, "clientUserMessageId": message.ID, "input": input}
-			roots, note := s.taskGitRoots(ctx, client, thread, inbox.KindOf(message))
-			if roots != nil {
-				params["runtimeWorkspaceRoots"] = roots
-			}
-			s.mu.Lock()
-			ready := s.current == thread && s.client == client && !s.dirty && s.discoveryErr == nil
-			s.mu.Unlock()
-			if !ready {
-				return inbox.Result{State: inbox.Failed, Detail: "the conversation changed before delivery; read the task and resend if it still applies"}
-			}
-			var result struct {
-				Turn struct {
-					ID string `json:"id"`
-				} `json:"turn"`
-			}
-			err := client.call(ctx, "turn/start", params, &result)
-			if err != nil {
-				return inbox.Result{State: inbox.Failed, Detail: err.Error() + "; delivery was not retried automatically"}
-			}
-			s.mu.Lock()
-			stillCurrent := s.current == thread
-			s.mu.Unlock()
-			if !stillCurrent {
-				return inbox.Result{State: inbox.Failed, Detail: "the conversation changed during delivery; the notice went to the previous thread"}
-			}
-			if result.Turn.ID == "" {
-				return inbox.Result{State: inbox.Failed, Detail: "app-server returned no turn id"}
-			}
-			return inbox.Result{State: inbox.Delivered, Via: "app-server", Detail: note}
-		}
-		select {
-		case <-ctx.Done():
-			return inbox.Result{State: inbox.Failed, Detail: "app-server has no ready TUI thread: " + ctx.Err().Error()}
-		case <-s.exited:
-			return inbox.Result{State: inbox.Failed, Detail: "session ended"}
-		case <-changed:
+			return nil
+		}); err != nil {
+			return inbox.Result{State: inbox.Failed, Detail: err.Error()}
 		}
 	}
+	return reserved.Deliver(ctx, message)
 }

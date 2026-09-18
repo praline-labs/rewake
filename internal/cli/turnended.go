@@ -59,6 +59,10 @@ func handleTurnEnded(_ *Context, call Call) error {
 }
 
 func completeTurn(dir string, self registry.Session, event turnResult, currentThread string) error {
+	return completeTurnContext(context.Background(), dir, self, event, currentThread)
+}
+
+func completeTurnContext(parent context.Context, dir string, self registry.Session, event turnResult, currentThread string) error {
 	if !registry.OwnsName(dir, self.Name, self.Epoch()) {
 		return nil
 	}
@@ -66,12 +70,15 @@ func completeTurn(dir string, self registry.Session, event turnResult, currentTh
 	// Under the mailbox lock, so two ends of a turn reported at once tell each
 	// waiter once, and a waiter recorded by a read in the meantime is not taken
 	// for the one reported.
-	ctx, cancel := context.WithTimeout(context.Background(), hookLockWait)
+	ctx, cancel := context.WithTimeout(parent, hookLockWait)
 	defer cancel()
 	return state.WithMailboxLock(ctx, dir, self.Name, func() error {
-		waiters := inbox.Waiters(dir, self.Name, self.Epoch())
+		waiters, err := inbox.ScopedWaiters(dir, self.Name, self.Epoch(), event.Boundary)
+		if err != nil {
+			return err
+		}
 		beforeReports()
-		return publishTurn(dir, self, event, currentThread, waiters)
+		return publishTurnContext(ctx, dir, self, event, currentThread, waiters)
 	})
 }
 

@@ -9,14 +9,19 @@ import (
 // Remote continuation rejects permission overrides before contacting the server.
 // Inspect option values separately so a model, path or prompt named resume does
 // not suppress metadata access on a fresh launch. Leave validation to the TUI.
-func continuationOptions(args []string) (continuation, permissionOverride bool) {
+func continuationOptions(args []string) (bool, bool) {
+	command, permissions := continuationMode(args)
+	return command == "resume" || command == "fork", permissions
+}
+
+func continuationMode(args []string) (command string, permissionOverride bool) {
 	visible := harness.BeforeTerminator(args)
 	positional := false
 	for i := 0; i < len(visible); i++ {
 		arg := visible[i]
 		if !strings.HasPrefix(arg, "-") {
 			if !positional {
-				continuation = arg == "resume" || arg == "fork"
+				command = arg
 				positional = true
 			}
 			continue
@@ -48,7 +53,7 @@ func continuationOptions(args []string) (continuation, permissionOverride bool) 
 			}
 		}
 	}
-	return continuation, permissionOverride
+	return command, permissionOverride
 }
 
 // Match the session-layer keys inspected by the upstream remote startup guard,

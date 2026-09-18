@@ -26,7 +26,11 @@ func loadTurnReceipt(dir string, self registry.Session, event turnResult) (turnR
 	if event.ID == "" {
 		return receipt, "", nil
 	}
-	sum := sha256.Sum256([]byte(self.Epoch() + "\x00" + event.ID))
+	key := self.Epoch() + "\x00" + event.ID
+	if event.Stopped {
+		key = "stopped\x00" + key
+	}
+	sum := sha256.Sum256([]byte(key))
 	directory := filepath.Join(state.InboxPath(dir, self.Name), "turns")
 	if err := state.EnsureSubdir(directory); err != nil {
 		return receipt, "", err
@@ -35,7 +39,33 @@ func loadTurnReceipt(dir string, self registry.Session, event turnResult) (turnR
 	raw, err := os.ReadFile(path)
 	if err == nil {
 		err = json.Unmarshal(raw, &receipt)
+		if err == nil && !event.Stopped && receipt.KeepWaiters {
+			stopEvent := event
+			stopEvent.Stopped = true
+			_, _, loadErr := loadTurnReceipt(dir, self, stopEvent)
+			if loadErr != nil {
+				return receipt, path, loadErr
+			}
+
+			receipt = turnReceipt{ID: inbox.NewID()}
+			err = saveTurnReceipt(path, receipt)
+		}
 	} else if os.IsNotExist(err) {
+		if event.Stopped {
+			legacySum := sha256.Sum256([]byte(self.Epoch() + "\x00" + event.ID))
+			legacyPath := filepath.Join(directory, fmt.Sprintf("%x", legacySum[:16]))
+			if previous, readErr := os.ReadFile(legacyPath); readErr == nil {
+				var old turnReceipt
+				if err := json.Unmarshal(previous, &old); err != nil {
+					return receipt, path, err
+				}
+				if old.KeepWaiters {
+					receipt = old
+				}
+			} else if !os.IsNotExist(readErr) {
+				return receipt, path, readErr
+			}
+		}
 		err = saveTurnReceipt(path, receipt)
 	}
 	return receipt, path, err

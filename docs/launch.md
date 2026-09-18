@@ -71,15 +71,19 @@ List and identity commands use the inherited room and accept no `--room` flag.
 ### Codex
 
 The wrapper owns two children: a foreground app-server on a private Unix socket
-and the ordinary TUI connected with --remote. The socket uses the existing
+and the ordinary TUI connected with --remote through its inline gateway. The
+original socket belongs to the gateway; the native endpoint adds `.up`. The socket uses the existing
 per-run digest fallback and 103-byte limit. The server has its own process group,
 so keyboard interrupts reach the TUI without killing its transport. Both children
 end with the session; no daemon lifecycle command is used. Server stderr goes
-to the adjacent private .log file. Server death terminates the TUI and refuses
+to the adjacent private `.up.log` file. Server death terminates the TUI and refuses
 pending mail as session ended.
 
-The adapter connects and initializes its WebSocket client before starting the
-TUI. Explicit -c overrides and the generated developer_instructions are passed
+The adjacent `.gateway.log` records bounded, payload-free connection-close reasons;
+see [startup transport diagnostics and limits](startup-transport.md).
+
+The adapter initializes and closes a startup probe before starting the TUI; it
+never discovers or resumes a root. The gateway forwards the TUI connection. Explicit -c overrides and the generated developer_instructions are passed
 to the server. A mention of developer_instructions in user configuration still
 suppresses the generated value; user files are never edited. The server receives
 the session's REWAKE_* environment, which the default shell policy inherits.

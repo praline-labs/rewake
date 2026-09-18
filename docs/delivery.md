@@ -176,70 +176,25 @@ recreated); otherwise `failed`.
 
 ### Codex adapter
 
-The session-owned backend maintains one initialized WebSocket connection to its
-private Unix socket. Root TUI thread/started selects the thread. Resume can omit
-that event: an unknown threadId in a notification triggers metadata discovery,
-with loaded-list polling until a root is known and a check before first delivery.
-RPC lookups run outside the socket reader so responses can still be read. Parent
-ids, non-user sources and unrelated originators are excluded. Discovery binds only a unique
-loaded root; ambiguity refuses delivery. Early terminal notifications
-wait for metadata validation before entering the reporting path. Discovered or
-reconnected roots are rejoined with excludeTurns=true when persistence permits. Closing the
-selected thread clears it. No process-tree scan or queue command selects a target.
+The wrapper's gateway follows the native TUI's own accepted primary intent and
+matching direct-input reply. It does not discover a loaded root or attach an
+observer through resume. The transport reserves epoch/connection/generation/thread
+before inbox readability and holds admission through the delivery ACK. A-B-A never
+reuses an old reservation. See [gateway selection and admission](gateway.md).
 
-Identity and subscription are separate: thread/started does not subscribe the
-observer. A fresh thread can accept its first turn/start before it has a rollout.
-For an observed active turn without a confirmed subscription, the backend tries
-thread/resume with excludeTurns=true every 50 ms, with a 500 ms RPC limit.
-Only -32600 no-rollout refusals retry; idle, closure, /new or session shutdown
-stop retries. An in-flight call retains its bounded budget; a generation change
-makes its late attachment obsolete. Subscriptions are tied to connection and thread.
+Readiness waits for ordinary resume backfill outside the mailbox lock, admission
+FIFO and global gate. Native reads and approval replies remain able to progress.
+The reservation also orders main/write additive Git roots and native settings
+updates. No permission policy is replaced. A bounded refusal sends no work and
+exposes no task; transport uncertainty is never automatically replayed.
 
-Established root changes wake a cleanup pass serialized with discovery/resume.
-It releases only this observer's obsolete subscriptions, even when the new root
-is idle without a rollout. Resume attempts are tracked before the call, so late
-acknowledgements cannot hide an obsolete attachment. Definite unsubscribe refusals
-retry with backoff; an uncertain canceled/timed-out observer RPC closes only that
-observer connection to fence late operations, then uses normal reconnection.
-The TUI connection is untouched. This does not establish terminal ownership:
-detached roots may stay loaded through the server's default 60-second delay.
-Old root hints still trigger discovery because /resume may return to one without
-thread/started. Ambiguity continues to refuse instead of choosing by activity,
-age or a permanent exclusion. See [ownership limits](thread-ownership-investigation.md).
-
-Global idle precedes scoped completion. If an observed active interval becomes
-idle without turn/completed after a 500 ms grace, emit error with the diagnostic
-"completion not observed" and no assistant result. This reports an observation
-gap, not a model failure. Normal completions cancel that fallback. An unknown
-turn id uses a run-local observation id; late completion for that interval is
-suppressed while it remains identifiable. No transcript or history is read.
-See [source ordering and limits](server-observation.md).
-
-An owed message records that thread before becoming readable. Delivery calls
-turn/start with threadId, clientUserMessageId and the notice as text input.
-For tasks/questions to main/write, a fresh history-free thread/read supplies the
-single local environment's roots and cwd. If Git metadata roots are missing,
-runtimeWorkspaceRoots contains all existing roots followed by only the missing
-gitdir/commondir paths. Already present roots, general, notify and reports omit
-the field. A failed or ambiguous roots read omits the field and adds one line to
-the delivery status; ordinary delivery continues. Policy, approval and profile
-are untouched. On steer the server stores these roots for subsequent turns while
-the active context keeps its permissions. Manual TUI input may replace the list,
-so grants never rely on a cached snapshot. See [source evidence and limits](continuation-permissions.md).
-The server starts an idle turn or steers the current one. A result with a turn id
-means delivered via app-server. A server refusal is failed with its text; transport
-errors and ambiguous results are not automatically resent. RPC cancellation
-covers waiting for the writer and writing the frame; a pre-canceled call sends
-nothing. A failed frame write closes the connection before another writer can
-append to a partial frame. A conversation change
-before or during the call refuses that delivery instead of silently retargeting it.
-An unavailable thread fails before readability rather than staying pending.
-
-A lost connection produces a note, never a turn outcome. Reconnection discovers
-loaded root threads and rejoins the unique candidate without requesting history.
-It refuses ambiguity instead of resuming a cached, possibly closed conversation.
-Events missed while disconnected cannot be reconstructed without a replay API;
-no error cause or successful result is inferred from their absence.
+The admitted-work ledger preserves matching outcomes after selection changes.
+A separate publisher journals callbacks with causal read boundaries and uses the
+durable report/turn receipt path asynchronously; later reads cannot join an older
+result. See [stable publication](report-publication.md). Socket readers never wait on mailbox locks. Upstream
+completion observation is not proof of terminal receipt. The owner-run synthetic
+terminal evidence and current compatibility limits are recorded in
+[native gateway evidence](gateway-native-evidence.md).
 
 ### Reading (`rewake inbox`)
 
@@ -264,7 +219,9 @@ does not imply nesting: a root session can select an agent profile.
 
 A hook runs `rewake turn-ended` with the last reply in its payload. The owned
 server backend sends completion events directly to the same internal reporting
-function, with explicit session epoch and thread identity. Under the mailbox lock, for every run in `awaiting/<own epoch>/` it
+function, with explicit session epoch and thread identity. Backend completions
+carry an observation-time read boundary; only its eligible still-owed messages are
+selected. Under the mailbox lock, for every eligible run in `awaiting/<own epoch>/` it
 leaves a `finished` message whose text is that reply, and whose `inReplyTo`
 lists the messages read from that run since its last report, addressed to that run —
 not to whoever holds the name now. Before publishing an identified turn, its
@@ -353,7 +310,9 @@ still depend on the harness providing a callback.
 A stopped outcome is advisory and hook-only. It goes to the current waiters,
 otherwise to main, using the text "the person at the keyboard stopped this turn".
 It owes no reply and has its own report id, separate from the eventual result.
-Its turn receipt keeps the original waits intact. Human continuation can then
+Its separate advisory turn receipt keeps the original waits intact. A finished
+or error outcome for the same native turn uses its final receipt and can settle
+those waits; retries of either outcome remain idempotent. Human continuation can then
 publish finished with the same inReplyTo and settle those waits. Main waits for
 the person instead of resending. A waiting question prints stopped and exits 1;
 the later result remains an ordinary inbox report. Socket notices use killed

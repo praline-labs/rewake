@@ -72,7 +72,7 @@ with `rewake --main --name lead claude`, becoming lead-claude.
      both running `rewake turn-ended`, unless the user passed `--settings`;
    - Codex: an owned foreground app-server on a private socket, initialized before
      the TUI starts with --remote. Explicit configuration and the briefing reach
-     the server; main/write metadata roots reach its thread through TUI
+     the server; an inline gateway follows accepted TUI intent. Main/write metadata roots reach its thread through TUI
      runtimeWorkspaceRoots on fresh launches. No notify program is installed.
      Resume/fork keep caller input, omit generated permission flags and warn
      committing roles about grants accompanying delivered work; incompatible
@@ -117,9 +117,11 @@ session's shell, or from a person's shell in the same room. A shell without
 
 ## Act 3. The wrapper announces it
 
-The recipient's wrapper sees the rename and, under the mailbox lock:
+The recipient's wrapper sees the rename, checks expiry/leases under the mailbox
+lock, and reserves the native destination outside that lock when supported:
 
-1. **Readable first.** Hard-links the message into `unread/`. An agent told
+1. **Readable first.** With the destination reserved, rechecks the message under
+   the mailbox lock, records its delivery thread, and hard-links the message into `unread/`. An agent told
    about mail may run `rewake inbox` at once, so the text is there before the
    notice goes out.
 2. **The notice.** One line, the same for every harness:
@@ -131,7 +133,7 @@ The recipient's wrapper sees the rename and, under the mailbox lock:
      interface draws it as a single green `● Rewake: lead-claude task, 1 new
      message(s)` line — the same line its own background tasks get — and the
      model wakes if it was idle.
-   - Codex: call turn/start on the tracked TUI thread. For tasks/questions to
+   - Codex: call turn/start through the reserved TUI connection/generation. For tasks/questions to
      main/write, read current local runtime roots without history and append only
      missing Git metadata from the thread's working repository. If roots cannot
      be read, omit the field and explain that in delivery status. General and
@@ -169,8 +171,9 @@ The notice wakes the agent, which runs `rewake inbox` in its shell.
 ## Act 5. The turn ends and the report goes back
 
 The harness itself says when a turn is over: Claude Code through Stop or StopFailure,
-Codex through turn/completed. The server observer subscribes during the first
-active turn once the rollout exists. An observed active-to-idle interval missing
+Codex through turn/completed on its own TUI connection. The gateway retains
+admitted outcomes across selection changes; no observer attachment is needed.
+An asynchronous publisher journals callbacks before the durable report path. An observed active-to-idle interval missing
 completion after a short grace produces error with "completion not observed",
 without an assistant result. The hook and server events use the same internal
 reporting function and turn receipts. A callback with `agent_id` is from a nested agent and is

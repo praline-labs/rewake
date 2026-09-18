@@ -20,11 +20,11 @@ type backendFixture struct {
 	closed bool
 }
 
-func (b *backendFixture) Start(_ context.Context, emit func(harness.Completion) error, _ func(string)) error {
+func (b *backendFixture) Start(_ context.Context, handler harness.CompletionHandler, _ func(string)) error {
 	if err := os.WriteFile(b.marker, nil, 0o600); err != nil {
 		return err
 	}
-	if err := emit(harness.Completion{ID: "event", Kind: inbox.Finished, Text: "result"}); err != nil {
+	if err := handler.Publish(context.Background(), harness.Completion{ID: "event", Kind: inbox.Finished, Text: "result"}); err != nil {
 		return err
 	}
 	if b.die {
@@ -63,7 +63,7 @@ func TestBackendStartsBeforeTUIAndSharesItsLifetime(t *testing.T) {
 			fake := &backendHarness{fakeHarness: fakeHarness{script: fmt.Sprintf("test -f %q", marker)}, backend: backend}
 			observed := false
 			started := time.Now()
-			code, err := Run(context.Background(), Request{Harness: fake, Dir: dir, Name: "api", OnTurn: func(self registry.Session, result harness.Completion) error {
+			code, err := Run(context.Background(), Request{Harness: fake, Dir: dir, Name: "api", OnTurn: func(_ context.Context, self registry.Session, result harness.Completion) error {
 				observed = self.Name == "api-fake" && result.Text == "result"
 				return nil
 			}})

@@ -40,10 +40,11 @@ harness's exit code. There's no daemon: each wrapper is the delivery point for
 its own session only.
 
 The server adapter has three processes: wrapper, app-server and TUI. The wrapper
-starts and stops both children, owns the RPC client and routes reports; the server
+starts and stops both children, owns the inline RPC gateway and routes reports; the server
 owns thread execution and sandboxing; the TUI keeps the inherited terminal.
 An optional Backend in LaunchPlan encapsulates this lifecycle, delivery, thread
-identity and completion events. A new harness can implement it independently.
+identity and completion events. An optional transport-neutral reservation holds
+a destination across inbox readability and ACK; native RPC stays inside its adapter.
 The socket adapter continues using its existing direct delivery and hook path.
 
 **Sender** — any process that calls `rewake send`. It doesn't deliver anything

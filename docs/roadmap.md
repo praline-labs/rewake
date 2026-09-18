@@ -332,7 +332,7 @@ Live acceptance, on the owner's sessions with CLI 0.154.0 and Claude Code
 ## First input and fresh-thread observation
 
 Completed changes are recorded in [the later history](reviews-later.md).
-Round fourteen found the still-open discovery-gap defect R14-2 in observation.
+Round fourteen found R14-2; its replacement regression is recorded in [gateway integration](gateway.md).
 
 ## Remote continuation startup — fixed, September 17, 2026
 
@@ -376,24 +376,25 @@ concurrency, literal suffixes and length boundaries. All five checks pass.
 
 ## Explicit main only — implemented, September 17, 2026
 
-Owner decision: remove inconvenient first-session promotion. Omitted roles always
-mean general, including after main exits; only --main creates main. The room lock
-preserves explicit-main uniqueness during concurrent and incomplete launches.
-Custom prefixes never select roles; existing names, permissions and reporting stay intact.
-Targeted review (`6436874..9aedd0f`): no reproduced defects; targeted tests passed three times.
-All 72 synchronized process claims passed; the automatic-main mutation was detected.
-Main's exact archive passed all five checks; binary: `9aedd0f`, `vcs.modified=false`.
-Live acceptance and ownership ambiguity remain open; round fourteen is recorded below.
+Omitted roles always mean general; only --main creates main under the room lock.
+Names never select roles. Targeted review found no defects, all five checks passed,
+and 72 synchronized process claims passed on exact archive `9aedd0f`.
 
-## Round fourteen — review complete, September 17, 2026
+## Round fourteen and gateway integration — September 18, 2026
 
-Reviewed `adbb6c2..b1b9d2b`; two P2 defects remain **open**: R14-1 retains closed
-observer clients during repeated failed reconnects; R14-2 drops observed active
-state during discovery and omits completion-gap reporting. Baseline five-check
-results are green; the new isolated reproductions fail. No fixes have landed.
-[Findings and reproductions](reviews-later.md#review-round-fourteen--complete-with-open-findings-september-17-2026).
+The earlier `adbb6c2..b1b9d2b` review found R14-1 (retained closed observer clients)
+and R14-2 (lost discovery-time active intervals). [Historical findings](reviews-later.md#review-round-fourteen--complete-with-open-findings-september-17-2026)
+remain recorded. The inline gateway replacement passes dedicated regressions for
+both semantics; independent integration and report-fix reviews completed.
 
-[Native resume matrix and probes](thread-lock-probes.md) confirm conditional runtime
-recreation on the fingerprinted build, without attributing the earlier live event.
-The [rewake-only intent gateway](thread-ownership-investigation.md#practical-rewake-only-intent-gateway-research)
-remains unselected research. Existing hooks are allowed; native changes remain forbidden.
+The owner accepted the V5 prototype's native fresh/new/resume routing and visible
+fresh/NEW/A/B/A delivery, steering, error and keyboard stop. Production integration
+now connects reservations, additive Git roots, async callbacks and durable reports;
+[design, checks and limits](gateway.md), [native evidence](gateway-native-evidence.md).
+CLI/ordinary fork and primary-preserving side now have protocol and integration
+regressions; owner decision keeps the address on main. [Report integration repairs](report-publication.md)
+address INT-1/2/3/4 and passed focused re-review. Subsequent owner installation
+failed startup. [Transport repair and evidence limits](startup-transport.md):
+queue repair passed review and isolated owner startup; the usual environment then
+confirmed nine size-guard closes. The size repair passed review and owner fresh/resume
+checks; installation and an automatic short-task report passed. Full main/side acceptance remains open.

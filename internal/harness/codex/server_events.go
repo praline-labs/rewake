@@ -3,175 +3,186 @@ package codex
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/harness"
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
+	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
-type serverThread struct {
-	Status       threadStatus    `json:"status"`
-	ID           string          `json:"id"`
-	Source       json.RawMessage `json:"source"`
-	Originator   string          `json:"originator"`
-	Parent       *string         `json:"parentThreadId"`
-	ThreadSource string          `json:"threadSource"`
-}
-
-func tuiThread(thread serverThread) bool {
-	var source string
-	if json.Unmarshal(thread.Source, &source) != nil {
-		return false
+// The protocol reader only enqueues. Disk writes and mailbox locks belong to the
+// publisher; a callback is not a report receipt until emit returns successfully.
+func (s *serverSession) queueCompletion(result harness.Completion) {
+	if s.capture != nil && result.Boundary == nil {
+		result.Boundary = s.capture()
 	}
-	if thread.Parent != nil || thread.ThreadSource != "" && thread.ThreadSource != "user" {
-		return false
-	}
-	if source != "cli" && source != "vscode" {
-		return false
-	}
-	switch thread.Originator {
-	case "rewake", "codex-tui", "codex_cli_rs":
-		return true
-	}
-	return false
-}
-
-type serverItem struct {
-	Kind string `json:"type"`
-	Text string `json:"text"`
-}
-
-func (s *serverSession) event(method string, raw json.RawMessage) {
-	var params struct {
-		Status   threadStatus `json:"status"`
-		Thread   serverThread `json:"thread"`
-		ThreadID string       `json:"threadId"`
-		TurnID   string       `json:"turnId"`
-		Item     serverItem   `json:"item"`
-		Turn     struct {
-			ID     string       `json:"id"`
-			Status string       `json:"status"`
-			Items  []serverItem `json:"items"`
-			Error  *struct {
-				Message string `json:"message"`
-			} `json:"error"`
-		} `json:"turn"`
-	}
-	if json.Unmarshal(raw, &params) != nil {
-		return
+	if result.Boundary != nil {
+		boundary := *result.Boundary
+		result.Boundary = &boundary
 	}
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	if method == "thread/status/changed" {
-		s.statusSequence++
+	s.outcomes = append(s.outcomes, result)
+	s.reportVersion++
+	bytes := 0
+	for _, outcome := range s.outcomes {
+		bytes += len(outcome.Text)
 	}
-	if method == "thread/started" {
-		if tuiThread(params.Thread) {
-			s.generation++
-			s.dirty = false
-			s.discoveryErr = nil
-			delete(s.ignored, params.Thread.ID)
-			s.selectRoot(params.Thread.ID)
-			s.observeStatus(params.Thread.Status.Kind)
-			s.signal()
-			s.wakeDiscovery()
-		} else {
-			s.ignored[params.Thread.ID] = true
-		}
-		return
+	overflow := len(s.outcomes) > 256 || bytes > 16<<20
+	s.mu.Unlock()
+	if overflow {
+		s.reportOverflow.Do(func() { s.cancel(); go s.gateway.Close() })
 	}
-	if params.ThreadID != s.current || s.current == "" {
-		if params.ThreadID != "" && !s.ignored[params.ThreadID] {
-			s.hintSequence++
-			s.dirty = true
-			if method == "turn/completed" || method == "item/completed" || method == "thread/status/changed" {
-				s.delayed = append(s.delayed, serverNotice{method: method, raw: raw, thread: params.ThreadID})
-			}
-			s.wakeDiscovery()
-		}
-		return
-	}
-	if method == "thread/closed" {
-		s.generation++
-		s.selectRoot("")
-		s.signal()
-		s.wakeDiscovery()
-		return
-	}
-	if method == "thread/status/changed" {
-		s.observeStatus(params.Status.Kind)
-		return
-	}
-	if method == "turn/started" {
-		if watch := s.observation; watch != nil && watch.active {
-			watch.turn = params.Turn.ID
-		}
-		return
-	}
-	if method == "item/completed" {
-		if params.Item.Kind == "agentMessage" {
-			s.messages[params.ThreadID+"/"+params.TurnID] = params.Item.Text
-		}
-		return
-	}
-	if method != "turn/completed" || params.Turn.ID == "" {
-		return
-	}
-	result := harness.Completion{ID: params.ThreadID + "/" + params.Turn.ID, Thread: params.ThreadID}
-	switch params.Turn.Status {
-	case "completed":
-		result.Kind = inbox.Finished
-		result.Text = s.messages[result.ID]
-		for _, item := range params.Turn.Items {
-			if item.Kind == "agentMessage" {
-				result.Text = item.Text
-			}
-		}
-	case "failed":
-		result.Kind = inbox.Error
-		if params.Turn.Error != nil {
-			result.Text = params.Turn.Error.Message
-		}
-	case "interrupted":
-		result.Kind = inbox.Stopped
-		result.Text = "the person at the keyboard stopped this turn"
+	select {
+	case s.wake <- struct{}{}:
 	default:
-		return
-	}
-	delete(s.messages, result.ID)
-	if !s.finishObservation(params.Turn.ID) {
-		s.queueCompletion(result)
 	}
 }
 
+func (s *serverSession) persistOutcomes() error {
+	s.mu.Lock()
+	if s.reportVersion == s.reportSaved {
+		s.mu.Unlock()
+		return nil
+	}
+	version := s.reportVersion
+	pending := append([]harness.Completion(nil), s.outcomes...)
+	s.mu.Unlock()
+	raw, err := json.Marshal(pending)
+	if err != nil {
+		return err
+	}
+	path := s.path + ".outcomes.json"
+	if err = state.WriteAtomic(path, raw); err != nil {
+		return err
+	}
+	s.mu.Lock()
+	s.reportSaved = version
+	s.mu.Unlock()
+	return nil
+}
+
+// One deadline covers the complete shutdown drain, including an already-running
+// publish. A late successful callback cannot dequeue its still-journaled head.
 func (s *serverSession) report(ctx context.Context) {
-	for {
+	defer close(s.stopped)
+	publishCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	budgetDone := make(chan struct{})
+	defer close(budgetDone)
+	go func() {
 		select {
 		case <-ctx.Done():
+		case <-budgetDone:
 			return
-		case <-s.wake:
 		}
-		for {
-			s.mu.Lock()
-			if len(s.outcomes) == 0 {
-				s.mu.Unlock()
-				break
+		timer := time.NewTimer(5 * time.Second)
+		defer timer.Stop()
+		select {
+		case <-timer.C:
+			cancel()
+		case <-budgetDone:
+		}
+	}()
+	ticker := time.NewTicker(250 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		if publishCtx.Err() != nil {
+			if err := s.persistOutcomes(); err != nil {
+				s.note("completion journal could not be saved: " + err.Error())
 			}
-			result := s.outcomes[0]
+			s.note("completion publication remains pending in " + s.path + ".outcomes.json")
+			return
+		}
+		if err := s.persistOutcomes(); err != nil {
+			if ctx.Err() != nil {
+				s.note("completion publication could not be persisted: " + err.Error())
+				return
+			}
+		} else {
+			s.mu.Lock()
+			if s.reportSaved != s.reportVersion {
+				s.mu.Unlock()
+				continue
+			}
+			empty := len(s.outcomes) == 0
+			var result harness.Completion
+			if !empty {
+				result = s.outcomes[0]
+			}
 			s.mu.Unlock()
-			if s.emit != nil {
-				if err := s.emit(result); err != nil {
-					select {
-					case <-ctx.Done():
-						return
-					case <-time.After(250 * time.Millisecond):
-						continue
-					}
+			if empty {
+				if ctx.Err() != nil {
+					return
+				}
+			} else if s.publishBound(publishCtx, result) == nil {
+				s.mu.Lock()
+				s.outcomes = s.outcomes[1:]
+				s.reportVersion++
+				s.mu.Unlock()
+				continue
+			}
+		}
+		select {
+		case <-publishCtx.Done():
+		case <-ctx.Done():
+			if ctx.Err() != nil {
+				select {
+				case <-publishCtx.Done():
+				case <-ticker.C:
 				}
 			}
-			s.mu.Lock()
-			s.outcomes = s.outcomes[1:]
-			s.mu.Unlock()
+		case <-s.wake:
+		case <-ticker.C:
 		}
 	}
+}
+
+func (s *serverSession) publishBound(ctx context.Context, result harness.Completion) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s.emit == nil {
+		return nil
+	}
+	if result.Boundary != nil {
+		boundary := *result.Boundary
+		result.Boundary = &boundary
+	}
+	done := make(chan error, 1)
+	go func() { done <- s.emit(ctx, result) }()
+	select {
+	case err := <-done:
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// A same-epoch restart can retry captured callbacks; it never borrows a new run's waits.
+func (s *serverSession) restoreOutcomes() error {
+	path := s.path + ".outcomes.json"
+	info, err := os.Lstat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if !info.Mode().IsRegular() || info.Size() > 32<<20 {
+		return fmt.Errorf("invalid completion journal %s", path)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	if err = json.Unmarshal(raw, &s.outcomes); err != nil {
+		return err
+	}
+	s.reportVersion = 1
+	return nil
 }

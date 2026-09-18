@@ -16,6 +16,15 @@ import (
 	"time"
 )
 
+type serverThread struct {
+	ID         string          `json:"id"`
+	Source     json.RawMessage `json:"source"`
+	Originator string          `json:"originator"`
+	Status     threadStatus    `json:"status"`
+}
+
+func tuiThread(thread serverThread) bool { return thread.Originator == "rewake" }
+
 const fixtureRoot = "0199ab12-1234-7123-8123-123456789abc"
 
 func TestServerProcessHelper(_ *testing.T) {
@@ -73,12 +82,13 @@ func TestServerProcessHelper(_ *testing.T) {
 				mode = "thread/resume"
 			}
 		}
-		if client.call(ctx, mode, map[string]any{"threadId": fixtureRoot, "excludeTurns": true}, nil) != nil {
+		if client.call(ctx, mode, map[string]any{"threadId": fixtureRoot, "excludeTurns": true, "threadSource": "user", "config": map[string]any{}, "runtimeWorkspaceRoots": []string{"/work"}}, nil) != nil {
 			client.close()
 			cancel()
 			os.Exit(7)
 		}
 		if mode == "thread/resume" {
+			_ = client.call(ctx, "thread/goal/get", map[string]string{"threadId": fixtureRoot}, nil)
 			_ = os.WriteFile(socket+".resumed", []byte("resumed without thread/started"), 0o600)
 		}
 		cancel()
@@ -131,7 +141,7 @@ func TestServerProcessHelper(_ *testing.T) {
 				return
 			}
 			var request struct {
-				ID     uint64          `json:"id"`
+				ID     json.RawMessage `json:"id"`
 				Method string          `json:"method"`
 				Params json.RawMessage `json:"params"`
 			}
@@ -151,10 +161,10 @@ func TestServerProcessHelper(_ *testing.T) {
 				root.Status.Kind = "idle"
 				loaded = true
 				subscribers[conn][root.ID] = true
-				result = map[string]any{"thread": root}
+				result = map[string]any{"thread": root, "canAcceptDirectInput": true}
 				for peer, ready := range clients {
 					if ready {
-						serverMessage(peer, map[string]any{"method": "thread/started", "params": map[string]any{"thread": root}})
+						serverMessage(peer, map[string]any{"method": "thread/started", "params": map[string]any{"thread": root, "canAcceptDirectInput": true}})
 					}
 				}
 			case "thread/resume":
@@ -184,7 +194,7 @@ func TestServerProcessHelper(_ *testing.T) {
 				subscribers[conn][root.ID] = true
 				wasLoaded := loaded
 				loaded = true
-				result = map[string]any{"thread": root}
+				result = map[string]any{"thread": root, "canAcceptDirectInput": true}
 				if !wasLoaded && os.Getenv("RW_SERVER_NO_STATUS") != "1" {
 					for peer, ready := range clients {
 						if ready {
@@ -238,7 +248,7 @@ func TestServerProcessHelper(_ *testing.T) {
 					mu.Unlock()
 					continue
 				}
-				result = map[string]any{"thread": root}
+				result = map[string]any{"thread": root, "canAcceptDirectInput": true}
 			case "fixture/replace-disconnect":
 				root.ID = "after-disconnect"
 				rolloutAt = time.Now()

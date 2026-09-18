@@ -5,12 +5,15 @@ import (
 	"context"
 	"encoding/json"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/iiiokojiadbi/rewake/internal/harness/codex/gateway"
 
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/role"
@@ -45,7 +48,7 @@ func gitDeliveryFixture(t *testing.T, part role.Role, reads ...gitReadFixture) (
 				return
 			}
 			var request struct {
-				ID     uint64                     `json:"id"`
+				ID     json.RawMessage            `json:"id"`
 				Method string                     `json:"method"`
 				Params map[string]json.RawMessage `json:"params"`
 			}
@@ -58,6 +61,8 @@ func gitDeliveryFixture(t *testing.T, part role.Role, reads ...gitReadFixture) (
 			case "initialized":
 				continue
 			case "initialize":
+			case "thread/start":
+				result = map[string]any{"thread": map[string]any{"id": fixtureRoot, "status": map[string]string{"type": "idle"}, "canAcceptDirectInput": true}}
 			case "thread/read":
 				if string(request.Params["includeTurns"]) != "false" || len(request.Params) != 2 {
 					t.Errorf("read requested history or unexpected fields: %s", raw)
@@ -76,7 +81,7 @@ func gitDeliveryFixture(t *testing.T, part role.Role, reads ...gitReadFixture) (
 					continue
 				}
 				if read.change {
-					serverMessage(c, map[string]any{"method": "thread/started", "params": map[string]any{"thread": map[string]string{"id": "replacement", "source": "cli", "originator": "rewake"}}})
+					serverMessage(c, map[string]any{"method": "thread/closed", "params": map[string]string{"threadId": fixtureRoot}})
 				}
 				result = map[string]any{"thread": read.thread}
 			case "turn/start":
@@ -95,12 +100,23 @@ func gitDeliveryFixture(t *testing.T, part role.Role, reads ...gitReadFixture) (
 	})
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	client, err := connectRPC(ctx, path, server.event)
+	server.gateway = gateway.New(gateway.Config{Upstream: path, Epoch: "test"})
+	downstream := filepath.Join(t.TempDir(), "gateway.sock")
+	listener, err := net.Listen("unix", downstream)
+	if err != nil {
+		t.Fatal(err)
+	}
+	proxy := &http.Server{Handler: server.gateway, ReadHeaderTimeout: time.Second}
+	go func() { _ = proxy.Serve(listener) }()
+	t.Cleanup(func() { _ = proxy.Close(); server.gateway.Close() })
+	client, err := connectRPC(ctx, downstream, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(client.close)
-	server.client, server.current = client, fixtureRoot
+	if err := client.call(ctx, "thread/start", map[string]any{"threadSource": "user", "runtimeWorkspaceRoots": []string{"/work"}}, nil); err != nil {
+		t.Fatal(err)
+	}
 	return server, captured
 }
 
@@ -237,11 +253,11 @@ func TestTaskGitRootsUnavailableDoesNotBlockDelivery(t *testing.T) {
 	}
 }
 
-func TestTaskGitRootsRefuseThreadChangedDuringRead(t *testing.T) {
+func TestTaskGitRootsRefuseClosedThreadDuringRead(t *testing.T) {
 	repo := gitRepository(t)
 	server, captured := gitDeliveryFixture(t, role.Write, gitReadFixture{thread: gitThreadFixture(repo, []string{repo}, "idle"), change: true})
 	result := server.Deliver(context.Background(), inbox.Message{ID: "changed", Kind: inbox.Task})
-	if result.State != inbox.Failed || !strings.Contains(result.Detail, "conversation changed") {
+	if result.State != inbox.Failed || !strings.Contains(result.Detail, "accepted conversation") {
 		t.Fatalf("result=%+v", result)
 	}
 	select {

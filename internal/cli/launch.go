@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/iiiokojiadbi/rewake/internal/harness"
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/role"
 	"github.com/iiiokojiadbi/rewake/internal/state"
@@ -40,8 +39,8 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 		}
 
 		code, err := wrap.Run(context.Background(), wrap.Request{
-			OnTurn: func(self registry.Session, result harness.Completion) error {
-				return completeTurn(dir, self, turnResult{ID: result.ID, Text: result.Text, Failed: result.Kind == inbox.Error, Stopped: result.Kind == inbox.Stopped}, result.Thread)
+			OnTurn: func(ctx context.Context, self registry.Session, result harness.Completion) error {
+				return ReportCompletion(ctx, dir, self, result)
 			},
 			Harness: h,
 			Dir:     dir,

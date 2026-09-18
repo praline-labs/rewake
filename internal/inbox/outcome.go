@@ -26,6 +26,10 @@ func (s *Server) lock(fn func() error) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	return s.lockWithContext(ctx, fn)
+}
+
+func (s *Server) lockWithContext(ctx context.Context, fn func() error) error {
 	err := state.WithMailboxLock(ctx, s.Dir, s.Name, fn)
 	var unusable *state.LockUnusableError
 	if errors.As(err, &unusable) {

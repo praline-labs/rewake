@@ -10,6 +10,10 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 )
 
+type threadStatus struct {
+	Kind string `json:"type"`
+}
+
 type threadEnvironment struct {
 	ID    string   `json:"environmentId"`
 	Cwd   string   `json:"cwd"`
@@ -19,7 +23,8 @@ type threadEnvironment struct {
 // Roots are a replacement field, not a grant list. Read a fresh server snapshot
 // for each task; neither launch cwd nor a cached resume reply can preserve roots
 // changed by the person in the TUI. Failure must not prevent ordinary delivery.
-func (s *serverSession) taskGitRoots(ctx context.Context, client *rpcClient, thread string, kind inbox.Kind) ([]string, string) {
+func (s *serverSession) taskGitRoots(ctx context.Context, readThread func(context.Context, any) error, thread string, kind inbox.Kind,
+) ([]string, string) {
 	if !s.gitWrite || kind != inbox.Task && kind != inbox.Question {
 		return nil, ""
 	}
@@ -32,7 +37,7 @@ func (s *serverSession) taskGitRoots(ctx context.Context, client *rpcClient, thr
 	}
 	readCtx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
 	defer cancel()
-	if err := client.call(readCtx, "thread/read", map[string]any{"threadId": thread, "includeTurns": false}, &response); err != nil {
+	if err := readThread(readCtx, &response); err != nil {
 		return nil, "Git metadata access unchanged: could not read current thread roots"
 	}
 	current := response.Thread

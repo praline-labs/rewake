@@ -93,9 +93,11 @@ summarizes the lack of an unconditional launch grant, not a promise that the TUI
 preserves server roots.
 
 The API has no atomic append or revision precondition. The adapter preserves its
-fresh snapshot, but another client's simultaneous root change between read and
-turn/start cannot be merged atomically. A detected conversation change refuses
-delivery rather than applying a prior thread's roots to its replacement.
+fresh snapshot. The metadata read and turn/start are now ordered under the same
+gateway reservation against native TUI
+selection/settings requests. A lost binding refuses delivery rather than applying
+a prior thread's roots to its replacement. This is not a global server transaction
+against clients that bypass the wrapper gateway.
 Fake-server tests cover roles, exact unions, worktrees, unreadable snapshots,
 steer, repeated tasks, manual replacement and thread changes. Mutations that
 narrow roots, grant general access or add other directories must fail these tests.
@@ -108,6 +110,7 @@ Cold resume returns ThreadResumeResponse only to its caller, without thread/star
 (`thread_processor.rs:4083–4133`). Its upsert at :4008 can broadcast
 thread/status/changed via `thread_status.rs:223–251` and
 `outgoing_message.rs:737–746`, without a thread subscription. Name changes also
-broadcast thread/name/updated (:672), but are not guaranteed on resume. Discovery
-therefore uses metadata hints plus loaded-list polling, never history.
+broadcast thread/name/updated (:672), but are not guaranteed on resume. The former observer used metadata hints plus loaded-list polling. The integrated
+gateway instead sees the caller's request and matching reply, so no discovery or
+observer resume is required; see [gateway selection](gateway.md).
 

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"time"
@@ -12,7 +13,10 @@ import (
 
 // The mailbox lock serializes preparation and clearing. Persist the entire
 // batch before its first publication so retries cannot absorb later work.
-func publishTurn(dir string, self registry.Session, event turnResult, currentThread string, waiters []inbox.Waiter) error {
+func publishTurnContext(ctx context.Context, dir string, self registry.Session, event turnResult, currentThread string, waiters []inbox.Waiter) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	receipt, path, err := loadTurnReceipt(dir, self, event)
 	if err != nil {
 		return err
@@ -30,6 +34,9 @@ func publishTurn(dir string, self registry.Session, event turnResult, currentThr
 			}
 		}
 		for _, report := range receipt.Reports {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
 			peer, err := registry.Lookup(dir, report.To)
 			if err != nil && !errors.Is(err, registry.ErrNotFound) {
 				return err
@@ -47,6 +54,9 @@ func publishTurn(dir string, self registry.Session, event turnResult, currentThr
 				return err
 			}
 		}
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		receipt.Done = true
 		if err := saveTurnReceipt(path, receipt); err != nil {
 			return err
@@ -56,6 +66,9 @@ func publishTurn(dir string, self registry.Session, event turnResult, currentThr
 		return nil
 	}
 	for _, waiter := range receipt.Waiters {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		inbox.ClearAwaiting(dir, self.Name, self.Epoch(), waiter)
 	}
 	return nil

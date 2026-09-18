@@ -4,16 +4,11 @@ Verified September 17, 2026 against CLI 0.154.0, source snapshot
 `44b9011611e1f4213ef34bd51b33476475803a94`. Paths below are inside codex-rs.
 No native harness or model was started for this follow-up.
 
-Known limitation found later the same day: loaded-root metadata does not establish
-terminal ownership. Obsolete observer subscriptions are now released on established
-root changes; the server may still retain detached roots during its unload delay.
-See [ownership investigation and mitigation](thread-ownership-investigation.md).
-
-Round fourteen found open P2 defect R14-2: active metadata observed during
-discovery can be discarded when idle/systemError arrives before subscription
-finishes, leaving no observation to expire. The tests below did not cover this
-ordering; [review findings](reviews-later.md#review-round-fourteen--complete-with-open-findings-september-17-2026)
-record the failing reproduction. This is not a missed-whole-interval limitation.
+This page records the original observer failure and native event ordering. The
+September 18 [inline gateway](gateway.md) replaces observer discovery/subscription;
+it receives the terminal connection's scoped outcomes from its first turn.
+R14-2's observed pre-reply active/idle interval now has a passing replacement
+regression. Independent integration review and real peer acceptance remain open.
 
 ## Subscription is separate from identity
 
@@ -42,7 +37,8 @@ running the turn. The latter records the user prompt later;
 `core/src/session/mod.rs:4743–4773` emits its item notifications and only then
 calls ensure_rollout_materialized. That function calls LiveThread.persist
 (`:1334–1351`). A resume triggered by active can consequently race persistence.
-Retrying the specific no-rollout error during the active interval is necessary.
+The old observer therefore retried the no-rollout error during the active interval;
+the inline gateway does not need that attachment.
 
 `app-server/src/bespoke_event_handling.rs:153–180` marks active before sending
 typed turn/started. At `:183–195` it marks completion/idle before sending typed
@@ -57,13 +53,6 @@ A fast failure, interruption or reply can finish before rollout lookup and
 subscription succeed. Even a successful resume can arrive after the terminal
 event captured its recipient list. History-free observation cannot recover it.
 
-The backend retries every 50 ms during an observed active interval, limits each
-RPC to 500 ms, and stops retries on idle, closure, /new or shutdown. An in-flight
-RPC keeps its bounded budget across a thread change; generation guards route a
-late attachment to cleanup. Other refusals stop retries for that interval.
-Subscription success records the connection, thread
-and generation, preventing an old acknowledgement from selecting a new target.
-
 Idle starts a 500 ms completion grace. If no completion arrives, the backend
 emits error with only the diagnostic "completion not observed", not model text
 or a guessed failure cause. Normal completion cancels this fallback. If no turn
@@ -73,8 +62,8 @@ or multiple missed intervals cannot be reconstructed reliably. Missing the whole
 active/idle interval during disconnect remains unobservable. Full recovery needs
 an upstream replay/subscription barrier; reading transcripts is not a fallback.
 
-The strict fake requires a persisted rollout for resume, rejects history access,
-and sends turn/item/error events only to subscribed connections. Tests exercise
-delayed persistence, fresh /new, retry cancellation, normal idle-before-completion
-ordering and a terminal event lost before subscription. Live acceptance remains
-an owner-run milestone check.
+The old strict fake modeled subscription/persistence races. Its implementation-
+specific tests have been replaced by gateway first-delivery, retained-outcome,
+generation, connection cleanup and observation-gap regressions. The native ordering
+facts above remain relevant; [current acceptance](gateway-native-evidence.md)
+distinguishes terminal observation, durable publication and actual peer delivery.

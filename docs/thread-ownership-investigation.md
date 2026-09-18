@@ -131,7 +131,9 @@ No latest/active/arbitrary-root heuristic is accepted as a reliable substitute.
 
 ### Practical rewake-only intent gateway research
 
-Research completed September 17, 2026; this option is **unselected and
+Research completed September 17, 2026. The original proposal below was later
+selected for the owner-accepted V5 prototype and [production integration](gateway.md).
+At the research date it was **unselected and
 unimplemented**. Its restricted contract would bind to the last successfully
 accepted ordinary startup/new/clear/resume intent on the wrapper-owned TUI
 connection. It would not attest the currently rendered screen. Existing hooks

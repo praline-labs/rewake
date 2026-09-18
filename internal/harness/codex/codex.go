@@ -108,6 +108,8 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 	args = harness.AddFlags(args, "--remote", "unix://"+socket)
 	server := newServer(socket, serverArgs, append(append([]string{}, env...), "CODEX_INTERNAL_APP_SERVER_REMOTE_CONTROL_DISABLED=1"), cwd)
 	server.gitWrite = request.Role.GitWrite
+	mode, _ := continuationMode(request.Args)
+	server.startupFork = mode == "fork"
 	return harness.LaunchPlan{
 		Backend:    server,
 		Socket:     socket,

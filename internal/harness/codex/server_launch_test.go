@@ -20,7 +20,7 @@ func TestLaunchOwnsServerAndKeepsPromptOnTUI(t *testing.T) {
 	if !ok {
 		t.Fatal("launch does not own an app-server")
 	}
-	if !strings.Contains(strings.Join(server.args, " "), introKey+"=") || !strings.Contains(strings.Join(server.args, " "), "app-server --listen unix:///tmp/session.sock") {
+	if !strings.Contains(strings.Join(server.args, " "), introKey+"=") || !strings.Contains(strings.Join(server.args, " "), "app-server --listen unix:///tmp/session.sock.up") {
 		t.Fatalf("server args=%q", server.args)
 	}
 	if !strings.Contains(strings.Join(plan.Args, " "), "--remote unix:///tmp/session.sock") || plan.Args[len(plan.Args)-1] != "caller prompt" {
@@ -45,11 +45,34 @@ func TestDifferentServerVersionWarnsWithoutRefusing(t *testing.T) {
 	path := filepath.Join(dir, "s.sock")
 	server := newServer(path, []string{"app-server", "--listen", "unix://" + path}, os.Environ(), dir)
 	var notes []string
-	if err := server.Start(context.Background(), nil, func(note string) { notes = append(notes, note) }); err != nil {
+	if err := server.Start(context.Background(), harness.CompletionHandler{}, func(note string) { notes = append(notes, note) }); err != nil {
 		t.Fatal(err)
 	}
 	defer server.Close()
 	if len(notes) != 1 || !strings.Contains(notes[0], "0.154.0") {
 		t.Fatalf("version mismatch warning=%v", notes)
+	}
+}
+
+func TestForkLaunchContextDoesNotComeFromOptionValues(t *testing.T) {
+	codexHome(t, "")
+	for _, test := range []struct {
+		args []string
+		fork bool
+	}{
+		{[]string{"fork", "--last"}, true},
+		{[]string{"-m", "fixture", "fork", "parent"}, true},
+		{[]string{"-m", "fork"}, false},
+		{[]string{"--", "fork"}, false},
+		{[]string{"-c", `developer_instructions="fork"`}, false},
+		{[]string{"resume", "parent"}, false},
+	} {
+		plan, err := New().Launch(harness.LaunchRequest{Name: "worker", Dir: t.TempDir(), Args: test.args})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := plan.Backend.(*serverSession).startupFork; got != test.fork {
+			t.Fatalf("args=%q fork=%v", test.args, got)
+		}
 	}
 }

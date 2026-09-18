@@ -394,6 +394,7 @@ child callbacks. Rewake ignores completions carrying a child identity.
 thread/loaded/list starts with an omitted or null cursor. For a nonempty loaded
 set, an empty string is an invalid ThreadId, not the first page. Only a returned
 nextCursor belongs in the next request (`thread_processor.rs:2732–2777`).
-
-[Server observation](server-observation.md) and [ownership research](thread-ownership-investigation.md) cover ordering, selection and the unselected intent gateway.
+[Gateway native evidence](gateway-native-evidence.md) and [128 MiB transport limits](startup-transport.md#confirmed-native-message-size-failure-and-repair) record
+the owner-accepted
+prototype and integration ordering; [ownership research](thread-ownership-investigation.md) preserves the earlier investigation.
 The [native resume matrix](thread-lock-probes.md) verifies conditional recreation on the fingerprinted 0.154.0 build; original live-event attribution remains open.

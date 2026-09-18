@@ -3,6 +3,8 @@ package inbox
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/state"
@@ -43,6 +45,8 @@ type Server struct {
 	Name string
 	// Deliver hands a message to the harness.
 	Deliver Deliverer
+	// Reserve fences destinations across readability and delivery when supported.
+	Reserve Reserver
 	// Thread identifies the target conversation before a task becomes readable.
 	Thread func() (string, error)
 	// TTL overrides how long a message may stay pending.
@@ -125,7 +129,7 @@ func (s *Server) drain(ctx context.Context) {
 		return
 	}
 	for _, message := range messages {
-		if ctx.Err() != nil {
+		if ctx.Err() != nil || !s.owned() {
 			return
 		}
 		if s.alreadySettled(message) {
@@ -142,44 +146,15 @@ func (s *Server) drain(ctx context.Context) {
 			continue
 		}
 
-		// Readable first, announced second: an agent that runs rewake inbox the
-		// moment it is told has to find the message there. A message linked on an
-		// earlier attempt may have been read since; then there is nothing left
-		// to announce.
-		read, answered, expired := false, false, false
-		err := s.lock(func() error {
-			if status, ok := ReadStatus(s.Dir, s.Name, message.ID); ok && status.State == Read {
-				read = true
-				return nil
-			}
-			// A lease keeps the report queued, but ordinary expired mail
-			// must never become visible to a reader in the first place.
-			answered = awaitedHere(s.Dir, s.Name, message)
-			var err error
-			expired, err = s.answerExpired(message, answered)
-			if err != nil {
-				return err
-			}
-			if expired {
-				return nil
-			}
-			if s.Thread != nil && Owed(message) {
-				thread, err := s.Thread()
-				if err != nil {
-					return err
-				}
-				if thread != "" {
-					if err := recordDeliveryThread(s.Dir, s.Name, message.ID, thread); err != nil {
-						return err
-					}
-					message.DeliveryThread = thread
-				}
-			}
-			if err := linkUnread(s.Dir, s.Name, message.ID); err != nil {
-				return err
-			}
-			return nil
-		})
+		read, answered, expired, reservation, release, err := s.prepareDelivery(ctx, &message)
+		if !s.owned() {
+			release()
+			return
+		}
+		if err != nil || read || answered || expired {
+			release()
+		}
+
 		if read {
 			s.finish(message, Result{State: Read})
 			continue
@@ -190,7 +165,8 @@ func (s *Server) drain(ctx context.Context) {
 			continue
 		}
 		if errors.Is(err, ErrThreadUnavailable) {
-			s.finish(message, Result{State: Failed, Detail: err.Error()})
+			_, readableErr := os.Stat(filepath.Join(state.UnreadPath(s.Dir, s.Name), message.ID+".json"))
+			s.finish(message, Result{State: Failed, Detail: err.Error(), ReportAvailable: IsReport(message) && readableErr == nil && !expired})
 			continue
 		}
 		if err != nil {
@@ -215,7 +191,13 @@ func (s *Server) drain(ctx context.Context) {
 		}
 		// The notice names how many messages wait, this one included.
 		message = noticeContext(s.Dir, s.Name, s.Epoch, message)
-		result := s.Deliver(ctx, message)
+		var result Result
+		if reservation != nil {
+			result = reservation.Deliver(ctx, message)
+		} else {
+			result = s.Deliver(ctx, message)
+		}
+		release()
 		result.ReportAvailable = result.State == Failed && IsReport(message)
 		s.attempts[message.ID] = time.Now()
 		if result.State == Pending {
