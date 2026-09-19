@@ -69,6 +69,7 @@ func buildGroups() {
 				Options:        []Option{jsonOption},
 				Examples:       []string{"rewake list", "rewake list --json"},
 				Next:           []string{"rewake send <name> \"text\""},
+				Notes:          []string{sessionStateHelp, "Main receives a notify when a session becomes available; a later main also learns which sessions were already available. Each launch epoch is announced once."},
 				Handler:        handleList,
 			},
 			{
@@ -85,6 +86,7 @@ func buildGroups() {
 				Notes: []string{
 					"A task is the default: the session reads it, works, and ends its turn with a final message, which comes back to you as a \"Rewake: <session> finished\" line.",
 					"A question blocks until that final message and prints it. A long one is better run in the background.",
+					sessionStateHelp,
 					"Quote the text as one argument: loose words are refused rather than silently joined.",
 				},
 				Handler: handleSend,
@@ -100,6 +102,7 @@ func buildGroups() {
 					"Run it when a \"Rewake: <session> <kind>\" line says messages are waiting.",
 					"A task or a question you read is answered by ending your turn: your final message goes back to the sender by itself. Put the result there.",
 					"A notify needs no answer. A finished message is a session's final message after work you gave it.",
+					sessionStateHelp,
 				},
 				Handler: handleInbox,
 			},

@@ -35,6 +35,9 @@ func answerQuestion(ctx *Context, question sent) error {
 
 	_, found, err := inbox.AwaitAnswer(wait, question.dir, question.self.Name, question.epoch, model.ID, func(answer inbox.Message) error {
 		model.State, model.Answer = string(inbox.Read), answer.Text
+		if canSeeSessionState(question.dir) {
+			model.Telemetry = sessionSnapshot(question.dir, answer.From, answer.FromEpoch)
+		}
 		model.ThreadChanged = answer.ThreadChanged
 		model.Kind = inbox.KindOf(answer)
 		if model.Kind == inbox.Error || model.Kind == inbox.Stopped {
@@ -45,7 +48,11 @@ func answerQuestion(ctx *Context, question sent) error {
 			if model.Kind == inbox.Error || model.Kind == inbox.Stopped {
 				heading = string(model.Kind)
 			}
-			lines := []string{fmt.Sprintf("%s from %s:", heading, target.Name), answer.Text}
+			var lines []string
+			if model.Telemetry != nil {
+				lines = append(lines, stateLine(answer.From, model.Telemetry, false), "")
+			}
+			lines = append(lines, fmt.Sprintf("%s from %s:", heading, target.Name), answer.Text)
 			if answer.ThreadChanged {
 				lines = append(lines, inbox.ThreadChangedWarning)
 			}

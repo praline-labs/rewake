@@ -26,6 +26,7 @@ type (
 	}
 	// Gateway fences delivery by accepted intent on a single TUI incarnation.
 	Gateway struct {
+		telemetry         telemetryRun
 		startupForkOwner  uint64
 		startupForkParent string
 		startupBound      bool
@@ -43,6 +44,7 @@ type (
 		publishOrder      []string
 	}
 	connection struct {
+		observations                connectionObservations
 		requestBytes, responseBytes atomic.Int64
 		owner                       *Gateway
 		up, down                    *socketClient
@@ -70,6 +72,7 @@ func (c *connection) closeWith(direction, reason string, err error, size int) {
 		_ = c.down.conn.Close()
 		c.mu.Lock()
 		previous := c.state.Binding
+		c.observationClosed()
 		c.state.invalidate("connection lost; re-establish recognized primary intent")
 		c.state.pending = map[string]pending{}
 		c.injected = map[string]chan meta{}
@@ -155,6 +158,7 @@ func (c *connection) readUI() {
 				}
 			}
 
+			c.observeRequest(m)
 			c.record("tui-request", m)
 			c.mu.Unlock()
 			if err == nil {

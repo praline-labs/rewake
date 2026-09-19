@@ -198,6 +198,12 @@ terminal evidence and current compatibility limits are recorded in
 
 ### Reading (`rewake inbox`)
 
+A verified main caller receives a [primary session-state header](session-state.md)
+before every message, and before direct question answers. Latest snapshots are
+looked up by the sender's exact epoch; JSON carries the same optional metadata.
+Workers and plain shells receive no telemetry. Message text and receipt identity
+are unchanged.
+
 Run by the agent inside its session: `REWAKE_SESSION` names the mailbox and
 `REWAKE_EPOCH` the run. A run that no longer holds the name is refused, and so
 is a process with a name and no run — by its name alone, a leftover of an ended

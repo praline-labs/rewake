@@ -66,13 +66,14 @@ different `TMPDIR` still finds the same directory.
 
 Checked on every open: it's a directory, not a symlink, owned by the current
 uid, with no group or other access; otherwise it fails with an explanation.
-Created with 0700.
+Created with 0700. [Optional primary observations](session-state.md) are collected asynchronously; only verified main callers see them.
 
 ```
 <REWAKE_DIR>/
   rooms/<room>/
     .launch.lock              serializes role choice and name publication
     sessions/<name>.json       session record
+    observations/<digest>.json latest bounded state for one name/epoch
     inbox/<name>/<id>.json     waiting for delivery
     inbox/<name>/<id>.status   pending, delivered, read or failed
     inbox/<name>/unread/       readable messages

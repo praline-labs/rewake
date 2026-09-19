@@ -15,6 +15,7 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/harness"
 	"github.com/iiiokojiadbi/rewake/internal/harness/codex/gateway"
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
+	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
 )
 
 type serverSession struct {
@@ -207,4 +208,11 @@ func (s *serverSession) Close() {
 		_ = os.Remove(s.path)
 		_ = os.Remove(s.upstream)
 	})
+}
+
+func (s *serverSession) SessionState() sessionstate.Snapshot {
+	if s.gateway == nil {
+		return sessionstate.Unknown(s.epoch)
+	}
+	return s.gateway.SessionState()
 }

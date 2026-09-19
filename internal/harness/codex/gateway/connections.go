@@ -46,6 +46,9 @@ func (g *Gateway) claim(c *connection) {
 	} else {
 		g.current = nil
 		g.reconnectThread = ""
+		g.telemetry.mu.Lock()
+		g.telemetry.partial = true
+		g.telemetry.mu.Unlock()
 	}
 }
 

@@ -380,21 +380,19 @@ Omitted roles always mean general; only --main creates main under the room lock.
 Names never select roles. Targeted review found no defects, all five checks passed,
 and 72 synchronized process claims passed on exact archive `9aedd0f`.
 
-## Round fourteen and gateway integration — September 18, 2026
+## Gateway integration — verified paths, September 19, 2026
 
-The earlier `adbb6c2..b1b9d2b` review found R14-1 (retained closed observer clients)
-and R14-2 (lost discovery-time active intervals). [Historical findings](reviews-later.md#review-round-fourteen--complete-with-open-findings-september-17-2026)
-remain recorded. The inline gateway replacement passes dedicated regressions for
-both semantics; independent integration and report-fix reviews completed.
+[Integration and review history](reviews-later.md#round-fourteen-and-gateway-integration--september-18-2026)
+records the installed startup and primary/side acceptance, with its scope unchanged.
 
-The owner accepted the V5 prototype's native fresh/new/resume routing and visible
-fresh/NEW/A/B/A delivery, steering, error and keyboard stop. Production integration
-now connects reservations, additive Git roots, async callbacks and durable reports;
-[design, checks and limits](gateway.md), [native evidence](gateway-native-evidence.md).
-CLI/ordinary fork and primary-preserving side now have protocol and integration
-regressions; owner decision keeps the address on main. [Report integration repairs](report-publication.md)
-address INT-1/2/3/4 and passed focused re-review. Subsequent owner installation
-failed startup. [Transport repair and evidence limits](startup-transport.md):
-queue repair passed review and isolated owner startup; the usual environment then
-confirmed nine size-guard closes. The size repair passed review and owner fresh/resume
-checks. Installed task/report exchange passed with side visible and after close, without resume/restart; [scope](gateway-native-evidence.md#installed-primaryside-delivery-acceptance--september-19-2026).
+## Session state and service notices — accepted scope, September 19, 2026
+
+[Primary observations](session-state.md) collect all roles and display only to main.
+WS, R2/R3 and ACT-1/2 repairs passed independent review and all five checks. The owner
+installed revision 4 and activity-3, then accepted startup, model/effort/context,
+availability, working/idle, finished headers, worker JSON privacy, stale departures
+on replacement and manual-compaction completion notices. Rounded 0% / 828K is not
+empty history. [The acceptance record](session-activity.md#evidence-and-acceptance)
+keeps unexercised live settings, waiting/error, interrupted/automatic compaction and
+side-telemetry scenarios separate. The older main-readiness/missing-notice incident
+remains open as the next task; this feature does not close it.

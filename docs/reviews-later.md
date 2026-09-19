@@ -204,3 +204,138 @@ outside scope. Ownership selection remains open; the later owner-run metadata
 probes are complete, with [evidence and limits](thread-lock-probes.md). The September 18 gateway replacement passes dedicated closed-connection cleanup
 and pre-reply active/idle regressions for R14-1/R14-2. Independent integration review
 and real peer acceptance remain open; see [gateway integration](gateway.md).
+
+## Round fourteen and gateway integration — September 18, 2026
+
+The earlier `adbb6c2..b1b9d2b` review found R14-1 (retained closed observer clients)
+and R14-2 (lost discovery-time active intervals). [Historical findings](reviews-later.md#review-round-fourteen--complete-with-open-findings-september-17-2026)
+remain recorded. The inline gateway replacement passes dedicated regressions for
+both semantics; independent integration and report-fix reviews completed.
+
+The owner accepted the V5 prototype's native fresh/new/resume routing and visible
+fresh/NEW/A/B/A delivery, steering, error and keyboard stop. Production integration
+now connects reservations, additive Git roots, async callbacks and durable reports;
+[design, checks and limits](gateway.md), [native evidence](gateway-native-evidence.md).
+CLI/ordinary fork and primary-preserving side now have protocol and integration
+regressions; owner decision keeps the address on main. [Report integration repairs](report-publication.md)
+address INT-1/2/3/4 and passed focused re-review. Subsequent owner installation
+failed startup. [Transport repair and evidence limits](startup-transport.md):
+queue repair passed review and isolated owner startup; the usual environment then
+confirmed nine size-guard closes. The size repair passed review and owner fresh/resume
+checks. Installed task/report exchange passed with side visible and after close, without resume/restart; [scope](gateway-native-evidence.md#installed-primaryside-delivery-acceptance--september-19-2026).
+
+## Session-state review and repairs — September 19, 2026
+
+Independent review of the state/availability submission reproduced six findings:
+optional telemetry could acquire an unbounded cleanup/name lock under main's mailbox;
+obsolete lifecycle and metadata replies could replace newer settings; rejected
+settings stayed pending; failed/interrupted compaction stayed in progress; a full
+candidate cache could prevent a subsequently accepted primary from getting a snapshot;
+and an empty shell list changed from sessions:null to sessions:[].
+
+Repairs use non-mutating identity reads in CLI and availability paths, request
+selection/revision fences, per-request rejection tracking, turn-scoped progress
+cleanup, accepted-primary cache admission with separate dedup history, and the
+original nil-list shape. The review's correctness repros are permanent coverage;
+additional overlaps preserve newer proposals, primary-preserving side and other
+turns' compactions. Original submission and failing evidence remain unchanged.
+Later revision-4 review and owner state/availability checks accepted these repairs.
+The separate deferred readiness/notification investigation is not part of this repair.
+
+### State settings ordering follow-up — September 19, 2026
+
+The six original repros passed focused re-review. Two related regressions remained:
+a rejected pre-ACK proposal suppressed a valid lifecycle confirmation, and accepting
+one metadata reply incorrectly excluded a newer concurrent read. Both new assertions
+passed on the first submission and failed on revision 2; those artifacts are retained.
+
+Revision 3 separates actual confirmed settings presence, mutation/notification fences
+and confirmed request serials. Lifecycle seed survives rejection without clearing an
+unresolved proposal; newer pre-ACK applied values still win. Later eligible reads
+can update settings in either response order, while older replies cannot replace
+newer evidence. Notification, rejection and selection boundaries remain fenced.
+Exact review repros and expanded ordering tests are permanent coverage. Later review
+accepted these ordering fixes; live setting-change coverage remains separate. No
+readiness investigation was added.
+
+### Pre-ACK current-turn usage repair — September 19, 2026
+
+Revision 3's settings-order fixes passed review. R3-1 found that lifecycle seeding
+with an unresolved proposal could re-arm the usage gate after turn/started was
+already observed. Rejection then left fresh usage of that running turn suppressed.
+The seed now preserves that boundary and context instead of treating the proposal
+as an applied model change. Actual applied-settings barriers remain unchanged.
+
+The exact review reproduction is permanent coverage, with start/resume ordering
+cases and applied changes before/after lifecycle ACK. Original WS and R2 repairs
+remain covered. Revision 4 subsequently passed focused review and the owner state
+checks below; live settings changes were not newly exercised.
+
+### State acceptance and activity extension — September 19, 2026
+
+Revision4 passed focused review. After installation, the owner confirmed state/model/
+effort for main, worker availability notices, worker JSON without telemetry, a state
+header on finished and manual compaction increment0->1 with rounded0% /828K context.
+This does not prove empty history or every model/compaction workflow.
+
+The next extension observes current primary activity independently of last outcome,
+notifies main of new canonical compaction completions, and reports known worker
+departure with frozen stale old-epoch state. It reuses the existing main observer,
+visibility and durable notify paths. Subsequent ACT-1/2 review and owner acceptance
+are recorded below. The readiness incident remains outside this feature.
+
+### Departure identity uncertainty repair — September 19, 2026
+
+Activity review confirmed ACT-1: a permission failure reading process identity made
+the boolean liveness helper report false, producing a false departure and discarding
+the known worker. No other activity/compaction blocker was confirmed.
+
+The notice path now distinguishes confirmed absence, PID reuse and zombie state
+from unknown identity. Unreadable/malformed stat data and unjudgeable namespaces
+retain both the known worker and any pending notice for retry. Publication uses the
+same non-mutating evidence check under the receiver mailbox, without sender name
+locks. Existing boolean reachability, registry cleanup and readiness remain unchanged.
+
+The unchanged review reproduction and retry/tail-gap test are permanent coverage.
+Additional tests cover wrapper/child uncertainty, recovery, absence/reuse/zombie,
+publication revalidation and stable notice identity across an uncertain retry.
+Initial focused regressions and five checks passed on the exact production mirror.
+Re-review accepted ACT-1 behavior but exposed the ACT-2 suite race below. No install,
+commit, owner-session operation or model probe occurred.
+
+### Process-fixture isolation repair — September 19, 2026
+
+ACT-2 re-review found the new process fixtures racing a backend watcher left by the
+backend lifetime test. Run cancellation did not join that reader before the next
+test replaced the global process reader. The original failing full-suite and
+reduced-pair logs remain preserved.
+
+The process-fixture tests now execute their unchanged assertions in separate child
+processes using the same test binary, including race instrumentation. Each child
+runs only its selected fixture test with a bounded test timeout; errors propagate
+to the parent. Production lifecycle and global reader APIs remain unchanged. This
+isolates the fixtures from every unrelated test reader without timing or ordering
+assumptions. A backend-only join attempt also exposed an unjoined reader in the
+interrupt test; its failing log is preserved, and that production change was dropped.
+
+The exact failing pair passes 30 repetitions under the reported shuffle seed and
+race detector. Relevant regressions and all five checks pass on the exact final
+production mirror. Focused ACT-2 re-review then found no blocker. Independent helper
+probes confirmed child assertion/race/timeout failures reach the parent, and all five
+checks passed again. Production lifecycle behavior remains unchanged.
+
+### Installed state and activity acceptance — September 19, 2026
+
+The owner installed the reviewed activity-3 candidate after state-only revision 4.
+[The scoped live record](session-activity.md#evidence-and-acceptance) identifies the
+installed hash and accepted behavior: ordinary startup, model/effort/context,
+availability and late-main discovery, worker JSON privacy, finished headers,
+working/idle transitions, departures with stale old state and subsequent replacement
+availability, and automatic notification of a manual compaction completion.
+
+Live settings changes/rejections, approval/input waiting, native system error and
+interrupted/continuing automatic compaction were not forced. Earlier main/side
+transport acceptance is unchanged, not a new claim about every telemetry workflow.
+The owner authorized the complete feature commit and ordinary upstream push after
+successful checks. The old main-readiness/missing-notice incident remains open and
+separate as the next task.

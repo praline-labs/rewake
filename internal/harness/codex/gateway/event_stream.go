@@ -26,6 +26,7 @@ func (c *connection) readServer() {
 			m.readThrough = &receivedRead
 		}
 		c.mu.Lock()
+		observationPending, observationCorrelated := c.state.pending[m.id]
 		if m.method == "" {
 			c.admitted.ack(m)
 			if waiter, ok := c.injected[m.id]; ok {
@@ -66,6 +67,7 @@ func (c *connection) readServer() {
 				c.state.closedThread(m.thread)
 			}
 		}
+		c.observeServer(m, raw, observationPending, observationCorrelated)
 		c.record("server-message", m)
 		outcomes := c.collectOutcomes()
 		overflow := len(c.state.events.out) > 64 || c.state.events.overflow || c.admitted.overLimit()

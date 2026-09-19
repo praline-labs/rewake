@@ -13,6 +13,7 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/role"
+	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
@@ -23,12 +24,13 @@ const defaultWait = 5 * time.Second
 
 // sendModel is the machine form of one send.
 type sendModel struct {
-	ID     string `json:"id"`
-	To     string `json:"to"`
-	From   string `json:"from"`
-	State  string `json:"state"`
-	Via    string `json:"via,omitempty"`
-	Detail string `json:"detail,omitempty"`
+	Telemetry *sessionstate.Snapshot `json:"telemetry,omitempty"`
+	ID        string                 `json:"id"`
+	To        string                 `json:"to"`
+	From      string                 `json:"from"`
+	State     string                 `json:"state"`
+	Via       string                 `json:"via,omitempty"`
+	Detail    string                 `json:"detail,omitempty"`
 	// Answer is the receiver's last reply, for a question that got one.
 	Answer        string     `json:"answer,omitempty"`
 	Kind          inbox.Kind `json:"kind,omitempty"`

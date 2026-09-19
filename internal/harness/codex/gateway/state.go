@@ -17,14 +17,17 @@ type Binding struct {
 }
 type (
 	pending struct {
-		sideSetup, sideDetach bool
-		fork, forkDetach      bool
-		reconnect             bool
-		generation            uint64
-		readSerial            uint64
-		intent                bool
-		backfill              bool
-		target, method        string
+		observationGeneration, observationFence, observationSerial uint64
+		observationActivityVersion                                 uint64
+		metadataOnly                                               bool
+		sideSetup, sideDetach                                      bool
+		fork, forkDetach                                           bool
+		reconnect                                                  bool
+		generation                                                 uint64
+		readSerial                                                 uint64
+		intent                                                     bool
+		backfill                                                   bool
+		target, method                                             string
 	}
 	state struct {
 		side string
@@ -82,7 +85,7 @@ func (s *state) request(m meta) error {
 	if nativeReadBoundary(m) {
 		s.closeReadContext("native " + m.method)
 	}
-	p := pending{method: m.method, target: m.thread, readSerial: s.readSerial, reconnect: m.reconnect}
+	p := pending{metadataOnly: m.method == "thread/read" && metadataRead(m), method: m.method, target: m.thread, readSerial: s.readSerial, reconnect: m.reconnect}
 	if m.method == "thread/loaded/list" && m.numeric && s.canBackfill && s.Ready {
 		p.backfill = true
 		p.generation = s.Generation

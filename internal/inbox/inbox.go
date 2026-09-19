@@ -19,11 +19,16 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
 // Message is one delivery, as it waits on disk.
 type Message struct {
+	Compaction   *CompactionNotice      `json:"compaction,omitempty"`
+	Departure    *DepartureNotice       `json:"departure,omitempty"`
+	SenderState  *sessionstate.Snapshot `json:"senderState,omitempty"`
+	Availability *Availability          `json:"availability,omitempty"`
 	// ID sorts by creation time, so a mailbox is served in order.
 	ID string `json:"id"`
 	// From is the sender's session name, or "shell" when it has none.

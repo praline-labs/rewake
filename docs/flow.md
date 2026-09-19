@@ -150,14 +150,19 @@ lock, and reserves the native destination outside that lock when supported:
 
 ## Act 4. The agent reads
 
-The notice wakes the agent, which runs `rewake inbox` in its shell.
+The notice wakes the agent, which runs `rewake inbox` in its shell. Main also gets
+[availability notifications](session-state.md#availability-notifications) when peers
+become ready; a later main learns which peers were already available. The same
+main observer queues [compaction-complete and known-departure notices](session-activity.md).
 
 1. **Whose mailbox.** `REWAKE_SESSION` names it, `REWAKE_EPOCH` proves the run:
    a stale run, or a process with a name and no epoch, is refused. Mail of an
    earlier run is not shown.
 2. **Print first.** Under the lock, every unread message of this run is
    printed, oldest first, with its sender, kind and time. Reports reserved by a
-   waiting `send --question` are skipped (Act 6).
+   waiting `send --question` are skipped (Act 6). A verified main caller first
+   sees a [session-state header](session-state.md) and blank line for each message;
+   workers see the original output. Stored agent text is unchanged.
 3. **Then record.** Only once the output got through: for each `task` or
    `question` from a session, the sender's run is written into
    `awaiting/<own epoch>/<sender>` — this run now owes that run a report. A

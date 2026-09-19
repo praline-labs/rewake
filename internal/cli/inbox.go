@@ -16,8 +16,8 @@ import (
 
 // inboxModel is the machine form of the messages a session fetched.
 type inboxModel struct {
-	Session  string          `json:"session"`
-	Messages []inbox.Message `json:"messages"`
+	Session  string        `json:"session"`
+	Messages []messageView `json:"messages"`
 }
 
 // handleInbox hands the agent its unread mail. A harness is only told that mail
@@ -58,7 +58,7 @@ func handleInbox(ctx *Context, call Call) error {
 			failure = failf("could not read the inbox of %s: %v", session.Name, err)
 			return nil
 		}
-		if err := writeInbox(ctx, inboxModel{Session: session.Name, Messages: messages}); err != nil {
+		if err := writeInbox(ctx, inboxModel{Session: session.Name, Messages: viewedMessages(dir, messages)}); err != nil {
 			failure = failf("could not print the messages, so none were marked read: %v", err)
 			return nil
 		}
@@ -99,7 +99,7 @@ func writeInbox(ctx *Context, model inboxModel) error {
 	return err
 }
 
-func inboxLines(messages []inbox.Message) []string {
+func inboxLines(messages []messageView) []string {
 	if len(messages) == 0 {
 		return []string{"No new messages."}
 	}
@@ -108,8 +108,11 @@ func inboxLines(messages []inbox.Message) []string {
 		if index > 0 {
 			lines = append(lines, "")
 		}
+		if message.Telemetry != nil {
+			lines = append(lines, stateLine(message.From, message.Telemetry, message.Availability != nil || message.Departure != nil), "")
+		}
 		lines = append(lines,
-			fmt.Sprintf("from %s · %s · %s", message.From, inbox.KindOf(message), message.CreatedAt.Local().Format("15:04:05")),
+			fmt.Sprintf("from %s · %s · %s", message.From, inbox.KindOf(message.Message), message.CreatedAt.Local().Format("15:04:05")),
 			message.Text,
 		)
 		if message.ThreadChanged {

@@ -26,6 +26,8 @@ import (
 
 // Session is what one running harness looks like to everybody else.
 type Session struct {
+	// MessagingReadyAt marks successful initial service readiness, not current connectivity.
+	MessagingReadyAt *time.Time `json:"messagingReadyAt,omitempty"`
 	// Name is the address of this session.
 	Name string `json:"name"`
 	// Room scopes the name and all mailbox paths.
@@ -320,7 +322,12 @@ func Lookup(dir, name string) (Session, error) {
 
 // List returns every live session, oldest first, and removes the records of
 // sessions that have ended.
-func List(dir string) ([]Session, error) {
+func List(dir string) ([]Session, error) { return list(dir, true) }
+
+// ListReadOnly observes live records without acquiring cleanup/name locks.
+func ListReadOnly(dir string) ([]Session, error) { return list(dir, false) }
+
+func list(dir string, cleanup bool) ([]Session, error) {
 	entries, err := os.ReadDir(state.SessionsPath(dir))
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -340,7 +347,7 @@ func List(dir string) ([]Session, error) {
 			continue
 		}
 		if !session.Alive() {
-			if session.Judgeable() {
+			if cleanup && session.Judgeable() {
 				_, _ = RemoveOwned(dir, name, session.Epoch())
 			}
 			continue

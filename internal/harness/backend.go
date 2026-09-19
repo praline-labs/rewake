@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
+	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
 )
 
 // Completion is a terminal turn outcome, independent of its transport.
@@ -34,4 +35,9 @@ type Backend interface {
 // ReservingBackend holds its transport's destination through inbox publication.
 type ReservingBackend interface {
 	Reserve(context.Context, inbox.Message) (inbox.Reservation, error)
+}
+
+// ObservedBackend exposes optional primary state without filesystem work.
+type ObservedBackend interface {
+	SessionState() sessionstate.Snapshot
 }

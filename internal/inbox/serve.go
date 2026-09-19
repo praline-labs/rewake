@@ -39,6 +39,8 @@ type Deliverer func(ctx context.Context, message Message) Result
 
 // Server drains one mailbox for as long as its session lives.
 type Server struct {
+	// Ready signals initialized servicing; it must not wait on external work.
+	Ready func()
 	// Dir is the state directory.
 	Dir string
 	// Name is the session whose mailbox this is.
@@ -99,6 +101,9 @@ func (s *Server) Serve(ctx context.Context) {
 	// The watch makes the common case immediate; the ticker still runs, because
 	// a pending message has to be retried on time and a watch may not exist.
 	changed := watch(ctx, s.Dir, s.Name)
+	if s.Ready != nil && ctx.Err() == nil && s.owned() && state.EnsureSubdir(state.InboxPath(s.Dir, s.Name)) == nil {
+		s.Ready()
+	}
 
 	for {
 		select {

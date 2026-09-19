@@ -24,6 +24,7 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/proc"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/role"
+	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
@@ -134,6 +135,9 @@ func Run(ctx context.Context, request Request) (int, error) {
 			return 0, err
 		}
 		defer plan.Backend.Close()
+		if observer, ok := plan.Backend.(harness.ObservedBackend); ok {
+			defer sessionstate.Start(ctx, request.Dir, name, epoch, observer.SessionState)()
+		}
 	}
 
 	command := exec.Command(plan.Command, plan.Args...)
@@ -170,6 +174,22 @@ func Run(ctx context.Context, request Request) (int, error) {
 	serveCtx, stopServing := context.WithCancel(ctx)
 	defer stopServing()
 	served := make(chan struct{})
+	serviceReady := make(chan struct{})
+	stopAvailability := startAvailability(serveCtx, request.Dir, session, serviceReady, func() bool {
+		if !proc.Alive(command.Process.Pid, harnessStart) {
+			return false
+		}
+		if plan.Backend != nil {
+			thread, err := plan.Backend.Thread()
+			return err == nil && thread != ""
+		}
+		if plan.Socket != "" {
+			info, err := os.Stat(plan.Socket)
+			return err == nil && info.Mode()&os.ModeSocket != 0
+		}
+		return true
+	})
+	defer stopAvailability()
 	go func() {
 		defer close(served)
 		var thread func() (string, error)
@@ -180,6 +200,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 			thread = plan.Backend.Thread
 		}
 		server := &inbox.Server{
+			Ready:  func() { close(serviceReady) },
 			Dir:    request.Dir,
 			Thread: thread,
 			Name:   name,

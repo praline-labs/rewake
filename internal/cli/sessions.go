@@ -14,9 +14,9 @@ import (
 
 // listModel is the machine form of the session list.
 type listModel struct {
-	Directory string             `json:"directory"`
-	Room      string             `json:"room"`
-	Sessions  []registry.Session `json:"sessions"`
+	Directory string        `json:"directory"`
+	Room      string        `json:"room"`
+	Sessions  []sessionView `json:"sessions"`
 }
 
 func handleList(ctx *Context, _ Call) error {
@@ -29,12 +29,22 @@ func handleList(ctx *Context, _ Call) error {
 		return failf("could not read the sessions in %s: %v", dir, err)
 	}
 
+	visible := canSeeSessionState(dir)
+	var views []sessionView
 	room := filepath.Base(dir)
 	for index := range sessions {
 		sessions[index].Room = room
 		sessions[index].Role = role.Of(sessions[index].Role).ID
+		view := sessionView{Session: sessions[index]}
+		if !visible {
+			view.MessagingReadyAt = nil
+		}
+		if visible {
+			view.Telemetry = sessionSnapshot(dir, view.Name, view.Epoch())
+		}
+		views = append(views, view)
 	}
-	return printValue(ctx, listModel{Directory: state.RootForRoom(dir), Room: room, Sessions: sessions}, func() []string {
+	return printValue(ctx, listModel{Directory: state.RootForRoom(dir), Room: room, Sessions: views}, func() []string {
 		if len(sessions) == 0 {
 			return []string{
 				fmt.Sprintf("No sessions are running in room %s.", room),
@@ -42,8 +52,11 @@ func handleList(ctx *Context, _ Call) error {
 			}
 		}
 		rows := make([]column, 0, len(sessions))
-		for _, session := range sessions {
+		for _, session := range views {
 			text := fmt.Sprintf("%-7s %-8s %s  room=%s  (%s)", session.Harness, age(session.Age()), session.CWD, room, session.Role)
+			if session.Telemetry != nil {
+				text += "\n" + stateLine(session.Name, session.Telemetry, true)
+			}
 			rows = append(rows, column{Name: session.Name, Text: text})
 		}
 		return printColumns(rows, "")
