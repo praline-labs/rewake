@@ -59,11 +59,11 @@ func TestSessionStateVisibilityInListTextAndJSON(t *testing.T) {
 				if code != ExitOK {
 					t.Fatalf("%d %s", code, errOut)
 				}
-				visible := strings.Contains(out, "context 42% used / 272K") || strings.Contains(out, `"telemetry"`)
+				visible := strings.Contains(out, "42% / 272K") || strings.Contains(out, `"telemetry"`)
 				if visible != (role == "main") {
 					t.Fatalf("role=%s output=%s", role, out)
 				}
-				if role == "main" && !asJSON && (!strings.Contains(out, "model \"fixture-model\"") || !strings.Contains(out, "effort \"high\"") || !strings.Contains(out, self.Name+": working | context")) {
+				if role == "main" && !asJSON && (!strings.Contains(out, "\"fixture-model\"") || !strings.Contains(out, "\"high\"") || !strings.Contains(out, self.Name) || !strings.Contains(out, "working") || !strings.Contains(out, "Compactions")) {
 					t.Fatal("main state or configured settings missing")
 				}
 				if role == "main" && asJSON && !strings.Contains(out, `"contextWindowTokens": 272123`) {

@@ -2,9 +2,6 @@ package inbox
 
 import (
 	"context"
-	"errors"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/state"
@@ -19,6 +16,8 @@ const (
 	// Pending means the receiver cannot take it yet — a Codex session with no
 	// conversation, a socket not created yet — so retrying fast buys nothing.
 	retryInterval = 2 * time.Second
+	// collectionInterval is fixed from the first wake, never extended by arrivals.
+	collectionInterval = 150 * time.Millisecond
 	// defaultTTL is how long a message may stay undelivered before it is called
 	// failed. A message older than this describes a situation that has passed.
 	defaultTTL = 30 * time.Minute
@@ -101,6 +100,15 @@ func (s *Server) Serve(ctx context.Context) {
 	// The watch makes the common case immediate; the ticker still runs, because
 	// a pending message has to be retried on time and a watch may not exist.
 	changed := watch(ctx, s.Dir, s.Name)
+	collection := time.NewTimer(collectionInterval)
+	defer collection.Stop()
+	collect := collection.C
+	schedule := func() {
+		if collect == nil {
+			collection.Reset(collectionInterval)
+			collect = collection.C
+		}
+	}
 	if s.Ready != nil && ctx.Err() == nil && s.owned() && state.EnsureSubdir(state.InboxPath(s.Dir, s.Name)) == nil {
 		s.Ready()
 	}
@@ -118,8 +126,11 @@ func (s *Server) Serve(ctx context.Context) {
 				changed = nil
 				continue
 			}
-			s.drain(ctx)
+			schedule()
 		case <-ticker.C:
+			schedule()
+		case <-collect:
+			collect = nil
 			s.drain(ctx)
 		case <-sweeper.C:
 			s.sweepFinished()
@@ -129,93 +140,31 @@ func (s *Server) Serve(ctx context.Context) {
 
 // drain makes one pass over the mailbox.
 func (s *Server) drain(ctx context.Context) {
+	s.deliverGroup(ctx, s.pendingMessages(ctx))
+}
+
+func (s *Server) pendingMessages(ctx context.Context) []Message {
 	messages, err := list(s.Dir, s.Name)
 	if err != nil {
-		return
+		return nil
 	}
+	var pending []Message
 	for _, message := range messages {
 		if ctx.Err() != nil || !s.owned() {
-			return
-		}
-		if s.alreadySettled(message) {
-			continue
+			return nil
 		}
 		if s.Epoch != "" && message.ToEpoch != s.Epoch {
-			// Somebody else's mail. It is left exactly where it is: the epoch it
-			// names may belong to the session that takes this name next, and a
-			// wrapper on its way out refusing that session's messages is how a
-			// live conversation was killed by a dead one.
+			continue
+		}
+		if s.alreadySettled(message) {
 			continue
 		}
 		if last, tried := s.attempts[message.ID]; tried && time.Since(last) < retryInterval {
 			continue
 		}
-
-		read, answered, expired, reservation, release, err := s.prepareDelivery(ctx, &message)
-		if !s.owned() {
-			release()
-			return
-		}
-		if err != nil || read || answered || expired {
-			release()
-		}
-
-		if read {
-			s.finish(message, Result{State: Read})
-			continue
-		}
-		if errors.Is(err, state.ErrMailboxBusy) {
-			// A reader holds the mailbox; this message waits for the next pass.
-			s.attempts[message.ID] = time.Now()
-			continue
-		}
-		if errors.Is(err, ErrThreadUnavailable) {
-			_, readableErr := os.Stat(filepath.Join(state.UnreadPath(s.Dir, s.Name), message.ID+".json"))
-			s.finish(message, Result{State: Failed, Detail: err.Error(), ReportAvailable: IsReport(message) && readableErr == nil && !expired})
-			continue
-		}
-		if err != nil {
-			s.attempts[message.ID] = time.Now()
-			s.record(message.ID, Result{
-				State:  Pending,
-				Detail: "the message could not be made readable yet: " + err.Error(),
-			})
-			continue
-		}
-		if answered {
-			// Reservation is provisional: keep the queue entry and check its
-			// lease again next tick, including after a crashed sender.
-			continue
-		}
-		if expired {
-			s.finish(message, Result{
-				State:  Failed,
-				Detail: "expired before the session could take it",
-			})
-			continue
-		}
-		// The notice names how many messages wait, this one included.
-		message = noticeContext(s.Dir, s.Name, s.Epoch, message)
-		var result Result
-		if reservation != nil {
-			result = reservation.Deliver(ctx, message)
-		} else {
-			result = s.Deliver(ctx, message)
-		}
-		release()
-		result.ReportAvailable = result.State == Failed && IsReport(message)
-		s.attempts[message.ID] = time.Now()
-		if result.State == Pending {
-			// A pending result is written too: a sender that is waiting should
-			// learn the reason now, not when the message finally lands. The
-			// agent may have read it meanwhile, and that outcome stands.
-			if s.record(message.ID, result) == Read {
-				s.finish(message, Result{State: Read})
-			}
-			continue
-		}
-		s.finish(message, result)
+		pending = append(pending, message)
 	}
+	return pending
 }
 
 // refuseWaiting marks this session's own waiting mail as failed when it ends.

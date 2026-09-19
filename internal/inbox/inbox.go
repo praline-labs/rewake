@@ -25,6 +25,7 @@ import (
 
 // Message is one delivery, as it waits on disk.
 type Message struct {
+	GrantGit     bool                   `json:"grantGit,omitempty"`
 	Compaction   *CompactionNotice      `json:"compaction,omitempty"`
 	Departure    *DepartureNotice       `json:"departure,omitempty"`
 	SenderState  *sessionstate.Snapshot `json:"senderState,omitempty"`
@@ -62,6 +63,8 @@ type Message struct {
 	Unread int `json:"-"`
 	// Latest is the newest available letter shown by an aggregate notification.
 	Latest *Message `json:"-"`
+	// Batch is transport-only membership; each stored message keeps its own identity.
+	Batch []Message `json:"-"`
 }
 
 // Kind is the subject of a message.

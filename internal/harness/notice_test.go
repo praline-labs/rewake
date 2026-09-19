@@ -55,3 +55,32 @@ func TestWidePreviewFitsOneHundredColumns(t *testing.T) {
 		}
 	}
 }
+
+func TestGroupedNoticeKeepsCompactPreviewWithoutInstructions(t *testing.T) {
+	latest := inbox.Message{ID: "b", From: "writer", Kind: inbox.Finished, Text: "Result ready\nprivate details"}
+	old := inbox.Message{ID: "a", From: "sender", Kind: inbox.Task, Text: "older summary"}
+	message := inbox.Message{ID: "group", Batch: []inbox.Message{latest, old}}
+	want := "Rewake: 2 new messages\n  ↳ writer finished: Result ready"
+	if got := Notice(message); got != want {
+		t.Fatalf("notice = %q, want %q", got, want)
+	}
+	for _, body := range []string{strings.Repeat("界", 200) + "\nprivate details", "\nprivate details", "one\rhidden\nprivate details", "one\u2028hidden"} {
+		message.Batch[0].Text = body
+		got := Notice(message)
+		parts := strings.Split(got, "\n")
+		if len(parts) != 2 || !strings.HasPrefix(parts[1], "  ↳ writer finished: ") || strings.Contains(got, "private details") || strings.Contains(got, "hidden") || strings.Contains(got, "Run rewake") || strings.Contains(got, "--peek") {
+			t.Fatal(got)
+		}
+		width := 0
+		for _, r := range parts[1] {
+			if r == '界' {
+				width += 2
+			} else {
+				width++
+			}
+		}
+		if width > 100 {
+			t.Fatalf("preview width %d", width)
+		}
+	}
+}

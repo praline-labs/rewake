@@ -9,6 +9,16 @@ import (
 // Notice announces unread mail and shows the author's bounded first line.
 // The full message stays in inbox; retries retain their original notice id.
 func Notice(message inbox.Message) string {
+	if len(message.Batch) > 1 {
+		latest := message.Batch[0]
+		for _, member := range message.Batch[1:] {
+			if member.CreatedAt.After(latest.CreatedAt) || member.CreatedAt.Equal(latest.CreatedAt) && member.ID > latest.ID {
+				latest = member
+			}
+		}
+		first := preview(fmt.Sprintf("%s %s: %s", latest.From, inbox.KindOf(latest), latest.Text))
+		return fmt.Sprintf("Rewake: %d new messages\n  ↳ %s", len(message.Batch), first)
+	}
 	count := message.Unread
 	if count < 1 {
 		count = 1
@@ -51,6 +61,9 @@ func shortID(id string) string {
 
 // NoticeKind follows the displayed latest letter, including its failure color.
 func NoticeKind(message inbox.Message) inbox.Kind {
+	if len(message.Batch) > 1 {
+		return inbox.Note
+	}
 	if message.Latest != nil {
 		return inbox.KindOf(*message.Latest)
 	}

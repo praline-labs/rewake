@@ -12,8 +12,7 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
-// The notice says how many messages wait, so the second one delivered before the
-// agent read the first must say two.
+// Messages from one pending pass produce one notice with both members.
 func TestNoticeCountsTheWaitingMail(t *testing.T) {
 	dir := stateDir(t)
 	first, second := message("one"), message("two")
@@ -34,11 +33,13 @@ func TestNoticeCountsTheWaitingMail(t *testing.T) {
 	serveUntil(t, server, func() bool {
 		mu.Lock()
 		defer mu.Unlock()
-		return len(counts) == 2
+		return len(counts) == 1
 	})
 
-	if counts[first.ID] != 1 || counts[second.ID] != 2 {
-		t.Errorf("counts = %v, want 1 for the first and 2 for the second", counts)
+	for _, count := range counts {
+		if count != 2 {
+			t.Errorf("counts = %v, want one grouped count of two", counts)
+		}
 	}
 }
 

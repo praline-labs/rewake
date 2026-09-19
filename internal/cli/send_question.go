@@ -64,7 +64,7 @@ func answerQuestion(ctx *Context, question sent) error {
 	}
 	if !found {
 		model.State = string(inbox.Pending)
-		model.Detail = fmt.Sprintf("no answer from %s yet; it will arrive as a \"Rewake: %s finished\" line, to be read with rewake inbox", target.Name, target.Name)
+		model.Detail = fmt.Sprintf("no answer from %s yet; it will arrive as a \"Rewake: %s finished\" line or a grouped notice, to be read with rewake inbox", target.Name, target.Name)
 		line := fmt.Sprintf("asked %s: %s", target.Name, model.Detail)
 		if ctx.JSON {
 			_ = printValue(ctx, model, func() []string { return nil })

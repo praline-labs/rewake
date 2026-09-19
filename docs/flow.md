@@ -61,8 +61,9 @@ with `rewake --main --name lead claude`, becoming lead-claude.
    room or after main exits. Only explicit `--main` creates main, and it refuses
    under the room lock if a live main already occupies the room. Explicit
    `--general` and `--write` remain unchanged; a --name prefix never selects a
-   role. Main stays silent; write reports like general. Main and write request
-   Git metadata access. The record and intro say default general for an omitted
+   role. Main stays silent; write reports like general. Main and write are eligible
+   recipients of explicit Git metadata grants requested by main; selecting a role
+   does not request access. The record and intro say default general for an omitted
    role flag, or identify the explicit flag.
 5. **The harness command line.** The user's arguments go through untouched.
    rewake adds, for one launch only and never into a config file:
@@ -72,10 +73,9 @@ with `rewake --main --name lead claude`, becoming lead-claude.
      both running `rewake turn-ended`, unless the user passed `--settings`;
    - Codex: an owned foreground app-server on a private socket, initialized before
      the TUI starts with --remote. Explicit configuration and the briefing reach
-     the server; an inline gateway follows accepted TUI intent. Main/write metadata roots reach its thread through TUI
-     runtimeWorkspaceRoots on fresh launches. No notify program is installed.
-     Resume/fork keep caller input, omit generated permission flags and warn
-     committing roles about grants accompanying delivered work; incompatible
+     the server; an inline gateway follows accepted TUI intent. Launch roles add no
+     Git roots, and no notify program is installed. Resume/fork keep caller input
+     and omit generated permission flags; incompatible
      remote/profile/managed-worktree/local-provider launches refuse.
 6. **The environment.** `REWAKE_SESSION=<name>`, `REWAKE_EPOCH=<epoch>`,
    `REWAKE_DIR=<root>` and `REWAKE_ROOM=<room>`; inherited Claude Code markers are stripped so a session
@@ -117,16 +117,20 @@ session's shell, or from a person's shell in the same room. A shell without
 
 ## Act 3. The wrapper announces it
 
-The recipient's wrapper sees the rename, checks expiry/leases under the mailbox
-lock, and reserves the native destination outside that lock when supported:
+The recipient's wrapper announces fixed groups. Later mail waits for its own group
+as soon as delivery is ready. Native start-or-steer reaches active work or wakes idle
+work without a required peek or terminal event. Only new member IDs are delivered. The initial burst window is
+150 ms. It checks expiry/leases and reserves destinations for the
+[grouped inbox](inbox-groups.md) before readability.
 
-1. **Readable first.** With the destination reserved, rechecks the message under
+1. **Readable first.** With the shared destination reserved, rechecks each message under
    the mailbox lock, records its delivery thread, and hard-links the message into `unread/`. An agent told
    about mail may run `rewake inbox` at once, so the text is there before the
    notice goes out.
-2. **The notice.** One line, the same for every harness:
-   `Rewake: lead-claude task, 1 new message(s)`. The count is this run's unread
-   mail. Its next line previews the author's first line.
+2. **The notice.** A single member uses `Rewake: lead-claude task, 1 new message`
+   and its first-line preview. A group uses `Rewake: <n> new messages` and one bounded
+   indented preview of its latest member, including sender and kind. The count covers exactly this group, not older accepted
+   unread mail or later arrivals. Messages arriving during destination acquisition join the group.
 3. **The adapter**, outside the lock because it can take seconds:
    - Claude Code: connect to the session's socket and write one JSON line
      whose content is a `<task-notification>` block with that summary. The
@@ -134,10 +138,10 @@ lock, and reserves the native destination outside that lock when supported:
      message(s)` line — the same line its own background tasks get — and the
      model wakes if it was idle.
    - Codex: call turn/start through the reserved TUI connection/generation. For tasks/questions to
-     main/write, read current local runtime roots without history and append only
+     eligible main/write with explicit --grant-git intent, read current local roots without history and append only
      missing Git metadata from the thread's working repository. If roots cannot
-     be read, omit the field and explain that in delivery status. General and
-     reports never get this grant. It starts idle work or steers the active turn;
+     be read, omit the field and explain that in delivery status. No-flag tasks, general and
+     report-only groups never get this grant. It starts idle work or steers the active turn;
      on steer, new roots apply only to subsequent turns. A successful RPC result means delivered. A stale
      or unavailable thread fails; it is not silently retargeted or queued.
 
@@ -158,7 +162,11 @@ main observer queues [compaction-complete and known-departure notices](session-a
 1. **Whose mailbox.** `REWAKE_SESSION` names it, `REWAKE_EPOCH` proves the run:
    a stale run, or a process with a name and no epoch, is refused. Mail of an
    earlier run is not shown.
-2. **Print first.** Under the lock, every unread message of this run is
+2. **Overview or full read.** `rewake inbox --peek` shows IDs and bounded first-line
+   metadata without bodies, consumption, waiters or task-boundary changes; successful
+   output has no dispatch side effect; new mail does not wait for an overview.
+   `--message <id>` selects one available message; the flags are mutually exclusive.
+   Plain inbox retains read-all. Under the lock, the selected available messages are
    printed, oldest first, with its sender, kind and time. Reports reserved by a
    waiting `send --question` are skipped (Act 6). A verified main caller first
    sees a [session-state header](session-state.md) and blank line for each message;

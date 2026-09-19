@@ -46,12 +46,11 @@ idle attachment:
 
 ## Grant with delivered work
 
-**Owner decision, September 17, 2026:** this is an "unplanned feature to grant
-permissions": Git metadata roots accompany delivered work, not attachment or
-an automatic startup turn. On resume/fork, main and write print:
-`resumed thread gets Git metadata access with each rewake task; turns you start yourself use the thread's stored roots`.
+**Owner correction, September 19, 2026:** [explicit --grant-git intent](git-grants.md)
+replaces the September 17 automatic per-task behavior. Attachment and role alone
+add no roots; eligible delivered tasks request them only when main chose the flag.
 
-For each task or question, committing roles call `thread/read` with
+Only an explicit --grant-git task/question to an eligible recipient calls `thread/read` with
 `includeTurns=false`. Loaded metadata includes current `environments`, each with
 `environmentId`, `cwd` and `runtimeWorkspaceRoots`
 (`app-server-protocol/src/protocol/v2/thread_data.rs:204–212`,
@@ -67,7 +66,7 @@ It resolves the thread environment's cwd, not the wrapper's launch cwd, through
 the existing metadata resolver. It preserves every returned root in its original
 order and appends only missing gitdir/commondir paths. A broad ancestor does not
 prove access to protected Git metadata; the exact metadata roots are required.
-Already present metadata needs no field. General, notify and completion reports
+Already present metadata needs no field. No-flag tasks, general, notify and completion reports
 never trigger this feature. No sandbox policy, profile, approval, cwd or other
 permission setting is sent. Effective access remains subject to the selected
 policy; adding a root does not turn a read-only profile into a writable one.
@@ -87,8 +86,8 @@ which always sends `runtimeWorkspaceRoots`. `thread/settings/updated` lacks that
 field (`protocol/v2/thread.rs:296–318`); TUI sync updates policy and retargets cwd
 but does not replace its roots (`tui/src/app/thread_settings.rs:247–262`,
 `chatwidget/settings.rs:454–487,507–524`). Consequently a human-started turn can
-replace the adapter's grant with the TUI's older list. Every delivered task reads
-a new snapshot and restores missing metadata if needed. The startup wording
+replace the adapter's grant with the TUI's older list. Every explicitly granted task reads
+a new snapshot and restores missing metadata if needed. The historical startup wording
 summarizes the lack of an unconditional launch grant, not a promise that the TUI
 preserves server roots.
 

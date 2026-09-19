@@ -19,8 +19,8 @@ from write-codex ...
 
 Every fetched inbox kind receives the header, including notifications and reports.
 Direct question answers use the same rule. [Current activity and service notices](session-activity.md)
-add primary status, compaction-complete and known-departure notifications. List adds these values and the confirmed
-configured primary-thread model and reasoning effort. The header is tool output,
+add primary status, compaction-complete and known-departure notifications. The [aligned session table](inbox-groups.md#session-table) adds these values and the
+confirmed configured primary-thread model and reasoning effort. The header is tool output,
 not a native chat message. Agent text, receipt IDs and message storage are unchanged.
 JSON nests `telemetry` before each message's original fields; list entries and
 direct answers also carry it only for main. Exact token counts are preserved.

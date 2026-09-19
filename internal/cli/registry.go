@@ -60,12 +60,12 @@ func buildGroups() {
 
 	talk := Group{
 		Title:   "TALK",
-		Summary: "Sessions address each other by name. The receiver sees a message notice and a bounded first-line preview, \"Rewake: <session> <kind>, <n> new message(s)\", and reads it with rewake inbox.",
+		Summary: "Sessions address each other by name. Nearby incoming messages share a notice. Use rewake inbox --peek for IDs and previews, --message <id> to read one, or plain inbox to read all.",
 		Commands: []*Command{
 			{
 				Name:           "list",
 				MaxPositionals: 0,
-				Summary:        "Live sessions in this room, with their room and role.",
+				Summary:        "Live sessions in an aligned table; room and shared directory appear once.",
 				Options:        []Option{jsonOption},
 				Examples:       []string{"rewake list", "rewake list --json"},
 				Next:           []string{"rewake send <name> \"text\""},
@@ -78,10 +78,11 @@ func buildGroups() {
 				MaxPositionals: 2,
 				Summary:        "Give a session a task, a question or a heads-up. Use - as the text to read it from stdin.",
 				Options: append(kindOptions(),
+					Option{Flag: "--grant-git", Summary: "Verified main only: explicitly grant eligible task/question recipients access to validated repository Git metadata. No flag adds no roots."},
 					Option{Flag: "--wait", Value: "<seconds>", Summary: "How long to wait. Default: 5 for the delivery, 600 for a question's answer."},
 					jsonOption,
 				),
-				Examples: sendExamples(),
+				Examples: append(sendExamples(), "rewake send writer-codex --grant-git \"Commit the reviewed change\""),
 				Next:     []string{"rewake inbox"},
 				Notes: []string{
 					"A task is the default: the session reads it, works, and ends its turn with a final message, which comes back to you as a \"Rewake: <session> finished\" line.",
@@ -94,12 +95,17 @@ func buildGroups() {
 			{
 				Name:           "inbox",
 				MaxPositionals: 0,
-				Summary:        "Read the messages waiting for this session. Each is shown once.",
-				Options:        []Option{jsonOption},
-				Examples:       []string{"rewake inbox", "rewake inbox --json"},
-				Next:           []string{"rewake send <name> \"text\""},
+				Summary:        "Read waiting messages, or preview their metadata without consuming them.",
+				Options: []Option{
+					jsonOption,
+					{Flag: "--peek", Summary: "Show IDs, senders, kinds, times and bounded first-line previews only; no messages are marked read."},
+					{Flag: "--message", Value: "<id>", Summary: "Read only this available unread message; reserved answers remain with their waiting send."},
+				},
+				Examples: []string{"rewake inbox", "rewake inbox --json", "rewake inbox --peek", "rewake inbox --peek --json", "rewake inbox --message=1780000000000000000-012345abcdef"},
+				Next:     []string{"rewake send <name> \"text\""},
 				Notes: []string{
-					"Run it when a \"Rewake: <session> <kind>\" line says messages are waiting.",
+					"--peek and --message are mutually exclusive. Peek has no full bodies, even in JSON, and creates no task read receipts or report obligations. Plain inbox still reads all available messages.",
+					"Run it when a Rewake notice says messages are waiting; a group may mix tasks, questions, notifications and reports.",
 					"A task or a question you read is answered by ending your turn: your final message goes back to the sender by itself. Put the result there.",
 					"A notify needs no answer. A finished message is a session's final message after work you gave it.",
 					sessionStateHelp,
@@ -205,7 +211,7 @@ func notes() []Note {
 		},
 		{
 			Title: "A waiting message is announced, not pasted",
-			Body:  "It shows up as one line: \"Rewake: <session> <kind>, <n> new message(s)\", with a 🟢 in front where the harness shows it as plain text. The following line previews the author's first line, limited to about 100 columns. Run rewake inbox for the full text. Start every message and final reply with one line stating its point. Errors use a red circle; keyboard stops use yellow.",
+			Body:  "It shows up as one line: \"Rewake: <session> <kind>, <n> new message(s)\", with a 🟢 in front where the harness shows it as plain text. The following line previews the author's first line, limited to about 100 columns. Each notice has fixed member IDs. Ready new mail is submitted promptly through native start-or-steer, without waiting for peek or a completed turn. No reminders for old unread mail. Initial collection is 150 ms; later arrivals join the next available dispatch, never an already accepted notice. Git grants accompany only the actual eligible task announcement. Use rewake inbox --peek for a non-consuming overview, --message <id> for one full message, or plain inbox for all. Groups preserve separate identities and obligations. Start every message and final reply with one line stating its point. Errors use a red circle; keyboard stops use yellow.",
 		},
 		{
 			Title: "Kinds and replies",

@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/iiiokojiadbi/rewake/internal/role"
 )
 
 func writeGitPointer(t *testing.T, path, text string) {
@@ -49,10 +47,12 @@ func TestGitPointersGrantTheActualMetadataDirectories(t *testing.T) {
 			case "same common directory":
 				writeGitPointer(t, filepath.Join(metadata, "commondir"), ".\n")
 			}
-			plan := gitLaunch(t, role.Write, "-C", cwd)
-			got := gitRoots(plan.Args)
+			got, err := gitMetadataDirectories(cwd)
+			if err != nil {
+				t.Fatal(err)
+			}
 			if strings.Join(got, "\x00") != strings.Join(expected, "\x00") {
-				t.Fatalf("roots=%q want=%q notes=%q", got, expected, plan.Notes)
+				t.Fatalf("roots=%q want=%q", got, expected)
 			}
 		})
 	}
@@ -117,12 +117,8 @@ func TestMalformedGitPointersNeverGrantPartialAccess(t *testing.T) {
 				pointer = "gitdir: ../linked/child\n"
 			}
 			writeGitPointer(t, filepath.Join(cwd, ".git"), pointer)
-			plan := gitLaunch(t, role.Write, "-C", cwd)
-			if got := gitRoots(plan.Args); len(got) != 0 {
-				t.Fatalf("invalid pointer granted %q", got)
-			}
-			if !strings.Contains(strings.Join(plan.Notes, " "), "not granting Git metadata writes") {
-				t.Errorf("missing reason: %q", plan.Notes)
+			if got, err := gitMetadataDirectories(cwd); err == nil || len(got) != 0 {
+				t.Fatalf("invalid pointer resolved %q, err=%v", got, err)
 			}
 		})
 	}
@@ -173,9 +169,8 @@ func TestMetadataResolutionMatchesGitLayouts(t *testing.T) {
 		if paths[1] != paths[0] {
 			expected = append(expected, paths[1])
 		}
-		plan := gitLaunch(t, role.Write, "-C", cwd)
-		if got := gitRoots(plan.Args); strings.Join(got, "\x00") != strings.Join(expected, "\x00") {
-			t.Errorf("cwd=%s roots=%q want=%q notes=%q", cwd, got, expected, plan.Notes)
+		if got, err := gitMetadataDirectories(cwd); err != nil || strings.Join(got, "\x00") != strings.Join(expected, "\x00") {
+			t.Errorf("cwd=%s roots=%q want=%q err=%v", cwd, got, expected, err)
 		}
 	}
 }

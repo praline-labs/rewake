@@ -338,4 +338,42 @@ interrupted/continuing automatic compaction were not forced. Earlier main/side
 transport acceptance is unchanged, not a new claim about every telemetry workflow.
 The owner authorized the complete feature commit and ordinary upstream push after
 successful checks. The old main-readiness/missing-notice incident remains open and
-separate as the next task.
+separate from the next native-notification work.
+
+### Grouped inbox revisions — September 19, 2026
+
+Initial compact-table/peek/select implementation passed local checks, but live
+acceptance exposed mismatched grouping expectations. Revision 2 incorrectly treated
+later arrivals as covered by an already accepted notice; a two-member notice could
+cover six unread items. Subsequent revisions fixed immutable membership and kept
+explicit main-authorized Git grants attached to their own eligible task batch.
+
+Revisions 3-5 held the next group until inbox overview or native terminal progress.
+Review found recovery-order liveness defects, then owner-captured status ordering
+(idle before interrupted; systemError before failed without later idle) disproved
+an idle-after-terminal gate. Revision 5 used matching native terminals instead.
+Original sources, reviews, failure proof and owner observations remain preserved.
+
+Final owner clarification supersedes that whole dispatch gate: messages reach active
+work between tool calls and wake idle work. The orchestrator had mistaken this for
+waiting for a full native turn/completed. No overview or terminal is a prerequisite.
+Revision 6 removes dispatch-progress receipts, owner recovery tracking and overview
+counters. Ready accumulated mail uses native start-or-steer without guessing status.
+The initial coalescing window remains 150 ms; in-flight arrivals form the next group.
+Spaced arrivals may have separate notices once each has been dispatched. Old unread
+never replays. Per-message pending backoff does not hold fresh eligible messages.
+
+Destination readiness, reservations, immutable counts/preview, explicit grants,
+leases/TTL, report retention and task-completion publication remain. Prompt-delivery
+tests replace the obsolete whole-turn suppression expectations. Full inbox/socket
+coverage checks active same-turn steering without terminal/peek, idle first input,
+readiness accumulation, in-flight ACK arrivals, exact mixed membership and no replay.
+Outcome coverage retains completed/failed/interrupted results, including before ACK.
+The [native API evidence](native-terminal-progress.md) separates acceptance from
+model consumption. Independent revision-6 review found no runtime blocker; P3
+launch-role grant wording was corrected. The additional mixed-batch/report test
+preserved all four task/question IDs for finished/error/stopped outcomes. Five checks
+passed independently. Full-wrapper smoke, owner startup and installed busy/idle
+acceptance then passed; [the dated record](inbox-acceptance.md) gives exact scope.
+Readiness investigation, native notifications, persistent Git permissions and the
+unified check runner remain separate work.

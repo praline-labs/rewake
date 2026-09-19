@@ -274,7 +274,9 @@ func TestOrderSurvivesTheSameMillisecond(t *testing.T) {
 
 	var order []string
 	server := &Server{Dir: dir, Name: "api", Deliver: func(_ context.Context, m Message) Result {
-		order = append(order, m.Text)
+		for _, member := range m.Batch {
+			order = append(order, member.Text)
+		}
 		return Result{State: Delivered}
 	}}
 	serveUntil(t, server, func() bool {

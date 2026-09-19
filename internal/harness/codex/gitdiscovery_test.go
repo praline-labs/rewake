@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/iiiokojiadbi/rewake/internal/role"
 )
 
 func fixtureGit(t *testing.T, cwd string, args ...string) string {
@@ -43,9 +41,8 @@ func TestGitPointersCannotGrantOrdinaryDirectories(t *testing.T) {
 			if err == nil {
 				t.Fatal("fixture unexpectedly accepted by Git")
 			}
-			plan := gitLaunch(t, role.Write, "-C", repo)
-			roots := gitRoots(plan.Args)
-			t.Logf("granted roots=%q notes=%q", roots, plan.Notes)
+			roots, resolutionErr := gitMetadataDirectories(repo)
+			t.Logf("metadata roots=%q error=%v", roots, resolutionErr)
 			if len(roots) > 0 {
 				t.Error("invalid metadata pointer expands write access outside checkout")
 			}
@@ -62,9 +59,8 @@ func TestGitMetadataIsFoundFromSubdirectories(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := fixtureGit(t, nested, "rev-parse", "--absolute-git-dir")
-	plan := gitLaunch(t, role.Write, "-C", nested)
-	roots := gitRoots(plan.Args)
-	t.Logf("roots=%q expected=%s notes=%q", roots, want, plan.Notes)
+	roots, err := gitMetadataDirectories(nested)
+	t.Logf("roots=%q expected=%s err=%v", roots, want, err)
 	if len(roots) != 1 || roots[0] != want {
 		t.Error("repository metadata not granted from its subdirectory")
 	}
@@ -75,9 +71,9 @@ func TestInvalidNestedMetadataDoesNotFallBackToTheParent(t *testing.T) {
 	repo := gitRepository(t)
 	nested := filepath.Join(repo, "nested")
 	writeGitPointer(t, filepath.Join(nested, ".git"), "gitdir: ..\n")
-	plan := gitLaunch(t, role.Write, "-C", nested)
-	if len(gitRoots(plan.Args)) != 0 {
-		t.Fatalf("broken nested checkout granted outer metadata: %q", plan.Args)
+	roots, err := gitMetadataDirectories(nested)
+	if err == nil || len(roots) != 0 {
+		t.Fatalf("broken nested checkout resolved outer metadata: %q", roots)
 	}
 }
 
@@ -89,7 +85,7 @@ func TestSharedMetadataRequiresAllStructuralMarkers(t *testing.T) {
 			if err := os.Remove(filepath.Join(repo, ".git", missing)); err != nil {
 				t.Fatal(err)
 			}
-			if roots := gitRoots(gitLaunch(t, role.Write, "-C", repo).Args); len(roots) != 0 {
+			if roots, err := gitMetadataDirectories(repo); err == nil || len(roots) != 0 {
 				t.Fatalf("metadata without %s granted: %q", missing, roots)
 			}
 		})

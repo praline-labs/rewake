@@ -106,6 +106,7 @@ func announceAvailable(ctx context.Context, dir string, self registry.Session, s
 	if err != nil {
 		return err
 	}
+	var candidates []registry.Session
 	for _, peer := range sessions {
 		if peer.Name == self.Name || peer.MessagingReadyAt == nil {
 			continue
@@ -115,11 +116,9 @@ func announceAvailable(ctx context.Context, dir string, self registry.Session, s
 		if _, known := seen[message.ID]; known {
 			continue
 		}
-		err := putAvailability(ctx, dir, current, peer, message)
-		if err == nil {
-			seen[message.ID] = peer
-		}
+		candidates = append(candidates, peer)
 	}
+	_ = putAvailabilityPass(ctx, dir, current, candidates, seen)
 	// A temporarily unreadable registry record must not erase dedup evidence.
 	// Keep one receipt per registered epoch, including after mailbox retention.
 	for id, peer := range seen {
@@ -143,6 +142,15 @@ func putAvailability(ctx context.Context, dir string, current, peer registry.Ses
 }
 
 func putMainNotice(ctx context.Context, dir string, current registry.Session, message inbox.Message, validate func() error) error {
+	return withMainMailbox(ctx, dir, current, func() error {
+		if err := validate(); err != nil {
+			return err
+		}
+		return inbox.PutOnce(dir, message)
+	})
+}
+
+func withMainMailbox(ctx context.Context, dir string, current registry.Session, publish func() error) error {
 	wait, cancel := context.WithTimeout(ctx, 250*time.Millisecond)
 	defer cancel()
 	return state.WithMailboxLock(wait, dir, current.Name, func() error {
@@ -150,9 +158,28 @@ func putMainNotice(ctx context.Context, dir string, current registry.Session, me
 		if err != nil || target.Epoch() != current.Epoch() || target.Role != role.Main.ID {
 			return registry.ErrNotFound
 		}
-		if err := validate(); err != nil {
-			return err
+		return publish()
+	})
+}
+
+// One discovery pass is published under one mailbox lock, so the first notice
+// cannot make a partial startup snapshot readable before its peers are queued.
+func putAvailabilityPass(ctx context.Context, dir string, current registry.Session, peers []registry.Session, seen map[string]registry.Session) error {
+	if len(peers) == 0 {
+		return nil
+	}
+	return withMainMailbox(ctx, dir, current, func() error {
+		for _, peer := range peers {
+			subject, err := registry.LookupReadOnly(dir, peer.Name)
+			if err != nil || subject.Epoch() != peer.Epoch() || subject.MessagingReadyAt == nil {
+				continue
+			}
+			message := availabilityMessage(current, peer)
+			if err := inbox.PutOnce(dir, message); err != nil {
+				return err
+			}
+			seen[message.ID] = peer
 		}
-		return inbox.PutOnce(dir, message)
+		return nil
 	})
 }

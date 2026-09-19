@@ -149,7 +149,7 @@ func (r *Reservation) Prepare(fn func(string) error) error {
 	return fn(r.binding.Thread)
 }
 
-// Close releases admission even when mailbox publication or Git metadata lookup fails.
+// Close releases admission once, including reservations canceled before dispatch.
 func (r *Reservation) Close() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -198,6 +198,8 @@ func (r *Reservation) Deliver(ctx context.Context, messageID, notice string, roo
 	if roots != nil {
 		params["runtimeWorkspaceRoots"] = roots
 	}
+	// Native start-or-steer chooses active/idle atomically; a status snapshot
+	// cannot safely decide that for a concurrent terminal.
 	reply, err := r.c.callReserved(ctx, r.binding, "turn/start", params, r.admissionID)
 	return reply.turn, err
 }

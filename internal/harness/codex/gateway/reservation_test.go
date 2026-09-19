@@ -212,3 +212,34 @@ func TestUnusedReservationsReleaseLedgerCapacity(t *testing.T) {
 		t.Fatal("unused reservations retained admission capacity")
 	}
 }
+
+func TestReservationScopeChangesAcrossNewAndRepeatedResume(t *testing.T) {
+	g, ui, peers, _ := setup(t)
+	server := <-peers
+	defer func() { _ = server.conn.Close() }()
+	bindUI(t, g, ui, server)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	scopes := map[Binding]bool{}
+	capture := func() {
+		t.Helper()
+		r, err := g.Reserve(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		scope := r.binding
+		r.Close()
+		if scopes[scope] {
+			t.Fatalf("reused reservation scope %+v", scope)
+		}
+		scopes[scope] = true
+	}
+	capture()
+	exchange(t, ui, server, `{"id":2,"method":"thread/start","params":{"threadSource":"user","runtimeWorkspaceRoots":[]}}`, `{"id":2,"result":{"thread":{"id":"B","canAcceptDirectInput":true}}}`)
+	capture()
+	for _, id := range []int{3, 5} {
+		exchange(t, ui, server, fmt.Sprintf(`{"id":%d,"method":"thread/resume","params":{"threadId":"A","config":{},"runtimeWorkspaceRoots":[]}}`, id), fmt.Sprintf(`{"id":%d,"result":{"thread":{"id":"A","canAcceptDirectInput":true}}}`, id))
+		exchange(t, ui, server, fmt.Sprintf(`{"id":%d,"method":"thread/goal/get","params":{"threadId":"A"}}`, id+1), fmt.Sprintf(`{"id":%d,"result":{}}`, id+1))
+		capture()
+	}
+}

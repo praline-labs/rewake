@@ -202,8 +202,8 @@ other forever. Roles now live in a catalogue, `internal/role`, and the one that
 hands out work has role `main`: it gets every report and reports
 nothing. Main now requires explicit `--main`; omitted flags and explicit
 `--general` keep reporting behavior. The `write` role now reports like a worker
-and requests Git metadata access; main requests the same access independently
-of its reporting policy.
+and is eligible for explicit main-authorized Git metadata access, independently
+of reporting. The September 19 decision removed automatic role-based grants.
 
 ## Milestone 8. Three kinds of message — done, September 16, 2026
 
@@ -288,7 +288,7 @@ sessions, mailboxes and sockets. Old root-level records are ignored.
 Role choice and name publication share a room lock. Without a role flag,
 launches now always use general; the September 17 decision supersedes automatic
 main selection. Explicit --main refuses with the live main's name when occupied.
-General and write can start first. Main and write retain Git metadata access;
+General and write can start first. Main/write are eligible for explicit grants;
 list, whoami, the launch note and intro identify the room and resolved role.
 
 **Acceptance, verified:** two rooms with identical session names cannot see or
@@ -339,14 +339,11 @@ Round fourteen found R14-2; its replacement regression is recorded in [gateway i
 Resume/fork omit generated permission grants; caller overrides stay intact with a warning.
 Fake TUI checks cover all roles; all five checks pass. [API limits](continuation-permissions.md) prevent an idle root grant. Saved roots may be superseded; live acceptance stays open.
 
-## Git metadata grants with tasks — done, September 17, 2026
+## Git metadata grants — superseded policy, September 19, 2026
 
-Owner decision: grant metadata with delivered tasks/questions to main/write.
-Fresh history-free roots are preserved and only missing gitdir/commondir paths
-are appended; unreadable roots skip the grant with a status note. Steer updates
-future turns, and manual TUI turns may replace roots. Fake-server tests cover
-roles, worktrees, repeated tasks and failures; all three requested mutations
-are detected. All five checks pass. Live acceptance remains with the owner.
+The September 17 automatic task/role policy is superseded by
+[explicit orchestrator intent](git-grants.md). Metadata validation and additive root
+handling remain; launch roles and no-flag tasks no longer add permissions.
 
 ## Lost report mitigation — September 17, 2026; ownership remains open
 
@@ -362,23 +359,13 @@ All five repository checks pass; all five targeted mutations are detected.
 
 ## Launch naming — done, September 17, 2026
 
-Owner decision: one uniform rule for every role, explicitly confirmed after
-clarification. Select the role under the room lock, use its ID or --name as the
-prefix, then always append the harness ID. Thus --write codex starts write-codex;
---write --name megamozg codex starts megamozg-codex. Automatic conflicts append
--2, -3 after the harness; explicit conflicts refuse. Prefix and assembled address
-must satisfy the existing syntax and 32-character limit. Existing sessions and
-messaging addresses remain unchanged. See [names](design.md#names).
-Claim-path and CLI regressions cover roles, conflicts, room isolation,
-concurrency, literal suffixes and length boundaries. All five checks pass.
-
-[The review history](reviews-later.md#targeted-review--done-september-17-2026) records the completed review of report delivery and naming.
+The role or explicit prefix receives the harness suffix; conflicts add numbers or refuse. [Names](design.md#names) retain the contract
+and [review history](reviews-later.md#targeted-review--done-september-17-2026) records
+all five checks and targeted acceptance.
 
 ## Explicit main only — implemented, September 17, 2026
 
-Omitted roles always mean general; only --main creates main under the room lock.
-Names never select roles. Targeted review found no defects, all five checks passed,
-and 72 synchronized process claims passed on exact archive `9aedd0f`.
+Only --main creates main; defaults stay general, names never choose roles. Review, five checks and 72 synchronized claims passed on `9aedd0f`.
 
 ## Gateway integration — verified paths, September 19, 2026
 
@@ -387,12 +374,27 @@ records the installed startup and primary/side acceptance, with its scope unchan
 
 ## Session state and service notices — accepted scope, September 19, 2026
 
-[Primary observations](session-state.md) collect all roles and display only to main.
-WS, R2/R3 and ACT-1/2 repairs passed independent review and all five checks. The owner
-installed revision 4 and activity-3, then accepted startup, model/effort/context,
-availability, working/idle, finished headers, worker JSON privacy, stale departures
-on replacement and manual-compaction completion notices. Rounded 0% / 828K is not
-empty history. [The acceptance record](session-activity.md#evidence-and-acceptance)
-keeps unexercised live settings, waiting/error, interrupted/automatic compaction and
-side-telemetry scenarios separate. The older main-readiness/missing-notice incident
-remains open as the next task; this feature does not close it.
+State/activity passed scoped owner acceptance in `ab3a86c`; [the record](session-activity.md#evidence-and-acceptance)
+keeps unexercised live cases explicit. The readiness/missing-notice incident stays open.
+
+## Compact tables and grouped inbox — accepted, September 19, 2026
+
+Revision 6 passed independent review and [installed live acceptance](inbox-acceptance.md).
+Ready mail uses native start-or-steer without peek/terminal gating; every notice
+keeps fixed members. Busy input was read between tool calls, the original report
+survived, and a new idle task woke and returned its report. [The contract](inbox-groups.md)
+retains independent receipts and explicit main-authorized grants; roles add none.
+The P3 launch-role wording was corrected. Runtime matched the reviewed archive.
+
+## Next work — owner decision, September 19, 2026
+
+Next, prioritize the researched native-notification path. Do not start it as part of this closeout.
+Persistent Git permissions remain a separate future item: explicit orchestrator
+event, scope to run and repository, preservation across later owner turns, and revocation. A running turn keeps its prior permission context.
+Only validated Git metadata roots are in scope, not tools, credentials or arbitrary
+folders. Do not implement that persistence in the current batch feature.
+The main-readiness/missing-notice incident stays open separately.
+
+[Unified check runner](check-runner.md): five checks plus selected fixtures; short
+PASS/FAIL and summary.json with source identity, exit codes, failed tests and log paths.
+Keep errors/skips explicit; reuse tests without a new framework or real model calls.

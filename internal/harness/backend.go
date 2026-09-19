@@ -7,6 +7,11 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
 )
 
+// GitGrantHarness supports explicit per-message repository metadata grants.
+type GitGrantHarness interface {
+	SupportsGitGrant() bool
+}
+
 // Completion is a terminal turn outcome, independent of its transport.
 type Completion struct {
 	Boundary *inbox.ReadBoundary

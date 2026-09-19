@@ -90,24 +90,17 @@ the session's REWAKE_* environment, which the default shell policy inherits.
 Its remote-control startup is disabled with the version-specific internal marker.
 Rewake does not install notify; a caller's own configured program stays theirs.
 
-On fresh launches, main and write add --add-dir Git metadata roots on the TUI. Its
-thread/start runtimeWorkspaceRoots passes them to the server; synthesizing a
-replacement writable_roots setting would lose the user's roots. Discovery still
-validates ordinary repositories, worktrees, submodules and commondir. General
-gets no extra roots. Sandbox, approval, network and tmp policies are not replaced.
-The existing warning about excluded temporary directories remains relevant.
+No role automatically adds Git metadata roots on fresh launch, resume or fork.
+Owner-supplied roots and sandbox, approval, network and temporary-directory policies
+are preserved. -C/--cd still selects the effective server cwd and TUI request.
+Continuations retain caller input without generated permission overrides; unsupported
+caller permission overrides keep the existing native-compatibility diagnostic.
 
--C/--cd selects the effective server cwd as well as the TUI request. Resume and
-fork retain their arguments but receive no generated permission overrides: the
-remote TUI refuses these before attaching. Committing roles print
-`resumed thread gets Git metadata access with each rewake task; turns you start yourself use the thread's stored roots`.
-Startup sends no automatic input or permission RPC. On each delivered task or
-question, committing roles read the current local workspace roots and append only
-missing Git metadata directories to that turn/start request. General and reports
-receive no grant. Unreadable roots leave the request unchanged with a delivery
-status note. The selected policy still applies; a steered turn retains its current
-permissions and the new roots affect subsequent turns. A manual TUI turn can
-replace these roots again, so the next task reads them afresh.
+Only a verified main's [explicit --grant-git task/question](git-grants.md) requests
+additional metadata roots. It reads current local roots without history and appends
+only missing validated metadata for an eligible recipient. A steered active turn
+keeps its existing permission context; new roots may affect only subsequent turns.
+Manual input can replace roots, so a later explicit request checks them afresh.
 See [continuation permission evidence](continuation-permissions.md).
 
 Caller permission flags and permission-related -c overrides stay untouched.

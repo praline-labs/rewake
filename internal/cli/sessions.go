@@ -51,15 +51,7 @@ func handleList(ctx *Context, _ Call) error {
 				"Start one: rewake --name api claude",
 			}
 		}
-		rows := make([]column, 0, len(sessions))
-		for _, session := range views {
-			text := fmt.Sprintf("%-7s %-8s %s  room=%s  (%s)", session.Harness, age(session.Age()), session.CWD, room, session.Role)
-			if session.Telemetry != nil {
-				text += "\n" + stateLine(session.Name, session.Telemetry, true)
-			}
-			rows = append(rows, column{Name: session.Name, Text: text})
-		}
-		return printColumns(rows, "")
+		return sessionTable(room, views, visible)
 	})
 }
 

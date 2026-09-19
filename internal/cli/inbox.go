@@ -28,6 +28,10 @@ type inboxModel struct {
 // first and lost on the way — a full disk, a killed process — would be gone
 // for good; shown twice, it is merely shown twice.
 func handleInbox(ctx *Context, call Call) error {
+	peek, selected, err := inboxSelection(call)
+	if err != nil {
+		return err
+	}
 	dir, err := state.Dir()
 	if err != nil {
 		return &UsageError{Command: call.Command, Message: err.Error()}
@@ -56,6 +60,26 @@ func handleInbox(ctx *Context, call Call) error {
 		messages, err := inbox.AvailableUnread(dir, session.Name, epoch)
 		if err != nil {
 			failure = failf("could not read the inbox of %s: %v", session.Name, err)
+			return nil
+		}
+		if selected != "" {
+			var found bool
+			for _, message := range messages {
+				if message.ID == selected {
+					messages, found = []inbox.Message{message}, true
+					break
+				}
+			}
+			if !found {
+				failure = failf("message %q is not available in this session's unread inbox (unknown, not yet announced, reserved or already read); run rewake inbox --peek", selected)
+				return nil
+			}
+		}
+		if peek {
+			if err := writeInboxPeek(ctx, session.Name, viewedMessages(dir, messages)); err != nil {
+				failure = failf("could not print the inbox overview: %v", err)
+				return nil
+			}
 			return nil
 		}
 		if err := writeInbox(ctx, inboxModel{Session: session.Name, Messages: viewedMessages(dir, messages)}); err != nil {

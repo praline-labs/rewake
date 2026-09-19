@@ -24,6 +24,7 @@ const defaultWait = 5 * time.Second
 
 // sendModel is the machine form of one send.
 type sendModel struct {
+	GrantGit  bool                   `json:"grantGit,omitempty"`
 	Telemetry *sessionstate.Snapshot `json:"telemetry,omitempty"`
 	ID        string                 `json:"id"`
 	To        string                 `json:"to"`
@@ -88,6 +89,10 @@ func handleSend(ctx *Context, call Call) error {
 	// current: a report then reaches this run, and a process left over from an
 	// earlier run cannot speak for the next one.
 	self, epoch, selfErr := ownRun(dir)
+	grantGit, grantErr := requestedGitGrant(call, self, session, selfErr)
+	if grantErr != nil {
+		return grantErr
+	}
 	if kind.needsSession != "" && selfErr != nil {
 		return &UsageError{
 			Command: command,
@@ -103,6 +108,7 @@ func handleSend(ctx *Context, call Call) error {
 	}
 
 	message := inbox.Message{
+		GrantGit:  grantGit,
 		ID:        inbox.NewID(),
 		From:      harness.ShellSender,
 		To:        session.Name,
@@ -132,7 +138,7 @@ func handleSend(ctx *Context, call Call) error {
 	// The delivery result is worth a few seconds at most; a kind that waits
 	// longer waits for something else, after it.
 	status, known := awaitStatus(dir, session.Name, message.ID, min(wait, defaultWait))
-	model := sendModel{ID: message.ID, To: session.Name, From: message.From}
+	model := sendModel{ID: message.ID, To: session.Name, From: message.From, GrantGit: message.GrantGit}
 	if !known && inbox.Answered(dir, session.Name, message.ID) {
 		// The message left the mailbox, and a status may have been written
 		// after the wait gave up. Absent a moment ago is not absent now:

@@ -134,20 +134,30 @@ unchanged. Previously archived failed reports are not automatically recovered.
 
 ### The notice
 
-A header and optional preview, the same for every harness:
+A single newly announced message keeps its own sender/kind and bounded first line:
 
 ```
-Rewake: <sender> <kind>, <n> new message(s)
-  ↳ <first line of the latest available letter>
+Rewake: <sender> <kind>, 1 new message
+  ↳ <first line>
 ```
 
-`n` counts this run's unread mail, the new message included. The notice carries
-the bounded first line of the latest available letter on a second line.
-The author writes that line; rewake does not summarize. The full text remains
-in inbox. An empty first line produces no preview. Control characters are
-removed; the indent and preview fit a conservative 100-column budget, ending
-with an ellipsis when truncated. Start messages and final replies with their
-point on the first line.
+Each notice has fixed members. At the next ready delivery opportunity, accumulated
+eligible mail gets its own notice through native start-or-steer: active work accepts
+steering, idle work starts. No peek, terminal event or model-seen acknowledgement
+is required. Initial collection is 150 ms; old unread alone produces no reminder.
+Arrivals after native dispatch belong to a later immutable notice.
+A multi-message signal says `Rewake: <n> new messages`, followed by one indented
+first-line preview of its latest member with sender and kind. Usage instructions
+remain in guide/help and briefing, outside the notification itself. Old accepted
+unread messages are not announced again. The [grouped inbox contract](inbox-groups.md)
+describes readiness, fixed membership, destination reservation and native ACK limits.
+Every stored message, receipt and obligation remains independent.
+
+Peek text/JSON contain only metadata and bounded previews, with the existing main
+state visibility. They create no task read receipts, waiters or dispatch acknowledgements. Selected/read-all output
+still precedes marking; active question-answer reservations remain excluded.
+Previews remove controls and stay within the conservative 100-column notice budget
+including indentation. Rewake does not summarize or include later body lines.
 
 ### Claude Code adapter
 
@@ -184,7 +194,7 @@ reuses an old reservation. See [gateway selection and admission](gateway.md).
 
 Readiness waits for ordinary resume backfill outside the mailbox lock, admission
 FIFO and global gate. Native reads and approval replies remain able to progress.
-The reservation also orders main/write additive Git roots and native settings
+The reservation also orders explicit main-authorized additive Git roots and native settings
 updates. No permission policy is replaced. A bounded refusal sends no work and
 exposes no task; transport uncertainty is never automatically replayed.
 

@@ -122,4 +122,4 @@ interrupted compaction and continuing automatic compaction were not forced in th
 acceptance. Their independent wire/fixture coverage remains separate. No large
 context was manufactured to trigger auto-compaction. Earlier main/side transport
 acceptance retains its scope; not every side workflow was repeated for telemetry.
-The older main-readiness/missing-notice incident remains open as a separate next task.
+The older main-readiness/missing-notice incident remains open as a separate task.

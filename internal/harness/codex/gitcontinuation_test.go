@@ -61,7 +61,7 @@ func TestRemoteContinuationsDoNotInjectPermissions(t *testing.T) {
 					t.Fatalf("caller arguments changed: %q", actual)
 				}
 				warned := strings.Contains(strings.Join(plan.Notes, " "), "resumed thread gets Git metadata access with each rewake task")
-				if warned != part.GitWrite {
+				if warned {
 					t.Fatalf("role=%s notes=%q", part.ID, plan.Notes)
 				}
 			})

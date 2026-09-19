@@ -5,6 +5,9 @@ import (
 	"unicode"
 )
 
+// Preview shares the same bounded first-line view between notices and inbox peeks.
+func Preview(text string) string { return preview(text) }
+
 // preview is the author's first line, never a generated summary. The four-cell
 // indent leaves 96 cells; non-ASCII characters count conservatively as two.
 func preview(text string) string {

@@ -19,8 +19,8 @@ type Role struct {
 	// is the exception, so the zero value is a session that reports: a caller
 	// that forgets the role must not switch reports off.
 	Silent bool
-	// GitWrite permits a launch to grant writes to the working repository metadata.
-	// It is separate from reporting: a writer reports, while main stays silent.
+	// GitWrite permits receiving an explicit main-authorized metadata grant.
+	// Eligibility alone never changes permissions at launch or message delivery.
 	GitWrite bool
 }
 
@@ -42,7 +42,7 @@ var Main = Role{
 // Write takes work and can commit changes in its working repository.
 var Write = Role{
 	ID:       "write",
-	Summary:  "Takes work and reports its turns, with permission to commit in the working repository.",
+	Summary:  "Takes work and reports its turns; eligible for explicitly granted repository Git metadata access. Existing owner permissions remain unchanged.",
 	GitWrite: true,
 }
 

@@ -51,6 +51,8 @@ func (codexHarness) Notes() []string {
 	}
 }
 
+func (codexHarness) SupportsGitGrant() bool { return true }
+
 func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, error) {
 	args := append([]string{}, request.Args...)
 	home := Home()
@@ -74,19 +76,8 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 	if continuation && permissionOverride {
 		notes = append(notes, "permission overrides cannot be used with resume/fork under rewake: the remote TUI rejects them; remove the permission flags or start a new thread; caller arguments are unchanged")
 	}
-	if continuation && request.Role.GitWrite {
-		notes = append(notes, "resumed thread gets Git metadata access with each rewake task; turns you start yourself use the thread's stored roots")
-	}
-	if request.Role.GitWrite && !continuation {
-		if flags, note := gitWriteFlags(args); note != "" {
-			notes = append(notes, note)
-		} else {
-			args = harness.AddFlags(args, flags...)
-		}
-	}
-
 	// The state directory uses the caller's existing temporary-directory
-	// permissions. Granting Git writes changes neither tmp nor network policy.
+	// permissions. Role selection never extends filesystem access.
 	if note := tmpNote(home, request.Dir, args, layered); note != "" {
 		notes = append(notes, note)
 	}

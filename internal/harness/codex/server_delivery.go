@@ -11,10 +11,13 @@ import (
 )
 
 type reservedDelivery struct {
-	session     *serverSession
-	reservation *gateway.Reservation
-	ctx         context.Context
-	cancel      context.CancelFunc
+	session      *serverSession
+	reservation  *gateway.Reservation
+	ctx          context.Context
+	cancel       context.CancelFunc
+	rootsChecked bool
+	roots        []string
+	rootNote     string
 }
 
 func (s *serverSession) Reserve(ctx context.Context, _ inbox.Message) (inbox.Reservation, error) {
@@ -40,16 +43,47 @@ func (r *reservedDelivery) Prepare(fn func(string) error) error {
 }
 
 func (r *reservedDelivery) Deliver(_ context.Context, message inbox.Message) inbox.Result {
+	return r.DeliverChecked(r.ctx, message, func() bool { return true })
+}
+
+func (r *reservedDelivery) DeliverChecked(_ context.Context, message inbox.Message, valid func() bool) inbox.Result {
 	var thread string
 	if err := r.Prepare(func(value string) error { thread = value; return nil }); err != nil {
 		return inbox.Result{State: inbox.Failed, Detail: err.Error()}
 	}
-	roots, note := r.session.taskGitRoots(r.ctx, r.reservation.ReadThread, thread, inbox.KindOf(message))
-	_, err := r.reservation.Deliver(r.ctx, message.ID, noticePrefix(message)+" "+harness.Notice(message), roots)
+	if !r.rootsChecked {
+		if err := r.checkRoots(thread, message); err != nil {
+			return inbox.Result{State: inbox.Failed, Detail: err.Error()}
+		}
+	}
+	if !valid() {
+		return inbox.Result{State: inbox.Pending, Detail: "announcement membership changed before send"}
+	}
+	_, err := r.reservation.Deliver(r.ctx, message.ID, noticePrefix(message)+" "+harness.Notice(message), r.roots)
 	if err != nil {
 		return inbox.Result{State: inbox.Failed, Detail: err.Error() + "; delivery was not retried automatically"}
 	}
-	return inbox.Result{State: inbox.Delivered, Via: "app-server", Detail: note}
+	return inbox.Result{State: inbox.Delivered, Via: "app-server", Detail: r.rootNote}
+}
+
+func (r *reservedDelivery) checkRoots(thread string, message inbox.Message) error {
+	grantKind := inbox.Note
+	members := message.Batch
+	if len(members) == 0 {
+		members = []inbox.Message{message}
+	}
+	for _, member := range members {
+		if member.GrantGit {
+			kind := inbox.KindOf(member)
+			if !r.session.gitWrite || kind != inbox.Task && kind != inbox.Question {
+				return fmt.Errorf("explicit Git grant is unsupported for this recipient or message kind")
+			}
+			grantKind = kind
+		}
+	}
+	r.roots, r.rootNote = r.session.taskGitRoots(r.ctx, r.reservation.ReadThread, thread, grantKind)
+	r.rootsChecked = true
+	return nil
 }
 
 func (s *serverSession) Deliver(ctx context.Context, message inbox.Message) inbox.Result {

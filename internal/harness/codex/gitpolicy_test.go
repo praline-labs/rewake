@@ -10,7 +10,7 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/role"
 )
 
-func TestGitWritesExtendCallerConfiguration(t *testing.T) {
+func TestLaunchPreservesCallerGitConfiguration(t *testing.T) {
 	codexHome(t, "")
 	repo := gitRepository(t)
 	for _, value := range []string{
@@ -31,7 +31,7 @@ func TestGitWritesExtendCallerConfiguration(t *testing.T) {
 				if strings.Join(plan.Args[:len(args)], "\x00") != strings.Join(args, "\x00") {
 					t.Fatalf("caller args changed: %q", plan.Args)
 				}
-				assertGitGrant(t, plan, repo)
+				assertNoImplicitGitGrant(t, plan, repo)
 				if _, ok := configValue(plan.Args[len(args):], rootsKey); ok {
 					t.Fatalf("roots override appended: %q", plan.Args)
 				}
@@ -66,7 +66,7 @@ func TestGitWritesDoNotReplaceAnyConfigSpelling(t *testing.T) {
 			codexHome(t, config)
 			repo := gitRepository(t)
 			plan := gitLaunch(t, role.Write, "-C", repo)
-			assertGitGrant(t, plan, repo)
+			assertNoImplicitGitGrant(t, plan, repo)
 		})
 	}
 }
@@ -79,7 +79,7 @@ func TestGitWritesDoNotNeedToReadConfig(t *testing.T) {
 	}
 	repo := gitRepository(t)
 	plan := gitLaunch(t, role.Write, "-C", repo)
-	assertGitGrant(t, plan, repo)
+	assertNoImplicitGitGrant(t, plan, repo)
 }
 
 func TestGitWritesKeepProjectConfiguration(t *testing.T) {
@@ -106,7 +106,7 @@ func TestGitWritesKeepProjectConfiguration(t *testing.T) {
 				t.Fatal(err)
 			}
 			plan := gitLaunch(t, role.Write, "-C", repo)
-			assertGitGrant(t, plan, repo)
+			assertNoImplicitGitGrant(t, plan, repo)
 			raw, err := os.ReadFile(path)
 			if err != nil || string(raw) != "[sandbox_workspace_write]\nwritable_roots=[]\n" {
 				t.Fatalf("project config changed: %q %v", raw, err)
@@ -124,14 +124,14 @@ func TestGitWritesExtendSelectedProfiles(t *testing.T) {
 	}
 }
 
-func TestGitWritesAppendToRepeatedDirectoryFlags(t *testing.T) {
+func TestLaunchPreservesExplicitDirectoryFlags(t *testing.T) {
 	codexHome(t, "")
 	repo := gitRepository(t)
 	for _, existing := range []string{filepath.Join(repo, ".git"), "/another/allowed/path"} {
 		for _, flags := range [][]string{{"--add-dir", existing}, {"--add-dir=" + existing}} {
 			plan := gitLaunch(t, role.Write, append([]string{"-C", repo}, flags...)...)
 			got := gitRoots(plan.Args)
-			if len(got) != 2 || got[0] != existing || got[1] != filepath.Join(repo, ".git") {
+			if len(got) != 1 || got[0] != existing {
 				t.Errorf("caller root lost: %q", plan.Args)
 			}
 		}

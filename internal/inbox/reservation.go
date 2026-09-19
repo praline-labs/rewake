@@ -15,7 +15,7 @@ type Reservation interface {
 	Close()
 }
 
-// Reserver binds one delivery before its message becomes readable.
+// Reserver binds one shared admission before its members become readable.
 type Reserver func(context.Context, Message) (Reservation, error)
 
 // prepareDelivery checks leases before reserving a destination, then rechecks under
@@ -105,4 +105,10 @@ func (s *Server) prepareDelivery(ctx context.Context, message *Message) (read, a
 		err = refuse(err)
 	}
 	return
+}
+
+// CheckedAnnouncer revalidates membership after slow permission preparation,
+// immediately before committing a native input.
+type CheckedAnnouncer interface {
+	DeliverChecked(context.Context, Message, func() bool) Result
 }

@@ -63,7 +63,7 @@ func TestListNamesTheMainSession(t *testing.T) {
 	dir := liveSession(t, "lead")
 	markMain(t, dir, "lead")
 	_, out, _ := run("list")
-	if !strings.Contains(out, "(main)") {
+	if !strings.Contains(out, "Role") || !strings.Contains(out, "main") {
 		t.Errorf("list = %q, want the main session marked", out)
 	}
 }

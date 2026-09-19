@@ -65,8 +65,7 @@ func TestListShowsALiveSession(t *testing.T) {
 	if strings.Contains(out, "No sessions are running") {
 		t.Fatalf("list reported nothing running: %q", out)
 	}
-	first := strings.Fields(strings.Split(out, "\n")[0])
-	if len(first) < 2 || first[0] != "api" || first[1] != "claude" {
+	if !strings.Contains(out, "Room: default") || !strings.Contains(out, "Harness: \"claude\"") || !strings.Contains(out, "api") {
 		t.Errorf("first line = %q, want the session name and its harness", out)
 	}
 }

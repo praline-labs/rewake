@@ -43,28 +43,28 @@ func gitRoots(args []string) []string {
 	return roots
 }
 
-func assertGitGrant(t *testing.T, plan harness.LaunchPlan, directory string) {
+func assertNoImplicitGitGrant(t *testing.T, plan harness.LaunchPlan, directory string) {
 	t.Helper()
 	roots := gitRoots(plan.Args)
-	if len(roots) != 1 || roots[0] != filepath.Join(directory, ".git") {
-		t.Fatalf("args=%q notes=%q; want only %s/.git added", plan.Args, plan.Notes, directory)
+	if plan.Backend.(*serverSession).cwd != directory {
+		t.Fatalf("effective cwd changed: %s", plan.Backend.(*serverSession).cwd)
+	}
+	if len(roots) != 0 {
+		t.Fatalf("args=%q notes=%q; no implicit Git roots allowed for %s", plan.Args, plan.Notes, directory)
 	}
 }
 
-func TestOnlyCommittingRolesReceiveGitWrites(t *testing.T) {
+func TestNoRoleAutomaticallyReceivesGitWrites(t *testing.T) {
 	codexHome(t, "")
 	repo := gitRepository(t)
 	for _, part := range []role.Role{role.General, {}, role.Main, role.Write} {
 		t.Run(part.ID, func(t *testing.T) {
 			plan := gitLaunch(t, part, "-C", repo)
 			granted := len(gitRoots(plan.Args)) > 0
-			want := part.ID == "main" || part.ID == "write"
-			if granted != want {
+			if granted {
 				t.Fatalf("role=%+v args=%q notes=%q", part, plan.Args, plan.Notes)
 			}
-			if want {
-				assertGitGrant(t, plan, repo)
-			}
+			assertNoImplicitGitGrant(t, plan, repo)
 			_, notify := configValue(plan.Args, notifyKey)
 			if notify {
 				t.Errorf("role=%s notify=%v", part.ID, notify)
@@ -91,10 +91,10 @@ func TestGitWritesFollowTheEffectiveWorkingDirectory(t *testing.T) {
 	for _, args := range [][]string{
 		{"-C", repo}, {"--cd", repo}, {"--cd=" + repo}, {"-C" + repo}, {"-C=" + repo}, {"-C", filepath.Base(repo)},
 	} {
-		t.Run(strings.Join(args, " "), func(t *testing.T) { assertGitGrant(t, gitLaunch(t, role.Write, args...), repo) })
+		t.Run(strings.Join(args, " "), func(t *testing.T) { assertNoImplicitGitGrant(t, gitLaunch(t, role.Write, args...), repo) })
 	}
 	t.Chdir(repo)
-	assertGitGrant(t, gitLaunch(t, role.Write), repo)
+	assertNoImplicitGitGrant(t, gitLaunch(t, role.Write), repo)
 }
 
 func TestGitFlagsStayBeforeThePrompt(t *testing.T) {
@@ -103,7 +103,7 @@ func TestGitFlagsStayBeforeThePrompt(t *testing.T) {
 	prompt := []string{"--", "-C", "/elsewhere", "-pwork", "-c", rootsKey + `=["/elsewhere"]`, "resume"}
 	args := append([]string{"-C", repo}, prompt...)
 	plan := gitLaunch(t, role.Write, args...)
-	assertGitGrant(t, plan, repo)
+	assertNoImplicitGitGrant(t, plan, repo)
 	if got := plan.Args[len(plan.Args)-len(prompt):]; strings.Join(got, "\x00") != strings.Join(prompt, "\x00") {
 		t.Errorf("prompt changed: %q", plan.Args)
 	}
@@ -137,8 +137,8 @@ func TestUnresolvedGitMetadataGetsNoGrant(t *testing.T) {
 			if len(gitRoots(plan.Args)) > 0 {
 				t.Fatalf("granted writes to %s: %q", kind, plan.Args)
 			}
-			if !strings.Contains(strings.Join(plan.Notes, " "), "not granting Git metadata writes") {
-				t.Errorf("missing explanation: %q", plan.Notes)
+			if roots, err := gitMetadataDirectories(repo); err == nil || len(roots) != 0 {
+				t.Fatalf("unresolved metadata accepted: %q %v", roots, err)
 			}
 		})
 	}

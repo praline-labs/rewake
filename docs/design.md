@@ -150,11 +150,11 @@ the help line and whether its turns are reported come from that value.
 System text lives in `internal/brief`, with a reviewed snapshot
 for each role; harness adapters only pass the rendered strings. The record keeps the role's id.
 
-| role | flag | turns reported | Git metadata writes requested for the sandbox | intro adds |
+| role | flag | turns reported | Eligible for explicit Git metadata grant | intro adds |
 |---|---|---|---|---|
 | `general` | `--general` | yes | no | end your turn with the result |
-| `main` | `--main` | no | fresh launch and delivered tasks/questions | you get reports, yours go to nobody |
-| `write` | `--write` | yes | fresh launch and delivered tasks/questions | end your turn with the result; you can commit |
+| `main` | `--main` | no | only a main-authorized --grant-git task/question | you get reports, yours go to nobody |
+| `write` | `--write` | yes | only a main-authorized --grant-git task/question | end your turn with the result; you can commit |
 
 **Owner decision, September 17, 2026:** omitted role flags always mean general,
 even in an empty room or after main exits. This supersedes automatic main
@@ -170,16 +170,11 @@ harness starts. Concurrent explicit launches cannot claim two mains. The lock is
 before preparing or running the harness. The record, launch note and intro say
 which role was chosen and why.
 
-Git writes are a separate role capability from reporting. The sandbox adapter
-appends `--add-dir` for the discovered metadata directories on fresh launches.
-Remote resume/fork omit that flag. Delivered tasks/questions read current local
-roots and append only missing metadata for main/write in turn/start; unreadable
-roots skip the grant with a status note. Steer affects subsequent turns, and TUI
-input may replace roots again. Sandbox policy and approval stay intact. Ordinary repos,
-worktrees and submodules are supported; configuration and existing roots remain
-intact. Unresolved or symlinked metadata is skipped with a reason. See
-[launch permissions](launch.md). A role does not revoke permissions the user
-already granted; general receives no extra Git access from rewake.
+Git eligibility is separate from reporting and does not itself grant permission.
+Only a verified main can attach [explicit --grant-git intent](git-grants.md) to an
+eligible task/question. No flag and no launch role adds roots. The existing validated
+metadata resolver and additive native root snapshot remain unchanged; existing owner
+permissions are neither replaced nor revoked. Notify/report paths cannot grant.
 
 The main session exists to stop a loop: it reads the reports of its workers,
 and if its own turns were reported to them, each report would wake the other
@@ -394,6 +389,7 @@ messages.
 6. The intro is minimal — what rewake is, and to run `rewake guide` — and the
    instructions live in the guide. Nothing is added to a notice that the person
    watching the session would not see.
-7. Whatever rewake passes to a harness adds to the user's settings and never
-   replaces them. A replacement-only briefing key is passed only when it cannot overwrite
+7. Whatever rewake passes to a harness adds to the user's settings and never replaces them. A replacement-only briefing key is passed only when it cannot overwrite
    the user's instructions. Rewake never installs a notify program.
+
+[Compact session tables and grouped inbox reading](inbox-groups.md) preserve message identities while sharing a bounded collection window and destination admission.

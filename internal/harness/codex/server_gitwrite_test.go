@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -20,10 +21,11 @@ import (
 )
 
 type gitReadFixture struct {
-	thread map[string]any
-	refuse bool
-	silent bool
-	change bool
+	beforeReply func()
+	thread      map[string]any
+	refuse      bool
+	silent      bool
+	change      bool
 }
 
 func gitThreadFixture(cwd string, roots []string, status string) map[string]any {
@@ -37,11 +39,35 @@ func gitThreadFixture(cwd string, roots []string, status string) map[string]any 
 // for unrelated permission fields, so a fake cannot hide a broad policy grant.
 func gitDeliveryFixture(t *testing.T, part role.Role, reads ...gitReadFixture) (*serverSession, <-chan map[string]json.RawMessage) {
 	t.Helper()
+	return gitDeliveryFixtureWithAck(t, part, nil, reads...)
+}
+
+func gitDeliveryFixtureWithAck(t *testing.T, part role.Role, beforeAck func(), reads ...gitReadFixture) (*serverSession, <-chan map[string]json.RawMessage) {
+	t.Helper()
+	return gitDeliveryFixtureWithStatus(t, part, "idle", beforeAck, reads...)
+}
+
+func gitDeliveryFixtureWithStatus(t *testing.T, part role.Role, status string, beforeAck func(), reads ...gitReadFixture) (*serverSession, <-chan map[string]json.RawMessage) {
+	t.Helper()
+	return gitDeliveryFixtureTraffic(t, part, status, beforeAck, nil, reads...)
+}
+
+func gitDeliveryFixtureTraffic(t *testing.T, part role.Role, status string, beforeAck func(), peer func(net.Conn), reads ...gitReadFixture) (*serverSession, <-chan map[string]json.RawMessage) {
+	t.Helper()
+	return gitDeliveryFixtureMode(t, part, status, false, beforeAck, peer, reads...)
+}
+
+// Same-turn mode models the native atomic start-or-steer decision.
+func gitDeliveryFixtureMode(t *testing.T, part role.Role, status string, sameTurn bool, beforeAck func(), peer func(net.Conn), reads ...gitReadFixture) (*serverSession, <-chan map[string]json.RawMessage) {
+	t.Helper()
 	codexHome(t, "")
 	server := gitLaunch(t, part, "resume", "--last").Backend.(*serverSession)
 	captured := make(chan map[string]json.RawMessage, 8)
 	path := socketFixture(t, func(c net.Conn, r *bufio.Reader) {
-		readIndex := 0
+		if peer != nil {
+			peer(c)
+		}
+		readIndex, turnIndex := 0, 0
 		for {
 			opcode, raw, _, err := readClientFrame(r)
 			if err != nil || opcode != 1 {
@@ -62,7 +88,7 @@ func gitDeliveryFixture(t *testing.T, part role.Role, reads ...gitReadFixture) (
 				continue
 			case "initialize":
 			case "thread/start":
-				result = map[string]any{"thread": map[string]any{"id": fixtureRoot, "status": map[string]string{"type": "idle"}, "canAcceptDirectInput": true}}
+				result = map[string]any{"thread": map[string]any{"id": fixtureRoot, "status": map[string]string{"type": status}, "canAcceptDirectInput": true}}
 			case "thread/read":
 				if string(request.Params["includeTurns"]) != "false" || len(request.Params) != 2 {
 					t.Errorf("read requested history or unexpected fields: %s", raw)
@@ -73,6 +99,9 @@ func gitDeliveryFixture(t *testing.T, part role.Role, reads ...gitReadFixture) (
 				}
 				read := reads[readIndex]
 				readIndex++
+				if read.beforeReply != nil {
+					read.beforeReply()
+				}
 				if read.silent {
 					continue
 				}
@@ -90,8 +119,16 @@ func gitDeliveryFixture(t *testing.T, part role.Role, reads ...gitReadFixture) (
 						t.Errorf("unexpected turn parameter %s", key)
 					}
 				}
+				turnIndex++
 				captured <- request.Params
-				result = map[string]any{"turn": map[string]string{"id": "delivered-turn"}}
+				if beforeAck != nil {
+					beforeAck()
+				}
+				turn := turnIndex
+				if sameTurn {
+					turn = 1
+				}
+				result = map[string]any{"turn": map[string]string{"id": fmt.Sprintf("delivered-turn-%d", turn)}}
 			default:
 				t.Errorf("unexpected RPC %s", request.Method)
 			}
@@ -122,7 +159,7 @@ func gitDeliveryFixture(t *testing.T, part role.Role, reads ...gitReadFixture) (
 
 func deliverGitTask(t *testing.T, server *serverSession, captured <-chan map[string]json.RawMessage, kind inbox.Kind) ([]string, inbox.Result) {
 	t.Helper()
-	result := server.Deliver(context.Background(), inbox.Message{ID: "git-task", Kind: kind, Text: "do the work"})
+	result := server.Deliver(context.Background(), inbox.Message{ID: "git-task", Kind: kind, GrantGit: server.gitWrite && (kind == "" || kind == inbox.Task || kind == inbox.Question), Text: "do the work"})
 	if result.State != inbox.Delivered {
 		t.Fatalf("delivery failed: %+v", result)
 	}
@@ -256,7 +293,7 @@ func TestTaskGitRootsUnavailableDoesNotBlockDelivery(t *testing.T) {
 func TestTaskGitRootsRefuseClosedThreadDuringRead(t *testing.T) {
 	repo := gitRepository(t)
 	server, captured := gitDeliveryFixture(t, role.Write, gitReadFixture{thread: gitThreadFixture(repo, []string{repo}, "idle"), change: true})
-	result := server.Deliver(context.Background(), inbox.Message{ID: "changed", Kind: inbox.Task})
+	result := server.Deliver(context.Background(), inbox.Message{ID: "changed", Kind: inbox.Task, GrantGit: true})
 	if result.State != inbox.Failed || !strings.Contains(result.Detail, "accepted conversation") {
 		t.Fatalf("result=%+v", result)
 	}
