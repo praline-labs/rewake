@@ -358,14 +358,15 @@ UI persistence mechanism is added. Other harness behavior is unchanged.
 
 ## Remaining work — owner decisions, September 19–20, 2026
 
-The September 19 native-notification priority is now complete. A different harness
-parity stage requires a separate task; it is not part of this closeout.
+The native-notification priority is complete. The next focus is the Claude Code
+handoff: [parity by the feature map](harness-features.md) and
+[workflow-check research](check-runner.md) with concise summaries. Neither a parity
+collector nor the unified runner is implemented by this documentation step.
 Persistent Git permissions remain a separate future item: explicit orchestrator
 event, scope to run and repository, preservation across later owner turns, and revocation. A running turn keeps its prior permission context.
 Only validated Git metadata roots are in scope, not tools, credentials or arbitrary
 folders. Do not implement that persistence in the current batch feature.
 The main-readiness/missing-notice incident stays open separately.
 
-[Unified check runner](check-runner.md): five checks plus selected fixtures; short
-PASS/FAIL and summary.json with source identity, exit codes, failed tests and log paths.
-Keep errors/skips explicit; reuse tests without a new framework or real model calls.
+[Check automation](check-runner.md): research observable workflows before implementing
+a thin runner; short console output and summary.json, with paid/manual tiers opt-in.

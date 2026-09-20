@@ -1,21 +1,203 @@
-# Unified check runner — future work
+# Check automation — research before implementation
 
-Owner decision, September 19, 2026. Add one development command that runs the five
-required checks and explicitly selected integration scenarios. Reuse current tests,
-isolated fixtures and the exact production mirror; no large new framework, private
-handoff-path dependency, owner credentials or real model calls.
+Owner intent, September 19–20, 2026: one development command should run the five
+required checks and selected workflow tests without filling agent context with logs.
+The tests should exercise the actual feature process; deciding which scenarios and
+architecture provide that evidence is the next research task. No runner is implemented
+or accepted by this document.
 
-Normal output is a short PASS/FAIL summary plus summary.json. Record exact source/
-build identity, check names, durations, exit codes, failing test names and log paths.
-Open detailed logs only for failures, with a bounded excerpt in the summary. Preserve
-failed runs when retrying. Missing tools, errors, skips and unrun manual acceptance
-must remain visible; none counts as success.
+Native model-context delivery and the arrival UI are installed and accepted through
+`4cfd3cf`. They are no longer a pending prerequisite or the next implementation
+priority. Their fixtures provide evidence and lessons for this investigation, not a
+ready-made general testing framework.
 
-Use actual message/receipt assertions for delivery, groups, peek/selected reads,
-roles, epochs, side behavior and state. Synthetic local responses may support isolated
-wrapper/native-server fixtures. Terminal rendering and model-consumption claims stay
-separate unless that run establishes them.
+## Research deliverable
 
-This is a separate future task, not an extension of the current batch repair.
-Native notifications remain the next priority after current review and acceptance.
-No runner implementation or new acceptance is claimed here.
+Separate two decisions:
+
+1. **Architecture and scenarios.** Inventory reusable checks/fixtures, map feature
+   claims to observable invariants, identify evidence gaps and propose a small suite.
+   Decide process boundaries, result ownership, synchronization, artifact collection
+   and how the suite proves its own negative cases. Document alternatives and costs.
+2. **Runner implementation.** After that proposal is reviewed, implement the smallest
+   orchestration needed for the chosen workflows. Reuse existing Go tests and mature
+   fixtures; do not build a broad framework or tests that merely reproduce current
+   implementation branches.
+
+The investigation should produce a harness-by-scenario matrix linked to the
+[feature map](harness-features.md). Use registered harness identities and the map's
+capability/acceptance boundaries. A scenario needs a stated invariant, prerequisites,
+observation points, evidence tier and reason for every unsupported or unrun cell.
+Shared user contracts may use different native mechanisms; feature presence does not
+mean identical protocol or equally strong acceptance evidence.
+
+## Output and evidence contract
+
+Normal agent-facing output is a short console summary plus `summary.json`. Successful
+checks do not stream detailed logs. Read a full log only after a failure or to answer
+a specific evidence question; link directly to the relevant case artifact. Emit
+bounded progress notices for long phases, not subprocess chatter.
+
+Each result should retain:
+
+- Check/workflow name, harness, scenario/variant and evidence tier.
+- Result category, expected outcome, observed outcome and a concrete reason.
+- Duration, subprocess exit code, timeout/interruption and failing assertion/test
+  names. Exit 0 alone is never the workflow acceptance criterion.
+- Source identity: commit plus a manifest/digest of the exact tested working tree,
+  including uncommitted changes. Record exclusions from the production mirror.
+- Build identity: executable hash and relevant build arguments. Native fixtures also
+  record the native version/hash and any reference-source revision; do not assume
+  source/binary equivalence from a version string.
+- Case-specific evidence paths: scoped trace, message/receipt identities, native
+  request/terminal summaries, effective configuration, cleanup and owner observations
+  when applicable. A generic log path is not sufficient proof of an invariant.
+- Observation provenance: which process saw or performed each step, including who
+  invoked inbox. Retain separate native turn status and human-observation fields.
+
+Use distinct results: `pass`, `fail`, `skip`, `unsupported`, `incomplete`, `not-run`.
+A skip is an intentional selection/policy decision with a reason; unsupported means
+that the harness lacks the required capability; not-run means no attempt was made;
+incomplete means an attempt lacks required evidence. Missing tools or prerequisites
+must be visible and cannot silently produce an aggregate pass. A required workflow
+with missing evidence is not green. An optional paid/manual case may remain not-run
+without being represented as accepted.
+
+An expected-failure control may pass its assertion while recording a failed native
+turn or refused admission. That is a successful negative control, not successful
+model work. A happy-path failed/interrupted terminal, missing correlation, cleanup
+failure or late endpoint error prevents a happy-path pass.
+
+Finalize results only after owned subprocesses and endpoint handlers finish and
+cleanup is checked. Keep attempts separate: a retry must not overwrite the failing
+run or change an unknown outcome into success by repeating an accepted request.
+
+Proposed MVP output budgets to validate during research: at most twelve normal
+summary lines for the five checks plus three workflows; failure excerpts at most
+twenty lines each and 8 KiB combined. Logs remain complete in artifacts. Confirm
+that an agent can choose the next diagnostic from summary.json without loading
+successful transcripts or broad directories of logs.
+
+## Observable workflow invariants
+
+The principal chain is sender, durable mailbox, native admission, recipient inbox
+read, causal report, then sender-side native report notice. Verify each edge with
+correlated message IDs, epochs, selected thread/generation and ACK turn where the
+adapter provides them. Do not infer one edge from a later convenient signal.
+
+| Scenario family | Required observations and boundary |
+| --- | --- |
+| Task and report | Real send, expected mailbox state, accepted native input, actual inbox consumption, report correlated to the read task, and matching report notice at the sender. Reading a report through CLI is not proof of its native announcement. |
+| Idle and busy | Positive native evidence of idle start or genuine active work; for same-turn claims, match the original turn and admission ACK. A status snapshot or scheduled sleep alone is insufficient. |
+| Batches and late arrivals | Fixed admitted member IDs/count/preview; later arrivals belong to another batch; old unread mail is not announced again. Reads and obligations remain individual. |
+| Failure and recovery | Distinguish rejected, accepted and unknown ACK outcomes. Check allowed retry/wake behavior without blind replay. Stopped work is not automatically replayed; recovery observations retain the original causal scope. |
+| Epoch and selection | Restart, changed epoch/generation, primary changes and side views cannot redirect old work or let a side settle primary obligations. Exercise only relevant selected boundaries, not every Cartesian combination. |
+| State and privacy | Telemetry freshness/provenance, compaction start/completion and visibility rules follow actual observed scope. Do not infer departure from unknown process identity or read unrelated transcripts for convenience. |
+| UI isolation | Arrival display is downstream-only, creates no phantom outcome or extra model context, and cosmetic loss leaves delivery accepted. Native rendering timing and cache behavior need their own evidence. |
+| Permissions | Granted versus ungranted work; additive existing roots remain intact, roles do not imply grants, and effective native policy matches the selected source. |
+| Cleanup | Owned processes/handlers end, sockets/registry/private state are cleaned as required, and late failures are reflected before final classification. |
+
+A controller invoking the real recipient CLI can prove mailbox consumption and causal
+receipt/report accounting. It does not prove that the model chose to read inbox.
+Record `read performed by controller` explicitly. A model-driven read needs evidence
+of that action from the model/tool path. A fake ACK proves only the simulated admission
+contract; neither model comprehension nor terminal appearance follows from it.
+
+## Evidence tiers and matrix
+
+| Tier | What it can establish | What remains separate |
+| --- | --- | --- |
+| Pure Go | Deterministic domain invariants, refusal reasons, scope guards, queue bounds, receipt accounting and targeted races. | A native process accepting the wire shape or a model following it. |
+| Protocol fixtures | Process wiring, framing, correlation and controlled ordering/failures through local doubles. | Native parser/behavior, model choice and rendering. |
+| Pinned real native with local stub | Actual wrapper/native process flow, effective policy, real tool lifecycle and serialized context against a scripted endpoint. | Real-model semantics and actual TUI appearance. |
+| Real-model semantic | Task understanding and model/tool choices under a stated setup, with strict marker/data provenance where relevant. | Other prompting conditions, comprehensive timing or visual behavior. |
+| Owner TUI | Visible rows, interaction, deferral and observed transitions. | Unrecorded exact event order, durable cache semantics or exhaustive recovery coverage. |
+
+Populate the harness-by-scenario matrix from [harness-features.md](harness-features.md)
+and these tiers. Record the highest justified evidence for each cell and its gaps,
+not a single ambiguous tested boolean. An unsupported native surface does not justify
+emulating a different feature and reporting parity. Unknown cells remain research
+items until a concrete observation or documented capability resolves them.
+
+The default suite must be no-account and enforce hard isolation before native launch:
+fresh private HOME/config/state, no owner credentials/config/session mounts, separate
+network/mount/PID boundaries, local-only endpoint, no inherited identity/proxy and
+verified binaries. Include required native helper dependencies inside that boundary.
+Failure to establish isolation stops the case; it never falls back to the real account.
+
+Paid semantic and manual TUI checks are explicit opt-ins with cost/time bounds and
+separate result scope. No typing proxies or automated input into a person's screen.
+A protocol client can drive a synthetic case, but must not be labelled a real TUI.
+
+## Lessons that the proposed tests must address
+
+- **Wrong guard, green test.** Generic error assertions passed because a reservation
+  expired. Use a live precondition and the specific expected refusal; removing the
+  intended guard should fail that test, rather than pass through another guard.
+- **Premature success.** A failed terminal, cleanup failure under exit 0, or endpoint
+  error after an early pass was hidden by weak classification. Observe terminal
+  identity/status, join handlers and validate cleanup before publishing a result.
+- **Wrong report edge.** Sender CLI read succeeded before the sender's native report
+  notice. Match the exact report ID/epochs on the sender's native connection/endpoint;
+  another availability notice or an extra HTTP request does not satisfy this edge.
+- **Permission premises changed.** A fresh temporary cwd selected read-only and inbox
+  could not write its lock. Record effective policy, not only launch intent. UI
+  continuation then rejected CLI permission overrides; the corrected isolated recipe
+  keeps equivalent defaults in its private profile-less config, with clean TUI argv.
+  Do not widen owner permissions or return those flags to remote continuation.
+- **Alternative data path.** A marker visible in an initial task, another tool result
+  or readable fixture file can undermine a comprehension claim. Audit all model-visible
+  channels and allowed tool paths, then use negative controls for the claimed source
+  boundary. A preserved wire string alone is not semantic consumption.
+- **Fixture evidence promoted to UI success.** Synthetic clients and scripted replies
+  did not render a terminal. Preserve explicit not-run/manual fields. Initial visible
+  UI and no noticed repeat do not prove persistence, exact ordering or cache invalidation.
+
+Use mutations/negative controls only where they test the claimed invariant: remove a
+specific guard, substitute the wrong identity/epoch, inject a terminal failure, omit
+the sender report notice, introduce a late cleanup error or expose an alternative
+marker route. Each control should explain which misleading green result it prevents.
+Avoid a blanket exponential matrix and implementation-mirroring pseudo-tests.
+
+## Initial implementation proposal: two or three workflows
+
+Select these during research, keeping the first implementation bounded:
+
+1. **Idle task to sender report notice:** the complete correlated chain, including
+   explicit controller-versus-model ownership of inbox reading and final cleanup.
+2. **Busy arrivals and fixed batches:** a genuine pending native operation, an
+   admitted group, a late arrival, preserved membership and the real operation's own
+   completion. Keep UI display evidence separate from work completion.
+3. **One uncertain/interrupted delivery recovery:** deliberately lose an ACK or stop
+   a turn, then establish the permitted new-mail/continuation behavior without replay
+   or invented success. Choose one focused fault branch first, not every recovery axis.
+
+The five existing Go checks remain required: gofumpt, go vet, staticcheck,
+golangci-lint and race/shuffle tests. They are not replaced by workflow tests.
+Extract only the reviewed fixture pieces needed for the selected workflows into a
+repository-owned test location. A fresh checkout must run them without any ignored
+handoff directory, private snapshot or installed owner binary. Decide the location
+and small orchestration interface during research; do not create them in this task.
+Keep version pinning, helper dependencies, isolation, teardown and evidence collectors
+reviewable. Prefer a thin command over existing tools to a new test framework.
+
+## Measurable acceptance for the future MVP
+
+- A fresh checkout can run all five checks and the selected two or three workflows
+  using documented dependencies and isolated state, without ignored/private inputs.
+- Default runs make zero real-account/provider requests, contact no owner session and
+  fail explicitly when isolation or a required pinned dependency cannot be established.
+- Every workflow declares required observations and its evidence tier; happy-path pass
+  requires all of them. Controller reads, fake ACKs and manual observations remain
+  separately identifiable in the machine summary and the matrix.
+- The selected negative controls reliably fail the intended happy-path assertion or
+  pass an explicitly named expected-failure assertion. No wrong guard, terminal,
+  report identity, late error or skipped required phase can leave a false green result.
+- Summaries meet the measured output budgets and identify a failed case's precise
+  evidence path. Raw successful logs do not enter normal console output.
+- Duration, source/build/native identity, exit/result categories and cleanup evidence
+  are present for every applicable check; inapplicable fields say not-used explicitly.
+- A rerun retains the previous attempt and does not replay uncertain accepted work.
+  Paid/manual cases remain explicit opt-ins; not-run is never converted to acceptance.
+- Reviewers can reproduce the chosen workflows and explain what each does not prove.
+  Expansion of the matrix follows a demonstrated gap, not availability of more fixtures.
