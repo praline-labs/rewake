@@ -2,9 +2,23 @@
 
 Owner intent, September 19–20, 2026: one development command should run the five
 required checks and selected workflow tests without filling agent context with logs.
-The tests should exercise the actual feature process; deciding which scenarios and
-architecture provide that evidence is the next research task. No runner is implemented
-or accepted by this document.
+The tests should exercise the actual feature process.
+
+A second requirement arrived on September 21, 2026, and it changes the architecture
+rather than adding to it: the suite has to stay convenient as harnesses are added.
+A scenario is therefore written once and parameterised by harness, the way the feature
+map gives a new harness a column rather than a copy of every row. A design that would
+require rewriting scenarios for a third harness is disqualified, however cheap it looks
+for two.
+
+The same day set the priority between the two existing columns. The owner's account:
+Codex "was developed further and checked more", Claude Code "was made first, then
+Codex", and "something may not work right in Claude, but Codex must not be broken".
+Because most of the mailbox is shared code, the Codex column is a regression gate and
+the Claude Code column is where defects are expected to be found.
+
+The answer to this research task is [check-runner-proposal.md](check-runner-proposal.md),
+September 21, 2026. No runner is implemented or accepted by either document.
 
 Native model-context delivery and the arrival UI are installed and accepted through
 `4cfd3cf`. They are no longer a pending prerequisite or the next implementation
@@ -13,12 +27,13 @@ ready-made general testing framework.
 
 ## Research deliverable
 
-Separate two decisions:
+Two decisions, the first now answered:
 
 1. **Architecture and scenarios.** Inventory reusable checks/fixtures, map feature
    claims to observable invariants, identify evidence gaps and propose a small suite.
    Decide process boundaries, result ownership, synchronization, artifact collection
    and how the suite proves its own negative cases. Document alternatives and costs.
+   Delivered as [check-runner-proposal.md](check-runner-proposal.md).
 2. **Runner implementation.** After that proposal is reviewed, implement the smallest
    orchestration needed for the chosen workflows. Reuse existing Go tests and mature
    fixtures; do not build a broad framework or tests that merely reproduce current
@@ -30,6 +45,14 @@ capability/acceptance boundaries. A scenario needs a stated invariant, prerequis
 observation points, evidence tier and reason for every unsupported or unrun cell.
 Shared user contracts may use different native mechanisms; feature presence does not
 mean identical protocol or equally strong acceptance evidence.
+
+Orchestrator decision, September 21, 2026: the matrix is generated from declared
+capabilities, not maintained by hand. A scenario asks whether its harness can be
+observed doing the thing, never which harness it is. That keeps a third column to one
+fixture plus a capability set, and keeps an unsupported cell honest — it names the
+capability and the HF row it comes from. `unsupported` means the capability is absent
+(**missing** in the map); a row marked **impl?** is implemented but unobserved, so its
+scenario must run rather than be skipped.
 
 ## Output and evidence contract
 
@@ -119,11 +142,19 @@ not a single ambiguous tested boolean. An unsupported native surface does not ju
 emulating a different feature and reporting parity. Unknown cells remain research
 items until a concrete observation or documented capability resolves them.
 
-The default suite must be no-account and enforce hard isolation before native launch:
-fresh private HOME/config/state, no owner credentials/config/session mounts, separate
-network/mount/PID boundaries, local-only endpoint, no inherited identity/proxy and
-verified binaries. Include required native helper dependencies inside that boundary.
-Failure to establish isolation stops the case; it never falls back to the real account.
+The default suite must be no-account and enforce isolation before native launch, and
+the requirement differs by tier — owner decision recorded by the orchestrator,
+September 21, 2026, after the first proposal showed that a single requirement for all
+tiers could not be met honestly.
+
+Every tier requires fresh private HOME/config/state, no owner credentials, config or
+session mounts, a local-only endpoint, no inherited identity or proxy, and verified
+binaries; required native helper dependencies live inside that boundary. The free
+tiers may substitute the harness with a shim on `PATH` in place of separate
+network/mount/PID boundaries: no real credentials are nearby, no network is used, and
+a substituted harness does not reach outside. Those boundaries stay mandatory for the
+paid tier, where real credentials live alongside. Failure to establish the isolation
+its tier requires stops the case; it never falls back to the real account.
 
 Paid semantic and manual TUI checks are explicit opt-ins with cost/time bounds and
 separate result scope. No typing proxies or automated input into a person's screen.
@@ -159,18 +190,23 @@ the sender report notice, introduce a late cleanup error or expose an alternativ
 marker route. Each control should explain which misleading green result it prevents.
 Avoid a blanket exponential matrix and implementation-mirroring pseudo-tests.
 
-## Initial implementation proposal: two or three workflows
+## Initial implementation: the selection, made September 21, 2026
 
-Select these during research, keeping the first implementation bounded:
+Research selected three, and they are specified in
+[check-runner-scenarios.md](check-runner-scenarios.md):
 
-1. **Idle task to sender report notice:** the complete correlated chain, including
+1. **Idle task to sender report notice** — the complete correlated chain, including
    explicit controller-versus-model ownership of inbox reading and final cleanup.
-2. **Busy arrivals and fixed batches:** a genuine pending native operation, an
+2. **Busy arrivals and fixed batches** — a genuine pending native operation, an
    admitted group, a late arrival, preserved membership and the real operation's own
    completion. Keep UI display evidence separate from work completion.
-3. **One uncertain/interrupted delivery recovery:** deliberately lose an ACK or stop
-   a turn, then establish the permitted new-mail/continuation behavior without replay
-   or invented success. Choose one focused fault branch first, not every recovery axis.
+3. **Mid-turn delivery** — a message reaching a session that is already working, whose
+   original task still reports its own result.
+
+Uncertain-delivery recovery, the third candidate when this was written, is deferred to
+fourth: it needs fault injection at the transport, which is worth attempting only once
+the fixture interface has survived three scenarios. Its claim is delivery and the
+absence of replay, not the `error` outcome of a broken turn.
 
 The five existing Go checks remain required: gofumpt, go vet, staticcheck,
 golangci-lint and race/shuffle tests. They are not replaced by workflow tests.

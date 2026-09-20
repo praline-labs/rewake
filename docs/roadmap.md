@@ -368,7 +368,8 @@ milestones; the remaining ones are listed in the feature map.
 The next focus is [check automation](check-runner.md): research observable workflows
 before implementing a thin runner, with short console output and summary.json and
 paid/manual tiers opt-in. Its research answer is
-[check-runner-proposal.md](check-runner-proposal.md), September 21, 2026; no runner is
+[check-runner-proposal.md](check-runner-proposal.md) with its selected scenarios in
+[check-runner-scenarios.md](check-runner-scenarios.md), September 21, 2026; no runner is
 implemented.
 
 Persistent Git permissions remain a separate future item: explicit orchestrator

@@ -1,0 +1,119 @@
+# Check runner — the first scenarios
+
+September 21, 2026. The companion to [check-runner-proposal.md](check-runner-proposal.md),
+which decides the shape of the suite; this one decides what it runs first. Split out
+because the two answer different questions and the proposal had outgrown the project's
+400-line limit. Terms used here — evidence tiers, result categories, the observation
+contract — are defined in [check-runner.md](check-runner.md). Nothing here is
+implemented.
+
+## First three scenarios
+
+Each is a behaviour the project depends on daily, each has a distinct failure mode, and
+together they cover the full chain once.
+
+### 1. `task-report` — idle task through to the sender's report notice
+
+- *Invariant:* a task delivered to an idle session is consumed by that session, and the
+  report that comes back correlates to the exact message consumed.
+- *Preconditions:* isolated state directory, two registered sessions, recipient idle
+  with positive evidence of idleness, not merely absence of activity.
+- *Observations:* mailbox holds the message; the harness accepted it; the recipient's
+  inbox read is recorded with its performer; the report carries the message ID and
+  epoch; the sender observes the report.
+- *On the acceptance ACK:* an observation is never optional. Capabilities apply to
+  single observations as well as whole scenarios, so the ACK is **required** on an
+  adapter that emits one and **declared absent by capability** on an adapter that does
+  not. "Where the adapter offers one" would make a missing ACK indistinguishable from a
+  defect that swallowed it.
+- *Negative controls:* deliver a report with a mismatched ID (the correlation
+  observation must fail); make the recipient's read fail (no report may be classified
+  as a pass); inject a late endpoint error after the report (the case must not already
+  be green).
+- *Rows:* HF-01, HF-03, HF-04, HF-08, HF-09.
+
+### 2. `batch-arrival` — two close messages, one fixed group, individual reads
+
+- *Invariant:* messages ready inside the collection window are announced as one group
+  of fixed membership; a later arrival belongs to a different group; reads and
+  obligations remain per message.
+- *Preconditions:* recipient registered and idle; two messages published inside the
+  window; a third after it.
+- *Observations:* member IDs and count in the announced group; the preview from the
+  latest member ([inbox-groups.md](inbox-groups.md)); the third message outside that
+  group; a peek consuming nothing; two separate `--message` reads; no replay of
+  already-announced mail.
+- *Negative controls:* widen the window so the third joins (membership must fail);
+  make peek mark mail read (non-consumption must fail); take the preview from the first
+  member instead of the latest (the preview observation must fail). For no-replay the
+  control matters most, because an observation with nothing to replay passes by itself:
+  the case has to contain mail that *was* already announced and remains unread, and a
+  control that re-announces it must turn the case red. Without that, no-replay is the
+  exact shape of false green this suite exists to prevent.
+- *Rows:* HF-07, HF-20, HF-08.
+
+### 3. `mid-turn` — delivery reaching a session that is already working
+
+- *Invariant:* a message delivered while a session is working reaches it without
+  waiting for the turn to end, and the original work still reports its own result.
+- *Preconditions:* a genuinely pending operation evidenced by the harness, not by a
+  sleep in the test; capability `observes-mid-turn-arrival`.
+- *Observations:* the operation is pending at delivery time; the delivery is accepted
+  mid-turn; the original turn completes with its own outcome; the arrival did not
+  create a second outcome.
+- *Negative controls:* deliver after the turn ends (the mid-turn observation must
+  fail); make the original operation fail (the case must not pass on the delivery
+  alone).
+- *Rows:* HF-21, HF-09. Not HF-14: nothing here observes terminal output, which is the
+  owner-TUI row further down.
+- *Boundary:* at the fixture tier this proves the transport reaches a busy session. It
+  does **not** prove a model read the message mid-turn — that is the paid tier, and the
+  September 21 observation in [claude-parity-2026-09-21.md](claude-parity-2026-09-21.md)
+  remains the only evidence of it.
+
+Deliberately not first: recovery from an uncertain ACK (proposal 3 of
+[check-runner.md](check-runner.md)). It is the most valuable scenario and the most
+expensive, because it needs fault injection at the transport. It comes fourth, once
+the fixture interface has survived three scenarios. Its rows are about delivery and
+the absence of replay (HF-09, HF-03), not HF-05: that row is the `error` outcome of a
+broken turn, a different claim.
+
+## Scenario × harness matrix
+
+Tier abbreviations: **F** protocol fixture, **P** pinned real harness with a local
+endpoint, **M** real-model semantic (paid), **O** owner TUI.
+
+| Scenario | Rows | Codex | Claude Code | A third harness |
+| --- | --- | --- | --- | --- |
+| `task-report` | HF-01, HF-03, HF-04, HF-08, HF-09 | F then P | F then P | F once its fixture exists |
+| `batch-arrival` | HF-07, HF-20, HF-08 | F then P | F then P | F; grouping is shared service code |
+| `mid-turn` | HF-21, HF-09 | F then P | F then P | `unsupported` unless it declares the capability |
+| `ack-recovery` (4th) | HF-09, HF-03 | F | F | F |
+| `stopped-outcome` (later) | HF-06 | F | `unsupported` — no interruption source | by capability |
+| `git-grant` (later) | HF-15 | F | `unsupported` — not an eligible recipient | by capability |
+| `telemetry-source` (later) | HF-11, HF-22 | F then P | `unsupported` — no collector | by capability |
+| `telemetry-read` (later) | HF-12 | F then P | F then P — the reader works on both | F |
+| Conversation commands (later) | HF-19 | F | **must run** — HF-19 is `impl?`, not missing | by capability |
+| Arrival appearance | HF-14 | O | O | O |
+| Model actually reads mail | HF-04, HF-21 | M | M | M |
+
+Every `unsupported` cell names a capability, and every capability traces to a row in
+[harness-features.md](harness-features.md). That is the property that makes a third
+column cheap: the matrix is generated from capabilities, not maintained by hand.
+
+`unsupported` and **impl?** are not the same thing, and conflating them would quietly
+defeat the purpose. `unsupported` means the capability is absent — the **missing**
+mark. An **impl?** row is implemented and merely unobserved, so its scenario *must*
+run; skipping it leaves the row unverified for ever. After September 21, 2026 exactly
+one Claude Code row is still **impl?** — HF-19, the harness's own conversation
+commands — which is why it has a row above with no `unsupported` cell.
+
+Telemetry is split for the same reason the feature map splits it: the source (HF-11,
+HF-22) does not exist on Claude Code, while the reader (HF-12) is **live** there since
+September 21, 2026. One cell cannot hold a live half and a missing half.
+
+The two columns carry the same scenarios with different jobs. **Codex is the regression
+gate:** a failure there blocks, because that path must not break. **Claude Code is the
+search column:** a failure there is a finding to investigate. The same scenario text
+runs on both; what differs is what red means, and that difference belongs in the
+summary, not in the reader's head.
