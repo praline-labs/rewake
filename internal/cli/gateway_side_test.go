@@ -59,6 +59,7 @@ func testSideWhilePrimaryWorks(t *testing.T, dir string, self, sender registry.S
 	if err := native.write(map[string]any{"id": request["id"], "result": map[string]any{"turn": map[string]string{"id": "work"}}}); err != nil {
 		t.Fatal(err)
 	}
+	wireNoticeDisplay(t, ui, "A", "work")
 	waitIntegration(t, func() bool {
 		status, ok := inbox.ReadStatus(dir, self.Name, note.ID)
 		return ok && status.State == inbox.Delivered

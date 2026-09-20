@@ -7,7 +7,9 @@ the gateway projects only bounded routing/control metadata and live completion
 text. The terminal retains its normal process and input handling.
 
 The [native mailbox output](native-mailbox.md) carries reserved batch
-metadata as standalone tool output. It does not consume inbox mail.
+metadata as standalone tool output. It does not consume inbox mail. Its successful
+ACK also permits a [display-only downstream completion](native-mailbox-ui.md),
+which bypasses native observation and outcome accounting entirely.
 
 ## Selection and reservation
 

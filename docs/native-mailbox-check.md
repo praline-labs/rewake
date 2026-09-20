@@ -5,6 +5,11 @@ checks](native-mailbox-acceptance.md). The original hashed research recipe remai
 historical. Repeat only for a new acceptance need: real model turns spend account
 quota. Use new test sessions, not the owner's working terminals or state.
 
+For UI-only lifecycle checks, use the [corrected display recipe](native-mailbox-ui-check.md):
+private config defaults, no CLI permission overrides. The real-account model-delivery
+procedure below did not test remote /resume; its per-launch permission flags are not
+suitable for that continuation check.
+
 ## Prepare an explicit test environment
 
 The owner must choose permission to write the disposable workspace and shared

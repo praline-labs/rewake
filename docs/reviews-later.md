@@ -377,3 +377,9 @@ passed independently. Full-wrapper smoke, owner startup and installed busy/idle
 acceptance then passed; [the dated record](inbox-acceptance.md) gives exact scope.
 Readiness investigation, native notifications, persistent Git permissions and the
 unified check runner remain separate work.
+
+## Native arrival display — accepted, September 20, 2026
+
+[The dated UI review record](reviews-native-ui-2026-09-20.md) covers the two
+prototypes, permission-recipe repair, default integration, owner label observation
+and installed task/report acceptance. Transient display is the accepted scope.

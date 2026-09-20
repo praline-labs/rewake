@@ -205,6 +205,9 @@ func (r *Reservation) Deliver(ctx context.Context, messageID string, notice Mail
 	// Native start-or-steer chooses active/idle atomically; a status snapshot
 	// cannot safely decide that for a concurrent terminal.
 	reply, err := r.c.callReserved(ctx, r.binding, "turn/start", params, r.admissionID)
+	if err == nil {
+		r.c.displayNotice(r.binding, reply.turn, notice.Notice)
+	}
 	return reply.turn, err
 }
 

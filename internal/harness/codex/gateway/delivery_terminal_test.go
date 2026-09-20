@@ -44,6 +44,7 @@ func TestDeliveryKeepsNativeTerminalOutcomesBeforeAndAfterACK(t *testing.T) {
 				if err := <-done; err != nil {
 					t.Fatal(err)
 				}
+				noticeDisplayParams(t, readWithin(t, ui))
 				r.Close()
 				if !early {
 					terminal()

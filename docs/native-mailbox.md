@@ -15,10 +15,15 @@ serialized request still obeys the existing 128 MiB native transport limit and
 144 MiB queue budget. Bodies stay in inbox until an actual read.
 
 Native start-or-steer still decides idle versus active atomically. There is no
-completion/peek gate, replay of old unread mail, renderer spoof, hidden per-message
+completion/peek gate, replay of old unread mail, synthetic delegation, hidden per-message
 user seed, or retry/fallback to user input after refusal or uncertain ACK. Existing
 reservation fencing, read clocks, outcomes, side selection and explicit additive
 Git grants remain in force. The socket/hook adapter keeps its existing transport.
+
+After ACK, a [display-only arrival row](native-mailbox-ui.md) is attempted only on
+the owning primary terminal. It adds no model input and neither reads nor settles
+mail. Cosmetic failure leaves delivery intact; transient UI rows are not persisted
+or reconstructed by the wrapper.
 
 ## Startup instructions
 

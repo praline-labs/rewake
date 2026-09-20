@@ -48,6 +48,7 @@ func TestReservationWaitsOutsideAdmissionForResumeReads(t *testing.T) {
 	if err := <-done; err != nil {
 		t.Fatal(err)
 	}
+	noticeDisplayParams(t, readWithin(t, ui))
 	if !g.Binding().Ready {
 		t.Fatal("ordinary overlap invalidated routing")
 	}
@@ -84,6 +85,7 @@ func TestReservationCoversReadabilityAndQueuedABASwitch(t *testing.T) {
 	if err := <-done; err != nil {
 		t.Fatal(err)
 	}
+	noticeDisplayParams(t, readWithin(t, ui))
 	r.Close()
 	_ = readWithin(t, server)
 	write(t, server, []byte(`{"id":2,"result":{"thread":{"id":"B","canAcceptDirectInput":true}}}`))

@@ -102,6 +102,7 @@ func TestGatewayMailboxReservationAndDurableReports(t *testing.T) {
 			if err := native.write(map[string]any{"id": request["id"], "result": map[string]any{"turn": map[string]string{"id": "work"}}}); err != nil {
 				t.Fatal(err)
 			}
+			wireNoticeDisplay(t, ui, "A", "work")
 			waitIntegration(t, func() bool {
 				status, ok := inbox.ReadStatus(dir, self.Name, task.ID)
 				return ok && status.State == inbox.Read

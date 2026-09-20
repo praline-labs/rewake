@@ -145,7 +145,10 @@ work without a required peek or terminal event. Only new member IDs are delivere
      be read, omit the field and explain that in delivery status. No-flag tasks, general and
      report-only groups never get this grant. It starts idle work or steers the active turn;
      on steer, new roots apply only to subsequent turns. A successful RPC result means delivered. A stale
-     or unavailable thread fails; it is not silently retargeted or queued.
+     or unavailable thread fails; it is not silently retargeted or queued. After ACK,
+     a best-effort [display-only row](native-mailbox-ui.md) goes only to the owning
+     primary TUI. It does not execute a command, add context or change delivery status;
+     native streaming may defer its visible appearance.
 
 4. **The status.** `delivered` (the waiting copy is removed, `unread/` keeps
    the message), `pending` (retried every two seconds), or `failed`. Failed

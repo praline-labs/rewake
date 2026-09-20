@@ -1,7 +1,9 @@
 # Message delivery
 
 Owned native announcements use the [mailbox output](native-mailbox.md);
-actual inbox reads still establish reporting obligations.
+actual inbox reads still establish reporting obligations. A separate
+[transient display-only row](native-mailbox-ui.md) follows a successful ACK on the
+primary TUI; losing that row never retries mail or changes its delivered status.
 
 [Back to the design](design.md).
 
