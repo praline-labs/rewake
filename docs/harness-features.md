@@ -1,6 +1,7 @@
 # Harness feature map
 
-September 20, 2026, at commit 4cfd3cf. What each harness can actually do today, so
+September 21, 2026; evidence taken on the installed build of commit 4cfd3cf, working
+tree 3d33467. What each harness can actually do today, so
 orchestration can move between them without guessing. The map is meant to be edited:
 every row has a stable ID, a new harness gets **a new column**, and a row is split
 rather than stretched when one cell would have to say two different things.
@@ -11,11 +12,16 @@ added for a harness that is **not** registered, so the remaining work stays visi
 its header must say `UNREGISTERED/planned`, and such a column carries only
 **research** or **missing** marks. A planned column never implies launcher support.
 
-Versions: Claude Code 2.1.270 and Codex CLI 0.154.0 were the versions the delivery
-research was gathered on, September 15-16, 2026 ([research.md](research.md)). A
-read-only `--version` check on September 20, 2026 reported the same two versions.
-Harness versions are not stored in the session registry, so a row can only cite the
-version its evidence was taken on.
+Versions: the delivery research of September 15-16, 2026 was gathered on Claude Code
+2.1.270 and Codex CLI 0.154.0 ([research.md](research.md)), and the acceptance rounds
+of that week were taken on the same pair. On September 21, 2026 a Codex session
+reported **0.155.1** and the Claude Code sessions **2.1.270**, each as its own answer
+to a request to run `--version`. On 0.155.1 four things were observed: launch with
+registration, a task accepted through the app-server, a `finished` report back, and
+telemetry collection ([claude-parity-2026-09-21.md](claude-parity-2026-09-21.md)).
+No row below had its own mechanism re-verified on that version. Harness versions are
+not stored in the session registry, so a row can only cite the version its evidence
+was taken on.
 
 ## Legend
 
@@ -39,21 +45,21 @@ regression on today's versions is a reasonable ask, but it is not the same as
 | ID | Capability | Codex | Claude Code | Evidence / next action |
 | --- | --- | --- | --- | --- |
 | HF-01 | Launch, registration, name/role/room selection; `--main` is the only way to become main | live | live | [flow.md](flow.md) Act 1, `internal/registry`. Claude Code launch/delivery closed as milestone 3 on September 16, 2026 ([roadmap.md](roadmap.md)). An incoming message never promotes a session to main. |
-| HF-02 | Roles: main silent, write/general reporting; role recorded and explained in the intro | live | live | [flow.md](flow.md) Act 1 step 4, `internal/role`. Shared path; both harnesses observed running under it, Claude Code currently as general. |
+| HF-02 | Roles: main silent, write/general reporting; role recorded and explained in the intro | live | live | [flow.md](flow.md) Act 1 step 4, `internal/role`. Shared path; both harnesses observed running under it, Claude Code currently as main and write, Codex as general. |
 | HF-03 | Message kinds task / question / notify; a question to a silent role is refused | live | live | `internal/cli/send_kinds.go`. Claude-to-Claude question and answer, and a Claude-to-Codex task with its report back, observed September 16, 2026 ([roadmap.md](roadmap.md)). Daily task/report use continues on both. |
-| HF-04 | Outcome `finished`, correlated to the messages read in that turn | live | live | [flow.md](flow.md) Act 5. Codex: gateway `turn/completed`. Claude Code: `Stop` hook running `rewake turn-ended`, observed September 16, 2026 and in daily use since. |
+| HF-04 | Outcome `finished`, correlated to the messages read in that turn | live | live | [flow.md](flow.md) Act 5. Codex: gateway `turn/completed`. Claude Code: `Stop` hook running `rewake turn-ended`, observed September 16, 2026 and in daily use since. Three sessions returned `finished` reports for one task on September 21, 2026, Codex on CLI 0.155.1 ([claude-parity-2026-09-21.md](claude-parity-2026-09-21.md)); the mark is unchanged, this is a freshness note. |
 | HF-05 | Outcome `error` on a failed turn | live (native fixture) | live (dated) | Claude Code passed this on September 17, 2026 with a real usage-limit stop ([transport-milestones-2026-09-17.md](transport-milestones-2026-09-17.md)). Codex native error and scoped callbacks were observed on September 18 with a local synthetic model service ([gateway-native-evidence.md](gateway-native-evidence.md)); that run did not prove durable mailbox/registered-peer delivery. Fresh real-model end-to-end error-report acceptance is not claimed. |
 | HF-06 | Outcome `stopped` on a keyboard interruption | live | missing | Derived only in the owned adapter (`internal/harness/codex/gateway/admitted_terminal.go`); observed September 17, 2026. Claude Code has no interruption source, so no `stopped` is produced there; a stopped **message** from a peer still renders as `killed` (`internal/harness/claude/notice.go`). |
-| HF-07 | Fixed-membership batching of ready mail, 150 ms window, no replay of announced mail | live | impl? | Shared service `internal/inbox/serve.go`, contract in [inbox-groups.md](inbox-groups.md), Codex acceptance September 19, 2026 ([inbox-acceptance.md](inbox-acceptance.md)). No observed multi-member group on a Claude Code recipient. |
+| HF-07 | Fixed-membership batching of ready mail, 150 ms window, no replay of announced mail | live | live | Shared service `internal/inbox/serve.go`, contract in [inbox-groups.md](inbox-groups.md), Codex acceptance September 19, 2026 ([inbox-acceptance.md](inbox-acceptance.md)). Claude Code: two parallel messages announced as one `Rewake: 2 new messages` notice with the latest member's preview, September 21, 2026 ([claude-parity-2026-09-21.md](claude-parity-2026-09-21.md)). That covers fixed membership only, from one grouping of two messages 0.27 ms apart: the 150 ms window itself was never exercised near its boundary, and no-replay of already-announced mail was not observed on a Claude Code recipient at all. |
 | HF-08 | `rewake inbox` read-all | live | live | Shared CLI (`internal/cli`), run in the agent's own shell. Used daily on both harnesses. |
-| HF-20 | `rewake inbox --peek` and `--message <id>` | live | impl? | Same shared CLI; contract in [inbox-groups.md](inbox-groups.md). Used on Codex sessions; no recorded Claude Code use, so not claimed. |
+| HF-20 | `rewake inbox --peek` and `--message <id>` | live | live | Same shared CLI; contract in [inbox-groups.md](inbox-groups.md). Used on Codex sessions; on Claude Code a peek left both members unread and each `--message <id>` returned its own body, September 21, 2026 ([claude-parity-2026-09-21.md](claude-parity-2026-09-21.md)). |
 | HF-09 | Delivery wakes an idle session | live | live | Codex: `turn/start` on an idle thread ([native-mailbox.md](native-mailbox.md)), accepted September 19-20, 2026. Claude Code: inbox socket, observed since September 16, 2026. |
-| HF-21 | Delivery reaches an already working session without waiting for its turn to end | live | impl? | Codex: four sleep-10 tool calls with mid-work consumption, September 19, 2026 ([inbox-acceptance.md](inbox-acceptance.md)). Claude Code sends `priority: "next"` for exactly this (`internal/harness/claude/claude.go`), but no dated mid-turn observation exists for it. |
+| HF-21 | Delivery reaches an already working session without waiting for its turn to end | live | live | Codex: four sleep-10 tool calls with mid-work consumption, September 19, 2026 ([inbox-acceptance.md](inbox-acceptance.md)). Claude Code sends `priority: "next"` for exactly this (`internal/harness/claude/claude.go`); a message sent during the third of four sleep-10 calls appeared between that result and the next call, and the original task still reported its own result, September 21, 2026 ([claude-parity-2026-09-21.md](claude-parity-2026-09-21.md)). |
 | HF-10 | rewake tracks the conversation a message was delivered to, and marks `threadChanged` in reports | live | missing | Codex implements `ThreadTracker` through the gateway ([gateway.md](gateway.md)); `/new` delivery with `threadChanged` observed September 17, 2026. No tracker exists for Claude Code (`internal/harness/thread.go`), so the field is omitted rather than guessed. |
 | HF-19 | The harness's own conversation commands (`/new`, `/resume`, `/clear`) keep working under rewake | live | impl? | Both CLIs keep their commands; rewake adds flags for one launch only. Codex side observed with selection fencing; on Claude Code nothing in rewake observes or owns the conversation, so behaviour after `/clear` or `/resume` is untested rather than broken. |
-| HF-11 | Telemetry collection: model, effort, context, compactions, activity | live | missing | Collected only from an `ObservedBackend` (`internal/wrap/wrap.go`, `internal/harness/codex/server.go`). Socket harnesses have no collector, so a Claude Code session publishes no snapshots. |
-| HF-12 | Telemetry display to a verified main | live | impl? | [session-state.md](session-state.md). The main-only header is role-gated shared CLI, so a Claude Code main should see Codex workers' telemetry — but main is currently a Codex session and Claude Code runs as general, so this has not been observed from a Claude Code main. Acceptance belongs to the orchestration move. |
-| HF-13 | Availability and known-departure notices for peers | live | live | [session-activity.md](session-activity.md), `internal/wrap/session_notices.go`. The current Codex main read `Session available` and `no longer available` for a Claude Code peer, including a general-claude restart on September 20, 2026. Identity-only notices are useful as they are. |
+| HF-11 | Telemetry collection: model, effort, context, compactions, activity | live | missing | Collected only from an `ObservedBackend` (`internal/wrap/wrap.go`, `internal/harness/codex/server.go`). Socket harnesses have no collector, so a Claude Code session publishes no snapshots. A snapshot taken before a session's first turn carries the launch defaults, not the model and effort it is running: on September 21, 2026 a worker launched as gpt-5.6-luna/low read as gpt-6-astra/high until it started working ([claude-parity-2026-09-21.md](claude-parity-2026-09-21.md)). Only a snapshot taken after work begins is evidence of the selected configuration. |
+| HF-12 | Telemetry display to a verified main | live | live | [session-state.md](session-state.md). The main-only header is role-gated shared CLI. Orchestration moved to Claude Code on September 21, 2026, and a `rewake list` from that main showed a working Codex worker's model, effort, context and compaction count ([claude-parity-2026-09-21.md](claude-parity-2026-09-21.md)). The compaction count read zero, which an unfilled field would also read as; no non-zero count has been seen from a Claude Code main. This is the reader, not the source: Claude Code sessions in the same listing stay `unknown` for lack of a collector (HF-11). |
+| HF-13 | Availability and known-departure notices for peers | live | live | [session-activity.md](session-activity.md), `internal/wrap/session_notices.go`. The then-current Codex main read `Session available` and `no longer available` for a Claude Code peer, including a general-claude restart on September 20, 2026; main has been a Claude Code session since September 21, 2026. Identity-only notices are useful as they are. |
 | HF-22 | Compaction-complete notices for a peer | live | missing | Same observer, but the event comes from telemetry snapshots (HF-11), which a Claude Code session does not produce. |
 | HF-14 | A visible arrival line in the terminal, without an ordinary chat bubble | live | live | Codex: display-only completion accepted September 20, 2026 ([native-mailbox-ui.md](native-mailbox-ui.md)). Claude Code: the socket message is drawn natively as one `●` task-notification line (`internal/harness/claude/notice.go`), observed since September 16, 2026. Different mechanisms, same purpose. |
 | HF-15 | Per-message Git metadata grants requested with `--grant-git` | live | missing (recipient) | Only an adapter implementing `SupportsGitGrant` can receive them (`internal/harness/backend.go`, `internal/harness/codex/codex.go`); refusal path in `internal/cli/send_git.go`. The **sender** may be any harness: a Claude Code main can request a grant for an eligible Codex recipient. |
@@ -63,20 +69,27 @@ regression on today's versions is a reasonable ask, but it is not the same as
 
 ## How the Claude Code evidence splits
 
-Three different things are easy to conflate, so keep them apart when updating a row:
+Four different things are easy to conflate, so keep them apart when updating a row:
 
-- **Historical dated acceptance.** Claude Code launch and delivery closed as milestone 3 on September 16, 2026;
-  message kinds and automatic turn reporting were accepted in later milestones
-  that day. A real
-  `error` report from a usage-limit stop was observed on September 17, 2026. Claude
-  Code also served as the orchestrator earlier in the project. These are recorded
-  facts on the versions of that week, not open questions.
+- **Historical dated acceptance.** Claude Code launch and delivery closed as milestone
+  3 on September 16, 2026; message kinds and automatic turn reporting were accepted in
+  later milestones that day. A real `error` report from a usage-limit stop was observed
+  on September 17, 2026. These are recorded facts on the versions of that week, not
+  open questions.
 - **Current ordinary use.** Cross-harness task and report exchange, arrival lines and
-  peer availability notices are in daily use right now, with Claude Code as general
-  and Codex as main.
-- **Untested new features.** Everything built after those milestones — grouped
-  batching, selected reads, mid-turn steering, telemetry, the main-only header from a
-  Claude Code main — has no Claude Code observation. Those are the **impl?** rows.
+  peer availability notices are in daily use right now. Since September 21, 2026 main
+  is a Claude Code session, with a Claude Code writer and a Codex worker under it.
+- **Single-run parity observations.** Grouped batching, selected reads, mid-turn
+  delivery and the main-only header were each observed exactly once, on September 21,
+  2026 ([claude-parity-2026-09-21.md](claude-parity-2026-09-21.md)). Their rows are
+  **live**, and the limits of one run are written into that document: no repetition,
+  no other grouping order, and no view of how the harness handles a mid-turn message
+  in flight.
+- **Still unobserved on Claude Code.** Telemetry collection and the compaction notice
+  that depends on it have no source (HF-11, HF-22); conversation tracking and
+  `stopped` have no signal (HF-10, HF-06); `/clear` and `/resume` behaviour under
+  rewake is untested (HF-19); a Claude Code recipient cannot receive a Git grant
+  (HF-15). Those are the remaining **impl?** and **missing** rows.
 
 ## Parity queue
 
@@ -85,11 +98,24 @@ closing criterion. Closing a research or limitation-decision item does not make
 the capability **live**: that mark still requires implemented, observed behavior
 and cited evidence. Research sign-off alone does not implement HF-18.
 
+### Closed
+
+Kept here rather than deleted, so it stays visible which question was settled and by
+what. A closed entry keeps the number it had when it was open.
+
+| # | Rows | Question that was settled | Closed by |
+| --- | --- | --- | --- |
+| 1 | HF-12 | Does the main-only telemetry header work when main itself is a Claude Code session? | September 21, 2026: `rewake list` from a Claude Code main showed a working Codex worker's model, effort and context ([claude-parity-2026-09-21.md](claude-parity-2026-09-21.md)); the compaction count was zero, so that field stays unproven |
+| 2 | HF-07, HF-20 | Do grouped arrivals and selected reads behave on a Claude Code recipient? | September 21, 2026: two parallel messages announced as one group, then read with `--peek` and `--message <id>` without losing either obligation (same document) |
+| 3 | HF-21 | Does a message delivered mid-turn reach a Claude Code session without disturbing the original task? | September 21, 2026: a message delivered inside the third of four sleep-10 calls, with the original task still reporting its own result (same document) |
+
+Each of the three rests on one observed run; the limits are named in that document and
+must not be read as a repeated regression.
+
+### Open
+
 | # | Rows | Question to settle | Closes when | Start from |
 | --- | --- | --- | --- | --- |
-| 1 | HF-12 | Does the main-only telemetry header work when main itself is a Claude Code session? | One observed fetch from a Claude Code main showing a Codex worker's model, context and compactions | [session-state.md](session-state.md) |
-| 2 | HF-07, HF-20 | Do grouped arrivals and selected reads behave on a Claude Code recipient? | Two close arrivals announced as one fixed group, then read with `--peek` and `--message` | [inbox-groups.md](inbox-groups.md), `internal/inbox/serve.go` |
-| 3 | HF-21 | Does a message delivered mid-turn reach a Claude Code session without disturbing the original task? | One observed mid-turn delivery whose original task still reports its own result | `internal/harness/claude/claude.go` |
 | 4 | HF-05, HF-04 | Do the September 2026 turn-outcome results still hold on the current versions? | A fresh regression covering one `finished` and one `error` report on today's Claude Code | [transport-milestones-2026-09-17.md](transport-milestones-2026-09-17.md) |
 | 5 | HF-11, HF-22 | Is there a supported way to observe a Claude Code session's model, context, activity and compactions? | A source-backed collector and observed model/context/activity/compaction cases; unsupported fields remain explicit pending an owner decision | [research.md](research.md), `internal/sessionstate` |
 | 6 | HF-10, HF-19 | Can rewake learn which Claude Code conversation a message landed in, so `threadChanged` stops being silently absent? | A `ThreadTracker` implementation with evidence, or a recorded decision to leave it absent | `internal/harness/thread.go` |

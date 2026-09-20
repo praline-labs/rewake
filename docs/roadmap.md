@@ -356,17 +356,23 @@ keeps the initial permission-override refusal and limited owner timing evidence.
 Final closeout changes only documentation after review; no new runtime behavior or
 UI persistence mechanism is added. Other harness behavior is unchanged.
 
-## Remaining work — owner decisions, September 19–20, 2026
+## Remaining work — owner decisions, September 19–21, 2026
 
-The native-notification priority is complete. The next focus is the Claude Code
-handoff: [parity by the feature map](harness-features.md) and
-[workflow-check research](check-runner.md) with concise summaries. Neither a parity
-collector nor the unified runner is implemented by this documentation step.
+The native-notification priority is complete, and so is the Claude Code handoff it
+pointed to: orchestration moved to Claude Code on September 21, 2026. The first three
+entries of the [parity queue](harness-features.md) closed the same day — HF-12, HF-07
+with HF-20, and HF-21 — each on one observed run
+([claude-parity-2026-09-21.md](claude-parity-2026-09-21.md)). Queue entries are not
+milestones; the remaining ones are listed in the feature map.
+
+The next focus is [check automation](check-runner.md): research observable workflows
+before implementing a thin runner, with short console output and summary.json and
+paid/manual tiers opt-in. Its research answer is
+[check-runner-proposal.md](check-runner-proposal.md), September 21, 2026; no runner is
+implemented.
+
 Persistent Git permissions remain a separate future item: explicit orchestrator
 event, scope to run and repository, preservation across later owner turns, and revocation. A running turn keeps its prior permission context.
 Only validated Git metadata roots are in scope, not tools, credentials or arbitrary
 folders. Do not implement that persistence in the current batch feature.
 The main-readiness/missing-notice incident stays open separately.
-
-[Check automation](check-runner.md): research observable workflows before implementing
-a thin runner; short console output and summary.json, with paid/manual tiers opt-in.
