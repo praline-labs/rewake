@@ -2,7 +2,6 @@ package codex
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net"
 	"strings"
@@ -66,11 +65,9 @@ func TestReadyRecipientAnnouncesNextFourWithoutOverviewOrTerminal(t *testing.T) 
 					t.Helper()
 					select {
 					case p := <-captured:
-						var input []struct {
-							Text string `json:"text"`
-						}
-						if json.Unmarshal(p["input"], &input) != nil || len(input) != 1 || !strings.Contains(input[0].Text, fmt.Sprintf("%d new message", count)) {
-							t.Fatalf("wrong fixed count: %s", p["input"])
+						notice := decodedMailbox(t, p)
+						if len(notice.Members) != count || !strings.Contains(notice.Notice, fmt.Sprintf("%d new message", count)) {
+							t.Fatalf("wrong fixed count: %+v", notice)
 						}
 						_, has := p["runtimeWorkspaceRoots"]
 						if has != grant {

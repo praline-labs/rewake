@@ -103,7 +103,8 @@ for the same group. Transport-only membership is not serialized into stored mess
 or CLI JSON. Each member retains its own ID, body, kind, epochs, status, receipts
 and task/question obligations.
 
-The native reservation and ACK track one submitted input for the group; active
+The native reservation and ACK track one `turn/start` submission for the group:
+empty `input` plus [standalone mailbox `toolOutput`](native-mailbox.md). Active
 steering can acknowledge the same native turn for several distinct groups.
 Every member shares that ACK, while normal actual reads and causal boundaries still
 decide which assignments a completion answers. No new native protocol or renderer

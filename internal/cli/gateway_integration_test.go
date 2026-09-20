@@ -20,7 +20,15 @@ type integratedReservation struct {
 }
 
 func (r integratedReservation) Deliver(_ context.Context, m inbox.Message) inbox.Result {
-	_, err := r.Reservation.Deliver(r.ctx, m.ID, harness.Notice(m), nil)
+	notice := gateway.MailboxNotice{Notice: harness.Notice(m)}
+	members := m.Batch
+	if len(members) == 0 {
+		members = []inbox.Message{m}
+	}
+	for _, member := range members {
+		notice.Members = append(notice.Members, gateway.MailboxMember{ID: member.ID, From: member.From, FromEpoch: member.FromEpoch, To: member.To, ToEpoch: member.ToEpoch})
+	}
+	_, err := r.Reservation.Deliver(r.ctx, m.ID, notice, nil)
 	if err != nil {
 		return inbox.Result{State: inbox.Failed, Detail: err.Error()}
 	}

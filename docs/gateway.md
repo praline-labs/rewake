@@ -6,6 +6,9 @@ or resumes them on the agent's behalf. Native requests and replies pass unchange
 the gateway projects only bounded routing/control metadata and live completion
 text. The terminal retains its normal process and input handling.
 
+The [native mailbox output](native-mailbox.md) carries reserved batch
+metadata as standalone tool output. It does not consume inbox mail.
+
 ## Selection and reservation
 
 A supported primary start/resume request on one TUI connection, followed by its

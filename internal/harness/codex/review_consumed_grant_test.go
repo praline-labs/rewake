@@ -45,7 +45,7 @@ func TestReviewConsumedGrantCannotAuthorizeRemainingNotice(t *testing.T) {
 	case params := <-captured:
 		var id string
 		_ = json.Unmarshal(params["clientUserMessageId"], &id)
-		if id != note.ID || strings.Contains(string(params["input"]), "grant-task") {
+		if id != note.ID || strings.Contains(string(params["toolOutput"]), "grant-task") {
 			t.Fatal("consumed task entered dispatch")
 		}
 		if _, ok := params["runtimeWorkspaceRoots"]; ok {

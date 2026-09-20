@@ -36,7 +36,10 @@ func TestReservationWaitsOutsideAdmissionForResumeReads(t *testing.T) {
 	}
 	defer reserved.reservation.Close()
 	done := make(chan error, 1)
-	go func() { _, err := reserved.reservation.Deliver(ctx, "task", "notice", nil); done <- err }()
+	go func() {
+		_, err := reserved.reservation.Deliver(ctx, "task", MailboxNotice{Notice: "notice"}, nil)
+		done <- err
+	}()
 	injection := metadata(t, string(readWithin(t, server)))
 	if injection.thread != "A" {
 		t.Fatal(injection)
@@ -72,7 +75,7 @@ func TestReservationCoversReadabilityAndQueuedABASwitch(t *testing.T) {
 	}
 	write(t, ui, []byte(`{"id":2,"method":"thread/resume","params":{"threadId":"B","config":{},"runtimeWorkspaceRoots":[]}}`))
 	done := make(chan error, 1)
-	go func() { _, err := r.Deliver(ctx, "id", "notice", nil); done <- err }()
+	go func() { _, err := r.Deliver(ctx, "id", MailboxNotice{Notice: "notice"}, nil); done <- err }()
 	m := metadata(t, string(readWithin(t, server)))
 	if m.method != "turn/start" || m.thread != "A" {
 		t.Fatal("selection overtook reserved work", m)
@@ -86,7 +89,7 @@ func TestReservationCoversReadabilityAndQueuedABASwitch(t *testing.T) {
 	write(t, server, []byte(`{"id":2,"result":{"thread":{"id":"B","canAcceptDirectInput":true}}}`))
 	_ = readWithin(t, ui)
 	exchange(t, ui, server, `{"id":3,"method":"thread/resume","params":{"threadId":"A","config":{},"runtimeWorkspaceRoots":[]}}`, `{"id":3,"result":{"thread":{"id":"A","canAcceptDirectInput":true}}}`)
-	if _, err := r.Deliver(ctx, "late", "notice", nil); err == nil {
+	if _, err := r.Deliver(ctx, "late", MailboxNotice{Notice: "notice"}, nil); err == nil {
 		t.Fatal("old A reservation survived A-B-A")
 	}
 }

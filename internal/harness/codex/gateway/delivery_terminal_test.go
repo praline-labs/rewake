@@ -29,7 +29,7 @@ func TestDeliveryKeepsNativeTerminalOutcomesBeforeAndAfterACK(t *testing.T) {
 				}
 				defer r.Close()
 				done := make(chan error, 1)
-				go func() { _, err := r.Deliver(ctx, "notice", "new mail", nil); done <- err }()
+				go func() { _, err := r.Deliver(ctx, "notice", MailboxNotice{Notice: "new mail"}, nil); done <- err }()
 				request := metadata(t, string(readWithin(t, native)))
 				terminal := func() {
 					write(t, native, []byte(fmt.Sprintf(`{"method":"thread/status/changed","params":{"threadId":"A","status":{"type":%q}}}`, tc.preceding)))

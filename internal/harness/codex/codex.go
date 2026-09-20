@@ -57,6 +57,7 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 	args := append([]string{}, request.Args...)
 	home := Home()
 	var notes []string
+	generatedBrief := false
 
 	// A profile, or a setting the caller passed themselves, is a layer this
 	// adapter cannot see into, and every value it passes replaces one.
@@ -68,8 +69,13 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 		} else if mentioned, why := configMentions(home, introKey); mentioned {
 			notes = append(notes, "not adding the rewake briefing: "+why+", and passing the briefing would replace the user's instructions. Run rewake guide in the session instead")
 		} else {
-			args = harness.AddFlags(args, configFlag, introKey+"="+quoteTOML(brief.Intro(request.BriefContext())))
+			generatedBrief = true
+			args = harness.AddFlags(args, configFlag, introKey+"="+quoteTOML(brief.Intro(request.BriefContext())+mailboxBriefing))
 		}
+	}
+
+	if !generatedBrief {
+		notes = append(notes, "native mailbox notices use rewake_mailbox_notice tool output. The generated briefing was not added; your session instructions must direct the agent to read rewake inbox on these notices and finish tasks with a final reply; see docs/native-mailbox.md")
 	}
 
 	continuation, permissionOverride := continuationOptions(request.Args)

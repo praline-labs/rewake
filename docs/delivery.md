@@ -1,5 +1,8 @@
 # Message delivery
 
+Owned native announcements use the [mailbox output](native-mailbox.md);
+actual inbox reads still establish reporting obligations.
+
 [Back to the design](design.md).
 
 Every path and lookup below is relative to the current room's state directory,

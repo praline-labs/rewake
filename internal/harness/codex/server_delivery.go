@@ -59,7 +59,7 @@ func (r *reservedDelivery) DeliverChecked(_ context.Context, message inbox.Messa
 	if !valid() {
 		return inbox.Result{State: inbox.Pending, Detail: "announcement membership changed before send"}
 	}
-	_, err := r.reservation.Deliver(r.ctx, message.ID, noticePrefix(message)+" "+harness.Notice(message), r.roots)
+	_, err := r.reservation.Deliver(r.ctx, message.ID, mailboxNotice(message), r.roots)
 	if err != nil {
 		return inbox.Result{State: inbox.Failed, Detail: err.Error() + "; delivery was not retried automatically"}
 	}
@@ -103,4 +103,16 @@ func (s *serverSession) Deliver(ctx context.Context, message inbox.Message) inbo
 		}
 	}
 	return reserved.Deliver(ctx, message)
+}
+
+func mailboxNotice(message inbox.Message) gateway.MailboxNotice {
+	members := message.Batch
+	if len(members) == 0 {
+		members = []inbox.Message{message}
+	}
+	notice := gateway.MailboxNotice{Notice: noticePrefix(message) + " " + harness.Notice(message)}
+	for _, member := range members {
+		notice.Members = append(notice.Members, gateway.MailboxMember{ID: member.ID, From: member.From, FromEpoch: member.FromEpoch, To: member.To, ToEpoch: member.ToEpoch})
+	}
+	return notice
 }

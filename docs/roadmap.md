@@ -1,11 +1,11 @@
 # Roadmap
 
-Work order for `docs/design.md`. A milestone counts as closed only once its
-acceptance criterion is met — not once the code is written.
+Work for `docs/design.md` closes only after its acceptance criterion passes.
+September 20: [native mailbox delivery accepted](native-mailbox-acceptance.md)
+in fresh owner checks and installed sessions; permission/timing limits stay explicit.
 
-Open [intermittent bugs](intermittent-bugs.md) track live failures whose triggers
-remain unknown, including the two-root-thread delivery refusal observed on
-September 17, 2026 and cleared by restarting the recipient.
+Open [intermittent bugs](intermittent-bugs.md): the unexplained two-root-thread
+refusal on September 17, 2026 cleared after recipient restart.
 
 ## How the work is run
 
@@ -299,73 +299,10 @@ explicit --main claims to have one winner. They use isolated state and fake
 harnesses, plus regression and mutation tests.
 
 
-## Milestone 10. Session-owned server transport — done, September 17, 2026
+## Earlier transport and launch milestones
 
-The owned server and TUI share the wrapper lifetime. An optional Backend keeps
-all process/RPC mechanics inside the adapter. Delivery uses start-or-steer,
-tracks root thread events and refuses closed or ambiguous targets. Completion
-callbacks share the existing receipt path; stopped keeps work owed to a human
-continuation. Fake-process and mutation checks cover these mechanisms.
-
-Acceptance requires same-turn delivery during work, delivery to a fresh /new
-thread, stopped after a keyboard interrupt, error after an API failure, and no
-persistent pending delivery to a live, ready session. Model runs are performed
-separately by the owner; protocol tests use a fake local server.
-
-The obsolete queue subprocess, lock-file tracker and unused process-tree/fd
-helpers are removed. The complete fake-process smoke covers delivery, stopped
-and continuation, /new, API errors, closed-thread refusal and server death.
-The milestone is closed by the live acceptance below. One criterion was not provoked live: a failed Codex turn; the fake server covers it, and a real one is recorded when it happens.
-
-Live acceptance, on the owner's sessions with CLI 0.154.0 and Claude Code
-(September 17, 2026):
-
-| criterion | result |
-|---|---|
-| delivery to a fresh thread without a first word | passed: the turn started on its own |
-| a report from a fresh thread's turn | passed: `finished` arrived |
-| same-turn delivery during work | passed: a mid-turn note was followed in that turn |
-| error after a failed turn | passed on Claude Code (a usage-limit stop); Codex only on the fake server |
-| stopped after a keyboard interrupt | passed: a yellow `stopped` line, the wait was kept |
-| delivery to a thread opened with /new | passed: the new thread started a turn; its `finished` answered both the stopped task and the new one, marked `threadChanged` |
-
-## First input and fresh-thread observation
-
-Completed changes are recorded in [the later history](reviews-later.md).
-Round fourteen found R14-2; its replacement regression is recorded in [gateway integration](gateway.md).
-
-## Remote continuation startup — fixed, September 17, 2026
-
-Resume/fork omit generated permission grants; caller overrides stay intact with a warning.
-Fake TUI checks cover all roles; all five checks pass. [API limits](continuation-permissions.md) prevent an idle root grant. Saved roots may be superseded; live acceptance stays open.
-
-## Git metadata grants — superseded policy, September 19, 2026
-
-The September 17 automatic task/role policy is superseded by
-[explicit orchestrator intent](git-grants.md). Metadata validation and additive root
-handling remain; launch roles and no-flag tasks no longer add permissions.
-
-## Lost report mitigation — September 17, 2026; ownership remains open
-
-Failed report notices retain their accepted text and diagnostics in unread;
-expiry, reservations and task failure semantics remain intact. Established root
-changes release obsolete observer subscriptions, including fresh idle targets
-and late acknowledgements. Uncertain observer RPCs retire only that connection.
-[Investigation and remaining limits](thread-ownership-investigation.md): loaded
-roots do not establish terminal ownership, /resume can revisit earlier roots,
-and ambiguity still refuses. Regression and mutation checks cover the bounded
-fix; this does not close live ownership acceptance.
-All five repository checks pass; all five targeted mutations are detected.
-
-## Launch naming — done, September 17, 2026
-
-The role or explicit prefix receives the harness suffix; conflicts add numbers or refuse. [Names](design.md#names) retain the contract
-and [review history](reviews-later.md#targeted-review--done-september-17-2026) records
-all five checks and targeted acceptance.
-
-## Explicit main only — implemented, September 17, 2026
-
-Only --main creates main; defaults stay general, names never choose roles. Review, five checks and 72 synchronized claims passed on `9aedd0f`.
+[September 17 history](transport-milestones-2026-09-17.md) preserves owned-server
+acceptance, continuation permissions, lost reports, naming and explicit main.
 
 ## Gateway integration — verified paths, September 19, 2026
 
@@ -386,9 +323,25 @@ survived, and a new idle task woke and returned its report. [The contract](inbox
 retains independent receipts and explicit main-authorized grants; roles add none.
 The P3 launch-role wording was corrected. Runtime matched the reviewed archive.
 
-## Next work — owner decision, September 19, 2026
+## Native mailbox output — accepted, September 20, 2026
 
-Next, prioritize the researched native-notification path. Do not start it as part of this closeout.
+Independent integration-1 review found no blocker; integration-2 closed its guard
+coverage and documentation findings and proved both native directions by identity.
+The 121 non-test runtime files stayed unchanged through the follow-up. The owner
+accepted ordinary-briefing idle work and automatic report reading, plus a normal
+sleep/notify scenario without visible user-message bubbles. After installation and
+restart, the short task returned NATIVE-INSTALLED-OK through native output and inbox.
+[Acceptance and limits](native-mailbox-acceptance.md) distinguish owner timing from
+the deterministic standalone active control. The initial read-only failure required
+explicit per-launch workspace-write in the fresh test directory, not automatic
+permission expansion. Deliberately read-only inbox support is not established.
+Both review rounds, synthetic/mutation coverage and final checks are part of this
+stage. The socket/hook adapter retains its existing behavior.
+
+## Remaining work — owner decisions, September 19–20, 2026
+
+The September 19 native-notification priority is now complete. A different harness
+parity stage requires a separate task; it is not part of this closeout.
 Persistent Git permissions remain a separate future item: explicit orchestrator
 event, scope to run and repository, preservation across later owner turns, and revocation. A running turn keeps its prior permission context.
 Only validated Git metadata roots are in scope, not tools, credentials or arbitrary

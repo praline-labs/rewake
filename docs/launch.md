@@ -116,6 +116,17 @@ Startup checks codex --version against 0.154.0 and warns, without refusing a
 different version. A fake executable and socket server cover the process and
 protocol contract. Real-model acceptance remains a separate owner-run check.
 
+### Fresh workspace permissions
+
+The native adapter preserves the caller's sandbox selection. In the September 20
+owner check, a fresh disposable directory without a trust/sandbox selection chose
+read-only and could not write the inbox `.lock`. The owner selected
+`-c 'sandbox_mode="workspace-write"'` for that test launch; configuration and runtime
+were not modified. Inbox reads need write access for locking and receipts. This
+acceptance does not establish inbox support under deliberately selected read-only
+permissions. [Evidence](native-mailbox-acceptance.md) and the
+[updated owner recipe](native-mailbox-check.md) retain that prerequisite.
+
 ### The intro
 
 The system layer uses an independent six-line briefing for general, write or

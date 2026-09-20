@@ -36,9 +36,10 @@ with a delivery diagnostic; they never broaden access as a fallback.
 
 A late granted task stays in the [unannounced queue](inbox-groups.md), alongside
 ordinary work until delivery is ready. It cannot attach to an already dispatched notice.
-Its roots are considered when its own batch is actually dispatched after observation
-or confirmed normal completion. Already-present metadata needs no added root field;
-expired, consumed or reserved members cannot grant rights to neighboring messages.
+Its roots are considered when its own ready batch is dispatched promptly, without
+waiting for observation or normal completion. Already-present metadata needs no
+added root field; expired, consumed or reserved members cannot grant rights to
+neighboring messages.
 
 The native field is a replacement root snapshot extended additively. On an active
 turn, changes may apply only to subsequent work; this is not a promise of retroactive

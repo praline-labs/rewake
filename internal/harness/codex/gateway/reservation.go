@@ -181,20 +181,24 @@ func (r *Reservation) ReadThread(ctx context.Context, result any) error {
 }
 
 // Deliver sends once under the same generation and additive workspace snapshot.
-func (r *Reservation) Deliver(ctx context.Context, messageID, notice string, roots []string) (string, error) {
+func (r *Reservation) Deliver(ctx context.Context, messageID string, notice MailboxNotice, roots []string) (string, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if err := r.valid(); err != nil {
 		return "", err
 	}
-	if len(notice) > 64<<10 || messageID == "" {
+	if len(notice.Notice) > 64<<10 || messageID == "" {
 		return "", errors.New("invalid notice")
 	}
 	if r.sent {
 		return "", errors.New("delivery reservation already used; do not replay")
 	}
+	output, err := json.Marshal(notice)
+	if err != nil {
+		return "", err
+	}
 	r.sent = true
-	params := map[string]any{"clientUserMessageId": messageID, "input": []any{map[string]any{"type": "text", "text": notice}}}
+	params := map[string]any{"clientUserMessageId": messageID, "input": []any{}, "toolOutput": map[string]any{"name": MailboxTool, "output": string(output)}}
 	if roots != nil {
 		params["runtimeWorkspaceRoots"] = roots
 	}

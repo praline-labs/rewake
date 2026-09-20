@@ -14,6 +14,11 @@ Renaming a neighboring file avoids that: existing wrappers keep their old
 executable, while new launches use the replacement. Restart existing sessions
 separately when their ongoing wrappers need the new behavior.
 
+For the accepted native mailbox path, use the [owner check recipe](native-mailbox-check.md)
+with an explicit permission selection for a fresh disposable workspace. The
+[September 20 acceptance](native-mailbox-acceptance.md) includes installation and
+restart, but does not establish inbox support under deliberate read-only permissions.
+
 **To test how it will be installed.** `scripts/pack.sh [version]` builds the npm
 packages into `dist/npm` — one per platform plus the entry package — and
 publishes nothing. Then:

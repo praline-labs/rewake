@@ -81,11 +81,18 @@ func (f *reviewBatchFixture) notice(t *testing.T, members []inbox.Message) {
 	select {
 	case params := <-f.captured:
 		var id string
-		var input []struct {
-			Text string `json:"text"`
+		notice := decodedMailbox(t, params)
+		if json.Unmarshal(params["clientUserMessageId"], &id) != nil {
+			t.Fatal("invalid native admission identity")
 		}
-		if json.Unmarshal(params["clientUserMessageId"], &id) != nil || json.Unmarshal(params["input"], &input) != nil || len(input) != 1 {
-			t.Fatal("invalid native input")
+		if len(notice.Members) != len(members) {
+			t.Fatal("wrong member count")
+		}
+		for i, member := range members {
+			got := notice.Members[i]
+			if got.ID != member.ID || got.From != member.From || got.FromEpoch != member.FromEpoch || got.To != member.To || got.ToEpoch != member.ToEpoch {
+				t.Fatalf("wrong member: %+v", got)
+			}
 		}
 		want := members[0].ID
 		if len(members) > 1 {
@@ -95,10 +102,10 @@ func (f *reviewBatchFixture) notice(t *testing.T, members []inbox.Message) {
 			}
 			want = fmt.Sprintf("group-%x", h.Sum(nil))
 		}
-		if id != want || !strings.Contains(input[0].Text, fmt.Sprintf("%d new message", len(members))) || !strings.Contains(input[0].Text, members[len(members)-1].Text) {
-			t.Fatalf("wrong fixed notice %s: %s", id, input[0].Text)
+		if id != want || !strings.Contains(notice.Notice, fmt.Sprintf("%d new message", len(members))) || !strings.Contains(notice.Notice, members[len(members)-1].Text) {
+			t.Fatalf("wrong fixed notice %s: %s", id, notice.Notice)
 		}
-		if strings.Contains(input[0].Text, "--peek") {
+		if strings.Contains(notice.Notice, "--peek") {
 			t.Fatal("long usage line returned")
 		}
 	case <-time.After(2500 * time.Millisecond):

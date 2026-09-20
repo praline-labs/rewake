@@ -137,7 +137,9 @@ work without a required peek or terminal event. Only new member IDs are delivere
      interface draws it as a single green `● Rewake: lead-claude task, 1 new
      message(s)` line — the same line its own background tasks get — and the
      model wakes if it was idle.
-   - Codex: call turn/start through the reserved TUI connection/generation. For tasks/questions to
+   - Codex: call turn/start through the reserved TUI connection/generation with empty
+     input and [standalone mailbox output](native-mailbox.md): short notice plus fixed
+     member identities, never full task bodies. For tasks/questions to
      eligible main/write with explicit --grant-git intent, read current local roots without history and append only
      missing Git metadata from the thread's working repository. If roots cannot
      be read, omit the field and explain that in delivery status. No-flag tasks, general and

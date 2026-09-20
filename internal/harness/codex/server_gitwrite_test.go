@@ -115,10 +115,11 @@ func gitDeliveryFixtureMode(t *testing.T, part role.Role, status string, sameTur
 				result = map[string]any{"thread": read.thread}
 			case "turn/start":
 				for key := range request.Params {
-					if !slices.Contains([]string{"threadId", "clientUserMessageId", "input", "runtimeWorkspaceRoots"}, key) {
+					if !slices.Contains([]string{"threadId", "clientUserMessageId", "input", "toolOutput", "runtimeWorkspaceRoots"}, key) {
 						t.Errorf("unexpected turn parameter %s", key)
 					}
 				}
+				decodedMailbox(t, request.Params)
 				turnIndex++
 				captured <- request.Params
 				if beforeAck != nil {
