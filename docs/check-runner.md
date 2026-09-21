@@ -160,6 +160,25 @@ Paid semantic and manual TUI checks are explicit opt-ins with cost/time bounds a
 separate result scope. No typing proxies or automated input into a person's screen.
 A protocol client can drive a synthetic case, but must not be labelled a real TUI.
 
+**The cheapest model, always.** Owner requirement, September 21, 2026: automated
+testing done through a real harness runs on the cheapest models. A case that starts a
+real harness with a real model sets, in that case's environment, the cheapest model
+available and the lowest reasoning effort. The values come from the environment of the
+run; they are not in this repository, and neither is any model name.
+
+The reason is not thrift for its own sake. This tier exists to see whether a model read
+its mail and acted on it — not to judge how well it works. The weakest model answers
+that, and the cheaper it is, the more often such a run can be afforded at all.
+
+So an unset value is a reason not to run the case, not a reason to fall back: a harness
+left to its own default picks an expensive model, which is the one outcome this rule
+exists to prevent. The case is `not-run` with that reason, and `not-run` is never
+acceptance.
+
+rewake itself takes the model and reasoning effort for a launch from the environment
+([launch.md](launch.md)), so a case sets two variables and needs nothing else — no
+model name in a test, and no harness configuration touched.
+
 ## Lessons that the proposed tests must address
 
 - **Wrong guard, green test.** Generic error assertions passed because a reservation

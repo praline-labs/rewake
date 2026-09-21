@@ -1,11 +1,9 @@
 package harness
 
-import (
-	"os"
-	"strings"
-)
+import "strings"
 
-// Launch defaults come from the environment, never from the source.
+// Launch defaults come from the environment and from settings files, never
+// from the source.
 //
 // Sessions multiply, and one that quietly picks an expensive model costs real
 // money for work that did not need it. So rewake can supply a cheaper default
@@ -19,13 +17,15 @@ import (
 //     effort, rewake adds nothing and says nothing: the person meant that.
 //   - An unset variable means no default. Nothing is guessed, nothing is
 //     "tried", and a session behaves exactly as it does today unless somebody
-//     configured otherwise.
+//     configured otherwise. Where a value may be configured, and in what
+//     order, is in settings.go.
 //   - Whatever is substituted is announced in a launch note. A silently
 //     swapped model is the worst kind of surprise.
 
 // Default is one value rewake may supply for a launch.
 type Default struct {
-	// Env is the variable the value is read from.
+	// Env is the name the value is read under, in the environment or in a
+	// settings file.
 	Env string
 	// What names the setting in the launch note ("model", "reasoning effort").
 	What string
@@ -35,18 +35,24 @@ type Default struct {
 	Apply func(args []string, value string) []string
 }
 
-// ApplyDefaults substitutes the defaults whose variable is set and whose
-// setting the caller did not give, and returns the notes to print.
+// ApplyDefaults substitutes the defaults that are configured and that the
+// caller did not give, and returns the notes to print.
 func ApplyDefaults(args []string, defaults []Default) ([]string, []string) {
-	var notes []string
+	settings := LoadSettings()
+	// Trouble with the files is said first: somebody whose settings did not
+	// load needs to know that before wondering about the model.
+	notes := settings.Notes
 	for _, candidate := range defaults {
-		value := strings.TrimSpace(os.Getenv(candidate.Env))
-		if value == "" || candidate.Present(args) {
+		value, source, ok := settings.Lookup(candidate.Env)
+		value = strings.TrimSpace(value)
+		if !ok || value == "" || candidate.Present(args) {
 			continue
 		}
 		args = candidate.Apply(args, value)
+		// The note names the source as well as the variable: somebody seeing
+		// an unexpected model should know in one step where to change it.
 		notes = append(notes, "using the "+candidate.What+" from "+candidate.Env+
-			" for this launch; pass your own flag to override it")
+			" in "+source+" for this launch; pass your own flag to override it")
 	}
 	return args, notes
 }

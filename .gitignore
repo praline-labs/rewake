@@ -1,3 +1,4 @@
 /rewake
 dist/
 handoffs/
+.rewake.env

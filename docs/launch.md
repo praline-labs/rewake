@@ -29,8 +29,8 @@ Sessions multiply, and one that quietly picks an expensive model costs real mone
 for work that did not need it. So rewake can supply a default model and reasoning
 effort — as flags for a single launch, never by editing anyone's configuration.
 
-The values live in the environment, one pair per harness, because the harnesses
-neither name their models the same way nor take the reasoning effort the same way:
+The values are named one pair per harness, because the harnesses neither name their
+models the same way nor take the reasoning effort the same way:
 
 | Variable | What it sets |
 | --- | --- |
@@ -42,11 +42,51 @@ neither name their models the same way nor take the reasoning effort the same wa
 No model names appear in this repository. Which model is cheap, and what it is
 called, belongs to whoever runs the sessions.
 
+They can be set in three places, and rewake reads the files itself — a setting that
+has to be loaded by hand before every launch is not a setting but a ritual, and the
+one time it is forgotten a session comes up on something else without saying so:
+
+| Where | For |
+| --- | --- |
+| the environment | this launch, or this shell |
+| `.rewake.env` in the working directory | one repository |
+| `~/.config/rewake/settings` | everything this person launches |
+
+Both files hold `KEY=VALUE` lines: blank lines and `#` comments are skipped, spaces
+around the name and the value are trimmed, and one matching pair of quotes is removed.
+Nothing more — no `$VAR` expansion, no commands, no line continuation. A file that can
+run things is a different and much larger promise, and this is a settings file.
+
+**A file may set those four names and nothing else.** Not a prefix — a list. That is
+a boundary rather than tidiness: a file sitting in whatever directory somebody happens
+to be in must not become a way to set arbitrary variables for the harness launching
+there, and names like the state directory or the room are spelled with the same prefix.
+Everything else in the file is ignored without comment, so the file can serve other
+purposes too. `export KEY=VALUE` is accepted, since that is how such a file is usually
+written, and a `#` after whitespace begins a comment that runs to the end of the line
+— inside quotes it is part of the value.
+
+The strongest source wins, and strength is nearness to the launch: a flag, then a
+variable already in the environment, then the project file, then the user file. A
+variable that is already set is never replaced by a file. `.rewake.env` in the working
+directory is the only project file consulted — no walking up the tree, where a parent
+directory could decide how a session launches.
+
+Trouble is said, not swallowed: a file that exists but cannot be read, one that is not
+an ordinary file at all, a line that is not `KEY=VALUE`, or a user file with
+permissions wider than the `0600` its convention expects — each produces a launch note,
+and none of them stops the launch. The permission warning is for the user file only: a
+project file created under the usual umask is `0644`, and warning about that on every
+launch would teach people to skip these notes.
+
 Three rules, all about not surprising anyone. An explicit flag always wins: a launch
-that already names a model or an effort gets nothing added and no note. An unset
-variable substitutes nothing — behaviour without configuration is exactly what it was
-before. And whatever is substituted is announced in a launch note naming the
-variable, because a silently swapped model is the worst kind of surprise.
+that already names a model or an effort gets nothing added and no note. Nothing
+configured means nothing substituted — behavior without configuration is exactly what
+it was before — and an **empty** variable is a choice rather than an absence: it turns
+the default off for that launch, and the files are not consulted behind it. And
+whatever is substituted is announced in a launch note naming both the variable and
+where its value came from, because a silently swapped model is the worst kind of
+surprise, and the second worst is not knowing where to change it.
 
 "Already named" means every way of naming it, because the way a person writes a
 choice must not decide whether it is heard. Checked against the installed binaries,
@@ -57,7 +97,7 @@ not from memory:
 - **Codex** takes the model as `--model` or `-m`, apart, with `=`, or joined
   (`-mname`) — and also as the configuration key `model`. It has no flag for the
   reasoning effort at all: that is the configuration key `model_reasoning_effort`.
-  Keys are recognised through `-c`/`--config` in every spelling, with whitespace
+  Keys are recognized through `-c`/`--config` in every spelling, with whitespace
   around the key allowed, because the CLI trims it.
 
 Not consulted, deliberately: the harnesses' own configuration files, and settings

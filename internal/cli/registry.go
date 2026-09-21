@@ -158,6 +158,7 @@ func buildGroups() {
 // launchCommand builds the command that starts one harness.
 func launchCommand(h harness.Harness) *Command {
 	notes := append([]string{}, h.Notes()...)
+	notes = append(notes, harness.SettingsHelp)
 	return &Command{
 		Name:           h.ID(),
 		Args:           "[" + h.ID() + " args...]",
