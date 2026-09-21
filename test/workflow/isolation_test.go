@@ -132,7 +132,23 @@ func (iso *Isolation) registerCleanupChecks(c *Case) {
 	c.CheckCleanup("no live socket left behind", iso.noLiveSockets)
 	c.CheckCleanup("no unpublished outcome left behind", iso.noPendingOutcomes)
 	c.CheckCleanup("no session record left behind", func() error {
-		return iso.emptyInEveryRoom("sessions")
+		// Everything except the lock. The per-name lock file is part of the
+		// registry's machinery and outlives any single session by design, so
+		// requiring the directory to be empty would fail every scenario that
+		// ever launched one. Excluding it is not the same as accepting only
+		// `.json`: an atomic write leaves a temporary file beside the record
+		// if the process dies mid-write, and a half-written registry entry is
+		// exactly the leftover of an unfinished session this must catch.
+		found, err := iso.inEveryRoom("sessions", func(name string) bool {
+			return !strings.HasSuffix(name, ".lock")
+		})
+		if err != nil {
+			return err
+		}
+		if len(found) > 0 {
+			return fmt.Errorf("still present: %s", strings.Join(found, ", "))
+		}
+		return nil
 	})
 }
 
@@ -237,20 +253,6 @@ func (iso *Isolation) collect(sub string, matches func(os.DirEntry) (bool, error
 		}
 	}
 	return found, nil
-}
-
-// emptyInEveryRoom requires <state>/rooms/*/<sub> to hold nothing at all. It
-// suits the session registry, where any surviving record means a session the
-// case failed to end.
-func (iso *Isolation) emptyInEveryRoom(sub string) error {
-	found, err := iso.inEveryRoom(sub, func(string) bool { return true })
-	if err != nil {
-		return err
-	}
-	if len(found) > 0 {
-		return fmt.Errorf("still present: %s", strings.Join(found, ", "))
-	}
-	return nil
 }
 
 // Env is the environment for anything this case launches. It is built from

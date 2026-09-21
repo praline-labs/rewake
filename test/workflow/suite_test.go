@@ -33,6 +33,12 @@ var suite struct {
 }
 
 func TestMain(m *testing.M) {
+	// Re-executed as `codex` by a scenario: be the harness and nothing else.
+	// Checked before anything else because the ordinary path would otherwise
+	// build a binary and run a suite inside the shim.
+	if os.Getenv(shimEnv) != "" {
+		os.Exit(runShim(os.Args))
+	}
 	enabled, err := switchedOn(os.Getenv(switchEnv))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "workflow: %v\n", err)

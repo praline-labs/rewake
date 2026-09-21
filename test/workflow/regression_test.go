@@ -49,6 +49,44 @@ func TestFailureReportedBeforeClassificationCannotKeepPass(t *testing.T) {
 	}
 }
 
+// The session-record check accepts the registry's own lock file and nothing
+// else. Narrowing it to "only .json" would look equivalent and would quietly
+// stop catching the half-written record an interrupted session leaves behind.
+func TestUnfinishedSessionRecordIsNotAcceptedAsClean(t *testing.T) {
+	iso := &Isolation{StateDir: t.TempDir()}
+	dir := filepath.Join(iso.StateDir, "rooms", "default", "sessions")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	c := newCase(&recorder{}, Spec{Name: "records", Observations: []string{"a"}})
+	iso.registerCleanupChecks(c)
+	recordCheck := func() error {
+		for _, check := range c.checks {
+			if check.what == "no session record left behind" {
+				return check.check()
+			}
+		}
+		t.Fatal("the session-record check is gone")
+		return nil
+	}
+
+	// The lock outlives every session by design.
+	if err := os.WriteFile(filepath.Join(dir, ".worker-codex.lock"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := recordCheck(); err != nil {
+		t.Errorf("the registry's own lock file counted as a leftover: %v", err)
+	}
+
+	// A temporary file from an interrupted atomic write does not.
+	if err := os.WriteFile(filepath.Join(dir, ".tmp-worker-codex-1234"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := recordCheck(); err == nil {
+		t.Error("a half-written session record went unnoticed")
+	}
+}
+
 // The server keeps these beside its socket in the ordinary course of events,
 // and removes only the sockets themselves. A cleanup check that called them
 // leftovers would fail the first working Codex scenario over nothing.

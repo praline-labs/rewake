@@ -4,6 +4,49 @@ Gathered September 15-16, 2026. Versions: Claude Code 2.1.270, Codex CLI 0.154.0
 Tags: **[verified live]** — live on these versions; **[source]** — source;
 **[docs]** — official pages. Recheck facts before changing the adapter.
 
+**[verified live; Codex CLI 0.155.1; September 21, 2026]** The installed binary emits
+its own protocol schema: `codex app-server generate-json-schema --experimental --out
+<DIR>` writes a bundle of about 4 MB, including the summary files
+`codex_app_server_protocol.schemas.json` and `…v2.schemas.json`. Both flags matter.
+`--out` is required — without it the command refuses. `--experimental` is required for
+a schema that describes the protocol rewake actually speaks: the default bundle omits
+experimental fields, leaving the conversation type with 28 properties and no
+`canAcceptDirectInput` at all, while the adapter uses that field and
+`runtimeWorkspaceRoots`, both experimental. Checking a fixture against the default
+bundle would therefore report correct answers as invented fields.
+
+The workflow suite checks fixture replies against that schema, and its list of
+understood schema keywords is closed: anything outside it fails the run rather than
+passing quietly. That list was completed by walking every definition reachable from
+the types the fixture answers, on 0.155.1. **Moving the version pin means walking
+them again**: a keyword that turns up in a used type and is not in the register makes
+every run red until it is implemented or classified. Doing that walk is part of the
+pin move, not a surprise afterwards.
+
+**[source: app-server schema of the installed CLI 0.155.1; September 21, 2026]**
+`ThreadStartParams` carries no conversation id: a new conversation is named by the
+server and the client learns it from the reply. The id appears only in
+`thread/resume`, which is therefore the only place a client can disagree with the
+server about which conversation it got. `InitializeParams` requires `clientInfo`
+with both `name` and `version`, and `capabilities.experimentalApi` opts into
+experimental methods and fields — which `runtimeWorkspaceRoots` and the thread's
+`canAcceptDirectInput` are, so a client using them without declaring the capability
+is asking for something it never negotiated. The adapter reads a conversation id
+from both the request parameters and the reply
+(`internal/harness/codex/gateway/metadata.go`), so it covers either shape; a fixture
+that sends an id on `thread/start` is the part that is wrong.
+
+**[source: reference tree `e29eceb75`; September 21, 2026]** `canAcceptDirectInput`
+is a field of the thread object, not of the reply. It is declared inside `ThreadData`
+(`codex-rs/app-server-protocol/src/protocol/v2/thread_data.rs:274`), beside `source`
+and `thread_source`. The adapter reads `result.thread.canAcceptDirectInput` and only
+falls back to a top-level copy
+(`internal/harness/codex/gateway/metadata.go`), so a fixture that answers on the top
+level exercises the fallback and leaves the main branch untested. Two further fields
+there are distinct: `source` is where the conversation came from (cli, vscode, exec,
+app-server), `thread_source` is an analytics classification — the client sends the
+latter, the server answers with both.
+
 **[verified live; Codex CLI 0.155.1; September 21, 2026]** The installed CLI moved to
 0.155.1 and the adapter's pin moved with it. Observed on that version: launch with
 registration, a task accepted through the app-server, a `finished` report back and
