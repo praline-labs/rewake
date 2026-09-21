@@ -22,12 +22,17 @@ type Role struct {
 	// GitWrite permits receiving an explicit main-authorized metadata grant.
 	// Eligibility alone never changes permissions at launch or message delivery.
 	GitWrite bool
+	// Play is what this role does, in order: the text of the briefing and of
+	// the guide's own section. Required — a role without one would launch a
+	// session that is told nothing, or, worse, told about another role.
+	Play Playbook
 }
 
 // General takes work and reports when its turn ends. It is also the fallback role.
 var General = Role{
 	ID:      "general",
 	Summary: "Default when no role flag is supplied. Takes work from other sessions and reports the end of each turn to them. Can start before a main session.",
+	Play:    generalPlaybook,
 }
 
 // Main hands out work. It reads every report, so its own turns are reported to
@@ -37,6 +42,7 @@ var Main = Role{
 	Summary:  "The session that hands out work: it gets reports, reports no successful turns, and requests permission to commit in the working repository.",
 	Silent:   true,
 	GitWrite: true,
+	Play:     mainPlaybook,
 }
 
 // Write takes work and can commit changes in its working repository.
@@ -44,6 +50,7 @@ var Write = Role{
 	ID:       "write",
 	Summary:  "Takes work and reports its turns; eligible for explicitly granted repository Git metadata access. Existing owner permissions remain unchanged.",
 	GitWrite: true,
+	Play:     writePlaybook,
 }
 
 // all lists the roles, the default first.

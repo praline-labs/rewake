@@ -3,6 +3,8 @@ package cli
 import (
 	"fmt"
 	"strings"
+
+	"github.com/iiiokojiadbi/rewake/internal/role"
 )
 
 // wrapWidth keeps prose readable in a narrow terminal without reflowing to it:
@@ -67,9 +69,26 @@ func wrapText(text, indent string) []string {
 // formatGuide renders the overview printed when rewake is called with nothing.
 // An agent's first call in a session should teach how the tool behaves, which a
 // refusal cannot do.
-func formatGuide() string {
+func formatGuide(play *role.Playbook) string {
 	var lines []string
 	lines = append(lines, "rewake — let coding agents on this machine message each other.", "")
+
+	// The caller's own role first, when the caller is a session. What an agent
+	// needs is the handful of moves its role makes, and it needs them before
+	// the map of everything the tool can do.
+	if play != nil {
+		lines = append(lines, "YOUR ROLE", "  "+play.Heading, "")
+		rows := make([]column, 0, len(play.Steps))
+		for _, step := range play.Steps {
+			rows = append(rows, column{Name: step.Do, Text: step.Why})
+		}
+		lines = append(lines, printColumns(rows, "  ")...)
+		lines = append(lines, "")
+		for _, limit := range play.Limits {
+			lines = append(lines, wrapText(limit, "  ")...)
+		}
+		lines = append(lines, "")
+	}
 
 	for _, group := range Groups() {
 		shown := visibleCommands(group)

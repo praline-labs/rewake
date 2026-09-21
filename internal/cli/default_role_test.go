@@ -59,7 +59,7 @@ func TestCLIResolvesDefaultGeneralAndPreservesExplicitCapabilities(t *testing.T)
 					t.Fatal(err)
 				}
 				got := probe.request
-				if got.Role != scenario.want || got.Name != scenario.prefix+"-"+h.ID() {
+				if got.Role.ID != scenario.want.ID || got.Name != scenario.prefix+"-"+h.ID() {
 					t.Fatalf("wrong role, permissions or name: %+v", got)
 				}
 				intro := brief.Intro(got.BriefContext())

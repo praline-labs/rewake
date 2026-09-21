@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/iiiokojiadbi/rewake/internal/role"
+
 	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
@@ -46,4 +48,30 @@ func ownRun(dir string) (registry.Session, string, error) {
 		return session, epoch, errEarlierRun
 	}
 	return session, epoch, nil
+}
+
+// callerPlaybook is the role guidance for the session running this command, or
+// nil when the command was not run by one.
+//
+// A guide asked for outside a session stays the general map: there is no role
+// to answer for, and inventing one would teach the wrong moves to whoever is
+// reading over a person's shoulder. Every failure answers the same way — an
+// unreadable state directory, a name that is not registered any more, a run
+// that has moved on — because in each of those the role is not known, which is
+// the only question being asked here.
+func callerPlaybook() *role.Playbook {
+	root, err := state.Root()
+	if err != nil {
+		return nil
+	}
+	dir, err := state.RoomDir(root, os.Getenv(state.RoomEnv))
+	if err != nil {
+		return nil
+	}
+	session, _, err := ownRun(dir)
+	if err != nil {
+		return nil
+	}
+	play := role.Of(session.Role).Play
+	return &play
 }

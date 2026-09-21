@@ -7,6 +7,7 @@ import (
 
 	"github.com/iiiokojiadbi/rewake/internal/alias"
 	"github.com/iiiokojiadbi/rewake/internal/harness"
+	"github.com/iiiokojiadbi/rewake/internal/role"
 )
 
 // Run executes one invocation and returns the process exit code.
@@ -41,12 +42,12 @@ func Run(argv []string, stdout, stderr io.Writer) int {
 		// The guide has a machine form too: an agent's first call may well be
 		// "rewake --json", and it must not get prose back.
 		if ctx.JSON {
-			if err := printValue(ctx, guideModel(), func() []string { return nil }); err != nil {
+			if err := printValue(ctx, guideModel(callerPlaybook()), func() []string { return nil }); err != nil {
 				return report(ctx, err)
 			}
 			return ExitOK
 		}
-		printText(ctx, formatGuide())
+		printText(ctx, formatGuide(callerPlaybook()))
 		return ExitOK
 	}
 
@@ -84,14 +85,14 @@ func report(ctx *Context, err error) int {
 
 func handleGuide(ctx *Context, _ Call) error {
 	if ctx.JSON {
-		return printValue(ctx, guideModel(), func() []string { return nil })
+		return printValue(ctx, guideModel(callerPlaybook()), func() []string { return nil })
 	}
-	printText(ctx, formatGuide())
+	printText(ctx, formatGuide(callerPlaybook()))
 	return nil
 }
 
 // guideModel is the machine form of the guide: the same table, all fields.
-func guideModel() map[string]any {
+func guideModel(play *role.Playbook) map[string]any {
 	type optionModel struct {
 		Flag     string `json:"flag"`
 		Value    string `json:"value,omitempty"`
@@ -142,7 +143,7 @@ func guideModel() map[string]any {
 		groupModels = append(groupModels, groupModel{Title: group.Title, Summary: group.Summary, Commands: commands})
 	}
 
-	return map[string]any{
+	model := map[string]any{
 		"version":       Version,
 		"groups":        groupModels,
 		"flow":          flow(),
@@ -150,4 +151,15 @@ func guideModel() map[string]any {
 		"globalOptions": renderOptions(globalOptions),
 		"harnesses":     harness.IDs(),
 	}
+	if play != nil {
+		// The same answer the printed form gives, in the same words: an agent
+		// reading --json must not get a different set of moves from the one a
+		// person reads on the screen.
+		steps := make([]map[string]string, 0, len(play.Steps))
+		for _, step := range play.Steps {
+			steps = append(steps, map[string]string{"do": step.Do, "why": step.Why})
+		}
+		model["role"] = map[string]any{"heading": play.Heading, "steps": steps, "limits": play.Limits}
+	}
+	return model
 }

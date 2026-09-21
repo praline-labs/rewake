@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/iiiokojiadbi/rewake/internal/role"
+
 	// The command table is derived from the harness catalog, so every test
 	// here needs it registered.
 	_ "github.com/iiiokojiadbi/rewake/internal/harness/catalog"
@@ -297,5 +299,34 @@ func TestVersion(t *testing.T) {
 	}
 	if !strings.Contains(out, Version) {
 		t.Errorf("version output = %q, want %q", out, Version)
+	}
+}
+
+// The guide answers for whoever is asking: a session sees its own role first,
+// a shell that is not a session sees the general map unchanged.
+func TestGuideShowsTheCallersRole(t *testing.T) {
+	play := role.Write.Play
+	text := formatGuide(&play)
+	if !strings.Contains(text, "YOUR ROLE") || !strings.Contains(text, play.Heading) {
+		t.Fatal("a session's guide does not open with its role")
+	}
+	for _, step := range play.Steps {
+		if !strings.Contains(text, step.Do) {
+			t.Fatalf("step %q is missing from the guide", step.Do)
+		}
+	}
+	// The same words in the machine form, for an agent that reads --json.
+	model := guideModel(&play)
+	section, ok := model["role"].(map[string]any)
+	if !ok || section["heading"] != play.Heading {
+		t.Fatalf("the machine form has no role section: %#v", model["role"])
+	}
+
+	plain := formatGuide(nil)
+	if strings.Contains(plain, "YOUR ROLE") {
+		t.Fatal("a caller with no session was given a role")
+	}
+	if _, present := guideModel(nil)["role"]; present {
+		t.Fatal("the machine form carries a role for a caller that has none")
 	}
 }
