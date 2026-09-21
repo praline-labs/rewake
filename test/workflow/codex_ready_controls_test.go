@@ -51,7 +51,7 @@ func refusedReadiness(t *testing.T, name, description string, controls ...string
 		Deadline: 60 * time.Second,
 	})
 	iso := Isolate(t, c, binary)
-	session := startCodexSession(t, c, iso, "worker", controls...)
+	session := startCodexSession(t, c, iso, "worker", "--main", controls...)
 	defer func() {
 		if err := session.stop(c); err != nil {
 			t.Errorf("ending the session: %v", err)

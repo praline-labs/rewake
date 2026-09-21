@@ -1,7 +1,6 @@
 package workflow
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,35 +22,6 @@ import (
 // server, that is a deliberate control named in the environment — and if the
 // gateway then still reports readiness, that is a finding about rewake, not a
 // reason to make the shim more agreeable.
-
-const (
-	shimEnv = "RW_SHIM"
-	// shimThread is the conversation the shim starts. A numeric request id and
-	// threadSource=user are what make the request recognizable to the
-	// gateway; the thread id itself only has to be stable.
-	shimThread = "0199ab12-0000-7000-8000-abcdef000001"
-
-	// Controls. Each one makes the shim answer like a server that is wrong in
-	// one specific way, so a scenario can check that readiness does not follow.
-	shimNoDirectInput = "RW_SHIM_NO_DIRECT_INPUT"
-	shimWrongThread   = "RW_SHIM_WRONG_THREAD"
-	// shimNoCorrelatedReply announces a conversation as an event and never
-	// answers the request that asked for it.
-	shimNoCorrelatedReply = "RW_SHIM_NO_CORRELATED_REPLY"
-	// shimResume makes the client continue a named conversation instead of
-	// starting a new one. Only a continuation carries a conversation id the
-	// client chose, so that is where "the server answered about a different
-	// conversation" can be asked at all.
-	shimResume = "RW_SHIM_RESUME"
-
-	// shimStateFile is where the client half writes what `rewake list` says.
-	// The session runs the command, not the test: that is the only way the
-	// provenance of an observation can be the session's.
-	shimStateFile = "RW_SHIM_STATE_FILE"
-	// shimAcceptedFile is where the client writes the conversation id the
-	// server actually gave it.
-	shimAcceptedFile = "RW_SHIM_ACCEPTED_FILE"
-)
 
 // runShim is the entry point when this binary is re-executed as `codex`.
 func runShim(args []string) int {
@@ -112,6 +82,7 @@ type shimSession struct {
 	mu     sync.Mutex
 	thread string
 	peers  []*shimPeer
+	turn   turnState
 }
 
 // shimPeer is one connection and what it negotiated.
@@ -216,8 +187,14 @@ func (s *shimSession) answer(peer *shimPeer, method string, params json.RawMessa
 		if hasField(params, "threadId") {
 			return nil, nil, errors.New("thread/start does not take a threadId")
 		}
+		if wrong := unserved("thread/start", params, startShape); wrong != "" {
+			return nil, nil, errors.New(wrong)
+		}
 		return s.lifecycle(s.thread)
 	case "thread/resume":
+		if wrong := unserved("thread/resume", params, resumeShape); wrong != "" {
+			return nil, nil, errors.New(wrong)
+		}
 		asked := threadOf(params)
 		if asked == "" {
 			return nil, nil, errors.New("thread/resume needs a threadId")
@@ -228,6 +205,8 @@ func (s *shimSession) answer(peer *shimPeer, method string, params json.RawMessa
 			return nil, nil, fmt.Errorf("no such thread %q", asked)
 		}
 		return s.lifecycle(asked)
+	case "turn/start":
+		return s.deliveredTurn(params)
 	case "thread/read":
 		asked := threadOf(params)
 		if asked == "" {
@@ -350,94 +329,4 @@ func (s *shimSession) broadcast(event any) {
 	for _, peer := range s.peers {
 		_ = peer.ws.writeJSON(event)
 	}
-}
-
-// threadOf reads the conversation id a request names, if any.
-func threadOf(params json.RawMessage) string {
-	var asked struct {
-		ThreadID string `json:"threadId"`
-	}
-	if json.Unmarshal(params, &asked) != nil {
-		return ""
-	}
-	return asked.ThreadID
-}
-
-// usesExperimental reports whether a request carries a field that only an
-// experimental client may use.
-func usesExperimental(params json.RawMessage) bool {
-	return hasField(params, "runtimeWorkspaceRoots")
-}
-
-// The shape of a request is checked explicitly, not by whether Go's decoder
-// complained. It accepts JSON null into almost anything — a null object
-// becomes an empty map, a null array element becomes an empty string — so
-// "it parsed" says very little about what arrived.
-
-// jsonKind reports what a raw JSON value is, or "" when it is unreadable.
-func jsonKind(raw json.RawMessage) string {
-	trimmed := bytes.TrimSpace(raw)
-	if len(trimmed) == 0 || !json.Valid(trimmed) {
-		return ""
-	}
-	switch trimmed[0] {
-	case '{':
-		return "object"
-	case '[':
-		return "array"
-	case '"':
-		return "string"
-	case 't', 'f':
-		return "boolean"
-	case 'n':
-		return "null"
-	default:
-		return "number"
-	}
-}
-
-// isObject reports whether params is a JSON object — null is not one.
-func isObject(params json.RawMessage) bool { return jsonKind(params) == "object" }
-
-// malformedField names the first field whose shape is wrong for the methods
-// this shim serves.
-func malformedField(params json.RawMessage) string {
-	var fields map[string]json.RawMessage
-	if json.Unmarshal(params, &fields) != nil {
-		return "params"
-	}
-	if raw, ok := fields["config"]; ok && jsonKind(raw) != "object" && jsonKind(raw) != "null" {
-		return "config must be an object"
-	}
-	if raw, ok := fields["threadSource"]; ok && jsonKind(raw) != "string" {
-		return "threadSource must be a string"
-	}
-	if raw, ok := fields["threadId"]; ok && jsonKind(raw) != "string" {
-		return "threadId must be a string"
-	}
-	if raw, ok := fields["runtimeWorkspaceRoots"]; ok {
-		if jsonKind(raw) != "array" {
-			return "runtimeWorkspaceRoots must be a list of paths"
-		}
-		var roots []json.RawMessage
-		if json.Unmarshal(raw, &roots) != nil {
-			return "runtimeWorkspaceRoots must be a list of paths"
-		}
-		for _, root := range roots {
-			if jsonKind(root) != "string" {
-				return "every runtimeWorkspaceRoots entry must be a path"
-			}
-		}
-	}
-	return ""
-}
-
-// hasField reports whether a JSON object carries a key at all.
-func hasField(params json.RawMessage, name string) bool {
-	var fields map[string]json.RawMessage
-	if json.Unmarshal(params, &fields) != nil {
-		return false
-	}
-	_, ok := fields[name]
-	return ok
 }

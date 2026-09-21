@@ -134,6 +134,25 @@ from both the request parameters and the reply
 (`internal/harness/codex/gateway/metadata.go`), so it covers either shape; a fixture
 that sends an id on `thread/start` is the part that is wrong.
 
+**[source: app-server schema of the installed CLI 0.155.1; September 21, 2026]** The
+delivery path has required fields a fixture is easy to get wrong. A `Turn` requires
+`id`, `items` and `status` together — a turn carrying only an id is not a turn, and
+`status` is one of `completed`, `interrupted`, `failed`, `inProgress`. That object
+appears in the `turn/start` reply, in `turn/started` and in `turn/completed`, so all
+three carry the list and the status. `ItemCompletedNotification` additionally requires
+`completedAtMs`, a Unix timestamp in milliseconds, beside `item`, `threadId` and
+`turnId`. `TurnStartParams` requires the `input` list to be present; a mailbox
+delivery is the case where it is present and empty.
+
+**[verified live; Codex CLI 0.155.1; September 21, 2026]** Two things the schema does
+not say and a fixture gets wrong by default. A workspace root must be an absolute
+path: the type is `AbsolutePathBuf`, which the JSON schema renders as a plain string
+with the requirement only in prose, and the server refuses a relative root outright.
+And a request repeating a field name is refused as if the field were missing —
+JSON allows the repetition and leaves the choice of winner to the reader, so two
+readers of the same request disagree: decoding into a Go struct keeps the earlier
+object's fields while a map keeps the later one's.
+
 **[source: reference tree `e29eceb75`; September 21, 2026]** `canAcceptDirectInput`
 is a field of the thread object, not of the reply. It is declared inside `ThreadData`
 (`codex-rs/app-server-protocol/src/protocol/v2/thread_data.rs:274`), beside `source`

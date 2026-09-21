@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"time"
 )
 
@@ -126,6 +125,19 @@ func shimClient(socket string) int {
 	if target := os.Getenv(shimAcceptedFile); target != "" {
 		_ = os.WriteFile(target, []byte(reply.Thread.ID), 0o600)
 	}
+	if target := os.Getenv(shimSendTo); target != "" {
+		// The sender is a session too: it sends with its own rewake, the way a
+		// session does, not the way a test would.
+		if err := insideACase(); err != nil {
+			fmt.Fprintf(os.Stderr, "shim: %v\n", err)
+			return 1
+		}
+		send := exec.Command("rewake", "send", target, os.Getenv(shimSendText))
+		send.Env = os.Environ()
+		if out, err := send.CombinedOutput(); err != nil {
+			fmt.Fprintf(os.Stderr, "shim: sending to %s: %v: %s\n", target, err, out)
+		}
+	}
 	return shimReportState()
 }
 
@@ -134,6 +146,10 @@ func shimClient(socket string) int {
 // for itself would prove nothing about what a session can see.
 func shimReportState() int {
 	target := os.Getenv(shimStateFile)
+	if err := insideACase(); err != nil {
+		fmt.Fprintf(os.Stderr, "shim: %v\n", err)
+		return 1
+	}
 	deadline := time.Now().Add(25 * time.Second)
 	for time.Now().Before(deadline) {
 		if target != "" {
@@ -143,7 +159,7 @@ func shimReportState() int {
 				_ = os.Rename(target+".tmp", target)
 			}
 		}
-		if _, err := os.Stat(filepath.Join(os.Getenv("HOME"), "shim-exit")); err == nil {
+		if _, err := os.Stat(os.Getenv(shimExitFile)); err == nil {
 			return 0
 		}
 		time.Sleep(100 * time.Millisecond)

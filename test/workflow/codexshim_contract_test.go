@@ -8,11 +8,19 @@ package workflow
 // Shape is checked separately, against the installed schema; this file is
 // about behavior: who owns the handshake, what silence means, when an event
 // is sent, and which requests must be refused.
+//
+// These run with the suite switch off, as part of an ordinary `go test ./...`,
+// which is why none of them may start work: everything here decides something
+// and returns. A test that accepted a turn would leave a goroutine running
+// rewake after the test had restored the ambient environment — the one
+// belonging to whatever session the owner is working in.
 
 import (
 	"encoding/json"
 	"net"
+	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -136,5 +144,41 @@ func TestShimInvalidThreadRequestsAreRejected(t *testing.T) {
 				t.Fatalf("invalid %s accepted: %#v", tc.method, result)
 			}
 		})
+	}
+}
+
+// Nothing in the suite may run rewake outside its own case. The guard is on
+// every call the shim makes, because a turn accepted inside a test starts work
+// in a goroutine that can outlive the environment the test set up for it.
+func TestShimRefusesToRunOutsideACase(t *testing.T) {
+	t.Setenv(shimEnv, "")
+	t.Setenv(stateDirEnv, "/tmp/somewhere")
+	if err := insideACase(); err == nil {
+		t.Fatal("a process with no shim mark considered itself inside a case")
+	}
+	// A refusal is not enough on its own: with no rewake on PATH the call
+	// would fail anyway and the test would pass while the guard was gone. So
+	// PATH gets a rewake that leaves a mark, and the mark must not appear.
+	dir := t.TempDir()
+	mark := filepath.Join(dir, "touched")
+	// Redirection rather than a command: PATH is about to hold only this
+	// directory, so anything the script called would not be found and the mark
+	// would stay absent for the wrong reason.
+	script := "#!/bin/sh\n: > " + strconv.Quote(mark) + "\n"
+	if err := os.WriteFile(filepath.Join(dir, "rewake"), []byte(script), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir)
+	s := &shimSession{thread: shimThread}
+	if read, err := s.readMailbox(); err == nil {
+		t.Fatalf("the mailbox was read outside a case: %q", read)
+	}
+	if _, err := os.Stat(mark); err == nil {
+		t.Fatal("rewake was run outside a case")
+	}
+	t.Setenv(shimEnv, "1")
+	t.Setenv(stateDirEnv, "")
+	if err := insideACase(); err == nil {
+		t.Fatal("a shim with no case state directory considered itself inside a case")
 	}
 }

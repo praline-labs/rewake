@@ -1,7 +1,9 @@
 package workflow
 
 import (
+	"encoding/json"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -24,6 +26,11 @@ func TestShimAnswersMatchTheInstalledSchema(t *testing.T) {
 			"the initialize reply matches InitializeResponse",
 			"the thread/start reply matches ThreadStartResponse",
 			"the conversation object matches Thread",
+			"the turn/start reply matches TurnStartResponse",
+			"the turn/started event matches TurnStartedNotification",
+			"the item/completed event matches ItemCompletedNotification",
+			"the turn/completed event matches TurnCompletedNotification",
+			"the fixture refuses every delivery the schema refuses",
 		},
 		Deadline: 120 * time.Second,
 	})
@@ -65,7 +72,74 @@ func TestShimAnswersMatchTheInstalledSchema(t *testing.T) {
 		return
 	}
 	check(c, bundle, "Thread", "the conversation object matches Thread", message["thread"])
+
+	// The delivery path, which the check did not reach until the acceptance
+	// round of September 21, 2026 found four messages of it in shapes the real
+	// server does not use. A check built against shape drift that is not
+	// extended along with the shim is a check that has stopped working.
+	check(c, bundle, "TurnStartResponse", "the turn/start reply matches TurnStartResponse", turnReply("turn-1"))
+	check(c, bundle, "TurnStartedNotification", "the turn/started event matches TurnStartedNotification",
+		eventParams(session.turnStartedEvent("turn-1")))
+	check(c, bundle, "ItemCompletedNotification", "the item/completed event matches ItemCompletedNotification",
+		eventParams(session.itemCompletedEvent("turn-1", "read: something")))
+	check(c, bundle, "TurnCompletedNotification", "the turn/completed event matches TurnCompletedNotification",
+		eventParams(session.turnCompletedEvent("turn-1", "read: something", false)))
+
+	// And the other direction: what the fixture accepts as a delivery. The
+	// check runs against the schema's own verdict on the same request, so the
+	// two cannot disagree about a field neither our decoder nor our table
+	// happens to look at.
+	c.Note("comparing the fixture's delivery check against the schema")
+	t.Setenv(sessionNameEnv, "me")
+	t.Setenv(sessionEpochEnv, "e2")
+	deliveriesAgainstTheSchema(c, bundle)
 }
+
+// deliveriesAgainstTheSchema checks the fixture's own answer against the
+// schema's, request by request. The direction that matters is one-way: a
+// fixture may refuse more than the server does, and must never accept what the
+// server refuses. The samples with a wrong-typed protocol field are the ones
+// the acceptance round of September 21, 2026 got past a shim that simply
+// decoded the four fields it cared about.
+func deliveriesAgainstTheSchema(c *Case, bundle *schemaBundle) {
+	const observation = "the fixture refuses every delivery the schema refuses"
+	notice := `{"notice":"one message","members":[{"id":"m1","from":"sender","fromEpoch":"e1","to":"me","toEpoch":"e2"}]}`
+	output := `"toolOutput":{"name":"` + mailboxToolName + `","output":` + strconv.Quote(notice) + `}`
+	for _, sample := range []string{
+		`{"threadId":"` + shimThread + `","clientUserMessageId":"c1","input":[],` + output + `}`,
+		`{"threadId":"` + shimThread + `","clientUserMessageId":"c1","input":[],"effort":5,` + output + `}`,
+		`{"threadId":"` + shimThread + `","clientUserMessageId":"c1","input":[],"model":true,` + output + `}`,
+		`{"threadId":"` + shimThread + `","clientUserMessageId":"c1","input":null,` + output + `}`,
+		`{"threadId":5,"clientUserMessageId":"c1","input":[],` + output + `}`,
+		// One level down, which is where the check used to stop.
+		`{"threadId":"` + shimThread + `","clientUserMessageId":"c1","input":[],"toolOutput":{"name":"` +
+			mailboxToolName + `","namespace":true,"output":` + strconv.Quote(notice) + `}}`,
+		`{"threadId":"` + shimThread + `","clientUserMessageId":"c1","input":[],"toolOutput":{"name":"` +
+			mailboxToolName + `","namespace":5,"output":` + strconv.Quote(notice) + `}}`,
+		`{"threadId":"` + shimThread + `","clientUserMessageId":"c1","input":[],"toolOutput":{"name":5,"output":` +
+			strconv.Quote(notice) + `}}`,
+		`{"threadId":"` + shimThread + `","clientUserMessageId":"c1","input":[],"runtimeWorkspaceRoots":[7],` +
+			output + `}`,
+	} {
+		var params map[string]any
+		if json.Unmarshal([]byte(sample), &params) != nil {
+			// A sample that is not JSON says nothing about either side.
+			continue
+		}
+		refusedBySchema := len(bundle.check("TurnStartParams", params)) > 0
+		session := &shimSession{thread: shimThread}
+		_, err := session.checkedDelivery(json.RawMessage(sample))
+		if refusedBySchema && err == nil {
+			c.Contradicted(observation, "the schema refuses %s and the fixture accepts it", sample)
+			return
+		}
+	}
+	c.Observed(observation, "no sample the schema refuses is accepted here")
+}
+
+// eventParams is the payload of a notification — the part the schema describes.
+// The envelope around it is JSON-RPC, checked elsewhere.
+func eventParams(event map[string]any) any { return event["params"] }
 
 // check records one observation from a schema comparison.
 func check(c *Case, bundle *schemaBundle, typeName, observation string, value any) {

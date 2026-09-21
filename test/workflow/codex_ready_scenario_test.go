@@ -29,7 +29,7 @@ func TestCodexConversationAccepted(t *testing.T) {
 		Deadline: 60 * time.Second,
 	})
 	iso := Isolate(t, c, binary)
-	session := startCodexSession(t, c, iso, "worker")
+	session := startCodexSession(t, c, iso, "worker", "--main")
 	defer func() {
 		if err := session.stop(c); err != nil {
 			t.Errorf("ending the session: %v", err)

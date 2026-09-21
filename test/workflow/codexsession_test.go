@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -16,8 +17,52 @@ type codexSession struct {
 	name     string
 	state    string // where the session writes what `rewake list` told it
 	accepted string // where it writes the conversation id the server gave it
-	home     string
-	process  *owned
+	mailbox  string // where it writes what its own `rewake inbox` returned
+	exitFile string // the file that asks this session to stop
+	turns    string // where it records the turns it accepted
+	// delivered is where it records the id of every message a delivery named.
+	delivered string
+	home      string
+	process   *owned
+}
+
+// mailboxRead is what this session's own `rewake inbox` returned, as the
+// session wrote it. A scenario reads this file rather than the mailbox itself:
+// the point is what the session saw, not what the test can see.
+func (s *codexSession) mailboxRead() string {
+	raw, err := os.ReadFile(s.mailbox)
+	if err != nil {
+		return ""
+	}
+	return string(raw)
+}
+
+// deliveredIDs are the message ids this session was told about, one per line,
+// with an unreadable file and an empty one answering alike — both mean the
+// scenario has nothing to correlate against, and both make it fail.
+// as the session recorded them when the delivery arrived. A report names the
+// messages it settles; these are what that naming has to match.
+func (s *codexSession) deliveredIDs() []string {
+	raw, err := os.ReadFile(s.delivered)
+	if err != nil {
+		return nil
+	}
+	var ids []string
+	for _, line := range strings.Split(string(raw), "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			ids = append(ids, line)
+		}
+	}
+	return ids
+}
+
+// acceptedTurns is what this session recorded about the turns it accepted.
+func (s *codexSession) acceptedTurns() string {
+	raw, err := os.ReadFile(s.turns)
+	if err != nil {
+		return ""
+	}
+	return string(raw)
 }
 
 // acceptedThread is the conversation the server named, as the session's own
@@ -35,7 +80,7 @@ func (s *codexSession) acceptedThread() string {
 // startCodexSession puts the shim on the case's PATH as `codex`, makes the
 // built rewake reachable to the session (it has to run `rewake list` itself),
 // and launches the wrapper as main so the session may see its own telemetry.
-func startCodexSession(t *testing.T, c *Case, iso *Isolation, name string, controls ...string) *codexSession {
+func startCodexSession(t *testing.T, c *Case, iso *Isolation, name, role string, controls ...string) *codexSession {
 	t.Helper()
 	installShim(t, c, iso)
 	// rewake appends the harness to the requested name.
@@ -43,9 +88,16 @@ func startCodexSession(t *testing.T, c *Case, iso *Isolation, name string, contr
 		name:     name + "-codex",
 		state:    filepath.Join(iso.Home, name+".state.json"),
 		accepted: filepath.Join(iso.Home, name+".accepted"),
+		// Per session: a shared stop file would end every session at once.
+		exitFile:  filepath.Join(iso.Home, name+".exit"),
+		turns:     filepath.Join(iso.Home, name+".turns"),
+		delivered: filepath.Join(iso.Home, name+".delivered"),
 	}
 
-	launch := iso.Command("--name", name, "--main", "codex")
+	// Only one session in a room may be main, and only a main sees telemetry.
+	// A scenario that needs two sessions gives that role to the one whose
+	// selection it has to observe.
+	launch := iso.Command("--name", name, role, "codex")
 	launch.Env = append(iso.Env(),
 		shimEnv+"=1",
 		"RW_SHIM_TEST_EXE="+testExecutable(t),
@@ -53,6 +105,11 @@ func startCodexSession(t *testing.T, c *Case, iso *Isolation, name string, contr
 		shimAcceptedFile+"="+session.accepted,
 	)
 	launch.Env = append(launch.Env, controls...)
+	// The mailbox the session reads with its own rewake, and what the scenario
+	// reads back afterwards.
+	session.mailbox = filepath.Join(iso.Home, name+".mailbox")
+	launch.Env = append(launch.Env, shimMailboxFile+"="+session.mailbox, shimExitFile+"="+session.exitFile,
+		shimTurnsFile+"="+session.turns, shimDeliveredFile+"="+session.delivered)
 	// Not marked as an expected failure: the shim is *asked* to stop and
 	// exits cleanly, so anything else is a real failure of the session and has
 	// to reach the verdict. The earlier blanket "failure expected" here hid an
@@ -70,7 +127,7 @@ func startCodexSession(t *testing.T, c *Case, iso *Isolation, name string, contr
 // scenario ends its own session: leaving that to the case's cleanup would
 // report every scenario as having left work running.
 func (s *codexSession) stop(c *Case) error {
-	if err := os.WriteFile(filepath.Join(s.home, "shim-exit"), nil, 0o600); err != nil {
+	if err := os.WriteFile(s.exitFile, nil, 0o600); err != nil {
 		return err
 	}
 	c.Note("waiting for the session to end")
