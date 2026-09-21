@@ -68,7 +68,7 @@ func TestEveryFormOfACallerOverrideIsSeen(t *testing.T) {
 // What the caller passed has to survive: dropping their arguments while
 // declining to add ours would be the same loss by another route.
 func TestCallerArgumentsSurviveALaunch(t *testing.T) {
-	args := []string{"--model", "gpt-5.6-terra", "--", "write the notes"}
+	args := []string{"--model", "chosen-model", "--", "write the notes"}
 	plan := launchWith(t, "", args)
 
 	joined := strings.Join(plan.Args, " ")
@@ -118,7 +118,7 @@ func TestAnyMentionKeepsTheBriefingOut(t *testing.T) {
 }
 
 func TestTheBriefingGoesInWhenNothingIsConfigured(t *testing.T) {
-	plan := launchWith(t, "model = \"gpt-5\"\n[sandbox_workspace_write]\nwritable_roots = [\"/var/data\"]\n", nil)
+	plan := launchWith(t, "model = \"configured-model\"\n[sandbox_workspace_write]\nwritable_roots = [\"/var/data\"]\n", nil)
 	value, passed := configValue(plan.Args, introKey)
 	if !passed || !strings.Contains(value, "rewake guide") {
 		t.Errorf("briefing = %q (passed %v), want it", value, passed)

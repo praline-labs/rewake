@@ -272,7 +272,7 @@ func (s *shimSession) startResponse(thread map[string]any) map[string]any {
 		"approvalPolicy":    "on-request",
 		"approvalsReviewer": "user",
 		"cwd":               "/work",
-		"model":             "gpt-5.6-luna",
+		"model":             "shim-model",
 		"modelProvider":     "openai",
 		// SandboxPolicy is a tagged object, not the bare mode string: the
 		// mode name belongs to SandboxMode, which this field is not.

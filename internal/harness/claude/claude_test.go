@@ -43,7 +43,7 @@ func indexOf(args []string, value string) int {
 // a rule. A flag appended there stops being a flag and becomes part of it.
 func TestAddedFlagsStayBeforeTheTerminator(t *testing.T) {
 	socket := filepath.Join(t.TempDir(), "api.sock")
-	plan := launch(t, []string{"--model", "haiku", "--", "write the release notes"}, socket)
+	plan := launch(t, []string{"--model", "chosen-model", "--", "write the release notes"}, socket)
 
 	terminator := indexOf(plan.Args, "--")
 	if terminator < 0 {

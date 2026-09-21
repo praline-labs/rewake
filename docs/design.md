@@ -349,7 +349,7 @@ Unit tests (`go test`):
 - argument parsing and the command table: the table's examples parse cleanly.
 
 Live tests, scripted under tmux, in a separate `/tmp` directory:
-1. `rewake claude --model haiku` and `rewake codex`, `rewake list` sees both.
+1. `rewake claude` and `rewake codex`, `rewake list` sees both.
 2. From a shell: `send claude "reply pong"` — a reply shows up on Claude's screen
    within seconds.
 3. From the Codex sandbox (`codex sandbox -P :workspace -- rewake send ...`) —

@@ -76,7 +76,7 @@ func TestLoosePositionalsAreRefused(t *testing.T) {
 }
 
 func TestHarnessArgumentsStayRaw(t *testing.T) {
-	result, err := parse([]string{"--name", "api", "claude", "--model", "haiku", "--", "write the notes", "", "--json"})
+	result, err := parse([]string{"--name", "api", "claude", "--model", "chosen-model", "--", "write the notes", "", "--json"})
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestHarnessArgumentsStayRaw(t *testing.T) {
 	}
 	// Compared element by element: joining them would hide a lost argument
 	// boundary and a dropped empty argument, which is how a prompt gets mangled.
-	want := []string{"--model", "haiku", "--", "write the notes", "", "--json"}
+	want := []string{"--model", "chosen-model", "--", "write the notes", "", "--json"}
 	if len(result.Call.Raw) != len(want) {
 		t.Fatalf("raw = %q, want %q", result.Call.Raw, want)
 	}

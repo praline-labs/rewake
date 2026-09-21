@@ -4,6 +4,72 @@ Gathered September 15-16, 2026. Versions: Claude Code 2.1.270, Codex CLI 0.154.0
 Tags: **[verified live]** — live on these versions; **[source]** — source;
 **[docs]** — official pages. Recheck facts before changing the adapter.
 
+**[verified live; Codex CLI 0.155.1; September 21, 2026]** What a model catalogue can
+be read from, and at what cost.
+
+`codex debug models` prints it as JSON: model names, descriptions, the effort levels
+each model offers — they differ per model — context windows, and visibility. It makes
+no model request, but refreshes through the network under the current account when its
+cache has expired; the cache is `~/.codex/models_cache.json`. The refreshed catalogue
+and the one built into the binary are not the same: `--bundled`, which skips the
+refresh and dumps what ships inside, lists nine entries where an ordinary call returns
+seven. That is what the experiment shows. That the list varies with the account follows
+from the code, not from this comparison.
+
+The same information, minus context windows, comes from the protocol method
+`model/list`, which is sturdier: it belongs to the protocol this adapter already
+speaks, where `codex debug` is a debug group with no such promise.
+
+Context windows need arithmetic, not quoting. Each model carries `context_window`, the
+value in effect, `max_context_window`, the ceiling, and
+`effective_context_window_percent`, the share of the result that is actually usable.
+The configuration key `model_context_window` does not merely narrow: it *replaces* the
+value in effect, clamped to the ceiling only when a ceiling is known — so it can raise
+the window as well as lower it (reference `e29eceb75`,
+`models-manager/src/model_info.rs:19`).
+
+The whole rule, in order. With the key set, the window is the smaller of the key and
+the ceiling when a ceiling exists, and the key alone when it does not. With no key, it
+is the value in effect, or the ceiling if that is missing. The usable window is that
+result multiplied by the percentage — not a share of the ceiling. The catalogue is
+printed before the key is applied, which is why this has to be computed rather than
+read off.
+
+**[verified live; Claude Code 2.1.270; September 21, 2026]** There is no command that
+lists models: the full list of subcommands in the help was read through, and none of
+them does that.
+
+The model flag does not validate its value: an unknown name passes in silence, where an
+unknown effort is answered immediately with the permitted set. What happens to that
+name afterwards was not observed — seeing it would need a real request — so the
+expectation that it fails later, at the provider, is an expectation, not a finding.
+
+Effort levels are obtainable reliably: an invalid value makes the harness print the
+permitted set itself, and the same set appears in the help.
+
+Models do exist in an internal catalogue cache in the Claude home. Its file name
+carries an identifier and a hash, and its contents follow the current login — so the
+catalogue is cached per login rather than per machine. It is undocumented, has an
+expiry, and may simply be absent on a fresh machine. No context window is recorded
+anywhere in that file: every key of it was examined.
+
+**That is a statement about the subcommands that were read and the catalogue cache,
+and about nothing else.** The status line is part of the CLI too, so "the CLI has no
+source" would already claim more than was looked at. Elsewhere
+there is more: the Agent SDK reports the available models together with their effort
+levels and can report context usage, the size of the window appears in a model's usage
+data, and the status line receives the context window size directly. This
+reconnaissance read the list of subcommands and the files on disk, not the SDK and not
+what the status line is handed, so it cannot say there is no source — only that it did
+not look where those are. What was not found anywhere is a ready-made catalogue of windows for
+all models without starting a session.
+
+**Three of those sources are unofficial**: the debug subcommand group, the internal
+cache, and the text of a warning message. `model/list` is part of an interface, but of
+the Codex protocol specifically. On the Claude Code side the documented route is the
+Agent SDK rather than the CLI, and it was not examined here. Anything built on the
+unofficial three has to treat their disappearance as ordinary, not exceptional.
+
 **[verified live; Codex CLI 0.155.1 and Claude Code 2.1.270; September 21, 2026]**
 How each harness takes a model and a reasoning effort for one launch, read from the
 installed binaries and checked by running them.

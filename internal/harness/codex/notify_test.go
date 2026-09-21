@@ -18,7 +18,7 @@ func launchPlan(t *testing.T, args []string) harness.LaunchPlan {
 }
 
 func TestServerReportsWithoutInstallingNotify(t *testing.T) {
-	codexHome(t, "model = \"gpt-5\"\n")
+	codexHome(t, "model = \"configured-model\"\n")
 	plan := launchPlan(t, nil)
 
 	if _, ok := configValue(plan.Args, notifyKey); ok || plan.Backend == nil {

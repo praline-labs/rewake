@@ -48,6 +48,16 @@ documentation is part of every change, not a task after it:
   never left beside the new and never postponed to a clean-up later.
 - A fact about a harness carries where it was verified (which version, live or
   read in the source), because these facts age.
+- A verbatim record of an observation is never edited afterwards, so it may
+  contain names the rest of the documentation avoids — a model's, for one. The
+  rule that keeps such names out protects the project from depending on any one
+  of them: they have no business in code, in configuration, or in text saying
+  how the system works. A record of what was seen on a given day is none of
+  those. Striking a name from it would not make the project more
+  provider-agnostic; it would make the evidence untrue, and an acceptance
+  document without evidence is empty. The dividing line: a name in text that
+  explains how something works or should work is incidental and goes; a name in
+  a record of what was observed is part of the observation and stays.
 
 ## Checks
 

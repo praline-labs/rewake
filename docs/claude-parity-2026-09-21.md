@@ -11,6 +11,11 @@ matrix for either harness.
 
 ## Versions and build identity
 
+A verbatim record of an observation is not edited, so this document names models
+that the rest of the documentation does not. That is the project rule on verbatim
+records, which lives with the others in AGENTS.md. Session names stay for the same
+reason, and because other documents refer to them.
+
 | Session | Role | Harness |
 | --- | --- | --- |
 | main-claude | main | Claude Code 2.1.270 |

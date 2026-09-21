@@ -79,7 +79,7 @@ Tests: delivery order by `id`; `pending` retries and becomes `failed` on TTL
 expiry; the status is written atomically; delivery to a nonexistent socket gives
 `pending`, and after the session dies, `failed`.
 
-**Live criterion:** `rewake claude --model haiku` in one terminal, `rewake send
+**Live criterion:** `rewake claude` in one terminal, `rewake send
 <name> "reply pong"` from another — a reply on screen within seconds; `list`
 shows the session; harness exit removes the record and socket, and pending
 messages get `failed`.
@@ -174,7 +174,7 @@ and gave the agent no sense that a tool was involved.
 - The intro shrank to what rewake is and "run `rewake guide`"; the instructions
   moved into the guide.
 
-**Live criterion, met:** two Claude Code sessions on Sonnet — one asked the other
+**Live criterion, met:** two Claude Code sessions — one asked the other
 a question on a shell's instruction, both read the guide on their own, the
 question and the answer each arrived as one line, and the end of the asking
 session's turn came back as `● rewake: web finished`. Then Claude Code and
@@ -371,6 +371,47 @@ paid/manual tiers opt-in. Its research answer is
 [check-runner-proposal.md](check-runner-proposal.md) with its selected scenarios in
 [check-runner-scenarios.md](check-runner-scenarios.md), September 21, 2026; no runner is
 implemented.
+
+A command that lists the models and effort levels a harness offers is **deferred**.
+Owner decision, September 21, 2026, asked directly: not now. The reconnaissance that
+would feed it is done and recorded in [research.md](research.md) — what can be read
+from each harness, how, and at what cost — so the work would start from facts rather
+than from scratch. Roughly a day.
+
+It would answer, per harness: which models are available to this account, which effort
+levels each of them takes, and what the configured context window is. For Codex the
+window comes from the catalogue and a configuration key, with arithmetic. For Claude
+Code neither the subcommands that were read nor the catalogue cache carries one — but
+the Agent SDK and the data handed to the status line do, and the reconnaissance did not
+go there. So the open question is not
+"is there a source" but "which of them is worth depending on", and nobody has yet found
+a catalogue of windows for every model that does not require starting a session.
+
+The sources are uneven: one protocol method, belonging to the Codex protocol, and three
+unofficial ones — a debug subcommand group, an undocumented per-login cache, and the
+text of a warning message. On the Claude Code side the documented route is the SDK.
+
+The requirement that shapes it: **a source that disappears must turn its cell into
+"unknown", never leave a stale truth standing.** Caches expire, debug commands are not
+promises, and an account's list changes. A table that keeps showing yesterday's answer
+because today's lookup failed is worse than one that admits it does not know — that is
+the same mistake as a check reporting success it did not earn, one layer up.
+
+A lead for the missing Claude Code telemetry collector (entry 5 of the
+[parity queue](harness-features.md)). Claude Code has a channel where the harness calls
+a command **we** name and hands it a structure describing the session, the context
+window size among its fields — so the source is the input to a program of ours, not
+text meant for a person. rewake already works this way elsewhere: the wrapper sets a
+command for the end of a turn, which calls `rewake turn-ended`
+(`internal/harness/hooks.go`). A different integration point, the same shape — the
+harness calls what we named and hands it data — and that shape looks like a fit for
+the collector.
+
+Not proposed, and not to be done: parsing the rendering of the status line. It is a
+display for a person, its format is not promised, and a reader of the screen would be
+fragile for no reason. How much that structure actually carries — model, effort,
+context fill, compactions, activity, the things collected from Codex — has not been
+established; that is its own reconnaissance.
 
 Persistent Git permissions remain a separate future item: explicit orchestrator
 event, scope to run and repository, preservation across later owner turns, and revocation. A running turn keeps its prior permission context.
