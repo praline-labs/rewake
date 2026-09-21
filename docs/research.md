@@ -4,6 +4,38 @@ Gathered September 15-16, 2026. Versions: Claude Code 2.1.270, Codex CLI 0.154.0
 Tags: **[verified live]** — live on these versions; **[source]** — source;
 **[docs]** — official pages. Recheck facts before changing the adapter.
 
+**[verified live; Codex CLI 0.155.1 and Claude Code 2.1.270; September 21, 2026]**
+How each harness takes a model and a reasoning effort for one launch, read from the
+installed binaries and checked by running them.
+
+**Read this before trusting a `--help` probe.** Appending `--help` to a command is the
+cheap way to ask "does this CLI accept that spelling", and on these two harnesses it
+answers different questions — or none:
+
+| Command | Exit | What it actually tells you |
+| --- | --- | --- |
+| `claude --definitely-not-a-flag x --help` | 0 | nothing: Claude Code takes any unknown flag beside `--help` and prints the help |
+| `codex --unknown --help` | 2 | the spelling is rejected — the useful form |
+| `codex --help --unknown` | 0 | nothing: `--help` before the flag short-circuits |
+| `codex -c not-a-setting --help` | 0 | nothing about the *setting*: only the flag's spelling was checked |
+
+So on Codex the probe works in exactly one arrangement — the flag first, `--help` last
+— and only for how a flag is written, never for what a configuration setting contains.
+On Claude Code it does not work at all, and a form has to be checked by running the
+command without `--help`: `claude -m x` answers "unknown option '-m'", which is how it
+is known that Claude Code has no short form for either flag. Claude Code takes both
+as flags: `--model <model>` and `--effort <level>`, where the levels it lists are
+low, medium, high, xhigh and max. Codex takes the model as `-m`/`--model <MODEL>`,
+but has no flag for the reasoning effort: it is the configuration key
+`model_reasoning_effort`, set for a single launch through the repeatable
+`-c key=value` override. The key name is confirmed in the reference tree at
+`e29eceb75` (`codex-rs/core/src/config/edit.rs:227`). Codex also accepts the model as
+the configuration key `model`, so a person can state that choice either way. Its
+override parser splits a setting on the first `=` and trims both halves
+(`codex-rs/utils/cli/src/config_override.rs`), which is why `-c 'model = "x"'` and
+`-c model="x"` are the same setting — verified live on 0.155.1, both accepted. Neither harness needs its
+configuration file touched for either setting.
+
 **[verified live; Codex CLI 0.155.1; September 21, 2026]** The installed binary emits
 its own protocol schema: `codex app-server generate-json-schema --experimental --out
 <DIR>` writes a bundle of about 4 MB, including the summary files

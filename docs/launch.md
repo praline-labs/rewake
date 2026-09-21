@@ -23,6 +23,51 @@ The common part of the wrapper:
 6. Remove the record, close the inbox (pending messages get the status `failed:
    session ended`), exit with the harness's code.
 
+### Launch defaults from the environment
+
+Sessions multiply, and one that quietly picks an expensive model costs real money
+for work that did not need it. So rewake can supply a default model and reasoning
+effort — as flags for a single launch, never by editing anyone's configuration.
+
+The values live in the environment, one pair per harness, because the harnesses
+neither name their models the same way nor take the reasoning effort the same way:
+
+| Variable | What it sets |
+| --- | --- |
+| `REWAKE_CODEX_MODEL` | the model for a Codex launch |
+| `REWAKE_CODEX_EFFORT` | its reasoning effort |
+| `REWAKE_CLAUDE_MODEL` | the model for a Claude Code launch |
+| `REWAKE_CLAUDE_EFFORT` | its reasoning effort |
+
+No model names appear in this repository. Which model is cheap, and what it is
+called, belongs to whoever runs the sessions.
+
+Three rules, all about not surprising anyone. An explicit flag always wins: a launch
+that already names a model or an effort gets nothing added and no note. An unset
+variable substitutes nothing — behaviour without configuration is exactly what it was
+before. And whatever is substituted is announced in a launch note naming the
+variable, because a silently swapped model is the worst kind of surprise.
+
+"Already named" means every way of naming it, because the way a person writes a
+choice must not decide whether it is heard. Checked against the installed binaries,
+not from memory:
+
+- **Claude Code** takes both as flags, `--model <model>` and `--effort <level>`,
+  apart or with `=`. Neither has a short form.
+- **Codex** takes the model as `--model` or `-m`, apart, with `=`, or joined
+  (`-mname`) — and also as the configuration key `model`. It has no flag for the
+  reasoning effort at all: that is the configuration key `model_reasoning_effort`.
+  Keys are recognised through `-c`/`--config` in every spelling, with whitespace
+  around the key allowed, because the CLI trims it.
+
+Not consulted, deliberately: the harnesses' own configuration files, and settings
+passed with `--settings` or a Codex profile. rewake neither reads nor edits a
+person's configuration, and cannot see into a file it was handed — so a model set
+there and a variable set for rewake would be two answers with no way to compare them.
+The variable wins, being the one set for rewake specifically. A Codex launch with a
+profile is refused outright before any of this, as are `--oss` and
+`--local-provider`.
+
 ### Room and role flags
 
 Launch flags precede the harness name. `--room <name>` selects the room and

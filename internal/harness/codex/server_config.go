@@ -1,8 +1,6 @@
 package codex
 
 import (
-	"strings"
-
 	"github.com/iiiokojiadbi/rewake/internal/harness"
 )
 
@@ -10,20 +8,9 @@ import (
 // receive explicit overrides and the briefing without editing the user's file.
 func serverConfigArgs(args []string) []string {
 	var result []string
-	visible := harness.BeforeTerminator(args)
-	for i := 0; i < len(visible); i++ {
-		arg := visible[i]
-		switch {
-		case arg == "-c" || arg == "--config":
-			if i+1 < len(visible) {
-				result = append(result, "-c", visible[i+1])
-				i++
-			}
-		case strings.HasPrefix(arg, "--config="):
-			result = append(result, "-c", strings.TrimPrefix(arg, "--config="))
-		case strings.HasPrefix(arg, "-c") && len(arg) > 2:
-			result = append(result, "-c", strings.TrimPrefix(arg[2:], "="))
-		}
+	// One parser for the spellings, canonical form on the way out.
+	for _, setting := range harness.FlagValues(args, configFlag, "--config") {
+		result = append(result, "-c", setting)
 	}
 	return result
 }

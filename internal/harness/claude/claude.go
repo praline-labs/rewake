@@ -35,6 +35,11 @@ const introFlag = "--append-system-prompt"
 // own hooks rather than instead of them.
 const settingsFlag = "--settings"
 
+// modelFlag and effortFlag are how Claude Code takes these for one session.
+const modelFlag = "--model"
+
+const effortFlag = "--effort"
+
 // toolFlag allows the rewake commands without a confirmation prompt for this
 // launch. Without it the agent can be messaged but cannot answer until a person
 // approves each reply.
@@ -77,7 +82,44 @@ func (claudeHarness) Summary() string {
 func (claudeHarness) Examples() []string {
 	return []string{
 		"rewake claude",
-		"rewake --name api claude --model haiku",
+		"rewake --name api claude --continue",
+	}
+}
+
+// claudeDefaults are the launch settings rewake may take from the environment.
+//
+// Every way a person can state either setting for one launch, checked against
+// the installed 2.1.270 rather than from memory. Both are ordinary flags —
+// "--model <model>" and "--effort <level>" — written apart or with '=', and
+// neither has a short form: "claude -m x" answers "unknown option '-m'".
+// Checking that with --help would have proved nothing: Claude Code accepts an
+// unknown flag beside --help and prints the help anyway.
+//
+// Deliberately not consulted: the settings files, and anything passed through
+// --settings. rewake does not read or edit a person's configuration, and this
+// adapter cannot see into a settings file it was handed. Somebody who sets a
+// model there and also sets the environment variable gets the variable, which
+// is the one they set for rewake specifically.
+//
+// Unlike Codex, neither setting has a configuration-key form to check.
+func claudeDefaults() []harness.Default {
+	return []harness.Default{
+		{
+			Env:     "REWAKE_CLAUDE_MODEL",
+			What:    "model",
+			Present: func(args []string) bool { return harness.HasFlag(args, modelFlag) },
+			Apply: func(args []string, value string) []string {
+				return harness.AddFlags(args, modelFlag, value)
+			},
+		},
+		{
+			Env:     "REWAKE_CLAUDE_EFFORT",
+			What:    "reasoning effort",
+			Present: func(args []string) bool { return harness.HasFlag(args, effortFlag) },
+			Apply: func(args []string, value string) []string {
+				return harness.AddFlags(args, effortFlag, value)
+			},
+		},
 	}
 }
 
@@ -115,7 +157,7 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 	if request.Intro && !harness.HasFlag(args, introFlag) {
 		args = harness.AddFlags(args, introFlag, brief.Intro(request.BriefContext()))
 	}
-	var notes []string
+	args, notes := harness.ApplyDefaults(args, claudeDefaults())
 	switch {
 	case harness.HasFlag(args, settingsFlag):
 		// Only one --settings is read, and replacing the caller's would drop

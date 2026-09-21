@@ -39,9 +39,71 @@ func (codexHarness) Summary() string {
 func (codexHarness) Examples() []string {
 	return []string{
 		"rewake codex",
-		"rewake --name web codex --model gpt-5.6-terra",
+		"rewake --name web codex --search",
 	}
 }
+
+// codexDefaults are the launch settings rewake may take from the environment.
+//
+// Every way a person can state either setting for one launch, checked against
+// the installed 0.155.1 and its argument parser rather than from memory:
+//
+//   - model: --model or -m, written apart, with '=', or joined ("-mname");
+//     and the configuration key `model` through -c/--config in any of its
+//     spellings, with whitespace around the key allowed.
+//   - reasoning effort: the configuration key `model_reasoning_effort` only.
+//     There is no flag for it; saying so is more useful than inventing one.
+//
+// Deliberately not consulted, each for a reason:
+//
+//   - ~/.codex/config.toml, and anything it includes. rewake does not read or
+//     edit a person's configuration (AGENTS.md), and a flag it adds would win
+//     over that file. Somebody who sets a model there and also sets the
+//     environment variable gets the variable; the variable is the thing they
+//     set for rewake specifically.
+//   - a profile (-p/--profile): a launch with one is refused outright before
+//     any of this, because its values are a layer this adapter cannot read.
+//   - --oss and --local-provider: refused outright for the same reason.
+//
+// The reasoning effort is a configuration key rather than a flag here, which
+// is why it is applied with -c.
+func codexDefaults() []harness.Default {
+	return []harness.Default{
+		{
+			Env:  "REWAKE_CODEX_MODEL",
+			What: "model",
+			Present: func(args []string) bool {
+				// Every way a person can choose a model for this launch:
+				// the flag in any spelling, including the joined short form
+				// "-mmodel" — Codex takes it, and a second --model then makes
+				// it refuse the arguments, so the session never starts — and
+				// the configuration key, which is the same choice said
+				// another way.
+				return len(harness.FlagValues(args, "--model", "-m")) > 0 || hasConfigKey(args, modelKey)
+			},
+			Apply: func(args []string, value string) []string {
+				return harness.AddFlags(args, "--model", value)
+			},
+		},
+		{
+			Env:  "REWAKE_CODEX_EFFORT",
+			What: "reasoning effort",
+			Present: func(args []string) bool {
+				return hasConfigKey(args, reasoningKey)
+			},
+			Apply: func(args []string, value string) []string {
+				return harness.AddFlags(args, "-c", reasoningKey+"="+quoteTOML(value))
+			},
+		},
+	}
+}
+
+// The configuration keys Codex reads these settings from. Either can also be
+// written as a flag, except the reasoning effort, which has no flag.
+const (
+	reasoningKey = "model_reasoning_effort"
+	modelKey     = "model"
+)
 
 func (codexHarness) Notes() []string {
 	return []string{
@@ -95,6 +157,16 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 	if err != nil {
 		return harness.LaunchPlan{}, err
 	}
+	// Before the server arguments are derived, on purpose: serverConfigArgs
+	// forwards -c settings to the app-server, so a reasoning effort added here
+	// reaches both halves and they agree. Moving this call below it would
+	// leave the server on a different setting, silently. The model is a flag
+	// rather than a setting, so it reaches the interface only — which is the
+	// adapter's existing behavior for every model flag, ours or the
+	// caller's.
+	args, defaultNotes := harness.ApplyDefaults(args, codexDefaults())
+	notes = append(notes, defaultNotes...)
+
 	socket := request.Socket
 	if socket == "" {
 		socket = filepath.Join(request.Dir, "server.sock")
@@ -162,26 +234,19 @@ func tmpNote(home, dir string, args []string, layered bool) string {
 // either spelling of the flag. Anything after "--" is input for the harness,
 // not a flag.
 func hasConfigKey(args []string, key string) bool {
-	visible := harness.BeforeTerminator(args)
-	for index, arg := range visible {
-		// Both spellings, and both shapes: "-c key=value" and "--config=key=value"
-		// are the same instruction, and missing one of them means overriding a
-		// setting the caller had already made.
-		switch {
-		case arg == configFlag || arg == "--config":
-			if index+1 < len(visible) && strings.HasPrefix(visible[index+1], key+"=") {
-				return true
-			}
-		case strings.HasPrefix(arg, "--config="):
-			if strings.HasPrefix(strings.TrimPrefix(arg, "--config="), key+"=") {
-				return true
-			}
-		case strings.HasPrefix(arg, "-c") && len(arg) > 2:
-			// Both "-ckey=value" and "-c=key=value": the CLI takes either, and
-			// missing one of them means overriding a setting the caller made.
-			if strings.HasPrefix(strings.TrimPrefix(arg[2:], "="), key+"=") {
-				return true
-			}
+	// One parser for the spellings of -c/--config, and this only has to know
+	// what a setting looks like. Three copies of the spelling rules is how one
+	// of them ends up missing a form.
+	//
+	// The key is taken up to the first '=' and trimmed, which is what the CLI
+	// itself does (utils/cli/src/config_override.rs at e29eceb75, splitn(2,
+	// '=') with trim on both halves). So `-c 'model = "x"'` sets the same key
+	// as `-c model="x"`, and treating them differently would let a default
+	// override a choice already made.
+	for _, setting := range harness.FlagValues(args, configFlag, "--config") {
+		name, _, found := strings.Cut(setting, "=")
+		if found && strings.TrimSpace(name) == key {
+			return true
 		}
 	}
 	return false
@@ -191,15 +256,7 @@ func hasConfigKey(args []string, key string) bool {
 // values are a layer this adapter cannot read, so overriding on top of one would
 // replace something it never saw.
 func hasProfile(args []string) bool {
-	for _, arg := range harness.BeforeTerminator(args) {
-		// Including the joined short form: "-pwork" selects a profile as surely
-		// as "-p work" does.
-		if arg == "-p" || arg == "--profile" || strings.HasPrefix(arg, "--profile=") ||
-			(strings.HasPrefix(arg, "-p") && len(arg) > 2) {
-			return true
-		}
-	}
-	return false
+	return len(harness.FlagValues(args, "--profile", "-p")) > 0
 }
 
 // quoteTOML renders a string as a TOML basic string.
