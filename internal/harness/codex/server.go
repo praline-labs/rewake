@@ -18,6 +18,14 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
 )
 
+// verifiedServerVersion is the native CLI the app-server transport was last observed
+// working against — two probes on 0.155.1, the ordinary path and steer, not a full
+// re-verification. A mismatch only produces a note: an unobserved version is a reason
+// to warn, not to refuse a launch the owner asked for. The test fixture repeats this
+// string as its own literal on purpose, so a typo here fails a test instead of
+// matching itself.
+const verifiedServerVersion = "codex-cli 0.155.1"
+
 type serverSession struct {
 	gatewayLog                 *os.File
 	capture                    func() *inbox.ReadBoundary
@@ -71,8 +79,8 @@ func (s *serverSession) Start(ctx context.Context, handler harness.CompletionHan
 	version.Env = s.env
 	raw, err := version.Output()
 	stopVersion()
-	if err != nil || string(raw) != "codex-cli 0.154.0\n" {
-		s.note("server transport was verified with codex-cli 0.154.0; installed version differs or could not be read")
+	if err != nil || string(raw) != verifiedServerVersion+"\n" {
+		s.note("server transport was last observed working with " + verifiedServerVersion + "; installed version differs or could not be read")
 	}
 	log, err := os.OpenFile(s.upstream+".log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
 	if err != nil {

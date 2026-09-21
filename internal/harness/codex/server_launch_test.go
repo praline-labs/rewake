@@ -49,8 +49,26 @@ func TestDifferentServerVersionWarnsWithoutRefusing(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer server.Close()
-	if len(notes) != 1 || !strings.Contains(notes[0], "0.154.0") {
+	if len(notes) != 1 || !strings.Contains(notes[0], verifiedServerVersion) {
 		t.Fatalf("version mismatch warning=%v", notes)
+	}
+}
+
+// The fixture prints its own literal rather than the constant, so this test fails
+// on a typo in the pin instead of comparing the constant with itself.
+func TestMatchingServerVersionWarnsAboutNothing(t *testing.T) {
+	fakeServerExecutable(t)
+	codexHome(t, "")
+	dir := t.TempDir()
+	path := filepath.Join(dir, "s.sock")
+	server := newServer(path, []string{"app-server", "--listen", "unix://" + path}, os.Environ(), dir)
+	var notes []string
+	if err := server.Start(context.Background(), harness.CompletionHandler{}, func(note string) { notes = append(notes, note) }); err != nil {
+		t.Fatal(err)
+	}
+	defer server.Close()
+	if len(notes) != 0 {
+		t.Fatalf("pinned version produced notes=%v", notes)
 	}
 }
 

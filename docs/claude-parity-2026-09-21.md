@@ -107,7 +107,45 @@ socket`, `delivered to review-claude via socket` and `delivered to luna-codex vi
 app-server`, and all three returned a `finished` report. That establishes launch with
 registration, task delivery, a report back and — for the Codex session — telemetry
 collection, on Codex CLI 0.155.1 and Claude Code 2.1.270. It establishes nothing
-beyond that ordinary path: no other row of the feature map was re-verified on 0.155.1.
+beyond that ordinary path; the one row re-verified on 0.155.1 beyond it is HF-21,
+below.
+
+## Mid-turn delivery on Codex CLI 0.155.1
+
+A second probe, run at 10:10–10:11 because the pin was about to move and the steer
+branch — delivery into a turn already running — had never been observed on this
+version. Sender and observer: main-claude. Recipient: luna-codex, Codex CLI 0.155.1,
+role general, model gpt-5.6-luna, effort low. Same installed rewake build.
+
+The recipient ran four separate `date && sleep 10 && date` calls:
+
+| Call | Start | End |
+| --- | --- | --- |
+| 1 | 10:10:42.228 | 10:10:52.230 |
+| 2 | 10:10:55.357 | 10:11:05.360 |
+| 3 | 10:11:09.130 | 10:11:19.132 |
+| 4 | 10:11:22.612 | 10:11:32.614 |
+
+The sender logged `delivered to luna-codex via app-server` at 10:10:58.293, inside the
+second call. A `rewake list` snapshot taken immediately before the send showed the
+recipient `working` — positive evidence of a busy session, not an inference from a
+sleep having been started. The notification appeared to the recipient after the second
+call and before the third:
+
+    🟢 Rewake: main-claude notify, 1 new message
+      ↳ Метка STEER-PROBE-0155. Письмо отправлено посреди твоей сер…
+
+The series was not interrupted, the fourth call ran normally, and the original task
+returned its own result. So on 0.155.1 the steer branch accepts a message into an
+active turn, the delivery reaches the context at the next boundary between tools, and
+the original work keeps its own report.
+
+Not established by this probe: conversation selection after `/new` while waiting,
+refusal of a stale target, the `stopped` path from a keyboard interruption (which
+needs a person at the keyboard), and the behaviour of a multi-message group arriving
+during an active turn. One run, no repeats, no race coverage. One boundary of the
+observation itself: the sender cannot see the moment the message entered the session —
+only its own send timestamp and the recipient's boundary between calls.
 
 ## What these probes do not establish
 
@@ -131,4 +169,6 @@ run:
   No recovery, restart, compaction or concurrent-sender case was exercised, and no
   regression was repeated under shuffle or race conditions at the live level.
 - **Build identity.** Commit 4cfd3cf is cited from the install record; no per-process
-  executable hash was taken, unlike earlier acceptance rounds.
+  executable hash was taken for any of these runs.
+- **Everything else on 0.155.1.** Beyond the ordinary path and the steer branch, no
+  row of the feature map was re-verified on that version.

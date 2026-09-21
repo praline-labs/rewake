@@ -163,7 +163,8 @@ may be displayed with explicit labels; cached data is not a fresh measurement.
 ## Evidence and acceptance
 
 Protocol research used reference revision `44b9011611e1f4213ef34bd51b33476475803a94`,
-with native version 0.154.0 as the existing tested adapter target. Exact reference
+against native version 0.154.0, which was the adapter target then; the target moved to
+0.155.1 on September 21, 2026 without repeating this research. Exact reference
 source/binary equivalence is not asserted. Relevant paths: `tui/src/token_usage.rs`,
 `app-server-protocol/src/protocol/v2/thread.rs`, `v2/item.rs`,
 `app-server/src/bespoke_event_handling.rs`, `request_processors/token_usage_replay.rs`

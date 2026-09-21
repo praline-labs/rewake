@@ -117,3 +117,10 @@ gate:** a failure there blocks, because that path must not break. **Claude Code 
 search column:** a failure there is a finding to investigate. The same scenario text
 runs on both; what differs is what red means, and that difference belongs in the
 summary, not in the reader's head.
+
+**The asymmetry is temporary, and ending it is the owner's call** — the decision of
+September 21, 2026 and its wording live in the legend of
+[harness-features.md](harness-features.md). Two consequences for the runner: it must
+not promote the Claude Code column on its own, whatever the matrix looks like, and
+until the owner says otherwise the summary keeps saying which column a red result came
+from.

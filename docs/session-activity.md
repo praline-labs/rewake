@@ -83,8 +83,9 @@ and no-blind-replay rules remain. Kernel filesystem stalls are not claimed preem
 
 ThreadStatus and active flags were read at reference revision
 `44b9011611e1f4213ef34bd51b33476475803a94`,
-`app-server-protocol/src/protocol/v2/thread.rs:1636`. The adapter's existing native
-target is 0.154.0; exact source/binary equivalence is not asserted.
+`app-server-protocol/src/protocol/v2/thread.rs:1636`. The adapter target at the time
+was 0.154.0; it moved to 0.155.1 on September 21, 2026, and these reads were not
+repeated against it. Exact source/binary equivalence is not asserted.
 
 ACT-1's evidence-aware departure repair and ACT-2's process-fixture isolation passed
 independent re-review. Permission errors retain the known worker; fixture assertions
@@ -94,8 +95,8 @@ and the reported failing pair's 30 repetitions passed before the acceptance buil
 The owner installed state-only revision 4, then the reviewed activity-3 extension on
 September 19, 2026. Final installed binary SHA-256:
 `613b9f824d13ae9cff7849a5f3effb5a53cec2fe1fd793bfacc2f18fdf7957e3`.
-These are owner-window and registered-peer observations on the existing native
-0.154.0 adapter target, not only fixture results:
+These are owner-window and registered-peer observations taken while the adapter
+target was 0.154.0, not only fixture results:
 
 - Both candidates started with the normal configuration without reconnect or
   flicker. Quit logs contained only peer EOF; native stderr was empty.

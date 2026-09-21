@@ -219,7 +219,7 @@ a decision about who pays:
 | --- | --- | --- |
 | Pure Go domain invariants | Yes, already | Free, in the five checks |
 | Protocol fixtures — local doubles for the native surface | Yes | Free; the dominant tier for the new suite |
-| Real harness binary against a local scripted endpoint | Yes | Free of account, but needs the harness installed and version-pinned; isolation must hold or the case stops. Today this tier runs on the mismatch branch — see below |
+| Real harness binary against a local scripted endpoint | Yes | Free of account, but needs the harness installed and version-pinned; isolation must hold or the case stops |
 | Real-model semantic — the model itself chooses to read the inbox | No | Paid per run; an explicit opt-in target, never in the default suite (three conditions below) |
 | Owner TUI — what a person sees on screen | No, permanently | Manual acceptance; no typing into anyone's terminal |
 
@@ -233,12 +233,11 @@ no real credentials are nearby, no network is used, and a substituted harness do
 reach outside. The network/mount/PID boundaries remain mandatory for the paid tier,
 where real credentials do live alongside.
 
-**The pinned version is already stale.** `internal/harness/codex/server.go` runs `codex`
-from `PATH` and compares the output against exactly `codex-cli 0.154.0`, printing a
-transport-mismatch note otherwise. Installed is 0.155.1, so that note prints on every
-launch today. Two consequences for the costs above: the fixture tier is reachable only
-through a `PATH` shim, and the real-harness tier currently runs the mismatch branch.
-The code is not changed here — see **Open**.
+**The pinned version.** `internal/harness/codex/server.go` runs `codex` from `PATH` and
+compares the output against one constant, warning when it differs. That constant was
+0.154.0 while 0.155.1 was installed, so the note printed on every launch; it moved to
+0.155.1 on September 21, 2026 (below). One consequence stands regardless: the fixture
+tier is reachable only through a `PATH` shim, which is why the fixture places one.
 
 Three conditions govern the paid tier, decided September 21, 2026:
 
@@ -336,6 +335,16 @@ that comparison.
 
 ## Decisions and what is still open
 
+**The owner's acceptance criterion, September 21, 2026**, quoted as given:
+
+> да, планируйте вместе как все разложить, решиние должно быть просто поддерживать
+
+The implementation is judged on how easy it is to maintain, ahead of how much it
+covers. That is a criterion, not a preference: a design that covers more
+rows but is harder to keep working loses to one that covers fewer and stays simple.
+Every choice below was made against it, and so should the ones that follow — layout
+included.
+
 Settled on September 21, 2026, between the orchestrator and this session: the standard
 library holds and testscript is not taken (above); `go test` is the engine; the summary
 parser is a Go program, not a shell pipeline; the paid tier is an opt-in target under
@@ -355,11 +364,13 @@ Two more were settled the same day:
   compiling the package on every gate run — is a few milliseconds and is itself the
   rot check.
 
-Open:
+**The transport pin moved to 0.155.1** on September 21, 2026, on the owner's decision
+("пин можно сделать") and on two probes of that day: the ordinary path, and steer into
+an active turn. It now lives in one constant, `verifiedServerVersion` in
+`internal/harness/codex/server.go`, so the real-harness tier no longer runs the
+mismatch branch. Not observed on that version, and not to be claimed by the suite:
+conversation selection after `/new`, stale-target refusal, `stopped` from an
+interruption, and a group arriving during an active turn.
 
-- **The transport pin against Codex CLI 0.155.1.** `internal/harness/codex/server.go`
-  still pins `codex-cli 0.154.0`, so the mismatch note prints on every launch and the
-  real-harness tier runs that branch. Either confirm the transport on 0.155.1 and move
-  the pin, or leave it deliberately and say so. Not touched by this proposal.
-- **The standard-library rule**, and only if the scenario count later makes testscript
-  worth raising with the owner.
+Open: **the standard-library rule**, and only if the scenario count later makes
+testscript worth raising with the owner.

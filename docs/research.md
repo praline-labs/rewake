@@ -3,6 +3,19 @@
 Gathered September 15-16, 2026. Versions: Claude Code 2.1.270, Codex CLI 0.154.0.
 Tags: **[verified live]** — live on these versions; **[source]** — source;
 **[docs]** — official pages. Recheck facts before changing the adapter.
+
+**[verified live; Codex CLI 0.155.1; September 21, 2026]** The installed CLI moved to
+0.155.1 and the adapter's pin moved with it. Observed on that version: launch with
+registration, a task accepted through the app-server, a `finished` report back and
+telemetry collection ([claude-parity-2026-09-21.md](claude-parity-2026-09-21.md));
+and, in a second probe, steer — a message sent inside the second of four sleep-10
+calls, with the worker observed `working` in a snapshot taken just before the send,
+reached the recipient at the next boundary between tools, the series continued and the
+original task returned its own result. Not observed on this version: conversation
+selection after `/new`, refusal of a stale target, `stopped` from a keyboard
+interruption, and a multi-message group arriving during an active turn. One probe
+each, no repeats and no race coverage. Every fact below carries the version it was
+taken on; a fact tagged 0.154.0 has not been re-checked on 0.155.1.
 September 20: [native mailbox contract](native-mailbox.md) and
 [owner/installed acceptance with evidence limits](native-mailbox-acceptance.md).
 
