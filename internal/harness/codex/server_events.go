@@ -65,6 +65,11 @@ func (s *serverSession) persistOutcomes() error {
 
 // One deadline covers the complete shutdown drain, including an already-running
 // publish. A late successful callback cannot dequeue its still-journaled head.
+//
+// The five seconds below are the largest stage of an ordinary shutdown, and the
+// workflow suite's termination budget (test/workflow) is the sum of those
+// stages: a change here has to be reflected there, or the suite starts killing
+// sessions before this drain can finish.
 func (s *serverSession) report(ctx context.Context) {
 	defer close(s.stopped)
 	publishCtx, cancel := context.WithCancel(context.Background())

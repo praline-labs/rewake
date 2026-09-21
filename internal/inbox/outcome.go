@@ -11,6 +11,9 @@ import (
 )
 
 // shutdownLockWait is how long the last writes wait for the mailbox lock.
+//
+// The workflow suite's termination budget (test/workflow) is the sum of this and
+// the other shutdown stages, so a change here has to be reflected there.
 const shutdownLockWait = 2 * time.Second
 
 // lock runs fn under the mailbox lock, waiting no longer than the server's

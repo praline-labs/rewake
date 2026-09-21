@@ -79,9 +79,15 @@ scenario is a Go function taking a fixture; the harness comes from a table.
 - *New scenario:* one function, one entry in the scenario list. It runs against every
   harness immediately.
 - *Code before the first scenario runs:* more than `go test` alone suggests. It gives
-  process isolation, `-race`, `-shuffle`, parallelism, subtests and machine-readable
-  output; the fixture still has to build the binary, place the shims, establish the
-  private environment, express per-case deadlines and define the observation struct.
+  process isolation, `-race`, `-shuffle`, subtests and machine-readable output; the
+  fixture still has to build the binary, place the shims, establish the private
+  environment, express per-case deadlines and define the observation struct.
+- *Parallelism:* `go test` offers it, and the suite does not take it. A case is
+  identified by descent from the test process, so two cases at once would each see
+  the other's processes as unaccounted for — signalling a neighbour's work and
+  recording strays against a case that never started them. Using it needs a real
+  boundary per case, a cgroup or a pid namespace, which is not worth it for a suite
+  whose cases are measured in seconds.
 - *Harness version bump:* fixture-local; a changed native surface changes one
   implementation, not the scenarios.
 

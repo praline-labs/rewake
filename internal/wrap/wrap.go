@@ -332,6 +332,9 @@ func catchSignals() (chan os.Signal, func()) {
 
 // forwardGrace is how long the harness is given to act on a signal it may have
 // received directly before the wrapper repeats it.
+//
+// The workflow suite's termination budget (test/workflow) is the sum of this and
+// the other shutdown stages, so a change here has to be reflected there.
 const forwardGrace = 300 * time.Millisecond
 
 // forward passes a termination request on to the harness — once, and only if it

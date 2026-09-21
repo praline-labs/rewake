@@ -173,6 +173,10 @@ func (s *serverSession) Thread() (string, error) {
 	return "", inbox.ErrThreadUnavailable
 }
 
+// stopProcess ends the native process group: SIGTERM, then SIGKILL two seconds
+// later. Those two seconds are one stage of an ordinary shutdown, and the
+// workflow suite's termination budget (test/workflow) is the sum of those
+// stages, so a change here has to be reflected there.
 func (s *serverSession) stopProcess() {
 	if s.process == nil {
 		return

@@ -52,16 +52,47 @@ documentation is part of every change, not a task after it:
 ## Checks
 
 ```bash
-gofumpt -l .                    # empty (stricter than gofmt, so gofmt is covered)
+gofumpt -l $(go list -f '{{.Dir}}' ./...)   # empty; the module, not the tree, see below
 go vet ./...
 staticcheck ./...
 golangci-lint run ./...         # config in .golangci.yml; golangci-lint fmt formats
-go test -race -shuffle=on ./...
+env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
+  go test -race -shuffle=on ./...
 ```
 
 All five green is the condition for a commit. A red check is never somebody
-else's: everything in the working tree belongs to the current work. The tools
-are installed with `go install` into `~/go/bin`, which has to be on `PATH`:
+else's: everything in the working tree belongs to the current work.
+
+Two forms differ from the obvious one. `gofumpt` walks the filesystem rather
+than the module, so a plain `.` reaches ignored research archives that are not
+part of the project; the package list keeps it to the module.
+
+And `go test` inherits this session's `REWAKE_*` variables unless they are
+cleared. The tests pass either way — checked on September 21, 2026 by running
+three packages with the variables set — so the risk is not a red run: it is a
+test writing into the owner's live state directory, or reading the running
+session as its own. Clear them.
+
+The workflow suite in `test/workflow` runs a built rewake end to end. It is off
+by default — its scenarios skip themselves, so the five checks stay cheap while
+still compiling and analyzing the code. To run it:
+
+```bash
+env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
+  REWAKE_WORKFLOW=1 go test -count=1 -v ./test/workflow/...
+```
+
+It builds its own binary and runs in a private HOME, state directory and PATH;
+it never touches an installed rewake or a live session. With the switch set and
+no scenario selected, the run fails rather than reporting green on nothing.
+
+`-v` is in that command on purpose: `go test` shows nothing a passing package
+printed, so without it the line naming how many scenarios ran — and which — is
+invisible, and a run that exercised three of four looks the same as one that
+exercised all four.
+
+The tools are installed with `go install` into `~/go/bin`, which has to be on
+`PATH`:
 
 ```bash
 go install honnef.co/go/tools/cmd/staticcheck@latest mvdan.cc/gofumpt@latest \
