@@ -1,7 +1,8 @@
 # rewake: first-version design
 
-The facts behind this design live in `docs/research.md`. This document covers what we're
-building and how.
+The facts behind this design live in `docs/research.md` and its two companions,
+`docs/research-launch.md` and `docs/research-protocol.md`, split by how a fact is
+obtained. This document covers what we're building and how.
 
 ## Goal
 

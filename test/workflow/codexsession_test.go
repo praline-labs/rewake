@@ -56,6 +56,14 @@ func (s *codexSession) deliveredIDs() []string {
 	return ids
 }
 
+// alive reports whether the session is still running — the process and the
+// group it owns. A session that left before the case was judged took its
+// evidence with it, and every observation recorded from its files describes a
+// session that no longer exists.
+func (s *codexSession) alive() bool {
+	return !s.process.finished() && s.process.groupAlive()
+}
+
 // acceptedTurns is what this session recorded about the turns it accepted.
 func (s *codexSession) acceptedTurns() string {
 	raw, err := os.ReadFile(s.turns)

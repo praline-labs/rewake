@@ -162,7 +162,24 @@ func shimReportState() int {
 		if _, err := os.Stat(os.Getenv(shimExitFile)); err == nil {
 			return 0
 		}
+		if os.Getenv(shimExitAfterTurn) != "" && workedATurn() {
+			// Nobody asked it to stop. This is the control for "the session
+			// was still there when the case was judged".
+			return 0
+		}
 		time.Sleep(100 * time.Millisecond)
 	}
 	return 0
+}
+
+// workedATurn reports whether this session has recorded a turn yet. The two
+// halves of the shim are separate processes, so the file is how the client
+// learns what the server did.
+func workedATurn() bool {
+	turns := os.Getenv(shimTurnsFile)
+	if turns == "" {
+		return false
+	}
+	info, err := os.Stat(turns)
+	return err == nil && info.Size() > 0
 }

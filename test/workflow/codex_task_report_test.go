@@ -37,6 +37,7 @@ func TestTaskReport(t *testing.T) {
 			"the recipient read its own mailbox",
 			"the report reaches the sender",
 			"the report corresponds to the message that was delivered",
+			"both sessions are still running when the case is judged",
 		},
 		Deadline: 90 * time.Second,
 	})
@@ -122,6 +123,29 @@ func TestTaskReport(t *testing.T) {
 	}
 	c.Observed("the report corresponds to the message that was delivered",
 		"settles exactly "+task.ID+", the message the recipient consumed")
+
+	// Last, and deliberately after everything else: every observation above
+	// was read from a file, and a file outlives the session that wrote it. A
+	// session that had already left would make all of them describe something
+	// that is no longer there.
+	if !worker.alive() || !sender.alive() {
+		c.Contradicted("both sessions are still running when the case is judged",
+			"worker alive: %v, sender alive: %v", worker.alive(), sender.alive())
+		return
+	}
+	c.Observed("both sessions are still running when the case is judged",
+		"neither session left before the verdict")
+}
+
+// countReports is how many messages of one kind a session read from another.
+func countReports(reader, about *codexSession, kind string) int {
+	seen := 0
+	for _, message := range readMessages(reader) {
+		if message.From == about.name && message.Kind == kind {
+			seen++
+		}
+	}
+	return seen
 }
 
 // reportView is the part of a message a scenario about reports needs: who sent

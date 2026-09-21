@@ -322,13 +322,13 @@ Read, not verified here; each is cited for the idea taken, and the fit noted.
 Options B, C and D are costed above; the rest are the alternatives that did not reach
 that comparison.
 
-- **An external scenario engine (testscript)** — two reasons, and the second binds. The
-  fit is partial: strongest at matching command output, while our invariants concern a
-  second process's observed state. And "Go, standard library only" is the owner's rule;
-  the first entry in `go.mod` changes the project's profile, which is not a decision to
-  take while they are away. Revisit deliberately — with the owner, not around them —
-  once there are more than roughly a dozen scenarios with visible repetition between
-  them. That is a concrete case, not a workaround.
+- **An external scenario engine (testscript)** — the fit is partial: it is strongest at
+  matching command output, while our invariants concern a second process's observed
+  state. That is the whole reason now. The second reason recorded here on September 21,
+  2026 — that this project took no dependencies — was lifted by the owner the same day;
+  a dependency is now an ordinary decision, judged on transitive dependencies and
+  maintenance. Revisit once there are more than roughly a dozen scenarios with visible
+  repetition between them. That is a concrete case, not a workaround.
 - **Extending the in-process integration test instead of a new location** — it shares
   the package under test, so it cannot exercise a real binary, and growing it blurs the
   unit and workflow tiers inside one `go test ./...`.

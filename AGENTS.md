@@ -24,6 +24,11 @@ forever.
    `docs/delivery.md` (sending, reading, reports, the answer to a question).
 3. `docs/research.md` — facts about each harness, marked with where they were
    verified. They age with harness versions: re-check before touching an adapter.
+   Split by how a fact is obtained, because that is how it ages:
+   `docs/research-launch.md` for what a binary answers when you run it — models,
+   efforts, argument forms; `docs/research-protocol.md` for what the generated
+   schema and the reference tree state; `docs/research.md` for what only a running
+   session shows.
 
 ## Keeping the documentation true
 
@@ -35,7 +40,8 @@ documentation is part of every change, not a task after it:
 - A change of behaviour or contract lands in the same commit as the code:
   `docs/flow.md` when the path of a message changes, `docs/design.md`,
   `docs/launch.md` or `docs/delivery.md` when the mechanism does,
-  `docs/research.md` when a fact about a harness is learned or found wrong.
+  `docs/research.md` — or its launch or protocol companion, whichever matches how
+  the fact was obtained — when a fact about a harness is learned or found wrong.
 - Every review round and every milestone is recorded in `docs/roadmap.md` as
   soon as it closes: what was found, what was done, what stays open. Older
   rounds move to `docs/reviews-later.md`; a file that passes 400 lines is split
@@ -78,10 +84,8 @@ than the module, so a plain `.` reaches ignored research archives that are not
 part of the project; the package list keeps it to the module.
 
 And `go test` inherits this session's `REWAKE_*` variables unless they are
-cleared. The tests pass either way — checked on September 21, 2026 by running
-three packages with the variables set — so the risk is not a red run: it is a
-test writing into the owner's live state directory, or reading the running
-session as its own. Clear them.
+cleared. Clear them: the risk is not a red run but a test writing into the
+owner's live state directory, or reading the running session as its own.
 
 The workflow suite in `test/workflow` runs a built rewake end to end. It is off
 by default — its scenarios skip themselves, so the five checks stay cheap while
@@ -171,7 +175,12 @@ delivered yet.
 
 ## Code
 
-Go, standard library only. Comments and doc comments answer "why" rather than
+Go. A dependency is allowed, and each one is its own decision: the library must
+carry no transitive dependencies and be actively maintained, and one library that
+covers several places beats three that each cover one. Prefer the standard library
+where it does the job.
+
+Comments and doc comments answer "why" rather than
 restating the line below them. Everything — code, comments, docs, commit
 messages — is in English; commits are a single subject line, no body.
 

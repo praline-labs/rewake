@@ -4,165 +4,13 @@ Gathered September 15-16, 2026. Versions: Claude Code 2.1.270, Codex CLI 0.154.0
 Tags: **[verified live]** — live on these versions; **[source]** — source;
 **[docs]** — official pages. Recheck facts before changing the adapter.
 
-**[verified live; Codex CLI 0.155.1; September 21, 2026]** What a model catalogue can
-be read from, and at what cost.
-
-`codex debug models` prints it as JSON: model names, descriptions, the effort levels
-each model offers — they differ per model — context windows, and visibility. It makes
-no model request, but refreshes through the network under the current account when its
-cache has expired; the cache is `~/.codex/models_cache.json`. The refreshed catalogue
-and the one built into the binary are not the same: `--bundled`, which skips the
-refresh and dumps what ships inside, lists nine entries where an ordinary call returns
-seven. That is what the experiment shows. That the list varies with the account follows
-from the code, not from this comparison.
-
-The same information, minus context windows, comes from the protocol method
-`model/list`, which is sturdier: it belongs to the protocol this adapter already
-speaks, where `codex debug` is a debug group with no such promise.
-
-Context windows need arithmetic, not quoting. Each model carries `context_window`, the
-value in effect, `max_context_window`, the ceiling, and
-`effective_context_window_percent`, the share of the result that is actually usable.
-The configuration key `model_context_window` does not merely narrow: it *replaces* the
-value in effect, clamped to the ceiling only when a ceiling is known — so it can raise
-the window as well as lower it (reference `e29eceb75`,
-`models-manager/src/model_info.rs:19`).
-
-The whole rule, in order. With the key set, the window is the smaller of the key and
-the ceiling when a ceiling exists, and the key alone when it does not. With no key, it
-is the value in effect, or the ceiling if that is missing. The usable window is that
-result multiplied by the percentage — not a share of the ceiling. The catalogue is
-printed before the key is applied, which is why this has to be computed rather than
-read off.
-
-**[verified live; Claude Code 2.1.270; September 21, 2026]** There is no command that
-lists models: the full list of subcommands in the help was read through, and none of
-them does that.
-
-The model flag does not validate its value: an unknown name passes in silence, where an
-unknown effort is answered immediately with the permitted set. What happens to that
-name afterwards was not observed — seeing it would need a real request — so the
-expectation that it fails later, at the provider, is an expectation, not a finding.
-
-Effort levels are obtainable reliably: an invalid value makes the harness print the
-permitted set itself, and the same set appears in the help.
-
-Models do exist in an internal catalogue cache in the Claude home. Its file name
-carries an identifier and a hash, and its contents follow the current login — so the
-catalogue is cached per login rather than per machine. It is undocumented, has an
-expiry, and may simply be absent on a fresh machine. No context window is recorded
-anywhere in that file: every key of it was examined.
-
-**That is a statement about the subcommands that were read and the catalogue cache,
-and about nothing else.** The status line is part of the CLI too, so "the CLI has no
-source" would already claim more than was looked at. Elsewhere
-there is more: the Agent SDK reports the available models together with their effort
-levels and can report context usage, the size of the window appears in a model's usage
-data, and the status line receives the context window size directly. This
-reconnaissance read the list of subcommands and the files on disk, not the SDK and not
-what the status line is handed, so it cannot say there is no source — only that it did
-not look where those are. What was not found anywhere is a ready-made catalogue of windows for
-all models without starting a session.
-
-**Three of those sources are unofficial**: the debug subcommand group, the internal
-cache, and the text of a warning message. `model/list` is part of an interface, but of
-the Codex protocol specifically. On the Claude Code side the documented route is the
-Agent SDK rather than the CLI, and it was not examined here. Anything built on the
-unofficial three has to treat their disappearance as ordinary, not exceptional.
-
-**[verified live; Codex CLI 0.155.1 and Claude Code 2.1.270; September 21, 2026]**
-How each harness takes a model and a reasoning effort for one launch, read from the
-installed binaries and checked by running them.
-
-**Read this before trusting a `--help` probe.** Appending `--help` to a command is the
-cheap way to ask "does this CLI accept that spelling", and on these two harnesses it
-answers different questions — or none:
-
-| Command | Exit | What it actually tells you |
-| --- | --- | --- |
-| `claude --definitely-not-a-flag x --help` | 0 | nothing: Claude Code takes any unknown flag beside `--help` and prints the help |
-| `codex --unknown --help` | 2 | the spelling is rejected — the useful form |
-| `codex --help --unknown` | 0 | nothing: `--help` before the flag short-circuits |
-| `codex -c not-a-setting --help` | 0 | nothing about the *setting*: only the flag's spelling was checked |
-
-So on Codex the probe works in exactly one arrangement — the flag first, `--help` last
-— and only for how a flag is written, never for what a configuration setting contains.
-On Claude Code it does not work at all, and a form has to be checked by running the
-command without `--help`: `claude -m x` answers "unknown option '-m'", which is how it
-is known that Claude Code has no short form for either flag. Claude Code takes both
-as flags: `--model <model>` and `--effort <level>`, where the levels it lists are
-low, medium, high, xhigh and max. Codex takes the model as `-m`/`--model <MODEL>`,
-but has no flag for the reasoning effort: it is the configuration key
-`model_reasoning_effort`, set for a single launch through the repeatable
-`-c key=value` override. The key name is confirmed in the reference tree at
-`e29eceb75` (`codex-rs/core/src/config/edit.rs:227`). Codex also accepts the model as
-the configuration key `model`, so a person can state that choice either way. Its
-override parser splits a setting on the first `=` and trims both halves
-(`codex-rs/utils/cli/src/config_override.rs`), which is why `-c 'model = "x"'` and
-`-c model="x"` are the same setting — verified live on 0.155.1, both accepted. Neither harness needs its
-configuration file touched for either setting.
-
-**[verified live; Codex CLI 0.155.1; September 21, 2026]** The installed binary emits
-its own protocol schema: `codex app-server generate-json-schema --experimental --out
-<DIR>` writes a bundle of about 4 MB, including the summary files
-`codex_app_server_protocol.schemas.json` and `…v2.schemas.json`. Both flags matter.
-`--out` is required — without it the command refuses. `--experimental` is required for
-a schema that describes the protocol rewake actually speaks: the default bundle omits
-experimental fields, leaving the conversation type with 28 properties and no
-`canAcceptDirectInput` at all, while the adapter uses that field and
-`runtimeWorkspaceRoots`, both experimental. Checking a fixture against the default
-bundle would therefore report correct answers as invented fields.
-
-The workflow suite checks fixture replies against that schema, and its list of
-understood schema keywords is closed: anything outside it fails the run rather than
-passing quietly. That list was completed by walking every definition reachable from
-the types the fixture answers, on 0.155.1. **Moving the version pin means walking
-them again**: a keyword that turns up in a used type and is not in the register makes
-every run red until it is implemented or classified. Doing that walk is part of the
-pin move, not a surprise afterwards.
-
-**[source: app-server schema of the installed CLI 0.155.1; September 21, 2026]**
-`ThreadStartParams` carries no conversation id: a new conversation is named by the
-server and the client learns it from the reply. The id appears only in
-`thread/resume`, which is therefore the only place a client can disagree with the
-server about which conversation it got. `InitializeParams` requires `clientInfo`
-with both `name` and `version`, and `capabilities.experimentalApi` opts into
-experimental methods and fields — which `runtimeWorkspaceRoots` and the thread's
-`canAcceptDirectInput` are, so a client using them without declaring the capability
-is asking for something it never negotiated. The adapter reads a conversation id
-from both the request parameters and the reply
-(`internal/harness/codex/gateway/metadata.go`), so it covers either shape; a fixture
-that sends an id on `thread/start` is the part that is wrong.
-
-**[source: app-server schema of the installed CLI 0.155.1; September 21, 2026]** The
-delivery path has required fields a fixture is easy to get wrong. A `Turn` requires
-`id`, `items` and `status` together — a turn carrying only an id is not a turn, and
-`status` is one of `completed`, `interrupted`, `failed`, `inProgress`. That object
-appears in the `turn/start` reply, in `turn/started` and in `turn/completed`, so all
-three carry the list and the status. `ItemCompletedNotification` additionally requires
-`completedAtMs`, a Unix timestamp in milliseconds, beside `item`, `threadId` and
-`turnId`. `TurnStartParams` requires the `input` list to be present; a mailbox
-delivery is the case where it is present and empty.
-
-**[verified live; Codex CLI 0.155.1; September 21, 2026]** Two things the schema does
-not say and a fixture gets wrong by default. A workspace root must be an absolute
-path: the type is `AbsolutePathBuf`, which the JSON schema renders as a plain string
-with the requirement only in prose, and the server refuses a relative root outright.
-And a request repeating a field name is refused as if the field were missing —
-JSON allows the repetition and leaves the choice of winner to the reader, so two
-readers of the same request disagree: decoding into a Go struct keeps the earlier
-object's fields while a map keeps the later one's.
-
-**[source: reference tree `e29eceb75`; September 21, 2026]** `canAcceptDirectInput`
-is a field of the thread object, not of the reply. It is declared inside `ThreadData`
-(`codex-rs/app-server-protocol/src/protocol/v2/thread_data.rs:274`), beside `source`
-and `thread_source`. The adapter reads `result.thread.canAcceptDirectInput` and only
-falls back to a top-level copy
-(`internal/harness/codex/gateway/metadata.go`), so a fixture that answers on the top
-level exercises the fallback and leaves the main branch untested. Two further fields
-there are distinct: `source` is where the conversation came from (cli, vscode, exec,
-app-server), `thread_source` is an analytics classification — the client sends the
-latter, the server answers with both.
+Two companions, split out on September 21, 2026 when this file passed 400 lines. The
+division is by how a fact is obtained, because that is how it ages: what a binary
+answers when you run it lives in [research-launch.md](research-launch.md) — models,
+efforts, argument forms; what the protocol schema and the reference tree state lives
+in [research-protocol.md](research-protocol.md). What stays here is what only a
+running session shows: how a message reaches it, what it does with it, and how the
+processes behave.
 
 **[verified live; Codex CLI 0.155.1; September 21, 2026]** The installed CLI moved to
 0.155.1 and the adapter's pin moved with it. Observed on that version: launch with
@@ -178,6 +26,13 @@ each, no repeats and no race coverage. Every fact below carries the version it w
 taken on; a fact tagged 0.154.0 has not been re-checked on 0.155.1.
 September 20: [native mailbox contract](native-mailbox.md) and
 [owner/installed acceptance with evidence limits](native-mailbox-acceptance.md).
+
+**[verified live; September 21, 2026]** A fact about our own checks rather than about a
+harness, kept here because it is dated and ages like the rest: `go test` inherits a
+session's `REWAKE_*` variables unless they are cleared, and the tests pass either way —
+three packages were run with the variables set. So the reason to clear them is not a
+red run. It is that a test which inherits them writes into the owner's live state
+directory and reads the running session as its own.
 
 ## Claude Code
 

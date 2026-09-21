@@ -34,6 +34,14 @@ const (
 	// shimLateFailure fails the turn after its text was sent and before the
 	// wrapper has published a report for it.
 	shimLateFailure = "RW_SHIM_LATE_FAILURE"
+	// shimSecondTerminal sends a second terminal event for a turn that has
+	// already ended. A server does not do this; the wrapper is supposed to
+	// ignore it, and this is how that is observed rather than assumed.
+	shimSecondTerminal = "RW_SHIM_SECOND_TERMINAL"
+	// shimExitAfterTurn makes the session leave, quietly and successfully, as
+	// soon as it has worked a turn. A session that disappears before the case
+	// is judged takes its evidence with it.
+	shimExitAfterTurn = "RW_SHIM_EXIT_AFTER_TURN"
 	// shimSendTo and shimSendText make this session send a task once it is
 	// ready, so that the sender in a delivery scenario is a session rather
 	// than the test process.

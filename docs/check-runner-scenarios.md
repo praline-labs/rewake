@@ -200,13 +200,38 @@ control named wider than it acts is the same false green in another costume.
 
 What remains of the original question, stated narrowly: a failure arriving *after* the
 report was published cannot produce a second outcome, because the wrapper suppresses a
-terminal for a finished turn (`internal/harness/codex/gateway/observe.go`, the `w.done`
-guard). The unobservable part is exactly that — a new outcome out of a suppressed
-terminal. Two neighboring questions *are* answerable at this tier and are not asked
-yet: that no second report appears after the first, and that the session does not die
-before the case is classified. The first needs a control that sends a second terminal
-plus a mutation of the guard to prove the check works at all, which is why it is named
-here rather than quietly skipped.
+terminal for a finished turn. Both neighboring questions were asked on September 21,
+2026, and they came out differently.
+
+**The session outliving the verdict** is a working observation with a working control.
+Every other observation in the delivery scenario is read from a file the session wrote,
+and a file outlives its writer — so the scenario ends by asking whether both sessions
+are still running, and the `early-exit` control makes the recipient leave quietly, with
+a successful exit, as soon as it has worked a turn. Nothing else in the case notices
+that: the exit code is zero, no process is left behind, and the files are all still
+there. The control fails the case, goes green only with its own breakage, and reddens
+under each of the other three.
+
+**One report for a turn that ends twice** is a case without a control, and that is a
+result rather than an omission. `second-terminal` makes the recipient end the same turn
+a second time and requires the sender to be told once — and its negation could not be
+reached. Two barriers were removed, one at a time and together, and a single report
+still came back: the `w.done` guard in the observer
+(`internal/harness/codex/gateway/observe.go`) and the write that skips a report whose
+id is already in the mailbox (`inbox.PutOnce`, paired with the deterministic
+`inbox.ReportID`).
+
+The third is what appears to hold it: the obligations cleared once a report is
+published (`internal/cli/turn_reports.go`). After the first report the waiter has no
+messages left, so a second outcome has nothing to report about. That is a reading of
+the code and not a result — it is the one barrier no single-line mutation could remove,
+which is also why it is the one that stayed untested. Naming it as a guess rather than
+listing three equal suspects is the difference between helping the next person and
+sending them to look where there is nothing to find.
+
+The case therefore says the system answers once; it does not say which barrier is
+load-bearing, and it stays green with two of the three removed. That is the boundary,
+and it is why the case names it in its own comment.
 
 Each control is verified by mutation, and by the cross: with its own breakage removed
 it goes red, and with another control's breakage in place it goes red too. The first

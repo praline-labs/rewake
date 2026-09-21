@@ -358,6 +358,12 @@ UI persistence mechanism is added. Other harness behavior is unchanged.
 
 ## Remaining work — owner decisions, September 19–21, 2026
 
+What comes next, in the order the owner set on September 21, 2026, is in
+[work-queue.md](work-queue.md): the rest of the workflow suite, then launch aliases
+with the project's first dependency, then pinning harness versions, then a two-way
+channel for Claude Code, then the parity queue. This section keeps the decisions
+behind those items.
+
 The native-notification priority is complete, and so is the Claude Code handoff it
 pointed to: orchestration moved to Claude Code on September 21, 2026. The first three
 entries of the [parity queue](harness-features.md) closed the same day — HF-12, HF-07
@@ -374,7 +380,7 @@ implemented.
 
 A command that lists the models and effort levels a harness offers is **deferred**.
 Owner decision, September 21, 2026, asked directly: not now. The reconnaissance that
-would feed it is done and recorded in [research.md](research.md) — what can be read
+would feed it is done and recorded in [research-launch.md](research-launch.md) — what can be read
 from each harness, how, and at what cost — so the work would start from facts rather
 than from scratch. Roughly a day.
 

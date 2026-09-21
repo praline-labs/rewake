@@ -228,12 +228,7 @@ func (s *shimSession) workTurn(id string) {
 	}
 	// A record of the turns this session accepted, for a scenario that has to
 	// tell "no turn arrived" from "a turn arrived and produced no report".
-	if turns := os.Getenv(shimTurnsFile); turns != "" {
-		if file, err := os.OpenFile(turns, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600); err == nil {
-			_, _ = fmt.Fprintf(file, "%s %s\n", id, firstLine(text))
-			_ = file.Close()
-		}
-	}
+	s.recordTurn(id + " " + firstLine(text))
 	s.mu.Lock()
 	// The content first, then the terminal event: a report without content is
 	// not a report, and the wrapper assembles one from what it saw in order.
@@ -241,7 +236,29 @@ func (s *shimSession) workTurn(id string) {
 	// The turn fails after its content was sent: a session that says something
 	// and then breaks has not answered.
 	s.broadcast(s.turnCompletedEvent(id, text, os.Getenv(shimLateFailure) != ""))
+	if os.Getenv(shimSecondTerminal) != "" {
+		// The same turn ends twice. Recorded as well as sent: a scenario that
+		// only counted reports could not tell "the second was ignored" from
+		// "the second was never sent".
+		s.broadcast(s.turnCompletedEvent(id, text, false))
+		s.recordTurn(id + " terminal-again")
+	}
 	s.mu.Unlock()
+}
+
+// recordTurn appends one line to the session's record of what it did with the
+// turns it accepted.
+func (s *shimSession) recordTurn(line string) {
+	turns := os.Getenv(shimTurnsFile)
+	if turns == "" {
+		return
+	}
+	file, err := os.OpenFile(turns, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		return
+	}
+	defer func() { _ = file.Close() }()
+	_, _ = fmt.Fprintln(file, line)
 }
 
 // readMailbox runs the built rewake, as the session, and returns what it read.

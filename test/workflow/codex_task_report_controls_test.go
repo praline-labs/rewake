@@ -45,6 +45,15 @@ func TestAFailureBeforeTheReportIsPublished(t *testing.T) {
 		shimLateFailure+"=1")
 }
 
+// Every observation above was read from a file the session wrote, and a file
+// outlives its writer. A session that left before the verdict makes all of
+// them describe something that is no longer there — and it leaves quietly,
+// with a successful exit, so nothing else in the case notices.
+func TestASessionThatLeavesEarlyFails(t *testing.T) {
+	failedTaskReport(t, "early-exit", "both sessions are still running when the case is judged",
+		shimExitAfterTurn+"=1")
+}
+
 // failedTaskReport runs the delivery scenario with one thing broken and
 // requires that the named observation is the one that fails.
 func failedTaskReport(t *testing.T, name, expected string, controls ...string) {
@@ -134,6 +143,13 @@ func controlOutcome(expected string, worker, sender *codexSession) (bool, string
 			!slices.Equal(report.InReplyTo, delivered) {
 			return true, fmt.Sprintf("the delivery named %v, the task consumed was %s, and the report settles %v",
 				delivered, task.ID, report.InReplyTo)
+		}
+	case "both sessions are still running when the case is judged":
+		// The turn was worked — the record of it is what the wait above
+		// required — and the session is gone anyway. Requiring the work first
+		// is what keeps this from passing on a session that never started.
+		if !worker.alive() {
+			return true, "the recipient worked a turn and then left before the verdict"
 		}
 	case "the report is a finished answer":
 		// The read happened and the text was sent; the kind is what says the
