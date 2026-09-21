@@ -37,7 +37,7 @@ func TestServerProcessHelper(_ *testing.T) {
 			if version := os.Getenv("RW_SERVER_VERSION"); version != "" {
 				fmt.Println(version)
 			} else {
-				// Its own literal, not verifiedServerVersion: a fixture echoing
+				// Its own literal, not lastObservedServerVersion: a fixture echoing
 				// the constant back would make the match test tautological and
 				// hide a typo in the pin.
 				fmt.Println("codex-cli 0.155.1")

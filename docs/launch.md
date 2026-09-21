@@ -115,7 +115,7 @@ Unknown TUI arguments are preserved, not interpreted as server configuration.
 Startup checks codex --version against the version the transport was last observed
 working on — 0.155.1 since September 21, 2026 — and warns, without refusing a different
 version. Moving the pin takes two edits that have to agree: the constant
-`verifiedServerVersion` in `internal/harness/codex/server.go`, and the literal the test
+`lastObservedServerVersion` in `internal/harness/codex/server.go`, and the literal the test
 fixture prints. The duplication is deliberate: a fixture echoing the constant back
 would make the matching test tautological and let a typo in the pin through. A fake
 executable and socket server cover the process and protocol contract. Real-model

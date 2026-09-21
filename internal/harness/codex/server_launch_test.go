@@ -49,7 +49,7 @@ func TestDifferentServerVersionWarnsWithoutRefusing(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer server.Close()
-	if len(notes) != 1 || !strings.Contains(notes[0], verifiedServerVersion) {
+	if len(notes) != 1 || !strings.Contains(notes[0], lastObservedServerVersion) {
 		t.Fatalf("version mismatch warning=%v", notes)
 	}
 }
