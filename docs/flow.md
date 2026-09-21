@@ -220,6 +220,20 @@ If that wake-up fails, the report remains available to ordinary `rewake inbox`
 in the addressed epoch. Its failed notification status keeps the diagnostic.
 Reading it still owes no report; a failure is not converted into another task.
 
+**Nobody sends a report.** The worker finishes its turn and stops; the wrapper turns
+the end of that turn into the message above, addressed to whoever was owed one. An
+agent that also writes `rewake send` with its result delivers the same text twice —
+once by hand, once when the turn ends — and the sender has no way to tell the two
+apart. This is easy to get wrong precisely because nothing refuses the extra send: it
+is a valid message, it arrives, and the duplication only shows up on the far side.
+
+A message from the worker to the sender is right in one case: when the worker needs an
+answer before it can go on — a fork in the task, a question, a finding that changes
+what was asked. Send it then, as `--notify` or as an ordinary message, not as a task.
+A task creates an obligation to report, and the session most likely to be asked is the
+main one, which is silent by role: the obligation would sit there with nothing to
+discharge it.
+
 ## Act 6. A question, when the sender wants to block
 
 `rewake send write-codex "which port?" --question` is a task whose sender waits for

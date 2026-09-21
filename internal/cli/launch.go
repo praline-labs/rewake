@@ -99,6 +99,30 @@ func roleOptions() []Option {
 	return options
 }
 
+// roleFlags are the flag names that choose a role. They are what a file
+// carried by a directory may not set: the role decides what a session sees and
+// what it may ask for, which is more than a working directory should decide
+// for whoever launches there.
+func roleFlags() []string {
+	var flags []string
+	for _, candidate := range role.All() {
+		flags = append(flags, candidate.ID)
+	}
+	return flags
+}
+
+// singleUseFlags asks a harness which of its flags it takes at most once. The
+// answer belongs to the harness — Codex refuses a repeated --model while
+// accepting a repeated --add-dir — so this only looks it up.
+func singleUseFlags(id string) []harness.Flag {
+	for _, candidate := range harness.All() {
+		if candidate.ID() == id {
+			return candidate.SingleUseFlags()
+		}
+	}
+	return nil
+}
+
 // roleSummary keeps the guide on the same catalog as launch flags and help.
 func roleSummary() string {
 	var descriptions []string

@@ -306,7 +306,10 @@ you mean") if the edit distance is small. Never prompt interactively.
 
 ## Code
 
-Go 1.25, no external dependencies (standard library and `syscall` only).
+Go 1.25. Dependencies are allowed one deliberate decision at a time, judged on having
+no transitive dependencies of their own and on being actively maintained; the standard
+library is preferred where it does the job. The one in use is `pelletier/go-toml/v2`,
+for the alias file.
 
 ```
 cmd/rewake/main.go            entry point, top-level parsing

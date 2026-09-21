@@ -45,6 +45,27 @@ Why this became possible only now: a hand-written TOML parser here broke on vali
 through two review rounds and was removed. The format was not the problem; writing the
 parser was.
 
+## Then: a role-shaped first page
+
+An agent launched through rewake should have the minimal order of actions for its own
+role within reach. Two ways, and they do not exclude each other.
+
+The briefing at launch explains what rewake is and points at the guide; it could also
+carry a short flow — what an executor does with a task it has just read, and how to
+finish. And the guide could recognize who is calling it: the session variables are
+already in its environment and the role is known, so it can show the section for that
+role — task-setting, telemetry and grants for a main session; reading mail, finishing
+by ending the turn, and writing mid-work only when an answer is needed, for an
+executor — beside the part everyone needs.
+
+What makes it worth doing: on September 21, 2026 an executor sent every report by hand
+*and* let the turn report it, all day, because no instruction said the report sends
+itself. Both documents described the mechanism; neither told anyone what to do.
+
+The condition: the briefing and the guide must not say different things. The briefing
+arrives first and will be believed, so either one source of text feeds both, or the
+split between them is explicit about which covers what. Roughly half a day.
+
 ## Then: pinning harness versions
 
 Take an arbitrary version of Codex into a disposable environment, generate the protocol

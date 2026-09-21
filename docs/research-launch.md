@@ -78,6 +78,72 @@ the Codex protocol specifically. On the Claude Code side the documented route is
 Agent SDK rather than the CLI, and it was not examined here. Anything built on the
 unofficial three has to treat their disappearance as ordinary, not exceptional.
 
+## Which flags may be repeated
+
+**The difference that matters first:** the two harnesses disagree about what repeating a
+flag even means. Codex treats a repeat as a malformed command line; Claude Code takes
+the last occurrence. So dropping a duplicate is a necessity on one and a convenience on
+the other, and anything built on "the last value wins" is true of only one of them.
+
+**[verified live; Codex CLI 0.155.1; September 21, 2026]** Codex refuses a repeated
+`--model` outright — the launch ends with a parse error rather than the last value
+winning. Four more were tried one after another with the same result, `--strict-config`
+among them. The flags that *choose* something behave this way: `--model`, `--cd`,
+`--sandbox`, `--ask-for-approval`, `--profile`, `--local-provider`, `--remote`,
+`--remote-auth-token-env`, and the switches `--search`, `--oss`, `--worktree`,
+`--strict-config`, `--no-alt-screen`, `--approve-for-me`,
+`--dangerously-bypass-approvals-and-sandbox`, `--dangerously-bypass-hook-trust`. Short
+and long spellings are one parameter: `-m` and `--model`, `-C` and `--cd`, `-s` and
+`--sandbox`, `-a` and `--ask-for-approval`, `-p` and `--profile`, `-i` and `--image`.
+
+Repeating is how other flags are *used*: `--image`, `--add-dir`, `--enable` and
+`--disable` accumulate, and `--enable`/`--disable` carry a feature name, so two of them
+are the same flag about different things. `-c key=value` repeats are accepted too.
+
+Five of those refusals were observed directly — `--model`, `--strict-config` and three
+more tried one after another. The rest of the list is read from the declarations rather
+than probed: each is declared as a single-valued option or a switch, which is the same
+shape as the five.
+
+**[verified live; Claude Code 2.1.270; September 21, 2026]** A repeated `--model` or
+`--effort` is accepted without complaint and the last occurrence decides; an effort
+level is validated on every occurrence, so an invalid one is refused even when a later
+occurrence would have replaced it. Its list-valued flags — `--add-dir`, `--plugin-dir`,
+`--plugin-url`, `--mcp-config` and the others spelled `<values...>` in its help — are
+repeated to add entries. There are no short spellings for `--model` or `--effort`.
+
+**[source: reference tree `e29eceb75`; September 21, 2026]** A flag can answer to more
+than one name, and **the help never says so**. `--dangerously-bypass-approvals-and-sandbox`
+is also `--yolo`, and `--approve-for-me` is also `--not-so-yolo`; both aliases are
+declared beside the long name in `codex-rs/utils/cli/src/shared_options.rs` and appear
+in neither the short nor the long help.
+
+How to find them, since half an hour went into learning that the help does not know:
+read the declarations — an alias sits next to its long name, so one pass through the
+file shows them all — and confirm by running the installed binary with both spellings
+at once, which is refused as the same argument used twice. Use a subcommand that spends
+no quota, such as `completion` — and put the flags **before** the subcommand, because
+after it they belong to the subcommand and come back as "unexpected argument", which
+looks like the same refusal and is not:
+
+```
+codex --approve-for-me --not-so-yolo completion bash   # exit 2: cannot be used multiple times
+codex --approve-for-me completion bash                 # exit 0
+codex completion bash --approve-for-me                 # exit 2: unexpected argument
+```
+
+Those two are the only aliases among the flags of an interactive launch;
+`--permission-profile`, which also has one, belongs to the `sandbox` subcommand.
+
+**[source: reference tree `e29eceb75`; September 21, 2026]** Two things about Codex that
+running it does not show. The order of `--enable` and `--disable` does not decide the
+outcome: every enable is applied and then every disable, so `--enable X --disable X`
+leaves X disabled whichever came last. And a repeated `-c` key does not always mean the
+same thing: a plain value is replaced by the last occurrence, while a structured setting
+merges, so part of an earlier one can survive a later one that does not restate it.
+Dropping an earlier `-c` because a later one names the same key can therefore lose
+settings, and telling the two cases apart means understanding the value.
+
 ## Passing a model and an effort for one launch
 
 **[verified live; Codex CLI 0.155.1 and Claude Code 2.1.270; September 21, 2026]**

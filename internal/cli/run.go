@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/iiiokojiadbi/rewake/internal/alias"
 	"github.com/iiiokojiadbi/rewake/internal/harness"
 )
 
@@ -12,7 +13,18 @@ import (
 func Run(argv []string, stdout, stderr io.Writer) int {
 	ctx := &Context{Stdout: stdout, Stderr: stderr}
 
-	result, err := parse(argv)
+	// Aliases first: everything downstream sees the arguments the alias stands
+	// for, so nothing else in the CLI has to know that aliases exist.
+	aliases := alias.Load()
+	for _, note := range aliases.Notes {
+		_, _ = fmt.Fprintln(stderr, "rewake: "+note)
+	}
+	expanded, err := aliases.Expand(argv, harness.IDs(), launchFlagTakesValue, roleFlags(), singleUseFlags)
+	if err != nil {
+		return report(ctx, &UsageError{Message: err.Error()})
+	}
+
+	result, err := parseKnowing(expanded, aliases.Names())
 	if err != nil {
 		return report(ctx, err)
 	}

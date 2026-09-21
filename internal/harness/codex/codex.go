@@ -115,6 +115,55 @@ func (codexHarness) Notes() []string {
 
 func (codexHarness) SupportsGitGrant() bool { return true }
 
+// SingleUseFlags are the flags Codex takes at most once, each naming one
+// parameter by every spelling it has.
+//
+// Read from `codex --help` on 0.155.1 and checked by running it: a repeated
+// flag from this list ends the launch with a parse error rather than taking
+// the last value. That is what makes replacement necessary here rather than
+// merely tidy.
+//
+// Deliberately absent, and they must stay absent: --image, --add-dir, --enable
+// and --disable accumulate — a second --add-dir adds a second directory — and
+// -c, which is left alone for a narrower reason. A repeated scalar key does
+// take its last value, but structured settings merge instead, so dropping an
+// earlier -c can remove a part of a setting that the later one does not
+// restate. Sorting one case from the other means understanding the value, and
+// the harness already does that correctly.
+//
+// Two things this cannot express, and should not try to: --enable X with
+// --disable X is not "the last one wins" (every enable is applied, then every
+// disable), and flags that conflict under different names — an approval policy
+// against a sandbox mode — are not found by comparing names at all.
+func (codexHarness) SingleUseFlags() []harness.Flag {
+	return []harness.Flag{
+		{Spellings: []string{"--model", "-m"}, TakesValue: true},
+		{Spellings: []string{"--cd", "-C"}, TakesValue: true},
+		{Spellings: []string{"--sandbox", "-s"}, TakesValue: true},
+		{Spellings: []string{"--ask-for-approval", "-a"}, TakesValue: true},
+		{Spellings: []string{"--profile", "-p"}, TakesValue: true},
+		{Spellings: []string{"--local-provider"}, TakesValue: true},
+		{Spellings: []string{"--remote"}, TakesValue: true},
+		{Spellings: []string{"--remote-auth-token-env"}, TakesValue: true},
+		// Switches. They carry nothing, and saying so is what keeps a dropped
+		// one from taking the argument standing behind it.
+		{Spellings: []string{"--search"}},
+		{Spellings: []string{"--oss"}},
+		{Spellings: []string{"--worktree"}},
+		{Spellings: []string{"--strict-config"}},
+		{Spellings: []string{"--no-alt-screen"}},
+		// --not-so-yolo is this switch's other name, declared beside the long
+		// one in the reference tree and confirmed by running 0.155.1: the two
+		// together are refused as one argument used twice. Neither alias
+		// appears in the help.
+		{Spellings: []string{"--approve-for-me", "--not-so-yolo"}},
+		// --yolo is the same switch under another name: passing both is
+		// refused as the argument used twice (verified live on 0.155.1).
+		{Spellings: []string{"--dangerously-bypass-approvals-and-sandbox", "--yolo"}},
+		{Spellings: []string{"--dangerously-bypass-hook-trust"}},
+	}
+}
+
 func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, error) {
 	args := append([]string{}, request.Args...)
 	home := Home()

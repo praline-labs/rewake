@@ -61,24 +61,43 @@ func FlagValues(args []string, forms ...string) []string {
 	var values []string
 	for index, arg := range visible {
 		for _, form := range forms {
-			switch {
-			case arg == form:
-				if index+1 < len(visible) {
-					values = append(values, visible[index+1])
-				} else {
-					values = append(values, "")
-				}
-			case strings.HasPrefix(arg, form+"="):
-				values = append(values, strings.TrimPrefix(arg, form+"="))
-			case isShort(form) && strings.HasPrefix(arg, form) && len(arg) > len(form):
-				values = append(values, strings.TrimPrefix(arg, form))
-			default:
+			value, separate, ok := MatchFlag(arg, form)
+			if !ok {
 				continue
 			}
+			if separate {
+				value = ""
+				if index+1 < len(visible) {
+					value = visible[index+1]
+				}
+			}
+			values = append(values, value)
 			break
 		}
 	}
 	return values
+}
+
+// MatchFlag reads one argument against one spelling of a flag. It answers the
+// value the argument carries, whether the value is instead the next argument,
+// and whether the argument spells this flag at all.
+//
+// It is the single place that knows the shapes above. Every caller that walks
+// a command line — reading a value out of it, or deciding that two arguments
+// name the same parameter — asks here, because a second copy of these rules is
+// how a spelling gets missed, and a missed spelling is a duplicate flag the
+// harness then refuses.
+func MatchFlag(arg, form string) (value string, separate bool, ok bool) {
+	switch {
+	case arg == form:
+		return "", true, true
+	case strings.HasPrefix(arg, form+"="):
+		return strings.TrimPrefix(arg, form+"="), false, true
+	case isShort(form) && strings.HasPrefix(arg, form) && len(arg) > len(form):
+		// -mvalue: a short flag joined to its value.
+		return strings.TrimPrefix(arg, form), false, true
+	}
+	return "", false, false
 }
 
 // isShort reports whether a form is a single-letter flag, which is the only

@@ -26,7 +26,13 @@ type parsed struct {
 }
 
 // parse reads argv into a call against the command table.
-func parse(argv []string) (parsed, error) {
+func parse(argv []string) (parsed, error) { return parseKnowing(argv, nil) }
+
+// parseKnowing is parse with the aliases this process can expand, so that a
+// word which is neither a command nor an alias is refused with both lists. A
+// person who mistypes an alias is told what exists, not only that this is not
+// a command.
+func parseKnowing(argv []string, aliases []string) (parsed, error) {
 	var result parsed
 	result.Call.Flags = map[string]string{}
 
@@ -60,6 +66,9 @@ func parse(argv []string) (parsed, error) {
 		message := fmt.Sprintf("No command %q.", word)
 		if near := nearestCommand(word); near != "" {
 			message += fmt.Sprintf(" Did you mean %q?", near)
+		}
+		if len(aliases) > 0 {
+			message += " Aliases here: " + strings.Join(aliases, ", ") + "."
 		}
 		message += " Run rewake for the map."
 		return result, &UsageError{Message: message}

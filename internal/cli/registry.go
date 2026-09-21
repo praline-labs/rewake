@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/iiiokojiadbi/rewake/internal/alias"
+
 	"github.com/iiiokojiadbi/rewake/internal/harness"
 	"github.com/iiiokojiadbi/rewake/internal/role"
 )
@@ -158,7 +160,7 @@ func buildGroups() {
 // launchCommand builds the command that starts one harness.
 func launchCommand(h harness.Harness) *Command {
 	notes := append([]string{}, h.Notes()...)
-	notes = append(notes, harness.SettingsHelp)
+	notes = append(notes, harness.SettingsHelp, alias.Help)
 	return &Command{
 		Name:           h.ID(),
 		Args:           "[" + h.ID() + " args...]",

@@ -178,6 +178,30 @@ func takesValue(command *Command, name string) bool {
 	return ok && option.Value != ""
 }
 
+// launchFlagTakesValue answers, for a flag standing before the command word,
+// whether the next argument is its value. Only launch commands and the global
+// options may appear there, so those are what it looks through — and it
+// answers for the whole set rather than one command, because the command is
+// exactly what is not known yet at that point.
+func launchFlagTakesValue(name string) bool {
+	for _, option := range globalOptions {
+		if strings.TrimPrefix(option.Flag, "--") == name {
+			return option.Value != ""
+		}
+	}
+	for _, group := range Groups() {
+		for _, command := range group.Commands {
+			if !command.Raw {
+				continue
+			}
+			if option, ok := lookupOption(command, name); ok {
+				return option.Value != ""
+			}
+		}
+	}
+	return false
+}
+
 // knownFlag reports whether a flag exists at all in this position.
 func knownFlag(command *Command, name string) bool {
 	_, ok := lookupOption(command, name)

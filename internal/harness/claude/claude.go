@@ -131,6 +131,30 @@ func (claudeHarness) Notes() []string {
 	}
 }
 
+// SingleUseFlags are the flags Claude Code resolves to a single value. Read
+// from `claude --help` on 2.1.270; it has no short spellings for these.
+//
+// The reason differs from Codex's, and the difference matters: Claude Code
+// accepts a repeated flag and takes the last occurrence, so replacing the
+// alias's copy is a convenience here — it keeps the command readable and the
+// two harnesses behaving alike — where on Codex it is what keeps the launch
+// from failing to parse at all.
+//
+// Absent on purpose: --add-dir, --plugin-dir, --plugin-url, --mcp-config and
+// the other lists it spells with `<values...>` — each of those is repeated to
+// add another entry, and replacing an alias's entry with a typed one would
+// remove a directory or a server nobody asked to remove.
+func (claudeHarness) SingleUseFlags() []harness.Flag {
+	return []harness.Flag{
+		{Spellings: []string{"--model"}, TakesValue: true},
+		{Spellings: []string{"--effort"}, TakesValue: true},
+		{Spellings: []string{"--fallback-model"}, TakesValue: true},
+		{Spellings: []string{"--permission-mode"}, TakesValue: true},
+		{Spellings: []string{"--settings"}, TakesValue: true},
+		{Spellings: []string{"--agent"}, TakesValue: true},
+	}
+}
+
 func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, error) {
 	args := append([]string{}, request.Args...)
 	socket := request.Socket

@@ -122,8 +122,13 @@ subscription quota: cheap model, short messages, warn the owner first.
 Meant to be one move:
 
 1. A new package `internal/harness/<name>` with a type implementing
-   `harness.Harness`: `ID`, `Title`, `Summary`, `Examples`, `Notes`, and from
-   milestone 3 on, launch and delivery.
+   `harness.Harness`: `ID`, `Title`, `Summary`, `Examples`, `Notes`,
+   `SingleUseFlags`, and from milestone 3 on, launch and delivery.
+   `SingleUseFlags` names the flags that harness takes at most once, each with
+   all its spellings and whether it carries a value. Returning nothing is not a
+   neutral answer — it says every flag may be repeated, and a launch alias plus
+   a typed flag then reach a harness that may refuse to parse them. A test over
+   the catalogue requires the list to be non-empty.
 2. One line in `internal/harness/catalog/catalog.go`.
 
 Everything else follows: the launch command, the guide entry, its own `--help`

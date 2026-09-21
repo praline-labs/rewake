@@ -70,10 +70,38 @@ type Harness interface {
 	Examples() []string
 	// Notes are decisions and limits worth knowing before starting it.
 	Notes() []string
+	// SingleUseFlags are the flags this harness takes at most once, each
+	// naming one parameter by all its spellings and saying whether it carries
+	// a value.
+	//
+	// It exists because an alias and a launch line can both name the same
+	// thing, and what happens then is the harness's property, not a rule we
+	// get to make. Codex refuses to parse a repeated --model, while a repeated
+	// --add-dir is how a second directory is added — so the first has to be
+	// replaced and the second must not be. A flag missing from this list is
+	// simply appended, which is the safe answer for anything unlisted.
+	//
+	// Returning nothing is therefore not a neutral answer: it says every flag
+	// may be repeated, and for a harness that refuses repeats it turns an
+	// alias plus a typed flag into a launch that will not parse.
+	SingleUseFlags() []Flag
 	// Launch turns a request into the command to run.
 	Launch(request LaunchRequest) (LaunchPlan, error)
 	// Deliver hands one message to a running session and says what happened.
 	Deliver(ctx context.Context, session registry.Session, message inbox.Message) inbox.Result
+}
+
+// Flag is one parameter of a harness, by every spelling it answers to.
+//
+// TakesValue is here because dropping a flag means dropping what belongs to
+// it, and a switch owns nothing: treating the next token as a value would
+// silently take away the prompt standing after --search.
+type Flag struct {
+	// Spellings are the forms of one parameter, longest-known first:
+	// {"--model", "-m"}.
+	Spellings []string
+	// TakesValue says whether the next argument belongs to this flag.
+	TakesValue bool
 }
 
 // BriefContext carries identity to the shared text package without assembling prose.
