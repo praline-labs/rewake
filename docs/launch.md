@@ -203,29 +203,13 @@ profile is refused outright before any of this, as are `--oss` and
 
 ### Room and role flags
 
-Launch flags precede the harness name. `--room <name>` selects the room and
-otherwise defaults to `default`; it does not inherit the launching process's
-room. After role selection under the room lock, the address is
-`<role ID>-<harness ID>`. `--name <prefix>` replaces only the role prefix;
-it always receives the harness suffix, without suffix deduplication.
-Automatic conflicts add -2, -3 after the harness ID; explicit conflicts refuse
-with the final address. Prefix and complete address use the lower-case name
-syntax, and the complete address must fit 32 characters. Choose a shorter
-prefix if appending the harness or a collision number would exceed it.
-Existing session records and direct messaging addresses are not rewritten.
-
-`--main`, `--general` and `--write` explicitly select one role and cannot be
-combined. Without a role flag, every launch is general, regardless of the room's
-occupants. Only explicit --main creates main; it refuses when the room already
-has one, naming its occupant and suggesting a launch without `--main`. General
-or write sessions can start first. No session is promoted when main exits, and
-subsequent unflagged launches still use general. A --name prefix never selects
-main or changes reporting and permissions.
-
-The wrapper passes the shared root as `REWAKE_DIR` and its room as `REWAKE_ROOM`,
-replacing the parent's room marker alongside session and epoch. The room lock
-covers role choice and name publication together, preventing concurrent mains.
-List and identity commands use the inherited room and accept no `--room` flag.
+Launch flags precede the harness name. `--room <name>` chooses the room, `default`
+without it; `--main`, `--general` or `--write` chooses the role, at most one of them,
+general without any; `--name <prefix>` replaces the role part of the address. What a
+room isolates, what each role may do and see, and how the address is formed are
+specified once, in design.md: [Rooms](design.md#rooms), [Roles](design.md#roles) and
+[Names](design.md#names). The variables the wrapper passes to the harness are in
+[Environment the harness receives](design.md#environment-the-harness-receives).
 
 ### Claude Code
 

@@ -163,7 +163,8 @@ selection. Only explicit `--main` creates an orchestrator; it refuses with the
 occupying session's name when main is already live. The same pid/start-time and
 namespace checks as list determine liveness. `--general` and `--write` remain
 explicit alternatives. A name prefix never chooses a role, and no session is
-promoted when a main leaves.
+promoted when a main leaves. The three role flags cannot be combined, and general
+or write sessions may start before any main exists.
 
 The room's `.launch.lock` covers inspection of live sessions, role choice and
 name publication. A starting wrapper is already a live claimant before its
@@ -312,18 +313,29 @@ library is preferred where it does the job. The one in use is `pelletier/go-toml
 for the alias file.
 
 ```
-cmd/rewake/main.go            entry point, top-level parsing
-internal/cli/                 command table, parsing, overview, help, failures, printing
-internal/state/                directory: checks, paths, atomic writes
-internal/registry/             session record, name publishing, liveness, listing
+cmd/rewake/main.go              entry point, top-level parsing
+internal/cli/                   command table, parsing, overview, help, failures, printing
+internal/state/                 directory: checks, paths, atomic writes
+internal/registry/              session record, name publishing, liveness, listing
 internal/proc/                  /proc: identity, liveness and job-control state
 internal/inbox/                 message, status, sender-side write, servicing loop
+internal/role/                  the role catalogue: flag, briefing line, reporting duty
+internal/brief/                 text injected into an agent, independent of transport
+internal/alias/                 launch aliases: a short name turned into launch arguments
+internal/sessionstate/          optional, epoch-scoped observations of a harness (telemetry)
+internal/harness/               the Harness interface, launch plans, notices, hooks, defaults
+internal/harness/catalog/       the one list of harnesses that exist
 internal/harness/claude/        launch arguments, environment, socket delivery
 internal/harness/codex/         owned app-server, WebSocket RPC, thread events and delivery
+internal/harness/codex/gateway/ the terminal gateway: selection, reservation, native mailbox
 internal/wrap/                  wrapper: launch, signals, lifecycle
+test/workflow/                  the workflow suite: end-to-end scenarios against fixtures
+tools/checksummary/             summarizes a suite run into a few lines and summary.json
+tools/harnesscache/             fetches and caches harness versions, runs them in a container
 ```
 
-The harness adapter is an interface (`internal/harness/plan.go`):
+`cmd/` holds only what the project ships; `tools/` holds development programs. The
+harness adapter is an interface (`internal/harness/plan.go`), here without its comments:
 
 ```go
 type Harness interface {
@@ -332,41 +344,28 @@ type Harness interface {
     Summary() string
     Examples() []string
     Notes() []string
+    SingleUseFlags() []Flag
     Launch(request LaunchRequest) (LaunchPlan, error)
     Deliver(ctx context.Context, session registry.Session, message inbox.Message) inbox.Result
 }
 ```
 
-`Deliver` sends the notice for `message`, built by `harness.Notice`; it never
-sends `message.Text`.
+`SingleUseFlags` names the flags a harness takes at most once, so an alias and a typed
+flag for the same parameter replace rather than repeat each other. `Deliver` sends the
+notice for `message`, built by `harness.Notice`; it never sends `message.Text`.
 
 ## Testing
 
-Unit tests (`go test`):
-- name publishing: a race between two publishes of the same name — one wins; a
-  dead record gets evicted; a live one doesn't;
-- liveness: a reused pid with a different start time counts as dead;
-- inbox: delivery order, `pending` retries, TTL, the status is written
-  atomically;
-- owned-server process lifetime, framing, RPC correlation, thread selection,
-  reconnects and terminal outcomes on a fake Unix-socket server;
-- argument parsing and the command table: the table's examples parse cleanly.
-
-Live tests, scripted under tmux, in a separate `/tmp` directory:
-1. `rewake claude` and `rewake codex`, `rewake list` sees both.
-2. From a shell: `send claude "reply pong"` — a reply shows up on Claude's screen
-   within seconds.
-3. From the Codex sandbox (`codex sandbox -P :workspace -- rewake send ...`) —
-   delivery to Claude through the inbox, without calling the model.
-4. `send codex` during work steers that turn; a fresh /new thread accepts its
-   first input without prior operator input. Interrupts report stopped.
-5. The Claude agent runs `rewake send` without confirmation (checks
-   `--allowedTools`).
-6. Harness exit — the record and socket are gone, pending messages got
-   `failed`.
-
-Live Codex tests spend subscription quota: run them on a cheap model with short
-messages.
+Three layers, cheapest first. Unit tests beside the code, run by the five checks in
+`AGENTS.md`: name publishing races, liveness with reused pids, inbox order, retries and
+expiry, the owned server's framing, correlation and reconnects on a fake socket, and a
+parse of every example in the command table. The workflow suite in `test/workflow`,
+switched on by `REWAKE_WORKFLOW=1`: a built rewake end to end against a fixture of each
+harness, in both columns, with controls that mutate the product; what it runs and why
+is in [check-runner-scenarios.md](check-runner-scenarios.md). And live runs with real
+harnesses in a separate `/tmp` state directory, done by hand and recorded in the dated
+acceptance documents; live Codex runs spend subscription quota, so they use a cheap
+model and short messages.
 
 ## Distribution
 

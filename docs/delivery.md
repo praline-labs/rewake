@@ -127,10 +127,13 @@ this exception; task/notify failure behavior is unchanged. Undelivered tasks and
 than `--ttl` (30 minutes by default) get `failed: expired`.
 
 **A reservation that cannot be taken in three seconds fails the message, it does not
-hold it.** September 22, 2026: `Reserve` in `internal/harness/codex/server_delivery.go`
-bounds the whole reservation at three seconds, a timeout comes back from
-`internal/harness/codex/gateway/reservation.go` as `ErrThreadUnavailable`, and
-`internal/inbox/batch.go` turns that into `failed` rather than `pending`. So a wrapper
+hold it.** September 22, 2026: the reservation is bounded at three seconds twice, by
+the delivery context in `internal/inbox/reservation.go` and again by `Reserve` in
+`internal/harness/codex/server_delivery.go`. On a timeout, `Reserve` in
+`internal/harness/codex/gateway/reservation.go` returns a plain context error; `refuse`
+in `internal/inbox/reservation.go` wraps it into `ErrThreadUnavailable`, declared in
+`internal/inbox/thread.go`; and `internal/inbox/batch.go` turns that into `failed`
+rather than `pending`. So a wrapper
 that waited for the thread to go idle before delivering would not deliver late — it
 would not deliver at all, and the sender would be told the delivery failed. That is
 why the choice between an active thread and an idle one is left to the native
@@ -322,6 +325,12 @@ its JSON result. The caller decides whether to resend. Existing idempotent
 report publication still applies.
 
 ### Failed turns
+
+After a failed or interrupted turn, a session is woken only by new mail: what was
+already announced is never announced again, and new mail needs neither a manual
+continuation nor a peek to reach it. Owner decision, September 19, 2026; the evidence
+is in [native-terminal-progress.md](native-terminal-progress.md). This holds for the
+keyboard stops below as well.
 
 The hidden hook emits error with the harness reason unchanged. Received empty
 completion after read work produces an error with empty text. Successful turns

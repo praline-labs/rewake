@@ -19,7 +19,10 @@ Because most of the mailbox is shared code, the Codex column is a regression gat
 the Claude Code column is where defects are expected to be found.
 
 The answer to this research task is [check-runner-proposal.md](check-runner-proposal.md),
-September 21, 2026. No runner is implemented or accepted by either document.
+September 21, 2026. What was built on it: the workflow suite in `test/workflow`, the
+summarizer `tools/checksummary` and the harness cache `tools/harnesscache`; there is no
+separate runner command, by decision. The scenarios as built are in
+[check-runner-scenarios.md](check-runner-scenarios.md).
 
 Native model-context delivery and the arrival UI are installed and accepted through
 `4cfd3cf`. They are no longer a pending prerequisite or the next implementation
@@ -232,12 +235,17 @@ The five existing Go checks remain required: gofumpt, go vet, staticcheck,
 golangci-lint and race/shuffle tests. They are not replaced by workflow tests.
 Extract only the reviewed fixture pieces needed for the selected workflows into a
 repository-owned test location. A fresh checkout must run them without any ignored
-handoff directory, private snapshot or installed owner binary. Decide the location
-and small orchestration interface during research; do not create them in this task.
-Keep version pinning, helper dependencies, isolation, teardown and evidence collectors
-reviewable. Prefer a thin command over existing tools to a new test framework.
+handoff directory, private snapshot or installed owner binary. That location is
+`test/workflow`, and the thin command over it is `go test` with the summarizer
+`tools/checksummary`. Keep version pinning, helper dependencies, isolation, teardown
+and evidence collectors reviewable.
 
-## Measurable acceptance for the future MVP
+## Measurable acceptance for the suite
+
+Written before the suite existed, as the bar it has to clear; the suite built since is
+held to it. The scenarios, their controls and the summary are recorded in the
+roadmap entries for the suite ([roadmap/README.md](roadmap/README.md)); the paid tier,
+which the last criteria govern, has not run.
 
 - A fresh checkout can run all five checks and the selected two or three workflows
   using documented dependencies and isolated state, without ignored/private inputs.

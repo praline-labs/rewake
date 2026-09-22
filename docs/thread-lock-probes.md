@@ -1,5 +1,13 @@
 # Process, writer-lock and native resume probes
 
+> **Status, September 23, 2026.** R14-1 and R14-2, called open below, are closed: the
+> September 18 gateway replacement passes a dedicated regression for each, recorded in
+> [reviews-later.md](reviews-later.md#r14-1--p2-replacement-regression-passes-failed-reconnects-retain-closed-observer-clients)
+> and [server-observation.md](server-observation.md). The observer mechanism this
+> record and the investigation it extends describe was replaced by the
+> [gateway](gateway.md), which runs no observer. The observations below
+> are left as they were recorded.
+
 Completed September 17, 2026. This evidence extends the
 [ownership investigation](thread-ownership-investigation.md); it does not repair
 selection or the open P2 findings R14-1/R14-2. In owner-run observations, A and B

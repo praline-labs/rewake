@@ -1,5 +1,13 @@
 # Loaded roots do not identify the terminal's conversation
 
+> **Status, September 23, 2026.** R14-1 and R14-2, called open below, are closed: the
+> September 18 gateway replacement passes a dedicated regression for each, recorded in
+> [reviews-later.md](reviews-later.md#r14-1--p2-replacement-regression-passes-failed-reconnects-retain-closed-observer-clients)
+> and [server-observation.md](server-observation.md). The observer mechanism this
+> investigation describes, including its bounded mitigation, was replaced by the
+> [gateway](gateway.md), which runs no observer. The observations below
+> are left as they were recorded.
+
 Investigation on September 17, 2026. Installed CLI: 0.154.0. Source snapshot:
 `44b9011611e1f4213ef34bd51b33476475803a94`. Source paths below are relative to
 the upstream Rust workspace. The original investigation launched no native harness;

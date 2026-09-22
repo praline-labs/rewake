@@ -1,8 +1,8 @@
 # Native start-or-steer and terminal outcome evidence
 
-September 19, 2026. Owner decision: after failed or interrupted work, wake only for
-new messages. Old announced work must never replay; manual continuation or inbox
-peek is not required for new mail.
+September 19, 2026. The evidence behind two rules stated elsewhere: what a failed or
+interrupted turn wakes, in [delivery.md](delivery.md#failed-turns), and start-or-steer
+without waiting for a finished turn, in the [grouped inbox contract](inbox-groups.md).
 
 ## Evidence
 
@@ -22,11 +22,10 @@ and isolated protocol regressions, not a new live acceptance run or transcript r
 
 ## Native start-or-steer, not a dispatch terminal gate
 
-Final owner clarification, September 19: ready messages reach active work between
-tool calls and wake idle work. The orchestrator's interpretation of "between turns"
-as a full native turn/completed boundary was wrong. Revision 6 removes that gate.
-The observed terminal orders above remain valid outcome evidence, not dispatch
-prerequisites. Completion tracking is retained for task reports and causal boundaries.
+The rule is in the [grouped inbox contract](inbox-groups.md); revision 6 removed the
+gate that waited for a finished turn. The observed terminal orders above remain valid
+outcome evidence, not dispatch prerequisites. Completion tracking is retained for task
+reports and causal boundaries.
 
 **[Source rechecked September 19, 2026; snapshot 44b9011, CLI 0.154.0]**
 `app-server/src/request_processors/turn_processor.rs:648-677` calls

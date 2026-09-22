@@ -32,6 +32,13 @@ forever.
    schema and the reference tree state; `docs/research.md` for what only a running
    session shows.
 
+The full map of the documentation is `docs/README.md`: every document, grouped by
+purpose, with what it contains and when to open it. A change that adds, removes or
+renames a document, or changes what one is for, updates the map in the same commit.
+`docs/map_test.go` runs with the five checks and fails when a document, in `docs/` or
+any directory below it, is on no map, or when a link in `docs/` names a missing file or
+heading.
+
 ## Keeping the documentation true
 
 The documents above are the memory of the project; the code is not. Whatever
@@ -66,6 +73,16 @@ documentation is part of every change, not a task after it:
   document without evidence is empty. The dividing line: a name in text that
   explains how something works or should work is incidental and goes; a name in
   a record of what was observed is part of the observation and stays.
+- An artifact address is not an explanation. The registry name of a harness
+  package, the path of the binary inside it and the command that starts it are
+  what the code fetches and runs, so they stay in code and in documentation
+  exactly as they are. Without them nothing can be fetched or run; replaced by a
+  variable, the same string only moves to wherever the variable is set, and the
+  dependency is as real as before. The rule against names governs text that
+  explains how something works or should work — not an address the system has to
+  use, just as it does not govern a verbatim record. A model or provider name passed
+  as a value inside such a command or example is not an address, and the ordinary
+  rule applies to it.
 
 ## Checks
 
