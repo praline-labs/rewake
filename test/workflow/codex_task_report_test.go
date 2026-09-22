@@ -26,11 +26,15 @@ import (
 // live one of September 21, 2026 in claude-parity-2026-09-21.md. A green run
 // here must never be read as evidence of understanding.
 func TestTaskReport(t *testing.T) {
+	runInColumns(t, "task-report", runTaskReport)
+}
+
+func runTaskReport(t *testing.T, col column) {
 	binary := enterScenario(t, "task-report")
 
 	c := Start(t, Spec{
 		Name:    "task-report",
-		Harness: "codex",
+		Harness: col.harness,
 		Observations: []string{
 			"the recipient reaches an accepted conversation",
 			"the recipient accepts the delivered turn",
@@ -51,24 +55,32 @@ func TestTaskReport(t *testing.T) {
 	// Both sessions read their mail in the machine form: the recipient so the
 	// scenario can tell which message it consumed, the sender so it can read
 	// the link a report carries. Neither is visible in the printed form.
-	worker := startCodexSession(t, c, iso, "worker", "--general", shimInboxJSON+"=1")
+	worker := startHarnessSession(t, c, iso, col.harness, "worker", "--general", shimInboxJSON+"=1")
 	defer stopSession(t, c, worker)
-	sender := startCodexSession(t, c, iso, "sender", "--main",
-		shimSendTo+"="+worker.name, shimSendText+"="+taskText, shimInboxJSON+"=1")
+	sender := startHarnessSession(t, c, iso, col.harness, "sender", "--main",
+		shimSendTo+"="+worker.name, shimSendText+"="+taskText, shimInboxJSON+"=1",
+		readinessSwitch(col, worker))
 	defer stopSession(t, c, sender)
 
-	// Telemetry is visible to a main, and the main here is the sender — so the
-	// recipient's selection is read from the sender's listing. The sender's
-	// own readiness shows itself by the fact that it managed to send at all,
-	// which is a stronger sign than a status field.
-	if _, ok := sender.await(c, "a selection for "+worker.name, func(l listing) bool {
-		_, selection, _, found := l.find(worker.name)
-		return found && selection == "ready"
-	}); !ok {
-		c.Contradicted("the recipient reaches an accepted conversation", "%s never became ready", worker.name)
-		return
+	if !col.offers(capabilitySelection) {
+		// No conversation on this column, so nothing to select and nothing to
+		// report. Said by name rather than left out: an absent mechanism that
+		// stayed silent would read as a defect that swallowed the evidence.
+		col.unsupported(c, "the recipient reaches an accepted conversation", capabilitySelection)
+	} else {
+		// Telemetry is visible to a main, and the main here is the sender — so
+		// the recipient's selection is read from the sender's listing. The
+		// sender's own readiness shows itself by the fact that it managed to
+		// send at all, which is a stronger sign than a status field.
+		if _, ok := sender.await(c, "a selection for "+worker.name, func(l listing) bool {
+			_, selection, _, found := l.find(worker.name)
+			return found && selection == "ready"
+		}); !ok {
+			c.Contradicted("the recipient reaches an accepted conversation", "%s never became ready", worker.name)
+			return
+		}
+		c.Observed("the recipient reaches an accepted conversation", "selection ready")
 	}
-	c.Observed("the recipient reaches an accepted conversation", "selection ready")
 
 	// The recipient's own read is the proof that the turn was accepted and
 	// that a session, not the test, consumed the mail: the shim refuses a turn
@@ -106,7 +118,7 @@ func TestTaskReport(t *testing.T) {
 			"the recipient's own read does not say which message carried the task")
 		return
 	}
-	if !slices.Contains(worker.deliveredIDs(), task.ID) {
+	if !col.deliveryNamed(worker, task.ID) {
 		c.Contradicted("the report corresponds to the message that was delivered",
 			"the task read as %s was not among the delivered %v", task.ID, worker.deliveredIDs())
 		return

@@ -100,12 +100,16 @@ func TestAConsumingOverviewFails(t *testing.T) {
 }
 func TestAReplayedAnnouncementFails(t *testing.T) { failedBatchArrival(t, batchControls[3]) }
 
-// failedBatchArrival runs the scenario against the control's own mutant and
-// requires the observation it names to be the one that breaks.
+// failedBatchArrival runs the scenario against the control's own mutant, in
+// both columns, and requires the observation it names to be the one that
+// breaks. Every one of these mutants is in shared service code, so what they
+// break is the same on either side of the fixture line.
 func failedBatchArrival(t *testing.T, control batchControl) {
 	t.Helper()
-	enterScenario(t, "batch-arrival-control-"+control.mutant.name)
-	runBatchControl(t, "batch-arrival-control-"+control.mutant.name, control.mutant, control.expected, mustBreak)
+	runInColumns(t, "batch-arrival-control", func(t *testing.T, col column) {
+		enterScenario(t, "batch-arrival-control-"+control.mutant.name)
+		runBatchControl(t, col, "batch-arrival-control-"+control.mutant.name, control.mutant, control.expected, mustBreak)
+	})
 }
 
 // crossSwitch turns the crosswise check on. It runs every control against
@@ -119,21 +123,23 @@ func TestBatchControlsCrosswise(t *testing.T) {
 	if os.Getenv(crossSwitch) == "" {
 		t.Skipf("crosswise check skipped: set %s=1 to run every control against every other mutant", crossSwitch)
 	}
-	enterScenario(t, "batch-arrival-crosswise")
-	for _, control := range batchControls {
-		for _, other := range batchControls {
-			if other.mutant.name == control.mutant.name {
-				continue
+	runInColumns(t, "batch-arrival-crosswise", func(t *testing.T, col column) {
+		enterScenario(t, "batch-arrival-crosswise")
+		for _, control := range batchControls {
+			for _, other := range batchControls {
+				if other.mutant.name == control.mutant.name {
+					continue
+				}
+				// One subtest per pair, because a case carries its own deadline
+				// and twelve sharing one exhausted it: the pair running last was
+				// blamed for a clock it never used.
+				name := control.mutant.name + "-under-" + other.mutant.name
+				t.Run(name, func(t *testing.T) {
+					runBatchControl(t, col, "batch-arrival-cross-"+name, other.mutant, control.expected, mustHold)
+				})
 			}
-			// One subtest per pair, because a case carries its own deadline
-			// and twelve sharing one exhausted it: the pair running last was
-			// blamed for a clock it never used.
-			name := control.mutant.name + "-under-" + other.mutant.name
-			t.Run(name, func(t *testing.T) {
-				runBatchControl(t, "batch-arrival-cross-"+name, other.mutant, control.expected, mustHold)
-			})
 		}
-	}
+	})
 }
 
 // whatIsExpected says which way a pair must come out. Against its own mutant a
@@ -157,17 +163,24 @@ func (w whatIsExpected) observation() string {
 
 // runBatchControl runs the scenario's sessions against a mutant and records
 // whether the named observation came out the way this pair requires.
-func runBatchControl(t *testing.T, name string, m mutation, expected string, want whatIsExpected) {
+func runBatchControl(t *testing.T, col column, name string, m mutation, expected string, want whatIsExpected) {
 	t.Helper()
-	binary := buildMutant(t, m)
+	// The case first, then the mutant: a build that fails is then a named red
+	// case with its build directory kept, rather than a run that fails with
+	// nothing to point at.
 	c := Start(t, Spec{
 		Name:         name,
-		Harness:      "codex",
+		Harness:      col.harness,
 		Observations: []string{want.observation()},
 		Deadline:     90 * time.Second,
 	})
+	binary, err := buildMutant(c, m)
+	if err != nil {
+		c.Contradicted(want.observation(), "the mutant could not be built: %v", err)
+		return
+	}
 	iso := Isolate(t, c, binary)
-	worker, sender := startBatchSessions(t, c, iso)
+	worker, sender := startBatchSessions(t, c, iso, col)
 	defer stopSession(t, c, worker)
 	defer stopSession(t, c, sender)
 
@@ -184,15 +197,19 @@ func runBatchControl(t *testing.T, name string, m mutation, expected string, wan
 	if !waitFor(c, batchWindow, func() bool {
 		alpha, seenA := worker.peekedCarrying(batchAlpha)
 		beta, seenB := worker.peekedCarrying(batchBeta)
-		_, seenC := worker.peekedCarrying(batchGamma)
+		gamma, seenC := worker.peekedCarrying(batchGamma)
 		if !seenA || !seenB || !seenC {
 			return false
 		}
-		_, triedA := readOf(worker, alpha.ID)
-		_, triedB := readOf(worker, beta.ID)
-		return triedA && triedB
+		// One read attempt, not a named letter's: a group names its members
+		// in id order, which is not the order they were sent, so which letter
+		// is read first and which is deferred is not the scenario's to
+		// predict. Under one mutant the deferred one is never read at all,
+		// because the overview that would have listed it consumed it.
+		attempted, _ := readsOf(worker, alpha.ID, beta.ID, gamma.ID)
+		return attempted > 0
 	}) {
-		c.Contradicted(want.observation(), "the three letters were not all listed and read, so nothing could be judged")
+		c.Contradicted(want.observation(), "the three letters were not all listed, or none was read, so nothing could be judged")
 		return
 	}
 	// No settling pause: every breakage this asks about is already in the
@@ -200,7 +217,7 @@ func runBatchControl(t *testing.T, name string, m mutation, expected string, wan
 	// as the redelivery whose read the anchor waited for, and the other three
 	// are properties of the delivery that carried those letters.
 	c.Note("watching " + expected + " under " + m.name)
-	broke, why, err := batchControlOutcome(expected, worker)
+	broke, why, err := batchControlOutcome(col, expected, worker)
 	switch {
 	case err != nil:
 		// Not being able to look is not the same as having looked: a record
@@ -226,7 +243,11 @@ const batchWindow = 45 * time.Second
 // three values rather than two: broken, not broken, or not judgeable. A branch
 // that folded the third into the second would call a record it could not read
 // an observation that held.
-func batchControlOutcome(expected string, worker *codexSession) (bool, string, error) {
+func batchControlOutcome(col column, expected string, worker *codexSession) (bool, string, error) {
+	// The record as the session wrote it. Membership is reconstructed only
+	// where a branch needs it, because on a column whose notice does not name
+	// its members the reconstruction assumes no replay — and one branch here
+	// exists precisely to find a replay.
 	deliveries, err := worker.groupDeliveries()
 	if err != nil {
 		return false, "", err
@@ -250,7 +271,14 @@ func batchControlOutcome(expected string, worker *codexSession) (bool, string, e
 		if !seenC {
 			return false, "", errors.New("the recipient never listed the third letter, so grouping cannot be judged")
 		}
-		for _, delivery := range deliveries {
+		announced, err := col.announcedDeliveries(worker)
+		if err != nil {
+			// A membership that cannot be reconciled with what was announced
+			// is not an absent delivery: the pair fails on it rather than
+			// reading it as an observation that held.
+			return false, "", err
+		}
+		for _, delivery := range announced {
 			if slices.Contains(delivery.Members, alpha.ID) && slices.Contains(delivery.Members, beta.ID) && slices.Contains(delivery.Members, gamma.ID) {
 				return true, "one delivery named all three letters: " + strings.Join(delivery.Members, ","), nil
 			}
@@ -258,7 +286,11 @@ func batchControlOutcome(expected string, worker *codexSession) (bool, string, e
 		return false, "no delivery named all three letters", nil
 	case obsPreviewLatest:
 		latest, earliest := latestOf(alpha, beta)
-		for _, delivery := range deliveries {
+		announced, err := col.announcedDeliveries(worker)
+		if err != nil {
+			return false, "", err
+		}
+		for _, delivery := range announced {
 			if slices.Contains(delivery.Members, alpha.ID) && slices.Contains(delivery.Members, beta.ID) &&
 				strings.Contains(delivery.Notice, earliest.Preview) && !strings.Contains(delivery.Notice, latest.Preview) {
 				return true, "the group's notice previews the earliest member, " + earliest.Preview, nil
@@ -280,19 +312,35 @@ func batchControlOutcome(expected string, worker *codexSession) (bool, string, e
 			}
 		}
 		// The overview listed both letters and the reads that followed were
-		// refused: the overview consumed what it only meant to show. Which of
-		// the two is read first follows the notice's order, so both are asked.
-		okA, triedA := readOf(worker, alpha.ID)
-		okB, triedB := readOf(worker, beta.ID)
-		if listed && triedA && triedB && !okA && !okB {
-			return true, "the overview listed both letters and the reads that followed were refused", nil
+		// refused: the overview consumed what it only meant to show.
+		attempted, succeeded := readsOf(worker, alpha.ID, beta.ID)
+		if col.offers(capabilityNamesMembers) {
+			// Where the notice names its members, the deferred letter is read
+			// by id at the next delivery whether or not an overview lists it,
+			// so both reads happen and both have to be refused.
+			if listed && attempted == 2 && succeeded == 0 {
+				return true, "the overview listed both letters and both reads that followed were refused", nil
+			}
+			return false, fmt.Sprintf("the letters stayed readable after the overview: %d attempted, %d allowed", attempted, succeeded), nil
 		}
-		return false, "the letters stayed readable after the overview", nil
+		// Where it does not, the order of reads comes from the overviews, and
+		// the one that would have listed the deferred letter has already
+		// consumed it — so that read never happens. One refused read with no
+		// success is the whole evidence this column can give for the same
+		// breakage.
+		if listed && attempted > 0 && succeeded == 0 {
+			return true, "the overview listed both letters and every read that followed was refused", nil
+		}
+		return false, fmt.Sprintf("the letters stayed readable after the overview: %d attempted, %d allowed", attempted, succeeded), nil
 	case obsNoReplay:
-		if again := announcedTwice(deliveries); again != "" {
-			return true, again + " was announced twice", nil
+		again, err := col.replayedAnnouncement(worker)
+		if err != nil {
+			return false, "", err
 		}
-		return false, "no id was announced twice", nil
+		if again != "" {
+			return true, again, nil
+		}
+		return false, "nothing was announced twice", nil
 	}
 	return false, "", errors.New("no such observation: " + expected)
 }

@@ -120,20 +120,48 @@ func TestRedRunNamesTheObservationAndTheEvidence(t *testing.T) {
 func TestUnsupportedIsGreenAndNamed(t *testing.T) {
 	text := stream(t, []string{
 		caseLine(t, record.Case{
-			Case: "mid-turn", Harness: "claude-code", Outcome: outcomeUnsupported,
-			Reason: "claude-code declares no observes-mid-turn-arrival",
+			Case: "mid-turn", Harness: "claude", Outcome: outcomeUnsupported,
+			Reason: "capability absent for: everything",
+			Observations: []record.Observation{
+				{Name: "a", Outcome: outcomeUnsupported, Capability: "observes-mid-turn-arrival"},
+			},
 		}),
 		runRecordLine("mid-turn"),
 	}, false)
 	found := summarize(t, text)
 	if !found.green() {
-		t.Error("an unsupported case made the run red")
+		t.Error("an unsupported case off the gate made the run red")
 	}
 	rendered := render(t, found)
-	for _, want := range []string{"unsupported", "claude-code", "observes-mid-turn-arrival"} {
+	// The case and the capability, not the column alone: three lines naming
+	// only a column cannot be told apart.
+	for _, want := range []string{"unsupported", "mid-turn/claude", "observes-mid-turn-arrival"} {
 		if !strings.Contains(rendered, want) {
 			t.Errorf("the unsupported line does not carry %q:\n%s", want, rendered)
 		}
+	}
+}
+
+// On the gate an unsupported case is red, whatever the record calls it. The
+// suite converts it already; this holds even for a record that did not, so a
+// regression in one place is not enough to let the gate lose an observation.
+func TestUnsupportedOnTheGateIsRed(t *testing.T) {
+	text := stream(t, []string{
+		caseLine(t, record.Case{
+			Case: "task-report", Harness: "codex", Gate: true, Outcome: outcomeUnsupported,
+			Observations: []record.Observation{
+				{Name: "the recipient reaches an accepted conversation", Outcome: outcomeUnsupported, Capability: "reports-conversation-selection"},
+			},
+		}),
+		runRecordLine("task-report"),
+	}, false)
+	found := summarize(t, text)
+	if found.green() {
+		t.Error("an unsupported case on the gate was green")
+	}
+	rendered := render(t, found)
+	if !strings.Contains(rendered, "FAIL  task-report/codex") || !strings.Contains(rendered, "the recipient reaches an accepted conversation") {
+		t.Errorf("the gate's lost observation is not named as a failure:\n%s", rendered)
 	}
 }
 
@@ -266,4 +294,23 @@ func chunks(t *testing.T, pieces []string) string {
 	out.Write(encoded)
 	out.WriteByte('\n')
 	return out.String()
+}
+
+// A red engine with no case to explain it names the tests that failed. That is
+// the shape a mutant that failed to build used to produce, and "no case
+// reporting a failure" alone left the next reader with nothing to look at.
+func TestAnUnexplainedRedEngineNamesItsFailedTests(t *testing.T) {
+	text := stream(t, []string{
+		caseLine(t, record.Case{Case: "stub", Outcome: outcomePass}),
+		runRecordLine("stub"),
+	}, true)
+	failed, _ := json.Marshal(map[string]any{"Action": "fail", "Package": "workflow", "Test": "TestBatchControlsCrosswise/claude/window-under-replay"})
+	text = string(failed) + "\n" + text
+	found := summarize(t, text)
+	code := 1
+	found.EngineExit = &code
+	rendered := render(t, found)
+	if !strings.Contains(rendered, "failed test  TestBatchControlsCrosswise/claude/window-under-replay") {
+		t.Errorf("the failed test is not named:\n%s", rendered)
+	}
 }

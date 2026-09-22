@@ -155,9 +155,9 @@ endpoint, **M** real-model semantic (paid), **O** owner TUI.
 
 | Scenario | Rows | Codex | Claude Code | A third harness |
 | --- | --- | --- | --- | --- |
-| `task-report` | HF-01, HF-03, HF-04, HF-08, HF-09 | F then P | F then P | F once its fixture exists |
-| `batch-arrival` | HF-07, HF-20 | F then P | F then P | F; grouping is shared service code |
-| `mid-turn` | HF-21, HF-09 | F then P | F then P | `unsupported` unless it declares the capability |
+| `task-report` | HF-01, HF-03, HF-04, HF-08, HF-09 | F runs | F runs, minus the conversation | F once its fixture exists |
+| `batch-arrival` | HF-07, HF-20 | F runs | F runs, minus the conversation | F; grouping is shared service code |
+| `mid-turn` | HF-21, HF-09 | F runs | `unsupported` — no `observes-mid-turn-arrival` | `unsupported` unless it declares the capability |
 | `ack-recovery` (4th) | HF-09, HF-03 | F | F | F |
 | `stopped-outcome` (later) | HF-06 | F | `unsupported` — no interruption source | by capability |
 | `git-grant` (later) | HF-15 | F | `unsupported` — not an eligible recipient | by capability |
@@ -166,6 +166,13 @@ endpoint, **M** real-model semantic (paid), **O** owner TUI.
 | Conversation commands (later) | HF-19 | F | **must run** — HF-19 is `impl?`, not missing | by capability |
 | Arrival appearance | HF-14 | O | O | O |
 | Model actually reads mail | HF-04, HF-21 | M | M | M |
+
+Both columns run since September 22, 2026, against a fixture each: a Codex
+app-server and a Claude Code session inbox. What a column cannot show it says by
+name — the socket column has no conversation, so the observation about reaching one
+is `unsupported` there rather than dropped, and `mid-turn` is `unsupported` whole,
+because a one-way socket has no notion of a turn to deliver into. The record of
+that fixture is [2026-09-22-fixture-claude-code.md](roadmap/2026-09-22-fixture-claude-code.md).
 
 Every `unsupported` cell names a capability, and every capability traces to a row in
 [harness-features.md](harness-features.md). That is the property that makes a third

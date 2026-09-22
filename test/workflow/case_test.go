@@ -129,6 +129,17 @@ func (c *Case) Contradicted(name, format string, args ...any) {
 // swallowed it.
 func (c *Case) Unsupported(name, reason string) { c.record(name, Unsupported, reason) }
 
+// UnsupportedCapability is Unsupported with the capability named as a field,
+// so whoever reads the record learns which one without parsing the reason.
+func (c *Case) UnsupportedCapability(name, capability, reason string) {
+	c.record(name, Unsupported, reason)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	entry := c.made[name]
+	entry.Capability = capability
+	c.made[name] = entry
+}
+
 func (c *Case) record(name string, outcome Outcome, detail string) {
 	c.t.Helper()
 	if !c.declares(name) {
@@ -244,9 +255,16 @@ func (c *Case) finish() {
 
 	outcome, reason := classify(c.spec.Observations, made, cleanupErr)
 	outcome, reason = c.applyRunState(outcome, reason)
+	if outcome == Unsupported && isGate(c.spec.Harness) {
+		// The gate column cannot lose an observation. An absent capability
+		// there is not a fact about the harness but a hole in the check that
+		// blocks regressions — and the review that found it removed one line
+		// from the column table and watched the run stay green.
+		outcome, reason = Fail, "the gate column reported a capability absent: "+reason
+	}
 
 	kept := ""
-	if outcome.Green() {
+	if c.acceptable(outcome) {
 		if err := c.removeDirs(); err != nil {
 			outcome, reason = Fail, "could not remove the case directory: "+err.Error()
 			kept = c.evidence()
@@ -266,11 +284,21 @@ func (c *Case) finish() {
 	// with every print somebody adds.
 	c.publishRecord(outcome, reason, made, kept != "")
 
-	if !outcome.Green() {
+	if !c.acceptable(outcome) {
 		// One message, not two: the verdict and where to look belong together,
 		// or the output budget of a failing run doubles for no information.
 		c.t.Errorf("case %q: %s: %s%s", c.spec.Name, outcome, reason, kept)
 	}
+}
+
+// acceptable reports whether an outcome leaves the run intact for this case.
+// Pass always does. Unsupported does only off the gate column: a capability a
+// younger harness lacks is a fact about that harness, and a column that lacks
+// one could otherwise never finish a run; on the gate it is a check that no
+// longer happens. Everything else — contradicted, never made, skipped — means
+// somebody has to look.
+func (c *Case) acceptable(outcome Outcome) bool {
+	return outcome == Pass || outcome == Unsupported && !isGate(c.spec.Harness)
 }
 
 // applyRunState folds in what happened around the observations: a deadline
@@ -284,12 +312,12 @@ func (c *Case) finish() {
 func (c *Case) applyRunState(outcome Outcome, reason string) (Outcome, string) {
 	if c.ctx.Err() != nil {
 		expired := fmt.Sprintf("the case deadline of %s expired; last observed: %s", c.spec.Deadline, c.lastProgress())
-		if !outcome.Green() {
+		if !c.acceptable(outcome) {
 			expired += "; also: " + reason
 		}
 		return Fail, expired
 	}
-	if !outcome.Green() {
+	if !c.acceptable(outcome) {
 		return outcome, reason
 	}
 	if c.t.Failed() {

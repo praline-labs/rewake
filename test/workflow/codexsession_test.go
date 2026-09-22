@@ -22,6 +22,9 @@ type codexSession struct {
 	turns    string // where it records the turns it accepted
 	// delivered is where it records the id of every message a delivery named.
 	delivered string
+	// ready is the file a session creates once it can receive. Only the
+	// socket column writes one; the other says it is ready through telemetry.
+	ready string
 	// groups is where it records each delivery as one group, reads is where it
 	// records each inbox call made under shimReadEach, and sends is where a
 	// sender records what became of each letter it sent.
@@ -96,10 +99,18 @@ func (s *codexSession) acceptedThread() string {
 // and launches the wrapper as main so the session may see its own telemetry.
 func startCodexSession(t *testing.T, c *Case, iso *Isolation, name, role string, controls ...string) *codexSession {
 	t.Helper()
+	return startHarnessSession(t, c, iso, "codex", name, role, controls...)
+}
+
+// startHarnessSession is the same for either column: the fixture for that
+// harness goes on the case's PATH under the harness's own name, the built
+// rewake goes beside it, and the session is launched to run it.
+func startHarnessSession(t *testing.T, c *Case, iso *Isolation, harness, name, role string, controls ...string) *codexSession {
+	t.Helper()
 	installShim(t, c, iso)
 	// rewake appends the harness to the requested name.
 	session := &codexSession{
-		name:     name + "-codex",
+		name:     name + "-" + harness,
 		state:    filepath.Join(iso.Home, name+".state.json"),
 		accepted: filepath.Join(iso.Home, name+".accepted"),
 		// Per session: a shared stop file would end every session at once.
@@ -109,17 +120,20 @@ func startCodexSession(t *testing.T, c *Case, iso *Isolation, name, role string,
 		groups:    filepath.Join(iso.Home, name+".groups"),
 		reads:     filepath.Join(iso.Home, name+".reads"),
 		sends:     filepath.Join(iso.Home, name+".sends"),
+		ready:     filepath.Join(iso.Home, name+".listening"),
 	}
 
 	// Only one session in a room may be main, and only a main sees telemetry.
 	// A scenario that needs two sessions gives that role to the one whose
 	// selection it has to observe.
-	launch := iso.Command("--name", name, role, "codex")
+	launch := iso.Command("--name", name, role, harness)
 	launch.Env = append(iso.Env(),
 		shimEnv+"=1",
+		shimHarness+"="+harness,
 		"RW_SHIM_TEST_EXE="+testExecutable(t),
 		shimStateFile+"="+session.state,
 		shimAcceptedFile+"="+session.accepted,
+		shimReadyFile+"="+session.ready,
 	)
 	launch.Env = append(launch.Env, controls...)
 	// The mailbox the session reads with its own rewake, and what the scenario
@@ -166,9 +180,15 @@ func (s *codexSession) stop(c *Case) error {
 // scenario means to measure.
 func installShim(t *testing.T, c *Case, iso *Isolation) {
 	t.Helper()
-	script := "#!/bin/sh\nexec \"$RW_SHIM_TEST_EXE\" -test.run=TestCodexShimHelper -- \"$@\"\n"
-	if err := os.WriteFile(filepath.Join(iso.ShimDir, "codex"), []byte(script), 0o700); err != nil {
-		t.Fatalf("installing the codex shim: %v", err)
+	// One script per harness, each naming which fixture to be. The wrapper
+	// runs the harness by name, so the name of the file is what decides which
+	// column a session belongs to.
+	for _, harness := range []string{"codex", "claude"} {
+		script := "#!/bin/sh\nexec env " + shimHarness + "=" + harness +
+			" \"$RW_SHIM_TEST_EXE\" -test.run=TestCodexShimHelper -- \"$@\"\n"
+		if err := os.WriteFile(filepath.Join(iso.ShimDir, harness), []byte(script), 0o700); err != nil {
+			t.Fatalf("installing the %s shim: %v", harness, err)
+		}
 	}
 	link := "#!/bin/sh\nexec " + iso.binary + " \"$@\"\n"
 	if err := os.WriteFile(filepath.Join(iso.ShimDir, "rewake"), []byte(link), 0o700); err != nil {

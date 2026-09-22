@@ -10,6 +10,10 @@ package workflow
 
 const (
 	shimEnv = "RW_SHIM"
+	// shimHarness says which harness this process is re-executed as. The two
+	// fixtures are different programs behind one binary, and the script that
+	// stands in for each sets this.
+	shimHarness = "RW_SHIM_HARNESS"
 	// shimThread is the conversation the shim starts. A numeric request id and
 	// threadSource=user are what make the request recognizable to the
 	// gateway; the thread id itself only has to be stable.
@@ -103,6 +107,14 @@ const (
 	// it a scenario cannot tell a letter that has not arrived yet from one
 	// whose delivery was refused.
 	shimSendsFile = "RW_SHIM_SENDS_FILE"
+	// shimReadyFile is where a session on the socket column says it is
+	// listening. That column has no telemetry, so a sender waits for this file
+	// rather than for a readiness field — and mail sent before the socket
+	// exists waits in the mailbox and lands in the first delivery, which would
+	// make a scenario about the collection window measure the launch instead.
+	shimReadyFile = "RW_SHIM_READY_FILE"
+	// shimWaitForFile is that file, as the sender is told about it.
+	shimWaitForFile = "RW_SHIM_WAIT_FOR_FILE"
 	// shimResume makes the client continue a named conversation instead of
 	// starting a new one. Only a continuation carries a conversation id the
 	// client chose, so that is where "the server answered about a different

@@ -31,6 +31,7 @@ func (c *Case) publishRecord(outcome Outcome, reason string, made map[string]obs
 	published := record.Case{
 		Case:    c.spec.Name,
 		Harness: c.spec.Harness,
+		Gate:    isGate(c.spec.Harness),
 		// The one conversion: the suite's Outcome is a type of the test files,
 		// and the shared record carries plain strings so a program outside can
 		// read it.
@@ -45,7 +46,9 @@ func (c *Case) publishRecord(outcome Outcome, reason string, made map[string]obs
 			published.Observations = append(published.Observations, record.Observation{Name: name, Outcome: string(NotRun)})
 			continue
 		}
-		published.Observations = append(published.Observations, record.Observation{Name: name, Outcome: string(entry.Outcome), Detail: entry.Detail})
+		published.Observations = append(published.Observations, record.Observation{
+			Name: name, Outcome: string(entry.Outcome), Detail: entry.Detail, Capability: entry.Capability,
+		})
 	}
 	encoded, err := json.Marshal(published)
 	if err != nil {

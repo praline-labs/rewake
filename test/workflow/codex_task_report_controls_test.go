@@ -1,163 +1,227 @@
 package workflow
 
 import (
-	"fmt"
+	"os"
 	"slices"
-	"strings"
 	"testing"
-	"time"
 )
 
-// The scenario's negative controls. Each one breaks exactly one thing and must
-// take down exactly the observation that covers it — otherwise the scenario
-// would pass on a shim and a wrapper agreeing with each other.
+// The delivery scenario's negative controls, in both columns. Each one breaks
+// exactly one thing and must take down the observation that covers it —
+// otherwise the scenario would pass on a fixture and a wrapper agreeing with
+// each other.
 //
-// Every one of them is verified twice over: with its own breakage removed it
-// must go red, and with another control's breakage in place it must go red
-// too. The first version of these controls passed both ways, which is the
-// failure this suite exists to catch.
+// Four break the fixture: a session that records the wrong message id, one
+// whose read fails, one whose turn fails after its answer, one that leaves.
+// Three break the product, where the product is reachable: the Stop hook left
+// out of the launch settings, `rewake turn-ended` not taking a Stop as the end
+// of a turn, and a report that settles nothing. Two of those three exist only
+// on the socket column — the other column's reports do not travel through a
+// hook or through turn-ended — and a control that cannot break anything on a
+// column would pass there for the wrong reason, so it is not run there.
 
-// A report whose link points at a message that never arrived says nothing
-// about which task it answers. The correlation observation must notice.
-func TestReportNotMatchingTheMessageFails(t *testing.T) {
-	failedTaskReport(t, "wrong-report", "the report corresponds to the message that was delivered",
-		shimWrongReportID+"=1")
-}
+// The observations the controls name. Four are the scenario's own; the fifth,
+// that the report is a finished answer, is how the scenario's "the report
+// reaches the sender" is told apart from an error report arriving instead.
+const (
+	obsTRRead       = "the recipient read its own mailbox"
+	obsTRReaches    = "the report reaches the sender"
+	obsTRFinished   = "the report is a finished answer"
+	obsTRCorrelates = "the report corresponds to the message that was delivered"
+	obsTRAlive      = "both sessions are still running when the case is judged"
+)
 
-// A delivery alone is not the claim: if the session could not read its mail,
-// the case must not go green on the fact that something was delivered.
-func TestAFailedMailboxReadFails(t *testing.T) {
-	failedTaskReport(t, "read-fails", "the recipient read its own mailbox",
-		shimReadFails+"=1")
-}
-
-// A session that sends its answer and then fails has not answered. The failure
-// here falls between the two: after the text of the turn, before the report is
-// published. The report must arrive as an error, not as the finished answer
-// whose text it carries.
-//
-// The name is exact on purpose. A failure arriving *after* the report was
-// published is a different question, and this control does not ask it — see
-// the boundary in check-runner-scenarios.md for what can and cannot be asked
-// about one at this tier.
-func TestAFailureBeforeTheReportIsPublished(t *testing.T) {
-	failedTaskReport(t, "failure-before-report", "the report is a finished answer",
-		shimLateFailure+"=1")
-}
-
-// Every observation above was read from a file the session wrote, and a file
-// outlives its writer. A session that left before the verdict makes all of
-// them describe something that is no longer there — and it leaves quietly,
-// with a successful exit, so nothing else in the case notices.
-func TestASessionThatLeavesEarlyFails(t *testing.T) {
-	failedTaskReport(t, "early-exit", "both sessions are still running when the case is judged",
-		shimExitAfterTurn+"=1")
-}
-
-// failedTaskReport runs the delivery scenario with one thing broken and
-// requires that the named observation is the one that fails.
-func failedTaskReport(t *testing.T, name, expected string, controls ...string) {
-	t.Helper()
-	binary := enterScenario(t, "task-report-control-"+name)
-
-	c := Start(t, Spec{
-		Name:         "task-report-control-" + name,
-		Harness:      "codex",
-		Observations: []string{"the control broke what it meant to break"},
-		Deadline:     90 * time.Second,
-	})
-	iso := Isolate(t, c, binary)
-
-	worker := startCodexSession(t, c, iso, "worker", "--general",
-		append([]string{shimInboxJSON + "=1"}, controls...)...)
-	defer stopSession(t, c, worker)
-	sender := startCodexSession(t, c, iso, "sender", "--main",
-		shimSendTo+"="+worker.name, shimSendText+"="+taskText, shimInboxJSON+"=1")
-	defer stopSession(t, c, sender)
-
-	// Anchored on the recipient's own record of the turn rather than on a flat
-	// sleep: until a turn has arrived there is nothing to judge, and asking
-	// early would let a control pass on the mere fact that the report has not
-	// come back *yet* — which is true of a healthy run too, for a moment.
-	if !waitFor(c, turnWindow, func() bool { return strings.Contains(worker.acceptedTurns(), "turn-") }) {
-		c.Contradicted("the control broke what it meant to break", "no turn ever reached the recipient")
-		return
-	}
-	c.Note("watching for " + expected + " to fail")
-	time.Sleep(reportWindow)
-
-	if broke, why := controlOutcome(expected, worker, sender); broke {
-		c.Observed("the control broke what it meant to break", why)
-		return
-	}
-	c.Contradicted("the control broke what it meant to break",
-		"%s held anyway: worker turns %q, delivered %v", expected,
-		firstLine(worker.acceptedTurns()), worker.deliveredIDs())
-}
+// reportKind is what a control's world sends back to the sender: nothing, an
+// error, or a finished answer. Declared per control and checked on every run
+// of it, because the crosswise check skips the cells an observation cannot be
+// asked in, and a declaration nobody checked would decide that silently.
+type reportKind string
 
 const (
-	// turnWindow is how long a delivery may take to reach the recipient. It
-	// bounds a wait that a healthy run finishes in milliseconds; a control
-	// that never gets its turn is a broken case, not a passing one.
-	turnWindow = 30 * time.Second
-	// reportWindow is what a report needs once the turn has been recorded: the
-	// read, the terminal event, and the sender's own next inbox call. The
-	// healthy scenario does all three inside a fraction of this.
-	reportWindow = 1500 * time.Millisecond
+	reportsNothing  reportKind = "nothing"
+	reportsError    reportKind = "error"
+	reportsFinished reportKind = "finished"
 )
 
-// waitFor polls until the condition holds or the window runs out.
-func waitFor(c *Case, window time.Duration, condition func() bool) bool {
-	deadline := time.Now().Add(window)
-	for time.Now().Before(deadline) && !c.Expired() {
-		if condition() {
+var (
+	// The Stop hook is what reports a turn that answered, and only a silent
+	// role goes without one. Left out for every role, a general session's
+	// answer reaches nobody.
+	mutantNoStopHook = mutation{
+		name:  "no-stop-hook",
+		file:  "internal/harness/claude/claude.go",
+		edits: []edit{{"if !silent {", "if false {"}},
+	}
+	// turn-ended takes a Stop as the end of a turn. Made to accept only a
+	// failure, a turn that answered ends without anyone being told.
+	mutantTurnEndedIgnoresStop = mutation{
+		name: "turn-ended-ignores-stop",
+		file: "internal/cli/turn_result.go",
+		edits: []edit{{
+			`if hook != "" && hook != "Stop" && hook != "StopFailure" {`,
+			`if hook != "" && hook != "StopFailure" {`,
+		}},
+	}
+	// A report names the messages it settles. Emptied, it arrives and settles
+	// nothing — which is the report the correlation observation exists to
+	// catch, and one a check that only asked whether a report came back would
+	// call a pass.
+	mutantSettlesNothing = mutation{
+		name:  "settles-nothing",
+		file:  "internal/cli/turn_reports.go",
+		edits: []edit{{"InReplyTo: waiter.Messages,", "InReplyTo: nil,"}},
+	}
+)
+
+// taskReportControl is one control: how its world differs, what that world
+// sends back, and which observation it must take down.
+type taskReportControl struct {
+	name    string
+	shim    []string
+	mutant  *mutation
+	reports reportKind
+	// leaves is true for the world where the recipient goes away on its own
+	// after a turn. That departure is what the run waits for before judging:
+	// judged the moment the report arrived, the session had not finished
+	// leaving yet and the control passed on timing.
+	leaves   bool
+	expected string
+	// columns it runs in. A product mutant of the socket path cannot break
+	// anything on the other column, and would pass there for the wrong reason.
+	columns []column
+}
+
+var bothColumns = []column{codexColumn, claudeColumn}
+
+var taskReportControls = []taskReportControl{
+	{name: "wrong-report", shim: []string{shimWrongReportID + "=1"}, reports: reportsFinished, expected: obsTRCorrelates, columns: bothColumns},
+	{name: "read-fails", shim: []string{shimReadFails + "=1"}, reports: reportsNothing, expected: obsTRRead, columns: bothColumns},
+	{name: "failure-before-report", shim: []string{shimLateFailure + "=1"}, reports: reportsError, expected: obsTRFinished, columns: bothColumns},
+	{name: "early-exit", shim: []string{shimExitAfterTurn + "=1"}, reports: reportsFinished, leaves: true, expected: obsTRAlive, columns: bothColumns},
+	{name: "no-stop-hook", mutant: &mutantNoStopHook, reports: reportsNothing, expected: obsTRReaches, columns: []column{claudeColumn}},
+	{name: "turn-ended-ignores-stop", mutant: &mutantTurnEndedIgnoresStop, reports: reportsNothing, expected: obsTRReaches, columns: []column{claudeColumn}},
+	{name: "settles-nothing", mutant: &mutantSettlesNothing, reports: reportsFinished, expected: obsTRCorrelates, columns: bothColumns},
+}
+
+func TestReportNotMatchingTheMessageFails(t *testing.T) { failedTaskReport(t, "wrong-report") }
+func TestAFailedMailboxReadFails(t *testing.T)          { failedTaskReport(t, "read-fails") }
+
+// The failure falls between the text of the turn and the publication of its
+// report, and the name says so: a failure after publication is a different
+// question, see the boundary in check-runner-scenarios.md.
+func TestAFailureBeforeTheReportIsPublished(t *testing.T) {
+	failedTaskReport(t, "failure-before-report")
+}
+func TestASessionThatLeavesEarlyFails(t *testing.T) { failedTaskReport(t, "early-exit") }
+func TestALaunchWithoutAStopHookFails(t *testing.T) { failedTaskReport(t, "no-stop-hook") }
+func TestATurnEndThatIgnoresStopFails(t *testing.T) { failedTaskReport(t, "turn-ended-ignores-stop") }
+func TestAReportSettlingNothingFails(t *testing.T)  { failedTaskReport(t, "settles-nothing") }
+
+// runsIn reports whether this control applies to a column. By harness name:
+// a column carries its capability table, and a table is not something to
+// compare for equality.
+func (control taskReportControl) runsIn(col column) bool {
+	for _, one := range control.columns {
+		if one.harness == col.harness {
 			return true
 		}
-		time.Sleep(20 * time.Millisecond)
 	}
 	return false
 }
 
-// controlOutcome reports whether the expected observation has been broken.
-//
-// Each branch asks for the whole shape of its breakage, not just its symptom:
-// the cross-check showed that a branch naming only what is missing goes green
-// on another control's breakage as well.
-func controlOutcome(expected string, worker, sender *codexSession) (bool, string) {
-	read, delivered := worker.mailboxRead(), worker.deliveredIDs()
-	report, reported := reportOfKind(sender, worker, "finished")
-	switch expected {
-	case "the recipient read its own mailbox":
-		// A turn was delivered and nothing was read, so no obligation to answer
-		// was ever recorded and no report can exist. Delivery alone is what is
-		// left — which is exactly what must not be enough.
-		if !strings.Contains(read, taskText) && !reported {
-			return true, "a turn was delivered, nothing was read, and no report followed"
-		}
-	case "the report corresponds to the message that was delivered":
-		// The report came back, and what it settles is not what arrived here.
-		// An observation that only asked whether a report exists would call
-		// this a pass.
-		task, known := messageCarrying(worker, taskText)
-		if reported && known && !slices.Contains(delivered, task.ID) &&
-			!slices.Equal(report.InReplyTo, delivered) {
-			return true, fmt.Sprintf("the delivery named %v, the task consumed was %s, and the report settles %v",
-				delivered, task.ID, report.InReplyTo)
-		}
-	case "both sessions are still running when the case is judged":
-		// The turn was worked — the record of it is what the wait above
-		// required — and the session is gone anyway. Requiring the work first
-		// is what keeps this from passing on a session that never started.
-		if !worker.alive() {
-			return true, "the recipient worked a turn and then left before the verdict"
-		}
-	case "the report is a finished answer":
-		// The read happened and the text was sent; the kind is what says the
-		// turn did not answer. Requiring the read too is what keeps this branch
-		// from passing on a broken read instead.
-		if _, failed := reportOfKind(sender, worker, "error"); strings.Contains(read, taskText) && !reported && failed {
-			return true, "the failed turn reported an error rather than an answer"
+func controlNamed(name string) taskReportControl {
+	for _, control := range taskReportControls {
+		if control.name == name {
+			return control
 		}
 	}
-	return false, ""
+	panic("no task-report control named " + name)
+}
+
+// failedTaskReport runs one control in every column it applies to and requires
+// the observation it names to be the one that breaks.
+func failedTaskReport(t *testing.T, name string) {
+	t.Helper()
+	control := controlNamed(name)
+	for _, col := range control.columns {
+		t.Run(col.harness, func(t *testing.T) {
+			enterScenario(t, "task-report-control-"+name)
+			runTaskReportControl(t, col, "task-report-control-"+name, control, control.expected, mustBreak)
+		})
+	}
+}
+
+// TestTaskReportControlsCrosswise checks each control's observation against the
+// other controls' worlds, per column, and requires it to stand there.
+//
+// Some cells are not asked, by a rule rather than a list: an observation about
+// a report cannot be asked in a world that sends none, and one about a
+// finished report not in a world that sends an error. Which world sends what is
+// each control's own declaration, and every run of that control checks the
+// declaration against what actually came back — so a wrong one turns the
+// control red rather than quietly removing a cell here.
+func TestTaskReportControlsCrosswise(t *testing.T) {
+	if os.Getenv(crossSwitch) == "" {
+		t.Skipf("crosswise check skipped: set %s=1 to run every control against every other world", crossSwitch)
+	}
+	for _, col := range bothColumns {
+		t.Run(col.harness, func(t *testing.T) {
+			enterScenario(t, "task-report-crosswise")
+			for _, observation := range taskReportObservations(col) {
+				for _, other := range taskReportControls {
+					if other.expected == observation || !other.runsIn(col) || !askable(observation, other.reports) {
+						continue
+					}
+					name := shortTaskObservation(observation) + "-under-" + other.name
+					t.Run(name, func(t *testing.T) {
+						runTaskReportControl(t, col, "task-report-cross-"+name, other, observation, mustHold)
+					})
+				}
+			}
+		})
+	}
+}
+
+// taskReportObservations are the observations some control breaks in this
+// column, each once.
+func taskReportObservations(col column) []string {
+	var out []string
+	for _, control := range taskReportControls {
+		if control.runsIn(col) && !slices.Contains(out, control.expected) {
+			out = append(out, control.expected)
+		}
+	}
+	return out
+}
+
+// askable says whether an observation can be asked in a world that sends
+// back this kind of report.
+func askable(observation string, reports reportKind) bool {
+	switch observation {
+	case obsTRReaches:
+		// Asked where the task was read and an answer is owed: a world that
+		// sends nothing because nothing was read has no report to miss.
+		return reports != reportsNothing
+	case obsTRFinished:
+		return reports != reportsNothing
+	case obsTRCorrelates:
+		return reports == reportsFinished
+	}
+	return true
+}
+
+func shortTaskObservation(observation string) string {
+	switch observation {
+	case obsTRRead:
+		return "read"
+	case obsTRReaches:
+		return "reaches"
+	case obsTRFinished:
+		return "finished"
+	case obsTRCorrelates:
+		return "correlates"
+	case obsTRAlive:
+		return "alive"
+	}
+	return "observation"
 }

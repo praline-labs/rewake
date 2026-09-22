@@ -21,8 +21,7 @@ second-terminal case, which has no reachable control and says so.
 
 What remains, from [check-runner-scenarios.md](check-runner-scenarios.md) and
 [check-runner-proposal.md](check-runner-proposal.md): the scenario `ack-recovery`;
-a fixture for the Claude Code column, which has none; and the paid tier, which has not
-run under the suite. The summarizer the proposal asks for is built
+and the paid tier, which has not run under the suite. The summarizer the proposal asks for is built
 ([the record](roadmap/2026-09-22-suite-summarizer.md)); there is still no separate
 runner command, by decision.
 

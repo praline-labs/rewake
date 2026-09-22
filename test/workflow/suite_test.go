@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -37,6 +38,9 @@ func TestMain(m *testing.M) {
 	// Checked before anything else because the ordinary path would otherwise
 	// build a binary and run a suite inside the shim.
 	if os.Getenv(shimEnv) != "" {
+		if os.Getenv(shimHarness) == "claude" {
+			os.Exit(runClaudeShim(os.Args))
+		}
 		os.Exit(runShim(os.Args))
 	}
 	enabled, err := switchedOn(os.Getenv(switchEnv))
@@ -105,7 +109,7 @@ func ranScenarios() []string {
 	ran := append([]string(nil), suite.ran...)
 	suite.mu.Unlock()
 	sort.Strings(ran)
-	return ran
+	return slices.Compact(ran)
 }
 
 // reportScenarios says how many scenarios ran, and refuses a green run that

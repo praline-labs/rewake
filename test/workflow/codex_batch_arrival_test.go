@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"fmt"
+	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -22,30 +23,33 @@ import (
 // The controls break the product, not the fixture: each one is rewake with a
 // single line changed, built through an overlay (mutant_test.go).
 func TestBatchArrival(t *testing.T) {
+	runInColumns(t, "batch-arrival", runBatchArrival)
+}
+
+func runBatchArrival(t *testing.T, col column) {
 	binary := enterScenario(t, "batch-arrival")
 	c := Start(t, Spec{
 		Name:    "batch-arrival",
-		Harness: "codex",
+		Harness: col.harness,
 		Observations: []string{
-			obsReady, obsGroupOfTwo, obsPreviewLatest, obsThirdOutside,
+			obsReady, obsListening, obsGroupOfTwo, obsPreviewLatest, obsThirdOutside,
 			obsPeekConsumedNothing, obsReadOneByOne, obsNoReplay, obsAlive,
 		},
 		Deadline: 90 * time.Second,
 	})
 	iso := Isolate(t, c, binary)
-	worker, sender := startBatchSessions(t, c, iso)
+	worker, sender := startBatchSessions(t, c, iso, col)
 	defer stopSession(t, c, worker)
 	defer stopSession(t, c, sender)
 
-	if !awaitBatchReady(c, worker, sender) {
+	if !awaitBatchReady(c, col, worker, sender) {
 		return
 	}
-	c.Observed(obsReady, "selection ready")
 
 	// The ids are learnt from the recipient's own overview, not from the
 	// sender: the claim is about what the recipient was told.
 	alpha, beta := awaitFirstTwo(c, worker)
-	group := deliveryContaining(c, worker, alpha.ID)
+	group := deliveryContaining(c, col, worker, alpha.ID)
 	members := append([]string(nil), group.Members...)
 	slices.Sort(members)
 	if !slices.Equal(members, sorted(alpha.ID, beta.ID)) {
@@ -63,7 +67,7 @@ func TestBatchArrival(t *testing.T) {
 	}
 
 	gamma := awaitThird(c, worker)
-	third := deliveryContaining(c, worker, gamma.ID)
+	third := deliveryContaining(c, col, worker, gamma.ID)
 	if !slices.Equal(third.Members, []string{gamma.ID}) || third.Turn == group.Turn {
 		c.Contradicted(obsThirdOutside, "the third letter %s arrived as %v in %s, the first group was %s", gamma.ID, third.Members, third.Turn, group.Turn)
 	} else {
@@ -82,7 +86,7 @@ func TestBatchArrival(t *testing.T) {
 		return true
 	})
 	judgeReads(c, worker, alpha.ID, beta.ID, gamma.ID)
-	judgeNoReplay(c, worker)
+	judgeNoReplay(c, col, worker)
 
 	if !worker.alive() || !sender.alive() {
 		c.Contradicted(obsAlive, "worker alive: %v, sender alive: %v", worker.alive(), sender.alive())
@@ -95,6 +99,7 @@ func TestBatchArrival(t *testing.T) {
 // name which of them their breakage must take down.
 const (
 	obsReady               = "the recipient reaches an accepted conversation"
+	obsListening           = "the recipient can receive mail before the letters leave"
 	obsGroupOfTwo          = "two close letters are announced as one group of two"
 	obsPreviewLatest       = "the notice previews the latest member"
 	obsThirdOutside        = "the third letter is announced outside that group"
@@ -116,24 +121,52 @@ const (
 // time, and the sender, which waits for the recipient to be ready before its
 // letters leave — mail sent earlier would wait in the mailbox and be folded
 // into the first group, which would measure readiness rather than the window.
-func startBatchSessions(t *testing.T, c *Case, iso *Isolation) (*codexSession, *codexSession) {
+func startBatchSessions(t *testing.T, c *Case, iso *Isolation, col column, controls ...string) (*codexSession, *codexSession) {
 	t.Helper()
-	worker := startCodexSession(t, c, iso, "worker", "--general", shimReadEach+"=1")
-	sender := startCodexSession(t, c, iso, "sender", "--main",
-		shimSendTo+"="+worker.name, shimSendWhenReady+"="+worker.name,
+	worker := startHarnessSession(t, c, iso, col.harness, "worker", "--general",
+		append([]string{shimReadEach + "=1"}, controls...)...)
+	sender := startHarnessSession(t, c, iso, col.harness, "sender", "--main",
+		shimSendTo+"="+worker.name, readinessSwitch(col, worker),
 		shimSendTexts+"="+batchAlpha+"|"+batchBeta, shimSendLaterText+"="+batchGamma)
 	return worker, sender
 }
 
-func awaitBatchReady(c *Case, worker, sender *codexSession) bool {
+// awaitBatchReady waits for whatever readiness this column has, and records
+// the observation it can support. One column reports an accepted conversation;
+// the other has none, and says so by name — while still waiting for the
+// recipient to be listening, which on that column is a file it writes itself.
+func awaitBatchReady(c *Case, col column, worker, sender *codexSession) bool {
+	if !col.offers(capabilitySelection) {
+		col.unsupported(c, obsReady, capabilitySelection)
+		// No conversation here, but the recipient still has to be able to
+		// receive before the letters leave, and it says so by creating a file.
+		// A red line about that names this, not the grouping that never got a
+		// chance to happen.
+		if !waitFor(c, batchWindow, func() bool { return exists(worker.ready) }) {
+			c.Contradicted(obsListening, "%s never started listening", worker.name)
+			return false
+		}
+		c.Observed(obsListening, "the recipient's socket is listening")
+		return true
+	}
 	if _, ok := sender.await(c, "a selection for "+worker.name, func(l listing) bool {
 		_, selection, _, found := l.find(worker.name)
 		return found && selection == "ready"
 	}); !ok {
 		c.Contradicted(obsReady, "%s never became ready", worker.name)
+		c.Contradicted(obsListening, "%s never became ready, so it could not receive", worker.name)
 		return false
 	}
+	c.Observed(obsReady, "selection ready")
+	// On this column a selected conversation is what the gateway delivers to,
+	// so the same evidence answers both: there is nothing else to wait for.
+	c.Observed(obsListening, "the gateway accepts delivery once the conversation is selected")
 	return true
+}
+
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 // awaitFirstTwo waits for the recipient's overview to list both of the close
@@ -162,11 +195,13 @@ func awaitThird(c *Case, worker *codexSession) peekedMessage {
 
 // deliveryContaining finds the delivery that named an id. A record the
 // scenario cannot read fails the case rather than reading as no delivery.
-func deliveryContaining(c *Case, worker *codexSession, id string) groupDelivery {
+func deliveryContaining(c *Case, col column, worker *codexSession, id string) groupDelivery {
 	var found groupDelivery
 	c.Await("a delivery naming "+id, func() bool {
-		deliveries, err := worker.groupDeliveries()
+		deliveries, err := col.announcedDeliveries(worker)
 		if err != nil {
+			// A membership that cannot be reconciled with what the notice
+			// announced is not an absent delivery; the case fails on it.
 			c.t.Fatalf("workflow: %v", err)
 		}
 		for _, delivery := range deliveries {
@@ -246,7 +281,11 @@ func judgeReads(c *Case, worker *codexSession, alpha, beta, gamma string) {
 // judgeNoReplay requires every announced id to have been announced exactly
 // once — availability notices included, which is why it looks at every
 // delivery and not only at the three letters.
-func judgeNoReplay(c *Case, worker *codexSession) {
+// judgeNoReplay asks the question the way this column can answer it: by the
+// ids a delivery named where it names them, and by arithmetic where it does
+// not. Both read the record as the session wrote it, never a reconstruction —
+// a replay is the one case a reconstruction cannot survive.
+func judgeNoReplay(c *Case, col column, worker *codexSession) {
 	deliveries, err := worker.groupDeliveries()
 	if err != nil {
 		c.t.Fatalf("workflow: %v", err)
@@ -255,11 +294,15 @@ func judgeNoReplay(c *Case, worker *codexSession) {
 		c.Contradicted(obsNoReplay, "the recipient recorded no deliveries, so a replay could not have shown")
 		return
 	}
-	if again := announcedTwice(deliveries); again != "" {
-		c.Contradicted(obsNoReplay, "%s was announced in more than one delivery", again)
+	again, err := col.replayedAnnouncement(worker)
+	if err != nil {
+		c.t.Fatalf("workflow: %v", err)
+	}
+	if again != "" {
+		c.Contradicted(obsNoReplay, "%s", again)
 		return
 	}
-	c.Observed(obsNoReplay, fmt.Sprintf("%d deliveries, no id in two of them", len(deliveries)))
+	c.Observed(obsNoReplay, fmt.Sprintf("%d deliveries, nothing announced in two of them", len(deliveries)))
 }
 
 func announcedTwice(deliveries []groupDelivery) string {
@@ -286,4 +329,22 @@ func atoiOr(text string, fallback int) int {
 		return fallback
 	}
 	return n
+}
+
+// readsOf counts how the reads of these letters came out: how many were
+// attempted, and how many of those the product allowed. Counting rather than
+// naming, because which letter a group hands over first follows the order of
+// their ids, which is not the order they were sent.
+func readsOf(worker *codexSession, ids ...string) (attempted, succeeded int) {
+	for _, id := range ids {
+		ok, tried := readOf(worker, id)
+		if !tried {
+			continue
+		}
+		attempted++
+		if ok {
+			succeeded++
+		}
+	}
+	return attempted, succeeded
 }

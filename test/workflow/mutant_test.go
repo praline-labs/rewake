@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"testing"
 )
 
 // A control that breaks a property of the product breaks the product, not the
@@ -34,38 +33,55 @@ type mutation struct {
 type edit struct{ old, new string }
 
 // buildMutant builds rewake with the mutation applied and answers the path of
-// the binary. The build runs in the module root, like the ordinary one, with
-// the mutated file laid over the original.
-func buildMutant(t *testing.T, m mutation) string {
-	t.Helper()
+// the binary, or why it could not.
+//
+// It belongs to a case that has already started, and that is the point of its
+// shape. Built before the case, a failed mutant published no record at all:
+// the run went red, the summary could only say that no case explained it, and
+// the build directory — the one piece of evidence — was deleted by t.TempDir
+// on the way out. Now the directory belongs to the case, so it is kept when
+// the case is red, and the error comes back to be recorded against the
+// control's own observation.
+func buildMutant(c *Case, m mutation) (string, error) {
+	dir, err := os.MkdirTemp("", "rewake-mutant-"+m.name+"-")
+	if err != nil {
+		return "", fmt.Errorf("%s: a directory to build in: %w", m, err)
+	}
+	c.RemoveOnFinish(dir)
+	fail := func(format string, args ...any) (string, error) {
+		err := fmt.Errorf("%s: "+format, append([]any{m}, args...)...)
+		// The reason goes beside the build, so the directory the verdict
+		// points at says what happened in it.
+		_ = os.WriteFile(filepath.Join(dir, "failure.txt"), []byte(err.Error()+"\n"), 0o600)
+		return "", err
+	}
 	root, err := moduleRoot()
 	if err != nil {
-		t.Fatalf("mutant %s: %v", m.name, err)
+		return fail("%v", err)
 	}
 	original := filepath.Join(root, m.file)
 	source, err := os.ReadFile(original)
 	if err != nil {
-		t.Fatalf("mutant %s: reading %s: %v", m.name, m.file, err)
+		return fail("reading %s: %v", m.file, err)
 	}
 	text := string(source)
 	for _, e := range m.edits {
 		if n := strings.Count(text, e.old); n != 1 {
-			t.Fatalf("mutant %s: the text to change occurs %d times in %s, not once; the product has moved and the control no longer breaks what it says", m.name, n, m.file)
+			return fail("the text to change occurs %d times in %s, not once; the product has moved and the control no longer breaks what it says", n, m.file)
 		}
 		text = strings.Replace(text, e.old, e.new, 1)
 	}
-	dir := t.TempDir()
 	mutated := filepath.Join(dir, filepath.Base(m.file))
 	if err := os.WriteFile(mutated, []byte(text), 0o600); err != nil {
-		t.Fatalf("mutant %s: %v", m.name, err)
+		return fail("%v", err)
 	}
 	overlay, err := json.Marshal(map[string]any{"Replace": map[string]string{original: mutated}})
 	if err != nil {
-		t.Fatalf("mutant %s: %v", m.name, err)
+		return fail("%v", err)
 	}
 	overlayFile := filepath.Join(dir, "overlay.json")
 	if err := os.WriteFile(overlayFile, overlay, 0o600); err != nil {
-		t.Fatalf("mutant %s: %v", m.name, err)
+		return fail("%v", err)
 	}
 	binary := filepath.Join(dir, "rewake-"+m.name)
 	ctx, stop := context.WithTimeout(context.Background(), buildTimeout)
@@ -74,9 +90,10 @@ func buildMutant(t *testing.T, m mutation) string {
 	build.Dir = root
 	build.Env = os.Environ()
 	if out, err := outputBounded(ctx, "go build", build); err != nil {
-		t.Fatalf("mutant %s: building: %v: %s", m.name, err, out)
+		_ = os.WriteFile(filepath.Join(dir, "build.log"), out, 0o600)
+		return fail("building: %v", err)
 	}
-	return binary
+	return binary, nil
 }
 
 func (m mutation) String() string { return fmt.Sprintf("mutant %s (%s)", m.name, m.file) }

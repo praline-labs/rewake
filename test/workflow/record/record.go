@@ -29,8 +29,12 @@ const (
 // Case is one finished case: what it claimed, how it came out, and where the
 // evidence is if it kept any.
 type Case struct {
-	Case         string        `json:"case"`
-	Harness      string        `json:"harness"`
+	Case    string `json:"case"`
+	Harness string `json:"harness"`
+	// Gate is true for the column whose red blocks: there an unsupported
+	// outcome is a failure too, and a summarizer must not count it as green
+	// even if a record says unsupported.
+	Gate         bool          `json:"gate"`
 	Outcome      string        `json:"outcome"`
 	Reason       string        `json:"reason"`
 	Observations []Observation `json:"observations"`
@@ -45,6 +49,8 @@ type Observation struct {
 	Name    string `json:"name"`
 	Outcome string `json:"outcome"`
 	Detail  string `json:"detail"`
+	// Capability names what an unsupported observation lacks.
+	Capability string `json:"capability,omitempty"`
 }
 
 // Run is the record of the run itself: whether the scenarios were switched on

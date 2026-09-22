@@ -143,21 +143,27 @@ func runMidTurnControl(t *testing.T, control midTurnControl, want whatIsExpected
 // requires.
 func runNamedMidTurnControl(t *testing.T, name string, control midTurnControl, expected string, want whatIsExpected) {
 	t.Helper()
-	binary := suite.binary
-	if control.mutant != nil {
-		binary = buildMutant(t, *control.mutant)
-	}
+	// The case first, then the mutant, for the reason given in buildMutant.
 	c := Start(t, Spec{
 		Name:         name,
 		Harness:      "codex",
 		Observations: []string{want.observation()},
 		Deadline:     150 * time.Second,
 	})
-	if !offers(c, "codex", capabilityMidTurn) {
+	binary := suite.binary
+	if control.mutant != nil {
+		built, err := buildMutant(c, *control.mutant)
+		if err != nil {
+			c.Contradicted(want.observation(), "the mutant could not be built: %v", err)
+			return
+		}
+		binary = built
+	}
+	if !offersMidTurn(c, codexColumn) {
 		return
 	}
 	iso := Isolate(t, c, binary)
-	worker, sender := startMidTurnSessions(t, c, iso, control.timing, control.shim...)
+	worker, sender := startMidTurnSessions(t, c, iso, codexColumn, control.timing, control.shim...)
 	defer stopSession(t, c, worker)
 	defer stopSession(t, c, sender)
 

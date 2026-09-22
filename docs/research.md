@@ -103,6 +103,23 @@ directory and reads the running session as its own.
   hook runs]**
 - The Stop hook receives `last_assistant_message` on stdin. **[source; verified
   live]**
+- What rewake reads from that payload (`internal/cli/turn_result.go`): `agent_id`,
+  which decides whether the end counts at all — a child's inherited hook carries one
+  and is ignored — then `type`, `hook_event_name`, `turn-id` or `turn_id`,
+  `thread-id`, the last message under `last_assistant_message`,
+  `last-assistant-message` or `last_agent_message`, and `error` with
+  `error_details` for a failure. Of what the workflow suite's Claude Code fixture
+  sends, only `last_assistant_message` on Stop is verified live; `hook_event_name`,
+  `session_id`, `cwd`, `transcript_path`, and the StopFailure fields are
+  **[assumed]**, shaped from the hook reference rather than from a running session.
+  For StopFailure the fixture puts the error text in `last_assistant_message` with
+  `error_details` and `error` beside it, following the reference cited below.
+  September 22, 2026.
+- Whether the real harness refuses an envelope carrying a field it does not serve is
+  **[assumed]** too, and assumed the other way: the fixture refuses one. A fixture
+  looser than the harness lets a scenario pass while the envelope is mangled on the
+  way; stricter only costs a fixture change the day the envelope grows a field.
+  September 22, 2026.
 - A hook runs while its session is awake; it cannot wake anything from deep idle.
   Waking goes through the socket. **[owner]**
 

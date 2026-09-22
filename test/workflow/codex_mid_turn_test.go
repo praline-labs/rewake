@@ -28,20 +28,24 @@ import (
 // This is the fixture tier; the only observation of that kind is the live one
 // of September 21, 2026 in claude-parity-2026-09-21.md.
 func TestMidTurn(t *testing.T) {
+	runInColumns(t, "mid-turn", runMidTurn)
+}
+
+func runMidTurn(t *testing.T, col column) {
 	binary := enterScenario(t, "mid-turn")
 	c := Start(t, Spec{
 		Name:    "mid-turn",
-		Harness: "codex",
+		Harness: col.harness,
 		Observations: []string{
 			obsMidReady, obsPending, obsSteered, obsOriginalOutcome, obsNoSecondOutcome, obsMidAlive,
 		},
 		Deadline: 120 * time.Second,
 	})
-	if !offers(c, "codex", capabilityMidTurn) {
+	if !offersMidTurn(c, col) {
 		return
 	}
 	iso := Isolate(t, c, binary)
-	worker, sender := startMidTurnSessions(t, c, iso, midTurnLive)
+	worker, sender := startMidTurnSessions(t, c, iso, col, midTurnLive)
 	defer stopSession(t, c, worker)
 	defer stopSession(t, c, sender)
 
@@ -159,27 +163,23 @@ const (
 
 // capabilityMidTurn is what a harness must offer for this scenario to mean
 // anything: its fixture has to show a delivery reaching a session that is
-// already working. A harness that does not offer it is unsupported, which is
-// not a pass — see classification_test.go.
-const capabilityMidTurn = "observes-mid-turn-arrival"
+// already working. The socket column does not: one line goes in and nothing
+// comes back, so it has no notion of a turn in progress to deliver into. A
+// harness that does not offer it is unsupported, which is not a pass — see
+// classification_test.go.
+var capabilityMidTurn = capability("observes-mid-turn-arrival")
 
-// capabilities is what each harness fixture declares. Claude Code has no
-// fixture at all yet, so it declares nothing and every scenario that needs a
-// capability reports unsupported for it rather than quietly skipping.
-var capabilities = map[string]map[string]bool{
-	"codex": {capabilityMidTurn: true},
-}
-
-// offers records every observation as unsupported when the harness lacks the
-// capability, and answers whether the case may go on. Saying so by name is the
-// point: a missing mechanism that stayed silent would read as a defect that
-// swallowed the evidence.
-func offers(c *Case, harness, capability string) bool {
-	if capabilities[harness][capability] {
+// offersMidTurn records every observation as unsupported when the column
+// cannot show a mid-turn arrival, and answers whether the case may go on.
+// Saying so by name is the point: a missing mechanism that stayed silent would
+// read as a defect that swallowed the evidence, and a case skipped by name
+// would leave the row unverified for ever.
+func offersMidTurn(c *Case, col column) bool {
+	if col.offers(capabilityMidTurn) {
 		return true
 	}
 	for _, observation := range c.spec.Observations {
-		c.Unsupported(observation, harness+" declares no "+capability)
+		col.unsupported(c, observation, capabilityMidTurn)
 	}
 	return false
 }
@@ -197,16 +197,16 @@ const (
 // startMidTurnSessions launches a recipient that holds its first turn open and
 // a sender that sends one letter now and one when the recipient reaches the
 // state this run is about.
-func startMidTurnSessions(t *testing.T, c *Case, iso *Isolation, when midTurnTiming, controls ...string) (*codexSession, *codexSession) {
+func startMidTurnSessions(t *testing.T, c *Case, iso *Isolation, col column, when midTurnTiming, controls ...string) (*codexSession, *codexSession) {
 	t.Helper()
-	worker := startCodexSession(t, c, iso, "worker", "--general",
+	worker := startHarnessSession(t, c, iso, col.harness, "worker", "--general",
 		append([]string{shimInboxJSON + "=1", shimHoldTurn + "=1"}, controls...)...)
 	timing := shimSendWhenWorking + "=" + worker.name
 	if when == midTurnLate {
 		timing = shimSendWhenIdle + "=" + worker.name
 	}
-	sender := startCodexSession(t, c, iso, "sender", "--main",
-		shimInboxJSON+"=1", shimSendTo+"="+worker.name, shimSendWhenReady+"="+worker.name,
+	sender := startHarnessSession(t, c, iso, col.harness, "sender", "--main",
+		shimInboxJSON+"=1", shimSendTo+"="+worker.name, readinessSwitch(col, worker),
 		shimSendText+"="+midTurnFirst, timing, shimSendSecondText+"="+midTurnSecond)
 	return worker, sender
 }

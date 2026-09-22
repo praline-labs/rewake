@@ -105,11 +105,19 @@ const (
 // looked and it was right" do not collapse into the same color.
 func (o Outcome) Green() bool { return o == Pass }
 
+// Whether an outcome leaves the run intact is not a property of the outcome
+// alone: it depends on the column. See Case.acceptable — an outcome-only rule
+// here let an unsupported observation pass on the one column that must never
+// lose one.
+
 // observation is one observation as the case saw it.
 type observation struct {
 	Name    string
 	Detail  string
 	Outcome Outcome
+	// Capability names what an unsupported observation lacks. A summary that
+	// has to recover it from the detail's prose is reading free text again.
+	Capability string
 }
 
 // classify decides a case's outcome from its declared observations, the

@@ -29,9 +29,12 @@ and what it does not prove, is in its own record:
 [batch-arrival](2026-09-22-scenario-batch-arrival.md) and
 [mid-turn](2026-09-22-scenario-mid-turn.md).
 
-What does not exist: `ack-recovery`, the fourth scenario; a fixture for the Claude
-Code column, so the scenario × harness matrix has one column running; and a runner
-command — the proposal chose `go test` with a summarizer over `go test -json` and
-rejected a separate binary,
-and the summarizer is not written either. The paid tier with a real model has not run
-under the suite.
+Both columns run since September 22, 2026: a fixture for the Claude Code session
+inbox joined the Codex one, and the three scenarios run against each
+([the record](2026-09-22-fixture-claude-code.md)).
+
+What does not exist: `ack-recovery`, the fourth scenario, and a separate runner
+command — by decision, since the proposal chose `go test` with a summarizer over
+`go test -json` and rejected a separate binary. The summarizer exists since
+September 22, 2026 ([its record](2026-09-22-suite-summarizer.md)). The paid tier with
+a real model has not run under the suite.

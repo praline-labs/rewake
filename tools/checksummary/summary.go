@@ -31,10 +31,13 @@ type summary struct {
 	// Totals are the cases by outcome, written into the file from the same
 	// function the console line uses. A consumer that had to recount them
 	// would be a second implementation of the one question this file answers.
-	Totals        map[string]int `json:"totals"`
-	Wall          string         `json:"wall"`
-	EngineExit    *int           `json:"engineExit"`
-	PackageFailed bool           `json:"packageFailed"`
+	Totals map[string]int `json:"totals"`
+	// FailedTests are the tests the engine reported failed, whether or not a
+	// case record explains them.
+	FailedTests   []string `json:"failedTests"`
+	Wall          string   `json:"wall"`
+	EngineExit    *int     `json:"engineExit"`
+	PackageFailed bool     `json:"packageFailed"`
 
 	sawRun bool
 }
@@ -55,11 +58,18 @@ func (s *summary) green() bool {
 		return false
 	}
 	for _, one := range s.Cases {
-		if one.Outcome != outcomePass && one.Outcome != outcomeUnsupported {
+		if !acceptable(one) {
 			return false
 		}
 	}
 	return true
+}
+
+// acceptable is the run's rule for one case: a pass, or an absent capability
+// off the gate. On the gate an unsupported case is red whatever it says — the
+// suite converts it already, and this holds even for a record that did not.
+func acceptable(one record.Case) bool {
+	return one.Outcome == outcomePass || one.Outcome == outcomeUnsupported && !one.Gate
 }
 
 func (s *summary) encode() ([]byte, error) {
@@ -113,6 +123,13 @@ func (s *summary) render(to io.Writer, path string) {
 		// and ran nothing fails the engine by design, and printing both is two
 		// refusals for one cause.
 		_, _ = fmt.Fprintf(to, "engine    FAIL  go test exited %d with no case reporting a failure\n", *s.EngineExit)
+		for index, name := range s.FailedTests {
+			if index == failedTestLines {
+				_, _ = fmt.Fprintf(to, "          … %d more in the summary file\n", len(s.FailedTests)-index)
+				break
+			}
+			_, _ = fmt.Fprintf(to, "          failed test  %s\n", name)
+		}
 	}
 	_, _ = fmt.Fprintf(to, "summary   %s\n", path)
 }
@@ -123,23 +140,48 @@ func (s *summary) ranNothing() bool { return s.Run.Enabled && len(s.Run.Scenario
 
 func (s *summary) anyRed() bool {
 	for _, one := range s.Cases {
-		if one.Outcome != outcomePass && one.Outcome != outcomeUnsupported {
+		if !acceptable(one) {
 			return true
 		}
 	}
 	return false
 }
 
-// renderUnsupported names each absent capability with the column it is absent
-// from. A cell that is unsupported and unexplained reads as a defect that
-// swallowed the evidence.
+// renderUnsupported names each absent capability with the case and the column
+// it is absent from. A cell that is unsupported and unexplained reads as a
+// defect that swallowed the evidence, and three lines naming only a column
+// cannot be told apart.
 func (s *summary) renderUnsupported(to io.Writer) {
 	for _, one := range s.Cases {
-		if one.Outcome != outcomeUnsupported {
+		if one.Outcome != outcomeUnsupported || !acceptable(one) {
 			continue
 		}
-		_, _ = fmt.Fprintf(to, "          unsupported  %s  %s\n", column(one), one.Reason)
+		_, _ = fmt.Fprintf(to, "          unsupported  %s/%s  %s\n", one.Case, column(one), capabilities(one))
 	}
+}
+
+// capabilities are the distinct capabilities a case's unsupported
+// observations name, or its reason when none names one.
+func capabilities(one record.Case) string {
+	var names []string
+	for _, observation := range one.Observations {
+		if observation.Capability != "" && !contains(names, observation.Capability) {
+			names = append(names, observation.Capability)
+		}
+	}
+	if len(names) == 0 {
+		return one.Reason
+	}
+	return strings.Join(names, ", ")
+}
+
+func contains(list []string, value string) bool {
+	for _, item := range list {
+		if item == value {
+			return true
+		}
+	}
+	return false
 }
 
 // renderFailures writes the bounded excerpt for each case that did not pass:
@@ -153,7 +195,7 @@ func (s *summary) renderUnsupported(to io.Writer) {
 func (s *summary) renderFailures(to io.Writer) {
 	budget := excerptBudget
 	for _, one := range s.Cases {
-		if one.Outcome == outcomePass || one.Outcome == outcomeUnsupported {
+		if acceptable(one) {
 			continue
 		}
 		lines := failureLines(one)
@@ -172,13 +214,20 @@ func (s *summary) renderFailures(to io.Writer) {
 // to the file.
 const excerptBudget = 8 << 10
 
+// failedTestLines bounds the tests named when no case explains a red engine.
+// The innermost failing test is usually the answer and the parents follow it,
+// so a handful is enough to point the next read.
+const failedTestLines = 5
+
 // excerptLines is the per-case ceiling from the same contract.
 const excerptLines = 20
 
 func failureLines(one record.Case) []string {
 	lines := []string{fmt.Sprintf("FAIL  %s/%s   %s", one.Case, column(one), one.Outcome)}
 	for _, observation := range one.Observations {
-		if observation.Outcome == outcomePass || observation.Outcome == outcomeUnsupported {
+		// An unsupported observation is the failure itself on the gate, and
+		// only a note elsewhere.
+		if observation.Outcome == outcomePass || observation.Outcome == outcomeUnsupported && !one.Gate {
 			continue
 		}
 		lines = append(lines, fmt.Sprintf("      %-11s %q", observation.Outcome, observation.Name))

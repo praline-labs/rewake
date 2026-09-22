@@ -13,10 +13,16 @@ import (
 // itself, because the claim is about what the session was told and did.
 
 // groupDelivery is one delivery as the session recorded it.
+//
+// Members is empty on a column whose notice does not name them; Count is what
+// the notice announced, and Announced is the id it carried. A scenario that
+// needs the members asks whether they are there rather than assuming.
 type groupDelivery struct {
-	Turn    string
-	Members []string
-	Notice  string
+	Turn      string
+	Count     int
+	Members   []string
+	Notice    string
+	Announced string
 }
 
 // groupDeliveries are the deliveries in the order they arrived. A line that
@@ -35,23 +41,26 @@ func (s *codexSession) groupDeliveries() ([]groupDelivery, error) {
 		if line == "" {
 			continue
 		}
-		fields := strings.SplitN(line, "\t", 4)
-		if len(fields) != 4 {
+		fields := strings.SplitN(line, "\t", 5)
+		if len(fields) != 5 {
 			return nil, errUnreadableRecord(s.groups, line)
 		}
 		count, err := strconv.Atoi(fields[1])
 		if err != nil {
 			return nil, errUnreadableRecord(s.groups, line)
 		}
-		members := strings.Split(fields[2], ",")
-		if count != len(members) {
-			return nil, errUnreadableRecord(s.groups, line)
+		var members []string
+		if fields[2] != "" {
+			members = strings.Split(fields[2], ",")
+			if count != len(members) {
+				return nil, errUnreadableRecord(s.groups, line)
+			}
 		}
 		notice, err := strconv.Unquote(fields[3])
 		if err != nil {
 			return nil, errUnreadableRecord(s.groups, line)
 		}
-		deliveries = append(deliveries, groupDelivery{Turn: fields[0], Members: members, Notice: notice})
+		deliveries = append(deliveries, groupDelivery{Turn: fields[0], Count: count, Members: members, Notice: notice, Announced: fields[4]})
 	}
 	return deliveries, nil
 }
@@ -103,6 +112,24 @@ func (s *codexSession) readRecords() ([]readRecord, error) {
 		records = append(records, record)
 	}
 	return records, nil
+}
+
+// overviews are the ids each overview listed, in the order the session took
+// them. One overview per delivery on a column that reads that way, which is
+// what makes "what this delivery announced" answerable where the notice does
+// not say.
+func (s *codexSession) overviews() ([][]string, error) {
+	records, err := s.readRecords()
+	if err != nil {
+		return nil, err
+	}
+	var taken [][]string
+	for _, entry := range records {
+		if entry.Kind == "peek" && entry.OK {
+			taken = append(taken, entry.IDs)
+		}
+	}
+	return taken, nil
 }
 
 // peekedMessage is one row of an overview the session took, as the session's

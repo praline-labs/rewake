@@ -123,6 +123,13 @@ func parseStream(from io.Reader) (*summary, error) {
 		if current.Action == "fail" && current.Test == "" {
 			found.PackageFailed = true
 		}
+		if current.Action == "fail" && current.Test != "" {
+			// Kept for the one case where no record explains a red engine: a
+			// test that failed before its case could publish anything. Its
+			// name is then the whole diagnostic, and "no case reporting a
+			// failure" without it sent the last reader looking for nothing.
+			found.FailedTests = append(found.FailedTests, current.Test)
+		}
 		if current.Action != "output" {
 			continue
 		}

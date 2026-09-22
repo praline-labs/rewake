@@ -146,7 +146,10 @@ func (s *shimSession) recordGroup(turn string, notice mailboxNotice) {
 	for _, member := range notice.Members {
 		ids = append(ids, member.ID)
 	}
-	appendLine(target, fmt.Sprintf("%s\t%d\t%s\t%s", turn, len(ids), strings.Join(ids, ","), strconv.Quote(notice.Notice)))
+	// Five fields, the last two of which this column leaves as they are: the
+	// count is len(members) here, and the announcement carries no id of its
+	// own. The other column fills them the other way round.
+	appendLine(target, fmt.Sprintf("%s\t%d\t%s\t%s\t%s", turn, len(ids), strings.Join(ids, ","), strconv.Quote(notice.Notice), ""))
 }
 
 // recordRead appends one inbox call and its outcome.
@@ -190,11 +193,11 @@ func sendAsAsked() int {
 		fmt.Fprintf(os.Stderr, "shim: %v\n", err)
 		return 1
 	}
-	if ready := os.Getenv(shimSendWhenReady); ready != "" && !awaitReady(ready) {
+	if !awaitRecipientReady() {
 		// Not an exit: the letters still go, and the scenario will see them
 		// folded into one group and say so. Leaving would end the session and
 		// turn a readiness problem into a missing sender.
-		fmt.Fprintf(os.Stderr, "shim: %s never became ready; sending anyway\n", ready)
+		fmt.Fprintln(os.Stderr, "shim: the recipient never became ready; sending anyway")
 	}
 	texts := []string{os.Getenv(shimSendText)}
 	if list := os.Getenv(shimSendTexts); list != "" {
@@ -235,6 +238,34 @@ func sendAsAsked() int {
 		}
 	}
 	return 0
+}
+
+// awaitRecipientReady waits for whatever readiness this column has. One column
+// reports an accepted conversation in the room's telemetry; the other has no
+// telemetry at all and says it is listening by creating a file. Asked for
+// neither, the sender does not wait.
+func awaitRecipientReady() bool {
+	if mark := os.Getenv(shimWaitForFile); mark != "" {
+		return awaitFile(mark)
+	}
+	if name := os.Getenv(shimSendWhenReady); name != "" {
+		return awaitReady(name)
+	}
+	return true
+}
+
+// awaitFile waits for a file to appear. Bounded like every other wait here: a
+// recipient that never listens is the scenario's finding, not the sender's to
+// wait on for ever.
+func awaitFile(path string) bool {
+	deadline := time.Now().Add(20 * time.Second)
+	for time.Now().Before(deadline) {
+		if _, err := os.Stat(path); err == nil {
+			return true
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	return false
 }
 
 // awaitReady polls the session's own view of the room until the named session
