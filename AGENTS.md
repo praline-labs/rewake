@@ -108,8 +108,8 @@ cleared. Clear them: the risk is not a red run but a test writing into the
 owner's live state directory, or reading the running session as its own.
 
 How the project is tested — tiers, what each proves, reading a result, checking a new
-harness version, extending the suite — is in `docs/testing.md`; this section keeps the
-commands.
+harness version, extending the suite — is in `docs/testing.md`, which explains these
+commands without repeating them; this section is the one place the commands live.
 
 The workflow suite in `test/workflow` runs a built rewake end to end. It is off
 by default — its scenarios skip themselves, so the five checks stay cheap while
@@ -164,6 +164,15 @@ not enough for both a slow first download and the suite, so a first run of a new
 version wants the thirty. The variable is read only under `REWAKE_WORKFLOW`.
 `go run ./tools/harnesscache --help` lists, fetches and removes cached versions;
 nothing is removed automatically.
+
+The crosswise check runs each control's observations in every other control's world;
+run it after adding or changing a control:
+
+```bash
+env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
+  REWAKE_WORKFLOW=1 REWAKE_WORKFLOW_CROSS=1 go run ./tools/checksummary \
+  -- go test -count=1 -json -run Crosswise ./test/workflow/...
+```
 
 The tools are installed with `go install` into `~/go/bin`, which has to be on
 `PATH`:

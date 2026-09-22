@@ -37,59 +37,36 @@ owner's decision, recorded in [harness-features.md](harness-features.md).
 
 ## Running it
 
-The five checks, the condition for every commit:
+The commands live in one place, the [Checks section of AGENTS.md](../AGENTS.md#checks),
+which every agent session loads and whose five checks are the condition for a commit.
+What follows is what their variables and flags do, and when each run is the right one.
 
-```bash
-gofumpt -l $(go list -f '{{.Dir}}' ./...)
-go vet ./...
-staticcheck ./...
-golangci-lint run ./...
-env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
-  go test -race -shuffle=on ./...
-```
+**The five checks** clear `REWAKE_SESSION`, `REWAKE_EPOCH`, `REWAKE_DIR` and
+`REWAKE_ROOM`, because a test that inherits them reads the live session's state as its
+own. They start no harness, no container and no network request, whatever else the
+environment says: every real-harness step is behind the suite switch. Run them before
+every commit.
 
-The `REWAKE_*` variables are cleared because a test that inherits them reads the live
-session's state as its own. These checks start no harness, no container and no network
-request, whatever else the environment says: every real-harness step is behind the
-suite switch.
+**The workflow suite** is switched on by `REWAKE_WORKFLOW=1`; without it every scenario
+skips itself. Run it through `tools/checksummary` to read a result, which prints a few
+lines and writes the rest to a file; run it with `go test -v` to watch it, and keep the
+`-v`: `go test` prints nothing a passing package printed, so without it the line naming
+how many scenarios ran is invisible. `-count=1` keeps a cached pass from standing in for
+a run. Run it after any change to delivery, reading, reporting or a fixture.
 
-The workflow suite, through the summarizer, which prints a few lines and writes the
-whole result to a file:
+**`REWAKE_CODEX_VERSION`** takes an exact version, `latest` or `installed`, and makes
+the schema case use that Codex, fetched once into the harness cache before any case
+starts and run in a container. The fetch gets half of `-timeout`, at most ten minutes,
+which is why the documented command raises `-timeout` to thirty; below about five
+minutes that half is not enough for a slow first download and the suite together.
+Docker is needed only when a version is named; without it the run is red with the
+reason. Run it before updating Codex, as described below.
 
-```bash
-env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
-  REWAKE_WORKFLOW=1 go run ./tools/checksummary \
-  -- go test -count=1 -json ./test/workflow/...
-```
-
-To watch it instead, the same run with `-v` in place of the summarizer:
-`REWAKE_WORKFLOW=1 go test -count=1 -v ./test/workflow/...` (with the same `env -u`).
-`-v` matters: `go test` prints nothing a passing package printed, so without it the line
-naming how many scenarios ran is invisible.
-
-The schema from a named Codex version — an exact version, `latest` or `installed` —
-with room for a first download:
-
-```bash
-env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
-  REWAKE_WORKFLOW=1 REWAKE_CODEX_VERSION=0.156.0 go run ./tools/checksummary \
-  -- go test -count=1 -timeout 30m -json ./test/workflow/...
-```
-
-The version is fetched once, before any case starts, within half of `-timeout` and at
-most ten minutes; below a `-timeout` of about five minutes that half is not enough for a
-slow first download and the suite together. Docker is needed only when a version is
-named; without it the run is red with the reason.
-
-The crosswise check runs every control against every other control's mutant and
-requires each observation to stand; it multiplies the run, about three and a half
-minutes, so it has its own switch:
-
-```bash
-env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
-  REWAKE_WORKFLOW=1 REWAKE_WORKFLOW_CROSS=1 go run ./tools/checksummary \
-  -- go test -count=1 -json -run Crosswise ./test/workflow/...
-```
+**`REWAKE_WORKFLOW_CROSS=1`** with `-run Crosswise` turns on the crosswise checks: each
+control's observations are run again in every other control's world — under the other
+product mutants and under the other fixture switches — and each must stand, so a control
+that breaks on somebody else's change is caught. It multiplies the run to about three
+and a half minutes. Run it after adding or changing a control.
 
 `REWAKE_WORKFLOW_SELFCHECK` is not for people: the suite sets it on a child of itself
 to prove that a scenario missing an observation turns the run red.
@@ -105,7 +82,7 @@ suite reads the same cache. Nothing is ever removed automatically.
 go run ./tools/harnesscache fetch codex 0.156.0     # prints the executable's path
 go run ./tools/harnesscache run codex 0.156.0 -- --version
 go run ./tools/harnesscache list
-go run ./tools/harnesscache remove codex 0.155.1
+go run ./tools/harnesscache remove codex <version>
 ```
 
 `run` starts the version in a fresh container: read-only root and harness, a private
@@ -115,7 +92,8 @@ both work; `--help` lists flags and exit codes.
 
 ## Checking a new harness version before updating
 
-1. Run the suite with `REWAKE_CODEX_VERSION=<version>` as above. The first run downloads
+1. Run the suite with `REWAKE_CODEX_VERSION=<version>`, the command in
+   [AGENTS.md](../AGENTS.md#checks). The first run downloads
    it; the `against` line says `downloaded this run`, and every later run says
    `from the cache without a download`.
 2. **Green** means every message the fixture sends matches the schema that version
@@ -144,9 +122,9 @@ one; build the binary to keep them apart):
 workflow  24 scenarios, 36 cases: 33 pass, 3 unsupported   2m0.7s
 against   schema from codex 0.156.0 (…); scenarios against the fixture in both columns
           unsupported  mid-turn/claude  observes-mid-turn-arrival
-FAIL  batch-arrival/codex   fail
+FAIL  batch-arrival/claude   fail
       fail        "the recipient can receive mail before the letters leave"
-        worker-codex never started listening
+        worker-claude never started listening
       evidence  /tmp/rewake-case-270015062
 summary   .rewake-checks/<time>/summary.json
 ```
@@ -164,13 +142,16 @@ directory and shim records of that case, or `/tmp/rewake-mutant-*` with `failure
 and `build.log` when a mutant could not be built. A green case removes its own. Read the
 evidence before deleting it.
 
-**The outcomes.** `pass`: every declared observation was made and held. `fail`: one was
-made and contradicted the claim. `incomplete`: the case ran and a declared observation
-was never made — never green, because "we never looked" is not "we looked and it was
-right". `not-run`: nothing was attempted. `skip`: a deliberate selection with a reason.
-`unsupported`: the column lacks a capability an observation needs; acceptable on the
-search column, red on the gate, where it would mean the regression check had quietly
-stopped checking.
+**The outcomes**, in the order the classifier ranks a case. `fail`: an observation was
+made and contradicted the claim, or cleanup failed, or the deadline expired — it wins
+over everything below. `incomplete`: the case ran and a declared observation was never
+made, which includes one recorded as `skip` or `not-run`; never green, because "we never
+looked" is not "we looked and it was right". `unsupported`: the column lacks a
+capability an observation needs; acceptable on the search column, red on the gate,
+where it would mean the regression check had quietly stopped checking. `pass`: every
+declared observation was made and held. `skip` and `not-run` appear on observations,
+never as a case's outcome: a declared observation nobody made is listed as `not-run`,
+and a case that has not finished has no verdict yet.
 
 ## Extending the suite
 
@@ -183,18 +164,21 @@ otherwise. Waits are anchored on a condition the case can observe (`Await`, `wai
 never on a sleep: a sleep makes a slow machine look like a defect and a lost wakeup look
 like slowness.
 
-**A control** proves the scenario can fail. Where the claim is about rewake, it mutates
-the product: `buildMutant` in `mutant_test.go` builds rewake with one edit through the
-toolchain's overlay, inside a started case, and refuses an edit that does not match
-exactly once — batch-arrival's four controls, three of task-report's and mid-turn's
-wait-for-idle work this way. Where the claim is about what rewake does when the world
-misbehaves, the control changes the fixture instead: task-report's other four, the
-readiness controls, and mid-turn's late and failed-operation. A
-control names the observation it must break; the crosswise check then runs every
-control against every other mutant and requires the named observations to stand, so a
-control that breaks on somebody else's mutation is caught. Each control answers in three
-values — broken, not broken, cannot judge — and a record that is unreadable or empty is
-"cannot judge", never "not broken".
+**A control** proves the scenario can fail. It breaks one claim, in one of two ways: a
+product mutant, built by `buildMutant` in `mutant_test.go` with one edit through the
+toolchain's overlay, inside a started case, refusing an edit that does not match
+exactly once; or a switch that changes the fixture's world. A mutant is preferred
+wherever one can be built, because it shows the scenario catching a broken rewake
+rather than a misbehaving peer. Of today's seventeen controls, eight are mutants —
+batch-arrival's four; task-report's no-stop-hook, turn-ended-ignores-stop and
+settles-nothing; mid-turn's wait-for-idle — and nine are fixture switches: task-report's
+wrong-report, read-fails, failure-before-report and early-exit; the three readiness
+controls; mid-turn's late and failed-operation. A control names the observation it must
+break; the crosswise check then runs every control's observations in every other
+control's world and requires them to stand, so a control that breaks on somebody else's
+change is caught. Each control answers in three values — broken, not broken, cannot
+judge — and a record that is unreadable or empty is "cannot judge", never "not
+broken".
 
 **A fixture** is stricter than the harness it plays, never looser: a fixture that
 accepts what the harness refuses lets a scenario pass on a product the harness would
@@ -215,8 +199,7 @@ scenarios do not change. What building the second one taught is in
   product with every test green, because the fixture accepted what the real server
   refuses ([research-launch.md](research-launch.md)).
 - **A control that passed for the wrong reason.** The replay control stayed green on the
-  socket column until replays were found by arithmetic rather than by id; an early-exit
-  control passed on timing alone until it waited for the departure itself
+  socket column until replays were found by arithmetic rather than by id
   ([2026-09-22-fixture-claude-code.md](roadmap/2026-09-22-fixture-claude-code.md)).
 - **A mutant built before its case.** A failed build published no record, and the only
   evidence was deleted on the way out; mutants now build inside a started case.
@@ -224,8 +207,10 @@ scenarios do not change. What building the second one taught is in
   observation `unsupported` and the run stayed green; unsupported is now red there.
 - **A shared deadline.** Twelve crosswise pairs in one case exhausted its clock and the
   last pair was blamed; each pair is its own subtest.
-- **The five checks reaching outside.** A child of the suite inherited a named version
-  and contacted the registry during an ordinary `go test ./...`
+- **The five checks reaching outside.** The direct shape tests were not behind the suite
+  switch, so every ordinary `go test ./...` ran the installed Codex with the owner's HOME,
+  and with a version named it contacted the registry and started a container; they need
+  the switch now, and the suite's self-check child no longer inherits a named version
   ([2026-09-23-harness-versions.md](roadmap/2026-09-23-harness-versions.md)).
 
 How each scenario was built, and what it does not prove, is in its own record:
