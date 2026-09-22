@@ -2,8 +2,10 @@
 
 > **Status, September 23, 2026.** R14-1 and R14-2, called open below, are closed: the
 > September 18 gateway replacement passes a dedicated regression for each, recorded in
-> [reviews-later.md](reviews-later.md#r14-1--p2-replacement-regression-passes-failed-reconnects-retain-closed-observer-clients)
-> and [server-observation.md](server-observation.md). The observer mechanism this
+> reviews-later.md, for
+> [R14-1](reviews-later.md#r14-1--p2-replacement-regression-passes-failed-reconnects-retain-closed-observer-clients)
+> and [R14-2](reviews-later.md#r14-2--p2-replacement-regression-passes-discovery-loses-an-observed-active-interval),
+> and in [server-observation.md](server-observation.md). The observer mechanism this
 > record and the investigation it extends describe was replaced by the
 > [gateway](gateway.md), which runs no observer. The observations below
 > are left as they were recorded.

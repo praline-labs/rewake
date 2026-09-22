@@ -164,7 +164,9 @@ occupying session's name when main is already live. The same pid/start-time and
 namespace checks as list determine liveness. `--general` and `--write` remain
 explicit alternatives. A name prefix never chooses a role, and no session is
 promoted when a main leaves. The three role flags cannot be combined, and general
-or write sessions may start before any main exists.
+or write sessions may start before any main exists. The refusal of a second `--main`
+names the live main and suggests stopping or restarting it, or launching without
+`--main` to join as general.
 
 The room's `.launch.lock` covers inspection of live sessions, role choice and
 name publication. A starting wrapper is already a live claimant before its
@@ -310,49 +312,8 @@ you mean") if the edit distance is small. Never prompt interactively.
 Go 1.25. Dependencies are allowed one deliberate decision at a time, judged on having
 no transitive dependencies of their own and on being actively maintained; the standard
 library is preferred where it does the job. The one in use is `pelletier/go-toml/v2`,
-for the alias file.
-
-```
-cmd/rewake/main.go              entry point, top-level parsing
-internal/cli/                   command table, parsing, overview, help, failures, printing
-internal/state/                 directory: checks, paths, atomic writes
-internal/registry/              session record, name publishing, liveness, listing
-internal/proc/                  /proc: identity, liveness and job-control state
-internal/inbox/                 message, status, sender-side write, servicing loop
-internal/role/                  the role catalogue: flag, briefing line, reporting duty
-internal/brief/                 text injected into an agent, independent of transport
-internal/alias/                 launch aliases: a short name turned into launch arguments
-internal/sessionstate/          optional, epoch-scoped observations of a harness (telemetry)
-internal/harness/               the Harness interface, launch plans, notices, hooks, defaults
-internal/harness/catalog/       the one list of harnesses that exist
-internal/harness/claude/        launch arguments, environment, socket delivery
-internal/harness/codex/         owned app-server, WebSocket RPC, thread events and delivery
-internal/harness/codex/gateway/ the terminal gateway: selection, reservation, native mailbox
-internal/wrap/                  wrapper: launch, signals, lifecycle
-test/workflow/                  the workflow suite: end-to-end scenarios against fixtures
-tools/checksummary/             summarizes a suite run into a few lines and summary.json
-tools/harnesscache/             fetches and caches harness versions, runs them in a container
-```
-
-`cmd/` holds only what the project ships; `tools/` holds development programs. The
-harness adapter is an interface (`internal/harness/plan.go`), here without its comments:
-
-```go
-type Harness interface {
-    ID() string
-    Title() string
-    Summary() string
-    Examples() []string
-    Notes() []string
-    SingleUseFlags() []Flag
-    Launch(request LaunchRequest) (LaunchPlan, error)
-    Deliver(ctx context.Context, session registry.Session, message inbox.Message) inbox.Result
-}
-```
-
-`SingleUseFlags` names the flags a harness takes at most once, so an alias and a typed
-flag for the same parameter replace rather than repeat each other. `Deliver` sends the
-notice for `message`, built by `harness.Notice`; it never sends `message.Text`.
+for the alias file. The source layout, package by package, and the harness
+interface every adapter implements are in [code.md](code.md).
 
 ## Testing
 
@@ -362,11 +323,16 @@ cheapest first. Unit tests beside the code, run by the five checks in
 expiry, the owned server's framing, correlation and reconnects on a fake socket, and a
 parse of every example in the command table. The workflow suite in `test/workflow`,
 switched on by `REWAKE_WORKFLOW=1`: a built rewake end to end against a fixture of each
-harness, in both columns, with controls that mutate the product; what it runs and why
-is in [check-runner-scenarios.md](check-runner-scenarios.md). And live runs with real
-harnesses in a separate `/tmp` state directory, done by hand and recorded in the dated
-acceptance documents; live Codex runs spend subscription quota, so they use a cheap
-model and short messages.
+harness, in both columns, with negative controls of two kinds: some build rewake with
+one line mutated (batch-arrival's four, three of task-report's, mid-turn's
+wait-for-idle), the others change the fixture's world (task-report's other four, the
+readiness controls, mid-turn's late and failed-operation); what each runs and why is in
+[check-runner-scenarios.md](check-runner-scenarios.md). Under the same switch, the
+schema case checks the fixture's messages against the protocol schema of a real Codex,
+the installed one or a version named by `REWAKE_CODEX_VERSION` and run in a container.
+And live runs with real harnesses in a separate `/tmp` state directory, done by hand and
+recorded in the dated acceptance documents; live Codex runs spend subscription quota,
+so they use a cheap model and short messages.
 
 ## Distribution
 

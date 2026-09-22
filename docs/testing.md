@@ -14,7 +14,7 @@ and controls, and the roadmap records named below for how each piece was built.
 | Tier | Runs | Proves | Does not prove | Costs |
 | --- | --- | --- | --- | --- |
 | The five checks | formatting, vet, two linters, `go test -race -shuffle=on ./...` | unit invariants: parsing, publishing races, liveness, inbox order and expiry, the owned server's framing on a fake socket, the map of `docs/`; the suite's own classifier and summarizer | anything end to end: every workflow scenario skips itself | about a minute; no network, no harness, no container |
-| Workflow suite (**F**) | a built rewake end to end against a fixture of each harness, in two columns, with controls that mutate the product | that the shared service code delivers, groups, steers and reports as each scenario claims, and that each claim can fail | that the real harness parses, renders or behaves as its fixture does | about two minutes; no network; under `REWAKE_WORKFLOW=1` the schema case also runs a real Codex (next row) |
+| Workflow suite (**F**) | a built rewake end to end against a fixture of each harness, in two columns, with negative controls: some mutate the product, the others change the fixture's world | that the shared service code delivers, groups, steers and reports as each scenario claims, and that each claim can fail | that the real harness parses, renders or behaves as its fixture does | about two minutes; no network; under `REWAKE_WORKFLOW=1` the schema case also runs a real Codex (next row) |
 | Schema of a Codex version | the installed Codex, or a named version fetched into a cache and run in a container, generating its protocol schema; every message the fixture sends is checked against it | that the fixture speaks the shape that version accepts: no missing required field, no field it does not have, no delivery it refuses and the fixture accepts | behaviour: order of events, readiness, reactions to a refusal — a schema has none of that | seconds from the cache; a first download is 150 MB and about half a minute |
 
 Two tiers are planned and not built. **P**, a real harness of a named version against a
@@ -183,9 +183,13 @@ otherwise. Waits are anchored on a condition the case can observe (`Await`, `wai
 never on a sleep: a sleep makes a slow machine look like a defect and a lost wakeup look
 like slowness.
 
-**A control** proves the scenario can fail. It mutates the product, not the fixture:
-`buildMutant` in `mutant_test.go` builds rewake with one edit through the toolchain's
-overlay, inside a started case, and refuses an edit that does not match exactly once. A
+**A control** proves the scenario can fail. Where the claim is about rewake, it mutates
+the product: `buildMutant` in `mutant_test.go` builds rewake with one edit through the
+toolchain's overlay, inside a started case, and refuses an edit that does not match
+exactly once — batch-arrival's four controls, three of task-report's and mid-turn's
+wait-for-idle work this way. Where the claim is about what rewake does when the world
+misbehaves, the control changes the fixture instead: task-report's other four, the
+readiness controls, and mid-turn's late and failed-operation. A
 control names the observation it must break; the crosswise check then runs every
 control against every other mutant and requires the named observations to stand, so a
 control that breaks on somebody else's mutation is caught. Each control answers in three

@@ -83,11 +83,6 @@ func TestEveryLinkResolves(t *testing.T) {
 			return err
 		}
 		for _, target := range links(t, path) {
-			if strings.HasPrefix(target.file, "..") {
-				// Outside docs/: the repository's own files, which this
-				// test does not own.
-				continue
-			}
 			if _, statErr := os.Stat(target.file); statErr != nil {
 				t.Errorf("docs/%s links %s, which does not exist: correct the link or the file name", path, target.file)
 				continue
@@ -143,9 +138,29 @@ func links(t *testing.T, document string) []target {
 	return found
 }
 
-// withoutCode blanks fenced code blocks, where a bracket and a parenthesis
-// are code rather than a link.
+// withoutCode blanks what a reader never sees as a link: fenced code blocks,
+// inline code and HTML comments. A document linked only from one of those is
+// on no map a reader can follow.
 func withoutCode(text string) string {
+	text = htmlComment.ReplaceAllStringFunc(text, blankKeepingLines)
+	return inlineCode.ReplaceAllString(withoutFences(text), "")
+}
+
+var (
+	htmlComment = regexp.MustCompile(`(?s)<!--.*?-->`)
+	inlineCode  = regexp.MustCompile("`[^`\n]*`")
+	// heading is what GitHub renders as a heading: one to six hashes and a
+	// space. "#notaheading" is text, and an anchor to it goes nowhere.
+	heading = regexp.MustCompile(`^#{1,6} `)
+)
+
+// blankKeepingLines replaces a match with its newlines only, so the text
+// after it keeps its line structure.
+func blankKeepingLines(match string) string {
+	return strings.Repeat("\n", strings.Count(match, "\n"))
+}
+
+func withoutFences(text string) string {
 	var kept strings.Builder
 	fenced := false
 	for _, line := range strings.SplitAfter(text, "\n") {
@@ -183,7 +198,7 @@ func headings(t *testing.T, document string) []string {
 			fenced = !fenced
 			continue
 		}
-		if fenced || !strings.HasPrefix(line, "#") {
+		if fenced || !heading.MatchString(line) {
 			continue
 		}
 		title := strings.TrimSpace(strings.TrimLeft(line, "#"))

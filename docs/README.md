@@ -20,8 +20,11 @@ everything else.
 - [design.md](design.md) — the specification: scope, the process model with no daemon,
   the state directory, rooms, the session record, roles and names (the one place their
   rules live), the environment a harness receives, the CLI contract and exit codes, the
-  source tree, the testing layers, and dated owner decisions. Open it for why the system
+  code policy, the testing layers, and dated owner decisions. Open it for why the system
   has the shape it has, or for a canonical rule.
+- [code.md](code.md) — the source tree, package by package, with the harness interface
+  every adapter implements. Open it to find where something lives, or before adding a
+  package.
 - [launch.md](launch.md) — starting a harness: the wrapper's launch sequence, signals,
   model and effort defaults from flags, environment and settings files, launch aliases,
   which flags choose a room and a role (the rules themselves are in design.md), the
@@ -140,8 +143,9 @@ everything else.
 
 ## Records of acceptance and observation
 
-Dated records of what was seen. They are not edited afterwards; where one has been
-superseded, the newer document says so.
+Dated records of what was seen. Their observations are never edited afterwards; a dated
+note ahead of them may say what has changed since, and where one has been superseded,
+the newer document says so.
 
 - [claude-parity-2026-09-21.md](claude-parity-2026-09-21.md) — three parity rows closed
   with Claude Code in the roles they waited on: telemetry of a Codex worker read by a

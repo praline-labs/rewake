@@ -242,10 +242,13 @@ and evidence collectors reviewable.
 
 ## Measurable acceptance for the suite
 
-Written before the suite existed, as the bar it has to clear; the suite built since is
-held to it. The scenarios, their controls and the summary are recorded in the
-roadmap entries for the suite ([roadmap/README.md](roadmap/README.md)); the paid tier,
-which the last criteria govern, has not run.
+Written before the suite existed, as the bar it has to clear. The suite built since
+meets part of it; the scenarios, their controls and the summary are recorded in the
+roadmap entries for the suite ([roadmap/README.md](roadmap/README.md)). Open today:
+the case record carries no source, build or native identity and no cleanup evidence,
+so nothing says "not-used" for an inapplicable field; it has no field that tells a
+controller's read, a fake acknowledgement or a manual observation apart from the
+others; and the paid tier, which the last criteria govern, has not run.
 
 - A fresh checkout can run all five checks and the selected two or three workflows
   using documented dependencies and isolated state, without ignored/private inputs.
