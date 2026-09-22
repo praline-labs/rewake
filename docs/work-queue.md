@@ -14,12 +14,13 @@ and what was learned goes to the research documents.
 What exists is in the roadmap's [suite entry](roadmap/2026-09-21-workflow-suite.md):
 `test/workflow` with its isolation, owned process groups and the shim that plays the
 Codex app-server; the Codex session taken to an accepted conversation; the first
-selected scenario, `task-report`, with its negative controls (`8b7004b`); and the
-second-terminal case, which has no reachable control and says so.
+selected scenario, `task-report`, with its negative controls (`8b7004b`); the second,
+`batch-arrival`, with four controls that mutate the product through a build overlay;
+and the second-terminal case, which has no reachable control and says so.
 
 What remains, from [check-runner-scenarios.md](check-runner-scenarios.md) and
-[check-runner-proposal.md](check-runner-proposal.md): the scenarios `batch-arrival` and
-`mid-turn`, then `ack-recovery`; a fixture for the Claude Code column, which has none;
+[check-runner-proposal.md](check-runner-proposal.md): the scenario `mid-turn`, then
+`ack-recovery`; a fixture for the Claude Code column, which has none;
 the summarizer over `go test -json` that gives the short console output and the summary
 file the proposal asks for — there is no separate runner command, by decision; and the
 paid tier, which has not run under the suite.

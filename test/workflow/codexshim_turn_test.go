@@ -31,6 +31,9 @@ type turnState struct {
 	// lastNotice is what arrived with the turn, for the scenario to compare
 	// against what it sent.
 	lastNotice mailboxNotice
+	// deferred are members left unread by an earlier delivery under
+	// shimReadEach, to be read at the next one.
+	deferred []string
 }
 
 // mailboxNotice mirrors the payload the wrapper sends. It is spelled out here
@@ -66,8 +69,9 @@ func (s *shimSession) deliveredTurn(params json.RawMessage) (any, any, error) {
 	id := fmt.Sprintf("turn-%d", s.turn.counter)
 	s.turn.lastNotice = notice
 	s.turn.mu.Unlock()
+	s.recordGroup(id, notice)
 
-	go s.workTurn(id)
+	go s.workTurn(id, notice)
 	return turnReply(id), nil, nil
 }
 
@@ -209,7 +213,7 @@ func (s *shimSession) turnCompletedEvent(id, text string, failed bool) map[strin
 
 // workTurn is what a session does with a delivery: read the mail, then finish
 // the turn with something to say.
-func (s *shimSession) workTurn(id string) {
+func (s *shimSession) workTurn(id string, notice mailboxNotice) {
 	// Announced first, the way a server does. Not for correlation: a report is
 	// tied to a read by the obligations that read recorded — sender, epoch,
 	// message id, and a monotonic read number compared against the counter
@@ -220,7 +224,13 @@ func (s *shimSession) workTurn(id string) {
 	s.mu.Unlock()
 	time.Sleep(20 * time.Millisecond)
 
-	text, err := s.readMailbox()
+	var text string
+	var err error
+	if os.Getenv(shimReadEach) != "" {
+		text, err = s.readEach(notice)
+	} else {
+		text, err = s.readMailbox()
+	}
 	if err != nil {
 		// Still a terminal turn, but one that reports the failure — a session
 		// that says nothing leaves the sender waiting for ever.

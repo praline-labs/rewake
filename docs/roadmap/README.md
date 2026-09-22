@@ -73,7 +73,9 @@ without a date. Local installation without publishing is in
 | September 21, 2026 | [The harness research, split by how a fact is obtained](2026-09-21-research-split.md) | three research documents by how their facts age |
 | September 21, 2026 | [Launch aliases, on the project's first dependency](2026-09-21-launch-aliases.md) | `rewake <alias>`, the alias file, the dependency decision |
 | September 21, 2026 | [A role-shaped first page](2026-09-21-role-playbook.md) | the role playbook in the briefing and the guide |
+| September 21, 2026 | [The task-report scenario, as built](2026-09-21-scenario-task-report.md) | what building the first delivery scenario taught, and what it does not prove |
 | September 22, 2026 | [The research packages, folded into the documents that outlive them](2026-09-22-research-packages.md) | archives deleted, their findings written into the surviving documents |
+| September 22, 2026 | [The batch-arrival scenario, as built](2026-09-22-scenario-batch-arrival.md) | grouping, previews, per-message reads and no replay, with four product mutants |
 
 ## Remaining work — owner decisions, September 19–21, 2026
 

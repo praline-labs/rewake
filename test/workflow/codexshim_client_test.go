@@ -125,18 +125,8 @@ func shimClient(socket string) int {
 	if target := os.Getenv(shimAcceptedFile); target != "" {
 		_ = os.WriteFile(target, []byte(reply.Thread.ID), 0o600)
 	}
-	if target := os.Getenv(shimSendTo); target != "" {
-		// The sender is a session too: it sends with its own rewake, the way a
-		// session does, not the way a test would.
-		if err := insideACase(); err != nil {
-			fmt.Fprintf(os.Stderr, "shim: %v\n", err)
-			return 1
-		}
-		send := exec.Command("rewake", "send", target, os.Getenv(shimSendText))
-		send.Env = os.Environ()
-		if out, err := send.CombinedOutput(); err != nil {
-			fmt.Fprintf(os.Stderr, "shim: sending to %s: %v: %s\n", target, err, out)
-		}
+	if code := sendAsAsked(); code != 0 {
+		return code
 	}
 	return shimReportState()
 }

@@ -62,6 +62,27 @@ const (
 	// link between a report and the messages it answers is a field, not a line
 	// of the printed form, so the side that has to observe it reads JSON.
 	shimInboxJSON = "RW_SHIM_INBOX_JSON"
+	// shimReadEach makes a session read a delivery the way the grouped-inbox
+	// contract describes: an overview first, then one member at a time. The
+	// last member of a group is left unread until the next delivery, so that
+	// the case holds mail that was announced and stays unread — the state in
+	// which a replay would show.
+	shimReadEach = "RW_SHIM_READ_EACH"
+	// shimGroupsFile is where a session records every delivery as a group:
+	// the turn, the member count, the member ids and the notice text.
+	shimGroupsFile = "RW_SHIM_GROUPS_FILE"
+	// shimReadsFile is where a session records each inbox call it made under
+	// shimReadEach, and what came of it.
+	shimReadsFile = "RW_SHIM_READS_FILE"
+	// shimSendWhenReady names the session whose readiness the sender waits for
+	// before sending anything. Mail sent before the recipient is ready waits in
+	// its mailbox and is folded into the first group, which would make a
+	// scenario about the collection window measure readiness instead.
+	shimSendWhenReady = "RW_SHIM_SEND_WHEN_READY"
+	// shimSendTexts is a list of texts sent at the same moment, separated by
+	// "|"; shimSendLaterText is one more, sent laterSendDelay after them.
+	shimSendTexts     = "RW_SHIM_SEND_TEXTS"
+	shimSendLaterText = "RW_SHIM_SEND_LATER_TEXT"
 	// shimResume makes the client continue a named conversation instead of
 	// starting a new one. Only a continuation carries a conversation id the
 	// client chose, so that is where "the server answered about a different
