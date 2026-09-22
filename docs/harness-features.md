@@ -21,8 +21,8 @@ path — launch with registration, a task accepted through the app-server, a `fi
 report back and telemetry collection — and steer, a delivery accepted during an active
 turn that left the original task reporting its own result, both recorded in
 [claude-parity-2026-09-21.md](claude-parity-2026-09-21.md). On that basis the adapter's
-version pin moved to 0.155.1 on September 21, 2026 (owner decision, "пин можно
-сделать", the pin may be moved), so the startup note no longer prints on every launch.
+version pin moved to 0.155.1 on September 21, 2026 (owner decision: the pin may be
+moved), so the startup note no longer prints on every launch.
 
 No row below had its own mechanism re-verified on 0.155.1 apart from HF-21, which the
 steer probe covers. Named examples of what was not exercised, so the gap is not read as
@@ -49,12 +49,7 @@ regression on today's versions is a reasonable ask, but it is not the same as
 
 **impl?** means *unverified*, never *works*, and today the two columns are not equal:
 a defect found on Codex is a regression that blocks, while one found on Claude Code is
-a finding to investigate. Owner decision, September 21, 2026 — quoted as given:
-
-> когда решим что claude подтянули до уровня codex, любые проблемы в нем тоже должны
-> правиться. Сейчас находки, после красный флаг как и у кодекс
-
-Once Claude Code is judged to have caught up, its column becomes a blocking gate on
+a finding to investigate. Owner decision, September 21, 2026: once Claude Code is judged to have caught up, its column becomes a blocking gate on
 the same terms and its defects are fixed like any regression. The owner names that
 moment; closing the last parity queue entry does not reach it by itself. This
 paragraph is the source for that rule; other documents link here rather than restate

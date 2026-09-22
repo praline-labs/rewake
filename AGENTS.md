@@ -23,8 +23,7 @@ forever.
    parts live next to it: `docs/launch.md` (launching a harness, signals) and
    `docs/delivery.md` (sending, reading, reports, the answer to a question).
 3. `docs/traps.md` — what behaves other than expected, in rewake and in the
-   harnesses it lives with, by symptom. `docs/owner-decisions.md` — the owner's
-   decisions in their own words, which is the only place the wording survives.
+   harnesses it lives with, by symptom.
 4. `docs/research.md` — facts about each harness, marked with where they were
    verified. They age with harness versions: re-check before touching an adapter.
    Split by how a fact is obtained, because that is how it ages:
@@ -49,8 +48,8 @@ documentation is part of every change, not a task after it:
   as it closes — one file per entry, listed in its `README.md`: what was found,
   what was done, what stays open. Older review rounds move to
   `docs/reviews-later.md`; a file that passes 400 lines is split by date.
-- An owner decision is written down where it applies, dated, in their words
-  where it matters.
+- An owner decision is written down where it applies, dated, as a plain
+  statement of what was decided; the wording is not quoted.
 - Before a commit, ask what the change taught that the documents do not yet
   say — and what they say that is no longer true. Rewriting what has gone
   stale is part of the same change: outdated text is corrected or removed,
@@ -217,13 +216,30 @@ messages — is in English; commits are a single subject line, no body.
 
 Keep a file under 400 lines; split by subject, not by size.
 
+## Delegation and review
+
+Work is handed out through rewake, with a brief that stands on its own and names
+exact paths: the session that receives it runs on a different prompt and cannot
+see what the orchestrator sees. The orchestrator then waits for the final report
+rather than watching the writer's intermediate code. A session that has dropped
+off is not revived by an agent: the owner comes and helps.
+
+A change goes through one chain before it lands: the writer writes; a session on
+the same harness as the orchestrator reviews it independently; the writer fixes;
+then, for the heavy cases, a session on the Codex side accepts; only then the
+commit. Acceptance on the Codex side is spent on the heavy cases only: the Codex
+path, transport, protocol, process behaviour. Documents, scenarios on the Claude
+Code side, file splits and ordinary edits land after the review alone.
+
 ## Commits
 
 Author the commit as the owner and keep both agents as co-authors: every commit
 here ends with two `Co-Authored-By` trailers, one for Codex and one for Claude,
 whichever of them wrote the change — the orchestrator sets the work and checks
 it, the executor writes it, so the record names both. Never one without the
-other. The current lines:
+other. The write session may commit and push when the work is accepted; never a
+force push, a migration of state, or an automatic restart of anyone's windows. The
+current lines:
 
 ```
 Co-Authored-By: Codex (gpt-6-astra) <noreply@openai.com>

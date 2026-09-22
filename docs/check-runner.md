@@ -12,8 +12,9 @@ require rewriting scenarios for a third harness is disqualified, however cheap i
 for two.
 
 The same day set the priority between the two existing columns. The owner's account:
-Codex "was developed further and checked more", Claude Code "was made first, then
-Codex", and "something may not work right in Claude, but Codex must not be broken".
+Codex was developed further and checked more, Claude Code was made first and came
+easier, and something may not work right in Claude Code while Codex must not be
+broken.
 Because most of the mailbox is shared code, the Codex column is a regression gate and
 the Claude Code column is where defects are expected to be found.
 

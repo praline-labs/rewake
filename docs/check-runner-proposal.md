@@ -9,9 +9,10 @@ pick has to stay convenient as harnesses are added.
 
 **What the suite is mainly for.** Not finding new behaviour — protecting the Codex path
 from regressions when shared code changes. The owner's account of the two adapters,
-September 21, 2026: Codex "was developed further and checked more", Claude Code "was
-made first, then Codex" and "came easier, Codex took titanic effort", so "something may
-not work right in Claude, but Codex must not be broken". Most of the mailbox is shared
+September 21, 2026: Codex was developed further and checked more; Claude Code was
+made first and came easier, while Codex took far more effort to find a solution; so
+something may not work right in Claude Code, but Codex must not be broken. Most of
+the mailbox is shared
 (`internal/inbox`, `internal/cli`, `internal/wrap`), so a change made for one harness
 lands under both. Hence the asymmetry: the Codex column is a regression gate, the
 Claude Code column is where defects are expected. An **impl?** cell there means
@@ -341,11 +342,7 @@ that comparison.
 
 ## Decisions and what is still open
 
-**The owner's acceptance criterion, September 21, 2026**, quoted as given:
-
-> да, планируйте вместе как все разложить, решиние должно быть просто поддерживать
-
-The implementation is judged on how easy it is to maintain, ahead of how much it
+**The owner's acceptance criterion, September 21, 2026.** The implementation is judged on how easy it is to maintain, ahead of how much it
 covers. That is a criterion, not a preference: a design that covers more
 rows but is harder to keep working loses to one that covers fewer and stays simple.
 Every choice below was made against it, and so should the ones that follow — layout
@@ -371,8 +368,8 @@ Two more were settled the same day:
   rot check.
 
 **The transport pin moved to 0.155.1** on September 21, 2026, on the owner's decision
-("пин можно сделать", the pin may be moved) and on two probes of that day: the
-ordinary path, and steer into an active turn. It now lives in one constant, `lastObservedServerVersion` in
+that the pin may be moved, and on two probes of that day: the ordinary path, and
+steer into an active turn. It now lives in one constant, `lastObservedServerVersion` in
 `internal/harness/codex/server.go`, so the real-harness tier no longer runs the
 mismatch branch. Not observed on that version, and not to be claimed by the suite:
 conversation selection after `/new`, stale-target refusal, `stopped` from an

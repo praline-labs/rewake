@@ -34,8 +34,8 @@ guard mutations and the strengthened native sender/receiver proof.
 
 For the fresh checks, no task or mailbox instructions were typed into the worker.
 The owner reported no visible user-message bubble for notifications in either
-terminal. Main also woke on availability. The normal-tool scenario was accepted as
-"да, все ок" ("yes, all fine"); this owner observation must not be promoted to the exact same-turn
+terminal. Main also woke on availability. The normal-tool scenario was accepted by the
+owner as fine; this owner observation must not be promoted to the exact same-turn
 proof supplied by the earlier standalone dynamic-tool control. No additional model
 run was needed to replace that successful observation with a more elaborate trace.
 
@@ -88,7 +88,7 @@ while no notification line appears in the conversation — consistent with a
 context-only toolOutput, which introduces no ordinary chat notice.
 
 **An active session, checked on request.** A sleep-30 task and a notify asking to
-include 23 × 29 in the final result. The owner answered "да, все ок" ("yes, all fine") and noted that
+include 23 × 29 in the final result. The owner answered that all was fine and noted that
 sleep execution is not very transparent in the native UI. No independent event-order
 trace was collected for that run, so its timing is not evidence of ordering.
 

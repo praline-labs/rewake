@@ -12,6 +12,9 @@ During streaming, native rendering can defer the row until the text finishes.
 
 ## Scope and transport
 
+The display registers no hook in the harness — the owner's preference, September 20,
+2026; the literal Ran label alone selects the native renderer.
+
 The item uses the real reserved primary thread and ACK turn, with a fresh 128-bit
 random ID in the private `rewake-notice-display-` namespace. After ACK, the gateway
 rechecks epoch, generation, connection, ready binding and unique current owner under

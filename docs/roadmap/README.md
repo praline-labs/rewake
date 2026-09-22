@@ -31,6 +31,9 @@ refusal on September 17, 2026 cleared after recipient restart.
   fixed before the next milestone.
 - A milestone marked **live criterion** is accepted by running the real
   harnesses, not by tests.
+- The working rules on delegation, the review chain and what the write session
+  may commit were set by the owner on September 17–21, 2026 and live in
+  `AGENTS.md`, under "Delegation and review" and "Commits".
 
 ## Open right now
 

@@ -42,8 +42,9 @@ division the fixture used, with the machine half no longer in a second language.
 
 Take an arbitrary version of Codex into a disposable environment, generate the protocol
 schema from it, and run our messages against that schema. The point is to learn what
-broke **before** the owner updates their installation, in the owner's words: "download
-and check new versions, so as not to test on me live."
+broke **before** the owner updates their installation: the owner asked, on September
+21, 2026, that new versions be downloaded and checked rather than tested on their
+live setup.
 
 This is the one place in the project where docker is warranted — a disposable container
 is cleaner than temporary directories, and the owner's installation is not touched at
