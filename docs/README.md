@@ -111,6 +111,11 @@ everything else.
 
 ## Testing
 
+- [testing.md](testing.md) — the entry point: the tiers with what each proves and costs,
+  the exact commands, checking a new harness version before updating, reading a summary
+  and a red case's evidence, how to add a scenario, a control or a column, and the traps
+  already paid for. Open it first for anything about tests; the documents below are the
+  depth behind it.
 - [check-runner.md](check-runner.md) — the requirements the workflow suite answers: one
   command without flooding an agent's context, the evidence tiers from pure Go to a
   person at a terminal, the output and evidence contract with its outcome names, isolation

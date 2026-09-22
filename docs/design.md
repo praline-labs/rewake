@@ -356,7 +356,8 @@ notice for `message`, built by `harness.Notice`; it never sends `message.Text`.
 
 ## Testing
 
-Three layers, cheapest first. Unit tests beside the code, run by the five checks in
+How to run, read and extend the tests is in [testing.md](testing.md). Three layers,
+cheapest first. Unit tests beside the code, run by the five checks in
 `AGENTS.md`: name publishing races, liveness with reused pids, inbox order, retries and
 expiry, the owned server's framing, correlation and reconnects on a fake socket, and a
 parse of every example in the command table. The workflow suite in `test/workflow`,

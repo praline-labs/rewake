@@ -107,6 +107,10 @@ And `go test` inherits this session's `REWAKE_*` variables unless they are
 cleared. Clear them: the risk is not a red run but a test writing into the
 owner's live state directory, or reading the running session as its own.
 
+How the project is tested — tiers, what each proves, reading a result, checking a new
+harness version, extending the suite — is in `docs/testing.md`; this section keeps the
+commands.
+
 The workflow suite in `test/workflow` runs a built rewake end to end. It is off
 by default — its scenarios skip themselves, so the five checks stay cheap while
 still compiling and analyzing the code. To run it:
