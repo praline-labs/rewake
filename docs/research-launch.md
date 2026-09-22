@@ -144,6 +144,31 @@ merges, so part of an earlier one can survive a later one that does not restate 
 Dropping an earlier `-c` because a later one names the same key can therefore lose
 settings, and telling the two cases apart means understanding the value.
 
+## Когда проверке через справку можно верить
+
+Перенесено из набора передачи 22 сентября 2026: это факты о harness, добытые
+запуском бинаря, и место им здесь, а не в каталоге передач.
+
+**[verified live; Claude Code 2.1.270; September 21, 2026]** Справка проглатывает
+любой неизвестный флаг: `claude --definitely-not-a-flag x --help` печатает справку и
+возвращает ноль. Проверять формы записи аргументов через справку там бессмысленно —
+нужен запуск без `--help`.
+
+**[verified live; Codex CLI 0.155.1; September 21, 2026]** У Codex результат зависит
+от расстановки: `codex --unknown --help` отвергает (код 2), `codex --help --unknown`
+принимает (код 0), `codex -c not-a-setting --help` тоже принимает. То есть прием
+работает в одной расстановке — флаг первым, справка последней — и только про
+написание флага, никогда про содержимое настройки.
+
+**[verified live; Codex CLI 0.155.1; September 21, 2026]** Псевдонимы флагов в
+справке не показываются вовсе: ни `--yolo`, ни `--not-so-yolo` в ней нет. Как их
+находить и как проверять — разделом ниже, про повторяемые флаги.
+
+**[source: reference tree `e29eceb75`; September 17, 2026]** Настоящий сервер не
+принимает пустой курсор и не шлет событие о начале беседы при подключении. Фикстура,
+которая делает и то и другое, мягче оригинала — и тесты на ней зеленеют при сломанном
+продукте: круг ревью нашел так две High при 289 зеленых тестах.
+
 ## Passing a model and an effort for one launch
 
 **[verified live; Codex CLI 0.155.1 and Claude Code 2.1.270; September 21, 2026]**

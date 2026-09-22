@@ -67,12 +67,41 @@ explicit. Inbox reads write locks and read receipts, so this acceptance does not
 prove operation under a deliberately read-only policy or resolve that separate
 support question. User permissions must not be silently widened.
 
-## Preserved records
+## What the evidence was
 
-Ignored research packages retain the original evidence without entering production
-source. Under `handoffs/native-notices-2026-09-19/`: the two integration review
-reports, integration-2's source/fixture manifests and both-direction proof,
-`outputs/integration-2/owner-live-observations.md`, and `installed-acceptance.json`
-record this acceptance. Earlier standalone and renderer proofs remain in their
-original packages. The original owner recipe is preserved; the current recipe is
-published separately rather than rewriting a hashed historical artifact.
+The research package that held it — raw runs, fixtures, launch records — was deleted
+on September 22, 2026 as 410 MB of logs that git never carried and no clone ever had.
+What it proved is quoted here; what it consisted of is gone, and that is the point of
+having quoted it.
+
+**Idle delivery and the automatic report, owner-observed.** The owner asked main to
+send a multiplication task through rewake, typing nothing into the worker. Main's
+answer:
+
+> 17 × 19 = 323. Автоматический отчет получен и прочитан через rewake inbox.
+
+**Main started on its own.** The owner confirmed that main began working
+automatically once the worker connected — no message was typed to prompt it.
+
+**No visible chat line.** The owner reported that both agents receive notifications
+while no notification line appears in the conversation — consistent with a
+context-only toolOutput, which introduces no ordinary chat notice.
+
+**An active session, checked on request.** A sleep-30 task and a notify asking to
+include 23 × 29 in the final result. The owner answered "да, все ок" and noted that
+sleep execution is not very transparent in the native UI. No independent event-order
+trace was collected for that run, so its timing is not evidence of ordering.
+
+**Installed acceptance.** The owner installed the accepted binary — SHA-256
+`1278c8db23c21f0d072bae0bc211eb6652499a37ece26b922497a89625d02d01`, matching the
+reviewed candidate — and restarted main and writer. Main received session
+availability and writer departure/rejoin as actual `rewake_mailbox_notice` tool
+output and read them through inbox; a short task to the restarted writer came back
+as the automatic finished report `NATIVE-INSTALLED-OK`, read the same way. No chat
+message was needed to prompt main to collect it.
+
+**The environment that made the first attempt fail.** The disposable working
+directory defaulted to read-only, main's `.lock` write was refused, and the owner
+relaunched both sessions with an explicit per-launch `workspace-write`. That was an
+environment failure, not a reproduced defect, and it is why the recipe states the
+prerequisite.

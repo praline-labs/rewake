@@ -71,9 +71,47 @@ and unrelated ideas. No further model or TUI test was needed to record acceptanc
 The [current check recipe](native-mailbox-ui-check.md) retains private permission
 defaults and the short lifecycle-only boundary for a future acceptance need.
 
-Preserved local evidence lives under `handoffs/native-notices-2026-09-19/`: the
-ui-event-probe-1/2 and ui-integration-1 reviews, their immutable submissions and
-owner-run-1 records, UI-OWNER-DECISION.md, and ui-integration-1 installed-acceptance.
-The earlier marker_missing results and fake-child picker side effect remain as
-recorded. This closeout neither accepts UI-history persistence nor broadens the
-existing transport ownership/recovery scope.
+## What the evidence was
+
+The local package holding it was deleted on September 22, 2026 — raw runs and
+fixtures, never in git. The observations it carried are quoted here.
+
+**The owner's decision on transience**, September 20, 2026, after the renderer and
+lifecycle experiments:
+
+> да и это нормально для решения. Когда-нибудь позже подумаем как сохранить, но
+> сейсчас и так отлично
+
+**What the owner saw**, running the reviewed lifecycle fixture, with exit 0 and
+empty controller and endpoint error lists:
+
+```text
+• Ran rewake notice --display-only
+  └ 🟢 Rewake: shell task, 1 new message
+      ↳ UI probe: idle mailbox notice
+```
+
+**How long it stayed.** Asked specifically about retention after `/resume`, the
+owner answered "я видел только 1 раз в самом начале". Only the initial appearance is
+confirmed, and no repeated row was noticed — which is not evidence of durable
+retention, of cache invalidation, or of an exhaustive duplicate check.
+
+**Where the row appeared.** Rows appeared for the idle, exec and stream phases. The
+exec row appeared above the completed command's row; the stream row appeared after
+all twelve fragments, which reads as deferred rendering rather than display at
+arrival. The owner reported no malfunction but was not certain of the ordering from
+the final screen.
+
+**A fixture defect, not a product one.** `/resume` refused with "Permission
+overrides are not supported when resuming a remote task", because approval and
+sandbox flags were on the TUI argv. The repaired fixture put those in the private
+user config instead, and the refusal was not seen again.
+
+**Installed acceptance.** Binary SHA-256
+`5b5f859de255714604bd610ebed8649403c5d853e5cd817296d583ec301b2586`; a task between
+the restarted sessions returned `UI-INSTALLED-OK` as a `rewake_mailbox_notice`,
+read through inbox, and the owner confirmed the visible row with a single word:
+"вижу".
+
+This closeout neither accepts UI-history persistence nor broadens the existing
+transport ownership and recovery scope.

@@ -80,9 +80,9 @@ stopped receipts, stop/error retries, adapter gap scope, delayed native ACKs and
 gap grace periods. The full production check suite covers side/primary continuity,
 reservation, permission, question, receipt and room regressions as well.
 
-The original integration submission and independent failing reproductions remain
-immutable. New fix evidence is under outputs/integration-fixes in the persistent
-task package. Native helper fixtures were not rerun: their unscoped callbacks do
+The original integration submission and the independent failing reproductions were
+kept unchanged at the time; the package holding them was deleted on September 22,
+2026, so what is written here and in the tests is what remains of them. Native helper fixtures were not rerun: their unscoped callbacks do
 not exercise this mailbox publisher; these defects have deterministic wire and
 cross-package reproductions. Independent re-review passed. By September 19 the
 owner had installed the reviewed startup-repaired build and a short task returned

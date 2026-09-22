@@ -25,7 +25,8 @@ bypass the metadata requirement. Metadata-only thread/read can describe a loaded
 fresh thread before persistence (`thread_processor.rs:2779–2856`). Therefore
 identity suffices for delivery, while resume may still return -32600 no rollout.
 
-The owner's [fresh-thread log](/tmp/rw13/live-new-ok.jsonl) confirms both facts:
+The owner's fresh-thread probe confirmed both facts (its log lived in a temporary
+directory that no longer exists):
 turn/start reached the TUI/model after /new, yet the unsubscribed observer got no
 turn events; excludeTurns resume before the first turn refused for missing rollout.
 Global thread/status/changed still arrived, including active and idle.

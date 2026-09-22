@@ -61,12 +61,12 @@ result. Main messages and reports must continue throughout; side answers must no
 settle primary waits. Separate side addressing remains out of scope. This supersedes
 the earlier proposal to refuse all work until resume/new after a side view.
 
-The owner-run proof `outputs/stage1-v5/proof/tui-zp8c9la6/` in the persistent package
-used the unchanged V5 gateway: CLI fork, /fork, explicit resume of seed A, /side,
-Ctrl+C closing side, /quit. All screens worked without errors, no TUI-phase model
-call or message delivery occurred, and isolation/cleanup passed. V5 did not accept
-fork routing. Main recorded the sequence in owner-fork-assessment.md; this capture
-alone is not a general selection rule.
+The owner ran that sequence against the unchanged V5 gateway: CLI fork, `/fork`,
+explicit resume of seed A, `/side`, Ctrl+C closing side, `/quit`. All screens worked
+without errors, no TUI-phase model call or message delivery occurred, and isolation
+and cleanup passed. V5 did not accept fork routing. That capture alone is not a
+general selection rule. (The run's files were deleted with the research packages on
+September 22, 2026; what they showed is this paragraph.)
 
 Source at `44b901161` establishes the additional workflow context:
 
@@ -124,5 +124,14 @@ switch. The owner reported possible upstream API trouble; that observation does
 not prove side paused execution. Neither the successful repeat nor the close test
 establishes the cause of every older missing report or warning. Prototype fork,
 steer/error/stop evidence keeps its separate scope; untested native workflows are
-not accepted by this check. Full facts remain in `outputs/installed-peer-acceptance.md`
-in the persistent task package.
+not accepted by this check. The facts behind it, from the record deleted on
+September 22, 2026: installed SHA-256
+`b3837e9beb08f0574c79c3b1b2500e11ae41d811910b4a885e2d65017a383bc6`, production commit
+`e465729`. With `/side` open in general, main's task
+`1789766141205224888-fed0cdf2e99b` was accepted at 00:15:41 and pinned to the main
+conversation `01a0b43d-cd0b-79b2-a589-19f8173c55fd`; it was delivered, stayed unread
+through the first wait, and general returned `MAIN-WITH-SIDE-OK` automatically at
+00:23:34, which main read through inbox. A second task with marker
+`MAIN-WITH-SIDE-02` came back at 00:24:50 while the owner confirmed they were still
+in side and had switched nothing. The first delay is not attributed to side: the
+owner warned of upstream API problems that day, and that remains unresolved.

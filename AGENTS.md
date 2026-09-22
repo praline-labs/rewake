@@ -22,7 +22,10 @@ forever.
 2. `docs/design.md` — how it works: processes, state directory, interface. Two
    parts live next to it: `docs/launch.md` (launching a harness, signals) and
    `docs/delivery.md` (sending, reading, reports, the answer to a question).
-3. `docs/research.md` — facts about each harness, marked with where they were
+3. `docs/traps.md` — what behaves other than expected, in rewake and in the
+   harnesses it lives with, by symptom. `docs/owner-decisions.md` — the owner's
+   decisions in their own words, which is the only place the wording survives.
+4. `docs/research.md` — facts about each harness, marked with where they were
    verified. They age with harness versions: re-check before touching an adapter.
    Split by how a fact is obtained, because that is how it ages:
    `docs/research-launch.md` for what a binary answers when you run it — models,
@@ -80,8 +83,9 @@ All five green is the condition for a commit. A red check is never somebody
 else's: everything in the working tree belongs to the current work.
 
 Two forms differ from the obvious one. `gofumpt` walks the filesystem rather
-than the module, so a plain `.` reaches ignored research archives that are not
-part of the project; the package list keeps it to the module.
+than the module: a plain `.` formats whatever Go file happens to lie under the
+working directory, which is not the same set as the project. The package list
+asks the module what belongs to it, and that is the answer this check wants.
 
 And `go test` inherits this session's `REWAKE_*` variables unless they are
 cleared. Clear them: the risk is not a red run but a test writing into the

@@ -83,8 +83,8 @@ task/report path; it adds no UI persistence guarantee or exhaustive lifecycle ma
 The [review history](reviews-native-ui-2026-09-20.md) preserves the initial resume
 refusal, fixture-only correction and all evidence boundaries. The
 [current owner-check recipe](native-mailbox-ui-check.md) uses private configuration
-without CLI permission overrides. Original records remain under the ignored
-native-notices research package: ui-event-probe-1/2 owner-run-1 observations and
-ui-integration-1 owner-run-1 plus installed-acceptance.json/.md. No earlier proof is
-rewritten. The original marker_missing and fake-child picker findings remain as
+without CLI permission overrides. The records themselves — owner runs, fixtures, launch
+files — were deleted with that research package on September 22, 2026; the
+observations and hashes they carried are quoted in the review history, which is now
+the only place they exist. The original marker_missing and fake-child picker findings remain as
 recorded in [mailbox acceptance](native-mailbox-acceptance.md).

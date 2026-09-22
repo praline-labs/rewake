@@ -156,6 +156,6 @@ must not be read as a repeated regression.
    genuinely cannot apply is **n/a** with a reason; a shared feature never is.
 4. Add new capabilities as new `HF-nn` IDs at the end, and split a row instead of
    letting one cell mix a live half with a missing half. Never renumber existing IDs:
-   other documents and handoffs cite them.
+   other documents cite them.
 5. Keep this file under 400 lines. If it outgrows that, move the parity queue into
    its own document rather than dropping rows.

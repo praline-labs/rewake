@@ -45,6 +45,20 @@ Why this became possible only now: a hand-written TOML parser here broke on vali
 through two review rounds and was removed. The format was not the problem; writing the
 parser was.
 
+## Also: the arrival-display stand, rebuilt on the suite
+
+The Python fixture that checked the native arrival row was deleted with its research
+package on September 22, 2026; what it did is written down in
+[native-mailbox-ui-check.md](native-mailbox-ui-check.md). Everything around the
+visible row is something `test/workflow` already does — an isolated case, a shim that
+plays the harness, a scripted endpoint, delivery and a read performed by the session
+itself, cleanup that is checked rather than assumed.
+
+What stays manual is the one step the fixture could not automate either: a person
+looking at the screen and saying whether the row appeared. The suite would carry the
+case up to that point, leave the observation to the owner, and record it — the same
+division the fixture used, with the machine half no longer in a second language.
+
 ## Then: pinning harness versions
 
 Take an arbitrary version of Codex into a disposable environment, generate the protocol

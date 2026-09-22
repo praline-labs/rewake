@@ -168,9 +168,10 @@ against native version 0.154.0, which was the adapter target then; the target mo
 source/binary equivalence is not asserted. Relevant paths: `tui/src/token_usage.rs`,
 `app-server-protocol/src/protocol/v2/thread.rs`, `v2/item.rs`,
 `app-server/src/bespoke_event_handling.rs`, `request_processors/token_usage_replay.rs`
-and `core/src/context_manager/history.rs`. Facts and formulas were supplied in the
-worker-state task's research notes; no private transcript or prompt/config body
-was inspected.
+and `core/src/context_manager/history.rs`. The facts and formulas came from the research notes of that
+task, whose package was deleted on September 22, 2026 — the paths above are what
+they pointed at, and they are still readable in the reference tree. No private
+transcript or prompt/config body was inspected.
 
 Deterministic socket, wrapper, storage and CLI tests cover the formula/unknowns,
 applied settings and stale windows, pre-ACK staging, side exclusion, manual/live

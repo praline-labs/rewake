@@ -75,3 +75,42 @@ The first slower attempt included a view switch before its correct report arrive
 Possible upstream API delay remains unresolved; it is not proof that side pauses
 primary work. This successful continuity check does not establish the cause of all
 older missing reports or warnings, or accept workflows that were not exercised.
+
+## A clarification refused at admission — unexplained, September 19, 2026
+
+The only record of this happening in real work. The package that held the analysis
+was deleted on September 22, 2026; what it established is here.
+
+**What happened.** A worker read its research task at 12:16:56 and sent a
+clarification question to main at 12:17:49. It failed three seconds later:
+`context deadline exceeded: selected conversation is not ready` — at local gateway
+admission, before the delivery request reached the native server. The worker finished
+at 12:22:30; the owner reported that the automatic notification did not appear, and
+main read the finished report from the inbox by hand at 12:24:01. The report itself
+was intact. Its earlier notification status had already been replaced by the manual
+read, so the two failures are not established to share a cause.
+
+**What the error does and does not mean.** Reservation gets three seconds, and the
+same message stands for several different waits: no unique current connection, a
+binding that is not ready, a ready binding whose resume reads have not settled, a
+pending `thread/settings/update` on the selected thread, or an admission still queued
+behind the connection's work queue. So the text is not evidence that native resume was
+running or that the model was busy — ordinary active work is deliverable by steering.
+Empty gateway close logs rule none of those out either: readiness invalidation and
+reservation expiry close no connection and call no log callback, and the installed
+wrapper wired `Closed` without `Record`.
+
+**The hypothesis that was not proved.** Main had run one built-in subagent earlier. A
+child's completion alone does not invalidate a selection; a numeric read of another
+thread can invalidate it permanently until a recognized selection succeeds, and that
+mechanism was reproduced locally. That it happened *here* was not. Attributing the
+incident to the subagent would overstate the evidence.
+
+**What to capture next time**, from the analysis, and still not implemented: on a
+reservation timeout, a bounded metadata snapshot — connection and owner counts, the
+current connection, binding generation and ready flag, the read phase and its age, the
+pending request's method and target relation, whether admission waits on readiness,
+read settlement, scheduler or gate — plus the failed completion-notice reason kept
+separately from the later read status. No message text, titles or transcripts are
+needed. Most of it is already available through the `Record` callback, which the
+installed wrapper does not wire.

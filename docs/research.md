@@ -214,15 +214,16 @@ start_or_steer_turn (request_processors/turn_processor.rs:646–677), including
 after an interruption. Basic turn/steer is stable and requires expectedTurnId;
 queue/start is experimental and is not needed for immediate delivery.
 
-**[owner live probes, 0.154.0]** [Same-turn steering](/tmp/rw13/live-steer-ok.jsonl)
-and [fresh /new delivery](/tmp/rw13/live-new-ok.jsonl) reached the TUI and model.
+**[owner live probes, 0.154.0]** Same-turn steering and fresh `/new` delivery both
+reached the TUI and the model. (The probe transcripts lived in a temporary directory
+that is long gone; the observation is what remains.)
 A closed old thread can absorb input without a visible answer, and resuming an
 empty thread did not reliably reply. Track closure; never deliver to a cached
 id after losing evidence that it remains current.
 
-**[source and no-model probes]** [Research report](/tmp/rw13/report.md) records
-RPC initialization, failed and interrupted outcomes, owned locks and the remote
-configuration boundary. TUI notify is not forwarded; developer instructions are
+**[source and no-model probes]** The research report behind this — kept in a
+temporary directory that is long gone — recorded RPC initialization, failed and
+interrupted outcomes, owned locks and the remote configuration boundary. TUI notify is not forwarded; developer instructions are
 conditional on a feature there, so launch configuration reaches the server too.
 TUI --add-dir is carried as runtimeWorkspaceRoots; -C and positional input are
 forwarded. REWAKE_* survives default shell environment filtering.
