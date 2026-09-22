@@ -1,8 +1,13 @@
 # Roadmap
 
-Work for `docs/design.md` closes only after its acceptance criterion passes.
-September 20: [native mailbox delivery accepted](native-mailbox-acceptance.md)
-in fresh owner checks and installed sessions; permission/timing limits stay explicit.
+Work for `docs/design.md` closes only after its acceptance criterion passes. This file
+keeps the current state and what is still open; the order of what comes next is in
+[work-queue.md](work-queue.md). Everything closed before September 21, 2026 — the
+first ten milestones and the acceptances of the gateway, session state, grouped inbox
+and native mailbox work — is in [roadmap-2026-09-16.md](roadmap-2026-09-16.md), with
+the transport milestones of September 17 in
+[transport-milestones-2026-09-17.md](transport-milestones-2026-09-17.md) and the review
+rounds in [reviews.md](reviews.md) and [reviews-later.md](reviews-later.md).
 
 Open [intermittent bugs](intermittent-bugs.md): the unexplained two-root-thread
 refusal on September 17, 2026 cleared after recipient restart.
@@ -10,9 +15,12 @@ refusal on September 17, 2026 cleared after recipient restart.
 ## How the work is run
 
 - One step, one commit; commit message short, subject line only, in English.
-- Before every commit: `gofumpt -l .` is empty; `go vet ./...`,
-  `staticcheck ./...`, `golangci-lint run ./...`, and
-  `go test -race -shuffle=on ./...` are green. No failing check is waived.
+- Before every commit, the five checks listed in `AGENTS.md` are green: the
+  formatter over the module's package list, `go vet`, `staticcheck`,
+  `golangci-lint` and the race-detected, shuffled test run with the session's
+  `REWAKE_*` variables cleared. `AGENTS.md` says why two of them take the form
+  they do; this file does not repeat the commands, so they cannot drift here.
+  No failing check is waived.
 - Live runs happen in a separate `/tmp` directory, with their own `REWAKE_DIR`.
   The user's working harness sessions are left untouched.
 - Live Codex runs spend subscription quota: cheap model, short messages, no
@@ -23,126 +31,7 @@ refusal on September 17, 2026 cleared after recipient restart.
 - A milestone marked **live criterion** is accepted by running the real
   harnesses, not by tests.
 
-## Milestone 1. Skeleton and interface — done, September 16, 2026
-
-The CLI scaffold without delivery: command table, parsing, overview, help,
-failures.
-
-- `go.mod`, the package layout from design, `cmd/rewake`.
-- `internal/cli`: the command table (name, arguments, flags, summary, examples,
-  next, notes), argument parsing, the no-argument overview, per-command
-  `--help`, failure formatting (reason, syntax, examples, `full help:`), "did
-  you mean" by edit distance, exit codes 0/1/2/3.
-- `internal/cli`: model printing — columns and `--json` from one function.
-- Commands print stubs for now.
-
-Tests: argument parsing; an unknown flag or an extra positional argument yields
-exit code 2; the command table matches the handlers in both directions; the
-table's examples parse without errors.
-
-Acceptance: `rewake` with no arguments prints the overview; `rewake send` with
-no arguments prints a failure with syntax and examples.
-
-## Milestone 2. State and registry — done, September 16, 2026
-
-- `internal/state`: the `$REWAKE_DIR` or `/tmp/rewake-<uid>` directory, owner
-  and permission checks, creation with 0700, paths, atomic writes (tmp +
-  rename).
-- `internal/proc`: process start time from `/proc/<pid>/stat`, the process tree,
-  `/proc/<pid>/fd` links. The `/proc` root is parameterized for tests.
-- `internal/registry`: the session record, name publishing via `link()`,
-  picking a free name, liveness by the pid-plus-start-time pair, evicting dead
-  records, listing.
-- `rewake list` and `rewake whoami` are for real now.
-
-Tests: two concurrent publishes of the same name — one wins; a dead record gets
-evicted, a live one doesn't; a reused pid with a different start time counts as
-dead; an unsafe directory fails with exit code 2.
-
-Acceptance: a record created by hand shows up in `list`; after killing the
-process it disappears from `list`.
-
-## Milestone 3. Claude Code: launch and delivery — done, September 16, 2026
-
-- `internal/wrap`: launching the harness with an inherited terminal, signals
-  (ignore `SIGINT`/`SIGQUIT`, forward `SIGTERM`/`SIGHUP`), stripping the parent
-  session's markers, publishing and removing the record, the harness's exit
-  code.
-- `internal/inbox`: the message and status format, sender-side writes, the
-  servicing loop with `pending` retries, TTL, moving to `done/`.
-- `internal/harness/claude`: launch arguments (`--messaging-socket-path`),
-  delivery as a line to the socket, the header `[rewake] from <name> · <id>`.
-- `rewake send` end to end: waiting for the status, the result line, exit codes
-  0/1/3.
-
-Tests: delivery order by `id`; `pending` retries and becomes `failed` on TTL
-expiry; the status is written atomically; delivery to a nonexistent socket gives
-`pending`, and after the session dies, `failed`.
-
-**Live criterion:** `rewake claude` in one terminal, `rewake send
-<name> "reply pong"` from another — a reply on screen within seconds; `list`
-shows the session; harness exit removes the record and socket, and pending
-messages get `failed`.
-
-Met on September 16, 2026: delivery took 0.25 s and the agent answered within
-three seconds, its reply landing in the sender's mailbox as a message of its own;
-killing the terminal removed both the record and the socket. The run found two
-defects that no test had:
-
-- the agent was told to answer with `rewake send` and could not: the binary was
-  not on its PATH. The wrapper now puts its own directory there;
-- the first message header, `[rewake] from <name> · <id>`, was copied whole into
-  the reply, which then addressed a session called `shell · 33f2`. The header now
-  keeps the name on a line of its own and spells out the command to answer with.
-
-## Milestone 4. Codex: launch and delivery — done, September 16, 2026
-
-- `internal/harness/codex`: finding the current thread from open lock files,
-  chosen by mtime; delivery via `codex queue`; parsing its errors (`no rollout
-  found` → `pending`, `No active session` → `failed`); `CODEX_HOME` in the
-  session record.
-- The Codex wrapper: the intro via `-c developer_instructions`, concatenated
-  with the user's value; the state directory added to `writable_roots` under
-  `exclude_slash_tmp`.
-
-Tests: thread lookup on a fixture of a process tree and a `/proc` directory;
-picking the most recent lock; classifying `codex queue` errors by their text.
-
-**Live criterion:** `rewake codex`, then `rewake send` before the first message
-— exit code 3 and `pending`; after the session's first turn, the same message
-gets delivered and Codex starts a turn on its own. Separately: `codex sandbox -P
-:workspace -- rewake send …` delivers to Claude Code — verifying the inbox path,
-without calling the model.
-
-Met on September 16, 2026, in full: the message sent before the first turn came
-back as pending with its reason, the thread id was read from the open lock file,
-and after one turn of the session the waiting message was delivered on its own,
-Codex started a turn and answered through `rewake send` from inside its sandbox.
-
-The run found a defect no test had. A Codex agent runs its commands in a sandbox
-with its own pid namespace, where every process but its own is missing — so
-`rewake list`, run from there, judged every session dead and deleted the record
-of the session that was running it. Records now carry the namespace their pids
-belong to, and a reader in a different one neither reports a session gone nor
-removes anything.
-
-## Milestone 5. Intro and permissions — done, September 16, 2026
-
-- The intro for both harnesses, plus the `--no-intro` flag.
-- `--allowedTools "Bash(rewake:*)"` for Claude Code.
-- Verify that the flag adds to the user's rules rather than replacing them; if
-  it replaces them, drop the flag and have the overview name the rule to add
-  once.
-
-**Live criterion:** an agent launched through the wrapper, asked "who are you
-in rewake", answers with its own name, and runs `rewake send` without
-confirmation. For Codex, the same question in one cheap turn.
-
-Met on September 16, 2026, as a side effect of the milestone 3 and 4 runs: both
-agents answered through `rewake send` without being told how and without a
-confirmation prompt, the Codex one from inside its sandbox.
-
-## Milestone 6. Ready for daily use
+## Milestone 6. Ready for daily use — open
 
 - Cleaning up `done/` by age; clear failures at the edges (a session dying
   while a wait is in progress, a taken name, an unreachable directory).
@@ -152,79 +41,16 @@ confirmation prompt, the Codex one from inside its sandbox.
 - Building for linux-amd64 and linux-arm64, publishing `@iiiokojiadbi/rewake`
   with platform packages; publish only on the owner's explicit word.
 
+Done so far: the mailbox is watched rather than polled and finished messages are
+swept by age, both on September 16, 2026
+([progress record](roadmap-2026-09-16.md#milestone-6-progress-september-16-2026));
+`README.md` exists; `scripts/pack.sh` builds the platform packages without
+publishing ([local installation](install.md)). Not done: the publication itself.
+
 Acceptance: a week of use without manual intervention; not one case of a
 message silently getting lost.
 
-## Milestone 7. Notices instead of pasted text — done, September 16, 2026
-
-The owner's call after living with milestone 6 for an hour: a message pasted
-into a session looked like something the user typed, drowned the screen in a
-block of text plus two lines of rewake hints plus Claude Code's own paragraph,
-and gave the agent no sense that a tool was involved.
-
-- A harness is told that mail is waiting — `rewake: api notify, 1 new message` —
-  and the agent reads it with the new `rewake inbox`. Claude Code draws the
-  notice as a single `● …` line because it is wrapped in `<task-notification>`;
-  Codex gets the same line as a plain message.
-- Messages have a kind: `notify`, `question` (`send --question`), `finished`.
-- The end of a turn is reported to whoever wrote during it, with the last reply:
-  a Stop hook passed in `--settings` for Claude Code, `-c notify` for Codex. A
-  direct answer replaces that report, and reading an answer or a report asks
-  for nothing back.
-- The intro shrank to what rewake is and "run `rewake guide`"; the instructions
-  moved into the guide.
-
-**Live criterion, met:** two Claude Code sessions — one asked the other
-a question on a shell's instruction, both read the guide on their own, the
-question and the answer each arrived as one line, and the end of the asking
-session's turn came back as `● rewake: web finished`. Then Claude Code and
-Codex: a task sent to Codex arrived as a plain `rewake: api notify` line, Codex
-read it with `rewake inbox`, answered in its final message only, and the notify
-program turned that into `● rewake: cx finished` on the Claude side with `42`
-in the inbox.
-
-The run found two things no test had:
-
-- an agent tried to answer a message from `shell` with `rewake send shell`; the
-  old message text used to say that cannot work, and nothing said it any more.
-  The guide says it now;
-- an answer read by the asking session put the answering one on its waiting
-  list, so the answering session woke up once more only to read that its answer
-  had been read. Messages to a waiting session are now marked as replies.
-
-The review round five findings (see below) are still open.
-
-## Milestone 9. Roles — done, September 16, 2026
-
-The owner, after restarting under the new build: the session handing out work
-got a report of its own turn back at its worker, and the two would wake each
-other forever. Roles now live in a catalogue, `internal/role`, and the one that
-hands out work has role `main`: it gets every report and reports
-nothing. Main now requires explicit `--main`; omitted flags and explicit
-`--general` keep reporting behavior. The `write` role now reports like a worker
-and is eligible for explicit main-authorized Git metadata access, independently
-of reporting. The September 19 decision removed automatic role-based grants.
-
-## Milestone 8. Three kinds of message — done, September 16, 2026
-
-The owner's call after the first real rounds with Codex: a heads-up should not
-wake anybody back, a question should block until it is answered, and work is
-reported by ending the turn with the result rather than by another send.
-
-- `task` (default): the reader owes a report; the report is its final message.
-- `question` (`--question`): the same, and `send` blocks until the answer and
-  prints it; the answer is not announced to the asking agent a second time.
-- `notify` (`--notify`): owes nothing.
-- The intro and the guide say how to answer: end the turn with the result.
-- Each kind is its own file in `internal/cli`, listed in one table.
-
-In Codex the notice keeps the 🟢: Codex strips control characters from a user
-message, so a coloured `●` like Claude Code's is not possible there.
-
-Earlier findings and fixes are in the [review history](reviews.md) and [its later part](reviews-later.md).
-
 ## Later, as needed
-
 
 - pi, opencode, grok — their delivery paths are already covered in
   `docs/research.md`.
@@ -258,103 +84,116 @@ Earlier findings and fixes are in the [review history](reviews.md) and [its late
 
 See [local installation without publishing](install.md) for source and package checks.
 
-## Milestone 6 progress, September 16, 2026
+## The Codex transport pin — done, September 21, 2026
 
-- **The mailbox is watched, not polled.** A message arrives as a rename into the
-  directory and the kernel says so, so delivery no longer waits for a tick. The
-  poll stays at one second as the safety net: it retries pending messages and
-  covers a watch the kernel would not give.
-- **Finished messages are swept by age.** Delivered and refused ones, and their
-  statuses, are kept a day and then let go; a message still waiting is answered
-  by the TTL rather than by the sweep.
+The version the app-server transport was last observed working against moved from
+0.154.0 to 0.155.1, and the string now lives in one constant,
+`lastObservedServerVersion` in `internal/harness/codex/server.go`; the launch note
+and the test fixture both read from it, the fixture repeating the literal on purpose
+so that a typo fails a test instead of matching itself. The constant was first named
+`verifiedServerVersion` and renamed the same day: two probes on a version — the
+ordinary path and steer — are an observation, not a verification, and the name said
+more than the evidence did. A mismatch produces a note, never a refusal: an
+unobserved version is a reason to warn, not to stop a launch the owner asked for.
 
-Two things the live run caught that the tests did not:
+What was observed on 0.155.1, and what was not, is in [research.md](research.md)
+under the tag of that version; the schema facts are in
+[research-protocol.md](research-protocol.md). Open: every fact tagged 0.154.0 stays
+unrechecked on 0.155.1, and moving the pin again means walking the fixture types
+against the new schema by hand. Checking a new version in a disposable environment
+before the owner installs it is queued in [work-queue.md](work-queue.md).
 
-- the watch descriptor was closed by two goroutines, and once the number was
-  reused that closed somebody else's file — the test framework's own directory,
-  as it happened. It is now waited on rather than blindly read, and closed once;
-- after the server's tick was slowed to a second, every delivery took exactly
-  that long. The server was immediate; the *sender* was polling for its answer at
-  the same slow interval. Measured on a live session: 0.03 s instead of 1.0 s.
+## Launch defaults from the environment and from settings files — done, September 21, 2026
 
+A launch may take its model and reasoning effort from `REWAKE_CODEX_MODEL`,
+`REWAKE_CODEX_EFFORT`, `REWAKE_CLAUDE_MODEL` and `REWAKE_CLAUDE_EFFORT`, supplied as
+flags for that one launch and announced in a launch note. Strongest first: a flag on
+the line, a variable already in the environment, `.rewake.env` in the working
+directory, then `~/.config/rewake/settings`. An unset value means no default and no
+guess; the set of names a file may decide is closed, so a file found in whatever
+directory somebody is in cannot steer the state directory or the room. No model name
+is in the repository.
 
-## Milestone 10. Rooms — done, September 16, 2026
+Where it lives: `internal/harness/defaults.go` for the substitution and the note,
+`internal/harness/settings.go` for the files and their order, and in each adapter
+the pair of defaults that harness takes. Documented in [launch.md](launch.md) under "Launch defaults
+from the environment"; what each harness accepts for a model and an effort, and in
+which spelling, is in [research-launch.md](research-launch.md). The workflow suite's
+paid tier relies on it: a case sets two variables and touches no harness
+configuration ([check-runner.md](check-runner.md)).
 
-**Owner decision:** rooms isolate session discovery, addressing and delivery.
-`--room <name>` is launch-only and defaults to `default`; agent commands inherit
-`REWAKE_ROOM`. `REWAKE_DIR` remains the shared root; `rooms/<room>/` holds each room's
-sessions, mailboxes and sockets. Old root-level records are ignored.
+Not to be developed further ([work-queue.md](work-queue.md)): an alias states the
+choice explicitly, which is what a default was approximating.
 
-Role choice and name publication share a room lock. Without a role flag,
-launches now always use general; the September 17 decision supersedes automatic
-main selection. Explicit --main refuses with the live main's name when occupied.
-General and write can start first. Main/write are eligible for explicit grants;
-list, whoami, the launch note and intro identify the room and resolved role.
+## The workflow suite — in progress since September 21, 2026
 
-**Acceptance, verified:** two rooms with identical session names cannot see or
-message each other; task notices and final reports stay in their originating
-room. The original first-session election checks are historical and superseded.
-Current checks require every unflagged launch to use general and concurrent
-explicit --main claims to have one winner. They use isolated state and fake
-harnesses, plus regression and mutation tests.
+`test/workflow` runs a built rewake end to end: its own binary, a private HOME, state
+directory and PATH, process groups it owns and kills, and a switch, `REWAKE_WORKFLOW=1`,
+without which every scenario skips itself and the five checks stay cheap. With the
+switch set and nothing run, the suite fails rather than reporting green on nothing.
+The harness in front of it is a shim that plays the Codex app-server, re-executed
+from the test binary, whose answers are checked against the saved 0.155.1 schema.
 
+What exists, by scenario name: `stub`; `codex-conversation-accepted`, a Codex session
+taken to an accepted conversation without delivery, with readiness controls that must
+turn the case red; `task-report`, the first of the three selected scenarios — a task
+delivered to an idle session and the report that answers it — with its negative
+controls; `second-terminal`, which states that a turn ended twice by a misbehaving
+server yields one report, and says in its own text that it has no reachable control;
+and two self-checks, `shim-answers-match-schema` and `self-check-incomplete`.
+The scenarios are described in [check-runner-scenarios.md](check-runner-scenarios.md),
+the shape in [check-runner-proposal.md](check-runner-proposal.md), the evidence
+contract in [check-runner.md](check-runner.md).
 
-## Earlier transport and launch milestones
+What does not exist: `batch-arrival` and `mid-turn`, the second and third selected
+scenarios, and `ack-recovery` after them; a fixture for the Claude Code column, so the
+scenario × harness matrix has one column running; and a runner command — the proposal
+chose `go test` with a summarizer over `go test -json` and rejected a separate binary,
+and the summarizer is not written either. The paid tier with a real model has not run
+under the suite.
 
-[September 17 history](transport-milestones-2026-09-17.md) preserves owned-server
-acceptance, continuation permissions, lost reports, naming and explicit main.
+## The harness research, split by how a fact is obtained — done, September 21, 2026
 
-## Gateway integration — verified paths, September 19, 2026
+`docs/research.md` had grown into one file for facts that age at different speeds. It
+is now three: [research-launch.md](research-launch.md) for what a binary answers when
+it is run — models, efforts, argument forms; [research-protocol.md](research-protocol.md)
+for what the generated schema and the reference tree state; [research.md](research.md)
+for what only a running session shows. The reading order in `AGENTS.md` names all three
+and says which to consult before touching an adapter. Each fact still carries where and
+on which version it was verified.
 
-[Integration and review history](reviews-later.md#round-fourteen-and-gateway-integration--september-18-2026)
-records the installed startup and primary/side acceptance, with its scope unchanged.
+## Launch aliases, on the project's first dependency — done, September 21, 2026
 
-## Session state and service notices — accepted scope, September 19, 2026
+`rewake <alias>` is a whole launch: `internal/alias` reads `[alias.<name>]` tables from
+`~/.config/rewake/aliases.toml` and `.rewake.toml` in the working directory, each with
+three fields — the harness to start, a string; the flags rewake reads and the
+arguments the harness gets, two lists — and the launch proceeds as if the arguments
+had been typed. For a flag the harness takes at most once, the ones it names in
+`SingleUseFlags`, a copy typed on the line replaces the alias's rather than merely
+outranking it, so such a flag reaches the harness once; everything else, `--add-dir`
+and `-c` among them, is appended, because repeating those is how a second value is
+added. An unknown name is a refusal listing the names that exist; an alias
+that expands into something unusable is a refusal showing the expansion; an alias can
+name arguments to rewake and nothing else, for the reason the settings file has no
+substitution. Lists, not strings: a string would have to be split into words, and
+splitting words means quoting rules. Documented in [launch.md](launch.md) under
+"Naming a whole launch" and in the launch help; what was
+learned about repeatable flags is in [research-launch.md](research-launch.md).
 
-State/activity passed scoped owner acceptance in `ab3a86c`; [the record](session-activity.md#evidence-and-acceptance)
-keeps unexercised live cases explicit. The readiness/missing-notice incident stays open.
+The file is read by `pelletier/go-toml/v2`, the project's first dependency. The
+owner's decision of September 21, 2026 lifted the standard-library-only rule: a
+dependency is allowed one deliberate decision at a time, judged on having no
+transitive dependencies of its own and on live maintenance, and one library that
+covers several places beats three that each cover one. The rule is in `AGENTS.md`
+and in [design.md](design.md). This library was chosen on reconnaissance — actively
+maintained, rewritten this year, faster, current specification, and, like its main
+alternative, with no transitive dependencies of its own, which was the deciding
+property. Why the alias came only now: a hand-written TOML parser here broke on valid
+TOML through two review rounds and was removed. The format was not the problem;
+writing the parser was.
 
-## Compact tables and grouped inbox — accepted, September 19, 2026
-
-Revision 6 passed independent review and [installed live acceptance](inbox-acceptance.md).
-Ready mail uses native start-or-steer without peek/terminal gating; every notice
-keeps fixed members. Busy input was read between tool calls, the original report
-survived, and a new idle task woke and returned its report. [The contract](inbox-groups.md)
-retains independent receipts and explicit main-authorized grants; roles add none.
-The P3 launch-role wording was corrected. Runtime matched the reviewed archive.
-
-## Native mailbox output — accepted, September 20, 2026
-
-Independent integration-1 review found no blocker; integration-2 closed its guard
-coverage and documentation findings and proved both native directions by identity.
-The 121 non-test runtime files stayed unchanged through the follow-up. The owner
-accepted ordinary-briefing idle work and automatic report reading, plus a normal
-sleep/notify scenario without visible user-message bubbles. After installation and
-restart, the short task returned NATIVE-INSTALLED-OK through native output and inbox.
-[Acceptance and limits](native-mailbox-acceptance.md) distinguish owner timing from
-the deterministic standalone active control. The initial read-only failure required
-explicit per-launch workspace-write in the fresh test directory, not automatic
-permission expansion. Deliberately read-only inbox support is not established.
-Both review rounds, synthetic/mutation coverage and final checks are part of this
-stage. The socket/hook adapter retains its existing behavior.
-
-## Native arrival UI — accepted, September 20, 2026
-
-Two independently reviewed prototypes established downstream-only display and the
-fixture correction needed for remote /resume. The owner observed idle/exec/stream
-rows and later accepted the lifecycle check without a reported picker anomaly.
-Transient display is explicitly sufficient; persistence/reconstruction/replay of UI
-rows is deferred, while durable mail and report accounting remain mandatory.
-
-The integration review reproduced the five checks and native synthetic cases with
-no defect. The owner accepted the new `Ran rewake notice --display-only` label,
-installed the reviewed binary and restarted main/write. UI-INSTALLED-OK returned as
-an automatic native finished report and was read; the owner confirmed visible rows.
-[The accepted contract](native-mailbox-ui.md) retains native Ran, deferred streaming
-and independent delivery/read/report truth. [Review history](reviews-native-ui-2026-09-20.md)
-keeps the initial permission-override refusal and limited owner timing evidence.
-Final closeout changes only documentation after review; no new runtime behavior or
-UI persistence mechanism is added. Other harness behavior is unchanged.
+Open: parsing the Codex configuration with the same library instead of looking for a
+mention of a key in the file's text, queued in [work-queue.md](work-queue.md).
 
 ## A role-shaped first page — done, September 21, 2026
 
@@ -362,8 +201,8 @@ An agent now reads what its own role does, in the briefing it is launched with a
 in `rewake guide`, which recognizes the session calling it and opens with that role's
 moves. A caller that is not a session sees the general map, unchanged.
 
-Both come from one place, `internal/brief.Playbook`: the heading, the ordered steps and
-the limits of a role are written once and rendered twice. A copy would have drifted the
+Both come from one place, `internal/role.Playbook`, the `Play` field of a role: the
+heading, the ordered steps and the limits are written once and rendered twice. A copy would have drifted the
 way copies here have drifted before, and it would have drifted unevenly — the briefing
 arrives first and is read once, the guide is consulted later and often, so a
 disagreement between them would be settled in favour of whichever the reader saw first.
@@ -375,13 +214,31 @@ correctly; no instruction said what to do about it. The playbook says it in one 
 ending the turn is what sends the report — and the guide repeats it to the same session
 later.
 
+## The research packages, folded into the documents that outlive them — done, September 22, 2026
+
+The local research packages — raw runs, fixtures, launch records, and the Python
+harness that checked the native arrival row — were deleted. What they proved was
+written into the documents that stay: the owner's decisions in their own words in
+[owner-decisions.md](owner-decisions.md), what behaves other than expected in
+[traps.md](traps.md), the evidence and its limits in
+[native-mailbox-acceptance.md](native-mailbox-acceptance.md),
+[native-mailbox-ui-check.md](native-mailbox-ui-check.md),
+[gateway-native-evidence.md](gateway-native-evidence.md) and
+[intermittent-bugs.md](intermittent-bugs.md). The reading order in `AGENTS.md` now
+names the first two. Every document that cites a deleted run says so and dates the
+deletion, so a reader knows the record cannot be re-examined.
+
+Open: the arrival-row check has no automated stand any more; rebuilding it on the
+workflow suite, up to the one step a person has to observe, is in
+[work-queue.md](work-queue.md).
+
 ## Remaining work — owner decisions, September 19–21, 2026
 
 What comes next, in the order the owner set on September 21, 2026, is in
-[work-queue.md](work-queue.md): the rest of the workflow suite, then launch aliases
-with the project's first dependency, then pinning harness versions, then a two-way
-channel for Claude Code, then the parity queue. This section keeps the decisions
-behind those items.
+[work-queue.md](work-queue.md): the rest of the workflow suite, then pinning harness
+versions in a disposable environment, then a two-way channel for Claude Code, then the
+parity queue. Launch aliases, which stood second in that order, closed the same day
+(above). This section keeps the decisions behind those items.
 
 The native-notification priority is complete, and so is the Claude Code handoff it
 pointed to: orchestration moved to Claude Code on September 21, 2026. The first three
@@ -390,12 +247,11 @@ with HF-20, and HF-21 — each on one observed run
 ([claude-parity-2026-09-21.md](claude-parity-2026-09-21.md)). Queue entries are not
 milestones; the remaining ones are listed in the feature map.
 
-The next focus is [check automation](check-runner.md): research observable workflows
-before implementing a thin runner, with short console output and summary.json and
-paid/manual tiers opt-in. Its research answer is
+Check automation is the [workflow suite](check-runner.md) above: the research answer,
 [check-runner-proposal.md](check-runner-proposal.md) with its selected scenarios in
-[check-runner-scenarios.md](check-runner-scenarios.md), September 21, 2026; no runner is
-implemented.
+[check-runner-scenarios.md](check-runner-scenarios.md), was accepted on September 21,
+2026 and the first scenario is implemented; short console output and a summary file,
+and paid and manual tiers as opt-in, are still requirements rather than code.
 
 A command that lists the models and effort levels a harness offers is **deferred**.
 Owner decision, September 21, 2026, asked directly: not now. The reconnaissance that

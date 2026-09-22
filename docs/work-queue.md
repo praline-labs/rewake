@@ -11,39 +11,18 @@ and what was learned goes to the research documents.
 
 ## Now: the workflow suite
 
-The delivery scenario and its controls are committed (`8b7004b`). What remains of that
-package is in [check-runner-scenarios.md](check-runner-scenarios.md): two more
-scenarios — `batch-arrival` and `mid-turn` — and the runner itself, described in
-[check-runner-proposal.md](check-runner-proposal.md).
+What exists is in the roadmap's [suite entry](roadmap.md#the-workflow-suite--in-progress-since-september-21-2026):
+`test/workflow` with its isolation, owned process groups and the shim that plays the
+Codex app-server; the Codex session taken to an accepted conversation; the first
+selected scenario, `task-report`, with its negative controls (`8b7004b`); and the
+second-terminal case, which has no reachable control and says so.
 
-## Next: launch aliases, and the first dependency
-
-The owner's decision of September 21, 2026: the rule that this project uses only the
-standard library is lifted. Dependencies are allowed, one deliberate decision at a
-time; the criterion is no transitive dependencies and live maintenance, and one library
-that covers several places beats three that each cover one.
-
-The first is `pelletier/go-toml/v2`, chosen on reconnaissance: actively maintained,
-rewritten this year, faster, current specification — and, like its main alternative,
-with no transitive dependencies of its own. That was the deciding property.
-
-What it enables first: **launch aliases**. A short name instead of a long command —
-`rewake wcodex` in place of a launch carrying a role, a name, a model and a
-configuration override. An alias expands into arguments and the launch proceeds as
-usual: environment defaults still fill what the alias did not name, and an explicit
-flag on the command still wins over the alias. An unknown name is a refusal listing
-the names that exist, and an alias that expands into something unusable is a refusal
-showing what it expanded to. An alias names arguments to rewake and nothing else: it
-cannot run a command of its own, for the same reason the settings file has no
-substitution.
-
-Arguments are a list, not a string. A string would have to be split into words, and
-that means quoting, spaces inside values, and every other place this project has
-already been caught today.
-
-Why this became possible only now: a hand-written TOML parser here broke on valid TOML
-through two review rounds and was removed. The format was not the problem; writing the
-parser was.
+What remains, from [check-runner-scenarios.md](check-runner-scenarios.md) and
+[check-runner-proposal.md](check-runner-proposal.md): the scenarios `batch-arrival` and
+`mid-turn`, then `ack-recovery`; a fixture for the Claude Code column, which has none;
+the summarizer over `go test -json` that gives the short console output and the summary
+file the proposal asks for — there is no separate runner command, by decision; and the
+paid tier, which has not run under the suite.
 
 ## Also: the arrival-display stand, rebuilt on the suite
 
@@ -102,5 +81,5 @@ properly. Its own task, because it touches the Codex adapter: careful, and accep
 the Codex-side reviewer.
 
 **Launch defaults from the environment** stay as they are, but are not worth
-developing further: an alias states the choice explicitly, which is what the defaults
-were approximating.
+developing further: an alias ([launch.md](launch.md), "Naming a whole launch") states
+the choice explicitly, which is what the defaults were approximating.

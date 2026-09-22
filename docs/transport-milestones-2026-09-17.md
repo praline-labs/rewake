@@ -71,6 +71,6 @@ all five checks and targeted acceptance.
 
 Only --main creates main; defaults stay general, names never choose roles. Review, five checks and 72 synchronized claims passed on `9aedd0f`.
 
-Later scoped acceptance is recorded in the [current roadmap](roadmap.md) and
+Later scoped acceptance is recorded in the [closed milestones and acceptances](roadmap-2026-09-16.md#gateway-integration--verified-paths-september-19-2026) and
 [native mailbox acceptance](native-mailbox-acceptance.md); it does not broaden the
 historical ownership limits above.
