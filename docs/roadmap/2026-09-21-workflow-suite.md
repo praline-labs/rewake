@@ -15,20 +15,23 @@ controls; `batch-arrival`, the second selected scenario, since September 22, 202
 two letters in one collection window announced as one group, a third outside it,
 an overview that consumes nothing, reads one member at a time, no replay — with four
 controls that each mutate the product through a build overlay rather than the
-fixture, and a crosswise check of them under `REWAKE_WORKFLOW_CROSS=1`;
-`second-terminal`, which states that a turn ended twice by a misbehaving
-server yields one report, and says in its own text that it has no reachable control;
+fixture, and a crosswise check of them under `REWAKE_WORKFLOW_CROSS=1`; `mid-turn`,
+the third, since September 22, 2026 — a letter steered into a turn the recipient
+holds open, with three controls of which one mutates the product; `second-terminal`,
+which states that a turn ended twice by a misbehaving server yields one report, and
+says in its own text that it has no reachable control;
 and two self-checks, `shim-answers-match-schema` and `self-check-incomplete`.
 The scenarios are described in [check-runner-scenarios.md](../check-runner-scenarios.md),
 the shape in [check-runner-proposal.md](../check-runner-proposal.md), the evidence
-contract in [check-runner.md](../check-runner.md). What building each of the two cost,
+contract in [check-runner.md](../check-runner.md). What building each of them cost,
 and what it does not prove, is in its own record:
-[task-report](2026-09-21-scenario-task-report.md) and
-[batch-arrival](2026-09-22-scenario-batch-arrival.md).
+[task-report](2026-09-21-scenario-task-report.md),
+[batch-arrival](2026-09-22-scenario-batch-arrival.md) and
+[mid-turn](2026-09-22-scenario-mid-turn.md).
 
-What does not exist: `mid-turn`, the third selected scenario, and `ack-recovery`
-after it; a fixture for the Claude Code column, so the
-scenario × harness matrix has one column running; and a runner command — the proposal
-chose `go test` with a summarizer over `go test -json` and rejected a separate binary,
+What does not exist: `ack-recovery`, the fourth scenario; a fixture for the Claude
+Code column, so the scenario × harness matrix has one column running; and a runner
+command — the proposal chose `go test` with a summarizer over `go test -json` and
+rejected a separate binary,
 and the summarizer is not written either. The paid tier with a real model has not run
 under the suite.

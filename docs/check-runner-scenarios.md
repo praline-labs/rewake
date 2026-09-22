@@ -133,6 +133,9 @@ together they cover the full chain once.
   alone).
 - *Rows:* HF-21, HF-09. Not HF-14: nothing here observes terminal output, which is the
   owner-TUI row further down.
+
+*As built:* see [2026-09-22-scenario-mid-turn.md](roadmap/2026-09-22-scenario-mid-turn.md).
+
 - *Boundary:* at the fixture tier this proves the transport reaches a busy session. It
   does **not** prove a model read the message mid-turn — that is the paid tier, and the
   September 21 observation in [claude-parity-2026-09-21.md](claude-parity-2026-09-21.md)

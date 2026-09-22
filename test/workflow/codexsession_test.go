@@ -22,10 +22,12 @@ type codexSession struct {
 	turns    string // where it records the turns it accepted
 	// delivered is where it records the id of every message a delivery named.
 	delivered string
-	// groups is where it records each delivery as one group, and reads is
-	// where it records each inbox call made under shimReadEach.
+	// groups is where it records each delivery as one group, reads is where it
+	// records each inbox call made under shimReadEach, and sends is where a
+	// sender records what became of each letter it sent.
 	groups  string
 	reads   string
+	sends   string
 	home    string
 	process *owned
 }
@@ -106,6 +108,7 @@ func startCodexSession(t *testing.T, c *Case, iso *Isolation, name, role string,
 		delivered: filepath.Join(iso.Home, name+".delivered"),
 		groups:    filepath.Join(iso.Home, name+".groups"),
 		reads:     filepath.Join(iso.Home, name+".reads"),
+		sends:     filepath.Join(iso.Home, name+".sends"),
 	}
 
 	// Only one session in a room may be main, and only a main sees telemetry.
@@ -124,7 +127,8 @@ func startCodexSession(t *testing.T, c *Case, iso *Isolation, name, role string,
 	session.mailbox = filepath.Join(iso.Home, name+".mailbox")
 	launch.Env = append(launch.Env, shimMailboxFile+"="+session.mailbox, shimExitFile+"="+session.exitFile,
 		shimTurnsFile+"="+session.turns, shimDeliveredFile+"="+session.delivered,
-		shimGroupsFile+"="+session.groups, shimReadsFile+"="+session.reads)
+		shimGroupsFile+"="+session.groups, shimReadsFile+"="+session.reads,
+		shimSendsFile+"="+session.sends)
 	// Not marked as an expected failure: the shim is *asked* to stop and
 	// exits cleanly, so anything else is a real failure of the session and has
 	// to reach the verdict. The earlier blanket "failure expected" here hid an

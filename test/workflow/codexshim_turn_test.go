@@ -34,25 +34,20 @@ type turnState struct {
 	// deferred are members left unread by an earlier delivery under
 	// shimReadEach, to be read at the next one.
 	deferred []string
+	// open is the turn this session is working, empty when it is idle. A
+	// turn/start arriving while it is set is steered into that turn, which is
+	// what the real server does: start_or_steer_turn tries to steer first and
+	// starts only when there is no active turn.
+	open string
+	// steered is closed when a delivery has been steered into the open turn,
+	// so the held work can finish instead of waiting for its deadline.
+	steered chan struct{}
 }
 
-// mailboxNotice mirrors the payload the wrapper sends. It is spelled out here
-// rather than imported: test/workflow is outside internal, and a fixture that
-// shared the product's struct would agree with it by construction.
-type mailboxNotice struct {
-	Notice  string `json:"notice"`
-	Members []struct {
-		ID        string `json:"id"`
-		From      string `json:"from"`
-		FromEpoch string `json:"fromEpoch"`
-		To        string `json:"to"`
-		ToEpoch   string `json:"toEpoch"`
-	} `json:"members"`
-}
-
-// deliveredTurn checks an incoming turn, starts the work, and answers with a
-// fresh turn id. The check is a separate function on purpose: it is the part a
-// contract test wants, and running the work would start a goroutine that
+// deliveredTurn checks an incoming turn, decides between starting one and
+// steering it into the turn already running, and answers accordingly. The
+// check is a separate function on purpose, and in another file: it is the part
+// a contract test wants, and running the work would start a goroutine that
 // outlives the test and calls rewake — in whatever environment happens to be
 // current by then. See checkedDelivery.
 func (s *shimSession) deliveredTurn(params json.RawMessage) (any, any, error) {
@@ -63,11 +58,34 @@ func (s *shimSession) deliveredTurn(params json.RawMessage) (any, any, error) {
 	s.recordDelivered(notice)
 
 	s.turn.mu.Lock()
+	// The start-or-steer fork, as the server decides it: a thread with a turn
+	// in progress is steered and answers with that turn's id, an idle one
+	// starts a new turn. The reply is the same object in both branches — only
+	// the id differs — and a steer emits no second turn/started, because that
+	// event belongs to a task beginning and no task begins here.
+	if open := s.turn.open; open != "" {
+		steered := s.turn.steered
+		s.turn.mu.Unlock()
+		s.recordSteer(open, messageIDOf(params))
+		s.recordGroup(open, notice)
+		if steered != nil {
+			select {
+			case <-steered:
+			default:
+				close(steered)
+			}
+		}
+		return turnReply(open), nil, nil
+	}
 	s.turn.counter++
 	// A new turn gets a new id. Reusing one is how an acknowledgement ends up
 	// belonging to the wrong turn without anybody noticing.
 	id := fmt.Sprintf("turn-%d", s.turn.counter)
 	s.turn.lastNotice = notice
+	if os.Getenv(shimHoldTurn) != "" {
+		s.turn.open = id
+		s.turn.steered = make(chan struct{})
+	}
 	s.turn.mu.Unlock()
 	s.recordGroup(id, notice)
 
@@ -75,76 +93,18 @@ func (s *shimSession) deliveredTurn(params json.RawMessage) (any, any, error) {
 	return turnReply(id), nil, nil
 }
 
-// checkedDelivery answers what a delivery must look like, and nothing else: no
-// state is changed and no work begins. Everything a scenario relies on when it
-// says "a turn was accepted" is decided here.
-func (s *shimSession) checkedDelivery(params json.RawMessage) (mailboxNotice, error) {
+// messageIDOf reads the id a delivery names, for the record of what was
+// steered. The request has already been accepted by checkedDelivery, so a
+// value that cannot be read here means the record is wrong rather than the
+// request.
+func messageIDOf(params json.RawMessage) string {
 	var asked struct {
-		ThreadID   string `json:"threadId"`
-		MessageID  string `json:"clientUserMessageId"`
-		ToolOutput struct {
-			Name   string `json:"name"`
-			Output string `json:"output"`
-		} `json:"toolOutput"`
-	}
-	var notice mailboxNotice
-	// The description decides first, and the struct is filled from a request
-	// it has already accepted. Reading into the struct first and checking
-	// afterwards is what let the two views of one request disagree: a repeated
-	// key kept the earlier object's fields in the struct and the later one's
-	// in the map, and a required field went missing between them.
-	output, _ := outputOf(params)
-	if wrong := unservedDelivery(params, output); wrong != "" {
-		return notice, errors.New(wrong)
+		MessageID string `json:"clientUserMessageId"`
 	}
 	if json.Unmarshal(params, &asked) != nil {
-		return notice, errors.New("unreadable turn/start params")
+		return ""
 	}
-	if asked.ThreadID != s.thread {
-		return notice, fmt.Errorf("turn for a conversation this server does not have: %q", asked.ThreadID)
-	}
-	// Presence and kind of the input list are the description's business; what
-	// is left here is emptiness, which no shape can state. A delivery is the
-	// case where the list is there and empty, because the notice is the whole
-	// message and any text would mean something else was sent.
-	input, _ := rawField(params, "input")
-	var carried []json.RawMessage
-	if json.Unmarshal(input, &carried) != nil || len(carried) != 0 {
-		return notice, errors.New("a mailbox delivery carries no input")
-	}
-	if asked.ToolOutput.Name != mailboxToolName {
-		return notice, fmt.Errorf("turn output is from %q, not the mailbox", asked.ToolOutput.Name)
-	}
-	if asked.MessageID == "" {
-		return notice, errors.New("a delivery names the message it carries")
-	}
-	if json.Unmarshal([]byte(asked.ToolOutput.Output), &notice) != nil {
-		return notice, errors.New("unreadable mailbox notice")
-	}
-	if len(notice.Members) == 0 {
-		return notice, errors.New("a mailbox notice with no members")
-	}
-	for _, member := range notice.Members {
-		if member.ID == "" || member.From == "" || member.To == "" {
-			return notice, errors.New("a notice member without identities")
-		}
-		// Both epochs, not just the recipient's. The sender's epoch is what
-		// decides which run of the sender a report goes back to, so a delivery
-		// that lost it would be a report addressed to nobody.
-		if member.FromEpoch == "" || member.ToEpoch == "" {
-			return notice, errors.New("a notice member without epochs")
-		}
-		// The real server has no idea who the mail is for, so this is not the
-		// server's check — but the wrapper runs this session and tells it its
-		// own name and epoch, so a delivery addressed elsewhere is free to
-		// catch here, and mail landing in the wrong session is the failure
-		// this scenario exists to rule out.
-		if member.To != os.Getenv(sessionNameEnv) || member.ToEpoch != os.Getenv(sessionEpochEnv) {
-			return notice, fmt.Errorf("a delivery addressed to %s/%s reached %s/%s",
-				member.To, member.ToEpoch, os.Getenv(sessionNameEnv), os.Getenv(sessionEpochEnv))
-		}
-	}
-	return notice, nil
+	return asked.MessageID
 }
 
 // The messages of the delivery path, built in one place. The shape check reads
@@ -221,6 +181,11 @@ func (s *shimSession) workTurn(id string, notice mailboxNotice) {
 	// turn's interval.
 	s.mu.Lock()
 	s.broadcast(s.turnStartedEvent(id))
+	// The thread is working now, and a client learns that from the status
+	// notification rather than from the turn events: the wrapper's telemetry
+	// reads thread/status/changed, so a fixture that never sent one left every
+	// session looking idle while it worked.
+	s.broadcast(s.threadStatusChangedEvent(activeStatus()))
 	s.mu.Unlock()
 	time.Sleep(20 * time.Millisecond)
 
@@ -239,13 +204,16 @@ func (s *shimSession) workTurn(id string, notice mailboxNotice) {
 	// A record of the turns this session accepted, for a scenario that has to
 	// tell "no turn arrived" from "a turn arrived and produced no report".
 	s.recordTurn(id + " " + firstLine(text))
+	if held := s.holdOpen(id); held != "" {
+		text += "; " + held
+	}
 	s.mu.Lock()
 	// The content first, then the terminal event: a report without content is
 	// not a report, and the wrapper assembles one from what it saw in order.
 	s.broadcast(s.itemCompletedEvent(id, text))
 	// The turn fails after its content was sent: a session that says something
 	// and then breaks has not answered.
-	s.broadcast(s.turnCompletedEvent(id, text, os.Getenv(shimLateFailure) != ""))
+	s.broadcast(s.turnCompletedEvent(id, text, turnFailed()))
 	if os.Getenv(shimSecondTerminal) != "" {
 		// The same turn ends twice. Recorded as well as sent: a scenario that
 		// only counted reports could not tell "the second was ignored" from
@@ -253,7 +221,9 @@ func (s *shimSession) workTurn(id string, notice mailboxNotice) {
 		s.broadcast(s.turnCompletedEvent(id, text, false))
 		s.recordTurn(id + " terminal-again")
 	}
+	s.broadcast(s.threadStatusChangedEvent(idleStatus()))
 	s.mu.Unlock()
+	s.recordTurnEvent("completed", id, turnOutcome())
 }
 
 // recordTurn appends one line to the session's record of what it did with the
@@ -314,31 +284,6 @@ func (s *shimSession) readMailbox() (string, error) {
 	// itself comes after it. A report quoting only the header would say
 	// nothing about which message it answers.
 	return "read: " + read, nil
-}
-
-// outputOf reads the notice out of a request, without deciding anything about
-// it. It answers "" for a request it cannot read that far into — a missing
-// field, a field of the wrong kind, params that are not an object — and every
-// one of those is refused by the description, which runs on the same request.
-// Nothing here treats "could not read it" as "there was nothing to read".
-func outputOf(params json.RawMessage) (string, bool) {
-	output, ok := rawField(params, "toolOutput")
-	if !ok || jsonKind(output) != "object" {
-		return "", false
-	}
-	raw, ok := rawField(output, "output")
-	if !ok || jsonKind(raw) != "string" {
-		return "", false
-	}
-	var text string
-	if json.Unmarshal(raw, &text) != nil {
-		return "", false
-	}
-	// The second answer is not decoration: a notice that is present and empty
-	// and one that could not be read are different requests, and the caller
-	// refuses both — but for different reasons, and a reason is what a person
-	// debugging a refusal has to go on.
-	return text, true
 }
 
 // recordDelivered writes down the id of every message a delivery named. The

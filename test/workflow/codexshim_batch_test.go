@@ -165,6 +165,19 @@ func appendLine(target, line string) {
 	_, _ = fmt.Fprintln(file, line)
 }
 
+// rewakeCommand prepares the built rewake with this session's environment.
+// Every call the shim makes goes through here, so the case's own rewake is the
+// only one that can be reached.
+func rewakeCommand(args ...string) *exec.Cmd {
+	command := exec.Command("rewake", args...)
+	command.Env = os.Environ()
+	return command
+}
+
+// unmarshalJSON is json.Unmarshal under a name this file can share with the
+// mid-turn half without importing encoding/json twice over.
+func unmarshalJSON(raw []byte, into any) error { return json.Unmarshal(raw, into) }
+
 // sendAsAsked is the sender's part: one letter, or several at the same moment
 // and one more after a delay. The sender is a session too — it sends with its
 // own rewake, the way a session does, not the way a test would.
@@ -206,6 +219,10 @@ func sendAsAsked() int {
 			fmt.Fprintf(os.Stderr, "shim: sending to %s: %v\n", target, err)
 		}
 	}
+	// A second letter timed against the recipient's own state, for the
+	// mid-turn scenario. It runs after the first letters have been accepted,
+	// because a turn has to be open before anything can be steered into it.
+	sendSecond()
 	if later := os.Getenv(shimSendLaterText); later != "" {
 		// Measured from the moment the first letters left, not from when
 		// their deliveries were confirmed: a wider window would delay the

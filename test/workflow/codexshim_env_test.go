@@ -83,6 +83,26 @@ const (
 	// "|"; shimSendLaterText is one more, sent laterSendDelay after them.
 	shimSendTexts     = "RW_SHIM_SEND_TEXTS"
 	shimSendLaterText = "RW_SHIM_SEND_LATER_TEXT"
+	// shimHoldTurn makes the session hold its first turn open: it reads, then
+	// waits for a second delivery to be steered into that same turn before it
+	// finishes. That is the pending operation a mid-turn scenario needs, and
+	// the session's own record of it is what the scenario reads.
+	shimHoldTurn = "RW_SHIM_HOLD_TURN"
+	// shimFailHeldTurn ends the held turn with a failure instead of an answer.
+	shimFailHeldTurn = "RW_SHIM_FAIL_HELD_TURN"
+	// shimSendWhenWorking and shimSendWhenIdle name the session whose telemetry
+	// the sender watches before its second letter leaves: working for a
+	// delivery that must land inside a turn, idle again for the control that
+	// must land after it.
+	shimSendWhenWorking = "RW_SHIM_SEND_WHEN_WORKING"
+	shimSendWhenIdle    = "RW_SHIM_SEND_WHEN_IDLE"
+	// shimSendSecondText is the letter that goes out once that state is seen.
+	shimSendSecondText = "RW_SHIM_SEND_SECOND_TEXT"
+	// shimSendsFile is where a sender records what became of each letter it
+	// sent: accepted, or refused with the reason its own rewake gave. Without
+	// it a scenario cannot tell a letter that has not arrived yet from one
+	// whose delivery was refused.
+	shimSendsFile = "RW_SHIM_SENDS_FILE"
 	// shimResume makes the client continue a named conversation instead of
 	// starting a new one. Only a continuation carries a conversation id the
 	// client chose, so that is where "the server answered about a different

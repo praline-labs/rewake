@@ -30,6 +30,8 @@ func TestShimAnswersMatchTheInstalledSchema(t *testing.T) {
 			"the turn/started event matches TurnStartedNotification",
 			"the item/completed event matches ItemCompletedNotification",
 			"the turn/completed event matches TurnCompletedNotification",
+			"the working thread/status/changed event matches ThreadStatusChangedNotification",
+			"the idle thread/status/changed event matches ThreadStatusChangedNotification",
 			"the fixture refuses every delivery the schema refuses",
 		},
 		Deadline: 120 * time.Second,
@@ -84,6 +86,14 @@ func TestShimAnswersMatchTheInstalledSchema(t *testing.T) {
 		eventParams(session.itemCompletedEvent("turn-1", "read: something")))
 	check(c, bundle, "TurnCompletedNotification", "the turn/completed event matches TurnCompletedNotification",
 		eventParams(session.turnCompletedEvent("turn-1", "read: something", false)))
+	// Both statuses the fixture sends, not only the interesting one. The active
+	// variant requires activeFlags beside the type and the idle variant the
+	// type alone, so they are two shapes and a check that saw one of them
+	// would leave the other free to drift.
+	check(c, bundle, "ThreadStatusChangedNotification", "the working thread/status/changed event matches ThreadStatusChangedNotification",
+		eventParams(session.threadStatusChangedEvent(activeStatus())))
+	check(c, bundle, "ThreadStatusChangedNotification", "the idle thread/status/changed event matches ThreadStatusChangedNotification",
+		eventParams(session.threadStatusChangedEvent(idleStatus())))
 
 	// And the other direction: what the fixture accepts as a delivery. The
 	// check runs against the schema's own verdict on the same request, so the

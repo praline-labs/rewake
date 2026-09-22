@@ -124,7 +124,19 @@ with `reportAvailable: true` in its status. Only its waiting copy is removed;
 there is no automatic notice retry. Durable recovery respects this flag, and a
 concurrent read takes precedence. Expired reports never gain readability through
 this exception; task/notify failure behavior is unchanged. Undelivered tasks and notifications older
-than `--ttl` (30 minutes by default) get `failed: expired`. Only an answer accepted under a fresh reservation receives a new delivery
+than `--ttl` (30 minutes by default) get `failed: expired`.
+
+**A reservation that cannot be taken in three seconds fails the message, it does not
+hold it.** September 22, 2026: `Reserve` in `internal/harness/codex/server_delivery.go`
+bounds the whole reservation at three seconds, a timeout comes back from
+`internal/harness/codex/gateway/reservation.go` as `ErrThreadUnavailable`, and
+`internal/inbox/batch.go` turns that into `failed` rather than `pending`. So a wrapper
+that waited for the thread to go idle before delivering would not deliver late — it
+would not deliver at all, and the sender would be told the delivery failed. That is
+why the choice between an active thread and an idle one is left to the native
+start-or-steer call rather than taken from a status snapshot.
+
+Only an answer accepted under a fresh reservation receives a new delivery
 window. `retention/<report id>` records that reservation and, on release, fixes
 one deadline origin. Retries never extend it; ordinary reports keep their
 original TTL. This state survives server restarts. Receipts remain while any

@@ -66,6 +66,37 @@ JSON allows the repetition and leaves the choice of winner to the reader, so two
 readers of the same request disagree: decoding into a Go struct keeps the earlier
 object's fields while a map keeps the later one's.
 
+**[source: reference tree `e29eceb75`; September 22, 2026]** What the server answers
+when a `turn/start` arrives at a thread that is already working, which is the fork a
+mid-turn delivery depends on. `start_or_steer_turn`
+(`codex-rs/core/src/codex_thread.rs:332`) tries to steer first: `start_or_steer`
+(`codex-rs/core/src/session/turn_input.rs:276`) calls `steer_input`, which fails with
+`NoActiveTurn` on an idle thread and otherwise queues the input into the running turn
+and answers that turn's id. The app-server builds the same reply either way
+(`request_processors/turn_processor.rs:646–712`): a `TurnStartResponse` whose turn
+carries `items: []` and `status: inProgress`. So a steered delivery differs from a
+fresh one in the id it comes back with and in nothing else.
+
+No second `turn/started` follows a steer: that event is emitted where a task begins
+(`codex-rs/core/src/tasks/regular.rs:51`), and a steered input starts no task. The
+turn ends once, with one `turn/completed` for the id both deliveries share.
+
+A mailbox delivery can steer even though its `input` list is empty. `steer_input`
+refuses empty *user* input, but a delivery carrying a tool output is submitted as a
+response item instead — `turn_processor.rs` builds `TurnInput::ResponseItem` when
+`toolOutput` is present — and `start_or_steer` accepts a standalone function-call
+output as explicit input. The core names this case itself: the queue call is
+`extend_pending_input_and_accept_mailbox_delivery_for_turn_state`.
+
+**[source: app-server schema of the installed CLI 0.155.1; September 22, 2026]** A
+client learns that a thread is working from `ThreadStatusChangedNotification`, which
+requires `threadId` and `status`. `ThreadStatus` is a tagged union, and its `active`
+variant requires `activeFlags` beside `type` while `idle` requires the type alone —
+so a fixture that reported working with the type alone would be sending a status the
+server cannot produce. The adapter reads exactly this notification for its telemetry
+(`internal/harness/codex/gateway/telemetry_activity.go`), which is why a fixture that
+never sent one left every session looking idle while it worked.
+
 **[source: reference tree `e29eceb75`; September 21, 2026]** `canAcceptDirectInput`
 is a field of the thread object, not of the reply. It is declared inside `ThreadData`
 (`codex-rs/app-server-protocol/src/protocol/v2/thread_data.rs:274`), beside `source`
