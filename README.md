@@ -44,4 +44,4 @@ go build -o rewake ./cmd/rewake
 
 ## Status
 
-Early. See `docs/roadmap.md` for what works today.
+Early. See `docs/roadmap/README.md` for what works today.

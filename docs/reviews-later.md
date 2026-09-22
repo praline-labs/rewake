@@ -1,6 +1,6 @@
 # Later review rounds and finished changes
 
-[Back to the roadmap](roadmap.md). Earlier rounds are in [reviews.md](reviews.md).
+[Back to the roadmap](roadmap/README.md). Earlier rounds are in [reviews.md](reviews.md).
 
 ## Expanded checks — done, September 17, 2026
 

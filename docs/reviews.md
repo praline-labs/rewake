@@ -1,6 +1,6 @@
 # Earlier review rounds
 
-[Back to the roadmap](roadmap.md).
+[Back to the roadmap](roadmap/README.md).
 
 Work of September 17, 2026 is in [the later review rounds](reviews-later.md).
 

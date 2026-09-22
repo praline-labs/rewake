@@ -16,7 +16,7 @@ forever.
 
 0. `docs/flow.md` — the whole path in one read: a session starts, a message is
    sent, announced, read, and the report comes back.
-1. `docs/roadmap.md` — what is done and what comes next. A milestone is closed by
+1. `docs/roadmap/README.md` — what is done and what comes next. A milestone is closed by
    its acceptance criterion, not by code existing. Findings and fixes of the
    earlier review rounds are in `docs/reviews.md` and `docs/reviews-later.md`.
 2. `docs/design.md` — how it works: processes, state directory, interface. Two
@@ -45,10 +45,10 @@ documentation is part of every change, not a task after it:
   `docs/launch.md` or `docs/delivery.md` when the mechanism does,
   `docs/research.md` — or its launch or protocol companion, whichever matches how
   the fact was obtained — when a fact about a harness is learned or found wrong.
-- Every review round and every milestone is recorded in `docs/roadmap.md` as
-  soon as it closes: what was found, what was done, what stays open. Older
-  rounds move to `docs/reviews-later.md`; a file that passes 400 lines is split
-  by date.
+- Every review round and every milestone is recorded in `docs/roadmap/` as soon
+  as it closes — one file per entry, listed in its `README.md`: what was found,
+  what was done, what stays open. Older review rounds move to
+  `docs/reviews-later.md`; a file that passes 400 lines is split by date.
 - An owner decision is written down where it applies, dated, in their words
   where it matters.
 - Before a commit, ask what the change taught that the documents do not yet

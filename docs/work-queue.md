@@ -1,7 +1,7 @@
 # Work queue
 
 The order of what comes next, as the owner set it on September 21, 2026. It lives
-apart from [roadmap.md](roadmap.md) because that file records what has happened —
+apart from [the roadmap](roadmap/README.md) because that file records what has happened —
 milestones closed, reviews held, decisions taken — and this one records what has not
 happened yet. Mixing the two makes both harder to read, and the roadmap had already
 passed the project's 400-line limit.
@@ -11,7 +11,7 @@ and what was learned goes to the research documents.
 
 ## Now: the workflow suite
 
-What exists is in the roadmap's [suite entry](roadmap.md#the-workflow-suite--in-progress-since-september-21-2026):
+What exists is in the roadmap's [suite entry](roadmap/2026-09-21-workflow-suite.md):
 `test/workflow` with its isolation, owned process groups and the shim that plays the
 Codex app-server; the Codex session taken to an accepted conversation; the first
 selected scenario, `task-report`, with its negative controls (`8b7004b`); and the

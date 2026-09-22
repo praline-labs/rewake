@@ -1,6 +1,6 @@
 # Transport and launch milestones — September 17, 2026
 
-[Back to the roadmap](roadmap.md). Preserved milestone history; later policy
+[Back to the roadmap](roadmap/README.md). Preserved milestone history; later policy
 changes remain noted in their original sections.
 
 ## Milestone 10. Session-owned server transport — done, September 17, 2026
@@ -71,6 +71,6 @@ all five checks and targeted acceptance.
 
 Only --main creates main; defaults stay general, names never choose roles. Review, five checks and 72 synchronized claims passed on `9aedd0f`.
 
-Later scoped acceptance is recorded in the [closed milestones and acceptances](roadmap-2026-09-16.md#gateway-integration--verified-paths-september-19-2026) and
+Later scoped acceptance is recorded in the [gateway integration entry](roadmap/2026-09-19-gateway-integration.md) and
 [native mailbox acceptance](native-mailbox-acceptance.md); it does not broaden the
 historical ownership limits above.

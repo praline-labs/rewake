@@ -1,6 +1,6 @@
 # Native arrival UI review and acceptance — September 20, 2026
 
-[Roadmap](roadmap.md) · [UI contract](native-mailbox-ui.md) ·
+[Roadmap](roadmap/README.md) · [UI contract](native-mailbox-ui.md) ·
 [Earlier review history](reviews-later.md)
 
 ## Prototype and the first owner observation
