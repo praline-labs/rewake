@@ -87,10 +87,25 @@ func run(m *testing.M) int {
 	}
 
 	code := m.Run()
+	// Published on both paths. A failing run needs its scenario count as much
+	// as a passing one — more, because the first question about a red run is
+	// whether the case that failed is the only thing that ran — and the
+	// earlier version reported it only when everything had passed.
+	scenarios := ranScenarios()
+	publishRun(suite.enabled, scenarios)
 	if code != 0 {
 		return code
 	}
-	return reportScenarios()
+	return reportScenarios(scenarios)
+}
+
+// ranScenarios is what actually ran, in a stable order.
+func ranScenarios() []string {
+	suite.mu.Lock()
+	ran := append([]string(nil), suite.ran...)
+	suite.mu.Unlock()
+	sort.Strings(ran)
+	return ran
 }
 
 // reportScenarios says how many scenarios ran, and refuses a green run that
@@ -102,15 +117,11 @@ func run(m *testing.M) int {
 // stdout nor stderr of a package that passed — which is why the documented
 // command in AGENTS.md carries -v. Without it, three scenarios where four were
 // expected still pass in silence.
-func reportScenarios() int {
+func reportScenarios(ran []string) int {
 	if !suite.enabled {
 		fmt.Printf("workflow: scenarios skipped, set %s=1 to run them\n", switchEnv)
 		return 0
 	}
-	suite.mu.Lock()
-	ran := append([]string(nil), suite.ran...)
-	suite.mu.Unlock()
-	sort.Strings(ran)
 	if len(ran) == 0 {
 		fmt.Fprintf(os.Stderr, "workflow: %s is set but no scenario ran\n", switchEnv)
 		return 1

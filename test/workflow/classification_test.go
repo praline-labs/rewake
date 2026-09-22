@@ -25,7 +25,7 @@ func TestOnlyPassIsGreen(t *testing.T) {
 
 func TestObservationNeverMadeIsIncompleteNotPass(t *testing.T) {
 	required := []string{"mailbox holds the message", "recipient read it"}
-	made := map[string]record{
+	made := map[string]observation{
 		"mailbox holds the message": {Name: "mailbox holds the message", Outcome: Pass},
 	}
 	outcome, reason := classify(required, made, nil)
@@ -39,7 +39,7 @@ func TestObservationNeverMadeIsIncompleteNotPass(t *testing.T) {
 
 func TestContradictedObservationOutranksMissingOne(t *testing.T) {
 	required := []string{"a", "b"}
-	made := map[string]record{"a": {Name: "a", Outcome: Fail, Detail: "epoch differed"}}
+	made := map[string]observation{"a": {Name: "a", Outcome: Fail, Detail: "epoch differed"}}
 	outcome, reason := classify(required, made, nil)
 	if outcome != Fail {
 		t.Fatalf("outcome=%s, want fail", outcome)
@@ -51,7 +51,7 @@ func TestContradictedObservationOutranksMissingOne(t *testing.T) {
 
 func TestAbsentCapabilityIsUnsupportedNotPass(t *testing.T) {
 	required := []string{"delivery accepted", "acceptance acknowledged"}
-	made := map[string]record{
+	made := map[string]observation{
 		"delivery accepted":       {Name: "delivery accepted", Outcome: Pass},
 		"acceptance acknowledged": {Name: "acceptance acknowledged", Outcome: Unsupported, Detail: "socket adapter emits no ACK"},
 	}
@@ -67,7 +67,7 @@ func TestAbsentCapabilityIsUnsupportedNotPass(t *testing.T) {
 // method that records one must not find a green path already open.
 func TestEvidencelessOutcomesCountAsMissing(t *testing.T) {
 	for _, outcome := range []Outcome{Skip, Incomplete, NotRun} {
-		made := map[string]record{"a": {Name: "a", Outcome: outcome}}
+		made := map[string]observation{"a": {Name: "a", Outcome: outcome}}
 		result, reason := classify([]string{"a"}, made, nil)
 		if result != Incomplete {
 			t.Errorf("an observation recorded as %s classified the case as %s, want incomplete", outcome, result)
@@ -82,7 +82,7 @@ func TestEvidencelessOutcomesCountAsMissing(t *testing.T) {
 // property that makes the default branch in classify worth having: whatever a
 // later change starts recording, it cannot arrive green by accident.
 func TestUnknownOutcomeIsNotGreen(t *testing.T) {
-	made := map[string]record{"a": {Name: "a", Outcome: Outcome("something-new")}}
+	made := map[string]observation{"a": {Name: "a", Outcome: Outcome("something-new")}}
 	outcome, reason := classify([]string{"a"}, made, nil)
 	if outcome.Green() {
 		t.Fatalf("an unknown outcome classified the case as %s", outcome)
@@ -97,7 +97,7 @@ func TestUnknownOutcomeIsNotGreen(t *testing.T) {
 
 func TestCleanupFailureFailsAnOtherwisePerfectCase(t *testing.T) {
 	required := []string{"a"}
-	made := map[string]record{"a": {Name: "a", Outcome: Pass}}
+	made := map[string]observation{"a": {Name: "a", Outcome: Pass}}
 	outcome, reason := classify(required, made, errors.New("socket still present"))
 	if outcome != Fail {
 		t.Fatalf("outcome=%s, want fail", outcome)

@@ -50,8 +50,15 @@ type Case struct {
 	ctx      context.Context
 	stop     context.CancelFunc
 
+	started time.Time
+	// scenario is true for a case a real scenario started through Start. The
+	// suite's own tests drive cases through a stand-in to examine the
+	// classifier, and several of those are *meant* to fail — publishing their
+	// records would put a dozen deliberate failures into the summary of a run
+	// that went perfectly.
+	scenario  bool
 	mu        sync.Mutex
-	made      map[string]record
+	made      map[string]observation
 	progress  string
 	checks    []cleanupCheck
 	dirs      []string
@@ -73,7 +80,9 @@ const defaultDeadline = 60 * time.Second
 // later: the result is published only once the case has actually finished.
 func Start(t *testing.T, spec Spec) *Case {
 	t.Helper()
-	return newCase(t, spec)
+	c := newCase(t, spec)
+	c.scenario = true
+	return c
 }
 
 func newCase(t caseT, spec Spec) *Case {
@@ -89,7 +98,7 @@ func newCase(t caseT, spec Spec) *Case {
 	}
 	deadline := time.Now().Add(spec.Deadline)
 	ctx, stop := context.WithDeadline(context.Background(), deadline)
-	c := &Case{t: t, spec: spec, deadline: deadline, ctx: ctx, stop: stop, made: map[string]record{}, result: NotRun}
+	c := &Case{t: t, spec: spec, deadline: deadline, started: time.Now(), ctx: ctx, stop: stop, made: map[string]observation{}, result: NotRun}
 	t.Cleanup(c.finish)
 	return c
 }
@@ -130,7 +139,7 @@ func (c *Case) record(name string, outcome Outcome, detail string) {
 	if previous, ok := c.made[name]; ok {
 		c.t.Fatalf("workflow: observation %q already recorded as %s: %s", name, previous.Outcome, previous.Detail)
 	}
-	c.made[name] = record{Name: name, Detail: detail, Outcome: outcome}
+	c.made[name] = observation{Name: name, Detail: detail, Outcome: outcome}
 }
 
 func (c *Case) declares(name string) bool {
@@ -227,7 +236,7 @@ func (c *Case) finish() {
 	}
 
 	c.mu.Lock()
-	made := make(map[string]record, len(c.made))
+	made := make(map[string]observation, len(c.made))
 	for name, r := range c.made {
 		made[name] = r
 	}
@@ -250,6 +259,12 @@ func (c *Case) finish() {
 	c.mu.Lock()
 	c.result, c.reason = outcome, reason
 	c.mu.Unlock()
+
+	// The machine-readable record, printed for every case whatever its
+	// outcome. It is the only thing a summary is built from: prose is for a
+	// person reading the run, and a summary assembled by reading prose grows
+	// with every print somebody adds.
+	c.publishRecord(outcome, reason, made, kept != "")
 
 	if !outcome.Green() {
 		// One message, not two: the verdict and where to look belong together,

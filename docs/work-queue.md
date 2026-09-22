@@ -21,10 +21,10 @@ second-terminal case, which has no reachable control and says so.
 
 What remains, from [check-runner-scenarios.md](check-runner-scenarios.md) and
 [check-runner-proposal.md](check-runner-proposal.md): the scenario `ack-recovery`;
-a fixture for the Claude Code column, which has none;
-the summarizer over `go test -json` that gives the short console output and the summary
-file the proposal asks for — there is no separate runner command, by decision; and the
-paid tier, which has not run under the suite.
+a fixture for the Claude Code column, which has none; and the paid tier, which has not
+run under the suite. The summarizer the proposal asks for is built
+([the record](roadmap/2026-09-22-suite-summarizer.md)); there is still no separate
+runner command, by decision.
 
 ## Also: the arrival-display stand, rebuilt on the suite
 

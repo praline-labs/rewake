@@ -108,6 +108,21 @@ printed, so without it the line naming how many scenarios ran — and which — 
 invisible, and a run that exercised three of four looks the same as one that
 exercised all four.
 
+For reading rather than watching, the same run goes through the summarizer, which
+prints a handful of lines and writes the whole result to a file:
+
+```bash
+env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
+  REWAKE_WORKFLOW=1 go run ./tools/checksummary \
+  -- go test -count=1 -json ./test/workflow/...
+```
+
+It exits 0 only when every case passed or was unsupported for a named capability,
+and names the failing observation and its evidence directory when one did not.
+`go run ./tools/checksummary --help` prints the flags and what each exit code means.
+`go run` reports every non-zero exit as 1 and prints the real one as `exit status N`,
+so a script that needs the codes apart builds the binary first.
+
 The tools are installed with `go install` into `~/go/bin`, which has to be on
 `PATH`:
 

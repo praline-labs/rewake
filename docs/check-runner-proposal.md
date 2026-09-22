@@ -208,6 +208,9 @@ pipeline. A `jq`-based script would make the runner depend on whatever happens t
 installed; Go is available by definition, since without it there is nothing to run.
 Its location — `cmd/` or `tools/` — is an implementation choice, not a design one.
 
+**Built on September 22, 2026** as `tools/checksummary`; what it does, what it leaves
+alone and what its shape cost is in [its record](roadmap/2026-09-22-suite-summarizer.md).
+
 Two rules make the budget hold rather than state it: the summary is generated from the
 result records, so no added print can grow it; and artifacts go per case into a
 directory named by the case, so the agent's next read is one path, never a listing.

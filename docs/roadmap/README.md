@@ -77,6 +77,7 @@ without a date. Local installation without publishing is in
 | September 22, 2026 | [The research packages, folded into the documents that outlive them](2026-09-22-research-packages.md) | archives deleted, their findings written into the surviving documents |
 | September 22, 2026 | [The batch-arrival scenario, as built](2026-09-22-scenario-batch-arrival.md) | grouping, previews, per-message reads and no replay, with four product mutants |
 | September 22, 2026 | [The mid-turn scenario, as built](2026-09-22-scenario-mid-turn.md) | a delivery steered into a running turn, and what the server decides rather than the product |
+| September 22, 2026 | [A summary of a suite run instead of its transcript](2026-09-22-suite-summarizer.md) | `tools/checksummary`: a few lines and a summary.json, built from records rather than prose |
 
 ## Remaining work — owner decisions, September 19–21, 2026
 

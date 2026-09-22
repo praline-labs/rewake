@@ -105,8 +105,8 @@ const (
 // looked and it was right" do not collapse into the same color.
 func (o Outcome) Green() bool { return o == Pass }
 
-// record is one observation as the case saw it.
-type record struct {
+// observation is one observation as the case saw it.
+type observation struct {
 	Name    string
 	Detail  string
 	Outcome Outcome
@@ -127,7 +127,7 @@ type record struct {
 // today, but this function is deliberately separate from the methods that
 // record them: a later Skipped or NotRun method must not open a silent path to
 // green just because the switch already compiled.
-func classify(required []string, made map[string]record, cleanupErr error) (Outcome, string) {
+func classify(required []string, made map[string]observation, cleanupErr error) (Outcome, string) {
 	if cleanupErr != nil {
 		return Fail, "cleanup failed: " + cleanupErr.Error()
 	}
