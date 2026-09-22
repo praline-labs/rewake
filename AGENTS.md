@@ -123,6 +123,27 @@ and names the failing observation and its evidence directory when one did not.
 `go run` reports every non-zero exit as 1 and prints the real one as `exit status N`,
 so a script that needs the codes apart builds the binary first.
 
+To check a Codex version before installing it, name it — an exact version, `latest` or
+`installed` — and give go test room for a first download:
+
+```bash
+env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
+  REWAKE_WORKFLOW=1 REWAKE_CODEX_VERSION=0.156.0 go run ./tools/checksummary \
+  -- go test -count=1 -timeout 30m -json ./test/workflow/...
+```
+
+The version is fetched once, before any case starts, into
+`~/.cache/rewake/harness/codex/<version>/` (`REWAKE_HARNESS_CACHE` moves it), and the
+schema is generated in a disposable docker container; only the schema comes from it,
+the scenarios run against the fixture. The fetch gets half of `-timeout`, at most ten
+minutes, and the suite the rest: under go test's default of ten minutes a slow first
+download would be cut at five, and a download that outlived the timeout would kill the
+test binary with no case to say why. Below a `-timeout` of about five minutes half is
+not enough for both a slow first download and the suite, so a first run of a new
+version wants the thirty. The variable is read only under `REWAKE_WORKFLOW`.
+`go run ./tools/harnesscache --help` lists, fetches and removes cached versions;
+nothing is removed automatically.
+
 The tools are installed with `go install` into `~/go/bin`, which has to be on
 `PATH`:
 

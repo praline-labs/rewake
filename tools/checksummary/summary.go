@@ -51,7 +51,7 @@ func (s *summary) green() bool {
 	if s.ranNothing() {
 		return false
 	}
-	if s.PackageFailed {
+	if s.PackageFailed || s.Run.Failure != "" {
 		return false
 	}
 	if s.EngineExit != nil && *s.EngineExit != 0 {
@@ -114,9 +114,18 @@ func (s *summary) render(to io.Writer, path string) {
 		_, _ = fmt.Fprintf(to, "workflow  %d %s, %d %s: %s   %s\n",
 			scenarios, plural(scenarios, "scenario"), len(s.Cases), plural(len(s.Cases), "case"), summaryOfCases, s.Wall)
 	}
+	if s.Run.Enabled && len(s.Run.Against) > 0 {
+		// What the run was green or red against. A version is the first
+		// thing to doubt about a harness, and a summary that leaves it out
+		// cannot be compared with the next one.
+		_, _ = fmt.Fprintf(to, "against   %s\n", record.DescribeAgainst(s.Run.Against))
+	}
+	if s.Run.Failure != "" {
+		_, _ = fmt.Fprintf(to, "run       FAIL  %s\n", firstChars(s.Run.Failure, 300))
+	}
 	s.renderUnsupported(to)
 	s.renderFailures(to)
-	if s.EngineExit != nil && *s.EngineExit != 0 && !s.anyRed() && !s.ranNothing() {
+	if s.EngineExit != nil && *s.EngineExit != 0 && !s.anyRed() && !s.ranNothing() && s.Run.Failure == "" {
 		// The engine failed and no case says why: a build error, a panic, a
 		// package timeout. Saying so is the whole diagnostic a reader gets —
 		// unless the line above already said it. A run that was switched on

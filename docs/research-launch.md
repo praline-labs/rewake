@@ -204,3 +204,37 @@ override parser splits a setting on the first `=` and trims both halves
 (`codex-rs/utils/cli/src/config_override.rs`), which is why `-c 'model = "x"'` and
 `-c model="x"` are the same setting — verified live on 0.155.1, both accepted. Neither harness needs its
 configuration file touched for either setting.
+
+## How each harness is published on npm
+
+**[verified by download; Codex CLI 0.155.1 and 0.156.0, Claude Code 2.1.280; September
+23, 2026]** What `tools/harnesscache` fetches, and why each harness is fetched
+differently. Both publish a sha512 `dist.integrity` for every version, which the cache
+checks before a version gets its name.
+
+**Codex.** `@openai/codex` publishes the platform builds as versions of the *same*
+package with a suffix: `0.155.1-linux-x64`, `0.155.1-linux-arm64`, and so on; the plain
+`0.155.1` is a node wrapper (`bin/codex.js`) whose optional dependencies alias those
+suffixed versions. The `linux-x64` tarball is 142 MB compressed and 370 MB unpacked, 46
+files. The binary is `package/vendor/x86_64-unknown-linux-musl/bin/codex`, a
+static-pie musl executable, so it runs in any Linux container without node or libc;
+`codex-code-mode-host` shares its `bin` directory, and the rest sits in sibling
+directories under the same vendor triple: `rg` in `codex-path`, and `bwrap`, a zsh and
+a voice host with its own libraries in `codex-resources`. Neither package contains a
+symbolic link (`find -type l` over all three cached versions is empty), which is why the
+cache refuses links outright. The dist-tags carry the platform too (`linux-x64` names the latest
+platform build), and `latest` on the plain package names the version.
+
+**Claude Code.** `@anthropic-ai/claude-code` is a 184 KB wrapper: `bin/claude.exe` is a
+placeholder that a `postinstall` script (`install.cjs`, run by node) overwrites with a
+binary copied out of a platform package listed in `optionalDependencies`. Fetching the
+wrapper alone gives no harness. The platform packages are separate names:
+`@anthropic-ai/claude-code-linux-x64` (glibc) and `-linux-x64-musl`, with arm64 and
+other platforms beside them, each versioned exactly like the wrapper. The cache
+fetches the musl one directly and runs no install script: 103 MB compressed, 227 MB
+unpacked, the executable at `package/claude`. `readelf` lists `libc.musl` as its only
+needed library, and `claude --version` answers `2.1.280 (Claude Code)` in a bare
+`alpine:3.22` container.
+
+The `--version` answers the cache's `installed` selector reads: Codex prints
+`codex-cli 0.155.1`, Claude Code `2.1.280 (Claude Code)`.

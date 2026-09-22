@@ -39,23 +39,23 @@ looking at the screen and saying whether the row appeared. The suite would carry
 case up to that point, leave the observation to the owner, and record it — the same
 division the fixture used, with the machine half no longer in a second language.
 
-## Then: pinning harness versions
+## Then: a named harness version against a local responder
 
-Take an arbitrary version of Codex into a disposable environment, generate the protocol
-schema from it, and run our messages against that schema. The point is to learn what
-broke **before** the owner updates their installation: the owner asked, on September
-21, 2026, that new versions be downloaded and checked rather than tested on their
-live setup.
+The first half of pinning harness versions is done
+([the record](roadmap/2026-09-23-harness-versions.md)): a Codex version named in
+`REWAKE_CODEX_VERSION` is fetched once into a cache, and the schema case generates the
+protocol schema from it in a disposable container. That catches changes of *shape* — a
+new required field, a field that disappeared, a type that changed — before the owner
+updates their installation, which is what the owner asked for on September 21, 2026.
 
-This is the one place in the project where docker is warranted — a disposable container
-is cleaner than temporary directories, and the owner's installation is not touched at
-all. For the rest of the suite it would be overhead.
-
-The boundary, stated honestly: a schema catches changes of *shape* — a new required
-field, a field that disappeared, a type that changed. It does not catch changes of
-*behaviour* — a different order of events, a different moment of readiness, a different
-reaction to a refusal. Those need a tier with a real harness against a local responder,
-which does not exist yet.
+What remains is the half a schema cannot see: changes of *behaviour* — a different
+order of events, a different moment of readiness, a different reaction to a refusal.
+That needs a tier with a real harness, of a named version, against a local responder
+instead of a model provider, for both harnesses. The pieces it would reuse exist:
+`tools/harnesscache/cache` already fetches and keeps both Codex and Claude Code, and
+`tools/harnesscache/container` runs either one with a private HOME and a network mode
+of the caller's choosing. What does not exist is the responder, and a way to point
+each harness at it for one launch without editing its configuration.
 
 ## Then: a two-way channel for Claude Code
 

@@ -79,13 +79,15 @@ without a date. Local installation without publishing is in
 | September 22, 2026 | [The mid-turn scenario, as built](2026-09-22-scenario-mid-turn.md) | a delivery steered into a running turn, and what the server decides rather than the product |
 | September 22, 2026 | [A summary of a suite run instead of its transcript](2026-09-22-suite-summarizer.md) | `tools/checksummary`: a few lines and a summary.json, built from records rather than prose |
 | September 22, 2026 | [A fixture for the Claude Code column](2026-09-22-fixture-claude-code.md) | the scenarios run twice; what the socket column cannot show, and says by name |
+| September 23, 2026 | [A named harness version, cached and run in a container](2026-09-23-harness-versions.md) | `tools/harnesscache`, `REWAKE_CODEX_VERSION`, and what 0.156.0 showed |
 
 ## Remaining work — owner decisions, September 19–21, 2026
 
 What comes next, in the order the owner set on September 21, 2026, is in
 [work-queue.md](../work-queue.md): the rest of the workflow suite, then pinning harness
-versions in a disposable environment, then a two-way channel for Claude Code, then the
-parity queue. Launch aliases, which stood second in that order, closed the same day
+versions in a disposable environment — its schema half closed on September 23, 2026
+([entry](2026-09-23-harness-versions.md)), its behaviour half is still queued — then a
+two-way channel for Claude Code, then the parity queue. Launch aliases, which stood second in that order, closed the same day
 ([entry](2026-09-21-launch-aliases.md)). This section keeps the decisions behind those items.
 
 The native-notification priority is complete, and so is the Claude Code handoff it

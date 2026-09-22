@@ -66,17 +66,27 @@ func mustMessage(t *testing.T, value any) map[string]any {
 }
 
 // schemaForTest gives a direct test the same bundle the scenario uses, or
-// skips it: these tests check the shim against the installed Codex, and
-// without one there is nothing to check against.
+// skips it when there is no Codex and none was named: without one there is
+// nothing to check against. A Codex that was there and failed is a failure,
+// not a skip.
 func schemaForTest(t *testing.T) *schemaBundle {
 	t.Helper()
+	// Under the switch: without it these tests would run a real Codex — the
+	// installed one, with the owner's HOME — on every go test ./..., which is
+	// exactly what the five ordinary checks must not do.
+	if !suite.enabled {
+		t.Skipf("needs a real Codex: set %s=1 to run it with the workflow suite", switchEnv)
+	}
 	rec := &recorder{}
 	c := newCase(rec, Spec{Name: "schema-for-test", Observations: []string{"a"}})
 	c.Observed("a", "not a scenario")
 	defer rec.finish()
-	bundle, why := loadSchema(c, t.TempDir())
+	bundle, source, err := loadSchema(c, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	if bundle == nil {
-		t.Skip(why)
+		t.Skip(source.absent)
 	}
 	return bundle
 }

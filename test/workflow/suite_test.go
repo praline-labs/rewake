@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,6 +13,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/iiiokojiadbi/rewake/test/workflow/record"
 )
 
 // switchEnv turns the scenarios on. They skip themselves without it so that
@@ -31,6 +34,12 @@ var suite struct {
 
 	mu  sync.Mutex
 	ran []string
+	// schema is where the schema comes from, decided before any case
+	// starts, and schemaUsed whether a case asked for it; see
+	// harness_version_test.go.
+	schema         schemaSource
+	schemaPrepared bool
+	schemaUsed     bool
 }
 
 func TestMain(m *testing.M) {
@@ -49,6 +58,9 @@ func TestMain(m *testing.M) {
 		os.Exit(2)
 	}
 	suite.enabled = enabled
+	// Parsed here rather than by m.Run, because the fetch before the cases
+	// takes its budget from -timeout.
+	flag.Parse()
 	os.Exit(run(m))
 }
 
@@ -88,6 +100,13 @@ func run(m *testing.M) int {
 			return 1
 		}
 		suite.binary = binary
+		suite.schema, suite.schemaPrepared = prepareSchemaSource()
+		if suite.schema.err != nil {
+			// Stated before the cases run, and again in the run record: a
+			// named version that could not be had is the run's failure
+			// whether or not the schema case is among those selected.
+			fmt.Fprintf(os.Stderr, "workflow: %v\n", suite.schema.err)
+		}
 	}
 
 	code := m.Run()
@@ -96,11 +115,19 @@ func run(m *testing.M) int {
 	// whether the case that failed is the only thing that ran — and the
 	// earlier version reported it only when everything had passed.
 	scenarios := ranScenarios()
-	publishRun(suite.enabled, scenarios)
+	against := againstForRun()
+	failure := ""
+	if suite.schema.err != nil {
+		failure = suite.schema.err.Error()
+	}
+	publishRun(suite.enabled, scenarios, against, failure)
 	if code != 0 {
 		return code
 	}
-	return reportScenarios(scenarios)
+	if failure != "" {
+		return 1
+	}
+	return reportScenarios(scenarios, against)
 }
 
 // ranScenarios is what actually ran, in a stable order.
@@ -121,7 +148,7 @@ func ranScenarios() []string {
 // stdout nor stderr of a package that passed — which is why the documented
 // command in AGENTS.md carries -v. Without it, three scenarios where four were
 // expected still pass in silence.
-func reportScenarios(ran []string) int {
+func reportScenarios(ran []string, against []record.Against) int {
 	if !suite.enabled {
 		fmt.Printf("workflow: scenarios skipped, set %s=1 to run them\n", switchEnv)
 		return 0
@@ -131,6 +158,9 @@ func reportScenarios(ran []string) int {
 		return 1
 	}
 	fmt.Printf("workflow: %d scenario(s) ran: %v\n", len(ran), ran)
+	// Beside the count, on purpose: a green run says what it was green
+	// against, and the version is the first thing to doubt about a harness.
+	fmt.Printf("workflow: %s\n", record.DescribeAgainst(against))
 	return 0
 }
 

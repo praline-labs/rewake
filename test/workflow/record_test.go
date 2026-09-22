@@ -60,8 +60,8 @@ func (c *Case) publishRecord(outcome Outcome, reason string, made map[string]obs
 	fmt.Println(record.CaseMark + string(encoded))
 }
 
-func publishRun(enabled bool, scenarios []string) {
-	encoded, err := json.Marshal(record.Run{Enabled: enabled, Scenarios: scenarios})
+func publishRun(enabled bool, scenarios []string, against []record.Against, failure string) {
+	encoded, err := json.Marshal(record.Run{Enabled: enabled, Scenarios: scenarios, Against: against, Failure: failure})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "workflow: the run record could not be written: %v\n", err)
 		return

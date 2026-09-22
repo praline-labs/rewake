@@ -314,3 +314,41 @@ func TestAnUnexplainedRedEngineNamesItsFailedTests(t *testing.T) {
 		t.Errorf("the failed test is not named:\n%s", rendered)
 	}
 }
+
+// A run says what it ran against, from the run record, in the same words the
+// suite's own -v line uses.
+func TestTheSummaryNamesWhatEachColumnRanAgainst(t *testing.T) {
+	encoded, _ := json.Marshal(record.Run{Enabled: true, Scenarios: []string{"shim-answers-match-schema"}, Against: []record.Against{
+		{What: "schema", Harness: "codex", Version: "0.156.0", How: "named by REWAKE_CODEX_VERSION, in a container"},
+		{What: "scenarios", How: "against the fixture in both columns"},
+	}})
+	text := stream(t, []string{
+		caseLine(t, record.Case{Case: "shim-answers-match-schema", Harness: "codex", Gate: true, Outcome: outcomePass}),
+		record.RunMark + string(encoded),
+	}, false)
+	rendered := render(t, summarize(t, text))
+	want := "against   schema from codex 0.156.0 (named by REWAKE_CODEX_VERSION, in a container); scenarios against the fixture in both columns"
+	if !strings.Contains(rendered, want) {
+		t.Errorf("the summary does not say what the run was against:\n%s", rendered)
+	}
+}
+
+// A failure of the run itself — a named version that could not be fetched —
+// is red and named, even when every case that ran passed.
+func TestARunFailureIsRedAndNamed(t *testing.T) {
+	encoded, _ := json.Marshal(record.Run{
+		Enabled: true, Scenarios: []string{"task-report"},
+		Failure: "REWAKE_CODEX_VERSION=0.0.1: the registry has no codex 0.0.1",
+	})
+	text := stream(t, []string{
+		caseLine(t, record.Case{Case: "task-report", Harness: "codex", Gate: true, Outcome: outcomePass}),
+		record.RunMark + string(encoded),
+	}, false)
+	found := summarize(t, text)
+	if found.green() {
+		t.Fatal("a run with a failure of its own was green")
+	}
+	if rendered := render(t, found); !strings.Contains(rendered, "run       FAIL  REWAKE_CODEX_VERSION=0.0.1") {
+		t.Errorf("the run failure is not named:\n%s", rendered)
+	}
+}
