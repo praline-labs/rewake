@@ -371,8 +371,8 @@ Two more were settled the same day:
   rot check.
 
 **The transport pin moved to 0.155.1** on September 21, 2026, on the owner's decision
-("пин можно сделать") and on two probes of that day: the ordinary path, and steer into
-an active turn. It now lives in one constant, `lastObservedServerVersion` in
+("пин можно сделать", the pin may be moved) and on two probes of that day: the
+ordinary path, and steer into an active turn. It now lives in one constant, `lastObservedServerVersion` in
 `internal/harness/codex/server.go`, so the real-harness tier no longer runs the
 mismatch branch. Not observed on that version, and not to be claimed by the suite:
 conversation selection after `/new`, stale-target refusal, `stopped` from an

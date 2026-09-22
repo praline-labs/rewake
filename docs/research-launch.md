@@ -144,30 +144,32 @@ merges, so part of an earlier one can survive a later one that does not restate 
 Dropping an earlier `-c` because a later one names the same key can therefore lose
 settings, and telling the two cases apart means understanding the value.
 
-## Когда проверке через справку можно верить
+## When a check through the help text can be trusted
 
-Перенесено из набора передачи 22 сентября 2026: это факты о harness, добытые
-запуском бинаря, и место им здесь, а не в каталоге передач.
+Moved from the handoff set on September 22, 2026: these are facts about a harness
+obtained by running the binary, and this is their place rather than the handoff
+directory.
 
-**[verified live; Claude Code 2.1.270; September 21, 2026]** Справка проглатывает
-любой неизвестный флаг: `claude --definitely-not-a-flag x --help` печатает справку и
-возвращает ноль. Проверять формы записи аргументов через справку там бессмысленно —
-нужен запуск без `--help`.
+**[verified live; Claude Code 2.1.270; September 21, 2026]** The help swallows any
+unknown flag: `claude --definitely-not-a-flag x --help` prints the help and returns
+zero. Checking argument spellings through the help is pointless there — it takes a
+run without `--help`.
 
-**[verified live; Codex CLI 0.155.1; September 21, 2026]** У Codex результат зависит
-от расстановки: `codex --unknown --help` отвергает (код 2), `codex --help --unknown`
-принимает (код 0), `codex -c not-a-setting --help` тоже принимает. То есть прием
-работает в одной расстановке — флаг первым, справка последней — и только про
-написание флага, никогда про содержимое настройки.
+**[verified live; Codex CLI 0.155.1; September 21, 2026]** In Codex the result depends
+on the placement: `codex --unknown --help` refuses (exit 2), `codex --help --unknown`
+accepts (exit 0), `codex -c not-a-setting --help` accepts too. So the technique works
+in one placement — the flag first, the help last — and only for the spelling of a
+flag, never for the content of a setting.
 
-**[verified live; Codex CLI 0.155.1; September 21, 2026]** Псевдонимы флагов в
-справке не показываются вовсе: ни `--yolo`, ни `--not-so-yolo` в ней нет. Как их
-находить и как проверять — разделом ниже, про повторяемые флаги.
+**[verified live; Codex CLI 0.155.1; September 21, 2026]** Flag aliases are not shown
+in the help at all: neither `--yolo` nor `--not-so-yolo` is there. How to find them
+and how to check them is in the section on which flags may be repeated, above.
 
-**[source: reference tree `e29eceb75`; September 17, 2026]** Настоящий сервер не
-принимает пустой курсор и не шлет событие о начале беседы при подключении. Фикстура,
-которая делает и то и другое, мягче оригинала — и тесты на ней зеленеют при сломанном
-продукте: круг ревью нашел так две High при 289 зеленых тестах.
+**[source: reference tree `e29eceb75`; September 17, 2026]** The real server does not
+accept an empty cursor and does not send a conversation-started event on connection. A
+fixture that does both is softer than the original — and tests on it go green on a
+broken product: one review round found two High findings that way, with 289 tests
+green.
 
 ## Passing a model and an effort for one launch
 

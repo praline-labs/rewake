@@ -22,7 +22,7 @@ report back and telemetry collection — and steer, a delivery accepted during a
 turn that left the original task reporting its own result, both recorded in
 [claude-parity-2026-09-21.md](claude-parity-2026-09-21.md). On that basis the adapter's
 version pin moved to 0.155.1 on September 21, 2026 (owner decision, "пин можно
-сделать"), so the startup note no longer prints on every launch.
+сделать", the pin may be moved), so the startup note no longer prints on every launch.
 
 No row below had its own mechanism re-verified on 0.155.1 apart from HF-21, which the
 steer probe covers. Named examples of what was not exercised, so the gap is not read as
