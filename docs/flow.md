@@ -197,7 +197,10 @@ main observer queues [compaction-complete and known-departure notices](session-a
    leaves the message unread for the next `inbox`.
 4. **The rule the agent follows**, from the guide: do the work, then end the
    turn with the result as the final message and stop. Do not answer with
-   `rewake send`; do not answer a `notify` at all.
+   `rewake send`; do not answer a `notify` at all. After a context compaction,
+   re-read the task with `rewake inbox --owed` rather than from the summary: it
+   prints again, in full, every message whose `awaiting/` record is still there,
+   and changes nothing.
 
 ## Act 5. The turn ends and the report goes back
 

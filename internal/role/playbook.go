@@ -53,6 +53,7 @@ var writePlaybook = Playbook{
 		"Never answer a notify at all.",
 		"You can commit changes when authorized; Git metadata access needs an explicit --grant-git task from main, or permissions the owner already gave.",
 		"If you end a turn while waiting for background work, run rewake pending \"<what it waits for>\" first, or the sender takes that turn's end as your report; better, wait inside the turn.",
+		"After a context compaction, re-read your task with rewake inbox --owed instead of working from the summary, and say in your report that you did.",
 	}, sharedLimits...),
 }
 
@@ -63,6 +64,7 @@ var generalPlaybook = Playbook{
 		"Never answer a task with rewake send: ending the turn already reports, and the sender would get the same result twice.",
 		"Never answer a notify at all.",
 		"Do not write .git or commit: this role grants no Git metadata access.",
+		"After a context compaction, re-read your task with rewake inbox --owed instead of working from the summary, and say in your report that you did.",
 	}, sharedLimits...),
 }
 

@@ -11,19 +11,33 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
 )
 
-func inboxSelection(call Call) (bool, string, error) {
+// inboxMode is what a call of rewake inbox asked for: all unread mail, an
+// overview of it, one message of it, or what was read and is still owed.
+type inboxMode struct {
+	peek, owed bool
+	selected   string
+}
+
+func inboxSelection(call Call) (inboxMode, error) {
 	value, peek := call.Flags["peek"]
+	owedValue, owed := call.Flags["owed"]
 	id, selected := call.Flags["message"]
 	if peek && selected {
-		return false, "", &UsageError{Command: call.Command, Message: "--peek and --message are mutually exclusive; choose an overview or one full message."}
+		return inboxMode{}, &UsageError{Command: call.Command, Message: "--peek and --message are mutually exclusive; choose an overview or one full message."}
+	}
+	if owed && (peek || selected) {
+		return inboxMode{}, &UsageError{Command: call.Command, Message: "--owed is used alone: it shows what was already read, while --peek and --message look at unread mail."}
 	}
 	if peek && value != "true" {
-		return false, "", &UsageError{Command: call.Command, Message: "--peek is a switch and takes no value."}
+		return inboxMode{}, &UsageError{Command: call.Command, Message: "--peek is a switch and takes no value."}
+	}
+	if owed && owedValue != "true" {
+		return inboxMode{}, &UsageError{Command: call.Command, Message: "--owed is a switch and takes no value."}
 	}
 	if selected && (id == "" || len(id) > 128 || strings.ContainsAny(id, "/\\") || strings.ContainsFunc(id, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsControl(r) })) {
-		return false, "", &UsageError{Command: call.Command, Message: "--message needs one opaque ID from rewake inbox --peek."}
+		return inboxMode{}, &UsageError{Command: call.Command, Message: "--message needs one opaque ID from rewake inbox --peek."}
 	}
-	return peek, id, nil
+	return inboxMode{peek: peek, owed: owed, selected: id}, nil
 }
 
 // No embedded Message: overview JSON must never acquire bodies or private fields.

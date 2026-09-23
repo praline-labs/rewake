@@ -141,6 +141,7 @@ func (s *claudeSession) workTurn(turn string, notice claudeNotice) {
 	if err != nil {
 		text = "could not read the mailbox: " + err.Error()
 	}
+	recordOwedOnce()
 	markPendingOnce()
 	s.endTurn(text)
 	// Recorded after the hook, not before: a session told to leave once it

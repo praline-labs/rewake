@@ -20,6 +20,9 @@ func (s *Server) sweepFinished() {
 func (s *Server) sweepFinishedLocked() {
 	cutoff := time.Now().Add(-keepFinished)
 	receipts := retainedReceipts(s.Dir, s.Name)
+	// A task read a day ago and still worked on is still owed, and rewake
+	// inbox --owed must be able to show it again.
+	owed := owedIDs(s.Dir, s.Name, s.Epoch)
 	// Unread mail goes by age too: a notice nobody acted on for a day describes
 	// a conversation that has moved on, and the mailbox of a name reused for
 	// weeks would otherwise keep every one of them.
@@ -50,6 +53,10 @@ func (s *Server) sweepFinishedLocked() {
 				}
 			}
 			if directory == threadPath(s.Dir, s.Name) && keepThreadRecord(s.Dir, s.Name, s.Epoch, entry.Name()) {
+				continue
+			}
+			// A read whose last step did not finish left the text in unread/.
+			if (directory == state.DonePath(s.Dir, s.Name) || directory == state.UnreadPath(s.Dir, s.Name)) && owed[strings.TrimSuffix(entry.Name(), ".json")] {
 				continue
 			}
 			if directory == answerReceiptsPath(s.Dir, s.Name) && receipts[entry.Name()] {

@@ -28,10 +28,11 @@ type inboxModel struct {
 // first and lost on the way — a full disk, a killed process — would be gone
 // for good; shown twice, it is merely shown twice.
 func handleInbox(ctx *Context, call Call) error {
-	peek, selected, err := inboxSelection(call)
+	mode, err := inboxSelection(call)
 	if err != nil {
 		return err
 	}
+	peek, selected := mode.peek, mode.selected
 	dir, err := state.Dir()
 	if err != nil {
 		return &UsageError{Command: call.Command, Message: err.Error()}
@@ -47,6 +48,9 @@ func handleInbox(ctx *Context, call Call) error {
 		return failf("%v; its mail is not this shell's to read", err)
 	case err != nil:
 		return failf("%v; its mail cannot be read", err)
+	}
+	if mode.owed {
+		return showOwed(ctx, call, dir, session, epoch)
 	}
 
 	// Held from looking to marking. Two readers at once — parallel tool calls,

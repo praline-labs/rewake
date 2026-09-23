@@ -1,6 +1,7 @@
 package workflow
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"sync"
@@ -26,5 +27,33 @@ func markPendingOnce() {
 			line = "pending refused: " + err.Error() + ": " + string(out)
 		}
 		(&shimSession{}).recordTurn(line)
+	})
+}
+
+// shimOwedFile makes a session run `rewake inbox --owed` in its first turn,
+// after reading its mail and before the turn ends — a worker re-reading its
+// task after a compaction — and write what that printed to this file: the
+// machine form, a separator line, then the plain form.
+const shimOwedFile = "RW_SHIM_OWED_FILE"
+
+// owedSeparator divides the two forms in the file.
+const owedSeparator = "\n--- plain ---\n"
+
+var owedOnce sync.Once
+
+// recordOwedOnce is called by either fixture just before a turn ends.
+func recordOwedOnce() {
+	target := os.Getenv(shimOwedFile)
+	if target == "" {
+		return
+	}
+	owedOnce.Do(func() {
+		machine, errMachine := exec.Command("rewake", "inbox", "--owed", "--json").CombinedOutput()
+		plain, errPlain := exec.Command("rewake", "inbox", "--owed").CombinedOutput()
+		record := string(machine) + owedSeparator + string(plain)
+		if err := errors.Join(errMachine, errPlain); err != nil {
+			record = "refused: " + err.Error() + "\n" + record
+		}
+		_ = os.WriteFile(target, []byte(record), 0o600)
 	})
 }

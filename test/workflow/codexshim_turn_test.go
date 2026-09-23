@@ -207,6 +207,7 @@ func (s *shimSession) workTurn(id string, notice mailboxNotice) {
 	if held := s.holdOpen(id); held != "" {
 		text += "; " + held
 	}
+	recordOwedOnce()
 	markPendingOnce()
 	s.mu.Lock()
 	// The content first, then the terminal event: a report without content is

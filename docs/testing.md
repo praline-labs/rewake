@@ -169,12 +169,13 @@ product mutant, built by `buildMutant` in `mutant_test.go` with one edit through
 toolchain's overlay, inside a started case, refusing an edit that does not match
 exactly once; or a switch that changes the fixture's world. A mutant is preferred
 wherever one can be built, because it shows the scenario catching a broken rewake
-rather than a misbehaving peer. Of today's twenty-eight controls, nineteen are mutants —
+rather than a misbehaving peer. Of today's twenty-nine controls, twenty are mutants —
 batch-arrival's four; task-report's no-stop-hook, turn-ended-ignores-stop and
 settles-nothing; mid-turn's wait-for-idle; claude-telemetry's tap-without-owner,
 uncounted-compaction and silent-compaction; pending-report's pending-ignored and
 pending-settles; claude-inbound's ungated, gate-on-session-start, held-as-delivered,
-expiry-unannounced, refusal-as-delivered and late-word-dropped — and nine are fixture switches: task-report's
+expiry-unannounced, refusal-as-delivered and late-word-dropped; owed-reread's
+owed-empty — and nine are fixture switches: task-report's
 wrong-report, read-fails, failure-before-report and early-exit; the three readiness
 controls; mid-turn's late and failed-operation. A control names the observation it must
 break; the crosswise check then runs every control's observations in every other
@@ -236,6 +237,13 @@ A third session then sends the worker a task of its own, and that turn end — w
 mark — must be the `finished` report settling the first task. Its two mutants, each in
 both columns, ignore the mark and let the interim turn end settle the task; like the
 telemetry controls, each names what it must break and requires the rest to hold.
+
+`owed-reread` runs in both columns with a main and a worker. The worker reads a
+multi-line task and, in the same turn, runs `rewake inbox --owed` in both forms, as a
+session re-reading its task after a compaction would. Both must print that task in full,
+with the id the worker read it under, and the turn end must then report it once and
+settle it: asking changed nothing. Its mutant, an `--owed` that finds nothing, must break
+the first observation and hold the second.
 
 `claude-inbound` runs on the Claude Code column only: Codex has no inbound gate, and its
 column is unchanged. The fixture plays the gate as the binary does — it holds whatever

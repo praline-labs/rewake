@@ -106,16 +106,18 @@ func buildGroups() {
 			{
 				Name:           "inbox",
 				MaxPositionals: 0,
-				Summary:        "Read waiting messages, or preview their metadata without consuming them.",
+				Summary:        "Read waiting messages, preview their metadata without consuming them, or show again what you read and still owe a report for.",
 				Options: []Option{
 					jsonOption,
 					{Flag: "--peek", Summary: "Show IDs, senders, kinds, times and bounded first-line previews only; no messages are marked read."},
 					{Flag: "--message", Value: "<id>", Summary: "Read only this available unread message; reserved answers remain with their waiting send."},
+					{Flag: "--owed", Summary: "Show again, in full, the tasks and questions you have read and not yet reported on; nothing is marked, recorded or announced."},
 				},
-				Examples: []string{"rewake inbox", "rewake inbox --json", "rewake inbox --peek", "rewake inbox --peek --json", "rewake inbox --message=1780000000000000000-012345abcdef"},
+				Examples: []string{"rewake inbox", "rewake inbox --json", "rewake inbox --peek", "rewake inbox --peek --json", "rewake inbox --message=1780000000000000000-012345abcdef", "rewake inbox --owed", "rewake inbox --owed --json"},
 				Next:     []string{"rewake send <name> \"text\""},
 				Notes: []string{
 					"--peek and --message are mutually exclusive. Peek has no full bodies, even in JSON, and creates no task read receipts or report obligations. Plain inbox still reads all available messages.",
+					"--owed is used alone. It is the task you are working on, from the mailbox rather than from memory: after a context compaction, re-read it there instead of working from the summary. A main session owes no reports, so it is refused there. Only work from another session is listed: a task sent from a plain shell owes no report and cannot be shown again this way.",
 					"Run it when a Rewake notice says messages are waiting; a group may mix tasks, questions, notifications and reports.",
 					"A task or a question you read is answered by ending your turn: your final message goes back to the sender by itself. Put the result there.",
 					"A notify needs no answer. A finished message is a session's final message after work you gave it.",
@@ -233,7 +235,7 @@ func flow() []FlowStep {
 	}
 	return append(steps,
 		FlowStep{Command: "rewake list", Summary: "See who is running and can be reached."},
-		FlowStep{Command: "rewake inbox", Summary: "When a \"Rewake:\" line says messages are waiting, read them here. Answer a task by finishing your turn with the result."},
+		FlowStep{Command: "rewake inbox", Summary: "When a \"Rewake:\" line says messages are waiting, read them here. Answer a task by finishing your turn with the result. rewake inbox --owed shows again what you read and still owe a report for."},
 		FlowStep{Command: "rewake <command> --help", Summary: "Flags, examples and notes for that command."},
 	)
 }

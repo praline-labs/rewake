@@ -114,3 +114,77 @@ func TestFinishedMessagesAreSweptByAge(t *testing.T) {
 		t.Errorf("a message that is still waiting was swept: %v", err)
 	}
 }
+
+// A task read long ago and still owed keeps its text: rewake inbox --owed has
+// to be able to show it again. What is no longer owed goes by age as before.
+func TestAnOwedMessageOutlivesTheSweep(t *testing.T) {
+	dir := stateDir(t)
+	owedTask, reported := message("still being worked on"), message("reported long ago")
+	for _, m := range []*Message{&owedTask, &reported} {
+		m.Kind, m.FromEpoch, m.ToEpoch = Task, "web-epoch", "api-epoch"
+		if err := Put(dir, *m); err != nil {
+			t.Fatal(err)
+		}
+		if err := linkUnread(dir, "api", m.ID); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Remove(filepath.Join(state.InboxPath(dir, "api"), m.ID+".json")); err != nil {
+			t.Fatal(err)
+		}
+		if err := MarkRead(dir, "api", "api-epoch", *m, true); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, waiter := range Waiters(dir, "api", "api-epoch") {
+		waiter.Messages = []string{reported.ID}
+		ClearAwaiting(dir, "api", "api-epoch", waiter)
+	}
+	old := time.Now().Add(-2 * keepFinished)
+	for _, m := range []Message{owedTask, reported} {
+		if err := os.Chtimes(filepath.Join(state.DonePath(dir, "api"), m.ID+".json"), old, old); err != nil {
+			t.Fatal(err)
+		}
+	}
+	(&Server{Dir: dir, Name: "api", Epoch: "api-epoch"}).sweepFinished()
+	if _, err := os.Stat(filepath.Join(state.DonePath(dir, "api"), owedTask.ID+".json")); err != nil {
+		t.Fatalf("an owed task was swept: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(state.DonePath(dir, "api"), reported.ID+".json")); !os.IsNotExist(err) {
+		t.Fatalf("a reported task outlived its age: %v", err)
+	}
+	if got := OwedMessages(dir, "api", "api-epoch"); len(got) != 1 || got[0].ID != owedTask.ID || !got[0].Kept {
+		t.Fatalf("owed %+v", got)
+	}
+}
+
+// A read whose last step failed left the text in unread/; while it is owed,
+// the age sweep leaves it there too.
+func TestAnOwedMessageLeftUnreadOutlivesTheSweep(t *testing.T) {
+	dir := stateDir(t)
+	task := message("read, but the move to done/ failed")
+	task.Kind, task.FromEpoch, task.ToEpoch = Task, "web-epoch", "api-epoch"
+	if err := Put(dir, task); err != nil {
+		t.Fatal(err)
+	}
+	if err := linkUnread(dir, "api", task.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(filepath.Join(state.InboxPath(dir, "api"), task.ID+".json")); err != nil {
+		t.Fatal(err)
+	}
+	if err := markAwaiting(dir, "api", "api-epoch", "web", "web-epoch", task.ID); err != nil {
+		t.Fatal(err)
+	}
+	unread := filepath.Join(state.UnreadPath(dir, "api"), task.ID+".json")
+	old := time.Now().Add(-2 * keepFinished)
+	if err := os.Chtimes(unread, old, old); err != nil {
+		t.Fatal(err)
+	}
+	(&Server{Dir: dir, Name: "api", Epoch: "api-epoch"}).sweepFinished()
+	if _, err := os.Stat(unread); err != nil {
+		t.Fatalf("an owed task left in unread/ was swept: %v", err)
+	}
+	if got := OwedMessages(dir, "api", "api-epoch"); len(got) != 1 || !got[0].Kept || got[0].Text != task.Text {
+		t.Fatalf("owed %+v", got)
+	}
+}
