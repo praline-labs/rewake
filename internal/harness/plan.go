@@ -32,6 +32,11 @@ type LaunchRequest struct {
 	Epoch string
 	// Role determines reporting and additive permission requests.
 	Role role.Role
+	// Command, when set, is the program started in place of the harness's
+	// own — a person's wrapper script around it, named with --command. It
+	// replaces the program and nothing else: every argument, variable, socket
+	// and setting the adapter adds is the same.
+	Command string
 	// ObservationSocket is where a harness without a backend of its own may
 	// have its session's telemetry sent: a path of this run, like Socket.
 	ObservationSocket string
@@ -62,6 +67,15 @@ type LaunchPlan struct {
 	// could not be read, a briefing that was skipped. They are printed once, to
 	// stderr, and do not stop the launch.
 	Notes []string
+}
+
+// Program is the executable a launch starts: the one named with --command, or
+// the harness's own.
+func (r LaunchRequest) Program(own string) string {
+	if r.Command != "" {
+		return r.Command
+	}
+	return own
 }
 
 // Harness describes one coding-agent CLI: how it is presented, how it is

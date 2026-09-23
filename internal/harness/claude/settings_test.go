@@ -277,3 +277,28 @@ func TestWithoutFlagDropsEveryForm(t *testing.T) {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
+
+// A launch through a person's wrapper starts that program and changes
+// nothing else; the tap and the hooks still call rewake, not the wrapper.
+func TestACommandReplacesOnlyTheProgram(t *testing.T) {
+	newWorld(t)
+	request := harness.LaunchRequest{Name: "api", Dir: t.TempDir(), Socket: "/tmp/rw/api.1.sock", ObservationSocket: "/tmp/rw/api.1.obs"}
+	plain, err := New().Launch(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request.Command = "claude-worker"
+	wrapped, err := New().Launch(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plain.Command != "claude" || wrapped.Command != "claude-worker" {
+		t.Errorf("commands %q and %q", plain.Command, wrapped.Command)
+	}
+	if strings.Join(plain.Args, "\x00") != strings.Join(wrapped.Args, "\x00") || strings.Join(plain.Env, "\x00") != strings.Join(wrapped.Env, "\x00") {
+		t.Errorf("the wrapper changed more than the program")
+	}
+	if argv := tapArgv(t, onlySettings(t, wrapped)); argv[1] != "status-tap" || strings.Contains(argv[0], "claude-worker") {
+		t.Errorf("the tap runs %q, want rewake", argv)
+	}
+}

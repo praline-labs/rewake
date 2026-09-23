@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/iiiokojiadbi/rewake/internal/alias"
 	"github.com/iiiokojiadbi/rewake/internal/harness"
@@ -20,11 +21,14 @@ func Run(argv []string, stdout, stderr io.Writer) int {
 	for _, note := range aliases.Notes {
 		_, _ = fmt.Fprintln(stderr, "rewake: "+note)
 	}
-	expanded, err := aliases.Expand(argv, harness.IDs(), launchFlagTakesValue, roleFlags(), singleUseFlags)
+	expanded, err := aliases.Expand(argv, harness.IDs(), launchFlagTakesValue, projectForbidden(), singleUseFlags)
 	if err != nil {
 		return report(ctx, &UsageError{Message: err.Error()})
 	}
 
+	if err := singleProgram(expanded); err != nil {
+		return report(ctx, err)
+	}
 	result, err := parseKnowing(expanded, aliases.Names())
 	if err != nil {
 		return report(ctx, err)
@@ -162,4 +166,35 @@ func guideModel(play *role.Playbook) map[string]any {
 		model["role"] = map[string]any{"heading": play.Heading, "steps": steps, "limits": play.Limits}
 	}
 	return model
+}
+
+// singleProgram refuses a launch line that names --command twice before the
+// harness word. A launch starts one program, and letting the last one win
+// would start something other than one of the two the person wrote. An
+// alias's copy is not counted: a typed --command replaces it during expansion.
+func singleProgram(argv []string) error {
+	count := 0
+	var command *Command
+	for index := 0; index < len(argv); index++ {
+		token := argv[index]
+		if token == "--" {
+			break
+		}
+		if !strings.HasPrefix(token, "-") {
+			// The launch word, so the refusal can print its syntax and help.
+			command = findCommand(token)
+			break
+		}
+		name, _, inline := strings.Cut(strings.TrimPrefix(token, "--"), "=")
+		if name == alias.CommandFlag {
+			count++
+		}
+		if !inline && launchFlagTakesValue(name) {
+			index++
+		}
+	}
+	if count > 1 {
+		return &UsageError{Command: command, Message: "--command given twice; a launch starts one program. Keep one --command before the harness name."}
+	}
+	return nil
 }

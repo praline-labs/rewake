@@ -47,6 +47,7 @@ func TestMain(m *testing.M) {
 	// Checked before anything else because the ordinary path would otherwise
 	// build a binary and run a suite inside the shim.
 	if os.Getenv(shimEnv) != "" {
+		recordShimCall(os.Args)
 		if os.Getenv(shimHarness) == "claude" {
 			os.Exit(runClaudeShim(os.Args))
 		}

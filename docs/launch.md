@@ -157,8 +157,10 @@ An alias names arguments to rewake and nothing else. It cannot begin with a comm
 word, so it cannot turn `rewake <name>` into some other command — the same boundary
 the settings file draws by having no substitutions.
 
-**A project file may not choose a role.** `--main`, `--write` and `--general` belong in
-the user's own file; an alias in `.rewake.toml` that carries one is refused by name. The
+**A project file may not choose a role, or the program.** `--main`, `--write` and
+`--general` belong in the user's own file, and so does `command` (or `--command` in its
+`rewake` list); an alias in `.rewake.toml` that carries one is refused by name. The
+program is whatever runs with the person's credentials, the same concern as the role. The
 role decides more than the room does — a main session sees everyone's telemetry and may
 ask for repository access — and a file sitting in whatever directory somebody happens to
 be in should not decide that for them. The user file is also held to `0600`, and a
@@ -211,6 +213,50 @@ room isolates, what each role may do and see, and how the address is formed are
 specified once, in design.md: [Rooms](design.md#rooms), [Roles](design.md#roles) and
 [Names](design.md#names). The variables the wrapper passes to the harness are in
 [Environment the harness receives](design.md#environment-the-harness-receives).
+
+### Starting a wrapper instead of the harness
+
+`--command <program>` starts that program where rewake would start the harness: a
+person's own wrapper script, which sets up an environment — a configuration directory,
+credentials — and then runs the harness. The harness is still named by its ordinary word:
+
+```bash
+rewake --general --name review --command claude-worker claude
+```
+
+- **Where it goes:** before the harness word, like `--name` — everything after that word
+  belongs to the harness. It is single-use: named twice there, the launch is refused
+  rather than the last one winning. An alias's copy is replaced by one typed on the line.
+- **What it replaces:** the program, and nothing else. Every argument, variable, socket
+  and settings layer the adapter adds is the same, and the telemetry hooks and the status
+  line still call rewake. For Codex both halves run through it — the version check, the
+  owned app-server and the terminal — because a server started beside the wrapper would
+  run in a different environment from the terminal.
+- **The Codex home rewake reads** is still taken from its own environment at launch. A
+  wrapper that sets `CODEX_HOME` runs both halves there, but rewake decides from its own
+  view whether to pass the briefing — so with `developer_instructions` in the wrapper's
+  `config.toml` and not in rewake's, the briefing passed with `-c` would replace them —
+  and reads its notes and records the home from it too. So a launch with `--command` on
+  Codex says on stderr which home rewake read, and to export `CODEX_HOME` for rewake as
+  well when the wrapper sets it.
+- **A wrapper should end with `exec`.** Without it the wrapper's shell stays the process
+  rewake started: termination signals and the server's parent-death signal reach the
+  shell, not the harness.
+- **What is checked:** the value, before anything is launched — a name must be found on
+  `PATH`, a path with a slash is resolved against the launch directory and passed on as
+  that absolute path, and either must be an executable file; otherwise the launch is
+  refused naming the value and the next action. The absolute path matters for Codex,
+  whose server starts in the `-C` directory: a relative one would resolve there. rewake
+  does not run the program to check it, and does not guess the harness from its name:
+  wrappers are named anything. For Codex, `<wrapper> --version` does run at start, as the
+  version check always does, through the wrapper like the other two processes; a wrapper
+  that does not answer it only produces the version note.
+- **In an alias** it is the field `command = "<program>"`, which becomes `--command`
+  before the harness word — in the user alias file only (above). With it, a launch
+  through a wrapper is one word: `[alias.review]` with `harness = "claude"`, `rewake =
+  ["--general", "--name", "review"]` and `command = "claude-worker"` is `rewake review`.
+- Owner decision, September 23, 2026: the harness is named, the program is given; no
+  guessing from names and no probing.
 
 ### Claude Code
 

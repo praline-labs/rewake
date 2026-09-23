@@ -168,6 +168,11 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 	args := append([]string{}, request.Args...)
 	home := Home()
 	var notes []string
+	if request.Command != "" {
+		// A wrapper may set its own CODEX_HOME, which rewake cannot see: the
+		// briefing, the notes and the recorded home all come from this one.
+		notes = append(notes, "rewake reads Codex configuration from "+home+"; if your wrapper sets CODEX_HOME, export it for rewake too")
+	}
 	generatedBrief := false
 
 	// A profile, or a setting the caller passed themselves, is a layer this
@@ -226,13 +231,17 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 	args = harness.AddFlags(args, "--remote", "unix://"+socket)
 	server := newServer(socket, serverArgs, append(append([]string{}, env...), "CODEX_INTERNAL_APP_SERVER_REMOTE_CONTROL_DISABLED=1"), cwd)
 	server.gitWrite = request.Role.GitWrite
+	// The owned server is started with the same program as the terminal: a
+	// person's wrapper sets the environment both halves need — a Codex home,
+	// credentials — and a server started around it would run in another one.
+	server.program = request.Program("codex")
 	mode, _ := continuationMode(request.Args)
 	server.startupFork = mode == "fork"
 	return harness.LaunchPlan{
 		Backend:    server,
 		Socket:     socket,
 		OwnsSocket: true,
-		Command:    "codex",
+		Command:    request.Program("codex"),
 		Args:       args,
 		Env:        env,
 		CodexHome:  home,

@@ -204,7 +204,7 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 	}
 
 	return harness.LaunchPlan{
-		Command:    "claude",
+		Command:    request.Program("claude"),
 		Args:       args,
 		Env:        env,
 		Socket:     socket,

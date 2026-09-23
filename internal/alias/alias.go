@@ -8,12 +8,8 @@ package alias
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
-
-	"github.com/pelletier/go-toml/v2"
 
 	"github.com/iiiokojiadbi/rewake/internal/harness"
 )
@@ -45,14 +41,23 @@ type Alias struct {
 	Rewake []string `toml:"rewake"`
 	// Args are handed to the harness untouched.
 	Args []string `toml:"args"`
+	// Command is the program started instead of the harness's own — a wrapper
+	// script that runs it. It becomes rewake's --command, so one typed on the
+	// line replaces it like any other of rewake's flags.
+	Command string `toml:"command"`
 }
+
+// CommandFlag is rewake's flag for the program a launch starts, which the
+// alias field of the same name becomes.
+const CommandFlag = "command"
 
 // Help is the one line that tells a person aliases exist, printed with every
 // launch command's help. Somebody who has to read the documentation to learn
 // that a feature exists will not find it.
 const Help = "A launch can be given a short name: put it in ~/.config/" + userDir + "/" + userFile +
 	" or in " + projectFile + " in the working directory, as [alias.<name>] with harness = \"<id>\", " +
-	"rewake = [flags rewake reads] and args = [arguments for the harness]. " +
+	"rewake = [flags rewake reads], args = [arguments for the harness] and, in the user file only, " +
+	"command = \"<program>\" to start a wrapper script instead of the harness itself. " +
 	"Then `rewake <name>` launches it: rewake's own flags go before that name, the harness's after it, " +
 	"and a flag you type replaces the one the alias carries."
 
@@ -67,20 +72,6 @@ type Set struct {
 	// alias that makes no sense. They are printed, not swallowed — an alias
 	// silently absent is a launch that silently runs something else.
 	Notes []string
-}
-
-// Load reads the user file and then the project file.
-func Load() *Set {
-	set := newSet()
-	if home, err := os.UserHomeDir(); err == nil {
-		set.read(filepath.Join(home, ".config", userDir, userFile), "the user alias file", true)
-	}
-	if working, err := os.Getwd(); err == nil {
-		// This directory only, like the settings file: a parent directory does
-		// not get to decide how a session launches.
-		set.read(filepath.Join(working, projectFile), "the project alias file", false)
-	}
-	return set
 }
 
 // Names are the aliases this process knows, in order, for a refusal that says
@@ -129,17 +120,29 @@ func (s *Set) Expand(argv []string, knownHarnesses []string, takesValue func(str
 	if err := value.check(name, source, knownHarnesses, takesValue); err != nil {
 		return nil, err
 	}
+	rewake := value.Rewake
+	if value.Command != "" {
+		rewake = append([]string{"--" + CommandFlag, value.Command}, rewake...)
+	}
 	if s.fromProject[name] {
-		for _, flag := range value.Rewake {
-			if contains(projectMayNotSet, strings.TrimPrefix(flag, "--")) {
-				// A file in whatever directory somebody happens to be in must
-				// not choose the role of the session launching there. The role
-				// outranks the room: a main sees every session's telemetry and
-				// may ask for repository access. Same boundary as the settings
-				// file's closed list of names, and for the same reason.
-				return nil, fmt.Errorf("alias %q in %s sets %s; a role belongs in the user alias file, not in one carried by a directory",
-					name, source, flag)
+		for _, flag := range rewake {
+			bare, _, _ := strings.Cut(strings.TrimPrefix(flag, "--"), "=")
+			if !strings.HasPrefix(flag, "--") || !contains(projectMayNotSet, bare) {
+				continue
 			}
+			// A file in whatever directory somebody happens to be in must not
+			// choose the role of the session launching there, nor the program
+			// it starts. The role outranks the room: a main sees every
+			// session's telemetry and may ask for repository access. The
+			// program is whatever runs with the person's credentials. Same
+			// boundary as the settings file's closed list of names, and for
+			// the same reason.
+			what := "a role"
+			if bare == CommandFlag {
+				what = "the program a launch starts"
+			}
+			return nil, fmt.Errorf("alias %q in %s sets %s; %s belongs in the user alias file, not in one carried by a directory",
+				name, source, flag, what)
 		}
 	}
 
@@ -152,7 +155,7 @@ func (s *Set) Expand(argv []string, knownHarnesses []string, takesValue func(str
 	// rewake's own flags are all single-use, and rewake knows which of them
 	// take a value; the harness half knows neither, so it is given the list the
 	// harness published and treats a following non-flag token as the value.
-	expanded = append(expanded, replaced(value.Rewake, typedBefore, rewakeFlags(takesValue, value.Rewake, typedBefore))...)
+	expanded = append(expanded, replaced(rewake, typedBefore, rewakeFlags(takesValue, rewake, typedBefore))...)
 	expanded = append(expanded, typedBefore...)
 	expanded = append(expanded, value.Harness)
 	expanded = append(expanded, replaced(value.Args, typedAfter, flags)...)
@@ -324,61 +327,19 @@ func (a Alias) check(name, source string, knownHarnesses []string, takesValue fu
 			i++
 		}
 	}
+	if a.Command != "" {
+		for _, flag := range a.Rewake {
+			if bare, _, _ := strings.Cut(strings.TrimPrefix(flag, "--"), "="); strings.HasPrefix(flag, "--") && bare == CommandFlag {
+				return fmt.Errorf("alias %q in %s names the program twice, as command and as --%s in rewake; keep one", name, source, CommandFlag)
+			}
+		}
+	}
 	for _, argument := range a.Args {
 		if argument == "" {
 			return fmt.Errorf("alias %q in %s has an empty argument", name, source)
 		}
 	}
 	return nil
-}
-
-func newSet() *Set {
-	return &Set{aliases: map[string]Alias{}, sources: map[string]string{}, fromProject: map[string]bool{}}
-}
-
-// read parses one file into the set. user says whether this is the file in the
-// home directory, which may set more and is held to stricter permissions.
-func (s *Set) read(path, description string, user bool) {
-	info, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		return
-	}
-	if err != nil {
-		s.Notes = append(s.Notes, "not reading "+description+": "+err.Error())
-		return
-	}
-	if !info.Mode().IsRegular() {
-		// A named pipe here would block the launch for ever at open, with no
-		// sign of why — the same hazard the settings file refuses.
-		s.Notes = append(s.Notes, fmt.Sprintf("not reading %s at %s: it is not an ordinary file (%s)", description, path, info.Mode().Type()))
-		return
-	}
-	if user && info.Mode().Perm()&0o077 != 0 {
-		// Only the file in the home directory, where the convention is 0600.
-		// The stake here is higher than for settings: that file names a model,
-		// this one can name a role, and a role decides what a session may see
-		// and ask for.
-		s.Notes = append(s.Notes, fmt.Sprintf("%s at %s is writable or readable by others (%#o); the convention for it is 0600", description, path, info.Mode().Perm()))
-	}
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		s.Notes = append(s.Notes, "not reading "+description+": "+err.Error())
-		return
-	}
-	var file struct {
-		Alias map[string]Alias `toml:"alias"`
-	}
-	if err := toml.Unmarshal(raw, &file); err != nil {
-		// Named, not skipped: a file that is there and unreadable is a
-		// mistake somebody wants to hear about.
-		s.Notes = append(s.Notes, fmt.Sprintf("%s at %s could not be read: %v", description, path, err))
-		return
-	}
-	for name, value := range file.Alias {
-		s.aliases[name] = value
-		s.sources[name] = description
-		s.fromProject[name] = !user
-	}
 }
 
 // concat joins argument lists without touching either.

@@ -15,6 +15,7 @@ package workflow
 // nothing here promotes one on its own.
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"testing"
@@ -101,6 +102,13 @@ func (col column) deliveryNamed(worker *codexSession, id string) bool {
 	return slices.Contains(named, noticeID(id))
 }
 
+// errRecordBehind is a recipient's record caught between two of its own
+// writes: the fixture records a delivery and then the overview it read for
+// it, and a check that lands in between sees one more delivery than
+// overviews. A waiting caller waits on; a judgement made after its anchor
+// still fails on it.
+var errRecordBehind = errors.New("the recipient's record is still being written")
+
 // announcedDeliveries are the deliveries a session recorded, each with the
 // messages it announced.
 //
@@ -132,8 +140,8 @@ func (col column) announcedDeliveries(worker *codexSession) ([]groupDelivery, er
 		return nil, err
 	}
 	if len(overviews) < len(deliveries) {
-		return nil, fmt.Errorf("the recipient recorded %d deliveries and %d overviews, so what each announced cannot be reconstructed",
-			len(deliveries), len(overviews))
+		return nil, fmt.Errorf("%w: the recipient recorded %d deliveries and %d overviews, so what each announced cannot be reconstructed",
+			errRecordBehind, len(deliveries), len(overviews))
 	}
 	var before []string
 	for index := range deliveries {

@@ -3,8 +3,12 @@ package cli
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os/exec"
+	"path/filepath"
 	"strings"
 
+	"github.com/iiiokojiadbi/rewake/internal/alias"
 	"github.com/iiiokojiadbi/rewake/internal/harness"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/role"
@@ -19,6 +23,10 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 	return func(_ *Context, call Call) error {
 		if prefix, present := call.Flags["name"]; present && prefix == "" {
 			return &UsageError{Command: call.Command, Message: "--name needs a nonempty prefix; omit --name to use the selected role."}
+		}
+		program, err := launchProgram(call)
+		if err != nil {
+			return err
 		}
 		root, err := state.Root()
 		if err != nil {
@@ -48,6 +56,7 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 			Args:    call.Raw,
 			Intro:   !call.Switch("no-intro"),
 			Role:    part,
+			Command: program,
 		})
 		if err != nil {
 			var mainTaken *wrap.MainTakenError
@@ -68,6 +77,43 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 		}
 		return nil
 	}
+}
+
+// launchProgram checks the program named with --command before anything is
+// launched: a name must be found on PATH, a path with a slash is taken as
+// given, and either must be an executable file. A wrapper that is not there
+// would otherwise surface as a harness that "is not installed", after the name
+// was already claimed. rewake does not run it to see whether it is the harness
+// it claims to be: the harness word says that, and a wrapper need not answer
+// --version.
+func launchProgram(call Call) (string, error) {
+	program, given := call.Flags[alias.CommandFlag]
+	if !given {
+		return "", nil
+	}
+	if program == "" {
+		return "", &UsageError{Command: call.Command, Message: "--command needs a program; omit it to start " + call.Command.Name + " itself."}
+	}
+	if _, err := exec.LookPath(program); err != nil {
+		where := "on PATH"
+		if strings.Contains(program, "/") {
+			where = "at that path"
+		}
+		return "", &UsageError{Command: call.Command, Message: fmt.Sprintf(
+			"--command %s: no executable file %s (%v). Name a program on PATH, give a path to an executable file, or omit --command to start %s itself.",
+			program, where, err, call.Command.Name)}
+	}
+	if strings.Contains(program, "/") {
+		// Fixed against the launch directory now. Codex starts its owned
+		// server in the directory given with -C, and a relative path would
+		// resolve there — to another file of the same name, or to none.
+		absolute, err := filepath.Abs(program)
+		if err != nil {
+			return "", &UsageError{Command: call.Command, Message: fmt.Sprintf("--command %s: %v", program, err)}
+		}
+		program = absolute
+	}
+	return program, nil
 }
 
 // chosenRole leaves an omitted role unset so the wrapper can distinguish
@@ -109,6 +155,12 @@ func roleFlags() []string {
 		flags = append(flags, candidate.ID)
 	}
 	return flags
+}
+
+// projectForbidden are the rewake flags an alias in a project file may not
+// set: the role flags, and the program a launch starts.
+func projectForbidden() []string {
+	return append(roleFlags(), alias.CommandFlag)
 }
 
 // singleUseFlags asks a harness which of its flags it takes at most once. The

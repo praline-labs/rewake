@@ -212,11 +212,26 @@ does not wait even for that. The case's budgets are a median of 20 ms and a p95 
 for a hook, and a median of 20 ms added by the tap: several times the measurement, so
 they catch a wait, a lock or a heavy start rather than a busy machine.
 
+`wrapped-launch` runs in both columns, twice each, in two rooms: a plain launch and one
+with `--command ./<harness>-worker`, a stand-in wrapper that exports a marker and execs the
+fixture. Every fixture process records its arguments and whether it saw the marker, and
+the case requires the wrapped processes — one for Claude Code; for Codex the version
+check, the app-server and the terminal — to get argument for argument what the plain
+launch gets, all to see the marker, and none of the plain ones to. The Codex launches
+carry `-C` into a directory holding another script of the same name, which must never
+run. It has no control in the suite; with the relative path left relative, it went red on
+three of its four observations (September 23, 2026).
+
 ## Traps this suite has already paid for
 
 - **An anchor weaker than its judgement.** The consuming-overview control waited for one
   read attempt while the Codex column's judgement needs two, and the second comes at the
   next delivery: red 5 of 20 alone. It now anchors on both there, and was 0 of 20
+  (September 23, 2026).
+- **A record read between two of its writes.** The Claude Code fixture records a
+  delivery and then the overview it read for it; batch-arrival's wait for a delivery
+  once landed in between under a full run and failed the case in half a second. A wait
+  now waits on through that gap; a judgement after its anchor still fails on it
   (September 23, 2026).
 - **Inherited session variables.** A test run from inside a session read the live state
   as its own — hence `env -u` everywhere

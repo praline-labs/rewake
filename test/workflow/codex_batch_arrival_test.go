@@ -1,6 +1,7 @@
 package workflow
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"slices"
@@ -199,6 +200,12 @@ func deliveryContaining(c *Case, col column, worker *codexSession, id string) gr
 	var found groupDelivery
 	c.Await("a delivery naming "+id, func() bool {
 		deliveries, err := col.announcedDeliveries(worker)
+		if errors.Is(err, errRecordBehind) {
+			// Caught between the delivery and its overview: under a full run
+			// that gap is wide enough to land in, and it is progress rather
+			// than a contradiction.
+			return false
+		}
 		if err != nil {
 			// A membership that cannot be reconciled with what the notice
 			// announced is not an absent delivery; the case fails on it.

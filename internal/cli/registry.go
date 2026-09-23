@@ -33,6 +33,15 @@ var nameOption = Option{
 	Summary: "Session prefix (default: selected role, general without a role flag). Address: <prefix>-<harness>, up to 32 characters. Automatic conflicts add -2, -3; explicit conflicts refuse.",
 }
 
+// commandOption names the program a launch starts instead of the harness's
+// own: a person's wrapper script, which sets up an environment and then runs
+// the harness. The harness word still says which harness it is — rewake does
+// not guess that from a program's name, and does not run the program to ask.
+var commandOption = Option{
+	Flag: "--command", Value: "<program>",
+	Summary: "Start this program instead of the harness's own, with everything rewake adds unchanged: a wrapper script that runs the harness. A name is looked up on PATH, a path with a slash is taken as given; either must be an executable file.",
+}
+
 var roomOption = Option{
 	Flag: "--room", Value: "<name>",
 	Summary: "Join this room at launch. Default: default. Names are unique within a room.",
@@ -184,7 +193,7 @@ func launchCommand(h harness.Harness) *Command {
 		Args:           "[" + h.ID() + " args...]",
 		MaxPositionals: Variadic,
 		Summary:        h.Summary(),
-		Options: append(append([]Option{nameOption, roomOption}, roleOptions()...),
+		Options: append(append([]Option{nameOption, roomOption, commandOption}, roleOptions()...),
 			Option{Flag: "--no-intro", Summary: "Do not add the system-layer briefing."},
 		),
 		Examples: append(h.Examples(), "rewake --room work --general --name helper "+h.ID()),

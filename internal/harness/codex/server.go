@@ -36,6 +36,7 @@ type serverSession struct {
 	path, upstream, epoch, cwd string
 	args, env                  []string
 	gitWrite                   bool
+	program                    string
 	gateway                    *gateway.Gateway
 	proxy                      *http.Server
 	process                    *exec.Cmd
@@ -66,6 +67,14 @@ func newServer(path string, args, env []string, cwd string) *serverSession {
 	return &serverSession{path: path, upstream: path + ".up", epoch: epoch, args: args, env: env, cwd: cwd, exited: make(chan struct{}), stopped: make(chan struct{}), wake: make(chan struct{}, 1)}
 }
 
+// executable is the program the server runs: the launch's --command, or codex.
+func (s *serverSession) executable() string {
+	if s.program != "" {
+		return s.program
+	}
+	return "codex"
+}
+
 func (s *serverSession) Start(ctx context.Context, handler harness.CompletionHandler, note func(string)) error {
 	s.emit, s.note = handler.Publish, note
 	s.capture = handler.Capture
@@ -75,8 +84,12 @@ func (s *serverSession) Start(ctx context.Context, handler harness.CompletionHan
 	runCtx, cancel := context.WithCancel(ctx)
 	s.cancel = cancel
 	versionCtx, stopVersion := context.WithTimeout(ctx, 2*time.Second)
-	version := exec.CommandContext(versionCtx, "codex", "--version")
+	version := exec.CommandContext(versionCtx, s.executable(), "--version")
 	version.Env = s.env
+	// A wrapper that does not end in exec leaves the harness as its child,
+	// holding stdout after the wrapper is killed; without a delay Output
+	// would wait for that grandchild for ever.
+	version.WaitDelay = time.Second
 	raw, err := version.Output()
 	stopVersion()
 	if err != nil || string(raw) != lastObservedServerVersion+"\n" {
@@ -87,7 +100,7 @@ func (s *serverSession) Start(ctx context.Context, handler harness.CompletionHan
 		cancel()
 		return err
 	}
-	command := exec.Command("codex", s.args...)
+	command := exec.Command(s.executable(), s.args...)
 	command.Env = s.env
 	command.Dir = s.cwd
 	command.Stderr = log

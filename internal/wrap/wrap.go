@@ -40,6 +40,8 @@ type Request struct {
 	Args []string
 	// Intro asks for the briefing that tells the agent it runs under rewake.
 	Intro bool
+	// Command is the program to start in place of the harness's own.
+	Command string
 
 	// Role is explicit when its ID is set; empty always uses general.
 	Role   role.Role
@@ -90,6 +92,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 		RoleReason: session.RoleReason,
 		Args:       request.Args,
 		Intro:      request.Intro,
+		Command:    request.Command,
 		Socket:     registry.SocketFor(request.Dir, name, epoch),
 		Epoch:      epoch,
 		Role:       role.Of(session.Role),
