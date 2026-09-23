@@ -28,7 +28,7 @@ func showOwed(ctx *Context, call Call, dir string, session registry.Session, epo
 	if role.Of(session.Role).Silent {
 		return &UsageError{
 			Command: call.Command,
-			Message: fmt.Sprintf("%s owes no reports: a %s session's reads record no obligation, so --owed has nothing to show.", session.Name, session.Role),
+			Message: fmt.Sprintf("%s owes no reports: a %s session's reads record no obligation, so --owed has nothing to show. rewake inbox --awaited shows what others owe it.", session.Name, session.Role),
 		}
 	}
 	owed := inbox.OwedMessages(dir, session.Name, epoch)

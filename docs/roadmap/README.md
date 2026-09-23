@@ -85,6 +85,7 @@ without a date. Local installation without publishing is in
 | September 23, 2026 | [Re-reading the owed task](2026-09-23-owed-reread.md) | `rewake inbox --owed`, and the rule to use it after a context compaction |
 | September 23, 2026 | [A quieter feed](2026-09-23-quiet-feed.md) | every text line of the ordinary flow, kept, shortened or dropped; two kept by owner decision |
 | September 23, 2026 | [Conversation tracking for Claude Code](2026-09-23-claude-thread-tracking.md) | deliveries pinned to the collector's `session_id`, compared with the Stop hook's; `threadChanged` on the fixture |
+| September 23, 2026 | [What others owe you](2026-09-23-awaited-view.md) | `rewake inbox --awaited`: what a run sent and still waits on, by recipient, and the main playbook's line for it |
 
 ## Remaining work — owner decisions, September 19–21, 2026
 

@@ -116,13 +116,17 @@ the class of receiver whose inbound gate holds every rewake line
 ([traps.md](traps.md#a-message-reported-delivered-was-held-by-claude-code--the-status-is-now-honest)),
 so a sender that can tell held from delivered is its prerequisite. Nothing to build yet.
 
-**A view for main of what others owe it.** Proposed with `rewake inbox --owed`, not
-asked for by the owner yet ([the record](roadmap/2026-09-23-owed-reread.md)): `--owed`
-refuses a main session, whose reads record no obligation, yet after its own compaction
-main needs the opposite list — the tasks it waits on from others, found through the other
-sessions' `awaiting/` records naming main's run, plus what they have not read yet. It
-answers a different question and reads other sessions' mailboxes, so it would be its own
-view rather than a mode of `--owed`.
+**Withdrawing, editing and resending an unread message.** The owner's idea of
+September 23, 2026, not built. The sender can withdraw a message the recipient has not
+read yet, which removes it from the recipient's mailbox, or edit its text and send it
+again. Only while unread: a message already read is final. To decide when it is built:
+a message announced to a live session has already shown a notice with a preview on the
+recipient's screen, so withdrawing it leaves a notice that points to nothing, and the
+recipient may be reading it in that same moment; a held message also sits in Claude
+Code's own approval queue; and who may do it — the sender only, and whether only main
+or any role. `rewake inbox --awaited`, which lists what a run sent and where each
+message stands ([delivery-owed.md](delivery-owed.md#what-others-owe-you-rewake-inbox---awaited)),
+is its natural starting point.
 
 **A slot in the room for heavy test runs.** The owner's idea of September 23, 2026, not
 built. Before a heavy run an agent checks whether the slot is free and takes it

@@ -81,5 +81,6 @@ var mainPlaybook = Playbook{
 		"Your own successful turns are reported to nobody, which is what keeps two sessions from waking each other forever.",
 		"Only you may add --grant-git to a task, and only to a session whose role allows it.",
 		"A stopped report means a person interrupted that session: do not resend the work automatically, and treat anything that arrives afterwards as separate work rather than a continuation.",
+		"After a context compaction, run rewake inbox --awaited to see what you handed out and are still owed, instead of rebuilding it from the summary.",
 	}, sharedLimits...),
 }

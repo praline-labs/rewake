@@ -81,6 +81,9 @@ func SessionPath(dir, name string) string {
 // SessionsPath is the directory holding every session record.
 func SessionsPath(dir string) string { return filepath.Join(dir, sessionsDir) }
 
+// InboxesPath is the directory holding every mailbox of the room.
+func InboxesPath(dir string) string { return filepath.Join(dir, inboxDir) }
+
 // InboxPath is the mailbox of one session.
 func InboxPath(dir, name string) string { return filepath.Join(dir, inboxDir, name) }
 

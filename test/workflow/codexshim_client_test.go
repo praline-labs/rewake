@@ -125,6 +125,7 @@ func shimClient(socket string) int {
 	if target := os.Getenv(shimAcceptedFile); target != "" {
 		_ = os.WriteFile(target, []byte(reply.Thread.ID), 0o600)
 	}
+	go serveRequests()
 	if code := sendAsAsked(); code != 0 {
 		return code
 	}
@@ -141,6 +142,10 @@ func shimReportState() int {
 		return 1
 	}
 	deadline := time.Now().Add(25 * time.Second)
+	if os.Getenv(shimRequestDir) != "" {
+		// A scenario may still ask for something after the usual state loop.
+		deadline = time.Now().Add(requestLifetime)
+	}
 	for time.Now().Before(deadline) {
 		if target != "" {
 			out, err := exec.Command("rewake", "list", "--json").Output()

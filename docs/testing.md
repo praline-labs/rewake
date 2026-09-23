@@ -169,14 +169,15 @@ product mutant, built by `buildMutant` in `mutant_test.go` with one edit through
 toolchain's overlay, inside a started case, refusing an edit that does not match
 exactly once; or a switch that changes the fixture's world. A mutant is preferred
 wherever one can be built, because it shows the scenario catching a broken rewake
-rather than a misbehaving peer. Of today's thirty-two controls, twenty-three are mutants —
+rather than a misbehaving peer. Of today's thirty-four controls, twenty-five are mutants —
 batch-arrival's four; task-report's no-stop-hook, turn-ended-ignores-stop and
 settles-nothing; mid-turn's wait-for-idle; claude-telemetry's tap-without-owner,
 uncounted-compaction and silent-compaction; pending-report's pending-ignored and
 pending-settles; claude-inbound's ungated, gate-on-session-start, held-as-delivered,
 expiry-unannounced, refusal-as-delivered and late-word-dropped; owed-reread's
 owed-empty; thread-changed's delivery-unpinned, stop-thread-ignored and
-thread-always-changed — and nine are fixture switches: task-report's
+thread-always-changed; awaited-view's awaited-interim-ignored and awaited-never-settled —
+and nine are fixture switches: task-report's
 wrong-report, read-fails, failure-before-report and early-exit; the three readiness
 controls; mid-turn's late and failed-operation. A control names the observation it must
 break; the crosswise check then runs every control's observations in every other
@@ -247,6 +248,17 @@ the machine form carries the id the worker read it under, and the text form open
 The turn end must then report it once and
 settle it: asking changed nothing. Its mutant, an `--owed` that finds nothing, must break
 the first observation and hold the second.
+
+`awaited-view` runs in both columns with a main and two workers. main runs its own
+commands when the scenario asks (the fixture's request directory): it sends one task to
+each worker. One reports at once; the other runs `rewake pending` in its turn, so its
+task stays owed. main's `rewake inbox --awaited`, in both forms, must then list exactly
+that second task, by id, as `pending` with the interim's text, under `to <worker>`, and
+leave the first out. A note from main wakes the second worker, whose next turn end
+reports; the view must then be `Rewake: nobody owes you a report.` Its two mutants run on
+the Claude Code column only — the view reads files the same way whichever harness wrote
+them: one blind to interim reports breaks the first observation alone, one that never
+lets a task go breaks both.
 
 `thread-changed` runs on the Claude Code column only, with two workers and a sender
 for each. The fixture names one conversation, the session's own, in every hook and in its

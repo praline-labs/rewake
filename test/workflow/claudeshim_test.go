@@ -80,6 +80,7 @@ func runClaudeShim(args []string) int {
 	// a session that sent before it could receive would be unable to answer
 	// the report it is about to be sent.
 	go sendAsAsked()
+	go serveRequests()
 	return session.waitToBeStopped()
 }
 

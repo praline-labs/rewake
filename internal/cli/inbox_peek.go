@@ -12,21 +12,29 @@ import (
 )
 
 // inboxMode is what a call of rewake inbox asked for: all unread mail, an
-// overview of it, one message of it, or what was read and is still owed.
+// overview of it, one message of it, what was read and is still owed, or what
+// was sent and is still awaited.
 type inboxMode struct {
-	peek, owed bool
-	selected   string
+	peek, owed, awaited bool
+	selected            string
 }
 
 func inboxSelection(call Call) (inboxMode, error) {
 	value, peek := call.Flags["peek"]
 	owedValue, owed := call.Flags["owed"]
 	id, selected := call.Flags["message"]
+	awaitedValue, awaited := call.Flags["awaited"]
 	if peek && selected {
 		return inboxMode{}, &UsageError{Command: call.Command, Message: "--peek and --message are mutually exclusive; choose an overview or one full message."}
 	}
 	if owed && (peek || selected) {
 		return inboxMode{}, &UsageError{Command: call.Command, Message: "--owed is used alone: it shows what was already read, while --peek and --message look at unread mail."}
+	}
+	if awaited && (peek || selected || owed) {
+		return inboxMode{}, &UsageError{Command: call.Command, Message: "--awaited is used alone: it shows what you sent, while the other flags look at mail you received."}
+	}
+	if awaited && awaitedValue != "true" {
+		return inboxMode{}, &UsageError{Command: call.Command, Message: "--awaited is a switch and takes no value."}
 	}
 	if peek && value != "true" {
 		return inboxMode{}, &UsageError{Command: call.Command, Message: "--peek is a switch and takes no value."}
@@ -37,7 +45,7 @@ func inboxSelection(call Call) (inboxMode, error) {
 	if selected && (id == "" || len(id) > 128 || strings.ContainsAny(id, "/\\") || strings.ContainsFunc(id, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsControl(r) })) {
 		return inboxMode{}, &UsageError{Command: call.Command, Message: "--message needs one opaque ID from rewake inbox --peek."}
 	}
-	return inboxMode{peek: peek, owed: owed, selected: id}, nil
+	return inboxMode{peek: peek, owed: owed, awaited: awaited, selected: id}, nil
 }
 
 // No embedded Message: overview JSON must never acquire bodies or private fields.

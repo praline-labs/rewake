@@ -52,6 +52,9 @@ func handleInbox(ctx *Context, call Call) error {
 	if mode.owed {
 		return showOwed(ctx, call, dir, session, epoch)
 	}
+	if mode.awaited {
+		return showAwaited(ctx, dir, session, epoch)
+	}
 
 	// Held from looking to marking. Two readers at once — parallel tool calls,
 	// a command run again while the first still prints — would otherwise both

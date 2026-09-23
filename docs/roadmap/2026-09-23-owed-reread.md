@@ -17,7 +17,7 @@ this way; outside a session it is the usual refusal. The age sweep of `done/` an
 `unread/`, where a read whose last step failed leaves the text, now keeps what the
 current run still owes, so a task
 worked on for more than a day can still be shown; a text lost anyway is named by id
-and sender with `kept: false`. Mechanism: [delivery.md](../delivery.md#reading-again-what-is-owed-rewake-inbox---owed).
+and sender with `kept: false`. Mechanism: [delivery-owed.md](../delivery-owed.md#reading-again-what-is-owed-rewake-inbox---owed).
 
 **Decisions.**
 
@@ -58,3 +58,7 @@ message(s):`, each message carries the header of an ordinary read without its id
 nothing owed is `Rewake: nothing owed a report.` The plain-shell explanation moved to
 `--help`, the id stayed in `--json`, and the workflow case now checks the id there and
 the header in the text.
+
+**Later still.** The owner approved the view for main, and it was built as `rewake inbox
+--awaited` ([entry](2026-09-23-awaited-view.md)); `--owed` in a main session now names it
+in the refusal.

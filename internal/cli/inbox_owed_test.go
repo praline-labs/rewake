@@ -203,7 +203,7 @@ func TestOwedRefusals(t *testing.T) {
 
 	t.Run("main owes nothing", func(t *testing.T) {
 		markMain(t, dir, self.Name)
-		if code, _, errOut := run("inbox", "--owed"); code != ExitUsage || !strings.HasPrefix(errOut, self.Name+" owes no reports: a main session's reads record no obligation, so --owed has nothing to show.\n") {
+		if code, _, errOut := run("inbox", "--owed"); code != ExitUsage || !strings.HasPrefix(errOut, self.Name+" owes no reports: a main session's reads record no obligation, so --owed has nothing to show. rewake inbox --awaited shows what others owe it.\n") {
 			t.Fatalf("exit %d, %s", code, errOut)
 		}
 	})

@@ -200,7 +200,11 @@ main observer queues [compaction-complete and known-departure notices](session-a
    `rewake send`; do not answer a `notify` at all. After a context compaction,
    re-read the task with `rewake inbox --owed` rather than from the summary: it
    prints again, in full, every message whose `awaiting/` record is still there,
-   and changes nothing.
+   and changes nothing. The sender's side of the same record: `rewake inbox
+   --awaited` in the sending run lists, by recipient, what it sent and has no
+   report on yet — unread, read and being worked on, pending, stopped — and what
+   will get none because its recipient ended
+   ([delivery-owed.md](delivery-owed.md#what-others-owe-you-rewake-inbox---awaited)).
 
 ## Act 5. The turn ends and the report goes back
 

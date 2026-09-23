@@ -106,18 +106,20 @@ func buildGroups() {
 			{
 				Name:           "inbox",
 				MaxPositionals: 0,
-				Summary:        "Read waiting messages, preview their metadata without consuming them, or show again what you read and still owe a report for.",
+				Summary:        "Read waiting messages, preview their metadata without consuming them, show again what you read and still owe a report for, or list what you sent and still wait on.",
 				Options: []Option{
 					jsonOption,
 					{Flag: "--peek", Summary: "Show IDs, senders, kinds, times and bounded first-line previews only; no messages are marked read."},
 					{Flag: "--message", Value: "<id>", Summary: "Read only this available unread message; reserved answers remain with their waiting send."},
 					{Flag: "--owed", Summary: "Show again, in full, the tasks and questions you have read and not yet reported on; nothing is marked, recorded or announced."},
+					{Flag: "--awaited", Summary: "List the tasks and questions this run sent that have no report yet, by recipient, with where each stands; nothing is locked, written or sent."},
 				},
-				Examples: []string{"rewake inbox", "rewake inbox --json", "rewake inbox --peek", "rewake inbox --peek --json", "rewake inbox --message=1780000000000000000-012345abcdef", "rewake inbox --owed", "rewake inbox --owed --json"},
+				Examples: []string{"rewake inbox", "rewake inbox --json", "rewake inbox --peek", "rewake inbox --peek --json", "rewake inbox --message=1780000000000000000-012345abcdef", "rewake inbox --owed", "rewake inbox --owed --json", "rewake inbox --awaited", "rewake inbox --awaited --json"},
 				Next:     []string{"rewake send <name> \"text\""},
 				Notes: []string{
 					"--peek and --message are mutually exclusive. Peek has no full bodies, even in JSON, and creates no task read receipts or report obligations. Plain inbox still reads all available messages.",
 					"--owed is used alone. It is the task you are working on, from the mailbox rather than from memory: after a context compaction, re-read it there instead of working from the summary. A main session owes no reports, so it is refused there. Only work from another session is listed: a task sent from a plain shell owes no report and cannot be shown again this way.",
+					"--awaited is used alone, in any role. It is what others owe you: after a context compaction, a main session runs it to see what it handed out and still waits on. Each message shows its id, kind, time, first line and state: not delivered yet, held, delivered and unread, read and being worked on, pending after an interim report, or stopped by a person. A recipient that ended or was replaced is named as such — no report is coming. --json carries the full text. Only this run's mail is listed; notes and anything sent from a plain shell owe nothing and are not tracked.",
 					"Run it when a Rewake notice says messages are waiting; a group may mix tasks, questions, notifications and reports.",
 					"A task or a question you read is answered by ending your turn: your final message goes back to the sender by itself. Put the result there.",
 					"A notify needs no answer. A finished message is a session's final message after work you gave it.",
@@ -261,7 +263,7 @@ func notes() []Note {
 		},
 		{
 			Title: "Rewake's own lines mostly start with Rewake:",
-			Body:  "A notice, a send result, an inbox header or a note from rewake itself opens with \"Rewake:\" and says what happened, not how. The exceptions: text from another session follows its own header — \"from <session> · <kind> · <time>\", \"answer from <session>:\" for a question, \"from <session> · <id> · text no longer kept\" when --owed has lost the text — and is printed as written; main's state line reads \"<session>: <activity> | context … | compactions …\"; the availability and departure notices open with \"Session available.\" or \"Session is no longer available…\" and keep their identity block. A note that a message was not delivered means the agent never saw it: it is owed no report and nothing sends it again.",
+			Body:  "A notice, a send result, an inbox header or a note from rewake itself opens with \"Rewake:\" and says what happened, not how. The exceptions: text from another session follows its own header — \"from <session> · <kind> · <time>\", \"answer from <session>:\" for a question, \"from <session> · <id> · text no longer kept\" when --owed has lost the text — and is printed as written; --awaited names each recipient as \"to <session>\" and each message as \"<id> · <kind> · <time> · <state>\" above its first line; main's state line reads \"<session>: <activity> | context … | compactions …\"; the availability and departure notices open with \"Session available.\" or \"Session is no longer available…\" and keep their identity block. A note that a message was not delivered means the agent never saw it: it is owed no report and nothing sends it again.",
 		},
 		{
 			Title: "Kinds and replies",

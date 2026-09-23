@@ -39,8 +39,11 @@ view. IDs are copied from peek, not parsed as timestamps or shortened addresses.
 Plain `rewake inbox` still reads all available unread messages oldest first.
 `--peek` and `--message` are mutually exclusive. `--owed` shows what was already
 read and is still owed a report, and takes neither
-([delivery.md](delivery.md#reading-again-what-is-owed-rewake-inbox---owed)). All modes use the current epoch and
-the existing bounded mailbox lock. Active question-answer leases exclude their
+([delivery-owed.md](delivery-owed.md#reading-again-what-is-owed-rewake-inbox---owed)); `--awaited`
+lists what was sent and is still owed a report, and takes nothing else either
+([delivery-owed.md](delivery-owed.md#what-others-owe-you-rewake-inbox---awaited)). All reading
+modes use the current epoch and the existing bounded mailbox lock; `--owed` and
+`--awaited` only look and take no lock. Active question-answer leases exclude their
 reports from overview, selected reads and ordinary announcements. Reserved, expired,
 already-read, unknown and other-epoch IDs cannot be selected as available mail.
 

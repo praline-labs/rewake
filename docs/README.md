@@ -36,6 +36,10 @@ everything else.
   heartbeat, the one lock per mailbox, the wrapper's servicing loop and notice texts,
   `rewake inbox`, turn-end reports and what happens on a thread change. Open it for the
   exact behaviour of any send, read or report.
+- [delivery-owed.md](delivery-owed.md) — owed reports read back: `rewake inbox --owed`,
+  what a session has read and still owes, and `rewake inbox --awaited`, what a run sent
+  and still waits on, with the table of states and when a missing wait record means
+  answered. Open it after a context compaction or when a listed state is in question.
 - [delivery-adapters.md](delivery-adapters.md) — how a notice reaches each harness: the
   Claude Code socket line, its reply socket and receipts, held and late words, the startup
   gate and what a killed wrapper leaves behind; and the Codex gateway in brief. Open it

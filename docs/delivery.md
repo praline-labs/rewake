@@ -235,34 +235,11 @@ status, then the move to `done/`, which is the commit. A failure at any step
 leaves the message unread, and the next `inbox` shows and records it again.
 Two readers at once are serialized: the second finds nothing new.
 
-### Reading again what is owed (`rewake inbox --owed`)
+### Owed reports
 
-What a session has read and not reported on is exactly what its
-`awaiting/<own epoch>/` records name: a report clears the ids it settles, and an
-interim turn end (`rewake pending`) or a stop keeps them. `--owed` prints those
-messages again, in full — under `Rewake: owed a report for <n> message(s):`, each with
-the sender, kind and time of an ordinary read and its text, from `done/` (or
-`unread/`, for a read whose last step failed) — oldest read first; `--json` adds each
-id. It is the task a session is working on, from the mailbox rather than from
-memory, which is what a session needs after a context compaction: a summary retells
-the brief and can drop an item. The write and general playbooks tell it to re-read
-there and to say so in its report.
-
-It only reads. No lock is taken — every record it reads is written whole or not at
-all — and nothing is marked read, recorded, announced or given a status, so a second
-read is not a second obligation. A message whose text is gone is still named, by id
-and sender (`text no longer kept`), with `kept: false`; the age sweep of `done/` and
-`unread/` keeps what the current run still owes, however old. Nothing owed is one
-line, `Rewake: nothing owed a report.`, and exit 0. Only work from another session is
-owed: a task sent from a plain shell has no run to report to, records no wait, and so
-is not listed and cannot be shown again this way — `--help` says so, the one-line
-answer does not. Mail not yet read — unread, pending or held — is not owed and does
-not appear.
-
-`--owed` is used alone: `--peek` and `--message` look at unread mail, and a
-combination is refused. A main session is refused too, naming why: its reads record no
-obligation, so it owes nothing to show. What main waits on from others is a different
-question, not answered here ([the roadmap record](roadmap/2026-09-23-owed-reread.md)).
+What a session has read and still owes a report on, shown again with `rewake inbox
+--owed`, and the sender's side — what a run sent and still waits on, with `rewake inbox
+--awaited` — are in [delivery-owed.md](delivery-owed.md).
 
 ### The end of a turn
 

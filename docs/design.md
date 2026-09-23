@@ -311,12 +311,15 @@ belongs to the harness.
   in the guide too: text from another session keeps its own header —
   `from <session> · <kind> · <time>`, `answer from <session>:` for a question,
   `from <session> · <id> · text no longer kept` when `--owed` has lost the text — and
-  is printed as written; main's state line reads `<session>: <activity> | context … |
+  is printed as written; `--awaited` names each recipient as `to <session>` and each
+  message as `<id> · <kind> · <time> · <state>` above its first line; main's state line reads `<session>: <activity> | context … |
   compactions …`; the availability and departure notices open with `Session
   available.` or `Session is no longer available…` and keep their identity block, by
   owner decision ([session-state.md](session-state.md#availability-notifications)).
   Refusals keep their full form. Every such line is listed in
-  [the feed record](roadmap/2026-09-23-quiet-feed.md).
+  [the feed record](roadmap/2026-09-23-quiet-feed.md), and the lines of a view added
+  since in that view's own entry — `--awaited`'s in
+  [its record](roadmap/2026-09-23-awaited-view.md#the-lines-it-prints).
 - `--json` on every command prints the full model; the text form is deliberately
   trimmed down. No colors, no TTY-dependent behavior.
 - A single command table (name, arguments, flags, summary, examples, next) is
