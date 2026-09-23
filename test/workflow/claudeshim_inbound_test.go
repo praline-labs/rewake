@@ -93,7 +93,7 @@ type peer struct {
 func (s *claudeSession) mount(hooks bool) {
 	time.Sleep(sessionStartAfter)
 	if payload, err := json.Marshal(map[string]any{
-		"hook_event_name": "SessionStart", "session_id": os.Getenv(sessionNameEnv),
+		"hook_event_name": "SessionStart", "session_id": shimConversation(),
 		"cwd": workingDirectory(), "source": "startup",
 	}); err == nil && hooks {
 		s.runHook("SessionStart", s.launch.settings.observe, payload)
@@ -117,7 +117,7 @@ func (s *claudeSession) mount(hooks bool) {
 	}
 	status := exec.Command("/bin/sh", "-c", s.launch.settings.statusLine)
 	status.Env = os.Environ()
-	status.Stdin = strings.NewReader(string(statusPayload(-1)))
+	status.Stdin = strings.NewReader(string(statusPayload(-1, shimConversation())))
 	_ = status.Run()
 }
 

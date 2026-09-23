@@ -30,6 +30,28 @@ mailbox. That is not a fault: it is how rewake keeps main's error without waking
 
 *September 16, 2026.*
 
+### An interrupted Claude Code task is reported finished with an unrelated answer
+
+A sender got `finished` for its task with a text that had nothing to do with it —
+observed at 20:03:12 and at 20:11:30 on September 23, 2026, once in the same
+conversation and once across a `/clear`. The worker's turn on the task had been
+interrupted with Esc, and the report was the end of the next, unrelated turn.
+
+Claude Code runs no Stop hook for an interrupted turn
+([research.md](research.md#interrupting-a-turn-and-changing-the-conversation)), so the
+task stays owed, and obligations are kept per wrapper run, not per conversation: the
+next turn end heard, whatever it was about, settles it with its own last reply. A
+shell-mode `!` command was seen to start a model turn that ends in Stop without a
+UserPromptSubmit, while nothing was owed; with a task owed it would settle it the same
+way — inferred, not observed.
+
+Across a `/clear` the report now carries `threadChanged`, so the sender is warned it may
+not answer the task (HF-10, [delivery-adapters.md](delivery-adapters.md#claude-code-adapter)).
+In the same conversation nothing marks it: rewake cannot hear the interruption (HF-06).
+Open.
+
+*September 23, 2026.*
+
 ## Tests next to a live session
 
 ### A test that inherited the session's variables declared its own session foreign
@@ -40,6 +62,15 @@ directory as its own. Always
 reviewer's brief too. `REWAKE_ROOM` was added on the evening of September 16.
 
 *September 16, 2026.*
+
+### A probe with its own HOME would still write into the person's Claude Code configuration
+
+Worker sessions carry `CLAUDE_CONFIG_DIR`, and a probe started from one inherits it.
+Claude Code reads its configuration directory from that variable before HOME, so a probe
+given a private HOME would still write into the person's directory. Unset
+`CLAUDE_CONFIG_DIR` as well as setting HOME. Noticed before a probe ran, not after.
+
+*September 23, 2026.*
 
 ### `pgrep -x codex` finds somebody else's Codex
 

@@ -169,13 +169,14 @@ product mutant, built by `buildMutant` in `mutant_test.go` with one edit through
 toolchain's overlay, inside a started case, refusing an edit that does not match
 exactly once; or a switch that changes the fixture's world. A mutant is preferred
 wherever one can be built, because it shows the scenario catching a broken rewake
-rather than a misbehaving peer. Of today's twenty-nine controls, twenty are mutants —
+rather than a misbehaving peer. Of today's thirty-two controls, twenty-three are mutants —
 batch-arrival's four; task-report's no-stop-hook, turn-ended-ignores-stop and
 settles-nothing; mid-turn's wait-for-idle; claude-telemetry's tap-without-owner,
 uncounted-compaction and silent-compaction; pending-report's pending-ignored and
 pending-settles; claude-inbound's ungated, gate-on-session-start, held-as-delivered,
 expiry-unannounced, refusal-as-delivered and late-word-dropped; owed-reread's
-owed-empty — and nine are fixture switches: task-report's
+owed-empty; thread-changed's delivery-unpinned, stop-thread-ignored and
+thread-always-changed — and nine are fixture switches: task-report's
 wrong-report, read-fails, failure-before-report and early-exit; the three readiness
 controls; mid-turn's late and failed-operation. A control names the observation it must
 break; the crosswise check then runs every control's observations in every other
@@ -246,6 +247,19 @@ the machine form carries the id the worker read it under, and the text form open
 The turn end must then report it once and
 settle it: asking changed nothing. Its mutant, an `--owed` that finds nothing, must break
 the first observation and hold the second.
+
+`thread-changed` runs on the Claude Code column only, with two workers and a sender
+for each. The fixture names one conversation, the session's own, in every hook and in its
+status line, and on a switch plays `/clear` once its first task has arrived: a
+SessionStart with source `clear` and a new `session_id`, which every later event then
+carries. The report from that worker must carry `threadChanged` and still arrive once
+and settle its task; the report from the worker that stayed where its task landed must
+carry none. Its three mutants, like the telemetry controls, name what they break and
+require the rest to hold: a wrapper that never pins the delivery and a turn end that
+ignores the Stop hook's `session_id` must each lose the mark, and a comparison that
+takes every known conversation for a change must mark the worker that stayed. Before
+this case the fixture's status line named a conversation of its own while its hooks
+named the session, which a tracker would have read as a `/clear` in every case.
 
 `claude-inbound` runs on the Claude Code column only: Codex has no inbound gate, and its
 column is unchanged. The fixture plays the gate as the binary does — it holds whatever

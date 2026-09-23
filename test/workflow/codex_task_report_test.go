@@ -63,9 +63,10 @@ func runTaskReport(t *testing.T, col column) {
 	defer stopSession(t, c, sender)
 
 	if !col.offers(capabilitySelection) {
-		// No conversation on this column, so nothing to select and nothing to
-		// report. Said by name rather than left out: an absent mechanism that
-		// stayed silent would read as a defect that swallowed the evidence.
+		// This column hears its conversation only from hooks, after the fact,
+		// and selects none, so there is no accepted selection to report. Said
+		// by name rather than left out: an absent mechanism that stayed silent
+		// would read as a defect that swallowed the evidence.
 		col.unsupported(c, "the recipient reaches an accepted conversation", capabilitySelection)
 	} else {
 		// Telemetry is visible to a main, and the main here is the sender — so
@@ -168,6 +169,9 @@ type reportView struct {
 	Kind      string   `json:"kind"`
 	InReplyTo []string `json:"inReplyTo"`
 	Text      string   `json:"text"`
+	// ThreadChanged is the reader's warning that it answered from another
+	// conversation than the one the message was delivered to.
+	ThreadChanged bool `json:"threadChanged"`
 	// Undelivered is set on the note that tells a sender its message never
 	// reached the agent.
 	Undelivered *struct {

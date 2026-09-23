@@ -121,11 +121,12 @@ func parseClaudeSettings(raw string) (claudeSettings, error) {
 // about, then end the turn through the hook.
 func (s *claudeSession) workTurn(turn string, notice claudeNotice) {
 	s.recordDelivery(turn, notice)
+	s.clearIfAsked()
 	// A delivered message starts a turn through UserPromptSubmit, as a typed
 	// one does (seen live on 2.1.280); its hook is how rewake learns the turn
 	// began.
 	if payload, err := json.Marshal(map[string]any{
-		"hook_event_name": "UserPromptSubmit", "session_id": os.Getenv(sessionNameEnv),
+		"hook_event_name": "UserPromptSubmit", "session_id": shimConversation(),
 		"cwd": workingDirectory(), "prompt": notice.Summary,
 	}); err == nil {
 		s.runHook("UserPromptSubmit", s.launch.settings.observe, payload)
@@ -202,9 +203,11 @@ func (s *claudeSession) runHook(event, command string, payload []byte) {
 // agent_id: this is the session itself, never a child.
 //
 // Verified is less than sent. Live, on 2.1.270, the Stop hook was seen to
-// receive last_assistant_message; the rest — the event name, session_id, cwd,
-// transcript_path, and the failure fields — follow the hook reference and are
-// assumed, which docs/research.md records.
+// receive last_assistant_message, and on 2.1.280 every hook the event name,
+// session_id, cwd and transcript_path; the failure fields follow the hook
+// reference and are assumed, which docs/research.md records. session_id is the
+// session's conversation (claudeshim_clear_test.go), which rewake compares
+// with the one the task was delivered to.
 //
 // For a failure the reference puts the error text in last_assistant_message,
 // with error_details and error beside it, and that is what this sends — not an
@@ -214,7 +217,7 @@ func hookInput(event, text string) map[string]any {
 	input := map[string]any{
 		"hook_event_name":        event,
 		"last_assistant_message": text,
-		"session_id":             os.Getenv(sessionNameEnv),
+		"session_id":             shimConversation(),
 		"cwd":                    workingDirectory(),
 		"transcript_path":        "",
 	}

@@ -80,9 +80,11 @@ without a date. Local installation without publishing is in
 | September 22, 2026 | [A summary of a suite run instead of its transcript](2026-09-22-suite-summarizer.md) | `tools/checksummary`: a few lines and a summary.json, built from records rather than prose |
 | September 22, 2026 | [A fixture for the Claude Code column](2026-09-22-fixture-claude-code.md) | the scenarios run twice; what the socket column cannot show, and says by name |
 | September 23, 2026 | [A named harness version, cached and run in a container](2026-09-23-harness-versions.md) | `tools/harnesscache`, `REWAKE_CODEX_VERSION`, and what 0.156.0 showed |
+| September 23, 2026 | [A telemetry collector for Claude Code](2026-09-23-claude-telemetry.md) | background hooks and a status-line tap into one collector; seen live the same day |
 | September 23, 2026 | [Honest delivery status for Claude Code](2026-09-23-honest-claude-delivery.md) | `held` as a state, the wrapper's reply socket, the first notice waiting for the status line |
 | September 23, 2026 | [Re-reading the owed task](2026-09-23-owed-reread.md) | `rewake inbox --owed`, and the rule to use it after a context compaction |
 | September 23, 2026 | [A quieter feed](2026-09-23-quiet-feed.md) | every text line of the ordinary flow, kept, shortened or dropped; two kept by owner decision |
+| September 23, 2026 | [Conversation tracking for Claude Code](2026-09-23-claude-thread-tracking.md) | deliveries pinned to the collector's `session_id`, compared with the Stop hook's; `threadChanged` on the fixture |
 
 ## Remaining work — owner decisions, September 19–21, 2026
 
@@ -132,7 +134,7 @@ promises, and an account's list changes. A table that keeps showing yesterday's 
 because today's lookup failed is worse than one that admits it does not know — that is
 the same mistake as a check reporting success it did not earn, one layer up.
 
-A lead for the missing Claude Code telemetry collector (entry 5 of the
+A lead for the Claude Code telemetry collector, then missing (entry 5 of the
 [parity queue](../harness-features.md)). Claude Code has a channel where the harness calls
 a command **we** name and hands it a structure describing the session, the context
 window size among its fields — so the source is the input to a program of ours, not
@@ -147,7 +149,8 @@ display for a person, its format is not promised, and a reader of the screen wou
 fragile for no reason. What that structure carries was established on September 23,
 2026, beside what the hooks carry, in [research.md](../research.md#telemetry-sources-the-status-line-and-hooks):
 model, effort and context fill are there, activity is not, and compactions come from
-hooks. Which mechanism to build is an owner decision still to be taken.
+hooks. The collector was built the same day on both, the hooks and a tap on the status
+line that keeps the person's own ([entry](2026-09-23-claude-telemetry.md)).
 
 Persistent Git permissions remain a separate future item: explicit orchestrator
 event, scope to run and repository, preservation across later owner turns, and revocation. A running turn keeps its prior permission context.

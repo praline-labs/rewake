@@ -219,6 +219,9 @@ func Run(ctx context.Context, request Request) (int, error) {
 		if tracker, ok := request.Harness.(harness.ThreadTracker); ok {
 			thread = func() (string, error) { return tracker.Thread(current(request.Dir, name, session)) }
 		}
+		if source, ok := plan.Observer.(harness.ThreadSource); ok && plan.Backend == nil {
+			thread = source.Thread
+		}
 		if plan.Backend != nil {
 			thread = plan.Backend.Thread
 		}

@@ -165,6 +165,7 @@ endpoint, **M** real-model semantic (paid), **O** owner TUI.
 | `stopped-outcome` (later) | HF-06 | F | `unsupported` — no interruption source | by capability |
 | `git-grant` (later) | HF-15 | F | `unsupported` — not an eligible recipient | by capability |
 | `telemetry-source` | HF-11, HF-22 | F then P | F runs as `claude-telemetry` since September 23, 2026 — the collector exists | by capability |
+| `thread-changed` | HF-10 | not in the suite; the gateway's tests and the live run of September 17, 2026 cover it | F runs since September 23, 2026 — `/clear` played by the fixture | by capability |
 | `telemetry-read` (later) | HF-12 | F then P | F then P — the reader works on both | F |
 | Conversation commands (later) | HF-19 | F | **must run** — HF-19 is `impl?`, not missing | by capability |
 | Arrival appearance | HF-14 | O | O | O |
@@ -172,8 +173,9 @@ endpoint, **M** real-model semantic (paid), **O** owner TUI.
 
 Both columns run since September 22, 2026, against a fixture each: a Codex
 app-server and a Claude Code session inbox. What a column cannot show it says by
-name — the socket column has no conversation, so the observation about reaching one
-is `unsupported` there rather than dropped, and `mid-turn` is `unsupported` whole,
+name — the socket column selects no conversation and hears one only from hooks after
+the fact, so the observation about reaching an accepted one is `unsupported` there
+rather than dropped, and `mid-turn` is `unsupported` whole,
 because a one-way socket has no notion of a turn to deliver into. The record of
 that fixture is [2026-09-22-fixture-claude-code.md](roadmap/2026-09-22-fixture-claude-code.md).
 

@@ -92,6 +92,26 @@ what the dead one held and tells each sender, as the dead one would have on a cl
 `ENOENT` and `ECONNREFUSED` mean `pending` as long as the harness is alive (the socket
 hasn't been created yet, or is being recreated); otherwise `failed`.
 
+**Which conversation a message went into.** Claude Code names its conversation in every
+hook and status line as `session_id`, which `/clear` replaces with a new one, `/resume`
+with the resumed conversation's, and a compaction keeps
+([research.md](research.md#interrupting-a-turn-and-changing-the-conversation)).
+The telemetry collector keeps the last one it heard, and the wrapper asks it when it pins
+an owed message to a conversation before making it readable
+([delivery.md](delivery.md#reports-after-a-thread-change)). At the end of the turn
+`rewake turn-ended` takes the conversation from the Stop or StopFailure payload's own
+`session_id`, so the comparison is with where the turn actually ended rather than with a
+snapshot of the collector. Either side unknown — no telemetry socket, no event heard yet,
+a payload without the field — leaves `threadChanged` out.
+
+One window marks a report that did not need it: a message delivered after a `/clear` but
+before that SessionStart hook reached the collector — the hooks run in the background — is
+pinned to the old conversation, and its report then reads as changed. The mark is
+advisory, so a false one costs the sender a resend it did not need, where a missing one
+would let an answer from a fresh conversation pass for an answer to the task. Covered by
+the `thread-changed` workflow case on the fixture since September 23, 2026
+([testing.md](testing.md)); not yet observed live (HF-10).
+
 ## Codex adapter
 
 The wrapper's gateway follows the native TUI's own accepted primary intent and

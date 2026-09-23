@@ -128,6 +128,16 @@ func (c *Collector) Close() {
 	}
 }
 
+// Thread is the conversation the session's events last named: the harness's
+// session_id, which /clear replaces. Empty until an event names
+// one, and never an error: without it a delivery is simply not pinned to a
+// conversation, and its report carries no threadChanged either way.
+func (c *Collector) Thread() (string, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.folded.thread, nil
+}
+
 // SessionState is the snapshot the wrapper publishes. It does no filesystem
 // work: the wrapper's heartbeat calls it four times a second.
 func (c *Collector) SessionState() sessionstate.Snapshot {

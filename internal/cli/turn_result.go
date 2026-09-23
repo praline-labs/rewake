@@ -18,6 +18,9 @@ type turnResult struct {
 	// they decide whether a pending mark was made in this turn.
 	Started, Ended int64
 	ID             string
+	// Thread is the conversation the turn ended in, when the payload names
+	// one: a Claude Code hook's session_id.
+	Thread string
 }
 
 func completedTurn(payload []byte) (turnResult, bool) {
@@ -39,6 +42,11 @@ func completedTurn(payload []byte) (turnResult, bool) {
 		return turnResult{}, false
 	}
 	result := turnResult{ID: text("turn-id")}
+	if hook != "" {
+		// Only a hook's payload: Codex's notify has no session_id, and its
+		// conversation reaches the report through the gateway instead.
+		result.Thread = text("session_id")
+	}
 	if result.ID == "" {
 		result.ID = text("turn_id")
 	}

@@ -190,9 +190,12 @@ rewake built from `d975dd7`, for model, effort, context, activity and a compacti
   (`CLOCK_BOOTTIME`), one clock for every process that a wall-clock jump after a WSL
   suspend does not move back.
   Known limit, September 23, 2026: a session a person interrupts with Esc stays
-  `working` until its next UserPromptSubmit or Stop. No hook was seen to mark the
-  interruption — Stop firing on it was not observed, and no `idle_prompt` arrived in 80
-  idle seconds ([research.md](research.md#telemetry-sources-the-status-line-and-hooks)) —
+  `working` until the next event that ends a turn or starts one afresh: a
+  UserPromptSubmit or Stop, a SessionStart that is not a compaction's (`/clear` and
+  `/resume`; the reset after `/clear` was seen live), or an `idle_prompt`
+  notification. No hook marks the
+  interruption — Esc and Ctrl+C run no Stop, StopFailure or Notification, and no
+  `idle_prompt` came within 80 seconds ([research.md](research.md#interrupting-a-turn-and-changing-the-conversation)) —
   so `rewake list` and the main header show a stopped session as working.
 - **Model and effort**: from the status line, which states both each time; a model the
   status line gives no effort for clears the effort to unknown. SessionStart and the
@@ -207,8 +210,9 @@ rewake built from `d975dd7`, for model, effort, context, activity and a compacti
   the first hook arrives: hooks can be switched off, and a zero nobody could count would
   be a claim.
 - **Conversation**: `primaryThread` is the harness's `session_id`, which `/clear`
-  replaces. It is published, but no `ThreadTracker` reads it yet, so reports still carry
-  no `threadChanged` for this harness (HF-10).
+  replaces. The wrapper pins a delivery to the same value, read from the collector
+  rather than from this publication, and a report from another conversation carries
+  `threadChanged` ([delivery-adapters.md](delivery-adapters.md#claude-code-adapter), HF-10).
 
 Freshness is the wrapper's heartbeat, as for Codex: the values are the last each event
 reported, and they read stale only when the wrapper stops publishing.

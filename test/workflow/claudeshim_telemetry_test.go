@@ -76,8 +76,9 @@ func hookPayload(event string, extra map[string]any) []byte {
 }
 
 // statusPayload is what the harness hands its status line, in the shape seen
-// on 2.1.280 (docs/research.md). used < 0 is a context not measured yet.
-func statusPayload(used int64) []byte {
+// on 2.1.280 (docs/research.md). used < 0 is a context not measured yet;
+// conversation is the session_id it names.
+func statusPayload(used int64, conversation string) []byte {
 	window := map[string]any{
 		"total_input_tokens": 0, "total_output_tokens": 0, "context_window_size": 200000,
 		"current_usage": nil, "used_percentage": nil, "remaining_percentage": nil,
@@ -91,7 +92,7 @@ func statusPayload(used int64) []byte {
 		}
 	}
 	encoded, _ := json.Marshal(map[string]any{
-		"session_id": telemetryConversation, "transcript_path": "/home/u/t.jsonl", "cwd": workingDirectory(),
+		"session_id": conversation, "transcript_path": "/home/u/t.jsonl", "cwd": workingDirectory(),
 		"model":  map[string]any{"id": "model-telemetry", "display_name": conversationText},
 		"effort": map[string]any{"level": "high"}, "context_window": window,
 		"workspace": map[string]any{"current_dir": workingDirectory()}, "version": "2.1.280",
@@ -120,7 +121,7 @@ func (s *claudeSession) playTelemetry() {
 		}
 	}
 	status := func(used int64) {
-		out, _, err := runShellTimed(settings.statusLine, statusPayload(used))
+		out, _, err := runShellTimed(settings.statusLine, statusPayload(used, telemetryConversation))
 		if err != nil && result.Error == "" {
 			result.Error = fmt.Sprintf("the status line failed: %v", err)
 		}
@@ -144,8 +145,8 @@ func (s *claudeSession) playTelemetry() {
 	owner := os.Getenv(shimOwnerStatus)
 	for range latencyRuns {
 		_, hook, _ := runShellTimed(settings.observe, probe)
-		_, tap, _ := runShellTimed(settings.statusLine, statusPayload(50000))
-		_, direct, _ := runShellTimed(owner, statusPayload(50000))
+		_, tap, _ := runShellTimed(settings.statusLine, statusPayload(50000, telemetryConversation))
+		_, direct, _ := runShellTimed(owner, statusPayload(50000, telemetryConversation))
 		_, turnStart, _ := runShellTimed(settings.observe, hookPayload("UserPromptSubmit", map[string]any{"prompt": conversationText}))
 		result.Hook = append(result.Hook, hook)
 		result.TurnStart = append(result.TurnStart, turnStart)

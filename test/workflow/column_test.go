@@ -36,9 +36,11 @@ func capability(name string) string {
 // Each capability traces to a row of the feature map, and each is absent for
 // a reason that belongs to the harness rather than to the fixture.
 var (
-	// capabilitySelection: the session reports which conversation it is in.
-	// The socket column has no conversation at all — one line goes in, nothing
-	// comes back — so nothing there can be selected or reported.
+	// capabilitySelection: the session reports which conversation it has
+	// selected and accepted, which is the Codex server's selection fencing.
+	// The socket column learns the conversation only from hooks after the
+	// fact — one line goes in, nothing comes back — so there is no selection
+	// to report.
 	capabilitySelection = capability("reports-conversation-selection")
 	// capabilityNamesMembers: a delivery names the messages it carries. The
 	// socket column's notification carries an id for the announcement, a

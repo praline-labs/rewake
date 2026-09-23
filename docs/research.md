@@ -140,10 +140,14 @@ which the gate does not consult when it decides:
   which decides whether the end counts at all — a child's inherited hook carries one
   and is ignored — then `type`, `hook_event_name`, `turn-id` or `turn_id`,
   `thread-id`, the last message under `last_assistant_message`,
-  `last-assistant-message` or `last_agent_message`, and `error` with
-  `error_details` for a failure. Of what the workflow suite's Claude Code fixture
-  sends, only `last_assistant_message` on Stop is verified live; `hook_event_name`,
-  `session_id`, `cwd`, `transcript_path`, and the StopFailure fields are
+  `last-assistant-message` or `last_agent_message`, `error` with
+  `error_details` for a failure, and, from a hook's payload only, `session_id` — the
+  conversation the turn ended in, compared with the one its messages were delivered to
+  (September 23, 2026). Of what the workflow suite's Claude Code fixture
+  sends, `last_assistant_message` on Stop is verified live, and so, since the
+  telemetry probes of September 23, 2026, are `hook_event_name` — the collector tells
+  events apart by it, live — and `session_id`, `cwd` and `transcript_path` on every
+  hook ([below](#telemetry-sources-the-status-line-and-hooks)); the StopFailure fields are
   **[assumed]**, shaped from the hook reference rather than from a running session.
   For StopFailure the fixture puts the error text in `last_assistant_message` with
   `error_details` and `error` beside it, following the reference cited below.
@@ -247,7 +251,8 @@ Hooks **[verified live unless marked]**:
   `prompt_id`, and on turn events `permission_mode`; `effort.level` when the model
   takes one **[source]** — absent on Haiku 4.5.
 - `SessionStart` carries `source` and `model` (the id): `startup` at launch,
-  `compact` after a compaction; `clear` and `resume` per the source.
+  `compact` after a compaction, `clear` after `/clear` — without `model` — and `resume`
+  after `/resume` ([below](#interrupting-a-turn-and-changing-the-conversation)).
 - `UserPromptSubmit` fires for a message delivered through the inbox socket, and
   carries its text in `prompt`.
 - `PreCompact` (`trigger` `manual` or `auto`, `custom_instructions`) and `PostCompact`
@@ -261,7 +266,8 @@ Hooks **[verified live unless marked]**:
   `cache_ttl`, `estimated_cache_write_usd`, `pricing`. **[container]**
 - `Notification`: `message`, `title`, `notification_type`; the binary names
   `permission_prompt`, `idle_prompt`, `agent_needs_input`, `agent_completed` and
-  others **[source]**. No `idle_prompt` arrived in 80 idle seconds.
+  others **[source]**. `idle_prompt` came 61.6 seconds after an ordinary `Stop`, and
+  not within 80 seconds after an Esc ([below](#interrupting-a-turn-and-changing-the-conversation)).
 - `SessionEnd`: `reason`, `prompt_input_exit` for `/exit`. `Stop` also carries
   `background_tasks` and `session_crons` **[source]**.
 - Conversation text travels in `prompt`, `last_assistant_message`,
@@ -269,8 +275,42 @@ Hooks **[verified live unless marked]**:
   transcripts drops them unread.
 
 `/clear` gives the session a new `session_id`, which the next status-line run already
-carries **[container]**; a compaction keeps it. Whether `Stop` fires when a person
-interrupts a turn was not observed.
+carries **[container]**; a compaction keeps it.
+
+### Interrupting a turn and changing the conversation
+
+Probed on September 23, 2026, Claude Code 2.1.280, in a private HOME against a fake API
+on a local port, with Esc and Ctrl+C typed through tmux **[live]** and the abort path
+read in the binary **[source]**.
+
+An interrupted turn is marked by nothing rewake can hear (HF-06):
+
+- Esc while the request hangs, while text streams, and during a Bash tool: no `Stop`,
+  `StopFailure`, `Notification` or `PostToolUseFailure`. No hook, no status-line field
+  and no key of a later `UserPromptSubmit` says the turn was interrupted.
+- `idle_prompt` did not come within 80 seconds after an Esc; after an ordinary `Stop`
+  it came 61.6 seconds later.
+- The only marker, `[Request interrupted by user]`, is in the next request's body — the
+  transcript, which rewake does not read.
+- Ctrl+C once or twice during a turn behaves like Esc. Twice while idle ends the
+  session: `SessionEnd` with reason `prompt_input_exit`, and the wrapper exits 0.
+- In the binary the abort branches return `aborted_streaming` or `aborted_tools` and
+  never call the Stop hook, whose callers are `blockable_turn_end`,
+  `turn_end_reactions` and `loop_tick`. A `terminal_reason` of `aborted_*` exists only
+  in the SDK's stream-json output. **[source]**
+
+Changing the conversation (HF-19):
+
+- `/clear`: `SessionEnd` with reason `clear` and the old `session_id`, then
+  `SessionStart` with source `clear` and a new one, without a `model` key; a status
+  line with the new id about 300 ms later.
+- `/resume <id>`: `SessionEnd` with reason `resume`, then `SessionStart` with source
+  `resume` and the resumed conversation's original id, with extra keys —
+  `context_tokens`, `seconds_since_last_response`, `prompt_cache_likely_expired`,
+  `estimated_cache_write_usd`, `model`, `prompt_id`. The picker behaves the same.
+- The wrapper's socket survives both, and a delivery and its `Stop` work after each.
+- Not checked: `--resume` or `--continue` at launch through rewake, and resuming a
+  conversation from another project or one started outside rewake.
 
 ## Other harnesses (for later)
 

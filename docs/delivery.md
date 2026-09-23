@@ -318,17 +318,19 @@ harness's own machinery, where an error is noise at best.
 
 ### Reports after a thread change
 
-Some harnesses can change conversations inside one wrapper run. Before an owed
-message is made readable, the wrapper records the selected thread in
-`inbox/<name>/threads/<message id>` under the mailbox lock. The server call uses that
-same thread. The context survives reads and status rewrites, and is retained
+Both harnesses can change conversations inside one wrapper run: Codex with `/new`,
+Claude Code with `/clear` or `/resume`. Before an owed message is made readable, the
+wrapper records the selected thread in `inbox/<name>/threads/<message id>` under the
+mailbox lock — Codex's from its server, Claude Code's the conversation its telemetry
+collector heard last ([delivery-adapters.md](delivery-adapters.md#claude-code-adapter)).
+On Codex the server call uses that same thread. The context survives reads and status rewrites, and is retained
 while the message is queued, unread or included in an unsettled wait.
 
-At the end of a turn the hook resolves the current thread using the harness's
-thread tracker. If any known delivery thread in the wait's message ids differs,
-the finished report carries `threadChanged: true`. Otherwise the field is
-omitted, including when either identity is unavailable or the harness has no
-thread tracker. This is an advisory comparison, not a change to report routing
+At the end of a turn the current thread comes from the harness: Codex's completion
+carries it through the gateway, and Claude Code's Stop hook names it as `session_id`.
+If any known delivery thread in the wait's message ids differs, the report carries
+`threadChanged: true`. Otherwise the field is omitted, including when either identity
+is unavailable. This is an advisory comparison, not a change to report routing
 or the wrapper epoch. A new conversation does not clear waits or resend tasks.
 
 `rewake inbox` prints this line beneath a marked report:

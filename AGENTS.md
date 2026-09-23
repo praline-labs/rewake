@@ -183,6 +183,14 @@ go install honnef.co/go/tools/cmd/staticcheck@latest mvdan.cc/gofumpt@latest \
   github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
 ```
 
+Sessions working on this repository share one machine, and heavy runs collide when two
+of them go at once: the five checks with `-race`, the workflow suite, the crosswise check,
+container probes. Before starting one, check whether another session is running one
+(`go test`, `checksummary`, `test/workflow`, `harnesscache` in the process list). If it
+is, wait for it with a bounded wait, or run only the narrow part needed — one package,
+`-run` on one scenario. A timing measured while another heavy run was going is not
+evidence: re-measure it, or say it was taken under load.
+
 Live runs happen in a separate `/tmp` directory with its own `REWAKE_DIR`. Never
 touch the harness sessions the owner is working in. Codex runs spend
 subscription quota: cheap model, short messages, warn the owner first.

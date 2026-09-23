@@ -340,7 +340,8 @@ for the actual RPC target. This covers readers that fetch mail before the
 notice call returns. The context stays alongside the task across read/status
 updates and remains while a report is owed.
 
-A `/new` changes the conversation without changing the wrapper epoch. At turn
+A `/new` in Codex, or a `/clear` in Claude Code, changes the conversation without
+changing the wrapper epoch. At turn
 end, the hook compares the current thread with the delivery thread of every
 message in `inReplyTo`. Any known mismatch adds `threadChanged: true` to the
 report. Inbox prints a warning beneath the result; a waiting question preserves

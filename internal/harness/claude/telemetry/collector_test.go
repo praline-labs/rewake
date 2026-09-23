@@ -62,6 +62,24 @@ func TestTheCollectorFoldsWhatIsSent(t *testing.T) {
 	}
 }
 
+// The conversation a delivery is pinned to is the one the events last named:
+// nothing before the first, and the new one once /clear has started it.
+func TestTheCollectorNamesTheConversation(t *testing.T) {
+	path := filepath.Join(socketDir(t), "s.obs")
+	collector := NewCollector(path)
+	if err := collector.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer collector.Close()
+	if thread, err := collector.Thread(); thread != "" || err != nil {
+		t.Fatalf("thread before any event = %q, %v; want unknown and no error", thread, err)
+	}
+	Send(path, Event{Kind: SessionStart, Source: "startup", Session: "conv-a"})
+	waitFor(t, "the first conversation", func() bool { thread, _ := collector.Thread(); return thread == "conv-a" })
+	Send(path, Event{Kind: SessionStart, Source: "clear", Session: "conv-b"})
+	waitFor(t, "the conversation after /clear", func() bool { thread, _ := collector.Thread(); return thread == "conv-b" })
+}
+
 // Garbage on the socket is dropped without stopping the reader.
 func TestTheCollectorSurvivesGarbage(t *testing.T) {
 	path := filepath.Join(socketDir(t), "s.obs")

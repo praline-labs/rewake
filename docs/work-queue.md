@@ -67,10 +67,15 @@ activity and compactions, observed live the same day
 ([claude-telemetry.md](claude-telemetry.md); HF-11 and HF-22 in the
 [feature map](harness-features.md#capability-map)).
 
+Conversation tracking is built as well and passes its fixture case
+([the record](roadmap/2026-09-23-claude-thread-tracking.md)); HF-10 waits only for a
+`/clear` seen live between a delivery and its report.
+
 What stays open is listed in the feature map's [parity queue](harness-features.md#open):
-a keyboard interruption that produces `stopped` (HF-06); tracking which conversation a
-message landed in, so `threadChanged` stops being absent (HF-10); and the harness's own
-`/clear` and `/resume` under rewake, untested rather than broken (HF-19). Two telemetry
+a keyboard interruption that produces `stopped` (HF-06), for which the harness was shown
+on September 23, 2026 to offer no signal, so it waits on the owner's decision. The
+harness's own `/clear` and `/resume` were observed working under rewake the same day
+(HF-19). Two telemetry
 limits remain beside them: activity stays `working` after Esc, and the waiting state is
 unknown during a turn ([session-state.md](session-state.md#claude-code-source)).
 
@@ -118,6 +123,16 @@ main needs the opposite list — the tasks it waits on from others, found throug
 sessions' `awaiting/` records naming main's run, plus what they have not read yet. It
 answers a different question and reads other sessions' mailboxes, so it would be its own
 view rather than a mode of `--owed`.
+
+**A slot in the room for heavy test runs.** The owner's idea of September 23, 2026, not
+built. Before a heavy run an agent checks whether the slot is free and takes it
+explicitly, then runs its tests. An agent that wants to run while the slot is busy takes
+a number in a queue and may go idle without ending its task — like a `rewake pending`
+mark, waiting in the queue does not close the task. The holder releases the slot when
+its tests are done; rewake also releases it when the holder's turn finishes, as a safety
+net that agents are not told to rely on. The next one in the queue, by its number, gets
+a waking notice that it now holds the slot. Once built, it replaces the manual rule in
+the Checks section of `AGENTS.md`.
 
 **Parsing the Codex configuration.** Today rewake looks for a mention of a key in the
 text of the file and substitutes nothing when it finds one — crude, and crude on

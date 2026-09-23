@@ -37,10 +37,17 @@ layer uses both; the wrapper listens.
   worker's compaction reached the main as `Primary compaction completed (observed count
   1).` The evidence is in [harness-features.md](harness-features.md) under HF-11 and
   HF-22.
+- **The conversation.** Every event's `session_id` is the conversation the session is
+  in; the collector keeps the latest by the boot clock, and the wrapper pins each owed
+  delivery to it, so a report from another conversation carries `threadChanged`
+  ([delivery-adapters.md](delivery-adapters.md#claude-code-adapter)).
 - **Activity after an interruption.** Known limit, September 23, 2026: a session a
-  person interrupts with Esc stays `working` until its next UserPromptSubmit or Stop. No hook was seen to mark the
-  interruption — Stop firing on it was not observed, and no `idle_prompt` arrived in 80
-  idle seconds ([research.md](research.md#telemetry-sources-the-status-line-and-hooks)) —
+  person interrupts with Esc stays `working` until the next event that ends a turn or starts one afresh: a
+  UserPromptSubmit or Stop, a SessionStart that is not a compaction's (`/clear` and
+  `/resume`; the reset after `/clear` was seen live), or an `idle_prompt`
+  notification. No hook marks the
+  interruption — Esc and Ctrl+C run no Stop, StopFailure or Notification, and no
+  `idle_prompt` came within 80 seconds ([research.md](research.md#interrupting-a-turn-and-changing-the-conversation)) —
   so `rewake list` and the main header show a stopped session as working.
 - **The tap.** The status line becomes `rewake status-tap <socket> <sources> [caller]`.
   It reads the payload, sends what the status line says, finds the person's command

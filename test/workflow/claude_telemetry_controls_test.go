@@ -49,13 +49,18 @@ func TestAnUncountedCompactionFails(t *testing.T) {
 	runTelemetryControl(t, mutantUncountedCompaction, obsCompactionCount, obsHeader, obsCompactionNotice)
 }
 
-// runTelemetryControl runs the scenario against a mutant and requires exactly
-// the named observations to break — judged, not merely unread — while every
-// other one holds. A mutant that broke everything would otherwise pass as a
-// control of whatever it was named for.
 func runTelemetryControl(t *testing.T, mutant mutation, breaks ...string) {
 	t.Helper()
-	name := "claude-telemetry-control-" + mutant.name
+	runFindingsControl(t, "claude-telemetry", playClaudeTelemetry, mutant, breaks...)
+}
+
+// runFindingsControl runs a Claude Code scenario against a mutant and requires
+// exactly the named observations to break — judged, not merely unread — while
+// every other one holds. A mutant that broke everything would otherwise pass
+// as a control of whatever it was named for.
+func runFindingsControl(t *testing.T, scenario string, play func(*testing.T, *Case, *Isolation) []telemetryFinding, mutant mutation, breaks ...string) {
+	t.Helper()
+	name := scenario + "-control-" + mutant.name
 	enterScenario(t, name)
 	want := "the " + mutant.name + " mutant breaks " + strings.Join(breaks, "; ") + ", and nothing else"
 	c := Start(t, Spec{
@@ -69,7 +74,7 @@ func runTelemetryControl(t *testing.T, mutant mutation, breaks ...string) {
 		c.Contradicted(want, "the mutant could not be built: %v", err)
 		return
 	}
-	findings := playClaudeTelemetry(t, c, Isolate(t, c, binary))
+	findings := play(t, c, Isolate(t, c, binary))
 	var wrong, broke []string
 	for _, finding := range findings {
 		expected := slices.Contains(breaks, finding.observation)

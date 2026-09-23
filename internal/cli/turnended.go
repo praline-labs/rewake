@@ -61,7 +61,12 @@ func handleTurnEnded(_ *Context, call Call) error {
 	observation := registry.ObservationFor(dir, self.Name, self.Epoch())
 	event.Ended = boottime.ProcessStarted
 	event.Started = telemetry.ReadTurnStart(telemetry.TurnStartPath(observation))
-	currentThread, _ := harness.SessionThread(self)
+	// The conversation the turn ended in, as the harness itself names it;
+	// a tracker is asked only when the payload named none.
+	currentThread := event.Thread
+	if currentThread == "" {
+		currentThread, _ = harness.SessionThread(self)
+	}
 
 	_ = completeTurn(dir, self, event, currentThread)
 	// Whatever comes next starts after this end, so the recorded start moves

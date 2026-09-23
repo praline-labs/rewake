@@ -25,6 +25,11 @@ import (
 // ID is the launch command and the harness field of a session record.
 const ID = "claude"
 
+// The collector is where a delivery learns its conversation; a change that
+// made it stop answering would leave every report without threadChanged and
+// nothing failing.
+var _ harness.ThreadSource = (*telemetry.Collector)(nil)
+
 // socketFlag asks Claude Code to put its inbox socket where we can name it. The
 // flag is undocumented but stable since 2.1.224; without it the socket lands
 // under a path derived from the pid, which we would then have to discover.
