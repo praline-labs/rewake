@@ -69,8 +69,10 @@ levels and can report context usage, the size of the window appears in a model's
 data, and the status line receives the context window size directly. This
 reconnaissance read the list of subcommands and the files on disk, not the SDK and not
 what the status line is handed, so it cannot say there is no source — only that it did
-not look where those are. What was not found anywhere is a ready-made catalogue of windows for
-all models without starting a session.
+not look where those are. What the status line is handed was read on September 23, 2026
+([research.md](research.md#telemetry-sources-the-status-line-and-hooks)): the running
+model's window, not a catalogue. What was not found anywhere is a ready-made catalogue of
+windows for all models without starting a session.
 
 **Three of those sources are unofficial**: the debug subcommand group, the internal
 cache, and the text of a warning message. `model/list` is part of an interface, but of
@@ -238,3 +240,23 @@ needed library, and `claude --version` answers `2.1.280 (Claude Code)` in a bare
 
 The `--version` answers the cache's `installed` selector reads: Codex prints
 `codex-cli 0.155.1`, Claude Code `2.1.280 (Claude Code)`.
+
+## Whether Claude Code has a client-server split to sit between
+
+**[help and the binary's bundled source, cached 2.1.280, no session started; September
+23, 2026]** Codex splits its interactive terminal from a session server over a
+documented protocol, and rewake owns that server. Claude Code offers nothing of that
+shape that a local program could stand between. Remote Control — `--remote-control
+[name]` and the subcommand spelled `remote-control`, `rc`, `remote`, `sync` or `bridge` —
+refuses to start without a claude.ai subscription login and talks to the vendor's
+service: the source names `wss://bridge.claudeusercontent.com`, `environments/bridge`
+and `/v1/sessions/<id>/events`. `CLAUDE_CODE_BRIDGE_SESSION_ID` is set from that bridge
+session's id. The one local split is background sessions: `--bg` starts a
+session under a supervisor, and `claude attach <id>` opens it in a terminal through a
+per-session `<id>.pty.sock` served by a pty host, with `claude logs` printing recent
+terminal output. What crosses that socket is a terminal, not a structured session
+protocol, it is undocumented, and relaying a terminal is outside rewake's boundaries.
+The structured protocol Claude Code does document is `--print` with
+`--input-format stream-json` and `--output-format stream-json`, the Agent SDK's
+transport. It runs without the interactive terminal, so a person would lose the screen
+they work in.

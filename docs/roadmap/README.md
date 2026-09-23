@@ -141,9 +141,10 @@ the collector.
 
 Not proposed, and not to be done: parsing the rendering of the status line. It is a
 display for a person, its format is not promised, and a reader of the screen would be
-fragile for no reason. How much that structure actually carries — model, effort,
-context fill, compactions, activity, the things collected from Codex — has not been
-established; that is its own reconnaissance.
+fragile for no reason. What that structure carries was established on September 23,
+2026, beside what the hooks carry, in [research.md](../research.md#telemetry-sources-the-status-line-and-hooks):
+model, effort and context fill are there, activity is not, and compactions come from
+hooks. Which mechanism to build is an owner decision still to be taken.
 
 Persistent Git permissions remain a separate future item: explicit orchestrator
 event, scope to run and repository, preservation across later owner turns, and revocation. A running turn keeps its prior permission context.

@@ -70,6 +70,32 @@ data about the session — the same shape by which the end of a turn already rea
 (`internal/harness/hooks.go`). The question for the research is whether Claude Code has
 a two-way path structured like the Codex one, and what it would give.
 
+What the status line and the hooks carry is now recorded
+([research.md](research.md#telemetry-sources-the-status-line-and-hooks)), and there is no
+local client-server split to stand between
+([research-launch.md](research-launch.md#whether-claude-code-has-a-client-server-split-to-sit-between)).
+The collector waits for the owner to choose its mechanism.
+
+## Then: Codex's `--worktree`
+
+rewake refuses Codex's `--worktree` today (`internal/harness/codex/codex.go`, the check
+before the launch plan; [launch.md](launch.md)). The session-owned app-server starts in
+the launch directory, while `--worktree` moves the conversation into a managed worktree
+that Codex creates itself. A plain git worktree, created first and launched from,
+already works.
+
+Two routes, to be chosen by research rather than built now. If the terminal creates the
+worktree and hands its directory to the server in `thread/start`, the refusal may be
+unnecessary and the flag can pass through the gateway. If not, rewake would create the
+worktree itself before starting the server — which copies Codex's allocation logic
+([research-permissions.md](research-permissions.md#managed-worktrees-and-continuation-permissions))
+and drifts with every Codex version.
+
+The research: where the installed and the latest Codex handle `--worktree` in their
+source, which fields `thread/start` takes in the generated schema, and one probe in the
+disposable container without a model call. It is the Codex path, so the launch does not
+change until the owner has seen the findings.
+
 ## Then: the parity queue
 
 The remaining entries of [harness-features.md](harness-features.md), in its order.

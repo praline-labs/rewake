@@ -154,6 +154,90 @@ twelve variables:
   confirming takes down-arrow then Enter. **[verified live]**
 - In the default mode, the agent calling Bash requires human confirmation.
 
+### Telemetry sources: the status line and hooks
+
+Gathered September 23, 2026, Claude Code 2.1.280. **[verified live]** here is one
+session of the installed binary under the owner's login, cheapest model, one turn
+delivered through the inbox socket and one `/compact`. **[container]** is the cached
+binary in the disposable container with no network and a placeholder API key: the
+status line runs there, because it renders before any request. **[source]** is the
+JavaScript bundled in the 2.1.280 binary.
+
+What the `statusLine` command receives on stdin, one JSON object:
+**[container; verified live]**
+
+- `session_id`, `transcript_path`, `cwd`, `scratchpad_dir`; `version`; `workspace`
+  (`current_dir`, `project_dir`, `added_dirs`); `output_style.name`.
+- `model.id` and `model.display_name`.
+- `effort.level` for a model that takes an effort — `medium` on Opus 5.5, then `high`
+  after `/effort high`. For Haiku 4.5 the key is absent altogether.
+- `context_window`: `total_input_tokens` is input plus cache creation plus cache read
+  of the **last** response — the current fill, not a running total — beside
+  `total_output_tokens`, `context_window_size`, `current_usage` (the four raw counts),
+  and `used_percentage`/`remaining_percentage`, rounded and clamped to 0–100. Before
+  the first response, and again after a compaction until the next one, the counts are
+  0 and `current_usage` and both percentages are `null`. Live: 34727 of 200000, 17%,
+  after one turn on Haiku 4.5; the window read 1000000 for both Opus 5.5 `[1m]` and
+  Sonnet 5 in the container.
+- `cost` (`total_cost_usd`, `total_duration_ms`, `total_api_duration_ms`, lines added
+  and removed), `exceeds_200k_tokens`, `fast_mode`, `thinking.enabled`.
+- `rate_limits` (`five_hour`, `seven_day`, each `used_percentage` and `resets_at`)
+  only under a subscription login, from about three seconds after start.
+- Conditionally, per the source: `session_name`, `prompt_cache`, `vim`, `agent`,
+  `remote`, `pr`, `worktree`.
+
+Nothing in it says whether the session is working, idle or waiting, and nothing
+about compaction beyond the context counts falling to `null`.
+
+When it runs **[source; the cadence confirmed in container and live]**: once when the
+footer mounts; 300 ms after any change of token usage, permission mode, model, effort,
+fast mode, thinking, vim mode or PR status, or after a new assistant message; on
+`/clear`; at a rate-limit reset and a prompt-cache expiry; and, only when
+`statusLine.refreshInterval` is set (seconds, at least 1), on that timer, idle
+included. A new run aborts the one in flight. Without the interval an idle session
+runs it not at all: once in 40 idle seconds, then once for each `/effort` and `/model`.
+It is skipped until the workspace is trusted; exit 0 is required and stdout, trimmed,
+is what is drawn. A managed policy may restrict the status line to its own.
+
+How `--settings` meets a configured status line **[container; verified live]**: the
+key is merged field by field. A user layer with `command`, `padding: 3` and
+`refreshInterval: 2`, under a `--settings` layer naming only `type` and `command`: only
+the flag's command ran, with the user's padding, eight times in about fifteen idle
+seconds. Live, the owner's own `refreshInterval` drove the probe's command every
+second. So a status line passed for one launch replaces the person's command for that
+session and inherits whatever else they set.
+
+Hooks **[verified live unless marked]**:
+
+- Every hook gets `session_id`, `transcript_path`, `cwd`, `scratchpad_dir`,
+  `prompt_id`, and on turn events `permission_mode`; `effort.level` when the model
+  takes one **[source]** — absent on Haiku 4.5.
+- `SessionStart` carries `source` and `model` (the id): `startup` at launch,
+  `compact` after a compaction; `clear` and `resume` per the source.
+- `UserPromptSubmit` fires for a message delivered through the inbox socket, and
+  carries its text in `prompt`.
+- `PreCompact` (`trigger` `manual` or `auto`, `custom_instructions`) and `PostCompact`
+  (`trigger`, `compact_summary`). A manual `/compact`: `PreCompact`, about ten seconds,
+  `SessionStart` with `source: compact`, `PostCompact` 8 ms later; `session_id` kept;
+  no `UserPromptSubmit` or `Stop` around it. Automatic compaction runs inside a turn
+  with `trigger: auto`, and a failed one runs `PreCompact` with no `PostCompact`
+  **[source]**.
+- `PreModelSwitch`/`PostModelSwitch`: `from_model`, `to_model`, `requested_model`,
+  `source` (`command` for `/model`), `context_tokens`, `prompt_cache_warm`,
+  `cache_ttl`, `estimated_cache_write_usd`, `pricing`. **[container]**
+- `Notification`: `message`, `title`, `notification_type`; the binary names
+  `permission_prompt`, `idle_prompt`, `agent_needs_input`, `agent_completed` and
+  others **[source]**. No `idle_prompt` arrived in 80 idle seconds.
+- `SessionEnd`: `reason`, `prompt_input_exit` for `/exit`. `Stop` also carries
+  `background_tasks` and `session_crons` **[source]**.
+- Conversation text travels in `prompt`, `last_assistant_message`,
+  `compact_summary` and `custom_instructions`; a consumer that must not read
+  transcripts drops them unread.
+
+`/clear` gives the session a new `session_id`, which the next status-line run already
+carries **[container]**; a compaction keeps it. Whether `Stop` fires when a person
+interrupts a turn was not observed.
+
 ## Codex CLI
 
 ### Delivery: `codex queue`

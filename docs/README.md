@@ -82,13 +82,14 @@ everything else.
 
 - [research.md](research.md) — what only a running session shows: the Claude Code socket
   line and its priority, waking an idle session, the Stop and StopFailure hook payloads
-  rewake reads, Codex app-server session ownership, and why a legacy notify cannot be
-  trusted as an error signal. Open it before touching delivery or wake behaviour, and
-  after a harness update. Its companions follow.
+  rewake reads, what the Claude Code status line and hooks hand a command about model,
+  context and compactions, Codex app-server session ownership, and why a legacy notify
+  cannot be trusted as an error signal. Open it before touching delivery or wake
+  behaviour, before building a Claude Code collector, and after a harness update. Its companions follow.
 - [research-launch.md](research-launch.md) — what an installed binary answers when run:
   model and effort catalogues and the usable context window, which flags may repeat,
-  undocumented aliases, when a `--help` probe can be trusted, and how each harness is
-  published on npm. Open it when adding a launch flag or when a model, an effort or a
+  undocumented aliases, when a `--help` probe can be trusted, how each harness is
+  published on npm, and whether Claude Code has a client-server split to stand between. Open it when adding a launch flag or when a model, an effort or a
   version is refused.
 - [research-protocol.md](research-protocol.md) — what the generated Codex schema and the
   reference source state: the flags schema generation needs, required fields of the
