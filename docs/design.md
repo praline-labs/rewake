@@ -301,10 +301,22 @@ belongs to the harness.
   List shows addresses, harnesses, ages, working directories, rooms and roles.
 - `send` prints the result as one line:
   ```
-  delivered to general-claude-2 via socket
-  delivered to write-codex via app-server
-  failed for write-codex: delivery thread is unavailable
+  Rewake: delivered to general-claude-2 via socket
+  Rewake: delivered to write-codex via app-server
+  Rewake: failed for write-codex: delivery thread is unavailable
   ```
+- A line rewake says itself in the ordinary flow starts with `Rewake:` and states the
+  outcome — a notice, a delivery result, an inbox header, a note of its own. It does
+  not explain the mechanism: that is in `--help` and the guide. The exceptions, named
+  in the guide too: text from another session keeps its own header —
+  `from <session> · <kind> · <time>`, `answer from <session>:` for a question,
+  `from <session> · <id> · text no longer kept` when `--owed` has lost the text — and
+  is printed as written; main's state line reads `<session>: <activity> | context … |
+  compactions …`; the availability and departure notices open with `Session
+  available.` or `Session is no longer available…` and keep their identity block, by
+  owner decision ([session-state.md](session-state.md#availability-notifications)).
+  Refusals keep their full form. Every such line is listed in
+  [the feed record](roadmap/2026-09-23-quiet-feed.md).
 - `--json` on every command prints the full model; the text form is deliberately
   trimmed down. No colors, no TTY-dependent behavior.
 - A single command table (name, arguments, flags, summary, examples, next) is

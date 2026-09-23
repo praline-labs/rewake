@@ -240,8 +240,10 @@ telemetry controls, each names what it must break and requires the rest to hold.
 
 `owed-reread` runs in both columns with a main and a worker. The worker reads a
 multi-line task and, in the same turn, runs `rewake inbox --owed` in both forms, as a
-session re-reading its task after a compaction would. Both must print that task in full,
-with the id the worker read it under, and the turn end must then report it once and
+session re-reading its task after a compaction would. Both must print that task in full;
+the machine form carries the id the worker read it under, and the text form opens with
+`Rewake: owed a report for 1 message:` and the sender's header and leaves the id out.
+The turn end must then report it once and
 settle it: asking changed nothing. Its mutant, an `--owed` that finds nothing, must break
 the first observation and hold the second.
 

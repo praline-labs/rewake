@@ -35,7 +35,7 @@ func TestOwedReread(t *testing.T) {
 }
 
 const (
-	obsOwedShown    = "rewake inbox --owed in the worker's turn prints the task it read, in full, with its id"
+	obsOwedShown    = "rewake inbox --owed in the worker's turn prints the task it read, in full, with its id in the machine form"
 	obsOwedReported = "the turn end after it reports the task once and settles it"
 	// owedTaskText has several lines, so a shortened or preview copy shows.
 	owedTaskText = "owed-reread-probe: rerun the check\nsecond line of the brief\nthird line, the last"
@@ -84,7 +84,8 @@ func playOwedReread(t *testing.T, c *Case, iso *Isolation, col column) []telemet
 	parsed := json.Unmarshal([]byte(machine), &model) == nil
 	shown := parsed && len(model.Messages) == 1 && model.Messages[0].ID == task.ID &&
 		model.Messages[0].Text == owedTaskText && model.Messages[0].Kind == "task" && model.Messages[0].Kept &&
-		strings.Contains(plain, owedTaskText) && strings.Contains(plain, task.ID)
+		strings.HasPrefix(plain, "Rewake: owed a report for 1 message:\n\nfrom "+sender.name+" · task · ") &&
+		strings.Contains(plain, owedTaskText) && !strings.Contains(plain, task.ID)
 	out := []telemetryFinding{finding(obsOwedShown, shown, "the task read was %s; --owed printed %q", task.ID, raw)}
 
 	var reports []reportView

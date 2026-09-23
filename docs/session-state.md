@@ -18,6 +18,10 @@ from write-codex ...
 ```
 
 Every fetched inbox kind receives the header, including notifications and reports.
+Owner decision, September 23, 2026, when the rest of the feed was trimmed: the header
+stays above every message main reads — not once per read, not only when a value
+changed — so main always knows each session's state at the message in front of it.
+Whoever next trims the feed leaves it there.
 Direct question answers use the same rule. [Current activity and service notices](session-activity.md)
 add primary status, compaction-complete and known-departure notifications. The [aligned session table](inbox-groups.md#session-table) adds these values and the
 confirmed configured primary-thread model and reasoning effort. The header is tool output,
@@ -40,6 +44,12 @@ also includes model/effort and context/compactions from that exact epoch's lates
 snapshot, as in list. Unknown state does not delay useful identity. JSON includes
 `availability` identity and the usual `telemetry` object. No separate list call is
 needed. The note owes no reply and cannot create a successful-report loop.
+
+Owner decision, September 23, 2026, when the rest of the feed was trimmed: the notice
+keeps its full block — its first line, then name, role, harness, room and cwd, one
+per line — rather than one line saying the session is back, so the reader never has
+to ask for them again. The departure notice keeps the same block for the same reason.
+Whoever next trims the feed leaves both as they are.
 
 A main started later labels prior ready workers as already available, rather than
 new launches. Deterministic IDs include both main and worker epochs. Publication

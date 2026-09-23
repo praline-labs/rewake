@@ -53,23 +53,29 @@ func owedIDs(model owedModel) []string {
 }
 
 // A read task and a read question are shown again in full, in the order they
-// were read, with sender, kind, id and time.
+// were read, with sender, kind and time; the ids stay in the machine form.
 func TestOwedShowsWhatWasReadInFull(t *testing.T) {
 	_, _, _, task, question := owedSetup(t)
 	code, out, errOut := run("inbox", "--owed")
 	if code != ExitOK {
 		t.Fatalf("exit %d: %s", code, errOut)
 	}
-	for _, want := range []string{"2 read and still owed a report", "from web · task · ", task, "rerun the smoke\nand paste the tail", "from web · question · ", question, "which port?"} {
+	if !strings.HasPrefix(out, "Rewake: owed a report for 2 messages:\n\nfrom web · task · ") {
+		t.Errorf("the output does not open with the count and the first message:\n%s", out)
+	}
+	for _, want := range []string{"from web · task · ", "rerun the smoke\nand paste the tail", "from web · question · ", "which port?"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("the output lacks %q:\n%s", want, out)
 		}
 	}
-	if strings.Index(out, task) > strings.Index(out, question) {
+	if strings.Contains(out, task) || strings.Contains(out, question) {
+		t.Errorf("the text form repeats message ids:\n%s", out)
+	}
+	if strings.Index(out, "rerun the smoke") > strings.Index(out, "which port?") {
 		t.Errorf("not in the order read:\n%s", out)
 	}
 	model := owed(t)
-	if len(model.Messages) != 2 || !model.Messages[0].Kept || model.Messages[0].Text != "rerun the smoke\nand paste the tail" ||
+	if len(model.Messages) != 2 || model.Messages[0].ID != task || model.Messages[1].ID != question || !model.Messages[0].Kept || model.Messages[0].Text != "rerun the smoke\nand paste the tail" ||
 		model.Messages[1].Kind != inbox.Question || model.Messages[0].From != "web" || model.Messages[0].CreatedAt.IsZero() {
 		t.Fatalf("got %+v", model)
 	}
@@ -82,7 +88,7 @@ func TestOwedIsEmptyOnceReported(t *testing.T) {
 		t.Fatal(err)
 	}
 	code, out, _ := run("inbox", "--owed")
-	if code != ExitOK || strings.Count(strings.TrimSpace(out), "\n") != 0 || !strings.HasPrefix(out, "Nothing read is owed a report to another session.") || !strings.Contains(out, "plain shell") {
+	if code != ExitOK || out != "Rewake: nothing owed a report.\n" {
 		t.Fatalf("exit %d: %q", code, out)
 	}
 	if model := owed(t); len(model.Messages) != 0 {
@@ -138,7 +144,7 @@ func TestOwedNamesWhatIsNoLongerKept(t *testing.T) {
 	if len(model.Messages) != 2 || model.Messages[0].ID != task || model.Messages[0].Kept || model.Messages[0].From != "web" {
 		t.Fatalf("got %+v", model)
 	}
-	if _, out, _ := run("inbox", "--owed"); !strings.Contains(out, "from web · "+task+" · the text is no longer kept") {
+	if _, out, _ := run("inbox", "--owed"); !strings.Contains(out, "from web · "+task+" · text no longer kept") {
 		t.Fatalf("got %s", out)
 	}
 }
@@ -197,7 +203,7 @@ func TestOwedRefusals(t *testing.T) {
 
 	t.Run("main owes nothing", func(t *testing.T) {
 		markMain(t, dir, self.Name)
-		if code, _, errOut := run("inbox", "--owed"); code != ExitUsage || !strings.Contains(errOut, "owes no reports") {
+		if code, _, errOut := run("inbox", "--owed"); code != ExitUsage || !strings.HasPrefix(errOut, self.Name+" owes no reports: a main session's reads record no obligation, so --owed has nothing to show.\n") {
 			t.Fatalf("exit %d, %s", code, errOut)
 		}
 	})

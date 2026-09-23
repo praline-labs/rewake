@@ -51,3 +51,10 @@ forms, and the turn end must then report it once and settle it. Its mutant
 only that one ([testing.md](../testing.md)).
 
 **Open.** The view for main, above, awaits the owner.
+
+**Later the same day.** The text form was trimmed with the rest of the feed
+([entry](2026-09-23-quiet-feed.md)): it opens with `Rewake: owed a report for <n>
+message(s):`, each message carries the header of an ordinary read without its id, and
+nothing owed is `Rewake: nothing owed a report.` The plain-shell explanation moved to
+`--help`, the id stayed in `--json`, and the workflow case now checks the id there and
+the header in the text.

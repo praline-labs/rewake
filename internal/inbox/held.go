@@ -254,7 +254,7 @@ func (s *Server) tellUndelivered(message Message, detail string) {
 		return
 	}
 	kind := KindOf(message)
-	text := fmt.Sprintf("Your %s to %s was not delivered: %s. The agent never saw it, it is not owed a report, and nothing sends it again; send it anew if it still matters.\n\nWhat was sent:\n%s",
+	text := fmt.Sprintf("Rewake: your %s to %s was not delivered: %s. Send it again if it still matters.\n\nWhat was sent:\n%s",
 		kind, s.Name, detail, message.Text)
 	_ = PutOnce(s.Dir, Message{
 		ID:          NewID(),

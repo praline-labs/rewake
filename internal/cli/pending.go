@@ -70,15 +70,12 @@ func handlePending(ctx *Context, call Call) error {
 		return failf("could not mark the turn pending: %v", err)
 	}
 	if len(waiting) == 0 {
-		return &UsageError{Command: call.Command, Message: "nothing is owed: no task or question read in this run waits for a report, so there is nothing to keep open; end the turn as usual."}
+		return &UsageError{Command: call.Command, Message: "nothing is owed a report, so there is nothing to keep open; end the turn as usual."}
 	}
 	for _, waiter := range waiting {
 		model.Waiting = append(model.Waiting, waiter.Name)
 	}
 	return printValue(ctx, model, func() []string {
-		return []string{
-			"pending: when this turn ends, " + strings.Join(model.Waiting, ", ") + " will read that the work is still going: " + text,
-			"The report follows at the next turn end. Better still: wait inside this turn.",
-		}
+		return []string{"Rewake: marked pending; at this turn's end " + strings.Join(model.Waiting, ", ") + " will read that the work goes on."}
 	})
 }

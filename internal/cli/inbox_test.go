@@ -53,7 +53,7 @@ func TestInboxShowsTheTextOnce(t *testing.T) {
 	}
 
 	_, again, _ := run("inbox")
-	if !strings.Contains(again, "No new messages.") {
+	if again != "Rewake: no new messages.\n" {
 		t.Errorf("second read = %q, want nothing new", again)
 	}
 }

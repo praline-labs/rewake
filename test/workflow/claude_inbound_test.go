@@ -165,7 +165,7 @@ func playClaudeInbound(t *testing.T, c *Case, iso *Isolation) []telemetryFinding
 	if record, ok := expiring.sent(c); !ok {
 		out = append(out, unjudged(obsHeldReported, "the sender recorded no send"))
 	} else {
-		out = append(out, finding(obsHeldReported, record.Outcome == "exit=3" && strings.HasPrefix(record.Detail, "held for "+expiring.worker.name+": "),
+		out = append(out, finding(obsHeldReported, record.Outcome == "exit=3" && strings.HasPrefix(record.Detail, "Rewake: held for "+expiring.worker.name+": "),
 			"the sender was told %s %q", record.Outcome, record.Detail))
 	}
 	// The note and the status follow the fixture's last word within a moment,

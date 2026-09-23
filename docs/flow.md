@@ -116,9 +116,9 @@ session's shell, or from a person's shell in the same room. A shell without
 4. **The file.** `inbox/write-codex/<id>.json.tmp`, renamed to `.json`. The id is
    time-sortable. Nothing else is touched: the sender does not deliver.
 5. **The wait.** The sender polls `<id>.status` for up to `--wait` seconds (5
-   by default) and prints one line: `delivered to write-codex via app-server`,
-   `pending for write-codex: …` or `held for write-codex: …` (exit 3), or
-   `failed` (exit 1).
+   by default) and prints one line: `Rewake: delivered to write-codex via app-server`,
+   `Rewake: pending for write-codex: …` or `Rewake: held for write-codex: …` (exit 3),
+   or `Rewake: failed for write-codex: …` (exit 1).
 
 ## Act 3. The wrapper announces it
 

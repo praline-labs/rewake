@@ -94,7 +94,7 @@ func TestSendWithoutAServerIsPending(t *testing.T) {
 	if code != ExitPending {
 		t.Fatalf("exit = %d, want %d (stderr: %s)", code, ExitPending, errOut)
 	}
-	if !strings.Contains(out, "pending for api") {
+	if !strings.HasPrefix(out, "Rewake: pending for api: ") {
 		t.Errorf("stdout does not explain the pending result: %q", out)
 	}
 

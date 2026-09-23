@@ -12,7 +12,7 @@ import (
 var ErrThreadUnavailable = errors.New("delivery thread is unavailable")
 
 // ThreadChangedWarning lets the caller decide whether an old task needs resending.
-const ThreadChangedWarning = "the reader's thread changed after delivery; the report may not answer it, resend the message"
+const ThreadChangedWarning = "Rewake: the reader's thread changed after delivery; this may not answer it, resend the message"
 
 func threadPath(dir, name string) string { return filepath.Join(state.InboxPath(dir, name), "threads") }
 

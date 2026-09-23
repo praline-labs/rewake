@@ -162,7 +162,7 @@ func playClaudeTelemetry(t *testing.T, c *Case, iso *Isolation) []telemetryFindi
 		out = append(out, telemetryFinding{observation: obsHeader, detail: "the worker's notify never reached the main: " + read()},
 			telemetryFinding{observation: obsCompactionNotice, detail: "the main's mail could not be judged"})
 	} else {
-		notice := "Primary compaction completed (observed count 1)."
+		notice := "Rewake: context compacted (compaction 1)."
 		waitFor(c, 5*time.Second, func() bool { return strings.Contains(read(), notice) })
 		header := worker.name + ": idle | context 25% used / 200K | compactions 1"
 		mail := read()

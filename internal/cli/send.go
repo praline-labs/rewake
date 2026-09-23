@@ -229,7 +229,7 @@ var awaitStatus = inbox.Await
 func sendLine(session registry.Session, model sendModel) string {
 	switch inbox.State(model.State) {
 	case inbox.Delivered:
-		line := fmt.Sprintf("delivered to %s", session.Name)
+		line := fmt.Sprintf("Rewake: delivered to %s", session.Name)
 		if model.Via != "" {
 			line += " via " + model.Via
 		}
@@ -238,11 +238,11 @@ func sendLine(session registry.Session, model sendModel) string {
 		}
 		return line
 	case inbox.Pending:
-		return fmt.Sprintf("pending for %s: %s", session.Name, model.Detail)
+		return fmt.Sprintf("Rewake: pending for %s: %s", session.Name, model.Detail)
 	case inbox.Held:
-		return fmt.Sprintf("held for %s: %s", session.Name, model.Detail)
+		return fmt.Sprintf("Rewake: held for %s: %s", session.Name, model.Detail)
 	default:
-		return fmt.Sprintf("failed for %s: %s", session.Name, model.Detail)
+		return fmt.Sprintf("Rewake: failed for %s: %s", session.Name, model.Detail)
 	}
 }
 

@@ -260,6 +260,10 @@ func notes() []Note {
 			Body:  "It shows up as one line: \"Rewake: <session> <kind>, <n> new message(s)\", with a 🟢 in front where the harness shows it as plain text. The following line previews the author's first line, limited to about 100 columns. Each notice has fixed member IDs. Ready new mail is submitted promptly through native start-or-steer, without waiting for peek or a completed turn. No reminders for old unread mail. Initial collection is 150 ms; later arrivals join the next available dispatch, never an already accepted notice. Git grants accompany only the actual eligible task announcement. Use rewake inbox --peek for a non-consuming overview, --message <id> for one full message, or plain inbox for all. Groups preserve separate identities and obligations. Start every message and final reply with one line stating its point. Errors use a red circle; keyboard stops use yellow.",
 		},
 		{
+			Title: "Rewake's own lines mostly start with Rewake:",
+			Body:  "A notice, a send result, an inbox header or a note from rewake itself opens with \"Rewake:\" and says what happened, not how. The exceptions: text from another session follows its own header — \"from <session> · <kind> · <time>\", \"answer from <session>:\" for a question, \"from <session> · <id> · text no longer kept\" when --owed has lost the text — and is printed as written; main's state line reads \"<session>: <activity> | context … | compactions …\"; the availability and departure notices open with \"Session available.\" or \"Session is no longer available…\" and keep their identity block. A note that a message was not delivered means the agent never saw it: it is owed no report and nothing sends it again.",
+		},
+		{
 			Title: "Kinds and replies",
 			Body:  kindSummary(),
 		},

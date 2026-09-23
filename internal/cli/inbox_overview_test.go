@@ -80,3 +80,18 @@ func TestConcurrentPeeksAndFailedReadRecording(t *testing.T) {
 		t.Fatal("peek created obligation")
 	}
 }
+
+// The overview is one line of rewake's own and a row per message: how to read
+// them is in the help, not repeated under every peek.
+func TestPeekPrintsACountAndRowsOnly(t *testing.T) {
+	dir, self, peer := stateCaller(t, "write")
+	leaveUnread(t, dir, inbox.Message{From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: inbox.Task, Text: "rerun the smoke"})
+	code, out, errOut := run("inbox", "--peek")
+	if code != ExitOK {
+		t.Fatal(errOut)
+	}
+	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
+	if len(lines) != 2 || lines[0] != "Rewake: 1 unread message:" || !strings.Contains(lines[1], " · "+peer.Name+" · task · ") || !strings.HasSuffix(lines[1], " · rerun the smoke") {
+		t.Fatalf("overview = %q", out)
+	}
+}

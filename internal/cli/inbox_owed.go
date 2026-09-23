@@ -28,7 +28,7 @@ func showOwed(ctx *Context, call Call, dir string, session registry.Session, epo
 	if role.Of(session.Role).Silent {
 		return &UsageError{
 			Command: call.Command,
-			Message: fmt.Sprintf("%s owes no reports: a %s session's reads record no obligation, so --owed has nothing to show. What you wait on from others comes back as reports; rewake list shows who is still working.", session.Name, session.Role),
+			Message: fmt.Sprintf("%s owes no reports: a %s session's reads record no obligation, so --owed has nothing to show.", session.Name, session.Role),
 		}
 	}
 	owed := inbox.OwedMessages(dir, session.Name, epoch)
@@ -45,20 +45,24 @@ func showOwed(ctx *Context, call Call, dir string, session registry.Session, epo
 
 func owedLines(messages []owedView) []string {
 	if len(messages) == 0 {
-		return []string{"Nothing read is owed a report to another session. A task sent from a plain shell owes no report and is not listed, so it cannot be shown again this way."}
+		return []string{"Rewake: nothing owed a report."}
 	}
-	lines := []string{fmt.Sprintf("%d read and still owed a report — shown again, nothing marked; ending your turn reports on them:", len(messages))}
+	noun := "messages"
+	if len(messages) == 1 {
+		noun = "message"
+	}
+	lines := []string{fmt.Sprintf("Rewake: owed a report for %d %s:", len(messages), noun)}
 	for _, message := range messages {
 		lines = append(lines, "")
 		if !message.Kept {
-			lines = append(lines, fmt.Sprintf("from %s · %s · the text is no longer kept", message.From, message.ID))
+			lines = append(lines, fmt.Sprintf("from %s · %s · text no longer kept", message.From, message.ID))
 			continue
 		}
 		if message.Telemetry != nil {
 			lines = append(lines, stateLine(message.From, message.Telemetry, message.Availability != nil || message.Departure != nil), "")
 		}
 		lines = append(lines,
-			fmt.Sprintf("from %s · %s · %s · %s", message.From, inbox.KindOf(message.Message), message.CreatedAt.Local().Format("15:04:05"), message.ID),
+			fmt.Sprintf("from %s · %s · %s", message.From, inbox.KindOf(message.Message), message.CreatedAt.Local().Format("15:04:05")),
 			message.Text,
 		)
 		if message.ThreadChanged {

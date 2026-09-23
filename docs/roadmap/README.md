@@ -82,6 +82,7 @@ without a date. Local installation without publishing is in
 | September 23, 2026 | [A named harness version, cached and run in a container](2026-09-23-harness-versions.md) | `tools/harnesscache`, `REWAKE_CODEX_VERSION`, and what 0.156.0 showed |
 | September 23, 2026 | [Honest delivery status for Claude Code](2026-09-23-honest-claude-delivery.md) | `held` as a state, the wrapper's reply socket, the first notice waiting for the status line |
 | September 23, 2026 | [Re-reading the owed task](2026-09-23-owed-reread.md) | `rewake inbox --owed`, and the rule to use it after a context compaction |
+| September 23, 2026 | [A quieter feed](2026-09-23-quiet-feed.md) | every text line of the ordinary flow, kept, shortened or dropped; two kept by owner decision |
 
 ## Remaining work — owner decisions, September 19–21, 2026
 

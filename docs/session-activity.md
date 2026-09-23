@@ -35,8 +35,9 @@ an assignment was abandoned and triggers no automatic restart or task resend.
 Only the already-deduplicated canonical primary item completion produces a cue.
 Start, failed/interrupted maintenance without completion, deprecated events and
 historical/replayed items do not produce completed notices. Counter and side rules
-are unchanged. Main receives a no-reply notify with the completed sequence/count;
-its normal state header shows current primary activity and the latest counter.
+are unchanged. Main receives a no-reply notify with the completed sequence/count, whose text reads
+`Rewake: context compacted (compaction <n>).`; its normal state header shows current
+primary activity and the latest counter.
 The worker is not woken by this notification.
 
 Native readers only update a bounded in-memory tail of 64 completion cues. The

@@ -147,7 +147,7 @@ func TestAnExpiredTaskIsFailedAndItsSenderTold(t *testing.T) {
 	if note == nil || note.Kind != Note || note.To != "web" || note.ToEpoch != "web-epoch" || note.Undelivered.Kind != Task {
 		t.Fatalf("the sender was not told: %+v", note)
 	}
-	if !strings.Contains(note.Text, "rerun the smoke") || !strings.Contains(note.Text, "it expired unreleased") {
+	if note.Text != "Rewake: your task to api was not delivered: it expired unreleased. Send it again if it still matters.\n\nWhat was sent:\nrerun the smoke" {
 		t.Fatalf("the note does not say what or why: %q", note.Text)
 	}
 	if Owed(*note) {

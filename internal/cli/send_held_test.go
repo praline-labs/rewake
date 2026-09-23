@@ -34,7 +34,7 @@ func TestAHeldSendIsNotReportedDelivered(t *testing.T) {
 	if code != 3 {
 		t.Fatalf("exit %d, want 3; stdout %q stderr %q", code, out, errOut)
 	}
-	if !strings.HasPrefix(out, "held for api: the session holds the notice") {
+	if !strings.HasPrefix(out, "Rewake: held for api: the session holds the notice") {
 		t.Fatalf("stdout %q", out)
 	}
 	code, out, _ = run("send", "api", "rerun the smoke", "--json")

@@ -38,7 +38,7 @@ a short notice and preview rather than the full body.
    result. `delivered` means the notice went out; `read` counts as delivered.
    `held` is not an answer yet and the wait goes on through it: a release or an
    expiry usually follows within the wait. A message still `held` when the wait
-   ends prints `held for <name>: <why>` and exits 3, like `pending` — accepted,
+   ends prints `Rewake: held for <name>: <why>` and exits 3, like `pending` — accepted,
    not delivered. A question then waits for its answer (below), and stops
    waiting, with exit 1, if its own status turns `failed` meanwhile: a hold that
    expired or a session that ended means no answer is coming.
@@ -90,8 +90,10 @@ ordinary delivery once all active questions finish. Receipts and stale marks
 are swept by age with the other mailbox records.
 
 When the wait ends, send looks once more under the lock. Without an answer it
-exits 3; after the reservation is released, any report arriving around that
-last look is still queued for an ordinary `finished` notice. No atomic removal
+prints `Rewake: no answer from <name> yet; it arrives later as its report` and exits
+3; the `--json` detail keeps its longer wording. After the reservation is released,
+any report arriving around that last look is still queued for an ordinary `finished`
+notice. No atomic removal
 and final peek are needed to prevent an unannounced answer from being stranded.
 
 ### One lock per mailbox
@@ -140,9 +142,11 @@ the harness's reason, and it is not retried. It ends when the adapter passes on 
 the hold ended, as a receipt the server reads alongside the mailbox: `delivered`
 settles it as delivered; `failed` settles it as failed and, for a task or question,
 writes its sender a note (kind `notify`, with an `undelivered` field naming the
-message, its kind and why) saying it never reached the agent, is owed no report, and
-is not sent again. Nothing is replayed automatically. A session that ends with
-messages still held fails them the same way. The agent may still read a held message
+message, its kind and why). Its text is `Rewake: your <kind> to <name> was not
+delivered: <why>. Send it again if it still matters.`, then what was sent; the rest —
+the agent never saw it, it is owed no report, nothing sends it again — follows from
+the kind and is in the guide, not in the note. Nothing is replayed automatically. A
+session that ends with messages still held fails them the same way. The agent may still read a held message
 on its own — it is readable, and nothing hides it — and that read is final like any
 other: a later expiry changes nothing and tells nobody.
 
@@ -236,9 +240,10 @@ Two readers at once are serialized: the second finds nothing new.
 What a session has read and not reported on is exactly what its
 `awaiting/<own epoch>/` records name: a report clears the ids it settles, and an
 interim turn end (`rewake pending`) or a stop keeps them. `--owed` prints those
-messages again, in full — sender, kind, time, id and text, from `done/` (or
-`unread/`, for a read whose last step failed) — oldest read first, in text or
-`--json`. It is the task a session is working on, from the mailbox rather than from
+messages again, in full — under `Rewake: owed a report for <n> message(s):`, each with
+the sender, kind and time of an ordinary read and its text, from `done/` (or
+`unread/`, for a read whose last step failed) — oldest read first; `--json` adds each
+id. It is the task a session is working on, from the mailbox rather than from
 memory, which is what a session needs after a context compaction: a summary retells
 the brief and can drop an item. The write and general playbooks tell it to re-read
 there and to say so in its report.
@@ -246,12 +251,13 @@ there and to say so in its report.
 It only reads. No lock is taken — every record it reads is written whole or not at
 all — and nothing is marked read, recorded, announced or given a status, so a second
 read is not a second obligation. A message whose text is gone is still named, by id
-and sender, with `kept: false`; the age sweep of `done/` and `unread/` keeps what the
-current run still owes, however old. Nothing owed is one line and exit 0. Only work from
-another session is owed: a task sent from a plain shell has no run to report to, records
-no wait, and so is not listed and cannot be shown again this way — the one-line answer
-says so. Mail not yet read — unread,
-pending or held — is not owed and does not appear.
+and sender (`text no longer kept`), with `kept: false`; the age sweep of `done/` and
+`unread/` keeps what the current run still owes, however old. Nothing owed is one
+line, `Rewake: nothing owed a report.`, and exit 0. Only work from another session is
+owed: a task sent from a plain shell has no run to report to, records no wait, and so
+is not listed and cannot be shown again this way — `--help` says so, the one-line
+answer does not. Mail not yet read — unread, pending or held — is not owed and does
+not appear.
 
 `--owed` is used alone: `--peek` and `--message` look at unread mail, and a
 combination is refused. A main session is refused too, naming why: its reads record no
@@ -328,7 +334,7 @@ or the wrapper epoch. A new conversation does not clear waits or resend tasks.
 `rewake inbox` prints this line beneath a marked report:
 
 ```
-the reader's thread changed after delivery; the report may not answer it, resend the message
+Rewake: the reader's thread changed after delivery; this may not answer it, resend the message
 ```
 
 A waiting `send --question` also prints the warning and preserves the boolean in

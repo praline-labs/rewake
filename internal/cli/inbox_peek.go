@@ -62,15 +62,19 @@ func writeInboxPeek(ctx *Context, name string, messages []messageView) error {
 	}
 	return printValue(ctx, model, func() []string {
 		if len(model.Messages) == 0 {
-			return []string{"No new messages."}
+			return []string{"Rewake: no new messages."}
 		}
-		lines := []string{fmt.Sprintf("%d unread messages (overview; none marked read):", len(model.Messages))}
+		noun := "messages"
+		if len(model.Messages) == 1 {
+			noun = "message"
+		}
+		lines := []string{fmt.Sprintf("Rewake: %d unread %s:", len(model.Messages), noun)}
 		for _, message := range model.Messages {
 			if message.Telemetry != nil {
 				lines = append(lines, stateLine(message.From, message.Telemetry, false))
 			}
 			lines = append(lines, fmt.Sprintf("%s · %s · %s · %s · %s", message.ID, message.From, message.Kind, message.CreatedAt.Local().Format("2006-01-02 15:04:05"), message.Preview))
 		}
-		return append(lines, "Read one: rewake inbox --message <id>; read all: rewake inbox")
+		return lines
 	})
 }

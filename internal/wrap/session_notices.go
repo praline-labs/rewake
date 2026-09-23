@@ -82,7 +82,7 @@ func (n *sessionNotices) scan(ctx context.Context, dir string, self registry.Ses
 func compactionMessage(self, peer registry.Session, event sessionstate.CompactionEvent) inbox.Message {
 	identity := fmt.Sprintf("compaction\x00%s\x00%s\x00%s\x00%s\x00%d", self.Name, self.Epoch(), peer.Name, peer.Epoch(), event.Sequence)
 	sum := sha256.Sum256([]byte(identity))
-	return inbox.Message{ID: fmt.Sprintf("%019d-%x", event.ObservedAt.UnixNano(), sum[:12]), From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: inbox.Note, CreatedAt: time.Now(), Text: fmt.Sprintf("Primary compaction completed (observed count %d).", event.Sequence), Compaction: &inbox.CompactionNotice{Count: event.Sequence, ObservedAt: event.ObservedAt}}
+	return inbox.Message{ID: fmt.Sprintf("%019d-%x", event.ObservedAt.UnixNano(), sum[:12]), From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: inbox.Note, CreatedAt: time.Now(), Text: fmt.Sprintf("Rewake: context compacted (compaction %d).", event.Sequence), Compaction: &inbox.CompactionNotice{Count: event.Sequence, ObservedAt: event.ObservedAt}}
 }
 
 func (n *sessionNotices) announceCompactions(ctx context.Context, dir string, self registry.Session, worker *knownWorker) error {

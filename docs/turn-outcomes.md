@@ -34,8 +34,9 @@ Owner decision, September 23, 2026: a turn end stays the report by default. A se
 about to end a turn that has not finished the work — background work still running —
 runs `rewake pending "<what it waits for>"` first. That turn end then reaches every
 waiter as a `pending` message carrying that text, instead of the report; it owes
-nothing, settles nothing, and the waits stay open. The next turn end without a mark is
-the report, as usual. A forgotten `pending` gives the behaviour without it, never worse;
+nothing, settles nothing, and the waits stay open. The command itself answers one line,
+`Rewake: marked pending; at this turn's end <senders> will read that the work goes on.`
+The next turn end without a mark is the report, as usual. A forgotten `pending` gives the behaviour without it, never worse;
 a `finished` marker the worker had to remember would have left the obligation open for
 ever when forgotten, which is why it was not chosen.
 

@@ -64,7 +64,7 @@ func TestCompactionRetrievalShowsLatestActivityWithoutEventTail(t *testing.T) {
 		if err := sessionstate.Save(dir, peer.Name, peer.Epoch(), snapshot); err != nil {
 			t.Fatal(err)
 		}
-		leaveUnread(t, dir, inbox.Message{From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: inbox.Note, Text: "Primary compaction completed.", Compaction: &inbox.CompactionNotice{Count: 2, ObservedAt: time.Now()}})
+		leaveUnread(t, dir, inbox.Message{From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: inbox.Note, Text: "Rewake: context compacted (compaction 2).", Compaction: &inbox.CompactionNotice{Count: 2, ObservedAt: time.Now()}})
 		args := []string{"inbox"}
 		if asJSON {
 			args = append(args, "--json")

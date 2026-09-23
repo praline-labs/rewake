@@ -64,7 +64,7 @@ func TestAPendingTurnEndKeepsTheTaskOwed(t *testing.T) {
 	self, _ := registry.Lookup(dir, "api")
 	turnStarted(t, dir, self, markAt-1)
 
-	if code, out, errOut := run("pending", "the suite is running"); code != ExitOK || !strings.Contains(out, "web") {
+	if code, out, errOut := run("pending", "the suite is running"); code != ExitOK || out != "Rewake: marked pending; at this turn's end web will read that the work goes on.\n" {
 		t.Fatalf("pending: %d %s %s", code, out, errOut)
 	}
 	end := boottime.Now()
@@ -214,7 +214,7 @@ func TestPendingIsRefusedWhereItMeansNothing(t *testing.T) {
 		t.Errorf("no turn start: %d %s", code, errOut)
 	}
 	turnStarted(t, dir, self, markAt-1)
-	if code, _, errOut := run("pending", "x"); code != ExitUsage || !strings.Contains(errOut, "nothing is owed") {
+	if code, _, errOut := run("pending", "x"); code != ExitUsage || !strings.HasPrefix(errOut, "nothing is owed a report, so there is nothing to keep open; end the turn as usual.\n") {
 		t.Errorf("nothing owed: %d %s", code, errOut)
 	}
 	if code, _, errOut := run("pending", " "); code != ExitUsage || !strings.Contains(errOut, "needs the text") {

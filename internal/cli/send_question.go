@@ -76,7 +76,9 @@ func answerQuestion(ctx *Context, question sent) error {
 		}
 		model.State = string(inbox.Pending)
 		model.Detail = fmt.Sprintf("no answer from %s yet; it will arrive as a \"Rewake: %s finished\" line or a grouped notice, to be read with rewake inbox", target.Name, target.Name)
-		line := fmt.Sprintf("asked %s: %s", target.Name, model.Detail)
+		// The detail stays as it was for --json; the line leaves out how the
+		// answer is announced, which the guide says.
+		line := fmt.Sprintf("Rewake: no answer from %s yet; it arrives later as its report", target.Name)
 		if ctx.JSON {
 			_ = printValue(ctx, model, func() []string { return nil })
 			return &PendingError{Message: ""}

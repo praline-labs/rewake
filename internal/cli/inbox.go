@@ -42,7 +42,7 @@ func handleInbox(ctx *Context, call Call) error {
 	case errors.Is(err, errNotASession):
 		return &UsageError{
 			Command: call.Command,
-			Message: "This shell is not part of a rewake session, so it has no inbox. Start an agent with rewake to give it one.",
+			Message: "This shell is not part of a rewake session, so it has no inbox.",
 		}
 	case errors.Is(err, errEarlierRun):
 		return failf("%v; its mail is not this shell's to read", err)
@@ -129,7 +129,7 @@ func writeInbox(ctx *Context, model inboxModel) error {
 
 func inboxLines(messages []messageView) []string {
 	if len(messages) == 0 {
-		return []string{"No new messages."}
+		return []string{"Rewake: no new messages."}
 	}
 	var lines []string
 	for index, message := range messages {
