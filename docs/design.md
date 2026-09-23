@@ -95,6 +95,7 @@ Created with 0700. [Optional primary observations](session-state.md) are collect
     sock/<name>.<epoch>.reply.sock the wrapper's own: Claude Code's receipts for held lines
     sock/<name>.<epoch>.obs    Claude Code telemetry datagrams to the wrapper
     sock/<name>.<epoch>.obs.turn/ when its latest turn started, one file per reading, for `rewake pending`
+    sock/<name>.<epoch>.obs.plugin/ rewake's function-hooks plugin for this run (claude-plugin.md)
 ```
 
 All mailbox paths in the delivery specification are relative to the room.

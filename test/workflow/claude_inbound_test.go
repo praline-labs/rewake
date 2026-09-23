@@ -194,7 +194,10 @@ func playClaudeInbound(t *testing.T, c *Case, iso *Isolation) []telemetryFinding
 	})
 	out = append(out, finding(obsExpiryTold, told && note.Kind == "notify" && note.Undelivered.Kind == "task" && strings.Contains(note.Text, inboundExpireText),
 		"a note from the worker naming the task: %v; kinds the sender read from it: %v", told, kindsFrom(expiring.sender, expiring.worker)))
-	owed, _ := filepath.Glob(filepath.Join(iso.StateDir, "rooms", "default", "inbox", expiring.worker.name, "awaiting", "*", "*"))
+	// A name with a leading dot is the wrapper's own bookkeeping — the read
+	// clock a run keeps beside its obligations — and owes nothing; a Go
+	// glob's * matches it all the same.
+	owed, _ := filepath.Glob(filepath.Join(iso.StateDir, "rooms", "default", "inbox", expiring.worker.name, "awaiting", "*", "[^.]*"))
 	out = append(out, finding(obsExpiryUnsettled, state == "failed" && expiring.worker.acceptedTurns() == "" && len(owed) == 0,
 		"the task's status %q; turns worked %q; owed %v; gate %v", state, expiring.worker.acceptedTurns(), owed, expiring.events()))
 	return append(out, playRefusalAndLate(c, iso, refusing, late)...)

@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/iiiokojiadbi/rewake/internal/harness"
 	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
 )
 
@@ -29,6 +30,13 @@ type Collector struct {
 	// drawn is closed on the first status line; see Drawn.
 	drawn     chan struct{}
 	drawnOnce sync.Once
+
+	// turns publishes an interrupted turn's outcome (collector_turns.go);
+	// stops queues them for the one goroutine that does, which Close waits
+	// for.
+	turns  harness.CompletionHandler
+	stops  chan harness.Completion
+	worker sync.WaitGroup
 }
 
 // NewCollector listens at path once started.
@@ -71,6 +79,11 @@ func (c *Collector) Start(ctx context.Context) error {
 	}
 	c.mu.Lock()
 	c.conn = conn
+	if c.turns.Publish != nil {
+		c.stops = make(chan harness.Completion, maxQueuedStops)
+		c.worker.Add(1)
+		go c.publishStops(ctx)
+	}
 	c.mu.Unlock()
 	go c.read(conn)
 	go func() {
@@ -104,28 +117,40 @@ func (c *Collector) read(conn *net.UnixConn) {
 		}
 		c.mu.Lock()
 		c.folded.apply(event, time.Now())
+		thread := c.folded.thread
 		c.mu.Unlock()
+		if event.Kind == TurnComplete && event.Reason == ReasonAborted {
+			c.interrupted(event, thread)
+		}
 		if event.Kind == StatusLine {
 			c.drawnOnce.Do(func() { close(c.drawn) })
 		}
 	}
 }
 
-// Close stops listening and removes the socket.
+// Close stops listening, waits for an interruption being published, and
+// removes the socket and what lies beside it. The plugin directory goes even
+// when the collector never started: the launch wrote it all the same.
 func (c *Collector) Close() {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	select {
 	case <-c.done:
+		c.mu.Unlock()
 		return
 	default:
 	}
 	close(c.done)
-	if c.conn != nil {
+	started := c.conn != nil
+	if started {
 		_ = c.conn.Close()
+	}
+	c.mu.Unlock()
+	c.worker.Wait()
+	if started {
 		_ = os.Remove(c.path)
 		_ = os.RemoveAll(TurnStartPath(c.path))
 	}
+	_ = os.RemoveAll(PluginPath(c.path))
 }
 
 // Thread is the conversation the session's events last named: the harness's

@@ -171,6 +171,30 @@ func (s *shimSession) turnCompletedEvent(id, text string, failed bool) map[strin
 	}
 }
 
+// interruptedEvent ends the turn the way a person's Esc does: status
+// "interrupted", with what was produced before it.
+func (s *shimSession) interruptedEvent(id, text string) map[string]any {
+	return map[string]any{
+		"method": "turn/completed",
+		"params": map[string]any{"threadId": s.thread, "turn": turnObject(id, "interrupted", agentMessageItem(id, text))},
+	}
+}
+
+// interruptNow reports whether this turn is the first one, to be interrupted
+// under shimInterruptFirst; later turns end as usual.
+func (s *shimSession) interruptNow() bool {
+	if os.Getenv(shimInterruptFirst) == "" {
+		return false
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.interrupted {
+		return false
+	}
+	s.interrupted = true
+	return true
+}
+
 // workTurn is what a session does with a delivery: read the mail, then finish
 // the turn with something to say.
 func (s *shimSession) workTurn(id string, notice mailboxNotice) {
@@ -209,6 +233,16 @@ func (s *shimSession) workTurn(id string, notice mailboxNotice) {
 	}
 	recordOwedOnce()
 	markPendingOnce()
+	if s.interruptNow() {
+		s.mu.Lock()
+		s.broadcast(s.itemCompletedEvent(id, text))
+		s.broadcast(s.interruptedEvent(id, text))
+		s.broadcast(s.threadStatusChangedEvent(idleStatus()))
+		s.mu.Unlock()
+		s.recordTurn(id + " interrupted")
+		s.recordTurnEvent("completed", id, "interrupted")
+		return
+	}
 	s.mu.Lock()
 	// The content first, then the terminal event: a report without content is
 	// not a report, and the wrapper assembles one from what it saw in order.

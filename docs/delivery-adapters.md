@@ -112,6 +112,18 @@ would let an answer from a fresh conversation pass for an answer to the task. Co
 the `thread-changed` workflow case on the fixture since September 23, 2026
 ([testing.md](testing.md)); not yet observed live (HF-10).
 
+**How a turn ends for rewake.** The Stop hook for a turn that answered, StopFailure for
+one that failed, each running `rewake turn-ended`, and — since September 23, 2026 — the
+plugin's `turn.complete` with reason `aborted` for a turn a person interrupted, which
+runs neither hook ([claude-plugin.md](claude-plugin.md)). The last one reaches the
+wrapper through the telemetry collector rather than a hook process, and the wrapper
+publishes it as `stopped` itself, with the read boundary it holds at that moment. The
+plugin's other turn ends are not reported, so an ordinary turn still gives one report;
+nor is an `aborted` end after the turn's Stop or StopFailure hook ran, which the module
+itself leaves out.
+Where the plugin does not load, an interruption is not heard at all, and the session's
+telemetry says so (`interruptions: unobserved`).
+
 ## Codex adapter
 
 The wrapper's gateway follows the native TUI's own accepted primary intent and

@@ -53,22 +53,39 @@ func TestStoppedKeepsWorkForTheHumanContinuation(t *testing.T) {
 	}
 }
 
-func TestStoppedFallsBackToMainWithoutCreatingReplyWork(t *testing.T) {
+// A stop nobody waits on sends nothing, from a worker or from main itself:
+// only the senders of what the session read and still owes hear of it.
+func TestStoppedWithNobodyWaitingSendsNothing(t *testing.T) {
 	dir := liveSession(t, "api")
 	otherRun(t, dir, "leader")
 	markMain(t, dir, "leader")
+	event := turnResult{ID: "thread/stop", Stopped: true, Text: "the person at the keyboard stopped this turn"}
+	for _, name := range []string{"api", "leader"} {
+		self, err := registry.Lookup(dir, name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for range 2 {
+			if err := completeTurn(dir, self, event, "thread"); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	for _, name := range []string{"api", "leader"} {
+		if files := finishedFor(t, dir, name); len(files) != 0 {
+			t.Fatalf("%s received %v", name, files)
+		}
+	}
+	// A failure nobody waits on still reaches main.
 	self, err := registry.Lookup(dir, "api")
 	if err != nil {
 		t.Fatal(err)
 	}
-	event := turnResult{ID: "thread/stop", Stopped: true, Text: "the person at the keyboard stopped this turn"}
-	for range 2 {
-		if err := completeTurn(dir, self, event, "thread"); err != nil {
-			t.Fatal(err)
-		}
+	if err := completeTurn(dir, self, turnResult{ID: "thread/fail", Failed: true, Text: "broken"}, "thread"); err != nil {
+		t.Fatal(err)
 	}
-	if reportObject(t, dir, "leader")["kind"] != "stopped" {
-		t.Fatal("main did not receive stopped")
+	if reportObject(t, dir, "leader")["kind"] != "error" {
+		t.Fatal("main did not receive the failure")
 	}
 	if _, err := parse([]string{"send", "api", "manual", "--stopped"}); err == nil {
 		t.Fatal("manual stopped reports must be refused")

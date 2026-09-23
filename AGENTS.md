@@ -318,5 +318,5 @@ current lines:
 
 ```
 Co-Authored-By: Codex (gpt-6-astra) <noreply@openai.com>
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ```

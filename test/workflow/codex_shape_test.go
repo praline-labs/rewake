@@ -31,6 +31,7 @@ func TestShimAnswersMatchTheInstalledSchema(t *testing.T) {
 			"the turn/started event matches TurnStartedNotification",
 			"the item/completed event matches ItemCompletedNotification",
 			"the turn/completed event matches TurnCompletedNotification",
+			"the interrupted turn/completed event matches TurnCompletedNotification",
 			"the working thread/status/changed event matches ThreadStatusChangedNotification",
 			"the idle thread/status/changed event matches ThreadStatusChangedNotification",
 			"the fixture refuses every delivery the schema refuses",
@@ -94,6 +95,8 @@ func TestShimAnswersMatchTheInstalledSchema(t *testing.T) {
 		eventParams(session.itemCompletedEvent("turn-1", "read: something")))
 	check(c, bundle, "TurnCompletedNotification", "the turn/completed event matches TurnCompletedNotification",
 		eventParams(session.turnCompletedEvent("turn-1", "read: something", false)))
+	check(c, bundle, "TurnCompletedNotification", "the interrupted turn/completed event matches TurnCompletedNotification",
+		eventParams(session.interruptedEvent("turn-1", "read: something")))
 	// Both statuses the fixture sends, not only the interesting one. The active
 	// variant requires activeFlags beside the type and the idle variant the
 	// type alone, so they are two shapes and a check that saw one of them

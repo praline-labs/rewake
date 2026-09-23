@@ -164,7 +164,10 @@ func playClaudeTelemetry(t *testing.T, c *Case, iso *Isolation) []telemetryFindi
 	} else {
 		notice := "Rewake: context compacted (compaction 1)."
 		waitFor(c, 5*time.Second, func() bool { return strings.Contains(read(), notice) })
-		header := worker.name + ": idle | context 25% used / 200K | compactions 1"
+		// The worker runs no plugin — this case passes it no node — so its
+		// turns are heard through the hooks alone, and the header says that
+		// interruptions go unheard.
+		header := worker.name + ": idle; interruptions unheard | context 25% used / 200K | compactions 1"
 		mail := read()
 		out = append(out, finding(obsHeader, strings.Contains(mail, header), "looked for %q in what the main read", header))
 		out = append(out, finding(obsCompactionNotice, strings.Contains(mail, notice), "looked for %q in what the main read", notice))

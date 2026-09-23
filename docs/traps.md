@@ -47,8 +47,15 @@ way — inferred, not observed.
 
 Across a `/clear` the report now carries `threadChanged`, so the sender is warned it may
 not answer the task (HF-10, [delivery-adapters.md](delivery-adapters.md#claude-code-adapter)).
-In the same conversation nothing marks it: rewake cannot hear the interruption (HF-06).
-Open.
+
+Mitigated, not removed, since September 23, 2026: rewake's function-hooks plugin hears
+the interruption, and the sender reads `stopped` for the task at once and waits for the
+person, as on Codex ([claude-plugin.md](claude-plugin.md)). The task stays owed, and the
+next turn end that finishes still settles it — the owner's decision, the same on both
+harnesses. The remaining risk is a person who, after Esc, turns the session to unrelated
+work: that work's `finished` then settles the interrupted task. Where the plugin does
+not load — `--bare`, an untrusted workspace, another harness version — the session's
+telemetry reads `interruptions: unobserved` and the defect is as before.
 
 *September 23, 2026.*
 

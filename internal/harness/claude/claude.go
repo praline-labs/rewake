@@ -214,6 +214,8 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 	}
 	args, settingsNotes := applySettings(args, cwd, request.Role.Silent, observation)
 	notes = append(notes, settingsNotes...)
+	args, env, pluginNotes := applyPlugin(args, env, observation)
+	notes = append(notes, pluginNotes...)
 	if !harness.HasFlag(args, toolFlag) {
 		args = harness.AddFlags(args, toolFlag, "Bash(rewake:*)")
 	}

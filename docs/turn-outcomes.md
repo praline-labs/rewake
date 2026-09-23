@@ -64,18 +64,20 @@ ever when forgotten, which is why it was not chosen.
   there — two hooks at once cannot leave the older reading on top. A late hook of the
   current turn therefore records an earlier time than the mark's and cannot clear it; a
   turn started after the mark always records a later one. Every turn end that reaches
-  `rewake turn-ended` also records its own end there, so the next turn is known to start
-  after it even without a UserPromptSubmit. Without any reading — the telemetry hooks are
+  `rewake turn-ended` also records its own end there, and so does an interruption the
+  plugin reports ([claude-plugin.md](claude-plugin.md)), so the next turn is known to
+  start after it even without a UserPromptSubmit. Without any reading — the telemetry hooks are
   not running — `rewake pending` is refused on Claude Code.
-- **The gap that remains.** If a turn end with a mark is lost — an Esc, a stdin or lock
-  timeout — and Claude Code then starts a turn by itself, without UserPromptSubmit, and
+- **The gap that remains.** If a turn end with a mark is lost — an Esc where the plugin
+  did not load, a stdin or lock timeout — and Claude Code then starts a turn by itself, without UserPromptSubmit, and
   that turn's end is the first one heard, its final answer leaves as an interim message
   and the report does not come. Not verified live: whether Claude Code fires
   UserPromptSubmit for a turn it starts by itself, to report a background task. Recording
   every heard turn end narrows the gap to that one sequence.
 - **Both harnesses** take the same path from there: the Stop hook through `rewake
-  turn-ended`, and Codex's completion from the gateway, into the one function that
-  prepares a turn's reports, which asks for the mark once per turn end.
+  turn-ended`, the plugin's interruption from the collector, and Codex's completion from
+  the gateway, into the one function that prepares a turn's reports, which asks for the
+  mark once per turn end.
 - **Only a normal finish is softened.** A failed or stopped turn reports `error` or
   `stopped` as it would have; the mark is used up by it all the same.
 - **The message** has its own report id (the wait's id plus `-pending-<turn>`), like
@@ -91,8 +93,17 @@ ever when forgotten, which is why it was not chosen.
 
 ## Keyboard stops
 
-A stopped outcome is advisory and hook-only. It goes to the current waiters,
-otherwise to main, using the text "the person at the keyboard stopped this turn".
+A stopped outcome is advisory and comes from the adapter that heard the turn end. It goes to the current waiters
+— the senders of read, unsettled tasks and questions — using the text "the person at the
+keyboard stopped this turn". With no waiter it goes nowhere: unlike an error, it does not
+fall back to main, and main's own interruption puts nothing into its own inbox. A person
+interrupting a turn no rewake task depends on is their own business, and the session
+turning idle in the telemetry says all there is to say — the owner's decision of
+September 23, 2026, the same on both harnesses, since the routing
+(`internal/cli/turn_reports.go`) is shared. A waiter whose session has ended, or runs
+under another epoch, is no waiter any more: a `stopped` meant only for it is dropped too,
+where it used to go to main. The turn receipt is kept all the same, so a repeated event
+publishes nothing either.
 It owes no reply and has its own report id, separate from the eventual result.
 Its separate advisory turn receipt keeps the original waits intact. A finished
 or error outcome for the same native turn uses its final receipt and can settle
@@ -101,6 +112,17 @@ publish finished with the same inReplyTo and settle those waits. Main waits for
 the person instead of resending. A waiting question prints stopped and exits 1;
 the later result remains an ordinary inbox report. Socket notices use killed
 status; server-delivered text notices use a yellow circle.
+
+**Where a stop comes from.** Codex: the owned gateway sees `turn/completed` with status
+`interrupted` (`internal/harness/codex/gateway/admitted_terminal.go`). Claude Code,
+since September 23, 2026: rewake's function-hooks plugin reports `turn.complete` with
+reason `aborted`, which no hook reports, and the collector in the wrapper publishes it
+at once ([claude-plugin.md](claude-plugin.md)). Both reach the same publication with the
+same text, notice and kept waits, and on both the next turn end that finishes settles
+the task — owner decision, September 23, 2026: the two harnesses do not diverge here.
+Where the Claude Code plugin does not load, nothing is heard, and the next finished
+settles the task without a `stopped` before it
+([traps.md](traps.md#an-interrupted-claude-code-task-is-reported-finished-with-an-unrelated-answer)).
 
 Answer receipts store the report id in received/<question id>. Only an exact
 match confirms that report; stopped does not acknowledge a later finished with

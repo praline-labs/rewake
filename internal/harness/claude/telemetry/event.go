@@ -62,6 +62,10 @@ type Event struct {
 	Model   string   `json:"model,omitempty"`
 	Effort  string   `json:"effort,omitempty"`
 	Context *Context `json:"context,omitempty"`
+	// Turn and Reason come from the plugin: the harness's id of a turn, and
+	// how turn.complete says it ended.
+	Turn   string `json:"turn,omitempty"`
+	Reason string `json:"reason,omitempty"`
 }
 
 // Context is the fill of the context window as the status line reports it.

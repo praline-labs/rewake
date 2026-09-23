@@ -100,6 +100,14 @@ func TestStatusBeforeTheFirstResponseIsUnknown(t *testing.T) {
 	if event.Effort != "" {
 		t.Errorf("effort = %q, want none for a model without one", event.Effort)
 	}
+	// After a compaction the counts are zero until the next response, and
+	// a usage object beside them must not turn that zero into an empty
+	// context.
+	compacted, _ := DecodeStatus([]byte(`{"model":{"id":"m"},"context_window":{"total_input_tokens":0,
+		"context_window_size":200000,"current_usage":{"input_tokens":0},"used_percentage":0}}`))
+	if compacted.Context == nil || compacted.Context.Used != nil || compacted.Context.Percent != nil {
+		t.Errorf("after a compaction context = %+v, want the window alone", compacted.Context)
+	}
 	measured, _ := DecodeStatus([]byte(`{"model":{"id":"m"},"effort":{"level":"high"},"context_window":{"total_input_tokens":34727,
 		"context_window_size":200000,"current_usage":{"input_tokens":10},"used_percentage":17}}`))
 	if measured.Effort != "high" || *measured.Context.Used != 34727 || *measured.Context.Percent != 17 {

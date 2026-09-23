@@ -44,6 +44,14 @@ func runClaudeShim(args []string) int {
 		}
 		return 2
 	}
+	plugin, err := loadPlugin(launch.pluginDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "claude-shim: %v\n", err)
+		if mark := os.Getenv(shimReadyFile); mark != "" {
+			_ = os.WriteFile(mark+".refused", []byte(err.Error()+"\n"), 0o600)
+		}
+		return 2
+	}
 	if err := insideACase(); err != nil {
 		fmt.Fprintf(os.Stderr, "claude-shim: %v\n", err)
 		return 1
@@ -63,7 +71,7 @@ func runClaudeShim(args []string) int {
 		_ = os.WriteFile(mark, []byte(launch.socket), 0o600)
 	}
 
-	session := &claudeSession{launch: launch, listening: time.Now()}
+	session := &claudeSession{launch: launch, plugin: plugin, listening: time.Now()}
 	go session.serve(listener)
 	// The telemetry script plays the session's hooks and status lines itself,
 	// and an extra status line of the startup's would land among its own.
@@ -107,6 +115,9 @@ type claudeLaunch struct {
 	intro    string
 	settings claudeSettings
 	tools    string
+	// pluginDir is the function-hooks plugin, when rewake passed one
+	// (claudeshim_plugin_test.go).
+	pluginDir string
 }
 
 // claudeLaunchFlags are the flags rewake passes to this harness, each with a
@@ -124,6 +135,7 @@ var claudeLaunchFlags = map[string]bool{
 	"--allowedTools":          true,
 	"--model":                 true,
 	"--effort":                true,
+	"--plugin-dir":            true,
 }
 
 func parseClaudeLaunch(args []string) (claudeLaunch, error) {
@@ -154,6 +166,8 @@ func parseClaudeLaunch(args []string) (claudeLaunch, error) {
 			settings = args[index]
 		case "--allowedTools":
 			launch.tools = args[index]
+		case "--plugin-dir":
+			launch.pluginDir = args[index]
 		}
 	}
 	if launch.socket == "" {
@@ -187,6 +201,10 @@ type claudeSession struct {
 	listening   time.Time
 	mounted     bool
 	startupHeld []startupRelease
+	// plugin is the loaded function-hooks plugin, nil when none loaded;
+	// interrupted says the one interrupted turn asked for has been played.
+	plugin      *claudePlugin
+	interrupted bool
 }
 
 func (s *claudeSession) serve(listener net.Listener) {

@@ -12,7 +12,12 @@ write-codex: working | context 42% used / 272K | compactions 1
 
 Confirmed primary lifecycle snapshots, metadata-only reads and status notifications
 supply activity. Labels distinguish idle, working, waiting for approval/input,
-not loaded and system error. A known compaction in progress adds `compacting`.
+not loaded and system error. A known compaction in progress adds `compacting`, and a
+Claude Code session whose interrupted turns go unheard — its plugin did not load, see
+[claude-plugin.md](claude-plugin.md#whether-interruptions-are-heard) — adds
+`interruptions unheard`. Only the gap is named: a session that hears them needs no word
+in a narrow cell, and a Codex session never sets the field, so a column of its own would
+read empty for most rows.
 Unknown activity is never inferred to be idle. Active status with missing or
 unrecognized waiting flags keeps waiting state explicitly unknown.
 

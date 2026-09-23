@@ -83,6 +83,9 @@ type shimSession struct {
 	thread string
 	peers  []*shimPeer
 	turn   turnState
+	// interrupted says the one interrupted turn shimInterruptFirst asks for
+	// has been played.
+	interrupted bool
 }
 
 // shimPeer is one connection and what it negotiated.

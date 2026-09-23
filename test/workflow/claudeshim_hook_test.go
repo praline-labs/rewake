@@ -131,6 +131,7 @@ func (s *claudeSession) workTurn(turn string, notice claudeNotice) {
 	}); err == nil {
 		s.runHook("UserPromptSubmit", s.launch.settings.observe, payload)
 	}
+	s.plugin.turnStarted(turn, notice.Summary)
 
 	var text string
 	var err error
@@ -144,7 +145,20 @@ func (s *claudeSession) workTurn(turn string, notice claudeNotice) {
 	}
 	recordOwedOnce()
 	markPendingOnce()
-	s.endTurn(text)
+	if s.firstTurn(shimInterruptFirst) {
+		// Esc: the harness ends the turn with no Stop hook at all, and only
+		// the plugin hears it (docs/research-claude-control.md).
+		s.plugin.turnCompleted(turn, text, "aborted")
+		(&shimSession{}).recordTurn(turn + " interrupted " + firstLine(text))
+		return
+	}
+	late := ""
+	if s.firstTurn(shimInterruptAtStop) {
+		// Esc after the Stop hook ran: the turn is reported and still ends
+		// as aborted.
+		late = "aborted"
+	}
+	s.endTurn(turn, text, late)
 	// Recorded after the hook, not before: a session told to leave once it
 	// has worked a turn leaves when this line appears, and one that left
 	// before its hook ran would take its report with it — which is a
@@ -159,22 +173,34 @@ func (s *claudeSession) workTurn(turn string, notice claudeNotice) {
 // for a turn that answered, StopFailure for one that broke. A silent role gets
 // no Stop hook at all, and then a turn that answered reports nothing — which
 // is the product's rule, not a gap in the fixture.
-func (s *claudeSession) endTurn(text string) {
+//
+// The plugin hears the end as well, in the order seen live on 2.1.280: the
+// hook event through classic.Stop or classic.StopFailure first, then
+// turn.complete — 15 to 30 ms after Stop, about 1 ms after StopFailure. Its
+// report of an ordinary end must add nothing to the hooks'. late, when set,
+// is the reason turn.complete gives instead: an Esc landing after the hook.
+func (s *claudeSession) endTurn(turn, text, late string) {
 	failed := os.Getenv(shimLateFailure) != "" || os.Getenv(shimFailHeldTurn) != ""
-	command, event := s.launch.settings.stop, "Stop"
+	command, event, reason := s.launch.settings.stop, "Stop", "answer"
 	if failed {
-		command, event = s.launch.settings.stopFailure, "StopFailure"
+		command, event, reason = s.launch.settings.stopFailure, "StopFailure", "error"
 	}
-	payload, err := json.Marshal(hookInput(event, text))
+	if late != "" {
+		reason = late
+	}
+	input := hookInput(event, text)
+	payload, err := json.Marshal(input)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "claude-shim: the hook payload could not be written: %v\n", err)
 		return
 	}
+	s.plugin.event("classic."+event, input)
 	// The harness runs every hook of the event; the telemetry one runs in the
 	// background and cannot hold the turn, so its result is not waited on here
 	// either beyond its own exit.
 	s.runHook(event, s.launch.settings.observe, payload)
 	s.runHook(event, command, payload)
+	s.plugin.turnCompleted(turn, text, reason)
 }
 
 // runHook runs one hook command with its payload on stdin. The command is a

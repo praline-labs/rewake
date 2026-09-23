@@ -71,13 +71,16 @@ Conversation tracking is built as well and passes its fixture case
 ([the record](roadmap/2026-09-23-claude-thread-tracking.md)); HF-10 waits only for a
 `/clear` seen live between a delivery and its report.
 
-What stays open is listed in the feature map's [parity queue](harness-features.md#open):
-a keyboard interruption that produces `stopped` (HF-06), for which the harness was shown
-on September 23, 2026 to offer no signal, so it waits on the owner's decision. The
-harness's own `/clear` and `/resume` were observed working under rewake the same day
-(HF-19). Two telemetry
-limits remain beside them: activity stays `working` after Esc, and the waiting state is
-unknown during a turn ([session-state.md](session-state.md#claude-code-source)).
+What stays open is listed in the feature map's [parity queue](harness-features.md#open).
+A keyboard interruption now produces `stopped` (HF-06) through rewake's function-hooks
+plugin, stage 1, observation only, built on September 23, 2026 and waiting for the
+owner's acceptance on a live session ([claude-plugin.md](claude-plugin.md)); the same
+plugin ends "working after Esc". The harness's own `/clear` and `/resume` were observed
+working under rewake the same day (HF-19). One telemetry limit remains: the waiting
+state is unknown during a turn ([session-state.md](session-state.md#claude-code-source)).
+A later stage of the plugin may act on the session — a compaction asked for from outside
+among them, which refuses at once while the worker is in a turn rather than waiting for
+idle, the same on Codex — and is not scheduled.
 
 ## Then: Codex's `--worktree`
 

@@ -67,10 +67,19 @@ type ObservedBackend interface {
 	SessionState() sessionstate.Snapshot
 }
 
+// TurnReporter is an Observer that also hears a turn outcome no end-of-turn
+// hook reports: Claude Code runs none for a turn a person interrupted. The
+// wrapper hands it, before Start, the handler a Backend gets.
+type TurnReporter interface {
+	ReportTurns(CompletionHandler)
+}
+
 // Observer is telemetry without a transport: something the harness reports to
 // on its own, which the wrapper listens to and publishes like a backend's.
 type Observer interface {
 	ObservedBackend
 	Start(context.Context) error
+	// Close is called whether Start succeeded or not, and cleans up what the
+	// launch prepared for it.
 	Close()
 }

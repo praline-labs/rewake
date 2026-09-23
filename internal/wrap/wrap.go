@@ -144,12 +144,28 @@ func Run(ctx context.Context, request Request) (int, error) {
 	}
 
 	if plan.Backend == nil && plan.Observer != nil {
+		if reporter, ok := plan.Observer.(harness.TurnReporter); ok && request.OnTurn != nil {
+			// The outcomes the observer hears are published the way a
+			// backend's are, bounded by what was read when each was heard.
+			// Without the clock they are not published at all, and the
+			// session reports as it did before.
+			reportSession := session
+			if clock, err := inbox.OpenReadClock(ctx, request.Dir, name, epoch); err != nil {
+				_, _ = fmt.Fprintln(os.Stderr, "rewake: not reporting interrupted turns: "+err.Error())
+			} else {
+				defer clock.Close()
+				reporter.ReportTurns(harness.CompletionHandler{Capture: clock.Snapshot, Publish: func(ctx context.Context, result harness.Completion) error {
+					return request.OnTurn(ctx, reportSession, result)
+				}})
+			}
+		}
 		// Started before the harness, so its first hook finds the socket.
 		// Telemetry that cannot start costs telemetry, never the session.
+		// Closed either way: what the launch wrote beside the socket goes.
+		defer plan.Observer.Close()
 		if err := plan.Observer.Start(ctx); err != nil {
 			_, _ = fmt.Fprintln(os.Stderr, "rewake: not collecting telemetry: "+err.Error())
 		} else {
-			defer plan.Observer.Close()
 			defer sessionstate.Start(ctx, request.Dir, name, epoch, plan.Observer.SessionState)()
 		}
 	}

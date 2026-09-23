@@ -48,6 +48,17 @@ func TestActivityLabelsAndUnknownAreExplicit(t *testing.T) {
 	if got := activityText(&snapshot); got != "working; compacting" {
 		t.Fatal(got)
 	}
+	// A session whose interruptions go unheard says so; one that hears them
+	// adds nothing.
+	snapshot.Compacting = nil
+	snapshot.Interruptions = sessionstate.InterruptionsObserved
+	if got := activityText(&snapshot); got != "working" {
+		t.Fatal(got)
+	}
+	snapshot.Interruptions = sessionstate.InterruptionsUnobserved
+	if got := activityText(&snapshot); got != "working; interruptions unheard" {
+		t.Fatal(got)
+	}
 	snapshot.Stale()
 	if got := activityText(&snapshot); !strings.Contains(got, "stale") {
 		t.Fatal("cached activity looked fresh")

@@ -181,7 +181,7 @@ func buildGroups() {
 			{
 				Name:     harness.Observe,
 				Args:     "<socket>",
-				Summary:  "Called by a Claude Code hook; passes what the hook was handed to the session's wrapper.",
+				Summary:  "Called by a Claude Code hook or rewake's plugin; passes what it was handed to the session's wrapper.",
 				Examples: []string{"rewake observe /tmp/rewake-1000/rooms/default/sock/worker-claude.1.obs"},
 				Raw:      true,
 				Hidden:   true,

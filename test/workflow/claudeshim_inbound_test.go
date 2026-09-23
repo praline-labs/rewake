@@ -97,6 +97,7 @@ func (s *claudeSession) mount(hooks bool) {
 		"cwd": workingDirectory(), "source": "startup",
 	}); err == nil && hooks {
 		s.runHook("SessionStart", s.launch.settings.observe, payload)
+		s.plugin.event("session.start", map[string]any{"cwd": workingDirectory(), "isInteractive": true, "surface": "terminal"})
 	}
 	time.Sleep(time.Until(s.listening.Add(mountedAfter)))
 	s.mu.Lock()

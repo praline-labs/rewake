@@ -2,6 +2,8 @@ package workflow
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -60,5 +62,47 @@ func TestClaudeShimRefusesWhatTheHarnessRefuses(t *testing.T) {
 				t.Errorf("accepted %v", tc.args)
 			}
 		})
+	}
+}
+
+// A plugin directory the fixture accepts is one the harness would load: laid
+// out as a plugin, with function hooks switched on. Anything else refuses the
+// launch, so no case passes on a session that never heard its plugin.
+func TestClaudeShimRefusesAPluginTheHarnessWouldNotLoad(t *testing.T) {
+	t.Setenv(shimNoFunctionHooks, "")
+	t.Setenv(shimNode, "/bin/true")
+	dir := t.TempDir()
+	write := func(name, content string) {
+		t.Helper()
+		path := filepath.Join(dir, name)
+		if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv(functionHooksEnv, "1")
+	if _, err := loadPlugin(dir); err == nil {
+		t.Error("a directory with no manifest was accepted")
+	}
+	write(".claude-plugin/plugin.json", `{"name":"rewake"}`)
+	if _, err := loadPlugin(dir); err == nil {
+		t.Error("a plugin with no hooks file was accepted")
+	}
+	write("hooks/hooks.json", `{"modules":["./rewake.js"]}`)
+	if _, err := loadPlugin(dir); err == nil {
+		t.Error("a plugin naming a missing module was accepted")
+	}
+	write("hooks/rewake.js", "export function register() {}\n")
+	if plugin, err := loadPlugin(dir); err != nil || plugin == nil {
+		t.Errorf("a plugin laid out as one was refused: %v", err)
+	}
+	t.Setenv(functionHooksEnv, "")
+	if _, err := loadPlugin(dir); err == nil {
+		t.Error("a plugin without function hooks switched on was accepted")
+	}
+	if plugin, err := loadPlugin(""); err != nil || plugin != nil {
+		t.Errorf("a launch without a plugin: %v, %v", plugin, err)
 	}
 }

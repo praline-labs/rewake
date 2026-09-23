@@ -27,6 +27,10 @@ import (
 // telemetry socket, so it names the same run and goes with it.
 func TurnStartPath(socket string) string { return socket + ".turn" }
 
+// PluginPath is where the launch writes the session's function-hooks plugin:
+// beside its telemetry socket too, and removed with it.
+func PluginPath(socket string) string { return socket + ".plugin" }
+
 // RecordTurnStart adds a reading, and drops the older ones it finds so the
 // directory stays a handful of entries.
 func RecordTurnStart(socket string, started int64) {

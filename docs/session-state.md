@@ -189,21 +189,31 @@ rewake built from `d975dd7`, for model, effort, context, activity and a compacti
   ignored; each sender stamps its process start on the machine's boot clock
   (`CLOCK_BOOTTIME`), one clock for every process that a wall-clock jump after a WSL
   suspend does not move back.
-  Known limit, September 23, 2026: a session a person interrupts with Esc stays
-  `working` until the next event that ends a turn or starts one afresh: a
-  UserPromptSubmit or Stop, a SessionStart that is not a compaction's (`/clear` and
-  `/resume`; the reset after `/clear` was seen live), or an `idle_prompt`
-  notification. No hook marks the
-  interruption — Esc and Ctrl+C run no Stop, StopFailure or Notification, and no
-  `idle_prompt` came within 80 seconds ([research-claude-control.md](research-claude-control.md#interrupting-a-turn-and-changing-the-conversation)) —
-  so `rewake list` and the main header show a stopped session as working.
+  The plugin's `turn.start` and `turn.complete` set `working` and `idle` too, and they
+  are what ends a turn a person interrupted, which runs no hook
+  ([claude-plugin.md](claude-plugin.md)). Where the plugin did not load, a session a
+  person interrupts with Esc stays `working` until the next event that ends a turn or
+  starts one afresh: a UserPromptSubmit or Stop, a SessionStart that is not a
+  compaction's (`/clear` and `/resume`; the reset after `/clear` was seen live), or an
+  `idle_prompt` notification, which did not come within 80 seconds of an Esc
+  ([research-claude-control.md](research-claude-control.md#interrupting-a-turn-and-changing-the-conversation)).
+- **Interruptions**: `interruptions` says whether an interrupted turn is heard —
+  `observed` once the plugin's first event arrived, `unobserved` once a turn was heard
+  through the hooks without one, absent before either. The machine form carries the
+  value; the text forms add `interruptions unheard` to the activity for `unobserved`
+  only ([session-activity.md](session-activity.md#current-activity)).
 - **Model and effort**: from the status line, which states both each time; a model the
   status line gives no effort for clears the effort to unknown. SessionStart and the
   turn hooks fill them earlier when they carry them.
 - **Context**: the harness's own figures — `total_input_tokens` of the last response,
-  `context_window_size` and `used_percentage` — not the Codex formula above. Before the
-  first response and after a compaction the harness sends zeros beside a null usage;
-  those read as unknown, not as an empty context.
+  `context_window_size` and `used_percentage` — not the Codex formula above; while the
+  status line has given none, the plugin's `session.measure` fills them in. Before the
+  first response and after a compaction the harness sends zeros, the usage null or
+  itself zero; a zero count reads as unknown, not as an empty context. A compaction's
+  end also drops the fill counted before it, keeping the window, and a status line or
+  measure started before that end is not taken — so after a compaction the listing
+  reads `unknown` until the next response, as at startup, rather than `0%` or the old
+  value.
 - **Compactions**: PreCompact sets in progress; PostCompact counts one and adds a
   notification cue with a monotonic sequence; a Stop, StopFailure or new prompt clears
   a compaction that never completed. The count and coverage `observed` appear only after

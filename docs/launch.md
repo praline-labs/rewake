@@ -286,10 +286,16 @@ rewake --general --name review --command claude-worker claude
   permissions rather than replacing them; if it replaces them, drop the flag and
   have the overview say which rule to add to settings once.
 
+- Pass rewake's function-hooks plugin: `--plugin-dir sock/<name>.<epoch>.obs.plugin`,
+  a directory the wrapper writes for the run, and `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`
+  in the harness's environment. Left out under `--bare` and when the person set that
+  variable off, with a launch note ([claude-plugin.md](claude-plugin.md)).
+
 ### Claude Code telemetry
 
 The telemetry hooks, the status-line tap and the collector they report to are specified
-in [claude-telemetry.md](claude-telemetry.md).
+in [claude-telemetry.md](claude-telemetry.md); the plugin that reports to the same
+collector in [claude-plugin.md](claude-plugin.md).
 
 ### Codex
 

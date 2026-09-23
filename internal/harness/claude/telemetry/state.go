@@ -38,6 +38,20 @@ type state struct {
 
 	context   *Context
 	contextOn time.Time
+	// measured is the plugin's session.measure, used only while the status
+	// line has said nothing about the context: a policy may keep the tap out.
+	measured   *Context
+	measuredOn time.Time
+	// compactedAt is when the last compaction ended. The fill counted before
+	// it no longer holds, and the harness reports none until the next
+	// response, so until then the fill is unknown, not the old value.
+	compactedAt int64
+
+	// plugin is set by the first event of the function-hooks plugin, and
+	// turns by the first hook that starts or ends a turn. A turn heard with
+	// no plugin event means interruptions go unheard in this session.
+	plugin bool
+	turns  bool
 
 	compacting bool
 	count      uint64
@@ -47,6 +61,9 @@ type state struct {
 func (s *state) apply(event Event, now time.Time) {
 	switch event.Kind {
 	case StatusLine, SessionStart, UserPromptSubmit, Stop, StopFailure, PreCompact, PostCompact, Notification, SessionEnd:
+	case PluginReady, TurnStart, TurnComplete, SessionMeasure:
+		s.applyPlugin(event, now)
+		return
 	default:
 		// A kind this collector does not know says nothing it can use.
 		return
@@ -79,9 +96,11 @@ func (s *state) apply(event Event, now time.Time) {
 			s.setActivity(event.At, activityIdle, []string{}, now)
 		}
 	case UserPromptSubmit:
+		s.turns = true
 		s.setActivity(event.At, activityWorking, nil, now)
 		s.compacting = false
 	case Stop, StopFailure:
+		s.turns = true
 		s.setActivity(event.At, activityIdle, []string{}, now)
 		// A compaction that failed runs PreCompact and nothing after it; the
 		// end of the turn is the latest point it can still be running.
@@ -100,10 +119,39 @@ func (s *state) apply(event Event, now time.Time) {
 		s.compacting = true
 	case PostCompact:
 		s.compacting = false
+		if event.At >= s.compactedAt {
+			s.compactedAt = event.At
+			s.context = unmeasured(s.context)
+			s.measured = unmeasured(s.measured)
+		}
 		s.count++
 		s.events = append(s.events, sessionstate.CompactionEvent{Sequence: s.count, ObservedAt: now})
 		if len(s.events) > maxCompactionEvents {
 			s.events = append([]sessionstate.CompactionEvent{}, s.events[len(s.events)-maxCompactionEvents:]...)
+		}
+	}
+}
+
+// applyPlugin takes what the plugin says. Its turn boundaries set activity
+// the way UserPromptSubmit and Stop do, and unlike them it hears the end of a
+// turn a person interrupted — which is what used to leave a session working
+// until its next turn.
+func (s *state) applyPlugin(event Event, now time.Time) {
+	s.heard = true
+	s.observedAt = now
+	s.plugin = true
+	switch event.Kind {
+	case TurnStart:
+		s.setActivity(event.At, activityWorking, nil, now)
+		s.compacting = false
+	case TurnComplete:
+		s.setActivity(event.At, activityIdle, []string{}, now)
+		s.compacting = false
+	case SessionMeasure:
+		if event.Context != nil && event.At >= s.compactedAt {
+			copied := *event.Context
+			s.measured = &copied
+			s.measuredOn = now
 		}
 	}
 }
@@ -126,7 +174,7 @@ func (s *state) applyStatus(event Event, now time.Time) {
 		}
 		s.settingsOn = now
 	}
-	if event.Context != nil {
+	if event.Context != nil && event.At >= s.compactedAt {
 		if s.waitingForApproval() && usedChanged(s.context, event.Context) {
 			// The count moves only after a response, and a response after a
 			// permission prompt means the prompt was answered.
@@ -136,6 +184,15 @@ func (s *state) applyStatus(event Event, now time.Time) {
 		s.context = &copied
 		s.contextOn = now
 	}
+}
+
+// unmeasured keeps what a compaction does not change — the window — and
+// drops the fill.
+func unmeasured(context *Context) *Context {
+	if context == nil {
+		return nil
+	}
+	return &Context{Window: context.Window}
 }
 
 func (s *state) setActivity(at int64, activity string, waiting []string, now time.Time) {
@@ -183,15 +240,25 @@ func (s *state) snapshot() sessionstate.Snapshot {
 		snapshot.SettingsAt = moment(s.settingsOn)
 		snapshot.SettingsFresh = true
 	}
-	if s.context != nil {
-		snapshot.ContextUsed = copyInt64(s.context.Used)
-		snapshot.ContextWindow = copyInt64(s.context.Window)
-		if s.context.Percent != nil {
-			percent := *s.context.Percent
+	context, contextOn := s.context, s.contextOn
+	if context == nil {
+		context, contextOn = s.measured, s.measuredOn
+	}
+	if context != nil {
+		snapshot.ContextUsed = copyInt64(context.Used)
+		snapshot.ContextWindow = copyInt64(context.Window)
+		if context.Percent != nil {
+			percent := *context.Percent
 			snapshot.FilledPercent = &percent
 		}
-		snapshot.ContextAt = moment(s.contextOn)
+		snapshot.ContextAt = moment(contextOn)
 		snapshot.ContextFresh = true
+	}
+	switch {
+	case s.plugin:
+		snapshot.Interruptions = sessionstate.InterruptionsObserved
+	case s.turns:
+		snapshot.Interruptions = sessionstate.InterruptionsUnobserved
 	}
 	if s.hooks {
 		count, compacting := s.count, s.compacting

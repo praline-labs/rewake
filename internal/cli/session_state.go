@@ -126,6 +126,13 @@ func activityText(snapshot *sessionstate.Snapshot) string {
 	if snapshot.Compacting != nil && *snapshot.Compacting {
 		label += "; compacting"
 	}
+	// Only the gap is named. A session that hears interruptions behaves as
+	// expected and needs no word in a narrow cell, and a Codex session never
+	// sets the field: its gateway always hears them. A column of its own would
+	// read empty or "unknown" for every such row.
+	if snapshot.Interruptions == sessionstate.InterruptionsUnobserved {
+		label += "; interruptions unheard"
+	}
 	if snapshot.ActivityAt != nil && (!snapshot.ActivityFresh || !snapshot.Fresh) {
 		label += " (stale)"
 	}

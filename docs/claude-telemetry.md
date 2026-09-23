@@ -41,14 +41,14 @@ layer uses both; the wrapper listens.
   in; the collector keeps the latest by the boot clock, and the wrapper pins each owed
   delivery to it, so a report from another conversation carries `threadChanged`
   ([delivery-adapters.md](delivery-adapters.md#claude-code-adapter)).
-- **Activity after an interruption.** Known limit, September 23, 2026: a session a
-  person interrupts with Esc stays `working` until the next event that ends a turn or starts one afresh: a
-  UserPromptSubmit or Stop, a SessionStart that is not a compaction's (`/clear` and
-  `/resume`; the reset after `/clear` was seen live), or an `idle_prompt`
-  notification. No hook marks the
-  interruption — Esc and Ctrl+C run no Stop, StopFailure or Notification, and no
-  `idle_prompt` came within 80 seconds ([research-claude-control.md](research-claude-control.md#interrupting-a-turn-and-changing-the-conversation)) —
-  so `rewake list` and the main header show a stopped session as working.
+- **The plugin.** No hook marks an interruption — Esc and Ctrl+C run no Stop,
+  StopFailure or Notification ([research-claude-control.md](research-claude-control.md#interrupting-a-turn-and-changing-the-conversation)).
+  Since September 23, 2026 rewake's own function-hooks plugin reports turn starts, turn
+  ends with their reason and the context fill through the same `rewake observe`, so an
+  interrupted session reads `idle` and its task gets `stopped`
+  ([claude-plugin.md](claude-plugin.md)). Where the plugin does not load, a session a
+  person interrupts stays `working` until the next event that ends a turn or starts one
+  afresh, as before, and its telemetry says interruptions are `unobserved`.
 - **The tap.** The status line becomes `rewake status-tap <socket> <sources> [caller]`.
   It reads the payload, sends what the status line says, finds the person's command
   (below), and then replaces itself with

@@ -88,6 +88,11 @@ everything else.
   wrapper, and the owner decisions that bound it. Open it when a Claude Code row of
   `rewake list` is wrong or unknown, or when a person's status line misbehaves under
   rewake.
+- [claude-plugin.md](claude-plugin.md) — rewake's function-hooks plugin for Claude Code:
+  what the launch carries, the four events it reports and the fields it never reads, how
+  an interrupted turn becomes `stopped` without a second report for an ordinary one, how
+  a session says whether interruptions are heard, and its limits. Open it when an Esc on
+  a Claude Code worker is not reported, is reported twice, or when the plugin API changes.
 - [session-activity.md](session-activity.md) — extends session-state: the activity labels
   and how fresh they must be, compaction notices, and how a worker's departure or
   replacement is detected and announced to main, with owner-run acceptance. Open it when
@@ -107,9 +112,9 @@ everything else.
   behaviour, before changing the Claude Code collector, and after a harness update. Its companions follow.
 - [research-claude-control.md](research-claude-control.md) — what reaches a running Claude
   Code session from outside besides a message, split from research.md by subject: what an
-  Esc or a Ctrl+C leaves for rewake to hear (nothing short of the transcript), what `/clear`
-  and `/resume` do, why no slash command runs from the inbound socket, and how text can be
-  put into the input box by the launch flag or a plugin. Open it before working on
+  Esc or a Ctrl+C leaves for a hook or the wrapper to hear (nothing), what a function-hooks
+  plugin hears instead, what `/clear` and `/resume` do, why no slash command runs from the
+  inbound socket, and how text can be put into the input box by the launch flag or a plugin. Open it before working on
   `stopped` for Claude Code, on conversation tracking, or on sending a session a command.
 - [research-codex.md](research-codex.md) — what only a running Codex session shows,
   split from research.md by subject: `codex queue`, thread identity and terminal events,

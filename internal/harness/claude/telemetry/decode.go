@@ -98,9 +98,12 @@ func DecodeStatus(raw []byte) (Event, bool) {
 		if window.Window != nil && *window.Window > 0 {
 			context.Window = window.Window
 		}
-		// Before the first response the counts read 0 and the usage null; a
-		// zero there is "not measured yet", not an empty context.
-		if window.Current != nil {
+		// Before the first response, and after a compaction until the next
+		// one, the counts read 0 and the usage null (docs/research.md); a
+		// zero there is "not measured yet", not an empty context. No context
+		// a response was counted in holds zero tokens, so a zero count reads
+		// the same way whatever the usage says.
+		if window.Current != nil && (window.Used == nil || *window.Used > 0) {
 			context.Used = window.Used
 			context.Percent = window.Percent
 		}

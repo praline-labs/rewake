@@ -74,7 +74,10 @@ with `rewake --main --name lead claude`, becoming lead-claude.
      StopFailure for every role and Stop for reporting roles, both running
      `rewake turn-ended`, plus background telemetry hooks and the status-line tap
      that report to the wrapper's `sock/<name>.<epoch>.obs`
-     ([claude-telemetry.md](claude-telemetry.md));
+     ([claude-telemetry.md](claude-telemetry.md)), and `--plugin-dir` with
+     `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` for rewake's plugin, which reports turn
+     starts and ends — an interrupted one included — to the same socket
+     ([claude-plugin.md](claude-plugin.md));
    - Codex: an owned foreground app-server on a private socket, initialized before
      the TUI starts with --remote. Explicit configuration and the briefing reach
      the server; an inline gateway follows accepted TUI intent. Launch roles add no
@@ -326,7 +329,7 @@ question to a silent role.
 | situation | what happens | what the sender sees |
 |---|---|---|
 | fresh server thread, no turn yet | turn/start begins its first turn | delivered after RPC acceptance |
-| Codex interrupted with Ctrl+C | stopped advises peers to wait; original work stays owed | yellow notice; human continuation reports its result |
+| a turn interrupted with Esc or Ctrl+C | stopped advises the waiters to wait, and goes to nobody when none waits; original work stays owed | yellow notice; human continuation reports its result |
 | recipient's wrapper gone | record evicted on the next read | exit 2, no such session |
 | a reader's stdout blocks | it holds the lock; server waits, `turn-ended` five seconds, `inbox` ten | delays, then "mailbox is busy" |
 | the main session is asked a question | refused before publication | exit 2 with a hint |

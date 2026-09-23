@@ -60,12 +60,18 @@ func runTelemetryControl(t *testing.T, mutant mutation, breaks ...string) {
 // as a control of whatever it was named for.
 func runFindingsControl(t *testing.T, scenario string, play func(*testing.T, *Case, *Isolation) []telemetryFinding, mutant mutation, breaks ...string) {
 	t.Helper()
+	runFindingsControlOn(t, claudeColumn.harness, scenario, play, mutant, breaks...)
+}
+
+// runFindingsControlOn is runFindingsControl on a column named by its harness.
+func runFindingsControlOn(t *testing.T, harness, scenario string, play func(*testing.T, *Case, *Isolation) []telemetryFinding, mutant mutation, breaks ...string) {
+	t.Helper()
 	name := scenario + "-control-" + mutant.name
 	enterScenario(t, name)
 	want := "the " + mutant.name + " mutant breaks " + strings.Join(breaks, "; ") + ", and nothing else"
 	c := Start(t, Spec{
 		Name:         name,
-		Harness:      claudeColumn.harness,
+		Harness:      harness,
 		Observations: []string{want},
 		Deadline:     120 * time.Second,
 	})

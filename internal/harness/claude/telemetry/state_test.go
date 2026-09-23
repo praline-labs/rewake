@@ -205,3 +205,36 @@ func TestAnUnknownKindSaysNothing(t *testing.T) {
 		t.Errorf("snapshot = %+v, want unknown", snapshot)
 	}
 }
+
+// A compaction leaves the fill unknown, as before the first response, until a
+// response is counted again: the harness reports zeros meanwhile, and the old
+// value no longer holds either. A status line started before the compaction
+// ended and arriving after it changes nothing; the window stays known.
+func TestACompactionLeavesTheFillUnknownUntilTheNextResponse(t *testing.T) {
+	var f folding
+	f.send(Event{Kind: SessionStart, Source: "startup"})
+	late := status("m", "", count(120000))
+	late.At = f.clock + 1
+	f.send(status("m", "", count(120000)))
+	f.send(Event{Kind: PreCompact, Trigger: "manual"})
+	f.send(Event{Kind: PostCompact, Trigger: "manual"})
+	fill := func() (*int, *int64) {
+		snapshot := f.state.snapshot()
+		return snapshot.FilledPercent, snapshot.ContextWindow
+	}
+	if percent, window := fill(); percent != nil || window == nil || *window != 200000 {
+		t.Fatalf("after the compaction: percent %v, window %v", percent, window)
+	}
+	f.state.apply(late, time.Unix(0, f.clock))
+	if percent, _ := fill(); percent != nil {
+		t.Fatalf("a status line from before the compaction brought back %d%%", *percent)
+	}
+	f.send(Event{Kind: SessionMeasure, Context: &Context{Used: count(120000)}})
+	if percent, _ := fill(); percent != nil {
+		t.Fatalf("the plugin's measure filled in %d%% while the status line runs", *percent)
+	}
+	f.send(status("m", "", count(20000)))
+	if percent, _ := fill(); percent == nil || *percent != 10 {
+		t.Fatalf("after the next response: percent %v, want 10", percent)
+	}
+}

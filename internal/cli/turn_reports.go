@@ -126,7 +126,12 @@ func prepareTurnReports(dir string, self registry.Session, event turnResult, cur
 		}
 		reports = append(reports, inbox.Message{ID: id, From: self.Name, FromEpoch: self.Epoch(), To: peer.Name, ToEpoch: peer.Epoch(), Kind: kind, Text: event.Text, InReplyTo: waiter.Messages, CreatedAt: time.Now(), ThreadChanged: inbox.ReportThreadChanged(dir, self.Name, waiter.Messages, currentThread)})
 	}
-	if (event.Failed || event.Stopped) && len(reports) == 0 {
+	// A failure nobody waits on still goes to main, which has to learn that a
+	// session is broken. A stop does not: a person interrupting a turn no
+	// rewake task depends on is their own business, and the session turning
+	// idle says all there is to say (the owner's decision of 23.09.2026,
+	// docs/turn-outcomes.md).
+	if event.Failed && !event.Stopped && len(reports) == 0 {
 		target := self
 		if role.Of(self.Role).ID != role.Main.ID {
 			sessions, err := registry.List(dir)

@@ -29,7 +29,16 @@ type Snapshot struct {
 	Compactions      *uint64           `json:"completedCompactions"`
 	Compacting       *bool             `json:"compactionInProgress"`
 	Coverage         string            `json:"compactionCoverage"`
+	// Interruptions says whether a turn a person interrupts is heard:
+	// observed, unobserved, or empty while nobody can tell yet.
+	Interruptions string `json:"interruptions,omitempty"`
 }
+
+// Values of Snapshot.Interruptions.
+const (
+	InterruptionsObserved   = "observed"
+	InterruptionsUnobserved = "unobserved"
+)
 
 // Unknown also covers unsupported adapters; zero compactions would claim coverage.
 func Unknown(epoch string) Snapshot {

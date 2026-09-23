@@ -71,10 +71,145 @@ the moment of an interruption.
   tools that follow are outside its reach, and blocking every turn behind a hook is a
   cost of its own.
 
-So no immediate interruption signal is reachable by rewake within its boundaries.
-Catching Esc in the wrapper would mean reading the keyboard between the person and the
-harness — a pseudo-terminal proxy, which the project's boundaries exclude
-([AGENTS.md](../AGENTS.md#boundaries)).
+So no immediate interruption signal is reachable by rewake within its boundaries through
+a hook or the wrapper. Catching Esc in the wrapper would mean reading the keyboard between
+the person and the harness — a pseudo-terminal proxy, which the project's boundaries
+exclude ([AGENTS.md](../AGENTS.md#boundaries)).
+
+### What a function-hooks plugin hears
+
+Probed on September 23, 2026, Claude Code 2.1.280, same setup **[live]**, with the
+event list read in the binary **[source]**. rewake builds its interruption signal on
+this ([claude-plugin.md](claude-plugin.md)).
+
+- **Enabling it** takes `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` and `--plugin-dir <dir>`
+  (or `CLAUDE_CODE_PLUGIN_DIRS`) for one launch. It loads only in a trusted workspace,
+  not under `--bare` or `disableAllHooks`, and the API is marked early access
+  **[source]**.
+- **Its events** include `turn.start`, `turn.step`, `turn.complete` with a reason of
+  `answer`, `aborted`, `refusal` or `error`, `session.measure` with the context's
+  `tokens`, `window` and `percent`, `session.end`, `session.receive` and the `classic.*`
+  family **[source]**.
+- **An ordinary turn** gave `turn.start`, then `turn.complete` with reason `answer`, and
+  the Stop hook ran **[live]**.
+- **The order at a turn's end**, recorded by review-claude the same day on 2.1.280
+  **[live]**: in five ordinary turns `classic.Stop` came before `turn.complete` with
+  reason `answer`, by 15 to 30 ms. On an API error and on a refusal `classic.StopFailure`
+  came first, then `turn.complete` with reason `error` or `refusal` about 1 ms later; a
+  refusal gave one `error` report through rewake.
+- **Esc during a tool** gave `turn.complete` with reason `aborted` and no Stop; Ctrl+C
+  likewise, with the rewake wrapper alive **[live]**. An Esc landing on the Stop hook
+  gave `classic.Stop` and then `turn.complete` with reason `aborted` **[live]**: the
+  same turn ends both ways.
+- **What a handler can do**: run a process and write files (`$.fs.write`) **[source]**;
+  a module that fails unloads the plugin and the session goes on without it **[live]**.
+  The process call is `$.process.run(argv, init)`: argv a non-empty list of strings,
+  the first naming the command, and init an optional `{ cwd?, env?, stdin?, timeoutMs? }`
+  — cwd a non-empty path, env an object of strings, stdin a string, timeoutMs a whole
+  number of ms from 1 to 600000, 30000 when left out **[source]**. Any other form is
+  refused before anything runs, with a rejected promise:
+  `process.run: takes argv, a non-empty list of strings naming the command first (host
+  check)`. A single options object `{ argv, init }` is such a form; a module calling it
+  so ran nothing on a live session **[live]**, review-claude, September 23, 2026.
+- **Side effects of switching function hooks on** **[live]**, review-claude, September
+  23, 2026, 2.1.280: the built-in plugin-authoring skill appears in the model's skill
+  list (seen in the request body), and function-hook modules of plugins the person
+  installed are enabled too. What each built-in needs, and how settings layers combine,
+  is [below](#built-in-plugins-and-what-the-switch-adds).
+- **After a compaction** the context counts are zero until the next response, as the
+  status line's are ([research.md](research.md#telemetry-sources-the-status-line-and-hooks)).
+  Not checked for `session.measure` itself; rewake reads zero tokens as unknown either
+  way.
+
+### Built-in plugins and what the switch adds
+
+Probed on September 23, 2026, Claude Code 2.1.280, by write-claude, with `-p` in a
+private HOME, a stand-in API and all other outbound traffic refused **[live]**; the
+registration and the gates read in the binary **[source]**.
+
+- **The switch.** `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS` overrides the harness's remote flag
+  `tengu_plugin_hooks_modules`, off by default and absent from the cached flags. It is
+  three-valued: `0` gave the same run as leaving it out **[live]**. It opens the hooks
+  modules of installed plugins, and the built-ins whose availability asks the same gate;
+  the built-ins' own modules load regardless of it — "built-in plugins load regardless"
+  in the debug log **[live]**.
+- **Nine built-ins are registered** — sec-default, agents-md, telemetry,
+  plugin-authoring, tips, mermaid, responsive-mode, diff, claude-test **[source]**:
+  - **telemetry** and **agents-md** load without the switch: telemetry whenever
+    analytics is not off, agents-md when the remote flag `tengu_agents_md_mod` is on,
+    as it is in the owner's cached flags and was seeded for the probe **[live]**.
+  - **plugin-authoring** loads only with the switch: its availability is the gate
+    itself. It has no module and one skill, and adds one line to the skill listing of
+    every request, 390 characters, about 90 to 100 tokens; the skill's body is read only
+    when it is invoked. The request body was 70681 bytes without the switch and 71072
+    with it, identical otherwise: this line is all the switch added to the request
+    **[live]**.
+  - **mermaid** needs the switch and the remote flag `tengu_mermaid_mod`; **diff**
+    needs `tengu_quiet_dolphin` and the interactive mode; **tips** needs
+    `tengu_tips_mod`; **responsive-mode** needs `tengu_quiet_ember`. None of those flags
+    was on, and none of the four loaded, with the switch or without **[source, live]**.
+    **claude-test** appeared in no run.
+  - **sec-default** was not seated: without the switch because "installed plugins'
+    hooks modules are off", with it because there are "no managed settings and not a
+    Team or Enterprise organization" **[live]**.
+- **Switching a built-in off.** `enabledPlugins` with `"<name>@builtin": false`; a
+  built-in left out counts as enabled **[source]**. Seen working for telemetry,
+  agents-md and plugin-authoring **[live]**. sec-default is the exception: it is read
+  from managed settings only **[source]**. agents-md also takes
+  `pluginConfigs["agents-md@builtin"].options.instructionFiles: "claude-md"`, which left
+  only its `session.start` hook and no AGENTS.md in the request; project settings are not
+  read for it **[live]**. For the skill alone, `skillOverrides: {"plugin-authoring":
+  "off"}` hides the line but keeps the plugin enabled and recorded as used **[live]**.
+- **`pluginUsage`.** The harness records the plugins a session used in `pluginUsage` in
+  `~/.claude.json`. `rewake@inline` is written there by `--plugin-dir` itself, with the
+  switch or without it; the switch adds `plugin-authoring@builtin` **[live]**.
+- **Installed plugins' modules.** Each plugin's module runs in a worker process of its
+  own ("hooks worker spawned (one for every plugin)"); without the switch an installed
+  plugin's module is not loaded at all ("rewake@inline not loaded") **[live]**. A module
+  sees nearly every event and may rewrite prompt sections and context, classic hooks'
+  input and output, what a settings read returns and the tool registrations, with
+  process, HTTP, file, environment and store calls at hand **[source]**. Nothing turns
+  off other plugins' modules alone: `allowManagedHooksOnly` and `disableAllHooks` turn
+  off rewake's as well **[source]**. No plugin installed on the owner's machine had a
+  module on September 23, 2026.
+- **To repeat on every new Claude Code version**: diff the request body of a `-p` run
+  with the switch and without it. A new built-in gated on the switch shows there first.
+
+### How `enabledPlugins` merges across settings layers
+
+Probed on September 23, 2026, Claude Code 2.1.280, by write-claude, same setup, the
+switch on in every run **[live]**. The owner decided the same day that rewake switches
+off no built-in, so rewake's `--settings` carries no `enabledPlugins`; this is recorded
+so that the answer is known before anyone passes one.
+
+The private HOME's `settings.json` enabled two dummy plugins, `alpha@probe-mkt` and
+`beta@probe-mkt`, installed from a local directory marketplace. Each run passed a
+`--settings` flag layer and read the debug log's plugin count and the skill listing in
+the request body:
+
+| flag layer | debug log | skills listed |
+|---|---|---|
+| none | Found 5 plugins (5 enabled, 0 disabled) | alpha, beta, plugin-authoring |
+| `{"enabledPlugins":{"plugin-authoring@builtin":false,"mermaid@builtin":false}}` | Found 5 plugins (4 enabled, 1 disabled) | alpha, beta |
+| the same plus `"alpha@probe-mkt":false`, as rewake's merge of a caller's `--settings` would pass it | Found 5 plugins (3 enabled, 2 disabled) | beta |
+| the second row, with `"plugin-authoring@builtin":true` added to the user file | Found 5 plugins (4 enabled, 1 disabled) | alpha, beta |
+
+The conclusion rests on one more fact, checked the next day, September 24, 2026, on the
+same version and setup rebuilt: an installed plugin with no `enabledPlugins` entry is
+off. The rebuilt HOME did not have agents-md's remote flag seeded, so each total is one
+lower than above:
+
+| user file | flag layer | debug log | skills listed |
+|---|---|---|---|
+| alpha and beta `true` | none | Found 4 plugins (4 enabled, 0 disabled) | alpha, beta, plugin-authoring |
+| alpha `true`, beta installed with no entry | none | Found 3 plugins (3 enabled, 0 disabled) | alpha, plugin-authoring |
+| the same | the built-ins' row above | Found 3 plugins (2 enabled, 1 disabled) | alpha |
+
+So the second row of the first table could only list alpha and beta because the user
+file's entries still counted. `enabledPlugins` merges key by key: a flag layer naming
+only built-ins leaves the person's own entries in force, and a key the flag layer names
+wins over the same key in the user file. mermaid did not load in any run, so it counts
+in none of the totals.
 
 ## Commands from outside
 
