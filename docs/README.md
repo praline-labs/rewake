@@ -90,17 +90,25 @@ everything else.
 
 ## Facts about the harnesses
 
-- [research.md](research.md) — what only a running session shows: the Claude Code socket
-  line and its priority, waking an idle session, the Stop and StopFailure hook payloads
-  rewake reads, what the Claude Code status line and hooks hand a command about model,
-  context and compactions, Codex app-server session ownership, and why a legacy notify
+- [research.md](research.md) — what only a running Claude Code session shows: the socket
+  line and its priority, waking an idle session, what the inbound gate did to rewake's
+  line at startup and in each permission mode and the receipts it sends to a reply
+  socket, the Stop and StopFailure hook payloads rewake reads, what the status line and
+  hooks hand a command about model, context and compactions, and why a legacy notify
   cannot be trusted as an error signal. Open it before touching delivery or wake
   behaviour, before changing the Claude Code collector, and after a harness update. Its companions follow.
+- [research-codex.md](research-codex.md) — what only a running Codex session shows,
+  split from research.md by subject: `codex queue`, thread identity and terminal events,
+  the sandbox as a running session meets it, environment and instructions, and the
+  session-owned app-server. Open it before touching the Codex adapter or after a Codex
+  update.
 - [research-launch.md](research-launch.md) — what an installed binary answers when run:
   model and effort catalogues and the usable context window, which flags may repeat,
   undocumented aliases, when a `--help` probe can be trusted, how each harness is
-  published on npm, whether Claude Code has a client-server split to stand between, and
-  the hook options and settings order the launch layer relies on. Open it when adding a launch flag or when a model, an effort or a
+  published on npm, whether Claude Code has a client-server split to stand between,
+  the hook options and settings order the launch layer relies on, and what the bundled
+  source states about Claude Code's cross-session inbound gate — `crossSessionInbound`,
+  permission-mode classes, holds, deadlines and receipts. Open it when adding a launch flag or when a model, an effort or a
   version is refused.
 - [research-protocol.md](research-protocol.md) — what the generated Codex schema and the
   reference source state: the flags schema generation needs, required fields of the

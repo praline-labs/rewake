@@ -35,7 +35,7 @@ requiring the caller to inspect thread state. The native operation chooses activ
 steering or idle start. The wrapper must not add a status-versus-start race, force
 interruptions or require a guessed turn ID through a separate steer-only request.
 Previously recorded owner same-turn and fresh-thread delivery probes are linked
-from [session-owned server research](research.md#session-owned-app-server).
+from [session-owned server research](research-codex.md#session-owned-app-server).
 
 The wrapper submits each ready eligible group through that existing API. An active
 turn can ACK multiple notices with the same turn ID; ACK is acceptance, not proof

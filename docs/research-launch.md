@@ -275,3 +275,94 @@ read under the working directory, the user layer under the configuration directo
 the machine policy from `/etc/claude-code/managed-settings.json` with a
 `managed-settings.d` beside it. `--setting-sources` names which of user, project and
 local are read, and `--restricted` reads none of them (`claude --help`).
+
+## Claude Code's cross-session inbound gate
+
+**[the binary's bundled source, installed 2.1.280; September 23, 2026]** Every line that
+reaches a session's inbox socket passes a receive-side gate before it joins the queue. What
+it does to rewake's line in a running session is in
+[research.md](research.md#the-inbound-gate-on-rewakes-line); this is what the code states.
+
+The setting, in the settings schema's own words: `crossSessionInbound` — "'accept'
+delivers them, 'hold' parks them for your review without letting Claude act, 'refuse'
+opts this session out. An explicit value always wins. Unset (mode parity): a message
+auto-delivers only when the sending session's permission-mode class matches yours
+(bypass↔bypass or prompting↔prompting); a mismatched sender's message is held for your
+approval; a sender that asserts no class is held only while this session bypasses
+permission prompts."
+
+**Which source decides.** `policySettings`, `flagSettings` and `userSettings` are read in
+that order and the first that sets the key wins, so a `--settings` layer overrides the
+user's file and managed policy overrides both. `localSettings` and `projectSettings` may
+then only raise the value along `accept < hold < refuse` ("a repo may only tighten"): a
+repository's `hold` beats a `--settings` `accept`. A source switched off by
+`--setting-sources` is skipped. An unrecognised value in any file holds everything while
+it is present (cause `invalid-setting`). A remote kill switch refuses regardless.
+
+**Unset: parity.** In order:
+
+- the permission-mode getter is not wired yet, or the mode is none of `acceptEdits`,
+  `auto`, `bypassPermissions`, `default`, `dontAsk`, `plan` — hold, cause `mode-unknown`;
+- the sender is a descendant process of the receiving session — accept (the process
+  tree is read only while the receiver bypasses; rewake's wrapper is the session's
+  parent, not a descendant, so this never applies to it);
+- the receiver's class is `bypass` for `bypassPermissions`, and for `plan` when bypass is
+  available to the session (started with `--dangerously-skip-permissions` or
+  `--allow-dangerously-skip-permissions`) and it is interactive; every other mode —
+  `default`, `acceptEdits`, `auto`, `dontAsk`, `plan` without bypass — is `prompting`;
+- a sender that asserted a class is accepted when it matches and held as
+  `mode-mismatch` when it does not;
+- a sender that asserted none is held as `no-mode-asserted` when the receiver is
+  `bypass`, and accepted otherwise.
+
+**Where a class comes from.** On the socket the class is not a field of the line. It is
+an attribute of a wrapper around the content: `<cross-session-message from="…"
+from-session="…" hop-chain="…" from-name="…" from-mode="bypass|prompting"
+from-plugin="…">`, a newline, the body, a newline, `</cross-session-message>`, every
+attribute optional. It is parsed with a regular expression and kept only when
+serialising the parsed parts gives back exactly the same text. Nothing signs it; the
+protocol's own description of `from` reads "Sender-asserted on the socket lane: a label,
+not an identity proof", and `from-name` is "A claim, like `from`". `SendMessage` writes
+this wrapper with its own session's class. rewake's `<task-notification>` content has no
+wrapper, so it asserts no class and no display name.
+
+**Holding.** At most 100 messages are held; the oldest is evicted as expired. The held
+set is re-evaluated when the permission mode changes (reason `mode-changed`), when the
+settings change (`policy-accepts`), and one message at a time on approval (`approved`);
+the screen then says `Released N held cross-session message(s) to Claude's queue
+(<reason>)`, the reason drawn as "permissions are prompting again", "crossSessionInbound
+now accepts" or "you approved it". The getter is wired as the interface mounts, which
+counts as a mode change, so a message held at startup is released with the first of
+those texts although nothing was ever in bypass. A released or approved message passes
+the inbox guard — rate limit, duplicate, queue cap — once more and can be dropped there.
+
+Only `mode-mismatch` and `no-mode-asserted` get an approval prompt and a deadline:
+`dialogExpiry` (`60s`, `5m`, `10m` or `never`; read from trusted sources only, never a
+repository file) or `CLAUDE_CODE_USER_DIALOG_TIMEOUT_MS`, five minutes by default; at the
+deadline the message is dropped. Every other cause has no deadline: the message waits
+for a release, an eviction or the end of the session, and at the end every held message
+is settled as expired.
+
+**Receipts.** The receiver reports a message's fate by opening a new connection to the
+address in the line's top-level `from`, never by writing back on the connection the line
+came on. The address must be `uds:<path>`, and the path a `.sock` file in the same
+directory as the receiver's own socket, or a pid-shaped name in a default `cc-socks`
+directory. Before writing, the receiver checks that the listening process is the one that
+wrote the message — same pid as the writer's peer credentials, same uid, same process
+start — and refuses otherwise. The receipt is one line:
+
+```json
+{"type":"control","action":"peer_message_status","status":"held","reason":"…","from":"uds:<receiver's socket>","orig_msg_id":"<the message's msg_id>","msgV":1,"msg_id":"<fresh>"}
+```
+
+`orig_msg_id` is present only when the message carried a UUID `msg_id`. Statuses: `held`;
+`delivered` once a held message is released or approved; `expired`; `denied`; a refusal,
+sent as `"status":"expired","status_detail":"refused"`; and `dropped`, with `drop_reason`
+and `dropped_msg_ids`. A message accepted outright gets no receipt. The `reason` texts
+are fixed per status — `held` always reads "Your message is held for the recipient
+user's approval before it reaches their Claude session (permission-mode parity).",
+whatever the cause.
+
+**Authentication.** A first line `{"type":"auth","token":"…"}` with the token from
+`CLAUDE_CODE_MESSAGING_TOKEN` is optional on Linux and macOS and required on Windows,
+where an unauthenticated line closes the connection.

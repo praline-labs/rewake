@@ -147,6 +147,26 @@ configuration, not into flags.
 
 *September 19–20, 2026.*
 
+### A message reported delivered was held by Claude Code
+
+`rewake send` answered `delivered via socket`, and the receiving Claude Code session
+showed nothing until a moment later it printed `Released 1 held cross-session message to
+Claude's queue (permissions are prompting again).` The write had succeeded; a successful
+write is all the adapter knows, and the receiver's inbound gate decides afterwards.
+
+Three ways it happens. A line that arrives in the first two hundred milliseconds or so
+after the socket appears is held until the interface is up, then released — with that
+misleading "prompting again", since the release counts as a mode change. A receiver in
+`bypassPermissions`, or in `plan` with bypass available, holds every rewake line: the line
+asserts no permission-mode class, a prompt waits for the person, and unless they approve
+it the message is dropped at a deadline, five minutes by default. And `crossSessionInbound` set to `hold` or `refuse` anywhere the
+receiver reads it holds or refuses regardless of mode. The receiver reports each of these
+only to a reply socket named in the line, and rewake names none, so nothing tells the
+sender. Details: [research-launch.md](research-launch.md#claude-codes-cross-session-inbound-gate),
+[research.md](research.md#the-inbound-gate-on-rewakes-line).
+
+*September 23, 2026.*
+
 ### After a new commit the running wrapper stays old
 
 An atomic installation replaces the file, not the live process. Compare the hash of

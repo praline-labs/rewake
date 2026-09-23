@@ -10,22 +10,10 @@ answers when you run it lives in [research-launch.md](research-launch.md) — mo
 efforts, argument forms; what the protocol schema and the reference tree state lives
 in [research-protocol.md](research-protocol.md). What stays here is what only a
 running session shows: how a message reaches it, what it does with it, and how the
-processes behave.
-
-**[verified live; Codex CLI 0.155.1; September 21, 2026]** The installed CLI moved to
-0.155.1 and the adapter's pin moved with it. Observed on that version: launch with
-registration, a task accepted through the app-server, a `finished` report back and
-telemetry collection ([claude-parity-2026-09-21.md](claude-parity-2026-09-21.md));
-and, in a second probe, steer — a message sent inside the second of four sleep-10
-calls, with the worker observed `working` in a snapshot taken just before the send,
-reached the recipient at the next boundary between tools, the series continued and the
-original task returned its own result. Not observed on this version: conversation
-selection after `/new`, refusal of a stale target, `stopped` from a keyboard
-interruption, and a multi-message group arriving during an active turn. One probe
-each, no repeats and no race coverage. Every fact below carries the version it was
-taken on; a fact tagged 0.154.0 has not been re-checked on 0.155.1.
-September 20: [native mailbox contract](native-mailbox.md) and
-[owner/installed acceptance with evidence limits](native-mailbox-acceptance.md).
+processes behave. On September 23, 2026 the file passed 400 lines again and was split
+by subject: what a running Codex session shows moved to
+[research-codex.md](research-codex.md), and this file keeps Claude Code, the other
+harnesses and the failed-turn observations.
 
 **[verified live; September 21, 2026]** A fact about our own checks rather than about a
 harness, kept here because it is dated and ages like the rest: `go test` inherits a
@@ -47,7 +35,9 @@ directory and reads the running session as its own.
 - The socket is created before hooks run; the session exports `CLAUDE_CODE_MESSAGING_SOCKET`
   and `CLAUDE_CODE_MESSAGING_TOKEN` into the environment of its children (Bash, hooks). **[verified live]**
 - On shutdown (including via SIGHUP) the socket and the registry entry are removed. **[verified live]**
-- Protocol: one JSON line terminated by `\n`, then close the connection — no reply.
+- Protocol: one JSON line terminated by `\n`, then close the connection — nothing comes
+  back on it; a receipt, when one is asked for, arrives on a socket of the sender's
+  ([the inbound gate](#the-inbound-gate-on-rewakes-line)).
   ```json
   {"type":"user","message":{"role":"user","content":"text"},"priority":"next"}
   ```
@@ -68,9 +58,9 @@ directory and reads the running session as its own.
 - Limits:
   - identical text from the same sender within 30 seconds is dropped;
   - the recipient's queue holds at most 50 messages, and a sender gets about 30 in a row;
-  - `crossSessionInbound` (`accept|hold|refuse`) in settings can delay or refuse
-    incoming messages; without it, a session in `bypassPermissions` holds the
-    message as a dialog until the sender declares the same mode;
+  - `crossSessionInbound` (`accept|hold|refuse`) and, when it is unset, the
+    permission-mode parity gate can hold or refuse a message after the write has
+    succeeded ([the inbound gate](#the-inbound-gate-on-rewakes-line));
   - the mechanism can be disabled remotely (the `tengu_harbor_kite` flag) or via an
     environment variable; it disables itself silently if creating the socket
     directory fails;
@@ -94,6 +84,38 @@ directory and reads the running session as its own.
   "uncorrelated". An outside process cannot use it. **[binary source 2.1.270]**
 - `ListAgents`/`SendMessage` see every interactive Claude Code session on the
   machine through its socket, not only subagents. **[verified live]**
+
+### The inbound gate on rewake's line
+
+**[verified live, 2.1.280; private HOME, a placeholder key and an unreachable API
+endpoint, so no model was called; September 23, 2026]** What the code states about the
+gate is in [research-launch.md](research-launch.md#claude-codes-cross-session-inbound-gate).
+rewake's line, written and closed; the startup and settings probes added a reply address,
+which the gate does not consult when it decides:
+
+- **At startup it is held and released.** A session started in `default` mode: socket
+  listening at 10:07:04.019 UTC, the line written at .115, `held inbound peer message
+  (1 held, cause=mode-unknown)` at .121, `released 1 held peer message(s)
+  (mode-changed)` at .228, and on screen `● Released 1 held cross-session message to Claude's queue
+  (permissions are prompting again).` followed by the notice — what the owner saw on a
+  restart. The window is the first two hundred milliseconds or so after the socket
+  appears.
+- **Once started it is accepted** in `default`, `acceptEdits`, `plan` (bypass not
+  available) and `auto`, switched with shift+tab in one session: `Routed user message to
+  queue` each time, no receipt, nothing written back on the connection.
+- **Receipts need a reply socket.** The same line with a top-level `from:
+  "uds:<dir>/reply-<pid>.sock"` and a UUID `msg_id`, the reply socket listened on by the
+  writing process in the receiver's socket directory: at startup `held` came 30 ms after
+  the write and `delivered` at 290 ms; under `--settings '{"crossSessionInbound":"refuse"}'`
+  a `"status":"expired","status_detail":"refused"` receipt at once; under `hold` a `held`
+  receipt, no prompt, and the transcript line `Held peer message — from
+  uds:…/reply-<pid>.sock [verified pid <pid>]; preview: «<task-notification>» … — not
+  delivered to Claude (1 held). Your "crossSessionInbound" setting is "hold"; set it to
+  "accept" to deliver held messages.`; two Ctrl-C then settled both held messages as
+  `expired`, delivered to the reply socket 2.3 s after the second write.
+- Not run live: a receiver in `bypassPermissions` or in `plan` with bypass available
+  (the launch was refused in this environment), the five-minute deadline, and the
+  order of the repository, user and `--settings` sources.
 
 ### Hooks for one launch
 
@@ -238,103 +260,6 @@ Hooks **[verified live unless marked]**:
 `/clear` gives the session a new `session_id`, which the next status-line run already
 carries **[container]**; a compaction keeps it. Whether `Stop` fires when a person
 interrupts a turn was not observed.
-
-## Codex CLI
-
-### Delivery: `codex queue`
-
-- `codex queue --thread <id|exact name> --message <text>`, run from any process,
-  places the message in a durable queue (`$CODEX_HOME/queue_1.sqlite`, method
-  `thread/queue/add`). Every Codex process, including a plain TUI, polls the
-  queue once every 10 seconds and starts a turn on its own if the thread is idle.
-  **[source: ext/queue/src/service.rs]**
-- An idle TUI wakes up without a daemon and without `--remote`, with a delay of
-  about 10 seconds. **[verified live]**
-- Mid-turn, the message waits and triggers the next turn once the current one
-  finishes; after an explicit interrupt there's no auto-start. **[source]** Not
-  verified live.
-- **A brand-new thread with no messages yet cannot accept one**: the rollout file
-  is created lazily, and `queue` responds with
-  `no rollout found for thread id <id> (code -32603)`, exit code 1. **[verified live]**
-- Unknown name: `No active session found matching '<name>'`, exit code 1.
-  **[verified live]**
-
-### Thread identity and terminal events
-
-The server adapter uses thread/started and thread/closed, not TUI file
-descriptors. Locks remain a fact of the standalone TUI, but under --remote the
-server owns them. A root thread source/originator and absent parent id distinguish
-TUI work from nested agents. The message sidecar still carries the delivery id.
-
-Legacy notify emits normal completions but skips some error branches. The
-adapter now consumes turn/completed: completed, failed with error.message, or
-interrupted. Intermediate error notifications with willRetry=true are not final.
-No transcript is read to obtain the result or infer a missing failure.
-
-### Sandbox (Linux)
-
-See the preserved [permission research](research-permissions.md#sandbox-linux).
-
-### Git metadata writes by role
-
-See the preserved [permission research](research-permissions.md#git-metadata-writes-by-role).
-
-### Managed worktrees and continuation permissions
-
-See the preserved [permission research](research-permissions.md#managed-worktrees-and-continuation-permissions).
-
-### Remote continuation permissions
-
-See the preserved [permission research](research-permissions.md#remote-continuation-permissions).
-
-### The sandbox has its own pid namespace
-
-The commands a Codex agent runs are started under `bwrap --as-pid-1`, so inside
-them `/proc` holds only the sandboxed process itself. `/tmp` is the real one —
-a file written there appears outside — but every pid from outside is missing.
-**[verified live]** Anything judging "is that process alive" from inside the
-sandbox therefore concludes "no" about every session but its own. A reader has to
-compare `/proc/self/ns/pid` before believing a pid it did not create.
-
-### Environment and instructions
-
-- `shell_environment_policy` inherits the environment by default, excluding names
-  matching the patterns `*KEY*`, `*SECRET*`, `*TOKEN*`. **[source]** The tool's
-  variable names must not match these patterns.
-- The `developer_instructions` config key can be set per run via
-  `-c developer_instructions="..."`; it overrides the user's value if one is set.
-  **[source]**
-- The first run in a new folder shows a trust dialog, confirmed with Enter; the
-  decision is written to `~/.codex/config.toml`. **[verified live]**
-
-### Session-owned app-server
-
-**[snapshot 44b9011; CLI 0.154.0; September 17, 2026]** Foreground
-app-server --listen unix://PATH supports a TUI via --remote. The listener uses
-WebSocket frames, not JSONL; proxy is only a byte relay. turn/start calls
-start_or_steer_turn (request_processors/turn_processor.rs:646–677), including
-after an interruption. Basic turn/steer is stable and requires expectedTurnId;
-queue/start is experimental and is not needed for immediate delivery.
-
-**[owner live probes, 0.154.0]** Same-turn steering and fresh `/new` delivery both
-reached the TUI and the model. (The probe transcripts lived in a temporary directory
-that is long gone; the observation is what remains.)
-A closed old thread can absorb input without a visible answer, and resuming an
-empty thread did not reliably reply. Track closure; never deliver to a cached
-id after losing evidence that it remains current.
-
-**[source and no-model probes]** The research report behind this — kept in a
-temporary directory that is long gone — recorded RPC initialization, failed and
-interrupted outcomes, owned locks and the remote configuration boundary. TUI notify is not forwarded; developer instructions are
-conditional on a feature there, so launch configuration reaches the server too.
-TUI --add-dir is carried as runtimeWorkspaceRoots; -C and positional input are
-forwarded. REWAKE_* survives default shell environment filtering.
-
-The owned server uses CODEX_INTERNAL_APP_SERVER_REMOTE_CONTROL_DISABLED=1
-(transport/remote_control/mod.rs:87) to keep this local launch off the persisted
-remote-control path. This internal marker and the remote configuration rules
-are version-specific. The later [installed native-mailbox acceptance](native-mailbox-acceptance.md)
-closes the supported launch/delivery path; raw protocol probes alone did not do so.
 
 ## Other harnesses (for later)
 

@@ -30,7 +30,7 @@ forever.
    `docs/research-launch.md` for what a binary answers when you run it — models,
    efforts, argument forms; `docs/research-protocol.md` for what the generated
    schema and the reference tree state; `docs/research.md` for what only a running
-   session shows.
+   session shows, with Codex's share of that in `docs/research-codex.md`.
 
 The full map of the documentation is `docs/README.md`: every document, grouped by
 purpose, with what it contains and when to open it. A change that adds, removes or
@@ -49,8 +49,9 @@ documentation is part of every change, not a task after it:
 - A change of behaviour or contract lands in the same commit as the code:
   `docs/flow.md` when the path of a message changes, `docs/design.md`,
   `docs/launch.md` or `docs/delivery.md` when the mechanism does,
-  `docs/research.md` — or its launch or protocol companion, whichever matches how
-  the fact was obtained — when a fact about a harness is learned or found wrong.
+  `docs/research.md` — or its launch, protocol or Codex companion, whichever matches
+  how the fact was obtained and which harness it is about — when a fact about a
+  harness is learned or found wrong.
 - Every review round and every milestone is recorded in `docs/roadmap/` as soon
   as it closes — one file per entry, listed in its `README.md`: what was found,
   what was done, what stays open. Older review rounds move to
