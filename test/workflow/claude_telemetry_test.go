@@ -67,12 +67,13 @@ const (
 	obsCompactionNotice = "the worker's compaction is announced to the main"
 	obsOwnerStatusShown = "the person's status line is what is shown"
 	obsHookBudget       = "a telemetry hook stays within its budget"
+	obsTurnStartBudget  = "the hook that records a turn start stays within the same budget"
 	obsTapBudget        = "the tap adds little to the person's status line"
 )
 
 var telemetryObservations = []string{
 	obsTelemetryValues, obsCompactionCount, obsIdleAfterTurn, obsConversation,
-	obsHeader, obsCompactionNotice, obsOwnerStatusShown, obsHookBudget, obsTapBudget,
+	obsHeader, obsCompactionNotice, obsOwnerStatusShown, obsHookBudget, obsTurnStartBudget, obsTapBudget,
 }
 
 // telemetryFinding is one observation's answer. judged is false when the
@@ -178,6 +179,9 @@ func playClaudeTelemetry(t *testing.T, c *Case, iso *Isolation) []telemetryFindi
 	hookMedian, hookP95 := quantile(result.Hook, 0.5), quantile(result.Hook, 0.95)
 	out = append(out, finding(obsHookBudget, len(result.Hook) == latencyRuns && hookMedian <= hookBudgetMedian && hookP95 <= hookBudgetP95,
 		"hook median %.1f ms, p95 %.1f ms over %d runs; budget %.0f / %.0f", hookMedian, hookP95, len(result.Hook), hookBudgetMedian, hookBudgetP95))
+	turnMedian, turnP95 := quantile(result.TurnStart, 0.5), quantile(result.TurnStart, 0.95)
+	out = append(out, finding(obsTurnStartBudget, len(result.TurnStart) == latencyRuns && turnMedian <= hookBudgetMedian && turnP95 <= hookBudgetP95,
+		"UserPromptSubmit hook median %.1f ms, p95 %.1f ms over %d runs; budget %.0f / %.0f", turnMedian, turnP95, len(result.TurnStart), hookBudgetMedian, hookBudgetP95))
 	var added []float64
 	for index := range result.Tap {
 		added = append(added, result.Tap[index]-result.Owner[index])

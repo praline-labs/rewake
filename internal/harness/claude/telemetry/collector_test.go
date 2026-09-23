@@ -180,3 +180,40 @@ func TestTheBootClockOrdersProcesses(t *testing.T) {
 func TestPrintBootClock(_ *testing.T) {
 	fmt.Println(processStarted)
 }
+
+// The turn-start file keeps the latest reading: a late hook of an earlier start
+// cannot move it back, and a later start moves it forward.
+func TestTheTurnStartKeepsTheLatestReading(t *testing.T) {
+	socket := filepath.Join(socketDir(t), "s.obs")
+	RecordTurnStart(socket, 200)
+	RecordTurnStart(socket, 150)
+	if got := ReadTurnStart(TurnStartPath(socket)); got != 200 {
+		t.Errorf("after a late earlier start the file reads %d, want 200", got)
+	}
+	RecordTurnStart(socket, 300)
+	if got := ReadTurnStart(TurnStartPath(socket)); got != 300 {
+		t.Errorf("after a later start the file reads %d, want 300", got)
+	}
+	if got := ReadTurnStart(filepath.Join(socketDir(t), "none.turn")); got != 0 {
+		t.Errorf("no file reads %d, want 0", got)
+	}
+}
+
+// Many hooks recording at once leave the latest reading, whatever order their
+// renames land in.
+func TestConcurrentTurnStartsLeaveTheLatest(t *testing.T) {
+	socket := filepath.Join(socketDir(t), "s.obs")
+	done := make(chan struct{})
+	for i := int64(1); i <= 20; i++ {
+		go func(at int64) {
+			RecordTurnStart(socket, at*100)
+			done <- struct{}{}
+		}(i)
+	}
+	for range 20 {
+		<-done
+	}
+	if got := ReadTurnStart(TurnStartPath(socket)); got != 2000 {
+		t.Errorf("the file reads %d after concurrent records, want 2000", got)
+	}
+}

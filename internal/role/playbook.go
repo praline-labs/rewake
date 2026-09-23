@@ -52,6 +52,7 @@ var writePlaybook = Playbook{
 		"Never answer a task with rewake send: ending the turn already reports, and the sender would get the same result twice.",
 		"Never answer a notify at all.",
 		"You can commit changes when authorized; Git metadata access needs an explicit --grant-git task from main, or permissions the owner already gave.",
+		"If you end a turn while waiting for background work, run rewake pending \"<what it waits for>\" first, or the sender takes that turn's end as your report; better, wait inside the turn.",
 	}, sharedLimits...),
 }
 
@@ -72,7 +73,7 @@ var mainPlaybook = Playbook{
 		{Do: "rewake send <name> \"...\"", Why: "a task, answered by a report when that session's turn ends"},
 		{Do: "rewake send <name> \"...\" --question", Why: "the same, but this command waits for the answer"},
 		{Do: "rewake send <name> \"...\" --notify", Why: "a heads-up that owes nothing back"},
-		{Do: "rewake inbox", Why: "read the reports: finished, error, stopped"},
+		{Do: "rewake inbox", Why: "read the reports: finished, error, stopped, and pending — work still going, its report to follow"},
 	},
 	Limits: append([]string{
 		"Your own successful turns are reported to nobody, which is what keeps two sessions from waking each other forever.",

@@ -108,6 +108,7 @@ func (c *Collector) Close() {
 	if c.conn != nil {
 		_ = c.conn.Close()
 		_ = os.Remove(c.path)
+		_ = os.RemoveAll(TurnStartPath(c.path))
 	}
 }
 

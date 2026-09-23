@@ -23,12 +23,24 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 	}
 	if !receipt.Done {
 		if !receipt.Prepared {
+			// Once per turn end: a retry of the same turn finds the receipt
+			// prepared and does not look at a later turn's mark.
+			text, pending, err := inbox.TakePending(dir, self.Name, self.Epoch(), event.Started, event.Ended)
+			if err != nil {
+				return err
+			}
+			if pending && !event.Failed && !event.Stopped {
+				// Only a normal finish is softened: a failure or a stop says
+				// more than "still working", and stays what it is.
+				event.Pending, event.Text = true, text
+			}
 			receipt.Reports, receipt.Waiters, err = prepareTurnReports(dir, self, event, currentThread, waiters, receipt.ID)
 			if err != nil {
 				return err
 			}
 			receipt.Prepared = true
-			receipt.KeepWaiters = event.Stopped
+			receipt.KeepWaiters = event.Stopped || event.Pending
+			receipt.Interim = event.Pending
 			if err := saveTurnReceipt(path, receipt); err != nil {
 				return err
 			}
@@ -86,10 +98,13 @@ func prepareTurnReports(dir string, self registry.Session, event turnResult, cur
 		return nil, nil, nil
 	}
 	kind := inbox.Finished
-	if event.Stopped {
+	switch {
+	case event.Stopped:
 		kind = inbox.Stopped
-	} else if event.Failed {
+	case event.Failed:
 		kind = errorKind.kind
+	case event.Pending:
+		kind = inbox.Interim
 	}
 	var reports []inbox.Message
 	for _, waiter := range waiters {
@@ -103,6 +118,11 @@ func prepareTurnReports(dir string, self registry.Session, event turnResult, cur
 		id := inbox.ReportID(self.Name, self.Epoch(), waiter)
 		if event.Stopped {
 			id += "-stopped-" + fallbackID
+		}
+		if event.Pending {
+			// Its own id, so the report that settles the wait later is not
+			// taken for a copy of this one.
+			id += "-pending-" + fallbackID
 		}
 		reports = append(reports, inbox.Message{ID: id, From: self.Name, FromEpoch: self.Epoch(), To: peer.Name, ToEpoch: peer.Epoch(), Kind: kind, Text: event.Text, InReplyTo: waiter.Messages, CreatedAt: time.Now(), ThreadChanged: inbox.ReportThreadChanged(dir, self.Name, waiter.Messages, currentThread)})
 	}

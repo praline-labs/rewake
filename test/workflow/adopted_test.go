@@ -166,9 +166,22 @@ func groupHasLiveMember(pgid int) (bool, error) {
 		if statErr != nil {
 			return false, statErr
 		}
-		if memberGroup == pgid {
-			return true, nil
+		if memberGroup != pgid {
+			continue
 		}
+		if isZombie(pid) && pid != pgid {
+			// Dead, and only waiting to be collected — by this process when
+			// it adopted the orphan, so collect it now. A shim that exits
+			// while a hook it started is finishing leaves exactly that, and
+			// counting it as a member kept a case waiting for a session that
+			// had long ended. Never the group's leader: that is the process
+			// the case started, whose own Wait collects it and its exit code,
+			// and taking it here would leave that Wait with nothing.
+			var status syscall.WaitStatus
+			_, _ = syscall.Wait4(pid, &status, syscall.WNOHANG, nil)
+			continue
+		}
+		return true, nil
 	}
 	return false, nil
 }

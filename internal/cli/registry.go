@@ -124,6 +124,20 @@ func buildGroups() {
 				Handler: handleInbox,
 			},
 			{
+				Name:           "pending",
+				Args:           "<text>",
+				MaxPositionals: 1,
+				Summary:        "Before ending a turn that has not finished the work, say what it waits for: that turn end then tells the senders the work is still going, and the next one reports.",
+				Options:        []Option{jsonOption},
+				Examples:       []string{"rewake pending \"the suite is running; the report follows when it ends\""},
+				Notes: []string{
+					"Without it, the end of a turn is the report, and the sender stops waiting. Better than either: wait inside the turn.",
+					"It holds for the one turn it is run in, and only a normal end of it: a turn that fails or is stopped reports that as usual.",
+					"Refused outside a session, for the main session, whose turns are reported to nobody, and when no read task or question is waiting for a report.",
+				},
+				Handler: handlePending,
+			},
+			{
 				Name:           "whoami",
 				MaxPositionals: 0,
 				Summary:        "The name, room and role of this session, when it runs under rewake.",

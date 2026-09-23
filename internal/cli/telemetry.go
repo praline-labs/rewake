@@ -3,6 +3,7 @@ package cli
 import (
 	"os"
 
+	"github.com/iiiokojiadbi/rewake/internal/boottime"
 	"github.com/iiiokojiadbi/rewake/internal/harness/claude/telemetry"
 )
 
@@ -18,6 +19,10 @@ func handleObserve(_ *Context, call Call) error {
 	}
 	if event, ok := telemetry.DecodeHook(readPayload(os.Stdin)); ok {
 		telemetry.Send(socket, event)
+		if event.Kind == telemetry.UserPromptSubmit {
+			// The start of a turn, for `rewake pending` (turnstart.go).
+			telemetry.RecordTurnStart(socket, boottime.ProcessStarted)
+		}
 	}
 	return nil
 }

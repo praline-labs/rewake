@@ -237,6 +237,12 @@ A task creates an obligation to report, and the session most likely to be asked 
 main one, which is silent by role: the obligation would sit there with nothing to
 discharge it.
 
+A worker that ends a turn before the work is done — background work still running —
+runs `rewake pending "<what it waits for>"` first. That one turn end then reaches the
+waiters as a `pending` message with that text, owing nothing and settling nothing, and
+the next turn end without a mark is the report
+([turn-outcomes.md](turn-outcomes.md#interim-turn-ends-rewake-pending)).
+
 ## Act 6. A question, when the sender wants to block
 
 `rewake send write-codex "which port?" --question` is a task whose sender waits for

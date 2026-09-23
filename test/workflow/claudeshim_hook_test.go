@@ -121,6 +121,15 @@ func parseClaudeSettings(raw string) (claudeSettings, error) {
 // about, then end the turn through the hook.
 func (s *claudeSession) workTurn(turn string, notice claudeNotice) {
 	s.recordDelivery(turn, notice)
+	// A delivered message starts a turn through UserPromptSubmit, as a typed
+	// one does (seen live on 2.1.280); its hook is how rewake learns the turn
+	// began.
+	if payload, err := json.Marshal(map[string]any{
+		"hook_event_name": "UserPromptSubmit", "session_id": os.Getenv(sessionNameEnv),
+		"cwd": workingDirectory(), "prompt": notice.Summary,
+	}); err == nil {
+		s.runHook("UserPromptSubmit", s.launch.settings.observe, payload)
+	}
 
 	var text string
 	var err error
@@ -132,6 +141,7 @@ func (s *claudeSession) workTurn(turn string, notice claudeNotice) {
 	if err != nil {
 		text = "could not read the mailbox: " + err.Error()
 	}
+	markPendingOnce()
 	s.endTurn(text)
 	// Recorded after the hook, not before: a session told to leave once it
 	// has worked a turn leaves when this line appears, and one that left

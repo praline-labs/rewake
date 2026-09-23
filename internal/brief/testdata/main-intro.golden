@@ -5,7 +5,7 @@ You are the main session: you hand out work and read what comes back.
   rewake send <name> "..." — a task, answered by a report when that session's turn ends
   rewake send <name> "..." --question — the same, but this command waits for the answer
   rewake send <name> "..." --notify — a heads-up that owes nothing back
-  rewake inbox — read the reports: finished, error, stopped
+  rewake inbox — read the reports: finished, error, stopped, and pending — work still going, its report to follow
 
 Your own successful turns are reported to nobody, which is what keeps two sessions from waking each other forever.
 Only you may add --grant-git to a task, and only to a session whose role allows it.

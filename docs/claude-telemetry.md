@@ -25,7 +25,11 @@ layer uses both; the wrapper listens.
   it needs, sends one datagram without waiting — a missing or busy socket fails on the
   spot — and exits 0 whatever happened. Each event carries its process's start on the
   boot clock (`CLOCK_BOOTTIME`, read while the package initializes, before stdin), which
-  the collector compares to put late background hooks in order. The end-of-turn hooks stay in the foreground: a
+  the collector compares to put late background hooks in order. On UserPromptSubmit the
+  hook also records that start in `<socket>.turn/`, without a lock, for binding a
+  `rewake pending` mark to its turn
+  ([turn-outcomes.md](turn-outcomes.md#interim-turn-ends-rewake-pending)). The
+  end-of-turn hooks stay in the foreground: a
   turn's end has to be recorded before the session goes idle.
 - **Activity after an interruption.** Known limit, September 23, 2026: a session a
   person interrupts with Esc stays `working` until its next UserPromptSubmit or Stop. No hook was seen to mark the

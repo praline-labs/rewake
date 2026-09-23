@@ -86,6 +86,11 @@ const (
 	Error Kind = "error"
 	// Stopped reports a keyboard interruption without settling the work.
 	Stopped Kind = "stopped"
+	// Interim is a turn end marked pending: the receiver ran `rewake pending` before
+	// ending a turn it had not finished the work in. It carries the text given
+	// there, owes nothing, and settles nothing: the report comes at the next
+	// turn end without such a mark.
+	Interim Kind = "pending"
 )
 
 // KindOf returns the kind of a message, reading a missing one as a task: mail
@@ -102,7 +107,7 @@ func KindOf(message Message) Kind {
 // already: waiting on one would have two sessions report to each other forever.
 func Owed(message Message) bool {
 	switch KindOf(message) {
-	case Note, Finished, Error, Stopped:
+	case Note, Finished, Error, Stopped, Interim:
 		return false
 	}
 	return message.FromEpoch != ""
@@ -262,7 +267,20 @@ func archive(dir, to, id string) error {
 	return err
 }
 
-// IsReport includes successful and failed turn outcomes.
+// IsReport includes every turn outcome — successful, failed, stopped and
+// interim — for what a report shares with the others: a notice that failed
+// leaves it readable rather than lost.
 func IsReport(message Message) bool {
-	return KindOf(message) == Finished || KindOf(message) == Error || KindOf(message) == Stopped
+	switch KindOf(message) {
+	case Finished, Error, Stopped, Interim:
+		return true
+	}
+	return false
+}
+
+// Settles reports whether a report ends the wait of whoever sent the work: a
+// blocked --question takes it as its answer. An interim one does not; the
+// question waits on for the report that follows it.
+func Settles(message Message) bool {
+	return IsReport(message) && KindOf(message) != Interim
 }

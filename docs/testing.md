@@ -169,10 +169,11 @@ product mutant, built by `buildMutant` in `mutant_test.go` with one edit through
 toolchain's overlay, inside a started case, refusing an edit that does not match
 exactly once; or a switch that changes the fixture's world. A mutant is preferred
 wherever one can be built, because it shows the scenario catching a broken rewake
-rather than a misbehaving peer. Of today's twenty controls, eleven are mutants —
+rather than a misbehaving peer. Of today's twenty-two controls, thirteen are mutants —
 batch-arrival's four; task-report's no-stop-hook, turn-ended-ignores-stop and
 settles-nothing; mid-turn's wait-for-idle; claude-telemetry's tap-without-owner,
-uncounted-compaction and silent-compaction — and nine are fixture switches: task-report's
+uncounted-compaction and silent-compaction; pending-report's pending-ignored and
+pending-settles — and nine are fixture switches: task-report's
 wrong-report, read-fails, failure-before-report and early-exit; the three readiness
 controls; mid-turn's late and failed-operation. A control names the observation it must
 break; the crosswise check then runs every control's observations in every other
@@ -205,7 +206,9 @@ all the others to hold, which stands in for a crosswise run: a mutant that broke
 everything would not pass as the control of one thing.
 
 Measured on the development machine, September 23, 2026, 40 runs each: a telemetry hook
-(shell plus a cold `rewake observe` sending one datagram) median 5.4 ms, p95 6.7 ms; the
+(shell plus a cold `rewake observe` sending one datagram) median 5.4 ms, p95 6.7 ms, and
+on UserPromptSubmit, which also records the turn's start on disk, median 5.1 ms, p95 5.9
+ms against the same budget; the
 tap in front of a one-line `sed` status line added a median of 4.8 ms, p95 6.8 ms, to
 that line's own 2.6 ms. The hooks run in the background (`"async": true`), so the agent
 does not wait even for that. The case's budgets are a median of 20 ms and a p95 of 50 ms
@@ -222,6 +225,14 @@ carry `-C` into a directory holding another script of the same name, which must 
 run. It has no control in the suite; with the relative path left relative, it went red on
 three of its four observations (September 23, 2026).
 
+`pending-report` runs in both columns with three sessions. A worker reads a task and,
+in that turn, runs `rewake pending` before ending it; the sender must read a `pending`
+message about the task first, and the worker's awaiting record must still be there.
+A third session then sends the worker a task of its own, and that turn end — with no
+mark — must be the `finished` report settling the first task. Its two mutants, each in
+both columns, ignore the mark and let the interim turn end settle the task; like the
+telemetry controls, each names what it must break and requires the rest to hold.
+
 ## Traps this suite has already paid for
 
 - **An anchor weaker than its judgement.** The consuming-overview control waited for one
@@ -233,6 +244,12 @@ three of its four observations (September 23, 2026).
   once landed in between under a full run and failed the case in half a second. A wait
   now waits on through that gap; a judgement after its anchor still fails on it
   (September 23, 2026).
+- **A zombie counted as a live session.** A fixture that exits while a hook it started
+  is finishing leaves that hook's shell an orphan, adopted by the suite as subreaper and
+  dead but uncollected; the check for a live process group counted it, and the case
+  waited out its deadline for a session that had ended — two of eight parallel runs of
+  pending-report. A zombie in the group is now collected and not counted (September 23,
+  2026).
 - **Inherited session variables.** A test run from inside a session read the live state
   as its own — hence `env -u` everywhere
   ([traps.md](traps.md#a-test-that-inherited-the-sessions-variables-declared-its-own-session-foreign)).

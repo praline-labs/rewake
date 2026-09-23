@@ -6,7 +6,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/iiiokojiadbi/rewake/internal/boottime"
 	"github.com/iiiokojiadbi/rewake/internal/harness"
+	"github.com/iiiokojiadbi/rewake/internal/harness/claude/telemetry"
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/state"
@@ -52,9 +54,22 @@ func handleTurnEnded(_ *Context, call Call) error {
 	if !ok {
 		return nil
 	}
+	// The end of this turn is this process's start: the harness runs the
+	// hook as the turn ends. Its start is the latest UserPromptSubmit the
+	// telemetry hook recorded; without one it is unknown, and a pending mark
+	// cannot be tied to the turn.
+	observation := registry.ObservationFor(dir, self.Name, self.Epoch())
+	event.Ended = boottime.ProcessStarted
+	event.Started = telemetry.ReadTurnStart(telemetry.TurnStartPath(observation))
 	currentThread, _ := harness.SessionThread(self)
 
 	_ = completeTurn(dir, self, event, currentThread)
+	// Whatever comes next starts after this end, so the recorded start moves
+	// up to it. A turn end that was lost — an Esc, a payload or a lock that
+	// never came — is then corrected by the next one heard: a mark made
+	// before it cannot be taken by a later turn, even one that starts without
+	// a UserPromptSubmit.
+	telemetry.RecordTurnStart(observation, event.Ended)
 	return nil
 }
 

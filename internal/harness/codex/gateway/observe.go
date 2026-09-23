@@ -1,6 +1,10 @@
 package gateway
 
-import "time"
+import (
+	"time"
+
+	"github.com/iiiokojiadbi/rewake/internal/boottime"
+)
 
 // Completion carries only live outcomes. No resume/history item can reach this path.
 type (
@@ -10,6 +14,11 @@ type (
 		Epoch                  string
 		Connection, Generation uint64
 		Retained               bool
+		// Started and Ended are when the gateway saw the turn start and end,
+		// on the boot clock; zero when it did not see one. They are what ties
+		// a `rewake pending` mark to this turn and to no other, however late
+		// the completion is published.
+		Started, Ended int64
 	}
 	interval struct {
 		endRead                           *uint64
@@ -17,6 +26,7 @@ type (
 		active, done, compact, seenActive bool
 		idle                              time.Time
 		serial                            uint64
+		started                           int64
 	}
 	observer struct {
 		thread    string
@@ -166,6 +176,9 @@ func (o *observer) event(m meta, raw []byte, now time.Time) {
 		if !w.seenActive {
 			w.endRead = nil
 		}
+		if w.turn != m.turn || w.started == 0 {
+			w.started = boottime.Now()
+		}
 		w.turn = m.turn
 		w.active = true
 		w.seenActive = true
@@ -192,7 +205,7 @@ func (o *observer) event(m meta, raw []byte, now time.Time) {
 			delete(o.manual, m.thread)
 			return
 		}
-		result := Completion{ID: m.thread + "/" + m.turn, Thread: m.thread, ReadThrough: endBoundary(w, m)}
+		result := Completion{ID: m.thread + "/" + m.turn, Thread: m.thread, ReadThrough: endBoundary(w, m), Started: w.started, Ended: boottime.Now()}
 		switch m.status {
 		case "completed":
 			result.Kind = "finished"

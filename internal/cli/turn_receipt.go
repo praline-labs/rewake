@@ -17,8 +17,11 @@ type turnReceipt struct {
 	Done        bool
 	Prepared    bool
 	KeepWaiters bool
-	Waiters     []inbox.Waiter
-	Reports     []inbox.Message
+	// Interim marks a turn end that kept its waiters because it was marked
+	// pending, not because it was stopped.
+	Interim bool
+	Waiters []inbox.Waiter
+	Reports []inbox.Message
 }
 
 func loadTurnReceipt(dir string, self registry.Session, event turnResult) (turnReceipt, string, error) {
@@ -39,7 +42,7 @@ func loadTurnReceipt(dir string, self registry.Session, event turnResult) (turnR
 	raw, err := os.ReadFile(path)
 	if err == nil {
 		err = json.Unmarshal(raw, &receipt)
-		if err == nil && !event.Stopped && receipt.KeepWaiters {
+		if err == nil && !event.Stopped && receipt.KeepWaiters && !receipt.Interim {
 			stopEvent := event
 			stopEvent.Stopped = true
 			_, _, loadErr := loadTurnReceipt(dir, self, stopEvent)

@@ -51,6 +51,8 @@ refusals and help come from there.
 | `notify` | `--notify` | nothing | once delivered |
 | `finished` | successful turn end | nothing | — |
 | `error` | failed turn hook only | nothing | failure, exit 1 for a waiting question |
+| `stopped` | keyboard interruption only | nothing | exit 1 for a waiting question |
+| `pending` | a normal turn end marked with `rewake pending` only | nothing | — a waiting question keeps waiting |
 
 The rule for agents, stated in the intro and the guide: a task or a question is
 answered by ending the turn with the result as the final message, and stopping.
@@ -285,7 +287,7 @@ runs while its own session is still awake anyway.
 
 Two rules keep this from turning into a loop:
 
-- reading finished, error, stopped or notify asks for nothing back;
+- reading finished, error, stopped, pending or notify asks for nothing back;
 - each waiting run is told once; a new run of the name starts with no waiters.
 
 So an exchange ends: A writes to B; B reads, answers, ends its turn and reports
@@ -324,43 +326,8 @@ A waiting `send --question` also prints the warning and preserves the boolean in
 its JSON result. The caller decides whether to resend. Existing idempotent
 report publication still applies.
 
-### Failed turns
+### Turn ends that are not an ordinary report
 
-After a failed or interrupted turn, a session is woken only by new mail: what was
-already announced is never announced again, and new mail needs neither a manual
-continuation nor a peek to reach it. Owner decision, September 19, 2026; the evidence
-is in [native-terminal-progress.md](native-terminal-progress.md). This holds for the
-keyboard stops below as well.
-
-The hidden hook emits error with the harness reason unchanged. Received empty
-completion after read work produces an error with empty text. Successful turns
-still produce finished. Error is in the kind catalog but has no send flag;
-`send --error` is refused. It creates no reply obligation.
-
-Errors go to all live waiters for this run; with none, they go to the room's
-main. A failing main, or a room with no main, retains the error in the failing
-session's own unread mailbox without announcing it to itself. Identified turns
-are idempotent; callbacks without turn ids are separate invocations. Delivery uses failed task-notification status on the socket path and a red circle on
-the server path. A waiting question consumes the error and exits 1.
-
-Failure observation depends on the harness providing a callback. The current
-server backend observes terminal failures directly. Hooks on other transports
-still depend on the harness providing a callback.
-
-### Keyboard stops
-
-A stopped outcome is advisory and hook-only. It goes to the current waiters,
-otherwise to main, using the text "the person at the keyboard stopped this turn".
-It owes no reply and has its own report id, separate from the eventual result.
-Its separate advisory turn receipt keeps the original waits intact. A finished
-or error outcome for the same native turn uses its final receipt and can settle
-those waits; retries of either outcome remain idempotent. Human continuation can then
-publish finished with the same inReplyTo and settle those waits. Main waits for
-the person instead of resending. A waiting question prints stopped and exits 1;
-the later result remains an ordinary inbox report. Socket notices use killed
-status; server-delivered text notices use a yellow circle.
-
-Answer receipts store the report id in received/<question id>. Only an exact
-match confirms that report; stopped does not acknowledge a later finished with
-the same inReplyTo. Empty legacy receipts are unqualified and do not confirm a
-new outcome. Their existing reference-based retention and expiry still apply.
+A failed turn, a keyboard stop and a turn end marked with `rewake pending` each reach
+the waiters differently from a `finished` report; they are in
+[turn-outcomes.md](turn-outcomes.md).

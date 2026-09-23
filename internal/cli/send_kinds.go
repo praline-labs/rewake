@@ -37,7 +37,7 @@ type sent struct {
 }
 
 // sendKinds lists every kind send can write, the default first.
-var sendKinds = []messageKind{taskKind, questionKind, noteKind, errorKind, stoppedKind}
+var sendKinds = []messageKind{taskKind, questionKind, noteKind, errorKind, stoppedKind, interimKind}
 
 // chosenKind reads the kind from the flags: at most one may be given.
 func chosenKind(call Call) (messageKind, error) {
@@ -74,5 +74,5 @@ func kindSummary() string {
 	for _, kind := range sendKinds {
 		descriptions = append(descriptions, string(kind.kind)+": "+kind.summary)
 	}
-	return strings.Join(descriptions, " ") + " finished: a successful final report, owing no reply. Answer tasks and questions by ending the turn with a final result, not by rewake send. Do not answer notify, finished or error messages."
+	return strings.Join(descriptions, " ") + " finished: a successful final report, owing no reply. Answer tasks and questions by ending the turn with a final result, not by rewake send. Do not answer notify, finished, pending or error messages."
 }

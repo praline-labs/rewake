@@ -13,6 +13,8 @@ func noticePrefix(message inbox.Message) string {
 		return "🔴"
 	case inbox.Stopped:
 		return "🟡"
+	case inbox.Interim:
+		return "⏳"
 	default:
 		return noticeMark
 	}

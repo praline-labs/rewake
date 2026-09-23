@@ -27,7 +27,7 @@ const answerPoll = time.Second
 // awaitedHere reports whether a send in this session waits for this report now.
 // The caller holds the mailbox lock.
 func awaitedHere(dir, name string, message Message) bool {
-	if !IsReport(message) {
+	if !Settles(message) {
 		return false
 	}
 	for _, id := range message.InReplyTo {
@@ -93,7 +93,7 @@ func takeAnswer(ctx context.Context, dir, name, epoch, question string, show fun
 
 // answers reports whether a message is the report that settles a question.
 func answers(message Message, question string) bool {
-	if !IsReport(message) {
+	if !Settles(message) {
 		return false
 	}
 	for _, id := range message.InReplyTo {

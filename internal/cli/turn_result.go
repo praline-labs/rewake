@@ -11,7 +11,13 @@ type turnResult struct {
 	Text     string
 	Failed   bool
 	Stopped  bool
-	ID       string
+	// Pending is decided from the session's mark when the turn's reports are
+	// prepared, never from a hook payload.
+	Pending bool
+	// Started and Ended bound the turn on the boot clock, zero where unknown:
+	// they decide whether a pending mark was made in this turn.
+	Started, Ended int64
+	ID             string
 }
 
 func completedTurn(payload []byte) (turnResult, bool) {

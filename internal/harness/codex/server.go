@@ -141,7 +141,7 @@ func (s *serverSession) Start(ctx context.Context, handler harness.CompletionHan
 	s.gateway = gateway.New(gateway.Config{Upstream: s.upstream, Epoch: s.epoch, StartupFork: s.startupFork, ReadSequence: readSequence, Closed: func(info gateway.CloseInfo) {
 		_, _ = fmt.Fprintf(s.gatewayLog, "connection=%d generation=%d direction=%s reason=%s error=%q bytes=%d requests=%d responses=%d sizeStage=%s messageBytes=%d limitBytes=%d\n", info.Connection, info.Generation, info.Direction, info.Reason, info.Error, info.Bytes, info.Requests, info.Responses, info.SizeStage, info.MessageBytes, info.LimitBytes)
 	}, Complete: func(result gateway.Completion) {
-		value := harness.Completion{ID: result.PublicationID(), Thread: result.Thread, Kind: inbox.Kind(result.Kind), Text: result.Text}
+		value := harness.Completion{ID: result.PublicationID(), Thread: result.Thread, Kind: inbox.Kind(result.Kind), Text: result.Text, Started: result.Started, Ended: result.Ended}
 		if s.capture != nil && result.ReadThrough != nil {
 			value.Boundary = s.capture()
 			value.Boundary.Through = *result.ReadThrough

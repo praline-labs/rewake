@@ -1,7 +1,7 @@
 # Native start-or-steer and terminal outcome evidence
 
 September 19, 2026. The evidence behind two rules stated elsewhere: what a failed or
-interrupted turn wakes, in [delivery.md](delivery.md#failed-turns), and start-or-steer
+interrupted turn wakes, in [turn-outcomes.md](turn-outcomes.md#failed-turns), and start-or-steer
 without waiting for a finished turn, in the [grouped inbox contract](inbox-groups.md).
 
 ## Evidence

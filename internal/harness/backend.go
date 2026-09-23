@@ -19,6 +19,10 @@ type Completion struct {
 	Thread   string
 	Kind     inbox.Kind
 	Text     string
+	// Started and Ended bound the turn on the boot clock (internal/boottime),
+	// zero where unknown; a pending mark counts for this turn only if it was
+	// made between them.
+	Started, Ended int64
 }
 
 // CompletionHandler separates nonblocking read-boundary capture from publication.

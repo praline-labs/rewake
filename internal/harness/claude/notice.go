@@ -23,6 +23,11 @@ func notification(message inbox.Message) string {
 	if harness.NoticeKind(message) == inbox.Error {
 		status = "failed"
 	}
+	if harness.NoticeKind(message) == inbox.Interim {
+		// Neither completed nor failed: the interface draws a status it has no
+		// color for as a plain line, which is what "still going" should look like.
+		status = "running"
+	}
 	return strings.Join([]string{
 		"<task-notification>",
 		fmt.Sprintf("<task-id>%s</task-id>", harness.NoticeID(message)),

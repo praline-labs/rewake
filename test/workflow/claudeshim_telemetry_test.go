@@ -50,10 +50,13 @@ type telemetryResult struct {
 	StatusOutputs []string `json:"statusOutputs"`
 	// Hook, Tap and Owner are timings in milliseconds: one telemetry hook, the
 	// tap running the person's command, and that command run directly.
-	Hook  []float64 `json:"hookMs"`
-	Tap   []float64 `json:"tapMs"`
-	Owner []float64 `json:"ownerMs"`
-	Error string    `json:"error,omitempty"`
+	Hook []float64 `json:"hookMs"`
+	// TurnStart times the telemetry hook on UserPromptSubmit, which also
+	// records the turn's start on disk.
+	TurnStart []float64 `json:"turnStartMs"`
+	Tap       []float64 `json:"tapMs"`
+	Owner     []float64 `json:"ownerMs"`
+	Error     string    `json:"error,omitempty"`
 }
 
 func hookPayload(event string, extra map[string]any) []byte {
@@ -141,12 +144,15 @@ func (s *claudeSession) playTelemetry() {
 		_, hook, _ := runShellTimed(settings.observe, probe)
 		_, tap, _ := runShellTimed(settings.statusLine, statusPayload(50000))
 		_, direct, _ := runShellTimed(owner, statusPayload(50000))
+		_, turnStart, _ := runShellTimed(settings.observe, hookPayload("UserPromptSubmit", map[string]any{"prompt": conversationText}))
 		result.Hook = append(result.Hook, hook)
+		result.TurnStart = append(result.TurnStart, turnStart)
 		result.Tap = append(result.Tap, tap)
 		result.Owner = append(result.Owner, direct)
 	}
-	// One more status after the timing, so the last thing the collector saw
-	// is the state the case checks.
+	// The timing started turns; one more end and one more status, so the
+	// last thing the collector saw is the state the case checks.
+	fire("Stop", map[string]any{"last_assistant_message": conversationText, "stop_hook_active": false})
 	status(50000)
 
 	if lead := os.Getenv(shimTelemetryNotify); lead != "" {

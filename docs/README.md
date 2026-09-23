@@ -34,9 +34,13 @@ everything else.
 - [delivery.md](delivery.md) — sending, reading and reporting at the level of files and
   wire: the message record, task, question and notify, the question reservation and its
   heartbeat, the one lock per mailbox, the wrapper's servicing loop and notice texts, both
-  adapters, `rewake inbox`, turn-end reports and what happens on a thread change, an
-  error or a stop, including the rule that a failed or interrupted turn is woken only by
-  new mail. Open it for the exact behaviour of any send, read or report.
+  adapters, `rewake inbox`, turn-end reports and what happens on a thread change. Open it
+  for the exact behaviour of any send, read or report.
+- [turn-outcomes.md](turn-outcomes.md) — the turn ends that are not an ordinary report:
+  a failed turn, a keyboard stop, and a turn end marked with `rewake pending`, which tells
+  the waiters the work is still going and keeps their tasks owed; including the rule that
+  a failed or interrupted turn is woken only by new mail. Open it when a report is an
+  error, stopped or pending, or when one of them settled or left open the wrong thing.
 - [gateway.md](gateway.md) — the Codex delivery gateway from the inside: how the primary
   terminal connection and its conversation are selected and reserved before mail goes
   in, the ledger of admitted work, report publication, forks and side conversations, and

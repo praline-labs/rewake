@@ -1,11 +1,16 @@
 package gateway
 
+import "github.com/iiiokojiadbi/rewake/internal/boottime"
+
 // An explicit terminal event matching an acknowledged turn does not require a
 // preceding turn/started event. Missing start evidence must not hide real results.
 func (a *admittedWork) confirmedTerminal(s *admittedThread, m meta, raw []byte) {
-	v := Completion{ID: m.thread + "/" + m.turn, Thread: m.thread}
+	v := Completion{ID: m.thread + "/" + m.turn, Thread: m.thread, Ended: boottime.Now()}
 	w := s.observed.find(m.thread, m.turn)
 	v.ReadThrough = endBoundary(w, m)
+	if w != nil && w.turn == m.turn {
+		v.Started = w.started
+	}
 	switch m.status {
 	case "completed":
 		v.Kind = "finished"
