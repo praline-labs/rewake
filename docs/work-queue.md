@@ -57,24 +57,22 @@ instead of a model provider, for both harnesses. The pieces it would reuse exist
 of the caller's choosing. What does not exist is the responder, and a way to point
 each harness at it for one launch without editing its configuration.
 
-## Then: a two-way channel for Claude Code
+## Then: what Claude Code's one-way channel still leaves out
 
 The Codex wrapper talks to its own server: it sends requests and receives events. With
 Claude Code the channel runs one way — a line is written into a socket and nothing
-comes back. Four rows of the [feature map](harness-features.md) are missing for that
-single reason: telemetry, compactions, interruption, and following the conversation.
+comes back. The telemetry half of that gap is closed: since September 23, 2026 a
+collector fed by background hooks and a status-line tap reports model, effort, context,
+activity and compactions, observed live the same day
+([claude-telemetry.md](claude-telemetry.md); HF-11 and HF-22 in the
+[feature map](harness-features.md#capability-map)).
 
-The leads are known. The Agent SDK reports the available models and can report context
-usage. And there is a channel where the harness calls a command *we* name and hands it
-data about the session — the same shape by which the end of a turn already reaches us
-(`internal/harness/hooks.go`). The question for the research is whether Claude Code has
-a two-way path structured like the Codex one, and what it would give.
-
-What the status line and the hooks carry is now recorded
-([research.md](research.md#telemetry-sources-the-status-line-and-hooks)), and there is no
-local client-server split to stand between
-([research-launch.md](research-launch.md#whether-claude-code-has-a-client-server-split-to-sit-between)).
-The collector waits for the owner to choose its mechanism.
+What stays open is listed in the feature map's [parity queue](harness-features.md#open):
+a keyboard interruption that produces `stopped` (HF-06); tracking which conversation a
+message landed in, so `threadChanged` stops being absent (HF-10); and the harness's own
+`/clear` and `/resume` under rewake, untested rather than broken (HF-19). Two telemetry
+limits remain beside them: activity stays `working` after Esc, and the waiting state is
+unknown during a turn ([session-state.md](session-state.md#claude-code-source)).
 
 ## Then: Codex's `--worktree`
 
@@ -112,6 +110,14 @@ A background worker will likely run without permission prompts, and that is exac
 the class of receiver whose inbound gate holds every rewake line
 ([traps.md](traps.md#a-message-reported-delivered-was-held-by-claude-code--the-status-is-now-honest)),
 so a sender that can tell held from delivered is its prerequisite. Nothing to build yet.
+
+**A view for main of what others owe it.** Proposed with `rewake inbox --owed`, not
+asked for by the owner yet ([the record](roadmap/2026-09-23-owed-reread.md)): `--owed`
+refuses a main session, whose reads record no obligation, yet after its own compaction
+main needs the opposite list — the tasks it waits on from others, found through the other
+sessions' `awaiting/` records naming main's run, plus what they have not read yet. It
+answers a different question and reads other sessions' mailboxes, so it would be its own
+view rather than a mode of `--owed`.
 
 **Parsing the Codex configuration.** Today rewake looks for a mention of a key in the
 text of the file and substitutes nothing when it finds one — crude, and crude on
