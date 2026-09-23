@@ -207,15 +207,25 @@ func runBatchControl(t *testing.T, col column, name string, m mutation, expected
 		// predict. Under one mutant the deferred one is never read at all,
 		// because the overview that would have listed it consumed it.
 		attempted, _ := readsOf(worker, alpha.ID, beta.ID, gamma.ID)
-		return attempted > 0
+		if !col.offers(capabilityNamesMembers) {
+			return attempted > 0
+		}
+		// Where the notice names its members, each close letter is read by id
+		// at the delivery that names it, the deferred one at the next — which
+		// can come after the first read. The judgement there needs both, so
+		// the anchor does too; anchored on one, a third of the runs of the
+		// consuming-overview control were judged before the second read.
+		closeAttempted, _ := readsOf(worker, alpha.ID, beta.ID)
+		return closeAttempted == 2
 	}) {
-		c.Contradicted(want.observation(), "the three letters were not all listed, or none was read, so nothing could be judged")
+		c.Contradicted(want.observation(), "the three letters were not all listed, or fewer letters were read than this column's judgement needs (one here, both close letters where the notice names its members), so nothing could be judged")
 		return
 	}
-	// No settling pause: every breakage this asks about is already in the
-	// recipient's record by the time the anchor is reached. The replay shows
-	// as the redelivery whose read the anchor waited for, and the other three
-	// are properties of the delivery that carried those letters.
+	// No settling pause: every breakage this asks about is in the recipient's
+	// record once the anchor holds. The replay shows as the redelivery whose
+	// read the anchor waited for, the consumed overview as the refused reads
+	// of both close letters the anchor waited for, and the other two are
+	// properties of the delivery that carried those letters.
 	c.Note("watching " + expected + " under " + m.name)
 	broke, why, err := batchControlOutcome(col, expected, worker)
 	switch {

@@ -23,7 +23,9 @@ layer uses both; the wrapper listens.
   each with `"async": true`: the harness runs it in the background and does not wait
   (supported on 2.1.280, read in the binary). The command decodes only the named fields
   it needs, sends one datagram without waiting — a missing or busy socket fails on the
-  spot — and exits 0 whatever happened. The end-of-turn hooks stay in the foreground: a
+  spot — and exits 0 whatever happened. Each event carries its process's start on the
+  boot clock (`CLOCK_BOOTTIME`, read while the package initializes, before stdin), which
+  the collector compares to put late background hooks in order. The end-of-turn hooks stay in the foreground: a
   turn's end has to be recorded before the session goes idle.
 - **Activity after an interruption.** Known limit, September 23, 2026: a session a
   person interrupts with Esc stays `working` until its next UserPromptSubmit or Stop. No hook was seen to mark the
@@ -39,7 +41,9 @@ layer uses both; the wrapper listens.
   the same process, directory and environment, under the harness's own timeout, with its
   output and exit code untouched. A payload too large for a pipe falls back to running
   the command as a child, with termination signals passed on. No configured status line:
-  the tap prints nothing. Parsing that fails, a changed format and a wrapper that is gone
+  the tap prints nothing. A person without a status line of their own therefore now has
+  one — rewake's tap, printing nothing; whether an empty status line looks the same on
+  screen as none was not verified (September 23, 2026). Parsing that fails, a changed format and a wrapper that is gone
   all end the same way — the command runs as if rewake were not there.
 - **Which command the tap runs** is found each time it runs, from its own environment
   and directory — the harness's — the way Claude Code merges its layers, field by field,

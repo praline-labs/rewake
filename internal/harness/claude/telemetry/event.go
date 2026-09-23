@@ -48,9 +48,11 @@ const maxDatagram = 2048
 // field but the kind is optional, and absent means "this sender did not say",
 // never zero.
 type Event struct {
-	// At is the sender's clock in unix nanoseconds. Hooks may run in the
-	// background, so two of them can arrive out of order; the collector uses
-	// this to keep an older event from overwriting a newer one.
+	// At is when the sending process started, on the machine's boot clock
+	// (clock.go). Hooks run in the background, so two of them can arrive out
+	// of order; the collector compares these to keep an older event from
+	// overwriting a newer one. Only the collector compares them, and only
+	// with each other.
 	At      int64    `json:"at"`
 	Kind    string   `json:"kind"`
 	Session string   `json:"session,omitempty"`

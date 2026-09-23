@@ -254,7 +254,24 @@ func RemoveOwned(dir, name, epoch string) (bool, error) {
 		return false, nil
 	}
 	removed := false
-	err := state.WithNameLock(dir, name, func() error {
+	err := state.WithNameLock(dir, name, removeIfOwned(dir, name, epoch, &removed))
+	return removed, err
+}
+
+// pruneIfFree removes a dead run's record the way RemoveOwned does, but only
+// when nobody holds the name: listing and lookup are reads, and a read must
+// not wait on a lock indefinitely. Whoever holds it is the run leaving or another caller
+// cleaning up, and a record left now is pruned by the next listing.
+func pruneIfFree(dir, name, epoch string) {
+	if !state.ValidName(name) {
+		return
+	}
+	removed := false
+	_, _ = state.TryWithNameLock(dir, name, removeIfOwned(dir, name, epoch, &removed))
+}
+
+func removeIfOwned(dir, name, epoch string, removed *bool) func() error {
+	return func() error {
 		existing, err := Load(dir, name)
 		if err != nil {
 			if errors.Is(err, ErrNotFound) {
@@ -270,11 +287,10 @@ func RemoveOwned(dir, name, epoch string) (bool, error) {
 			return nil
 		}
 		if err == nil {
-			removed = true
+			*removed = true
 		}
 		return err
-	})
-	return removed, err
+	}
 }
 
 // Load reads one record without judging whether it is alive.
@@ -312,8 +328,12 @@ func Lookup(dir, name string) (Session, error) {
 		if session.Judgeable() {
 			// Reading is also when leftovers are cleaned: nobody else will. It
 			// is the record that was read that goes, not whatever holds the
-			// name by the time the lock is taken.
-			_, _ = RemoveOwned(dir, name, session.Epoch())
+			// name by the time the lock is taken — and only when the lock is
+			// free: turn-ended looks sessions up from a foreground Stop hook,
+			// and a lookup that waited on a held name would stall the end of a
+			// turn. The answer does not depend on it: a dead record is not a
+			// live session whether or not it is gone yet.
+			pruneIfFree(dir, name, session.Epoch())
 		}
 		return Session{}, ErrNotFound
 	}
@@ -348,7 +368,7 @@ func list(dir string, cleanup bool) ([]Session, error) {
 		}
 		if !session.Alive() {
 			if cleanup && session.Judgeable() {
-				_, _ = RemoveOwned(dir, name, session.Epoch())
+				pruneIfFree(dir, name, session.Epoch())
 			}
 			continue
 		}

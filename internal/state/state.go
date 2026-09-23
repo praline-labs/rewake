@@ -271,6 +271,14 @@ func WithNameLock(dir, name string, fn func() error) error {
 	return withLock(filepath.Join(SessionsPath(dir), "."+name+".lock"), "the name "+name, fn)
 }
 
+// TryWithNameLock runs fn only when the name lock is free right now, and says
+// whether it ran. It is for work that can be left to the next caller — a
+// read-only command tidying a dead record — which must not wait on a holder
+// it cannot see.
+func TryWithNameLock(dir, name string, fn func() error) (bool, error) {
+	return tryLock(filepath.Join(SessionsPath(dir), "."+name+".lock"), "the name "+name, fn)
+}
+
 // ErrMailboxBusy means the mailbox lock was held by somebody else for longer
 // than the caller was willing to wait.
 var ErrMailboxBusy = errors.New("the mailbox is busy")
@@ -327,6 +335,24 @@ func WithMailboxLock(ctx context.Context, dir, name string, fn func() error) err
 // lockPoll is how often a busy mailbox lock is tried again. Holders keep it for
 // a file operation or two, so the wait is short in the common case.
 const lockPoll = 10 * time.Millisecond
+
+func tryLock(path, what string, fn func() error) (bool, error) {
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
+	if err != nil {
+		return false, err
+	}
+	defer func() { _ = file.Close() }()
+
+	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		if errors.Is(err, syscall.EWOULDBLOCK) {
+			return false, nil
+		}
+		return false, fmt.Errorf("could not lock %s: %w", what, err)
+	}
+	defer func() { _ = syscall.Flock(int(file.Fd()), syscall.LOCK_UN) }()
+
+	return true, fn()
+}
 
 func withLock(path, what string, fn func() error) error {
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)

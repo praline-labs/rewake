@@ -169,10 +169,10 @@ product mutant, built by `buildMutant` in `mutant_test.go` with one edit through
 toolchain's overlay, inside a started case, refusing an edit that does not match
 exactly once; or a switch that changes the fixture's world. A mutant is preferred
 wherever one can be built, because it shows the scenario catching a broken rewake
-rather than a misbehaving peer. Of today's nineteen controls, ten are mutants —
+rather than a misbehaving peer. Of today's twenty controls, eleven are mutants —
 batch-arrival's four; task-report's no-stop-hook, turn-ended-ignores-stop and
-settles-nothing; mid-turn's wait-for-idle; claude-telemetry's tap-without-owner and
-uncounted-compaction — and nine are fixture switches: task-report's
+settles-nothing; mid-turn's wait-for-idle; claude-telemetry's tap-without-owner,
+uncounted-compaction and silent-compaction — and nine are fixture switches: task-report's
 wrong-report, read-fails, failure-before-report and early-exit; the three readiness
 controls; mid-turn's late and failed-operation. A control names the observation it must
 break; the crosswise check then runs every control's observations in every other
@@ -193,12 +193,16 @@ scenarios do not change. What building the second one taught is in
 
 ### Claude Code telemetry budgets
 
-`claude-telemetry` runs on the Claude Code column only: the fixture plays a session's
-hooks and status line through `/bin/sh -c` with the payloads seen live, including their
-conversation fields, and the case reads the result back through the session's own
-`rewake list`. It also times the commands, cold each time, because a telemetry hook
-sits in front of every prompt. Its two controls are mutants; they have no crosswise run,
-since both break observations of one session read from one listing.
+`claude-telemetry` runs on the Claude Code column only, with a main and a worker: the
+fixture plays the worker's hooks and status line through `/bin/sh -c` with the payloads
+seen live, including their conversation fields, and the case reads the result from the
+main's side — its `rewake list`, its header on a message from the worker, and the
+compaction notice its wrapper sends. A listing the main's fixture could not finish in
+five seconds is recorded and fails the observations that needed it. It also times the
+commands, cold each time, because a telemetry hook sits in front of every prompt. Its
+three controls are mutants, and each names every observation it must break and requires
+all the others to hold, which stands in for a crosswise run: a mutant that broke
+everything would not pass as the control of one thing.
 
 Measured on the development machine, September 23, 2026, 40 runs each: a telemetry hook
 (shell plus a cold `rewake observe` sending one datagram) median 5.4 ms, p95 6.7 ms; the
@@ -210,6 +214,10 @@ they catch a wait, a lock or a heavy start rather than a busy machine.
 
 ## Traps this suite has already paid for
 
+- **An anchor weaker than its judgement.** The consuming-overview control waited for one
+  read attempt while the Codex column's judgement needs two, and the second comes at the
+  next delivery: red 5 of 20 alone. It now anchors on both there, and was 0 of 20
+  (September 23, 2026).
 - **Inherited session variables.** A test run from inside a session read the live state
   as its own — hence `env -u` everywhere
   ([traps.md](traps.md#a-test-that-inherited-the-sessions-variables-declared-its-own-session-foreign)).

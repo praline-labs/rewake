@@ -2,8 +2,11 @@ package telemetry
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -148,4 +151,32 @@ func sendRaw(t *testing.T, path string, raw []byte) {
 	}
 	defer closeSocket(fd)
 	_ = sendTo(fd, raw, path)
+}
+
+// The boot clock is one clock for every process and only moves forward: a
+// process started later reads a larger value than this one did.
+func TestTheBootClockOrdersProcesses(t *testing.T) {
+	if processStarted == 0 {
+		t.Fatal("CLOCK_BOOTTIME could not be read")
+	}
+	if later := bootClock(); later <= processStarted {
+		t.Errorf("boot clock went from %d to %d", processStarted, later)
+	}
+	out, err := exec.Command(os.Args[0], "-test.run=^TestPrintBootClock$").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var child int64
+	if _, err := fmt.Sscanf(strings.TrimSpace(strings.SplitN(string(out), "\n", 2)[0]), "%d", &child); err != nil {
+		t.Fatalf("the child printed %q", out)
+	}
+	if child <= processStarted {
+		t.Errorf("a process started later read %d, earlier than this one's %d", child, processStarted)
+	}
+}
+
+// TestPrintBootClock is the child of the test above: it prints the reading
+// its process took at start.
+func TestPrintBootClock(_ *testing.T) {
+	fmt.Println(processStarted)
 }

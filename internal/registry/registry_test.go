@@ -159,6 +159,102 @@ func TestListSkipsAndPrunesDead(t *testing.T) {
 	}
 }
 
+// Listing never waits for a name lock: with the lock of a dead record held,
+// the listing returns at once and leaves that record to the next one.
+func TestListDoesNotWaitOnAHeldNameLock(t *testing.T) {
+	living := map[int]uint64{10: 100}
+	dir := stateDir(t, living)
+	if err := Publish(dir, session("web", 10, 100)); err != nil {
+		t.Fatalf("publish web: %v", err)
+	}
+	delete(living, 10)
+
+	held, release, released := make(chan struct{}), make(chan struct{}), make(chan struct{})
+	go func() {
+		defer close(released)
+		_ = state.WithNameLock(dir, "web", func() error {
+			close(held)
+			<-release
+			return nil
+		})
+	}()
+	<-held
+	done := make(chan error, 1)
+	go func() {
+		_, err := List(dir)
+		done <- err
+	}()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("list: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		close(release)
+		t.Fatal("list waited on a held name lock")
+	}
+	if _, err := os.Stat(state.SessionPath(dir, "web")); err != nil {
+		t.Errorf("the record was removed under somebody else's lock: %v", err)
+	}
+	close(release)
+	// Released, not merely told to release: a listing that ran before the
+	// holder let go would find the lock still taken.
+	<-released
+	if _, err := List(dir); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(state.SessionPath(dir, "web")); !errors.Is(err, os.ErrNotExist) {
+		t.Error("the next listing did not prune the record once the lock was free")
+	}
+}
+
+// Lookup does not wait for a name lock either: a dead record is reported as
+// no session at once, and pruned by the first lookup that finds the lock free.
+func TestLookupDoesNotWaitOnAHeldNameLock(t *testing.T) {
+	living := map[int]uint64{10: 100}
+	dir := stateDir(t, living)
+	if err := Publish(dir, session("web", 10, 100)); err != nil {
+		t.Fatalf("publish web: %v", err)
+	}
+	delete(living, 10)
+
+	held, release, released := make(chan struct{}), make(chan struct{}), make(chan struct{})
+	go func() {
+		defer close(released)
+		_ = state.WithNameLock(dir, "web", func() error {
+			close(held)
+			<-release
+			return nil
+		})
+	}()
+	<-held
+	done := make(chan error, 1)
+	go func() {
+		_, err := Lookup(dir, "web")
+		done <- err
+	}()
+	select {
+	case err := <-done:
+		if !errors.Is(err, ErrNotFound) {
+			t.Fatalf("lookup of a dead record = %v, want ErrNotFound", err)
+		}
+	case <-time.After(2 * time.Second):
+		close(release)
+		t.Fatal("lookup waited on a held name lock")
+	}
+	if _, err := os.Stat(state.SessionPath(dir, "web")); err != nil {
+		t.Errorf("the record was removed under somebody else's lock: %v", err)
+	}
+	close(release)
+	<-released
+	if _, err := Lookup(dir, "web"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("second lookup = %v, want ErrNotFound", err)
+	}
+	if _, err := os.Stat(state.SessionPath(dir, "web")); !errors.Is(err, os.ErrNotExist) {
+		t.Error("the next lookup did not prune the record once the lock was free")
+	}
+}
+
 func TestChooseName(t *testing.T) {
 	dir := stateDir(t, map[int]uint64{10: 100})
 

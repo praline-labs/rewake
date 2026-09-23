@@ -27,10 +27,13 @@ const (
 // that what the harness handed the tap reached it.
 const ownerStatusCommand = `sed -n 's/.*"id":"\([^"]*\)".*/owner \1/p'`
 
-// TestClaudeTelemetry is the collector end to end on the Claude Code column:
-// the session's hooks and status line, run as the harness runs them, reach
-// `rewake list` as model, effort, context, compactions and activity; the
-// person's status line is still what is shown; and the commands stay cheap.
+// TestClaudeTelemetry is the collector end to end on the Claude Code column,
+// seen from where it is used: a main and a worker. The worker's hooks and
+// status line, run as the harness runs them, reach the main's `rewake list` as
+// model, effort, context, compactions and activity; the main's header on a
+// message from the worker shows the same; a compaction on the worker is
+// announced to the main; the person's status line is still what is shown;
+// and the commands stay cheap.
 //
 // Only this column: the Codex column's telemetry comes from its server and is
 // exercised by every scenario that waits on it.
@@ -56,22 +59,24 @@ func TestClaudeTelemetry(t *testing.T) {
 }
 
 const (
-	obsTelemetryValues  = "model, effort and context reach rewake list"
-	obsCompactionCount  = "a compaction is counted from the hooks"
-	obsIdleAfterTurn    = "the session reads idle after its turn"
-	obsConversation     = "the conversation is followed"
+	obsTelemetryValues  = "the worker's model, effort and context reach the main's rewake list"
+	obsCompactionCount  = "a compaction on the worker is counted from its hooks"
+	obsIdleAfterTurn    = "the worker reads idle after its turn"
+	obsConversation     = "the worker's conversation is followed"
+	obsHeader           = "the main's header on the worker's message shows its state"
+	obsCompactionNotice = "the worker's compaction is announced to the main"
 	obsOwnerStatusShown = "the person's status line is what is shown"
 	obsHookBudget       = "a telemetry hook stays within its budget"
 	obsTapBudget        = "the tap adds little to the person's status line"
 )
 
 var telemetryObservations = []string{
-	obsTelemetryValues, obsCompactionCount, obsIdleAfterTurn,
-	obsConversation, obsOwnerStatusShown, obsHookBudget, obsTapBudget,
+	obsTelemetryValues, obsCompactionCount, obsIdleAfterTurn, obsConversation,
+	obsHeader, obsCompactionNotice, obsOwnerStatusShown, obsHookBudget, obsTapBudget,
 }
 
 // telemetryFinding is one observation's answer. judged is false when the
-// session's record could not be read at all, which is never "held".
+// sessions' records could not be read at all, which is never "held".
 type telemetryFinding struct {
 	observation string
 	held        bool
@@ -79,8 +84,8 @@ type telemetryFinding struct {
 	detail      string
 }
 
-// playClaudeTelemetry runs one session through the telemetry script and
-// answers every observation.
+// playClaudeTelemetry runs a main and a worker, the worker through the
+// telemetry script, and answers every observation from the main's side.
 func playClaudeTelemetry(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 	t.Helper()
 	settings, _ := json.Marshal(map[string]any{"statusLine": map[string]string{"type": "command", "command": ownerStatusCommand}})
@@ -90,11 +95,6 @@ func playClaudeTelemetry(t *testing.T, c *Case, iso *Isolation) []telemetryFindi
 	if err := os.WriteFile(filepath.Join(iso.Home, ".claude", "settings.json"), settings, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	evidence := filepath.Join(iso.Home, "telemetry.json")
-	session := startHarnessSession(t, c, iso, claudeColumn.harness, "solo", "--main",
-		shimTelemetryFile+"="+evidence, shimOwnerStatus+"="+ownerStatusCommand)
-	defer stopSession(t, c, session)
-
 	unjudged := func(detail string) []telemetryFinding {
 		var out []telemetryFinding
 		for _, observation := range telemetryObservations {
@@ -102,6 +102,19 @@ func playClaudeTelemetry(t *testing.T, c *Case, iso *Isolation) []telemetryFindi
 		}
 		return out
 	}
+
+	// The main first: a compaction is announced only when it completes after
+	// the main started, and the worker compacts almost at once.
+	lead := startHarnessSession(t, c, iso, claudeColumn.harness, "lead", "--main", shimReportListing+"=1")
+	defer stopSession(t, c, lead)
+	if !waitFor(c, 20*time.Second, func() bool { _, err := os.Stat(lead.ready); return err == nil }) {
+		return unjudged("the main never started listening")
+	}
+	evidence := filepath.Join(iso.Home, "telemetry.json")
+	worker := startHarnessSession(t, c, iso, claudeColumn.harness, "worker", "--general",
+		shimTelemetryFile+"="+evidence, shimOwnerStatus+"="+ownerStatusCommand, shimTelemetryNotify+"="+lead.name)
+	defer stopSession(t, c, worker)
+
 	result, err := readTelemetryResult(c, evidence)
 	if err != nil {
 		return unjudged(err.Error())
@@ -109,26 +122,52 @@ func playClaudeTelemetry(t *testing.T, c *Case, iso *Isolation) []telemetryFindi
 	// Anchored on what no control touches: the last status and the end of the
 	// turn. The script has finished by the time its evidence exists, so what
 	// the listing says once these arrived is what the collector made of it.
-	row, ok := awaitTelemetry(c, session, func(row telemetryRow) bool {
+	row, ok := awaitTelemetry(c, lead, worker.name, func(row telemetryRow) bool {
 		return row.Activity == "idle" && row.Used != nil && *row.Used == 50000
 	})
-	if !ok {
-		return unjudged(fmt.Sprintf("the listing never showed the end of the turn: %+v", row))
+	listingFailed := ""
+	if timeouts, err := os.ReadFile(lead.state + ".timeouts"); err == nil && len(timeouts) > 0 {
+		listingFailed = "a listing timed out: " + strings.TrimSpace(string(timeouts))
+		c.Note(listingFailed)
+	}
+	if !ok && listingFailed == "" {
+		listingFailed = fmt.Sprintf("the main's listing never showed the end of the worker's turn: %+v", row)
 	}
 	finding := func(observation string, held bool, detail string, args ...any) telemetryFinding {
 		return telemetryFinding{observation: observation, held: held, judged: true, detail: fmt.Sprintf(detail, args...)}
 	}
 	var out []telemetryFinding
+	if listingFailed != "" {
+		for _, observation := range []string{obsTelemetryValues, obsCompactionCount, obsIdleAfterTurn, obsConversation} {
+			out = append(out, telemetryFinding{observation: observation, detail: listingFailed})
+		}
+	} else {
+		values := row.Model != nil && *row.Model == "model-telemetry" && row.Effort != nil && *row.Effort == "high" &&
+			row.Window != nil && *row.Window == 200000 && row.Percent != nil && *row.Percent == 25
+		out = append(out, finding(obsTelemetryValues, values, "model %s, effort %s, %d of %s (%s%%)",
+			show(row.Model), show(row.Effort), *row.Used, show(row.Window), show(row.Percent)))
+		counted := row.Compactions != nil && *row.Compactions == 1 && row.Coverage == "observed" && row.Compacting != nil && !*row.Compacting
+		out = append(out, finding(obsCompactionCount, counted, "completed %s, coverage %q, in progress %s",
+			show(row.Compactions), row.Coverage, show(row.Compacting)))
+		out = append(out, finding(obsIdleAfterTurn, true, "%s", row.Activity))
+		out = append(out, finding(obsConversation, row.Thread == telemetryConversation, "thread %q", row.Thread))
+	}
 
-	values := row.Model != nil && *row.Model == "model-telemetry" && row.Effort != nil && *row.Effort == "high" &&
-		row.Window != nil && *row.Window == 200000 && row.Percent != nil && *row.Percent == 25
-	out = append(out, finding(obsTelemetryValues, values, "model %s, effort %s, %d of %s (%s%%)",
-		show(row.Model), show(row.Effort), *row.Used, show(row.Window), show(row.Percent)))
-	counted := row.Compactions != nil && *row.Compactions == 1 && row.Coverage == "observed" && row.Compacting != nil && !*row.Compacting
-	out = append(out, finding(obsCompactionCount, counted, "completed %s, coverage %q, in progress %s",
-		show(row.Compactions), row.Coverage, show(row.Compacting)))
-	out = append(out, finding(obsIdleAfterTurn, true, "%s", row.Activity))
-	out = append(out, finding(obsConversation, row.Thread == telemetryConversation, "thread %q", row.Thread))
+	// The main reads its mail on every delivery and the fixture appends what
+	// it read. Anchored on the worker's notify; the compaction notice, sent by
+	// the main's own wrapper once a second, gets a few seconds beyond it.
+	read := func() string { return lead.mailboxRead() }
+	if !waitFor(c, 20*time.Second, func() bool { return strings.Contains(read(), "telemetry played") }) {
+		out = append(out, telemetryFinding{observation: obsHeader, detail: "the worker's notify never reached the main: " + read()},
+			telemetryFinding{observation: obsCompactionNotice, detail: "the main's mail could not be judged"})
+	} else {
+		notice := "Primary compaction completed (observed count 1)."
+		waitFor(c, 5*time.Second, func() bool { return strings.Contains(read(), notice) })
+		header := worker.name + ": idle | context 25% used / 200K | compactions 1"
+		mail := read()
+		out = append(out, finding(obsHeader, strings.Contains(mail, header), "looked for %q in what the main read", header))
+		out = append(out, finding(obsCompactionNotice, strings.Contains(mail, notice), "looked for %q in what the main read", notice))
+	}
 
 	shown := len(result.StatusOutputs) == 5 && result.Error == ""
 	for _, output := range result.StatusOutputs {
@@ -171,9 +210,9 @@ type telemetryRow struct {
 	Coverage    string  `json:"compactionCoverage"`
 }
 
-// awaitTelemetry reads the session's own listing until its row satisfies the
+// awaitTelemetry reads a session's listing until the named row satisfies the
 // predicate or the case runs out of time.
-func awaitTelemetry(c *Case, session *codexSession, ready func(telemetryRow) bool) (telemetryRow, bool) {
+func awaitTelemetry(c *Case, session *codexSession, name string, ready func(telemetryRow) bool) (telemetryRow, bool) {
 	var last telemetryRow
 	c.Note("waiting for the telemetry to settle")
 	for !c.Expired() {
@@ -186,7 +225,7 @@ func awaitTelemetry(c *Case, session *codexSession, ready func(telemetryRow) boo
 		}
 		if err == nil && json.Unmarshal(raw, &listed) == nil {
 			for _, entry := range listed.Sessions {
-				if entry.Name == session.name {
+				if entry.Name == name {
 					last = entry.Telemetry
 					if ready(last) {
 						return last, true

@@ -29,6 +29,12 @@ const (
 	// shimOwnerStatus is the person's own status-line command, run directly
 	// to time what the tap adds to it.
 	shimOwnerStatus = "RW_SHIM_OWNER_STATUS"
+	// shimTelemetryNotify names the session told, by a notify, that the
+	// script has finished: its header then shows this session's final state.
+	shimTelemetryNotify = "RW_SHIM_TELEMETRY_NOTIFY"
+	// shimReportListing makes a session write what its own `rewake list` says,
+	// until it is asked to stop; listings that time out are recorded beside it.
+	shimReportListing = "RW_SHIM_REPORT_LISTING"
 	// telemetryConversation is the conversation the script's events name.
 	telemetryConversation = "conv-telemetry-1"
 	// conversationText stands for the words of a conversation. It rides in
@@ -143,10 +149,16 @@ func (s *claudeSession) playTelemetry() {
 	// is the state the case checks.
 	status(50000)
 
+	if lead := os.Getenv(shimTelemetryNotify); lead != "" {
+		send := exec.Command("rewake", "send", lead, "--notify", "telemetry played")
+		send.Env = os.Environ()
+		if out, err := send.CombinedOutput(); err != nil && result.Error == "" {
+			result.Error = fmt.Sprintf("telling %s: %v: %s", lead, err, out)
+		}
+	}
 	encoded, _ := json.Marshal(result)
 	_ = os.WriteFile(target+".tmp", encoded, 0o600)
 	_ = os.Rename(target+".tmp", target)
-	s.reportState()
 }
 
 // reportState writes what this session's own `rewake list` says, until it is
@@ -165,7 +177,17 @@ func (s *claudeSession) reportState() {
 		list := exec.CommandContext(ctx, "rewake", "list", "--json")
 		list.SysProcAttr = &syscall.SysProcAttr{Pdeathsig: syscall.SIGKILL}
 		out, err := list.Output()
+		timedOut := ctx.Err() != nil
 		cancel()
+		if timedOut {
+			// Recorded, not skipped: the case reads this and fails what the
+			// listing was meant to show.
+			if file, err := os.OpenFile(target+".timeouts", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600); err == nil {
+				_, _ = fmt.Fprintf(file, "%s rewake list --json timed out after 5s\n", time.Now().Format(time.RFC3339Nano))
+				_ = file.Close()
+			}
+			continue
+		}
 		if err == nil {
 			_ = os.WriteFile(target+".tmp", out, 0o600)
 			_ = os.Rename(target+".tmp", target)

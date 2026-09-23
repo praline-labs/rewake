@@ -136,7 +136,14 @@ sessions, and an old record must not appear in a new room by accident.
   ticks). Liveness = the process exists and the start time matches: pids get
   reused.
 - A session is alive as long as both the servicing process and the harness are
-  alive. Any reader of the registry deletes a dead record.
+  alive. A listing or a lookup deletes a dead record it reads, but only when the
+  record's name lock is free at that moment (`LOCK_NB`): both are reads and never wait
+  on a lock — a lookup runs inside `turn-ended`, the foreground Stop hook, where a wait
+  would stall the end of a turn. Whoever holds the lock is the run leaving or another
+  reader cleaning up, so a record left now goes with the next read, and a dead record
+  is reported as no session either way. Publishing still takes the lock and waits,
+  replacing a dead record under it. Decided September 23, 2026 over
+  a bounded wait, which would still make a read wait on something it cannot see.
 - Publishing a record is atomic and exclusive: write a temp file, then `link()`
   it to the final name — `link` fails if the name is taken. If the existing
   record belongs to a dead session, it's removed and the attempt retried; for a

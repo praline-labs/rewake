@@ -173,7 +173,10 @@ What each field means there:
   not a compaction's, and an `idle_prompt` notification. Waiting stays unknown during a
   turn, except `approval` after a `permission_prompt` notification, cleared when the
   context count next moves — which happens only after a response. Hooks run in the
-  background, so an event older by the sender's clock than the one applied is ignored.
+  background, so an event whose process started earlier than the one applied is
+  ignored; each sender stamps its process start on the machine's boot clock
+  (`CLOCK_BOOTTIME`), one clock for every process that a wall-clock jump after a WSL
+  suspend does not move back.
   Known limit, September 23, 2026: a session a person interrupts with Esc stays
   `working` until its next UserPromptSubmit or Stop. No hook was seen to mark the
   interruption — Stop firing on it was not observed, and no `idle_prompt` arrived in 80

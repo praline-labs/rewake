@@ -68,6 +68,9 @@ func runClaudeShim(args []string) int {
 	if os.Getenv(shimTelemetryFile) != "" {
 		go session.playTelemetry()
 	}
+	if os.Getenv(shimReportListing) != "" {
+		go session.reportState()
+	}
 	// A sender sends with its own rewake here too, and it waits for its
 	// recipient first — so it runs beside the listener rather than before it:
 	// a session that sent before it could receive would be unable to answer

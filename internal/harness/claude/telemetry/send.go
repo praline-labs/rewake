@@ -1,9 +1,6 @@
 package telemetry
 
-import (
-	"syscall"
-	"time"
-)
+import "syscall"
 
 // Send hands one event to the wrapper listening at path and returns at once.
 //
@@ -17,7 +14,7 @@ func Send(path string, event Event) {
 		return
 	}
 	if event.At == 0 {
-		event.At = time.Now().UnixNano()
+		event.At = processStarted
 	}
 	raw, err := event.encode()
 	if err != nil {
