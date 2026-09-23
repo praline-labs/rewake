@@ -63,6 +63,9 @@ type LaunchPlan struct {
 	// that has no Backend. The wrapper starts it before the harness and
 	// publishes what it reports for as long as the session runs.
 	Observer Observer
+	// Lane, when set, delivers in place of the harness's Deliver for as long
+	// as the session runs. Only for a harness without a Backend.
+	Lane Lane
 	// Notes are things the caller should know about this launch: a setting that
 	// could not be read, a briefing that was skipped. They are printed once, to
 	// stderr, and do not stop the launch.

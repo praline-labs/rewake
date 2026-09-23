@@ -59,6 +59,13 @@ type Server struct {
 	// starts late — after its harness is gone and somebody else took the name —
 	// must not touch that mailbox at all.
 	Owns func() bool
+	// Receipts carries what the harness says about a notice after its
+	// delivery returned: how a hold ended, or that a notice taken as accepted
+	// was held or refused after all. Nil for a harness that never says.
+	Receipts <-chan Receipt
+	// Opened is closed once the harness can take its first notice. Until then
+	// mail waits, pending, and goes out right after. Nil means from the start.
+	Opened <-chan struct{}
 
 	// attempts remembers when each pending message was last tried.
 	attempts map[string]time.Time
@@ -75,6 +82,12 @@ type Server struct {
 	// undone: if writing the status fails, the outcome has to survive anyway, or
 	// the next pass delivers the same message a second time.
 	outcomes map[string]Result
+	// held maps a held announcement to the members it carried, so a receipt
+	// naming the announcement settles each of them.
+	held map[string][]Message
+	// recent keeps the members of notices reported delivered for a while, so
+	// a late word from the harness can still take the delivery back.
+	recent map[string]recentAnnouncement
 }
 
 // Serve drains the mailbox until the context is canceled, then refuses whatever
@@ -83,6 +96,8 @@ type Server struct {
 func (s *Server) Serve(ctx context.Context) {
 	s.attempts = map[string]time.Time{}
 	s.outcomes = map[string]Result{}
+	s.held = map[string][]Message{}
+	s.recent = map[string]recentAnnouncement{}
 	s.lockContext = ctx
 	if ctx.Err() != nil || !s.owned() {
 		// Canceled before it began, or the name already belongs to somebody
@@ -109,6 +124,7 @@ func (s *Server) Serve(ctx context.Context) {
 			collect = collection.C
 		}
 	}
+	opened := s.Opened
 	if s.Ready != nil && ctx.Err() == nil && s.owned() && state.EnsureSubdir(state.InboxPath(s.Dir, s.Name)) == nil {
 		s.Ready()
 	}
@@ -134,13 +150,24 @@ func (s *Server) Serve(ctx context.Context) {
 			s.drain(ctx)
 		case <-sweeper.C:
 			s.sweepFinished()
+		case <-opened:
+			opened = nil
+			s.retryNow()
+			schedule()
+		case receipt := <-s.Receipts:
+			s.receive(receipt)
 		}
 	}
 }
 
 // drain makes one pass over the mailbox.
 func (s *Server) drain(ctx context.Context) {
-	s.deliverGroup(ctx, s.pendingMessages(ctx))
+	pending := s.pendingMessages(ctx)
+	if s.gated() {
+		s.waitForOpening(pending)
+		return
+	}
+	s.deliverGroup(ctx, pending)
 }
 
 func (s *Server) pendingMessages(ctx context.Context) []Message {
@@ -179,6 +206,9 @@ func (s *Server) refuseWaiting(reason string) {
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownLockWait)
 	defer cancel()
 	s.lockContext = ctx
+	// Walked from what this run holds, not from the mailbox: a notice held
+	// only after it was reported delivered has no waiting copy any more.
+	s.failAllHeld("the session ended while its harness still held the notice")
 	messages, err := list(s.Dir, s.Name)
 	if err != nil {
 		return
@@ -244,11 +274,15 @@ func (s *Server) sweepForeign() {
 		if message.ToEpoch == s.Epoch || s.alreadySettled(message) {
 			continue
 		}
+		if s.failForeignHeld(message) {
+			continue
+		}
 		s.finish(message, Result{
 			State:  Failed,
 			Detail: "addressed to an earlier session that used this name",
 		})
 	}
+	s.sweepForeignHeld()
 }
 
 func (s *Server) expired(message Message) bool {

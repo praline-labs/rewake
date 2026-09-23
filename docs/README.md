@@ -33,9 +33,13 @@ everything else.
   is in question.
 - [delivery.md](delivery.md) — sending, reading and reporting at the level of files and
   wire: the message record, task, question and notify, the question reservation and its
-  heartbeat, the one lock per mailbox, the wrapper's servicing loop and notice texts, both
-  adapters, `rewake inbox`, turn-end reports and what happens on a thread change. Open it
-  for the exact behaviour of any send, read or report.
+  heartbeat, the one lock per mailbox, the wrapper's servicing loop and notice texts,
+  `rewake inbox`, turn-end reports and what happens on a thread change. Open it for the
+  exact behaviour of any send, read or report.
+- [delivery-adapters.md](delivery-adapters.md) — how a notice reaches each harness: the
+  Claude Code socket line, its reply socket and receipts, held and late words, the startup
+  gate and what a killed wrapper leaves behind; and the Codex gateway in brief. Open it
+  when a delivery result for one harness is in question.
 - [turn-outcomes.md](turn-outcomes.md) — the turn ends that are not an ordinary report:
   a failed turn, a keyboard stop, and a turn end marked with `rewake pending`, which tells
   the waiters the work is still going and keeps their tasks owed; including the rule that

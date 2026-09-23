@@ -63,9 +63,13 @@ func runClaudeShim(args []string) int {
 		_ = os.WriteFile(mark, []byte(launch.socket), 0o600)
 	}
 
-	session := &claudeSession{launch: launch}
+	session := &claudeSession{launch: launch, listening: time.Now()}
 	go session.serve(listener)
-	if os.Getenv(shimTelemetryFile) != "" {
+	// The telemetry script plays the session's hooks and status lines itself,
+	// and an extra status line of the startup's would land among its own.
+	scripted := os.Getenv(shimTelemetryFile) != ""
+	go session.mount(!scripted)
+	if scripted {
 		go session.playTelemetry()
 	}
 	if os.Getenv(shimReportListing) != "" {
@@ -176,6 +180,12 @@ type claudeSession struct {
 	// deliveries counts the notifications that arrived, which is this
 	// column's equivalent of a turn number — the socket has no turns.
 	deliveries int
+	// listening is when the socket appeared; mounted says the session is up
+	// and its gate no longer holds everything; startupHeld is what it held
+	// until then (claudeshim_inbound_test.go).
+	listening   time.Time
+	mounted     bool
+	startupHeld []startupRelease
 }
 
 func (s *claudeSession) serve(listener net.Listener) {
@@ -196,6 +206,11 @@ func (s *claudeSession) serve(listener net.Listener) {
 // nobody has.
 func (s *claudeSession) handle(connection net.Conn) {
 	defer func() { _ = connection.Close() }()
+	writer, err := peerOf(connection)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "claude-shim: who wrote a delivery: %v\n", err)
+		return
+	}
 	_ = connection.SetReadDeadline(time.Now().Add(5 * time.Second))
 	reader := bufio.NewReader(connection)
 	line, err := reader.ReadString('\n')
@@ -212,11 +227,18 @@ func (s *claudeSession) handle(connection net.Conn) {
 		fmt.Fprintf(os.Stderr, "claude-shim: a delivery carried more than one line\n")
 		return
 	}
+	inbound, err := checkedReply([]byte(line), s.launch.socket, writer)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "claude-shim: %v\n", err)
+		return
+	}
 	s.mu.Lock()
 	s.deliveries++
 	turn := fmt.Sprintf("delivery-%d", s.deliveries)
 	s.mu.Unlock()
-	s.workTurn(turn, notice)
+	if s.gate(inbound, turn, notice) {
+		s.workTurn(turn, notice)
+	}
 }
 
 // envelopeShape is what one line of the session inbox protocol may look like.
@@ -230,7 +252,10 @@ var envelopeShape = served{kind: "object", fields: map[string]served{
 		"content": {kind: "string"},
 	}, required: []string{"role", "content"}},
 	"priority": {kind: "string"},
-}, required: []string{"type", "message", "priority"}}
+	// The reply address and the id receipts quote (claudeshim_inbound_test.go).
+	"from":   {kind: "string"},
+	"msg_id": {kind: "string"},
+}, required: []string{"type", "message", "priority", "from", "msg_id"}}
 
 // claudeNotice is the notification as it arrives: the tagged block the adapter
 // builds. Its fields are what a session on this column can know about the mail

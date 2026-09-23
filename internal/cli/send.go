@@ -150,12 +150,14 @@ func handleSend(ctx *Context, call Call) error {
 		// Read already, which is delivered and then some.
 		model.State, model.Via = string(inbox.Delivered), status.Via
 		model.Detail = "already read"
-	case known && status.State != inbox.Pending:
+	case known && status.State != inbox.Pending && status.State != inbox.Held:
 		model.State, model.Via, model.Detail = string(status.State), status.Via, status.Detail
 	default:
-		// No final answer. Promising a later delivery is only honest while the
-		// session is still there to make one; a session that ended between the
-		// lookup and now leaves the message with nobody to take it.
+		// No final answer. Held is none either: it waits for the session that
+		// holds it, and a session that is gone will never release it.
+		// Promising a later delivery is only honest while the session is still
+		// there to make one; a session that ended between the lookup and now
+		// leaves the message with nobody to take it.
 		// The name is not enough: it may already belong to a session that
 		// started after this message was written, and that session will refuse
 		// it. Promising a later delivery then would be a promise nobody keeps.
@@ -178,6 +180,10 @@ func handleSend(ctx *Context, call Call) error {
 			model.Detail = "this message was answered earlier and the result is no longer kept"
 			break
 		}
+		if known && status.State == inbox.Held {
+			model.State, model.Via, model.Detail = string(inbox.Held), status.Via, status.Detail
+			break
+		}
 		model.State = string(inbox.Pending)
 		if known && status.Detail != "" {
 			model.Detail = status.Detail
@@ -198,7 +204,9 @@ func printDelivery(ctx *Context, session registry.Session, model sendModel) erro
 	switch inbox.State(model.State) {
 	case inbox.Delivered:
 		return printValue(ctx, model, func() []string { return []string{line} })
-	case inbox.Pending:
+	case inbox.Pending, inbox.Held:
+		// Held is accepted and not delivered, the same promise as pending: the
+		// agent has not been told, and it may yet be or not be.
 		if ctx.JSON {
 			_ = printValue(ctx, model, func() []string { return nil })
 			return &PendingError{Message: ""}
@@ -231,6 +239,8 @@ func sendLine(session registry.Session, model sendModel) string {
 		return line
 	case inbox.Pending:
 		return fmt.Sprintf("pending for %s: %s", session.Name, model.Detail)
+	case inbox.Held:
+		return fmt.Sprintf("held for %s: %s", session.Name, model.Detail)
 	default:
 		return fmt.Sprintf("failed for %s: %s", session.Name, model.Detail)
 	}

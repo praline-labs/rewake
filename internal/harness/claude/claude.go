@@ -4,11 +4,14 @@ package claude
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -185,13 +188,20 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 	args, notes := harness.ApplyDefaults(args, claudeDefaults())
 	env := harness.SessionEnv(request, childMarkers)
 	var observer harness.Observer
+	var drawn <-chan struct{}
 	observation := request.ObservationSocket
 	if len(observation) > maxSocketPath {
 		notes = append(notes, "not collecting telemetry: the socket path "+observation+" is longer than a unix socket allows")
 		observation = ""
 	}
 	if observation != "" {
-		observer = telemetry.NewCollector(observation)
+		collector := telemetry.NewCollector(observation)
+		observer, drawn = collector, collector.Drawn()
+	}
+	reply := replyPath(request, socket, owns)
+	if len(reply) > maxSocketPath {
+		notes = append(notes, "not hearing back about held messages: the socket path "+reply+" is longer than a unix socket allows")
+		reply = ""
 	}
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -211,22 +221,52 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 		OwnsSocket: owns,
 		Notes:      notes,
 		Observer:   observer,
+		Lane:       newLane(reply, owns, drawn),
 	}, nil
+}
+
+// replyPath is where this run hears back about its notices. It has to be a
+// .sock in the same directory as the session's own socket, the only place
+// Claude Code sends a receipt to (docs/research-launch.md). Beside a socket of
+// rewake's own it is that socket's name with .reply; beside one the caller
+// named, or where that name would be too long, a name of this run's own.
+func replyPath(request harness.LaunchRequest, socket string, owns bool) string {
+	if socket == "" {
+		return ""
+	}
+	if own := strings.TrimSuffix(socket, ".sock") + replySuffix; owns && len(own) <= maxSocketPath {
+		return own
+	}
+	sum := sha256.Sum256([]byte(request.Name + "\x00" + request.Epoch))
+	return filepath.Join(filepath.Dir(socket), fmt.Sprintf("rewake-%x.reply.sock", sum[:8]))
 }
 
 // maxSocketPath is the limit the kernel puts on a unix socket path.
 const maxSocketPath = 103
 
+// Deliver writes the notice with no reply address, so the session reports
+// nothing back and a successful write is all there is to know. The lane
+// (lane.go) is the path a running wrapper uses; this one is what is left when
+// it cannot listen.
 func (claudeHarness) Deliver(ctx context.Context, session registry.Session, message inbox.Message) inbox.Result {
+	return writeNotice(ctx, session, newEnvelope(message))
+}
+
+func newEnvelope(message inbox.Message) envelope {
+	return envelope{
+		Type:     "user",
+		Message:  payload{Role: "user", Content: notification(message)},
+		Priority: "next",
+	}
+}
+
+// writeNotice writes one line to the session's inbox socket.
+func writeNotice(ctx context.Context, session registry.Session, notice envelope) inbox.Result {
 	if session.Socket == "" {
 		return inbox.Result{State: inbox.Failed, Detail: "this session has no inbox socket"}
 	}
 
-	line, err := json.Marshal(envelope{
-		Type:     "user",
-		Message:  payload{Role: "user", Content: notification(message)},
-		Priority: "next",
-	})
+	line, err := json.Marshal(notice)
 	if err != nil {
 		return inbox.Result{State: inbox.Failed, Detail: "the message could not be encoded: " + err.Error()}
 	}
@@ -253,10 +293,15 @@ func (claudeHarness) Deliver(ctx context.Context, session registry.Session, mess
 // envelope is one line of the session inbox protocol. Priority "next" puts the
 // message after the tool call in flight and starts a turn when the session is
 // idle, which is what a message from a peer should do.
+//
+// From and MsgID ask for receipts: the session reports what its inbound gate
+// did with the line to the socket From names, quoting MsgID (lane.go).
 type envelope struct {
 	Type     string  `json:"type"`
 	Message  payload `json:"message"`
 	Priority string  `json:"priority"`
+	From     string  `json:"from,omitempty"`
+	MsgID    string  `json:"msg_id,omitempty"`
 }
 
 type payload struct {

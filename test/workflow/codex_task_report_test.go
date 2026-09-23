@@ -168,6 +168,12 @@ type reportView struct {
 	Kind      string   `json:"kind"`
 	InReplyTo []string `json:"inReplyTo"`
 	Text      string   `json:"text"`
+	// Undelivered is set on the note that tells a sender its message never
+	// reached the agent.
+	Undelivered *struct {
+		ID   string `json:"id"`
+		Kind string `json:"kind"`
+	} `json:"undelivered"`
 }
 
 // messageCarrying finds, among what a session's own inbox calls returned, the

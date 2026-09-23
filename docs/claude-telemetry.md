@@ -31,6 +31,12 @@ layer uses both; the wrapper listens.
   ([turn-outcomes.md](turn-outcomes.md#interim-turn-ends-rewake-pending)). The
   end-of-turn hooks stay in the foreground: a
   turn's end has to be recorded before the session goes idle.
+- **Seen live.** September 23, 2026, Claude Code 2.1.280, rewake built from `d975dd7`: a
+  main's `rewake list` showed model, effort, context, compactions and activity for
+  itself and its workers, a worker's context stayed unknown until its first reply, and a
+  worker's compaction reached the main as `Primary compaction completed (observed count
+  1).` The evidence is in [harness-features.md](harness-features.md) under HF-11 and
+  HF-22.
 - **Activity after an interruption.** Known limit, September 23, 2026: a session a
   person interrupts with Esc stays `working` until its next UserPromptSubmit or Stop. No hook was seen to mark the
   interruption — Stop firing on it was not observed, and no `idle_prompt` arrived in 80

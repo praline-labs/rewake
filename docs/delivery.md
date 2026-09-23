@@ -36,7 +36,12 @@ a short notice and preview rather than the full body.
 4. Write `inbox/<name>/<id>.json.tmp`, rename it to `.json`.
 5. Wait for `.status` up to `--wait` (5 seconds by default) and print the
    result. `delivered` means the notice went out; `read` counts as delivered.
-   A question then waits for its answer (below).
+   `held` is not an answer yet and the wait goes on through it: a release or an
+   expiry usually follows within the wait. A message still `held` when the wait
+   ends prints `held for <name>: <why>` and exits 3, like `pending` — accepted,
+   not delivered. A question then waits for its answer (below), and stops
+   waiting, with exit 1, if its own status turns `failed` meanwhile: a hold that
+   expired or a session that ended means no answer is coming.
 
 ### Kinds
 
@@ -128,6 +133,25 @@ concurrent read takes precedence. Expired reports never gain readability through
 this exception; task/notify failure behavior is unchanged. Undelivered tasks and notifications older
 than `--ttl` (30 minutes by default) get `failed: expired`.
 
+**Held.** An adapter may report that the harness took the notice and keeps it from
+the agent — Claude Code's inbound gate does (below). A held message is not delivered:
+both copies stay, the waiting one and the readable one, the status reads `held` with
+the harness's reason, and it is not retried. It ends when the adapter passes on how
+the hold ended, as a receipt the server reads alongside the mailbox: `delivered`
+settles it as delivered; `failed` settles it as failed and, for a task or question,
+writes its sender a note (kind `notify`, with an `undelivered` field naming the
+message, its kind and why) saying it never reached the agent, is owed no report, and
+is not sent again. Nothing is replayed automatically. A session that ends with
+messages still held fails them the same way. The agent may still read a held message
+on its own — it is readable, and nothing hides it — and that read is final like any
+other: a later expiry changes nothing and tells nobody.
+
+**The first notice.** An adapter may say its harness cannot take a notice yet. Until
+it can, waiting mail stays `pending` with the detail "the session is still starting",
+is not made readable, and goes out on the next pass once the harness opens. The
+Claude Code adapter opens on the session's first status line, or after three seconds
+if none comes.
+
 **A reservation that cannot be taken in three seconds fails the message, it does not
 hold it.** September 22, 2026: the reservation is bounded at three seconds twice, by
 the delivery context in `internal/inbox/reservation.go` and again by `Reserve` in
@@ -147,7 +171,7 @@ one deadline origin. Retries never extend it; ordinary reports keep their
 original TTL. This state survives server restarts. Receipts remain while any
 queued, unread or archived report still refers to their questions.
 
-Status: `{"state":"delivered|read|pending|failed","via":"socket|app-server","detail":"...","at":"..."}`,
+Status: `{"state":"delivered|read|pending|held|failed","via":"socket|app-server","detail":"...","at":"..."}`,
 plus optional `reportAvailable: true` for retained notification failures.
 Shutdown preserves unexpired reports for the addressed epoch, including those
 not yet announced. A reserved report stays queued for its waiting send; ordinary
@@ -181,52 +205,10 @@ still precedes marking; active question-answer reservations remain excluded.
 Previews remove controls and stay within the conservative 100-column notice budget
 including indentation. Rewake does not summarize or include later body lines.
 
-### Claude Code adapter
+### Adapters
 
-Connect to `claude.socket` with a 2-second timeout, write the line
-`{"type":"user","message":{"role":"user","content":<notification>},"priority":"next"}`
-followed by `\n`, then close. The content is
-
-```
-<task-notification>
-<task-id>rewake-<short id></task-id>
-<status>completed</status>
-<summary><the notice></summary>
-</task-notification>
-```
-
-Claude Code picks how to draw a user message from its text, and draws this one
-as `● <summary>`, with the preview on the next line. The status colors the
-circle: `completed` is green and `failed` is red; the kind is named in the
-summary. The short id keeps
-two identical notices apart: Claude Code drops identical text from the same
-sender within 30 seconds.
-
-A successful write means `delivered`. `ENOENT` and `ECONNREFUSED` mean `pending`
-as long as the harness is alive (the socket hasn't been created yet, or is being
-recreated); otherwise `failed`.
-
-### Codex adapter
-
-The wrapper's gateway follows the native TUI's own accepted primary intent and
-matching direct-input reply. It does not discover a loaded root or attach an
-observer through resume. The transport reserves epoch/connection/generation/thread
-before inbox readability and holds admission through the delivery ACK. A-B-A never
-reuses an old reservation. See [gateway selection and admission](gateway.md).
-
-Readiness waits for ordinary resume backfill outside the mailbox lock, admission
-FIFO and global gate. Native reads and approval replies remain able to progress.
-The reservation also orders explicit main-authorized additive Git roots and native settings
-updates. No permission policy is replaced. A bounded refusal sends no work and
-exposes no task; transport uncertainty is never automatically replayed.
-
-The admitted-work ledger preserves matching outcomes after selection changes.
-A separate publisher journals callbacks with causal read boundaries and uses the
-durable report/turn receipt path asynchronously; later reads cannot join an older
-result. See [stable publication](report-publication.md). Socket readers never wait on mailbox locks. Upstream
-completion observation is not proof of terminal receipt. The owner-run synthetic
-terminal evidence and current compatibility limits are recorded in
-[native gateway evidence](gateway-native-evidence.md).
+How a notice reaches each harness — the Claude Code socket line with its reply socket
+and receipts, and the Codex gateway — is in [delivery-adapters.md](delivery-adapters.md).
 
 ### Reading (`rewake inbox`)
 

@@ -12,10 +12,12 @@ package workflow
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strings"
 	"syscall"
@@ -156,6 +158,10 @@ func (s *claudeSession) playTelemetry() {
 	status(50000)
 
 	if lead := os.Getenv(shimTelemetryNotify); lead != "" {
+		// The main's header shows what the worker's wrapper last published,
+		// every quarter second; told before that, it would read the worker
+		// as still working.
+		awaitPublishedIdle(5 * time.Second)
 		send := exec.Command("rewake", "send", lead, "--notify", "telemetry played")
 		send.Env = os.Environ()
 		if out, err := send.CombinedOutput(); err != nil && result.Error == "" {
@@ -211,4 +217,26 @@ func quantile(values []float64, q float64) float64 {
 	slices.Sort(sorted)
 	index := int(q * float64(len(sorted)-1))
 	return sorted[index]
+}
+
+// awaitPublishedIdle waits until this session's wrapper has published it idle,
+// reading the snapshot where the wrapper keeps it: rooms/<room>/observations/,
+// named by a digest of name and run.
+func awaitPublishedIdle(limit time.Duration) {
+	room := os.Getenv("REWAKE_ROOM")
+	if room == "" {
+		room = "default"
+	}
+	sum := sha256.Sum256([]byte(os.Getenv("REWAKE_SESSION") + "\x00" + os.Getenv("REWAKE_EPOCH")))
+	path := filepath.Join(os.Getenv("REWAKE_DIR"), "rooms", room, "observations", fmt.Sprintf("%x.json", sum[:]))
+	deadline := time.Now().Add(limit)
+	for time.Now().Before(deadline) {
+		var snapshot struct {
+			Activity string `json:"activity"`
+		}
+		if raw, err := os.ReadFile(path); err == nil && json.Unmarshal(raw, &snapshot) == nil && snapshot.Activity == "idle" {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
 }

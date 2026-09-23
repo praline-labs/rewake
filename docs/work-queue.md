@@ -102,6 +102,17 @@ The remaining entries of [harness-features.md](harness-features.md), in its orde
 
 ## Also queued, not scheduled
 
+**An orchestrator starts a worker in the background.** The owner's idea for later,
+recorded September 23, 2026, after honest delivery status for Claude Code landed:
+an orchestrating session starts its worker itself, without a terminal of its own.
+Claude Code offers the means — `--bg` starts a session under a supervisor and `claude
+attach <id>` opens it in a terminal later
+([research-launch.md](research-launch.md#whether-claude-code-has-a-client-server-split-to-sit-between)).
+A background worker will likely run without permission prompts, and that is exactly
+the class of receiver whose inbound gate holds every rewake line
+([traps.md](traps.md#a-message-reported-delivered-was-held-by-claude-code--the-status-is-now-honest)),
+so a sender that can tell held from delivered is its prerequisite. Nothing to build yet.
+
 **Parsing the Codex configuration.** Today rewake looks for a mention of a key in the
 text of the file and substitutes nothing when it finds one — crude, and crude on
 purpose, because the hand-written parser was removed. With a library this can be done

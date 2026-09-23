@@ -26,7 +26,7 @@ the paths below are relative to `<REWAKE_DIR>/rooms/<room>/`:
 sessions/<name>.json             who is running: room, role, reason, pids, cwd, harness details
 .launch.lock                    role selection and name publication
 inbox/<name>/<id>.json           a message the wrapper still has to announce
-inbox/<name>/<id>.status         pending | delivered | read | failed
+inbox/<name>/<id>.status         pending | held | delivered | read | failed
 inbox/<name>/unread/<id>.json    announced, not yet read by the agent
 inbox/<name>/done/<id>.json      read or failed; swept after a day
 inbox/<name>/awaiting/<epoch>/<peer>   who is owed a report by this run
@@ -37,6 +37,7 @@ inbox/<name>/turns/<id>          completion retry receipt
 inbox/<name>/threads/<id>        selected delivery thread, when supported
 inbox/<name>/.lock               the mailbox lock, one flock for every state change
 sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
+sock/<name>.<epoch>.reply.sock   where that run's wrapper hears what the socket did with a line
 ```
 
 ## Act 1. A session starts
@@ -73,7 +74,7 @@ with `rewake --main --name lead claude`, becoming lead-claude.
      StopFailure for every role and Stop for reporting roles, both running
      `rewake turn-ended`, plus background telemetry hooks and the status-line tap
      that report to the wrapper's `sock/<name>.<epoch>.obs`
-     ([launch.md](claude-telemetry.md));
+     ([claude-telemetry.md](claude-telemetry.md));
    - Codex: an owned foreground app-server on a private socket, initialized before
      the TUI starts with --remote. Explicit configuration and the briefing reach
      the server; an inline gateway follows accepted TUI intent. Launch roles add no
@@ -116,7 +117,8 @@ session's shell, or from a person's shell in the same room. A shell without
    time-sortable. Nothing else is touched: the sender does not deliver.
 5. **The wait.** The sender polls `<id>.status` for up to `--wait` seconds (5
    by default) and prints one line: `delivered to write-codex via app-server`,
-   `pending for write-codex: …` (exit 3), or `failed` (exit 1).
+   `pending for write-codex: …` or `held for write-codex: …` (exit 3), or
+   `failed` (exit 1).
 
 ## Act 3. The wrapper announces it
 
@@ -139,7 +141,12 @@ work without a required peek or terminal event. Only new member IDs are delivere
      whose content is a `<task-notification>` block with that summary. The
      interface draws it as a single green `● Rewake: lead-claude task, 1 new
      message(s)` line — the same line its own background tasks get — and the
-     model wakes if it was idle.
+     model wakes if it was idle. The line names the wrapper's reply socket and
+     an id, and the session's inbound gate answers there if it holds or refuses
+     the line; silence for 300 ms counts as taken, and a word after that for a
+     minute takes the delivery back. The first notice to a new
+     session waits for its first status line, since until then the gate holds
+     everything ([delivery-adapters.md](delivery-adapters.md#claude-code-adapter)).
    - Codex: call turn/start through the reserved TUI connection/generation with empty
      input and [standalone mailbox output](native-mailbox.md): short notice plus fixed
      member identities, never full task bodies. For tasks/questions to
@@ -154,7 +161,10 @@ work without a required peek or terminal event. Only new member IDs are delivere
      native streaming may defer its visible appearance.
 
 4. **The status.** `delivered` (the waiting copy is removed, `unread/` keeps
-   the message), `pending` (retried every two seconds), or `failed`. Failed
+   the message), `pending` (retried every two seconds), `held` (both copies stay
+   until the harness says how the hold ended; not delivered, and not retried),
+   or `failed`. A held task or question that ends failed sends its sender a note
+   that it never arrived. Failed
    task/notify notices and expired mail move to `done/`. An accepted report
    whose notice fails stays in `unread/`, with `reportAvailable: true` in its
    failed status; the notice is not retried. Written atomically; the sender
@@ -301,7 +311,7 @@ evicts it.
 | lead-claude reads | | status `read`, `done/<rid>.json`; no wait recorded |
 
 Exit codes the sender sees along the way: 0 delivered, 3 accepted and still
-pending, 1 failed or unreachable, 2 wrong call — unknown session, bad flag, a
+pending or held, 1 failed or unreachable, 2 wrong call — unknown session, bad flag, a
 question to a silent role.
 
 ## Where the flow can stall, and what it says
@@ -315,6 +325,10 @@ question to a silent role.
 | the main session is asked a question | refused before publication | exit 2 with a hint |
 | a process of an ended run | its epoch no longer holds the name | `inbox` and `send` refuse |
 | Claude Code's socket not yet up | `ENOENT` while the harness lives | `pending`, then delivered |
+| Claude Code up, status line not drawn yet | the first notice waits, three seconds at most | `pending`, then delivered |
+| Claude Code's gate holds the line | both copies stay, no retry | `held` (exit 3), then delivered, or failed and a note |
+| Claude Code's gate says it holds only after the 300 ms | the delivery is taken back, for up to a minute | `delivered` (exit 0), then `held`; if it fails, a note |
+| the wrapper is killed while its session holds a line | the next session with the name fails it | `failed`, the session ended, if send still waits; a note once the name is taken again |
 
 ## Reports across conversation changes
 

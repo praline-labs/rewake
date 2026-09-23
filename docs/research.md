@@ -113,6 +113,17 @@ which the gate does not consult when it decides:
   delivered to Claude (1 held). Your "crossSessionInbound" setting is "hold"; set it to
   "accept" to deliver held messages.`; two Ctrl-C then settled both held messages as
   `expired`, delivered to the reply socket 2.3 s after the second write.
+- **SessionStart is too early; the first status line is not.** Same setup, later the
+  same day (11:13–11:14 UTC). Three sessions with a sync and an async SessionStart
+  hook each writing a timestamp: both ran 64–85 ms after the socket appeared. Three
+  more with the line, carrying a reply address, written the moment the async hook's
+  file appeared (76, 83 and 81 ms after the socket): each was held 18–19 ms after the
+  write, `permission-mode getter not wired (fail-closed → hold)` in the debug log,
+  released about 100 ms later (`mode-changed`), and the `delivered` receipt came 305–339
+  ms after the write. Three more with the line written when a status-line command
+  first ran — 240–280 ms after the socket, 157–181 ms after SessionStart: `Routed user
+  message to queue (priority=next)` each time, no receipt. So the wrapper opens on the
+  first status line (`telemetry.Collector.Drawn`), not on SessionStart.
 - Not run live: a receiver in `bypassPermissions` or in `plan` with bypass available
   (the launch was refused in this environment), the five-minute deadline, and the
   order of the repository, user and `--settings` sources.

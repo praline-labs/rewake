@@ -166,7 +166,9 @@ Everything above describes the Codex source, a server whose events the gateway r
 Claude Code session has none; its wrapper collects the same snapshot from the session's
 hooks and status line instead ([claude-telemetry.md](claude-telemetry.md)), and the
 readers — `rewake list`, the main-only header, the compaction notice — are unchanged.
-What each field means there:
+What each field means there — observed live on September 23, 2026, Claude Code 2.1.280,
+rewake built from `d975dd7`, for model, effort, context, activity and a compaction notice
+([harness-features.md](harness-features.md), HF-11 and HF-22):
 
 - **Activity**: `working` from UserPromptSubmit, which fires for a message delivered
   through the inbox socket too; `idle` from Stop, StopFailure, a SessionStart that is

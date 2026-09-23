@@ -122,14 +122,22 @@ func (s *Server) settleOutcome(id string, outcome State, reportAvailable bool) {
 // the waiting copy goes. A refused one is taken back from unread/ and archived.
 func settle(dir, name, id string, outcome State) {
 	switch outcome {
+	case Held:
+		// Neither delivered nor refused yet, so both copies stay: its status
+		// keeps it from being announced again, and the readable copy is there
+		// for an agent that reads its mail on its own.
 	case Delivered, Read:
 		waiting := filepath.Join(state.InboxPath(dir, name), id+".json")
 		if err := removeWaiting(waiting); err == nil {
 			_ = state.SyncDir(state.InboxPath(dir, name))
 		}
 	default:
+		// A notice taken back after it was reported delivered has lost its
+		// waiting copy; the readable one is then the last, and goes to done/.
+		if err := move(id, state.InboxPath(dir, name), state.DonePath(dir, name)); errors.Is(err, os.ErrNotExist) {
+			_ = move(id, state.UnreadPath(dir, name), state.DonePath(dir, name))
+		}
 		dropUnread(dir, name, id)
-		_ = archive(dir, name, id)
 	}
 }
 
@@ -137,11 +145,18 @@ func settle(dir, name, id string, outcome State) {
 // from a previous one whose status or archiving did not complete.
 func (s *Server) alreadySettled(message Message) bool {
 	if result, known := s.outcomes[message.ID]; known {
+		if result.State == Held {
+			s.stillHeld(message, result)
+			return true
+		}
 		s.publish(message.ID, result)
 		return true
 	}
 	status, ok := ReadStatus(s.Dir, s.Name, message.ID)
-	if !ok || status.State == Pending {
+	if !ok || status.State == Pending || status.State == Held {
+		// Held on disk and not in this run's memory was held by a run that
+		// died without saying how it ended — a wrapper killed outright. That
+		// is no outcome: like pending, the message is still to be decided.
 		return false
 	}
 	s.outcomes[message.ID] = Result{State: status.State, Via: status.Via, Detail: status.Detail, ReportAvailable: status.ReportAvailable}

@@ -30,6 +30,7 @@ type Message struct {
 	Departure    *DepartureNotice       `json:"departure,omitempty"`
 	SenderState  *sessionstate.Snapshot `json:"senderState,omitempty"`
 	Availability *Availability          `json:"availability,omitempty"`
+	Undelivered  *UndeliveredNotice     `json:"undelivered,omitempty"`
 	// ID sorts by creation time, so a mailbox is served in order.
 	ID string `json:"id"`
 	// From is the sender's session name, or "shell" when it has none.
@@ -125,6 +126,11 @@ const (
 	Pending State = "pending"
 	// Failed means it will not be delivered.
 	Failed State = "failed"
+	// Held means the harness took the notice and keeps it from the agent until
+	// somebody releases it. It is not delivered: it may still be delivered,
+	// expire or be refused, and the serving process writes that down when the
+	// harness says so.
+	Held State = "held"
 )
 
 // Result is what a delivery attempt says about itself.
@@ -226,7 +232,9 @@ const statusPoll = 25 * time.Millisecond
 func Await(dir, to, id string, timeout time.Duration) (Status, bool) {
 	deadline := time.Now().Add(timeout)
 	for {
-		if status, ok := ReadStatus(dir, to, id); ok && status.State != Pending {
+		// Held is not an answer yet: a release or an expiry usually follows
+		// within the wait, and the last word is the one worth printing.
+		if status, ok := ReadStatus(dir, to, id); ok && status.State != Pending && status.State != Held {
 			return status, true
 		} else if ok && time.Now().After(deadline) {
 			return status, true

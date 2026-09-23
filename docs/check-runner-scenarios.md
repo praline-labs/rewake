@@ -189,8 +189,9 @@ one Claude Code row is still **impl?** — HF-19, the harness's own conversation
 commands — which is why it has a row above with no `unsupported` cell.
 
 Telemetry is split for the same reason the feature map splits it: the source (HF-11,
-HF-22) does not exist on Claude Code, while the reader (HF-12) is **live** there since
-September 21, 2026. One cell cannot hold a live half and a missing half.
+HF-22) and the reader (HF-12) reached Claude Code at different times — the reader is
+**live** there since September 21, 2026, the source since September 23, 2026. One cell
+cannot hold halves with different evidence.
 
 The two columns carry the same scenarios with different jobs. **Codex is the regression
 gate:** a failure there blocks, because that path must not break. **Claude Code is the

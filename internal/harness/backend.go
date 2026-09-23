@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
+	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
 )
 
@@ -44,6 +45,21 @@ type Backend interface {
 // ReservingBackend holds its transport's destination through inbox publication.
 type ReservingBackend interface {
 	Reserve(context.Context, inbox.Message) (inbox.Reservation, error)
+}
+
+// Lane is a session-owned delivery path for a harness without a Backend. The
+// wrapper starts it before the harness and hands it every notice; what the
+// harness says about a notice after Deliver returned Held comes back through
+// Receipts, and the inbox server settles the message then.
+type Lane interface {
+	// Start prepares the lane. An error costs the receipts, never delivery:
+	// Deliver then writes as a lane that hears nothing back.
+	Start(context.Context) error
+	Deliver(context.Context, registry.Session, inbox.Message) inbox.Result
+	Receipts() <-chan inbox.Receipt
+	// Opened is closed once the session can take its first notice.
+	Opened() <-chan struct{}
+	Close()
 }
 
 // ObservedBackend exposes optional primary state without filesystem work.

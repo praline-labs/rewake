@@ -80,6 +80,7 @@ without a date. Local installation without publishing is in
 | September 22, 2026 | [A summary of a suite run instead of its transcript](2026-09-22-suite-summarizer.md) | `tools/checksummary`: a few lines and a summary.json, built from records rather than prose |
 | September 22, 2026 | [A fixture for the Claude Code column](2026-09-22-fixture-claude-code.md) | the scenarios run twice; what the socket column cannot show, and says by name |
 | September 23, 2026 | [A named harness version, cached and run in a container](2026-09-23-harness-versions.md) | `tools/harnesscache`, `REWAKE_CODEX_VERSION`, and what 0.156.0 showed |
+| September 23, 2026 | [Honest delivery status for Claude Code](2026-09-23-honest-claude-delivery.md) | `held` as a state, the wrapper's reply socket, the first notice waiting for the status line |
 
 ## Remaining work — owner decisions, September 19–21, 2026
 

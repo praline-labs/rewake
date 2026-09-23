@@ -169,11 +169,12 @@ product mutant, built by `buildMutant` in `mutant_test.go` with one edit through
 toolchain's overlay, inside a started case, refusing an edit that does not match
 exactly once; or a switch that changes the fixture's world. A mutant is preferred
 wherever one can be built, because it shows the scenario catching a broken rewake
-rather than a misbehaving peer. Of today's twenty-two controls, thirteen are mutants —
+rather than a misbehaving peer. Of today's twenty-eight controls, nineteen are mutants —
 batch-arrival's four; task-report's no-stop-hook, turn-ended-ignores-stop and
 settles-nothing; mid-turn's wait-for-idle; claude-telemetry's tap-without-owner,
 uncounted-compaction and silent-compaction; pending-report's pending-ignored and
-pending-settles — and nine are fixture switches: task-report's
+pending-settles; claude-inbound's ungated, gate-on-session-start, held-as-delivered,
+expiry-unannounced, refusal-as-delivered and late-word-dropped — and nine are fixture switches: task-report's
 wrong-report, read-fails, failure-before-report and early-exit; the three readiness
 controls; mid-turn's late and failed-operation. A control names the observation it must
 break; the crosswise check then runs every control's observations in every other
@@ -198,7 +199,10 @@ scenarios do not change. What building the second one taught is in
 fixture plays the worker's hooks and status line through `/bin/sh -c` with the payloads
 seen live, including their conversation fields, and the case reads the result from the
 main's side — its `rewake list`, its header on a message from the worker, and the
-compaction notice its wrapper sends. A listing the main's fixture could not finish in
+compaction notice its wrapper sends. The worker tells the main only once its wrapper has
+published it idle — the header is drawn from that publication, a quarter second apart, and
+a main whose first notice waited for its status line once read the worker's message inside
+that gap. A listing the main's fixture could not finish in
 five seconds is recorded and fails the observations that needed it. It also times the
 commands, cold each time, because a telemetry hook sits in front of every prompt. Its
 three controls are mutants, and each names every observation it must break and requires
@@ -232,6 +236,26 @@ A third session then sends the worker a task of its own, and that turn end — w
 mark — must be the `finished` report settling the first task. Its two mutants, each in
 both columns, ignore the mark and let the interim turn end settle the task; like the
 telemetry controls, each names what it must break and requires the rest to hold.
+
+`claude-inbound` runs on the Claude Code column only: Codex has no inbound gate, and its
+column is unchanged. The fixture plays the gate as the binary does — it holds whatever
+arrives in the first 600 ms after its socket listens, longer than the real two hundred so
+a notice that does not wait is caught every time, and it answers held, released, expired
+or refused lines with receipts on the reply socket, after checking that socket is in its
+own directory and listened on by the process that wrote the line. It refuses a line that
+does not ask for receipts, which the real one would merely not answer, and in one mode
+reports a hold 900 ms late, past rewake's 300 ms wait for a first word, since nothing
+bounds how soon the real one speaks under load. Five workers each get one task from a
+sender of their own: one sent as soon as the socket appears, which must go out once the
+session is up and not be held; one held and released, reported delivered after the hold
+and then worked; one held until it expires, reported `held` with exit 3, its sender sent a
+note that it never arrived, and the task failed, unread and not owed; one refused,
+reported failed with exit 1 and never worked; one held late, whose task must end failed
+and unworked with its sender told, whatever `send` said first. Its six mutants deliver
+without waiting, wait for SessionStart instead of the status line, read a held receipt as
+a delivery, settle an expiry without telling the sender, read a refusal as a delivery,
+and drop a word that comes after the window; each names what it must break and requires
+the rest to hold.
 
 ## Traps this suite has already paid for
 

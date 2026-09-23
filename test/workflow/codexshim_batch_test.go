@@ -208,19 +208,27 @@ func sendAsAsked() int {
 	// windows.
 	started := time.Now()
 	var running []*exec.Cmd
+	var outputs []*strings.Builder
 	for _, text := range texts {
 		send := exec.Command("rewake", "send", target, text)
 		send.Env = os.Environ()
+		output := &strings.Builder{}
+		send.Stdout, send.Stderr = output, output
 		if err := send.Start(); err != nil {
 			fmt.Fprintf(os.Stderr, "shim: sending to %s: %v\n", target, err)
 			continue
 		}
 		running = append(running, send)
+		outputs = append(outputs, output)
 	}
-	for _, send := range running {
-		if err := send.Wait(); err != nil {
+	for index, send := range running {
+		err := send.Wait()
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "shim: sending to %s: %v\n", target, err)
 		}
+		// What the sender was told, and the exit code that told it: a letter
+		// held on the way is accepted and not delivered, and only both say so.
+		recordSend(fmt.Sprintf("letter-%d", index+1), fmt.Sprintf("exit=%d", send.ProcessState.ExitCode()), firstLine(outputs[index].String()))
 	}
 	// A second letter timed against the recipient's own state, for the
 	// mid-turn scenario. It runs after the first letters have been accepted,

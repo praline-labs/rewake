@@ -24,7 +24,8 @@ In scope: Claude Code and Codex, the commands `claude`, `codex`, `list`, `send`,
 `inbox`, `whoami`, the no-argument overview, `--json`. Linux.
 
 Out of scope: pi, opencode, grok (their delivery paths are covered in research);
-macOS (needs replacements for `/proc`); delivery receipts from the recipient;
+macOS (needs replacements for `/proc`); delivery receipts from the recipient (added
+later for Claude Code's inbound gate, September 23, 2026 — [delivery-adapters.md](delivery-adapters.md#claude-code-adapter));
 message history; a UI.
 
 Never doing: a pseudo-terminal proxy or typing text into someone else's screen;
@@ -46,7 +47,11 @@ owns thread execution and sandboxing; the TUI keeps the inherited terminal.
 An optional Backend in LaunchPlan encapsulates this lifecycle, delivery, thread
 identity and completion events. An optional transport-neutral reservation holds
 a destination across inbox readability and ACK; native RPC stays inside its adapter.
-The socket adapter continues using its existing direct delivery and hook path.
+The socket adapter continues using its existing direct delivery and hook path, and
+its wrapper also listens on a reply socket of its own beside the session's: Claude
+Code reports there what its inbound gate did with a line, and only to the process that
+wrote the line, so the wrapper — the one writer of its session's notices — is the one
+listener ([delivery-adapters.md](delivery-adapters.md#claude-code-adapter)).
 
 **Sender** — any process that calls `rewake send`. It doesn't deliver anything
 itself: it drops a file into the recipient's inbox and waits for a status. This
@@ -87,13 +92,15 @@ Created with 0700. [Optional primary observations](session-state.md) are collect
     inbox/<name>/awaiting/<epoch>/<peer> reports owed by this run
     inbox/<name>/pending/      the running turn's `rewake pending` mark
     sock/<name>.<epoch>.sock   one inbound socket per run
+    sock/<name>.<epoch>.reply.sock the wrapper's own: Claude Code's receipts for held lines
     sock/<name>.<epoch>.obs    Claude Code telemetry datagrams to the wrapper
     sock/<name>.<epoch>.obs.turn/ when its latest turn started, one file per reading, for `rewake pending`
 ```
 
 All mailbox paths in the delivery specification are relative to the room.
 Socket names — the telemetry socket's too — fall back to a digest of name and epoch
-when the expanded path would exceed 103 bytes; an excessively long state root still needs shortening.
+when the expanded path would exceed 103 bytes (the reply socket, which has to share the
+inbound socket's directory, to `rewake-<digest>.reply.sock` there); an excessively long state root still needs shortening.
 
 ### Rooms
 

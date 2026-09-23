@@ -26,12 +26,25 @@ type Collector struct {
 	conn   *net.UnixConn
 	done   chan struct{}
 	folded state
+	// drawn is closed on the first status line; see Drawn.
+	drawn     chan struct{}
+	drawnOnce sync.Once
 }
 
 // NewCollector listens at path once started.
 func NewCollector(path string) *Collector {
-	return &Collector{path: path, done: make(chan struct{})}
+	return &Collector{path: path, done: make(chan struct{}), drawn: make(chan struct{})}
 }
+
+// Drawn is closed once the harness has run its status line for the first time.
+//
+// It marks the moment a new session can take a cross-session message without
+// holding it. Claude Code holds every line that arrives before its interface is
+// up, and SessionStart comes too early to say so: live on 2.1.280 it ran about
+// 80 ms after the socket appeared and a line sent then was still held, while
+// the first status line ran after the interface was up and a line sent then
+// was accepted (docs/research.md).
+func (c *Collector) Drawn() <-chan struct{} { return c.drawn }
 
 // Path is where the senders write.
 func (c *Collector) Path() string { return c.path }
@@ -92,6 +105,9 @@ func (c *Collector) read(conn *net.UnixConn) {
 		c.mu.Lock()
 		c.folded.apply(event, time.Now())
 		c.mu.Unlock()
+		if event.Kind == StatusLine {
+			c.drawnOnce.Do(func() { close(c.drawn) })
+		}
 	}
 }
 

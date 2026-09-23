@@ -247,7 +247,7 @@ func notes() []Note {
 		},
 		{
 			Title: "Exit codes are distinguishable",
-			Body:  "2 means the call was wrong: unknown command or flag, missing argument, no such session. 1 means the target refused or could not be reached. 3 means a message was accepted but not delivered yet, and will land on its own. Branch on the code instead of parsing text.",
+			Body:  "0 means done; a message delivered to a Claude Code session may still be taken back within a minute, if that session says late that it held it, and a task or question that then fails comes back to its sender as a note. 2 means the call was wrong: unknown command or flag, missing argument, no such session. 1 means the target refused or could not be reached. 3 means a message was accepted but not delivered yet: pending lands on its own once the session can take it; held waits for the person at the receiving session, who may release it or let it expire, and an expired task or question comes back to its sender as a note. Branch on the code instead of parsing text.",
 		},
 		{
 			Title: "Only sessions started through rewake take part",

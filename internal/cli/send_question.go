@@ -32,6 +32,11 @@ func answerQuestion(ctx *Context, question sent) error {
 	target, model := question.target, question.model
 	wait, cancel := context.WithDeadline(context.Background(), question.deadline)
 	defer cancel()
+	// A question can still fail after send reported it held or pending — the
+	// hold expired, the session ended — and then no answer is coming. Waiting
+	// out the deadline for one would block the asker for nothing.
+	refused := make(chan inbox.Status, 1)
+	go watchRefusal(wait, question.dir, target.Name, model.ID, refused, cancel)
 
 	_, found, err := inbox.AwaitAnswer(wait, question.dir, question.self.Name, question.epoch, model.ID, func(answer inbox.Message) error {
 		model.State, model.Answer = string(inbox.Read), answer.Text
@@ -63,6 +68,12 @@ func answerQuestion(ctx *Context, question sent) error {
 		return failf("asked %s, but its answer could not be handed over: %v", target.Name, err)
 	}
 	if !found {
+		select {
+		case status := <-refused:
+			model.State, model.Via, model.Detail = string(inbox.Failed), status.Via, status.Detail
+			return printDelivery(ctx, target, model)
+		default:
+		}
 		model.State = string(inbox.Pending)
 		model.Detail = fmt.Sprintf("no answer from %s yet; it will arrive as a \"Rewake: %s finished\" line or a grouped notice, to be read with rewake inbox", target.Name, target.Name)
 		line := fmt.Sprintf("asked %s: %s", target.Name, model.Detail)
@@ -77,4 +88,25 @@ func answerQuestion(ctx *Context, question sent) error {
 		return &ExitCodeError{Code: ExitFailed}
 	}
 	return nil
+}
+
+// refusalPoll is how often a waiting question looks at its own status.
+const refusalPoll = 250 * time.Millisecond
+
+// watchRefusal ends the wait for an answer once the question itself has failed.
+func watchRefusal(ctx context.Context, dir, to, id string, refused chan<- inbox.Status, stop func()) {
+	ticker := time.NewTicker(refusalPoll)
+	defer ticker.Stop()
+	for {
+		if status, ok := inbox.ReadStatus(dir, to, id); ok && status.State == inbox.Failed {
+			refused <- status
+			stop()
+			return
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+	}
 }

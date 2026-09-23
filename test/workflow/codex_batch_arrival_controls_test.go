@@ -68,17 +68,21 @@ var mutantReplay = mutation{
 			"\tcase Delivered:\n\tcase Read:\n\t\twaiting :=",
 		},
 		{
-			"if result, known := s.outcomes[message.ID]; known {\n" +
+			"if result, known := s.outcomes[message.ID]; known {\n" + heldBranch +
 				"\t\ts.publish(message.ID, result)\n\t\treturn true\n\t}\n" +
 				"\tstatus, ok := ReadStatus(s.Dir, s.Name, message.ID)\n" +
-				"\tif !ok || status.State == Pending {",
-			"if result, known := s.outcomes[message.ID]; known && result.State != Delivered {\n" +
+				"\tif !ok || status.State == Pending || status.State == Held {",
+			"if result, known := s.outcomes[message.ID]; known && result.State != Delivered {\n" + heldBranch +
 				"\t\ts.publish(message.ID, result)\n\t\treturn true\n\t}\n" +
 				"\tstatus, ok := ReadStatus(s.Dir, s.Name, message.ID)\n" +
-				"\tif !ok || status.State == Pending || status.State == Delivered {",
+				"\tif !ok || status.State == Pending || status.State == Held || status.State == Delivered {",
 		},
 	},
 }
+
+// heldBranch is the held message's way out of alreadySettled, which the replay
+// mutant leaves as it is.
+const heldBranch = "\t\tif result.State == Held {\n\t\t\ts.stillHeld(message, result)\n\t\t\treturn true\n\t\t}\n"
 
 // batchControl pairs a mutation with the observation it must take down.
 type batchControl struct {

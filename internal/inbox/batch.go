@@ -118,6 +118,7 @@ func (s *Server) deliverGroup(ctx context.Context, pending []Message) {
 		shared.Close()
 		shared = nil
 	}
+	s.track(message.ID, result, ready)
 	// Remember every irreversible result before any filesystem operation can fail.
 	if result.State != Pending {
 		for _, member := range ready {

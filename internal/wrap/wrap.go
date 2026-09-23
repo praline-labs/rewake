@@ -15,9 +15,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/harness"
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
@@ -156,6 +154,15 @@ func Run(ctx context.Context, request Request) (int, error) {
 		}
 	}
 
+	if plan.Backend == nil && plan.Lane != nil {
+		// Before the harness, like the telemetry socket: its answer to the
+		// first notice goes to an address that has to exist by then.
+		if err := plan.Lane.Start(ctx); err != nil {
+			_, _ = fmt.Fprintln(os.Stderr, "rewake: "+err.Error())
+		}
+		defer plan.Lane.Close()
+	}
+
 	command := exec.Command(plan.Command, plan.Args...)
 	command.Env = plan.Env
 	command.Stdin, command.Stdout, command.Stderr = os.Stdin, os.Stdout, os.Stderr
@@ -229,11 +236,17 @@ func Run(ctx context.Context, request Request) (int, error) {
 				if plan.Backend != nil {
 					return plan.Backend.Deliver(ctx, message)
 				}
+				if plan.Lane != nil {
+					return plan.Lane.Deliver(ctx, current(request.Dir, name, session), message)
+				}
 				return request.Harness.Deliver(ctx, current(request.Dir, name, session), message)
 			},
 		}
 		if backend, ok := plan.Backend.(harness.ReservingBackend); ok {
 			server.Reserve = backend.Reserve
+		}
+		if plan.Backend == nil && plan.Lane != nil {
+			server.Receipts, server.Opened = plan.Lane.Receipts(), plan.Lane.Opened()
 		}
 		server.Serve(serveCtx)
 	}()
@@ -280,30 +293,6 @@ func waitForHarness(pid int) int {
 	}
 }
 
-// followStop stops the wrapper with a harness that stopped on its own, and
-// brings the harness back when the wrapper is continued.
-//
-// The report of a stop can be old news. Ctrl+Z stops the whole job, wrapper
-// included, and the report is read only after "fg" has continued both — stopping
-// again then handed the shell a stopped job while the harness ran on its own.
-// So the wrapper follows only a harness that is stopped right now.
-func followStop(pid int, stopped func(int) bool, stop func()) {
-	if !stopped(pid) {
-		return
-	}
-	stop()
-	_ = syscall.Kill(pid, syscall.SIGCONT)
-}
-
-// stillStopped reports whether a process is in a job-control stop now.
-func stillStopped(pid int) bool {
-	state, err := proc.State(pid)
-	return err == nil && state == "T"
-}
-
-// stopSelf stops the wrapper the way a job is stopped.
-func stopSelf() { _ = syscall.Kill(os.Getpid(), syscall.SIGSTOP) }
-
 // current re-reads the session record so delivery sees the latest one. The
 // harness may have moved on — a new Codex thread, a recreated socket — and the
 // record is where that shows up. A record that is no longer ours is ignored:
@@ -314,66 +303,6 @@ func current(dir, name string, fallback registry.Session) registry.Session {
 		return fallback
 	}
 	return session
-}
-
-// catchSignals starts listening before there is a child to forward to.
-func catchSignals() (chan os.Signal, func()) {
-	incoming := make(chan os.Signal, 8)
-	signal.Notify(incoming, syscall.SIGTERM, syscall.SIGHUP)
-	// The keyboard signals are caught and dropped rather than left to their
-	// default. The wrapper shares the harness's group, so Ctrl+C reaches it too,
-	// and dying from it left the agent running with nobody serving its mailbox:
-	// interrupting a turn must not end the session.
-	//
-	// Caught, not ignored. An ignored signal stays ignored across exec, so the
-	// harness and every command it ran would have lost Ctrl+C too; a caught one
-	// is reset to its default in the child.
-	keyboard := make(chan os.Signal, 8)
-	signal.Notify(keyboard, syscall.SIGINT, syscall.SIGQUIT)
-	go func() {
-		for {
-			// Keyboard signals belong to the harness; consume until the channel closes.
-			if _, open := <-keyboard; !open {
-				return
-			}
-		}
-	}()
-	return incoming, func() {
-		signal.Stop(incoming)
-		// Stop guarantees nothing more is sent, so closing ends the drain.
-		signal.Stop(keyboard)
-		close(keyboard)
-	}
-}
-
-// forwardGrace is how long the harness is given to act on a signal it may have
-// received directly before the wrapper repeats it.
-//
-// The workflow suite's termination budget (test/workflow) is the sum of this and
-// the other shutdown stages, so a change here has to be reflected there.
-const forwardGrace = 300 * time.Millisecond
-
-// forward passes a termination request on to the harness — once, and only if it
-// has not already acted on one.
-//
-// Both processes are in the same group, so a signal sent to the group reaches
-// the harness by itself; repeating it turns one request into two, and for many
-// programs the second one means "stop cleaning up and die". A signal sent to the
-// wrapper alone reaches nobody else, and that is the case this covers. The
-// difference between them is not visible in the signal, so the answer comes from
-// the harness: if it is still running a moment later, it did not get one.
-func forward(incoming chan os.Signal, process *os.Process, alive func() bool) {
-	for received := range incoming {
-		signalValue, ok := received.(syscall.Signal)
-		if !ok {
-			continue
-		}
-		time.Sleep(forwardGrace)
-		if !alive() {
-			continue
-		}
-		_ = process.Signal(signalValue)
-	}
 }
 
 // removeSocket clears the socket file of a session that has ended. The harness

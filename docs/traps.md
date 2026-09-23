@@ -147,7 +147,7 @@ configuration, not into flags.
 
 *September 19–20, 2026.*
 
-### A message reported delivered was held by Claude Code
+### A message reported delivered was held by Claude Code — the status is now honest
 
 `rewake send` answered `delivered via socket`, and the receiving Claude Code session
 showed nothing until a moment later it printed `Released 1 held cross-session message to
@@ -161,8 +161,17 @@ misleading "prompting again", since the release counts as a mode change. A recei
 asserts no permission-mode class, a prompt waits for the person, and unless they approve
 it the message is dropped at a deadline, five minutes by default. And `crossSessionInbound` set to `hold` or `refuse` anywhere the
 receiver reads it holds or refuses regardless of mode. The receiver reports each of these
-only to a reply socket named in the line, and rewake names none, so nothing tells the
-sender. Details: [research-launch.md](research-launch.md#claude-codes-cross-session-inbound-gate),
+only to a reply socket named in the line, and rewake named none, so nothing told the
+sender.
+
+Now every line names the wrapper's reply socket, and a held line is reported `held`
+(exit 3), then delivered or failed as the receipts come; a held task that expires
+sends its sender a note. A hold reported after rewake's 300 ms wait for a first word
+takes the delivery back, so `delivered` from `send` is final only for work the agent has
+read; a late failure sends the same note. The first notice to a new session waits for its status line,
+so the startup hold no longer applies. What stays: a hold is still a hold — the
+message waits for the person at the receiving session, and rewake does not release it.
+The mechanism is in [delivery-adapters.md](delivery-adapters.md#claude-code-adapter). Details: [research-launch.md](research-launch.md#claude-codes-cross-session-inbound-gate),
 [research.md](research.md#the-inbound-gate-on-rewakes-line).
 
 *September 23, 2026.*
