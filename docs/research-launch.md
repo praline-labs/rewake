@@ -261,6 +261,14 @@ The structured protocol Claude Code does document is `--print` with
 transport. It runs without the interactive terminal, so a person would lose the screen
 they work in.
 
+## A prompt draft at launch
+
+**[verified live; Claude Code 2.1.280, private HOME, fake API; September 23, 2026]**
+`--prefill <text>`, and `--prefill-b64` with the text in base64, puts the text into the
+input box without submitting it and shows `Pre-filled prompt · review before pressing
+Enter`. It fills the first prompt only; a draft for a session already running needs a
+plugin ([research-claude-control.md](research-claude-control.md#putting-text-into-the-input-box)).
+
 ## Hook options and settings order that rewake's launch layer relies on
 
 **[the binary's bundled source, cached 2.1.280; September 23, 2026]** A command hook

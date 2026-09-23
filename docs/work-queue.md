@@ -115,6 +115,11 @@ A background worker will likely run without permission prompts, and that is exac
 the class of receiver whose inbound gate holds every rewake line
 ([traps.md](traps.md#a-message-reported-delivered-was-held-by-claude-code--the-status-is-now-honest)),
 so a sender that can tell held from delivered is its prerequisite. Nothing to build yet.
+Its first step is research, not verified yet: `claude -p` with stream-json input and
+output, where rewake would own the input rather than a terminal, and could then learn of
+an interruption (`terminal_reason` `aborted_*`), ask for a compaction and send the other
+commands a terminal session does not take from outside
+([research-claude-control.md](research-claude-control.md)).
 
 **Withdrawing, editing and resending an unread message.** The owner's idea of
 September 23, 2026, not built. The sender can withdraw a message the recipient has not

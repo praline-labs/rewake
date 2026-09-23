@@ -13,7 +13,9 @@ running session shows: how a message reaches it, what it does with it, and how t
 processes behave. On September 23, 2026 the file passed 400 lines again and was split
 by subject: what a running Codex session shows moved to
 [research-codex.md](research-codex.md), and this file keeps Claude Code, the other
-harnesses and the failed-turn observations.
+harnesses and the failed-turn observations. Later the same day, what reaches a running
+Claude Code session from outside besides a message — an interruption, a command, a
+prompt draft — moved to [research-claude-control.md](research-claude-control.md).
 
 **[verified live; September 21, 2026]** A fact about our own checks rather than about a
 harness, kept here because it is dated and ages like the rest: `go test` inherits a
@@ -252,7 +254,7 @@ Hooks **[verified live unless marked]**:
   takes one **[source]** — absent on Haiku 4.5.
 - `SessionStart` carries `source` and `model` (the id): `startup` at launch,
   `compact` after a compaction, `clear` after `/clear` — without `model` — and `resume`
-  after `/resume` ([below](#interrupting-a-turn-and-changing-the-conversation)).
+  after `/resume` ([research-claude-control.md](research-claude-control.md#interrupting-a-turn-and-changing-the-conversation)).
 - `UserPromptSubmit` fires for a message delivered through the inbox socket, and
   carries its text in `prompt`.
 - `PreCompact` (`trigger` `manual` or `auto`, `custom_instructions`) and `PostCompact`
@@ -267,7 +269,7 @@ Hooks **[verified live unless marked]**:
 - `Notification`: `message`, `title`, `notification_type`; the binary names
   `permission_prompt`, `idle_prompt`, `agent_needs_input`, `agent_completed` and
   others **[source]**. `idle_prompt` came 61.6 seconds after an ordinary `Stop`, and
-  not within 80 seconds after an Esc ([below](#interrupting-a-turn-and-changing-the-conversation)).
+  not within 80 seconds after an Esc ([research-claude-control.md](research-claude-control.md#interrupting-a-turn-and-changing-the-conversation)).
 - `SessionEnd`: `reason`, `prompt_input_exit` for `/exit`. `Stop` also carries
   `background_tasks` and `session_crons` **[source]**.
 - Conversation text travels in `prompt`, `last_assistant_message`,
@@ -277,40 +279,11 @@ Hooks **[verified live unless marked]**:
 `/clear` gives the session a new `session_id`, which the next status-line run already
 carries **[container]**; a compaction keeps it.
 
-### Interrupting a turn and changing the conversation
+### Interrupting a turn, commands and prompt drafts
 
-Probed on September 23, 2026, Claude Code 2.1.280, in a private HOME against a fake API
-on a local port, with Esc and Ctrl+C typed through tmux **[live]** and the abort path
-read in the binary **[source]**.
-
-An interrupted turn is marked by nothing rewake can hear (HF-06):
-
-- Esc while the request hangs, while text streams, and during a Bash tool: no `Stop`,
-  `StopFailure`, `Notification` or `PostToolUseFailure`. No hook, no status-line field
-  and no key of a later `UserPromptSubmit` says the turn was interrupted.
-- `idle_prompt` did not come within 80 seconds after an Esc; after an ordinary `Stop`
-  it came 61.6 seconds later.
-- The only marker, `[Request interrupted by user]`, is in the next request's body — the
-  transcript, which rewake does not read.
-- Ctrl+C once or twice during a turn behaves like Esc. Twice while idle ends the
-  session: `SessionEnd` with reason `prompt_input_exit`, and the wrapper exits 0.
-- In the binary the abort branches return `aborted_streaming` or `aborted_tools` and
-  never call the Stop hook, whose callers are `blockable_turn_end`,
-  `turn_end_reactions` and `loop_tick`. A `terminal_reason` of `aborted_*` exists only
-  in the SDK's stream-json output. **[source]**
-
-Changing the conversation (HF-19):
-
-- `/clear`: `SessionEnd` with reason `clear` and the old `session_id`, then
-  `SessionStart` with source `clear` and a new one, without a `model` key; a status
-  line with the new id about 300 ms later.
-- `/resume <id>`: `SessionEnd` with reason `resume`, then `SessionStart` with source
-  `resume` and the resumed conversation's original id, with extra keys —
-  `context_tokens`, `seconds_since_last_response`, `prompt_cache_likely_expired`,
-  `estimated_cache_write_usd`, `model`, `prompt_id`. The picker behaves the same.
-- The wrapper's socket survives both, and a delivery and its `Stop` work after each.
-- Not checked: `--resume` or `--continue` at launch through rewake, and resuming a
-  conversation from another project or one started outside rewake.
+Moved on September 23, 2026 to [research-claude-control.md](research-claude-control.md):
+what an Esc or a Ctrl+C leaves for rewake to hear, what `/clear` and `/resume` do, which
+commands reach a session from outside, and how text can be put into its input box.
 
 ## Other harnesses (for later)
 

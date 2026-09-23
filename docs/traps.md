@@ -38,7 +38,7 @@ conversation and once across a `/clear`. The worker's turn on the task had been
 interrupted with Esc, and the report was the end of the next, unrelated turn.
 
 Claude Code runs no Stop hook for an interrupted turn
-([research.md](research.md#interrupting-a-turn-and-changing-the-conversation)), so the
+([research-claude-control.md](research-claude-control.md#interrupting-a-turn-and-changing-the-conversation)), so the
 task stays owed, and obligations are kept per wrapper run, not per conversation: the
 next turn end heard, whatever it was about, settles it with its own last reply. A
 shell-mode `!` command was seen to start a model turn that ends in Stop without a

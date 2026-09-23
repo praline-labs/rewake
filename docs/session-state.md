@@ -195,7 +195,7 @@ rewake built from `d975dd7`, for model, effort, context, activity and a compacti
   `/resume`; the reset after `/clear` was seen live), or an `idle_prompt`
   notification. No hook marks the
   interruption — Esc and Ctrl+C run no Stop, StopFailure or Notification, and no
-  `idle_prompt` came within 80 seconds ([research.md](research.md#interrupting-a-turn-and-changing-the-conversation)) —
+  `idle_prompt` came within 80 seconds ([research-claude-control.md](research-claude-control.md#interrupting-a-turn-and-changing-the-conversation)) —
   so `rewake list` and the main header show a stopped session as working.
 - **Model and effort**: from the status line, which states both each time; a model the
   status line gives no effort for clears the effort to unknown. SessionStart and the

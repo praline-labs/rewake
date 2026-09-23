@@ -107,3 +107,37 @@ level exercises the fallback and leaves the main branch untested. Two further fi
 there are distinct: `source` is where the conversation came from (cli, vscode, exec,
 app-server), `thread_source` is an analytics classification — the client sends the
 latter, the server answers with both.
+
+## Compaction and the terminal's commands over the protocol
+
+**[source: app-server schema of the installed CLI 0.155.1 and reference tree `e29eceb75`;
+September 23, 2026]** Whether rewake could compact a Codex conversation, or run another
+of the terminal's commands, on its own behalf. The Claude Code side is in
+[research-claude-control.md](research-claude-control.md#commands-from-outside).
+
+`thread/compact/start` takes `{threadId}` and nothing else, and replies `{}`. The work
+shows as events: `turn/started`, an item of kind `contextCompaction`, `thread/compacted`,
+a token-usage update, `turn/completed`. The core aborts the running tasks before it
+compacts, so a compaction requested mid-turn cuts that turn short; the terminal offers
+`/compact` only while idle.
+
+rewake could inject the request itself through the gateway's `callReserved`
+(`internal/harness/codex/gateway/gateway.go`), but the gateway marks a thread as being
+in manual compaction only when the request comes from the terminal (the
+`thread/compact/start` branch of its request loop, near line 153); a request of rewake's
+own would need that mark set as well.
+
+The terminal's commands and what they send:
+
+| Command | Protocol |
+| --- | --- |
+| model, effort, plan mode, working directory | a settings update |
+| rename | `thread/name/set` |
+| goal | the goal methods |
+| review | `review/start` |
+| a shell command | `thread/shellCommand` |
+| background terminals | their own list and clean-up methods |
+| interrupt | `turn/interrupt` |
+| the read-only lists | their list methods |
+| `/new`, `/clear`, `/resume`, `/fork` | none: which conversation is shown is the client's own state |
+| commands that act only in the client | none |

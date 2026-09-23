@@ -95,7 +95,7 @@ hasn't been created yet, or is being recreated); otherwise `failed`.
 **Which conversation a message went into.** Claude Code names its conversation in every
 hook and status line as `session_id`, which `/clear` replaces with a new one, `/resume`
 with the resumed conversation's, and a compaction keeps
-([research.md](research.md#interrupting-a-turn-and-changing-the-conversation)).
+([research-claude-control.md](research-claude-control.md#interrupting-a-turn-and-changing-the-conversation)).
 The telemetry collector keeps the last one it heard, and the wrapper asks it when it pins
 an owed message to a conversation before making it readable
 ([delivery.md](delivery.md#reports-after-a-thread-change)). At the end of the turn

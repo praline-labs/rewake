@@ -105,6 +105,12 @@ everything else.
   hooks hand a command about model, context and compactions, and why a legacy notify
   cannot be trusted as an error signal. Open it before touching delivery or wake
   behaviour, before changing the Claude Code collector, and after a harness update. Its companions follow.
+- [research-claude-control.md](research-claude-control.md) — what reaches a running Claude
+  Code session from outside besides a message, split from research.md by subject: what an
+  Esc or a Ctrl+C leaves for rewake to hear (nothing short of the transcript), what `/clear`
+  and `/resume` do, why no slash command runs from the inbound socket, and how text can be
+  put into the input box by the launch flag or a plugin. Open it before working on
+  `stopped` for Claude Code, on conversation tracking, or on sending a session a command.
 - [research-codex.md](research-codex.md) — what only a running Codex session shows,
   split from research.md by subject: `codex queue`, thread identity and terminal events,
   the sandbox as a running session meets it, environment and instructions, and the
@@ -113,15 +119,16 @@ everything else.
 - [research-launch.md](research-launch.md) — what an installed binary answers when run:
   model and effort catalogues and the usable context window, which flags may repeat,
   undocumented aliases, when a `--help` probe can be trusted, how each harness is
-  published on npm, whether Claude Code has a client-server split to stand between,
+  published on npm, whether Claude Code has a client-server split to stand between, a
+  prompt draft at launch,
   the hook options and settings order the launch layer relies on, and what the bundled
   source states about Claude Code's cross-session inbound gate — `crossSessionInbound`,
   permission-mode classes, holds, deadlines and receipts. Open it when adding a launch flag or when a model, an effort or a
   version is refused.
 - [research-protocol.md](research-protocol.md) — what the generated Codex schema and the
   reference source state: the flags schema generation needs, required fields of the
-  types the adapter uses, how start-or-steer forks, and where `canAcceptDirectInput`
-  lives. Open it when the adapter or the fixture has to match a protocol change.
+  types the adapter uses, how start-or-steer forks, where `canAcceptDirectInput`
+  lives, and what compaction and the terminal's other commands send over the protocol. Open it when the adapter or the fixture has to match a protocol change.
 - [research-permissions.md](research-permissions.md) — the Codex sandbox: network and
   filesystem limits on Linux, why `.git`, `.agents` and `.codex` are protected, how
   `--add-dir` grants access, worktree quirks, and a short account of remote resume
