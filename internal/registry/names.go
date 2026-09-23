@@ -51,5 +51,8 @@ func ChooseName(dir, explicit, base string) (string, error) {
 // SocketFor is where the wrapper asks a harness to place its inbox socket.
 func SocketFor(dir, name, epoch string) string { return state.SocketPath(dir, name, epoch) }
 
+// ObservationFor is where a run's telemetry senders write.
+func ObservationFor(dir, name, epoch string) string { return state.ObservationPath(dir, name, epoch) }
+
 // RecordPath is the file holding a session record.
 func RecordPath(dir, name string) string { return filepath.Clean(state.SessionPath(dir, name)) }

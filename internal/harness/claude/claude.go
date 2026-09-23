@@ -14,6 +14,7 @@ import (
 
 	"github.com/iiiokojiadbi/rewake/internal/brief"
 	"github.com/iiiokojiadbi/rewake/internal/harness"
+	"github.com/iiiokojiadbi/rewake/internal/harness/claude/telemetry"
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
 )
@@ -31,8 +32,8 @@ const socketFlag = "--messaging-socket-path"
 const introFlag = "--append-system-prompt"
 
 // settingsFlag layers a settings object over the user's for one launch. Claude
-// Code merges the layers, so the Stop hook it carries runs next to the user's
-// own hooks rather than instead of them.
+// Code merges the layers, so the hooks it carries run next to the user's own
+// rather than instead of them; it reads only one, which settings.go handles.
 const settingsFlag = "--settings"
 
 // modelFlag and effortFlag are how Claude Code takes these for one session.
@@ -182,18 +183,22 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 		args = harness.AddFlags(args, introFlag, brief.Intro(request.BriefContext()))
 	}
 	args, notes := harness.ApplyDefaults(args, claudeDefaults())
-	switch {
-	case harness.HasFlag(args, settingsFlag):
-		// Only one --settings is read, and replacing the caller's would drop
-		// whatever they layered on purpose.
-		notes = append(notes, "not reporting the end of turns to the sessions that wrote here: --settings is already given, and a second one would replace it")
-	default:
-		if hooks, err := turnHookSettings(request.Role.Silent); err == nil {
-			args = harness.AddFlags(args, settingsFlag, hooks)
-		} else {
-			notes = append(notes, "not reporting the end of turns: "+err.Error())
-		}
+	env := harness.SessionEnv(request, childMarkers)
+	var observer harness.Observer
+	observation := request.ObservationSocket
+	if len(observation) > maxSocketPath {
+		notes = append(notes, "not collecting telemetry: the socket path "+observation+" is longer than a unix socket allows")
+		observation = ""
 	}
+	if observation != "" {
+		observer = telemetry.NewCollector(observation)
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return harness.LaunchPlan{}, err
+	}
+	args, settingsNotes := applySettings(args, cwd, request.Role.Silent, observation)
+	notes = append(notes, settingsNotes...)
 	if !harness.HasFlag(args, toolFlag) {
 		args = harness.AddFlags(args, toolFlag, "Bash(rewake:*)")
 	}
@@ -201,35 +206,12 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 	return harness.LaunchPlan{
 		Command:    "claude",
 		Args:       args,
-		Env:        harness.SessionEnv(request, childMarkers),
+		Env:        env,
 		Socket:     socket,
 		OwnsSocket: owns,
 		Notes:      notes,
+		Observer:   observer,
 	}, nil
-}
-
-// turnHookSettings is the settings layer that reports the end of every turn.
-// The Stop hook runs while the session is still awake, so it only records the
-// event; waking the sessions that wait for it is their own wrappers' job.
-func turnHookSettings(silent bool) (string, error) {
-	command, err := harness.TurnEndedCommand()
-	if err != nil {
-		return "", err
-	}
-	type hook struct {
-		Kind    string `json:"type"`
-		Command string `json:"command"`
-		Timeout int    `json:"timeout"`
-	}
-	type matcher struct {
-		Hooks []hook `json:"hooks"`
-	}
-	hooks := map[string][]matcher{"StopFailure": {{Hooks: []hook{{Kind: "command", Command: command, Timeout: 10}}}}}
-	if !silent {
-		hooks["Stop"] = []matcher{{Hooks: []hook{{Kind: "command", Command: command, Timeout: 10}}}}
-	}
-	encoded, err := json.Marshal(map[string]any{"hooks": hooks})
-	return string(encoded), err
 }
 
 // maxSocketPath is the limit the kernel puts on a unix socket path.

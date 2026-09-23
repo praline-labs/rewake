@@ -16,17 +16,28 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 )
 
 // claudeSettings is the part of the settings layer this fixture uses: the
-// command each hook runs. What the wrapper puts there is checked, because a
-// session that never ran the hook would leave every sender waiting and the
-// scenario would report it as a delivery that produced no answer.
+// command each hook runs, and the status line. What the wrapper puts there is
+// checked, because a session that never ran the hook would leave every sender
+// waiting and the scenario would report it as a delivery that produced no
+// answer.
 type claudeSettings struct {
 	stop        string
 	stopFailure string
+	// observe is the telemetry hook: one command, registered for every event
+	// in telemetryEvents and run in the background.
+	observe string
+	// statusLine is the status line's command: rewake's tap.
+	statusLine string
 }
+
+// telemetryEvents are the hooks the adapter registers for telemetry. Spelled
+// out rather than imported, like everything else this fixture checks.
+var telemetryEvents = []string{"SessionStart", "UserPromptSubmit", "PreCompact", "PostCompact", "Notification", "Stop", "StopFailure", "SessionEnd"}
 
 func parseClaudeSettings(raw string) (claudeSettings, error) {
 	var settings claudeSettings
@@ -39,25 +50,54 @@ func parseClaudeSettings(raw string) (claudeSettings, error) {
 				Kind    string `json:"type"`
 				Command string `json:"command"`
 				Timeout int    `json:"timeout"`
+				Async   bool   `json:"async"`
 			} `json:"hooks"`
 		} `json:"hooks"`
+		StatusLine *struct {
+			Kind    string `json:"type"`
+			Command string `json:"command"`
+		} `json:"statusLine"`
 	}
 	if err := json.Unmarshal([]byte(raw), &layer); err != nil {
 		return settings, fmt.Errorf("unreadable --settings: %w", err)
 	}
+	observed := map[string]bool{}
 	for name, matchers := range layer.Hooks {
 		for _, matcher := range matchers {
 			for _, hook := range matcher.Hooks {
 				if hook.Kind != "command" || hook.Command == "" {
 					return settings, fmt.Errorf("the %s hook is not a command", name)
 				}
-				switch name {
-				case "Stop":
-					settings.stop = hook.Command
-				case "StopFailure":
-					settings.stopFailure = hook.Command
+				switch {
+				case strings.HasSuffix(hook.Command, "'turn-ended'"):
+					// The end of a turn has to be recorded before the session
+					// goes idle, so it never runs in the background.
+					if hook.Async {
+						return settings, fmt.Errorf("the %s turn-ended hook runs in the background", name)
+					}
+					switch name {
+					case "Stop":
+						settings.stop = hook.Command
+					case "StopFailure":
+						settings.stopFailure = hook.Command
+					default:
+						return settings, fmt.Errorf("turn-ended registered for %s", name)
+					}
+				case strings.Contains(hook.Command, "'observe' "):
+					// In front of every prompt: it must not hold the session.
+					if !hook.Async {
+						return settings, fmt.Errorf("the %s telemetry hook runs in the foreground", name)
+					}
+					if settings.observe != "" && settings.observe != hook.Command {
+						return settings, fmt.Errorf("the %s telemetry hook names a different command", name)
+					}
+					if !slices.Contains(telemetryEvents, name) || observed[name] {
+						return settings, fmt.Errorf("a telemetry hook this fixture does not serve: %s", name)
+					}
+					settings.observe = hook.Command
+					observed[name] = true
 				default:
-					return settings, fmt.Errorf("a hook this fixture does not serve: %s", name)
+					return settings, fmt.Errorf("a hook this fixture does not serve: %s runs %s", name, hook.Command)
 				}
 			}
 		}
@@ -67,6 +107,13 @@ func parseClaudeSettings(raw string) (claudeSettings, error) {
 		// reports at all.
 		return settings, errors.New("no StopFailure hook in --settings")
 	}
+	if len(observed) != len(telemetryEvents) {
+		return settings, fmt.Errorf("telemetry hooks for %d of %d events", len(observed), len(telemetryEvents))
+	}
+	if layer.StatusLine == nil || layer.StatusLine.Kind != "command" || !strings.Contains(layer.StatusLine.Command, "'status-tap' ") {
+		return settings, errors.New("no status-line tap in --settings")
+	}
+	settings.statusLine = layer.StatusLine.Command
 	return settings, nil
 }
 
@@ -106,16 +153,25 @@ func (s *claudeSession) endTurn(text string) {
 	if failed {
 		command, event = s.launch.settings.stopFailure, "StopFailure"
 	}
-	if command == "" {
-		return
-	}
 	payload, err := json.Marshal(hookInput(event, text))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "claude-shim: the hook payload could not be written: %v\n", err)
 		return
 	}
-	// The hook command is a quoted argv, as the settings layer spells it, so
-	// it runs through a shell the way the harness runs it.
+	// The harness runs every hook of the event; the telemetry one runs in the
+	// background and cannot hold the turn, so its result is not waited on here
+	// either beyond its own exit.
+	s.runHook(event, s.launch.settings.observe, payload)
+	s.runHook(event, command, payload)
+}
+
+// runHook runs one hook command with its payload on stdin. The command is a
+// quoted argv, as the settings layer spells it, so it runs through a shell the
+// way the harness runs it.
+func (s *claudeSession) runHook(event, command string, payload []byte) {
+	if command == "" {
+		return
+	}
 	hook := exec.Command("/bin/sh", "-c", command)
 	hook.Env = os.Environ()
 	hook.Stdin = strings.NewReader(string(payload))

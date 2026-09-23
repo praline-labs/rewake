@@ -86,11 +86,12 @@ Created with 0700. [Optional primary observations](session-state.md) are collect
     inbox/<name>/threads/<id>  selected delivery thread, when supported
     inbox/<name>/awaiting/<epoch>/<peer> reports owed by this run
     sock/<name>.<epoch>.sock   one inbound socket per run
+    sock/<name>.<epoch>.obs    Claude Code telemetry datagrams to the wrapper
 ```
 
 All mailbox paths in the delivery specification are relative to the room.
-Socket names fall back to a digest of name and epoch when the expanded path
-would exceed 103 bytes; an excessively long state root still needs shortening.
+Socket names — the telemetry socket's too — fall back to a digest of name and epoch
+when the expanded path would exceed 103 bytes; an excessively long state root still needs shortening.
 
 ### Rooms
 

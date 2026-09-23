@@ -93,6 +93,8 @@ func Run(ctx context.Context, request Request) (int, error) {
 		Socket:     registry.SocketFor(request.Dir, name, epoch),
 		Epoch:      epoch,
 		Role:       role.Of(session.Role),
+
+		ObservationSocket: registry.ObservationFor(request.Dir, name, epoch),
 	})
 	if err != nil {
 		return 0, err
@@ -137,6 +139,17 @@ func Run(ctx context.Context, request Request) (int, error) {
 		defer plan.Backend.Close()
 		if observer, ok := plan.Backend.(harness.ObservedBackend); ok {
 			defer sessionstate.Start(ctx, request.Dir, name, epoch, observer.SessionState)()
+		}
+	}
+
+	if plan.Backend == nil && plan.Observer != nil {
+		// Started before the harness, so its first hook finds the socket.
+		// Telemetry that cannot start costs telemetry, never the session.
+		if err := plan.Observer.Start(ctx); err != nil {
+			_, _ = fmt.Fprintln(os.Stderr, "rewake: not collecting telemetry: "+err.Error())
+		} else {
+			defer plan.Observer.Close()
+			defer sessionstate.Start(ctx, request.Dir, name, epoch, plan.Observer.SessionState)()
 		}
 	}
 

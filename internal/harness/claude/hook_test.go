@@ -48,24 +48,6 @@ func TestTurnHookIsLayeredForOneLaunch(t *testing.T) {
 	}
 }
 
-// Only one --settings is read. The caller's is theirs, so rewake says it is not
-// reporting turns instead of replacing it.
-func TestCallerSettingsAreNotReplaced(t *testing.T) {
-	plan := launch(t, []string{"--settings", "/home/u/team.json"}, "")
-	count := 0
-	for _, arg := range plan.Args {
-		if arg == settingsFlag {
-			count++
-		}
-	}
-	if count != 1 || plan.Args[indexOf(plan.Args, settingsFlag)+1] != "/home/u/team.json" {
-		t.Errorf("args = %v, want the caller's --settings alone", plan.Args)
-	}
-	if len(plan.Notes) == 0 || !strings.Contains(plan.Notes[0], "--settings") {
-		t.Errorf("notes = %v, want a word on the turn reports that were skipped", plan.Notes)
-	}
-}
-
 // The main session's turns are reported to nobody, so it gets no hook, and its
 // briefing says what it is.
 func TestMainObservesOnlyFailedTurns(t *testing.T) {

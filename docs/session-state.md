@@ -160,6 +160,44 @@ JSON separates publication time, last observation, context/settings observation
 times, selection freshness, field freshness and compaction coverage. Stale values
 may be displayed with explicit labels; cached data is not a fresh measurement.
 
+## Claude Code source
+
+Everything above describes the Codex source, a server whose events the gateway reads. A
+Claude Code session has none; its wrapper collects the same snapshot from the session's
+hooks and status line instead ([claude-telemetry.md](claude-telemetry.md)), and the
+readers — `rewake list`, the main-only header, the compaction notice — are unchanged.
+What each field means there:
+
+- **Activity**: `working` from UserPromptSubmit, which fires for a message delivered
+  through the inbox socket too; `idle` from Stop, StopFailure, a SessionStart that is
+  not a compaction's, and an `idle_prompt` notification. Waiting stays unknown during a
+  turn, except `approval` after a `permission_prompt` notification, cleared when the
+  context count next moves — which happens only after a response. Hooks run in the
+  background, so an event older by the sender's clock than the one applied is ignored.
+  Known limit, September 23, 2026: a session a person interrupts with Esc stays
+  `working` until its next UserPromptSubmit or Stop. No hook was seen to mark the
+  interruption — Stop firing on it was not observed, and no `idle_prompt` arrived in 80
+  idle seconds ([research.md](research.md#telemetry-sources-the-status-line-and-hooks)) —
+  so `rewake list` and the main header show a stopped session as working.
+- **Model and effort**: from the status line, which states both each time; a model the
+  status line gives no effort for clears the effort to unknown. SessionStart and the
+  turn hooks fill them earlier when they carry them.
+- **Context**: the harness's own figures — `total_input_tokens` of the last response,
+  `context_window_size` and `used_percentage` — not the Codex formula above. Before the
+  first response and after a compaction the harness sends zeros beside a null usage;
+  those read as unknown, not as an empty context.
+- **Compactions**: PreCompact sets in progress; PostCompact counts one and adds a
+  notification cue with a monotonic sequence; a Stop, StopFailure or new prompt clears
+  a compaction that never completed. The count and coverage `observed` appear only after
+  the first hook arrives: hooks can be switched off, and a zero nobody could count would
+  be a claim.
+- **Conversation**: `primaryThread` is the harness's `session_id`, which `/clear`
+  replaces. It is published, but no `ThreadTracker` reads it yet, so reports still carry
+  no `threadChanged` for this harness (HF-10).
+
+Freshness is the wrapper's heartbeat, as for Codex: the values are the last each event
+reported, and they read stale only when the wrapper stops publishing.
+
 ## Evidence and acceptance
 
 Protocol research used reference revision `44b9011611e1f4213ef34bd51b33476475803a94`,

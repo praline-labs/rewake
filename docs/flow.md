@@ -69,8 +69,11 @@ with `rewake --main --name lead claude`, becoming lead-claude.
    rewake adds, for one launch only and never into a config file:
    - Claude Code: `--messaging-socket-path sock/<name>.<epoch>.sock`,
      `--append-system-prompt <intro>`, `--allowedTools "Bash(rewake:*)"`, and
-     `--settings` with StopFailure for every role and Stop for reporting roles,
-     both running `rewake turn-ended`, unless the user passed `--settings`;
+     one `--settings` layer — merged into the user's own if they passed one — with
+     StopFailure for every role and Stop for reporting roles, both running
+     `rewake turn-ended`, plus background telemetry hooks and the status-line tap
+     that report to the wrapper's `sock/<name>.<epoch>.obs`
+     ([launch.md](claude-telemetry.md));
    - Codex: an owned foreground app-server on a private socket, initialized before
      the TUI starts with --remote. Explicit configuration and the briefing reach
      the server; an inline gateway follows accepted TUI intent. Launch roles add no

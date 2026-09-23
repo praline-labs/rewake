@@ -46,3 +46,11 @@ type ReservingBackend interface {
 type ObservedBackend interface {
 	SessionState() sessionstate.Snapshot
 }
+
+// Observer is telemetry without a transport: something the harness reports to
+// on its own, which the wrapper listens to and publishes like a backend's.
+type Observer interface {
+	ObservedBackend
+	Start(context.Context) error
+	Close()
+}

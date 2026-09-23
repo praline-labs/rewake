@@ -164,7 +164,7 @@ endpoint, **M** real-model semantic (paid), **O** owner TUI.
 | `ack-recovery` (4th) | HF-09, HF-03 | F | F | F |
 | `stopped-outcome` (later) | HF-06 | F | `unsupported` — no interruption source | by capability |
 | `git-grant` (later) | HF-15 | F | `unsupported` — not an eligible recipient | by capability |
-| `telemetry-source` (later) | HF-11, HF-22 | F then P | `unsupported` — no collector | by capability |
+| `telemetry-source` | HF-11, HF-22 | F then P | F runs as `claude-telemetry` since September 23, 2026 — the collector exists | by capability |
 | `telemetry-read` (later) | HF-12 | F then P | F then P — the reader works on both | F |
 | Conversation commands (later) | HF-19 | F | **must run** — HF-19 is `impl?`, not missing | by capability |
 | Arrival appearance | HF-14 | O | O | O |

@@ -1,0 +1,223 @@
+package telemetry
+
+import (
+	"time"
+
+	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
+)
+
+// Activity values, the same words the Codex side publishes.
+const (
+	activityIdle    = "idle"
+	activityWorking = "working"
+)
+
+// state is what the events so far say. Every value starts unknown and stays
+// unknown until an event says otherwise: a session nobody has heard from is
+// not idle, and one whose hooks never ran has not had zero compactions.
+type state struct {
+	heard      bool
+	observedAt time.Time
+	// hooks is set by the first hook event. Only then are compactions counted
+	// from the start of the session: hooks can be switched off (a managed
+	// policy, --bare), and a count nobody could have made must not read zero.
+	hooks bool
+
+	thread   string
+	threadAt int64
+
+	activity   *string
+	waiting    []string
+	activityAt int64
+	activityOn time.Time
+
+	statusAt   int64
+	model      *string
+	effort     *string
+	settingsOn time.Time
+
+	context   *Context
+	contextOn time.Time
+
+	compacting bool
+	count      uint64
+	events     []sessionstate.CompactionEvent
+}
+
+func (s *state) apply(event Event, now time.Time) {
+	switch event.Kind {
+	case StatusLine, SessionStart, UserPromptSubmit, Stop, StopFailure, PreCompact, PostCompact, Notification, SessionEnd:
+	default:
+		// A kind this collector does not know says nothing it can use.
+		return
+	}
+	s.heard = true
+	s.observedAt = now
+	if event.Session != "" && event.At >= s.threadAt {
+		// The conversation: /clear gives the session a new one, and the next
+		// event of any kind already carries it.
+		s.thread, s.threadAt = event.Session, event.At
+	}
+	if event.Kind == StatusLine {
+		s.applyStatus(event, now)
+		return
+	}
+	s.hooks = true
+	if event.Model != "" {
+		s.model = text(event.Model)
+		s.settingsOn = now
+	}
+	if event.Effort != "" {
+		s.effort = text(event.Effort)
+		s.settingsOn = now
+	}
+	switch event.Kind {
+	case SessionStart:
+		// A compaction starts the session again with source "compact" in the
+		// middle of a turn; only a fresh start means nothing is running.
+		if event.Source != "compact" {
+			s.setActivity(event.At, activityIdle, []string{}, now)
+		}
+	case UserPromptSubmit:
+		s.setActivity(event.At, activityWorking, nil, now)
+		s.compacting = false
+	case Stop, StopFailure:
+		s.setActivity(event.At, activityIdle, []string{}, now)
+		// A compaction that failed runs PreCompact and nothing after it; the
+		// end of the turn is the latest point it can still be running.
+		s.compacting = false
+	case Notification:
+		switch event.Notice {
+		case "permission_prompt":
+			if s.activity != nil && *s.activity == activityWorking && event.At >= s.activityAt {
+				s.waiting = []string{"approval"}
+				s.activityOn = now
+			}
+		case "idle_prompt":
+			s.setActivity(event.At, activityIdle, []string{}, now)
+		}
+	case PreCompact:
+		s.compacting = true
+	case PostCompact:
+		s.compacting = false
+		s.count++
+		s.events = append(s.events, sessionstate.CompactionEvent{Sequence: s.count, ObservedAt: now})
+		if len(s.events) > maxCompactionEvents {
+			s.events = append([]sessionstate.CompactionEvent{}, s.events[len(s.events)-maxCompactionEvents:]...)
+		}
+	}
+}
+
+// applyStatus takes model, effort and context from the status line, which
+// states all three together each time it runs.
+func (s *state) applyStatus(event Event, now time.Time) {
+	if event.At < s.statusAt {
+		return
+	}
+	s.statusAt = event.At
+	if event.Model != "" {
+		s.model = text(event.Model)
+		// Here an absent effort is an answer: the status line leaves the key
+		// out for a model that takes none, so the previous model's effort
+		// must not stay behind.
+		s.effort = nil
+		if event.Effort != "" {
+			s.effort = text(event.Effort)
+		}
+		s.settingsOn = now
+	}
+	if event.Context != nil {
+		if s.waitingForApproval() && usedChanged(s.context, event.Context) {
+			// The count moves only after a response, and a response after a
+			// permission prompt means the prompt was answered.
+			s.waiting = nil
+		}
+		copied := *event.Context
+		s.context = &copied
+		s.contextOn = now
+	}
+}
+
+func (s *state) setActivity(at int64, activity string, waiting []string, now time.Time) {
+	// Hooks may run in the background, so an older event can arrive late.
+	if at < s.activityAt {
+		return
+	}
+	s.activityAt = at
+	s.activity = text(activity)
+	s.waiting = waiting
+	s.activityOn = now
+}
+
+func (s *state) waitingForApproval() bool {
+	return len(s.waiting) == 1 && s.waiting[0] == "approval"
+}
+
+func usedChanged(before, after *Context) bool {
+	if before == nil || before.Used == nil || after.Used == nil {
+		return after.Used != nil
+	}
+	return *before.Used != *after.Used
+}
+
+func (s *state) snapshot() sessionstate.Snapshot {
+	snapshot := sessionstate.Unknown("")
+	if !s.heard {
+		return snapshot
+	}
+	snapshot.Selection = "ready"
+	snapshot.Fresh = true
+	snapshot.ObservedAt = moment(s.observedAt)
+	snapshot.Thread = s.thread
+	if s.activity != nil {
+		snapshot.Activity = text(*s.activity)
+		if s.waiting != nil {
+			snapshot.WaitingFor = append([]string{}, s.waiting...)
+		}
+		snapshot.ActivityAt = moment(s.activityOn)
+		snapshot.ActivityFresh = true
+	}
+	if s.model != nil || s.effort != nil {
+		snapshot.Model = copyText(s.model)
+		snapshot.Effort = copyText(s.effort)
+		snapshot.SettingsAt = moment(s.settingsOn)
+		snapshot.SettingsFresh = true
+	}
+	if s.context != nil {
+		snapshot.ContextUsed = copyInt64(s.context.Used)
+		snapshot.ContextWindow = copyInt64(s.context.Window)
+		if s.context.Percent != nil {
+			percent := *s.context.Percent
+			snapshot.FilledPercent = &percent
+		}
+		snapshot.ContextAt = moment(s.contextOn)
+		snapshot.ContextFresh = true
+	}
+	if s.hooks {
+		count, compacting := s.count, s.compacting
+		snapshot.Compactions = &count
+		snapshot.Compacting = &compacting
+		snapshot.Coverage = "observed"
+		snapshot.CompactionEvents = append([]sessionstate.CompactionEvent{}, s.events...)
+	}
+	return snapshot
+}
+
+func text(value string) *string { return &value }
+
+func copyText(value *string) *string {
+	if value == nil {
+		return nil
+	}
+	return text(*value)
+}
+
+func copyInt64(value *int64) *int64 {
+	if value == nil {
+		return nil
+	}
+	copied := *value
+	return &copied
+}
+
+func moment(at time.Time) *time.Time { return &at }

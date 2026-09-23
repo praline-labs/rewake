@@ -151,6 +151,24 @@ func buildGroups() {
 				Hidden:         true,
 				Handler:        handleTurnEnded,
 			},
+			{
+				Name:     harness.Observe,
+				Args:     "<socket>",
+				Summary:  "Called by a Claude Code hook; passes what the hook was handed to the session's wrapper.",
+				Examples: []string{"rewake observe /tmp/rewake-1000/rooms/default/sock/worker-claude.1.obs"},
+				Raw:      true,
+				Hidden:   true,
+				Handler:  handleObserve,
+			},
+			{
+				Name:     harness.StatusTap,
+				Args:     "<socket> [sources] [caller-status-line]",
+				Summary:  "The status line of a Claude Code session; reports to its wrapper, then runs the configured status line.",
+				Examples: []string{"rewake status-tap /tmp/rewake-1000/rooms/default/sock/worker-claude.1.obs user,project,local"},
+				Raw:      true,
+				Hidden:   true,
+				Handler:  handleStatusTap,
+			},
 		},
 	}
 

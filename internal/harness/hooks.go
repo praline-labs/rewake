@@ -26,9 +26,23 @@ func TurnEndedCommand() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	return ShellQuote(argv), nil
+}
+
+// ShellQuote spells an argv as one POSIX shell command line: every argument in
+// single quotes, so a path with spaces or a command with its own quoting
+// arrives as the same argument it was.
+func ShellQuote(argv []string) string {
 	quoted := make([]string, 0, len(argv))
 	for _, arg := range argv {
 		quoted = append(quoted, "'"+strings.ReplaceAll(arg, "'", `'\''`)+"'")
 	}
-	return strings.Join(quoted, " "), nil
+	return strings.Join(quoted, " ")
 }
+
+// Observe and StatusTap are the hidden commands a Claude Code session runs for
+// telemetry: one from its hooks, one as its status line.
+const (
+	Observe   = "observe"
+	StatusTap = "status-tap"
+)

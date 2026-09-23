@@ -169,9 +169,10 @@ product mutant, built by `buildMutant` in `mutant_test.go` with one edit through
 toolchain's overlay, inside a started case, refusing an edit that does not match
 exactly once; or a switch that changes the fixture's world. A mutant is preferred
 wherever one can be built, because it shows the scenario catching a broken rewake
-rather than a misbehaving peer. Of today's seventeen controls, eight are mutants —
+rather than a misbehaving peer. Of today's nineteen controls, ten are mutants —
 batch-arrival's four; task-report's no-stop-hook, turn-ended-ignores-stop and
-settles-nothing; mid-turn's wait-for-idle — and nine are fixture switches: task-report's
+settles-nothing; mid-turn's wait-for-idle; claude-telemetry's tap-without-owner and
+uncounted-compaction — and nine are fixture switches: task-report's
 wrong-report, read-fails, failure-before-report and early-exit; the three readiness
 controls; mid-turn's late and failed-operation. A control names the observation it must
 break; the crosswise check then runs every control's observations in every other
@@ -189,6 +190,23 @@ neighbours), so a message the scenarios send cannot escape the shape check.
 **A harness column** is a `column` value with its capabilities and a fixture; the
 scenarios do not change. What building the second one taught is in
 [2026-09-22-fixture-claude-code.md](roadmap/2026-09-22-fixture-claude-code.md).
+
+### Claude Code telemetry budgets
+
+`claude-telemetry` runs on the Claude Code column only: the fixture plays a session's
+hooks and status line through `/bin/sh -c` with the payloads seen live, including their
+conversation fields, and the case reads the result back through the session's own
+`rewake list`. It also times the commands, cold each time, because a telemetry hook
+sits in front of every prompt. Its two controls are mutants; they have no crosswise run,
+since both break observations of one session read from one listing.
+
+Measured on the development machine, September 23, 2026, 40 runs each: a telemetry hook
+(shell plus a cold `rewake observe` sending one datagram) median 5.4 ms, p95 6.7 ms; the
+tap in front of a one-line `sed` status line added a median of 4.8 ms, p95 6.8 ms, to
+that line's own 2.6 ms. The hooks run in the background (`"async": true`), so the agent
+does not wait even for that. The case's budgets are a median of 20 ms and a p95 of 50 ms
+for a hook, and a median of 20 ms added by the tap: several times the measurement, so
+they catch a wait, a lock or a heavy start rather than a busy machine.
 
 ## Traps this suite has already paid for
 

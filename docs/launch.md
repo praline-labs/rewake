@@ -193,8 +193,9 @@ not from memory:
   Keys are recognized through `-c`/`--config` in every spelling, with whitespace
   around the key allowed, because the CLI trims it.
 
-Not consulted, deliberately: the harnesses' own configuration files, and settings
-passed with `--settings` or a Codex profile. rewake neither reads nor edits a
+Not consulted for these defaults, deliberately: the harnesses' own configuration files,
+and settings passed with `--settings` or a Codex profile. (The Claude Code status line
+is read from those files for another purpose, below; nothing else of them is.) rewake neither reads nor edits a
 person's configuration, and cannot see into a file it was handed — so a model set
 there and a variable set for rewake would be two answers with no way to compare them.
 The variable wins, being the one set for rewake specifically. A Codex launch with a
@@ -220,15 +221,29 @@ specified once, in design.md: [Rooms](design.md#rooms), [Roles](design.md#roles)
 - Add `--messaging-socket-path <root>/rooms/<room>/sock/<name>.<epoch>.sock` unless the user passed
   their own; before launch, remove a stale socket file at the same path.
 - Add `--append-system-prompt <intro>` (turned off by `--no-intro`).
-- Add `--settings` with Stop and StopFailure hooks that run `rewake turn-ended` (see "The end
-  of a turn"). Claude Code merges settings layers, so the hook runs next to the
-  user's own. If the caller passed `--settings`, nothing is added — only one is
-  read — and rewake says on stderr that turns will not be reported.
+- Add one `--settings` layer carrying the Stop and StopFailure hooks that run
+  `rewake turn-ended` (see "The end of a turn"), the telemetry hooks and the status-line
+  tap ([claude-telemetry.md](claude-telemetry.md)). Claude Code merges settings layers, so the
+  hooks run next to the user's own. It reads only one `--settings` and takes the last,
+  so a caller's own is merged into rather than replaced or skipped: their keys stay,
+  their hooks for an event come first and ours are appended, their status line keeps
+  every field but the command. A caller's layer that cannot be read or merged is left
+  as given, alone, and rewake says on stderr what is not happening. Since September 23,
+  2026 a caller's `--settings` file is read at launch and passed to the harness inline,
+  as the merged JSON, instead of as its path (`internal/harness/claude/settings.go`). Two
+  consequences: everything in that file, environment values included, is visible in the
+  harness's `/proc/<pid>/cmdline`; and edits to the file during the session are not
+  picked up.
 - Allow the tool's own commands without confirmation:
   `--allowedTools "Bash(rewake:*)"`. This adds a rule for the run without
   touching the user's settings. **Verify live** that the flag adds to the user's
   permissions rather than replacing them; if it replaces them, drop the flag and
   have the overview say which rule to add to settings once.
+
+### Claude Code telemetry
+
+The telemetry hooks, the status-line tap and the collector they report to are specified
+in [claude-telemetry.md](claude-telemetry.md).
 
 ### Codex
 

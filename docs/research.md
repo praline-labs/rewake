@@ -197,7 +197,8 @@ fast mode, thinking, vim mode or PR status, or after a new assistant message; on
 included. A new run aborts the one in flight. Without the interval an idle session
 runs it not at all: once in 40 idle seconds, then once for each `/effort` and `/model`.
 It is skipped until the workspace is trusted; exit 0 is required and stdout, trimmed,
-is what is drawn. A managed policy may restrict the status line to its own.
+is what is drawn. It runs as `/bin/sh -c <command>` in the project directory with
+`CLAUDE_PROJECT_DIR`, `COLUMNS` and `LINES` added, the JSON plus a newline on stdin **[container]**. A managed policy may restrict the status line to its own.
 
 How `--settings` meets a configured status line **[container; verified live]**: the
 key is merged field by field. A user layer with `command`, `padding: 3` and

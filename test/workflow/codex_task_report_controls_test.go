@@ -49,7 +49,7 @@ var (
 	// answer reaches nobody.
 	mutantNoStopHook = mutation{
 		name:  "no-stop-hook",
-		file:  "internal/harness/claude/claude.go",
+		file:  "internal/harness/claude/settings.go",
 		edits: []edit{{"if !silent {", "if false {"}},
 	}
 	// turn-ended takes a Stop as the end of a turn. Made to accept only a

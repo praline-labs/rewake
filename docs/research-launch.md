@@ -260,3 +260,18 @@ The structured protocol Claude Code does document is `--print` with
 `--input-format stream-json` and `--output-format stream-json`, the Agent SDK's
 transport. It runs without the interactive terminal, so a person would lose the screen
 they work in.
+
+## Hook options and settings order that rewake's launch layer relies on
+
+**[the binary's bundled source, cached 2.1.280; September 23, 2026]** A command hook
+takes `"async": true` — "runs in background without blocking": the harness writes the
+payload to its stdin, closes it and goes on. It also takes an exec form, `args` beside
+`command`, which skips the shell; rewake does not use it, since a version that did not
+know the key could refuse the whole layer. The status line has neither: `type`,
+`command`, `padding`, `refreshInterval`, `hideVimModeIndicator`. The settings layers are
+merged in the order of the harness's own list, `userSettings, projectSettings,
+localSettings, flagSettings, policySettings`, later over earlier; project and local are
+read under the working directory, the user layer under the configuration directory, and
+the machine policy from `/etc/claude-code/managed-settings.json` with a
+`managed-settings.d` beside it. `--setting-sources` names which of user, project and
+local are read, and `--restricted` reads none of them (`claude --help`).

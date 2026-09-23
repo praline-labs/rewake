@@ -78,6 +78,31 @@ func FlagValues(args []string, forms ...string) []string {
 	return values
 }
 
+// WithoutFlag removes every occurrence of a flag that carries a value, in any
+// of its spellings, before a "--" terminator. It is for a harness that reads
+// a flag once and must be handed one merged value instead of the caller's.
+func WithoutFlag(args []string, forms ...string) []string {
+	visible := BeforeTerminator(args)
+	out := make([]string, 0, len(args))
+	for index := 0; index < len(visible); index++ {
+		matched, skipNext := false, false
+		for _, form := range forms {
+			if _, separate, ok := MatchFlag(visible[index], form); ok {
+				matched, skipNext = true, separate
+				break
+			}
+		}
+		if !matched {
+			out = append(out, visible[index])
+			continue
+		}
+		if skipNext {
+			index++
+		}
+	}
+	return append(out, args[len(visible):]...)
+}
+
 // MatchFlag reads one argument against one spelling of a flag. It answers the
 // value the argument carries, whether the value is instead the next argument,
 // and whether the argument spells this flag at all.

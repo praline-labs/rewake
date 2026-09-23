@@ -70,6 +70,12 @@ everything else.
   model and effort are confirmed, the compaction counter, snapshot staleness, with its
   acceptance log. Open it when `rewake list`, a header or an availability notice shows
   a wrong or stale value.
+- [claude-telemetry.md](claude-telemetry.md) — how a Claude Code session's telemetry is
+  collected: the background hooks, the status-line tap that runs the person's own status
+  line in its place, the settings layers it resolves at each call, the collector in the
+  wrapper, and the owner decisions that bound it. Open it when a Claude Code row of
+  `rewake list` is wrong or unknown, or when a person's status line misbehaves under
+  rewake.
 - [session-activity.md](session-activity.md) — extends session-state: the activity labels
   and how fresh they must be, compaction notices, and how a worker's departure or
   replacement is detected and announced to main, with owner-run acceptance. Open it when
@@ -85,11 +91,12 @@ everything else.
   rewake reads, what the Claude Code status line and hooks hand a command about model,
   context and compactions, Codex app-server session ownership, and why a legacy notify
   cannot be trusted as an error signal. Open it before touching delivery or wake
-  behaviour, before building a Claude Code collector, and after a harness update. Its companions follow.
+  behaviour, before changing the Claude Code collector, and after a harness update. Its companions follow.
 - [research-launch.md](research-launch.md) — what an installed binary answers when run:
   model and effort catalogues and the usable context window, which flags may repeat,
   undocumented aliases, when a `--help` probe can be trusted, how each harness is
-  published on npm, and whether Claude Code has a client-server split to stand between. Open it when adding a launch flag or when a model, an effort or a
+  published on npm, whether Claude Code has a client-server split to stand between, and
+  the hook options and settings order the launch layer relies on. Open it when adding a launch flag or when a model, an effort or a
   version is refused.
 - [research-protocol.md](research-protocol.md) — what the generated Codex schema and the
   reference source state: the flags schema generation needs, required fields of the

@@ -105,6 +105,17 @@ func AwaitingPath(dir, name string) string {
 	return filepath.Join(dir, inboxDir, name, awaitingDir)
 }
 
+// ObservationPath is where a session's telemetry senders write: beside its
+// inbox socket, one per run for the same reason, and short enough to bind.
+func ObservationPath(dir, name, run string) string {
+	path := filepath.Join(dir, socketsDir, name+"."+run+".obs")
+	if len(path) > 103 {
+		sum := sha256.Sum256([]byte(name + "\x00" + run))
+		path = filepath.Join(dir, socketsDir, fmt.Sprintf("%x.obs", sum[:12]))
+	}
+	return path
+}
+
 // SocketPath is where the wrapper asks a harness to put its inbox socket. It is
 // kept short: a unix socket path may not exceed 103 bytes.
 //

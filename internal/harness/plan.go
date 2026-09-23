@@ -32,6 +32,9 @@ type LaunchRequest struct {
 	Epoch string
 	// Role determines reporting and additive permission requests.
 	Role role.Role
+	// ObservationSocket is where a harness without a backend of its own may
+	// have its session's telemetry sent: a path of this run, like Socket.
+	ObservationSocket string
 }
 
 // LaunchPlan is how the wrapper starts the harness.
@@ -51,6 +54,10 @@ type LaunchPlan struct {
 	OwnsSocket bool
 	// CodexHome, when set, is recorded so delivery uses the same state.
 	CodexHome string
+	// Observer, when set, is a session-owned telemetry source for a harness
+	// that has no Backend. The wrapper starts it before the harness and
+	// publishes what it reports for as long as the session runs.
+	Observer Observer
 	// Notes are things the caller should know about this launch: a setting that
 	// could not be read, a briefing that was skipped. They are printed once, to
 	// stderr, and do not stop the launch.
