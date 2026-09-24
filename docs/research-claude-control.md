@@ -148,7 +148,8 @@ registration and the gates read in the binary **[source]**.
     needs `tengu_quiet_dolphin` and the interactive mode; **tips** needs
     `tengu_tips_mod`; **responsive-mode** needs `tengu_quiet_ember`. None of those flags
     was on, and none of the four loaded, with the switch or without **[source, live]**.
-    **claude-test** appeared in no run.
+    **claude-test** appeared in no run. mermaid was probed on its own the next day
+    ([below](#the-mermaid-built-in)).
   - **sec-default** was not seated: without the switch because "installed plugins'
     hooks modules are off", with it because there are "no managed settings and not a
     Team or Enterprise organization" **[live]**.
@@ -174,6 +175,84 @@ registration and the gates read in the binary **[source]**.
   module on September 23, 2026.
 - **To repeat on every new Claude Code version**: diff the request body of a `-p` run
   with the switch and without it. A new built-in gated on the switch shows there first.
+
+### The mermaid built-in
+
+Probed on September 24, 2026, Claude Code 2.1.280, by review-claude, in a private HOME
+with a stand-in API on a local port and a proxy that logged and refused every outbound
+CONNECT. The stand-in put mermaid fences into its replies, and the remote flag was
+seeded into the private `.claude.json` beside a read-only copy of the owner's other
+cached flags **[live]**. The module was read in the binary **[source]**.
+
+- **What it does.** A hooks module with no skill, command, agent or setting; its
+  manifest scans `hooks:["ui.render"]` and `calls:[]` **[source]**, and the debug log
+  reads `hooks module mermaid@builtin loaded (native, environment 3, tier builtin);
+  events: ui.render` **[live]**. Its one hook is `ui.render` on the `AssistantMessage`
+  component of the terminal surface. It rewrites the reply's text before drawing: a
+  `` ```mermaid `` fence becomes a block headed `mermaid · flowchart` or `mermaid ·
+  sequence diagram`, drawn in box-drawing characters by its own renderer in plain JS —
+  flowchart and graph with directions, subgraphs and solid, dotted and thick arrows, and
+  sequenceDiagram; other diagram kinds are left alone **[source]**. A flowchart LR and a
+  sequence diagram were drawn; without the flag the same reply showed the raw fence
+  **[live]**.
+- **Its bounds.** A fence up to 20000 characters, a drawing up to 300 lines, a reply
+  grown by at most 60000, a flowchart up to 200 nodes and 400 edges; the width is
+  `viewport.columns`, 80 by default. A diagram that does not fit or does not parse stays
+  as it was. Results are cached in memory, at most 32 entries and 250000 characters
+  **[source]**.
+- **The screen only.** Under `-p` stdout carries the raw fence **[live]**. The prompt,
+  the request body and the history are unchanged: the next request carried the
+  assistant turn with the raw mermaid and no box characters, and the transcript on disk
+  keeps the raw text **[live]**. So a report's text and the transcript are the same with
+  it or without; only what the person sees changes.
+- **The gate.** Available when the function-hooks switch resolves on, screen-reader
+  mode is off and the remote flag `tengu_mermaid_mod` is on; not on by default
+  **[source]**. The flag's value is fixed at its first read in a process, so a change
+  mid-session applies only after a restart; it comes from a local override, the
+  payload, the disk cache or the default **[source]**. `-p` runs **[live]**:
+
+  | run | debug log | mermaid |
+  |---|---|---|
+  | switch `1`, no flag | Found 3 plugins | not loaded |
+  | switch `1`, flag on | Found 4 plugins | loaded |
+  | flag on, switch unset | Found 2 plugins | not loaded |
+  | flag on, switch `0` | Found 2 plugins | not loaded |
+
+  Unlike rewake's own plugin, `disableAllHooks: true` and `--bare` do not switch it off:
+  it loaded under both, since its gate is the switch rather than the check that governs
+  installed plugins' modules **[source, live]**.
+- **Not in rewake sessions today.** On September 24, 2026 the owner's cached flags,
+  read only, had no `tengu_mermaid_mod` key, so the default off applies;
+  `tengu_plugin_hooks_modules` was absent too, and `pluginUsage` named no
+  `mermaid@builtin`. rewake sessions do not get it, and would once the server turns the
+  flag on and it reaches the disk cache.
+- **No network of its own.** `calls` is empty, and the module has no fetch; it imports
+  only gates, telemetry and registration **[source]**. The refused CONNECTs were the
+  same with the flag and without — under `-p` five to the API host and one to a
+  telemetry host, in the terminal UI the same hosts **[live]**. Its only trace is
+  telemetry through the harness's shared analytics queue: `tengu_feature_ok` with
+  `feature_name:"mermaid_render"` once per session per outcome (`drawn`),
+  `tengu_feature_sad` on `fell_back` or `threw`, and the ordinary plugin-load event with
+  `plugin_name:"mermaid"` **[source, live]** — seen in the private HOME's telemetry
+  directory, where the refused sends left them. The binary also carries
+  `mermaid.min.js` 11.16.1; that is the runtime for published artifacts, and the plugin
+  does not use it **[source]**.
+- **No files of its own** **[source: `calls` empty; live]**. The one write is the line
+  `mermaid@builtin` in `pluginUsage`, made by the harness **[live]**, beside the
+  telemetry events in their usual place; the drawn text reaches no file **[live]**.
+- **Switching it off.** `enabledPlugins: {"mermaid@builtin": false}` through
+  `--settings` gave `Found 4 plugins (3 enabled, 1 disabled)` and the module did not
+  load **[live]**; a key in the flag layer wins over the same key in the user file
+  ([below](#how-enabledplugins-merges-across-settings-layers)). The switch unset or `0`
+  and screen-reader mode switch it off as well **[source; the switch live]**.
+- **Cost per request: none.** `-p` request bodies with the flag and without were 80777
+  bytes each and differed only in `metadata.user_id`, with `enabledPlugins` off the
+  same **[live]**. Drawing a reply in the terminal UI took `ui.render settled in 5.5ms`
+  and `2.4ms` **[live]**.
+- **To re-check on a new version**, from the source alone: find the module with
+  `PLUGIN_NAME:"mermaid"`, and read its `isAvailable:()=>` and its
+  `scan:{hooks:[...],calls:[...]}`. A new entry in `calls` would mean network or disk of
+  its own.
 
 ### How `enabledPlugins` merges across settings layers
 

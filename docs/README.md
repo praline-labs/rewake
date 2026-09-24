@@ -113,7 +113,8 @@ everything else.
 - [research-claude-control.md](research-claude-control.md) — what reaches a running Claude
   Code session from outside besides a message, split from research.md by subject: what an
   Esc or a Ctrl+C leaves for a hook or the wrapper to hear (nothing), what a function-hooks
-  plugin hears instead, what `/clear` and `/resume` do, why no slash command runs from the
+  plugin hears instead, what the built-in plugins do under the function-hooks switch,
+  mermaid among them, what `/clear` and `/resume` do, why no slash command runs from the
   inbound socket, and how text can be put into the input box by the launch flag or a plugin. Open it before working on
   `stopped` for Claude Code, on conversation tracking, or on sending a session a command.
 - [research-codex.md](research-codex.md) — what only a running Codex session shows,

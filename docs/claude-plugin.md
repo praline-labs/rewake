@@ -144,6 +144,11 @@ is not reported, and the next turn end that finishes settles its task.
   - **`pluginUsage`.** The harness records `rewake@inline` there in `~/.claude.json`
     because of `--plugin-dir`, with the switch or without it; the switch adds
     `plugin-authoring@builtin`. rewake itself writes nothing there.
+  - **The mermaid built-in**, once the harness's remote flag `tengu_mermaid_mod` turns on;
+    it was off in the owner's cached flags on September 24, 2026. It draws mermaid fences
+    on the screen only — the request, the report's text and the transcript stay the same —
+    and neither `disableAllHooks` nor `--bare` stops it; `enabledPlugins` does
+    ([research-claude-control.md](research-claude-control.md#the-mermaid-built-in)).
   - **On every new Claude Code version**, repeat the request-body diff of a run with the
     switch and without it: a new built-in gated on the switch would show there.
 
