@@ -19,33 +19,46 @@ import (
 //   - $.clock.every(ms, fn) takes a non-negative number and a function. The
 //     host never fires it on its own: a "tick" step runs every callback and
 //     waits for it, so the test decides when the module polls.
+//     $.clock.sleep(ms) takes the same number and resolves a twentieth of it
+//     later; order records when it was asked for and when it resolved.
 //   - $.fs takes positional arguments on real files; read of a missing file is
 //     what the harness logs as an error, and is recorded as one. With
 //     withdraw set, the asker gives up the moment the module marks a request
 //     taken: the request is removed, or replaced by the next asker's.
 //   - $.session.compact takes nothing or { instructions } and is refused while
-//     a turn runs, when compaction is switched off, or when the conversation is
-//     too short (seen live on September 24, 2026); it answers with the
-//     summary's messages, which must never leave the module.
+//     a turn runs, while another compaction is in flight, or when compaction is
+//     switched off; otherwise it runs the module's session.compact handler with
+//     trigger "plugin" around the compaction itself, which refuses a
+//     conversation too short (seen live on September 24, 2026) and answers
+//     with the summary's messages, which must never leave the module. A
+//     "compaction" step plays one the module did not ask for.
 //   - $.turn.abort takes { turnId } of the running turn, and ends it with
 //     turn.complete "aborted" before its promise settles.
+//   - $.process.run resolves once its process has ended, which here is a
+//     timer later; order records when each report was sent, when the host
+//     compacted and when the module wrote an answer.
 //
 // Steps: ["event", name, fields], ["tick"], ["write", file, text] into the
-// control directory, and ["reload"], which loads the module afresh and runs
-// its session.start again, as the harness does after an edit.
+// control directory, ["compaction", trigger], and ["reload"], which loads the
+// module afresh and runs its session.start again, as the harness does after an
+// edit.
 const controlHost = hostRun + `
 import { pathToFileURL } from "node:url"
 import { readFileSync, writeFileSync, mkdirSync, statSync, readdirSync, unlinkSync } from "node:fs"
 import { dirname, join } from "node:path"
 const [modulePath, controlDir, stepsJSON, worldJSON] = process.argv.slice(2)
 const world = JSON.parse(worldJSON)
-const calls = [], errors = [], compacts = [], aborts = []
-let timers = [], running, handlers, loads = 0
+const calls = [], errors = [], compacts = [], aborts = [], order = []
+let timers = [], running, compacting = false, handlers, loads = 0
 // The harness puts the plugin's name in front of every refusal it gives.
 const refuse = (text) => { errors.push(text); return Promise.reject(new Error("rewake: " + text)) }
 const path = (p) => typeof p === "string" && p !== ""
 const $ = {
-  process: { run: checkedRun((argv, init) => { calls.push(JSON.parse(init.stdin)); return Promise.resolve({ exitCode: 0, stdout: "", stderr: "" }) }) },
+  process: { run: checkedRun((argv, init) => {
+    const event = JSON.parse(init.stdin)
+    calls.push(event)
+    return new Promise((resolve) => setTimeout(() => { order.push("sent " + event.plugin_event); resolve({ exitCode: 0, stdout: "", stderr: "" }) }, 0))
+  }) },
   env: { get: async () => undefined },
   settings: { read: async () => ({}) },
   clock: { every: (ms, fn) => {
@@ -54,6 +67,11 @@ const $ = {
     const timer = { fn, load: loads }
     timers.push(timer)
     return { cancel: () => { timers = timers.filter((t) => t !== timer) } }
+  }, sleep: async (ms) => {
+    if (!(typeof ms === "number" && Number.isFinite(ms) && ms >= 0)) return refuse("$.clock.sleep takes a non-negative number of milliseconds")
+    order.push("sleep " + ms)
+    await new Promise((resolve) => setTimeout(resolve, ms / 20))
+    order.push("slept " + ms)
   } },
   fs: {
     exists: async (...a) => { if (a.length !== 1 || !path(a[0])) return refuse("$.fs.exists takes a path"); try { statSync(a[0]); return true } catch { return false } },
@@ -64,6 +82,7 @@ const $ = {
     write: async (...a) => {
       if (a.length !== 2 || !path(a[0]) || typeof a[1] !== "string") return refuse("$.fs.write takes a path and a string")
       mkdirSync(dirname(a[0]), { recursive: true }); writeFileSync(a[0], a[1])
+      if (a[0].endsWith(".result")) order.push("write " + a[0].slice(a[0].lastIndexOf("/") + 1))
       if (a[0].endsWith(".taken") && world.withdraw === "remove") unlinkSync(join(controlDir, "request.json"))
       if (a[0].endsWith(".taken") && world.withdraw === "replace") writeFileSync(join(controlDir, "request.json"), JSON.stringify({ id: "f".repeat(32), action: "compact", from: "lead" }))
     },
@@ -72,10 +91,13 @@ const $ = {
     const form = a.length === 0 || (a.length === 1 && a[0] !== null && typeof a[0] === "object" && Object.keys(a[0]).every((k) => k === "instructions") && typeof a[0].instructions === "string")
     if (!form) return refuse("$.session.compact takes { instructions } (a string) or nothing")
     if (running !== undefined) return refuse("$.session.compact: a turn is running (" + running + "); the conversation compacts between turns, so call it from turn.complete or later")
+    if (compacting || world.inFlight) return refuse("$.session.compact: a turn is in flight; the conversation compacts between turns")
     if (world.compactOff) return refuse("$.session.compact: compaction is switched off in this session (DISABLE_COMPACT), for /compact and plugins alike")
-    if (world.tooShort) return refuse("$.session.compact: Not enough messages to compact.")
-    compacts.push(a.length === 0 ? null : a[0].instructions)
-    return { messages: [{ role: "user", text: "SECRET SUMMARY" }], tokensBefore: 120000, tokensAfter: 9000, usage: { input: 1 } }
+    try {
+      return await compaction("plugin", a.length === 0 ? null : a[0].instructions)
+    } catch (e) {
+      return refuse("$.session.compact: " + e.message)
+    }
   } },
   turn: { abort: async (...a) => {
     if (a.length !== 1 || a[0] === null || typeof a[0] !== "object" || typeof a[0].turnId !== "string") return refuse("$.turn.abort takes { turnId }")
@@ -84,6 +106,24 @@ const $ = {
     aborts.push(a[0].turnId)
     await play("turn.complete", { turnId: running, reason: "aborted", isAborted: true, answer: "partial" })
   } },
+}
+// compaction runs one compaction through the module's session.compact
+// handler, which passes it on to the compaction itself with next.
+async function compaction(trigger, instructions) {
+  compacting = true
+  try {
+    const core = async (e) => {
+      if (world.tooShort) throw new Error("Not enough messages to compact.")
+      if (trigger === "plugin") compacts.push(instructions)
+      order.push(trigger === "plugin" ? "compact" : "compact " + trigger)
+      return { messages: [{ role: "user", text: "SECRET SUMMARY" }], tokensBefore: 120000, tokensAfter: 9000, usage: { input: 1 } }
+    }
+    const e = { trigger, ...(instructions !== null && { instructions }), messages: [{ role: "user", text: "SECRET" }] }
+    const handler = handlers["session.compact"]
+    return typeof handler === "function" ? await handler($, e, core) : await core(e)
+  } finally {
+    compacting = false
+  }
 }
 async function play(name, fields) {
   if (name === "turn.start" && fields.agentId === undefined) running = fields.turnId
@@ -105,10 +145,11 @@ for (const [step, a, b] of JSON.parse(stepsJSON)) {
   if (step === "tick") for (const timer of [...timers]) await timer.fn()
   if (step === "write") writeFileSync(join(controlDir, a), b)
   if (step === "reload") await load()
+  if (step === "compaction") await compaction(a, null)
 }
 const files = {}
 for (const name of readdirSync(controlDir)) files[name] = readFileSync(join(controlDir, name), "utf8")
-process.stdout.write(JSON.stringify({ calls, errors, compacts, aborts, files, timers: timers.length, refused }))
+process.stdout.write(JSON.stringify({ calls, errors, compacts, aborts, order, files, timers: timers.length, refused }))
 `
 
 type controlRun struct {
@@ -116,6 +157,7 @@ type controlRun struct {
 	Errors   []string          `json:"errors"`
 	Compacts []*string         `json:"compacts"`
 	Aborts   []string          `json:"aborts"`
+	Order    []string          `json:"order"`
 	Files    map[string]string `json:"files"`
 	Timers   int               `json:"timers"`
 	Refused  []string          `json:"refused"`
@@ -123,6 +165,7 @@ type controlRun struct {
 
 type controlWorld struct {
 	CompactOff bool   `json:"compactOff,omitempty"`
+	InFlight   bool   `json:"inFlight,omitempty"`
 	TooShort   bool   `json:"tooShort,omitempty"`
 	Withdraw   string `json:"withdraw,omitempty"`
 }
@@ -241,6 +284,10 @@ func TestTheModulePassesTheHostsRefusalsOn(t *testing.T) {
 	short := runControl(t, true, controlWorld{TooShort: true}, asked(idA, control.Compact, ""), tick)
 	if answer := answerIn(t, short, idA); answer["outcome"] != "refused" || answer["reason"] != control.NothingToCompact {
 		t.Fatalf("too short: %v", answer)
+	}
+	flight := runControl(t, true, controlWorld{InFlight: true}, asked(idA, control.Compact, ""), tick)
+	if answer := answerIn(t, flight, idA); answer["outcome"] != "refused" || answer["reason"] != control.InTurn || !strings.Contains(answer["detail"].(string), "a turn is in flight") {
+		t.Fatalf("another compaction in flight: %v", answer)
 	}
 	idle := runControl(t, true, controlWorld{}, asked(idA, control.Interrupt, ""), tick)
 	if answer := answerIn(t, idle, idA); answer["reason"] != control.NoTurn || len(idle.Aborts) != 0 {

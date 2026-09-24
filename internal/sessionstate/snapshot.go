@@ -52,7 +52,12 @@ func (s *Snapshot) Stale() {
 
 // CompactionEvent is a bounded notification cue, not transcript content.
 // Sequence is the wrapper's deduplicated completed counter at observation.
+// RequestedBy and Request name the main whose `rewake compact` asked for this
+// compaction and its request; empty for any other compaction. That main's own
+// command reports it, so its wrapper sends no notice of it.
 type CompactionEvent struct {
-	Sequence   uint64    `json:"sequence"`
-	ObservedAt time.Time `json:"observedAt"`
+	Sequence    uint64    `json:"sequence"`
+	ObservedAt  time.Time `json:"observedAt"`
+	RequestedBy string    `json:"requestedBy,omitempty"`
+	Request     string    `json:"request,omitempty"`
 }

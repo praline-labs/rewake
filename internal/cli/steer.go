@@ -14,6 +14,7 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/harness"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/role"
+	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
@@ -27,7 +28,16 @@ type steerModel struct {
 	Detail       string `json:"detail,omitempty"`
 	TokensBefore *int64 `json:"tokensBefore,omitempty"`
 	TokensAfter  *int64 `json:"tokensAfter,omitempty"`
+	// Compaction is the session's count of compactions with this one, the
+	// number a notice of it would carry; nil when its telemetry did not show
+	// it in time.
+	Compaction *uint64 `json:"compaction,omitempty"`
 }
+
+// countLimit bounds the wait for a done compaction to show in the session's
+// telemetry: its hooks run in the background and the wrapper publishes four
+// times a second, so it is there well within this unless something is broken.
+var countLimit = 3 * time.Second
 
 // steerLimits bounds a request. The plugin polls four times a second, so a
 // request nobody took within the pickup limit has nobody to take it. A
@@ -114,6 +124,9 @@ func steer(ctx *Context, call Call, action string) error {
 	}
 	model.Outcome, model.Reason, model.Detail = answer.Outcome, answer.Reason, answer.Detail
 	model.TokensBefore, model.TokensAfter = answer.TokensBefore, answer.TokensAfter
+	if action == control.Compact && model.Outcome == control.Done {
+		model.Compaction = compactionCount(asking, dir, session, answer.ID)
+	}
 	line := steerLine(model)
 	if model.Outcome == control.Done {
 		return printValue(ctx, model, func() []string { return []string{line} })
@@ -123,6 +136,32 @@ func steer(ctx *Context, call Call, action string) error {
 		return &FailedError{Message: ""}
 	}
 	return &FailedError{Message: line}
+}
+
+// compactionCount waits, within countLimit, for the session's telemetry to
+// count the compaction a request asked for, and answers its number: the one
+// the collector gave the request's id. The collector gives the id to the next
+// PostCompact it gets, which is this compaction's unless another compaction's
+// PostCompact came more than a second late (docs/remote-control.md).
+func compactionCount(ctx context.Context, dir string, session registry.Session, request string) *uint64 {
+	deadline := time.NewTimer(countLimit)
+	defer deadline.Stop()
+	tick := time.NewTicker(50 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		for _, event := range sessionstate.Load(dir, session.Name, session.Epoch()).CompactionEvents {
+			if event.Request == request {
+				return &event.Sequence
+			}
+		}
+		select {
+		case <-tick.C:
+		case <-deadline.C:
+			return nil
+		case <-ctx.Done():
+			return nil
+		}
+	}
 }
 
 // steerLine is the line a caller reads: the outcome, and when it is not done,
@@ -142,7 +181,10 @@ func steerLine(model steerModel) string {
 		if model.TokensBefore != nil && model.TokensAfter != nil {
 			line += fmt.Sprintf(": %d tokens before, %d after", *model.TokensBefore, *model.TokensAfter)
 		}
-		return line + "."
+		if model.Compaction == nil {
+			return line + "; its telemetry has not counted it yet, and rewake list shows the count once it does."
+		}
+		return line + fmt.Sprintf(" (compaction %d).", *model.Compaction)
 	case control.Refused:
 		return fmt.Sprintf("Rewake: %s refused %s: %s%s. %s", model.Session, what, model.Reason, detail, steerNext[model.Reason])
 	}

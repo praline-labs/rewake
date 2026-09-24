@@ -11,6 +11,7 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/control"
 	"github.com/iiiokojiadbi/rewake/internal/harness"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
+	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
@@ -35,8 +36,27 @@ func steerWorld(t *testing.T, workerHarness string) (string, registry.Session, s
 	saved := steerLimits
 	fast := control.Limits{Pickup: 300 * time.Millisecond, Outcome: 300 * time.Millisecond, Poll: 5 * time.Millisecond}
 	steerLimits = map[string]control.Limits{control.Compact: fast, control.Interrupt: fast}
-	t.Cleanup(func() { steerLimits = saved })
+	savedCount := countLimit
+	countLimit = 300 * time.Millisecond
+	t.Cleanup(func() { steerLimits, countLimit = saved, savedCount })
 	return dir, worker, controlDir
+}
+
+// counted publishes the worker's telemetry as its wrapper would once the
+// compaction a request asked for is counted, as the latest of its compactions,
+// with one before it that nobody asked for.
+func counted(t *testing.T, dir string, worker registry.Session, request string, sequence uint64) {
+	t.Helper()
+	now := time.Now()
+	snapshot := sessionstate.Unknown(worker.Epoch())
+	snapshot.PublishedAt = &now
+	snapshot.CompactionEvents = []sessionstate.CompactionEvent{
+		{Sequence: sequence - 1, ObservedAt: now},
+		{Sequence: sequence, ObservedAt: now, RequestedBy: "lead", Request: request},
+	}
+	if err := sessionstate.Save(dir, worker.Name, worker.Epoch(), snapshot); err != nil {
+		t.Error(err)
+	}
 }
 
 // answerOnce plays the worker's plugin for one request.
@@ -63,13 +83,16 @@ func answerOnce(t *testing.T, controlDir string, answer func(control.Request) st
 	return seen
 }
 
-func TestCompactDoneReportsTheTokens(t *testing.T) {
-	_, _, controlDir := steerWorld(t, "claude")
+// Main gets no notice of a compaction it asked for, so the answer carries what
+// the notice would: the count, besides the tokens.
+func TestCompactDoneReportsTheTokensAndTheCount(t *testing.T) {
+	dir, worker, controlDir := steerWorld(t, "claude")
 	seen := answerOnce(t, controlDir, func(r control.Request) string {
+		counted(t, dir, worker, r.ID, 3)
 		return `{"id":"` + r.ID + `","outcome":"done","tokensBefore":120000,"tokensAfter":9000}`
 	})
 	code, out, errOut := run("compact", "worker", "keep the plan")
-	if code != ExitOK || out != "Rewake: compacted worker: 120000 tokens before, 9000 after.\n" {
+	if code != ExitOK || out != "Rewake: compacted worker: 120000 tokens before, 9000 after (compaction 3).\n" {
 		t.Fatalf("exit %d, %q, %q", code, out, errOut)
 	}
 	if request := <-seen; request.Action != control.Compact || request.Focus != "keep the plan" || request.From != "lead" {
@@ -201,7 +224,7 @@ type focusless struct{ harness.Harness }
 func (focusless) CompactFocus() bool { return false }
 
 func TestAHarnessThatCannotTakeItIsAWrongCall(t *testing.T) {
-	_, _, controlDir := steerWorld(t, "codex")
+	dir, worker, controlDir := steerWorld(t, "codex")
 	code, _, errOut := run("compact", "worker")
 	if code != ExitUsage || !strings.Contains(errOut, "worker is a Codex session, which does not take rewake compact yet") {
 		t.Fatalf("exit %d, %q", code, errOut)
@@ -219,8 +242,30 @@ func TestAHarnessThatCannotTakeItIsAWrongCall(t *testing.T) {
 	if entries, _ := os.ReadDir(controlDir); len(entries) != 0 {
 		t.Fatalf("a wrong call wrote %v", entries)
 	}
-	answerOnce(t, controlDir, func(r control.Request) string { return `{"id":"` + r.ID + `","outcome":"done"}` })
-	if code, out, errOut := run("compact", "worker"); code != ExitOK || out != "Rewake: compacted worker.\n" {
+	answerOnce(t, controlDir, func(r control.Request) string {
+		counted(t, dir, worker, r.ID, 1)
+		return `{"id":"` + r.ID + `","outcome":"done"}`
+	})
+	if code, out, errOut := run("compact", "worker"); code != ExitOK || out != "Rewake: compacted worker (compaction 1).\n" {
 		t.Fatalf("without a focus: exit %d, %q, %q", code, out, errOut)
+	}
+}
+
+// A compaction the telemetry has not counted in time is still done, and the
+// answer says where the count will show rather than taking another
+// compaction's number.
+func TestCompactDoneBeforeItIsCounted(t *testing.T) {
+	dir, worker, controlDir := steerWorld(t, "claude")
+	answerOnce(t, controlDir, func(r control.Request) string {
+		counted(t, dir, worker, "0123456789abcdef0123456789abcdef", 2)
+		return `{"id":"` + r.ID + `","outcome":"done","tokensBefore":120000,"tokensAfter":9000}`
+	})
+	code, out, errOut := run("compact", "worker", "--json")
+	var model steerModel
+	if code != ExitOK || json.Unmarshal([]byte(out), &model) != nil || model.Outcome != control.Done || model.Compaction != nil {
+		t.Fatalf("exit %d, %q, %q", code, out, errOut)
+	}
+	if line := steerLine(model); !strings.Contains(line, "has not counted it yet, and rewake list shows the count") {
+		t.Fatalf("the line: %q", line)
 	}
 }

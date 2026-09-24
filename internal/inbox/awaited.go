@@ -24,7 +24,8 @@ const (
 	StageOwed Stage = "owed"
 	// StagePending is read, and an interim report said the work is still going.
 	StagePending Stage = "pending"
-	// StageStopped is read, and a person interrupted the recipient since.
+	// StageStopped is read, and the recipient's turn was stopped since: by the
+	// person at the keyboard, or by a main with rewake interrupt.
 	StageStopped Stage = "stopped"
 	// StageFailed will not be delivered, so no report is coming.
 	StageFailed Stage = "failed"

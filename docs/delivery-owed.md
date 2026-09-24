@@ -59,7 +59,7 @@ is then placed:
 | `unread` — delivered, unread | status `delivered` |
 | `owed` — read, being worked on | status `read` (or in `done/` with the status swept), and the recipient's `awaiting/<its run>/<this name>` names this run and the id |
 | `pending` | read and owed, and the latest interim report on it came after any stop |
-| `stopped` | read and owed, and the latest report on it is a stop |
+| `stopped` | read and owed, and the latest report on it is a stop; the text form prints the stop's own words after `stopped:`, which say whether the person at the keyboard or a main with `rewake interrupt` stopped it |
 
 "Latest" is by the report's `createdAt`, the id only breaking a tie: every report on one
 wait carries the wait's time prefix, and what follows it is a hash.

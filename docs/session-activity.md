@@ -42,7 +42,10 @@ Start, failed/interrupted maintenance without completion, deprecated events and
 historical/replayed items do not produce completed notices. Counter and side rules
 are unchanged. Main receives a no-reply notify with the completed sequence/count, whose text reads
 `Rewake: context compacted (compaction <n>).`; its normal state header shows current
-primary activity and the latest counter.
+primary activity and the latest counter. A compaction main asked for itself with
+`rewake compact` is the exception: its cue names main as the asker, and the command's
+answer carries the count instead of a notice
+([remote-control.md](remote-control.md#on-claude-code)).
 The worker is not woken by this notification.
 
 Native readers only update a bounded in-memory tail of 64 completion cues. The

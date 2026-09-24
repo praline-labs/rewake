@@ -67,16 +67,18 @@ polling it, the session carrying it out, and back. Like `claude-interrupted` it 
 unsupported for `node` without one, with its controls.
 
 For it the fixture's plugin host serves what a module asks of the session itself. The
-host gives the module `$.clock.every` on real timers, `$.fs` with positional arguments
+host gives the module `$.clock.every` and `$.clock.sleep` on real timers, `$.fs` with positional arguments
 on real files — a `read` of a missing file logged as an `[ERROR]`, a `write` over 4 MiB
 refused — `$.session.compact` and `$.turn.abort`, each as strict as 2.1.280 about its
 forms ([research-claude-actions.md](research-claude-actions.md#compaction-abort-polling)).
 The last two go out to the session as a line naming the call, and the session answers
-on the host's stdin: a compaction is refused while a turn runs, with compaction switched
-off by `DISABLE_COMPACT`, and before any turn has ended, in the harness's words; one that
-goes ahead plays the plugin's `session.compact` and runs the hooks `PreCompact`,
+on the host's stdin: a compaction is refused while a turn runs and with compaction
+switched off by `DISABLE_COMPACT`, in the harness's words; one that goes ahead plays the
+plugin's `session.compact` with trigger `plugin` and runs the hooks `PreCompact`,
 `SessionStart` with source `compact` and `PostCompact`, so rewake's telemetry counts it
-by its own path, and answers with the summary and 120000 and 9000 tokens. An abort is
+by its own path, and answers with the summary and 120000 and 9000 tokens. Before any
+turn has ended it stops after `PreCompact` and refuses the conversation as too short,
+as the harness does. An abort is
 refused with no turn running or for another turn's id, again in the harness's words;
 otherwise it ends the running turn with `turn.complete` reason `aborted` and no Stop hook,
 before it answers. Every refusal carries the plugin's name in front, as the harness puts
@@ -91,19 +93,39 @@ runs without the module. The observations:
 - a compaction of busy is refused as `in a turn`, exit 1, and busy still reads `working`
   with nothing reported about its task;
 - an interrupt of busy is `done`, exit 0, and main reads `stopped` about the task with
-  the text "lead-claude interrupted this turn with rewake interrupt";
+  the text "lead-claude interrupted this turn with rewake interrupt", which its
+  `rewake inbox --awaited` shows after `stopped:` as well;
 - busy's next notice ends with "lead-claude interrupted your previous turn with rewake
   interrupt.", and the notice after it does not;
 - an interrupt of calm, idle, is refused as `no turn running`, exit 1;
 - a compaction of calm with a focus is `done`, exit 0, with the host's token counts, and
   main's `rewake list --json` then counts one compaction for calm;
+- that answer carries `compaction` 1, and main is sent no "Rewake: context compacted
+  (compaction 1)." within five seconds. main's wrapper looks once a second, and the
+  telemetry case sees the notice within five. Nothing later can stand in for the wait,
+  since the absence is what is observed;
 - calm, a worker, asking for a compaction is a wrong call, exit 2.
 
-Its seven mutants each break one link and name what they must break: a module that
-never asks the host to compact, one that does not know the host's mid-turn refusal, one
-that aborts without saying who asked, a lane that never uses the interrupt mark up, a
-module that answers an idle interrupt as done, a control package that reports a request
-nobody took as `failed`, and a command that lets any role steer.
+Its eleven mutants each break one link and name what they must break:
+
+- a module that never asks the host to compact;
+- one that does not know the host's mid-turn refusal;
+- one that aborts without saying who asked;
+- a lane that never uses the interrupt mark up;
+- a module that answers an idle interrupt as done;
+- a control package that reports a request nobody took as `failed`;
+- a command that lets any role steer;
+- a main wrapper that announces the compaction it asked for;
+- a command that answers without the count;
+- a module that compacts without telling rewake who asked;
+- an awaited list that puts every stop down to a person.
+
+A module that tells rewake who asked but does not wait for the report to be sent is not
+among them, nor one that does not wait out the second after another compaction. The
+fixture's host runs the report quickly enough that it would still arrive first, and the
+fixture has no typed `/compact`, so the module test under node
+(`plugin_compact_test.go`) checks both instead: its host resolves `$.process.run` a
+timer later, and plays a compaction the module did not ask for.
 
 What it cannot show: that the real harness carries these calls out as the fixture does
 — its forms, refusals and effects were seen live by review-claude on September 24, 2026,

@@ -18,6 +18,10 @@ on the session. Part B, the Codex side, is next. The design as built is in
   later (September 24; [work-queue.md](../work-queue.md)).
 - After an interrupt from main, the Claude Code worker's next rewake notice carries a
   line saying so, once, so that its model sees roughly what Codex's does (September 24).
+- When main asked for a compaction itself with `rewake compact`, it gets no "context
+  compacted" notice for it. The command's answer carries the tokens before and after
+  and the session's compaction count. Compactions the worker makes itself, and ones
+  anyone else asked for, keep their notice (September 24, after the live acceptance).
 
 **The research.** review-claude probed Claude Code 2.1.280 live against a stand-in API
 and read the binary and the Codex schemas the same morning; the facts are in
@@ -133,6 +137,60 @@ five checks do not run it. review-claude re-ran `43a1f62` afterwards:
   - the SIGSTOP entry: the missing mail inferred, not seen, and the wrapper's own
     `SIGCONT` as the likelier cause.
 
+**Accepted live.** On September 24, 2026, Claude Code 2.1.280, the installed rewake
+built from `e65b865`, in the owner's sessions started through their launch aliases:
+
+- main-claude ran `rewake compact review-claude "<focus>"` on the idle reviewer: exit 0,
+  "compacted review-claude: 129381 tokens before, 5949 after".
+- It then ran `rewake interrupt write-claude` 8 s into a task: exit 0. At 14:20:27 main
+  received the stopped report "main-claude interrupted this turn with rewake interrupt".
+- write-claude's next notice ended with "main-claude interrupted your previous turn with
+  rewake interrupt."; the notice before it did not. The interrupted turn had reached only
+  its first command.
+- `rewake list` showed `/ 300K` for both workers after the restart: the context-window
+  work of `87fcf54` seen live as well.
+
+Two findings, fixed afterwards in one change:
+
+- `rewake inbox --awaited` showed the interrupted task as `stopped by a person`. The
+  listing now prints `stopped:` followed by the stop's own text, which names the main.
+  The help, the stopped kind's description and main's playbook line now say that a stop
+  comes from the person at the keyboard or from a main.
+- main was sent the compaction notice for the compaction it had asked for; the owner's
+  decision above followed. The module tells rewake who asked (`compact.asked`, with the
+  request id), the collector gives that mark to the next `PostCompact`, main's wrapper
+  skips a compaction that names it, and the command waits up to 3 s for the telemetry
+  to count its request and prints "(compaction N)". `claude-steered` gained two checks:
+  the count in the answer with no notice to main, and the awaited list naming main. It
+  also gained four mutants: a wrapper announcing main's own compaction, an answer
+  without the count, a module that does not tell who asked, and the old awaited
+  wording.
+
+**Review of that fix.** review-claude reviewed the uncommitted tree with a live run on
+2.1.280 the same day: main's `rewake compact` answered "(compaction 1)" and main got no
+notice; a worker's own `/compact` kept its notice; `--awaited` showed the right stopped
+text after main's interrupt and after a keyboard Esc; `$.process.run` does wait for the
+process to close, in the binary. Four findings, with main's decisions:
+
+- The fix claimed to tie the compaction to the request by identity, not by timing, but
+  the collector gives the mark to the first `PostCompact` it gets after it. A typed
+  `/compact` leaves no turn for the module to see, so a request could start tens of ms
+  after its end, and that compaction's late `PostCompact` would take the mark. Inferred
+  from the source, not reproduced. Fixed: the mark is now sent from the module's
+  `session.compact` handler for its own call, trigger `plugin`, which holds the
+  compaction until it is sent. After the end of a compaction the module did not ask
+  for, it waits a second before it asks the host — waiting, not refusing, since the
+  host already refuses while the other runs. The claims now say what the code
+  guarantees, and the remaining window is a known limit.
+- The refusal was reported without waiting; it is now sent before the answer is
+  written.
+- The host's refusal while another compaction runs, "a turn is in flight; the
+  conversation compacts between turns", seen live during a typed `/compact`, went out as
+  `failed`; it is now `in a turn`.
+- "Not enough messages" comes after `PreCompact` and no `PostCompact` follows, so the
+  listing read `idle; compacting` until the next turn; the refusal now ends
+  `compacting`. The fixture refuses a short conversation in that order too.
+
 **What stays open.**
 
 - Part B, the Codex side: the wrapper serves the same directory, refuses a compaction
@@ -149,3 +207,10 @@ five checks do not run it. review-claude re-ran `43a1f62` afterwards:
   ([intermittent-bugs.md](../intermittent-bugs.md)).
 - The fixture's threshold for "Not enough messages to compact" is its own, and a focus
   reaching the summary request is shown only live; the workflow case says so.
+- The compaction attribution as changed after the review has not been seen live: the
+  mark sent from `session.compact` and the second waited out after another compaction.
+- A `PostCompact` more than a second late after a compaction the module did not ask for
+  is still taken for main's ([remote-control.md](../remote-control.md#known-limits)).
+- A compaction whose `PostCompact` never reaches the collector leaves the mark for the
+  next compaction, which then counts as main's
+  ([remote-control.md](../remote-control.md#known-limits)).

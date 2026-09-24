@@ -94,6 +94,38 @@ func TestCompactionNoticesDedupAndLateMain(t *testing.T) {
 	}
 }
 
+// A compaction this main asked for with rewake compact is reported by the
+// command, with its count, and gets no notice; one another main asked for, and
+// one the worker made itself, each get theirs.
+func TestACompactionMainAskedForGetsNoNotice(t *testing.T) {
+	dir := stateDir(t)
+	main := availabilityPeer(t, dir, "main-fixture", role.Main.ID, 1, true)
+	peer := availabilityPeer(t, dir, "worker-fixture", role.General.ID, 2, true)
+	observer := newSessionNotices()
+	if err := observer.scan(context.Background(), dir, main); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now()
+	noticeState(t, dir, peer, "idle", 3, []sessionstate.CompactionEvent{
+		{Sequence: 1, ObservedAt: now, RequestedBy: main.Name, Request: "0123456789abcdef0123456789abcdef"},
+		{Sequence: 2, ObservedAt: now, RequestedBy: "other-main", Request: "fedcba9876543210fedcba9876543210"},
+		{Sequence: 3, ObservedAt: now},
+	})
+	for range 2 {
+		if err := observer.scan(context.Background(), dir, main); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_, completed, _ := noticeKinds(t, dir, main.Name)
+	var counts []uint64
+	for _, notice := range completed {
+		counts = append(counts, notice.Compaction.Count)
+	}
+	if len(counts) != 2 || counts[0]+counts[1] != 5 {
+		t.Fatalf("notices of compactions %v, want 2 and 3", counts)
+	}
+}
+
 func TestKnownDepartureRetainsOldStateAndDeduplicates(t *testing.T) {
 	for _, mode := range []string{"removed", "dead", "replaced"} {
 		t.Run(mode, func(t *testing.T) {

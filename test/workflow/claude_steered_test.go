@@ -18,10 +18,13 @@ import (
 //
 //   - calm works its task to the end and is idle: a compaction is done, with
 //     the host's token counts, and rewake's telemetry counts it by the hooks a
-//     compaction runs; an interrupt is refused as no turn running.
+//     compaction runs; the answer carries that count, and main, which asked,
+//     gets no notice of the compaction besides. An interrupt is refused as no
+//     turn running.
 //   - busy is held in its first turn: a compaction is refused as in a turn and
-//     the turn goes on; an interrupt ends it, main reads stopped naming itself,
-//     and busy's next notice says who interrupted it — once.
+//     the turn goes on; an interrupt ends it, main reads stopped naming itself
+//     and its list of what it is owed says the same, and busy's next notice
+//     says who interrupted it — once.
 //   - bare runs without the module: every request is not answering.
 //
 // And a worker asking is a wrong call.
@@ -56,7 +59,8 @@ func TestClaudeSteered(t *testing.T) {
 const (
 	obsCompactIdle     = "main compacts an idle worker: done with the token counts, and the telemetry counts one compaction"
 	obsCompactBusy     = "main compacts a worker in a turn: refused as in a turn, and the turn goes on unreported"
-	obsInterruptBusy   = "main interrupts a worker in a turn: done, and main reads stopped saying main interrupted it"
+	obsInterruptBusy   = "main interrupts a worker in a turn: done, and main reads stopped saying main interrupted it, as its awaited list does"
+	obsCompactQuiet    = "main's own compaction: its answer carries the session's compaction count, and main gets no compaction notice of it"
 	obsInterruptLine   = "the interrupted worker's next notice says main interrupted it, and the one after does not"
 	obsInterruptIdle   = "main interrupts an idle worker: refused as no turn running"
 	obsNotAnswering    = "a request to a worker without the module is refused as not answering"
@@ -69,17 +73,18 @@ const (
 )
 
 var steeredObservations = []string{
-	obsCompactIdle, obsCompactBusy, obsInterruptBusy, obsInterruptLine, obsInterruptIdle, obsNotAnswering, obsNotMain,
+	obsCompactIdle, obsCompactQuiet, obsCompactBusy, obsInterruptBusy, obsInterruptLine, obsInterruptIdle, obsNotAnswering, obsNotMain,
 }
 
 // steeredView is what `rewake compact` and `rewake interrupt` print under
 // --json.
 type steeredView struct {
-	Outcome      string `json:"outcome"`
-	Reason       string `json:"reason"`
-	Detail       string `json:"detail"`
-	TokensBefore *int64 `json:"tokensBefore"`
-	TokensAfter  *int64 `json:"tokensAfter"`
+	Outcome      string  `json:"outcome"`
+	Reason       string  `json:"reason"`
+	Detail       string  `json:"detail"`
+	TokensBefore *int64  `json:"tokensBefore"`
+	TokensAfter  *int64  `json:"tokensAfter"`
+	Compaction   *uint64 `json:"compaction"`
 }
 
 type steeredRow struct {
@@ -207,9 +212,13 @@ func playSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 		}
 		return false
 	})
+	// The task is still owed after a stop, and main's list of what it is owed
+	// says who stopped it.
+	_, awaited, _ := asks.ask(c, "inbox", "--awaited")
 	out = append(out, finding(obsInterruptBusy,
-		code == 0 && view.Outcome == "done" && strings.Contains(stopped.Text, steeredStoppedText),
-		"%s; main read %v about the task, the stopped saying %q", said, kinds(about(busy, tasks[busy])), firstLine(stopped.Text)))
+		code == 0 && view.Outcome == "done" && strings.Contains(stopped.Text, steeredStoppedText) &&
+			strings.Contains(awaited, " · stopped: "+steeredStoppedText+"\n"),
+		"%s; main read %v about the task, the stopped saying %q; its awaited list: %q", said, kinds(about(busy, tasks[busy])), firstLine(stopped.Text), awaited))
 
 	// Two notes, the second once the first one's turn is over, so that each
 	// is a notice of its own.
@@ -246,112 +255,16 @@ func playSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 		code == 0 && view.Outcome == "done" && view.TokensBefore != nil && *view.TokensBefore == 120000 && view.TokensAfter != nil && *view.TokensAfter == 9000 && counted,
 		"%s, tokens %s before and %s after; the telemetry counts %s compactions %s", said, show(view.TokensBefore), show(view.TokensAfter), show(calmRow.Compactions), failure))
 
+	// main's wrapper looks for compactions once a second, and the telemetry
+	// case sees its notice within five: nothing in five means none was sent.
+	// No later event can stand in for the wait — the absence is the finding.
+	const notice = "Rewake: context compacted (compaction 1)."
+	noticed := waitFor(c, 5*time.Second, func() bool { return strings.Contains(lead.mailboxRead(), notice) })
+	out = append(out, finding(obsCompactQuiet,
+		code == 0 && view.Compaction != nil && *view.Compaction == 1 && !noticed,
+		"the answer's compaction %s; main read %q: %v", show(view.Compaction), notice, noticed))
+
 	code, refused, _ := calmAsks.ask(c, "compact", bare.name)
 	out = append(out, finding(obsNotMain, code == 2, "exit %d, %s", code, firstLine(refused)))
 	return out
-}
-
-// The controls. Each breaks one link of a request's path, in the product, and
-// the observations resting on that link go with it.
-
-// The module takes a compaction and never asks the host for it.
-var mutantCompactNotRun = mutation{
-	name: "compact-not-run",
-	file: "internal/harness/claude/plugin.js",
-	edits: []edit{{
-		`const result = focus === "" ? await $.session.compact() : await $.session.compact({ instructions: focus })`,
-		`const result = {}`,
-	}},
-}
-
-// The module does not know the host's mid-turn refusal.
-var mutantInTurnUnmapped = mutation{
-	name:  "in-turn-unmapped",
-	file:  "internal/harness/claude/plugin.js",
-	edits: []edit{{`["a turn is running", "in a turn"]`, `["a turn is never running", "in a turn"]`}},
-}
-
-// The module aborts the turn without saying who asked.
-var mutantInterrupterUnnamed = mutation{
-	name:  "interrupter-unnamed",
-	file:  "internal/harness/claude/plugin.js",
-	edits: []edit{{"by: word(asked.from) }", "by: undefined }"}},
-}
-
-// The mark is never used up and never laid aside: every notice says the turn
-// was interrupted. Both guards go together because either one alone keeps the
-// line to one notice here: the next turn's start lays the mark aside before a
-// second notice is composed, and a notice composed between a delivery and its
-// turn's start, where only Told stops it, is left to the unit tests.
-var mutantLineRepeated = mutation{
-	name: "line-repeated",
-	file: "internal/harness/claude/telemetry/collector_turns.go",
-	edits: []edit{
-		{"if mark == c.interrupts {", "if false && mark == c.interrupts {"},
-		{"case event.Kind == TurnStart, event.Kind == TurnComplete:", "case false:"},
-	},
-}
-
-// The module answers an interrupt of an idle session as done.
-var mutantIdleInterruptDone = mutation{
-	name:  "idle-interrupt-done",
-	file:  "internal/harness/claude/plugin.js",
-	edits: []edit{{`if (turn === undefined) return { outcome: "refused", reason: "no turn running" }`, `if (turn === undefined) return { outcome: "done" }`}},
-}
-
-// A request nobody took is reported as a failure, not as not answering.
-var mutantSilentNotAnswering = mutation{
-	name:  "silent-not-answering",
-	file:  "internal/control/control.go",
-	edits: []edit{{"Outcome: Refused, Reason: NotAnswering, Detail: detail}", "Outcome: Failed, Detail: detail}"}},
-}
-
-// Any session may steer another.
-var mutantAnyRoleSteers = mutation{
-	name:  "any-role-steers",
-	file:  "internal/cli/steer.go",
-	edits: []edit{{"if self.Role != role.Main.ID {", "if false && self.Role != role.Main.ID {"}},
-}
-
-func TestACompactionNeverAskedOfTheHostFails(t *testing.T) {
-	runSteeredControl(t, mutantCompactNotRun, obsCompactIdle, obsCompactBusy)
-}
-
-func TestAnUnmappedMidTurnRefusalFails(t *testing.T) {
-	runSteeredControl(t, mutantInTurnUnmapped, obsCompactBusy)
-}
-
-func TestAnInterruptThatDoesNotNameMainFails(t *testing.T) {
-	runSteeredControl(t, mutantInterrupterUnnamed, obsInterruptBusy, obsInterruptLine)
-}
-
-func TestAnInterruptLineRepeatedFails(t *testing.T) {
-	runSteeredControl(t, mutantLineRepeated, obsInterruptLine)
-}
-
-func TestAnIdleInterruptAnsweredDoneFails(t *testing.T) {
-	runSteeredControl(t, mutantIdleInterruptDone, obsInterruptIdle)
-}
-
-func TestANotAnsweringReportedAsFailedFails(t *testing.T) {
-	runSteeredControl(t, mutantSilentNotAnswering, obsNotAnswering)
-}
-
-func TestAWorkerThatSteersFails(t *testing.T) {
-	runSteeredControl(t, mutantAnyRoleSteers, obsNotMain)
-}
-
-// runSteeredControl is runFindingsControl, unsupported without node like the
-// interrupted turn's.
-func runSteeredControl(t *testing.T, mutant mutation, breaks ...string) {
-	t.Helper()
-	if _, err := exec.LookPath("node"); err != nil {
-		name := "claude-steered-control-" + mutant.name
-		enterScenario(t, name)
-		want := "the " + mutant.name + " mutant breaks " + strings.Join(breaks, "; ") + ", and nothing else"
-		c := Start(t, Spec{Name: name, Harness: claudeColumn.harness, Observations: []string{want}, Deadline: time.Minute})
-		c.UnsupportedCapability(want, "node", "no node on PATH to run the plugin's module")
-		return
-	}
-	runFindingsControl(t, "claude-steered", playSteered, mutant, breaks...)
 }

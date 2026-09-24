@@ -2,7 +2,7 @@ package workflow
 
 // What a module may ask of the session itself — compact its conversation,
 // abort its turn — and the $ it needs to poll a control directory for such a
-// request: $.clock.every and $.fs.
+// request: $.clock.every, $.clock.sleep and $.fs.
 //
 // The harness answers these from inside the session, so the fixture answers
 // them from inside its own: the node host sends each call out as a line, the
@@ -63,6 +63,9 @@ $.clock = { every: (ms, fn) => {
     try { await fn() } catch (err) { say({ log: "[WARN] a $.clock.every callback threw: " + String(err && err.message || err) }) }
   }, ms)
   return { cancel: () => clearInterval(timer) }
+}, sleep: async (ms) => {
+  if (!(typeof ms === "number" && Number.isFinite(ms) && ms >= 0)) return refuse("$.clock.sleep takes a non-negative number of milliseconds")
+  await new Promise((resolve) => setTimeout(resolve, ms))
 } }
 $.fs = {
   exists: async (...a) => {
@@ -178,7 +181,8 @@ func (s *claudeSession) steer(call string, args json.RawMessage) (any, string) {
 
 // compact refuses in the harness's order and words, then runs what a
 // compaction runs: the plugin's session.compact, and the hooks PreCompact,
-// SessionStart with source "compact" and PostCompact.
+// SessionStart with source "compact" and PostCompact. A conversation too short
+// is refused after PreCompact, with nothing after it, as the harness does.
 func (s *claudeSession) compact(instructions string) (any, string) {
 	s.turns.compacting.Lock()
 	defer s.turns.compacting.Unlock()
@@ -190,10 +194,6 @@ func (s *claudeSession) compact(instructions string) (any, string) {
 		return nil, "$.session.compact: a turn is running (" + running + "); the conversation compacts between turns, so call it from turn.complete or later"
 	case os.Getenv("DISABLE_COMPACT") != "":
 		return nil, "$.session.compact: compaction is switched off in this session (DISABLE_COMPACT), for /compact and plugins alike"
-	case completed == 0:
-		// Where the harness draws the line is not known; one finished turn
-		// is the fixture's, and a case that compacts has worked one.
-		return nil, "$.session.compact: Not enough messages to compact."
 	}
 	s.plugin.event("session.compact", map[string]any{"trigger": "plugin", "instructions": instructions})
 	summary := "the conversation so far, summarized"
@@ -211,6 +211,11 @@ func (s *claudeSession) compact(instructions string) (any, string) {
 		}
 		if encoded, err := json.Marshal(payload); err == nil {
 			s.runHook(hook.event, s.launch.settings.observe, encoded)
+		}
+		if hook.event == "PreCompact" && completed == 0 {
+			// Where the harness draws the line is not known; one finished
+			// turn is the fixture's, and a case that compacts has worked one.
+			return nil, "$.session.compact: Not enough messages to compact."
 		}
 	}
 	return map[string]any{

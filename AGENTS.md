@@ -130,6 +130,12 @@ printed, so without it the line naming how many scenarios ran — and which — 
 invisible, and a run that exercised three of four looks the same as one that
 exercised all four.
 
+A change to the Claude Code plugin module (`internal/harness/claude/plugin.js`)
+or to the fixture that hosts it also runs the workflow suite before the commit.
+The five checks do not start the module under the harness's host, and a module
+that fails there unloads silently: every plugin case goes red while the five
+checks stay green.
+
 For reading rather than watching, the same run goes through the summarizer, which
 prints a handful of lines and writes the whole result to a file:
 

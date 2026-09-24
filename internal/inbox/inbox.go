@@ -85,7 +85,8 @@ const (
 	Finished Kind = "finished"
 	// Error reports a failed turn and never owes another report.
 	Error Kind = "error"
-	// Stopped reports a keyboard interruption without settling the work.
+	// Stopped reports a turn stopped — by the person at the keyboard, or by a
+	// main with rewake interrupt — without settling the work.
 	Stopped Kind = "stopped"
 	// Interim is a turn end marked pending: the receiver ran `rewake pending` before
 	// ending a turn it had not finished the work in. It carries the text given

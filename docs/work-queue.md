@@ -81,12 +81,13 @@ harness's own `/clear` and `/resume` were observed working under rewake on Septe
 state is unknown during a turn ([session-state.md](session-state.md#claude-code-source)).
 Stage 2 of the plugin acts on the session: `rewake compact` and `rewake interrupt`,
 built on the Claude Code side on September 24, 2026 ([remote-control.md](remote-control.md))
-with its workflow case, `claude-steered`; the Codex side follows below.
+with its workflow case, `claude-steered`, and accepted live the same day; the Codex side
+follows below.
 
 ## Now: stage 2 of the plugin, the rest
 
 What [remote-control.md](remote-control.md) describes is built for Claude Code with unit
-and module tests and the workflow case `claude-steered` with seven product mutants
+and module tests and the workflow case `claude-steered` with eleven product mutants
 ([testing-plugin.md](testing-plugin.md#steering-a-session)). Next is part B, the Codex
 adapter: the wrapper serves the same control directory, refuses a
 compaction itself while a turn runs or a `turn/start` is in flight, sends
@@ -101,6 +102,22 @@ prompt for the whole conversation. Two routes are to be researched later, not bu
 proper one, if a later protocol version adds a field or a per-request override; and an
 emulation through the conversation's history — the focus put in as an item before the
 compaction, which unlike instructions stays in the history afterwards.
+
+## Then: a todo list sent with a task
+
+The owner asked on September 24, 2026 for this feature, scheduled after stage 2 part B:
+main sets a todo list for a worker together with a task — `rewake send` with a list —
+and the list appears in the worker's terminal as the harness's own checklist, ticked
+off as the worker goes.
+
+What is known for Claude Code ([research-claude-actions.md](research-claude-actions.md#the-task-list)):
+the harness's task tools are off by model for the current models, and
+`CLAUDE_CODE_ENABLE_TODO_TOOLS=1` turns them on for one launch — rewake does not switch
+them off, and has to switch them on. The plugin can create the items itself with
+`$.tool.call` and `TaskCreate`, and they show in the terminal; the model does not see
+items made that way, so the task's text has to name them. A new kind of control request
+would carry the list from main to the worker's plugin. Codex keeps a plan of its own in
+its terminal; parity needs research first.
 
 ## Then: Codex's `--worktree`
 

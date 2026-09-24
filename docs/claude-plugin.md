@@ -50,6 +50,9 @@ would otherwise unload the whole plugin.
 | `turn.complete` | `turn.complete` | the turn id and the reason: `answer`, `aborted`, `refusal` or `error`; for a turn a main's `rewake interrupt` aborted, `by` with the main's name |
 | `session.measure` | `session.measure` | `tokens`, `window` and `percent` of the context and the window limit, only when `changed` names `context` |
 | `classic.Stop`, `classic.StopFailure` | nothing | none: they mark the turn as reported by its hook |
+| `session.compact` with trigger `plugin`, for the module's own call | `compact.asked` | the request id and the main's name; the handler holds the compaction until it is sent ([remote-control.md](remote-control.md#on-claude-code)) |
+| none: that compaction refused or failed after it started | `compact.refused` | the request id, sent before the answer |
+| `session.compact` with any other trigger | nothing | none: its end starts the second the module waits before a main's compaction |
 
 An event that carries an `agentId` is a subagent's and is not sent. `session.measure`
 fires for rate limits and cost as well, and each report is a process, so only a change

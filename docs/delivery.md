@@ -56,7 +56,7 @@ refusals and help come from there.
 | `notify` | `--notify` | nothing | once delivered |
 | `finished` | successful turn end | nothing | — |
 | `error` | failed turn hook only | nothing | failure, exit 1 for a waiting question |
-| `stopped` | keyboard interruption only | nothing | exit 1 for a waiting question |
+| `stopped` | a turn stopped at the keyboard, or on Claude Code by a main's `rewake interrupt` | nothing | exit 1 for a waiting question |
 | `pending` | a normal turn end marked with `rewake pending` only | nothing | — a waiting question keeps waiting |
 
 The rule for agents, stated in the intro and the guide: a task or a question is

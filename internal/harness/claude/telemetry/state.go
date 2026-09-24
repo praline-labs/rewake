@@ -63,12 +63,23 @@ type state struct {
 	compacting bool
 	count      uint64
 	events     []sessionstate.CompactionEvent
+	// asked is the compaction a main asked for with `rewake compact`, heard
+	// as the host starts it and before any hook of it: the next PostCompact is
+	// taken for that compaction, which holds unless another compaction's
+	// PostCompact arrives later than a second after its end
+	// (docs/remote-control.md).
+	asked *askedCompaction
+}
+
+// askedCompaction is who asked for a compaction, and by which request.
+type askedCompaction struct {
+	by, request string
 }
 
 func (s *state) apply(event Event, now time.Time) {
 	switch event.Kind {
 	case StatusLine, SessionStart, UserPromptSubmit, Stop, StopFailure, PreCompact, PostCompact, Notification, SessionEnd:
-	case PluginReady, TurnStart, TurnComplete, SessionMeasure:
+	case PluginReady, TurnStart, TurnComplete, SessionMeasure, CompactAsked, CompactRefused:
 		s.applyPlugin(event, now)
 		return
 	default:
@@ -132,7 +143,12 @@ func (s *state) apply(event Event, now time.Time) {
 			s.measured = unmeasured(s.measured)
 		}
 		s.count++
-		s.events = append(s.events, sessionstate.CompactionEvent{Sequence: s.count, ObservedAt: now})
+		compaction := sessionstate.CompactionEvent{Sequence: s.count, ObservedAt: now}
+		if s.asked != nil {
+			compaction.RequestedBy, compaction.Request = s.asked.by, s.asked.request
+			s.asked = nil
+		}
+		s.events = append(s.events, compaction)
 		if len(s.events) > maxCompactionEvents {
 			s.events = append([]sessionstate.CompactionEvent{}, s.events[len(s.events)-maxCompactionEvents:]...)
 		}
@@ -164,6 +180,15 @@ func (s *state) applyPlugin(event Event, now time.Time) {
 			s.measured = &copied
 			s.measuredOn = now
 		}
+	case CompactAsked:
+		s.asked = &askedCompaction{by: event.By, request: event.Request}
+	case CompactRefused:
+		if s.asked != nil && s.asked.request == event.Request {
+			s.asked = nil
+		}
+		// The host may refuse after PreCompact — "Not enough messages" comes
+		// then — and no PostCompact follows: this is the compaction's end.
+		s.compacting = false
 	}
 }
 

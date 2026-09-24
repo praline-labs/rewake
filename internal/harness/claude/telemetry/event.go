@@ -66,8 +66,11 @@ type Event struct {
 	// how turn.complete says it ended.
 	Turn   string `json:"turn,omitempty"`
 	Reason string `json:"reason,omitempty"`
-	// By is the session that interrupted the turn with `rewake interrupt`.
+	// By is the session that interrupted the turn with `rewake interrupt`,
+	// or that asked for the compaction with `rewake compact`.
 	By string `json:"by,omitempty"`
+	// Request is the id of that compaction's control request.
+	Request string `json:"request,omitempty"`
 	// Limit is the auto-compact window the plugin found configured
 	// (window.go); nil when it did not say.
 	Limit *Limit `json:"limit,omitempty"`

@@ -131,9 +131,10 @@ everything else.
   or on sending a session a command.
 - [research-claude-actions.md](research-claude-actions.md) — what a function-hooks plugin
   can do to the Claude Code session it runs in, split from research-claude-control.md by
-  subject: compact it, abort its turn, poll a file, swallow a socket line, reload — with
-  the forms and refusals of each, as the host words them. Open it before changing the
-  module's side of `rewake compact` or `rewake interrupt`, and after a harness update.
+  subject: compact it, abort its turn, poll a file, swallow a socket line, reload, fill
+  the harness's task list — with the forms and refusals of each, as the host words them.
+  Open it before changing the module's side of `rewake compact` or `rewake interrupt`,
+  before the todo list sent with a task, and after a harness update.
 - [research-codex.md](research-codex.md) — what only a running Codex session shows,
   split from research.md by subject: `codex queue`, thread identity and terminal events,
   the sandbox as a running session meets it, environment and instructions, and the

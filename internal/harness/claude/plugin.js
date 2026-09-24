@@ -7,6 +7,8 @@
 // `rewake interrupt`: it polls the run's control directory, compacts the
 // conversation or aborts the running turn, and writes back the outcome — only
 // numbers and the host's own error text (docs/remote-control.md).
+// It watches every compaction start and end, reading only its trigger, to
+// tell a main's apart from the others.
 // Nothing else: it reads no prompt and no answer, sends of the settings only
 // that one key, and never sends the compaction's summary.
 const argv = __REWAKE_ARGV__
@@ -20,6 +22,16 @@ function report($, event) {
   try {
     const running = $.process.run(argv, { stdin: JSON.stringify(event), timeoutMs: 5000 })
     if (running && typeof running.catch === "function") running.catch(() => {})
+  } catch {}
+}
+
+// told hands one event to rewake and waits until it is sent: $.process.run
+// resolves once the process has ended, and `rewake observe` has sent its one
+// datagram by then. Only for what must reach rewake ahead of the hooks of a
+// compaction the module asked for — never in a turn, which must not wait on it.
+async function told($, event) {
+  try {
+    await $.process.run(argv, { stdin: JSON.stringify(event), timeoutMs: 5000 })
   } catch {}
 }
 
@@ -58,6 +70,20 @@ let aborting
 const handled = new Set()
 let polling
 let busy = false
+// ours is the compaction the module asked the host for, with who asked, until
+// the host answers. The host runs every compaction through session.compact,
+// this one with trigger "plugin", and that is where rewake is told who asked.
+let ours
+// quiet settles a second after the end of the last compaction that was not
+// ours: that one's PostCompact reaches rewake a moment after it ends, and
+// arriving after the word for ours it would be counted as ours
+// (docs/remote-control.md).
+let quiet = Promise.resolve()
+function settle($) {
+  try {
+    quiet = Promise.resolve($.clock.sleep(1000)).catch(() => {})
+  } catch {}
+}
 
 const request = (text) => {
   try {
@@ -82,19 +108,33 @@ function refusal(error, reasons) {
 // act carries out one request. The host refuses a compaction mid-turn by
 // itself, atomically, so the module does not check; an abort needs the turn's
 // id, which only the module knows.
+// A compaction waits out the second after another one first. Once the host
+// starts it, the session.compact handler tells rewake who asked; a refusal
+// after that is told as well, before the answer, so rewake lays the word aside
+// ahead of any later hook.
 async function act($, asked) {
   if (asked.action === "compact") {
+    for (let waited; waited !== quiet; ) {
+      waited = quiet
+      await waited
+    }
+    const mine = { request: asked.id, by: word(asked.from), told: false }
+    ours = mine
     try {
       const focus = word(asked.focus)
       const result = focus === "" ? await $.session.compact() : await $.session.compact({ instructions: focus })
       const counts = result !== null && typeof result === "object" ? result : {}
       return { outcome: "done", tokensBefore: number(counts.tokensBefore), tokensAfter: number(counts.tokensAfter) }
     } catch (error) {
+      if (mine.told) await told($, { plugin_event: "compact.refused", request: asked.id })
       return refusal(error, [
         ["a turn is running", "in a turn"],
+        ["a turn is in flight", "in a turn"],
         ["switched off", "compaction switched off"],
         ["Not enough messages to compact", "nothing to compact"],
       ])
+    } finally {
+      if (ours === mine) ours = undefined
     }
   }
   if (asked.action === "interrupt") {
@@ -186,6 +226,21 @@ export function register(on) {
       if (aborting !== undefined && aborting.turn === id) aborting = undefined
     }
     return next(e)
+  })
+  on("session.compact", async ($, e, next) => {
+    const trigger = e !== null && typeof e === "object" ? e.trigger : undefined
+    if (trigger === "plugin" && ours !== undefined && !ours.told) {
+      // Ours: the hooks run beneath next, so the word goes first.
+      ours.told = true
+      await told($, { plugin_event: "compact.asked", request: ours.request, by: ours.by })
+      return next(e)
+    }
+    // Another's: while it runs the host refuses ours as in flight.
+    try {
+      return await next(e)
+    } finally {
+      settle($)
+    }
   })
   on("session.measure", async ($, e, next) => {
     // The event fires for rate limits and cost as well, and each report is a

@@ -159,7 +159,9 @@ func awaitedState(recipient string, message awaitedView) string {
 	case inbox.StagePending:
 		return detail("pending")
 	case inbox.StageStopped:
-		return "stopped by a person"
+		// The stop's own text says who stopped the turn: the person at the
+		// keyboard, or a main by name with rewake interrupt.
+		return detail("stopped")
 	case inbox.StageFailed:
 		return detail("not delivered, no report coming")
 	default:

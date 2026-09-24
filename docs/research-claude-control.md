@@ -127,6 +127,12 @@ this ([claude-plugin.md](claude-plugin.md)).
   `process.run: takes argv, a non-empty list of strings naming the command first (host
   check)`. A single options object `{ argv, init }` is such a form; a module calling it
   so ran nothing on a live session **[live]**, review-claude, September 23, 2026.
+  `$.process.run` resolves only once the process has ended: the host waits for the
+  child's exit and its output streams, within the timeout. A separate `$.process.spawn`
+  sits beside it, taking `{ argv, cwd?, env?, input? }`; it was not tried. Both read in
+  the 2.1.280 binary on September 24, 2026 **[source]**. rewake's module relies on the
+  first when it must tell rewake something before a compaction's hooks run
+  ([remote-control.md](remote-control.md#on-claude-code)).
 - **The load check on `$`** **[live]**, review-claude, September 24, 2026, 2.1.280: a
   module that uses `$` inside a logical expression — `$.env.get(x) || …` — does not load,
   and the debug log says `$ itself is used in a LogicalExpression (bound, passed, spread,

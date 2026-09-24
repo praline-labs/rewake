@@ -94,6 +94,12 @@ func (n *sessionNotices) announceCompactions(ctx context.Context, dir string, se
 			worker.compactions = event.Sequence
 			continue
 		}
+		if event.RequestedBy == self.Name {
+			// This main asked for it with rewake compact, whose answer
+			// already said so, with the count: a notice would say it twice.
+			worker.compactions = event.Sequence
+			continue
+		}
 		if err := putMainNotice(ctx, dir, self, compactionMessage(self, worker.session, event), func() error { return nil }); err != nil {
 			return err
 		}

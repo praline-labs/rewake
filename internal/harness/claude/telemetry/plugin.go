@@ -3,6 +3,7 @@ package telemetry
 import (
 	"math"
 
+	"github.com/iiiokojiadbi/rewake/internal/control"
 	statedir "github.com/iiiokojiadbi/rewake/internal/state"
 )
 
@@ -19,6 +20,16 @@ const (
 	TurnComplete = "turn.complete"
 	// SessionMeasure is the context fill the harness measured at a turn's end.
 	SessionMeasure = "session.measure"
+	// CompactAsked says the host has started the compaction a main's
+	// `rewake compact` asked for, with the request and who asked. The module
+	// sends it from the compaction's session.compact handler and holds the
+	// compaction until it is sent, and datagrams reach the collector in the
+	// order they were sent, so it arrives ahead of every hook of that
+	// compaction (docs/remote-control.md).
+	CompactAsked = "compact.asked"
+	// CompactRefused says the host refused that compaction after it started,
+	// or it failed: no PostCompact of it follows.
+	CompactRefused = "compact.refused"
 )
 
 // ReasonAborted is the turn.complete reason of a turn a person interrupted
@@ -33,9 +44,12 @@ type pluginInput struct {
 	Event  string `json:"plugin_event"`
 	Turn   string `json:"turn_id"`
 	Reason string `json:"reason"`
-	// By names the session whose `rewake interrupt` aborted the turn; empty
-	// for a turn a person stopped.
-	By      string `json:"by"`
+	// By names the session whose `rewake interrupt` aborted the turn, empty
+	// for a turn a person stopped; or the one whose `rewake compact` asked for
+	// a compaction.
+	By string `json:"by"`
+	// Request is that compaction's control request id.
+	Request string `json:"request"`
 	Context *struct {
 		Tokens  *float64 `json:"tokens"`
 		Window  *float64 `json:"window"`
@@ -90,6 +104,17 @@ func DecodePlugin(raw []byte) (Event, bool) {
 			return Event{}, false
 		}
 		event.Context = context
+	case CompactAsked, CompactRefused:
+		if !control.ValidID.MatchString(input.Request) {
+			return Event{}, false
+		}
+		event.Request = input.Request
+		if input.Event == CompactAsked {
+			if !statedir.ValidName(input.By) {
+				return Event{}, false
+			}
+			event.By = input.By
+		}
 	default:
 		return Event{}, false
 	}

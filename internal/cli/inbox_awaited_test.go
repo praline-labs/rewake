@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/boottime"
+	"github.com/iiiokojiadbi/rewake/internal/harness/claude/telemetry"
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/state"
@@ -126,6 +127,7 @@ func TestAwaitedShowsWhereEachTaskStands(t *testing.T) {
 	working := otherRun(t, room.dir, "working")
 	paused := otherRun(t, room.dir, "paused")
 	stopped := otherRun(t, room.dir, "halted")
+	aborted := otherRun(t, room.dir, "aborted")
 	done := otherRun(t, room.dir, "done")
 	refused := otherRun(t, room.dir, "refused")
 
@@ -148,7 +150,11 @@ func TestAwaitedShowsWhereEachTaskStands(t *testing.T) {
 	room.turnEnds(paused, turnResult{ID: "p/1", Text: "the suite is running", Started: markAt - 1, Ended: boottime.Now()})
 
 	halted := room.sentAndRead(stopped, "refactor")
-	room.turnEnds(stopped, turnResult{ID: "s/1", Text: "half way", Stopped: true})
+	room.turnEnds(stopped, turnResult{ID: "s/1", Text: telemetry.StoppedText, Stopped: true})
+	// A main's rewake interrupt is not a person's Esc, and the listing says
+	// which it was.
+	interrupted := room.sentAndRead(aborted, "rename")
+	room.turnEnds(aborted, turnResult{ID: "a/1", Text: telemetry.InterruptedText("lead"), Stopped: true})
 
 	settled := room.sentAndRead(done, "small fix")
 	room.turnEnds(done, turnResult{ID: "d/1", Text: "fixed"})
@@ -158,7 +164,7 @@ func TestAwaitedShowsWhereEachTaskStands(t *testing.T) {
 	views := byID(awaitedJSON(t))
 	want := map[string]inbox.Stage{
 		owed: inbox.StageOwed, unread: inbox.StageUnread, held: inbox.StageHeld, undelivered: inbox.StageUndelivered,
-		pending: inbox.StagePending, halted: inbox.StageStopped, failed: inbox.StageFailed,
+		pending: inbox.StagePending, halted: inbox.StageStopped, interrupted: inbox.StageStopped, failed: inbox.StageFailed,
 	}
 	for id, stage := range want {
 		if views[id].State != stage || views[id].Gone != "" {
@@ -176,7 +182,7 @@ func TestAwaitedShowsWhereEachTaskStands(t *testing.T) {
 	}
 
 	code, out, _ := run("inbox", "--awaited")
-	if code != ExitOK || !strings.HasPrefix(out, "Rewake: waiting on 6 reports; 1 more will not come:\n\nto working\n") {
+	if code != ExitOK || !strings.HasPrefix(out, "Rewake: waiting on 7 reports; 1 more will not come:\n\nto working\n") {
 		t.Fatalf("exit %d:\n%s", code, out)
 	}
 	for _, line := range []string{
@@ -185,7 +191,8 @@ func TestAwaitedShowsWhereEachTaskStands(t *testing.T) {
 		" · held: waiting for the person to approve\nheld one\n",
 		" · not delivered yet\njust sent\n",
 		" · pending: the suite is running\nrun the suite\n",
-		" · stopped by a person\nrefactor\n",
+		" · stopped: the person at the keyboard stopped this turn\nrefactor\n",
+		" · stopped: lead interrupted this turn with rewake interrupt\nrename\n",
 		" · not delivered, no report coming: the harness refused the notice\nnever landed\n",
 	} {
 		if !strings.Contains(out, line) {

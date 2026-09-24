@@ -169,7 +169,7 @@ product mutant, built by `buildMutant` in `mutant_test.go` with one edit through
 toolchain's overlay, inside a started case, refusing an edit that does not match exactly
 once; or a switch that changes the fixture's world. A mutant is preferred wherever one
 can be built, because it shows the scenario catching a broken rewake rather than a
-misbehaving peer. Of today's forty-seven controls, thirty-eight are mutants — batch-arrival's
+misbehaving peer. Of today's fifty-one controls, forty-two are mutants — batch-arrival's
 four; task-report's no-stop-hook, turn-ended-ignores-stop and settles-nothing;
 mid-turn's wait-for-idle; claude-telemetry's tap-without-owner, uncounted-compaction,
 silent-compaction and model-window; pending-report's pending-ignored and
@@ -179,7 +179,8 @@ owed-empty; thread-changed's delivery-unpinned, stop-thread-ignored and
 thread-always-changed; awaited-view's awaited-interim-ignored and awaited-never-settled;
 claude-interrupted's interrupt-unpublished, every-end-stopped, plugin-not-passed and
 stop-not-heard; claude-steered's compact-not-run, in-turn-unmapped, interrupter-unnamed,
-line-repeated, idle-interrupt-done, silent-not-answering and any-role-steers;
+line-repeated, idle-interrupt-done, silent-not-answering, any-role-steers,
+own-compaction-announced, compaction-uncounted, asker-untold and stop-by-a-person;
 stopped-routing's stopped-to-main — and nine are fixture switches:
 task-report's wrong-report, read-fails, failure-before-report and early-exit; the three
 readiness controls; mid-turn's late and failed-operation. A control names the
