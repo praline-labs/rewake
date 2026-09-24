@@ -82,12 +82,14 @@ harness, in a private HOME with a stand-in API, and found the plugin silent ther
   `pluginUsage` for `rewake@inline` turned out to come from `--plugin-dir`, not from the
   switch ([claude-plugin.md](../claude-plugin.md#limits)).
 
+**Accepted live**, September 24, 2026: the owner pressed Esc and then Ctrl+C at the
+keyboard, each during a task write-claude held from main, on Claude Code 2.1.280 with
+rewake built from `d97da91`; each gave main a `stopped` within seconds and both tasks
+stayed awaited. HF-06 is **live** on Claude Code; the observation is in
+[harness-features.md](../harness-features.md#capability-map).
+
 **What stays open.**
 
-- HF-06 on Claude Code is **impl?** until the owner accepts an Esc at the keyboard on a
-  live session ([harness-features.md](../harness-features.md#capability-map)). review-claude
-  saw the real harness call the module the same day and rewake receive `stopped`,
-  `finished` and `error`, with the interruption simulated by `$.turn.abort`.
 - The remaining risk the traps entry names: a person who turns the session to unrelated
   work after Esc settles the interrupted task with that work's `finished`.
 - A plugin that unloads after its first event leaves `interruptions` at `observed`.

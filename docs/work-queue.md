@@ -73,9 +73,9 @@ Conversation tracking is built as well and passes its fixture case
 
 What stays open is listed in the feature map's [parity queue](harness-features.md#open).
 A keyboard interruption now produces `stopped` (HF-06) through rewake's function-hooks
-plugin, stage 1, observation only, built on September 23, 2026 and waiting for the
-owner's acceptance on a live session ([claude-plugin.md](claude-plugin.md)); the same
-plugin ends "working after Esc". The harness's own `/clear` and `/resume` were observed
+plugin, stage 1, observation only, built on September 23, 2026 and accepted live by the
+owner on September 24, 2026 with an Esc and a Ctrl+C at the keyboard
+([claude-plugin.md](claude-plugin.md)); the same plugin ends "working after Esc". The harness's own `/clear` and `/resume` were observed
 working under rewake the same day (HF-19). One telemetry limit remains: the waiting
 state is unknown during a turn ([session-state.md](session-state.md#claude-code-source)).
 A later stage of the plugin may act on the session — a compaction asked for from outside

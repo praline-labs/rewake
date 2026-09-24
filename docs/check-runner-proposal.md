@@ -17,7 +17,8 @@ the mailbox is shared
 lands under both. Hence the asymmetry: the Codex column is a regression gate, the
 Claude Code column is where defects are expected. An **impl?** cell there means
 *unverified*, never *works* — odd behaviour gets investigated, not attributed to the
-harness. After September 21, 2026 one such cell remains: HF-19.
+harness. On September 21, 2026 one such cell remained, HF-19; the current marks are in
+[harness-features.md](harness-features.md#capability-map).
 
 **The proposal in one paragraph.** Keep `go test` as the engine and add no framework.
 A workflow scenario becomes an ordinary Go test in a new `test/workflow` package,

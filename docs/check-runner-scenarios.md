@@ -162,12 +162,12 @@ endpoint, **M** real-model semantic (paid), **O** owner TUI.
 | `batch-arrival` | HF-07, HF-20 | F runs | F runs, minus the conversation | F; grouping is shared service code |
 | `mid-turn` | HF-21, HF-09 | F runs | `unsupported` — no `observes-mid-turn-arrival` | `unsupported` unless it declares the capability |
 | `ack-recovery` (4th) | HF-09, HF-03 | F | F | F |
-| `stopped-outcome` (later) | HF-06 | F | `unsupported` — no interruption source | by capability |
+| `stopped-routing`, `claude-interrupted` | HF-06 | F runs `stopped-routing` | F runs both since September 23, 2026 — the interruption heard through rewake's plugin | by capability |
 | `git-grant` (later) | HF-15 | F | `unsupported` — not an eligible recipient | by capability |
 | `telemetry-source` | HF-11, HF-22 | F then P | F runs as `claude-telemetry` since September 23, 2026 — the collector exists | by capability |
 | `thread-changed` | HF-10 | not in the suite; the gateway's tests and the live run of September 17, 2026 cover it | F runs since September 23, 2026 — `/clear` played by the fixture | by capability |
 | `telemetry-read` (later) | HF-12 | F then P | F then P — the reader works on both | F |
-| Conversation commands (later) | HF-19 | F | **must run** — HF-19 is `impl?`, not missing | by capability |
+| Conversation commands (later) | HF-19 | F | F — HF-19 is live since September 23, 2026; launch-time resume is still unchecked | by capability |
 | Arrival appearance | HF-14 | O | O | O |
 | Model actually reads mail | HF-04, HF-21 | M | M | M |
 
@@ -186,9 +186,10 @@ column cheap: the matrix is generated from capabilities, not maintained by hand.
 `unsupported` and **impl?** are not the same thing, and conflating them would quietly
 defeat the purpose. `unsupported` means the capability is absent — the **missing**
 mark. An **impl?** row is implemented and merely unobserved, so its scenario *must*
-run; skipping it leaves the row unverified for ever. After September 21, 2026 exactly
-one Claude Code row is still **impl?** — HF-19, the harness's own conversation
-commands — which is why it has a row above with no `unsupported` cell.
+run; skipping it leaves the row unverified for ever. On September 21, 2026 that row was
+HF-19, the harness's own conversation commands, observed live since September 23, 2026;
+since September 24, 2026 the one Claude Code row still **impl?** is HF-10, and its
+scenario `thread-changed` runs.
 
 Telemetry is split for the same reason the feature map splits it: the source (HF-11,
 HF-22) and the reader (HF-12) reached Claude Code at different times — the reader is

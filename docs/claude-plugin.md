@@ -114,13 +114,16 @@ is not reported, and the next turn end that finishes settles its task.
 - **The API is early access** and may change between releases. What the plugin reads
   was seen live on Claude Code 2.1.280; a release that renames an event or a field makes
   it fall silent, which is the fallback above.
-- **Not accepted live yet.** The fixture runs the module rewake writes under node, with a
-  `$.process.run` as strict as the harness's, and plays it the events in the order seen
-  live. That the real harness calls the module was seen by review-claude on September
-  23, 2026, on 2.1.280, in a private HOME with a stand-in API: rewake received `stopped`,
-  `finished` and `error` from a live session through the plugin. The interruption there
-  was simulated with `$.turn.abort` from a module, not typed; an Esc at the keyboard is
-  left to the owner's acceptance, and HF-06 stays **impl?** until then.
+- **Accepted live on one run of each key.** The fixture runs the module rewake writes
+  under node, with a `$.process.run` as strict as the harness's, and plays it the events
+  in the order seen live. That the real harness calls the module was seen by
+  review-claude on September 23, 2026, on 2.1.280, in a private HOME with a stand-in
+  API, with the interruption simulated by `$.turn.abort`. The owner accepted it at the
+  keyboard on September 24, 2026, on 2.1.280 with rewake built from `d97da91`: an Esc
+  and then a Ctrl+C, each during a worker's task, each gave main a `stopped` within
+  seconds, and both tasks stayed awaited. HF-06 is **live** on Claude Code; the
+  observation and its limits — one run of each key, the keypress-to-notice time not
+  measured apart — are in [harness-features.md](harness-features.md#capability-map).
 - **The order** of the hook and `turn.complete`, seen live on 2.1.280 by review-claude
   on September 23, 2026: in five ordinary turns `classic.Stop` came 15 to 30 ms before
   `turn.complete` with reason `answer`; on an API error and on a refusal
