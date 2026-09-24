@@ -330,14 +330,14 @@ func TestAnAskerCutShortWithdrawsTheRequest(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	slow := Limits{Pickup: 10 * time.Second, Outcome: 10 * time.Second, Poll: 5 * time.Millisecond}
 	go func() {
-		for !exists(RequestPath(dir)) {
+		for deadline := time.Now().Add(5 * time.Second); !exists(RequestPath(dir)) && time.Now().Before(deadline); {
 			time.Sleep(time.Millisecond)
 		}
 		cancel()
 	}()
 	started := time.Now()
 	answer, err := Ask(ctx, dir, Request{Action: Compact, From: "lead"}, slow)
-	if err != nil || answer.Reason != NotAnswering || time.Since(started) > 2*time.Second {
+	if err != nil || answer.Reason != CutShort || time.Since(started) > 2*time.Second {
 		t.Fatalf("answer %+v, %v after %s", answer, err, time.Since(started))
 	}
 	if names := left(t, dir); len(names) != 0 {

@@ -130,7 +130,8 @@ The remaining entries of [harness-features.md](harness-features.md), in its orde
 
 **A wrapper left stopped after its harness was stopped from outside.** Recorded
 September 24, 2026, cause unknown ([intermittent-bugs.md](intermittent-bugs.md#a-stopped-harness-leaves-its-wrapper-stopped--cause-unknown-september-24-2026)):
-find who continues the harness, then decide whether `followStop` should notice it.
+confirm whether the wrapper's own `SIGCONT` continues the harness before the wrapper's
+stop of itself takes effect, as the snapshot review suspects, then fix `followStop`.
 
 **An orchestrator starts a worker in the background.** The owner's idea for later,
 recorded September 23, 2026, after honest delivery status for Claude Code landed:

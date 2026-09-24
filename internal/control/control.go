@@ -43,6 +43,7 @@ const (
 	CompactionOff    = "compaction switched off"
 	NothingToCompact = "nothing to compact"
 	NotAnswering     = "not answering"
+	CutShort         = "cut short"
 	NoControl        = "no control directory"
 	Withdrawn        = "withdrawn before it was taken"
 	Busy             = "another request in flight"
@@ -157,10 +158,12 @@ func Ask(ctx context.Context, dir string, request Request, limits Limits) (Answe
 		_ = os.Remove(RequestPath(dir))
 		lastLook(dir, request.ID)
 		if !exists(TakenPath(dir, request.ID)) && !exists(AnswerPath(dir, request.ID)) {
-			detail := fmt.Sprintf("nothing took the request within %s", limits.Pickup)
+			// The asker's own call was interrupted: nothing is known about
+			// the target, so this is not the target's silence.
 			if ctx.Err() != nil {
-				detail = "the wait was cut short before anything took the request, and it is withdrawn"
+				return Answer{ID: request.ID, Outcome: Refused, Reason: CutShort, Detail: "the wait was cut short before anything took the request, and it is withdrawn"}, nil
 			}
+			detail := fmt.Sprintf("nothing took the request within %s", limits.Pickup)
 			return Answer{ID: request.ID, Outcome: Refused, Reason: NotAnswering, Detail: detail}, nil
 		}
 	}

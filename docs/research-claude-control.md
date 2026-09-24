@@ -74,6 +74,19 @@ the moment of an interruption.
   tools that follow are outside its reach, and blocking every turn behind a hook is a
   cost of its own.
 
+- **A Bash tool's command gets SIGTERM, then SIGKILL.** Probed by review-claude on
+  September 24, 2026, Claude Code 2.1.280, in a private HOME with a stand-in API that
+  asked for a Bash tool call **[live]**, and read in the binary **[source]**. The tool
+  runs `bash -c` as the leader of its own session and group, and the command's
+  processes inherit that group. On Esc and on Ctrl+C alike the harness sends SIGTERM to
+  the command's whole process tree — 64 to 67 ms after Esc, 13 to 15 ms after Ctrl+C —
+  and never SIGINT **[live]**. It then polls every 100 ms and, if the tree is still alive
+  after 1500 ms, sends SIGKILL to the group and the tree **[source]**; a command that
+  ignored SIGTERM died silently between 1.47 and 1.67 s **[live]**. Esc and Ctrl+C
+  during a tool go to the same kill **[source]**. So a `rewake compact` or
+  `rewake interrupt` that a main runs from its Bash tool has 1.5 s to withdraw its
+  request when main's turn is interrupted ([remote-control.md](remote-control.md)).
+
 So no immediate interruption signal is reachable by rewake within its boundaries through
 a hook or the wrapper. Catching Esc in the wrapper would mean reading the keyboard between
 the person and the harness — a pseudo-terminal proxy, which the project's boundaries

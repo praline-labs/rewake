@@ -14,7 +14,7 @@ import (
 
 // controlHost plays the module the parts of $ a control request uses, as
 // strict as Claude Code 2.1.280 is about them (read in the binary and seen
-// live, docs/research-claude-control.md):
+// live, docs/research-claude-actions.md):
 //
 //   - $.clock.every(ms, fn) takes a non-negative number and a function. The
 //     host never fires it on its own: a "tick" step runs every callback and
@@ -72,7 +72,7 @@ const $ = {
     if (!form) return refuse("$.session.compact takes { instructions } (a string) or nothing")
     if (running !== undefined) return refuse("$.session.compact: a turn is running (" + running + "); the conversation compacts between turns, so call it from turn.complete or later")
     if (world.compactOff) return refuse("$.session.compact: compaction is switched off in this session (DISABLE_COMPACT), for /compact and plugins alike")
-    if (world.tooShort) return refuse("Not enough messages to compact.")
+    if (world.tooShort) return refuse("$.session.compact: Not enough messages to compact.")
     compacts.push(a.length === 0 ? null : a[0].instructions)
     return { messages: [{ role: "user", text: "SECRET SUMMARY" }], tokensBefore: 120000, tokensAfter: 9000, usage: { input: 1 } }
   } },

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -122,6 +123,33 @@ func TestAWorkerThatTakesNothingIsNotAnswering(t *testing.T) {
 	if code, _, errOut := run("compact", "worker"); code != ExitFailed || !strings.Contains(errOut, "refused the compaction: no control directory") ||
 		!strings.Contains(errOut, "restart that session with the current rewake") || strings.Contains(errOut, "--bare") {
 		t.Fatalf("without a control directory: exit %d, %q", code, errOut)
+	}
+}
+
+// Esc or Ctrl+C on main, while this command runs from its Bash tool, sends
+// the command SIGTERM (docs/research-claude-actions.md): the wait ends, the
+// request is withdrawn, and the answer says the call was cut short — not that
+// the worker is silent. Without the handler the signal would end this test
+// binary.
+func TestASIGTERMDuringPickupWithdrawsTheRequest(t *testing.T) {
+	_, _, controlDir := steerWorld(t, "claude")
+	steerLimits = map[string]control.Limits{control.Compact: {Pickup: 5 * time.Second, Outcome: 5 * time.Second, Poll: 5 * time.Millisecond}}
+	go func() {
+		for deadline := time.Now().Add(3 * time.Second); time.Now().Before(deadline); time.Sleep(time.Millisecond) {
+			if _, err := os.Stat(control.RequestPath(controlDir)); err == nil {
+				_ = syscall.Kill(os.Getpid(), syscall.SIGTERM)
+				return
+			}
+		}
+	}()
+	started := time.Now()
+	code, _, errOut := run("compact", "worker")
+	if code != ExitFailed || !strings.Contains(errOut, "refused the compaction: cut short") || !strings.Contains(errOut, "ask again") ||
+		strings.Contains(errOut, "--bare") || time.Since(started) > 2*time.Second {
+		t.Fatalf("exit %d after %s, %q", code, time.Since(started), errOut)
+	}
+	if _, err := os.Stat(control.RequestPath(controlDir)); err == nil {
+		t.Fatal("the request stayed behind")
 	}
 }
 

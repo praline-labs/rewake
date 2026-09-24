@@ -97,9 +97,10 @@ func steer(ctx *Context, call Call, action string) error {
 		return usage("focus not supported by %s: it has no way to pass a focus for one compaction. Run rewake compact %s without it.", harnessTitle(found, session.Harness), session.Name)
 	}
 
-	// An Esc on the calling session interrupts this shell call with a signal;
-	// the request is withdrawn on the way out rather than left for a stalled
-	// target to carry out later, unseen. SIGKILL cannot be caught.
+	// An Esc or Ctrl+C on the calling session ends this shell call with
+	// SIGTERM, and SIGKILL 1.5 s later (docs/research-claude-control.md); the
+	// request is withdrawn on the way out rather than left for a stalled target
+	// to carry out later, unseen. SIGKILL cannot be caught.
 	asking, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	model := steerModel{Session: session.Name, Action: action, Focus: focus}
@@ -155,6 +156,7 @@ var steerNext = map[string]string{
 	control.CompactionOff:    "The session runs with compaction switched off; rewake cannot change that.",
 	control.NothingToCompact: "The conversation is too short to compact; nothing was done.",
 	control.NotAnswering:     "Its rewake plugin is not loaded or not answering — --bare, function hooks switched off, another harness version; such a session shows interruptions unobserved in rewake list.",
+	control.CutShort:         "This call was interrupted before the session took the request, which is withdrawn; nothing was done: ask again.",
 	control.NoControl:        "It was started by an earlier rewake, which takes no requests, or its wrapper could not make the directory: restart that session with the current rewake.",
 	control.Withdrawn:        "The session took it in the instant this command gave up waiting, and did nothing: ask again.",
 	control.Busy:             "Wait for that request to end, then ask again.",

@@ -41,7 +41,8 @@ command waits for its outcome, within bounds:
 | `refused`, `no turn running` | 1 | an interrupt was asked while the worker is idle |
 | `refused`, `compaction switched off` | 1 | the worker runs with compaction switched off |
 | `refused`, `nothing to compact` | 1 | the conversation is too short to compact |
-| `refused`, `not answering` | 1 | nothing took the request within 5 seconds: the plugin is not loaded, or the session is stalled — stopped, or its process frozen — or the call was cut short before anything took it |
+| `refused`, `not answering` | 1 | nothing took the request within 5 seconds: the plugin is not loaded, or the session is stalled — stopped, or its process frozen |
+| `refused`, `cut short` | 1 | the command itself was interrupted before anything took the request; the request is withdrawn and nothing was done |
 | `refused`, `no control directory` | 1 | the session was started by an earlier rewake, or its wrapper could not make one: restart it |
 | `refused`, `withdrawn before it was taken` | 1 | the session took the request in the instant the command gave up, and did nothing |
 | `refused`, `another request in flight` | 1 | another `compact` or `interrupt` is waiting on the same session |
@@ -105,10 +106,15 @@ adds no limit of its own: the check is one more read before acting. Found in rev
 September 24, 2026, when the asker still removed the request at pickup and a module that
 had read it in the same instant acted after `not answering` was reported.
 
-**An asker cut short** — an Esc on main interrupts its shell call with a signal, or the
-call is terminated — stops waiting, withdraws the request on the way out and reports
-that the wait was cut short: `not answering` before a pickup, `failed` after one. So a
-stalled target that resumes later finds nothing to carry out.
+**An asker cut short** — an Esc or Ctrl+C on main ends its Bash tool's command with
+SIGTERM, and SIGKILL 1.5 s later if it is still alive (seen live and read in the binary,
+Claude Code 2.1.280, September 24, 2026,
+[research-claude-control.md](research-claude-control.md#a-second-probe-signals-and-hooks-around-an-interruption)),
+or the call is terminated otherwise — stops waiting on SIGTERM or SIGINT, withdraws the
+request on the way out and reports that the wait was cut short: refused as `cut short`
+before a pickup, `failed` after one. So a stalled target that resumes later finds nothing
+to carry out. The withdrawal waits for nothing, so it fits in the 1.5 s: a probe of the
+same day saw exit 1 in 53 ms with the request removed.
 
 The limits: pickup 5 seconds for both — the module polls four times a second —
 outcome 90 seconds for a compaction, a request to the model that stays under the two
@@ -199,14 +205,15 @@ will implement `Steerable` with `CompactFocus` false.
   and its late result cleared, a partial or foreign answer ignored, a second asker
   refused without writing, no directory, a request taken as the asker gives up, in
   each of the three orders above, a taken request left in place while it is served, and
-  an asker cut short withdrawing its request.
+  an asker cut short withdrawing its request as `cut short`.
 - `internal/wrap/control_test.go` — the wrapper makes the directory, private, for a
   harness that serves it, removes it with the session, and makes none for one that
   does not.
 - `internal/cli/steer_test.go` — the commands against a fake served side: the outputs,
   the refusals with their next action, `not answering`, and every wrong call refused
   with exit 2 and nothing written; a harness that is not steerable, and one without a
-  focus.
+  focus; and a SIGTERM during the pickup, which ends the call as `cut short` with the
+  request withdrawn instead of ending the process.
 - `internal/harness/claude/plugin_control_test.go` — the module under node against a
   strict host with the research's forms and refusals of `$.clock.every`, `$.fs`,
   `$.session.compact` and `$.turn.abort`: an idle compaction, the host's refusals passed

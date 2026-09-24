@@ -93,7 +93,7 @@ func (claudeHarness) ID() string    { return ID }
 func (claudeHarness) Title() string { return "Claude Code" }
 
 // CompactFocus: the plugin passes a focus as the compaction's instructions,
-// which reach the summary request (docs/research-claude-control.md).
+// which reach the summary request (docs/research-claude-actions.md).
 func (claudeHarness) CompactFocus() bool { return true }
 
 func (claudeHarness) Summary() string {

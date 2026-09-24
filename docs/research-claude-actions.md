@@ -31,14 +31,15 @@ Probed by review-claude on September 24, 2026, Claude Code 2.1.280, with a stand
   turn.complete or later` — the host prefixes every refusal a plugin gets with the
   plugin's name — and the turn went on to end with `answer` **[live]**; the same from a
   clock callback and from `session.receive`. A short conversation is refused with
-  `rewake: Not enough messages to compact.` **[live, 2.1.280, September 24, 2026,
-  review-claude]**. Other refusals **[source]**: `compaction is switched off in this
+  `rewake: $.session.compact: Not enough messages to compact.` **[live, 2.1.280,
+  September 24, 2026, review-claude]**. Other refusals **[source]**: `compaction is switched off in this
   session (DISABLE_COMPACT), for /compact and plugins alike`, and one for a call from a
   hook that holds the turn.
 - **`$.turn.abort({ turnId })`** ends the running turn: `turn.complete` with reason
-  `aborted` came 2 ms later **[live]**. Idle it is refused with `$.turn.abort: no turn
-  is running (asked for …)` **[live]**, a wrong id with `… is not the running turn (Y)`
-  **[source]**. Unlike an Esc before the first output, the prompt stays in the
+  `aborted` came 2 ms later **[live]**. Idle it is refused with `<plugin>: $.turn.abort:
+  no turn is running (asked for …)` — `ctl: $.turn.abort: no turn is running (asked for
+  none)` from a probe plugin named `ctl` on September 23 **[live]** — and a wrong id with
+  `… is not the running turn (Y)` **[source]**. Unlike an Esc before the first output, the prompt stays in the
   conversation; the next request carried the aborted prompt and the next one in a single
   user message, with no marker of the abort, and the screen showed no "Interrupted"
   **[live]**.

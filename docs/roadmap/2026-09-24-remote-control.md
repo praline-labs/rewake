@@ -114,6 +114,22 @@ suite was not run before that commit. The five checks do not run the suite.
   - the command's wait cut short by SIGINT and SIGTERM;
   - `not answering` described as it is, and main's interrupt added to `flow.md`;
   - a test that the wrapper removes the directory.
+- review-claude reviewed the snapshot of `43a1f62` and probed an Esc live. Six of the
+  seven fixes were as claimed, and the mutants that had survived for the request left in
+  place and the directory's removal were now killed. The seventh, the signal handler,
+  had no test at the command's level: a mutant that waited on a plain context survived.
+  The probe found what main's Esc does to a command it runs: SIGTERM to the command's
+  whole tree on Esc and on Ctrl+C alike, never SIGINT, and SIGKILL 1.5 s later
+  ([research-claude-control.md](../research-claude-control.md#a-second-probe-signals-and-hooks-around-an-interruption)).
+  Fixed after A2, in a commit of its own:
+  - a test that sends the command SIGTERM during the pickup and expects the request
+    withdrawn;
+  - a reason of its own, `cut short`, whose hint says to ask again, instead of a
+    `not answering` that sent the caller looking for `--bare` on the target;
+  - the refusal quotes with their prefix;
+  - stale pointers from the code to the research;
+  - the SIGSTOP entry: the missing mail inferred, not seen, and the wrapper's own
+    `SIGCONT` as the likelier cause.
 
 **What stays open.**
 
@@ -125,8 +141,9 @@ suite was not run before that commit. The five checks do not run the suite.
   that moment carries it out when it resumes, telling nobody
   ([remote-control.md](../remote-control.md#known-limits)).
 - Found by review-claude outside part A and not yet explained: after a SIGSTOP of the
-  harness the wrapper stays stopped while the harness runs again, and no mail is
-  delivered until someone continues the wrapper
+  harness the wrapper stays stopped while the harness runs again, and by its state it
+  would deliver no mail until someone continues it; the wrapper's own `SIGCONT` to the
+  harness is the likelier cause
   ([intermittent-bugs.md](../intermittent-bugs.md)).
 - The fixture's threshold for "Not enough messages to compact" is its own, and a focus
   reaching the summary request is shown only live; the workflow case says so.

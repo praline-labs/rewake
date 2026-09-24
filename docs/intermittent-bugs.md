@@ -125,18 +125,24 @@ working tree of stage 2 part A, in a private HOME with a stand-in API; evidence 
 the wrapper as designed: `followStop` (`internal/wrap/signals.go`) sees the harness in
 `T` and stops the wrapper with it, to continue the harness once the wrapper is
 continued. But the harness was running again within 0.15 s, while the wrapper stayed
-stopped — the wrapper in `T`, the harness in `S` — and no mail was delivered to the
-session until somebody sent the wrapper `SIGCONT`. Stopping the wrapper first behaved.
+stopped — the wrapper in `T`, the harness in `S`. That no mail would reach the session
+until somebody sent the wrapper `SIGCONT` is inferred from the wrapper's state, not
+observed: no mail was sent while it was stopped. Stopping the wrapper first behaved.
 
-**What is not known.** Who continued the harness. An isolated Go reproduction of
-`followStop` with a plain child did not reproduce it, so the harness itself, or
-something around it, is the likelier source; that is not established.
+**What is not known.** Who continued the harness. The harness does not resume by
+itself: with the wrapper stopped first, it stayed in `T` for 6.5 s. So the wrapper's own
+reaction is the likelier source — in `followStop` (`internal/wrap/signals.go`) the
+`SIGCONT` to the harness may run before the wrapper's stop of itself takes effect. An
+isolated Go reproduction of `followStop` with a plain child did not reproduce it, but it
+differed from the wrapper: no `signal.Notify`, fewer threads. Review of the snapshot of
+`43a1f62`, September 24, 2026; not established.
 
 **Why it matters.** A wrapper left stopped serves no mailbox, and nothing says so:
 `rewake list` still shows the session alive. It needs a stop from outside to begin
 with, which no rewake path sends.
 
-**What to capture next time:** the order and senders of the signals the harness
-receives — its own handlers for `SIGTSTP` and `SIGCONT` among them — the process states
-of both at short intervals from the stop on, and whether a harness without its terminal
-interface does the same.
+**What to capture next time:** a debug build of the wrapper that writes a timestamp
+around its stop of itself and around the `SIGCONT` it sends the harness, and the
+process states of both at short intervals from the stop on; `strace` was not available
+to the probe. Then whether a harness without its terminal interface
+does the same.

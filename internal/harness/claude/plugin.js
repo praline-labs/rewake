@@ -70,7 +70,7 @@ const request = (text) => {
 const message = (error) => String(error !== null && typeof error === "object" && typeof error.message === "string" ? error.message : error)
 
 // refusal maps the host's refusal to one of rewake's reasons by the words the
-// host uses (docs/research-claude-control.md), and keeps its text as it was.
+// host uses (docs/research-claude-actions.md), and keeps its text as it was.
 function refusal(error, reasons) {
   const detail = message(error)
   for (const [words, reason] of reasons) {
