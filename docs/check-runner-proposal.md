@@ -192,7 +192,7 @@ twenty lines and 8 KiB combined — is realistic for the shape below and should 
 ```
 checks    5/5 ok           12.4s
 workflow  3 scenarios × 2 harnesses: 5 pass, 1 unsupported   64.1s
-          unsupported  mid-turn/claude-code  no interruption source (HF-06)
+          unsupported  mid-turn/claude-code  no observes-mid-turn-arrival (HF-21)
 summary   .rewake-checks/2026-09-21T00-41/summary.json
 ```
 

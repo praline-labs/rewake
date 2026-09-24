@@ -120,10 +120,13 @@ is not reported, and the next turn end that finishes settles its task.
   review-claude on September 23, 2026, on 2.1.280, in a private HOME with a stand-in
   API, with the interruption simulated by `$.turn.abort`. The owner accepted it at the
   keyboard on September 24, 2026, on 2.1.280 with rewake built from `d97da91`: an Esc
-  and then a Ctrl+C, each during a worker's task, each gave main a `stopped` within
-  seconds, and both tasks stayed awaited. HF-06 is **live** on Claude Code; the
-  observation and its limits — one run of each key, the keypress-to-notice time not
-  measured apart — are in [harness-features.md](harness-features.md#capability-map).
+  and then a Ctrl+C, each during a worker's task, each gave main a `stopped`, and both
+  tasks stayed awaited. The Ctrl+C's `stopped` arrived at most 5 s after its task was
+  sent, the turn's start included; the Esc's has no such bound, since the time of the
+  keypress is unknown. HF-06 is **live** on Claude Code; the observation and its limits —
+  one run of each key, the keypress-to-notice time not measured apart, replay not
+  checked deliberately — are in
+  [harness-features.md](harness-features.md#capability-map).
 - **The order** of the hook and `turn.complete`, seen live on 2.1.280 by review-claude
   on September 23, 2026: in five ordinary turns `classic.Stop` came 15 to 30 ms before
   `turn.complete` with reason `answer`; on an API error and on a refusal

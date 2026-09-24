@@ -84,8 +84,10 @@ harness, in a private HOME with a stand-in API, and found the plugin silent ther
 
 **Accepted live**, September 24, 2026: the owner pressed Esc and then Ctrl+C at the
 keyboard, each during a task write-claude held from main, on Claude Code 2.1.280 with
-rewake built from `d97da91`; each gave main a `stopped` within seconds and both tasks
-stayed awaited. HF-06 is **live** on Claude Code; the observation is in
+rewake built from `d97da91`; each gave main a `stopped` and both tasks stayed awaited.
+The Ctrl+C's arrived at most 5 s after its task was sent, the turn's start included; the
+Esc's has no bound, since the keypress time is unknown. HF-06 is **live** on Claude
+Code; the observation and its limits are in
 [harness-features.md](../harness-features.md#capability-map).
 
 **What stays open.**

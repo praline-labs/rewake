@@ -16,7 +16,10 @@ Probed on September 23, 2026, Claude Code 2.1.280, in a private HOME against a f
 on a local port, with Esc and Ctrl+C typed through tmux **[live]** and the abort path
 read in the binary **[source]**.
 
-An interrupted turn is marked by nothing rewake can hear (HF-06):
+Through hooks and the wrapper alone, an interrupted turn is marked by nothing rewake
+can hear (HF-06); a function-hooks plugin does hear it, and rewake's own plugin reports
+it since September 23, 2026 ([below](#what-a-function-hooks-plugin-hears)). The probe
+found:
 
 - Esc while the request hangs, while text streams, and during a Bash tool: no `Stop`,
   `StopFailure`, `Notification` or `PostToolUseFailure`. No hook, no status-line field
