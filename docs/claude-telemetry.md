@@ -69,7 +69,9 @@ layer uses both; the wrapper listens.
   not load, the listing shows the model's window whatever the person set, the flag
   included, because the variable and the key are read only through the plugin.
   Owner decision, September 24, 2026: the listing shows the person's limit as the
-  window, read from the harness's own sources rather than assumed. Leaving the
+  window, read from the harness's own sources rather than assumed; the owner does not
+  change the value mid-conversation, and the reading at every measure follows an edit
+  anyway. Leaving the
   compaction point out is a design choice made for the reason above, not part of that
   decision.
 - **The tap.** The status line becomes `rewake status-tap <socket> <sources> [caller]`.

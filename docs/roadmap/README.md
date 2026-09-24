@@ -87,6 +87,7 @@ without a date. Local installation without publishing is in
 | September 23, 2026 | [Conversation tracking for Claude Code](2026-09-23-claude-thread-tracking.md) | deliveries pinned to the collector's `session_id`, compared with the Stop hook's; `threadChanged` on the fixture |
 | September 23, 2026 | [What others owe you](2026-09-23-awaited-view.md) | `rewake inbox --awaited`: what a run sent and still waits on, by recipient, and the main playbook's line for it |
 | September 23, 2026 | [A Claude Code plugin that hears an interruption](2026-09-23-claude-plugin.md) | stage 1, observation only: Esc gives `stopped` without waiting for the next turn, with the Codex semantics, activity follows turns, `interruptions` says whether it is heard; accepted live by the owner on September 24, 2026 |
+| September 24, 2026 | [A Claude Code session's context window, as the person set it](2026-09-24-claude-context-window.md) | the auto-compact window read through the plugin and the launch and shown as the window; reviewed live in eleven runs |
 
 ## Remaining work — owner decisions, September 19–21, 2026
 
