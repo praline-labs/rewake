@@ -127,7 +127,7 @@ func TestAWorkerThatTakesNothingIsNotAnswering(t *testing.T) {
 }
 
 // Esc or Ctrl+C on main, while this command runs from its Bash tool, sends
-// the command SIGTERM (docs/research-claude-actions.md): the wait ends, the
+// the command SIGTERM (docs/research-claude-control.md): the wait ends, the
 // request is withdrawn, and the answer says the call was cut short — not that
 // the worker is silent. Without the handler the signal would end this test
 // binary.

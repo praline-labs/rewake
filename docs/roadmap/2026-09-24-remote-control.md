@@ -70,9 +70,11 @@ remove both of its guards. Told alone is never reached in the fixture: the next 
 start lays the mark aside before a second notice is composed.
 
 A2 also mended the suite. A1's module calls `$.clock.every` in `session.start`, which
-the fixture's host did not have. Read from the code, not re-run on `43a1f62`: every case
-that runs the module then had it fail on its first event and unloaded, and the workflow
-suite was not run before that commit. The five checks do not run the suite.
+the fixture's host did not have, so every case that runs the module had it fail on its
+first event and unloaded; the workflow suite was not run before that commit, and the
+five checks do not run it. review-claude re-ran `43a1f62` afterwards:
+`claude-interrupted` and `stopped-routing` on the Claude Code column were red, six times
+`session.start failed … reading every`, while `claude-telemetry` stayed green.
 
 **The live probes and reviews.**
 

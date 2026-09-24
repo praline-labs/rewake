@@ -41,7 +41,8 @@ const [modulePath, controlDir, stepsJSON, worldJSON] = process.argv.slice(2)
 const world = JSON.parse(worldJSON)
 const calls = [], errors = [], compacts = [], aborts = []
 let timers = [], running, handlers, loads = 0
-const refuse = (text) => { errors.push(text); return Promise.reject(new Error(text)) }
+// The harness puts the plugin's name in front of every refusal it gives.
+const refuse = (text) => { errors.push(text); return Promise.reject(new Error("rewake: " + text)) }
 const path = (p) => typeof p === "string" && p !== ""
 const $ = {
   process: { run: checkedRun((argv, init) => { calls.push(JSON.parse(init.stdin)); return Promise.resolve({ exitCode: 0, stdout: "", stderr: "" }) }) },
