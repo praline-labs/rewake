@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -22,6 +23,11 @@ const (
 	tapBudgetMedian  = 20.0
 )
 
+// ownerWindow is the auto-compact window the person sets in the env block of
+// their settings, as the owner does: below the fixture model's 200000, so the
+// listing has a window to lower.
+const ownerWindow = "150000"
+
 // ownerStatusCommand is the person's own status line in the case: it prints
 // the model id it finds on stdin, so its output shows both that it ran and
 // that what the harness handed the tap reached it.
@@ -30,10 +36,11 @@ const ownerStatusCommand = `sed -n 's/.*"id":"\([^"]*\)".*/owner \1/p'`
 // TestClaudeTelemetry is the collector end to end on the Claude Code column,
 // seen from where it is used: a main and a worker. The worker's hooks and
 // status line, run as the harness runs them, reach the main's `rewake list` as
-// model, effort, context, compactions and activity; the main's header on a
-// message from the worker shows the same; a compaction on the worker is
-// announced to the main; the person's status line is still what is shown;
-// and the commands stay cheap.
+// model, effort, context, compactions and activity; the auto-compact window
+// the person set in their settings, read by rewake's plugin, stands in for the
+// model's window; the main's header on a message from the worker shows the
+// same; a compaction on the worker is announced to the main; the person's
+// status line is still what is shown; and the commands stay cheap.
 //
 // Only this column: the Codex column's telemetry comes from its server and is
 // exercised by every scenario that waits on it.
@@ -60,6 +67,7 @@ func TestClaudeTelemetry(t *testing.T) {
 
 const (
 	obsTelemetryValues  = "the worker's model, effort and context reach the main's rewake list"
+	obsLimitWindow      = "the worker's auto-compact window is the window the main's listing shows"
 	obsCompactionCount  = "a compaction on the worker is counted from its hooks"
 	obsIdleAfterTurn    = "the worker reads idle after its turn"
 	obsConversation     = "the worker's conversation is followed"
@@ -72,7 +80,7 @@ const (
 )
 
 var telemetryObservations = []string{
-	obsTelemetryValues, obsCompactionCount, obsIdleAfterTurn, obsConversation,
+	obsTelemetryValues, obsLimitWindow, obsCompactionCount, obsIdleAfterTurn, obsConversation,
 	obsHeader, obsCompactionNotice, obsOwnerStatusShown, obsHookBudget, obsTurnStartBudget, obsTapBudget,
 }
 
@@ -89,7 +97,10 @@ type telemetryFinding struct {
 // telemetry script, and answers every observation from the main's side.
 func playClaudeTelemetry(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 	t.Helper()
-	settings, _ := json.Marshal(map[string]any{"statusLine": map[string]string{"type": "command", "command": ownerStatusCommand}})
+	settings, _ := json.Marshal(map[string]any{
+		"statusLine": map[string]string{"type": "command", "command": ownerStatusCommand},
+		"env":        map[string]string{"CLAUDE_CODE_AUTO_COMPACT_WINDOW": ownerWindow},
+	})
 	if err := os.MkdirAll(filepath.Join(iso.Home, ".claude"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -103,6 +114,10 @@ func playClaudeTelemetry(t *testing.T, c *Case, iso *Isolation) []telemetryFindi
 		}
 		return out
 	}
+	node, err := exec.LookPath("node")
+	if err != nil {
+		return unjudged("no node to run the plugin's module")
+	}
 
 	// The main first: a compaction is announced only when it completes after
 	// the main started, and the worker compacts almost at once.
@@ -113,7 +128,7 @@ func playClaudeTelemetry(t *testing.T, c *Case, iso *Isolation) []telemetryFindi
 	}
 	evidence := filepath.Join(iso.Home, "telemetry.json")
 	worker := startHarnessSession(t, c, iso, claudeColumn.harness, "worker", "--general",
-		shimTelemetryFile+"="+evidence, shimOwnerStatus+"="+ownerStatusCommand, shimTelemetryNotify+"="+lead.name)
+		shimTelemetryFile+"="+evidence, shimOwnerStatus+"="+ownerStatusCommand, shimTelemetryNotify+"="+lead.name, shimNode+"="+node)
 	defer stopSession(t, c, worker)
 
 	result, err := readTelemetryResult(c, evidence)
@@ -139,14 +154,18 @@ func playClaudeTelemetry(t *testing.T, c *Case, iso *Isolation) []telemetryFindi
 	}
 	var out []telemetryFinding
 	if listingFailed != "" {
-		for _, observation := range []string{obsTelemetryValues, obsCompactionCount, obsIdleAfterTurn, obsConversation} {
+		for _, observation := range []string{obsTelemetryValues, obsLimitWindow, obsCompactionCount, obsIdleAfterTurn, obsConversation} {
 			out = append(out, telemetryFinding{observation: observation, detail: listingFailed})
 		}
 	} else {
-		values := row.Model != nil && *row.Model == "model-telemetry" && row.Effort != nil && *row.Effort == "high" &&
-			row.Window != nil && *row.Window == 200000 && row.Percent != nil && *row.Percent == 25
-		out = append(out, finding(obsTelemetryValues, values, "model %s, effort %s, %d of %s (%s%%)",
-			show(row.Model), show(row.Effort), *row.Used, show(row.Window), show(row.Percent)))
+		values := row.Model != nil && *row.Model == "model-telemetry" && row.Effort != nil && *row.Effort == "high"
+		out = append(out, finding(obsTelemetryValues, values, "model %s, effort %s, %d tokens used",
+			show(row.Model), show(row.Effort), *row.Used))
+		// The status line says 50000 of 200000, 25%; under a limit of
+		// 150000 the harness works in 150000, and 50000 is a third of it.
+		limited := row.Window != nil && *row.Window == 150000 && row.Percent != nil && *row.Percent == 33
+		out = append(out, finding(obsLimitWindow, limited, "%d of %s (%s%%), the model's window 200000, the limit %s",
+			*row.Used, show(row.Window), show(row.Percent), ownerWindow))
 		counted := row.Compactions != nil && *row.Compactions == 1 && row.Coverage == "observed" && row.Compacting != nil && !*row.Compacting
 		out = append(out, finding(obsCompactionCount, counted, "completed %s, coverage %q, in progress %s",
 			show(row.Compactions), row.Coverage, show(row.Compacting)))
@@ -164,10 +183,9 @@ func playClaudeTelemetry(t *testing.T, c *Case, iso *Isolation) []telemetryFindi
 	} else {
 		notice := "Rewake: context compacted (compaction 1)."
 		waitFor(c, 5*time.Second, func() bool { return strings.Contains(read(), notice) })
-		// The worker runs no plugin — this case passes it no node — so its
-		// turns are heard through the hooks alone, and the header says that
-		// interruptions go unheard.
-		header := worker.name + ": idle; interruptions unheard | context 25% used / 200K | compactions 1"
+		// The worker runs rewake's plugin, so it hears interruptions and the
+		// header has no word for them; the window is the person's limit.
+		header := worker.name + ": idle | context 33% used / 150K | compactions 1"
 		mail := read()
 		out = append(out, finding(obsHeader, strings.Contains(mail, header), "looked for %q in what the main read", header))
 		out = append(out, finding(obsCompactionNotice, strings.Contains(mail, notice), "looked for %q in what the main read", notice))

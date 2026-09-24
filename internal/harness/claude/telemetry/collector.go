@@ -44,6 +44,15 @@ func NewCollector(path string) *Collector {
 	return &Collector{path: path, done: make(chan struct{}), drawn: make(chan struct{})}
 }
 
+// LaunchedWith records the --autocompact value the session was launched with,
+// before Start: the harness reads the flag between the environment variable
+// and the settings key, and only the launch knows it.
+func (c *Collector) LaunchedWith(autocompact string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.folded.autocompact = ParseAutocompact(autocompact)
+}
+
 // Drawn is closed once the harness has run its status line for the first time.
 //
 // It marks the moment a new session can take a cross-session message without

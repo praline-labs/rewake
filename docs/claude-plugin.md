@@ -42,10 +42,10 @@ would otherwise unload the whole plugin.
 
 | Harness event | Sent as | Fields |
 |---|---|---|
-| `session.start` | `plugin.ready` | none |
+| `session.start` | `plugin.ready` | the window limit |
 | `turn.start` | `turn.start` | the turn id |
 | `turn.complete` | `turn.complete` | the turn id and the reason: `answer`, `aborted`, `refusal` or `error` |
-| `session.measure` | `session.measure` | `tokens`, `window` and `percent` of the context, only when `changed` names `context` |
+| `session.measure` | `session.measure` | `tokens`, `window` and `percent` of the context and the window limit, only when `changed` names `context` |
 | `classic.Stop`, `classic.StopFailure` | nothing | none: they mark the turn as reported by its hook |
 
 An event that carries an `agentId` is a subagent's and is not sent. `session.measure`
@@ -55,6 +55,21 @@ conversation field are never read: a test runs the module under node with events
 throw when `text`, `answer`, `prompt`, `last_assistant_message` or `error_details` is
 touched (`internal/harness/claude/plugin_test.go`). The collector decodes only the named
 fields (`internal/harness/claude/telemetry/plugin.go`), as it does for hooks.
+
+**The window limit** is the raw `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, read with
+`$.env.get`, and the `autoCompactWindow` key of `$.settings.read()`, sent as `limit`
+with `env` and `settings`. When either read throws, the event carries no `limit` at
+all, and the last limit the wrapper heard stands: a read that failed is not a source
+that went away, and reporting it as none would put the model's window back in the
+listing. A test under node fails each read in turn and checks that. The environment
+and the settings are the person's and can hold secrets, so nothing but that variable
+and that key leaves the module, and a test under node gives it an environment and a
+settings `env` block with secrets in them and checks that none is sent. What the wrapper does
+with the values is in [claude-telemetry.md](claude-telemetry.md). The harness refuses to
+load a module that uses `$` inside a logical expression
+([research-claude-control.md](research-claude-control.md#what-a-function-hooks-plugin-hears)),
+so each read stands in its own `try`, and a test reads the module for `$` beside `||`,
+`&&` or `??`.
 
 **An Esc on the Stop hook.** Live, a person's Esc can land after the turn's Stop hook has
 run: `classic.Stop`, then `turn.complete` with reason `aborted`. The hook has already

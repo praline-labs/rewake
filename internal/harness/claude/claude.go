@@ -54,6 +54,10 @@ const effortFlag = "--effort"
 // approves each reply.
 const toolFlag = "--allowedTools"
 
+// autocompactFlag sets the auto-compact window, which the harness then treats
+// as the context window; the collector needs it to show that window.
+const autocompactFlag = "--autocompact"
+
 // childMarkers are the variables a Claude Code session exports to its children.
 // Inherited by a new session they point it at the parent's socket and switch its
 // transcript off, so a session started from inside another one must not see them.
@@ -201,6 +205,10 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 	}
 	if observation != "" {
 		collector := telemetry.NewCollector(observation)
+		if values := harness.FlagValues(args, autocompactFlag); len(values) > 0 {
+			// The harness takes the last one, as it does for any option.
+			collector.LaunchedWith(values[len(values)-1])
+		}
 		observer, drawn = collector, collector.Drawn()
 	}
 	reply := replyPath(request, socket, owns)

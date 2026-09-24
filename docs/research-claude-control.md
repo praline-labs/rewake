@@ -114,6 +114,12 @@ this ([claude-plugin.md](claude-plugin.md)).
   `process.run: takes argv, a non-empty list of strings naming the command first (host
   check)`. A single options object `{ argv, init }` is such a form; a module calling it
   so ran nothing on a live session **[live]**, review-claude, September 23, 2026.
+- **The load check on `$`** **[live]**, review-claude, September 24, 2026, 2.1.280: a
+  module that uses `$` inside a logical expression — `$.env.get(x) || …` — does not load,
+  and the debug log says `$ itself is used in a LogicalExpression (bound, passed, spread,
+  returned or read); $ is always spelled $.noun.event(...) at the call site`. The module
+  then hears nothing. A module also cannot see `process`: the environment is read
+  through `$.env.get(name)` and the settings through `$.settings.read()`.
 - **Side effects of switching function hooks on** **[live]**, review-claude, September
   23, 2026, 2.1.280: the built-in plugin-authoring skill appears in the model's skill
   list (seen in the request body), and function-hook modules of plugins the person

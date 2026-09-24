@@ -166,27 +166,26 @@ like slowness.
 
 **A control** proves the scenario can fail. It breaks one claim, in one of two ways: a
 product mutant, built by `buildMutant` in `mutant_test.go` with one edit through the
-toolchain's overlay, inside a started case, refusing an edit that does not match
-exactly once; or a switch that changes the fixture's world. A mutant is preferred
-wherever one can be built, because it shows the scenario catching a broken rewake
-rather than a misbehaving peer. Of today's thirty-nine controls, thirty are mutants —
-batch-arrival's four; task-report's no-stop-hook, turn-ended-ignores-stop and
-settles-nothing; mid-turn's wait-for-idle; claude-telemetry's tap-without-owner,
-uncounted-compaction and silent-compaction; pending-report's pending-ignored and
+toolchain's overlay, inside a started case, refusing an edit that does not match exactly
+once; or a switch that changes the fixture's world. A mutant is preferred wherever one
+can be built, because it shows the scenario catching a broken rewake rather than a
+misbehaving peer. Of today's forty controls, thirty-one are mutants — batch-arrival's
+four; task-report's no-stop-hook, turn-ended-ignores-stop and settles-nothing;
+mid-turn's wait-for-idle; claude-telemetry's tap-without-owner, uncounted-compaction,
+silent-compaction and model-window; pending-report's pending-ignored and
 pending-settles; claude-inbound's ungated, gate-on-session-start, held-as-delivered,
 expiry-unannounced, refusal-as-delivered and late-word-dropped; owed-reread's
 owed-empty; thread-changed's delivery-unpinned, stop-thread-ignored and
 thread-always-changed; awaited-view's awaited-interim-ignored and awaited-never-settled;
 claude-interrupted's interrupt-unpublished, every-end-stopped, plugin-not-passed and
-stop-not-heard; stopped-routing's stopped-to-main —
-and nine are fixture switches: task-report's
-wrong-report, read-fails, failure-before-report and early-exit; the three readiness
-controls; mid-turn's late and failed-operation. A control names the observation it must
-break; the crosswise check then runs every control's observations in every other
-control's world and requires them to stand, so a control that breaks on somebody else's
-change is caught. Each control answers in three values — broken, not broken, cannot
-judge — and a record that is unreadable or empty is "cannot judge", never "not
-broken".
+stop-not-heard; stopped-routing's stopped-to-main — and nine are fixture switches:
+task-report's wrong-report, read-fails, failure-before-report and early-exit; the three
+readiness controls; mid-turn's late and failed-operation. A control names the
+observation it must break; the crosswise check then runs every control's observations in
+every other control's world and requires them to stand, so a control that breaks on
+somebody else's change is caught. Each control answers in three values — broken, not
+broken, cannot judge — and a record that is unreadable or empty is "cannot judge", never
+"not broken".
 
 **A fixture** is stricter than the harness it plays, never looser: a fixture that
 accepts what the harness refuses lets a scenario pass on a product the harness would
@@ -205,14 +204,18 @@ fixture plays the worker's hooks and status line through `/bin/sh -c` with the p
 seen live, including their conversation fields, and the case reads the result from the
 main's side — its `rewake list`, its header on a message from the worker, and the
 compaction notice its wrapper sends. The worker tells the main only once its wrapper has
-published it idle — the header is drawn from that publication, a quarter second apart, and
-a main whose first notice waited for its status line once read the worker's message inside
-that gap. A listing the main's fixture could not finish in
-five seconds is recorded and fails the observations that needed it. It also times the
-commands, cold each time, because a telemetry hook sits in front of every prompt. Its
-three controls are mutants, and each names every observation it must break and requires
-all the others to hold, which stands in for a crosswise run: a mutant that broke
-everything would not pass as the control of one thing.
+published it idle — the header is drawn from that publication, a quarter second apart,
+and a main whose first notice waited for its status line once read the worker's message
+inside that gap. A listing the main's fixture could not finish in five seconds is
+recorded and fails the observations that needed it. The worker runs rewake's plugin
+under node with a 150K `CLAUDE_CODE_AUTO_COMPACT_WINDOW` in its settings, under the
+status line's 200K, so both must show 33% of 150K; without node it is unjudged. Accepted
+September 24, 2026: no case plays a plugin-less session end to end; its model window and
+`interruptions unheard` header rest on unit tests and claude-interrupted's `unobserved`.
+The case also times the commands, cold each time, because a telemetry hook sits in front
+of every prompt. Its four controls are mutants, and each names every observation it must
+break and requires all the others to hold, which stands in for a crosswise run: a mutant
+that broke everything would not pass as the control of one thing.
 
 Measured on the development machine, September 23, 2026, 40 runs each: a telemetry hook
 (shell plus a cold `rewake observe` sending one datagram) median 5.4 ms, p95 6.7 ms, and

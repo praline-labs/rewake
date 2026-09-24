@@ -134,9 +134,16 @@ func loadPlugin(dir string) (*claudePlugin, error) {
 // named in the reply. A looser host once let a module pass here whose every
 // call the harness refused, so the fixture must never accept what the harness
 // does not. The same check is in internal/harness/claude/plugin_test.go.
+//
+// $.env and $.settings answer as the harness does for the person's settings
+// file: $.settings.read() is that file, and $.env.get a variable from its env
+// block before the process's own — the harness applies that block to its
+// environment, and it wins over a variable the process already had
+// (docs/research.md).
 const pluginHostScript = `
 import { spawn } from "node:child_process"
 import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import { createInterface } from "node:readline"
 const modulePath = process.argv[process.argv.length - 1]
 const mod = await import("data:text/javascript," + encodeURIComponent(readFileSync(modulePath, "utf8")))
@@ -155,7 +162,14 @@ function hostCheck(argv, init) {
   return undefined
 }
 let running = []
-const $ = { process: { run: (...args) => {
+const readSettings = () => {
+  try { return JSON.parse(readFileSync(join(process.env.CLAUDE_CONFIG_DIR || join(process.env.HOME, ".claude"), "settings.json"), "utf8")) } catch { return {} }
+}
+const $ = { env: { get: async (name) => {
+  const block = readSettings().env
+  if (block !== null && typeof block === "object" && Object.hasOwn(block, name)) return String(block[name])
+  return process.env[name]
+} }, settings: { read: async () => readSettings() }, process: { run: (...args) => {
   const refusal = args.length > 2 ? "takes argv and init" : hostCheck(args[0], args[1])
   if (refusal !== undefined) {
     refused.push(refusal)

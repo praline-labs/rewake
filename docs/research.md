@@ -279,6 +279,42 @@ Hooks **[verified live unless marked]**:
 `/clear` gives the session a new `session_id`, which the next status-line run already
 carries **[container]**; a compaction keeps it.
 
+**The auto-compact window.** Researched by review-claude on September 24, 2026, Claude
+Code 2.1.280, against a stand-in API server; the evidence was kept outside the repository.
+
+- **Where the harness takes it** **[source]**: at every call that needs the window, so
+  every turn, in this order. `CLAUDE_CODE_AUTO_COMPACT_WINDOW` first, whenever it is
+  set: plain digits, an exponent form that comes out whole (`3e5`), and digits grouped
+  in threes by one separator used throughout — underscore, comma, space, no-break space
+  or narrow no-break space (`300,000`, `300 000`) — are understood; anything else reads
+  as the integer it begins with, so `300k` is 300, `0.5` is 0 and `3,00000` is 3; zero,
+  a negative or a value that is no number (`.5`, `1.5e-1`) is ignored and the order
+  goes on; the result is `min(model window, max(100000, min(value, 1000000)))`. Then the
+  `--autocompact <auto|tokens>` flag — `auto`, digits with an `m` or `k` suffix, or a
+  count read the same way, 100 to 1000 meaning thousands, taken within 100000–1000000 —
+  whose `auto` sets the settings key aside. Then the `autoCompactWindow` settings key, a whole number
+  within 100000–1000000, anything else dropped. Then a value from the remote
+  configuration, then an experiment's, then the model's own default window.
+- **Where it can be set** **[live]**: in the process environment, and in the `env`
+  block of settings.json, which wins over the process environment (settings 300000 over
+  a process 200000 gave the 300000's working window). Editing the value in the file
+  mid-session took effect on the next turn without `/clear`; removing the key left the
+  last value in place, even across `/clear`. Only the user's settings file was tried;
+  the other layers go through the same env merge **[source]**.
+- **Where it compacts** **[source; live]**: at `window − min(maxOutput, 20000) − 13000`.
+  Under 300000 that is 267000, 89% of the window; live, 266000 tokens did not compact
+  and 268000 did on the next request. The footer's "N% until auto-compact" counts to
+  that point, not to the window. `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` can lower the point,
+  never raise it **[source]**.
+- **Who carries it** **[live]**: neither the status line nor a plugin's
+  `session.measure` — both report the model's window, 1000000 for a `[1m]` model, and
+  the percent of it, with the variable set or not. A function-hooks module's
+  `$.env.get("CLAUDE_CODE_AUTO_COMPACT_WINDOW")` returned what the harness used in every
+  case, the value left behind by a removed key included; `$.settings.read()` returns the
+  `autoCompactWindow` key; `$.config.list` has only the boolean `autoCompact`. The flag
+  is not visible to a plugin at all; rewake reads it from the launch's arguments
+  ([claude-telemetry.md](claude-telemetry.md)).
+
 ### Interrupting a turn, commands and prompt drafts
 
 Moved on September 23, 2026 to [research-claude-control.md](research-claude-control.md):

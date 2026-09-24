@@ -42,6 +42,13 @@ type state struct {
 	// line has said nothing about the context: a policy may keep the tap out.
 	measured   *Context
 	measuredOn time.Time
+	// limit is the auto-compact window the plugin last found configured,
+	// and autocompact the flag the session was launched with; together they
+	// decide the window the snapshot shows (window.go). Without the plugin
+	// the limit is unknown and the model window stands.
+	limit       *Limit
+	limitAt     int64
+	autocompact Autocompact
 	// compactedAt is when the last compaction ended. The fill counted before
 	// it no longer holds, and the harness reports none until the next
 	// response, so until then the fill is unknown, not the old value.
@@ -140,6 +147,10 @@ func (s *state) applyPlugin(event Event, now time.Time) {
 	s.heard = true
 	s.observedAt = now
 	s.plugin = true
+	if event.Limit != nil && event.At >= s.limitAt {
+		limit := *event.Limit
+		s.limit, s.limitAt = &limit, event.At
+	}
 	switch event.Kind {
 	case TurnStart:
 		s.setActivity(event.At, activityWorking, nil, now)
@@ -244,6 +255,7 @@ func (s *state) snapshot() sessionstate.Snapshot {
 	if context == nil {
 		context, contextOn = s.measured, s.measuredOn
 	}
+	context = capped(context, configured(s.limit, s.autocompact))
 	if context != nil {
 		snapshot.ContextUsed = copyInt64(context.Used)
 		snapshot.ContextWindow = copyInt64(context.Window)

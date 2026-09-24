@@ -129,6 +129,9 @@ func (s *claudeSession) playTelemetry() {
 	}
 
 	fire("SessionStart", map[string]any{"source": "startup", "model": "model-telemetry"})
+	// The plugin, where the case runs it, reads the auto-compact window at
+	// the start; without node this plays nothing.
+	s.plugin.event("session.start", map[string]any{"cwd": workingDirectory(), "isInteractive": true, "surface": "terminal"})
 	status(-1)
 	fire("UserPromptSubmit", map[string]any{"prompt": conversationText, "permission_mode": "default"})
 	status(84000)

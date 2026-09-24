@@ -66,6 +66,9 @@ type Event struct {
 	// how turn.complete says it ended.
 	Turn   string `json:"turn,omitempty"`
 	Reason string `json:"reason,omitempty"`
+	// Limit is the auto-compact window the plugin found configured
+	// (window.go); nil when it did not say.
+	Limit *Limit `json:"limit,omitempty"`
 }
 
 // Context is the fill of the context window as the status line reports it.

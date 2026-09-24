@@ -207,7 +207,12 @@ rewake built from `d975dd7`, for model, effort, context, activity and a compacti
   turn hooks fill them earlier when they carry them.
 - **Context**: the harness's own figures — `total_input_tokens` of the last response,
   `context_window_size` and `used_percentage` — not the Codex formula above; while the
-  status line has given none, the plugin's `session.measure` fills them in. Before the
+  status line has given none, the plugin's `session.measure` fills them in. Where the
+  person capped the window below the model's — `CLAUDE_CODE_AUTO_COMPACT_WINDOW`,
+  `--autocompact` or `autoCompactWindow` — the window is that cap and the percent is of
+  it, as the plugin reported the values
+  ([claude-telemetry.md](claude-telemetry.md)); a percent past 100 is shown as it is.
+  Without the plugin the window is the model's whatever the person set. Before the
   first response and after a compaction the harness sends zeros, the usage null or
   itself zero; a zero count reads as unknown, not as an empty context. A compaction's
   end also drops the fill counted before it, keeping the window, and a status line or

@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// The telemetry scenario's controls: three product mutants, each taking down
+// The telemetry scenario's controls: four product mutants, each taking down
 // one observation. There is no crosswise run over them yet — each breaks a
 // different observation of one pair of sessions, read in the same run, so
 // the scenario's own observations stand in for the cross.
@@ -33,6 +33,18 @@ var mutantSilentCompaction = mutation{
 	name:  "silent-compaction",
 	file:  "internal/harness/claude/telemetry/state.go",
 	edits: []edit{{"\t\tsnapshot.CompactionEvents = append([]sessionstate.CompactionEvent{}, s.events...)\n", "\n"}},
+}
+
+// The collector shows the model's window whatever limit the person set: the
+// listing and the header read the status line's 200K and 25%.
+var mutantModelWindow = mutation{
+	name:  "model-window",
+	file:  "internal/harness/claude/telemetry/state.go",
+	edits: []edit{{"\tcontext = capped(context, configured(s.limit, s.autocompact))\n", "\n"}},
+}
+
+func TestTheModelWindowInPlaceOfTheLimitFails(t *testing.T) {
+	runTelemetryControl(t, mutantModelWindow, obsLimitWindow, obsHeader)
 }
 
 func TestASilentCompactionFails(t *testing.T) {

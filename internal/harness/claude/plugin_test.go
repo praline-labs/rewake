@@ -128,8 +128,13 @@ function checkedRun(run) {
 // pluginHost loads the module the way the harness does — register(on), then
 // each handler with ($, event, next), the module loaded once for the whole
 // session — with a $ that records what the module asks to run instead of
-// running it. The events it hands over throw when the prompt, the answer or
-// the last message is read, so a module that touched one fails here.
+// running it. Its environment and settings are the ones the test names, the
+// first read at once and the second through a promise, so the module is held
+// to awaiting either; a test that names neither gets a $ without them, as the
+// workflow fixture's host once was, and the module must go on regardless. A
+// part the test names as failing throws when it is read. The
+// events it hands over throw when the prompt, the answer or the last message
+// is read, so a module that touched one fails here.
 const pluginHost = hostRun + `
 import { pathToFileURL } from "node:url"
 const mod = await import(pathToFileURL(process.argv[2]).href)
@@ -137,6 +142,10 @@ const handlers = {}
 mod.register((name, handler) => { handlers[name] = handler })
 const calls = []
 const $ = { process: { run: checkedRun((argv, init) => { calls.push({ argv, init }); return Promise.resolve({ exitCode: 0, stdout: "", stderr: "" }) }) } }
+const world = JSON.parse(process.argv[4])
+const fails = (part) => (world.fail ?? []).includes(part)
+if (world.env !== undefined) $.env = { get: (name) => { if (fails("env")) throw new Error("env: host refused"); return world.env[name] } }
+if (world.settings !== undefined) $.settings = { read: async () => { if (fails("settings")) throw new Error("settings: host refused"); return world.settings } }
 const guarded = (fields) => new Proxy(fields, { get(target, key) {
   if (["text", "answer", "prompt", "last_assistant_message", "error_details"].includes(key)) throw new Error("the module read " + String(key))
   return target[key]
@@ -164,6 +173,19 @@ type hostCall struct {
 // checked above.
 func runModule(t *testing.T, module []byte, events [][2]any) ([]hostCall, []string) {
 	t.Helper()
+	return runModuleIn(t, module, hostWorld{}, events)
+}
+
+// hostWorld is the environment and settings the host's $ answers with; nil
+// leaves that part of $ out, and a part named in Fail throws when read.
+type hostWorld struct {
+	Env      map[string]string `json:"env,omitempty"`
+	Settings map[string]any    `json:"settings,omitempty"`
+	Fail     []string          `json:"fail,omitempty"`
+}
+
+func runModuleIn(t *testing.T, module []byte, world hostWorld, events [][2]any) ([]hostCall, []string) {
+	t.Helper()
 	node, err := exec.LookPath("node")
 	if err != nil {
 		t.Skip("node is not installed; the module is not run")
@@ -181,7 +203,11 @@ func runModule(t *testing.T, module []byte, events [][2]any) ([]hostCall, []stri
 	if err != nil {
 		t.Fatal(err)
 	}
-	out, err := exec.Command(node, filepath.Join(dir, "host.mjs"), filepath.Join(dir, "rewake.mjs"), string(encoded)).CombinedOutput()
+	worldJSON, err := json.Marshal(world)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := exec.Command(node, filepath.Join(dir, "host.mjs"), filepath.Join(dir, "rewake.mjs"), string(encoded), string(worldJSON)).CombinedOutput()
 	if err != nil {
 		t.Fatalf("the module failed: %v\n%s", err, out)
 	}

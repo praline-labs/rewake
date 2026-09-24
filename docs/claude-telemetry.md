@@ -49,6 +49,29 @@ layer uses both; the wrapper listens.
   ([claude-plugin.md](claude-plugin.md)). Where the plugin does not load, a session a
   person interrupts stays `working` until the next event that ends a turn or starts one
   afresh, as before, and its telemetry says interruptions are `unobserved`.
+- **The window.** A person can cap the context below the model's window —
+  `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, the `--autocompact` flag or the `autoCompactWindow`
+  settings key — and the harness then compacts against the cap, while the status line
+  and `session.measure` still report the model's window and the percent of it
+  ([research.md](research.md#telemetry-sources-the-status-line-and-hooks)). So the plugin
+  reads the variable through `$.env.get` and the key through `$.settings.read()` at the
+  session's start and at every measure of the context, and sends the two raw values with
+  `plugin.ready` and `session.measure`; the wrapper takes the flag from the launch's own
+  arguments, the last one given, since a plugin cannot see it. The collector reads each
+  value by the harness's rules and in its order — the variable, then the flag, whose
+  `auto` sets the key aside, then the key — and where the result is below the model's
+  window the listing shows it as the window, with the percent computed against it. The
+  tokens stay the status line's. The newest report decides, so a value edited
+  mid-session follows the harness from the next measure. The compaction point — 89% of
+  a 300K window — is not shown anywhere: it depends on the model's output limit, which
+  rewake does not know, and computing it would copy the harness's arithmetic. Without
+  any of the three the numbers are the status line's, as before; where the plugin did
+  not load, the listing shows the model's window whatever the person set, the flag
+  included, because the variable and the key are read only through the plugin.
+  Owner decision, September 24, 2026: the listing shows the person's limit as the
+  window, read from the harness's own sources rather than assumed. Leaving the
+  compaction point out is a design choice made for the reason above, not part of that
+  decision.
 - **The tap.** The status line becomes `rewake status-tap <socket> <sources> [caller]`.
   It reads the payload, sends what the status line says, finds the person's command
   (below), and then replaces itself with

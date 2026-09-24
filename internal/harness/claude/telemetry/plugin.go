@@ -34,6 +34,13 @@ type pluginInput struct {
 		Window  *float64 `json:"window"`
 		Percent *float64 `json:"percent"`
 	} `json:"context"`
+	// Limit is what the plugin read of the auto-compact window: the variable
+	// as the harness's environment holds it, the settings key as the
+	// harness's settings hold it.
+	Limit *struct {
+		Env      string   `json:"env"`
+		Settings *float64 `json:"settings"`
+	} `json:"limit"`
 }
 
 // DecodePlugin reads what the plugin handed `rewake observe`. It answers false
@@ -75,6 +82,9 @@ func DecodePlugin(raw []byte) (Event, bool) {
 		event.Context = context
 	default:
 		return Event{}, false
+	}
+	if input.Limit != nil && (event.Kind == PluginReady || event.Kind == SessionMeasure) {
+		event.Limit = &Limit{Env: envWindow(input.Limit.Env), Settings: settingsWindow(input.Limit.Settings)}
 	}
 	return event, true
 }
