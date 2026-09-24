@@ -194,8 +194,8 @@ seeded into the private `.claude.json` beside a read-only copy of the owner's ot
 cached flags **[live]**. The module was read in the binary **[source]**.
 
 - **What it does.** A hooks module with no skill, command, agent or setting; its
-  manifest scans `hooks:["ui.render"]` and `calls:[]` **[source]**, and the debug log
-  reads `hooks module mermaid@builtin loaded (native, environment 3, tier builtin);
+  manifest's scan lists `hooks:["ui.render"]` and `calls:[]` **[source]**, and the debug
+  log reads `hooks module mermaid@builtin loaded (native, environment 3, tier builtin);
   events: ui.render` **[live]**. Its one hook is `ui.render` on the `AssistantMessage`
   component of the terminal surface. It rewrites the reply's text before drawing: a
   `` ```mermaid `` fence becomes a block headed `mermaid · flowchart` or `mermaid ·
