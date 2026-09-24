@@ -71,6 +71,9 @@ type Event struct {
 	By string `json:"by,omitempty"`
 	// Request is the id of that compaction's control request.
 	Request string `json:"request,omitempty"`
+	// Started says the host refused that compaction after it had started
+	// it, past PreCompact.
+	Started bool `json:"started,omitempty"`
 	// Limit is the auto-compact window the plugin found configured
 	// (window.go); nil when it did not say.
 	Limit *Limit `json:"limit,omitempty"`

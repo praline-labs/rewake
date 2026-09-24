@@ -88,7 +88,7 @@ var mutantCompactionUncounted = mutation{
 var mutantAskerUntold = mutation{
 	name:  "asker-untold",
 	file:  "internal/harness/claude/plugin.js",
-	edits: []edit{{`if (trigger === "plugin" && ours !== undefined && !ours.told) {`, "if (false) {"}},
+	edits: []edit{{`if (announced) await told($, { plugin_event: "compact.asked"`, `if (false) await told($, { plugin_event: "compact.asked"`}},
 }
 
 // main's list of what it is owed puts every stop down to a person.

@@ -20,15 +20,15 @@ const (
 	TurnComplete = "turn.complete"
 	// SessionMeasure is the context fill the harness measured at a turn's end.
 	SessionMeasure = "session.measure"
-	// CompactAsked says the host has started the compaction a main's
-	// `rewake compact` asked for, with the request and who asked. The module
-	// sends it from the compaction's session.compact handler and holds the
-	// compaction until it is sent, and datagrams reach the collector in the
-	// order they were sent, so it arrives ahead of every hook of that
-	// compaction (docs/remote-control.md).
+	// CompactAsked says a main's `rewake compact` is about to compact the
+	// session, with the request and who asked. The module waits for this
+	// report to be sent before it asks the host to compact, and datagrams
+	// reach the collector in the order they were sent, so it arrives ahead of
+	// every hook of that compaction (docs/remote-control.md).
 	CompactAsked = "compact.asked"
-	// CompactRefused says the host refused that compaction after it started,
-	// or it failed: no PostCompact of it follows.
+	// CompactRefused says the host refused that compaction, or it failed: no
+	// PostCompact of it follows. Started says whether the host had begun it,
+	// so that a PreCompact of it may have run.
 	CompactRefused = "compact.refused"
 )
 
@@ -50,6 +50,8 @@ type pluginInput struct {
 	By string `json:"by"`
 	// Request is that compaction's control request id.
 	Request string `json:"request"`
+	// Started is set on a refusal the host gave after PreCompact.
+	Started bool `json:"started"`
 	Context *struct {
 		Tokens  *float64 `json:"tokens"`
 		Window  *float64 `json:"window"`
@@ -109,6 +111,7 @@ func DecodePlugin(raw []byte) (Event, bool) {
 			return Event{}, false
 		}
 		event.Request = input.Request
+		event.Started = input.Event == CompactRefused && input.Started
 		if input.Event == CompactAsked {
 			if !statedir.ValidName(input.By) {
 				return Event{}, false

@@ -154,27 +154,28 @@ still in place, acts, and writes the result.
   result carries `tokensBefore` and `tokensAfter` only — never the summary the host
   returns, since transcripts are not read. The compaction is counted by the existing
   telemetry like any other (`completedCompactions`).
-- **Who asked for a compaction.** The host runs every compaction through the module's
-  `session.compact` handler, with the core beneath `next(e)`: the hooks `PreCompact`,
-  `SessionStart` and `PostCompact` run inside or after it (read in the 2.1.280 binary;
-  live order `session.compact`, `PreCompact`, `SessionStart`, `PostCompact`). The
-  module's own call arrives with trigger `plugin`, a typed `/compact` with `manual`.
-  For its own, the handler tells rewake who asked — `compact.asked` with the request id
-  and the asker — and holds the compaction until that report is sent: `$.process.run`
-  resolves only once `rewake observe` has ended (read in the binary). Datagrams reach
-  the collector in the order they were sent, so the mark is there before any hook of
-  that compaction. A refusal after that — "Not enough messages" comes after
-  `PreCompact` — is reported as `compact.refused` and sent before the answer is
-  written; it lays the mark aside and ends the listing's `compacting`. A refusal
-  before the host starts the compaction, mid-turn say, needs no word: no mark was
-  sent.
+- **Who asked for a compaction.** Before it asks the host, while it knows no turn is
+  running, the module tells rewake who asked — `compact.asked` with the request id and
+  the asker — and waits until that report is sent: `$.process.run` resolves only once
+  `rewake observe` has ended (read in the 2.1.280 binary). Datagrams reach the
+  collector in the order they were sent, so the mark is there before any hook of that
+  compaction, and the next `PostCompact` takes it up. A refusal or failure is reported
+  as `compact.refused` and sent before the answer is written; it lays the mark aside.
+  It says whether the host had started the compaction — "Not enough messages" comes
+  after `PreCompact`, the other refusals before the host starts — so the collector
+  ends the listing's `compacting` for it, or lets its `PreCompact`, a background hook
+  that may come after the refusal, start nothing. Mid-turn no mark is sent: the host
+  refuses that compaction, and the turn may compact on its own.
+- **The module's `session.compact` handler** never sees the compaction its own call
+  raised: the host skips a plugin's handlers for an event that plugin's code raised,
+  as re-entry (seen live and read in the binary, 2.1.280). It sees every other one,
+  with the compaction itself beneath `next(e)`, and uses only its end.
 - **What the mark guarantees.** The collector gives it to the next `PostCompact` it
   receives, whichever compaction that belongs to. The hooks run as separate processes,
-  so a compaction's `PostCompact` can arrive a moment after its end. The module
-  watches every compaction the host runs through the handler, and after the end of one
-  it did not ask for — a person's `/compact`, an automatic one — it waits a second
-  before it asks the host for the main's, so that compaction's `PostCompact` is in
-  first. Within a second of the other's end the request waits rather than being
+  so a compaction's `PostCompact` can arrive a moment after its end. After the end of
+  a compaction the module did not ask for — a person's `/compact`, an automatic one —
+  it waits a second before it sends the mark and asks the host for the main's, so that
+  compaction's `PostCompact` is in first. Within a second of the other's end the request waits rather than being
   refused; while the other still runs, the host refuses it as `in a turn`.
 - **Interrupt** needs the running turn's id, which only the module knows: it keeps it
   from `turn.start` and `turn.complete` of its own events, those without an `agentId`.
@@ -283,16 +284,17 @@ will implement `Steerable` with `CompactFocus` false.
   `$.clock.sleep`, `$.fs`,
   `$.session.compact` and `$.turn.abort`: an idle compaction, the host's refusals passed
   on, "in flight" among them, the asker reported and sent before the host compacts, a
-  refusal reported and sent before the answer, no mark for a compaction the host never
-  started, no mark for one the module did not ask for and a second waited out after its
-  end, the interrupter reported, a request carried out once across a reload, a request
+  refusal reported and sent before the answer with whether the host had started, no
+  mark sent mid-turn, a second waited out after the end of a compaction the module did
+  not ask for, the host itself held to the re-entry rule, the interrupter reported, a request carried out once across a reload, a request
   withdrawn or replaced as it is marked left undone, and no polling without a directory.
 - `internal/harness/claude/telemetry/interrupter_test.go` and
   `internal/harness/claude/lane_interrupt_test.go` — the stopped text naming main, the
   mark and when it is used up or laid aside, and the notice line;
   `internal/harness/claude/telemetry/compaction_asked_test.go` — the mark decoded, taken
-  up by the next compaction and laid aside by its refusal, which also ends
-  `compacting`.
+  up by the next compaction and laid aside by its refusal, which ends `compacting` for
+  a started compaction, also when its `PreCompact` comes after the refusal, and leaves
+  another compaction's alone.
 - `internal/wrap/session_notices_test.go` — no notice of a compaction this main asked
   for, and one each for a compaction another main asked for and one nobody asked for.
 - The workflow case `claude-steered` — both commands end to end from a main against

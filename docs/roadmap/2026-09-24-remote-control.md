@@ -191,6 +191,36 @@ process to close, in the binary. Four findings, with main's decisions:
   listing read `idle; compacting` until the next turn; the refusal now ends
   `compacting`. The fixture refuses a short conversation in that order too.
 
+**Live re-review of `92e84a8`.** review-claude ran it on 2.1.280 the same day: the mark
+never went out. The host skips a plugin's own handlers for an event its own code
+raised — `hooks module rewake@inline session.compact skipped: re-entry (the plugin's
+own code raised it; origin rewake)` — so main got the notice for its own compaction,
+the answer came without the count after the 3 s wait, and a "Not enough messages"
+refusal sent no `compact.refused`, leaving `compacting` set. Both hosts had run the
+module's handler for its own compaction, softer than the harness. The wrapping itself
+and the second waited out after another compaction's end were right. Fixed:
+
+- The module sends the mark from the request again, before it asks the host and after
+  the quiet second, while no turn runs; a refusal is sent before the answer and says
+  whether the host had started. The collector ends `compacting` for a started one, and
+  if its `PreCompact`, a background hook, comes after the refusal, that starts
+  nothing. The handler serves only the quiet second.
+- Both hosts skip the calling plugin's handlers for the compaction its own call
+  raised, and a test holds each of them to it.
+
+Seen live by write-claude after the fix, September 24, 2026, Claude Code 2.1.280, in a
+private HOME against the stand-in API, a main and a worker started through rewake:
+
+- Before the worker's first turn, `rewake compact` answered `nothing to compact`, exit
+  1; the worker's debug log showed the mark sent, `session.compact skipped: re-entry`,
+  `PreCompact`, then the refusal sent; `compactionInProgress` read false afterwards.
+- After one turn: "compacted w1-claude: 60 tokens before, 1233 after (compaction 1).",
+  exit 0, 0.2 s; no "context compacted" notice reached main.
+- `/compact` typed in the worker's terminal, and `rewake compact` at once after it: the
+  typed one ended at 12:45:39.035 (UTC, its `PostCompact`), the module sent the mark at
+  12:45:40.041, a second later; the answer was "(compaction 3)", and main got "Rewake:
+  context compacted (compaction 2)." for the typed one only.
+
 **What stays open.**
 
 - Part B, the Codex side: the wrapper serves the same directory, refuses a compaction
@@ -207,8 +237,9 @@ process to close, in the binary. Four findings, with main's decisions:
   ([intermittent-bugs.md](../intermittent-bugs.md)).
 - The fixture's threshold for "Not enough messages to compact" is its own, and a focus
   reaching the summary request is shown only live; the workflow case says so.
-- The compaction attribution as changed after the review has not been seen live: the
-  mark sent from `session.compact` and the second waited out after another compaction.
+- A typed `/compact` refused as "Not enough messages" leaves `compacting` set until the
+  next turn: its `PreCompact` runs and nothing after it, and rewake hears no refusal of
+  a compaction it did not ask for. Seen live on September 24, 2026.
 - A `PostCompact` more than a second late after a compaction the module did not ask for
   is still taken for main's ([remote-control.md](../remote-control.md#known-limits)).
 - A compaction whose `PostCompact` never reaches the collector leaves the mark for the

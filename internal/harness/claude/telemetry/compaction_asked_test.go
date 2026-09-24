@@ -21,10 +21,11 @@ func TestACompactionAskedDecodes(t *testing.T) {
 	}{
 		{"asked", `{"plugin_event":"compact.asked","request":"` + askedID + `","by":"lead"}`, Event{Kind: CompactAsked, Request: askedID, By: "lead"}},
 		{"refused", `{"plugin_event":"compact.refused","request":"` + askedID + `"}`, Event{Kind: CompactRefused, Request: askedID}},
+		{"refused started", `{"plugin_event":"compact.refused","request":"` + askedID + `","started":true}`, Event{Kind: CompactRefused, Request: askedID, Started: true}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got, ok := DecodePlugin([]byte(tc.raw))
-			if !ok || got.Kind != tc.want.Kind || got.Request != tc.want.Request || got.By != tc.want.By {
+			if !ok || got.Kind != tc.want.Kind || got.Request != tc.want.Request || got.By != tc.want.By || got.Started != tc.want.Started {
 				t.Errorf("DecodePlugin(%s) = %+v, %v; want %+v", tc.raw, got, ok, tc.want)
 			}
 		})
@@ -91,18 +92,64 @@ func TestARefusedCompactionLeavesNoMark(t *testing.T) {
 
 // The host refuses a short conversation after PreCompact and runs no
 // PostCompact; the refusal ends the compaction, so the listing does not read
-// compacting until the next turn.
+// compacting until the next turn — also when the PreCompact, a background
+// hook, arrives after the refusal. A refusal before the host started leaves a
+// compaction in progress, someone else's, as it is.
 func TestARefusalAfterPreCompactEndsTheCompaction(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		events     []Event
+		compacting bool
+	}{
+		{"PreCompact first", []Event{
+			{Kind: CompactAsked, Request: askedID, By: "lead"},
+			{Kind: PreCompact},
+			{Kind: CompactRefused, Request: askedID, Started: true},
+		}, false},
+		{"PreCompact late", []Event{
+			{Kind: CompactAsked, Request: askedID, By: "lead"},
+			{Kind: CompactRefused, Request: askedID, Started: true},
+			{Kind: PreCompact},
+		}, false},
+		{"refused before it started", []Event{
+			{Kind: PreCompact},
+			{Kind: CompactAsked, Request: askedID, By: "lead"},
+			{Kind: CompactRefused, Request: askedID},
+		}, true},
+		{"another started between the word and the call", []Event{
+			{Kind: CompactAsked, Request: askedID, By: "lead"},
+			{Kind: PreCompact},
+			{Kind: CompactRefused, Request: askedID},
+		}, true},
+		{"another started after the refusal", []Event{
+			{Kind: CompactAsked, Request: askedID, By: "lead"},
+			{Kind: CompactRefused, Request: askedID},
+			{Kind: PreCompact},
+		}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var f folding
+			f.send(Event{Kind: SessionStart})
+			for _, event := range tc.events {
+				f.send(event)
+			}
+			if snapshot := f.state.snapshot(); *snapshot.Compacting != tc.compacting || *snapshot.Compactions != 0 {
+				t.Fatalf("compacting %v, count %v; want compacting %v", *snapshot.Compacting, *snapshot.Compactions, tc.compacting)
+			}
+		})
+	}
+	// The late PreCompact is swallowed once: the next compaction's shows.
 	var f folding
 	for _, event := range []Event{
 		{Kind: SessionStart},
 		{Kind: CompactAsked, Request: askedID, By: "lead"},
+		{Kind: CompactRefused, Request: askedID, Started: true},
 		{Kind: PreCompact},
-		{Kind: CompactRefused, Request: askedID},
+		{Kind: PreCompact},
 	} {
 		f.send(event)
 	}
-	if snapshot := f.state.snapshot(); *snapshot.Compacting || *snapshot.Compactions != 0 {
-		t.Fatalf("compacting %v, count %v after the refusal", *snapshot.Compacting, *snapshot.Compactions)
+	if !*f.state.snapshot().Compacting {
+		t.Fatal("the next compaction's PreCompact was swallowed too")
 	}
 }

@@ -35,12 +35,16 @@ Probed by review-claude on September 24, 2026, Claude Code 2.1.280, with a stand
   September 24, 2026, review-claude]**. Other refusals **[source]**: `compaction is switched off in this
   session (DISABLE_COMPACT), for /compact and plugins alike`, and one for a call from a
   hook that holds the turn.
-- **Every compaction runs through the plugins' `session.compact` handlers**, with the
+- **A compaction runs through the plugins' `session.compact` handlers**, with the
   compaction itself beneath `next(e)`: `PreCompact` runs inside it, and a handler's
   `await next(e)` returns once it is done, with `tokensBefore` and `tokensAfter`. The
   trigger is `plugin` for a module's call and `manual`, `auto` or `precompute` for the
   others, and a handler may change neither the trigger nor the `agentId` **[source,
-  2.1.280, September 24, 2026, write-claude]**. A module's call while a typed `/compact`
+  2.1.280, September 24, 2026, write-claude]**. **The calling plugin's own handlers are
+  skipped** for the compaction its `$.session.compact` raised: the debug log says
+  `hooks module rewake@inline session.compact skipped: re-entry (the plugin's own code
+  raised it; origin rewake)` **[live + source, 2.1.280, September 24, 2026,
+  review-claude]**. A module sees only the compactions it did not ask for there. A module's call while a typed `/compact`
   ran was refused with `a turn is in flight; the conversation compacts between turns`,
   and "Not enough messages" came after `PreCompact`, with no `PostCompact` after it
   **[live, 2.1.280, September 24, 2026, review-claude]**.

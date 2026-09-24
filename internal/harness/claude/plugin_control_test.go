@@ -27,11 +27,13 @@ import (
 //     taken: the request is removed, or replaced by the next asker's.
 //   - $.session.compact takes nothing or { instructions } and is refused while
 //     a turn runs, while another compaction is in flight, or when compaction is
-//     switched off; otherwise it runs the module's session.compact handler with
-//     trigger "plugin" around the compaction itself, which refuses a
+//     switched off; otherwise it runs the compaction itself, which refuses a
 //     conversation too short (seen live on September 24, 2026) and answers
-//     with the summary's messages, which must never leave the module. A
-//     "compaction" step plays one the module did not ask for.
+//     with the summary's messages, which must never leave the module. The
+//     module's own session.compact handler is skipped for it, as re-entry:
+//     the harness runs no plugin's handlers for an event that plugin's own
+//     call raised (seen live on 2.1.280). A "compaction" step plays one the
+//     module did not ask for, through its handler.
 //   - $.turn.abort takes { turnId } of the running turn, and ends it with
 //     turn.complete "aborted" before its promise settles.
 //   - $.process.run resolves once its process has ended, which here is a
@@ -107,8 +109,9 @@ const $ = {
     await play("turn.complete", { turnId: running, reason: "aborted", isAborted: true, answer: "partial" })
   } },
 }
-// compaction runs one compaction through the module's session.compact
-// handler, which passes it on to the compaction itself with next.
+// compaction runs one compaction, through the module's session.compact
+// handler, which passes it on with next, unless the module's own call raised
+// it.
 async function compaction(trigger, instructions) {
   compacting = true
   try {
@@ -119,7 +122,7 @@ async function compaction(trigger, instructions) {
       return { messages: [{ role: "user", text: "SECRET SUMMARY" }], tokensBefore: 120000, tokensAfter: 9000, usage: { input: 1 } }
     }
     const e = { trigger, ...(instructions !== null && { instructions }), messages: [{ role: "user", text: "SECRET" }] }
-    const handler = handlers["session.compact"]
+    const handler = trigger === "plugin" ? undefined : handlers["session.compact"]
     return typeof handler === "function" ? await handler($, e, core) : await core(e)
   } finally {
     compacting = false
@@ -175,6 +178,13 @@ type controlWorld struct {
 // what happened.
 func runControl(t *testing.T, controlled bool, world controlWorld, steps ...[]any) controlRun {
 	t.Helper()
+	return runControlModule(t, controlled, world, nil, steps...)
+}
+
+// runControlModule is runControl with another module in place of the plugin's, when
+// source is not nil: for holding the host itself to the harness's rules.
+func runControlModule(t *testing.T, controlled bool, world controlWorld, source []byte, steps ...[]any) controlRun {
+	t.Helper()
 	node, err := exec.LookPath("node")
 	if err != nil {
 		t.Skip("node is not installed; the module is not run")
@@ -194,6 +204,9 @@ func runControl(t *testing.T, controlled bool, world controlWorld, steps ...[]an
 	module, err := os.ReadFile(filepath.Join(dir, "plugin", "hooks", "rewake.js"))
 	if err != nil {
 		t.Fatal(err)
+	}
+	if source != nil {
+		module = source
 	}
 	if err := os.WriteFile(filepath.Join(dir, "rewake.mjs"), module, 0o600); err != nil {
 		t.Fatal(err)

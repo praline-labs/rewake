@@ -180,9 +180,10 @@ func (s *claudeSession) steer(call string, args json.RawMessage) (any, string) {
 }
 
 // compact refuses in the harness's order and words, then runs what a
-// compaction runs: the plugin's session.compact, and the hooks PreCompact,
-// SessionStart with source "compact" and PostCompact. A conversation too short
-// is refused after PreCompact, with nothing after it, as the harness does.
+// compaction runs: session.compact, which the calling plugin's own handlers do
+// not see, and the hooks PreCompact, SessionStart with source "compact" and
+// PostCompact. A conversation too short is refused after PreCompact, with
+// nothing after it, as the harness does.
 func (s *claudeSession) compact(instructions string) (any, string) {
 	s.turns.compacting.Lock()
 	defer s.turns.compacting.Unlock()
@@ -195,7 +196,8 @@ func (s *claudeSession) compact(instructions string) (any, string) {
 	case os.Getenv("DISABLE_COMPACT") != "":
 		return nil, "$.session.compact: compaction is switched off in this session (DISABLE_COMPACT), for /compact and plugins alike"
 	}
-	s.plugin.event("session.compact", map[string]any{"trigger": "plugin", "instructions": instructions})
+	// Every call here comes from this plugin's modules.
+	s.plugin.raised(s.plugin.origin(), "session.compact", map[string]any{"trigger": "plugin", "instructions": instructions})
 	summary := "the conversation so far, summarized"
 	for _, hook := range []struct {
 		event  string
@@ -248,6 +250,27 @@ func (s *claudeSession) abort(turn string) (any, string) {
 	}
 	<-done
 	return nil, ""
+}
+
+// raised plays an event a plugin's own call raised. The harness runs none of
+// that plugin's handlers for it — "hooks module rewake@inline session.compact
+// skipped: re-entry (the plugin's own code raised it; origin rewake)", seen
+// live on 2.1.280 — and a host that ran them passed a module whose handler a
+// live session never calls.
+func (p *claudePlugin) raised(origin, name string, fields map[string]any) {
+	if p != nil && origin == p.name {
+		pluginRecord("%s skipped: re-entry (the plugin's own code raised it; origin %s)", name, origin)
+		return
+	}
+	p.event(name, fields)
+}
+
+// origin names the plugin whose call raised an event.
+func (p *claudePlugin) origin() string {
+	if p == nil {
+		return ""
+	}
+	return p.name
 }
 
 // answer carries a module's call to the session and its answer back to the

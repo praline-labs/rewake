@@ -3,6 +3,7 @@ package workflow
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 )
@@ -104,5 +105,42 @@ func TestClaudeShimRefusesAPluginTheHarnessWouldNotLoad(t *testing.T) {
 	}
 	if plugin, err := loadPlugin(""); err != nil || plugin != nil {
 		t.Errorf("a launch without a plugin: %v, %v", plugin, err)
+	}
+}
+
+// The fixture runs none of a plugin's handlers for an event that plugin's own
+// call raised, as the harness does; an event from elsewhere reaches them.
+func TestClaudeShimSkipsAPluginsHandlersForItsOwnCall(t *testing.T) {
+	node, err := exec.LookPath("node")
+	if err != nil {
+		t.Skip("node is not installed; the module is not run")
+	}
+	dir := t.TempDir()
+	module := filepath.Join(dir, "probe.js")
+	source := `export function register(on) {
+  on("session.compact", async ($, e, next) => {
+    await $.fs.write(e.dir + "/" + e.trigger, "")
+    return next(e)
+  })
+}
+`
+	if err := os.WriteFile(module, []byte(source), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	plugin := &claudePlugin{node: node, name: "rewake", modules: []string{module}}
+	defer func() {
+		for _, host := range plugin.hosts {
+			if host != nil {
+				_ = host.in.Close()
+			}
+		}
+	}()
+	plugin.raised(plugin.origin(), "session.compact", map[string]any{"trigger": "plugin", "dir": dir})
+	plugin.raised("", "session.compact", map[string]any{"trigger": "manual", "dir": dir})
+	if _, err := os.Stat(filepath.Join(dir, "plugin")); err == nil {
+		t.Error("the plugin's handler ran for the compaction its own call raised")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "manual")); err != nil {
+		t.Errorf("the plugin's handler did not run for a compaction from elsewhere: %v", err)
 	}
 }

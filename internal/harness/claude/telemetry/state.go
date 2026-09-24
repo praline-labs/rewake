@@ -64,16 +64,21 @@ type state struct {
 	count      uint64
 	events     []sessionstate.CompactionEvent
 	// asked is the compaction a main asked for with `rewake compact`, heard
-	// as the host starts it and before any hook of it: the next PostCompact is
-	// taken for that compaction, which holds unless another compaction's
-	// PostCompact arrives later than a second after its end
-	// (docs/remote-control.md).
+	// before any hook of it: the next PostCompact is taken for that
+	// compaction, which holds unless another compaction's PostCompact arrives
+	// later than a second after its end (docs/remote-control.md).
 	asked *askedCompaction
+	// lateStart is set when a main's compaction was refused after it started
+	// but before its PreCompact was heard: the hooks run in the background,
+	// and that PreCompact, when it comes, starts nothing.
+	lateStart bool
 }
 
-// askedCompaction is who asked for a compaction, and by which request.
+// askedCompaction is who asked for a compaction, by which request, and
+// whether its PreCompact has been heard.
 type askedCompaction struct {
 	by, request string
+	started     bool
 }
 
 func (s *state) apply(event Event, now time.Time) {
@@ -116,13 +121,13 @@ func (s *state) apply(event Event, now time.Time) {
 	case UserPromptSubmit:
 		s.turns = true
 		s.setActivity(event.At, activityWorking, nil, now)
-		s.compacting = false
+		s.compacting, s.lateStart = false, false
 	case Stop, StopFailure:
 		s.turns = true
 		s.setActivity(event.At, activityIdle, []string{}, now)
 		// A compaction that failed runs PreCompact and nothing after it; the
 		// end of the turn is the latest point it can still be running.
-		s.compacting = false
+		s.compacting, s.lateStart = false, false
 	case Notification:
 		switch event.Notice {
 		case "permission_prompt":
@@ -134,9 +139,16 @@ func (s *state) apply(event Event, now time.Time) {
 			s.setActivity(event.At, activityIdle, []string{}, now)
 		}
 	case PreCompact:
+		if s.lateStart {
+			s.lateStart = false
+			break
+		}
 		s.compacting = true
+		if s.asked != nil {
+			s.asked.started = true
+		}
 	case PostCompact:
-		s.compacting = false
+		s.compacting, s.lateStart = false, false
 		if event.At >= s.compactedAt {
 			s.compactedAt = event.At
 			s.context = unmeasured(s.context)
@@ -170,10 +182,10 @@ func (s *state) applyPlugin(event Event, now time.Time) {
 	switch event.Kind {
 	case TurnStart:
 		s.setActivity(event.At, activityWorking, nil, now)
-		s.compacting = false
+		s.compacting, s.lateStart = false, false
 	case TurnComplete:
 		s.setActivity(event.At, activityIdle, []string{}, now)
-		s.compacting = false
+		s.compacting, s.lateStart = false, false
 	case SessionMeasure:
 		if event.Context != nil && event.At >= s.compactedAt {
 			copied := *event.Context
@@ -184,11 +196,16 @@ func (s *state) applyPlugin(event Event, now time.Time) {
 		s.asked = &askedCompaction{by: event.By, request: event.Request}
 	case CompactRefused:
 		if s.asked != nil && s.asked.request == event.Request {
+			// The host may refuse after PreCompact — "Not enough messages"
+			// comes then — and no PostCompact follows: this is the
+			// compaction's end, or its PreCompact is still on its way.
+			if event.Started && s.asked.started {
+				s.compacting = false
+			} else if event.Started {
+				s.lateStart = true
+			}
 			s.asked = nil
 		}
-		// The host may refuse after PreCompact — "Not enough messages" comes
-		// then — and no PostCompact follows: this is the compaction's end.
-		s.compacting = false
 	}
 }
 

@@ -21,11 +21,11 @@ func reported(run controlRun, event string) []map[string]any {
 	return found
 }
 
-// As the host starts the compaction, the module tells rewake who asked, and
-// holds the compaction until that report is sent: it then reaches the
-// collector ahead of the compaction's hooks, and the compaction is counted as
-// the main's. A refusal after that is told before the answer is written; one
-// the host gives before it starts — mid-turn, say — needs no word at all.
+// Before it asks the host to compact, the module tells rewake who asked, and
+// waits until that report is sent: it then reaches the collector ahead of the
+// compaction's hooks, and the compaction is counted as the main's. A refusal is
+// told before the answer is written, saying whether the host had started;
+// a compaction asked mid-turn, which the host refuses, is not announced.
 func TestTheModuleTellsWhoAskedBeforeItCompacts(t *testing.T) {
 	idle := runControl(t, true, controlWorld{}, asked(idA, control.Compact, ""), tick)
 	want := []map[string]any{{"plugin_event": "compact.asked", "request": idA, "by": "lead"}}
@@ -35,23 +35,26 @@ func TestTheModuleTellsWhoAskedBeforeItCompacts(t *testing.T) {
 	if sent, compacted := indexOf(idle.Order, "sent compact.asked"), indexOf(idle.Order, "compact"); sent < 0 || compacted < 0 || sent > compacted {
 		t.Fatalf("the host compacted before the report was sent: %v", idle.Order)
 	}
-	short := runControl(t, true, controlWorld{TooShort: true}, asked(idA, control.Compact, ""), tick)
-	refused := []map[string]any{{"plugin_event": "compact.refused", "request": idA}}
-	if got := reported(short, "compact.refused"); len(reported(short, "compact.asked")) != 1 || !reflect.DeepEqual(got, refused) {
-		t.Fatalf("a refused compaction reported %v", short.Calls)
-	}
-	if sent, answered := indexOf(short.Order, "sent compact.refused"), indexOf(short.Order, "write "+idA+".result"); sent < 0 || answered < 0 || sent > answered {
-		t.Fatalf("answered before the refusal was sent: %v", short.Order)
-	}
-	for name, world := range map[string]controlWorld{"mid-turn": {}, "in flight": {InFlight: true}, "switched off": {CompactOff: true}} {
-		steps := [][]any{asked(idA, control.Compact, ""), tick}
-		if name == "mid-turn" {
-			steps = append([][]any{{"event", "turn.start", map[string]any{"turnId": "t1"}}}, steps...)
+	for name, tc := range map[string]struct {
+		world   controlWorld
+		started bool
+	}{
+		"too short":    {controlWorld{TooShort: true}, true},
+		"in flight":    {controlWorld{InFlight: true}, false},
+		"switched off": {controlWorld{CompactOff: true}, false},
+	} {
+		run := runControl(t, true, tc.world, asked(idA, control.Compact, ""), tick)
+		refused := map[string]any{"plugin_event": "compact.refused", "request": idA, "started": tc.started}
+		if got := reported(run, "compact.refused"); len(reported(run, "compact.asked")) != 1 || !reflect.DeepEqual(got, []map[string]any{refused}) {
+			t.Fatalf("%s: reported %v, want %v", name, run.Calls, refused)
 		}
-		run := runControl(t, true, world, steps...)
-		if len(reported(run, "compact.asked")) != 0 || len(reported(run, "compact.refused")) != 0 {
-			t.Fatalf("%s: a compaction the host never started was announced: %v", name, run.Calls)
+		if sent, answered := indexOf(run.Order, "sent compact.refused"), indexOf(run.Order, "write "+idA+".result"); sent < 0 || answered < 0 || sent > answered {
+			t.Fatalf("%s: answered before the refusal was sent: %v", name, run.Order)
 		}
+	}
+	busy := runControl(t, true, controlWorld{}, []any{"event", "turn.start", map[string]any{"turnId": "t1"}}, asked(idA, control.Compact, ""), tick)
+	if len(reported(busy, "compact.asked")) != 0 || len(reported(busy, "compact.refused")) != 0 {
+		t.Fatalf("a compaction asked mid-turn was announced: %v", busy.Calls)
 	}
 }
 
@@ -72,5 +75,28 @@ func TestTheModuleWaitsOutAnotherCompaction(t *testing.T) {
 	}
 	if answer := answerIn(t, run, idA); answer["outcome"] != "done" {
 		t.Fatalf("answer %v", answer)
+	}
+}
+
+// The host holds a module to the harness's re-entry rule: a compaction the
+// module's own call raised does not reach its session.compact handler, while
+// one it did not ask for does. A softer host let the module's word ride on
+// that handler, which a live session never ran.
+func TestTheHostSkipsTheModulesHandlerForItsOwnCompaction(t *testing.T) {
+	probe := []byte(`export function register(on) {
+  on("session.start", async ($, e, next) => {
+    $.clock.every(250, async () => { try { await $.session.compact() } catch {} })
+    return next(e)
+  })
+  on("session.compact", async ($, e, next) => {
+    await $.process.run(["/bin/probe"], { stdin: JSON.stringify({ plugin_event: "saw " + e.trigger }) })
+    return next(e)
+  })
+}
+`)
+	run := runControlModule(t, true, controlWorld{}, probe, tick, []any{"compaction", "manual"})
+	want := []map[string]any{{"plugin_event": "saw manual"}}
+	if !reflect.DeepEqual(run.Calls, want) || len(run.Compacts) != 1 {
+		t.Fatalf("the handler saw %v, want %v; %d compactions of its own", run.Calls, want, len(run.Compacts))
 	}
 }

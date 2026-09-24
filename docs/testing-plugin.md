@@ -73,8 +73,9 @@ refused — `$.session.compact` and `$.turn.abort`, each as strict as 2.1.280 ab
 forms ([research-claude-actions.md](research-claude-actions.md#compaction-abort-polling)).
 The last two go out to the session as a line naming the call, and the session answers
 on the host's stdin: a compaction is refused while a turn runs and with compaction
-switched off by `DISABLE_COMPACT`, in the harness's words; one that goes ahead plays the
-plugin's `session.compact` with trigger `plugin` and runs the hooks `PreCompact`,
+switched off by `DISABLE_COMPACT`, in the harness's words; one that goes ahead raises
+`session.compact`, which the plugin's own handlers do not see, as the harness skips
+them for re-entry, and runs the hooks `PreCompact`,
 `SessionStart` with source `compact` and `PostCompact`, so rewake's telemetry counts it
 by its own path, and answers with the summary and 120000 and 9000 tokens. Before any
 turn has ended it stops after `PreCompact` and refuses the conversation as too short,
@@ -125,7 +126,9 @@ among them, nor one that does not wait out the second after another compaction. 
 fixture's host runs the report quickly enough that it would still arrive first, and the
 fixture has no typed `/compact`, so the module test under node
 (`plugin_compact_test.go`) checks both instead: its host resolves `$.process.run` a
-timer later, and plays a compaction the module did not ask for.
+timer later, and plays a compaction the module did not ask for. Both hosts are held to
+the re-entry rule by a test of their own: `TestTheHostSkipsTheModulesHandlerForItsOwnCompaction`
+and `TestClaudeShimSkipsAPluginsHandlersForItsOwnCall`.
 
 What it cannot show: that the real harness carries these calls out as the fixture does
 — its forms, refusals and effects were seen live by review-claude on September 24, 2026,
