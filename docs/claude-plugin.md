@@ -182,8 +182,8 @@ Unit: decoding and the refusals (`telemetry/plugin_test.go`), the collector publ
 module under node (`claude/plugin_test.go`) with a host that checks `$.process.run` as
 the harness does and a test that the host refuses the forms the harness refuses. The
 workflow case `claude-interrupted` and its four mutant controls are described in
-[testing.md](testing.md#claude-code-interruptions), and `stopped-routing`, where a stop
-goes on both harnesses, in [the section after it](testing.md#where-a-stop-goes).
+[testing-plugin.md](testing-plugin.md#claude-code-interruptions), and `stopped-routing`, where a stop
+goes on both harnesses, in [the section after it](testing-plugin.md#where-a-stop-goes).
 Stage 2's tests — the control protocol, the commands, the module acting under a strict
 host, and the stopped text and notice line after main's interrupt — are listed in
 [remote-control.md](remote-control.md#tests).

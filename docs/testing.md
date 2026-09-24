@@ -169,7 +169,7 @@ product mutant, built by `buildMutant` in `mutant_test.go` with one edit through
 toolchain's overlay, inside a started case, refusing an edit that does not match exactly
 once; or a switch that changes the fixture's world. A mutant is preferred wherever one
 can be built, because it shows the scenario catching a broken rewake rather than a
-misbehaving peer. Of today's forty controls, thirty-one are mutants — batch-arrival's
+misbehaving peer. Of today's forty-seven controls, thirty-eight are mutants — batch-arrival's
 four; task-report's no-stop-hook, turn-ended-ignores-stop and settles-nothing;
 mid-turn's wait-for-idle; claude-telemetry's tap-without-owner, uncounted-compaction,
 silent-compaction and model-window; pending-report's pending-ignored and
@@ -178,7 +178,9 @@ expiry-unannounced, refusal-as-delivered and late-word-dropped; owed-reread's
 owed-empty; thread-changed's delivery-unpinned, stop-thread-ignored and
 thread-always-changed; awaited-view's awaited-interim-ignored and awaited-never-settled;
 claude-interrupted's interrupt-unpublished, every-end-stopped, plugin-not-passed and
-stop-not-heard; stopped-routing's stopped-to-main — and nine are fixture switches:
+stop-not-heard; claude-steered's compact-not-run, in-turn-unmapped, interrupter-unnamed,
+line-repeated, idle-interrupt-done, silent-not-answering and any-role-steers;
+stopped-routing's stopped-to-main — and nine are fixture switches:
 task-report's wrong-report, read-fails, failure-before-report and early-exit; the three
 readiness controls; mid-turn's late and failed-operation. A control names the
 observation it must break; the crosswise check then runs every control's observations in
@@ -298,57 +300,11 @@ a delivery, settle an expiry without telling the sender, read a refusal as a del
 and drop a word that comes after the window; each names what it must break and requires
 the rest to hold.
 
-### Claude Code interruptions
+### The plugin's cases
 
-`claude-interrupted` runs on the Claude Code column only, with a main and four workers,
-main running its own commands. The fixture loads the plugin rewake passed the way the
-harness does — it refuses a directory that is not laid out as a plugin, or one passed
-without function hooks switched on — and runs its module under node, loaded once for the
-session so that its state lives from one event to the next, calling each handler with
-the events the harness sends and running what the module asks `$.process.run` to run.
-That call is checked as the 2.1.280 binary checks it — `(argv, init)`, argv a non-empty
-list of strings — and any other form is refused and recorded in the case's evidence: a
-host that also took `({ argv, init })` once passed a module whose every call the real
-harness refused. The events throw when the module reads the prompt, the answer or the
-last message. The fixture plays the order seen live: `classic.Stop` or
-`classic.StopFailure`, then the hooks, then `turn.complete`. What the fixture cannot
-prove is that the harness calls the module as it does; only a live session shows that.
-The case's own PATH holds no node, so it passes the node it found; without one the case
-and its controls are unsupported for the capability `node`, and every other case runs
-with the plugin passed and not loaded. One worker's first turn reads its task and ends
-as an Esc ends it: `turn.complete` with reason `aborted` and no Stop hook. main must read
-`stopped` about the task before any later turn and still list it as `stopped` in
-`--awaited`; the listing must show that worker `idle` with interruptions `observed`; after
-a note, its next turn end must bring exactly one `finished`, which settles the task, and
-the worker must have published one stop in all. A second worker's ordinary turn must
-give exactly one `finished` and publish no stop, though the plugin heard its end too. A
-third is interrupted just as its turn ends, the way an Esc landing on the Stop hook was
-seen live: the Stop hook reports and `turn.complete` still says `aborted`; main must read
-one `finished`, and the worker must publish no stop. A stop is counted by the turn receipt
-the worker keeps for it, not in main's inbox: a `stopped` after the `finished` that
-settled every wait goes to nobody
-([turn-outcomes.md](turn-outcomes.md#keyboard-stops)), so main would never see it; on
-this column only a stop leaves a receipt, since the Stop hook's report names no turn. A fourth is interrupted in a session whose harness does not load the plugin:
-interruptions read `unobserved`, nothing arrives, and the next `finished` settles the task,
-as before the plugin. Its four mutants — a collector that publishes nothing for
-`aborted`, one that takes every turn end for an interruption, a launch that never
-carries the plugin, and a module that does not heed the Stop hook — each name what they
-break and require the rest to hold.
-
-### Where a stop goes
-
-`stopped-routing` runs on both columns, the Claude Code one through the plugin as above
-and unsupported for `node` without it, and the Codex one through the fixture's switch
-`RW_SHIM_INTERRUPT_FIRST_TURN`, which ends a session's first turn with `turn/completed`
-of status `interrupted`, the shape the schema case checks. A main, running its own
-commands, sends one worker a task and another a `--notify`, which owes nothing; both
-workers and main have their first turn interrupted. main must read `stopped` about the
-task and list it as `stopped` in `--awaited`; the notified worker's stop, once its
-receipt shows it was acted on, must leave nothing in main's inbox, read or not, and the
-worker must read `idle`; main's own stop must leave nothing in its own inbox. Its mutant,
-stopped-to-main, restores the rule the owner removed on September 23, 2026 — a stop
-nobody waits on goes to main — and must break the last two observations and leave the
-first.
+The cases that run rewake's function-hooks plugin under node — `claude-interrupted`,
+`stopped-routing` and `claude-steered` — and what the fixture's plugin host plays for
+them are in [testing-plugin.md](testing-plugin.md).
 
 ## Traps this suite has already paid for
 

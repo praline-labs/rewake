@@ -131,6 +131,7 @@ func (s *claudeSession) workTurn(turn string, notice claudeNotice) {
 	}); err == nil {
 		s.runHook("UserPromptSubmit", s.launch.settings.observe, payload)
 	}
+	s.startTurn(turn)
 	s.plugin.turnStarted(turn, notice.Summary)
 
 	var text string
@@ -148,8 +149,11 @@ func (s *claudeSession) workTurn(turn string, notice claudeNotice) {
 	if s.firstTurn(shimInterruptFirst) {
 		// Esc: the harness ends the turn with no Stop hook at all, and only
 		// the plugin hears it (docs/research-claude-control.md).
-		s.plugin.turnCompleted(turn, text, "aborted")
+		s.completeTurn(turn, text, "aborted")
 		(&shimSession{}).recordTurn(turn + " interrupted " + firstLine(text))
+		return
+	}
+	if s.firstTurn(shimHoldFirstTurn) && s.holdTurn(turn, text) {
 		return
 	}
 	late := ""
@@ -200,7 +204,7 @@ func (s *claudeSession) endTurn(turn, text, late string) {
 	// either beyond its own exit.
 	s.runHook(event, s.launch.settings.observe, payload)
 	s.runHook(event, command, payload)
-	s.plugin.turnCompleted(turn, text, reason)
+	s.completeTurn(turn, text, reason)
 }
 
 // runHook runs one hook command with its payload on stdin. The command is a

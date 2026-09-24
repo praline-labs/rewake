@@ -58,7 +58,11 @@ const (
 // lives from one event to the next.
 type claudePlugin struct {
 	node    string
+	name    string
 	modules []string
+	// serve answers what a module asks of the session itself — a compaction,
+	// an abort (claudeshim_control_test.go); nil answers nothing.
+	serve func(call string, args json.RawMessage) (any, string)
 
 	mu    sync.Mutex
 	hosts map[string]*pluginHost
@@ -68,7 +72,10 @@ type claudePlugin struct {
 // event comes back once the event's handlers and the processes they started
 // are done.
 type pluginHost struct {
-	in      io.WriteCloser
+	in io.WriteCloser
+	// writing keeps an event and an answer to a module's call from
+	// interleaving on stdin.
+	writing sync.Mutex
 	replies chan string
 	// unloaded is set when the module failed; the harness unloads such a
 	// plugin and the session goes on without it.
@@ -98,7 +105,7 @@ func loadPlugin(dir string) (*claudePlugin, error) {
 	if err != nil || json.Unmarshal(raw, &hooks) != nil || len(hooks.Modules) == 0 {
 		return nil, fmt.Errorf("the plugin in %s names no hooks modules: %v", dir, err)
 	}
-	plugin := &claudePlugin{}
+	plugin := &claudePlugin{name: manifest.Name}
 	for _, module := range hooks.Modules {
 		path := filepath.Join(dir, "hooks", module)
 		if !strings.HasPrefix(path, filepath.Join(dir, "hooks")+string(filepath.Separator)) {
@@ -125,7 +132,9 @@ func loadPlugin(dir string) (*claudePlugin, error) {
 // pluginHostScript loads one module and plays it the events that come in on
 // stdin, one JSON line each. The handlers of an event are chained the way the
 // harness chains them, each passing the event on with next, and the reply
-// waits for every process the module started.
+// waits for every process the module started. Beside the replies, a module's
+// call on the session itself goes out as a line naming it, and its answer
+// comes back on stdin (claudeshim_control_test.go).
 //
 // Its $.process.run is as strict as the harness's (read in the 2.1.280
 // binary, docs/research-claude-control.md): two arguments, argv — a non-empty
@@ -140,12 +149,15 @@ func loadPlugin(dir string) (*claudePlugin, error) {
 // block before the process's own — the harness applies that block to its
 // environment, and it wins over a variable the process already had
 // (docs/research.md).
-const pluginHostScript = `
+var pluginHostScript = pluginHostHead + pluginControlScript + pluginHostLoop
+
+const pluginHostHead = `
 import { spawn } from "node:child_process"
-import { readFileSync } from "node:fs"
-import { join } from "node:path"
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs"
+import { join, dirname } from "node:path"
 import { createInterface } from "node:readline"
-const modulePath = process.argv[process.argv.length - 1]
+const [pluginName, modulePath] = process.argv.slice(-2)
+const say = (message) => process.stdout.write(JSON.stringify(message) + "\n")
 const mod = await import("data:text/javascript," + encodeURIComponent(readFileSync(modulePath, "utf8")))
 const handlers = {}
 mod.register((event, handler) => { (handlers[event] ??= []).push(handler) })
@@ -192,8 +204,14 @@ const guarded = (fields) => new Proxy(fields, { get(target, key) {
   if (["text", "answer", "prompt", "last_assistant_message", "error_details"].includes(key)) throw new Error("the module read the " + String(key))
   return target[key]
 } })
-for await (const line of createInterface({ input: process.stdin })) {
-  const { name, fields } = JSON.parse(line)
+`
+
+// pluginHostLoop plays the events one after another, and resolves a
+// module's call the moment its answer arrives, even while an event plays: an
+// abort ends its turn with an event before it resolves. The timers the
+// module starts would keep node running, so the end of stdin ends it.
+const pluginHostLoop = `
+async function play(name, fields) {
   let error = ""
   try {
     let chain = async (e) => e
@@ -201,10 +219,21 @@ for await (const line of createInterface({ input: process.stdin })) {
     await chain(guarded(fields))
   } catch (err) { error = String(err && err.stack || err) }
   await Promise.all(running)
-  process.stdout.write(JSON.stringify({ error, refused }) + "\n")
+  say({ error, refused })
   running = []
   refused = []
 }
+let queue = Promise.resolve()
+const lines = createInterface({ input: process.stdin })
+lines.on("line", (line) => {
+  const message = JSON.parse(line)
+  if (message.answer !== undefined) {
+    answered(message)
+    return
+  }
+  queue = queue.then(() => play(message.name, message.fields))
+})
+lines.on("close", () => process.exit(0))
 `
 
 // event plays one harness event to every module and returns once the
@@ -226,7 +255,10 @@ func (p *claudePlugin) event(name string, fields map[string]any) {
 		if host == nil || host.unloaded {
 			continue
 		}
-		if _, err := host.in.Write(append(encoded, '\n')); err != nil {
+		host.writing.Lock()
+		_, err := host.in.Write(append(encoded, '\n'))
+		host.writing.Unlock()
+		if err != nil {
 			pluginRecord("%s: the host is gone: %v", name, err)
 			host.unloaded = true
 			continue
@@ -265,7 +297,7 @@ func (p *claudePlugin) host(module string) *pluginHost {
 	if p.hosts == nil {
 		p.hosts = map[string]*pluginHost{}
 	}
-	cmd := exec.Command(p.node, "--input-type=module", "-e", pluginHostScript, "--", module)
+	cmd := exec.Command(p.node, "--input-type=module", "-e", pluginHostScript, "--", p.name, module)
 	cmd.Env = os.Environ()
 	cmd.Stderr = os.Stderr
 	in, err := cmd.StdinPipe()
@@ -286,7 +318,22 @@ func (p *claudePlugin) host(module string) *pluginHost {
 		scanner := bufio.NewScanner(out)
 		scanner.Buffer(make([]byte, 0, 64*1024), 1<<20)
 		for scanner.Scan() {
-			host.replies <- scanner.Text()
+			line := scanner.Text()
+			var tagged struct {
+				Call string          `json:"call"`
+				ID   int             `json:"id"`
+				Args json.RawMessage `json:"args"`
+				Log  *string         `json:"log"`
+			}
+			_ = json.Unmarshal([]byte(line), &tagged)
+			switch {
+			case tagged.Call != "":
+				go p.answer(host, tagged.ID, tagged.Call, tagged.Args)
+			case tagged.Log != nil:
+				pluginRecord("%s", *tagged.Log)
+			default:
+				host.replies <- line
+			}
 		}
 		close(host.replies)
 		_ = cmd.Wait()

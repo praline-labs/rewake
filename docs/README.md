@@ -179,6 +179,11 @@ everything else.
   and a red case's evidence, how to add a scenario, a control or a column, and the traps
   already paid for. Open it first for anything about tests; the documents below are the
   depth behind it.
+- [testing-plugin.md](testing-plugin.md) — the workflow cases that run rewake's
+  function-hooks plugin under node: how the fixture hosts the module and answers its
+  calls on the session, and what `claude-interrupted`, `stopped-routing` and
+  `claude-steered` claim, with their controls. Open it before changing the plugin, the
+  control directory or those cases.
 - [check-runner.md](check-runner.md) — the requirements the workflow suite answers: one
   command without flooding an agent's context, the evidence tiers from pure Go to a
   person at a terminal, the output and evidence contract with its outcome names, isolation

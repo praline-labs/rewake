@@ -7,8 +7,8 @@ which only listens). What the harness offers for it is in
 [research-claude-actions.md](research-claude-actions.md)
 and, for Codex, [research-protocol.md](research-protocol.md#compaction-and-interrupt-on-request).
 
-Built on September 24, 2026 for Claude Code, with unit and module tests. The workflow
-case and the Codex side are next ([work-queue.md](work-queue.md#now-stage-2-of-the-plugin-the-rest)).
+Built on September 24, 2026 for Claude Code, with unit and module tests and a workflow
+case. The Codex side is next ([work-queue.md](work-queue.md#now-stage-2-of-the-plugin-the-rest)).
 
 ## The commands
 
@@ -215,3 +215,9 @@ will implement `Steerable` with `CompactFocus` false.
 - `internal/harness/claude/telemetry/interrupter_test.go` and
   `internal/harness/claude/lane_interrupt_test.go` — the stopped text naming main, the
   mark and when it is used up or laid aside, and the notice line.
+- The workflow case `claude-steered` — both commands end to end from a main against
+  workers whose module runs under node in the fixture: an idle compaction counted by the
+  telemetry, a compaction refused mid-turn with the turn going on, an interrupt giving
+  main the stopped text and the worker the notice line once, an idle interrupt refused,
+  a worker without the module not answering, and a worker's call refused as a wrong call;
+  seven product mutants, one per link ([testing-plugin.md](testing-plugin.md#steering-a-session)).

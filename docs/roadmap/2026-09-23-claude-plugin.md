@@ -34,7 +34,7 @@ it: `turn.complete` with reason `aborted`
 and the module run under node with events that throw on a read of conversation text.
 The Claude Code fixture now loads the plugin as the harness does, stricter than it, and
 runs the module; the workflow case `claude-interrupted` and its three mutant controls
-are described in [testing.md](../testing.md#claude-code-interruptions).
+are described in [testing.md](../testing-plugin.md#claude-code-interruptions).
 
 A Claude Code run now keeps a read clock for its whole life, as a Codex run always has,
 so that an interruption's report is bounded by what was read when it was heard. Its

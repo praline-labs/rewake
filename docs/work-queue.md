@@ -80,16 +80,15 @@ harness's own `/clear` and `/resume` were observed working under rewake on Septe
 2026 (HF-19). One telemetry limit remains: the waiting
 state is unknown during a turn ([session-state.md](session-state.md#claude-code-source)).
 Stage 2 of the plugin acts on the session: `rewake compact` and `rewake interrupt`,
-built on the Claude Code side on September 24, 2026 ([remote-control.md](remote-control.md));
-its workflow case and the Codex side follow below.
+built on the Claude Code side on September 24, 2026 ([remote-control.md](remote-control.md))
+with its workflow case, `claude-steered`; the Codex side follows below.
 
 ## Now: stage 2 of the plugin, the rest
 
 What [remote-control.md](remote-control.md) describes is built for Claude Code with unit
-and module tests. Next, in order: the workflow case in the Claude Code column — main
-compacts an idle worker and a busy one, interrupts a busy one and an idle one, and a
-worker without the module does not answer — with product mutants for each property;
-then part B, the Codex adapter: the wrapper serves the same control directory, refuses a
+and module tests and the workflow case `claude-steered` with seven product mutants
+([testing-plugin.md](testing-plugin.md#steering-a-session)). Next is part B, the Codex
+adapter: the wrapper serves the same control directory, refuses a
 compaction itself while a turn runs or a `turn/start` is in flight, sends
 `thread/compact/start` with the gateway's manual-compaction mark, and `turn/interrupt`
 with the running turn's id. Its live check is in
