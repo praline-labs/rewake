@@ -3,9 +3,14 @@
 // session starts and ends — including a turn a person interrupted, which runs
 // no Stop hook — how full the context is, and the auto-compact window it is
 // measured against, by running `rewake observe`.
+// And it carries out what a main session asks through `rewake compact` and
+// `rewake interrupt`: it polls the run's control directory, compacts the
+// conversation or aborts the running turn, and writes back the outcome — only
+// numbers and the host's own error text (docs/remote-control.md).
 // Nothing else: it reads no prompt and no answer, sends of the settings only
-// that one key, and acts on nothing.
+// that one key, and never sends the compaction's summary.
 const argv = __REWAKE_ARGV__
+const control = __REWAKE_CONTROL__
 
 // report hands one event to rewake and does not wait for it: a turn must never
 // wait on its observer, and a report that fails costs one observation. The
@@ -43,18 +48,123 @@ const limitOf = (env, settings) => ({
 // aborted, and reporting that too would give the turn two outcomes.
 let hooked = false
 
+// turn is the id of the session's own running turn, the one an interrupt
+// aborts; aborting is that turn once a request asked for it, with who asked, so
+// its end is reported as theirs rather than a person's.
+let turn
+let aborting
+// handled keeps the ids of requests taken by this load of the module; the
+// .taken file keeps them across a reload, which runs session.start again.
+const handled = new Set()
+let polling
+let busy = false
+
+const request = (text) => {
+  try {
+    const parsed = JSON.parse(text)
+    return parsed !== null && typeof parsed === "object" && /^[0-9a-f]{32}$/.test(word(parsed.id)) ? parsed : undefined
+  } catch {
+    return undefined
+  }
+}
+const message = (error) => String(error !== null && typeof error === "object" && typeof error.message === "string" ? error.message : error)
+
+// refusal maps the host's refusal to one of rewake's reasons by the words the
+// host uses (docs/research-claude-control.md), and keeps its text as it was.
+function refusal(error, reasons) {
+  const detail = message(error)
+  for (const [words, reason] of reasons) {
+    if (detail.includes(words)) return { outcome: "refused", reason, detail }
+  }
+  return { outcome: "failed", detail }
+}
+
+// act carries out one request. The host refuses a compaction mid-turn by
+// itself, atomically, so the module does not check; an abort needs the turn's
+// id, which only the module knows.
+async function act($, asked) {
+  if (asked.action === "compact") {
+    try {
+      const focus = word(asked.focus)
+      const result = focus === "" ? await $.session.compact() : await $.session.compact({ instructions: focus })
+      const counts = result !== null && typeof result === "object" ? result : {}
+      return { outcome: "done", tokensBefore: number(counts.tokensBefore), tokensAfter: number(counts.tokensAfter) }
+    } catch (error) {
+      return refusal(error, [
+        ["a turn is running", "in a turn"],
+        ["switched off", "compaction switched off"],
+        ["Not enough messages to compact", "nothing to compact"],
+      ])
+    }
+  }
+  if (asked.action === "interrupt") {
+    if (turn === undefined) return { outcome: "refused", reason: "no turn running" }
+    const running = turn
+    aborting = { turn: running, by: word(asked.from) }
+    try {
+      await $.turn.abort({ turnId: running })
+      return { outcome: "done" }
+    } catch (error) {
+      if (aborting !== undefined && aborting.turn === running) aborting = undefined
+      return refusal(error, [["no turn is running", "no turn running"], ["is not the running turn", "no turn running"]])
+    }
+  }
+  return { outcome: "failed", detail: "unknown action " + word(asked.action) }
+}
+
+// pending reads the request in place, if any. It asks whether the file exists
+// before reading it: reading a missing file is logged as an error by the host,
+// four times a second. A file removed between the two reads as none.
+async function pending($) {
+  if (!(await $.fs.exists(control + "/request.json"))) return undefined
+  try {
+    return request(await $.fs.read(control + "/request.json"))
+  } catch {
+    return undefined
+  }
+}
+
+// poll takes the request waiting in the control directory, if any, once. It
+// marks the request taken before acting and then checks it is still in place:
+// an asker that gave up removes it before its last look for the mark, so a
+// request still there is one the asker will wait for, and one gone is answered
+// as withdrawn without acting (docs/remote-control.md).
+async function poll($) {
+  if (busy) return
+  busy = true
+  try {
+    const asked = await pending($)
+    if (asked === undefined || handled.has(asked.id)) return
+    handled.add(asked.id)
+    const taken = control + "/" + asked.id + ".taken"
+    if (await $.fs.exists(taken)) return
+    await $.fs.write(taken, "")
+    const still = await pending($)
+    const answer = still !== undefined && still.id === asked.id ? await act($, asked) : { outcome: "refused", reason: "withdrawn before it was taken" }
+    await $.fs.write(control + "/" + asked.id + ".result", JSON.stringify({ id: asked.id, ...answer }))
+  } catch {
+  } finally {
+    busy = false
+  }
+}
+
 export function register(on) {
   on("session.start", async ($, e, next) => {
     let env, settings, read = true
     try { env = await $.env.get("CLAUDE_CODE_AUTO_COMPACT_WINDOW") } catch { read = false }
     try { settings = await $.settings.read() } catch { read = false }
     report($, { plugin_event: "plugin.ready", limit: read ? limitOf(env, settings) : undefined })
+    // Once per load of the module: a reload loads it afresh and starts again.
+    if (polling === undefined) {
+      if (control !== "") polling = $.clock.every(250, () => poll($))
+    }
     return next(e)
   })
   on("turn.start", async ($, e, next) => {
     if (own(e)) {
       hooked = false
-      report($, { plugin_event: "turn.start", turn_id: word(e.turnId) })
+      turn = word(e.turnId)
+      report($, { plugin_event: "turn.start", turn_id: turn })
     }
     return next(e)
   })
@@ -69,7 +179,11 @@ export function register(on) {
   on("turn.complete", async ($, e, next) => {
     if (own(e)) {
       const reason = word(e.reason)
-      if (!(reason === "aborted" && hooked)) report($, { plugin_event: "turn.complete", turn_id: word(e.turnId), reason })
+      const id = word(e.turnId)
+      const by = reason === "aborted" && aborting !== undefined && aborting.turn === id ? aborting.by : undefined
+      if (!(reason === "aborted" && hooked)) report($, { plugin_event: "turn.complete", turn_id: id, reason, by })
+      if (turn === id) turn = undefined
+      if (aborting !== undefined && aborting.turn === id) aborting = undefined
     }
     return next(e)
   })

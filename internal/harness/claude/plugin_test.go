@@ -19,7 +19,7 @@ import (
 // only, through the environment. The person's own plugin directories stay.
 func TestALaunchCarriesThePlugin(t *testing.T) {
 	socket := filepath.Join(t.TempDir(), "s.obs")
-	args, env, notes := applyPlugin([]string{"--plugin-dir", "/theirs"}, []string{"HOME=/h"}, socket)
+	args, env, notes := applyPlugin([]string{"--plugin-dir", "/theirs"}, []string{"HOME=/h"}, socket, "")
 	dir := telemetry.PluginPath(socket)
 	if len(notes) != 0 || !slices.Equal(harness.FlagValues(args, pluginDirFlag), []string{"/theirs", dir}) {
 		t.Fatalf("args %v, notes %v", args, notes)
@@ -74,7 +74,7 @@ func TestThePluginStaysOutWhereItCannotWork(t *testing.T) {
 		{"function hooks off", nil, []string{functionHooksEnv + "=0"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			args, env, notes := applyPlugin(tc.args, tc.env, socket)
+			args, env, notes := applyPlugin(tc.args, tc.env, socket, "")
 			if harness.HasFlag(args, pluginDirFlag) || !slices.Equal(env, tc.env) || len(notes) != 1 || !strings.HasPrefix(notes[0], "not hearing interrupted turns: ") {
 				t.Fatalf("args %v, env %v, notes %v", args, env, notes)
 			}
@@ -83,11 +83,11 @@ func TestThePluginStaysOutWhereItCannotWork(t *testing.T) {
 			}
 		})
 	}
-	args, env, notes := applyPlugin(nil, []string{functionHooksEnv + "=true"}, socket)
+	args, env, notes := applyPlugin(nil, []string{functionHooksEnv + "=true"}, socket, "")
 	if !harness.HasFlag(args, pluginDirFlag) || len(notes) != 0 || !slices.Equal(env, []string{functionHooksEnv + "=1"}) {
 		t.Fatalf("switched on by the person: args %v, env %v, notes %v", args, env, notes)
 	}
-	if args, env, notes := applyPlugin(nil, nil, ""); len(args) != 0 || len(env) != 0 || len(notes) != 0 {
+	if args, env, notes := applyPlugin(nil, nil, "", ""); len(args) != 0 || len(env) != 0 || len(notes) != 0 {
 		t.Fatalf("without a socket: %v %v %v", args, env, notes)
 	}
 }
@@ -231,7 +231,7 @@ func runModuleIn(t *testing.T, module []byte, world hostWorld, events [][2]any) 
 func TestThePluginModuleReportsOnlyWhatRewakeReads(t *testing.T) {
 	dir := t.TempDir()
 	argv := []string{"/bin/rewake", "observe", "/run/s.obs"}
-	if err := writePlugin(filepath.Join(dir, "plugin"), argv); err != nil {
+	if err := writePlugin(filepath.Join(dir, "plugin"), argv, ""); err != nil {
 		t.Fatal(err)
 	}
 	module, err := os.ReadFile(filepath.Join(dir, "plugin", "hooks", "rewake.js"))

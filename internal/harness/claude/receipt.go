@@ -1,10 +1,14 @@
 package claude
 
 import (
+	"bufio"
 	"encoding/json"
+	"errors"
+	"net"
 	"os"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 )
@@ -105,4 +109,50 @@ func sameUser(connection interface {
 		return false
 	}
 	return int(credentials.Uid) == os.Getuid()
+}
+
+// maxReceipt bounds one receipt line. A receipt is a handful of short fields.
+const maxReceipt = 64 << 10
+
+// acceptPause bounds the wait after a failed accept — out of descriptors, say —
+// which would otherwise be retried at once, and again, on a whole core.
+const acceptPause = time.Second
+
+func (l *lane) accept(listener *net.UnixListener) {
+	var pause time.Duration
+	for {
+		connection, err := listener.AcceptUnix()
+		if err != nil {
+			if errors.Is(err, net.ErrClosed) {
+				return
+			}
+			pause = min(max(2*pause, 5*time.Millisecond), acceptPause)
+			select {
+			case <-l.done:
+				return
+			case <-time.After(pause):
+			}
+			continue
+		}
+		pause = 0
+		go l.read(connection)
+	}
+}
+
+// read takes the receipts one connection carries. Only this user's processes
+// may write here — the directory says so, and the peer is checked for a
+// directory somebody loosened.
+func (l *lane) read(connection *net.UnixConn) {
+	defer func() { _ = connection.Close() }()
+	if !sameUser(connection) {
+		return
+	}
+	_ = connection.SetReadDeadline(time.Now().Add(dialTimeout))
+	scanner := bufio.NewScanner(connection)
+	scanner.Buffer(make([]byte, 0, 4096), maxReceipt)
+	for scanner.Scan() {
+		for _, word := range parseReceipt(scanner.Bytes()) {
+			l.route(word.msgID, word.result)
+		}
+	}
 }

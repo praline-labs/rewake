@@ -113,11 +113,17 @@ func age(d time.Duration) string {
 
 // unknownSessionError refuses a name nobody answers to, and says who does.
 func unknownSessionError(dir, name string) error {
+	return unknownSessionFor(findCommand("send"), dir, name)
+}
+
+// unknownSessionFor refuses a name no running session answers to, with the
+// syntax of the command that was called.
+func unknownSessionFor(command *Command, dir, name string) error {
 	message := fmt.Sprintf("No session named %q is running.", name)
 	if names := registry.Names(dir); len(names) > 0 {
 		message += " Running now: " + strings.Join(names, ", ") + "."
 	} else {
 		message += " No sessions are running. Run rewake for launch commands, then use the exact address from rewake list."
 	}
-	return &UsageError{Command: findCommand("send"), Message: message}
+	return &UsageError{Command: command, Message: message}
 }

@@ -104,6 +104,10 @@ September 23, 2026, the same on both harnesses, since the routing
 under another epoch, is no waiter any more: a `stopped` meant only for it is dropped too,
 where it used to go to main. The turn receipt is kept all the same, so a repeated event
 publishes nothing either.
+On Claude Code a turn a main aborted with `rewake interrupt` is stopped the same way,
+with the text "<main> interrupted this turn with rewake interrupt" instead, and the same
+routing; its next notice tells the interrupted session so, once
+([remote-control.md](remote-control.md#on-claude-code)).
 It owes no reply and has its own report id, separate from the eventual result.
 Its separate advisory turn receipt keeps the original waits intact. A finished
 or error outcome for the same native turn uses its final receipt and can settle

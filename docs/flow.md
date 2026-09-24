@@ -330,6 +330,7 @@ question to a silent role.
 |---|---|---|
 | fresh server thread, no turn yet | turn/start begins its first turn | delivered after RPC acceptance |
 | a turn interrupted with Esc or Ctrl+C | stopped advises the waiters to wait, and goes to nobody when none waits; original work stays owed | yellow notice; human continuation reports its result |
+| a Claude Code turn interrupted by main's `rewake interrupt` | the same stopped, naming main instead of the person; the worker's next notice says main interrupted it, once ([remote-control.md](remote-control.md)) | yellow notice naming main |
 | recipient's wrapper gone | record evicted on the next read | exit 2, no such session |
 | a reader's stdout blocks | it holds the lock; server waits, `turn-ended` five seconds, `inbox` ten | delays, then "mailbox is busy" |
 | the main session is asked a question | refused before publication | exit 2 with a hint |

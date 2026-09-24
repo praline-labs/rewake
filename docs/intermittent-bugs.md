@@ -114,3 +114,29 @@ read settlement, scheduler or gate — plus the failed completion-notice reason 
 separately from the later read status. No message text, titles or transcripts are
 needed. Most of it is already available through the `Record` callback, which the
 installed wrapper does not wire.
+
+## A stopped harness leaves its wrapper stopped — cause unknown, September 24, 2026
+
+Seen by review-claude on September 24, 2026, Claude Code 2.1.280, rewake built from the
+working tree of stage 2 part A, in a private HOME with a stand-in API; evidence in
+`/tmp/stage2A1-probe-OM8dqF` while it lasts.
+
+**What happened.** A `SIGSTOP` sent to the Claude Code process, not to its job, stopped
+the wrapper as designed: `followStop` (`internal/wrap/signals.go`) sees the harness in
+`T` and stops the wrapper with it, to continue the harness once the wrapper is
+continued. But the harness was running again within 0.15 s, while the wrapper stayed
+stopped — the wrapper in `T`, the harness in `S` — and no mail was delivered to the
+session until somebody sent the wrapper `SIGCONT`. Stopping the wrapper first behaved.
+
+**What is not known.** Who continued the harness. An isolated Go reproduction of
+`followStop` with a plain child did not reproduce it, so the harness itself, or
+something around it, is the likelier source; that is not established.
+
+**Why it matters.** A wrapper left stopped serves no mailbox, and nothing says so:
+`rewake list` still shows the session alive. It needs a stop from outside to begin
+with, which no rewake path sends.
+
+**What to capture next time:** the order and senders of the signals the harness
+receives — its own handlers for `SIGTSTP` and `SIGCONT` among them — the process states
+of both at short intervals from the stop on, and whether a harness without its terminal
+interface does the same.

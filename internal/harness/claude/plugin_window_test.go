@@ -22,7 +22,7 @@ import (
 func TestThePluginReportsTheAutoCompactWindow(t *testing.T) {
 	dir := t.TempDir()
 	argv := []string{"/bin/rewake", "observe", "/run/s.obs"}
-	if err := writePlugin(filepath.Join(dir, "plugin"), argv); err != nil {
+	if err := writePlugin(filepath.Join(dir, "plugin"), argv, ""); err != nil {
 		t.Fatal(err)
 	}
 	module, err := os.ReadFile(filepath.Join(dir, "plugin", "hooks", "rewake.js"))
@@ -67,7 +67,7 @@ func TestThePluginReportsTheAutoCompactWindow(t *testing.T) {
 // put the model's window back in the listing until the next measure.
 func TestAFailedReadSendsNoLimit(t *testing.T) {
 	dir := t.TempDir()
-	if err := writePlugin(filepath.Join(dir, "plugin"), []string{"/bin/rewake", "observe", "/run/s.obs"}); err != nil {
+	if err := writePlugin(filepath.Join(dir, "plugin"), []string{"/bin/rewake", "observe", "/run/s.obs"}, ""); err != nil {
 		t.Fatal(err)
 	}
 	module, err := os.ReadFile(filepath.Join(dir, "plugin", "hooks", "rewake.js"))

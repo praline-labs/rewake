@@ -12,6 +12,7 @@ internal/state/                  directory: checks, paths, atomic writes
 internal/registry/               session record, name publishing, liveness, listing
 internal/proc/                   /proc: identity, liveness and job-control state
 internal/inbox/                  message, status, sender-side write, servicing loop
+internal/control/                a main's control request to a run and its answer, as files
 internal/role/                   the role catalogue: flag, briefing line, reporting duty
 internal/brief/                  text injected into an agent, independent of transport
 internal/alias/                  launch aliases: a short name turned into launch arguments
@@ -56,4 +57,8 @@ type Harness interface {
 `SingleUseFlags` names the flags a harness takes at most once, so an alias and a typed
 flag for the same parameter replace rather than repeat each other. `Deliver` sends the
 notice for `message`, built by `harness.Notice`; it never sends `message.Text`.
+
+A harness whose sessions take `rewake compact` and `rewake interrupt` also implements
+`Steerable` — `CompactFocus() bool`, whether a compaction may carry a focus. One that
+does not is refused before anything is sent ([remote-control.md](remote-control.md)).
 

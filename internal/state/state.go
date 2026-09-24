@@ -67,6 +67,7 @@ const (
 	sessionsDir  = "sessions"
 	inboxDir     = "inbox"
 	socketsDir   = "sock"
+	controlDir   = "control"
 	doneDir      = "done"
 	unreadDir    = "unread"
 	awaitingDir  = "awaiting"
@@ -117,6 +118,14 @@ func ObservationPath(dir, name, run string) string {
 		path = filepath.Join(dir, socketsDir, fmt.Sprintf("%x.obs", sum[:12]))
 	}
 	return path
+}
+
+// ControlPath is where a run takes control requests — compact, interrupt — and
+// leaves its answers (docs/remote-control.md). One per run, like the sockets:
+// a request written for a run that ended must not reach the next holder of the
+// name. It is no socket, so its length does not matter.
+func ControlPath(dir, name, run string) string {
+	return filepath.Join(dir, controlDir, name+"."+run)
 }
 
 // SocketPath is where the wrapper asks a harness to put its inbox socket. It is

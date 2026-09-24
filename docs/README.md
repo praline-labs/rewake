@@ -18,16 +18,21 @@ everything else.
   ends; with the files each step leaves and the exit codes and stalls a reader meets.
   Open it first, before any of the documents below, which it strings together.
 - [design.md](design.md) — the specification: scope, the process model with no daemon,
-  the state directory, rooms, the session record, roles and names (the one place their
-  rules live), the environment a harness receives, the CLI contract and exit codes, the
-  code policy, the testing layers, and dated owner decisions. Open it for why the system
-  has the shape it has, or for a canonical rule.
+  the state directory, rooms, the session record, the environment a harness receives,
+  the CLI contract and exit codes, the code policy, the testing layers, and dated owner
+  decisions. Open it for why the system has the shape it has, or for a canonical rule.
+- [roles.md](roles.md) — roles and names, split from design.md by subject and the one
+  place their rules live: the role catalogue and what each role reports and may be
+  granted, how the role is chosen under the room lock, why main is silent, and how a
+  name is built from role, prefix and harness. Open it when a launch picks the wrong
+  role or name.
 - [code.md](code.md) — the source tree, package by package, with the harness interface
   every adapter implements. Open it to find where something lives, or before adding a
   package.
 - [launch.md](launch.md) — starting a harness: the wrapper's launch sequence, signals,
   model and effort defaults from flags, environment and settings files, launch aliases,
-  which flags choose a room and a role (the rules themselves are in design.md), the
+  which flags choose a room and a role (the rules themselves are in design.md and
+  roles.md), the
   Claude Code flags and the Codex owned server with its terminal gateway, and the
   briefing a session is given. Open it when a launch flag, an alias or a startup detail
   is in question.
@@ -93,6 +98,12 @@ everything else.
   an interrupted turn becomes `stopped` without a second report for an ordinary one, how
   a session says whether interruptions are heard, and its limits. Open it when an Esc on
   a Claude Code worker is not reported, is reported twice, or when the plugin API changes.
+- [remote-control.md](remote-control.md) — `rewake compact` and `rewake interrupt`, a
+  main acting on a running worker: who may call them and every refusal, the per-run
+  control directory and its files, why giving up on a request is honest in every order,
+  how the Claude Code module compacts and aborts, the stopped text and notice line after
+  main's interrupt, the Codex plan, known limits and the owner decisions. Open it when a
+  compaction or an interrupt from main is refused, lost or misreported.
 - [session-activity.md](session-activity.md) — extends session-state: the activity labels
   and how fresh they must be, compaction notices, and how a worker's departure or
   replacement is detected and announced to main, with owner-run acceptance. Open it when
@@ -115,8 +126,14 @@ everything else.
   Esc or a Ctrl+C leaves for a hook or the wrapper to hear (nothing), what a function-hooks
   plugin hears instead, what the built-in plugins do under the function-hooks switch,
   mermaid among them, what `/clear` and `/resume` do, why no slash command runs from the
-  inbound socket, and how text can be put into the input box by the launch flag or a plugin. Open it before working on
-  `stopped` for Claude Code, on conversation tracking, or on sending a session a command.
+  inbound socket, and how text can be put into the input box by the launch flag or a
+  plugin. Open it before working on `stopped` for Claude Code, on conversation tracking,
+  or on sending a session a command.
+- [research-claude-actions.md](research-claude-actions.md) — what a function-hooks plugin
+  can do to the Claude Code session it runs in, split from research-claude-control.md by
+  subject: compact it, abort its turn, poll a file, swallow a socket line, reload — with
+  the forms and refusals of each, as the host words them. Open it before changing the
+  module's side of `rewake compact` or `rewake interrupt`, and after a harness update.
 - [research-codex.md](research-codex.md) — what only a running Codex session shows,
   split from research.md by subject: `codex queue`, thread identity and terminal events,
   the sandbox as a running session meets it, environment and instructions, and the
@@ -134,7 +151,9 @@ everything else.
 - [research-protocol.md](research-protocol.md) — what the generated Codex schema and the
   reference source state: the flags schema generation needs, required fields of the
   types the adapter uses, how start-or-steer forks, where `canAcceptDirectInput`
-  lives, and what compaction and the terminal's other commands send over the protocol. Open it when the adapter or the fixture has to match a protocol change.
+  lives, what compaction and the terminal's other commands send over the protocol, and
+  what a compaction or an interrupt on rewake's request would send and meet. Open it
+  when the adapter or the fixture has to match a protocol change.
 - [research-permissions.md](research-permissions.md) — the Codex sandbox: network and
   filesystem limits on Linux, why `.git`, `.agents` and `.codex` are protected, how
   `--add-dir` grants access, worktree quirks, and a short account of remote resume
@@ -232,8 +251,9 @@ the newer document says so.
 
 - [work-queue.md](work-queue.md) — what comes next, in the owner's order: the rest of the
   workflow suite, the arrival-row check on the suite, a named harness version against a
-  local responder, a two-way channel for Claude Code, the parity queue, and what is
-  queued without a date. Open it to pick the next piece of work.
+  local responder, a two-way channel for Claude Code, the rest of stage 2 of the plugin
+  and a focus for a Codex compaction, the parity queue, and what is queued without a
+  date. Open it to pick the next piece of work.
 - [roadmap/README.md](roadmap/README.md) — what is done: the index of the roadmap, one
   file per closed milestone, review round or piece of work, named
   `YYYY-MM-DD-<subject>.md` by the day it closed, plus `risks.md` for the risks table and

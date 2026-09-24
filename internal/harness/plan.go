@@ -40,6 +40,10 @@ type LaunchRequest struct {
 	// ObservationSocket is where a harness without a backend of its own may
 	// have its session's telemetry sent: a path of this run, like Socket.
 	ObservationSocket string
+	// ControlDir is where this run takes control requests, made by the
+	// wrapper before the launch and removed after it; empty when it could not
+	// be made (docs/remote-control.md).
+	ControlDir string
 }
 
 // LaunchPlan is how the wrapper starts the harness.
@@ -113,6 +117,17 @@ type Harness interface {
 	Launch(request LaunchRequest) (LaunchPlan, error)
 	// Deliver hands one message to a running session and says what happened.
 	Deliver(ctx context.Context, session registry.Session, message inbox.Message) inbox.Result
+}
+
+// Steerable is a harness whose running sessions take a main's control
+// requests — `rewake compact` and `rewake interrupt` — through their run's
+// control directory (docs/remote-control.md). A harness that is not one is
+// refused before anything is written.
+type Steerable interface {
+	// CompactFocus says whether a compaction may carry a focus: text the
+	// summary is to keep. Where the harness has no way to pass one for a
+	// single compaction, a focus is a wrong call, refused before sending.
+	CompactFocus() bool
 }
 
 // Flag is one parameter of a harness, by every spelling it answers to.

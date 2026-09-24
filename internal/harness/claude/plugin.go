@@ -20,10 +20,11 @@ import (
 // plugin of its own for each launch, into its state directory, and passes it
 // for that launch only — a flag and an environment variable; rewake writes
 // nothing into the person's configuration, though the switch reaches further
-// than this plugin (docs/claude-plugin.md). The plugin only observes: it
-// reports turn starts, turn ends and the context fill through `rewake
-// observe`, the command the telemetry hooks run, and the wrapper decides what
-// they mean.
+// than this plugin (docs/claude-plugin.md). The plugin observes: it reports
+// turn starts, turn ends and the context fill through `rewake observe`, the
+// command the telemetry hooks run, and the wrapper decides what they mean. The
+// one thing it acts on is a main's request in the run's control directory
+// (docs/remote-control.md).
 //
 // The API is an early-access one and may change between releases; when the
 // plugin does not load — another version, an untrusted workspace, --bare,
@@ -42,12 +43,15 @@ const (
 	bareFlag = "--bare"
 	// pluginArgv is the placeholder the module's command replaces.
 	pluginArgv = "__REWAKE_ARGV__"
+	// pluginControl is the placeholder the run's control directory replaces;
+	// empty, the module takes no requests.
+	pluginControl = "__REWAKE_CONTROL__"
 )
 
 // applyPlugin writes the plugin for this launch and passes it. What it could
 // not do comes back as a note; the launch goes on either way, as it did before
 // the plugin existed.
-func applyPlugin(args, env []string, socket string) ([]string, []string, []string) {
+func applyPlugin(args, env []string, socket, control string) ([]string, []string, []string) {
 	if socket == "" {
 		return args, env, nil
 	}
@@ -65,22 +69,31 @@ func applyPlugin(args, env []string, socket string) ([]string, []string, []strin
 		return args, env, []string{unheard + "could not find the rewake binary: " + err.Error()}
 	}
 	dir := telemetry.PluginPath(socket)
-	if err := writePlugin(dir, []string{executable, harness.Observe, socket}); err != nil {
+	if err := writePlugin(dir, []string{executable, harness.Observe, socket}, control); err != nil {
 		return args, env, []string{unheard + "could not write the plugin: " + err.Error()}
 	}
 	return harness.AddFlags(args, pluginDirFlag, dir), setEnv(env, functionHooksEnv, "1"), nil
 }
 
 // writePlugin lays out a plugin directory: its manifest, the hooks file naming
-// the module, and the module with the command it runs written in.
-func writePlugin(dir string, argv []string) error {
+// the module, and the module with the command it runs and its control
+// directory written in.
+func writePlugin(dir string, argv []string, control string) error {
 	encoded, err := json.Marshal(argv)
 	if err != nil {
 		return err
 	}
-	if !strings.Contains(pluginModule, pluginArgv) {
-		return fmt.Errorf("the plugin module has no %s", pluginArgv)
+	controlled, err := json.Marshal(control)
+	if err != nil {
+		return err
 	}
+	for _, placeholder := range []string{pluginArgv, pluginControl} {
+		if !strings.Contains(pluginModule, placeholder) {
+			return fmt.Errorf("the plugin module has no %s", placeholder)
+		}
+	}
+	module := strings.Replace(pluginModule, pluginArgv, string(encoded), 1)
+	module = strings.Replace(module, pluginControl, string(controlled), 1)
 	// A leftover from a run that died under the same name holds nothing of
 	// this one.
 	if err := os.RemoveAll(dir); err != nil {
@@ -89,7 +102,7 @@ func writePlugin(dir string, argv []string) error {
 	files := map[string]string{
 		filepath.Join(".claude-plugin", "plugin.json"): `{"name":"rewake","version":"1.0.0","description":"Tells the rewake wrapper when a turn starts and ends, and how full the context is."}` + "\n",
 		filepath.Join("hooks", "hooks.json"):           `{"modules":["./rewake.js"]}` + "\n",
-		filepath.Join("hooks", "rewake.js"):            strings.Replace(pluginModule, pluginArgv, string(encoded), 1),
+		filepath.Join("hooks", "rewake.js"):            module,
 	}
 	for name, content := range files {
 		path := filepath.Join(dir, name)

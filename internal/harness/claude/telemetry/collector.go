@@ -37,6 +37,12 @@ type Collector struct {
 	turns  harness.CompletionHandler
 	stops  chan harness.Completion
 	worker sync.WaitGroup
+
+	// interrupter is who interrupted the last turn with `rewake interrupt`,
+	// until the next notice tells the model; interrupts counts them, so a
+	// notice marks told only the one it carried.
+	interrupter string
+	interrupts  uint64
 }
 
 // NewCollector listens at path once started.
@@ -126,6 +132,7 @@ func (c *Collector) read(conn *net.UnixConn) {
 		}
 		c.mu.Lock()
 		c.folded.apply(event, time.Now())
+		c.noteInterrupter(event)
 		thread := c.folded.thread
 		c.mu.Unlock()
 		if event.Kind == TurnComplete && event.Reason == ReasonAborted {

@@ -335,9 +335,11 @@ instructions, say — for the person to confirm with Enter, since it cannot run 
     the person had typed, so a handler reads the box first or appends.
   - `$.prompt.suggest` — a grey suggestion, shown only when the input is empty and the
     session idle; Tab takes it, Enter sends it **[live]**.
-  - `$.session.compact` and `$.command.run` exist in the declarations and would act
-    without an Enter. Not tested live: the probe was refused by the auto-mode
-    classifier **[source]**.
+  - `$.session.compact` acts without an Enter: tested live by review-claude on
+    September 23 and again on September 24, 2026, on 2.1.280, see
+    [research-claude-actions.md](research-claude-actions.md). `$.command.run` exists in
+    the declarations **[source]**; its probe was refused by the auto-mode classifier on
+    September 23, and it is not tested live.
 - **Not usable for a draft**: the socket's envelope and control frames; a command hook's
   output — `SessionStart`'s `initialUserMessage` submits at once, and only in print or
   SDK mode; the built-in prompt suggestions, which nothing outside feeds; Remote

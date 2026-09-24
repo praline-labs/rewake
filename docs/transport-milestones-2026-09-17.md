@@ -63,7 +63,7 @@ All five repository checks pass; all five targeted mutations are detected.
 
 ## Launch naming — done, September 17, 2026
 
-The role or explicit prefix receives the harness suffix; conflicts add numbers or refuse. [Names](design.md#names) retain the contract
+The role or explicit prefix receives the harness suffix; conflicts add numbers or refuse. [Names](roles.md#names) retain the contract
 and [review history](reviews-later.md#targeted-review--done-september-17-2026) records
 all five checks and targeted acceptance.
 

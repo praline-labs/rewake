@@ -80,7 +80,7 @@ func answer(t *testing.T, reply, id, status string) {
 
 func startLane(t *testing.T, dir string, drawn <-chan struct{}) *lane {
 	t.Helper()
-	l := newLane(filepath.Join(dir, "session.reply.sock"), false, drawn)
+	l := newLane(filepath.Join(dir, "session.reply.sock"), false, drawn, nil)
 	l.window, l.limit = 200*time.Millisecond, 100*time.Millisecond
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(func() { cancel(); l.Close() })
@@ -278,7 +278,7 @@ func TestLaneSweepsDeadReplySockets(t *testing.T) {
 func TestLaneWithoutReplySocketWritesPlainly(t *testing.T) {
 	dir := t.TempDir()
 	r := startReceiver(t, dir)
-	l := newLane("", false, nil)
+	l := newLane("", false, nil, nil)
 	if err := l.Start(context.Background()); err == nil {
 		t.Fatal("a lane with no reply socket has to say it hears nothing back")
 	}
@@ -302,7 +302,7 @@ func TestLaneOpens(t *testing.T) {
 	}
 	t.Run("on the status line", func(t *testing.T) {
 		drawn := make(chan struct{})
-		l := newLane("", false, drawn)
+		l := newLane("", false, drawn, nil)
 		l.limit = time.Hour
 		_ = l.Start(context.Background())
 		defer l.Close()
@@ -312,7 +312,7 @@ func TestLaneOpens(t *testing.T) {
 		}
 	})
 	t.Run("after the limit", func(t *testing.T) {
-		l := newLane("", false, make(chan struct{}))
+		l := newLane("", false, make(chan struct{}), nil)
 		l.limit = 10 * time.Millisecond
 		_ = l.Start(context.Background())
 		defer l.Close()
@@ -324,7 +324,7 @@ func TestLaneOpens(t *testing.T) {
 
 func TestLaneMakesItsOwnDirectory(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "sock")
-	l := newLane(filepath.Join(dir, "a.reply.sock"), true, nil)
+	l := newLane(filepath.Join(dir, "a.reply.sock"), true, nil, nil)
 	defer l.Close()
 	if err := l.Start(context.Background()); err != nil {
 		t.Fatal(err)

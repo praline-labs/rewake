@@ -66,6 +66,8 @@ type Event struct {
 	// how turn.complete says it ended.
 	Turn   string `json:"turn,omitempty"`
 	Reason string `json:"reason,omitempty"`
+	// By is the session that interrupted the turn with `rewake interrupt`.
+	By string `json:"by,omitempty"`
 	// Limit is the auto-compact window the plugin found configured
 	// (window.go); nil when it did not say.
 	Limit *Limit `json:"limit,omitempty"`

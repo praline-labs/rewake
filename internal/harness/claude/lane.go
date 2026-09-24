@@ -1,7 +1,6 @@
 package claude
 
 import (
-	"bufio"
 	"context"
 	"crypto/rand"
 	"errors"
@@ -45,9 +44,6 @@ const receiptWindow = 300 * time.Millisecond
 // mail goes out after this.
 const openingLimit = 3 * time.Second
 
-// maxReceipt bounds one receipt line. A receipt is a handful of short fields.
-const maxReceipt = 64 << 10
-
 // lane delivers notices with a reply address and routes what comes back.
 type lane struct {
 	reply string
@@ -56,6 +52,8 @@ type lane struct {
 	// left as it is.
 	ownDir bool
 	drawn  <-chan struct{}
+	// marks, when set, says who interrupted the last turn.
+	marks  interruptMarks
 	window time.Duration
 	limit  time.Duration
 
@@ -97,11 +95,12 @@ type sentNotice struct {
 
 // newLane listens at reply once started; drawn, when not nil, opens the gate on
 // the first notice.
-func newLane(reply string, ownDir bool, drawn <-chan struct{}) *lane {
+func newLane(reply string, ownDir bool, drawn <-chan struct{}, marks interruptMarks) *lane {
 	return &lane{
 		reply:    reply,
 		ownDir:   ownDir,
 		drawn:    drawn,
+		marks:    marks,
 		window:   receiptWindow,
 		limit:    openingLimit,
 		sent:     map[string]*sentNotice{},
@@ -187,9 +186,10 @@ func (l *lane) Deliver(ctx context.Context, session registry.Session, message in
 	l.mu.Lock()
 	listening := l.listener != nil
 	l.mu.Unlock()
-	notice := newEnvelope(message)
+	interrupter, told := l.interruption()
+	notice := newEnvelope(message, interrupter)
 	if !listening {
-		return writeNotice(ctx, session, notice)
+		return told(writeNotice(ctx, session, notice))
 	}
 	notice.From, notice.MsgID = "uds:"+l.reply, newMsgID()
 	waiting := &sentNotice{id: message.ID, msgID: notice.MsgID, first: make(chan inbox.Result, 1)}
@@ -197,7 +197,7 @@ func (l *lane) Deliver(ctx context.Context, session registry.Session, message in
 	l.sent[notice.MsgID] = waiting
 	l.mu.Unlock()
 
-	result := writeNotice(ctx, session, notice)
+	result := told(writeNotice(ctx, session, notice))
 	if result.State != inbox.Delivered {
 		l.forget(notice.MsgID)
 		return result
@@ -342,49 +342,6 @@ func (l *lane) forward() {
 		case l.receipts <- *next:
 		case <-l.done:
 			return
-		}
-	}
-}
-
-// acceptPause bounds the wait after a failed accept — out of descriptors, say —
-// which would otherwise be retried at once, and again, on a whole core.
-const acceptPause = time.Second
-
-func (l *lane) accept(listener *net.UnixListener) {
-	var pause time.Duration
-	for {
-		connection, err := listener.AcceptUnix()
-		if err != nil {
-			if errors.Is(err, net.ErrClosed) {
-				return
-			}
-			pause = min(max(2*pause, 5*time.Millisecond), acceptPause)
-			select {
-			case <-l.done:
-				return
-			case <-time.After(pause):
-			}
-			continue
-		}
-		pause = 0
-		go l.read(connection)
-	}
-}
-
-// read takes the receipts one connection carries. Only this user's processes
-// may write here — the directory says so, and the peer is checked for a
-// directory somebody loosened.
-func (l *lane) read(connection *net.UnixConn) {
-	defer func() { _ = connection.Close() }()
-	if !sameUser(connection) {
-		return
-	}
-	_ = connection.SetReadDeadline(time.Now().Add(dialTimeout))
-	scanner := bufio.NewScanner(connection)
-	scanner.Buffer(make([]byte, 0, 4096), maxReceipt)
-	for scanner.Scan() {
-		for _, word := range parseReceipt(scanner.Bytes()) {
-			l.route(word.msgID, word.result)
 		}
 	}
 }

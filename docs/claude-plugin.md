@@ -3,7 +3,10 @@
 How rewake hears what no Claude Code hook says — above all a turn a person interrupted
 with Esc or Ctrl+C — through a function-hooks plugin of its own, and what the wrapper
 does with it. Stage 1, observation only, approved by the owner on September 23, 2026:
-the plugin runs no command in the session and compacts nothing. Switching function hooks
+the plugin runs no command in the session and compacts nothing. Stage 2, built on
+September 24, 2026, lets a main act through it — compact the session or abort its turn
+on request, and nothing else — described in [remote-control.md](remote-control.md);
+this document is about what the plugin hears. Switching function hooks
 on for the launch does change more than loading this plugin — see
 [Limits](#limits). The facts about the harness it rests on are in
 [research-claude-control.md](research-claude-control.md#what-a-function-hooks-plugin-hears)
@@ -44,7 +47,7 @@ would otherwise unload the whole plugin.
 |---|---|---|
 | `session.start` | `plugin.ready` | the window limit |
 | `turn.start` | `turn.start` | the turn id |
-| `turn.complete` | `turn.complete` | the turn id and the reason: `answer`, `aborted`, `refusal` or `error` |
+| `turn.complete` | `turn.complete` | the turn id and the reason: `answer`, `aborted`, `refusal` or `error`; for a turn a main's `rewake interrupt` aborted, `by` with the main's name |
 | `session.measure` | `session.measure` | `tokens`, `window` and `percent` of the context and the window limit, only when `changed` names `context` |
 | `classic.Stop`, `classic.StopFailure` | nothing | none: they mark the turn as reported by its hook |
 
@@ -92,7 +95,9 @@ event.
   two harnesses must not diverge here. A `stopped` goes only to the sessions waiting on
   this one; an Esc on the person's own prompt, with no rewake task owed, sends nothing
   and the session just turns idle — the owner's decision of September 23, 2026, shared
-  with Codex ([turn-outcomes.md](turn-outcomes.md#keyboard-stops)).
+  with Codex ([turn-outcomes.md](turn-outcomes.md#keyboard-stops)). A turn a main
+  aborted carries `by`, and its `stopped` says that main interrupted it rather than the
+  person at the keyboard ([remote-control.md](remote-control.md#on-claude-code)).
 - **Exactly one report per turn.** An ordinary turn now ends twice for rewake: in the
   plugin's `turn.complete` and in the Stop or StopFailure hook. Only `aborted` is taken
   from the plugin; `answer`, `refusal` and `error` are left to the hooks, which carry the
@@ -179,3 +184,6 @@ the harness does and a test that the host refuses the forms the harness refuses.
 workflow case `claude-interrupted` and its four mutant controls are described in
 [testing.md](testing.md#claude-code-interruptions), and `stopped-routing`, where a stop
 goes on both harnesses, in [the section after it](testing.md#where-a-stop-goes).
+Stage 2's tests — the control protocol, the commands, the module acting under a strict
+host, and the stopped text and notice line after main's interrupt — are listed in
+[remote-control.md](remote-control.md#tests).

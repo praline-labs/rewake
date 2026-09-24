@@ -1,6 +1,10 @@
 package telemetry
 
-import "math"
+import (
+	"math"
+
+	statedir "github.com/iiiokojiadbi/rewake/internal/state"
+)
 
 // Events the function-hooks plugin sends (internal/harness/claude/plugin.go).
 // The plugin hears what no hook says: the end of a turn a person interrupted,
@@ -26,9 +30,12 @@ const ReasonAborted = "aborted"
 // out of the harness's event and never touches the prompt or the answer; this
 // decoder names them again so that nothing else is read even if it did.
 type pluginInput struct {
-	Event   string `json:"plugin_event"`
-	Turn    string `json:"turn_id"`
-	Reason  string `json:"reason"`
+	Event  string `json:"plugin_event"`
+	Turn   string `json:"turn_id"`
+	Reason string `json:"reason"`
+	// By names the session whose `rewake interrupt` aborted the turn; empty
+	// for a turn a person stopped.
+	By      string `json:"by"`
 	Context *struct {
 		Tokens  *float64 `json:"tokens"`
 		Window  *float64 `json:"window"`
@@ -59,6 +66,9 @@ func DecodePlugin(raw []byte) (Event, bool) {
 			return Event{}, false
 		}
 		event.Turn, event.Reason = input.Turn, input.Reason
+		if input.Reason == ReasonAborted && statedir.ValidName(input.By) {
+			event.By = input.By
+		}
 	case SessionMeasure:
 		if input.Context == nil {
 			return Event{}, false

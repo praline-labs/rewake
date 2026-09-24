@@ -17,6 +17,7 @@ import (
 	"os/exec"
 	"syscall"
 
+	"github.com/iiiokojiadbi/rewake/internal/control"
 	"github.com/iiiokojiadbi/rewake/internal/harness"
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/proc"
@@ -83,6 +84,19 @@ func Run(ctx context.Context, request Request) (int, error) {
 		}
 	}()
 
+	// The control directory is the run's, like its sockets: made before the
+	// harness can be asked anything, removed with the session. Only for a
+	// harness that serves it: a directory nobody serves would answer "not
+	// answering" where "no control directory" names the real next step.
+	controlDir := ""
+	if _, steerable := request.Harness.(harness.Steerable); steerable {
+		made := registry.ControlFor(request.Dir, name, epoch)
+		if control.Prepare(made) == nil {
+			controlDir = made
+			defer func() { _ = os.RemoveAll(made) }()
+		}
+	}
+
 	plan, err := request.Harness.Launch(harness.LaunchRequest{
 		Name:       name,
 		Dir:        state.RootForRoom(request.Dir),
@@ -96,6 +110,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 		Role:       role.Of(session.Role),
 
 		ObservationSocket: registry.ObservationFor(request.Dir, name, epoch),
+		ControlDir:        controlDir,
 	})
 	if err != nil {
 		return 0, err

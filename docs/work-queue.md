@@ -79,9 +79,29 @@ owner on September 24, 2026 with an Esc and a Ctrl+C at the keyboard
 harness's own `/clear` and `/resume` were observed working under rewake on September 23,
 2026 (HF-19). One telemetry limit remains: the waiting
 state is unknown during a turn ([session-state.md](session-state.md#claude-code-source)).
-A later stage of the plugin may act on the session — a compaction asked for from outside
-among them, which refuses at once while the worker is in a turn rather than waiting for
-idle, the same on Codex — and is not scheduled.
+Stage 2 of the plugin acts on the session: `rewake compact` and `rewake interrupt`,
+built on the Claude Code side on September 24, 2026 ([remote-control.md](remote-control.md));
+its workflow case and the Codex side follow below.
+
+## Now: stage 2 of the plugin, the rest
+
+What [remote-control.md](remote-control.md) describes is built for Claude Code with unit
+and module tests. Next, in order: the workflow case in the Claude Code column — main
+compacts an idle worker and a busy one, interrupts a busy one and an idle one, and a
+worker without the module does not answer — with product mutants for each property;
+then part B, the Codex adapter: the wrapper serves the same control directory, refuses a
+compaction itself while a turn runs or a `turn/start` is in flight, sends
+`thread/compact/start` with the gateway's manual-compaction mark, and `turn/interrupt`
+with the running turn's id. Its live check is in
+[research-protocol.md](research-protocol.md#compaction-and-interrupt-on-request).
+
+**A focus for a Codex compaction, to be researched.** The owner decided on September 24,
+2026 that `rewake compact <codex session> <focus>` is refused for now: Codex's
+`thread/compact/start` has no field for it, and `compact_prompt` replaces the whole
+prompt for the whole conversation. Two routes are to be researched later, not built: a
+proper one, if a later protocol version adds a field or a per-request override; and an
+emulation through the conversation's history — the focus put in as an item before the
+compaction, which unlike instructions stays in the history afterwards.
 
 ## Then: Codex's `--worktree`
 
@@ -108,6 +128,10 @@ change until the owner has seen the findings.
 The remaining entries of [harness-features.md](harness-features.md), in its order.
 
 ## Also queued, not scheduled
+
+**A wrapper left stopped after its harness was stopped from outside.** Recorded
+September 24, 2026, cause unknown ([intermittent-bugs.md](intermittent-bugs.md#a-stopped-harness-leaves-its-wrapper-stopped--cause-unknown-september-24-2026)):
+find who continues the harness, then decide whether `followStop` should notice it.
 
 **An orchestrator starts a worker in the background.** The owner's idea for later,
 recorded September 23, 2026, after honest delivery status for Claude Code landed:

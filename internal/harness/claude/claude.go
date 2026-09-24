@@ -30,6 +30,10 @@ const ID = "claude"
 // nothing failing.
 var _ harness.ThreadSource = (*telemetry.Collector)(nil)
 
+// Its plugin serves control requests; a change that dropped the method would
+// refuse every compact and interrupt as unsupported.
+var _ harness.Steerable = claudeHarness{}
+
 // socketFlag asks Claude Code to put its inbox socket where we can name it. The
 // flag is undocumented but stable since 2.1.224; without it the socket lands
 // under a path derived from the pid, which we would then have to discover.
@@ -87,6 +91,10 @@ func New() harness.Harness { return claudeHarness{} }
 
 func (claudeHarness) ID() string    { return ID }
 func (claudeHarness) Title() string { return "Claude Code" }
+
+// CompactFocus: the plugin passes a focus as the compaction's instructions,
+// which reach the summary request (docs/research-claude-control.md).
+func (claudeHarness) CompactFocus() bool { return true }
 
 func (claudeHarness) Summary() string {
 	return "Start Claude Code as a rewake session. Messages reach it in seconds."
@@ -198,6 +206,7 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 	env := harness.SessionEnv(request, childMarkers)
 	var observer harness.Observer
 	var drawn <-chan struct{}
+	var marks interruptMarks
 	observation := request.ObservationSocket
 	if len(observation) > maxSocketPath {
 		notes = append(notes, "not collecting telemetry: the socket path "+observation+" is longer than a unix socket allows")
@@ -209,7 +218,7 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 			// The harness takes the last one, as it does for any option.
 			collector.LaunchedWith(values[len(values)-1])
 		}
-		observer, drawn = collector, collector.Drawn()
+		observer, drawn, marks = collector, collector.Drawn(), collector
 	}
 	reply := replyPath(request, socket, owns)
 	if len(reply) > maxSocketPath {
@@ -222,7 +231,7 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 	}
 	args, settingsNotes := applySettings(args, cwd, request.Role.Silent, observation)
 	notes = append(notes, settingsNotes...)
-	args, env, pluginNotes := applyPlugin(args, env, observation)
+	args, env, pluginNotes := applyPlugin(args, env, observation, request.ControlDir)
 	notes = append(notes, pluginNotes...)
 	if !harness.HasFlag(args, toolFlag) {
 		args = harness.AddFlags(args, toolFlag, "Bash(rewake:*)")
@@ -236,7 +245,7 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 		OwnsSocket: owns,
 		Notes:      notes,
 		Observer:   observer,
-		Lane:       newLane(reply, owns, drawn),
+		Lane:       newLane(reply, owns, drawn, marks),
 	}, nil
 }
 
@@ -264,13 +273,13 @@ const maxSocketPath = 103
 // (lane.go) is the path a running wrapper uses; this one is what is left when
 // it cannot listen.
 func (claudeHarness) Deliver(ctx context.Context, session registry.Session, message inbox.Message) inbox.Result {
-	return writeNotice(ctx, session, newEnvelope(message))
+	return writeNotice(ctx, session, newEnvelope(message, ""))
 }
 
-func newEnvelope(message inbox.Message) envelope {
+func newEnvelope(message inbox.Message, interrupter string) envelope {
 	return envelope{
 		Type:     "user",
-		Message:  payload{Role: "user", Content: notification(message)},
+		Message:  payload{Role: "user", Content: notification(message, interrupter)},
 		Priority: "next",
 	}
 }

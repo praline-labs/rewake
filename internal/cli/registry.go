@@ -152,6 +152,45 @@ func buildGroups() {
 		},
 	}
 
+	steer := Group{
+		Title:   "STEER A SESSION",
+		Summary: "A main session compacts a worker's conversation or interrupts its turn. Only main may; the worker must be in the same room and running.",
+		Commands: []*Command{
+			{
+				Name:           "compact",
+				Args:           "<name> [focus]",
+				MaxPositionals: 2,
+				Summary:        "Compact an idle session's conversation now, optionally telling the summary what to keep.",
+				Options:        []Option{jsonOption},
+				Examples:       []string{"rewake compact worker-claude", "rewake compact worker-claude \"keep the review findings and the open questions\"", "rewake compact worker-claude --json"},
+				Next:           []string{"rewake list"},
+				Notes: []string{
+					"Refused at once while the session is in a turn: a compaction never waits for the turn to end, and nothing compacts on its own. Interrupt the turn first, or ask again once rewake list shows it idle.",
+					"Codex sessions do not take it yet: a compaction of one is refused before anything is sent.",
+					"Waits up to 5 seconds for the session's rewake plugin to take the request, then up to 90 for the compaction. Prints the token counts before and after when the harness gives them; never the summary.",
+					"Exit 0 done; 1 refused (in a turn, compaction switched off, nothing to compact, not answering, no control directory, withdrawn before it was taken, another request in flight) or failed; 2 a wrong call — not a main, no such session, a harness that does not take it or cannot take a focus.",
+				},
+				Handler: handleCompact,
+			},
+			{
+				Name:           "interrupt",
+				Args:           "<name>",
+				MaxPositionals: 1,
+				Summary:        "Stop the turn a session is working on, as Esc would.",
+				Options:        []Option{jsonOption},
+				Examples:       []string{"rewake interrupt worker-claude", "rewake interrupt worker-claude --json"},
+				Next:           []string{"rewake inbox --awaited"},
+				Notes: []string{
+					"A session waiting on that turn reads stopped, saying who interrupted it. The interrupted session's next rewake notice tells it that you interrupted its previous turn, once.",
+					"Refused when no turn is running. Waits up to 5 seconds for the session's rewake plugin to take the request.",
+					"Codex sessions do not take it yet: an interrupt of one is refused before anything is sent.",
+					"Exit 0 done; 1 refused (no turn running, not answering, no control directory, withdrawn before it was taken, another request in flight) or failed; 2 a wrong call — not a main, no such session, a harness that does not take it.",
+				},
+				Handler: handleInterrupt,
+			},
+		},
+	}
+
 	help := Group{
 		Title: "HELP",
 		Commands: []*Command{
@@ -199,7 +238,7 @@ func buildGroups() {
 		},
 	}
 
-	groups = []Group{run, talk, help, internal}
+	groups = []Group{run, talk, steer, help, internal}
 }
 
 // launchCommand builds the command that starts one harness.

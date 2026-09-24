@@ -141,3 +141,31 @@ The terminal's commands and what they send:
 | the read-only lists | their list methods |
 | `/new`, `/clear`, `/resume`, `/fork` | none: which conversation is shown is the client's own state |
 | commands that act only in the client | none |
+
+## Compaction and interrupt on request
+
+**[source: app-server schemas of 0.155.1 and 0.156.0, generated in a container, and
+reference tree `e29eceb75`; September 24, 2026; review-claude]** What `rewake compact`
+and `rewake interrupt` would have to send on Codex; their design is in
+[remote-control.md](remote-control.md). Not run live.
+
+- **No focus for one compaction.** `thread/compact/start` takes `{threadId}` in both
+  versions and has no field for instructions. What the summary is asked to keep is set
+  only by the configuration key `compact_prompt`: in `config` of `thread/start` or
+  `thread/resume`, or written into the configuration file by `config/value/write`;
+  `thread/settings/update` does not take it. It replaces the whole prompt for the whole
+  conversation, so it is no way to pass a focus for one request.
+- **Mid-turn it would cut the turn.** The core's `compact()` first calls
+  `abort_all_tasks(TurnAbortReason::Replaced)`: a compaction asked during a turn ends
+  that turn instead of being refused. rewake has to refuse on its own before it sends.
+- **`turn/interrupt`** takes `{threadId, turnId}` in both versions and replies `{}` only
+  after the turn is aborted. Idle it is refused with `no active turn to interrupt`, a
+  wrong id with `expected active turn id X but found Y`; the turn's status becomes
+  `interrupted`. The same shape as the Claude Code plugin's `$.turn.abort`.
+- **The model sees the interrupt.** The core records
+  `<turn_aborted>The user interrupted the previous turn on purpose…` in the history;
+  Claude Code's plugin abort records nothing, which is why rewake adds a line to the
+  interrupted session's next notice there.
+- **Still to see live:** the order of events for a compaction on rewake's request, what
+  becomes of a `turn/start` from the terminal while it runs, and what the terminal shows
+  for a compaction or an interrupt it did not ask for.

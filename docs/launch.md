@@ -210,8 +210,8 @@ Launch flags precede the harness name. `--room <name>` chooses the room, `defaul
 without it; `--main`, `--general` or `--write` chooses the role, at most one of them,
 general without any; `--name <prefix>` replaces the role part of the address. What a
 room isolates, what each role may do and see, and how the address is formed are
-specified once, in design.md: [Rooms](design.md#rooms), [Roles](design.md#roles) and
-[Names](design.md#names). The variables the wrapper passes to the harness are in
+specified once, in design.md and roles.md: [Rooms](design.md#rooms), [Roles](roles.md#roles) and
+[Names](roles.md#names). The variables the wrapper passes to the harness are in
 [Environment the harness receives](design.md#environment-the-harness-receives).
 
 ### Starting a wrapper instead of the harness

@@ -96,6 +96,7 @@ Created with 0700. [Optional primary observations](session-state.md) are collect
     sock/<name>.<epoch>.obs    Claude Code telemetry datagrams to the wrapper
     sock/<name>.<epoch>.obs.turn/ when its latest turn started, one file per reading, for `rewake pending`
     sock/<name>.<epoch>.obs.plugin/ rewake's function-hooks plugin for this run (claude-plugin.md)
+    control/<name>.<epoch>/    a main's compact or interrupt request and its answer (remote-control.md)
 ```
 
 All mailbox paths in the delivery specification are relative to the room.
@@ -161,68 +162,11 @@ sessions, and an old record must not appear in a new room by accident.
 - Updating one's own record (for example, the harness pid after launch) uses a
   temp file and `rename()`.
 
-### Roles
+### Roles and names
 
-A session has a role, from the catalogue in `internal/role`: one value per role
-and a line in its list, the way a harness is added. The launch flag `--<id>`,
-the help line and whether its turns are reported come from that value.
-System text lives in `internal/brief`, with a reviewed snapshot
-for each role; harness adapters only pass the rendered strings. The record keeps the role's id.
-
-| role | flag | turns reported | Eligible for explicit Git metadata grant | intro adds |
-|---|---|---|---|---|
-| `general` | `--general` | yes | no | end your turn with the result |
-| `main` | `--main` | no | only a main-authorized --grant-git task/question | you get reports, yours go to nobody |
-| `write` | `--write` | yes | only a main-authorized --grant-git task/question | end your turn with the result; you can commit |
-
-**Owner decision, September 17, 2026:** omitted role flags always mean general,
-even in an empty room or after main exits. This supersedes automatic main
-selection. Only explicit `--main` creates an orchestrator; it refuses with the
-occupying session's name when main is already live. The same pid/start-time and
-namespace checks as list determine liveness. `--general` and `--write` remain
-explicit alternatives. A name prefix never chooses a role, and no session is
-promoted when a main leaves. The three role flags cannot be combined, and general
-or write sessions may start before any main exists. The refusal of a second `--main`
-names the live main and suggests stopping or restarting it, or launching without
-`--main` to join as general.
-
-The room's `.launch.lock` covers inspection of live sessions, role choice and
-name publication. A starting wrapper is already a live claimant before its
-harness starts. Concurrent explicit launches cannot claim two mains. The lock is released
-before preparing or running the harness. The record, launch note and intro say
-which role was chosen and why.
-
-Git eligibility is separate from reporting and does not itself grant permission.
-Only a verified main can attach [explicit --grant-git intent](git-grants.md) to an
-eligible task/question. No flag and no launch role adds roots. The existing validated
-metadata resolver and additive native root snapshot remain unchanged; existing owner
-permissions are neither replaced nor revoked. Notify/report paths cannot grant.
-
-The main session exists to stop a loop: it reads the reports of its workers,
-and if its own turns were reported to them, each report would wake the other
-side for good. A silent role records no waits and emits no successful turn reports. Failure
-observation remains installed: StopFailure for the socket harness and terminal
-server events for the owned-server harness. An error from main stays in its own unread mailbox
-without waking the same failing conversation. Old records with role `worker` are read as `general`; omitted role flags and --general create
-reporting sessions without Git access. The zero role value remains a reporting fallback inside the
-catalogue; an omitted launch role is resolved separately under the room lock.
-The write role reports like general; main stays silent whether its Git grant
-was applied or skipped.
-
-### Names
-
-**Owner decision, September 17, 2026:** one rule for every role and harness.
-Select the actual role under the room lock, use its ID as the default prefix,
-then append `-<harness ID>`. `--name <prefix>` replaces only the prefix:
-`rewake --write codex` starts write-codex; adding `--name megamozg` starts
-megamozg-codex. No role flag produces general-codex; explicit --main produces main-codex.
-
-Automatic conflicts add -2, -3 after the harness suffix; explicit conflicts
-refuse with the complete address. Prefix and result must match
-`[a-z0-9][a-z0-9._-]{0,31}`, including the 32-character address limit after any
-collision suffix. Overlength names require a shorter prefix; nothing is
-truncated or deduplicated. Existing records, room isolation and send addresses
-stay unchanged: send uses the exact name from list, never an inferred suffix.
+A session's role — what it is told, whether its turns are reported, whether it may take
+a Git grant — and how its name is built from the role, the prefix and the harness are
+in [roles.md](roles.md), with the owner decisions that set them.
 
 ### Environment the harness receives
 
@@ -283,6 +227,8 @@ rewake list [--json]                    live sessions in this room
 rewake send <name> <text|-> [--question] [--wait S] [--json]
 rewake inbox [--json]                   read the messages waiting for this session
 rewake whoami [--json]                  this session's name, room, role and state root
+rewake compact <name> [focus] [--json]  main only: compact an idle session (remote-control.md)
+rewake interrupt <name> [--json]        main only: stop a session's running turn
 rewake <command> --help
 ```
 
