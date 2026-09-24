@@ -311,6 +311,10 @@ pending mail as session ended.
 The adjacent `.gateway.log` records bounded, payload-free connection-close reasons;
 see [startup transport diagnostics and limits](startup-transport.md).
 
+Once the app-server is up the wrapper also serves the run's control directory, polling
+it every 100 ms and carrying a main's `rewake compact` or `rewake interrupt` out through
+the gateway ([remote-control-codex.md](remote-control-codex.md)).
+
 The adapter initializes and closes a startup probe before starting the TUI; it
 never discovers or resumes a root. The gateway forwards the TUI connection. Explicit -c overrides and the generated developer_instructions are passed
 to the server. A mention of developer_instructions in user configuration still

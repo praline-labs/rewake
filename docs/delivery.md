@@ -56,7 +56,7 @@ refusals and help come from there.
 | `notify` | `--notify` | nothing | once delivered |
 | `finished` | successful turn end | nothing | — |
 | `error` | failed turn hook only | nothing | failure, exit 1 for a waiting question |
-| `stopped` | a turn stopped at the keyboard, or on Claude Code by a main's `rewake interrupt` | nothing | exit 1 for a waiting question |
+| `stopped` | a turn stopped at the keyboard, or by a main's `rewake interrupt`; on Codex also a run that passed unseen, or a turn that ended with no proof of work | nothing | exit 1 for a waiting question |
 | `pending` | a normal turn end marked with `rewake pending` only | nothing | — a waiting question keeps waiting |
 
 The rule for agents, stated in the intro and the guide: a task or a question is
@@ -168,6 +168,16 @@ that waited for the thread to go idle before delivering would not deliver late �
 would not deliver at all, and the sender would be told the delivery failed. That is
 why the choice between an active thread and an idle one is left to the native
 start-or-steer call rather than taken from a status snapshot.
+
+The one exception is a compaction (September 24, 2026): a Codex conversation being
+compacted, by main's `rewake compact` or the terminal's `/compact`, takes no work, and
+the gateway's `Reserve` then returns `gateway.ErrCompacting`, which `Reserve` in
+`internal/harness/codex/server_delivery.go` passes on as `inbox.ErrNotYet`. `refuse`
+lets that one through unwrapped, so the message stays `pending` and goes on a later
+pass, once the compaction has ended, main's wait for it has, or its mark's 80-second
+bound has passed ([remote-control-codex.md](remote-control-codex.md)). Nothing else holds a delivery:
+an operation whose end the gateway has not read makes main's compaction refuse, not
+a delivery wait.
 
 Only an answer accepted under a fresh reservation receives a new delivery
 window. `retention/<report id>` records that reservation and, on release, fixes

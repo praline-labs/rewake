@@ -12,7 +12,7 @@ func scopedWork() Binding {
 
 func admit(t *testing.T, a *admittedWork, id, turn string) {
 	t.Helper()
-	if err := a.prepare(id, scopedWork(), true); err != nil {
+	if err := a.prepare(id, scopedWork(), true, 0); err != nil {
 		t.Fatal(err)
 	}
 	a.ack(meta{id: id, turn: turn})
@@ -22,10 +22,15 @@ func workEvent(a *admittedWork, method, turn, status string, now time.Time) {
 	a.event(meta{method: method, thread: "A", turn: turn, status: status}, nil, now)
 }
 
+// compactionStarted plays the compaction item that ties a mark to its turn.
+func compactionStarted(a *admittedWork, turn string, now time.Time) {
+	a.event(meta{method: "item/started", thread: "A", turn: turn}, []byte(`{"params":{"item":{"type":"contextCompaction"}}}`), now)
+}
+
 func TestRetainedCompletionBeforeACKAndFailureDiscard(t *testing.T) {
 	for _, refused := range []bool{false, true} {
 		a := newAdmittedWork()
-		if e := a.prepare("id", scopedWork(), true); e != nil {
+		if e := a.prepare("id", scopedWork(), true, 0); e != nil {
 			t.Fatal(e)
 		}
 		now := time.Now()
@@ -49,7 +54,7 @@ func TestRetainedCompletionBeforeACKAndFailureDiscard(t *testing.T) {
 func TestSteerLateACKCannotResurrectReportedTurn(t *testing.T) {
 	a := newAdmittedWork()
 	admit(t, &a, "first", "T")
-	if e := a.prepare("steer", scopedWork(), true); e != nil {
+	if e := a.prepare("steer", scopedWork(), true, 0); e != nil {
 		t.Fatal(e)
 	}
 	now := time.Now()
@@ -105,20 +110,18 @@ func TestUnrelatedTurnAndManualMaintenanceNeverBecomeAdmittedResults(t *testing.
 	admit(t, &a, "work", "T")
 	now := time.Now()
 	workEvent(&a, "turn/started", "T", "", now)
-	a.manualStart("A", newObserver())
+	a.manualStart("A", newObserver(), 0, 0, time.Now().Add(time.Minute))
 	workEvent(&a, "turn/completed", "T", "completed", now)
 	if len(a.collect()) != 1 {
 		t.Fatal("maintenance hid previously admitted task")
 	}
 	workEvent(&a, "turn/started", "M", "", now)
+	compactionStarted(&a, "M", now)
 	workEvent(&a, "turn/completed", "M", "completed", now)
 	if len(a.collect()) != 0 {
 		t.Fatal("manual turn published")
 	}
-	if !a.excluded["A/M"] {
-		t.Fatal("manual identity not retained for duplicate filtering")
-	}
-	if e := a.prepare("pending", scopedWork(), true); e != nil {
+	if e := a.prepare("pending", scopedWork(), true, 0); e != nil {
 		t.Fatal(e)
 	}
 	workEvent(&a, "turn/started", "unrelated", "", now)
@@ -138,7 +141,7 @@ func TestAdmittedCapacityRefusesBeforeDiscardingLiveWork(t *testing.T) {
 	for i := 0; i < 64; i++ {
 		admit(t, &a, fmt.Sprint(i), fmt.Sprint(i))
 	}
-	if e := a.prepare("overflow", scopedWork(), true); e == nil {
+	if e := a.prepare("overflow", scopedWork(), true, 0); e == nil {
 		t.Fatal("unbounded admissions")
 	}
 	if len(a.threads["A"].turns) != 64 {
@@ -149,14 +152,14 @@ func TestAdmittedCapacityRefusesBeforeDiscardingLiveWork(t *testing.T) {
 func TestStoppedContinuationACKKeepsLiveTextAndReleasesNoOtherScope(t *testing.T) {
 	a := newAdmittedWork()
 	admit(t, &a, "first", "T")
-	if e := a.prepare("other", scopedWork(), true); e != nil {
+	if e := a.prepare("other", scopedWork(), true, 0); e != nil {
 		t.Fatal(e)
 	}
 	now := time.Now()
 	workEvent(&a, "turn/started", "T", "", now)
 	workEvent(&a, "turn/completed", "T", "interrupted", now)
 	_ = a.collect()
-	if e := a.prepare("continuation", scopedWork(), true); e != nil {
+	if e := a.prepare("continuation", scopedWork(), true, 0); e != nil {
 		t.Fatal(e)
 	}
 	a.event(meta{method: "item/completed", thread: "A", turn: "T"}, []byte(`{"params":{"item":{"type":"agentMessage","text":"continued final"}}}`), now)
@@ -191,16 +194,19 @@ func TestRepeatedStoppedContinuationDoesNotEvictItsCurrentSettledScope(t *testin
 
 func TestMaintenanceCannotBecomeSettledWorkThroughAnInterruptedACK(t *testing.T) {
 	a := newAdmittedWork()
-	a.manualStart("A", newObserver())
-	if err := a.prepare("injected", scopedWork(), true); err == nil {
+	a.manualStart("A", newObserver(), 0, 0, time.Now().Add(time.Minute))
+	if err := a.prepare("injected", scopedWork(), true, 0); err == nil {
 		t.Fatal("injection admitted during known maintenance")
 	}
-	if err := a.prepare("native", scopedWork(), false); err != nil {
+	if err := a.prepare("native", scopedWork(), false, 0); err != nil {
 		t.Fatal(err)
 	}
 	now := time.Now()
 	workEvent(&a, "turn/started", "M", "", now)
-	a.ack(meta{id: "native", turn: "M"})
+	compactionStarted(&a, "M", now)
+	// The server refuses input into a compaction's turn
+	// (core/src/session/turn_input.rs), so no reply names it.
+	a.ack(meta{id: "native", failure: true})
 	workEvent(&a, "turn/completed", "M", "interrupted", now)
 	if len(a.collect()) != 0 || len(a.stopped) != 0 {
 		t.Fatal("manual interrupt became settled work")

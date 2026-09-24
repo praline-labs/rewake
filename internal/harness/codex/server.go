@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/iiiokojiadbi/rewake/internal/control"
 	"github.com/iiiokojiadbi/rewake/internal/harness"
 	"github.com/iiiokojiadbi/rewake/internal/harness/codex/gateway"
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
@@ -37,6 +38,7 @@ type serverSession struct {
 	args, env                  []string
 	gitWrite                   bool
 	program                    string
+	controlDir                 string
 	gateway                    *gateway.Gateway
 	proxy                      *http.Server
 	process                    *exec.Cmd
@@ -152,6 +154,9 @@ func (s *serverSession) Start(ctx context.Context, handler harness.CompletionHan
 	reportCtx, reportCancel := context.WithCancel(context.Background())
 	s.reportCancel = reportCancel
 	go s.report(reportCtx)
+	if s.controlDir != "" {
+		go control.Serve(runCtx, s.controlDir, controlPoll, s.steer)
+	}
 	go func() { _ = s.proxy.Serve(listener); cancel() }()
 	go func() { <-runCtx.Done(); s.stopProcess() }()
 	return nil

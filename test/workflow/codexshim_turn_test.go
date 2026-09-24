@@ -42,6 +42,12 @@ type turnState struct {
 	// steered is closed when a delivery has been steered into the open turn,
 	// so the held work can finish instead of waiting for its deadline.
 	steered chan struct{}
+	// abort is closed when the open turn is interrupted or a compaction
+	// replaces it, and aborted says so to the work that held it.
+	abort   chan struct{}
+	aborted bool
+	// compactions numbers the compactions' own turns.
+	compactions int
 }
 
 // deliveredTurn checks an incoming turn, decides between starting one and
@@ -85,6 +91,7 @@ func (s *shimSession) deliveredTurn(params json.RawMessage) (any, any, error) {
 	if os.Getenv(shimHoldTurn) != "" {
 		s.turn.open = id
 		s.turn.steered = make(chan struct{})
+		s.turn.abort = make(chan struct{})
 	}
 	s.turn.mu.Unlock()
 	s.recordGroup(id, notice)
@@ -233,7 +240,7 @@ func (s *shimSession) workTurn(id string, notice mailboxNotice) {
 	}
 	recordOwedOnce()
 	markPendingOnce()
-	if s.interruptNow() {
+	if s.takeAborted() || s.interruptNow() {
 		s.mu.Lock()
 		s.broadcast(s.itemCompletedEvent(id, text))
 		s.broadcast(s.interruptedEvent(id, text))
@@ -246,6 +253,7 @@ func (s *shimSession) workTurn(id string, notice mailboxNotice) {
 	s.mu.Lock()
 	// The content first, then the terminal event: a report without content is
 	// not a report, and the wrapper assembles one from what it saw in order.
+	s.broadcast(s.usageEvent(id, workTokens))
 	s.broadcast(s.itemCompletedEvent(id, text))
 	// The turn fails after its content was sent: a session that says something
 	// and then breaks has not answered.

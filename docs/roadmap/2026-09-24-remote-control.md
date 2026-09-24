@@ -3,7 +3,8 @@
 Stage 2 of rewake's function-hooks plugin, part A: `rewake compact` and
 `rewake interrupt`, the request path they share, and the Claude Code side of it. Stage 1
 only listened ([2026-09-23-claude-plugin.md](2026-09-23-claude-plugin.md)); this one acts
-on the session. Part B, the Codex side, is next. The design as built is in
+on the session. Part B, the Codex side, followed the same day
+([2026-09-24-remote-control-codex.md](2026-09-24-remote-control-codex.md)). The design as built is in
 [remote-control.md](../remote-control.md).
 
 **The owner's decisions**, recorded where they apply:

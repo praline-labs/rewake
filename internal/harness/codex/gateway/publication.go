@@ -1,6 +1,9 @@
 package gateway
 
-import "strings"
+import (
+	"strings"
+	"time"
+)
 
 type publishedOutcome struct{ stopped, final bool }
 
@@ -35,23 +38,23 @@ func (g *Gateway) publish(v Completion) {
 	}
 }
 
+// collectOutcomes takes the outcomes ready to publish: those of turns shown to
+// be work (proven). Called under c.mu.
 func (c *connection) collectOutcomes() []Completion {
 	out := c.admitted.collect()
+	for i := range out {
+		c.steeredText(&out[i])
+	}
 	if c.state.Ready && c.owner.owns(c) {
 		for _, v := range c.state.events.drain() {
-			if c.admitted.excluded[v.ID] {
-				continue
-			}
-			if strings.Contains(v.ID, "/gap-") && c.admitted.manual[v.Thread] != nil {
-				continue
-			}
 			v.Epoch = c.state.Epoch
 			v.Connection = c.state.Connection
 			v.Generation = c.state.Generation
+			c.steeredText(&v)
 			out = append(out, v)
 		}
 	}
-	return out
+	return c.proven(out, time.Now())
 }
 
 func (c *connection) complete(out []Completion) {

@@ -11,6 +11,11 @@ import (
 // ErrThreadUnavailable refuses delivery without making a task readable in an unknown conversation.
 var ErrThreadUnavailable = errors.New("delivery thread is unavailable")
 
+// ErrNotYet says the conversation is there but cannot take a message at the
+// moment — it is being compacted, say. The message stays pending and is tried
+// again, rather than failed as for a conversation that is gone.
+var ErrNotYet = errors.New("the conversation cannot take a message yet")
+
 // ThreadChangedWarning lets the caller decide whether an old task needs resending.
 const ThreadChangedWarning = "Rewake: the reader's thread changed after delivery; this may not answer it, resend the message"
 

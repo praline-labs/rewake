@@ -178,7 +178,7 @@ func TestReservationRefusesCapacityAndMaintenanceBeforeReadability(t *testing.T)
 			c := g.currentConnection()
 			c.mu.Lock()
 			if maintenance {
-				c.admitted.manual["A"] = &manualWork{}
+				c.admitted.manual["A"] = &manualWork{hold: time.Now().Add(time.Minute)}
 			} else {
 				for i := 0; i < 64; i++ {
 					c.admitted.pending[fmt.Sprint(i)] = admittedRequest{binding: c.state.Binding}

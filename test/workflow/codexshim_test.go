@@ -210,6 +210,10 @@ func (s *shimSession) answer(peer *shimPeer, method string, params json.RawMessa
 		return s.lifecycle(asked)
 	case "turn/start":
 		return s.deliveredTurn(params)
+	case "thread/compact/start":
+		return s.compact(params)
+	case "turn/interrupt":
+		return s.interrupt(params)
 	case "thread/read":
 		asked := threadOf(params)
 		if asked == "" {
@@ -327,8 +331,15 @@ func (s *shimSession) threadDescription(id string) map[string]any {
 	return thread
 }
 
-// broadcast sends an event to every connected peer. Call with the lock held.
+// broadcast sends an event to every connected peer, or each of a sequence in
+// order. Call with the lock held.
 func (s *shimSession) broadcast(event any) {
+	if sequence, ok := event.(eventSequence); ok {
+		for _, each := range sequence {
+			s.broadcast(each)
+		}
+		return
+	}
 	for _, peer := range s.peers {
 		_ = peer.ws.writeJSON(event)
 	}

@@ -28,15 +28,24 @@ type (
 		intent                                                     bool
 		backfill                                                   bool
 		target, method                                             string
+		// sent is the request's place in the order of writes.
+		sent uint64
 	}
 	state struct {
 		side string
 		fork *forkSelection
 		Binding
-		pending      map[string]pending
-		initialized  bool
-		events       observer
-		canBackfill  bool
+		pending     map[string]pending
+		initialized bool
+		events      observer
+		canBackfill bool
+		// fresh says the selected thread was started on this connection and
+		// has run no turn since: there is nothing to compact.
+		fresh bool
+		doing activity
+		// ops outlive a selection and the connection, unlike the rest: the
+		// gateway's, shared by its connections (operations).
+		ops          *operations
 		readSerial   uint64
 		readClosedBy string
 		backfill     map[string]bool
@@ -44,7 +53,7 @@ type (
 )
 
 func newState(epoch string, conn uint64) state {
-	return state{Binding: Binding{Epoch: epoch, Connection: conn, Reason: "waiting for recognized primary intent"}, pending: map[string]pending{}, events: newObserver()}
+	return state{Binding: Binding{Epoch: epoch, Connection: conn, Reason: "waiting for recognized primary intent"}, pending: map[string]pending{}, events: newObserver(), ops: newOperations()}
 }
 
 func (s *state) invalidate(reason string) {
@@ -53,6 +62,8 @@ func (s *state) invalidate(reason string) {
 	s.Generation++
 	s.Ready = false
 	s.Thread = ""
+	s.fresh = false
+	s.doing = activity{}
 	s.Reason = reason
 	s.events.reset()
 	s.closeReadContext("selection fence invalidated")
@@ -86,6 +97,11 @@ func (s *state) request(m meta) error {
 		s.closeReadContext("native " + m.method)
 	}
 	p := pending{metadataOnly: m.method == "thread/read" && metadataRead(m), method: m.method, target: m.thread, readSerial: s.readSerial, reconnect: m.reconnect}
+	p.sent = m.sent
+	if m.method == "review/start" || isTurnAdmission(m.method) {
+		// Only a reply of the current selection names its running turn.
+		p.generation = s.Generation
+	}
 	if m.method == "thread/loaded/list" && m.numeric && s.canBackfill && s.Ready {
 		p.backfill = true
 		p.generation = s.Generation
@@ -158,9 +174,6 @@ func (s *state) response(m meta, raw ...[]byte) meta {
 		m.loaded, m.loadedValid = loadedIDs(raw[0])
 		s.acceptBackfill(m, p)
 	}
-	if p.method == "thread/compact/start" && m.failure {
-		s.events.refuseManual(p.target)
-	}
 
 	if p.method == "initialize" && !m.failure {
 		s.initialized = true
@@ -175,6 +188,7 @@ func (s *state) response(m meta, raw ...[]byte) meta {
 	s.Thread = m.thread
 	s.Ready = true
 	s.Reason = "accepted primary intent"
+	s.fresh = p.method == "thread/start"
 	s.events.bind(m.thread, m.status, time.Now())
 	s.canBackfill = p.method == "thread/resume" && !p.reconnect && p.readSerial == s.readSerial
 	if s.canBackfill {

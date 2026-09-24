@@ -125,7 +125,7 @@ func TestPendingAcceptedIntentKeepsObservedActiveIdleGap(t *testing.T) {
 	_ = readWithin(t, ui)
 	select {
 	case result := <-completed:
-		if result.Kind != "error" || result.Thread != "A" || result.Text != "completion not observed" {
+		if result.Kind != "stopped" || result.Thread != "A" || result.Text != gapText {
 			t.Fatal(result)
 		}
 	case <-time.After(2 * time.Second):

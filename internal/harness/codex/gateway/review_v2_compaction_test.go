@@ -10,13 +10,15 @@ func TestReviewV2ManualCompactionAfterIdleBeforeFirstObservedTurn(t *testing.T) 
 	o := newObserver()
 	o.event(meta{method: "thread/status/changed", thread: "A", status: "idle"}, nil, now)
 	o.bind("A", "idle", now)
-	// The gateway records a manual marker on request admission; no model task has run on this observer yet.
-	o.manual["A"] = true
 	o.event(meta{method: "thread/status/changed", thread: "A", status: "active"}, nil, now.Add(time.Millisecond))
 	o.event(meta{method: "turn/started", thread: "A", turn: "compact"}, nil, now.Add(2*time.Millisecond))
+	// No reply names the compaction's turn and it has no other item, so the
+	// connection keeps its outcome; no model task has run on this observer
+	// before.
 	o.event(meta{method: "thread/status/changed", thread: "A", status: "idle"}, nil, now.Add(3*time.Millisecond))
 	o.event(meta{method: "turn/completed", thread: "A", turn: "compact", status: "completed"}, nil, now.Add(4*time.Millisecond))
-	if out := o.drain(); len(out) != 0 {
+	c := &connection{admitted: newAdmittedWork()}
+	if out := c.proven(o.drain(), time.Now()); len(out) != 0 {
 		t.Fatalf("first manual compaction became a task result: %+v", out)
 	}
 }

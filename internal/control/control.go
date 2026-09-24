@@ -38,15 +38,16 @@ const (
 
 // Reasons of a refusal, the same words whichever harness answered.
 const (
-	InTurn           = "in a turn"
-	NoTurn           = "no turn running"
-	CompactionOff    = "compaction switched off"
-	NothingToCompact = "nothing to compact"
-	NotAnswering     = "not answering"
-	CutShort         = "cut short"
-	NoControl        = "no control directory"
-	Withdrawn        = "withdrawn before it was taken"
-	Busy             = "another request in flight"
+	InTurn             = "in a turn"
+	NoTurn             = "no turn running"
+	CompactionOff      = "compaction switched off"
+	NothingToCompact   = "nothing to compact"
+	RemoteConversation = "remote conversation"
+	NotAnswering       = "not answering"
+	CutShort           = "cut short"
+	NoControl          = "no control directory"
+	Withdrawn          = "withdrawn before it was taken"
+	Busy               = "another request in flight"
 )
 
 // Request is what the asker writes. From is the asking session's name: the

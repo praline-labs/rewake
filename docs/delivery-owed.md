@@ -54,7 +54,7 @@ is then placed:
 
 | state | what it rests on |
 |---|---|
-| `undelivered` — not delivered yet | waiting in `inbox/`, status absent or `pending` |
+| `undelivered` — not delivered yet | waiting in `inbox/`, status absent or `pending`; a `pending` status's detail says why it waits, a compaction for one |
 | `held` | status `held`; the detail says why |
 | `unread` — delivered, unread | status `delivered` |
 | `owed` — read, being worked on | status `read` (or in `done/` with the status swept), and the recipient's `awaiting/<its run>/<this name>` names this run and the id |

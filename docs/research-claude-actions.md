@@ -34,7 +34,13 @@ Probed by review-claude on September 24, 2026, Claude Code 2.1.280, with a stand
   `rewake: $.session.compact: Not enough messages to compact.` **[live, 2.1.280,
   September 24, 2026, review-claude]**. Other refusals **[source]**: `compaction is switched off in this
   session (DISABLE_COMPACT), for /compact and plugins alike`, and one for a call from a
-  hook that holds the turn.
+  hook that holds the turn. Two more stand beside the in-flight one in the binary's
+  string table: `an external turn is driving the conversation; it compacts between
+  turns` and `a thin client's conversation lives on the remote session; compact it
+  there`; next to them `the compaction produced no summary` and `a newer turn began
+  before the compaction could be applied`, which by their words come after the summary
+  was asked for **[strings of the 2.1.280 binary, September 24, 2026, write-claude;
+  the code around them is compiled and was not read]**.
 - **A compaction runs through the plugins' `session.compact` handlers**, with the
   compaction itself beneath `next(e)`: `PreCompact` runs inside it, and a handler's
   `await next(e)` returns once it is done, with `tokensBefore` and `tokensAfter`. The

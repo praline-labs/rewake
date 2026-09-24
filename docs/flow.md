@@ -216,7 +216,12 @@ Codex through turn/completed on its own TUI connection. The gateway retains
 admitted outcomes across selection changes; no observer attachment is needed.
 An asynchronous publisher journals callbacks before the durable report path. An observed active-to-idle interval missing
 completion after a short grace produces error with "completion not observed",
-without an assistant result. The hook and server events use the same internal
+without an assistant result, when its turn is known; when its turn was never named it
+is a gap, reported as an advisory `stopped` that settles nothing, since it may have been
+a compaction. Only a turn with proof that it is work — a reply naming it or an item
+other than a compaction's — settles a wait; one without is reported as advisory, and a
+turn its `contextCompaction` item shows to be a compaction reports nothing, so a
+compaction's turn never settles a wait ([codex-publication.md](codex-publication.md)). The hook and server events use the same internal
 reporting function and turn receipts. A callback with `agent_id` is from a nested agent and is
 ignored without changing the parent session's waits.
 
@@ -330,7 +335,7 @@ question to a silent role.
 |---|---|---|
 | fresh server thread, no turn yet | turn/start begins its first turn | delivered after RPC acceptance |
 | a turn interrupted with Esc or Ctrl+C | stopped advises the waiters to wait, and goes to nobody when none waits; original work stays owed | yellow notice; human continuation reports its result |
-| a Claude Code turn interrupted by main's `rewake interrupt` | the same stopped, naming main instead of the person; the worker's next notice says main interrupted it, once ([remote-control.md](remote-control.md)) | yellow notice naming main |
+| a turn interrupted by main's `rewake interrupt` | the same stopped, naming main instead of the person; on Claude Code the worker's next notice says main interrupted it, once, and on Codex the harness records it in the model's history itself ([remote-control.md](remote-control.md)) | yellow notice naming main |
 | recipient's wrapper gone | record evicted on the next read | exit 2, no such session |
 | a reader's stdout blocks | it holds the lock; server waits, `turn-ended` five seconds, `inbox` ten | delays, then "mailbox is busy" |
 | the main session is asked a question | refused before publication | exit 2 with a hint |

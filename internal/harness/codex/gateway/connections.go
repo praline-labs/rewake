@@ -8,7 +8,7 @@ import (
 
 // New waits for a recognized intent, not merely the first TCP/Unix connection.
 func New(cfg Config) *Gateway {
-	return &Gateway{cfg: cfg, conns: map[*connection]bool{}, owners: map[*connection]bool{}, gate: make(chan struct{}, 1), published: map[string]publishedOutcome{}}
+	return &Gateway{cfg: cfg, conns: map[*connection]bool{}, owners: map[*connection]bool{}, gate: make(chan struct{}, 1), published: map[string]publishedOutcome{}, proofs: newProofs(), ops: newOperations()}
 }
 
 // Close releases every helper and intent-bearing connection with the wrapper.
@@ -106,6 +106,8 @@ func (g *Gateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	g.serial++
 	c := &connection{cleaned: make(chan struct{}), owner: g, up: up, down: down, ctx: ctx, cancel: cancel, work: make(chan func(), transportQueueItems), toUI: make(chan []byte, transportQueueItems), state: newState(g.cfg.Epoch, g.serial), admitted: newAdmittedWork(), injected: map[string]chan meta{}, prefix: "rewake-inject-" + g.cfg.Epoch + "-" + itoa(g.serial) + "-"}
+	c.admitted.proven = g.proofs
+	c.state.ops = g.ops
 	g.conns[c] = true
 	g.workers.Add(2)
 	g.mu.Unlock()

@@ -55,11 +55,18 @@ mutating-request uncertainty still fences that connection and forbids replay.
 An admitted-work ledger binds positive ACKs to thread/turn under the original
 connection/generation. Later routing uncertainty, switching or remaining reads
 cannot erase a matching finished/error/stopped outcome. Work admitted before ACK
-can stage bounded candidates until the ACK identifies its turn. Manual compaction
-is excluded from owed-work outcomes. Stopped is advisory; an explicit later finish
+can stage bounded candidates until the ACK identifies its turn. An outcome is published
+as it is only for a turn with proof of work — a reply naming it or an item other than a
+compaction's; one without is reported as an advisory `stopped` after half a second
+waiting for its proof, and nothing for a turn its `contextCompaction` item shows to be
+a compaction — so a compaction's turn never settles owed work
+([codex-publication.md](codex-publication.md)). The open operations that keep
+main's compaction refused belong to the gateway and outlive the connection. Stopped is advisory; an explicit later finish
 or error may still settle the original wait. Duplicate terminal results are filtered.
 
-Observed active/idle intervals retain the existing 500 ms completion-gap diagnostic.
+Observed active/idle intervals retain the existing 500 ms completion-gap diagnostic;
+an interval whose turn was never named is reported as an advisory `stopped`, which
+settles nothing.
 An interval seen while a primary request awaits its reply is preserved when that
 reply validates the thread. This does not reconstruct missed history or manufacture
 an outcome from disconnection. Explicit unsubscribe can also exclude a terminal

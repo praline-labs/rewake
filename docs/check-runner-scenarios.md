@@ -163,7 +163,7 @@ endpoint, **M** real-model semantic (paid), **O** owner TUI.
 | `mid-turn` | HF-21, HF-09 | F runs | `unsupported` — no `observes-mid-turn-arrival` | `unsupported` unless it declares the capability |
 | `ack-recovery` (4th) | HF-09, HF-03 | F | F | F |
 | `stopped-routing`, `claude-interrupted` | HF-06 | F runs `stopped-routing` | F runs both since September 23, 2026 — the interruption heard through rewake's plugin | by capability |
-| `claude-steered` | none yet — `rewake compact` and `rewake interrupt` ([remote-control.md](remote-control.md)) | not in the suite until part B serves the control directory | F runs since September 24, 2026 — the module under node, the fixture carrying out its compaction and abort | by capability |
+| `claude-steered` | none yet — `rewake compact` and `rewake interrupt` ([remote-control.md](remote-control.md)) | F runs as `codex-steered` since September 24, 2026 — the wrapper serving the directory, the shim answering `thread/compact/start` and `turn/interrupt` | F runs since September 24, 2026 — the module under node, the fixture carrying out its compaction and abort | by capability |
 | `git-grant` (later) | HF-15 | F | `unsupported` — not an eligible recipient | by capability |
 | `telemetry-source` | HF-11, HF-22 | F then P | F runs as `claude-telemetry` since September 23, 2026 — the collector exists | by capability |
 | `thread-changed` | HF-10 | not in the suite; the gateway's tests and the live run of September 17, 2026 cover it | F runs since September 23, 2026 — `/clear` played by the fixture | by capability |

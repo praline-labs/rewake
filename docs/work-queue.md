@@ -81,19 +81,36 @@ harness's own `/clear` and `/resume` were observed working under rewake on Septe
 state is unknown during a turn ([session-state.md](session-state.md#claude-code-source)).
 Stage 2 of the plugin acts on the session: `rewake compact` and `rewake interrupt`,
 built on the Claude Code side on September 24, 2026 ([remote-control.md](remote-control.md))
-with its workflow case, `claude-steered`, and accepted live the same day; the Codex side
-follows below.
+with its workflow case, `claude-steered`, and accepted live the same day; the Codex side,
+part B, was built the same day and accepted live on September 25.
 
 ## Now: stage 2 of the plugin, the rest
 
-What [remote-control.md](remote-control.md) describes is built for Claude Code with unit
-and module tests and the workflow case `claude-steered` with eleven product mutants
-([testing-plugin.md](testing-plugin.md#steering-a-session)). Next is part B, the Codex
-adapter: the wrapper serves the same control directory, refuses a
-compaction itself while a turn runs or a `turn/start` is in flight, sends
-`thread/compact/start` with the gateway's manual-compaction mark, and `turn/interrupt`
-with the running turn's id. Its live check is in
-[research-protocol.md](research-protocol.md#compaction-and-interrupt-on-request).
+What [remote-control.md](remote-control.md) describes is built and accepted live on both
+harnesses: Claude Code on September 24, 2026, Codex (part B) on September 25 after nine
+review rounds ([2026-09-24-remote-control-codex.md](roadmap/2026-09-24-remote-control-codex.md)).
+In order, what follows it:
+
+**`rewake compact` returns at once.** Main's order of September 25, 2026: the command
+returns once the request is taken or refused, and the outcome of the compaction comes
+to main as a letter, instead of the command waiting for it.
+
+**The worker rules in the role briefing**, and with them the re-read after a compaction.
+The briefing tells a session to re-read its task with `rewake inbox --owed` after a
+context compaction (`internal/role/playbook.go`), and `--owed` lists only the tasks read
+and not yet answered: a new task still unread reads as nothing owed. Seen live twice on
+September 25, 2026, Codex CLI 0.155.1, on the subject of part B's acceptance, each time a
+task delivered during a compaction: after the first the session ended its turn with
+"nothing owed", after the second it resumed the old interrupted task instead. The
+direction: `--owed` names unread tasks as well, or says "N unread — run rewake inbox",
+and the briefing's line says so.
+
+**A main's own failed turn reports to nobody.** On September 24, 2026 at 19:36 main
+received an `error` letter about its own turn, "API Error: Connection lost
+mid-response". A main's turns are reported to nobody ([roles.md](roles.md)), and its
+own failures should be too. The contract in force says otherwise: a failing main
+retains the error in its own unread mailbox, unannounced
+([turn-outcomes.md](turn-outcomes.md)); that rule is what changes.
 
 **A focus for a Codex compaction, to be researched.** The owner decided on September 24,
 2026 that `rewake compact <codex session> <focus>` is refused for now: Codex's

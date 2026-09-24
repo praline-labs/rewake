@@ -117,6 +117,25 @@ the person instead of resending. A waiting question prints stopped and exits 1;
 the later result remains an ordinary inbox report. Socket notices use killed
 status; server-delivered text notices use a yellow circle.
 
+**A run that passed unseen** (Codex, September 25, 2026, main's decision): the gateway
+saw the conversation go active and then idle but never learned which turn ran, so it
+cannot tell work from a compaction. It publishes a `stopped` with the text "a run of
+this conversation passed unseen by rewake; whether it did your task is not known here",
+routed and kept like a keyboard stop: current waiters only, waits intact, the next
+finished settling the task. Why it cannot settle anything is in
+[codex-publication.md](codex-publication.md).
+
+**A turn that ended unproven** (Codex, September 25, 2026, main's decision in round 8):
+a turn with no reply naming it and no item but a compaction's — a goal's turn failing
+at its first model call, or one whose reply was lost with the connection — is reported
+the same way, with the text "a turn of this conversation ended without rewake seeing
+what it did", followed by its error text or that it was stopped, under an identity of
+its own: the turn's id with `/advisory` after it. If the proof comes later, the turn's
+own outcome follows, of any kind, a stop included, with its start and end, and is
+handled as any turn end: a finish or an error settles the task, and a pending mark
+made during the turn is taken by it, never by the advisory. A turn whose only item is
+`contextCompaction` is a compaction and reports nothing.
+
 **Where a stop comes from.** Codex: the owned gateway sees `turn/completed` with status
 `interrupted` (`internal/harness/codex/gateway/admitted_terminal.go`). Claude Code,
 since September 23, 2026: rewake's function-hooks plugin reports `turn.complete` with

@@ -21,17 +21,16 @@ type (
 		Started, Ended int64
 	}
 	interval struct {
-		endRead                           *uint64
-		thread, turn, text                string
-		active, done, compact, seenActive bool
-		idle                              time.Time
-		serial                            uint64
-		started                           int64
+		endRead                  *uint64
+		thread, turn, text       string
+		active, done, seenActive bool
+		idle                     time.Time
+		serial                   uint64
+		started                  int64
 	}
 	observer struct {
 		thread    string
 		watches   map[string]*interval
-		manual    map[string]bool
 		intervals []*interval
 		sequence  uint64
 		out       []Completion
@@ -40,7 +39,7 @@ type (
 )
 
 func newObserver() observer {
-	return observer{watches: map[string]*interval{}, manual: map[string]bool{}}
+	return observer{watches: map[string]*interval{}}
 }
 func (o *observer) reset() { *o = newObserver() }
 func (o *observer) allocate(thread string) *interval {
@@ -62,7 +61,7 @@ func (o *observer) allocate(thread string) *interval {
 		}
 	}
 	o.sequence++
-	w := &interval{thread: thread, serial: o.sequence, compact: o.manual[thread]}
+	w := &interval{thread: thread, serial: o.sequence}
 	o.intervals = append(o.intervals, w)
 	o.watches[thread] = w
 	return w
@@ -114,18 +113,6 @@ func (o *observer) bind(thread, status string, _ time.Time) {
 	}
 }
 
-// Refused maintenance never reopens or removes a previous task interval.
-func (o *observer) refuseManual(thread string) {
-	delete(o.manual, thread)
-	for _, w := range o.intervals {
-		if w.thread == thread && w.compact {
-			w.done = true
-			w.active = false
-			w.text = ""
-		}
-	}
-}
-
 func (o *observer) event(m meta, raw []byte, now time.Time) {
 	if m.thread == "" || o.thread != "" && m.thread != o.thread {
 		return
@@ -148,9 +135,6 @@ func (o *observer) event(m meta, raw []byte, now time.Time) {
 					return
 				}
 			}
-			if !w.seenActive && w.turn == "" {
-				w.compact = o.manual[m.thread]
-			}
 			w.active = true
 			w.seenActive = true
 			w.idle = time.Time{}
@@ -169,9 +153,6 @@ func (o *observer) event(m meta, raw []byte, now time.Time) {
 			if w == nil {
 				return
 			}
-		}
-		if !w.seenActive && w.turn == "" {
-			w.compact = o.manual[m.thread]
 		}
 		if !w.seenActive {
 			w.endRead = nil
@@ -201,10 +182,6 @@ func (o *observer) event(m meta, raw []byte, now time.Time) {
 		w.turn = m.turn
 		w.active = false
 		w.done = true
-		if w.compact {
-			delete(o.manual, m.thread)
-			return
-		}
 		result := Completion{ID: m.thread + "/" + m.turn, Thread: m.thread, ReadThrough: endBoundary(w, m), Started: w.started, Ended: boottime.Now()}
 		switch m.status {
 		case "completed":
@@ -224,18 +201,24 @@ func (o *observer) event(m meta, raw []byte, now time.Time) {
 	}
 }
 
+// gapText is the advisory outcome of a run seen only as an active status and
+// then idle, its turn unknown.
+const gapText = "a run of this conversation passed unseen by rewake; whether it did your task is not known here"
+
 func (o *observer) expire(now time.Time) {
 	for _, w := range o.intervals {
-		if w.thread != o.thread || !w.seenActive || w.done || w.compact || w.active || w.idle.IsZero() || now.Sub(w.idle) < 500*time.Millisecond {
+		if w.thread != o.thread || !w.seenActive || w.done || w.active || w.idle.IsZero() || now.Sub(w.idle) < 500*time.Millisecond {
 			continue
 		}
 		w.done = true
 		w.text = ""
-		id := w.turn
-		if id == "" {
-			id = "gap-" + itoa(w.serial)
+		if w.turn == "" {
+			// A gap: whether it was work or a compaction is not known, so it
+			// is only advisory, and settles nothing.
+			o.out = append(o.out, Completion{ID: w.thread + "/gap-" + itoa(w.serial), Thread: w.thread, Kind: "stopped", Text: gapText, ReadThrough: w.endRead})
+			continue
 		}
-		o.out = append(o.out, Completion{ID: w.thread + "/" + id, Thread: w.thread, Kind: "error", Text: "completion not observed", ReadThrough: w.endRead})
+		o.out = append(o.out, Completion{ID: w.thread + "/" + w.turn, Thread: w.thread, Kind: "error", Text: "completion not observed", ReadThrough: w.endRead})
 	}
 }
 

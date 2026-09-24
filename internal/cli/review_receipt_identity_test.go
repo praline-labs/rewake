@@ -42,7 +42,7 @@ func reviewPublish(t *testing.T, dir string, self registry.Session, outcome gate
 		t.Fatal(err)
 	}
 	defer clock.Close()
-	err = ReportCompletion(context.Background(), dir, self, harness.Completion{ID: outcome.PublicationID(), Text: outcome.Text, Thread: outcome.Thread, Kind: inbox.Kind(outcome.Kind), Boundary: clock.Snapshot()})
+	err = ReportCompletion(context.Background(), dir, self, harness.Completion{ID: outcome.PublicationID(), Text: outcome.Text, Thread: outcome.Thread, Kind: inbox.Kind(outcome.Kind), Boundary: clock.Snapshot(), Started: outcome.Started, Ended: outcome.Ended})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,8 +71,12 @@ func TestReviewScopedGapReceiptsRemainDistinct(t *testing.T) {
 	}
 	waiters := inbox.Waiters(dir, self.Name, self.Epoch())
 	t.Logf("gateway outcomes=%+v reports=%v remaining=%v", outcomes, finishedFor(t, dir, peer.Name), waiters)
-	if len(finishedFor(t, dir, peer.Name)) != 2 || len(waiters) != 0 {
+	if len(finishedFor(t, dir, peer.Name)) != 2 {
 		t.Fatal("distinct admission generations collapsed onto one durable gap receipt")
+	}
+	// A gap is advisory: it settles nothing, and the wait stays.
+	if len(waiters) != 1 {
+		t.Fatal("a gap settled the wait")
 	}
 }
 

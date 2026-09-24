@@ -96,6 +96,10 @@ func (claudeHarness) Title() string { return "Claude Code" }
 // which reach the summary request (docs/research-claude-actions.md).
 func (claudeHarness) CompactFocus() bool { return true }
 
+// InterruptTrace: a plugin abort leaves the model no trace, so rewake adds a
+// line to the session's next notice (docs/remote-control.md).
+func (claudeHarness) InterruptTrace() string { return "its next notice says you interrupted it" }
+
 func (claudeHarness) Summary() string {
 	return "Start Claude Code as a rewake session. Messages reach it in seconds."
 }

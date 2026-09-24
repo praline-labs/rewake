@@ -60,7 +60,8 @@ first.
 
 ## Steering a session
 
-`claude-steered` runs on the Claude Code column only: a main, running its own commands,
+`claude-steered` runs on the Claude Code column, and `codex-steered`, below, on the Codex
+one. In `claude-steered` a main, running its own commands,
 steers three workers with `rewake compact` and `rewake interrupt`, and each request
 travels the product's whole path — the command, the control directory, the module
 polling it, the session carrying it out, and back. Like `claude-interrupted` it is
@@ -137,3 +138,47 @@ harness draws the line for "Not enough messages to compact", which the fixture p
 one finished turn; the focus reaching the summary request, which only a live session
 shows; and a stalled or killed session, which the unit tests of `internal/control`
 cover.
+
+### On Codex
+
+`codex-steered` runs the same commands on the Codex column, where there is no plugin:
+the worker's wrapper serves the control directory and carries a request out over its
+app-server connection. The fixture's shim answers the two requests as the server of
+0.155.1 does ([research-protocol.md](research-protocol.md#compaction-and-interrupt-on-request)):
+`thread/compact/start` with `{}`, then the compaction as a turn of its own — the status
+active, `turn/started`, the `contextCompaction` item started, a token usage of 9000, the
+item completed, the status idle, `turn/completed` — and `turn/interrupt` with `{}`,
+ending the held turn as interrupted, or refused in the server's words with no turn
+running or another turn's id. A compaction that arrives while a turn is held aborts that
+turn first, as Codex's `compact()` does, so a wrapper that does not refuse it breaks the
+turn rather than passing. A work turn reports a usage of 120000 before it completes. The
+switch `RW_SHIM_HOLD_TURN` holds busy's first turn for ten seconds at most. The shape
+case checks the shim's reply and events for both requests against the schema, and that
+the shim accepts neither request in a form the schema refuses.
+
+calm works its task to the end and busy is held in its first turn; main is a Codex
+session too. The observations:
+
+- a compaction of calm with a focus is a wrong call, exit 2, naming the focus, and calm's
+  compaction count afterwards is the one of the plain compaction below;
+- a compaction of busy is refused as `in a turn`, exit 1, and busy still reads `working`
+  with nothing reported about its task;
+- an interrupt of busy is `done`, exit 0, and main reads `stopped` with "lead-codex
+  interrupted this turn with rewake interrupt", as its `rewake inbox --awaited` does;
+- busy's next notice carries no line about the interrupt;
+- an interrupt of calm, idle, is refused as `no turn running`, exit 1;
+- a compaction of calm is `done`, exit 0, with 120000 tokens before and 9000 after, and
+  the telemetry counts one compaction;
+- that answer carries `compaction` 1, and main is sent no compaction notice within five
+  seconds;
+- calm asking for a compaction is a wrong call, exit 2.
+
+Its five mutants: a wrapper that sends a compaction whatever runs, which breaks the
+refusal and, the held turn being aborted by it, the interrupt; a telemetry that counts
+the compaction without its request and asker; a wrapper that interrupts without keeping
+who asked; one that answers an idle interrupt as done; and a Codex harness that lets a
+focus through to the wrapper.
+
+What it cannot show: what the terminal does meanwhile — the live run of September 24,
+2026 saw it hold a message typed during the compaction and send it after — and how long
+a real compaction takes.

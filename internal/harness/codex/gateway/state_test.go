@@ -94,7 +94,7 @@ func TestObservedActiveBeforeBindingKeepsGapAndFiltersOldThreads(t *testing.T) {
 	o.bind("A", "idle", now)
 	o.expire(now.Add(time.Second))
 	out := o.drain()
-	if len(out) != 1 || out[0].Text != "completion not observed" {
+	if len(out) != 1 || out[0].Kind != "stopped" || out[0].Text != gapText {
 		t.Fatal(out)
 	}
 	o.expire(now.Add(2 * time.Second))
@@ -135,12 +135,11 @@ func TestLiveCompletionOnlyAndCompaction(t *testing.T) {
 	}
 	o := newObserver()
 	o.bind("A", "idle", now)
-	o.manual["A"] = true
-	o.watch("A").compact = true
 	o.event(meta{method: "turn/started", thread: "A", turn: "compact"}, nil, now)
 	o.event(meta{method: "turn/completed", thread: "A", turn: "compact", status: "completed"}, nil, now)
 	o.expire(now.Add(time.Second))
-	if len(o.drain()) != 0 {
+	c := &connection{admitted: newAdmittedWork()}
+	if len(c.proven(o.drain(), time.Now())) != 0 {
 		t.Fatal("compaction reported task completion")
 	}
 }

@@ -23,6 +23,9 @@ type telemetryRun struct {
 	last    sessionstate.Snapshot
 	binding Binding
 	events  []sessionstate.CompactionEvent
+	// counted is the event of each turn's compaction, by thread and turn,
+	// until the turn ends and its asker, if any, is known.
+	counted map[string]uint64
 }
 
 type threadObservation struct {
@@ -40,6 +43,10 @@ type threadObservation struct {
 }
 
 type compactionObservation struct {
+	// request and by are set on the end of the turn of a compaction a main
+	// asked for with rewake compact: main's wrapper sends no notice of it,
+	// and the command reads its count by the request.
+	request, by         string
 	thread, item, turn  string
 	observedAt          time.Time
 	completed, terminal bool
@@ -176,11 +183,22 @@ func (c *connection) syncObservation() {
 }
 
 func (r *telemetryRun) compaction(entry *threadObservation, event compactionObservation) {
+	key := event.thread + "\x00" + event.turn
 	if event.terminal {
 		if entry.activeTurn == event.turn {
 			entry.active = ""
 			entry.activeTurn = ""
 		}
+		// The asker is written only now, at the end of the turn the mark was
+		// still tied to: a tie undone before it leaves nothing to take back.
+		if sequence, ok := r.counted[key]; ok && event.by != "" {
+			for i := range r.events {
+				if r.events[i].Sequence == sequence {
+					r.events[i].RequestedBy, r.events[i].Request = event.by, event.request
+				}
+			}
+		}
+		delete(r.counted, key)
 		return
 	}
 	identity := sha256.Sum256([]byte(event.thread + "\x00" + event.item))
@@ -210,6 +228,10 @@ func (r *telemetryRun) compaction(entry *threadObservation, event compactionObse
 			r.events = r.events[:maxCompactionEvents-1]
 		}
 		r.events = append(r.events, sessionstate.CompactionEvent{Sequence: r.count, ObservedAt: event.observedAt})
+		if r.counted == nil || len(r.counted) >= maxCompactionEvents {
+			r.counted = map[string]uint64{}
+		}
+		r.counted[key] = r.count
 	}
 }
 
@@ -225,8 +247,7 @@ func (c *connection) observeCompaction(thread, item, turn string, completed bool
 		return
 	}
 	now := observedNow(&entry.snapshot)
-	event := compactionObservation{observedAt: now, thread: thread, item: item, turn: turn, completed: completed}
-	c.recordCompaction(entry, event)
+	c.recordCompaction(entry, compactionObservation{observedAt: now, thread: thread, item: item, turn: turn, completed: completed})
 }
 
 func (c *connection) recordCompaction(entry *threadObservation, event compactionObservation) {

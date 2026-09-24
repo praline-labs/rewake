@@ -22,7 +22,7 @@ func TestShimAnswersMatchTheInstalledSchema(t *testing.T) {
 	c := Start(t, Spec{
 		Name:    "shim-answers-match-schema",
 		Harness: "codex",
-		Observations: []string{
+		Observations: append([]string{
 			"the schema is available",
 			"the initialize reply matches InitializeResponse",
 			"the thread/start reply matches ThreadStartResponse",
@@ -35,7 +35,7 @@ func TestShimAnswersMatchTheInstalledSchema(t *testing.T) {
 			"the working thread/status/changed event matches ThreadStatusChangedNotification",
 			"the idle thread/status/changed event matches ThreadStatusChangedNotification",
 			"the fixture refuses every delivery the schema refuses",
-		},
+		}, steeringShapes...),
 		Deadline: 120 * time.Second,
 	})
 	iso := Isolate(t, c, binary)
@@ -114,6 +114,7 @@ func TestShimAnswersMatchTheInstalledSchema(t *testing.T) {
 	t.Setenv(sessionNameEnv, "me")
 	t.Setenv(sessionEpochEnv, "e2")
 	deliveriesAgainstTheSchema(c, bundle)
+	steeringAgainstTheSchema(c, bundle)
 }
 
 // deliveriesAgainstTheSchema checks the fixture's own answer against the

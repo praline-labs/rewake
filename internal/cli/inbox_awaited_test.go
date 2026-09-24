@@ -141,7 +141,7 @@ func TestAwaitedShowsWhereEachTaskStands(t *testing.T) {
 	room.read(working)
 	unread := room.put(working, "unread", inbox.Delivered, "", map[string]any{"kind": "question", "text": "which port?"})
 	held := room.put(working, "inbox", inbox.Held, "waiting for the person to approve", map[string]any{"text": "held one"})
-	undelivered := room.put(working, "inbox", "", "", map[string]any{"text": "just sent"})
+	undelivered := room.put(working, "inbox", inbox.Pending, "a compaction is running", map[string]any{"text": "just sent"})
 
 	pending := room.sentAndRead(paused, "run the suite")
 	if err := inbox.MarkPending(room.dir, paused.Name, paused.Epoch(), "the suite is running", markAt); err != nil {
@@ -189,7 +189,7 @@ func TestAwaitedShowsWhereEachTaskStands(t *testing.T) {
 		owed + " · task · ", " · read, being worked on\nfix the parser\n",
 		unread + " · question · ", " · delivered, unread\nwhich port?\n",
 		" · held: waiting for the person to approve\nheld one\n",
-		" · not delivered yet\njust sent\n",
+		" · not delivered yet: a compaction is running\njust sent\n",
 		" · pending: the suite is running\nrun the suite\n",
 		" · stopped: the person at the keyboard stopped this turn\nrefactor\n",
 		" · stopped: lead interrupted this turn with rewake interrupt\nrename\n",

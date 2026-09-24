@@ -115,6 +115,8 @@ func present(b []byte, keys ...string) bool {
 func boolValue(b []byte, keys ...string) bool { return bytes.Equal(field(b, keys...), []byte("true")) }
 
 type meta struct {
+	// sent is a request's place in the order of writes (operations.sent).
+	sent                                                 uint64
 	readThrough                                          *uint64
 	resultObject                                         bool
 	startupFork, permissions                             bool

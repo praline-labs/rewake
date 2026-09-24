@@ -127,11 +127,15 @@ async function act($, asked) {
       const answer = refusal(error, [
         ["a turn is running", "in a turn"],
         ["a turn is in flight", "in a turn"],
+        ["an external turn is driving the conversation", "in a turn"],
         ["switched off", "compaction switched off"],
+        ["lives on the remote session", "remote conversation"],
         ["Not enough messages to compact", "nothing to compact"],
       ])
-      // A conversation too short is refused after PreCompact, and a failure
-      // may come after it too; the other refusals come before the host starts.
+      // A conversation too short is refused after PreCompact. Every other
+      // refusal the host has comes before it starts, and the table holds them
+      // all (read in the 2.1.280 binary), so what it does not hold failed
+      // after the start: the summary's request, or applying it.
       const started = answer.reason === "nothing to compact" || answer.outcome === "failed"
       if (announced) await told($, { plugin_event: "compact.refused", request: asked.id, started })
       return answer

@@ -181,7 +181,8 @@ func buildRewake(dir string) (string, error) {
 	ctx, stop := context.WithTimeout(context.Background(), buildTimeout)
 	defer stop()
 	binary := filepath.Join(dir, "rewake")
-	build := exec.Command("go", "build", "-o", binary, "./cmd/rewake")
+	// No VCS stamp: rewake reads none, and a copy without .git would fail on it.
+	build := exec.Command("go", "build", "-buildvcs=false", "-o", binary, "./cmd/rewake")
 	build.Dir = root
 	build.Env = os.Environ()
 	// Through the same group machinery a case uses: `go build` starts

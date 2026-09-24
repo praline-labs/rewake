@@ -39,9 +39,12 @@ func TestTheModuleTellsWhoAskedBeforeItCompacts(t *testing.T) {
 		world   controlWorld
 		started bool
 	}{
-		"too short":    {controlWorld{TooShort: true}, true},
-		"in flight":    {controlWorld{InFlight: true}, false},
-		"switched off": {controlWorld{CompactOff: true}, false},
+		"too short":              {controlWorld{TooShort: true}, true},
+		"in flight":              {controlWorld{InFlight: true}, false},
+		"switched off":           {controlWorld{CompactOff: true}, false},
+		"external turn":          {controlWorld{Refuse: externalTurn}, false},
+		"thin client":            {controlWorld{Refuse: thinClient}, false},
+		"failed after the start": {controlWorld{FailAfter: "the compaction produced no summary"}, true},
 	} {
 		run := runControl(t, true, tc.world, asked(idA, control.Compact, ""), tick)
 		refused := map[string]any{"plugin_event": "compact.refused", "request": idA, "started": tc.started}

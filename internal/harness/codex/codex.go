@@ -26,6 +26,8 @@ const introKey = "developer_instructions"
 
 type codexHarness struct{}
 
+var _ harness.Steerable = codexHarness{}
+
 // New returns the Codex harness.
 func New() harness.Harness { return codexHarness{} }
 
@@ -114,6 +116,18 @@ func (codexHarness) Notes() []string {
 }
 
 func (codexHarness) SupportsGitGrant() bool { return true }
+
+// CompactFocus: thread/compact/start has no field for one, and the only key
+// that shapes the summary replaces its whole prompt for the whole
+// conversation, so a focus is refused before anything is sent (owner decision,
+// docs/remote-control.md).
+func (codexHarness) CompactFocus() bool { return false }
+
+// InterruptTrace: Codex records the interrupt in the conversation itself, so
+// rewake adds no line (owner decision, docs/remote-control.md).
+func (codexHarness) InterruptTrace() string {
+	return "Codex records the interrupt in its model's history"
+}
 
 // SingleUseFlags are the flags Codex takes at most once, each naming one
 // parameter by every spelling it has.
@@ -231,6 +245,7 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 	args = harness.AddFlags(args, "--remote", "unix://"+socket)
 	server := newServer(socket, serverArgs, append(append([]string{}, env...), "CODEX_INTERNAL_APP_SERVER_REMOTE_CONTROL_DISABLED=1"), cwd)
 	server.gitWrite = request.Role.GitWrite
+	server.controlDir = request.ControlDir
 	// The owned server is started with the same program as the terminal: a
 	// person's wrapper sets the environment both halves need — a Codex home,
 	// credentials — and a server started around it would run in another one.

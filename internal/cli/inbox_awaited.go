@@ -151,7 +151,7 @@ func awaitedState(recipient string, message awaitedView) string {
 	}
 	switch message.State {
 	case inbox.StageUndelivered:
-		return "not delivered yet"
+		return detail("not delivered yet")
 	case inbox.StageHeld:
 		return detail("held")
 	case inbox.StageUnread:

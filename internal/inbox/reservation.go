@@ -61,7 +61,9 @@ func (s *Server) prepareDelivery(ctx context.Context, message *Message) (read, a
 	if s.Reserve != nil {
 		reservation, err = s.Reserve(deliveryCtx, *message)
 		if err != nil {
-			err = refuse(err)
+			if !errors.Is(err, ErrNotYet) {
+				err = refuse(err)
+			}
 			return
 		}
 

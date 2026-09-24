@@ -35,7 +35,7 @@ const holdWindow = 10 * time.Second
 // that the arrival fell between the two rather than inferring it from a clock.
 func (s *shimSession) holdOpen(id string) string {
 	s.turn.mu.Lock()
-	holding, steered := s.turn.open == id, s.turn.steered
+	holding, steered, abort := s.turn.open == id, s.turn.steered, s.turn.abort
 	s.turn.mu.Unlock()
 	if !holding {
 		return ""
@@ -45,6 +45,13 @@ func (s *shimSession) holdOpen(id string) string {
 	select {
 	case <-steered:
 		arrived = true
+	case <-abort:
+		// Interrupted: the turn ends here, with nothing more read.
+		s.turn.mu.Lock()
+		s.turn.open, s.turn.steered = "", nil
+		s.turn.mu.Unlock()
+		s.recordTurnEvent("operation-aborted", id, "")
+		return ""
 	case <-time.After(holdWindow):
 	}
 	// Whatever arrived mid-turn is read inside this same turn, the way an
@@ -56,7 +63,7 @@ func (s *shimSession) holdOpen(id string) string {
 		second = "second read failed: " + err.Error()
 	}
 	s.turn.mu.Lock()
-	s.turn.open, s.turn.steered = "", nil
+	s.turn.open, s.turn.steered, s.turn.abort = "", nil, nil
 	s.turn.mu.Unlock()
 	s.recordTurnEvent("operation-closed", id, fmt.Sprintf("steered=%v", arrived))
 	return second

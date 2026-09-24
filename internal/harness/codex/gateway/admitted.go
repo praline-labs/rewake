@@ -2,48 +2,76 @@ package gateway
 
 import (
 	"errors"
-	"strings"
 	"time"
 )
 
 type (
 	admittedRequest struct {
-		binding      Binding
-		duringManual bool
+		binding Binding
+		// sent is the request's place in the order of writes (operations.sent).
+		sent uint64
 	}
 	admittedTurn struct {
-		binding      Binding
-		duringManual bool
+		binding Binding
+		sent    uint64
 	}
 	admittedThread struct {
-		completed   map[string]bool
-		maintenance map[string]bool
-		observed    observer
-		turns       map[string]admittedTurn
+		completed map[string]bool
+		observed  observer
+		turns     map[string]admittedTurn
 	}
+	// manualWork is a compaction in flight, the terminal's /compact or a
+	// main's rewake compact. For a main's it also carries the request and the
+	// asker, and ended, closed when its turn completes with status, the
+	// failure's message and the context after it, when a usage update said,
+	// or when the hold ends first, or sight is lost; answered says it was.
 	manualWork struct {
-		before map[string]bool
-		turn   string
+		before              map[string]bool
+		turn                string
+		request, by         string
+		ended               chan struct{}
+		answered            bool
+		status, failure     string
+		tokensBefore, after *int64
+		// generation is the selection the request was sent in. lost says
+		// the selection changed before the mark was tied: the stream that
+		// would show its turn has a gap, so it never ties (lostSight).
+		generation uint64
+		lost       bool
+		// sent is the request's place in the order of writes, the key of
+		// its open operation (threadTurns.open).
+		sent uint64
+		// hold is when the mark stops holding deliveries and main's wait;
+		// released says it has. The mark itself stays until its turn ends,
+		// so that main's answer and the telemetry's author go by it.
+		hold     time.Time
+		released bool
 	}
 	admittedWork struct {
-		stopped       map[string]stoppedWork
-		stoppedOrder  []string
-		ready         []Completion
-		pending       map[string]admittedRequest
-		threads       map[string]*admittedThread
-		manual        map[string]*manualWork
-		excluded      map[string]bool
-		excludedOrder []string
+		stopped      map[string]stoppedWork
+		stoppedOrder []string
+		ready        []Completion
+		pending      map[string]admittedRequest
+		threads      map[string]*admittedThread
+		manual       map[string]*manualWork
+		// proven names the turns known to be work, never a compaction's: one
+		// a reply named, or one with an item other than contextCompaction.
+		// The gateway's, shared by its connections.
+		proven *proofs
+		// authored is the asker of the compaction whose turn the last event
+		// ended while the mark was tied to it, for the telemetry to write.
+		authored compactionAuthor
 	}
+	compactionAuthor struct{ thread, turn, request, by string }
 )
 
 func newAdmittedWork() admittedWork {
-	return admittedWork{pending: map[string]admittedRequest{}, threads: map[string]*admittedThread{}, manual: map[string]*manualWork{}, excluded: map[string]bool{}, stopped: map[string]stoppedWork{}}
+	return admittedWork{pending: map[string]admittedRequest{}, threads: map[string]*admittedThread{}, manual: map[string]*manualWork{}, proven: newProofs(), stopped: map[string]stoppedWork{}}
 }
 func isTurnAdmission(method string) bool { return method == "turn/start" || method == "turn/steer" }
-func (a *admittedWork) prepare(id string, b Binding, injected bool) error {
-	if injected && a.manual[b.Thread] != nil {
-		return errors.New("manual maintenance is pending; no work sent")
+func (a *admittedWork) prepare(id string, b Binding, injected bool, sent uint64) error {
+	if injected && a.holding(b.Thread) {
+		return ErrCompacting
 	}
 	count := len(a.pending)
 	for _, s := range a.threads {
@@ -55,9 +83,9 @@ func (a *admittedWork) prepare(id string, b Binding, injected bool) error {
 	if a.threads[b.Thread] == nil {
 		o := newObserver()
 		o.bind(b.Thread, "idle", time.Now())
-		a.threads[b.Thread] = &admittedThread{observed: o, turns: map[string]admittedTurn{}, maintenance: map[string]bool{}, completed: map[string]bool{}}
+		a.threads[b.Thread] = &admittedThread{observed: o, turns: map[string]admittedTurn{}, completed: map[string]bool{}}
 	}
-	a.pending[id] = admittedRequest{binding: b, duringManual: a.manual[b.Thread] != nil}
+	a.pending[id] = admittedRequest{binding: b, sent: sent}
 	return nil
 }
 
@@ -68,6 +96,7 @@ func (a *admittedWork) ack(m meta) {
 	}
 	delete(a.pending, m.id)
 	if !m.failure && m.turn != "" {
+		a.worked(p.binding.Thread, m.turn)
 		s := a.threads[p.binding.Thread]
 		if s.completed[m.turn] {
 			return
@@ -101,48 +130,34 @@ func (a *admittedWork) ack(m meta) {
 		if _, exists := s.turns[m.turn]; !exists {
 			s.turns[m.turn] = admittedTurn(p)
 		}
-		if !p.duringManual {
-			a.allowWork(p.binding.Thread + "/" + m.turn)
-			delete(s.maintenance, m.turn)
-		}
 	}
 }
 
-func (a *admittedWork) manualStart(thread string, selected observer) bool {
-	if a.manual[thread] == nil && len(a.manual) >= 64 {
-		return false
-	}
-	before := map[string]bool{}
-	for _, w := range selected.intervals {
-		if w.thread == thread && w.turn != "" {
-			before[w.turn] = true
-		}
-	}
-	if s := a.threads[thread]; s != nil {
-		for id := range s.turns {
-			before[id] = true
-		}
-	}
-	for id, old := range a.stopped {
-		if old.binding.Thread == thread {
-			before[strings.TrimPrefix(id, thread+"/")] = true
-		}
-	}
-	a.manual[thread] = &manualWork{before: before}
-	return true
-}
-func (a *admittedWork) manualRefused(thread string) { delete(a.manual, thread) }
 func (a *admittedWork) event(m meta, raw []byte, now time.Time) {
+	a.authored = compactionAuthor{}
 	if marker := a.manual[m.thread]; marker != nil {
-		if (m.method == "turn/started" || m.method == "item/started" && str(raw, "params", "item", "type") == "contextCompaction") && m.turn != "" && !marker.before[m.turn] {
-			marker.turn = m.turn
-			a.exclude(m.thread + "/" + m.turn)
-			if s := a.threads[m.thread]; s != nil {
-				s.maintenance[m.turn] = true
-			}
+		// Only the compaction's own item ties the mark to a turn, and only
+		// a turn not known to be work: an ordinary turn compacts inside
+		// itself too, with the same item (docs/remote-control-codex.md).
+		if marker.turn == "" && !marker.lost && m.turn != "" && !marker.before[m.turn] && !a.proven.has(m.thread+"/"+m.turn) && isCompactionItem(m, raw) {
+			a.manualTurn(m.thread, m.turn)
 		}
-		if m.method == "turn/completed" && m.turn != "" && marker.turn == m.turn {
+		if m.method == "thread/tokenUsage/updated" && m.turn != "" && marker.turn == m.turn {
+			marker.after = telemetryInteger(field(raw, "params", "tokenUsage", "last", "totalTokens"))
+		}
+		if terminal(m) && marker.turn == m.turn {
 			delete(a.manual, m.thread)
+			if marker.by != "" {
+				a.authored = compactionAuthor{thread: m.thread, turn: m.turn, request: marker.request, by: marker.by}
+			}
+			marker.finish(m.status, decodeText(field(raw, "params", "turn", "error", "message")))
+		}
+	}
+	if m.turn != "" && (m.method == "item/started" || m.method == "item/completed") {
+		if isCompactionItem(m, raw) {
+			a.proven.compaction(m.thread + "/" + m.turn)
+		} else {
+			a.worked(m.thread, m.turn)
 		}
 	}
 	a.stoppedEvent(m, raw)
@@ -164,16 +179,18 @@ func (a *admittedWork) event(m meta, raw []byte, now time.Time) {
 	}
 }
 
-func (a *admittedWork) exclude(id string) {
-	if a.excluded[id] {
-		return
-	}
-	a.excluded[id] = true
-	a.excludedOrder = append(a.excludedOrder, id)
-	if len(a.excludedOrder) > 128 {
-		old := a.excludedOrder[0]
-		a.excludedOrder = a.excludedOrder[1:]
-		delete(a.excluded, old)
+func isCompactionItem(m meta, raw []byte) bool {
+	return (m.method == "item/started" || m.method == "item/completed") && str(raw, "params", "item", "type") == "contextCompaction"
+}
+
+// worked records a turn shown to be work. A mark tied to it was tied by an
+// auto-compaction whose item came before the proof — before the turn's reply,
+// or before its first other item — and is untied: a manual compaction's turn
+// has no item but its own, and no reply names it.
+func (a *admittedWork) worked(thread, turn string) {
+	a.proven.add(thread + "/" + turn)
+	if marker := a.manual[thread]; marker != nil && marker.turn == turn {
+		marker.turn = ""
 	}
 }
 
@@ -214,9 +231,6 @@ func (a *admittedWork) collect() []Completion {
 			if v.Kind != "stopped" {
 				s.completed[turn] = true
 			}
-			if (a.excluded[v.ID] || s.maintenance[turn]) && known.duringManual {
-				continue
-			}
 			if v.Kind == "stopped" {
 				a.rememberStopped(v.ID, known.binding)
 			}
@@ -241,7 +255,7 @@ func (a *admittedWork) overLimit() bool {
 			return true
 		}
 		events += len(s.observed.out)
-		intervals += len(s.observed.intervals) + len(s.maintenance) + len(s.completed)
+		intervals += len(s.observed.intervals) + len(s.completed)
 		for _, v := range s.observed.out {
 			text += len(v.Text)
 		}
@@ -255,16 +269,6 @@ func (a *admittedWork) overLimit() bool {
 	return events > 64 || intervals > 128 || text > 4<<20
 }
 
-func (a *admittedWork) allowWork(id string) {
-	delete(a.excluded, id)
-	for i, key := range a.excludedOrder {
-		if key == id {
-			a.excludedOrder = append(a.excludedOrder[:i], a.excludedOrder[i+1:]...)
-			break
-		}
-	}
-}
-
 // Steering may acknowledge a turn whose start was observed before the request.
 // Copy actual evidence only; an acknowledgement itself is never an active event.
 func (a *admittedWork) capture(selected observer, thread string) {
@@ -273,7 +277,7 @@ func (a *admittedWork) capture(selected observer, thread string) {
 		return
 	}
 	for _, w := range selected.intervals {
-		if w.thread != thread || w.done || w.compact {
+		if w.thread != thread || w.done {
 			continue
 		}
 		snapshot := *w

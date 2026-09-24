@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 func itoa(v uint64) string         { return strconv.FormatUint(v, 10) }
@@ -42,6 +43,10 @@ type (
 		gate              chan struct{}
 		published         map[string]publishedOutcome
 		publishOrder      []string
+		markHold          time.Duration
+		proofHold         time.Duration
+		proofs            *proofs
+		ops               *operations
 	}
 	connection struct {
 		observations                connectionObservations
@@ -60,6 +65,10 @@ type (
 		injected                    map[string]chan meta
 		next                        uint64
 		prefix                      string
+		interrupted                 steered
+		// unproven are outcomes whose turn is not yet shown to be work
+		// (proven).
+		unproven []unprovenWork
 	}
 )
 
@@ -73,11 +82,16 @@ func (c *connection) closeWith(direction, reason string, err error, size int) {
 		c.mu.Lock()
 		previous := c.state.Binding
 		c.observationClosed()
+		c.unanswered()
 		c.state.invalidate("connection lost; re-establish recognized primary intent")
 		c.state.pending = map[string]pending{}
 		c.injected = map[string]chan meta{}
+		proven := c.admitted.proven
 		c.admitted = newAdmittedWork()
+		c.admitted.proven = proven
+		abandoned := c.abandon()
 		c.mu.Unlock()
+		c.complete(abandoned)
 		c.owner.release(c, previous)
 		if c.owner.cfg.Closed != nil {
 			info := CloseInfo{Connection: previous.Connection, Generation: previous.Generation, Direction: direction, Reason: reason, Error: closeError(err), Bytes: size, Requests: len(c.work), Responses: len(c.toUI)}
@@ -139,22 +153,32 @@ func (c *connection) readUI() {
 				c.owner.claim(c)
 			}
 			c.mu.Lock()
+			if reply := c.refuseTerminalCompact(m, raw); reply != nil {
+				c.record("tui-request-refused", m)
+				c.mu.Unlock()
+				if !c.queueResponse(reply) {
+					c.closeWith("server-to-tui", "response-queue-capacity", nil, len(reply))
+				}
+				return
+			}
 			m.readClass = c.state.readContext(m)
+			m.sent = c.state.ops.next()
 			var err error
 			if isTurnAdmission(m.method) && !isHelper(m) && c.owner.owns(c) && c.state.Ready && m.thread == c.state.Thread {
-				err = c.admitted.prepare(m.id, c.state.Binding, false)
+				err = c.admitted.prepare(m.id, c.state.Binding, false, m.sent)
 				if err == nil {
 					c.admitted.capture(c.state.events, m.thread)
 				}
 			}
 			if err == nil {
 				err = c.state.request(m)
+				c.lostSight()
 			}
 			if m.method == "thread/compact/start" && err == nil {
-				if !c.admitted.manualStart(m.thread, c.state.events) {
+				if !c.admitted.manualStart(m.thread, c.state.events, m.sent, c.state.Generation, time.Now().Add(c.owner.markLimit())) {
 					err = errors.New("manual-scope capacity reached; control not forwarded")
 				} else {
-					c.state.events.manual[m.thread] = true
+					c.state.ops.opened(m.thread, m.sent, "")
 				}
 			}
 
@@ -175,15 +199,21 @@ func (c *connection) readUI() {
 	}
 }
 
+// unsent is a failure of callReserved before its request was written: the
+// server never saw it.
+type unsent struct{ error }
+
+func (e unsent) Unwrap() error { return e.error }
+
 func (c *connection) callReserved(ctx context.Context, want Binding, method string, params map[string]any, admissionID ...string) (meta, error) {
 	if err := ctx.Err(); err != nil {
-		return meta{}, err
+		return meta{}, unsent{err}
 	}
 	c.mu.Lock()
 	now := c.state.Binding
 	if !c.owner.owns(c) || !now.Ready || now.Epoch != want.Epoch || now.Connection != want.Connection || now.Generation != want.Generation || now.Thread != want.Thread {
 		c.mu.Unlock()
-		return meta{}, errors.New("binding unavailable or changed; inspect status and explicitly resume primary")
+		return meta{}, unsent{errors.New("binding unavailable or changed; inspect status and explicitly resume primary")}
 	}
 	var id string
 	if len(admissionID) > 0 {
@@ -191,15 +221,15 @@ func (c *connection) callReserved(ctx context.Context, want Binding, method stri
 		pending, ok := c.admitted.pending["s:"+id]
 		if !ok || !sameBinding(pending.binding, now) {
 			c.mu.Unlock()
-			return meta{}, errors.New("admission reservation expired; nothing sent")
+			return meta{}, unsent{errors.New("admission reservation expired; nothing sent")}
 		}
 	} else {
 		c.next++
 		id = c.prefix + itoa(c.next)
 		if isTurnAdmission(method) {
-			if err := c.admitted.prepare("s:"+id, now, true); err != nil {
+			if err := c.admitted.prepare("s:"+id, now, true, c.state.ops.next()); err != nil {
 				c.mu.Unlock()
-				return meta{}, err
+				return meta{}, unsent{err}
 			}
 			c.admitted.capture(c.state.events, now.Thread)
 		}
@@ -214,7 +244,7 @@ func (c *connection) callReserved(ctx context.Context, want Binding, method stri
 	c.record("injected-request", meta{method: method, thread: now.Thread})
 	c.mu.Unlock()
 	if err != nil {
-		return meta{}, err
+		return meta{}, unsent{err}
 	}
 	if err = c.up.writeFrameContext(ctx, 1, raw); err != nil {
 		c.closeWith("injected-to-server", "write", err, len(raw))
@@ -231,7 +261,10 @@ func (c *connection) callReserved(ctx context.Context, want Binding, method stri
 		}
 		return reply, nil
 	case <-ctx.Done():
-		if method == "thread/read" {
+		// A read, and a main's compaction or interrupt, admit no work: a
+		// reply that comes after the wait is dropped as a reserved id, and
+		// the terminal keeps its connection.
+		if method == "thread/read" || method == "thread/compact/start" || method == "turn/interrupt" {
 			c.mu.Lock()
 			delete(c.injected, "s:"+id)
 			c.mu.Unlock()

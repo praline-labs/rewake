@@ -102,8 +102,20 @@ everything else.
   main acting on a running worker: who may call them and every refusal, the per-run
   control directory and its files, why giving up on a request is honest in every order,
   how the Claude Code module compacts and aborts, the stopped text and notice line after
-  main's interrupt, the Codex plan, known limits and the owner decisions. Open it when a
-  compaction or an interrupt from main is refused, lost or misreported.
+  main's interrupt, known limits and the owner decisions. Open it when a compaction or
+  an interrupt from main is refused, lost or misreported.
+- [remote-control-codex.md](remote-control-codex.md) — how a Codex session serves those
+  requests through its gateway: the three safety properties, when a compaction is
+  refused as busy, uncertain or as nothing to compact, the open operations kept across
+  reconnects, the mark that ties main's compaction to its turn and what happens to it
+  when the request fails, the terminal's `/compact` answered while main's runs, and the
+  interrupt naming main. Open it when a Codex compaction or interrupt from main
+  misbehaves.
+- [codex-publication.md](codex-publication.md) — which Codex turn outcomes reach the
+  waiters: proof of work, the advisory report of a turn without it or of a run that
+  passed unseen, a compaction's turn reporting nothing, and why no outcome is dropped
+  and no compaction settles a task. Open it when a Codex report is missing, advisory
+  when it should settle, or settles when it should not.
 - [session-activity.md](session-activity.md) — extends session-state: the activity labels
   and how fresh they must be, compaction notices, and how a worker's departure or
   replacement is detected and announced to main, with owner-run acceptance. Open it when
@@ -183,8 +195,9 @@ everything else.
 - [testing-plugin.md](testing-plugin.md) — the workflow cases that run rewake's
   function-hooks plugin under node: how the fixture hosts the module and answers its
   calls on the session, and what `claude-interrupted`, `stopped-routing` and
-  `claude-steered` claim, with their controls. Open it before changing the plugin, the
-  control directory or those cases.
+  `claude-steered` claim, with their controls, and `codex-steered`, the same commands
+  served by the Codex wrapper. Open it before changing the plugin, the control
+  directory, the Codex side of `rewake compact` and `rewake interrupt`, or those cases.
 - [check-runner.md](check-runner.md) — the requirements the workflow suite answers: one
   command without flooding an agent's context, the evidence tiers from pure Go to a
   person at a terminal, the output and evidence contract with its outcome names, isolation

@@ -28,8 +28,10 @@ func (c *connection) readServer() {
 		c.mu.Lock()
 		observationPending, observationCorrelated := c.state.pending[m.id]
 		if m.method == "" {
+			admission, admitted := c.admitted.pending[m.id]
 			c.admitted.ack(m)
 			if waiter, ok := c.injected[m.id]; ok {
+				c.replied(m, raw, pending{}, false, admission, admitted)
 				delete(c.injected, m.id)
 				if environments := field(raw, "result", "thread", "environments"); len(environments) <= 64<<10 {
 					m.environments = append([]byte(nil), environments...)
@@ -49,9 +51,10 @@ func (c *connection) readServer() {
 				continue
 			}
 			if p, ok := c.state.pending[m.id]; ok && p.method == "thread/compact/start" && m.failure {
-				c.admitted.manualRefused(p.target)
+				c.compactionRefused(p.target, p.sent)
 			}
 			m = c.state.response(m, raw)
+			c.replied(m, raw, observationPending, observationCorrelated, admission, admitted)
 			if c.state.Ready && c.owner.owns(c) {
 				c.owner.mu.Lock()
 				c.owner.reconnectThread = ""
@@ -59,14 +62,19 @@ func (c *connection) readServer() {
 				c.owner.mu.Unlock()
 			}
 		} else if m.id == "" {
+			if m.method == "turn/started" && m.thread == c.state.Thread {
+				c.state.fresh = false
+			}
 			c.admitted.event(m, raw, time.Now())
 			if c.owner.owns(c) && c.state.observing() {
 				c.state.events.event(m, raw, time.Now())
 			}
+			c.announced(m)
 			if m.method == "thread/closed" {
 				c.state.closedThread(m.thread)
 			}
 		}
+		c.lostSight()
 		c.observeServer(m, raw, observationPending, observationCorrelated)
 		c.record("server-message", m)
 		outcomes := c.collectOutcomes()
@@ -113,6 +121,7 @@ func (c *connection) tick() {
 			c.mu.Lock()
 			c.state.events.expire(now)
 			c.admitted.expire(now)
+			c.dropStale(now)
 			out := c.collectOutcomes()
 			overflow := c.admitted.overLimit()
 			c.mu.Unlock()

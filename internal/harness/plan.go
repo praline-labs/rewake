@@ -128,6 +128,10 @@ type Steerable interface {
 	// summary is to keep. Where the harness has no way to pass one for a
 	// single compaction, a focus is a wrong call, refused before sending.
 	CompactFocus() bool
+	// InterruptTrace says what the interrupted session's model is shown of an
+	// interrupt, completing "whoever waits on it reads stopped, and …" in the
+	// answer to `rewake interrupt`.
+	InterruptTrace() string
 }
 
 // Flag is one parameter of a harness, by every spelling it answers to.

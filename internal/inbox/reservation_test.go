@@ -3,6 +3,7 @@ package inbox
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -111,5 +112,35 @@ func TestReportStaysReadableWhenReservedDestinationDisappears(t *testing.T) {
 	status, _ := ReadStatus(dir, "api", m.ID)
 	if !r.closed || len(unread) != 1 || !status.ReportAvailable || status.State != Failed {
 		t.Fatalf("lost-binding report was discarded: %+v", status)
+	}
+}
+
+// A destination that cannot take the message yet — a conversation being
+// compacted — keeps it pending and unread, and the next attempt delivers it.
+func TestReservationNotYetKeepsTheMessagePending(t *testing.T) {
+	dir := stateDir(t)
+	m := message("after-compaction")
+	if err := Put(dir, m); err != nil {
+		t.Fatal(err)
+	}
+	busy := true
+	r := &reservationFixture{prepare: func(fn func(string) error) error { return fn("A") }, deliver: func(context.Context, Message) Result { return Result{State: Delivered} }}
+	s := &Server{Dir: dir, Name: "api", attempts: map[string]time.Time{}, outcomes: map[string]Result{}, Reserve: func(context.Context, Message) (Reservation, error) {
+		if busy {
+			return nil, fmt.Errorf("%w: a compaction is running", ErrNotYet)
+		}
+		return r, nil
+	}}
+	s.drain(context.Background())
+	status, _ := ReadStatus(dir, "api", m.ID)
+	unread, _ := PeekUnread(dir, "api", "")
+	if status.State != Pending || len(unread) != 0 {
+		t.Fatalf("while compacting: %+v, %d unread", status, len(unread))
+	}
+	busy = false
+	s.attempts[m.ID] = time.Now().Add(-retryInterval)
+	s.drain(context.Background())
+	if status, _ := ReadStatus(dir, "api", m.ID); status.State != Delivered {
+		t.Fatalf("after the compaction: %+v", status)
 	}
 }

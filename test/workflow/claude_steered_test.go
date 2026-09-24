@@ -1,7 +1,6 @@
 package workflow
 
 import (
-	"encoding/json"
 	"fmt"
 	"os/exec"
 	"slices"
@@ -76,22 +75,6 @@ var steeredObservations = []string{
 	obsCompactIdle, obsCompactQuiet, obsCompactBusy, obsInterruptBusy, obsInterruptLine, obsInterruptIdle, obsNotAnswering, obsNotMain,
 }
 
-// steeredView is what `rewake compact` and `rewake interrupt` print under
-// --json.
-type steeredView struct {
-	Outcome      string  `json:"outcome"`
-	Reason       string  `json:"reason"`
-	Detail       string  `json:"detail"`
-	TokensBefore *int64  `json:"tokensBefore"`
-	TokensAfter  *int64  `json:"tokensAfter"`
-	Compaction   *uint64 `json:"compaction"`
-}
-
-type steeredRow struct {
-	Activity    string  `json:"activity"`
-	Compactions *uint64 `json:"completedCompactions"`
-}
-
 func playSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 	t.Helper()
 	node, err := exec.LookPath("node")
@@ -117,50 +100,8 @@ func playSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 	finding := func(observation string, held bool, detail string, args ...any) telemetryFinding {
 		return telemetryFinding{observation: observation, held: held, judged: true, detail: fmt.Sprintf(detail, args...)}
 	}
-	// steer runs one command as main and reads what it printed.
-	steer := func(args ...string) (int, steeredView, string) {
-		code, out, ok := asks.ask(c, append(args, "--json")...)
-		var view steeredView
-		if !ok || json.Unmarshal([]byte(out), &view) != nil {
-			return code, view, fmt.Sprintf("exit %d, %q", code, firstLine(out))
-		}
-		return code, view, fmt.Sprintf("exit %d, %s %s: %s", code, view.Outcome, view.Reason, view.Detail)
-	}
-	// The messages main read from a worker about its task.
-	about := func(worker *codexSession, task string) []reportView {
-		var found []reportView
-		for _, message := range readMessages(lead) {
-			if message.From == worker.name && slices.Contains(message.InReplyTo, task) {
-				found = append(found, message)
-			}
-		}
-		return found
-	}
-	kinds := func(messages []reportView) []string {
-		var out []string
-		for _, message := range messages {
-			out = append(out, message.Kind)
-		}
-		return out
-	}
-	row := func(worker *codexSession) (steeredRow, string) {
-		code, machine, ok := asks.ask(c, "list", "--json")
-		var listed struct {
-			Sessions []struct {
-				Name      string     `json:"name"`
-				Telemetry steeredRow `json:"telemetry"`
-			} `json:"sessions"`
-		}
-		if !ok || code != 0 || json.Unmarshal([]byte(machine), &listed) != nil {
-			return steeredRow{}, fmt.Sprintf("the listing did not come back: exit %d, %q", code, firstLine(machine))
-		}
-		for _, entry := range listed.Sessions {
-			if entry.Name == worker.name {
-				return entry.Telemetry, ""
-			}
-		}
-		return steeredRow{}, worker.name + " is not listed"
-	}
+	sg := steering{c: c, asks: asks, lead: lead}
+	steer, about, row, kinds := sg.steer, sg.about, sg.row, reportKinds
 
 	var sends []string
 	for _, worker := range []*codexSession{calm, busy} {
@@ -202,16 +143,7 @@ func playSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 		"%s; then busy reads %q %s, and main read %v about its task", said, busyRow.Activity, failure, early))
 
 	code, view, said = steer("interrupt", busy.name)
-	var stopped reportView
-	waitFor(c, 10*time.Second, func() bool {
-		for _, message := range about(busy, tasks[busy]) {
-			if message.Kind == "stopped" {
-				stopped = message
-				return true
-			}
-		}
-		return false
-	})
+	stopped := sg.stoppedAbout(busy, tasks[busy])
 	// The task is still owed after a stop, and main's list of what it is owed
 	// says who stopped it.
 	_, awaited, _ := asks.ask(c, "inbox", "--awaited")

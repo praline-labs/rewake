@@ -173,7 +173,12 @@ func stageOf(dir string, message Message, reports []Message) (AwaitedMessage, bo
 	case known && status.State == Delivered:
 		item.Stage = StageUnread
 	default:
+		// A pending status says why it waits: a compaction, a session still
+		// starting.
 		item.Stage = StageUndelivered
+		if known {
+			item.Detail = status.Detail
+		}
 	}
 	return item, false
 }

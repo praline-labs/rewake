@@ -2,6 +2,7 @@ package codex
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -28,9 +29,19 @@ func (s *serverSession) Reserve(ctx context.Context, _ inbox.Message) (inbox.Res
 	reserved, err := s.gateway.Reserve(ctx)
 	if err != nil {
 		cancel()
-		return nil, err
+		return nil, reserveRefusal(err)
 	}
 	return &reservedDelivery{session: s, reservation: reserved, ctx: ctx, cancel: cancel}, nil
+}
+
+// reserveRefusal tells the inbox a refusal that passes with a running
+// compaction, so the message stays pending and goes after it, from one that
+// fails the delivery.
+func reserveRefusal(err error) error {
+	if errors.Is(err, gateway.ErrCompacting) {
+		return fmt.Errorf("%w: %v", inbox.ErrNotYet, err)
+	}
+	return err
 }
 func (r *reservedDelivery) Close() { r.reservation.Close(); r.cancel() }
 func (r *reservedDelivery) Prepare(fn func(string) error) error {
@@ -88,6 +99,9 @@ func (r *reservedDelivery) checkRoots(thread string, message inbox.Message) erro
 
 func (s *serverSession) Deliver(ctx context.Context, message inbox.Message) inbox.Result {
 	reserved, err := s.Reserve(ctx, message)
+	if errors.Is(err, inbox.ErrNotYet) {
+		return inbox.Result{State: inbox.Pending, Detail: err.Error()}
+	}
 	if err != nil {
 		return inbox.Result{State: inbox.Failed, Detail: err.Error()}
 	}

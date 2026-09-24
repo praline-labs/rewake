@@ -95,6 +95,7 @@ const $ = {
     if (running !== undefined) return refuse("$.session.compact: a turn is running (" + running + "); the conversation compacts between turns, so call it from turn.complete or later")
     if (compacting || world.inFlight) return refuse("$.session.compact: a turn is in flight; the conversation compacts between turns")
     if (world.compactOff) return refuse("$.session.compact: compaction is switched off in this session (DISABLE_COMPACT), for /compact and plugins alike")
+    if (world.refuse) return refuse("$.session.compact: " + world.refuse)
     try {
       return await compaction("plugin", a.length === 0 ? null : a[0].instructions)
     } catch (e) {
@@ -117,6 +118,7 @@ async function compaction(trigger, instructions) {
   try {
     const core = async (e) => {
       if (world.tooShort) throw new Error("Not enough messages to compact.")
+      if (world.failAfter) throw new Error(world.failAfter)
       if (trigger === "plugin") compacts.push(instructions)
       order.push(trigger === "plugin" ? "compact" : "compact " + trigger)
       return { messages: [{ role: "user", text: "SECRET SUMMARY" }], tokensBefore: 120000, tokensAfter: 9000, usage: { input: 1 } }
@@ -166,10 +168,19 @@ type controlRun struct {
 	Refused  []string          `json:"refused"`
 }
 
+// The host's refusals before a compaction starts that the other worlds do
+// not play, word for word as in the 2.1.280 binary.
+const (
+	externalTurn = "an external turn is driving the conversation; it compacts between turns"
+	thinClient   = "a thin client's conversation lives on the remote session; compact it there"
+)
+
 type controlWorld struct {
 	CompactOff bool   `json:"compactOff,omitempty"`
 	InFlight   bool   `json:"inFlight,omitempty"`
 	TooShort   bool   `json:"tooShort,omitempty"`
+	Refuse     string `json:"refuse,omitempty"`
+	FailAfter  string `json:"failAfter,omitempty"`
 	Withdraw   string `json:"withdraw,omitempty"`
 }
 
@@ -301,6 +312,12 @@ func TestTheModulePassesTheHostsRefusalsOn(t *testing.T) {
 	flight := runControl(t, true, controlWorld{InFlight: true}, asked(idA, control.Compact, ""), tick)
 	if answer := answerIn(t, flight, idA); answer["outcome"] != "refused" || answer["reason"] != control.InTurn || !strings.Contains(answer["detail"].(string), "a turn is in flight") {
 		t.Fatalf("another compaction in flight: %v", answer)
+	}
+	for words, reason := range map[string]string{externalTurn: control.InTurn, thinClient: control.RemoteConversation} {
+		run := runControl(t, true, controlWorld{Refuse: words}, asked(idA, control.Compact, ""), tick)
+		if answer := answerIn(t, run, idA); answer["outcome"] != "refused" || answer["reason"] != reason || !strings.Contains(answer["detail"].(string), words) {
+			t.Fatalf("%q: %v", words, answer)
+		}
 	}
 	idle := runControl(t, true, controlWorld{}, asked(idA, control.Interrupt, ""), tick)
 	if answer := answerIn(t, idle, idA); answer["reason"] != control.NoTurn || len(idle.Aborts) != 0 {

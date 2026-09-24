@@ -91,7 +91,11 @@ func (c *connection) observeServer(m meta, raw []byte, p pending, correlated boo
 		if m.turn != "" && (m.status == "completed" || m.status == "failed" || m.status == "interrupted") {
 			if entry := c.observationThread(m.thread); entry != nil {
 				observedNow(&entry.snapshot)
-				c.recordCompaction(entry, compactionObservation{thread: m.thread, turn: m.turn, terminal: true})
+				event := compactionObservation{thread: m.thread, turn: m.turn, terminal: true}
+				if a := c.admitted.authored; a.thread == m.thread && a.turn == m.turn {
+					event.request, event.by = a.request, a.by
+				}
+				c.recordCompaction(entry, event)
 			}
 		}
 	case "item/started", "item/completed":

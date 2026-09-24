@@ -32,6 +32,9 @@ type steerModel struct {
 	// number a notice of it would carry; nil when its telemetry did not show
 	// it in time.
 	Compaction *uint64 `json:"compaction,omitempty"`
+	// trace is what the session's model is shown of an interrupt, from its
+	// harness.
+	trace string
 }
 
 // countLimit bounds the wait for a done compaction to show in the session's
@@ -113,7 +116,7 @@ func steer(ctx *Context, call Call, action string) error {
 	// to carry out later, unseen. SIGKILL cannot be caught.
 	asking, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	model := steerModel{Session: session.Name, Action: action, Focus: focus}
+	model := steerModel{Session: session.Name, Action: action, Focus: focus, trace: steerable.InterruptTrace()}
 	answer, err := control.Ask(asking, registry.ControlFor(dir, session.Name, session.Epoch()),
 		control.Request{Action: action, Focus: focus, From: self.Name}, steerLimits[action])
 	switch {
@@ -175,7 +178,7 @@ func steerLine(model steerModel) string {
 	switch model.Outcome {
 	case control.Done:
 		if model.Action == control.Interrupt {
-			return fmt.Sprintf("Rewake: interrupted the turn of %s; whoever waits on it reads stopped, and its next notice says you interrupted it.", model.Session)
+			return fmt.Sprintf("Rewake: interrupted the turn of %s; whoever waits on it reads stopped, and %s.", model.Session, model.trace)
 		}
 		line := "Rewake: compacted " + model.Session
 		if model.TokensBefore != nil && model.TokensAfter != nil {
@@ -193,15 +196,16 @@ func steerLine(model steerModel) string {
 
 // steerNext is the next action after each refusal.
 var steerNext = map[string]string{
-	control.InTurn:           "A compaction never waits for the turn to end: ask again once rewake list shows the session idle, or interrupt it first.",
-	control.NoTurn:           "There is nothing to interrupt: rewake list shows the session idle.",
-	control.CompactionOff:    "The session runs with compaction switched off; rewake cannot change that.",
-	control.NothingToCompact: "The conversation is too short to compact; nothing was done.",
-	control.NotAnswering:     "Its rewake plugin is not loaded or not answering — --bare, function hooks switched off, another harness version; such a session shows interruptions unobserved in rewake list.",
-	control.CutShort:         "This call was interrupted before the session took the request, which is withdrawn; nothing was done: ask again.",
-	control.NoControl:        "It was started by an earlier rewake, which takes no requests, or its wrapper could not make the directory: restart that session with the current rewake.",
-	control.Withdrawn:        "The session took it in the instant this command gave up waiting, and did nothing: ask again.",
-	control.Busy:             "Wait for that request to end, then ask again.",
+	control.InTurn:             "A compaction never waits for the turn to end: ask again once rewake list shows the session idle, or interrupt it first.",
+	control.NoTurn:             "There is nothing to interrupt: rewake list shows the session idle.",
+	control.CompactionOff:      "The session runs with compaction switched off; rewake cannot change that.",
+	control.NothingToCompact:   "The conversation is too short to compact; nothing was done.",
+	control.RemoteConversation: "The session is a thin client whose conversation lives on a remote session: compact that one.",
+	control.NotAnswering:       "Its rewake plugin is not loaded or not answering — --bare, function hooks switched off, another harness version; such a session shows interruptions unobserved in rewake list.",
+	control.CutShort:           "This call was interrupted before the session took the request, which is withdrawn; nothing was done: ask again.",
+	control.NoControl:          "It was started by an earlier rewake, which takes no requests, or its wrapper could not make the directory: restart that session with the current rewake.",
+	control.Withdrawn:          "The session took it in the instant this command gave up waiting, and did nothing: ask again.",
+	control.Busy:               "Wait for that request to end, then ask again.",
 }
 
 func harnessTitle(found harness.Harness, id string) string {

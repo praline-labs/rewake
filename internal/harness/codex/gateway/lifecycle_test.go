@@ -111,7 +111,7 @@ func TestActiveResponseSnapshotAfterTerminalEventKeepsGap(t *testing.T) {
 		o.event(meta{method: "thread/status/changed", thread: "A", status: status}, nil, now)
 		o.bind("A", "active", now)
 		o.expire(now.Add(time.Second))
-		if out := o.drain(); len(out) != 1 || out[0].Text != "completion not observed" {
+		if out := o.drain(); len(out) != 1 || out[0].Kind != "stopped" || out[0].Text != gapText {
 			t.Fatal(status, out)
 		}
 		o.expire(now.Add(2 * time.Second))

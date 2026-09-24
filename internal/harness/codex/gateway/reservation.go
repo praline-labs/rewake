@@ -23,14 +23,24 @@ type Reservation struct {
 
 var errReadPhase = errors.New("primary resume reads are still in progress")
 
-// Reserve waits outside the admission FIFO and gate for justified read completion.
-// A selection change while waiting refuses the old request rather than retargeting it.
+// ErrCompacting refuses to send work while a compaction of the conversation
+// runs, the terminal's /compact or a main's. It passes with the compaction, so
+// the caller of Reserve keeps the delivery waiting rather than failing it.
+var ErrCompacting = errors.New("a compaction of the conversation is running")
+
+// Reserve waits outside the admission FIFO and gate for justified read completion
+// and for a running compaction's end. A selection change while waiting refuses
+// the old request rather than retargeting it.
 func (g *Gateway) Reserve(ctx context.Context) (*Reservation, error) {
 	var want Binding
+	compacting := false
 	ticker := time.NewTicker(25 * time.Millisecond)
 	defer ticker.Stop()
 	for {
 		if err := ctx.Err(); err != nil {
+			if compacting {
+				return nil, ErrCompacting
+			}
 			return nil, err
 		}
 		c := g.currentConnection()
@@ -38,15 +48,23 @@ func (g *Gateway) Reserve(ctx context.Context) (*Reservation, error) {
 			c.mu.Lock()
 			b := c.state.Binding
 			closed := c.state.deliverySettled()
+			compacting = b.Ready && c.admitted.holding(b.Thread)
 			c.mu.Unlock()
 			if want.Ready && !sameBinding(want, b) {
 				return nil, errors.New("conversation changed while waiting for delivery admission")
 			}
 			if b.Ready && g.owns(c) {
 				want = b
-				if closed {
+				if closed && !compacting {
 					r, err := c.reserve(ctx, want)
-					if !errors.Is(err, errReadPhase) {
+					if err != nil {
+						// A compaction that took the gate first, while
+						// this one queued on it, is marked by now.
+						c.mu.Lock()
+						compacting = errors.Is(err, ErrCompacting) || c.admitted.holding(want.Thread)
+						c.mu.Unlock()
+					}
+					if !errors.Is(err, errReadPhase) && !compacting {
 						return r, err
 					}
 				}
@@ -54,6 +72,9 @@ func (g *Gateway) Reserve(ctx context.Context) (*Reservation, error) {
 		}
 		select {
 		case <-ctx.Done():
+			if compacting {
+				return nil, ErrCompacting
+			}
 			return nil, fmt.Errorf("%w: selected conversation is not ready; wait for native resume to finish or select /resume or /new", ctx.Err())
 		case <-ticker.C:
 		}
@@ -93,7 +114,7 @@ func (c *connection) reserve(ctx context.Context, want Binding) (*Reservation, e
 		c.mu.Lock()
 		c.next++
 		id := c.prefix + itoa(c.next)
-		err := c.admitted.prepare("s:"+id, want, true)
+		err := c.admitted.prepare("s:"+id, want, true, c.state.ops.next())
 		if err == nil {
 			c.admitted.capture(c.state.events, want.Thread)
 		}

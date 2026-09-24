@@ -110,6 +110,24 @@ func TestInterruptDoneAsJSON(t *testing.T) {
 	}
 }
 
+// The answer says what the interrupted session's model is shown, which
+// differs by harness: a line in its next notice on Claude Code, nothing of
+// rewake's on Codex, which records the interrupt itself.
+func TestTheInterruptAnswerSaysWhatTheModelIsShown(t *testing.T) {
+	for workerHarness, want := range map[string]string{
+		"claude": "reads stopped, and its next notice says you interrupted it.\n",
+		"codex":  "reads stopped, and Codex records the interrupt in its model's history.\n",
+	} {
+		t.Run(workerHarness, func(t *testing.T) {
+			_, _, controlDir := steerWorld(t, workerHarness)
+			answerOnce(t, controlDir, func(r control.Request) string { return `{"id":"` + r.ID + `","outcome":"done"}` })
+			if code, out, errOut := run("interrupt", "worker"); code != ExitOK || !strings.HasSuffix(out, want) {
+				t.Fatalf("exit %d, %q, %q", code, out, errOut)
+			}
+		})
+	}
+}
+
 func TestARefusalExitsOneAndNamesTheNextAction(t *testing.T) {
 	_, _, controlDir := steerWorld(t, "claude")
 	answerOnce(t, controlDir, func(r control.Request) string {
@@ -217,24 +235,21 @@ func TestWrongCallsAreRefusedBeforeAnythingIsSent(t *testing.T) {
 	}
 }
 
-// focusless is a harness that takes control requests but no focus, as Codex
-// will.
-type focusless struct{ harness.Harness }
-
-func (focusless) CompactFocus() bool { return false }
+// unsteerable is a harness that takes no control requests.
+type unsteerable struct{ harness.Harness }
 
 func TestAHarnessThatCannotTakeItIsAWrongCall(t *testing.T) {
 	dir, worker, controlDir := steerWorld(t, "codex")
-	code, _, errOut := run("compact", "worker")
-	if code != ExitUsage || !strings.Contains(errOut, "worker is a Codex session, which does not take rewake compact yet") {
-		t.Fatalf("exit %d, %q", code, errOut)
-	}
 	saved := findHarness
 	findHarness = func(id string) (harness.Harness, bool) {
 		found, ok := saved(id)
-		return focusless{found}, ok
+		return unsteerable{found}, ok
 	}
-	t.Cleanup(func() { findHarness = saved })
+	code, _, errOut := run("compact", "worker")
+	findHarness = saved
+	if code != ExitUsage || !strings.Contains(errOut, "worker is a Codex session, which does not take rewake compact yet") {
+		t.Fatalf("exit %d, %q", code, errOut)
+	}
 	code, _, errOut = run("compact", "worker", "keep the plan")
 	if code != ExitUsage || !strings.Contains(errOut, "focus not supported by Codex") {
 		t.Fatalf("exit %d, %q", code, errOut)
