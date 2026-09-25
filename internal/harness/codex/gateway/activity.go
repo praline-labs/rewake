@@ -172,7 +172,7 @@ func (c *connection) marked(thread string) {
 }
 
 // dropStale ends the hold of every compaction mark past its bound: deliveries
-// go again, and main's wait ends with the reason. The mark itself stays until
+// go again, and the wait for its end ends with the reason. The mark itself stays until
 // its turn's end, so a compaction that starts late is still counted as asked
 // for. Called under c.mu.
 func (c *connection) dropStale(now time.Time) {
@@ -190,7 +190,7 @@ func (c *connection) dropStale(now time.Time) {
 	}
 }
 
-// lostDetail is main's answer when the terminal left the conversation before
+// lostDetail is main's letter's detail when the terminal left the conversation before
 // the compaction's turn was seen.
 const lostDetail = "the gateway lost sight of the compaction (the terminal left the conversation before it started)"
 
@@ -198,7 +198,7 @@ const lostDetail = "the gateway lost sight of the compaction (the terminal left 
 // changed since its request: the server sends a conversation's events only
 // while it is selected, so the compaction's item may have passed unseen, and
 // a turn seen after the gap is not known to be it. The mark never ties;
-// main's wait ends, deliveries go on, and the compaction's operation stays
+// the wait for its end ends, deliveries go on, and the compaction's operation stays
 // open. Called under c.mu after anything that may change the selection.
 func (c *connection) lostSight() {
 	for _, marker := range c.admitted.manual {

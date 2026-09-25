@@ -69,7 +69,7 @@ func TestACompactionStoppedBeforeItsItemIsOnlyAdvisory(t *testing.T) {
 			if variant == "the terminal's, by Esc" {
 				exchange(t, ui, native, `{"id":8,"method":"thread/compact/start","params":{"threadId":"A"}}`, `{"id":8,"result":{}}`)
 			} else {
-				_ = steerAnswer(func() control.Answer { return g.Compact(context.Background(), "0123", "lead") })
+				_ = steerAnswer(func() control.Answer { return g.compactToEnd(context.Background(), "0123", "lead") })
 				id := injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 				write(t, native, []byte(`{"id":"`+id+`","result":{}}`))
 			}
@@ -92,7 +92,7 @@ func TestACompactionAfterAGoalTookItsMarkIsNeverPublished(t *testing.T) {
 	bindUI(t, g, ui, native)
 	ranATurn(t, ui, native)
 	out := callbacks(g)
-	answers := steerAnswer(func() control.Answer { return g.Compact(context.Background(), "0123", "lead") })
+	answers := steerAnswer(func() control.Answer { return g.compactToEnd(context.Background(), "0123", "lead") })
 	id := injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 	write(t, native, []byte(`{"id":"`+id+`","result":{}}`))
 	events(t, ui, native, started("U"), compactionItem("U", "item/started"),
@@ -135,7 +135,7 @@ func TestACompactionThatOutlivesTheConnectionIsNeverPublished(t *testing.T) {
 			answers := steerAnswer(func() control.Answer {
 				ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 				defer cancel()
-				return g.Compact(ctx, "0123", "lead")
+				return g.compactToEnd(ctx, "0123", "lead")
 			})
 			id := injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 			write(t, native, []byte(`{"id":"`+id+`","result":{}}`))

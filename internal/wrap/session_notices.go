@@ -22,10 +22,13 @@ type knownWorker struct {
 type sessionNotices struct {
 	available map[string]registry.Session
 	known     map[string]*knownWorker
+	// letters are the compactions this main asked for, by request, until
+	// each one's letter has gone (compaction_letters.go).
+	letters map[string]*heldLetter
 }
 
 func newSessionNotices() *sessionNotices {
-	return &sessionNotices{available: map[string]registry.Session{}, known: map[string]*knownWorker{}}
+	return &sessionNotices{available: map[string]registry.Session{}, known: map[string]*knownWorker{}, letters: map[string]*heldLetter{}}
 }
 
 // This extends the existing main observer; neither the worker nor native readers
@@ -41,6 +44,11 @@ func (n *sessionNotices) scan(ctx context.Context, dir string, self registry.Ses
 	if err := announceAvailable(ctx, dir, self, n.available); err != nil {
 		return err
 	}
+	// Ahead of the departures below, so a letter whose outcome is already in
+	// the worker's snapshot precedes the notice that its worker has gone. A
+	// letter with no word of the compaction waits letterWait past the
+	// departure for a last snapshot, and so follows that notice.
+	n.closeRequests(ctx, dir, current)
 	for id, peer := range n.available {
 		live, err := registry.LookupReadOnly(dir, peer.Name)
 		if err != nil || live.Epoch() != peer.Epoch() {
@@ -95,8 +103,8 @@ func (n *sessionNotices) announceCompactions(ctx context.Context, dir string, se
 			continue
 		}
 		if event.RequestedBy == self.Name {
-			// This main asked for it with rewake compact, whose answer
-			// already said so, with the count: a notice would say it twice.
+			// This main asked for it with rewake compact, and its letter
+			// says so, with the count: a notice would say it twice.
 			worker.compactions = event.Sequence
 			continue
 		}

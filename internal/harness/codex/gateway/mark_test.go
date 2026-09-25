@@ -26,7 +26,7 @@ func TestAnAutoCompactingTurnIsNeverTheMarks(t *testing.T) {
 			bindUI(t, g, ui, native)
 			ranATurn(t, ui, native)
 			out := callbacks(g)
-			answers := steerAnswer(func() control.Answer { return g.Compact(context.Background(), "0123", "lead") })
+			answers := steerAnswer(func() control.Answer { return g.compactToEnd(context.Background(), "0123", "lead") })
 			id := injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 			write(t, native, []byte(`{"id":"`+id+`","result":{}}`))
 			compaction := []string{compactionItem("U", "item/started"), compactionItem("U", "item/completed")}
@@ -89,7 +89,7 @@ func TestATiedMarkNeverMoves(t *testing.T) {
 	defer func() { _ = native.conn.Close() }()
 	bindUI(t, g, ui, native)
 	ranATurn(t, ui, native)
-	answers := steerAnswer(func() control.Answer { return g.Compact(context.Background(), "0123", "lead") })
+	answers := steerAnswer(func() control.Answer { return g.compactToEnd(context.Background(), "0123", "lead") })
 	id := injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 	write(t, native, []byte(`{"id":"`+id+`","result":{}}`))
 	events(t, ui, native, started("C"), compactionItem("C", "item/started"))
@@ -133,7 +133,7 @@ func TestMainsWaitEndsTheHoldAndSaysWhatWasSeen(t *testing.T) {
 			ranATurn(t, ui, native)
 			ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 			defer cancel()
-			answers := steerAnswer(func() control.Answer { return g.Compact(ctx, "0123", "lead") })
+			answers := steerAnswer(func() control.Answer { return g.compactToEnd(ctx, "0123", "lead") })
 			id := injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 			write(t, native, []byte(`{"id":"`+id+`","result":{}}`))
 			want := "the compaction's turn was not seen to start when the wait ended; deliveries go on, and its turn is still not taken for work if it starts"

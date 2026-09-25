@@ -155,7 +155,7 @@ func (s *serverSession) Start(ctx context.Context, handler harness.CompletionHan
 	s.reportCancel = reportCancel
 	go s.report(reportCtx)
 	if s.controlDir != "" {
-		go control.Serve(runCtx, s.controlDir, controlPoll, s.steer)
+		go control.Serve(runCtx, s.controlDir, controlPoll, s.steer, s.withdrawn)
 	}
 	go func() { _ = s.proxy.Serve(listener); cancel() }()
 	go func() { <-runCtx.Done(); s.stopProcess() }()

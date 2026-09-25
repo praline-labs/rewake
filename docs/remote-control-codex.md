@@ -10,8 +10,11 @@ Codex has no plugin, and the wrapper already holds the app-server connection and
 the running turn, so the wrapper serves the directory: `control.Serve` polls it every
 100 ms from the moment the app-server is up and follows the same steps as the module —
 mark taken, check the request is still in place, act, write the answer once. It acts
-through the gateway (`internal/harness/codex/gateway/steer.go`), which bounds a
-compaction to 80 seconds and an interrupt to 8, under the asker's own limits.
+through the gateway (`internal/harness/codex/gateway/steer.go`). A compaction is
+answered once it has started, within 3 seconds, and its end is waited for apart, up to
+80 seconds from the request, and kept in the session's telemetry for main's letter
+([remote-control.md](remote-control-letter.md)); an interrupt is answered within
+8 seconds. Both stay under the asker's limit of 10.
 
 - **Compact** takes the gateway's admission gate, so no request of the terminal's is
   admitted meanwhile, and refuses as `in a turn` when the conversation is busy: a
@@ -31,26 +34,52 @@ compaction to 80 seconds and an interrupt to 8, under the asker's own limits.
   turns (`excludeTurns`), so an empty list proves nothing.
 - **Otherwise** it marks the compaction manual, as the terminal's `/compact` is, so its
   turn is never taken for work, settles nothing and reports nothing, and sends
-  `thread/compact/start {threadId}`. The compaction runs as a turn of its own; the
-  answer comes when that turn completes. `tokensBefore` is the context the telemetry
+  `thread/compact/start {threadId}`. The compaction runs as a turn of its own.
+- **When it has started.** The server's reply `{}` says only that the request was
+  queued: the session runs it when it gets to it. A `turn/started` alone does not say
+  whose turn it is — a delivery's or the terminal's could start in that instant. What
+  does is the compaction's `contextCompaction` item in a turn with no other item, which
+  ties the mark to that turn (below): the tie answers `started`. The compaction's end
+  comes only after the tie; a wait for it that ended before the tie — the gateway lost
+  sight of the compaction, or the mark's bound passed — is no start, and answers
+  `requested`, "its start was not seen: " and the reason. No tie within 3 seconds answers
+  `requested`, saying whether the server had taken the request ("the server took the
+  request, and its turn was not seen to start within 3s") or not yet answered it; so
+  does a wait cut short first. A refusal in the reply before that is the answer, and
+  nothing more is waited for.
+- **Its end.** The wrapper goes on waiting in the background for the compaction's turn
+  to complete, the same wait and the same mark as before — only the command no longer
+  waits for it — and records the outcome in the session's telemetry
+  (`compactionOutcomes`) for main's letter. `tokensBefore` is the context the telemetry
   last saw, `tokensAfter` the `last.totalTokens` of the compaction turn's
-  `thread/tokenUsage/updated`; with no usage seen before the answer carries neither.
+  `thread/tokenUsage/updated`; with no usage seen before the outcome carries neither.
 - **When the request fails.** A refusal from the server is `failed` with its text, and
-  the mark is laid aside; so it is when the request was never written. Any other
-  failure — no reply within the wait — leaves the server free to start the compaction
-  still, so the mark stays and its turn, if it starts, is not taken for work; the answer
-  says it may still start, and the hold ends with it, as with any wait that ends first.
-- **The mark's bound.** A mark holds deliveries, and main's wait, for 80 seconds from
-  the request, or until main's wait ends if that comes first — main's answer then says
-  whether the compaction's turn was seen at all, and a compaction that ended as the wait
-  did is answered by its end. Past it the hold ends — deliveries go, main's answer is `failed` with the
+  the mark is laid aside; so it is when the request was never written. It is the
+  command's answer when it comes within the 3 seconds — a final one, so main's record
+  of the request goes and no letter follows — and main's letter when it comes after
+  `requested`. Any other failure — no reply within the wait for the end, or the
+  connection ending once the request went out — leaves the server free to start the
+  compaction still, so the mark stays and its turn, if it starts, is not taken for work;
+  the answer says it may still start and is marked `open`, so main's record stays and
+  its letter comes, and the hold ends with it, as with any wait that ends first. Every
+  final answer the wrapper gives — a refusal, a final failure, and a request withdrawn
+  before it was taken, which `control.Serve` answers without the gateway and hands back
+  once written — is recorded as the compaction's outcome as well, as the Claude Code
+  module sends it, for a command whose wait ended before it. A request that finds no
+  gateway yet is the one final answer not recorded: nothing holds the telemetry then,
+  and it is not reached, as the control directory is served only once the gateway is
+  there.
+- **The mark's bound.** A mark holds deliveries, and the wait for its end, for 80
+  seconds from the request, or until that wait ends if that comes first — main's letter
+  then says whether the compaction's turn was seen at all, and a compaction that ended as
+  the wait did is reported by its end. Past it the hold ends — deliveries go, main's letter says `failed` with the
   reason — but the mark does not: a compaction that starts late is still not taken for
   work, and main's next compaction stays refused until the operation is seen to end.
   80, not less: a compaction is a model call over the whole conversation, 4 to 9 seconds
   live on a nearly empty one and longer on a long one; the server refuses a delivery
-  sent while it runs; and main's own wait is 80 seconds, so one bound ends both.
+  sent while it runs; and the wait for its end is 80 seconds, so one bound ends both.
 - **The terminal's `/compact` while main's runs** never reaches the server, which would
-  abort main's compaction for it and pass the mark to its own: main's answer would fail
+  abort main's compaction for it and pass the mark to its own: main's letter would fail
   and its turn be published as work. The gateway answers the terminal itself with a
   JSON-RPC error (`-32600`, "rewake: `<main>` asked for a compaction with rewake compact
   and it is running; try again once it ends"); a second compaction right after the first
@@ -63,7 +92,7 @@ compaction to 80 seconds and an interrupt to 8, under the asker's own limits.
   the compaction took it, and learns of the mark only when its wait ends — and if the
   compaction has not ended the message stays `pending` ("the conversation cannot take a message yet: a compaction of the
   conversation is running") and is tried again every two seconds, going once the
-  compaction's turn has completed, once main's answer has come, or once the mark's bound
+  compaction's turn has completed, once the wait for its end is over, or once the mark's bound
   has passed. So compacting a worker and then sending it its
   task at once is an ordinary order; `rewake send` may answer exit 3 for it, and the
   message goes a few seconds later.
@@ -147,7 +176,7 @@ is judged by — three safety properties:
    settles, and a compaction's turn gives none (the publication rule,
    [codex-publication.md](codex-publication.md)).
 
-Everything about *which* compaction is main's — main's answer, the telemetry's author,
+Everything about *which* compaction is main's — the command's answer, main's letter, the telemetry's author,
 the mark's turn — is attribution: best effort, stated below with its limits, never at
 the cost of the three.
 
@@ -195,7 +224,7 @@ before:
   away and back, or any request that resets the selection, a resume of the same
   conversation included, since rewake does not tell them apart — the server may
   have sent the compaction's item while the conversation was not selected, so a turn
-  seen after the gap is not known to be it. The mark never ties then. Main's wait ends
+  seen after the gap is not known to be it. The mark never ties then. The wait for its end ends
   `failed` with "the gateway lost sight of the compaction (the terminal left the
   conversation before it started)", the hold ends, and the compaction's operation stays
   open, so the conversation stays uncertain by the rule. Whichever turn seen later is
@@ -234,8 +263,8 @@ The gateway keeps three things (`internal/harness/codex/gateway/activity.go`,
 | `turn/completed` T, status `completed`, `failed` or `interrupted` | T's operation closed, T remembered as ended, its mark ended; the running turn cleared when it is T or unknown |
 | the reply to a selection | what runs: the snapshot's last turn in progress — no `turn/started` follows for it — or one of unknown id when the status is active and the reply has no turns; nothing open closed |
 | the server refusing a compaction's request, or the request never written | the mark and its open operation gone |
-| the mark's bound passing, or main's wait ending first | the mark stops holding; main's answer `failed` with the reason |
-| a change of selection, the mark tied to no turn | the mark lost: it never ties, stops holding, main's answer `failed` with the reason; its operation stays open |
+| the mark's bound passing, or the wait for its end ending first | the mark stops holding; main's letter `failed` with the reason |
+| a change of selection, the mark tied to no turn | the mark lost: it never ties, stops holding, main's letter `failed` with the reason; its operation stays open |
 | the connection ending with a `turn/start`, `turn/steer`, `review/start` or delivery unanswered | an operation open on its conversation with no turn |
 | an outcome waiting half a second for its proof | its advisory report published, none for a turn its `contextCompaction` item shows to be a compaction; the outcome still waits |
 
@@ -268,7 +297,7 @@ Either proof may come after the item — a reply travels apart from the events, 
 auto-compaction at a turn's start comes before the turn's input — so a mark tied to a
 turn later shown to be work is untied, and waits for its own compaction's item again.
 That is not a move: the tie was wrong, and a manual compaction's turn never gives
-either proof. The mark goes when its turn completes, which is main's answer, or when
+either proof. The mark goes when its turn completes, which is main's letter, or when
 the server refuses the request; otherwise with the connection. A reply may even come
 after the turn's end, the mark having ended with it; the turn still reports, by the
 publication rule.
@@ -301,12 +330,12 @@ what the terminal shows and does meanwhile — is in
 - **A turn whose reply comes after its end.** A turn of the terminal's or a delivery's
   that compacts first and ends — before the reply naming it reaches the gateway — while
   a mark waits for its compaction's item is taken for that compaction: main may get a
-  false answer, and the telemetry puts main's name on that turn's compaction. The turn's
+  false answer or letter, and the telemetry puts main's name on that turn's compaction. The turn's
   report is still published when the reply comes, and the reply closes every operation
   sent before it anyway.
 - **A compaction request left without a reply** keeps its mark in case the server
   starts it late; it takes a server silent for the whole 80-second wait. The hold ends
-  with main's answer: deliveries go, and so does the terminal's `/compact`. A turn the
+  with main's letter: deliveries go, and so does the terminal's `/compact`. A turn the
   terminal starts meanwhile is work, as it should be: only the compaction's own item
   ties the mark.
 - **A compaction lost sight of.** After the terminal left the conversation before the

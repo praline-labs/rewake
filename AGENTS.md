@@ -118,7 +118,7 @@ still compiling and analyzing the code. To run it:
 
 ```bash
 env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
-  REWAKE_WORKFLOW=1 go test -count=1 -v ./test/workflow/...
+  REWAKE_WORKFLOW=1 go test -count=1 -timeout 30m -v ./test/workflow/...
 ```
 
 It builds its own binary and runs in a private HOME, state directory and PATH;
@@ -129,6 +129,10 @@ no scenario selected, the run fails rather than reporting green on nothing.
 printed, so without it the line naming how many scenarios ran — and which — is
 invisible, and a run that exercised three of four looks the same as one that
 exercised all four.
+
+The `-timeout 30m` is there because the whole suite runs longer than go test's
+default of ten minutes; without it the run dies with `panic: test timed out` and
+no case to say why.
 
 A change to the Claude Code plugin module (`internal/harness/claude/plugin.js`)
 or to the fixture that hosts it also runs the workflow suite before the commit.
@@ -142,7 +146,7 @@ prints a handful of lines and writes the whole result to a file:
 ```bash
 env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
   REWAKE_WORKFLOW=1 go run ./tools/checksummary \
-  -- go test -count=1 -json ./test/workflow/...
+  -- go test -count=1 -timeout 30m -json ./test/workflow/...
 ```
 
 It exits 0 only when every case passed or was unsupported for a named capability,
@@ -166,9 +170,10 @@ schema is generated in a disposable docker container; only the schema comes from
 the scenarios run against the fixture. The fetch gets half of `-timeout`, at most ten
 minutes, and the suite the rest: under go test's default of ten minutes a slow first
 download would be cut at five, and a download that outlived the timeout would kill the
-test binary with no case to say why. Below a `-timeout` of about five minutes half is
-not enough for both a slow first download and the suite, so a first run of a new
-version wants the thirty. The variable is read only under `REWAKE_WORKFLOW`.
+test binary with no case to say why. The suite alone takes about fourteen minutes
+(`docs/testing.md`), so with a slow first download taking its full ten minutes the
+two need about twenty-five: a first run of a new version wants the thirty. The
+variable is read only under `REWAKE_WORKFLOW`.
 `go run ./tools/harnesscache --help` lists, fetches and removes cached versions;
 nothing is removed automatically.
 

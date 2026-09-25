@@ -74,6 +74,13 @@ type Event struct {
 	// Started says the host refused that compaction after it had started
 	// it, past PreCompact.
 	Started bool `json:"started,omitempty"`
+	// Outcome, Detail and the tokens are how that compaction ended, or the
+	// final answer to its request (compact.ended); Reason is then the
+	// refusal's.
+	Outcome      string `json:"outcome,omitempty"`
+	Detail       string `json:"detail,omitempty"`
+	TokensBefore *int64 `json:"tokensBefore,omitempty"`
+	TokensAfter  *int64 `json:"tokensAfter,omitempty"`
 	// Limit is the auto-compact window the plugin found configured
 	// (window.go); nil when it did not say.
 	Limit *Limit `json:"limit,omitempty"`

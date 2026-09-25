@@ -29,11 +29,17 @@ const (
 	Interrupt = "interrupt"
 )
 
-// Outcomes of a request.
+// Outcomes of a request. A compaction is answered Started once the served
+// side saw it begin, or Requested once it was asked for and its start was not
+// seen within the served side's bound; either way the command has ended, and
+// the compaction's own outcome reaches the asker later as a letter
+// (docs/remote-control.md). Done, Refused and Failed are final.
 const (
-	Done    = "done"
-	Refused = "refused"
-	Failed  = "failed"
+	Done      = "done"
+	Refused   = "refused"
+	Failed    = "failed"
+	Started   = "started"
+	Requested = "requested"
 )
 
 // Reasons of a refusal, the same words whichever harness answered.
@@ -62,11 +68,16 @@ type Request struct {
 // Answer is what the served side writes: the outcome, a fixed reason word for
 // a refusal, the host's own error text, and for a compaction the token counts
 // around it. Never the summary or any other text of the conversation.
+//
+// Open marks a failure that leaves the outcome undecided: the request went
+// out and may still be carried out, so a compaction's letter is still owed.
+// Without it a failure is final, like a refusal — nothing was carried out.
 type Answer struct {
 	ID           string `json:"id"`
 	Outcome      string `json:"outcome"`
 	Reason       string `json:"reason,omitempty"`
 	Detail       string `json:"detail,omitempty"`
+	Open         bool   `json:"open,omitempty"`
 	TokensBefore *int64 `json:"tokensBefore,omitempty"`
 	TokensAfter  *int64 `json:"tokensAfter,omitempty"`
 }
@@ -79,6 +90,7 @@ const (
 	lockFile    = "lock"
 	takenSuffix = ".taken"
 	answerSuff  = ".result"
+	startSuffix = ".started"
 )
 
 // RequestPath is the file the served side polls.
@@ -89,6 +101,11 @@ func TakenPath(dir, id string) string { return filepath.Join(dir, id+takenSuffix
 
 // AnswerPath is written by the served side once the request is carried out.
 func AnswerPath(dir, id string) string { return filepath.Join(dir, id+answerSuff) }
+
+// StartedPath is written by the Claude Code wrapper's collector when the
+// PreCompact hook of a compaction a main asked for reaches it: the module,
+// which never sees the hooks of its own compaction, reads it as the start.
+func StartedPath(dir, id string) string { return filepath.Join(dir, id+startSuffix) }
 
 // ValidID is the shape of a request id; the served side builds paths from it
 // and refuses any other.
@@ -148,6 +165,7 @@ func Ask(ctx context.Context, dir string, request Request, limits Limits) (Answe
 	defer func() {
 		_ = os.Remove(RequestPath(dir))
 		_ = os.Remove(TakenPath(dir, request.ID))
+		_ = os.Remove(StartedPath(dir, request.ID))
 	}()
 
 	if !waitFile(ctx, limits.Pickup, limits.Poll, TakenPath(dir, request.ID), AnswerPath(dir, request.ID)) {
@@ -182,7 +200,7 @@ func Ask(ctx context.Context, dir string, request Request, limits Limits) (Answe
 			if ctx.Err() != nil {
 				detail = "the request was taken and the wait was cut short; it may still be carried out"
 			}
-			return Answer{ID: request.ID, Outcome: Failed, Detail: detail}, nil
+			return Answer{ID: request.ID, Outcome: Failed, Detail: detail, Open: true}, nil
 		}
 		sleep(ctx, limits.Poll)
 	}
@@ -235,7 +253,7 @@ func readAnswer(dir, id string) (Answer, bool) {
 		return Answer{}, false
 	}
 	switch answer.Outcome {
-	case Done, Refused, Failed:
+	case Done, Refused, Failed, Started, Requested:
 		return answer, true
 	}
 	return Answer{}, false

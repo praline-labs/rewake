@@ -39,7 +39,7 @@ func (a *admittedWork) manualStart(thread string, selected observer, sent, gener
 	return true
 }
 
-// finish answers main's wait for the compaction, once.
+// finish ends the wait for the compaction's end, once.
 func (m *manualWork) finish(status, failure string) {
 	if m.ended == nil || m.answered {
 		return
@@ -49,8 +49,13 @@ func (m *manualWork) finish(status, failure string) {
 	close(m.ended)
 }
 
-// manualTurn ties the compaction to its turn: main's answer and the
+// manualTurn ties the compaction to its turn: main's letter and the
 // telemetry's author go by that turn's end.
 func (a *admittedWork) manualTurn(thread, turn string) {
-	a.manual[thread].turn = turn
+	marker := a.manual[thread]
+	marker.turn = turn
+	if marker.tied != nil {
+		close(marker.tied)
+		marker.tied = nil
+	}
 }

@@ -178,7 +178,11 @@ work without a required peek or terminal event. Only new member IDs are delivere
 The notice wakes the agent, which runs `rewake inbox` in its shell. Main also gets
 [availability notifications](session-state.md#availability-notifications) when peers
 become ready; a later main learns which peers were already available. The same
-main observer queues [compaction-complete and known-departure notices](session-activity.md).
+main observer queues [compaction-complete and known-departure notices](session-activity.md),
+and the letter that ends a compaction main asked for with `rewake compact`: the command
+returns once the compaction has started, and the outcome — the tokens and the count, or
+why it was refused or failed — comes later as a notify from the worker
+([remote-control.md](remote-control-letter.md)).
 
 1. **Whose mailbox.** `REWAKE_SESSION` names it, `REWAKE_EPOCH` proves the run:
    a stale run, or a process with a name and no epoch, is refused. Mail of an
@@ -335,6 +339,7 @@ question to a silent role.
 |---|---|---|
 | fresh server thread, no turn yet | turn/start begins its first turn | delivered after RPC acceptance |
 | a turn interrupted with Esc or Ctrl+C | stopped advises the waiters to wait, and goes to nobody when none waits; original work stays owed | yellow notice; human continuation reports its result |
+| a compaction main asked for with `rewake compact` | the command returns once it has started, or says requested when its start was not seen in 3 seconds; the worker's module or wrapper waits for its end ([remote-control.md](remote-control.md)) | exit 0, then a notify with the tokens and the count, or the refusal or failure |
 | a turn interrupted by main's `rewake interrupt` | the same stopped, naming main instead of the person; on Claude Code the worker's next notice says main interrupted it, once, and on Codex the harness records it in the model's history itself ([remote-control.md](remote-control.md)) | yellow notice naming main |
 | recipient's wrapper gone | record evicted on the next read | exit 2, no such session |
 | a reader's stdout blocks | it holds the lock; server waits, `turn-ended` five seconds, `inbox` ten | delays, then "mailbox is busy" |

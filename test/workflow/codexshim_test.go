@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 )
 
 // The shim plays a Codex *session*, not a transport.
@@ -338,6 +339,15 @@ func (s *shimSession) broadcast(event any) {
 		for _, each := range sequence {
 			s.broadcast(each)
 		}
+		return
+	}
+	if later, ok := event.(eventsLater); ok {
+		go func() {
+			time.Sleep(later.after)
+			s.mu.Lock()
+			defer s.mu.Unlock()
+			s.broadcast(later.events)
+		}()
 		return
 	}
 	for _, peer := range s.peers {

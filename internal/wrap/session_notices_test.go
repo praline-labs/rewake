@@ -94,8 +94,8 @@ func TestCompactionNoticesDedupAndLateMain(t *testing.T) {
 	}
 }
 
-// A compaction this main asked for with rewake compact is reported by the
-// command, with its count, and gets no notice; one another main asked for, and
+// A compaction this main asked for with rewake compact is reported by its
+// letter, with its count, and gets no notice; one another main asked for, and
 // one the worker made itself, each get theirs.
 func TestACompactionMainAskedForGetsNoNotice(t *testing.T) {
 	dir := stateDir(t)

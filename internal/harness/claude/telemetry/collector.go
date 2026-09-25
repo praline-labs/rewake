@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/iiiokojiadbi/rewake/internal/control"
 	"github.com/iiiokojiadbi/rewake/internal/harness"
 	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
 )
@@ -43,6 +44,11 @@ type Collector struct {
 	// notice marks told only the one it carried.
 	interrupter string
 	interrupts  uint64
+
+	// controls is the run's control directory, where the PreCompact of a
+	// compaction a main asked for is marked for the module to read as its
+	// start; empty without one.
+	controls string
 }
 
 // NewCollector listens at path once started.
@@ -57,6 +63,13 @@ func (c *Collector) LaunchedWith(autocompact string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.folded.autocompact = ParseAutocompact(autocompact)
+}
+
+// Controls names the run's control directory, before Start.
+func (c *Collector) Controls(dir string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.controls = dir
 }
 
 // Drawn is closed once the harness has run its status line for the first time.
@@ -134,7 +147,16 @@ func (c *Collector) read(conn *net.UnixConn) {
 		c.folded.apply(event, time.Now())
 		c.noteInterrupter(event)
 		thread := c.folded.thread
+		began := ""
+		if asked := c.folded.asked; event.Kind == PreCompact && asked != nil && asked.started && c.controls != "" {
+			began = control.StartedPath(c.controls, asked.request)
+		}
 		c.mu.Unlock()
+		if began != "" {
+			// The module cannot see the hooks of the compaction it asked
+			// for; this mark is how it learns the host began it.
+			_ = os.WriteFile(began, nil, 0o600)
+		}
 		if event.Kind == TurnComplete && event.Reason == ReasonAborted {
 			c.interrupted(event, thread)
 		}

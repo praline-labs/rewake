@@ -30,6 +30,13 @@ by main, a delivery held pending during a compaction and delivered after it, a f
 refused with exit 2, and an ordinary task after them. The run scenario by scenario is in
 [the roadmap entry](roadmap/2026-09-24-remote-control-codex.md).
 
+**Non-blocking since September 25, 2026** (owner decision below): `rewake compact`
+returns once the compaction has started — or answers `requested` when its start was not
+seen in time — and never waits for its end. The end reaches main as a letter from the
+worker, a `notify` that owes nothing, with the token counts and the session's count of
+compactions, or the refusal or failure that ended it ([below](#the-letter)). The
+roadmap entry is [2026-09-25-compact-non-blocking.md](roadmap/2026-09-25-compact-non-blocking.md).
+
 ## The commands
 
 ```
@@ -52,11 +59,14 @@ and refusals. The call is checked whole before anything is written:
   refused here, before anything is sent (owner decision below).
 
 Every one of these is exit 2 and writes nothing. Then the request is sent and the
-command waits for its outcome, within bounds:
+command waits for its answer, within bounds — for a compaction, the answer to the
+request, not the compaction's end:
 
 | Outcome | Exit | Meaning |
 | --- | --- | --- |
-| `done` | 0 | compacted — with the token counts before and after when the harness gave them, and the session's count of compactions with this one — or the turn is interrupted |
+| `started` | 0 | the compaction has started; its end comes to main as a letter |
+| `requested` | 0 | the session took the request, and the compaction's start was not seen within 3 seconds: it may still start, and its letter comes either way |
+| `done` | 0 | the turn is interrupted |
 | `refused`, `in a turn` | 1 | a compaction was asked while the worker is in a turn |
 | `refused`, `no turn running` | 1 | an interrupt was asked while the worker is idle |
 | `refused`, `compaction switched off` | 1 | the worker runs with compaction switched off |
@@ -67,14 +77,21 @@ command waits for its outcome, within bounds:
 | `refused`, `no control directory` | 1 | the session was started by an earlier rewake, or its wrapper could not make one: restart it |
 | `refused`, `withdrawn before it was taken` | 1 | the session took the request in the instant the command gave up, and did nothing |
 | `refused`, `another request in flight` | 1 | another `compact` or `interrupt` is waiting on the same session |
-| `failed` | 1 | the harness raised something else, or no outcome came in time |
+| `failed` | 1 | the harness raised something else: final, like a refusal, and no letter follows; or, marked `open`, the request went out and no outcome came — the command's wait ran out or was cut short once the request was taken, or the served side lost the request on its way — and for a compaction, which may still run, its letter comes |
 
 A refusal carries the host's own error text as its detail and names the next action.
 Under `--json` the model is printed either way: `session`, `action`, `focus`,
-`outcome`, `reason`, `detail`, `tokensBefore`, `tokensAfter`, `compaction`. For a
-compaction that is done, the command waits up to 3 seconds for the session's telemetry
-to count it and prints the count as the compaction notice would, "(compaction N)". If
-the telemetry has not counted it by then, the line says so and points to `rewake list`.
+`outcome`, `reason`, `detail`, and `tokensBefore`, `tokensAfter` where an answer
+carries them. An answer's `open` tells a failure that leaves the outcome undecided from a
+final one; a served side of an earlier rewake never sets it, so its failures are final. A refusal the host gives at once — mid-turn, switched off, too short when
+it comes before the start is seen — is the command's answer, and no letter follows.
+
+### The letter
+
+When a compaction the command answered `started`, `requested` or an open `failed`
+ends, main gets a letter from the worker, of kind `notify`, with
+its outcome; main's own wrapper owes it. How it is made and why it always comes:
+[remote-control-letter.md](remote-control-letter.md).
 
 ## The control directory
 
@@ -86,6 +103,7 @@ the next holder of the name:
   lock                    flock of the asker; a second asker is refused, not queued
   request.json            {id, action, focus, from}, 0600, put in place by rename
   <id>.taken              written by the served side the moment it picks the request up
+  <id>.started            Claude Code: written by the collector when the compaction's PreCompact arrives
   <id>.result             {id, outcome, reason, detail, tokensBefore, tokensAfter}, written once
 ```
 
@@ -109,8 +127,8 @@ The served side — rewake's module in a Claude Code session, the wrapper itself
    request's id. A file that does not parse yet is one still being written and is read
    again. The request stays in place meanwhile; the served side checks it (below).
 5. Remove the request, the taken mark and the result on the way out. No result in time:
-   `failed`, saying the request was taken and may still be carried out; its late result
-   is cleared by the next request.
+   `failed`, marked `open`, saying the request was taken and may still be carried out;
+   its late result is cleared by the next request.
 
 **Giving up is honest in every order.** The served side, having read a request, first
 writes its mark and then checks that the request is still in place: carried out only if
@@ -141,9 +159,11 @@ before a pickup, `failed` after one. So a stalled target that resumes later find
 to carry out. The withdrawal waits for nothing, so it fits in the 1.5 s: a probe of the
 same day saw exit 1 in 53 ms with the request removed.
 
-The limits: pickup 5 seconds for both — the module polls four times a second —
-outcome 90 seconds for a compaction, a request to the model that stays under the two
-minutes an agent's shell call is usually given, and 10 for an interrupt.
+The limits: pickup 5 seconds for both — the module polls four times a second — and
+outcome 10 seconds for both. A compaction is answered once it has started, which the
+served side waits up to 3 seconds to see; its end is waited for apart from the command,
+by the module or the wrapper, and reaches main as the letter. Until September 25, 2026
+the command waited up to 90 seconds for the end.
 
 ## On Claude Code
 
@@ -164,10 +184,24 @@ still in place, acts, and writes the result.
   `remote conversation`; "Not enough messages to compact" becomes `nothing to compact`;
   anything else is `failed` with the host's text. The table holds every refusal the
   host has before a compaction starts (read in the 2.1.280 binary), so a `failed` is an
-  error after the start — the summary's request, or applying it. The
-  result carries `tokensBefore` and `tokensAfter` only — never the summary the host
-  returns, since transcripts are not read. The compaction is counted by the existing
-  telemetry like any other (`completedCompactions`).
+  error after the start — the summary's request, or applying it. Such a
+  refusal, when it comes before the start is seen, is the answer.
+- **When it has started.** The host's call resolves only at the compaction's end, and
+  the module does not see the hooks of its own compaction (below). The collector does:
+  when a `PreCompact` arrives while a main's word is waiting for its compaction, it
+  writes `<id>.started` into the control directory. The module races the call, a watch
+  for that file every 100 ms, and a bound of 3 seconds: the file answers `started`; the
+  call settling first answers `started` when it succeeded and with its refusal when it
+  failed; the bound answers `requested`. A too-short conversation is refused after
+  `PreCompact`, so it may be answered `started` and end in a refusal letter.
+- **Its end.** After writing the answer the module goes on waiting for the call, then
+  sends `compact.ended` with the request, the asker, the outcome and `tokensBefore` and
+  `tokensAfter` only — never the summary the host returns, since transcripts are not
+  read, and the detail cut to 400 bytes. A second request while it runs is refused as
+  `in a turn`: its word would take the first compaction's place. The compaction is
+  counted by the existing telemetry like any other (`completedCompactions`). A final
+  answer — a refusal, a failure — is sent as `compact.ended` too, once written, for a
+  command whose wait ended before it ([remote-control-letter.md](remote-control-letter.md)).
 - **Who asked for a compaction.** Before it asks the host, while it knows no turn is
   running, the module tells rewake who asked — `compact.asked` with the request id and
   the asker — and waits until that report is sent: `$.process.run` resolves only once
@@ -207,11 +241,11 @@ sessions waiting on that worker. main's `rewake inbox --awaited` shows the task 
 `stopped:` followed by the stop's own text, so it names who stopped the turn: the person
 at the keyboard, or the main.
 
-**Main gets no notice of its own compaction.** main's wrapper sends a notice
-"Rewake: context compacted (compaction N)." for each compaction of a worker. It skips a
-compaction whose cue names this main as the asker, because the command's answer already
-carries the tokens and the count. A compaction the worker makes itself, or one another
-main asked for, keeps its notice.
+**Main gets a letter instead of a notice of its own compaction.** main's wrapper sends a
+notice "Rewake: context compacted (compaction N)." for each compaction of a worker. It
+skips a compaction whose cue names this main as the asker, because the letter carries
+the tokens and the count. A compaction the worker makes itself, or one another main
+asked for, keeps its notice.
 
 **The line in the next notice.** A plugin abort leaves no trace for the model: the
 prompt stays, nothing marks the stop (unlike Codex's `<turn_aborted>`). So after an
@@ -231,8 +265,19 @@ app-server connection: [remote-control-codex.md](remote-control-codex.md).
 - **An asker killed outright** (SIGKILL) cannot withdraw its request: a target stalled
   at that moment carries it out when it resumes, telling nobody. The next request clears
   what is left.
-- **A compaction that outlives 90 seconds** is reported `failed` and may still finish;
-  `rewake list` shows the compaction when it does.
+- **A compaction on Codex that outlives 80 seconds** — its mark's bound — ends in a
+  `failed` letter and may still finish; `rewake list` shows the compaction when it
+  does. On Claude Code the module waits for the host's call, which has no bound of
+  rewake's; a compaction there, or anywhere, with no word of it within 5 minutes gets
+  main's bound letter, and its later end gives no second letter.
+- **A worker whose wrapper ends just after its compaction**, before its snapshot is next
+  written — within a quarter second — takes the outcome with it: the 3 seconds main's
+  wrapper waits after a departure cover a snapshot published late, not one never
+  published. The letter then says the worker left before the compaction ended, while
+  `rewake list` of that run would have shown it compacted.
+- **A module reloaded during a compaction** loses its wait: no `compact.ended` comes, and
+  main's letter is sent from the count alone, without the tokens, 3 seconds after the
+  telemetry counts it.
 - **A hot reload of the module in the middle of a turn loses the tracked turn**: the
   reloaded module has not seen that turn start, so an interrupt answers `no turn
   running` until the next turn. rewake never changes the module's file once the
@@ -240,14 +285,14 @@ app-server connection: [remote-control-codex.md](remote-control-codex.md).
 - **A `PostCompact` later than a second** after the end of a compaction the module did
   not ask for, arriving after the mark of a main's compaction, is taken for that one:
   the worker's compaction counts as main's, and main gets no notice of it, while main's
-  own gets a notice and `rewake compact` prints the other compaction's number. The
+  own gets a notice and its letter carries the other compaction's number. The
   wait narrows this to a hook process that took more than a second to start and send;
   nothing ties a `PostCompact` to its compaction by identity, since the hook carries
   none.
 - **A compaction whose `PostCompact` never reaches the collector** — a hook that
   failed — leaves its mark in place. The session's next compaction then takes the mark
-  and counts as main's, so main gets no notice of it. The command, whose request it was,
-  has stopped waiting by then and reports no count.
+  and counts as main's, so main gets no notice of it. The letter of the request it was
+  goes without a count, after its wait.
 - **Without the module** — `--bare`, function hooks switched off, a harness version
   without them — every request is `not answering`; such a session shows interruptions
   unobserved in `rewake list`.
@@ -275,127 +320,18 @@ app-server connection: [remote-control-codex.md](remote-control-codex.md).
   gateway with an error the terminal shows, not queued behind it: a second compaction
   right after is pointless, and a refusal is predictable (September 24, 2026).
 - When main asked for a compaction itself with `rewake compact`, it gets no "context
-  compacted" notice for it. The command's answer carries what main needs instead: the
-  tokens before and after, and the session's count of compactions with this one.
-  Compactions the worker makes itself, and ones anyone else asked for, keep their notice
+  compacted" notice for it. What main needs comes instead with the outcome — the tokens
+  before and after, and the session's count of compactions with this one — since the
+  decision below in the letter rather than in the command's answer. Compactions the
+  worker makes itself, and ones anyone else asked for, keep their notice
   (September 24, 2026).
+- `rewake compact` does not block: it returns as soon as the request's outcome is known
+  — refused at once, or the compaction started — and the result comes to main later as
+  a letter, the way `send` returns at once and the report comes later. Waiting for the
+  end, up to 80–90 seconds, stalled the orchestrator on one shell call. The behaviour is
+  the same on both harnesses; `rewake interrupt` stays as it is (September 24, 2026).
 
 ## Tests
 
-- `internal/control/control_test.go` — the protocol: a done answer and the cleanup, the
-  modes, `not answering` with the request removed, a taken request without an outcome
-  and its late result cleared, a partial or foreign answer ignored, a second asker
-  refused without writing, no directory, a request taken as the asker gives up, in
-  each of the three orders above, a taken request left in place while it is served, and
-  an asker cut short withdrawing its request as `cut short`.
-- `internal/wrap/control_test.go` — the wrapper makes the directory, private, for a
-  harness that serves it, removes it with the session, and makes none for one that
-  does not.
-- `internal/cli/steer_test.go` — the commands against a fake served side: the outputs,
-  a done compaction with its count from the telemetry and without one that has not
-  come,
-  the refusals with their next action, `not answering`, and every wrong call refused
-  with exit 2 and nothing written; a harness that is not steerable, and one without a
-  focus; and a SIGTERM during the pickup, which ends the call as `cut short` with the
-  request withdrawn instead of ending the process.
-- `internal/harness/claude/plugin_control_test.go` and `plugin_compact_test.go` — the module under node against a
-  strict host with the research's forms and refusals of `$.clock.every`,
-  `$.clock.sleep`, `$.fs`,
-  `$.session.compact` and `$.turn.abort`: an idle compaction, the host's refusals passed
-  on, "in flight", "an external turn" and the thin client's among them, and an error
-  after the start counted as started, the asker reported and sent before the host compacts, a
-  refusal reported and sent before the answer with whether the host had started, no
-  mark sent mid-turn, a second waited out after the end of a compaction the module did
-  not ask for, the host itself held to the re-entry rule, the interrupter reported, a request carried out once across a reload, a request
-  withdrawn or replaced as it is marked left undone, and no polling without a directory.
-- `internal/harness/claude/telemetry/interrupter_test.go` and
-  `internal/harness/claude/lane_interrupt_test.go` — the stopped text naming main, the
-  mark and when it is used up or laid aside, and the notice line;
-  `internal/harness/claude/telemetry/compaction_asked_test.go` — the mark decoded, taken
-  up by the next compaction and laid aside by its refusal, which ends `compacting` for
-  a started compaction, also when its `PreCompact` comes after the refusal, and leaves
-  another compaction's alone.
-- `internal/wrap/session_notices_test.go` — no notice of a compaction this main asked
-  for, and one each for a compaction another main asked for and one nobody asked for.
-- The workflow case `claude-steered` — both commands end to end from a main against
-  workers whose module runs under node in the fixture: an idle compaction counted by the
-  telemetry, with its count in the answer and no notice of it to main, a compaction
-  refused mid-turn with the turn going on, an interrupt giving main the stopped text,
-  also in its awaited list, and the worker the notice line once, an idle interrupt
-  refused, a worker without the module not answering, and a worker's call refused as a
-  wrong call; eleven product mutants, one per link
-  ([testing-plugin.md](testing-plugin.md#steering-a-session)).
-- `internal/control/serve_test.go` — the served side the Codex wrapper runs: an answer
-  written once with the request's id, a request carried out once across a second look
-  and a fresh server, one withdrawn or replaced as it is marked left undone, and a
-  foreign id not taken.
-- `internal/harness/codex/gateway/steer_test.go` and `steer_guard_test.go` — a
-  compaction on request marked manual, never published as work, with its tokens and
-  counted as the asker's; refused without a word to the server while a turn, a
-  `turn/start` or `review/start` in flight, the terminal's `/compact` or a working
-  status runs, and between a `turn/start` reply and its `turn/started`, the terminal's
-  and a delivery's; refused as `nothing to compact` on a new conversation with no turn,
-  and sent on a resumed one; a server's refusal leaving no mark, an unanswered request
-  keeping it for a late compaction, and a mark whose compaction never starts ceasing
-  to hold at its bound while main's next compaction stays refused; a turn acknowledged
-  before a `/resume` to another thread keeping the conversation uncertain until a later
-  turn is answered; the terminal's `/compact` answered by the gateway while main's
-  runs; a delivery waiting out main's compaction and going after it; an interrupt
-  naming main in the stopped outcome, of a turn the terminal started and of one a
-  delivery started, and refused idle, during a compaction and when the server says no
-  turn is active. `internal/harness/codex/server_steer_test.go` — the wrapper serves
-  the run's directory, answers what it cannot carry out, and passes a reservation
-  refused for a compaction to the inbox as one to try again;
-  `internal/inbox/reservation_test.go` keeps such a message pending and delivers it
-  on the next pass. `activity_test.go` holds the record of what a conversation does
-  to the frames that set and clear it: a compaction refused while an inline review is
-  acknowledged and sent past a detached one; an interrupt naming the turn a
-  `turn/start` reply named before its `turn/started`, and the one a resume's snapshot
-  shows running; a delivery that queued on the gate behind main's compaction staying
-  pending; a compaction left behind by a `/resume` not ended by an idle resume — still
-  holding when its start was seen, lost sight of when only answered — and held until its
-  end when it comes back running; a reply naming a turn already ended holding nothing.
-  `accepted_test.go` holds main's rule for work the server accepted: an operation
-  without its end — a review, started or not, a turn through `systemError` or through
-  its items — leaving the conversation uncertain through a resume, a status and time;
-  the answer to a later turn ending that; a compaction answered but not started
-  outliving an idle resume; a mark holding deliveries only up to its bound, with main's
-  answer saying why; an unbound mark taking no other turn; an interrupt learning the
-  turn's id from an item event; a late reply from an earlier selection naming no turn. `mark_test.go` holds how the mark
-  finds its turn: an ordinary turn compacting inside itself never taken for it, also
-  when the proof it is work comes after its compaction item; a tied mark never moving;
-  an operation past the record's capacity leaving the conversation uncertain; main's
-  wait ending the hold and its answer saying whether the turn was seen. `sight_test.go`
-  holds the three safety properties against attribution: a mark lost sight of when the
-  terminal leaves before its turn — main answered at once, deliveries going, the
-  conversation uncertain, also through a goal's turn failing at its compaction; a lost
-  compaction's turn settling nothing, whether its item, only its end or a run of unknown
-  id comes back, or the terminal's own compaction came between, while a goal's turn
-  shown to be work by its item and a turn of the terminal's still report; an untied mark leaving no author on
-  the turn's compaction; main's wait without a reply ending the hold; a compaction that
-  ended as the wait did answered by its end; and a turn whose end came before its reply
-  still reporting, the terminal's and a delivery's. `proof_test.go` holds the
-  publication rule: a compaction only advisory when stopped before its item by Esc or
-  its hook, and never published when it runs after a goal's turn took its mark or ends
-  on the next connection; a turn of the terminal's and a delivery's reporting in every
-  order of the reply and the turn's events, with no item or with the reply last; and a
-  turn named on one connection reporting when it ends on the next. `advisory_test.go`
-  holds the advisory report of a turn without proof — a goal's failing before its item,
-  one whose reply was lost with the connection — none for a compaction shown by its
-  item, the turn's own outcome after a late proof, a stop included, under an identity
-  apart from the advisory's, and no outcome dropped when the connection ends or later
-  ones push it out. `reconnect_uncertainty_test.go` holds an inline review, or a turn
-  whose reply was lost, keeping main's compaction refused after a reconnect until its
-  end, a later answered turn or a delivered message, and the refusal texts naming
-  their ways out. `internal/cli/gap_advisory_test.go` holds the advisory reports at the
-  waiter, and a proven stop after an advisory reported with its times, taking the
-  pending mark.
-- The workflow case `codex-steered` — the same commands on the Codex column, the shim
-  answering `thread/compact/start` and `turn/interrupt` as the server does, aborting a
-  held turn for a compaction sent mid-turn: a focus refused with exit 2 and nothing
-  compacted, an idle compaction with its tokens and count and no notice to main, a
-  compaction refused mid-turn with the turn going on, an interrupt giving main the
-  stopped text, also in its awaited list, and the worker's next notice no line, an idle
-  interrupt refused, and a worker's call refused; five product mutants
-  ([testing-plugin.md](testing-plugin.md#steering-a-session)). The shape case checks the
-  shim's reply and events for both requests against the schema.
+What proves each part — the unit tests, the module under node, and the workflow cases
+with their mutants — is listed in [remote-control-tests.md](remote-control-tests.md).

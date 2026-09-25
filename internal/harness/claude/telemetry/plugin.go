@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"math"
+	"unicode/utf8"
 
 	"github.com/iiiokojiadbi/rewake/internal/control"
 	statedir "github.com/iiiokojiadbi/rewake/internal/state"
@@ -30,7 +31,17 @@ const (
 	// PostCompact of it follows. Started says whether the host had begun it,
 	// so that a PreCompact of it may have run.
 	CompactRefused = "compact.refused"
+	// CompactEnded is how a compaction a main asked for ended: its end after
+	// the command was answered started or requested, or the final answer
+	// itself — a refusal, a failure — for a command whose wait ended first.
+	// main's wrapper sends it to that main as a letter while main's record of
+	// the request is open (docs/remote-control-letter.md).
+	CompactEnded = "compact.ended"
 )
+
+// maxDetail bounds the host's error text an outcome carries, so the event
+// fits one datagram.
+const maxDetail = 400
 
 // ReasonAborted is the turn.complete reason of a turn a person interrupted
 // with Esc or Ctrl+C. The others — answer, refusal, error — end in a Stop or
@@ -52,7 +63,13 @@ type pluginInput struct {
 	Request string `json:"request"`
 	// Started is set on a refusal the host gave after PreCompact.
 	Started bool `json:"started"`
-	Context *struct {
+	// Outcome, Detail and the tokens end a compaction, or give the final
+	// answer to its request; Reason is then the refusal's.
+	Outcome      string   `json:"outcome"`
+	Detail       string   `json:"detail"`
+	TokensBefore *float64 `json:"tokensBefore"`
+	TokensAfter  *float64 `json:"tokensAfter"`
+	Context      *struct {
 		Tokens  *float64 `json:"tokens"`
 		Window  *float64 `json:"window"`
 		Percent *float64 `json:"percent"`
@@ -118,6 +135,18 @@ func DecodePlugin(raw []byte) (Event, bool) {
 			}
 			event.By = input.By
 		}
+	case CompactEnded:
+		if !control.ValidID.MatchString(input.Request) || !statedir.ValidName(input.By) {
+			return Event{}, false
+		}
+		switch input.Outcome {
+		case control.Done, control.Refused, control.Failed:
+		default:
+			return Event{}, false
+		}
+		event.Request, event.By, event.Outcome = input.Request, input.By, input.Outcome
+		event.Reason, event.Detail = bounded(input.Reason), bounded(input.Detail)
+		event.TokensBefore, event.TokensAfter = tokenCount(input.TokensBefore), tokenCount(input.TokensAfter)
 	default:
 		return Event{}, false
 	}
@@ -125,6 +154,18 @@ func DecodePlugin(raw []byte) (Event, bool) {
 		event.Limit = &Limit{Env: envWindow(input.Limit.Env), Settings: settingsWindow(input.Limit.Settings)}
 	}
 	return event, true
+}
+
+// bounded cuts a text to maxDetail bytes, on a rune boundary.
+func bounded(text string) string {
+	if len(text) <= maxDetail {
+		return text
+	}
+	cut := maxDetail
+	for cut > 0 && !utf8.RuneStart(text[cut]) {
+		cut--
+	}
+	return text[:cut] + "…"
 }
 
 // tokenCount takes a token count the way JSON carries it, as a number, and drops

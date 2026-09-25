@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 )
 
@@ -54,10 +55,12 @@ func (s *shimSession) compact(params json.RawMessage) (any, any, error) {
 	s.turn.mu.Unlock()
 	s.recordTurnEvent("compacted", id, "")
 	item := compactionItem(id)
-	return map[string]any{}, eventSequence{
+	begun := eventSequence{
 		s.threadStatusChangedEvent(activeStatus()),
 		s.turnStartedEvent(id),
 		s.itemEvent("item/started", "startedAtMs", id, item),
+	}
+	end := eventSequence{
 		s.usageEvent(id, compactedTokens),
 		s.itemEvent("item/completed", "completedAtMs", id, item),
 		s.threadStatusChangedEvent(idleStatus()),
@@ -65,7 +68,18 @@ func (s *shimSession) compact(params json.RawMessage) (any, any, error) {
 			"method": "turn/completed",
 			"params": map[string]any{"threadId": s.thread, "turn": turnObject(id, "completed", item)},
 		},
-	}, nil
+	}
+	if takes, err := time.ParseDuration(os.Getenv(shimCompactTakes)); err == nil {
+		return map[string]any{}, append(begun, eventsLater{takes, end}), nil
+	}
+	return map[string]any{}, append(begun, end...), nil
+}
+
+// eventsLater is events sent a while after the ones before them, without
+// holding up anything else the fixture serves meanwhile.
+type eventsLater struct {
+	after  time.Duration
+	events eventSequence
 }
 
 // interrupt answers turn/interrupt: refused with the server's own words when

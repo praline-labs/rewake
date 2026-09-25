@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"testing"
 
 	"github.com/iiiokojiadbi/rewake/internal/control"
@@ -36,6 +37,22 @@ func TestSteerAnswersWhatItCannotCarryOut(t *testing.T) {
 		if answer := server.steer(context.Background(), tc.request); answer.Outcome != control.Failed || answer.Detail != tc.detail {
 			t.Fatalf("%+v: %+v", tc.request, answer)
 		}
+	}
+}
+
+// A compaction withdrawn before it was taken is a final answer the wrapper
+// gives without the gateway, and its outcome all the same; an interrupt has
+// no letter to feed.
+func TestAWithdrawnCompactionIsItsOutcome(t *testing.T) {
+	server := &serverSession{gateway: gateway.New(gateway.Config{Upstream: filepath.Join(t.TempDir(), "app-server.sock"), Epoch: "test"})}
+	t.Cleanup(server.gateway.Close)
+	withdrawn := control.Answer{ID: "0123", Outcome: control.Refused, Reason: control.Withdrawn}
+	server.withdrawn(control.Request{ID: "0123", Action: control.Compact, From: "lead"}, withdrawn)
+	server.withdrawn(control.Request{ID: "4567", Action: control.Interrupt, From: "lead"}, control.Answer{ID: "4567", Outcome: control.Refused, Reason: control.Withdrawn})
+	outcomes := server.gateway.SessionState().CompactionOutcomes
+	if len(outcomes) != 1 || outcomes[0].Request != "0123" || outcomes[0].RequestedBy != "lead" ||
+		outcomes[0].Outcome != control.Refused || outcomes[0].Reason != control.Withdrawn {
+		t.Fatalf("outcomes %+v", outcomes)
 	}
 }
 

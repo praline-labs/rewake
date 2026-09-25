@@ -11,7 +11,6 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/control"
 	"github.com/iiiokojiadbi/rewake/internal/harness"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
-	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
@@ -36,27 +35,8 @@ func steerWorld(t *testing.T, workerHarness string) (string, registry.Session, s
 	saved := steerLimits
 	fast := control.Limits{Pickup: 300 * time.Millisecond, Outcome: 300 * time.Millisecond, Poll: 5 * time.Millisecond}
 	steerLimits = map[string]control.Limits{control.Compact: fast, control.Interrupt: fast}
-	savedCount := countLimit
-	countLimit = 300 * time.Millisecond
-	t.Cleanup(func() { steerLimits, countLimit = saved, savedCount })
+	t.Cleanup(func() { steerLimits = saved })
 	return dir, worker, controlDir
-}
-
-// counted publishes the worker's telemetry as its wrapper would once the
-// compaction a request asked for is counted, as the latest of its compactions,
-// with one before it that nobody asked for.
-func counted(t *testing.T, dir string, worker registry.Session, request string, sequence uint64) {
-	t.Helper()
-	now := time.Now()
-	snapshot := sessionstate.Unknown(worker.Epoch())
-	snapshot.PublishedAt = &now
-	snapshot.CompactionEvents = []sessionstate.CompactionEvent{
-		{Sequence: sequence - 1, ObservedAt: now},
-		{Sequence: sequence, ObservedAt: now, RequestedBy: "lead", Request: request},
-	}
-	if err := sessionstate.Save(dir, worker.Name, worker.Epoch(), snapshot); err != nil {
-		t.Error(err)
-	}
 }
 
 // answerOnce plays the worker's plugin for one request.
@@ -83,20 +63,125 @@ func answerOnce(t *testing.T, controlDir string, answer func(control.Request) st
 	return seen
 }
 
-// Main gets no notice of a compaction it asked for, so the answer carries what
-// the notice would: the count, besides the tokens.
-func TestCompactDoneReportsTheTokensAndTheCount(t *testing.T) {
+// The command ends once the compaction has started, not at its end: the
+// result comes to main as a letter, which main's own wrapper owes from the
+// record the command leaves.
+func TestCompactStartedEndsTheCommand(t *testing.T) {
 	dir, worker, controlDir := steerWorld(t, "claude")
-	seen := answerOnce(t, controlDir, func(r control.Request) string {
-		counted(t, dir, worker, r.ID, 3)
-		return `{"id":"` + r.ID + `","outcome":"done","tokensBefore":120000,"tokensAfter":9000}`
-	})
+	seen := answerOnce(t, controlDir, func(r control.Request) string { return `{"id":"` + r.ID + `","outcome":"started"}` })
 	code, out, errOut := run("compact", "worker", "keep the plan")
-	if code != ExitOK || out != "Rewake: compacted worker: 120000 tokens before, 9000 after (compaction 3).\n" {
+	if code != ExitOK || out != "Rewake: the compaction of worker started; its result comes to you as a letter, with the token counts and its number.\n" {
 		t.Fatalf("exit %d, %q, %q", code, out, errOut)
 	}
-	if request := <-seen; request.Action != control.Compact || request.Focus != "keep the plan" || request.From != "lead" {
+	request := <-seen
+	if request.Action != control.Compact || request.Focus != "keep the plan" || request.From != "lead" {
 		t.Fatalf("the worker read %+v", request)
+	}
+	lead, err := registry.Lookup(dir, "lead")
+	if err != nil {
+		t.Fatal(err)
+	}
+	pending := control.PendingOf(dir, "lead")
+	if len(pending) != 1 || pending[0].ID != request.ID || pending[0].Worker.Name != worker.Name || pending[0].Worker.Epoch() != worker.Epoch() || pending[0].AskerEpoch != lead.Epoch() {
+		t.Fatalf("the record for main's letter: %+v", pending)
+	}
+}
+
+// A request taken and not answered within the limit may still be carried
+// out: its record stays, made before the request was written, and the answer
+// promises the letter. The same holds for a command killed after the pickup,
+// which never gets to remove it.
+func TestACompactionTakenAndUnansweredKeepsItsRecord(t *testing.T) {
+	dir, worker, controlDir := steerWorld(t, "claude")
+	taken := make(chan string, 1)
+	go func() {
+		for deadline := time.Now().Add(2 * time.Second); time.Now().Before(deadline); time.Sleep(2 * time.Millisecond) {
+			raw, err := os.ReadFile(control.RequestPath(controlDir))
+			var request control.Request
+			if err != nil || json.Unmarshal(raw, &request) != nil {
+				continue
+			}
+			if pending := control.PendingOf(dir, "lead"); len(pending) != 1 || pending[0].ID != request.ID {
+				taken <- "no record when the request was written: " + request.ID
+				return
+			}
+			if _, release, held := control.Hold(dir, "lead", request.ID); held {
+				release()
+				taken <- "main's wrapper could take the record while the command asked: " + request.ID
+				return
+			}
+			_ = os.WriteFile(control.TakenPath(controlDir, request.ID), nil, 0o600)
+			taken <- request.ID
+			return
+		}
+		close(taken)
+	}()
+	code, _, errOut := run("compact", worker.Name)
+	id := <-taken
+	if code != ExitFailed || !strings.Contains(errOut, "it may still be carried out); its result comes to you as a letter, whether it compacts or not.") {
+		t.Fatalf("exit %d, %q", code, errOut)
+	}
+	if pending := control.PendingOf(dir, "lead"); len(pending) != 1 || pending[0].ID != id {
+		t.Fatalf("the record for main's letter: %+v, want %s", pending, id)
+	}
+	_, release, held := control.Hold(dir, "lead", id)
+	if !held {
+		t.Fatal("the command still holds its record after it ended")
+	}
+	release()
+}
+
+// A failure the served side gives as final — nothing was carried out — is an
+// answer like a refusal: main has it, the record goes and no letter is
+// promised. One that leaves the outcome open keeps the record and promises it.
+func TestAFinalFailureClosesTheRecord(t *testing.T) {
+	for _, tc := range []struct {
+		answer, line string
+		kept         bool
+	}{
+		{`"outcome":"failed","detail":"compaction is disabled"`, "Rewake: the compaction failed on worker (compaction is disabled).\n", false},
+		{`"outcome":"failed","detail":"no answer to the compaction request; it may still start","open":true`, "Rewake: the compaction failed on worker (no answer to the compaction request; it may still start); its result comes to you as a letter, whether it compacts or not.\n", true},
+	} {
+		dir, _, controlDir := steerWorld(t, "codex")
+		answerOnce(t, controlDir, func(r control.Request) string { return `{"id":"` + r.ID + `",` + tc.answer + `}` })
+		code, _, errOut := run("compact", "worker")
+		if code != ExitFailed || errOut != tc.line {
+			t.Fatalf("%s: exit %d, %q", tc.answer, code, errOut)
+		}
+		if pending := control.PendingOf(dir, "lead"); len(pending) == 1 != tc.kept || len(pending) > 1 {
+			t.Fatalf("%s: the record for main's letter: %+v", tc.answer, pending)
+		}
+	}
+}
+
+// A command that could not leave the record says no letter comes, rather
+// than promising one.
+func TestCompactWithNoRecordPromisesNoLetter(t *testing.T) {
+	_, _, controlDir := steerWorld(t, "claude")
+	saved := remember
+	remember = func(string, string, control.Pending) (func(), error) { return nil, os.ErrPermission }
+	t.Cleanup(func() { remember = saved })
+	answerOnce(t, controlDir, func(r control.Request) string { return `{"id":"` + r.ID + `","outcome":"started"}` })
+	code, out, errOut := run("compact", "worker")
+	if code != ExitOK || out != "Rewake: the compaction of worker is started; rewake could not note it for its letter (permission denied), so none comes: rewake list shows whether it compacted.\n" {
+		t.Fatalf("exit %d, %q, %q", code, out, errOut)
+	}
+}
+
+// A start the served side did not see in time is said as it is: requested,
+// with the letter still to come.
+func TestCompactRequestedSaysSo(t *testing.T) {
+	_, _, controlDir := steerWorld(t, "codex")
+	answerOnce(t, controlDir, func(r control.Request) string {
+		return `{"id":"` + r.ID + `","outcome":"requested","detail":"the server has not answered the request within 3s"}`
+	})
+	code, out, errOut := run("compact", "worker", "--json")
+	var model steerModel
+	if code != ExitOK || json.Unmarshal([]byte(out), &model) != nil || model.Outcome != control.Requested || model.TokensBefore != nil {
+		t.Fatalf("exit %d, %q, %q", code, out, errOut)
+	}
+	if line := steerLine(model); line != "Rewake: the compaction of worker is requested (the server has not answered the request within 3s); its result comes to you as a letter, whether it compacts or not." {
+		t.Fatalf("the line: %q", line)
 	}
 }
 
@@ -129,7 +214,7 @@ func TestTheInterruptAnswerSaysWhatTheModelIsShown(t *testing.T) {
 }
 
 func TestARefusalExitsOneAndNamesTheNextAction(t *testing.T) {
-	_, _, controlDir := steerWorld(t, "claude")
+	dir, _, controlDir := steerWorld(t, "claude")
 	answerOnce(t, controlDir, func(r control.Request) string {
 		return `{"id":"` + r.ID + `","outcome":"refused","reason":"in a turn","detail":"$.session.compact: a turn is running (t1)"}`
 	})
@@ -144,6 +229,9 @@ func TestARefusalExitsOneAndNamesTheNextAction(t *testing.T) {
 	var model steerModel
 	if code != ExitFailed || json.Unmarshal([]byte(out), &model) != nil || model.Reason != control.NoTurn {
 		t.Fatalf("exit %d, %q", code, out)
+	}
+	if pending := control.PendingOf(dir, "lead"); len(pending) != 0 {
+		t.Fatalf("a refusal left a record for a letter: %+v", pending)
 	}
 }
 
@@ -239,7 +327,7 @@ func TestWrongCallsAreRefusedBeforeAnythingIsSent(t *testing.T) {
 type unsteerable struct{ harness.Harness }
 
 func TestAHarnessThatCannotTakeItIsAWrongCall(t *testing.T) {
-	dir, worker, controlDir := steerWorld(t, "codex")
+	_, _, controlDir := steerWorld(t, "codex")
 	saved := findHarness
 	findHarness = func(id string) (harness.Harness, bool) {
 		found, ok := saved(id)
@@ -257,30 +345,8 @@ func TestAHarnessThatCannotTakeItIsAWrongCall(t *testing.T) {
 	if entries, _ := os.ReadDir(controlDir); len(entries) != 0 {
 		t.Fatalf("a wrong call wrote %v", entries)
 	}
-	answerOnce(t, controlDir, func(r control.Request) string {
-		counted(t, dir, worker, r.ID, 1)
-		return `{"id":"` + r.ID + `","outcome":"done"}`
-	})
-	if code, out, errOut := run("compact", "worker"); code != ExitOK || out != "Rewake: compacted worker (compaction 1).\n" {
+	answerOnce(t, controlDir, func(r control.Request) string { return `{"id":"` + r.ID + `","outcome":"started"}` })
+	if code, out, errOut := run("compact", "worker"); code != ExitOK || !strings.HasPrefix(out, "Rewake: the compaction of worker started;") {
 		t.Fatalf("without a focus: exit %d, %q, %q", code, out, errOut)
-	}
-}
-
-// A compaction the telemetry has not counted in time is still done, and the
-// answer says where the count will show rather than taking another
-// compaction's number.
-func TestCompactDoneBeforeItIsCounted(t *testing.T) {
-	dir, worker, controlDir := steerWorld(t, "claude")
-	answerOnce(t, controlDir, func(r control.Request) string {
-		counted(t, dir, worker, "0123456789abcdef0123456789abcdef", 2)
-		return `{"id":"` + r.ID + `","outcome":"done","tokensBefore":120000,"tokensAfter":9000}`
-	})
-	code, out, errOut := run("compact", "worker", "--json")
-	var model steerModel
-	if code != ExitOK || json.Unmarshal([]byte(out), &model) != nil || model.Outcome != control.Done || model.Compaction != nil {
-		t.Fatalf("exit %d, %q, %q", code, out, errOut)
-	}
-	if line := steerLine(model); !strings.Contains(line, "has not counted it yet, and rewake list shows the count") {
-		t.Fatalf("the line: %q", line)
 	}
 }

@@ -30,6 +30,10 @@ import (
 // it or holdLimit passes and it ends as an ordinary turn.
 const shimHoldFirstTurn = "RW_SHIM_HOLD_FIRST_TURN"
 
+// shimCompactTakes, a duration, is how long a compaction takes after its
+// PreCompact, so a case can see what happens between its start and its end.
+const shimCompactTakes = "RW_SHIM_COMPACT_TAKES"
+
 // holdLimit is long enough for a case to compact and interrupt the held turn,
 // and short enough to leave the session's own ceiling room to end.
 const holdLimit = 12 * time.Second
@@ -218,6 +222,9 @@ func (s *claudeSession) compact(instructions string) (any, string) {
 			// Where the harness draws the line is not known; one finished
 			// turn is the fixture's, and a case that compacts has worked one.
 			return nil, "$.session.compact: Not enough messages to compact."
+		}
+		if takes, err := time.ParseDuration(os.Getenv(shimCompactTakes)); hook.event == "PreCompact" && err == nil {
+			time.Sleep(takes)
 		}
 	}
 	return map[string]any{

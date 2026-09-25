@@ -14,13 +14,15 @@ import (
 // the same steps as the Claude Code module (docs/remote-control.md): take a
 // request, mark it taken, check it is still in place, act, and write the answer
 // once. One request at a time: act runs on this goroutine, and the asker's lock
-// lets no second request in meanwhile.
-func Serve(ctx context.Context, dir string, poll time.Duration, act func(context.Context, Request) Answer) {
+// lets no second request in meanwhile. withdrawn is given the answer Serve
+// gives in act's place, once it is written — a final answer, which the served
+// side records as the outcome as it does act's own (docs/remote-control-letter.md).
+func Serve(ctx context.Context, dir string, poll time.Duration, act func(context.Context, Request) Answer, withdrawn func(Request, Answer)) {
 	tick := time.NewTicker(poll)
 	defer tick.Stop()
 	last := ""
 	for {
-		last = serveOnce(ctx, dir, last, act)
+		last = serveOnce(ctx, dir, last, act, withdrawn)
 		select {
 		case <-ctx.Done():
 			return
@@ -33,7 +35,7 @@ func Serve(ctx context.Context, dir string, poll time.Duration, act func(context
 // last, so a request still in place while its asker reads the answer is not
 // looked at again. The taken mark keeps it from being carried out twice beyond
 // that.
-func serveOnce(ctx context.Context, dir, last string, act func(context.Context, Request) Answer) string {
+func serveOnce(ctx context.Context, dir, last string, act func(context.Context, Request) Answer, withdrawn func(Request, Answer)) string {
 	asked, ok := pendingRequest(dir)
 	if !ok || asked.ID == last {
 		return last
@@ -45,12 +47,13 @@ func serveOnce(ctx context.Context, dir, last string, act func(context.Context, 
 		return asked.ID
 	}
 	afterMark(dir, asked.ID)
-	var answer Answer
-	if still, ok := pendingRequest(dir); ok && still.ID == asked.ID {
-		answer = act(ctx, asked)
-	} else {
-		answer = Answer{Outcome: Refused, Reason: Withdrawn}
+	if still, ok := pendingRequest(dir); !ok || still.ID != asked.ID {
+		answer := Answer{ID: asked.ID, Outcome: Refused, Reason: Withdrawn}
+		writeAnswer(dir, answer)
+		withdrawn(asked, answer)
+		return asked.ID
 	}
+	answer := act(ctx, asked)
 	answer.ID = asked.ID
 	writeAnswer(dir, answer)
 	return asked.ID

@@ -1,10 +1,14 @@
 package workflow
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -15,11 +19,13 @@ import (
 // the directory, the module polling it under node, the session carrying it
 // out, and back.
 //
-//   - calm works its task to the end and is idle: a compaction is done, with
-//     the host's token counts, and rewake's telemetry counts it by the hooks a
-//     compaction runs; the answer carries that count, and main, which asked,
-//     gets no notice of the compaction besides. An interrupt is refused as no
-//     turn running.
+//   - calm works its task to the end and is idle: a compaction is answered
+//     started while it still runs, before rewake's telemetry counts it by the
+//     hooks a compaction runs; its end reaches main as a letter with the
+//     host's token counts and that count, and main, which asked, gets no
+//     notice of the compaction besides. An interrupt is refused as no turn
+//     running. Then calm is killed in the middle of a second compaction, and
+//     main still gets its letter, from its own wrapper's record.
 //   - busy is held in its first turn: a compaction is refused as in a turn and
 //     the turn goes on; an interrupt ends it, main reads stopped naming itself
 //     and its list of what it is owed says the same, and busy's next notice
@@ -56,12 +62,14 @@ func TestClaudeSteered(t *testing.T) {
 }
 
 const (
-	obsCompactIdle     = "main compacts an idle worker: done with the token counts, and the telemetry counts one compaction"
+	obsCompactStarted  = "main compacts an idle worker: the command answers started before the compaction ends, which the telemetry has not counted yet"
+	obsCompactLetter   = "the compaction's end reaches main as a notify from the worker, with the token counts and the compaction's number"
 	obsCompactBusy     = "main compacts a worker in a turn: refused as in a turn, and the turn goes on unreported"
 	obsInterruptBusy   = "main interrupts a worker in a turn: done, and main reads stopped saying main interrupted it, as its awaited list does"
-	obsCompactQuiet    = "main's own compaction: its answer carries the session's compaction count, and main gets no compaction notice of it"
+	obsCompactQuiet    = "main's own compaction: the telemetry counts it, and main gets no compaction notice of it"
 	obsInterruptLine   = "the interrupted worker's next notice says main interrupted it, and the one after does not"
 	obsInterruptIdle   = "main interrupts an idle worker: refused as no turn running"
+	obsCompactOrphan   = "a worker killed in the middle of a compaction main asked for: main still gets one letter of it"
 	obsNotAnswering    = "a request to a worker without the module is refused as not answering"
 	obsNotMain         = "a worker that is not main asking for a compaction is a wrong call"
 	steeredTask        = "claude-steered: work the long task"
@@ -72,7 +80,8 @@ const (
 )
 
 var steeredObservations = []string{
-	obsCompactIdle, obsCompactQuiet, obsCompactBusy, obsInterruptBusy, obsInterruptLine, obsInterruptIdle, obsNotAnswering, obsNotMain,
+	obsCompactStarted, obsCompactLetter, obsCompactQuiet, obsCompactBusy, obsInterruptBusy, obsInterruptLine, obsInterruptIdle, obsCompactOrphan,
+	obsNotAnswering, obsNotMain,
 }
 
 func playSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
@@ -87,7 +96,7 @@ func playSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 	}
 	runs := shimNode + "=" + node
 	calmAsks := newRequests(iso, "calm")
-	calm := startHarnessSession(t, c, iso, claudeColumn.harness, "calm", "--general", shimInboxJSON+"=1", runs, calmAsks.env())
+	calm := startHarnessSession(t, c, iso, claudeColumn.harness, "calm", "--general", shimInboxJSON+"=1", runs, shimCompactTakes+"="+compactTakes, calmAsks.env())
 	defer stopSession(t, c, calm)
 	busy := startHarnessSession(t, c, iso, claudeColumn.harness, "busy", "--general", shimInboxJSON+"=1", runs, shimHoldFirstTurn+"=1")
 	defer stopSession(t, c, busy)
@@ -176,27 +185,59 @@ func playSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 	code, view, said = steer("interrupt", calm.name)
 	out = append(out, finding(obsInterruptIdle, code == 1 && view.Outcome == "refused" && view.Reason == "no turn running", "%s", said))
 
-	code, view, said = steer("compact", calm.name, steeredFocus)
-	var calmRow steeredRow
-	waitFor(c, 5*time.Second, func() bool {
-		calmRow, failure = row(calm)
-		return calmRow.Compactions != nil && *calmRow.Compactions == 1
-	})
-	counted := calmRow.Compactions != nil && *calmRow.Compactions == 1
-	out = append(out, finding(obsCompactIdle,
-		code == 0 && view.Outcome == "done" && view.TokensBefore != nil && *view.TokensBefore == 120000 && view.TokensAfter != nil && *view.TokensAfter == 9000 && counted,
-		"%s, tokens %s before and %s after; the telemetry counts %s compactions %s", said, show(view.TokensBefore), show(view.TokensAfter), show(calmRow.Compactions), failure))
-
-	// main's wrapper looks for compactions once a second, and the telemetry
-	// case sees its notice within five: nothing in five means none was sent.
-	// No later event can stand in for the wait — the absence is the finding.
-	const notice = "Rewake: context compacted (compaction 1)."
-	noticed := waitFor(c, 5*time.Second, func() bool { return strings.Contains(lead.mailboxRead(), notice) })
-	out = append(out, finding(obsCompactQuiet,
-		code == 0 && view.Compaction != nil && *view.Compaction == 1 && !noticed,
-		"the answer's compaction %s; main read %q: %v", show(view.Compaction), notice, noticed))
+	// With a focus, which only this column takes: the fixture's compaction
+	// runs it, as the host does.
+	out = append(out, sg.compactIdle(calm, 120000, 9000, steeredFocus)...)
 
 	code, refused, _ := calmAsks.ask(c, "compact", bare.name)
 	out = append(out, finding(obsNotMain, code == 2, "exit %d, %s", code, firstLine(refused)))
+
+	// calm's harness is killed while its second compaction runs: nothing
+	// records the end but, at most, the module's report that the host's call
+	// failed or the count of a compaction that just ended, and the letter comes
+	// from main's own wrapper either way. A worker stopped the ordinary way may
+	// finish the compaction first, so it is killed. A letter without an outcome
+	// goes 3 seconds after the departure is seen.
+	lettersOf := func() []string {
+		var letters []string
+		for _, message := range readMessages(lead) {
+			if message.From == calm.name && (strings.HasPrefix(message.Text, "Rewake: the compaction of "+calm.name+" you asked for") ||
+				strings.HasPrefix(message.Text, "Rewake: compacted "+calm.name)) {
+				letters = append(letters, message.Kind+" "+message.Text)
+			}
+		}
+		return letters
+	}
+	earlier := len(lettersOf())
+	code, view, said = steer("compact", calm.name)
+	killHarness(c, iso, calm)
+	var letters []string
+	waitFor(c, 15*time.Second, func() bool {
+		letters = lettersOf()
+		letters = letters[min(earlier, len(letters)):]
+		return len(letters) > 0
+	})
+	out = append(out, finding(obsCompactOrphan,
+		code == 0 && view.Outcome == "started" && len(letters) == 1 && strings.HasPrefix(letters[0], "notify "),
+		"%s; then main read %q", said, letters))
 	return out
+}
+
+// killHarness kills a session's harness outright, as a crash does, and waits
+// for its wrapper to end the session: nothing of the harness writes anything
+// afterwards, while the wrapper still cleans up after it.
+func killHarness(c *Case, iso *Isolation, session *codexSession) {
+	var record struct {
+		HarnessPID int `json:"harnessPid"`
+	}
+	raw, err := os.ReadFile(filepath.Join(iso.StateDir, "rooms", "default", "sessions", session.name+".json"))
+	if err != nil || json.Unmarshal(raw, &record) != nil || record.HarnessPID <= 0 {
+		c.Note("no harness to kill for " + session.name)
+		return
+	}
+	c.mu.Lock()
+	session.process.endedByCase = true
+	c.mu.Unlock()
+	_ = syscall.Kill(record.HarnessPID, syscall.SIGKILL)
+	waitFor(c, 10*time.Second, func() bool { return session.process.finished() && !session.process.groupAlive() })
 }

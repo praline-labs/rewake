@@ -97,6 +97,7 @@ Created with 0700. [Optional primary observations](session-state.md) are collect
     sock/<name>.<epoch>.obs.turn/ when its latest turn started, one file per reading, for `rewake pending`
     sock/<name>.<epoch>.obs.plugin/ rewake's function-hooks plugin for this run (claude-plugin.md)
     control/<name>.<epoch>/    a main's compact or interrupt request and its answer (remote-control.md)
+    letters/<name>/<id>.json   a compaction this main asked for, held by the command while it asks, kept on an answer that leaves the outcome open until its letter goes (remote-control-letter.md)
 ```
 
 All mailbox paths in the delivery specification are relative to the room.

@@ -138,8 +138,8 @@ func TestATakenRequestWithoutAnOutcomeFailsAndTheNextAskClearsIt(t *testing.T) {
 		t.Fatal(err)
 	}
 	first = <-seen
-	if answer.Outcome != Failed || answer.Reason != "" {
-		t.Fatalf("answer %+v", answer)
+	if answer.Outcome != Failed || answer.Reason != "" || !answer.Open {
+		t.Fatalf("answer %+v, want a failure that leaves the outcome open", answer)
 	}
 	// The outcome arrives late, after the asker gave up.
 	late := `{"id":"` + first.ID + `","outcome":"done"}`

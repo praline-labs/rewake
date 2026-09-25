@@ -49,7 +49,7 @@ func TestACompactionIsRefusedBetweenATurnsReplyAndItsStart(t *testing.T) {
 			nothingSent(t, native)
 			// Once the turn has ended the conversation compacts.
 			events(t, ui, native, started("T"), completed("T", "completed"))
-			_ = steerAnswer(func() control.Answer { return g.Compact(context.Background(), "0123", "lead") })
+			_ = steerAnswer(func() control.Answer { return g.compactToEnd(context.Background(), "0123", "lead") })
 			injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 		})
 	}
@@ -60,7 +60,7 @@ func TestACompactionIsRefusedBetweenATurnsReplyAndItsStart(t *testing.T) {
 func compactBounded(g *Gateway, request string) control.Answer {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	return g.Compact(ctx, request, "lead")
+	return g.compactToEnd(ctx, request, "lead")
 }
 
 // A turn acknowledged before the terminal left the thread and never seen to
@@ -85,7 +85,7 @@ func TestATurnAcknowledgedBeforeTheThreadWasLeftStaysUncertainUntilALaterTurnIsA
 	refusedAsUncertain(t, g, native, "past any bound")
 	exchange(t, ui, native, `{"id":10,"method":"turn/start","params":{"threadId":"A","input":[]}}`, `{"id":10,"result":{"turn":{"id":"U","items":[],"status":"inProgress"}}}`)
 	events(t, ui, native, started("U"), completed("U", "completed"))
-	_ = steerAnswer(func() control.Answer { return g.Compact(context.Background(), "0124", "lead") })
+	_ = steerAnswer(func() control.Answer { return g.compactToEnd(context.Background(), "0124", "lead") })
 	injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 }
 
@@ -98,7 +98,7 @@ func TestTheTerminalsCompactionIsRefusedWhileMainsRuns(t *testing.T) {
 	bindUI(t, g, ui, native)
 	ranATurn(t, ui, native)
 	out := callbacks(g)
-	answers := steerAnswer(func() control.Answer { return g.Compact(context.Background(), "0123", "lead") })
+	answers := steerAnswer(func() control.Answer { return g.compactToEnd(context.Background(), "0123", "lead") })
 	id := injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 	write(t, native, []byte(`{"id":"`+id+`","result":{}}`))
 	write(t, ui, []byte(`{"id":8,"method":"thread/compact/start","params":{"threadId":"A"}}`))
@@ -146,9 +146,9 @@ func TestAnUnansweredCompactionKeepsItsMark(t *testing.T) {
 	out := callbacks(g)
 	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
 	defer cancel()
-	answers := steerAnswer(func() control.Answer { return g.Compact(ctx, "0123", "lead") })
+	answers := steerAnswer(func() control.Answer { return g.compactToEnd(ctx, "0123", "lead") })
 	id := injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
-	if answer := within(t, answers); answer.Outcome != control.Failed || !strings.Contains(answer.Detail, "it may still start") {
+	if answer := within(t, answers); answer.Outcome != control.Failed || !strings.Contains(answer.Detail, "it may still start") || !answer.Open {
 		t.Fatalf("answer %+v", answer)
 	}
 	write(t, native, []byte(`{"id":"`+id+`","result":{}}`))
@@ -175,19 +175,19 @@ func TestAConversationWithNoTurnHasNothingToCompact(t *testing.T) {
 	// Bounded: a compaction sent after all would wait for its end.
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	if answer := g.Compact(ctx, "0123", "lead"); answer.Outcome != control.Refused || answer.Reason != control.NothingToCompact {
+	if answer := g.compactToEnd(ctx, "0123", "lead"); answer.Outcome != control.Refused || answer.Reason != control.NothingToCompact {
 		t.Fatalf("new conversation: %+v", answer)
 	}
 	nothingSent(t, native)
 	ranATurn(t, ui, native)
-	_ = steerAnswer(func() control.Answer { return g.Compact(context.Background(), "0123", "lead") })
+	_ = steerAnswer(func() control.Answer { return g.compactToEnd(context.Background(), "0123", "lead") })
 	injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 
 	g, ui, peers, _ = setup(t)
 	native = <-peers
 	defer func() { _ = native.conn.Close() }()
 	socketResume(t, ui, native)
-	_ = steerAnswer(func() control.Answer { return g.Compact(context.Background(), "0123", "lead") })
+	_ = steerAnswer(func() control.Answer { return g.compactToEnd(context.Background(), "0123", "lead") })
 	injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 }
 
@@ -203,7 +203,7 @@ func TestAMarkWhoseCompactionNeverStartsStopsHoldingAtItsBound(t *testing.T) {
 	ranATurn(t, ui, native)
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
-	answers := steerAnswer(func() control.Answer { return g.Compact(ctx, "0123", "lead") })
+	answers := steerAnswer(func() control.Answer { return g.compactToEnd(ctx, "0123", "lead") })
 	injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 	if answer := within(t, answers); answer.Outcome != control.Failed {
 		t.Fatalf("answer %+v", answer)
@@ -222,7 +222,7 @@ func TestAMarkWhoseCompactionNeverStartsStopsHoldingAtItsBound(t *testing.T) {
 	}
 	exchange(t, ui, native, `{"id":10,"method":"turn/start","params":{"threadId":"A","input":[]}}`, `{"id":10,"result":{"turn":{"id":"U","items":[],"status":"inProgress"}}}`)
 	events(t, ui, native, started("U"), completed("U", "completed"))
-	_ = steerAnswer(func() control.Answer { return g.Compact(context.Background(), "0125", "lead") })
+	_ = steerAnswer(func() control.Answer { return g.compactToEnd(context.Background(), "0125", "lead") })
 	injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 }
 
@@ -235,7 +235,7 @@ func TestADeliveryWaitsOutMainsCompaction(t *testing.T) {
 	defer func() { _ = native.conn.Close() }()
 	bindUI(t, g, ui, native)
 	ranATurn(t, ui, native)
-	answers := steerAnswer(func() control.Answer { return g.Compact(context.Background(), "0123", "lead") })
+	answers := steerAnswer(func() control.Answer { return g.compactToEnd(context.Background(), "0123", "lead") })
 	id := injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 	write(t, native, []byte(`{"id":"`+id+`","result":{}}`))
 	events(t, ui, native, started("C"), compactionItem("C", "item/started"))

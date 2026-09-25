@@ -78,7 +78,9 @@ switched off by `DISABLE_COMPACT`, in the harness's words; one that goes ahead r
 `session.compact`, which the plugin's own handlers do not see, as the harness skips
 them for re-entry, and runs the hooks `PreCompact`,
 `SessionStart` with source `compact` and `PostCompact`, so rewake's telemetry counts it
-by its own path, and answers with the summary and 120000 and 9000 tokens. Before any
+by its own path, and answers with the summary and 120000 and 9000 tokens. With
+`RW_SHIM_COMPACT_TAKES` set to a duration it waits that long after `PreCompact`, so a
+case sees what happens between a compaction's start and its end. Before any
 turn has ended it stops after `PreCompact` and refuses the conversation as too short,
 as the harness does. An abort is
 refused with no turn running or for another turn's id, again in the harness's words;
@@ -100,17 +102,32 @@ runs without the module. The observations:
 - busy's next notice ends with "lead-claude interrupted your previous turn with rewake
   interrupt.", and the notice after it does not;
 - an interrupt of calm, idle, is refused as `no turn running`, exit 1;
-- a compaction of calm with a focus is `done`, exit 0, with the host's token counts, and
-  main's `rewake list --json` then counts one compaction for calm;
-- that answer carries `compaction` 1, and main is sent no "Rewake: context compacted
-  (compaction 1)." within five seconds. main's wrapper looks once a second, and the
-  telemetry case sees the notice within five. Nothing later can stand in for the wait,
-  since the absence is what is observed;
-- calm, a worker, asking for a compaction is a wrong call, exit 2.
+- a compaction of calm with a focus, which takes five seconds, is `started`, exit 0,
+  within three, and main's `rewake list --json` then counts no compaction for calm yet;
+- its end reaches main as a notify from calm reading "Rewake: compacted calm-claude:
+  120000 tokens before, 9000 after (compaction 1).";
+- the telemetry then counts one compaction, and main is sent no "Rewake: context
+  compacted (compaction 1)." within five seconds. main's wrapper looks once a second, and
+  the telemetry case sees the notice within five. Nothing later can stand in for the
+  wait, since the absence is what is observed;
+- calm, a worker, asking for a compaction is a wrong call, exit 2;
+- a second compaction of calm is `started`, calm's harness is killed right after — a
+  worker stopped the ordinary way may finish the compaction first — and main reads one
+  new letter of it, a notify from calm, from its own wrapper's record of the request:
+  "Rewake: the compaction of calm-claude you asked for failed", or, when a slower
+  control let the compaction end before the kill, "Rewake: compacted calm-claude
+  (compaction 2)." from the count alone. The letter goes 3 seconds
+  after the departure is seen, and by then the scenario has run past the fixture's
+  ordinary 25 seconds under a slower control; a session that serves the scenario's
+  requests stays up 85 seconds on this column too, or main's wrapper ends before the
+  letter is due.
 
-Its eleven mutants each break one link and name what they must break:
+Its fourteen mutants each break one link and name what they must break:
 
 - a module that never asks the host to compact;
+- one that answers only at the compaction's end, as the command did before September
+  25, 2026;
+- one that tells rewake the compaction ended without the host's counts;
 - one that does not know the host's mid-turn refusal;
 - one that aborts without saying who asked;
 - a lane that never uses the interrupt mark up;
@@ -118,7 +135,9 @@ Its eleven mutants each break one link and name what they must break:
 - a control package that reports a request nobody took as `failed`;
 - a command that lets any role steer;
 - a main wrapper that announces the compaction it asked for;
-- a command that answers without the count;
+- a letter without the session's count of compactions;
+- a main wrapper that waits for the worker's word however the worker went, so a worker
+  gone mid-compaction leaves main without a letter;
 - a module that compacts without telling rewake who asked;
 - an awaited list that puts every stop down to a person.
 
@@ -147,7 +166,8 @@ app-server connection. The fixture's shim answers the two requests as the server
 0.155.1 does ([research-protocol.md](research-protocol.md#compaction-and-interrupt-on-request)):
 `thread/compact/start` with `{}`, then the compaction as a turn of its own — the status
 active, `turn/started`, the `contextCompaction` item started, a token usage of 9000, the
-item completed, the status idle, `turn/completed` — and `turn/interrupt` with `{}`,
+item completed, the status idle, `turn/completed`, the last four `RW_SHIM_COMPACT_TAKES`
+later when it is set — and `turn/interrupt` with `{}`,
 ending the held turn as interrupted, or refused in the server's words with no turn
 running or another turn's id. A compaction that arrives while a turn is held aborts that
 turn first, as Codex's `compact()` does, so a wrapper that does not refuse it breaks the
@@ -167,15 +187,19 @@ session too. The observations:
   interrupted this turn with rewake interrupt", as its `rewake inbox --awaited` does;
 - busy's next notice carries no line about the interrupt;
 - an interrupt of calm, idle, is refused as `no turn running`, exit 1;
-- a compaction of calm is `done`, exit 0, with 120000 tokens before and 9000 after, and
-  the telemetry counts one compaction;
-- that answer carries `compaction` 1, and main is sent no compaction notice within five
-  seconds;
+- a compaction of calm, which takes five seconds, is `started`, exit 0, within three,
+  before the telemetry counts it;
+- its end reaches main as a notify with 120000 tokens before and 9000 after and
+  "(compaction 1)";
+- the telemetry then counts one compaction, and main is sent no compaction notice within
+  five seconds;
 - calm asking for a compaction is a wrong call, exit 2.
 
-Its five mutants: a wrapper that sends a compaction whatever runs, which breaks the
+Its seven mutants: a wrapper that sends a compaction whatever runs, which breaks the
 refusal and, the held turn being aborted by it, the interrupt; a telemetry that counts
-the compaction without its request and asker; a wrapper that interrupts without keeping
+the compaction without its request and asker; a wrapper that answers only at the
+compaction's end, which the bound of the start then answers `requested`; one that never
+keeps how the compaction ended, so the letter has no tokens; a wrapper that interrupts without keeping
 who asked; one that answers an idle interrupt as done; and a Codex harness that lets a
 focus through to the wrapper.
 

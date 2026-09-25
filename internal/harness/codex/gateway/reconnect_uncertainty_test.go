@@ -50,7 +50,7 @@ func TestAnOperationAcceptedBeforeAReconnectKeepsTheConversationUncertain(t *tes
 				exchange(t, next, peer, `{"id":32,"method":"turn/start","params":{"threadId":"A","input":[]}}`, `{"id":32,"result":{"turn":{"id":"V","items":[],"status":"inProgress"}}}`)
 				events(t, next, peer, started("V"), completed("V", "completed"))
 			}
-			_ = steerAnswer(func() control.Answer { return g.Compact(context.Background(), "0124", "lead") })
+			_ = steerAnswer(func() control.Answer { return g.compactToEnd(context.Background(), "0124", "lead") })
 			injected(t, peer, "thread/compact/start", map[string]string{"threadId": "A"})
 		})
 	}

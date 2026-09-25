@@ -68,6 +68,9 @@ type state struct {
 	// compaction, which holds unless another compaction's PostCompact arrives
 	// later than a second after its end (docs/remote-control.md).
 	asked *askedCompaction
+	// outcomes are the ends of main's compactions its command answered
+	// before, for main's wrapper to send as letters.
+	outcomes []sessionstate.CompactionOutcome
 	// lateStart is set when a main's compaction was refused after it started
 	// but before its PreCompact was heard: the hooks run in the background,
 	// and that PreCompact, when it comes, starts nothing.
@@ -84,7 +87,7 @@ type askedCompaction struct {
 func (s *state) apply(event Event, now time.Time) {
 	switch event.Kind {
 	case StatusLine, SessionStart, UserPromptSubmit, Stop, StopFailure, PreCompact, PostCompact, Notification, SessionEnd:
-	case PluginReady, TurnStart, TurnComplete, SessionMeasure, CompactAsked, CompactRefused:
+	case PluginReady, TurnStart, TurnComplete, SessionMeasure, CompactAsked, CompactRefused, CompactEnded:
 		s.applyPlugin(event, now)
 		return
 	default:
@@ -206,6 +209,11 @@ func (s *state) applyPlugin(event Event, now time.Time) {
 			}
 			s.asked = nil
 		}
+	case CompactEnded:
+		s.outcomes = sessionstate.KeepOutcome(s.outcomes, sessionstate.CompactionOutcome{
+			Request: event.Request, RequestedBy: event.By, Outcome: event.Outcome, Reason: event.Reason, Detail: event.Detail,
+			TokensBefore: event.TokensBefore, TokensAfter: event.TokensAfter, EndedAt: now,
+		})
 	}
 }
 
@@ -320,6 +328,9 @@ func (s *state) snapshot() sessionstate.Snapshot {
 		snapshot.Compacting = &compacting
 		snapshot.Coverage = "observed"
 		snapshot.CompactionEvents = append([]sessionstate.CompactionEvent{}, s.events...)
+	}
+	if len(s.outcomes) > 0 {
+		snapshot.CompactionOutcomes = append([]sessionstate.CompactionOutcome{}, s.outcomes...)
 	}
 	return snapshot
 }

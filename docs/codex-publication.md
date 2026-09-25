@@ -34,7 +34,7 @@ pushed out, or left when the connection ends, whose reply is lost with it, goes 
 advisory if it has not yet. The gateway keeps the proofs for all its connections
 (`internal/harness/codex/gateway/proof.go`), so a turn named on one connection reports
 when it ends on the next, after the terminal reconnects. The rule reads no mark: marks
-serve only main's answer, the telemetry's author and holding deliveries.
+serve only main's answer and letter, the telemetry's author and holding deliveries.
 
 A gap — a run the gateway sees only as an active status and then idle, its turn never
 named — may have been work or a compaction, and nothing tells which. Main decided on

@@ -20,8 +20,9 @@ import (
 // listing what it waits on, is then done by the session, not by the test.
 const shimRequestDir = "RW_SHIM_REQUEST_DIR"
 
-// requestLifetime is how long a session serving requests stays up unasked on
-// the Codex column, whose client otherwise leaves after its state loop.
+// requestLifetime is how long a session serving requests stays up unasked, on
+// either column: past the ordinary ceiling, which a steered scenario run under a
+// slower control outlives, taking its sessions down in the middle of it.
 const requestLifetime = 85 * time.Second
 
 // serveRequests runs in the fixture beside everything else, for as long as the

@@ -14,10 +14,11 @@ import (
 // app-server's request, and back.
 //
 //   - calm works its task to the end and is idle: a compaction with a focus is
-//     a wrong call and nothing is sent; one without is done, with the tokens
-//     the context held before and after, and the telemetry counts it; the
-//     answer carries that count, and main gets no notice of it. An interrupt
-//     is refused as no turn running.
+//     a wrong call and nothing is sent; one without is answered started once
+//     its turn shows its compaction item, before the telemetry counts it; its
+//     end reaches main as a letter with the tokens the context held before and
+//     after and that count, and main gets no notice of it. An interrupt is
+//     refused as no turn running.
 //   - busy is held in its first turn: a compaction is refused as in a turn
 //     before anything is sent — the server would abort the turn and compact
 //     instead — and the turn goes on; an interrupt ends it, main reads stopped
@@ -57,7 +58,7 @@ const (
 )
 
 var codexSteeredObservations = []string{
-	obsFocusRefused, obsCompactIdle, obsCompactQuiet, obsCompactBusy, obsInterruptBusy, obsNoInterruptLine, obsInterruptIdle, obsNotMain,
+	obsFocusRefused, obsCompactStarted, obsCompactLetter, obsCompactQuiet, obsCompactBusy, obsInterruptBusy, obsNoInterruptLine, obsInterruptIdle, obsNotMain,
 }
 
 func playCodexSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
@@ -66,7 +67,7 @@ func playCodexSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding 
 	// Every session serves requests, which also keeps it up long enough for
 	// the whole case.
 	calmAsks := newRequests(iso, "calm")
-	calm := startHarnessSession(t, c, iso, col, "calm", "--general", shimInboxJSON+"=1", calmAsks.env())
+	calm := startHarnessSession(t, c, iso, col, "calm", "--general", shimInboxJSON+"=1", shimCompactTakes+"="+compactTakes, calmAsks.env())
 	defer stopSession(t, c, calm)
 	busy := startHarnessSession(t, c, iso, col, "busy", "--general", shimInboxJSON+"=1", shimHoldTurn+"=1", newRequests(iso, "busy").env())
 	defer stopSession(t, c, busy)
@@ -141,28 +142,13 @@ func playCodexSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding 
 	out = append(out, finding(obsInterruptIdle, code == 1 && view.Outcome == "refused" && view.Reason == "no turn running", "%s", said))
 
 	// A focus first: had it been compacted, the plain compaction after it
-	// would be the second.
+	// would be the second, and its letter would say so.
 	focusCode, _, focusSaid := steer("compact", calm.name, steeredFocus)
-	code, view, said = steer("compact", calm.name)
-	var calmRow steeredRow
-	waitFor(c, 5*time.Second, func() bool {
-		calmRow, failure = row(calm)
-		return calmRow.Compactions != nil && *calmRow.Compactions >= 1
-	})
-	counted := calmRow.Compactions != nil && *calmRow.Compactions == 1
+	out = append(out, sg.compactIdle(calm, workTokens, compactedTokens)...)
+	calmRow, failure := row(calm)
 	out = append(out, finding(obsFocusRefused,
-		focusCode == 2 && strings.Contains(focusSaid, "focus") && counted,
+		focusCode == 2 && strings.Contains(focusSaid, "focus") && calmRow.Compactions != nil && *calmRow.Compactions == 1,
 		"%s; the telemetry then counts %s compactions %s", focusSaid, show(calmRow.Compactions), failure))
-	out = append(out, finding(obsCompactIdle,
-		code == 0 && view.Outcome == "done" && view.TokensBefore != nil && *view.TokensBefore == workTokens && view.TokensAfter != nil && *view.TokensAfter == compactedTokens && counted,
-		"%s, tokens %s before and %s after; the telemetry counts %s compactions %s", said, show(view.TokensBefore), show(view.TokensAfter), show(calmRow.Compactions), failure))
-
-	// As in the Claude Code case: nothing in five seconds means none was sent.
-	const notice = "Rewake: context compacted (compaction 1)."
-	noticed := waitFor(c, 5*time.Second, func() bool { return strings.Contains(lead.mailboxRead(), notice) })
-	out = append(out, finding(obsCompactQuiet,
-		code == 0 && view.Compaction != nil && *view.Compaction == 1 && !noticed,
-		"the answer's compaction %s; main read %q: %v", show(view.Compaction), notice, noticed))
 
 	code, refused, _ := calmAsks.ask(c, "compact", busy.name)
 	out = append(out, finding(obsNotMain, code == 2, "exit %d, %s", code, firstLine(refused)))

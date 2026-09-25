@@ -218,6 +218,7 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 	}
 	if observation != "" {
 		collector := telemetry.NewCollector(observation)
+		collector.Controls(request.ControlDir)
 		if values := harness.FlagValues(args, autocompactFlag); len(values) > 0 {
 			// The harness takes the last one, as it does for any option.
 			collector.LaunchedWith(values[len(values)-1])

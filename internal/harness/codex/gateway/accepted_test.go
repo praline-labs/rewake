@@ -69,7 +69,7 @@ func TestAnAcceptedOperationWithoutItsEndLeavesTheConversationUncertain(t *testi
 				refusedAsUncertain(t, g, native, "before its end")
 			}
 			events(t, ui, native, completed(turn, "interrupted"))
-			_ = steerAnswer(func() control.Answer { return g.Compact(context.Background(), "0124", "lead") })
+			_ = steerAnswer(func() control.Answer { return g.compactToEnd(context.Background(), "0124", "lead") })
 			injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 		})
 	}
@@ -88,7 +88,7 @@ func TestAnAnsweredLaterTurnEndsTheUncertainty(t *testing.T) {
 	refusedAsUncertain(t, g, native, "after the idle resume")
 	exchange(t, ui, native, `{"id":30,"method":"turn/start","params":{"threadId":"A","input":[]}}`, `{"id":30,"result":{"turn":{"id":"U","items":[],"status":"inProgress"}}}`)
 	events(t, ui, native, started("U"), completed("U", "completed"))
-	_ = steerAnswer(func() control.Answer { return g.Compact(context.Background(), "0124", "lead") })
+	_ = steerAnswer(func() control.Answer { return g.compactToEnd(context.Background(), "0124", "lead") })
 	injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 }
 
@@ -104,7 +104,7 @@ func TestACompactionAcceptedButNotStartedOutlivesAnIdleResume(t *testing.T) {
 	bindUI(t, g, ui, native)
 	ranATurn(t, ui, native)
 	out := callbacks(g)
-	answers := steerAnswer(func() control.Answer { return g.Compact(context.Background(), "0123", "lead") })
+	answers := steerAnswer(func() control.Answer { return g.compactToEnd(context.Background(), "0123", "lead") })
 	id := injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 	write(t, native, []byte(`{"id":"`+id+`","result":{}}`))
 	resumeA(t, ui, native, "idle", "")
@@ -131,7 +131,7 @@ func TestAMarkHoldsDeliveriesOnlyUntilItsBound(t *testing.T) {
 	bindUI(t, g, ui, native)
 	ranATurn(t, ui, native)
 	out := callbacks(g)
-	answers := steerAnswer(func() control.Answer { return g.Compact(context.Background(), "0123", "lead") })
+	answers := steerAnswer(func() control.Answer { return g.compactToEnd(context.Background(), "0123", "lead") })
 	id := injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 	write(t, native, []byte(`{"id":"`+id+`","result":{}}`))
 	if err := reserveWithin(g, 50*time.Millisecond); !errors.Is(err, ErrCompacting) {
@@ -151,7 +151,7 @@ func TestAMarkHoldsDeliveriesOnlyUntilItsBound(t *testing.T) {
 	case <-time.After(700 * time.Millisecond):
 	}
 	// Its item named the open operation's turn, so that turn's end closed it.
-	_ = steerAnswer(func() control.Answer { return g.Compact(context.Background(), "0124", "lead") })
+	_ = steerAnswer(func() control.Answer { return g.compactToEnd(context.Background(), "0124", "lead") })
 	injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 }
 
@@ -166,7 +166,7 @@ func TestAnUnboundMarkTakesNoOtherTurn(t *testing.T) {
 	bindUI(t, g, ui, native)
 	ranATurn(t, ui, native)
 	out := callbacks(g)
-	answers := steerAnswer(func() control.Answer { return g.Compact(context.Background(), "0123", "lead") })
+	answers := steerAnswer(func() control.Answer { return g.compactToEnd(context.Background(), "0123", "lead") })
 	id := injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 	write(t, native, []byte(`{"id":"`+id+`","result":{}}`))
 	leaveAndReturn(t, ui, native, "idle", "")
@@ -275,7 +275,7 @@ func TestATurnCompletedWithoutAFinalStatusEndsNothing(t *testing.T) {
 	}
 	nothingSent(t, native)
 	events(t, ui, native, completed("T", "completed"))
-	_ = steerAnswer(func() control.Answer { return g.Compact(context.Background(), "0124", "lead") })
+	_ = steerAnswer(func() control.Answer { return g.compactToEnd(context.Background(), "0124", "lead") })
 	injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 }
 

@@ -5,8 +5,10 @@
 // measured against, by running `rewake observe`.
 // And it carries out what a main session asks through `rewake compact` and
 // `rewake interrupt`: it polls the run's control directory, compacts the
-// conversation or aborts the running turn, and writes back the outcome — only
-// numbers and the host's own error text (docs/remote-control.md).
+// conversation or aborts the running turn, and writes back the answer — only
+// numbers and the host's own error text; a compaction is answered once it has
+// started, and its end is told to rewake for main's letter
+// (docs/remote-control.md).
 // It watches the end of every compaction it did not ask for, reading nothing
 // of it, to keep a main's compaction clear of the others.
 // Nothing else: it reads no prompt and no answer, sends of the settings only
@@ -101,59 +103,118 @@ function refusal(error, reasons) {
   return { outcome: "failed", detail }
 }
 
-// act carries out one request. The host refuses a compaction mid-turn by
-// itself, atomically, so the module does not check; an abort needs the turn's
-// id, which only the module knows.
+// compactRefusal maps a refused or failed compaction, and says whether the
+// host had started it. A conversation too short is refused after PreCompact.
+// Every other refusal the host has comes before it starts, and the table holds
+// them all (read in the 2.1.280 binary), so what it does not hold failed after
+// the start: the summary's request, or applying it.
+function compactRefusal(error) {
+  const answer = refusal(error, [
+    ["a turn is running", "in a turn"],
+    ["a turn is in flight", "in a turn"],
+    ["an external turn is driving the conversation", "in a turn"],
+    ["switched off", "compaction switched off"],
+    ["lives on the remote session", "remote conversation"],
+    ["Not enough messages to compact", "nothing to compact"],
+  ])
+  return [answer, answer.reason === "nothing to compact" || answer.outcome === "failed"]
+}
+
+// startWait is how long a compaction may go without showing its start before
+// the command is answered requested; the command waits ten seconds for an
+// answer, and the second after another compaction and the report of who asked
+// come before this.
+const startWait = 3000
+
+// compacting is set while a compaction this module asked for runs: the
+// command has ended by then, and a second request would put its asker's mark
+// over the first's.
+let compacting = false
+
+// begun waits for the collector's mark that a compaction's PreCompact reached
+// rewake: the module never sees the hooks of its own compaction
+// (docs/research-claude-actions.md), and this is how it learns the host began.
+// A look that fails stops the watch without answering: the compaction's end or
+// the bound answers instead.
+async function begun($, id, over) {
+  while (!over()) {
+    try {
+      if (await $.fs.exists(control + "/" + id + ".started")) return "started"
+      await $.clock.sleep(100)
+    } catch {
+      break
+    }
+  }
+  return new Promise(() => {})
+}
+
+// act carries out one request and answers it; for a compaction that has
+// started, or whose start was not seen in time, later carries it on to its
+// end, which reaches main as a letter (docs/remote-control.md). The host
+// refuses a compaction mid-turn by itself, atomically, so the module does not
+// check; an abort needs the turn's id, which only the module knows.
 // A compaction waits out the second after another one first. Then rewake is
 // told who asked, and the module waits until that report is sent before it
 // asks the host, so it reaches rewake ahead of the compaction's hooks; a
-// refusal is told as well, before the answer, so rewake lays the word aside
-// ahead of any later hook. Not while a turn runs: the host refuses that
-// compaction, and the turn may compact on its own.
+// refusal is told as well, so rewake lays the word aside ahead of any later
+// hook. Not while a turn runs: the host refuses that compaction, and the turn
+// may compact on its own.
 async function act($, asked) {
   if (asked.action === "compact") {
+    if (compacting) return { answer: { outcome: "refused", reason: "in a turn", detail: "the compaction rewake asked for last is still running" } }
     for (let waited; waited !== quiet; ) {
       waited = quiet
       await waited
     }
     const announced = turn === undefined
     if (announced) await told($, { plugin_event: "compact.asked", request: asked.id, by: word(asked.from) })
-    try {
-      const focus = word(asked.focus)
-      const result = focus === "" ? await $.session.compact() : await $.session.compact({ instructions: focus })
-      const counts = result !== null && typeof result === "object" ? result : {}
-      return { outcome: "done", tokensBefore: number(counts.tokensBefore), tokensAfter: number(counts.tokensAfter) }
-    } catch (error) {
-      const answer = refusal(error, [
-        ["a turn is running", "in a turn"],
-        ["a turn is in flight", "in a turn"],
-        ["an external turn is driving the conversation", "in a turn"],
-        ["switched off", "compaction switched off"],
-        ["lives on the remote session", "remote conversation"],
-        ["Not enough messages to compact", "nothing to compact"],
-      ])
-      // A conversation too short is refused after PreCompact. Every other
-      // refusal the host has comes before it starts, and the table holds them
-      // all (read in the 2.1.280 binary), so what it does not hold failed
-      // after the start: the summary's request, or applying it.
-      const started = answer.reason === "nothing to compact" || answer.outcome === "failed"
+    compacting = true
+    const focus = word(asked.focus)
+    const compaction = (async () => (focus === "" ? $.session.compact() : $.session.compact({ instructions: focus })))().then(
+      (result) => ({ result }),
+      (error) => ({ error }),
+    )
+    let over = false
+    const bound = Promise.resolve($.clock.sleep(startWait)).then(() => "requested", () => "requested")
+    const first = await Promise.race([compaction, begun($, asked.id, () => over), bound])
+    over = true
+    if (typeof first === "object" && "error" in first) {
+      // Refused or failed before its start was seen: that is the answer.
+      compacting = false
+      const [answer, started] = compactRefusal(first.error)
       if (announced) await told($, { plugin_event: "compact.refused", request: asked.id, started })
-      return answer
+      return { answer }
     }
+    const later = async () => {
+      const ended = await compaction
+      let outcome
+      if ("error" in ended) {
+        const [answer, started] = compactRefusal(ended.error)
+        if (announced) await told($, { plugin_event: "compact.refused", request: asked.id, started })
+        outcome = answer
+      } else {
+        const counts = ended.result !== null && typeof ended.result === "object" ? ended.result : {}
+        outcome = { outcome: "done", tokensBefore: number(counts.tokensBefore), tokensAfter: number(counts.tokensAfter) }
+      }
+      compacting = false
+      await told($, { plugin_event: "compact.ended", request: asked.id, by: word(asked.from), ...outcome })
+    }
+    if (first === "requested") return { answer: { outcome: "requested", detail: "its start was not seen within " + startWait / 1000 + " s" }, later }
+    return { answer: { outcome: "started" }, later }
   }
   if (asked.action === "interrupt") {
-    if (turn === undefined) return { outcome: "refused", reason: "no turn running" }
+    if (turn === undefined) return { answer: { outcome: "refused", reason: "no turn running" } }
     const running = turn
     aborting = { turn: running, by: word(asked.from) }
     try {
       await $.turn.abort({ turnId: running })
-      return { outcome: "done" }
+      return { answer: { outcome: "done" } }
     } catch (error) {
       if (aborting !== undefined && aborting.turn === running) aborting = undefined
-      return refusal(error, [["no turn is running", "no turn running"], ["is not the running turn", "no turn running"]])
+      return { answer: refusal(error, [["no turn is running", "no turn running"], ["is not the running turn", "no turn running"]]) }
     }
   }
-  return { outcome: "failed", detail: "unknown action " + word(asked.action) }
+  return { answer: { outcome: "failed", detail: "unknown action " + word(asked.action) } }
 }
 
 // pending reads the request in place, if any. It asks whether the file exists
@@ -176,19 +237,32 @@ async function pending($) {
 async function poll($) {
   if (busy) return
   busy = true
+  let asked, acted
   try {
-    const asked = await pending($)
+    asked = await pending($)
     if (asked === undefined || handled.has(asked.id)) return
     handled.add(asked.id)
     const taken = control + "/" + asked.id + ".taken"
     if (await $.fs.exists(taken)) return
     await $.fs.write(taken, "")
     const still = await pending($)
-    const answer = still !== undefined && still.id === asked.id ? await act($, asked) : { outcome: "refused", reason: "withdrawn before it was taken" }
-    await $.fs.write(control + "/" + asked.id + ".result", JSON.stringify({ id: asked.id, ...answer }))
+    acted = still !== undefined && still.id === asked.id ? await act($, asked) : { answer: { outcome: "refused", reason: "withdrawn before it was taken" } }
+    await $.fs.write(control + "/" + asked.id + ".result", JSON.stringify({ id: asked.id, ...acted.answer }))
   } catch {
   } finally {
     busy = false
+    // After the answer, so the command has it before the letter, and even
+    // when the answer could not be written: a compaction under way ends
+    // compacting and is told whatever happened to its answer. The rest runs
+    // on its own, and the next request is taken meanwhile.
+    if (acted !== undefined && acted.later !== undefined) acted.later().catch(() => {})
+    // A final answer to a compaction is its outcome too: a command whose wait
+    // was cut short once the request was taken holds an open answer, and
+    // main's letter comes from this at once rather than at its bound. A
+    // command that read the answer has closed its record, so nothing is sent.
+    else if (acted !== undefined && asked.action === "compact") {
+      told($, { plugin_event: "compact.ended", request: asked.id, by: word(asked.from), ...acted.answer }).catch(() => {})
+    }
   }
 }
 

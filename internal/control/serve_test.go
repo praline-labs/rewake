@@ -17,7 +17,7 @@ func TestServeAnswersWhatAskAsks(t *testing.T) {
 		seen.Store(r)
 		before, after := int64(900), int64(90)
 		return Answer{ID: "someone else's", Outcome: Done, TokensBefore: &before, TokensAfter: &after}
-	})
+	}, nobody)
 	answer, err := Ask(context.Background(), dir, Request{Action: Compact, From: "lead"}, fast)
 	if err != nil {
 		t.Fatal(err)
@@ -42,11 +42,11 @@ func TestServeCarriesARequestOutOnce(t *testing.T) {
 	}
 	var acted atomic.Int32
 	act := func(context.Context, Request) Answer { acted.Add(1); return Answer{Outcome: Done} }
-	last := serveOnce(context.Background(), dir, "", act)
+	last := serveOnce(context.Background(), dir, "", act, nobody)
 	// A later look at the same request, and a fresh server that finds its
 	// mark, both leave it alone.
-	last = serveOnce(context.Background(), dir, last, act)
-	serveOnce(context.Background(), dir, "", act)
+	last = serveOnce(context.Background(), dir, last, act, nobody)
+	serveOnce(context.Background(), dir, "", act, nobody)
 	if acted.Load() != 1 || last != request.ID {
 		t.Fatalf("acted %d times, last %q", acted.Load(), last)
 	}
@@ -70,10 +70,19 @@ func TestServeLeavesARequestWithdrawnAsItIsMarkedUndone(t *testing.T) {
 			afterMark = func(dir, _ string) { move(dir) }
 			t.Cleanup(func() { afterMark = saved })
 			acted := false
-			serveOnce(context.Background(), dir, "", func(context.Context, Request) Answer { acted = true; return Answer{Outcome: Done} })
+			// The served side is given the answer once it is written, to
+			// record it as the outcome.
+			var told []Answer
+			withdrawn := func(r Request, a Answer) {
+				if written, ok := readAnswer(dir, request.ID); !ok || written != a || r.ID != request.ID {
+					t.Errorf("told %+v of %+v before its answer was written: %+v", a, r, written)
+				}
+				told = append(told, a)
+			}
+			serveOnce(context.Background(), dir, "", func(context.Context, Request) Answer { acted = true; return Answer{Outcome: Done} }, withdrawn)
 			answer, ok := readAnswer(dir, request.ID)
-			if acted || !ok || answer.Outcome != Refused || answer.Reason != Withdrawn {
-				t.Fatalf("acted %v, answer %+v", acted, answer)
+			if acted || !ok || answer.Outcome != Refused || answer.Reason != Withdrawn || len(told) != 1 || told[0] != answer {
+				t.Fatalf("acted %v, answer %+v, told %+v", acted, answer, told)
 			}
 		})
 	}
@@ -85,8 +94,11 @@ func TestServeTakesNoRequestWithAForeignID(t *testing.T) {
 		t.Fatal(err)
 	}
 	acted := false
-	serveOnce(context.Background(), dir, "", func(context.Context, Request) Answer { acted = true; return Answer{} })
+	serveOnce(context.Background(), dir, "", func(context.Context, Request) Answer { acted = true; return Answer{} }, nobody)
 	if names := left(t, dir); acted || len(names) != 1 {
 		t.Fatalf("acted %v, left %v", acted, names)
 	}
 }
+
+// nobody is told of no withdrawn request: the test gives none.
+func nobody(Request, Answer) {}

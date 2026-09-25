@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/iiiokojiadbi/rewake/internal/control"
 	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
 )
 
@@ -26,6 +27,9 @@ type telemetryRun struct {
 	// counted is the event of each turn's compaction, by thread and turn,
 	// until the turn ends and its asker, if any, is known.
 	counted map[string]uint64
+	// outcomes are the ends of main's compactions its command answered
+	// before, for main's wrapper to send as letters.
+	outcomes []sessionstate.CompactionOutcome
 }
 
 type threadObservation struct {
@@ -72,6 +76,7 @@ func (g *Gateway) SessionState() sessionstate.Snapshot {
 	count := g.telemetry.count
 	result.Compactions = &count
 	result.CompactionEvents = append([]sessionstate.CompactionEvent(nil), g.telemetry.events...)
+	result.CompactionOutcomes = append([]sessionstate.CompactionOutcome(nil), g.telemetry.outcomes...)
 	result.Coverage = "observed"
 	if g.telemetry.partial {
 		result.Coverage = "partial"
@@ -180,6 +185,19 @@ func (c *connection) syncObservation() {
 			delete(c.observations.threads, thread)
 		}
 	}
+}
+
+// CompactionEnded keeps how a compaction a main asked for ended, for that
+// main's wrapper to send as a letter: its end, once its command has answered
+// started or requested, and every final answer, which the letter needs when
+// the command's own wait was cut short.
+func (g *Gateway) CompactionEnded(request, by string, answer control.Answer) {
+	g.telemetry.mu.Lock()
+	defer g.telemetry.mu.Unlock()
+	g.telemetry.outcomes = sessionstate.KeepOutcome(g.telemetry.outcomes, sessionstate.CompactionOutcome{
+		Request: request, RequestedBy: by, Outcome: answer.Outcome, Reason: answer.Reason, Detail: answer.Detail,
+		TokensBefore: answer.TokensBefore, TokensAfter: answer.TokensAfter, EndedAt: time.Now(),
+	})
 }
 
 func (r *telemetryRun) compaction(entry *threadObservation, event compactionObservation) {

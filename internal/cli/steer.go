@@ -14,7 +14,6 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/harness"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/role"
-	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
@@ -28,28 +27,29 @@ type steerModel struct {
 	Detail       string `json:"detail,omitempty"`
 	TokensBefore *int64 `json:"tokensBefore,omitempty"`
 	TokensAfter  *int64 `json:"tokensAfter,omitempty"`
-	// Compaction is the session's count of compactions with this one, the
-	// number a notice of it would carry; nil when its telemetry did not show
-	// it in time.
-	Compaction *uint64 `json:"compaction,omitempty"`
+	// NoLetter says why no letter comes for a compaction answered started
+	// or requested: rewake could not note the request for main's wrapper.
+	NoLetter string `json:"noLetter,omitempty"`
 	// trace is what the session's model is shown of an interrupt, from its
 	// harness.
 	trace string
+	// letter says main's wrapper owes a letter of this compaction's outcome.
+	letter bool
 }
-
-// countLimit bounds the wait for a done compaction to show in the session's
-// telemetry: its hooks run in the background and the wrapper publishes four
-// times a second, so it is there well within this unless something is broken.
-var countLimit = 3 * time.Second
 
 // steerLimits bounds a request. The plugin polls four times a second, so a
 // request nobody took within the pickup limit has nobody to take it. A
-// compaction is a request to the model and may take a minute; it stays under
-// the two minutes an agent's shell call is usually given.
+// compaction is answered once it has started, not at its end — the served
+// side gives its start three seconds after the second it may wait out behind
+// another compaction — and its end comes to main as a letter: the command
+// never holds main's shell for a request to the model.
 var steerLimits = map[string]control.Limits{
-	control.Compact:   {Pickup: 5 * time.Second, Outcome: 90 * time.Second, Poll: 50 * time.Millisecond},
+	control.Compact:   {Pickup: 5 * time.Second, Outcome: 10 * time.Second, Poll: 50 * time.Millisecond},
 	control.Interrupt: {Pickup: 5 * time.Second, Outcome: 10 * time.Second, Poll: 50 * time.Millisecond},
 }
+
+// remember leaves a compaction for main's wrapper; replaceable in tests.
+var remember = control.Remember
 
 // findHarness looks a harness up; replaceable in tests, where no harness
 // without a focus is registered yet.
@@ -117,21 +117,49 @@ func steer(ctx *Context, call Call, action string) error {
 	asking, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	model := steerModel{Session: session.Name, Action: action, Focus: focus, trace: steerable.InterruptTrace()}
-	answer, err := control.Ask(asking, registry.ControlFor(dir, session.Name, session.Epoch()),
-		control.Request{Action: action, Focus: focus, From: self.Name}, steerLimits[action])
+	request := control.Request{ID: control.NewID(), Action: action, Focus: focus, From: self.Name}
+	// main's own wrapper owns a compaction's letter: the record is left
+	// before the request is written, so a command killed once the request is
+	// taken leaves it too, and the wrapper closes it with the outcome, the
+	// worker's departure or its bound (docs/remote-control-letter.md).
+	noted, noLetter := false, ""
+	if action == control.Compact {
+		pending := control.Pending{ID: request.ID, Worker: session, AskerEpoch: self.Epoch(), AskedAt: time.Now()}
+		release, err := remember(dir, self.Name, pending)
+		if err != nil {
+			noLetter = err.Error()
+		} else {
+			noted = true
+			defer release()
+		}
+	}
+	answer, err := control.Ask(asking, registry.ControlFor(dir, session.Name, session.Epoch()), request, steerLimits[action])
+	// Only an answer that leaves the outcome open keeps the record and
+	// promises the letter: started, requested, or a failure marked open — a
+	// request taken and then cut short or unanswered, or one the served side
+	// sent on and lost. A refusal, a final failure and an earlier rewake's
+	// done are answers main already has.
 	switch {
 	case errors.Is(err, control.ErrNoControl):
 		answer = control.Answer{Outcome: control.Refused, Reason: control.NoControl}
 	case err != nil:
+		if noted {
+			_ = control.Forget(dir, self.Name, request.ID)
+		}
 		return failf("could not ask %s: %v", session.Name, err)
 	}
 	model.Outcome, model.Reason, model.Detail = answer.Outcome, answer.Reason, answer.Detail
 	model.TokensBefore, model.TokensAfter = answer.TokensBefore, answer.TokensAfter
-	if action == control.Compact && model.Outcome == control.Done {
-		model.Compaction = compactionCount(asking, dir, session, answer.ID)
+	model.letter = action == control.Compact && (answer.Outcome == control.Started || answer.Outcome == control.Requested || answer.Outcome == control.Failed && answer.Open)
+	switch {
+	case model.letter:
+		model.NoLetter = noLetter
+	case noted:
+		_ = control.Forget(dir, self.Name, request.ID)
 	}
 	line := steerLine(model)
-	if model.Outcome == control.Done {
+	switch model.Outcome {
+	case control.Done, control.Started, control.Requested:
 		return printValue(ctx, model, func() []string { return []string{line} })
 	}
 	if ctx.JSON {
@@ -139,32 +167,6 @@ func steer(ctx *Context, call Call, action string) error {
 		return &FailedError{Message: ""}
 	}
 	return &FailedError{Message: line}
-}
-
-// compactionCount waits, within countLimit, for the session's telemetry to
-// count the compaction a request asked for, and answers its number: the one
-// the collector gave the request's id. The collector gives the id to the next
-// PostCompact it gets, which is this compaction's unless another compaction's
-// PostCompact came more than a second late (docs/remote-control.md).
-func compactionCount(ctx context.Context, dir string, session registry.Session, request string) *uint64 {
-	deadline := time.NewTimer(countLimit)
-	defer deadline.Stop()
-	tick := time.NewTicker(50 * time.Millisecond)
-	defer tick.Stop()
-	for {
-		for _, event := range sessionstate.Load(dir, session.Name, session.Epoch()).CompactionEvents {
-			if event.Request == request {
-				return &event.Sequence
-			}
-		}
-		select {
-		case <-tick.C:
-		case <-deadline.C:
-			return nil
-		case <-ctx.Done():
-			return nil
-		}
-	}
 }
 
 // steerLine is the line a caller reads: the outcome, and when it is not done,
@@ -175,21 +177,29 @@ func steerLine(model steerModel) string {
 	if model.Detail != "" {
 		detail = " (" + model.Detail + ")"
 	}
+	if model.letter && model.NoLetter != "" {
+		return fmt.Sprintf("Rewake: the compaction of %s is %s%s; rewake could not note it for its letter (%s), so none comes: rewake list shows whether it compacted.", model.Session, model.Outcome, detail, model.NoLetter)
+	}
 	switch model.Outcome {
 	case control.Done:
 		if model.Action == control.Interrupt {
 			return fmt.Sprintf("Rewake: interrupted the turn of %s; whoever waits on it reads stopped, and %s.", model.Session, model.trace)
 		}
+		// A served side of an earlier rewake answers a compaction at its end.
 		line := "Rewake: compacted " + model.Session
 		if model.TokensBefore != nil && model.TokensAfter != nil {
 			line += fmt.Sprintf(": %d tokens before, %d after", *model.TokensBefore, *model.TokensAfter)
 		}
-		if model.Compaction == nil {
-			return line + "; its telemetry has not counted it yet, and rewake list shows the count once it does."
-		}
-		return line + fmt.Sprintf(" (compaction %d).", *model.Compaction)
+		return line + "."
+	case control.Started:
+		return fmt.Sprintf("Rewake: the compaction of %s started; its result comes to you as a letter, with the token counts and its number.", model.Session)
+	case control.Requested:
+		return fmt.Sprintf("Rewake: the compaction of %s is requested%s; its result comes to you as a letter, whether it compacts or not.", model.Session, detail)
 	case control.Refused:
 		return fmt.Sprintf("Rewake: %s refused %s: %s%s. %s", model.Session, what, model.Reason, detail, steerNext[model.Reason])
+	}
+	if model.letter {
+		return fmt.Sprintf("Rewake: %s failed on %s%s; its result comes to you as a letter, whether it compacts or not.", what, model.Session, detail)
 	}
 	return fmt.Sprintf("Rewake: %s failed on %s%s.", what, model.Session, detail)
 }

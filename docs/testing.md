@@ -14,7 +14,7 @@ and controls, and the roadmap records named below for how each piece was built.
 | Tier | Runs | Proves | Does not prove | Costs |
 | --- | --- | --- | --- | --- |
 | The five checks | formatting, vet, two linters, `go test -race -shuffle=on ./...` | unit invariants: parsing, publishing races, liveness, inbox order and expiry, the owned server's framing on a fake socket, the map of `docs/`; the suite's own classifier and summarizer | anything end to end: every workflow scenario skips itself | about a minute; no network, no harness, no container |
-| Workflow suite (**F**) | a built rewake end to end against a fixture of each harness, in two columns, with negative controls: some mutate the product, the others change the fixture's world | that the shared service code delivers, groups, steers and reports as each scenario claims, and that each claim can fail | that the real harness parses, renders or behaves as its fixture does | about two minutes; no network; under `REWAKE_WORKFLOW=1` the schema case also runs a real Codex (next row) |
+| Workflow suite (**F**) | a built rewake end to end against a fixture of each harness, in two columns, with negative controls: some mutate the product, the others change the fixture's world | that the shared service code delivers, groups, steers and reports as each scenario claims, and that each claim can fail | that the real harness parses, renders or behaves as its fixture does | about fourteen minutes — 13m36s on September 25, 2026, a hundred cases one after another, six of the minutes `claude-steered` and its controls — so a full run needs a `-timeout` past `go test`'s default ten minutes; no network; under `REWAKE_WORKFLOW=1` the schema case also runs a real Codex (next row) |
 | Schema of a Codex version | the installed Codex, or a named version fetched into a cache and run in a container, generating its protocol schema; every message the fixture sends is checked against it | that the fixture speaks the shape that version accepts: no missing required field, no field it does not have, no delivery it refuses and the fixture accepts | behaviour: order of events, readiness, reactions to a refusal — a schema has none of that | seconds from the cache; a first download is 150 MB and about half a minute |
 
 Two tiers are planned and not built. **P**, a real harness of a named version against a
@@ -57,8 +57,8 @@ a run. Run it after any change to delivery, reading, reporting or a fixture.
 **`REWAKE_CODEX_VERSION`** takes an exact version, `latest` or `installed`, and makes
 the schema case use that Codex, fetched once into the harness cache before any case
 starts and run in a container. The fetch gets half of `-timeout`, at most ten minutes,
-which is why the documented command raises `-timeout` to thirty; below about five
-minutes that half is not enough for a slow first download and the suite together.
+which is why the documented command raises `-timeout` to thirty: the suite alone takes
+about fourteen minutes, and what is left after a slow first download has to hold it.
 Docker is needed only when a version is named; without it the run is red with the
 reason. Run it before updating Codex, as described below.
 

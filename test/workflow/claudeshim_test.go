@@ -333,9 +333,13 @@ func checkedEnvelope(line []byte) (claudeNotice, error) {
 }
 
 // waitToBeStopped keeps the session alive the way the Codex client half does:
-// until it is asked to stop, or until its own ceiling.
+// until it is asked to stop, or until its own ceiling — the longer one when it
+// serves a scenario's requests, whose scenarios run longest.
 func (s *claudeSession) waitToBeStopped() int {
 	deadline := time.Now().Add(25 * time.Second)
+	if os.Getenv(shimRequestDir) != "" {
+		deadline = time.Now().Add(requestLifetime)
+	}
 	for time.Now().Before(deadline) {
 		if _, err := os.Stat(os.Getenv(shimExitFile)); err == nil {
 			return 0

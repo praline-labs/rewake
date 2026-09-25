@@ -167,8 +167,8 @@ func buildGroups() {
 				Notes: []string{
 					"Refused at once while the session is in a turn: a compaction never waits for the turn to end, and nothing compacts on its own. Interrupt the turn first, or ask again once rewake list shows it idle.",
 					"A focus is refused for a Codex session before anything is sent: Codex has no way to pass one for a single compaction.",
-					"Waits up to 5 seconds for the session to take the request — its rewake plugin on Claude Code, its wrapper on Codex — then up to 90 for the compaction. Prints the token counts before and after when the harness gives them, and the session's count of compactions with this one; never the summary. You get no \"context compacted\" notice for a compaction you asked for: this answer is it.",
-					"Exit 0 done; 1 refused (in a turn, compaction switched off, nothing to compact, remote conversation, not answering, cut short, no control directory, withdrawn before it was taken, another request in flight) or failed; 2 a wrong call — not a main, no such session, a harness that does not take it or cannot take a focus.",
+					"Waits up to 5 seconds for the session to take the request — its rewake plugin on Claude Code, its wrapper on Codex — then up to 10 for its answer, and returns once the compaction has started, never waiting for its end. \"requested\" means its start was not seen in time: it may still start. Either way its result comes to you as a notify from the session: the token counts before and after when the harness gives them, and the session's count of compactions with this one, or why it was refused or failed; never the summary. You get no \"context compacted\" notice for a compaction you asked for: that letter is it.",
+					"Exit 0 started or requested; 1 refused (in a turn, compaction switched off, nothing to compact, remote conversation, not answering, cut short, no control directory, withdrawn before it was taken, another request in flight) or failed; 2 a wrong call — not a main, no such session, a harness that does not take it or cannot take a focus.",
 				},
 				Handler: handleCompact,
 			},

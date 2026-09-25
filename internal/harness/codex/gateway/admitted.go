@@ -25,11 +25,13 @@ type (
 	// asker, and ended, closed when its turn completes with status, the
 	// failure's message and the context after it, when a usage update said,
 	// or when the hold ends first, or sight is lost; answered says it was.
+	// tied is closed when the compaction's item first ties the mark to a
+	// turn: main's command is answered started by it.
 	manualWork struct {
 		before              map[string]bool
 		turn                string
 		request, by         string
-		ended               chan struct{}
+		ended, tied         chan struct{}
 		answered            bool
 		status, failure     string
 		tokensBefore, after *int64
@@ -41,9 +43,9 @@ type (
 		// sent is the request's place in the order of writes, the key of
 		// its open operation (threadTurns.open).
 		sent uint64
-		// hold is when the mark stops holding deliveries and main's wait;
+		// hold is when the mark stops holding deliveries and the wait for its end;
 		// released says it has. The mark itself stays until its turn ends,
-		// so that main's answer and the telemetry's author go by it.
+		// so that main's letter and the telemetry's author go by it.
 		hold     time.Time
 		released bool
 	}

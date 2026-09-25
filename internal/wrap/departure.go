@@ -64,7 +64,7 @@ func departureMessage(self registry.Session, worker *knownWorker, reason string)
 	snapshot := worker.last
 	snapshot.Epoch = peer.Epoch()
 	snapshot.Stale()
-	snapshot.CompactionEvents = nil
+	snapshot.CompactionEvents, snapshot.CompactionOutcomes = nil, nil
 	identity := inbox.Availability{Name: peer.Name, Role: role.Of(peer.Role).ID, Harness: peer.Harness, Room: peer.Room, CWD: peer.CWD}
 	body := fmt.Sprintf("Session is no longer available in this room (%s).\nname: %s\nrole: %s\nharness: %s\nroom: %s\ncwd: %q", reason, identity.Name, identity.Role, identity.Harness, identity.Room, identity.CWD)
 	// The observer retains this message across failed publication attempts, including

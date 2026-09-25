@@ -53,7 +53,7 @@ refusals and help come from there.
 |---|---|---|---|
 | `task` | plain `send` | a report at the end of its turn | once delivered |
 | `question` | `--question` | the same | with the answer, up to `--wait` (600 s by default) |
-| `notify` | `--notify` | nothing | once delivered |
+| `notify` | `--notify`; also main's wrapper for availability, departure and compaction notices, and the letter that ends a compaction main asked for with `rewake compact` ([remote-control.md](remote-control-letter.md)) | nothing | once delivered |
 | `finished` | successful turn end | nothing | — |
 | `error` | failed turn hook only | nothing | failure, exit 1 for a waiting question |
 | `stopped` | a turn stopped at the keyboard, or by a main's `rewake interrupt`; on Codex also a run that passed unseen, or a turn that ended with no proof of work | nothing | exit 1 for a waiting question |
@@ -174,7 +174,7 @@ compacted, by main's `rewake compact` or the terminal's `/compact`, takes no wor
 the gateway's `Reserve` then returns `gateway.ErrCompacting`, which `Reserve` in
 `internal/harness/codex/server_delivery.go` passes on as `inbox.ErrNotYet`. `refuse`
 lets that one through unwrapped, so the message stays `pending` and goes on a later
-pass, once the compaction has ended, main's wait for it has, or its mark's 80-second
+pass, once the compaction has ended, the wrapper's wait for its end has, or its mark's 80-second
 bound has passed ([remote-control-codex.md](remote-control-codex.md)). Nothing else holds a delivery:
 an operation whose end the gateway has not read makes main's compaction refuse, not
 a delivery wait.

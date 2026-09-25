@@ -62,6 +62,16 @@ func ranATurn(t *testing.T, ui, native *socketClient) {
 	events(t, ui, native, started("W"), userItem("W"), completed("W", "completed"))
 }
 
+// compactToEnd asks for a compaction and waits for its end, as main's letter
+// does: most cases here are about the end, not the start.
+func (g *Gateway) compactToEnd(ctx context.Context, request, by string) control.Answer {
+	answer, later := g.Compact(ctx, request, by, 5*time.Second)
+	if later == nil {
+		return answer
+	}
+	return later()
+}
+
 func steerAnswer(ask func() control.Answer) <-chan control.Answer {
 	out := make(chan control.Answer, 1)
 	go func() { out <- ask() }()
@@ -86,7 +96,7 @@ func TestACompactionOnRequestIsManualAndCountedAsTheAskers(t *testing.T) {
 	modelBinding(t, g, ui, native)
 	events(t, ui, native, started("W"), userItem("W"), usageEvent("A", "W", "121200", "272000"), completed("W", "completed"))
 	out := callbacks(g)
-	answers := steerAnswer(func() control.Answer { return g.Compact(context.Background(), "0123", "lead") })
+	answers := steerAnswer(func() control.Answer { return g.compactToEnd(context.Background(), "0123", "lead") })
 	id := injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 	write(t, native, []byte(`{"id":"`+id+`","result":{}}`))
 	events(t, ui, native,
@@ -140,7 +150,7 @@ func TestACompactionIsRefusedWhileAnythingRuns(t *testing.T) {
 			defer func() { _ = native.conn.Close() }()
 			bindUI(t, g, ui, native)
 			running(t, ui, native)
-			answer := g.Compact(context.Background(), "0123", "lead")
+			answer := g.compactToEnd(context.Background(), "0123", "lead")
 			if answer.Outcome != control.Refused || answer.Reason != control.InTurn || answer.Detail == "" {
 				t.Fatalf("answer %+v", answer)
 			}
@@ -156,7 +166,7 @@ func TestACompactionTheServerRefusesLeavesNoMark(t *testing.T) {
 	bindUI(t, g, ui, native)
 	ranATurn(t, ui, native)
 	out := callbacks(g)
-	answers := steerAnswer(func() control.Answer { return g.Compact(context.Background(), "0123", "lead") })
+	answers := steerAnswer(func() control.Answer { return g.compactToEnd(context.Background(), "0123", "lead") })
 	id := injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 	write(t, native, []byte(`{"id":"`+id+`","error":{"code":-32600,"message":"compaction is disabled"}}`))
 	if answer := within(t, answers); answer.Outcome != control.Failed || answer.Detail != "compaction is disabled" {

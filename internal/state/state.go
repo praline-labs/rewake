@@ -68,6 +68,7 @@ const (
 	inboxDir     = "inbox"
 	socketsDir   = "sock"
 	controlDir   = "control"
+	lettersDir   = "letters"
 	doneDir      = "done"
 	unreadDir    = "unread"
 	awaitingDir  = "awaiting"
@@ -127,6 +128,11 @@ func ObservationPath(dir, name, run string) string {
 func ControlPath(dir, name, run string) string {
 	return filepath.Join(dir, controlDir, name+"."+run)
 }
+
+// LettersPath holds the compactions a main asked for with rewake compact whose
+// letter has not gone yet (docs/remote-control.md). It is kept by name, not by
+// run: the next run of that main closes what an earlier one left open.
+func LettersPath(dir, name string) string { return filepath.Join(dir, lettersDir, name) }
 
 // SocketPath is where the wrapper asks a harness to put its inbox socket. It is
 // kept short: a unix socket path may not exceed 103 bytes.

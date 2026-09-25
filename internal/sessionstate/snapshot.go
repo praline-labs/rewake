@@ -1,7 +1,11 @@
 // Package sessionstate carries optional, epoch-scoped harness observations.
 package sessionstate
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+	"unicode/utf8"
+)
 
 // Snapshot describes the last reported primary state, not cumulative usage or
 // the model executing an already captured inference step. Nil means unknown.
@@ -32,6 +36,10 @@ type Snapshot struct {
 	// Interruptions says whether a turn a person interrupts is heard:
 	// observed, unobserved, or empty while nobody can tell yet.
 	Interruptions string `json:"interruptions,omitempty"`
+	// CompactionOutcomes are the ends of compactions a main asked for whose
+	// command answered before the end: that main's wrapper sends each as a
+	// letter.
+	CompactionOutcomes []CompactionOutcome `json:"compactionOutcomes,omitempty"`
 }
 
 // Values of Snapshot.Interruptions.
@@ -60,4 +68,67 @@ type CompactionEvent struct {
 	ObservedAt  time.Time `json:"observedAt"`
 	RequestedBy string    `json:"requestedBy,omitempty"`
 	Request     string    `json:"request,omitempty"`
+}
+
+// CompactionOutcome is how a compaction a main asked for with `rewake compact`
+// ended, kept for that main's wrapper to send as a letter: the command
+// answered started or requested and has ended by then. Outcome, Reason and
+// Detail are those of internal/control; the tokens are the counts around the
+// compaction, never its summary.
+type CompactionOutcome struct {
+	Request      string    `json:"request"`
+	RequestedBy  string    `json:"requestedBy"`
+	Outcome      string    `json:"outcome"`
+	Reason       string    `json:"reason,omitempty"`
+	Detail       string    `json:"detail,omitempty"`
+	TokensBefore *int64    `json:"tokensBefore,omitempty"`
+	TokensAfter  *int64    `json:"tokensAfter,omitempty"`
+	EndedAt      time.Time `json:"endedAt"`
+}
+
+// MaxCompactionOutcomes bounds the outcomes a snapshot keeps. main's wrapper
+// reads them once a second, and one main compacts one session at a time.
+const MaxCompactionOutcomes = 16
+
+// The outcomes' share of a snapshot. A snapshot over maxSnapshotBytes is not
+// saved at all, which would stop the whole telemetry, so the outcomes have a
+// byte budget beside everything else at its longest — 64 compaction events
+// with the longest names take about 12 KiB — and each detail, the host's or
+// the server's error text, is cut, as is a reason, which is a fixed word from
+// a served side that behaves.
+const (
+	maxOutcomeDetail = 300
+	maxOutcomeReason = 64
+	outcomesBudget   = 3 << 10
+)
+
+// KeepOutcome appends an outcome within the bounds, dropping the oldest; the
+// newest is always kept.
+func KeepOutcome(outcomes []CompactionOutcome, outcome CompactionOutcome) []CompactionOutcome {
+	outcome.Detail = cut(outcome.Detail, maxOutcomeDetail)
+	outcome.Reason = cut(outcome.Reason, maxOutcomeReason)
+	outcomes = append(append([]CompactionOutcome{}, outcomes...), outcome)
+	if len(outcomes) > MaxCompactionOutcomes {
+		outcomes = outcomes[len(outcomes)-MaxCompactionOutcomes:]
+	}
+	for len(outcomes) > 1 {
+		encoded, err := json.Marshal(outcomes)
+		if err == nil && len(encoded) <= outcomesBudget {
+			break
+		}
+		outcomes = outcomes[1:]
+	}
+	return outcomes
+}
+
+// cut shortens a text to at most limit bytes, on a rune boundary.
+func cut(text string, limit int) string {
+	if len(text) <= limit {
+		return text
+	}
+	end := limit
+	for end > 0 && !utf8.RuneStart(text[end]) {
+		end--
+	}
+	return text[:end] + "…"
 }

@@ -79,80 +79,158 @@ func (c *connection) busyWith(thread string) string {
 	return c.state.ops.uncertain(thread)
 }
 
-// Compact compacts the selected conversation for a main's request and waits
-// for the compaction's turn to end, within ctx. It is refused while anything
-// runs. The compaction is marked manual as the terminal's /compact is, so
-// main's answer goes by its turn's end, and the mark carries the request and
-// the asker, so the telemetry counts it as theirs. Its turn is never published
-// either way: it shows no proof of work (proof.go).
-func (g *Gateway) Compact(ctx context.Context, request, by string) control.Answer {
+// Compact compacts the selected conversation for a main's request. It is
+// refused while anything runs. The compaction is marked manual as the
+// terminal's /compact is, so main's letter goes by its turn's end, and the mark
+// carries the request and the asker, so the telemetry counts it as theirs. Its
+// turn is never published either way: it shows no proof of work (proof.go).
+//
+// It answers as soon as the request's fate is known, and never waits for the
+// end: refused or failed before anything started; started once the
+// compaction's own item has tied the mark to its turn, which its end needs
+// too; requested when no tie came within start, or when the wait for the end
+// ended before one — the hold's bound, or sight lost. The server's reply to the request
+// is not the start: it comes once the compaction is queued. When the answer is
+// started or requested, later waits for the end within ctx and answers it, for
+// main's letter (docs/remote-control-codex.md); otherwise later is nil.
+func (g *Gateway) Compact(ctx context.Context, request, by string, start time.Duration) (control.Answer, func() control.Answer) {
+	answer, later := g.compact(ctx, request, by, start)
+	// A final answer is the compaction's outcome too: a command whose wait was
+	// cut short once the request was taken holds an open answer, and main's
+	// letter comes from this at once rather than at its bound. A command that
+	// read the answer has closed its record, so nothing is sent.
+	if later == nil && !answer.Open {
+		g.CompactionEnded(request, by, answer)
+	}
+	return answer, later
+}
+
+func (g *Gateway) compact(ctx context.Context, request, by string, start time.Duration) (control.Answer, func() control.Answer) {
 	c := g.currentConnection()
 	if c == nil {
-		return control.Answer{Outcome: control.Failed, Detail: "no conversation is selected"}
+		return control.Answer{Outcome: control.Failed, Detail: "no conversation is selected"}, nil
 	}
-	if err := g.acquire(ctx); err != nil {
-		return control.Answer{Outcome: control.Failed, Detail: err.Error()}
+	admit, cancel := context.WithTimeout(ctx, start)
+	err := g.acquire(admit)
+	cancel()
+	if err != nil {
+		return control.Answer{Outcome: control.Failed, Detail: "the gateway admitted nothing within " + start.String() + ": " + err.Error()}, nil
 	}
 	c.mu.Lock()
 	binding := c.state.Binding
 	if !binding.Ready || !g.owns(c) {
 		c.mu.Unlock()
 		<-g.gate
-		return control.Answer{Outcome: control.Failed, Detail: "no conversation is selected: " + binding.Reason}
+		return control.Answer{Outcome: control.Failed, Detail: "no conversation is selected: " + binding.Reason}, nil
 	}
 	if why := c.busyWith(binding.Thread); why != "" {
 		c.mu.Unlock()
 		<-g.gate
-		return control.Answer{Outcome: control.Refused, Reason: control.InTurn, Detail: why}
+		return control.Answer{Outcome: control.Refused, Reason: control.InTurn, Detail: why}, nil
 	}
 	// Codex compacts a conversation that has run no turn, and spends a model
 	// call on it; Claude Code refuses it as too short, and so does rewake.
 	if c.state.fresh {
 		c.mu.Unlock()
 		<-g.gate
-		return control.Answer{Outcome: control.Refused, Reason: control.NothingToCompact, Detail: "the conversation has run no turn"}
+		return control.Answer{Outcome: control.Refused, Reason: control.NothingToCompact, Detail: "the conversation has run no turn"}, nil
 	}
 	sent := c.state.ops.next()
 	if !c.admitted.manualStart(binding.Thread, c.state.events, sent, binding.Generation, time.Now().Add(g.markLimit())) {
 		c.mu.Unlock()
 		<-g.gate
-		return control.Answer{Outcome: control.Failed, Detail: "manual-scope capacity reached"}
+		return control.Answer{Outcome: control.Failed, Detail: "manual-scope capacity reached"}, nil
 	}
 	marker := c.admitted.manual[binding.Thread]
-	ended := make(chan struct{})
-	marker.request, marker.by, marker.ended = request, by, ended
+	ended, tied := make(chan struct{}), make(chan struct{})
+	marker.request, marker.by, marker.ended, marker.tied = request, by, ended, tied
 	c.state.ops.opened(binding.Thread, sent, "")
 	if entry := c.observations.threads[binding.Thread]; entry != nil {
 		marker.tokensBefore = entry.snapshot.ContextUsed
 	}
 	c.mu.Unlock()
-	_, err := c.callReserved(ctx, binding, "thread/compact/start", map[string]any{})
-	<-g.gate
-	if err != nil {
-		detail, refused := strings.CutPrefix(err.Error(), "native request refused: ")
-		// Only a request never written, or one the server refused, is known
-		// not to compact. Any other failure may still start the compaction:
-		// the mark stays, holding deliveries until its bound, and its turn
-		// is taken for main's, not for work.
-		var never unsent
-		if !refused && !errors.As(err, &never) {
+	replied := make(chan error, 1)
+	go func() {
+		_, err := c.callReserved(ctx, binding, "thread/compact/start", map[string]any{})
+		<-g.gate
+		replied <- err
+	}()
+	bound := time.NewTimer(start)
+	defer bound.Stop()
+	heard, reply := false, replied
+	answer := control.Answer{Outcome: control.Started}
+wait:
+	for {
+		select {
+		case err := <-reply:
+			if err != nil {
+				return c.compactUnsent(binding.Thread, sent, marker, err), nil
+			}
+			heard, reply = true, nil
+		case <-tied:
+			break wait
+		case <-ended:
+			// An end before the tie is no start: the hold's bound or the
+			// gateway losing sight of it ended the wait (lostSight).
 			c.mu.Lock()
-			marker.released, marker.ended = true, nil
+			if marker.turn == "" {
+				answer = control.Answer{Outcome: control.Requested, Detail: "its start was not seen: " + marker.failure}
+			}
 			c.mu.Unlock()
-			return control.Answer{Outcome: control.Failed, Detail: "no answer to the compaction request (" + detail + "); it may still start, and rewake list counts it if it does"}
+			break wait
+		case <-bound.C:
+			answer = control.Answer{Outcome: control.Requested, Detail: "the server has not answered the request within " + start.String()}
+			if heard {
+				answer.Detail = "the server took the request, and its turn was not seen to start within " + start.String()
+			}
+			break wait
+		case <-ctx.Done():
+			// The wait for the end is over before the start was seen: later
+			// answers how it ended.
+			answer = control.Answer{Outcome: control.Requested, Detail: "the wait for it ended before its start was seen"}
+			break wait
+		case <-c.ctx.Done():
+			// The request went out: the server may still compact.
+			return control.Answer{Outcome: control.Failed, Detail: "the connection ended during the compaction", Open: true}, nil
 		}
-		c.mu.Lock()
-		c.compactionRefused(binding.Thread, sent)
-		c.mu.Unlock()
-		return control.Answer{Outcome: control.Failed, Detail: detail}
 	}
-	select {
-	case <-ended:
-	case <-ctx.Done():
-	case <-c.ctx.Done():
-		return control.Answer{Outcome: control.Failed, Detail: "the connection ended during the compaction"}
+	later := func() control.Answer {
+		if !heard {
+			select {
+			case err := <-replied:
+				if err != nil {
+					return c.compactUnsent(binding.Thread, sent, marker, err)
+				}
+			case <-c.ctx.Done():
+				return control.Answer{Outcome: control.Failed, Detail: "the connection ended during the compaction"}
+			}
+		}
+		select {
+		case <-ended:
+		case <-ctx.Done():
+		case <-c.ctx.Done():
+			return control.Answer{Outcome: control.Failed, Detail: "the connection ended during the compaction"}
+		}
+		return c.waitEnded(marker)
 	}
-	return c.waitEnded(marker)
+	return answer, later
+}
+
+// compactUnsent answers a compaction whose request failed. Only a request
+// never written, or one the server refused, is known not to compact. Any
+// other failure may still start the compaction: the mark stays, holding
+// deliveries until its bound, and its turn is taken for main's, not for work.
+func (c *connection) compactUnsent(thread string, sent uint64, marker *manualWork, err error) control.Answer {
+	detail, refused := strings.CutPrefix(err.Error(), "native request refused: ")
+	var never unsent
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if !refused && !errors.As(err, &never) {
+		marker.released, marker.ended = true, nil
+		return control.Answer{Outcome: control.Failed, Detail: "no answer to the compaction request (" + detail + "); it may still start, and rewake list counts it if it does", Open: true}
+	}
+	c.compactionRefused(thread, sent)
+	return control.Answer{Outcome: control.Failed, Detail: detail}
 }
 
 // waitEnded answers main when its wait ends: by the compaction's end when it
@@ -245,7 +323,7 @@ func (c *connection) steeredText(v *Completion) {
 // refuseTerminalCompact answers the terminal's thread/compact/start itself
 // while a main's compaction of that thread runs, instead of passing it on:
 // the server would abort main's compaction for it, and the marker would pass
-// to the terminal's, leaving main's answer to fail. A second compaction right
+// to the terminal's, leaving main's letter to fail. A second compaction right
 // after the first compacts nothing more.
 // Called under c.mu; returns the reply to queue, or nil to pass it on.
 func (c *connection) refuseTerminalCompact(m meta, raw []byte) []byte {

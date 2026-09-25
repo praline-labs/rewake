@@ -25,7 +25,7 @@ func TestACompactionIsRefusedWhileAReviewIsAcknowledged(t *testing.T) {
 	// A detached review runs on a conversation of its own.
 	events(t, ui, native, started("R"), completed("R", "completed"))
 	exchange(t, ui, native, `{"id":8,"method":"review/start","params":{"threadId":"A","target":{"type":"uncommittedChanges"},"delivery":"detached"}}`, `{"id":8,"result":{"reviewThreadId":"V","turn":{"id":"S","items":[],"status":"inProgress"}}}`)
-	_ = steerAnswer(func() control.Answer { return g.Compact(context.Background(), "0124", "lead") })
+	_ = steerAnswer(func() control.Answer { return g.compactToEnd(context.Background(), "0124", "lead") })
 	injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 }
 
@@ -75,7 +75,7 @@ func TestADeliveryQueuedBehindACompactionStaysPending(t *testing.T) {
 	}
 	compactCtx, cancelCompact := context.WithTimeout(context.Background(), time.Second)
 	defer cancelCompact()
-	_ = steerAnswer(func() control.Answer { return g.Compact(compactCtx, "0123", "lead") })
+	_ = steerAnswer(func() control.Answer { return g.compactToEnd(compactCtx, "0123", "lead") })
 	time.Sleep(30 * time.Millisecond)
 	reserveCtx, cancelReserve := context.WithTimeout(context.Background(), 150*time.Millisecond)
 	defer cancelReserve()
@@ -131,7 +131,7 @@ func TestACompactionLeftBehindIsNotEndedByAnIdleResume(t *testing.T) {
 			if variant == "the terminal's" {
 				exchange(t, ui, native, `{"id":8,"method":"thread/compact/start","params":{"threadId":"A"}}`, `{"id":8,"result":{}}`)
 			} else {
-				answers = steerAnswer(func() control.Answer { return g.Compact(context.Background(), "0123", "lead") })
+				answers = steerAnswer(func() control.Answer { return g.compactToEnd(context.Background(), "0123", "lead") })
 				id := injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 				write(t, native, []byte(`{"id":"`+id+`","result":{}}`))
 			}
@@ -173,7 +173,7 @@ func TestACompactionStillRunningAfterAResumeHoldsUntilItsEnd(t *testing.T) {
 	bindUI(t, g, ui, native)
 	ranATurn(t, ui, native)
 	out := callbacks(g)
-	answers := steerAnswer(func() control.Answer { return g.Compact(context.Background(), "0123", "lead") })
+	answers := steerAnswer(func() control.Answer { return g.compactToEnd(context.Background(), "0123", "lead") })
 	id := injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 	write(t, native, []byte(`{"id":"`+id+`","result":{}}`))
 	events(t, ui, native, started("C"), compactionItem("C", "item/started"))
@@ -210,6 +210,6 @@ func TestAReplyNamingATurnAlreadyEndedHoldsNothing(t *testing.T) {
 	events(t, ui, native, started("T"), completed("T", "completed"))
 	write(t, native, []byte(`{"id":7,"result":{"turn":{"id":"T","items":[],"status":"inProgress"}}}`))
 	_ = readWithin(t, ui)
-	_ = steerAnswer(func() control.Answer { return g.Compact(context.Background(), "0123", "lead") })
+	_ = steerAnswer(func() control.Answer { return g.compactToEnd(context.Background(), "0123", "lead") })
 	injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 }

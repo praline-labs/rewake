@@ -189,4 +189,4 @@ workflow case `claude-interrupted` and its four mutant controls are described in
 goes on both harnesses, in [the section after it](testing-plugin.md#where-a-stop-goes).
 Stage 2's tests — the control protocol, the commands, the module acting under a strict
 host, and the stopped text and notice line after main's interrupt — are listed in
-[remote-control.md](remote-control.md#tests).
+[remote-control-tests.md](remote-control-tests.md).

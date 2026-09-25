@@ -14,11 +14,28 @@ var mutantBusyUnchecked = mutation{
 }
 
 // The compaction is counted without the request and the asker: main gets a
-// notice and the command finds no count.
+// notice and the letter finds no count.
 var mutantCodexAskerUntold = mutation{
 	name:  "codex-asker-untold",
 	file:  "internal/harness/codex/gateway/telemetry_fields.go",
 	edits: []edit{{"event.request, event.by = a.request, a.by", "_ = a"}},
+}
+
+// The wrapper answers only once the compaction has ended, as it did before
+// the command stopped waiting for the end: the bound of the start then answers
+// requested.
+var mutantCodexWaitsForTheEnd = mutation{
+	name:  "codex-waits-for-the-end",
+	file:  "internal/harness/codex/gateway/steer.go",
+	edits: []edit{{"		case <-tied:\n			break wait\n", "		case <-tied:\n			tied = nil\n"}},
+}
+
+// The wrapper never keeps how the compaction ended, so the letter has no
+// token counts.
+var mutantCodexOutcomeUnkept = mutation{
+	name:  "codex-outcome-unkept",
+	file:  "internal/harness/codex/server_steer.go",
+	edits: []edit{{"s.gateway.CompactionEnded(request.ID, request.From, later())", "later()"}},
 }
 
 // The wrapper interrupts without keeping who asked.
@@ -51,7 +68,15 @@ func TestACompactionSentMidTurnFails(t *testing.T) {
 }
 
 func TestACodexCompactionNotTiedToItsAskerFails(t *testing.T) {
-	runCodexSteeredControl(t, mutantCodexAskerUntold, obsCompactQuiet)
+	runCodexSteeredControl(t, mutantCodexAskerUntold, obsCompactLetter, obsCompactQuiet)
+}
+
+func TestACodexCompactionAnsweredAtItsEndFails(t *testing.T) {
+	runCodexSteeredControl(t, mutantCodexWaitsForTheEnd, obsCompactStarted)
+}
+
+func TestACodexLetterWithoutTheTokensFails(t *testing.T) {
+	runCodexSteeredControl(t, mutantCodexOutcomeUnkept, obsCompactLetter)
 }
 
 func TestACodexInterruptThatDoesNotNameMainFails(t *testing.T) {

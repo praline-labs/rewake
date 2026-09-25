@@ -24,7 +24,7 @@ func canSeeSessionState(dir string) bool {
 
 func sessionSnapshot(dir, name, epoch string) *sessionstate.Snapshot {
 	value := sessionstate.Load(dir, name, epoch)
-	value.CompactionEvents = nil
+	value.CompactionEvents, value.CompactionOutcomes = nil, nil
 	current, err := registry.LookupReadOnly(dir, name)
 	if err != nil || current.Epoch() != epoch {
 		value.Stale()
@@ -53,7 +53,7 @@ func viewedMessages(dir string, messages []inbox.Message) []messageView {
 			if message.Departure != nil && message.SenderState != nil && message.SenderState.Epoch == message.FromEpoch {
 				frozen := *message.SenderState
 				frozen.Stale()
-				frozen.CompactionEvents = nil
+				frozen.CompactionEvents, frozen.CompactionOutcomes = nil, nil
 				view.Telemetry = &frozen
 			}
 		}

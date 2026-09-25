@@ -101,9 +101,18 @@ everything else.
 - [remote-control.md](remote-control.md) — `rewake compact` and `rewake interrupt`, a
   main acting on a running worker: who may call them and every refusal, the per-run
   control directory and its files, why giving up on a request is honest in every order,
-  how the Claude Code module compacts and aborts, the stopped text and notice line after
-  main's interrupt, known limits and the owner decisions. Open it when a compaction or
+  how the Claude Code module compacts and aborts, the stopped text and notice line after main's interrupt, known limits and the owner
+  decisions. Open it when a compaction or
   an interrupt from main is refused, lost or misreported.
+- [remote-control-letter.md](remote-control-letter.md) — the letter that ends a
+  compaction main asked for: what it says, where its halves come from, the record
+  main's own wrapper owes it by — closed by the outcome, the worker's departure or a
+  bound — and a record an earlier run of main left. Open it when a letter is missing,
+  late or wrong.
+- [remote-control-tests.md](remote-control-tests.md) — the tests of `rewake compact` and
+  `rewake interrupt`, file by file: the control protocol, the commands, the module under
+  node, the collector, main's letters, the Codex gateway, and the workflow cases with
+  their mutants. Open it to find what proves a part before changing it.
 - [remote-control-codex.md](remote-control-codex.md) — how a Codex session serves those
   requests through its gateway: the three safety properties, when a compaction is
   refused as busy, uncertain or as nothing to compact, the open operations kept across

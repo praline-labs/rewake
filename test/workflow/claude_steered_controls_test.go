@@ -15,8 +15,8 @@ var mutantCompactNotRun = mutation{
 	name: "compact-not-run",
 	file: "internal/harness/claude/plugin.js",
 	edits: []edit{{
-		`const result = focus === "" ? await $.session.compact() : await $.session.compact({ instructions: focus })`,
-		`const result = {}`,
+		`(focus === "" ? $.session.compact() : $.session.compact({ instructions: focus }))`,
+		`({})`,
 	}},
 }
 
@@ -52,7 +52,7 @@ var mutantLineRepeated = mutation{
 var mutantIdleInterruptDone = mutation{
 	name:  "idle-interrupt-done",
 	file:  "internal/harness/claude/plugin.js",
-	edits: []edit{{`if (turn === undefined) return { outcome: "refused", reason: "no turn running" }`, `if (turn === undefined) return { outcome: "done" }`}},
+	edits: []edit{{`if (turn === undefined) return { answer: { outcome: "refused", reason: "no turn running" } }`, `if (turn === undefined) return { answer: { outcome: "done" } }`}},
 }
 
 // A request nobody took is reported as a failure, not as not answering.
@@ -76,19 +76,44 @@ var mutantOwnCompactionAnnounced = mutation{
 	edits: []edit{{"if event.RequestedBy == self.Name {", "if false && event.RequestedBy == self.Name {"}},
 }
 
-// The command answers without the session's compaction count.
-var mutantCompactionUncounted = mutation{
-	name:  "compaction-uncounted",
-	file:  "internal/cli/steer.go",
-	edits: []edit{{"model.Compaction = compactionCount(asking, dir, session, answer.ID)", "model.Compaction = nil"}},
+// main's letter leaves out the session's count of compactions.
+var mutantLetterUncounted = mutation{
+	name:  "letter-uncounted",
+	file:  "internal/wrap/compaction_letters.go",
+	edits: []edit{{`text += fmt.Sprintf(" (compaction %d).", found.event.Sequence)`, `text += "."`}},
+}
+
+// The module answers only once the compaction has ended, as the command did
+// before it stopped waiting for the end.
+var mutantWaitsForTheEnd = mutation{
+	name:  "waits-for-the-end",
+	file:  "internal/harness/claude/plugin.js",
+	edits: []edit{{`const first = await Promise.race([compaction, begun($, asked.id, () => over), bound])`, `const first = await compaction`}},
+}
+
+// The module tells rewake a compaction ended without the host's counts.
+var mutantEndedUncounted = mutation{
+	name:  "ended-uncounted",
+	file:  "internal/harness/claude/plugin.js",
+	edits: []edit{{`outcome = { outcome: "done", tokensBefore: number(counts.tokensBefore), tokensAfter: number(counts.tokensAfter) }`, `outcome = { outcome: "done" }`}},
 }
 
 // The module compacts without telling rewake who asked: the compaction is
-// nobody's, so main gets a notice and the command finds no count.
+// nobody's, so its start is not marked for the module, which answers
+// requested, main gets a notice, and the letter finds no count.
 var mutantAskerUntold = mutation{
 	name:  "asker-untold",
 	file:  "internal/harness/claude/plugin.js",
 	edits: []edit{{`if (announced) await told($, { plugin_event: "compact.asked"`, `if (false) await told($, { plugin_event: "compact.asked"`}},
+}
+
+// main's wrapper waits for the worker's word however the worker went: a
+// worker killed mid-compaction leaves main without a letter until the bound,
+// long past the case.
+var mutantOrphanUnlettered = mutation{
+	name:  "orphan-unlettered",
+	file:  "internal/wrap/compaction_letters.go",
+	edits: []edit{{"\t\tcase gone:\n", "\t\tcase false && gone:\n"}},
 }
 
 // main's list of what it is owed puts every stop down to a person.
@@ -99,19 +124,31 @@ var mutantStopByAPerson = mutation{
 }
 
 func TestACompactionNeverAskedOfTheHostFails(t *testing.T) {
-	runSteeredControl(t, mutantCompactNotRun, obsCompactIdle, obsCompactQuiet, obsCompactBusy)
+	runSteeredControl(t, mutantCompactNotRun, obsCompactLetter, obsCompactQuiet, obsCompactBusy)
 }
 
 func TestMainNoticedOfItsOwnCompactionFails(t *testing.T) {
 	runSteeredControl(t, mutantOwnCompactionAnnounced, obsCompactQuiet)
 }
 
-func TestACompactionAnsweredWithoutItsCountFails(t *testing.T) {
-	runSteeredControl(t, mutantCompactionUncounted, obsCompactQuiet)
+func TestALetterWithoutTheCountFails(t *testing.T) {
+	runSteeredControl(t, mutantLetterUncounted, obsCompactLetter)
+}
+
+func TestACompactionAnsweredAtItsEndFails(t *testing.T) {
+	runSteeredControl(t, mutantWaitsForTheEnd, obsCompactStarted)
+}
+
+func TestALetterWithoutTheTokensFails(t *testing.T) {
+	runSteeredControl(t, mutantEndedUncounted, obsCompactLetter)
 }
 
 func TestACompactionNotTiedToItsAskerFails(t *testing.T) {
-	runSteeredControl(t, mutantAskerUntold, obsCompactQuiet)
+	runSteeredControl(t, mutantAskerUntold, obsCompactStarted, obsCompactLetter, obsCompactQuiet, obsCompactOrphan)
+}
+
+func TestALetterLostWithItsWorkerFails(t *testing.T) {
+	runSteeredControl(t, mutantOrphanUnlettered, obsCompactOrphan)
 }
 
 func TestAnInterruptListedAsAPersonsStopFails(t *testing.T) {
