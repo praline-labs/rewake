@@ -14,7 +14,7 @@ and controls, and the roadmap records named below for how each piece was built.
 | Tier | Runs | Proves | Does not prove | Costs |
 | --- | --- | --- | --- | --- |
 | The five checks | formatting, vet, two linters, `go test -race -shuffle=on ./...` | unit invariants: parsing, publishing races, liveness, inbox order and expiry, the owned server's framing on a fake socket, the map of `docs/`; the suite's own classifier and summarizer | anything end to end: every workflow scenario skips itself | about a minute; no network, no harness, no container |
-| Workflow suite (**F**) | a built rewake end to end against a fixture of each harness, in two columns, with negative controls: some mutate the product, the others change the fixture's world | that the shared service code delivers, groups, steers and reports as each scenario claims, and that each claim can fail | that the real harness parses, renders or behaves as its fixture does | about fourteen minutes — 13m36s on September 25, 2026, a hundred cases one after another, six of the minutes `claude-steered` and its controls — so a full run needs a `-timeout` past `go test`'s default ten minutes; no network; under `REWAKE_WORKFLOW=1` the schema case also runs a real Codex (next row) |
+| Workflow suite (**F**) | a built rewake end to end against a fixture of each harness, in two columns, with negative controls: some mutate the product, the others change the fixture's world | that the shared service code delivers, groups, steers and reports as each scenario claims, and that each claim can fail | that the real harness parses, renders or behaves as its fixture does | about twenty minutes — 19m28s on September 25, 2026, 102 cases one after another, eight of the minutes `claude-steered` and its controls — so a full run needs a `-timeout` past `go test`'s default ten minutes; no network; under `REWAKE_WORKFLOW=1` the schema case also runs a real Codex (next row) |
 | Schema of a Codex version | the installed Codex, or a named version fetched into a cache and run in a container, generating its protocol schema; every message the fixture sends is checked against it | that the fixture speaks the shape that version accepts: no missing required field, no field it does not have, no delivery it refuses and the fixture accepts | behaviour: order of events, readiness, reactions to a refusal — a schema has none of that | seconds from the cache; a first download is 150 MB and about half a minute |
 
 Two tiers are planned and not built. **P**, a real harness of a named version against a
@@ -54,11 +54,22 @@ lines and writes the rest to a file; run it with `go test -v` to watch it, and k
 how many scenarios ran is invisible. `-count=1` keeps a cached pass from standing in for
 a run. Run it after any change to delivery, reading, reporting or a fixture.
 
+**The suite's binary** serves a shorter coalescing window than a release: 1.5 seconds of
+quiet and a 2-second cap instead of three and four, set at build through
+`-ldflags -X` on `internal/inbox`'s `builtQuiet` and `builtCap`, for the binary under
+test and every mutant alike (`windowFlags` in `test/workflow/suite_test.go`). A heads-up
+or a report waits for company in most scenarios, and at the real window that wait added
+about nine minutes to a full run — measured while another session's cases ran — while
+proving nothing a shorter one does not. The real
+values are held by the unit tests, including one that keeps the cap a second inside
+`send`'s five-second wait. A scenario that times something against the window takes
+`suiteQuiet` or `suiteCap` rather than a number of its own.
+
 **`REWAKE_CODEX_VERSION`** takes an exact version, `latest` or `installed`, and makes
 the schema case use that Codex, fetched once into the harness cache before any case
 starts and run in a container. The fetch gets half of `-timeout`, at most ten minutes,
-which is why the documented command raises `-timeout` to thirty: the suite alone takes
-about fourteen minutes, and what is left after a slow first download has to hold it.
+which is why a first run of a new version raises `-timeout` to forty: the suite alone
+takes about twenty minutes, and what is left after a slow first download has to hold it.
 Docker is needed only when a version is named; without it the run is red with the
 reason. Run it before updating Codex, as described below.
 
@@ -169,8 +180,8 @@ product mutant, built by `buildMutant` in `mutant_test.go` with one edit through
 toolchain's overlay, inside a started case, refusing an edit that does not match exactly
 once; or a switch that changes the fixture's world. A mutant is preferred wherever one
 can be built, because it shows the scenario catching a broken rewake rather than a
-misbehaving peer. Of today's fifty-six controls, forty-seven are mutants — batch-arrival's
-four; task-report's no-stop-hook, turn-ended-ignores-stop and settles-nothing;
+misbehaving peer. Of today's fifty-seven controls, forty-eight are mutants — batch-arrival's
+five; task-report's no-stop-hook, turn-ended-ignores-stop and settles-nothing;
 mid-turn's wait-for-idle; claude-telemetry's tap-without-owner, uncounted-compaction,
 silent-compaction and model-window; pending-report's pending-ignored and
 pending-settles; claude-inbound's ungated, gate-on-session-start, held-as-delivered,
@@ -311,6 +322,13 @@ commands on the Codex column.
 
 ## Traps this suite has already paid for
 
+- **A fixture session that outlives nothing.** A fixture session stops itself after 25
+  seconds unless it serves a request directory, which keeps it up for 85. A worker the
+  scenario asks nothing of, launched late in a long case, was gone when its last step
+  came — and a step that expected a refusal took "no such session" for it, since both
+  exit 2. When the coalescing window made heads-ups wait, three steered and interrupted
+  cases crossed the line. Such a worker is launched with `staysUp`, and a finding that
+  expects a refusal names its text, not only its exit code (September 25, 2026).
 - **An anchor weaker than its judgement.** The consuming-overview control waited for one
   read attempt while the Codex column's judgement needs two, and the second comes at the
   next delivery: red 5 of 20 alone. It now anchors on both there, and was 0 of 20

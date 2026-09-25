@@ -63,7 +63,8 @@ everything else.
   is dense with evidence, not an overview.
 - [inbox-groups.md](inbox-groups.md) — the contract for grouped incoming mail: the
   session table's columns, `--peek` and `--message <id>`, the 150 ms window that fixes a
-  group's members, start-or-steer dispatch without waiting for a finished turn, and the
+  group's members — and, since September 25, the longer wait of notifies and reports for
+  company, detailed in delivery.md — start-or-steer dispatch without waiting for a finished turn, and the
   group digest the notice carries. Open it when grouping, the table or selected reads
   are in question.
 - [native-mailbox.md](native-mailbox.md) — how the Codex adapter delivers a notice as the

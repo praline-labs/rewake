@@ -86,3 +86,13 @@ func TestAQuestionStopsWaitingWhenItsHoldFails(t *testing.T) {
 		t.Fatalf("exit %d, stdout %q, stderr %q", code, out, errOut)
 	}
 }
+
+// A heads-up held to the window's cap must still be announced inside send's
+// own wait, or its send answers pending where delivered was true a moment
+// later. A second covers the first collection and the harness taking the
+// notice, with room to spare.
+func TestTheWindowFitsSendsWait(t *testing.T) {
+	if inbox.Coalescing.Cap+time.Second > defaultWait {
+		t.Fatalf("the window's cap %s leaves send's %s wait no second to see the notice go", inbox.Coalescing.Cap, defaultWait)
+	}
+}

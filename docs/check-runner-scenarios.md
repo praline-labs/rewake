@@ -115,6 +115,9 @@ together they cover the full chain once.
   separate reads it asserts.
 
 *As built:* see [2026-09-22-scenario-batch-arrival.md](roadmap/2026-09-22-scenario-batch-arrival.md).
+Since September 25, 2026 the case also sends three heads-ups 600 ms apart and observes
+that none of them is announced alone, with a fifth control that serves the mailbox without
+the window ([2026-09-25-coalesced-notices.md](roadmap/2026-09-25-coalesced-notices.md)).
 
 - *Boundary:* the fixture tier. This shows that the service code groups, previews,
   keeps an overview free of side effects and does not replay; it shows the Codex

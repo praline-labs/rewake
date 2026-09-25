@@ -62,7 +62,13 @@ After native dispatch, that group's membership/count/preview are immutable. Arri
 during its ACK wait form the next group as soon as another dispatch can proceed.
 Old announced-but-unread messages remain readable, never inflate later notices and
 never generate another wake. Spaced arrivals may produce separate notices when each
-has already been dispatched; there is no promise of one notice over several seconds.
+has already been dispatched.
+
+September 25, 2026, the owner's request changed the last point for mail that asks for
+nothing: notifies and reports now wait up to four seconds for company, three after the
+latest arrival, so a burst seconds apart shares one notice. Tasks and questions still go
+at once, as decided on September 19, and take any waiting mail along
+([delivery.md](delivery.md#the-notice)).
 
 The wrapper keeps destination reservation, metadata/read-phase readiness, per-member
 scope and readability checks. Native `turn/start` calls start-or-steer atomically,

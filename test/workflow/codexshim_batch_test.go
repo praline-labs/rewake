@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -21,6 +22,12 @@ import (
 // retry interval too, so that a replay of announced-but-unread mail — which
 // the retry interval gates — would show before the third letter arrives.
 const laterSendDelay = 3 * time.Second
+
+// noteSpacing separates the heads-ups from the later letter and from each
+// other: far outside the first collection, and well inside suiteQuiet, the
+// quiet a heads-up waits in for company in the suite's build; the three span
+// less than suiteCap.
+const noteSpacing = 600 * time.Millisecond
 
 // readEach is what a session does with a delivery under shimReadEach: an
 // overview that must consume nothing, then one member at a time. The last
@@ -234,6 +241,9 @@ func sendAsAsked() int {
 	// mid-turn scenario. It runs after the first letters have been accepted,
 	// because a turn has to be open before anything can be steered into it.
 	sendSecond()
+	// In the background: one column reports its own state only once this
+	// returns, and the heads-ups take seconds to leave.
+	go sendNotes(target, started)
 	if later := os.Getenv(shimSendLaterText); later != "" {
 		// Measured from the moment the first letters left, not from when
 		// their deliveries were confirmed: a wider window would delay the
@@ -246,6 +256,35 @@ func sendAsAsked() int {
 		}
 	}
 	return 0
+}
+
+// sendNotes sends the heads-ups, each at its own moment from when the first
+// letters left, without waiting for the one before: a send waits for its
+// delivery, and a heads-up's delivery waits for company.
+func sendNotes(target string, started time.Time) {
+	list := os.Getenv(shimSendNotes)
+	if list == "" {
+		return
+	}
+	var running sync.WaitGroup
+	for index, text := range strings.Split(list, "|") {
+		time.Sleep(time.Until(started.Add(laterSendDelay + time.Duration(index+1)*noteSpacing)))
+		running.Add(1)
+		go func() {
+			defer running.Done()
+			send := exec.Command("rewake", "send", target, text, "--notify")
+			send.Env = os.Environ()
+			out, err := send.CombinedOutput()
+			code := -1
+			if send.ProcessState != nil {
+				code = send.ProcessState.ExitCode()
+			} else if err != nil {
+				out = []byte(err.Error())
+			}
+			recordSend(fmt.Sprintf("note-%d", index+1), fmt.Sprintf("exit=%d", code), firstLine(string(out)))
+		}()
+	}
+	running.Wait()
 }
 
 // awaitRecipientReady waits for whatever readiness this column has. One column

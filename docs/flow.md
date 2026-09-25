@@ -121,14 +121,19 @@ session's shell, or from a person's shell in the same room. A shell without
 5. **The wait.** The sender polls `<id>.status` for up to `--wait` seconds (5
    by default) and prints one line: `Rewake: delivered to write-codex via app-server`,
    `Rewake: pending for write-codex: …` or `Rewake: held for write-codex: …` (exit 3),
-   or `Rewake: failed for write-codex: …` (exit 1).
+   or `Rewake: failed for write-codex: …` (exit 1). A task or a question is announced
+   at once; a `--notify` waits up to four seconds for company (Act 3), and the send
+   waits with it — inside its five, so it still answers delivered.
 
 ## Act 3. The wrapper announces it
 
 The recipient's wrapper announces fixed groups. Later mail waits for its own group
 as soon as delivery is ready. Native start-or-steer reaches active work or wakes idle
 work without a required peek or terminal event. Only new member IDs are delivered. The initial burst window is
-150 ms. It checks expiry/leases and reserves destinations for the
+150 ms. Mail that asks for nothing — a notify, a report — then waits for company: three
+seconds after the latest such arrival, four at most from when the earliest was written, and all of it goes
+in one notice. A task or a question does not wait, and takes whatever is waiting with it
+([delivery.md](delivery.md#the-notice)). It checks expiry/leases and reserves destinations for the
 [grouped inbox](inbox-groups.md) before readability.
 
 1. **Readable first.** With the shared destination reserved, rechecks each message under
@@ -340,6 +345,7 @@ question to a silent role.
 | situation | what happens | what the sender sees |
 |---|---|---|
 | fresh server thread, no turn yet | turn/start begins its first turn | delivered after RPC acceptance |
+| a notify or a report with nothing else arriving | it waits three seconds for company, then goes alone; a task arriving meanwhile takes it along at once | delivered after about three seconds, pending meanwhile with why |
 | a turn interrupted with Esc or Ctrl+C | stopped advises the waiters to wait, and goes to nobody when none waits; original work stays owed | yellow notice; human continuation reports its result |
 | a compaction main asked for with `rewake compact` | the command returns once it has started, or says requested when its start was not seen in 3 seconds; the worker's module or wrapper waits for its end ([remote-control.md](remote-control.md)) | exit 0, then a notify with the tokens and the count, or the refusal or failure |
 | a turn interrupted by main's `rewake interrupt` | the same stopped, naming main instead of the person; on Claude Code the worker's next notice says main interrupted it, once, and on Codex the harness records it in the model's history itself ([remote-control.md](remote-control.md)) | yellow notice naming main |

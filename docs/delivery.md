@@ -53,7 +53,7 @@ refusals and help come from there.
 |---|---|---|---|
 | `task` | plain `send` | a report at the end of its turn | once delivered |
 | `question` | `--question` | the same | with the answer, up to `--wait` (600 s by default) |
-| `notify` | `--notify`; also main's wrapper for availability, departure and compaction notices, and the letter that ends a compaction main asked for with `rewake compact` ([remote-control.md](remote-control-letter.md)) | nothing | once delivered |
+| `notify` | `--notify`; also main's wrapper for availability, departure and compaction notices, and the letter that ends a compaction main asked for with `rewake compact` ([remote-control.md](remote-control-letter.md)) | nothing | once delivered, after waiting up to four seconds for company ([the notice](#the-notice)) |
 | `finished` | successful turn end | nothing | — |
 | `error` | failed turn hook only | nothing | failure, exit 1 for a waiting question |
 | `stopped` | a turn stopped at the keyboard, or by a main's `rewake interrupt`; on Codex also a run that passed unseen, or a turn that ended with no proof of work | nothing | exit 1 for a waiting question |
@@ -206,6 +206,43 @@ eligible mail gets its own notice through native start-or-steer: active work acc
 steering, idle work starts. No peek, terminal event or model-seen acknowledgement
 is required. Initial collection is 150 ms; old unread alone produces no reminder.
 Arrivals after native dispatch belong to a later immutable notice.
+
+**Mail that asks for nothing waits for company.** September 25, 2026, the owner's
+request: a burst of letters seconds apart — three workers restarted gave main seven
+notices, a departure and an availability each, a few seconds apart — wakes the
+recipient once. After the first collection, a pass whose mail is all of kinds that ask
+for nothing holds it: announced three seconds after the latest arrival, and never later
+than four seconds after the earliest was written, so a steady stream cannot put it off.
+The cap counts from the write, or from when the server first saw the letter if that is
+earlier, not from the sight alone: the pass that sees a letter comes up to a collection
+after it, and a sender's wait begins at the write. Mail that lay in the mailbox before
+the wrapper started has used its cap and goes on the first pass. The owner
+asked for about five; four keeps the whole wait, with the first collection and a
+harness taking the notice, inside a sender's default five-second wait for its status,
+so a lone `--notify` from an agent still returns delivered rather than pending. Whatever
+arrives meanwhile goes in the same notice.
+
+What may wait is decided by kind, in `canWait` (`internal/inbox/window.go`), from
+`AsksForWork`: `notify` and the four reports (`finished`, `error`, `stopped`,
+`pending`) wait. A `task`, a `question` and a kind this build does not know are work —
+the same reading `Owed` gives an unknown kind — and go at once, taking any waiting mail
+along in their notice: a waiting worker is not slowed, and a task arriving behind waiting
+notes cuts their wait short. A report a waiting `send --question` reserved as its answer
+does not wait either: it is linked for that send, not announced, and holding it would
+hold the send.
+
+The window lives in the recipient's wrapper, in the mailbox server both harnesses share:
+the Claude Code socket line and the Codex gateway call are made after it, so both get
+the same grouping. The server learns an arrival the first time a pass sees the message,
+and the quiet counts from that sight; a retry, or mail that waited for the session to open, keeps its first arrival and is
+not held again. While a letter waits, its status is `pending` with the detail `waiting
+up to 4s to be announced together with other mail that arrives meanwhile`, so a sender
+whose own wait ends first prints why. A wrapper that exits in the window changes nothing
+about the mail: reports stay readable for their epoch and the rest is refused as for any
+undelivered message on shutdown. The mailbox server a test builds has no window unless
+it sets `Window`; the wrapper sets `inbox.Coalescing`. A build may shorten that window
+through `-ldflags -X` on `builtQuiet` and `builtCap`, and the workflow suite's does
+([testing.md](testing.md#running-it)); a release build sets neither.
 A multi-message signal says `Rewake: <n> new messages`, followed by one indented
 first-line preview of its latest member with sender and kind. Usage instructions
 remain in guide/help and briefing, outside the notification itself. Old accepted

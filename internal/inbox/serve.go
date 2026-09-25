@@ -16,7 +16,8 @@ const (
 	// Pending means the receiver cannot take it yet — a Codex session with no
 	// conversation, a socket not created yet — so retrying fast buys nothing.
 	retryInterval = 2 * time.Second
-	// collectionInterval is fixed from the first wake, never extended by arrivals.
+	// collectionInterval is fixed from the first wake, never extended by
+	// arrivals. Mail that may wait for company waits longer (window.go).
 	collectionInterval = 150 * time.Millisecond
 	// defaultTTL is how long a message may stay undelivered before it is called
 	// failed. A message older than this describes a situation that has passed.
@@ -63,6 +64,9 @@ type Server struct {
 	// delivery returned: how a hold ended, or that a notice taken as accepted
 	// was held or refused after all. Nil for a harness that never says.
 	Receipts <-chan Receipt
+	// Window is how long mail that asks for nothing waits for company before
+	// it is announced (window.go); zero announces at once.
+	Window Window
 	// Opened is closed once the harness can take its first notice. Until then
 	// mail waits, pending, and goes out right after. Nil means from the start.
 	Opened <-chan struct{}
@@ -88,6 +92,9 @@ type Server struct {
 	// recent keeps the members of notices reported delivered for a while, so
 	// a late word from the harness can still take the delivery back.
 	recent map[string]recentAnnouncement
+	// arrivals remembers when each waiting message was first seen, which is
+	// what the window mail waits in is measured from.
+	arrivals map[string]*arrival
 }
 
 // Serve drains the mailbox until the context is canceled, then refuses whatever
@@ -98,6 +105,7 @@ func (s *Server) Serve(ctx context.Context) {
 	s.outcomes = map[string]Result{}
 	s.held = map[string][]Message{}
 	s.recent = map[string]recentAnnouncement{}
+	s.arrivals = map[string]*arrival{}
 	s.lockContext = ctx
 	if ctx.Err() != nil || !s.owned() {
 		// Canceled before it began, or the name already belongs to somebody
@@ -117,12 +125,17 @@ func (s *Server) Serve(ctx context.Context) {
 	changed := watch(ctx, s.Dir, s.Name)
 	collection := time.NewTimer(collectionInterval)
 	defer collection.Stop()
-	collect := collection.C
-	schedule := func() {
-		if collect == nil {
-			collection.Reset(collectionInterval)
-			collect = collection.C
+	collect, due := collection.C, time.Now().Add(collectionInterval)
+	// A pass already due sooner stays as it is, so a wake never extends a
+	// collection; a sooner one replaces it, so mail held for company does not
+	// hold back a task that arrives behind it.
+	schedule := func(after time.Duration) {
+		at := time.Now().Add(after)
+		if collect != nil && !at.Before(due) {
+			return
 		}
+		collection.Reset(after)
+		collect, due = collection.C, at
 	}
 	opened := s.Opened
 	if s.Ready != nil && ctx.Err() == nil && s.owned() && state.EnsureSubdir(state.InboxPath(s.Dir, s.Name)) == nil {
@@ -142,32 +155,40 @@ func (s *Server) Serve(ctx context.Context) {
 				changed = nil
 				continue
 			}
-			schedule()
+			schedule(collectionInterval)
 		case <-ticker.C:
-			schedule()
+			schedule(collectionInterval)
 		case <-collect:
 			collect = nil
-			s.drain(ctx)
+			if wait := s.drain(ctx); wait > 0 {
+				schedule(wait)
+			}
 		case <-sweeper.C:
 			s.sweepFinished()
 		case <-opened:
 			opened = nil
 			s.retryNow()
-			schedule()
+			schedule(collectionInterval)
 		case receipt := <-s.Receipts:
 			s.receive(receipt)
 		}
 	}
 }
 
-// drain makes one pass over the mailbox.
-func (s *Server) drain(ctx context.Context) {
+// drain makes one pass over the mailbox and answers how long the mail it found
+// may still wait for company, zero once it has gone.
+func (s *Server) drain(ctx context.Context) time.Duration {
 	pending := s.pendingMessages(ctx)
 	if s.gated() {
 		s.waitForOpening(pending)
-		return
+		return 0
+	}
+	if wait := s.holdFor(pending, time.Now()); wait > 0 {
+		s.tellWaiting(pending)
+		return wait
 	}
 	s.deliverGroup(ctx, pending)
+	return 0
 }
 
 func (s *Server) pendingMessages(ctx context.Context) []Message {
@@ -175,7 +196,7 @@ func (s *Server) pendingMessages(ctx context.Context) []Message {
 	if err != nil {
 		return nil
 	}
-	var pending []Message
+	var pending, waiting []Message
 	for _, message := range messages {
 		if ctx.Err() != nil || !s.owned() {
 			return nil
@@ -186,11 +207,13 @@ func (s *Server) pendingMessages(ctx context.Context) []Message {
 		if s.alreadySettled(message) {
 			continue
 		}
+		waiting = append(waiting, message)
 		if last, tried := s.attempts[message.ID]; tried && time.Since(last) < retryInterval {
 			continue
 		}
 		pending = append(pending, message)
 	}
+	s.noteArrivals(waiting, time.Now())
 	return pending
 }
 

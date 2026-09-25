@@ -208,7 +208,10 @@ func TestAvailabilityWaitsForServiceAndTransportAndToleratesStorageFailure(t *te
 func TestAvailabilityUsesNormalWrapperNotifyDelivery(t *testing.T) {
 	dir := stateDir(t)
 	peer := availabilityPeer(t, dir, "worker-fixture", role.General.ID, 1, true)
-	fake := &fakeHarness{script: "sleep 0.7"}
+	// Long enough for the notice's window: a notify waits for company
+	// (inbox.Coalescing) before it is announced.
+	shortWindow(t)
+	fake := &fakeHarness{script: "sleep 2"}
 	code, err := Run(context.Background(), Request{Harness: fake, Dir: dir, Role: role.Main})
 	if code != 0 || err != nil {
 		t.Fatalf("wrapper failed: %d %v", code, err)

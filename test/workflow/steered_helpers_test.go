@@ -98,6 +98,11 @@ func reportKinds(messages []reportView) []string {
 	return out
 }
 
+// notMainRefusal is the start of the refusal a session that is not main gets
+// for steering. A plain exit 2 is not enough: naming a session that has already
+// left is a wrong call too, and it would pass for the refusal.
+const notMainRefusal = "only a main session may "
+
 // compactTakes is how long the fixture's compaction runs after its start in
 // the steered cases: long enough that a command which waited for the end
 // could neither answer within startedWithin nor before the telemetry counted

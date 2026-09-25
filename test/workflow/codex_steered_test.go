@@ -102,7 +102,7 @@ func playCodexSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding 
 			out = append(out, telemetryFinding{observation: observation, detail: fmt.Sprintf("the workers did not take their tasks: sends %v; calm's reports %v", sends, kinds(about(calm, tasks[calm])))})
 		}
 		code, refused, _ := calmAsks.ask(c, "compact", busy.name)
-		return append(out, finding(obsNotMain, code == 2, "exit %d, %s", code, firstLine(refused)))
+		return append(out, finding(obsNotMain, code == 2 && strings.Contains(refused, notMainRefusal), "exit %d, %s", code, firstLine(refused)))
 	}
 
 	// busy is in its held turn: a compaction is refused, and the turn is
@@ -151,6 +151,6 @@ func playCodexSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding 
 		"%s; the telemetry then counts %s compactions %s", focusSaid, show(calmRow.Compactions), failure))
 
 	code, refused, _ := calmAsks.ask(c, "compact", busy.name)
-	out = append(out, finding(obsNotMain, code == 2, "exit %d, %s", code, firstLine(refused)))
+	out = append(out, finding(obsNotMain, code == 2 && strings.Contains(refused, notMainRefusal), "exit %d, %s", code, firstLine(refused)))
 	return out
 }

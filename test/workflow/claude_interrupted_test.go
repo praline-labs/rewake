@@ -91,14 +91,17 @@ func playInterruptedTurn(t *testing.T, c *Case, iso *Isolation) []telemetryFindi
 		return out
 	}
 	runs := shimNode + "=" + node
-	heard := startHarnessSession(t, c, iso, claudeColumn.harness, "heard", "--general", shimInboxJSON+"=1", shimInterruptFirst+"=1", runs)
+	// The workers are asked nothing, but the wake comes late in the case: a
+	// slower control, or a heads-up waiting for company, puts it past the
+	// ordinary ceiling.
+	heard := startHarnessSession(t, c, iso, claudeColumn.harness, "heard", "--general", shimInboxJSON+"=1", shimInterruptFirst+"=1", runs, staysUp(iso, "heard"))
 	defer stopSession(t, c, heard)
-	ordinary := startHarnessSession(t, c, iso, claudeColumn.harness, "ordinary", "--general", shimInboxJSON+"=1", runs)
+	ordinary := startHarnessSession(t, c, iso, claudeColumn.harness, "ordinary", "--general", shimInboxJSON+"=1", runs, staysUp(iso, "ordinary"))
 	defer stopSession(t, c, ordinary)
-	late := startHarnessSession(t, c, iso, claudeColumn.harness, "late", "--general", shimInboxJSON+"=1", shimInterruptAtStop+"=1", runs)
+	late := startHarnessSession(t, c, iso, claudeColumn.harness, "late", "--general", shimInboxJSON+"=1", shimInterruptAtStop+"=1", runs, staysUp(iso, "late"))
 	defer stopSession(t, c, late)
 	unheard := startHarnessSession(t, c, iso, claudeColumn.harness, "unheard", "--general", shimInboxJSON+"=1",
-		shimInterruptFirst+"=1", shimNoFunctionHooks+"=1", runs)
+		shimInterruptFirst+"=1", shimNoFunctionHooks+"=1", runs, staysUp(iso, "unheard"))
 	defer stopSession(t, c, unheard)
 	asks := newRequests(iso, "lead")
 	lead := startHarnessSession(t, c, iso, claudeColumn.harness, "lead", "--main", shimInboxJSON+"=1", asks.env())

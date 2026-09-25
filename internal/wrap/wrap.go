@@ -266,6 +266,8 @@ func Run(ctx context.Context, request Request) (int, error) {
 			// that starts late, after its harness is gone and the name has
 			// changed hands, has no business in there.
 			Owns: func() bool { return registry.OwnsName(request.Dir, name, epoch) },
+			// A burst of letters that ask for nothing wakes the session once.
+			Window: inbox.Coalescing,
 			Deliver: func(ctx context.Context, message inbox.Message) inbox.Result {
 				if plan.Backend != nil {
 					return plan.Backend.Deliver(ctx, message)

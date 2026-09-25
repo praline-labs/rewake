@@ -7,6 +7,7 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/alias"
 
 	"github.com/iiiokojiadbi/rewake/internal/harness"
+	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/role"
 )
 
@@ -71,7 +72,7 @@ func buildGroups() {
 
 	talk := Group{
 		Title:   "TALK",
-		Summary: "Sessions address each other by name. Nearby incoming messages share a notice. Use rewake inbox --peek for IDs and previews, --message <id> to read one, or plain inbox to read all.",
+		Summary: "Sessions address each other by name. Nearby incoming messages share a notice: a heads-up or a report waits a few seconds for others, a task or a question goes at once. Use rewake inbox --peek for IDs and previews, --message <id> to read one, or plain inbox to read all.",
 		Commands: []*Command{
 			{
 				Name:           "list",
@@ -98,6 +99,7 @@ func buildGroups() {
 				Notes: []string{
 					"A task is the default: the session reads it, works, and ends its turn with a final message, which comes back to you as a \"Rewake: <session> finished\" line.",
 					"A question blocks until that final message and prints it. A long one is better run in the background.",
+					fmt.Sprintf("A heads-up (--notify) waits up to %s to share one notice with other mail arriving meanwhile, and send waits with it; a task or a question is announced at once.", inbox.Coalescing.Cap),
 					sessionStateHelp,
 					"Quote the text as one argument: loose words are refused rather than silently joined.",
 				},

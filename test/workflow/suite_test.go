@@ -170,6 +170,22 @@ func reportScenarios(ran []string, against []record.Against) int {
 // with no diagnostic at all.
 const buildTimeout = 3 * time.Minute
 
+// The suite's binary serves a shorter coalescing window than a release: a
+// heads-up or a report waits for company in dozens of cases, and the real
+// three seconds of quiet add minutes to a run while proving nothing the
+// shorter window does not. The scenario that observes the window, batch-arrival,
+// spaces its heads-ups well inside this quiet. internal/inbox/window.go reads
+// the two values.
+const (
+	suiteQuiet = 1500 * time.Millisecond
+	suiteCap   = 2 * time.Second
+)
+
+// windowFlags are the build flags that set the suite's window, for the
+// binary under test and every mutant alike.
+var windowFlags = []string{"-ldflags", fmt.Sprintf("-X %[1]s.builtQuiet=%[2]s -X %[1]s.builtCap=%[3]s",
+	"github.com/iiiokojiadbi/rewake/internal/inbox", suiteQuiet, suiteCap)}
+
 // buildRewake builds the binary under test into dir. Scenarios must never find
 // `rewake` on the developer's PATH: a green result obtained against somebody
 // else's build, of unknown age, proves nothing about this working tree.
@@ -183,7 +199,7 @@ func buildRewake(dir string) (string, error) {
 	binary := filepath.Join(dir, "rewake")
 	// No VCS stamp: the suite asserts nothing about the build line, and a
 	// copy without .git would fail on the stamp.
-	build := exec.Command("go", "build", "-buildvcs=false", "-o", binary, "./cmd/rewake")
+	build := exec.Command("go", append(append([]string{"build", "-buildvcs=false"}, windowFlags...), "-o", binary, "./cmd/rewake")...)
 	build.Dir = root
 	build.Env = os.Environ()
 	// Through the same group machinery a case uses: `go build` starts

@@ -27,6 +27,18 @@ var mutantWindow = mutation{
 	}},
 }
 
+// The wrapper serves its mailbox with the window heads-ups wait in for
+// company. Served without it, each heads-up 600 ms apart wakes the
+// recipient by itself.
+var mutantUnwindowed = mutation{
+	name: "unwindowed",
+	file: "internal/wrap/wrap.go",
+	edits: []edit{{
+		"\t\t\tWindow: inbox.Coalescing,\n",
+		"",
+	}},
+}
+
 // The preview is taken from the latest member by one comparison. Reversed,
 // the notice previews the earliest.
 var mutantPreview = mutation{
@@ -95,6 +107,7 @@ var batchControls = []batchControl{
 	{mutantPreview, obsPreviewLatest},
 	{mutantPeekConsumes, obsPeekConsumedNothing},
 	{mutantReplay, obsNoReplay},
+	{mutantUnwindowed, obsNotesTogether},
 }
 
 func TestAWidenedWindowFails(t *testing.T)    { failedBatchArrival(t, batchControls[0]) }
@@ -103,6 +116,7 @@ func TestAConsumingOverviewFails(t *testing.T) {
 	failedBatchArrival(t, batchControls[2])
 }
 func TestAReplayedAnnouncementFails(t *testing.T) { failedBatchArrival(t, batchControls[3]) }
+func TestAnUnwindowedWrapperFails(t *testing.T)   { failedBatchArrival(t, batchControls[4]) }
 
 // failedBatchArrival runs the scenario against the control's own mutant, in
 // both columns, and requires the observation it names to be the one that
@@ -197,12 +211,13 @@ func runBatchControl(t *testing.T, col column, name string, m mutation, expected
 	// is sent after three, so under the replay mutant the reads are all done
 	// before the third letter exists; without it in the anchor the grouping
 	// question was judged on a record that could not yet answer it, and said
-	// so.
+	// so. The heads-ups are in the anchor for their own question: listed means
+	// announced, since an overview is taken at a delivery.
 	if !waitFor(c, batchWindow, func() bool {
 		alpha, seenA := worker.peekedCarrying(batchAlpha)
 		beta, seenB := worker.peekedCarrying(batchBeta)
 		gamma, seenC := worker.peekedCarrying(batchGamma)
-		if !seenA || !seenB || !seenC {
+		if !seenA || !seenB || !seenC || !notesListed(worker) {
 			return false
 		}
 		// One read attempt, not a named letter's: a group names its members
@@ -249,8 +264,9 @@ func runBatchControl(t *testing.T, col column, name string, m mutation, expected
 	}
 }
 
-// batchWindow bounds the wait for the anchor. The healthy run reaches it a
-// little after laterSendDelay; the widened window adds its own ten seconds.
+// batchWindow bounds the wait for the anchor. The healthy run reaches it a few
+// seconds after the last heads-up, which waits for company; the widened window
+// adds its own ten seconds.
 const batchWindow = 45 * time.Second
 
 // batchControlOutcome asks for the full shape of each breakage, and answers in
@@ -346,6 +362,23 @@ func batchControlOutcome(col column, expected string, worker *codexSession) (boo
 			return true, "the overview listed both letters and every read that followed was refused", nil
 		}
 		return false, fmt.Sprintf("the letters stayed readable after the overview: %d attempted, %d allowed", attempted, succeeded), nil
+	case obsNotesTogether:
+		if !notesListed(worker) {
+			return false, "", errors.New("the recipient never listed every heads-up, so their notices cannot be judged")
+		}
+		announced, err := settledDeliveries(col, worker)
+		if err != nil {
+			return false, "", err
+		}
+		for _, text := range batchNotes {
+			note, _ := worker.peekedCarrying(text)
+			for _, delivery := range announced {
+				if slices.Contains(delivery.Members, note.ID) && len(delivery.Members) == 1 {
+					return true, text + " was announced alone in " + delivery.Turn, nil
+				}
+			}
+		}
+		return false, "every heads-up shared its notice", nil
 	case obsNoReplay:
 		again, err := col.replayedAnnouncement(worker)
 		if err != nil {

@@ -87,6 +87,9 @@ const (
 	// "|"; shimSendLaterText is one more, sent laterSendDelay after them.
 	shimSendTexts     = "RW_SHIM_SEND_TEXTS"
 	shimSendLaterText = "RW_SHIM_SEND_LATER_TEXT"
+	// shimSendNotes is a list of heads-ups, separated by "|", sent with
+	// --notify noteSpacing apart once the later letter has had its time.
+	shimSendNotes = "RW_SHIM_SEND_NOTES"
 	// shimHoldTurn makes the session hold its first turn open: it reads, then
 	// waits for a second delivery to be steered into that same turn before it
 	// finishes. That is the pending operation a mid-turn scenario needs, and

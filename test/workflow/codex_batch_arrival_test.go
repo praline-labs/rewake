@@ -21,6 +21,10 @@ import (
 // leaves the last member of a group unread until the next delivery, and the
 // third letter comes late enough for a replay to have shown in between.
 //
+// Three heads-ups follow, 600 ms apart: each gap is far outside the first
+// collection, and still they must not wake the recipient one by one — a
+// heads-up waits a few seconds for company.
+//
 // The controls break the product, not the fixture: each one is rewake with a
 // single line changed, built through an overlay (mutant_test.go).
 func TestBatchArrival(t *testing.T) {
@@ -34,7 +38,7 @@ func runBatchArrival(t *testing.T, col column) {
 		Harness: col.harness,
 		Observations: []string{
 			obsReady, obsListening, obsGroupOfTwo, obsPreviewLatest, obsThirdOutside,
-			obsPeekConsumedNothing, obsReadOneByOne, obsNoReplay, obsAlive,
+			obsNotesTogether, obsPeekConsumedNothing, obsReadOneByOne, obsNoReplay, obsAlive,
 		},
 		Deadline: 90 * time.Second,
 	})
@@ -75,6 +79,14 @@ func runBatchArrival(t *testing.T, col column) {
 		c.Observed(obsThirdOutside, "announced alone, after the group")
 	}
 
+	notes := awaitNotes(c, worker)
+	if alone, why := notesAlone(c, col, worker, notes); alone {
+		c.Contradicted(obsNotesTogether, "%s", why)
+	} else {
+		c.Observed(obsNotesTogether, why)
+	}
+	noteSends(t, c, sender)
+
 	// Anchored on the recipient's own record of its reads: every letter has
 	// been attempted once the third has, because the member deferred from the
 	// first group is read at the same delivery, just before it.
@@ -104,6 +116,7 @@ const (
 	obsGroupOfTwo          = "two close letters are announced as one group of two"
 	obsPreviewLatest       = "the notice previews the latest member"
 	obsThirdOutside        = "the third letter is announced outside that group"
+	obsNotesTogether       = "heads-ups 600 ms apart are not announced one by one"
 	obsPeekConsumedNothing = "an overview consumed nothing"
 	obsReadOneByOne        = "each member is read on its own"
 	obsNoReplay            = "announced mail is never announced again"
@@ -128,7 +141,8 @@ func startBatchSessions(t *testing.T, c *Case, iso *Isolation, col column, contr
 		append([]string{shimReadEach + "=1"}, controls...)...)
 	sender := startHarnessSession(t, c, iso, col.harness, "sender", "--main",
 		shimSendTo+"="+worker.name, readinessSwitch(col, worker),
-		shimSendTexts+"="+batchAlpha+"|"+batchBeta, shimSendLaterText+"="+batchGamma)
+		shimSendTexts+"="+batchAlpha+"|"+batchBeta, shimSendLaterText+"="+batchGamma,
+		shimSendNotes+"="+strings.Join(batchNotes, "|"))
 	return worker, sender
 }
 

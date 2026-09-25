@@ -161,7 +161,7 @@ To check a Codex version before installing it, name it — an exact version, `la
 ```bash
 env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
   REWAKE_WORKFLOW=1 REWAKE_CODEX_VERSION=0.156.0 go run ./tools/checksummary \
-  -- go test -count=1 -timeout 30m -json ./test/workflow/...
+  -- go test -count=1 -timeout 40m -json ./test/workflow/...
 ```
 
 The version is fetched once, before any case starts, into
@@ -170,9 +170,9 @@ schema is generated in a disposable docker container; only the schema comes from
 the scenarios run against the fixture. The fetch gets half of `-timeout`, at most ten
 minutes, and the suite the rest: under go test's default of ten minutes a slow first
 download would be cut at five, and a download that outlived the timeout would kill the
-test binary with no case to say why. The suite alone takes about fourteen minutes
+test binary with no case to say why. The suite alone takes about twenty minutes
 (`docs/testing.md`), so with a slow first download taking its full ten minutes the
-two need about twenty-five: a first run of a new version wants the thirty. The
+two need about thirty: a first run of a new version wants `-timeout 40m`. The
 variable is read only under `REWAKE_WORKFLOW`.
 `go run ./tools/harnesscache --help` lists, fetches and removes cached versions;
 nothing is removed automatically.

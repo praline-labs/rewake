@@ -81,6 +81,11 @@ func newRequests(iso *Isolation, label string) *requests {
 	return &requests{dir: filepath.Join(iso.Home, label+".requests")}
 }
 
+// staysUp is the launch switch for a session asked nothing that still has to
+// outlive the ordinary ceiling: its request directory is never written to, and
+// serving it is what keeps the session up for requestLifetime.
+func staysUp(iso *Isolation, label string) string { return newRequests(iso, label).env() }
+
 // env is the switch the session is launched with.
 func (r *requests) env() string { return shimRequestDir + "=" + r.dir }
 

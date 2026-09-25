@@ -98,9 +98,11 @@ func playSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 	calmAsks := newRequests(iso, "calm")
 	calm := startHarnessSession(t, c, iso, claudeColumn.harness, "calm", "--general", shimInboxJSON+"=1", runs, shimCompactTakes+"="+compactTakes, calmAsks.env())
 	defer stopSession(t, c, calm)
-	busy := startHarnessSession(t, c, iso, claudeColumn.harness, "busy", "--general", shimInboxJSON+"=1", runs, shimHoldFirstTurn+"=1")
+	// busy and bare are asked nothing, but the case outlives the ordinary
+	// ceiling.
+	busy := startHarnessSession(t, c, iso, claudeColumn.harness, "busy", "--general", shimInboxJSON+"=1", runs, shimHoldFirstTurn+"=1", staysUp(iso, "busy"))
 	defer stopSession(t, c, busy)
-	bare := startHarnessSession(t, c, iso, claudeColumn.harness, "bare", "--general", shimInboxJSON+"=1", runs, shimNoFunctionHooks+"=1")
+	bare := startHarnessSession(t, c, iso, claudeColumn.harness, "bare", "--general", shimInboxJSON+"=1", runs, shimNoFunctionHooks+"=1", staysUp(iso, "bare"))
 	defer stopSession(t, c, bare)
 	asks := newRequests(iso, "lead")
 	lead := startHarnessSession(t, c, iso, claudeColumn.harness, "lead", "--main", shimInboxJSON+"=1", asks.env())
@@ -139,7 +141,7 @@ func playSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 			out = append(out, telemetryFinding{observation: observation, detail: fmt.Sprintf("the workers did not take their tasks: sends %v; calm's reports %v", sends, kinds(about(calm, tasks[calm])))})
 		}
 		code, refused, _ := calmAsks.ask(c, "compact", bare.name)
-		return append(out, finding(obsNotMain, code == 2, "exit %d, %s", code, firstLine(refused)))
+		return append(out, finding(obsNotMain, code == 2 && strings.Contains(refused, notMainRefusal), "exit %d, %s", code, firstLine(refused)))
 	}
 
 	// busy is in its held turn: a compaction is refused, and the turn is
@@ -190,7 +192,7 @@ func playSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 	out = append(out, sg.compactIdle(calm, 120000, 9000, steeredFocus)...)
 
 	code, refused, _ := calmAsks.ask(c, "compact", bare.name)
-	out = append(out, finding(obsNotMain, code == 2, "exit %d, %s", code, firstLine(refused)))
+	out = append(out, finding(obsNotMain, code == 2 && strings.Contains(refused, notMainRefusal), "exit %d, %s", code, firstLine(refused)))
 
 	// calm's harness is killed while its second compaction runs: nothing
 	// records the end but, at most, the module's report that the host's call

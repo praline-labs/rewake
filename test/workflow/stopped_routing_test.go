@@ -100,8 +100,11 @@ func playStoppedRouting(t *testing.T, c *Case, iso *Isolation, col column) []tel
 		return len(found)
 	}
 	// What main holds from a session, read or not: its own mailbox reads and
-	// the files still in its inbox. A report main put into its own inbox is
-	// not announced, so only the file shows it.
+	// the files it has not read. A report main gives itself goes straight to
+	// its unread mail and is not announced, so only the file shows it until
+	// some other notice wakes main — and a notice that asks for nothing now
+	// waits seconds for company, past this look. Mail still waiting for its
+	// server is counted as well.
 	holds := func(from *codexSession) []string {
 		var kinds []string
 		for _, message := range readMessages(lead) {
@@ -109,8 +112,10 @@ func playStoppedRouting(t *testing.T, c *Case, iso *Isolation, col column) []tel
 				kinds = append(kinds, "read "+message.Kind)
 			}
 		}
-		files, _ := filepath.Glob(filepath.Join(iso.StateDir, "rooms", "default", "inbox", lead.name, "*.json"))
-		for _, file := range files {
+		mailbox := filepath.Join(iso.StateDir, "rooms", "default", "inbox", lead.name)
+		files, _ := filepath.Glob(filepath.Join(mailbox, "*.json"))
+		unread, _ := filepath.Glob(filepath.Join(mailbox, "unread", "*.json"))
+		for _, file := range append(files, unread...) {
 			var message reportView
 			raw, err := os.ReadFile(file)
 			if err == nil && json.Unmarshal(raw, &message) == nil && message.From == from.name && message.Kind != "notify" {

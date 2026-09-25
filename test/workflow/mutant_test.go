@@ -89,7 +89,7 @@ func buildMutant(c *Case, m mutation) (string, error) {
 	// No VCS stamp: the suite asserts nothing about the build line, and a
 	// checkout copied without its .git, as a reviewer's snapshot is, fails the
 	// stamp rather than the mutant.
-	build := exec.Command("go", "build", "-buildvcs=false", "-overlay", overlayFile, "-o", binary, "./cmd/rewake")
+	build := exec.Command("go", append(append([]string{"build", "-buildvcs=false"}, windowFlags...), "-overlay", overlayFile, "-o", binary, "./cmd/rewake")...)
 	build.Dir = root
 	build.Env = os.Environ()
 	if out, err := outputBounded(ctx, "go build", build); err != nil {

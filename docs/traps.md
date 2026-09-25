@@ -214,6 +214,18 @@ The mechanism is in [delivery-adapters.md](delivery-adapters.md#claude-code-adap
 
 *September 23, 2026.*
 
+### `rewake send --notify` takes three seconds, and a report arrives late
+
+Not a slow harness. Since September 25, 2026 a notify or a report waits in the
+recipient's wrapper for other mail that asks for nothing — three seconds after the
+latest, four at most from the earliest — so a burst wakes the recipient once. The send
+waits with it and answers delivered; a task or a question does not wait at all. A test
+that serves a mailbox by hand has no window unless it sets `Window`, which is why the
+unit tests of the old behaviour still deliver notes at once
+([delivery.md](delivery.md#the-notice)).
+
+*September 25, 2026.*
+
 ### After a new commit the running wrapper stays old
 
 An atomic installation replaces the file, not the live process. `rewake --version`

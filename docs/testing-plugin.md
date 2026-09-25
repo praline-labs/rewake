@@ -53,7 +53,8 @@ commands, sends one worker a task and another a `--notify`, which owes nothing; 
 workers and main have their first turn interrupted. main must read `stopped` about the
 task and list it as `stopped` in `--awaited`; the notified worker's stop, once its
 receipt shows it was acted on, must leave nothing in main's inbox, read or not, and the
-worker must read `idle`; main's own stop must leave nothing in its own inbox. Its mutant,
+worker must read `idle`; main's own stop must leave nothing in its own inbox, unread
+mail included, where a report main gives itself lies unannounced. Its mutant,
 stopped-to-main, restores the rule the owner removed on September 23, 2026 — a stop
 nobody waits on goes to main — and must break the last two observations and leave the
 first.
@@ -110,7 +111,9 @@ runs without the module. The observations:
   compacted (compaction 1)." within five seconds. main's wrapper looks once a second, and
   the telemetry case sees the notice within five. Nothing later can stand in for the
   wait, since the absence is what is observed;
-- calm, a worker, asking for a compaction is a wrong call, exit 2;
+- calm, a worker, asking for a compaction of bare is a wrong call, exit 2, refused as
+  not main — not as a session that has left, which is exit 2 too; busy and bare serve a
+  request directory only to stay up that long;
 - a second compaction of calm is `started`, calm's harness is killed right after — a
   worker stopped the ordinary way may finish the compaction first — and main reads one
   new letter of it, a notify from calm, from its own wrapper's record of the request:
@@ -193,7 +196,7 @@ session too. The observations:
   "(compaction 1)";
 - the telemetry then counts one compaction, and main is sent no compaction notice within
   five seconds;
-- calm asking for a compaction is a wrong call, exit 2.
+- calm asking for a compaction is a wrong call, exit 2, refused as not main.
 
 Its seven mutants: a wrapper that sends a compaction whatever runs, which breaks the
 refusal and, the held turn being aborted by it, the interrupt; a telemetry that counts
