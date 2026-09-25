@@ -93,12 +93,10 @@ The command returning at once and the worker rules in the role briefing followed
 September 25, 2026 ([2026-09-25-compact-non-blocking.md](roadmap/2026-09-25-compact-non-blocking.md),
 [roles.md](roles.md)). What stays open:
 
-**A main's own failed turn reports to nobody.** On September 24, 2026 at 19:36 main
-received an `error` letter about its own turn, "API Error: Connection lost
-mid-response". A main's turns are reported to nobody ([roles.md](roles.md)), and its
-own failures should be too. The contract in force says otherwise: a failing main
-retains the error in its own unread mailbox, unannounced
-([turn-outcomes.md](turn-outcomes.md)); that rule is what changes.
+**Dropped: a main's own failed turn reporting to nobody.** The owner decided on
+September 26, 2026 to leave it as it is, because the error letter a failing main keeps is
+unread and unannounced and wakes nobody; the contract in
+[turn-outcomes.md](turn-outcomes.md#failed-turns) stays.
 
 **A focus for a Codex compaction, to be researched.** The owner decided on September 24,
 2026 that `rewake compact <codex session> <focus>` is refused for now: Codex's
@@ -119,14 +117,30 @@ Claude Code's task tools in [research-claude-actions.md](research-claude-actions
 Codex's plan tool in [research-codex.md](research-codex.md#the-plan-tool) and
 [research-protocol.md](research-protocol.md#the-plan-over-the-protocol).
 
-## Then: an addendum to a task already sent
+## Then: actions on a sent message
 
-Kept from the dropped feature on September 26, 2026 because it is about delivery; queued,
-not built. Today a correction to a task already sent goes as a notify, and after the
-worker's compaction it drops out of view: `rewake inbox --owed` shows the task alone.
-`rewake send <name> "..." --to <task id>` would attach the text to that task; `rewake
-inbox --owed` would show the task together with its addenda; and the addendum itself is
-announced like any letter.
+The owner decided on September 26, 2026 to make one feature of two queued ideas — the
+addendum kept from the dropped todo list, and withdrawing or editing an unread message
+(the owner's idea of September 23, 2026). Queued, not built. Each action names the
+message by its id:
+
+- `rewake send <name> "..." --to <id>` attaches an addendum to a task already sent, at
+  any time, read or not. Today a correction goes as a notify, and after the worker's
+  compaction it drops out of view: `rewake inbox --owed` shows the task alone. With the
+  addendum, `--owed` shows the task together with its addenda, and the addendum itself
+  is announced like any letter.
+- `rewake withdraw <id>` removes a message from the recipient's mailbox, and
+  `rewake edit <id> "..."` replaces its text — both only while it is unread: a message
+  already read is final.
+
+To decide when it is built: a message announced to a live session has already shown a
+notice with a preview on the recipient's screen, so withdrawing it leaves a notice that
+points to nothing, and the recipient may be reading it in that same moment; a held
+message also sits in Claude Code's own approval queue; and who may do it — the sender
+only, and whether only main or any role. `rewake inbox --awaited`, which lists what a run
+sent and where each message stands
+([delivery-owed.md](delivery-owed.md#what-others-owe-you-rewake-inbox---awaited)), is its
+natural starting point.
 
 ## Then: Codex's `--worktree`
 
@@ -174,18 +188,6 @@ output, where rewake would own the input rather than a terminal, and could then 
 an interruption (`terminal_reason` `aborted_*`), ask for a compaction and send the other
 commands a terminal session does not take from outside
 ([research-claude-control.md](research-claude-control.md)).
-
-**Withdrawing, editing and resending an unread message.** The owner's idea of
-September 23, 2026, not built. The sender can withdraw a message the recipient has not
-read yet, which removes it from the recipient's mailbox, or edit its text and send it
-again. Only while unread: a message already read is final. To decide when it is built:
-a message announced to a live session has already shown a notice with a preview on the
-recipient's screen, so withdrawing it leaves a notice that points to nothing, and the
-recipient may be reading it in that same moment; a held message also sits in Claude
-Code's own approval queue; and who may do it — the sender only, and whether only main
-or any role. `rewake inbox --awaited`, which lists what a run sent and where each
-message stands ([delivery-owed.md](delivery-owed.md#what-others-owe-you-rewake-inbox---awaited)),
-is its natural starting point.
 
 **A slot in the room for heavy test runs.** The owner's idea of September 23, 2026, not
 built. Before a heavy run an agent checks whether the slot is free and takes it

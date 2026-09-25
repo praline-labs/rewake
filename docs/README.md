@@ -289,8 +289,8 @@ the newer document says so.
 - [work-queue.md](work-queue.md) — what comes next, in the owner's order: the rest of the
   workflow suite, the arrival-row check on the suite, a named harness version against a
   local responder, a two-way channel for Claude Code, the rest of stage 2 of the plugin
-  and a focus for a Codex compaction, the parity queue, and what is queued without a
-  date. Open it to pick the next piece of work.
+  and a focus for a Codex compaction, actions on a sent message, the parity queue, and
+  what is queued without a date. Open it to pick the next piece of work.
 - [roadmap/README.md](roadmap/README.md) — what is done: the index of the roadmap, one
   file per closed milestone, review round or piece of work, named
   `YYYY-MM-DD-<subject>.md` by the day it closed, plus `risks.md` for the risks table and
