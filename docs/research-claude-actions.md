@@ -91,7 +91,8 @@ Probed by review-claude on September 24, 2026, Claude Code 2.1.280, with a stand
 
 Probed by review-claude on September 24, 2026, Claude Code 2.1.280, in a private HOME
 against a stand-in API **[live]** and in the binary **[source]**, for a todo list sent
-with a task ([work-queue.md](work-queue.md#then-a-todo-list-sent-with-a-task)).
+with a task, a feature the owner later dropped
+([work-queue.md](work-queue.md#dropped-a-todo-list-sent-with-a-task)).
 
 - **The tools** are `TaskCreate`, `TaskUpdate`, `TaskList` and `TaskGet`; `TodoWrite` is
   the older one, which takes their place only with `CLAUDE_CODE_ENABLE_TASKS=0`

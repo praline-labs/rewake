@@ -122,3 +122,38 @@ The owned server uses CODEX_INTERNAL_APP_SERVER_REMOTE_CONTROL_DISABLED=1
 remote-control path. This internal marker and the remote configuration rules
 are version-specific. The later [installed native-mailbox acceptance](native-mailbox-acceptance.md)
 closes the supported launch/delivery path; raw protocol probes alone did not do so.
+
+### The plan tool
+
+**[live against a local Responses stand-in, no model calls; Codex CLI 0.155.1 and
+0.156.1; September 25, 2026]** Probed for a checklist sent with a task, a feature the
+owner later dropped ([work-queue.md](work-queue.md#dropped-a-todo-list-sent-with-a-task));
+the evidence lay in `/tmp/rewake-plan-research`, a temporary directory. The terminal was
+not watched.
+
+- **The checklist is the model's `update_plan` tool**, which takes the whole list each
+  call: `{"explanation"?, "plan": [{"step", "status"}]}`, status `pending`,
+  `in_progress` or `completed`. Items carry no id, description or dependency; "at most
+  one in progress" is only in the tool's description **[source]**.
+- **It is off by default** on both versions: without a setting the tool was not among
+  those sent to the model, and a forced call got `unsupported call: update_plan`.
+  **`-c tools.update_plan.enabled=true` turns it on for a launch**; a call then
+  answered `Plan updated` and raised the event. rewake does not pass it.
+- **Plan mode refuses it even when enabled**, on both versions, verbatim: `update_plan
+  is a TODO/checklist tool and is not allowed in Plan mode`. A checklist is kept in
+  Default mode.
+- **A client cannot set the plan.** There is no request for it, and one that runs a
+  built-in tool does not exist ([research-protocol.md](research-protocol.md#the-plan-over-the-protocol)).
+  A `function_call` of `update_plan` with its output put in through `thread/inject_items`
+  is accepted, and runs nothing: no handler, no `turn/plan/updated`, no checklist in
+  `thread/read` or `thread/resume`.
+- **Across turns, resume and compaction**: the next turn's request carries the earlier
+  call and its arguments, and after a real restart of 0.155.1 and a resume the next
+  request still held the steps; the notification is not sent again and `thread.turns`
+  shows no checklist, because the plan event is not written to the rollout while the
+  call and its output are **[source]**. A stand-in compaction whose summary left the
+  steps out removed them from the next request: nothing keeps the list apart from the
+  history.
+- **In the terminal** each update adds an "Updated Plan" entry to the history — done
+  steps checked and struck through, the current one highlighted — a series of
+  snapshots rather than a standing panel **[source]**.

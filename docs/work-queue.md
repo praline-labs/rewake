@@ -89,21 +89,9 @@ part B, was built the same day and accepted live on September 25.
 What [remote-control.md](remote-control.md) describes is built and accepted live on both
 harnesses: Claude Code on September 24, 2026, Codex (part B) on September 25 after nine
 review rounds ([2026-09-24-remote-control-codex.md](roadmap/2026-09-24-remote-control-codex.md)).
-In order, what follows it:
-
-**`rewake compact` returns at once.** Main's order of September 25, 2026: the command
-returns once the request is taken or refused, and the outcome of the compaction comes
-to main as a letter, instead of the command waiting for it.
-
-**The worker rules in the role briefing**, and with them the re-read after a compaction.
-The briefing tells a session to re-read its task with `rewake inbox --owed` after a
-context compaction (`internal/role/playbook.go`), and `--owed` lists only the tasks read
-and not yet answered: a new task still unread reads as nothing owed. Seen live twice on
-September 25, 2026, Codex CLI 0.155.1, on the subject of part B's acceptance, each time a
-task delivered during a compaction: after the first the session ended its turn with
-"nothing owed", after the second it resumed the old interrupted task instead. The
-direction: `--owed` names unread tasks as well, or says "N unread — run rewake inbox",
-and the briefing's line says so.
+The command returning at once and the worker rules in the role briefing followed on
+September 25, 2026 ([2026-09-25-compact-non-blocking.md](roadmap/2026-09-25-compact-non-blocking.md),
+[roles.md](roles.md)). What stays open:
 
 **A main's own failed turn reports to nobody.** On September 24, 2026 at 19:36 main
 received an `error` letter about its own turn, "API Error: Connection lost
@@ -120,21 +108,25 @@ proper one, if a later protocol version adds a field or a per-request override; 
 emulation through the conversation's history — the focus put in as an item before the
 compaction, which unlike instructions stays in the history afterwards.
 
-## Then: a todo list sent with a task
+## Dropped: a todo list sent with a task
 
-The owner asked on September 24, 2026 for this feature, scheduled after stage 2 part B:
-main sets a todo list for a worker together with a task — `rewake send` with a list —
-and the list appears in the worker's terminal as the harness's own checklist, ticked
-off as the worker goes.
+The owner asked on September 24, 2026 for a todo list that main sends with a task and
+the worker's harness shows as its own checklist. On September 26, 2026 the owner decided
+not to build it — neither a list on `rewake send` nor turning the harnesses' checklist
+tools on at launch: rewake is about delivery between sessions, and task lists belong to
+the harness and to the owner's task trackers. What the research learned stays recorded:
+Claude Code's task tools in [research-claude-actions.md](research-claude-actions.md#the-task-list),
+Codex's plan tool in [research-codex.md](research-codex.md#the-plan-tool) and
+[research-protocol.md](research-protocol.md#the-plan-over-the-protocol).
 
-What is known for Claude Code ([research-claude-actions.md](research-claude-actions.md#the-task-list)):
-the harness's task tools are off by model for the current models, and
-`CLAUDE_CODE_ENABLE_TODO_TOOLS=1` turns them on for one launch — rewake does not switch
-them off, and has to switch them on. The plugin can create the items itself with
-`$.tool.call` and `TaskCreate`, and they show in the terminal; the model does not see
-items made that way, so the task's text has to name them. A new kind of control request
-would carry the list from main to the worker's plugin. Codex keeps a plan of its own in
-its terminal; parity needs research first.
+## Then: an addendum to a task already sent
+
+Kept from the dropped feature on September 26, 2026 because it is about delivery; queued,
+not built. Today a correction to a task already sent goes as a notify, and after the
+worker's compaction it drops out of view: `rewake inbox --owed` shows the task alone.
+`rewake send <name> "..." --to <task id>` would attach the text to that task; `rewake
+inbox --owed` would show the task together with its addenda; and the addendum itself is
+announced like any letter.
 
 ## Then: Codex's `--worktree`
 

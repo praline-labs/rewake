@@ -281,3 +281,24 @@ session of 0.156.1 was started.
   never sends.
 - **Server notifications**: no method added or removed; the item and turn
   notifications changed only through the nested definitions above.
+
+## The plan over the protocol
+
+**[schemas of 0.155.1 and 0.156.1, experimental; reference tree; September 25,
+2026]** What the protocol offers for the model's checklist, the `update_plan` tool
+([research-codex.md](research-codex.md#the-plan-tool)).
+
+- **The server announces it** as `turn/plan/updated`, with `threadId`, `turnId`,
+  `explanation` and `plan: [{step, status}]`. The notification spells the status
+  `inProgress` where the tool's argument has `in_progress`. The schema is the same,
+  byte for byte, in both versions.
+- **A client has no request that sets it**: `ClientRequest` holds none, and none that
+  runs a built-in tool. `mcpServer/tool/call` is for MCP tools, and a `toolOutput` on
+  `turn/start` hands in a finished result rather than running anything.
+- **Not this checklist**: `ThreadItem::Plan {text}` and `item/plan/delta` carry the
+  prose plan of Plan mode.
+- **A standing instruction for a turn**: `additionalContext` on `turn/start` and
+  `turn/steer` with `kind: application` reaches the model as a developer message, and
+  stays in the history; each fragment is cut at about 1000 tokens, and an unchanged
+  value under the same key is not necessarily sent again **[source]**. rewake does not
+  use it.

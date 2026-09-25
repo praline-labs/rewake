@@ -158,11 +158,11 @@ everything else.
   subject: compact it, abort its turn, poll a file, swallow a socket line, reload, fill
   the harness's task list — with the forms and refusals of each, as the host words them.
   Open it before changing the module's side of `rewake compact` or `rewake interrupt`,
-  before the todo list sent with a task, and after a harness update.
+  and after a harness update.
 - [research-codex.md](research-codex.md) — what only a running Codex session shows,
   split from research.md by subject: `codex queue`, thread identity and terminal events,
-  the sandbox as a running session meets it, environment and instructions, and the
-  session-owned app-server. Open it before touching the Codex adapter or after a Codex
+  the sandbox as a running session meets it, environment and instructions, the
+  session-owned app-server, and the model's plan tool. Open it before touching the Codex adapter or after a Codex
   update.
 - [research-launch.md](research-launch.md) — what an installed binary answers when run:
   model and effort catalogues and the usable context window, which flags may repeat,
@@ -177,8 +177,8 @@ everything else.
   reference source state: the flags schema generation needs, required fields of the
   types the adapter uses, how start-or-steer forks, where `canAcceptDirectInput`
   lives, what compaction and the terminal's other commands send over the protocol, and
-  what a compaction or an interrupt on rewake's request would send and meet. Open it
-  when the adapter or the fixture has to match a protocol change.
+  what a compaction or an interrupt on rewake's request would send and meet, and what
+  the protocol offers for the model's plan. Open it when the adapter or the fixture has to match a protocol change.
 - [research-permissions.md](research-permissions.md) — the Codex sandbox: network and
   filesystem limits on Linux, why `.git`, `.agents` and `.codex` are protected, how
   `--add-dir` grants access, worktree quirks, and a short account of remote resume
