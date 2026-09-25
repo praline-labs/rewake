@@ -8,11 +8,21 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/iiiokojiadbi/rewake/internal/buildtime"
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/role"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
+
+// noticeScan is how often main's wrapper looks for other sessions' comings,
+// goings and compactions: once a second unless a build set builtNoticeScan
+// (see package buildtime). The workflow suite sets it shorter, because several of
+// its observations are an absence — no notice sent — and the wait that proves
+// one has to outlast a scan.
+var noticeScan = buildtime.Duration("builtNoticeScan", builtNoticeScan, time.Second)
+
+var builtNoticeScan string
 
 // One readiness worker per launch, and one discovery loop only for room main.
 // Notification/storage errors never enter the child or mailbox lifecycle paths.
@@ -41,7 +51,7 @@ func startAvailability(parent context.Context, dir string, self registry.Session
 		if ctx.Err() != nil || self.Role != role.Main.ID {
 			return
 		}
-		ticker.Reset(time.Second)
+		ticker.Reset(noticeScan)
 		notices := newSessionNotices()
 		for ctx.Err() == nil {
 			if usable() {

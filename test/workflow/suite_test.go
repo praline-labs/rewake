@@ -110,17 +110,36 @@ func run(m *testing.M) int {
 		}
 	}
 
+	if err := takePoolWidth(); err != nil {
+		fmt.Fprintf(os.Stderr, "workflow: -parallel: %v\n", err)
+		return 2
+	}
 	code := m.Run()
+	var failures []string
+	if suite.schema.err != nil {
+		failures = append(failures, suite.schema.err.Error())
+	}
+	// Every case has finished and swept what carried its label. Whatever is
+	// still below this process was accounted for by no case — an unlabeled
+	// descendant, or one a sweep could not read — and the run fails on it:
+	// the guarantee that nothing a case started survives it now ends here.
+	// It goes into the run record as well, because no case record will say
+	// it, and a summary would otherwise report a red engine and nothing more.
+	if left := finalSweep(); len(left) > 0 {
+		leftover := "processes outlived their cases: " + joinStrings(left, "; ")
+		fmt.Fprintf(os.Stderr, "workflow: %s\n", leftover)
+		failures = append(failures, leftover)
+		if code == 0 {
+			code = 1
+		}
+	}
 	// Published on both paths. A failing run needs its scenario count as much
 	// as a passing one — more, because the first question about a red run is
 	// whether the case that failed is the only thing that ran — and the
 	// earlier version reported it only when everything had passed.
 	scenarios := ranScenarios()
 	against := againstForRun()
-	failure := ""
-	if suite.schema.err != nil {
-		failure = suite.schema.err.Error()
-	}
+	failure := joinStrings(failures, "; ")
 	publishRun(suite.enabled, scenarios, against, failure)
 	if code != 0 {
 		return code
@@ -170,22 +189,6 @@ func reportScenarios(ran []string, against []record.Against) int {
 // with no diagnostic at all.
 const buildTimeout = 3 * time.Minute
 
-// The suite's binary serves a shorter coalescing window than a release: a
-// heads-up or a report waits for company in dozens of cases, and the real
-// three seconds of quiet add minutes to a run while proving nothing the
-// shorter window does not. The scenario that observes the window, batch-arrival,
-// spaces its heads-ups well inside this quiet. internal/inbox/window.go reads
-// the two values.
-const (
-	suiteQuiet = 1500 * time.Millisecond
-	suiteCap   = 2 * time.Second
-)
-
-// windowFlags are the build flags that set the suite's window, for the
-// binary under test and every mutant alike.
-var windowFlags = []string{"-ldflags", fmt.Sprintf("-X %[1]s.builtQuiet=%[2]s -X %[1]s.builtCap=%[3]s",
-	"github.com/iiiokojiadbi/rewake/internal/inbox", suiteQuiet, suiteCap)}
-
 // buildRewake builds the binary under test into dir. Scenarios must never find
 // `rewake` on the developer's PATH: a green result obtained against somebody
 // else's build, of unknown age, proves nothing about this working tree.
@@ -199,7 +202,7 @@ func buildRewake(dir string) (string, error) {
 	binary := filepath.Join(dir, "rewake")
 	// No VCS stamp: the suite asserts nothing about the build line, and a
 	// copy without .git would fail on the stamp.
-	build := exec.Command("go", append(append([]string{"build", "-buildvcs=false"}, windowFlags...), "-o", binary, "./cmd/rewake")...)
+	build := exec.Command("go", append(append([]string{"build", "-buildvcs=false"}, suiteFlags...), "-o", binary, "./cmd/rewake")...)
 	build.Dir = root
 	build.Env = os.Environ()
 	// Through the same group machinery a case uses: `go build` starts
@@ -233,7 +236,20 @@ func moduleRoot() (string, error) {
 // enterScenario gates a scenario on the switch and records that it ran. It
 // returns the path of the binary built for this run, which is the only rewake
 // a scenario may execute.
+//
+// The scenario runs in the pool, beside other cases (pool_test.go).
 func enterScenario(t *testing.T, name string) string {
+	t.Helper()
+	binary := enterSerialScenario(t, name)
+	joinPool(t, name)
+	return binary
+}
+
+// enterSerialScenario is enterScenario for a scenario that must not overlap
+// another case: one that changes what the whole test process shares, such as
+// its environment through t.Setenv. It runs in the serial phase, before the
+// pool starts.
+func enterSerialScenario(t *testing.T, name string) string {
 	t.Helper()
 	if !suite.enabled {
 		t.Skipf("scenario %q skipped: set %s=1 to run the workflow suite", name, switchEnv)

@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/iiiokojiadbi/rewake/internal/buildtime"
 	"github.com/iiiokojiadbi/rewake/internal/control"
 	"github.com/iiiokojiadbi/rewake/internal/harness"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
@@ -44,9 +45,16 @@ type steerModel struct {
 // another compaction — and its end comes to main as a letter: the command
 // never holds main's shell for a request to the model.
 var steerLimits = map[string]control.Limits{
-	control.Compact:   {Pickup: 5 * time.Second, Outcome: 10 * time.Second, Poll: 50 * time.Millisecond},
-	control.Interrupt: {Pickup: 5 * time.Second, Outcome: 10 * time.Second, Poll: 50 * time.Millisecond},
+	control.Compact:   {Pickup: steerPickup, Outcome: 10 * time.Second, Poll: 50 * time.Millisecond},
+	control.Interrupt: {Pickup: steerPickup, Outcome: 10 * time.Second, Poll: 50 * time.Millisecond},
 }
+
+// steerPickup is the pickup limit, five seconds unless a build set builtPickup
+// (see package buildtime). The workflow suite sets it: every case where nobody
+// takes a request waits out the whole limit before the refusal it observes.
+var steerPickup = buildtime.Duration("builtPickup", builtPickup, 5*time.Second)
+
+var builtPickup string
 
 // remember leaves a compaction for main's wrapper; replaceable in tests.
 var remember = control.Remember

@@ -92,6 +92,7 @@ without a date. Local installation without publishing is in
 | September 24, 2026 | [A main that compacts and interrupts a Codex session](2026-09-24-remote-control-codex.md) | stage 2 part B: the Codex wrapper serves the control directory, the gateway compacts marked manual and refuses mid-turn itself, interrupts naming main; no notice line on Codex by owner decision; probed live on 0.155.1, the workflow case `codex-steered` with five mutants; nine review rounds, accepted on the Codex side after a live run on 0.155.1 on September 25 |
 | September 25, 2026 | [`rewake compact` that does not wait for the end](2026-09-25-compact-non-blocking.md) | the command returns once the compaction started, or says requested; the end reaches main as a notify with the tokens and the count, from the worker's telemetry through main's wrapper; the workflow cases with new mutants for both |
 | September 25, 2026 | [One notice for a burst of letters](2026-09-25-coalesced-notices.md) | notifies and reports wait up to four seconds for company in the shared mailbox server, tasks and questions go at once; the batch-arrival case with a fifth mutant |
+| September 25, 2026 | [The workflow suite in three minutes instead of twenty](2026-09-25-suite-speed.md) | cases side by side in a pool sized by `-parallel`, owner labels for process cleanup with a final sweep, five product waits shorter in the suite's build; 19m22s to about 3m10s, crosswise 7m02s to 1m17s |
 
 ## Remaining work — owner decisions, September 19–21, 2026
 

@@ -181,6 +181,26 @@ func (s *codexSession) stop(c *Case) error {
 	return errors.New("the session did not end after being asked to")
 }
 
+// replaceScript puts an executable script at path by writing it beside and
+// renaming it over, never by rewriting the file in place. A case starts more
+// than one session, each installing the shims again, while an earlier session
+// of the same case is running them: a script open for writing when another
+// process execs it fails that exec with ETXTBSY, and a rename swaps the file
+// without ever holding one open.
+func replaceScript(path, content string) error {
+	temporary, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+"-*")
+	if err != nil {
+		return err
+	}
+	_, writeErr := temporary.WriteString(content)
+	closeErr := temporary.Close()
+	if err := errors.Join(writeErr, closeErr, os.Chmod(temporary.Name(), 0o700)); err != nil {
+		_ = os.Remove(temporary.Name())
+		return err
+	}
+	return os.Rename(temporary.Name(), path)
+}
+
 // installShim writes the two programs the session needs on its PATH: `codex`,
 // which re-executes this test binary as the harness, and `rewake`, which is
 // the binary built for this run. The isolation deliberately keeps an
@@ -194,12 +214,12 @@ func installShim(t *testing.T, c *Case, iso *Isolation) {
 	for _, harness := range []string{"codex", "claude"} {
 		script := "#!/bin/sh\nexec env " + shimHarness + "=" + harness +
 			" \"$RW_SHIM_TEST_EXE\" -test.run=TestCodexShimHelper -- \"$@\"\n"
-		if err := os.WriteFile(filepath.Join(iso.ShimDir, harness), []byte(script), 0o700); err != nil {
+		if err := replaceScript(filepath.Join(iso.ShimDir, harness), script); err != nil {
 			t.Fatalf("installing the %s shim: %v", harness, err)
 		}
 	}
 	link := "#!/bin/sh\nexec " + iso.binary + " \"$@\"\n"
-	if err := os.WriteFile(filepath.Join(iso.ShimDir, "rewake"), []byte(link), 0o700); err != nil {
+	if err := replaceScript(filepath.Join(iso.ShimDir, "rewake"), link); err != nil {
 		t.Fatalf("installing rewake for the session: %v", err)
 	}
 	// Checked, not assumed: a typo here would not fail loudly. The session

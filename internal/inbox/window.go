@@ -3,6 +3,8 @@ package inbox
 import (
 	"fmt"
 	"time"
+
+	"github.com/iiiokojiadbi/rewake/internal/buildtime"
 )
 
 // Letters that ask for nothing come in bursts: three workers restarted give
@@ -44,25 +46,12 @@ var Coalescing = builtWindow(Window{Quiet: 3 * time.Second, Cap: 4 * time.Second
 // neither.
 var builtQuiet, builtCap string
 
-// builtWindow is window with the durations a build set. A value that does not
-// parse stops the binary at its start: a build asked for a window, and quietly
-// serving another would make whatever it tests untrue.
+// builtWindow is window with the durations a build set; see package buildtime.
 func builtWindow(window Window, quiet, capped string) Window {
-	for _, set := range []struct {
-		name  string
-		value string
-		into  *time.Duration
-	}{{"builtQuiet", quiet, &window.Quiet}, {"builtCap", capped, &window.Cap}} {
-		if set.value == "" {
-			continue
-		}
-		parsed, err := time.ParseDuration(set.value)
-		if err != nil || parsed <= 0 {
-			panic(fmt.Sprintf("rewake was built with %s=%q, not a positive duration", set.name, set.value))
-		}
-		*set.into = parsed
+	return Window{
+		Quiet: buildtime.Duration("builtQuiet", quiet, window.Quiet),
+		Cap:   buildtime.Duration("builtCap", capped, window.Cap),
 	}
-	return window
 }
 
 // collectingDetail is what a sender reads while its letter waits for company.

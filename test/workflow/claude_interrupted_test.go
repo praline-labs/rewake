@@ -208,7 +208,10 @@ func playInterruptedTurn(t *testing.T, c *Case, iso *Isolation) []telemetryFindi
 	// turn has been asked of it yet, so whatever reaches main now came from
 	// the interruption itself.
 	begun := time.Now()
-	stoppedHeard := waitFor(c, 15*time.Second, func() bool { return slices.Contains(about(heard, tasks[heard]), "stopped") })
+	// A ceiling the healthy run ends within a second or two — the report waits
+	// up to suiteCap for company — and the controls that publish nothing wait
+	// out in full.
+	stoppedHeard := waitFor(c, suiteCap+3*time.Second, func() bool { return slices.Contains(about(heard, tasks[heard]), "stopped") })
 	state, failure := awaited(tasks[heard])
 	out = append(out, finding(obsStoppedAtOnce, stoppedHeard && state == "stopped" && failure == "",
 		"after %s main read %v about the task; the awaited view gives it %q %s", time.Since(begun).Round(10*time.Millisecond), about(heard, tasks[heard]), state, failure))

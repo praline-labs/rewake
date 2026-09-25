@@ -80,7 +80,7 @@ The first full run with the real window took 23m43s against 13m44s the run befor
 cases both runs share, the window added 509 s, and 65 of them grew by more than two
 seconds — most by one wait on a heads-up or a report each, the steered cases by 12 to
 17 s. So the suite's build now serves a shorter window, 1.5 s of quiet and a 2 s cap,
-through `-ldflags -X` on `builtQuiet` and `builtCap` ([testing.md](../testing.md#running-it));
+through `-ldflags -X` on `builtQuiet` and `builtCap` ([testing-pool.md](../testing-pool.md#waits-the-suite-shortens));
 batch-arrival spaces its heads-ups 600 ms apart to stay inside it, and its unwindowed
 control still breaks. The real values stay held by the unit tests, one of which keeps
 the cap a second inside `send`'s five-second wait. With it the full run was green, 99

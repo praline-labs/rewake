@@ -35,6 +35,9 @@ type owned struct {
 	pgid int
 	done chan struct{}
 	err  error
+	// label is the owner label the process was started under, which its
+	// descendants carry too; see owner_labels_test.go.
+	label string
 
 	// failureExpected marks a process whose non-zero exit is the point of the
 	// scenario. Without it a negative case would have to choose between
@@ -100,18 +103,22 @@ func (process *owned) reapGroup() {
 	}
 }
 
-// startGroup starts cmd in a process group of its own and begins reaping it.
-func startGroup(name string, cmd *exec.Cmd) (*owned, error) {
+// startGroup starts cmd in a process group of its own, under the owner label,
+// and begins reaping it.
+func startGroup(name, label string, cmd *exec.Cmd) (*owned, error) {
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
 	}
 	cmd.SysProcAttr.Setpgid = true
-	if err := cmd.Start(); err != nil {
+	cmd.Env = withLabel(cmd.Env, label)
+	if err := startLeader(cmd); err != nil {
 		return nil, fmt.Errorf("starting %s: %w", name, err)
 	}
-	process := &owned{name: name, cmd: cmd, pgid: cmd.Process.Pid, done: make(chan struct{})}
+	pid := cmd.Process.Pid
+	process := &owned{name: name, cmd: cmd, pgid: pid, done: make(chan struct{}), label: label}
 	go func() {
 		process.err = cmd.Wait()
+		forgetLeader(pid)
 		close(process.done)
 	}()
 	return process, nil
@@ -126,7 +133,9 @@ func outputBounded(ctx context.Context, name string, cmd *exec.Cmd) ([]byte, err
 	var combined bytes.Buffer
 	cmd.Stdout = &combined
 	cmd.Stderr = &combined
-	process, err := startGroup(name, cmd)
+	// A label of its own: this runs beside the cases, and its sweep must take
+	// what it started and nothing of theirs.
+	process, err := startGroup(name, newOwnerLabel(), cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +145,7 @@ func outputBounded(ctx context.Context, name string, cmd *exec.Cmd) ([]byte, err
 		outcome = process.err
 	case <-ctx.Done():
 		outcome = fmt.Errorf("%s did not finish in time: %w", name, ctx.Err())
-		if left := terminate(process, nil); len(left) > 0 {
+		if left := terminate(process, process.label, nil); len(left) > 0 {
 			outcome = fmt.Errorf("%s left work running: %s", name, joinStrings(left, "; "))
 		}
 	}
@@ -153,7 +162,7 @@ func outputBounded(ctx context.Context, name string, cmd *exec.Cmd) ([]byte, err
 // group, and any descendant that moved to a group of its own and outlived it.
 func (process *owned) descendantsLeft() []string {
 	stillUp := process.groupAlive()
-	left := terminate(process, nil)
+	left := terminate(process, process.label, nil)
 	if stillUp {
 		left = append(left, fmt.Sprintf("group %d was still running", process.pgid))
 	}
@@ -191,7 +200,7 @@ func (c *Case) output(cmd *exec.Cmd, failureExpected bool) ([]byte, error) {
 // start launches cmd in its own process group and registers the group with the
 // case, so the case remains responsible for it however the call goes.
 func (c *Case) start(cmd *exec.Cmd, failureExpected bool) (*owned, error) {
-	process, err := startGroup(cmd.Path, cmd)
+	process, err := startGroup(cmd.Path, c.label, cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +223,7 @@ func (c *Case) wait(process *owned) error {
 		// terminate rather than wait-then-clean: what holds the pipe open may
 		// be a descendant that left the group, and waiting for the parent
 		// first would wait on exactly what nothing has cleaned up yet.
-		terminate(process, c.livePids())
+		terminate(process, c.label, c.livePids())
 		return fmt.Errorf("%s ran past the case deadline of %s; last observed: %s",
 			process.name, c.spec.Deadline, c.lastProgress())
 	}
@@ -236,13 +245,13 @@ func (c *Case) joinProcesses() error {
 			c.mu.Lock()
 			process.endedByCase = true
 			c.mu.Unlock()
-			problems = append(problems, terminate(process, c.livePids())...)
+			problems = append(problems, terminate(process, c.label, c.livePids())...)
 			problems = append(problems, fmt.Sprintf("%s was still running when the case ended", process.name))
 			continue
 		}
 		// The parent is gone; the group may not be.
 		if process.groupAlive() {
-			problems = append(problems, terminate(process, c.livePids())...)
+			problems = append(problems, terminate(process, c.label, c.livePids())...)
 			problems = append(problems, fmt.Sprintf("%s left descendants running after it exited", process.name))
 			continue
 		}
@@ -252,7 +261,7 @@ func (c *Case) joinProcesses() error {
 	}
 	// Anything that left the group it was started in is invisible to every
 	// check above, so it is looked for by descent instead.
-	problems = append(problems, terminate(nil, c.livePids())...)
+	problems = append(problems, terminate(nil, c.label, c.livePids())...)
 	if problems = dedup(problems); len(problems) > 0 {
 		return fmt.Errorf("%s", joinStrings(problems, "; "))
 	}

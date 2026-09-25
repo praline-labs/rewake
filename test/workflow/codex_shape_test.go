@@ -17,7 +17,9 @@ import (
 // check is unsupported, and says why. See schema_test.go for what shape does
 // and does not prove.
 func TestShimAnswersMatchTheInstalledSchema(t *testing.T) {
-	binary := enterScenario(t, "shim-answers-match-schema")
+	// Serial: the fixture's delivery check below reads the session from the
+	// process environment, which t.Setenv changes for every case at once.
+	binary := enterSerialScenario(t, "shim-answers-match-schema")
 
 	c := Start(t, Spec{
 		Name:    "shim-answers-match-schema",

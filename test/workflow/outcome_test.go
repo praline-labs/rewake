@@ -21,14 +21,14 @@
 //   - The switch is REWAKE_WORKFLOW, and its value is read: 1/true/yes/on turn
 //     the scenarios on, 0/false/no/off and an empty value leave them off, and
 //     anything else stops the run instead of guessing.
-//   - Scenarios never run in parallel — no t.Parallel, and nothing that starts
-//     one case while another is live. Cleanup identifies a case's processes by
-//     descent from this process, so two cases at once would each see the
-//     other's work as nobody's: signals sent to a neighbour's processes, and
-//     "pid N was still running" recorded against a case that never started it.
-//     The regression that makes /proc unreadable would take down whatever else
-//     was opening a file at that moment. Parallelism needs a real boundary —
-//     a cgroup or a pid namespace — before it can be considered.
+//   - Scenarios run in parallel, through enterScenario and the pool in
+//     pool_test.go — never by a t.Parallel of their own, which would take a
+//     slot outside the pool. A case's processes are told from a neighbour's by
+//     the owner label they inherit (owner_labels_test.go), so its cleanup
+//     signals and reports only its own, and a sweep once every case has ended
+//     fails the run on anything no case accounted for. A scenario that changes
+//     state the whole process shares — t.Setenv, a package variable — enters
+//     through enterSerialScenario instead, and runs before the parallel ones.
 //   - Commands run through Case.Output or Case.OutputAllowingFailure, never
 //     through cmd.Run or cmd.Output directly. A command started outside them
 //     compiles fine and is never registered with the case, so the termination

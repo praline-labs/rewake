@@ -226,8 +226,12 @@ func (col column) replayedAnnouncement(worker *codexSession) (string, error) {
 // runInColumns runs one scenario body in both columns, under a subtest each.
 // The scenario keeps one name: the column is a property of the case, which is
 // what the summary prints beside it, not a second scenario.
+//
+// The test itself is made parallel so that its columns, each of which joins
+// the pool, can overlap other tests and not only each other.
 func runInColumns(t *testing.T, name string, body func(t *testing.T, col column)) {
 	t.Helper()
+	runParallel(t)
 	for _, col := range []column{codexColumn, claudeColumn} {
 		t.Run(col.harness, func(t *testing.T) { body(t, col) })
 	}

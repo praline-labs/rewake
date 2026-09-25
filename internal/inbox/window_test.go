@@ -93,17 +93,20 @@ func members(notice Message) []Message {
 }
 
 func TestNotesSecondsApartAreAnnouncedOnce(t *testing.T) {
-	f := serveWindow(t, Window{Quiet: time.Second, Cap: 2500 * time.Millisecond})
+	f := serveWindow(t, Window{Quiet: 2 * time.Second, Cap: 3500 * time.Millisecond})
 	for index, text := range []string{"first left", "second left", "first available"} {
 		if index > 0 {
 			// Each gap is far outside the 150 ms first collection, and the
-			// last letter comes after a quiet second counted from the first
-			// would have closed: the quiet is counted from the latest.
-			time.Sleep(700 * time.Millisecond)
+			// last letter comes after a quiet counted from the first would
+			// have closed: the quiet is counted from the latest. A stall only
+			// widens a gap, so the margin that matters is the gap's under the
+			// quiet; under -race on a busy machine a 700 ms sleep once took
+			// 1.9 s.
+			time.Sleep(1100 * time.Millisecond)
 		}
 		f.put(Note, text)
 	}
-	f.seen(1, 4*time.Second)
+	f.seen(1, 5*time.Second)
 	// Long enough for a split notice to follow the first.
 	time.Sleep(600 * time.Millisecond)
 	notices, _ := f.seen(1, 0)

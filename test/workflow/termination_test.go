@@ -40,8 +40,10 @@ const groupTerminationBudget = 12 * time.Second
 // Only the loop's own pacing changes; the budget above, and the shutdown
 // stages it is built from, are untouched.
 //
-// A package variable is safe here because scenarios never run in parallel —
-// see the conventions in outcome_test.go.
+// A package variable is safe here because the tests that shorten it do not
+// call t.Parallel: Go resumes the parallel tests only once every serial one
+// has finished, so no case is cleaning up while the budget is changed — see
+// the conventions in outcome_test.go.
 var terminationBudget = groupTerminationBudget
 
 // killGrace is how much of that budget is reserved for SIGKILL to take effect
@@ -73,8 +75,10 @@ const blindBudget = time.Second
 // the process that nothing has yet cleaned up: with a 100 ms deadline that
 // took 14 seconds and an outside rescue.
 //
-// own may be nil, for a pass that only looks for escaped descendants.
-func terminate(own *owned, known map[int]bool) []string {
+// own may be nil, for a pass that only looks for escaped descendants. Only
+// descendants carrying the label are this call's to end; an empty label takes
+// everything, which only the final sweep may.
+func terminate(own *owned, label string, known map[int]bool) []string {
 	started := time.Now()
 	deadline := started.Add(terminationBudget)
 	// Nothing is called clean before this: /proc answers about an instant,
@@ -98,8 +102,9 @@ func terminate(own *owned, known map[int]bool) []string {
 	// out the whole budget while every look fails buys nothing: the case is
 	// already red, and the condition being waited for cannot be observed.
 	var blindSince time.Time
+	described := map[int]string{}
 	for {
-		found, err := sweepOnce(known, signal)
+		found, err := sweepOnce(label, known, signal, described)
 		if err != nil {
 			left = append(left, err.Error())
 			if blindSince.IsZero() {

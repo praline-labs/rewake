@@ -63,8 +63,11 @@ type Case struct {
 	checks    []cleanupCheck
 	dirs      []string
 	processes []*owned
-	result    Outcome
-	reason    string
+	// label marks everything the case starts and everything that descends
+	// from it, so its sweeps take its own processes and no neighbour's.
+	label  string
+	result Outcome
+	reason string
 }
 
 type cleanupCheck struct {
@@ -98,7 +101,7 @@ func newCase(t caseT, spec Spec) *Case {
 	}
 	deadline := time.Now().Add(spec.Deadline)
 	ctx, stop := context.WithDeadline(context.Background(), deadline)
-	c := &Case{t: t, spec: spec, deadline: deadline, started: time.Now(), ctx: ctx, stop: stop, made: map[string]observation{}, result: NotRun}
+	c := &Case{t: t, spec: spec, deadline: deadline, started: time.Now(), ctx: ctx, stop: stop, made: map[string]observation{}, result: NotRun, label: newOwnerLabel()}
 	t.Cleanup(c.finish)
 	return c
 }

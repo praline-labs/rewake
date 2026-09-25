@@ -90,7 +90,7 @@ func TestMidTurnControlsCrosswise(t *testing.T) {
 	if os.Getenv(crossSwitch) == "" {
 		t.Skipf("crosswise check skipped: set %s=1 to run every control against every other world", crossSwitch)
 	}
-	enterScenario(t, "mid-turn-crosswise")
+	enterScenarioAround(t, "mid-turn-crosswise")
 	// Over observations rather than over controls: two of the three controls
 	// name the same observation, and pairing control with control ran that
 	// one twice under the same world, under two names for one question.
@@ -100,8 +100,9 @@ func TestMidTurnControlsCrosswise(t *testing.T) {
 				continue
 			}
 			t.Run(other.name+"-keeps-"+shortObservation(observation), func(t *testing.T) {
-				runNamedMidTurnControl(t, "mid-turn-cross-"+shortObservation(observation)+"-under-"+other.name,
-					other, observation, mustHold)
+				name := "mid-turn-cross-" + shortObservation(observation) + "-under-" + other.name
+				joinPool(t, name)
+				runNamedMidTurnControl(t, name, other, observation, mustHold)
 			})
 		}
 	}

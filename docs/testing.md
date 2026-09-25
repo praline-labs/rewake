@@ -14,7 +14,7 @@ and controls, and the roadmap records named below for how each piece was built.
 | Tier | Runs | Proves | Does not prove | Costs |
 | --- | --- | --- | --- | --- |
 | The five checks | formatting, vet, two linters, `go test -race -shuffle=on ./...` | unit invariants: parsing, publishing races, liveness, inbox order and expiry, the owned server's framing on a fake socket, the map of `docs/`; the suite's own classifier and summarizer | anything end to end: every workflow scenario skips itself | about a minute; no network, no harness, no container |
-| Workflow suite (**F**) | a built rewake end to end against a fixture of each harness, in two columns, with negative controls: some mutate the product, the others change the fixture's world | that the shared service code delivers, groups, steers and reports as each scenario claims, and that each claim can fail | that the real harness parses, renders or behaves as its fixture does | about twenty minutes — 19m28s on September 25, 2026, 102 cases one after another, eight of the minutes `claude-steered` and its controls — so a full run needs a `-timeout` past `go test`'s default ten minutes; no network; under `REWAKE_WORKFLOW=1` the schema case also runs a real Codex (next row) |
+| Workflow suite (**F**) | a built rewake end to end against a fixture of each harness, in two columns, with negative controls: some mutate the product, the others change the fixture's world | that the shared service code delivers, groups, steers and reports as each scenario claims, and that each claim can fail | that the real harness parses, renders or behaves as its fixture does | about three minutes — 3m06s and 3m10s on September 25, 2026, 102 cases six at a time, against 19m22s one after another the same evening; 2m23s eight at a time. The longest cases are `claude-steered`'s controls, about 30 s each. It fits in `go test`'s default ten minutes; the longer `-timeout` of the documented commands is for a first download of a named Codex version (below); no network; under `REWAKE_WORKFLOW=1` the schema case also runs a real Codex (next row) |
 | Schema of a Codex version | the installed Codex, or a named version fetched into a cache and run in a container, generating its protocol schema; every message the fixture sends is checked against it | that the fixture speaks the shape that version accepts: no missing required field, no field it does not have, no delivery it refuses and the fixture accepts | behaviour: order of events, readiness, reactions to a refusal — a schema has none of that | seconds from the cache; a first download is 150 MB and about half a minute |
 
 Two tiers are planned and not built. **P**, a real harness of a named version against a
@@ -54,30 +54,26 @@ lines and writes the rest to a file; run it with `go test -v` to watch it, and k
 how many scenarios ran is invisible. `-count=1` keeps a cached pass from standing in for
 a run. Run it after any change to delivery, reading, reporting or a fixture.
 
-**The suite's binary** serves a shorter coalescing window than a release: 1.5 seconds of
-quiet and a 2-second cap instead of three and four, set at build through
-`-ldflags -X` on `internal/inbox`'s `builtQuiet` and `builtCap`, for the binary under
-test and every mutant alike (`windowFlags` in `test/workflow/suite_test.go`). A heads-up
-or a report waits for company in most scenarios, and at the real window that wait added
-about nine minutes to a full run — measured while another session's cases ran — while
-proving nothing a shorter one does not. The real
-values are held by the unit tests, including one that keeps the cap a second inside
-`send`'s five-second wait. A scenario that times something against the window takes
-`suiteQuiet` or `suiteCap` rather than a number of its own.
+**Cases run side by side**, six at a time unless `-parallel` says otherwise, and the
+suite's binary runs five of the product's waits shorter than a release.
+[testing-pool.md](testing-pool.md) says how to choose the width, how a case's cleanup
+leaves its neighbours alone, and which values the suite does not run at their real
+length.
 
 **`REWAKE_CODEX_VERSION`** takes an exact version, `latest` or `installed`, and makes
 the schema case use that Codex, fetched once into the harness cache before any case
 starts and run in a container. The fetch gets half of `-timeout`, at most ten minutes,
-which is why a first run of a new version raises `-timeout` to forty: the suite alone
-takes about twenty minutes, and what is left after a slow first download has to hold it.
+which is why a first run of a new version raises `-timeout`: a slow first download
+takes up to ten minutes of it, and the suite about three more.
 Docker is needed only when a version is named; without it the run is red with the
 reason. Run it before updating Codex, as described below.
 
 **`REWAKE_WORKFLOW_CROSS=1`** with `-run Crosswise` turns on the crosswise checks: each
 control's observations are run again in every other control's world — under the other
 product mutants and under the other fixture switches — and each must stand, so a control
-that breaks on somebody else's change is caught. It multiplies the run to about three
-and a half minutes. Run it after adding or changing a control.
+that breaks on somebody else's change is caught. Each pair is a case of its own in the
+pool, so its 75 cases take about a minute and a quarter — 1m17s on September 25, 2026,
+against 7m02s one pair after another. Run it after adding or changing a control.
 
 `REWAKE_WORKFLOW_SELFCHECK` is not for people: the suite sets it on a child of itself
 to prove that a scenario missing an observation turns the run red.
@@ -322,6 +318,20 @@ commands on the Codex column.
 
 ## Traps this suite has already paid for
 
+- **A shim rewritten while it runs.** Every session a case starts installed the shim
+  scripts again, writing them in place, while an earlier session of the same case was
+  executing them: an exec of a file open for writing fails with ETXTBSY. Seen once while
+  eight copies of the suite ran at a time; the scripts are now written beside and renamed over
+  (September 25, 2026).
+- **Timers set at the edge of an idle machine.** Shortening the widened-window mutant's
+  collection interval from ten seconds to five broke its control in both columns: the
+  first two sends wait out `send`'s five-second wait for a status before the third letter
+  leaves, so the widened window has to outlast that, not only `laterSendDelay`. And with
+  six cases at a time, the sends writing batch-arrival's heads-ups started over a second
+  late: at 1.5 s of quiet and a 2 s cap, one crosswise run in four had the third heads-up
+  announced alone. The suite's window is 2 s and 3 s since, which cost about 25 s of a
+  full run. Every shortened wait now carries, beside its value, what it has to outlast
+  (September 25, 2026).
 - **A fixture session that outlives nothing.** A fixture session stops itself after 25
   seconds unless it serves a request directory, which keeps it up for 85. A worker the
   scenario asks nothing of, launched late in a long case, was gone when its last step

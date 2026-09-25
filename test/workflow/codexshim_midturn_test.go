@@ -21,10 +21,10 @@ import (
 // holdWindow bounds the wait for a second delivery to be steered in. It is a
 // ceiling on a wait that a healthy run ends in milliseconds — the sender
 // watches the recipient's telemetry and sends as soon as it says working — and
-// a run that reaches it has already failed: nothing arrived mid-turn. Ten
-// seconds rather than more because the controls that steer nothing wait it out
-// in full, and the suite pays that wait once per control.
-const holdWindow = 10 * time.Second
+// a run that reaches it has already failed: nothing arrived mid-turn. Four
+// seconds and no more because the controls that steer nothing wait it out in
+// full, and the suite pays that wait once per control and crosswise pair.
+const holdWindow = 4 * time.Second
 
 // holdOpen keeps the turn in progress until a delivery is steered into it, and
 // answers what happened for the turn's own text. It returns "" when this

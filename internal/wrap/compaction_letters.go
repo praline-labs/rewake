@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/iiiokojiadbi/rewake/internal/buildtime"
 	"github.com/iiiokojiadbi/rewake/internal/control"
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
@@ -16,8 +17,12 @@ import (
 // of a compaction and its count come apart — on Claude Code from the module
 // and from the PostCompact hook, which runs in the background — and each is
 // there within moments of the other unless something is broken. After it the
-// letter goes with what came, as it does when the worker has gone.
-var letterWait = 3 * time.Second
+// letter goes with what came, as it does when the worker has gone. A build may
+// set it with builtLetterWait (see package buildtime); the workflow suite does,
+// since each letter its cases wait for half of waits out the whole of it.
+var letterWait = buildtime.Duration("builtLetterWait", builtLetterWait, 3*time.Second)
+
+var builtLetterWait string
 
 // letterBound bounds how long main's wrapper waits for any word of a
 // compaction main asked for while its worker lives on. It is well past the

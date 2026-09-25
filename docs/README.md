@@ -210,6 +210,12 @@ everything else.
   `claude-steered` claim, with their controls, and `codex-steered`, the same commands
   served by the Codex wrapper. Open it before changing the plugin, the control
   directory, the Codex side of `rewake compact` and `rewake interrupt`, or those cases.
+- [testing-pool.md](testing-pool.md) — how the workflow suite runs its cases side by
+  side: choosing `-parallel`, the pool that starts the longest scenarios first, the
+  owner labels that keep one case's cleanup off its neighbours' processes, the sweep
+  after the last case, and the product waits the suite's build runs shorter than a
+  release. Open it before changing how a case starts or ends its processes, adding a
+  scenario that must run alone, or shortening a product value for the suite.
 - [check-runner.md](check-runner.md) — the requirements the workflow suite answers: one
   command without flooding an agent's context, the evidence tiers from pure Go to a
   person at a terminal, the output and evidence contract with its outcome names, isolation

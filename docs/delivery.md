@@ -242,7 +242,7 @@ about the mail: reports stay readable for their epoch and the rest is refused as
 undelivered message on shutdown. The mailbox server a test builds has no window unless
 it sets `Window`; the wrapper sets `inbox.Coalescing`. A build may shorten that window
 through `-ldflags -X` on `builtQuiet` and `builtCap`, and the workflow suite's does
-([testing.md](testing.md#running-it)); a release build sets neither.
+([testing-pool.md](testing-pool.md#waits-the-suite-shortens)); a release build sets neither.
 A multi-message signal says `Rewake: <n> new messages`, followed by one indented
 first-line preview of its latest member with sender and kind. Usage instructions
 remain in guide/help and briefing, outside the notification itself. Old accepted

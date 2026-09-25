@@ -205,9 +205,10 @@ func playClaudeInbound(t *testing.T, c *Case, iso *Isolation) []telemetryFinding
 
 // afterFinalWord is how long the note and the status get once the fixture has
 // said its last word about a line. The note asks for nothing, so the sender's
-// wrapper holds it up to suiteCap for company before announcing it; the three
-// seconds the rest takes come on top of that.
-const afterFinalWord = 3*time.Second + suiteCap
+// wrapper holds it up to suiteCap for company before announcing it; the rest
+// takes well under a second on an idle machine, and two leave room for a
+// loaded one. The controls that never say it wait all of this, three times.
+const afterFinalWord = 2*time.Second + suiteCap
 
 // finalWord waits for the fixture to record that the pair's hold expired.
 func (p inboundPair) finalWord(c *Case) bool {

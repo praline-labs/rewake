@@ -106,12 +106,13 @@ const notMainRefusal = "only a main session may "
 // compactTakes is how long the fixture's compaction runs after its start in
 // the steered cases: long enough that a command which waited for the end
 // could neither answer within startedWithin nor before the telemetry counted
-// it.
-const compactTakes = "5s"
+// it. Past startedWithin with a second to spare, and no longer: every steered
+// case waits it out.
+const compactTakes = "3s"
 
 // startedWithin is how soon a command that did not wait for the end answers,
 // with room for the module's poll and the pickup under a loaded machine.
-const startedWithin = 3 * time.Second
+const startedWithin = 2 * time.Second
 
 // compactIdle is main compacting an idle worker whose compaction takes
 // compactTakes: the command answers once it has started, the end comes as a
@@ -146,11 +147,12 @@ func (s steering) compactIdle(worker *codexSession, before, after int64, focus .
 		letter.Text == want && letter.Kind == "notify",
 		"main read %s %q, want notify %q", letter.Kind, letter.Text, want))
 
-	// main's wrapper looks for compactions once a second, and the telemetry
-	// case sees its notice within five: nothing in five means none was sent.
-	// No later event can stand in for the wait — the absence is the finding.
+	// main's wrapper looks for compactions every suiteNoticeScan, and holds a
+	// notice up to suiteCap for company: nothing in a scan, the cap and a
+	// margin for a loaded machine means none was sent. No later event can
+	// stand in for the wait — the absence is the finding.
 	const notice = "Rewake: context compacted (compaction 1)."
-	noticed := waitFor(s.c, 5*time.Second, func() bool { return strings.Contains(s.lead.mailboxRead(), notice) })
+	noticed := waitFor(s.c, suiteNoticeScan+suiteCap+1500*time.Millisecond, func() bool { return strings.Contains(s.lead.mailboxRead(), notice) })
 	late, failure := s.row(worker)
 	out = append(out, finding(obsCompactQuiet,
 		late.Compactions != nil && *late.Compactions == 1 && !noticed,

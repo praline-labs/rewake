@@ -143,6 +143,7 @@ func controlNamed(name string) taskReportControl {
 func failedTaskReport(t *testing.T, name string) {
 	t.Helper()
 	control := controlNamed(name)
+	runParallel(t)
 	for _, col := range control.columns {
 		t.Run(col.harness, func(t *testing.T) {
 			enterScenario(t, "task-report-control-"+name)
@@ -164,9 +165,10 @@ func TestTaskReportControlsCrosswise(t *testing.T) {
 	if os.Getenv(crossSwitch) == "" {
 		t.Skipf("crosswise check skipped: set %s=1 to run every control against every other world", crossSwitch)
 	}
+	runParallel(t)
 	for _, col := range bothColumns {
 		t.Run(col.harness, func(t *testing.T) {
-			enterScenario(t, "task-report-crosswise")
+			enterScenarioAround(t, "task-report-crosswise")
 			for _, observation := range taskReportObservations(col) {
 				for _, other := range taskReportControls {
 					if other.expected == observation || !other.runsIn(col) || !askable(observation, other.reports) {
@@ -174,6 +176,7 @@ func TestTaskReportControlsCrosswise(t *testing.T) {
 					}
 					name := shortTaskObservation(observation) + "-under-" + other.name
 					t.Run(name, func(t *testing.T) {
+						joinPool(t, "task-report-cross-"+name)
 						runTaskReportControl(t, col, "task-report-cross-"+name, other, observation, mustHold)
 					})
 				}

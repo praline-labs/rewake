@@ -214,7 +214,9 @@ func playSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 	code, view, said = steer("compact", calm.name)
 	killHarness(c, iso, calm)
 	var letters []string
-	waitFor(c, 15*time.Second, func() bool {
+	// The letter goes letterWait after the worker is gone and waits up to
+	// suiteCap for company; the control that sends none waits this out.
+	waitFor(c, suiteLetterWait+suiteCap+3*time.Second, func() bool {
 		letters = lettersOf()
 		letters = letters[min(earlier, len(letters)):]
 		return len(letters) > 0

@@ -17,7 +17,10 @@ import (
 // switch because it multiplies the scenario by the number of pairs.
 
 // The collection window is one product constant. Widened, the third letter
-// joins the first two and the group is no longer one of two.
+// joins the first two and the group is no longer one of two. Ten seconds, not
+// just past laterSendDelay: with the pass that widely spaced, the first two
+// sends wait out send's five-second wait for a status, and the third letter
+// leaves only after them.
 var mutantWindow = mutation{
 	name: "window",
 	file: "internal/inbox/serve.go",
@@ -142,7 +145,7 @@ func TestBatchControlsCrosswise(t *testing.T) {
 		t.Skipf("crosswise check skipped: set %s=1 to run every control against every other mutant", crossSwitch)
 	}
 	runInColumns(t, "batch-arrival-crosswise", func(t *testing.T, col column) {
-		enterScenario(t, "batch-arrival-crosswise")
+		enterScenarioAround(t, "batch-arrival-crosswise")
 		for _, control := range batchControls {
 			for _, other := range batchControls {
 				if other.mutant.name == control.mutant.name {
@@ -153,6 +156,7 @@ func TestBatchControlsCrosswise(t *testing.T) {
 				// blamed for a clock it never used.
 				name := control.mutant.name + "-under-" + other.mutant.name
 				t.Run(name, func(t *testing.T) {
+					joinPool(t, "batch-arrival-cross-"+name)
 					runBatchControl(t, col, "batch-arrival-cross-"+name, other.mutant, control.expected, mustHold)
 				})
 			}
