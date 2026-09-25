@@ -19,7 +19,7 @@ the sender, kind and time of an ordinary read and its text, from `done/` (or
 id. It is the task a session is working on, from the mailbox rather than from
 memory, which is what a session needs after a context compaction: a summary retells
 the brief and can drop an item. The write and general playbooks tell it to re-read
-there and to say so in its report.
+there, to read new mail with `rewake inbox`, and to say so in its report.
 
 It only reads. No lock is taken — every record it reads is written whole or not at
 all — and nothing is marked read, recorded, announced or given a status, so a second
@@ -30,7 +30,18 @@ line, `Rewake: nothing owed a report.`, and exit 0. Only work from another sessi
 owed: a task sent from a plain shell has no run to report to, records no wait, and so
 is not listed and cannot be shown again this way — `--help` says so, the one-line
 answer does not. Mail not yet read — unread, pending or held — is not owed and does
-not appear.
+not appear. What of it asks for work — tasks and questions, and a kind this build does
+not know, by kind alone (`inbox.AsksForWork`), so a task from a plain shell counts too —
+is counted after the list, `Rewake: <n> unread task(s) or question(s) — run rewake
+inbox.`, and nothing is said when there is none; `--json` carries the count as
+`unread`, 0 included. The count says work is waiting, not that a report is. Unread mail
+is looked at before what is owed, and a message in both is counted once, as owed: a
+parallel `rewake inbox` writes the wait record before it moves the message out of
+`unread/`, so a message read between the two looks is found at least once — the other
+order could miss it in both and answer "nothing owed" with nothing unread. "Nothing owed" is not "no work": a Codex worker that asked
+`--owed` after a compaction read that line and skipped a new unread task twice, which
+is why the count is there and why the playbooks tell a session to read new mail with
+`rewake inbox` as well (both dated September 25, 2026).
 
 `--owed` is used alone: `--peek` and `--message` look at unread mail, and a
 combination is refused. A main session is refused too, naming why: its reads record no

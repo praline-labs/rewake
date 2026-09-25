@@ -108,11 +108,19 @@ func KindOf(message Message) Kind {
 // reader's turn ends. A note asks for nothing, and a report is an answer
 // already: waiting on one would have two sessions report to each other forever.
 func Owed(message Message) bool {
+	return AsksForWork(message) && message.FromEpoch != ""
+}
+
+// AsksForWork reports whether a message's kind asks its reader for work — a
+// task or a question, and a kind this build does not know, as Owed takes it —
+// whoever sent it: a task from a plain shell asks for work too, though nobody
+// waits for its report.
+func AsksForWork(message Message) bool {
 	switch KindOf(message) {
 	case Note, Finished, Error, Stopped, Interim:
 		return false
 	}
-	return message.FromEpoch != ""
+	return true
 }
 
 // State is what happened to a message.

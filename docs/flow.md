@@ -202,15 +202,16 @@ why it was refused or failed — comes later as a notify from the worker
    `finished` or a `notify`, or a message from a plain shell, records nothing.
    Then the `read` status, then the move to `done/`. A failure at any step
    leaves the message unread for the next `inbox`.
-4. **The rule the agent follows**, from the guide: do the work, then end the
-   turn with the result as the final message and stop. Do not answer with
-   `rewake send`; do not answer a `notify` at all. After a context compaction,
-   re-read the task with `rewake inbox --owed` rather than from the summary: it
-   prints again, in full, every message whose `awaiting/` record is still there,
-   and changes nothing. The sender's side of the same record: `rewake inbox
-   --awaited` in the sending run lists, by recipient, what it sent and has no
-   report on yet — unread, read and being worked on, pending, stopped — and what
-   will get none because its recipient ended
+4. **The rule the agent follows**, from the guide: do the work, then end the turn
+   with the result as the final message and stop. Do not answer with `rewake send`;
+   do not answer a `notify` at all. After a context compaction, re-read the task
+   with `rewake inbox --owed` rather than from the summary, and read new mail with
+   `rewake inbox`: `--owed` prints again, in full, every message whose `awaiting/`
+   record is still there, and changes nothing; tasks and questions still unread it
+   only counts, in a last line naming `rewake inbox`. The sender's side of the same
+   record: `rewake inbox --awaited` in the sending run lists, by recipient, what it
+   sent and has no report on yet — unread, read and being worked on, pending,
+   stopped — and what will get none because its recipient ended
    ([delivery-owed.md](delivery-owed.md#what-others-owe-you-rewake-inbox---awaited)).
 
 ## Act 5. The turn ends and the report goes back
@@ -266,8 +267,9 @@ A task creates an obligation to report, and the session most likely to be asked 
 main one, which is silent by role: the obligation would sit there with nothing to
 discharge it.
 
-A worker that ends a turn before the work is done — background work still running —
-runs `rewake pending "<what it waits for>"` first. That one turn end then reaches the
+A worker that ends a turn before the work is done — waiting on anything outside the
+turn: background work still running, the owner, a refusal to be cleared — runs
+`rewake pending "<what it waits for>"` first. That one turn end then reaches the
 waiters as a `pending` message with that text, owing nothing and settling nothing, and
 the next turn end without a mark is the report
 ([turn-outcomes.md](turn-outcomes.md#interim-turn-ends-rewake-pending)).

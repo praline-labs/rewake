@@ -118,7 +118,7 @@ func buildGroups() {
 				Next:     []string{"rewake send <name> \"text\""},
 				Notes: []string{
 					"--peek and --message are mutually exclusive. Peek has no full bodies, even in JSON, and creates no task read receipts or report obligations. Plain inbox still reads all available messages.",
-					"--owed is used alone. It is the task you are working on, from the mailbox rather than from memory: after a context compaction, re-read it there instead of working from the summary. A main session owes no reports, so it is refused there. Only work from another session is listed: a task sent from a plain shell owes no report and cannot be shown again this way.",
+					"--owed is used alone. It is the task you are working on, from the mailbox rather than from memory: after a context compaction, re-read it there instead of working from the summary. It shows only what you read: a last line counts the tasks and questions still unread, whoever sent them (unread in --json), and rewake inbox reads them. A main session owes no reports, so it is refused there. Only work from another session is listed: a task sent from a plain shell owes no report and cannot be shown again this way.",
 					"--awaited is used alone, in any role. It is what others owe you: after a context compaction, a main session runs it to see what it handed out and still waits on. Each message shows its id, kind, time, first line and state: not delivered yet, held, delivered and unread, read and being worked on, pending after an interim report, or stopped, with the stop's own words on who stopped it: the person at the keyboard, or a main by name with rewake interrupt. A recipient that ended or was replaced is named as such — no report is coming. --json carries the full text. Only this run's mail is listed; notes and anything sent from a plain shell owe nothing and are not tracked.",
 					"Run it when a Rewake notice says messages are waiting; a group may mix tasks, questions, notifications and reports.",
 					"A task or a question you read is answered by ending your turn: your final message goes back to the sender by itself. Put the result there.",
@@ -135,7 +135,7 @@ func buildGroups() {
 				Options:        []Option{jsonOption},
 				Examples:       []string{"rewake pending \"the suite is running; the report follows when it ends\""},
 				Notes: []string{
-					"Without it, the end of a turn is the report, and the sender stops waiting. Better than either: wait inside the turn.",
+					"Without it, the end of a turn is the report, and the sender stops waiting. When the wait is on background work, better than either: wait inside the turn.",
 					"It holds for the one turn it is run in, and only a normal end of it: a turn that fails or is stopped reports that as usual.",
 					"Refused outside a session, for the main session, whose turns are reported to nobody, and when no read task or question is waiting for a report.",
 				},

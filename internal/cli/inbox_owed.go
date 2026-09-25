@@ -18,6 +18,12 @@ type owedView struct {
 type owedModel struct {
 	Session  string     `json:"session"`
 	Messages []owedView `json:"messages"`
+	// Unread counts the tasks and questions waiting unread, whoever sent
+	// them: it says work is waiting, not that a report is. --owed shows only
+	// what was read, and a session that asks it after a compaction must not
+	// take "nothing owed" for "no work": a Codex worker skipped a new task
+	// twice that way.
+	Unread int `json:"unread"`
 }
 
 // showOwed prints again, in full, what this run has read and not yet reported
@@ -31,6 +37,16 @@ func showOwed(ctx *Context, call Call, dir string, session registry.Session, epo
 			Message: fmt.Sprintf("%s owes no reports: a %s session's reads record no obligation, so --owed has nothing to show. rewake inbox --awaited shows what others owe it.", session.Name, session.Role),
 		}
 	}
+	// Unread first, then owed: a read by a parallel rewake inbox writes the
+	// wait record before it moves the message out of unread/, so a message
+	// read between the two looks lands in both lists, never in neither. The
+	// other order could miss it twice and answer "nothing owed" with nothing
+	// unread — the trap the count is there for. One in both is counted once,
+	// as owed.
+	unread, err := inbox.PeekUnread(dir, session.Name, epoch)
+	if err != nil {
+		return failf("could not look at the unread mail of %s: %v; run rewake inbox", session.Name, err)
+	}
 	owed := inbox.OwedMessages(dir, session.Name, epoch)
 	messages := make([]inbox.Message, 0, len(owed))
 	for _, message := range owed {
@@ -40,7 +56,28 @@ func showOwed(ctx *Context, call Call, dir string, session registry.Session, epo
 	for index, view := range viewedMessages(dir, messages) {
 		model.Messages = append(model.Messages, owedView{messageView: view, Kept: owed[index].Kept})
 	}
-	return printValue(ctx, model, func() []string { return owedLines(model.Messages) })
+	listed := make(map[string]bool, len(owed))
+	for _, message := range owed {
+		listed[message.ID] = true
+	}
+	for _, message := range unread {
+		if inbox.AsksForWork(message) && !listed[message.ID] {
+			model.Unread++
+		}
+	}
+	return printValue(ctx, model, func() []string { return append(owedLines(model.Messages), unreadHint(model.Unread)...) })
+}
+
+// unreadHint is the line after what is owed that names the tasks and
+// questions still waiting unread, and nothing when there are none.
+func unreadHint(count int) []string {
+	switch count {
+	case 0:
+		return nil
+	case 1:
+		return []string{"", "Rewake: 1 unread task or question — run rewake inbox."}
+	}
+	return []string{"", fmt.Sprintf("Rewake: %d unread tasks or questions — run rewake inbox.", count)}
 }
 
 func owedLines(messages []owedView) []string {

@@ -134,6 +134,59 @@ func TestOwedLeavesOutWhatWasNotRead(t *testing.T) {
 	}
 }
 
+// --owed shows what was read, and says what waits unread besides: a session
+// asking after a compaction must not take "nothing owed" for "no work". What
+// asks for work is counted — tasks and questions, whoever sent them — and not
+// notes or reports.
+func TestOwedNamesTheWorkWaitingUnread(t *testing.T) {
+	dir := liveSession(t, "api")
+	web := otherRun(t, dir, "web")
+	self, _ := registry.Lookup(dir, "api")
+	t.Setenv(state.SessionEnv, "api")
+	t.Setenv(epochEnv, self.Epoch())
+	unread := func(kind string) {
+		rawUnread(t, dir, "api", map[string]any{"from": "web", "fromEpoch": web.Epoch(), "toEpoch": self.Epoch(), "kind": kind, "text": "new " + kind})
+	}
+	unread("notify")
+	unread("finished")
+	if code, out, _ := run("inbox", "--owed"); code != ExitOK || out != "Rewake: nothing owed a report.\n" {
+		t.Fatalf("with only a note and a report unread: exit %d, %q", code, out)
+	}
+	if model := owed(t); model.Unread != 0 {
+		t.Fatalf("a note and a report counted: %+v", model)
+	}
+	unread("task")
+	if code, out, _ := run("inbox", "--owed"); code != ExitOK || out != "Rewake: nothing owed a report.\n\nRewake: 1 unread task or question — run rewake inbox.\n" {
+		t.Fatalf("with a task unread: exit %d, %q", code, out)
+	}
+	unread("question")
+	if code, out, _ := run("inbox", "--owed"); code != ExitOK || !strings.HasSuffix(out, "\n\nRewake: 2 unread tasks or questions — run rewake inbox.\n") {
+		t.Fatalf("with a task and a question unread: exit %d, %q", code, out)
+	}
+	if model := owed(t); model.Unread != 2 || len(model.Messages) != 0 {
+		t.Fatalf("got %+v", model)
+	}
+	// A task from a plain shell asks for work too, though nobody waits for
+	// its report.
+	rawUnread(t, dir, "api", map[string]any{"from": "web", "toEpoch": self.Epoch(), "kind": "task", "text": "from a shell"})
+	if model := owed(t); model.Unread != 3 {
+		t.Fatalf("a shell's task not counted: %+v", model)
+	}
+}
+
+// The same after what was read: the owed messages first, then the hint.
+func TestOwedNamesUnreadWorkAfterTheOwed(t *testing.T) {
+	dir, self, web, _, _ := owedSetup(t)
+	rawUnread(t, dir, "api", map[string]any{"from": "web", "fromEpoch": web.Epoch(), "toEpoch": self.Epoch(), "kind": "task", "text": "one more"})
+	code, out, _ := run("inbox", "--owed")
+	if code != ExitOK || !strings.HasPrefix(out, "Rewake: owed a report for 2 messages:") || !strings.HasSuffix(out, "which port?\n\nRewake: 1 unread task or question — run rewake inbox.\n") {
+		t.Fatalf("exit %d: %q", code, out)
+	}
+	if model := owed(t); model.Unread != 1 || len(model.Messages) != 2 {
+		t.Fatalf("got %+v", model)
+	}
+}
+
 // A task owed long enough for its text to be gone is still named.
 func TestOwedNamesWhatIsNoLongerKept(t *testing.T) {
 	dir, _, _, task, _ := owedSetup(t)

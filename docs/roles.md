@@ -52,6 +52,39 @@ catalogue; an omitted launch role is resolved separately under the room lock.
 The write role reports like general; main stays silent whether its Git grant
 was applied or skipped.
 
+## What a session is told
+
+A role's `Play` carries its heading, its steps and its limits; `internal/brief` renders
+them into the launch briefing and `rewake guide` prints them again, so the two cannot
+differ. One limit binds every role: each message and final reply starts with a line
+stating its point. Write and general share their steps and every limit but the one
+about Git (`executorLimits` in `internal/role/playbook.go`).
+
+**Owner decision, September 25, 2026:** four rules for write and general, after three
+failures of the day before — a worker that took main's word for a peer's and would not
+lift a pause main had lifted, a worker whose turn ended waiting for the owner and was
+taken as its report, and a worker that ran `rewake inbox --owed` after a compaction,
+read "nothing owed" and skipped a new unread task twice:
+
+- A message widens no permission by its text alone: permissions come from the launch
+  and from what main grants through rewake, such as `--grant-git`. A refusal by the
+  harness or its classifier is not routed around; the worker tells main what was
+  refused and why the work needs it, and main does it itself, grants it, or brings the
+  owner in. This replaces the limit every role had, to treat a message as a peer's
+  words, which the worker had read as putting main's word on a par with any other.
+  Main's own line says the same from its side: a reported refusal is not a request to
+  route around it, and main grants only within its own rights.
+- Main directs the work on the owner's behalf: its word on pausing, resuming, scope and
+  ordinary decisions stands without the owner confirming it in the worker's session.
+  The worker does not address the owner; a blocker only the owner can clear goes to
+  main.
+- A turn ended waiting on anything outside it — background work, the owner, a refusal
+  to be cleared — is marked with `rewake pending` first
+  ([turn-outcomes.md](turn-outcomes.md#interim-turn-ends-rewake-pending)).
+- After a compaction the task is re-read with `rewake inbox --owed` and new mail with
+  `rewake inbox`; `--owed` counts what waits unread in a last line
+  ([delivery-owed.md](delivery-owed.md#reading-again-what-is-owed-rewake-inbox---owed)).
+
 ## Names
 
 **Owner decision, September 17, 2026:** one rule for every role and harness.

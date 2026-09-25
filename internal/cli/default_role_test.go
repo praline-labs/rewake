@@ -69,7 +69,9 @@ func TestCLIResolvesDefaultGeneralAndPreservesExplicitCapabilities(t *testing.T)
 							t.Fatalf("intro lacks %q: %s", want, intro)
 						}
 					}
-					if strings.Contains(intro, "main session") || strings.Contains(intro, "automatically") {
+					// main's own heading, not the words "main session": a
+					// worker's limits name the main session it takes work from.
+					if strings.Contains(intro, role.Main.Play.Heading) || strings.Contains(intro, "automatically") {
 						t.Fatalf("default briefing claims main: %s", intro)
 					}
 				} else if !strings.Contains(intro, "selected explicitly with --"+scenario.want.ID) {

@@ -31,14 +31,19 @@ still depend on the harness providing a callback.
 ## Interim turn ends (`rewake pending`)
 
 Owner decision, September 23, 2026: a turn end stays the report by default. A session
-about to end a turn that has not finished the work — background work still running —
-runs `rewake pending "<what it waits for>"` first. That turn end then reaches every
-waiter as a `pending` message carrying that text, instead of the report; it owes
-nothing, settles nothing, and the waits stay open. The command itself answers one line,
+about to end a turn that has not finished the work — waiting on anything outside the
+turn: background work still running, the owner, a refusal to be cleared — runs
+`rewake pending "<what it waits for>"` first. The write and general playbooks say so
+since September 25, 2026, when a worker's turn ended waiting for the owner and was
+taken as its report; before, only write's did, and for background work alone. That turn
+end then reaches every waiter as a `pending` message carrying that text, instead of the
+report; it owes nothing, settles nothing, and the waits stay open. The command itself
+answers one line,
 `Rewake: marked pending; at this turn's end <senders> will read that the work goes on.`
-The next turn end without a mark is the report, as usual. A forgotten `pending` gives the behaviour without it, never worse;
-a `finished` marker the worker had to remember would have left the obligation open for
-ever when forgotten, which is why it was not chosen.
+The next turn end without a mark is the report, as usual. A forgotten `pending` gives
+the behaviour without it, never worse; a `finished` marker the worker had to remember
+would have left the obligation open for ever when forgotten, which is why it was not
+chosen.
 
 - **The mark** is `inbox/<name>/pending/mark.json`, changed only under the mailbox lock.
   It belongs to the turn it was made in and to no other, and the tie is time on the

@@ -23,8 +23,9 @@ everything else.
   decisions. Open it for why the system has the shape it has, or for a canonical rule.
 - [roles.md](roles.md) — roles and names, split from design.md by subject and the one
   place their rules live: the role catalogue and what each role reports and may be
-  granted, how the role is chosen under the room lock, why main is silent, and how a
-  name is built from role, prefix and harness. Open it when a launch picks the wrong
+  granted, what each role is told and the owner's rules behind its limits, how the role
+  is chosen under the room lock, why main is silent, and how a name is built from role,
+  prefix and harness. Open it when a launch picks the wrong
   role or name.
 - [code.md](code.md) — the source tree, package by package, with the harness interface
   every adapter implements. Open it to find where something lives, or before adding a
@@ -42,7 +43,8 @@ everything else.
   `rewake inbox`, turn-end reports and what happens on a thread change. Open it for the
   exact behaviour of any send, read or report.
 - [delivery-owed.md](delivery-owed.md) — owed reports read back: `rewake inbox --owed`,
-  what a session has read and still owes, and `rewake inbox --awaited`, what a run sent
+  what a session has read and still owes and how many tasks wait unread, and
+  `rewake inbox --awaited`, what a run sent
   and still waits on, with the table of states and when a missing wait record means
   answered. Open it after a context compaction or when a listed state is in question.
 - [delivery-adapters.md](delivery-adapters.md) — how a notice reaches each harness: the
