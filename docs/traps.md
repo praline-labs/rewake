@@ -216,9 +216,12 @@ The mechanism is in [delivery-adapters.md](delivery-adapters.md#claude-code-adap
 
 ### After a new commit the running wrapper stays old
 
-An atomic installation replaces the file, not the live process. Compare the hash of
-the candidate and of the installed file, and restart by epoch, not by `--version`
-alone — the version may stay `0.0.1`. The owner restarts the windows; the agent does
-not revive vanished workers.
+An atomic installation replaces the file, not the live process. `rewake --version`
+names the revision and the build time of the installed file, but it is a new process:
+it says nothing of the wrapper already running, so restart by epoch. A file built
+without the build time passed in (a plain `go build`, see
+[install.md](install.md)) shows only the commit time, and two such builds of one
+revision with a modified tree print the same line; compare the hashes for those. The
+owner restarts the windows; the agent does not revive vanished workers.
 
-*September 19, 2026.*
+*September 19, 2026; the revision in `--version` since September 25, 2026.*

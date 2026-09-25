@@ -70,7 +70,9 @@ func wrapText(text, indent string) []string {
 // An agent's first call in a session should teach how the tool behaves, which a
 // refusal cannot do.
 func formatGuide(play *role.Playbook) string {
-	var lines []string
+	// The build first: a session that reads the guide learns which binary
+	// answers it, which the version alone cannot tell between two releases.
+	lines := []string{thisBuild().Line(), ""}
 	lines = append(lines, "rewake — let coding agents on this machine message each other.", "")
 
 	// The caller's own role first, when the caller is a session. What an agent

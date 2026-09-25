@@ -15,6 +15,9 @@ version="${1:-0.0.1}"
 scope="@iiiokojiadbi"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 out="$root/dist/npm"
+# The build time, which the binary cannot know otherwise: rewake --version
+# shows it, so two builds of one revision can be told apart.
+built="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 rm -rf "$out"
 mkdir -p "$out"
@@ -32,7 +35,7 @@ for target in linux-amd64:linux-x64 linux-arm64:linux-arm64; do
   # The version reaches the binary too: a package that says 0.9.9 while its
   # rewake --version says something else is a package nobody can place.
   CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -C "$root" -trimpath \
-    -ldflags "-X github.com/iiiokojiadbi/rewake/internal/cli.Version=$version" \
+    -ldflags "-X github.com/iiiokojiadbi/rewake/internal/cli.Version=$version -X github.com/iiiokojiadbi/rewake/internal/cli.built=$built" \
     -o "$dir/bin/rewake" ./cmd/rewake
 
   cat > "$dir/package.json" <<JSON

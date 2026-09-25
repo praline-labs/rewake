@@ -5,9 +5,15 @@ Two ways, and they answer different questions.
 **To use it.** Build beside the installed command, then replace it atomically:
 
 ```bash
-go build -o ~/.local/bin/rewake.new ./cmd/rewake
+go build -ldflags "-X github.com/iiiokojiadbi/rewake/internal/cli.built=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  -o ~/.local/bin/rewake.new ./cmd/rewake
 mv -f ~/.local/bin/rewake.new ~/.local/bin/rewake
 ```
+
+The `-ldflags` passes in the build time, which `rewake --version` and the guide show:
+the binary cannot know it otherwise. Built without it, they show the revision's commit
+time instead, labeled `committed`, and two builds of one revision with a modified tree
+look alike.
 
 Building directly over a running executable can fail with `text file busy`.
 Renaming a neighboring file avoids that: existing wrappers keep their old
@@ -28,6 +34,10 @@ cd dist/npm/rewake-linux-x64 && npm pack && npm install -g ./*.tgz
 cd ../rewake && npm pack && npm install -g --omit=optional ./*.tgz
 rewake --version
 ```
+
+`rewake --version` names the version, the revision the binary was built from
+(`build unknown` for one built outside a git checkout) and the build time
+`scripts/pack.sh` passes in.
 
 That exercises everything a registry release would except the registry itself:
 the package contents, the platform split, the shim resolving its binary, and the

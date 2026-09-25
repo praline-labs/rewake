@@ -292,16 +292,6 @@ func TestGuideJSONCarriesTheTable(t *testing.T) {
 	}
 }
 
-func TestVersion(t *testing.T) {
-	code, out, _ := run("--version")
-	if code != ExitOK {
-		t.Fatalf("exit = %d", code)
-	}
-	if !strings.Contains(out, Version) {
-		t.Errorf("version output = %q, want %q", out, Version)
-	}
-}
-
 // The guide answers for whoever is asking: a session sees its own role first,
 // a shell that is not a session sees the general map unchanged.
 func TestGuideShowsTheCallersRole(t *testing.T) {

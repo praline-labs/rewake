@@ -86,8 +86,9 @@ func buildMutant(c *Case, m mutation) (string, error) {
 	binary := filepath.Join(dir, "rewake-"+m.name)
 	ctx, stop := context.WithTimeout(context.Background(), buildTimeout)
 	defer stop()
-	// rewake reads no VCS stamp, and a checkout copied without its .git, as a
-	// reviewer's snapshot is, fails the stamp rather than the mutant.
+	// No VCS stamp: the suite asserts nothing about the build line, and a
+	// checkout copied without its .git, as a reviewer's snapshot is, fails the
+	// stamp rather than the mutant.
 	build := exec.Command("go", "build", "-buildvcs=false", "-overlay", overlayFile, "-o", binary, "./cmd/rewake")
 	build.Dir = root
 	build.Env = os.Environ()

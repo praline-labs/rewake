@@ -22,7 +22,7 @@ var jsonOption = Option{
 var globalOptions = []Option{
 	jsonOption,
 	{Flag: "--help", Summary: "Flags, examples and notes for one command."},
-	{Flag: "--version", Summary: "Print the version of rewake."},
+	{Flag: "--version", Summary: "Print the version of rewake and the build it came from: revision, build or commit time, modified."},
 }
 
 // nameOption is a launch flag, and it goes before the harness name: everything

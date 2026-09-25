@@ -241,6 +241,26 @@ belongs to the harness.
 - With no arguments — the overview, exit code 0: command groups, the workflow as
   real invocations, and behavior notes (exit codes, the refusal to ever prompt
   interactively, and delivery outcomes).
+- The overview opens with the build, and `--version` prints that line alone:
+  ```
+  rewake 0.0.1 · build 36d6b90 · built 2026-09-25 11:58 UTC · modified
+  ```
+  The version stays the same between releases, so it cannot tell one build from
+  another; the revision and the build time do. The revision comes from the VCS stamp Go
+  records when it builds in a git checkout (`runtime/debug.ReadBuildInfo`), with
+  `modified` when the working tree differed from it; a binary built from an archive, or
+  run with `go run`, carries no stamp and says `build unknown`. Go records no build
+  time, so the build command passes it in, `-ldflags "-X
+  github.com/iiiokojiadbi/rewake/internal/cli.built=<RFC 3339 UTC>"` — `scripts/pack.sh`
+  and the local build in [install.md](install.md) do. A binary built without it shows
+  the revision's commit time instead, labeled `committed <time>`; with neither, no
+  time. Under `--json` both carry the same fields as an object, `build` in the guide's
+  model and the whole answer of `--version`: `version` and `known` always; the full
+  `revision` only when known; `built` and `committed`, RFC 3339, each only when known;
+  and `modified` only when set. The owner
+  asked on September 25, 2026 for the version, the revision and the build date: the
+  version alone left comparing file hashes as the only way to know which build a
+  session runs.
 - One line per object, aligned columns, empty values are omitted.
   ```
   general-claude-2  claude  12m  /workspace/api  room=default  (general)

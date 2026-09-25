@@ -37,7 +37,10 @@ func Run(argv []string, stdout, stderr io.Writer) int {
 
 	switch {
 	case result.Version:
-		_ = emit(ctx, "rewake "+Version)
+		build := thisBuild()
+		if err := printValue(ctx, build, func() []string { return []string{build.Line()} }); err != nil {
+			return report(ctx, err)
+		}
 		return ExitOK
 	case result.Help && result.Call.Command != nil:
 		printText(ctx, formatCommandHelp(result.Call.Command, true))
@@ -149,6 +152,7 @@ func guideModel(play *role.Playbook) map[string]any {
 
 	model := map[string]any{
 		"version":       Version,
+		"build":         thisBuild(),
 		"groups":        groupModels,
 		"flow":          flow(),
 		"notes":         notes(),
