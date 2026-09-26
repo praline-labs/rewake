@@ -84,9 +84,9 @@ chosen.
   every heard turn end narrows the gap to that one sequence.
 - **A turn background work woke.** A worker that marked a turn and was then woken by a
   finished subagent or background task must mark that turn too, or its end is the
-  report; only the briefing says so. A Stop-hook confirmation on Claude Code that would
-  catch it awaits the owner's decision
-  ([the record](roadmap/2026-09-26-pending-text.md#what-was-not-done)).
+  report; the briefing says so. On Claude Code the Stop hook asks once when the mark is
+  missing ([below](#the-confirmation-on-claude-code)); on Codex the briefing is all
+  there is.
 - **Both harnesses** take the same path from there: the Stop hook through `rewake
   turn-ended`, the plugin's interruption from the collector, and Codex's completion from
   the gateway, into the one function that prepares a turn's reports, which asks for the
@@ -103,6 +103,58 @@ chosen.
 - **Refused** outside a session, for main — whose turns are reported to nobody — without
   text, and when no read task or question in this run waits for a report; each refusal
   says why.
+
+## The confirmation on Claude Code
+
+Owner decision, September 26, 2026: after an interim turn end, rewake's Stop hook holds
+the next turn end that carries no mark, once, and asks the session whether the work is
+done. It catches the mark forgotten on a turn a finished subagent woke — three tasks
+were closed early that way that day — without a marker the worker must remember: the
+turn end stays the report by default, as decided on September 23. Codex is untouched:
+its turn end cannot be held through the gateway, and there the briefing alone asks for
+the mark.
+
+- **When.** `rewake turn-ended` holds a turn end only when all of these are true: it is
+  a Stop, not a StopFailure; its `stop_hook_active` is `false`; this run's last
+  published turn end was interim; a sender whose session still runs waits on a task;
+  the ending turn made no mark; and no answer is kept from an earlier hold. Then it
+  publishes nothing, keeps `last_assistant_message`, and prints
+  `{"decision":"block","reason":"…"}`. The reason quotes the pending line, names the
+  senders, and says both ways on: still waiting — run `rewake pending` and end the turn;
+  done — end the turn, and the answer just given goes as the report with whatever is
+  added after it. Claude Code shows the reason to the model as a hook's blocking error
+  and asks it again ([research-claude-control.md](research-claude-control.md#a-stop-hook-that-holds-the-turn)).
+- **Once.** The call after a hold carries `stop_hook_active: true` and is never held,
+  and neither is a turn end while an answer is still kept. So a turn is held at most
+  once, far below the harness's eight. Each later unmarked turn end after an interim
+  one is asked again: every interim end starts a new episode.
+- **The records**, beside the mark in `inbox/<name>/pending/` and changed only under
+  the mailbox lock: `interim.json` holds the run's epoch and the pending line of its
+  last turn end when that end was interim — a finished or failed end removes it, a stop
+  leaves it, as a stop leaves the waits; `kept.json` holds the held answer.
+- **The report keeps the held answer.** The harness's second Stop carries only what the
+  model said after the hold, so the next turn end heard puts the kept answer into its
+  own outcome: a finish gives the kept answer, then the continuation; a pending mark
+  made in the continuation gives the mark's line, the kept answer, then the
+  continuation; a StopFailure gives its error, then the kept answer. The answer is
+  dropped once that outcome is published, not before.
+- **A hold is not an end.** `rewake turn-ended` records every turn end it hears as the
+  next turn's start; a held one is not recorded, so a mark the continuation makes falls
+  within the turn its end takes it from.
+- **An Esc after a hold.** Nothing runs Stop or StopFailure then. rewake's plugin reports
+  the stop, and that `stopped` carries its line and then the kept answer; the waits stay
+  open, as after any stop. Where the plugin did not load nothing is heard, and the kept
+  answer goes out with the next turn end heard, which is not held again.
+- **Someone else's blocking Stop hook — left as it is.** A person's own Stop hook may
+  block a turn end rewake did not hold. rewake's hook has already published on the first
+  call, with the answer before the block, and settled the waits; the continuation's end
+  finds nobody waiting, and its text reaches nobody. rewake cannot tell on the first call
+  that another hook will block, since the hooks of one event run side by side, and
+  holding every report until a chain of blocks ends would need a signal the harness
+  does not give. Found by reading; not observed.
+- **Telemetry during a hold.** The Stop telemetry hook runs beside `rewake turn-ended` and
+  cannot know of the hold, so `rewake list` shows the session idle while the model is
+  asked again, until its next event. Delivery does not read that state.
 
 ## Keyboard stops
 

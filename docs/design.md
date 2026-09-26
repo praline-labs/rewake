@@ -90,7 +90,7 @@ Created with 0700. [Optional primary observations](session-state.md) are collect
     inbox/<name>/turns/<id>    completion retry receipts
     inbox/<name>/threads/<id>  selected delivery thread, when supported
     inbox/<name>/awaiting/<epoch>/<peer> reports owed by this run
-    inbox/<name>/pending/      the running turn's `rewake pending` mark
+    inbox/<name>/pending/      the running turn's `rewake pending` mark; the last interim end and a held answer (turn-outcomes.md)
     sock/<name>.<epoch>.sock   one inbound socket per run
     sock/<name>.<epoch>.reply.sock the wrapper's own: Claude Code's receipts for held lines
     sock/<name>.<epoch>.obs    Claude Code telemetry datagrams to the wrapper

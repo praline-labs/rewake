@@ -23,12 +23,24 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 	}
 	if !receipt.Done {
 		if !receipt.Prepared {
+			// The answer of a turn end held for confirmation is the report
+			// the session gave; this end, its continuation or what cut the
+			// continuation short, adds to it. A failure or a stop leads, as
+			// the preview, and the answer follows.
+			if held, ok := inbox.KeptAnswer(dir, self.Name, self.Epoch()); ok {
+				if event.Failed || event.Stopped {
+					event.Text = joinTurnText(event.Text, held)
+				} else {
+					event.Text = joinTurnText(held, event.Text)
+				}
+			}
 			// Once per turn end: a retry of the same turn finds the receipt
 			// prepared and does not look at a later turn's mark.
-			text, pending, err := inbox.TakePending(dir, self.Name, self.Epoch(), event.Started, event.Ended)
+			line, pending, err := inbox.TakePending(dir, self.Name, self.Epoch(), event.Started, event.Ended)
 			if err != nil {
 				return err
 			}
+			text, mark := line, ""
 			if pending && !event.Failed && !event.Stopped {
 				// Only a normal finish is softened: a failure or a stop says
 				// more than "still working", and stays what it is. The mark's
@@ -37,7 +49,7 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 				if turn := strings.TrimSpace(event.Text); turn != "" {
 					text += "\n\n" + turn
 				}
-				event.Pending, event.Text = true, text
+				event.Pending, event.Text, mark = true, text, line
 			}
 			receipt.Reports, receipt.Waiters, err = prepareTurnReports(dir, self, event, currentThread, waiters, receipt.ID)
 			if err != nil {
@@ -48,6 +60,14 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 			receipt.Interim = event.Pending
 			if err := saveTurnReceipt(path, receipt); err != nil {
 				return err
+			}
+			// What the next unmarked turn end is asked about. A stop says
+			// nothing of the work and leaves it as it was.
+			switch {
+			case event.Pending:
+				_ = inbox.NoteInterim(dir, self.Name, self.Epoch(), mark)
+			case !event.Stopped:
+				_ = inbox.ClearInterim(dir, self.Name)
 			}
 		}
 		for _, report := range receipt.Reports {
@@ -78,6 +98,9 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 		if err := saveTurnReceipt(path, receipt); err != nil {
 			return err
 		}
+		// Published with this end; kept until now, so an end that failed on
+		// the way leaves it to the next.
+		_ = inbox.DropKeptAnswer(dir, self.Name)
 	}
 	if receipt.KeepWaiters {
 		return nil

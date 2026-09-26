@@ -66,7 +66,8 @@ everything else.
   when a delivery result for one harness is in question.
 - [turn-outcomes.md](turn-outcomes.md) — the turn ends that are not an ordinary report:
   a failed turn, a keyboard stop, and a turn end marked with `rewake pending`, which tells
-  the waiters the work is still going and keeps their tasks owed; including the rule that
+  the waiters the work is still going and keeps their tasks owed, with the confirmation
+  Claude Code's Stop hook asks once after it when a later turn ends unmarked; including the rule that
   a failed or interrupted turn is woken only by new mail. Open it when a report is an
   error, stopped or pending, or when one of them settled or left open the wrong thing.
 - [gateway.md](gateway.md) — the Codex delivery gateway from the inside: how the primary
@@ -167,7 +168,7 @@ everything else.
   Code session from outside besides a message, split from research.md by subject: what an
   Esc or a Ctrl+C leaves for a hook or the wrapper to hear (nothing), what a function-hooks
   plugin hears instead, what the built-in plugins do under the function-hooks switch,
-  mermaid among them, what `/clear` and `/resume` do, why no slash command runs from the
+  mermaid among them, what a Stop hook's block does to a turn, what `/clear` and `/resume` do, why no slash command runs from the
   inbound socket, and how text can be put into the input box by the launch flag or a
   plugin. Open it before working on `stopped` for Claude Code, on conversation tracking,
   or on sending a session a command.

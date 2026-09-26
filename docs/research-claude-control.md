@@ -318,6 +318,25 @@ only built-ins leaves the person's own entries in force, and a key the flag laye
 wins over the same key in the user file. mermaid did not load in any run, so it counts
 in none of the totals.
 
+## A Stop hook that holds the turn
+
+Probed on September 26, 2026, Claude Code 2.1.280, in a private HOME against a stand-in
+API, with a Stop hook in a `--settings` layer that printed
+`{"decision":"block","reason":"…"}` **[live]**; the evidence was kept outside the
+repository. rewake's confirmation after an interim turn end rests on it
+([turn-outcomes.md](turn-outcomes.md#the-confirmation-on-claude-code)).
+
+- A block from the `--settings` layer holds the turn: the model is called again, with
+  the reason shown to it as `Stop hook blocking error from command: "<command>":
+  <reason>`.
+- The Stop hooks then run again. That call carries `stop_hook_active: true` — the first
+  call of a turn end carries `false` — and its `last_assistant_message` holds only what
+  the model said after the block, not the answer before it.
+- Blocks in a row are capped: eight are honored in one turn; after the ninth the harness
+  ends the turn and calls no Stop hook again.
+- An Esc while the model answers after a block runs neither Stop nor StopFailure; only
+  rewake's plugin hears the end, as `turn.complete` with reason `aborted`.
+
 ## Commands from outside
 
 Probed on September 23, 2026, Claude Code 2.1.280, same setup **[live]**, with the

@@ -31,7 +31,7 @@ const payloadWait = 3 * time.Second
 // Code Stop hook, a Codex notify program — where an error is at best noise on
 // the screen and at worst a turn that will not end. What it could not do stays
 // owed and is tried again at the end of the next turn.
-func handleTurnEnded(_ *Context, call Call) error {
+func handleTurnEnded(ctx *Context, call Call) error {
 	dir, err := state.Dir()
 	if err != nil {
 		return nil
@@ -68,7 +68,17 @@ func handleTurnEnded(_ *Context, call Call) error {
 		currentThread, _ = harness.SessionThread(self)
 	}
 
-	_ = completeTurn(dir, self, event, currentThread)
+	if reason, _ := endTurnContext(context.Background(), dir, self, event, currentThread); reason != "" {
+		// Held: the turn goes on, and its end is still to come. Recording
+		// this moment as a start would put a mark the continuation makes
+		// outside the turn it belongs to.
+		out := io.Writer(os.Stdout)
+		if ctx != nil && ctx.Stdout != nil {
+			out = ctx.Stdout
+		}
+		printHold(out, reason)
+		return nil
+	}
 	// Whatever comes next starts after this end, so the recorded start moves
 	// up to it. A turn end that was lost — an Esc, a payload or a lock that
 	// never came — is then corrected by the next one heard: a mark made
@@ -83,8 +93,16 @@ func completeTurn(dir string, self registry.Session, event turnResult, currentTh
 }
 
 func completeTurnContext(parent context.Context, dir string, self registry.Session, event turnResult, currentThread string) error {
+	_, err := endTurnContext(parent, dir, self, event, currentThread)
+	return err
+}
+
+// endTurnContext publishes a turn end, or holds it for the session to confirm
+// (turn_hold.go): then it publishes nothing and answers the reason to hand
+// the model.
+func endTurnContext(parent context.Context, dir string, self registry.Session, event turnResult, currentThread string) (string, error) {
 	if !registry.OwnsName(dir, self.Name, self.Epoch()) {
-		return nil
+		return "", nil
 	}
 
 	// Under the mailbox lock, so two ends of a turn reported at once tell each
@@ -92,14 +110,19 @@ func completeTurnContext(parent context.Context, dir string, self registry.Sessi
 	// for the one reported.
 	ctx, cancel := context.WithTimeout(parent, hookLockWait)
 	defer cancel()
-	return state.WithMailboxLock(ctx, dir, self.Name, func() error {
+	reason := ""
+	err := state.WithMailboxLock(ctx, dir, self.Name, func() error {
 		waiters, err := inbox.ScopedWaiters(dir, self.Name, self.Epoch(), event.Boundary)
 		if err != nil {
 			return err
 		}
+		if reason = holdTurn(dir, self, event, waiters); reason != "" {
+			return nil
+		}
 		beforeReports()
 		return publishTurnContext(ctx, dir, self, event, currentThread, waiters)
 	})
+	return reason, err
 }
 
 // hookLockWait is how long the end of a turn waits for the mailbox. What it

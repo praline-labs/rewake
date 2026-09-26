@@ -21,6 +21,11 @@ type turnResult struct {
 	// Thread is the conversation the turn ended in, when the payload names
 	// one: a Claude Code hook's session_id.
 	Thread string
+	// Holdable says the harness lets this turn end be held and the model
+	// asked once more: a Claude Code Stop hook whose stop_hook_active is
+	// false. The call after a hold says true and is never held again, so a
+	// turn is held at most once (docs/turn-outcomes.md).
+	Holdable bool
 }
 
 func completedTurn(payload []byte) (turnResult, bool) {
@@ -47,6 +52,7 @@ func completedTurn(payload []byte) (turnResult, bool) {
 		// conversation reaches the report through the gateway instead.
 		result.Thread = text("session_id")
 	}
+	result.Holdable = hook == "Stop" && string(fields["stop_hook_active"]) == "false"
 	if result.ID == "" {
 		result.ID = text("turn_id")
 	}

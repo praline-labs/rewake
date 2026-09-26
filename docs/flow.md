@@ -285,9 +285,10 @@ A worker that ends a turn before the work is done — waiting on anything outsid
 turn: background work still running, the owner, a refusal to be cleared — runs
 `rewake pending "<what it waits for>"` first. That one turn end then reaches the
 waiters as a `pending` message with that text first and the turn's own answer after it,
-owing nothing and settling nothing, and
-the next turn end without a mark is the report
-([turn-outcomes.md](turn-outcomes.md#interim-turn-ends-rewake-pending)).
+owing nothing and settling nothing, and the next turn end without a mark is the report
+([turn-outcomes.md](turn-outcomes.md#interim-turn-ends-rewake-pending)) — on Claude Code
+after the Stop hook has held it once to ask whether the work is done
+([the confirmation](turn-outcomes.md#the-confirmation-on-claude-code)).
 
 ## Act 6. A question, when the sender wants to block
 

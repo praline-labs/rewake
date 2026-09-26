@@ -40,7 +40,8 @@ two of them the same day.
 
 ## What was not done
 
-- **(e) A Stop hook that asks once, on Claude Code — approved, being built.**
+- **(e) A Stop hook that asks once, on Claude Code — approved and built the same day**
+  ([its record](2026-09-26-pending-confirm.md)); what follows is how it stood here.
   After an interim turn end, a turn that ends without a mark while waits are still open
   would be held once by the Stop hook (`{"decision":"block"}`, with `stop_hook_active`
   guarding the second call) and asked: still waiting — mark it; done — end the turn
@@ -62,12 +63,11 @@ two of them the same day.
 
 ## What stays open
 
-- **(e)**, above, approved by the owner on September 26, 2026 and being built. The live check it needed was made the same
-  evening ([live checks](2026-09-26-live-checks.md#claude-code-21280)): a block from a
-  `--settings` layer holds the turn, and the second call's `last_assistant_message`
-  holds only the continuation's text.
-- **Someone else's Stop hook that blocks.** `rewake turn-ended` does not look at
-  `stop_hook_active`. If a person's own Stop hook blocks the stop, rewake has already
-  reported on the first Stop, with the text before the block, and settled the waits; the
-  turn's continuation then finds nobody waiting, and main never reads what came after.
-  Not observed, found by reading; to be decided with (e).
+- **(e)**, above — since built ([its record](2026-09-26-pending-confirm.md)), after the
+  live check it needed ([live checks](2026-09-26-live-checks.md#claude-code-21280)).
+- **Someone else's Stop hook that blocks.** If a person's own Stop hook blocks the
+  stop, rewake has already reported on the first Stop, with the text before the block,
+  and settled the waits; the turn's continuation then finds nobody waiting, and main
+  never reads what came after. Not observed, found by reading. Decided with (e): left as
+  it is, and written down in
+  [turn-outcomes.md](../turn-outcomes.md#the-confirmation-on-claude-code).

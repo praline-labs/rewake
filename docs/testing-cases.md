@@ -56,7 +56,21 @@ A third session then sends the worker a task of its own, and that turn end — w
 mark — must be the `finished` report settling the first task. Its three mutants, each in
 both columns, ignore the mark, let the interim turn end settle the task, and drop the
 turn's text from the interim message; like the
-telemetry controls, each names what it must break and requires the rest to hold.
+telemetry controls, each names what it must break and requires the rest to hold. On the
+Claude Code column the unmarked turn end is now held once by the Stop hook first; the
+fixture's model then only ends the turn, so the report follows as before.
+
+`pending-confirm` runs in the Claude Code column with four sessions. A worker ends its
+first turn about a task pending; woken by a second session's mail, its next turn ends
+with no mark, and the Stop hook must hold it exactly once, quoting the pending line. The
+fixture answers a block as the harness does — it asks its model again and runs the Stop
+hooks once more with `stop_hook_active: true` and the new answer alone — and its model,
+asked the first time, runs `rewake pending` with a second line: the sender must read an
+interim message with that line, then the held answer, then the continuation, and the
+task must stay owed. Woken by a third session, the worker ends unmarked again, is held
+once more about the second line, and only ends the turn: the report must be the held
+answer and then the continuation, and it must settle the task. Its two mutants never
+hold, and publish the continuation without the held answer (September 26, 2026).
 
 `owed-reread` runs in both columns with a main and a worker. The worker reads a
 multi-line task and, in the same turn, runs `rewake inbox --owed` in both forms, as a
@@ -173,6 +187,7 @@ switches have no single form in the code to find them by, and the row is kept by
 | mid-turn | `wait-for-idle` | `late`, `failed-operation` |
 | claude-telemetry | `tap-without-owner`, `uncounted-compaction`, `silent-compaction`, `model-window` | — |
 | pending-report | `pending-ignored`, `pending-settles`, `pending-text-dropped` | — |
+| pending-confirm | `pending-unconfirmed`, `confirm-answer-dropped` | — |
 | claude-inbound | `ungated`, `gate-on-session-start`, `held-as-delivered`, `expiry-unannounced`, `refusal-as-delivered`, `late-word-dropped` | — |
 | owed-reread | `owed-empty` | — |
 | thread-changed | `delivery-unpinned`, `stop-thread-ignored`, `thread-always-changed` | — |
