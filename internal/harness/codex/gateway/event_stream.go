@@ -66,6 +66,7 @@ func (c *connection) readServer() {
 				c.state.fresh = false
 			}
 			c.admitted.event(m, raw, time.Now())
+			c.recordLateEnds()
 			if c.owner.owns(c) && c.state.observing() {
 				c.state.events.event(m, raw, time.Now())
 			}

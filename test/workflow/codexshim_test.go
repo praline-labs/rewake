@@ -136,7 +136,12 @@ func (s *shimSession) serve(conn net.Conn) {
 		}
 		reply := map[string]any{"id": json.RawMessage(request.ID)}
 		if failure != nil {
-			reply["error"] = map[string]any{"code": -32600, "message": failure.Error()}
+			code := -32600
+			var coded rpcError
+			if errors.As(failure, &coded) {
+				code = coded.code
+			}
+			reply["error"] = map[string]any{"code": code, "message": failure.Error()}
 		} else {
 			reply["result"] = result
 		}
@@ -339,6 +344,10 @@ func (s *shimSession) broadcast(event any) {
 		for _, each := range sequence {
 			s.broadcast(each)
 		}
+		return
+	}
+	if hook, ok := event.(eventHook); ok {
+		hook()
 		return
 	}
 	if later, ok := event.(eventsLater); ok {

@@ -43,11 +43,16 @@ type (
 		// sent is the request's place in the order of writes, the key of
 		// its open operation (threadTurns.open).
 		sent uint64
-		// hold is when the mark stops holding deliveries and the wait for its end;
-		// released says it has. The mark itself stays until its turn ends,
-		// so that main's letter and the telemetry's author go by it.
-		hold     time.Time
+		// asked is when the request was sent, from which the mark's bounds
+		// run (steer.go); released says it has stopped holding deliveries.
+		// The mark itself stays until its turn ends, so that main's letter
+		// and the telemetry's author go by it.
+		asked    time.Time
 		released bool
+		// late says main was told the compaction was still running when
+		// the wait for its end ended: its end, when seen, is main's outcome
+		// all the same (lateEnds).
+		late bool
 	}
 	admittedWork struct {
 		stopped      map[string]stoppedWork
@@ -63,6 +68,9 @@ type (
 		// authored is the asker of the compaction whose turn the last event
 		// ended while the mark was tied to it, for the telemetry to write.
 		authored compactionAuthor
+		// lateEnds are the marks of main's compactions that ended after
+		// main was told they were still running, for the gateway to record.
+		lateEnds []*manualWork
 	}
 	compactionAuthor struct{ thread, turn, request, by string }
 )
@@ -152,7 +160,13 @@ func (a *admittedWork) event(m meta, raw []byte, now time.Time) {
 			if marker.by != "" {
 				a.authored = compactionAuthor{thread: m.thread, turn: m.turn, request: marker.request, by: marker.by}
 			}
-			marker.finish(m.status, decodeText(field(raw, "params", "turn", "error", "message")))
+			failure := decodeText(field(raw, "params", "turn", "error", "message"))
+			if marker.late {
+				marker.status, marker.failure = m.status, failure
+				a.lateEnds = append(a.lateEnds, marker)
+			} else {
+				marker.finish(m.status, failure)
+			}
 		}
 	}
 	if m.turn != "" && (m.method == "item/started" || m.method == "item/completed") {

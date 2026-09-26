@@ -265,11 +265,14 @@ app-server connection: [remote-control-codex.md](remote-control-codex.md).
 - **An asker killed outright** (SIGKILL) cannot withdraw its request: a target stalled
   at that moment carries it out when it resumes, telling nobody. The next request clears
   what is left.
-- **A compaction on Codex that outlives 80 seconds** — its mark's bound — ends in a
-  `failed` letter and may still finish; `rewake list` shows the compaction when it
-  does. On Claude Code the module waits for the host's call, which has no bound of
-  rewake's; a compaction there, or anywhere, with no word of it within 5 minutes gets
-  main's bound letter, and its later end gives no second letter.
+- **A compaction on Codex that outlives 10 minutes** — its mark's running bound — is
+  answered `started`, which is no outcome yet: main's letter waits for its end and comes
+  from it. One still not ended at main's bound gets the bound letter saying it may still
+  be running. One whose turn is not seen within 80 seconds of the request ends in a
+  `failed` letter, and may still start. On Claude Code the module waits for the host's
+  call, which has no bound of rewake's; a compaction there, or anywhere, with no word of
+  it within 15 minutes gets main's bound letter, and its later end gives no second
+  letter.
 - **A worker whose wrapper ends just after its compaction**, before its snapshot is next
   written — within a quarter second — takes the outcome with it: the 3 seconds main's
   wrapper waits after a departure cover a snapshot published late, not one never

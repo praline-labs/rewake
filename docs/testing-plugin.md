@@ -209,3 +209,34 @@ focus through to the wrapper.
 What it cannot show: what the terminal does meanwhile — the live run of September 24,
 2026 saw it hold a message typed during the compaction and send it after — and how long
 a real compaction takes.
+
+### A long compaction on Codex
+
+`codex-compact-hold` sends a task to a Codex worker right after main's compaction of
+it, the order a main hands a compacted worker its next task, with the compaction taking
+longer than the mark's bounds. The shim refuses a `turn/start` while its compaction runs,
+in the words of 0.155.1 (`ActiveTurnNotSteerable { turn_kind: Compact }`, code -32603),
+and logs the refusal and the compaction's end, so a case can tell the two apart in
+time. The suite's build runs the bounds at 2 s until the compaction's turn is seen and
+6 s once it runs ([testing-pool.md](testing-pool.md#waits-the-suite-shortens)).
+
+Each worker first works a task to its end — a conversation with no turn is not
+compacted. slow's compaction takes 4 s, past the start bound and within the running one;
+slower's takes 10 s, past both; main is a Codex session. The observations:
+
+- slow takes the task after its compaction, the task's status is not `failed`, and the
+  shim refused no notice: the mark, tied to the compaction's turn, held the task to the
+  end;
+- slower takes the task too, not `failed`, and the shim refused it at least once before
+  the compaction's end: the refusal is a wait, not a failure;
+- main reads one letter from slower, the compaction's end with 120000 tokens before,
+  9000 after and "(compaction 1)", though the wrapper's wait ended before it.
+
+Its four mutants: a hold of a running compaction that ends at the start bound, which
+the shim then refuses for slow; a refusal for a compaction taken as final, which fails
+slower's task; a late end not recorded, and a wrapper of main's that takes an outcome of
+`started` for the outcome — each leaves main without the letter from the end.
+
+What it cannot show: how long a real compaction takes — the one seen live took about
+104 seconds on a conversation 85% full — and whether a later Codex refuses in the same
+words; the gateway recognizes the refusal by its text.

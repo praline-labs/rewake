@@ -84,7 +84,7 @@ func TestAnAutoCompactingTurnIsNeverTheMarks(t *testing.T) {
 // idle, does not move it.
 func TestATiedMarkNeverMoves(t *testing.T) {
 	g, ui, peers, _ := setup(t)
-	g.markHold = time.Second
+	g.markHold, g.runHold = time.Second, time.Second
 	native := <-peers
 	defer func() { _ = native.conn.Close() }()
 	bindUI(t, g, ui, native)
@@ -122,7 +122,8 @@ func TestAnOperationPastTheRecordsCapacityKeepsTheConversationUncertain(t *testi
 }
 
 // Main's wait is shorter than the bound: the hold ends with it, and the answer
-// says the compaction's turn was never seen rather than that it was started.
+// says the compaction's turn was never seen, or that the compaction may still
+// be running — started, which main's wrapper takes for no outcome yet.
 func TestMainsWaitEndsTheHoldAndSaysWhatWasSeen(t *testing.T) {
 	for _, seen := range []bool{false, true} {
 		t.Run(fmt.Sprint("turn seen ", seen), func(t *testing.T) {
@@ -136,12 +137,12 @@ func TestMainsWaitEndsTheHoldAndSaysWhatWasSeen(t *testing.T) {
 			answers := steerAnswer(func() control.Answer { return g.compactToEnd(ctx, "0123", "lead") })
 			id := injected(t, native, "thread/compact/start", map[string]string{"threadId": "A"})
 			write(t, native, []byte(`{"id":"`+id+`","result":{}}`))
-			want := "the compaction's turn was not seen to start when the wait ended; deliveries go on, and its turn is still not taken for work if it starts"
+			outcome, want := control.Failed, "the compaction's turn was not seen to start when the wait ended; deliveries go on, and its turn is still not taken for work if it starts"
 			if seen {
 				events(t, ui, native, started("C"), compactionItem("C", "item/started"))
-				want = "the compaction was started and had not ended when the wait did; it may still finish, and deliveries go on meanwhile"
+				outcome, want = control.Started, "the compaction was not seen to end when the wait did; it may still be running, and its end is reported when seen"
 			}
-			if answer := within(t, answers); answer.Outcome != control.Failed || answer.Detail != want {
+			if answer := within(t, answers); answer.Outcome != outcome || answer.Detail != want {
 				t.Fatalf("main's answer %+v", answer)
 			}
 			if err := reserveWithin(g, 100*time.Millisecond); err != nil {

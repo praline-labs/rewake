@@ -55,7 +55,24 @@ func (c *connection) replied(m meta, raw []byte, p pending, requested bool, admi
 		}
 	case requested && p.intent && s.Ready && p.generation == s.Generation && m.thread == s.Thread:
 		s.resumed(m.status, raw)
+		c.resumedMark(m.thread)
 	}
+}
+
+// resumedMark ends the hold of a tied mark when the reply to a selection shows
+// its compaction no longer running: the terminal was away when its turn ended,
+// so no turn/completed of it will come, and the hold would last to its bound.
+// Only the hold ends — the reply says nothing of how the compaction ended, so
+// main's wait goes on — and a reply that shows nothing either way keeps it. A
+// delivery sent into a compaction running after all is refused by the server
+// and waits (ErrCompacting). Called under c.mu after state.resumed.
+func (c *connection) resumedMark(thread string) {
+	marker := c.admitted.manual[thread]
+	d := c.state.doing
+	if marker == nil || marker.turn == "" || d.running && (d.turn == "" || d.turn == marker.turn) {
+		return
+	}
+	marker.released = true
 }
 
 // routed takes the reply to a turn/start or turn/steer. The session handles
@@ -171,21 +188,26 @@ func (c *connection) marked(thread string) {
 	c.state.ops.name(thread, marker.sent, marker.turn)
 }
 
-// dropStale ends the hold of every compaction mark past its bound: deliveries
-// go again, and the wait for its end ends with the reason. The mark itself stays until
-// its turn's end, so a compaction that starts late is still counted as asked
-// for. Called under c.mu.
+// dropStale ends the hold of every compaction mark past its bound: the start
+// bound while its turn has not been seen, the running bound once it has
+// (steer.go). Deliveries go again, and the wait for its end ends: with the
+// reason when nothing was seen to start, and as still running otherwise, whose
+// end is then main's outcome when it is seen. The mark itself stays until its
+// turn's end, so a compaction that starts late is still counted as asked for.
+// Called under c.mu.
 func (c *connection) dropStale(now time.Time) {
-	limit := c.owner.markLimit()
+	start, run := c.owner.markLimit(), c.owner.runLimit()
 	for _, marker := range c.admitted.manual {
-		if marker.released || now.Before(marker.hold) {
-			continue
-		}
-		marker.released = true
-		if marker.turn == "" {
-			marker.finish("", "the compaction's turn was not seen to start within "+limit.String()+"; deliveries go on, and its turn is still not taken for work if it starts")
-		} else {
-			marker.finish("", "the compaction had not ended within "+limit.String()+"; deliveries go on, and its turn is still not taken for work")
+		switch {
+		case marker.turn == "" && !marker.released && now.Sub(marker.asked) >= start:
+			marker.released = true
+			marker.finish("", "the compaction's turn was not seen to start within "+start.String()+"; deliveries go on, and its turn is still not taken for work if it starts")
+		case marker.turn != "" && now.Sub(marker.asked) >= run:
+			// A resume may have ended the hold before, and not the wait.
+			marker.released = true
+			if marker.ended != nil && !marker.answered {
+				marker.stillRunning("the compaction was not seen to end within " + run.String())
+			}
 		}
 	}
 }

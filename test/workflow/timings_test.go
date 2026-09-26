@@ -44,6 +44,13 @@ const (
 	// comings, goings and compactions (internal/wrap, one second). The cases
 	// that prove no notice was sent wait out a scan and the coalescing cap.
 	suiteNoticeScan = 250 * time.Millisecond
+	// suiteCompactionStart and suiteCompactionRun are the bounds of a Codex
+	// compaction's mark (internal/harness/codex/gateway, 80 seconds while its
+	// turn has not been seen to start, 10 minutes once it has). compact-hold
+	// runs one compaction past the first and one past the second; the steered
+	// cases' compactions start at once and end well inside the second.
+	suiteCompactionStart = 2 * time.Second
+	suiteCompactionRun   = 6 * time.Second
 )
 
 // suiteFlags are the build flags that set those values, for the binary under
@@ -55,6 +62,8 @@ var suiteFlags = []string{"-ldflags", strings.Join([]string{
 	buildValue("cli", "builtPickup", suitePickup),
 	buildValue("wrap", "builtLetterWait", suiteLetterWait),
 	buildValue("wrap", "builtNoticeScan", suiteNoticeScan),
+	buildValue("harness/codex/gateway", "builtCompactionStart", suiteCompactionStart),
+	buildValue("harness/codex/gateway", "builtCompactionRun", suiteCompactionRun),
 }, " ")}
 
 func buildValue(pkg, name string, value time.Duration) string {

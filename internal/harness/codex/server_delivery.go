@@ -71,6 +71,11 @@ func (r *reservedDelivery) DeliverChecked(_ context.Context, message inbox.Messa
 		return inbox.Result{State: inbox.Pending, Detail: "announcement membership changed before send"}
 	}
 	_, err := r.reservation.Deliver(r.ctx, message.ID, mailboxNotice(message), r.roots)
+	if errors.Is(err, gateway.ErrCompacting) {
+		// The server refused the notice for a compaction running: nothing was
+		// taken, and the message goes once the compaction has ended.
+		return inbox.Result{State: inbox.Pending, Detail: reserveRefusal(err).Error()}
+	}
 	if err != nil {
 		return inbox.Result{State: inbox.Failed, Detail: err.Error() + "; delivery was not retried automatically"}
 	}

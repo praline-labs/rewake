@@ -25,11 +25,12 @@ var letterWait = buildtime.Duration("builtLetterWait", builtLetterWait, 3*time.S
 var builtLetterWait string
 
 // letterBound bounds how long main's wrapper waits for any word of a
-// compaction main asked for while its worker lives on. It is well past the
-// 80 seconds the Codex wrapper waits for a compaction's end, and gives a
-// Claude Code compaction — whose host call rewake does not bound — several
-// minutes; a compaction still running past it is shown by rewake list.
-var letterBound = 5 * time.Minute
+// compaction main asked for while its worker lives on, and for the end of one
+// its worker last said was still running. It is well past the 10 minutes the
+// Codex wrapper waits for a compaction's end, and gives a Claude Code
+// compaction — whose host call rewake does not bound — as long; a compaction
+// still running past it is shown by rewake list.
+var letterBound = 15 * time.Minute
 
 // heldLetter is what main's wrapper keeps of one pending compaction between
 // scans: when either half of its letter was first seen, when its worker was
@@ -60,6 +61,12 @@ type letterParts struct {
 //     departure was: the compaction failed, as the worker left before it
 //     ended;
 //   - letterBound since the request with neither half seen.
+//
+// An outcome of started is no outcome yet: the worker stopped waiting for the
+// end with the compaction still running, and records the end when it sees it,
+// as a later outcome of the same request, and the count comes with it. Until
+// then the record waits as if nothing were seen, and its bound letter says
+// what the worker said.
 //
 // A record left by an earlier run of this main is closed the same way, to the
 // current run: the letter says so.
@@ -94,6 +101,10 @@ func (n *sessionNotices) closeRequest(ctx context.Context, dir string, self regi
 	}
 	if held.message == nil {
 		found := halves(dir, self, pending)
+		var running *sessionstate.CompactionOutcome
+		if found.outcome != nil && found.outcome.Outcome == control.Started {
+			running, found.outcome = found.outcome, nil
+		}
 		reason, known := observeDeparture(dir, pending.Worker)
 		gone := known && reason != ""
 		some := found.outcome != nil || found.event != nil
@@ -114,6 +125,8 @@ func (n *sessionNotices) closeRequest(ctx context.Context, dir string, self regi
 			return
 		case gone:
 			message = closingLetter(self, pending, fmt.Sprintf("Rewake: the compaction of %s you asked for failed (%s left before the compaction ended: %s).", pending.Worker.Name, pending.Worker.Name, reason))
+		case now.Sub(pending.AskedAt) >= letterBound && running != nil:
+			message = closingLetter(self, pending, fmt.Sprintf("Rewake: the compaction of %s you asked for had no outcome within %s (%s); rewake list shows whether it compacted.", pending.Worker.Name, letterBound, running.Detail))
 		case now.Sub(pending.AskedAt) >= letterBound:
 			message = closingLetter(self, pending, fmt.Sprintf("Rewake: no outcome of the compaction of %s you asked for was seen within %s; rewake list shows whether it compacted.", pending.Worker.Name, letterBound))
 		default:

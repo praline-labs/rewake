@@ -55,7 +55,7 @@ how many scenarios ran is invisible. `-count=1` keeps a cached pass from standin
 a run. Run it after any change to delivery, reading, reporting or a fixture.
 
 **Cases run side by side**, six at a time unless `-parallel` says otherwise, and the
-suite's binary runs five of the product's waits shorter than a release.
+suite's binary runs seven of the product's waits shorter than a release.
 [testing-pool.md](testing-pool.md) says how to choose the width, how a case's cleanup
 leaves its neighbours alone, and which values the suite does not run at their real
 length.

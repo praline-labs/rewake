@@ -242,6 +242,21 @@ minutes or hours stays on the wall clock, which counts a sleeping host
 
 *September 26, 2026.*
 
+### A task sent after `rewake compact` on Codex failed, and so did the compaction
+
+A compaction of a long Codex conversation outlasted the 80 seconds the mark then held
+deliveries for. The task sent after it went into the compaction, the server refused it
+with `ActiveTurnNotSteerable { turn_kind: Compact }`, and the task was `failed` with
+"not retried automatically"; main's letter said the compaction had failed, while it
+finished half a minute later. Since September 26, 2026 a compaction seen running holds
+deliveries up to 10 minutes, that refusal leaves the message `pending` to go after the
+end, and a compaction outliving the wait is reported by its end
+([remote-control-codex.md](remote-control-codex.md)). A running wrapper built before
+that day still does the old thing: send the task again once `rewake list` shows the
+compaction counted.
+
+*September 26, 2026.*
+
 ### After a new commit the running wrapper stays old
 
 An atomic installation replaces the file, not the live process. `rewake --version`

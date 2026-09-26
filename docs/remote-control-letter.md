@@ -92,11 +92,18 @@ main's own wrapper closes each record kept exactly once, by the first of:
   snapshot a moment later, and the snapshot is read again meanwhile: "Rewake: the
   compaction of `<worker>` you asked for failed (`<worker>` left before the compaction
   ended: `<reason>`)." It comes after the notice that the worker has gone;
-- **5 minutes** from the request with neither seen while the worker lives on: "Rewake:
-  no outcome of the compaction of `<worker>` you asked for was seen within 5m0s; rewake
-  list shows whether it compacted." The bound is well past the 80 seconds of the Codex
-  wrapper's wait and gives a Claude Code compaction, whose host call rewake does not
-  bound, several minutes.
+- **15 minutes** from the request with neither seen while the worker lives on: "Rewake:
+  no outcome of the compaction of `<worker>` you asked for was seen within 15m0s; rewake
+  list shows whether it compacted." The bound is well past the 10 minutes the Codex
+  wrapper waits for a running compaction and gives a Claude Code compaction, whose host
+  call rewake does not bound, several minutes. A worker's outcome of `started` — the
+  Codex wrapper's wait ended with the compaction still running — is no outcome: the
+  record waits on for the compaction's end, which the worker records as a second outcome
+  of the same request, with the tokens. If the bound comes first, the letter says what
+  the worker said: "Rewake: the compaction of `<worker>` you asked for had no outcome
+  within 15m0s (`<detail>`); rewake list shows whether it compacted." Until September
+  26, 2026 the Codex wait ended as `failed` after 80 seconds whatever it saw, and a
+  compaction still running got a `failed` letter at once, its later success unreported.
 
 The record goes once its letter is in main's inbox; a letter whose write failed is
 retried with the same id. So the promise in the answer holds: a letter comes, whether it

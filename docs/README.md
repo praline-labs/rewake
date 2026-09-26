@@ -223,8 +223,9 @@ everything else.
 - [testing-plugin.md](testing-plugin.md) — the workflow cases that run rewake's
   function-hooks plugin under node: how the fixture hosts the module and answers its
   calls on the session, and what `claude-interrupted`, `stopped-routing` and
-  `claude-steered` claim, with their controls, and `codex-steered`, the same commands
-  served by the Codex wrapper. Open it before changing the plugin, the control
+  `claude-steered` claim, with their controls, `codex-steered`, the same commands
+  served by the Codex wrapper, and `codex-compact-hold`, a task sent into a long Codex
+  compaction. Open it before changing the plugin, the control
   directory, the Codex side of `rewake compact` and `rewake interrupt`, or those cases.
 - [testing-pool.md](testing-pool.md) — how the workflow suite runs its cases side by
   side: choosing `-parallel`, the pool that starts the longest scenarios first, the

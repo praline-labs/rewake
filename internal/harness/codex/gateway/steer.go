@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/iiiokojiadbi/rewake/internal/buildtime"
 	"github.com/iiiokojiadbi/rewake/internal/control"
 )
 
@@ -14,14 +15,28 @@ import (
 // with `rewake interrupt`, the same words the Claude Code side sends.
 func interruptedText(by string) string { return by + " interrupted this turn with rewake interrupt" }
 
-// markHoldLimit bounds how long a compaction mark holds deliveries and main's
-// wait. A compaction is a model call over the whole conversation: the live
-// run took 4 to 9 seconds on a nearly empty one, and a long conversation takes
-// longer. A delivery sent while it runs is refused by the server, so ending
-// the hold early fails letters that would have gone moments later; and main's
-// own wait for a compaction is 80 seconds, so one bound ends both together.
-// Gateway.markHold shortens it for the tests.
-const markHoldLimit = 80 * time.Second
+// The bounds of a compaction mark. A compaction is a model call over the
+// whole conversation: 4 to 9 seconds live on a nearly empty one, and 104
+// seconds from the request on one whose context was 85 per cent full
+// (docs/research-codex.md). The
+// server refuses a delivery sent while it runs, so a hold that ends early only
+// turns letters into refusals.
+//
+// markHoldLimit bounds the hold while the compaction's turn has not been seen
+// to start: nothing then shows that anything runs. compactionRunLimit bounds it
+// once its item has tied the mark to its turn, which shows the compaction
+// running until that turn ends; it is also how long the wrapper waits for the
+// end on main's behalf, so one bound ends both. Ten minutes is several times
+// the longest compaction seen, and main's wrapper waits longer still for its
+// letter (internal/wrap, letterBound). A build may set either (see
+// package buildtime); Gateway.markHold and Gateway.runHold shorten them for the
+// tests.
+var (
+	markHoldLimit      = buildtime.Duration("builtCompactionStart", builtCompactionStart, 80*time.Second)
+	compactionRunLimit = buildtime.Duration("builtCompactionRun", builtCompactionRun, 10*time.Minute)
+)
+
+var builtCompactionStart, builtCompactionRun string
 
 func (g *Gateway) markLimit() time.Duration {
 	if g.markHold > 0 {
@@ -29,6 +44,17 @@ func (g *Gateway) markLimit() time.Duration {
 	}
 	return markHoldLimit
 }
+
+func (g *Gateway) runLimit() time.Duration {
+	if g.runHold > 0 {
+		return g.runHold
+	}
+	return compactionRunLimit
+}
+
+// CompactionWait is how long the wrapper waits for the end of a compaction a
+// main asked for: the bound of its running mark.
+func (g *Gateway) CompactionWait() time.Duration { return g.runLimit() }
 
 // compactionRefused lays aside a compaction the server refused, or whose
 // request was never written: it cannot start. Called under c.mu.
@@ -136,7 +162,7 @@ func (g *Gateway) compact(ctx context.Context, request, by string, start time.Du
 		return control.Answer{Outcome: control.Refused, Reason: control.NothingToCompact, Detail: "the conversation has run no turn"}, nil
 	}
 	sent := c.state.ops.next()
-	if !c.admitted.manualStart(binding.Thread, c.state.events, sent, binding.Generation, time.Now().Add(g.markLimit())) {
+	if !c.admitted.manualStart(binding.Thread, c.state.events, sent, binding.Generation, time.Now()) {
 		c.mu.Unlock()
 		<-g.gate
 		return control.Answer{Outcome: control.Failed, Detail: "manual-scope capacity reached"}, nil
@@ -233,31 +259,34 @@ func (c *connection) compactUnsent(thread string, sent uint64, marker *manualWor
 	return control.Answer{Outcome: control.Failed, Detail: detail}
 }
 
-// waitEnded answers main when its wait ends: by the compaction's end when it
-// has been answered — also when the wait ran out as it came — and otherwise
-// as the wait ending first. The hold then ends with it, and the answer says
-// whether the compaction's turn was seen at all.
+// waitEnded answers main when its wait ends: by how the mark's wait ended when
+// it has — the compaction's end, also when the wait ran out as it came, or a
+// bound — and otherwise as the wait ending first. The hold then ends with it,
+// and the answer says whether the compaction's turn was seen at all; one seen
+// is still running, and its end is main's outcome when seen.
 func (c *connection) waitEnded(marker *manualWork) control.Answer {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if !marker.answered {
-		marker.released, marker.ended = true, nil
+		marker.released = true
 		if marker.turn == "" {
+			marker.ended = nil
 			return control.Answer{Outcome: control.Failed, Detail: "the compaction's turn was not seen to start when the wait ended; deliveries go on, and its turn is still not taken for work if it starts"}
 		}
-		return control.Answer{Outcome: control.Failed, Detail: "the compaction was started and had not ended when the wait did; it may still finish, and deliveries go on meanwhile"}
+		marker.stillRunning("the compaction was not seen to end when the wait did")
 	}
-	switch marker.status {
-	case "completed":
-		answer := control.Answer{Outcome: control.Done, TokensAfter: marker.after}
-		if marker.after != nil {
-			answer.TokensBefore = marker.tokensBefore
-		}
-		return answer
-	case "interrupted":
-		return control.Answer{Outcome: control.Failed, Detail: "the compaction was interrupted"}
+	return marker.outcome()
+}
+
+// recordLateEnds records the end of each compaction of a main's that ended
+// after main was told it was still running: main's wrapper still waits for
+// it. Called under c.mu, after an event, following the connection-to-owner
+// lock order.
+func (c *connection) recordLateEnds() {
+	for _, marker := range c.admitted.lateEnds {
+		c.owner.CompactionEnded(marker.request, marker.by, marker.outcome())
 	}
-	return control.Answer{Outcome: control.Failed, Detail: marker.failure}
+	c.admitted.lateEnds = nil
 }
 
 // Interrupt aborts the selected conversation's running turn, the one the

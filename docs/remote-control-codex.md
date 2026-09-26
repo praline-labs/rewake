@@ -11,8 +11,9 @@ the running turn, so the wrapper serves the directory: `control.Serve` polls it 
 100 ms from the moment the app-server is up and follows the same steps as the module —
 mark taken, check the request is still in place, act, write the answer once. It acts
 through the gateway (`internal/harness/codex/gateway/steer.go`). A compaction is
-answered once it has started, within 3 seconds, and its end is waited for apart, up to
-80 seconds from the request, and kept in the session's telemetry for main's letter
+answered once it has started, within 3 seconds, and its end is waited for apart —
+80 seconds from the request for its turn to be seen, 10 minutes once it is — and kept
+in the session's telemetry for main's letter
 ([remote-control.md](remote-control-letter.md)); an interrupt is answered within
 8 seconds. Both stay under the asker's limit of 10.
 
@@ -69,15 +70,25 @@ answered once it has started, within 3 seconds, and its end is waited for apart,
   gateway yet is the one final answer not recorded: nothing holds the telemetry then,
   and it is not reached, as the control directory is served only once the gateway is
   there.
-- **The mark's bound.** A mark holds deliveries, and the wait for its end, for 80
-  seconds from the request, or until that wait ends if that comes first — main's letter
-  then says whether the compaction's turn was seen at all, and a compaction that ended as
-  the wait did is reported by its end. Past it the hold ends — deliveries go, main's letter says `failed` with the
-  reason — but the mark does not: a compaction that starts late is still not taken for
-  work, and main's next compaction stays refused until the operation is seen to end.
-  80, not less: a compaction is a model call over the whole conversation, 4 to 9 seconds
-  live on a nearly empty one and longer on a long one; the server refuses a delivery
-  sent while it runs; and the wait for its end is 80 seconds, so one bound ends both.
+- **The mark's bounds.** A mark holds deliveries, and the wait for its end, by two
+  bounds counted from the request. Until the compaction's item ties it to a turn, 80
+  seconds: a request the server does not start in that time is taken for one that will
+  not start — the hold ends, main's letter says `failed`, the compaction's turn was not
+  seen. Once tied, 10 minutes: the compaction visibly runs, so the hold lasts until its
+  turn ends. At either bound, or when main's wait ends first, main's letter says what
+  was seen, and a compaction that ended as the wait did is reported by its end. Past the
+  running bound the hold ends and main is told the compaction may still be running —
+  `started`, not `failed`; its end, when it comes, is recorded as main's outcome with
+  the tokens, and main's letter comes from that ([remote-control-letter.md](remote-control-letter.md)).
+  The mark itself outlives both bounds: a compaction that starts late is still not taken
+  for work, and main's next compaction stays refused until the operation is seen to end.
+  Why two: a compaction is a model call over the whole conversation, 4 to 9 seconds
+  live on a nearly empty one and about 104 seconds on one whose context was 85% full
+  (0.155.1, September 26, 2026). Until that day one bound of 80 seconds ended the hold
+  of a running compaction too: the task sent after it went, the server refused it, and
+  it failed for good ([research-codex.md](research-codex.md#a-delivery-during-a-long-compaction)).
+  A resume whose snapshot shows the compaction no longer running releases a tied hold
+  early; one that shows it still running keeps it.
 - **The terminal's `/compact` while main's runs** never reaches the server, which would
   abort main's compaction for it and pass the mark to its own: main's letter would fail
   and its turn be published as work. The gateway answers the terminal itself with a
@@ -93,9 +104,13 @@ answered once it has started, within 3 seconds, and its end is waited for apart,
   compaction has not ended the message stays `pending` ("the conversation cannot take a message yet: a compaction of the
   conversation is running") and is tried again every two seconds, going once the
   compaction's turn has completed, once the wait for its end is over, or once the mark's bound
-  has passed. So compacting a worker and then sending it its
+  has passed. A delivery the server itself refuses with `ActiveTurnNotSteerable
+  { turn_kind: Compact }` — sent past the bound, or into a compaction the gateway did
+  not see — is the same `pending`: nothing was taken, and the message is tried again
+  until the compaction ends. So compacting a worker and then sending it its
   task at once is an ordinary order; `rewake send` may answer exit 3 for it, and the
-  message goes a few seconds later.
+  message goes a few seconds later. The same refusal for a review
+  (`turn_kind: Review`) still fails the message.
 - **Who asked for a compaction.** The manual mark carries the request id and the asker,
   and the telemetry puts them on the compaction it counts, so main's wrapper sends no
   notice of it and the command reads its count — the same fields the Claude Code
@@ -342,8 +357,8 @@ what the terminal shows and does meanwhile — is in
   compaction's turn was seen, the compaction ends unseen or is any later turn, so main's
   compaction on that conversation stays refused as uncertain until a `turn/start` or
   `turn/steer` sent after it is answered — in practice, the next turn. A delivery sent
-  while the compaction still runs is refused by the server and fails, as it does past
-  the bound.
+  while the compaction still runs is refused by the server and stays `pending`, tried
+  again until the compaction has ended, as it is past the bound.
 - **A turn without proof of work is only advisory.** A goal's turn that fails before any
   item, or a turn whose reply the gateway never read, the connection having closed
   between the request and its reply, reports as advisory: the task it did stays owed
@@ -356,7 +371,7 @@ what the terminal shows and does meanwhile — is in
 - **A mark whose compaction ends unseen after its turn was seen** — the terminal left the
   conversation by `/resume` of another while it ran — lives until the connection ends:
   the server sends this connection nothing more of it, and neither a resume nor a status
-  is its end. It holds deliveries only up to its bound; main's compaction on that
+  is its end. It holds deliveries only up to its running bound; main's compaction on that
   conversation stays refused as uncertain until a later turn is answered.
 - **Work accepted and lost.** A turn or review the server accepted and whose end the
   gateway never reads — on this connection or on any after it — keeps the conversation

@@ -44,6 +44,7 @@ type (
 		published         map[string]publishedOutcome
 		publishOrder      []string
 		markHold          time.Duration
+		runHold           time.Duration
 		proofHold         time.Duration
 		proofs            *proofs
 		ops               *operations
@@ -175,7 +176,7 @@ func (c *connection) readUI() {
 				c.lostSight()
 			}
 			if m.method == "thread/compact/start" && err == nil {
-				if !c.admitted.manualStart(m.thread, c.state.events, m.sent, c.state.Generation, time.Now().Add(c.owner.markLimit())) {
+				if !c.admitted.manualStart(m.thread, c.state.events, m.sent, c.state.Generation, time.Now()) {
 					err = errors.New("manual-scope capacity reached; control not forwarded")
 				} else {
 					c.state.ops.opened(m.thread, m.sent, "")

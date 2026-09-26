@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 )
@@ -26,7 +27,15 @@ var errReadPhase = errors.New("primary resume reads are still in progress")
 // ErrCompacting refuses to send work while a compaction of the conversation
 // runs, the terminal's /compact or a main's. It passes with the compaction, so
 // the caller of Reserve keeps the delivery waiting rather than failing it.
+// Deliver returns it too when the server refused the input for a compaction
+// running where no mark held — one past its mark's bound, say.
 var ErrCompacting = errors.New("a compaction of the conversation is running")
+
+// compactionRefusal is the server's refusal of input while a compaction runs,
+// as its reply's message spells it: the input is refused, not queued, so the
+// same delivery may go again once the compaction has ended
+// (docs/research-protocol.md, core/src/session/turn_input.rs).
+const compactionRefusal = "ActiveTurnNotSteerable { turn_kind: Compact }"
 
 // Reserve waits outside the admission FIFO and gate for justified read completion
 // and for a running compaction's end. A selection change while waiting refuses
@@ -228,6 +237,9 @@ func (r *Reservation) Deliver(ctx context.Context, messageID string, notice Mail
 	reply, err := r.c.callReserved(ctx, r.binding, "turn/start", params, r.admissionID)
 	if err == nil {
 		r.c.displayNotice(r.binding, reply.turn, notice.Notice)
+	}
+	if err != nil && strings.Contains(err.Error(), compactionRefusal) {
+		return "", fmt.Errorf("%w: the server refused the notice (%v)", ErrCompacting, err)
 	}
 	return reply.turn, err
 }

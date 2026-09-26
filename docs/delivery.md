@@ -188,8 +188,12 @@ compacted, by main's `rewake compact` or the terminal's `/compact`, takes no wor
 the gateway's `Reserve` then returns `gateway.ErrCompacting`, which `Reserve` in
 `internal/harness/codex/server_delivery.go` passes on as `inbox.ErrNotYet`. `refuse`
 lets that one through unwrapped, so the message stays `pending` and goes on a later
-pass, once the compaction has ended, the wrapper's wait for its end has, or its mark's 80-second
-bound has passed ([remote-control-codex.md](remote-control-codex.md)). Nothing else holds a delivery:
+pass, once the compaction has ended, the wrapper's wait for its end has, or its mark's bound
+has passed — 80 seconds for a compaction whose turn is not seen, 10 minutes for one
+seen running ([remote-control-codex.md](remote-control-codex.md)). A delivery the server
+itself refuses for a compaction running (`ActiveTurnNotSteerable { turn_kind: Compact }`,
+September 26, 2026) is `gateway.ErrCompacting` too, and `DeliverChecked` makes it
+`pending`: the message goes once the compaction has ended. Nothing else holds a delivery:
 an operation whose end the gateway has not read makes main's compaction refuse, not
 a delivery wait.
 

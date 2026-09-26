@@ -48,6 +48,9 @@ type turnState struct {
 	aborted bool
 	// compactions numbers the compactions' own turns.
 	compactions int
+	// compacting says a compaction runs: the server refuses input then
+	// rather than steer it (compactionRefusal).
+	compacting bool
 }
 
 // deliveredTurn checks an incoming turn, decides between starting one and
@@ -60,6 +63,13 @@ func (s *shimSession) deliveredTurn(params json.RawMessage) (any, any, error) {
 	notice, err := s.checkedDelivery(params)
 	if err != nil {
 		return nil, nil, err
+	}
+	s.turn.mu.Lock()
+	compacting := s.turn.compacting
+	s.turn.mu.Unlock()
+	if compacting {
+		s.recordTurnEvent("refused", "compaction", messageIDOf(params))
+		return nil, nil, compactionRefusal
 	}
 	s.recordDelivered(notice)
 

@@ -116,9 +116,10 @@ func reserveWithin(g *Gateway, wait time.Duration) error {
 
 // A compaction whose end this connection never reads — the terminal left the
 // conversation during it — is not ended by a resume showing the conversation
-// idle: only its turn/completed ends it. One whose start was seen keeps
-// holding deliveries; one only answered is lost sight of — main's wait fails
-// at once, deliveries go, and main's next compaction stays refused.
+// idle: only its turn/completed ends it, so main's next compaction stays
+// refused. One whose start was seen stops holding deliveries, as the reply
+// shows it no longer running, and main's wait for its end goes on; one only
+// answered is lost sight of — main's wait fails at once, and deliveries go.
 func TestACompactionLeftBehindIsNotEndedByAnIdleResume(t *testing.T) {
 	for _, variant := range []string{"main's, started", "main's, only answered", "the terminal's"} {
 		t.Run(variant, func(t *testing.T) {
@@ -140,12 +141,10 @@ func TestACompactionLeftBehindIsNotEndedByAnIdleResume(t *testing.T) {
 			}
 			leaveAndReturn(t, ui, native, "idle", `{"id":"W","items":[],"status":"completed"},{"id":"C","items":[],"status":"completed"}`)
 			if variant != "main's, only answered" {
-				if err := reserveWithin(g, 200*time.Millisecond); !errors.Is(err, ErrCompacting) {
+				if err := reserveWithin(g, 200*time.Millisecond); err != nil {
 					t.Fatalf("a delivery after coming back: %v", err)
 				}
-				if answer := compactBounded(g, "0124"); answer.Reason != control.InTurn || answer.Detail != "a compaction is running" {
-					t.Fatalf("main's compaction after coming back: %+v", answer)
-				}
+				refusedAsUncertain(t, g, native, "main's compaction after coming back")
 				if answers != nil {
 					select {
 					case answer := <-answers:

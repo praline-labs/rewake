@@ -141,7 +141,8 @@ the rest to hold.
 The cases that run rewake's function-hooks plugin under node — `claude-interrupted`,
 `stopped-routing` and `claude-steered` — and what the fixture's plugin host plays for
 them are in [testing-plugin.md](testing-plugin.md), with `codex-steered`, the same
-commands on the Codex column.
+commands on the Codex column, and `codex-compact-hold`, a task sent into a long Codex
+compaction.
 
 ## Every control
 
@@ -169,6 +170,7 @@ switches have no single form in the code to find them by, and the row is kept by
 | claude-interrupted | `interrupt-unpublished`, `every-end-stopped`, `plugin-not-passed`, `stop-not-heard` | — |
 | claude-steered | `compact-not-run`, `in-turn-unmapped`, `interrupter-unnamed`, `line-repeated`, `idle-interrupt-done`, `silent-not-answering`, `any-role-steers`, `own-compaction-announced`, `letter-uncounted`, `waits-for-the-end`, `ended-uncounted`, `asker-untold`, `orphan-unlettered`, `stop-by-a-person` | — |
 | codex-steered | `busy-unchecked`, `codex-asker-untold`, `codex-waits-for-the-end`, `codex-outcome-unkept`, `codex-interrupter-unnamed`, `codex-idle-interrupt-done`, `focus-taken` | — |
+| codex-compact-hold | `hold-ends-at-start`, `compaction-refusal-final`, `late-end-unrecorded`, `running-taken-for-an-outcome` | — |
 | stopped-routing | `stopped-to-main` | — |
 | withdraw-after-notice | `withdraw-leaves-task`, `withdraw-silent`, `recall-sender-first` | — |
 | withdraw-mid-turn | `recall-unnamed` | — |

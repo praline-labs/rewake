@@ -162,3 +162,12 @@ built in [testing-plugin.md](testing-plugin.md#steering-a-session).
   interrupt refused, and a worker's call refused; seven product mutants
   ([testing-plugin.md](testing-plugin.md#steering-a-session)). The shape case checks the
   shim's reply and events for both requests against the schema.
+- The workflow case `codex-compact-hold` — a task sent right after main's compaction of
+  a Codex worker whose compaction runs long, the shim refusing input meanwhile as the
+  server does: past the mark's start bound the hold lasts to the compaction's end and
+  the server is never asked; past its running bound the task is refused, waits and goes
+  after the end, and main's letter comes from the late end with its tokens; four product
+  mutants ([testing-plugin.md](testing-plugin.md#a-long-compaction-on-codex)).
+  `internal/harness/codex/gateway/compact_hold_test.go` holds the same at the gateway,
+  and `internal/wrap/compaction_letters_running_test.go` the letter waiting past an
+  outcome of `started`.

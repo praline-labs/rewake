@@ -51,6 +51,7 @@ func (s *shimSession) compact(params json.RawMessage) (any, any, error) {
 		s.abortOpen()
 	}
 	s.turn.compactions++
+	s.turn.compacting = true
 	id := fmt.Sprintf("compaction-%d", s.turn.compactions)
 	s.turn.mu.Unlock()
 	s.recordTurnEvent("compacted", id, "")
@@ -61,6 +62,14 @@ func (s *shimSession) compact(params json.RawMessage) (any, any, error) {
 		s.itemEvent("item/started", "startedAtMs", id, item),
 	}
 	end := eventSequence{
+		// The compaction's task ends before its events go out, and input is
+		// taken again from then on.
+		eventHook(func() {
+			s.turn.mu.Lock()
+			s.turn.compacting = false
+			s.turn.mu.Unlock()
+			s.recordTurnEvent("compaction-ended", id, "")
+		}),
 		s.usageEvent(id, compactedTokens),
 		s.itemEvent("item/completed", "completedAtMs", id, item),
 		s.threadStatusChangedEvent(idleStatus()),
@@ -81,6 +90,25 @@ type eventsLater struct {
 	after  time.Duration
 	events eventSequence
 }
+
+// eventHook is a step of the fixture's own taken in the order of the events
+// around it, sending nothing.
+type eventHook func()
+
+// compactionRefusal is the server's answer to input while a compaction runs:
+// an error reply, the input neither queued nor steered. The code and the text
+// are 0.155.1's, seen live on September 24 and 26, 2026
+// (docs/research-protocol.md, docs/research-codex.md).
+var compactionRefusal = rpcError{code: -32603, message: "failed to submit turn input: ActiveTurnNotSteerable { turn_kind: Compact }"}
+
+// rpcError is a refusal with a code of its own; any other error is answered
+// with -32600.
+type rpcError struct {
+	code    int
+	message string
+}
+
+func (e rpcError) Error() string { return e.message }
 
 // interrupt answers turn/interrupt: refused with the server's own words when
 // no turn runs or another one does, otherwise the held turn ends interrupted.
@@ -166,7 +194,14 @@ var steeringShapes = []string{
 func steeringAgainstTheSchema(c *Case, bundle *schemaBundle) {
 	session := &shimSession{thread: shimThread}
 	reply, after, err := session.compact(json.RawMessage(`{"threadId":"` + shimThread + `"}`))
-	events, _ := after.(eventSequence)
+	var events eventSequence
+	sequence, _ := after.(eventSequence)
+	for _, event := range sequence {
+		// A hook of the fixture's own sends nothing, so it is no event to check.
+		if _, hook := event.(eventHook); !hook {
+			events = append(events, event)
+		}
+	}
 	if err != nil || len(events) != 7 {
 		for _, observation := range steeringShapes[:5] {
 			c.Contradicted(observation, "the shim did not compact: %v, %d events", err, len(events))

@@ -11,15 +11,12 @@ import (
 // gives the served side five seconds to take one (docs/remote-control.md).
 const controlPoll = 100 * time.Millisecond
 
-// The waits of a request. An interrupt is answered within the asker's own
-// wait of 10 seconds. A compaction is answered once it has started, within
-// compactStart, and its end is waited for apart from the asker, up to 80
-// seconds from the request, the bound of its mark; that end reaches main as a
+// interruptWait bounds an interrupt, answered within the asker's own wait of
+// 10 seconds. A compaction is answered once it has started, within
+// compactStart, and its end is waited for apart from the asker for as long as
+// its running mark holds (gateway.CompactionWait); that end reaches main as a
 // letter.
-var steerWaits = map[string]time.Duration{
-	control.Compact:   80 * time.Second,
-	control.Interrupt: 8 * time.Second,
-}
+const interruptWait = 8 * time.Second
 
 // compactStart bounds the wait for a compaction's start, well inside the ten
 // seconds the asker waits for an answer.
@@ -28,8 +25,7 @@ const compactStart = 3 * time.Second
 // steer carries out a main's request on the owned app-server: Codex has no
 // plugin, and the wrapper is what holds the connection and knows the turn.
 func (s *serverSession) steer(ctx context.Context, request control.Request) control.Answer {
-	wait, known := steerWaits[request.Action]
-	if !known {
+	if request.Action != control.Compact && request.Action != control.Interrupt {
 		return control.Answer{Outcome: control.Failed, Detail: "unknown action " + request.Action}
 	}
 	if s.gateway == nil {
@@ -38,11 +34,12 @@ func (s *serverSession) steer(ctx context.Context, request control.Request) cont
 		// the outcome either, as the telemetry lives in the gateway.
 		return control.Answer{Outcome: control.Failed, Detail: "the app-server is not connected yet"}
 	}
-	ctx, cancel := context.WithTimeout(ctx, wait)
 	if request.Action == control.Interrupt {
+		ctx, cancel := context.WithTimeout(ctx, interruptWait)
 		defer cancel()
 		return s.gateway.Interrupt(ctx, request.From)
 	}
+	ctx, cancel := context.WithTimeout(ctx, s.gateway.CompactionWait())
 	if request.Focus != "" {
 		// The command refuses a focus for Codex before sending; one that
 		// arrives anyway is not dropped silently, and is its outcome too, as

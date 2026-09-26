@@ -187,3 +187,29 @@ not watched.
 - **In the terminal** each update adds an "Updated Plan" entry to the history — done
   steps checked and struck through, the current one highlighted — a series of
   snapshots rather than a standing panel **[source]**.
+
+### A delivery during a long compaction
+
+**[live; Codex CLI 0.155.1; September 26, 2026; a worker's message status and its
+telemetry snapshot read afterwards; times as the state directory logged them]** main
+compacted a worker whose context was 85% full (about 220K tokens) with `rewake compact`
+and sent it a task seven seconds later. What happened, with the rewake of that day:
+
+- The compaction was requested at about 19:41:22.95; the task was sent at 19:41:29 and
+  held as `pending` by the mark.
+- At 19:42:42.95 — 80 seconds from the request, 73 from the send — the mark's bound
+  ended the hold and main's wait at once. The task went as `turn/start`, and the server
+  refused it: the status read `failed`, "native request refused: failed to submit turn
+  input: ActiveTurnNotSteerable { turn_kind: Compact }; delivery was not retried
+  automatically". So a compaction still refuses input at 80 seconds, as the probe of
+  September 24 saw at its start ([research-protocol.md](research-protocol.md#compaction-and-interrupt-on-request)).
+- main's letter came at the same moment: the compaction "failed", started and not ended
+  when the wait did.
+- The telemetry counted the compaction at 19:43:06.49, its asker main — about 104 seconds
+  from the request — and the context went from 85% to 0%. The compaction had succeeded;
+  nothing told main.
+
+The fix of the same day ([2026-09-26-codex-compact-hold.md](roadmap/2026-09-26-codex-compact-hold.md))
+holds a compaction seen running up to 10 minutes, takes this refusal for a wait, and
+reports a compaction outliving the wait by its end.
+
