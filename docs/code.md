@@ -69,8 +69,11 @@ does not is refused before anything is sent ([remote-control.md](remote-control.
 
 
 A harness whose own worktree flag cannot work under rewake implements
-`WorktreeHarness` — `WorktreeFlag()`, the spelling the launch command takes for itself,
-and `LaunchDirectory(args)`, the directory the launch would work in and the arguments
+`WorktreeHarness` — `WorktreeFlag()`, the spelling the launch command takes for itself;
+`WorktreeRefusal(args)`, what the harness cannot do in a checkout of its own, asked
+before anything is made (Codex: a continued conversation, which stays in the directory
+it was started in, and the arguments its launch refuses anyway); and
+`LaunchDirectory(args)`, the directory the launch would work in and the arguments
 without what chose it. The launch command then makes the checkout in `internal/worktree`
 and starts the session inside it ([launch.md](launch.md#a-worktree-for-a-launch)). Only
 Codex implements it; Claude Code makes its own.

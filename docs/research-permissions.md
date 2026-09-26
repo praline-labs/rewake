@@ -100,7 +100,10 @@ September 17, 2026; no model call]** These worktree checks concern local
 launches. Rewake now uses a remote TUI, whose continuation permission boundary
 is documented below; the local behavior does not establish remote behavior.
 
-Managed worktree allocation uses `$CODEX_HOME/worktrees/<four-character id>/<repo>`
+Managed worktree allocation uses `$CODEX_HOME/worktrees/<id>/<repo>`, `<id>` the
+first four characters of a random UUID in its simple form — four lowercase hex digits
+(`Uuid::new_v4().simple()`, `worktree/src/paths.rs:26–27`; read in the reference tree at
+`e29eceb75` on September 26, 2026) —
 by default, or `desktop.git-worktree-root` when configured
 (`worktree/src/settings.rs:43–56`, `worktree/src/paths.rs:13–30`, relative to
 `codex-rs`). `worktree/src/lib.rs:85–99` runs a detached `git worktree add`;

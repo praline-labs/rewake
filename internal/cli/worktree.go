@@ -3,10 +3,13 @@ package cli
 import (
 	"bytes"
 	"fmt"
+	"path/filepath"
+	"slices"
 	"strings"
 	"text/tabwriter"
 
 	"github.com/iiiokojiadbi/rewake/internal/registry"
+	"github.com/iiiokojiadbi/rewake/internal/state"
 	"github.com/iiiokojiadbi/rewake/internal/worktree"
 )
 
@@ -20,7 +23,7 @@ func worktreeCommand() *Command {
 		MaxPositionals: 2,
 		Summary:        "The worktrees rewake made for launches with --worktree: list them, or remove one.",
 		Options: []Option{
-			{Flag: "--force", Summary: "rm only: remove a worktree with changes, with commits no branch holds, or of a session that still runs."},
+			{Flag: "--force", Summary: "rm only: remove a worktree with changes or ignored files, with commits no branch holds, whose directory went missing, or with a session still running in it."},
 			jsonOption,
 		},
 		Examples: []string{
@@ -33,7 +36,7 @@ func worktreeCommand() *Command {
 		Notes: []string{
 			"They live under " + worktreeRootHelp + ", one directory per repository, named for it; each worktree has its record beside it, saying whose session it was made for, from which repository and at which commit.",
 			"rm takes a name, or <repository>/<name> as ls prints it when one name is in two repositories. It removes the checkout with git worktree remove, so the repository forgets it too; the commits made in it stay in the repository while a branch holds them.",
-			"rm refuses a worktree with changes or with commits only it holds, and one whose session still runs, and says which; --force removes it anyway.",
+			"rm refuses a worktree with changes, with files git ignores (a .env, a local build), with commits only it holds, whose directory is gone while the repository still lists it, or in which a rewake session still runs — the one it was made for or any started there since — and says which; --force removes it anyway. A process rewake did not start is not seen.",
 		},
 		Handler: handleWorktree,
 	}
@@ -44,9 +47,12 @@ const worktreeRootHelp = "$" + worktree.RootEnv + ", else $XDG_DATA_HOME/rewake/
 // worktreeView is one checkout as ls reports it.
 type worktreeView struct {
 	worktree.Record
-	// Running says the session it was made for still runs.
-	Running bool           `json:"running"`
-	Check   worktree.Check `json:"check"`
+	// Running says a rewake session still runs in it: the one it was made
+	// for, or another started there since.
+	Running bool `json:"running"`
+	// RunningSessions names them, each with its room.
+	RunningSessions []string       `json:"runningSessions,omitempty"`
+	Check           worktree.Check `json:"check"`
 	// Problem is why the checkout could not be looked at, when it could not.
 	Problem string `json:"problem,omitempty"`
 }
@@ -93,8 +99,12 @@ func listWorktrees(ctx *Context, root string) error {
 	}
 	listing := worktreeListing{Root: root, Worktrees: []worktreeView{}}
 	for _, record := range records {
-		view := worktreeView{Record: record, Running: sessionRuns(record)}
-		if check, err := worktree.Inspect(record); err != nil {
+		view := worktreeView{Record: record}
+		running, err := runningIn(record)
+		view.RunningSessions, view.Running = running, len(running) > 0
+		if err != nil {
+			view.Problem = err.Error()
+		} else if check, err := worktree.Inspect(record); err != nil {
 			view.Problem = err.Error()
 		} else {
 			view.Check = check
@@ -151,58 +161,114 @@ func removeWorktree(ctx *Context, call Call, root, ref string) error {
 	})
 }
 
-// keepReasons says what removing a checkout would lose or cut off.
+// keepReasons says what removing a checkout would lose or cut off. Whatever
+// cannot be told is an error, and rm then refuses too: without --force it
+// never loses work.
 func keepReasons(record worktree.Record) ([]string, error) {
 	var reasons []string
-	if sessionRuns(record) {
-		reasons = append(reasons, "its session "+record.Session.Name+" in room "+record.Session.Room+" still runs")
+	running, err := runningIn(record)
+	if err != nil {
+		return nil, err
+	}
+	if len(running) > 0 {
+		reasons = append(reasons, "rewake sessions still run in it: "+strings.Join(running, ", "))
 	}
 	check, err := worktree.Inspect(record)
 	if err != nil {
 		return nil, err
 	}
+	if check.Missing && !check.Forgotten {
+		reasons = append(reasons, "its directory "+record.Path+" is gone while the repository still lists it; if it was moved, git worktree repair <new path> run in the repository reconnects it, and whatever it holds is out of sight here")
+	}
 	if check.Changes {
 		reasons = append(reasons, "it has changes git status shows")
 	}
+	if check.Ignored {
+		reasons = append(reasons, "it holds files git ignores, a .env or a local build, which removal deletes")
+	}
 	if check.Unreachable {
-		reasons = append(reasons, "its HEAD "+shortCommit(check.Head)+" is on no branch or tag, and those commits would be left to garbage collection")
+		reasons = append(reasons, "its HEAD "+shortCommit(check.Head)+" is on no branch, tag or remote-tracking ref, and those commits would be left to garbage collection")
 	}
 	return reasons, nil
 }
 
-// sessionRuns says the session a checkout was made for still runs: its record
-// is in the room it registered in, alive, and of the same run.
-func sessionRuns(record worktree.Record) bool {
-	owner := record.Session
-	if owner == nil || owner.Dir == "" {
-		return false
+// runningIn names the rewake sessions still running with their work in a
+// checkout: the one it was made for, and any started there since — after the
+// first ended, or by hand in its directory, as a taken name's refusal
+// suggests. It looks in every room of the current state directory and of the
+// one the owner registered in. A process rewake did not start is not seen.
+func runningIn(record worktree.Record) ([]string, error) {
+	var roots []string
+	if root, err := state.Root(); err == nil {
+		roots = append(roots, root)
 	}
-	session, err := registry.Load(owner.Dir, owner.Name)
-	return err == nil && session.Epoch() == owner.Epoch && session.Alive()
+	owner := record.Session
+	if owner != nil && owner.Dir != "" {
+		if root := state.RootForRoom(owner.Dir); !slices.Contains(roots, root) {
+			roots = append(roots, root)
+		}
+	}
+	var found []string
+	for _, root := range roots {
+		rooms, err := state.RoomDirs(root)
+		if err != nil {
+			return nil, fmt.Errorf("cannot list the rooms of %s: %w", root, err)
+		}
+		for _, room := range rooms {
+			sessions, err := registry.ListReadOnly(room)
+			if err != nil {
+				return nil, fmt.Errorf("cannot list the sessions of %s: %w", room, err)
+			}
+			for _, session := range sessions {
+				made := owner != nil && filepath.Clean(owner.Dir) == room && session.Name == owner.Name && session.Epoch() == owner.Epoch
+				label := session.Name + " in room " + filepath.Base(room)
+				if session.Alive() && (made || worktree.Within(session.CWD, record.Path)) && !slices.Contains(found, label) {
+					found = append(found, label)
+				}
+			}
+		}
+	}
+	return found, nil
 }
 
+// ownerLabel names who works in a checkout: the sessions running there, or
+// the one it was made for, ended.
 func ownerLabel(view worktreeView) string {
-	if view.Session == nil {
-		return "-"
+	switch {
+	case view.Running:
+		names := make([]string, 0, len(view.RunningSessions))
+		for _, running := range view.RunningSessions {
+			name, _, _ := strings.Cut(running, " in room ")
+			names = append(names, name)
+		}
+		return strings.Join(names, ",") + " (running)"
+	case view.Session != nil:
+		return view.Session.Name + " (ended)"
 	}
-	if view.Running {
-		return view.Session.Name + " (running)"
-	}
-	return view.Session.Name + " (ended)"
+	return "-"
 }
 
 func stateLabel(view worktreeView) string {
-	switch {
-	case view.Problem != "":
+	if view.Problem != "" {
 		return "unreadable"
-	case view.Check.Missing:
-		return "missing"
-	case view.Check.Changes && view.Check.Unreachable:
-		return "changes, unreachable"
-	case view.Check.Changes:
-		return "changes"
-	case view.Check.Unreachable:
-		return "unreachable"
 	}
-	return "clean"
+	var parts []string
+	for _, part := range []struct {
+		on   bool
+		name string
+	}{
+		{view.Check.Missing, "missing"},
+		{view.Check.Forgotten, "forgotten"},
+		{view.Check.Changes, "changes"},
+		{view.Check.Ignored, "ignored"},
+		{view.Check.Unreachable, "unreachable"},
+	} {
+		if part.on {
+			parts = append(parts, part.name)
+		}
+	}
+	if len(parts) == 0 {
+		return "clean"
+	}
+	return strings.Join(parts, ", ")
 }

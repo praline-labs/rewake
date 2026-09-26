@@ -154,7 +154,7 @@ the owner chose variant B for `rewake codex --worktree`: rewake makes a detached
 with the public `git worktree add` and keeps its own record
 ([launch.md](launch.md#a-worktree-for-a-launch)). Variant A would repeat what Codex's
 terminal does in a local launch — its directory layout under
-`$CODEX_HOME/worktrees/<four hex>/<repository>`, a detached `--no-checkout` add,
+`$CODEX_HOME/worktrees/<id>/<repository>`, `<id>` the first four hex characters of a random UUID, a detached `--no-checkout` add,
 `config.worktree`, and the binding of the checkout to the thread in `codex-thread.json`
 ([research-codex.md](research-codex.md#--worktree-with-a-remote-terminal),
 [research-permissions.md](research-permissions.md#managed-worktrees-and-continuation-permissions)).

@@ -146,10 +146,26 @@ func Create(root, from, name string) (Record, error) {
 	if err != nil {
 		return Record{}, err
 	}
+	if inside(resolved(root), resolved(source.Source)) {
+		// Git would list the checkout among the repository's own files, and
+		// an agent searching the repository would find a second copy of it.
+		return Record{}, &UnusableError{Reason: fmt.Sprintf("the worktree directory %s is inside the repository at %s; set %s to a directory outside it", root, source.Source, RootEnv)}
+	}
 	directory := filepath.Join(root, source.Repository)
 	if err := os.MkdirAll(directory, 0o755); err != nil {
 		return Record{}, fmt.Errorf("cannot create %s: %w", directory, err)
 	}
+	record, err := add(source, directory, name)
+	if err != nil {
+		// Only when empty: a repository's directory holding other
+		// checkouts stays.
+		_ = os.Remove(directory)
+	}
+	return record, err
+}
+
+// add claims a name in directory and checks the source's commit out under it.
+func add(source Record, directory, name string) (Record, error) {
 	for try := 0; ; try++ {
 		record := source
 		record.Name = name
@@ -217,7 +233,10 @@ func List(root string) ([]Record, error) {
 	var records []Record
 	for _, path := range paths {
 		record, err := read(path)
-		if err != nil || recordPath(record) != path {
+		if err != nil || recordPath(record) != path || filepath.Base(record.Path) != record.Name {
+			// A record whose checkout is not the directory of its name
+			// beside it names a path rewake did not make, and rm would
+			// remove it.
 			continue
 		}
 		records = append(records, record)
@@ -255,7 +274,7 @@ func read(path string) (Record, error) {
 	if err := json.Unmarshal(raw, &record); err != nil {
 		return Record{}, err
 	}
-	if !ValidName(record.Name) || !filepath.IsAbs(record.Path) {
+	if !ValidName(record.Name) || !filepath.IsAbs(record.Path) || filepath.Clean(record.Path) != record.Path {
 		return Record{}, fmt.Errorf("%s is not a worktree record", path)
 	}
 	return record, nil
@@ -295,4 +314,30 @@ func repositoryDir(commonDir string) string {
 	}
 	sum := sha256.Sum256([]byte(commonDir))
 	return clean + "-" + hex.EncodeToString(sum[:3])
+}
+
+// resolved is a path with the symbolic links of its longest existing part
+// resolved: a root not made yet is compared by where it would be.
+func resolved(path string) string {
+	rest := ""
+	for current := filepath.Clean(path); ; current = filepath.Dir(current) {
+		if actual, err := filepath.EvalSymlinks(current); err == nil {
+			return filepath.Join(actual, rest)
+		}
+		if parent := filepath.Dir(current); parent == current {
+			return filepath.Clean(path)
+		}
+		rest = filepath.Join(filepath.Base(current), rest)
+	}
+}
+
+// inside says whether path is dir or below it.
+func inside(path, dir string) bool {
+	relative, err := filepath.Rel(dir, path)
+	return err == nil && relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator))
+}
+
+// Within says whether path lies in dir or is dir, symbolic links resolved.
+func Within(path, dir string) bool {
+	return path != "" && inside(resolved(path), resolved(dir))
 }

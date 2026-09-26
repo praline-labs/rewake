@@ -1,6 +1,7 @@
 package codex
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -60,4 +61,24 @@ func (codexHarness) LaunchDirectory(args []string) (string, []string, error) {
 		return "", nil, err
 	}
 	return dir, harness.WithoutFlag(args, "--cd", "-C"), nil
+}
+
+// localArgumentsRequired refuses a launch whose arguments name a server or a
+// configuration of their own.
+const localArgumentsRequired = "session-owned app-server requires local arguments without --remote, --profile or --oss/--local-provider; select a configuration explicitly before launching"
+
+// WorktreeRefusal refuses what the launch itself would refuse, and a
+// continued conversation. resume and fork carry on in the directory the
+// conversation was started in: the terminal sends thread/resume with no cwd,
+// and the server keeps the old one, while the session's workspace roots are
+// already the checkout's (seen on 0.155.1). The model would work in one place
+// with its rights in another.
+func (codexHarness) WorktreeRefusal(args []string) error {
+	if harness.HasFlag(args, "--remote") || hasProfile(args) || harness.HasFlag(args, "--oss") || harness.HasFlag(args, "--local-provider") {
+		return errors.New(localArgumentsRequired)
+	}
+	if mode, _ := continuationMode(args); mode == "resume" || mode == "fork" {
+		return fmt.Errorf("%s makes a new checkout for a new conversation, and %s continues one in the directory it was started in, which Codex keeps: the session would work outside the checkout its permissions name. Start a new conversation with %s, or %s without %s", worktreeFlag, mode, worktreeFlag, mode, worktreeFlag)
+	}
+	return nil
 }

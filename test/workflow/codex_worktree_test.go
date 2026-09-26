@@ -18,8 +18,12 @@ import (
 // worktree directory and starts the session there — the wrapper, the
 // terminal and the app-server all at the launch directory's place within the
 // checkout. A task sent to it is delivered. While it runs, `rewake worktree
-// rm` refuses its checkout; once it has ended, rm removes the checkout through
-// git, so the repository forgets it too.
+// rm` refuses its checkout, and after it has ended as well while another
+// session started there runs. Three more checkouts, each launched and ended
+// for the purpose, show what else rm keeps without --force: a file git
+// ignores, a commit no branch holds any more, and a directory moved away.
+// Once nothing holds the first checkout, rm removes it through git, so the
+// repository forgets it too.
 //
 // What it does not prove: anything of Codex's own worktree, which the terminal
 // refuses beside --remote (docs/research-codex.md); rewake never asks it for one.
@@ -48,7 +52,10 @@ const (
 	codexTreeTask    = "codex-worktree-probe: work here"
 )
 
-var codexWorktreeObservations = []string{obsTreeEntered, obsTreeDelivered, obsTreeKept, obsTreeRemoved}
+var codexWorktreeObservations = []string{
+	obsTreeEntered, obsTreeDelivered, obsTreeKept, obsTreeVisited,
+	obsTreeIgnored, obsTreeUnreached, obsTreeMoved, obsTreeRemoved,
+}
 
 // shimCwdFile makes each half of the Codex fixture write the directory it was
 // started in to this path with .client or .server appended.
@@ -98,6 +105,9 @@ func playCodexWorktree(t *testing.T, c *Case, iso *Isolation) []telemetryFinding
 	if err := os.WriteFile(filepath.Join(nested, "file"), []byte("one\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(repo, ".gitignore"), []byte(".env\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	git := func(dir string, args ...string) (string, error) {
 		command := exec.Command("git", append([]string{"-C", dir}, args...)...)
 		command.Env = append(iso.Env(), "GIT_CONFIG_NOSYSTEM=1",
@@ -145,7 +155,9 @@ func playCodexWorktree(t *testing.T, c *Case, iso *Isolation) []telemetryFinding
 		var err1, err2 error
 		client, err1 = os.ReadFile(cwdFile + ".client")
 		server, err2 = os.ReadFile(cwdFile + ".server")
-		if len(found) != 1 || err1 != nil || err2 != nil {
+		// Written by the fixture as the scenario reads: an empty file is
+		// one not written yet.
+		if len(found) != 1 || err1 != nil || err2 != nil || len(client) == 0 || len(server) == 0 {
 			return false
 		}
 		tree = found[0]
@@ -153,22 +165,7 @@ func playCodexWorktree(t *testing.T, c *Case, iso *Isolation) []telemetryFinding
 	}) {
 		return unjudged(0, fmt.Sprintf("no checkout with an owner and no started halves: worktrees %+v, client %q, server %q", listTrees(), client, server))
 	}
-	registered := ""
-	if out, err := rewake("list", "--json"); err == nil {
-		var listing struct {
-			Sessions []struct {
-				Name string `json:"name"`
-				CWD  string `json:"cwd"`
-			} `json:"sessions"`
-		}
-		if json.Unmarshal([]byte(out), &listing) == nil {
-			for _, session := range listing.Sessions {
-				if session.Name == worker.name {
-					registered = session.CWD
-				}
-			}
-		}
-	}
+	registered := registeredCWD(rewake, worker.name)
 	want := filepath.Join(tree.Path, "src", "nested")
 	_, onBranch := git(tree.Path, "symbolic-ref", "-q", "HEAD")
 	checkedOut, _ := git(tree.Path, "rev-parse", "HEAD")
@@ -194,18 +191,26 @@ func playCodexWorktree(t *testing.T, c *Case, iso *Isolation) []telemetryFinding
 
 	kept, keptErr := rewake("worktree", "rm", "probe")
 	_, stillThere := os.Stat(tree.Path)
-	refused := keptErr != nil && strings.Contains(keptErr.Error(), "still runs") && stillThere == nil
+	refused := keptErr != nil && strings.Contains(keptErr.Error(), "still run in it: "+worker.name) && stillThere == nil
 	out = append(out, finding(obsTreeKept, refused, "rm while running: %v, %q; checkout there: %v", keptErr, kept, stillThere == nil))
 
 	stopped = true
 	if err := worker.stop(c); err != nil {
 		return append(out, unjudged(3, "the session did not end: "+err.Error())...)
 	}
+	stand := treeStand{t: t, c: c, iso: iso, repo: repo, head: head, rewake: rewake, git: git, trees: listTrees}
+	out = append(out, stand.visited(tree))
+	spares, err := stand.spares("ignored", "unreached", "moved")
+	if err != nil {
+		return append(out, unjudged(4, err.Error())...)
+	}
+	out = append(out, stand.ignored(spares["ignored"]), stand.unreached(spares["unreached"]), stand.moved(spares["moved"]))
+
 	removedOut, removeErr := rewake("worktree", "rm", "probe")
 	_, gone := os.Stat(tree.Path)
 	listed, _ := git(repo, "worktree", "list", "--porcelain")
 	left := listTrees()
-	removed := removeErr == nil && os.IsNotExist(gone) && len(left) == 0 && !strings.Contains(listed, tree.Path)
+	removed := removeErr == nil && os.IsNotExist(gone) && len(left) == 0 && !strings.Contains(listed, tree.Path+"\n")
 	return append(out, finding(obsTreeRemoved, removed,
 		"rm after the end: %v, %q; checkout gone: %v; records left %d; git lists:\n%s", removeErr, removedOut, os.IsNotExist(gone), len(left), listed))
 }
@@ -215,19 +220,20 @@ func playCodexWorktree(t *testing.T, c *Case, iso *Isolation) []telemetryFinding
 var mutantWorktreeNotEntered = mutation{
 	name:  "worktree-not-entered",
 	file:  "internal/cli/launch_worktree.go",
-	edits: []edit{{"if err := os.Chdir(record.Workdir()); err != nil {", "if err := error(nil); err != nil {"}},
+	edits: []edit{{"if err := os.Chdir(record.Workdir()); err != nil {", "if err := os.Chdir(\".\"); err != nil {"}},
 }
 
 // rm that takes no running session for one: it removes the checkout from
-// under the session, and after the end there is nothing left to remove.
+// under the session, and after the end there is nothing left to visit or to
+// remove.
 var mutantWorktreeRunningIgnored = mutation{
 	name:  "worktree-running-ignored",
 	file:  "internal/cli/worktree.go",
-	edits: []edit{{"\tif owner == nil || owner.Dir == \"\" {", "\tif owner == nil || owner.Dir == \"\" || true {"}},
+	edits: []edit{{"\t\t\t\tif session.Alive() && (made ||", "\t\t\t\tif false && session.Alive() && (made ||"}},
 }
 
 // rm that deletes the directory without asking git: the repository keeps an
-// entry for a checkout that is gone.
+// entry for a checkout that is gone, the moved one's included.
 var mutantWorktreeGitKept = mutation{
 	name:  "worktree-git-kept",
 	file:  "internal/worktree/git.go",
@@ -239,9 +245,9 @@ func TestAWorktreeLaunchThatStaysInTheSourceFails(t *testing.T) {
 }
 
 func TestARemovalThatIgnoresTheSessionFails(t *testing.T) {
-	runFindingsControlOn(t, codexColumn.harness, "codex-worktree", playCodexWorktree, mutantWorktreeRunningIgnored, obsTreeKept, obsTreeRemoved)
+	runFindingsControlOn(t, codexColumn.harness, "codex-worktree", playCodexWorktree, mutantWorktreeRunningIgnored, obsTreeKept, obsTreeVisited, obsTreeRemoved)
 }
 
 func TestARemovalBehindGitsBackFails(t *testing.T) {
-	runFindingsControlOn(t, codexColumn.harness, "codex-worktree", playCodexWorktree, mutantWorktreeGitKept, obsTreeRemoved)
+	runFindingsControlOn(t, codexColumn.harness, "codex-worktree", playCodexWorktree, mutantWorktreeGitKept, obsTreeMoved, obsTreeRemoved)
 }

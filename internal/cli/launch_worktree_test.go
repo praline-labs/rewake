@@ -21,6 +21,9 @@ type worktreeProbe struct {
 	roleLaunchProbe
 	cwd  string
 	fail bool
+	// command replaces the harness program: /bin/false for one that exits
+	// with an error.
+	command string
 }
 
 func (p *worktreeProbe) Launch(request harness.LaunchRequest) (harness.LaunchPlan, error) {
@@ -28,10 +31,18 @@ func (p *worktreeProbe) Launch(request harness.LaunchRequest) (harness.LaunchPla
 	if p.fail {
 		return harness.LaunchPlan{}, errors.New("the harness would not start")
 	}
-	return p.roleLaunchProbe.Launch(request)
+	plan, err := p.roleLaunchProbe.Launch(request)
+	if p.command != "" {
+		plan.Command = p.command
+	}
+	return plan, err
 }
 
 func (p *worktreeProbe) WorktreeFlag() string { return p.taker().WorktreeFlag() }
+
+func (p *worktreeProbe) WorktreeRefusal(args []string) error {
+	return p.taker().WorktreeRefusal(args)
+}
 
 func (p *worktreeProbe) LaunchDirectory(args []string) (string, []string, error) {
 	return p.taker().LaunchDirectory(args)
@@ -102,14 +113,23 @@ func (lab worktreeLab) records(t *testing.T) []worktree.Record {
 
 // launch runs one launch of the probe from dir with the arguments after the
 // harness word.
-func (worktreeLab) launch(t *testing.T, probe *worktreeProbe, dir string, raw ...string) error {
+func (lab worktreeLab) launch(t *testing.T, probe *worktreeProbe, dir string, raw ...string) error {
+	t.Helper()
+	_, err := lab.launchTold(t, probe, dir, raw...)
+	return err
+}
+
+// launchTold is launch with what rewake told the person on stderr.
+func (worktreeLab) launchTold(t *testing.T, probe *worktreeProbe, dir string, raw ...string) (string, error) {
 	t.Helper()
 	t.Chdir(dir)
 	parsed, err := parse(append([]string{"--room", "trees", "--name", "tree", "codex"}, raw...))
 	if err != nil {
 		t.Fatal(err)
 	}
-	return handleLaunch(probe)(&Context{Stdout: io.Discard, Stderr: io.Discard}, parsed.Call)
+	var stderr strings.Builder
+	err = handleLaunch(probe)(&Context{Stdout: io.Discard, Stderr: &stderr}, parsed.Call)
+	return stderr.String(), err
 }
 
 func codexProbe(t *testing.T) *worktreeProbe {
@@ -187,6 +207,10 @@ func TestWorktreeLaunchRefusals(t *testing.T) {
 		{lab.repo, []string{"--worktree=taken"}, "rewake worktree rm"},
 		{outside, []string{"--worktree"}, "not in a Git working tree"},
 		{lab.repo, []string{"--worktree", "-C", "missing"}, "missing"},
+		{lab.repo, []string{"--worktree", "resume", "--last"}, "Start a new conversation with --worktree"},
+		{lab.repo, []string{"--worktree=a", "fork", "0199"}, "fork continues one in the directory it was started in"},
+		{lab.repo, []string{"--worktree", "--remote", "ws://h"}, "--remote"},
+		{lab.repo, []string{"--worktree", "--profile", "p"}, "--profile"},
 	} {
 		err := lab.launch(t, codexProbe(t), c.dir, c.args...)
 		var usage *UsageError

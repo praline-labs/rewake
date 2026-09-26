@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 )
 
 // inspect reads what a checkout needs from the repository holding from: its
@@ -49,26 +50,36 @@ func inspect(from string) (Record, error) {
 
 // Check is what a command should know of a checkout before removing it.
 type Check struct {
-	// Missing is a checkout whose directory is gone.
+	// Missing is a checkout whose directory is gone: removed, or moved by
+	// hand, in which case whatever it held is out of sight.
 	Missing bool `json:"missing,omitempty"`
+	// Forgotten is a missing checkout the repository no longer lists either:
+	// nothing of it is left but rewake's record.
+	Forgotten bool `json:"forgotten,omitempty"`
 	// Changes lists what `git status` shows: edits, staged or untracked files.
 	Changes bool `json:"changes,omitempty"`
-	// Unreachable is a HEAD moved to commits no branch or tag holds: removing
-	// the checkout would leave them to garbage collection.
+	// Ignored is files git ignores, which `git worktree remove` deletes
+	// without asking: a .env, a local build.
+	Ignored bool `json:"ignored,omitempty"`
+	// Unreachable is a HEAD no branch, tag or remote-tracking ref holds:
+	// removing the checkout would leave its commits to garbage collection.
+	// It holds for the commit a checkout was made at as well, once the branch
+	// that held it is gone.
 	Unreachable bool `json:"unreachable,omitempty"`
-	// Head is the commit checked out now.
+	// Head is the commit checked out now, as the checkout or, when it is
+	// missing, the repository's list of worktrees says.
 	Head string `json:"head,omitempty"`
 }
 
 // Dirty says whether removing the checkout would lose work.
-func (c Check) Dirty() bool { return c.Changes || c.Unreachable }
+func (c Check) Dirty() bool { return c.Changes || c.Ignored || c.Unreachable }
 
 // Inspect looks at a checkout as it is now.
 func Inspect(record Record) (Check, error) {
 	if info, err := os.Stat(record.Path); err != nil || !info.IsDir() {
-		return Check{Missing: true}, nil
+		return inspectMissing(record)
 	}
-	status, err := gitOutput(record.Path, "status", "--porcelain", "--untracked-files=normal")
+	status, err := gitOutput(record.Path, "status", "--porcelain", "--untracked-files=normal", "--ignored=matching")
 	if err != nil {
 		return Check{}, fmt.Errorf("git status in %s failed: %w", record.Path, err)
 	}
@@ -76,26 +87,101 @@ func Inspect(record Record) (Check, error) {
 	if err != nil {
 		return Check{}, fmt.Errorf("cannot read HEAD in %s: %w", record.Path, err)
 	}
-	check := Check{Changes: status != "", Head: head}
-	if head != record.Commit {
-		holders, err := gitOutput(record.Path, "for-each-ref", "--contains", head, "--count=1", "--format=%(refname)", "refs/heads", "refs/tags")
-		if err != nil {
-			return Check{}, fmt.Errorf("cannot tell whether %s is on a branch: %w", head, err)
+	check := Check{Head: head}
+	for _, line := range strings.Split(status, "\n") {
+		switch {
+		case strings.HasPrefix(line, "!! "):
+			check.Ignored = true
+		case line != "":
+			check.Changes = true
 		}
-		check.Unreachable = holders == ""
+	}
+	if check.Unreachable, err = unreachable(record.CommonDir, head); err != nil {
+		return Check{}, err
 	}
 	return check, nil
 }
 
-// Remove takes a checkout away with the public `git worktree remove`, and its
-// record after it. force removes one with changes as well; a checkout whose
-// directory is already gone is pruned from the repository.
-func Remove(record Record, force bool) error {
-	if info, err := os.Stat(record.Path); err != nil || !info.IsDir() {
-		if err := gitDir(record.CommonDir, "worktree", "prune"); err != nil && !errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("git worktree prune failed: %w", err)
+// inspectMissing looks at a checkout whose directory is gone through what the
+// repository still records of it.
+func inspectMissing(record Record) (Check, error) {
+	check := Check{Missing: true}
+	head, listed, err := listedHead(record)
+	if err != nil {
+		return Check{}, err
+	}
+	if !listed {
+		check.Forgotten = true
+		return check, nil
+	}
+	check.Head = head
+	if head != "" {
+		if check.Unreachable, err = unreachable(record.CommonDir, head); err != nil {
+			return Check{}, err
 		}
-	} else {
+	}
+	return check, nil
+}
+
+// unreachable says whether no branch, tag or remote-tracking ref holds a
+// commit. A commit git cannot find at all is an error, not an answer.
+func unreachable(commonDir, head string) (bool, error) {
+	holders, err := gitDirOutput(commonDir, "for-each-ref", "--contains", head, "--count=1", "--format=%(refname)", "refs/heads", "refs/tags", "refs/remotes")
+	if err != nil {
+		return false, fmt.Errorf("cannot tell whether %s is on a branch: %w", head, err)
+	}
+	return holders == "", nil
+}
+
+// listedHead reads a checkout's HEAD from the repository's own list of
+// worktrees, and says whether the repository lists it at all.
+func listedHead(record Record) (string, bool, error) {
+	out, err := gitDirOutput(record.CommonDir, "worktree", "list", "--porcelain")
+	if err != nil {
+		return "", false, fmt.Errorf("cannot list the worktrees of %s: %w", record.CommonDir, err)
+	}
+	for _, block := range strings.Split(out, "\n\n") {
+		path, head := "", ""
+		for _, line := range strings.Split(block, "\n") {
+			if value, ok := strings.CutPrefix(line, "worktree "); ok {
+				path = value
+			} else if value, ok := strings.CutPrefix(line, "HEAD "); ok {
+				head = value
+			}
+		}
+		if path != "" && samePath(path, record.Path) {
+			return head, true, nil
+		}
+	}
+	return "", false, nil
+}
+
+// samePath compares a path git printed with a record's, which may reach the
+// same place through a symbolic link.
+func samePath(listed, recorded string) bool {
+	if filepath.Clean(listed) == filepath.Clean(recorded) {
+		return true
+	}
+	parent, err := filepath.EvalSymlinks(filepath.Dir(recorded))
+	return err == nil && filepath.Clean(listed) == filepath.Join(parent, filepath.Base(recorded))
+}
+
+// Remove takes a checkout away with the public `git worktree remove`, and its
+// record after it. force removes one with changes as well. A checkout whose
+// directory is gone is removed the same way, which on a missing directory
+// touches only its own entry — never `git worktree prune`, which would take
+// every other missing checkout of the repository along; one the repository
+// has forgotten leaves only the record to remove.
+func Remove(record Record, force bool) error {
+	forgotten := false
+	if info, err := os.Stat(record.Path); err != nil || !info.IsDir() {
+		_, listed, err := listedHead(record)
+		if err != nil {
+			return err
+		}
+		forgotten = !listed
+	}
+	if !forgotten {
 		args := []string{"worktree", "remove"}
 		if force {
 			args = append(args, "--force")
@@ -133,18 +219,34 @@ func gitOutput(dir string, args ...string) (string, error) {
 	return run(exec.Command("git", append([]string{"-C", dir}, args...)...))
 }
 
+func gitDirOutput(commonDir string, args ...string) (string, error) {
+	if _, err := os.Stat(commonDir); err != nil {
+		return "", err
+	}
+	return run(exec.Command("git", append([]string{"--git-dir", commonDir}, args...)...))
+}
+
 // run runs git with an environment of its own choosing: a GIT_DIR or a
 // GIT_WORK_TREE inherited from a hook that started this would point every call
 // at another repository.
+//
+// Nothing it runs may wait for a person, since the caller is most often an
+// agent: no terminal prompt for credentials a hook or a filter might ask for,
+// and a session of its own, so git has no terminal to open at all. And a look
+// must not stand in a session's way: `git status` otherwise refreshes the
+// index under index.lock, and a commit the session makes at that moment fails.
 func run(command *exec.Cmd) (string, error) {
 	for _, entry := range os.Environ() {
 		key, _, _ := strings.Cut(entry, "=")
 		switch key {
-		case "GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR", "GIT_OBJECT_DIRECTORY", "GIT_PREFIX", "GIT_NAMESPACE":
+		case "GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR", "GIT_OBJECT_DIRECTORY", "GIT_PREFIX", "GIT_NAMESPACE",
+			"GIT_TERMINAL_PROMPT", "GIT_OPTIONAL_LOCKS":
 			continue
 		}
 		command.Env = append(command.Env, entry)
 	}
+	command.Env = append(command.Env, "GIT_TERMINAL_PROMPT=0", "GIT_OPTIONAL_LOCKS=0")
+	command.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	var stdout, stderr bytes.Buffer
 	command.Stdout, command.Stderr = &stdout, &stderr
 	if err := command.Run(); err != nil {

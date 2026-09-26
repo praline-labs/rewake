@@ -20,7 +20,7 @@ import (
 // harness exits, and with its exit code: rewake sits in the middle and should
 // not hide what the program said.
 func handleLaunch(h harness.Harness) func(*Context, Call) error {
-	return func(_ *Context, call Call) error {
+	return func(ctx *Context, call Call) error {
 		if prefix, present := call.Flags["name"]; present && prefix == "" {
 			return &UsageError{Command: call.Command, Message: "--name needs a nonempty prefix; omit --name to use the selected role."}
 		}
@@ -48,7 +48,7 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 
 		// Last of the preparations: every refusal above leaves no checkout
 		// behind.
-		args, checkout, err := takeWorktree(h, call)
+		args, checkout, err := takeWorktree(h, call, ctx.Stderr)
 		if err != nil {
 			return err
 		}
@@ -72,7 +72,7 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 			OnClaimed: onClaimed,
 		})
 		if checkout != nil {
-			checkout.settle(err != nil)
+			checkout.settle(err != nil || code != 0)
 		}
 		if err != nil {
 			var mainTaken *wrap.MainTakenError

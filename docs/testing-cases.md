@@ -111,11 +111,22 @@ fixture writes the directory it started in (`RW_SHIM_CWD_FILE`). The checkout mu
 detached one of the source's HEAD under that directory, and the session's record, the
 terminal and the app-server must all work in its `src/nested`; a task a main sends must
 be delivered there; `rewake worktree rm` must refuse the checkout while the worker runs
-and say so; and once the worker has ended, rm must remove the checkout, its record and
-git's own entry. Its three mutants each name what they break and require the rest to
-hold: a launch that never enters its checkout, a removal that takes no session for a
-running one — which also leaves nothing for the last rm — and a removal that deletes the
-directory behind git's back, whose entry stays.
+and say so, and after the worker has ended as well, while a visitor session started in
+the checkout runs. Three spare checkouts, launched and ended for the purpose, show what
+else rm keeps: one holding a `.env` the repository ignores (and `--force` removes it),
+one at the commit it was made at after `main` is deleted (and removed once `main` is
+back), and one whose directory was moved away, where the refusal points at `git
+worktree repair` and `--force` takes out its record and git's entry. Once nothing holds
+the first checkout, rm must remove it, its record and git's own entry. Its seven
+mutants each name what they break and require the rest to hold: a launch that never
+enters its checkout; a removal that takes no session for a running one, which also
+leaves nothing to visit or to remove; one that sees only the session the checkout was
+made for, which removes it from under the visitor; one that deletes the directory behind
+git's back, whose entries stay; one blind to ignored files; one that asks whether a
+commit is held only after the HEAD moved; and one that removes a moved checkout without
+`--force`. That the removal of a missing checkout takes out its own entry and no other,
+where `git worktree prune` would take every missing checkout's, is held by
+`internal/worktree` (`TestAMissingCheckoutIsRemovedAlone`).
 
 ## Actions on a sent message
 
@@ -217,4 +228,4 @@ switches have no single form in the code to find them by, and the row is kept by
 | withdraw-mid-turn | `recall-unnamed` | — |
 | edit-after-notice | `edit-keeps-old-text`, `edit-unlinked`, `replacement-unmarked` | — |
 | addendum-owed | `owed-flat` | — |
-| codex-worktree | `worktree-not-entered`, `worktree-running-ignored`, `worktree-git-kept` | — |
+| codex-worktree | `worktree-not-entered`, `worktree-running-ignored`, `worktree-visitor-ignored`, `worktree-git-kept`, `worktree-ignored-unseen`, `worktree-branch-trusted`, `worktree-moved-unrefused` | — |

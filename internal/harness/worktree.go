@@ -12,4 +12,8 @@ type WorktreeHarness interface {
 	// in the same place within it, and a flag naming the old one would lead
 	// back out.
 	LaunchDirectory(args []string) (string, []string, error)
+	// WorktreeRefusal says why a launch with these arguments cannot run in a
+	// checkout rewake makes, or nil when it can. It is asked before anything
+	// is made, so a refused launch leaves nothing behind.
+	WorktreeRefusal(args []string) error
 }

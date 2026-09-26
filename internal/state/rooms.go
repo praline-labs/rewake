@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 )
 
 // RoomEnv carries the command's inherited conversation namespace.
@@ -64,3 +65,23 @@ func WithRoomLock(dir string, fn func() error) error {
 // RootForRoom reverses the rooms/<name> namespace without consulting ambient
 // environment, so a wrapper always passes its original root to children.
 func RootForRoom(directory string) string { return filepath.Dir(filepath.Dir(directory)) }
+
+// RoomDirs lists the rooms a state directory already has, making none: a
+// command looking for sessions everywhere must not leave rooms behind.
+func RoomDirs(root string) ([]string, error) {
+	entries, err := os.ReadDir(filepath.Join(root, "rooms"))
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var dirs []string
+	for _, entry := range entries {
+		if entry.IsDir() && ValidName(entry.Name()) {
+			dirs = append(dirs, filepath.Join(root, "rooms", entry.Name()))
+		}
+	}
+	sort.Strings(dirs)
+	return dirs, nil
+}

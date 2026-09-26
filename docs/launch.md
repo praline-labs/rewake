@@ -206,7 +206,8 @@ contract, and a copy would drift from the next version silently.
   `<repository>-<hash>/<name>/` and `<name>.json`. Not the state directory — that lives
   in `/tmp` and would not outlive a restart, while a checkout holds work — and not inside
   the repository, where it would show up in `git status` and in the agent's own
-  searches. One place for every repository, so `rewake worktree ls` sees them all.
+  searches: a `$REWAKE_WORKTREES` inside it, compared with symbolic links resolved, is
+  refused. One place for every repository, so `rewake worktree ls` sees them all.
 - **Where the launch starts.** At the launch directory's place within the checkout, as
   Codex does; at the checkout's top when that directory is not in the commit, an
   untracked one say. The wrapper changes into it before the session is registered, and
@@ -219,22 +220,63 @@ contract, and a copy would drift from the next version silently.
 - **The record** says which repository (its shared Git directory and the checkout the
   launch came from), which commit, where, when, and — written once the session's name is
   claimed — which session: name, room, run and the room's state directory.
-- **Refusals** come before anything is made and exit 2: a name out of shape, a name
-  taken by a checkout or by a directory in its place — with the next step: another name,
-  `rewake worktree rm`, or `cd` into the existing one —, a launch directory outside any
-  working tree, a repository with no commit yet. Nothing prompts.
+- **A new conversation only.** `resume` and `fork` are refused with `--worktree`: they
+  continue a conversation in the directory it was started in. The terminal's
+  `thread/resume` carries a cwd only from its own `-C`/`--cd`, which rewake takes out,
+  and the server then restores the saved one, while the session's workspace roots are
+  already the checkout's: the model would work in one place with its rights named for
+  another (seen on 0.155.1 in a container with the real binaries, September 26, 2026;
+  fork read in the source, not run). Moving the conversation into the checkout — handing
+  the terminal the checkout as its `-C` — is not built: what that does to a continued
+  conversation's permissions ([continuation-permissions.md](continuation-permissions.md))
+  was not checked. The refusal names the two ways on: a new conversation with
+  `--worktree`, or the continuation without it.
+- **Refusals** exit 2 and nothing prompts; every git call runs with
+  `GIT_TERMINAL_PROMPT=0` and in a session of its own, with no terminal to open. Most
+  come before anything is made: the flag given twice or as `--worktree=`, `resume` or
+  `fork`, `--remote`, a profile or `--oss`/`--local-provider`, a launch directory that
+  does not resolve, a name out of shape, a launch directory outside any working tree, a
+  repository with no commit yet, a worktree directory inside the repository. By then the
+  worktree directory itself may have been created. A name taken by a checkout or by a
+  directory in its place is found once the repository's directory under it is made,
+  which is removed again when empty; the refusal gives the next step: another name,
+  `rewake worktree rm`, or `cd` into the existing one. A refusal of the registration — a
+  session name or a main already taken — comes after the checkout was made: it is taken
+  back, and the line saying where the session works is printed only once the name is
+  claimed.
 - **After the session** the checkout stays, as Codex's own would, and a line on stderr
-  says where and how to remove it. A launch that fails after the checkout was made takes
-  it back when nothing in it changed.
+  says where and how to remove it. A launch that fails after the checkout was made, or
+  whose harness exits with an error — a resume of a conversation that does not exist,
+  say — takes it back when it is still at its commit and rm without `--force` would
+  remove it.
 
-`rewake worktree ls` lists the checkouts with their owner, whether that session still
-runs, and whether removing one would lose anything; `--json` gives the same model.
+`rewake worktree ls` lists the checkouts with their owner, the rewake sessions still
+running in each, and whether removing one would lose anything; `--json` gives the same
+model. A record whose path is not the directory of its own name beside it is not
+listed: rewake did not make that path, and rm would remove it.
 `rewake worktree rm <name>` — or `<repository>/<name>` when a name is in two
 repositories — removes one through `git worktree remove`, so the repository forgets it
-too, and prunes one whose directory is already gone. It refuses a checkout with changes
-`git status` shows, one whose HEAD moved to commits no branch or tag holds, and one whose
-session still runs, naming each reason; `--force` removes it anyway. Nothing is removed
-automatically.
+too. Without `--force` it never loses work, and when it cannot tell, it refuses. It
+refuses, naming each reason:
+
+- changes `git status` shows;
+- files git ignores — a `.env`, a local build — which `git worktree remove --force`
+  deletes without a word;
+- a HEAD no branch, tag or remote-tracking ref holds, asked every time: the commit a
+  checkout was made at is lost too once the branch that held it is deleted;
+- a rewake session still running in it: the one it was made for, or any whose working
+  directory is in the checkout — started there by hand after the first ended, say — in
+  any room of the current state directory and of the one the owner registered in. A
+  process rewake did not start is not seen;
+- a directory gone while the repository still lists it: it may have been moved with its
+  work, and `git worktree repair <new path>` run in the repository reconnects it. With
+  `--force` its own entry is removed with `git worktree remove`, never `git worktree
+  prune`, which would take every other missing checkout of the repository along. One
+  the repository no longer lists either leaves only the record, which rm removes.
+
+`--force` removes it anyway. Looking never stands in a session's way: git runs with
+`GIT_OPTIONAL_LOCKS=0`, so `git status` does not take `index.lock` from under a commit
+the session is making. Nothing is removed automatically.
 
 A main's `--grant-git` reaches such a checkout as it does a worktree made by hand: the
 grant reads the conversation's cwd, which is in the checkout, and resolves its private

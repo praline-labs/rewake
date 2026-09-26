@@ -86,8 +86,8 @@ func TestWorktreeRmRefusesWhatHoldsWork(t *testing.T) {
 	}
 	for name, want := range map[string]string{
 		"changed":  "has changes",
-		"detached": "on no branch or tag",
-		"running":  "busy-codex in room trees still runs",
+		"detached": "on no branch",
+		"running":  "still run in it: busy-codex in room trees",
 	} {
 		code, _, errOut := run("worktree", "rm", name)
 		if code != ExitUsage || !strings.Contains(errOut, want) || !strings.Contains(errOut, "--force") {

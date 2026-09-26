@@ -33,7 +33,7 @@ if the owner asked. The owner asked, and chose between two variants on September
 - **`rewake worktree ls`** and **`rewake worktree rm <name>`**, in the command table:
   ls with the owner, whether it still runs and what removing would lose, also as
   `--json`; rm through `git worktree remove`, refusing changes, commits no branch holds
-  and a running session unless `--force`.
+  and a running session unless `--force` — widened by [the review](2026-09-26-codex-worktree-review.md).
 - **Git metadata grants** needed no change: `taskGitRoots` reads the conversation's cwd,
   which is in the checkout, and to Git the checkout is an ordinary linked worktree. A test
   in `gitmetadata_test.go` resolves one made by rewake beside one made by hand.
@@ -55,7 +55,9 @@ force, a checkout already deleted — and for the launch and the command in
 
 ## What stays open
 
-- Acceptance on the Codex side, as for every change to the Codex launch path.
+- Acceptance on the Codex side, as for every change to the Codex launch path. The first
+  round did not accept it; the findings and fixes are in
+  [the review](2026-09-26-codex-worktree-review.md).
 - A live run against a real Codex: the fixture plays the terminal and the server; that
   the real terminal's trust dialog reads the same key as the source's resolution was not
   checked.
