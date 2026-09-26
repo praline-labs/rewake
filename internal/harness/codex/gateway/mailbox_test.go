@@ -16,7 +16,15 @@ func TestReservedMailboxWireShapeAndOutcomes(t *testing.T) {
 			native := <-peers
 			defer func() { _ = native.conn.Close() }()
 			bindUI(t, g, ui, native)
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			// The deadline spans the whole exchange, this test's own checks of a frame
+			// over 64 KiB included, and an expired one closes the upstream connection
+			// before the reply below is written. Only lost-ack needs it to expire; the
+			// others get room for a loaded -race run.
+			limit := 10 * time.Second
+			if outcome == "lost-ack" {
+				limit = time.Second
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), limit)
 			defer cancel()
 			r, err := g.Reserve(ctx)
 			if err != nil {
