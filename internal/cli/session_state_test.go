@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/iiiokojiadbi/rewake/internal/boottime"
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
@@ -203,5 +204,25 @@ func TestAvailabilityHeaderIncludesListStateAndFrozenIdentity(t *testing.T) {
 		} else if !strings.HasPrefix(out, peer.Name+": working | context 42% used / 272K | compactions 2 | model \"fixture-model\" | effort \"high\"\n\nfrom ") {
 			t.Fatal("availability header omitted model/effort or blank line")
 		}
+	}
+}
+
+// A boot clock reading is kept on disk for the processes of this machine and
+// never shown: it means nothing to an agent reading its mail.
+func TestBootReadingsStayOutOfTheJSON(t *testing.T) {
+	dir, self, peer := stateCaller(t, "main")
+	now := time.Now()
+	snapshot := sessionstate.Snapshot{Selection: "ready", Fresh: true, PublishedAt: &now, PublishedBoot: boottime.Now()}
+	if err := sessionstate.Save(dir, peer.Name, peer.Epoch(), snapshot); err != nil {
+		t.Fatal(err)
+	}
+	leaveUnread(t, dir, inbox.Message{From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Text: "stamped", CreatedBoot: boottime.Now()})
+	// A departure carries the sender's last snapshot, readings and all.
+	frozen := snapshot
+	frozen.Epoch = peer.Epoch()
+	leaveUnread(t, dir, inbox.Message{From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: inbox.Note, Text: "gone", Departure: &inbox.DepartureNotice{Reason: "ended"}, SenderState: &frozen})
+	_, out, _ := run("inbox", "--json")
+	if !strings.Contains(out, `"telemetry"`) || strings.Contains(out, "createdBoot") || strings.Contains(out, "publishedBoot") {
+		t.Fatalf("inbox --json: %s", out)
 	}
 }

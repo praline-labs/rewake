@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/iiiokojiadbi/rewake/internal/boottime"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
@@ -70,10 +71,22 @@ func Load(dir, name, epoch string) Snapshot {
 	if err != nil || len(raw) > maxSnapshotBytes || json.Unmarshal(raw, &snapshot) != nil || snapshot.Epoch != epoch {
 		return unknown
 	}
-	if snapshot.PublishedAt == nil || snapshot.PublishedAt.IsZero() || time.Since(*snapshot.PublishedAt) > 2*time.Second || time.Until(*snapshot.PublishedAt) > time.Second {
+	if !published(snapshot, time.Now(), boottime.Now()) {
 		snapshot.Stale()
 	}
 	return snapshot
+}
+
+// published reports whether a snapshot was published recently enough to be
+// read as current: within two seconds, by the boot clock when the snapshot
+// carries its reading, since that clock is not stepped; by the wall clock
+// otherwise, which may run up to a second ahead in the publisher.
+func published(snapshot Snapshot, now time.Time, boot int64) bool {
+	if snapshot.PublishedBoot != 0 && boot != 0 {
+		age := time.Duration(boot - snapshot.PublishedBoot)
+		return age >= 0 && age <= 2*time.Second
+	}
+	return snapshot.PublishedAt != nil && !snapshot.PublishedAt.IsZero() && now.Sub(*snapshot.PublishedAt) <= 2*time.Second && snapshot.PublishedAt.Sub(now) <= time.Second
 }
 
 // Start keeps one worker and no update backlog. Storage failures lose telemetry,
@@ -91,7 +104,7 @@ func Start(parent context.Context, dir, name, epoch string, source func() Snapsh
 			}
 			snapshot := source()
 			now := time.Now()
-			snapshot.PublishedAt = &now
+			snapshot.PublishedAt, snapshot.PublishedBoot = &now, boottime.Now()
 			_ = Save(dir, name, epoch, snapshot)
 			select {
 			case <-ctx.Done():

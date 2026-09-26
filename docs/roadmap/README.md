@@ -97,6 +97,7 @@ without a date. Local installation without publishing is in
 | September 26, 2026 | [A wrapper that stops before it continues its harness](2026-09-26-stopped-wrapper.md) | the intermittent stopped-wrapper bug: the stop aimed at the calling thread with `tgkill`, a test that fails on the old code every run; `docs/launch.md` split, defaults and aliases into `launch-defaults.md` |
 | September 26, 2026 | [Documentation that had drifted from the code](2026-09-26-docs-drift.md) | the controls, commands, source tree and session record set against the code; the controls as a table and the source tree under tests in `docs/`, the command list replaced by a pointer to `rewake guide` |
 | September 26, 2026 | [Addenda kept with their task](2026-09-26-addendum-consistency.md) | withdraw takes a task's unread addenda along, an edit's replacement keeps them through `inbox.CurrentTask`, the `--to` checks asked again under the recipient's lock, an edited notify announced at once; after review, an id an edit replaced names its replacement for withdraw and edit |
+| September 26, 2026 | [Durations between processes on the boot clock](2026-09-26-boot-clock.md) | the coalescing cap, a waiting question's answer mark and a telemetry snapshot's freshness read the boot clock a letter, a mark and a snapshot now carry, so a step of the wall clock no longer splits a burst or makes a live send look gone; the long terms stay on the wall clock |
 
 ## Remaining work — owner decisions, September 19–21, 2026
 

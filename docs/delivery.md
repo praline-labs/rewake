@@ -26,7 +26,11 @@ a short notice and preview rather than the full body.
    stdin). Extra positional arguments are the error "Quote the text as one
    argument".
 2. Look up a live session; if there's none, fail and list the live names.
-3. The message: `{"id","from","fromEpoch","to","toEpoch","kind","text","createdAt"}`.
+3. The message: `{"id","from","fromEpoch","to","toEpoch","kind","text","createdAt","createdBoot"}`.
+   `createdBoot` is the boot clock's reading (`internal/boottime`), stamped where the
+   letter is put into the mailbox; the coalescing window counts from it
+   ([the notice](#the-notice)). It is for the processes of this machine and stays on
+   disk: `inbox --json` leaves it out.
    `id` is time-sortable (nanosecond timestamp plus a random tail). `from` is
    `REWAKE_SESSION` or `shell`, and `fromEpoch` its run — both only when the
    run in `REWAKE_EPOCH` still holds the name. `kind` is `task` by default,
@@ -71,9 +75,13 @@ A silent recipient refuses `--question` before publication, with exit 2 and a
 hint to use plain `send` or `--notify`.
 
 Before publishing a question, `send` creates `answering/<question id>` in its
-own mailbox. A separate heartbeat touches the mark every second throughout
-delivery, answer waiting and output. A mark older than three seconds no longer
-reserves anything. The wrapper links a reserved report into `unread/`, keeps
+own mailbox. A separate heartbeat writes the boot clock's reading into the mark every
+second throughout delivery, answer waiting and output, and never creates it again once
+it is gone. A mark whose reading is three seconds old no longer reserves anything; one
+without a readable reading, from an earlier build, is judged by its modification time.
+The reading and not the file's time since September 26, 2026: the time is the wall
+clock, which can be stepped by seconds, and a step between a touch and the wrapper's look
+made a live send look gone, so its answer was announced to the agent as well. The wrapper links a reserved report into `unread/`, keeps
 its queue entry, and checks the reservation on every tick. Reservation is not
 final delivery: no delivered status or remembered outcome is recorded for it.
 Ordinary `inbox` and notice counts skip reports with a fresh reservation.
@@ -221,7 +229,11 @@ for nothing holds it: announced three seconds after the latest arrival, and neve
 than four seconds after the earliest was written, so a steady stream cannot put it off.
 The cap counts from the write, or from when the server first saw the letter if that is
 earlier, not from the sight alone: the pass that sees a letter comes up to a collection
-after it, and a sender's wait begins at the write. Mail that lay in the mailbox before
+after it, and a sender's wait begins at the write. The write is placed by the letter's
+boot clock reading (`createdBoot`), since September 26, 2026: `createdAt` is the
+writer's wall clock, and a step of that clock by seconds between the write and the look
+cut the cap short and split the burst. A letter without the reading, from an earlier
+build, or with a reading ahead of the clock, as after a reboot, falls back to `createdAt`. Mail that lay in the mailbox before
 the wrapper started has used its cap and goes on the first pass. The owner
 asked for about five; four keeps the whole wait, with the first collection and a
 harness taking the notice, inside a sender's default five-second wait for its status,

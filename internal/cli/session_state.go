@@ -24,7 +24,8 @@ func canSeeSessionState(dir string) bool {
 
 func sessionSnapshot(dir, name, epoch string) *sessionstate.Snapshot {
 	value := sessionstate.Load(dir, name, epoch)
-	value.CompactionEvents, value.CompactionOutcomes = nil, nil
+	// A boot clock reading means nothing outside this machine's processes.
+	value.CompactionEvents, value.CompactionOutcomes, value.PublishedBoot = nil, nil, 0
 	current, err := registry.LookupReadOnly(dir, name)
 	if err != nil || current.Epoch() != epoch {
 		value.Stale()
@@ -47,7 +48,8 @@ func viewedMessages(dir string, messages []inbox.Message) []messageView {
 	result := make([]messageView, 0, len(messages))
 	for _, message := range messages {
 		view := messageView{Message: message}
-		view.SenderState = nil
+		// A boot clock reading means nothing to the reader.
+		view.SenderState, view.CreatedBoot = nil, 0
 		if message.AddendumTo != "" {
 			// The task as it is now: an edit leaves the addendum naming the
 			// letter it replaced.
@@ -59,6 +61,7 @@ func viewedMessages(dir string, messages []inbox.Message) []messageView {
 				frozen := *message.SenderState
 				frozen.Stale()
 				frozen.CompactionEvents, frozen.CompactionOutcomes = nil, nil
+				frozen.PublishedBoot = 0
 				view.Telemetry = &frozen
 			}
 		}

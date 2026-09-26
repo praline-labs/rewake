@@ -31,8 +31,7 @@ func awaitedHere(dir, name string, message Message) bool {
 		return false
 	}
 	for _, id := range message.InReplyTo {
-		info, err := os.Stat(filepath.Join(state.AnsweringPath(dir, name), id))
-		if err == nil && time.Since(info.ModTime()) < answeringFresh {
+		if markFresh(filepath.Join(state.AnsweringPath(dir, name), id)) {
 			return true
 		}
 	}

@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/iiiokojiadbi/rewake/internal/boottime"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
@@ -165,6 +166,7 @@ func TestALetterSeenLateKeepsItsCap(t *testing.T) {
 	late := message("available")
 	late.Kind, late.ToEpoch = Note, "5.5"
 	late.CreatedAt = time.Now().Add(-2500 * time.Millisecond)
+	late.CreatedBoot = boottime.Now() - int64(2500*time.Millisecond)
 	put := time.Now()
 	if err := Put(f.dir, late); err != nil {
 		t.Fatal(err)

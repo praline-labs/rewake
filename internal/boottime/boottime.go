@@ -7,6 +7,19 @@
 // when a WSL guest's wall clock jumps. rewake uses it where the order of events
 // seen by different processes decides something: which turn a mark belongs to,
 // which of two late hooks is newer.
+//
+// And where a duration of seconds is measured between two processes: the
+// coalescing window counts from a letter's reading, a waiting send's answer mark
+// holds one, and so does a telemetry snapshot. The wall clock can be stepped by
+// seconds at any moment — on some virtual machines a time sync steps it every
+// half a minute — and every such duration grew or shrank by the step.
+//
+// Terms of minutes and more stay on the wall clock: a letter's thirty-minute
+// lifetime, the day finished mail is kept, the five minutes main waits for the
+// end of a compaction, and the order ids sort in. A virtual machine paused while
+// its host sleeps does not advance this clock, so a letter left for a night would
+// still look fresh by it, and an id must still sort after a reboot, which starts
+// this clock again from zero.
 package boottime
 
 import (

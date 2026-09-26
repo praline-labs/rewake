@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/iiiokojiadbi/rewake/internal/boottime"
 	"github.com/iiiokojiadbi/rewake/internal/buildtime"
 )
 
@@ -95,11 +96,7 @@ func (s *Server) noteArrivals(waiting []Message, now time.Time) {
 	for _, message := range waiting {
 		present[message.ID] = true
 		if _, seen := s.arrivals[message.ID]; !seen {
-			since := now
-			if !message.CreatedAt.IsZero() && message.CreatedAt.Before(now) {
-				since = message.CreatedAt
-			}
-			s.arrivals[message.ID] = &arrival{at: now, since: since}
+			s.arrivals[message.ID] = &arrival{at: now, since: writtenAt(message, now, boottime.Now())}
 		}
 	}
 	for id := range s.arrivals {
@@ -107,6 +104,25 @@ func (s *Server) noteArrivals(waiting []Message, now time.Time) {
 			delete(s.arrivals, id)
 		}
 	}
+}
+
+// writtenAt places when a message was written on this process's own clock,
+// which is what the cap counts from. CreatedAt will not do by itself: it is
+// the writer's wall clock, which can be stepped by seconds at any moment — a
+// step forward between the write and this look cut the cap short, and split
+// bursts the window exists to join. The boot clock is one for every process
+// and never stepped, so a letter that carries its reading is placed by how
+// long ago that was, on now's monotonic reading. One without it, from an
+// earlier build, or whose reading is ahead of boot — written before a reboot
+// — falls back to its wall clock, and to now when that is ahead too.
+func writtenAt(message Message, now time.Time, boot int64) time.Time {
+	if message.CreatedBoot != 0 && boot != 0 && boot >= message.CreatedBoot {
+		return now.Add(-time.Duration(boot - message.CreatedBoot))
+	}
+	if !message.CreatedAt.IsZero() && message.CreatedAt.Before(now) {
+		return message.CreatedAt
+	}
+	return now
 }
 
 // holdFor answers how much longer this pass's mail may wait for company, and

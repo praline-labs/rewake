@@ -40,6 +40,11 @@ type Snapshot struct {
 	// command answered before the end: that main's wrapper sends each as a
 	// letter.
 	CompactionOutcomes []CompactionOutcome `json:"compactionOutcomes,omitempty"`
+	// PublishedBoot is the boot clock's reading at PublishedAt (package
+	// boottime), 0 from a build that did not write it. Freshness is judged by
+	// it: the publisher and the reader are different processes, and the wall
+	// clock can be stepped by seconds between the two.
+	PublishedBoot int64 `json:"publishedBoot,omitempty"`
 }
 
 // Values of Snapshot.Interruptions.

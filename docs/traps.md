@@ -226,6 +226,22 @@ unit tests of the old behaviour still deliver notes at once
 
 *September 25, 2026.*
 
+### A burst of notes split in two, a waiting question's answer announced as well
+
+The wall clock can be stepped by seconds at any moment — a time sync does it, on some
+virtual machines every half a minute — and a duration taken between two processes on
+the wall clock grows or shrinks by the step. The coalescing cap counted from the
+writer's `createdAt`, so a step forward inside the window closed it early and a burst
+went out as two notices; `TestNotesSecondsApartAreAnnouncedOnce` failed now and then
+for that alone. A waiting `send --question` was judged gone by its mark's
+modification time, and a telemetry snapshot read stale by its `publishedAt`. All three
+compare the boot clock now (`internal/boottime`), which every process shares and nothing
+steps. A new comparison between processes over seconds belongs on it too; a term of
+minutes or hours stays on the wall clock, which counts a sleeping host
+([delivery.md](delivery.md#the-notice)).
+
+*September 26, 2026.*
+
 ### After a new commit the running wrapper stays old
 
 An atomic installation replaces the file, not the live process. `rewake --version`

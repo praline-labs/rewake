@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/iiiokojiadbi/rewake/internal/boottime"
 	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
@@ -70,6 +71,12 @@ type Message struct {
 	Text string `json:"text"`
 	// CreatedAt is when the sender wrote it.
 	CreatedAt time.Time `json:"createdAt"`
+	// CreatedBoot is the boot clock's reading when Put wrote it (package
+	// boottime), 0 from a build that did not stamp it. The coalescing window
+	// counts from it: CreatedAt is another process's wall clock, and a step of
+	// that clock between the write and the serving process's look would cut
+	// the wait short or stretch it by as much.
+	CreatedBoot int64 `json:"createdBoot,omitempty"`
 	// Unread is how many messages the receiver will hold once this one lands. It is
 	// computed by the serving process right before delivery and never stored.
 	Unread int `json:"-"`
@@ -218,6 +225,9 @@ func NewID() string {
 
 // Put writes a message into the mailbox of its receiver.
 func Put(dir string, message Message) error {
+	if message.CreatedBoot == 0 {
+		message.CreatedBoot = boottime.Now()
+	}
 	mailbox := state.InboxPath(dir, message.To)
 	if err := state.EnsureSubdir(mailbox); err != nil {
 		return err

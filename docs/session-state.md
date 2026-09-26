@@ -165,7 +165,11 @@ preexisting JSON `sessions:null` representation.
 Inbox and direct-answer lookup use the message sender's exact epoch, never a
 reused name's new run. A missing epoch/snapshot stays unknown. A stopped sender,
 a mismatched live registry epoch or a publication heartbeat older than two seconds
-marks cached data stale. The snapshot can lag native events by a sampling interval.
+marks cached data stale. The heartbeat's age is read from the boot clock reading the
+wrapper publishes with it (`publishedBoot`, since September 26, 2026), and from
+`publishedAt` only for a snapshot without one: the wall clock can be stepped by seconds
+between the publisher and the reader, and a step made a live snapshot read stale. The
+reading is not shown to agents. The snapshot can lag native events by a sampling interval.
 JSON separates publication time, last observation, context/settings observation
 times, selection freshness, field freshness and compaction coverage. Stale values
 may be displayed with explicit labels; cached data is not a fresh measurement.
