@@ -134,7 +134,8 @@ func playAwaitedView(t *testing.T, c *Case, iso *Isolation, col column) []teleme
 		if only {
 			message := model.Recipients[0].Messages[0]
 			shown = message.ID == slowTask.ID && message.Kind == "task" && message.State == "pending" &&
-				message.Detail == awaitedPending && message.Text == awaitedSlow && message.Gone == ""
+				// The interim report's text: the mark's line, then the turn's own.
+				strings.HasPrefix(message.Detail, awaitedPending+"\n\n") && message.Text == awaitedSlow && message.Gone == ""
 		}
 		shown = shown && strings.HasPrefix(plain, "Rewake: waiting on 1 report:\n\nto "+slow.name+"\n"+slowTask.ID+" · task · ") &&
 			strings.Contains(plain, " · pending: "+awaitedPending+"\nawaited-view-slow: run the long check\n") &&

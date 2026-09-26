@@ -79,7 +79,10 @@ read "nothing owed" and skipped a new unread task twice:
   The worker does not address the owner; a blocker only the owner can clear goes to
   main.
 - A turn ended waiting on anything outside it — background work, the owner, a refusal
-  to be cleared — is marked with `rewake pending` first
+  to be cleared — is marked with `rewake pending` first, every such turn, one a finished
+  subagent or background task woke included: a worker woken that way wrote "waiting for
+  two more", ended without the mark, and closed its task (September 26, 2026). The
+  turn's text goes with the mark, so findings can be written in the answer itself
   ([turn-outcomes.md](turn-outcomes.md#interim-turn-ends-rewake-pending)).
 - After a compaction the task is re-read with `rewake inbox --owed` and new mail with
   `rewake inbox`; `--owed` counts what waits unread in a last line

@@ -147,7 +147,7 @@ func TestAwaitedShowsWhereEachTaskStands(t *testing.T) {
 	if err := inbox.MarkPending(room.dir, paused.Name, paused.Epoch(), "the suite is running", markAt); err != nil {
 		t.Fatal(err)
 	}
-	room.turnEnds(paused, turnResult{ID: "p/1", Text: "the suite is running", Started: markAt - 1, Ended: boottime.Now()})
+	room.turnEnds(paused, turnResult{ID: "p/1", Text: "started the suite", Started: markAt - 1, Ended: boottime.Now()})
 
 	halted := room.sentAndRead(stopped, "refactor")
 	room.turnEnds(stopped, turnResult{ID: "s/1", Text: telemetry.StoppedText, Stopped: true})
@@ -177,7 +177,7 @@ func TestAwaitedShowsWhereEachTaskStands(t *testing.T) {
 	if _, listed := views[settled]; listed {
 		t.Errorf("a task reported on is still listed")
 	}
-	if views[owed].Text != "fix the parser\nand the tests" || views[held].Detail != "waiting for the person to approve" || views[pending].Detail != "the suite is running" || views[unread].Kind != inbox.Question {
+	if views[owed].Text != "fix the parser\nand the tests" || views[held].Detail != "waiting for the person to approve" || views[pending].Detail != "the suite is running\n\nstarted the suite" || views[unread].Kind != inbox.Question {
 		t.Errorf("the machine form lost the text or the detail: %+v", views)
 	}
 
@@ -314,8 +314,8 @@ func TestAwaitedTakesTheLatestInterimOrStop(t *testing.T) {
 	if err := inbox.MarkPending(room.dir, worker.Name, worker.Epoch(), "resumed, still running", markAt); err != nil {
 		t.Fatal(err)
 	}
-	room.turnEnds(worker, turnResult{ID: "w/2", Text: "resumed, still running", Started: markAt - 1, Ended: boottime.Now()})
-	if view := byID(awaitedJSON(t))[task]; view.State != inbox.StagePending || view.Detail != "resumed, still running" {
+	room.turnEnds(worker, turnResult{ID: "w/2", Text: "resumed", Started: markAt - 1, Ended: boottime.Now()})
+	if view := byID(awaitedJSON(t))[task]; view.State != inbox.StagePending || view.Detail != "resumed, still running\n\nresumed" {
 		t.Fatalf("after the interim that followed the stop: %+v", view)
 	}
 }

@@ -36,8 +36,11 @@ turn: background work still running, the owner, a refusal to be cleared — runs
 `rewake pending "<what it waits for>"` first. The write and general playbooks say so
 since September 25, 2026, when a worker's turn ended waiting for the owner and was
 taken as its report; before, only write's did, and for background work alone. That turn
-end then reaches every waiter as a `pending` message carrying that text, instead of the
-report; it owes nothing, settles nothing, and the waits stay open. The command itself
+end then reaches every waiter as a `pending` message instead of the report: that text
+on its first line, then a blank line and whatever the turn itself said, so findings
+written into the answer are not lost behind the mark (since September 26, 2026; before,
+the mark's text replaced the turn's). It owes nothing, settles nothing, and the waits
+stay open. The command itself
 answers one line,
 `Rewake: marked pending; at this turn's end <senders> will read that the work goes on.`
 The next turn end without a mark is the report, as usual. A forgotten `pending` gives
@@ -79,6 +82,11 @@ chosen.
   and the report does not come. Not verified live: whether Claude Code fires
   UserPromptSubmit for a turn it starts by itself, to report a background task. Recording
   every heard turn end narrows the gap to that one sequence.
+- **A turn background work woke.** A worker that marked a turn and was then woken by a
+  finished subagent or background task must mark that turn too, or its end is the
+  report; only the briefing says so. A Stop-hook confirmation on Claude Code that would
+  catch it awaits the owner's decision
+  ([the record](roadmap/2026-09-26-pending-text.md#what-was-not-done)).
 - **Both harnesses** take the same path from there: the Stop hook through `rewake
   turn-ended`, the plugin's interruption from the collector, and Codex's completion from
   the gateway, into the one function that prepares a turn's reports, which asks for the
@@ -90,7 +98,7 @@ chosen.
   does not take it for its answer: it is a turn outcome for being kept readable when
   its notice fails (`inbox.IsReport`), but not one that settles (`inbox.Settles`), and
   a question waiting in the sender's session leaves it to be announced. The notice reads
-  `Rewake: <session> pending, …` with the text as its preview; Claude Code draws it as
+  `Rewake: <session> pending, …` with the mark's text as its preview; Claude Code draws it as
   status `running`, which it has no color for, and Codex marks it with ⏳.
 - **Refused** outside a session, for main — whose turns are reported to nobody — without
   text, and when no read task or question in this run waits for a report; each refusal

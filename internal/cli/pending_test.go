@@ -72,7 +72,8 @@ func TestAPendingTurnEndKeepsTheTaskOwed(t *testing.T) {
 		t.Fatal(err)
 	}
 	interim := reportsTo(t, dir, "web")
-	if len(interim) != 1 || inbox.KindOf(interim[0]) != inbox.Interim || interim[0].Text != "the suite is running" ||
+	// The mark's line leads, as the preview; the turn's own text follows it.
+	if len(interim) != 1 || inbox.KindOf(interim[0]) != inbox.Interim || interim[0].Text != "the suite is running\n\nwaiting for the suite" ||
 		len(interim[0].InReplyTo) != 1 || interim[0].InReplyTo[0] != task || inbox.Owed(interim[0]) {
 		t.Fatalf("after the pending turn end web holds %+v", interim)
 	}
@@ -152,10 +153,29 @@ func TestALatePublishedTurnIsAReportWithItsOwnText(t *testing.T) {
 	}
 	var interim bool
 	for _, message := range reportsTo(t, dir, "web") {
-		interim = interim || inbox.KindOf(message) == inbox.Interim && message.Text == "K+1 waits for the suite"
+		interim = interim || inbox.KindOf(message) == inbox.Interim && message.Text == "K+1 waits for the suite\n\nstill going"
 	}
 	if !interim {
 		t.Fatalf("K+1 did not end as the interim turn end: %v", kinds(reportsTo(t, dir, "web")))
+	}
+}
+
+// A pending turn end whose turn said nothing carries the mark's line alone.
+func TestAPendingTurnEndWithoutTextIsItsMark(t *testing.T) {
+	dir := liveSession(t, "api")
+	peer := otherRun(t, dir, "web")
+	readFrom(t, dir, peer)
+	self, _ := registry.Lookup(dir, "api")
+	turnStarted(t, dir, self, markAt-1)
+	if code, _, errOut := run("pending", "the suite is running"); code != ExitOK {
+		t.Fatalf("pending: %s", errOut)
+	}
+	if err := completeTurn(dir, self, turnResult{ID: "t/1", Text: " \n", Started: markAt - 1, Ended: boottime.Now()}, "t"); err != nil {
+		t.Fatal(err)
+	}
+	got := reportsTo(t, dir, "web")
+	if len(got) != 1 || inbox.KindOf(got[0]) != inbox.Interim || got[0].Text != "the suite is running" {
+		t.Fatalf("web holds %+v, want the mark's line alone", got)
 	}
 }
 

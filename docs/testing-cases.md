@@ -50,10 +50,12 @@ three of its four observations (September 23, 2026).
 
 `pending-report` runs in both columns with three sessions. A worker reads a task and,
 in that turn, runs `rewake pending` before ending it; the sender must read a `pending`
-message about the task first, and the worker's awaiting record must still be there.
+message about the task first — the mark's line, then the turn's own text — and the
+worker's awaiting record must still be there.
 A third session then sends the worker a task of its own, and that turn end — with no
-mark — must be the `finished` report settling the first task. Its two mutants, each in
-both columns, ignore the mark and let the interim turn end settle the task; like the
+mark — must be the `finished` report settling the first task. Its three mutants, each in
+both columns, ignore the mark, let the interim turn end settle the task, and drop the
+turn's text from the interim message; like the
 telemetry controls, each names what it must break and requires the rest to hold.
 
 `owed-reread` runs in both columns with a main and a worker. The worker reads a
@@ -159,7 +161,7 @@ switches have no single form in the code to find them by, and the row is kept by
 | readiness | — | `no-direct-input`, `wrong-thread`, `no-correlated-reply` |
 | mid-turn | `wait-for-idle` | `late`, `failed-operation` |
 | claude-telemetry | `tap-without-owner`, `uncounted-compaction`, `silent-compaction`, `model-window` | — |
-| pending-report | `pending-ignored`, `pending-settles` | — |
+| pending-report | `pending-ignored`, `pending-settles`, `pending-text-dropped` | — |
 | claude-inbound | `ungated`, `gate-on-session-start`, `held-as-delivered`, `expiry-unannounced`, `refusal-as-delivered`, `late-word-dropped` | — |
 | owed-reread | `owed-empty` | — |
 | thread-changed | `delivery-unpinned`, `stop-thread-ignored`, `thread-always-changed` | — |

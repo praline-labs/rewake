@@ -284,7 +284,8 @@ discharge it.
 A worker that ends a turn before the work is done — waiting on anything outside the
 turn: background work still running, the owner, a refusal to be cleared — runs
 `rewake pending "<what it waits for>"` first. That one turn end then reaches the
-waiters as a `pending` message with that text, owing nothing and settling nothing, and
+waiters as a `pending` message with that text first and the turn's own answer after it,
+owing nothing and settling nothing, and
 the next turn end without a mark is the report
 ([turn-outcomes.md](turn-outcomes.md#interim-turn-ends-rewake-pending)).
 

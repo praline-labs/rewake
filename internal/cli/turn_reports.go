@@ -31,7 +31,12 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 			}
 			if pending && !event.Failed && !event.Stopped {
 				// Only a normal finish is softened: a failure or a stop says
-				// more than "still working", and stays what it is.
+				// more than "still working", and stays what it is. The mark's
+				// line comes first, as the preview; the turn's own text follows,
+				// since an agent may have put its findings there.
+				if turn := strings.TrimSpace(event.Text); turn != "" {
+					text += "\n\n" + turn
+				}
 				event.Pending, event.Text = true, text
 			}
 			receipt.Reports, receipt.Waiters, err = prepareTurnReports(dir, self, event, currentThread, waiters, receipt.ID)

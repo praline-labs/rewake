@@ -12,8 +12,8 @@ import (
 // TestPendingReport is `rewake pending` end to end. A worker reads a task and,
 // in that first turn, runs `rewake pending` before the turn ends — a worker
 // leaving background work running. The sender must be told the work is still
-// going, in a message that is not a report and settles nothing, and the task
-// must stay owed. Then the worker is woken by another session's task, its next
+// going, in a message that is not a report and settles nothing — the mark's
+// line first, then what the turn itself said — and the task must stay owed. Then the worker is woken by another session's task, its next
 // turn ends with no mark, and that turn end is the report that settles the
 // first task.
 func TestPendingReport(t *testing.T) {
@@ -37,7 +37,7 @@ func TestPendingReport(t *testing.T) {
 
 const (
 	obsPendingMarked   = "the worker's rewake pending is accepted"
-	obsInterimArrives  = "the sender reads an interim message about the task"
+	obsInterimArrives  = "the sender reads an interim message about the task, the mark's line and then the turn's text"
 	obsTaskStillOwed   = "the task stays owed after the interim turn end"
 	obsReportFollows   = "the next turn end reports and settles the task"
 	pendingText        = "the suite is running in the background"
@@ -93,7 +93,8 @@ func playPendingReport(t *testing.T, c *Case, iso *Isolation, col column) []tele
 	}) {
 		return append(out, unjudged("the sender never read anything about the task from the worker")[1:]...)
 	}
-	out = append(out, finding(obsInterimArrives, first.Kind == "pending" && first.Text == pendingText,
+	// The turn's text is what the worker read: the task, among the rest.
+	out = append(out, finding(obsInterimArrives, first.Kind == "pending" && strings.HasPrefix(first.Text, pendingText+"\n\n") && strings.Contains(first.Text, pendingTaskText),
 		"the first message about the task was %s: %q", first.Kind, first.Text))
 
 	owed := awaiting(iso, worker)
@@ -172,12 +173,24 @@ var mutantPendingSettles = mutation{
 	edits: []edit{{"\t\t\treceipt.KeepWaiters = event.Stopped || event.Pending\n", "\t\t\treceipt.KeepWaiters = event.Stopped\n"}},
 }
 
+// The interim turn end carries the mark's line alone, as before: whatever the
+// turn itself said is lost.
+var mutantPendingTextDropped = mutation{
+	name:  "pending-text-dropped",
+	file:  "internal/cli/turn_reports.go",
+	edits: []edit{{"\t\t\t\t\ttext += \"\\n\\n\" + turn\n", "\t\t\t\t\t_ = turn\n"}},
+}
+
 func TestAnIgnoredPendingMarkFails(t *testing.T) {
 	runPendingControl(t, mutantPendingIgnored, obsInterimArrives, obsTaskStillOwed, obsReportFollows)
 }
 
 func TestAPendingTurnEndThatSettlesFails(t *testing.T) {
 	runPendingControl(t, mutantPendingSettles, obsTaskStillOwed, obsReportFollows)
+}
+
+func TestAPendingTurnEndWithoutItsTextFails(t *testing.T) {
+	runPendingControl(t, mutantPendingTextDropped, obsInterimArrives)
 }
 
 func runPendingControl(t *testing.T, mutant mutation, breaks ...string) {
