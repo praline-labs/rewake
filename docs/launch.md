@@ -230,9 +230,20 @@ contract, and a copy would drift from the next version silently.
   the terminal the checkout as its `-C` — is not built: what that does to a continued
   conversation's permissions ([continuation-permissions.md](continuation-permissions.md))
   was not checked. The refusal names the two ways on: a new conversation with
-  `--worktree`, or the continuation without it.
+  `--worktree`, or the continuation without it. It is asked of the words, not of Codex's
+  grammar: `resume` or `fork` as a whole argument anywhere before `--` refuses. The
+  grammar lets a prompt come before the subcommand and ends an image's joined value
+  (`--image=foo`, `-ifoo`) in its own argument where a separated one runs on, and a
+  parser that followed it missed six forms the 0.155.1 terminal takes as a continuation.
+  A prompt or an option's value that is the bare word is refused too; the refusal says
+  such a prompt goes after `--`, where it is text (decided September 26, 2026). Neither
+  0.155.1 nor 0.157.1 has another spelling: no alias, and a bare `--last` is refused by
+  the parser.
 - **Refusals** exit 2 and nothing prompts; every git call runs with
-  `GIT_TERMINAL_PROMPT=0` and in a session of its own, with no terminal to open. Most
+  `GIT_TERMINAL_PROMPT=0` and in a session of its own, with no terminal to open. The
+  same session keeps Ctrl-C from reaching git: a long `git worktree add` interrupted so
+  runs to its end after rewake has gone, and its checkout is left with a record and no
+  owner, which `ls` shows and rm removes (kept on purpose, September 26, 2026). Most
   come before anything is made: the flag given twice or as `--worktree=`, `resume` or
   `fork`, `--remote`, a profile or `--oss`/`--local-provider`, a launch directory that
   does not resolve, a name out of shape, a launch directory outside any working tree, a
@@ -267,12 +278,20 @@ refuses, naming each reason:
 - a rewake session still running in it: the one it was made for, or any whose working
   directory is in the checkout — started there by hand after the first ended, say — in
   any room of the current state directory and of the one the owner registered in. A
-  process rewake did not start is not seen;
+  process rewake did not start is not seen, and neither is a rewake session started
+  from another directory with `-C <checkout>`: the working directory it registers is
+  the one its wrapper started in, not the target of `-C`. Its work is not lost —
+  `git worktree remove` refuses a checkout with changes — but a clean checkout goes from
+  under it. Recording the directory a session actually works in is queued
+  ([work-queue.md](work-queue.md#also-queued-not-scheduled));
 - a directory gone while the repository still lists it: it may have been moved with its
   work, and `git worktree repair <new path>` run in the repository reconnects it. With
   `--force` its own entry is removed with `git worktree remove`, never `git worktree
   prune`, which would take every other missing checkout of the repository along. One
-  the repository no longer lists either leaves only the record, which rm removes.
+  the repository no longer lists either leaves only the record, which rm removes;
+- a directory whose repository is gone: git has nothing left to say of what it holds.
+  With `--force` the directory and its record go. One whose directory is gone as well
+  leaves only the record, which rm removes.
 
 `--force` removes it anyway. Looking never stands in a session's way: git runs with
 `GIT_OPTIONAL_LOCKS=0`, so `git status` does not take `index.lock` from under a commit

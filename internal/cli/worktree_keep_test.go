@@ -72,6 +72,29 @@ func TestWorktreeRmKeepsAMissingCheckoutUnlessForced(t *testing.T) {
 	}
 }
 
+// A deleted repository leaves git nothing to say of its checkout; rm keeps
+// the directory unless forced, as its refusal says, and forced removes it.
+func TestWorktreeRmOfACheckoutWhoseRepositoryIsGone(t *testing.T) {
+	lab := newWorktreeLab(t)
+	record := lab.made(t, "orphan")
+	if err := os.RemoveAll(lab.repo); err != nil {
+		t.Fatal(err)
+	}
+	code, _, errOut := run("worktree", "rm", "orphan")
+	if code != ExitUsage || !strings.Contains(errOut, "is gone, so git cannot tell") || !strings.Contains(errOut, "--force") {
+		t.Fatalf("rm without its repository: %d %s", code, errOut)
+	}
+	if code, _, errOut := run("worktree", "rm", "orphan", "--force"); code != ExitOK {
+		t.Fatalf("rm --force: %d %s", code, errOut)
+	}
+	if _, err := os.Stat(record.Path); !os.IsNotExist(err) {
+		t.Errorf("the directory stayed: %v", err)
+	}
+	if records := lab.records(t); len(records) != 0 {
+		t.Errorf("records left: %+v", records)
+	}
+}
+
 // Files git ignores are deleted by git worktree remove without a word, so rm
 // keeps a checkout holding them.
 func TestWorktreeRmKeepsIgnoredFiles(t *testing.T) {

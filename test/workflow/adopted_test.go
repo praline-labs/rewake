@@ -205,9 +205,10 @@ func groupHasLiveMember(pgid int) (bool, error) {
 // /proc answers about an instant, while a parent exiting, its child being
 // re-parented here and that child starting work of its own all happen
 // independently of each other: a snapshot taken immediately after a parent is
-// reaped can miss a descendant that is about to appear in the tree. One repeat
-// after a short pause closes that gap, and it costs this much only on the
-// clean path, where nothing was found the first time.
+// reaped can miss a descendant that is about to appear in the tree, and one
+// taken while a descendant is exiting can miss it on its way out. So the pause
+// runs from the start, from the end of the case's own group and from the last
+// find, and a clean tree costs this much once.
 const straySettle = 50 * time.Millisecond
 
 // sweepOnce takes one look at the tree, signals what it finds under the label

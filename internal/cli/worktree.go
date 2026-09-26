@@ -180,6 +180,9 @@ func keepReasons(record worktree.Record) ([]string, error) {
 	if check.Missing && !check.Forgotten {
 		reasons = append(reasons, "its directory "+record.Path+" is gone while the repository still lists it; if it was moved, git worktree repair <new path> run in the repository reconnects it, and whatever it holds is out of sight here")
 	}
+	if check.Forgotten && !check.Missing {
+		reasons = append(reasons, "its repository "+record.CommonDir+" is gone, so git cannot tell what "+record.Path+" holds")
+	}
 	if check.Changes {
 		reasons = append(reasons, "it has changes git status shows")
 	}

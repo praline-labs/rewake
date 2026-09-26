@@ -164,6 +164,16 @@ one Codex recognizes. Worth studying when Codex exposes its worktrees through th
 app-server or a subcommand, or accepts `--worktree` beside `--remote`; until then B
 gives the substance without the dependency.
 
+**Recording the directory a session actually works in: `claude -w` and `codex -C`.**
+Found September 26, 2026. A session registers the working directory its wrapper
+started in, while the harness may work elsewhere: Claude Code's `-w` moves it into a
+worktree of its own ([research-launch.md](research-launch.md#a-worktree-at-launch)), and
+Codex's `-C` into the directory named. So `rewake worktree rm`
+does not see a session started with `-C <checkout>` from outside the checkout, and a
+clean checkout can go from under it ([launch.md](launch.md#a-worktree-for-a-launch)).
+The same record would serve both: the directory each harness reports once it has
+started, not the wrapper's.
+
 **Parsing the Codex configuration.** Today rewake looks for a mention of a key in the
 text of the file and substitutes nothing when it finds one — crude, and crude on
 purpose, because the hand-written parser was removed. With a library this can be done

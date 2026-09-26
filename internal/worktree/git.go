@@ -53,8 +53,9 @@ type Check struct {
 	// Missing is a checkout whose directory is gone: removed, or moved by
 	// hand, in which case whatever it held is out of sight.
 	Missing bool `json:"missing,omitempty"`
-	// Forgotten is a missing checkout the repository no longer lists either:
-	// nothing of it is left but rewake's record.
+	// Forgotten is a checkout git has nothing left to say of: missing, and
+	// no longer listed by its repository, or a repository that is gone
+	// itself. A directory still there holds what nobody can tell.
 	Forgotten bool `json:"forgotten,omitempty"`
 	// Changes lists what `git status` shows: edits, staged or untracked files.
 	Changes bool `json:"changes,omitempty"`
@@ -76,7 +77,11 @@ func (c Check) Dirty() bool { return c.Changes || c.Ignored || c.Unreachable }
 
 // Inspect looks at a checkout as it is now.
 func Inspect(record Record) (Check, error) {
-	if info, err := os.Stat(record.Path); err != nil || !info.IsDir() {
+	present := isDir(record.Path)
+	if repositoryGone(record) {
+		return Check{Missing: !present, Forgotten: true}, nil
+	}
+	if !present {
 		return inspectMissing(record)
 	}
 	status, err := gitOutput(record.Path, "status", "--porcelain", "--untracked-files=normal", "--ignored=matching")
@@ -171,23 +176,33 @@ func samePath(listed, recorded string) bool {
 // directory is gone is removed the same way, which on a missing directory
 // touches only its own entry — never `git worktree prune`, which would take
 // every other missing checkout of the repository along; one the repository
-// has forgotten leaves only the record to remove.
+// has forgotten leaves only the record to remove. A directory whose repository
+// is gone has no git left to remove it, and only force deletes it.
 func Remove(record Record, force bool) error {
-	forgotten := false
-	if info, err := os.Stat(record.Path); err != nil || !info.IsDir() {
+	present := isDir(record.Path)
+	forgotten := repositoryGone(record)
+	if !forgotten && !present {
 		_, listed, err := listedHead(record)
 		if err != nil {
 			return err
 		}
 		forgotten = !listed
 	}
-	if !forgotten {
+	switch {
+	case !forgotten:
 		args := []string{"worktree", "remove"}
 		if force {
 			args = append(args, "--force")
 		}
 		if err := gitDir(record.CommonDir, append(args, record.Path)...); err != nil {
 			return fmt.Errorf("git worktree remove failed: %w", err)
+		}
+	case present:
+		if !force {
+			return fmt.Errorf("the repository of %s is gone, so git cannot tell what it holds; only a forced removal deletes it", record.Path)
+		}
+		if err := os.RemoveAll(record.Path); err != nil {
+			return err
 		}
 	}
 	if err := os.Remove(recordPath(record)); err != nil && !os.IsNotExist(err) {
@@ -197,6 +212,19 @@ func Remove(record Record, force bool) error {
 	// refuses to go, which is the answer wanted.
 	_ = os.Remove(filepath.Dir(record.Path))
 	return nil
+}
+
+func isDir(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.IsDir()
+}
+
+// repositoryGone says whether the Git directory a checkout was made from no
+// longer exists: the repository was deleted, and git with it can answer
+// nothing about the checkout. Any other failure to look is not an answer.
+func repositoryGone(record Record) bool {
+	_, err := os.Stat(record.CommonDir)
+	return errors.Is(err, os.ErrNotExist)
 }
 
 // git runs git in a directory.

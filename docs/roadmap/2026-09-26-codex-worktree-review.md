@@ -91,9 +91,65 @@ The harness interface gained `WorktreeRefusal(args)` ([code.md](../code.md)).
   ([testing-pool.md](../testing-pool.md#owner-labels)); 0 of 180 runs, and 0 of 60
   under `-race` with every core busy.
 
+## Re-acceptance of 858f57d
+
+The Codex side accepted findings 1–3 and 5–12. Finding 4 was open still: the refusal
+asked the launch's continuation parser, which disagreed with the terminal. A joined image
+value (`--image=foo`, `-ifoo`, `-i=foo`) was read as the start of a variadic list and
+took the `resume` after it; the first positional was taken for the subcommand, though a
+prompt may come before it; and `--remote-auth-token-env`'s value was not skipped. On
+0.155.1 `--worktree=x --image=foo resume --help`, `-ifoo fork --help` and
+`"caller prompt" resume --help` all printed the continuation's help with exit 0 and left
+a checkout: six forms of twenty-five went through.
+
+Main decided not to follow Codex's grammar: `resume` or `fork` as a whole argument
+before `--` refuses, whatever it would have been
+([launch.md](../launch.md#a-worktree-for-a-launch)). A prompt that is the bare word is
+refused as well, safely, with a hint to put it after `--`. The launch's parser stays for
+what it decides — permission overrides on a continuation, and whether the server starts
+a fork — and the refusal no longer asks it. `TestAWorktreeRefusesEveryContinuationForm`
+holds the six forms, red on 858f57d on exactly those six;
+`TestAWorktreeTakesAPromptAfterTheTerminator` keeps `-- resume` a prompt.
+
+## Second review on the Claude Code side, of 858f57d and d4c5e45
+
+No way was found for rm without `--force` to lose work, and the earlier findings were
+closed. What it found, fixed in the same change as the refusal by words:
+
+- **The sweep test still failed**, about once in three hundred runs under a parallel
+  `-race` load: the neighbour's own sweep left its descendant running. A process that
+  has released its memory but is not yet a zombie reads an empty `environ`, so it
+  carries no label and is not found; the sweep counted its pause from the end of the
+  case's own group and left on that first empty pass. It counts it from the last find
+  as well now ([testing-pool.md](../testing-pool.md#owner-labels)), a fix in the sweep,
+  not in the test: of 480 runs of both sweep tests, eight at a time beside
+  `go test -race ./internal/...`, the old sweep failed 2 and the new one none.
+- **A record whose repository is gone could not be removed**, even with `--force`, which
+  the refusal promised: every look asked git in a Git directory that no longer existed.
+  A regression against `c27fce7`, whose prune skipped a missing repository. Such a
+  record now counts as forgotten: with its directory gone rm removes the record, with it
+  there rm refuses and `--force` removes both (`TestARecordWhoseRepositoryIsGone`,
+  `TestWorktreeRmOfACheckoutWhoseRepositoryIsGone`, both red before).
+- **A session started with `-C <checkout>` from elsewhere is not seen by rm**: it
+  registers the wrapper's directory. Not fixed; written down in
+  [launch.md](../launch.md#a-worktree-for-a-launch) and queued with `claude -w`, which
+  has the same gap ([work-queue.md](../work-queue.md#also-queued-not-scheduled)).
+- **A dangling link as the worktree root**, pointing into the repository, failed at
+  `mkdir` with exit 1 instead of being refused with 2. The root's links are followed
+  now even when their target does not exist yet.
+
+Main kept git in a session of its own; the cost, that Ctrl-C does not stop a long
+`git worktree add`, is in [launch.md](../launch.md#a-worktree-for-a-launch).
+
 ## What stays open
 
-- Acceptance on the Codex side of these fixes.
+- Acceptance on the Codex side of the refusal by words.
+- The launch's continuation parser still reads a joined image value and a prompt before
+  the subcommand as the terminal does not. Without `--worktree` that costs two smaller
+  things: `--image=foo fork` is not marked as a fork at startup for the gateway, and a
+  continuation spelled so with a permission flag goes without the note that the remote
+  terminal rejects it.
 - A continued conversation in a new checkout, should the owner want one: hand the
   terminal the checkout as `-C` and check the permissions of the continuation first.
-- A process rewake did not start in a checkout is not seen by rm.
+- A process rewake did not start in a checkout is not seen by rm, nor a rewake session
+  started in it with `-C` from another directory.

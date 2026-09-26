@@ -62,6 +62,14 @@ of a second to end on SIGTERM. With a bare `sleep` it raced the kernel — the s
 die between the signal and the look — and failed a few runs in a hundred, on main as on
 any branch (found September 26, 2026).
 
+A sweep calls the tree quiet only after a pause of `straySettle` with nothing found,
+counted from its start, from the end of the case's own group and from its last find. The
+last of those came later the same day: a descendant ending on the signal releases its
+memory before it becomes a zombie, and in that moment `/proc/<pid>/environ` reads empty,
+so it carries no label and is not found while it still runs. The sweep left on that first
+empty pass and the test found the neighbour's descendant alive, about once in a few
+hundred runs under a parallel `-race` load.
+
 ## Waits the suite shortens
 
 The suite's binary runs seven of the product's waits shorter than a release, set at

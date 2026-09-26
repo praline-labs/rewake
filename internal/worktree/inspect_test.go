@@ -111,15 +111,20 @@ func TestAMissingCheckoutIsRemovedAlone(t *testing.T) {
 }
 
 // A worktree directory inside the repository would be listed among its own
-// files; it is refused, symbolic links resolved, before anything is made.
+// files; it is refused, symbolic links resolved, dangling ones as well, before
+// anything is made.
 func TestARootInsideTheRepositoryIsRefused(t *testing.T) {
 	isolate(t)
 	source := repository(t, "project")
-	link := filepath.Join(t.TempDir(), "link")
+	link, dangling := filepath.Join(t.TempDir(), "link"), filepath.Join(t.TempDir(), "dangling")
 	if err := os.Symlink(source, link); err != nil {
 		t.Fatal(err)
 	}
-	for _, root := range []string{filepath.Join(source, "trees"), source, filepath.Join(link, "trees")} {
+	// A link to a directory not made yet, which is where the root would be.
+	if err := os.Symlink(filepath.Join(source, "trees"), dangling); err != nil {
+		t.Fatal(err)
+	}
+	for _, root := range []string{filepath.Join(source, "trees"), source, filepath.Join(link, "trees"), dangling, filepath.Join(dangling, "x")} {
 		var unusable *UnusableError
 		if _, err := Create(root, source, "x"); !errors.As(err, &unusable) || !strings.Contains(err.Error(), RootEnv) {
 			t.Errorf("%s: %v", root, err)
@@ -173,5 +178,53 @@ func TestGitRunsDetachedAndWithoutOptionalLocks(t *testing.T) {
 	}
 	if pid, _ := strconv.Atoi(fields[2]); strconv.Itoa(pid) != fields[3] {
 		t.Errorf("not a session leader: pid %s, session %s", fields[2], fields[3])
+	}
+}
+
+// A repository deleted from under its checkouts leaves git nothing to say of
+// them. The record of one whose directory is gone is all there is to remove;
+// one whose directory is still there is removed only by force, directory and
+// all.
+func TestARecordWhoseRepositoryIsGone(t *testing.T) {
+	isolate(t)
+	source := repository(t, "project")
+	root := t.TempDir()
+	kept, err := Create(root, source, "kept")
+	if err != nil {
+		t.Fatal(err)
+	}
+	gone, err := Create(root, source, "gone")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(gone.Path); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(source); err != nil {
+		t.Fatal(err)
+	}
+	if check, err := Inspect(gone); err != nil || !check.Missing || !check.Forgotten {
+		t.Fatalf("gone with its repository: %+v, %v", check, err)
+	}
+	if err := Remove(gone, false); err != nil {
+		t.Fatal(err)
+	}
+	if check, err := Inspect(kept); err != nil || check.Missing || !check.Forgotten {
+		t.Fatalf("left without its repository: %+v, %v", check, err)
+	}
+	if err := Remove(kept, false); err == nil {
+		t.Fatal("removed without force")
+	}
+	if _, err := os.Stat(kept.Path); err != nil {
+		t.Fatalf("a refused removal touched the directory: %v", err)
+	}
+	if err := Remove(kept, true); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(kept.Path); !os.IsNotExist(err) {
+		t.Errorf("the directory stayed: %v", err)
+	}
+	if records, _ := List(root); len(records) != 0 {
+		t.Errorf("records left: %+v", records)
 	}
 }

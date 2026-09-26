@@ -137,6 +137,13 @@ func terminate(own *owned, label string, known map[int]bool) []string {
 			// here, without extending the overall budget.
 			settled = now.Add(straySettle)
 		}
+		// And from the last find: a descendant ending on the signal has
+		// released its memory before it is a zombie, and in that moment its
+		// environ reads empty — no label, so no find, while it still runs. A
+		// quiet pass right after a find is not yet a quiet tree.
+		if len(found) > 0 {
+			settled = now.Add(straySettle)
+		}
 		if waitingFor == nil && err == nil && len(found) == 0 && now.After(settled) {
 			return dedup(left)
 		}

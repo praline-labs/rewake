@@ -317,12 +317,26 @@ func repositoryDir(commonDir string) string {
 }
 
 // resolved is a path with the symbolic links of its longest existing part
-// resolved: a root not made yet is compared by where it would be.
+// resolved: a root not made yet is compared by where it would be. A link to
+// what does not exist yet is followed too, since that is where the root would
+// be made.
 func resolved(path string) string {
+	return resolvedWithin(path, 40)
+}
+
+// resolvedWithin is resolved following at most hops dangling links, the most
+// the kernel follows in one lookup, so a loop of them ends.
+func resolvedWithin(path string, hops int) string {
 	rest := ""
 	for current := filepath.Clean(path); ; current = filepath.Dir(current) {
 		if actual, err := filepath.EvalSymlinks(current); err == nil {
 			return filepath.Join(actual, rest)
+		}
+		if target, err := os.Readlink(current); err == nil && hops > 0 {
+			if !filepath.IsAbs(target) {
+				target = filepath.Join(filepath.Dir(current), target)
+			}
+			return resolvedWithin(filepath.Join(target, rest), hops-1)
 		}
 		if parent := filepath.Dir(current); parent == current {
 			return filepath.Clean(path)

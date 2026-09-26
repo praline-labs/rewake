@@ -77,8 +77,25 @@ func (codexHarness) WorktreeRefusal(args []string) error {
 	if harness.HasFlag(args, "--remote") || hasProfile(args) || harness.HasFlag(args, "--oss") || harness.HasFlag(args, "--local-provider") {
 		return errors.New(localArgumentsRequired)
 	}
-	if mode, _ := continuationMode(args); mode == "resume" || mode == "fork" {
-		return fmt.Errorf("%s makes a new checkout for a new conversation, and %s continues one in the directory it was started in, which Codex keeps: the session would work outside the checkout its permissions name. Start a new conversation with %s, or %s without %s", worktreeFlag, mode, worktreeFlag, mode, worktreeFlag)
+	if mode := continuationWord(args); mode != "" {
+		return fmt.Errorf("%s makes a new checkout for a new conversation, and %s continues one in the directory it was started in, which Codex keeps: the session would work outside the checkout its permissions name. Start a new conversation with %s, or %s without %s; a prompt that is the word %s itself goes after --", worktreeFlag, mode, worktreeFlag, mode, worktreeFlag, mode)
 	}
 	return nil
+}
+
+// continuationWord is resume or fork when either appears as a whole argument
+// before the terminator, or "". It does not follow Codex's grammar, which lets
+// a prompt precede the subcommand and an image's joined value end where a
+// separated one runs on: a parser that trails it misses a form the terminal
+// accepts, and each miss is a checkout the conversation never works in. A word
+// that was an option's value or the whole prompt is refused as well; the
+// refusal names the way round, and a prompt that must be the bare word goes
+// after --.
+func continuationWord(args []string) string {
+	for _, arg := range harness.BeforeTerminator(args) {
+		if arg == "resume" || arg == "fork" {
+			return arg
+		}
+	}
+	return ""
 }
