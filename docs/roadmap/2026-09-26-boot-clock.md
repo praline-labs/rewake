@@ -53,13 +53,16 @@ microseconds. The order that ids and `createdAt` give changes only on a step bac
 
 ## Evidence
 
-Each change has a test that fails without it, checked by mutation:
+Each change but one has a test that fails without it, checked by mutation:
 `TestAWallClockStepInsideTheWindowKeepsTheCap` (the old failure, made certain),
 `TestWrittenAtFallsBackToTheWallClock`, `TestPutStampsTheBootClock`,
 `TestAMarkIsJudgedByItsBootReading`, `TestTheHeartbeatDoesNotBringAMarkBack`,
 `TestFreshnessGoesByTheBootClock` and `TestBootReadingsStayOutOfTheJSON`.
 `TestALetterSeenLateKeepsItsCap` sets the boot reading back with `createdAt`, so it still
-shows a letter written before it was seen.
+shows a letter written before it was seen. The one exception is reading the clock after
+the mark rather than before: the window it closes is a touch landing between the two, too
+narrow to hit without replacing the clock, so it rests on a probe in review that wrote
+the mark after the reading and saw a live send judged gone.
 
 ## What stays open
 
