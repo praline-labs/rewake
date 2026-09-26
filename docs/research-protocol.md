@@ -282,6 +282,20 @@ session of 0.156.1 was started.
 - **Server notifications**: no method added or removed; the item and turn
   notifications changed only through the nested definitions above.
 
+## Where a new conversation runs
+
+**[schemas of 0.155.1 and 0.157.1, experimental; source at release tags `rust-v0.155.1`
+and `rust-v0.157.1`; September 26, 2026]** Read for Codex's `--worktree`
+([research-codex.md](research-codex.md#--worktree-with-a-remote-terminal)).
+
+- **`ThreadStartParams` has no worktree field** in either version. It has an optional,
+  nullable `cwd` and `runtimeWorkspaceRoots`, absolute paths.
+- **The server applies `cwd` per conversation**, as an override, so the directory the
+  server process started in does not fix where a conversation runs. A client that
+  created a checkout itself could start a conversation there over the protocol.
+- **The checkout is the terminal's work**, not the server's: a local terminal allocates
+  it and sends only its path in these two fields.
+
 ## The plan over the protocol
 
 **[schemas of 0.155.1 and 0.156.1, experimental; reference tree; September 25,

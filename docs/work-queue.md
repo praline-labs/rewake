@@ -117,26 +117,6 @@ Claude Code's task tools in [research-claude-actions.md](research-claude-actions
 Codex's plan tool in [research-codex.md](research-codex.md#the-plan-tool) and
 [research-protocol.md](research-protocol.md#the-plan-over-the-protocol).
 
-## Then: Codex's `--worktree`
-
-rewake refuses Codex's `--worktree` today (`internal/harness/codex/codex.go`, the check
-before the launch plan; [launch.md](launch.md)). The session-owned app-server starts in
-the launch directory, while `--worktree` moves the conversation into a managed worktree
-that Codex creates itself. A plain git worktree, created first and launched from,
-already works.
-
-Two routes, to be chosen by research rather than built now. If the terminal creates the
-worktree and hands its directory to the server in `thread/start`, the refusal may be
-unnecessary and the flag can pass through the gateway. If not, rewake would create the
-worktree itself before starting the server — which copies Codex's allocation logic
-([research-permissions.md](research-permissions.md#managed-worktrees-and-continuation-permissions))
-and drifts with every Codex version.
-
-The research: where the installed and the latest Codex handle `--worktree` in their
-source, which fields `thread/start` takes in the generated schema, and one probe in the
-disposable container without a model call. It is the Codex path, so the launch does not
-change until the owner has seen the findings.
-
 ## Then: the parity queue
 
 The remaining entries of [harness-features.md](harness-features.md), in its order.

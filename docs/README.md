@@ -169,8 +169,9 @@ everything else.
   and after a harness update.
 - [research-codex.md](research-codex.md) — what only a running Codex session shows,
   split from research.md by subject: `codex queue`, thread identity and terminal events,
-  the sandbox as a running session meets it, environment and instructions, the
-  session-owned app-server, and the model's plan tool. Open it before touching the Codex adapter or after a Codex
+  the sandbox as a running session meets it, why `--worktree` cannot go with a remote
+  terminal, environment and instructions, the session-owned app-server, and the model's
+  plan tool. Open it before touching the Codex adapter or after a Codex
   update.
 - [research-launch.md](research-launch.md) — what an installed binary answers when run:
   model and effort catalogues and the usable context window, which flags may repeat,
@@ -185,8 +186,8 @@ everything else.
   reference source state: the flags schema generation needs, required fields of the
   types the adapter uses, how start-or-steer forks, where `canAcceptDirectInput`
   lives, what compaction and the terminal's other commands send over the protocol, and
-  what a compaction or an interrupt on rewake's request would send and meet, and what
-  the protocol offers for the model's plan. Open it when the adapter or the fixture has to match a protocol change.
+  what a compaction or an interrupt on rewake's request would send and meet, where a
+  new conversation runs, and what the protocol offers for the model's plan. Open it when the adapter or the fixture has to match a protocol change.
 - [research-permissions.md](research-permissions.md) — the Codex sandbox: network and
   filesystem limits on Linux, why `.git`, `.agents` and `.codex` are protected, how
   `--add-dir` grants access, worktree quirks, and a short account of remote resume
@@ -304,7 +305,7 @@ the newer document says so.
 - [work-queue.md](work-queue.md) — what comes next, in the owner's order: the rest of the
   workflow suite, the arrival-row check on the suite, a named harness version against a
   local responder, a two-way channel for Claude Code, the rest of stage 2 of the plugin
-  and a focus for a Codex compaction, Codex's `--worktree`, the parity queue, and what is
+  and a focus for a Codex compaction, the parity queue, and what is
   queued without a date; and what the owner dropped, the todo list sent with a task among
   it. Open it to pick the next piece of work.
 - [roadmap/README.md](roadmap/README.md) — what is done: the index of the roadmap, one

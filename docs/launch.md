@@ -173,6 +173,12 @@ prompt text, not permission flags. The registry keeps
 the wrapper's original cwd. Existing --remote, --profile, --worktree and --oss/--local-provider launches
 are refused with advice: they cannot safely share this owned server topology or
 forward all configuration. Create the checkout first and use explicit settings.
+For `--worktree` the refusal is also upstream's: the terminal itself refuses the flag
+together with `--remote`, before it creates a checkout, and rewake always starts it with
+`--remote` ([research-codex.md](research-codex.md#--worktree-with-a-remote-terminal)).
+A plain `git worktree add`, launched from its checkout, is the supported way; rewake
+does not allocate a managed checkout itself
+([the decision](roadmap/2026-09-26-codex-worktree.md)).
 Unknown TUI arguments are preserved, not interpreted as server configuration.
 
 Startup checks codex --version against the version the transport was last observed

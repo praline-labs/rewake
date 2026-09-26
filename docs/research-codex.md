@@ -70,6 +70,36 @@ See the preserved [permission research](research-permissions.md#git-metadata-wri
 
 See the preserved [permission research](research-permissions.md#managed-worktrees-and-continuation-permissions).
 
+### `--worktree` with a remote terminal
+
+**[source: release tags `rust-v0.155.1` and `rust-v0.157.1`; verified live in a
+disposable container without network, no model call; September 26, 2026]** Asked
+whether rewake's refusal of `--worktree` could be lifted by passing the flag through its
+gateway ([launch.md](launch.md#codex)).
+
+- **The terminal refuses the pair itself.** Both versions exit 1 on `--worktree` with an
+  explicit `--remote`, a local unix socket included, verbatim:
+  ``Error: `--worktree` is only supported for local sessions``. The refusal comes before
+  a checkout is created and before the terminal connects to any app-server
+  (`tui/src/startup_orchestration.rs:17` in 0.155.1, `:27` in 0.157.1, relative to
+  `codex-rs`). rewake always starts the terminal with `--remote`, so passing the flag
+  through cannot work; the barrier is upstream.
+- **In a supported local launch the terminal creates the checkout.**
+  `worktree_startup::prepare` calls `WorktreeManager::create`
+  (`tui/src/worktree_startup.rs:232` in 0.155.1, `:238` in 0.157.1), rebuilds the
+  configuration with the checkout as its cwd, and hands the server that cwd and the
+  workspace roots as ordinary `thread/start` parameters
+  (`tui/src/app_server_session.rs:2048` / `:2017`). After the start it binds the
+  checkout to the thread id through `codex-thread.json` in the git metadata
+  (`worktree/src/metadata.rs:49`, `tui/src/app/startup.rs:34`).
+- **A managed worktree is more than `git worktree add`**: a unique directory, a
+  detached `--no-checkout` add, `config.worktree`, and a rollback of an allocation that
+  did not complete. The allocation layout is in
+  [research-permissions.md](research-permissions.md#managed-worktrees-and-continuation-permissions).
+
+What the server accepts for it is in
+[research-protocol.md](research-protocol.md#where-a-new-conversation-runs).
+
 ### Remote continuation permissions
 
 See the preserved [permission research](research-permissions.md#remote-continuation-permissions).

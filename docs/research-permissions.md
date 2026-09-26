@@ -136,12 +136,18 @@ codex sandbox -c 'sandbox_mode="workspace-write"' \
   sh -c 'printf "fixture\n" > probe.txt && git add probe.txt && git -c user.name=Test -c user.email=test@example.invalid commit -m "Check worktree access"'
 ```
 
-Rewake refuses managed `--worktree` launches under its owned server: it cannot
-know that private gitdir before the harness allocates it. A
-supported alternative is to create the worktree first, then launch from its
-checkout; metadata discovery can then add both directories. Future automatic
-support needs the allocated path before sandbox permissions are finalized, or
-a reliable upstream carveout override. Rewake's session record retains the
+Rewake refuses managed `--worktree` launches under its owned server. The direct reason,
+found on September 26, 2026, is upstream: the terminal itself refuses `--worktree`
+together with `--remote`, before it creates a checkout, and rewake always starts it with
+`--remote` ([research-codex.md](research-codex.md#--worktree-with-a-remote-terminal)).
+The unknown private gitdir, once given as the reason, is not the whole obstacle any
+more: the grant a main's task adds (`taskGitRoots`,
+`internal/harness/codex/server_gitwrite.go`) reads the cwd of the selected conversation,
+not the launch directory. The supported alternative is to create the worktree first,
+then launch from its checkout; metadata discovery can then add both directories.
+Automatic support would need the terminal to accept the flag with `--remote`, or rewake
+to allocate the checkout itself, which is not built unless the owner asks
+([the decision](roadmap/2026-09-26-codex-worktree.md)). Rewake's session record retains the
 wrapper's original cwd, not the dynamically chosen checkout path, and it does
 not read saved transcripts to predict where a continuation will run.
 
