@@ -104,6 +104,47 @@ Do not kill or restart on such a conclusion.
 
 *September 19, 2026.*
 
+### A Codex session started inside Codex's sandbox runs no command
+
+A live check run by a Codex session launched its subject Codex sessions from its own
+shell, inside its sandbox. The subject could not run a single command: `rewake guide`, a
+shell wait and `rewake inbox` all failed before starting because the nested sandbox
+could not open its mount registry lock, and the subject reported the work blocked. Not a
+delivery failure, and no rewake defect. The rerun passed `--sandbox danger-full-access`
+to the subject sessions only, for that launch and on main's decision, with the outer
+sandbox left in force. A live check that starts Codex from Codex decides this before
+the first turn, not after.
+
+*September 26, 2026, Codex CLI 0.155.1.*
+
+### A probe in a fresh HOME cloned the plugin marketplace over SSH
+
+On its first start in an empty HOME, Claude Code 2.1.280 installs the official plugin
+marketplace by itself. Its HTTPS download could not pass the probe's dead proxy — the
+order the source gives, not seen in the probe — and the fallback started a real `git clone` of the marketplace repository over SSH,
+which the proxy variables do not cover; it was killed within seconds. Read in the
+bundled source: the install is skipped when `CLAUDE_CODE_DISABLE_OFFICIAL_MARKETPLACE_AUTOINSTALL`
+is set; otherwise, after a failed CDN download, the git fallback runs `ssh -T
+git@github.com` and clones over SSH when that authenticates, over HTTPS when it does not
+or when `CLAUDE_CODE_PLUGIN_PREFER_HTTPS` is set. The variable was not tried live. A
+probe sets it, or closes outbound SSH, before the first launch;
+`CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` was set in that probe and did not stop the
+clone.
+
+*September 26, 2026, Claude Code 2.1.280.*
+
+### `REWAKE_ROOM` in the environment put a probe's launch in `default`
+
+A probe exported `REWAKE_ROOM=probe` and launched two sessions. The one launched without
+`--room` went to room `default` of the probe's private state directory, the two sessions
+ended in different rooms, and neither could see the other until both were launched with
+`rewake --room probe …`. This is the contract, not a defect:
+launch takes its room from `--room` alone, and commands such as `list` and `send` read
+the variable ([design.md](design.md#rooms)). Put `--room` before the harness name, like
+`--main`.
+
+*September 26, 2026.*
+
 ## Arguments and continuing a conversation
 
 ### Under `--remote`, continuing a thread refuses because of our own flag

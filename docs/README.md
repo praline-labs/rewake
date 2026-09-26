@@ -174,9 +174,10 @@ everything else.
 - [research-claude-actions.md](research-claude-actions.md) — what a function-hooks plugin
   can do to the Claude Code session it runs in, split from research-claude-control.md by
   subject: compact it, abort its turn, poll a file, swallow a socket line, reload, fill
-  the harness's task list — with the forms and refusals of each, as the host words them.
-  Open it before changing the module's side of `rewake compact` or `rewake interrupt`,
-  and after a harness update.
+  the harness's task list — with the forms and refusals of each, as the host words them —
+  and what a Stop hook that blocks does to a turn's end: the second call, its payload,
+  the limit of eight. Open it before changing the module's side of `rewake compact` or
+  `rewake interrupt`, before a Stop hook that holds a turn, and after a harness update.
 - [research-codex.md](research-codex.md) — what only a running Codex session shows,
   split from research.md by subject: `codex queue`, thread identity and terminal events,
   the sandbox as a running session meets it, why `--worktree` cannot go with a remote
@@ -187,7 +188,7 @@ everything else.
   model and effort catalogues and the usable context window, which flags may repeat,
   undocumented aliases, when a `--help` probe can be trusted, how each harness is
   published on npm, whether Claude Code has a client-server split to stand between, a
-  prompt draft at launch,
+  prompt draft at launch, where a Claude Code session launched with `-w` runs,
   the hook options and settings order the launch layer relies on, and what the bundled
   source states about Claude Code's cross-session inbound gate — `crossSessionInbound`,
   permission-mode classes, holds, deadlines and receipts. Open it when adding a launch flag or when a model, an effort or a

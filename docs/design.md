@@ -154,6 +154,12 @@ sessions, and an old record must not appear in a new room by accident.
   that the start succeeded, not that delivery works now. Absent until then.
 - `ownsSocket` — this session created the socket path, so it removes it when it ends;
   absent for a harness without a socket, and for one whose socket path the caller named.
+- `cwd` — the directory rewake was launched from, taken when the name is claimed. A
+  harness that moves itself afterwards is not followed: Claude Code launched with `-w
+  <name>` runs in `.claude/worktrees/<name>`, while the record, `rewake list` and the
+  availability notices show the launch directory (live, 2.1.280, September 26, 2026,
+  [research-launch.md](research-launch.md#a-worktree-at-launch)). A known discrepancy,
+  not fixed yet.
 - `codexHome` — the `CODEX_HOME` a Codex session runs with; absent for other harnesses.
 - `pidNamespace` — the pid namespace the two pids belong to: a reader in another one
   cannot judge whether they are alive, and does not try.

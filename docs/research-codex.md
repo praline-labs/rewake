@@ -21,7 +21,9 @@ reached the recipient at the next boundary between tools, the series continued a
 original task returned its own result. Not observed on this version: conversation
 selection after `/new`, refusal of a stale target, `stopped` from a keyboard
 interruption, and a multi-message group arriving during an active turn. One probe
-each, no repeats and no race coverage. Every fact below carries the version it was
+each, no repeats and no race coverage. A group arriving during an active turn and
+delivery after `/new` were observed on September 26, 2026
+([below](#live-messaging-checks-of-september-26-2026)). Every fact below carries the version it was
 taken on; a fact tagged 0.154.0 has not been re-checked on 0.155.1.
 September 20: [native mailbox contract](native-mailbox.md) and
 [owner/installed acceptance with evidence limits](native-mailbox-acceptance.md).
@@ -212,6 +214,33 @@ and sent it a task seven seconds later. What happened, with the rewake of that d
 The fix of the same day ([2026-09-26-codex-compact-hold.md](roadmap/2026-09-26-codex-compact-hold.md))
 holds a compaction seen running up to 10 minutes, takes this refusal for a wait, and
 reports a compaction outliving the wait by its end.
+
+### Live messaging checks of September 26, 2026
+
+**[verified live; Codex CLI 0.155.1; September 26, 2026; rewake builds 0ee310e and
+fa5ece0]** Two real sessions in a private room, state directory and workspace, both on
+a cheap model at effort low, the TUI driven through a pseudo-terminal and the socket
+watched by a passive relay that logged methods, ids and timings only. What the
+harness showed; what rewake did with it is in
+[the record](roadmap/2026-09-26-live-checks.md).
+
+- **Everything reaches the running turn.** A grouped notice of three notes, a task and
+  its addendum sent during a 20-second shell command were each answered with the id of
+  the turn already running, and the turn read all five and ended once.
+- **`/new` is refused while a turn runs**: the TUI answers `'/new' is disabled while a
+  task is in progress.` After the turn ended, `/new` switched the conversation, and a
+  delivery went to the new one.
+- **A short compaction.** `thread/compact/start` was followed 300 ms later by the
+  compaction's turn and its `contextCompaction` item; the turn ended 3.58 seconds after
+  it started. A `turn/start` sent 29.5 ms after that end was accepted.
+- **An interrupt ends the turn, not the command it started.** `turn/interrupt` was
+  answered by `turn/completed` with status `interrupted` 27 ms later, while a `sleep 20`
+  the turn had started ran on: it wrote its end marker 20 seconds after it started, and
+  its `item/completed` arrived after the turn's end. Whether a later version stops the
+  command is not read in the source.
+- **A Codex session inside another Codex session's sandbox runs no command.** Every
+  shell call failed before starting because the nested sandbox could not open its mount
+  registry lock ([traps.md](traps.md#a-codex-session-started-inside-codexs-sandbox-runs-no-command)).
 
 
 ### The terminal's selection on 0.157.1

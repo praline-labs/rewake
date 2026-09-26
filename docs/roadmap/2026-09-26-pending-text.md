@@ -40,15 +40,16 @@ two of them the same day.
 
 ## What was not done
 
-- **(e) A Stop hook that asks once, on Claude Code — awaiting the owner's decision.**
+- **(e) A Stop hook that asks once, on Claude Code — approved, being built.**
   After an interim turn end, a turn that ends without a mark while waits are still open
   would be held once by the Stop hook (`{"decision":"block"}`, with `stop_hook_active`
   guarding the second call) and asked: still waiting — mark it; done — end the turn
   again. It closes the first loss without a marker the worker must remember, at the cost
-  of one more model step per episode. Not built: it needs the owner's decision and a live
-  check that a block from rewake's settings layer works and what
-  `last_assistant_message` holds on the second call. Codex has no such hold through the
-  gateway.
+  of one more model step per episode. Not built in this change: it needed the owner's
+  decision and a live check that a block from rewake's settings layer works and what
+  `last_assistant_message` holds on the second call. Both came the same evening: the owner
+  approved it on September 26, 2026, and the check passed. Codex has no such hold through
+  the gateway.
 - **(b) A mark that lasts until an explicit "done" — rejected.** It reverses the owner's
   decision of September 23, 2026: a forgotten "done" leaves the obligation open for
   ever, a `--question` waits out its `--wait`, and `--owed` and `--awaited` show pending
@@ -61,7 +62,10 @@ two of them the same day.
 
 ## What stays open
 
-- **(e)**, above, until the owner decides.
+- **(e)**, above, approved by the owner on September 26, 2026 and being built. The live check it needed was made the same
+  evening ([live checks](2026-09-26-live-checks.md#claude-code-21280)): a block from a
+  `--settings` layer holds the turn, and the second call's `last_assistant_message`
+  holds only the continuation's text.
 - **Someone else's Stop hook that blocks.** `rewake turn-ended` does not look at
   `stop_hook_active`. If a person's own Stop hook blocks the stop, rewake has already
   reported on the first Stop, with the text before the block, and settled the waits; the

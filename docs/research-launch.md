@@ -269,6 +269,19 @@ input box without submitting it and shows `Pre-filled prompt · review before pr
 Enter`. It fills the first prompt only; a draft for a session already running needs a
 plugin ([research-claude-control.md](research-claude-control.md#putting-text-into-the-input-box)).
 
+## A worktree at launch
+
+**[verified live; Claude Code 2.1.280, rewake 0ee310e, private HOME, stand-in API; September 26, 2026]** `rewake --room probe claude -w probe` launched, registered and took
+deliveries as any session: a line from a plain shell and one signed by main both woke the
+idle session and started a turn. Claude Code made the worktree
+`.claude/worktrees/probe` on a branch `worktree-probe` and ran there — its process's
+working directory and the path in its TUI — while the session record, and so `rewake
+list`, kept the directory rewake was launched from
+([design.md](design.md#session-record)). After `/exit` Claude Code removed the worktree
+and the branch itself; `git worktree list` showed only the main checkout. A report at
+the turn's end was not seen: the stand-in API calls no tools, so the session never ran
+`rewake inbox`, and a message not read owes no report.
+
 ## Hook options and settings order that rewake's launch layer relies on
 
 **[the binary's bundled source, cached 2.1.280; September 23, 2026]** A command hook

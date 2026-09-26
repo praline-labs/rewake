@@ -73,3 +73,12 @@ limits refer to is in `internal/harness/codex/gateway`.
   turn runs but not which; `rewake interrupt` is then `failed` with a hint to ask
   again, until an event of that turn names it — usually within moments, since a
   running turn streams.
+- **An interrupt stops the turn, not the command the turn started.** On Codex 0.155.1 a
+  `sleep 20` the turn was running outlived `turn/interrupt`: the turn ended as
+  `interrupted` within 27 ms and the task's sender got `stopped` at once, while the command
+  ran to its end 20 seconds later and wrote what it was told to write (live, September
+  26, 2026, [research-codex.md](research-codex.md#live-messaging-checks-of-september-26-2026)).
+  So `stopped` means the model will take no further step in that turn, not that
+  everything it set going has stopped: a command's effects may land after the letter.
+  rewake has no handle on the server's processes and asks for nothing beyond
+  `turn/interrupt`; stopping what a turn started is the harness's own business.

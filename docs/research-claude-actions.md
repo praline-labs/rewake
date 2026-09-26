@@ -1,10 +1,11 @@
-# Research: acting on a Claude Code session from its plugin
+# Research: acting on a Claude Code session from its plugin and its hooks
 
 Split from [research-claude-control.md](research-claude-control.md) by subject on
 September 24, 2026: that document is about what reaches a running session from outside
 and what rewake hears back; this one is about what a function-hooks plugin can do to the
 session it runs in — compact it, abort its turn, poll a file, swallow a socket line,
-fill the harness's task list — with the forms and refusals of each. `rewake compact` and `rewake interrupt` rest on it
+fill the harness's task list — with the forms and refusals of each; and what a Stop hook
+in rewake's settings layer can do to a turn's end. `rewake compact` and `rewake interrupt` rest on it
 ([remote-control.md](remote-control.md)). The Codex side of the same requests is in
 [research-protocol.md](research-protocol.md#compaction-and-interrupt-on-request).
 
@@ -129,3 +130,30 @@ with a task, a feature the owner later dropped
 - **In the terminal**: the list is drawn under the transcript as "N tasks (x done, y in
   progress, z open)"; after the model's own task call it shows by itself, while items
   the plugin made need `ctrl+t`, and the status line hints at it **[live]**.
+
+## Holding a turn's end from the Stop hook
+
+Probed on September 26, 2026, Claude Code 2.1.280, in a private HOME against a stand-in
+API **[live]** and in the binary **[source]**, for a Stop-hook confirmation after an
+interim turn end ([the proposal](roadmap/2026-09-26-pending-text.md#what-was-not-done)).
+The hook sat in a layer given with `--settings`, as rewake's own hooks do.
+
+- **A block holds the turn.** A Stop hook that printed `{"decision":"block","reason":…}`
+  kept the turn going: the model was called again at once, with the reason in the new
+  user message as `Stop hook blocking error from command: "<command>": <reason>`, and
+  the screen showed `Stop hook error: <reason>` **[live]**.
+- **The second call knows it is one.** The first Stop payload carried `stop_hook_active:
+  false` and the whole reply in `last_assistant_message`; the Stop after the
+  continuation carried `stop_hook_active: true`, and `last_assistant_message` held only
+  the continuation's text, not the reply before the block **[live]**.
+- **Eight blocks in a row, then the harness ends the turn.** The ninth consecutive block
+  was overridden with `A hook blocked the turn from ending 9 consecutive times —
+  overriding and ending turn`, and the turn ended **[live]**.
+  `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` sets the limit, default 8; a value of 0 or less
+  turns it off **[source]**.
+- **An Esc during the continuation fires neither Stop nor StopFailure** **[live]**: the
+  stand-in answered slowly, the turn showed "Interrupted", and the hook log of that run
+  stayed empty; that empty log was not kept apart from the cap run's.
+  StopFailure runs only for a turn that ended on an API error **[source]**; an Esc is
+  heard by the function-hooks plugin alone
+  ([research-claude-control.md](research-claude-control.md#what-a-function-hooks-plugin-hears)).
