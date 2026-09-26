@@ -12,7 +12,7 @@ added. An unknown name is a refusal listing the names that exist; an alias
 that expands into something unusable is a refusal showing the expansion; an alias can
 name arguments to rewake and nothing else, for the reason the settings file has no
 substitution. Lists, not strings: a string would have to be split into words, and
-splitting words means quoting rules. Documented in [launch.md](../launch.md) under
+splitting words means quoting rules. Documented in [launch-defaults.md](../launch-defaults.md) under
 "Naming a whole launch" and in the launch help; what was
 learned about repeatable flags is in [research-launch.md](../research-launch.md).
 

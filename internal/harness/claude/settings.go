@@ -25,7 +25,7 @@ type hookEntry struct {
 	Command string `json:"command"`
 	Timeout int    `json:"timeout"`
 	// Async runs the hook in the background, so the session does not wait
-	// for it (supported on 2.1.280, docs/launch.md). Only the telemetry hooks
+	// for it (supported on 2.1.280, docs/research-launch.md). Only the telemetry hooks
 	// take it: the end of a turn has to be recorded before the harness goes
 	// idle, or a sender waiting on it could be woken for nothing.
 	Async bool `json:"async,omitempty"`

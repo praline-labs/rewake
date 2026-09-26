@@ -143,11 +143,6 @@ The remaining entries of [harness-features.md](harness-features.md), in its orde
 
 ## Also queued, not scheduled
 
-**A wrapper left stopped after its harness was stopped from outside.** Recorded
-September 24, 2026, cause unknown ([intermittent-bugs.md](intermittent-bugs.md#a-stopped-harness-leaves-its-wrapper-stopped--cause-unknown-september-24-2026)):
-confirm whether the wrapper's own `SIGCONT` continues the harness before the wrapper's
-stop of itself takes effect, as the snapshot review suspects, then fix `followStop`.
-
 **An orchestrator starts a worker in the background.** The owner's idea for later,
 recorded September 23, 2026, after honest delivery status for Claude Code landed:
 an orchestrating session starts its worker itself, without a terminal of its own.
@@ -181,5 +176,5 @@ properly. Its own task, because it touches the Codex adapter: careful, and accep
 the Codex-side reviewer.
 
 **Launch defaults from the environment** stay as they are, but are not worth
-developing further: an alias ([launch.md](launch.md), "Naming a whole launch") states
+developing further: an alias ([launch-defaults.md](launch-defaults.md#naming-a-whole-launch)) states
 the choice explicitly, which is what the defaults were approximating.

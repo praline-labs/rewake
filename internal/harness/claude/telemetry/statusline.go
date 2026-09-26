@@ -12,7 +12,7 @@ import (
 // runs the command the person would have had, found the way Claude Code finds
 // it: every settings layer it reads, merged field by field, lowest first —
 // user, project, local, then a --settings the caller passed. That order is
-// Claude Code's own list in 2.1.280 (docs/launch.md).
+// Claude Code's own list in 2.1.280 (docs/research-launch.md).
 //
 // It is found each time the tap runs, from the tap's own environment and
 // directory — which are the harness's. A person may set CLAUDE_CONFIG_DIR in a

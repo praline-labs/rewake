@@ -30,13 +30,16 @@ everything else.
 - [code.md](code.md) — the source tree, package by package, with the harness interface
   every adapter implements. Open it to find where something lives, or before adding a
   package.
-- [launch.md](launch.md) — starting a harness: the wrapper's launch sequence, signals,
-  model and effort defaults from flags, environment and settings files, launch aliases,
-  which flags choose a room and a role (the rules themselves are in design.md and
-  roles.md), the
+- [launch.md](launch.md) — starting a harness: the wrapper's launch sequence, signals
+  and following a stopped harness, which flags choose a room and a role (the rules
+  themselves are in design.md and roles.md), the
   Claude Code flags and the Codex owned server with its terminal gateway, and the
-  briefing a session is given. Open it when a launch flag, an alias or a startup detail
-  is in question.
+  briefing a session is given. Open it when a launch flag or a startup detail is in
+  question.
+- [launch-defaults.md](launch-defaults.md) — what a launch gets that nobody typed:
+  model and effort defaults from flags, environment and settings files, and launch
+  aliases with the rules for which of their flags a typed one replaces. Open it when a
+  session came up on an unexpected model or an alias does something other than meant.
 - [delivery.md](delivery.md) — sending, reading and reporting at the level of files and
   wire: the message record, task, question and notify, the question reservation and its
   heartbeat, the one lock per mailbox, the wrapper's servicing loop and notice texts,

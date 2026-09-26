@@ -115,7 +115,7 @@ separately from the later read status. No message text, titles or transcripts ar
 needed. Most of it is already available through the `Record` callback, which the
 installed wrapper does not wire.
 
-## A stopped harness leaves its wrapper stopped — cause unknown, September 24, 2026
+## A stopped harness leaves its wrapper stopped — fixed, September 26, 2026
 
 Seen by review-claude on September 24, 2026, Claude Code 2.1.280, rewake built from the
 working tree of stage 2 part A, in a private HOME with a stand-in API; evidence in
@@ -129,20 +129,27 @@ stopped — the wrapper in `T`, the harness in `S`. That no mail would reach the
 until somebody sent the wrapper `SIGCONT` is inferred from the wrapper's state, not
 observed: no mail was sent while it was stopped. Stopping the wrapper first behaved.
 
-**What is not known.** Who continued the harness. The harness does not resume by
-itself: with the wrapper stopped first, it stayed in `T` for 6.5 s. So the wrapper's own
-reaction is the likelier source — in `followStop` (`internal/wrap/signals.go`) the
-`SIGCONT` to the harness may run before the wrapper's stop of itself takes effect. An
-isolated Go reproduction of `followStop` with a plain child did not reproduce it, but it
-differed from the wrapper: no `signal.Notify`, fewer threads. Review of the snapshot of
-`43a1f62`, September 24, 2026; not established.
+**Cause, found September 26, 2026.** The wrapper's own `SIGCONT` continued the
+harness. `stopSelf` sent `SIGSTOP` to the process; the kernel hands a process-wide
+signal to a thread of its choosing — the main one, as a rule — and the thread that
+called `kill` returned from it and ran on, so `followStop` continued the harness before
+the group stop had reached the wrapper. The isolated reproduction of the snapshot review of
+`43a1f62` (September 24, 2026), which did not reproduce it, most likely followed on the
+main thread, which takes the signal on its own way out of `kill` and so
+never loses the race; in the wrapper, `waitForHarness` runs wherever its goroutine lands
+after the blocking `Wait4`, which is usually another thread. A probe with a plain child
+showed it: the follower on the main thread left both stopped in 10 runs of 10, on
+another thread left the harness running in 7 of 10 and 6 of 10, and on another thread
+with the stop aimed at that thread left both stopped in 10 of 10.
 
-**Why it matters.** A wrapper left stopped serves no mailbox, and nothing says so:
-`rewake list` still shows the session alive. It needs a stop from outside to begin
+**Fix.** `stopSelf` (`internal/wrap/signals.go`) sends the stop to its own thread with
+`tgkill`, with the goroutine locked to the thread for the call, so the stop is taken
+before the next line runs and the harness is continued only once the wrapper is.
+`TestAStoppedHarnessStaysStoppedWithItsWrapper` (`internal/wrap/stop_follow_test.go`)
+runs the follower on a non-main thread in a process of its own, ten rounds a run: on
+the old code it failed in the first round in 20 runs of 20, with and without `-race`;
+on the fix it passed 20 runs of 20 under `-race -shuffle=on`, and 20 without.
+
+**Why it mattered.** A wrapper left stopped serves no mailbox, and nothing says so:
+`rewake list` still shows the session alive. It needed a stop from outside to begin
 with, which no rewake path sends.
-
-**What to capture next time:** a debug build of the wrapper that writes a timestamp
-around its stop of itself and around the `SIGCONT` it sends the harness, and the
-process states of both at short intervals from the stop on; `strace` was not available
-to the probe. Then whether a harness without its terminal interface
-does the same.

@@ -180,7 +180,7 @@ exists to prevent. The case is `not-run` with that reason, and `not-run` is neve
 acceptance.
 
 rewake itself takes the model and reasoning effort for a launch from the environment
-([launch.md](launch.md)), so a case sets two variables and needs nothing else — no
+([launch-defaults.md](launch-defaults.md)), so a case sets two variables and needs nothing else — no
 model name in a test, and no harness configuration touched.
 
 ## Lessons that the proposed tests must address

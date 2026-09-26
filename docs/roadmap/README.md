@@ -94,6 +94,7 @@ without a date. Local installation without publishing is in
 | September 25, 2026 | [One notice for a burst of letters](2026-09-25-coalesced-notices.md) | notifies and reports wait up to four seconds for company in the shared mailbox server, tasks and questions go at once; the batch-arrival case with a fifth mutant |
 | September 25, 2026 | [The workflow suite in three minutes instead of twenty](2026-09-25-suite-speed.md) | cases side by side in a pool sized by `-parallel`, owner labels for process cleanup with a final sweep, five product waits shorter in the suite's build; 19m22s to about 3m10s, crosswise 7m02s to 1m17s |
 | September 26, 2026 | [Actions on a sent message](2026-09-26-sent-message-actions.md) | `rewake withdraw`, `rewake edit` and `rewake send --to` by the id `send` now prints, short forms included; withdrawn final like read; a recall note when a withdrawn notice may have gone out, on a line of its own in every notice; an edit's replacement previewed as replacing the old id, with no recall; the reviews' halfway failures closed; the workflow cases `withdraw-after-notice`, `edit-after-notice`, `addendum-owed` and `withdraw-mid-turn` with eight mutants |
+| September 26, 2026 | [A wrapper that stops before it continues its harness](2026-09-26-stopped-wrapper.md) | the intermittent stopped-wrapper bug: the stop aimed at the calling thread with `tgkill`, a test that fails on the old code every run; `docs/launch.md` split, defaults and aliases into `launch-defaults.md` |
 
 ## Remaining work — owner decisions, September 19–21, 2026
 

@@ -3,6 +3,7 @@ package wrap
 import (
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -30,8 +31,22 @@ func stillStopped(pid int) bool {
 	return err == nil && state == "T"
 }
 
-// stopSelf stops the wrapper the way a job is stopped.
-func stopSelf() { _ = syscall.Kill(os.Getpid(), syscall.SIGSTOP) }
+// stopSelf stops the wrapper the way a job is stopped, and returns only once it
+// has been continued.
+//
+// The stop is aimed at the calling thread, not at the process. A stop sent to
+// the process is taken by whichever thread the kernel picks — the main one, as a
+// rule — while the caller returns from kill and runs on: followStop then
+// continued the harness before the wrapper had stopped, leaving the harness
+// running and the wrapper stopped. A stop aimed at the calling thread is taken on
+// its way out of the syscall, before the next line runs. The thread is locked
+// for the pair of calls so the goroutine cannot move between naming the thread
+// and signaling it.
+func stopSelf() {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	_ = syscall.Tgkill(os.Getpid(), syscall.Gettid(), syscall.SIGSTOP)
+}
 
 // catchSignals starts listening before there is a child to forward to.
 func catchSignals() (chan os.Signal, func()) {
