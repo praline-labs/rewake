@@ -55,6 +55,13 @@ gone; the finding goes into the run record, so `tools/checksummary` prints it as
 run's failure, and a sweep never signals the test process's own group, which is go
 test's and its caller's as well.
 
+A case's own sweep is laxer: it names a descendant only if it still runs after the
+signal, so one that ends at once is not a finding. The regression test for that sweep
+(`TestACaseSweepLeavesItsNeighbourAlone`) therefore gives its escaped descendant a fifth
+of a second to end on SIGTERM. With a bare `sleep` it raced the kernel — the sleep could
+die between the signal and the look — and failed a few runs in a hundred, on main as on
+any branch (found September 26, 2026).
+
 ## Waits the suite shortens
 
 The suite's binary runs seven of the product's waits shorter than a release, set at

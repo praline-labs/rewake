@@ -23,14 +23,22 @@ import (
 const escapeScript = `setsid /bin/sh -c 'echo $$ > "$1"; exec sleep 30' sh "$1" >/dev/null 2>&1 & ` +
 	`while [ ! -s "$1" ]; do sleep .01; done; exit "$2"`
 
+// slowEscapeScript is escapeScript with a descendant that takes a fifth of a
+// second to end on SIGTERM, ignoring the ones that follow. A case's sweep
+// names only what still runs after its signal, and a bare sleep could die
+// between the signal and that look: whether the sweep named it was a race the
+// test lost now and then.
+const slowEscapeScript = `setsid /bin/sh -c 'trap "trap \"\" TERM; sleep .2; exit" TERM; echo $$ > "$1"; sleep 30 & wait' sh "$1" >/dev/null 2>&1 & ` +
+	`while [ ! -s "$1" ]; do sleep .01; done; exit "$2"`
+
 func TestACaseSweepLeavesItsNeighbourAlone(t *testing.T) {
 	dir := t.TempDir()
 	minePID, theirsPID := filepath.Join(dir, "mine"), filepath.Join(dir, "theirs")
-	mine, err := startGroup("mine", newOwnerLabel(), exec.Command("/bin/sh", "-c", escapeScript, "sh", minePID, "0"))
+	mine, err := startGroup("mine", newOwnerLabel(), exec.Command("/bin/sh", "-c", slowEscapeScript, "sh", minePID, "0"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	theirs, err := startGroup("theirs", newOwnerLabel(), exec.Command("/bin/sh", "-c", escapeScript, "sh", theirsPID, "3"))
+	theirs, err := startGroup("theirs", newOwnerLabel(), exec.Command("/bin/sh", "-c", slowEscapeScript, "sh", theirsPID, "3"))
 	if err != nil {
 		t.Fatal(err)
 	}

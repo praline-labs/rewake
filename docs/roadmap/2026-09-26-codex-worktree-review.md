@@ -84,6 +84,12 @@ The harness interface gained `WorktreeRefusal(args)` ([code.md](../code.md)).
   empty text for the terminal's directory; the visitor's was satisfied by the
   registration, before the harness had started, so a mutant's rm took the directory and
   the visitor failed to start. Both now wait for the directory files of both halves.
+- After the branch was moved onto main, `TestACaseSweepLeavesItsNeighbourAlone` went red
+  there. Not the branch: the test raced the kernel on main too, 2 of 30 runs, since its
+  escaped descendant, a bare `sleep`, could die between the sweep's signal and its look.
+  The descendant now takes a fifth of a second to end
+  ([testing-pool.md](../testing-pool.md#owner-labels)); 0 of 180 runs, and 0 of 60
+  under `-race` with every core busy.
 
 ## What stays open
 
