@@ -37,7 +37,7 @@ func TestShimAnswersMatchTheInstalledSchema(t *testing.T) {
 			"the working thread/status/changed event matches ThreadStatusChangedNotification",
 			"the idle thread/status/changed event matches ThreadStatusChangedNotification",
 			"the fixture refuses every delivery the schema refuses",
-		}, steeringShapes...),
+		}, append(steeringShapes, lifecycleShapes...)...),
 		Deadline: 120 * time.Second,
 	})
 	iso := Isolate(t, c, binary)
@@ -117,6 +117,45 @@ func TestShimAnswersMatchTheInstalledSchema(t *testing.T) {
 	t.Setenv(sessionEpochEnv, "e2")
 	deliveriesAgainstTheSchema(c, bundle)
 	steeringAgainstTheSchema(c, bundle)
+	lifecycleAgainstTheSchema(c, bundle, peer)
+}
+
+// lifecycleShapes are the shape case's observations about the terminal's own
+// requests in the form of 0.157.1, which the client sends under shimTUIShape.
+var lifecycleShapes = []string{
+	"the 0.157.1 terminal's thread/start matches ThreadStartParams and the fixture serves it",
+	"the 0.157.1 terminal's thread/resume matches ThreadResumeParams and the fixture serves it",
+	"the thread/goal/get reply matches ThreadGoalGetResponse",
+}
+
+// lifecycleAgainstTheSchema checks the requests the client sends in the form of
+// 0.157.1 against the schema, so the form the fixture plays is one the server
+// takes, and the one reply the resume path added.
+func lifecycleAgainstTheSchema(c *Case, bundle *schemaBundle, peer *shimPeer) {
+	for i, resume := range []bool{false, true} {
+		method, params := terminalLifecycle("0.157.1", resume)
+		typeName := map[bool]string{false: "ThreadStartParams", true: "ThreadResumeParams"}[resume]
+		raw, err := json.Marshal(params)
+		if err != nil {
+			c.Contradicted(lifecycleShapes[i], "unreadable %s: %v", method, err)
+			continue
+		}
+		if problems := bundle.check(typeName, params); len(problems) > 0 {
+			c.Contradicted(lifecycleShapes[i], "%s", describe(problems))
+			continue
+		}
+		if _, _, err := (&shimSession{thread: shimThread}).answer(peer, method, raw); err != nil {
+			c.Contradicted(lifecycleShapes[i], "the fixture refused it: %v", err)
+			continue
+		}
+		c.Observed(lifecycleShapes[i], "matches "+typeName+" and is served")
+	}
+	reply, _, err := (&shimSession{thread: shimThread}).answer(peer, "thread/goal/get", []byte(`{"threadId":"`+shimThread+`"}`))
+	if err != nil {
+		c.Contradicted(lifecycleShapes[2], "the fixture refused a goal query: %v", err)
+		return
+	}
+	check(c, bundle, "ThreadGoalGetResponse", lifecycleShapes[2], reply)
 }
 
 // deliveriesAgainstTheSchema checks the fixture's own answer against the

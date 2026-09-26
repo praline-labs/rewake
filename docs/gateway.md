@@ -93,6 +93,12 @@ Native callback text is allowed only as live results; no transcript file is read
 ## Compatibility and limits
 
 Fresh startup and ordinary new/resume keep native arguments and configuration.
+The terminal's start and resume are recognized by what its own builder writes: the
+runtime roots or a permission profile, or — since Codex 0.157.1 sends the roots null
+in remote mode — a configuration whose `web_search` is one of the four modes, a resume
+by id then also with no history and no path. The request-id families and
+`threadSource: "user"` still gate each; a configuration merely present selects nothing
+([research-codex.md](research-codex.md#the-terminals-selection-on-01571)).
 The launcher owns the upstream socket (`.up`) and gateway socket for the run;
 startup initializes and closes a probe client without selecting any thread. The
 TUI uses the original socket path. Backend exit terminates the TUI, and cleanup

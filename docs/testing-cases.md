@@ -78,6 +78,16 @@ the Claude Code column only — the view reads files the same way whichever harn
 them: one blind to interim reports breaks the first observation alone, one that never
 lets a task go breaks both.
 
+`codex-tui-later-shape` runs on the Codex column with a main and two workers whose
+fixture terminal speaks the form of Codex 0.157.1 (`RW_SHIM_TUI_SHAPE`): its start and
+resume carry `runtimeWorkspaceRoots: null`, `permissions: null` and a configuration
+holding only `web_search`, the resume by id with `history` and `path` null. One worker
+starts fresh, the other resumes a conversation and then reads its goal, as the terminal
+does. main sends each a task, and each must report it `finished`: the gateway took the
+terminal's selection from its configuration. Its mutant, `roots-only-recognition`,
+restores the rule that asked for roots or permissions, and must break both observations
+([research-codex.md](research-codex.md#the-terminals-selection-on-01571)).
+
 ## Actions on a sent message
 
 `withdraw-after-notice`, `edit-after-notice` and `addendum-owed` run in both columns with a
@@ -170,6 +180,7 @@ switches have no single form in the code to find them by, and the row is kept by
 | claude-interrupted | `interrupt-unpublished`, `every-end-stopped`, `plugin-not-passed`, `stop-not-heard` | — |
 | claude-steered | `compact-not-run`, `in-turn-unmapped`, `interrupter-unnamed`, `line-repeated`, `idle-interrupt-done`, `silent-not-answering`, `any-role-steers`, `own-compaction-announced`, `letter-uncounted`, `waits-for-the-end`, `ended-uncounted`, `asker-untold`, `orphan-unlettered`, `stop-by-a-person` | — |
 | codex-steered | `busy-unchecked`, `codex-asker-untold`, `codex-waits-for-the-end`, `codex-outcome-unkept`, `codex-interrupter-unnamed`, `codex-idle-interrupt-done`, `focus-taken` | — |
+| codex-tui-later-shape | `roots-only-recognition` | — |
 | codex-compact-hold | `hold-ends-at-start`, `compaction-refusal-final`, `late-end-unrecorded`, `running-taken-for-an-outcome` | — |
 | stopped-routing | `stopped-to-main` | — |
 | withdraw-after-notice | `withdraw-leaves-task`, `withdraw-silent`, `recall-sender-first` | — |

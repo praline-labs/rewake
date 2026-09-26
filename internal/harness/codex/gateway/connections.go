@@ -139,7 +139,9 @@ func (g *Gateway) acquire(ctx context.Context) error {
 // overrides. Correlate that request with the last unambiguous closed owner; an
 // anchor alone never selects, subscribes, sends work or restores a result ledger.
 func (g *Gateway) reconnectIntent(c *connection, m meta) bool {
-	if m.method != "thread/resume" || !m.numeric || m.thread == "" || m.roots {
+	// An ordinary resume of the terminal's carries its roots or, from 0.157.1,
+	// its configuration (tuiConfig): only one carrying neither rejoins.
+	if m.method != "thread/resume" || !m.numeric || m.thread == "" || m.roots || m.tuiConfig {
 		return false
 	}
 	c.mu.Lock()

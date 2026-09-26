@@ -106,7 +106,10 @@ both work; `--help` lists flags and exit codes.
 2. **Green** means every message the fixture sends matches the schema that version
    generates, and the fixture accepts no delivery that schema refuses. It says nothing
    about behaviour — the same messages in a different order, a different moment of
-   readiness, a different answer to a refusal would all still be green.
+   readiness, a different answer to a refusal would all still be green. Codex 0.157.1
+   was green on the schema and still undeliverable: its terminal sent a field null
+   that the gateway recognized it by. So the fixture's terminal speaks each form a
+   version was seen to send (`RW_SHIM_TUI_SHAPE`), and the suite delivers through it.
 3. **Red on the schema case** names the message and the field: the version requires a
    field the fixture leaves out, dropped one it sends, or changed a type. Look at what
    changed in the schema before touching the adapter; the shim is fixed to match the
@@ -190,7 +193,11 @@ broken, cannot judge — and a record that is unreadable or empty is "cannot jud
 accepts what the harness refuses lets a scenario pass on a product the harness would
 reject. The Codex fixture builds every message through the constructors the schema case
 reads (`turnReply`, `turnStartedEvent`, `threadStatusChangedEvent` and their
-neighbours), so a message the scenarios send cannot escape the shape check.
+neighbours), so a message the scenarios send cannot escape the shape check. The
+requests its terminal sends go the other way: the 0.157.1 start and resume from
+`terminalLifecycle` must match the schema's `ThreadStartParams` and `ThreadResumeParams`
+and be served by the shim, and its answer to the resume's `thread/goal/get` must match
+`ThreadGoalGetResponse`.
 
 **A harness column** is a `column` value with its capabilities and a fixture; the
 scenarios do not change. What building the second one taught is in

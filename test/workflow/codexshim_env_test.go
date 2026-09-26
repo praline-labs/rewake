@@ -123,6 +123,11 @@ const (
 	// client chose, so that is where "the server answered about a different
 	// conversation" can be asked at all.
 	shimResume = "RW_SHIM_RESUME"
+	// shimTUIShape makes the client send its start or resume in the form a
+	// terminal of that version sends it, where the gateway recognizes the
+	// terminal differently: "0.157.1" leaves the workspace roots out and marks
+	// the request with the terminal's configuration (terminalLifecycle).
+	shimTUIShape = "RW_SHIM_TUI_SHAPE"
 
 	// sessionNameEnv and sessionEpochEnv are how the wrapper tells a harness
 	// which session it is running. Spelled out here rather than imported, like

@@ -9,7 +9,7 @@ import (
 // Duplicate routing fields could make first-key projection disagree with the
 // native parser's last-key choice. Reject them before forwarding either way.
 func uniqueControlFields(raw []byte) error {
-	for _, path := range [][]string{nil, {"params"}, {"result"}, {"result", "thread"}, {"result", "turn"}, {"params", "thread"}, {"params", "status"}, {"params", "turn"}, {"params", "item"}} {
+	for _, path := range [][]string{nil, {"params"}, {"result"}, {"result", "thread"}, {"result", "turn"}, {"params", "thread"}, {"params", "status"}, {"params", "turn"}, {"params", "item"}, {"params", "config"}} {
 		b := field(raw, path...)
 		if len(b) == 0 || b[0] != '{' {
 			continue
@@ -34,7 +34,8 @@ func uniqueControlFields(raw []byte) error {
 			i++
 			i = skipValue(b, i)
 			switch key {
-			case "id", "method", "params", "result", "error", "thread", "threadId", "turn", "turnId", "status", "type", "threadSource", "config", "runtimeWorkspaceRoots", "permissions", "canAcceptDirectInput", "includeTurns", "data", "nextCursor":
+			case "id", "method", "params", "result", "error", "thread", "threadId", "turn", "turnId", "status", "type", "threadSource", "config", "runtimeWorkspaceRoots", "permissions", "canAcceptDirectInput", "includeTurns", "data", "nextCursor",
+				"web_search", "history", "path", "excludeTurns":
 				if seen[key] {
 					return errors.New("duplicate routing field")
 				}

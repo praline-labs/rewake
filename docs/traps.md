@@ -257,6 +257,18 @@ compaction counted.
 
 *September 26, 2026.*
 
+### A Codex 0.157.1 terminal is never selected
+
+The session registers and the terminal works, but `rewake send` refuses with
+`delivery thread is unavailable: ... selected conversation is not ready`, after the
+first launch, `/new`, `/resume` and `codex resume <id>` alike. Codex 0.157.1 sends
+`runtimeWorkspaceRoots: null` in remote mode, and the gateway recognized the terminal's
+start and resume by those roots. Since September 26, 2026 its configuration's
+`web_search` marks them instead ([gateway.md](gateway.md#compatibility-and-limits)); a
+wrapper built before that day stays unavailable on 0.157.1 — run it on 0.155.1.
+
+*September 26, 2026.*
+
 ### After a new commit the running wrapper stays old
 
 An atomic installation replaces the file, not the live process. `rewake --version`

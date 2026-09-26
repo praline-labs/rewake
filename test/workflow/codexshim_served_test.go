@@ -48,6 +48,9 @@ type served struct {
 	required []string
 	// items is what every element of an array must look like.
 	items *served
+	// nullable says JSON null stands for the value left out, as the protocol's
+	// optional fields allow.
+	nullable bool
 	// text is a further condition on a string, beyond being a string. The
 	// protocol carries meanings a JSON kind cannot express — a workspace root
 	// is a path, and the server refuses a relative one — and a check that
@@ -109,6 +112,9 @@ var noticeShape = served{kind: "object", fields: map[string]served{
 // about an unnamed field several levels down helps nobody.
 func unserved(path string, raw json.RawMessage, want served) string {
 	kind := jsonKind(raw)
+	if kind == "null" && want.nullable {
+		return ""
+	}
 	if kind != want.kind {
 		return fmt.Sprintf("%s must be a %s, got %s", path, want.kind, describeKind(raw))
 	}
@@ -211,16 +217,34 @@ func unservedDelivery(params json.RawMessage, output string) string {
 }
 
 // startShape and resumeShape close the other request this fixture serves. The
-// nested object here is `config`: closed and empty, because the fixture serves
-// no setting at all, and an empty description would have left the same hole
-// the delivery path had — an object nobody looks inside.
+// nested object here is `config`, closed: an empty description would have left
+// the same hole the delivery path had — an object nobody looks inside. The one
+// setting served is web_search, which a terminal's builder writes into every
+// lifecycle request, and it takes the four modes only. The permissions,
+// and on a resume the history and the path, are served as left out, which is
+// all a terminal sends of them.
 var startShape = served{kind: "object", fields: map[string]served{
 	"threadSource":          {kind: "string"},
-	"config":                {kind: "object", fields: map[string]served{}},
-	"runtimeWorkspaceRoots": {kind: "array", items: &served{kind: "string", text: anAbsolutePath}},
+	"config":                {kind: "object", fields: map[string]served{"web_search": {kind: "string", text: aWebSearchMode}}},
+	"runtimeWorkspaceRoots": {kind: "array", nullable: true, items: &served{kind: "string", text: anAbsolutePath}},
+	"permissions":           {kind: "null"},
 }, required: []string{"threadSource"}}
 
-var resumeShape = served{kind: "object", fields: withField(startShape.fields, "threadId", served{kind: "string"})}
+var resumeShape = served{kind: "object", fields: withField(withField(withField(withField(startShape.fields,
+	"threadId", served{kind: "string"}), "history", served{kind: "null"}), "path", served{kind: "null"}),
+	"excludeTurns", served{kind: "boolean"})}
+
+// goalShape is thread/goal/get, which names its conversation and nothing else.
+var goalShape = served{kind: "object", fields: map[string]served{"threadId": {kind: "string"}}, required: []string{"threadId"}}
+
+// aWebSearchMode is what web_search may be (protocol/src/config_types.rs).
+var aWebSearchMode = &textRule{name: "a web_search mode", ok: func(value string) bool {
+	switch value {
+	case "disabled", "cached", "indexed", "live":
+		return true
+	}
+	return false
+}}
 
 // withField copies a field set and adds one, so the two descriptions cannot
 // drift apart by editing one of them.

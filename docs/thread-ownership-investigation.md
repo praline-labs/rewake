@@ -155,7 +155,8 @@ integer IDs, while dynamic/temporary helpers have separate prefixes
 (`tui/src/app_server_session.rs:1699–1717,2054–2161`;
 `tui/src/dynamic_tools.rs:638–648,1230–1236`;
 `tui/src/temporary_structured_request.rs:101,131,185`).
-Normal resume includes config and runtimeWorkspaceRoots; PreserveExistingThread
+Normal resume includes config and runtimeWorkspaceRoots (the roots null in remote
+mode since 0.157.1, [research-codex.md](research-codex.md#the-terminals-selection-on-01571)); PreserveExistingThread
 starts mostly with defaults, but later MCP configuration can add config. Config
 presence alone is therefore not a primary-intent classifier. These implementation
 conventions require supported-binary validation, not just a matching version string.

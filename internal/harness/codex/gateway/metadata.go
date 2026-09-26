@@ -130,6 +130,9 @@ type meta struct {
 	method, id, idText, thread, status, turn, source     string
 	numeric, config, roots, direct, directKnown, failure bool
 	includeTurnsKnown, includeTurns                      bool
+	// tuiConfig and byID are the shape of the terminal's own lifecycle
+	// requests where the workspace roots no longer mark them (tuiConfig).
+	tuiConfig, byID bool
 }
 
 func project(raw []byte) (meta, error) {
@@ -170,6 +173,8 @@ func project(raw []byte) (meta, error) {
 	m.config = present(raw, "params", "config")
 	m.roots = present(raw, "params", "runtimeWorkspaceRoots")
 	m.permissions = present(raw, "params", "permissions")
+	m.tuiConfig = tuiConfig(raw)
+	m.byID = !present(raw, "params", "history") && !present(raw, "params", "path")
 	m.source = str(raw, "params", "threadSource")
 	m.status = str(raw, "params", "status", "type")
 	m.turn = str(raw, "params", "turnId")
@@ -201,4 +206,27 @@ func project(raw []byte) (meta, error) {
 		}
 	}
 	return m, nil
+}
+
+// tuiConfig says a request carries the configuration the terminal's own builder
+// writes into every start, resume and fork it sends: an object holding
+// web_search, a string of the four modes, beside whatever else the launch set.
+// Until 0.155.1 the workspace roots marked those requests; a remote terminal of
+// 0.157.1 sends none, and the permissions are absent on both. So this is what
+// is left to tell the terminal's selection from anything else — a version's
+// habit, read in its source (tui/src/app_server_session.rs,
+// config_request_overrides_from_config), not a promise of the protocol. A
+// configuration that is merely present is not it: a helper's or a reconnect's
+// carries none or an empty one. The helpers' ids are refused apart, since some
+// of them are built from the same configuration.
+func tuiConfig(raw []byte) bool {
+	config := field(raw, "params", "config")
+	if len(config) == 0 || config[0] != '{' {
+		return false
+	}
+	switch str(config, "web_search") {
+	case "disabled", "cached", "indexed", "live":
+		return true
+	}
+	return false
 }

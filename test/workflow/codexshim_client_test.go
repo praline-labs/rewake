@@ -94,20 +94,7 @@ func shimClient(socket string) int {
 	if err := ws.writeJSON(map[string]any{"method": "initialized", "params": map[string]any{}}); err != nil {
 		return 5
 	}
-	// What makes the request recognizable to the gateway: a numeric id,
-	// threadSource "user", and workspace roots. The conversation id is not
-	// sent — a new conversation is named by the server, and the client learns
-	// it from the reply.
-	method := "thread/start"
-	params := map[string]any{
-		"threadSource":          "user",
-		"config":                map[string]any{},
-		"runtimeWorkspaceRoots": []string{"/work"},
-	}
-	if os.Getenv(shimResume) != "" {
-		method = "thread/resume"
-		params["threadId"] = shimThread
-	}
+	method, params := terminalLifecycle(os.Getenv(shimTUIShape), os.Getenv(shimResume) != "")
 	var reply struct {
 		Thread struct {
 			ID string `json:"id"`
@@ -119,6 +106,13 @@ func shimClient(socket string) int {
 		// reported readiness. Leaving here would end the session instead, and
 		// the control would be watching an absence caused by the shim.
 		fmt.Fprintf(os.Stderr, "shim: %v\n", err)
+	} else if method == "thread/resume" {
+		// The terminal asks for the goal once a resume has loaded its history,
+		// on both versions the probe recorded; the gateway takes the resume's
+		// reads as over only then, and holds deliveries until it.
+		if err := call(3, "thread/goal/get", map[string]any{"threadId": reply.Thread.ID}, nil); err != nil {
+			fmt.Fprintf(os.Stderr, "shim: %v\n", err)
+		}
 	}
 	// The accepted conversation is whatever came back, and the scenario
 	// compares telemetry against that rather than against a guess.
@@ -130,6 +124,39 @@ func shimClient(socket string) int {
 		return code
 	}
 	return shimReportState()
+}
+
+// terminalLifecycle is the start or resume the client sends, in the form of
+// the terminal version named, or of 0.155.1 when none is. What makes it
+// recognizable to the gateway: a numeric id, threadSource "user" on a start,
+// and the workspace roots — or, from 0.157.1, which sends no roots, the
+// terminal's configuration with its web_search mode, and on a resume the
+// history and the path left null, as the live probe of September 26, 2026
+// recorded them (docs/research-codex.md). The conversation id is not sent on
+// a start: a new conversation is named by the server, and the client learns
+// it from the reply.
+func terminalLifecycle(shape string, resume bool) (string, map[string]any) {
+	params := map[string]any{
+		"threadSource":          "user",
+		"config":                map[string]any{},
+		"runtimeWorkspaceRoots": []string{"/work"},
+	}
+	if shape == "0.157.1" {
+		params["runtimeWorkspaceRoots"] = nil
+		params["permissions"] = nil
+		params["config"] = map[string]any{"web_search": "cached"}
+	}
+	if !resume {
+		return "thread/start", params
+	}
+	params["threadId"] = shimThread
+	if shape == "0.157.1" {
+		delete(params, "threadSource")
+		params["history"] = nil
+		params["path"] = nil
+		params["excludeTurns"] = true
+	}
+	return "thread/resume", params
 }
 
 // shimReportState keeps the session alive and writes what `rewake list` says

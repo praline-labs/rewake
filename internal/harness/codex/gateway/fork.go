@@ -14,7 +14,9 @@ type forkSelection struct {
 }
 
 func forkIntent(m meta) bool {
-	return m.method == "thread/fork" && m.numeric && m.source == "user" && m.thread != "" && m.config && (m.roots || m.permissions)
+	// The terminal's fork carries its configuration as its start and resume do
+	// (tuiConfig); read in the source of 0.157.1, not seen live.
+	return m.method == "thread/fork" && m.numeric && m.source == "user" && m.thread != "" && m.config && (m.roots || m.permissions || m.tuiConfig)
 }
 
 func (g *Gateway) startupForkIntent(c *connection, m meta) bool {

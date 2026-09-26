@@ -73,12 +73,19 @@ func isHelper(m meta) bool {
 	return strings.HasPrefix(m.idText, "tui-dynamic-") || strings.HasPrefix(m.idText, "temporary-")
 }
 
+// recognized says a lifecycle request is the terminal's own selection. The
+// roots or the permissions marked it until 0.155.1; 0.157.1 sends neither, and
+// its terminal's configuration marks it instead (tuiConfig) — for a resume
+// only in the shape of a resume by id, the history and the path left out, as
+// the terminal sends one. A resume carrying the configuration's defaults only
+// is the terminal rejoining a thread, for a reconnect or to attach a helper:
+// that is a selection only as the reconnect a gateway correlated (m.reconnect).
 func recognized(m meta) bool {
 	switch m.method {
 	case "thread/start":
-		return (m.numeric || strings.HasPrefix(m.idText, "startup-thread-start-")) && m.source == "user" && (m.roots || m.permissions)
+		return (m.numeric || strings.HasPrefix(m.idText, "startup-thread-start-")) && m.source == "user" && (m.roots || m.permissions || m.tuiConfig)
 	case "thread/resume":
-		return m.numeric && m.thread != "" && ((m.roots || m.permissions) && m.config || m.reconnect)
+		return m.numeric && m.thread != "" && ((m.roots || m.permissions) && m.config || m.tuiConfig && m.byID || m.reconnect)
 	}
 	return false
 }

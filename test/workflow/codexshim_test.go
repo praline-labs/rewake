@@ -229,6 +229,17 @@ func (s *shimSession) answer(peer *shimPeer, method string, params json.RawMessa
 			return nil, nil, fmt.Errorf("no such thread %q", asked)
 		}
 		return map[string]any{"thread": s.threadDescription(asked)}, nil, nil
+	case "thread/goal/get":
+		// The terminal asks for the goal once a resume has loaded its
+		// history, and the gateway takes that for the end of the resume's
+		// reads. This fixture keeps no goal.
+		if wrong := unserved("thread/goal/get", params, goalShape); wrong != "" {
+			return nil, nil, errors.New(wrong)
+		}
+		if asked := threadOf(params); asked != s.thread {
+			return nil, nil, fmt.Errorf("no such thread %q", asked)
+		}
+		return map[string]any{"goal": nil}, nil, nil
 	case "thread/unsubscribe", "thread/settings/update", "thread/metadata/update":
 		// Not implemented, so refused. An unconditional success for a method
 		// whose contract this shim does not model is the same invention as

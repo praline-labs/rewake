@@ -213,3 +213,63 @@ The fix of the same day ([2026-09-26-codex-compact-hold.md](roadmap/2026-09-26-c
 holds a compaction seen running up to 10 minutes, takes this refusal for a wait, and
 reports a compaction outliving the wait by its end.
 
+
+### The terminal's selection on 0.157.1
+
+**[verified live; Codex CLI 0.155.1 and 0.157.1; September 26, 2026]** A rewake build of
+e3a90cf ran real terminals and app-servers of both versions in disposable containers
+with networking disabled, each probe with its own HOME, CODEX_HOME and REWAKE_DIR. No
+model call reached a provider: the 0.155.1 control accepted a mailbox turn, which was
+interrupted without a model response.
+
+- **0.157.1 was never selected.** Startup and `/new` created threads the server
+  answered writable (`canAcceptDirectInput: true`); `/resume` of a persisted
+  conversation in the same process and a separate `codex resume <id>` launch got
+  successful native replies too. The gateway stayed unavailable on all four, and a
+  delivery failed with `delivery thread is unavailable: context deadline exceeded:
+  selected conversation is not ready; wait for native resume to finish or select
+  /resume or /new`. The 0.155.1 control selected and delivered after every path.
+- **What changed is `runtimeWorkspaceRoots`**: 0.155.1 sends an array on these
+  requests, 0.157.1 sends null; `permissions` was null on both. The gateway of that
+  day asked for one of the two ([gateway.md](gateway.md#compatibility-and-limits)).
+- **The request forms, 0.157.1.** Startup keeps a `startup-thread-start-<uuid>` id;
+  `/new` a numeric id and `threadSource: "user"`. An ordinary resume has a numeric id,
+  `threadId`, `history: null`, `path: null`, `excludeTurns: true` and no
+  `threadSource`. Every one of them carries a `config` object holding
+  `web_search: "cached"`; 0.155.1 sends the same key, beside a personality.
+- **The reads did not change**: numeric metadata reads before an explicit resume, UUID
+  metadata reads refreshing the overview, and after an in-process resume a numeric
+  loaded list, one numeric metadata read for each other loaded thread, and a numeric
+  `thread/goal/get`. `includeTurns` was left out of those reads.
+- **An empty new conversation cannot be resumed**: it has no rollout, and the resume
+  failed natively with `no rollout found for thread id ...`. The successful 0.157.1
+  resumes reused a private conversation the offline 0.155.1 control had persisted; no
+  personal session or transcript was used.
+
+**[source; release tags rust-v0.155.1 and rust-v0.157.1]**
+
+- The ordinary builder of the terminal's configuration overrides
+  (`config_request_overrides_from_config`, `tui/src/app_server_session.rs:1795` in
+  0.157.1) always writes `web_search`, one of `disabled`, `cached`, `indexed` and
+  `live` (`protocol/src/config_types.rs:376`); start, resume and fork all take it. In
+  remote mode the roots are not sent: `workspace_roots_from_config` answers none.
+- `excludeTurns` is true on the paginated resume; a legacy history makes it false, and
+  the serializer then leaves it out (`rollout_history.rs:161`, protocol
+  `v2/thread.rs:424`). Requiring it would refuse a valid resume.
+- The temporary and dynamic helpers use the same builder and keep their own request-id
+  prefixes, `temporary-` and `tui-dynamic-`.
+- `PreserveExistingThread` builds a resume of defaults only (`:2065`), not with the
+  ordinary builder; `resume_thread` then lets the terminal's tool transport add its
+  own server to the configuration (`rollout_history.rs:157`, the key
+  `mcp_servers.codex_tui` at `:248`). The transport itself is outside the two trees.
+  This resume also attaches subagents and refreshes a cached snapshot
+  (`app/session_lifecycle.rs:364`, `app/thread_routing.rs:1662`), so a resume of
+  defaults is no selection by itself.
+
+The same day the gateway took the configuration as the terminal's mark
+([roadmap](roadmap/2026-09-26-codex-0157-recognition.md)). The five recorded paths are
+kept projected — the lifecycle requests with their parameters, the replies' routing
+fields — in `internal/harness/codex/gateway/testdata/tui-paths`, and replayed through a
+real gateway: each selects what the terminal selected, on both versions. A fork and a
+`PreserveExistingThread` resume of 0.157.1 were not driven live; the rules for them rest
+on the source above.
