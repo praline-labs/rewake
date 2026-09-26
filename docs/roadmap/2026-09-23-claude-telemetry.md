@@ -38,7 +38,7 @@ decisions of the day are in [claude-telemetry.md](../claude-telemetry.md).
 workflow case `claude-telemetry` runs a main and a worker on the Claude Code column and
 reads the worker's telemetry from the main's `rewake list`, its header and the
 compaction notice, with budgets on the hook and the tap and three mutant controls
-([testing.md](../testing.md#claude-code-telemetry-budgets)).
+([testing-cases.md](../testing-cases.md#claude-code-telemetry-budgets)).
 
 **Observed live.** September 23, 2026, Claude Code 2.1.280, rewake built from
 `d975dd7`: a main's `rewake list` showed model, effort, context, compactions and

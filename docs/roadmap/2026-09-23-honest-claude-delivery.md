@@ -70,7 +70,7 @@ order, a late word, the opening — for receipt parsing, for the held states in 
 server, and for `send` and `--question` on a held or failed message. The workflow case
 `claude-inbound` on the Claude Code column, with a fixture that holds, releases, expires
 and refuses as the binary does, and reports a hold late, and six product mutants
-([testing.md](../testing.md#claude-code-telemetry-budgets)). Three paths are covered by
+([testing-cases.md](../testing-cases.md#claude-code-telemetry-budgets)). Three paths are covered by
 unit tests alone, on purpose: the session's end failing what it holds, a `--question`
 stopping on `failed`, and a held message the agent reads anyway. Each is decided in one
 function with no harness in it — the inbox server's shutdown, the question's status

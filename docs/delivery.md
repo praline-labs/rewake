@@ -35,11 +35,14 @@ a short notice and preview rather than the full body.
    mid-turn is not the end of the turn.
 4. Write `inbox/<name>/<id>.json.tmp`, rename it to `.json`.
 5. Wait for `.status` up to `--wait` (5 seconds by default) and print the
-   result. `delivered` means the notice went out; `read` counts as delivered.
+   result, then `id <id>` on a line of its own unless the send failed: the id is what
+   `withdraw`, `edit` and `--to` take ([delivery-sent.md](delivery-sent.md)).
+   `delivered` means the notice went out; `read` counts as delivered.
    `held` is not an answer yet and the wait goes on through it: a release or an
    expiry usually follows within the wait. A message still `held` when the wait
    ends prints `Rewake: held for <name>: <why>` and exits 3, like `pending` — accepted,
-   not delivered. A question then waits for its answer (below), and stops
+   not delivered. A question prints `id <id>` first and then waits for its answer
+   (below), so the id is at hand for an edit or an addendum while it waits; it stops
    waiting, with exit 1, if its own status turns `failed` meanwhile: a hold that
    expired or a session that ended means no answer is coming.
 
@@ -105,7 +108,10 @@ what delivery did, reading, and reporting a turn. The call into the harness is
 not under it — an RPC can take seconds — so a message can be read while
 its notice is on the way. For that, `read` is final: whatever the harness says
 afterwards, the status stays `read` and the message is not linked or announced
-again. The Codex sandbox allows `flock` on files in `/tmp`.
+again. A withdrawal is final the same way: `failed` with `withdrawn: true` stays
+what it is whatever the notice's outcome turns out to be
+([delivery-sent.md](delivery-sent.md#withdraw-rewake-withdraw-id)). The Codex sandbox
+allows `flock` on files in `/tmp`.
 
 No wait for the lock is endless: a reader holds it while it prints, and its
 stdout can block for as long as nobody drains the pipe. The server waits while
@@ -229,7 +235,9 @@ the same reading `Owed` gives an unknown kind — and go at once, taking any wai
 along in their notice: a waiting worker is not slowed, and a task arriving behind waiting
 notes cuts their wait short. A report a waiting `send --question` reserved as its answer
 does not wait either: it is linked for that send, not announced, and holding it would
-hold the send.
+hold the send. Nor does the note a withdrawal sends when the withdrawn message's notice
+may have gone out (`recall`, [delivery-sent.md](delivery-sent.md)): it is there to stop
+work a preview began, and the window would be time spent on that work.
 
 The window lives in the recipient's wrapper, in the mailbox server both harnesses share:
 the Claude Code socket line and the Codex gateway call are made after it, so both get
@@ -244,7 +252,12 @@ it sets `Window`; the wrapper sets `inbox.Coalescing`. A build may shorten that 
 through `-ldflags -X` on `builtQuiet` and `builtCap`, and the workflow suite's does
 ([testing-pool.md](testing-pool.md#waits-the-suite-shortens)); a release build sets neither.
 A multi-message signal says `Rewake: <n> new messages`, followed by one indented
-first-line preview of its latest member with sender and kind. Usage instructions
+first-line preview of its latest member with sender and kind. A correcting letter — a
+recall, the note that tells the recipient not to act on a withdrawn message, or an
+edit's replacement, which previews as `Replaces <short id> (withdrawn): <first line>` —
+is never that latest member: each one in the notice gets an indented line of its own,
+before the preview, oldest first, and a single one is shown the same way when its notice
+previews a newer unread letter ([delivery-sent.md](delivery-sent.md)). Usage instructions
 remain in guide/help and briefing, outside the notification itself. Old accepted
 unread messages are not announced again. The [grouped inbox contract](inbox-groups.md)
 describes readiness, fixed membership, destination reservation and native ACK limits.
@@ -287,6 +300,12 @@ Two readers at once are serialized: the second finds nothing new.
 What a session has read and still owes a report on, shown again with `rewake inbox
 --owed`, and the sender's side — what a run sent and still waits on, with `rewake inbox
 --awaited` — are in [delivery-owed.md](delivery-owed.md).
+
+### Actions on a sent message
+
+Withdrawing a message nobody has read, replacing its text, and adding to a task
+under way — `rewake withdraw`, `rewake edit`, `rewake send --to` — are in
+[delivery-sent.md](delivery-sent.md).
 
 ### The end of a turn
 

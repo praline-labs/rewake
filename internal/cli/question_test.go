@@ -3,6 +3,7 @@ package cli
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -52,6 +53,8 @@ func TestAQuestionPrintsTheAnswer(t *testing.T) {
 	}
 }
 
+var idThenNoAnswer = regexp.MustCompile(`^id \S+\nRewake: no answer from api yet; it arrives later as its report\n$`)
+
 // Without an answer in time the question stays open, and says how the answer
 // will arrive.
 func TestAnUnansweredQuestionStaysOpen(t *testing.T) {
@@ -61,7 +64,8 @@ func TestAnUnansweredQuestionStaysOpen(t *testing.T) {
 	t.Setenv(epochEnv, web.Epoch())
 
 	code, out, _ := run("send", "api", "which port?", "--question", "--wait", "0.5")
-	if code != ExitPending || out != "Rewake: no answer from api yet; it arrives later as its report\n" {
+	// The id comes first, before the wait: an edit or an addendum takes it.
+	if code != ExitPending || !idThenNoAnswer.MatchString(out) {
 		t.Errorf("exit = %d, out = %q; want pending with how the answer will come", code, out)
 	}
 	waiting, _ := filepath.Glob(filepath.Join(state.InboxPath(dir, "api"), "*.json"))

@@ -77,6 +77,17 @@ func (s *shimSession) recordSteer(turn, messageID string) {
 	s.recordTurnEvent("steered", turn, messageID)
 }
 
+// recordRecalls writes down each member of a delivery that recalls another
+// message, with the turn it reached and the message it names: whether a recall
+// stopped work in progress is a question of which turn it came into.
+func (s *shimSession) recordRecalls(turn string, notice mailboxNotice) {
+	for _, member := range notice.Members {
+		if member.Recalls != "" {
+			s.recordTurnEvent("recall", turn, member.ID+" "+member.Recalls)
+		}
+	}
+}
+
 // turnEventMark opens every structured line of the turn log. The older
 // free-text lines stay beside these — other scenarios read them — so the two
 // have to be told apart, and the mark is what does it. Separating them by the

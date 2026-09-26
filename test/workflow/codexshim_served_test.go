@@ -96,6 +96,10 @@ var noticeShape = served{kind: "object", fields: map[string]served{
 		"fromEpoch": {kind: "string"},
 		"to":        {kind: "string"},
 		"toEpoch":   {kind: "string"},
+		// Only on a recall: the message it tells the session not to act on.
+		"recalls": {kind: "string"},
+		// Only on a replacement sent by rewake edit: the message it replaces.
+		"replaces": {kind: "string"},
 	}, required: []string{"id", "from", "fromEpoch", "to", "toEpoch"}}},
 }, required: []string{"notice", "members"}}
 

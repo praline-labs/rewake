@@ -88,19 +88,32 @@ func Awaited(dir, name, epoch string, runOf func(recipient, run string) Recipien
 				wait = waiterFor(dir, recipient, run, name, epoch)
 				waits[run] = wait
 			}
-			item, settled := stageOf(dir, message, reports[message.ID])
-			if settled {
-				continue
+			if item, settled := placed(dir, message, reports[message.ID], wait, runOf); !settled {
+				awaited = append(awaited, item)
 			}
-			item.Run = runOf(recipient, run)
-			if item.read() && !slices.Contains(wait.Messages, message.ID) && recordKept(dir, recipient, run, item.Run) {
-				continue
-			}
-			awaited = append(awaited, item)
 		}
 	}
 	sort.SliceStable(awaited, func(i, j int) bool { return awaited[i].ID < awaited[j].ID })
 	return awaited
+}
+
+// AwaitedOne places one message this run sent, as Awaited would: where it
+// stands, or that a report has settled it.
+func AwaitedOne(dir, name, epoch string, message Message, runOf func(recipient, run string) RecipientRun) (AwaitedMessage, bool) {
+	wait := waiterFor(dir, message.To, message.ToEpoch, name, epoch)
+	return placed(dir, message, reportsTo(dir, name, epoch)[message.ID], wait, runOf)
+}
+
+func placed(dir string, message Message, reports []Message, wait Waiter, runOf func(recipient, run string) RecipientRun) (AwaitedMessage, bool) {
+	item, settled := stageOf(dir, message, reports)
+	if settled {
+		return item, true
+	}
+	item.Run = runOf(message.To, message.ToEpoch)
+	if item.read() && !slices.Contains(wait.Messages, message.ID) && recordKept(dir, message.To, message.ToEpoch, item.Run) {
+		return item, true
+	}
+	return item, false
 }
 
 // recordKept says whether the recipient run's wait records can still be

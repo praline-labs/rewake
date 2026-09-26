@@ -17,4 +17,10 @@ type MailboxMember struct {
 	FromEpoch string `json:"fromEpoch"`
 	To        string `json:"to"`
 	ToEpoch   string `json:"toEpoch"`
+	// Recalls is the id of the message a recall tells the recipient not to
+	// act on: the recall's own id names only the note.
+	Recalls string `json:"recalls,omitempty"`
+	// Replaces is the id of the message a replacement sent by rewake edit
+	// took the place of; the notice names it only by its short form.
+	Replaces string `json:"replaces,omitempty"`
 }

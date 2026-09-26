@@ -124,6 +124,13 @@ session's shell, or from a person's shell in the same room. A shell without
    or `Rewake: failed for write-codex: …` (exit 1). A task or a question is announced
    at once; a `--notify` waits up to four seconds for company (Act 3), and the send
    waits with it — inside its five, so it still answers delivered.
+6. **The id.** Unless the send failed, a second line gives the message's id,
+   `id <id>`. It is how the sender acts on the message later, while it is its own
+   run: `rewake withdraw <id>` takes it back unread, leaving a withdrawn note under
+   the same id where a notice went out; `rewake edit <id> "..."` does that and sends
+   the new text as a new letter; `rewake send write-codex "..." --to <id>` adds to the
+   task, and one report settles both. A short tail of the id is enough
+   ([delivery-sent.md](delivery-sent.md)).
 
 ## Act 3. The wrapper announces it
 
@@ -142,7 +149,9 @@ in one notice. A task or a question does not wait, and takes whatever is waiting
    notice goes out.
 2. **The notice.** A single member uses `Rewake: lead-claude task, 1 new message`
    and its first-line preview. A group uses `Rewake: <n> new messages` and one bounded
-   indented preview of its latest member, including sender and kind. The count covers exactly this group, not older accepted
+   indented preview of its latest member, including sender and kind; every correcting letter
+   in the group — a recall or an edit's replacement — gets a line of its own before it
+   ([delivery-sent.md](delivery-sent.md)). The count covers exactly this group, not older accepted
    unread mail or later arrivals. Messages arriving during destination acquisition join the group.
 3. **The adapter**, outside the lock because it can take seconds:
    - Claude Code: connect to the session's socket and write one JSON line
@@ -383,7 +392,7 @@ question returns the failure directly. Callback availability is a harness
 boundary; rewake never infers a cause from missing callbacks or reads rollouts.
 
 Notifications show the latest available letter's first line beneath the header,
-prefixed by an indented ↳. They never substitute the preview for inbox content.
+prefixed by an indented ↳, and each recall or replacement on a line of its own before it. They never substitute the preview for inbox content.
 Empty first lines stay empty; long ones are clipped with an ellipsis to about
 100 columns. Errors use failed/red status; keyboard stops use killed/yellow. Active question reservations
 are excluded from ordinary counts and previews.

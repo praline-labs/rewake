@@ -126,7 +126,12 @@ func mailboxNotice(message inbox.Message) gateway.MailboxNotice {
 	}
 	notice := gateway.MailboxNotice{Notice: noticePrefix(message) + " " + harness.Notice(message)}
 	for _, member := range members {
-		notice.Members = append(notice.Members, gateway.MailboxMember{ID: member.ID, From: member.From, FromEpoch: member.FromEpoch, To: member.To, ToEpoch: member.ToEpoch})
+		entry := gateway.MailboxMember{ID: member.ID, From: member.From, FromEpoch: member.FromEpoch, To: member.To, ToEpoch: member.ToEpoch}
+		if member.Recall != nil {
+			entry.Recalls = member.Recall.ID
+		}
+		entry.Replaces = member.Replaces
+		notice.Members = append(notice.Members, entry)
 	}
 	return notice
 }

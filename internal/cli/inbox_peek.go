@@ -56,6 +56,11 @@ type messagePreview struct {
 	CreatedAt time.Time              `json:"createdAt"`
 	Preview   string                 `json:"preview"`
 	Telemetry *sessionstate.Snapshot `json:"telemetry,omitempty"`
+	// AddendumTo and Replaces link a letter to the one it belongs with, as
+	// the heading of a plain read does.
+	AddendumTo string `json:"addendumTo,omitempty"`
+	Replaces   string `json:"replaces,omitempty"`
+	relation   string
 }
 
 type inboxPeekModel struct {
@@ -66,7 +71,10 @@ type inboxPeekModel struct {
 func writeInboxPeek(ctx *Context, name string, messages []messageView) error {
 	model := inboxPeekModel{Session: name, Messages: make([]messagePreview, 0, len(messages))}
 	for _, message := range messages {
-		model.Messages = append(model.Messages, messagePreview{ID: message.ID, From: message.From, Kind: inbox.KindOf(message.Message), CreatedAt: message.CreatedAt, Preview: harness.Preview(message.Text), Telemetry: message.Telemetry})
+		model.Messages = append(model.Messages, messagePreview{
+			ID: message.ID, From: message.From, Kind: inbox.KindOf(message.Message), CreatedAt: message.CreatedAt, Preview: harness.Preview(message.Text), Telemetry: message.Telemetry,
+			AddendumTo: message.AddendumTo, Replaces: message.Replaces, relation: relation(message.Message),
+		})
 	}
 	return printValue(ctx, model, func() []string {
 		if len(model.Messages) == 0 {
@@ -81,7 +89,7 @@ func writeInboxPeek(ctx *Context, name string, messages []messageView) error {
 			if message.Telemetry != nil {
 				lines = append(lines, stateLine(message.From, message.Telemetry, false))
 			}
-			lines = append(lines, fmt.Sprintf("%s · %s · %s · %s · %s", message.ID, message.From, message.Kind, message.CreatedAt.Local().Format("2006-01-02 15:04:05"), message.Preview))
+			lines = append(lines, fmt.Sprintf("%s · %s · %s · %s%s · %s", message.ID, message.From, message.Kind, message.CreatedAt.Local().Format("2006-01-02 15:04:05"), message.relation, message.Preview))
 		}
 		return lines
 	})

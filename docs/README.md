@@ -47,6 +47,11 @@ everything else.
   `rewake inbox --awaited`, what a run sent
   and still waits on, with the table of states and when a missing wait record means
   answered. Open it after a context compaction or when a listed state is in question.
+- [delivery-sent.md](delivery-sent.md) — what a sender can still do with a message it
+  sent: `rewake withdraw` while unread, with the tombstone and why withdrawn is final
+  like read, `rewake edit` as a withdrawal plus a new letter, and `rewake send --to` for
+  an addendum; who may act and which id forms are taken. Open it when a withdrawn,
+  replaced or added-to message is in question.
 - [delivery-adapters.md](delivery-adapters.md) — how a notice reaches each harness: the
   Claude Code socket line, its reply socket and receipts, held and late words, the startup
   gate and what a killed wrapper leaves behind; and the Codex gateway in brief. Open it
@@ -204,6 +209,12 @@ everything else.
   and a red case's evidence, how to add a scenario, a control or a column, and the traps
   already paid for. Open it first for anything about tests; the documents below are the
   depth behind it.
+- [testing-cases.md](testing-cases.md) — what each end-to-end case claims, with its
+  sessions, what the fixture plays and its controls: the Claude Code telemetry budgets
+  and their measurement, launching through a wrapper, pending and owed reports, the
+  awaited view, withdrawing, editing and adding to a sent message, a changed
+  conversation, and the inbound gate. Open it before changing one of those cases or the
+  behaviour it guards.
 - [testing-plugin.md](testing-plugin.md) — the workflow cases that run rewake's
   function-hooks plugin under node: how the fixture hosts the module and answers its
   calls on the session, and what `claude-interrupted`, `stopped-routing` and
@@ -289,7 +300,7 @@ the newer document says so.
 - [work-queue.md](work-queue.md) — what comes next, in the owner's order: the rest of the
   workflow suite, the arrival-row check on the suite, a named harness version against a
   local responder, a two-way channel for Claude Code, the rest of stage 2 of the plugin
-  and a focus for a Codex compaction, actions on a sent message, the parity queue, and
+  and a focus for a Codex compaction, the parity queue, and
   what is queued without a date. Open it to pick the next piece of work.
 - [roadmap/README.md](roadmap/README.md) — what is done: the index of the roadmap, one
   file per closed milestone, review round or piece of work, named

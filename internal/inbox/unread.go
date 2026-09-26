@@ -66,10 +66,24 @@ func PeekUnread(dir, name, epoch string) ([]Message, error) {
 	mine := make([]Message, 0, len(messages))
 	for _, message := range messages {
 		if epoch == "" || message.ToEpoch == epoch {
-			mine = append(mine, message)
+			mine = append(mine, asWithdrawn(dir, name, message))
 		}
 	}
 	return mine, nil
+}
+
+// asWithdrawn shows a message its status calls withdrawn as its tombstone. A
+// withdrawal writes the status before the tombstone, and one that failed in
+// between leaves the original readable by hard link: its sender was told it
+// failed, but the text must not reach the reader as work all the same.
+func asWithdrawn(dir, name string, message Message) Message {
+	if message.Withdrawn != nil {
+		return message
+	}
+	if status, ok := ReadStatus(dir, name, message.ID); ok && status.Withdrawn {
+		return tombstoneOf(message, "")
+	}
+	return message
 }
 
 // MarkRead records that this run of the session has read a message. The caller
@@ -86,26 +100,55 @@ func MarkRead(dir, name, epoch string, message Message, reports bool) error {
 	// this is a retry of a read whose last step failed: the waiter was recorded
 	// then, and may have been reported to since. Recording it again owed a
 	// second report for one message.
-	retry := false
-	if status, ok := ReadStatus(dir, name, message.ID); ok && status.State == Read {
-		retry = true
-	}
+	status, known := ReadStatus(dir, name, message.ID)
+	retry := known && status.State == Read
+	// Withdrawn is final like read, whatever copy the caller holds: a
+	// withdrawal that failed after its status leaves the original in unread/,
+	// and reading it must neither owe a report nor write read over the status
+	// its sender, and a second withdraw, go on reading.
+	withdrawn := message.Withdrawn != nil || known && status.Withdrawn
 	// A note or a report owes nothing, and a sender without a run of its own —
 	// a shell, or mail from before runs were recorded — has nowhere a report
 	// could go.
-	if reports && !retry && Owed(message) {
+	if reports && !retry && !withdrawn && Owed(message) {
 		if err := markScopedAwaiting(dir, name, epoch, message); err != nil {
 			return err
 		}
 	}
-	if err := writeStatus(dir, name, message.ID, Result{State: Read}); err != nil {
-		return err
+	if !withdrawn {
+		if err := writeStatus(dir, name, message.ID, Result{State: Read}); err != nil {
+			return err
+		}
+	}
+	if withdrawn && !tombstoneIn(state.UnreadPath(dir, name), message.ID) {
+		// What is kept is what was read: the tombstone, not the original.
+		return archiveTombstone(dir, name, tombstoneOf(message, ""))
 	}
 	err := move(message.ID, state.UnreadPath(dir, name), state.DonePath(dir, name))
 	if errors.Is(err, os.ErrNotExist) {
 		return nil
 	}
 	return err
+}
+
+// archiveTombstone keeps a tombstone in done/ in place of the original a
+// half-done withdrawal left in unread/.
+func archiveTombstone(dir, name string, stone Message) error {
+	encoded, err := json.MarshalIndent(stone, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := state.EnsureSubdir(state.DonePath(dir, name)); err != nil {
+		return err
+	}
+	if err := state.WriteAtomic(filepath.Join(state.DonePath(dir, name), stone.ID+".json"), append(encoded, '\n')); err != nil {
+		return err
+	}
+	if err := os.Remove(filepath.Join(state.UnreadPath(dir, name), stone.ID+".json")); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	_ = state.SyncDir(state.UnreadPath(dir, name))
+	return nil
 }
 
 // move renames a message file between two directories of one mailbox.

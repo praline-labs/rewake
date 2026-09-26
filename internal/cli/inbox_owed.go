@@ -89,7 +89,7 @@ func owedLines(messages []owedView) []string {
 		noun = "message"
 	}
 	lines := []string{fmt.Sprintf("Rewake: owed a report for %d %s:", len(messages), noun)}
-	for _, message := range messages {
+	for _, message := range nestAddenda(messages) {
 		lines = append(lines, "")
 		if !message.Kept {
 			lines = append(lines, fmt.Sprintf("from %s · %s · text no longer kept", message.From, message.ID))
@@ -98,13 +98,51 @@ func owedLines(messages []owedView) []string {
 		if message.Telemetry != nil {
 			lines = append(lines, stateLine(message.From, message.Telemetry, message.Availability != nil || message.Departure != nil), "")
 		}
-		lines = append(lines,
-			fmt.Sprintf("from %s · %s · %s", message.From, inbox.KindOf(message.Message), message.CreatedAt.Local().Format("15:04:05")),
-			message.Text,
-		)
+		heading := fmt.Sprintf("from %s · %s · %s%s", message.From, inbox.KindOf(message.Message), message.CreatedAt.Local().Format("15:04:05"), relation(message.Message))
+		if message.nested {
+			heading = fmt.Sprintf("+ addendum from %s · %s", message.From, message.CreatedAt.Local().Format("15:04:05"))
+		}
+		lines = append(lines, heading, message.Text)
 		if message.ThreadChanged {
 			lines = append(lines, inbox.ThreadChangedWarning)
 		}
 	}
 	return lines
+}
+
+// nestedOwed is an owed message in the order it is shown; nested is an
+// addendum placed under the task it adds to.
+type nestedOwed struct {
+	owedView
+	nested bool
+}
+
+// nestAddenda moves each addendum under the task it adds to, so a session
+// that re-reads its work after a compaction reads the corrections with the
+// task. An addendum whose task is not owed any more stands alone, its
+// heading naming the task.
+func nestAddenda(messages []owedView) []nestedOwed {
+	roots := map[string]bool{}
+	for _, message := range messages {
+		if message.AddendumTo == "" {
+			roots[message.ID] = true
+		}
+	}
+	addenda := map[string][]owedView{}
+	for _, message := range messages {
+		if roots[message.AddendumTo] {
+			addenda[message.AddendumTo] = append(addenda[message.AddendumTo], message)
+		}
+	}
+	ordered := make([]nestedOwed, 0, len(messages))
+	for _, message := range messages {
+		if roots[message.AddendumTo] {
+			continue
+		}
+		ordered = append(ordered, nestedOwed{owedView: message})
+		for _, addendum := range addenda[message.ID] {
+			ordered = append(ordered, nestedOwed{owedView: addendum, nested: true})
+		}
+	}
+	return ordered
 }

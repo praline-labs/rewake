@@ -88,8 +88,8 @@ func (s *Server) retryNow() {
 func (s *Server) stillHeld(message Message, held Result) {
 	status, ok := ReadStatus(s.Dir, s.Name, message.ID)
 	switch {
-	case ok && status.State == Read:
-		s.finish(message, Result{State: Read, Via: status.Via})
+	case ok && status.final():
+		s.finish(message, status.result())
 	case !ok || status.State != Held:
 		s.publish(message.ID, held)
 	}
@@ -180,8 +180,7 @@ func (s *Server) takeBack(receipt Receipt, members []Message) {
 		if s.outcomes[member.ID].State != Delivered {
 			continue
 		}
-		if s.record(member.ID, receipt.Result) == Read {
-			s.outcomes[member.ID] = Result{State: Read}
+		if isFinal(s.record(member.ID, receipt.Result)) {
 			continue
 		}
 		s.outcomes[member.ID] = receipt.Result
@@ -202,7 +201,7 @@ func (s *Server) outcomeFor(member Message, result Result) Result {
 // is reported to its sender, who would otherwise wait for a report nobody owes.
 func (s *Server) settleHeld(message Message, outcome Result) {
 	s.finish(message, outcome)
-	if s.outcomes[message.ID].State == Failed {
+	if s.outcomes[message.ID].State == Failed && !s.outcomes[message.ID].Withdrawn {
 		s.tellUndelivered(message, outcome.Detail)
 	}
 }
@@ -251,6 +250,12 @@ func (s *Server) sweepForeignHeld() {
 // note asks for nothing, and a report's sender is not waiting on it.
 func (s *Server) tellUndelivered(message Message, detail string) {
 	if !Owed(message) {
+		return
+	}
+	// Its sender took it back: a hold that ends after that ends nothing the
+	// sender still waits on. Read from disk, because the outcome in memory
+	// is the harness's when the status could not be recorded under the lock.
+	if status, ok := ReadStatus(s.Dir, s.Name, message.ID); ok && status.Withdrawn {
 		return
 	}
 	kind := KindOf(message)

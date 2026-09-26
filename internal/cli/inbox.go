@@ -143,7 +143,7 @@ func inboxLines(messages []messageView) []string {
 			lines = append(lines, stateLine(message.From, message.Telemetry, message.Availability != nil || message.Departure != nil), "")
 		}
 		lines = append(lines,
-			fmt.Sprintf("from %s · %s · %s", message.From, inbox.KindOf(message.Message), message.CreatedAt.Local().Format("15:04:05")),
+			fmt.Sprintf("from %s · %s · %s%s", message.From, inbox.KindOf(message.Message), message.CreatedAt.Local().Format("15:04:05"), relation(message.Message)),
 			message.Text,
 		)
 		if message.ThreadChanged {
@@ -151,4 +151,17 @@ func inboxLines(messages []messageView) []string {
 		}
 	}
 	return lines
+}
+
+// relation names the message a letter belongs with, for the heading line:
+// the task an addendum adds to, the letter an edit replaced.
+func relation(message inbox.Message) string {
+	var parts []string
+	if message.AddendumTo != "" {
+		parts = append(parts, " · addendum to "+message.AddendumTo)
+	}
+	if message.Replaces != "" {
+		parts = append(parts, " · replaces "+message.Replaces)
+	}
+	return strings.Join(parts, "")
 }

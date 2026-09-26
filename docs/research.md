@@ -87,6 +87,18 @@ directory and reads the running session as its own.
 - `ListAgents`/`SendMessage` see every interactive Claude Code session on the
   machine through its socket, not only subagents. **[verified live]**
 
+### A notice during a running turn
+
+**[verified live, 2.1.280; observer review-claude, a private stand with its own state
+directory and a cheap model; September 26, 2026]** A notice written into the socket
+while the session is in a turn does not interrupt it: it reaches the model only at a
+tool-call boundary, after the step in progress. So a later notice — the recall rewake
+sends after a withdrawal ([delivery-sent.md](delivery-sent.md)) — can stop only what the
+model has not done yet. In the run that showed it, the subject carried out a one-step
+task straight from the first notice's preview, without running `rewake inbox`; the turn
+ended, and the recall arrived after it as a turn of its own. What was done from the
+preview stayed done.
+
 ### The inbound gate on rewake's line
 
 **[verified live, 2.1.280; private HOME, a placeholder key and an unreachable API

@@ -115,4 +115,4 @@ layer uses both; the wrapper listens.
   stored, logged, forwarded or used: the decoders name the fields they want and skip the
   rest, never unmarshalling into a generic map. Hooks must not slow the agent: fire and
   forget, no waiting, no retry, no lock. Measured figures are in
-  [testing.md](testing.md#claude-code-telemetry-budgets).
+  [testing-cases.md](testing-cases.md#claude-code-telemetry-budgets).

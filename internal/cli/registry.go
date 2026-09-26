@@ -92,6 +92,7 @@ func buildGroups() {
 				Options: append(kindOptions(),
 					Option{Flag: "--grant-git", Summary: "Verified main only: explicitly grant eligible task/question recipients access to validated repository Git metadata. No flag adds no roots."},
 					Option{Flag: "--wait", Value: "<seconds>", Summary: "How long to wait. Default: 5 for the delivery, 600 for a question's answer."},
+					Option{Flag: "--to", Value: "<id>", Summary: "Add to a task or question this run sent that is not reported on yet: a task of its own, announced at once, shown with it by rewake inbox --owed and settled by the same report. Takes a unique prefix of the id."},
 					jsonOption,
 				),
 				Examples: append(sendExamples(), "rewake send writer-codex --grant-git \"Commit the reviewed change\""),
@@ -102,8 +103,42 @@ func buildGroups() {
 					fmt.Sprintf("A heads-up (--notify) waits up to %s to share one notice with other mail arriving meanwhile, and send waits with it; a task or a question is announced at once.", inbox.Coalescing.Cap),
 					sessionStateHelp,
 					"Quote the text as one argument: loose words are refused rather than silently joined.",
+					"The output ends with the message's id, which rewake withdraw, rewake edit and --to take, whole or as a unique prefix of it or of the part after the dash.",
 				},
 				Handler: handleSend,
+			},
+			{
+				Name:           "withdraw",
+				Args:           "<id>",
+				MaxPositionals: 1,
+				Summary:        "Take back a message this run sent, while it is unread.",
+				Options:        []Option{jsonOption},
+				Examples:       []string{"rewake withdraw 8d4ddd85", "rewake withdraw 1790370984617481194-8d4ddd85c8f1 --json"},
+				Next:           []string{"rewake inbox --awaited"},
+				Notes: []string{
+					"Before its notice went out, the message simply goes. After, the recipient finds it in its inbox marked withdrawn, under the same id, and is sent a note at once not to act on the notice, since an agent may act on a preview without reading its inbox. A notice held for approval stays in the recipient harness's queue, which rewake cannot empty; if approved, it leads to the withdrawn mark. A sender blocked on a withdrawn question stops waiting and exits 1.",
+					"Only the session run that sent it may, in any role; mail from a plain shell or an earlier run is out of reach. A read message is final: add to it with rewake send <name> \"...\" --to <id>.",
+					"A withdrawal that could not finish says how far it got and names the command that finishes it. Exit 0 withdrawn, or withdrawn already; 1 read, not delivered, no longer kept, no such message, or not finished; 2 a wrong call — not a session, an id too short.",
+				},
+				Handler: handleWithdraw,
+			},
+			{
+				Name:           "edit",
+				Args:           "<id> <text>",
+				MaxPositionals: 2,
+				Summary:        "Replace a message this run sent, while it is unread, with a new text of the same kind. Use - as the text to read it from stdin.",
+				Options: []Option{
+					{Flag: "--wait", Value: "<seconds>", Summary: "How long to wait, as for send."},
+					jsonOption,
+				},
+				Examples: []string{"rewake edit 8d4ddd85 \"rerun the smoke on the staging branch\"", "rewake edit 8d4ddd85 - --json"},
+				Next:     []string{"rewake inbox --awaited"},
+				Notes: []string{
+					"The old message is withdrawn and the new one sent in its place, in one step: the recipient finds the old one marked withdrawn and replaced, and the new one with its own notice, whose preview begins by naming the old one as withdrawn, so no separate note is sent. The output is send's, ending with the new id.",
+					"A question's replacement waits for its answer as send --question does; the send blocked on the old one stops waiting and exits 1.",
+					"Who may, and when, as for rewake withdraw. Exit codes as for send.",
+				},
+				Handler: handleEdit,
 			},
 			{
 				Name:           "inbox",
@@ -275,7 +310,17 @@ func flow() []FlowStep {
 			Summary: "Give that exact address a task; its final message comes back when the turn ends.",
 		})
 	}
+	// The id a send prints, or its tail, names the message afterwards.
+	last := harness.All()[len(harness.All())-1].ID()
 	return append(steps,
+		FlowStep{
+			Command: fmt.Sprintf("rewake send helper-%s \"also rerun the lint\" --to 8d4ddd85", last),
+			Summary: "Add to a task you sent, by the id its send printed or the start of the part after the dash; one report settles both.",
+		},
+		FlowStep{
+			Command: "rewake edit 8d4ddd85 \"pull and rerun the full suite\"",
+			Summary: "Replace a message of yours nobody has read yet; rewake withdraw 8d4ddd85 takes it back instead.",
+		},
 		FlowStep{Command: "rewake list", Summary: "See who is running and can be reached."},
 		FlowStep{Command: "rewake inbox", Summary: "When a \"Rewake:\" line says messages are waiting, read them here. Answer a task by finishing your turn with the result. rewake inbox --owed shows again what you read and still owe a report for."},
 		FlowStep{Command: "rewake <command> --help", Summary: "Flags, examples and notes for that command."},

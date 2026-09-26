@@ -173,8 +173,8 @@ var mutantAwaitedNeverSettled = mutation{
 	name: "awaited-never-settled",
 	file: "internal/inbox/awaited.go",
 	edits: []edit{
-		{"\t\t\tif settled {\n", "\t\t\tif settled && false {\n"},
-		{"\t\t\tif item.read() && !slices.Contains(", "\t\t\tif false && item.read() && !slices.Contains("},
+		{"\tif settled {\n", "\tif settled && false {\n"},
+		{"\tif item.read() && !slices.Contains(", "\tif false && item.read() && !slices.Contains("},
 	},
 }
 

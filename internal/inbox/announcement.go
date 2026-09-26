@@ -18,7 +18,7 @@ func (s *Server) validAnnouncement(ctx context.Context, members []Message) bool 
 			if err != nil {
 				return err
 			}
-			if known && status.State == Read || reserved || expired {
+			if known && status.final() || reserved || expired {
 				valid = false
 				return nil
 			}

@@ -31,6 +31,17 @@ type Message struct {
 	SenderState  *sessionstate.Snapshot `json:"senderState,omitempty"`
 	Availability *Availability          `json:"availability,omitempty"`
 	Undelivered  *UndeliveredNotice     `json:"undelivered,omitempty"`
+	// Withdrawn marks a tombstone: its sender took the message back before it
+	// was read, and this text, under the same id, says so (withdraw.go).
+	Withdrawn *WithdrawnNotice `json:"withdrawn,omitempty"`
+	// Recall marks the note telling a recipient not to act on the notice of a
+	// message withdrawn after it went out (recall.go).
+	Recall *RecallNotice `json:"recall,omitempty"`
+	// Replaces names the message this one replaced by rewake edit.
+	Replaces string `json:"replaces,omitempty"`
+	// AddendumTo names the task this one adds to: an addendum is a task of
+	// its own, read into the same wait, so one report settles both.
+	AddendumTo string `json:"addendumTo,omitempty"`
 	// ID sorts by creation time, so a mailbox is served in order.
 	ID string `json:"id"`
 	// From is the sender's session name, or "shell" when it has none.
@@ -151,6 +162,9 @@ type Result struct {
 	Via string
 	// Detail explains a pending or failed result in one sentence.
 	Detail string
+	// Withdrawn marks a failed result its sender caused by withdrawing the
+	// message: final like a read, whatever the harness says afterwards.
+	Withdrawn bool
 }
 
 // Status is the Result as the sender reads it back.
@@ -159,8 +173,34 @@ type Status struct {
 	State           State     `json:"state"`
 	Via             string    `json:"via,omitempty"`
 	Detail          string    `json:"detail,omitempty"`
+	Withdrawn       bool      `json:"withdrawn,omitempty"`
 	At              time.Time `json:"at"`
 }
+
+// withdrawn is what the server takes a withdrawn message's outcome for. It is
+// never written: on disk the status is failed, which is what a sender waiting
+// on it has to hear, but a failed one is settled by archiving its readable
+// copy, and the tombstone there has to stay until it is read.
+const withdrawn State = "withdrawn"
+
+// final says nothing said about the notice afterwards can change this status:
+// the agent has the text, or its sender took it back.
+func (s Status) final() bool { return s.State == Read || s.Withdrawn }
+
+// outcome is the state the server settles a status by.
+func (s Status) outcome() State {
+	if s.Withdrawn {
+		return withdrawn
+	}
+	return s.State
+}
+
+func (s Status) result() Result {
+	return Result{State: s.State, Via: s.Via, Detail: s.Detail, ReportAvailable: s.ReportAvailable, Withdrawn: s.Withdrawn}
+}
+
+// isFinal is final for an outcome the server already holds.
+func isFinal(outcome State) bool { return outcome == Read || outcome == withdrawn }
 
 // NewID returns an identifier that sorts by time and never repeats. The time
 // prefix gives mailbox order; the random tail keeps two senders in the same
@@ -257,7 +297,7 @@ func Await(dir, to, id string, timeout time.Duration) (Status, bool) {
 
 // writeStatus records what happened to a message.
 func writeStatus(dir, to, id string, result Result) error {
-	status := Status{State: result.State, Via: result.Via, Detail: result.Detail, ReportAvailable: result.ReportAvailable, At: time.Now()}
+	status := Status{State: result.State, Via: result.Via, Detail: result.Detail, ReportAvailable: result.ReportAvailable, Withdrawn: result.Withdrawn, At: time.Now()}
 	encoded, err := json.MarshalIndent(status, "", "  ")
 	if err != nil {
 		return err

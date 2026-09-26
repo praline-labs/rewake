@@ -8,7 +8,10 @@ task bodies have been read. No call ID is invented. The existing announcement ID
 remains `clientUserMessageId` for admission correlation.
 
 The JSON contains `notice` (the existing bounded count/preview) and `members`, each
-with `id`, `from`, `fromEpoch`, `to`, `toEpoch`. The members are exactly the reserved
+with `id`, `from`, `fromEpoch`, `to`, `toEpoch`; a recall's also with `recalls`, the
+id of the withdrawn message it tells the session not to act on, and an edit's
+replacement's with `replaces`, the id of the message it took the place of
+([delivery-sent.md](delivery-sent.md)). The members are exactly the reserved
 batch, including singleton identity; full bodies and Git permissions are not copied
 into the result. Member metadata does not share the 64 KiB short-notice bound; the
 serialized request still obeys the existing 128 MiB native transport limit and

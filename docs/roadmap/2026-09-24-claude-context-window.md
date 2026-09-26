@@ -40,7 +40,7 @@ stand-in API the same morning
   `claude-telemetry` workflow case now runs the plugin with a 150K window against a 200K
   status line and must read 33% of 150K, and a fourth mutant, `model-window`, puts the
   model's window back and breaks exactly the listing and the header
-  ([testing.md](../testing.md#claude-code-telemetry-budgets)).
+  ([testing-cases.md](../testing-cases.md#claude-code-telemetry-budgets)).
 
 **The review.** review-claude ran the built tree against the real 2.1.280 in a private
 HOME with a stand-in API: a settings `env` of 300000 gave `17% / 300K` in a main's

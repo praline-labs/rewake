@@ -95,4 +95,4 @@ than every message in the current record replace another run's record, since run
 one name do not overlap. Not built.
 
 Withdrawing, editing and resending an unread message, the owner's idea of the same day,
-starts from this view ([work-queue.md](../work-queue.md#then-actions-on-a-sent-message)).
+was built on this view on September 26, 2026 ([its record](2026-09-26-sent-message-actions.md)).

@@ -109,15 +109,21 @@ func handleSend(ctx *Context, call Call) error {
 		return unknownSessionError(dir, target)
 	}
 
+	addendumTo, err := addendumRoot(call, dir, kind, session)
+	if err != nil {
+		return err
+	}
+
 	message := inbox.Message{
-		GrantGit:  grantGit,
-		ID:        inbox.NewID(),
-		From:      harness.ShellSender,
-		To:        session.Name,
-		ToEpoch:   session.Epoch(),
-		Kind:      kind.kind,
-		Text:      text,
-		CreatedAt: time.Now(),
+		AddendumTo: addendumTo,
+		GrantGit:   grantGit,
+		ID:         inbox.NewID(),
+		From:       harness.ShellSender,
+		To:         session.Name,
+		ToEpoch:    session.Epoch(),
+		Kind:       kind.kind,
+		Text:       text,
+		CreatedAt:  time.Now(),
 	}
 	// Writing to a session does not settle what this one owes it. A message
 	// sent mid-turn — "started", or a new task in answer to "ready" — is not the
@@ -136,7 +142,14 @@ func handleSend(ctx *Context, call Call) error {
 	if err := inbox.Put(dir, message); err != nil {
 		return failf("could not write the message into the mailbox of %s: %v", session.Name, err)
 	}
+	return reportSent(ctx, sent{dir: dir, self: self, epoch: epoch, target: session, deadline: started.Add(wait)}, message, kind, wait)
+}
 
+// reportSent waits for the delivery result of a message just written and
+// prints it, then hands over to what its kind does next — a question waits
+// for its answer.
+func reportSent(ctx *Context, after sent, message inbox.Message, kind messageKind, wait time.Duration) error {
+	dir, session := after.dir, after.target
 	// The delivery result is worth a few seconds at most; a kind that waits
 	// longer waits for something else, after it.
 	status, known := awaitStatus(dir, session.Name, message.ID, min(wait, defaultWait))
@@ -195,7 +208,13 @@ func handleSend(ctx *Context, call Call) error {
 	}
 
 	if inbox.State(model.State) != inbox.Failed && kind.after != nil {
-		return kind.after(ctx, sent{dir: dir, self: self, epoch: epoch, target: session, model: model, deadline: started.Add(wait)})
+		// The id before the wait, which may be long: it is what an edit or an
+		// addendum to this message takes while the sender still waits.
+		if !ctx.JSON {
+			_ = emit(ctx, idLines(model)...)
+		}
+		after.model = model
+		return kind.after(ctx, after)
 	}
 	return printDelivery(ctx, session, model)
 }
@@ -203,6 +222,9 @@ func handleSend(ctx *Context, call Call) error {
 // printDelivery prints the delivery result and turns it into the exit code.
 func printDelivery(ctx *Context, session registry.Session, model sendModel) error {
 	line := sendLine(session, model)
+	if inbox.State(model.State) != inbox.Failed && model.ID != "" {
+		line += "\n" + strings.Join(idLines(model), "\n")
+	}
 	switch inbox.State(model.State) {
 	case inbox.Delivered:
 		return printValue(ctx, model, func() []string { return []string{line} })
@@ -221,6 +243,12 @@ func printDelivery(ctx *Context, session registry.Session, model sendModel) erro
 		}
 		return &FailedError{Message: line}
 	}
+}
+
+// idLines name the message sent: the id rewake withdraw, rewake edit and send
+// --to take.
+func idLines(model sendModel) []string {
+	return []string{"id " + model.ID}
 }
 
 // awaitStatus waits for the status of a message; replaceable in tests.

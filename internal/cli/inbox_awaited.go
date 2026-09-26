@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/harness"
@@ -21,6 +22,33 @@ type awaitedView struct {
 	Detail    string      `json:"detail,omitempty"`
 	Gone      string      `json:"gone,omitempty"`
 	Text      string      `json:"text"`
+	// AddendumTo names the task this one adds to.
+	AddendumTo string `json:"addendumTo,omitempty"`
+	// nested is an addendum listed under its task.
+	nested bool
+}
+
+// afterTheirTask lists each addendum right after the task it adds to, which
+// other tasks sent in between would otherwise separate it from.
+func afterTheirTask(messages []awaitedView) []awaitedView {
+	roots := map[string]bool{}
+	for _, message := range messages {
+		roots[message.ID] = message.AddendumTo == ""
+	}
+	ordered := make([]awaitedView, 0, len(messages))
+	for _, message := range messages {
+		if roots[message.AddendumTo] {
+			continue
+		}
+		ordered = append(ordered, message)
+		for _, addendum := range messages {
+			if addendum.AddendumTo == message.ID && roots[message.ID] {
+				addendum.nested = true
+				ordered = append(ordered, addendum)
+			}
+		}
+	}
+	return ordered
 }
 
 // coming says whether a report on it can still arrive.
@@ -80,7 +108,7 @@ func showAwaited(ctx *Context, dir string, session registry.Session, epoch strin
 		}
 		view := awaitedView{
 			ID: message.ID, Kind: inbox.KindOf(message.Message), CreatedAt: message.CreatedAt,
-			State: message.Stage, Detail: message.Detail, Text: message.Text,
+			State: message.Stage, Detail: message.Detail, Text: message.Text, AddendumTo: message.AddendumTo,
 		}
 		switch message.Run {
 		case inbox.RunEnded:
@@ -95,6 +123,9 @@ func showAwaited(ctx *Context, dir string, session registry.Session, epoch strin
 			model.Recipients = append(model.Recipients, awaitedRecipient{Name: message.To})
 		}
 		model.Recipients[at].Messages = append(model.Recipients[at].Messages, view)
+	}
+	for index := range model.Recipients {
+		model.Recipients[index].Messages = afterTheirTask(model.Recipients[index].Messages)
 	}
 	return printValue(ctx, model, func() []string { return awaitedLines(model.Recipients) })
 }
@@ -125,9 +156,20 @@ func awaitedLines(recipients []awaitedRecipient) []string {
 	for _, recipient := range recipients {
 		lines = append(lines, "", "to "+recipient.Name)
 		for _, message := range recipient.Messages {
+			// An addendum lists after its task, which sorts first: indented,
+			// it reads as part of the same work.
+			indent, kind := "", string(message.Kind)
+			switch {
+			case message.nested:
+				indent, kind = "  + ", "addendum to "+shortRef(message.AddendumTo)
+			case message.AddendumTo != "":
+				// Its task is not listed — reported on, or no longer
+				// kept — so it stands alone, still saying what it adds to.
+				kind += ", addendum to " + shortRef(message.AddendumTo)
+			}
 			lines = append(lines,
-				fmt.Sprintf("%s · %s · %s · %s", message.ID, message.Kind, message.CreatedAt.Local().Format("15:04:05"), awaitedState(recipient.Name, message)),
-				harness.Preview(message.Text),
+				fmt.Sprintf("%s%s · %s · %s · %s", indent, message.ID, kind, message.CreatedAt.Local().Format("15:04:05"), awaitedState(recipient.Name, message)),
+				strings.Repeat(" ", len(indent))+harness.Preview(message.Text),
 			)
 		}
 	}

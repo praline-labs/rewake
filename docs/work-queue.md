@@ -117,31 +117,6 @@ Claude Code's task tools in [research-claude-actions.md](research-claude-actions
 Codex's plan tool in [research-codex.md](research-codex.md#the-plan-tool) and
 [research-protocol.md](research-protocol.md#the-plan-over-the-protocol).
 
-## Then: actions on a sent message
-
-The owner decided on September 26, 2026 to make one feature of two queued ideas — the
-addendum kept from the dropped todo list, and withdrawing or editing an unread message
-(the owner's idea of September 23, 2026). Queued, not built. Each action names the
-message by its id:
-
-- `rewake send <name> "..." --to <id>` attaches an addendum to a task already sent, at
-  any time, read or not. Today a correction goes as a notify, and after the worker's
-  compaction it drops out of view: `rewake inbox --owed` shows the task alone. With the
-  addendum, `--owed` shows the task together with its addenda, and the addendum itself
-  is announced like any letter.
-- `rewake withdraw <id>` removes a message from the recipient's mailbox, and
-  `rewake edit <id> "..."` replaces its text — both only while it is unread: a message
-  already read is final.
-
-To decide when it is built: a message announced to a live session has already shown a
-notice with a preview on the recipient's screen, so withdrawing it leaves a notice that
-points to nothing, and the recipient may be reading it in that same moment; a held
-message also sits in Claude Code's own approval queue; and who may do it — the sender
-only, and whether only main or any role. `rewake inbox --awaited`, which lists what a run
-sent and where each message stands
-([delivery-owed.md](delivery-owed.md#what-others-owe-you-rewake-inbox---awaited)), is its
-natural starting point.
-
 ## Then: Codex's `--worktree`
 
 rewake refuses Codex's `--worktree` today (`internal/harness/codex/codex.go`, the check

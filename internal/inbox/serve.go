@@ -249,7 +249,7 @@ func (s *Server) refuseWaiting(reason string) {
 			// Shutdown may precede the first drain. Admission still respects
 			// expiry and reservations before making the report readable.
 			err := s.lock(func() error {
-				if status, ok := ReadStatus(s.Dir, s.Name, message.ID); ok && status.State == Read {
+				if status, ok := ReadStatus(s.Dir, s.Name, message.ID); ok && status.final() {
 					return nil
 				}
 				reserved = awaitedHere(s.Dir, s.Name, message)

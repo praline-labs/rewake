@@ -74,6 +74,7 @@ func (s *shimSession) deliveredTurn(params json.RawMessage) (any, any, error) {
 		s.turn.mu.Unlock()
 		s.recordSteer(open, messageIDOf(params))
 		s.recordGroup(open, notice)
+		s.recordRecalls(open, notice)
 		if steered != nil {
 			select {
 			case <-steered:
@@ -95,6 +96,7 @@ func (s *shimSession) deliveredTurn(params json.RawMessage) (any, any, error) {
 	}
 	s.turn.mu.Unlock()
 	s.recordGroup(id, notice)
+	s.recordRecalls(id, notice)
 
 	go s.workTurn(id, notice)
 	return turnReply(id), nil, nil
@@ -300,6 +302,7 @@ func (s *shimSession) readMailbox() (string, error) {
 	if os.Getenv(shimReadFails) != "" {
 		return "", errors.New("the mailbox read was made to fail")
 	}
+	waitAtReadGate()
 	arguments := []string{"inbox"}
 	if os.Getenv(shimInboxJSON) != "" {
 		arguments = append(arguments, "--json")

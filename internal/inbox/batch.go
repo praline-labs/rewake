@@ -132,8 +132,8 @@ func (s *Server) deliverGroup(ctx context.Context, pending []Message) {
 		outcome.ReportAvailable = outcome.State == Failed && IsReport(member)
 		s.attempts[member.ID] = time.Now()
 		if outcome.State == Pending {
-			if s.record(member.ID, outcome) == Read {
-				s.finish(member, Result{State: Read})
+			if isFinal(s.record(member.ID, outcome)) {
+				s.finish(member, s.outcomes[member.ID])
 			}
 		} else {
 			s.finish(member, outcome)

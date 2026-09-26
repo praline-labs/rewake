@@ -14,5 +14,6 @@ func sendExamples() []string {
 		"rewake send " + address + " \"which port does the dev server use?\" --question",
 		"rewake send " + address + " \"the migration is merged\" --notify",
 		"rewake send " + address + " - --wait 20",
+		"rewake send " + address + " \"also rerun the lint\" --to 8d4ddd85",
 	}
 }

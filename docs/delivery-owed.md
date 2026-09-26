@@ -16,9 +16,14 @@ interim turn end (`rewake pending`) or a stop keeps them. `--owed` prints those
 messages again, in full — under `Rewake: owed a report for <n> message(s):`, each with
 the sender, kind and time of an ordinary read and its text, from `done/` (or
 `unread/`, for a read whose last step failed) — oldest read first; `--json` adds each
-id. It is the task a session is working on, from the mailbox rather than from
-memory, which is what a session needs after a context compaction: a summary retells
-the brief and can drop an item. The write and general playbooks tell it to re-read
+id. An addendum (`rewake send --to`, [delivery-sent.md](delivery-sent.md)) is
+placed right under its task, headed `+ addendum from <sender> · HH:MM:SS`, so the
+corrections are re-read with the brief they correct; one whose task is not owed any
+more stands alone, its heading naming the task (`· addendum to <id>`). Only the
+rendering nests: `--json` keeps the flat list, each addendum with its `addendumTo`.
+It is the task a session is working on, from the mailbox rather than from memory,
+which is what a session needs after a context compaction: a summary retells the brief
+and can drop an item. The write and general playbooks tell it to re-read
 there, to read new mail with `rewake inbox`, and to say so in its report.
 
 It only reads. No lock is taken — every record it reads is written whole or not at
@@ -97,10 +102,14 @@ recipient whose role reports nothing is skipped: its reads owe no report.
 
 The plain form opens with `Rewake: waiting on <n> report(s):` — with `; <m> more will
 not come` when some will not — then, per recipient, `to <name>` and, per message,
-`<id> · <kind> · <time> · <state>` above the first line of its text. Nothing awaited is
+`<id> · <kind> · <time> · <state>` above the first line of its text. An addendum
+follows its task, indented: `  + <id> · addendum to <tail of the task's id> · <time> · <state>` — the tail
+is a reference `withdraw`, `edit` and `--to` accept. One whose task is not listed — reported
+on already, or no longer kept — stands alone as `<id> · task, addendum to <tail> · …`. Nothing awaited is
 `Rewake: nobody owes you a report.` `--json` carries each message whole: `id`, `kind`,
 `createdAt`, `state`, `detail` (the hold or failure reason, or the interim or stop
-report's text), `gone` (`ended` or `replaced`) and the full `text`.
+report's text), `gone` (`ended` or `replaced`), `addendumTo` for an addendum, and the
+full `text`. A withdrawn message is a note from then on and is not listed.
 
 It only reads, like `--owed`: no lock, no status, nothing marked, nothing sent, and a
 registry lookup that does not prune a dead record. A message caught between two

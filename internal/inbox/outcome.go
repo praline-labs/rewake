@@ -91,11 +91,13 @@ func (s *Server) record(id string, result Result) State {
 // recordLocked is record under a lock the caller holds. Read is final: the
 // agent has the text, so whatever the harness said about the notice afterwards
 // — pending, failed, even delivered — must not undo that, or the task is handed
-// out again or its sender told it was refused.
+// out again or its sender told it was refused. Withdrawn is final the same
+// way: a late delivered would tell its sender the message arrived after all,
+// and a late failed would archive the tombstone its reader is to find.
 func (s *Server) recordLocked(id string, result Result) (State, error) {
-	if current, ok := ReadStatus(s.Dir, s.Name, id); ok && current.State == Read {
-		s.outcomes[id] = Result{State: Read, Via: current.Via}
-		return Read, nil
+	if current, ok := ReadStatus(s.Dir, s.Name, id); ok && current.final() {
+		s.outcomes[id] = current.result()
+		return current.outcome(), nil
 	}
 	if err := writeStatus(s.Dir, s.Name, id, result); err != nil {
 		return "", err
@@ -126,7 +128,9 @@ func settle(dir, name, id string, outcome State) {
 		// Neither delivered nor refused yet, so both copies stay: its status
 		// keeps it from being announced again, and the readable copy is there
 		// for an agent that reads its mail on its own.
-	case Delivered, Read:
+	case Delivered, Read, withdrawn:
+		// A withdrawal takes the waiting copy itself; one left behind goes
+		// here, and the tombstone stays where its reader will look.
 		waiting := filepath.Join(state.InboxPath(dir, name), id+".json")
 		if err := removeWaiting(waiting); err == nil {
 			_ = state.SyncDir(state.InboxPath(dir, name))
@@ -159,9 +163,9 @@ func (s *Server) alreadySettled(message Message) bool {
 		// is no outcome: like pending, the message is still to be decided.
 		return false
 	}
-	s.outcomes[message.ID] = Result{State: status.State, Via: status.Via, Detail: status.Detail, ReportAvailable: status.ReportAvailable}
+	s.outcomes[message.ID] = status.result()
 	_ = s.lock(func() error {
-		s.settleOutcome(message.ID, status.State, status.ReportAvailable)
+		s.settleOutcome(message.ID, status.outcome(), status.ReportAvailable)
 		return nil
 	})
 	return true

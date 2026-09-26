@@ -31,6 +31,11 @@ type mailboxNotice struct {
 		FromEpoch string `json:"fromEpoch"`
 		To        string `json:"to"`
 		ToEpoch   string `json:"toEpoch"`
+		// Recalls is the message a recall member tells the session not to
+		// act on.
+		Recalls string `json:"recalls"`
+		// Replaces is the message a replacement member takes the place of.
+		Replaces string `json:"replaces"`
 	} `json:"members"`
 }
 

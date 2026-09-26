@@ -79,8 +79,8 @@ var mutantReplay = mutation{
 	file: "internal/inbox/outcome.go",
 	edits: []edit{
 		{
-			"\tcase Delivered, Read:\n\t\twaiting :=",
-			"\tcase Delivered:\n\tcase Read:\n\t\twaiting :=",
+			"\tcase Delivered, Read, withdrawn:\n",
+			"\tcase Delivered:\n\tcase Read, withdrawn:\n",
 		},
 		{
 			"if result, known := s.outcomes[message.ID]; known {\n" + heldBranch +

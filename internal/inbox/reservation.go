@@ -23,7 +23,9 @@ type Reserver func(context.Context, Message) (Reservation, error)
 func (s *Server) prepareDelivery(ctx context.Context, message *Message) (read, answered, expired bool, reservation Reservation, release func(), err error) {
 	release = func() {}
 	check := func() error {
-		if status, ok := ReadStatus(s.Dir, s.Name, message.ID); ok && status.State == Read {
+		if status, ok := ReadStatus(s.Dir, s.Name, message.ID); ok && status.final() {
+			// Withdrawn goes the way of read: nothing is made readable, and
+			// recording the read keeps the withdrawal as it is.
 			read = true
 			return nil
 		}
