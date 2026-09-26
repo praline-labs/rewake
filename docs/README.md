@@ -213,7 +213,8 @@ everything else.
   already paid for. Open it first for anything about tests; the documents below are the
   depth behind it.
 - [testing-cases.md](testing-cases.md) — what each end-to-end case claims, with its
-  sessions, what the fixture plays and its controls: the Claude Code telemetry budgets
+  sessions, what the fixture plays and its controls, with a table of every control by
+  scenario that `controls_test.go` keeps equal to the suite: the Claude Code telemetry budgets
   and their measurement, launching through a wrapper, pending and owed reports, the
   awaited view, withdrawing, editing and adding to a sent message, a changed
   conversation, and the inbound gate. Open it before changing one of those cases or the
@@ -303,8 +304,9 @@ the newer document says so.
 - [work-queue.md](work-queue.md) — what comes next, in the owner's order: the rest of the
   workflow suite, the arrival-row check on the suite, a named harness version against a
   local responder, a two-way channel for Claude Code, the rest of stage 2 of the plugin
-  and a focus for a Codex compaction, the parity queue, and
-  what is queued without a date. Open it to pick the next piece of work.
+  and a focus for a Codex compaction, Codex's `--worktree`, the parity queue, and what is
+  queued without a date; and what the owner dropped, the todo list sent with a task among
+  it. Open it to pick the next piece of work.
 - [roadmap/README.md](roadmap/README.md) — what is done: the index of the roadmap, one
   file per closed milestone, review round or piece of work, named
   `YYYY-MM-DD-<subject>.md` by the day it closed, plus `risks.md` for the risks table and

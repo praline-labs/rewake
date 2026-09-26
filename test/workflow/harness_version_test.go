@@ -66,7 +66,7 @@ func prepareSchemaSource() (source schemaSource, prepared bool) {
 }
 
 // fetchBudget is half of go test's -timeout, at most ten minutes: the other
-// half is the suite, which takes a little over two. With no timeout at all
+// half is the suite, which takes about three minutes. With no timeout at all
 // the ten minutes stand.
 func fetchBudget() time.Duration {
 	const ceiling = 10 * time.Minute

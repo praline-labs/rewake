@@ -226,7 +226,7 @@ private HOME against the stand-in API, a main and a worker started through rewak
 
 - Part B, the Codex side: the wrapper serves the same directory, refuses a compaction
   itself while a turn runs or a `turn/start` is in flight, and sends
-  `thread/compact/start` and `turn/interrupt` ([work-queue.md](../work-queue.md#now-stage-2-of-the-plugin-the-rest)).
+  `thread/compact/start` and `turn/interrupt` ([work-queue.md](../work-queue.md#then-stage-2-of-the-plugin-the-rest)).
 - A focus for a Codex compaction, to be researched as the owner decided.
 - An asker killed outright with SIGKILL cannot withdraw its request: a target stalled at
   that moment carries it out when it resumes, telling nobody

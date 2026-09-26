@@ -140,13 +140,23 @@ sessions, and an old record must not appear in a new room by accident.
   "harnessStart": 1671402,
   "cwd": "/home/u/code/x",
   "startedAt": "2026-09-16T00:08:03Z",
-  "socket": "/tmp/rewake-1000/rooms/default/sock/general-claude-2.12345.1671399.sock"
+  "messagingReadyAt": "2026-09-16T00:08:05Z",
+  "socket": "/tmp/rewake-1000/rooms/default/sock/general-claude-2.12345.1671399.sock",
+  "ownsSocket": true,
+  "pidNamespace": "pid:[4026531836]"
 }
 ```
 
 - `serviceStart`, `harnessStart` — field 22 of `/proc/<pid>/stat` (start time in
   ticks). Liveness = the process exists and the start time matches: pids get
   reused.
+- `messagingReadyAt` — when the session first became ready to take messages; it marks
+  that the start succeeded, not that delivery works now. Absent until then.
+- `ownsSocket` — this session created the socket path, so it removes it when it ends;
+  absent for a harness without a socket, and for one whose socket path the caller named.
+- `codexHome` — the `CODEX_HOME` a Codex session runs with; absent for other harnesses.
+- `pidNamespace` — the pid namespace the two pids belong to: a reader in another one
+  cannot judge whether they are alive, and does not try.
 - A session is alive as long as both the servicing process and the harness are
   alive. A listing or a lookup deletes a dead record it reads, but only when the
   record's name lock is free at that moment (`LOCK_NB`): both are reads and never wait
@@ -220,18 +230,11 @@ proven them out.
 
 ### Commands
 
-```
-rewake                                  overview (command map, workflow, behavior notes)
-rewake [--room R] [--name PREFIX] [--main|--general|--write] claude [args...]   launch a Claude Code session under rewake
-rewake [--room R] [--name PREFIX] [--main|--general|--write] codex [args...]    launch a Codex session under rewake
-rewake list [--json]                    live sessions in this room
-rewake send <name> <text|-> [--question] [--wait S] [--json]
-rewake inbox [--json]                   read the messages waiting for this session
-rewake whoami [--json]                  this session's name, room, role and state root
-rewake compact <name> [focus] [--json]  main only: compact an idle session (remote-control.md)
-rewake interrupt <name> [--json]        main only: stop a session's running turn
-rewake <command> --help
-```
+The command list is not repeated here: it is `internal/cli/registry.go`, and the
+tool prints it itself — `rewake` or `rewake guide` for the overview with every command,
+`rewake <command> --help` for one command's syntax, flags and examples. A copy here
+would teach a stale call with the same confidence, as the list that stood here did
+until September 26, 2026: it had fallen behind by four commands and eight flags.
 
 The tool's own flags only work before the harness name; everything after it
 belongs to the harness.

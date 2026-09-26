@@ -172,29 +172,14 @@ never on a sleep: a sleep makes a slow machine look like a defect and a lost wak
 like slowness.
 
 **A control** proves the scenario can fail. It breaks one claim, in one of two ways: a
-product mutant, built by `buildMutant` in `mutant_test.go` with one edit through the
+product mutant, built by `buildMutant` in `mutant_test.go` with its edits through the
 toolchain's overlay, inside a started case, refusing an edit that does not match exactly
 once; or a switch that changes the fixture's world. A mutant is preferred wherever one
 can be built, because it shows the scenario catching a broken rewake rather than a
-misbehaving peer. Of today's sixty-five controls, fifty-six are mutants — batch-arrival's
-five; task-report's no-stop-hook, turn-ended-ignores-stop and settles-nothing;
-mid-turn's wait-for-idle; claude-telemetry's tap-without-owner, uncounted-compaction,
-silent-compaction and model-window; pending-report's pending-ignored and
-pending-settles; claude-inbound's ungated, gate-on-session-start, held-as-delivered,
-expiry-unannounced, refusal-as-delivered and late-word-dropped; owed-reread's
-owed-empty; thread-changed's delivery-unpinned, stop-thread-ignored and
-thread-always-changed; awaited-view's awaited-interim-ignored and awaited-never-settled;
-claude-interrupted's interrupt-unpublished, every-end-stopped, plugin-not-passed and
-stop-not-heard; claude-steered's compact-not-run, in-turn-unmapped, interrupter-unnamed,
-line-repeated, idle-interrupt-done, silent-not-answering, any-role-steers,
-own-compaction-announced, compaction-uncounted, asker-untold and stop-by-a-person;
-codex-steered's busy-unchecked, codex-asker-untold, codex-interrupter-unnamed,
-codex-idle-interrupt-done and focus-taken; stopped-routing's stopped-to-main;
-withdraw-after-notice's withdraw-leaves-task, withdraw-silent and recall-sender-first;
-withdraw-mid-turn's recall-unnamed; edit-after-notice's edit-keeps-old-text, edit-unlinked
-and replacement-unmarked; addendum-owed's owed-flat — and nine are fixture switches:
-task-report's wrong-report, read-fails, failure-before-report and early-exit; the three
-readiness controls; mid-turn's late and failed-operation. A control names the
+misbehaving peer, and most controls are mutants. Which control belongs to which
+scenario is the table in [testing-cases.md](testing-cases.md#every-control), which
+`docs/controls_test.go` keeps equal to the suite; a count written here would go stale
+with the next mutant, as the list that stood here did. A control names the
 observation it must break; the crosswise check then runs every control's observations in
 every other control's world and requires them to stand, so a control that breaks on
 somebody else's change is caught. Each control answers in three values — broken, not

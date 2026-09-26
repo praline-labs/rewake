@@ -11,13 +11,13 @@ and what was learned goes to the research documents.
 
 ## Now: the workflow suite
 
-What exists is in the roadmap's [suite entry](roadmap/2026-09-21-workflow-suite.md):
-`test/workflow` with its isolation, owned process groups and the shim that plays the
-Codex app-server; the Codex session taken to an accepted conversation; the first
-selected scenario, `task-report`, with its negative controls (`8b7004b`); the second,
-`batch-arrival`, with four controls that mutate the product through a build overlay;
-the third, `mid-turn`, a letter steered into a turn the recipient holds open; and the
-second-terminal case, which has no reachable control and says so.
+What exists began with the roadmap's [suite entry](roadmap/2026-09-21-workflow-suite.md)
+and has grown with nearly every change since: `test/workflow` with its isolation, owned
+process groups and the fixtures that play Codex's app-server and Claude Code, and
+scenarios across launching, reports, delivery, actions on a sent message, conversations,
+the inbound gate and the plugin. The cases and their controls are listed in
+[testing-cases.md](testing-cases.md) rather than here, where a list went stale with each
+new scenario; the second-terminal case still has no reachable control and says so.
 
 What remains, from [check-runner-scenarios.md](check-runner-scenarios.md) and
 [check-runner-proposal.md](check-runner-proposal.md): the scenario `ack-recovery`;
@@ -84,7 +84,7 @@ built on the Claude Code side on September 24, 2026 ([remote-control.md](remote-
 with its workflow case, `claude-steered`, and accepted live the same day; the Codex side,
 part B, was built the same day and accepted live on September 25.
 
-## Now: stage 2 of the plugin, the rest
+## Then: stage 2 of the plugin, the rest
 
 What [remote-control.md](remote-control.md) describes is built and accepted live on both
 harnesses: Claude Code on September 24, 2026, Codex (part B) on September 25 after nine

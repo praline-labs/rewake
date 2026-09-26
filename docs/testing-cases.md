@@ -140,3 +140,35 @@ The cases that run rewake's function-hooks plugin under node — `claude-interru
 `stopped-routing` and `claude-steered` — and what the fixture's plugin host plays for
 them are in [testing-plugin.md](testing-plugin.md), with `codex-steered`, the same
 commands on the Codex column.
+
+## Every control
+
+Each scenario's controls by name: the product mutants, built from a `mutation` value in
+`test/workflow`, and the switches that change the fixture's world instead
+([testing.md](testing.md#extending-the-suite) says why a mutant is preferred).
+`docs/controls_test.go` keeps the mutants column equal to the `mutation` values in the
+suite and requires every listed switch to be a name the suite spells, so a mutant added
+or renamed, or a listed switch renamed, without this table turns the five checks red. It
+checks neither that a new switch is listed nor that a control sits in its scenario's row:
+switches have no single form in the code to find them by, and the row is kept by review.
+
+| Scenario | Mutants | Fixture switches |
+|---|---|---|
+| batch-arrival | `preview`, `window`, `unwindowed`, `replay`, `peek-consumes` | — |
+| task-report | `no-stop-hook`, `turn-ended-ignores-stop`, `settles-nothing` | `wrong-report`, `read-fails`, `failure-before-report`, `early-exit` |
+| readiness | — | `no-direct-input`, `wrong-thread`, `no-correlated-reply` |
+| mid-turn | `wait-for-idle` | `late`, `failed-operation` |
+| claude-telemetry | `tap-without-owner`, `uncounted-compaction`, `silent-compaction`, `model-window` | — |
+| pending-report | `pending-ignored`, `pending-settles` | — |
+| claude-inbound | `ungated`, `gate-on-session-start`, `held-as-delivered`, `expiry-unannounced`, `refusal-as-delivered`, `late-word-dropped` | — |
+| owed-reread | `owed-empty` | — |
+| thread-changed | `delivery-unpinned`, `stop-thread-ignored`, `thread-always-changed` | — |
+| awaited-view | `awaited-interim-ignored`, `awaited-never-settled` | — |
+| claude-interrupted | `interrupt-unpublished`, `every-end-stopped`, `plugin-not-passed`, `stop-not-heard` | — |
+| claude-steered | `compact-not-run`, `in-turn-unmapped`, `interrupter-unnamed`, `line-repeated`, `idle-interrupt-done`, `silent-not-answering`, `any-role-steers`, `own-compaction-announced`, `letter-uncounted`, `waits-for-the-end`, `ended-uncounted`, `asker-untold`, `orphan-unlettered`, `stop-by-a-person` | — |
+| codex-steered | `busy-unchecked`, `codex-asker-untold`, `codex-waits-for-the-end`, `codex-outcome-unkept`, `codex-interrupter-unnamed`, `codex-idle-interrupt-done`, `focus-taken` | — |
+| stopped-routing | `stopped-to-main` | — |
+| withdraw-after-notice | `withdraw-leaves-task`, `withdraw-silent`, `recall-sender-first` | — |
+| withdraw-mid-turn | `recall-unnamed` | — |
+| edit-after-notice | `edit-keeps-old-text`, `edit-unlinked`, `replacement-unmarked` | — |
+| addendum-owed | `owed-flat` | — |
