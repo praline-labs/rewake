@@ -96,7 +96,7 @@ main's own wrapper closes each record kept exactly once, by the first of:
   no outcome of the compaction of `<worker>` you asked for was seen within 15m0s; rewake
   list shows whether it compacted." The bound is well past the 10 minutes the Codex
   wrapper waits for a running compaction and gives a Claude Code compaction, whose host
-  call rewake does not bound, several minutes. A worker's outcome of `started` — the
+  call rewake does not bound, the same 15 minutes. A worker's outcome of `started` — the
   Codex wrapper's wait ended with the compaction still running — is no outcome: the
   record waits on for the compaction's end, which the worker records as a second outcome
   of the same request, with the tokens. If the bound comes first, the letter says what

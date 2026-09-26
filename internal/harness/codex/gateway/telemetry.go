@@ -191,9 +191,21 @@ func (c *connection) syncObservation() {
 // main's wrapper to send as a letter: its end, once its command has answered
 // started or requested, and every final answer, which the letter needs when
 // the command's own wait was cut short.
+//
+// A started answer is published after the connection's lock is let go, so the
+// compaction's end, recorded under that lock, can come first: a started that
+// arrives after a final outcome of the same request is dropped, or the
+// letter would take the compaction for still running.
 func (g *Gateway) CompactionEnded(request, by string, answer control.Answer) {
 	g.telemetry.mu.Lock()
 	defer g.telemetry.mu.Unlock()
+	if answer.Outcome == control.Started {
+		for _, kept := range g.telemetry.outcomes {
+			if kept.Request == request && kept.RequestedBy == by && kept.Outcome != control.Started {
+				return
+			}
+		}
+	}
 	g.telemetry.outcomes = sessionstate.KeepOutcome(g.telemetry.outcomes, sessionstate.CompactionOutcome{
 		Request: request, RequestedBy: by, Outcome: answer.Outcome, Reason: answer.Reason, Detail: answer.Detail,
 		TokensBefore: answer.TokensBefore, TokensAfter: answer.TokensAfter, EndedAt: time.Now(),

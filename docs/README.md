@@ -131,6 +131,11 @@ everything else.
   when the request fails, the terminal's `/compact` answered while main's runs, and the
   interrupt naming main. Open it when a Codex compaction or interrupt from main
   misbehaves.
+- [remote-control-codex-limits.md](remote-control-codex-limits.md) — the known limits of
+  that service: a goal's turn compacting before main's compaction, a reply after its
+  turn's end, a request left unanswered, a compaction lost sight of or ending unseen,
+  work accepted and lost, a running turn whose id is unknown. Open it when main's
+  compaction is refused as uncertain, or its answer or letter looks wrong.
 - [codex-publication.md](codex-publication.md) — which Codex turn outcomes reach the
   waiters: proof of work, the advisory report of a turn without it or of a run that
   passed unseen, a compaction's turn reporting nothing, and why no outcome is dropped

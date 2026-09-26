@@ -177,7 +177,13 @@ func (g *Gateway) compact(ctx context.Context, request, by string, start time.Du
 	c.mu.Unlock()
 	replied := make(chan error, 1)
 	go func() {
-		_, err := c.callReserved(ctx, binding, "thread/compact/start", map[string]any{})
+		// The gate is held until the server answers the request, and every
+		// request of the terminal's waits for it: the request is bounded by
+		// the start bound, not by the wait for the compaction's end, so a
+		// silent server holds the terminal no longer than an untied mark.
+		call, cancel := context.WithTimeout(ctx, g.markLimit())
+		defer cancel()
+		_, err := c.callReserved(call, binding, "thread/compact/start", map[string]any{})
 		<-g.gate
 		replied <- err
 	}()

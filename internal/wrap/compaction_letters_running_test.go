@@ -54,3 +54,44 @@ func TestACompactionStillRunningAtTheBoundSaysSo(t *testing.T) {
 		t.Fatalf("letters %+v, want one saying %q", got, want)
 	}
 }
+
+// A worker may record a started after the compaction's end: its command
+// publishes the answer after the end was recorded. The final outcome stands
+// over it in either order, and main's letter comes from it at once.
+func TestAStartedRecordedAfterTheEndDoesNotHideIt(t *testing.T) {
+	now := time.Now()
+	before, after := int64(120000), int64(9000)
+	for _, c := range []struct {
+		name   string
+		final  sessionstate.CompactionOutcome
+		events []sessionstate.CompactionEvent
+		want   string
+	}{
+		{
+			name:  "failed",
+			final: sessionstate.CompactionOutcome{Request: letterA, Outcome: control.Failed, Detail: "the compaction was interrupted", EndedAt: now},
+			want:  "Rewake: the compaction of worker-fixture you asked for failed (the compaction was interrupted).",
+		},
+		{
+			name:   "done",
+			final:  sessionstate.CompactionOutcome{Request: letterA, Outcome: control.Done, TokensBefore: &before, TokensAfter: &after, EndedAt: now},
+			events: []sessionstate.CompactionEvent{{Sequence: 1, ObservedAt: now, Request: letterA}},
+			want:   "Rewake: compacted worker-fixture: 120000 tokens before, 9000 after (compaction 1).",
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			dir, main, peer, observer := lettersFixture(t)
+			c.final.RequestedBy = main.Name
+			for i := range c.events {
+				c.events[i].RequestedBy = main.Name
+			}
+			running := sessionstate.CompactionOutcome{Request: letterA, RequestedBy: main.Name, Outcome: control.Started, Detail: runningDetail, EndedAt: now.Add(time.Millisecond)}
+			letterState(t, dir, peer, c.events, []sessionstate.CompactionOutcome{c.final, running})
+			pend(t, dir, main, peer, letterA)
+			scanTimes(t, observer, dir, main, 2)
+			if got := letters(t, dir, main.Name); len(got) != 1 || got[0].Text != c.want {
+				t.Fatalf("letters %+v, want one saying %q", got, c.want)
+			}
+		})
+	}
+}

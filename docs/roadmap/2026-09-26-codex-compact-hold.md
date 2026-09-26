@@ -81,8 +81,47 @@ or one running past any bound.
   fails the message: nothing holds a delivery during a review, and a review's end is not
   tracked as a compaction's is.
 - **The refusal is recognized by its text**, which is the Debug form of a Rust enum in
-  0.155.1; a later Codex that words it otherwise makes it final again. The fixture's
+  0.155.1, and the same in 0.157.1 (`turn_processor.rs:675`, `turn_input.rs:659`,
+  `error_code.rs:6`, read by the Codex-side acceptance); a later Codex that words it
+  otherwise makes it final again. The fixture's
   refusal carries the 0.155.1 text, so the suite does not notice such a change.
 - **The 10-minute bound is a guess from two points**, 4–9 seconds on an empty
   conversation and 104 seconds on a full one. Past it the task goes, is refused and
   waits — no longer lost — but main's wait has ended as `started`.
+- **A compaction that ends while the terminal is away** releases its hold on the
+  terminal's return, but main learns its end only at the bound: the resume asks for no
+  turns, so nothing says how it ended
+  ([remote-control-codex.md](../remote-control-codex.md)).
+
+## Review
+
+The Claude-side review and the Codex-side acceptance of the commit accepted neither,
+for two defects, one gap and three documents; fixed in the next commit.
+
+- **A silent server held the terminal for 10 minutes** (regression, confirmed by a probe:
+  with a 200 ms start bound and a 3 s running bound, the terminal's `thread/read` reached
+  the server after 2.5 s). The command's context became the 10-minute wait for the end,
+  and the same context bounded `thread/compact/start` in `callReserved`, which holds the
+  admission gate every request of the terminal's waits for. The request now has its own
+  context bounded by the start bound (`steer.go`, `g.markLimit()`), as the 80-second
+  bound did before. `TestASilentCompactionRequestHoldsTheTerminalOnlyToTheStartBound`
+  goes red without it.
+- **A late `started` hid the end** (found by both, reproduced deterministically).
+  `server_steer.go` publishes `later()`'s answer after the connection's lock is let go,
+  and the compaction's end, recorded under that lock by `recordLateEnds`, can come
+  first: the outcomes read `[done, started]` or `[failed, started]`, and `halves` took the
+  last, so main waited for its bound. Now a `started` after a final outcome of the same
+  request is dropped by `CompactionEnded` (`telemetry.go`), and `halves`
+  (`internal/wrap/compaction_letters.go`) lets no `started` stand over a final outcome in
+  either order. `TestALateStartedDoesNotStandOverTheEnd` (the review's reproduction),
+  `TestAStartedAfterAFinalOutcomeIsDropped` and `TestAStartedRecordedAfterTheEndDoesNotHideIt`
+  go red without the two changes.
+- **A resume ends the hold, not the wait.** Finishing the wait from the resume's reply
+  was not simple: the terminal's resume asks for no turns, so the reply carries no
+  status of the compaction's turn. Written down as a limit instead, above.
+- Documents: the letter's bound for a Claude Code compaction is 15 minutes, not "several";
+  the terminal's `/compact` sets a mark and holds deliveries the same way, and a repeated
+  one is refused for as long as main's runs; the request's own bound. The limits of
+  [remote-control-codex.md](../remote-control-codex.md) moved to
+  [remote-control-codex-limits.md](../remote-control-codex-limits.md) when it passed 400
+  lines.

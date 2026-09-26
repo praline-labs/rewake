@@ -143,14 +143,20 @@ func (n *sessionNotices) closeRequest(ctx context.Context, dir string, self regi
 }
 
 // halves finds a pending compaction's outcome and count in its worker's
-// snapshot, which stays readable after the worker has gone.
+// snapshot, which stays readable after the worker has gone. The last outcome
+// stands, except that started — no outcome yet — never stands over a final
+// one, whichever order a worker recorded them in.
 func halves(dir string, self registry.Session, pending control.Pending) letterParts {
 	snapshot := sessionstate.Load(dir, pending.Worker.Name, pending.Worker.Epoch())
 	var found letterParts
 	for i, outcome := range snapshot.CompactionOutcomes {
-		if outcome.Request == pending.ID && outcome.RequestedBy == self.Name {
-			found.outcome = &snapshot.CompactionOutcomes[i]
+		if outcome.Request != pending.ID || outcome.RequestedBy != self.Name {
+			continue
 		}
+		if outcome.Outcome == control.Started && found.outcome != nil && found.outcome.Outcome != control.Started {
+			continue
+		}
+		found.outcome = &snapshot.CompactionOutcomes[i]
 	}
 	for i, event := range snapshot.CompactionEvents {
 		if event.Request == pending.ID && event.RequestedBy == self.Name {
