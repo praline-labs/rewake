@@ -141,9 +141,22 @@ closed. What it found, fixed in the same change as the refusal by words:
 Main kept git in a session of its own; the cost, that Ctrl-C does not stop a long
 `git worktree add`, is in [launch.md](../launch.md#a-worktree-for-a-launch).
 
+## Final acceptance of c7fdfdf
+
+Accepted on both sides on September 27, 2026. On the Codex side all 25 continuation
+forms, on 0.155.1 and 0.157.1, were refused with exit 2 before a checkout, the nested
+`exec` and `e` forms too, and no other spelling of a continuation was found. On the
+Claude Code side the sweep tests ran 600 times under parallel `-race` load with no
+failure, and the full workflow suite passed.
+
 ## What stays open
 
-- Acceptance on the Codex side of the refusal by words.
+- A relative dangling root link reached through a symlinked directory is resolved
+  lexically, so the inside-the-repository check misses it; the launch then fails at
+  `MkdirAll` with exit 1 rather than refusing with exit 2. No work is at risk.
+- A checkout whose repository was moved, not deleted, is refused as "gone"; the refusal
+  could point at `git worktree repair` from the new place, as the missing-directory one
+  does.
 - The launch's continuation parser still reads a joined image value and a prompt before
   the subcommand as the terminal does not. Without `--worktree` that costs two smaller
   things: `--image=foo fork` is not marked as a fork at startup for the gateway, and a
