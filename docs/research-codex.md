@@ -256,8 +256,10 @@ interrupted without a model response.
 - `excludeTurns` is true on the paginated resume; a legacy history makes it false, and
   the serializer then leaves it out (`rollout_history.rs:161`, protocol
   `v2/thread.rs:424`). Requiring it would refuse a valid resume.
-- The temporary and dynamic helpers use the same builder and keep their own request-id
-  prefixes, `temporary-` and `tui-dynamic-`.
+- The helpers carry `web_search` too, so only their request-id prefixes, `temporary-`
+  and `tui-dynamic-`, tell them apart: the temporary helper writes its own
+  configuration with `web_search` `"disabled"` (`tui/src/temporary_structured_request.rs`,
+  about line 98), and the dynamic helper's start takes the builder's.
 - `PreserveExistingThread` builds a resume of defaults only (`:2065`), not with the
   ordinary builder; `resume_thread` then lets the terminal's tool transport add its
   own server to the configuration (`rollout_history.rs:157`, the key

@@ -83,8 +83,10 @@ func isHelper(m meta) bool {
 func recognized(m meta) bool {
 	switch m.method {
 	case "thread/start":
+		// legacy(codex <0.157.1): 0.155.1 marks its start by the roots or the permissions, later versions by tuiConfig only; remove when 0.155.1 is no longer supported
 		return (m.numeric || strings.HasPrefix(m.idText, "startup-thread-start-")) && m.source == "user" && (m.roots || m.permissions || m.tuiConfig)
 	case "thread/resume":
+		// legacy(codex <0.157.1): the (roots || permissions) && config arm is 0.155.1's ordinary resume; remove when 0.155.1 is no longer supported
 		return m.numeric && m.thread != "" && ((m.roots || m.permissions) && m.config || m.tuiConfig && m.byID || m.reconnect)
 	}
 	return false

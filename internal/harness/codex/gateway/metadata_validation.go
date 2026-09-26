@@ -33,6 +33,7 @@ func uniqueControlFields(raw []byte) error {
 			}
 			i++
 			i = skipValue(b, i)
+			// legacy(codex <0.157.1): runtimeWorkspaceRoots and permissions are read only for 0.155.1's requests; remove when 0.155.1 is no longer supported
 			switch key {
 			case "id", "method", "params", "result", "error", "thread", "threadId", "turn", "turnId", "status", "type", "threadSource", "config", "runtimeWorkspaceRoots", "permissions", "canAcceptDirectInput", "includeTurns", "data", "nextCursor",
 				"web_search", "history", "path", "excludeTurns":

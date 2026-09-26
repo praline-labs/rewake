@@ -73,6 +73,7 @@ func malformedField(params json.RawMessage) string {
 	if raw, ok := fields["threadId"]; ok && jsonKind(raw) != "string" {
 		return "threadId must be a string"
 	}
+	// legacy(codex <0.157.1): only 0.155.1 sends the roots as a list; remove when 0.155.1 is no longer supported
 	if raw, ok := fields["runtimeWorkspaceRoots"]; ok && jsonKind(raw) != "null" {
 		if jsonKind(raw) != "array" {
 			return "runtimeWorkspaceRoots must be a list of paths"

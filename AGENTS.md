@@ -302,6 +302,9 @@ messages — is in English; commits are a single subject line, no body.
 
 Keep a file under 400 lines; split by subject, not by size.
 
+Code kept only for an older harness version or for records an earlier rewake wrote
+carries the mark described in `docs/legacy.md`.
+
 ## Delegation and review
 
 Work is handed out through rewake, with a brief that stands on its own and names

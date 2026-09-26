@@ -16,6 +16,7 @@ type forkSelection struct {
 func forkIntent(m meta) bool {
 	// The terminal's fork carries its configuration as its start and resume do
 	// (tuiConfig); read in the source of 0.157.1, not seen live.
+	// legacy(codex <0.157.1): the roots or the permissions mark 0.155.1's fork; remove when 0.155.1 is no longer supported
 	return m.method == "thread/fork" && m.numeric && m.source == "user" && m.thread != "" && m.config && (m.roots || m.permissions || m.tuiConfig)
 }
 

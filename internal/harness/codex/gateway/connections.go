@@ -141,6 +141,7 @@ func (g *Gateway) acquire(ctx context.Context) error {
 func (g *Gateway) reconnectIntent(c *connection, m meta) bool {
 	// An ordinary resume of the terminal's carries its roots or, from 0.157.1,
 	// its configuration (tuiConfig): only one carrying neither rejoins.
+	// legacy(codex <0.157.1): m.roots is 0.155.1's ordinary resume; remove when 0.155.1 is no longer supported
 	if m.method != "thread/resume" || !m.numeric || m.thread == "" || m.roots || m.tuiConfig {
 		return false
 	}

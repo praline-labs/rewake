@@ -15,10 +15,14 @@ import (
 // routing fields — with each record's line in the recording. The model list
 // and the notifications recorded without parameters are left out; neither
 // selects anything. checks are the probe's own checkpoints: the recording's
-// length when the terminal had started, run /new and run /resume.
+// length when the terminal had started, run /new and run /resume. A bare path
+// replays its recording with web_search struck from every configuration the
+// terminal sends: 0.155.1 sends it as well, so only a bare replay shows its
+// roots still selecting on their own, as for a version that sends no web_search.
 type tuiPath struct {
 	name   string
 	checks []tuiCheck
+	bare   bool
 }
 
 type tuiCheck struct {
@@ -34,30 +38,39 @@ const seededThread = "01a0dea0-9d0f-7850-a072-27682e647d7e"
 // conversations the terminal had loaded then, as the terminal's next reads and
 // the same step recorded with its ids on 0.157.1 show; without them the
 // terminal's reads after its /resume would be refused as unexplained.
+//
+// legacy(codex <0.157.1): a patch for the recording of 0.155.1; remove when 0.155.1 is no longer supported
 var unlisted = map[string]map[int][]string{
 	"0.155.1-interactive": {88: {seededThread, "01a0dea0-a907-7a71-a136-0e1d9c0d3aae"}},
 }
 
 var tuiPaths = []tuiPath{
-	{"0.155.1-interactive", []tuiCheck{{"startup", 36, seededThread}, {"new", 62, "01a0dea0-a907-7a71-a136-0e1d9c0d3aae"}, {"resume", 98, seededThread}}},
-	{"0.155.1-launch-resume", []tuiCheck{{"resume", 47, seededThread}}},
+	// legacy(codex <0.157.1): the recordings of 0.155.1 and their bare replays; remove when 0.155.1 is no longer supported
+	{"0.155.1-interactive", []tuiCheck{{"startup", 36, seededThread}, {"new", 62, "01a0dea0-a907-7a71-a136-0e1d9c0d3aae"}, {"resume", 98, seededThread}}, false},
+	{"0.155.1-interactive", []tuiCheck{{"startup", 36, seededThread}, {"new", 62, "01a0dea0-a907-7a71-a136-0e1d9c0d3aae"}, {"resume", 98, seededThread}}, true},
+	{"0.155.1-launch-resume", []tuiCheck{{"resume", 47, seededThread}}, false},
+	{"0.155.1-launch-resume", []tuiCheck{{"resume", 47, seededThread}}, true},
 	// /resume of a conversation that ran no turn fails natively ("no rollout
 	// found"), so the terminal is left with no selection proved.
-	{"0.157.1-interactive", []tuiCheck{{"startup", 36, "01a0dea0-2099-74c2-ab58-5d93934e4cef"}, {"new", 49, "01a0dea0-32d7-7512-8a6a-ec5abdc6c8f4"}, {"resume", 53, ""}}},
-	{"0.157.1-seeded-interactive", []tuiCheck{{"startup", 47, seededThread}, {"new", 60, "01a0dea1-f01f-77c1-b9c6-a7977f5f63e5"}, {"resume", 85, seededThread}}},
-	{"0.157.1-seeded-launch-resume", []tuiCheck{{"resume", 47, seededThread}}},
+	{"0.157.1-interactive", []tuiCheck{{"startup", 36, "01a0dea0-2099-74c2-ab58-5d93934e4cef"}, {"new", 49, "01a0dea0-32d7-7512-8a6a-ec5abdc6c8f4"}, {"resume", 53, ""}}, false},
+	{"0.157.1-seeded-interactive", []tuiCheck{{"startup", 47, seededThread}, {"new", 60, "01a0dea1-f01f-77c1-b9c6-a7977f5f63e5"}, {"resume", 85, seededThread}}, false},
+	{"0.157.1-seeded-launch-resume", []tuiCheck{{"resume", 47, seededThread}}, false},
 }
 
 // Each path the probe drove selects what the terminal selected, on both
 // versions: the 0.157.1 ones are what the gateway of that day refused.
 func TestTheTerminalsPathsSelectOnBothVersions(t *testing.T) {
 	for _, path := range tuiPaths {
-		t.Run(path.name, func(t *testing.T) {
+		name := path.name
+		if path.bare {
+			name += "-bare"
+		}
+		t.Run(name, func(t *testing.T) {
 			g, ui, peers, _ := setup(t)
 			native := <-peers
 			defer func() { _ = native.conn.Close() }()
 			checks := path.checks
-			for _, record := range tuiRecords(t, path.name) {
+			for _, record := range tuiRecords(t, path.name, path.bare) {
 				for len(checks) > 0 && record.line > checks[0].after {
 					tuiCheckpoint(t, g, checks[0])
 					checks = checks[1:]
@@ -95,7 +108,7 @@ type tuiRecord struct {
 // apart from the reply's shape, so it is put back: a thread under result, the
 // ids of a list as the list — plain ids for the loaded list, as the server
 // sends them, objects for the others.
-func tuiRecords(t *testing.T, name string) []tuiRecord {
+func tuiRecords(t *testing.T, name string, bare bool) []tuiRecord {
 	t.Helper()
 	file, err := os.Open(filepath.Join("testdata", "tui-paths", name+".jsonl"))
 	if err != nil {
@@ -130,6 +143,9 @@ func tuiRecords(t *testing.T, name string) []tuiRecord {
 			message["method"] = r.Method
 			if len(r.Params) > 0 {
 				message["params"] = r.Params
+				if bare && r.Direction == "tui-to-gateway" {
+					message["params"] = withoutWebSearch(t, r.Params)
+				}
 			}
 			if r.Direction == "tui-to-gateway" {
 				methods[string(r.ID)] = r.Method
@@ -160,6 +176,29 @@ func tuiRecords(t *testing.T, name string) []tuiRecord {
 		out = append(out, tuiRecord{line: r.Line, fromTUI: r.Direction == "tui-to-gateway", raw: raw})
 	}
 	if err := scanner.Err(); err != nil {
+		t.Fatal(err)
+	}
+	return out
+}
+
+// withoutWebSearch strikes web_search from a request's configuration.
+func withoutWebSearch(t *testing.T, params json.RawMessage) json.RawMessage {
+	t.Helper()
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(params, &fields); err != nil {
+		t.Fatal(err)
+	}
+	var config map[string]json.RawMessage
+	if json.Unmarshal(fields["config"], &config) != nil || config == nil {
+		return params
+	}
+	delete(config, "web_search")
+	var err error
+	if fields["config"], err = json.Marshal(config); err != nil {
+		t.Fatal(err)
+	}
+	out, err := json.Marshal(fields)
+	if err != nil {
 		t.Fatal(err)
 	}
 	return out

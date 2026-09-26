@@ -136,6 +136,7 @@ func shimClient(socket string) int {
 // a start: a new conversation is named by the server, and the client learns
 // it from the reply.
 func terminalLifecycle(shape string, resume bool) (string, map[string]any) {
+	// legacy(codex <0.157.1): the default shape is 0.155.1's, with its roots; remove when 0.155.1 is no longer supported
 	params := map[string]any{
 		"threadSource":          "user",
 		"config":                map[string]any{},

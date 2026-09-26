@@ -68,6 +68,28 @@ its `PreserveExistingThread` resume carry one too.
 - The full workflow suite with the new case: 124 cases, 121 pass and 3 unsupported for
   a named capability, 4m19s.
 
+## Review
+
+review-claude reviewed the commit (7212685) on September 26, 2026: no high or medium
+finding, and the older versions not broken. Fixed in the next commit of the branch, with
+the legacy marks ([legacy.md](../legacy.md)):
+
+- **Low: the replay of 0.155.1 did not hold the roots path.** 0.155.1 writes
+  `web_search: "cached"` as well, so its recordings stayed green without the roots in
+  `recognized`. `tui_paths_test.go` now also replays each 0.155.1 recording bare, with
+  `web_search` struck from every configuration the terminal sends; the mutant that
+  drops the roots from `recognized` turns both bare replays red and leaves the others
+  green.
+- [gateway.md](../gateway.md#compatibility-and-limits) said `threadSource: "user"`
+  gates each recognized request; a resume carries none, and it gates a start and a fork.
+  It also said the reconnect's resume is without roots only; it is without the
+  terminal's configuration too.
+- `metadata.go` and [research-codex.md](../research-codex.md#the-terminals-selection-on-01571)
+  said the helpers carry no configuration, or the builder's. The temporary helper writes
+  its own with `web_search` `"disabled"` (`temporary_structured_request.rs`, about line
+  98) and the dynamic one takes the builder's on a start; only their request-id prefixes
+  tell them apart.
+
 ## What stays open
 
 - **No fork and no `PreserveExistingThread` resume of 0.157.1 was driven live.** The

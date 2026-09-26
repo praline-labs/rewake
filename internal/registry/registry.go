@@ -93,6 +93,7 @@ func (s Session) Judgeable() bool {
 	}
 	// A record without a namespace comes from a version that did not record
 	// one; the reader's own is the best it has.
+	// legacy(rewake <2026-09-16): records of earlier builds carry no pidNamespace; remove when no session started by such a build is registered
 	return s.PIDNamespace == "" || s.PIDNamespace == here
 }
 

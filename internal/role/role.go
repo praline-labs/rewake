@@ -65,6 +65,7 @@ func Default() Role { return all[0] }
 // Find returns the role with this id. An empty id is the default: records
 // written before roles existed have none.
 func Find(id string) (Role, bool) {
+	// legacy(rewake <2026-09-17): records of earlier builds carry no role or the old id worker; remove when no session started by such a build is registered
 	if id == "" || id == "worker" {
 		return Default(), true
 	}

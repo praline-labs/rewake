@@ -30,6 +30,11 @@ everything else.
 - [code.md](code.md) — the source tree, package by package, with the harness interface
   every adapter implements. Open it to find where something lives, or before adding a
   package.
+- [legacy.md](legacy.md) — the mark on code kept for an old harness version or for
+  records an earlier rewake wrote: its form, the search, when a mark is due, the order of
+  clearing one, the oldest supported versions and the table of current marks that
+  `legacy_test.go` keeps equal to the code. Open it before keeping something for an old
+  version, or when raising the oldest supported one.
 - [launch.md](launch.md) — starting a harness: the wrapper's launch sequence, signals
   and following a stopped harness, which flags choose a room and a role (the rules
   themselves are in design.md and roles.md), the

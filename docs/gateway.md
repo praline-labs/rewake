@@ -96,8 +96,9 @@ Fresh startup and ordinary new/resume keep native arguments and configuration.
 The terminal's start and resume are recognized by what its own builder writes: the
 runtime roots or a permission profile, or — since Codex 0.157.1 sends the roots null
 in remote mode — a configuration whose `web_search` is one of the four modes, a resume
-by id then also with no history and no path. The request-id families and
-`threadSource: "user"` still gate each; a configuration merely present selects nothing
+by id then also with no history and no path. The request-id families gate each, and
+`threadSource: "user"` gates a start and a fork — a resume carries none; a
+configuration merely present selects nothing
 ([research-codex.md](research-codex.md#the-terminals-selection-on-01571)).
 The launcher owns the upstream socket (`.up`) and gateway socket for the run;
 startup initializes and closes a probe client without selecting any thread. The
@@ -111,7 +112,8 @@ close diagnostics. A subsequent owner log confirmed the 4 MiB size guard caused
 repeated closes. The 128 MiB message / 144 MiB queue repair passed independent
 review and owner fresh/resume checks in the usual environment; see the acceptance record below.
 
-The native reconnect workflow uses a settings-preserving resume without roots.
+The native reconnect workflow uses a settings-preserving resume without roots and
+without the terminal's configuration.
 On a new initialized connection, its explicit numeric resume may correlate with
 the last unambiguous closed primary's thread ID. A matching direct-input ACK is
 still required and establishes a new connection/generation. This preserve path

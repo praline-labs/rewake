@@ -171,6 +171,7 @@ func project(raw []byte) (meta, error) {
 	m.includeTurnsKnown = present(raw, "params", "includeTurns")
 	m.includeTurns = boolValue(raw, "params", "includeTurns")
 	m.config = present(raw, "params", "config")
+	// legacy(codex <0.157.1): the roots and the permissions mark the terminal's requests on 0.155.1 only; remove when 0.155.1 is no longer supported
 	m.roots = present(raw, "params", "runtimeWorkspaceRoots")
 	m.permissions = present(raw, "params", "permissions")
 	m.tuiConfig = tuiConfig(raw)
@@ -216,9 +217,11 @@ func project(raw []byte) (meta, error) {
 // is left to tell the terminal's selection from anything else — a version's
 // habit, read in its source (tui/src/app_server_session.rs,
 // config_request_overrides_from_config), not a promise of the protocol. A
-// configuration that is merely present is not it: a helper's or a reconnect's
-// carries none or an empty one. The helpers' ids are refused apart, since some
-// of them are built from the same configuration.
+// configuration that is merely present is not it: a reconnect's carries the
+// defaults only. The helpers carry web_search too — the temporary helper its own
+// configuration with web_search "disabled" (temporary_structured_request.rs),
+// the dynamic one the builder's on a start — so only their request-id prefixes
+// tell them apart (isHelper).
 func tuiConfig(raw []byte) bool {
 	config := field(raw, "params", "config")
 	if len(config) == 0 || config[0] != '{' {

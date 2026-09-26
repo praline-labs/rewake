@@ -54,6 +54,7 @@ func loadTurnReceipt(dir string, self registry.Session, event turnResult) (turnR
 			err = saveTurnReceipt(path, receipt)
 		}
 	} else if os.IsNotExist(err) {
+		// legacy(rewake <2026-09-19): earlier builds kept a turn's receipt under a hash of the run and the event id alone; remove when no session started by such a build is registered
 		if event.Stopped {
 			legacySum := sha256.Sum256([]byte(self.Epoch() + "\x00" + event.ID))
 			legacyPath := filepath.Join(directory, fmt.Sprintf("%x", legacySum[:16]))

@@ -27,6 +27,7 @@ func answer(t *testing.T, s *state, id, thread string) {
 	s.response(metadata(t, fmt.Sprintf(`{"id":%s,"result":{"thread":{"id":%q,"canAcceptDirectInput":true,"status":{"type":"idle"}}}}`, id, thread)))
 }
 
+// legacy(codex <0.157.1): the terminal's start as 0.155.1 sends it, which most tests here take for any terminal's; remove when 0.155.1 is no longer supported, rewriting those tests in the 0.157.1 form
 const startA = `{"id":1,"method":"thread/start","params":{"threadSource":"user","runtimeWorkspaceRoots":[],"config":{},"input":"SECRET"}}`
 
 func TestAcceptedIntentABAStaleRepliesAndRefusals(t *testing.T) {

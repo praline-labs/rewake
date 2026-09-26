@@ -223,6 +223,8 @@ func unservedDelivery(params json.RawMessage, output string) string {
 // lifecycle request, and it takes the four modes only. The permissions,
 // and on a resume the history and the path, are served as left out, which is
 // all a terminal sends of them.
+//
+// legacy(codex <0.157.1): only 0.155.1 sends the roots, as a list; remove when 0.155.1 is no longer supported
 var startShape = served{kind: "object", fields: map[string]served{
 	"threadSource":          {kind: "string"},
 	"config":                {kind: "object", fields: map[string]served{"web_search": {kind: "string", text: aWebSearchMode}}},
