@@ -45,3 +45,19 @@ func gitWorkingDirectory(args []string) (string, error) {
 	}
 	return resolved, nil
 }
+
+// worktreeFlag is Codex's switch for a worktree of its own, which rewake takes
+// (harness.WorktreeHarness).
+const worktreeFlag = "--worktree"
+
+func (codexHarness) WorktreeFlag() string { return worktreeFlag }
+
+// LaunchDirectory is the directory -C or --cd chose, or the current one, and
+// the arguments without them: the launch starts in the checkout instead.
+func (codexHarness) LaunchDirectory(args []string) (string, []string, error) {
+	dir, err := gitWorkingDirectory(args)
+	if err != nil {
+		return "", nil, err
+	}
+	return dir, harness.WithoutFlag(args, "--cd", "-C"), nil
+}

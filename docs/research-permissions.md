@@ -136,19 +136,22 @@ codex sandbox -c 'sandbox_mode="workspace-write"' \
   sh -c 'printf "fixture\n" > probe.txt && git add probe.txt && git -c user.name=Test -c user.email=test@example.invalid commit -m "Check worktree access"'
 ```
 
-Rewake refuses managed `--worktree` launches under its owned server. The direct reason,
+Rewake does not pass `--worktree` to Codex under its owned server. The direct reason,
 found on September 26, 2026, is upstream: the terminal itself refuses `--worktree`
 together with `--remote`, before it creates a checkout, and rewake always starts it with
 `--remote` ([research-codex.md](research-codex.md#--worktree-with-a-remote-terminal)).
 The unknown private gitdir, once given as the reason, is not the whole obstacle any
 more: the grant a main's task adds (`taskGitRoots`,
 `internal/harness/codex/server_gitwrite.go`) reads the cwd of the selected conversation,
-not the launch directory. The supported alternative is to create the worktree first,
-then launch from its checkout; metadata discovery can then add both directories.
-Automatic support would need the terminal to accept the flag with `--remote`, or rewake
-to allocate the checkout itself, which is not built unless the owner asks
-([the decision](roadmap/2026-09-26-codex-worktree.md)). Rewake's session record retains the
-wrapper's original cwd, not the dynamically chosen checkout path, and it does
+not the launch directory. Since September 26, 2026, by the owner's decision, the launch
+command takes the flag and makes the checkout itself with a plain detached
+`git worktree add` ([launch.md](launch.md#a-worktree-for-a-launch)), then starts the
+session inside it. To Git that checkout is an ordinary linked worktree — a `.git` file
+pointing at `<common>/worktrees/<name>`, with a `commondir` back — so metadata discovery
+resolves both directories exactly as for one made by hand; `gitmetadata_test.go` compares
+the two. A worktree made first by hand and launched from remains as good. Rewake's
+session record retains the wrapper's cwd — the checkout, for a `--worktree` launch — not a
+checkout a continuation may choose later, and it does
 not read saved transcripts to predict where a continuation will run.
 
 ### Remote continuation permissions

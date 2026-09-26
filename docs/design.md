@@ -105,6 +105,11 @@ Socket names — the telemetry socket's too — fall back to a digest of name an
 when the expanded path would exceed 103 bytes (the reply socket, which has to share the
 inbound socket's directory, to `rewake-<digest>.reply.sock` there); an excessively long state root still needs shortening.
 
+One thing rewake keeps outside it: the checkouts it makes for a Codex launch with
+`--worktree`, and their records. A checkout holds work that must outlive a restart, so
+they live in the user's data directory, `~/.local/share/rewake/worktrees` by default
+([launch.md](launch.md#a-worktree-for-a-launch)).
+
 ### Rooms
 
 **Owner decision, September 16, 2026:** `--room <name>` selects a room at launch.

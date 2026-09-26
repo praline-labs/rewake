@@ -69,6 +69,7 @@ func buildGroups() {
 	for _, h := range harness.All() {
 		run.Commands = append(run.Commands, launchCommand(h))
 	}
+	run.Commands = append(run.Commands, worktreeCommand())
 
 	talk := Group{
 		Title:   "TALK",

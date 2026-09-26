@@ -33,9 +33,11 @@ func runShim(args []string) int {
 		}
 	}
 	if socket, ok := flagValue(args, "--listen"); ok {
+		recordShimCwd("server")
 		return shimServer(strings.TrimPrefix(socket, "unix://"))
 	}
 	if socket, ok := flagValue(args, "--remote"); ok {
+		recordShimCwd("client")
 		return shimClient(strings.TrimPrefix(socket, "unix://"))
 	}
 	fmt.Fprintln(os.Stderr, "shim: neither --listen nor --remote")

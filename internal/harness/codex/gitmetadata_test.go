@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/iiiokojiadbi/rewake/internal/worktree"
 )
 
 func writeGitPointer(t *testing.T, path, text string) {
@@ -155,7 +157,21 @@ func TestMetadataResolutionMatchesGitLayouts(t *testing.T) {
 	linked := filepath.Join(base, "linked")
 	git(main, "worktree", "add", "-b", "linked", linked)
 	git(main, "submodule", "add", source, "child")
-	checkouts := []string{main, linked, filepath.Join(main, "child")}
+	// A checkout rewake makes for a launch with --worktree is an ordinary
+	// linked worktree to Git, and its metadata is found as that of one made
+	// by hand: a grant reaches its private directory and the common one.
+	t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
+	t.Setenv("GIT_CONFIG_SYSTEM", os.DevNull)
+	made, err := worktree.Create(filepath.Join(base, "trees"), main, "made")
+	if err != nil {
+		t.Fatal(err)
+	}
+	manual, _ := gitMetadataDirectories(linked)
+	rewakes, _ := gitMetadataDirectories(made.Path)
+	if len(manual) != 2 || len(rewakes) != 2 || rewakes[1] != manual[1] || filepath.Dir(rewakes[0]) != filepath.Dir(manual[0]) {
+		t.Errorf("rewake's worktree resolves to %q, a manual one to %q", rewakes, manual)
+	}
+	checkouts := []string{main, linked, made.Path, filepath.Join(main, "child")}
 	for _, checkout := range append([]string{}, checkouts...) {
 		nested := filepath.Join(checkout, "src", "nested")
 		if err := os.MkdirAll(nested, 0o700); err != nil {

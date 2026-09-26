@@ -54,3 +54,5 @@ unless the owner asks for it. The entry left the work queue.
 
 Nothing to build. If a later Codex version accepts `--worktree` with `--remote`, the
 refusal can be revisited; the probe is the same run of the terminal in a container.
+Later the same day the owner asked for a checkout of rewake's own:
+[A worktree for a Codex launch](2026-09-26-codex-worktree-launch.md).

@@ -152,10 +152,15 @@ func TestContinuationDetectionSkipsOptionValuesAndPrompts(t *testing.T) {
 	}
 }
 
-func TestManagedWorktreesExplainTheUnknownPrivateMetadata(t *testing.T) {
+// The launch command takes --worktree before a launch is planned; one that
+// reaches the plan anyway would start a terminal that refuses it beside
+// --remote, so the plan refuses it first and names the launch that works.
+func TestAWorktreeFlagReachingThePlanIsRefused(t *testing.T) {
 	codexHome(t, "")
-	_, err := New().Launch(harness.LaunchRequest{Dir: t.TempDir(), Args: []string{"--worktree"}})
-	if err == nil || !strings.Contains(err.Error(), "checkout") {
-		t.Fatalf("unknown server checkout accepted: %v", err)
+	for _, args := range [][]string{{"--worktree"}, {"--worktree=a"}} {
+		_, err := New().Launch(harness.LaunchRequest{Dir: t.TempDir(), Args: args})
+		if err == nil || !strings.Contains(err.Error(), "rewake codex --worktree") {
+			t.Fatalf("%q reached the plan: %v", args, err)
+		}
 	}
 }

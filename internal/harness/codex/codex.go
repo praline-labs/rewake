@@ -110,7 +110,8 @@ const (
 func (codexHarness) Notes() []string {
 	return []string{
 		"A private app-server starts or steers a turn when a notice arrives; no queue polling is needed.",
-		"The server lives only for this session. Existing --remote, --profile, --worktree and --oss/--local-provider arguments require a separate checkout or explicit configuration instead.",
+		"The server lives only for this session. Existing --remote, --profile and --oss/--local-provider arguments require explicit configuration instead.",
+		"--worktree is rewake's here, since the terminal refuses its own beside the server: rewake adds a detached checkout of HEAD under its worktree directory and starts the session in it, at the same place within the repository; --worktree=<name> names it. rewake worktree ls lists them and rewake worktree rm removes one.",
 		"Arguments after the harness name are passed to codex untouched, with one exception: a --help written first asks rewake for this page instead of starting the harness.",
 	}
 }
@@ -218,8 +219,14 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 		notes = append(notes, note)
 	}
 
-	if harness.HasFlag(request.Args, "--remote") || hasProfile(request.Args) || harness.HasFlag(request.Args, "--worktree") || harness.HasFlag(request.Args, "--oss") || harness.HasFlag(request.Args, "--local-provider") {
-		return harness.LaunchPlan{}, fmt.Errorf("session-owned app-server requires local arguments without --remote, --profile, --worktree or --oss/--local-provider; select a checkout and configuration explicitly before launching")
+	if harness.HasFlag(request.Args, "--remote") || hasProfile(request.Args) || harness.HasFlag(request.Args, "--oss") || harness.HasFlag(request.Args, "--local-provider") {
+		return harness.LaunchPlan{}, fmt.Errorf("session-owned app-server requires local arguments without --remote, --profile or --oss/--local-provider; select a configuration explicitly before launching")
+	}
+	if harness.HasFlag(request.Args, worktreeFlag) {
+		// The launch command takes the flag before a launch is planned; one
+		// reaching here came some other way, and the terminal would refuse it
+		// beside --remote.
+		return harness.LaunchPlan{}, fmt.Errorf("%s reached the Codex launch; start it with rewake codex %s so rewake makes the checkout", worktreeFlag, worktreeFlag)
 	}
 	cwd, err := gitWorkingDirectory(request.Args)
 	if err != nil {

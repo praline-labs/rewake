@@ -170,15 +170,78 @@ Caller permission flags and permission-related -c overrides stay untouched.
 For resume/fork, a separate stderr note explains that the remote TUI rejects
 them and advises removing them or starting a new thread. Arguments after -- are
 prompt text, not permission flags. The registry keeps
-the wrapper's original cwd. Existing --remote, --profile, --worktree and --oss/--local-provider launches
+the wrapper's cwd — the launch directory, or the checkout of a `--worktree` launch below.
+Existing --remote, --profile and --oss/--local-provider launches
 are refused with advice: they cannot safely share this owned server topology or
-forward all configuration. Create the checkout first and use explicit settings.
-For `--worktree` the refusal is also upstream's: the terminal itself refuses the flag
-together with `--remote`, before it creates a checkout, and rewake always starts it with
-`--remote` ([research-codex.md](research-codex.md#--worktree-with-a-remote-terminal)).
-A plain `git worktree add`, launched from its checkout, is the supported way; rewake
-does not allocate a managed checkout itself
-([the decision](roadmap/2026-09-26-codex-worktree.md)).
+forward all configuration. Use explicit settings.
+
+#### A worktree for a launch
+
+`rewake codex --worktree` gives the session a checkout of its own. Codex's terminal
+cannot make one under rewake — it refuses `--worktree` together with `--remote`, before
+it creates anything, and rewake always starts it with `--remote`
+([research-codex.md](research-codex.md#--worktree-with-a-remote-terminal)) — so the
+launch command takes the flag for itself and never passes it on. Decided by the owner on
+September 26, 2026, as the variant that keeps only the substance of Codex's worktree:
+a detached checkout made with the public `git worktree add`, and rewake's own record of
+it. Codex's private scheme — its directory layout, a `--no-checkout` add,
+`config.worktree`, the thread binding in the git metadata — is not repeated: it is no
+contract, and a copy would drift from the next version silently.
+
+- **The flag.** Codex's own spelling, read as a switch: `--worktree` alone asks for a
+  generated name, six hex digits; `--worktree=<name>` names the checkout — a letter or
+  digit, then up to 39 letters, digits, `-` or `_`. A spaced value is not read: the word
+  after the switch stays the harness's, a prompt most often, as it would be for Codex
+  itself. The flag after `--` is prompt text and stays. Given twice, or as `--worktree=`,
+  it is a wrong call.
+- **The checkout.** The repository is the one holding the launch directory — `-C` or
+  `--cd` when given, else the current one. rewake adds a detached checkout of its HEAD
+  commit: detached, so the branch checked out in the source stays free and a second
+  launch from the same place does not collide with the first. Uncommitted changes in the
+  source do not come along.
+- **Where.** `$REWAKE_WORKTREES` when set (absolute), else
+  `$XDG_DATA_HOME/rewake/worktrees`, else `~/.local/share/rewake/worktrees`; under it one
+  directory per repository, named for it with a short hash of its Git directory so two
+  repositories of one name stay apart, and in that one each checkout beside its record:
+  `<repository>-<hash>/<name>/` and `<name>.json`. Not the state directory — that lives
+  in `/tmp` and would not outlive a restart, while a checkout holds work — and not inside
+  the repository, where it would show up in `git status` and in the agent's own
+  searches. One place for every repository, so `rewake worktree ls` sees them all.
+- **Where the launch starts.** At the launch directory's place within the checkout, as
+  Codex does; at the checkout's top when that directory is not in the commit, an
+  untracked one say. The wrapper changes into it before the session is registered, and
+  `-C`/`--cd` are taken out of the arguments, so the record, the terminal and the
+  app-server all work there. Relative paths among the harness arguments resolve there
+  too.
+- **Trust.** Codex resolves a linked worktree's trust to its main checkout, so a
+  launch from a trusted repository keeps that trust in its checkout
+  ([research-codex.md](research-codex.md#--worktree-with-a-remote-terminal)).
+- **The record** says which repository (its shared Git directory and the checkout the
+  launch came from), which commit, where, when, and — written once the session's name is
+  claimed — which session: name, room, run and the room's state directory.
+- **Refusals** come before anything is made and exit 2: a name out of shape, a name
+  taken by a checkout or by a directory in its place — with the next step: another name,
+  `rewake worktree rm`, or `cd` into the existing one —, a launch directory outside any
+  working tree, a repository with no commit yet. Nothing prompts.
+- **After the session** the checkout stays, as Codex's own would, and a line on stderr
+  says where and how to remove it. A launch that fails after the checkout was made takes
+  it back when nothing in it changed.
+
+`rewake worktree ls` lists the checkouts with their owner, whether that session still
+runs, and whether removing one would lose anything; `--json` gives the same model.
+`rewake worktree rm <name>` — or `<repository>/<name>` when a name is in two
+repositories — removes one through `git worktree remove`, so the repository forgets it
+too, and prunes one whose directory is already gone. It refuses a checkout with changes
+`git status` shows, one whose HEAD moved to commits no branch or tag holds, and one whose
+session still runs, naming each reason; `--force` removes it anyway. Nothing is removed
+automatically.
+
+A main's `--grant-git` reaches such a checkout as it does a worktree made by hand: the
+grant reads the conversation's cwd, which is in the checkout, and resolves its private
+and common Git directories
+([research-permissions.md](research-permissions.md#managed-worktrees-and-continuation-permissions)).
+Claude Code keeps its own `-w`/`--worktree`: rewake does not take it.
+
 Unknown TUI arguments are preserved, not interpreted as server configuration.
 
 Startup checks codex --version against the version the transport was last observed

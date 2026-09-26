@@ -45,6 +45,10 @@ type Request struct {
 	// Role is explicit when its ID is set; empty always uses general.
 	Role   role.Role
 	OnTurn func(context.Context, registry.Session, harness.Completion) error
+	// OnClaimed hears the session once its name is claimed, before the
+	// harness is planned: whatever was prepared for the launch learns whose
+	// it is. An error ends the launch.
+	OnClaimed func(registry.Session) error
 }
 
 // Run starts the harness, serves its mailbox until it exits, and returns the
@@ -83,6 +87,11 @@ func Run(ctx context.Context, request Request) (int, error) {
 			removeSocket(session.Socket)
 		}
 	}()
+	if request.OnClaimed != nil {
+		if err := request.OnClaimed(session); err != nil {
+			return 0, err
+		}
+	}
 
 	// The control directory is the run's, like its sockets: made before the
 	// harness can be asked anything, removed with the session. Only for a

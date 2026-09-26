@@ -27,6 +27,7 @@ internal/harness/claude/telemetry/  what a Claude Code session says about itself
 internal/harness/codex/          owned app-server, WebSocket RPC, thread events and delivery
 internal/harness/codex/gateway/  the terminal gateway: selection, reservation, native mailbox
 internal/wrap/                   wrapper: launch, signals, lifecycle
+internal/worktree/               checkouts rewake makes for a launch: git worktree add, records, removal
 scripts/                         packaging scripts and the tests of the npm shim
 docs/                            the documentation, and the tests that keep it true to the tree
 test/workflow/                   the workflow suite: end-to-end scenarios against fixtures
@@ -66,3 +67,10 @@ A harness whose sessions take `rewake compact` and `rewake interrupt` also imple
 `Steerable` — `CompactFocus() bool`, whether a compaction may carry a focus. One that
 does not is refused before anything is sent ([remote-control.md](remote-control.md)).
 
+
+A harness whose own worktree flag cannot work under rewake implements
+`WorktreeHarness` — `WorktreeFlag()`, the spelling the launch command takes for itself,
+and `LaunchDirectory(args)`, the directory the launch would work in and the arguments
+without what chose it. The launch command then makes the checkout in `internal/worktree`
+and starts the session inside it ([launch.md](launch.md#a-worktree-for-a-launch)). Only
+Codex implements it; Claude Code makes its own.

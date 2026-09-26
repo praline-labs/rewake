@@ -99,6 +99,19 @@ gateway ([launch.md](launch.md#codex)).
   did not complete. The allocation layout is in
   [research-permissions.md](research-permissions.md#managed-worktrees-and-continuation-permissions).
 
+- **Trust follows the main checkout.** **[source: `codex-rs/git-utils/src/trust.rs`,
+  identical at `rust-v0.155.1` and `rust-v0.157.1`, fetched and read September 26,
+  2026]** `resolve_root_git_project_for_trust` walks up from the cwd to the nearest
+  `.git`; when that is a file, it follows it to `<common>/worktrees/<name>`, requires
+  that directory's `gitdir` to name the same checkout's `.git` and its `commondir` to
+  lead to `<common>`, and that `<common>` is the main checkout's `.git`, and then
+  answers the main checkout's root, the key its trust setting is kept under. So a
+  linked worktree made by plain `git worktree add` takes the trust of its repository.
+  Not verified live: that the terminal's first-run dialog reads the same key. rewake's
+  own checkouts
+  ([launch.md](launch.md#a-worktree-for-a-launch)) have this layout;
+  `internal/worktree` has a test that holds them to it.
+
 What the server accepts for it is in
 [research-protocol.md](research-protocol.md#where-a-new-conversation-runs).
 

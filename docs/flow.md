@@ -48,7 +48,10 @@ with `rewake --main --name lead claude`, becoming lead-claude.
 1. **The directory.** The wrapper opens the `REWAKE_DIR` root and the room
    selected by `--room`, or `default` when omitted. Both are 0700; a symlink,
    foreign owner or loose permissions is refused. Legacy root-level records
-   are ignored.
+   are ignored. A Codex launch with `--worktree` first gets a detached checkout of
+   the launch directory's HEAD under rewake's worktree directory, and the wrapper
+   moves into it, at the same place in the repository, before anything else
+   ([launch.md](launch.md#a-worktree-for-a-launch)).
 2. **The name and role.** Under the room lock, first select the role (step 4),
    then append the harness ID to the role prefix or explicit `--name` prefix.
    Automatic collisions add -2, -3 after the harness suffix; explicit conflicts
@@ -83,7 +86,7 @@ with `rewake --main --name lead claude`, becoming lead-claude.
      the server; an inline gateway follows accepted TUI intent. Launch roles add no
      Git roots, and no notify program is installed. Resume/fork keep caller input
      and omit generated permission flags; incompatible
-     remote/profile/managed-worktree/local-provider launches refuse.
+     remote/profile/local-provider launches refuse; `--worktree` never reaches it.
 6. **The environment.** `REWAKE_SESSION=<name>`, `REWAKE_EPOCH=<epoch>`,
    `REWAKE_DIR=<root>` and `REWAKE_ROOM=<room>`; inherited Claude Code markers are stripped so a session
    started from inside another does not borrow its socket.

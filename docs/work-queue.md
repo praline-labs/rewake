@@ -149,6 +149,21 @@ net that agents are not told to rely on. The next one in the queue, by its numbe
 a waking notice that it now holds the slot. Once built, it replaces the manual rule in
 the Checks section of `AGENTS.md`.
 
+**A: Codex's own worktree scheme — to study later.** Recorded September 26, 2026, when
+the owner chose variant B for `rewake codex --worktree`: rewake makes a detached checkout
+with the public `git worktree add` and keeps its own record
+([launch.md](launch.md#a-worktree-for-a-launch)). Variant A would repeat what Codex's
+terminal does in a local launch — its directory layout under
+`$CODEX_HOME/worktrees/<four hex>/<repository>`, a detached `--no-checkout` add,
+`config.worktree`, and the binding of the checkout to the thread in `codex-thread.json`
+([research-codex.md](research-codex.md#--worktree-with-a-remote-terminal),
+[research-permissions.md](research-permissions.md#managed-worktrees-and-continuation-permissions)).
+It is deferred because that scheme is private to the terminal, not a contract: a copy
+would drift from a new Codex version without a word, and the checkout would stop being
+one Codex recognizes. Worth studying when Codex exposes its worktrees through the
+app-server or a subcommand, or accepts `--worktree` beside `--remote`; until then B
+gives the substance without the dependency.
+
 **Parsing the Codex configuration.** Today rewake looks for a mention of a key in the
 text of the file and substitutes nothing when it finds one — crude, and crude on
 purpose, because the hand-written parser was removed. With a library this can be done

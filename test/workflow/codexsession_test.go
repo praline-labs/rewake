@@ -115,6 +115,13 @@ func startHarnessSession(t *testing.T, c *Case, iso *Isolation, harness, name, r
 // which go after it.
 func startSessionWith(t *testing.T, c *Case, iso *Isolation, harness, name, role string, flags, harnessArgs []string, controls ...string) *codexSession {
 	t.Helper()
+	return startSessionIn(t, c, iso, "", harness, name, role, flags, harnessArgs, controls...)
+}
+
+// startSessionIn is startSessionWith launched from dir rather than the case's
+// home, for a scenario about where a launch works.
+func startSessionIn(t *testing.T, c *Case, iso *Isolation, dir, harness, name, role string, flags, harnessArgs []string, controls ...string) *codexSession {
+	t.Helper()
 	installShim(t, c, iso)
 	// rewake appends the harness to the requested name.
 	session := &codexSession{
@@ -135,6 +142,9 @@ func startSessionWith(t *testing.T, c *Case, iso *Isolation, harness, name, role
 	// A scenario that needs two sessions gives that role to the one whose
 	// selection it has to observe.
 	launch := iso.Command(append(append(append([]string{"--name", name, role}, flags...), harness), harnessArgs...)...)
+	if dir != "" {
+		launch.Dir = dir
+	}
 	launch.Env = append(iso.Env(),
 		shimEnv+"=1",
 		shimHarness+"="+harness,

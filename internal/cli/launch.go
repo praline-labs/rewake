@@ -46,6 +46,17 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 			return err
 		}
 
+		// Last of the preparations: every refusal above leaves no checkout
+		// behind.
+		args, checkout, err := takeWorktree(h, call)
+		if err != nil {
+			return err
+		}
+		var onClaimed func(registry.Session) error
+		if checkout != nil {
+			onClaimed = checkout.claimed(dir)
+		}
+
 		code, err := wrap.Run(context.Background(), wrap.Request{
 			OnTurn: func(ctx context.Context, self registry.Session, result harness.Completion) error {
 				return ReportCompletion(ctx, dir, self, result)
@@ -53,11 +64,16 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 			Harness: h,
 			Dir:     dir,
 			Name:    call.Flag("name", ""),
-			Args:    call.Raw,
+			Args:    args,
 			Intro:   !call.Switch("no-intro"),
 			Role:    part,
 			Command: program,
+
+			OnClaimed: onClaimed,
 		})
+		if checkout != nil {
+			checkout.settle(err != nil)
+		}
 		if err != nil {
 			var mainTaken *wrap.MainTakenError
 			if errors.As(err, &mainTaken) {

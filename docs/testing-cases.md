@@ -102,6 +102,21 @@ terminal's selection from its configuration. Its mutant, `roots-only-recognition
 restores the rule that asked for roots or permissions, and must break both observations
 ([research-codex.md](research-codex.md#the-terminals-selection-on-01571)).
 
+## A worktree for a Codex launch
+
+`codex-worktree` runs on the Codex column only: Claude Code makes its own worktree. A
+worker is launched from `src/nested` of a fresh repository with `--worktree=probe`, the
+worktree directory left at its default under the case's home, and each half of the
+fixture writes the directory it started in (`RW_SHIM_CWD_FILE`). The checkout must be a
+detached one of the source's HEAD under that directory, and the session's record, the
+terminal and the app-server must all work in its `src/nested`; a task a main sends must
+be delivered there; `rewake worktree rm` must refuse the checkout while the worker runs
+and say so; and once the worker has ended, rm must remove the checkout, its record and
+git's own entry. Its three mutants each name what they break and require the rest to
+hold: a launch that never enters its checkout, a removal that takes no session for a
+running one — which also leaves nothing for the last rm — and a removal that deletes the
+directory behind git's back, whose entry stays.
+
 ## Actions on a sent message
 
 `withdraw-after-notice`, `edit-after-notice` and `addendum-owed` run in both columns with a
@@ -202,3 +217,4 @@ switches have no single form in the code to find them by, and the row is kept by
 | withdraw-mid-turn | `recall-unnamed` | — |
 | edit-after-notice | `edit-keeps-old-text`, `edit-unlinked`, `replacement-unmarked` | — |
 | addendum-owed | `owed-flat` | — |
+| codex-worktree | `worktree-not-entered`, `worktree-running-ignored`, `worktree-git-kept` | — |
