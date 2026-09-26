@@ -86,6 +86,7 @@ func published(snapshot Snapshot, now time.Time, boot int64) bool {
 		age := time.Duration(boot - snapshot.PublishedBoot)
 		return age >= 0 && age <= 2*time.Second
 	}
+	// legacy(rewake <2026-09-26): snapshots of earlier builds carry no publishedBoot and are judged by the wall clock; remove when no session started by such a build is registered, keeping the wall clock for no boot clock
 	return snapshot.PublishedAt != nil && !snapshot.PublishedAt.IsZero() && now.Sub(*snapshot.PublishedAt) <= 2*time.Second && snapshot.PublishedAt.Sub(now) <= time.Second
 }
 

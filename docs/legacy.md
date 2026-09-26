@@ -28,7 +28,9 @@ One comment line, in the code it keeps:
 The mark stands on its own line, never at the end of a statement, so a mark is one
 line of the search output. An explanation longer than a clause stays in the ordinary
 comment beside it. A block of code kept for one reason takes one mark above it; two
-separate places take two marks, so each is found where it is.
+separate places take two marks, so each is found where it is. When the code under a
+mark also serves a present case — a wall clock kept as well for a host without a boot
+clock — the condition says what stays, and the clean-up removes only the old form's use.
 
 A test or a fixture that exists only for the old form carries the mark too, on the
 helper, the constant or the fixture list that holds it, so it goes with the code.
@@ -114,8 +116,11 @@ In one change, in this order:
 | `internal/harness/codex/gateway/state.go` | `codex <0.157.1` | 2 |
 | `internal/harness/codex/gateway/state_test.go` | `codex <0.157.1` | 1 |
 | `internal/harness/codex/gateway/tui_paths_test.go` | `codex <0.157.1` | 2 |
+| `internal/inbox/answer_mark.go` | `rewake <2026-09-26` | 1 |
+| `internal/inbox/window.go` | `rewake <2026-09-26` | 1 |
 | `internal/registry/registry.go` | `rewake <2026-09-16` | 1 |
 | `internal/role/role.go` | `rewake <2026-09-17` | 1 |
+| `internal/sessionstate/store.go` | `rewake <2026-09-26` | 1 |
 | `test/workflow/codexshim_client_test.go` | `codex <0.157.1` | 1 |
 | `test/workflow/codexshim_params_test.go` | `codex <0.157.1` | 1 |
 | `test/workflow/codexshim_served_test.go` | `codex <0.157.1` | 1 |

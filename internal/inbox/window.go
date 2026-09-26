@@ -119,6 +119,7 @@ func writtenAt(message Message, now time.Time, boot int64) time.Time {
 	if message.CreatedBoot != 0 && boot != 0 && boot >= message.CreatedBoot {
 		return now.Add(-time.Duration(boot - message.CreatedBoot))
 	}
+	// legacy(rewake <2026-09-26): letters of earlier builds carry no createdBoot and take this wall-clock path; remove when no session started by such a build is registered, keeping the path for a reading ahead of boot or no boot clock
 	if !message.CreatedAt.IsZero() && message.CreatedAt.Before(now) {
 		return message.CreatedAt
 	}
