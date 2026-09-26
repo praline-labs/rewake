@@ -92,7 +92,7 @@ func buildGroups() {
 				Options: append(kindOptions(),
 					Option{Flag: "--grant-git", Summary: "Verified main only: explicitly grant eligible task/question recipients access to validated repository Git metadata. No flag adds no roots."},
 					Option{Flag: "--wait", Value: "<seconds>", Summary: "How long to wait. Default: 5 for the delivery, 600 for a question's answer."},
-					Option{Flag: "--to", Value: "<id>", Summary: "Add to a task or question this run sent that is not reported on yet: a task of its own, announced at once, shown with it by rewake inbox --owed and settled by the same report. Takes a unique prefix of the id."},
+					Option{Flag: "--to", Value: "<id>", Summary: "Add to a task or question this run sent that is not reported on yet: a task of its own, announced at once, shown with it by rewake inbox --owed and settled by the same report. Takes a unique prefix of the id; an id rewake edit replaced adds to its replacement."},
 					jsonOption,
 				),
 				Examples: append(sendExamples(), "rewake send writer-codex --grant-git \"Commit the reviewed change\""),
@@ -118,6 +118,8 @@ func buildGroups() {
 				Notes: []string{
 					"Before its notice went out, the message simply goes. After, the recipient finds it in its inbox marked withdrawn, under the same id, and is sent a note at once not to act on the notice, since an agent may act on a preview without reading its inbox. A notice held for approval stays in the recipient harness's queue, which rewake cannot empty; if approved, it leads to the withdrawn mark. A sender blocked on a withdrawn question stops waiting and exits 1.",
 					"Only the session run that sent it may, in any role; mail from a plain shell or an earlier run is out of reach. A read message is final: add to it with rewake send <name> \"...\" --to <id>.",
+					"A task goes with its addenda: each unread one is withdrawn with it, the same way. A read addendum stays, owed as before, and the task is recalled for it even if its own notice never went out.",
+					"An id rewake edit replaced names its replacement: withdrawing it withdraws the letter that stands now, and the output says so first.",
 					"A withdrawal that could not finish says how far it got and names the command that finishes it. Exit 0 withdrawn, or withdrawn already; 1 read, not delivered, no longer kept, no such message, or not finished; 2 a wrong call — not a session, an id too short.",
 				},
 				Handler: handleWithdraw,
@@ -136,6 +138,8 @@ func buildGroups() {
 				Notes: []string{
 					"The old message is withdrawn and the new one sent in its place, in one step: the recipient finds the old one marked withdrawn and replaced, and the new one with its own notice, whose preview begins by naming the old one as withdrawn, so no separate note is sent. The output is send's, ending with the new id.",
 					"A question's replacement waits for its answer as send --question does; the send blocked on the old one stops waiting and exits 1.",
+					"A task's addenda stay where they are and add to the replacement from then on; the output names them, with the command to take one back.",
+					"An id an earlier edit replaced names its replacement, which is what the edit then replaces; the output says so first.",
 					"Who may, and when, as for rewake withdraw. Exit codes as for send.",
 				},
 				Handler: handleEdit,

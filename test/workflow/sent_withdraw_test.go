@@ -239,6 +239,7 @@ func playWithdrawAfterNotice(t *testing.T, c *Case, iso *Isolation, col column, 
 	out := []telemetryFinding{judged(obsWithdrawAnswered,
 		code == 0 && strings.HasPrefix(answer, "Rewake: withdrew your task "+task+" from "+worker.name+"; its notice may have gone out, so "+worker.name+" is told not to act on it"),
 		"send printed %q; withdraw %s exited %d: %q", sent, shortOf(task), code, answer)}
+	unannounced, _ := recallAnnounced(c, iso, worker, task)
 	openReadGate(gate)
 
 	var read []sentView
@@ -271,7 +272,7 @@ func playWithdrawAfterNotice(t *testing.T, c *Case, iso *Isolation, col column, 
 		"the recall the worker read: %+v; everything it read: %+v", recall, sentRead(worker)))
 	shown, noticed := noticeCarrying(c, worker, recallLine(task))
 	deliveries, _ := worker.groupDeliveries()
-	out = append(out, judged(obsWithdrawNoticed, noticed, "the notice with the recall: %+v; every notice the worker was shown: %+v", shown, deliveries))
+	out = append(out, judged(obsWithdrawNoticed, noticed, "the notice with the recall: %+v; every notice the worker was shown: %+v; %s", shown, deliveries, orAnnounced(unannounced)))
 	if held {
 		out = append(out, steeredRecall(c, worker, task))
 	}
@@ -334,7 +335,7 @@ var mutantWithdrawLeavesTask = mutation{
 var mutantWithdrawSilent = mutation{
 	name:  "withdraw-silent",
 	file:  "internal/cli/withdraw.go",
-	edits: []edit{{"\tif result == inbox.WithdrawnAnnounced {\n", "\tif false {\n"}},
+	edits: []edit{{"\tif recallTask {\n", "\tif recallTask && false {\n"}},
 }
 
 func playWithdrawOnClaude(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {

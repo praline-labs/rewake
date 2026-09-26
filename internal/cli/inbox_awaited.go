@@ -108,7 +108,11 @@ func showAwaited(ctx *Context, dir string, session registry.Session, epoch strin
 		}
 		view := awaitedView{
 			ID: message.ID, Kind: inbox.KindOf(message.Message), CreatedAt: message.CreatedAt,
-			State: message.Stage, Detail: message.Detail, Text: message.Text, AddendumTo: message.AddendumTo,
+			State: message.Stage, Detail: message.Detail, Text: message.Text,
+		}
+		if message.AddendumTo != "" {
+			// Under the task as it is now, an edit's replacement included.
+			view.AddendumTo = inbox.CurrentTask(dir, message.To, message.AddendumTo)
 		}
 		switch message.Run {
 		case inbox.RunEnded:

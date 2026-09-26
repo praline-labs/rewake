@@ -38,6 +38,12 @@ type sendModel struct {
 	Answer        string     `json:"answer,omitempty"`
 	Kind          inbox.Kind `json:"kind,omitempty"`
 	ThreadChanged bool       `json:"threadChanged,omitempty"`
+	// Addenda are the addenda that now add to an edit's replacement.
+	Addenda []string `json:"addenda,omitempty"`
+	// Replaces is the letter an edit replaced, and Named the id the edit was
+	// given when that letter is the replacement of an earlier edit.
+	Replaces string `json:"replaces,omitempty"`
+	Named    string `json:"named,omitempty"`
 }
 
 func handleSend(ctx *Context, call Call) error {
@@ -139,8 +145,8 @@ func handleSend(ctx *Context, call Call) error {
 		}
 		defer release()
 	}
-	if err := inbox.Put(dir, message); err != nil {
-		return failf("could not write the message into the mailbox of %s: %v", session.Name, err)
+	if err := writeSent(dir, self, epoch, message, session); err != nil {
+		return err
 	}
 	return reportSent(ctx, sent{dir: dir, self: self, epoch: epoch, target: session, deadline: started.Add(wait)}, message, kind, wait)
 }
@@ -153,7 +159,7 @@ func reportSent(ctx *Context, after sent, message inbox.Message, kind messageKin
 	// The delivery result is worth a few seconds at most; a kind that waits
 	// longer waits for something else, after it.
 	status, known := awaitStatus(dir, session.Name, message.ID, min(wait, defaultWait))
-	model := sendModel{ID: message.ID, To: session.Name, From: message.From, GrantGit: message.GrantGit}
+	model := sendModel{ID: message.ID, To: session.Name, From: message.From, GrantGit: message.GrantGit, Addenda: after.addenda, Replaces: message.Replaces, Named: after.named}
 	if !known && inbox.Answered(dir, session.Name, message.ID) {
 		// The message left the mailbox, and a status may have been written
 		// after the wait gave up. Absent a moment ago is not absent now:
@@ -246,9 +252,17 @@ func printDelivery(ctx *Context, session registry.Session, model sendModel) erro
 }
 
 // idLines name the message sent: the id rewake withdraw, rewake edit and send
-// --to take.
+// --to take, and after an edit the addenda that came along to it.
 func idLines(model sendModel) []string {
-	return []string{"id " + model.ID}
+	lines := []string{"id " + model.ID}
+	switch len(model.Addenda) {
+	case 0:
+	case 1:
+		lines = append(lines, fmt.Sprintf("Rewake: your addendum %s now adds to %s; take it back with: rewake withdraw %s", model.Addenda[0], model.ID, shortRef(model.Addenda[0])))
+	default:
+		lines = append(lines, fmt.Sprintf("Rewake: your addenda %s now add to %s; take one back with: rewake withdraw <id>", strings.Join(model.Addenda, ", "), model.ID))
+	}
+	return lines
 }
 
 // awaitStatus waits for the status of a message; replaceable in tests.

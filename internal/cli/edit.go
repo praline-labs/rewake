@@ -37,12 +37,16 @@ func handleEdit(ctx *Context, call Call) error {
 	if strings.TrimSpace(text) == "" {
 		return &UsageError{Command: call.Command, Message: "The new text is empty; to take the message back without a replacement, run rewake withdraw."}
 	}
-	self, epoch, old, err := sentBySelf(call, dir, call.Positionals[0], "rewake edit <id> \"...\"")
+	self, epoch, named, err := sentBySelf(call, dir, call.Positionals[0], "rewake edit <id> \"...\"")
+	if err != nil {
+		return err
+	}
+	old, err := currentSent(dir, self, epoch, named)
 	if err != nil {
 		return err
 	}
 	if old.Withdrawn != nil {
-		return failf("your %s %s to %s was already withdrawn; send a new one with: rewake send %s \"...\"", old.Withdrawn.Kind, old.ID, old.To, old.To)
+		return editedWithdrawn(old)
 	}
 	target, err := registry.Lookup(dir, old.To)
 	if errors.Is(err, registry.ErrNotFound) || err == nil && target.Epoch() != old.ToEpoch {
@@ -53,7 +57,8 @@ func handleEdit(ctx *Context, call Call) error {
 	}
 	if old.AddendumTo != "" {
 		// The replacement adds to the same task, which may have been reported
-		// on since: then it would owe a report nobody waits for.
+		// on since: then it would owe a report nobody waits for. Asked again
+		// under the lock, below; this look only refuses early.
 		root, err := rootOf(dir, self, epoch, old, target)
 		if err != nil {
 			return err
@@ -90,12 +95,51 @@ func handleEdit(ctx *Context, call Call) error {
 	// No recall follows: the replacement is announced at once, and its own
 	// preview names the message it replaces (harness.Notice), so one line
 	// both sets the old work aside and shows the new.
-	if err := underMailboxLock(dir, old.To, func() error {
-		_, err := inbox.Withdraw(dir, old, &replacement)
+	replace := func() error {
+		// Asked again under the lock: an edit running beside this one may have
+		// replaced old since the look above, and this one then replaces the
+		// letter that stands now rather than find a tombstone.
+		current, err := currentSent(dir, self, epoch, named)
+		if err != nil {
+			return err
+		}
+		if current.Withdrawn != nil {
+			return editedWithdrawn(current)
+		}
+		old, replacement.Replaces = current, current.ID
+		_, err = inbox.Withdraw(dir, old, &replacement)
 		return err
-	}); err != nil {
+	}
+	if old.AddendumTo == "" {
+		err = underMailboxLock(dir, old.To, replace)
+	} else {
+		err = underAddendumLock(dir, self, epoch, old, target, replace)
+	}
+	var refused *FailedError
+	if errors.As(err, &refused) {
+		return err
+	}
+	if err != nil {
 		return withdrawRefusal(dir, old, err, true)
 	}
 	after := sent{dir: dir, self: self, epoch: epoch, target: target, deadline: started.Add(wait)}
+	if old.ID != named.ID {
+		after.named = named.ID
+		if !ctx.JSON {
+			_ = emit(ctx, redirectLine(named.ID, old.ID, "editing"))
+		}
+	}
+	// Addenda are never rewritten: they name the old id, which now leads to
+	// the replacement (inbox.CurrentTask), and the sender is told they came
+	// along, since a correction it meant to drop with the old text would
+	// otherwise go on being read.
+	for _, addendum := range inbox.AddendaOf(dir, replacement) {
+		after.addenda = append(after.addenda, addendum.ID)
+	}
 	return reportSent(ctx, after, replacement, kind, wait)
+}
+
+// editedWithdrawn refuses an edit of a letter withdrawn outright.
+func editedWithdrawn(old inbox.Message) error {
+	return failf("your %s %s to %s was already withdrawn; send a new one with: rewake send %s \"...\"", old.Withdrawn.Kind, old.ID, old.To, old.To)
 }

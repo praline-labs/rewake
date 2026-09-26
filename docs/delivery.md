@@ -237,7 +237,9 @@ notes cuts their wait short. A report a waiting `send --question` reserved as it
 does not wait either: it is linked for that send, not announced, and holding it would
 hold the send. Nor does the note a withdrawal sends when the withdrawn message's notice
 may have gone out (`recall`, [delivery-sent.md](delivery-sent.md)): it is there to stop
-work a preview began, and the window would be time spent on that work.
+work a preview began, and the window would be time spent on that work. Nor does an edit's
+replacement (`replaces`), a notify's included: it sends no recall, so its own preview is
+what sets the old notice aside.
 
 The window lives in the recipient's wrapper, in the mailbox server both harnesses share:
 the Claude Code socket line and the Codex gateway call are made after it, so both get

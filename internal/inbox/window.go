@@ -76,9 +76,11 @@ type arrival struct {
 // send. That look is taken without the mailbox lock: a wrong answer only moves
 // when the report goes, and whether it is linked or announced is decided under
 // the lock when it does. A recall does not wait either: it exists to stop work
-// a preview may have started, and three seconds is time to act on it.
+// a preview may have started, and three seconds is time to act on it. Nor does
+// an edit's replacement, whatever its kind: it sends no recall, so its own
+// preview is what sets the old notice aside, and it is the one to go at once.
 func (s *Server) canWait(message Message) bool {
-	return !AsksForWork(message) && message.Recall == nil && !awaitedHere(s.Dir, s.Name, message)
+	return !AsksForWork(message) && message.Recall == nil && message.Replaces == "" && !awaitedHere(s.Dir, s.Name, message)
 }
 
 // noteArrivals learns when each waiting message was first seen and forgets the

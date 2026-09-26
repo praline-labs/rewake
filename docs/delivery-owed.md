@@ -19,8 +19,10 @@ the sender, kind and time of an ordinary read and its text, from `done/` (or
 id. An addendum (`rewake send --to`, [delivery-sent.md](delivery-sent.md)) is
 placed right under its task, headed `+ addendum from <sender> · HH:MM:SS`, so the
 corrections are re-read with the brief they correct; one whose task is not owed any
-more stands alone, its heading naming the task (`· addendum to <id>`). Only the
-rendering nests: `--json` keeps the flat list, each addendum with its `addendumTo`.
+more stands alone, its heading naming the task (`· addendum to <id>`). The task is
+the one as it is now: an addendum to a task `rewake edit` replaced goes under the
+replacement, and `addendumTo` names it (`inbox.CurrentTask`, [delivery-sent.md](delivery-sent.md#edit-rewake-edit-id-text)).
+Only the rendering nests: `--json` keeps the flat list, each addendum with its `addendumTo`.
 It is the task a session is working on, from the mailbox rather than from memory,
 which is what a session needs after a context compaction: a summary retells the brief
 and can drop an item. The write and general playbooks tell it to re-read
@@ -105,7 +107,8 @@ not come` when some will not — then, per recipient, `to <name>` and, per messa
 `<id> · <kind> · <time> · <state>` above the first line of its text. An addendum
 follows its task, indented: `  + <id> · addendum to <tail of the task's id> · <time> · <state>` — the tail
 is a reference `withdraw`, `edit` and `--to` accept. One whose task is not listed — reported
-on already, or no longer kept — stands alone as `<id> · task, addendum to <tail> · …`. Nothing awaited is
+on already, or no longer kept — stands alone as `<id> · task, addendum to <tail> · …`. The task is
+the current one, an edit's replacement included, as for `--owed`. Nothing awaited is
 `Rewake: nobody owes you a report.` `--json` carries each message whole: `id`, `kind`,
 `createdAt`, `state`, `detail` (the hold or failure reason, or the interim or stop
 report's text), `gone` (`ended` or `replaced`), `addendumTo` for an addendum, and the

@@ -87,6 +87,20 @@ decides the outcome:
 - **Failed** or no longer kept — exit 1, nothing to take back. Withdrawn already — exit 0,
   said so.
 
+**A task goes with its addenda.** An addendum is a task that only makes sense beside
+the one it adds to; left standing after it, it would be read on its own and owe a report
+on work its sender took back. So under the same lock, once the task is withdrawn — or
+found withdrawn already, which lets a retry finish the rest — each of its addenda from
+the same run is withdrawn the same way (`inbox.AddendaOf`, which follows edits, below),
+and the answer adds a line for each: `withdrew its addendum <id> too`, with the recall
+its own notice calls for. A read addendum is final like any read message: it stays owed,
+the answer says so, and the task is recalled for it even when the task's own notice never
+went out, since the addendum named it. `--json` lists them under `addenda`, each with its
+`result` — `unseen`, `announced`, `held`, `already`, `read`, `undelivered` or `failed` —
+and its `recall`; one that did not finish makes the exit 1 and names the withdraw that
+finishes it. Chosen on September 26, 2026, from the health review's finding that
+a withdrawn task left its addenda owing reports.
+
 The status is written first, before the tombstone: `failed`, detail `withdrawn by
 <sender>`, `withdrawn: true`. `failed` is deliberate: whoever already waits on the message
 behaves correctly — a blocked `send --question` exits 1, `--awaited` stops listing it —
@@ -162,7 +176,46 @@ its own line and the same exit codes; a question edit waits for its answer as `s
 --question` does, and the old blocked send exits 1. `-` reads the text from stdin. What
 refuses a withdrawal refuses an edit, and so does a message withdrawn already or a
 recipient run that has ended. An addendum's replacement adds to the same task, and the
-checks of `--to` are asked again first: the task may have been reported on since.
+checks of `--to` are asked again first, under the recipient's mailbox lock, as for an
+addendum (below): the task may have been reported on since.
+
+**An edited task keeps its addenda.** They are not rewritten — a letter's content never
+changes once written — and go on naming the old id; the old id's tombstone names the
+replacement (`withdrawn.replacedBy`), and every place that asks what an addendum adds to
+follows that link, through as many edits as there were (`inbox.CurrentTask`): `--owed`,
+`--awaited`, a plain read and `--peek` show the addendum under, or as adding to, the
+replacement, and `--to` given either id adds to the replacement. The answer
+names them — `your addendum <id> now adds to <new id>`, with the withdraw that takes it
+back — and `--json` lists them under `addenda`, since a correction the sender meant to
+drop with the old text would otherwise go on being read. Withdrawing the edit's
+replacement later takes them along. The other choice, withdrawing them with the old
+text, would make an edit silently undo corrections the sender still wants; one withdraw
+per addendum is the cheaper mistake to fix. Chosen on September 26, 2026.
+
+**The old id names the replacement.** After an edit the id main was printed first is
+still the name it has for the task, so every action by it acts on the letter that stands
+now, through as many edits as there were (`currentSent`): `rewake withdraw <old id>`
+withdraws the replacement with its addenda, and `rewake edit <old id>` replaces the
+replacement. The answer says so first — `Rewake: <old id> was replaced by <new id>;
+withdrawing <new id>.`, or `editing` — and `--json` gives the letter acted on as `id` for
+a withdrawal and `replaces` for an edit, with the id the call named as `named`. The
+withdrawal looks the replacement up under the recipient's mailbox lock, so the letter it
+finds is the one it withdraws. Until review found it the same day, the old id met its
+tombstone: withdraw answered `already withdrawn` with exit 0 while the replacement stood,
+and edit refused with advice to send the task again, which would have left two. Decided
+by main on September 26, 2026. A replacement withdrawn without a new one is withdrawn
+already, by either id.
+
+**What a withdrawal says of a read addendum.** A task whose notice never went out but
+whose addendum was read is not one the recipient "saw nothing" of: the first line says
+it has read an addendum to it, so it is told not to act on the task. Withdrawn a second
+time, the read addendum's line says the recipient was told when the task was withdrawn,
+since no second recall goes out.
+
+An edit's replacement is announced at once whatever its kind, a notify's included
+(`canWait`): it sends no recall, so its own preview is what sets the old notice aside.
+Before September 26, 2026 a notify's replacement waited in the coalescing window like
+any notify, up to four seconds.
 
 ## Addendum (`rewake send <name> <text> --to <id>`)
 
@@ -176,8 +229,16 @@ its own until the next turn end; a report never waits for addenda still on the w
 It is refused with exit 1, each with a ready line, when the task went to another
 recipient, is withdrawn, is a note, was already reported on (send it as a new task),
 failed, or its recipient's run has ended; and with exit 2 beside `--notify`, `--question`
-or `--grant-git`. A report arriving between the check and the write is harmless: the
-addendum stays a task and is reported on again.
+or `--grant-git`. An id that `rewake edit` replaced adds to its replacement.
+
+The checks are made twice: once without a lock, for a quick refusal, and again under the
+recipient's mailbox lock, with the addendum written under the same hold. The turn end
+that writes a report holds that lock too, so a report lands either before the second
+look, which then refuses, or after the addendum is in the mailbox. The health review of
+September 26, 2026 found the second look missing: a report landing between the check and
+the write let through an addendum the check existed to refuse. An addendum in the mailbox
+before the report is read with the task and settled by it, or read after it and owed on
+its own, as above.
 
 How it is shown: plain `rewake inbox` and `--peek` add `· addendum to <id>` to the
 heading (and an edit's replacement `· replaces <id>`); `--owed` places it under its task as
@@ -194,7 +255,12 @@ halfway read and a waiting copy that will not go; the recall's place outside the
 `internal/inbox/recall_test.go`; the recall's lines and the replacement's in a notice in
 `internal/harness/notice_recall_test.go`, and the member entries of a recall and of a
 replacement in `internal/harness/codex/mailbox_test.go`; the references, refusals, the recall and the
-edit that sends none in `internal/cli/withdraw_test.go`. End to end,
+edit that sends none in `internal/cli/withdraw_test.go`; a task withdrawn with its
+addenda, a read addendum that stays, an edit's replacement keeping them and the second
+look under the lock in `internal/cli/addendum_test.go`; withdraw and edit by an id an edit
+replaced, and a second withdrawal that sends no second recall, in
+`internal/cli/sent_current_test.go`; an edited notify announced at once
+beside the recall in `internal/inbox/recall_test.go`. End to end,
 `withdraw-after-notice`, `edit-after-notice` and `addendum-owed` run in both columns and
 check the notice the worker was shown, and `withdraw-mid-turn` holds a Codex worker's
 turn open and sees the recall steered into it ([testing-cases.md](testing-cases.md#actions-on-a-sent-message)).

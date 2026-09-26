@@ -21,3 +21,19 @@ func TestARecallIsAnnouncedAtOnce(t *testing.T) {
 		t.Fatalf("the recall went out %s after it was written: %+v", at[0].Sub(written), notices[0])
 	}
 }
+
+// Nor does an edit's replacement, of a notify as of a task: it sends no
+// recall, so its own preview is what sets the old notice aside.
+func TestAReplacedNotifyIsAnnouncedAtOnce(t *testing.T) {
+	f := serveWindow(t, Window{Quiet: 3 * time.Second, Cap: 4 * time.Second})
+	replacement := message("the build is green after all")
+	replacement.Kind, replacement.ToEpoch, replacement.Replaces = Note, "5.5", NewID()
+	written := time.Now()
+	if err := Put(f.dir, replacement); err != nil {
+		t.Fatal(err)
+	}
+	notices, at := f.seen(1, 5*time.Second)
+	if notices[0].ID != replacement.ID || at[0].Sub(written) > 2*time.Second {
+		t.Fatalf("the replacement went out %s after it was written: %+v", at[0].Sub(written), notices[0])
+	}
+}

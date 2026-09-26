@@ -48,6 +48,11 @@ func viewedMessages(dir string, messages []inbox.Message) []messageView {
 	for _, message := range messages {
 		view := messageView{Message: message}
 		view.SenderState = nil
+		if message.AddendumTo != "" {
+			// The task as it is now: an edit leaves the addendum naming the
+			// letter it replaced.
+			view.AddendumTo = inbox.CurrentTask(dir, message.To, message.AddendumTo)
+		}
 		if visible {
 			view.Telemetry = sessionSnapshot(dir, message.From, message.FromEpoch)
 			if message.Departure != nil && message.SenderState != nil && message.SenderState.Epoch == message.FromEpoch {

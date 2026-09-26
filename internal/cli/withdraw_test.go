@@ -119,7 +119,11 @@ func TestEditSendsAReplacementInOneStep(t *testing.T) {
 	if status, _ := inbox.ReadStatus(dir, "api", old); !status.Withdrawn || !strings.Contains(status.Detail, "replaced by "+fresh) {
 		t.Fatalf("old status %+v", status)
 	}
-	if code, _, errOut := run("edit", old, "again"); code != ExitFailed || !strings.Contains(errOut, "already withdrawn") {
+	// Withdrawn without a replacement, it is refused, by either id.
+	if code, _, errOut := run("withdraw", fresh); code != ExitOK {
+		t.Fatalf("withdraw the replacement: %d %q", code, errOut)
+	}
+	if code, _, errOut := run("edit", old, "again"); code != ExitFailed || !strings.Contains(errOut, "your task "+fresh+" to api was already withdrawn") {
 		t.Fatalf("edit of a withdrawn one: %d %q", code, errOut)
 	}
 }
