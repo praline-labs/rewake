@@ -137,3 +137,27 @@ func TestAFullKeeperRefusesTheNextGrant(t *testing.T) {
 		t.Fatalf("kept %d, the first among them %v", len(entries), entries[0])
 	}
 }
+
+// A grant restored after a resume keeps where it came from, and one the
+// session was started with is taken out through the hook, as one it added.
+func TestARestoredGrantIsTakenBackThroughTheHook(t *testing.T) {
+	settled := map[string]bool{}
+	keeper, path, _ := keep(t, os.Getpid(), settled, func(json.RawMessage, []grant.Entry) Decision { return Decision{} })
+	origin := grant.Entry{Message: "m1", At: time.Now(), Thread: "c1", From: "lead", FromEpoch: "1.1"}
+	if err := keeper.GrantFrom(origin, []string{"/g"}, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := keeper.GrantFrom(grant.Entry{Message: "m2", At: time.Now()}, []string{"/h"}, false); err != nil {
+		t.Fatal(err)
+	}
+	if entry := keeper.Entries()[0]; entry.Thread != "c1" || entry.From != "lead" || entry.FromEpoch != "1.1" {
+		t.Fatalf("the origin was lost: %+v", entry)
+	}
+	settled["m1"], settled["m2"] = true, true
+	if _, err := Ask(path, ownExpect(t), json.RawMessage(`"nothing"`)); err != nil {
+		t.Fatal(err)
+	}
+	if got := outcomes(keeper.Entries()); got != "m1:/g=revoking m2:/h=revoked" {
+		t.Fatalf("after the report: %s", got)
+	}
+}

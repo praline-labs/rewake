@@ -52,7 +52,7 @@ func (s *Server) sweepFinishedLocked() {
 					continue
 				}
 			}
-			if directory == threadPath(s.Dir, s.Name) && keepThreadRecord(s.Dir, s.Name, s.Epoch, entry.Name()) {
+			if directory == threadPath(s.Dir, s.Name) && keepThreadRecord(s.Dir, s.Name, entry.Name()) {
 				continue
 			}
 			// A read whose last step did not finish left the text in unread/.

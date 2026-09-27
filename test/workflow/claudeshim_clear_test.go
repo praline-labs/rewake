@@ -27,17 +27,24 @@ var shimConversationState struct {
 	sync.Mutex
 	cleared bool
 	once    sync.Once
+	// resumed is the conversation a --resume named (claudeshim_resume_test.go).
+	resumed string
 }
 
 // shimConversation is the session_id the session's hooks and status line
-// carry now: the session's name until a /clear, then a new one.
+// carry now: the one a --resume named, or else the session's name, until a
+// /clear, then a new one.
 func shimConversation() string {
 	shimConversationState.Lock()
 	defer shimConversationState.Unlock()
-	if shimConversationState.cleared {
-		return os.Getenv(sessionNameEnv) + clearedSuffix
+	conversation := os.Getenv(sessionNameEnv)
+	if shimConversationState.resumed != "" {
+		conversation = shimConversationState.resumed
 	}
-	return os.Getenv(sessionNameEnv)
+	if shimConversationState.cleared {
+		return conversation + clearedSuffix
+	}
+	return conversation
 }
 
 // clearIfAsked plays /clear once, when the switch asks for it: the harness

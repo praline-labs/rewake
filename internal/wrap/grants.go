@@ -17,8 +17,10 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
-// grantLifetime is how long main's wrapper can confirm a grant: the wait of
-// the task that carries it, and some to spare for the pass that delivers it.
+// grantLifetime is how long main's wrapper keeps a grant whose letter it
+// cannot find: the wait of the task that carries it, and some to spare for the
+// pass that delivers it. One whose task it finds it keeps until that task is
+// closed (grantauth.Authority).
 const grantLifetime = inbox.DefaultTTL + 5*time.Minute
 
 // checkGrant checks a message's grant again at delivery, with this session's
@@ -31,7 +33,7 @@ const grantLifetime = inbox.DefaultTTL + 5*time.Minute
 // For a harness that takes a grant through its own hook, the grant then
 // waits for the session to be idle, as Codex's does, and goes into the
 // keeper the hook asks; keeper is nil for any other.
-func checkGrant(dir, name, epoch string, keeper *grantauth.Keeper, busy func() bool) func(inbox.Message) error {
+func checkGrant(dir, name, epoch string, keeper *grantauth.Keeper, busy func() bool, conversation func() string) func(inbox.Message) error {
 	root := state.RootForRoom(dir)
 	return func(message inbox.Message) error {
 		rules := grant.CurrentEnv(root, harness.AllProtectedDirs()).Rules()
@@ -46,7 +48,13 @@ func checkGrant(dir, name, epoch string, keeper *grantauth.Keeper, busy func() b
 		if busy != nil && busy() {
 			return fmt.Errorf("%w: %s", inbox.ErrNotYet, idleWait)
 		}
-		return keeper.Grant(message.ID, message.GrantDirs, time.Now())
+		// Where it came from, so a run resuming the conversation can ask
+		// for it again (grant_resume.go).
+		origin := grant.Entry{Message: message.ID, At: time.Now(), From: message.From, FromEpoch: message.FromEpoch}
+		if conversation != nil {
+			origin.Thread = conversation()
+		}
+		return keeper.GrantFrom(origin, message.GrantDirs, false)
 	}
 }
 
@@ -68,7 +76,7 @@ func keepGrants(ctx context.Context, dir, name, epoch string, self int, adapter 
 		return nil
 	}
 	keeper.Decide = granter.DecideGrant
-	keeper.Settled = func(id string) bool { return inbox.Settled(dir, name, epoch, id) }
+	keeper.Settled = func(id string) bool { return inbox.Settled(dir, name, id) }
 	keeper.Mirror = func(entries []grant.Entry) { _ = grant.Save(dir, name, epoch, entries) }
 	go keeper.Serve(ctx)
 	return keeper
@@ -125,5 +133,6 @@ func listenAuthority(dir, epoch string, self int) *grantauth.Authority {
 		_, _ = fmt.Fprintln(os.Stderr, "rewake: this session cannot grant directories or Git access: "+err.Error())
 		return nil
 	}
+	authority.Open = func(held grantauth.Grant) (bool, bool) { return inbox.TaskOpen(dir, held.To, held.ID) }
 	return authority
 }

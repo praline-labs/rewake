@@ -127,11 +127,13 @@ Both stages of the directory grant landed on September 27, 2026 ([grants.md](gra
 the roadmap entries of that day), and so did the worktree lifecycle
 ([worktree.md](worktree.md)). What they left, in the owner's order of September 27:
 
-1. **A grant restored after a cold resume — in work.** A resumed session starts without
-   the grant: its wrapper's journal went with the run that received it. The owner's
-   `--add-dir` on resume needs a source a worker cannot write; main decided on
-   September 27, 2026 that main's wrapper confirms the grant again. It covers both
-   harnesses, and the journal that follows the thread below is part of it.
+1. **A grant restored after a cold resume — done September 27, 2026.** Main's wrapper
+   confirms the grant again for the run that resumes the conversation, the journal's copy
+   follows the conversation, and a resumed run takes over the task's wait
+   ([grants-resume.md](grants-resume.md),
+   [the record](roadmap/2026-09-27-grant-resume.md)). Left open: a grant whose main has
+   ended is not restored, and a copy a worker deletes leaves a Codex root it restored
+   un-journaled ([grants-resume.md](grants-resume.md#what-it-does-not-cover)).
 2. **A grant confirmed for a Codex main.** Since September 27, 2026 a Codex main cannot
    grant, `--grant-git` included: its sandbox refuses `connect()` on the unix socket
    its `rewake send` registers a grant through ([grants.md](grants.md#who-can-grant)).

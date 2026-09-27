@@ -4,14 +4,11 @@ package claude
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
 	"os"
-	"path/filepath"
-	"strings"
 	"syscall"
 	"time"
 
@@ -264,6 +261,7 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 	if rewakeRule {
 		args = harness.AddFlags(args, toolFlag, "Bash(rewake:*)")
 	}
+	args = grantDirs(args, request.GrantDirs)
 
 	return harness.LaunchPlan{
 		Command:    request.Program("claude"),
@@ -275,22 +273,6 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 		Observer:   observer,
 		Lane:       newLane(reply, owns, drawn, marks),
 	}, nil
-}
-
-// replyPath is where this run hears back about its notices. It has to be a
-// .sock in the same directory as the session's own socket, the only place
-// Claude Code sends a receipt to (docs/research-launch.md). Beside a socket of
-// rewake's own it is that socket's name with .reply; beside one the caller
-// named, or where that name would be too long, a name of this run's own.
-func replyPath(request harness.LaunchRequest, socket string, owns bool) string {
-	if socket == "" {
-		return ""
-	}
-	if own := strings.TrimSuffix(socket, ".sock") + replySuffix; owns && len(own) <= maxSocketPath {
-		return own
-	}
-	sum := sha256.Sum256([]byte(request.Name + "\x00" + request.Epoch))
-	return filepath.Join(filepath.Dir(socket), fmt.Sprintf("rewake-%x.reply.sock", sum[:8]))
 }
 
 // maxSocketPath is the limit the kernel puts on a unix socket path.

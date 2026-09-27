@@ -24,6 +24,9 @@ type rootsChange struct {
 	applied []string
 	// journal is saved once the notice is taken; nil when unchanged.
 	journal []grant.Entry
+	// followed is the conversation whose grants from before a resume this
+	// notice settles; recorded once the notice is taken.
+	followed string
 }
 
 // planRoots works out the roots a notice carries: the snapshot as read, less
@@ -33,7 +36,13 @@ func (s *serverSession) planRoots(thread string, read func() threadRead, git boo
 	var change rootsChange
 	entries := s.grantJournal()
 	settled := s.settledGrants(entries)
-	if !git && len(granted.GrantDirs) == 0 && len(settled) == 0 {
+	restoring := s.resumedHints(thread, entries)
+	if restoring == nil && !s.followedThread(thread) {
+		// Nothing a resume left to restore here; the next notice need not
+		// look again.
+		change.followed = thread
+	}
+	if !git && len(granted.GrantDirs) == 0 && len(settled) == 0 && restoring == nil {
 		return change, nil
 	}
 	snapshot := read()
@@ -52,6 +61,13 @@ func (s *serverSession) planRoots(thread string, read func() threadRead, git boo
 	roots := slices.Clone(environment.Roots)
 	active := snapshot.status == "active"
 	now := time.Now()
+	journaled := false
+	if restoring != nil {
+		var notes []string
+		notes, journaled, change.followed = s.restoreRoots(thread, restoring, &roots, &entries, environment, now)
+		change.notes = append(change.notes, notes...)
+		settled = s.settledGrants(entries)
+	}
 	var revoked []string
 	for _, index := range settled {
 		entry := &entries[index]
@@ -72,14 +88,14 @@ func (s *serverSession) planRoots(thread string, read func() threadRead, git boo
 	if len(revoked) > 0 {
 		change.notes = append(change.notes, "taken back, their tasks reported on: "+strings.Join(revoked, ", "))
 	}
-	journaled := len(settled) > 0
+	journaled = journaled || len(settled) > 0
 	if git {
 		if note := addGitRoots(&roots, environment, active); note != "" {
 			change.notes = append(change.notes, note)
 		}
 	}
 	if len(granted.GrantDirs) > 0 {
-		added, writable, notes, err := s.addGrantedRoots(&roots, &entries, granted, git, environment.Cwd, now)
+		added, writable, notes, err := s.addGrantedRoots(&roots, &entries, granted, git, environment.Cwd, thread, now)
 		if err != nil {
 			return change, err
 		}
@@ -112,7 +128,7 @@ func (s *serverSession) planRoots(thread string, read func() threadRead, git boo
 // task is refused: the worker writes in its parent through that grant, and
 // could put a link in its place before the harness resolves it again
 // (docs/grants.md#what-a-grant-does-not-stop). An error fails the task.
-func (s *serverSession) addGrantedRoots(roots *[]string, entries *[]grant.Entry, granted inbox.Message, git bool, cwd string, now time.Time) (added, writable, notes []string, err error) {
+func (s *serverSession) addGrantedRoots(roots *[]string, entries *[]grant.Entry, granted inbox.Message, git bool, cwd, thread string, now time.Time) (added, writable, notes []string, err error) {
 	if slices.ContainsFunc(*entries, func(entry grant.Entry) bool { return entry.Message == granted.ID }) {
 		return nil, nil, nil, fmt.Errorf("message %s was granted once already", granted.ID)
 	}
@@ -139,7 +155,10 @@ func (s *serverSession) addGrantedRoots(roots *[]string, entries *[]grant.Entry,
 		return nil, nil, nil, fmt.Errorf("this session holds %d granted directories, and %d more would pass the %d rewake keeps; wait for earlier tasks to be reported on", live, len(granted.GrantDirs), grant.MaxLive)
 	}
 	record := func(path, of string) {
-		*entries = append(*entries, grant.Entry{Path: path, For: of, Message: granted.ID, At: now, Outcome: grant.Granted})
+		*entries = append(*entries, grant.Entry{
+			Path: path, For: of, Message: granted.ID, At: now, Outcome: grant.Granted,
+			Thread: thread, From: granted.From, FromEpoch: granted.FromEpoch,
+		})
 	}
 	var rules *grant.Rules
 	for _, directory := range granted.GrantDirs {
@@ -217,7 +236,7 @@ func (s *serverSession) settledGrants(entries []grant.Entry) []int {
 		if value, ok := known[id]; ok {
 			return value
 		}
-		known[id] = inbox.Settled(s.mailbox, s.name, s.epoch, id)
+		known[id] = inbox.Settled(s.mailbox, s.name, id)
 		return known[id]
 	}
 	held := map[string]bool{}

@@ -34,6 +34,14 @@ type HookGranter interface {
 	DecideGrant(call json.RawMessage, entries []grant.Entry) grantauth.Decision
 }
 
+// Resumer is a harness whose launch arguments can name the conversation a
+// launch resumes, so that the grants it had can be confirmed again and given
+// at launch (docs/grants.md#after-a-cold-resume). Empty when they name none —
+// a new conversation, a picker, a fork.
+type Resumer interface {
+	ResumedConversation(args []string) string
+}
+
 // GrantIssuer is a harness whose session, as main, can register a grant with
 // its wrapper: the commands it runs reach the wrapper's socket. A grant is
 // confirmed only by the wrapper of the main that sent it

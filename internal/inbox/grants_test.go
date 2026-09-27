@@ -165,7 +165,7 @@ func TestExpiredGrantFailsWithoutAReservation(t *testing.T) {
 func TestSettledFollowsTheTaskToItsReport(t *testing.T) {
 	dir := stateDir(t)
 	m := grantPending(t, dir, true)[0]
-	if Settled(dir, "api", "receiver-epoch", m.ID) {
+	if Settled(dir, "api", m.ID) {
 		t.Fatal("a task waiting in the inbox is settled")
 	}
 	if err := state.WithMailboxLock(context.Background(), dir, "api", func() error {
@@ -176,13 +176,13 @@ func TestSettledFollowsTheTaskToItsReport(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if Settled(dir, "api", "receiver-epoch", m.ID) {
+	if Settled(dir, "api", m.ID) {
 		t.Fatal("a task read and not reported on is settled")
 	}
 	for _, waiter := range Waiters(dir, "api", "receiver-epoch") {
 		ClearAwaiting(dir, "api", "receiver-epoch", waiter)
 	}
-	if !Settled(dir, "api", "receiver-epoch", m.ID) {
+	if !Settled(dir, "api", m.ID) {
 		t.Fatal("a task reported on is not settled")
 	}
 
@@ -191,7 +191,7 @@ func TestSettledFollowsTheTaskToItsReport(t *testing.T) {
 	if err := os.Remove(filepath.Join(state.InboxPath(dir, "api"), other.ID+".json")); err != nil {
 		t.Fatal(err)
 	}
-	if !Settled(dir, "api", "receiver-epoch", other.ID) {
+	if !Settled(dir, "api", other.ID) {
 		t.Fatal("a swept task is not settled")
 	}
 }

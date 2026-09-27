@@ -65,8 +65,19 @@ func Keep(address string, self int) (*Keeper, error) {
 // changes nothing; past grant.MaxLive live directories the grant is refused
 // rather than an earlier one forgotten.
 func (k *Keeper) Grant(id string, dirs []string, at time.Time) error {
+	return k.GrantFrom(grant.Entry{Message: id, At: at}, dirs, false)
+}
+
+// GrantFrom records a grant with where it came from — the message, the main
+// run that sent it and the conversation it went into, as origin names them —
+// so that a run resuming that conversation can find it
+// (docs/grants.md#after-a-cold-resume). added says the session has the
+// directories already: a resumed one was started with them, and taking them
+// back then needs the hook, as for one the hook added.
+func (k *Keeper) GrantFrom(origin grant.Entry, dirs []string, added bool) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
+	id := origin.Message
 	if slices.ContainsFunc(k.entries, func(entry grant.Entry) bool { return entry.Message == id }) {
 		return nil
 	}
@@ -80,7 +91,12 @@ func (k *Keeper) Grant(id string, dirs []string, at time.Time) error {
 		return fmt.Errorf("this session holds %d granted directories, and %d more would pass the %d rewake keeps; wait for earlier tasks to be reported on", live, len(dirs), grant.MaxLive)
 	}
 	for _, dir := range dirs {
-		k.entries = append(k.entries, grant.Entry{Path: dir, Message: id, At: at, Outcome: grant.Granted})
+		entry := origin
+		entry.Path, entry.Outcome, entry.EndedAt = dir, grant.Granted, nil
+		k.entries = append(k.entries, entry)
+		if added {
+			k.added[dir] = true
+		}
 	}
 	k.mirror()
 	return nil

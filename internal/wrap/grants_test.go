@@ -126,7 +126,7 @@ func TestAGrantForAHookWaitsForIdleAndIsKept(t *testing.T) {
 	message := inbox.Message{ID: "m1", From: "lead", FromEpoch: epoch, To: "worker", ToEpoch: "9.9", Kind: inbox.Task, GrantDirs: []string{lib}}
 
 	busy := true
-	check := checkGrant(dir, "worker", "9.9", keeper, func() bool { return busy })
+	check := checkGrant(dir, "worker", "9.9", keeper, func() bool { return busy }, nil)
 	if err := check(message); !errors.Is(err, inbox.ErrNotYet) || len(keeper.Entries()) != 0 {
 		t.Fatalf("while the session works: %v, kept %v", err, keeper.Entries())
 	}

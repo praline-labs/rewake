@@ -279,8 +279,10 @@ ignored without changing the parent session's waits.
    and message ids even when new work arrived between attempts.
 3. **A grant ends.** A directory granted with a task lives at least until this
    report. Rewake takes it back at the next delivery to the session after it, not at
-   the report itself. A person's own turn in the terminal drops it at once, and a cold
-   resume of the conversation can bring it back ([grants.md](grants.md#how-long-a-grant-lives)).
+   the report itself. A person's own turn in the terminal drops it at once. A cold resume
+   before the report starts a new run, which takes over the task's wait and has main
+   confirm the grant again; a resume after it gets nothing back
+   ([grants-resume.md](grants-resume.md)).
 4. **Forget the reported messages** after all reports are written and the turn
    receipt is marked done. Cleanup matches the original run and wait; newly
    read messages remain owed to the next result.

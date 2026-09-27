@@ -105,6 +105,7 @@ func (r *reservedDelivery) DeliverChecked(_ context.Context, message inbox.Messa
 	if note := r.session.saveJournal(r.change.journal); note != "" {
 		notes = append(notes, note)
 	}
+	r.session.follow(r.change.followed)
 	return inbox.Result{State: inbox.Delivered, Via: "app-server", Detail: strings.Join(notes, "; "), GrantApplied: r.change.applied}
 }
 

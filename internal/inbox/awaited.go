@@ -110,6 +110,14 @@ func placed(dir string, message Message, reports []Message, wait Waiter, runOf f
 		return item, true
 	}
 	item.Run = runOf(message.To, message.ToEpoch)
+	if item.Run != RunLive {
+		// A run that resumed the conversation took the wait over, and its
+		// turn will report.
+		if run, ok := adoptedBy(dir, message); ok {
+			item.Run = runOf(message.To, run)
+			wait = waiterFor(dir, message.To, run, message.From, message.FromEpoch)
+		}
+	}
 	if item.read() && !slices.Contains(wait.Messages, message.ID) && recordKept(dir, message.To, message.ToEpoch, item.Run) {
 		return item, true
 	}
@@ -147,7 +155,11 @@ func stageOf(dir string, message Message, reports []Message) (AwaitedMessage, bo
 	item := AwaitedMessage{Message: message}
 	var latest *Message
 	for index, report := range reports {
-		if report.From != message.To || report.FromEpoch != message.ToEpoch {
+		// From any run of the recipient, not only the one the message was
+		// written for: a run that resumed the conversation takes the wait
+		// over and reports on it (adopt.go), and a run reports only on what
+		// its own waits name.
+		if report.From != message.To {
 			continue
 		}
 		switch KindOf(report) {

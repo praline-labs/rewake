@@ -118,6 +118,11 @@ everything else.
   through its permission hooks, the journal and how a grant is taken back after the
   report, and how long a grant lives. Open it for anything about
   giving a session write access to a directory outside its workspace.
+- [grants-resume.md](grants-resume.md) — a grant after a cold resume: how the new run
+  finds its conversation and takes over the task's wait, the journal copy that follows the
+  conversation, main's wrapper confirming the grant again and what it checks, what Claude
+  Code and Codex each do with the answer, and what is not restored. Open it when a resumed
+  session gains or lacks a granted directory.
 - [session-state.md](session-state.md) — the telemetry line main sees for its workers
   (activity, context used, compactions): what is shown to whom, the availability
   notifications main receives when a worker becomes ready, the context formula, how

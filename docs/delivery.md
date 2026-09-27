@@ -327,6 +327,24 @@ here ([grants.md](grants.md#delivery)). The `--owed` lines add that a turn typed
 terminal may have dropped the grant since, or, once the journal says so, that it was
 revoked or dropped ([grants.md](grants.md#taking-a-grant-back)).
 
+### A resumed conversation
+
+A cold resume starts a new run of the name in a conversation an earlier run worked in.
+What that run read and had not reported on is in the conversation, and only the new run
+can finish it. So each delivery pins the conversation it went into
+(`inbox/<name>/threads/<id>`, written before the task becomes readable), and once the new
+run's harness names its conversation, the wrapper takes over the earlier runs' waits for
+the tasks pinned to that conversation, as if this run had read them now
+(`internal/inbox/adopt.go`). Only then does it sweep the earlier runs' records. The
+report at the new run's next turn end settles those tasks for their senders; a task
+delivered into another conversation, or never pinned, is not taken over, and its sender
+reads that no report is coming.
+
+The conversation is the link, not the name: a new conversation under the same name owes
+nothing, and a fork (`--fork-session`) starts one. A harness that names no conversation
+sweeps at once. The grants of those tasks are confirmed again by main
+([grants-resume.md](grants-resume.md)).
+
 ### Owed reports
 
 What a session has read and still owes a report on, shown again with `rewake inbox

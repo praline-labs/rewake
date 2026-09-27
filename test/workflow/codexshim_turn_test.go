@@ -274,6 +274,7 @@ func (s *shimSession) workTurn(id string, notice mailboxNotice) {
 	// The turn fails after its content was sent: a session that says something
 	// and then breaks has not answered.
 	s.broadcast(s.turnCompletedEvent(id, text, turnFailed()))
+	s.saveCompleted()
 	if os.Getenv(shimSecondTerminal) != "" {
 		// The same turn ends twice. Recorded as well as sent: a scenario that
 		// only counted reports could not tell "the second was ignored" from

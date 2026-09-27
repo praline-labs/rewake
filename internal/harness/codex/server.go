@@ -44,6 +44,9 @@ type serverSession struct {
 	// grants is what this run granted and took back, guarded by mu: the
 	// record revocation goes by (grantJournal).
 	grants []grant.Entry
+	// followed are the conversations whose grants from before a resume were
+	// restored or taken back, guarded by mu (server_dirgrant_resume.go).
+	followed map[string]bool
 	// legacyLandlock says why this session's commands may run in rewake's
 	// own namespaces; set, it takes no grant.
 	legacyLandlock  string

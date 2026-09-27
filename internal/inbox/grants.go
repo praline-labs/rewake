@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/state"
@@ -89,9 +90,11 @@ func (s *Server) failGranted(message Message, result Result) {
 // The status is read before the waits: reading records the wait first and
 // the read status after it, so a read status seen here has its wait recorded
 // already, and a wait found gone was settled by a report.
-func Settled(dir, name, epoch, id string) bool {
+func Settled(dir, name, id string) bool {
 	status, known := ReadStatus(dir, name, id)
-	if owedIDs(dir, name, epoch)[id] {
+	// Any run's wait counts: until a resumed run has taken over what the run
+	// before it owed (adopt.go), the wait is still that run's.
+	if owedByAnyRun(dir, name, id) {
 		return false
 	}
 	if known {
@@ -105,4 +108,54 @@ func Settled(dir, name, epoch, id string) bool {
 		}
 	}
 	return true
+}
+
+// TaskOpen says, for the main that granted with a task, whether the task is
+// still open: on its way to its reader, delivered and not read, or read and
+// owed by a run of the reader — any run, since a run that resumed the
+// conversation takes over what the run before it owed (AdoptWaits). found is
+// false when nothing of the message is there: a grant is registered before
+// its letter is written, and one whose letter never was has no task to close.
+//
+// Everything read here a worker could write. It can make a task look open
+// only, and that keeps its grant as long as not reporting on it would.
+func TaskOpen(dir, name, id string) (open, found bool) {
+	if !state.ValidName(name) || !safeID(id) {
+		return false, false
+	}
+	if owedByAnyRun(dir, name, id) {
+		return true, true
+	}
+	if status, known := ReadStatus(dir, name, id); known {
+		return status.State != Read && status.State != Failed && !status.Withdrawn, true
+	}
+	for _, directory := range []string{state.InboxPath(dir, name), state.UnreadPath(dir, name)} {
+		if _, err := os.Stat(filepath.Join(directory, id+".json")); err == nil {
+			return true, true
+		}
+	}
+	if _, err := os.Stat(filepath.Join(state.DonePath(dir, name), id+".json")); err == nil {
+		return false, true
+	}
+	return false, false
+}
+
+// owedByAnyRun says whether a wait record of any run of the name lists the
+// message.
+func owedByAnyRun(dir, name, id string) bool {
+	runs, err := os.ReadDir(state.AwaitingPath(dir, name))
+	if err != nil {
+		return false
+	}
+	for _, run := range runs {
+		if !run.IsDir() {
+			continue
+		}
+		for _, waiter := range Waiters(dir, name, run.Name()) {
+			if slices.Contains(waiter.Messages, id) {
+				return true
+			}
+		}
+	}
+	return false
 }

@@ -38,6 +38,13 @@ type Entry struct {
 	At      time.Time  `json:"at"`
 	Outcome string     `json:"outcome"`
 	EndedAt *time.Time `json:"endedAt,omitempty"`
+	// Thread is the conversation the grant was delivered into, and From and
+	// FromEpoch the main run that sent it: what a run resuming that
+	// conversation asks to confirm the grant again (resume.go). Empty in a
+	// copy from before they were kept, which restores nothing.
+	Thread    string `json:"thread,omitempty"`
+	From      string `json:"from,omitempty"`
+	FromEpoch string `json:"fromEpoch,omitempty"`
 }
 
 // Live says whether rewake still counts the entry as granted.
@@ -65,7 +72,11 @@ func Load(dir, name, epoch string) []Entry {
 	if !state.ValidName(name) || epoch == "" {
 		return nil
 	}
-	raw, err := os.ReadFile(journalPath(dir, name, epoch))
+	return loadFile(journalPath(dir, name, epoch))
+}
+
+func loadFile(path string) []Entry {
+	raw, err := os.ReadFile(path)
 	if err != nil {
 		return nil
 	}
@@ -117,9 +128,11 @@ func Save(dir, name, epoch string, entries []Entry) error {
 // record being rewritten could hide a live one, and not for this long.
 const sweepGrace = time.Minute
 
-// sweep removes the journals of runs that have ended. A journal is only what
-// rewake list shows; what a run revokes by is held by its wrapper
-// (docs/grants.md#taking-a-grant-back), so nothing that ended needs one.
+// sweep removes the journals of runs that have ended. A journal is what
+// rewake list shows, and what a run resuming the conversation is pointed to;
+// what a run revokes by is held by its wrapper
+// (docs/grants.md#taking-a-grant-back). So an ended run's copy stays only while
+// it names a grant the main that sent it is still there to confirm again.
 func sweep(dir string) {
 	files, err := os.ReadDir(filepath.Join(dir, "grants"))
 	if err != nil {
@@ -135,6 +148,9 @@ func sweep(dir string) {
 	}
 	for _, file := range files {
 		if live[file.Name()] || !strings.HasSuffix(file.Name(), ".json") {
+			continue
+		}
+		if restorable(loadFile(filepath.Join(dir, "grants", file.Name()))) {
 			continue
 		}
 		if info, err := file.Info(); err == nil && time.Since(info.ModTime()) > sweepGrace {

@@ -98,6 +98,9 @@ type Server struct {
 	// arrivals remembers when each waiting message was first seen, which is
 	// what the window mail waits in is measured from.
 	arrivals map[string]*arrival
+	// followed is set once the earlier runs' waits were taken over or
+	// forgotten (adopt.go).
+	followed bool
 }
 
 // Serve drains the mailbox until the context is canceled, then refuses whatever
@@ -181,6 +184,7 @@ func (s *Server) Serve(ctx context.Context) {
 // drain makes one pass over the mailbox and answers how long the mail it found
 // may still wait for company, zero once it has gone.
 func (s *Server) drain(ctx context.Context) time.Duration {
+	s.followEarlierRun(ctx)
 	pending := s.pendingMessages(ctx)
 	if s.gated() {
 		s.waitForOpening(pending)
@@ -288,10 +292,7 @@ func (s *Server) sweepForeign() {
 	if s.Epoch == "" {
 		return
 	}
-	_ = s.lock(func() error {
-		sweepAwaiting(s.Dir, s.Name, s.Epoch)
-		return nil
-	})
+	s.followEarlierRun(s.lockContext)
 	messages, err := list(s.Dir, s.Name)
 	if err != nil {
 		return

@@ -203,6 +203,7 @@ func (s *shimSession) answer(peer *shimPeer, method string, params json.RawMessa
 			return nil, nil, errors.New(wrong)
 		}
 		s.seedRoots(params)
+		s.saveStarted()
 		return s.lifecycle(s.thread)
 	case "thread/resume":
 		if wrong := unserved("thread/resume", params, resumeShape); wrong != "" {
@@ -218,6 +219,7 @@ func (s *shimSession) answer(peer *shimPeer, method string, params json.RawMessa
 			return nil, nil, fmt.Errorf("no such thread %q", asked)
 		}
 		s.seedRoots(params)
+		s.restoreSaved(params)
 		return s.lifecycle(asked)
 	case "turn/start":
 		return s.deliveredTurn(params)

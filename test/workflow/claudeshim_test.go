@@ -72,6 +72,7 @@ func runClaudeShim(args []string) int {
 	}
 
 	session := &claudeSession{launch: launch, plugin: plugin, listening: time.Now()}
+	session.resume()
 	if plugin != nil {
 		plugin.serve = session.steer
 	}
@@ -121,6 +122,10 @@ type claudeLaunch struct {
 	// pluginDir is the function-hooks plugin, when rewake passed one
 	// (claudeshim_plugin_test.go).
 	pluginDir string
+	// resume is the conversation a resumed launch names, and addDirs the
+	// working directories it was given (claudeshim_resume_test.go).
+	resume  string
+	addDirs []string
 }
 
 // claudeLaunchFlags are the flags rewake passes to this harness, each with a
@@ -139,7 +144,12 @@ var claudeLaunchFlags = map[string]bool{
 	"--model":                 true,
 	"--effort":                true,
 	"--plugin-dir":            true,
+	"--resume":                true,
+	"--add-dir":               true,
 }
+
+// claudeRepeatedFlags may be given more than once, as the harness takes them.
+var claudeRepeatedFlags = map[string]bool{"--add-dir": true}
 
 func parseClaudeLaunch(args []string) (claudeLaunch, error) {
 	var launch claudeLaunch
@@ -152,7 +162,7 @@ func parseClaudeLaunch(args []string) (claudeLaunch, error) {
 			// would mean the launch carried a prompt nobody asked for.
 			return launch, fmt.Errorf("unknown option %q; rewake does not pass it", flag)
 		}
-		if seen[flag] {
+		if seen[flag] && !claudeRepeatedFlags[flag] {
 			return launch, fmt.Errorf("%s given twice; rewake passes it once", flag)
 		}
 		seen[flag] = true
@@ -171,6 +181,10 @@ func parseClaudeLaunch(args []string) (claudeLaunch, error) {
 			launch.tools = args[index]
 		case "--plugin-dir":
 			launch.pluginDir = args[index]
+		case "--resume":
+			launch.resume = args[index]
+		case "--add-dir":
+			launch.addDirs = append(launch.addDirs, args[index])
 		}
 	}
 	if launch.socket == "" {

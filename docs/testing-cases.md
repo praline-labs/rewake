@@ -217,6 +217,36 @@ learn that a task was reported on (`claude-grant-kept`, which breaks the taking 
 alone). The decisions themselves, and the keeper's checks of who asks, are unit tests in
 `internal/harness/claude` and `internal/grantauth`.
 
+`claude-grant-resume` and `codex-grant-resume` are a grant across a cold resume
+([grants-resume.md](grants-resume.md)), one per column, each with a Claude Code main. The
+worker writes in the grant, marks its turn pending and is stopped; it is started again in
+the same conversation, reports, and is stopped and started once more. The Claude Code
+fixture takes `--resume <id>` and `--add-dir`: it keeps the conversation's id the resume
+names, starts with the given directories as working ones, says `resume` as the
+SessionStart source and records the launch among its turns. The Codex fixture keeps a
+thread's roots in a file between runs (`RW_SHIM_THREAD_STORE`), as the server was seen
+to: those a start names and those of every completed turn after the first, restored by a
+resume that names none — so a grant given on the first turn is lost by the resume, and
+the resumed terminal sends no roots, in 0.157.1's shape. After the first resume the
+Claude Code run must be launched with `--add-dir` for the directory and run a command in
+it unasked, and the Codex one must name it among the roots at the first delivery, the
+listing showing it granted. The resumed run's report must settle the task, and then the
+grant goes as any other: a write denied, the directory taken out, the listing `revoked`.
+After the second resume the Claude Code run is launched with no directory, and the Codex
+run's first delivery names none and journals nothing of it, though the old copy still
+names the grant live. Their mutants give the harness no confirmed directory
+(`claude-resume-not-given`, which breaks the giving alone), keep it as one the hook never
+added (`claude-resume-not-held`, which breaks the taking back alone), restore nothing on
+Codex (`codex-resume-not-restored`, which breaks the giving and the taking back), take over
+no wait of an earlier run (`resume-waits-dropped`, which breaks the same two, the task
+closed by the resume), and have main hold a grant after its report
+(`claude-resume-closed-held` and `codex-resume-closed-held`, which break the resume after
+the report alone). On Codex the report the run finds would take such a grant out again in
+the same delivery, so the case asks that the run journal nothing, not only that the roots
+lack it. Main's side of the confirmation, the hints and the adopted waits are unit tests in
+`internal/grantauth`, `internal/grant`, `internal/wrap`, `internal/harness/codex` and
+`internal/inbox`.
+
 ## Actions on a sent message
 
 `withdraw-after-notice`, `edit-after-notice` and `addendum-owed` run in both columns with a
@@ -315,6 +345,8 @@ switches have no single form in the code to find them by, and the row is kept by
 | codex-grant-dir | `grant-steered`, `grant-not-added`, `grant-kept` | — |
 | codex-grant-forgery | `grant-from-anywhere`, `grant-unconfirmed`, `grant-any-listener` | — |
 | claude-grant-dir | `claude-grant-silent`, `claude-grant-unshielded`, `claude-grant-kept` | `RW_SHIM_TOOLS` |
+| claude-grant-resume | `claude-resume-not-given`, `claude-resume-not-held`, `claude-resume-closed-held` | `RW_SHIM_TOOLS` |
+| codex-grant-resume | `codex-resume-not-restored`, `resume-waits-dropped`, `codex-resume-closed-held` | `RW_SHIM_THREAD_STORE` |
 | stopped-routing | `stopped-to-main` | — |
 | withdraw-after-notice | `withdraw-leaves-task`, `withdraw-silent`, `recall-sender-first` | — |
 | withdraw-mid-turn | `recall-unnamed` | — |

@@ -61,6 +61,9 @@ func sameSet(a, b []string) bool {
 const (
 	opRegister = "register"
 	opConfirm  = "confirm"
+	// opReconfirm asks for a grant again for a new run of its recipient: the
+	// conversation it went into was resumed cold (resume.go).
+	opReconfirm = "reconfirm"
 	// opDecide is a hook call to the keeper of a worker's grants.
 	opDecide = "decide"
 )

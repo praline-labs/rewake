@@ -40,6 +40,9 @@ main's name into the shared state directory, the owner decided:
 - the model is written down as it is: it holds against a worker in the Codex sandbox,
   and a worker with no sandbox has no boundary to hold.
 
+On September 27, 2026 main decided that a grant comes back after a cold resume only when
+main's wrapper confirms it again ([after a cold resume](#after-a-cold-resume)).
+
 ## Sending
 
 ```text
@@ -149,8 +152,11 @@ send report it as registered.
    worker's process runs below its own wrapper and not main's, unless main started it;
    one that left its tree through `setsid` and a double fork runs below neither. The
    wrapper holds the grant in memory — message, recipient, the recipient's run,
-   directories, broad ones, Git — for the task's time to live and five minutes more, at
-   most 256 at once; past that it refuses a new one rather than forget an old one.
+   directories, broad ones, Git — while its task is open: until the task is read and
+   reported on or taken back, and for the task's time to live and five minutes more when
+   its letter cannot be found; at most 256 at once, and past that it refuses a new one
+   rather than forget an old one. A resumed run of the recipient asks it again
+   ([after a cold resume](#after-a-cold-resume)).
 2. **At delivery.** The recipient's wrapper asks the address the letter's run leads
    to, and takes the answer only from the process that run names: the
    listener's pid from `SO_PEERCRED` must be that run's pid, alive with that start time
@@ -259,8 +265,10 @@ journaled with `for` naming that checkout.
 A live entry is never dropped: it is how rewake finds a grant to take back. At most 64
 directories are granted to one run at once, and a task that would pass that fails with
 the reason instead; ended entries beyond 64 go oldest first. A message granted once is
-refused a second time. The copy of a run that has ended is removed at the next save of
-any journal in the room.
+refused a second time. Each entry names the conversation and the main run it came from.
+The copy of a run that has ended is removed at the next save of any journal in the room,
+unless it names a live grant whose main still runs: a resumed run reads it
+([after a cold resume](#after-a-cold-resume)).
 
 `rewake inbox --owed` repeats a task's grant with a caveat — `grant: write <dir> — unless
 a turn typed in this session's terminal has dropped it since` — because rewake learns of
@@ -284,10 +292,8 @@ and 0.157.1 ([research-codex.md](research-codex.md#runtime-workspace-roots)):
   roots and drops the grant; rewake records it as dropped when it comes to take it back;
 - a cold fork of the conversation starts without it.
 
-A cold resume, on the other hand, restores the roots the conversation last saved, grant
-included; rewake's journal belongs to the run, so the resumed run does not take it back.
-Keying it by the thread instead is queued
-([work-queue.md](work-queue.md#also-queued-not-scheduled)).
+A cold resume starts a new run; what it keeps of a grant is in
+[after a cold resume](#after-a-cold-resume).
 
 ## What a grant does not stop
 
@@ -368,10 +374,8 @@ does only without the person's own `--allowedTools` ([launch.md](launch.md#claud
   A directory another live task holds stays. A grant never used — never added — ends at
   the report. In any other mode — `plan`, `bypassPermissions`, auto — nothing is forced,
   and a grant once added stays until the session ends.
-- **What ends it early.** A cold resume starts without the directory, and the new run's
-  wrapper does not restore it: a grant a file could restore is one a worker could forge.
-  Restoring it by asking main's wrapper to confirm the grant again is left for later
-  (main's decision of September 27, 2026).
+- **After a cold resume** the new run's wrapper asks main to confirm the grant again and
+  starts the harness with the directory ([after a cold resume](#after-a-cold-resume)).
 
 This is a courtesy, not a boundary. Claude Code runs approved shell commands as the user,
 so a worker writes wherever the user can if a prompt is approved, and can forge a grant
@@ -379,6 +383,13 @@ so a worker writes wherever the user can if a prompt is approved, and can forge 
 directory main named, and a prompt again once the task is done. What the worker's own
 `rewake` rule runs unasked includes no launch: a harness started from inside a session
 is refused ([launch.md](launch.md#no-session-inside-a-session)).
+
+## After a cold resume
+
+A resumed run asks main's wrapper to confirm again each grant the journal copies name
+for its conversation; main hands one over while its task is open. Claude Code is started
+with the directory; Codex has the roots journaled again, and one nobody confirms taken
+out. A main that has ended restores nothing ([grants-resume.md](grants-resume.md)).
 
 ## At launch
 

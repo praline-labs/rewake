@@ -3,14 +3,17 @@ package claude
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/iiiokojiadbi/rewake/internal/harness"
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/state"
@@ -353,4 +356,20 @@ func newMsgID() string {
 	b[6] = b[6]&0x0f | 0x40
 	b[8] = b[8]&0x3f | 0x80
 	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
+}
+
+// replyPath is where this run hears back about its notices. It has to be a
+// .sock in the same directory as the session's own socket, the only place
+// Claude Code sends a receipt to (docs/research-launch.md). Beside a socket of
+// rewake's own it is that socket's name with .reply; beside one the caller
+// named, or where that name would be too long, a name of this run's own.
+func replyPath(request harness.LaunchRequest, socket string, owns bool) string {
+	if socket == "" {
+		return ""
+	}
+	if own := strings.TrimSuffix(socket, ".sock") + replySuffix; owns && len(own) <= maxSocketPath {
+		return own
+	}
+	sum := sha256.Sum256([]byte(request.Name + "\x00" + request.Epoch))
+	return filepath.Join(filepath.Dir(socket), fmt.Sprintf("rewake-%x.reply.sock", sum[:8]))
 }

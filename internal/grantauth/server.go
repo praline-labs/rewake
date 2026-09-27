@@ -22,12 +22,22 @@ const maxHeld = 256
 
 // Authority holds the grants of one main run, in memory only: a record on
 // disk is one a sandboxed worker could write.
+//
+// A grant is held while its task is open, not for a fixed time: a worker
+// resumed cold asks for it again (Reconfirm), and the answer has to be here
+// for as long as the task may still be worked on.
 type Authority struct {
 	// Self is the wrapper; a registration comes from a process below it.
 	Self int
-	// Lifetime is how long a grant stays confirmable: the time a task
-	// carrying one may wait for delivery, with some to spare.
+	// Lifetime is how long a grant whose task has not been found yet stays
+	// confirmable: the time a task carrying one may wait for delivery, with
+	// some to spare. A registration is made before its letter is written, and
+	// a letter that never was leaves nothing that could close it.
 	Lifetime time.Duration
+	// Open says whether the task a grant came with is still open — delivered
+	// or on its way, or read and not yet reported on — and whether its letter
+	// was found at all. Nil holds every grant for Lifetime.
+	Open func(Grant) (open, found bool)
 
 	listener *net.UnixListener
 	mu       sync.Mutex
@@ -39,6 +49,9 @@ type Authority struct {
 type heldGrant struct {
 	grant Grant
 	at    time.Time
+	// delivered is a grant confirmed to its recipient's wrapper once: only
+	// such a grant can have reached a conversation a resume continues.
+	delivered bool
 }
 
 // Listen binds the run's address, an abstract unix socket: nothing on disk
@@ -109,8 +122,12 @@ func (a *Authority) answer(conn *net.UnixConn) {
 			if err := a.register(conn, asked.Grant); err != nil {
 				answer.Error = err.Error()
 			}
-		case opConfirm:
-			grant, err := a.confirm(conn, asked.Grant)
+		case opConfirm, opReconfirm:
+			confirm := a.confirm
+			if asked.Op == opReconfirm {
+				confirm = a.reconfirm
+			}
+			grant, err := confirm(conn, asked.Grant)
 			if err != nil {
 				answer.Error = err.Error()
 			} else {
@@ -152,7 +169,7 @@ func (a *Authority) register(conn *net.UnixConn, grant Grant) error {
 		return fmt.Errorf("message %s already carries another grant", grant.ID)
 	}
 	if len(a.held) >= maxHeld {
-		return fmt.Errorf("this session holds %d grants waiting for delivery, the most it keeps; wait for some to be delivered or to expire", maxHeld)
+		return fmt.Errorf("this session holds %d grants whose tasks are open, the most it keeps; wait for some of those tasks to be reported on, or take some back", maxHeld)
 	}
 	a.held[grant.ID] = heldGrant{grant: grant, at: time.Now()}
 	return nil
@@ -171,13 +188,23 @@ func (a *Authority) confirm(conn *net.UnixConn, asked Grant) (Grant, error) {
 	if !ok || held.grant.To != asked.To || held.grant.ToEpoch != asked.ToEpoch {
 		return Grant{}, fmt.Errorf("this session registered no grant with message %s for that run", asked.ID)
 	}
+	held.delivered = true
+	a.held[asked.ID] = held
 	return held.grant, nil
 }
 
-// prune forgets what has outlived the wait of its message. Call with the
-// lock held.
+// prune forgets the grants whose tasks are closed, and those whose letter was
+// never found once the wait of a message is over. Call with the lock held.
 func (a *Authority) prune() {
 	for id, held := range a.held {
+		if a.Open != nil {
+			if open, found := a.Open(held.grant); found {
+				if !open {
+					delete(a.held, id)
+				}
+				continue
+			}
+		}
 		if time.Since(held.at) > a.Lifetime {
 			delete(a.held, id)
 		}

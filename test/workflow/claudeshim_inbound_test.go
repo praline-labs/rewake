@@ -94,7 +94,7 @@ func (s *claudeSession) mount(hooks bool) {
 	time.Sleep(sessionStartAfter)
 	if payload, err := json.Marshal(map[string]any{
 		"hook_event_name": "SessionStart", "session_id": shimConversation(),
-		"cwd": workingDirectory(), "source": "startup",
+		"cwd": workingDirectory(), "source": s.startSource(),
 	}); err == nil && hooks {
 		s.runHook("SessionStart", s.launch.settings.observe, payload)
 		s.plugin.event("session.start", map[string]any{"cwd": workingDirectory(), "isInteractive": true, "surface": "terminal"})

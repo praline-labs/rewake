@@ -57,18 +57,13 @@ func ReportThreadChanged(dir, name string, ids []string, current string) bool {
 
 // Unread messages and unsettled waits still need their delivery context, even
 // when a long turn outlives the normal retention window.
-func keepThreadRecord(dir, name, epoch, id string) bool {
+func keepThreadRecord(dir, name, id string) bool {
 	for _, directory := range []string{state.InboxPath(dir, name), state.UnreadPath(dir, name)} {
 		if _, err := os.Stat(filepath.Join(directory, id+".json")); err == nil {
 			return true
 		}
 	}
-	for _, waiter := range Waiters(dir, name, epoch) {
-		for _, message := range waiter.Messages {
-			if message == id {
-				return true
-			}
-		}
-	}
-	return false
+	// Any run's: an earlier run's owed task is what a resumed one takes over
+	// by this record (adopt.go).
+	return owedByAnyRun(dir, name, id)
 }

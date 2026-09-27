@@ -46,6 +46,10 @@ type LaunchRequest struct {
 	// wrapper before the launch and removed after it; empty when it could not
 	// be made (docs/remote-control.md).
 	ControlDir string
+	// GrantDirs are directories main confirmed again for the conversation
+	// this launch resumes (Resumer); a harness that takes a directory at
+	// launch is started with them.
+	GrantDirs []string
 }
 
 // LaunchPlan is how the wrapper starts the harness.

@@ -84,8 +84,11 @@ wait carries the wait's time prefix, and what follows it is a hash.
 | `failed` — no report coming | status `failed` |
 
 A `finished` or `error` report in this run's own mailbox that names the id in
-`inReplyTo` settles it, and so does a wait record that no longer names it — the record
-is cleared only once the report is written. Settled messages are not listed. A recipient
+`inReplyTo` settles it — from any run of the recipient, since a run that resumed the
+conversation reports on what it took over — and so does a wait record that no longer
+names it; the record is cleared only once the report is written. A message whose wait a
+resumed run took over is followed in that run's records
+([delivery.md](delivery.md#a-resumed-conversation)), and listed as that run's. Settled messages are not listed. A recipient
 whose run has ended, or whose name a new run has taken, owes nothing any more: its
 unsettled messages are listed as `no report coming: <name> ended` or `… was replaced by
 a new run`, whatever stage they had reached, and counted apart from the reports still
