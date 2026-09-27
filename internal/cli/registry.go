@@ -245,6 +245,13 @@ func buildGroups() {
 				Handler:  handleObserve,
 			},
 			{
+				Name:     harness.GrantHook,
+				Summary:  "Called by a Claude Code hook before a tool call and on a permission request; gives and takes back directories granted with a task.",
+				Examples: []string{"rewake grant-hook"},
+				Hidden:   true,
+				Handler:  handleGrantHook,
+			},
+			{
 				Name:     harness.StatusTap,
 				Args:     "<socket> [sources] [caller-status-line]",
 				Summary:  "The status line of a Claude Code session; reports to its wrapper, then runs the configured status line.",

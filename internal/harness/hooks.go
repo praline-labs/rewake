@@ -46,3 +46,8 @@ const (
 	Observe   = "observe"
 	StatusTap = "status-tap"
 )
+
+// GrantHook is the hidden command a Claude Code session runs before a tool
+// call and on a permission request: it gives and takes back the directories
+// granted to that session (docs/grants.md).
+const GrantHook = "grant-hook"

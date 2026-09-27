@@ -14,8 +14,8 @@ import (
 )
 
 // Claude Code reads one --settings and takes the last one given, so what
-// rewake needs for a launch — the end-of-turn hooks, the telemetry hooks, the
-// status-line tap — goes into a single layer. When the caller passed their own,
+// rewake needs for a launch — the end-of-turn hooks, the grant hooks, the
+// telemetry hooks, the status-line tap — goes into a single layer. When the caller passed their own,
 // ours is merged into theirs rather than replacing it or being dropped: their
 // keys stay, their hooks run beside ours, and their status line is the one
 // the tap runs.
@@ -32,12 +32,27 @@ type hookEntry struct {
 }
 
 type hookMatcher struct {
-	Hooks []hookEntry `json:"hooks"`
+	// Matcher narrows a tool event to the tools it names; empty is every one.
+	Matcher string      `json:"matcher,omitempty"`
+	Hooks   []hookEntry `json:"hooks"`
 }
 
 // observeTimeout bounds a telemetry hook. It returns in milliseconds; this is
 // the harness's ceiling for one that somehow does not.
 const observeTimeout = 5
+
+// grantHookTimeout bounds the grant hook. It holds a tool call while it runs,
+// so it runs in the foreground: an answer that came after the call would be
+// no answer. It reads one small journal and returns in milliseconds; past the
+// ceiling the harness goes on as if it had said nothing, which is the hook's
+// own answer to anything it cannot decide.
+const grantHookTimeout = 5
+
+// grantPreToolUse are the tools whose calls the grant hook sees before they
+// run: the file tools it denies inside a grant being taken back, and the
+// reads it turns into the question that takes it back (permission.go). Every
+// other tool is spared the process start.
+const grantPreToolUse = "Write|Edit|MultiEdit|NotebookEdit|Read|Glob|Grep|LS|NotebookRead"
 
 // launchLayer is what rewake adds for one launch.
 type launchLayer struct {
@@ -62,6 +77,9 @@ func newLaunchLayer(silent bool, socket, sources string, caller json.RawMessage)
 	if !silent {
 		add(telemetry.Stop, hookEntry{Kind: "command", Command: turnEnded, Timeout: 10})
 	}
+	grantHook := hookEntry{Kind: "command", Command: harness.ShellQuote([]string{executable, harness.GrantHook}), Timeout: grantHookTimeout}
+	layer.hooks[preToolUse] = append(layer.hooks[preToolUse], hookMatcher{Matcher: grantPreToolUse, Hooks: []hookEntry{grantHook}})
+	add(permissionRequest, grantHook)
 	if socket == "" {
 		return layer, nil
 	}

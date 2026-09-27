@@ -311,6 +311,32 @@ func fold(path string) string {
 
 func isLetter(c byte) bool { return 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' }
 
+// ResolveExisting resolves as much of a path as exists, the rest joined on as
+// given: a file a tool is about to create is judged where it will land.
+func ResolveExisting(path string) string { return resolve(path) }
+
+// shielded are the directories inside a grant a harness keeps its own
+// configuration or a checkout its metadata in. A grant does not reach them,
+// at any depth: a task that needs one gets it by name, or from the owner.
+var shielded = []string{".git", ".claude", ".codex", ".agents"}
+
+// Covers says whether a grant of root lets a session write path: path lies
+// within root and in none of the directories shielded inside it.
+func Covers(root, path string) bool {
+	if !within(path, root) {
+		return false
+	}
+	rel, _ := filepath.Rel(fold(root), fold(path))
+	for _, element := range strings.Split(rel, string(filepath.Separator)) {
+		for _, name := range shielded {
+			if strings.EqualFold(element, name) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 // resolve resolves as much of a path as exists: a protected directory that is
 // not there yet still protects where it would be, through the links above it.
 func resolve(path string) string {

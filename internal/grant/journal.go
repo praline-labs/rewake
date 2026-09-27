@@ -17,10 +17,15 @@ import (
 // harness; it ends revoked when rewake took it back, or dropped when rewake
 // found it gone already — a person's own turn in the terminal replaces the
 // roots with the launch's.
+//
+// One more belongs to Claude Code, whose grant only its permission hook can
+// take back: revoking is a grant whose task is settled, waiting for the hook
+// to remove the directory at the session's next tool call.
 const (
-	Granted = "granted"
-	Revoked = "revoked"
-	Dropped = "dropped"
+	Granted  = "granted"
+	Revoked  = "revoked"
+	Dropped  = "dropped"
+	Revoking = "revoking"
 )
 
 // Entry is one directory rewake added to a session's writable roots.
@@ -37,6 +42,9 @@ type Entry struct {
 
 // Live says whether rewake still counts the entry as granted.
 func (e Entry) Live() bool { return e.Outcome == Granted }
+
+// Revoking says whether the entry waits for the harness to take it back.
+func (e Entry) Revoking() bool { return e.Outcome == Revoking }
 
 // maxEnded bounds the ended entries a journal keeps, the oldest going first.
 // Live ones are never dropped: an entry is how rewake finds a grant to take

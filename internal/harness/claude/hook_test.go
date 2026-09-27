@@ -43,8 +43,8 @@ func TestTurnHookIsLayeredForOneLaunch(t *testing.T) {
 	if out, err := shell.CombinedOutput(); err != nil {
 		t.Errorf("the hook command does not name an executable followed by turn-ended: %v %s", err, out)
 	}
-	if len(layer.Hooks) != 2 || len(layer.Hooks["StopFailure"]) != 1 {
-		t.Errorf("hooks = %v, want Stop and StopFailure", layer.Hooks)
+	if len(layer.Hooks) != 4 || len(layer.Hooks["StopFailure"]) != 1 || len(layer.Hooks["PreToolUse"]) != 1 || len(layer.Hooks["PermissionRequest"]) != 1 {
+		t.Errorf("hooks = %v, want Stop, StopFailure and the grant hooks", layer.Hooks)
 	}
 }
 
@@ -65,7 +65,8 @@ func TestMainObservesOnlyFailedTurns(t *testing.T) {
 	if err := json.Unmarshal([]byte(plan.Args[pos+1]), &settings); err != nil {
 		t.Fatal(err)
 	}
-	if len(settings.Hooks) != 1 || settings.Hooks["StopFailure"] == nil {
+	// Main may be given a directory too: it keeps the grant hooks.
+	if len(settings.Hooks) != 3 || settings.Hooks["StopFailure"] == nil || settings.Hooks["PermissionRequest"] == nil {
 		t.Fatalf("unexpected main hooks: %s", plan.Args[pos+1])
 	}
 	at := indexOf(plan.Args, introFlag)

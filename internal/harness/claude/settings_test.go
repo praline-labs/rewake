@@ -196,8 +196,8 @@ func TestTheCallersSettingsAreMergedInto(t *testing.T) {
 			if stop := view.Hooks["Stop"]; len(stop) != 3 || stop[0].Hooks[0].Command != "mine" {
 				t.Errorf("Stop = %+v, want theirs first and both of ours", stop)
 			}
-			if len(view.Hooks["PreToolUse"]) != 1 {
-				t.Errorf("their PreToolUse hook is gone: %+v", view.Hooks["PreToolUse"])
+			if pre := view.Hooks["PreToolUse"]; len(pre) != 2 || pre[0].Hooks[0].Command != "guard" {
+				t.Errorf("PreToolUse = %+v, want theirs first and the grant hook", pre)
 			}
 			if string(view.StatusLine["padding"]) != "4" {
 				t.Errorf("their padding is gone: %v", view.StatusLine)
@@ -243,12 +243,13 @@ func TestAPolicyStatusLineIsNoted(t *testing.T) {
 	}
 }
 
-// Without a telemetry socket the layer is what it was: the turn hooks alone.
+// Without a telemetry socket the layer is what it was: the turn hooks and the
+// grant hooks alone.
 func TestWithoutASocketThereIsNoTelemetry(t *testing.T) {
 	newWorld(t)
 	view := onlySettings(t, launch(t, nil, ""))
-	if view.StatusLine != nil || len(view.Hooks) != 2 {
-		t.Errorf("layer = %+v, want Stop and StopFailure only", view.Keys)
+	if view.StatusLine != nil || len(view.Hooks) != 4 {
+		t.Errorf("layer = %+v, want Stop, StopFailure and the grant hooks only", view.Keys)
 	}
 	if plan := launch(t, nil, ""); plan.Observer != nil {
 		t.Error("an observer without a socket")
