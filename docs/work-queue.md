@@ -121,47 +121,35 @@ Codex's plan tool in [research-codex.md](research-codex.md#the-plan-tool) and
 
 The remaining entries of [harness-features.md](harness-features.md), in its order.
 
-## Next: a directory grant for Claude Code
+## Now: what the directory grants and the worktrees left open
 
-Stage 2 of the directory grant ([grants.md](grants.md)). Stage 1 — the flags, the two
-tiers, the recheck and idle wait at delivery, the journal and taking a grant back, and
-Codex's roots — landed on September 27, 2026; until stage 2 a grant to a Claude Code
-session is refused with exit 1. Settled with the owner the same day, after research:
+Both stages of the directory grant landed on September 27, 2026 ([grants.md](grants.md);
+the roadmap entries of that day), and so did the worktree lifecycle
+([worktree.md](worktree.md)). What they left, in the owner's order of September 27:
 
-- **Claude Code takes a directory into a running session** through the `PermissionRequest`
-  hook in the `--settings` layer rewake already passes: `allow` with `addDirectories`
-  (session), taken back with `removeDirectories`; a cold resume needs `--add-dir` from
-  rewake while the grant lives. Seen live on 2.1.280 on September 27, 2026. On Claude the
-  grant removes prompts for file tools and is not a boundary for an approved shell command.
-- An owner file of extra rules for the tiers comes later, when a case needs it.
-
-Paused by the owner on September 27, 2026 for grants that a worker cannot forge
-([grants.md](grants.md#who-can-grant)). The stage's work so far keeps a branch of its
-own. Resumed the same day: the hook asks the worker's own wrapper, which keeps the grants
-in memory and answers only a process below it ([grants.md](grants.md#claude-code)).
-Left for later: a cold resume, which starts without the grant — the owner's `--add-dir`
-on resume needs a source a worker cannot write, and main decided on September 27, 2026
-that it is main's wrapper confirming the grant again.
+1. **A grant restored after a cold resume — in work.** A resumed session starts without
+   the grant: its wrapper's journal went with the run that received it. The owner's
+   `--add-dir` on resume needs a source a worker cannot write; main decided on
+   September 27, 2026 that main's wrapper confirms the grant again. It covers both
+   harnesses, and the journal that follows the thread below is part of it.
+2. **A grant confirmed for a Codex main.** Since September 27, 2026 a Codex main cannot
+   grant, `--grant-git` included: its sandbox refuses `connect()` on the unix socket
+   its `rewake send` registers a grant through ([grants.md](grants.md#who-can-grant)).
+   The owner's idea: main's wrapper already sees, in its own app-server's stream, every
+   command its model runs (`commandExecution` items); a `rewake send` seen there with
+   the grant's arguments may be the confirmation, without a socket. To research first.
+3. **Does Codex resolve a root again on each command?** If it does, a granted directory
+   whose parent the worker can write can be swapped for a link after delivery; rewake
+   refuses the cases it can see ([grants.md](grants.md#what-a-grant-does-not-stop)). A
+   probe on the real sandbox settles which.
+4. **`land`, `finish` and the checks before `ls` and `rm` beside a foreign `git worktree
+   add`.** Creating and removing are serialized per repository
+   ([worktree.md](worktree.md#launches-at-once)); these are not, and during someone
+   else's `add` — by hand, or Claude Code's own `-w` — they may fail with git's message
+   and have to be run again.
+5. **An owner file of extra rules for the grant tiers**, when a case needs it.
 
 ## Also queued, not scheduled
-
-**A grant confirmed for a Codex main.** Since September 27, 2026 a Codex main cannot
-grant: its sandbox refuses `connect()` on the unix socket its `rewake send` registers a
-grant through ([grants.md](grants.md#who-can-grant)). The owner's idea for later: main's
-wrapper already sees, in its own app-server's stream, every command its model runs
-(`commandExecution` items); a `rewake send` seen there with the grant's arguments may be
-the confirmation, without a socket. To research before building.
-
-**A grant journal that follows the thread.** A cold resume of a Codex conversation
-restores the roots it last saved, a grant included, while rewake's journal belongs to
-the run that granted it ([grants.md](grants.md#how-long-a-grant-lives)). Keyed by the
-thread id, the resumed run would find the entry and take the grant back. Recorded
-September 27, 2026.
-
-**Does Codex resolve a root again on each command?** If it does, a granted directory
-whose parent the worker can write can be swapped for a link after delivery; rewake
-refuses the cases it can see ([grants.md](grants.md#what-a-grant-does-not-stop)). A
-probe on the real sandbox settles which. Recorded September 27, 2026.
 
 **An orchestrator starts a worker in the background.** The owner's idea for later,
 recorded September 23, 2026, after honest delivery status for Claude Code landed:

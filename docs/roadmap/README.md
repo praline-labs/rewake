@@ -123,6 +123,11 @@ versions in a disposable environment — its schema half closed on September 23,
 two-way channel for Claude Code, then the parity queue. Launch aliases, which stood second in that order, closed the same day
 ([entry](2026-09-21-launch-aliases.md)). This section keeps the decisions behind those items.
 
+What the directory grants and the worktrees of September 27, 2026 left open — a grant
+restored after a cold resume, a grant from a Codex main, a root swapped after delivery,
+`land` and `finish` beside a foreign `git worktree add`, an owner file of grant rules —
+is ordered in [work-queue.md](../work-queue.md#now-what-the-directory-grants-and-the-worktrees-left-open).
+
 The native-notification priority is complete, and so is the Claude Code handoff it
 pointed to: orchestration moved to Claude Code on September 21, 2026. The first three
 entries of the [parity queue](../harness-features.md) closed the same day — HF-12, HF-07
