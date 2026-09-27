@@ -26,10 +26,20 @@ that scheme.
 - The refusal of `--grant-dir` to Claude Code is gone; the help and main's briefing say
   that on Claude Code a grant spares prompts and draws no line.
 
+- **The shielded part** is asked about before it is written: once the grant is a
+  working directory the harness runs a file tool anywhere in it unasked, so PreToolUse
+  answers `ask` for a file tool writing into `.git`, `.claude`, `.codex` or `.agents`
+  inside a live grant. Main decided the same day that `--grant-git` does not change this.
+- **The fixture** calls tools its mail names and passes them through the grant hooks the
+  way the harness was seen to; its settings parser takes the grant hooks, which it had
+  refused, so every Claude Code case would have failed at launch. The workflow case
+  `claude-grant-dir` with three mutants: `claude-grant-silent`, `claude-grant-unshielded`,
+  `claude-grant-kept` ([testing-cases.md](../testing-cases.md#a-directory-granted-with-a-task)).
+
 ## What stays open
 
-- The fixture learning the permission hooks, and a workflow case `claude-grant-dir` with
-  mutants.
 - A cold resume starts without the grant, while the owner's route restored it with
-  `--add-dir`; a restore needs a source a worker cannot write.
-- `.git` inside a grant stays with the person even beside `--grant-git`.
+  `--add-dir`. Main decided on September 27, 2026 that the way is to have main's wrapper
+  confirm the grant again, later.
+- A shell command inside a granted directory reaches its `.git` unasked: Claude Code has
+  no sandbox, and the hook sees a command only when the harness asks about it.

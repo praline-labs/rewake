@@ -153,8 +153,8 @@ observations say; the refusals of `-w`, `--tmux` and the continuations are unit 
 ## A directory granted with a task
 
 `codex-grant-dir` runs on the Codex column only: Claude Code takes a grant through its
-permission hooks, which that fixture does not speak ([grants.md](grants.md#claude-code)). Its main is a Claude Code session, because a Codex main
-cannot grant ([grants.md](grants.md#who-can-grant)), and the granted directory lies in
+permission hooks, and `claude-grant-dir` below is its case. Its main is a Claude Code
+session, because a Codex main cannot grant ([grants.md](grants.md#who-can-grant)), and the granted directory lies in
 the user's cache directory rather than under `/tmp`, which is never granted. The fixture
 keeps the thread's workspace roots as the
 server was seen to — set by the start, replaced by a `turn/start` that carries them —
@@ -192,6 +192,28 @@ from any process (`grant-from-anywhere`, which breaks the direct registration al
 asking main's wrapper (`grant-unconfirmed`, which breaks the three letters), and take
 an answer from any listener (`grant-any-listener`, which breaks the foreign answer
 alone).
+
+`claude-grant-dir` runs on the Claude Code column only, with a Claude Code main and write
+worker. The fixture calls tools when told to (`RW_SHIM_TOOLS`): each line `tool <Write|Read|Bash>
+<path>` in the mail it read is one call, made before the turn ends. It keeps its working
+directories — its own and those a hook added — and passes each call through the grant
+hooks as the harness was seen to in `acceptEdits` on 2.1.280: PreToolUse for the tools its
+matcher names, where deny ends the call and ask forces a PermissionRequest; a
+PermissionRequest for a write outside every working directory, suggesting its parent;
+allow applying `addDirectories` and `removeDirectories`, silence going to a person, who
+never answers. An answer outside that shape — an update beyond the session, a kind the
+hook does not make — is recorded as refused. Main grants a directory in the user's
+cache; the worker writes in it, runs a command in it, writes its `.git/config` and a
+directory beside it: the first two must run, the first adding the directory, and the last
+two go to the person. After the report the next task writes in it, reads `README` in the
+worker's own directory and writes in it again: denied, run with the directory removed,
+then to the person; main's `rewake list --json` must show it `revoked`. Its mutants never
+allow a write in a grant (`claude-grant-silent`, which breaks the giving and the taking
+back, the grant ending at the report with nothing added), let a grant reach its Git
+metadata (`claude-grant-unshielded`, which breaks the shielded writes alone), and never
+learn that a task was reported on (`claude-grant-kept`, which breaks the taking back
+alone). The decisions themselves, and the keeper's checks of who asks, are unit tests in
+`internal/harness/claude` and `internal/grantauth`.
 
 ## Actions on a sent message
 
@@ -290,6 +312,7 @@ switches have no single form in the code to find them by, and the row is kept by
 | codex-compact-hold | `hold-ends-at-start`, `compaction-refusal-final`, `late-end-unrecorded`, `running-taken-for-an-outcome` | — |
 | codex-grant-dir | `grant-steered`, `grant-not-added`, `grant-kept` | — |
 | codex-grant-forgery | `grant-from-anywhere`, `grant-unconfirmed`, `grant-any-listener` | — |
+| claude-grant-dir | `claude-grant-silent`, `claude-grant-unshielded`, `claude-grant-kept` | `RW_SHIM_TOOLS` |
 | stopped-routing | `stopped-to-main` | — |
 | withdraw-after-notice | `withdraw-leaves-task`, `withdraw-silent`, `recall-sender-first` | — |
 | withdraw-mid-turn | `recall-unnamed` | — |

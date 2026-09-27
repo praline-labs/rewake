@@ -75,6 +75,16 @@ func TestTheGrantHookAnswersFromTheJournal(t *testing.T) {
 			entries: journal[:1], silent: true,
 		},
 		{
+			name:    "a file tool writing into the Git metadata of a live grant is sent to the person before it runs",
+			payload: hookPayload(preToolUse, "Write", "acceptEdits", work, write(filepath.Join(granted, ".git", "config"))),
+			entries: journal[:1], says: []string{`"permissionDecision":"ask"`, "left to the person"},
+		},
+		{
+			name:    "and one writing elsewhere in it is not",
+			payload: hookPayload(preToolUse, "Write", "acceptEdits", work, write(filepath.Join(granted, "a.txt"))),
+			entries: journal[:1], silent: true,
+		},
+		{
 			name:    "a file tool writing where a grant is taken back is denied, and nothing taken out yet",
 			payload: hookPayload(preToolUse, "Write", "acceptEdits", work, write(filepath.Join(old, "a.txt"))),
 			says:    []string{`"permissionDecision":"deny"`, "taken back"},

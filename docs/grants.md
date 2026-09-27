@@ -337,10 +337,13 @@ and as a PermissionRequest hook, each with a five-second timeout.
   judged by its path; any other tool by what the harness suggests adding, and only when
   every suggestion lies in a grant, since an approved command runs whole.
 - **What stays with the person.** `.git`, `.claude`, `.codex` and `.agents` at any depth
-  inside a grant are never allowed, `--grant-git` or not: whatever reads them next runs
-  what the worker wrote, and on Claude Code nothing but the prompt stands in the way. A
-  write outside every grant hears silence, and silence is also the answer to any error
-  or timeout: the hook never allows on a guess.
+  inside a grant are never allowed, `--grant-git` or not (main's decision of September
+  27, 2026): whatever reads them next runs what the worker wrote, and on Claude Code
+  nothing but the prompt stands in the way. Once the grant is a working directory the
+  harness would run a file tool anywhere in it unasked, so PreToolUse answers `ask` for a
+  file tool writing there; a shell command inside the grant reaches them unasked all the
+  same. A write outside every grant hears silence, and silence is also the answer to any
+  error or timeout: the hook never allows on a guess.
 - **Taking back.** At the first tool call after the task is settled, a read inside the
   working directory in `default` or `acceptEdits` is answered `ask` from PreToolUse; the
   PermissionRequest that follows is allowed with the grant's root removed. A file tool
@@ -349,6 +352,8 @@ and as a PermissionRequest hook, each with a five-second timeout.
   live task holds stays. A grant never used — never added — ends at the report.
 - **What ends it early.** A cold resume starts without the directory, and the new run's
   wrapper does not restore it: a grant a file could restore is one a worker could forge.
+  Restoring it by asking main's wrapper to confirm the grant again is left for later
+  (main's decision of September 27, 2026).
   In `bypassPermissions` the hook is never asked, and the grant is moot.
 
 This is a courtesy, not a boundary. Claude Code runs approved shell commands as the user,

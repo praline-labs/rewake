@@ -10,19 +10,26 @@ import (
 
 // launchLayerLike is a settings layer shaped like the one rewake builds: the
 // end-of-turn hook in the foreground, the telemetry hook in the background on
-// every event, and the status-line tap.
+// every event, the grant hooks, and the status-line tap.
 func launchLayerLike() string {
 	type hook struct {
 		Kind    string `json:"type"`
 		Command string `json:"command"`
 		Async   bool   `json:"async,omitempty"`
+		Timeout int    `json:"timeout,omitempty"`
 	}
 	type matcher struct {
-		Hooks []hook `json:"hooks"`
+		Matcher string `json:"matcher,omitempty"`
+		Hooks   []hook `json:"hooks"`
 	}
-	hooks := map[string][]matcher{"StopFailure": {{Hooks: []hook{{"command", "'/r' 'turn-ended'", false}}}}}
+	grantHook := hook{"command", "'/r' 'grant-hook'", false, 5}
+	hooks := map[string][]matcher{
+		"StopFailure":       {{Hooks: []hook{{"command", "'/r' 'turn-ended'", false, 0}}}},
+		"PreToolUse":        {{Matcher: "Write|Read", Hooks: []hook{grantHook}}},
+		"PermissionRequest": {{Hooks: []hook{grantHook}}},
+	}
 	for _, event := range telemetryEvents {
-		hooks[event] = append(hooks[event], matcher{Hooks: []hook{{"command", "'/r' 'observe' '/s.obs'", true}}})
+		hooks[event] = append(hooks[event], matcher{Hooks: []hook{{"command", "'/r' 'observe' '/s.obs'", true, 0}}})
 	}
 	layer, _ := json.Marshal(map[string]any{
 		"hooks":      hooks,

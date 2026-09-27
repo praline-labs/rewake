@@ -211,6 +211,9 @@ type claudeSession struct {
 	// turns is what a module's call on the session needs to know of its
 	// turns (claudeshim_control_test.go).
 	turns sessionTurns
+	// added are the working directories a permission hook added for the
+	// session (claudeshim_tools_test.go).
+	added []string
 }
 
 func (s *claudeSession) serve(listener net.Listener) {

@@ -139,10 +139,9 @@ Paused by the owner on September 27, 2026 for grants that a worker cannot forge
 ([grants.md](grants.md#who-can-grant)). The stage's work so far keeps a branch of its
 own. Resumed the same day: the hook asks the worker's own wrapper, which keeps the grants
 in memory and answers only a process below it ([grants.md](grants.md#claude-code)).
-Left for the stage: the fixture learning the permission hooks, a workflow case with
-mutants, and a cold resume, which starts without the grant — the owner's `--add-dir` on
-resume needs a source a worker cannot write, such as main's wrapper confirming the grant
-again.
+Left for later: a cold resume, which starts without the grant — the owner's `--add-dir`
+on resume needs a source a worker cannot write, and main decided on September 27, 2026
+that it is main's wrapper confirming the grant again.
 
 ## Also queued, not scheduled
 

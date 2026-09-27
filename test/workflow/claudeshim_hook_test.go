@@ -34,6 +34,9 @@ type claudeSettings struct {
 	observe string
 	// statusLine is the status line's command: rewake's tap.
 	statusLine string
+	// preToolUse and permissionRequest are the grant hook, and preToolMatcher
+	// the tools its PreToolUse entry names (claudeshim_tools_test.go).
+	preToolUse, preToolMatcher, permissionRequest string
 }
 
 // telemetryEvents are the hooks the adapter registers for telemetry. Spelled
@@ -47,7 +50,8 @@ func parseClaudeSettings(raw string) (claudeSettings, error) {
 	}
 	var layer struct {
 		Hooks map[string][]struct {
-			Hooks []struct {
+			Matcher string `json:"matcher"`
+			Hooks   []struct {
 				Kind    string `json:"type"`
 				Command string `json:"command"`
 				Timeout int    `json:"timeout"`
@@ -97,6 +101,20 @@ func parseClaudeSettings(raw string) (claudeSettings, error) {
 					}
 					settings.observe = hook.Command
 					observed[name] = true
+				case strings.HasSuffix(hook.Command, "'grant-hook'"):
+					// It decides a tool call before it runs, so it cannot run
+					// beside it, and a hook the harness waits on needs a ceiling.
+					if hook.Async || hook.Timeout <= 0 {
+						return settings, fmt.Errorf("the %s grant hook runs in the background or without a timeout", name)
+					}
+					switch {
+					case name == "PreToolUse" && matcher.Matcher != "" && settings.preToolUse == "":
+						settings.preToolUse, settings.preToolMatcher = hook.Command, matcher.Matcher
+					case name == "PermissionRequest" && matcher.Matcher == "" && settings.permissionRequest == "":
+						settings.permissionRequest = hook.Command
+					default:
+						return settings, fmt.Errorf("a grant hook this fixture does not serve: %s, matcher %q", name, matcher.Matcher)
+					}
 				default:
 					return settings, fmt.Errorf("a hook this fixture does not serve: %s runs %s", name, hook.Command)
 				}
@@ -107,6 +125,10 @@ func parseClaudeSettings(raw string) (claudeSettings, error) {
 		// Every role gets this one; only Stop depends on whether the role
 		// reports at all.
 		return settings, errors.New("no StopFailure hook in --settings")
+	}
+	if settings.preToolUse == "" || settings.permissionRequest == "" {
+		// Every role gets them: a grant can reach any session but main.
+		return settings, errors.New("no grant hooks in --settings")
 	}
 	if len(observed) != len(telemetryEvents) {
 		return settings, fmt.Errorf("telemetry hooks for %d of %d events", len(observed), len(telemetryEvents))
@@ -145,6 +167,7 @@ func (s *claudeSession) workTurn(turn string, notice claudeNotice) {
 	if err != nil {
 		text = "could not read the mailbox: " + err.Error()
 	}
+	s.playTools(turn, text)
 	recordOwedOnce()
 	markPendingOnce()
 	if s.firstTurn(shimInterruptFirst) {

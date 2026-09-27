@@ -43,7 +43,7 @@ const observeTimeout = 5
 
 // grantHookTimeout bounds the grant hook. It holds a tool call while it runs,
 // so it runs in the foreground: an answer that came after the call would be
-// no answer. It reads one small journal and returns in milliseconds; past the
+// no answer. It asks its wrapper over a socket and returns in milliseconds; past the
 // ceiling the harness goes on as if it had said nothing, which is the hook's
 // own answer to anything it cannot decide.
 const grantHookTimeout = 5

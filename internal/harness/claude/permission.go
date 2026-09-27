@@ -117,7 +117,7 @@ func DecideGrant(payload []byte, entries []grant.Entry) grantauth.Decision {
 	}
 	switch in.Event {
 	case preToolUse:
-		return in.preToolUse(revoking)
+		return in.preToolUse(live, revoking)
 	case permissionRequest:
 		return in.permissionRequest(live, revoking)
 	}
@@ -125,14 +125,25 @@ func DecideGrant(payload []byte, entries []grant.Entry) grantauth.Decision {
 }
 
 // preToolUse denies a file tool writing where a grant is being taken back,
-// and forces a question on a read that would run anyway, so the answer to it
-// can take the directory out.
-func (in grantHookInput) preToolUse(revoking []string) grantauth.Decision {
-	if len(revoking) == 0 {
-		return grantauth.Decision{}
-	}
+// sends one writing into a shielded part of a live grant to the person, and
+// forces a question on a read that would run anyway, so the answer to it can
+// take the directory out.
+//
+// The shielded part needs the question here: once a grant is a working
+// directory, the harness runs a file tool anywhere inside it unasked, and
+// PermissionRequest never comes.
+func (in grantHookInput) preToolUse(live, revoking []string) grantauth.Decision {
 	if field, ok := fileWriters[in.Tool]; ok {
 		path := in.path(field)
+		for _, root := range live {
+			if path != "" && grant.Within(path, root) && !grant.Covers(root, path) {
+				return hookAnswer(map[string]any{
+					"hookEventName":            preToolUse,
+					"permissionDecision":       "ask",
+					"permissionDecisionReason": "rewake: " + path + " is in a part of the grant left to the person",
+				}, nil, nil)
+			}
+		}
 		for _, root := range revoking {
 			if path != "" && grant.Within(path, root) {
 				return hookAnswer(map[string]any{
@@ -144,7 +155,7 @@ func (in grantHookInput) preToolUse(revoking []string) grantauth.Decision {
 		}
 		return grantauth.Decision{}
 	}
-	if !in.forcible() {
+	if len(revoking) == 0 || !in.forcible() {
 		return grantauth.Decision{}
 	}
 	return hookAnswer(map[string]any{
