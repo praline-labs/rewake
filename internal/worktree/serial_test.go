@@ -231,3 +231,27 @@ func entries(t *testing.T, dir string) []string {
 	}
 	return names
 }
+
+// A removal whose root the person has deleted goes through without a lock and
+// leaves the root deleted, rather than making it again for a lock file.
+func TestARemovalDoesNotMakeAGoneRootAgain(t *testing.T) {
+	isolate(t)
+	source := repository(t, "project")
+	root := filepath.Join(t.TempDir(), "worktrees")
+	record, err := Create(root, source, "orphan")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(root); err != nil {
+		t.Fatal(err)
+	}
+	if err := Remove(record, true); err != nil {
+		t.Fatalf("removal: %v", err)
+	}
+	if _, err := os.Stat(root); !os.IsNotExist(err) {
+		t.Errorf("the root is back: %v", err)
+	}
+	if out := must(t, source, "worktree", "list", "--porcelain"); strings.Contains(out, "orphan") {
+		t.Errorf("git still lists it:\n%s", out)
+	}
+}

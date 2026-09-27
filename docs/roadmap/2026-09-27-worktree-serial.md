@@ -46,6 +46,17 @@ under load, after the review of the nested-launch refusal
   excerpt ([testing.md](../testing.md#reading-a-result)); a green case deletes them with
   its directory.
 
+## After review
+
+- A holder can keep the lock past the minute without hanging: the copies
+  `.worktreeinclude` asks for stay under it, so a parallel rm cannot take a checkout
+  still being filled (main's decision), and large ignored directories take time. The
+  refusal and [worktree.md](../worktree.md#launches-at-once) now say so and say to wait
+  and run again; the minute stays.
+- A removal no longer makes the worktree root again for its lock: when the root is gone
+  it goes without the lock, and only Create makes the root. Before, rm of a checkout
+  whose root the person had deleted made an empty root and a lock file again.
+
 ## What stays open
 
 - land, finish's landing and the checks before ls and rm are not serialized with an

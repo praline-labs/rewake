@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -190,9 +191,15 @@ func samePath(listed, recorded string) bool {
 // has forgotten leaves only the record to remove. A directory whose repository
 // is gone has no git left to remove it, and only force deletes it. It holds
 // the repository's lock, as Create does: git worktree remove reads the
-// entries of the others as well.
+// entries of the others as well. A root that is gone takes no lock, and is not
+// made again for one: no checkout is made in it without Create making it
+// first, and a root the person removed should stay removed.
 func Remove(record Record, force bool) error {
-	return withRepositoryLock(filepath.Dir(record.Path), func() error { return remove(record, force) })
+	directory := filepath.Dir(record.Path)
+	if _, err := os.Stat(filepath.Dir(directory)); errors.Is(err, fs.ErrNotExist) {
+		return remove(record, force)
+	}
+	return withRepositoryLock(directory, func() error { return remove(record, force) })
 }
 
 func remove(record Record, force bool) error {

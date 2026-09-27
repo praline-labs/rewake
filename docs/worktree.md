@@ -190,8 +190,12 @@ locks nothing once its holder has let go or died. `rewake worktree rm` and finis
 removal take the same lock, since `git worktree remove` reads the other entries too.
 
 The wait is bounded: after a minute the launch is refused with exit 1, naming the lock
-and the process that took it last; nothing is made. A holder is that slow only when it
-hangs.
+and the process that took it last; nothing is made. A holder is that slow when it hangs,
+or when it copies large ignored directories `.worktreeinclude` names: the copies stay
+under the lock, so a parallel rm cannot take a checkout still being filled (main's
+decision of September 27, 2026). The refusal says both, and to wait and run the command
+again. A removal whose worktree root is gone takes no lock and does not make the root
+again: nothing is made there without a launch making the root first.
 
 A `git worktree add` rewake does not run — the person's, or Claude Code's own `-w` — is
 outside the lock. An add of rewake's that meets such an entry half-written, which git

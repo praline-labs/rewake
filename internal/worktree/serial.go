@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -24,8 +23,10 @@ import (
 
 // lockWait bounds the wait for another rewake command's checkout of the same
 // repository: a git worktree add, the copies .worktreeinclude asks for, a git
-// worktree remove. Long past any of those, a holder is stuck, and a launch
-// waiting on it without end would hang the caller.
+// worktree remove. A holder past it is stuck, or copying large ignored
+// directories .worktreeinclude names, which stay under the lock so a parallel
+// rm cannot take a checkout still being filled; either way a launch waiting
+// without end would hang the caller.
 var lockWait = time.Minute
 
 // lockPoll is how often a held lock is tried again.
@@ -45,21 +46,19 @@ func (e *BusyError) Error() string {
 	if e.Holder > 0 {
 		holder = fmt.Sprintf("rewake process %d", e.Holder)
 	}
-	return fmt.Sprintf("%s has held the worktree lock %s for over %s, and checkouts of one repository are made and removed one at a time; try again once it ends, or end it if it hangs", holder, e.Lock, e.Waited)
+	return fmt.Sprintf("%s has held the worktree lock %s for over %s, and checkouts of one repository are made and removed one at a time; it may be copying large directories .worktreeinclude names, or it may hang: wait and run this again, and end that process only if it does not finish", holder, e.Lock, e.Waited)
 }
 
 // lockPath is the lock of the repository whose checkouts are in directory.
 func lockPath(directory string) string { return directory + ".lock" }
 
 // withRepositoryLock runs fn holding the lock of the repository whose
-// checkouts are in directory, waiting for it at most lockWait. The lock is an
-// flock, so a holder that dies lets go; its file stays, and a leftover file
-// locks nothing.
+// checkouts are in directory, waiting for it at most lockWait. The root the
+// lock lies in must exist: Create makes it, Remove goes without a lock when it
+// is gone. The lock is an flock, so a holder that dies lets go; its file
+// stays, and a leftover file locks nothing.
 func withRepositoryLock(directory string, fn func() error) error {
 	path := lockPath(directory)
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return fmt.Errorf("cannot create %s: %w", filepath.Dir(path), err)
-	}
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
 	if err != nil {
 		return fmt.Errorf("cannot open the worktree lock: %w", err)

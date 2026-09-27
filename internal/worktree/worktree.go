@@ -187,6 +187,9 @@ func Create(root, from, name string) (Record, error) {
 		return Record{}, &UnusableError{Reason: fmt.Sprintf("the worktree directory %s is inside the repository at %s; set %s to a directory outside it", root, source.Source, RootEnv)}
 	}
 	directory := filepath.Join(root, source.Repository)
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		return Record{}, fmt.Errorf("cannot create %s: %w", root, err)
+	}
 	var record Record
 	err = withRepositoryLock(directory, func() error {
 		if err := os.MkdirAll(directory, 0o755); err != nil {
