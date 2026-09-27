@@ -38,9 +38,14 @@ everything else.
 - [launch.md](launch.md) — starting a harness: the wrapper's launch sequence, signals
   and following a stopped harness, which flags choose a room and a role (the rules
   themselves are in design.md and roles.md), the
-  Claude Code flags and the Codex owned server with its terminal gateway, and the
-  briefing a session is given. Open it when a launch flag or a startup detail is in
+  Claude Code flags and the Codex owned server with its terminal gateway, how the main
+  session gives each writer a worktree of its own, and the briefing a session is given. Open it when a launch flag or a startup detail is in
   question.
+- [worktree.md](worktree.md) — the checkout `--worktree` gives a Codex or Claude Code
+  launch: its branch, where it lives, where the launch starts, the continuations and
+  names refused, how git runs, what `.worktreeinclude` copies, and what `rewake worktree
+  land`, `finish`, `ls` and `rm` do and ask first. Open it when touching
+  `internal/worktree`, the worktree command or a harness's worktree flag.
 - [launch-defaults.md](launch-defaults.md) — what a launch gets that nobody typed:
   model and effort defaults from flags, environment and settings files, and launch
   aliases with the rules for which of their flags a typed one replaces. Open it when a
@@ -194,6 +199,11 @@ everything else.
   source states about Claude Code's cross-session inbound gate — `crossSessionInbound`,
   permission-mode classes, holds, deadlines and receipts. Open it when adding a launch flag or when a model, an effort or a
   version is refused.
+- [research-worktree.md](research-worktree.md) — Claude Code's own worktree beside
+  rewake's: the flags that continue a conversation and why a continuation leaves a new
+  checkout, where trust is kept, `.worktreeinclude` as the binary and the reference
+  source do it and where they differ, and what else its worktree does that rewake does
+  not. Open it before changing the Claude Code worktree flag or `.worktreeinclude`.
 - [research-protocol.md](research-protocol.md) — what the generated Codex schema and the
   reference source state: the flags schema generation needs, required fields of the
   types the adapter uses, how start-or-steer forks, where `canAcceptDirectInput`

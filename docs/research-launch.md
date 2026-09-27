@@ -282,6 +282,9 @@ and the branch itself; `git worktree list` showed only the main checkout. A repo
 the turn's end was not seen: the stand-in API calls no tools, so the session never ran
 `rewake inbox`, and a message not read owes no report.
 
+What rewake's own worktree takes from Claude Code's — the flags that continue a
+conversation, trust, `.worktreeinclude` — is in [research-worktree.md](research-worktree.md).
+
 ## Hook options and settings order that rewake's launch layer relies on
 
 **[the binary's bundled source, cached 2.1.280; September 23, 2026]** A command hook

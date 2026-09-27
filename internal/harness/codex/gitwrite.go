@@ -78,7 +78,7 @@ func (codexHarness) WorktreeRefusal(args []string) error {
 		return errors.New(localArgumentsRequired)
 	}
 	if mode := continuationWord(args); mode != "" {
-		return fmt.Errorf("%s makes a new checkout for a new conversation, and %s continues one in the directory it was started in, which Codex keeps: the session would work outside the checkout its permissions name. Start a new conversation with %s, or %s without %s; a prompt that is the word %s itself goes after --", worktreeFlag, mode, worktreeFlag, mode, worktreeFlag, mode)
+		return fmt.Errorf("%s makes a new checkout for a new conversation, and %s continues one in the directory it was started in, which Codex keeps: the session would work outside the checkout its permissions name. Start a new conversation with %s, or %s; a prompt that is the word %s itself goes after --", worktreeFlag, mode, worktreeFlag, harness.ContinueInWorktree("rewake codex", mode), mode)
 	}
 	return nil
 }

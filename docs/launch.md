@@ -170,138 +170,11 @@ Caller permission flags and permission-related -c overrides stay untouched.
 For resume/fork, a separate stderr note explains that the remote TUI rejects
 them and advises removing them or starting a new thread. Arguments after -- are
 prompt text, not permission flags. The registry keeps
-the wrapper's cwd — the launch directory, or the checkout of a `--worktree` launch below.
+the wrapper's cwd — the launch directory, or the checkout of a `--worktree` launch
+([below](#a-worktree-for-a-launch)).
 Existing --remote, --profile and --oss/--local-provider launches
 are refused with advice: they cannot safely share this owned server topology or
 forward all configuration. Use explicit settings.
-
-#### A worktree for a launch
-
-`rewake codex --worktree` gives the session a checkout of its own. Codex's terminal
-cannot make one under rewake — it refuses `--worktree` together with `--remote`, before
-it creates anything, and rewake always starts it with `--remote`
-([research-codex.md](research-codex.md#--worktree-with-a-remote-terminal)) — so the
-launch command takes the flag for itself and never passes it on. Decided by the owner on
-September 26, 2026, as the variant that keeps only the substance of Codex's worktree:
-a detached checkout made with the public `git worktree add`, and rewake's own record of
-it. Codex's private scheme — its directory layout, a `--no-checkout` add,
-`config.worktree`, the thread binding in the git metadata — is not repeated: it is no
-contract, and a copy would drift from the next version silently.
-
-- **The flag.** Codex's own spelling, read as a switch: `--worktree` alone asks for a
-  generated name, six hex digits; `--worktree=<name>` names the checkout — a letter or
-  digit, then up to 39 letters, digits, `-` or `_`. A spaced value is not read: the word
-  after the switch stays the harness's, a prompt most often, as it would be for Codex
-  itself. The flag after `--` is prompt text and stays. Given twice, or as `--worktree=`,
-  it is a wrong call.
-- **The checkout.** The repository is the one holding the launch directory — `-C` or
-  `--cd` when given, else the current one. rewake adds a detached checkout of its HEAD
-  commit: detached, so the branch checked out in the source stays free and a second
-  launch from the same place does not collide with the first. Uncommitted changes in the
-  source do not come along.
-- **Where.** `$REWAKE_WORKTREES` when set (absolute), else
-  `$XDG_DATA_HOME/rewake/worktrees`, else `~/.local/share/rewake/worktrees`; under it one
-  directory per repository, named for it with a short hash of its Git directory so two
-  repositories of one name stay apart, and in that one each checkout beside its record:
-  `<repository>-<hash>/<name>/` and `<name>.json`. Not the state directory — that lives
-  in `/tmp` and would not outlive a restart, while a checkout holds work — and not inside
-  the repository, where it would show up in `git status` and in the agent's own
-  searches: a `$REWAKE_WORKTREES` inside it, compared with symbolic links resolved, is
-  refused. One place for every repository, so `rewake worktree ls` sees them all.
-- **Where the launch starts.** At the launch directory's place within the checkout, as
-  Codex does; at the checkout's top when that directory is not in the commit, an
-  untracked one say. The wrapper changes into it before the session is registered, and
-  `-C`/`--cd` are taken out of the arguments, so the record, the terminal and the
-  app-server all work there. Relative paths among the harness arguments resolve there
-  too.
-- **Trust.** Codex resolves a linked worktree's trust to its main checkout, so a
-  launch from a trusted repository keeps that trust in its checkout
-  ([research-codex.md](research-codex.md#--worktree-with-a-remote-terminal)).
-- **The record** says which repository (its shared Git directory and the checkout the
-  launch came from), which commit, where, when, and — written once the session's name is
-  claimed — which session: name, room, run and the room's state directory.
-- **A new conversation only.** `resume` and `fork` are refused with `--worktree`: they
-  continue a conversation in the directory it was started in. The terminal's
-  `thread/resume` carries a cwd only from its own `-C`/`--cd`, which rewake takes out,
-  and the server then restores the saved one, while the session's workspace roots are
-  already the checkout's: the model would work in one place with its rights named for
-  another (seen on 0.155.1 in a container with the real binaries, September 26, 2026;
-  fork read in the source, not run). Moving the conversation into the checkout — handing
-  the terminal the checkout as its `-C` — is not built: what that does to a continued
-  conversation's permissions ([continuation-permissions.md](continuation-permissions.md))
-  was not checked. The refusal names the two ways on: a new conversation with
-  `--worktree`, or the continuation without it. It is asked of the words, not of Codex's
-  grammar: `resume` or `fork` as a whole argument anywhere before `--` refuses. The
-  grammar lets a prompt come before the subcommand and ends an image's joined value
-  (`--image=foo`, `-ifoo`) in its own argument where a separated one runs on, and a
-  parser that followed it missed six forms the 0.155.1 terminal takes as a continuation.
-  A prompt or an option's value that is the bare word is refused too; the refusal says
-  such a prompt goes after `--`, where it is text (decided September 26, 2026). Neither
-  0.155.1 nor 0.157.1 has another spelling: no alias, and a bare `--last` is refused by
-  the parser.
-- **Refusals** exit 2 and nothing prompts; every git call runs with
-  `GIT_TERMINAL_PROMPT=0` and in a session of its own, with no terminal to open. The
-  same session keeps Ctrl-C from reaching git: a long `git worktree add` interrupted so
-  runs to its end after rewake has gone, and its checkout is left with a record and no
-  owner, which `ls` shows and rm removes (kept on purpose, September 26, 2026). Most
-  come before anything is made: the flag given twice or as `--worktree=`, `resume` or
-  `fork`, `--remote`, a profile or `--oss`/`--local-provider`, a launch directory that
-  does not resolve, a name out of shape, a launch directory outside any working tree, a
-  repository with no commit yet, a worktree directory inside the repository. By then the
-  worktree directory itself may have been created. A name taken by a checkout or by a
-  directory in its place is found once the repository's directory under it is made,
-  which is removed again when empty; the refusal gives the next step: another name,
-  `rewake worktree rm`, or `cd` into the existing one. A refusal of the registration — a
-  session name or a main already taken — comes after the checkout was made: it is taken
-  back, and the line saying where the session works is printed only once the name is
-  claimed.
-- **After the session** the checkout stays, as Codex's own would, and a line on stderr
-  says where and how to remove it. A launch that fails after the checkout was made, or
-  whose harness exits with an error — a resume of a conversation that does not exist,
-  say — takes it back when it is still at its commit and rm without `--force` would
-  remove it.
-
-`rewake worktree ls` lists the checkouts with their owner, the rewake sessions still
-running in each, and whether removing one would lose anything; `--json` gives the same
-model. A record whose path is not the directory of its own name beside it is not
-listed: rewake did not make that path, and rm would remove it.
-`rewake worktree rm <name>` — or `<repository>/<name>` when a name is in two
-repositories — removes one through `git worktree remove`, so the repository forgets it
-too. Without `--force` it never loses work, and when it cannot tell, it refuses. It
-refuses, naming each reason:
-
-- changes `git status` shows;
-- files git ignores — a `.env`, a local build — which `git worktree remove --force`
-  deletes without a word;
-- a HEAD no branch, tag or remote-tracking ref holds, asked every time: the commit a
-  checkout was made at is lost too once the branch that held it is deleted;
-- a rewake session still running in it: the one it was made for, or any whose working
-  directory is in the checkout — started there by hand after the first ended, say — in
-  any room of the current state directory and of the one the owner registered in. A
-  process rewake did not start is not seen, and neither is a rewake session started
-  from another directory with `-C <checkout>`: the working directory it registers is
-  the one its wrapper started in, not the target of `-C`. Its work is not lost —
-  `git worktree remove` refuses a checkout with changes — but a clean checkout goes from
-  under it. Recording the directory a session actually works in is queued
-  ([work-queue.md](work-queue.md#also-queued-not-scheduled));
-- a directory gone while the repository still lists it: it may have been moved with its
-  work, and `git worktree repair <new path>` run in the repository reconnects it. With
-  `--force` its own entry is removed with `git worktree remove`, never `git worktree
-  prune`, which would take every other missing checkout of the repository along. One
-  the repository no longer lists either leaves only the record, which rm removes;
-- a directory whose repository is gone: git has nothing left to say of what it holds.
-  With `--force` the directory and its record go. One whose directory is gone as well
-  leaves only the record, which rm removes.
-
-`--force` removes it anyway. Looking never stands in a session's way: git runs with
-`GIT_OPTIONAL_LOCKS=0`, so `git status` does not take `index.lock` from under a commit
-the session is making. Nothing is removed automatically.
-
-A main's `--grant-git` reaches such a checkout as it does a worktree made by hand: the
-grant reads the conversation's cwd, which is in the checkout, and resolves its private
-and common Git directories
-([research-permissions.md](research-permissions.md#managed-worktrees-and-continuation-permissions)).
-Claude Code keeps its own `-w`/`--worktree`: rewake does not take it.
 
 Unknown TUI arguments are preserved, not interpreted as server configuration.
 
@@ -313,6 +186,22 @@ fixture prints. The duplication is deliberate: a fixture echoing the constant ba
 would make the matching test tautological and let a typo in the pin through. A fake
 executable and socket server cover the process and protocol contract. Real-model
 acceptance remains a separate owner-run check.
+
+### A worktree for a launch
+
+`rewake codex --worktree` and `rewake claude --worktree` give a session a checkout of its
+own, on a branch of its own, under rewake's worktree directory. `rewake worktree land`
+fast-forwards a branch of the checkout it came from to the worktree's commits, `finish`
+lands once more and removes the worktree and its branch, and `ls` and `rm` list and
+remove. What the flag does for each harness, where the checkout goes, what
+`.worktreeinclude` copies in and what land, finish and rm ask first is in
+[worktree.md](worktree.md).
+
+The main session launches each writer in a checkout of its own with
+`--worktree=<topic>`, takes the accepted work with `rewake worktree land <topic>` and
+closes the checkout with `rewake worktree finish <topic>`, rather than making one by
+hand with `git worktree add`. A writer's uncommitted edits then never mix with what is
+being checked or committed in the main checkout at the same time.
 
 ### Fresh workspace permissions
 

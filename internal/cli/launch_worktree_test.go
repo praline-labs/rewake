@@ -123,7 +123,7 @@ func (lab worktreeLab) launch(t *testing.T, probe *worktreeProbe, dir string, ra
 func (worktreeLab) launchTold(t *testing.T, probe *worktreeProbe, dir string, raw ...string) (string, error) {
 	t.Helper()
 	t.Chdir(dir)
-	parsed, err := parse(append([]string{"--room", "trees", "--name", "tree", "codex"}, raw...))
+	parsed, err := parse(append([]string{"--room", "trees", "--name", "tree", probe.ID()}, raw...))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,13 +132,15 @@ func (worktreeLab) launchTold(t *testing.T, probe *worktreeProbe, dir string, ra
 	return stderr.String(), err
 }
 
-func codexProbe(t *testing.T) *worktreeProbe {
+func codexProbe(t *testing.T) *worktreeProbe { return harnessProbe(t, "codex") }
+
+func harnessProbe(t *testing.T, id string) *worktreeProbe {
 	t.Helper()
-	codex, ok := harness.Find("codex")
+	found, ok := harness.Find(id)
 	if !ok {
-		t.Fatal("codex is not in the catalog")
+		t.Fatalf("%s is not in the catalog", id)
 	}
-	return &worktreeProbe{roleLaunchProbe: roleLaunchProbe{Harness: codex}}
+	return &worktreeProbe{roleLaunchProbe: roleLaunchProbe{Harness: found}}
 }
 
 // The launch starts in the checkout, at the place within the repository it
@@ -205,9 +207,12 @@ func TestWorktreeLaunchRefusals(t *testing.T) {
 		{lab.repo, []string{"--worktree", "--worktree=a"}, "given twice"},
 		{lab.repo, []string{"--worktree=bad.name"}, "not usable"},
 		{lab.repo, []string{"--worktree=taken"}, "rewake worktree rm"},
+		{lab.repo, []string{"--worktree=main"}, "already has a branch main"},
+		{lab.repo, []string{"--worktree=HEAD"}, "not usable"},
 		{outside, []string{"--worktree"}, "not in a Git working tree"},
 		{lab.repo, []string{"--worktree", "-C", "missing"}, "missing"},
 		{lab.repo, []string{"--worktree", "resume", "--last"}, "Start a new conversation with --worktree"},
+		{lab.repo, []string{"--worktree", "resume", "--last"}, "rewake worktree ls names the worktree's path; cd there and run rewake codex resume without --worktree"},
 		{lab.repo, []string{"--worktree=a", "fork", "0199"}, "fork continues one in the directory it was started in"},
 		{lab.repo, []string{"--worktree", "--remote", "ws://h"}, "--remote"},
 		{lab.repo, []string{"--worktree", "--profile", "p"}, "--profile"},
@@ -238,15 +243,84 @@ func TestAFailedLaunchTakesItsCheckoutBack(t *testing.T) {
 	if listed := lab.git(t, lab.repo, "worktree", "list", "--porcelain"); strings.Contains(listed, lab.root) {
 		t.Errorf("git still knows it:\n%s", listed)
 	}
+	if branches := lab.git(t, lab.repo, "branch", "--list", "short"); branches != "" {
+		t.Errorf("its branch stayed: %s", branches)
+	}
 }
 
-// Only a harness that cannot make its own worktree under rewake gives the flag
-// to rewake; Claude Code keeps its own -w/--worktree.
-func TestOnlyCodexHandsItsWorktreeFlagToRewake(t *testing.T) {
-	for _, h := range harness.All() {
-		_, takes := h.(harness.WorktreeHarness)
-		if takes != (h.ID() == "codex") {
-			t.Errorf("%s: takes the worktree flag %v", h.ID(), takes)
+// A failed launch whose harness left something in the checkout keeps it, and
+// says why, where it is and how to go on there.
+func TestAFailedLaunchKeepsATouchedCheckoutAndSaysSo(t *testing.T) {
+	lab := newWorktreeLab(t)
+	probe := codexProbe(t)
+	probe.command = filepath.Join(t.TempDir(), "harness")
+	if err := os.WriteFile(probe.command, []byte("#!/bin/sh\ntouch left-behind\nexit 1\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	told, _ := lab.launchTold(t, probe, lab.repo, "--worktree=touched")
+	records := lab.records(t)
+	if len(records) != 1 {
+		t.Fatalf("records: %+v", records)
+	}
+	path := records[0].Path
+	for _, want := range []string{"the launch failed", "has changes", "cd " + path + " and run rewake codex without --worktree", "rewake worktree land"} {
+		if !strings.Contains(told, want) {
+			t.Errorf("told %q, want %q in it", told, want)
 		}
+	}
+}
+
+// Both harnesses hand --worktree to rewake. Claude Code's -w stays its own:
+// it reaches the harness untouched and makes no checkout of rewake's, and the
+// two together are refused.
+func TestClaudeHandsItsLongWorktreeFlagToRewake(t *testing.T) {
+	for _, h := range harness.All() {
+		if taker, ok := h.(harness.WorktreeHarness); !ok || taker.WorktreeFlag() != "--worktree" {
+			t.Errorf("%s does not take --worktree", h.ID())
+		}
+	}
+	lab := newWorktreeLab(t)
+	probe := harnessProbe(t, "claude")
+	if err := lab.launch(t, probe, filepath.Join(lab.repo, "src", "nested"), "--worktree=fix", "--model", "m"); err != nil {
+		t.Fatal(err)
+	}
+	records := lab.records(t)
+	if len(records) != 1 || records[0].Branch != "fix" || probe.cwd != filepath.Join(records[0].Path, "src", "nested") {
+		t.Fatalf("launched in %s, records %+v", probe.cwd, records)
+	}
+	if want := []string{"--model", "m"}; !reflect.DeepEqual(probe.request.Args, want) {
+		t.Errorf("harness got %q, want %q", probe.request.Args, want)
+	}
+	native := harnessProbe(t, "claude")
+	if err := lab.launch(t, native, lab.repo, "-w", "own"); err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"-w", "own"}; !reflect.DeepEqual(native.request.Args, want) || native.cwd != lab.repo || len(lab.records(t)) != 1 {
+		t.Errorf("-w: harness got %q in %s", native.request.Args, native.cwd)
+	}
+	for _, args := range [][]string{
+		{"--worktree", "-w"},
+		{"--worktree", "--tmux"},
+		{"--worktree", "--continue"},
+		{"--worktree", "-c"},
+		{"--worktree", "-pc"},
+		{"--worktree", "--resume", "0199"},
+		{"--worktree", "-r0199"},
+		{"--worktree=a", "--resume=0199", "--fork-session"},
+		{"--worktree", "--from-pr", "12"},
+		{"--worktree", "--teleport"},
+	} {
+		err := lab.launch(t, harnessProbe(t, "claude"), lab.repo, args...)
+		var usage *UsageError
+		if !errors.As(err, &usage) {
+			t.Errorf("%q: %v, want a refusal", args, err)
+		}
+		if records := lab.records(t); len(records) != 1 {
+			t.Errorf("%q left %d checkouts", args, len(records))
+		}
+	}
+	after := harnessProbe(t, "claude")
+	if err := lab.launch(t, after, lab.repo, "--worktree=text", "--", "--continue"); err != nil {
+		t.Errorf("a prompt after --: %v", err)
 	}
 }

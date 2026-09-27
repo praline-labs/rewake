@@ -108,6 +108,7 @@ func (claudeHarness) Examples() []string {
 	return []string{
 		"rewake claude",
 		"rewake --name api claude --continue",
+		"rewake claude --worktree=fix-login",
 	}
 }
 
@@ -153,6 +154,7 @@ func (claudeHarness) Notes() []string {
 		"Delivery goes through the session inbox socket, so a message arrives within seconds and wakes an idle session.",
 		"Arguments after the harness name are passed to claude untouched, with one exception: a --help written first asks rewake for this page instead of starting the harness.",
 		"An identical message from the same sender within thirty seconds is dropped by Claude Code itself; rewake puts a short id in every message to keep them apart.",
+		"--worktree is rewake's here: rewake adds a checkout of HEAD on a new branch under its worktree directory and starts the session in it, at the same place within the repository; --worktree=<name> names both. rewake worktree land takes the branch's commits into the checkout it came from, finish lands and removes it, ls lists and rm removes. It starts a new conversation only: --continue, --resume, --from-pr, --teleport and --fork-session are refused beside it. -w stays Claude Code's own worktree, inside the repository.",
 	}
 }
 
@@ -182,6 +184,12 @@ func (claudeHarness) SingleUseFlags() []harness.Flag {
 
 func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, error) {
 	args := append([]string{}, request.Args...)
+	if harness.HasFlag(args, worktreeFlag) {
+		// The launch command takes the flag before a launch is planned; one
+		// reaching here came some other way, and Claude Code would make a
+		// worktree of its own instead of rewake's.
+		return harness.LaunchPlan{}, fmt.Errorf("%s reached the Claude Code launch; start it with rewake claude %s so rewake makes the checkout, or give -w for Claude Code's own", worktreeFlag, worktreeFlag)
+	}
 	socket := request.Socket
 	owns := false
 

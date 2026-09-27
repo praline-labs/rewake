@@ -17,3 +17,11 @@ type WorktreeHarness interface {
 	// is made, so a refused launch leaves nothing behind.
 	WorktreeRefusal(args []string) error
 }
+
+// ContinueInWorktree is the way on that a refused continuation names: the
+// conversation goes on where it was started, and one started in a checkout
+// rewake made is found with rewake worktree ls. Launched in the checkout
+// without the flag, the harness finds it where it left it.
+func ContinueInWorktree(launch, word string) string {
+	return "continue it where it was started: for a conversation begun in a rewake worktree, rewake worktree ls names the worktree's path; cd there and run " + launch + " " + word + " without --worktree"
+}

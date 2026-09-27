@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -59,9 +60,10 @@ func write(t *testing.T, path, text string) {
 	}
 }
 
-// A launch gets the commit it stood on, detached, so the branch checked out in
-// the source stays free; the place within the repository comes along.
-func TestCreateChecksOutHeadDetachedAtTheSamePlace(t *testing.T) {
+// A launch gets the commit it stood on, on a new branch of the checkout's
+// name, so the branch checked out in the source stays free and the work has a
+// branch to land from; the place within the repository comes along.
+func TestCreateChecksOutHeadOnItsOwnBranchAtTheSamePlace(t *testing.T) {
 	isolate(t)
 	source := repository(t, "project")
 	root := t.TempDir()
@@ -69,8 +71,8 @@ func TestCreateChecksOutHeadDetachedAtTheSamePlace(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !ValidName(record.Name) || len(record.Name) != 6 {
-		t.Errorf("generated name %q", record.Name)
+	if !ValidName(record.Name) || !regexp.MustCompile(`^wt-[0-9a-f]{6}$`).MatchString(record.Name) || record.Branch != record.Name {
+		t.Errorf("generated name %q, branch %q", record.Name, record.Branch)
 	}
 	if !strings.HasPrefix(record.Repository, "project-") || record.Path != filepath.Join(root, record.Repository, record.Name) {
 		t.Errorf("placed at %s in %s", record.Path, record.Repository)
@@ -81,8 +83,11 @@ func TestCreateChecksOutHeadDetachedAtTheSamePlace(t *testing.T) {
 	if head := must(t, record.Path, "rev-parse", "HEAD"); head != record.Commit || head != must(t, source, "rev-parse", "HEAD") {
 		t.Errorf("checked out %s, recorded %s", head, record.Commit)
 	}
-	if _, err := gitOutput(record.Path, "symbolic-ref", "-q", "HEAD"); err == nil {
-		t.Error("the checkout is on a branch; it should be detached")
+	if branch := must(t, record.Path, "symbolic-ref", "-q", "HEAD"); branch != "refs/heads/"+record.Name {
+		t.Errorf("the checkout is on %q, not on a branch of its name", branch)
+	}
+	if source, _, _ := currentBranch(source); source != "main" {
+		t.Errorf("the source moved to %q", source)
 	}
 	if got := record.Workdir(); got != filepath.Join(record.Path, "src", "nested") {
 		t.Errorf("workdir %s", got)
@@ -125,7 +130,7 @@ func TestNamesOutOfShapeAreRefused(t *testing.T) {
 	isolate(t)
 	source := repository(t, "project")
 	root := t.TempDir()
-	for _, name := range []string{"../escape", "a/b", "a.json", ".hidden", "-flag", "_x", "has space", strings.Repeat("a", 41)} {
+	for _, name := range []string{"../escape", "a/b", "a.json", ".hidden", "-flag", "_x", "has space", strings.Repeat("a", 41), "HEAD", strings.Repeat("a", 40)} {
 		var unusable *UnusableError
 		if _, err := Create(root, source, name); !errors.As(err, &unusable) {
 			t.Errorf("%q: %v", name, err)
@@ -134,7 +139,7 @@ func TestNamesOutOfShapeAreRefused(t *testing.T) {
 	if entries, _ := os.ReadDir(root); len(entries) != 0 {
 		t.Errorf("a refused name left %d entries", len(entries))
 	}
-	if _, err := Create(root, source, strings.Repeat("a", 40)); err != nil {
+	if _, err := Create(root, source, strings.Repeat("a", 39)+"g"); err != nil {
 		t.Errorf("forty characters: %v", err)
 	}
 }

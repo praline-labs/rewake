@@ -147,8 +147,9 @@ The unknown private gitdir, once given as the reason, is not the whole obstacle 
 more: the grant a main's task adds (`taskGitRoots`,
 `internal/harness/codex/server_gitwrite.go`) reads the cwd of the selected conversation,
 not the launch directory. Since September 26, 2026, by the owner's decision, the launch
-command takes the flag and makes the checkout itself with a plain detached
-`git worktree add` ([launch.md](launch.md#a-worktree-for-a-launch)), then starts the
+command takes the flag and makes the checkout itself with a plain `git worktree add` —
+detached until September 27, on a branch of its own since ([worktree.md](worktree.md)) —
+then starts the
 session inside it. To Git that checkout is an ordinary linked worktree — a `.git` file
 pointing at `<common>/worktrees/<name>`, with a `commondir` back — so metadata discovery
 resolves both directories exactly as for one made by hand; `gitmetadata_test.go` compares

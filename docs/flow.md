@@ -48,8 +48,8 @@ with `rewake --main --name lead claude`, becoming lead-claude.
 1. **The directory.** The wrapper opens the `REWAKE_DIR` root and the room
    selected by `--room`, or `default` when omitted. Both are 0700; a symlink,
    foreign owner or loose permissions is refused. Legacy root-level records
-   are ignored. A Codex launch with `--worktree` first gets a detached checkout of
-   the launch directory's HEAD under rewake's worktree directory, and the wrapper
+   are ignored. A launch with `--worktree` first gets a checkout of the launch
+   directory's HEAD on a new branch under rewake's worktree directory, and the wrapper
    moves into it, at the same place in the repository, before anything else
    ([launch.md](launch.md#a-worktree-for-a-launch)).
 2. **The name and role.** Under the room lock, first select the role (step 4),

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 )
@@ -70,6 +71,9 @@ type Check struct {
 	// Head is the commit checked out now, as the checkout or, when it is
 	// missing, the repository's list of worktrees says.
 	Head string `json:"head,omitempty"`
+	// Branch is the branch checked out in it now, empty when it is detached
+	// or missing.
+	Branch string `json:"branch,omitempty"`
 }
 
 // Dirty says whether removing the checkout would lose work.
@@ -84,7 +88,7 @@ func Inspect(record Record) (Check, error) {
 	if !present {
 		return inspectMissing(record)
 	}
-	status, err := gitOutput(record.Path, "status", "--porcelain", "--untracked-files=normal", "--ignored=matching")
+	status, err := gitOutput(record.Path, "status", "--porcelain", "-z", "--untracked-files=normal", "--ignored=matching")
 	if err != nil {
 		return Check{}, fmt.Errorf("git status in %s failed: %w", record.Path, err)
 	}
@@ -93,11 +97,18 @@ func Inspect(record Record) (Check, error) {
 		return Check{}, fmt.Errorf("cannot read HEAD in %s: %w", record.Path, err)
 	}
 	check := Check{Head: head}
-	for _, line := range strings.Split(status, "\n") {
+	if check.Branch, _, err = currentBranch(record.Path); err != nil {
+		return Check{}, err
+	}
+	for _, entry := range strings.Split(status, "\x00") {
 		switch {
-		case strings.HasPrefix(line, "!! "):
-			check.Ignored = true
-		case line != "":
+		case strings.HasPrefix(entry, "!! "):
+			// A copy .worktreeinclude made, still equal to the source's,
+			// is no work of the checkout's.
+			if !includedCopy(record, strings.TrimPrefix(entry, "!! ")) {
+				check.Ignored = true
+			}
+		case entry != "":
 			check.Changes = true
 		}
 	}
@@ -239,7 +250,7 @@ func gitDir(commonDir string, args ...string) error {
 	if _, err := os.Stat(commonDir); err != nil {
 		return err
 	}
-	_, err := run(exec.Command("git", append([]string{"--git-dir", commonDir}, args...)...))
+	_, err := run(gitDirCommand(commonDir, args...))
 	return err
 }
 
@@ -251,29 +262,75 @@ func gitDirOutput(commonDir string, args ...string) (string, error) {
 	if _, err := os.Stat(commonDir); err != nil {
 		return "", err
 	}
-	return run(exec.Command("git", append([]string{"--git-dir", commonDir}, args...)...))
+	return run(gitDirCommand(commonDir, args...))
 }
 
-// run runs git with an environment of its own choosing: a GIT_DIR or a
-// GIT_WORK_TREE inherited from a hook that started this would point every call
-// at another repository.
+// gitDirCommand runs in the Git directory as well: the process may stand in a
+// checkout that is gone by now — the one a launch ran in, or the one finish
+// just removed — and git refuses to start in a directory that does not exist.
+func gitDirCommand(commonDir string, args ...string) *exec.Cmd {
+	command := exec.Command("git", append([]string{"--git-dir", commonDir}, args...)...)
+	command.Dir = commonDir
+	return command
+}
+
+// run runs git with an environment of its own choosing, and without the
+// repository's hooks.
+func run(command *exec.Cmd) (string, error) {
+	return runGit(command, false)
+}
+
+// runWithHooks runs git as a person would in their own checkout, hooks
+// included: land moves the source's branch, and the hooks the repository keeps
+// for a merge or a ref update are the person's to run there.
+func runWithHooks(command *exec.Cmd) (string, error) {
+	return runGit(command, true)
+}
+
+// keptGitEnv are the GIT_ variables that pass: which configuration files the
+// person's git reads, and the identity it signs with. None of them points at a
+// repository or changes what a command does to one.
+var keptGitEnv = []string{
+	"GIT_CONFIG_GLOBAL", "GIT_CONFIG_SYSTEM", "GIT_CONFIG_NOSYSTEM",
+	"GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL", "GIT_AUTHOR_DATE",
+	"GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL", "GIT_COMMITTER_DATE",
+}
+
+// runGit leaves out every other inherited GIT_ variable: a GIT_DIR or a
+// GIT_WORK_TREE from a hook that started this would point every call at
+// another repository, and GIT_CONFIG_PARAMETERS or GIT_CONFIG_COUNT would carry
+// a parent's configuration into it.
 //
 // Nothing it runs may wait for a person, since the caller is most often an
 // agent: no terminal prompt for credentials a hook or a filter might ask for,
-// and a session of its own, so git has no terminal to open at all. And a look
-// must not stand in a session's way: `git status` otherwise refreshes the
-// index under index.lock, and a commit the session makes at that moment fails.
-func run(command *exec.Cmd) (string, error) {
+// and a session of its own, so git has no terminal to open at all. A look must
+// not stand in a session's way: `git status` otherwise refreshes the index
+// under index.lock, and a commit the session makes at that moment fails. No
+// filesystem monitor is started for a checkout: its daemon would outlive the
+// call. And unless hooks are asked for, none runs: a post-checkout hook in a
+// new checkout would run the repository's code with no terminal before the
+// session starts — the preparation rewake does not do — and a reference hook
+// would run on a branch rewake makes or drops. Clean and smudge filters stay:
+// without them a large file kept by a filter would be checked out as its
+// pointer. The settings go by GIT_CONFIG_COUNT, for this call only; nothing
+// is written to the repository's configuration.
+func runGit(command *exec.Cmd, hooks bool) (string, error) {
 	for _, entry := range os.Environ() {
 		key, _, _ := strings.Cut(entry, "=")
-		switch key {
-		case "GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR", "GIT_OBJECT_DIRECTORY", "GIT_PREFIX", "GIT_NAMESPACE",
-			"GIT_TERMINAL_PROMPT", "GIT_OPTIONAL_LOCKS":
+		if strings.HasPrefix(key, "GIT_") && !slices.Contains(keptGitEnv, key) {
 			continue
 		}
 		command.Env = append(command.Env, entry)
 	}
-	command.Env = append(command.Env, "GIT_TERMINAL_PROMPT=0", "GIT_OPTIONAL_LOCKS=0")
+	command.Env = append(command.Env, "GIT_TERMINAL_PROMPT=0", "GIT_OPTIONAL_LOCKS=0", "GIT_MERGE_AUTOEDIT=no")
+	settings := [][2]string{{"core.fsmonitor", "false"}}
+	if !hooks {
+		settings = append(settings, [2]string{"core.hooksPath", os.DevNull})
+	}
+	command.Env = append(command.Env, fmt.Sprintf("GIT_CONFIG_COUNT=%d", len(settings)))
+	for i, setting := range settings {
+		command.Env = append(command.Env, fmt.Sprintf("GIT_CONFIG_KEY_%d=%s", i, setting[0]), fmt.Sprintf("GIT_CONFIG_VALUE_%d=%s", i, setting[1]))
+	}
 	command.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	var stdout, stderr bytes.Buffer
 	command.Stdout, command.Stderr = &stdout, &stderr

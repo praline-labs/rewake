@@ -11,22 +11,25 @@ import (
 )
 
 // A checkout still at the commit it was made at loses that commit too once
-// the branch that held it is gone: reachability is asked every time, not only
-// after the HEAD moved.
+// the branches that held it are gone: reachability is asked every time, not
+// only after the HEAD moved. Its own branch holds it while it stays; one the
+// checkout left, detached, holds nothing.
 func TestACommitNoBranchHoldsAnyMoreIsUnreachable(t *testing.T) {
 	isolate(t)
 	source := repository(t, "project")
 	must(t, source, "checkout", "-q", "-b", "topic")
 	must(t, source, "commit", "-q", "--allow-empty", "-m", "Only on topic")
-	record, err := Create(t.TempDir(), source, "topic")
+	record, err := Create(t.TempDir(), source, "work")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if check, err := Inspect(record); err != nil || check.Dirty() {
-		t.Fatalf("while topic holds it: %+v, %v", check, err)
-	}
 	must(t, source, "checkout", "-q", "main")
 	must(t, source, "branch", "-q", "-D", "topic")
+	if check, err := Inspect(record); err != nil || check.Dirty() || check.Branch != "work" {
+		t.Fatalf("while its own branch holds it: %+v, %v", check, err)
+	}
+	must(t, record.Path, "switch", "-q", "--detach")
+	must(t, source, "branch", "-q", "-D", "work")
 	check, err := Inspect(record)
 	if err != nil || !check.Unreachable || check.Head != record.Commit || !check.Dirty() {
 		t.Fatalf("after topic was deleted: %+v, %v", check, err)

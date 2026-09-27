@@ -18,7 +18,7 @@ import (
 const (
 	obsTreeVisited   = "after its session ends, rm still refuses the checkout while another rewake session started in it runs, naming that session"
 	obsTreeIgnored   = "rm refuses a checkout holding a file git ignores and leaves the file; --force removes it"
-	obsTreeUnreached = "rm refuses a checkout still at the commit it was made at once no branch holds that commit, and removes it once one does again"
+	obsTreeUnreached = "rm refuses a checkout still at the commit it was made at once no ref holds that commit — its own branch left for a detached HEAD — and removes it once they hold it again"
 	obsTreeMoved     = "rm refuses a checkout whose directory was moved away, pointing at git worktree repair; --force takes out its record and git's entry for it"
 )
 
@@ -28,7 +28,6 @@ type treeStand struct {
 	c      *Case
 	iso    *Isolation
 	repo   string
-	head   string
 	rewake func(args ...string) (string, error)
 	git    func(dir string, args ...string) (string, error)
 	trees  func() []treeView
@@ -108,21 +107,35 @@ func (s treeStand) ignored(tree treeView) telemetryFinding {
 		keptErr, kept, left == nil, forceErr, forced, os.IsNotExist(gone))
 }
 
-// unreached deletes the branch holding the checkout's commit and puts it back.
+// unreached leaves a checkout detached at the commit it was made at and takes
+// away every ref holding that commit — its own branch, main and the other
+// checkouts' branches — then puts them back as they were.
 func (s treeStand) unreached(tree treeView) telemetryFinding {
-	if _, err := s.git(s.repo, "update-ref", "-d", "refs/heads/main"); err != nil {
-		return s.finding(obsTreeUnreached, false, "cannot delete main: %v", err)
+	if _, err := s.git(tree.Path, "switch", "-q", "--detach"); err != nil {
+		return s.finding(obsTreeUnreached, false, "cannot leave the branch: %v", err)
+	}
+	holders, err := s.git(s.repo, "for-each-ref", "--contains", tree.Commit, "--format=%(refname) %(objectname)", "refs/heads", "refs/tags", "refs/remotes")
+	if err != nil {
+		return s.finding(obsTreeUnreached, false, "cannot list the refs holding %s: %v", tree.Commit, err)
+	}
+	refs := strings.Fields(holders)
+	for i := 0; i+1 < len(refs); i += 2 {
+		if _, err := s.git(s.repo, "update-ref", "-d", refs[i]); err != nil {
+			return s.finding(obsTreeUnreached, false, "cannot delete %s: %v", refs[i], err)
+		}
 	}
 	kept, keptErr := s.rewake("worktree", "rm", tree.Name)
 	_, there := os.Stat(tree.Path)
-	if _, err := s.git(s.repo, "update-ref", "refs/heads/main", s.head); err != nil {
-		return s.finding(obsTreeUnreached, false, "cannot restore main: %v", err)
+	for i := 0; i+1 < len(refs); i += 2 {
+		if _, err := s.git(s.repo, "update-ref", refs[i], refs[i+1]); err != nil {
+			return s.finding(obsTreeUnreached, false, "cannot restore %s: %v", refs[i], err)
+		}
 	}
 	removed, removeErr := s.rewake("worktree", "rm", tree.Name)
 	_, gone := os.Stat(tree.Path)
 	held := keptErr != nil && strings.Contains(keptErr.Error(), "on no branch") && there == nil && removeErr == nil && os.IsNotExist(gone)
-	return s.finding(obsTreeUnreached, held, "rm with main deleted: %v, %q, checkout there: %v; rm with main back: %v, %q, gone: %v",
-		keptErr, kept, there == nil, removeErr, removed, os.IsNotExist(gone))
+	return s.finding(obsTreeUnreached, held, "rm with %v deleted: %v, %q, checkout there: %v; rm with them back: %v, %q, gone: %v",
+		refs, keptErr, kept, there == nil, removeErr, removed, os.IsNotExist(gone))
 }
 
 // moved takes a checkout's directory away from where the record says it is.

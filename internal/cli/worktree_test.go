@@ -77,6 +77,7 @@ func TestWorktreeRmRefusesWhatHoldsWork(t *testing.T) {
 		t.Fatal(err)
 	}
 	detached := lab.made(t, "detached")
+	lab.git(t, detached.Path, "switch", "-q", "--detach")
 	lab.git(t, detached.Path, "commit", "-q", "--allow-empty", "-m", "Only here")
 	running := lab.made(t, "running")
 	roomDir, _ := state.RoomDir(lab.state, "trees")
@@ -144,11 +145,19 @@ func TestWorktreeCommandRefusals(t *testing.T) {
 		args []string
 		want string
 	}{
-		{[]string{"worktree"}, "needs ls or rm"},
-		{[]string{"worktree", "list"}, "needs ls or rm"},
+		{[]string{"worktree"}, "needs ls, land, finish or rm"},
+		{[]string{"worktree", "list"}, "needs ls, land, finish or rm"},
 		{[]string{"worktree", "ls", "x"}, "takes no name"},
 		{[]string{"worktree", "ls", "--force"}, "--force is for rm"},
+		{[]string{"worktree", "land", "twin", "--force"}, "--force is for rm"},
+		{[]string{"worktree", "finish", "twin", "--force"}, "--force is for rm"},
+		{[]string{"worktree", "rm", "twin", "--into", "main"}, "--into is for land and finish"},
+		{[]string{"worktree", "ls", "--into", "main"}, "--into is for land and finish"},
 		{[]string{"worktree", "rm"}, "needs the name"},
+		{[]string{"worktree", "land"}, "needs the name"},
+		{[]string{"worktree", "finish"}, "needs the name"},
+		{[]string{"worktree", "land", "nothing"}, "No worktree"},
+		{[]string{"worktree", "finish", "twin"}, "in 2 repositories"},
 		{[]string{"worktree", "rm", "nothing"}, "No worktree"},
 		{[]string{"worktree", "rm", "twin"}, "in 2 repositories"},
 		{[]string{"worktree", "rm", "a", "b"}, "at most 2"},

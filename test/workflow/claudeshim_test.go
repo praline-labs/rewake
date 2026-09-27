@@ -43,6 +43,7 @@ func runClaudeShim(args []string) int {
 		}
 		return 2
 	}
+	recordShimCwd("claude")
 	plugin, err := loadPlugin(launch.pluginDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "claude-shim: %v\n", err)

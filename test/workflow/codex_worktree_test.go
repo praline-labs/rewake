@@ -14,16 +14,19 @@ import (
 
 // TestCodexWorktree is `rewake codex --worktree` end to end on the Codex
 // column: a worker is launched from a directory inside a repository with
-// --worktree=probe, and rewake makes a detached checkout of HEAD under its
-// worktree directory and starts the session there — the wrapper, the
-// terminal and the app-server all at the launch directory's place within the
-// checkout. A task sent to it is delivered. While it runs, `rewake worktree
-// rm` refuses its checkout, and after it has ended as well while another
-// session started there runs. Three more checkouts, each launched and ended
-// for the purpose, show what else rm keeps without --force: a file git
-// ignores, a commit no branch holds any more, and a directory moved away.
-// Once nothing holds the first checkout, rm removes it through git, so the
-// repository forgets it too.
+// --worktree=probe, and rewake makes a checkout of HEAD on a new branch probe
+// under its worktree directory and starts the session there — the wrapper,
+// the terminal and the app-server all at the launch directory's place within
+// the checkout. A task sent to it is delivered. While it runs, `rewake
+// worktree rm` refuses its checkout; a commit made in it lands in the source
+// with `rewake worktree land`, hashes kept and the session left running; a
+// second commit follows, and finish refuses while the session runs. After it
+// has ended rm still refuses while another session started there runs. Three
+// more checkouts, each launched and ended for the purpose, show what else rm
+// keeps without --force: a file git ignores, a commit no ref holds any more,
+// and a directory moved away. Once nothing holds the first checkout, finish
+// lands the second commit and removes the checkout through git, and its
+// branch, so the repository forgets both.
 //
 // What it does not prove: anything of Codex's own worktree, which the terminal
 // refuses beside --remote (docs/research-codex.md); rewake never asks it for one.
@@ -45,15 +48,17 @@ func TestCodexWorktree(t *testing.T) {
 }
 
 const (
-	obsTreeEntered   = "a launch with --worktree=probe runs in a detached checkout of HEAD under the worktree directory, at the launch directory's place in it: the session's record, the terminal and the app-server all work there, and the record names the session"
-	obsTreeDelivered = "a task sent to the session in the checkout is delivered"
-	obsTreeKept      = "rewake worktree rm refuses the checkout while its session runs, saying so, and leaves it"
-	obsTreeRemoved   = "after the session ends, rewake worktree rm removes the checkout, its record, and git's own entry for it"
-	codexTreeTask    = "codex-worktree-probe: work here"
+	obsTreeEntered    = "a launch with --worktree=probe runs in a checkout of HEAD on a new branch probe under the worktree directory, at the launch directory's place in it: the session's record, the terminal and the app-server all work there, and the record names the session"
+	obsTreeDelivered  = "a task sent to the session in the checkout is delivered"
+	obsTreeKept       = "rewake worktree rm refuses the checkout while its session runs, saying so, and leaves it"
+	obsTreeLanded     = "rewake worktree land, while the session runs, fast-forwards the source's main to the commit made in the checkout, hash kept and its file in the source, and leaves the checkout on its branch and the session running"
+	obsTreeFinishKept = "rewake worktree finish refuses while the session runs, naming it, and lands and removes nothing"
+	obsTreeRemoved    = "after the sessions end, rewake worktree finish lands the last commit by fast-forward and removes the checkout, its record, git's own entry for it and its branch"
+	codexTreeTask     = "codex-worktree-probe: work here"
 )
 
 var codexWorktreeObservations = []string{
-	obsTreeEntered, obsTreeDelivered, obsTreeKept, obsTreeVisited,
+	obsTreeEntered, obsTreeDelivered, obsTreeKept, obsTreeLanded, obsTreeFinishKept, obsTreeVisited,
 	obsTreeIgnored, obsTreeUnreached, obsTreeMoved, obsTreeRemoved,
 }
 
@@ -128,16 +133,7 @@ func playCodexWorktree(t *testing.T, c *Case, iso *Isolation) []telemetryFinding
 		out, err := c.OutputAllowingFailure(iso.Command(args...))
 		return string(out), err
 	}
-	listTrees := func() []treeView {
-		out, err := rewake("worktree", "ls", "--json")
-		var listing struct {
-			Worktrees []treeView `json:"worktrees"`
-		}
-		if err != nil || json.Unmarshal([]byte(out), &listing) != nil {
-			return nil
-		}
-		return listing.Worktrees
-	}
+	listTrees := func() []treeView { return listTreesFrom(rewake) }
 
 	worker := startSessionIn(t, c, iso, nested, "codex", "tree", "--general", nil, []string{"--worktree=probe"},
 		shimCwdFile+"="+cwdFile, shimInboxJSON+"=1")
@@ -167,14 +163,15 @@ func playCodexWorktree(t *testing.T, c *Case, iso *Isolation) []telemetryFinding
 	}
 	registered := registeredCWD(rewake, worker.name)
 	want := filepath.Join(tree.Path, "src", "nested")
-	_, onBranch := git(tree.Path, "symbolic-ref", "-q", "HEAD")
+	branch, _ := git(tree.Path, "symbolic-ref", "-q", "HEAD")
 	checkedOut, _ := git(tree.Path, "rev-parse", "HEAD")
+	sourceBranch, _ := git(repo, "symbolic-ref", "-q", "HEAD")
 	entered := tree.Name == "probe" && strings.HasPrefix(tree.Path, trees+string(filepath.Separator)) &&
-		tree.Commit == head && checkedOut == head && onBranch != nil &&
+		tree.Commit == head && checkedOut == head && branch == "refs/heads/probe" && sourceBranch == "refs/heads/main" &&
 		registered == want && string(client) == want && string(server) == want && tree.Session.Name == worker.name
 	out := []telemetryFinding{finding(obsTreeEntered, entered,
-		"checkout %s at %s (HEAD %s, source HEAD %s, detached %v) owned by %v; want the work in %s: record %q, terminal %q, server %q",
-		tree.Name, tree.Path, checkedOut, head, onBranch != nil, tree.Session, want, registered, client, server)}
+		"checkout %s at %s (HEAD %s on %q, source HEAD %s on %q) owned by %v; want the work in %s: record %q, terminal %q, server %q",
+		tree.Name, tree.Path, checkedOut, branch, head, sourceBranch, tree.Session, want, registered, client, server)}
 
 	// A session sends it: mail from a plain shell carries no run to
 	// answer to, and a Codex delivery refuses it.
@@ -194,25 +191,102 @@ func playCodexWorktree(t *testing.T, c *Case, iso *Isolation) []telemetryFinding
 	refused := keptErr != nil && strings.Contains(keptErr.Error(), "still run in it: "+worker.name) && stillThere == nil
 	out = append(out, finding(obsTreeKept, refused, "rm while running: %v, %q; checkout there: %v", keptErr, kept, stillThere == nil))
 
+	commit := func(dir, file string) (string, error) {
+		if err := os.WriteFile(filepath.Join(dir, file), []byte(file+"\n"), 0o600); err != nil {
+			return "", err
+		}
+		if _, err := git(dir, "add", file); err != nil {
+			return "", err
+		}
+		if _, err := git(dir, "commit", "-q", "-m", "Add "+file); err != nil {
+			return "", err
+		}
+		return git(dir, "rev-parse", "HEAD")
+	}
+	out = append(out, midSession(worker, tree, repo, commit, git, rewake, finding)...)
+	landedAt, _ := git(repo, "rev-parse", "main")
+
 	stopped = true
 	if err := worker.stop(c); err != nil {
-		return append(out, unjudged(3, "the session did not end: "+err.Error())...)
+		return append(out, unjudged(5, "the session did not end: "+err.Error())...)
 	}
-	stand := treeStand{t: t, c: c, iso: iso, repo: repo, head: head, rewake: rewake, git: git, trees: listTrees}
+	stand := treeStand{t: t, c: c, iso: iso, repo: repo, rewake: rewake, git: git, trees: listTrees}
 	out = append(out, stand.visited(tree))
 	spares, err := stand.spares("ignored", "unreached", "moved")
 	if err != nil {
-		return append(out, unjudged(4, err.Error())...)
+		return append(out, unjudged(6, err.Error())...)
 	}
 	out = append(out, stand.ignored(spares["ignored"]), stand.unreached(spares["unreached"]), stand.moved(spares["moved"]))
 
-	removedOut, removeErr := rewake("worktree", "rm", "probe")
+	last, _ := git(tree.Path, "rev-parse", "HEAD")
+	finished, finishErr := rewake("worktree", "finish", "probe")
+	main, _ := git(repo, "rev-parse", "main")
 	_, gone := os.Stat(tree.Path)
 	listed, _ := git(repo, "worktree", "list", "--porcelain")
+	branches, _ := git(repo, "branch", "--list", "probe")
 	left := listTrees()
-	removed := removeErr == nil && os.IsNotExist(gone) && len(left) == 0 && !strings.Contains(listed, tree.Path+"\n")
+	removed := finishErr == nil && main == last && last != landedAt && os.IsNotExist(gone) && len(left) == 0 &&
+		!strings.Contains(listed, tree.Path+"\n") && branches == ""
 	return append(out, finding(obsTreeRemoved, removed,
-		"rm after the end: %v, %q; checkout gone: %v; records left %d; git lists:\n%s", removeErr, removedOut, os.IsNotExist(gone), len(left), listed))
+		"finish after the end: %v, %q; main %s, the checkout's last commit %s, landed before %s; checkout gone: %v; records left %d; branch probe %q; git lists:\n%s",
+		finishErr, finished, main, last, landedAt, os.IsNotExist(gone), len(left), branches, listed))
+}
+
+// midSession is the work in the checkout while its session runs: a commit
+// landed mid-session, a second one, and a finish refused because the session
+// runs.
+func midSession(worker *codexSession, tree treeView, repo string,
+	commit func(dir, file string) (string, error),
+	git func(dir string, args ...string) (string, error),
+	rewake func(args ...string) (string, error),
+	finding func(observation string, held bool, detail string, args ...any) telemetryFinding,
+) []telemetryFinding {
+	first, err := commit(tree.Path, "first")
+	if err != nil {
+		return []telemetryFinding{
+			finding(obsTreeLanded, false, "cannot commit in the checkout: %v", err),
+			finding(obsTreeFinishKept, false, "no commit to finish with: %v", err),
+		}
+	}
+	landed, landErr := rewake("worktree", "land", "probe")
+	main, _ := git(repo, "rev-parse", "main")
+	_, inSource := os.Stat(filepath.Join(repo, "first"))
+	branch, _ := git(tree.Path, "symbolic-ref", "-q", "HEAD")
+	head, _ := git(tree.Path, "rev-parse", "HEAD")
+	running := false
+	for _, view := range listTreesFrom(rewake) {
+		running = running || view.Name == tree.Name && view.Running
+	}
+	held := landErr == nil && strings.Contains(landed, "landed 1 commit of probe into main") && main == first &&
+		inSource == nil && branch == "refs/heads/probe" && head == first && running
+	out := []telemetryFinding{finding(obsTreeLanded, held,
+		"land mid-session: %v, %q; main %s, the commit %s, its file in the source: %v; checkout on %q at %s; still running: %v",
+		landErr, landed, main, first, inSource == nil, branch, head, running)}
+
+	second, err := commit(tree.Path, "second")
+	if err != nil {
+		return append(out, finding(obsTreeFinishKept, false, "cannot commit again in the checkout: %v", err))
+	}
+	refused, refuseErr := rewake("worktree", "finish", "probe")
+	after, _ := git(repo, "rev-parse", "main")
+	_, there := os.Stat(tree.Path)
+	tip, _ := git(repo, "rev-parse", "refs/heads/probe")
+	kept := refuseErr != nil && strings.Contains(refuseErr.Error(), "still run in it: "+worker.name) &&
+		after == main && there == nil && tip == second
+	return append(out, finding(obsTreeFinishKept, kept, "finish while running: %v, %q; main %s (was %s); checkout there: %v; probe at %s, want %s",
+		refuseErr, refused, after, main, there == nil, tip, second))
+}
+
+// listTreesFrom is `rewake worktree ls --json` read through a runner.
+func listTreesFrom(rewake func(args ...string) (string, error)) []treeView {
+	out, err := rewake("worktree", "ls", "--json")
+	var listing struct {
+		Worktrees []treeView `json:"worktrees"`
+	}
+	if err != nil || json.Unmarshal([]byte(out), &listing) != nil {
+		return nil
+	}
+	return listing.Worktrees
 }
 
 // The launch that does not enter its checkout: the session and both halves
@@ -245,9 +319,56 @@ func TestAWorktreeLaunchThatStaysInTheSourceFails(t *testing.T) {
 }
 
 func TestARemovalThatIgnoresTheSessionFails(t *testing.T) {
-	runFindingsControlOn(t, codexColumn.harness, "codex-worktree", playCodexWorktree, mutantWorktreeRunningIgnored, obsTreeKept, obsTreeVisited, obsTreeRemoved)
+	runFindingsControlOn(t, codexColumn.harness, "codex-worktree", playCodexWorktree, mutantWorktreeRunningIgnored, obsTreeKept, obsTreeLanded, obsTreeFinishKept, obsTreeVisited, obsTreeRemoved)
 }
 
 func TestARemovalBehindGitsBackFails(t *testing.T) {
 	runFindingsControlOn(t, codexColumn.harness, "codex-worktree", playCodexWorktree, mutantWorktreeGitKept, obsTreeMoved, obsTreeRemoved)
+}
+
+// The checkout made detached, as before worktrees had a branch: nothing to
+// land, and nothing finish can take.
+var mutantWorktreeDetached = mutation{
+	name:  "worktree-detached",
+	file:  "internal/worktree/worktree.go",
+	edits: []edit{{`git(source.Source, "worktree", "add", "-b", record.Branch, record.Path, record.Commit)`, `git(source.Source, "worktree", "add", "--detach", record.Path, record.Commit)`}},
+}
+
+// land that merges instead of fast-forwarding: main gets a merge commit, not
+// the worker's, and the branch can no longer be finished.
+var mutantWorktreeLandMerges = mutation{
+	name:  "worktree-land-merges",
+	file:  "internal/worktree/land.go",
+	edits: []edit{{`"merge", "--ff-only", "--quiet", tip`, `"-c", "user.name=Mutant", "-c", "user.email=mutant@example.invalid", "merge", "--no-ff", "--quiet", "-m", "Land", tip`}},
+}
+
+// finish that asks nothing first: it lands and removes the checkout from
+// under the running session.
+var mutantWorktreeFinishUnchecked = mutation{
+	name:  "worktree-finish-unchecked",
+	file:  "internal/cli/worktree_land.go",
+	edits: []edit{{"\tif len(reasons) > 0 {\n\t\treturn &FailedError{Message: fmt.Sprintf(\"%s is not finished", "\tif false {\n\t\treturn &FailedError{Message: fmt.Sprintf(\"%s is not finished"}},
+}
+
+// finish that leaves the branch behind.
+var mutantWorktreeFinishBranchKept = mutation{
+	name:  "worktree-finish-branch-kept",
+	file:  "internal/cli/worktree_land.go",
+	edits: []edit{{"\tresult.BranchDropped, result.BranchKept = dropBranch(record)\n\treturn printValue(ctx, result, func() []string {\n\t\tlines := append(", "\treturn printValue(ctx, result, func() []string {\n\t\tlines := append("}},
+}
+
+func TestAWorktreeWithoutABranchFails(t *testing.T) {
+	runFindingsControlOn(t, codexColumn.harness, "codex-worktree", playCodexWorktree, mutantWorktreeDetached, obsTreeEntered, obsTreeLanded, obsTreeFinishKept, obsTreeRemoved)
+}
+
+func TestALandThatMergesFails(t *testing.T) {
+	runFindingsControlOn(t, codexColumn.harness, "codex-worktree", playCodexWorktree, mutantWorktreeLandMerges, obsTreeLanded, obsTreeRemoved)
+}
+
+func TestAFinishThatAsksNothingFails(t *testing.T) {
+	runFindingsControlOn(t, codexColumn.harness, "codex-worktree", playCodexWorktree, mutantWorktreeFinishUnchecked, obsTreeFinishKept, obsTreeVisited, obsTreeRemoved)
+}
+
+func TestAFinishThatKeepsTheBranchFails(t *testing.T) {
+	runFindingsControlOn(t, codexColumn.harness, "codex-worktree", playCodexWorktree, mutantWorktreeFinishBranchKept, obsTreeRemoved)
 }

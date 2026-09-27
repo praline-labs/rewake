@@ -112,7 +112,7 @@ func (codexHarness) Notes() []string {
 	return []string{
 		"A private app-server starts or steers a turn when a notice arrives; no queue polling is needed.",
 		"The server lives only for this session. Existing --remote, --profile and --oss/--local-provider arguments require explicit configuration instead.",
-		"--worktree is rewake's here, since the terminal refuses its own beside the server: rewake adds a detached checkout of HEAD under its worktree directory and starts the session in it, at the same place within the repository; --worktree=<name> names it. rewake worktree ls lists them and rewake worktree rm removes one. It starts a new conversation only: resume and fork are refused beside it, since they continue in the directory the conversation was started in.",
+		"--worktree is rewake's here, since the terminal refuses its own beside the server: rewake adds a checkout of HEAD on a new branch under its worktree directory and starts the session in it, at the same place within the repository; --worktree=<name> names both. rewake worktree land takes the branch's commits into the checkout it came from, finish lands and removes it, ls lists and rm removes. It starts a new conversation only: resume and fork are refused beside it, since they continue in the directory the conversation was started in.",
 		"Arguments after the harness name are passed to codex untouched, with one exception: a --help written first asks rewake for this page instead of starting the harness.",
 	}
 }

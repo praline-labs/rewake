@@ -68,12 +68,13 @@ A harness whose sessions take `rewake compact` and `rewake interrupt` also imple
 does not is refused before anything is sent ([remote-control.md](remote-control.md)).
 
 
-A harness whose own worktree flag cannot work under rewake implements
-`WorktreeHarness` — `WorktreeFlag()`, the spelling the launch command takes for itself;
+A harness that gives rewake's worktree to a launch implements `WorktreeHarness` —
+`WorktreeFlag()`, the spelling the launch command takes for itself;
 `WorktreeRefusal(args)`, what the harness cannot do in a checkout of its own, asked
-before anything is made (Codex: a continued conversation, which stays in the directory
-it was started in, and the arguments its launch refuses anyway); and
-`LaunchDirectory(args)`, the directory the launch would work in and the arguments
-without what chose it. The launch command then makes the checkout in `internal/worktree`
-and starts the session inside it ([launch.md](launch.md#a-worktree-for-a-launch)). Only
-Codex implements it; Claude Code makes its own.
+before anything is made (a continued conversation, which stays in the directory it was
+started in; for Codex the arguments its launch refuses anyway, for Claude Code its own
+`-w` and `--tmux` beside rewake's); and `LaunchDirectory(args)`, the directory the
+launch would work in and the arguments without what chose it. The launch command then
+makes the checkout in `internal/worktree` and starts the session inside it
+([worktree.md](worktree.md)). Codex and Claude Code both implement it: Codex's terminal
+cannot make its worktree under `--remote`, and Claude Code keeps `-w` for its own.

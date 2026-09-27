@@ -119,6 +119,7 @@ In one change, in this order:
 | `internal/inbox/answer_mark.go` | `rewake <2026-09-26` | 1 |
 | `internal/inbox/window.go` | `rewake <2026-09-26` | 1 |
 | `internal/registry/registry.go` | `rewake <2026-09-16` | 1 |
+| `internal/worktree/land.go` | `rewake <2026-09-27` | 1 |
 | `internal/role/role.go` | `rewake <2026-09-17` | 1 |
 | `internal/sessionstate/store.go` | `rewake <2026-09-26` | 1 |
 | `test/workflow/codexshim_client_test.go` | `codex <0.157.1` | 1 |

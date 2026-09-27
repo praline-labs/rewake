@@ -8,7 +8,8 @@ import (
 )
 
 // What removing a checkout would lose is what Inspect reports: changes git
-// status shows, and commits made on its detached HEAD that nothing else holds.
+// status shows, and commits that nothing else holds once the checkout has left
+// its branch.
 func TestInspectSaysWhatWouldBeLost(t *testing.T) {
 	isolate(t)
 	root := t.TempDir()
@@ -24,8 +25,13 @@ func TestInspectSaysWhatWouldBeLost(t *testing.T) {
 		t.Errorf("untracked file: %+v", check)
 	}
 	must(t, record.Path, "add", "new")
-	must(t, record.Path, "commit", "-q", "-m", "Detached work")
-	if check, _ := Inspect(record); check.Changes || !check.Unreachable || check.Head == record.Commit {
+	must(t, record.Path, "commit", "-q", "-m", "Work")
+	if check, _ := Inspect(record); check.Dirty() || check.Branch != "work" {
+		t.Errorf("commit on its own branch: %+v", check)
+	}
+	must(t, record.Path, "switch", "-q", "--detach")
+	must(t, record.Path, "commit", "-q", "--allow-empty", "-m", "Detached work")
+	if check, _ := Inspect(record); check.Changes || !check.Unreachable || check.Head == record.Commit || check.Branch != "" {
 		t.Errorf("detached commit: %+v", check)
 	}
 	must(t, record.Path, "branch", "kept")

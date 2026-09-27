@@ -104,29 +104,51 @@ restores the rule that asked for roots or permissions, and must break both obser
 
 ## A worktree for a Codex launch
 
-`codex-worktree` runs on the Codex column only: Claude Code makes its own worktree. A
-worker is launched from `src/nested` of a fresh repository with `--worktree=probe`, the
-worktree directory left at its default under the case's home, and each half of the
-fixture writes the directory it started in (`RW_SHIM_CWD_FILE`). The checkout must be a
-detached one of the source's HEAD under that directory, and the session's record, the
-terminal and the app-server must all work in its `src/nested`; a task a main sends must
-be delivered there; `rewake worktree rm` must refuse the checkout while the worker runs
-and say so, and after the worker has ended as well, while a visitor session started in
-the checkout runs. Three spare checkouts, launched and ended for the purpose, show what
+`codex-worktree` runs on the Codex column only; the Claude Code launch has its own case
+below. A worker is launched from `src/nested` of a fresh repository with
+`--worktree=probe`, the worktree directory left at its default under the case's home,
+and each half of the fixture writes the directory it started in (`RW_SHIM_CWD_FILE`).
+The checkout must be one of the source's HEAD on a new branch `probe`, the source still
+on `main`, under that directory, and the session's record, the terminal and the
+app-server must all work in its `src/nested`; a task a main sends must be delivered
+there; `rewake worktree rm` must refuse the checkout while the worker runs and say so.
+While the worker runs, a commit made in the checkout is landed — `main` moves to it, its
+file appears in the source, the checkout stays on `probe` and the worker keeps running
+— and after a second commit `finish` must refuse, naming the worker, and move nothing.
+After the worker has ended, rm must still refuse while a visitor session started in the
+checkout runs. Three spare checkouts, launched and ended for the purpose, show what
 else rm keeps: one holding a `.env` the repository ignores (and `--force` removes it),
-one at the commit it was made at after `main` is deleted (and removed once `main` is
-back), and one whose directory was moved away, where the refusal points at `git
-worktree repair` and `--force` takes out its record and git's entry. Once nothing holds
-the first checkout, rm must remove it, its record and git's own entry. Its seven
-mutants each name what they break and require the rest to hold: a launch that never
-enters its checkout; a removal that takes no session for a running one, which also
-leaves nothing to visit or to remove; one that sees only the session the checkout was
-made for, which removes it from under the visitor; one that deletes the directory behind
+one whose commit no ref holds once its checkout is detached and every ref holding it is
+deleted (and removed once they are back), and one whose directory was moved away, where
+the refusal points at `git worktree repair` and `--force` takes out its record and git's
+entry. Once nothing holds the first checkout, `finish` must land the second commit and
+remove the checkout, its record, git's own entry and the branch. Its eleven mutants each
+name what they break and require the rest to hold: a launch that never enters its
+checkout; a removal that takes no session for a running one, which also leaves nothing
+to visit and lets finish go ahead; one that sees only the session the checkout was made
+for, which removes it from under the visitor; one that deletes the directory behind
 git's back, whose entries stay; one blind to ignored files; one that asks whether a
-commit is held only after the HEAD moved; and one that removes a moved checkout without
-`--force`. That the removal of a missing checkout takes out its own entry and no other,
-where `git worktree prune` would take every missing checkout's, is held by
+commit is held only after the HEAD moved; one that removes a moved checkout without
+`--force`; a checkout made detached, which nothing can land and finish will not take; a
+land that makes a merge commit; a finish that asks nothing first; and one that leaves
+the branch behind. That the removal of a missing checkout takes out its own entry and no
+other, where `git worktree prune` would take every missing checkout's, is held by
 `internal/worktree` (`TestAMissingCheckoutIsRemovedAlone`).
+
+## A worktree for a Claude Code launch
+
+`claude-worktree` runs on the Claude column. A worker is launched from `src/nested` of a
+fresh repository with `--worktree=probe`, and the fixture writes the directory it
+started in. The checkout must be one of the source's HEAD on a new branch `probe`, and
+the session's record and the harness must work in its `src/nested`; the fixture refuses
+an option it does not know, so a `--worktree` passed on would end the launch. After a
+commit in the checkout and the worker's end, `finish` must land the commit in `main`
+with its hash and remove the checkout, its record and the branch. Its mutant,
+`claude-worktree-parent`, names the parent of the launch directory and must break only
+the first observation. A mutant that passed the flag on is not used: the launch it
+breaks exits 2, and a case whose process failed fails its cleanup whatever its
+observations say; the refusals of `-w`, `--tmux` and the continuations are unit tests in
+`internal/cli`.
 
 ## Actions on a sent message
 
@@ -228,4 +250,5 @@ switches have no single form in the code to find them by, and the row is kept by
 | withdraw-mid-turn | `recall-unnamed` | — |
 | edit-after-notice | `edit-keeps-old-text`, `edit-unlinked`, `replacement-unmarked` | — |
 | addendum-owed | `owed-flat` | — |
-| codex-worktree | `worktree-not-entered`, `worktree-running-ignored`, `worktree-visitor-ignored`, `worktree-git-kept`, `worktree-ignored-unseen`, `worktree-branch-trusted`, `worktree-moved-unrefused` | — |
+| codex-worktree | `worktree-not-entered`, `worktree-running-ignored`, `worktree-visitor-ignored`, `worktree-git-kept`, `worktree-ignored-unseen`, `worktree-branch-trusted`, `worktree-moved-unrefused`, `worktree-detached`, `worktree-land-merges`, `worktree-finish-unchecked`, `worktree-finish-branch-kept` | — |
+| claude-worktree | `claude-worktree-parent` | — |

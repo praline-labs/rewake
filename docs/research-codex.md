@@ -98,6 +98,26 @@ gateway ([launch.md](launch.md#codex)).
   detached `--no-checkout` add, `config.worktree`, and a rollback of an allocation that
   did not complete. The allocation layout is in
   [research-permissions.md](research-permissions.md#managed-worktrees-and-continuation-permissions).
+- **Nothing beyond the commit comes along.** **[source: `codex-rs/worktree/src/lib.rs`
+  at `rust-v0.155.1` and `rust-v0.157.1`, read September 27, 2026, not run]**
+  `WorktreeManager::create` — `git worktree add --detach --no-checkout`, then
+  `config.worktree` and `reset --hard` (`lib.rs:61-165` in 0.155.1, `:62-166` in
+  0.157.1) — carries neither untracked nor ignored files into the checkout, by copy or by
+  link, and runs no preparation script. The only setting the terminal has for it is the
+  root, `git-worktree-root` under `[desktop]` (`worktree/src/settings.rs:28-35`). Setup
+  run when a checkout is made — "local environments" — belongs to Codex's desktop
+  application; the terminal does not use it. rewake's `.worktreeinclude`
+  ([worktree.md](worktree.md#files-git-ignores-worktreeinclude)) has no counterpart here.
+- **How the checkout is made and removed.** **[source: `codex-rs` at commit `67a709665`
+  and at `rust-v0.157.1`, read September 27, 2026, not run]** Making the checkout, git
+  runs with hooks, the filesystem monitor and clean, smudge and process filters turned
+  off, and with the inherited `GIT_*` variables cleared (`worktree/src/git.rs:32`,
+  `:142`). The directory is reserved atomically — the last level made without `-p` —
+  and a checkout that was not completed is rolled back (`worktree/src/lib.rs:62`).
+  Removal asks nothing about commits a detached HEAD alone holds (`lib.rs:284`). A
+  launch that fails after the checkout was made leaves it and prints how to recover
+  (`tui/src/worktree_startup.rs:62`). What rewake took of this and what it did not is in
+  [worktree.md](worktree.md#the-launch).
 
 - **Trust follows the main checkout.** **[source: `codex-rs/git-utils/src/trust.rs`,
   identical at `rust-v0.155.1` and `rust-v0.157.1`, fetched and read September 26,
@@ -109,7 +129,7 @@ gateway ([launch.md](launch.md#codex)).
   linked worktree made by plain `git worktree add` takes the trust of its repository.
   Not verified live: that the terminal's first-run dialog reads the same key. rewake's
   own checkouts
-  ([launch.md](launch.md#a-worktree-for-a-launch)) have this layout;
+  ([worktree.md](worktree.md)) have this layout;
   `internal/worktree` has a test that holds them to it.
 
 What the server accepts for it is in

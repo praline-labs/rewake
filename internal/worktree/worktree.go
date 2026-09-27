@@ -3,10 +3,13 @@ Package worktree makes and keeps the checkouts rewake creates for a launch.
 
 A harness that cannot make its own worktree under rewake — Codex's terminal
 refuses its --worktree beside the --remote rewake always passes — gets one from
-rewake instead: a detached checkout of the launch directory's HEAD, added with
-the public `git worktree add`, and a record of whose it is. Nothing of a
-harness's private layout is repeated: that layout is no contract, and a copy of
-it would drift from the next version silently.
+rewake instead: a checkout of the launch directory's HEAD on a new branch of the
+checkout's name, added with the public `git worktree add`, and a record of whose
+it is. Nothing of a harness's private layout is repeated: that layout is no
+contract, and a copy of it would drift from the next version silently.
+
+The branch is how the work comes back: land fast-forwards the source's branch
+to it, finish does that once more and removes the checkout and the branch.
 
 Where they live: one directory for every repository, outside any of them and
 outside the state directory, which is under /tmp and would not outlive a
@@ -22,13 +25,11 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 	"time"
 
@@ -51,10 +52,20 @@ type Record struct {
 	// Source is the top of the checkout the launch was made from.
 	Source string `json:"source"`
 	Commit string `json:"commit"`
+	// Branch is the branch made for the checkout, of its name. Empty in a
+	// record of a build that checked out detached.
+	Branch string `json:"branch,omitempty"`
 	Path   string `json:"path"`
 	// Subdir is where the launch stood within Source, kept within the new
 	// checkout as the harness's own worktree keeps it.
-	Subdir    string    `json:"subdir,omitempty"`
+	Subdir string `json:"subdir,omitempty"`
+	// Included lists the files copied in from the source by
+	// .worktreeinclude, relative to the top: ignored files, which rm would
+	// otherwise take for work of the checkout's own.
+	Included []string `json:"included,omitempty"`
+	// Skipped says what .worktreeinclude named and could not be copied, for
+	// the launch to tell; it is not kept.
+	Skipped   []string  `json:"-"`
 	CreatedAt time.Time `json:"createdAt"`
 	Session   *Owner    `json:"session,omitempty"`
 }
@@ -110,11 +121,16 @@ func Root() (string, error) {
 // file name: no dot, so no name ends in .json.
 var nameShape = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$`)
 
-// ValidName says whether a name may name a checkout.
-func ValidName(name string) bool { return nameShape.MatchString(name) }
+// ValidName says whether a name may name a checkout and its branch: HEAD and
+// forty hex digits are of the shape, and git refuses both as a branch.
+func ValidName(name string) bool {
+	return nameShape.MatchString(name) && name != "HEAD" && !objectName.MatchString(name)
+}
+
+var objectName = regexp.MustCompile(`^[0-9a-fA-F]{40}$`)
 
 // NameRule says what ValidName accepts, for a refusal.
-const NameRule = "a letter or digit, then up to 39 letters, digits, - or _"
+const NameRule = "a letter or digit, then up to 39 letters, digits, - or _; not HEAD and not forty hex digits, which git refuses as a branch"
 
 // UnusableError is a checkout that cannot be made from what the call gave: a
 // name out of shape, a directory outside any repository, a repository with no
@@ -131,13 +147,26 @@ func (e *ExistsError) Error() string {
 	return fmt.Sprintf("the worktree %s exists at %s", e.Record.Ref(), e.Record.Path)
 }
 
+// BranchTakenError is a name whose branch the repository already has: a
+// checkout of it would not start where the launch stands, and landing it
+// would take somebody else's commits.
+type BranchTakenError struct {
+	Branch string
+	Source string
+}
+
+func (e *BranchTakenError) Error() string {
+	return fmt.Sprintf("the repository at %s already has a branch %s", e.Source, e.Branch)
+}
+
 // generatedTries bounds the search for a free generated name; a collision of
 // six hex digits in one repository is rare, several in a row mean something
 // else is wrong.
 const generatedTries = 8
 
-// Create adds a detached checkout of the HEAD of the repository holding from,
-// named name or a generated name when name is empty, and records it.
+// Create adds a checkout of the HEAD of the repository holding from on a new
+// branch, both named name or a generated name when name is empty, copies in
+// what .worktreeinclude asks for, and records it.
 func Create(root, from, name string) (Record, error) {
 	if name != "" && !ValidName(name) {
 		return Record{}, &UnusableError{Reason: fmt.Sprintf("the worktree name %q is not usable: %s", name, NameRule)}
@@ -164,7 +193,8 @@ func Create(root, from, name string) (Record, error) {
 	return record, err
 }
 
-// add claims a name in directory and checks the source's commit out under it.
+// add claims a name in directory and checks the source's commit out under it
+// on a new branch of that name.
 func add(source Record, directory, name string) (Record, error) {
 	for try := 0; ; try++ {
 		record := source
@@ -172,26 +202,45 @@ func add(source Record, directory, name string) (Record, error) {
 		if name == "" {
 			record.Name = generatedName()
 		}
+		record.Branch = record.Name
 		record.Path = filepath.Join(directory, record.Name)
 		record.CreatedAt = time.Now().UTC()
 		err := claim(record)
 		var exists *ExistsError
-		if name == "" && errors.As(err, &exists) && try < generatedTries {
+		var taken *BranchTakenError
+		if name == "" && (errors.As(err, &exists) || errors.As(err, &taken)) && try < generatedTries {
 			continue
 		}
 		if err != nil {
 			return Record{}, err
 		}
-		if err := git(source.Source, "worktree", "add", "--detach", record.Path, record.Commit); err != nil {
-			_ = os.Remove(recordPath(record))
+		if err := git(source.Source, "worktree", "add", "-b", record.Branch, record.Path, record.Commit); err != nil {
+			unclaim(record)
 			return Record{}, fmt.Errorf("git worktree add failed: %w", err)
 		}
-		return record, nil
+		return include(record), nil
 	}
 }
 
+// unclaim takes back what a failed git worktree add may have left: git
+// removes a checkout it could not finish, but the branch -b made before it
+// stays. The branch goes only while it is still at the commit and no checkout
+// has it out — it was free when claimed, so that is the one just made — and the
+// directory only when empty.
+func unclaim(record Record) {
+	if tip, err := refTip(record.CommonDir, branchRef(record.Branch)); err == nil && tip == record.Commit {
+		if at, err := checkedOutAt(record.CommonDir, branchRef(record.Branch)); err == nil && len(at) == 0 {
+			_ = gitDir(record.CommonDir, "update-ref", "-d", branchRef(record.Branch), record.Commit)
+		}
+	}
+	_ = os.Remove(record.Path)
+	_ = os.Remove(recordPath(record))
+}
+
 // claim publishes a record under its name, refusing a name that is taken: by a
-// record, or by a directory standing where the checkout would go.
+// record, by a directory standing where the checkout would go, or by a branch.
+// A checkout of the name is named first: its branch is taken too, and the
+// checkout is what the person is looking for.
 func claim(record Record) error {
 	if _, err := os.Lstat(record.Path); err == nil {
 		return &ExistsError{Record: record}
@@ -209,89 +258,23 @@ func claim(record Record) error {
 		}
 		return err
 	}
+	tip, err := refTip(record.CommonDir, branchRef(record.Branch))
+	if err == nil && tip != "" {
+		err = &BranchTakenError{Branch: record.Branch, Source: record.Source}
+	}
+	if err != nil {
+		_ = os.Remove(recordPath(record))
+		return err
+	}
 	return nil
 }
 
-// Claim writes the session a checkout was made for into its record.
-func Claim(record Record, owner Owner) (Record, error) {
-	record.Session = &owner
-	data, err := encode(record)
-	if err != nil {
-		return record, err
-	}
-	return record, state.WriteAtomic(recordPath(record), data)
-}
-
-// List returns every checkout recorded under root, by repository and name. A
-// record that cannot be read is left out: it names nothing a command could act
-// on, and one bad file should not hide the rest.
-func List(root string) ([]Record, error) {
-	paths, err := filepath.Glob(filepath.Join(root, "*", "*.json"))
-	if err != nil {
-		return nil, err
-	}
-	var records []Record
-	for _, path := range paths {
-		record, err := read(path)
-		if err != nil || recordPath(record) != path || filepath.Base(record.Path) != record.Name {
-			// A record whose checkout is not the directory of its name
-			// beside it names a path rewake did not make, and rm would
-			// remove it.
-			continue
-		}
-		records = append(records, record)
-	}
-	sort.Slice(records, func(i, j int) bool { return records[i].Ref() < records[j].Ref() })
-	return records, nil
-}
-
-// Find returns the checkouts a command names: <repository>/<name> names one, a
-// bare name every repository's checkout of that name.
-func Find(root, ref string) ([]Record, error) {
-	records, err := List(root)
-	if err != nil {
-		return nil, err
-	}
-	var found []Record
-	for _, record := range records {
-		if record.Ref() == ref || !strings.Contains(ref, "/") && record.Name == ref {
-			found = append(found, record)
-		}
-	}
-	return found, nil
-}
-
-func recordPath(record Record) string {
-	return filepath.Join(filepath.Dir(record.Path), record.Name+".json")
-}
-
-func read(path string) (Record, error) {
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		return Record{}, err
-	}
-	var record Record
-	if err := json.Unmarshal(raw, &record); err != nil {
-		return Record{}, err
-	}
-	if !ValidName(record.Name) || !filepath.IsAbs(record.Path) || filepath.Clean(record.Path) != record.Path {
-		return Record{}, fmt.Errorf("%s is not a worktree record", path)
-	}
-	return record, nil
-}
-
-func encode(record Record) ([]byte, error) {
-	data, err := json.MarshalIndent(record, "", "  ")
-	if err != nil {
-		return nil, err
-	}
-	return append(data, '\n'), nil
-}
-
+// generatedName is wt- and six hex digits: six digits alone would name a
+// branch git takes for an abbreviated commit as well.
 func generatedName() string {
 	var raw [3]byte
 	_, _ = rand.Read(raw[:])
-	return hex.EncodeToString(raw[:])
+	return "wt-" + hex.EncodeToString(raw[:])
 }
 
 // repositoryDir names a repository's directory under the root: the name a
