@@ -97,6 +97,7 @@ func TestRedRunNamesTheObservationAndTheEvidence(t *testing.T) {
 				{Name: "an overview consumed nothing", Outcome: outcomePass},
 			},
 			Evidence: []string{"/tmp/rewake-case-1"},
+			Stderr:   []string{"lead.stderr: rewake: git worktree add failed"},
 		}),
 		runRecordLine("batch-arrival"),
 	}, true)
@@ -105,7 +106,7 @@ func TestRedRunNamesTheObservationAndTheEvidence(t *testing.T) {
 		t.Error("a run with a failing case was green")
 	}
 	rendered := render(t, found)
-	for _, want := range []string{"FAIL", "batch-arrival/codex", "two close letters are one group", "the delivery named three", "/tmp/rewake-case-1"} {
+	for _, want := range []string{"FAIL", "batch-arrival/codex", "two close letters are one group", "the delivery named three", "/tmp/rewake-case-1", "lead.stderr: rewake: git worktree add failed"} {
 		if !strings.Contains(rendered, want) {
 			t.Errorf("the failure does not carry %q:\n%s", want, rendered)
 		}

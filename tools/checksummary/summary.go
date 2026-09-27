@@ -257,6 +257,14 @@ func failureLines(one record.Case) []string {
 		lines = append(lines, "      evidence  "+evidence)
 		break
 	}
+	// Where a session that exited without a word said why; within the same
+	// per-case ceiling.
+	for _, stderr := range one.Stderr {
+		if len(lines) >= excerptLines {
+			break
+		}
+		lines = append(lines, "      stderr    "+firstChars(stderr, 200))
+	}
 	return lines
 }
 
