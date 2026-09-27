@@ -7,7 +7,6 @@ import (
 	pathpkg "path"
 	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
@@ -33,7 +32,7 @@ func List(root string) ([]Record, error) {
 	var records []Record
 	for _, path := range paths {
 		record, err := read(path)
-		if err != nil || recordPath(record) != path || filepath.Base(record.Path) != record.Name {
+		if err != nil || recordPath(record) != path || filepath.Base(record.Path) != flatName(record.Name) {
 			// A record whose checkout is not the directory of its name
 			// beside it names a path rewake did not make, and rm would
 			// remove it.
@@ -45,24 +44,33 @@ func List(root string) ([]Record, error) {
 	return records, nil
 }
 
-// Find returns the checkouts a command names: <repository>/<name> names one, a
-// bare name every repository's checkout of that name.
+// Find returns the checkouts a command names: <repository>/<name> names one,
+// a bare name every repository's checkout of that name. A name may hold a
+// slash itself, so a ref is read both ways, and the full form wins: the
+// repository part is a directory rewake names with a hash, so a ref that
+// matches one in full is meant that way, and one checkout's full form stays
+// its own even when it spells another's name.
 func Find(root, ref string) ([]Record, error) {
 	records, err := List(root)
 	if err != nil {
 		return nil, err
 	}
-	var found []Record
+	var full, named []Record
 	for _, record := range records {
-		if record.Ref() == ref || !strings.Contains(ref, "/") && record.Name == ref {
-			found = append(found, record)
+		if record.Ref() == ref {
+			full = append(full, record)
+		} else if record.Name == ref {
+			named = append(named, record)
 		}
 	}
-	return found, nil
+	if len(full) > 0 {
+		return full, nil
+	}
+	return named, nil
 }
 
 func recordPath(record Record) string {
-	return filepath.Join(filepath.Dir(record.Path), record.Name+".json")
+	return filepath.Join(filepath.Dir(record.Path), flatName(record.Name)+".json")
 }
 
 func read(path string) (Record, error) {

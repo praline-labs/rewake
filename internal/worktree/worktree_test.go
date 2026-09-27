@@ -125,12 +125,12 @@ func TestAnUntrackedLaunchDirectoryStartsAtTheTop(t *testing.T) {
 	}
 }
 
-// A name is one path element that cannot be read as a record's file.
+// A name leads nowhere out of the root and cannot be read as a record's file.
 func TestNamesOutOfShapeAreRefused(t *testing.T) {
 	isolate(t)
 	source := repository(t, "project")
 	root := t.TempDir()
-	for _, name := range []string{"../escape", "a/b", "a.json", ".hidden", "-flag", "_x", "has space", strings.Repeat("a", 41), "HEAD", strings.Repeat("a", 40)} {
+	for _, name := range []string{"../escape", "a/../b", "/a", "a+b", "a.json", ".hidden", "-flag", "has space", strings.Repeat("a", MaxName+1), "HEAD", strings.Repeat("a", 40)} {
 		var unusable *UnusableError
 		if _, err := Create(root, source, name); !errors.As(err, &unusable) {
 			t.Errorf("%q: %v", name, err)
@@ -139,8 +139,8 @@ func TestNamesOutOfShapeAreRefused(t *testing.T) {
 	if entries, _ := os.ReadDir(root); len(entries) != 0 {
 		t.Errorf("a refused name left %d entries", len(entries))
 	}
-	if _, err := Create(root, source, strings.Repeat("a", 39)+"g"); err != nil {
-		t.Errorf("forty characters: %v", err)
+	if _, err := Create(root, source, strings.Repeat("a", MaxName-1)+"g"); err != nil {
+		t.Errorf("%d characters: %v", MaxName, err)
 	}
 }
 

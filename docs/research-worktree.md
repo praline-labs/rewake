@@ -62,6 +62,20 @@ under the canonical git root — `getProjectPathForConfig` through `findCanonica
 — which for a linked worktree is its main checkout: a checkout of a trusted repository
 should need no dialog, not checked live.
 
+## Names with a slash
+
+**[reference source, `utils/worktree.ts:48-88`, `:207-227`; commit of April 4, 2026, its
+version not recorded; read September 27, 2026, not run]** A worktree name may hold `/`:
+each element must be non-empty and of `[a-zA-Z0-9._-]`, neither `.` nor `..`, and the
+whole at most 64 characters. `flattenSlug` writes each `/` as `+` both in the directory,
+`.claude/worktrees/feat+x`, and in the branch, `worktree-feat+x`: nested, a branch
+`worktree-feat` would stand where `worktree-feat/x` needs a directory, and a checkout
+`feat/x` would lie inside the checkout `feat`, whose removal deletes it. `+` is outside
+the allowed characters, so the mapping is one to one. rewake takes the characters and
+the directory's `+`; its branch keeps the slash, by the owner's decision
+([worktree.md](worktree.md#the-launch)), and a branch above or below the name is
+refused rather than avoided.
+
 ## `.worktreeinclude`
 
 

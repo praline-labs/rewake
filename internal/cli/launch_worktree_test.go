@@ -206,7 +206,7 @@ func TestWorktreeLaunchRefusals(t *testing.T) {
 	}{
 		{lab.repo, []string{"--worktree="}, "needs a name"},
 		{lab.repo, []string{"--worktree", "--worktree=a"}, "given twice"},
-		{lab.repo, []string{"--worktree=bad.name"}, "not usable"},
+		{lab.repo, []string{"--worktree=bad+name"}, "not usable"},
 		{lab.repo, []string{"--worktree=taken"}, "rewake worktree rm"},
 		{lab.repo, []string{"--worktree=main"}, "already has a branch main"},
 		{lab.repo, []string{"--worktree=HEAD"}, "not usable"},

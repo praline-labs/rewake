@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -152,5 +153,43 @@ func TestWorktreeRmDropsOnlyABranchNothingIsLostWith(t *testing.T) {
 	}
 	if branches := lab.git(t, lab.repo, "branch", "--list", "clean", "worked"); strings.Contains(branches, "clean") || !strings.Contains(branches, "worked") {
 		t.Errorf("branches left: %q", branches)
+	}
+}
+
+// A name with a slash is launched, listed, landed and removed as it is, and
+// the full <repository>/<name> form still names it with its slashes; a name
+// below a branch the repository has is refused with the branch in the way.
+func TestWorktreeWithASlashInItsName(t *testing.T) {
+	lab := newWorktreeLab(t)
+	if err := lab.launch(t, codexProbe(t), lab.repo, "--worktree=feat/super-feature"); err != nil {
+		t.Fatal(err)
+	}
+	records := lab.records(t)
+	if len(records) != 1 || records[0].Branch != "feat/super-feature" || filepath.Base(records[0].Path) != "feat+super-feature" {
+		t.Fatalf("made %+v", records)
+	}
+	record := records[0]
+	if code, out, _ := run("worktree", "ls"); code != ExitOK || !strings.Contains(out, record.Repository+"/feat/super-feature") {
+		t.Errorf("ls: %d %s", code, out)
+	}
+	tip := lab.commitIn(t, record.Path, "one")
+	if code, out, errOut := run("worktree", "land", "feat/super-feature"); code != ExitOK || !strings.Contains(out, "landed 1 commit of feat/super-feature into main") {
+		t.Errorf("land: %d %s %s", code, out, errOut)
+	}
+	if head := lab.git(t, lab.repo, "rev-parse", "main"); head != tip {
+		t.Errorf("main at %s, want %s", head, tip)
+	}
+
+	err := lab.launch(t, codexProbe(t), lab.repo, "--worktree=feat/super-feature/more")
+	var usage *UsageError
+	if !errors.As(err, &usage) || !strings.Contains(err.Error(), "has a branch feat/super-feature, so git can make no branch feat/super-feature/more") {
+		t.Errorf("a name below a branch: %v", err)
+	}
+
+	if code, out, errOut := run("worktree", "rm", record.Ref()); code != ExitOK || !strings.Contains(out, "removed "+record.Ref()) {
+		t.Errorf("rm: %d %s %s", code, out, errOut)
+	}
+	if left := lab.git(t, lab.repo, "branch", "--list", "feat/*"); left != "" {
+		t.Errorf("branches left: %s", left)
 	}
 }

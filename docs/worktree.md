@@ -21,9 +21,19 @@ bring the work back, and that Claude Code launches get the same checkout.
 ## The launch
 
 - **The flag.** Read as a switch: `--worktree` alone asks for a generated name, `wt-`
-  and six hex digits; `--worktree=<name>` names the checkout and its branch — a letter or
-  digit, then up to 39 letters, digits, `-` or `_`, and neither `HEAD` nor forty hex
-  digits, which git would read as something other than a branch. A spaced value is not
+  and six hex digits; `--worktree=<name>` names the checkout and its branch, exactly: a
+  branch name `git check-ref-format --branch` takes, slashes included —
+  `--worktree=feat/super-feature` makes the branch `feat/super-feature` — written in
+  ASCII letters, digits, `.`, `_`, `-` and `/`, at most 250 bytes, neither `HEAD` nor
+  forty hex digits, which git would read as something other than a branch, and not
+  ending in `.json`. The owner decided on September 27, 2026 that a name may hold a
+  slash as a branch's does; before, it was a letter or digit and up to 39 letters,
+  digits, `-` or `_`. The characters are Claude Code's for its own worktree names
+  ([research-worktree.md](research-worktree.md#names-with-a-slash)): they leave out `+`,
+  which stands for the slash in the directory's name, and everything a shell reads, so
+  the name goes into the commands a refusal prints as it is. The length is the longest
+  whose record, `<name>.json`, and git's `.lock` beside a branch's last element fit the
+  255 bytes of a file name. A spaced value is not
   read: the word after the switch stays the harness's, a prompt most often, as it would
   be for Codex itself. The flag after `--` is prompt text and stays. Given twice, or as
   `--worktree=`, it is a wrong call. For Codex it is Codex's own spelling. For Claude
@@ -39,9 +49,10 @@ bring the work back, and that Claude Code launches get the same checkout.
   `git worktree add`: the branch checked out in the source
   stays free, a second launch from the same place does not collide with the first, and
   the commits a session makes sit on a branch rather than on a detached HEAD, where
-  nothing would hold them. A branch of that name already in the repository, or a branch
+  nothing would hold them. A branch of that name already in the repository, a branch
   below it — `fix/login` for the name `fix`, beside which git keeps no branch `fix` —
-  refuses the launch with the next step: another name, or `rewake worktree ls` when the worktree is
+  or a branch above it — `feat` for the name `feat/login` — refuses the launch naming
+  the branch in the way with the next step: another name, or `rewake worktree ls` when the worktree is
   already there — a launch in its directory needs no `--worktree`. Uncommitted changes
   in the source do not come along; files git ignores come only as `.worktreeinclude`
   below names them.
@@ -49,7 +60,11 @@ bring the work back, and that Claude Code launches get the same checkout.
   `$XDG_DATA_HOME/rewake/worktrees`, else `~/.local/share/rewake/worktrees`; under it one
   directory per repository, named for it with a short hash of its Git directory so two
   repositories of one name stay apart, and in that one each checkout beside its record:
-  `<repository>-<hash>/<name>/` and `<name>.json`. Not the state directory — that lives
+  `<repository>-<hash>/<name>/` and `<name>.json`, with `+` for each slash of the name:
+  `feat+super-feature/` and `feat+super-feature.json`, as Claude Code names its own.
+  Directories nested by the slash would put one checkout inside another's when one
+  name is below another, `feat` and `feat/login`, and a record among its files; no name
+  holds a `+`, so two names never share a directory. Not the state directory — that lives
   in `/tmp` and would not outlive a restart, while a checkout holds work — and not inside
   the repository, where it would show up in `git status` and in the agent's own
   searches: a `$REWAKE_WORKTREES` inside it, compared with symbolic links resolved, is
@@ -243,10 +258,18 @@ finish has no `--force`: removing without those checks is `rm --force`.
 
 ## Listing and removing
 
+A command names a worktree by its name or by `<repository>/<name>`, as ls prints it.
+Since a name may hold a slash, `rewake-3f9a1c/feat/login` could be read either way; the
+full form is tried first — a repository's directory and a name in it that match the word
+— and the bare name only when none does. The repository part is a directory rewake
+names with a hash, so a word that matches one in full is meant that way, and every
+worktree's full form names it alone, even when another worktree's name spells it.
+
 `rewake worktree ls` lists the checkouts with their branch, their owner, the rewake
 sessions still running in each, and whether removing one would lose anything; `--json`
-gives the same model. A record whose path is not the directory of its own name beside it
-is not listed: rewake did not make that path, and rm would remove it.
+gives the same model. A record whose path is not the directory of its own name beside it,
+with `+` for its slashes, is not listed: rewake did not make that path, and rm would
+remove it.
 `rewake worktree rm <name>` — or `<repository>/<name>` when a name is in two
 repositories — removes one through `git worktree remove`, so the repository forgets it
 too. Its branch goes along only when another branch, tag or remote-tracking ref holds

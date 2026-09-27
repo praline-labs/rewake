@@ -18,6 +18,9 @@ each checkout has its directory and its record side by side:
 
 	<root>/<repository>-<hash>/<name>/        the checkout
 	<root>/<repository>-<hash>/<name>.json    whose it is
+
+A name may hold slashes, as a branch's does; in these two it is written with +
+for each, so every checkout is one directory beside the others.
 */
 package worktree
 
@@ -29,7 +32,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
@@ -117,21 +119,6 @@ func Root() (string, error) {
 	return filepath.Join(home, ".local", "share", "rewake", "worktrees"), nil
 }
 
-// nameShape keeps a name one path element that cannot collide with a record's
-// file name: no dot, so no name ends in .json.
-var nameShape = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$`)
-
-// ValidName says whether a name may name a checkout and its branch: HEAD and
-// forty hex digits are of the shape, and git refuses both as a branch.
-func ValidName(name string) bool {
-	return nameShape.MatchString(name) && name != "HEAD" && !objectName.MatchString(name)
-}
-
-var objectName = regexp.MustCompile(`^[0-9a-fA-F]{40}$`)
-
-// NameRule says what ValidName accepts, for a refusal.
-const NameRule = "a letter or digit, then up to 39 letters, digits, - or _; not HEAD and not forty hex digits, which git refuses as a branch"
-
 // UnusableError is a checkout that cannot be made from what the call gave: a
 // name out of shape, a directory outside any repository, a repository with no
 // commit yet. The call has to change, not the repository.
@@ -156,18 +143,23 @@ func (e *ExistsError) Error() string {
 
 // BranchTakenError is a name whose branch the repository already has: a
 // checkout of it would not start where the launch stands, and landing it
-// would take somebody else's commits. Below is set when the name is free but a
-// branch under it, <name>/..., is not: git keeps no branch beside branches
-// below its name.
+// would take somebody else's commits. Below or Above is set when the name is
+// free but git still cannot make it: a branch under it, <name>/..., or a branch
+// its name is under, as feat is for feat/login. Git keeps a branch's name
+// either as a branch or as a directory of branches, never both.
 type BranchTakenError struct {
 	Branch string
 	Source string
 	Below  string
+	Above  string
 }
 
 func (e *BranchTakenError) Error() string {
 	if e.Below != "" {
 		return fmt.Sprintf("the repository at %s has a branch %s below the name %s, so git can make no branch %s", e.Source, e.Below, e.Branch, e.Branch)
+	}
+	if e.Above != "" {
+		return fmt.Sprintf("the repository at %s has a branch %s, so git can make no branch %s below it", e.Source, e.Above, e.Branch)
 	}
 	return fmt.Sprintf("the repository at %s already has a branch %s", e.Source, e.Branch)
 }
@@ -216,7 +208,7 @@ func add(source Record, directory, name string) (Record, error) {
 			record.Name = generatedName()
 		}
 		record.Branch = record.Name
-		record.Path = filepath.Join(directory, record.Name)
+		record.Path = filepath.Join(directory, flatName(record.Name))
 		record.CreatedAt = time.Now().UTC()
 		err := claim(record)
 		var exists *ExistsError
@@ -292,6 +284,8 @@ func claim(record Record) error {
 			err = &BranchTakenError{Branch: record.Branch, Source: record.Source}
 		} else if below := branchBelow(record.CommonDir, record.Branch); below != "" {
 			err = &BranchTakenError{Branch: record.Branch, Source: record.Source, Below: below}
+		} else if above := branchAbove(record.CommonDir, record.Branch); above != "" {
+			err = &BranchTakenError{Branch: record.Branch, Source: record.Source, Above: above}
 		} else {
 			err = fmt.Errorf("cannot make the branch %s: %w", record.Branch, err)
 		}
@@ -309,6 +303,17 @@ func branchBelow(commonDir, branch string) string {
 		return ""
 	}
 	return strings.TrimSpace(out)
+}
+
+// branchAbove names a branch whose name leads the branch's, feat for
+// feat/login, or "" when there is none or it cannot be told.
+func branchAbove(commonDir, branch string) string {
+	for at := strings.LastIndex(branch, "/"); at > 0; at = strings.LastIndex(branch[:at], "/") {
+		if tip, err := refTip(commonDir, branchRef(branch[:at])); err == nil && tip != "" {
+			return branch[:at]
+		}
+	}
+	return ""
 }
 
 // generatedName is wt- and six hex digits: six digits alone would name a
