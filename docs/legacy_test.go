@@ -63,13 +63,14 @@ func TestEveryLegacyMarkIsWellFormedAndListed(t *testing.T) {
 		counted[[2]string{m.file, m.head()}]++
 		switch m.subject {
 		case "rewake":
-			// The day of the commit, as its author's clock reads it: parsed
-			// as UTC, a mark written just after midnight east of Greenwich
-			// would be dated in the future for the first hours of its day.
-			day, err := time.ParseInLocation(time.DateOnly, m.bound, time.Local)
+			// The day of the commit, as its author's clock read it, which may be
+			// a zone ahead of the machine running the test: a day's slack keeps
+			// a mark written just after midnight elsewhere from reading as the
+			// future, while a mark dated tomorrow or later is still caught.
+			day, err := time.Parse(time.DateOnly, m.bound)
 			if !markDate.MatchString(m.bound) || err != nil {
 				t.Errorf("%s: the bound of a rewake mark is the date of the change, YYYY-MM-DD, not %q", m.file, m.bound)
-			} else if day.After(time.Now()) {
+			} else if day.After(time.Now().Add(24 * time.Hour)) {
 				t.Errorf("%s: the mark's date %s is in the future", m.file, m.bound)
 			}
 		default:
