@@ -82,6 +82,7 @@ func (s *shimSession) deliveredTurn(params json.RawMessage) (any, any, error) {
 	if open := s.turn.open; open != "" {
 		steered := s.turn.steered
 		s.turn.mu.Unlock()
+		s.takeRoots(open, params)
 		s.recordSteer(open, messageIDOf(params))
 		s.recordGroup(open, notice)
 		s.recordRecalls(open, notice)
@@ -105,6 +106,7 @@ func (s *shimSession) deliveredTurn(params json.RawMessage) (any, any, error) {
 		s.turn.abort = make(chan struct{})
 	}
 	s.turn.mu.Unlock()
+	s.takeRoots(id, params)
 	s.recordGroup(id, notice)
 	s.recordRecalls(id, notice)
 
@@ -229,6 +231,7 @@ func (s *shimSession) workTurn(id string, notice mailboxNotice) {
 	// reads thread/status/changed, so a fixture that never sent one left every
 	// session looking idle while it worked.
 	s.broadcast(s.threadStatusChangedEvent(activeStatus()))
+	s.setActive(true)
 	s.mu.Unlock()
 	time.Sleep(20 * time.Millisecond)
 
@@ -257,6 +260,7 @@ func (s *shimSession) workTurn(id string, notice mailboxNotice) {
 		s.broadcast(s.itemCompletedEvent(id, text))
 		s.broadcast(s.interruptedEvent(id, text))
 		s.broadcast(s.threadStatusChangedEvent(idleStatus()))
+		s.setActive(false)
 		s.mu.Unlock()
 		s.recordTurn(id + " interrupted")
 		s.recordTurnEvent("completed", id, "interrupted")
@@ -278,6 +282,7 @@ func (s *shimSession) workTurn(id string, notice mailboxNotice) {
 		s.recordTurn(id + " terminal-again")
 	}
 	s.broadcast(s.threadStatusChangedEvent(idleStatus()))
+	s.setActive(false)
 	s.mu.Unlock()
 	s.recordTurnEvent("completed", id, turnOutcome())
 }

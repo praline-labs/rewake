@@ -26,6 +26,10 @@ type Option struct {
 	Summary string
 	// Required marks a flag the command refuses to run without.
 	Required bool
+	// Repeatable marks a flag that may be given more than once, each value
+	// kept in Call.Lists. Any other flag given twice is refused: keeping the
+	// last one silently dropped the first.
+	Repeatable bool
 }
 
 // Label renders the flag the way help prints it.
@@ -121,8 +125,11 @@ type Context struct {
 type Call struct {
 	Command     *Command
 	Positionals []string
-	// Flags holds every flag given; a switch maps to "true"/"false".
+	// Flags holds every flag given; a switch maps to "true"/"false". A
+	// repeatable flag maps to its last value.
 	Flags map[string]string
+	// Lists holds every value of a repeatable flag, in order.
+	Lists map[string][]string
 	// Raw is everything after the command name of a Raw command.
 	Raw []string
 }
@@ -173,6 +180,11 @@ func lookupOption(command *Command, name string) (Option, bool) {
 }
 
 // takesValue reports whether a flag carries a value.
+func repeatable(command *Command, name string) bool {
+	option, ok := lookupOption(command, name)
+	return ok && option.Repeatable
+}
+
 func takesValue(command *Command, name string) bool {
 	option, ok := lookupOption(command, name)
 	return ok && option.Value != ""

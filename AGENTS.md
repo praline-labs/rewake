@@ -218,6 +218,9 @@ Meant to be one move:
    neutral answer — it says every flag may be repeated, and a launch alias plus
    a typed flag then reach a harness that may refuse to parse them. A test over
    the catalogue requires the list to be non-empty.
+   `ProtectedDirs` names the harness's own configuration directories, which no
+   task may grant a session to write (`docs/grants.md`); a harness that keeps
+   none returns nothing, and one that forgets them leaves them grantable.
 2. One line in `internal/harness/catalog/catalog.go`.
 
 Everything else follows: the launch command, the guide entry, its own `--help`

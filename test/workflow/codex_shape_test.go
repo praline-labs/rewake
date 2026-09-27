@@ -36,6 +36,7 @@ func TestShimAnswersMatchTheInstalledSchema(t *testing.T) {
 			"the interrupted turn/completed event matches TurnCompletedNotification",
 			"the working thread/status/changed event matches ThreadStatusChangedNotification",
 			"the idle thread/status/changed event matches ThreadStatusChangedNotification",
+			"the thread/read reply of a working thread matches ThreadReadResponse",
 			"the fixture refuses every delivery the schema refuses",
 		}, append(steeringShapes, lifecycleShapes...)...),
 		Deadline: 120 * time.Second,
@@ -107,6 +108,16 @@ func TestShimAnswersMatchTheInstalledSchema(t *testing.T) {
 		eventParams(session.threadStatusChangedEvent(activeStatus())))
 	check(c, bundle, "ThreadStatusChangedNotification", "the idle thread/status/changed event matches ThreadStatusChangedNotification",
 		eventParams(session.threadStatusChangedEvent(idleStatus())))
+	// What a grant's delivery reads before it goes: the status while a turn
+	// runs, and the environment with the roots thread/start named.
+	session.setActive(true)
+	read, _, err := session.answer(peer, "thread/read", []byte(`{"threadId":"`+shimThread+`"}`))
+	session.setActive(false)
+	if err != nil {
+		c.Contradicted("the thread/read reply of a working thread matches ThreadReadResponse", "the shim refused a valid read: %v", err)
+	} else {
+		check(c, bundle, "ThreadReadResponse", "the thread/read reply of a working thread matches ThreadReadResponse", read)
+	}
 
 	// And the other direction: what the fixture accepts as a delivery. The
 	// check runs against the schema's own verdict on the same request, so the

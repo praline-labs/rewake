@@ -37,6 +37,10 @@ a short notice and preview rather than the full body.
    `question` with `--question`, `notify` with `--notify` (see "Kinds").
    Sending settles nothing the sender owes the recipient: a message sent
    mid-turn is not the end of the turn.
+   A task or a question from main may carry `grantGit` ([git-grants.md](git-grants.md))
+   and `grantDirs`, the resolved directories of `--grant-dir` and `--grant-dir-broad`,
+   with `grantBroad` naming those confirmed as broad; the directories are checked
+   before the file is written ([grants.md](grants.md#sending)).
 4. Write `inbox/<name>/<id>.json.tmp`, rename it to `.json`.
 5. Wait for `.status` up to `--wait` (5 seconds by default) and print the
    result, then `id <id>` on a line of its own unless the send failed: the id is what
@@ -312,6 +316,11 @@ through is each message recorded: its sender run in `awaiting/<own epoch>/`
 status, then the move to `done/`, which is the commit. A failure at any step
 leaves the message unread, and the next `inbox` shows and records it again.
 Two readers at once are serialized: the second finds nothing new.
+
+A task that carries a directory grant is printed with one `grant: write <dir>` line per
+directory between its heading and its text, and `inbox --owed` repeats them while the
+task is owed: the roots changed without a word in the terminal, so the reader learns it
+here ([grants.md](grants.md#delivery)).
 
 ### Owed reports
 

@@ -19,8 +19,12 @@ func TestReadyRecipientAnnouncesNextFourWithoutOverviewOrTerminal(t *testing.T) 
 				peers := make(chan net.Conn, 1)
 				var reads []gitReadFixture
 				if granted {
+					// An active thread keeps the grant waiting, read again on
+					// each retry.
 					repo := gitRepository(t)
-					reads = []gitReadFixture{{thread: gitThreadFixture(repo, []string{repo}, status)}}
+					for range 8 {
+						reads = append(reads, gitReadFixture{thread: gitThreadFixture(repo, []string{repo}, status)})
+					}
 				}
 				backend, captured := gitDeliveryFixtureMode(t, role.Write, status, true, nil, func(c net.Conn) { peers <- c }, reads...)
 				native := <-peers
@@ -91,9 +95,25 @@ func TestReadyRecipientAnnouncesNextFourWithoutOverviewOrTerminal(t *testing.T) 
 						t.Fatal(err)
 					}
 				}
-				waitState(later, inbox.Delivered)
-				rpc(4, granted)
-				if unread, _ := inbox.PeekUnread(dir, s.Name, s.Epoch); len(unread) != 6 {
+				readable := 6
+				switch {
+				case !granted:
+					waitState(later, inbox.Delivered)
+					rpc(4, false)
+				case status == "idle":
+					// A grant goes alone, after the mail before it.
+					waitState(later, inbox.Delivered)
+					rpc(3, false)
+					rpc(1, true)
+				default:
+					// An active thread takes the mail before it and keeps
+					// the grant waiting, not readable yet.
+					waitState(later[:3], inbox.Delivered)
+					rpc(3, false)
+					waitState(later[3:], inbox.Pending)
+					readable = 5
+				}
+				if unread, _ := inbox.PeekUnread(dir, s.Name, s.Epoch); len(unread) != readable {
 					t.Fatal("old unread or new batch lost")
 				}
 				// Only old unread remains; another servicing opportunity cannot replay it.

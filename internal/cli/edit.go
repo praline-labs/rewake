@@ -79,11 +79,14 @@ func handleEdit(ctx *Context, call Call) error {
 	}
 	started := time.Now()
 	replacement := inbox.Message{
-		// A grant goes on only while the sender is still the main that
-		// could give it.
-		GrantGit: old.GrantGit && self.Role == role.Main.ID,
-		ID:       inbox.NewID(), From: self.Name, FromEpoch: epoch, To: old.To, ToEpoch: old.ToEpoch,
+		ID: inbox.NewID(), From: self.Name, FromEpoch: epoch, To: old.To, ToEpoch: old.ToEpoch,
 		Kind: old.Kind, Text: text, CreatedAt: time.Now(), Replaces: old.ID, AddendumTo: old.AddendumTo,
+	}
+	// A grant goes on only while the sender is still the main that could
+	// give it. Its directories are checked again when the replacement is
+	// delivered, as the original's would have been.
+	if self.Role == role.Main.ID {
+		replacement.GrantGit, replacement.GrantDirs, replacement.GrantBroad = old.GrantGit, old.GrantDirs, old.GrantBroad
 	}
 	if kind.kind == inbox.Question {
 		release, err := inbox.ReserveAnswer(dir, self.Name, replacement.ID)

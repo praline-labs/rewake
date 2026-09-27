@@ -40,6 +40,7 @@ func (f *fakeHarness) Notes() []string    { return nil }
 
 // A double takes every flag once: nothing here launches a real harness.
 func (f *fakeHarness) SingleUseFlags() []harness.Flag { return nil }
+func (f *fakeHarness) ProtectedDirs() []string        { return nil }
 
 func (f *fakeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, error) {
 	time.Sleep(f.launchDelay)

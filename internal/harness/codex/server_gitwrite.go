@@ -3,11 +3,8 @@ package codex
 import (
 	"context"
 	"path/filepath"
-	"slices"
 	"strings"
 	"time"
-
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
 )
 
 type threadStatus struct {
@@ -20,14 +17,18 @@ type threadEnvironment struct {
 	Roots []string `json:"runtimeWorkspaceRoots"`
 }
 
-// Roots are a replacement field, not a grant list. Read a fresh server snapshot
-// for each task; neither launch cwd nor a cached resume reply can preserve roots
-// changed by the person in the TUI. Failure must not prevent ordinary delivery.
-func (s *serverSession) taskGitRoots(ctx context.Context, readThread func(context.Context, any) error, thread string, kind inbox.Kind,
-) ([]string, string) {
-	if !s.gitWrite || kind != inbox.Task && kind != inbox.Question {
-		return nil, ""
-	}
+// threadRead is one read of the thread's roots and status, taken once per
+// notice. Roots are a replacement field, not a grant list: neither the launch
+// cwd nor a cached resume reply can preserve roots changed by the person in
+// the TUI, so each notice that changes them reads a fresh snapshot.
+type threadRead struct {
+	id           string
+	status       string
+	environments []threadEnvironment
+	err          error
+}
+
+func readThreadRoots(ctx context.Context, readThread func(context.Context, any) error) threadRead {
 	var response struct {
 		Thread struct {
 			ID           string              `json:"id"`
@@ -38,35 +39,65 @@ func (s *serverSession) taskGitRoots(ctx context.Context, readThread func(contex
 	readCtx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
 	defer cancel()
 	if err := readThread(readCtx, &response); err != nil {
-		return nil, "Git metadata access unchanged: could not read current thread roots"
+		return threadRead{err: err}
 	}
-	current := response.Thread
-	// Top-level roots rebuild the default environment selection. Do not project
-	// multiple or remote environments into one local list and discard their state.
-	if current.ID != thread || len(current.Environments) != 1 || current.Environments[0].ID != "local" {
-		return nil, "Git metadata access unchanged: current local workspace roots are unavailable"
+	return threadRead{id: response.Thread.ID, status: response.Thread.Status.Kind, environments: response.Thread.Environments}
+}
+
+// local returns the thread's one local environment, or why its roots cannot
+// be changed. Top-level roots rebuild the default environment selection: do
+// not project multiple or remote environments into one local list and discard
+// their state.
+func (read threadRead) local(thread string) (threadEnvironment, string) {
+	if read.err != nil {
+		return threadEnvironment{}, "could not read current thread roots"
 	}
-	environment := current.Environments[0]
+	if read.id != thread || len(read.environments) != 1 || read.environments[0].ID != "local" {
+		return threadEnvironment{}, "current local workspace roots are unavailable"
+	}
+	environment := read.environments[0]
 	if environment.Roots == nil || !localRoot(environment.Cwd) || !allLocalRoots(environment.Roots) {
-		return nil, "Git metadata access unchanged: current local workspace roots are unavailable"
+		return threadEnvironment{}, "current local workspace roots are unavailable"
 	}
+	return environment, ""
+}
+
+// addGitRoots adds the metadata of the thread's own checkout, for an explicit
+// --grant-git, and says what it did. Failure must not prevent ordinary
+// delivery: the task goes without the grant, and the detail says so.
+func addGitRoots(roots *[]string, environment threadEnvironment, active bool) string {
 	metadata, err := gitMetadataDirectories(environment.Cwd)
 	if err != nil {
-		return nil, "Git metadata access unchanged: could not resolve the thread's Git metadata"
+		return "Git metadata access unchanged: could not resolve the thread's Git metadata"
 	}
-	roots := slices.Clone(environment.Roots)
-	for _, directory := range metadata {
-		if !slices.ContainsFunc(roots, func(root string) bool { return filepath.Clean(root) == directory }) {
-			roots = append(roots, directory)
+	if len(addRoots(roots, metadata)) == 0 {
+		return ""
+	}
+	if active {
+		return "Git metadata roots added for subsequent turns; the active turn keeps its existing permissions"
+	}
+	return "Git metadata roots added; the selected permission policy still applies"
+}
+
+// addRoots appends each directory no root names already, and returns those.
+func addRoots(roots *[]string, directories []string) []string {
+	var added []string
+	for _, directory := range directories {
+		if !hasRoot(*roots, directory) {
+			*roots = append(*roots, directory)
+			added = append(added, directory)
 		}
 	}
-	if len(roots) == len(environment.Roots) {
-		return nil, ""
+	return added
+}
+
+func hasRoot(roots []string, directory string) bool {
+	for _, root := range roots {
+		if filepath.Clean(root) == directory {
+			return true
+		}
 	}
-	if current.Status.Kind == "active" {
-		return roots, "Git metadata roots added for subsequent turns; the active turn keeps its existing permissions"
-	}
-	return roots, "Git metadata roots added; the selected permission policy still applies"
+	return false
 }
 
 func localRoot(path string) bool {

@@ -7,7 +7,6 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/alias"
 
 	"github.com/iiiokojiadbi/rewake/internal/harness"
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/role"
 )
 
@@ -85,29 +84,7 @@ func buildGroups() {
 				Notes:          []string{sessionStateHelp, "Main receives a notify when a session becomes available; a later main also learns which sessions were already available. Each launch epoch is announced once."},
 				Handler:        handleList,
 			},
-			{
-				Name:           "send",
-				Args:           "<name> <text>",
-				MaxPositionals: 2,
-				Summary:        "Give a session a task, a question or a heads-up. Use - as the text to read it from stdin.",
-				Options: append(kindOptions(),
-					Option{Flag: "--grant-git", Summary: "Verified main only: explicitly grant eligible task/question recipients access to validated repository Git metadata. No flag adds no roots."},
-					Option{Flag: "--wait", Value: "<seconds>", Summary: "How long to wait. Default: 5 for the delivery, 600 for a question's answer."},
-					Option{Flag: "--to", Value: "<id>", Summary: "Add to a task or question this run sent that is not reported on yet: a task of its own, announced at once, shown with it by rewake inbox --owed and settled by the same report. Takes a unique prefix of the id; an id rewake edit replaced adds to its replacement."},
-					jsonOption,
-				),
-				Examples: append(sendExamples(), "rewake send writer-codex --grant-git \"Commit the reviewed change\""),
-				Next:     []string{"rewake inbox"},
-				Notes: []string{
-					"A task is the default: the session reads it, works, and ends its turn with a final message, which comes back to you as a \"Rewake: <session> finished\" line.",
-					"A question blocks until that final message and prints it. A long one is better run in the background.",
-					fmt.Sprintf("A heads-up (--notify) waits up to %s to share one notice with other mail arriving meanwhile, and send waits with it; a task or a question is announced at once.", inbox.Coalescing.Cap),
-					sessionStateHelp,
-					"Quote the text as one argument: loose words are refused rather than silently joined.",
-					"The output ends with the message's id, which rewake withdraw, rewake edit and --to take, whole or as a unique prefix of it or of the part after the dash.",
-				},
-				Handler: handleSend,
-			},
+			sendCommand(),
 			{
 				Name:           "withdraw",
 				Args:           "<id>",

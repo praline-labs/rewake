@@ -105,6 +105,8 @@ func guideModel(play *role.Playbook) map[string]any {
 		Value    string `json:"value,omitempty"`
 		Summary  string `json:"summary"`
 		Required bool   `json:"required,omitempty"`
+		// Repeatable is a flag that may be given more than once.
+		Repeatable bool `json:"repeatable,omitempty"`
 	}
 	type commandModel struct {
 		Name     string        `json:"name"`

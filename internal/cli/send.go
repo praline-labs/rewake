@@ -26,14 +26,20 @@ const defaultWait = 5 * time.Second
 
 // sendModel is the machine form of one send.
 type sendModel struct {
-	GrantGit  bool                   `json:"grantGit,omitempty"`
-	Telemetry *sessionstate.Snapshot `json:"telemetry,omitempty"`
-	ID        string                 `json:"id"`
-	To        string                 `json:"to"`
-	From      string                 `json:"from"`
-	State     string                 `json:"state"`
-	Via       string                 `json:"via,omitempty"`
-	Detail    string                 `json:"detail,omitempty"`
+	GrantGit bool `json:"grantGit,omitempty"`
+	// GrantDirs are the directories the task grants, as resolved; GrantApplied
+	// those the recipient's harness took with the notice, and
+	// AlreadyWritable those found in the recipient's workspace, not carried.
+	GrantDirs       []string               `json:"grantDirs,omitempty"`
+	GrantApplied    []string               `json:"grantApplied,omitempty"`
+	AlreadyWritable []string               `json:"alreadyWritable,omitempty"`
+	Telemetry       *sessionstate.Snapshot `json:"telemetry,omitempty"`
+	ID              string                 `json:"id"`
+	To              string                 `json:"to"`
+	From            string                 `json:"from"`
+	State           string                 `json:"state"`
+	Via             string                 `json:"via,omitempty"`
+	Detail          string                 `json:"detail,omitempty"`
 	// Answer is the receiver's last reply, for a question that got one.
 	Answer        string     `json:"answer,omitempty"`
 	Kind          inbox.Kind `json:"kind,omitempty"`
@@ -101,6 +107,10 @@ func handleSend(ctx *Context, call Call) error {
 	if grantErr != nil {
 		return grantErr
 	}
+	grantDirs, grantErr := requestedDirGrants(call, self, session, selfErr, dir)
+	if grantErr != nil {
+		return grantErr
+	}
 	if kind.needsSession != "" && selfErr != nil {
 		return &UsageError{
 			Command: command,
@@ -123,6 +133,8 @@ func handleSend(ctx *Context, call Call) error {
 	message := inbox.Message{
 		AddendumTo: addendumTo,
 		GrantGit:   grantGit,
+		GrantDirs:  grantDirs.dirs,
+		GrantBroad: grantDirs.broad,
 		ID:         inbox.NewID(),
 		From:       harness.ShellSender,
 		To:         session.Name,
@@ -148,7 +160,7 @@ func handleSend(ctx *Context, call Call) error {
 	if err := writeSent(dir, self, epoch, message, session); err != nil {
 		return err
 	}
-	return reportSent(ctx, sent{dir: dir, self: self, epoch: epoch, target: session, deadline: started.Add(wait)}, message, kind, wait)
+	return reportSent(ctx, sent{dir: dir, self: self, epoch: epoch, target: session, deadline: started.Add(wait), writable: grantDirs.writable}, message, kind, wait)
 }
 
 // reportSent waits for the delivery result of a message just written and
@@ -159,12 +171,15 @@ func reportSent(ctx *Context, after sent, message inbox.Message, kind messageKin
 	// The delivery result is worth a few seconds at most; a kind that waits
 	// longer waits for something else, after it.
 	status, known := awaitStatus(dir, session.Name, message.ID, min(wait, defaultWait))
-	model := sendModel{ID: message.ID, To: session.Name, From: message.From, GrantGit: message.GrantGit, Addenda: after.addenda, Replaces: message.Replaces, Named: after.named}
+	model := sendModel{ID: message.ID, To: session.Name, From: message.From, GrantGit: message.GrantGit, GrantDirs: message.GrantDirs, AlreadyWritable: after.writable, Addenda: after.addenda, Replaces: message.Replaces, Named: after.named}
 	if !known && inbox.Answered(dir, session.Name, message.ID) {
 		// The message left the mailbox, and a status may have been written
 		// after the wait gave up. Absent a moment ago is not absent now:
 		// calling a fresh delivery lost sends the sender to do it twice.
 		status, known = inbox.ReadStatus(dir, session.Name, message.ID)
+	}
+	if known {
+		model.GrantApplied = status.GrantApplied
 	}
 	switch {
 	case known && status.State == inbox.Read:
@@ -217,7 +232,7 @@ func reportSent(ctx *Context, after sent, message inbox.Message, kind messageKin
 		// The id before the wait, which may be long: it is what an edit or an
 		// addendum to this message takes while the sender still waits.
 		if !ctx.JSON {
-			_ = emit(ctx, idLines(model)...)
+			_ = emit(ctx, append(writableLines(session, model), idLines(model)...)...)
 		}
 		after.model = model
 		return kind.after(ctx, after)
@@ -229,7 +244,7 @@ func reportSent(ctx *Context, after sent, message inbox.Message, kind messageKin
 func printDelivery(ctx *Context, session registry.Session, model sendModel) error {
 	line := sendLine(session, model)
 	if inbox.State(model.State) != inbox.Failed && model.ID != "" {
-		line += "\n" + strings.Join(idLines(model), "\n")
+		line += "\n" + strings.Join(append(writableLines(session, model), idLines(model)...), "\n")
 	}
 	switch inbox.State(model.State) {
 	case inbox.Delivered:

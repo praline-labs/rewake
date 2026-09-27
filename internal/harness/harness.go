@@ -44,3 +44,14 @@ func IDs() []string {
 	}
 	return out
 }
+
+// AllProtectedDirs are the directories of every registered harness: a worker
+// of one harness that could write another's configuration could still change
+// what a session may do.
+func AllProtectedDirs() []string {
+	var dirs []string
+	for _, h := range registered {
+		dirs = append(dirs, h.ProtectedDirs()...)
+	}
+	return dirs
+}

@@ -1,0 +1,207 @@
+package codex
+
+import (
+	"fmt"
+	"slices"
+	"strings"
+	"time"
+
+	"github.com/iiiokojiadbi/rewake/internal/grant"
+	"github.com/iiiokojiadbi/rewake/internal/harness"
+	"github.com/iiiokojiadbi/rewake/internal/inbox"
+)
+
+// idleWait is why a notice carrying a grant waits: the roots a turn starts
+// with are the ones it keeps, and a grant steered into a running turn would
+// reach only its later work (docs/grants.md).
+const idleWait = "a task carrying a grant waits for the session to be idle, so the grant holds from the task's first turn"
+
+// rootsChange is what one notice does to the session's roots.
+type rootsChange struct {
+	// roots replace the thread's; nil leaves them as they are.
+	roots   []string
+	notes   []string
+	applied []string
+	// journal is saved once the notice is taken; nil when unchanged.
+	journal []grant.Entry
+}
+
+// planRoots works out the roots a notice carries: the snapshot as read, less
+// what rewake granted for tasks settled since, plus the thread's Git metadata
+// for --grant-git and the directories the message grants.
+func (s *serverSession) planRoots(thread string, read func() threadRead, git bool, granted inbox.Message) (rootsChange, error) {
+	var change rootsChange
+	entries := grant.Load(s.mailbox, s.name, s.epoch)
+	settled := s.settledGrants(entries)
+	if !git && len(granted.GrantDirs) == 0 && len(settled) == 0 {
+		return change, nil
+	}
+	snapshot := read()
+	environment, unavailable := snapshot.local(thread)
+	if unavailable != "" {
+		if len(granted.GrantDirs) > 0 {
+			// A task is never handed over without the grant it was sent with.
+			return change, fmt.Errorf("its directory grant could not be applied: %s", unavailable)
+		}
+		if git {
+			change.notes = append(change.notes, "Git metadata access unchanged: "+unavailable)
+		}
+		// What settled tasks were granted waits for a later notice.
+		return change, nil
+	}
+	roots := slices.Clone(environment.Roots)
+	active := snapshot.status == "active"
+	now := time.Now()
+	var revoked []string
+	for _, index := range settled {
+		entry := &entries[index]
+		entry.EndedAt = &now
+		entry.Outcome = grant.Dropped
+		// Two settled tasks can have held one directory: the root goes once,
+		// and both took it back.
+		if slices.Contains(revoked, entry.Path) {
+			entry.Outcome = grant.Revoked
+			continue
+		}
+		if at := slices.IndexFunc(roots, func(root string) bool { return hasRoot([]string{root}, entry.Path) }); at >= 0 {
+			roots = slices.Delete(roots, at, at+1)
+			entry.Outcome = grant.Revoked
+			revoked = append(revoked, entry.Path)
+		}
+	}
+	if len(revoked) > 0 {
+		change.notes = append(change.notes, "taken back, their tasks reported on: "+strings.Join(revoked, ", "))
+	}
+	journaled := len(settled) > 0
+	if git {
+		if note := addGitRoots(&roots, environment, active); note != "" {
+			change.notes = append(change.notes, note)
+		}
+	}
+	if len(granted.GrantDirs) > 0 {
+		added, writable, notes := s.addGrantedRoots(&roots, &entries, granted, git, now)
+		change.notes = append(change.notes, notes...)
+		change.applied = slices.Concat(added, writable)
+		if len(added) > 0 {
+			journaled = true
+			note := "write granted: " + strings.Join(added, ", ")
+			if active {
+				note += ", for subsequent turns; the active turn keeps its existing permissions"
+			}
+			change.notes = append(change.notes, note)
+		}
+		if len(writable) > 0 {
+			change.notes = append(change.notes, "already writable: "+strings.Join(writable, ", "))
+		}
+	}
+	if journaled {
+		change.journal = entries
+	}
+	if !slices.Equal(roots, environment.Roots) {
+		change.roots = roots
+	}
+	return change, nil
+}
+
+// addGrantedRoots adds each granted directory a root does not cover already,
+// with its Git metadata when the task also carries --grant-git, and journals
+// what it added. A directory inside a root rewake itself granted for another
+// task is added on its own all the same: that root goes with its task.
+func (s *serverSession) addGrantedRoots(roots *[]string, entries *[]grant.Entry, granted inbox.Message, git bool, now time.Time) (added, writable, notes []string) {
+	journaled := func(root string) bool {
+		return slices.ContainsFunc(*entries, func(entry grant.Entry) bool { return entry.Live() && entry.Path == root })
+	}
+	covered := func(directory string) bool {
+		return slices.ContainsFunc(*roots, func(root string) bool { return grant.Within(directory, root) && !journaled(root) })
+	}
+	record := func(path, of string) {
+		*entries = append(*entries, grant.Entry{Path: path, For: of, Message: granted.ID, At: now, Outcome: grant.Granted})
+	}
+	var rules *grant.Rules
+	for _, directory := range granted.GrantDirs {
+		if covered(directory) {
+			writable = append(writable, directory)
+		} else {
+			// A root another live task was granted is journaled again for
+			// this one, so it stays until both are reported on.
+			if !hasRoot(*roots, directory) {
+				*roots = append(*roots, directory)
+			}
+			record(directory, "")
+			added = append(added, directory)
+		}
+		if !git {
+			continue
+		}
+		metadata, err := gitMetadataDirectories(directory)
+		if err != nil {
+			notes = append(notes, fmt.Sprintf("no Git metadata granted for %s: %v", directory, err))
+			continue
+		}
+		if rules == nil {
+			built := grant.CurrentEnv(s.stateRoot, harness.AllProtectedDirs()).Rules()
+			rules = &built
+		}
+		for _, path := range metadata {
+			if covered(path) {
+				continue
+			}
+			// The metadata can lie outside the directory, and so outside
+			// what was checked when the grant was sent.
+			if err := rules.Check(path, path, false); err != nil {
+				notes = append(notes, fmt.Sprintf("no Git metadata granted for %s: %v", directory, err))
+				continue
+			}
+			if !hasRoot(*roots, path) {
+				*roots = append(*roots, path)
+			}
+			record(path, directory)
+		}
+	}
+	return added, writable, notes
+}
+
+// settledGrants lists the live entries whose tasks are settled, leaving out a
+// directory another live task still holds.
+func (s *serverSession) settledGrants(entries []grant.Entry) []int {
+	if s.mailbox == "" {
+		return nil
+	}
+	known := map[string]bool{}
+	settled := func(id string) bool {
+		if value, ok := known[id]; ok {
+			return value
+		}
+		known[id] = inbox.Settled(s.mailbox, s.name, s.epoch, id)
+		return known[id]
+	}
+	held := map[string]bool{}
+	for _, entry := range entries {
+		if entry.Live() && !settled(entry.Message) {
+			held[entry.Path] = true
+		}
+	}
+	var indexes []int
+	for index, entry := range entries {
+		if entry.Live() && settled(entry.Message) && !held[entry.Path] {
+			indexes = append(indexes, index)
+		}
+	}
+	return indexes
+}
+
+// saveJournal records what a notice the harness took granted and took back.
+// The roots are sent by then; a journal that cannot be written leaves a grant
+// rewake cannot take back, and the detail says so.
+func (s *serverSession) saveJournal(entries []grant.Entry) string {
+	if entries == nil {
+		return ""
+	}
+	if s.mailbox == "" {
+		return "the grant could not be recorded, so rewake will not take it back: this session has no state directory"
+	}
+	if err := grant.Save(s.mailbox, s.name, s.epoch, entries); err != nil {
+		return "the grant could not be recorded, so rewake will not take it back: " + err.Error()
+	}
+	return ""
+}

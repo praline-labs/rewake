@@ -160,6 +160,19 @@ On `resume` and `fork`, look at the interface's argv: it must carry no `--add-di
 
 *September 17, 2026.*
 
+### `rewake codex --add-dir` exits 1 on Codex 0.156 and later
+
+From 0.156 the Codex terminal refuses `--add-dir` and a
+`sandbox_workspace_write.writable_roots` override beside `--remote` and exits 1 before its
+first request (live on 0.157.1; 0.155.1 still took both,
+[research-codex.md](research-codex.md#runtime-workspace-roots)). Every `rewake codex`
+launch runs the terminal under `--remote`, so a launch that asked for a second writable
+directory simply ended. Rewake now refuses both itself with exit 2 and points at
+`rewake send --grant-dir`, which adds the directory for one task
+([grants.md](grants.md)).
+
+*September 27, 2026.*
+
 ### Native remote resume rejects permission flags even from a test recipe
 
 The same trap again, in the UI stand of September 20: `-c sandbox_mode` and

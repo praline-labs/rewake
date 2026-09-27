@@ -37,7 +37,7 @@ var mutantUnwindowed = mutation{
 	name: "unwindowed",
 	file: "internal/wrap/wrap.go",
 	edits: []edit{{
-		"\t\t\tWindow: inbox.Coalescing,\n",
+		"\t\t\tWindow:     inbox.Coalescing,\n",
 		"",
 	}},
 }

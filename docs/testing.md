@@ -206,8 +206,9 @@ scenarios do not change. What building the second one taught is in
 ### The cases
 
 What each case claims, with its controls, is in [testing-cases.md](testing-cases.md):
-the Claude Code telemetry budgets, launching and reporting, actions on a sent message,
-conversations and the inbound gate, and a pointer to the plugin's cases.
+the Claude Code telemetry budgets, launching and reporting, the worktrees, a directory
+granted with a task, actions on a sent message, conversations and the inbound gate, and a
+pointer to the plugin's cases.
 
 ## Traps this suite has already paid for
 

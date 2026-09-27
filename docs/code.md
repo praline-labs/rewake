@@ -15,6 +15,7 @@ internal/registry/               session record, name publishing, liveness, list
 internal/proc/                   /proc: identity, liveness and job-control state
 internal/boottime/               the boot clock, comparable across processes and never set back
 internal/inbox/                  message, status, sender-side write, servicing loop
+internal/grant/                  which directories a task may grant, and the journal of what was granted
 internal/control/                a main's control request to a run and its answer, as files
 internal/role/                   the role catalogue: flag, briefing line, reporting duty
 internal/brief/                  text injected into an agent, independent of transport
@@ -54,19 +55,29 @@ type Harness interface {
     Examples() []string
     Notes() []string
     SingleUseFlags() []Flag
+    ProtectedDirs() []string
     Launch(request LaunchRequest) (LaunchPlan, error)
     Deliver(ctx context.Context, session registry.Session, message inbox.Message) inbox.Result
 }
 ```
 
 `SingleUseFlags` names the flags a harness takes at most once, so an alias and a typed
-flag for the same parameter replace rather than repeat each other. `Deliver` sends the
+flag for the same parameter replace rather than repeat each other. `ProtectedDirs` names
+the harness's own configuration, which no task may grant a session to write
+([grants.md](grants.md)). `Deliver` sends the
 notice for `message`, built by `harness.Notice`; it never sends `message.Text`.
 
 A harness whose sessions take `rewake compact` and `rewake interrupt` also implements
 `Steerable` — `CompactFocus() bool`, whether a compaction may carry a focus. One that
 does not is refused before anything is sent ([remote-control.md](remote-control.md)).
 
+
+A harness that takes a directory into a running session for one task implements
+`DirGrantHarness` — `SupportsDirGrant()`; `rewake send --grant-dir` to a session of any
+other harness is refused with exit 1 ([grants.md](grants.md)). A harness whose launch
+takes arguments rewake has a way of its own for implements `LaunchRefuser` —
+`RefuseLaunch(args)`, asked before anything else of the launch; Codex refuses
+`--add-dir` and a `writable_roots` override there.
 
 A harness that gives rewake's worktree to a launch implements `WorktreeHarness` —
 `WorktreeFlag()`, the spelling the launch command takes for itself;

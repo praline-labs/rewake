@@ -13,6 +13,19 @@ type GitGrantHarness interface {
 	SupportsGitGrant() bool
 }
 
+// DirGrantHarness takes a directory into a running session's writable roots
+// for one task, and takes it back once the task is reported on
+// (docs/grants.md). A harness that is not one refuses --grant-dir.
+type DirGrantHarness interface {
+	SupportsDirGrant() bool
+}
+
+// LaunchRefuser refuses launch arguments rewake has a way of its own for, and
+// names that way. The refusal is a call to change: exit 2.
+type LaunchRefuser interface {
+	RefuseLaunch(args []string) error
+}
+
 // Completion is a terminal turn outcome, independent of its transport.
 type Completion struct {
 	Boundary *inbox.ReadBoundary

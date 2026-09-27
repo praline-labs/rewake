@@ -103,6 +103,11 @@ everything else.
   Codex delivery reservation appends the missing Git metadata roots without touching the
   sandbox policy; persistence through queueing and the refusals. Open it for anything
   about giving a session write access to Git metadata.
+- [grants.md](grants.md) — `--grant-dir` and `--grant-dir-broad`: the owner's decisions,
+  the hard and broad tiers a directory is checked against at send and again at delivery,
+  the idle wait, how Codex adds the directory to its roots, the journal and how a grant
+  is taken back after the report, and how long a grant lives. Open it for anything about
+  giving a session write access to a directory outside its workspace.
 - [session-state.md](session-state.md) — the telemetry line main sees for its workers
   (activity, context used, compactions): what is shown to whom, the availability
   notifications main receives when a worker becomes ready, the context formula, how
@@ -239,7 +244,7 @@ everything else.
   sessions, what the fixture plays and its controls, with a table of every control by
   scenario that `controls_test.go` keeps equal to the suite: the Claude Code telemetry budgets
   and their measurement, launching through a wrapper, pending and owed reports, the
-  awaited view, withdrawing, editing and adding to a sent message, a changed
+  worktrees, a directory granted with a task, the awaited view, withdrawing, editing and adding to a sent message, a changed
   conversation, and the inbound gate. Open it before changing one of those cases or the
   behaviour it guards.
 - [testing-plugin.md](testing-plugin.md) — the workflow cases that run rewake's

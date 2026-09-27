@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/iiiokojiadbi/rewake/internal/grant"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/role"
 	"github.com/iiiokojiadbi/rewake/internal/state"
@@ -35,7 +36,7 @@ func handleList(ctx *Context, _ Call) error {
 	for index := range sessions {
 		sessions[index].Room = room
 		sessions[index].Role = role.Of(sessions[index].Role).ID
-		view := sessionView{Session: sessions[index]}
+		view := sessionView{Session: sessions[index], Grants: grant.Load(dir, sessions[index].Name, sessions[index].Epoch())}
 		if !visible {
 			view.MessagingReadyAt = nil
 		}

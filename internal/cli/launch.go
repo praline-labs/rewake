@@ -24,6 +24,11 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 		if prefix, present := call.Flags["name"]; present && prefix == "" {
 			return &UsageError{Command: call.Command, Message: "--name needs a nonempty prefix; omit --name to use the selected role."}
 		}
+		if refuser, ok := h.(harness.LaunchRefuser); ok {
+			if err := refuser.RefuseLaunch(call.Raw); err != nil {
+				return &UsageError{Command: call.Command, Message: err.Error() + "."}
+			}
+		}
 		program, err := launchProgram(call)
 		if err != nil {
 			return err

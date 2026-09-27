@@ -37,20 +37,23 @@ type serverSession struct {
 	path, upstream, epoch, cwd string
 	args, env                  []string
 	gitWrite                   bool
-	program                    string
-	controlDir                 string
-	gateway                    *gateway.Gateway
-	proxy                      *http.Server
-	process                    *exec.Cmd
-	exited, stopped            chan struct{}
-	cancel                     context.CancelFunc
-	closeOnce                  sync.Once
-	mu                         sync.Mutex
-	outcomes                   []harness.Completion
-	wake                       chan struct{}
-	reportCancel               context.CancelFunc
-	emit                       func(context.Context, harness.Completion) error
-	note                       func(string)
+	// mailbox is the room's state directory, where the session's mail and
+	// its grant journal are, and stateRoot the root above every room.
+	mailbox, name, stateRoot string
+	program                  string
+	controlDir               string
+	gateway                  *gateway.Gateway
+	proxy                    *http.Server
+	process                  *exec.Cmd
+	exited, stopped          chan struct{}
+	cancel                   context.CancelFunc
+	closeOnce                sync.Once
+	mu                       sync.Mutex
+	outcomes                 []harness.Completion
+	wake                     chan struct{}
+	reportCancel             context.CancelFunc
+	emit                     func(context.Context, harness.Completion) error
+	note                     func(string)
 }
 
 func newServer(path string, args, env []string, cwd string) *serverSession {

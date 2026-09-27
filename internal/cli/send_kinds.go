@@ -40,6 +40,9 @@ type sent struct {
 	// named is the id an edit was given when an earlier edit had replaced
 	// it, and the letter replaced is that edit's replacement.
 	named string
+	// writable are granted directories the recipient's workspace holds
+	// already.
+	writable []string
 }
 
 // sendKinds lists every kind send can write, the default first.

@@ -15,6 +15,8 @@ type LaunchRequest struct {
 	Name string
 	// Dir is the shared state root, never a room subdirectory.
 	Dir string
+	// RoomDir is the room's own directory, where the session's mail is.
+	RoomDir string
 	// Room is the isolated conversation this launch belongs to.
 	Room string
 	// RoleReason explains the explicit or automatic role selection.
@@ -113,6 +115,12 @@ type Harness interface {
 	// may be repeated, and for a harness that refuses repeats it turns an
 	// alias plus a typed flag into a launch that will not parse.
 	SingleUseFlags() []Flag
+	// ProtectedDirs are where the harness keeps its own configuration,
+	// credentials and sessions. rewake never grants a worker write access to
+	// them, whichever harness the worker runs (docs/grants.md): a worker that
+	// could write there could change its own permissions, or another
+	// session's.
+	ProtectedDirs() []string
 	// Launch turns a request into the command to run.
 	Launch(request LaunchRequest) (LaunchPlan, error)
 	// Deliver hands one message to a running session and says what happened.

@@ -102,7 +102,9 @@ func owedLines(messages []owedView) []string {
 		if message.nested {
 			heading = fmt.Sprintf("+ addendum from %s · %s", message.From, message.CreatedAt.Local().Format("15:04:05"))
 		}
-		lines = append(lines, heading, message.Text)
+		lines = append(lines, heading)
+		lines = append(lines, grantLines(message.Message)...)
+		lines = append(lines, message.Text)
 		if message.ThreadChanged {
 			lines = append(lines, inbox.ThreadChangedWarning)
 		}

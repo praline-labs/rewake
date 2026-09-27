@@ -34,15 +34,20 @@ credentials nor opens arbitrary folders or a general-purpose tool permission.
 Malformed/unresolved/symlinked metadata and unreadable roots leave the grant unapplied
 with a delivery diagnostic; they never broaden access as a fallback.
 
-A late granted task stays in the [unannounced queue](inbox-groups.md), alongside
-ordinary work until delivery is ready. It cannot attach to an already dispatched notice.
-Its roots are considered when its own ready batch is dispatched promptly, without
-waiting for observation or normal completion. Already-present metadata needs no
-added root field; expired, consumed or reserved members cannot grant rights to
-neighboring messages.
+Owner decision, September 27, 2026: a granted task that arrives during a turn waits
+for the recipient to be idle, so the grant holds from the task's first turn. Since then
+a granted task goes on a notice of its own, never in a group with other mail, and the
+adapter reads the thread before the task becomes readable: while the thread is active
+the task stays pending and is retried. Mail after it goes on without it. It cannot
+attach to an already dispatched notice. Already-present metadata needs no added root
+field; an expired granted task fails before the harness is asked anything, and
+consumed or reserved members cannot grant rights to neighboring messages. The same
+path carries `--grant-dir` ([grants.md](grants.md)).
 
-The native field is a replacement root snapshot extended additively. On an active
-turn, changes may apply only to subsequent work; this is not a promise of retroactive
-permission for a running tool call. Later native owner input can replace roots again.
-Rewake adds no persistent grant/revocation policy in this feature. Explicit persistent
-session/repository decisions are a separate roadmap item.
+The native field is a replacement root snapshot extended additively. The terminal can
+still start a turn between the adapter's read and its `turn/start`; the notice then
+steers into that turn, and the metadata applies only to subsequent work — this is not a
+promise of retroactive permission for a running tool call. Later native owner input can
+replace roots again. The thread's own metadata is not journaled and not taken back:
+rewake revokes only what `--grant-dir` added, including the metadata of a granted
+checkout ([grants.md](grants.md#taking-a-grant-back)).

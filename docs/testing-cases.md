@@ -150,6 +150,25 @@ breaks exits 2, and a case whose process failed fails its cleanup whatever its
 observations say; the refusals of `-w`, `--tmux` and the continuations are unit tests in
 `internal/cli`.
 
+## A directory granted with a task
+
+`codex-grant-dir` runs on the Codex column only: Claude Code takes a grant from stage 2
+on ([grants.md](grants.md)). The fixture keeps the thread's workspace roots as the
+server was seen to — set by the start, replaced by a `turn/start` that carries them —
+answers `thread/read` with them in `environments` and with the status of the turn in
+progress, and records the roots each delivery that carried them named. A write worker holds its
+first turn open; main sends it a task with `--grant-dir` on a directory outside its
+workspace, which must be accepted pending (exit 3), start a turn of its own after the
+held one closes and never be steered into it, and name the directory beside `/work` in
+its roots. After the worker's report, the next plain task must carry the roots without
+the directory, and main's `rewake list --json` must show it `revoked`. Its mutants skip
+the idle wait (`grant-steered`, which breaks the wait alone), journal the directory
+without adding it (`grant-not-added`, which breaks the roots and the revocation, the
+journal then saying `dropped`), and keep it after the report (`grant-kept`, which breaks
+the revocation alone). The shape case checks the fixture's `thread/read` reply of a
+working thread against `ThreadReadResponse`. The path rules, the journal and the
+refusals are unit tests in `internal/grant`, `internal/cli` and `internal/harness/codex`.
+
 ## Actions on a sent message
 
 `withdraw-after-notice`, `edit-after-notice` and `addendum-owed` run in both columns with a
@@ -245,6 +264,7 @@ switches have no single form in the code to find them by, and the row is kept by
 | codex-steered | `busy-unchecked`, `codex-asker-untold`, `codex-waits-for-the-end`, `codex-outcome-unkept`, `codex-interrupter-unnamed`, `codex-idle-interrupt-done`, `focus-taken` | — |
 | codex-tui-later-shape | `roots-only-recognition` | — |
 | codex-compact-hold | `hold-ends-at-start`, `compaction-refusal-final`, `late-end-unrecorded`, `running-taken-for-an-outcome` | — |
+| codex-grant-dir | `grant-steered`, `grant-not-added`, `grant-kept` | — |
 | stopped-routing | `stopped-to-main` | — |
 | withdraw-after-notice | `withdraw-leaves-task`, `withdraw-silent`, `recall-sender-first` | — |
 | withdraw-mid-turn | `recall-unnamed` | — |

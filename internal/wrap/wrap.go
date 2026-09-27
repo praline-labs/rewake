@@ -109,6 +109,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	plan, err := request.Harness.Launch(harness.LaunchRequest{
 		Name:       name,
 		Dir:        state.RootForRoom(request.Dir),
+		RoomDir:    request.Dir,
 		Room:       session.Room,
 		RoleReason: session.RoleReason,
 		Args:       request.Args,
@@ -276,7 +277,8 @@ func Run(ctx context.Context, request Request) (int, error) {
 			// changed hands, has no business in there.
 			Owns: func() bool { return registry.OwnsName(request.Dir, name, epoch) },
 			// A burst of letters that ask for nothing wakes the session once.
-			Window: inbox.Coalescing,
+			Window:     inbox.Coalescing,
+			CheckGrant: checkGrant(state.RootForRoom(request.Dir)),
 			Deliver: func(ctx context.Context, message inbox.Message) inbox.Result {
 				if plan.Backend != nil {
 					return plan.Backend.Deliver(ctx, message)

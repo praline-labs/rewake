@@ -17,7 +17,8 @@ Saved permission settings and runtime roots are distinct. Remote resume clears
 approval/sandbox/profile overrides (`tui/src/app_server_session.rs:2151–2160`);
 remote fork with InheritSaved does likewise at :985–992. The server restores
 saved approval settings and named profile identity (`request_processors/thread_processor.rs:4142–4171`,
-fork at :4934–5007). **This does not establish that an old `--add-dir` survives.**
+fork at :4934–5007). The source reading alone did not establish that an old
+`--add-dir` survives; a live probe since has (below).
 The TUI still supplies `Some(config.workspace_roots.clone())` for resume and fork
 (:2142, :2186). Cold server resume restores saved runtime roots only when that
 request field is absent (:3765–3813), so the TUI's current root list wins over
@@ -25,6 +26,14 @@ saved roots. Local config builds that list from cwd and configured roots without
 rewake's omitted grant (`core/src/config/mod.rs:3435–3470`). A thread started
 under write therefore still needs live verification of effective Git access
 when continued; do not promise metadata access solely from its original role.
+
+**[verified live; 0.155.1 and 0.157.1; September 26, 2026]** A cold `thread/resume`
+that omits the roots field restores the roots the thread last saved, a root added by
+`turn/start` on an established history included; a cold `thread/fork` drops it
+([research-codex.md](research-codex.md#runtime-workspace-roots)). A resume through the
+terminal supplies its own list, per the source above, so what survives depends on who
+resumes. Rewake's directory grant counts on neither: it is given at delivery and taken
+back after the report ([grants.md](grants.md#how-long-a-grant-lives)).
 
 The supported APIs do not offer an additive, policy-preserving root update at
 idle attachment:

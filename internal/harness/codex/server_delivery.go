@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/harness"
@@ -17,11 +18,13 @@ type reservedDelivery struct {
 	ctx          context.Context
 	cancel       context.CancelFunc
 	rootsChecked bool
-	roots        []string
-	rootNote     string
+	// read is the thread read Reserve took for a notice carrying a grant,
+	// which planning the roots uses rather than reading again.
+	read   *threadRead
+	change rootsChange
 }
 
-func (s *serverSession) Reserve(ctx context.Context, _ inbox.Message) (inbox.Reservation, error) {
+func (s *serverSession) Reserve(ctx context.Context, message inbox.Message) (inbox.Reservation, error) {
 	if s.gateway == nil {
 		return nil, inbox.ErrThreadUnavailable
 	}
@@ -31,7 +34,18 @@ func (s *serverSession) Reserve(ctx context.Context, _ inbox.Message) (inbox.Res
 		cancel()
 		return nil, reserveRefusal(err)
 	}
-	return &reservedDelivery{session: s, reservation: reserved, ctx: ctx, cancel: cancel}, nil
+	delivery := &reservedDelivery{session: s, reservation: reserved, ctx: ctx, cancel: cancel}
+	if s.appliesGrant(message) {
+		// Asked before the message becomes readable: a task read while it
+		// waits would go without its grant.
+		read := readThreadRoots(ctx, reserved.ReadThread)
+		if read.err == nil && read.status == "active" {
+			delivery.Close()
+			return nil, fmt.Errorf("%w: %s", inbox.ErrNotYet, idleWait)
+		}
+		delivery.read = &read
+	}
+	return delivery, nil
 }
 
 // reserveRefusal tells the inbox a refusal that passes with a running
@@ -70,7 +84,7 @@ func (r *reservedDelivery) DeliverChecked(_ context.Context, message inbox.Messa
 	if !valid() {
 		return inbox.Result{State: inbox.Pending, Detail: "announcement membership changed before send"}
 	}
-	_, err := r.reservation.Deliver(r.ctx, message.ID, mailboxNotice(message), r.roots)
+	_, err := r.reservation.Deliver(r.ctx, message.ID, mailboxNotice(message), r.change.roots)
 	if errors.Is(err, gateway.ErrCompacting) {
 		// The server refused the notice for a compaction running: nothing was
 		// taken, and the message goes once the compaction has ended.
@@ -79,26 +93,47 @@ func (r *reservedDelivery) DeliverChecked(_ context.Context, message inbox.Messa
 	if err != nil {
 		return inbox.Result{State: inbox.Failed, Detail: err.Error() + "; delivery was not retried automatically"}
 	}
-	return inbox.Result{State: inbox.Delivered, Via: "app-server", Detail: r.rootNote}
+	notes := r.change.notes
+	if note := r.session.saveJournal(r.change.journal); note != "" {
+		notes = append(notes, note)
+	}
+	return inbox.Result{State: inbox.Delivered, Via: "app-server", Detail: strings.Join(notes, "; "), GrantApplied: r.change.applied}
 }
 
 func (r *reservedDelivery) checkRoots(thread string, message inbox.Message) error {
-	grantKind := inbox.Note
+	git := false
+	var granted inbox.Message
 	members := message.Batch
 	if len(members) == 0 {
 		members = []inbox.Message{message}
 	}
 	for _, member := range members {
+		kind := inbox.KindOf(member)
+		work := kind == inbox.Task || kind == inbox.Question
 		if member.GrantGit {
-			kind := inbox.KindOf(member)
-			if !r.session.gitWrite || kind != inbox.Task && kind != inbox.Question {
+			if !r.session.gitWrite || !work {
 				return fmt.Errorf("explicit Git grant is unsupported for this recipient or message kind")
 			}
-			grantKind = kind
+			git = true
+		}
+		if len(member.GrantDirs) > 0 {
+			if !work || len(members) > 1 {
+				return fmt.Errorf("a directory grant goes only with a task or a question, announced on its own")
+			}
+			granted = member
 		}
 	}
-	r.roots, r.rootNote = r.session.taskGitRoots(r.ctx, r.reservation.ReadThread, thread, grantKind)
-	r.rootsChecked = true
+	read := func() threadRead {
+		if r.read != nil {
+			return *r.read
+		}
+		return readThreadRoots(r.ctx, r.reservation.ReadThread)
+	}
+	change, err := r.session.planRoots(thread, read, git, granted)
+	if err != nil {
+		return err
+	}
+	r.change, r.rootsChecked = change, true
 	return nil
 }
 
@@ -139,4 +174,24 @@ func mailboxNotice(message inbox.Message) gateway.MailboxNotice {
 		notice.Members = append(notice.Members, entry)
 	}
 	return notice
+}
+
+// appliesGrant says whether a notice carries a grant this session applies,
+// and so waits for it to be idle. One it refuses is refused when its roots
+// are planned, without a read.
+func (s *serverSession) appliesGrant(message inbox.Message) bool {
+	members := message.Batch
+	if len(members) == 0 {
+		members = []inbox.Message{message}
+	}
+	for _, member := range members {
+		kind := inbox.KindOf(member)
+		if kind != inbox.Task && kind != inbox.Question {
+			continue
+		}
+		if member.GrantGit && s.gitWrite || len(member.GrantDirs) > 0 {
+			return true
+		}
+	}
+	return false
 }

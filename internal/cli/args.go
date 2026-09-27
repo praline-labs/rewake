@@ -35,12 +35,13 @@ func parse(argv []string) (parsed, error) { return parseKnowing(argv, nil) }
 func parseKnowing(argv []string, aliases []string) (parsed, error) {
 	var result parsed
 	result.Call.Flags = map[string]string{}
+	result.Call.Lists = map[string][]string{}
 
 	index := 0
 	// Flags before the command word: global ones, plus the launch flags, which
 	// must come first because everything after a harness name is the harness's.
 	for index < len(argv) && strings.HasPrefix(argv[index], "--") {
-		consumed, err := readFlag(argv, index, nil, result.Call.Flags)
+		consumed, err := readFlag(argv, index, nil, &result.Call)
 		if err != nil {
 			return result, err
 		}
@@ -106,7 +107,7 @@ func parseKnowing(argv []string, aliases []string) (parsed, error) {
 			endOfFlags = true
 			index++
 		case !endOfFlags && strings.HasPrefix(token, "--"):
-			consumed, err := readFlag(argv, index, command, result.Call.Flags)
+			consumed, err := readFlag(argv, index, command, &result.Call)
 			if err != nil {
 				return result, err
 			}
@@ -135,39 +136,43 @@ func parseKnowing(argv []string, aliases []string) (parsed, error) {
 	return result, nil
 }
 
-// readFlag reads one flag at argv[index] into flags and returns the next index.
-func readFlag(argv []string, index int, command *Command, flags map[string]string) (int, error) {
+// readFlag reads one flag at argv[index] into the call and returns the next
+// index.
+func readFlag(argv []string, index int, command *Command, call *Call) (int, error) {
 	body := strings.TrimPrefix(argv[index], "--")
 	if body == "" {
 		return index, &UsageError{Command: command, Message: "Bare -- is not a flag."}
 	}
 
-	if equals := strings.Index(body, "="); equals >= 0 {
-		name, value := body[:equals], body[equals+1:]
-		if !knownFlag(command, name) {
-			return index, unknownFlagError(command, name)
-		}
-		flags[name] = value
-		return index + 1, nil
+	name, value, inline := strings.Cut(body, "=")
+	if !knownFlag(command, name) {
+		return index, unknownFlagError(command, name)
 	}
-
-	if !knownFlag(command, body) {
-		return index, unknownFlagError(command, body)
-	}
-
-	if takesValue(command, body) {
+	next := index + 1
+	switch {
+	case inline:
+	case takesValue(command, name):
 		if index+1 >= len(argv) || strings.HasPrefix(argv[index+1], "--") {
 			return index, &UsageError{
 				Command: command,
-				Message: fmt.Sprintf("Flag --%s needs a value.", body),
+				Message: fmt.Sprintf("Flag --%s needs a value.", name),
 			}
 		}
-		flags[body] = argv[index+1]
-		return index + 2, nil
+		value, next = argv[index+1], index+2
+	default:
+		value = "true"
 	}
 
-	flags[body] = "true"
-	return index + 1, nil
+	if repeatable(command, name) {
+		call.Lists[name] = append(call.Lists[name], value)
+	} else if _, given := call.Flags[name]; given {
+		return index, &UsageError{
+			Command: command,
+			Message: fmt.Sprintf("Flag --%s is given twice; give it once.", name),
+		}
+	}
+	call.Flags[name] = value
+	return next, nil
 }
 
 // unknownFlagError explains a flag the command does not take. Silently ignoring

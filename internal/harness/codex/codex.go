@@ -118,6 +118,7 @@ func (codexHarness) Notes() []string {
 }
 
 func (codexHarness) SupportsGitGrant() bool { return true }
+func (codexHarness) SupportsDirGrant() bool { return true }
 
 // CompactFocus: thread/compact/start has no field for one, and the only key
 // that shapes the summary replaces its whole prompt for the whole
@@ -253,6 +254,7 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 	args = harness.AddFlags(args, "--remote", "unix://"+socket)
 	server := newServer(socket, serverArgs, append(append([]string{}, env...), "CODEX_INTERNAL_APP_SERVER_REMOTE_CONTROL_DISABLED=1"), cwd)
 	server.gitWrite = request.Role.GitWrite
+	server.mailbox, server.name, server.stateRoot = request.RoomDir, request.Name, request.Dir
 	server.controlDir = request.ControlDir
 	// The owned server is started with the same program as the terminal: a
 	// person's wrapper sets the environment both halves need — a Codex home,
@@ -372,3 +374,7 @@ func quoteTOML(value string) string {
 	out.WriteByte('"')
 	return out.String()
 }
+
+// ProtectedDirs: Codex keeps its configuration, credentials and sessions in
+// its home, CODEX_HOME or ~/.codex.
+func (codexHarness) ProtectedDirs() []string { return []string{Home()} }

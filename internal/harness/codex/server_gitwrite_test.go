@@ -227,19 +227,32 @@ func TestTaskGitRootsFollowThreadAndPreserveWorktreeMetadata(t *testing.T) {
 	}
 }
 
-func TestTaskGitRootsReadAgainAfterSteerAndManualTurn(t *testing.T) {
+// A grant waits while the thread is active, so it holds from the task's first
+// turn; the roots are read again for each task, and a person's own turn,
+// which dropped them, gets them back with the next.
+func TestTaskGitRootsWaitForIdleAndReadAgainAfterManualTurn(t *testing.T) {
 	repo := gitRepository(t)
 	gitdir := filepath.Join(repo, ".git")
 	existing := []string{repo, t.TempDir()}
 	granted := append(slices.Clone(existing), gitdir)
 	server, captured := gitDeliveryFixture(t, role.Main,
 		gitReadFixture{thread: gitThreadFixture(repo, existing, "active")},
+		gitReadFixture{thread: gitThreadFixture(repo, existing, "idle")},
 		gitReadFixture{thread: gitThreadFixture(repo, granted, "idle")},
 		gitReadFixture{thread: gitThreadFixture(repo, existing, "idle")},
 	)
+	result := server.Deliver(context.Background(), inbox.Message{ID: "git-task", Kind: inbox.Task, GrantGit: true, Text: "do the work"})
+	if result.State != inbox.Pending || !strings.Contains(result.Detail, "idle") {
+		t.Fatalf("an active thread took the grant: %+v", result)
+	}
+	select {
+	case params := <-captured:
+		t.Fatalf("steered into the active turn: %v", params)
+	default:
+	}
 	roots, result := deliverGitTask(t, server, captured, inbox.Task)
-	if !slices.Equal(roots, granted) || !strings.Contains(result.Detail, "subsequent turns") {
-		t.Fatalf("steer roots=%q result=%+v", roots, result)
+	if !slices.Equal(roots, granted) || !strings.Contains(result.Detail, "Git metadata roots added") {
+		t.Fatalf("idle roots=%q result=%+v", roots, result)
 	}
 	roots, result = deliverGitTask(t, server, captured, inbox.Task)
 	if roots != nil || result.Detail != "" {

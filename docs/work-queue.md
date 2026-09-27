@@ -121,45 +121,19 @@ Codex's plan tool in [research-codex.md](research-codex.md#the-plan-tool) and
 
 The remaining entries of [harness-features.md](harness-features.md), in its order.
 
-## Next: a directory grant with a task
+## Next: a directory grant for Claude Code
 
-`rewake send <worker> --grant-dir <dir> "task"` — main gives a worker write access to a
-directory outside its workspace for that task, as `--grant-git` does for Git metadata
-([git-grants.md](git-grants.md)). The owner decided on September 27, 2026:
+Stage 2 of the directory grant ([grants.md](grants.md)). Stage 1 — the flags, the two
+tiers, the recheck and idle wait at delivery, the journal and taking a grant back, and
+Codex's roots — landed on September 27, 2026; until stage 2 a grant to a Claude Code
+session is refused with exit 1. Settled with the owner the same day, after research:
 
-- the flag is `--grant-dir`, repeatable; `--grant-git` stays a flag of its own, and the
-  two combine for a worker that writes and commits in a neighbouring checkout;
-- every role may receive it, general included;
-- rewake takes back what it granted at the next delivery after the task is reported on,
-  which the documentation, `docs/flow.md` among it, has to say plainly: the grant lives at
-  least until the report, a person's own turn in the terminal drops it at once, and a
-  cold resume can bring it back;
-- a task with a grant that arrives during a turn waits for the worker to be idle, so the
-  grant holds from its first turn; the same applies to `--grant-git`.
-
-Settled the same day, after research on both harnesses:
-
-- **Two tiers of refusal.** A hard tier, which a directory may not equal, lie inside or
-  contain: rewake's state directory, `~/.config/rewake` and the directory of the rewake
-  binary; each harness's own configuration (`~/.codex`, `~/.claude*`,
-  `~/.local/share/claude`), named by the harness itself; login keys (`~/.ssh`,
-  `~/.gnupg`, `~/.aws`, `~/.kube`, `~/.docker`, `~/.password-store`); every directory on
-  `PATH` and git, systemd, autostart and environment.d configuration under `~/.config`;
-  and the system directories. A broad tier, matched exactly and granted only with
-  `--grant-dir-broad <dir>`: `/mnt`, `/media`, each mounted drive, each direct child of
-  `$HOME`, and any `~/.config/<app>` that holds a `credentials` file. The owner chose the
-  flexible form: service credentials are sensitive but writing there does not raise an
-  agent's own powers, so they are confirmed rather than refused. A grant is for writing;
-  reading stays with the harness. An owner file of extra rules comes later, when a case
-  needs it.
 - **Claude Code takes a directory into a running session** through the `PermissionRequest`
   hook in the `--settings` layer rewake already passes: `allow` with `addDirectories`
   (session), taken back with `removeDirectories`; a cold resume needs `--add-dir` from
   rewake while the grant lives. Seen live on 2.1.280 on September 27, 2026. On Claude the
   grant removes prompts for file tools and is not a boundary for an approved shell command.
-- **`rewake codex --add-dir` is refused** with a pointer to `--grant-dir`: from Codex 0.156
-  the terminal refuses `--add-dir` and `writable_roots` beside `--remote` (seen live on
-  0.157.1).
+- An owner file of extra rules for the tiers comes later, when a case needs it.
 
 ## Also queued, not scheduled
 

@@ -70,6 +70,9 @@ type Server struct {
 	// Opened is closed once the harness can take its first notice. Until then
 	// mail waits, pending, and goes out right after. Nil means from the start.
 	Opened <-chan struct{}
+	// CheckGrant checks a message's granted directories again before it
+	// becomes readable (docs/grants.md). Nil refuses every directory grant.
+	CheckGrant func(Message) error
 
 	// attempts remembers when each pending message was last tried.
 	attempts map[string]time.Time

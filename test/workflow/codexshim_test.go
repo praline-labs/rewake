@@ -86,6 +86,7 @@ type shimSession struct {
 	thread string
 	peers  []*shimPeer
 	turn   turnState
+	roots  shimRoots
 	// interrupted says the one interrupted turn shimInterruptFirst asks for
 	// has been played.
 	interrupted bool
@@ -201,6 +202,7 @@ func (s *shimSession) answer(peer *shimPeer, method string, params json.RawMessa
 		if wrong := unserved("thread/start", params, startShape); wrong != "" {
 			return nil, nil, errors.New(wrong)
 		}
+		s.seedRoots(params)
 		return s.lifecycle(s.thread)
 	case "thread/resume":
 		if wrong := unserved("thread/resume", params, resumeShape); wrong != "" {
@@ -215,6 +217,7 @@ func (s *shimSession) answer(peer *shimPeer, method string, params json.RawMessa
 			// not a success about some other conversation.
 			return nil, nil, fmt.Errorf("no such thread %q", asked)
 		}
+		s.seedRoots(params)
 		return s.lifecycle(asked)
 	case "turn/start":
 		return s.deliveredTurn(params)
@@ -341,8 +344,11 @@ func (s *shimSession) threadDescription(id string) map[string]any {
 		"source":        "cli",
 		"threadSource":  "user",
 		"originator":    "rewake",
-		"status":        map[string]string{"type": "idle"},
+		"status":        s.currentStatus(),
 		"turns":         []any{},
+	}
+	if environments := s.environments(); environments != nil {
+		thread["environments"] = environments
 	}
 	if os.Getenv(shimNoDirectInput) == "" {
 		thread["canAcceptDirectInput"] = true

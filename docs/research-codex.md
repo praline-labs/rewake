@@ -200,6 +200,36 @@ remote-control path. This internal marker and the remote configuration rules
 are version-specific. The later [installed native-mailbox acceptance](native-mailbox-acceptance.md)
 closes the supported launch/delivery path; raw protocol probes alone did not do so.
 
+### Runtime workspace roots
+
+**[verified live; Codex CLI 0.155.1 and 0.157.1; September 26, 2026]** No-provider probes
+against a real app-server in a disposable container, private HOME and CODEX_HOME;
+evidence in `~/.cache/rewake/evidence/2026-09-26/rewake-grant-probe/`. What rewake's
+directory grant ([grants.md](grants.md)) rests on:
+
+- `turn/start` with `runtimeWorkspaceRoots` replaces the thread's roots; the snapshot
+  shows the added directory on both versions. A later `turn/start` without the field
+  keeps them, and so does a failed `thread/compact/start`. A successful compaction was
+  not run.
+- A symlinked root is kept in the spelling it was given, not resolved; so is a root that
+  is `$CODEX_HOME` itself, which the server accepts. Rewake resolves a granted directory
+  and refuses the harness's own configuration before sending.
+- A person's turn in the terminal sends only the launch directory as the roots, and
+  `thread/read` afterwards shows the added root gone.
+- A cold fork (`thread/fork` on a fresh server) starts without the added root. A cold
+  `thread/resume` without the roots field restores it when the grant was given on an
+  established history; a grant on the first turn, whose turn then failed, was lost on
+  cold resume on both versions.
+- The persisted thread settings carry the whole native permission profile with the
+  added root; whether a write under `workspaceWrite` succeeds there was not shown, since
+  the container policy kept restricted execution from running.
+- Beside `--remote` the terminal takes `--add-dir` and `-c
+  sandbox_workspace_write.writable_roots=[…]` on 0.155.1, and on 0.157.1 exits 1 before
+  its first request: `Error: --add-dir is not supported with --remote. Configure
+  additional workspace roots on the server.` and `Error:
+  sandbox_workspace_write.writable_roots overrides are not supported with --remote.
+  Configure additional workspace roots on the server.`
+
 ### The plan tool
 
 **[live against a local Responses stand-in, no model calls; Codex CLI 0.155.1 and

@@ -66,8 +66,8 @@ with `rewake --main --name lead claude`, becoming lead-claude.
    under the room lock if a live main already occupies the room. Explicit
    `--general` and `--write` remain unchanged; a --name prefix never selects a
    role. Main stays silent; write reports like general. Main and write are eligible
-   recipients of explicit Git metadata grants requested by main; selecting a role
-   does not request access. The record and intro say default general for an omitted
+   recipients of explicit Git metadata grants requested by main, and every role of a
+   directory grant ([grants.md](grants.md)); selecting a role does not request access. The record and intro say default general for an omitted
    role flag, or identify the explicit flag.
 5. **The harness command line.** The user's arguments go through untouched.
    rewake adds, for one launch only and never into a config file:
@@ -135,6 +135,12 @@ session's shell, or from a person's shell in the same room. A shell without
    task, and one report settles both. A short tail of the id is enough
    ([delivery-sent.md](delivery-sent.md)).
 
+A task or a question from main may carry a grant: `--grant-git` for Git metadata, or
+`--grant-dir <dir>` for a directory outside the worker's workspace. A granted directory
+is resolved and checked here, before anything is written; a protected one is refused
+with exit 2, a missing one with exit 1, and one the worker can write already is named
+and not carried ([grants.md](grants.md#sending)).
+
 ## Act 3. The wrapper announces it
 
 The recipient's wrapper announces fixed groups. Later mail waits for its own group
@@ -169,12 +175,18 @@ in one notice. A task or a question does not wait, and takes whatever is waiting
      everything ([delivery-adapters.md](delivery-adapters.md#claude-code-adapter)).
    - Codex: call turn/start through the reserved TUI connection/generation with empty
      input and [standalone mailbox output](native-mailbox.md): short notice plus fixed
-     member identities, never full task bodies. For tasks/questions to
-     eligible main/write with explicit --grant-git intent, read current local roots without history and append only
-     missing Git metadata from the thread's working repository. If roots cannot
-     be read, omit the field and explain that in delivery status. No-flag tasks, general and
-     report-only groups never get this grant. It starts idle work or steers the active turn;
-     on steer, new roots apply only to subsequent turns. A successful RPC result means delivered. A stale
+     member identities, never full task bodies. A task or question carrying a grant
+     goes on a notice of its own and waits, pending, while the thread is active, so the
+     grant holds from its first turn; its directories are checked again first, and one
+     that no longer passes fails the task and tells its sender. On an idle thread the
+     adapter reads the current local roots without history and sends them with the
+     granted directories, and with --grant-git (main/write only) the missing Git
+     metadata of the thread's repository. If roots cannot be read, --grant-git alone
+     goes without the field and says so in delivery status; a directory grant fails.
+     No-flag tasks and report-only groups never get a grant. What rewake granted for
+     tasks since reported on is taken out of the roots at the same time
+     ([grants.md](grants.md#taking-a-grant-back)). Other notices start idle work or
+     steer the active turn. A successful RPC result means delivered. A stale
      or unavailable thread fails; it is not silently retargeted or queued. After ACK,
      a best-effort [display-only row](native-mailbox-ui.md) goes only to the owning
      primary TUI. It does not execute a command, add context or change delivery status;
@@ -257,10 +269,14 @@ ignored without changing the parent session's waits.
    whoever holds the name now. The id is derived from the wait, so a retried
    hook writes the same report once. Retries use the stored text, recipients
    and message ids even when new work arrived between attempts.
-3. **Forget the reported messages** after all reports are written and the turn
+3. **A grant ends.** A directory granted with a task lives at least until this
+   report. Rewake takes it back at the next delivery to the session after it, not at
+   the report itself. A person's own turn in the terminal drops it at once, and a cold
+   resume of the conversation can bring it back ([grants.md](grants.md#how-long-a-grant-lives)).
+4. **Forget the reported messages** after all reports are written and the turn
    receipt is marked done. Cleanup matches the original run and wait; newly
    read messages remain owed to the next result.
-4. **The sender is woken** by its own wrapper, through Act 3, with
+5. **The sender is woken** by its own wrapper, through Act 3, with
    `Rewake: write-codex finished, 1 new message(s)`. The sender reads it with
    `rewake inbox`; a `finished` asks for nothing back, so the exchange ends
    here. The main session never reports successful turns, which is

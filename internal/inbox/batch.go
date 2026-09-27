@@ -33,6 +33,7 @@ func announcement(messages []Message) Message {
 }
 
 func (s *Server) deliverGroup(ctx context.Context, pending []Message) {
+	pending = grantAlone(s.checkGrants(pending))
 	if len(pending) == 0 {
 		return
 	}
@@ -54,7 +55,7 @@ func (s *Server) deliverGroup(ctx context.Context, pending []Message) {
 			seen[member.ID] = true
 		}
 		for _, member := range preparer.pendingMessages(groupCtx) {
-			if !seen[member.ID] {
+			if !seen[member.ID] && joins(pending, member) {
 				pending = append(pending, member)
 			}
 		}
@@ -136,7 +137,7 @@ func (s *Server) deliverGroup(ctx context.Context, pending []Message) {
 				s.finish(member, s.outcomes[member.ID])
 			}
 		} else {
-			s.finish(member, outcome)
+			s.failGranted(member, outcome)
 		}
 	}
 }
@@ -152,7 +153,7 @@ func (s *Server) prepared(message Message, read, answered, expired bool, err err
 	}
 	if errors.Is(err, ErrThreadUnavailable) {
 		_, readableErr := os.Stat(filepath.Join(state.UnreadPath(s.Dir, s.Name), message.ID+".json"))
-		s.finish(message, Result{State: Failed, Detail: err.Error(), ReportAvailable: IsReport(message) && readableErr == nil && !expired})
+		s.failGranted(message, Result{State: Failed, Detail: err.Error(), ReportAvailable: IsReport(message) && readableErr == nil && !expired})
 		return false
 	}
 	if err != nil {
@@ -164,7 +165,7 @@ func (s *Server) prepared(message Message, read, answered, expired bool, err err
 		return false
 	}
 	if expired {
-		s.finish(message, Result{State: Failed, Detail: "expired before the session could take it"})
+		s.failGranted(message, Result{State: Failed, Detail: "expired before the session could take it"})
 		return false
 	}
 	return true

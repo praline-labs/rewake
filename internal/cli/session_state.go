@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/iiiokojiadbi/rewake/internal/grant"
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/role"
@@ -35,6 +36,9 @@ func sessionSnapshot(dir, name, epoch string) *sessionstate.Snapshot {
 
 type sessionView struct {
 	Telemetry *sessionstate.Snapshot `json:"telemetry,omitempty"`
+	// Grants are the directories rewake added to this run's writable roots
+	// for a task, live and ended (docs/grants.md).
+	Grants []grant.Entry `json:"grants,omitempty"`
 	registry.Session
 }
 

@@ -26,7 +26,12 @@ import (
 
 // Message is one delivery, as it waits on disk.
 type Message struct {
-	GrantGit     bool                   `json:"grantGit,omitempty"`
+	GrantGit bool `json:"grantGit,omitempty"`
+	// GrantDirs are the directories main gave the reader write access to for
+	// this task, resolved when it was sent; GrantBroad are those of them main
+	// confirmed as broad (docs/grants.md).
+	GrantDirs    []string               `json:"grantDirs,omitempty"`
+	GrantBroad   []string               `json:"grantBroad,omitempty"`
 	Compaction   *CompactionNotice      `json:"compaction,omitempty"`
 	Departure    *DepartureNotice       `json:"departure,omitempty"`
 	SenderState  *sessionstate.Snapshot `json:"senderState,omitempty"`
@@ -122,6 +127,13 @@ func KindOf(message Message) Kind {
 	return message.Kind
 }
 
+// CarriesGrant says whether a message gives its reader a permission for its
+// task. Such a message is announced on its own, and only while its reader is
+// idle, so the permission holds from the task's first turn (docs/grants.md).
+func CarriesGrant(message Message) bool {
+	return message.GrantGit || len(message.GrantDirs) > 0
+}
+
 // Owed reports whether reading a message owes its sender a report when the
 // reader's turn ends. A note asks for nothing, and a report is an answer
 // already: waiting on one would have two sessions report to each other forever.
@@ -172,6 +184,9 @@ type Result struct {
 	// Withdrawn marks a failed result its sender caused by withdrawing the
 	// message: final like a read, whatever the harness says afterwards.
 	Withdrawn bool
+	// GrantApplied lists the granted directories the harness took with the
+	// notice; Detail says what became of the others.
+	GrantApplied []string
 }
 
 // Status is the Result as the sender reads it back.
@@ -181,6 +196,7 @@ type Status struct {
 	Via             string    `json:"via,omitempty"`
 	Detail          string    `json:"detail,omitempty"`
 	Withdrawn       bool      `json:"withdrawn,omitempty"`
+	GrantApplied    []string  `json:"grantApplied,omitempty"`
 	At              time.Time `json:"at"`
 }
 
@@ -203,7 +219,7 @@ func (s Status) outcome() State {
 }
 
 func (s Status) result() Result {
-	return Result{State: s.State, Via: s.Via, Detail: s.Detail, ReportAvailable: s.ReportAvailable, Withdrawn: s.Withdrawn}
+	return Result{State: s.State, Via: s.Via, Detail: s.Detail, ReportAvailable: s.ReportAvailable, Withdrawn: s.Withdrawn, GrantApplied: s.GrantApplied}
 }
 
 // isFinal is final for an outcome the server already holds.
@@ -307,7 +323,7 @@ func Await(dir, to, id string, timeout time.Duration) (Status, bool) {
 
 // writeStatus records what happened to a message.
 func writeStatus(dir, to, id string, result Result) error {
-	status := Status{State: result.State, Via: result.Via, Detail: result.Detail, ReportAvailable: result.ReportAvailable, Withdrawn: result.Withdrawn, At: time.Now()}
+	status := Status{State: result.State, Via: result.Via, Detail: result.Detail, ReportAvailable: result.ReportAvailable, Withdrawn: result.Withdrawn, GrantApplied: result.GrantApplied, At: time.Now()}
 	encoded, err := json.MarshalIndent(status, "", "  ")
 	if err != nil {
 		return err

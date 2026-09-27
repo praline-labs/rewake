@@ -144,8 +144,9 @@ func inboxLines(messages []messageView) []string {
 		}
 		lines = append(lines,
 			fmt.Sprintf("from %s · %s · %s%s", message.From, inbox.KindOf(message.Message), message.CreatedAt.Local().Format("15:04:05"), relation(message.Message)),
-			message.Text,
 		)
+		lines = append(lines, grantLines(message.Message)...)
+		lines = append(lines, message.Text)
 		if message.ThreadChanged {
 			lines = append(lines, inbox.ThreadChangedWarning)
 		}
@@ -164,4 +165,14 @@ func relation(message inbox.Message) string {
 		parts = append(parts, " · replaces "+message.Replaces)
 	}
 	return strings.Join(parts, "")
+}
+
+// grantLines name each directory the task lets its reader write: the roots
+// changed without a word in the terminal, so the reader learns it here.
+func grantLines(message inbox.Message) []string {
+	lines := make([]string, 0, len(message.GrantDirs))
+	for _, dir := range message.GrantDirs {
+		lines = append(lines, "grant: write "+dir)
+	}
+	return lines
 }

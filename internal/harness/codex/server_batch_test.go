@@ -3,8 +3,6 @@ package codex
 import (
 	"context"
 	"encoding/json"
-	"path/filepath"
-	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -15,7 +13,9 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/role"
 )
 
-func TestMixedBatchSharesNativeACKAndUnionsTaskGrants(t *testing.T) {
+// A grant goes on a notice of its own (internal/inbox, grants_test.go), so a
+// group here carries none.
+func TestMixedBatchSharesNativeACK(t *testing.T) {
 	for _, part := range []role.Role{role.General, role.Write, role.Main} {
 		for _, work := range []bool{false, true} {
 			label := "reports"
@@ -23,18 +23,11 @@ func TestMixedBatchSharesNativeACKAndUnionsTaskGrants(t *testing.T) {
 				label = "mixed"
 			}
 			t.Run(part.ID+"/"+label, func(t *testing.T) {
-				repo := gitRepository(t)
-				roots := []string{repo, t.TempDir()}
-				grant := work && part.GitWrite
-				var reads []gitReadFixture
-				if grant {
-					reads = []gitReadFixture{{thread: gitThreadFixture(repo, roots, "idle")}}
-				}
 				ack := make(chan struct{})
 				var release sync.Once
 				releaseACK := func() { release.Do(func() { close(ack) }) }
 				defer releaseACK()
-				backend, captured := gitDeliveryFixtureWithAck(t, part, func() { <-ack }, reads...)
+				backend, captured := gitDeliveryFixtureWithAck(t, part, func() { <-ack })
 				dir := t.TempDir()
 				var members []inbox.Message
 				kinds := []inbox.Kind{inbox.Finished, inbox.Note, inbox.Error, inbox.Stopped}
@@ -42,7 +35,7 @@ func TestMixedBatchSharesNativeACKAndUnionsTaskGrants(t *testing.T) {
 					kinds = []inbox.Kind{inbox.Finished, inbox.Question, inbox.Note, inbox.Task}
 				}
 				for _, kind := range kinds {
-					m := inbox.Message{ID: inbox.NewID(), From: "sender", FromEpoch: "sender-epoch", To: "receiver", ToEpoch: "epoch", Kind: kind, GrantGit: grant && (kind == inbox.Task || kind == inbox.Question), Text: "Brief " + string(kind) + "\nPRIVATE FULL BODY " + string(kind), CreatedAt: time.Now()}
+					m := inbox.Message{ID: inbox.NewID(), From: "sender", FromEpoch: "sender-epoch", To: "receiver", ToEpoch: "epoch", Kind: kind, Text: "Brief " + string(kind) + "\nPRIVATE FULL BODY " + string(kind), CreatedAt: time.Now()}
 					if err := inbox.Put(dir, m); err != nil {
 						t.Fatal(err)
 					}
@@ -74,12 +67,8 @@ func TestMixedBatchSharesNativeACKAndUnionsTaskGrants(t *testing.T) {
 				}
 				var gotRoots []string
 				_ = json.Unmarshal(params["runtimeWorkspaceRoots"], &gotRoots)
-				if grant {
-					if !slices.Equal(gotRoots, append(slices.Clone(roots), filepath.Join(repo, ".git"))) {
-						t.Fatalf("mixed task grant replaced roots: %q", gotRoots)
-					}
-				} else if gotRoots != nil {
-					t.Fatal("report-only/ordinary role gained roots")
+				if gotRoots != nil {
+					t.Fatal("a group without a grant carried roots")
 				}
 				for _, m := range members {
 					if status, ok := inbox.ReadStatus(dir, m.To, m.ID); ok && status.State == inbox.Delivered {
