@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	pathpkg "path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -75,6 +76,17 @@ func read(path string) (Record, error) {
 	}
 	if !ValidName(record.Name) || !filepath.IsAbs(record.Path) || filepath.Clean(record.Path) != record.Path {
 		return Record{}, fmt.Errorf("%s is not a worktree record", path)
+	}
+	// A branch other than the name would have land and finish move and
+	// delete a branch rewake did not make; an included path leading out of
+	// the checkout would have rm take a file there for a copy of its own.
+	if record.Branch != "" && record.Branch != record.Name {
+		return Record{}, fmt.Errorf("%s names the branch %q for the worktree %q", path, record.Branch, record.Name)
+	}
+	for _, file := range record.Included {
+		if !filepath.IsLocal(file) || pathpkg.Clean(file) != file {
+			return Record{}, fmt.Errorf("%s lists %q, which is not a path within the checkout", path, file)
+		}
 	}
 	return record, nil
 }

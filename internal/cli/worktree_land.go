@@ -41,15 +41,19 @@ func landWorktree(ctx *Context, call Call, record worktree.Record) error {
 }
 
 // landRecord lands a checkout's branch and turns a refusal into the answer an
-// agent acts on: a wrong call exits 2, the worktree's state 1.
+// agent acts on: a wrong call exits 2, the state of the worktree or its
+// repository 1.
 func landRecord(call Call, record worktree.Record) (worktreeLanding, error) {
 	landing, err := worktree.Land(record, call.Flag("into", ""))
 	var unusable *worktree.UnusableError
+	var blocked *worktree.StateError
 	var diverged *worktree.DivergedError
 	var refused *worktree.RefusedError
 	switch {
 	case errors.As(err, &unusable):
 		return worktreeLanding{}, &UsageError{Command: call.Command, Message: unusable.Error() + "."}
+	case errors.As(err, &blocked):
+		return worktreeLanding{}, &FailedError{Message: blocked.Error() + "."}
 	case errors.As(err, &diverged):
 		return worktreeLanding{}, &FailedError{Message: fmt.Sprintf("%s. rewake does not rewrite history: rebase the branch onto %s in the worktree — git -C %s rebase %s — then land again.",
 			diverged.Error(), diverged.Target, diverged.Path, diverged.Target)}

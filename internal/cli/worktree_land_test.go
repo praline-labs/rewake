@@ -54,7 +54,7 @@ func TestWorktreeLandReportsWhatMoved(t *testing.T) {
 	if code != ExitFailed || !strings.Contains(errOut, "rebase") || !strings.Contains(errOut, "git -C "+record.Path+" rebase main") {
 		t.Errorf("diverged: %d %s", code, errOut)
 	}
-	if code, _, errOut := run("worktree", "land", "fix", "--into", "missing"); code != ExitUsage || !strings.Contains(errOut, "no branch missing") {
+	if code, _, errOut := run("worktree", "land", "fix", "--into", "missing"); code != ExitFailed || !strings.Contains(errOut, "no branch missing") {
 		t.Errorf("--into missing: %d %s", code, errOut)
 	}
 }

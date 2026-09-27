@@ -33,7 +33,7 @@ func TestASessionStartedInACheckoutHoldsIt(t *testing.T) {
 	runningAt(t, trees, "neighbor", record.Path+"-copy")
 
 	code, _, errOut := run("worktree", "rm", "visited")
-	if code != ExitUsage || !strings.Contains(errOut, "still run in it: visitor in room elsewhere") || strings.Contains(errOut, "neighbor") {
+	if code != ExitFailed || !strings.Contains(errOut, "still run in it: visitor in room elsewhere") || strings.Contains(errOut, "neighbor") {
 		t.Fatalf("rm with a visitor: %d %s", code, errOut)
 	}
 	if _, out, _ := run("worktree", "ls"); !strings.Contains(out, "visitor (running)") {
@@ -57,7 +57,7 @@ func TestWorktreeRmKeepsAMissingCheckoutUnlessForced(t *testing.T) {
 		}
 	}
 	code, _, errOut := run("worktree", "rm", "moved")
-	if code != ExitUsage || !strings.Contains(errOut, "git worktree repair") || !strings.Contains(errOut, "--force") {
+	if code != ExitFailed || !strings.Contains(errOut, "git worktree repair") || !strings.Contains(errOut, "--force") {
 		t.Fatalf("rm of a missing checkout: %d %s", code, errOut)
 	}
 	if _, out, _ := run("worktree", "ls"); !strings.Contains(out, "missing") {
@@ -81,7 +81,7 @@ func TestWorktreeRmOfACheckoutWhoseRepositoryIsGone(t *testing.T) {
 		t.Fatal(err)
 	}
 	code, _, errOut := run("worktree", "rm", "orphan")
-	if code != ExitUsage || !strings.Contains(errOut, "is gone, so git cannot tell") || !strings.Contains(errOut, "--force") {
+	if code != ExitFailed || !strings.Contains(errOut, "is gone, so git cannot tell") || !strings.Contains(errOut, "--force") {
 		t.Fatalf("rm without its repository: %d %s", code, errOut)
 	}
 	if code, _, errOut := run("worktree", "rm", "orphan", "--force"); code != ExitOK {
@@ -108,7 +108,7 @@ func TestWorktreeRmKeepsIgnoredFiles(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(record.Path, ".env"), []byte("TOKEN=x\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if code, _, errOut := run("worktree", "rm", "env"); code != ExitUsage || !strings.Contains(errOut, "files git ignores") {
+	if code, _, errOut := run("worktree", "rm", "env"); code != ExitFailed || !strings.Contains(errOut, "files git ignores") {
 		t.Fatalf("rm with a .env: %d %s", code, errOut)
 	}
 	if _, err := os.Stat(filepath.Join(record.Path, ".env")); err != nil {

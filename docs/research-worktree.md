@@ -25,6 +25,29 @@ harness works where it is started. rewake takes the long `--worktree` for its ow
 checkout and refuses `-w`, `--tmux` and every continuation beside it
 ([worktree.md](worktree.md#the-launch)).
 
+**[`claude --help`, Claude Code 2.1.280; September 27, 2026]** Beside those: the
+subcommands `attach <id>`, which opens a background session in this terminal, and
+`respawn [id]`, which restarts one; `--cloud [description|session_id|url]`, which
+creates a cloud session or attaches to an existing one; and `--session-id <uuid>`, "use
+a specific session ID for the conversation". The short flags taking a value are `-d`
+(`--debug [filter]`), `-n` (`--name <name>`), `-r` (`--resume [value]`) and `-w`
+(`--worktree [name]`); `-c`, `-h`, `-p` and `-v` take none. rewake refuses `attach`,
+`respawn` and `--cloud` beside `--worktree`, and reads a cluster of short flags as ending
+at the first letter that takes a value.
+
+**[live, Claude Code 2.1.280, a scratch home with no login, no model call; September
+27, 2026]** A word after `--` is not taken for a subcommand: `claude logs zz9` ran the
+subcommand and answered that no job matches, `claude -- logs zz9` started a session
+with it as the prompt and stopped at the missing login. So a prompt that is the bare
+word `attach` goes after `--`, as the refusal says.
+
+**[reference source, `main.tsx:1276-1300`; commit of April 4, 2026, its version not
+recorded; read September 27, 2026, not run]** `--session-id` starts a new conversation
+under that id: an id already in use is refused ("Session ID … is already in use"), and
+beside `--continue` or `--resume` it is accepted only with `--fork-session`, which
+rewake refuses anyway. So it is not a continuation, and rewake lets it through with
+`--worktree`.
+
 **[reference source, `utils/crossProjectResume.ts`, `utils/sessionRestore.ts`,
 `utils/config.ts`; commit of April 4, 2026, its version not recorded; read September 27,
 2026, not run]** A conversation is kept with the directory it ran in. Resuming one begun

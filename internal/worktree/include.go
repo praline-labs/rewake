@@ -36,7 +36,8 @@ func include(record Record) Record {
 		}
 		return record
 	}
-	rules := parseIgnoreRules(string(text))
+	rules, unread := parseIgnoreRules(string(text))
+	record.Skipped = append(record.Skipped, unread...)
 	if len(rules) == 0 {
 		return record
 	}
@@ -193,10 +194,53 @@ func sameCopy(record Record, file string) bool {
 	if !slices.Contains(record.Included, file) {
 		return false
 	}
-	copied, err := os.ReadFile(filepath.Join(record.Path, filepath.FromSlash(file)))
+	same, err := sameContent(filepath.Join(record.Path, filepath.FromSlash(file)), filepath.Join(record.Source, filepath.FromSlash(file)))
+	return err == nil && same
+}
+
+// sameContent says whether two regular files hold the same bytes. ls, rm and
+// finish ask it of every copy, and a copy can be large, so it compares sizes
+// first and then reads both a block at a time rather than whole. Anything but a
+// regular file is not a copy rewake made, and opening one — a pipe — could wait
+// forever.
+func sameContent(one, other string) (bool, error) {
+	oneInfo, err := os.Lstat(one)
 	if err != nil {
-		return false
+		return false, err
 	}
-	original, err := os.ReadFile(filepath.Join(record.Source, filepath.FromSlash(file)))
-	return err == nil && bytes.Equal(copied, original)
+	otherInfo, err := os.Lstat(other)
+	if err != nil {
+		return false, err
+	}
+	if !oneInfo.Mode().IsRegular() || !otherInfo.Mode().IsRegular() || oneInfo.Size() != otherInfo.Size() {
+		return false, nil
+	}
+	a, err := os.Open(one)
+	if err != nil {
+		return false, err
+	}
+	defer func() { _ = a.Close() }()
+	b, err := os.Open(other)
+	if err != nil {
+		return false, err
+	}
+	defer func() { _ = b.Close() }()
+	aBlock, bBlock := make([]byte, 64<<10), make([]byte, 64<<10)
+	for {
+		aRead, aErr := io.ReadFull(a, aBlock)
+		bRead, bErr := io.ReadFull(b, bBlock)
+		if aRead != bRead || !bytes.Equal(aBlock[:aRead], bBlock[:bRead]) {
+			return false, nil
+		}
+		aDone := errors.Is(aErr, io.EOF) || errors.Is(aErr, io.ErrUnexpectedEOF)
+		bDone := errors.Is(bErr, io.EOF) || errors.Is(bErr, io.ErrUnexpectedEOF)
+		switch {
+		case aErr != nil && !aDone:
+			return false, aErr
+		case bErr != nil && !bDone:
+			return false, bErr
+		case aDone || bDone:
+			return aDone && bDone, nil
+		}
+	}
 }

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -309,6 +310,12 @@ func TestClaudeHandsItsLongWorktreeFlagToRewake(t *testing.T) {
 		{"--worktree=a", "--resume=0199", "--fork-session"},
 		{"--worktree", "--from-pr", "12"},
 		{"--worktree", "--teleport"},
+		{"--worktree", "-pw"},
+		{"--worktree", "-prID"},
+		{"--worktree", "--cloud"},
+		{"--worktree", "--cloud=0199"},
+		{"--worktree", "attach", "a1b2"},
+		{"--worktree", "--model", "m", "respawn"},
 	} {
 		err := lab.launch(t, harnessProbe(t, "claude"), lab.repo, args...)
 		var usage *UsageError
@@ -319,8 +326,18 @@ func TestClaudeHandsItsLongWorktreeFlagToRewake(t *testing.T) {
 			t.Errorf("%q left %d checkouts", args, len(records))
 		}
 	}
-	after := harnessProbe(t, "claude")
-	if err := lab.launch(t, after, lab.repo, "--worktree=text", "--", "--continue"); err != nil {
-		t.Errorf("a prompt after --: %v", err)
+	// A prompt after --, a value of -d or -n that holds c, and the id of a new
+	// conversation are not continuations.
+	for index, args := range [][]string{
+		{"--", "--continue"},
+		{"--", "attach"},
+		{"-dcache"},
+		{"-ncircle"},
+		{"--session-id", "0199"},
+	} {
+		named := append([]string{fmt.Sprintf("--worktree=kept-%d", index)}, args...)
+		if err := lab.launch(t, harnessProbe(t, "claude"), lab.repo, named...); err != nil {
+			t.Errorf("%q: %v", named, err)
+		}
 	}
 }

@@ -8,16 +8,16 @@ lands and finishes it, and that a Claude Code launch gets the same worktree.
 
 ## What was built
 
-- **A branch per worktree.** `--worktree=<name>` makes the checkout with
-  `git worktree add -b <name>` from HEAD; without a name the generated one is `wt-` and
+- **A branch per worktree.** `--worktree=<name>` makes the branch `<name>` at HEAD and
+  checks it out with `git worktree add`; without a name the generated one is `wt-` and
   six hex digits. A branch of that name already in the repository refuses the launch
   with exit 2 and the next step: another name, or `rewake worktree ls` when the worktree
   is already there. `HEAD` and forty hex digits are no longer names. The record keeps
   the branch; `ls` shows it, and says when the checkout has left it.
 - **`rewake worktree land <name> [--into <branch>]`.** A fast-forward of the branch
   checked out in the source, or of `--into`, to the worktree's branch: hashes kept, the
-  worktree and its session untouched, any number of times. Checked out somewhere, the
-  target moves with `git merge --ff-only` there, and git's refusal over a dirty source is
+  worktree and its session untouched, any number of times. Checked out in the source,
+  the target moves with `git merge --ff-only` there, and git's refusal over a dirty source is
   passed on with what to do; checked out nowhere, with `git update-ref` against the value
   read. A target that moved on is refused with exit 1 and the rebase to run in the
   worktree. The answer names the commits moved and the old and new commit, also as
@@ -68,7 +68,7 @@ lands and finishes it, and that a Claude Code launch gets the same worktree.
     the hooks, as the person's own merge would run them. Filters stay on, so a file a
     large-file filter keeps is not checked out as its pointer;
   - the name is claimed with an exclusive record before git runs, and a failed
-    `git worktree add` takes back the branch its `-b` made, the empty directory and the
+    `git worktree add` takes back the branch the claim made, the empty directory and the
     record;
   - rm keeps asking whether a detached HEAD's commits are held, which Codex's removal
     does not;
@@ -106,13 +106,72 @@ finish while the worker runs and a final finish, with four more mutants; the new
 ([testing-cases.md](../testing-cases.md#a-worktree-for-a-codex-launch),
 [its Claude Code case](../testing-cases.md#a-worktree-for-a-claude-code-launch)).
 
+## Review
+
+Review on the Claude Code side and acceptance on the Codex side, of `cb9a432`: neither
+accepted it, and neither found a path through land, finish or rm that loses committed
+work. What they found, and what was done:
+
+- **A `.worktreeinclude` line that made no expression crashed the launch** after the
+  checkout was made: `[z-a]` compiled with `MustCompile` panicked, leaving the checkout,
+  its branch and its record, and a second launch of the name met "exists". The file is
+  the repository's content, a stranger's too. Now such a line is named on stderr and
+  left out, and the other lines apply; a fuzz test and a table hold it. A named class
+  `[[:alpha:]]` ended at its first `]`; it is read as git reads it now, and so is a
+  backslash inside brackets.
+- **`land --into` a branch another checkout held merged there**, changing a live
+  worker's files and HEAD with exit 0 — the worktree's own among them, once its worker
+  had switched to the target; seen live on Codex 0.155.1 and 0.157.1. With several
+  checkouts it took the first, not the source. Decided September 27, 2026: the merge
+  runs only in the source, compared with symbolic links resolved; any other checkout
+  holding the target refuses with exit 1 and the merge to run there.
+- **A branch under a rebase or a bisect was moved by `update-ref`**: git lists that
+  checkout as detached, so it looked checked out nowhere, and the rebase's last step
+  would fail. Now land reads `rebase-merge/head-name`, `rebase-apply/head-name` and
+  `BISECT_START` in every checkout's Git directory, as git does before moving a branch,
+  and refuses.
+- **The comparison of copies read both files whole** on every ls, rm and finish. It
+  compares sizes, then a block at a time, and no longer opens what is not a regular
+  file — a pipe in the source would have waited forever.
+- **Claude Code's continuations were incomplete.** `claude --help` of 2.1.280 lists
+  `attach <id>` and `respawn [id]`, which open a background session where it was
+  started, and `--cloud`, which starts or attaches a session that works in no local
+  checkout: all three are refused beside `--worktree`. `--session-id` names a new
+  conversation's id, and Claude Code refuses one in use: it is not refused, and why is
+  in [research-worktree.md](../research-worktree.md#continuing-a-conversation-and-trust).
+  A cluster of short flags is read as Claude Code's parser reads it: a letter taking a
+  value ends it, so `-dcache` and `-ncircle` are no longer refused, and `-pw` now is.
+- **Exit codes.** Decided September 27, 2026: a refusal over state exits 1 in rm, land
+  and finish alike — rm's "is kept" refusals exited 2, a change of rm's contract — and
+  so do land's refusals of a repository, branch or source gone, a source on a detached
+  HEAD, a target the repository lacks, and a record of an earlier build. 2 is left to a
+  wrong call: a worktree name that names none, a branch name git refuses, `--into` the
+  worktree's own branch.
+- **A branch's tip matched a branch below its name**: `for-each-ref refs/heads/foo`
+  lists `refs/heads/foo/bar`. Only the line of the exact name counts now. `rev-parse
+  --verify` was proposed and not taken: a full name it does not find it looks up again
+  under `refs/heads/` and the rest, and takes a branch named `refs/heads/foo` for the
+  missing `foo` (seen on git 2.43).
+- **Reading a record** now also requires its branch to be its name, and each included
+  path to lie within the checkout; another record is not listed.
+- **A branch made between the claim and `git worktree add -b`** failed the add, and
+  taking the add back deleted it. The claim now makes the branch itself with
+  `update-ref` against an empty old value, which creates it only when absent, and a
+  failed add takes back only that branch; the path a failed add leaves is removed only
+  when it is an empty directory.
+- rm's help says what its reachability refusal now is: a HEAD on no branch, tag or
+  remote-tracking ref.
+
+Every fix of the first four points and of the claim has a test that fails without it.
+The acceptance run also confirmed live, on Codex 0.155.1 and 0.157.1: trust and
+`AGENTS.md` work in a checkout on its branch without a new trust prompt; a plain land
+leaves the worker's index, HEAD and files as they were; finish with the worker running
+refuses with exit 1 before landing; no git variable reaches Codex; and a conversation
+begun in a checkout resumes there
+([research-codex.md](../research-codex.md#--worktree-with-a-remote-terminal)), which
+closes the item queued for it.
+
 ## What stays open
 
-- Review on the same harness as the orchestrator, then acceptance on the Codex side, as
-  for every change to the Codex launch path.
-- The live check of continuing a conversation inside a rewake worktree
-  ([work-queue.md](../work-queue.md)).
-- rm refuses with exit 2, finish with exit 1 for the same reasons: rm's code was fixed
-  before finish existed.
 - The Claude Code facts behind the continuation refusal and trust were read in the
   reference source, not run.

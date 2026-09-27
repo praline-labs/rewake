@@ -35,7 +35,8 @@ bring the work back, and that Claude Code launches get the same checkout.
 - **The checkout.** The repository is the one holding the launch directory — for Codex
   `-C` or `--cd` when given, else the current one; Claude Code has no such flag, so for
   it the current one. rewake adds a checkout of its HEAD commit on a new branch of the
-  checkout's name, with `git worktree add -b`: the branch checked out in the source
+  checkout's name, made when the name is claimed and checked out with
+  `git worktree add`: the branch checked out in the source
   stays free, a second launch from the same place does not collide with the first, and
   the commits a session makes sit on a branch rather than on a detached HEAD, where
   nothing would hold them. A branch of that name already in the repository refuses the
@@ -85,10 +86,16 @@ bring the work back, and that Claude Code launches get the same checkout.
   terminal takes as a continuation. Neither 0.155.1 nor 0.157.1 has another spelling: no
   alias, and a bare `--last` is refused by the parser. For Claude Code it is
   `--continue`/`-c`, `--resume`/`-r`, `--from-pr`, `--teleport` and `--fork-session`,
-  and a cluster of short flags holding `c` or `r`: a conversation is kept with its
-  directory, so in a new checkout `--continue` finds none and `--resume` of one begun
-  elsewhere leads back out (read in its source, not run;
-  [research-worktree.md](research-worktree.md#continuing-a-conversation-and-trust)). A prompt or an
+  a cluster of short flags in which `c` or `r` acts as a flag, and the subcommands
+  `attach` and `respawn`, which open a background session where it was started: a
+  conversation is kept with its directory, so in a new checkout `--continue` finds none
+  and `--resume` of one begun elsewhere leads back out (read in its source, not run;
+  [research-worktree.md](research-worktree.md#continuing-a-conversation-and-trust)). In
+  a cluster a letter that takes a value — `-d`, `-n`, `-r`, `-w` — ends the flags, so
+  `-dcache`, a debug filter, and `-ncircle`, a name, are not refused, while `-pc` and
+  `-rID` are. `--session-id` is no continuation: it names the id of a new conversation,
+  and Claude Code refuses an id already in use. `--cloud` is refused as well, new or
+  attached: a cloud session works in none of this machine's checkouts. A prompt or an
   option's value that is the bare word is refused too; the refusal says such a prompt
   goes after `--`, where it is text (decided September 26, 2026). The refusal spells out
   both ways on: a new conversation with `--worktree`, or the continuation where the
@@ -118,7 +125,7 @@ bring the work back, and that Claude Code launches get the same checkout.
   runs to its end after rewake has gone, and its checkout is left with a record and no
   owner, which `ls` shows and rm removes (kept on purpose, September 26, 2026). Most
   come before anything is made: the flag given twice or as `--worktree=`, a
-  continuation, `-w` or `--tmux` beside it, Codex's `--remote`, a profile or
+  continuation, `-w`, `--tmux` or `--cloud` beside it, Codex's `--remote`, a profile or
   `--oss`/`--local-provider`, a launch directory that does not resolve, a name out of
   shape, a launch directory outside any working tree, a repository with no commit yet, a
   worktree directory inside the repository. By then the worktree directory itself may
@@ -130,10 +137,14 @@ bring the work back, and that Claude Code launches get the same checkout.
   line saying where the session works is printed only once the name is claimed.
 - **A name is claimed before git runs.** The record is published under the name with
   an exclusive link, so of two launches asking for one name only one goes on, and a
-  directory already standing where the checkout would go refuses the name.
-  `git worktree add` that fails removes the checkout it could not finish, but the branch
-  its `-b` made stays; rewake drops it while it is still at the commit and checked out
-  nowhere, and removes the empty directory and the record.
+  directory already standing where the checkout would go refuses the name. The branch
+  is made in the same claim, with `git update-ref` against an empty old value, which
+  creates it only when there is none: a look for the branch followed by
+  `git worktree add -b` left a moment in which a branch somebody made would fail the
+  add, and taking the add back would have deleted their branch. `git worktree add` that
+  fails removes the checkout it could not finish, but the branch the claim made stays;
+  rewake drops it while it is still at the commit and checked out nowhere, and removes
+  the directory when it is empty and the record.
 - **After the session** the checkout and its branch stay, as Codex's own would, and a
   line on stderr says where, and how to land, finish or remove it. A launch that fails
   after the checkout was made, or whose harness exits with an error — a resume of a
@@ -153,7 +164,11 @@ the checkout the launch came from. The format and the choice are Claude Code's
 Code `-w` worktree and a rewake worktree of either harness alike:
 
 - `.gitignore` syntax: `#` comments, `!` negation, a trailing `/` for directories, a
-  leading or inner `/` anchoring at the top, `*`, `?`, `[...]` and `**`;
+  leading or inner `/` anchoring at the top, `*`, `?`, `[...]` with `[:alpha:]` and the
+  other named classes inside, and `**`. The file is the repository's content, a
+  stranger's too, so a line that makes no pattern — a range running backwards such as
+  `[z-a]`, a class of no known name — is named on stderr and left out, and the other
+  lines apply;
 - only files git ignores are copied: a tracked file the pattern names is the commit's,
   and an untracked one git does not ignore is not copied either;
 - a directory git ignores as a whole is not walked unless a pattern opens it — names it,
@@ -167,8 +182,11 @@ Code `-w` worktree and a rewake worktree of either harness alike:
 - without the file nothing is copied.
 
 What was copied is in the record and named on the launch line. rm and finish do not
-count those copies as work while they equal the source's files; a copy changed in the
-checkout, or a new ignored file beside them, counts as before.
+count those copies as work while they equal the source's files — compared by size, then
+a block at a time, and a copy or source that is no longer a regular file is not equal; a
+copy changed in the checkout, or a new ignored file beside them, counts as before. A
+record whose branch is not its name, or that lists a copy outside its checkout, is no
+record rewake wrote and is not listed.
 
 The copy is full: listing a heavy directory such as `node_modules` copies every file in
 it, which is slow and costly in space. A copy that skips links does not reproduce the
@@ -189,15 +207,27 @@ branch, and nothing else: the commits keep their hashes — no rebase, squash or
 commit — and the worktree and its session are not touched, so it runs as often as there
 is accepted work to take. The target is the branch checked out in the checkout the
 worktree was made from, or `--into <branch>`; a source on a detached HEAD needs `--into`.
-Checked out somewhere, the target is moved there with `git merge --ff-only`, so the
+Checked out in the source, the target is moved there with `git merge --ff-only`, so the
 files in that checkout follow and git refuses changes the merge would overwrite; its
 reason is passed on with the advice to commit or stash them. Checked out nowhere, its
-ref is moved with `git update-ref` against the value it was read at. A target that
-moved on is refused — rewake does not rewrite history — with the rebase to run in the
-worktree, `git -C <worktree> rebase <target>`. Nothing new to take is not a refusal: it
-says so and exits 0. The answer names how many commits moved and the target's old and
-new commit; `--json` gives the same model. A refusal over the worktree's state exits 1;
-a name, branch or `--into` that does not resolve exits 2.
+ref is moved with `git update-ref` against the value it was read at. Checked out in any
+other checkout — the source compared with symbolic links resolved — it is refused with
+the merge to run there: that checkout may be a worker's, the worktree's own among them
+when its worker switched to the target, and a merge would change its files and HEAD
+under it (decided September 27, 2026, after an acceptance run saw exactly that on Codex
+0.155.1 and 0.157.1). A target a rebase or a bisect in any checkout is working on is
+refused too, as git itself refuses moving such a branch: git lists that checkout as
+detached, and the rebase's last step would fail. A target that moved on is refused —
+rewake does not rewrite history — with the rebase to run in the worktree,
+`git -C <worktree> rebase <target>`. Nothing new to take is not a refusal: it says so
+and exits 0. The answer names how many commits moved and the target's old and new
+commit; `--json` gives the same model.
+
+A refusal over the state of the worktree or its repository exits 1: a branch,
+repository or source gone, a source on a detached HEAD, a target the repository lacks,
+another checkout holds or has moved on. A wrong call exits 2: a worktree name that names
+none, a branch name `git check-ref-format` refuses, `--into` the worktree's own branch
+(decided September 27, 2026).
 
 `rewake worktree finish <name>` lands once more, then removes the worktree and its
 branch. Everything that would stop it is asked first, and a refused finish lands and
@@ -246,8 +276,10 @@ cannot tell, it refuses. It refuses, naming each reason:
 
 `--force` removes it anyway. Looking never stands in a session's way: git runs with
 `GIT_OPTIONAL_LOCKS=0`, so `git status` does not take `index.lock` from under a commit
-the session is making. Nothing is removed automatically. rm's refusals exit 2, where
-finish's exit 1: rm's were fixed before finish existed, and finish follows land.
+the session is making. Nothing is removed automatically. rm's refusals exit 1, as
+finish's and land's over the same state do; a worktree name that names none exits 2.
+Until September 27, 2026 they exited 2, fixed before finish existed; the owner decided
+that day that a refusal over state exits 1 in every worktree command.
 
 A main's `--grant-git` reaches such a checkout as it does a worktree made by hand: the
 grant reads the conversation's cwd, which is in the checkout, and resolves its private

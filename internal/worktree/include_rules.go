@@ -1,6 +1,7 @@
 package worktree
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 )
@@ -23,13 +24,19 @@ type ignoreRules []ignoreRule
 // directory only, a slash elsewhere anchors the pattern at the top, * and ?
 // and [...] match within one path element, and ** across them as a leading
 // **/, a trailing /** or an inner /**/. A backslash quotes the next character.
-func parseIgnoreRules(text string) ignoreRules {
+//
+// The file is the repository's content, a stranger's as well, so a line that
+// makes no expression — a range running backwards, a class of no known name —
+// is named in the second result and left out, and the other lines apply.
+func parseIgnoreRules(text string) (ignoreRules, []string) {
 	var rules ignoreRules
+	var unread []string
 	for _, line := range strings.Split(text, "\n") {
 		line = trimTrailingSpaces(strings.TrimSuffix(line, "\r"))
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
+		written := line
 		var rule ignoreRule
 		if rest, ok := strings.CutPrefix(line, "!"); ok {
 			rule.negate, line = true, rest
@@ -42,19 +49,23 @@ func parseIgnoreRules(text string) ignoreRules {
 		if line == "" {
 			continue
 		}
-		body := globRegexp(line)
+		expression := "^(?:.*/)?" + globRegexp(line) + "$"
 		if anchored {
-			rule.pattern = regexp.MustCompile("^" + body + "$")
+			expression = "^" + globRegexp(line) + "$"
 			rule.literal = line
 			if at := strings.IndexAny(line, `*?[\`); at >= 0 {
 				rule.literal, rule.glob = line[:at], true
 			}
-		} else {
-			rule.pattern = regexp.MustCompile("^(?:.*/)?" + body + "$")
 		}
+		pattern, err := regexp.Compile(expression)
+		if err != nil {
+			unread = append(unread, fmt.Sprintf("%s: the line %q is not a pattern rewake can read, so it copies nothing: %v", IncludeFile, written, err))
+			continue
+		}
+		rule.pattern = pattern
 		rules = append(rules, rule)
 	}
-	return rules
+	return rules, unread
 }
 
 // trimTrailingSpaces drops the spaces ending a line, except one quoted by a
@@ -108,36 +119,51 @@ func globRegexp(glob string) string {
 
 // globClass reads a bracket expression at the start of glob and returns it as
 // a regular expression class and the width it took, or a width of 0 when the
-// bracket is not closed and stands for itself.
+// bracket is not closed and stands for itself. Within it a backslash quotes the
+// next character and [:name:] is a character class of that name, as in git's
+// wildmatch; a name the expression syntax does not know, or a range running
+// backwards, is left for the compiler to refuse.
 func globClass(glob string) (string, int) {
 	i := 1
 	negate := false
 	if i < len(glob) && (glob[i] == '!' || glob[i] == '^') {
 		negate, i = true, i+1
 	}
-	start := i
-	if i < len(glob) && glob[i] == ']' {
-		i++
-	}
-	for i < len(glob) && glob[i] != ']' {
-		i++
-	}
-	if i >= len(glob) {
-		return "", 0
-	}
 	var class strings.Builder
 	class.WriteString("[")
 	if negate {
 		class.WriteString("^/")
 	}
-	for _, r := range glob[start:i] {
-		if r == '\\' || r == '[' || r == ']' || r == '^' {
-			class.WriteString(`\`)
+	for first := true; ; first = false {
+		if i >= len(glob) {
+			return "", 0
 		}
-		class.WriteRune(r)
+		c := glob[i]
+		switch {
+		case c == ']' && !first:
+			class.WriteString("]")
+			return class.String(), i + 1
+		case c == '\\' && i+1 < len(glob):
+			class.WriteString(regexp.QuoteMeta(glob[i+1 : i+2]))
+			i += 2
+		case c == '[' && strings.HasPrefix(glob[i:], "[:"):
+			end := strings.Index(glob[i+2:], ":]")
+			if end < 0 {
+				class.WriteString(`\[`)
+				i++
+				continue
+			}
+			class.WriteString(glob[i : i+2+end+2])
+			i += 2 + end + 2
+		case c == '\\' || c == '[' || c == ']' || c == '^':
+			class.WriteString(`\`)
+			class.WriteByte(c)
+			i++
+		default:
+			class.WriteByte(c)
+			i++
+		}
 	}
-	class.WriteString("]")
-	return class.String(), i + 1
 }
 
 // matches says whether the rules take in a path, relative to the top: the

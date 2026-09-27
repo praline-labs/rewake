@@ -125,11 +125,17 @@ func TestLandIntoABranchCheckedOutNowhere(t *testing.T) {
 	if got := must(t, source, "rev-parse", "main"); got != record.Commit {
 		t.Errorf("main moved to %s", got)
 	}
-	for _, into := range []string{"missing", "m*", "work", "-x"} {
+	for _, into := range []string{"m*", "work", "-x"} {
 		var unusable *UnusableError
 		if _, err := Land(record, into); !errors.As(err, &unusable) {
 			t.Errorf("--into %s: %v", into, err)
 		}
+	}
+	// A name of the right shape the repository lacks is its state, not a
+	// wrong call.
+	var blocked *StateError
+	if _, err := Land(record, "missing"); !errors.As(err, &blocked) {
+		t.Errorf("--into missing: %v", err)
 	}
 }
 
@@ -169,13 +175,13 @@ func TestLandNeedsATargetFromADetachedSource(t *testing.T) {
 		t.Fatal(err)
 	}
 	must(t, source, "switch", "-q", "--detach")
-	var unusable *UnusableError
-	if _, err := Land(record, ""); !errors.As(err, &unusable) || !strings.Contains(err.Error(), "--into") {
+	var blocked *StateError
+	if _, err := Land(record, ""); !errors.As(err, &blocked) || !strings.Contains(err.Error(), "--into") {
 		t.Errorf("got %v", err)
 	}
 	legacy := record
 	legacy.Branch = ""
-	if _, err := Land(legacy, "main"); !errors.As(err, &unusable) || !strings.Contains(err.Error(), "detached") {
+	if _, err := Land(legacy, "main"); !errors.As(err, &blocked) || !strings.Contains(err.Error(), "detached") {
 		t.Errorf("a record without a branch: %v", err)
 	}
 }

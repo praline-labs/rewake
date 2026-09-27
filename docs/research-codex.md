@@ -127,10 +127,22 @@ gateway ([launch.md](launch.md#codex)).
   lead to `<common>`, and that `<common>` is the main checkout's `.git`, and then
   answers the main checkout's root, the key its trust setting is kept under. So a
   linked worktree made by plain `git worktree add` takes the trust of its repository.
-  Not verified live: that the terminal's first-run dialog reads the same key. rewake's
-  own checkouts
-  ([worktree.md](worktree.md)) have this layout;
-  `internal/worktree` has a test that holds them to it.
+  rewake's own checkouts ([worktree.md](worktree.md)) have this layout;
+  `internal/worktree` has a test that holds them to it. **[live, Codex 0.155.1 and
+  0.157.1, synthetic history, no model call; September 26–27, 2026]** Seen in a rewake
+  checkout on its branch: the terminal asked for no new trust, and `AGENTS.md` was found
+  as in the main checkout.
+- **A conversation begun in a rewake checkout continues there.** **[live, Codex 0.155.1
+  and 0.157.1, synthetic history, no model call; September 26–27, 2026]** A session
+  launched with `--worktree` from `src/nested` of a repository, then `rewake codex
+  resume` run in the checkout's `src/nested` without the flag: the resumed thread's
+  cwd, the session's registration and the workspace roots all named that directory of
+  the checkout. The terminal sends `thread/resume` with `cwd: null` on both versions;
+  0.155.1 sends the checkout's directory as `runtimeWorkspaceRoots`, 0.157.1 sends
+  `null` there, and the server answers the right roots either way. So the way on that a
+  refused `--worktree` with `resume` names ([worktree.md](worktree.md#the-launch)) works
+  as it says. Seen in the Codex-side acceptance run of the worktree lifecycle
+  ([2026-09-27-worktree-land.md](roadmap/2026-09-27-worktree-land.md)).
 
 What the server accepts for it is in
 [research-protocol.md](research-protocol.md#where-a-new-conversation-runs).

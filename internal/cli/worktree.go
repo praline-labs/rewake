@@ -40,11 +40,11 @@ func worktreeCommand() *Command {
 		Notes: []string{
 			"They live under " + worktreeRootHelp + ", one directory per repository, named for it; each worktree has its record beside it, saying whose session it was made for, from which repository and at which commit. Each is on a branch of its own name.",
 			"A name, or <repository>/<name> as ls prints it when one name is in two repositories.",
-			"land fast-forwards the target to the worktree's branch, and nothing else: the commits keep their hashes, the worktree and its session are not touched, and it may run any number of times. The target is the branch checked out where the worktree was made from, or --into; checked out somewhere, it is merged there with git merge --ff-only, so git refuses changes the merge would overwrite; checked out nowhere, its ref is moved. A target that moved on is refused: rebase the branch onto it in the worktree, then land again.",
+			"land fast-forwards the target to the worktree's branch, and nothing else: the commits keep their hashes, the worktree and its session are not touched, and it may run any number of times. The target is the branch checked out where the worktree was made from, or --into; checked out there, it is merged there with git merge --ff-only, so git refuses changes the merge would overwrite; checked out nowhere, its ref is moved. A target checked out in any other checkout — a worker's, the worktree's own — is refused, and so is one a rebase or bisect is working on. A target that moved on is refused: rebase the branch onto it in the worktree, then land again.",
 			"finish lands once more, then removes the worktree and its branch. It refuses while a rewake session runs in the worktree, while it has changes or files git ignores, while it is not on its branch, and when the fast-forward is not possible; nothing is removed then.",
 			"rm removes the checkout with git worktree remove, so the repository forgets it too, and its branch when another branch, tag or remote-tracking ref holds the branch's commits; a branch with commits only it holds stays.",
-			"rm refuses a worktree with changes, with files git ignores (a .env, a local build) other than unchanged copies .worktreeinclude made, with commits only it holds, whose directory is gone while the repository still lists it, or in which a rewake session still runs — the one it was made for or any started there since — and says which; --force removes it anyway. A process rewake did not start is not seen.",
-			"Refusals of land and finish over the worktree's state — a running session, changes, a target that moved on, git refusing the merge — exit 1; a name or branch that does not resolve exits 2.",
+			"rm refuses a worktree with changes, with files git ignores (a .env, a local build) other than unchanged copies .worktreeinclude made, whose HEAD is on no branch, tag or remote-tracking ref (a detached HEAD with commits of its own), whose directory is gone while the repository still lists it, or in which a rewake session still runs — the one it was made for or any started there since — and says which; --force removes it anyway. A process rewake did not start is not seen.",
+			"Refusals of rm, land and finish over the state of the worktree or its repository — a running session, changes, a branch or repository gone, a target that moved on or that another checkout holds, git refusing the merge — exit 1. A wrong call exits 2: a worktree name that names none, a branch name git refuses, --into the worktree's own branch.",
 		},
 		Handler: handleWorktree,
 	}
@@ -203,7 +203,7 @@ func removeWorktree(ctx *Context, call Call, record worktree.Record) error {
 		if reasons, err := keepReasons(record); err != nil {
 			return &FailedError{Message: fmt.Sprintf("cannot tell whether %s holds work: %v. --force removes it without looking.", record.Ref(), err)}
 		} else if len(reasons) > 0 {
-			return &UsageError{Command: call.Command, Message: fmt.Sprintf("%s is kept: %s. Remove it anyway with rewake worktree rm %s --force.", record.Ref(), strings.Join(reasons, "; "), record.Ref())}
+			return &FailedError{Message: fmt.Sprintf("%s is kept: %s. Remove it anyway with rewake worktree rm %s --force.", record.Ref(), strings.Join(reasons, "; "), record.Ref())}
 		}
 	}
 	if err := worktree.Remove(record, force); err != nil {

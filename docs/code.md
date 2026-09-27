@@ -27,7 +27,7 @@ internal/harness/claude/telemetry/  what a Claude Code session says about itself
 internal/harness/codex/          owned app-server, WebSocket RPC, thread events and delivery
 internal/harness/codex/gateway/  the terminal gateway: selection, reservation, native mailbox
 internal/wrap/                   wrapper: launch, signals, lifecycle
-internal/worktree/               checkouts rewake makes for a launch: git worktree add, records, removal
+internal/worktree/               checkouts rewake makes for a launch: git worktree add, records, land, removal
 scripts/                         packaging scripts and the tests of the npm shim
 docs/                            the documentation, and the tests that keep it true to the tree
 test/workflow/                   the workflow suite: end-to-end scenarios against fixtures

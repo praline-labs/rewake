@@ -29,6 +29,10 @@ func TestIncludeRulesMatchAsGitDoes(t *testing.T) {
 		"docs/*.md",
 		"?y",
 		"nested/only/",
+		"[[:digit:]]x.cfg",
+		"[![:alpha:]]q.cfg",
+		"[]a]r.cfg",
+		`[\]b]s.cfg`,
 		"",
 	}, "\n")
 	files := []string{
@@ -42,6 +46,7 @@ func TestIncludeRulesMatchAsGitDoes(t *testing.T) {
 		"dx.bin", "cx.bin",
 		"#hash", "trailing", "docs/one.md", "docs/sub/two.md",
 		"zy", "zzy", "nested/only/file", "nested/onlyfile",
+		"1x.cfg", "ax.cfg", "1q.cfg", "aq.cfg", "]r.cfg", "ar.cfg", "cr.cfg", "]s.cfg", "bs.cfg", "cs.cfg",
 	}
 	top := t.TempDir()
 	for _, file := range files {
@@ -53,7 +58,10 @@ func TestIncludeRulesMatchAsGitDoes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rules := parseIgnoreRules(patterns)
+	rules, unread := parseIgnoreRules(patterns)
+	if len(unread) != 0 {
+		t.Errorf("unread lines: %v", unread)
+	}
 	var got []string
 	for _, file := range files {
 		if rules.matches(file, false) {

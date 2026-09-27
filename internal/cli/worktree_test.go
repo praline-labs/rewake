@@ -91,7 +91,7 @@ func TestWorktreeRmRefusesWhatHoldsWork(t *testing.T) {
 		"running":  "still run in it: busy-codex in room trees",
 	} {
 		code, _, errOut := run("worktree", "rm", name)
-		if code != ExitUsage || !strings.Contains(errOut, want) || !strings.Contains(errOut, "--force") {
+		if code != ExitFailed || !strings.Contains(errOut, want) || !strings.Contains(errOut, "--force") {
 			t.Errorf("rm %s: %d %s", name, code, errOut)
 		}
 	}

@@ -326,12 +326,13 @@ func TestARemovalBehindGitsBackFails(t *testing.T) {
 	runFindingsControlOn(t, codexColumn.harness, "codex-worktree", playCodexWorktree, mutantWorktreeGitKept, obsTreeMoved, obsTreeRemoved)
 }
 
-// The checkout made detached, as before worktrees had a branch: nothing to
-// land, and nothing finish can take.
+// The checkout made detached, as before worktrees had a branch: the claim's
+// branch stays at the commit, so there is nothing to land, and nothing finish
+// can take.
 var mutantWorktreeDetached = mutation{
 	name:  "worktree-detached",
 	file:  "internal/worktree/worktree.go",
-	edits: []edit{{`git(source.Source, "worktree", "add", "-b", record.Branch, record.Path, record.Commit)`, `git(source.Source, "worktree", "add", "--detach", record.Path, record.Commit)`}},
+	edits: []edit{{`git(source.Source, "worktree", "add", record.Path, record.Branch)`, `git(source.Source, "worktree", "add", "--detach", record.Path, record.Commit)`}},
 }
 
 // land that merges instead of fast-forwarding: main gets a merge commit, not

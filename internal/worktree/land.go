@@ -47,23 +47,25 @@ func (e *RefusedError) Error() string {
 
 // Land fast-forwards a branch of the repository to the checkout's branch:
 // into, or the branch checked out in the source when into is empty. Commits
-// keep their hashes: a fast-forward or nothing. A target checked out somewhere
-// is merged there, so its files follow; one checked out nowhere has its ref
-// moved, and only if it is still where it was read.
+// keep their hashes: a fast-forward or nothing. A target checked out in the
+// source is merged there, so its files follow; one checked out nowhere has its
+// ref moved, and only if it is still where it was read. A target checked out in
+// any other checkout is refused: that may be a worker's, the worktree's own
+// among them, and a merge there would change files and HEAD under it.
 func Land(record Record, into string) (Landing, error) {
 	// legacy(rewake <2026-09-27): records of earlier builds name no branch, their checkouts are detached; remove when no such record is left under the worktree root
 	if record.Branch == "" {
-		return Landing{}, &UnusableError{Reason: fmt.Sprintf("%s is a detached checkout from before rewake gave worktrees a branch, so it has no branch to land; make one in it with git switch -c <name> and merge that by hand", record.Ref())}
+		return Landing{}, &StateError{Reason: fmt.Sprintf("%s is a detached checkout from before rewake gave worktrees a branch, so it has no branch to land; make one in it with git switch -c <name> and merge that by hand", record.Ref())}
 	}
 	if repositoryGone(record) {
-		return Landing{}, &UnusableError{Reason: fmt.Sprintf("the repository %s of %s is gone", record.CommonDir, record.Ref())}
+		return Landing{}, &StateError{Reason: fmt.Sprintf("the repository %s of %s is gone", record.CommonDir, record.Ref())}
 	}
 	tip, err := refTip(record.CommonDir, branchRef(record.Branch))
 	if err != nil {
 		return Landing{}, err
 	}
 	if tip == "" {
-		return Landing{}, &UnusableError{Reason: fmt.Sprintf("the branch %s of %s is gone", record.Branch, record.Ref())}
+		return Landing{}, &StateError{Reason: fmt.Sprintf("the branch %s of %s is gone", record.Branch, record.Ref())}
 	}
 	target, err := landTarget(record, into)
 	if err != nil {
@@ -74,7 +76,7 @@ func Land(record Record, into string) (Landing, error) {
 		return Landing{}, err
 	}
 	if old == "" {
-		return Landing{}, &UnusableError{Reason: fmt.Sprintf("the repository at %s has no branch %s to land into", record.Source, target)}
+		return Landing{}, &StateError{Reason: fmt.Sprintf("the repository at %s has no branch %s to land into", record.Source, target)}
 	}
 	landing := Landing{Branch: record.Branch, Target: target, Old: old, New: old}
 	if held, err := isAncestor(record.CommonDir, tip, old); err != nil || held {
@@ -92,9 +94,17 @@ func Land(record Record, into string) (Landing, error) {
 	if landing.Commits, err = strconv.Atoi(count); err != nil {
 		return Landing{}, fmt.Errorf("git rev-list --count said %q", count)
 	}
+	if err := underWay(record.CommonDir, target); err != nil {
+		return Landing{}, err
+	}
 	checkouts, err := checkedOutAt(record.CommonDir, branchRef(target))
 	if err != nil {
 		return Landing{}, err
+	}
+	for _, checkout := range checkouts {
+		if !samePlace(checkout, record.Source) {
+			return Landing{}, heldElsewhere(record, target, tip, checkout)
+		}
 	}
 	if len(checkouts) > 0 {
 		landing.Checkout = checkouts[0]
@@ -123,14 +133,14 @@ func landTarget(record Record, into string) (string, error) {
 		}
 	} else {
 		if !isDir(record.Source) {
-			return "", &UnusableError{Reason: fmt.Sprintf("the checkout %s the worktree was made from is gone; name the branch to land into with --into <branch>", record.Source)}
+			return "", &StateError{Reason: fmt.Sprintf("the checkout %s the worktree was made from is gone; name the branch to land into with --into <branch>", record.Source)}
 		}
 		head, detached, err := currentBranch(record.Source)
 		if err != nil {
 			return "", err
 		}
 		if detached {
-			return "", &UnusableError{Reason: fmt.Sprintf("%s has no branch checked out; name the branch to land into with --into <branch>", record.Source)}
+			return "", &StateError{Reason: fmt.Sprintf("%s has no branch checked out; name the branch to land into with --into <branch>", record.Source)}
 		}
 		target = head
 	}
@@ -177,16 +187,22 @@ func DropBranch(record Record) (bool, error) {
 func branchRef(branch string) string { return "refs/heads/" + branch }
 
 // refTip is the commit a full ref names, or "" when there is no such ref.
-// for-each-ref matches whole path components, and a ref cannot exist beside
-// refs below it, so a pattern with no glob in it names that one ref alone;
-// what reaches here is a checkout's name or a branch check-ref-format passed.
+// for-each-ref takes the name as a prefix of whole components, so
+// refs/heads/foo lists refs/heads/foo/bar as well, and only the line of the
+// name itself counts. Not rev-parse: a full name it does not find it tries
+// again under refs/heads/ and the rest, and would take a branch named
+// refs/heads/foo for the missing foo.
 func refTip(commonDir, ref string) (string, error) {
-	out, err := gitDirOutput(commonDir, "for-each-ref", "--format=%(objectname)", ref)
+	out, err := gitDirOutput(commonDir, "for-each-ref", "--format=%(objectname) %(refname)", ref)
 	if err != nil {
 		return "", fmt.Errorf("cannot read %s: %w", ref, err)
 	}
-	tip, _, _ := strings.Cut(out, "\n")
-	return tip, nil
+	for _, line := range strings.Split(out, "\n") {
+		if tip, name, ok := strings.Cut(line, " "); ok && name == ref {
+			return tip, nil
+		}
+	}
+	return "", nil
 }
 
 // isAncestor says whether ancestor is in the history of commit, a commit

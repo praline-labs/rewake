@@ -139,6 +139,13 @@ type UnusableError struct{ Reason string }
 
 func (e *UnusableError) Error() string { return e.Reason }
 
+// StateError is a call that is right but meets a state that stops it: a
+// repository or branch gone, a target another checkout holds, an operation
+// under way. The state has to change, not the call.
+type StateError struct{ Reason string }
+
+func (e *StateError) Error() string { return e.Reason }
+
 // ExistsError is a name already taken in a repository: by a checkout of
 // rewake's, or by a directory in its place.
 type ExistsError struct{ Record Record }
@@ -214,33 +221,47 @@ func add(source Record, directory, name string) (Record, error) {
 		if err != nil {
 			return Record{}, err
 		}
-		if err := git(source.Source, "worktree", "add", "-b", record.Branch, record.Path, record.Commit); err != nil {
-			unclaim(record)
-			return Record{}, fmt.Errorf("git worktree add failed: %w", err)
+		if err := checkout(source, record); err != nil {
+			return Record{}, err
 		}
 		return include(record), nil
 	}
 }
 
-// unclaim takes back what a failed git worktree add may have left: git
-// removes a checkout it could not finish, but the branch -b made before it
-// stays. The branch goes only while it is still at the commit and no checkout
-// has it out — it was free when claimed, so that is the one just made — and the
-// directory only when empty.
+// checkout checks a claimed name's branch out at its path, and takes the claim
+// back when git cannot.
+func checkout(source, record Record) error {
+	if err := git(source.Source, "worktree", "add", record.Path, record.Branch); err != nil {
+		unclaim(record)
+		return fmt.Errorf("git worktree add failed: %w", err)
+	}
+	return nil
+}
+
+// unclaim takes back what a failed git worktree add left: git removes a
+// checkout it could not finish, but the branch claim made stays. The branch is
+// this call's own — claim made it and would have failed on one that existed —
+// and it goes only while it is still at the commit and no checkout has it out;
+// the directory goes only when empty.
 func unclaim(record Record) {
 	if tip, err := refTip(record.CommonDir, branchRef(record.Branch)); err == nil && tip == record.Commit {
 		if at, err := checkedOutAt(record.CommonDir, branchRef(record.Branch)); err == nil && len(at) == 0 {
 			_ = gitDir(record.CommonDir, "update-ref", "-d", branchRef(record.Branch), record.Commit)
 		}
 	}
-	_ = os.Remove(record.Path)
+	if info, err := os.Lstat(record.Path); err == nil && info.IsDir() {
+		_ = os.Remove(record.Path)
+	}
 	_ = os.Remove(recordPath(record))
 }
 
-// claim publishes a record under its name, refusing a name that is taken: by a
-// record, by a directory standing where the checkout would go, or by a branch.
-// A checkout of the name is named first: its branch is taken too, and the
-// checkout is what the person is looking for.
+// claim publishes a record under its name and makes its branch, refusing a
+// name that is taken: by a record, by a directory standing where the checkout
+// would go, or by a branch. A checkout of the name is named first: its branch
+// is taken too, and the checkout is what the person is looking for. The branch
+// is made here, created only if absent in one step, rather than by git worktree
+// add -b after a look: a branch somebody made between the look and the add
+// would fail the add, and taking back the add would delete their branch.
 func claim(record Record) error {
 	if _, err := os.Lstat(record.Path); err == nil {
 		return &ExistsError{Record: record}
@@ -258,11 +279,14 @@ func claim(record Record) error {
 		}
 		return err
 	}
-	tip, err := refTip(record.CommonDir, branchRef(record.Branch))
-	if err == nil && tip != "" {
-		err = &BranchTakenError{Branch: record.Branch, Source: record.Source}
-	}
+	// An empty old value creates the ref only when there is none.
+	err = gitDir(record.CommonDir, "update-ref", "-m", "branch: Created from "+record.Commit, branchRef(record.Branch), record.Commit, "")
 	if err != nil {
+		if tip, readErr := refTip(record.CommonDir, branchRef(record.Branch)); readErr == nil && tip != "" {
+			err = &BranchTakenError{Branch: record.Branch, Source: record.Source}
+		} else {
+			err = fmt.Errorf("cannot make the branch %s: %w", record.Branch, err)
+		}
 		_ = os.Remove(recordPath(record))
 		return err
 	}
