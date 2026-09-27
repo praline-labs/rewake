@@ -300,7 +300,7 @@ and `rust-v0.157.1`; September 26, 2026]** Read for Codex's `--worktree`
 
 **[schema of Codex CLI 0.155.1 and 0.157.1, generated with `--experimental`; September
 26, 2026]** The requests 0.157.1's terminal was seen to send in remote mode
-([research-codex.md](research-codex.md#the-terminals-selection-on-01571)) are valid on
+([research-codex-live-checks.md](research-codex-live-checks.md#the-terminals-selection-on-01571)) are valid on
 both schemas: `ThreadStartParams` with `runtimeWorkspaceRoots: null`,
 `permissions: null`, `threadSource: "user"` and `config: {"web_search": "cached"}`;
 `ThreadResumeParams` with `threadId`, the same nulls and configuration, `history: null`,

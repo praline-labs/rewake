@@ -49,10 +49,11 @@ const observeTimeout = 5
 const grantHookTimeout = 5
 
 // grantPreToolUse are the tools whose calls the grant hook sees before they
-// run: the file tools it denies inside a grant being taken back, and the
-// reads it turns into the question that takes it back (permission.go). Every
-// other tool is spared the process start.
-const grantPreToolUse = "Write|Edit|MultiEdit|NotebookEdit|Read|Glob|Grep|LS|NotebookRead"
+// run: the file tools it denies inside a grant being taken back or sends to
+// the person inside its shielded part, and the reads and commands it turns
+// into the question that takes it back (permission.go). Every other tool is
+// spared the process start.
+const grantPreToolUse = "Write|Edit|MultiEdit|NotebookEdit|Read|Glob|Grep|LS|NotebookRead|Bash"
 
 // launchLayer is what rewake adds for one launch.
 type launchLayer struct {

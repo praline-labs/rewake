@@ -3,6 +3,7 @@ package claude
 import (
 	"encoding/json"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -23,8 +24,9 @@ import (
 //   - PreToolUse cannot change permissions, but its answer ask makes the
 //     harness raise a PermissionRequest for a call it would have run anyway.
 //
-// So a grant is given when the session first asks to write in it, and taken
-// back at the first tool call after its task is settled. The hook itself
+// So a grant is given when the session first asks to write in it with a file
+// tool, and taken back at the first read or plain rewake command after its
+// task is settled, in a mode where those run unasked. The hook itself
 // holds nothing: it hands the call to the session's wrapper, which keeps the
 // journal in memory (grantauth.Keeper) and answers with DecideGrant. It
 // answers only what the journal proves and is silent otherwise: silence
@@ -38,16 +40,14 @@ const (
 
 // grantHookInput is the part of a hook's payload the grant hook reads.
 type grantHookInput struct {
-	Event       string                     `json:"hook_event_name"`
-	Tool        string                     `json:"tool_name"`
-	Input       map[string]json.RawMessage `json:"tool_input"`
-	Suggestions []permissionUpdate         `json:"permission_suggestions"`
-	CWD         string                     `json:"cwd"`
-	Mode        string                     `json:"permission_mode"`
+	Event string                     `json:"hook_event_name"`
+	Tool  string                     `json:"tool_name"`
+	Input map[string]json.RawMessage `json:"tool_input"`
+	CWD   string                     `json:"cwd"`
+	Mode  string                     `json:"permission_mode"`
 }
 
-// permissionUpdate is one entry of permission_suggestions, and of the
-// updatedPermissions an answer carries.
+// permissionUpdate is one entry of the updatedPermissions an answer carries.
 type permissionUpdate struct {
 	Kind        string   `json:"type"`
 	Directories []string `json:"directories,omitempty"`
@@ -61,6 +61,16 @@ var fileWriters = map[string]string{"Write": "file_path", "Edit": "file_path", "
 // left out means the working directory.
 var readers = map[string]string{"Read": "file_path", "Glob": "path", "Grep": "path", "LS": "path", "NotebookRead": "notebook_path"}
 
+// shell is the command tool. The hook never allows it: an approved command runs
+// whole, and whether the harness names every reason a compound command needs
+// in its suggestions is not known. It is asked about only to take a grant back.
+const shell = "Bash"
+
+// plainRewake is a command that only runs rewake with plain words: one the
+// session's own allow rule for rewake runs anyway, so a question forced on it
+// approves nothing the rule would not.
+var plainRewake = regexp.MustCompile(`^rewake(?:[ \t]+[A-Za-z0-9_./=:@,+-]+)*[ \t]*$`)
+
 // forcingModes are where a read in the working directory runs without asking,
 // so an ask forced on it approves nothing the mode would not. bypassPermissions
 // asks nothing and might show a person the forced question; plan and the rest
@@ -68,15 +78,16 @@ var readers = map[string]string{"Read": "file_path", "Glob": "path", "Grep": "pa
 var forcingModes = []string{"default", "acceptEdits"}
 
 // GrantCall is the part of a hook's payload the wrapper needs to decide it:
-// the payload less every tool argument but the path ones. A Write's payload
-// carries the whole file it writes, which the wrapper has no use for.
-func (claudeHarness) GrantCall(payload []byte) (json.RawMessage, bool) {
+// the payload less every tool argument but the path ones and a command. A
+// Write's payload carries the whole file it writes, which the wrapper has no
+// use for.
+func GrantCall(payload []byte) (json.RawMessage, bool) {
 	var in grantHookInput
 	if json.Unmarshal(payload, &in) != nil {
 		return nil, false
 	}
 	kept := map[string]json.RawMessage{}
-	for _, fields := range []map[string]string{fileWriters, readers} {
+	for _, fields := range []map[string]string{fileWriters, readers, {shell: "command"}} {
 		if field, ok := fields[in.Tool]; ok {
 			if raw, ok := in.Input[field]; ok {
 				kept[field] = raw
@@ -127,7 +138,10 @@ func DecideGrant(payload []byte, entries []grant.Entry) grantauth.Decision {
 // preToolUse denies a file tool writing where a grant is being taken back,
 // sends one writing into a shielded part of a live grant to the person, and
 // forces a question on a read that would run anyway, so the answer to it can
-// take the directory out.
+// take the directory out. A command is asked about too while a grant is being
+// taken back: the directory is still a working one, and a command would write
+// in it unasked. A plain rewake command gets its question answered with the
+// removal; any other goes to the person.
 //
 // The shielded part needs the question here: once a grant is a working
 // directory, the harness runs a file tool anywhere inside it unasked, and
@@ -155,7 +169,7 @@ func (in grantHookInput) preToolUse(live, revoking []string) grantauth.Decision 
 		}
 		return grantauth.Decision{}
 	}
-	if len(revoking) == 0 || !in.forcible() {
+	if len(revoking) == 0 || !slices.Contains(forcingModes, in.Mode) || (in.Tool != shell && !in.forcible()) {
 		return grantauth.Decision{}
 	}
 	return hookAnswer(map[string]any{
@@ -186,51 +200,35 @@ func (in grantHookInput) permissionRequest(live, revoking []string) grantauth.De
 	}, roots, revoking)
 }
 
-// grantedRoots are the live grants a call writes in, or nil when it writes
-// anywhere else too. A file tool is judged by its path, which is all it
-// writes. Any other tool is judged by what the harness suggests adding: the
-// call is allowed only when every suggestion is a directory inside a grant,
-// that is, when the grant alone would have let it run — an approved command
-// runs whole, so one that needs anything more is left to the person.
+// grantedRoots is the live grant a file tool writes in, or nil. Only a file
+// tool is allowed, judged by its path, which is all it writes; a command gets
+// the directory once a file tool has added it (shell).
 func (in grantHookInput) grantedRoots(live []string) []string {
-	var paths []string
-	if field, ok := fileWriters[in.Tool]; ok {
-		path := in.path(field)
-		if path == "" {
-			return nil
-		}
-		paths = []string{path}
-	} else {
-		if len(in.Suggestions) == 0 {
-			return nil
-		}
-		for _, suggestion := range in.Suggestions {
-			if suggestion.Kind != "addDirectories" || len(suggestion.Directories) == 0 {
-				return nil
-			}
-			for _, directory := range suggestion.Directories {
-				paths = append(paths, in.resolved(directory))
-			}
-		}
+	field, ok := fileWriters[in.Tool]
+	if !ok {
+		return nil
 	}
-	var roots []string
-	for _, path := range paths {
-		at := slices.IndexFunc(live, func(root string) bool { return grant.Covers(root, path) })
-		if at < 0 {
-			return nil
-		}
-		if !slices.Contains(roots, live[at]) {
-			roots = append(roots, live[at])
-		}
+	path := in.path(field)
+	at := slices.IndexFunc(live, func(root string) bool { return path != "" && grant.Covers(root, path) })
+	if at < 0 {
+		return nil
 	}
-	return roots
+	return []string{live[at]}
 }
 
-// forcible says whether the call reads inside the working directory in a mode
-// that runs such a read without asking.
+// forcible says whether the call runs without asking in its mode anyway: a
+// read inside the working directory, or a plain rewake command.
 func (in grantHookInput) forcible() bool {
+	if !slices.Contains(forcingModes, in.Mode) {
+		return false
+	}
+	if in.Tool == shell {
+		var command string
+		raw, ok := in.Input["command"]
+		return ok && json.Unmarshal(raw, &command) == nil && plainRewake.MatchString(command)
+	}
 	field, ok := readers[in.Tool]
-	if !ok || !slices.Contains(forcingModes, in.Mode) || in.CWD == "" {
+	if !ok || in.CWD == "" {
 		return false
 	}
 	path := in.path(field)

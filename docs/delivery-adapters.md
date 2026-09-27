@@ -98,7 +98,7 @@ with the resumed conversation's, and a compaction keeps
 ([research-claude-control.md](research-claude-control.md#interrupting-a-turn-and-changing-the-conversation)).
 The telemetry collector keeps the last one it heard, and the wrapper asks it when it pins
 an owed message to a conversation before making it readable
-([delivery.md](delivery.md#reports-after-a-thread-change)). At the end of the turn
+([delivery-turn-end.md](delivery-turn-end.md#reports-after-a-thread-change)). At the end of the turn
 `rewake turn-ended` takes the conversation from the Stop or StopFailure payload's own
 `session_id`, so the comparison is with where the turn actually ended rather than with a
 snapshot of the collector. Either side unknown — no telemetry socket, no event heard yet,

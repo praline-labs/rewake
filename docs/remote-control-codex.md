@@ -91,7 +91,7 @@ in the session's telemetry for main's letter
   live on a nearly empty one and about 104 seconds on one whose context was 85% full
   (0.155.1, September 26, 2026). Until that day one bound of 80 seconds ended the hold
   of a running compaction too: the task sent after it went, the server refused it, and
-  it failed for good ([research-codex.md](research-codex.md#a-delivery-during-a-long-compaction)).
+  it failed for good ([research-codex-live-checks.md](research-codex-live-checks.md#a-delivery-during-a-long-compaction)).
   A resume whose snapshot shows the compaction no longer running releases a tied hold
   early; one that shows it still running keeps it. Only the hold: the terminal's ordinary
   resume asks for no turns (`excludeTurns`, on 0.155.1 and 0.157.1), so its reply does

@@ -77,7 +77,7 @@ limits refer to is in `internal/harness/codex/gateway`.
   `sleep 20` the turn was running outlived `turn/interrupt`: the turn ended as
   `interrupted` within 27 ms and the task's sender got `stopped` at once, while the command
   ran to its end 20 seconds later and wrote what it was told to write (live, September
-  26, 2026, [research-codex.md](research-codex.md#live-messaging-checks-of-september-26-2026)).
+  26, 2026, [research-codex-live-checks.md](research-codex-live-checks.md#live-messaging-checks-of-september-26-2026)).
   So `stopped` means the model will take no further step in that turn, not that
   everything it set going has stopped: a command's effects may land after the letter.
   rewake has no handle on the server's processes and asks for nothing beyond

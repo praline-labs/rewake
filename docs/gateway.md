@@ -99,7 +99,7 @@ in remote mode — a configuration whose `web_search` is one of the four modes, 
 by id then also with no history and no path. The request-id families gate each, and
 `threadSource: "user"` gates a start and a fork — a resume carries none; a
 configuration merely present selects nothing
-([research-codex.md](research-codex.md#the-terminals-selection-on-01571)).
+([research-codex-live-checks.md](research-codex-live-checks.md#the-terminals-selection-on-01571)).
 The launcher owns the upstream socket (`.up`) and gateway socket for the run;
 startup initializes and closes a probe client without selecting any thread. The
 TUI uses the original socket path. Backend exit terminates the TUI, and cleanup

@@ -43,6 +43,7 @@ func TestTheGrantHookAnswersFromTheJournal(t *testing.T) {
 	}
 	write := func(path string) map[string]string { return map[string]string{"file_path": path, "content": "probe\n"} }
 	read := map[string]string{"file_path": filepath.Join(work, "README")}
+	command := func(line string) map[string]string { return map[string]string{"command": line} }
 	for _, c := range []struct {
 		name     string
 		payload  []byte
@@ -60,14 +61,44 @@ func TestTheGrantHookAnswersFromTheJournal(t *testing.T) {
 			added:   []string{granted}, removed: []string{old},
 		},
 		{
-			name:    "a command whose suggestions all lie in a grant is allowed",
-			payload: hookPayload(permissionRequest, "Bash", "default", work, map[string]string{"command": "touch " + granted + "/c.txt"}, granted),
-			entries: journal[:1], says: []string{`"behavior":"allow"`, granted}, added: []string{granted},
+			name:    "a command is never allowed, even one whose suggestions all lie in a grant",
+			payload: hookPayload(permissionRequest, "Bash", "default", work, command("touch "+granted+"/c.txt && touch ~/.bashrc"), granted),
+			entries: journal[:1], silent: true,
 		},
 		{
-			name:    "a command that needs anything else is left to the person",
-			payload: hookPayload(permissionRequest, "Bash", "default", work, map[string]string{"command": "touch " + other + "/c.txt"}, other),
+			name:    "nor one that needs anything else",
+			payload: hookPayload(permissionRequest, "Bash", "default", work, command("touch "+other+"/c.txt"), other),
 			entries: journal[:1], silent: true,
+		},
+		{
+			name:    "a command is not asked about while nothing is taken back",
+			payload: hookPayload(preToolUse, "Bash", "acceptEdits", work, command("touch "+granted+"/c.txt")),
+			entries: journal[:1], silent: true,
+		},
+		{
+			name:    "a command while a grant is taken back is asked about",
+			payload: hookPayload(preToolUse, "Bash", "acceptEdits", work, command("touch "+old+"/c.txt")),
+			says:    []string{`"permissionDecision":"ask"`, old},
+		},
+		{
+			name:    "and its question goes to the person",
+			payload: hookPayload(permissionRequest, "Bash", "acceptEdits", work, command("touch "+old+"/c.txt")),
+			silent:  true,
+		},
+		{
+			name:    "unless it is a plain rewake command, answered with the removal",
+			payload: hookPayload(permissionRequest, "Bash", "acceptEdits", work, command("rewake inbox --owed")),
+			says:    []string{`"behavior":"allow"`, `"removeDirectories"`, old}, removed: []string{old}, notAdded: []string{granted},
+		},
+		{
+			name:    "a rewake command with anything more is no plain one",
+			payload: hookPayload(permissionRequest, "Bash", "acceptEdits", work, command("rewake inbox; touch "+old+"/x")),
+			silent:  true,
+		},
+		{
+			name:    "a command in a mode that asks nothing is not asked",
+			payload: hookPayload(preToolUse, "Bash", "bypassPermissions", work, command("touch "+old+"/c.txt")),
+			silent:  true,
 		},
 		{
 			name:    "the Git metadata inside a grant is not given",
@@ -152,12 +183,16 @@ func TestTheGrantHookAnswersFromTheJournal(t *testing.T) {
 // The wrapper is handed the call without what the tool writes: a Write
 // carries the whole file.
 func TestAGrantCallLeavesOutTheContent(t *testing.T) {
-	payload := hookPayload(permissionRequest, "Write", "default", "/w", map[string]string{"file_path": "/g/a.txt", "content": "secret body"}, "/g")
-	call, ok := claudeHarness{}.GrantCall(payload)
-	if !ok || strings.Contains(string(call), "secret body") || !strings.Contains(string(call), "/g/a.txt") || !strings.Contains(string(call), "addDirectories") {
+	payload := hookPayload(permissionRequest, "Write", "acceptEdits", "/w", map[string]string{"file_path": "/g/a.txt", "content": "secret body"}, "/g")
+	call, ok := GrantCall(payload)
+	if !ok || strings.Contains(string(call), "secret body") || !strings.Contains(string(call), "/g/a.txt") || !strings.Contains(string(call), "acceptEdits") {
 		t.Fatalf("call %s, %v", call, ok)
 	}
-	if _, ok := (claudeHarness{}).GrantCall([]byte("not json")); ok {
+	bash := hookPayload(preToolUse, "Bash", "acceptEdits", "/w", map[string]string{"command": "rewake inbox", "description": "read the mail"})
+	if call, ok := GrantCall(bash); !ok || !strings.Contains(string(call), "rewake inbox") || strings.Contains(string(call), "read the mail") {
+		t.Fatalf("a command's call %s, %v", call, ok)
+	}
+	if _, ok := GrantCall([]byte("not json")); ok {
 		t.Fatal("a payload that does not parse made a call")
 	}
 }

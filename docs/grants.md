@@ -318,24 +318,30 @@ Keying it by the thread instead is queued
 Nothing adds a working directory to a running Claude Code session from outside, but its
 permission hooks can ([research-claude-actions.md](research-claude-actions.md#a-directory-given-to-a-running-session)).
 Rewake's settings layer adds `rewake grant-hook` as a PreToolUse hook on the file tools
-and as a PermissionRequest hook, each with a five-second timeout.
+and `Bash`, and as a PermissionRequest hook, each with a five-second timeout.
 
 - **Where the grant lives.** Once the grant is confirmed ([who can grant](#who-can-grant)),
   the recipient's wrapper keeps it in memory. The hook holds nothing: it is a child of
   the harness, so it runs below that wrapper, and it asks the wrapper over an abstract
-  socket named from the room, the session and its run (`@rewake/keep/<hash>`). The
-  wrapper answers only a process below itself, checked as registration is; the hook
-  believes only the process its run names. It sends the call's path fields, never the
-  content a Write carries. A file in the state directory decides nothing, since a
-  worker can write one; the copy under `grants/` is only what `rewake list` shows.
-- **Delivery waits for an idle session.** A grant task stays pending while the session
-  is working, retried every two seconds, as on Codex: a grant that arrived mid-turn
-  would be taken back by a report the turn had not made.
-- **Giving.** When the session first asks to write inside a grant, the PermissionRequest
-  hook answers allow and adds the grant's root as a working directory for the session.
-  From then on writes and shell commands inside it run without asking. A file tool is
-  judged by its path; any other tool by what the harness suggests adding, and only when
-  every suggestion lies in a grant, since an approved command runs whole.
+  socket named from the room, the session and its run (`@rewake/keep/<hash>`), taking
+  the session and the run from the environment the wrapper gave the harness. The wrapper
+  answers only a process below itself and in its namespaces, checked as registration
+  is; the hook believes only the process its run names. It sends the call's path fields
+  and a command, never the content a Write carries. No record in the state directory
+  decides anything, since a worker can write one; the copy under `grants/` is only what
+  `rewake list` shows.
+- **Delivery waits for an idle session** while its telemetry says a turn is running:
+  a grant task stays pending, retried every two seconds, as on Codex, since a grant that
+  arrived mid-turn would be taken back by a report the turn had not made. Telemetry that
+  has gone stale counts as idle.
+- **Giving.** Only a file tool is allowed — Write, Edit, MultiEdit, NotebookEdit —
+  judged by its path. When it first writes inside a grant, the PermissionRequest hook
+  answers allow and adds the grant's root as a working directory for the session. A
+  shell command is never allowed (main's decision of September 27, 2026): an approved
+  command runs whole, and whether the harness names every reason a compound one needs
+  — `&&`, `;`, a redirection, `$(...)` — in what it suggests is not known. So a command
+  inside a grant goes to the person until a file tool has written there, and runs
+  unasked after, the directory then being a working one.
 - **What stays with the person.** `.git`, `.claude`, `.codex` and `.agents` at any depth
   inside a grant are never allowed, `--grant-git` or not (main's decision of September
   27, 2026): whatever reads them next runs what the worker wrote, and on Claude Code
@@ -344,17 +350,20 @@ and as a PermissionRequest hook, each with a five-second timeout.
   file tool writing there; a shell command inside the grant reaches them unasked all the
   same. A write outside every grant hears silence, and silence is also the answer to any
   error or timeout: the hook never allows on a guess.
-- **Taking back.** At the first tool call after the task is settled, a read inside the
-  working directory in `default` or `acceptEdits` is answered `ask` from PreToolUse; the
-  PermissionRequest that follows is allowed with the grant's root removed. A file tool
-  writing into a directory being taken back is denied with a line naming why; a shell
-  command that mentions it hears silence and is left to the person. A directory another
-  live task holds stays. A grant never used — never added — ends at the report.
+- **Taking back** happens in `default` and `acceptEdits` only. After the task is settled,
+  PreToolUse answers `ask` on the first read inside the working directory, and on every
+  shell command, while a grant is being taken back. The PermissionRequest that follows
+  a read, or a plain `rewake` command with nothing but words after it, is allowed with
+  the grant's root removed: those run unasked anyway, so the answer approves nothing new.
+  Any other command's question goes to the person, and so does the removal with it. A
+  file tool writing into a directory being taken back is denied with a line naming why.
+  A directory another live task holds stays. A grant never used — never added — ends at
+  the report. In any other mode — `plan`, `bypassPermissions`, auto — nothing is forced,
+  and a grant once added stays until the session ends.
 - **What ends it early.** A cold resume starts without the directory, and the new run's
   wrapper does not restore it: a grant a file could restore is one a worker could forge.
   Restoring it by asking main's wrapper to confirm the grant again is left for later
   (main's decision of September 27, 2026).
-  In `bypassPermissions` the hook is never asked, and the grant is moot.
 
 This is a courtesy, not a boundary. Claude Code runs approved shell commands as the user,
 so a worker writes wherever the user can if a prompt is approved, and can forge a grant

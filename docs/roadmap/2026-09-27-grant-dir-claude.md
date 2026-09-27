@@ -36,10 +36,31 @@ that scheme.
   `claude-grant-dir` with three mutants: `claude-grant-silent`, `claude-grant-unshielded`,
   `claude-grant-kept` ([testing-cases.md](../testing-cases.md#a-directory-granted-with-a-task)).
 
+## After review
+
+review-claude's round on the stage, fixed the same day:
+
+- **Medium: a command allowed by its suggestions.** The hook allowed a shell command when
+  every directory the harness suggested lay in a grant, which rests on the harness naming
+  every reason a compound command needs; that is not verified. Main decided the hook
+  allows file tools only; a command gets the directory once a file tool has added it.
+- **Taking back missed commands.** Until a read came, the directory stayed a working one
+  and a command wrote there unasked. `Bash` joined the PreToolUse matcher: while a grant
+  is being taken back every command is asked about, a plain `rewake` command's question
+  answered with the removal and any other's left to the person. `grants.md` now names
+  the modes where taking back works.
+- **The hook read the registry** — and tidied it — on every tool call. It takes the
+  session and run from the environment alone.
+- **The keeper did not check namespaces**, as registration does; it does now, with a
+  test from a helper in its own user namespace.
+- `grants.md`: the idle wait holds only while telemetry says a turn runs.
+- `docs/flow.md`, `docs/delivery.md` and `docs/research-codex.md` had grown past 400
+  lines with stage 1 and are split by subject.
+
 ## What stays open
 
 - A cold resume starts without the grant, while the owner's route restored it with
   `--add-dir`. Main decided on September 27, 2026 that the way is to have main's wrapper
   confirm the grant again, later.
 - A shell command inside a granted directory reaches its `.git` unasked: Claude Code has
-  no sandbox, and the hook sees a command only when the harness asks about it.
+  no sandbox, and the hook cannot read what a command writes.

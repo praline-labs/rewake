@@ -34,7 +34,7 @@ confirmation of visible markers and usable input supplies that separate evidence
   In remote mode 0.157.1 sends the roots null; the ordinary configuration builder
   (`:1795` there) always writes `web_search`, which now stands in for them on start,
   on a by-ID resume (history and path null) and on fork. An ordinary resume carrying
-  it is not taken for a reconnect ([research-codex.md](research-codex.md#the-terminals-selection-on-01571)).
+  it is not taken for a reconnect ([research-codex-live-checks.md](research-codex-live-checks.md#the-terminals-selection-on-01571)).
 - `tui/src/app/session_lifecycle.rs`, resume backfill: the accepted primary is
   established before a loaded-thread inventory and numeric metadata reads. A
   bounded correlated cohort authorizes those reads without selecting among them.

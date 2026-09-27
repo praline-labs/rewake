@@ -6,7 +6,7 @@ was 85% full and sent it its next task, the compaction ran about 104 seconds, an
 main's wait for the end. The task went into the running compaction, the server refused
 it with `ActiveTurnNotSteerable { turn_kind: Compact }`, and the delivery failed with
 "not retried automatically"; main was told the compaction had failed, and was told
-nothing when it succeeded ([research-codex.md](../research-codex.md#a-delivery-during-a-long-compaction)).
+nothing when it succeeded ([research-codex-live-checks.md](../research-codex-live-checks.md#a-delivery-during-a-long-compaction)).
 
 ## Why it was lost
 

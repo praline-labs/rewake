@@ -26,11 +26,10 @@ type DirGrantHarness interface {
 // HookGranter takes a directory grant through a hook the harness runs in
 // front of a tool call, not through anything the wrapper can do to it: the
 // wrapper keeps the journal (grantauth.Keeper), and the hook, a process below
-// it, asks the wrapper what to answer (docs/grants.md#claude-code).
+// it, asks the wrapper what to answer (docs/grants.md#claude-code). What the
+// hook sends is the harness package's own business: the hook knows which
+// harness runs it.
 type HookGranter interface {
-	// GrantCall is the part of a hook's payload the wrapper decides on, or
-	// false when the payload does not parse.
-	GrantCall(payload []byte) (json.RawMessage, bool)
 	// DecideGrant answers one call from the journal.
 	DecideGrant(call json.RawMessage, entries []grant.Entry) grantauth.Decision
 }

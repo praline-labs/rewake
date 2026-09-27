@@ -18,13 +18,15 @@ import (
 // reports; main sends the next task, in which the worker writes there again
 // and reads its own directory.
 //
-//   - A write inside the grant is allowed by the PermissionRequest hook, which
-//     adds the directory for the session; a command inside it then runs unasked.
+//   - A command inside the grant goes to the person until a file tool writes
+//     there; that write is allowed by the PermissionRequest hook, which adds
+//     the directory for the session, and a command inside it then runs unasked.
 //   - A write into `.git` inside the grant, and a write outside it, go to the
 //     person, even once the grant is a working directory.
-//   - After the report a write into the directory is denied, the next read is
-//     answered with the directory's removal, a write after that goes to the
-//     person, and `rewake list --json` shows the grant revoked.
+//   - After the report a write into the directory is denied, a command is
+//     asked about and goes to the person, the next read is answered with the
+//     directory's removal, a write after that goes to the person, and
+//     `rewake list --json` shows the grant revoked.
 //
 // What it does not prove: what the real harness does with the answers. That
 // was seen live on 2.1.280 (docs/research-claude-actions.md); the fixture
@@ -48,9 +50,9 @@ func TestClaudeGrantDir(t *testing.T) {
 }
 
 const (
-	obsClaudeGrantGiven     = "a write inside the granted directory is allowed by the permission hook, which adds the directory for the session, and a command in it then runs unasked"
+	obsClaudeGrantGiven     = "a command in the granted directory goes to the person until a file tool writes there, which the permission hook allows, adding the directory for the session, and a command in it then runs unasked"
 	obsClaudeGrantShielded  = "a write into the Git metadata inside the grant, and a write outside the grant, go to the person"
-	obsClaudeGrantTakenBack = "after the report a write into the directory is denied, the next read is answered with its removal, a write after that goes to the person, and the listing shows it revoked"
+	obsClaudeGrantTakenBack = "after the report a write into the directory is denied, a command is asked about and goes to the person, the next read is answered with its removal, a write after that goes to the person, and the listing shows it revoked"
 	claudeGrantTask         = "claude-grant-task: write in the granted directory"
 	claudeGrantAfter        = "claude-grant-after: the task after the report"
 )
@@ -81,9 +83,10 @@ func playClaudeGrantDir(t *testing.T, c *Case, iso *Isolation) []telemetryFindin
 	sg := steering{c: c, asks: asks, lead: lead}
 
 	calls := func(lines ...string) string { return strings.Join(lines, "\n") }
-	written, run, git, outside := filepath.Join(granted, "a.txt"), filepath.Join(granted, "b.txt"), filepath.Join(granted, ".git", "config"), filepath.Join(other, "c.txt")
+	early, written, run := filepath.Join(granted, "early.txt"), filepath.Join(granted, "a.txt"), filepath.Join(granted, "b.txt")
+	git, outside := filepath.Join(granted, ".git", "config"), filepath.Join(other, "c.txt")
 	code, sent, _ := asks.ask(c, "send", worker.name, "--grant-dir", granted, "--json", calls(claudeGrantTask,
-		"tool Write "+written, "tool Bash "+run, "tool Write "+git, "tool Write "+outside))
+		"tool Bash "+early, "tool Write "+written, "tool Bash "+run, "tool Write "+git, "tool Write "+outside))
 	var view struct {
 		ID        string   `json:"id"`
 		GrantDirs []string `json:"grantDirs"`
@@ -96,9 +99,9 @@ func playClaudeGrantDir(t *testing.T, c *Case, iso *Isolation) []telemetryFindin
 		events, _ := worker.turnEvents()
 		return unjudgedAll(claudeGrantObservations, "the worker did not finish the granted task %s, its status %q: %v", task, statusState(iso, worker, task), events)
 	}
-	denied, again := filepath.Join(granted, "d.txt"), filepath.Join(granted, "e.txt")
+	denied, asked, again := filepath.Join(granted, "d.txt"), filepath.Join(granted, "f.txt"), filepath.Join(granted, "e.txt")
 	_, sent, _ = asks.ask(c, "send", worker.name, calls(claudeGrantAfter,
-		"tool Write "+denied, "tool Read README", "tool Write "+again))
+		"tool Write "+denied, "tool Bash "+asked, "tool Read README", "tool Write "+again))
 	after := printedID(sent)
 	var events []turnEvent
 	tools := map[string]string{}
@@ -111,11 +114,11 @@ func playClaudeGrantDir(t *testing.T, c *Case, iso *Isolation) []telemetryFindin
 
 	var out []telemetryFinding
 	out = append(out, judged(obsClaudeGrantGiven,
-		tools["Write "+written] == "ran +"+granted && tools["Bash "+run] == "ran", "%s", record))
+		tools["Bash "+early] == "prompted" && tools["Write "+written] == "ran +"+granted && tools["Bash "+run] == "ran", "%s", record))
 	out = append(out, judged(obsClaudeGrantShielded,
 		tools["Write "+git] == "prompted" && tools["Write "+outside] == "prompted", "%s", record))
 	outcome := journaledOutcome(sg, worker, granted)
-	taken := tools["Write "+denied] == "denied" && tools["Read README"] == "ran -"+granted &&
+	taken := tools["Write "+denied] == "denied" && tools["Bash "+asked] == "prompted" && tools["Read README"] == "ran -"+granted &&
 		tools["Write "+again] == "prompted" && outcome == "revoked"
 	return append(out, judged(obsClaudeGrantTakenBack, taken, "the journal says %q; %s", outcome, record))
 }

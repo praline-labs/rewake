@@ -3,7 +3,7 @@
 What reaches the sessions waiting on a turn when that turn does not simply finish: it
 failed, a person stopped it, or the session marked it as not the end of the work. The
 ordinary path — a turn end, its `finished` report, and how waits are recorded and
-settled — is in [delivery.md](delivery.md#the-end-of-a-turn).
+settled — is in [delivery-turn-end.md](delivery-turn-end.md#the-end-of-a-turn).
 
 ## Failed turns
 

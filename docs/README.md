@@ -13,10 +13,15 @@ everything else.
 
 ## How it works
 
-- [flow.md](flow.md) — the whole path of one message as a story: a session starts, a
-  message is sent, announced, read and answered, the report comes back, the session
-  ends; with the files each step leaves and the exit codes and stalls a reader meets.
-  Open it first, before any of the documents below, which it strings together.
+- [flow.md](flow.md) — the whole path of one message as a story, Acts 1 through 5: a
+  session starts, a task is sent, the wrapper announces it, the agent reads it and the
+  turn ends with the report going back; with the files each step leaves. Open it first,
+  before any of the documents below, which it strings together.
+- [flow-endings.md](flow-endings.md) — the rest of the flow, split from flow.md by
+  subject: a blocking question (Act 6), a notify (Act 7), the session's end (Act 8), one
+  exchange traced through its files, where the flow can stall and what the sender sees,
+  and how a report notes that the reader's conversation changed underneath it. Open it
+  for a question, a notify, a session's end, or a stall a reader met.
 - [design.md](design.md) — the specification: scope, the process model with no daemon,
   the state directory, rooms, the session record, the environment a harness receives,
   the CLI contract and exit codes, the code policy, the testing layers, and dated owner
@@ -50,11 +55,15 @@ everything else.
   model and effort defaults from flags, environment and settings files, and launch
   aliases with the rules for which of their flags a typed one replaces. Open it when a
   session came up on an unexpected model or an alias does something other than meant.
-- [delivery.md](delivery.md) — sending, reading and reporting at the level of files and
-  wire: the message record, task, question and notify, the question reservation and its
-  heartbeat, the one lock per mailbox, the wrapper's servicing loop and notice texts,
-  `rewake inbox`, turn-end reports and what happens on a thread change. Open it for the
-  exact behaviour of any send, read or report.
+- [delivery.md](delivery.md) — sending and reading at the level of files and wire: the
+  message record, task, question and notify, the question reservation and its heartbeat,
+  the one lock per mailbox, the wrapper's servicing loop and notice texts, and `rewake
+  inbox`. Open it for the exact behaviour of any send or read.
+- [delivery-turn-end.md](delivery-turn-end.md) — what happens once the reader's turn
+  ends, split from delivery.md by subject: how `turn-ended` turns a finished turn into a
+  report, the report's derived id and what a retry replays, and how a report notes that
+  the reader's conversation changed underneath it. Open it for the exact behaviour of a
+  turn-end report.
 - [delivery-owed.md](delivery-owed.md) — owed reports read back: `rewake inbox --owed`,
   what a session has read and still owes and how many tasks wait unread, and
   `rewake inbox --awaited`, what a run sent
@@ -198,6 +207,11 @@ everything else.
   terminal, environment and instructions, the session-owned app-server, and the model's
   plan tool. Open it before touching the Codex adapter or after a Codex
   update.
+- [research-codex-live-checks.md](research-codex-live-checks.md) — dated live probes of
+  delivery and conversation selection, split from research-codex.md by subject: a
+  compaction held against a task, two real sessions driven end to end through steering,
+  `/new`, compaction and an interrupt, and the terminal's selection between two installed
+  versions. Open it before touching delivery timing or conversation selection on Codex.
 - [research-launch.md](research-launch.md) — what an installed binary answers when run:
   model and effort catalogues and the usable context window, which flags may repeat,
   undocumented aliases, when a `--help` probe can be trusted, how each harness is

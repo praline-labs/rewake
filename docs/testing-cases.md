@@ -100,7 +100,7 @@ starts fresh, the other resumes a conversation and then reads its goal, as the t
 does. main sends each a task, and each must report it `finished`: the gateway took the
 terminal's selection from its configuration. Its mutant, `roots-only-recognition`,
 restores the rule that asked for roots or permissions, and must break both observations
-([research-codex.md](research-codex.md#the-terminals-selection-on-01571)).
+([research-codex-live-checks.md](research-codex-live-checks.md#the-terminals-selection-on-01571)).
 
 ## A worktree for a Codex launch
 
@@ -203,11 +203,13 @@ PermissionRequest for a write outside every working directory, suggesting its pa
 allow applying `addDirectories` and `removeDirectories`, silence going to a person, who
 never answers. An answer outside that shape — an update beyond the session, a kind the
 hook does not make — is recorded as refused. Main grants a directory in the user's
-cache; the worker writes in it, runs a command in it, writes its `.git/config` and a
-directory beside it: the first two must run, the first adding the directory, and the last
-two go to the person. After the report the next task writes in it, reads `README` in the
-worker's own directory and writes in it again: denied, run with the directory removed,
-then to the person; main's `rewake list --json` must show it `revoked`. Its mutants never
+cache; the worker runs a command in it, writes in it, runs another command in it, writes
+its `.git/config` and a directory beside it: the first command goes to the person, the
+write runs and adds the directory, the second command then runs unasked, and the last
+two go to the person. After the report the next task writes in it, runs a command in it,
+reads `README` in the worker's own directory and writes in it again: denied, to the
+person, run with the directory removed, then to the person; main's `rewake list --json`
+must show it `revoked`. Its mutants never
 allow a write in a grant (`claude-grant-silent`, which breaks the giving and the taking
 back, the grant ending at the report with nothing added), let a grant reach its Git
 metadata (`claude-grant-unshielded`, which breaks the shielded writes alone), and never

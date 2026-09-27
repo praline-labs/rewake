@@ -82,10 +82,11 @@ takes arguments rewake has a way of its own for implements `LaunchRefuser` —
 implements `GrantIssuer` — `ReachesWrapper()`, whether its commands reach their wrapper's
 socket; only Claude Code does, and a grant from a main of any other harness is refused
 with exit 1 ([grants.md](grants.md#who-can-grant)). A harness that takes a grant through
-a permission hook rather than at delivery implements `HookGranter` — `GrantCall(payload)`,
-the part of a hook's payload the wrapper needs, and `DecideGrant(call, entries)`, the
-answer from the grants the wrapper keeps; the hidden `rewake grant-hook` passes one to
-the other over the wrapper's keeper socket ([grants.md](grants.md#claude-code)).
+a permission hook rather than at delivery implements `HookGranter` —
+`DecideGrant(call, entries)`, the answer from the grants the wrapper keeps. The hidden
+`rewake grant-hook` knows which harness runs it: it trims the payload with that
+package's `GrantCall` and asks the wrapper over its keeper socket
+([grants.md](grants.md#claude-code)).
 
 A harness that gives rewake's worktree to a launch implements `WorktreeHarness` —
 `WorktreeFlag()`, the spelling the launch command takes for itself;

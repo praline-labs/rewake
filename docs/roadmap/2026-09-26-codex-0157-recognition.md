@@ -5,7 +5,7 @@ A live probe of the same day ran real terminals and app-servers of Codex 0.155.1
 server answered every lifecycle request writable, but the gateway selected nothing:
 after the first launch, `/new`, `/resume` in the same process and `codex resume <id>`,
 `rewake send` refused with `selected conversation is not ready`. 0.155.1 delivered
-after all four ([research-codex.md](../research-codex.md#the-terminals-selection-on-01571)).
+after all four ([research-codex-live-checks.md](../research-codex-live-checks.md#the-terminals-selection-on-01571)).
 
 ## Why
 
@@ -40,7 +40,7 @@ its `PreserveExistingThread` resume carry one too.
 - **The fixture's terminal speaks 0.157.1** under `RW_SHIM_TUI_SHAPE`, and reads its
   goal after a resume as the real one does; the shim serves the goal query. The schema
   case checks both forms and the goal reply.
-- Documents: [research-codex.md](../research-codex.md#the-terminals-selection-on-01571),
+- Documents: [research-codex-live-checks.md](../research-codex-live-checks.md#the-terminals-selection-on-01571),
   [research-protocol.md](../research-protocol.md#the-terminals-lifecycle-requests-on-01571),
   [gateway.md](../gateway.md#compatibility-and-limits),
   [gateway-native-evidence.md](../gateway-native-evidence.md),
@@ -84,7 +84,7 @@ the legacy marks ([legacy.md](../legacy.md)):
   gates each recognized request; a resume carries none, and it gates a start and a fork.
   It also said the reconnect's resume is without roots only; it is without the
   terminal's configuration too.
-- `metadata.go` and [research-codex.md](../research-codex.md#the-terminals-selection-on-01571)
+- `metadata.go` and [research-codex-live-checks.md](../research-codex-live-checks.md#the-terminals-selection-on-01571)
   said the helpers carry no configuration, or the builder's. The temporary helper writes
   its own with `web_search` `"disabled"` (`temporary_structured_request.rs`, about line
   98) and the dynamic one takes the builder's on a start; only their request-id prefixes

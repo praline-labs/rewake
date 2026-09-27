@@ -94,7 +94,7 @@ In one change, in this order:
   (the construction of the primary start and resume),
   [thread-ownership-investigation.md](thread-ownership-investigation.md) (the ordinary
   resume's fields), [traps.md](traps.md) (a wrapper built before September 26, 2026 on
-  0.157.1), [research-codex.md](research-codex.md#the-terminals-selection-on-01571)
+  0.157.1), [research-codex-live-checks.md](research-codex-live-checks.md#the-terminals-selection-on-01571)
   (0.155.1 as the control of the probe).
 
 ## Oldest supported versions

@@ -132,8 +132,8 @@ func (k *Keeper) answer(conn *net.UnixConn) {
 	_ = json.NewEncoder(conn).Encode(answer)
 }
 
-// decide answers a hook call from a process below this wrapper: this
-// session's own harness. Anything else is told nothing.
+// decide answers a hook call from a process below this wrapper and in its
+// namespaces: this session's own harness. Anything else is told nothing.
 func (k *Keeper) decide(conn *net.UnixConn, call json.RawMessage) (json.RawMessage, error) {
 	peer, err := peerOf(conn)
 	if err != nil {
@@ -144,6 +144,11 @@ func (k *Keeper) decide(conn *net.UnixConn, call json.RawMessage) (json.RawMessa
 	}
 	if err := proc.Default.Descends(int(peer.Pid), k.Self); err != nil {
 		return nil, fmt.Errorf("only this session's harness asks about its grants: %v", err)
+	}
+	// The harness's own hook runs beside it; a command it started in a
+	// sandbox of its own is not the hook, even below this wrapper.
+	if err := sameNamespaces(int(peer.Pid)); err != nil {
+		return nil, fmt.Errorf("a command in a sandbox of its own is told nothing about the grants: %v", err)
 	}
 	k.mu.Lock()
 	defer k.mu.Unlock()
