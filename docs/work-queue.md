@@ -149,6 +149,15 @@ net that agents are not told to rely on. The next one in the queue, by its numbe
 a waking notice that it now holds the slot. Once built, it replaces the manual rule in
 the Checks section of `AGENTS.md`.
 
+**Continuing a conversation inside a rewake worktree.** Recorded September 27, 2026.
+`--worktree` with `resume` or `fork` is refused ([launch.md](launch.md#a-worktree-for-a-launch)),
+and the way to continue is to enter the checkout `rewake worktree ls` names and run
+`rewake codex resume` there without the flag: the conversation began in the checkout, so
+Codex restores it there. That path is expected by design and not yet seen live; one probe
+with the real binaries and no model call settles it. The refusal should also spell the
+path out — `rewake worktree ls`, then `cd` and `resume` from the checkout — rather than
+only "without --worktree".
+
 **A: Codex's own worktree scheme — to study later.** Recorded September 26, 2026, when
 the owner chose variant B for `rewake codex --worktree`: rewake makes a detached checkout
 with the public `git worktree add` and keeps its own record
