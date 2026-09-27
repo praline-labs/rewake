@@ -65,6 +65,12 @@ func Run(ctx context.Context, request Request) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	if request.Role.ID == role.Main.ID {
+		if authority := listenAuthority(request.Dir, registry.Session{ServicePID: self, ServiceStart: selfStart}.Epoch(), self); authority != nil {
+			defer authority.Close()
+			go authority.Serve(ctx)
+		}
+	}
 
 	// The name is claimed before anything is prepared. Preparing first means a
 	// launch that loses the race has already touched what belongs to the session
@@ -139,11 +145,6 @@ func Run(ctx context.Context, request Request) (int, error) {
 	if err := registry.Update(request.Dir, session); err != nil {
 		return 0, err
 	}
-	if role.Of(session.Role).ID == role.Main.ID {
-		// Before the harness: its first command may already send a grant.
-		defer serveAuthority(ctx, request.Dir, name, epoch, self)()
-	}
-
 	// Signals are caught before the child exists. In the gap between starting it
 	// and installing the handlers, a SIGTERM meant for the wrapper would kill it
 	// outright: the harness would keep running with nobody serving its mailbox

@@ -57,7 +57,7 @@ func TestAGrantIsConfirmedWithTheMainThatSentIt(t *testing.T) {
 		t.Fatalf("before main listens: %v", err)
 	}
 
-	authority, err := grantauth.Listen(state.AuthorityAddress(dir, "lead", epoch), os.Getpid(), time.Minute)
+	authority, err := grantauth.Listen(state.AuthorityAddress(dir, epoch), os.Getpid(), time.Minute)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +69,7 @@ func TestAGrantIsConfirmedWithTheMainThatSentIt(t *testing.T) {
 		t.Fatalf("a grant main never registered: %v", err)
 	}
 	registered := grantauth.Grant{ID: "m1", To: "worker", ToEpoch: "9.9", Dirs: []string{"/src/lib"}}
-	if err := grantauth.Register(state.AuthorityAddress(dir, "lead", epoch), registered); err != nil {
+	if err := grantauth.Register(state.AuthorityAddress(dir, epoch), registered); err != nil {
 		t.Fatal(err)
 	}
 	if err := confirmGrant(dir, "worker", "9.9", message); err != nil {

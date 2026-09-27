@@ -1,7 +1,6 @@
 package wrap
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -50,7 +49,7 @@ func confirmGrant(dir, name, epoch string, message inbox.Message) error {
 		return errors.New("its sender is not a session run that can be asked to confirm it")
 	}
 	expect := grantauth.Expect{PID: pid, Start: start}
-	confirmed, err := grantauth.Confirm(state.AuthorityAddress(dir, message.From, message.FromEpoch), expect, message.ID, name, epoch)
+	confirmed, err := grantauth.Confirm(state.AuthorityAddress(dir, message.FromEpoch), expect, message.ID, name, epoch)
 	switch {
 	case err == nil:
 	case errors.Is(err, grantauth.ErrUnreachable) && proc.Alive(pid, start):
@@ -67,14 +66,16 @@ func confirmGrant(dir, name, epoch string, message inbox.Message) error {
 	return nil
 }
 
-// serveAuthority answers, for a main run, for the grants its commands
-// register. Any other role has none to answer for, and no socket.
-func serveAuthority(ctx context.Context, dir, name, epoch string, self int) func() {
-	authority, err := grantauth.Listen(state.AuthorityAddress(dir, name, epoch), self, grantLifetime)
+// listenAuthority binds, for a main run, the address that answers for the
+// grants its commands register; any other role has none to answer for, and
+// no socket. It binds before the run's record is written: from then on the
+// address can be computed, and a listener there first would take main's
+// registrations. Nil when it cannot bind, and the session is told why.
+func listenAuthority(dir, epoch string, self int) *grantauth.Authority {
+	authority, err := grantauth.Listen(state.AuthorityAddress(dir, epoch), self, grantLifetime)
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, "rewake: this session cannot grant directories or Git access: "+err.Error())
-		return func() {}
+		return nil
 	}
-	go authority.Serve(ctx)
-	return authority.Close
+	return authority
 }

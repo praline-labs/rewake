@@ -6,7 +6,9 @@ import "testing"
 // grant's origin undone.
 
 // Main's wrapper takes a grant from any process of the user, not only from
-// one below it: both forged sends are registered and written.
+// one below it: a registration written straight to its address is taken.
+// rewake send itself still registers only with a listener above it, so the
+// forged sends stay refused.
 var mutantGrantFromAnywhere = mutation{
 	name:  "grant-from-anywhere",
 	file:  "internal/grantauth/server.go",
@@ -30,11 +32,11 @@ var mutantGrantAnyListener = mutation{
 }
 
 func TestAGrantRegisteredFromAnyProcessFails(t *testing.T) {
-	runGrantForgeryControl(t, mutantGrantFromAnywhere, obsForgedSend, obsDetachedSend)
+	runGrantForgeryControl(t, mutantGrantFromAnywhere, obsRawRegister)
 }
 
 func TestAGrantNeverConfirmedWithMainFails(t *testing.T) {
-	runGrantForgeryControl(t, mutantGrantUnconfirmed, obsHandLetter, obsForeignAnswer)
+	runGrantForgeryControl(t, mutantGrantUnconfirmed, obsRawRegister, obsHandLetter, obsForeignAnswer)
 }
 
 func TestAGrantConfirmedByAnyListenerFails(t *testing.T) {

@@ -173,20 +173,25 @@ working thread against `ThreadReadResponse`. The path rules, the journal and the
 refusals are unit tests in `internal/grant`, `internal/cli` and `internal/harness/codex`.
 
 `codex-grant-forgery` is a Codex write worker trying to grant itself a directory in the
-name of a running Claude Code main, four ways. Its own process runs `rewake send` with
+name of a running Claude Code main, five ways. Its own process runs `rewake send` with
 main's `REWAKE_SESSION` and `REWAKE_EPOCH`, and so does a process it detached through
-`setsid`: both must exit 1 and leave no letter, because main's wrapper registers a grant
-only from a process below it. A letter carrying a grant is put into the worker's mailbox
-by hand in main's name, and another in the name of a session whose run is main's while
-a listener in the test process answers at that session's address and confirms the
-grant: both must fail and never reach the worker's roots — the first because main
-never registered it, the second because the answer came from a process other than the
-run the letter names. What it does not prove is the namespace check: every process in
-the suite shares the wrappers' namespaces, as a worker outside a sandbox does, so that
-check has its own unit test in `internal/grantauth`. Its mutants take registrations from
-any process (`grant-from-anywhere`, which breaks the two sends), deliver a grant without
-asking main's wrapper (`grant-unconfirmed`, which breaks the two letters), and take an
-answer from any listener (`grant-any-listener`, which breaks the foreign answer alone).
+`setsid`: both must exit 1 and leave no letter. The test process, outside main's tree,
+writes a registration straight to main's address, as a forger's own client would,
+skipping the checks `rewake send` makes of its listener, and puts the letter in the
+worker's mailbox: main's wrapper must refuse the registration and the letter fail. A
+letter carrying a grant is put in by hand in main's name, and another in main's name
+whose run is the worker's own while a listener in the test process answers at that
+run's address and confirms the grant: both must fail and never reach the worker's roots
+— the first because main never registered it, the second because the answer came from
+a process other than the run the letter names. What it does not prove is the namespace
+check: every process in the suite shares the wrappers' namespaces, as a worker outside
+a sandbox does, so those checks have their own unit tests in `internal/grantauth`, the
+registration's from a helper in a real user namespace. Its mutants take registrations
+from any process (`grant-from-anywhere`, which breaks the direct registration alone —
+`rewake send` still registers only with a listener above it), deliver a grant without
+asking main's wrapper (`grant-unconfirmed`, which breaks the three letters), and take
+an answer from any listener (`grant-any-listener`, which breaks the foreign answer
+alone).
 
 ## Actions on a sent message
 

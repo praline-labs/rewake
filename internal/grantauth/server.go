@@ -130,6 +130,9 @@ func (a *Authority) register(conn *net.UnixConn, grant Grant) error {
 	if err := proc.Default.Descends(int(peer.Pid), a.Self); err != nil {
 		return fmt.Errorf("only a command this session runs registers its grants: %v", err)
 	}
+	if err := sameNamespaces(int(peer.Pid)); err != nil {
+		return fmt.Errorf("a command in a sandbox of its own does not register a grant, even one this session started: %v", err)
+	}
 	if grant.ID == "" || grant.To == "" || grant.ToEpoch == "" || len(grant.Dirs) == 0 && !grant.Git {
 		return errors.New("a grant names its message, its recipient's run and what it grants")
 	}

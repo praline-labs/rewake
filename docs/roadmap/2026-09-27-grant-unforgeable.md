@@ -32,13 +32,13 @@ stage 2 for it, and settled the details with the sketch the same day
 ## What was done
 
 - **Registration.** `rewake send` with a grant registers it with its own main's
-  wrapper over an abstract unix socket named from the room, the session and its run
+  wrapper over an abstract unix socket named from the room and its run
   (`internal/grantauth`). The wrapper takes it only from its own user and from a process
   below it — a walk up the parents with start times checked, so a reused pid does not
   pass — and holds it in memory for the task's time to live and five minutes more, at
   most 256 at once, refusing the next rather than dropping one.
 - **Confirmation.** The recipient's wrapper, outside the sandbox, asks the address of
-  the letter's sender and run before delivering; the answer counts only from the process
+  the letter's run before delivering; the answer counts only from the process
   that run names, alive, in the same mount, user and PID namespaces. A sender alive but
   not reachable keeps the task pending until its time to live; one that has ended, or
   an answer that does not match, fails it with a note to the sender.
@@ -73,19 +73,42 @@ the temporary directories, a live session's directory and the sweep; in `interna
 the empty value, the addendum and the owed lines; a test over the catalogue for
 `ProtectedDirs`. Hand mutations of each rule were killed.
 
-The workflow case `codex-grant-forgery` tries four forgeries against a running main —
+The workflow case `codex-grant-forgery` tries five forgeries against a running main —
 a send with main's variables, the same from a process detached through `setsid`, a
-letter written by hand and a letter another listener confirms — and none reaches the
-worker's roots. Its three mutants each break what they name
+registration written straight to main's address, a letter written by hand and a letter
+another listener confirms — and none reaches the worker's roots. Its three mutants each break what they name
 ([testing-cases.md](../testing-cases.md#a-directory-granted-with-a-task)).
 `codex-grant-dir` now has a Claude Code main and grants a directory outside `/tmp`.
+
+## After review
+
+review-claude found one medium point and three low ones, fixed the same day:
+
+- **A sandbox main started itself** registered a grant: a command run through
+  `unshare -Ur --pid --fork --mount --mount-proc` below main's wrapper was taken. Main's
+  wrapper now refuses a registration from other mount, user or PID namespaces, as it
+  refuses a confirmation from them; a unit test registers from such a helper process.
+- **The address was bound after the record was written**, so a listener there first
+  took main's registrations while send reported them. The address is now named from the
+  room and the run alone, bound before the name is claimed, and `rewake send` registers
+  only with a listener above itself. The forgery case's foreign letter names the
+  worker's own run, since main's is bound; and since the forged sends now stop at that
+  client check, a fifth forgery writes a registration straight to main's address from
+  outside its tree, which is what `grant-from-anywhere` breaks.
+- `grants.md` no longer says a worker's process never runs below main's wrapper; it
+  names a sandbox main started and a worker's code main runs, says the legacy Landlock
+  refusal is the recipient's, the live-session tier a guard against main's mistake, and
+  `.git/hooks` writable only with `--grant-git`.
+- `internal/state/state.go` reached 400 lines; its paths and addresses moved to
+  `paths.go`.
 
 ## What stays open
 
 - A Claude Code worker has no boundary: outside a sandbox it can forge a registry
   record, start a listener and leave main's tree. Written in
   [grants.md](../grants.md#what-a-grant-does-not-stop).
-- The namespace check cannot be exercised by the suite, whose processes share them.
+- The workflow suite cannot exercise the namespace checks, its processes sharing them;
+  unit tests do, the registration's in a real user namespace.
 - A grant from a Codex main, a journal keyed by thread for a cold resume, and whether
   Codex resolves a root on every command are queued
   ([work-queue.md](../work-queue.md#also-queued-not-scheduled)).

@@ -187,6 +187,13 @@ seccomp filter was lifted so bubblewrap could create namespaces; evidence in
   it deprecated and off by default, chosen only by an explicit setting, and a failing
   bubblewrap does not fall back to it.
 
+**[verified live by review-codex; Codex CLI 0.155.1 and 0.157.1; September 27, 2026]**
+The network namespace follows `networkAccess`. With `networkAccess=false` the sandbox has
+a network namespace of its own, and no `@rewake` abstract name is visible from inside.
+With `networkAccess=true` it shares the host's, and the `@rewake` names listed inside
+are the ones listed outside. So an abstract address is hidden from a sandbox only while
+its network is off; the grant rests on the peer checks, not on the name.
+
 ### Environment and instructions
 
 - `shell_environment_policy` inherits the environment by default, excluding names

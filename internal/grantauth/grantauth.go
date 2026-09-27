@@ -90,12 +90,33 @@ func Register(path string, grant Grant) error {
 		return err
 	}
 	defer func() { _ = conn.Close() }()
+	if err := servesCaller(conn); err != nil {
+		return err
+	}
 	answer, err := exchange(conn, request{Op: opRegister, Grant: grant})
 	if err != nil {
 		return err
 	}
 	if answer.Error != "" {
 		return fmt.Errorf("%w: %s", ErrNotConfirmed, answer.Error)
+	}
+	return nil
+}
+
+// servesCaller checks that the listener at the other end of conn is a
+// process above the caller: its own session's wrapper. A listener that bound
+// the address first would otherwise take the registration, and send would
+// report a grant that no wrapper can confirm.
+func servesCaller(conn *net.UnixConn) error {
+	peer, err := peerOf(conn)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrUnreachable, err)
+	}
+	if int(peer.Uid) != os.Getuid() {
+		return fmt.Errorf("%w: the socket is served by another user", ErrNotConfirmed)
+	}
+	if err := proc.Default.Descends(os.Getpid(), int(peer.Pid)); err != nil {
+		return fmt.Errorf("%w: the socket is served by process %d, which is not this session's wrapper: %v", ErrNotConfirmed, peer.Pid, err)
 	}
 	return nil
 }
@@ -158,13 +179,35 @@ func (e Expect) answeredBy(conn *net.UnixConn) error {
 	if !proc.Alive(e.PID, e.Start) {
 		return refuse("process %d is not the sending session's wrapper as it started", e.PID)
 	}
+	if err := sameNamespaces(e.PID); err != nil {
+		if errors.Is(err, errOwnNamespaces) {
+			return fmt.Errorf("%w: %v", ErrUnreachable, err)
+		}
+		return refuse("the sending session's wrapper runs in other namespaces than this one, as a sandboxed process would")
+	}
+	return nil
+}
+
+// errOwnNamespaces is this process failing to read its own namespaces:
+// nothing learned about the other one.
+var errOwnNamespaces = errors.New("cannot read this process's namespaces")
+
+// sameNamespaces says whether a process shares this one's mount, user and
+// PID namespaces. A sandbox starts its commands in namespaces of their own,
+// and neither end of a grant is to be one of them: not the wrapper that
+// confirms a grant, nor the command that registers one — a sandboxed
+// process main itself started runs below main's wrapper too.
+func sameNamespaces(pid int) error {
 	own, err := namespaces("self")
 	if err != nil {
-		return fmt.Errorf("%w: cannot read this process's namespaces: %v", ErrUnreachable, err)
+		return fmt.Errorf("%w: %v", errOwnNamespaces, err)
 	}
-	theirs, err := namespaces(strconv.Itoa(e.PID))
-	if err != nil || theirs != own {
-		return refuse("the sending session's wrapper runs in other namespaces than this one, as a sandboxed process would")
+	theirs, err := namespaces(strconv.Itoa(pid))
+	if err != nil {
+		return err
+	}
+	if theirs != own {
+		return errors.New("other namespaces than this process")
 	}
 	return nil
 }

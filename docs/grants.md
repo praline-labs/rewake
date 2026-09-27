@@ -115,7 +115,9 @@ Matched exactly, and granted only with `--grant-dir-broad <the same path>`:
   harness and rewake what to run, so a grant there reaches past the task into the other
   session. Unlike the rest of the tier this one matches what contains the directory
   too. Read from the registry at send and again at delivery; a directory confirmed when
-  sent is not refused at delivery because its session has ended since.
+  sent is not refused at delivery because its session has ended since. The registry is
+  a file a sandboxed worker can rewrite, so this guards against main's mistake, not
+  against the worker.
 
 The same files in a directory no session works in are not recognized: a grant of a
 checkout nobody runs in opens its `.claude/` and `.mcp.json` for writing, and the next
@@ -133,20 +135,24 @@ Everything a message carries is written by whoever wrote the file, and the state
 directory — registry, mailboxes, journals — is writable by a Codex worker in
 `workspace-write`, since it lies in `/tmp`. So nothing on disk says who sent a grant.
 What does is main's wrapper, a process outside every sandbox, asked over an abstract
-unix socket named from the room, main's name and its run (`@rewake/grant/<hash>`, no
-file to replace or leave behind):
+unix socket named from the room and main's run (`@rewake/grant/<hash>`, no file to
+replace or leave behind). The wrapper binds it before it writes its record, so from the
+moment the address can be worked out it is taken; a `rewake send` registers only with a
+listener that runs above it, so a listener there first would not take a grant and have
+send report it as registered.
 
 1. **At send.** `rewake send` or `rewake edit` with a grant registers it with its own
    session's wrapper before the letter is written. The wrapper takes it only from a
    process below itself: the caller's uid and pid from `SO_PEERCRED`, then its chain of
    parents up to the wrapper, each no younger than its child, so a pid taken again on the
-   way ends the walk. A worker's process runs below its own wrapper, never main's, and
+   way ends the walk; and it must share the wrapper's mount, user and PID namespaces. A
+   worker's process runs below its own wrapper and not main's, unless main started it;
    one that left its tree through `setsid` and a double fork runs below neither. The
    wrapper holds the grant in memory — message, recipient, the recipient's run,
    directories, broad ones, Git — for the task's time to live and five minutes more, at
    most 256 at once; past that it refuses a new one rather than forget an old one.
-2. **At delivery.** The recipient's wrapper asks the address the letter's sender and
-   run lead to, and takes the answer only from the process that run names: the
+2. **At delivery.** The recipient's wrapper asks the address the letter's run leads
+   to, and takes the answer only from the process that run names: the
    listener's pid from `SO_PEERCRED` must be that run's pid, alive with that start time
    before and after the answer, and in the same mount, user and PID namespaces as the
    asking wrapper. The grant confirmed must be the one the letter carries, for this
@@ -157,6 +163,13 @@ file to replace or leave behind):
    nobody can confirm the grant, now or later: the task fails, naming the main that sent
    it, and has to be sent again from the current one.
 
+What this holds against rests on the peer checks, not on the address being hidden. A
+Codex sandbox with its network on shares the host's network namespace and sees every
+`@rewake` name ([research-codex.md](research-codex.md#the-sandboxs-namespaces)); only
+with the network off is it cut off from them. So the wrapper checks who is at the other
+end both ways — the pid, the start time and the mount, user and PID namespaces — and the
+namespace check at registration is what keeps a sandbox main started from granting.
+
 What this holds against, and what it does not:
 
 - **A worker inside the Codex sandbox.** Codex runs a command in a mount, user and PID
@@ -165,9 +178,19 @@ What this holds against, and what it does not:
   ([research-codex.md](research-codex.md#the-sandboxs-namespaces)). Its process is below
   no wrapper, so it registers nothing; a listener it starts in a run it names itself is
   in other namespaces, so nothing it confirms counts. This is what the scheme is for.
+- **A sandbox main started itself.** A Codex that main runs from its own shell — for a
+  live probe, as this repository's instructions do — runs below main's wrapper, and so
+  does every command of its sandbox; with network allowed, one could reach main's
+  address, register a grant for any recipient and put the letter in a mailbox itself.
+  Its commands are in namespaces of their own, so the wrapper refuses the registration
+  as it refuses a confirmation from them.
+- **A worker's code main runs.** `go test` on a worker's branch, run by main, runs below
+  main's wrapper in its namespaces and could register a grant. It is no new hole: code
+  main runs outside a sandbox can do whatever main can, a grant included.
 - **Codex's legacy Landlock backend** runs sandboxed commands in the app-server's own
   namespaces. It is off by default and never chosen as a fallback, but a session whose
-  launch arguments or `config.toml` mention `use_legacy_landlock` takes no grant.
+  launch arguments or `config.toml` mention `use_legacy_landlock` takes no grant. The
+  refusal is the recipient's: other sessions of the room take grants as before.
 - **A worker with no sandbox** — Claude Code, whose approved shell commands run as the
   user — has no boundary at all. It can start a listener in the wrappers' own namespaces,
   write a registry record naming that listener's run as a main, and send a letter
@@ -278,8 +301,9 @@ Keying it by the thread instead is queued
   a directory the owner gave it is not known to rewake — is not caught. Whether Codex
   resolves a root once or on every command is an open question, to be probed.
 - **What lies inside a granted directory.** A grant is for the whole tree: a `.claude/`,
-  `.mcp.json`, `.rewake.toml` or `.git/hooks` inside it is writable too, and whatever
-  reads them next runs what the worker wrote. Only a directory where a live session
+  `.mcp.json` or `.rewake.toml` inside it is writable too, and `.git/hooks` when
+  `--grant-git` rides along — Codex keeps a checkout's `.git` read-only under a writable
+  root otherwise — and whatever reads them next runs what the worker wrote. Only a directory where a live session
   works is recognized ([the broad tier](#the-broad-tier)).
 - **The shared metadata of a worktree.** `--grant-git` beside `--grant-dir` on a linked
   worktree would add the repository's common `.git`, hooks and configuration included,

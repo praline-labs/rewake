@@ -19,7 +19,7 @@ import (
 // below it; a wrapper elsewhere takes no registration from them.
 func grantingMain(t *testing.T, dir string, self registry.Session, wrapper int) {
 	t.Helper()
-	authority, err := grantauth.Listen(state.AuthorityAddress(dir, self.Name, self.Epoch()), wrapper, time.Minute)
+	authority, err := grantauth.Listen(state.AuthorityAddress(dir, self.Epoch()), wrapper, time.Minute)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +45,7 @@ func TestADirGrantIsRegisteredWithMainsWrapper(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	confirmed, err := grantauth.Confirm(state.AuthorityAddress(w.dir, self.Name, self.Epoch()), grantauth.Expect{PID: self.ServicePID, Start: self.ServiceStart}, message.ID, w.peer.Name, w.peer.Epoch())
+	confirmed, err := grantauth.Confirm(state.AuthorityAddress(w.dir, self.Epoch()), grantauth.Expect{PID: self.ServicePID, Start: self.ServiceStart}, message.ID, w.peer.Name, w.peer.Epoch())
 	if err != nil || !confirmed.Same(grantauth.Grant{ID: message.ID, To: w.peer.Name, ToEpoch: w.peer.Epoch(), Dirs: []string{lib}}) {
 		t.Fatalf("confirmed %+v, %v", confirmed, err)
 	}
