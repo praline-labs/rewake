@@ -314,6 +314,8 @@ func TestClaudeHandsItsLongWorktreeFlagToRewake(t *testing.T) {
 		{"--worktree", "-prID"},
 		{"--worktree", "--cloud"},
 		{"--worktree", "--cloud=0199"},
+		{"--worktree", "--environment", "env_01"},
+		{"--worktree", "--environment=env_01"},
 		{"--worktree", "attach", "a1b2"},
 		{"--worktree", "--model", "m", "respawn"},
 	} {

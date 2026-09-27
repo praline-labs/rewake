@@ -3,6 +3,8 @@ package worktree
 import (
 	"fmt"
 	"regexp"
+	"regexp/syntax"
+	"slices"
 	"strings"
 )
 
@@ -49,15 +51,19 @@ func parseIgnoreRules(text string) (ignoreRules, []string) {
 		if line == "" {
 			continue
 		}
-		expression := "^(?:.*/)?" + globRegexp(line) + "$"
+		body, err := globRegexp(line)
+		expression := "^(?:.*/)?" + body + "$"
 		if anchored {
-			expression = "^" + globRegexp(line) + "$"
+			expression = "^" + body + "$"
 			rule.literal = line
 			if at := strings.IndexAny(line, `*?[\`); at >= 0 {
 				rule.literal, rule.glob = line[:at], true
 			}
 		}
-		pattern, err := regexp.Compile(expression)
+		var pattern *regexp.Regexp
+		if err == nil {
+			pattern, err = regexp.Compile(expression)
+		}
 		if err != nil {
 			unread = append(unread, fmt.Sprintf("%s: the line %q is not a pattern rewake can read, so it copies nothing: %v", IncludeFile, written, err))
 			continue
@@ -79,7 +85,7 @@ func trimTrailingSpaces(line string) string {
 
 // globRegexp turns a pattern into the body of a regular expression over a
 // slash-separated path.
-func globRegexp(glob string) string {
+func globRegexp(glob string) (string, error) {
 	var out strings.Builder
 	for i := 0; i < len(glob); i++ {
 		switch c := glob[i]; {
@@ -100,7 +106,10 @@ func globRegexp(glob string) string {
 		case c == '?':
 			out.WriteString("[^/]")
 		case c == '[':
-			class, width := globClass(glob[i:])
+			class, width, err := globClass(glob[i:])
+			if err != nil {
+				return "", err
+			}
 			if width == 0 {
 				out.WriteString(`\[`)
 				continue
@@ -114,16 +123,17 @@ func globRegexp(glob string) string {
 			out.WriteString(regexp.QuoteMeta(glob[i : i+1]))
 		}
 	}
-	return out.String()
+	return out.String(), nil
 }
 
 // globClass reads a bracket expression at the start of glob and returns it as
 // a regular expression class and the width it took, or a width of 0 when the
 // bracket is not closed and stands for itself. Within it a backslash quotes the
-// next character and [:name:] is a character class of that name, as in git's
-// wildmatch; a name the expression syntax does not know, or a range running
-// backwards, is left for the compiler to refuse.
-func globClass(glob string) (string, int) {
+// next character and [:name:] is one of git's twelve named classes, as in its
+// wildmatch; another name, which the expression syntax might know — word — and
+// git does not, and a range running backwards, are an error. As in git, the
+// class never matches a slash, whatever its range: a[.-0]b does not match a/b.
+func globClass(glob string) (string, int, error) {
 	i := 1
 	negate := false
 	if i < len(glob) && (glob[i] == '!' || glob[i] == '^') {
@@ -132,17 +142,18 @@ func globClass(glob string) (string, int) {
 	var class strings.Builder
 	class.WriteString("[")
 	if negate {
-		class.WriteString("^/")
+		class.WriteString("^")
 	}
 	for first := true; ; first = false {
 		if i >= len(glob) {
-			return "", 0
+			return "", 0, nil
 		}
 		c := glob[i]
 		switch {
 		case c == ']' && !first:
 			class.WriteString("]")
-			return class.String(), i + 1
+			text, err := withoutSlash(class.String())
+			return text, i + 1, err
 		case c == '\\' && i+1 < len(glob):
 			class.WriteString(regexp.QuoteMeta(glob[i+1 : i+2]))
 			i += 2
@@ -152,6 +163,9 @@ func globClass(glob string) (string, int) {
 				class.WriteString(`\[`)
 				i++
 				continue
+			}
+			if name := glob[i+2 : i+2+end]; !slices.Contains(gitClasses, name) {
+				return "", 0, fmt.Errorf("[:%s:] is not a class git knows", name)
 			}
 			class.WriteString(glob[i : i+2+end+2])
 			i += 2 + end + 2
@@ -164,6 +178,45 @@ func globClass(glob string) (string, int) {
 			i++
 		}
 	}
+}
+
+// gitClasses are the names wildmatch knows inside brackets.
+var gitClasses = []string{"alnum", "alpha", "blank", "cntrl", "digit", "graph", "lower", "print", "punct", "space", "upper", "xdigit"}
+
+// withoutSlash takes the slash out of a bracket expression's set, so neither a
+// range nor a negation spanning it matches one.
+func withoutSlash(class string) (string, error) {
+	parsed, err := syntax.Parse(class, syntax.Perl)
+	if err != nil {
+		return "", err
+	}
+	var ranges []rune
+	switch parsed.Op {
+	case syntax.OpCharClass:
+		ranges = parsed.Rune
+	case syntax.OpLiteral:
+		for _, r := range parsed.Rune {
+			ranges = append(ranges, r, r)
+		}
+	default:
+		return "", fmt.Errorf("%s is not a set of characters", class)
+	}
+	var kept []rune
+	for j := 0; j+1 < len(ranges); j += 2 {
+		lo, hi := ranges[j], ranges[j+1]
+		if lo <= '/' && '/' <= hi {
+			if lo < '/' {
+				kept = append(kept, lo, '/'-1)
+			}
+			if hi > '/' {
+				kept = append(kept, '/'+1, hi)
+			}
+			continue
+		}
+		kept = append(kept, lo, hi)
+	}
+	set := &syntax.Regexp{Op: syntax.OpCharClass, Rune: kept}
+	return set.String(), nil
 }
 
 // matches says whether the rules take in a path, relative to the top: the

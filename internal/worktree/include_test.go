@@ -33,6 +33,9 @@ func TestIncludeRulesMatchAsGitDoes(t *testing.T) {
 		"[![:alpha:]]q.cfg",
 		"[]a]r.cfg",
 		`[\]b]s.cfg`,
+		"q[/]r",
+		"s[.-0]t",
+		"u[!a]v",
 		"",
 	}, "\n")
 	files := []string{
@@ -47,6 +50,7 @@ func TestIncludeRulesMatchAsGitDoes(t *testing.T) {
 		"#hash", "trailing", "docs/one.md", "docs/sub/two.md",
 		"zy", "zzy", "nested/only/file", "nested/onlyfile",
 		"1x.cfg", "ax.cfg", "1q.cfg", "aq.cfg", "]r.cfg", "ar.cfg", "cr.cfg", "]s.cfg", "bs.cfg", "cs.cfg",
+		"q/r", "s/t", "s.t", "s0t", "u/v", "ubv",
 	}
 	top := t.TempDir()
 	for _, file := range files {

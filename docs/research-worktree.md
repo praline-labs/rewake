@@ -28,11 +28,14 @@ checkout and refuses `-w`, `--tmux` and every continuation beside it
 **[`claude --help`, Claude Code 2.1.280; September 27, 2026]** Beside those: the
 subcommands `attach <id>`, which opens a background session in this terminal, and
 `respawn [id]`, which restarts one; `--cloud [description|session_id|url]`, which
-creates a cloud session or attaches to an existing one; and `--session-id <uuid>`, "use
+creates a cloud session or attaches to an existing one; `--environment
+<environment_id>`, which creates a new cloud session that runs on the given self-hosted
+environment; and
+`--session-id <uuid>`, "use
 a specific session ID for the conversation". The short flags taking a value are `-d`
 (`--debug [filter]`), `-n` (`--name <name>`), `-r` (`--resume [value]`) and `-w`
 (`--worktree [name]`); `-c`, `-h`, `-p` and `-v` take none. rewake refuses `attach`,
-`respawn` and `--cloud` beside `--worktree`, and reads a cluster of short flags as ending
+`respawn`, `--cloud` and `--environment` beside `--worktree`, and reads a cluster of short flags as ending
 at the first letter that takes a value.
 
 **[live, Claude Code 2.1.280, a scratch home with no login, no model call; September

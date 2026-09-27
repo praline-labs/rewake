@@ -140,3 +140,35 @@ func TestRefTipIsExact(t *testing.T) {
 		t.Errorf("refs/heads/foo/bar: %q, %v", tip, err)
 	}
 }
+
+// A branch a rebase with --update-refs will move at its end is not moved
+// either: git refuses to move it, and the rebase would fail on it.
+func TestLandRefusesABranchARebaseWillUpdate(t *testing.T) {
+	isolate(t)
+	source := repository(t, "project")
+	record, err := Create(t.TempDir(), source, "work")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rebasing := filepath.Join(t.TempDir(), "rebasing")
+	must(t, source, "worktree", "add", "-q", "-b", "top", rebasing, record.Commit)
+	midTip := change(t, rebasing, "src/nested/file", "mid\n")
+	must(t, source, "branch", "mid", midTip)
+	change(t, rebasing, "top", "top\n")
+	must(t, record.Path, "merge", "-q", "--ff-only", "mid")
+	change(t, record.Path, "mine", "mine\n")
+	other := filepath.Join(t.TempDir(), "other")
+	must(t, source, "worktree", "add", "-q", "--detach", other, record.Commit)
+	change(t, other, "src/nested/file", "theirs\n")
+	must(t, source, "branch", "onto", must(t, other, "rev-parse", "HEAD"))
+	if _, err := gitOutput(rebasing, "rebase", "--update-refs", "onto"); err == nil {
+		t.Fatal("the rebase did not stop on its conflict")
+	}
+	var blocked *StateError
+	if _, err := Land(record, "mid"); !errors.As(err, &blocked) || !strings.Contains(err.Error(), "--update-refs") {
+		t.Errorf("--into a branch a rebase will update: %v", err)
+	}
+	if tip := must(t, source, "rev-parse", "mid"); tip != midTip {
+		t.Errorf("mid moved to %s under the rebase", tip)
+	}
+}

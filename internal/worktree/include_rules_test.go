@@ -14,7 +14,7 @@ import (
 // it still apply: the file is a repository's content, and a stranger's line
 // must not stop a launch.
 func TestIncludeRulesSkipALineThatMakesNoExpression(t *testing.T) {
-	for _, line := range []string{"[z-a]", "a[b-a]c/", "[[:nope:]]"} {
+	for _, line := range []string{"[z-a]", "a[b-a]c/", "[[:nope:]]", "[[:word:]]"} {
 		rules, unread := parseIgnoreRules("*.env\n" + line + "\n!keep.env\n")
 		if len(rules) != 2 || len(unread) != 1 || !strings.Contains(unread[0], line) {
 			t.Errorf("%q: %d rules, unread %v", line, len(rules), unread)

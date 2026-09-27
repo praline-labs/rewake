@@ -52,7 +52,8 @@ var continuationCommands = []string{"attach", "respawn"}
 const valueLetters = "dnrw"
 
 // WorktreeRefusal refuses Claude Code's own worktree beside rewake's, a cloud
-// session, and a continued conversation. Claude Code keeps a conversation with
+// session — --cloud, or --environment, which makes one on that environment —
+// and a continued conversation. Claude Code keeps a conversation with
 // the directory it ran in: --continue in a new checkout finds none there, and
 // --resume of one begun elsewhere sends the person back to its directory — or,
 // for one begun in Claude Code's own worktree, changes into that — rather than
@@ -66,8 +67,10 @@ func (claudeHarness) WorktreeRefusal(args []string) error {
 		if _, _, ok := harness.MatchFlag(arg, "--tmux"); ok {
 			return errors.New("--tmux opens Claude Code's own worktree in tmux and needs its -w; rewake's " + worktreeFlag + " has no tmux")
 		}
-		if _, _, ok := harness.MatchFlag(arg, "--cloud"); ok {
-			return errors.New("--cloud starts a cloud session or attaches to one, and it works in none of this machine's checkouts; rewake's " + worktreeFlag + " is a checkout here, so launch one or the other")
+		for _, cloud := range []string{"--cloud", "--environment"} {
+			if _, _, ok := harness.MatchFlag(arg, cloud); ok {
+				return errors.New(cloud + " starts a cloud session or attaches to one, and it works in none of this machine's checkouts; rewake's " + worktreeFlag + " is a checkout here, so launch one or the other")
+			}
 		}
 	}
 	if word := claudeContinuation(visible); word != "" {

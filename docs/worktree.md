@@ -39,8 +39,9 @@ bring the work back, and that Claude Code launches get the same checkout.
   `git worktree add`: the branch checked out in the source
   stays free, a second launch from the same place does not collide with the first, and
   the commits a session makes sit on a branch rather than on a detached HEAD, where
-  nothing would hold them. A branch of that name already in the repository refuses the
-  launch with the next step: another name, or `rewake worktree ls` when the worktree is
+  nothing would hold them. A branch of that name already in the repository, or a branch
+  below it — `fix/login` for the name `fix`, beside which git keeps no branch `fix` —
+  refuses the launch with the next step: another name, or `rewake worktree ls` when the worktree is
   already there — a launch in its directory needs no `--worktree`. Uncommitted changes
   in the source do not come along; files git ignores come only as `.worktreeinclude`
   below names them.
@@ -95,7 +96,8 @@ bring the work back, and that Claude Code launches get the same checkout.
   `-dcache`, a debug filter, and `-ncircle`, a name, are not refused, while `-pc` and
   `-rID` are. `--session-id` is no continuation: it names the id of a new conversation,
   and Claude Code refuses an id already in use. `--cloud` is refused as well, new or
-  attached: a cloud session works in none of this machine's checkouts. A prompt or an
+  attached, and `--environment`, which makes a cloud session on that environment: a
+  cloud session works in none of this machine's checkouts. A prompt or an
   option's value that is the bare word is refused too; the refusal says such a prompt
   goes after `--`, where it is text (decided September 26, 2026). The refusal spells out
   both ways on: a new conversation with `--worktree`, or the continuation where the
@@ -125,7 +127,7 @@ bring the work back, and that Claude Code launches get the same checkout.
   runs to its end after rewake has gone, and its checkout is left with a record and no
   owner, which `ls` shows and rm removes (kept on purpose, September 26, 2026). Most
   come before anything is made: the flag given twice or as `--worktree=`, a
-  continuation, `-w`, `--tmux` or `--cloud` beside it, Codex's `--remote`, a profile or
+  continuation, `-w`, `--tmux`, `--cloud` or `--environment` beside it, Codex's `--remote`, a profile or
   `--oss`/`--local-provider`, a launch directory that does not resolve, a name out of
   shape, a launch directory outside any working tree, a repository with no commit yet, a
   worktree directory inside the repository. By then the worktree directory itself may
@@ -164,11 +166,12 @@ the checkout the launch came from. The format and the choice are Claude Code's
 Code `-w` worktree and a rewake worktree of either harness alike:
 
 - `.gitignore` syntax: `#` comments, `!` negation, a trailing `/` for directories, a
-  leading or inner `/` anchoring at the top, `*`, `?`, `[...]` with `[:alpha:]` and the
-  other named classes inside, and `**`. The file is the repository's content, a
-  stranger's too, so a line that makes no pattern — a range running backwards such as
-  `[z-a]`, a class of no known name — is named on stderr and left out, and the other
-  lines apply;
+  leading or inner `/` anchoring at the top, `*`, `?`, `[...]` with git's twelve named
+  classes inside — `[:alpha:]`, `[:digit:]` and the rest — and `**`. As in git, a
+  bracket never matches a slash, so neither `a[/]b` nor `a[.-0]b` matches `a/b`. The
+  file is the repository's content, a stranger's too, so a line that makes no pattern —
+  a range running backwards such as `[z-a]`, a class git does not know such as
+  `[:word:]` — is named on stderr and left out, and the other lines apply;
 - only files git ignores are copied: a tracked file the pattern names is the commit's,
   and an untracked one git does not ignore is not copied either;
 - a directory git ignores as a whole is not walked unless a pattern opens it — names it,
@@ -217,7 +220,9 @@ when its worker switched to the target, and a merge would change its files and H
 under it (decided September 27, 2026, after an acceptance run saw exactly that on Codex
 0.155.1 and 0.157.1). A target a rebase or a bisect in any checkout is working on is
 refused too, as git itself refuses moving such a branch: git lists that checkout as
-detached, and the rebase's last step would fail. A target that moved on is refused —
+detached, and the rebase's last step would fail. So is a target a rebase with
+`--update-refs` (or `rebase.updateRefs`) will move at its end, which it lists in
+`rebase-merge/update-refs`: moved under it, the rebase fails to update it. A target that moved on is refused —
 rewake does not rewrite history — with the rebase to run in the worktree,
 `git -C <worktree> rebase <target>`. Nothing new to take is not a refusal: it says so
 and exits 0. The answer names how many commits moved and the target's old and new

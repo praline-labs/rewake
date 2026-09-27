@@ -29,8 +29,9 @@ func samePlace(one, other string) bool {
 // of the repository is working on. Git lists such a checkout as detached, so
 // checkedOutAt does not see it, and a branch moved under a rebase makes its
 // last step fail and looks like lost work. It reads what git itself asks
-// before it lets a branch move: the rebase's head-name and BISECT_START, in
-// every checkout's own Git directory.
+// before it lets a branch move, in every checkout's own Git directory: the
+// rebase's head-name, the branches a rebase with --update-refs will move at
+// its end, and BISECT_START.
 func underWay(commonDir, branch string) error {
 	ref := branchRef(branch)
 	for _, dir := range checkoutGitDirs(commonDir) {
@@ -41,6 +42,10 @@ func underWay(commonDir, branch string) error {
 					branch, place, place, place)}
 			}
 		}
+		if updating(filepath.Join(dir, "rebase-merge", "update-refs"), ref) {
+			return &StateError{Reason: fmt.Sprintf("a rebase with --update-refs under way in %s will move %s at its end, and moving the branch now would make that fail; finish it with git -C %s rebase --continue, or give it up with git -C %s rebase --abort, then land again",
+				place, branch, place, place)}
+		}
 		if start, err := os.ReadFile(filepath.Join(dir, "BISECT_START")); err == nil {
 			if name := strings.TrimSpace(string(start)); name == branch || name == ref {
 				return &StateError{Reason: fmt.Sprintf("a bisect that started on %s is under way in %s, and it goes back to the branch when it ends; end it with git -C %s bisect reset, then land again",
@@ -49,6 +54,23 @@ func underWay(commonDir, branch string) error {
 		}
 	}
 	return nil
+}
+
+// updating says whether a rebase's update-refs file names ref: the file holds
+// three lines per branch — its name, where it was, where it goes — and git
+// refuses to move a branch named there.
+func updating(file, ref string) bool {
+	text, err := os.ReadFile(file)
+	if err != nil {
+		return false
+	}
+	lines := strings.Split(string(text), "\n")
+	for i := 0; i < len(lines); i += 3 {
+		if strings.TrimSpace(lines[i]) == ref {
+			return true
+		}
+	}
+	return false
 }
 
 // checkoutGitDirs lists the Git directories of the repository's checkouts:

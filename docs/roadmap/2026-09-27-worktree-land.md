@@ -161,6 +161,14 @@ work. What they found, and what was done:
   when it is an empty directory.
 - rm's help says what its reachability refusal now is: a HEAD on no branch, tag or
   remote-tracking ref.
+- **Four low findings after the merge of `5a74e79`**, each with a test that fails
+  without its fix: land also refuses a branch a rebase with `--update-refs` will move,
+  read from `rebase-merge/update-refs` — on git 2.43 `git branch -f` refused such a
+  branch while land moved it and the rebase then failed; `--environment`, which makes a
+  cloud session, is refused beside `--worktree` as `--cloud` is; a bracket in
+  `.worktreeinclude` takes only git's twelve named classes and never matches a slash;
+  and a name with a branch below it, `fix` beside `fix/login`, is refused as a taken
+  branch naming the one in the way rather than with git's raw error.
 
 Every fix of the first four points and of the claim has a test that fails without it.
 The acceptance run also confirmed live, on Codex 0.155.1 and 0.157.1: trust and

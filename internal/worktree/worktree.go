@@ -156,13 +156,19 @@ func (e *ExistsError) Error() string {
 
 // BranchTakenError is a name whose branch the repository already has: a
 // checkout of it would not start where the launch stands, and landing it
-// would take somebody else's commits.
+// would take somebody else's commits. Below is set when the name is free but a
+// branch under it, <name>/..., is not: git keeps no branch beside branches
+// below its name.
 type BranchTakenError struct {
 	Branch string
 	Source string
+	Below  string
 }
 
 func (e *BranchTakenError) Error() string {
+	if e.Below != "" {
+		return fmt.Sprintf("the repository at %s has a branch %s below the name %s, so git can make no branch %s", e.Source, e.Below, e.Branch, e.Branch)
+	}
 	return fmt.Sprintf("the repository at %s already has a branch %s", e.Source, e.Branch)
 }
 
@@ -284,6 +290,8 @@ func claim(record Record) error {
 	if err != nil {
 		if tip, readErr := refTip(record.CommonDir, branchRef(record.Branch)); readErr == nil && tip != "" {
 			err = &BranchTakenError{Branch: record.Branch, Source: record.Source}
+		} else if below := branchBelow(record.CommonDir, record.Branch); below != "" {
+			err = &BranchTakenError{Branch: record.Branch, Source: record.Source, Below: below}
 		} else {
 			err = fmt.Errorf("cannot make the branch %s: %w", record.Branch, err)
 		}
@@ -291,6 +299,16 @@ func claim(record Record) error {
 		return err
 	}
 	return nil
+}
+
+// branchBelow names a branch under <branch>/, or "" when there is none or it
+// cannot be told.
+func branchBelow(commonDir, branch string) string {
+	out, err := gitDirOutput(commonDir, "for-each-ref", "--count=1", "--format=%(refname:short)", branchRef(branch)+"/")
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(out)
 }
 
 // generatedName is wt- and six hex digits: six digits alone would name a

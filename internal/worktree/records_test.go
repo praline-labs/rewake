@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -75,5 +76,18 @@ func TestAForgedRecordIsLeftOut(t *testing.T) {
 	}
 	if len(records) != 1 || records[0].Name != "good" {
 		t.Errorf("listed %+v", records)
+	}
+}
+
+// A name with branches below it, name/..., is taken as well: git keeps no
+// branch beside them, and the refusal names the one in the way.
+func TestANameWithBranchesBelowItIsTaken(t *testing.T) {
+	isolate(t)
+	source := repository(t, "project")
+	must(t, source, "branch", "fix/login")
+	_, err := Create(t.TempDir(), source, "fix")
+	var taken *BranchTakenError
+	if !errors.As(err, &taken) || taken.Below != "fix/login" || !strings.Contains(err.Error(), "fix/login") {
+		t.Errorf("got %v", err)
 	}
 }
