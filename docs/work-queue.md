@@ -121,6 +121,27 @@ Codex's plan tool in [research-codex.md](research-codex.md#the-plan-tool) and
 
 The remaining entries of [harness-features.md](harness-features.md), in its order.
 
+## Next: a directory grant with a task
+
+`rewake send <worker> --grant-dir <dir> "task"` — main gives a worker write access to a
+directory outside its workspace for that task, as `--grant-git` does for Git metadata
+([git-grants.md](git-grants.md)). The owner decided on September 27, 2026:
+
+- the flag is `--grant-dir`, repeatable; `--grant-git` stays a flag of its own, and the
+  two combine for a worker that writes and commits in a neighbouring checkout;
+- every role may receive it, general included;
+- rewake takes back what it granted at the next delivery after the task is reported on,
+  which the documentation, `docs/flow.md` among it, has to say plainly: the grant lives at
+  least until the report, a person's own turn in the terminal drops it at once, and a
+  cold resume can bring it back;
+- a task with a grant that arrives during a turn waits for the worker to be idle, so the
+  grant holds from its first turn; the same applies to `--grant-git`.
+
+Before it is built: the refusal list for directories is to be designed again — the first
+draft was too strict; whether Claude Code can take a directory into a running session is
+to be researched further (the first research found no way; the owner expects one); and
+the Codex facts it rests on are to be checked live on 0.157.1.
+
 ## Also queued, not scheduled
 
 **An orchestrator starts a worker in the background.** The owner's idea for later,
