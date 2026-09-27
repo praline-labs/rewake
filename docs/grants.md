@@ -134,84 +134,13 @@ wins where both match.
 
 ## Who can grant
 
-Everything a message carries is written by whoever wrote the file, and the state
-directory — registry, mailboxes, journals — is writable by a Codex worker in
-`workspace-write`, since it lies in `/tmp`. So nothing on disk says who sent a grant.
-What does is main's wrapper, a process outside every sandbox, asked over an abstract
-unix socket named from the room and main's run (`@rewake/grant/<hash>`, no file to
-replace or leave behind). The wrapper binds it before it writes its record, so from the
-moment the address can be worked out it is taken; a `rewake send` registers only with a
-listener that runs above it, so a listener there first would not take a grant and have
-send report it as registered.
-
-1. **At send.** `rewake send` or `rewake edit` with a grant registers it with its own
-   session's wrapper before the letter is written. The wrapper takes it only from a
-   process below itself: the caller's uid and pid from `SO_PEERCRED`, then its chain of
-   parents up to the wrapper, each no younger than its child, so a pid taken again on the
-   way ends the walk; and it must share the wrapper's mount, user and PID namespaces. A
-   worker's process runs below its own wrapper and not main's, unless main started it;
-   one that left its tree through `setsid` and a double fork runs below neither. The
-   wrapper holds the grant in memory — message, recipient, the recipient's run,
-   directories, broad ones, Git — while its task is open: until the task is read and
-   reported on or taken back, and for the task's time to live and five minutes more when
-   its letter cannot be found; at most 256 at once, and past that it refuses a new one
-   rather than forget an old one. A resumed run of the recipient asks it again
-   ([after a cold resume](#after-a-cold-resume)).
-2. **At delivery.** The recipient's wrapper asks the address the letter's run leads
-   to, and takes the answer only from the process that run names: the
-   listener's pid from `SO_PEERCRED` must be that run's pid, alive with that start time
-   before and after the answer, and in the same mount, user and PID namespaces as the
-   asking wrapper. The grant confirmed must be the one the letter carries, for this
-   recipient and this run. A letter main never registered, one naming a run it is not,
-   one answered from another process fail, and main is told.
-3. **When main cannot answer.** While main's wrapper is alive and does not answer, the
-   task stays pending and is asked again until it expires. Once that wrapper has ended,
-   nobody can confirm the grant, now or later: the task fails, naming the main that sent
-   it, and has to be sent again from the current one.
-
-What this holds against rests on the peer checks, not on the address being hidden. A
-Codex sandbox with its network on shares the host's network namespace and sees every
-`@rewake` name ([research-codex.md](research-codex.md#the-sandboxs-namespaces)); only
-with the network off is it cut off from them. So the wrapper checks who is at the other
-end both ways — the pid, the start time and the mount, user and PID namespaces — and the
-namespace check at registration is what keeps a sandbox main started from granting.
-
-What this holds against, and what it does not:
-
-- **A worker inside the Codex sandbox.** Codex runs a command in a mount, user and PID
-  namespace of its own, in `workspace-write` and `read-only` alike, and `setsid`, a
-  double fork or `nohup` do not change them
-  ([research-codex.md](research-codex.md#the-sandboxs-namespaces)). Its process is below
-  no wrapper, so it registers nothing; a listener it starts in a run it names itself is
-  in other namespaces, so nothing it confirms counts. This is what the scheme is for.
-- **A sandbox main started itself.** A Codex that main runs from its own shell — for a
-  live probe, as this repository's instructions do — runs below main's wrapper, and so
-  does every command of its sandbox; with network allowed, one could reach main's
-  address, register a grant for any recipient and put the letter in a mailbox itself.
-  Its commands are in namespaces of their own, so the wrapper refuses the registration
-  as it refuses a confirmation from them.
-- **A worker's code main runs.** `go test` on a worker's branch, run by main, runs below
-  main's wrapper in its namespaces and could register a grant. It is no new hole: code
-  main runs outside a sandbox can do whatever main can, a grant included.
-- **Codex's legacy Landlock backend** runs sandboxed commands in the app-server's own
-  namespaces. It is off by default and never chosen as a fallback, but a session whose
-  launch arguments or `config.toml` mention `use_legacy_landlock` takes no grant. The
-  refusal is the recipient's: other sessions of the room take grants as before.
-- **A worker with no sandbox** — Claude Code, whose approved shell commands run as the
-  user — has no boundary at all. It can start a listener in the wrappers' own namespaces,
-  write a registry record naming that listener's run as a main, and send a letter
-  pointing at it; nothing in rewake tells that listener from a wrapper. It is not a new
-  hole: such a worker writes wherever the user can anyway, and a grant on Claude Code
-  removes prompts rather than draws a line.
-- **A Codex main** cannot grant: its own sandbox refuses `connect()` on a unix socket
-  ([research-permissions.md](research-permissions.md)), so its `rewake send` never
-  reaches its wrapper. `--grant-dir` and `--grant-git` from a Codex main are refused with
-  exit 1; before this change `--grant-git` from one was accepted
-  ([git-grants.md](git-grants.md)).
-- **A Claude Code main** registers through its shell, which shares the wrapper's network
-  namespace today. A Claude Code sandbox with network isolation turned on would cut the
-  shell off from the abstract socket as well, and the send would fail with exit 1 naming
-  the wrapper it could not reach; not observed, since the sandbox is off here.
+Only a verified main, and nothing on disk proves it. Main's wrapper registers each grant
+from a process running below itself, holds it in memory while its task is open, and
+confirms it at delivery only to the recipient's wrapper, told apart by pid, start time and
+namespaces; the recipient takes the answer only from the process main's run names. A
+worker in the Codex sandbox cannot grant itself one, a worker with no sandbox has no
+boundary to hold, and a Codex main cannot grant at all. The scheme, and what it holds
+against and what not, is in [grants-authority.md](grants-authority.md).
 
 ## Delivery
 
@@ -321,68 +250,12 @@ A cold resume starts a new run; what it keeps of a grant is in
 
 ## Claude Code
 
-Nothing adds a working directory to a running Claude Code session from outside, but its
-permission hooks can ([research-claude-actions.md](research-claude-actions.md#a-directory-given-to-a-running-session)).
-Rewake's settings layer adds `rewake grant-hook` as a PreToolUse hook on the file tools
-and `Bash`, and as a PermissionRequest hook, each with a five-second timeout. The command
-carries `--rewake-allowed` when the launch added its own `Bash(rewake:*)` rule, which it
-does only without the person's own `--allowedTools` ([launch.md](launch.md#claude-code)).
-
-- **Where the grant lives.** Once the grant is confirmed ([who can grant](#who-can-grant)),
-  the recipient's wrapper keeps it in memory. The hook holds nothing: it is a child of
-  the harness, so it runs below that wrapper, and it asks the wrapper over an abstract
-  socket named from the room, the session and its run (`@rewake/keep/<hash>`), taking
-  the session and the run from the environment the wrapper gave the harness. The wrapper
-  answers only a process below itself and in its namespaces, checked as registration
-  is; the hook believes only the process its run names. It sends the call's path fields
-  and a command, never the content a Write carries. No record in the state directory
-  decides anything, since a worker can write one; the copy under `grants/` is only what
-  `rewake list` shows.
-- **Delivery waits for an idle session** while its telemetry says a turn is running:
-  a grant task stays pending, retried every two seconds, as on Codex, since a grant that
-  arrived mid-turn would be taken back by a report the turn had not made. Telemetry that
-  has gone stale counts as idle.
-- **Giving.** Only a file tool is allowed — Write, Edit, MultiEdit, NotebookEdit —
-  judged by its path. When it first writes inside a grant, the PermissionRequest hook
-  answers allow and adds the grant's root as a working directory for the session. A
-  shell command is never allowed (main's decision of September 27, 2026): an approved
-  command runs whole, and whether the harness names every reason a compound one needs
-  — `&&`, `;`, a redirection, `$(...)` — in what it suggests is not known. So a command
-  inside a grant goes to the person until a file tool has written there, and runs
-  unasked after, the directory then being a working one.
-- **What stays with the person.** `.git`, `.claude`, `.codex` and `.agents` at any depth
-  inside a grant are never allowed, `--grant-git` or not (main's decision of September
-  27, 2026): whatever reads them next runs what the worker wrote, and on Claude Code
-  nothing but the prompt stands in the way. Once the grant is a working directory the
-  harness would run a file tool anywhere in it unasked, so PreToolUse answers `ask` for a
-  file tool writing there; a shell command inside the grant reaches them unasked all the
-  same. A write outside every grant hears silence, and silence is also the answer to any
-  error or timeout: the hook never allows on a guess.
-- **Taking back** happens in `default` and `acceptEdits` only. After the task is settled,
-  PreToolUse answers `ask` on the first read inside the working directory, and on every
-  shell command, while a grant is being taken back. The PermissionRequest that follows
-  a read, or a plain `rewake` command with nothing but words after it, is allowed with
-  the grant's root removed: those run unasked anyway, so the answer approves nothing new.
-  A plain `rewake` command counts only under the rule the launch added
-  (`--rewake-allowed`); where the person gave their own `--allowedTools`, it may be one
-  they are asked about, and it goes to them like any other command. Any other command's
-  PermissionRequest hears silence: the person is asked, and the directory is not taken
-  out even if they approve. So until the first read or plain `rewake` command, every
-  shell command asks the person; for a worker under orchestration the first
-  `rewake inbox` of its next turn ends that. A file tool writing into a directory being
-  taken back is denied with a line naming why.
-  A directory another live task holds stays. A grant never used — never added — ends at
-  the report. In any other mode — `plan`, `bypassPermissions`, auto — nothing is forced,
-  and a grant once added stays until the session ends.
-- **After a cold resume** the new run's wrapper asks main to confirm the grant again and
-  starts the harness with the directory ([after a cold resume](#after-a-cold-resume)).
-
-This is a courtesy, not a boundary. Claude Code runs approved shell commands as the user,
-so a worker writes wherever the user can if a prompt is approved, and can forge a grant
-([who can grant](#who-can-grant)). What the hook adds is fewer prompts inside the
-directory main named, and a prompt again once the task is done. What the worker's own
-`rewake` rule runs unasked includes no launch: a harness started from inside a session
-is refused ([launch.md](launch.md#no-session-inside-a-session)).
+Claude Code has no sandbox, so a grant goes through its permission hooks. Rewake's
+`grant-hook` asks the worker's wrapper, which keeps the confirmed grants in memory; the
+first file-tool write inside a grant adds its root as a working directory, `.git` and the
+harness directories inside it stay with the person, and after the report a forced
+question takes the root out. It spares the worker prompts and draws no line. How each
+step works, and in which permission modes, is in [grants-claude.md](grants-claude.md).
 
 ## After a cold resume
 

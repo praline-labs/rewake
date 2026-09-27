@@ -69,9 +69,12 @@ const (
 )
 
 type request struct {
-	Op    string          `json:"op"`
-	Grant Grant           `json:"grant"`
-	Call  json.RawMessage `json:"call,omitempty"`
+	Op    string `json:"op"`
+	Grant Grant  `json:"grant"`
+	// Thread is the conversation a confirmed grant goes into, or the one a
+	// resumed run continues (resume.go).
+	Thread string          `json:"thread,omitempty"`
+	Call   json.RawMessage `json:"call,omitempty"`
 }
 
 type response struct {
@@ -140,8 +143,9 @@ type Expect struct {
 }
 
 // Confirm asks the sending session's wrapper for the grant of one message to
-// one run, and returns what it holds.
-func Confirm(path string, expect Expect, id, to, toEpoch string) (Grant, error) {
+// one run, and returns what it holds. thread is the conversation the message
+// goes into: the only one a later resume may take the grant into.
+func Confirm(path string, expect Expect, id, to, toEpoch, thread string) (Grant, error) {
 	conn, err := dial(path)
 	if err != nil {
 		return Grant{}, err
@@ -150,7 +154,7 @@ func Confirm(path string, expect Expect, id, to, toEpoch string) (Grant, error) 
 	if err := expect.answeredBy(conn); err != nil {
 		return Grant{}, err
 	}
-	answer, err := exchange(conn, request{Op: opConfirm, Grant: Grant{ID: id, To: to, ToEpoch: toEpoch}})
+	answer, err := exchange(conn, request{Op: opConfirm, Grant: Grant{ID: id, To: to, ToEpoch: toEpoch}, Thread: thread})
 	if err != nil {
 		return Grant{}, err
 	}

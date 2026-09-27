@@ -88,11 +88,21 @@ A `finished` or `error` report in this run's own mailbox that names the id in
 conversation reports on what it took over — and so does a wait record that no longer
 names it; the record is cleared only once the report is written. A message whose wait a
 resumed run took over is followed in that run's records
-([delivery.md](delivery.md#a-resumed-conversation)), and listed as that run's. Settled messages are not listed. A recipient
-whose run has ended, or whose name a new run has taken, owes nothing any more: its
-unsettled messages are listed as `no report coming: <name> ended` or `… was replaced by
-a new run`, whatever stage they had reached, and counted apart from the reports still
-expected.
+([delivery.md](delivery.md#a-resumed-conversation)), and listed as that run's. Settled messages are not listed.
+
+A message read by a run that then ended, still named by its wait record, and delivered
+into a conversation is not lost yet: a resume of that conversation takes the wait over and
+reports on it. It is listed as `<name> ended; a resume of its conversation may still
+report` (`"resumable": true`) and counted with the reports still expected, and main is told
+not to send it again yet: sending it would get the work done twice. That holds before any
+new run of the name, and after a new one has started but not yet learned its conversation
+and swept the old run's waits. It stops holding when a new run in another conversation
+sweeps the wait, or a day after the wait was recorded (`resumeWindow`, as long as
+finished mail is kept): from then on no resume takes it over, main's wrapper lets its grant
+go, and it is lost for good. Any other unsettled message of a recipient whose run has
+ended, or whose name a new run has taken, is lost — listed as `no report coming: <name>
+ended` or `… was replaced by a new run`, whatever stage it had reached, and counted apart
+from the reports still expected. Only that line means the task may be sent again.
 
 Whether a missing wait record can be trusted depends on who could have removed it. Only
 the report removes one, and only a new run of the name sweeps the old run's directory
@@ -114,7 +124,8 @@ on already, or no longer kept — stands alone as `<id> · task, addendum to <ta
 the current one, an edit's replacement included, as for `--owed`. Nothing awaited is
 `Rewake: nobody owes you a report.` `--json` carries each message whole: `id`, `kind`,
 `createdAt`, `state`, `detail` (the hold or failure reason, or the interim or stop
-report's text), `gone` (`ended` or `replaced`), `addendumTo` for an addendum, and the
+report's text), `gone` (`ended` or `replaced`, only when lost), `resumable`, `addendumTo`
+for an addendum, and the
 full `text`. A withdrawn message is a note from then on and is not listed.
 
 It only reads, like `--owed`: no lock, no status, nothing marked, nothing sent, and a

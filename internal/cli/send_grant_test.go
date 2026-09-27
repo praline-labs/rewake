@@ -45,7 +45,7 @@ func TestADirGrantIsRegisteredWithMainsWrapper(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	confirmed, err := grantauth.Confirm(state.AuthorityAddress(w.dir, self.Epoch()), grantauth.Expect{PID: self.ServicePID, Start: self.ServiceStart}, message.ID, w.peer.Name, w.peer.Epoch())
+	confirmed, err := grantauth.Confirm(state.AuthorityAddress(w.dir, self.Epoch()), grantauth.Expect{PID: self.ServicePID, Start: self.ServiceStart}, message.ID, w.peer.Name, w.peer.Epoch(), "c1")
 	if err != nil || !confirmed.Same(grantauth.Grant{ID: message.ID, To: w.peer.Name, ToEpoch: w.peer.Epoch(), Dirs: []string{lib}}) {
 		t.Fatalf("confirmed %+v, %v", confirmed, err)
 	}

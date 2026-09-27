@@ -54,7 +54,7 @@ func TestAGrantIsConfirmedWithTheMainThatSentIt(t *testing.T) {
 	message := inbox.Message{ID: "m1", From: "lead", FromEpoch: epoch, To: "worker", ToEpoch: "9.9", Kind: inbox.Task, GrantDirs: []string{"/src/lib"}}
 
 	// Nobody listens yet, and main is alive: the message waits.
-	if err := confirmGrant(dir, "worker", "9.9", message); !errors.Is(err, inbox.ErrNotYet) {
+	if err := confirmGrant(dir, "worker", "9.9", "c1", message); !errors.Is(err, inbox.ErrNotYet) {
 		t.Fatalf("before main listens: %v", err)
 	}
 
@@ -66,33 +66,33 @@ func TestAGrantIsConfirmedWithTheMainThatSentIt(t *testing.T) {
 	defer cancel()
 	go authority.Serve(ctx)
 	defer authority.Close()
-	if err := confirmGrant(dir, "worker", "9.9", message); err == nil || !strings.Contains(err.Error(), "did not confirm") {
+	if err := confirmGrant(dir, "worker", "9.9", "c1", message); err == nil || !strings.Contains(err.Error(), "did not confirm") {
 		t.Fatalf("a grant main never registered: %v", err)
 	}
 	registered := grantauth.Grant{ID: "m1", To: "worker", ToEpoch: "9.9", Dirs: []string{"/src/lib"}}
 	if err := grantauth.Register(state.AuthorityAddress(dir, epoch), registered); err != nil {
 		t.Fatal(err)
 	}
-	if err := confirmGrant(dir, "worker", "9.9", message); err != nil {
+	if err := confirmGrant(dir, "worker", "9.9", "c1", message); err != nil {
 		t.Fatalf("a registered grant: %v", err)
 	}
 	wider := message
 	wider.GrantDirs = []string{"/src/lib", "/src/other"}
-	if err := confirmGrant(dir, "worker", "9.9", wider); err == nil || !strings.Contains(err.Error(), "another grant") {
+	if err := confirmGrant(dir, "worker", "9.9", "c1", wider); err == nil || !strings.Contains(err.Error(), "another grant") {
 		t.Fatalf("a message carrying more than main registered: %v", err)
 	}
-	if err := confirmGrant(dir, "worker", "8.8", message); err == nil {
+	if err := confirmGrant(dir, "worker", "8.8", "c1", message); err == nil {
 		t.Fatal("confirmed for another run of the reader")
 	}
 
 	ended := message
 	ended.FromEpoch = endedEpoch(t)
-	if err := confirmGrant(dir, "worker", "9.9", ended); err == nil || errors.Is(err, inbox.ErrNotYet) || !strings.Contains(err.Error(), "has ended") {
+	if err := confirmGrant(dir, "worker", "9.9", "c1", ended); err == nil || errors.Is(err, inbox.ErrNotYet) || !strings.Contains(err.Error(), "has ended") {
 		t.Fatalf("a main that has ended: %v", err)
 	}
 	forged := message
 	forged.FromEpoch = "not-a-run"
-	if err := confirmGrant(dir, "worker", "9.9", forged); err == nil {
+	if err := confirmGrant(dir, "worker", "9.9", "c1", forged); err == nil {
 		t.Fatal("a sender with no run was asked")
 	}
 }
@@ -126,7 +126,8 @@ func TestAGrantForAHookWaitsForIdleAndIsKept(t *testing.T) {
 	message := inbox.Message{ID: "m1", From: "lead", FromEpoch: epoch, To: "worker", ToEpoch: "9.9", Kind: inbox.Task, GrantDirs: []string{lib}}
 
 	busy := true
-	check := checkGrant(dir, "worker", "9.9", keeper, func() bool { return busy }, nil)
+	conversation := func() (string, error) { return "s9", nil }
+	check := checkGrant(dir, "worker", "9.9", keeper, func() bool { return busy }, conversation)
 	if err := check(message); !errors.Is(err, inbox.ErrNotYet) || len(keeper.Entries()) != 0 {
 		t.Fatalf("while the session works: %v, kept %v", err, keeper.Entries())
 	}
@@ -134,7 +135,8 @@ func TestAGrantForAHookWaitsForIdleAndIsKept(t *testing.T) {
 	if err := check(message); err != nil {
 		t.Fatal(err)
 	}
-	if entries := keeper.Entries(); len(entries) != 1 || entries[0].Path != lib || !entries[0].Live() {
+	// Kept with the conversation it went into, for a resume to ask by.
+	if entries := keeper.Entries(); len(entries) != 1 || entries[0].Path != lib || !entries[0].Live() || entries[0].Thread != "s9" {
 		t.Fatalf("kept %+v", entries)
 	}
 	// A grant main never registered is not kept.

@@ -38,6 +38,9 @@ type Authority struct {
 	// or on its way, or read and not yet reported on — and whether its letter
 	// was found at all. Nil holds every grant for Lifetime.
 	Open func(Grant) (open, found bool)
+	// Owns says whether a run holds a session name now. Nil takes the run a
+	// question names as the holder.
+	Owns func(name, epoch string) bool
 
 	listener *net.UnixListener
 	mu       sync.Mutex
@@ -52,6 +55,10 @@ type heldGrant struct {
 	// delivered is a grant confirmed to its recipient's wrapper once: only
 	// such a grant can have reached a conversation a resume continues.
 	delivered bool
+	// thread is the conversation the confirmation named: a resume of it,
+	// and of no other, may have the grant again. Kept here because the copy
+	// on disk that names it is one a worker could write.
+	thread string
 }
 
 // Listen binds the run's address, an abstract unix socket: nothing on disk
@@ -127,7 +134,7 @@ func (a *Authority) answer(conn *net.UnixConn) {
 			if asked.Op == opReconfirm {
 				confirm = a.reconfirm
 			}
-			grant, err := confirm(conn, asked.Grant)
+			grant, err := confirm(conn, asked.Grant, asked.Thread)
 			if err != nil {
 				answer.Error = err.Error()
 			} else {
@@ -176,11 +183,17 @@ func (a *Authority) register(conn *net.UnixConn, grant Grant) error {
 }
 
 // confirm answers for a grant to whoever runs as this user: an abstract
-// address has no file mode to keep others out.
-func (a *Authority) confirm(conn *net.UnixConn, asked Grant) (Grant, error) {
-	if peer, err := peerOf(conn); err != nil || int(peer.Uid) != os.Getuid() {
+// address has no file mode to keep others out. It takes the grant for
+// delivered, into the conversation named, only from a process in this
+// wrapper's namespaces: a sandboxed worker reads its letter before delivery
+// and could otherwise name a conversation of its own choosing for a later
+// resume to take the grant into.
+func (a *Authority) confirm(conn *net.UnixConn, asked Grant, thread string) (Grant, error) {
+	peer, err := peerOf(conn)
+	if err != nil || int(peer.Uid) != os.Getuid() {
 		return Grant{}, errors.New("asked by another user")
 	}
+	delivering := sameNamespaces(int(peer.Pid)) == nil
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.prune()
@@ -188,8 +201,10 @@ func (a *Authority) confirm(conn *net.UnixConn, asked Grant) (Grant, error) {
 	if !ok || held.grant.To != asked.To || held.grant.ToEpoch != asked.ToEpoch {
 		return Grant{}, fmt.Errorf("this session registered no grant with message %s for that run", asked.ID)
 	}
-	held.delivered = true
-	a.held[asked.ID] = held
+	if delivering {
+		held.delivered, held.thread = true, thread
+		a.held[asked.ID] = held
+	}
 	return held.grant, nil
 }
 

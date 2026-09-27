@@ -24,7 +24,7 @@ import (
 // over to this run of the recipient, and returns it. The caller is the new
 // run's wrapper itself: the other end checks that the asking process is the
 // run it names.
-func Reconfirm(path string, expect Expect, id, to, epoch string) (Grant, error) {
+func Reconfirm(path string, expect Expect, id, to, epoch, thread string) (Grant, error) {
 	conn, err := dial(path)
 	if err != nil {
 		return Grant{}, err
@@ -33,7 +33,7 @@ func Reconfirm(path string, expect Expect, id, to, epoch string) (Grant, error) 
 	if err := expect.answeredBy(conn); err != nil {
 		return Grant{}, err
 	}
-	answer, err := exchange(conn, request{Op: opReconfirm, Grant: Grant{ID: id, To: to, ToEpoch: epoch}})
+	answer, err := exchange(conn, request{Op: opReconfirm, Grant: Grant{ID: id, To: to, ToEpoch: epoch}, Thread: thread})
 	if err != nil {
 		return Grant{}, err
 	}
@@ -51,11 +51,15 @@ func Reconfirm(path string, expect Expect, id, to, epoch string) (Grant, error) 
 
 // reconfirm hands a delivered grant over to a new run of its recipient. It
 // answers only that run's wrapper — the process the run names, alive as it
-// started, in this wrapper's namespaces — and only while the run it was
-// granted to has ended and its task is open.
-func (a *Authority) reconfirm(conn *net.UnixConn, asked Grant) (Grant, error) {
+// started, in this wrapper's namespaces, holding the recipient's name — and
+// only for the conversation the grant was delivered into, while the run it
+// was granted to has ended and its task is open.
+func (a *Authority) reconfirm(conn *net.UnixConn, asked Grant, thread string) (Grant, error) {
 	if err := askedByRun(conn, asked.ToEpoch); err != nil {
 		return Grant{}, err
+	}
+	if a.Owns != nil && !a.Owns(asked.To, asked.ToEpoch) {
+		return Grant{}, fmt.Errorf("run %s does not hold the name %s", asked.ToEpoch, asked.To)
 	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -66,6 +70,12 @@ func (a *Authority) reconfirm(conn *net.UnixConn, asked Grant) (Grant, error) {
 	}
 	if !held.delivered {
 		return Grant{}, fmt.Errorf("the grant with message %s was never delivered, so no conversation took it", asked.ID)
+	}
+	if held.thread == "" || held.thread != thread {
+		// The copy that pointed here names the conversation, and a worker
+		// could have written it: a resume of another conversation would
+		// carry the grant somewhere it never went.
+		return Grant{}, fmt.Errorf("the grant with message %s went into another conversation than %q", asked.ID, thread)
 	}
 	if held.grant.ToEpoch == asked.ToEpoch {
 		// Asked again by the run it was handed to: a retry.
@@ -121,13 +131,14 @@ type Restored struct {
 func Restore(dir, name, epoch, thread string) []Restored {
 	var restored []Restored
 	for _, hint := range grant.Hints(dir, thread) {
-		restored = append(restored, RestoreHint(dir, name, epoch, hint))
+		restored = append(restored, RestoreHint(dir, name, epoch, thread, hint))
 	}
 	return restored
 }
 
-// RestoreHint asks for the one grant a hint names.
-func RestoreHint(dir, name, epoch string, hint grant.Hint) Restored {
+// RestoreHint asks for the one grant a hint names, for the conversation this
+// run continues.
+func RestoreHint(dir, name, epoch, thread string, hint grant.Hint) Restored {
 	outcome := Restored{Hint: hint}
 	gone := fmt.Errorf("%w: %s, which sent it, has ended, and nobody else can confirm the grant", ErrNotConfirmed, hint.From)
 	pid, start, ok := registry.ParseEpoch(hint.FromEpoch)
@@ -137,7 +148,7 @@ func RestoreHint(dir, name, epoch string, hint grant.Hint) Restored {
 	case !proc.Alive(pid, start):
 		outcome.Err = gone
 	default:
-		outcome.Grant, outcome.Err = Reconfirm(state.AuthorityAddress(dir, hint.FromEpoch), Expect{PID: pid, Start: start}, hint.Message, name, epoch)
+		outcome.Grant, outcome.Err = Reconfirm(state.AuthorityAddress(dir, hint.FromEpoch), Expect{PID: pid, Start: start}, hint.Message, name, epoch, thread)
 		if errors.Is(outcome.Err, ErrUnreachable) && !proc.Alive(pid, start) {
 			outcome.Err = gone
 		}

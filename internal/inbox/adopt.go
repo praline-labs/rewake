@@ -4,7 +4,10 @@ import (
 	"context"
 	"os"
 	"slices"
+	"time"
 
+	"github.com/iiiokojiadbi/rewake/internal/proc"
+	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
@@ -19,6 +22,30 @@ import (
 //
 // The earlier runs' records are swept only once the new run knows its
 // conversation, and has taken over what belongs to it.
+
+// resumeWindow is how long, from when a wait was recorded, a run that ended
+// still owes it: a resume of its conversation may take it over until then.
+// Past it the task is lost for good — its sender reads that no report is
+// coming, a resume no longer takes it over, and main lets its grant go — so
+// that a sender told it is lost can send it again without the work being done
+// twice. A day, as long as finished mail is kept.
+const resumeWindow = keepFinished
+
+// waitStands says whether a run's wait still owes what it names: the run is
+// running, or it ended within the resume window of the wait.
+func waitStands(run string, waiter Waiter) bool {
+	if pid, start, ok := registry.ParseEpoch(run); ok && proc.Alive(pid, start) {
+		return true
+	}
+	return time.Since(time.Unix(0, waiter.Since)) < resumeWindow
+}
+
+// mayResume says whether a message a run that ended still owes can yet be
+// reported on by a run resuming its conversation: it was delivered into one,
+// and the wait naming it stands.
+func mayResume(dir string, message Message, run string, wait Waiter) bool {
+	return slices.Contains(wait.Messages, message.ID) && deliveryThread(dir, message.To, message.ID) != "" && waitStands(run, wait)
+}
 
 // AdoptWaits moves to this run the waits of earlier runs of the name for the
 // messages delivered into thread, as if this run had read them now. It
@@ -37,6 +64,9 @@ func AdoptWaits(dir, name, epoch, thread string) []string {
 			continue
 		}
 		for _, waiter := range Waiters(dir, name, run.Name()) {
+			if !waitStands(run.Name(), waiter) {
+				continue
+			}
 			for _, id := range waiter.Messages {
 				if !safeID(id) || deliveryThread(dir, name, id) != thread || slices.Contains(adopted, id) {
 					continue

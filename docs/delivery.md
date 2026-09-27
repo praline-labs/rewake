@@ -338,7 +338,10 @@ the tasks pinned to that conversation, as if this run had read them now
 (`internal/inbox/adopt.go`). Only then does it sweep the earlier runs' records. The
 report at the new run's next turn end settles those tasks for their senders; a task
 delivered into another conversation, or never pinned, is not taken over, and its sender
-reads that no report is coming.
+reads that no report is coming. A wait is taken over only within a day of being recorded
+(`resumeWindow`); until a resume or that day, the sender reads that a resume may still
+report, and is told not to send the task again
+([delivery-owed.md](delivery-owed.md#what-others-owe-you-rewake-inbox---awaited)).
 
 The conversation is the link, not the name: a new conversation under the same name owes
 nothing, and a fork (`--fork-session`) starts one. A harness that names no conversation

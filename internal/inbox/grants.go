@@ -141,7 +141,8 @@ func TaskOpen(dir, name, id string) (open, found bool) {
 }
 
 // owedByAnyRun says whether a wait record of any run of the name lists the
-// message.
+// message, and still stands: a run that ended owes it only within the resume
+// window (adopt.go).
 func owedByAnyRun(dir, name, id string) bool {
 	runs, err := os.ReadDir(state.AwaitingPath(dir, name))
 	if err != nil {
@@ -152,7 +153,7 @@ func owedByAnyRun(dir, name, id string) bool {
 			continue
 		}
 		for _, waiter := range Waiters(dir, name, run.Name()) {
-			if slices.Contains(waiter.Messages, id) {
+			if slices.Contains(waiter.Messages, id) && waitStands(run.Name(), waiter) {
 				return true
 			}
 		}

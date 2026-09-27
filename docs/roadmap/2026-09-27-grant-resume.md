@@ -26,8 +26,8 @@ is in [grants-resume.md](../grants-resume.md).
   `grant.Hints` collects them for a conversation.
 - **Claude Code.** `--resume <id>` or `-r <id>`, without `--fork-session`, is asked
   before the start, and what main confirms is passed as `--add-dir` and kept as a grant
-  the session has, so the hook takes it out after the report. A `--continue`, a picker or
-  a warm `/resume` is followed through telemetry every two seconds.
+  the session has, so the hook takes it out after the report. `--continue` is followed
+  through telemetry, polled every two seconds.
 - **Codex.** At the first notice into a conversation the adapter asks for the hints not in
   its journal: a confirmed grant is journaled again and a root the thread lost added back;
   a hint nobody confirms has its roots taken out, never the launch directory; a main that
@@ -51,6 +51,37 @@ is in [grants-resume.md](../grants-resume.md).
 - **On Codex the case after the report asks that nothing be journaled**, not only that
   the roots lack the directory: the report the run finds would take a wrongly confirmed
   grant out again in the same delivery, and the roots alone would not show it.
+
+## After review
+
+The review round on 0a921a7, fixed on September 28, 2026 by main's decisions:
+
+- **Medium: "no report coming" was no longer final.** A task a resume could still take
+  over was listed as lost, and a main acting on that would send it again and have the work
+  done twice. A read task of an ended run, delivered into a conversation, now reads
+  `<name> ended; a resume of its conversation may still report`, before any new run and
+  in the window before a new one sweeps the wait. It is lost only once a new run in
+  another conversation sweeps the wait, or a day after the wait was recorded
+  (`resumeWindow`); past that a resume takes nothing over and main lets the grant go.
+  `send --to` on such a task says so, and main's briefing tells it not to send the task
+  again yet.
+- **Medium: reconfirm did not know the grant's conversation**; only the copy, which a
+  worker can write, did. A worker could write a copy for a conversation of its own and
+  resume that one with `--resume`, and main would confirm before the waits were swept.
+  The recipient's wrapper now names the conversation when it confirms a grant at delivery,
+  main's wrapper keeps it — taken only from a process in its own namespaces, since a
+  sandboxed worker reads its letter before delivery — and reconfirm refuses any other.
+- **Low:** a warm `/resume` in a run that has already worked in another conversation
+  restores nothing, as the one-time takeover leaves it; the documentation said it did. The
+  picker restores only if its first `session_id` is the conversation picked, not verified.
+- **Low:** reconfirm checks that the run asking holds the recipient's name in the
+  registry.
+- **Low:** `docs/grants.md` had reached 399 lines; who can grant and the Claude Code
+  mechanism moved to `grants-authority.md` and `grants-claude.md`.
+
+review-codex, in acceptance the same day, saw live that 0.155.1's terminal resumes with
+roots of its own and loses a saved grant before the first notice, which adds it back,
+while 0.157.1's keeps it; `grants-resume.md` and `research-codex.md` say so.
 
 ## What stays open
 

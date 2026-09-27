@@ -255,6 +255,12 @@ directory grant ([grants.md](grants.md)) rests on:
   `thread/resume` without the roots field restores it when the grant was given on an
   established history; a grant on the first turn, whose turn then failed, was lost on
   cold resume on both versions.
+- **[verified live; Codex CLI 0.155.1 and 0.157.1; September 28, 2026; review-codex, in
+  acceptance of the grant restored after a cold resume]** What the terminal itself sends
+  on a cold resume differs: 0.155.1's `thread/resume` carries roots of its own,
+  `runtimeWorkspaceRoots=[cwd, existing]` as reported, without the saved grant, so the
+  grant is gone before rewake's first notice, which then adds it back; 0.157.1's carries `null`, and the saved
+  root stays.
 - The persisted thread settings carry the whole native permission profile with the
   added root; whether a write under `workspaceWrite` succeeds there was not shown, since
   the container policy kept restricted execution from running.

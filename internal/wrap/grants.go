@@ -32,8 +32,10 @@ const grantLifetime = inbox.DefaultTTL + 5*time.Minute
 //
 // For a harness that takes a grant through its own hook, the grant then
 // waits for the session to be idle, as Codex's does, and goes into the
-// keeper the hook asks; keeper is nil for any other.
-func checkGrant(dir, name, epoch string, keeper *grantauth.Keeper, busy func() bool, conversation func() string) func(inbox.Message) error {
+// keeper the hook asks; keeper is nil for any other. thread is the session's
+// conversation, the one the delivery is pinned to; nil for a harness that
+// names none.
+func checkGrant(dir, name, epoch string, keeper *grantauth.Keeper, busy func() bool, thread func() (string, error)) func(inbox.Message) error {
 	root := state.RootForRoom(dir)
 	return func(message inbox.Message) error {
 		rules := grant.CurrentEnv(root, harness.AllProtectedDirs()).Rules()
@@ -42,7 +44,11 @@ func checkGrant(dir, name, epoch string, keeper *grantauth.Keeper, busy func() b
 				return err
 			}
 		}
-		if err := confirmGrant(dir, name, epoch, message); err != nil || keeper == nil || len(message.GrantDirs) == 0 {
+		conversation := ""
+		if thread != nil {
+			conversation, _ = thread()
+		}
+		if err := confirmGrant(dir, name, epoch, conversation, message); err != nil || keeper == nil || len(message.GrantDirs) == 0 {
 			return err
 		}
 		if busy != nil && busy() {
@@ -50,10 +56,7 @@ func checkGrant(dir, name, epoch string, keeper *grantauth.Keeper, busy func() b
 		}
 		// Where it came from, so a run resuming the conversation can ask
 		// for it again (grant_resume.go).
-		origin := grant.Entry{Message: message.ID, At: time.Now(), From: message.From, FromEpoch: message.FromEpoch}
-		if conversation != nil {
-			origin.Thread = conversation()
-		}
+		origin := grant.Entry{Message: message.ID, At: time.Now(), Thread: conversation, From: message.From, FromEpoch: message.FromEpoch}
 		return keeper.GrantFrom(origin, message.GrantDirs, false)
 	}
 }
@@ -98,14 +101,15 @@ func working(observer harness.Observer) func() bool {
 // confirmGrant asks the sending wrapper for the grant it registered, and
 // takes the message's only if it is the same. A wrapper that cannot be reached
 // while it runs may be busy: the message waits, within its own time to live.
-// One that has ended can confirm nothing, now or later.
-func confirmGrant(dir, name, epoch string, message inbox.Message) error {
+// One that has ended can confirm nothing, now or later. thread tells it the
+// conversation the message goes into.
+func confirmGrant(dir, name, epoch, thread string, message inbox.Message) error {
 	pid, start, ok := registry.ParseEpoch(message.FromEpoch)
 	if !ok || !state.ValidName(message.From) {
 		return errors.New("its sender is not a session run that can be asked to confirm it")
 	}
 	expect := grantauth.Expect{PID: pid, Start: start}
-	confirmed, err := grantauth.Confirm(state.AuthorityAddress(dir, message.FromEpoch), expect, message.ID, name, epoch)
+	confirmed, err := grantauth.Confirm(state.AuthorityAddress(dir, message.FromEpoch), expect, message.ID, name, epoch, thread)
 	switch {
 	case err == nil:
 	case errors.Is(err, grantauth.ErrUnreachable) && proc.Alive(pid, start):
@@ -134,5 +138,6 @@ func listenAuthority(dir, epoch string, self int) *grantauth.Authority {
 		return nil
 	}
 	authority.Open = func(held grantauth.Grant) (bool, bool) { return inbox.TaskOpen(dir, held.To, held.ID) }
+	authority.Owns = func(name, epoch string) bool { return registry.OwnsName(dir, name, epoch) }
 	return authority
 }

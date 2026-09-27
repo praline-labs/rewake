@@ -60,7 +60,7 @@ func TestAGrantRegisteredFromBelowIsConfirmed(t *testing.T) {
 	if err := Register(path, lib); err != nil {
 		t.Fatalf("a repeated registration: %v", err)
 	}
-	got, err := Confirm(path, ownExpect(t), lib.ID, lib.To, lib.ToEpoch)
+	got, err := Confirm(path, ownExpect(t), lib.ID, lib.To, lib.ToEpoch, "c1")
 	if err != nil || !got.Same(lib) {
 		t.Fatalf("confirmed %+v, %v", got, err)
 	}
@@ -91,7 +91,7 @@ func TestAConfirmationSettlesOnlyForItsRun(t *testing.T) {
 		"another recipient": {lib.ID, "other", lib.ToEpoch},
 		"another run":       {lib.ID, lib.To, "e2"},
 	} {
-		if _, err := Confirm(path, ownExpect(t), asked[0], asked[1], asked[2]); !errors.Is(err, ErrNotConfirmed) {
+		if _, err := Confirm(path, ownExpect(t), asked[0], asked[1], asked[2], "c1"); !errors.Is(err, ErrNotConfirmed) {
 			t.Errorf("%s: %v", name, err)
 		}
 	}
@@ -110,7 +110,7 @@ func TestAConfirmationFromAnotherProcessIsRefused(t *testing.T) {
 		"another start time": {PID: own.PID, Start: own.Start + 1},
 		"no pid":             {},
 	} {
-		if _, err := Confirm(path, expect, lib.ID, lib.To, lib.ToEpoch); !errors.Is(err, ErrNotConfirmed) {
+		if _, err := Confirm(path, expect, lib.ID, lib.To, lib.ToEpoch, "c1"); !errors.Is(err, ErrNotConfirmed) {
 			t.Errorf("%s: %v", name, err)
 		}
 	}
@@ -118,7 +118,7 @@ func TestAConfirmationFromAnotherProcessIsRefused(t *testing.T) {
 
 func TestAWrapperNotThereIsUnreachable(t *testing.T) {
 	path := "@rewake-test/gone/" + strconv.Itoa(os.Getpid())
-	if _, err := Confirm(path, ownExpect(t), lib.ID, lib.To, lib.ToEpoch); !errors.Is(err, ErrUnreachable) {
+	if _, err := Confirm(path, ownExpect(t), lib.ID, lib.To, lib.ToEpoch, "c1"); !errors.Is(err, ErrUnreachable) {
 		t.Fatalf("confirmed by nobody: %v", err)
 	}
 	if err := Register(path, lib); !errors.Is(err, ErrUnreachable) {
@@ -143,7 +143,7 @@ func TestAFullAuthorityRefusesAndKeepsWhatItHolds(t *testing.T) {
 		t.Fatalf("past the limit: %v", err)
 	}
 	first := "ma" + time.Duration(0).String()
-	if _, err := Confirm(path, ownExpect(t), first, lib.To, lib.ToEpoch); err != nil {
+	if _, err := Confirm(path, ownExpect(t), first, lib.To, lib.ToEpoch, "c1"); err != nil {
 		t.Fatalf("the first grant was pushed out: %v", err)
 	}
 }
@@ -154,7 +154,7 @@ func TestAGrantOutlivingItsWaitIsForgotten(t *testing.T) {
 		t.Fatal(err)
 	}
 	time.Sleep(50 * time.Millisecond)
-	if _, err := Confirm(path, ownExpect(t), lib.ID, lib.To, lib.ToEpoch); !errors.Is(err, ErrNotConfirmed) {
+	if _, err := Confirm(path, ownExpect(t), lib.ID, lib.To, lib.ToEpoch, "c1"); !errors.Is(err, ErrNotConfirmed) {
 		t.Fatalf("confirmed after its lifetime: %v", err)
 	}
 }
@@ -166,7 +166,7 @@ func TestClosingFreesTheAddress(t *testing.T) {
 		t.Fatal(err)
 	}
 	authority.Close()
-	if _, err := Confirm(path, ownExpect(t), lib.ID, lib.To, lib.ToEpoch); !errors.Is(err, ErrUnreachable) {
+	if _, err := Confirm(path, ownExpect(t), lib.ID, lib.To, lib.ToEpoch, "c1"); !errors.Is(err, ErrUnreachable) {
 		t.Fatalf("confirmed after closing: %v", err)
 	}
 	again, err := Listen(path, os.Getpid(), time.Minute)
@@ -185,17 +185,13 @@ func TestABoundAddressIsNotTakenOver(t *testing.T) {
 	}
 }
 
-// A wrapper in other namespaces than the one asking is a process a sandbox
-// started: a worker inside one could name its own process as the sender's
-// run and answer for it, so nothing it confirms counts.
-func TestAConfirmationFromOtherNamespacesIsRefused(t *testing.T) {
-	_, path := listen(t, os.Getpid(), time.Minute)
-	if err := Register(path, lib); err != nil {
-		t.Fatal(err)
-	}
-	own := ownExpect(t)
+// sandboxed makes this process look, to itself, as if it ran in other
+// namespaces than its own: the view of a wrapper that a process started inside
+// a sandbox has. It returns what puts the real view back.
+func sandboxed(t *testing.T) (restore func()) {
+	t.Helper()
 	root := t.TempDir()
-	for pid, mount := range map[string]string{"self": "mnt:[1]", strconv.Itoa(own.PID): "mnt:[2]"} {
+	for pid, mount := range map[string]string{"self": "mnt:[1]", strconv.Itoa(os.Getpid()): "mnt:[2]"} {
 		dir := filepath.Join(root, pid, "ns")
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			t.Fatal(err)
@@ -208,8 +204,22 @@ func TestAConfirmationFromOtherNamespacesIsRefused(t *testing.T) {
 	}
 	saved := namespaces
 	namespaces = proc.Reader{Root: root}.Namespaces
-	t.Cleanup(func() { namespaces = saved })
-	_, err := Confirm(path, own, lib.ID, lib.To, lib.ToEpoch)
+	restore = func() { namespaces = saved }
+	t.Cleanup(restore)
+	return restore
+}
+
+// A wrapper in other namespaces than the one asking is a process a sandbox
+// started: a worker inside one could name its own process as the sender's
+// run and answer for it, so nothing it confirms counts.
+func TestAConfirmationFromOtherNamespacesIsRefused(t *testing.T) {
+	_, path := listen(t, os.Getpid(), time.Minute)
+	if err := Register(path, lib); err != nil {
+		t.Fatal(err)
+	}
+	own := ownExpect(t)
+	sandboxed(t)
+	_, err := Confirm(path, own, lib.ID, lib.To, lib.ToEpoch, "c1")
 	if !errors.Is(err, ErrNotConfirmed) || !strings.Contains(err.Error(), "other namespaces") {
 		t.Fatalf("confirmed from other namespaces: %v", err)
 	}

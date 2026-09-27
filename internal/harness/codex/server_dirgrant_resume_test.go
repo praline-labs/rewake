@@ -65,7 +65,7 @@ func resumedMain(t *testing.T, server *serverSession, grants map[string]string, 
 		if err := grantauth.Register(address, grantauth.Grant{ID: id, To: server.name, ToEpoch: previous, Dirs: []string{directory}}); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := grantauth.Confirm(address, self, id, server.name, previous); err != nil {
+		if _, err := grantauth.Confirm(address, self, id, server.name, previous, fixtureRoot); err != nil {
 			t.Fatal(err)
 		}
 	}

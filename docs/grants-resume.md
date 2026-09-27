@@ -28,7 +28,9 @@ nothing.
 A run that continues a conversation takes over what the runs before it owe there: their
 waits for tasks delivered into it move to the new run, which reports on them at its next
 turn end ([delivery.md](delivery.md#a-resumed-conversation)). Without that, the task
-would be closed by the resume and its grant could never end by a report.
+would be closed by the resume and its grant could never end by a report. A wait is taken
+over within a day of being recorded; past that the task is lost, its sender reads so, and
+main lets its grant go ([delivery-owed.md](delivery-owed.md#what-others-owe-you-rewake-inbox---awaited)).
 
 ## The copy that follows the conversation
 
@@ -43,18 +45,27 @@ asked like any other, and main refuses it.
 
 ## Confirmed again
 
+At delivery the recipient's wrapper names, when it asks main to confirm a grant, the
+conversation the task goes into — the one the delivery pins — and main's wrapper keeps it
+beside the grant. It takes that name only from a process in its own namespaces: a
+sandboxed worker can read its letter before delivery and could otherwise confirm it
+first with a conversation of its own.
+
 For each hint the new run's wrapper asks the wrapper of the main the hint names, over the
-same abstract address as at delivery, and takes the answer only from that run's process,
-alive as it started and in the same namespaces. Main's wrapper hands the grant over only
-when every condition holds:
+same abstract address as at delivery, names the conversation it continues, and takes the
+answer only from that run's process, alive as it started and in the same namespaces.
+Main's wrapper hands the grant over only when every condition holds:
 
 - it holds a grant with that message, for this recipient;
-- that grant was confirmed at a delivery once — it went into some conversation;
+- that grant was confirmed at a delivery, into the conversation the new run names — not
+  the one a copy names, since a worker could write the copy and then resume a
+  conversation of its own with it;
 - the run it belongs to has ended;
 - its task is open: on its way or unread, or read and not reported on by any run of the
   recipient; neither withdrawn nor failed;
 - the process asking is the wrapper of the run it names: that pid from `SO_PEERCRED`,
-  alive with that start time, in main's mount, user and PID namespaces.
+  alive with that start time, in main's mount, user and PID namespaces;
+- that run holds the recipient's name in the registry now.
 
 The grant then belongs to the new run; the run before it can no longer have it
 confirmed, and a later resume asks the same way. The directories are checked again with
@@ -78,19 +89,27 @@ the report as it takes out one it added: the harness removes a directory given w
 `--add-dir` through the same answer. What was restored and what was not is printed
 among the launch notes.
 
-A `--continue`, a picker, or a `/resume` inside the session names the conversation only
-through telemetry. The wrapper then asks once the conversation is known and keeps what is
-confirmed; the hook adds the directory at the first write in it, as for any grant.
+`--continue` names the conversation only through telemetry: the wrapper asks once the
+session's first `session_id` arrives and keeps what is confirmed, and the hook adds the
+directory at the first write in it, as for any grant. The picker (`--resume` with no id)
+restores the grant only if the first `session_id` the session reports is the conversation
+picked; that is not verified. A `/resume` inside a session that has already worked in
+another conversation restores nothing: the new run takes over and sweeps the earlier runs'
+waits once, at its first conversation, and the task is closed by then.
 
 `--grant-git` alone gives Claude Code nothing to restore.
 
 ## Codex
 
-A cold resume restores the roots the thread last saved; a grant given on the thread's
-first turn was not saved and is lost (seen live on 0.155.1 and 0.157.1,
-[research-codex.md](research-codex.md#runtime-workspace-roots)). At the first notice into
-a conversation the adapter looks for the hints of that conversation not in its own
-journal and asks for each:
+What a cold resume leaves in the thread depends on the terminal's version. On 0.157.1 its
+`thread/resume` carries no roots, and the server restores those the thread last saved; a
+grant given on the thread's first turn was not saved and is lost (live,
+[research-codex.md](research-codex.md#runtime-workspace-roots)). On 0.155.1 the terminal's
+`thread/resume` names roots of its own without the saved grant, so the grant is gone
+before the first notice (live, acceptance by review-codex on September 28, 2026).
+Either way the first notice settles it. At the first notice into a conversation the
+adapter looks for the hints of that conversation not in its own journal and asks for
+each:
 
 - **confirmed** — its roots are taken out and added back through the ordinary grant
   path, so they are journaled for this run and taken back after the report; a root the
@@ -108,6 +127,8 @@ A root no copy names is left alone: rewake cannot tell it from one the person ga
   thread restored without a journal entry, and rewake does not take it back; a Claude
   Code session simply does not get the directory again.
 - A main that has ended cannot confirm, so nothing it granted is restored.
+- A `/resume` inside a Claude Code session that already worked in another conversation
+  restores nothing, and neither does a resume a day or more after the task was read.
 - The real harnesses were not run through a resume with a grant end to end; the
   workflow cases `claude-grant-resume` and `codex-grant-resume` run the fixtures, which
   keep a conversation's id and its saved roots the way the harnesses were seen to.

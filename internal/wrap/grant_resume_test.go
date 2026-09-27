@@ -13,7 +13,7 @@ import (
 	"github.com/iiiokojiadbi/rewake/internal/grant"
 	"github.com/iiiokojiadbi/rewake/internal/grantauth"
 	"github.com/iiiokojiadbi/rewake/internal/harness/claude"
-	"github.com/iiiokojiadbi/rewake/internal/registry"
+	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
@@ -48,29 +48,41 @@ func TestAResumedRunKeepsOnlyWhatMainConfirmsAgain(t *testing.T) {
 	go authority.Serve(ctx)
 	defer authority.Close()
 	address := state.AuthorityAddress(dir, main)
-	pid, start, _ := registry.ParseEpoch(main)
-	expect := grantauth.Expect{PID: pid, Start: start}
 	for id, directory := range map[string]string{"m1": lib, "m2": doc} {
 		if err := grantauth.Register(address, grantauth.Grant{ID: id, To: "worker", ToEpoch: previous, Dirs: []string{directory}}); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := grantauth.Confirm(address, expect, id, "worker", previous); err != nil {
+		// As the delivery to the run before confirmed it, naming its
+		// conversation.
+		letter := inbox.Message{ID: id, From: "lead", FromEpoch: main, GrantDirs: []string{directory}}
+		if err := confirmGrant(dir, "worker", previous, "s1", letter); err != nil {
 			t.Fatal(err)
 		}
 	}
 	closed.Store("m2")
 	copied := []grant.Entry{
-		{Path: lib, Message: "m1", Outcome: grant.Granted, Thread: "c1", From: "lead", FromEpoch: main},
-		{Path: doc, Message: "m2", Outcome: grant.Granted, Thread: "c1", From: "lead", FromEpoch: main},
-		{Path: forged, Message: "m3", Outcome: grant.Granted, Thread: "c1", From: "lead", FromEpoch: main},
-		{Path: forged, Message: "m4", Outcome: grant.Granted, Thread: "c1", From: "lead", FromEpoch: endedEpoch(t)},
+		{Path: lib, Message: "m1", Outcome: grant.Granted, Thread: "s1", From: "lead", FromEpoch: main},
+		{Path: doc, Message: "m2", Outcome: grant.Granted, Thread: "s1", From: "lead", FromEpoch: main},
+		{Path: forged, Message: "m3", Outcome: grant.Granted, Thread: "s1", From: "lead", FromEpoch: main},
+		{Path: forged, Message: "m4", Outcome: grant.Granted, Thread: "s1", From: "lead", FromEpoch: endedEpoch(t)},
 	}
 	if err := grant.Save(dir, "worker", previous, copied); err != nil {
 		t.Fatal(err)
 	}
 
-	restored := resumeGrants(dir, "worker", main, claude.New(), []string{"--resume", "c1"})
-	if restored.thread != "c1" || !slices.Equal(restored.dirs(), []string{lib}) {
+	// A copy a worker wrote for a conversation of its own, naming the grant
+	// delivered into c1, and a resume of that conversation while main still
+	// holds the grant: the grant does not follow it there.
+	own := []grant.Entry{{Path: lib, Message: "m1", Outcome: grant.Granted, Thread: "c0", From: "lead", FromEpoch: main}}
+	if err := grant.Save(dir, "worker", endedEpoch(t), own); err != nil {
+		t.Fatal(err)
+	}
+	if elsewhere := resumeGrants(dir, "worker", main, claude.New(), []string{"--resume", "c0"}); len(elsewhere.dirs()) != 0 {
+		t.Fatalf("a resume of another conversation got %v", elsewhere.dirs())
+	}
+
+	restored := resumeGrants(dir, "worker", main, claude.New(), []string{"--resume", "s1"})
+	if restored.thread != "s1" || !slices.Equal(restored.dirs(), []string{lib}) {
 		t.Fatalf("restored %v for %q", restored.dirs(), restored.thread)
 	}
 	notes := strings.Join(restored.notes, "\n")
@@ -89,12 +101,12 @@ func TestAResumedRunKeepsOnlyWhatMainConfirmsAgain(t *testing.T) {
 		t.Error("nothing is left to ask, and the conversation is asked again")
 	}
 	entries := keeper.Entries()
-	if len(entries) != 1 || entries[0].Path != lib || entries[0].Thread != "c1" || entries[0].FromEpoch != main || !entries[0].Live() {
+	if len(entries) != 1 || entries[0].Path != lib || entries[0].Thread != "s1" || entries[0].FromEpoch != main || !entries[0].Live() {
 		t.Fatalf("kept %+v", entries)
 	}
 
 	// A launch that resumes nothing, or a fork, restores nothing.
-	for _, args := range [][]string{nil, {"--resume", "c1", "--fork-session"}} {
+	for _, args := range [][]string{nil, {"--resume", "s1", "--fork-session"}} {
 		if got := resumeGrants(dir, "worker", main, claude.New(), args); len(got.grants) != 0 {
 			t.Errorf("%v restored %+v", args, got.grants)
 		}

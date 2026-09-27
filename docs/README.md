@@ -114,10 +114,20 @@ everything else.
   about giving a session write access to Git metadata.
 - [grants.md](grants.md) — `--grant-dir` and `--grant-dir-broad`: the owner's decisions,
   the hard and broad tiers a directory is checked against at send and again at delivery,
-  the idle wait, how Codex adds the directory to its roots and Claude Code takes it
-  through its permission hooks, the journal and how a grant is taken back after the
-  report, and how long a grant lives. Open it for anything about
-  giving a session write access to a directory outside its workspace.
+  the idle wait, how Codex adds the directory to its roots, the journal and how a grant is
+  taken back after the report, and how long a grant lives, with a short account of who
+  can grant and of Claude Code. Open it first for anything about giving a session write
+  access to a directory outside its workspace.
+- [grants-authority.md](grants-authority.md) — who can grant: main's wrapper registering
+  a grant from below itself, holding it while its task is open and confirming it at
+  delivery by pid, start time and namespaces, the conversation it keeps for a resume, and
+  what the scheme holds against and what not. Open it when a grant is refused as not
+  confirmed, or to judge whether a worker could grant itself one.
+- [grants-claude.md](grants-claude.md) — a grant to a Claude Code session through its
+  permission hooks: the keeper in the worker's wrapper, the idle wait, giving on the first
+  file-tool write, what stays with the person, taking back and the modes it works in, and
+  why it is a courtesy rather than a boundary. Open it when a Claude Code worker is asked,
+  or not asked, about a write in a granted directory.
 - [grants-resume.md](grants-resume.md) — a grant after a cold resume: how the new run
   finds its conversation and takes over the task's wait, the journal copy that follows the
   conversation, main's wrapper confirming the grant again and what it checks, what Claude

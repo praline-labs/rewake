@@ -69,7 +69,7 @@ func (s *serverSession) restoreRoots(thread string, hints []grant.Hint, roots *[
 	rules := grant.CurrentEnv(s.stateRoot, harness.AllProtectedDirs()).Rules()
 	waiting := false
 	for _, hint := range hints {
-		restored := grantauth.RestoreHint(s.mailbox, s.name, s.epoch, hint)
+		restored := grantauth.RestoreHint(s.mailbox, s.name, s.epoch, thread, hint)
 		err := restored.Err
 		if errors.Is(err, grantauth.ErrUnreachable) {
 			// Its main is running and did not answer: asked again at the

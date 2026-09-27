@@ -299,7 +299,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 			Owns: func() bool { return registry.OwnsName(request.Dir, name, epoch) },
 			// A burst of letters that ask for nothing wakes the session once.
 			Window:     inbox.Coalescing,
-			CheckGrant: checkGrant(request.Dir, name, epoch, keeper, working(plan.Observer), conversationOf(plan.Observer)),
+			CheckGrant: checkGrant(request.Dir, name, epoch, keeper, working(plan.Observer), thread),
 			Deliver: func(ctx context.Context, message inbox.Message) inbox.Result {
 				if plan.Backend != nil {
 					return plan.Backend.Deliver(ctx, message)
