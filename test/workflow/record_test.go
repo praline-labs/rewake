@@ -22,6 +22,7 @@ func (c *Case) publishRecord(outcome Outcome, reason string, made map[string]obs
 	}
 	c.mu.Lock()
 	dirs := append([]string(nil), c.dirs...)
+	stderr := append([]string(nil), c.stderr...)
 	c.mu.Unlock()
 	if !keptEvidence {
 		// A green case removes its directories, so naming them would send a
@@ -38,6 +39,7 @@ func (c *Case) publishRecord(outcome Outcome, reason string, made map[string]obs
 		Outcome:    string(outcome),
 		Reason:     reason,
 		Evidence:   dirs,
+		Stderr:     stderr,
 		DurationMs: time.Since(c.started).Milliseconds(),
 	}
 	for _, name := range c.spec.Observations {

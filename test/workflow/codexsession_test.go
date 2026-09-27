@@ -165,7 +165,9 @@ func startSessionIn(t *testing.T, c *Case, iso *Isolation, dir, harness, name, r
 	// exits cleanly, so anything else is a real failure of the session and has
 	// to reach the verdict. The earlier blanket "failure expected" here hid an
 	// exit code of 42 completely.
+	release := c.captureStderr(launch, iso.Home, name)
 	process, err := c.start(launch, false)
+	release()
 	if err != nil {
 		t.Fatalf("launching the session: %v", err)
 	}

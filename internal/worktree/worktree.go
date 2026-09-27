@@ -171,7 +171,8 @@ const generatedTries = 8
 
 // Create adds a checkout of the HEAD of the repository holding from on a new
 // branch, both named name or a generated name when name is empty, copies in
-// what .worktreeinclude asks for, and records it.
+// what .worktreeinclude asks for, and records it, holding the repository's
+// lock throughout (serial.go).
 func Create(root, from, name string) (Record, error) {
 	if name != "" && !ValidName(name) {
 		return Record{}, &UnusableError{Reason: fmt.Sprintf("the worktree name %q is not usable: %s", name, NameRule)}
@@ -186,16 +187,24 @@ func Create(root, from, name string) (Record, error) {
 		return Record{}, &UnusableError{Reason: fmt.Sprintf("the worktree directory %s is inside the repository at %s; set %s to a directory outside it", root, source.Source, RootEnv)}
 	}
 	directory := filepath.Join(root, source.Repository)
-	if err := os.MkdirAll(directory, 0o755); err != nil {
-		return Record{}, fmt.Errorf("cannot create %s: %w", directory, err)
-	}
-	record, err := add(source, directory, name)
+	var record Record
+	err = withRepositoryLock(directory, func() error {
+		if err := os.MkdirAll(directory, 0o755); err != nil {
+			return fmt.Errorf("cannot create %s: %w", directory, err)
+		}
+		made, err := add(source, directory, name)
+		if err != nil {
+			// Only when empty: a repository's directory holding other
+			// checkouts stays.
+			_ = os.Remove(directory)
+		}
+		record = made
+		return err
+	})
 	if err != nil {
-		// Only when empty: a repository's directory holding other
-		// checkouts stays.
-		_ = os.Remove(directory)
+		return Record{}, err
 	}
-	return record, err
+	return record, nil
 }
 
 // add claims a name in directory and checks the source's commit out under it
@@ -224,16 +233,6 @@ func add(source Record, directory, name string) (Record, error) {
 		}
 		return include(record), nil
 	}
-}
-
-// checkout checks a claimed name's branch out at its path, and takes the claim
-// back when git cannot.
-func checkout(source, record Record) error {
-	if err := git(source.Source, "worktree", "add", record.Path, record.Branch); err != nil {
-		unclaim(record)
-		return fmt.Errorf("git worktree add failed: %w", err)
-	}
-	return nil
 }
 
 // unclaim takes back what a failed git worktree add left: git removes a

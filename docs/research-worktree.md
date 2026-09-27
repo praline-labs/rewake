@@ -6,7 +6,9 @@ trust is kept, what `.worktreeinclude` copies. Split out of
 [research-launch.md](research-launch.md) on September 27, 2026 by subject; what a live
 `-w` session showed stays there
 ([research-launch.md](research-launch.md#a-worktree-at-launch)). Codex's own worktree is
-in [research-codex.md](research-codex.md#--worktree-with-a-remote-terminal).
+in [research-codex.md](research-codex.md#--worktree-with-a-remote-terminal). One fact
+about git itself, which every worktree rewake makes goes through, closes the file:
+[a `git worktree add` beside another](#git-worktree-add-beside-another).
 
 The facts come three ways, each marked: `claude --help` of the installed binary, the
 owner's reading of that binary, and a reference copy of Claude Code's source whose
@@ -119,3 +121,30 @@ checkouts share, pointing them at the main checkout's hooks (`:540-570`); rewake
 no configuration. And a periodic cleanup removes agent worktrees older than a cutoff,
 looking at them with `git status -uno`, which counts untracked files as build output
 (`:1044-1132`); rewake removes nothing by itself, and untracked files keep a checkout.
+
+## git worktree add beside another
+
+**[git 2.43.0, run September 27, 2026]** A `git worktree add` dies when another
+worktree's entry in `<common dir>/worktrees/` has a `commondir` that exists and is
+empty:
+
+```
+Preparing worktree (checking out 'moved')
+fatal: failed to read .git/worktrees/unreached/commondir: Success
+```
+
+The exit is 128; `Success` is errno 0, since the read returned nothing rather than an
+error. git removes what it had begun of its own checkout and entry, so nothing of the
+failed add is left. `git worktree remove`, `git worktree list` and `git branch -d` die on
+the same entry with the same line. Once the file holds the path, all of them pass.
+
+An empty `commondir` is, as far as the failure shows, what a `git worktree add`
+running beside leaves for a moment: the file created before its content is written.
+git's source was not read for it. That is how it was first seen, in the workflow suite, whose `codex-worktree` case launches three
+`rewake codex --worktree` at once in one repository: one of 48 runs of the worktree
+cases under load failed its launch with the lines above, the neighbour named being one
+of the other two. A direct stress of three adds at once, 150 times, did not catch it;
+the entry left empty by hand reproduces it every time, which is how the unit tests of
+rewake's retry do it. rewake makes its own checkouts of a repository one at a time and
+tries an add that meets somebody else's once more
+([worktree.md](worktree.md#launches-at-once)).

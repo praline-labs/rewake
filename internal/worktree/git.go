@@ -188,8 +188,14 @@ func samePath(listed, recorded string) bool {
 // touches only its own entry — never `git worktree prune`, which would take
 // every other missing checkout of the repository along; one the repository
 // has forgotten leaves only the record to remove. A directory whose repository
-// is gone has no git left to remove it, and only force deletes it.
+// is gone has no git left to remove it, and only force deletes it. It holds
+// the repository's lock, as Create does: git worktree remove reads the
+// entries of the others as well.
 func Remove(record Record, force bool) error {
+	return withRepositoryLock(filepath.Dir(record.Path), func() error { return remove(record, force) })
+}
+
+func remove(record Record, force bool) error {
 	present := isDir(record.Path)
 	forgotten := repositoryGone(record)
 	if !forgotten && !present {

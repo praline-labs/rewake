@@ -63,6 +63,11 @@ type Case struct {
 	checks    []cleanupCheck
 	dirs      []string
 	processes []*owned
+	// captured are the standard error files of the sessions it started, and
+	// stderr the last line of each, gathered once a red case keeps them
+	// (stderr_test.go).
+	captured []string
+	stderr   []string
 	// label marks everything the case starts and everything that descends
 	// from it, so its sweeps take its own processes and no neighbour's.
 	label  string
@@ -274,6 +279,15 @@ func (c *Case) finish() {
 		}
 	} else {
 		kept = c.evidence()
+	}
+	if kept != "" {
+		stderr := c.keptStderr()
+		for _, line := range stderr {
+			kept += "\n\tstderr: " + line
+		}
+		c.mu.Lock()
+		c.stderr = stderr
+		c.mu.Unlock()
 	}
 	c.stop()
 

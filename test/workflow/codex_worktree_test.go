@@ -331,7 +331,7 @@ func TestARemovalBehindGitsBackFails(t *testing.T) {
 // can take.
 var mutantWorktreeDetached = mutation{
 	name:  "worktree-detached",
-	file:  "internal/worktree/worktree.go",
+	file:  "internal/worktree/serial.go",
 	edits: []edit{{`git(source.Source, "worktree", "add", record.Path, record.Branch)`, `git(source.Source, "worktree", "add", "--detach", record.Path, record.Commit)`}},
 }
 

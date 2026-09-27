@@ -171,6 +171,37 @@ bring the work back, and that Claude Code launches get the same checkout.
   where it is, that the launch command runs there without `--worktree` to go on, and how
   to land, finish or remove it.
 
+## Launches at once
+
+Several launches with `--worktree` in one repository make their checkouts one after
+another, not side by side. With git 2.43 a `git worktree add` running beside another
+can read the other's new entry in the Git directory with its `commondir` still empty,
+and dies, leaving the launch to exit 1
+([research-worktree.md](research-worktree.md#git-worktree-add-beside-another)). The
+workflow suite's three `--worktree` launches at once met it in one run of 48.
+
+Main decided on September 27, 2026 how: a lock per repository, held by the launch from
+before its branch is made until the checkout, its copies and its record are in place.
+The lock is an `flock` on `<repository>-<hash>.lock` beside the repository's directory
+under the worktree root: not in the repository's Git directory, since rewake writes
+nothing of its own into another program's metadata, and not inside the repository's own
+directory, which goes with its last checkout. The file stays, one per repository, and
+locks nothing once its holder has let go or died. `rewake worktree rm` and finish's
+removal take the same lock, since `git worktree remove` reads the other entries too.
+
+The wait is bounded: after a minute the launch is refused with exit 1, naming the lock
+and the process that took it last; nothing is made. A holder is that slow only when it
+hangs.
+
+A `git worktree add` rewake does not run — the person's, or Claude Code's own `-w` — is
+outside the lock. An add of rewake's that meets such an entry half-written, which git
+reports as `failed to read <common dir>/worktrees/<entry>/commondir`, is tried once
+more after a fifth of a second: git has removed what it began of this checkout, and the
+other entry is whole long before then. A second failure is reported as it is. The match
+is on the path in git's message, not its words, which git translates. The other worktree
+commands — land, finish's landing, the checks of ls and rm — are not serialized with
+such an add, and can fail the same way with git's message; they are then run again.
+
 ## Files git ignores: `.worktreeinclude`
 
 A checkout holds what the commit holds, and a repository often needs a file git ignores

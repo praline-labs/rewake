@@ -41,7 +41,11 @@ type Case struct {
 	Reason       string        `json:"reason"`
 	Observations []Observation `json:"observations"`
 	Evidence     []string      `json:"evidence"`
-	DurationMs   int64         `json:"durationMs"`
+	// Stderr is, for a case that kept its evidence, the last line each of its
+	// sessions printed to standard error, after the file it is in: where a
+	// session that exited without a word said why.
+	Stderr     []string `json:"stderr,omitempty"`
+	DurationMs int64    `json:"durationMs"`
 }
 
 // Observation is one observation of a case. A declared observation that was

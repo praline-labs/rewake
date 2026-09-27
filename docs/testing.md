@@ -136,21 +136,28 @@ FAIL  batch-arrival/claude   fail
       fail        "the recipient can receive mail before the letters leave"
         worker-claude never started listening
       evidence  /tmp/rewake-case-270015062
+      stderr    worker.stderr: claude-shim: a delivery carried more than one line
 summary   .rewake-checks/<time>/summary.json
 ```
 
 The first line counts scenarios and cases by outcome. `against` says what the run was
 checked against. An `unsupported` line names the case, the column and the capability it
 lacks. A `FAIL` block names the case and column, each observation that did not pass
-with its detail, and one evidence directory. `run FAIL` is a failure of the run itself,
-such as a version that could not be fetched; `engine FAIL` means `go test` failed with
-no case to explain it, and the failed tests are listed. `summary.json` holds all of it,
+with its detail, one evidence directory, and a `stderr` line for each session that
+printed to its standard error, at most four: the file and the last line in it.
+`run FAIL` is a failure of the run itself, such as a version that could not be
+fetched; `engine FAIL` means `go test` failed with no case to explain it, and the
+failed tests are listed. `summary.json` holds all of it,
 every case and every observation, under `.rewake-checks/`, which git ignores.
 
 A red case keeps its directory: `/tmp/rewake-case-*` with the private HOME, state
 directory and shim records of that case, or `/tmp/rewake-mutant-*` with `failure.txt`
 and `build.log` when a mutant could not be built. A green case removes its own. Read the
-evidence before deleting it.
+evidence before deleting it. Each session the case started wrote its standard error to
+`<name>.stderr` in that HOME — the wrapper's refusals, the fixture's complaints — and a
+red case keeps those files cut to 64 KiB, their first and last halves, so a session
+that looped on an error does not fill the disk. They were added on September 27, 2026,
+after a launch that exited 1 said why only in a rerun with the capture added by hand.
 
 **The outcomes**, in the order the classifier ranks a case. `fail`: an observation was
 made and contradicted the claim, or cleanup failed, or the deadline expired — it wins
