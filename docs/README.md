@@ -105,8 +105,9 @@ everything else.
   about giving a session write access to Git metadata.
 - [grants.md](grants.md) — `--grant-dir` and `--grant-dir-broad`: the owner's decisions,
   the hard and broad tiers a directory is checked against at send and again at delivery,
-  the idle wait, how Codex adds the directory to its roots, the journal and how a grant
-  is taken back after the report, and how long a grant lives. Open it for anything about
+  the idle wait, how Codex adds the directory to its roots and Claude Code takes it
+  through its permission hooks, the journal and how a grant is taken back after the
+  report, and how long a grant lives. Open it for anything about
   giving a session write access to a directory outside its workspace.
 - [session-state.md](session-state.md) — the telemetry line main sees for its workers
   (activity, context used, compactions): what is shown to whom, the availability
@@ -187,8 +188,10 @@ everything else.
   subject: compact it, abort its turn, poll a file, swallow a socket line, reload, fill
   the harness's task list — with the forms and refusals of each, as the host words them —
   and what a Stop hook that blocks does to a turn's end: the second call, its payload,
-  the limit of eight. Open it before changing the module's side of `rewake compact` or
-  `rewake interrupt`, before a Stop hook that holds a turn, and after a harness update.
+  the limit of eight; and how a permission hook adds a working directory to a running
+  session and takes it out. Open it before changing the module's side of `rewake compact`
+  or `rewake interrupt`, before a Stop hook that holds a turn, before touching the grant
+  hook, and after a harness update.
 - [research-codex.md](research-codex.md) — what only a running Codex session shows,
   split from research.md by subject: `codex queue`, thread identity and terminal events,
   the sandbox as a running session meets it, why `--worktree` cannot go with a remote

@@ -186,6 +186,10 @@ func (claudeHarness) SingleUseFlags() []harness.Flag {
 // so `rewake send` reaches the wrapper's socket to register a grant.
 func (claudeHarness) ReachesWrapper() bool { return true }
 
+// SupportsDirGrant: a grant reaches a running session through the permission
+// hooks rewake installs (permission.go).
+func (claudeHarness) SupportsDirGrant() bool { return true }
+
 func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, error) {
 	args := append([]string{}, request.Args...)
 	if harness.HasFlag(args, worktreeFlag) {

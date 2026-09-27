@@ -79,6 +79,15 @@ func AuthorityAddress(dir, run string) string {
 	return fmt.Sprintf("@rewake/grant/%x", sum[:16])
 }
 
+// KeeperAddress is where a run's wrapper keeps the grants given to it, for a
+// harness that applies them through a hook the harness runs (a Claude Code
+// permission hook, docs/grants.md#claude-code): abstract, like
+// AuthorityAddress, and checked through its peer the same way.
+func KeeperAddress(dir, name, run string) string {
+	sum := sha256.Sum256([]byte(filepath.Clean(dir) + "\x00" + name + "\x00" + run))
+	return fmt.Sprintf("@rewake/keep/%x", sum[:16])
+}
+
 // ControlPath is where a run takes control requests — compact, interrupt — and
 // leaves its answers (docs/remote-control.md). One per run, like the sockets:
 // a request written for a run that ended must not reach the next holder of the

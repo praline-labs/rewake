@@ -152,8 +152,8 @@ observations say; the refusals of `-w`, `--tmux` and the continuations are unit 
 
 ## A directory granted with a task
 
-`codex-grant-dir` runs on the Codex column only: Claude Code takes a grant from stage 2
-on ([grants.md](grants.md)). Its main is a Claude Code session, because a Codex main
+`codex-grant-dir` runs on the Codex column only: Claude Code takes a grant through its
+permission hooks, which that fixture does not speak ([grants.md](grants.md#claude-code)). Its main is a Claude Code session, because a Codex main
 cannot grant ([grants.md](grants.md#who-can-grant)), and the granted directory lies in
 the user's cache directory rather than under `/tmp`, which is never granted. The fixture
 keeps the thread's workspace roots as the

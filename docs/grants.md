@@ -3,9 +3,9 @@
 `rewake send <worker> --grant-dir <dir> "task"` lets a worker write a directory outside
 its workspace for one task. It is `--grant-git`'s sibling ([git-grants.md](git-grants.md)):
 main decides per task, rewake carries the decision with the message, and the harness
-adapter applies it when the task is delivered. Stage 1 covers the shared part and Codex;
-Claude Code takes the grant in stage 2, and until then a grant to a Claude Code session
-is refused. Main's wrapper confirms every grant at delivery, so a worker inside the
+adapter applies it when the task is delivered. Codex takes a grant as a workspace root
+of its sandbox; Claude Code, which has no sandbox, takes it through its permission hooks
+and is spared the prompts, not fenced in ([Claude Code](#claude-code)). Main's wrapper confirms every grant at delivery, so a worker inside the
 Codex sandbox cannot grant itself one ([who can grant](#who-can-grant)).
 
 ## What the owner decided
@@ -312,6 +312,49 @@ Keying it by the thread instead is queued
   repository it is added as before: the worker could write that common `.git` from its
   own checkout already, and the hooks it writes run in main's checkout just the same
   ([git-grants.md](git-grants.md)).
+
+## Claude Code
+
+Nothing adds a working directory to a running Claude Code session from outside, but its
+permission hooks can ([research-claude-actions.md](research-claude-actions.md#a-directory-given-to-a-running-session)).
+Rewake's settings layer adds `rewake grant-hook` as a PreToolUse hook on the file tools
+and as a PermissionRequest hook, each with a five-second timeout.
+
+- **Where the grant lives.** Once the grant is confirmed ([who can grant](#who-can-grant)),
+  the recipient's wrapper keeps it in memory. The hook holds nothing: it is a child of
+  the harness, so it runs below that wrapper, and it asks the wrapper over an abstract
+  socket named from the room, the session and its run (`@rewake/keep/<hash>`). The
+  wrapper answers only a process below itself, checked as registration is; the hook
+  believes only the process its run names. It sends the call's path fields, never the
+  content a Write carries. A file in the state directory decides nothing, since a
+  worker can write one; the copy under `grants/` is only what `rewake list` shows.
+- **Delivery waits for an idle session.** A grant task stays pending while the session
+  is working, retried every two seconds, as on Codex: a grant that arrived mid-turn
+  would be taken back by a report the turn had not made.
+- **Giving.** When the session first asks to write inside a grant, the PermissionRequest
+  hook answers allow and adds the grant's root as a working directory for the session.
+  From then on writes and shell commands inside it run without asking. A file tool is
+  judged by its path; any other tool by what the harness suggests adding, and only when
+  every suggestion lies in a grant, since an approved command runs whole.
+- **What stays with the person.** `.git`, `.claude`, `.codex` and `.agents` at any depth
+  inside a grant are never allowed, `--grant-git` or not: whatever reads them next runs
+  what the worker wrote, and on Claude Code nothing but the prompt stands in the way. A
+  write outside every grant hears silence, and silence is also the answer to any error
+  or timeout: the hook never allows on a guess.
+- **Taking back.** At the first tool call after the task is settled, a read inside the
+  working directory in `default` or `acceptEdits` is answered `ask` from PreToolUse; the
+  PermissionRequest that follows is allowed with the grant's root removed. A file tool
+  writing into a directory being taken back is denied with a line naming why; a shell
+  command that mentions it hears silence and is left to the person. A directory another
+  live task holds stays. A grant never used — never added — ends at the report.
+- **What ends it early.** A cold resume starts without the directory, and the new run's
+  wrapper does not restore it: a grant a file could restore is one a worker could forge.
+  In `bypassPermissions` the hook is never asked, and the grant is moot.
+
+This is a courtesy, not a boundary. Claude Code runs approved shell commands as the user,
+so a worker writes wherever the user can if a prompt is approved, and can forge a grant
+([who can grant](#who-can-grant)). What the hook adds is fewer prompts inside the
+directory main named, and a prompt again once the task is done.
 
 ## At launch
 

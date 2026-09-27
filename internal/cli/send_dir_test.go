@@ -117,6 +117,21 @@ func TestDirGrantIsCarriedResolvedAndCollapsed(t *testing.T) {
 	}
 }
 
+// A Claude Code session takes a grant through its permission hook, which
+// asks its wrapper (docs/grants.md#claude-code): the task goes out like one to
+// Codex.
+func TestAClaudeCodeSessionIsSentADirectoryGrant(t *testing.T) {
+	w := newGrantWorld(t, "main", "claude")
+	lib := filepath.Join(w.home, "work/lib")
+	code, out, stderr := run("send", w.peer.Name, "Bump the client", "--wait=0", "--grant-dir", lib)
+	if code != ExitPending {
+		t.Fatalf("send: %d %s %s", code, out, stderr)
+	}
+	if messages := w.sent(t); len(messages) != 1 || !slices.Equal(messages[0].GrantDirs, []string{lib}) {
+		t.Fatalf("sent %+v", messages)
+	}
+}
+
 func TestDirGrantInWorkspaceIsNotCarried(t *testing.T) {
 	w := newGrantWorld(t, "main", "codex")
 	code, out, stderr := run("send", w.peer.Name, "Tidy src", "--wait=0", "--grant-dir", filepath.Join(w.workspace, "src"))
@@ -140,7 +155,6 @@ func TestDirGrantRefusals(t *testing.T) {
 		{name: "general sends", sender: "general", args: func(w grantWorld) []string { return []string{"--grant-dir", w.home + "/work/lib"} }, code: ExitUsage, says: "only a verified current main"},
 		{name: "heads-up", args: func(w grantWorld) []string { return []string{"--notify", "--grant-dir", w.home + "/work/lib"} }, code: ExitUsage, says: "only a task or a question"},
 		{name: "addendum", args: func(w grantWorld) []string { return []string{"--to", "abc", "--grant-dir", w.home + "/work/lib"} }, code: ExitUsage, says: "--to excludes it"},
-		{name: "claude", peer: "claude", args: func(w grantWorld) []string { return []string{"--grant-dir", w.home + "/work/lib"} }, code: ExitFailed, says: "cannot take a directory"},
 		{name: "missing", args: func(w grantWorld) []string { return []string{"--grant-dir", w.home + "/work/nope"} }, code: ExitFailed, says: "no such directory"},
 		{name: "keys", args: func(w grantWorld) []string { return []string{"--grant-dir", w.home + "/.ssh"} }, code: ExitUsage, says: "where login keys are kept"},
 		{name: "rewake state", args: func(w grantWorld) []string { return []string{"--grant-dir", w.dir} }, code: ExitUsage, says: "rewake's state directory"},

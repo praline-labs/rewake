@@ -12,6 +12,10 @@
 // from the process the sender's record names, in its own namespaces: a
 // listener put in the socket's place by a sandboxed process lives in the
 // sandbox's namespaces and cannot leave them.
+//
+// The receiving side keeps what it was granted the same way when its harness
+// applies a grant through a hook of its own (keeper.go): in the wrapper's
+// memory, answered only to a process below the wrapper.
 package grantauth
 
 import (
@@ -57,16 +61,20 @@ func sameSet(a, b []string) bool {
 const (
 	opRegister = "register"
 	opConfirm  = "confirm"
+	// opDecide is a hook call to the keeper of a worker's grants.
+	opDecide = "decide"
 )
 
 type request struct {
-	Op    string `json:"op"`
-	Grant Grant  `json:"grant"`
+	Op    string          `json:"op"`
+	Grant Grant           `json:"grant"`
+	Call  json.RawMessage `json:"call,omitempty"`
 }
 
 type response struct {
-	Grant *Grant `json:"grant,omitempty"`
-	Error string `json:"error,omitempty"`
+	Grant  *Grant          `json:"grant,omitempty"`
+	Output json.RawMessage `json:"output,omitempty"`
+	Error  string          `json:"error,omitempty"`
 }
 
 // Errors a caller tells apart.

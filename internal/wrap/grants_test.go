@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -93,5 +94,53 @@ func TestAGrantIsConfirmedWithTheMainThatSentIt(t *testing.T) {
 	forged.FromEpoch = "not-a-run"
 	if err := confirmGrant(dir, "worker", "9.9", forged); err == nil {
 		t.Fatal("a sender with no run was asked")
+	}
+}
+
+// For a harness that takes a grant through its own hook, a confirmed grant
+// waits while the session works, then goes into the keeper its hook asks.
+func TestAGrantForAHookWaitsForIdleAndIsKept(t *testing.T) {
+	// A room below a state directory of its own: the grant lies beside it.
+	dir := filepath.Join(t.TempDir(), "rooms", "default")
+	epoch := ownEpoch(t)
+	lib, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	authority, err := grantauth.Listen(state.AuthorityAddress(dir, epoch), os.Getpid(), time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go authority.Serve(ctx)
+	defer authority.Close()
+	if err := grantauth.Register(state.AuthorityAddress(dir, epoch), grantauth.Grant{ID: "m1", To: "worker", ToEpoch: "9.9", Dirs: []string{lib}}); err != nil {
+		t.Fatal(err)
+	}
+	keeper, err := grantauth.Keep(state.KeeperAddress(dir, "worker", "9.9"), os.Getpid())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer keeper.Close()
+	message := inbox.Message{ID: "m1", From: "lead", FromEpoch: epoch, To: "worker", ToEpoch: "9.9", Kind: inbox.Task, GrantDirs: []string{lib}}
+
+	busy := true
+	check := checkGrant(dir, "worker", "9.9", keeper, func() bool { return busy })
+	if err := check(message); !errors.Is(err, inbox.ErrNotYet) || len(keeper.Entries()) != 0 {
+		t.Fatalf("while the session works: %v, kept %v", err, keeper.Entries())
+	}
+	busy = false
+	if err := check(message); err != nil {
+		t.Fatal(err)
+	}
+	if entries := keeper.Entries(); len(entries) != 1 || entries[0].Path != lib || !entries[0].Live() {
+		t.Fatalf("kept %+v", entries)
+	}
+	// A grant main never registered is not kept.
+	unregistered := message
+	unregistered.ID = "m2"
+	if err := check(unregistered); err == nil || len(keeper.Entries()) != 1 {
+		t.Fatalf("an unconfirmed grant: %v, kept %v", err, keeper.Entries())
 	}
 }

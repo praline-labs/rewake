@@ -54,18 +54,24 @@ func Listen(address string, self int, lifetime time.Duration) (*Authority, error
 
 // Serve answers until the context ends or Close is called.
 func (a *Authority) Serve(ctx context.Context) {
+	acceptLoop(ctx, a.listener, a.done, a.Close, a.answer)
+}
+
+// acceptLoop hands each connection to answer until the context ends or done
+// closes.
+func acceptLoop(ctx context.Context, listener *net.UnixListener, done chan struct{}, closer func(), answer func(*net.UnixConn)) {
 	go func() {
 		select {
 		case <-ctx.Done():
-			a.Close()
-		case <-a.done:
+			closer()
+		case <-done:
 		}
 	}()
 	for {
-		conn, err := a.listener.AcceptUnix()
+		conn, err := listener.AcceptUnix()
 		if err != nil {
 			select {
-			case <-a.done:
+			case <-done:
 				return
 			default:
 			}
@@ -74,7 +80,7 @@ func (a *Authority) Serve(ctx context.Context) {
 			}
 			continue
 		}
-		go a.answer(conn)
+		go answer(conn)
 	}
 }
 

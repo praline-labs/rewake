@@ -16,7 +16,7 @@ internal/proc/                   /proc: identity, liveness, job-control state, l
 internal/boottime/               the boot clock, comparable across processes and never set back
 internal/inbox/                  message, status, sender-side write, servicing loop
 internal/grant/                  which directories a task may grant, and the journal of what was granted
-internal/grantauth/              main's wrapper holding the grants its commands registered, and confirming them
+internal/grantauth/              main's wrapper holding the grants its commands registered, and confirming them; a worker's wrapper keeping its own grants for its permission hook
 internal/control/                a main's control request to a run and its answer, as files
 internal/role/                   the role catalogue: flag, briefing line, reporting duty
 internal/brief/                  text injected into an agent, independent of transport
@@ -81,7 +81,11 @@ takes arguments rewake has a way of its own for implements `LaunchRefuser` —
 `--add-dir` and a `writable_roots` override there. A harness whose main can grant
 implements `GrantIssuer` — `ReachesWrapper()`, whether its commands reach their wrapper's
 socket; only Claude Code does, and a grant from a main of any other harness is refused
-with exit 1 ([grants.md](grants.md#who-can-grant)).
+with exit 1 ([grants.md](grants.md#who-can-grant)). A harness that takes a grant through
+a permission hook rather than at delivery implements `HookGranter` — `GrantCall(payload)`,
+the part of a hook's payload the wrapper needs, and `DecideGrant(call, entries)`, the
+answer from the grants the wrapper keeps; the hidden `rewake grant-hook` passes one to
+the other over the wrapper's keeper socket ([grants.md](grants.md#claude-code)).
 
 A harness that gives rewake's worktree to a launch implements `WorktreeHarness` —
 `WorktreeFlag()`, the spelling the launch command takes for itself;

@@ -1,6 +1,7 @@
 package wrap
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -26,7 +27,11 @@ const grantLifetime = inbox.DefaultTTL + 5*time.Minute
 // did. What the sender's view allowed, the receiver's may not, and the
 // receiver's is the one the worker writes in; and nothing in the message
 // itself proves who wrote it (docs/grants.md#who-can-grant).
-func checkGrant(dir, name, epoch string) func(inbox.Message) error {
+//
+// For a harness that takes a grant through its own hook, the grant then
+// waits for the session to be idle, as Codex's does, and goes into the
+// keeper the hook asks; keeper is nil for any other.
+func checkGrant(dir, name, epoch string, keeper *grantauth.Keeper, busy func() bool) func(inbox.Message) error {
 	root := state.RootForRoom(dir)
 	return func(message inbox.Message) error {
 		rules := grant.CurrentEnv(root, harness.AllProtectedDirs()).Rules()
@@ -35,7 +40,50 @@ func checkGrant(dir, name, epoch string) func(inbox.Message) error {
 				return err
 			}
 		}
-		return confirmGrant(dir, name, epoch, message)
+		if err := confirmGrant(dir, name, epoch, message); err != nil || keeper == nil || len(message.GrantDirs) == 0 {
+			return err
+		}
+		if busy != nil && busy() {
+			return fmt.Errorf("%w: %s", inbox.ErrNotYet, idleWait)
+		}
+		return keeper.Grant(message.ID, message.GrantDirs, time.Now())
+	}
+}
+
+// idleWait is why a grant for a hook waits: a task that arrives on a turn of
+// its own is reported on by that turn, and the grant ends with the report.
+const idleWait = "a task carrying a grant waits for the session to be idle, so it arrives on a turn of its own"
+
+// keepGrants starts, for a harness that takes a grant through its own hook,
+// the keeper that hook asks; nil for any other harness, and when the address
+// cannot be bound, which the session is told.
+func keepGrants(ctx context.Context, dir, name, epoch string, self int, adapter harness.Harness) *grantauth.Keeper {
+	granter, ok := adapter.(harness.HookGranter)
+	if !ok {
+		return nil
+	}
+	keeper, err := grantauth.Keep(state.KeeperAddress(dir, name, epoch), self)
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, "rewake: this session cannot take a directory grant: "+err.Error())
+		return nil
+	}
+	keeper.Decide = granter.DecideGrant
+	keeper.Settled = func(id string) bool { return inbox.Settled(dir, name, epoch, id) }
+	keeper.Mirror = func(entries []grant.Entry) { _ = grant.Save(dir, name, epoch, entries) }
+	go keeper.Serve(ctx)
+	return keeper
+}
+
+// working says whether an observed session is in a turn, from what its
+// telemetry last heard; not knowing is not working, since a grant through a
+// hook holds from whenever the session next asks to write.
+func working(observer harness.Observer) func() bool {
+	if observer == nil {
+		return nil
+	}
+	return func() bool {
+		snapshot := observer.SessionState()
+		return snapshot.ActivityFresh && snapshot.Activity != nil && *snapshot.Activity == "working"
 	}
 }
 

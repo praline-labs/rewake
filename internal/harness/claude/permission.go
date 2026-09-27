@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/iiiokojiadbi/rewake/internal/grant"
+	"github.com/iiiokojiadbi/rewake/internal/grantauth"
 )
 
 // A directory granted with a task reaches Claude Code through its permission
@@ -23,8 +24,10 @@ import (
 //     harness raise a PermissionRequest for a call it would have run anyway.
 //
 // So a grant is given when the session first asks to write in it, and taken
-// back at the first tool call after its task is settled. The hook answers
-// only what it can prove from the journal and is silent otherwise: silence
+// back at the first tool call after its task is settled. The hook itself
+// holds nothing: it hands the call to the session's wrapper, which keeps the
+// journal in memory (grantauth.Keeper) and answers with DecideGrant. It
+// answers only what the journal proves and is silent otherwise: silence
 // leaves the call to the person and the permission mode.
 
 // Hook events the grant hook answers.
@@ -51,13 +54,6 @@ type permissionUpdate struct {
 	Destination string   `json:"destination,omitempty"`
 }
 
-// GrantAnswer is what the grant hook does with one call: what it prints, and
-// which directories that answer takes out of the session, for the journal.
-type GrantAnswer struct {
-	Output  []byte
-	Removed []string
-}
-
 // fileWriters name the path their call writes; notebookPath is NotebookEdit's.
 var fileWriters = map[string]string{"Write": "file_path", "Edit": "file_path", "MultiEdit": "file_path", "NotebookEdit": "notebook_path"}
 
@@ -71,13 +67,39 @@ var readers = map[string]string{"Read": "file_path", "Glob": "path", "Grep": "pa
 // are not known to behave so.
 var forcingModes = []string{"default", "acceptEdits"}
 
+// GrantCall is the part of a hook's payload the wrapper needs to decide it:
+// the payload less every tool argument but the path ones. A Write's payload
+// carries the whole file it writes, which the wrapper has no use for.
+func (claudeHarness) GrantCall(payload []byte) (json.RawMessage, bool) {
+	var in grantHookInput
+	if json.Unmarshal(payload, &in) != nil {
+		return nil, false
+	}
+	kept := map[string]json.RawMessage{}
+	for _, fields := range []map[string]string{fileWriters, readers} {
+		if field, ok := fields[in.Tool]; ok {
+			if raw, ok := in.Input[field]; ok {
+				kept[field] = raw
+			}
+		}
+	}
+	in.Input = kept
+	encoded, err := json.Marshal(in)
+	return encoded, err == nil
+}
+
+// DecideGrant answers one hook call for the wrapper.
+func (claudeHarness) DecideGrant(call json.RawMessage, entries []grant.Entry) grantauth.Decision {
+	return DecideGrant(call, entries)
+}
+
 // DecideGrant answers one PreToolUse or PermissionRequest of a session from
 // its journal. It never fails: a payload it cannot read is a call it is
 // silent about.
-func DecideGrant(payload []byte, entries []grant.Entry) GrantAnswer {
+func DecideGrant(payload []byte, entries []grant.Entry) grantauth.Decision {
 	var in grantHookInput
 	if json.Unmarshal(payload, &in) != nil {
-		return GrantAnswer{}
+		return grantauth.Decision{}
 	}
 	var live, revoking []string
 	for _, entry := range entries {
@@ -91,7 +113,7 @@ func DecideGrant(payload []byte, entries []grant.Entry) GrantAnswer {
 	// A directory another live task holds is not taken back.
 	revoking = slices.DeleteFunc(revoking, func(path string) bool { return slices.Contains(live, path) })
 	if len(live) == 0 && len(revoking) == 0 {
-		return GrantAnswer{}
+		return grantauth.Decision{}
 	}
 	switch in.Event {
 	case preToolUse:
@@ -99,15 +121,15 @@ func DecideGrant(payload []byte, entries []grant.Entry) GrantAnswer {
 	case permissionRequest:
 		return in.permissionRequest(live, revoking)
 	}
-	return GrantAnswer{}
+	return grantauth.Decision{}
 }
 
 // preToolUse denies a file tool writing where a grant is being taken back,
 // and forces a question on a read that would run anyway, so the answer to it
 // can take the directory out.
-func (in grantHookInput) preToolUse(revoking []string) GrantAnswer {
+func (in grantHookInput) preToolUse(revoking []string) grantauth.Decision {
 	if len(revoking) == 0 {
-		return GrantAnswer{}
+		return grantauth.Decision{}
 	}
 	if field, ok := fileWriters[in.Tool]; ok {
 		path := in.path(field)
@@ -117,31 +139,32 @@ func (in grantHookInput) preToolUse(revoking []string) GrantAnswer {
 					"hookEventName":            preToolUse,
 					"permissionDecision":       "deny",
 					"permissionDecisionReason": "rewake: write access to " + root + " was taken back, its task reported on; ask main for a new grant if the work needs it",
-				}, nil)
+				}, nil, nil)
 			}
 		}
-		return GrantAnswer{}
+		return grantauth.Decision{}
 	}
 	if !in.forcible() {
-		return GrantAnswer{}
+		return grantauth.Decision{}
 	}
 	return hookAnswer(map[string]any{
 		"hookEventName":            preToolUse,
 		"permissionDecision":       "ask",
 		"permissionDecisionReason": "rewake: taking back write access to " + strings.Join(revoking, ", "),
-	}, nil)
+	}, nil, nil)
 }
 
 // permissionRequest allows a write inside a live grant, adding its root, and
 // takes out what is being taken back when it answers at all.
-func (in grantHookInput) permissionRequest(live, revoking []string) GrantAnswer {
+func (in grantHookInput) permissionRequest(live, revoking []string) grantauth.Decision {
 	var updates []permissionUpdate
-	if roots := in.grantedRoots(live); roots != nil {
+	roots := in.grantedRoots(live)
+	if roots != nil {
 		updates = append(updates, permissionUpdate{Kind: "addDirectories", Directories: roots, Destination: "session"})
 	} else if len(revoking) == 0 || !in.forcible() {
 		// Not a write rewake granted, and not the question it forced: the
 		// person or the mode decides.
-		return GrantAnswer{}
+		return grantauth.Decision{}
 	}
 	if len(revoking) > 0 {
 		updates = append(updates, permissionUpdate{Kind: "removeDirectories", Directories: revoking, Destination: "session"})
@@ -149,7 +172,7 @@ func (in grantHookInput) permissionRequest(live, revoking []string) GrantAnswer 
 	return hookAnswer(map[string]any{
 		"hookEventName": permissionRequest,
 		"decision":      map[string]any{"behavior": "allow", "updatedPermissions": updates},
-	}, revoking)
+	}, roots, revoking)
 }
 
 // grantedRoots are the live grants a call writes in, or nil when it writes
@@ -226,10 +249,10 @@ func (in grantHookInput) resolved(given string) string {
 	return grant.ResolveExisting(given)
 }
 
-func hookAnswer(specific map[string]any, removed []string) GrantAnswer {
+func hookAnswer(specific map[string]any, added, removed []string) grantauth.Decision {
 	encoded, err := json.Marshal(map[string]any{"hookSpecificOutput": specific})
 	if err != nil {
-		return GrantAnswer{}
+		return grantauth.Decision{}
 	}
-	return GrantAnswer{Output: encoded, Removed: removed}
+	return grantauth.Decision{Output: encoded, Added: added, Removed: removed}
 }

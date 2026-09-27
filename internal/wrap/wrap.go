@@ -145,6 +145,12 @@ func Run(ctx context.Context, request Request) (int, error) {
 	if err := registry.Update(request.Dir, session); err != nil {
 		return 0, err
 	}
+	// Before the harness: its hook asks from the first tool call.
+	keeper := keepGrants(ctx, request.Dir, name, epoch, self, request.Harness)
+	if keeper != nil {
+		defer keeper.Close()
+	}
+
 	// Signals are caught before the child exists. In the gap between starting it
 	// and installing the handlers, a SIGTERM meant for the wrapper would kill it
 	// outright: the harness would keep running with nobody serving its mailbox
@@ -283,7 +289,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 			Owns: func() bool { return registry.OwnsName(request.Dir, name, epoch) },
 			// A burst of letters that ask for nothing wakes the session once.
 			Window:     inbox.Coalescing,
-			CheckGrant: checkGrant(request.Dir, name, epoch),
+			CheckGrant: checkGrant(request.Dir, name, epoch, keeper, working(plan.Observer)),
 			Deliver: func(ctx context.Context, message inbox.Message) inbox.Result {
 				if plan.Backend != nil {
 					return plan.Backend.Deliver(ctx, message)

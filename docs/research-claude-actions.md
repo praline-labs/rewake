@@ -5,7 +5,8 @@ September 24, 2026: that document is about what reaches a running session from o
 and what rewake hears back; this one is about what a function-hooks plugin can do to the
 session it runs in — compact it, abort its turn, poll a file, swallow a socket line,
 fill the harness's task list — with the forms and refusals of each; and what a Stop hook
-in rewake's settings layer can do to a turn's end. `rewake compact` and `rewake interrupt` rest on it
+in rewake's settings layer can do to a turn's end, and a permission hook to its working
+directories. `rewake compact` and `rewake interrupt` rest on it
 ([remote-control.md](remote-control.md)). The Codex side of the same requests is in
 [research-protocol.md](research-protocol.md#compaction-and-interrupt-on-request).
 
@@ -157,3 +158,30 @@ The hook sat in a layer given with `--settings`, as rewake's own hooks do.
   StopFailure runs only for a turn that ended on an API error **[source]**; an Esc is
   heard by the function-hooks plugin alone
   ([research-claude-control.md](research-claude-control.md#what-a-function-hooks-plugin-hears)).
+
+## A directory given to a running session
+
+Probed on September 27, 2026, Claude Code 2.1.280, in a private HOME against a stand-in
+API **[live]**, for a directory granted with a task ([grants.md](grants.md#claude-code)).
+The session ran as `claude --settings <layer> --permission-mode acceptEdits`, with a
+PreToolUse and a PermissionRequest hook in that layer. Evidence:
+`~/.cache/rewake/evidence/2026-09-27/claude-grant-dir-probe/`.
+
+- **A write outside the working directories** raises PreToolUse, then PermissionRequest
+  with `permission_suggestions` `[{"type":"addDirectories","directories":[<parent>],"destination":"session"}]`.
+  A hook answering `{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow","updatedPermissions":[{"type":"addDirectories","directories":[<dir>],"destination":"session"}]}}}`
+  lets the call run; the terminal shows "Allowed by PermissionRequest hook", and the next
+  model request carries "Additional working directories added: - <dir>".
+- **After that the directory is a working one.** A Write and a Bash `touch` inside it ran
+  with no prompt and no PermissionRequest; the same `touch` in another outside directory
+  prompted. Nothing was written to disk: no project `.claude/`, user settings unchanged.
+- **`removeDirectories`** in the same answer, on any request, takes a directory out; the
+  model is told "Additional working directories removed", and the next write there
+  prompts. It removed a directory given at launch with `--add-dir` as well.
+- **PreToolUse cannot change permissions**, but `permissionDecision: "ask"` on a call that
+  would run anyway — a Write inside the working directory — makes the harness raise a
+  PermissionRequest, whose answer then carries the removal.
+- **A cold resume** (`/exit`, then `--resume <id>`) does not restore a directory added for
+  the session: the next Write prompted. `--resume <id> --add-dir <dir>` did.
+
+Not tried: auto mode, `bypassPermissions`, a sandboxed Bash.
