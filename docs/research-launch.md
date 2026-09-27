@@ -300,6 +300,11 @@ the machine policy from `/etc/claude-code/managed-settings.json` with a
 `managed-settings.d` beside it. `--setting-sources` names which of user, project and
 local are read, and `--restricted` reads none of them (`claude --help`).
 
+**[`claude --help`, installed 2.1.280; September 27, 2026]** The allow list for a launch
+has two spellings, `--allowedTools, --allowed-tools <tools...>`, as does
+`--disallowedTools, --disallowed-tools`. Rewake adds its `Bash(rewake:*)` rule only when
+neither spelling of the allow list is given.
+
 ## Claude Code's cross-session inbound gate
 
 **[the binary's bundled source, installed 2.1.280; September 23, 2026]** Every line that

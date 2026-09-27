@@ -50,8 +50,10 @@ shell inside a rewake session is refused with exit 2, before anything else is ch
 (main's decision of September 27, 2026). A Claude Code worker runs a plain `rewake`
 command unasked, and a launch among them would start an agent with none of the
 worker's limits: `rewake claude --dangerously-skip-permissions -p x` from its shell.
-The sign is the environment alone: `REWAKE_SESSION` or `REWAKE_EPOCH` set and not
-empty. A live record behind it is not required — a worker can remove or rewrite its
+The sign is the environment alone: `REWAKE_SESSION` or `REWAKE_EPOCH` set, even to
+nothing — emptying one is as deliberate as removing it, and removing both
+(`env -u REWAKE_SESSION -u REWAKE_EPOCH`) is the way a person's live run from a
+session's shell goes. A live record behind it is not required — a worker can remove or rewrite its
 own — so a shell left over from a session that has ended is refused too, and a new
 shell is the way out. `--help` on a launch word still prints the help page. A way for
 main to start a worker, when there is one, will be its own command, not this path.
@@ -127,8 +129,8 @@ rewake --general --name review --command claude-worker claude
   harness's `/proc/<pid>/cmdline`; and edits to the file during the session are not
   picked up.
 - Allow the tool's own commands without confirmation:
-  `--allowedTools "Bash(rewake:*)"`, only when the caller passed no `--allowedTools` of
-  their own. This adds a rule for the run without touching the user's settings. The
+  `--allowedTools "Bash(rewake:*)"`, only when the caller passed no allow list of their
+  own under either spelling, `--allowedTools` or `--allowed-tools`. This adds a rule for the run without touching the user's settings. The
   grant hook's command carries `--rewake-allowed` exactly when the rule was added, since
   only then may a plain `rewake` command take a grant back
   ([grants.md](grants.md#claude-code)). **Verify live** that the flag adds to the user's

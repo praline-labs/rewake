@@ -58,6 +58,11 @@ const effortFlag = "--effort"
 // approves each reply.
 const toolFlag = "--allowedTools"
 
+// toolFlagKebab is the other spelling of toolFlag: 2.1.280's --help lists
+// "--allowedTools, --allowed-tools <tools...>" (docs/research-launch.md). A
+// person's own rule under it is theirs just the same.
+const toolFlagKebab = "--allowed-tools"
+
 // autocompactFlag sets the auto-compact window, which the harness then treats
 // as the context window; the collector needs it to show that window.
 const autocompactFlag = "--autocompact"
@@ -251,7 +256,7 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 		return harness.LaunchPlan{}, err
 	}
 	// Decided once, since the grant hook is told whether the rule is ours.
-	rewakeRule := !harness.HasFlag(args, toolFlag)
+	rewakeRule := len(harness.FlagValues(args, toolFlag, toolFlagKebab)) == 0
 	args, settingsNotes := applySettings(args, cwd, request.Role.Silent, rewakeRule, observation)
 	notes = append(notes, settingsNotes...)
 	args, env, pluginNotes := applyPlugin(args, env, observation, request.ControlDir)

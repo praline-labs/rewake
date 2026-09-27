@@ -110,10 +110,13 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 // with none of the worker's limits — rewake claude
 // --dangerously-skip-permissions, say. The environment alone decides: a live
 // record is not required, since a worker could remove or rewrite its own, and
-// refusing a shell whose session has ended costs a new shell.
+// refusing a shell whose session has ended costs a new shell. A variable set
+// to nothing counts too: emptying it is as deliberate as removing it, and
+// only removing it is the documented way out.
 func refuseNestedLaunch(call Call) error {
-	name, epoch := os.Getenv(state.SessionEnv), os.Getenv(state.EpochEnv)
-	if name == "" && epoch == "" {
+	name, named := os.LookupEnv(state.SessionEnv)
+	_, run := os.LookupEnv(state.EpochEnv)
+	if !named && !run {
 		return nil
 	}
 	inside := "a rewake session"

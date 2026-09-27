@@ -116,7 +116,7 @@ func TestAnOccupiedMainIsAUsageRefusal(t *testing.T) {
 	dir := liveSession(t, "leader")
 	markMain(t, dir, "leader")
 	// The launch comes from a shell outside any session.
-	t.Setenv(state.EpochEnv, "")
+	outsideAnySession(t)
 	code, _, errOut := run("--main", "--name", "other", "claude")
 	if code != ExitUsage || !strings.Contains(errOut, "leader") || !strings.Contains(errOut, "without --main") {
 		t.Errorf("refusal=%d %s", code, errOut)

@@ -21,11 +21,15 @@ September 27, 2026. Found by review-claude after stage 2 of the directory grant
 ## What was done
 
 - A launch — a harness word or an alias for one — from a shell where `REWAKE_SESSION` or
-  `REWAKE_EPOCH` is set is refused with exit 2 before anything else is checked (main's
+  `REWAKE_EPOCH` is set, even to nothing, is refused with exit 2 before anything else is checked (main's
   decision of September 27, 2026); the environment alone decides, no live record needed
   ([launch.md](../launch.md#no-session-inside-a-session)). Two unit tests that stood for
-  a launch from outside now clear the run their fake session set; the workflow suite
-  already starts every case with these variables cleared.
+  a launch from outside now remove the variables their fake session set; the workflow
+  suite already starts every case without them. `AGENTS.md` says a live run from a
+  session's shell goes through `env -u REWAKE_SESSION -u REWAKE_EPOCH`.
+- Review of aa25dfe: the person's own allow list is recognized under both spellings,
+  `--allowedTools` and `--allowed-tools`, which 2.1.280 accepts
+  ([research-launch.md](../research-launch.md#hook-options-and-settings-order-that-rewakes-launch-layer-relies-on)).
 - The grant hook's command carries `--rewake-allowed` exactly when the launch added the
   rule, the hook passes it with the call, and only then is a plain `rewake` command
   forcible ([grants.md](../grants.md#claude-code)). The payload cannot claim it.

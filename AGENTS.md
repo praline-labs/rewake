@@ -202,7 +202,9 @@ is, wait for it with a bounded wait, or run only the narrow part needed — one 
 `-run` on one scenario. A timing measured while another heavy run was going is not
 evidence: re-measure it, or say it was taken under load.
 
-Live runs happen in a separate `/tmp` directory with its own `REWAKE_DIR`. Never
+Live runs happen in a separate `/tmp` directory with its own `REWAKE_DIR`. From a
+session's shell a live launch goes through `env -u REWAKE_SESSION -u REWAKE_EPOCH`,
+since rewake refuses to start a harness inside a session with exit 2. Never
 touch the harness sessions the owner is working in. Codex runs spend
 subscription quota: cheap model, short messages, warn the owner first.
 

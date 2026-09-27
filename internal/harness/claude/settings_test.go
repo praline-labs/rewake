@@ -313,7 +313,7 @@ func TestTheGrantHookIsToldWhetherTheRewakeRuleIsOurs(t *testing.T) {
 	for _, c := range []struct {
 		args []string
 		ours bool
-	}{{nil, true}, {[]string{toolFlag, "Read"}, false}} {
+	}{{nil, true}, {[]string{toolFlag, "Read"}, false}, {[]string{"--allowed-tools=Read"}, false}} {
 		plan := launchObserved(t, c.args, false)
 		rules := harness.FlagValues(plan.Args, toolFlag)
 		if ours := slices.Contains(rules, "Bash(rewake:*)"); ours != c.ours {
