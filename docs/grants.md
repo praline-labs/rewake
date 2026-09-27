@@ -318,7 +318,9 @@ Keying it by the thread instead is queued
 Nothing adds a working directory to a running Claude Code session from outside, but its
 permission hooks can ([research-claude-actions.md](research-claude-actions.md#a-directory-given-to-a-running-session)).
 Rewake's settings layer adds `rewake grant-hook` as a PreToolUse hook on the file tools
-and `Bash`, and as a PermissionRequest hook, each with a five-second timeout.
+and `Bash`, and as a PermissionRequest hook, each with a five-second timeout. The command
+carries `--rewake-allowed` when the launch added its own `Bash(rewake:*)` rule, which it
+does only without the person's own `--allowedTools` ([launch.md](launch.md#claude-code)).
 
 - **Where the grant lives.** Once the grant is confirmed ([who can grant](#who-can-grant)),
   the recipient's wrapper keeps it in memory. The hook holds nothing: it is a child of
@@ -355,8 +357,14 @@ and `Bash`, and as a PermissionRequest hook, each with a five-second timeout.
   shell command, while a grant is being taken back. The PermissionRequest that follows
   a read, or a plain `rewake` command with nothing but words after it, is allowed with
   the grant's root removed: those run unasked anyway, so the answer approves nothing new.
-  Any other command's question goes to the person, and so does the removal with it. A
-  file tool writing into a directory being taken back is denied with a line naming why.
+  A plain `rewake` command counts only under the rule the launch added
+  (`--rewake-allowed`); where the person gave their own `--allowedTools`, it may be one
+  they are asked about, and it goes to them like any other command. Any other command's
+  PermissionRequest hears silence: the person is asked, and the directory is not taken
+  out even if they approve. So until the first read or plain `rewake` command, every
+  shell command asks the person; for a worker under orchestration the first
+  `rewake inbox` of its next turn ends that. A file tool writing into a directory being
+  taken back is denied with a line naming why.
   A directory another live task holds stays. A grant never used — never added — ends at
   the report. In any other mode — `plan`, `bypassPermissions`, auto — nothing is forced,
   and a grant once added stays until the session ends.
@@ -368,7 +376,9 @@ and `Bash`, and as a PermissionRequest hook, each with a five-second timeout.
 This is a courtesy, not a boundary. Claude Code runs approved shell commands as the user,
 so a worker writes wherever the user can if a prompt is approved, and can forge a grant
 ([who can grant](#who-can-grant)). What the hook adds is fewer prompts inside the
-directory main named, and a prompt again once the task is done.
+directory main named, and a prompt again once the task is done. What the worker's own
+`rewake` rule runs unasked includes no launch: a harness started from inside a session
+is refused ([launch.md](launch.md#no-session-inside-a-session)).
 
 ## At launch
 

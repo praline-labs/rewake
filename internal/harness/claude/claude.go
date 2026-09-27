@@ -250,11 +250,13 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 	if err != nil {
 		return harness.LaunchPlan{}, err
 	}
-	args, settingsNotes := applySettings(args, cwd, request.Role.Silent, observation)
+	// Decided once, since the grant hook is told whether the rule is ours.
+	rewakeRule := !harness.HasFlag(args, toolFlag)
+	args, settingsNotes := applySettings(args, cwd, request.Role.Silent, rewakeRule, observation)
 	notes = append(notes, settingsNotes...)
 	args, env, pluginNotes := applyPlugin(args, env, observation, request.ControlDir)
 	notes = append(notes, pluginNotes...)
-	if !harness.HasFlag(args, toolFlag) {
+	if rewakeRule {
 		args = harness.AddFlags(args, toolFlag, "Bash(rewake:*)")
 	}
 

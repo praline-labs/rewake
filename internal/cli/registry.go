@@ -245,9 +245,13 @@ func buildGroups() {
 				Handler:  handleObserve,
 			},
 			{
-				Name:     harness.GrantHook,
-				Summary:  "Called by a Claude Code hook before a tool call and on a permission request; gives and takes back directories granted with a task.",
-				Examples: []string{"rewake grant-hook"},
+				Name:    harness.GrantHook,
+				Summary: "Called by a Claude Code hook before a tool call and on a permission request; gives and takes back directories granted with a task.",
+				Options: []Option{{
+					Flag:    "--" + harness.GrantRewakeRule,
+					Summary: "The launch added the allow rule for rewake, so a plain rewake command may take a grant back.",
+				}},
+				Examples: []string{"rewake grant-hook --" + harness.GrantRewakeRule},
 				Hidden:   true,
 				Handler:  handleGrantHook,
 			},

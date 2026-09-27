@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -21,6 +22,9 @@ import (
 // not hide what the program said.
 func handleLaunch(h harness.Harness) func(*Context, Call) error {
 	return func(ctx *Context, call Call) error {
+		if err := refuseNestedLaunch(call); err != nil {
+			return err
+		}
 		if prefix, present := call.Flags["name"]; present && prefix == "" {
 			return &UsageError{Command: call.Command, Message: "--name needs a nonempty prefix; omit --name to use the selected role."}
 		}
@@ -98,6 +102,27 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 		}
 		return nil
 	}
+}
+
+// refuseNestedLaunch refuses a launch from a shell inside a rewake session
+// (docs/launch.md#no-session-inside-a-session). A worker's rewake commands may
+// run without asking the person, and a launch among them would start an agent
+// with none of the worker's limits — rewake claude
+// --dangerously-skip-permissions, say. The environment alone decides: a live
+// record is not required, since a worker could remove or rewrite its own, and
+// refusing a shell whose session has ended costs a new shell.
+func refuseNestedLaunch(call Call) error {
+	name, epoch := os.Getenv(state.SessionEnv), os.Getenv(state.EpochEnv)
+	if name == "" && epoch == "" {
+		return nil
+	}
+	inside := "a rewake session"
+	if name != "" {
+		inside = "rewake session " + name
+	}
+	return &UsageError{Command: call.Command, Message: fmt.Sprintf(
+		"this shell runs inside %s (%s or %s is set), and a session does not start other sessions. Start %s from a shell outside any rewake session; a way for main to start a worker, when there is one, will be its own command.",
+		inside, state.SessionEnv, state.EpochEnv, call.Command.Name)}
 }
 
 // launchProgram checks the program named with --command before anything is

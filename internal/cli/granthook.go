@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/iiiokojiadbi/rewake/internal/grantauth"
+	"github.com/iiiokojiadbi/rewake/internal/harness"
 	"github.com/iiiokojiadbi/rewake/internal/harness/claude"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/state"
@@ -24,7 +25,7 @@ import (
 // Silence leaves the call to the person and the permission mode. A payload
 // past maxPayload — a Write of a file that large — does not parse, and is
 // such a silence.
-func handleGrantHook(ctx *Context, _ Call) error {
+func handleGrantHook(ctx *Context, invocation Call) error {
 	name, epoch := os.Getenv(state.SessionEnv), os.Getenv(state.EpochEnv)
 	pid, start, ok := registry.ParseEpoch(epoch)
 	if name == "" || !ok {
@@ -34,7 +35,7 @@ func handleGrantHook(ctx *Context, _ Call) error {
 	if err != nil {
 		return nil
 	}
-	call, ok := claude.GrantCall(readPayload(os.Stdin))
+	call, ok := claude.GrantCall(readPayload(os.Stdin), invocation.Switch(harness.GrantRewakeRule))
 	if !ok {
 		return nil
 	}

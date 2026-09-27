@@ -51,3 +51,10 @@ const (
 // call and on a permission request: it gives and takes back the directories
 // granted to that session (docs/grants.md).
 const GrantHook = "grant-hook"
+
+// GrantRewakeRule is the switch the grant hook's command carries when the
+// launch added the allow rule for rewake itself. Only then does a plain rewake
+// command run unasked, so only then may the question forced on it be answered
+// with a grant's removal: a person who gave their own allowed tools may have
+// left rewake out of them.
+const GrantRewakeRule = "rewake-allowed"

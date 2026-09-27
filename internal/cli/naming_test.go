@@ -58,6 +58,8 @@ func TestExplicitPrefixConflictNamesFinalAddress(t *testing.T) {
 		t.Run(h.ID(), func(t *testing.T) {
 			address := "taken-" + h.ID()
 			liveSession(t, address)
+			// The launch comes from a shell outside any session.
+			t.Setenv(state.EpochEnv, "")
 			t.Setenv("PATH", t.TempDir())
 			code, _, errOut := run("--write", "--name", "taken", h.ID())
 			if code != ExitUsage || !strings.Contains(errOut, address) || !strings.Contains(errOut, "prefix") {

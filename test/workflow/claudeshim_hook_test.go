@@ -101,7 +101,7 @@ func parseClaudeSettings(raw string) (claudeSettings, error) {
 					}
 					settings.observe = hook.Command
 					observed[name] = true
-				case strings.HasSuffix(hook.Command, "'grant-hook'"):
+				case strings.HasSuffix(hook.Command, "'grant-hook'"), strings.HasSuffix(hook.Command, "'grant-hook' '--rewake-allowed'"):
 					// It decides a tool call before it runs, so it cannot run
 					// beside it, and a hook the harness waits on needs a ceiling.
 					if hook.Async || hook.Timeout <= 0 {

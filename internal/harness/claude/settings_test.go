@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -301,5 +302,33 @@ func TestACommandReplacesOnlyTheProgram(t *testing.T) {
 	}
 	if argv := tapArgv(t, onlySettings(t, wrapped)); argv[1] != "status-tap" || strings.Contains(argv[0], "claude-worker") {
 		t.Errorf("the tap runs %q, want rewake", argv)
+	}
+}
+
+// The grant hook is told whether the launch added the allow rule for rewake:
+// only then may a plain rewake command take a grant back, since a person's own
+// allowed tools may leave rewake to be asked about.
+func TestTheGrantHookIsToldWhetherTheRewakeRuleIsOurs(t *testing.T) {
+	newWorld(t)
+	for _, c := range []struct {
+		args []string
+		ours bool
+	}{{nil, true}, {[]string{toolFlag, "Read"}, false}} {
+		plan := launchObserved(t, c.args, false)
+		rules := harness.FlagValues(plan.Args, toolFlag)
+		if ours := slices.Contains(rules, "Bash(rewake:*)"); ours != c.ours {
+			t.Fatalf("launched with %v: allowed tools %v", c.args, rules)
+		}
+		view := onlySettings(t, plan)
+		for _, event := range []string{preToolUse, permissionRequest} {
+			matchers := view.Hooks[event]
+			if len(matchers) != 1 {
+				t.Fatalf("%s hooks = %+v, want the grant hook alone", event, matchers)
+			}
+			told := strings.HasSuffix(matchers[0].Hooks[0].Command, "'grant-hook' '--"+harness.GrantRewakeRule+"'")
+			if told != c.ours {
+				t.Errorf("launched with %v: the %s grant hook runs %s", c.args, event, matchers[0].Hooks[0].Command)
+			}
+		}
 	}
 }

@@ -43,6 +43,22 @@ specified once, in design.md and roles.md: [Rooms](design.md#rooms), [Roles](rol
 [Names](roles.md#names). The variables the wrapper passes to the harness are in
 [Environment the harness receives](design.md#environment-the-harness-receives).
 
+### No session inside a session
+
+A launch — `rewake claude`, `rewake codex`, or an alias that stands for one — from a
+shell inside a rewake session is refused with exit 2, before anything else is checked
+(main's decision of September 27, 2026). A Claude Code worker runs a plain `rewake`
+command unasked, and a launch among them would start an agent with none of the
+worker's limits: `rewake claude --dangerously-skip-permissions -p x` from its shell.
+The sign is the environment alone: `REWAKE_SESSION` or `REWAKE_EPOCH` set and not
+empty. A live record behind it is not required — a worker can remove or rewrite its
+own — so a shell left over from a session that has ended is refused too, and a new
+shell is the way out. `--help` on a launch word still prints the help page. A way for
+main to start a worker, when there is one, will be its own command, not this path.
+
+Tests and the workflow suite start sessions with these variables cleared, as the
+[checks](../AGENTS.md#checks) already require for `go test`.
+
 ### Starting a wrapper instead of the harness
 
 `--command <program>` starts that program where rewake would start the harness: a
@@ -111,8 +127,11 @@ rewake --general --name review --command claude-worker claude
   harness's `/proc/<pid>/cmdline`; and edits to the file during the session are not
   picked up.
 - Allow the tool's own commands without confirmation:
-  `--allowedTools "Bash(rewake:*)"`. This adds a rule for the run without
-  touching the user's settings. **Verify live** that the flag adds to the user's
+  `--allowedTools "Bash(rewake:*)"`, only when the caller passed no `--allowedTools` of
+  their own. This adds a rule for the run without touching the user's settings. The
+  grant hook's command carries `--rewake-allowed` exactly when the rule was added, since
+  only then may a plain `rewake` command take a grant back
+  ([grants.md](grants.md#claude-code)). **Verify live** that the flag adds to the user's
   permissions rather than replacing them; if it replaces them, drop the flag and
   have the overview say which rule to add to settings once.
 

@@ -45,6 +45,10 @@ type grantHookInput struct {
 	Input map[string]json.RawMessage `json:"tool_input"`
 	CWD   string                     `json:"cwd"`
 	Mode  string                     `json:"permission_mode"`
+	// RewakeRule is not the harness's: the hook sets it from its own command
+	// line, which says whether the launch added the allow rule for rewake
+	// (harness.GrantRewakeRule).
+	RewakeRule bool `json:"rewake_rule,omitempty"`
 }
 
 // permissionUpdate is one entry of the updatedPermissions an answer carries.
@@ -67,8 +71,8 @@ var readers = map[string]string{"Read": "file_path", "Glob": "path", "Grep": "pa
 const shell = "Bash"
 
 // plainRewake is a command that only runs rewake with plain words: one the
-// session's own allow rule for rewake runs anyway, so a question forced on it
-// approves nothing the rule would not.
+// allow rule for rewake the launch added runs anyway, so a question forced on
+// it approves nothing the rule would not.
 var plainRewake = regexp.MustCompile(`^rewake(?:[ \t]+[A-Za-z0-9_./=:@,+-]+)*[ \t]*$`)
 
 // forcingModes are where a read in the working directory runs without asking,
@@ -78,14 +82,15 @@ var plainRewake = regexp.MustCompile(`^rewake(?:[ \t]+[A-Za-z0-9_./=:@,+-]+)*[ \
 var forcingModes = []string{"default", "acceptEdits"}
 
 // GrantCall is the part of a hook's payload the wrapper needs to decide it:
-// the payload less every tool argument but the path ones and a command. A
-// Write's payload carries the whole file it writes, which the wrapper has no
-// use for.
-func GrantCall(payload []byte) (json.RawMessage, bool) {
+// the payload less every tool argument but the path ones and a command, with
+// whether the launch added the allow rule for rewake. A Write's payload
+// carries the whole file it writes, which the wrapper has no use for.
+func GrantCall(payload []byte, rewakeRule bool) (json.RawMessage, bool) {
 	var in grantHookInput
 	if json.Unmarshal(payload, &in) != nil {
 		return nil, false
 	}
+	in.RewakeRule = rewakeRule
 	kept := map[string]json.RawMessage{}
 	for _, fields := range []map[string]string{fileWriters, readers, {shell: "command"}} {
 		if field, ok := fields[in.Tool]; ok {
@@ -217,12 +222,16 @@ func (in grantHookInput) grantedRoots(live []string) []string {
 }
 
 // forcible says whether the call runs without asking in its mode anyway: a
-// read inside the working directory, or a plain rewake command.
+// read inside the working directory, or a plain rewake command where the
+// launch's own rule allows it.
 func (in grantHookInput) forcible() bool {
 	if !slices.Contains(forcingModes, in.Mode) {
 		return false
 	}
 	if in.Tool == shell {
+		if !in.RewakeRule {
+			return false
+		}
 		var command string
 		raw, ok := in.Input["command"]
 		return ok && json.Unmarshal(raw, &command) == nil && plainRewake.MatchString(command)

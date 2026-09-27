@@ -62,9 +62,11 @@ type launchLayer struct {
 }
 
 // newLaunchLayer builds rewake's hooks and, when a telemetry socket is known,
-// the telemetry hooks and the tap. sources and caller are what the tap needs
-// to find the person's status line and cannot learn itself (statusline.go).
-func newLaunchLayer(silent bool, socket, sources string, caller json.RawMessage) (launchLayer, error) {
+// the telemetry hooks and the tap. rewakeRule says the launch adds the allow
+// rule for rewake, which the grant hook is told (harness.GrantRewakeRule). sources and
+// caller are what the tap needs to find the person's status line and cannot
+// learn itself (statusline.go).
+func newLaunchLayer(silent, rewakeRule bool, socket, sources string, caller json.RawMessage) (launchLayer, error) {
 	executable, err := os.Executable()
 	if err != nil {
 		return launchLayer{}, fmt.Errorf("could not find the rewake binary: %w", err)
@@ -78,7 +80,11 @@ func newLaunchLayer(silent bool, socket, sources string, caller json.RawMessage)
 	if !silent {
 		add(telemetry.Stop, hookEntry{Kind: "command", Command: turnEnded, Timeout: 10})
 	}
-	grantHook := hookEntry{Kind: "command", Command: harness.ShellQuote([]string{executable, harness.GrantHook}), Timeout: grantHookTimeout}
+	grantCommand := []string{executable, harness.GrantHook}
+	if rewakeRule {
+		grantCommand = append(grantCommand, "--"+harness.GrantRewakeRule)
+	}
+	grantHook := hookEntry{Kind: "command", Command: harness.ShellQuote(grantCommand), Timeout: grantHookTimeout}
 	layer.hooks[preToolUse] = append(layer.hooks[preToolUse], hookMatcher{Matcher: grantPreToolUse, Hooks: []hookEntry{grantHook}})
 	add(permissionRequest, grantHook)
 	if socket == "" {
@@ -187,7 +193,7 @@ func (l launchLayer) merge(caller map[string]json.RawMessage) (string, error) {
 // --settings: the caller's, with rewake's merged in. When the caller's cannot
 // be read, it stays as they gave it and rewake adds nothing — a merge that
 // guessed would change settings they chose — and the note says what is lost.
-func applySettings(args []string, cwd string, silent bool, socket string) ([]string, []string) {
+func applySettings(args []string, cwd string, silent, rewakeRule bool, socket string) ([]string, []string) {
 	var notes []string
 	caller := map[string]json.RawMessage{}
 	if values := harness.FlagValues(args, settingsFlag); len(values) > 0 {
@@ -208,7 +214,7 @@ func applySettings(args []string, cwd string, silent bool, socket string) ([]str
 			callerStatus = compact.Bytes()
 		}
 	}
-	layer, err := newLaunchLayer(silent, socket, launchSources(args), callerStatus)
+	layer, err := newLaunchLayer(silent, rewakeRule, socket, launchSources(args), callerStatus)
 	if err != nil {
 		return args, append(notes, "not reporting the end of turns: "+err.Error())
 	}

@@ -53,6 +53,9 @@ func TestTheGrantHookAnswersFromTheJournal(t *testing.T) {
 		removed  []string
 		silent   bool
 		notAdded []string
+		// ownTools is a launch with the person's own allowed tools, where
+		// rewake added no rule of its own.
+		ownTools bool
 	}{
 		{
 			name:    "a write in a live grant is allowed and its root added, and a settled one taken out with it",
@@ -89,6 +92,11 @@ func TestTheGrantHookAnswersFromTheJournal(t *testing.T) {
 			name:    "unless it is a plain rewake command, answered with the removal",
 			payload: hookPayload(permissionRequest, "Bash", "acceptEdits", work, command("rewake inbox --owed")),
 			says:    []string{`"behavior":"allow"`, `"removeDirectories"`, old}, removed: []string{old}, notAdded: []string{granted},
+		},
+		{
+			name:     "but not where the person gave their own allowed tools, which may leave rewake to be asked",
+			payload:  hookPayload(permissionRequest, "Bash", "acceptEdits", work, command("rewake inbox --owed")),
+			ownTools: true, silent: true,
 		},
 		{
 			name:    "a rewake command with anything more is no plain one",
@@ -156,7 +164,9 @@ func TestTheGrantHookAnswersFromTheJournal(t *testing.T) {
 			if entries == nil {
 				entries = journal
 			}
-			decided := DecideGrant(c.payload, entries)
+			// Through GrantCall, as the hook hands it to the wrapper.
+			call, _ := GrantCall(c.payload, !c.ownTools)
+			decided := DecideGrant(call, entries)
 			if c.silent {
 				if len(decided.Output) != 0 {
 					t.Fatalf("answered %s", decided.Output)
@@ -184,15 +194,23 @@ func TestTheGrantHookAnswersFromTheJournal(t *testing.T) {
 // carries the whole file.
 func TestAGrantCallLeavesOutTheContent(t *testing.T) {
 	payload := hookPayload(permissionRequest, "Write", "acceptEdits", "/w", map[string]string{"file_path": "/g/a.txt", "content": "secret body"}, "/g")
-	call, ok := GrantCall(payload)
+	call, ok := GrantCall(payload, true)
 	if !ok || strings.Contains(string(call), "secret body") || !strings.Contains(string(call), "/g/a.txt") || !strings.Contains(string(call), "acceptEdits") {
 		t.Fatalf("call %s, %v", call, ok)
 	}
 	bash := hookPayload(preToolUse, "Bash", "acceptEdits", "/w", map[string]string{"command": "rewake inbox", "description": "read the mail"})
-	if call, ok := GrantCall(bash); !ok || !strings.Contains(string(call), "rewake inbox") || strings.Contains(string(call), "read the mail") {
+	if call, ok := GrantCall(bash, true); !ok || !strings.Contains(string(call), "rewake inbox") || strings.Contains(string(call), "read the mail") {
 		t.Fatalf("a command's call %s, %v", call, ok)
 	}
-	if _, ok := GrantCall([]byte("not json")); ok {
+	// Whether rewake's rule is in force is the hook's to say, never the payload's.
+	var claimed map[string]any
+	_ = json.Unmarshal(bash, &claimed)
+	claimed["rewake_rule"] = true
+	forged, _ := json.Marshal(claimed)
+	if call, _ := GrantCall(forged, false); strings.Contains(string(call), "rewake_rule") {
+		t.Fatalf("a payload set the rule: %s", call)
+	}
+	if _, ok := GrantCall([]byte("not json"), true); ok {
 		t.Fatal("a payload that does not parse made a call")
 	}
 }
