@@ -3,16 +3,21 @@ package inbox
 import (
 	"context"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 )
 
-// agedWaits moves back when a run's waits were recorded, by age.
+// agedWaits moves back when a run's waits were recorded, and when each task
+// in them was read, by age.
 func agedWaits(t *testing.T, dir, run string, age time.Duration) {
 	t.Helper()
 	path, _ := awaitingPath(dir, "api", run)
 	for _, waiter := range Waiters(dir, "api", run) {
-		waiter.Since = time.Now().Add(-age).UnixNano()
+		waiter.Since -= age.Nanoseconds()
+		for index := range waiter.ReadAt {
+			waiter.ReadAt[index] -= age.Nanoseconds()
+		}
 		if err := writeWaiter(filepath.Join(path, waiter.Name), waiter); err != nil {
 			t.Fatal(err)
 		}
@@ -61,6 +66,34 @@ func TestATaskOfAnEndedRunIsLostOnlyWhenNoResumeCanTakeItOver(t *testing.T) {
 	}
 	if adopted := AdoptWaits(dir, "api", "resumed-epoch", "thread-a"); len(adopted) != 0 {
 		t.Errorf("past the window a resume took over %v", adopted)
+	}
+}
+
+// A wait gathers what is read from one sender until the next report, so it
+// can have begun long before a task in it was read: that task is owed for the
+// window from its own reading, not from the wait's beginning.
+func TestATaskReadLateIntoALongWaitMayStillBeResumed(t *testing.T) {
+	dir := stateDir(t)
+	tasks := grantPending(t, dir, true, true)
+	readIn(t, dir, "receiver-epoch", "thread-a", tasks[0])
+	agedWaits(t, dir, "receiver-epoch", resumeWindow+time.Hour)
+	readIn(t, dir, "receiver-epoch", "thread-a", tasks[1])
+	if waits := Waiters(dir, "api", "receiver-epoch"); len(waits) != 1 || len(waits[0].Messages) != 2 {
+		t.Fatalf("the two tasks are not in one wait: %+v", waits)
+	}
+
+	awaited := awaitedBy(dir, RunEnded)
+	if item := awaited[tasks[0].ID]; item.Resumable || !item.Gone() {
+		t.Errorf("the task read past the window reads as %+v", item)
+	}
+	if item := awaited[tasks[1].ID]; !item.Resumable || item.Gone() {
+		t.Errorf("the task read late into the wait reads as %+v", item)
+	}
+	if open, _ := TaskOpen(dir, "api", tasks[1].ID); !open {
+		t.Error("main lets go of the grant of a task a resume may still take over")
+	}
+	if adopted := AdoptWaits(dir, "api", "resumed-epoch", "thread-a"); !slices.Equal(adopted, []string{tasks[1].ID}) {
+		t.Errorf("a resume took over %v", adopted)
 	}
 }
 

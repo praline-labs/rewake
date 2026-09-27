@@ -29,7 +29,7 @@ A run that continues a conversation takes over what the runs before it owe there
 waits for tasks delivered into it move to the new run, which reports on them at its next
 turn end ([delivery.md](delivery.md#a-resumed-conversation)). Without that, the task
 would be closed by the resume and its grant could never end by a report. A wait is taken
-over within a day of being recorded; past that the task is lost, its sender reads so, and
+over within a day of the task being read; past that the task is lost, its sender reads so, and
 main lets its grant go ([delivery-owed.md](delivery-owed.md#what-others-owe-you-rewake-inbox---awaited)).
 
 ## The copy that follows the conversation
@@ -47,9 +47,10 @@ asked like any other, and main refuses it.
 
 At delivery the recipient's wrapper names, when it asks main to confirm a grant, the
 conversation the task goes into — the one the delivery pins — and main's wrapper keeps it
-beside the grant. It takes that name only from a process in its own namespaces: a
-sandboxed worker can read its letter before delivery and could otherwise confirm it
-first with a conversation of its own.
+beside the grant. It takes that name only from the wrapper of the run the grant went to —
+the same check as for a resumed run below — and keeps the first one named: a worker reads
+its letter before delivery, and it, or any other process of this user, could otherwise
+confirm the grant with a conversation of its own.
 
 For each hint the new run's wrapper asks the wrapper of the main the hint names, over the
 same abstract address as at delivery, names the conversation it continues, and takes the

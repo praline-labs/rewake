@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/grant"
+	"github.com/iiiokojiadbi/rewake/internal/grantauth/grantauthtest"
 	"github.com/iiiokojiadbi/rewake/internal/proc"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
@@ -43,6 +44,21 @@ type taskOpen struct{ open, found atomic.Bool }
 
 func (o *taskOpen) check(Grant) (bool, bool) { return o.open.Load(), o.found.Load() }
 
+// deliveredBy registers granted for a run of its own and has that run confirm
+// it at delivery once for each of threads, then end: main takes a grant for
+// delivered only from the wrapper of the run it went to.
+func deliveredBy(t *testing.T, path string, granted Grant, threads ...string) Grant {
+	t.Helper()
+	own := ownExpect(t)
+	granted.ToEpoch = grantauthtest.EndedRun(t, func(run string) {
+		granted.ToEpoch = run
+		if err := Register(path, granted); err != nil {
+			t.Fatal(err)
+		}
+	}, grantauthtest.Delivery{Address: path, MainPID: own.PID, MainStart: own.Start, To: granted.To, Grants: map[string][]string{granted.ID: nil}, Threads: threads})
+	return granted
+}
+
 // delivered is a grant registered for a run that has ended since, confirmed
 // to it once, as a delivery confirms it; open says its task is.
 func delivered(t *testing.T, lifetime time.Duration) (string, *taskOpen) {
@@ -52,14 +68,7 @@ func delivered(t *testing.T, lifetime time.Duration) (string, *taskOpen) {
 	task.open.Store(true)
 	task.found.Store(true)
 	authority.Open = task.check
-	grant := lib
-	grant.ToEpoch = ended(t)
-	if err := Register(path, grant); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := Confirm(path, ownExpect(t), grant.ID, grant.To, grant.ToEpoch, "c1"); err != nil {
-		t.Fatal(err)
-	}
+	deliveredBy(t, path, lib, "c1")
 	return path, task
 }
 
@@ -130,19 +139,14 @@ func TestAGrantIsNotHandedOverWithoutEveryCondition(t *testing.T) {
 		},
 		"a run still running": func(t *testing.T) (string, string, string) {
 			_, path := listen(t, os.Getpid(), time.Minute)
-			alive := stranger(t)
-			start, err := proc.StartTime(alive)
-			if err != nil {
-				t.Fatal(err)
-			}
-			grant := lib
-			grant.ToEpoch = fmt.Sprintf("%d.%d", alive, start)
-			if err := Register(path, grant); err != nil {
-				t.Fatal(err)
-			}
-			if _, err := Confirm(path, ownExpect(t), grant.ID, grant.To, grant.ToEpoch, "c1"); err != nil {
-				t.Fatal(err)
-			}
+			own := ownExpect(t)
+			grantauthtest.LiveRun(t, func(alive string) {
+				grant := lib
+				grant.ToEpoch = alive
+				if err := Register(path, grant); err != nil {
+					t.Fatal(err)
+				}
+			}, grantauthtest.Delivery{Address: path, MainPID: own.PID, MainStart: own.Start, To: lib.To, Grants: map[string][]string{lib.ID: nil}, Threads: []string{"c1"}})
 			return path, lib.To, run
 		},
 		"a process that is not the run": func(t *testing.T) (string, string, string) {
@@ -167,45 +171,37 @@ func TestAGrantIsNotHandedOverWithoutEveryCondition(t *testing.T) {
 		authority, path := listen(t, os.Getpid(), time.Minute)
 		authority.Open = func(Grant) (bool, bool) { return true, true }
 		authority.Owns = func(string, string) bool { return false }
-		grant := lib
-		grant.ToEpoch = ended(t)
-		if err := Register(path, grant); err != nil {
-			t.Fatal(err)
-		}
-		if _, err := Confirm(path, ownExpect(t), grant.ID, grant.To, grant.ToEpoch, "c1"); err != nil {
-			t.Fatal(err)
-		}
+		deliveredBy(t, path, lib, "c1")
 		if got, err := Reconfirm(path, ownExpect(t), lib.ID, lib.To, run, "c1"); !errors.Is(err, ErrNotConfirmed) || !strings.Contains(err.Error(), "does not hold the name") {
 			t.Fatalf("handed over: %+v, %v", got, err)
 		}
 	})
 }
 
-// The conversation a grant may be taken into again is the one its delivery
-// named, held by main: a copy on disk naming another — a worker's own, which
-// it then resumes — does not carry the grant there, and neither does a confirm
-// from inside a sandbox naming a conversation of the worker's choosing.
+// The conversation a grant may be taken into again is the first one its
+// delivery named, held by main: a copy on disk naming another — a worker's
+// own, which it then resumes — does not carry the grant there, and neither
+// does a later confirm naming another, whether from a sandbox, from any other
+// process of this user, or from the run's wrapper itself.
 func TestAGrantGoesOnlyIntoTheConversationItWasDeliveredTo(t *testing.T) {
 	authority, path := listen(t, os.Getpid(), time.Minute)
 	authority.Open = func(Grant) (bool, bool) { return true, true }
-	grant := lib
-	grant.ToEpoch = ended(t)
-	if err := Register(path, grant); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := Confirm(path, ownExpect(t), grant.ID, grant.To, grant.ToEpoch, "c1"); err != nil {
-		t.Fatal(err)
-	}
-	conn, err := dial(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	restore := sandboxed(t)
-	answer, err := exchange(conn, request{Op: opConfirm, Grant: Grant{ID: grant.ID, To: grant.To, ToEpoch: grant.ToEpoch}, Thread: "c0"})
-	_ = conn.Close()
-	restore()
-	if err != nil || answer.Error != "" {
-		t.Fatalf("the confirm from a sandbox: %+v, %v", answer, err)
+	grant := deliveredBy(t, path, lib, "c1", "c0")
+	for _, inSandbox := range []bool{true, false} {
+		conn, err := dial(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		restore := func() {}
+		if inSandbox {
+			restore = sandboxed(t)
+		}
+		answer, err := exchange(conn, request{Op: opConfirm, Grant: Grant{ID: grant.ID, To: grant.To, ToEpoch: grant.ToEpoch}, Thread: "c0"})
+		_ = conn.Close()
+		restore()
+		if err != nil || answer.Error != "" {
+			t.Fatalf("the confirm naming c0, in a sandbox %v: %+v, %v", inSandbox, answer, err)
+		}
 	}
 	run := ownRun(t)
 	if got, err := Reconfirm(path, ownExpect(t), lib.ID, lib.To, run, "c0"); !errors.Is(err, ErrNotConfirmed) || !strings.Contains(err.Error(), "another conversation") {
@@ -216,9 +212,10 @@ func TestAGrantGoesOnlyIntoTheConversationItWasDeliveredTo(t *testing.T) {
 	}
 }
 
-// A grant confirmed with no conversation — its session named none yet — went
-// into none a resume could continue.
-func TestAGrantConfirmedWithNoConversationIsNotHandedOver(t *testing.T) {
+// A confirm from a process of this user that is not the wrapper of the run
+// the grant went to is answered, and delivers nothing: the grant was never
+// taken into a conversation a resume could continue.
+func TestAConfirmByAnotherProcessDeliversNothing(t *testing.T) {
 	authority, path := listen(t, os.Getpid(), time.Minute)
 	authority.Open = func(Grant) (bool, bool) { return true, true }
 	grant := lib
@@ -226,9 +223,20 @@ func TestAGrantConfirmedWithNoConversationIsNotHandedOver(t *testing.T) {
 	if err := Register(path, grant); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Confirm(path, ownExpect(t), grant.ID, grant.To, grant.ToEpoch, ""); err != nil {
+	if _, err := Confirm(path, ownExpect(t), grant.ID, grant.To, grant.ToEpoch, "c1"); err != nil {
 		t.Fatal(err)
 	}
+	if got, err := Reconfirm(path, ownExpect(t), lib.ID, lib.To, ownRun(t), "c1"); !errors.Is(err, ErrNotConfirmed) || !strings.Contains(err.Error(), "never delivered") {
+		t.Fatalf("handed over: %+v, %v", got, err)
+	}
+}
+
+// A grant confirmed with no conversation — its session named none yet — went
+// into none a resume could continue.
+func TestAGrantConfirmedWithNoConversationIsNotHandedOver(t *testing.T) {
+	authority, path := listen(t, os.Getpid(), time.Minute)
+	authority.Open = func(Grant) (bool, bool) { return true, true }
+	deliveredBy(t, path, lib, "")
 	if got, err := Reconfirm(path, ownExpect(t), lib.ID, lib.To, ownRun(t), ""); !errors.Is(err, ErrNotConfirmed) {
 		t.Fatalf("handed over: %+v, %v", got, err)
 	}
@@ -247,16 +255,7 @@ func TestRestoringAsksTheMainTheCopyNames(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	go authority.Serve(ctx)
 	t.Cleanup(func() { cancel(); authority.Close() })
-	previous := ended(t)
-	granted := lib
-	granted.ToEpoch = previous
-	address := state.AuthorityAddress(dir, run)
-	if err := Register(address, granted); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := Confirm(address, ownExpect(t), lib.ID, lib.To, previous, "c1"); err != nil {
-		t.Fatal(err)
-	}
+	deliveredBy(t, state.AuthorityAddress(dir, run), lib, "c1")
 	// Whoever took the address of the main that ended is not asked.
 	endedMain := ended(t)
 	squatter, err := Listen(state.AuthorityAddress(dir, endedMain), os.Getpid(), time.Minute)

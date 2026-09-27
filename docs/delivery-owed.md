@@ -92,13 +92,15 @@ resumed run took over is followed in that run's records
 
 A message read by a run that then ended, still named by its wait record, and delivered
 into a conversation is not lost yet: a resume of that conversation takes the wait over and
-reports on it. It is listed as `<name> ended; a resume of its conversation may still
-report` (`"resumable": true`) and counted with the reports still expected, and main is told
+reports on it — a resume under the same name only, since a conversation resumed under
+another name takes over nothing. It is listed as `<name> ended; a resume of <name> in its
+conversation may still report` (`"resumable": true`) and counted with the reports still expected, and main is told
 not to send it again yet: sending it would get the work done twice. That holds before any
 new run of the name, and after a new one has started but not yet learned its conversation
 and swept the old run's waits. It stops holding when a new run in another conversation
-sweeps the wait, or a day after the wait was recorded (`resumeWindow`, as long as
-finished mail is kept): from then on no resume takes it over, main's wrapper lets its grant
+sweeps the wait, or a day after the message was read (`resumeWindow`, as long as
+finished mail is kept; counted from each message's own read time, which the wait record
+keeps beside its read sequence, since one wait gathers what is read until the next report): from then on no resume takes it over, main's wrapper lets its grant
 go, and it is lost for good. Any other unsettled message of a recipient whose run has
 ended, or whose name a new run has taken, is lost — listed as `no report coming: <name>
 ended` or `… was replaced by a new run`, whatever stage it had reached, and counted apart

@@ -32,13 +32,19 @@ func TestReadBoundaryExcludesLaterReadsAndIncludesSameTurnSteering(t *testing.T)
 	read("steered")
 	boundary := clock.Snapshot()
 	read("next-turn")
+	readAt := Waiters(dir, "api", "1.1")[0].ReadAt
 	selected, err := ScopedWaiters(dir, "api", "1.1", boundary)
 	if err != nil || len(selected) != 1 || !slices.Equal(selected[0].Messages, []string{"first", "steered"}) {
 		t.Fatalf("scope=%v %v", selected, err)
 	}
+	// Each message keeps its own read time through the scope and the clear:
+	// the resume window counts from it.
+	if len(readAt) != 3 || !slices.Equal(selected[0].ReadAt, readAt[:2]) {
+		t.Fatalf("read times %v, scoped %v", readAt, selected[0].ReadAt)
+	}
 	ClearAwaiting(dir, "api", "1.1", selected[0])
 	remaining := Waiters(dir, "api", "1.1")
-	if len(remaining) != 1 || !slices.Equal(remaining[0].Messages, []string{"next-turn"}) {
+	if len(remaining) != 1 || !slices.Equal(remaining[0].Messages, []string{"next-turn"}) || !slices.Equal(remaining[0].ReadAt, readAt[2:]) {
 		t.Fatal(remaining)
 	}
 	if _, err := ScopedWaiters(dir, "api", "other", boundary); err == nil {

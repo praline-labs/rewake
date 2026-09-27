@@ -23,28 +23,34 @@ import (
 // The earlier runs' records are swept only once the new run knows its
 // conversation, and has taken over what belongs to it.
 
-// resumeWindow is how long, from when a wait was recorded, a run that ended
+// resumeWindow is how long, from when a task was read, a run that ended
 // still owes it: a resume of its conversation may take it over until then.
 // Past it the task is lost for good — its sender reads that no report is
 // coming, a resume no longer takes it over, and main lets its grant go — so
 // that a sender told it is lost can send it again without the work being done
-// twice. A day, as long as finished mail is kept.
+// twice. A day, as long as finished mail is kept. Counted per task, not from
+// when the wait began: a wait gathers what is read until the next report, and
+// a task read late into a long wait is owed as long as one read first.
 const resumeWindow = keepFinished
 
-// waitStands says whether a run's wait still owes what it names: the run is
-// running, or it ended within the resume window of the wait.
-func waitStands(run string, waiter Waiter) bool {
+// owedStands says whether a run's wait still owes the message id: it names
+// it, and the run is running or ended within the resume window of reading it.
+func owedStands(run string, waiter Waiter, id string) bool {
+	index := slices.Index(waiter.Messages, id)
+	if index < 0 {
+		return false
+	}
 	if pid, start, ok := registry.ParseEpoch(run); ok && proc.Alive(pid, start) {
 		return true
 	}
-	return time.Since(time.Unix(0, waiter.Since)) < resumeWindow
+	return time.Since(time.Unix(0, waiter.readAt(index))) < resumeWindow
 }
 
 // mayResume says whether a message a run that ended still owes can yet be
 // reported on by a run resuming its conversation: it was delivered into one,
 // and the wait naming it stands.
 func mayResume(dir string, message Message, run string, wait Waiter) bool {
-	return slices.Contains(wait.Messages, message.ID) && deliveryThread(dir, message.To, message.ID) != "" && waitStands(run, wait)
+	return deliveryThread(dir, message.To, message.ID) != "" && owedStands(run, wait, message.ID)
 }
 
 // AdoptWaits moves to this run the waits of earlier runs of the name for the
@@ -64,11 +70,8 @@ func AdoptWaits(dir, name, epoch, thread string) []string {
 			continue
 		}
 		for _, waiter := range Waiters(dir, name, run.Name()) {
-			if !waitStands(run.Name(), waiter) {
-				continue
-			}
 			for _, id := range waiter.Messages {
-				if !safeID(id) || deliveryThread(dir, name, id) != thread || slices.Contains(adopted, id) {
+				if !safeID(id) || !owedStands(run.Name(), waiter, id) || deliveryThread(dir, name, id) != thread || slices.Contains(adopted, id) {
 					continue
 				}
 				if markScopedAwaiting(dir, name, epoch, Message{ID: id, From: waiter.Name, FromEpoch: waiter.Epoch}) == nil {

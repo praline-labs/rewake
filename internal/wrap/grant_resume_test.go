@@ -12,8 +12,9 @@ import (
 
 	"github.com/iiiokojiadbi/rewake/internal/grant"
 	"github.com/iiiokojiadbi/rewake/internal/grantauth"
+	"github.com/iiiokojiadbi/rewake/internal/grantauth/grantauthtest"
 	"github.com/iiiokojiadbi/rewake/internal/harness/claude"
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
+	"github.com/iiiokojiadbi/rewake/internal/proc"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
@@ -33,7 +34,6 @@ func realDir(t *testing.T) string {
 func TestAResumedRunKeepsOnlyWhatMainConfirmsAgain(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "rooms", "default")
 	main := ownEpoch(t)
-	previous := endedEpoch(t)
 	lib, doc, forged := realDir(t), realDir(t), realDir(t)
 
 	authority, err := grantauth.Listen(state.AuthorityAddress(dir, main), os.Getpid(), time.Minute)
@@ -48,17 +48,18 @@ func TestAResumedRunKeepsOnlyWhatMainConfirmsAgain(t *testing.T) {
 	go authority.Serve(ctx)
 	defer authority.Close()
 	address := state.AuthorityAddress(dir, main)
-	for id, directory := range map[string]string{"m1": lib, "m2": doc} {
-		if err := grantauth.Register(address, grantauth.Grant{ID: id, To: "worker", ToEpoch: previous, Dirs: []string{directory}}); err != nil {
-			t.Fatal(err)
+	grants := map[string][]string{"m1": {lib}, "m2": {doc}}
+	// The run before confirmed them at delivery, naming its conversation,
+	// and ended.
+	self := grantauth.Expect{PID: os.Getpid()}
+	self.Start, _ = proc.StartTime(os.Getpid())
+	previous := grantauthtest.EndedRun(t, func(run string) {
+		for id, directories := range grants {
+			if err := grantauth.Register(address, grantauth.Grant{ID: id, To: "worker", ToEpoch: run, Dirs: directories}); err != nil {
+				t.Fatal(err)
+			}
 		}
-		// As the delivery to the run before confirmed it, naming its
-		// conversation.
-		letter := inbox.Message{ID: id, From: "lead", FromEpoch: main, GrantDirs: []string{directory}}
-		if err := confirmGrant(dir, "worker", previous, "s1", letter); err != nil {
-			t.Fatal(err)
-		}
-	}
+	}, grantauthtest.Delivery{Dir: dir, Address: address, MainPID: self.PID, MainStart: self.Start, From: "lead", FromEpoch: main, To: "worker", Grants: grants, Threads: []string{"s1"}})
 	closed.Store("m2")
 	copied := []grant.Entry{
 		{Path: lib, Message: "m1", Outcome: grant.Granted, Thread: "s1", From: "lead", FromEpoch: main},

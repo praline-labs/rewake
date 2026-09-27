@@ -17,6 +17,7 @@ internal/boottime/               the boot clock, comparable across processes and
 internal/inbox/                  message, status, sender-side write, servicing loop
 internal/grant/                  which directories a task may grant, and the journal of what was granted
 internal/grantauth/              main's wrapper holding the grants its commands registered, and confirming them; a worker's wrapper keeping its own grants for its permission hook
+internal/grantauth/grantauthtest/ for tests: a helper process that is a recipient's run, confirms its grants at delivery and ends
 internal/control/                a main's control request to a run and its answer, as files
 internal/role/                   the role catalogue: flag, briefing line, reporting duty
 internal/brief/                  text injected into an agent, independent of transport

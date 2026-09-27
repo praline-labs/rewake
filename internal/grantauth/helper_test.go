@@ -15,7 +15,18 @@ import (
 	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/grant"
+	"github.com/iiiokojiadbi/rewake/internal/grantauth/grantauthtest"
 )
+
+// A test binary started again as a recipient's run confirms, as its wrapper
+// would at delivery, before anything is tested.
+func TestMain(m *testing.M) {
+	grantauthtest.Child(func(run, id, thread string, delivery grantauthtest.Delivery) error {
+		_, err := Confirm(delivery.Address, Expect{PID: delivery.MainPID, Start: delivery.MainStart}, id, delivery.To, run, thread)
+		return err
+	})
+	os.Exit(m.Run())
+}
 
 // A test process started again as a helper: another process for the
 // protocol to face, where the check under test is about who the peer is.

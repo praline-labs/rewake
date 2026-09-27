@@ -117,6 +117,7 @@ In one change, in this order:
 | `internal/harness/codex/gateway/state_test.go` | `codex <0.157.1` | 1 |
 | `internal/harness/codex/gateway/tui_paths_test.go` | `codex <0.157.1` | 2 |
 | `internal/inbox/answer_mark.go` | `rewake <2026-09-26` | 1 |
+| `internal/inbox/waiters.go` | `rewake <2026-09-28` | 1 |
 | `internal/inbox/window.go` | `rewake <2026-09-26` | 1 |
 | `internal/registry/registry.go` | `rewake <2026-09-16` | 1 |
 | `internal/worktree/land.go` | `rewake <2026-09-27` | 1 |

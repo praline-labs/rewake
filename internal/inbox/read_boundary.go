@@ -161,6 +161,7 @@ func ScopedWaiters(dir, name, epoch string, boundary *ReadBoundary) ([]Waiter, e
 		}
 		ids := make([]string, 0, len(waiter.Messages))
 		seqs := make([]uint64, 0, len(waiter.Messages))
+		times := make([]int64, 0, len(waiter.Messages))
 		for i, id := range waiter.Messages {
 			if waiter.ReadSequences[i] == 0 {
 				return nil, errors.New("waiter has no stable read association")
@@ -168,11 +169,13 @@ func ScopedWaiters(dir, name, epoch string, boundary *ReadBoundary) ([]Waiter, e
 			if waiter.ReadSequences[i] > 0 && waiter.ReadSequences[i] <= boundary.Through {
 				ids = append(ids, id)
 				seqs = append(seqs, waiter.ReadSequences[i])
+				times = append(times, waiter.readAt(i))
 			}
 		}
 		if len(ids) > 0 {
 			waiter.Messages = ids
 			waiter.ReadSequences = seqs
+			waiter.ReadAt = times
 			selected = append(selected, waiter)
 		}
 	}

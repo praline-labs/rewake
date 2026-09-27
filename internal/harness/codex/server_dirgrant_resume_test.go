@@ -13,6 +13,7 @@ import (
 
 	"github.com/iiiokojiadbi/rewake/internal/grant"
 	"github.com/iiiokojiadbi/rewake/internal/grantauth"
+	"github.com/iiiokojiadbi/rewake/internal/grantauth/grantauthtest"
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/proc"
 	"github.com/iiiokojiadbi/rewake/internal/role"
@@ -58,17 +59,19 @@ func resumedMain(t *testing.T, server *serverSession, grants map[string]string, 
 	ctx, cancel := context.WithCancel(context.Background())
 	go authority.Serve(ctx)
 	t.Cleanup(func() { cancel(); authority.Close() })
-	previous := endedRunOf(t)
 	self := grantauth.Expect{PID: os.Getpid()}
 	self.Start, _ = proc.StartTime(os.Getpid())
+	confirmed := map[string][]string{}
 	for id, directory := range grants {
-		if err := grantauth.Register(address, grantauth.Grant{ID: id, To: server.name, ToEpoch: previous, Dirs: []string{directory}}); err != nil {
-			t.Fatal(err)
-		}
-		if _, err := grantauth.Confirm(address, self, id, server.name, previous, fixtureRoot); err != nil {
-			t.Fatal(err)
-		}
+		confirmed[id] = []string{directory}
 	}
+	previous := grantauthtest.EndedRun(t, func(run string) {
+		for id, directories := range confirmed {
+			if err := grantauth.Register(address, grantauth.Grant{ID: id, To: server.name, ToEpoch: run, Dirs: directories}); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}, grantauthtest.Delivery{Address: address, MainPID: self.PID, MainStart: self.Start, To: server.name, Grants: confirmed, Threads: []string{fixtureRoot}})
 	delivered.Store(true)
 	return previous
 }

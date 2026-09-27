@@ -36,9 +36,9 @@ send report it as registered.
    asking wrapper. The grant confirmed must be the one the letter carries, for this
    recipient and this run. A letter main never registered, one naming a run it is not,
    one answered from another process fail, and main is told. The question names the
-   conversation the task goes into; main's wrapper keeps it beside the grant, taken only
-   from a process in its own namespaces, as the one conversation a resume may take the
-   grant into ([grants-resume.md](grants-resume.md)).
+   conversation the task goes into; main's wrapper keeps the first one named beside the
+   grant, taken only from the wrapper of the run the grant went to, as the one
+   conversation a resume may take the grant into ([grants-resume.md](grants-resume.md)).
 3. **When main cannot answer.** While main's wrapper is alive and does not answer, the
    task stays pending and is asked again until it expires. Once that wrapper has ended,
    nobody can confirm the grant, now or later: the task fails, naming the main that sent

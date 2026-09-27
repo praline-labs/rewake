@@ -50,8 +50,8 @@ func TestAwaitedDoesNotCallAResumableTaskLost(t *testing.T) {
 	}
 	code, out, _ := run("inbox", "--awaited")
 	if code != ExitOK || strings.Contains(out, "no report coming") || strings.Contains(out, "will not come") ||
-		!strings.Contains(out, " · ended ended; a resume of its conversation may still report\nlong job\n") ||
-		!strings.Contains(out, " · replaced ended; a resume of its conversation may still report\nanother job\n") {
+		!strings.Contains(out, " · ended ended; a resume of ended in its conversation may still report\nlong job\n") ||
+		!strings.Contains(out, " · replaced ended; a resume of replaced in its conversation may still report\nanother job\n") {
 		t.Fatalf("exit %d:\n%s", code, out)
 	}
 	code, _, errOut := run("send", "replaced", "also this", "--to", second)

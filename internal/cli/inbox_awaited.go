@@ -190,7 +190,7 @@ func awaitedLines(recipients []awaitedRecipient) []string {
 // is in --json; one line of it is enough to know what to do.
 func awaitedState(recipient string, message awaitedView) string {
 	if message.Resumable {
-		return recipient + " ended; a resume of its conversation may still report"
+		return recipient + " ended; a resume of " + recipient + " in its conversation may still report"
 	}
 	switch message.Gone {
 	case "ended":

@@ -83,6 +83,27 @@ review-codex, in acceptance the same day, saw live that 0.155.1's terminal resum
 roots of its own and loses a saved grant before the first notice, which adds it back,
 while 0.157.1's keeps it; `grants-resume.md` and `research-codex.md` say so.
 
+## After the second review
+
+The review of 303a71c found three low points, fixed on top of it:
+
+- **The window counted from when the wait began.** A wait gathers what is read from one
+  sender until the next report, so a task read a day into a long wait was lost at once
+  when its run ended: its sender would send it again while a resume could still do it.
+  The wait record now keeps each message's read time beside its read sequence, and the
+  window counts from that; a record written before keeps the wait's start (legacy mark).
+- **Any process of this user in main's namespaces could name the conversation** at
+  confirm, and each confirm overwrote it: a Claude Code worker or another session's shell
+  could rebind the grant after reading its letter. Main's wrapper now takes the
+  conversation, and the grant for delivered, only from the wrapper of the run the grant
+  went to (`askedByRun`, as for a resumed run), and keeps the first conversation named.
+  The unit tests that need a delivered grant of an ended run now have a helper process
+  be that run (`internal/grantauth/grantauthtest`).
+- **The label** said a resume of the conversation may report; a resume of it under another
+  name takes nothing over. It now reads `<name> ended; a resume of <name> in its
+  conversation may still report`, and main's briefing adds that a separate task may be
+  sent meanwhile, as the refusal of `send --to` says.
+
 ## What stays open
 
 - A grant whose main has ended is not restored: nobody can confirm it. A task sent again

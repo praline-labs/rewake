@@ -184,16 +184,17 @@ func (a *Authority) register(conn *net.UnixConn, grant Grant) error {
 
 // confirm answers for a grant to whoever runs as this user: an abstract
 // address has no file mode to keep others out. It takes the grant for
-// delivered, into the conversation named, only from a process in this
-// wrapper's namespaces: a sandboxed worker reads its letter before delivery
-// and could otherwise name a conversation of its own choosing for a later
-// resume to take the grant into.
+// delivered, into the conversation named, only from the wrapper of the run it
+// was granted to, and keeps the first conversation named: a worker reads its
+// letter before delivery, and it or any other process of this user could
+// otherwise name a conversation of its own choosing for a later resume to
+// take the grant into.
 func (a *Authority) confirm(conn *net.UnixConn, asked Grant, thread string) (Grant, error) {
 	peer, err := peerOf(conn)
 	if err != nil || int(peer.Uid) != os.Getuid() {
 		return Grant{}, errors.New("asked by another user")
 	}
-	delivering := sameNamespaces(int(peer.Pid)) == nil
+	delivering := askedByRun(conn, asked.ToEpoch) == nil
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.prune()
@@ -202,7 +203,10 @@ func (a *Authority) confirm(conn *net.UnixConn, asked Grant, thread string) (Gra
 		return Grant{}, fmt.Errorf("this session registered no grant with message %s for that run", asked.ID)
 	}
 	if delivering {
-		held.delivered, held.thread = true, thread
+		held.delivered = true
+		if held.thread == "" {
+			held.thread = thread
+		}
 		a.held[asked.ID] = held
 	}
 	return held.grant, nil

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"slices"
 	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/state"
@@ -153,7 +152,7 @@ func owedByAnyRun(dir, name, id string) bool {
 			continue
 		}
 		for _, waiter := range Waiters(dir, name, run.Name()) {
-			if slices.Contains(waiter.Messages, id) && waitStands(run.Name(), waiter) {
+			if owedStands(run.Name(), waiter, id) {
 				return true
 			}
 		}

@@ -25,6 +25,19 @@ type Waiter struct {
 	Since int64
 	// Messages are the ids of what was read from that run since its last report.
 	Messages []string
+	// ReadAt is when each of Messages was read, in nanoseconds: a wait
+	// gathers what is read until the report, and each task may be resumed
+	// for its own time from its reading (adopt.go).
+	ReadAt []int64
+}
+
+// readAt is when the message at index was read.
+func (w Waiter) readAt(index int) int64 {
+	if index < len(w.ReadAt) && w.ReadAt[index] != 0 {
+		return w.ReadAt[index]
+	}
+	// legacy(rewake <2026-09-28): a wait record written before read times were kept has only when its wait began; remove when no session started by an earlier build is registered
+	return w.Since
 }
 
 // same reports whether two records describe the same wait.
@@ -70,7 +83,8 @@ func markAwaitingSequence(dir, name, epoch, from, fromEpoch, messageID string, s
 		return err
 	}
 	file := filepath.Join(path, from)
-	waiter := Waiter{Name: from, Epoch: fromEpoch, Since: time.Now().UnixNano()}
+	now := time.Now().UnixNano()
+	waiter := Waiter{Name: from, Epoch: fromEpoch, Since: now}
 	if raw, err := os.ReadFile(file); err == nil {
 		if existing := parseWaiter(from, string(raw)); existing.Epoch == fromEpoch {
 			waiter = existing
@@ -85,20 +99,40 @@ func markAwaitingSequence(dir, name, epoch, from, fromEpoch, messageID string, s
 		for len(waiter.ReadSequences) < len(waiter.Messages) {
 			waiter.ReadSequences = append(waiter.ReadSequences, 0)
 		}
+		for len(waiter.ReadAt) < len(waiter.Messages) {
+			waiter.ReadAt = append(waiter.ReadAt, 0)
+		}
 		waiter.Messages = append(waiter.Messages, messageID)
 		waiter.ReadSequences = append(waiter.ReadSequences, sequence)
+		waiter.ReadAt = append(waiter.ReadAt, now)
 	}
 	return writeWaiter(file, waiter)
 }
 
+// writeWaiter writes a wait record: the run, when the wait began, the
+// messages, and for each message its read sequence and when it was read. The
+// read times follow the sequences, so a record with times has sequences too;
+// a sequence of 0 is one not known, as a missing one is.
 func writeWaiter(file string, waiter Waiter) error {
 	record := waiter.Epoch + " " + strconv.FormatInt(waiter.Since, 10) + " " + strings.Join(waiter.Messages, ",")
-	if len(waiter.ReadSequences) == len(waiter.Messages) && len(waiter.Messages) > 0 {
-		seqs := make([]string, len(waiter.ReadSequences))
-		for i, seq := range waiter.ReadSequences {
+	timed := len(waiter.ReadAt) == len(waiter.Messages) && len(waiter.Messages) > 0
+	if timed || len(waiter.ReadSequences) == len(waiter.Messages) && len(waiter.Messages) > 0 {
+		seqs := make([]string, len(waiter.Messages))
+		for i := range seqs {
+			var seq uint64
+			if i < len(waiter.ReadSequences) {
+				seq = waiter.ReadSequences[i]
+			}
 			seqs[i] = strconv.FormatUint(seq, 10)
 		}
 		record += " " + strings.Join(seqs, ",")
+	}
+	if timed {
+		times := make([]string, len(waiter.ReadAt))
+		for i, at := range waiter.ReadAt {
+			times[i] = strconv.FormatInt(at, 10)
+		}
+		record += " " + strings.Join(times, ",")
 	}
 	return state.WriteAtomic(file, []byte(strings.TrimSpace(record)))
 }
@@ -130,8 +164,8 @@ func Waiters(dir, name, epoch string) []Waiter {
 	return waiters
 }
 
-// parseWaiter reads a wait record: the run, then when the wait began. A record
-// with the run alone comes from before the time was kept.
+// parseWaiter reads a wait record as writeWaiter writes it. A record with the
+// run alone comes from before the time was kept.
 func parseWaiter(name, raw string) Waiter {
 	fields := strings.Fields(raw)
 	waiter := Waiter{Name: name}
@@ -148,6 +182,12 @@ func parseWaiter(name, raw string) Waiter {
 		for _, value := range strings.Split(fields[3], ",") {
 			seq, _ := strconv.ParseUint(value, 10, 64)
 			waiter.ReadSequences = append(waiter.ReadSequences, seq)
+		}
+	}
+	if len(fields) > 4 {
+		for _, value := range strings.Split(fields[4], ",") {
+			at, _ := strconv.ParseInt(value, 10, 64)
+			waiter.ReadAt = append(waiter.ReadAt, at)
 		}
 	}
 	return waiter
@@ -178,12 +218,14 @@ func ClearAwaiting(dir, name, epoch string, peer Waiter) {
 	}
 	remaining := make([]string, 0, len(current.Messages))
 	sequences := make([]uint64, 0, len(current.Messages))
+	times := make([]int64, 0, len(current.Messages))
 	for i, id := range current.Messages {
 		if !slices.Contains(peer.Messages, id) {
 			remaining = append(remaining, id)
 			if i < len(current.ReadSequences) {
 				sequences = append(sequences, current.ReadSequences[i])
 			}
+			times = append(times, current.readAt(i))
 		}
 	}
 	if len(remaining) == len(current.Messages) {
@@ -195,6 +237,7 @@ func ClearAwaiting(dir, name, epoch string, peer Waiter) {
 	}
 	current.Messages = remaining
 	current.ReadSequences = sequences
+	current.ReadAt = times
 	_ = writeWaiter(file, current)
 }
 
