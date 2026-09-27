@@ -139,7 +139,11 @@ A task or a question from main may carry a grant: `--grant-git` for Git metadata
 `--grant-dir <dir>` for a directory outside the worker's workspace. A granted directory
 is resolved and checked here, before anything is written; a protected one is refused
 with exit 2, a missing one with exit 1, and one the worker can write already is named
-and not carried ([grants.md](grants.md#sending)).
+and not carried ([grants.md](grants.md#sending)). Then `send` registers the grant with its
+own session's wrapper, which takes it only from a process running below itself and
+holds it in memory; a grant not registered — a Codex main's, a command from outside
+main's tree — is refused with exit 1 and nothing is written
+([grants.md](grants.md#who-can-grant)).
 
 ## Act 3. The wrapper announces it
 
@@ -177,12 +181,16 @@ in one notice. A task or a question does not wait, and takes whatever is waiting
      input and [standalone mailbox output](native-mailbox.md): short notice plus fixed
      member identities, never full task bodies. A task or question carrying a grant
      goes on a notice of its own and waits, pending, while the thread is active, so the
-     grant holds from its first turn; its directories are checked again first, and one
-     that no longer passes fails the task and tells its sender. On an idle thread the
+     grant holds from its first turn; its directories are checked again first, and the
+     wrapper of the main that sent it is asked to confirm it — answered only by that
+     wrapper's own process, in this wrapper's namespaces. A grant that no longer passes,
+     or that main does not confirm, fails the task and tells its sender; a main that is
+     alive and does not answer yet keeps it pending. On an idle thread the
      adapter reads the current local roots without history and sends them with the
      granted directories, and with --grant-git (main/write only) the missing Git
      metadata of the thread's repository. If roots cannot be read, --grant-git alone
-     goes without the field and says so in delivery status; a directory grant fails.
+     goes without the field and says so in delivery status; a directory grant waits
+     and is read again.
      No-flag tasks and report-only groups never get a grant. What rewake granted for
      tasks since reported on is taken out of the roots at the same time
      ([grants.md](grants.md#taking-a-grant-back)). Other notices start idle work or

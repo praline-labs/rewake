@@ -23,6 +23,7 @@ func TestExplicitGitGrantRequiresMainAndEligibleTask(t *testing.T) {
 				senderRole = "general"
 			}
 			dir, self, peer := stateCaller(t, senderRole)
+			grantingMain(t, dir, self, os.Getpid())
 			peer.Role, peer.Harness = "write", "codex"
 			if scenario == "ineligible" {
 				peer.Role = "general"

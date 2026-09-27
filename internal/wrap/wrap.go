@@ -139,6 +139,10 @@ func Run(ctx context.Context, request Request) (int, error) {
 	if err := registry.Update(request.Dir, session); err != nil {
 		return 0, err
 	}
+	if role.Of(session.Role).ID == role.Main.ID {
+		// Before the harness: its first command may already send a grant.
+		defer serveAuthority(ctx, request.Dir, name, epoch, self)()
+	}
 
 	// Signals are caught before the child exists. In the gap between starting it
 	// and installing the handlers, a SIGTERM meant for the wrapper would kill it
@@ -278,7 +282,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 			Owns: func() bool { return registry.OwnsName(request.Dir, name, epoch) },
 			// A burst of letters that ask for nothing wakes the session once.
 			Window:     inbox.Coalescing,
-			CheckGrant: checkGrant(state.RootForRoom(request.Dir)),
+			CheckGrant: checkGrant(request.Dir, name, epoch),
 			Deliver: func(ctx context.Context, message inbox.Message) inbox.Result {
 				if plan.Backend != nil {
 					return plan.Backend.Deliver(ctx, message)

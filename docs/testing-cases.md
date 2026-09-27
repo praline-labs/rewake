@@ -153,7 +153,10 @@ observations say; the refusals of `-w`, `--tmux` and the continuations are unit 
 ## A directory granted with a task
 
 `codex-grant-dir` runs on the Codex column only: Claude Code takes a grant from stage 2
-on ([grants.md](grants.md)). The fixture keeps the thread's workspace roots as the
+on ([grants.md](grants.md)). Its main is a Claude Code session, because a Codex main
+cannot grant ([grants.md](grants.md#who-can-grant)), and the granted directory lies in
+the user's cache directory rather than under `/tmp`, which is never granted. The fixture
+keeps the thread's workspace roots as the
 server was seen to — set by the start, replaced by a `turn/start` that carries them —
 answers `thread/read` with them in `environments` and with the status of the turn in
 progress, and records the roots each delivery that carried them named. A write worker holds its
@@ -168,6 +171,22 @@ journal then saying `dropped`), and keep it after the report (`grant-kept`, whic
 the revocation alone). The shape case checks the fixture's `thread/read` reply of a
 working thread against `ThreadReadResponse`. The path rules, the journal and the
 refusals are unit tests in `internal/grant`, `internal/cli` and `internal/harness/codex`.
+
+`codex-grant-forgery` is a Codex write worker trying to grant itself a directory in the
+name of a running Claude Code main, four ways. Its own process runs `rewake send` with
+main's `REWAKE_SESSION` and `REWAKE_EPOCH`, and so does a process it detached through
+`setsid`: both must exit 1 and leave no letter, because main's wrapper registers a grant
+only from a process below it. A letter carrying a grant is put into the worker's mailbox
+by hand in main's name, and another in the name of a session whose run is main's while
+a listener in the test process answers at that session's address and confirms the
+grant: both must fail and never reach the worker's roots — the first because main
+never registered it, the second because the answer came from a process other than the
+run the letter names. What it does not prove is the namespace check: every process in
+the suite shares the wrappers' namespaces, as a worker outside a sandbox does, so that
+check has its own unit test in `internal/grantauth`. Its mutants take registrations from
+any process (`grant-from-anywhere`, which breaks the two sends), deliver a grant without
+asking main's wrapper (`grant-unconfirmed`, which breaks the two letters), and take an
+answer from any listener (`grant-any-listener`, which breaks the foreign answer alone).
 
 ## Actions on a sent message
 
@@ -265,6 +284,7 @@ switches have no single form in the code to find them by, and the row is kept by
 | codex-tui-later-shape | `roots-only-recognition` | — |
 | codex-compact-hold | `hold-ends-at-start`, `compaction-refusal-final`, `late-end-unrecorded`, `running-taken-for-an-outcome` | — |
 | codex-grant-dir | `grant-steered`, `grant-not-added`, `grant-kept` | — |
+| codex-grant-forgery | `grant-from-anywhere`, `grant-unconfirmed`, `grant-any-listener` | — |
 | stopped-routing | `stopped-to-main` | — |
 | withdraw-after-notice | `withdraw-leaves-task`, `withdraw-silent`, `recall-sender-first` | — |
 | withdraw-mid-turn | `recall-unnamed` | — |

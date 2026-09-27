@@ -121,6 +121,17 @@ func ObservationPath(dir, name, run string) string {
 	return path
 }
 
+// AuthorityAddress is where a main run's wrapper answers for the grants it
+// registered (docs/grants.md#who-can-grant): an abstract unix socket, named
+// by the state directory and the run. Abstract, because a file in the state
+// directory is one a sandboxed worker could replace with its own listener,
+// and because no path limit applies; the name is checked through its peer
+// either way.
+func AuthorityAddress(dir, name, run string) string {
+	sum := sha256.Sum256([]byte(filepath.Clean(dir) + "\x00" + name + "\x00" + run))
+	return fmt.Sprintf("@rewake/grant/%x", sum[:16])
+}
+
 // ControlPath is where a run takes control requests — compact, interrupt — and
 // leaves its answers (docs/remote-control.md). One per run, like the sockets:
 // a request written for a run that ended must not reach the next holder of the

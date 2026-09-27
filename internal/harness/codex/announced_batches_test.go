@@ -29,7 +29,7 @@ func TestReadyRecipientAnnouncesNextFourWithoutOverviewOrTerminal(t *testing.T) 
 				backend, captured := gitDeliveryFixtureMode(t, role.Write, status, true, nil, func(c net.Conn) { peers <- c }, reads...)
 				native := <-peers
 				dir := t.TempDir()
-				s := &inbox.Server{Dir: dir, Name: "receiver", Epoch: "epoch", Reserve: backend.Reserve}
+				s := &inbox.Server{Dir: dir, Name: "receiver", Epoch: "epoch", Reserve: backend.Reserve, CheckGrant: confirmedGrant}
 				put := func(kind inbox.Kind, grant bool) inbox.Message {
 					t.Helper()
 					m := inbox.Message{ID: inbox.NewID(), From: "main", FromEpoch: "main-epoch", To: s.Name, ToEpoch: s.Epoch, Kind: kind, GrantGit: grant, Text: "current preview", CreatedAt: time.Now()}

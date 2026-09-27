@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/iiiokojiadbi/rewake/internal/grant"
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/state"
@@ -22,7 +23,8 @@ type grantWorld struct {
 
 func newGrantWorld(t *testing.T, senderRole, harnessID string) grantWorld {
 	t.Helper()
-	dir, _, peer := stateCaller(t, senderRole)
+	dir, self, peer := stateCaller(t, senderRole)
+	grantingMain(t, dir, self, os.Getpid())
 	base, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
@@ -102,8 +104,16 @@ func TestDirGrantIsCarriedResolvedAndCollapsed(t *testing.T) {
 		t.Fatalf("inbox: %d %s %s", code, out, stderr)
 	}
 	code, out, _ = run("inbox", "--owed")
-	if code != ExitOK || !strings.Contains(out, "grant: write "+lib) {
+	if code != ExitOK || !strings.Contains(out, "grant: write "+lib+" — unless a turn typed") {
 		t.Fatalf("inbox --owed lost the grant line: %s", out)
+	}
+	// Once the journal says a directory is gone, --owed stops promising it.
+	if err := grant.Save(w.dir, w.peer.Name, w.peer.Epoch(), []grant.Entry{{Path: lib, Message: message.ID, Outcome: grant.Dropped}}); err != nil {
+		t.Fatal(err)
+	}
+	code, out, _ = run("inbox", "--owed")
+	if code != ExitOK || !strings.Contains(out, "grant: dropped "+lib+" — no longer writable") || !strings.Contains(out, "grant: write "+wide) {
+		t.Fatalf("inbox --owed after the grant was dropped: %s", out)
 	}
 }
 
@@ -143,6 +153,8 @@ func TestDirGrantRefusals(t *testing.T) {
 			}
 			return args
 		}, code: ExitUsage, says: "at most 8 directories"},
+		{name: "empty", args: func(grantWorld) []string { return []string{"--grant-dir", ""} }, code: ExitUsage, says: "needs a directory"},
+		{name: "a live session's directory", args: func(w grantWorld) []string { return []string{"--grant-dir", w.home + "/work"} }, code: ExitUsage, says: "live rewake session"},
 		{name: "wait twice", args: func(grantWorld) []string { return []string{"--wait=1"} }, code: ExitUsage, says: "--wait is given twice"},
 	}
 	for _, c := range cases {
@@ -209,5 +221,24 @@ func TestCodexLaunchRefusesAddDir(t *testing.T) {
 		if code != ExitUsage || !strings.Contains(stderr, "rewake send --grant-dir") {
 			t.Errorf("%q: got %d %s %s", args, code, out, stderr)
 		}
+	}
+}
+
+// An addition to a task whose grant waits for the worker to be idle would be
+// read first, and worked on without the grant: --to refuses it and names
+// rewake edit, which changes the task itself.
+func TestAnAddendumToAWaitingGrantIsRefused(t *testing.T) {
+	w := newGrantWorld(t, "main", "codex")
+	code, out, stderr := run("send", w.peer.Name, "Write there", "--wait=0", "--grant-dir", w.home+"/work/lib")
+	if code != ExitPending {
+		t.Fatalf("send: %d %s %s", code, out, stderr)
+	}
+	task := w.sent(t)[0]
+	code, out, stderr = run("send", w.peer.Name, "and this too", "--wait=0", "--to", task.ID)
+	if code != ExitFailed || !strings.Contains(stderr, "carries a grant") || !strings.Contains(stderr, "rewake edit") {
+		t.Fatalf("addendum: %d %s %s", code, out, stderr)
+	}
+	if messages := w.sent(t); len(messages) != 1 {
+		t.Fatalf("the refused addendum was written: %d messages", len(messages))
 	}
 }

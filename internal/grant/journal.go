@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
+	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
 
@@ -36,8 +38,14 @@ type Entry struct {
 // Live says whether rewake still counts the entry as granted.
 func (e Entry) Live() bool { return e.Outcome == Granted }
 
-// maxEntries bounds a journal; ended entries go first.
-const maxEntries = 64
+// maxEnded bounds the ended entries a journal keeps, the oldest going first.
+// Live ones are never dropped: an entry is how rewake finds a grant to take
+// back, and one pushed out would stay granted for good.
+const maxEnded = 64
+
+// MaxLive bounds the directories granted to one run at once. A grant past it
+// is refused, never an earlier one forgotten.
+const MaxLive = 64
 
 func journalPath(dir, name, epoch string) string {
 	sum := sha256.Sum256([]byte(name + "\x00" + epoch))
@@ -66,19 +74,21 @@ func Save(dir, name, epoch string, entries []Entry) error {
 	if !state.ValidName(name) || epoch == "" {
 		return fmt.Errorf("invalid session identity")
 	}
-	for len(entries) > maxEntries {
-		dropped := false
-		for i, entry := range entries {
-			if !entry.Live() {
-				entries = append(entries[:i:i], entries[i+1:]...)
-				dropped = true
-				break
-			}
-		}
-		if !dropped {
-			entries = entries[1:]
+	ended := 0
+	for _, entry := range entries {
+		if !entry.Live() {
+			ended++
 		}
 	}
+	kept := make([]Entry, 0, len(entries))
+	for _, entry := range entries {
+		if !entry.Live() && ended > maxEnded {
+			ended--
+			continue
+		}
+		kept = append(kept, entry)
+	}
+	entries = kept
 	raw, err := json.MarshalIndent(entries, "", "  ")
 	if err != nil {
 		return err
@@ -87,5 +97,40 @@ func Save(dir, name, epoch string, entries []Entry) error {
 	if err := state.EnsureSubdir(filepath.Dir(path)); err != nil {
 		return err
 	}
-	return state.WriteAtomic(path, append(raw, '\n'))
+	if err := state.WriteAtomic(path, append(raw, '\n')); err != nil {
+		return err
+	}
+	sweep(dir)
+	return nil
+}
+
+// sweepGrace keeps a journal a while after its run is gone from the
+// registry: a run is registered before anything is granted to it, so only a
+// record being rewritten could hide a live one, and not for this long.
+const sweepGrace = time.Minute
+
+// sweep removes the journals of runs that have ended. A journal is only what
+// rewake list shows; what a run revokes by is held by its wrapper
+// (docs/grants.md#taking-a-grant-back), so nothing that ended needs one.
+func sweep(dir string) {
+	files, err := os.ReadDir(filepath.Join(dir, "grants"))
+	if err != nil {
+		return
+	}
+	sessions, err := registry.ListReadOnly(dir)
+	if err != nil {
+		return
+	}
+	live := map[string]bool{}
+	for _, session := range sessions {
+		live[filepath.Base(journalPath(dir, session.Name, session.Epoch()))] = true
+	}
+	for _, file := range files {
+		if live[file.Name()] || !strings.HasSuffix(file.Name(), ".json") {
+			continue
+		}
+		if info, err := file.Info(); err == nil && time.Since(info.ModTime()) > sweepGrace {
+			_ = os.Remove(filepath.Join(dir, "grants", file.Name()))
+		}
+	}
 }

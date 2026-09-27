@@ -31,7 +31,7 @@ type rootsChange struct {
 // for --grant-git and the directories the message grants.
 func (s *serverSession) planRoots(thread string, read func() threadRead, git bool, granted inbox.Message) (rootsChange, error) {
 	var change rootsChange
-	entries := grant.Load(s.mailbox, s.name, s.epoch)
+	entries := s.grantJournal()
 	settled := s.settledGrants(entries)
 	if !git && len(granted.GrantDirs) == 0 && len(settled) == 0 {
 		return change, nil
@@ -79,7 +79,10 @@ func (s *serverSession) planRoots(thread string, read func() threadRead, git boo
 		}
 	}
 	if len(granted.GrantDirs) > 0 {
-		added, writable, notes := s.addGrantedRoots(&roots, &entries, granted, git, now)
+		added, writable, notes, err := s.addGrantedRoots(&roots, &entries, granted, git, environment.Cwd, now)
+		if err != nil {
+			return change, err
+		}
 		change.notes = append(change.notes, notes...)
 		change.applied = slices.Concat(added, writable)
 		if len(added) > 0 {
@@ -106,13 +109,34 @@ func (s *serverSession) planRoots(thread string, read func() threadRead, git boo
 // addGrantedRoots adds each granted directory a root does not cover already,
 // with its Git metadata when the task also carries --grant-git, and journals
 // what it added. A directory inside a root rewake itself granted for another
-// task is added on its own all the same: that root goes with its task.
-func (s *serverSession) addGrantedRoots(roots *[]string, entries *[]grant.Entry, granted inbox.Message, git bool, now time.Time) (added, writable, notes []string) {
+// task is refused: the worker writes in its parent through that grant, and
+// could put a link in its place before the harness resolves it again
+// (docs/grants.md#what-a-grant-does-not-stop). An error fails the task.
+func (s *serverSession) addGrantedRoots(roots *[]string, entries *[]grant.Entry, granted inbox.Message, git bool, cwd string, now time.Time) (added, writable, notes []string, err error) {
+	if slices.ContainsFunc(*entries, func(entry grant.Entry) bool { return entry.Message == granted.ID }) {
+		return nil, nil, nil, fmt.Errorf("message %s was granted once already", granted.ID)
+	}
 	journaled := func(root string) bool {
 		return slices.ContainsFunc(*entries, func(entry grant.Entry) bool { return entry.Live() && entry.Path == root })
 	}
 	covered := func(directory string) bool {
 		return slices.ContainsFunc(*roots, func(root string) bool { return grant.Within(directory, root) && !journaled(root) })
+	}
+	for _, directory := range granted.GrantDirs {
+		for _, root := range *roots {
+			if journaled(root) && root != directory && grant.Within(directory, root) {
+				return nil, nil, nil, fmt.Errorf("%s lies inside %s, which another task's grant lets this session write, so it could be replaced by a link before it is used; grant it once that task is reported on", directory, root)
+			}
+		}
+	}
+	live := 0
+	for _, entry := range *entries {
+		if entry.Live() {
+			live++
+		}
+	}
+	if live+len(granted.GrantDirs) > grant.MaxLive {
+		return nil, nil, nil, fmt.Errorf("this session holds %d granted directories, and %d more would pass the %d rewake keeps; wait for earlier tasks to be reported on", live, len(granted.GrantDirs), grant.MaxLive)
 	}
 	record := func(path, of string) {
 		*entries = append(*entries, grant.Entry{Path: path, For: of, Message: granted.ID, At: now, Outcome: grant.Granted})
@@ -138,12 +162,17 @@ func (s *serverSession) addGrantedRoots(roots *[]string, entries *[]grant.Entry,
 			notes = append(notes, fmt.Sprintf("no Git metadata granted for %s: %v", directory, err))
 			continue
 		}
+		if err := sharedElsewhere(directory, metadata, cwd); err != nil {
+			return nil, nil, nil, err
+		}
 		if rules == nil {
 			built := grant.CurrentEnv(s.stateRoot, harness.AllProtectedDirs()).Rules()
 			rules = &built
 		}
 		for _, path := range metadata {
-			if covered(path) {
+			// Only a root that is the metadata itself covers it: the harness
+			// keeps .git read-only inside every root, the one it lies in too.
+			if hasRoot(*roots, path) && !journaled(path) {
 				continue
 			}
 			// The metadata can lie outside the directory, and so outside
@@ -158,7 +187,23 @@ func (s *serverSession) addGrantedRoots(roots *[]string, entries *[]grant.Entry,
 			record(path, directory)
 		}
 	}
-	return added, writable, notes
+	return added, writable, notes, nil
+}
+
+// sharedElsewhere refuses the Git metadata of a linked worktree whose
+// repository is not the session's own. Its common directory holds the hooks
+// and the configuration every checkout of that repository runs — main's
+// included, outside any sandbox — so writing it is not writing one checkout.
+// The session's own repository was writable before the grant.
+func sharedElsewhere(directory string, metadata []string, cwd string) error {
+	if len(metadata) < 2 {
+		return nil
+	}
+	common := metadata[len(metadata)-1]
+	if own, err := gitMetadataDirectories(cwd); err == nil && own[len(own)-1] == common {
+		return nil
+	}
+	return fmt.Errorf("%s is a worktree of the repository at %s, whose Git metadata — hooks and configuration included — every checkout of it shares; --grant-git does not give that to a session working elsewhere: grant the directory without it, or have the owner give the access", directory, common)
 }
 
 // settledGrants lists the live entries whose tasks are settled, leaving out a
@@ -190,18 +235,31 @@ func (s *serverSession) settledGrants(entries []grant.Entry) []int {
 	return indexes
 }
 
-// saveJournal records what a notice the harness took granted and took back.
-// The roots are sent by then; a journal that cannot be written leaves a grant
-// rewake cannot take back, and the detail says so.
+// grantJournal is a copy of what this run granted. The wrapper's memory is
+// the record rewake takes grants back by: the file beside the mailbox is one
+// a sandboxed worker could write, or empty, and it is kept only for `rewake
+// list` to show.
+func (s *serverSession) grantJournal() []grant.Entry {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return slices.Clone(s.grants)
+}
+
+// saveJournal records what a notice the harness took granted and took back,
+// in memory first. A copy on disk that cannot be written costs only the
+// listing, and the detail says so.
 func (s *serverSession) saveJournal(entries []grant.Entry) string {
 	if entries == nil {
 		return ""
 	}
+	s.mu.Lock()
+	s.grants = slices.Clone(entries)
+	s.mu.Unlock()
 	if s.mailbox == "" {
-		return "the grant could not be recorded, so rewake will not take it back: this session has no state directory"
+		return "the grant is not shown by rewake list: this session has no state directory"
 	}
 	if err := grant.Save(s.mailbox, s.name, s.epoch, entries); err != nil {
-		return "the grant could not be recorded, so rewake will not take it back: " + err.Error()
+		return "the grant is not shown by rewake list: " + err.Error()
 	}
 	return ""
 }

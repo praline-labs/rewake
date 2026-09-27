@@ -77,7 +77,7 @@ func TestAnActiveAnswerDoesNotExpire(t *testing.T) {
 	report := message("long running question")
 	report.Kind = Finished
 	report.InReplyTo = []string{"q1"}
-	report.CreatedAt = time.Now().Add(-2 * defaultTTL)
+	report.CreatedAt = time.Now().Add(-2 * DefaultTTL)
 	if err := Put(dir, report); err != nil {
 		t.Fatal(err)
 	}

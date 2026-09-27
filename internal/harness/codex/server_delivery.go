@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -42,6 +43,13 @@ func (s *serverSession) Reserve(ctx context.Context, message inbox.Message) (inb
 		if read.err == nil && read.status == "active" {
 			delivery.Close()
 			return nil, fmt.Errorf("%w: %s", inbox.ErrNotYet, idleWait)
+		}
+		if read.err != nil && grantsDirs(message) {
+			// A read that failed may pass: the task waits, within its time
+			// to live, rather than go without its grant or fail for good.
+			// Git metadata alone goes without, with a note, as it did.
+			delivery.Close()
+			return nil, fmt.Errorf("%w: the thread's roots could not be read yet: %v", inbox.ErrNotYet, read.err)
 		}
 		delivery.read = &read
 	}
@@ -123,6 +131,9 @@ func (r *reservedDelivery) checkRoots(thread string, message inbox.Message) erro
 			granted = member
 		}
 	}
+	if (git || granted.ID != "") && r.session.legacyLandlock != "" {
+		return errors.New(legacyLandlockRefusal(r.session.legacyLandlock))
+	}
 	read := func() threadRead {
 		if r.read != nil {
 			return *r.read
@@ -194,4 +205,9 @@ func (s *serverSession) appliesGrant(message inbox.Message) bool {
 		}
 	}
 	return false
+}
+
+// grantsDirs says whether a notice carries a directory grant.
+func grantsDirs(message inbox.Message) bool {
+	return len(message.GrantDirs) > 0 || slices.ContainsFunc(message.Batch, func(member inbox.Message) bool { return len(member.GrantDirs) > 0 })
 }

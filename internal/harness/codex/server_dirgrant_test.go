@@ -202,9 +202,10 @@ func TestDirGrantWithGitAddsTheCheckoutsMetadata(t *testing.T) {
 	}
 }
 
-// A grant does not go into a running turn, and does not go at all without a
-// snapshot to add it to: a task is never handed over without its grant.
-func TestDirGrantWaitsForIdleAndFailsWithoutRoots(t *testing.T) {
+// A grant does not go into a running turn, and does not go without a
+// snapshot to add it to: a task is never handed over without its grant. A
+// read that failed may pass, so the task waits for it rather than fail.
+func TestDirGrantWaitsForIdleAndForReadableRoots(t *testing.T) {
 	workspace, lib := t.TempDir(), t.TempDir()
 	server, captured := gitDeliveryFixture(t, role.General,
 		gitReadFixture{thread: gitThreadFixture(workspace, []string{workspace}, "active")},
@@ -217,7 +218,7 @@ func TestDirGrantWaitsForIdleAndFailsWithoutRoots(t *testing.T) {
 		t.Fatalf("active: roots=%q result=%+v", roots, result)
 	}
 	roots, result = deliverDirs(t, server, captured, message)
-	if result.State != inbox.Failed || !strings.Contains(result.Detail, "directory grant could not be applied") || roots != nil {
+	if result.State != inbox.Pending || !strings.Contains(result.Detail, "roots could not be read yet") || roots != nil {
 		t.Fatalf("unreadable: roots=%q result=%+v", roots, result)
 	}
 	if journal(server) != nil {
@@ -250,3 +251,7 @@ func TestDirGrantRefusedOnAHeadsUpOrInABatch(t *testing.T) {
 		})
 	}
 }
+
+// confirmedGrant stands for the wrapper's check of a grant with the main that
+// sent it, which these tests take as passed (internal/wrap/grants.go).
+func confirmedGrant(inbox.Message) error { return nil }

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/control"
+	"github.com/iiiokojiadbi/rewake/internal/grant"
 	"github.com/iiiokojiadbi/rewake/internal/harness"
 	"github.com/iiiokojiadbi/rewake/internal/harness/codex/gateway"
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
@@ -40,20 +41,26 @@ type serverSession struct {
 	// mailbox is the room's state directory, where the session's mail and
 	// its grant journal are, and stateRoot the root above every room.
 	mailbox, name, stateRoot string
-	program                  string
-	controlDir               string
-	gateway                  *gateway.Gateway
-	proxy                    *http.Server
-	process                  *exec.Cmd
-	exited, stopped          chan struct{}
-	cancel                   context.CancelFunc
-	closeOnce                sync.Once
-	mu                       sync.Mutex
-	outcomes                 []harness.Completion
-	wake                     chan struct{}
-	reportCancel             context.CancelFunc
-	emit                     func(context.Context, harness.Completion) error
-	note                     func(string)
+	// grants is what this run granted and took back, guarded by mu: the
+	// record revocation goes by (grantJournal).
+	grants []grant.Entry
+	// legacyLandlock says why this session's commands may run in rewake's
+	// own namespaces; set, it takes no grant.
+	legacyLandlock  string
+	program         string
+	controlDir      string
+	gateway         *gateway.Gateway
+	proxy           *http.Server
+	process         *exec.Cmd
+	exited, stopped chan struct{}
+	cancel          context.CancelFunc
+	closeOnce       sync.Once
+	mu              sync.Mutex
+	outcomes        []harness.Completion
+	wake            chan struct{}
+	reportCancel    context.CancelFunc
+	emit            func(context.Context, harness.Completion) error
+	note            func(string)
 }
 
 func newServer(path string, args, env []string, cwd string) *serverSession {

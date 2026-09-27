@@ -160,6 +160,33 @@ a file written there appears outside — but every pid from outside is missing.
 sandbox therefore concludes "no" about every session but its own. A reader has to
 compare `/proc/self/ns/pid` before believing a pid it did not create.
 
+### The sandbox's namespaces
+
+**[verified live; Codex CLI 0.155.1 and 0.157.1; September 26, 2026]** Native
+`command/exec` against a real app-server, no model calls, in disposable containers whose
+seccomp filter was lifted so bubblewrap could create namespaces; evidence in
+`~/.cache/rewake/evidence/2026-09-26/rewake-ns-probe/` (`README.md`,
+`verification.json`). What the directory grant's confirmation rests on
+([grants.md](grants.md#who-can-grant)):
+
+- A sandboxed command runs in a mount, user and PID namespace other than the
+  app-server's, in `workspace-write` and `read-only` alike, with the sandbox's network on
+  or off.
+- `setsid`, a double fork and `nohup` keep the command's namespaces, and each such child
+  was gone before `command/exec` answered. Whether a process started by a model's tool
+  call outlives that turn was not tested: no model was called.
+- Seen from outside, `SO_PEERCRED` on a listener inside the sandbox gives a non-zero
+  outer pid whose `/proc/<pid>/ns/{mnt,user,pid}` are readable and are the sandbox's.
+  From inside, a listener outside shows pid 0.
+- A listener: in `workspace-write` with `networkAccess=true` a command binds a unix
+  socket in `/tmp` and the outside reaches it; with the network off `socket()` succeeds
+  and `bind()` gives `EPERM`; in `read-only` binding a path gives `EROFS`.
+- The legacy Landlock backend, `[features] use_legacy_landlock=true`, runs `read-only`
+  commands in the app-server's own namespaces on 0.155.1, and refuses `workspace-write`
+  with exit 101; on 0.157.1 it refuses both restricted modes. The release source makes
+  it deprecated and off by default, chosen only by an explicit setting, and a failing
+  bubblewrap does not fall back to it.
+
 ### Environment and instructions
 
 - `shell_environment_policy` inherits the environment by default, excluding names

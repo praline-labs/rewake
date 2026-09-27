@@ -36,7 +36,7 @@ func TestReviewConsumedGrantCannotAuthorizeRemainingNotice(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	s := &inbox.Server{Dir: dir, Name: "receiver", Epoch: "epoch", Reserve: backend.Reserve}
+	s := &inbox.Server{Dir: dir, Name: "receiver", Epoch: "epoch", Reserve: backend.Reserve, CheckGrant: confirmedGrant}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	go func() { defer close(done); s.Serve(ctx) }()

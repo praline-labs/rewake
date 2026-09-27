@@ -16,7 +16,7 @@ func TestGroupedPreparationRechecksAnswerLeasesExpiryAndEpoch(t *testing.T) {
 	reserved := message("reserved answer")
 	reserved.Kind, reserved.ToEpoch, reserved.InReplyTo = Finished, s.Epoch, []string{"question-id"}
 	expired := message("expired")
-	expired.ToEpoch, expired.CreatedAt = s.Epoch, time.Now().Add(-2*defaultTTL)
+	expired.ToEpoch, expired.CreatedAt = s.Epoch, time.Now().Add(-2*DefaultTTL)
 	foreign := message("foreign")
 	foreign.ToEpoch = "other-epoch"
 	for _, m := range []Message{reserved, expired, foreign} {

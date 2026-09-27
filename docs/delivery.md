@@ -40,7 +40,10 @@ a short notice and preview rather than the full body.
    A task or a question from main may carry `grantGit` ([git-grants.md](git-grants.md))
    and `grantDirs`, the resolved directories of `--grant-dir` and `--grant-dir-broad`,
    with `grantBroad` naming those confirmed as broad; the directories are checked
-   before the file is written ([grants.md](grants.md#sending)).
+   before the file is written ([grants.md](grants.md#sending)). A message carrying a
+   grant is registered with the sender's own wrapper before it is written, and refused
+   with exit 1 when the wrapper does not take it; the recipient's wrapper confirms it
+   there at delivery ([grants.md](grants.md#who-can-grant)).
 4. Write `inbox/<name>/<id>.json.tmp`, rename it to `.json`.
 5. Wait for `.status` up to `--wait` (5 seconds by default) and print the
    result, then `id <id>` on a line of its own unless the send failed: the id is what
@@ -320,7 +323,9 @@ Two readers at once are serialized: the second finds nothing new.
 A task that carries a directory grant is printed with one `grant: write <dir>` line per
 directory between its heading and its text, and `inbox --owed` repeats them while the
 task is owed: the roots changed without a word in the terminal, so the reader learns it
-here ([grants.md](grants.md#delivery)).
+here ([grants.md](grants.md#delivery)). The `--owed` lines add that a turn typed in the
+terminal may have dropped the grant since, or, once the journal says so, that it was
+revoked or dropped ([grants.md](grants.md#taking-a-grant-back)).
 
 ### Owed reports
 

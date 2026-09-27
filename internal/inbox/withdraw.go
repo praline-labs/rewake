@@ -178,6 +178,9 @@ func tombstoneOf(message Message, replacedBy string) Message {
 	notice.ReplacedBy = replacedBy
 	stone := message
 	stone.Kind, stone.GrantGit, stone.AddendumTo, stone.Withdrawn = Note, false, "", &notice
+	// A note carries no grant: one left on it would be asked for again,
+	// confirmed, and refused by a harness that takes a grant only with work.
+	stone.GrantDirs, stone.GrantBroad = nil, nil
 	at := message.CreatedAt.Local().Format("15:04:05")
 	stone.Text = fmt.Sprintf("Rewake: %s withdrew its %s of %s before you read it; disregard its notice.", message.From, notice.Kind, at)
 	if replacedBy != "" {

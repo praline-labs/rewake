@@ -299,3 +299,14 @@ func TestUpdateKeepsTheName(t *testing.T) {
 		t.Errorf("update left temporary files behind: %v", entries)
 	}
 }
+
+func TestParseEpochTakesOnlyARun(t *testing.T) {
+	if pid, start, ok := ParseEpoch("123.456"); !ok || pid != 123 || start != 456 {
+		t.Fatalf("ParseEpoch = %d, %d, %v", pid, start, ok)
+	}
+	for _, epoch := range []string{"", "123", "123.", ".456", "0.456", "-1.456", "a.456", "123.b"} {
+		if _, _, ok := ParseEpoch(epoch); ok {
+			t.Errorf("%q parsed", epoch)
+		}
+	}
+}

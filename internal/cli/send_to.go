@@ -134,6 +134,11 @@ func addendumRefusal(dir string, self registry.Session, epoch string, root inbox
 		return failf("the session run your %s %s was written for has ended, so no report on it is coming; send a new task with: %s", inbox.KindOf(root), root.ID, next)
 	case item.Stage == inbox.StageFailed:
 		return failf("your %s %s was not delivered to %s; send the task again, with the addition, as: %s", inbox.KindOf(root), root.ID, target.Name, next)
+	case inbox.CarriesGrant(root) && (item.Stage == inbox.StageUndelivered || item.Stage == inbox.StageHeld):
+		// A task carrying a grant waits for its reader to be idle, and an
+		// addendum does not: it would be read first, and worked on without
+		// the grant (docs/grants.md#delivery).
+		return failf("your %s %s carries a grant and waits for %s to be idle, so an addition would reach it first; change the task itself with: rewake edit %s \"...\"", inbox.KindOf(root), root.ID, target.Name, shortRef(root.ID))
 	}
 	return nil
 }

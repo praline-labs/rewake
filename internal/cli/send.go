@@ -157,6 +157,9 @@ func handleSend(ctx *Context, call Call) error {
 		}
 		defer release()
 	}
+	if err := registerGrant(dir, self, epoch, message); err != nil {
+		return err
+	}
 	if err := writeSent(dir, self, epoch, message, session); err != nil {
 		return err
 	}

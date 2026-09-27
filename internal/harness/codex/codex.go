@@ -254,6 +254,7 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 	args = harness.AddFlags(args, "--remote", "unix://"+socket)
 	server := newServer(socket, serverArgs, append(append([]string{}, env...), "CODEX_INTERNAL_APP_SERVER_REMOTE_CONTROL_DISABLED=1"), cwd)
 	server.gitWrite = request.Role.GitWrite
+	server.legacyLandlock = legacyLandlock(args, home)
 	server.mailbox, server.name, server.stateRoot = request.RoomDir, request.Name, request.Dir
 	server.controlDir = request.ControlDir
 	// The owned server is started with the same program as the terminal: a

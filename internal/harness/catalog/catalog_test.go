@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -35,6 +36,25 @@ func TestEveryHarnessNamesItsSingleUseFlags(t *testing.T) {
 						t.Fatalf("%q is listed twice; one spelling belongs to one parameter", spelling)
 					}
 					seen[spelling] = true
+				}
+			}
+		})
+	}
+}
+
+// A registered harness has to name where it keeps its own configuration. An
+// empty list is the cheapest way to satisfy the method, and it would let main
+// grant a worker the directory that decides what that harness runs.
+func TestEveryHarnessNamesItsProtectedDirs(t *testing.T) {
+	for _, h := range harness.All() {
+		t.Run(h.ID(), func(t *testing.T) {
+			dirs := h.ProtectedDirs()
+			if len(dirs) == 0 {
+				t.Fatal("no protected directories: a grant could reach this harness's own configuration")
+			}
+			for _, dir := range dirs {
+				if !filepath.IsAbs(dir) {
+					t.Fatalf("%q is not absolute: the hard tier drops it", dir)
 				}
 			}
 		})

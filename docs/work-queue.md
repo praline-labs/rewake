@@ -135,7 +135,31 @@ session is refused with exit 1. Settled with the owner the same day, after resea
   grant removes prompts for file tools and is not a boundary for an approved shell command.
 - An owner file of extra rules for the tiers comes later, when a case needs it.
 
+Paused by the owner on September 27, 2026 for grants that a worker cannot forge
+([grants.md](grants.md#who-can-grant)). The stage's work so far keeps a branch of its
+own; its hook reads the grant journal, a file a worker can write, and is to ask the
+worker's own wrapper instead, the way a Codex worker's journal has lived in its
+wrapper's memory since then.
+
 ## Also queued, not scheduled
+
+**A grant confirmed for a Codex main.** Since September 27, 2026 a Codex main cannot
+grant: its sandbox refuses `connect()` on the unix socket its `rewake send` registers a
+grant through ([grants.md](grants.md#who-can-grant)). The owner's idea for later: main's
+wrapper already sees, in its own app-server's stream, every command its model runs
+(`commandExecution` items); a `rewake send` seen there with the grant's arguments may be
+the confirmation, without a socket. To research before building.
+
+**A grant journal that follows the thread.** A cold resume of a Codex conversation
+restores the roots it last saved, a grant included, while rewake's journal belongs to
+the run that granted it ([grants.md](grants.md#how-long-a-grant-lives)). Keyed by the
+thread id, the resumed run would find the entry and take the grant back. Recorded
+September 27, 2026.
+
+**Does Codex resolve a root again on each command?** If it does, a granted directory
+whose parent the worker can write can be swapped for a link after delivery; rewake
+refuses the cases it can see ([grants.md](grants.md#what-a-grant-does-not-stop)). A
+probe on the real sandbox settles which. Recorded September 27, 2026.
 
 **An orchestrator starts a worker in the background.** The owner's idea for later,
 recorded September 23, 2026, after honest delivery status for Claude Code landed:

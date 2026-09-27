@@ -6,7 +6,10 @@ text, task/question kind or recipient role. This supersedes automatic launch and
 per-task grants. Existing permissions configured independently by the owner remain
 unchanged; nothing is revoked or narrowed at launch.
 
-A verified current main can send:
+A verified current main whose wrapper registers the grant can send it; since
+September 27, 2026 that leaves a Codex main out, whose sandbox cannot reach its wrapper,
+and `--grant-git` from one — accepted before — is refused with exit 1
+([grants.md](grants.md#who-can-grant)):
 
 ```text
 rewake send writer-codex --grant-git "Commit the reviewed change"
@@ -51,3 +54,13 @@ promise of retroactive permission for a running tool call. Later native owner in
 replace roots again. The thread's own metadata is not journaled and not taken back:
 rewake revokes only what `--grant-dir` added, including the metadata of a granted
 checkout ([grants.md](grants.md#taking-a-grant-back)).
+
+The metadata of a worktree includes its repository's common directory — hooks and
+configuration that every checkout of the repository runs, main's included, outside any
+sandbox. For the worker's own checkout that is what `--grant-git` has always opened,
+and a hook the worker writes there runs next in whichever checkout commits. Beside
+`--grant-dir`, the metadata of a granted worktree of another repository than the
+worker's own is refused, and the task with it
+([grants.md](grants.md#what-a-grant-does-not-stop)). A task carrying `--grant-git` is
+confirmed with main's wrapper at delivery like a directory grant, and fails when it is
+not.

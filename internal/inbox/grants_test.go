@@ -85,12 +85,14 @@ func TestGrantedTaskGoesAloneAndItsWaitHoldsNothingBack(t *testing.T) {
 	}
 }
 
-// A grant that no longer passes at delivery fails its task before anything is
-// reserved, and its sender is told why.
-func TestGrantThatNoLongerPassesIsNotDelivered(t *testing.T) {
+// A grant that does not pass at delivery — a directory changed, or main's
+// wrapper did not confirm it — fails its task before anything is reserved, and
+// its sender is told why.
+func TestGrantThatDoesNotPassIsNotDelivered(t *testing.T) {
 	for name, check := range map[string]func(Message) error{
-		"changed":  func(Message) error { return errors.New("/work/lib now leads to /etc: a link changed") },
-		"no check": nil,
+		"changed":       func(Message) error { return errors.New("/work/lib now leads to /etc: a link changed") },
+		"not confirmed": func(Message) error { return errors.New("main did not confirm the grant") },
+		"no check":      nil,
 	} {
 		t.Run(name, func(t *testing.T) {
 			dir := stateDir(t)
@@ -103,7 +105,7 @@ func TestGrantThatNoLongerPassesIsNotDelivered(t *testing.T) {
 			}
 			s.drain(context.Background())
 			status, ok := ReadStatus(dir, "api", members[0].ID)
-			if !ok || status.State != Failed || !strings.Contains(status.Detail, "no longer passes") {
+			if !ok || status.State != Failed || !strings.Contains(status.Detail, "does not pass") {
 				t.Fatalf("status = %+v", status)
 			}
 			told, err := list(dir, "web")
@@ -114,13 +116,38 @@ func TestGrantThatNoLongerPassesIsNotDelivered(t *testing.T) {
 	}
 }
 
+// A sender's wrapper that is there but did not answer yet leaves the task
+// waiting, and a later pass that hears from it delivers the task.
+func TestGrantNotConfirmedYetWaits(t *testing.T) {
+	dir := stateDir(t)
+	members := grantPending(t, dir, true)
+	s := batchServer(dir)
+	s.Deliver = func(context.Context, Message) Result { return Result{State: Delivered} }
+	answered := false
+	s.CheckGrant = func(Message) error {
+		if !answered {
+			return fmt.Errorf("%w: the wrapper of web did not confirm the grant yet", ErrNotYet)
+		}
+		return nil
+	}
+	s.drain(context.Background())
+	if status, ok := ReadStatus(dir, "api", members[0].ID); !ok || status.State != Pending || !strings.Contains(status.Detail, "did not confirm the grant yet") {
+		t.Fatalf("status = %+v", status)
+	}
+	answered, s.attempts = true, map[string]time.Time{}
+	s.drain(context.Background())
+	if status, ok := ReadStatus(dir, "api", members[0].ID); !ok || status.State != Delivered {
+		t.Fatalf("status after the answer = %+v", status)
+	}
+}
+
 // A task that waited out its life with a grant fails without asking the
 // harness whether it is idle.
 func TestExpiredGrantFailsWithoutAReservation(t *testing.T) {
 	dir := stateDir(t)
 	m := message("old task")
 	m.Kind, m.FromEpoch, m.ToEpoch, m.GrantGit = Task, "sender-epoch", "receiver-epoch", true
-	m.CreatedAt = time.Now().Add(-2 * defaultTTL)
+	m.CreatedAt = time.Now().Add(-2 * DefaultTTL)
 	if err := Put(dir, m); err != nil {
 		t.Fatal(err)
 	}

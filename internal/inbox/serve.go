@@ -19,9 +19,9 @@ const (
 	// collectionInterval is fixed from the first wake, never extended by
 	// arrivals. Mail that may wait for company waits longer (window.go).
 	collectionInterval = 150 * time.Millisecond
-	// defaultTTL is how long a message may stay undelivered before it is called
+	// DefaultTTL is how long a message may stay undelivered before it is called
 	// failed. A message older than this describes a situation that has passed.
-	defaultTTL = 30 * time.Minute
+	DefaultTTL = 30 * time.Minute
 	// keepFinished is how long a delivered or refused message and its status are
 	// kept. Long enough for a sender that came back late to read the answer,
 	// short enough that a machine running for weeks does not collect a mailbox
@@ -314,7 +314,7 @@ func (s *Server) sweepForeign() {
 func (s *Server) expired(message Message) bool {
 	ttl := s.TTL
 	if ttl == 0 {
-		ttl = defaultTTL
+		ttl = DefaultTTL
 	}
 	return time.Since(message.CreatedAt) > ttl
 }

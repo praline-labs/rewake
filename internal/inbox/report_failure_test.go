@@ -51,7 +51,7 @@ func TestReportFailureAdmissionAndShutdown(t *testing.T) {
 			s, m, calls := reportFailureFixture(t)
 			switch mode {
 			case "expired", "expired after pending", "expired shutdown":
-				m.CreatedAt = time.Now().Add(-2 * defaultTTL)
+				m.CreatedAt = time.Now().Add(-2 * DefaultTTL)
 			case "foreign", "foreign shutdown":
 				m.ToEpoch = "old.1"
 			case "task":
@@ -169,7 +169,7 @@ func TestReportFailureRecovery(t *testing.T) {
 func TestFailedReportReservationAndRetention(t *testing.T) {
 	s, m, calls := reportFailureFixture(t)
 	m.InReplyTo = []string{"q1", "q2"}
-	m.CreatedAt = time.Now().Add(-2 * defaultTTL)
+	m.CreatedAt = time.Now().Add(-2 * DefaultTTL)
 	if err := Put(s.Dir, m); err != nil {
 		t.Fatal(err)
 	}

@@ -2,7 +2,9 @@ package cli
 
 import (
 	"fmt"
+	"slices"
 
+	"github.com/iiiokojiadbi/rewake/internal/grant"
 	"github.com/iiiokojiadbi/rewake/internal/inbox"
 	"github.com/iiiokojiadbi/rewake/internal/registry"
 	"github.com/iiiokojiadbi/rewake/internal/role"
@@ -13,6 +15,9 @@ import (
 type owedView struct {
 	messageView
 	Kept bool `json:"kept"`
+	// GrantEnded names each directory of the grant rewake has taken back or
+	// found dropped, with the outcome its journal gives.
+	GrantEnded map[string]string `json:"grantEnded,omitempty"`
 }
 
 type owedModel struct {
@@ -53,8 +58,9 @@ func showOwed(ctx *Context, call Call, dir string, session registry.Session, epo
 		messages = append(messages, message.Message)
 	}
 	model := owedModel{Session: session.Name, Messages: make([]owedView, 0, len(owed))}
+	journal := grant.Load(dir, session.Name, epoch)
 	for index, view := range viewedMessages(dir, messages) {
-		model.Messages = append(model.Messages, owedView{messageView: view, Kept: owed[index].Kept})
+		model.Messages = append(model.Messages, owedView{messageView: view, Kept: owed[index].Kept, GrantEnded: grantEnded(view.Message, journal)})
 	}
 	listed := make(map[string]bool, len(owed))
 	for _, message := range owed {
@@ -103,7 +109,7 @@ func owedLines(messages []owedView) []string {
 			heading = fmt.Sprintf("+ addendum from %s · %s", message.From, message.CreatedAt.Local().Format("15:04:05"))
 		}
 		lines = append(lines, heading)
-		lines = append(lines, grantLines(message.Message)...)
+		lines = append(lines, owedGrantLines(message.owedView)...)
 		lines = append(lines, message.Text)
 		if message.ThreadChanged {
 			lines = append(lines, inbox.ThreadChangedWarning)
@@ -147,4 +153,35 @@ func nestAddenda(messages []owedView) []nestedOwed {
 		}
 	}
 	return ordered
+}
+
+// grantEnded is what the journal says ended of a message's grant.
+func grantEnded(message inbox.Message, journal []grant.Entry) map[string]string {
+	var ended map[string]string
+	for _, entry := range journal {
+		if entry.Message == message.ID && !entry.Live() && slices.Contains(message.GrantDirs, entry.Path) {
+			if ended == nil {
+				ended = map[string]string{}
+			}
+			ended[entry.Path] = entry.Outcome
+		}
+	}
+	return ended
+}
+
+// owedGrantLines repeat a task's grant for a session re-reading its work, and
+// say what may have ended since it was read. A turn typed in the terminal
+// replaces the roots, and rewake learns of it only when it comes to take the
+// grant back (docs/grants.md#how-long-a-grant-lives), so a grant it still
+// counts is shown with that caveat rather than as a promise.
+func owedGrantLines(message owedView) []string {
+	lines := make([]string, 0, len(message.GrantDirs))
+	for _, dir := range message.GrantDirs {
+		if outcome, ended := message.GrantEnded[dir]; ended {
+			lines = append(lines, "grant: "+outcome+" "+dir+" — no longer writable; ask main to send it again")
+			continue
+		}
+		lines = append(lines, "grant: write "+dir+" — unless a turn typed in this session's terminal has dropped it since")
+	}
+	return lines
 }

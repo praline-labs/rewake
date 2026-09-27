@@ -23,9 +23,12 @@ import (
 //   - The first delivery after the report sends the roots without it, and
 //     `rewake list --json` shows it taken back.
 //
-// What it does not prove: that the real server writes where the roots say.
-// That was seen live on 0.155.1 and 0.157.1
-// (docs/research-codex.md#runtime-workspace-roots); here the fixture keeps
+// What it does not prove: that a command on the real server can write where
+// the roots say. What was seen live on 0.155.1 and 0.157.1 is the server's
+// policy — the snapshot names the added root, and the persisted permission
+// profile carries it — while the write itself was never shown, the container
+// keeping restricted execution from running
+// (docs/research-codex.md#runtime-workspace-roots). Here the fixture keeps
 // the roots the way the server was seen to, and the case reads what rewake
 // sent it.
 func TestCodexGrantDir(t *testing.T) {
@@ -59,16 +62,16 @@ var grantDirObservations = []string{obsGrantWaitsIdle, obsGrantReachRoots, obsGr
 func playGrantDir(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 	t.Helper()
 	col := codexColumn.harness
-	// Outside the worker's workspace and not directly in HOME, so the grant
-	// is neither already writable nor of the broad tier.
-	granted := filepath.Join(filepath.Dir(iso.Home), "granted", "lib")
-	if err := os.MkdirAll(granted, 0o700); err != nil {
-		return unjudgedAll(grantDirObservations, "cannot create the granted directory: %v", err)
+	granted, grantErr := grantableDir(t)
+	if grantErr != nil {
+		return unjudgedAll(grantDirObservations, "cannot create the granted directory: %v", grantErr)
 	}
 	worker := startHarnessSession(t, c, iso, col, "worker", "--write", shimInboxJSON+"=1", shimHoldTurn+"=1", staysUp(iso, "worker"))
 	defer stopSession(t, c, worker)
 	asks := newRequests(iso, "lead")
-	lead := startHarnessSession(t, c, iso, col, "lead", "--main", shimInboxJSON+"=1", asks.env())
+	// Main runs Claude Code: a Codex main cannot grant, its sandbox does not
+	// reach its wrapper (docs/grants.md#who-can-grant).
+	lead := startHarnessSession(t, c, iso, claudeColumn.harness, "lead", "--main", asks.env())
 	defer stopSession(t, c, lead)
 	sg := steering{c: c, asks: asks, lead: lead}
 
@@ -92,9 +95,7 @@ func playGrantDir(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 		return unjudgedAll(grantDirObservations, "the grant was not sent: exit %d, %q", code, sent)
 	}
 	task := view.ID
-	if !waitFor(c, 30*time.Second, func() bool {
-		return slices.Contains(reportKinds(sg.about(worker, task)), "finished")
-	}) {
+	if !waitFor(c, 30*time.Second, func() bool { return reportedOn(c, asks, task) }) {
 		events, _ = worker.turnEvents()
 		return unjudgedAll(grantDirObservations, "the worker did not finish the granted task %s, its status %q: %v", task, statusState(iso, worker, task), events)
 	}
@@ -177,4 +178,58 @@ func journaledOutcome(sg steering, worker *codexSession, directory string) strin
 		}
 	}
 	return "not journaled"
+}
+
+// grantableDir makes a directory a grant may name: outside the worker's
+// workspace, not directly in HOME, and not in a temporary directory, which
+// the hard tier refuses (docs/grants.md#the-hard-tier) and where every case's
+// own directories lie. So it goes in the user's cache, beside the harness
+// versions the suite keeps there, and is removed with the case.
+func grantableDir(t *testing.T) (string, error) {
+	t.Helper()
+	cache, err := os.UserCacheDir()
+	if err != nil {
+		return "", err
+	}
+	base := filepath.Join(cache, "rewake", "workflow-grants")
+	if err := os.MkdirAll(base, 0o700); err != nil {
+		return "", err
+	}
+	dir, err := os.MkdirTemp(base, "case-")
+	if err != nil {
+		return "", err
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+	granted := filepath.Join(dir, "lib")
+	if err := os.Mkdir(granted, 0o700); err != nil {
+		return "", err
+	}
+	// Resolved, as rewake resolves it: the case compares the path it sent
+	// with the roots the fixture received.
+	return filepath.EvalSymlinks(granted)
+}
+
+// reportedOn says whether main no longer waits on a task: its report came.
+// Asked of main's own listing, since a Claude Code main keeps no record of
+// what it read that the case could look at.
+func reportedOn(c *Case, asks *requests, id string) bool {
+	code, machine, ok := asks.ask(c, "inbox", "--awaited", "--json")
+	var awaited struct {
+		Recipients []struct {
+			Messages []struct {
+				ID string `json:"id"`
+			} `json:"messages"`
+		} `json:"recipients"`
+	}
+	if !ok || code != 0 || json.Unmarshal([]byte(machine), &awaited) != nil {
+		return false
+	}
+	for _, recipient := range awaited.Recipients {
+		for _, message := range recipient.Messages {
+			if message.ID == id {
+				return false
+			}
+		}
+	}
+	return true
 }

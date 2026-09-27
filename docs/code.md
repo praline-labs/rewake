@@ -12,10 +12,11 @@ internal/cli/                    command table, parsing, overview, help, failure
 internal/state/                  directory: checks, paths, atomic writes
 internal/buildtime/              durations a build may shorten through -ldflags, for the suite
 internal/registry/               session record, name publishing, liveness, listing
-internal/proc/                   /proc: identity, liveness and job-control state
+internal/proc/                   /proc: identity, liveness, job-control state, lineage and namespaces
 internal/boottime/               the boot clock, comparable across processes and never set back
 internal/inbox/                  message, status, sender-side write, servicing loop
 internal/grant/                  which directories a task may grant, and the journal of what was granted
+internal/grantauth/              main's wrapper holding the grants its commands registered, and confirming them
 internal/control/                a main's control request to a run and its answer, as files
 internal/role/                   the role catalogue: flag, briefing line, reporting duty
 internal/brief/                  text injected into an agent, independent of transport
@@ -77,7 +78,10 @@ A harness that takes a directory into a running session for one task implements
 other harness is refused with exit 1 ([grants.md](grants.md)). A harness whose launch
 takes arguments rewake has a way of its own for implements `LaunchRefuser` —
 `RefuseLaunch(args)`, asked before anything else of the launch; Codex refuses
-`--add-dir` and a `writable_roots` override there.
+`--add-dir` and a `writable_roots` override there. A harness whose main can grant
+implements `GrantIssuer` — `ReachesWrapper()`, whether its commands reach their wrapper's
+socket; only Claude Code does, and a grant from a main of any other harness is refused
+with exit 1 ([grants.md](grants.md#who-can-grant)).
 
 A harness that gives rewake's worktree to a launch implements `WorktreeHarness` —
 `WorktreeFlag()`, the spelling the launch command takes for itself;

@@ -20,6 +20,15 @@ type DirGrantHarness interface {
 	SupportsDirGrant() bool
 }
 
+// GrantIssuer is a harness whose session, as main, can register a grant with
+// its wrapper: the commands it runs reach the wrapper's socket. A grant is
+// confirmed only by the wrapper of the main that sent it
+// (docs/grants.md#who-can-grant), so a main whose commands cannot reach it
+// cannot grant at all.
+type GrantIssuer interface {
+	ReachesWrapper() bool
+}
+
 // LaunchRefuser refuses launch arguments rewake has a way of its own for, and
 // names that way. The refusal is a call to change: exit 2.
 type LaunchRefuser interface {

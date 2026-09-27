@@ -88,6 +88,11 @@ func handleEdit(ctx *Context, call Call) error {
 	if self.Role == role.Main.ID {
 		replacement.GrantGit, replacement.GrantDirs, replacement.GrantBroad = old.GrantGit, old.GrantDirs, old.GrantBroad
 	}
+	// Registered under the replacement's own id: the original's registration
+	// confirms the original only.
+	if err := registerGrant(dir, self, epoch, replacement); err != nil {
+		return err
+	}
 	if kind.kind == inbox.Question {
 		release, err := inbox.ReserveAnswer(dir, self.Name, replacement.ID)
 		if err != nil {

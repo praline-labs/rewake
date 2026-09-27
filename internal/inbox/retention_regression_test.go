@@ -88,7 +88,7 @@ func TestReleasedAnswerRetriesCannotRenewTheirDeadline(t *testing.T) {
 	answer := message("old result")
 	answer.Kind = Finished
 	answer.InReplyTo = []string{"q"}
-	answer.CreatedAt = time.Now().Add(-2 * defaultTTL)
+	answer.CreatedAt = time.Now().Add(-2 * DefaultTTL)
 	if err := Put(dir, answer); err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +107,7 @@ func TestReleasedAnswerRetriesCannotRenewTheirDeadline(t *testing.T) {
 	if err != nil || string(raw) != string(again) {
 		t.Fatalf("retry renewed deadline: %s %s %v", raw, again, err)
 	}
-	expired, _ := json.Marshal(answerLifetime{ReleasedAt: time.Now().Add(-2 * defaultTTL)})
+	expired, _ := json.Marshal(answerLifetime{ReleasedAt: time.Now().Add(-2 * DefaultTTL)})
 	if err := os.WriteFile(path, expired, 0o600); err != nil {
 		t.Fatal(err)
 	}

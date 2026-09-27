@@ -16,7 +16,7 @@ func TestAReleasedOldAnswerIsStillAnnounced(t *testing.T) {
 	report := message("must remain recoverable")
 	report.Kind = Finished
 	report.InReplyTo = []string{"q1"}
-	report.CreatedAt = time.Now().Add(-2 * defaultTTL)
+	report.CreatedAt = time.Now().Add(-2 * DefaultTTL)
 	if err := Put(dir, report); err != nil {
 		t.Fatal(err)
 	}

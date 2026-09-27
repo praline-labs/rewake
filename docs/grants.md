@@ -5,7 +5,8 @@ its workspace for one task. It is `--grant-git`'s sibling ([git-grants.md](git-g
 main decides per task, rewake carries the decision with the message, and the harness
 adapter applies it when the task is delivered. Stage 1 covers the shared part and Codex;
 Claude Code takes the grant in stage 2, and until then a grant to a Claude Code session
-is refused.
+is refused. Main's wrapper confirms every grant at delivery, so a worker inside the
+Codex sandbox cannot grant itself one ([who can grant](#who-can-grant)).
 
 ## What the owner decided
 
@@ -25,6 +26,20 @@ On September 27, 2026 the owner decided:
 - `rewake codex --add-dir` and a `writable_roots` override are refused at launch, with a
   pointer to `--grant-dir`.
 
+Later on September 27, 2026, after a review found that a worker could write a grant in
+main's name into the shared state directory, the owner decided:
+
+- a grant is one the worker cannot forge: main's wrapper registers it and confirms it
+  at delivery, and nothing on disk counts as proof ([who can grant](#who-can-grant));
+- a Codex main cannot grant for now, `--grant-dir` and `--grant-git` both, since its
+  sandbox cannot reach its wrapper; how it could is queued
+  ([work-queue.md](work-queue.md#also-queued-not-scheduled));
+- no subreaper in the wrapper: the namespace check holds a sandboxed Codex worker, and a
+  session run with Codex's legacy Landlock backend, which drops those namespaces, takes
+  no grant at all;
+- the model is written down as it is: it holds against a worker in the Codex sandbox,
+  and a worker with no sandbox has no boundary to hold.
+
 ## Sending
 
 ```text
@@ -34,10 +49,16 @@ rewake send writer-codex --grant-dir ../shared-lib --grant-git "Commit the bump 
 ```
 
 Both flags repeat, at most 8 directories together. A grant goes only on a task or a
-question, sent by a verified current main; a heads-up, a report, an addendum (`--to`)
-and a sender that is not main are refused with exit 2. A recipient whose harness cannot
-take a directory into a running session is refused with exit 1 and told what to do
-instead.
+question, sent by a verified current main; a heads-up, a report, an addendum (`--to`),
+an empty value and a sender that is not main are refused with exit 2. A recipient whose
+harness cannot take a directory into a running session is refused with exit 1 and told
+what to do instead. So is a send whose own wrapper does not register the grant — a
+Codex main, a command not run below main's wrapper — and nothing is written then.
+
+A task carrying a grant waits at most 30 minutes, its time to live, for the worker to be
+idle; past that it expires and main is told. While it waits, `--to` refuses to add to
+it — the addition would be read first and worked on without the grant — and points to
+`rewake edit <id>`, which replaces the task and registers its grant again.
 
 Each directory is resolved the way the harness will see it: a relative path from the
 sender's directory, cleaned, links resolved. It must exist and be a directory, or the
@@ -61,6 +82,9 @@ whatever flag names it:
   `~/.local/share/claude` for Claude Code;
 - `~/.ssh`, `~/.gnupg`, `~/.aws`, `~/.kube`, `~/.docker`, `~/.password-store`;
 - every directory on the sender's `PATH`;
+- the shared temporary directories, `/tmp` and `$TMPDIR`: the Codex sandbox lets its
+  commands write both by default, so the worker could swap a directory granted there for
+  a link ([below](#what-a-grant-does-not-stop));
 - `~/.config/git`, `~/.config/systemd`, `~/.config/autostart`, `~/.config/environment.d`;
 - the system directories: `/etc`, `/usr`, `/bin`, `/sbin`, `/lib*`, `/boot`, `/dev`,
   `/proc`, `/sys`, `/run`, `/var`, `/opt`, `/root`, `/srv`, `/snap`; and `/` itself, which
@@ -71,6 +95,12 @@ truly needs one of these gets it from the owner — for Claude Code, `--add-dir`
 launch or `/add-dir` in its terminal; for Codex, a launch in that directory — or main
 does that part of the work itself.
 
+"Contains" also decides the Windows drives under WSL. WSL appends the Windows `PATH` to
+the Linux one, so directories such as `/mnt/c/Windows/System32` and the user's
+`AppData/Local/Microsoft/WindowsApps` are on it: `/mnt/c` and the Windows user's home
+contain them and fall in the hard tier, not the broad one. A directory beside those —
+a project under `/mnt/c/Users/<name>/src`, say — is granted as any other.
+
 ### The broad tier
 
 Matched exactly, and granted only with `--grant-dir-broad <the same path>`:
@@ -79,28 +109,103 @@ Matched exactly, and granted only with `--grant-dir-broad <the same path>`:
 - each mount point under `/mnt` and `/media`, read from `/proc/self/mountinfo`;
 - each directory directly in `$HOME`;
 - each `~/.config/<app>` with a `credentials` file directly inside. Writing there does
-  not raise an agent's own powers, so the owner chose to confirm it rather than refuse.
+  not raise an agent's own powers, so the owner chose to confirm it rather than refuse;
+- a directory where a live rewake session works, or one that holds it — main's own
+  checkout among them. Its `.claude/`, `.mcp.json` and `.rewake.toml` tell that session's
+  harness and rewake what to run, so a grant there reaches past the task into the other
+  session. Unlike the rest of the tier this one matches what contains the directory
+  too. Read from the registry at send and again at delivery; a directory confirmed when
+  sent is not refused at delivery because its session has ended since.
+
+The same files in a directory no session works in are not recognized: a grant of a
+checkout nobody runs in opens its `.claude/` and `.mcp.json` for writing, and the next
+session started there runs what the worker put in them. Grant the directory the task
+needs, not the checkout above it, when the checkout is one a session will be started in.
 
 A directory of the broad tier under `--grant-dir` is refused with exit 2, the refusal
 naming the `--grant-dir-broad` call; `--grant-dir-broad` on a directory that is not broad
 is refused the same way, so a confirmation always names what it confirms. The hard tier
 wins where both match.
 
+## Who can grant
+
+Everything a message carries is written by whoever wrote the file, and the state
+directory — registry, mailboxes, journals — is writable by a Codex worker in
+`workspace-write`, since it lies in `/tmp`. So nothing on disk says who sent a grant.
+What does is main's wrapper, a process outside every sandbox, asked over an abstract
+unix socket named from the room, main's name and its run (`@rewake/grant/<hash>`, no
+file to replace or leave behind):
+
+1. **At send.** `rewake send` or `rewake edit` with a grant registers it with its own
+   session's wrapper before the letter is written. The wrapper takes it only from a
+   process below itself: the caller's uid and pid from `SO_PEERCRED`, then its chain of
+   parents up to the wrapper, each no younger than its child, so a pid taken again on the
+   way ends the walk. A worker's process runs below its own wrapper, never main's, and
+   one that left its tree through `setsid` and a double fork runs below neither. The
+   wrapper holds the grant in memory — message, recipient, the recipient's run,
+   directories, broad ones, Git — for the task's time to live and five minutes more, at
+   most 256 at once; past that it refuses a new one rather than forget an old one.
+2. **At delivery.** The recipient's wrapper asks the address the letter's sender and
+   run lead to, and takes the answer only from the process that run names: the
+   listener's pid from `SO_PEERCRED` must be that run's pid, alive with that start time
+   before and after the answer, and in the same mount, user and PID namespaces as the
+   asking wrapper. The grant confirmed must be the one the letter carries, for this
+   recipient and this run. A letter main never registered, one naming a run it is not,
+   one answered from another process fail, and main is told.
+3. **When main cannot answer.** While main's wrapper is alive and does not answer, the
+   task stays pending and is asked again until it expires. Once that wrapper has ended,
+   nobody can confirm the grant, now or later: the task fails, naming the main that sent
+   it, and has to be sent again from the current one.
+
+What this holds against, and what it does not:
+
+- **A worker inside the Codex sandbox.** Codex runs a command in a mount, user and PID
+  namespace of its own, in `workspace-write` and `read-only` alike, and `setsid`, a
+  double fork or `nohup` do not change them
+  ([research-codex.md](research-codex.md#the-sandboxs-namespaces)). Its process is below
+  no wrapper, so it registers nothing; a listener it starts in a run it names itself is
+  in other namespaces, so nothing it confirms counts. This is what the scheme is for.
+- **Codex's legacy Landlock backend** runs sandboxed commands in the app-server's own
+  namespaces. It is off by default and never chosen as a fallback, but a session whose
+  launch arguments or `config.toml` mention `use_legacy_landlock` takes no grant.
+- **A worker with no sandbox** — Claude Code, whose approved shell commands run as the
+  user — has no boundary at all. It can start a listener in the wrappers' own namespaces,
+  write a registry record naming that listener's run as a main, and send a letter
+  pointing at it; nothing in rewake tells that listener from a wrapper. It is not a new
+  hole: such a worker writes wherever the user can anyway, and a grant on Claude Code
+  removes prompts rather than draws a line.
+- **A Codex main** cannot grant: its own sandbox refuses `connect()` on a unix socket
+  ([research-permissions.md](research-permissions.md)), so its `rewake send` never
+  reaches its wrapper. `--grant-dir` and `--grant-git` from a Codex main are refused with
+  exit 1; before this change `--grant-git` from one was accepted
+  ([git-grants.md](git-grants.md)).
+- **A Claude Code main** registers through its shell, which shares the wrapper's network
+  namespace today. A Claude Code sandbox with network isolation turned on would cut the
+  shell off from the abstract socket as well, and the send would fail with exit 1 naming
+  the wrapper it could not reach; not observed, since the sandbox is off here.
+
 ## Delivery
 
 Before a grant task becomes readable, the wrapper serving the recipient checks every
 directory again with the recipient's own view (its `HOME`, its `PATH`, the harness
-directories) and requires the path to resolve to itself: a link swapped in since the send
-fails it. A task whose grant no longer passes is not delivered without it: it fails, and
-its sender gets a note with the reason. An expired grant task fails the same way, without
-asking the harness anything.
+directories, the sessions registered now) and requires the path to resolve to itself: a
+link swapped in since the send fails it. Then it asks the wrapper of the main that sent
+the task to confirm the grant ([who can grant](#who-can-grant)). A task whose grant does
+not pass either check is not delivered without it: it fails, and its sender gets a note
+with the reason. An expired grant task fails the same way, without asking the harness
+anything.
 
 A message carrying a grant — a directory or `--grant-git` — goes on a notice of its own.
 The Codex adapter reads the thread before the task becomes readable, and while the thread
 is active the task stays pending (`inbox.ErrNotYet`), retried every two seconds for up to
 its time to live. Mail after it goes on without it and may reach the reader first. A
-read that fails, or a thread with no single local environment, fails a directory grant;
-for `--grant-git` alone it delivers with a diagnostic, as before.
+read that fails keeps a directory grant pending the same way; a thread with no single
+local environment fails it. For `--grant-git` alone either delivers with a diagnostic,
+as before.
+
+A session started with Codex's legacy Landlock backend — `use_legacy_landlock` mentioned
+in its launch arguments or its `config.toml` — takes no grant: every task carrying one
+fails, naming the setting ([who can grant](#who-can-grant)).
 
 On an idle thread the adapter sends `turn/start` with `runtimeWorkspaceRoots`: the
 snapshot as read, less what rewake granted for tasks settled since, plus each granted
@@ -119,12 +224,25 @@ for the turns after it — the same as `--grant-git` on an active thread before 
 
 ## Taking a grant back
 
-What rewake adds it journals, per session run, under the room's `grants/` directory: the
-path, the task's id, the time and the outcome — `granted`, `revoked` when rewake took it
-out, `dropped` when rewake found it gone already. A directory some root covered before the
-grant is not journaled: rewake did not give it, so it does not take it back. Metadata of a
-granted checkout is journaled with `for` naming that checkout. `rewake list --json` shows
-the journal as `grants` on each session.
+What rewake adds it journals per session run: the path, the task's id, the time and the
+outcome — `granted`, `revoked` when rewake took it out, `dropped` when rewake found it
+gone already. The journal the adapter revokes by is held in the recipient wrapper's
+memory; a copy under the room's `grants/` directory is what `rewake list --json` shows
+as `grants` on each session, and a worker that rewrites or removes that copy changes
+only what is shown. A directory some root covered before the grant is not journaled:
+rewake did not give it, so it does not take it back. Metadata of a granted checkout is
+journaled with `for` naming that checkout.
+
+A live entry is never dropped: it is how rewake finds a grant to take back. At most 64
+directories are granted to one run at once, and a task that would pass that fails with
+the reason instead; ended entries beyond 64 go oldest first. A message granted once is
+refused a second time. The copy of a run that has ended is removed at the next save of
+any journal in the room.
+
+`rewake inbox --owed` repeats a task's grant with a caveat — `grant: write <dir> — unless
+a turn typed in this session's terminal has dropped it since` — because rewake learns of
+a drop only when it comes to take the grant back; once the journal says a directory was
+revoked or dropped, the line says so instead.
 
 A task is settled once its reader has read it and reported on it, or its sender took it
 back. At every delivery to the session after that, while the journal holds live entries of
@@ -145,6 +263,31 @@ and 0.157.1 ([research-codex.md](research-codex.md#runtime-workspace-roots)):
 
 A cold resume, on the other hand, restores the roots the conversation last saved, grant
 included; rewake's journal belongs to the run, so the resumed run does not take it back.
+Keying it by the thread instead is queued
+([work-queue.md](work-queue.md#also-queued-not-scheduled)).
+
+## What a grant does not stop
+
+- **A link swapped in after delivery.** The recheck at delivery requires each directory
+  to resolve to itself, but Codex may resolve a root again on each command, and a worker
+  that can write the directory's parent can put a link in its place:
+  `mv /tmp/x /tmp/x.old; ln -s ~/.ssh /tmp/x`. Rewake narrows it where it can see the
+  parent is writable: a directory in `/tmp` or `$TMPDIR` is in the hard tier, and one
+  inside a directory granted to the same run for another task is refused at delivery.
+  A parent the worker can write for some other reason — its own workspace is covered,
+  a directory the owner gave it is not known to rewake — is not caught. Whether Codex
+  resolves a root once or on every command is an open question, to be probed.
+- **What lies inside a granted directory.** A grant is for the whole tree: a `.claude/`,
+  `.mcp.json`, `.rewake.toml` or `.git/hooks` inside it is writable too, and whatever
+  reads them next runs what the worker wrote. Only a directory where a live session
+  works is recognized ([the broad tier](#the-broad-tier)).
+- **The shared metadata of a worktree.** `--grant-git` beside `--grant-dir` on a linked
+  worktree would add the repository's common `.git`, hooks and configuration included,
+  which every checkout of it runs — main's too, outside any sandbox. For a worktree of
+  another repository than the worker's own it is refused. For one of the worker's own
+  repository it is added as before: the worker could write that common `.git` from its
+  own checkout already, and the hooks it writes run in main's checkout just the same
+  ([git-grants.md](git-grants.md)).
 
 ## At launch
 

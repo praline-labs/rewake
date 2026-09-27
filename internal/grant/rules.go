@@ -5,9 +5,9 @@
 // equal, lie inside or contain: rewake's own state and binary, each harness's
 // configuration, login keys, what runs as the person — PATH, git and systemd
 // configuration — and the system directories. Nothing grants those. The broad
-// tier is matched exactly and needs confirming: a directory that holds far
-// more than one task's work, or a service's credentials, is granted only when
-// main names it again with --grant-dir-broad.
+// tier needs confirming: a directory that holds far more than one task's
+// work, a service's credentials, or where a live rewake session works, is
+// granted only when main names it again with --grant-dir-broad.
 package grant
 
 import (
@@ -18,6 +18,8 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/iiiokojiadbi/rewake/internal/registry"
 )
 
 // Rule is one protected directory and what it is.
@@ -39,6 +41,9 @@ type Rules struct {
 	// broad, and so is a directory directly in its .config holding a
 	// credentials file.
 	Home string
+	// Sessions are where live rewake sessions work: a directory that is or
+	// holds one is broad, since it holds that session's configuration.
+	Sessions []string
 }
 
 // Env is what the rules are built from.
@@ -52,7 +57,19 @@ type Env struct {
 	// Mounts are the mount points, of which those under /mnt and /media are
 	// broad.
 	Mounts []string
+	// Sessions are the working directories of live rewake sessions.
+	Sessions []string
+	// Temp are the shared temporary directories.
+	Temp []string
 }
+
+// TempRoots are the shared temporary directories: /tmp and $TMPDIR. A Codex
+// sandbox lets its commands write both by default, and the worker could put a
+// link in place of a directory there once it is granted; the harness resolves
+// a root again when it applies it (docs/grants.md#what-a-grant-does-not-stop).
+// A variable only so that a test, whose every directory lies in one, can set
+// them aside.
+var TempRoots = func() []string { return []string{"/tmp", os.TempDir()} }
 
 // CurrentEnv reads the environment of this process. harnessDirs come from
 // the harness catalog, which this package does not import.
@@ -63,6 +80,10 @@ func CurrentEnv(stateRoot string, harnessDirs []string) Env {
 		env.Executable = executable
 	}
 	env.Mounts = mountPoints("/proc/self/mountinfo")
+	if stateRoot != "" {
+		env.Sessions = registry.WorkDirs(stateRoot)
+	}
+	env.Temp = TempRoots()
 	return env
 }
 
@@ -97,6 +118,9 @@ func (env Env) Rules() Rules {
 	for _, dir := range filepath.SplitList(env.PATH) {
 		hard(dir, "a directory on PATH")
 	}
+	for _, dir := range env.Temp {
+		hard(dir, "a shared temporary directory, where a sandboxed worker can write and swap a granted directory for a link")
+	}
 	rules.Hard = append(rules.Hard, Rule{Path: "/", What: "the root of the filesystem", Exact: true})
 	libs, _ := filepath.Glob("/lib*")
 	for _, dir := range append(slices.Clone(systemDirs), append([]string{"/lib"}, libs...)...) {
@@ -109,6 +133,11 @@ func (env Env) Rules() Rules {
 	for _, mount := range env.Mounts {
 		if within(mount, "/mnt") || within(mount, "/media") {
 			rules.Broad = append(rules.Broad, Rule{Path: resolve(mount), What: "a mounted drive"})
+		}
+	}
+	for _, dir := range env.Sessions {
+		if filepath.IsAbs(dir) {
+			rules.Sessions = append(rules.Sessions, resolve(dir))
 		}
 	}
 	return rules
@@ -152,6 +181,13 @@ func Resolve(given, cwd string) (string, error) {
 // confirmed it with --grant-dir-broad; it is refused for a directory that is
 // not broad, so the confirmation always names what it confirms.
 func (rules Rules) Check(given, resolved string, broad bool) error {
+	return rules.check(given, resolved, broad, true)
+}
+
+// check is Check; strict refuses a confirmation of a directory that is not
+// broad. Only a call is strict: a directory broad when sent, for a session
+// that has ended since, is no reason to refuse the task at delivery.
+func (rules Rules) check(given, resolved string, broad, strict bool) error {
 	shown := given
 	if given != resolved {
 		shown = fmt.Sprintf("%s (%s)", given, resolved)
@@ -178,7 +214,7 @@ func (rules Rules) Check(given, resolved string, broad bool) error {
 	switch {
 	case isBroad && !broad:
 		return &Refusal{Code: 2, Message: fmt.Sprintf("%s is %s: a grant there reaches far more than one task needs. Grant the directory the task works in, or confirm this one with --grant-dir-broad %s", shown, what, given)}
-	case !isBroad && broad:
+	case !isBroad && broad && strict:
 		return &Refusal{Code: 2, Message: fmt.Sprintf("--grant-dir-broad confirms a broad directory, and %s is none; pass it with --grant-dir", shown)}
 	}
 	return nil
@@ -189,6 +225,13 @@ func (rules Rules) broad(resolved string) (string, bool) {
 	for _, rule := range rules.Broad {
 		if same(resolved, rule.Path) {
 			return rule.What, true
+		}
+	}
+	for _, session := range rules.Sessions {
+		if within(session, resolved) {
+			// Its .claude, .mcp.json and .rewake.toml tell a harness what to
+			// run: a grant here reaches past the task, into that session.
+			return "where a live rewake session works, or holds it, with that session's own configuration", true
 		}
 	}
 	if rules.Home == "" {
@@ -221,7 +264,7 @@ func (rules Rules) Recheck(path string, broad bool) error {
 	if info, err := os.Stat(path); err != nil || !info.IsDir() {
 		return &Refusal{Code: 1, Message: fmt.Sprintf("%s is no longer a directory", path)}
 	}
-	return rules.Check(path, path, broad)
+	return rules.check(path, path, broad, false)
 }
 
 // Outermost drops every directory that lies inside another of the list, or

@@ -1,8 +1,10 @@
 package inbox
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
@@ -31,10 +33,11 @@ func joins(group []Message, message Message) bool {
 	return !CarriesGrant(message) && (len(group) == 0 || !CarriesGrant(group[0]))
 }
 
-// checkGrants checks each granted directory again before the message becomes
-// readable, and refuses the message whose grant no longer passes: a task is
-// never handed over without the grant it was sent with. Its sender is told.
-// A grant expired is refused here too.
+// checkGrants checks each grant again before the message becomes readable —
+// its directories, and that the main it names did send it — and refuses the
+// message whose grant does not pass: a task is never handed over without the
+// grant it was sent with. Its sender is told. A grant expired is refused here
+// too.
 func (s *Server) checkGrants(pending []Message) []Message {
 	kept := make([]Message, 0, len(pending))
 	for _, message := range pending {
@@ -44,20 +47,27 @@ func (s *Server) checkGrants(pending []Message) []Message {
 			s.failGranted(message, Result{State: Failed, Detail: "expired before the session could take it"})
 			continue
 		}
-		if len(message.GrantDirs) == 0 {
+		if !CarriesGrant(message) {
 			kept = append(kept, message)
 			continue
 		}
-		detail := "this session cannot check a directory grant"
+		detail := "this session cannot check a grant"
 		if s.CheckGrant != nil {
 			err := s.CheckGrant(message)
 			if err == nil {
 				kept = append(kept, message)
 				continue
 			}
+			if errors.Is(err, ErrNotYet) {
+				// The sender's wrapper is there and did not answer: asked
+				// again on a later pass, until the message expires.
+				s.attempts[message.ID] = time.Now()
+				s.record(message.ID, Result{State: Pending, Detail: err.Error()})
+				continue
+			}
 			detail = err.Error()
 		}
-		s.failGranted(message, Result{State: Failed, Detail: "its directory grant no longer passes: " + detail})
+		s.failGranted(message, Result{State: Failed, Detail: "its grant does not pass: " + detail})
 	}
 	return kept
 }

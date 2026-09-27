@@ -25,31 +25,32 @@ func TestJournalIsPerRun(t *testing.T) {
 	}
 }
 
-func TestJournalDropsEndedEntriesFirst(t *testing.T) {
+// Past its bound a journal forgets the oldest ended entries, and never a live
+// one: nine grants of eight directories each once lost the first grant here,
+// and with it the way to take it back.
+func TestJournalNeverDropsALiveEntry(t *testing.T) {
 	dir := t.TempDir()
 	ended := time.Now()
 	var entries []Entry
-	for i := range maxEntries + 3 {
-		entry := Entry{Path: fmt.Sprintf("/w/%d", i), Message: "m", Outcome: Granted}
-		if i%10 == 5 {
-			entry.Outcome, entry.EndedAt = Revoked, &ended
-		}
-		entries = append(entries, entry)
+	for i := range maxEnded + 3 {
+		entries = append(entries, Entry{Path: fmt.Sprintf("/ended/%d", i), Message: "old", Outcome: Revoked, EndedAt: &ended})
+	}
+	for i := range MaxLive + 8 {
+		entries = append(entries, Entry{Path: fmt.Sprintf("/live/%d", i), Message: "m", Outcome: Granted})
 	}
 	if err := Save(dir, "writer", "e1", entries); err != nil {
 		t.Fatal(err)
 	}
 	got := Load(dir, "writer", "e1")
-	if len(got) != maxEntries {
-		t.Fatalf("kept %d entries, want %d", len(got), maxEntries)
-	}
-	live := 0
+	live, kept := 0, 0
 	for _, entry := range got {
 		if entry.Live() {
 			live++
+		} else {
+			kept++
 		}
 	}
-	if live != maxEntries-4 {
-		t.Fatalf("kept %d live entries of %d: live ones were dropped before ended ones", live, maxEntries-3)
+	if live != MaxLive+8 || kept != maxEnded || got[0].Path != "/ended/3" {
+		t.Fatalf("kept %d live of %d and %d ended of %d, first %q", live, MaxLive+8, kept, maxEnded+3, got[0].Path)
 	}
 }

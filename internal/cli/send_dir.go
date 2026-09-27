@@ -70,7 +70,18 @@ func requestedDirGrants(call Call, sender, target registry.Session, senderErr er
 	workspace, _ := filepath.EvalSymlinks(target.CWD)
 	var resolved, confirmed []string
 	check := func(flag, given string, confirm bool) error {
+		if strings.TrimSpace(given) == "" {
+			// Resolved against the current directory, an empty value would
+			// grant main's own checkout without naming it.
+			return &UsageError{Command: call.Command, Message: flag + " needs a directory; an empty value names none."}
+		}
 		path, err := grant.Resolve(given, cwd)
+		if err == nil && workspace != "" && grant.Within(path, workspace) {
+			// Carried nowhere, so checked against nothing: the recipient's
+			// own workspace is a live session's directory, which is broad.
+			result.writable = append(result.writable, path)
+			return nil
+		}
 		if err == nil {
 			err = rules.Check(given, path, confirm)
 		}
@@ -80,10 +91,6 @@ func requestedDirGrants(call Call, sender, target registry.Session, senderErr er
 		}
 		if err != nil {
 			return &UsageError{Command: call.Command, Message: flag + " " + err.Error()}
-		}
-		if workspace != "" && grant.Within(path, workspace) {
-			result.writable = append(result.writable, path)
-			return nil
 		}
 		resolved = append(resolved, path)
 		if confirm {

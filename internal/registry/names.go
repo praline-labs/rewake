@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/iiiokojiadbi/rewake/internal/state"
 )
@@ -59,3 +60,20 @@ func ControlFor(dir, name, epoch string) string { return state.ControlPath(dir, 
 
 // RecordPath is the file holding a session record.
 func RecordPath(dir, name string) string { return filepath.Clean(state.SessionPath(dir, name)) }
+
+// ParseEpoch reads back the wrapper an epoch names: its pid and start time.
+func ParseEpoch(epoch string) (int, uint64, bool) {
+	pid, start, found := strings.Cut(epoch, ".")
+	if !found {
+		return 0, 0, false
+	}
+	number, err := strconv.Atoi(pid)
+	if err != nil || number <= 0 {
+		return 0, 0, false
+	}
+	ticks, err := strconv.ParseUint(start, 10, 64)
+	if err != nil {
+		return 0, 0, false
+	}
+	return number, ticks, true
+}
