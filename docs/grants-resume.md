@@ -57,10 +57,13 @@ letter becomes readable, the recipient's wrapper names that conversation to main
 main's wrapper keeps it beside the grant. The confirmation before it names none: a task
 that waited for an idle reader, or for a turn to end, may be pinned to another
 conversation than the one the session had when the grant was first checked — after a
-`/clear`, say — and main keeps only the first one it hears. It takes that name only from the wrapper of the run the grant went to —
-the same check as for a resumed run below — and keeps the first one named: a worker reads
-its letter before delivery, and it, or any other process of this user, could otherwise
-confirm the grant with a conversation of its own.
+`/clear`, say. It takes that name only from the wrapper of the run the grant went to —
+the same check as for a resumed run below: a worker reads its letter before delivery,
+and it, or any other process of this user, could otherwise confirm the grant with a
+conversation of its own. That wrapper's latest name wins: a delivery refused after the
+letter was pinned — `turn/start` refused while the conversation compacts — is pinned
+again at its retry, maybe into another conversation, and the grant goes where the letter
+went.
 
 For each hint the new run's wrapper asks the wrapper of the main the hint names, over the
 same abstract address as at delivery, names the conversation it continues, and takes the

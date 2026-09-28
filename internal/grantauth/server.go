@@ -235,10 +235,12 @@ func (a *Authority) hold(grant Grant) error {
 // confirm answers for a grant to whoever runs as this user: an abstract
 // address has no file mode to keep others out. It takes the grant for
 // delivered, into the conversation named, only from the wrapper of the run it
-// was granted to, and keeps the first conversation named: a worker reads its
-// letter before delivery, and it or any other process of this user could
-// otherwise name a conversation of its own choosing for a later resume to
-// take the grant into.
+// was granted to: a worker reads its letter before delivery, and it or any
+// other process of this user could otherwise name a conversation of its own
+// choosing for a later resume to take the grant into. That wrapper's latest
+// name wins, as its own record of the letter does: a delivery refused after
+// the letter was pinned — the conversation compacting — is pinned again when
+// it is tried again, and may go into another conversation then.
 func (a *Authority) confirm(conn *net.UnixConn, asked Grant, thread string) (Grant, error) {
 	peer, err := peerOf(conn)
 	if err != nil || int(peer.Uid) != os.Getuid() {
@@ -254,7 +256,7 @@ func (a *Authority) confirm(conn *net.UnixConn, asked Grant, thread string) (Gra
 	}
 	if delivering {
 		held.delivered = true
-		if held.thread == "" {
+		if thread != "" {
 			held.thread = thread
 		}
 		a.held[asked.ID] = held

@@ -22,7 +22,11 @@ reconnaissance found missing there. The worktree findings are the next package.
   named the session's conversation at the first try, a task that waited for an idle
   reader could be pinned to another after a `/clear`, and main kept the first. The check
   now names none; the wrapper names the pinned conversation under the mailbox lock as
-  the letter becomes readable (`inbox.Server.PinGrant`).
+  the letter becomes readable (`inbox.Server.PinGrant`). Acceptance found main still
+  keeping the first pin: a delivery refused after it — `turn/start` refused while the
+  conversation compacts — is pinned again at the retry, maybe into another
+  conversation, and a resume of that one was refused. Main now keeps the latest name
+  from the recipient's wrapper, as the recipient's own record does.
 - **A shielded directory given as the root passed.** `.git`, `.claude`, `.codex` and
   `.agents` are shielded inside a grant, and nothing shielded the grant's own root. A
   directory with one of them in its path is broad; the metadata `--grant-git` adds is
@@ -31,7 +35,10 @@ reconnaissance found missing there. The worktree findings are the next package.
   target.** Added `~/.config/gh`, `~/.config/fish`, `~/.local/share/systemd`,
   `~/.local/share/applications`, the Go module and build caches, and the toolchain above
   each `bin` on `PATH`. A path through a shared temporary directory to somewhere outside
-  it is refused, and send prints each granted directory as resolved.
+  it is refused, and send prints each granted directory as resolved. Acceptance found a
+  link outside passing through one on its way — `~/work/link` to `/tmp/out` to
+  `~/notes` — let through, since only the name given was looked at; every step of the
+  resolution is looked at now (`grant.steps`).
 - **Adoption restarted the resume window.** A wait taken over now keeps the time the
   earlier run read the task.
 - **A failed delivery did not settle its task**, and a wait record a worker wrote

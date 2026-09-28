@@ -42,10 +42,14 @@ send report it as registered.
    conversation: a task that waits — for an idle reader, for a turn to end — may go into
    another one than the session had when it was first checked. Once the letter is
    pinned, under the mailbox lock as it becomes readable, the recipient's wrapper asks
-   again naming the conversation it was pinned to. Main's wrapper keeps the first one
-   named beside the grant, taken only from the wrapper of the run the grant went to, as
-   the one conversation a resume may take the grant into
-   ([grants-resume.md](grants-resume.md)). A main that does not answer that second
+   again naming the conversation it was pinned to. Main's wrapper keeps that name beside
+   the grant, taken only from the wrapper of the run the grant went to, as the one
+   conversation a resume may take the grant into ([grants-resume.md](grants-resume.md)).
+   A delivery refused after the pin — the conversation compacting — is pinned again when
+   it is tried again, maybe into another conversation, and that wrapper's latest name
+   replaces the earlier one, as its own record of the letter does (September 28, 2026;
+   until then main kept the first, and a resume of the conversation the task went into
+   was refused). A main that does not answer that second
    question leaves the grant with no conversation: it holds for the run, and a resume
    does not restore it.
 3. **When main cannot answer.** While main's wrapper is alive and does not answer, the

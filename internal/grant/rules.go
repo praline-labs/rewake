@@ -88,19 +88,65 @@ func Resolve(given, cwd string) (string, error) {
 // directory: a sandboxed worker can write there, and a link it put in place
 // beforehand — /tmp/out leading to a directory of the owner's — would have
 // main grant what the link leads to while naming a scratch directory. The
-// hard tier refuses what lies there; this refuses what only passes through.
+// hard tier refuses what lies there; this refuses what only passes through,
+// at any step of the resolution: a link of the owner's leading to /tmp/out
+// passes through it as much as the name /tmp/out does.
 func (rules Rules) Named(given, cwd, resolved string) error {
 	path := given
 	if !filepath.IsAbs(path) {
 		path = filepath.Join(cwd, path)
 	}
-	path = filepath.Clean(path)
-	for _, temp := range rules.Temp {
-		if within(path, temp) && !within(resolved, temp) {
-			return &Refusal{Code: 2, Message: fmt.Sprintf("%s leads through %s, a shared temporary directory where a sandboxed worker can put a link, to %s; rewake grants no path through it. If %s is the directory the task needs, name it", given, temp, resolved, resolved)}
+	for _, step := range steps(filepath.Clean(path)) {
+		for _, temp := range rules.Temp {
+			if within(step, temp) && !within(resolved, temp) {
+				return &Refusal{Code: 2, Message: fmt.Sprintf("%s leads through %s, a shared temporary directory where a sandboxed worker can put a link, to %s; rewake grants no path through it. If %s is the directory the task needs, name it", given, temp, resolved, resolved)}
+			}
 		}
 	}
 	return nil
+}
+
+// maxLinks bounds the links one resolution follows, as the kernel does
+// (MAXSYMLINKS); a loop ends there, and EvalSymlinks has refused it already.
+const maxLinks = 40
+
+// steps lists every path the resolution of an absolute, clean path reaches,
+// each directory as it walks in, through the targets of the links it meets.
+// EvalSymlinks answers only where the walk ends.
+func steps(path string) []string {
+	seen := []string{path}
+	rest := strings.Split(path, string(filepath.Separator))
+	current := string(filepath.Separator)
+	for links := 0; len(rest) > 0; {
+		part := rest[0]
+		rest = rest[1:]
+		switch part {
+		case "", ".":
+			continue
+		case "..":
+			// current has no links left in it, so its parent is its lexical one.
+			current = filepath.Dir(current)
+			seen = append(seen, current)
+			continue
+		}
+		next := filepath.Join(current, part)
+		seen = append(seen, next)
+		target, err := os.Readlink(next)
+		if err != nil {
+			current = next
+			continue
+		}
+		if links++; links > maxLinks {
+			break
+		}
+		// Walked part by part, not cleaned: a ".." after a link in the target
+		// leaves where that link leads, not the link's directory.
+		if filepath.IsAbs(target) {
+			current = string(filepath.Separator)
+		}
+		rest = append(strings.Split(target, string(filepath.Separator)), rest...)
+	}
+	return seen
 }
 
 // Check refuses a resolved directory the tiers protect. broad says main

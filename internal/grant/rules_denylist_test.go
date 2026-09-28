@@ -101,4 +101,35 @@ func TestAPathThroughATemporaryDirectoryIsRefused(t *testing.T) {
 	if err := rules.Named(target, root, target); err != nil {
 		t.Errorf("the directory named by itself: %v", err)
 	}
+	// A link outside that passes through the worker's link on its way, and
+	// one whose own target climbs into the temporary directory and out again.
+	work := filepath.Join(root, "home", "work")
+	if err := os.MkdirAll(work, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for name, via := range map[string]string{"link": link, "climb": "../../tmp/../home/notes"} {
+		outside := filepath.Join(work, name)
+		if err := os.Symlink(via, outside); err != nil {
+			t.Fatal(err)
+		}
+		resolved, err := Resolve(outside, root)
+		if err != nil || resolved != target {
+			t.Fatalf("%s resolved to %s, %v", outside, resolved, err)
+		}
+		var refusal *Refusal
+		err = rules.Named(outside, root, resolved)
+		if name == "link" && (!errors.As(err, &refusal) || refusal.Code != 2 || !strings.Contains(refusal.Message, temp)) {
+			t.Errorf("a link leading through %s: %v", link, err)
+		}
+		if name == "climb" && !errors.As(err, &refusal) {
+			t.Errorf("a link climbing through %s: %v", temp, err)
+		}
+	}
+	plain := filepath.Join(work, "plain")
+	if err := os.Symlink(target, plain); err != nil {
+		t.Fatal(err)
+	}
+	if err := rules.Named(plain, root, target); err != nil {
+		t.Errorf("a link that never passes the temporary directory: %v", err)
+	}
 }

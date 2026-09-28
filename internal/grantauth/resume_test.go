@@ -178,15 +178,17 @@ func TestAGrantIsNotHandedOverWithoutEveryCondition(t *testing.T) {
 	})
 }
 
-// The conversation a grant may be taken into again is the first one its
-// delivery named, held by main: a copy on disk naming another — a worker's
-// own, which it then resumes — does not carry the grant there, and neither
-// does a later confirm naming another, whether from a sandbox, from any other
-// process of this user, or from the run's wrapper itself.
+// The conversation a grant may be taken into again is the one its delivery
+// last pinned, held by main: a copy on disk naming another — a worker's own,
+// which it then resumes — does not carry the grant there, and neither does a
+// confirm naming another from a sandbox or from any other process of this
+// user. The run's wrapper pinning the letter again — a delivery tried again
+// after the conversation changed — moves the grant along with the letter,
+// and a check naming no conversation leaves it where it is.
 func TestAGrantGoesOnlyIntoTheConversationItWasDeliveredTo(t *testing.T) {
 	authority, path := listen(t, os.Getpid(), time.Minute)
 	authority.Open = func(Grant) (bool, bool) { return true, true }
-	grant := deliveredBy(t, path, lib, "c1", "c0")
+	grant := deliveredBy(t, path, lib, "c0", "c1", "")
 	for _, inSandbox := range []bool{true, false} {
 		conn, err := dial(path)
 		if err != nil {

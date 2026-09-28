@@ -43,3 +43,31 @@ func TestAGrantIsNamedTheConversationItsLetterIsPinnedTo(t *testing.T) {
 		t.Fatalf("pinned to %q", got)
 	}
 }
+
+// A delivery refused after its letter was pinned — the conversation
+// compacting — is pinned again when it is tried again, and main is told the
+// conversation the letter went into then, the same one its record keeps.
+func TestAGrantIsNamedAgainWhenItsDeliveryIsPinnedAgain(t *testing.T) {
+	dir := stateDir(t)
+	members := grantPending(t, dir, true)
+	s := batchServer(dir)
+	s.CheckGrant = func(Message) error { return nil }
+	var pins []string
+	s.PinGrant = func(_ Message, thread string) { pins = append(pins, thread) }
+	thread, outcome := "before-compaction", Result{State: Pending, Detail: "compacting"}
+	s.Reserve = func(context.Context, Message) (Reservation, error) {
+		r := &reservationFixture{}
+		r.prepare = func(fn func(string) error) error { return fn(thread) }
+		r.deliver = func(context.Context, Message) Result { return outcome }
+		return r, nil
+	}
+	s.drain(context.Background())
+	thread, outcome, s.attempts = "after-compaction", Result{State: Delivered}, map[string]time.Time{}
+	s.drain(context.Background())
+	if want := []string{"before-compaction", "after-compaction"}; !slices.Equal(pins, want) {
+		t.Fatalf("named %v, want %v", pins, want)
+	}
+	if got := deliveryThread(dir, "api", members[0].ID); got != "after-compaction" {
+		t.Fatalf("pinned to %q", got)
+	}
+}

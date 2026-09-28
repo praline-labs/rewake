@@ -38,8 +38,8 @@ const grantLifetime = inbox.DefaultTTL + 5*time.Minute
 // The confirmation here names no conversation: a message that waits — for an
 // idle session, or for a harness busy with a turn — may be pinned to another
 // one than the session had when it was first checked, and main keeps the
-// first conversation it is told. pinGrant tells it the one the letter is
-// pinned to.
+// conversation this wrapper names, not a guess. pinGrant tells it the one the
+// letter is pinned to, and again at each pin of a delivery tried again.
 func checkGrant(dir, name, epoch string, keeper *grantauth.Keeper, busy func() bool, thread func() (string, error)) func(inbox.Message) error {
 	root := state.RootForRoom(dir)
 	return func(message inbox.Message) error {
@@ -70,7 +70,9 @@ func checkGrant(dir, name, epoch string, keeper *grantauth.Keeper, busy func() b
 
 // pinGrant tells the main that sent a granted task the conversation its
 // letter was pinned to, as the letter becomes readable: the only one a resume
-// may take the grant into again (docs/grants-resume.md). Told by this wrapper
+// may take the grant into again (docs/grants-resume.md). A delivery tried
+// again pins the letter again, maybe into another conversation, and tells
+// main that one. Told by this wrapper
 // and no other process, and told nothing else: the grant was confirmed
 // already. A main that does not answer leaves the grant without a
 // conversation, as one delivered into none — it holds for this run and is not

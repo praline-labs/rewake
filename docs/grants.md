@@ -73,7 +73,9 @@ send fails with exit 1. The resolved path is what the message carries, and the s
 names it (`Rewake: grants <worker> write access to: <dir>`), so main sees where a link
 led. A path that goes through a shared temporary directory, `/tmp` or `$TMPDIR`, to
 somewhere outside it is refused with exit 2, the refusal naming where it leads: a
-sandboxed worker can write there and put a link in place before main names it. A directory that
+sandboxed worker can write there and put a link in place before main names it. Every
+step of the resolution counts, not only the name given: a link of the owner's that
+leads to `/tmp/out`, which leads on to the owner's notes, is refused as well. A directory that
 lies in the recipient's workspace already is not carried and is named in the output as
 already writable (`alreadyWritable` in `--json`); a directory inside another granted one
 goes with it, so the message carries only the outermost.
