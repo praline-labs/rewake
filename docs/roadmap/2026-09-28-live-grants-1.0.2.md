@@ -20,6 +20,14 @@ one-step task.
   grant lives to the session's end by design — so this shows the write was not blocked,
   not that the grant's hook approved it.
 
+## The Claude Code hook in manual mode
+
+The owner switched the write session to the manual permission mode (the one that asks
+before edits) and main sent a task with `--grant-dir`: the Write tool created the file in
+the granted directory with no prompt. After the report, a task with no grant asked for a
+second file in the same directory, and Claude Code showed its usual prompt "Do you want to
+create two.txt?" — the grant was gone. The owner answered no.
+
 ## A worktree, live
 
 The owner restarted the write session as `rewake --write claude --worktree=test/probe`;
@@ -41,8 +49,6 @@ checks; main ran them on `main` after landing.
 
 ## What stays open
 
-- The hook seen approving a write in a session in the `default` permission mode, and the
-  grant taken back there at the first rewake command after the report.
 - Cosmetic: on Codex the send prints the grant twice — in the delivery line
   (`write granted: <dir>`) and again as `grants <name> write access to: <dir>`.
 - A grant restored after a cold resume, live.

@@ -169,10 +169,22 @@ What the day of the 1.0.0 release left, recorded on September 28, 2026 at the ow
 
 - **Live checks on the released wrappers.** On September 28, 2026, on 1.0.2, a directory
   grant was seen granted, taken back and refused on Codex, and a Claude Code worktree
-  session landed and finished
-  ([the record](roadmap/2026-09-28-live-grants-1.0.2.md)). Still to see: the Claude Code
-  grant hook in the default permission mode and a grant restored after a cold resume;
-  milestone 6's week of use counts from 1.0.x.
+  session landed and finished, on Codex as well with a commit under `--grant-git`, and the
+  Claude Code grant hook in manual mode let a granted write through and prompted again
+  after the report ([the record](roadmap/2026-09-28-live-grants-1.0.2.md)). Still to see:
+  a grant restored after a cold resume; milestone 6's week of use counts from 1.0.x.
+- **A permission prompt stalls an unattended worker — to design.** Seen the same day: once
+  a grant is taken back, a Claude Code worker in manual mode that writes outside its
+  workspace stops at the harness's prompt, and with nobody at its keyboard the task hangs
+  and main is not told. The owner asked on September 28, 2026 whether rewake can keep such
+  a request from blocking — hold the worker idle while it waits — and let main give the
+  right instead. rewake's PermissionRequest hook already sees these requests, so the ways
+  to weigh are: refuse them at once with a message naming the next step (end the turn with
+  `rewake pending "needs write to <dir>"`, and main answers with a task carrying
+  `--grant-dir`); or hold the hook while main is asked, with a command for main to allow
+  or deny, bounded by the hook's timeout; and for Codex, the approval requests its
+  app-server sends. Which sessions it applies to, and what a person at the keyboard keeps,
+  is part of the decision.
 - **A requested compaction left without its outcome**
   ([intermittent-bugs.md](intermittent-bugs.md#a-requested-compaction-counted-as-nobodys-with-no-outcome--open-september-28-2026)):
   the plugin's `told` swallows a failed call; check the exit, retry once, and put the mark
