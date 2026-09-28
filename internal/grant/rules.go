@@ -96,7 +96,11 @@ func (rules Rules) Named(given, cwd, resolved string) error {
 	if !filepath.IsAbs(path) {
 		path = filepath.Join(cwd, path)
 	}
-	for _, step := range steps(filepath.Clean(path)) {
+	walked, whole := steps(filepath.Clean(path))
+	if !whole {
+		return &Refusal{Code: 2, Message: fmt.Sprintf("%s passes more than %d links on its way to %s, more than rewake follows to see what it passes through, so it grants no path like it; name %s itself if it is the directory the task needs", given, maxLinks, resolved, resolved)}
+	}
+	for _, step := range walked {
 		for _, temp := range rules.Temp {
 			if within(step, temp) && !within(resolved, temp) {
 				return &Refusal{Code: 2, Message: fmt.Sprintf("%s leads through %s, a shared temporary directory where a sandboxed worker can put a link, to %s; rewake grants no path through it. If %s is the directory the task needs, name it", given, temp, resolved, resolved)}
@@ -107,14 +111,16 @@ func (rules Rules) Named(given, cwd, resolved string) error {
 }
 
 // maxLinks bounds the links one resolution follows, as the kernel does
-// (MAXSYMLINKS); a loop ends there, and EvalSymlinks has refused it already.
+// (MAXSYMLINKS). EvalSymlinks follows up to 255, so a path it resolved may
+// still run past this; what lies beyond is unchecked, and Named refuses it.
 const maxLinks = 40
 
 // steps lists every path the resolution of an absolute, clean path reaches,
 // each directory as it walks in, through the targets of the links it meets.
-// EvalSymlinks answers only where the walk ends.
-func steps(path string) []string {
-	seen := []string{path}
+// EvalSymlinks answers only where the walk ends. whole is false when the walk
+// stopped at maxLinks, with the rest of the way unseen.
+func steps(path string) (seen []string, whole bool) {
+	seen = []string{path}
 	rest := strings.Split(path, string(filepath.Separator))
 	current := string(filepath.Separator)
 	for links := 0; len(rest) > 0; {
@@ -137,7 +143,7 @@ func steps(path string) []string {
 			continue
 		}
 		if links++; links > maxLinks {
-			break
+			return seen, false
 		}
 		// Walked part by part, not cleaned: a ".." after a link in the target
 		// leaves where that link leads, not the link's directory.
@@ -146,7 +152,7 @@ func steps(path string) []string {
 		}
 		rest = append(strings.Split(target, string(filepath.Separator)), rest...)
 	}
-	return seen
+	return seen, true
 }
 
 // Check refuses a resolved directory the tiers protect. broad says main

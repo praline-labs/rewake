@@ -75,7 +75,10 @@ led. A path that goes through a shared temporary directory, `/tmp` or `$TMPDIR`,
 somewhere outside it is refused with exit 2, the refusal naming where it leads: a
 sandboxed worker can write there and put a link in place before main names it. Every
 step of the resolution counts, not only the name given: a link of the owner's that
-leads to `/tmp/out`, which leads on to the owner's notes, is refused as well. A directory that
+leads to `/tmp/out`, which leads on to the owner's notes, is refused as well. The walk
+follows 40 links, as the kernel does; a path through more is refused with exit 2 rather
+than taken as checked, since `filepath.EvalSymlinks` follows up to 255 and what lay past
+the fortieth would go unseen. A directory that
 lies in the recipient's workspace already is not carried and is named in the output as
 already writable (`alreadyWritable` in `--json`); a directory inside another granted one
 goes with it, so the message carries only the outermost.

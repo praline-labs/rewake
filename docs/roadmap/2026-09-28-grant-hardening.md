@@ -38,7 +38,8 @@ reconnaissance found missing there. The worktree findings are the next package.
   it is refused, and send prints each granted directory as resolved. Acceptance found a
   link outside passing through one on its way — `~/work/link` to `/tmp/out` to
   `~/notes` — let through, since only the name given was looked at; every step of the
-  resolution is looked at now (`grant.steps`).
+  resolution is looked at now (`grant.steps`). A second acceptance round found that walk
+  stopping at 40 links and passing what lay beyond; a path through more is refused.
 - **Adoption restarted the resume window.** A wait taken over now keeps the time the
   earlier run read the task.
 - **A failed delivery did not settle its task**, and a wait record a worker wrote

@@ -2,6 +2,7 @@ package grant
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -131,5 +132,62 @@ func TestAPathThroughATemporaryDirectoryIsRefused(t *testing.T) {
 	}
 	if err := rules.Named(plain, root, target); err != nil {
 		t.Errorf("a link that never passes the temporary directory: %v", err)
+	}
+}
+
+// A path past the links the walk follows is refused, not taken as checked:
+// EvalSymlinks follows more, and whatever lay beyond — a hop through /tmp —
+// would go unseen.
+func TestAPathPastTheLinksFollowedIsRefused(t *testing.T) {
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	temp, target, chains := filepath.Join(root, "tmp"), filepath.Join(root, "home", "notes"), filepath.Join(root, "home", "chains")
+	for _, dir := range []string{temp, target, chains} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	out := filepath.Join(temp, "out")
+	if err := os.Symlink(target, out); err != nil {
+		t.Fatal(err)
+	}
+	rules := Env{Temp: []string{temp}}.Rules()
+	// chain makes count links, each leading to the next, the last to end.
+	chain := func(name string, count int, end string) string {
+		next := end
+		for index := count; index > 0; index-- {
+			link := filepath.Join(chains, fmt.Sprintf("%s-%d", name, index))
+			if err := os.Symlink(next, link); err != nil {
+				t.Fatal(err)
+			}
+			next = link
+		}
+		return next
+	}
+	cases := []struct {
+		name    string
+		given   string
+		refused string
+	}{
+		{"at the limit", chain("forty", maxLinks, target), ""},
+		{"past the limit", chain("fortyone", maxLinks+1, target), "more than"},
+		{"through /tmp just past the limit", chain("hop", maxLinks+1, out), "more than"},
+		{"through /tmp within the limit", chain("near", maxLinks-1, out), temp},
+	}
+	for _, c := range cases {
+		resolved, err := Resolve(c.given, root)
+		if err != nil || resolved != target {
+			t.Fatalf("%s: resolved to %s, %v", c.name, resolved, err)
+		}
+		err = rules.Named(c.given, root, resolved)
+		var refusal *Refusal
+		switch {
+		case c.refused == "" && err != nil:
+			t.Errorf("%s: %v", c.name, err)
+		case c.refused != "" && (!errors.As(err, &refusal) || refusal.Code != 2 || !strings.Contains(refusal.Message, c.refused)):
+			t.Errorf("%s: %v", c.name, err)
+		}
 	}
 }
