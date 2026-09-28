@@ -171,8 +171,6 @@ What the day of the 1.0.0 release left, recorded on September 28, 2026 at the ow
   the whole release; grants, delivery and worktrees as released have been seen only in
   the suite. Restart the sessions and watch a grant, a resume and a worktree land live;
   milestone 6's week of use counts from 1.0.0.
-- **The repository opens** after the owner decides on the early history (verbatim Russian
-  notes before the translation) and the author identity; the HEAD audit is done.
 - **A requested compaction left without its outcome**
   ([intermittent-bugs.md](intermittent-bugs.md#a-requested-compaction-counted-as-nobodys-with-no-outcome--open-september-28-2026)):
   the plugin's `told` swallows a failed call; check the exit, retry once, and put the mark
@@ -197,8 +195,8 @@ What the day of the 1.0.0 release left, recorded on September 28, 2026 at the ow
 - **Worktrees:** a repository made with `--separate-git-dir` and no `core.worktree` keeps
   no record of its main checkout, so from a linked checkout only a root inside the Git
   directory is refused.
-- **Publishing from CI** with npm's trusted publishing and provenance, once the repository
-  is public.
+- **Publishing from CI** with npm's trusted publishing and provenance: the repository is
+  public since September 28, 2026, so nothing waits for it now.
 
 ## Also queued, not scheduled
 
