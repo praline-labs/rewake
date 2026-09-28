@@ -108,18 +108,53 @@ func Land(record Record, into string) (Landing, error) {
 	}
 	if len(checkouts) > 0 {
 		landing.Checkout = checkouts[0]
+		// git merge moves whatever branch the checkout has out when it runs,
+		// so the checkout is asked again right before it, and the target
+		// after it.
+		beforeLook(landing.Checkout)
+		if now, detached, err := currentBranch(landing.Checkout); err != nil {
+			return Landing{}, err
+		} else if detached || now != target {
+			return Landing{}, &StateError{Reason: fmt.Sprintf("%s left %s while land looked, and nothing was merged; land again", landing.Checkout, target)}
+		}
+		beforeMerge(landing.Checkout)
 		// The commit, not the branch's name: the branch may move between the
 		// look above and the merge, and what was counted is what lands.
-		if _, err := runWithHooks(exec.Command("git", "-C", landing.Checkout, "merge", "--ff-only", "--quiet", tip)); err != nil {
+		if _, err := runWithHooks("git merge --ff-only in "+landing.Checkout, exec.Command("git", "-C", landing.Checkout, "merge", "--ff-only", "--quiet", tip)); err != nil {
+			var slow *HookWaitError
+			if errors.As(err, &slow) {
+				return Landing{}, err
+			}
 			return Landing{}, &RefusedError{Checkout: landing.Checkout, Reason: oneLine(err.Error())}
 		}
-	} else if _, err := runWithHooks(gitDirCommand(record.CommonDir, "update-ref", "-m", "rewake worktree land "+record.Ref(), branchRef(target), tip, old)); err != nil {
+	} else if _, err := runWithHooks("git update-ref of "+target, gitDirCommand(record.CommonDir, "update-ref", "-m", "rewake worktree land "+record.Ref(), branchRef(target), tip, old)); err != nil {
+		var slow *HookWaitError
+		if errors.As(err, &slow) {
+			return Landing{}, err
+		}
 		return Landing{}, fmt.Errorf("git update-ref of %s failed: %w", target, err)
 	}
 	if landing.New, err = refTip(record.CommonDir, branchRef(target)); err != nil {
 		return Landing{}, err
 	}
+	if landing.New != tip {
+		return Landing{}, strayMerge(landing, tip)
+	}
 	return landing, nil
+}
+
+// strayMerge refuses a landing after which the target does not hold the tip:
+// the checkout switched to another branch between the look and the merge, and
+// git fast-forwarded that one instead, or something moved the target since.
+func strayMerge(landing Landing, tip string) error {
+	if landing.Checkout == "" {
+		return &StateError{Reason: fmt.Sprintf("%s moved to %s right after land set it to %s; see git reflog %s", landing.Target, landing.New, tip, landing.Target)}
+	}
+	now, detached, err := currentBranch(landing.Checkout)
+	if err == nil && !detached && now != landing.Target {
+		return &StateError{Reason: fmt.Sprintf("%s switched from %s to %s while land ran, and git merge --ff-only fast-forwarded %s to %s instead; if that was not wanted, git -C %s reflog %s shows where it was", landing.Checkout, landing.Target, now, now, tip, landing.Checkout, now)}
+	}
+	return &StateError{Reason: fmt.Sprintf("%s does not hold %s after land merged it in %s: the checkout changed while land ran; git -C %s reflog shows what moved", landing.Target, tip, landing.Checkout, landing.Checkout)}
 }
 
 // landTarget is the branch to land into: into, or the one checked out in the
@@ -142,6 +177,10 @@ func landTarget(record Record, into string) (string, error) {
 		if detached {
 			return "", &StateError{Reason: fmt.Sprintf("%s has no branch checked out; name the branch to land into with --into <branch>", record.Source)}
 		}
+		if head == record.Branch {
+			// Not the call: the source switched to the worktree's branch.
+			return "", &StateError{Reason: fmt.Sprintf("%s has the worktree's own branch %s checked out, so there is nothing to land it into; name the target with --into <branch>, or switch %s back to it", record.Source, head, record.Source)}
+		}
 		target = head
 	}
 	if target == record.Branch {
@@ -150,38 +189,58 @@ func landTarget(record Record, into string) (string, error) {
 	return target, nil
 }
 
+// Dropping is what DropBranch did with a branch. Nothing set is a branch
+// that holds commits no other branch, tag or remote-tracking ref has.
+type Dropping struct {
+	Dropped bool
+	// Gone says why there was no branch to drop: gone already, or its
+	// repository with it.
+	Gone string
+	// CheckedOut is the checkout that has the branch out, which keeps it.
+	CheckedOut string
+}
+
 // DropBranch deletes a checkout's branch when nothing goes with it: another
 // branch, tag or remote-tracking ref holds its tip, and no checkout has it
-// out. It says whether the branch went; one that stays holds commits only it
-// has, or is checked out somewhere.
-func DropBranch(record Record) (bool, error) {
-	if record.Branch == "" || repositoryGone(record) {
-		return false, nil
+// out.
+func DropBranch(record Record) (Dropping, error) {
+	if record.Branch == "" {
+		return Dropping{Gone: "the worktree has no branch of its own"}, nil
+	}
+	if repositoryGone(record) {
+		return Dropping{Gone: "its repository " + record.CommonDir + " is gone"}, nil
 	}
 	ref := branchRef(record.Branch)
 	tip, err := refTip(record.CommonDir, ref)
-	if err != nil || tip == "" {
-		return false, err
+	if err != nil {
+		return Dropping{}, err
+	}
+	if tip == "" {
+		return Dropping{Gone: "it was deleted already"}, nil
+	}
+	checkouts, err := checkedOutAt(record.CommonDir, ref)
+	if err != nil {
+		return Dropping{}, err
+	}
+	if len(checkouts) > 0 {
+		return Dropping{CheckedOut: checkouts[0]}, nil
 	}
 	holders, err := gitDirOutput(record.CommonDir, "for-each-ref", "--contains", tip, "--format=%(refname)", "refs/heads", "refs/tags", "refs/remotes")
 	if err != nil {
-		return false, err
+		return Dropping{}, err
 	}
 	held := false
 	for _, holder := range strings.Split(holders, "\n") {
 		held = held || holder != "" && holder != ref
 	}
 	if !held {
-		return false, nil
-	}
-	if checkouts, err := checkedOutAt(record.CommonDir, ref); err != nil || len(checkouts) > 0 {
-		return false, err
+		return Dropping{}, nil
 	}
 	// The tip read above, so a commit made since keeps the branch.
 	if err := gitDir(record.CommonDir, "update-ref", "-d", ref, tip); err != nil {
-		return false, fmt.Errorf("git update-ref -d %s failed: %w", ref, err)
+		return Dropping{}, fmt.Errorf("git update-ref -d %s failed: %w", ref, err)
 	}
-	return true, nil
+	return Dropping{Dropped: true}, nil
 }
 
 func branchRef(branch string) string { return "refs/heads/" + branch }

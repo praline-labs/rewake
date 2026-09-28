@@ -70,7 +70,9 @@ bring the work back, and that Claude Code launches get the same checkout.
   in `/tmp` and would not outlive a restart, while a checkout holds work — and not inside
   the repository, where it would show up in `git status` and in the agent's own
   searches: a `$REWAKE_WORKTREES` inside it, compared with symbolic links resolved, is
-  refused. One place for every repository, so `rewake worktree ls` sees them all.
+  refused — inside the checkout the launch came from, or inside the main checkout when
+  the launch came from a linked one. One place for every repository, so
+  `rewake worktree ls` sees them all.
 - **Where the launch starts.** At the launch directory's place within the checkout, as
   Codex does; at the checkout's top when that directory is not in the commit, an
   untracked one say. The wrapper changes into it before the session is registered, and
@@ -84,9 +86,13 @@ bring the work back, and that Claude Code launches get the same checkout.
   checkout too — read in its source, not checked live
   ([research-worktree.md](research-worktree.md#continuing-a-conversation-and-trust)).
 - **The record** says which repository (its shared Git directory and the checkout the
-  launch came from), which commit, which branch, where, when, what `.worktreeinclude`
-  copied, and — written once the session's name is claimed — which session: name, room,
-  run and the room's state directory.
+  launch came from), which commit, which branch, where, when, which rewake process made
+  it, what `.worktreeinclude` copied — written as soon as the copies are made, under the
+  lock that made the checkout — and, once the session's name is claimed, which session:
+  name, room, run and the room's state directory. Between the checkout being made and
+  the session being registered only the process that made it says the checkout is in
+  use: while it runs and no session is claimed, `ls` shows the worktree as launching and
+  rm keeps it.
 - **A new conversation only.** A continuation is refused with `--worktree`: it continues
   a conversation in the directory it was started in. For Codex that is `resume` and
   `fork`. The terminal's `thread/resume` carries a cwd only from its own `-C`/`--cd`,
@@ -133,7 +139,8 @@ bring the work back, and that Claude Code launches get the same checkout.
   checkouts share. Clean and smudge filters stay on, or a file a large-file filter keeps
   would be checked out as its pointer. `land` is the exception for hooks: it moves the
   person's branch in their checkout, and the hooks the repository keeps for a merge or a
-  ref update run as they would for the person's own `git merge --ff-only`. The same
+  ref update run as they would for the person's own `git merge --ff-only`, waited for
+  at most a minute ([landing and finishing](#landing-and-finishing)). The same
   choices were weighed against Codex's own worktree, which turns filters off too
   ([research-codex.md](research-codex.md#--worktree-with-a-remote-terminal)), and
   against Claude Code's, which sets `core.hooksPath` in the shared configuration and
@@ -188,8 +195,13 @@ The lock is an `flock` on `<repository>-<hash>.lock` beside the repository's dir
 under the worktree root: not in the repository's Git directory, since rewake writes
 nothing of its own into another program's metadata, and not inside the repository's own
 directory, which goes with its last checkout. The file stays, one per repository, and
-locks nothing once its holder has let go or died. `rewake worktree rm` and finish's
-removal take the same lock, since `git worktree remove` reads the other entries too.
+locks nothing once its holder has let go or died. `rewake worktree rm` takes the same
+lock for its checks and the removal together, and finish for its checks, its landing
+and the removal, and each reads the record again under it: `git worktree remove` reads
+the other entries too, and a look taken before the lock could see a name a launch had
+claimed and not yet checked out — missing, nothing to keep — and the removal after the
+wait would take the checkout that launch had just made (found September 28, 2026). A
+failed launch taking its checkout back looks and removes under the lock the same way.
 
 The wait is bounded: after a minute the launch is refused with exit 1, naming the lock
 and the process that took it last; nothing is made. A holder is that slow when it hangs,
@@ -205,8 +217,8 @@ reports as `failed to read <common dir>/worktrees/<entry>/commondir`, is tried o
 more after a fifth of a second: git has removed what it began of this checkout, and the
 other entry is whole long before then. A second failure is reported as it is. The match
 is on the path in git's message, not its words, which git translates. The other worktree
-commands — land, finish's landing, the checks of ls and rm — are not serialized with
-such an add, and can fail the same way with git's message; they are then run again.
+commands — land, finish, the checks of ls and rm — are not serialized with such an add,
+and can fail the same way with git's message; they are then run again.
 
 ## Files git ignores: `.worktreeinclude`
 
@@ -280,18 +292,41 @@ rewake does not rewrite history — with the rebase to run in the worktree,
 and exits 0. The answer names how many commits moved and the target's old and new
 commit; `--json` gives the same model.
 
+`git merge` moves whatever branch its checkout has out when it runs, so a source that
+switches branches while land runs would have that branch fast-forwarded instead. The
+source is asked again right before the merge, and a source no longer on the target is
+refused with nothing merged; after the merge the target must hold the worktree's tip,
+and when it does not, land is refused naming the branch the source switched to, which
+git moved, and its reflog to see where it was (found September 28, 2026).
+
+The hooks land runs are the repository's code, and land waits for a git call running
+them at most a minute — the time a launch waits for the lock finish holds through its
+landing. Past it land is refused naming the hook still running, or the command git
+started, and git is not stopped: a merge cut short between moving the files and moving
+the branch would leave the checkout changed under a branch that did not move. git goes
+on in a session of its own, writing its output to files rather than to pipes that
+would close when rewake exits, and what it does may still land; land run again once it
+has ended says what did.
+
 A refusal over the state of the worktree or its repository exits 1: a branch,
-repository or source gone, a source on a detached HEAD, a target the repository lacks,
-another checkout holds or has moved on. A wrong call exits 2: a worktree name that names
-none, a branch name `git check-ref-format` refuses, `--into` the worktree's own branch
-(decided September 27, 2026).
+repository or source gone, a source on a detached HEAD or on the worktree's own branch,
+a target the repository lacks, another checkout holds or has moved on, a source that
+switched branches or a hook still running. A wrong call exits 2: a worktree name that
+names none, a branch name `git check-ref-format` refuses, `--into` the worktree's own
+branch, `--into=` with no branch, which would otherwise land into the default target
+(decided September 27, 2026; the source on the worktree's branch and `--into=` on
+September 28).
 
 `rewake worktree finish <name>` lands once more, then removes the worktree and its
-branch. Everything that would stop it is asked first, and a refused finish lands and
-removes nothing: a rewake session running in the worktree, changes, files git ignores
+branch. Everything that would stop it is asked first, under the repository's lock held
+until the removal, and a refused finish lands and removes nothing: a rewake session
+running in the worktree or a launch still starting one, changes, files git ignores
 other than unchanged copies, commits only a detached HEAD holds, a worktree no longer
-on its branch, a fast-forward that is not possible. Each exits 1 with its reason.
-finish has no `--force`: removing without those checks is `rm --force`.
+on its branch, a fast-forward that is not possible, and what `git worktree remove`
+itself refuses — a worktree locked with `git worktree lock`, or one holding a submodule
+checked out (until September 28, 2026 those two let finish land and then fail to
+remove). Each exits 1 with its reason. finish has no `--force`: removing without those
+checks is `rm --force`.
 
 ## Listing and removing
 
@@ -312,15 +347,23 @@ repositories — removes one through `git worktree remove`, so the repository fo
 too. Its branch goes along only when another branch, tag or remote-tracking ref holds
 the branch's commits and no checkout has it out; a branch with commits only it holds
 stays, with or without `--force`, and rm says how to take them (`git merge --ff-only`)
-or drop them (`git branch -D`). Without `--force` it never loses work, and when it
-cannot tell, it refuses. It refuses, naming each reason:
+or drop them (`git branch -D`). A branch another checkout has out stays too, and rm says
+where; one already deleted, or gone with its repository, is named as gone, with no
+advice to merge it. Without `--force` it never loses work, and when it cannot tell, it
+refuses. The checks and the removal hold the repository's lock together
+([launches at once](#launches-at-once)). It refuses, naming each reason:
 
 - changes `git status` shows;
-- files git ignores — a `.env`, a local build — which `git worktree remove --force`
-  deletes without a word; unchanged copies `.worktreeinclude` made are not counted;
+- files git ignores — a `.env`, a local build — which `git worktree remove` deletes
+  without a word, forced or not (checked on git 2.43, September 28, 2026); unchanged
+  copies `.worktreeinclude` made are not counted;
 - a HEAD no branch, tag or remote-tracking ref holds, asked every time: the worktree's
   own branch holds its commits while HEAD is on it, but a checkout switched to a
   detached HEAD, or whose branch was deleted, holds commits nothing else does;
+- a launch that made it and has not yet registered its session, while that rewake
+  process runs;
+- a lock from `git worktree lock`, named with its reason, and `git worktree unlock` to
+  lift it; a submodule checked out in it. `git worktree remove` refuses both;
 - a rewake session still running in it: the one it was made for, or any whose working
   directory is in the checkout — started there by hand after the first ended, say — in
   any room of the current state directory and of the one the owner registered in. A
@@ -339,7 +382,8 @@ cannot tell, it refuses. It refuses, naming each reason:
   With `--force` the directory and its record go. One whose directory is gone as well
   leaves only the record, which rm removes.
 
-`--force` removes it anyway. Looking never stands in a session's way: git runs with
+`--force` removes it anyway, a locked one too: git needs `--force` twice for that, and
+rm passes it twice. Looking never stands in a session's way: git runs with
 `GIT_OPTIONAL_LOCKS=0`, so `git status` does not take `index.lock` from under a commit
 the session is making. Nothing is removed automatically. rm's refusals exit 1, as
 finish's and land's over the same state do; a worktree name that names none exits 2.

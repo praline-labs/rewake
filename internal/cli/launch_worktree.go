@@ -134,12 +134,9 @@ func (c *launchCheckout) claimed(dir string) func(registry.Session) error {
 // is told where.
 func (c *launchCheckout) settle(failed bool) {
 	if failed {
-		why := c.kept()
-		if why == "" && c.takeBack() {
-			return
-		}
+		why := c.takeBack()
 		if why == "" {
-			why = "it could not be removed"
+			return
 		}
 		_, _ = fmt.Fprintf(c.stderr, "rewake: the launch failed, and the worktree %s stays at %s on the branch %s: %s. To go on there, cd %s and run %s without --worktree; rewake worktree land %s takes its commits, finish lands and removes it, rm removes it\n",
 			c.record.Ref(), c.record.Path, c.record.Branch, why, c.record.Path, c.launch, c.record.Ref())
@@ -151,29 +148,44 @@ func (c *launchCheckout) settle(failed bool) {
 
 // kept says why a failed launch's checkout is not taken back, or "" when it
 // may be.
-func (c *launchCheckout) kept() string {
-	check, err := worktree.Inspect(c.record)
+func kept(record worktree.Record) string {
+	check, err := worktree.Inspect(record)
 	if err != nil {
 		return err.Error()
 	}
-	if check.Head != c.record.Commit {
+	if check.Head != record.Commit {
 		return "its HEAD moved from the commit it was made at"
 	}
-	reasons, err := keepReasons(c.record)
+	reasons, err := keepReasons(record)
 	if err != nil {
 		return err.Error()
 	}
 	return strings.Join(reasons, "; ")
 }
 
+// errKept refuses a take-back inside the lock; the reason is kept apart.
+var errKept = errors.New("kept")
+
 // takeBack removes a checkout made for a launch that did not use it, and the
-// branch made with it when nothing but that branch is lost.
-func (c *launchCheckout) takeBack() bool {
-	if worktree.Remove(c.record, false) != nil {
-		return false
+// branch made with it when nothing but that branch is lost, looking and
+// removing under one hold of the repository's lock as rm does. It says why
+// the checkout stays, or "" once it is gone.
+func (c *launchCheckout) takeBack() string {
+	why := ""
+	err := worktree.RemoveChecked(c.record, false, func(current worktree.Record) error {
+		if why = kept(current); why != "" {
+			return errKept
+		}
+		return nil
+	})
+	switch {
+	case why != "":
+		return why
+	case err != nil:
+		return "it could not be removed: " + err.Error()
 	}
 	_, _ = worktree.DropBranch(c.record)
-	return true
+	return ""
 }
 
 // includedNote names what .worktreeinclude copied in, when anything.

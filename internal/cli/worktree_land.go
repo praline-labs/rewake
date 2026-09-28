@@ -41,50 +41,65 @@ func landWorktree(ctx *Context, call Call, record worktree.Record) error {
 }
 
 // landRecord lands a checkout's branch and turns a refusal into the answer an
-// agent acts on: a wrong call exits 2, the state of the worktree or its
-// repository 1.
+// agent acts on.
 func landRecord(call Call, record worktree.Record) (worktreeLanding, error) {
 	landing, err := worktree.Land(record, call.Flag("into", ""))
+	if err != nil {
+		return worktreeLanding{}, landRefusal(call, err)
+	}
+	return worktreeLanding{Worktree: record.Ref(), Landing: landing}, nil
+}
+
+// landRefusal is a refusal of land as the caller reads it: a wrong call exits
+// 2, the state of the worktree or its repository 1.
+func landRefusal(call Call, err error) error {
 	var unusable *worktree.UnusableError
 	var blocked *worktree.StateError
 	var diverged *worktree.DivergedError
 	var refused *worktree.RefusedError
 	switch {
 	case errors.As(err, &unusable):
-		return worktreeLanding{}, &UsageError{Command: call.Command, Message: unusable.Error() + "."}
+		return &UsageError{Command: call.Command, Message: unusable.Error() + "."}
 	case errors.As(err, &blocked):
-		return worktreeLanding{}, &FailedError{Message: blocked.Error() + "."}
+		return &FailedError{Message: blocked.Error() + "."}
 	case errors.As(err, &diverged):
-		return worktreeLanding{}, &FailedError{Message: fmt.Sprintf("%s. rewake does not rewrite history: rebase the branch onto %s in the worktree — git -C %s rebase %s — then land again.",
+		return &FailedError{Message: fmt.Sprintf("%s. rewake does not rewrite history: rebase the branch onto %s in the worktree — git -C %s rebase %s — then land again.",
 			diverged.Error(), diverged.Target, diverged.Path, diverged.Target)}
 	case errors.As(err, &refused):
-		return worktreeLanding{}, &FailedError{Message: fmt.Sprintf("%s. Commit or stash those changes in %s, then land again.", refused.Error(), refused.Checkout)}
-	case err != nil:
-		return worktreeLanding{}, &FailedError{Message: err.Error()}
+		return &FailedError{Message: fmt.Sprintf("%s. Commit or stash those changes in %s, then land again.", refused.Error(), refused.Checkout)}
 	}
-	return worktreeLanding{Worktree: record.Ref(), Landing: landing}, nil
+	return &FailedError{Message: err.Error()}
 }
 
 // finishWorktree lands a checkout for the last time and removes it and its
-// branch. Everything that would stop it is asked before anything moves, so a
-// refused finish leaves the worktree, its branch and the target as they were.
+// branch. Everything that would stop it is asked before anything moves, under
+// the repository's lock the removal holds too, so a refused finish leaves the
+// worktree, its branch and the target as they were.
 func finishWorktree(ctx *Context, call Call, record worktree.Record) error {
-	reasons, err := finishReasons(record)
-	if err != nil {
-		return &FailedError{Message: fmt.Sprintf("cannot tell whether %s holds work: %v.", record.Ref(), err)}
+	keep := func(current worktree.Record) error {
+		reasons, err := finishReasons(current)
+		if err != nil {
+			return &FailedError{Message: fmt.Sprintf("cannot tell whether %s holds work: %v.", record.Ref(), err)}
+		}
+		if len(reasons) > 0 {
+			return &FailedError{Message: fmt.Sprintf("%s is not finished: %s. Nothing was landed or removed.", record.Ref(), strings.Join(reasons, "; "))}
+		}
+		return nil
 	}
-	if len(reasons) > 0 {
-		return &FailedError{Message: fmt.Sprintf("%s is not finished: %s. Nothing was landed or removed.", record.Ref(), strings.Join(reasons, "; "))}
-	}
-	landing, err := landRecord(call, record)
-	if err != nil {
+	landed, err := worktree.Finish(record, call.Flag("into", ""), keep)
+	var refused *FailedError
+	var stuck *worktree.LandedError
+	switch {
+	case errors.As(err, &refused):
 		return err
+	case errors.As(err, &stuck):
+		return &FailedError{Message: fmt.Sprintf("landed %s into %s, then could not remove it: %v", record.Ref(), stuck.Landing.Target, stuck.Err)}
+	case err != nil:
+		return landRefusal(call, err)
 	}
-	if err := worktree.Remove(record, false); err != nil {
-		return &FailedError{Message: fmt.Sprintf("landed %s into %s, then could not remove it: %v", record.Ref(), landing.Target, err)}
-	}
+	landing := worktreeLanding{Worktree: record.Ref(), Landing: landed}
 	result := worktreeFinish{Landed: landing, worktreeRemoval: worktreeRemoval{Removed: record}}
-	result.BranchDropped, result.BranchKept = dropBranch(record)
+	result.fateOfBranch(record)
 	return printValue(ctx, result, func() []string {
 		lines := append(landing.lines(), "removed "+record.Ref()+" at "+record.Path)
 		return append(lines, result.branchLines()...)

@@ -7,7 +7,10 @@ import (
 	pathpkg "path"
 	"path/filepath"
 	"sort"
+	"strconv"
 
+	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/state"
 )
 
@@ -19,6 +22,50 @@ func Claim(record Record, owner Owner) (Record, error) {
 		return record, err
 	}
 	return record, state.WriteAtomic(recordPath(record), data)
+}
+
+// keepIncluded writes what .worktreeinclude copied into the record at once,
+// under the lock that made the checkout: until then an rm would take the
+// copies for ignored files of the checkout's own, and a launch killed before
+// its session is claimed would leave them so. Best effort: a record that
+// keeps none only makes rm refuse more.
+func keepIncluded(record Record) Record {
+	if len(record.Included) > 0 {
+		if data, err := encode(record); err == nil {
+			_ = state.WriteAtomic(recordPath(record), data)
+		}
+	}
+	return record
+}
+
+// launcher is this process as a record names its launcher, or "" when its
+// start time cannot be read.
+func launcher() string {
+	start, err := proc.StartTime(os.Getpid())
+	if err != nil {
+		return ""
+	}
+	return strconv.Itoa(os.Getpid()) + "." + strconv.FormatUint(start, 10)
+}
+
+// Launching says whether the checkout is still being made or its session
+// started, by a rewake process other than this one: the record names no
+// session yet, and the process that made it still runs.
+func (r Record) Launching() bool {
+	if r.Session != nil {
+		return false
+	}
+	pid, start, ok := registry.ParseEpoch(r.Launcher)
+	return ok && pid != os.Getpid() && proc.Alive(pid, start)
+}
+
+// mainCheckout is the checkout holding a repository's shared Git directory,
+// or "" for one kept apart from any, a bare repository's.
+func mainCheckout(commonDir string) string {
+	if filepath.Base(commonDir) != ".git" {
+		return ""
+	}
+	return filepath.Dir(commonDir)
 }
 
 // List returns every checkout recorded under root, by repository and name. A

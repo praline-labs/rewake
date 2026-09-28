@@ -196,20 +196,23 @@ func TestDropBranchKeepsWorkOnlyItHolds(t *testing.T) {
 		t.Fatal(err)
 	}
 	commit(t, record.Path, "mine")
-	if dropped, err := DropBranch(record); err != nil || dropped {
-		t.Errorf("checked out: %v, %v", dropped, err)
+	if dropping, err := DropBranch(record); err != nil || dropping.Dropped || !samePlace(dropping.CheckedOut, record.Path) {
+		t.Errorf("checked out: %+v, %v", dropping, err)
 	}
 	if err := Remove(record, false); err != nil {
 		t.Fatal(err)
 	}
-	if dropped, err := DropBranch(record); err != nil || dropped {
-		t.Errorf("with commits only it holds: %v, %v", dropped, err)
+	if dropping, err := DropBranch(record); err != nil || dropping != (Dropping{}) {
+		t.Errorf("with commits only it holds: %+v, %v", dropping, err)
 	}
 	must(t, source, "merge", "-q", "--ff-only", "work")
-	if dropped, err := DropBranch(record); err != nil || !dropped {
-		t.Errorf("held by main: %v, %v", dropped, err)
+	if dropping, err := DropBranch(record); err != nil || !dropping.Dropped {
+		t.Errorf("held by main: %+v, %v", dropping, err)
 	}
 	if tip, _ := refTip(record.CommonDir, "refs/heads/work"); tip != "" {
 		t.Errorf("work is still at %s", tip)
+	}
+	if dropping, err := DropBranch(record); err != nil || dropping.Gone == "" || dropping.Dropped {
+		t.Errorf("gone already: %+v, %v", dropping, err)
 	}
 }

@@ -148,7 +148,7 @@ func TestWorktreeRmDropsOnlyABranchNothingIsLostWith(t *testing.T) {
 		t.Errorf("rm clean: %d %s %s", code, out, errOut)
 	}
 	code, out, errOut := run("worktree", "rm", worked.Name)
-	if code != ExitOK || !strings.Contains(out, "kept the branch worked") || !strings.Contains(out, "git merge --ff-only worked") {
+	if code != ExitOK || !strings.Contains(out, "kept the branch worked") || !strings.Contains(out, "merge --ff-only worked") {
 		t.Errorf("rm worked: %d %s %s", code, out, errOut)
 	}
 	if branches := lab.git(t, lab.repo, "branch", "--list", "clean", "worked"); strings.Contains(branches, "clean") || !strings.Contains(branches, "worked") {

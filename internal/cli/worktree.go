@@ -2,14 +2,11 @@ package cli
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
-	"path/filepath"
-	"slices"
 	"strings"
 	"text/tabwriter"
 
-	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/state"
 	"github.com/praline-labs/rewake/internal/worktree"
 )
 
@@ -42,10 +39,10 @@ func worktreeCommand() *Command {
 			"They live under " + worktreeRootHelp + ", one directory per repository, named for it; each worktree has its record beside it, saying whose session it was made for, from which repository and at which commit. Each is on a branch of its own name; a name may hold slashes, feat/login, and its directory then has + for each.",
 			"A name, or <repository>/<name> as ls prints it when one name is in two repositories. A name may hold a slash itself, so a word is taken as <repository>/<name> first, when a repository's directory and a name there match it, and as a name otherwise.",
 			"land fast-forwards the target to the worktree's branch, and nothing else: the commits keep their hashes, the worktree and its session are not touched, and it may run any number of times. The target is the branch checked out where the worktree was made from, or --into; checked out there, it is merged there with git merge --ff-only, so git refuses changes the merge would overwrite; checked out nowhere, its ref is moved. A target checked out in any other checkout — a worker's, the worktree's own — is refused, and so is one a rebase or bisect is working on. A target that moved on is refused: rebase the branch onto it in the worktree, then land again.",
-			"finish lands once more, then removes the worktree and its branch. It refuses while a rewake session runs in the worktree, while it has changes or files git ignores, while it is not on its branch, and when the fast-forward is not possible; nothing is removed then.",
-			"rm removes the checkout with git worktree remove, so the repository forgets it too, and its branch when another branch, tag or remote-tracking ref holds the branch's commits; a branch with commits only it holds stays.",
-			"rm refuses a worktree with changes, with files git ignores (a .env, a local build) other than unchanged copies .worktreeinclude made, whose HEAD is on no branch, tag or remote-tracking ref (a detached HEAD with commits of its own), whose directory is gone while the repository still lists it, or in which a rewake session still runs — the one it was made for or any started there since — and says which; --force removes it anyway. A process rewake did not start is not seen.",
-			"Refusals of rm, land and finish over the state of the worktree or its repository — a running session, changes, a branch or repository gone, a target that moved on or that another checkout holds, git refusing the merge — exit 1. A wrong call exits 2: a worktree name that names none, a branch name git refuses, --into the worktree's own branch.",
+			"finish lands once more, then removes the worktree and its branch. It refuses while a rewake session runs in the worktree or a launch is still starting one, while it has changes or files git ignores, while it is not on its branch, while it is locked with git worktree lock or holds a submodule checked out, and when the fast-forward is not possible; nothing is landed or removed then.",
+			"rm removes the checkout with git worktree remove, so the repository forgets it too, and its branch when another branch, tag or remote-tracking ref holds the branch's commits and no checkout has it out; a branch with commits only it holds stays, and so does one another checkout has out.",
+			"rm refuses a worktree with changes, with files git ignores (a .env, a local build) other than unchanged copies .worktreeinclude made, whose HEAD is on no branch, tag or remote-tracking ref (a detached HEAD with commits of its own), whose directory is gone while the repository still lists it, locked with git worktree lock, holding a submodule checked out, whose launch is still starting its session, or in which a rewake session still runs — the one it was made for or any started there since — and says which; --force removes it anyway, a locked one too. A process rewake did not start is not seen.",
+			"Refusals of rm, land and finish over the state of the worktree or its repository — a running session, changes, a branch or repository gone, a source on the worktree's own branch, a target that moved on or that another checkout holds, git refusing the merge, a hook still running after a minute — exit 1. A wrong call exits 2: a worktree name that names none, a branch name git refuses, --into the worktree's own branch, --into= with no branch.",
 		},
 		Handler: handleWorktree,
 	}
@@ -75,9 +72,10 @@ type worktreeRemoval struct {
 	Removed worktree.Record `json:"removed"`
 	Forced  bool            `json:"forced,omitempty"`
 	// BranchDropped says the worktree's branch went with it; BranchKept,
-	// when it stayed, says why.
+	// when it stayed, says why; BranchGone, when there was none to drop.
 	BranchDropped bool   `json:"branchDropped,omitempty"`
 	BranchKept    string `json:"branchKept,omitempty"`
+	BranchGone    string `json:"branchGone,omitempty"`
 }
 
 func (r worktreeRemoval) branchLines() []string {
@@ -86,24 +84,10 @@ func (r worktreeRemoval) branchLines() []string {
 		return []string{"deleted the branch " + r.Removed.Branch + ", which another ref holds"}
 	case r.BranchKept != "":
 		return []string{"kept the branch " + r.Removed.Branch + ": " + r.BranchKept}
+	case r.BranchGone != "" && r.Removed.Branch != "":
+		return []string{"no branch " + r.Removed.Branch + " to delete: " + r.BranchGone}
 	}
 	return nil
-}
-
-// dropBranch deletes a removed checkout's branch when nothing goes with it,
-// and says why it stays when it does.
-func dropBranch(record worktree.Record) (bool, string) {
-	if record.Branch == "" {
-		return false, ""
-	}
-	dropped, err := worktree.DropBranch(record)
-	switch {
-	case err != nil:
-		return false, err.Error()
-	case !dropped:
-		return false, "it holds commits no other branch, tag or remote-tracking ref has; git merge --ff-only " + record.Branch + " in " + record.Source + " takes them, git branch -D " + record.Branch + " drops them"
-	}
-	return true, ""
 }
 
 func handleWorktree(ctx *Context, call Call) error {
@@ -121,6 +105,8 @@ func handleWorktree(ctx *Context, call Call) error {
 		return &UsageError{Command: call.Command, Message: "--force is for rm; ls, land and finish remove nothing without their checks. rewake worktree rm <name> --force removes without them."}
 	case into && verb != "land" && verb != "finish":
 		return &UsageError{Command: call.Command, Message: "--into is for land and finish."}
+	case into && call.Flags["into"] == "":
+		return &UsageError{Command: call.Command, Message: "--into= needs a branch name; leave --into out to land into the branch checked out where the worktree was made from."}
 	case verb == "ls" && len(call.Positionals) == 1:
 		return listWorktrees(ctx, root)
 	case verb == "ls":
@@ -200,100 +186,29 @@ func findWorktree(call Call, root, ref string) (worktree.Record, error) {
 
 func removeWorktree(ctx *Context, call Call, record worktree.Record) error {
 	force := call.Switch("force")
+	var keep func(worktree.Record) error
 	if !force {
-		if reasons, err := keepReasons(record); err != nil {
-			return &FailedError{Message: fmt.Sprintf("cannot tell whether %s holds work: %v. --force removes it without looking.", record.Ref(), err)}
-		} else if len(reasons) > 0 {
-			return &FailedError{Message: fmt.Sprintf("%s is kept: %s. Remove it anyway with rewake worktree rm %s --force.", record.Ref(), strings.Join(reasons, "; "), record.Ref())}
+		keep = func(current worktree.Record) error {
+			if reasons, err := keepReasons(current); err != nil {
+				return &FailedError{Message: fmt.Sprintf("cannot tell whether %s holds work: %v. --force removes it without looking.", record.Ref(), err)}
+			} else if len(reasons) > 0 {
+				return &FailedError{Message: fmt.Sprintf("%s is kept: %s. Remove it anyway with rewake worktree rm %s --force.", record.Ref(), strings.Join(reasons, "; "), record.Ref())}
+			}
+			return nil
 		}
 	}
-	if err := worktree.Remove(record, force); err != nil {
+	if err := worktree.RemoveChecked(record, force, keep); err != nil {
+		var refused *FailedError
+		if errors.As(err, &refused) {
+			return err
+		}
 		return &FailedError{Message: err.Error()}
 	}
 	result := worktreeRemoval{Removed: record, Forced: force}
-	result.BranchDropped, result.BranchKept = dropBranch(record)
+	result.fateOfBranch(record)
 	return printValue(ctx, result, func() []string {
 		return append([]string{"removed " + record.Ref() + " at " + record.Path}, result.branchLines()...)
 	})
-}
-
-// keepReasons says what removing a checkout would lose or cut off. Whatever
-// cannot be told is an error, and rm then refuses too: without --force it
-// never loses work.
-func keepReasons(record worktree.Record) ([]string, error) {
-	reasons, _, err := keepReasonsAndCheck(record)
-	return reasons, err
-}
-
-// keepReasonsAndCheck is keepReasons with the look at the checkout it took.
-func keepReasonsAndCheck(record worktree.Record) ([]string, worktree.Check, error) {
-	var reasons []string
-	running, err := runningIn(record)
-	if err != nil {
-		return nil, worktree.Check{}, err
-	}
-	if len(running) > 0 {
-		reasons = append(reasons, "rewake sessions still run in it: "+strings.Join(running, ", "))
-	}
-	check, err := worktree.Inspect(record)
-	if err != nil {
-		return nil, worktree.Check{}, err
-	}
-	if check.Missing && !check.Forgotten {
-		reasons = append(reasons, "its directory "+record.Path+" is gone while the repository still lists it; if it was moved, git worktree repair <new path> run in the repository reconnects it, and whatever it holds is out of sight here")
-	}
-	if check.Forgotten && !check.Missing {
-		reasons = append(reasons, "its repository "+record.CommonDir+" is gone, so git cannot tell what "+record.Path+" holds")
-	}
-	if check.Changes {
-		reasons = append(reasons, "it has changes git status shows")
-	}
-	if check.Ignored {
-		reasons = append(reasons, "it holds files git ignores, a .env or a local build, which removal deletes")
-	}
-	if check.Unreachable {
-		reasons = append(reasons, "its HEAD "+shortCommit(check.Head)+" is on no branch, tag or remote-tracking ref, and those commits would be left to garbage collection")
-	}
-	return reasons, check, nil
-}
-
-// runningIn names the rewake sessions still running with their work in a
-// checkout: the one it was made for, and any started there since — after the
-// first ended, or by hand in its directory, as a taken name's refusal
-// suggests. It looks in every room of the current state directory and of the
-// one the owner registered in. A process rewake did not start is not seen.
-func runningIn(record worktree.Record) ([]string, error) {
-	var roots []string
-	if root, err := state.Root(); err == nil {
-		roots = append(roots, root)
-	}
-	owner := record.Session
-	if owner != nil && owner.Dir != "" {
-		if root := state.RootForRoom(owner.Dir); !slices.Contains(roots, root) {
-			roots = append(roots, root)
-		}
-	}
-	var found []string
-	for _, root := range roots {
-		rooms, err := state.RoomDirs(root)
-		if err != nil {
-			return nil, fmt.Errorf("cannot list the rooms of %s: %w", root, err)
-		}
-		for _, room := range rooms {
-			sessions, err := registry.ListReadOnly(room)
-			if err != nil {
-				return nil, fmt.Errorf("cannot list the sessions of %s: %w", room, err)
-			}
-			for _, session := range sessions {
-				made := owner != nil && filepath.Clean(owner.Dir) == room && session.Name == owner.Name && session.Epoch() == owner.Epoch
-				label := session.Name + " in room " + filepath.Base(room)
-				if session.Alive() && (made || worktree.Within(session.CWD, record.Path)) && !slices.Contains(found, label) {
-					found = append(found, label)
-				}
-			}
-		}
-	}
-	return found, nil
 }
 
 // ownerLabel names who works in a checkout: the sessions running there, or
@@ -307,6 +222,8 @@ func ownerLabel(view worktreeView) string {
 			names = append(names, name)
 		}
 		return strings.Join(names, ",") + " (running)"
+	case view.Launching():
+		return "- (launching)"
 	case view.Session != nil:
 		return view.Session.Name + " (ended)"
 	}

@@ -69,7 +69,11 @@ type Record struct {
 	// the launch to tell; it is not kept.
 	Skipped   []string  `json:"-"`
 	CreatedAt time.Time `json:"createdAt"`
-	Session   *Owner    `json:"session,omitempty"`
+	// Launcher is the rewake process that made the checkout, as pid.start:
+	// until the session is claimed, that it still runs is all that says the
+	// checkout is about to be used.
+	Launcher string `json:"launcher,omitempty"`
+	Session  *Owner `json:"session,omitempty"`
 }
 
 // Owner is the session a checkout was made for.
@@ -181,10 +185,13 @@ func Create(root, from, name string) (Record, error) {
 	if err != nil {
 		return Record{}, err
 	}
-	if inside(resolved(root), resolved(source.Source)) {
-		// Git would list the checkout among the repository's own files, and
-		// an agent searching the repository would find a second copy of it.
-		return Record{}, &UnusableError{Reason: fmt.Sprintf("the worktree directory %s is inside the repository at %s; set %s to a directory outside it", root, source.Source, RootEnv)}
+	// Git would list the checkout among the repository's own files, and an
+	// agent searching the repository would find a second copy of it. The main
+	// checkout is asked too: a launch from a linked one stands in another top.
+	for _, top := range []string{source.Source, mainCheckout(source.CommonDir)} {
+		if top != "" && inside(resolved(root), resolved(top)) {
+			return Record{}, &UnusableError{Reason: fmt.Sprintf("the worktree directory %s is inside the repository at %s; set %s to a directory outside it", root, top, RootEnv)}
+		}
 	}
 	directory := filepath.Join(root, source.Repository)
 	if err := os.MkdirAll(root, 0o755); err != nil {
@@ -222,6 +229,7 @@ func add(source Record, directory, name string) (Record, error) {
 		record.Branch = record.Name
 		record.Path = filepath.Join(directory, flatName(record.Name))
 		record.CreatedAt = time.Now().UTC()
+		record.Launcher = launcher()
 		err := claim(record)
 		var exists *ExistsError
 		var taken *BranchTakenError
@@ -234,7 +242,7 @@ func add(source Record, directory, name string) (Record, error) {
 		if err := checkout(source, record); err != nil {
 			return Record{}, err
 		}
-		return include(record), nil
+		return keepIncluded(include(record)), nil
 	}
 }
 

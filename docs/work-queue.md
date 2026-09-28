@@ -145,10 +145,12 @@ the roadmap entries of that day), and so did the worktree lifecycle
    refuses the cases it can see ([grants.md](grants.md#what-a-grant-does-not-stop)). A
    probe on the real sandbox settles which.
 4. **`land`, `finish` and the checks before `ls` and `rm` beside a foreign `git worktree
-   add`.** Creating and removing are serialized per repository
-   ([worktree.md](worktree.md#launches-at-once)); these are not, and during someone
-   else's `add` — by hand, or Claude Code's own `-w` — they may fail with git's message
-   and have to be run again.
+   add`.** Creating and removing are serialized per repository, and since September 28,
+   2026 rm's checks and finish as a whole hold the same lock as the removal
+   ([worktree.md](worktree.md#launches-at-once)), so none of them meets rewake's own
+   add half-way. An `add` rewake does not run — by hand, or Claude Code's own `-w` — is
+   outside that lock: during it `land`, `finish` and the checks of `ls` and `rm` may
+   still fail with git's message and have to be run again.
 5. **An owner file of extra rules for the grant tiers**, when a case needs it.
 
 ## Also queued, not scheduled

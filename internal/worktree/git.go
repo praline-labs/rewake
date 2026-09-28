@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -75,6 +74,14 @@ type Check struct {
 	// Branch is the branch checked out in it now, empty when it is detached
 	// or missing.
 	Branch string `json:"branch,omitempty"`
+	// Locked is a checkout somebody locked with `git worktree lock`, which
+	// git worktree remove refuses unless forced twice; LockReason is the
+	// reason given, if any.
+	Locked     bool   `json:"locked,omitempty"`
+	LockReason string `json:"lockReason,omitempty"`
+	// Submodules is a checkout holding a submodule checked out, which git
+	// worktree remove refuses unless forced.
+	Submodules bool `json:"submodules,omitempty"`
 }
 
 // Dirty says whether removing the checkout would lose work.
@@ -116,6 +123,14 @@ func Inspect(record Record) (Check, error) {
 	if check.Unreachable, err = unreachable(record.CommonDir, head); err != nil {
 		return Check{}, err
 	}
+	entry, _, err := listed(record)
+	if err != nil {
+		return Check{}, err
+	}
+	check.Locked, check.LockReason = entry.locked, entry.lockReason
+	if check.Submodules, err = submodules(record.Path); err != nil {
+		return Check{}, err
+	}
 	return check, nil
 }
 
@@ -123,17 +138,17 @@ func Inspect(record Record) (Check, error) {
 // repository still records of it.
 func inspectMissing(record Record) (Check, error) {
 	check := Check{Missing: true}
-	head, listed, err := listedHead(record)
+	entry, found, err := listed(record)
 	if err != nil {
 		return Check{}, err
 	}
-	if !listed {
+	if !found {
 		check.Forgotten = true
 		return check, nil
 	}
-	check.Head = head
-	if head != "" {
-		if check.Unreachable, err = unreachable(record.CommonDir, head); err != nil {
+	check.Head, check.Locked, check.LockReason = entry.head, entry.locked, entry.lockReason
+	if check.Head != "" {
+		if check.Unreachable, err = unreachable(record.CommonDir, check.Head); err != nil {
 			return Check{}, err
 		}
 	}
@@ -150,27 +165,64 @@ func unreachable(commonDir, head string) (bool, error) {
 	return holders == "", nil
 }
 
-// listedHead reads a checkout's HEAD from the repository's own list of
+// entry is what the repository's own list of worktrees says of a checkout.
+type entry struct {
+	head       string
+	locked     bool
+	lockReason string
+}
+
+// listed reads a checkout's entry from the repository's own list of
 // worktrees, and says whether the repository lists it at all.
-func listedHead(record Record) (string, bool, error) {
+func listed(record Record) (entry, bool, error) {
 	out, err := gitDirOutput(record.CommonDir, "worktree", "list", "--porcelain")
 	if err != nil {
-		return "", false, fmt.Errorf("cannot list the worktrees of %s: %w", record.CommonDir, err)
+		return entry{}, false, fmt.Errorf("cannot list the worktrees of %s: %w", record.CommonDir, err)
 	}
 	for _, block := range strings.Split(out, "\n\n") {
-		path, head := "", ""
+		path, found := "", entry{}
 		for _, line := range strings.Split(block, "\n") {
 			if value, ok := strings.CutPrefix(line, "worktree "); ok {
 				path = value
 			} else if value, ok := strings.CutPrefix(line, "HEAD "); ok {
-				head = value
+				found.head = value
+			} else if line == "locked" {
+				found.locked = true
+			} else if value, ok := strings.CutPrefix(line, "locked "); ok {
+				found.locked, found.lockReason = true, value
 			}
 		}
 		if path != "" && samePath(path, record.Path) {
-			return head, true, nil
+			return found, true, nil
 		}
 	}
-	return "", false, nil
+	return entry{}, false, nil
+}
+
+// submodules says whether a checkout holds a submodule checked out, as git
+// worktree remove asks before it refuses one: a modules directory in the
+// checkout's own Git directory, or a submodule of its index whose directory
+// holds a .git.
+func submodules(path string) (bool, error) {
+	gitDir, err := gitOutput(path, "rev-parse", "--path-format=absolute", "--git-dir")
+	if err != nil {
+		return false, fmt.Errorf("cannot find the Git directory of %s: %w", path, err)
+	}
+	if isDir(filepath.Join(gitDir, "modules")) {
+		return true, nil
+	}
+	staged, err := gitOutput(path, "ls-files", "--stage", "-z")
+	if err != nil {
+		return false, fmt.Errorf("cannot list the index of %s: %w", path, err)
+	}
+	for _, line := range strings.Split(staged, "\x00") {
+		// <mode> <object> <stage>\t<path>; 160000 is a submodule.
+		meta, name, ok := strings.Cut(line, "\t")
+		if ok && strings.HasPrefix(meta, "160000 ") && exists(filepath.Join(path, filepath.FromSlash(name), ".git")) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // samePath compares a path git printed with a record's, which may reach the
@@ -181,61 +233,6 @@ func samePath(listed, recorded string) bool {
 	}
 	parent, err := filepath.EvalSymlinks(filepath.Dir(recorded))
 	return err == nil && filepath.Clean(listed) == filepath.Join(parent, filepath.Base(recorded))
-}
-
-// Remove takes a checkout away with the public `git worktree remove`, and its
-// record after it. force removes one with changes as well. A checkout whose
-// directory is gone is removed the same way, which on a missing directory
-// touches only its own entry — never `git worktree prune`, which would take
-// every other missing checkout of the repository along; one the repository
-// has forgotten leaves only the record to remove. A directory whose repository
-// is gone has no git left to remove it, and only force deletes it. It holds
-// the repository's lock, as Create does: git worktree remove reads the
-// entries of the others as well. A root that is gone takes no lock, and is not
-// made again for one: no checkout is made in it without Create making it
-// first, and a root the person removed should stay removed.
-func Remove(record Record, force bool) error {
-	directory := filepath.Dir(record.Path)
-	if _, err := os.Stat(filepath.Dir(directory)); errors.Is(err, fs.ErrNotExist) {
-		return remove(record, force)
-	}
-	return withRepositoryLock(directory, func() error { return remove(record, force) })
-}
-
-func remove(record Record, force bool) error {
-	present := isDir(record.Path)
-	forgotten := repositoryGone(record)
-	if !forgotten && !present {
-		_, listed, err := listedHead(record)
-		if err != nil {
-			return err
-		}
-		forgotten = !listed
-	}
-	switch {
-	case !forgotten:
-		args := []string{"worktree", "remove"}
-		if force {
-			args = append(args, "--force")
-		}
-		if err := gitDir(record.CommonDir, append(args, record.Path)...); err != nil {
-			return fmt.Errorf("git worktree remove failed: %w", err)
-		}
-	case present:
-		if !force {
-			return fmt.Errorf("the repository of %s is gone, so git cannot tell what it holds; only a forced removal deletes it", record.Path)
-		}
-		if err := os.RemoveAll(record.Path); err != nil {
-			return err
-		}
-	}
-	if err := os.Remove(recordPath(record)); err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	// The repository's directory goes with its last checkout; one still in use
-	// refuses to go, which is the answer wanted.
-	_ = os.Remove(filepath.Dir(record.Path))
-	return nil
 }
 
 func isDir(path string) bool {
@@ -293,13 +290,6 @@ func run(command *exec.Cmd) (string, error) {
 	return runGit(command, false)
 }
 
-// runWithHooks runs git as a person would in their own checkout, hooks
-// included: land moves the source's branch, and the hooks the repository keeps
-// for a merge or a ref update are the person's to run there.
-func runWithHooks(command *exec.Cmd) (string, error) {
-	return runGit(command, true)
-}
-
 // keptGitEnv are the GIT_ variables that pass: which configuration files the
 // person's git reads, and the identity it signs with. None of them points at a
 // repository or changes what a command does to one.
@@ -328,6 +318,14 @@ var keptGitEnv = []string{
 // pointer. The settings go by GIT_CONFIG_COUNT, for this call only; nothing
 // is written to the repository's configuration.
 func runGit(command *exec.Cmd, hooks bool) (string, error) {
+	prepare(command, hooks)
+	var stdout, stderr bytes.Buffer
+	command.Stdout, command.Stderr = &stdout, &stderr
+	return finished(command.Run(), stdout.String(), stderr.String())
+}
+
+// prepare sets the environment and the session runGit describes.
+func prepare(command *exec.Cmd, hooks bool) {
 	for _, entry := range os.Environ() {
 		key, _, _ := strings.Cut(entry, "=")
 		if strings.HasPrefix(key, "GIT_") && !slices.Contains(keptGitEnv, key) {
@@ -345,13 +343,16 @@ func runGit(command *exec.Cmd, hooks bool) (string, error) {
 		command.Env = append(command.Env, fmt.Sprintf("GIT_CONFIG_KEY_%d=%s", i, setting[0]), fmt.Sprintf("GIT_CONFIG_VALUE_%d=%s", i, setting[1]))
 	}
 	command.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
-	var stdout, stderr bytes.Buffer
-	command.Stdout, command.Stderr = &stdout, &stderr
-	if err := command.Run(); err != nil {
-		if message := strings.TrimSpace(stderr.String()); message != "" {
+}
+
+// finished is what a git call that ended answers: its output, or its error
+// in git's own words when it printed any.
+func finished(err error, stdout, stderr string) (string, error) {
+	if err != nil {
+		if message := strings.TrimSpace(stderr); message != "" {
 			return "", errors.New(message)
 		}
 		return "", err
 	}
-	return strings.TrimSpace(stdout.String()), nil
+	return strings.TrimSpace(stdout), nil
 }
