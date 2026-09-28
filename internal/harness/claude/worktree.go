@@ -20,6 +20,10 @@ const worktreeFlag = "--worktree"
 
 func (claudeHarness) WorktreeFlag() string { return worktreeFlag }
 
+// WorktreeNameSpaced: Claude Code's own flag is --worktree [name], so a person
+// used to it writes the name after a space.
+func (claudeHarness) WorktreeNameSpaced() bool { return true }
+
 // LaunchDirectory is the current directory: Claude Code has no flag that
 // chooses where it works, so the arguments come back as they are.
 func (claudeHarness) LaunchDirectory(args []string) (string, []string, error) {

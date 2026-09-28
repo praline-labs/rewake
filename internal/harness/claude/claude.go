@@ -154,9 +154,9 @@ func claudeDefaults() []harness.Default {
 func (claudeHarness) Notes() []string {
 	return []string{
 		"Delivery goes through the session inbox socket, so a message arrives within seconds and wakes an idle session.",
-		"Arguments after the harness name are passed to claude untouched, with one exception: a --help written first asks rewake for this page instead of starting the harness.",
+		"Arguments after the harness name are passed to claude as written, except: a --help written first asks rewake for this page instead of starting the harness; --worktree is rewake's, below; and a flag the line types replaces an alias's copy of it, as the alias note says. rewake adds the flags its delivery needs beside them.",
 		"An identical message from the same sender within thirty seconds is dropped by Claude Code itself; rewake puts a short id in every message to keep them apart.",
-		"--worktree is rewake's here: rewake adds a checkout of HEAD on a new branch under its worktree directory and starts the session in it, at the same place within the repository; --worktree=<name> names both. rewake worktree land takes the branch's commits into the checkout it came from, finish lands and removes it, ls lists and rm removes. It starts a new conversation only: --continue, --resume, --from-pr, --teleport and --fork-session are refused beside it. -w stays Claude Code's own worktree, inside the repository.",
+		"--worktree is rewake's here: rewake adds a checkout of HEAD on a new branch under its worktree directory and starts the session in it, at the same place within the repository; --worktree=<name> names both, and a name after a space is refused, since it would reach claude as the prompt. rewake worktree land takes the branch's commits into the checkout it came from, finish lands and removes it, ls lists and rm removes. It starts a new conversation only: --continue or -c, --resume or -r, --from-pr, --teleport, --fork-session and the attach and respawn commands are refused beside it, and so are Claude Code's own -w and --tmux, and --cloud and --environment. -w alone stays Claude Code's own worktree, inside the repository.",
 	}
 }
 
@@ -181,6 +181,9 @@ func (claudeHarness) SingleUseFlags() []harness.Flag {
 		{Spellings: []string{"--permission-mode"}, TakesValue: true},
 		{Spellings: []string{"--settings"}, TakesValue: true},
 		{Spellings: []string{"--agent"}, TakesValue: true},
+		// rewake's own, taken before the launch and read only with =<name>, so
+		// a switch here as on Codex: a typed one replaces an alias's.
+		{Spellings: []string{"--worktree"}},
 	}
 }
 

@@ -92,7 +92,7 @@ func steer(ctx *Context, call Call, action string) error {
 	}
 	self, _, err := ownRun(dir)
 	if err != nil {
-		return usage("only a main session may %s another, and this is not one: %v.", action, err)
+		return usage("only a main session may %s another, and this is not one: %v. Run it from the main session's shell, or ask main to do it.", action, err)
 	}
 	if self.Role != role.Main.ID {
 		return usage("only a main session may %s another; %s is a %s session. Ask the main to do it.", action, self.Name, self.Role)

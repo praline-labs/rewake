@@ -45,6 +45,8 @@ func (p *worktreeProbe) WorktreeRefusal(args []string) error {
 	return p.taker().WorktreeRefusal(args)
 }
 
+func (p *worktreeProbe) WorktreeNameSpaced() bool { return p.taker().WorktreeNameSpaced() }
+
 func (p *worktreeProbe) LaunchDirectory(args []string) (string, []string, error) {
 	return p.taker().LaunchDirectory(args)
 }
@@ -341,5 +343,29 @@ func TestClaudeHandsItsLongWorktreeFlagToRewake(t *testing.T) {
 		if err := lab.launch(t, harnessProbe(t, "claude"), lab.repo, named...); err != nil {
 			t.Errorf("%q: %v", named, err)
 		}
+	}
+}
+
+// Claude Code's own flag is --worktree [name], so a word after rewake's is the
+// name the person meant: refused with the spelling that names it, where it
+// once made a checkout of a generated name and sent the word as the prompt.
+// Codex's own flag is a switch, and there the word stays the prompt.
+func TestClaudeWorktreeNameAfterASpaceIsRefused(t *testing.T) {
+	lab := newWorktreeLab(t)
+	err := lab.launch(t, harnessProbe(t, "claude"), lab.repo, "--worktree", "fix-login")
+	var usage *UsageError
+	if !errors.As(err, &usage) || !strings.Contains(usage.Message, "--worktree=fix-login") || !strings.Contains(usage.Message, `--worktree -- "fix-login"`) {
+		t.Fatalf("got %v, want a refusal naming --worktree=fix-login", err)
+	}
+	if records := lab.records(t); len(records) != 0 {
+		t.Fatalf("a refused launch left %d checkouts", len(records))
+	}
+	for _, args := range [][]string{{"--worktree", "--", "fix the login"}, {"--worktree", "--model", "m"}} {
+		if err := lab.launch(t, harnessProbe(t, "claude"), lab.repo, args...); err != nil {
+			t.Errorf("%q: %v", args, err)
+		}
+	}
+	if err := lab.launch(t, codexProbe(t), lab.repo, "--worktree", "fix the login"); err != nil {
+		t.Errorf("codex took its prompt for a name: %v", err)
 	}
 }

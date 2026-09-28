@@ -43,7 +43,9 @@ sock/<name>.<epoch>.reply.sock   where that run's wrapper hears what the socket 
 ## Act 1. A session starts
 
 `rewake --write codex` starts write-codex. The sender in this example starts
-with `rewake --main --name lead claude`, becoming lead-claude.
+with `rewake --main --name lead claude`, becoming lead-claude. The owner runs both, from
+terminals outside any session: a launch from a shell inside a rewake session is refused
+with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-session)).
 
 1. **The directory.** The wrapper opens the `REWAKE_DIR` root and the room
    selected by `--room`, or `default` when omitted. Both are 0700; a symlink,
@@ -65,12 +67,15 @@ with `rewake --main --name lead claude`, becoming lead-claude.
    room or after main exits. Only explicit `--main` creates main, and it refuses
    under the room lock if a live main already occupies the room. Explicit
    `--general` and `--write` remain unchanged; a --name prefix never selects a
-   role. Main stays silent; write reports like general. Main and write are eligible
-   recipients of explicit Git metadata grants requested by main, and every role of a
-   directory grant ([grants.md](grants.md)); selecting a role does not request access. The record and intro say default general for an omitted
+   role. Main stays silent; write reports like general. A write session on Codex is the
+   one recipient of an explicit Git metadata grant requested by main — Claude Code takes
+   none, and main cannot send to itself — and every role of a directory grant
+   ([grants.md](grants.md)); selecting a role does not request access. The record and intro say default general for an omitted
    role flag, or identify the explicit flag.
-5. **The harness command line.** The user's arguments go through untouched.
-   rewake adds, for one launch only and never into a config file:
+5. **The harness command line.** The user's arguments go through as written, save the
+   exceptions each launch page's notes list: a `--help` written first, rewake's own
+   `--worktree`, a flag the line types again in place of an alias's copy, and the Codex
+   flags that name another server or configuration, which are refused. rewake adds, for one launch only and never into a config file:
    - Claude Code: `--messaging-socket-path sock/<name>.<epoch>.sock`,
      `--append-system-prompt <intro>`, `--allowedTools "Bash(rewake:*)"`, and
      one `--settings` layer — merged into the user's own if they passed one — with
@@ -88,15 +93,17 @@ with `rewake --main --name lead claude`, becoming lead-claude.
      and omit generated permission flags; incompatible
      remote/profile/local-provider launches refuse; `--worktree` never reaches it.
 6. **The environment.** `REWAKE_SESSION=<name>`, `REWAKE_EPOCH=<epoch>`,
-   `REWAKE_DIR=<root>` and `REWAKE_ROOM=<room>`; inherited Claude Code markers are stripped so a session
-   started from inside another does not borrow its socket.
+   `REWAKE_DIR=<root>` and `REWAKE_ROOM=<room>`; inherited Claude Code markers are stripped, so the harness
+   never borrows another session's socket. A launch from inside a session never gets
+   here; the stripping stays for a shell that carries such markers without rewake's.
 7. **Launch.** The harness starts with the wrapper's terminal and process
    group. Its pid and start time are added to the record. From now on the
    session is alive only while both processes are.
 8. **The intro.** The agent's first context names its session, room, selected
-   role and the reason for that role. A waiting message is announced with
-   `Rewake:`, run `rewake guide` before sending or reading. Everything else the
-   agent needs is in the guide, which always matches the binary.
+   role and the reason for that role, then the role's whole playbook — its steps and
+   its limits, the text `rewake guide` prints again in that session — how a waiting
+   message is announced with `Rewake:`, and that `rewake guide` has the complete rules.
+   The golden copies are in `internal/brief/testdata/`.
 9. **Serving.** The wrapper watches `inbox/<name>/` with inotify, polls every
    second as the safety net, sweeps old mail every ten minutes, and waits for
    the harness to exit.
@@ -122,7 +129,7 @@ session's shell, or from a person's shell in the same room. A shell without
 4. **The file.** `inbox/write-codex/<id>.json.tmp`, renamed to `.json`. The id is
    time-sortable. Nothing else is touched: the sender does not deliver.
 5. **The wait.** The sender polls `<id>.status` for up to `--wait` seconds (5
-   by default) and prints one line: `Rewake: delivered to write-codex via app-server`,
+   by default; a question's delivery 5 at most) and prints one line: `Rewake: delivered to write-codex via app-server`,
    `Rewake: pending for write-codex: …` or `Rewake: held for write-codex: …` (exit 3),
    or `Rewake: failed for write-codex: …` (exit 1). A task or a question is announced
    at once; a `--notify` waits up to four seconds for company (Act 3), and the send
@@ -177,6 +184,11 @@ in one notice. A task or a question does not wait, and takes whatever is waiting
      minute takes the delivery back. The first notice to a new
      session waits for its first status line, since until then the gate holds
      everything ([delivery-adapters.md](delivery-adapters.md#claude-code-adapter)).
+     A task or question carrying a directory grant waits, pending, while the session's
+     telemetry says a turn is running, and main's wrapper confirms the grant as on
+     Codex; the wrapper then keeps it in memory, and the session's `grant-hook` adds the
+     directory at the first file-tool write inside it ([grants-claude.md](grants-claude.md)).
+     `--grant-git` to a Claude Code session is refused at send, with exit 1.
    - Codex: call turn/start through the reserved TUI connection/generation with empty
      input and [standalone mailbox output](native-mailbox.md): short notice plus fixed
      member identities, never full task bodies. A task or question carrying a grant
@@ -187,7 +199,7 @@ in one notice. A task or a question does not wait, and takes whatever is waiting
      or that main does not confirm, fails the task and tells its sender; a main that is
      alive and does not answer yet keeps it pending. On an idle thread the
      adapter reads the current local roots without history and sends them with the
-     granted directories, and with --grant-git (main/write only) the missing Git
+     granted directories, and with --grant-git (a write session only) the missing Git
      metadata of the thread's repository. If roots cannot be read, --grant-git alone
      goes without the field and says so in delivery status; a directory grant waits
      and is read again.
@@ -278,11 +290,19 @@ ignored without changing the parent session's waits.
    hook writes the same report once. Retries use the stored text, recipients
    and message ids even when new work arrived between attempts.
 3. **A grant ends.** A directory granted with a task lives at least until this
-   report. Rewake takes it back at the next delivery to the session after it, not at
-   the report itself. A person's own turn in the terminal drops it at once. A cold resume
-   before the report starts a new run, which takes over the task's wait and has main
-   confirm the grant again; a resume after it gets nothing back
-   ([grants-resume.md](grants-resume.md)).
+   report; a stopped turn or a pending mark keeps it, and an error report or a
+   withdrawal ends it as a report does. On Codex rewake takes it back at the next
+   delivery to the session after it, not at the report itself, and a person's own turn
+   in the terminal drops it at once. On Claude Code the hook takes it back at the first
+   read or `rewake` command after the report in the `default` and `acceptEdits` modes;
+   in `plan`, `bypassPermissions` and auto it stays until the session ends
+   ([grants-claude.md](grants-claude.md)). A cold resume before the report starts a new
+   run, which takes over the task's wait and has main confirm the grant again — only
+   while that main still runs, in the same conversation, within a day of the read; a
+   restarted main restores nothing, and a resume after the report gets nothing back
+   ([grants-resume.md](grants-resume.md)). The Git metadata of a Codex worker's own
+   checkout, opened by `--grant-git` alone, is not journaled and never taken back: it
+   stays for the rest of the thread ([git-grants.md](git-grants.md)).
 4. **Forget the reported messages** after all reports are written and the turn
    receipt is marked done. Cleanup matches the original run and wait; newly
    read messages remain owed to the next result.

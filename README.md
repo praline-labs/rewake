@@ -34,21 +34,43 @@ screen and no terminal is proxied.
 Run `rewake` with no arguments for the map of commands, the usual order of work,
 and the exit codes.
 
+## Works with
+
+- **Claude Code** — `rewake claude`
+- **Codex** — `rewake codex`
+
+Each harness is installed and logged in on its own; rewake starts the one you name,
+passes your arguments on — the few exceptions are on `rewake claude --help` and
+`rewake codex --help` — and never edits its configuration. Sessions of both
+kinds talk to each other in one room.
+
 ## Install
 
-Not published yet. Build from source:
+```bash
+npm install -g @praline-labs/rewake
+rewake --version
+```
+
+Linux on x64 or arm64. npm installs a small launcher and the binary for your
+platform; Node and npm are needed only to install it — rewake itself is a single
+static binary and does not run on Node.
+
+From source, with Go 1.25 or newer:
 
 ```bash
+git clone https://github.com/praline-labs/rewake.git && cd rewake
 go build -ldflags "-X github.com/praline-labs/rewake/internal/cli.built=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   -o rewake ./cmd/rewake
 ```
 
-The `-ldflags` is optional: it passes in the build time, which `rewake --version` shows
-(see [docs/install.md](docs/install.md)).
+The `-ldflags` is optional: it passes in the build time, which `rewake --version` shows.
+[docs/install.md](docs/install.md) covers replacing an installed binary safely and how
+a release is made.
 
 ## Status
 
-Early. See `docs/roadmap/README.md` for what works today.
+See [docs/roadmap/README.md](docs/roadmap/README.md) for what works today and what
+comes next.
 
 ## License
 

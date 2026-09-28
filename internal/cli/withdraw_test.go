@@ -19,7 +19,7 @@ import (
 func sender(t *testing.T) (string, registry.Session) {
 	t.Helper()
 	dir, web := questionSender(t)
-	awaitStatus = func(string, string, string, time.Duration) (inbox.Status, bool) {
+	awaitStatus = func(string, string, string, time.Duration, func() bool) (inbox.Status, bool) {
 		return inbox.Status{State: inbox.Delivered, Via: "socket"}, true
 	}
 	return dir, web

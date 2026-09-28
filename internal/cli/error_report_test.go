@@ -126,7 +126,7 @@ func TestIdentifiedFailuresAreNotRoutedAgainAfterTheirWaitsClear(t *testing.T) {
 
 func TestQuestionsReturnAnErrorOutcome(t *testing.T) {
 	dir, peer := questionSender(t)
-	awaitStatus = func(_, _, id string, _ time.Duration) (inbox.Status, bool) {
+	awaitStatus = func(_, _, id string, _ time.Duration, _ func() bool) (inbox.Status, bool) {
 		rawUnread(t, dir, "web", map[string]any{"kind": "error", "text": "failure", "toEpoch": peer.Epoch(), "inReplyTo": []string{id}})
 		return inbox.Status{State: inbox.Delivered}, true
 	}

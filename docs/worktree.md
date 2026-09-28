@@ -2,7 +2,8 @@
 
 Split out of [launch.md](launch.md#a-worktree-for-a-launch) on September 27, 2026, when
 land, finish, Claude Code's launch and `.worktreeinclude` took it past the project's
-400-line limit. How the main session uses these worktrees is said there.
+400-line limit. How they are used — the owner starts each writer in one, since a session
+cannot start another, and main lands and finishes it — is said there.
 
 `rewake codex --worktree` and `rewake claude --worktree` give the session a checkout of
 its own, on a branch of its own. Codex's terminal cannot make one under rewake — it
@@ -33,9 +34,10 @@ bring the work back, and that Claude Code launches get the same checkout.
   which stands for the slash in the directory's name, and everything a shell reads, so
   the name goes into the commands a refusal prints as it is. The length is the longest
   whose record, `<name>.json`, and git's `.lock` beside a branch's last element fit the
-  255 bytes of a file name. A spaced value is not
+  255 bytes of a file name. For Codex a spaced value is not
   read: the word after the switch stays the harness's, a prompt most often, as it would
-  be for Codex itself. The flag after `--` is prompt text and stays. Given twice, or as
+  be for Codex itself. For Claude Code, whose own flag is `--worktree [name]`, such a
+  word is refused, naming `--worktree=<word>` and `--worktree -- <word>`. The flag after `--` is prompt text and stays. Given twice, or as
   `--worktree=`, it is a wrong call. For Codex it is Codex's own spelling. For Claude
   Code it is the long spelling of its own flag; the short `-w` stays Claude Code's —
   a worktree inside the repository in `.claude/worktrees/<name>`, on a branch

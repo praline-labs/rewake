@@ -90,7 +90,12 @@ func requestedDirGrants(call Call, sender, target registry.Session, senderErr er
 			return &FailedError{Message: flag + " " + refusal.Message}
 		}
 		if err != nil {
-			return &UsageError{Command: call.Command, Message: flag + " " + err.Error()}
+			message := err.Error()
+			if !strings.HasPrefix(message, flag+" ") {
+				// A refusal about the flag itself names it already.
+				message = flag + " " + message
+			}
+			return &UsageError{Command: call.Command, Message: message}
 		}
 		resolved = append(resolved, path)
 		if confirm {

@@ -39,6 +39,7 @@ tools/checksummary/              summarizes a suite run into a few lines and sum
 tools/harnesscache/              fetches and caches harness versions, runs them in a container
 tools/harnesscache/cache/        resolving, downloading, verifying and keeping a version
 tools/harnesscache/container/    the disposable container a cached version runs in
+tools/release/                   the release gate: checks, builds with pack.sh, publishes only when told
 ```
 
 `cmd/` holds only what the project ships; `tools/` holds development programs that ship

@@ -9,6 +9,11 @@ import (
 	"github.com/praline-labs/rewake/internal/role"
 )
 
+// requestedGitGrant checks --grant-git. A call to change — the wrong sender,
+// kind or role — is refused with exit 2, as a question to a silent role is:
+// the caller could have seen it in rewake list. A recipient whose harness
+// cannot take the grant is refused with exit 1, as --grant-dir refuses one: the
+// call was right, the target cannot carry it out.
 func requestedGitGrant(call Call, sender, target registry.Session, senderErr error) (bool, error) {
 	value, requested := call.Flags["grant-git"]
 	if !requested {
@@ -31,12 +36,12 @@ func requestedGitGrant(call Call, sender, target registry.Session, senderErr err
 		return refuse("only tasks and questions can carry an explicit grant; notify/report paths cannot")
 	}
 	if !role.Of(target.Role).GitWrite {
-		return refuse(fmt.Sprintf("recipient %s is not eligible for repository Git metadata grants", target.Name))
+		return refuse(fmt.Sprintf("%s is a %s session, and only a write session takes repository Git metadata grants. Send the task to a --write Codex session, or do the Git part yourself.", target.Name, role.Of(target.Role).ID))
 	}
 	adapter, _ := harness.Find(target.Harness)
 	capability, supported := adapter.(harness.GitGrantHarness)
 	if !supported || !capability.SupportsGitGrant() {
-		return refuse(fmt.Sprintf("recipient harness %s does not support explicit per-message Git grants", target.Harness))
+		return false, &FailedError{Message: fmt.Sprintf("--grant-git: %s runs %s, which takes no per-message Git grant; only a Codex write session does. Do the Git part yourself, or send the task to a --write Codex session.", target.Name, target.Harness)}
 	}
 	return true, nil
 }

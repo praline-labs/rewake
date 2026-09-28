@@ -22,10 +22,15 @@ the send result. It survives queueing, grouping, selected reads and retries. Nor
 causal read receipts still identify the individual task/question; replies never
 inherit a grant. Preview does not consume that task or create an obligation.
 
-Only main/write recipients on an adapter supporting per-message grants are
-eligible. The current owned-server adapter supports them; unsupported harnesses,
-ordinary-role recipients, stale/shell/non-main senders and notify/report requests
-refuse explicitly. Role eligibility is not a permission decision. Fresh launch,
+Only write recipients on an adapter supporting per-message grants are eligible: the
+owned-server Codex adapter supports them, and Claude Code does not. Main is eligible by
+role and never receives one, since it is the only sender and `send` refuses a session
+writing to itself. Since September 28, 2026 a recipient whose harness cannot take the
+grant is refused with exit 1 — the call is right and the target cannot carry it out, as
+for a directory grant it cannot take — naming the way on: do the Git part yourself, or
+send the task to a `--write` Codex session. An ordinary-role recipient, a stale, shell
+or non-main sender and a notify or report are wrong calls, refused with exit 2; the
+role refusal names the same way on. Role eligibility is not a permission decision. Fresh launch,
 resume and fork preserve owner arguments and do not automatically append Git roots.
 
 For an eligible admitted explicit task/question, the existing native reservation

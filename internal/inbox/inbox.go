@@ -301,11 +301,18 @@ func ReadStatus(dir, to, id string) (Status, bool) {
 // borrowing it here made every delivery look like it took a second.
 const statusPoll = 25 * time.Millisecond
 
+// runningPoll is how often a waiting sender asks whether the recipient still
+// runs: a registry read and two process checks, too much for every statusPoll.
+const runningPoll = 500 * time.Millisecond
+
 // Await waits for a status until the deadline, and returns the last one seen.
 // A message with no status yet is not lost: the mailbox is durable, and the
-// serving process writes one as soon as it can.
-func Await(dir, to, id string, timeout time.Duration) (Status, bool) {
+// serving process writes one as soon as it can. running, when given, cuts the
+// wait short once it says the recipient no longer runs: a run that ended will
+// write no status, and a long wait for one outlived it by up to an hour.
+func Await(dir, to, id string, timeout time.Duration, running func() bool) (Status, bool) {
 	deadline := time.Now().Add(timeout)
+	nextCheck := time.Now().Add(runningPoll)
 	for {
 		// Held is not an answer yet: a release or an expiry usually follows
 		// within the wait, and the last word is the one worth printing.
@@ -316,6 +323,15 @@ func Await(dir, to, id string, timeout time.Duration) (Status, bool) {
 		}
 		if time.Now().After(deadline) {
 			return Status{}, false
+		}
+		if running != nil && time.Now().After(nextCheck) {
+			if !running() {
+				// One last look: the status may have been written just
+				// before the run ended.
+				status, ok := ReadStatus(dir, to, id)
+				return status, ok
+			}
+			nextCheck = time.Now().Add(runningPoll)
 		}
 		time.Sleep(statusPoll)
 	}

@@ -32,7 +32,7 @@ func takeWorktree(h harness.Harness, call Call, stderr io.Writer) ([]string, *la
 		return call.Raw, nil, nil
 	}
 	flag := taker.WorktreeFlag()
-	name, given, args, err := worktreeRequest(call, flag)
+	name, given, args, err := worktreeRequest(call, flag, taker.WorktreeNameSpaced())
 	if err != nil || !given {
 		return args, nil, err
 	}
@@ -78,11 +78,13 @@ func takeWorktree(h harness.Harness, call Call, stderr io.Writer) ([]string, *la
 // worktreeRequest finds the flag among the arguments meant for the harness:
 // a switch asks for a generated name, =<name> names the checkout. A spaced
 // value is not read: the word after a switch is the harness's, a prompt most
-// often, and taking it would change what a launch line already means.
-func worktreeRequest(call Call, flag string) (name string, given bool, rest []string, err error) {
+// often, and taking it would change what a launch line already means. Where
+// the harness's own flag takes a spaced name, such a word is refused instead:
+// the person meant it as the name.
+func worktreeRequest(call Call, flag string, spaced bool) (name string, given bool, rest []string, err error) {
 	visible := harness.BeforeTerminator(call.Raw)
 	rest = make([]string, 0, len(call.Raw))
-	for _, arg := range visible {
+	for index, arg := range visible {
 		value, separate, ok := harness.MatchFlag(arg, flag)
 		if !ok {
 			rest = append(rest, arg)
@@ -93,6 +95,12 @@ func worktreeRequest(call Call, flag string) (name string, given bool, rest []st
 		}
 		if !separate && value == "" {
 			return "", false, nil, &UsageError{Command: call.Command, Message: flag + "= needs a name; write " + flag + " alone for a generated one."}
+		}
+		if separate && spaced && index+1 < len(visible) && !strings.HasPrefix(visible[index+1], "-") {
+			word := visible[index+1]
+			return "", false, nil, &UsageError{Command: call.Command, Message: fmt.Sprintf(
+				"rewake's %s takes its name only as %s=<name>, and %q after it would reach the harness as the prompt of a worktree with a generated name. Write %s=%s to name it, or %s -- %q for a generated name with that prompt.",
+				flag, flag, word, flag, word, flag, word)}
 		}
 		given, name = true, value
 	}

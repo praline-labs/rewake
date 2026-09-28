@@ -184,7 +184,7 @@ func TestDirGrantRefusals(t *testing.T) {
 			args := append([]string{"send", w.peer.Name, "Write there", "--wait=0"}, c.args(w)...)
 			code, out, stderr := run(args...)
 			says := strings.ReplaceAll(c.says, "{home}", w.home)
-			if code != c.code || !strings.Contains(stderr, says) {
+			if code != c.code || !strings.Contains(stderr, says) || strings.Contains(stderr, "--grant-dir-broad --grant-dir-broad") {
 				t.Fatalf("got %d %s %s, want %d saying %q", code, out, stderr, c.code, says)
 			}
 			if messages := w.sent(t); len(messages) != 0 {

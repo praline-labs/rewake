@@ -24,8 +24,16 @@ a short notice and preview rather than the full body.
 
 1. Parse arguments: exactly one name and one text (`-` reads the text from
    stdin). Extra positional arguments are the error "Quote the text as one
-   argument".
-2. Look up a live session; if there's none, fail and list the live names.
+   argument". `-h` is `--help`, before the command word as after it and checked the
+   same way, and any other short flag before `--` is refused rather
+   than sent as the text; a text beginning with a dash goes after `--`. The kind and
+   `--wait` are checked next, before any session is looked up, so a wrong flag is named
+   as such.
+2. Look up a live session; if there's none, fail and list the live names. A session
+   naming itself is refused with exit 2: a task to itself would owe a report to the
+   turn that sent it, and a question would wait for an answer only its own blocked turn
+   could give. `rewake edit` refuses to replace such a message, which only an earlier
+   build could have written, and names `rewake withdraw` for it.
 3. The message: `{"id","from","fromEpoch","to","toEpoch","kind","text","createdAt","createdBoot"}`.
    `createdBoot` is the boot clock's reading (`internal/boottime`), stamped where the
    letter is put into the mailbox; the coalescing window counts from it
@@ -45,8 +53,11 @@ a short notice and preview rather than the full body.
    with exit 1 when the wrapper does not take it; the recipient's wrapper confirms it
    there at delivery ([grants.md](grants.md#who-can-grant)).
 4. Write `inbox/<name>/<id>.json.tmp`, rename it to `.json`.
-5. Wait for `.status` up to `--wait` (5 seconds by default) and print the
-   result, then `id <id>` on a line of its own unless the send failed: the id is what
+5. Wait for `.status` up to `--wait` (5 seconds by default; a question gives its
+   delivery 5 seconds of its `--wait` at most, the rest being its answer's) and print the
+   result. The wait ends early once the recipient run is proven ended or its name taken
+   by another run, checked every half second; a run in another pid namespace cannot be
+   judged and is waited for. Then print the result, then `id <id>` on a line of its own unless the send failed: the id is what
    `withdraw`, `edit` and `--to` take ([delivery-sent.md](delivery-sent.md)).
    `delivered` means the notice went out; `read` counts as delivered.
    `held` is not an answer yet and the wait goes on through it: a release or an

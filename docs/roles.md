@@ -12,11 +12,16 @@ the help line and whether its turns are reported come from that value.
 System text lives in `internal/brief`, with a reviewed snapshot
 for each role; harness adapters only pass the rendered strings. The record keeps the role's id.
 
-| role | flag | turns reported | Eligible for explicit Git metadata grant | intro adds |
+| role | flag | turns reported | takes a `--grant-git` task or question | its playbook says |
 |---|---|---|---|---|
-| `general` | `--general` | yes | no | end your turn with the result |
-| `main` | `--main` | no | only a main-authorized --grant-git task/question | you get reports, yours go to nobody |
-| `write` | `--write` | yes | only a main-authorized --grant-git task/question | end your turn with the result; you can commit |
+| `general` | `--general` | yes | no | take work, end your turn with the result; no Git metadata |
+| `main` | `--main` | no | no: only main sends one, and never to itself | hand out work, read reports; grants; you cannot start sessions |
+| `write` | `--write` | yes | on Codex only; Claude Code is refused with exit 1 | take work, end your turn with the result; you can commit when authorized |
+
+The briefing carries the role's whole playbook, the text of
+[what a session is told](#what-a-session-is-told); the last column only names its
+point. `GitWrite` is set for main as well as write, but main receives no grant: it is
+the only sender of one, and `send` refuses a session writing to itself.
 
 **Owner decision, September 17, 2026:** omitted role flags always mean general,
 even in an empty room or after main exits. This supersedes automatic main

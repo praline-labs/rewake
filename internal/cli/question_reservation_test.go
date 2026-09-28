@@ -28,7 +28,7 @@ func TestAnAnswerSurvivesFailedOutput(t *testing.T) {
 	for _, format := range []string{"text", "json"} {
 		t.Run(format, func(t *testing.T) {
 			dir, web := questionSender(t)
-			awaitStatus = func(_, _, id string, _ time.Duration) (inbox.Status, bool) {
+			awaitStatus = func(_, _, id string, _ time.Duration, _ func() bool) (inbox.Status, bool) {
 				rawUnread(t, dir, "web", map[string]any{"from": "api", "kind": "finished", "toEpoch": web.Epoch(), "inReplyTo": []string{id}, "text": "irreplaceable result"})
 				return inbox.Status{State: inbox.Delivered}, true
 			}
@@ -51,7 +51,7 @@ func TestAnAnswerSurvivesFailedOutput(t *testing.T) {
 
 func TestInboxLeavesAReservedAnswerForSend(t *testing.T) {
 	dir, web := questionSender(t)
-	awaitStatus = func(_, _, id string, _ time.Duration) (inbox.Status, bool) {
+	awaitStatus = func(_, _, id string, _ time.Duration, _ func() bool) (inbox.Status, bool) {
 		// Existing waits also reserve their answer, independently of when send
 		// first creates the mark.
 		marks := state.AnsweringPath(dir, "web")
@@ -79,7 +79,7 @@ func TestEveryQuestionReceivesASharedAnswer(t *testing.T) {
 	dir, web := questionSender(t)
 	ids := make(chan string, 2)
 	ready := make(chan struct{})
-	awaitStatus = func(_, _, id string, _ time.Duration) (inbox.Status, bool) {
+	awaitStatus = func(_, _, id string, _ time.Duration, _ func() bool) (inbox.Status, bool) {
 		ids <- id
 		<-ready
 		return inbox.Status{State: inbox.Delivered}, true
@@ -118,7 +118,7 @@ func TestAQuestionToASilentSessionIsRefused(t *testing.T) {
 	if err := registry.Update(dir, target); err != nil {
 		t.Fatal(err)
 	}
-	awaitStatus = func(_, _, _ string, _ time.Duration) (inbox.Status, bool) {
+	awaitStatus = func(_, _, _ string, _ time.Duration, _ func() bool) (inbox.Status, bool) {
 		return inbox.Status{State: inbox.Delivered}, true
 	}
 	code, _, errOut := run("send", "api", "question", "--question", "--wait", "0")

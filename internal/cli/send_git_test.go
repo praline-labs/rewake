@@ -58,8 +58,17 @@ func TestExplicitGitGrantRequiresMainAndEligibleTask(t *testing.T) {
 			allowed := scenario == "task" || scenario == "question" || !requested
 			files, _ := filepath.Glob(filepath.Join(state.InboxPath(dir, peer.Name), "*.json"))
 			if !allowed {
-				if code != ExitUsage || len(files) != 0 || !strings.Contains(stderr, "--grant-git") {
+				// The call was right and the target cannot take it: exit 1,
+				// as for a directory grant; any other refusal is a wrong call.
+				want := ExitUsage
+				if scenario == "unsupported" {
+					want = ExitFailed
+				}
+				if code != want || len(files) != 0 || !strings.Contains(stderr, "--grant-git") {
 					t.Fatalf("unauthorized grant: %d %s %s files=%v", code, out, stderr, files)
+				}
+				if (scenario == "unsupported" || scenario == "ineligible") && !strings.Contains(stderr, "--write Codex session") {
+					t.Fatalf("refusal names no next action: %s", stderr)
 				}
 				return
 			}
@@ -95,5 +104,18 @@ func TestExplicitGitGrantRequiresMainAndEligibleTask(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// The help promises the take-back only for what rewake journals: the metadata
+// of the session's own checkout, which --grant-git alone opens, stays.
+func TestTheHelpSaysAGitGrantStays(t *testing.T) {
+	_, out, _ := run("send", "--help")
+	out = strings.Join(strings.Fields(out), " ")
+	if !strings.Contains(out, "--grant-git alone opens the Git metadata of the session's own checkout, and that is never taken back") {
+		t.Errorf("send --help does not say a standalone --grant-git stays:\n%s", out)
+	}
+	if strings.Contains(out, "a settled task's grant is taken back") {
+		t.Errorf("send --help promises every grant back:\n%s", out)
 	}
 }

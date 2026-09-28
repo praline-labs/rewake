@@ -20,7 +20,7 @@ func TestAFastAnswerIsNotAnnouncedTwice(t *testing.T) {
 	previous := awaitStatus
 	defer func() { awaitStatus = previous }()
 	var notices atomic.Int32
-	awaitStatus = func(_ string, _ string, id string, _ time.Duration) (inbox.Status, bool) {
+	awaitStatus = func(_ string, _ string, id string, _ time.Duration, _ func() bool) (inbox.Status, bool) {
 		// Delivery may finish before the caller polls its status. The receiver's
 		// end-of-turn report can already be on its way in this interval.
 		report := inbox.Message{ID: inbox.NewID(), From: "api", To: "web", ToEpoch: web.Epoch(), Kind: inbox.Finished, InReplyTo: []string{id}, Text: "fast result", CreatedAt: time.Now()}

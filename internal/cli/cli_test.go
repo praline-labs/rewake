@@ -66,6 +66,50 @@ func TestFlagNeedingValueIsRefused(t *testing.T) {
 	}
 }
 
+// A short flag is help or a refusal, never text: send took -h for a task that
+// read "-h". Text that only begins with a dash, and anything after --, stays
+// text.
+func TestShortFlagsAreHelpOrRefused(t *testing.T) {
+	for _, argv := range [][]string{{"-h"}, {"send", "api", "-h"}, {"inbox", "-h"}} {
+		result, err := parse(argv)
+		if err != nil || !result.Help {
+			t.Errorf("%v is not help: %+v %v", argv, result, err)
+		}
+	}
+	code, _, errOut := run("send", "api", "-x", "text")
+	if code != ExitUsage || !strings.Contains(errOut, "send does not take -x") || !strings.Contains(errOut, "after --") {
+		t.Errorf("short flag not refused: %d %s", code, errOut)
+	}
+	code, _, errOut = run("-v")
+	if code != ExitUsage || !strings.Contains(errOut, "--help") {
+		t.Errorf("-v names no way on: %d %s", code, errOut)
+	}
+	for _, argv := range [][]string{{"send", "api", "- fix the login"}, {"send", "api", "-"}, {"send", "api", "--", "-x"}} {
+		result, err := parse(argv)
+		if err != nil || len(result.Call.Positionals) != 2 {
+			t.Errorf("%v lost its text: %+v %v", argv, result.Call.Positionals, err)
+		}
+	}
+}
+
+// A leading -h is --help in every respect: the command after it gets its own
+// page, and what follows is checked as it would be after --help.
+func TestALeadingShortHelpIsTheLongOne(t *testing.T) {
+	for _, rest := range [][]string{{"send"}, {"--bogus"}, {"list"}, {"--name", "x", "list"}} {
+		long := append([]string{"--help"}, rest...)
+		short := append([]string{"-h"}, rest...)
+		if rest[0] == "--name" {
+			long = []string{"--name", "x", "--help", "list"}
+			short = []string{"--name", "x", "-h", "list"}
+		}
+		longCode, longOut, longErr := run(long...)
+		shortCode, shortOut, shortErr := run(short...)
+		if shortCode != longCode || shortOut != longOut || shortErr != longErr {
+			t.Errorf("%v: got %d %q %q, %v gives %d %q %q", short, shortCode, shortOut, shortErr, long, longCode, longOut, longErr)
+		}
+	}
+}
+
 func TestLoosePositionalsAreRefused(t *testing.T) {
 	// The common mistake: text that is not quoted arrives as separate words.
 	code, _, errOut := run("send", "api", "pull", "and", "rerun")

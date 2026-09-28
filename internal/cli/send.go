@@ -66,6 +66,16 @@ func handleSend(ctx *Context, call Call) error {
 	if err != nil {
 		return &UsageError{Command: command, Message: err.Error()}
 	}
+	// The flags first: a call that is wrong whoever it names is refused for
+	// what is wrong with it, not for a session that happens to be missing.
+	kind, err := chosenKind(call)
+	if err != nil {
+		return err
+	}
+	wait, err := waitDuration(call, kind.wait)
+	if err != nil {
+		return err
+	}
 
 	session, err := registry.Lookup(dir, target)
 	if errors.Is(err, registry.ErrNotFound) {
@@ -86,16 +96,8 @@ func handleSend(ctx *Context, call Call) error {
 		return &UsageError{Command: command, Message: "The message is empty."}
 	}
 
-	kind, err := chosenKind(call)
-	if err != nil {
-		return err
-	}
 	if kind.kind == inbox.Question && role.Of(session.Role).Silent {
 		return &UsageError{Command: command, Message: fmt.Sprintf("Session %s does not report its turns, so it cannot answer --question; use plain send or --notify instead.", session.Name)}
-	}
-	wait, err := waitDuration(call, kind.wait)
-	if err != nil {
-		return err
 	}
 	started := time.Now()
 
@@ -103,6 +105,12 @@ func handleSend(ctx *Context, call Call) error {
 	// current: a report then reaches this run, and a process left over from an
 	// earlier run cannot speak for the next one.
 	self, epoch, selfErr := ownRun(dir)
+	if selfErr == nil && self.Name == session.Name {
+		// A task to itself would be announced into the turn that sent it and
+		// owe a report to that same turn; a question would wait for an answer
+		// only its own blocked turn could give.
+		return &UsageError{Command: command, Message: fmt.Sprintf("a session cannot send to itself, and %s is this session: do the work in this turn, or send it to another session from rewake list.", session.Name)}
+	}
 	grantGit, grantErr := requestedGitGrant(call, self, session, selfErr)
 	if grantErr != nil {
 		return grantErr
@@ -171,9 +179,14 @@ func handleSend(ctx *Context, call Call) error {
 // for its answer.
 func reportSent(ctx *Context, after sent, message inbox.Message, kind messageKind, wait time.Duration) error {
 	dir, session := after.dir, after.target
-	// The delivery result is worth a few seconds at most; a kind that waits
-	// longer waits for something else, after it.
-	status, known := awaitStatus(dir, session.Name, message.ID, min(wait, defaultWait))
+	// A kind that waits for something after the delivery — a question's
+	// answer — gives the delivery a few seconds of its wait at most; any other
+	// waits for the delivery as long as --wait says.
+	delivery := wait
+	if kind.after != nil {
+		delivery = min(wait, defaultWait)
+	}
+	status, known := awaitStatus(dir, session.Name, message.ID, delivery, recipientRunning(dir, session))
 	model := sendModel{ID: message.ID, To: session.Name, From: message.From, GrantGit: message.GrantGit, GrantDirs: message.GrantDirs, AlreadyWritable: after.writable, Addenda: after.addenda, Replaces: message.Replaces, Named: after.named}
 	if !known && inbox.Answered(dir, session.Name, message.ID) {
 		// The message left the mailbox, and a status may have been written
@@ -227,7 +240,7 @@ func reportSent(ctx *Context, after sent, message inbox.Message, kind messageKin
 		if known && status.Detail != "" {
 			model.Detail = status.Detail
 		} else {
-			model.Detail = fmt.Sprintf("no result yet after %s; the session has it and will take it", wait)
+			model.Detail = fmt.Sprintf("no result yet after %s; the session has it and will take it", delivery)
 		}
 	}
 
@@ -285,6 +298,21 @@ func idLines(model sendModel) []string {
 
 // awaitStatus waits for the status of a message; replaceable in tests.
 var awaitStatus = inbox.Await
+
+// recipientRunning says whether the run a message was written for still runs,
+// so a long --wait ends with it. A run in another pid namespace cannot be
+// judged from here and counts as running, as everywhere else: its wrapper,
+// which can see it, is the one that delivers. A record that cannot be read
+// says nothing either way.
+func recipientRunning(dir string, target registry.Session) func() bool {
+	return func() bool {
+		current, err := registry.LookupReadOnly(dir, target.Name)
+		if errors.Is(err, registry.ErrNotFound) {
+			return false
+		}
+		return err != nil || current.Epoch() == target.Epoch()
+	}
+}
 
 // sendLine is the one line a caller reads: what happened, by which path, and
 // what it means when the answer is not "delivered".

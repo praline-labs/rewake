@@ -100,7 +100,7 @@ func TestAQuestionPreservesTheThreadWarning(t *testing.T) {
 	for _, format := range []string{"text", "json"} {
 		t.Run(format, func(t *testing.T) {
 			dir, web := questionSender(t)
-			awaitStatus = func(_, _, id string, _ time.Duration) (inbox.Status, bool) {
+			awaitStatus = func(_, _, id string, _ time.Duration, _ func() bool) (inbox.Status, bool) {
 				rawUnread(t, dir, "web", map[string]any{"from": "api", "kind": "finished", "toEpoch": web.Epoch(), "inReplyTo": []string{id}, "text": "new turn", "threadChanged": true})
 				return inbox.Status{State: inbox.Delivered}, true
 			}

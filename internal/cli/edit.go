@@ -2,6 +2,7 @@ package cli
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -25,6 +26,11 @@ func handleEdit(ctx *Context, call Call) error {
 	dir, err := state.Dir()
 	if err != nil {
 		return &UsageError{Command: call.Command, Message: err.Error()}
+	}
+	// Checked again below with the kind's default; a malformed value is
+	// refused before any message is looked up, as send refuses it.
+	if _, err := waitDuration(call, 0); err != nil {
+		return err
 	}
 	text := call.Positionals[1]
 	if text == "-" {
@@ -54,6 +60,11 @@ func handleEdit(ctx *Context, call Call) error {
 	}
 	if err != nil {
 		return failf("could not read the record of %s: %v", old.To, err)
+	}
+	if old.To == self.Name {
+		// Only a build before send refused this could have written it; a
+		// replacement would be the same self-send again.
+		return &UsageError{Command: call.Command, Message: fmt.Sprintf("a session cannot send to itself, and %s is this session: take %s back with rewake withdraw %s and do the work in this turn.", old.To, old.ID, shortRef(old.ID))}
 	}
 	if old.AddendumTo != "" {
 		// The replacement adds to the same task, which may have been reported

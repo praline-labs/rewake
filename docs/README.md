@@ -187,8 +187,9 @@ everything else.
   replacement is detected and announced to main, with owner-run acceptance. Open it when
   a label, a compaction notice or a departure notice misbehaves.
 - [install.md](install.md) — building and installing rewake locally with an atomic
-  replace, and a dry run of the npm packaging with `scripts/pack.sh`. Open it after a
-  change you want to run as the installed binary.
+  replace, a dry run of the npm packaging with `scripts/pack.sh`, and the release to npm
+  through the gate `tools/release`. Open it after a change you want to run as the
+  installed binary, and before a release.
 
 ## Facts about the harnesses
 

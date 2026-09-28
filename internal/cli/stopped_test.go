@@ -95,7 +95,7 @@ func TestStoppedWithNobodyWaitingSendsNothing(t *testing.T) {
 func TestAStoppedQuestionReturnsAndLeavesTheLaterResultReadable(t *testing.T) {
 	dir, web := questionSender(t)
 	var question string
-	awaitStatus = func(_, _, id string, _ time.Duration) (inbox.Status, bool) {
+	awaitStatus = func(_, _, id string, _ time.Duration, _ func() bool) (inbox.Status, bool) {
 		question = id
 		rawUnread(t, dir, "web", map[string]any{"from": "api", "kind": "stopped", "toEpoch": web.Epoch(), "inReplyTo": []string{id}, "text": "the person at the keyboard stopped this turn"})
 		return inbox.Status{State: inbox.Delivered}, true

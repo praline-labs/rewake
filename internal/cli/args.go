@@ -40,7 +40,15 @@ func parseKnowing(argv []string, aliases []string) (parsed, error) {
 	index := 0
 	// Flags before the command word: global ones, plus the launch flags, which
 	// must come first because everything after a harness name is the harness's.
-	for index < len(argv) && strings.HasPrefix(argv[index], "--") {
+	for index < len(argv) && (strings.HasPrefix(argv[index], "--") || argv[index] == "-h") {
+		if argv[index] == "-h" {
+			// -h is --help here as after the command word, and what follows
+			// is checked the same way: returning at once printed the guide
+			// for "-h send" and let "-h --bogus" through.
+			result.Call.Flags["help"] = "true"
+			index++
+			continue
+		}
 		consumed, err := readFlag(argv, index, nil, &result.Call)
 		if err != nil {
 			return result, err
@@ -59,7 +67,7 @@ func parseKnowing(argv []string, aliases []string) (parsed, error) {
 
 	word := argv[index]
 	if strings.HasPrefix(word, "-") {
-		return result, &UsageError{Message: fmt.Sprintf("%s is not a command.", word)}
+		return result, &UsageError{Message: fmt.Sprintf("%s is not a command. rewake's own flags are long ones, such as --help; run rewake for the map.", word)}
 	}
 
 	command := findCommand(word)
@@ -112,6 +120,16 @@ func parseKnowing(argv []string, aliases []string) (parsed, error) {
 				return result, err
 			}
 			index = consumed
+		case !endOfFlags && token == "-h":
+			// The one short flag an agent types by habit. Taken for text, it
+			// would be sent as a task that reads "-h".
+			result.Call.Flags["help"] = "true"
+			index++
+		case !endOfFlags && shortFlag(token):
+			return result, &UsageError{
+				Command: command,
+				Message: fmt.Sprintf("%s does not take %s: its flags are long ones, listed below. A text that begins with a dash goes after --.", command.Name, token),
+			}
 		default:
 			result.Call.Positionals = append(result.Call.Positionals, token)
 			index++
@@ -134,6 +152,20 @@ func parseKnowing(argv []string, aliases []string) (parsed, error) {
 	}
 
 	return result, nil
+}
+
+// shortFlag tells a token written as a short flag, -x or -json, from text:
+// "-" alone is stdin, and a text such as "- fix the login" or "-5" is not
+// shaped like a flag.
+func shortFlag(token string) bool {
+	if len(token) < 2 || token[0] != '-' || token[1] == '-' {
+		return false
+	}
+	letter := token[1]
+	if (letter < 'a' || letter > 'z') && (letter < 'A' || letter > 'Z') {
+		return false
+	}
+	return !strings.ContainsAny(token, " \t\n")
 }
 
 // readFlag reads one flag at argv[index] into the call and returns the next

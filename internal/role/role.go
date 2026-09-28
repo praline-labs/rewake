@@ -39,7 +39,7 @@ var General = Role{
 // nobody: reporting back to the sessions that reported to it would never end.
 var Main = Role{
 	ID:       "main",
-	Summary:  "The session that hands out work: it gets reports, reports no successful turns, and requests permission to commit in the working repository.",
+	Summary:  "The session that hands out work: it gets reports, reports no successful turns, and alone may grant a worker a directory or Git metadata with a task. rewake adds no permission of its own to it; what it may write is its harness's.",
 	Silent:   true,
 	GitWrite: true,
 	Play:     mainPlaybook,
@@ -48,7 +48,7 @@ var Main = Role{
 // Write takes work and can commit changes in its working repository.
 var Write = Role{
 	ID:       "write",
-	Summary:  "Takes work and reports its turns; eligible for explicitly granted repository Git metadata access. Existing owner permissions remain unchanged.",
+	Summary:  "Takes work and reports its turns; a Codex write session may be granted repository Git metadata access by main's --grant-git task, a Claude Code one commits within its own permissions. Existing owner permissions remain unchanged.",
 	GitWrite: true,
 	Play:     writePlaybook,
 }

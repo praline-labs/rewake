@@ -14,6 +14,9 @@ set -eu
 version="${1:-0.0.1}"
 scope="@praline-labs"
 root="$(cd "$(dirname "$0")/.." && pwd)"
+# Where the source lives. The registry's page links to it, and resolves the
+# README's relative links against it; without it they lead nowhere.
+repository='"repository": { "type": "git", "url": "git+https://github.com/praline-labs/rewake.git" }'
 out="$root/dist/npm"
 # The build time, which the binary cannot know otherwise: rewake --version
 # shows it, so two builds of one revision can be told apart.
@@ -44,6 +47,7 @@ for target in linux-amd64:linux-x64 linux-arm64:linux-arm64; do
   "version": "$version",
   "description": "rewake binary for $npm_name",
   "license": "MIT",
+  $repository,
   "os": ["$goos"],
   "cpu": ["$( [ "$goarch" = "amd64" ] && echo x64 || echo "$goarch" )"],
   "files": ["bin/rewake", "LICENSE"]
@@ -61,6 +65,7 @@ cat > "$entry/package.json" <<JSON
   "version": "$version",
   "description": "Let the coding agents running on your machine message each other",
   "license": "MIT",
+  $repository,
   "bin": { "rewake": "bin/rewake" },
   "files": ["bin/rewake", "README.md", "LICENSE"],
   "optionalDependencies": {

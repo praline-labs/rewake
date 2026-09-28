@@ -16,6 +16,12 @@ type WorktreeHarness interface {
 	// checkout rewake makes, or nil when it can. It is asked before anything
 	// is made, so a refused launch leaves nothing behind.
 	WorktreeRefusal(args []string) error
+	// WorktreeNameSpaced says the harness's own flag takes its name after a
+	// space, as Claude Code's --worktree [name] does: a word written there
+	// was meant as the name, and rewake, which reads a name only from =<name>,
+	// refuses it rather than start a checkout of another name with that word
+	// as the prompt.
+	WorktreeNameSpaced() bool
 }
 
 // ContinueInWorktree is the way on that a refused continuation names: the

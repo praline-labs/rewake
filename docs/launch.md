@@ -56,7 +56,9 @@ nothing — emptying one is as deliberate as removing it, and removing both
 session's shell goes. A live record behind it is not required — a worker can remove or rewrite its
 own — so a shell left over from a session that has ended is refused too, and a new
 shell is the way out. `--help` on a launch word still prints the help page. A way for
-main to start a worker, when there is one, will be its own command, not this path.
+main to start a worker, when there is one, will be its own command, not this path. The
+rule is on every launch page's notes and in main's playbook, so a main learns it before
+it tries.
 
 Tests and the workflow suite start sessions with these variables cleared, as the
 [checks](../AGENTS.md#checks) already require for `go test`.
@@ -218,11 +220,13 @@ remove. What the flag does for each harness, where the checkout goes, what
 `.worktreeinclude` copies in and what land, finish and rm ask first is in
 [worktree.md](worktree.md).
 
-The main session launches each writer in a checkout of its own with
-`--worktree=<topic>`, takes the accepted work with `rewake worktree land <topic>` and
-closes the checkout with `rewake worktree finish <topic>`, rather than making one by
-hand with `git worktree add`. A writer's uncommitted edits then never mix with what is
-being checked or committed in the main checkout at the same time.
+A session cannot start another ([no session inside a session](#no-session-inside-a-session)),
+so the owner starts each writer, in a checkout of its own with `--worktree=<topic>`, from
+a terminal outside any session. The main session then takes the accepted work with
+`rewake worktree land <topic>` and closes the checkout with
+`rewake worktree finish <topic>`, rather than making one by hand with `git worktree add`.
+A writer's uncommitted edits then never mix with what is being checked or committed in
+the main checkout at the same time.
 
 ### Fresh workspace permissions
 

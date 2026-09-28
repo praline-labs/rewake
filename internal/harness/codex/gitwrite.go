@@ -53,6 +53,10 @@ const worktreeFlag = "--worktree"
 
 func (codexHarness) WorktreeFlag() string { return worktreeFlag }
 
+// WorktreeNameSpaced: the terminal's own --worktree is a switch, so the word
+// after it is the prompt, as it is without rewake.
+func (codexHarness) WorktreeNameSpaced() bool { return false }
+
 // LaunchDirectory is the directory -C or --cd chose, or the current one, and
 // the arguments without them: the launch starts in the checkout instead.
 func (codexHarness) LaunchDirectory(args []string) (string, []string, error) {

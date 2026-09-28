@@ -236,7 +236,7 @@ func TestAwaitReturnsTheFinalStatus(t *testing.T) {
 		_ = writeStatus(dir, "api", sent.ID, Result{State: Delivered, Via: "socket"})
 	}()
 
-	status, ok := Await(dir, "api", sent.ID, 3*time.Second)
+	status, ok := Await(dir, "api", sent.ID, 3*time.Second, nil)
 	if !ok || status.State != Delivered {
 		t.Fatalf("Await = %+v, %v; want delivered", status, ok)
 	}
@@ -245,7 +245,7 @@ func TestAwaitReturnsTheFinalStatus(t *testing.T) {
 func TestAwaitGivesUpWithoutAStatus(t *testing.T) {
 	dir := stateDir(t)
 	began := time.Now()
-	if _, ok := Await(dir, "api", "missing", 500*time.Millisecond); ok {
+	if _, ok := Await(dir, "api", "missing", 500*time.Millisecond, nil); ok {
 		t.Error("Await reported a status that was never written")
 	}
 	// It has to wait out the time it was given: returning at once would report

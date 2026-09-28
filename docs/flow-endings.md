@@ -43,6 +43,14 @@ wrapper (which then forwards it to a harness still alive a moment later).
 1. The wrapper closes the inbox: waiting mail gets `failed: session ended`.
    Unexpired reports stay readable for their epoch. A reserved answer keeps
    its queue entry and lease semantics so its waiting command can consume it.
+   A task the session had read and not reported on is not lost yet: for a day from
+   that read, `rewake inbox --awaited` shows its sender "<name> ended; a resume of
+   <name> in its conversation may still report", and a resume of that conversation
+   under the name takes the wait over and reports
+   ([delivery-owed.md](delivery-owed.md#what-others-owe-you-rewake-inbox---awaited)).
+   Its grant goes with the wait: main's wrapper keeps it while the task is open and
+   confirms it to the resumed run, and a main that has ended restores nothing
+   ([grants-resume.md](grants-resume.md)).
 2. The record and the socket are removed; a later `list` will not show the
    name, and a `send` to it gets exit 2.
 3. The wrapper exits with the harness's exit code.
@@ -75,7 +83,7 @@ question to a silent role.
 | fresh server thread, no turn yet | turn/start begins its first turn | delivered after RPC acceptance |
 | a notify or a report with nothing else arriving | it waits three seconds for company, then goes alone; a task arriving meanwhile takes it along at once | delivered after about three seconds, pending meanwhile with why |
 | a turn interrupted with Esc or Ctrl+C | stopped advises the waiters to wait, and goes to nobody when none waits; original work stays owed | yellow notice; human continuation reports its result |
-| a compaction main asked for with `rewake compact` | the command returns once it has started, or says requested when its start was not seen in 3 seconds; the worker's module or wrapper waits for its end ([remote-control.md](remote-control.md)) | exit 0, then a notify with the tokens and the count, or the refusal or failure |
+| a compaction main asked for with `rewake compact` | the command waits up to 5 seconds for the session to take the request and up to 10 for its answer, and returns once the compaction has started, or says requested when its start was not seen in that time; the worker's module or wrapper waits for its end ([remote-control.md](remote-control.md)) | exit 0, then a notify with the tokens and the count, or the refusal or failure |
 | a turn interrupted by main's `rewake interrupt` | the same stopped, naming main instead of the person; on Claude Code the worker's next notice says main interrupted it, once, and on Codex the harness records it in the model's history itself ([remote-control.md](remote-control.md)) | yellow notice naming main |
 | recipient's wrapper gone | record evicted on the next read | exit 2, no such session |
 | a reader's stdout blocks | it holds the lock; server waits, `turn-ended` five seconds, `inbox` ten | delays, then "mailbox is busy" |

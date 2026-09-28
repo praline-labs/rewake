@@ -18,7 +18,7 @@ func holdEverything(t *testing.T, then func(id string)) {
 	t.Helper()
 	previous := awaitStatus
 	t.Cleanup(func() { awaitStatus = previous })
-	awaitStatus = func(_ string, _ string, id string, _ time.Duration) (inbox.Status, bool) {
+	awaitStatus = func(_ string, _ string, id string, _ time.Duration, _ func() bool) (inbox.Status, bool) {
 		if then != nil {
 			then(id)
 		}

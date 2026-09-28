@@ -138,11 +138,11 @@ func buildGroups() {
 				Notes: []string{
 					"--peek and --message are mutually exclusive. Peek has no full bodies, even in JSON, and creates no task read receipts or report obligations. Plain inbox still reads all available messages.",
 					"--owed is used alone. It is the task you are working on, from the mailbox rather than from memory: after a context compaction, re-read it there instead of working from the summary. It shows only what you read: a last line counts the tasks and questions still unread, whoever sent them (unread in --json), and rewake inbox reads them. A main session owes no reports, so it is refused there. Only work from another session is listed: a task sent from a plain shell owes no report and cannot be shown again this way.",
-					"--awaited is used alone, in any role. It is what others owe you: after a context compaction, a main session runs it to see what it handed out and still waits on. Each message shows its id, kind, time, first line and state: not delivered yet, held, delivered and unread, read and being worked on, pending after an interim report, or stopped, with the stop's own words on who stopped it: the person at the keyboard, or a main by name with rewake interrupt. A recipient that ended or was replaced is named as such — no report is coming. --json carries the full text. Only this run's mail is listed; notes and anything sent from a plain shell owe nothing and are not tracked.",
+					"--awaited is used alone, in any role. It is what others owe you: after a context compaction, a main session runs it to see what it handed out and still waits on. Each message shows its id, kind, time, first line and state: not delivered yet, held, delivered and unread, read and being worked on, pending after an interim report, or stopped, with the stop's own words on who stopped it: the person at the keyboard, or a main by name with rewake interrupt. A recipient that ended owing a task it had read reads \"<name> ended; a resume of <name> in its conversation may still report\" for a day from that read: a resume of it under that name takes the task over and reports, so do not send it again yet. Past that day, or once a new run of the name in another conversation has swept it, and for a task never read, it reads \"no report coming\", as for a recipient replaced by a new run. --json carries the full text. Only this run's mail is listed; notes and anything sent from a plain shell owe nothing and are not tracked.",
 					"Run it when a Rewake notice says messages are waiting; a group may mix tasks, questions, notifications and reports.",
 					"A task or a question you read is answered by ending your turn: your final message goes back to the sender by itself. Put the result there.",
 					"A notify needs no answer. A finished message is a session's final message after work you gave it.",
-					sessionStateHelp,
+					"A verified main also sees the sending session's state line above each of its messages; rewake list --help says what it holds.",
 				},
 				Handler: handleInbox,
 			},
@@ -156,7 +156,8 @@ func buildGroups() {
 				Notes: []string{
 					"Without it, the end of a turn is the report, and the sender stops waiting. When the wait is on background work, better than either: wait inside the turn.",
 					"It holds for the one turn it is run in, and only a normal end of it: a turn that fails or is stopped reports that as usual.",
-					"Refused outside a session, for the main session, whose turns are reported to nobody, and when no read task or question is waiting for a report.",
+					"On Claude Code, a turn end that follows one marked pending and carries no mark of its own is held once: the session is asked whether the work is done. Still waiting — run rewake pending and end the turn; done — end the turn, and the answer already given goes into the report with what follows it.",
+					"Refused outside a session; for the main session, whose turns are reported to nobody; when no read task or question is waiting for a report; and on a Claude Code session whose telemetry hooks record no turn start, since the mark could not be tied to this turn.",
 				},
 				Handler: handlePending,
 			},
@@ -201,7 +202,7 @@ func buildGroups() {
 				Next:           []string{"rewake inbox --awaited"},
 				Notes: []string{
 					"A session waiting on that turn reads stopped, saying who interrupted it. On Claude Code the interrupted session's next rewake notice tells it that you interrupted its previous turn, once; Codex records the interrupt in its model's history itself.",
-					"Refused when no turn is running. Waits up to 5 seconds for the session to take the request: its rewake plugin on Claude Code, its wrapper on Codex.",
+					"Refused when no turn is running. Waits up to 5 seconds for the session to take the request — its rewake plugin on Claude Code, its wrapper on Codex — then up to 10 for its answer.",
 					"Exit 0 done; 1 refused (no turn running, not answering, cut short, no control directory, withdrawn before it was taken, another request in flight) or failed; 2 a wrong call — not a main, no such session, a harness that does not take it.",
 				},
 				Handler: handleInterrupt,
@@ -270,10 +271,14 @@ func buildGroups() {
 	groups = []Group{run, talk, steer, help, internal}
 }
 
+// nestedLaunchHelp is refuseNestedLaunch's rule, on every launch page: a
+// main reading how to start a worker must not learn it only from the refusal.
+const nestedLaunchHelp = "Refused with exit 2 from a shell inside a rewake session: a session does not start other sessions. The owner starts each one from a terminal outside any session."
+
 // launchCommand builds the command that starts one harness.
 func launchCommand(h harness.Harness) *Command {
 	notes := append([]string{}, h.Notes()...)
-	notes = append(notes, harness.SettingsHelp, alias.Help)
+	notes = append(notes, nestedLaunchHelp, harness.SettingsHelp, alias.Help)
 	return &Command{
 		Name:           h.ID(),
 		Args:           "[" + h.ID() + " args...]",
@@ -337,7 +342,7 @@ func notes() []Note {
 		},
 		{
 			Title: "A waiting message is announced, not pasted",
-			Body:  "It shows up as one line: \"Rewake: <session> <kind>, <n> new message(s)\", with a 🟢 in front where the harness shows it as plain text. The following line previews the author's first line, limited to about 100 columns. Each notice has fixed member IDs. Ready new mail is submitted promptly through native start-or-steer, without waiting for peek or a completed turn. No reminders for old unread mail. Initial collection is 150 ms; later arrivals join the next available dispatch, never an already accepted notice. Git grants accompany only the actual eligible task announcement. Use rewake inbox --peek for a non-consuming overview, --message <id> for one full message, or plain inbox for all. Groups preserve separate identities and obligations. Start every message and final reply with one line stating its point. Errors use a red circle; stopped turns use yellow.",
+			Body:  "It shows up as one line: \"Rewake: <session> <kind>, <n> new message(s)\", with a 🟢 in front where the harness shows it as plain text. The following line previews the author's first line, limited to about 100 columns. Each notice has fixed member IDs. Ready new mail is submitted promptly through native start-or-steer, without waiting for peek or a completed turn. No reminders for old unread mail. Initial collection is 150 ms; later arrivals join the next available dispatch, never an already accepted notice. A grant, of a directory or of Git metadata, goes only with the announcement of the task or question that carries it. Use rewake inbox --peek for a non-consuming overview, --message <id> for one full message, or plain inbox for all. Groups preserve separate identities and obligations. Start every message and final reply with one line stating its point. Errors use a red circle; stopped turns use yellow.",
 		},
 		{
 			Title: "Rewake's own lines mostly start with Rewake:",
