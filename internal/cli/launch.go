@@ -231,5 +231,5 @@ func roleSummary() string {
 		label := "--" + candidate.ID
 		descriptions = append(descriptions, label+": "+candidate.Summary)
 	}
-	return "Without a role flag, every launch uses general, even in an empty room. Only --main creates main, and it refuses if main is occupied. A name prefix never selects a role. " + strings.Join(descriptions, " ") + " A silent coordinator prevents reports from waking each other indefinitely."
+	return "No role flag means general, even in an empty room; only --main makes main, refused while the room has one, and a name never selects a role. " + strings.Join(descriptions, " ")
 }

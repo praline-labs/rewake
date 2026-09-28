@@ -6,7 +6,7 @@ import "github.com/praline-labs/rewake/internal/inbox"
 // not report its turn to the sender.
 var noteKind = messageKind{
 	kind:    inbox.Note,
-	summary: "a heads-up that needs no reply.",
-	flag:    Option{Flag: "--notify", Summary: "A heads-up that needs no answer; the session will not report back."},
+	summary: "a heads-up.",
+	flag:    Option{Flag: "--notify", Summary: "A heads-up that needs no answer; no report comes back."},
 	wait:    defaultWait,
 }

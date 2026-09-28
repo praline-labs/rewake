@@ -54,12 +54,11 @@ const CommandFlag = "command"
 // Help is the one line that tells a person aliases exist, printed with every
 // launch command's help. Somebody who has to read the documentation to learn
 // that a feature exists will not find it.
-const Help = "A launch can be given a short name: put it in ~/.config/" + userDir + "/" + userFile +
-	" or in " + projectFile + " in the working directory, as [alias.<name>] with harness = \"<id>\", " +
+const Help = "An alias names a launch: [alias.<name>] in ~/.config/" + userDir + "/" + userFile +
+	" or in " + projectFile + " in the working directory, with harness = \"<id>\", " +
 	"rewake = [flags rewake reads], args = [arguments for the harness] and, in the user file only, " +
-	"command = \"<program>\" to start a wrapper script instead of the harness itself. " +
-	"Then `rewake <name>` launches it: rewake's own flags go before that name, the harness's after it, " +
-	"and a flag you type replaces the one the alias carries."
+	"command = \"<program>\" for a wrapper script. `rewake <name>` then launches it: rewake's flags go " +
+	"before the name, the harness's after it, and a typed flag replaces the alias's copy."
 
 // Set is what this process can expand.
 type Set struct {

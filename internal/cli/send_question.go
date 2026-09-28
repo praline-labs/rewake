@@ -13,7 +13,7 @@ import (
 var questionKind = messageKind{
 	kind:         inbox.Question,
 	summary:      "work whose sender waits for the outcome.",
-	flag:         Option{Flag: "--question", Summary: "Wait for the answer: block until the session ends its turn, and print its final message."},
+	flag:         Option{Flag: "--question", Summary: "Block until the session ends its turn, and print its final message."},
 	wait:         defaultQuestionWait,
 	needsSession: "A question needs a rewake session to receive its answer, and this shell is not one; send it as a task instead, without --question",
 	after:        answerQuestion,

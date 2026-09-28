@@ -85,7 +85,7 @@ func TestCLIResolvesDefaultGeneralAndPreservesExplicitCapabilities(t *testing.T)
 func TestGuideDescribesDefaultGeneralWithoutElection(t *testing.T) {
 	code, out, errOut := run("guide")
 	out = strings.Join(strings.Fields(out), " ")
-	if code != ExitOK || !strings.Contains(out, "every launch uses general") || !strings.Contains(out, "Only --main creates main") || strings.Contains(out, "elects this session main") {
+	if code != ExitOK || !strings.Contains(out, "No role flag means general") || !strings.Contains(out, "only --main makes main") || strings.Contains(out, "elects this session main") {
 		t.Fatalf("guide=%d %s %s", code, out, errOut)
 	}
 }

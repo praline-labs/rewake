@@ -113,7 +113,7 @@ func stateLine(name string, snapshot *sessionstate.Snapshot, settings bool) stri
 	return line
 }
 
-const sessionStateHelp = "Verified main callers also see epoch-scoped primary state: current primary activity, last reported context fill, usable window (rounded decimal K), and observed completed compactions. List includes configured model/effort. Main also receives compaction-complete and known-departure notices; idle alone never triggers a resend. Unknown/stale/partial values are explicit; workers and plain shells receive no telemetry, including in JSON."
+const sessionStateHelp = "A verified main also sees each launch's state: activity, configured model and effort, last reported context fill, usable window (in decimal K) and completed compactions, with unknown or stale values marked. Workers and plain shells get none of it, in JSON either."
 
 func activityText(snapshot *sessionstate.Snapshot) string {
 	label := "unknown"

@@ -31,7 +31,7 @@ type Role struct {
 // General takes work and reports when its turn ends. It is also the fallback role.
 var General = Role{
 	ID:      "general",
-	Summary: "Default when no role flag is supplied. Takes work from other sessions and reports the end of each turn to them. Can start before a main session.",
+	Summary: "The default. Takes work from other sessions and reports each turn's end to them; may start before main.",
 	Play:    generalPlaybook,
 }
 
@@ -39,7 +39,7 @@ var General = Role{
 // nobody: reporting back to the sessions that reported to it would never end.
 var Main = Role{
 	ID:       "main",
-	Summary:  "The session that hands out work: it gets reports, reports no successful turns, and alone may grant a worker a directory or Git metadata with a task. rewake adds no permission of its own to it; what it may write is its harness's.",
+	Summary:  "Hands out work and reads the reports; its own successful turns go to nobody, so reports never wake each other endlessly. Alone may grant a worker a directory or Git metadata with a task; rewake gives it no write permission of its own.",
 	Silent:   true,
 	GitWrite: true,
 	Play:     mainPlaybook,
@@ -48,7 +48,7 @@ var Main = Role{
 // Write takes work and can commit changes in its working repository.
 var Write = Role{
 	ID:       "write",
-	Summary:  "Takes work and reports its turns; a Codex write session may be granted repository Git metadata access by main's --grant-git task, a Claude Code one commits within its own permissions. Existing owner permissions remain unchanged.",
+	Summary:  "As general, and may commit: on Codex once main's --grant-git task opens the Git metadata, on Claude Code within its own permissions. The owner's permissions stay as they are.",
 	GitWrite: true,
 	Play:     writePlaybook,
 }

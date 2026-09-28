@@ -54,10 +54,10 @@ var readable = map[string]bool{
 // SettingsHelp is the one line that tells a person these files exist, printed
 // with every launch command's help. Somebody who has to read the documentation
 // to learn where a setting lives will not find it.
-const SettingsHelp = "Launch defaults are read from ~/.config/" + userSettingsDir + "/" + userSettingsFile +
-	" and from " + projectSettingsFile + " in the working directory, as KEY=VALUE lines: REWAKE_CODEX_MODEL, " +
-	"REWAKE_CODEX_EFFORT, REWAKE_CLAUDE_MODEL, REWAKE_CLAUDE_EFFORT. A variable already in the environment beats " +
-	"both files, an empty one turns the default off for that launch, and your own flag beats everything."
+const SettingsHelp = "Launch defaults come as KEY=VALUE lines from ~/.config/" + userSettingsDir + "/" + userSettingsFile +
+	" and " + projectSettingsFile + " in the working directory: REWAKE_CODEX_MODEL, REWAKE_CODEX_EFFORT, " +
+	"REWAKE_CLAUDE_MODEL, REWAKE_CLAUDE_EFFORT. The environment beats both files, an empty variable turns a " +
+	"default off for the launch, and a typed flag beats everything."
 
 // Settings are the launch defaults available to this process.
 type Settings struct {

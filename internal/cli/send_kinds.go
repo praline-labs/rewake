@@ -83,5 +83,5 @@ func kindSummary() string {
 	for _, kind := range sendKinds {
 		descriptions = append(descriptions, string(kind.kind)+": "+kind.summary)
 	}
-	return strings.Join(descriptions, " ") + " finished: a successful final report, owing no reply. Answer tasks and questions by ending the turn with a final result, not by rewake send. Do not answer notify, finished, pending or error messages."
+	return strings.Join(descriptions, " ") + " finished: a successful report. Answer a task or a question by ending the turn with the result, never with rewake send; answer no other kind."
 }

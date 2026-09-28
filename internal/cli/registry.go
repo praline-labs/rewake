@@ -22,7 +22,7 @@ var jsonOption = Option{
 var globalOptions = []Option{
 	jsonOption,
 	{Flag: "--help", Summary: "Flags, examples and notes for one command."},
-	{Flag: "--version", Summary: "Print the version of rewake and the build it came from: revision, build or commit time, modified."},
+	{Flag: "--version", Summary: "The version and its build: revision, build or commit time, modified."},
 }
 
 // nameOption is a launch flag, and it goes before the harness name: everything
@@ -30,7 +30,7 @@ var globalOptions = []Option{
 var nameOption = Option{
 	Flag:    "--name",
 	Value:   "<prefix>",
-	Summary: "Session prefix (default: selected role, general without a role flag). Address: <prefix>-<harness>, up to 32 characters. Automatic conflicts add -2, -3; explicit conflicts refuse.",
+	Summary: "Address prefix, the role by default: the session is <prefix>-<harness>, 32 characters at most. A taken default gets -2, -3; a taken --name is refused.",
 }
 
 // commandOption names the program a launch starts instead of the harness's
@@ -39,12 +39,12 @@ var nameOption = Option{
 // not guess that from a program's name, and does not run the program to ask.
 var commandOption = Option{
 	Flag: "--command", Value: "<program>",
-	Summary: "Start this program instead of the harness's own, with everything rewake adds unchanged: a wrapper script that runs the harness. A name is looked up on PATH, a path with a slash is taken as given; either must be an executable file.",
+	Summary: "Start this program, a wrapper script that runs the harness, in place of the harness with the same arguments. A name is looked up on PATH, a path with a slash taken as given; it must be executable.",
 }
 
 var roomOption = Option{
 	Flag: "--room", Value: "<name>",
-	Summary: "Join this room at launch. Default: default. Names are unique within a room.",
+	Summary: "The room to join; default otherwise. Names are unique within a room.",
 }
 
 var (
@@ -63,7 +63,7 @@ func Groups() []Group {
 func buildGroups() {
 	run := Group{
 		Title:   "RUN A SESSION",
-		Summary: "Start a coding agent through rewake. It runs in this terminal as usual; rewake only registers it and carries messages.",
+		Summary: "A coding agent started through rewake runs in this terminal as usual; rewake registers it and carries its messages.",
 	}
 	for _, h := range harness.All() {
 		run.Commands = append(run.Commands, launchCommand(h))
@@ -72,16 +72,16 @@ func buildGroups() {
 
 	talk := Group{
 		Title:   "TALK",
-		Summary: "Sessions address each other by name. Nearby incoming messages share a notice: a heads-up or a report waits a few seconds for others, a task or a question goes at once. Use rewake inbox --peek for IDs and previews, --message <id> to read one, or plain inbox to read all.",
+		Summary: "Sessions address each other by name. A notify or a report waits a few seconds to share one notice with other mail; a task or a question is announced at once.",
 		Commands: []*Command{
 			{
 				Name:           "list",
 				MaxPositionals: 0,
-				Summary:        "Live sessions in an aligned table; room and shared directory appear once.",
+				Summary:        "The running sessions of this room.",
 				Options:        []Option{jsonOption},
 				Examples:       []string{"rewake list", "rewake list --json"},
 				Next:           []string{"rewake send <name> \"text\""},
-				Notes:          []string{sessionStateHelp, "Main receives a notify when a session becomes available; a later main also learns which sessions were already available. Each launch epoch is announced once."},
+				Notes:          []string{sessionStateHelp, "Main is told once per launch when a session becomes available, and when one compacts or leaves; a main started later learns which are already available. Idleness alone resends nothing."},
 				Handler:        handleList,
 			},
 			sendCommand(),
@@ -94,11 +94,11 @@ func buildGroups() {
 				Examples:       []string{"rewake withdraw 8d4ddd85", "rewake withdraw 1790370984617481194-8d4ddd85c8f1 --json"},
 				Next:           []string{"rewake inbox --awaited"},
 				Notes: []string{
-					"Before its notice went out, the message simply goes. After, the recipient finds it in its inbox marked withdrawn, under the same id, and is sent a note at once not to act on the notice, since an agent may act on a preview without reading its inbox. A notice held for approval stays in the recipient harness's queue, which rewake cannot empty; if approved, it leads to the withdrawn mark. A sender blocked on a withdrawn question stops waiting and exits 1.",
-					"Only the session run that sent it may, in any role; mail from a plain shell or an earlier run is out of reach. A read message is final: add to it with rewake send <name> \"...\" --to <id>.",
-					"A task goes with its addenda: each unread one is withdrawn with it, the same way. A read addendum stays, owed as before, and the task is recalled for it even if its own notice never went out.",
-					"An id rewake edit replaced names its replacement: withdrawing it withdraws the letter that stands now, and the output says so first.",
-					"A withdrawal that could not finish says how far it got and names the command that finishes it. Exit 0 withdrawn, or withdrawn already; 1 read, not delivered, no longer kept, no such message, or not finished; 2 a wrong call — not a session, an id too short.",
+					"Before its notice went out, the message just goes. After, it stays in the recipient's inbox marked withdrawn under the same id, and a note tells the recipient at once not to act on the notice, which it may have acted on from the preview alone. A notice held for approval stays in the harness's queue, which rewake cannot empty, and leads to the withdrawn mark if approved. A send blocked on a withdrawn question exits 1.",
+					"Only the run that sent it may, in any role; a plain shell's or an earlier run's mail is out of reach. A read message is final: add to it with rewake send <name> \"...\" --to <id>.",
+					"A task's unread addenda are withdrawn with it. A read addendum stays owed, and the task is recalled for it even if the task's own notice never went out.",
+					"An id rewake edit replaced stands for its replacement; the output says so first.",
+					"A withdrawal cut short says how far it got and the command that finishes it. Exit 0 withdrawn, now or before; 1 read, not delivered, no longer kept, no such message, or not finished; 2 a wrong call — not a session, an id too short.",
 				},
 				Handler: handleWithdraw,
 			},
@@ -106,7 +106,7 @@ func buildGroups() {
 				Name:           "edit",
 				Args:           "<id> <text>",
 				MaxPositionals: 2,
-				Summary:        "Replace a message this run sent, while it is unread, with a new text of the same kind. Use - as the text to read it from stdin.",
+				Summary:        "Replace an unread message this run sent with a new text of the same kind. Use - as the text to read it from stdin.",
 				Options: []Option{
 					{Flag: "--wait", Value: "<seconds>", Summary: "How long to wait, as for send."},
 					jsonOption,
@@ -114,35 +114,33 @@ func buildGroups() {
 				Examples: []string{"rewake edit 8d4ddd85 \"rerun the smoke on the staging branch\"", "rewake edit 8d4ddd85 - --json"},
 				Next:     []string{"rewake inbox --awaited"},
 				Notes: []string{
-					"The old message is withdrawn and the new one sent in its place, in one step: the recipient finds the old one marked withdrawn and replaced, and the new one with its own notice, whose preview begins by naming the old one as withdrawn, so no separate note is sent. The output is send's, ending with the new id.",
-					"A question's replacement waits for its answer as send --question does; the send blocked on the old one stops waiting and exits 1.",
-					"A task's addenda stay where they are and add to the replacement from then on; the output names them, with the command to take one back.",
-					"An id an earlier edit replaced names its replacement, which is what the edit then replaces; the output says so first.",
-					"Who may, and when, as for rewake withdraw. Exit codes as for send.",
+					"One step withdraws the old message and sends the new one: the recipient finds the old one marked withdrawn and replaced, and the new one's notice names the old as withdrawn, so no separate note goes. The output is send's, ending with the new id.",
+					"A question's replacement waits for its answer as send --question does; the send blocked on the old one exits 1.",
+					"A task's addenda stay and add to the replacement; the output names them, with the command to take one back.",
+					"An id an earlier edit replaced stands for its replacement; the output says so first.",
+					"Who may, and when, as for rewake withdraw; exit codes as for send.",
 				},
 				Handler: handleEdit,
 			},
 			{
 				Name:           "inbox",
 				MaxPositionals: 0,
-				Summary:        "Read waiting messages, preview their metadata without consuming them, show again what you read and still owe a report for, or list what you sent and still wait on.",
+				Summary:        "Read waiting messages, or preview them, show again what you owe a report for, or list what others owe you.",
 				Options: []Option{
 					jsonOption,
-					{Flag: "--peek", Summary: "Show IDs, senders, kinds, times and bounded first-line previews only; no messages are marked read."},
-					{Flag: "--message", Value: "<id>", Summary: "Read only this available unread message; reserved answers remain with their waiting send."},
-					{Flag: "--owed", Summary: "Show again, in full, the tasks and questions you have read and not yet reported on; nothing is marked, recorded or announced."},
-					{Flag: "--awaited", Summary: "List the tasks and questions this run sent that have no report yet, by recipient, with where each stands; nothing is locked, written or sent."},
+					{Flag: "--peek", Summary: "IDs, senders, kinds, times and first-line previews only; nothing is marked read."},
+					{Flag: "--message", Value: "<id>", Summary: "Read only this unread message; an answer reserved for a waiting send stays with it."},
+					{Flag: "--owed", Summary: "Show again, in full, the tasks and questions you read and have not reported on; changes nothing."},
+					{Flag: "--awaited", Summary: "The tasks and questions this run sent that have no report yet, by recipient, with where each stands; changes nothing."},
 				},
 				Examples: []string{"rewake inbox", "rewake inbox --json", "rewake inbox --peek", "rewake inbox --peek --json", "rewake inbox --message=1780000000000000000-012345abcdef", "rewake inbox --owed", "rewake inbox --owed --json", "rewake inbox --awaited", "rewake inbox --awaited --json"},
 				Next:     []string{"rewake send <name> \"text\""},
 				Notes: []string{
-					"--peek and --message are mutually exclusive. Peek has no full bodies, even in JSON, and creates no task read receipts or report obligations. Plain inbox still reads all available messages.",
-					"--owed is used alone. It is the task you are working on, from the mailbox rather than from memory: after a context compaction, re-read it there instead of working from the summary. It shows only what you read: a last line counts the tasks and questions still unread, whoever sent them (unread in --json), and rewake inbox reads them. A main session owes no reports, so it is refused there. Only work from another session is listed: a task sent from a plain shell owes no report and cannot be shown again this way.",
-					"--awaited is used alone, in any role. It is what others owe you: after a context compaction, a main session runs it to see what it handed out and still waits on. Each message shows its id, kind, time, first line and state: not delivered yet, held, delivered and unread, read and being worked on, pending after an interim report, or stopped, with the stop's own words on who stopped it: the person at the keyboard, or a main by name with rewake interrupt. A recipient that ended owing a task it had read reads \"<name> ended; a resume of <name> in its conversation may still report\" for a day from that read: a resume of it under that name takes the task over and reports, so do not send it again yet. Past that day, or once a new run of the name in another conversation has swept it, and for a task never read, it reads \"no report coming\", as for a recipient replaced by a new run. --json carries the full text. Only this run's mail is listed; notes and anything sent from a plain shell owe nothing and are not tracked.",
-					"Run it when a Rewake notice says messages are waiting; a group may mix tasks, questions, notifications and reports.",
-					"A task or a question you read is answered by ending your turn: your final message goes back to the sender by itself. Put the result there.",
-					"A notify needs no answer. A finished message is a session's final message after work you gave it.",
-					"A verified main also sees the sending session's state line above each of its messages; rewake list --help says what it holds.",
+					"--peek and --message exclude each other. A peek shows no bodies, even in JSON, and creates no read receipt or report obligation.",
+					"--owed goes alone: after a context compaction, re-read your task there rather than from the summary. It shows only what you read; a last line counts what is still unread (unread in --json), which plain inbox reads. Refused for main, which owes no reports. A task from a plain shell owes none and is not listed.",
+					"--awaited goes alone, in any role; after a compaction, main runs it to see what it is still owed. Each message shows its id, kind, time, first line and state: not delivered yet, held, delivered and unread, read, pending, or stopped, with who stopped it — the keyboard, or a main by name. A recipient that ended owing a read task reads \"<name> ended; a resume of <name> in its conversation may still report\" for a day from the read: a resume under that name takes the task over, so do not resend it yet. After that day, once a new run of the name in another conversation swept it, for a task never read, or for a recipient replaced by a new run, it reads \"no report coming\". --json carries the full text. Only this run's tasks and questions are listed.",
+					"Answer a task or a question by ending your turn with the result: the final message goes back to the sender by itself. Nothing else is answered.",
+					"A verified main sees the sender's state line above each of its messages; rewake list --help says what it holds.",
 				},
 				Handler: handleInbox,
 			},
@@ -150,14 +148,14 @@ func buildGroups() {
 				Name:           "pending",
 				Args:           "<text>",
 				MaxPositionals: 1,
-				Summary:        "Before ending a turn that has not finished the work, say what it waits for: that turn end then tells the senders the work is still going, and the next one reports.",
+				Summary:        "Mark a turn that ends before the work does, saying what it waits for: the senders hear the work is still going, and a later turn reports.",
 				Options:        []Option{jsonOption},
 				Examples:       []string{"rewake pending \"the suite is running; the report follows when it ends\""},
 				Notes: []string{
-					"Without it, the end of a turn is the report, and the sender stops waiting. When the wait is on background work, better than either: wait inside the turn.",
-					"It holds for the one turn it is run in, and only a normal end of it: a turn that fails or is stopped reports that as usual.",
-					"On Claude Code, a turn end that follows one marked pending and carries no mark of its own is held once: the session is asked whether the work is done. Still waiting — run rewake pending and end the turn; done — end the turn, and the answer already given goes into the report with what follows it.",
-					"Refused outside a session; for the main session, whose turns are reported to nobody; when no read task or question is waiting for a report; and on a Claude Code session whose telemetry hooks record no turn start, since the mark could not be tied to this turn.",
+					"Without it, the turn's end is the report and the sender stops waiting. Waiting on background work inside the turn beats both.",
+					"It marks only the turn it runs in, and only its normal end: a failed or stopped turn reports as usual.",
+					"On Claude Code, an unmarked turn end after a pending one is held once to ask whether the work is done: still waiting — run rewake pending and end the turn; done — end the turn, and the answer already given goes into the report with what follows.",
+					"Refused outside a session; for main, whose turns go to nobody; with no read task or question awaiting a report; and on a Claude Code session whose telemetry hooks record no turn start to tie the mark to.",
 				},
 				Handler: handlePending,
 			},
@@ -174,7 +172,7 @@ func buildGroups() {
 
 	steer := Group{
 		Title:   "STEER A SESSION",
-		Summary: "A main session compacts a worker's conversation or interrupts its turn. Only main may; the worker must be in the same room and running.",
+		Summary: "Main only, on a running session of its room.",
 		Commands: []*Command{
 			{
 				Name:           "compact",
@@ -185,9 +183,9 @@ func buildGroups() {
 				Examples:       []string{"rewake compact worker-claude", "rewake compact worker-claude \"keep the review findings and the open questions\"", "rewake compact worker-claude --json"},
 				Next:           []string{"rewake list"},
 				Notes: []string{
-					"Refused at once while the session is in a turn: a compaction never waits for the turn to end, and nothing compacts on its own. Interrupt the turn first, or ask again once rewake list shows it idle.",
-					"A focus is refused for a Codex session before anything is sent: Codex has no way to pass one for a single compaction.",
-					"Waits up to 5 seconds for the session to take the request — its rewake plugin on Claude Code, its wrapper on Codex — then up to 10 for its answer, and returns once the compaction has started, never waiting for its end. \"requested\" means its start was not seen in time: it may still start. Either way its result comes to you as a notify from the session: the token counts before and after when the harness gives them, and the session's count of compactions with this one, or why it was refused or failed; never the summary. You get no \"context compacted\" notice for a compaction you asked for: that letter is it.",
+					"Refused at once while the session is in a turn; nothing waits for the turn to end. Interrupt it first, or ask again once rewake list shows it idle.",
+					"A focus is refused for Codex before anything is sent: it has no way to pass one.",
+					"Waits up to 5 seconds for the session to take the request — its rewake plugin on Claude Code, its wrapper on Codex — then up to 10 for its answer, and returns once the compaction has started. \"requested\" means the start was not seen in time and may still come. The result then arrives as a notify from the session, in place of the \"context compacted\" notice: token counts before and after where the harness gives them and its count of compactions, or why it was refused or failed; never the summary.",
 					"Exit 0 started or requested; 1 refused (in a turn, compaction switched off, nothing to compact, remote conversation, not answering, cut short, no control directory, withdrawn before it was taken, another request in flight) or failed; 2 a wrong call — not a main, no such session, a harness that does not take it or cannot take a focus.",
 				},
 				Handler: handleCompact,
@@ -201,8 +199,8 @@ func buildGroups() {
 				Examples:       []string{"rewake interrupt worker-claude", "rewake interrupt worker-claude --json"},
 				Next:           []string{"rewake inbox --awaited"},
 				Notes: []string{
-					"A session waiting on that turn reads stopped, saying who interrupted it. On Claude Code the interrupted session's next rewake notice tells it that you interrupted its previous turn, once; Codex records the interrupt in its model's history itself.",
-					"Refused when no turn is running. Waits up to 5 seconds for the session to take the request — its rewake plugin on Claude Code, its wrapper on Codex — then up to 10 for its answer.",
+					"A session waiting on that turn reads stopped, naming who interrupted it. On Claude Code the session's next notice tells it once that you interrupted its turn; Codex records the interrupt in its model's history itself.",
+					"Refused when no turn runs. Waits as rewake compact does: 5 seconds for the session to take the request, then 10 for its answer.",
 					"Exit 0 done; 1 refused (no turn running, not answering, cut short, no control directory, withdrawn before it was taken, another request in flight) or failed; 2 a wrong call — not a main, no such session, a harness that does not take it.",
 				},
 				Handler: handleInterrupt,
@@ -273,7 +271,7 @@ func buildGroups() {
 
 // nestedLaunchHelp is refuseNestedLaunch's rule, on every launch page: a
 // main reading how to start a worker must not learn it only from the refusal.
-const nestedLaunchHelp = "Refused with exit 2 from a shell inside a rewake session: a session does not start other sessions. The owner starts each one from a terminal outside any session."
+const nestedLaunchHelp = "Refused with exit 2 from a shell inside a rewake session: the owner starts sessions, from a terminal outside any."
 
 // launchCommand builds the command that starts one harness.
 func launchCommand(h harness.Harness) *Command {
@@ -305,7 +303,7 @@ func flow() []FlowStep {
 			Summary: fmt.Sprintf("Start %s as helper-%s with role %s; --name sets only the prefix.", h.Title(), h.ID(), role.General.ID),
 		}, FlowStep{
 			Command: fmt.Sprintf("rewake send helper-%s \"pull and rerun the smoke\"", h.ID()),
-			Summary: "Give that exact address a task; its final message comes back when the turn ends.",
+			Summary: "Give that exact address a task; its report comes back when the turn ends.",
 		})
 	}
 	// The id a send prints, or its tail, names the message afterwards.
@@ -313,15 +311,14 @@ func flow() []FlowStep {
 	return append(steps,
 		FlowStep{
 			Command: fmt.Sprintf("rewake send helper-%s \"also rerun the lint\" --to 8d4ddd85", last),
-			Summary: "Add to a task you sent, by the id its send printed or the start of the part after the dash; one report settles both.",
+			Summary: "Add to an unreported task by the id its send printed, or a unique prefix; one report settles both.",
 		},
 		FlowStep{
 			Command: "rewake edit 8d4ddd85 \"pull and rerun the full suite\"",
-			Summary: "Replace a message of yours nobody has read yet; rewake withdraw 8d4ddd85 takes it back instead.",
+			Summary: "Replace an unread message of yours; rewake withdraw 8d4ddd85 takes it back instead.",
 		},
 		FlowStep{Command: "rewake list", Summary: "See who is running and can be reached."},
-		FlowStep{Command: "rewake inbox", Summary: "When a \"Rewake:\" line says messages are waiting, read them here. Answer a task by finishing your turn with the result. rewake inbox --owed shows again what you read and still owe a report for."},
-		FlowStep{Command: "rewake <command> --help", Summary: "Flags, examples and notes for that command."},
+		FlowStep{Command: "rewake inbox", Summary: "Read what a \"Rewake:\" notice announced; answer a task by ending your turn with the result."},
 	)
 }
 
@@ -330,23 +327,23 @@ func notes() []Note {
 	return []Note{
 		{
 			Title: "Nothing ever prompts",
-			Body:  "A CLI that waits for input hangs an agent forever. A missing argument is a refusal that names what was expected and shows a real invocation.",
+			Body:  "A CLI that waits for input hangs an agent. A missing argument is a refusal naming what was expected, with a real invocation.",
 		},
 		{
 			Title: "Exit codes are distinguishable",
-			Body:  "0 means done; a message delivered to a Claude Code session may still be taken back within a minute, if that session says late that it held it, and a task or question that then fails comes back to its sender as a note. 2 means the call was wrong: unknown command or flag, missing argument, no such session. 1 means the target refused or could not be reached. 3 means a message was accepted but not delivered yet: pending lands on its own once the session can take it; held waits for the person at the receiving session, who may release it or let it expire, and an expired task or question comes back to its sender as a note. Branch on the code instead of parsing text.",
+			Body:  "0 done; a Claude Code session may still say within a minute that it held the message, and a task or question taken back that way returns to its sender as a note. 1 the target refused or could not be reached. 2 the call was wrong: unknown command or flag, missing argument, no such session. 3 accepted, not delivered yet: pending lands once the session can take it; held waits for the person at the receiving session to release it or let it expire, and an expired task or question returns to its sender as a note. Branch on the code, not on the text.",
 		},
 		{
 			Title: "Only sessions started through rewake take part",
-			Body:  "An agent started by hand in another terminal is not reachable: rewake has no way into it. Start it with rewake and it appears in list.",
+			Body:  "An agent started by hand is out of reach. Start it with rewake and it appears in list.",
 		},
 		{
 			Title: "A waiting message is announced, not pasted",
-			Body:  "It shows up as one line: \"Rewake: <session> <kind>, <n> new message(s)\", with a 🟢 in front where the harness shows it as plain text. The following line previews the author's first line, limited to about 100 columns. Each notice has fixed member IDs. Ready new mail is submitted promptly through native start-or-steer, without waiting for peek or a completed turn. No reminders for old unread mail. Initial collection is 150 ms; later arrivals join the next available dispatch, never an already accepted notice. A grant, of a directory or of Git metadata, goes only with the announcement of the task or question that carries it. Use rewake inbox --peek for a non-consuming overview, --message <id> for one full message, or plain inbox for all. Groups preserve separate identities and obligations. Start every message and final reply with one line stating its point. Errors use a red circle; stopped turns use yellow.",
+			Body:  "A notice is one line, \"Rewake: <session> <kind>, <n> new message(s)\" — with a 🟢 in front where the harness shows plain text, a red circle for an error, yellow for a stopped turn — and a preview of the author's first line, about 100 columns. Ready mail is announced at once, starting or steering a turn, without waiting for a peek or a finished turn. Mail arriving within the first 150 ms joins the notice; later mail goes with the next, never into one already accepted. A notice's members are fixed, each keeping its own sender and obligation, and old unread mail is not announced again. A grant, of a directory or of Git metadata, goes only with the notice of the task or question that carries it. rewake inbox --peek previews, --message <id> reads one, plain inbox reads all. Start every message and final reply with one line stating its point.",
 		},
 		{
 			Title: "Rewake's own lines mostly start with Rewake:",
-			Body:  "A notice, a send result, an inbox header or a note from rewake itself opens with \"Rewake:\" and says what happened, not how. The exceptions: text from another session follows its own header — \"from <session> · <kind> · <time>\", \"answer from <session>:\" for a question, \"from <session> · <id> · text no longer kept\" when --owed has lost the text — and is printed as written; --awaited names each recipient as \"to <session>\" and each message as \"<id> · <kind> · <time> · <state>\" above its first line; main's state line reads \"<session>: <activity> | context … | compactions …\"; the availability and departure notices open with \"Session available.\" or \"Session is no longer available…\" and keep their identity block. A note that a message was not delivered means the agent never saw it: it is owed no report and nothing sends it again.",
+			Body:  "Notices, send results, inbox headers and notes from rewake open with \"Rewake:\" and say what happened, not how. The exceptions: another session's text, printed as written under \"from <session> · <kind> · <time>\", \"answer from <session>:\" for a question, or \"from <session> · <id> · text no longer kept\" when --owed has lost it; --awaited's \"to <session>\" and \"<id> · <kind> · <time> · <state>\" above each first line; main's state line, \"<session>: <activity> | context … | compactions …\"; and the notices \"Session available.\" and \"Session is no longer available…\", which keep their identity block. A note that a message was not delivered means the agent never saw it: no report is owed and nothing resends it.",
 		},
 		{
 			Title: "Kinds and replies",
@@ -354,11 +351,11 @@ func notes() []Note {
 		},
 		{
 			Title: "Rooms isolate conversations",
-			Body:  "Choose --room <name> before the harness name; without it, launches use default. The system briefing names the role and directs the agent to rewake guide on its first task. Sessions see only their room. Commands inherit REWAKE_ROOM; a shell without it uses default. Names can repeat across rooms. There is no cross-room address or --room flag on messaging commands.",
+			Body:  "--room <name> before the harness name picks the room, default otherwise. Commands inherit REWAKE_ROOM, default without it. Sessions see only their room and names may repeat across rooms: no address or messaging flag reaches another room.",
 		},
 		{
 			Title: "Session addresses come from launch prefixes",
-			Body:  "The selected role is the default prefix; --name replaces that prefix without changing the role. Launch always appends -<harness>, even if the prefix already ends with that suffix. Automatic conflicts add -2, -3 after the harness; explicit conflicts refuse. Prefixes start with a lower-case letter or digit and use lower-case letters, digits, dots, dashes or underscores; the complete address must fit 32 characters. Send uses the exact address shown by list. Existing running sessions keep their names.",
+			Body:  "An address is <prefix>-<harness>. The prefix is the role unless --name replaces it, which leaves the role as it is; -<harness> is added even to a prefix that already ends with it. A taken default gets -2, -3 after the harness; a taken --name is refused. A prefix starts with a lower-case letter or digit and holds lower-case letters, digits, dots, dashes and underscores; the address fits 32 characters. Send takes the exact address list shows, and running sessions keep their names.",
 		},
 		{
 			Title: "Choose a session role",
@@ -366,11 +363,11 @@ func notes() []Note {
 		},
 		{
 			Title: "A message from shell cannot be answered with send",
-			Body:  "shell means it was typed in a plain terminal, not sent by a session. Answer it in your own reply; rewake has no way to deliver to it.",
+			Body:  "shell means it was typed in a plain terminal, not sent by a session. Answer it in your own reply; rewake cannot deliver to a shell.",
 		},
 		{
 			Title: "Delivery speed differs by harness",
-			Body:  "Claude Code receives through its inbox socket. Codex uses an owned app-server to start or steer a turn, including in a fresh conversation. Every send reports acceptance or the reason delivery failed.",
+			Body:  "Claude Code receives through its inbox socket; Codex through its own app-server, which starts or steers a turn, in a fresh conversation too. Every send reports acceptance or why delivery failed.",
 		},
 	}
 }

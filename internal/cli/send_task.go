@@ -7,6 +7,6 @@ import "github.com/praline-labs/rewake/internal/inbox"
 // "Rewake: <session> finished" line.
 var taskKind = messageKind{
 	kind:    inbox.Task,
-	summary: "work to do, with a report when the turn ends.",
+	summary: "work, reported when the turn ends.",
 	wait:    defaultWait,
 }

@@ -36,7 +36,7 @@ func (codexHarness) ID() string    { return ID }
 func (codexHarness) Title() string { return "Codex" }
 
 func (codexHarness) Summary() string {
-	return "Start Codex with a session-owned server for immediate delivery."
+	return "Start Codex as a rewake session, with its own server for delivery."
 }
 
 func (codexHarness) Examples() []string {
@@ -110,10 +110,9 @@ const (
 
 func (codexHarness) Notes() []string {
 	return []string{
-		"A private app-server starts or steers a turn when a notice arrives; no queue polling is needed.",
-		"The server lives only for this session.",
-		"--worktree is rewake's here, since the terminal refuses its own beside the server: rewake adds a checkout of HEAD on a new branch under its worktree directory and starts the session in it, at the same place within the repository; --worktree=<name> names both. rewake worktree land takes the branch's commits into the checkout it came from, finish lands and removes it, ls lists and rm removes. It starts a new conversation only: resume and fork are refused beside it, since they continue in the directory the conversation was started in.",
-		"Arguments after the harness name are passed to codex as written, except: a --help written first asks rewake for this page instead of starting the harness; --worktree is rewake's, above, and beside it -C or --cd only says where the checkout is made from; --remote, --profile or -p, --oss and --local-provider are refused, since the session's own server needs local arguments; and a flag the line types replaces an alias's copy of it, as the alias note says. rewake adds --remote to that server beside them.",
+		"A private app-server, living as long as the session, starts or steers a turn when a notice arrives.",
+		"--worktree is rewake's here, since the terminal refuses its own beside the server: it starts the session in a new checkout of HEAD on a new branch under rewake's worktree directory, at the same place within the repository; --worktree=<name> names both. rewake worktree --help says how to land and remove it. It starts a new conversation only: resume and fork are refused beside it, since they continue in the conversation's own directory.",
+		"Arguments after codex reach it as written, beside the --remote rewake adds for its server, except: a --help first asks rewake for this page; beside --worktree, -C or --cd only says where the checkout is made from; --remote, --profile or -p, --oss and --local-provider are refused, since the session's own server needs local arguments; and a typed flag replaces an alias's copy of it.",
 	}
 }
 

@@ -112,7 +112,7 @@ func TestExplicitGitGrantRequiresMainAndEligibleTask(t *testing.T) {
 func TestTheHelpSaysAGitGrantStays(t *testing.T) {
 	_, out, _ := run("send", "--help")
 	out = strings.Join(strings.Fields(out), " ")
-	if !strings.Contains(out, "--grant-git alone opens the Git metadata of the session's own checkout, and that is never taken back") {
+	if !strings.Contains(out, "--grant-git alone opens the Git metadata of the session's own checkout for the rest of the thread: rewake does not journal it, so neither the report nor a later message takes it back") {
 		t.Errorf("send --help does not say a standalone --grant-git stays:\n%s", out)
 	}
 	if strings.Contains(out, "a settled task's grant is taken back") {

@@ -103,7 +103,7 @@ func (claudeHarness) CompactFocus() bool { return true }
 func (claudeHarness) InterruptTrace() string { return "its next notice says you interrupted it" }
 
 func (claudeHarness) Summary() string {
-	return "Start Claude Code as a rewake session. Messages reach it in seconds."
+	return "Start Claude Code as a rewake session."
 }
 
 func (claudeHarness) Examples() []string {
@@ -153,10 +153,9 @@ func claudeDefaults() []harness.Default {
 
 func (claudeHarness) Notes() []string {
 	return []string{
-		"Delivery goes through the session inbox socket, so a message arrives within seconds and wakes an idle session.",
-		"Arguments after the harness name are passed to claude as written, except: a --help written first asks rewake for this page instead of starting the harness; --worktree is rewake's, below; and a flag the line types replaces an alias's copy of it, as the alias note says. rewake adds the flags its delivery needs beside them.",
-		"An identical message from the same sender within thirty seconds is dropped by Claude Code itself; rewake puts a short id in every message to keep them apart.",
-		"--worktree is rewake's here: rewake adds a checkout of HEAD on a new branch under its worktree directory and starts the session in it, at the same place within the repository; --worktree=<name> names both, and a name after a space is refused, since it would reach claude as the prompt. rewake worktree land takes the branch's commits into the checkout it came from, finish lands and removes it, ls lists and rm removes. It starts a new conversation only: --continue or -c, --resume or -r, --from-pr, --teleport, --fork-session and the attach and respawn commands are refused beside it, and so are Claude Code's own -w and --tmux, and --cloud and --environment. -w alone stays Claude Code's own worktree, inside the repository.",
+		"Messages arrive through the session's inbox socket within seconds and wake an idle session.",
+		"Arguments after claude reach it as written, beside the flags rewake adds for delivery, except: a --help first asks rewake for this page; --worktree is rewake's, below; and a typed flag replaces an alias's copy of it.",
+		"--worktree starts the session in a new checkout of HEAD on a new branch under rewake's worktree directory, at the same place within the repository; --worktree=<name> names both, and a name after a space is refused, since it would reach claude as the prompt. rewake worktree --help says how to land and remove it. It starts a new conversation only: --continue or -c, --resume or -r, --from-pr, --teleport, --fork-session, the attach and respawn commands, Claude Code's own -w and --tmux, --cloud and --environment are refused beside it. -w alone stays Claude Code's own worktree, inside the repository.",
 	}
 }
 
