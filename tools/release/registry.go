@@ -94,17 +94,19 @@ func classify(r result, version string) (presence, string) {
 	return unknown, code
 }
 
-// checkRegistry is the precondition: no package of the release has the
-// version yet, as far as the registry can say.
+// checkRegistry is the precondition: no upload of the release has its
+// version yet, as far as the registry can say. Each version is asked for
+// exactly, so a free release does not hide a build already taken.
 func (g *gate) checkRegistry(ctx context.Context) {
 	for _, p := range packages {
-		switch answer, why := g.lookup(ctx, p.name, g.version); answer {
+		ref := p.ref(g.version)
+		switch answer, why := g.lookup(ctx, packageName, p.version(g.version)); answer {
 		case absent:
-			g.pass("%s@%s is not in the registry", p.name, g.version)
+			g.pass("%s is not in the registry", ref)
 		case present:
-			g.fail("%s@%s is already in the registry: a version cannot be published twice, release the next one", p.name, g.version)
+			g.fail("%s is already in the registry: a version cannot be published twice, release the next one", ref)
 		default:
-			g.fail("could not tell whether %s@%s is in the registry, so publishing is unsafe to decide: %s", p.name, g.version, why)
+			g.fail("could not tell whether %s is in the registry, so publishing is unsafe to decide: %s", ref, why)
 		}
 	}
 }
@@ -122,12 +124,13 @@ var refused = regexp.MustCompile(`^(E4\d\d|EOTP)$`)
 func (g *gate) publishAll(ctx context.Context) bool {
 	var done []string
 	for index, p := range packages {
-		ref := p.name + "@" + g.version
-		g.say("publishing %s", ref)
+		ref, tag := p.ref(g.version), p.tag(g.version)
+		g.say("publishing %s under %s", ref, tag)
 		// --dry-run=false on the command line outranks a dry-run setting
 		// inherited from the environment or an npmrc, under which npm
-		// skips the upload and still exits 0.
-		args := append([]string{"publish", "--dry-run=false", "--access", "public", "--ignore-scripts"}, registryFlags...)
+		// skips the upload and still exits 0. The tag is always named: npm
+		// would give latest to whatever it publishes without one.
+		args := append([]string{"publish", "--dry-run=false", "--access", "public", "--tag", tag, "--ignore-scripts"}, registryFlags...)
 		if g.otp != "" {
 			args = append(args, "--otp", g.otp)
 		}
@@ -146,7 +149,7 @@ func (g *gate) publishAll(ctx context.Context) bool {
 		if r.err != nil || !refused.MatchString(code) {
 			// The request may have been stored before its answer was lost:
 			// ask once which it was.
-			switch answer, why := g.lookup(ctx, p.name, g.version); answer {
+			switch answer, why := g.lookup(ctx, packageName, p.version(g.version)); answer {
 			case present:
 				g.say("the registry has %s all the same: its upload went through, and the next one follows", ref)
 				done = append(done, ref)
@@ -164,7 +167,7 @@ func (g *gate) publishAll(ctx context.Context) bool {
 			rest = append(rest, ref)
 		}
 		for _, later := range packages[index+1:] {
-			rest = append(rest, later.name+"@"+g.version)
+			rest = append(rest, later.ref(g.version))
 		}
 		g.say("published:     %s", listOrNone(done))
 		if unknownRef != "" {
@@ -173,7 +176,7 @@ func (g *gate) publishAll(ctx context.Context) bool {
 		g.say("not published: %s", listOrNone(rest))
 		switch {
 		case len(done) > 0:
-			g.say("%s cannot be reused: the registry refuses a version once taken, even after an unpublish, and this gate refuses one any package already has. Release the next version.", g.version)
+			g.say("%s cannot be reused: the registry refuses a version once taken, even after an unpublish, and this gate refuses a release any of whose versions is taken. Release the next version.", g.version)
 		case unknownRef != "":
 			g.say("do not reuse %s until npm view %s version answers E404 a while from now; if it shows the version, %s was published and %s cannot be reused.", g.version, unknownRef, unknownRef, g.version)
 		default:
@@ -186,15 +189,16 @@ func (g *gate) publishAll(ctx context.Context) bool {
 
 // verify asks the registry for what was just published, once, without
 // retrying: right after an upload the registry may answer 404 for a while. It
-// reports whether every package was seen; one that was not may be delay, or an
-// upload npm skipped while saying it made it, and only a later look tells.
+// reports whether every version was seen and every dist-tag points at its
+// upload; one that does not may be delay, or an upload npm skipped while
+// saying it made it, and only a later look tells.
 func (g *gate) verify(ctx context.Context) bool {
 	g.say("")
 	g.say("in the registry now:")
 	var unseen []string
 	for _, p := range packages {
-		ref := p.name + "@" + g.version
-		switch answer, why := g.lookup(ctx, p.name, g.version); answer {
+		ref := p.ref(g.version)
+		switch answer, why := g.lookup(ctx, packageName, p.version(g.version)); answer {
 		case present:
 			g.say("  %s visible", ref)
 		case absent:
@@ -205,17 +209,25 @@ func (g *gate) verify(ctx context.Context) bool {
 			unseen = append(unseen, ref)
 		}
 	}
-	entry := packages[len(packages)-1].name
-	args := append([]string{"view", entry, "dist-tags.latest", "--json"}, registryFlags...)
+	args := append([]string{"view", packageName, "dist-tags", "--json"}, registryFlags...)
 	r := g.run(ctx, viewLimit, g.root, "npm", args...)
-	var latest string
-	switch {
-	case r.ok() && json.Unmarshal([]byte(strings.TrimSpace(r.stdout)), &latest) == nil && latest == g.version:
-		g.say("  %s latest is %s", entry, latest)
-	case r.ok() && latest != "":
-		g.say("  %s latest is %s, not %s; if that is not intended: npm dist-tag add %s@%s latest", entry, latest, g.version, entry, g.version)
-	default:
-		g.say("  %s latest could not be read yet: npm view %s dist-tags.latest", entry, entry)
+	var tags map[string]string
+	read := r.ok() && json.Unmarshal([]byte(strings.TrimSpace(r.stdout)), &tags) == nil
+	var untagged []string
+	for _, p := range packages {
+		tag, want := p.tag(g.version), p.version(g.version)
+		switch {
+		case !read:
+			g.say("  the tag %s could not be read yet: npm view %s dist-tags", tag, packageName)
+		case tags[tag] == want:
+			g.say("  %s is %s", tag, want)
+			continue
+		case tags[tag] == "":
+			g.say("  there is no tag %s yet; if it stays so: npm dist-tag add %s %s", tag, p.ref(g.version), tag)
+		default:
+			g.say("  %s is %s, not %s; if it stays so: npm dist-tag add %s %s", tag, tags[tag], want, p.ref(g.version), tag)
+		}
+		untagged = append(untagged, tag)
 	}
 	if len(unseen) > 0 {
 		g.say("")
@@ -224,7 +236,11 @@ func (g *gate) verify(ctx context.Context) bool {
 			g.say("  npm view %s version", ref)
 		}
 	}
-	return len(unseen) == 0
+	if len(untagged) > 0 {
+		g.say("")
+		g.say("the dist-tags %s do not point at this release yet; usually the registry's delay again. Tag only once npm view %s dist-tags shows them.", strings.Join(untagged, ", "), packageName)
+	}
+	return len(unseen) == 0 && len(untagged) == 0
 }
 
 func listOrNone(refs []string) string {

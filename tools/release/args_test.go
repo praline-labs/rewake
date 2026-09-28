@@ -40,6 +40,8 @@ func TestParseArgsRefusals(t *testing.T) {
 		{[]string{"1.0.0+build.1"}, "without it, 1.0.0"},
 		{[]string{"1.0.0-rc.1+sha.abc"}, "without it, 1.0.0-rc.1"},
 		{[]string{"1.0.0", "1.0.1"}, "one version only"},
+		{[]string{"1.0.2-linux-x64"}, "the linux-x64 build of 1.0.2, not a release: name the release, 1.0.2"},
+		{[]string{"1.1.0-rc.1-linux-arm64"}, "name the release, 1.1.0-rc.1"},
 		{[]string{"1.0.0", "--dry-run"}, "no flag --dry-run"},
 		{[]string{"1.0.0", "--otp", "1"}, "--otp is for --publish"},
 		{[]string{"1.0.0", "--publish", "--otp"}, "--otp needs the code"},

@@ -13,32 +13,72 @@ import (
 	"time"
 )
 
-// scope is the npm organization the packages are published under; the
+// scope is the npm organization the package is published under; the
 // unscoped name belongs to somebody else.
 const scope = "@praline-labs"
 
-// pkg is one npm package of a release, as scripts/pack.sh builds it.
+// packageName is the one name every build of a release is published under
+// (owner decision, September 28, 2026): the platform builds are versions of it,
+// not packages of their own.
+const packageName = scope + "/rewake"
+
+// pkg is one upload of a release, as scripts/pack.sh builds it.
 type pkg struct {
-	// dir is the package's directory under dist/npm.
-	dir  string
-	name string
-	// cpu is the npm cpu of a platform package, "" for the entry.
+	// dir is its directory under dist/npm.
+	dir string
+	// platform is a platform build's npm os and cpu, as its version suffix,
+	// its dist-tag and its alias spell them; "" for the entry.
+	platform string
+	// cpu is the npm cpu of a platform build, "" for the entry.
 	cpu string
 	// machine is the architecture its binary must be built for.
 	machine elf.Machine
-	// files is everything the package may upload, and must: an allowlist
+	// files is everything the upload may carry, and must: an allowlist
 	// checked both ways, since a missing file breaks the install and an
 	// extra one stays in every mirror for as long as the version exists.
 	files []string
 }
 
-// packages in the order they are published: the platforms first, the entry,
-// which names them, last.
+// packages in the order they are published: the platform builds first, the
+// entry, which names them, last.
 var packages = []pkg{
-	{dir: "rewake-linux-x64", name: scope + "/rewake-linux-x64", cpu: "x64", machine: elf.EM_X86_64, files: []string{"LICENSE", "bin/rewake", "package.json"}},
-	{dir: "rewake-linux-arm64", name: scope + "/rewake-linux-arm64", cpu: "arm64", machine: elf.EM_AARCH64, files: []string{"LICENSE", "bin/rewake", "package.json"}},
-	{dir: "rewake", name: scope + "/rewake", files: []string{"LICENSE", "README.md", "bin/rewake", "package.json"}},
+	{dir: "rewake-linux-x64", platform: "linux-x64", cpu: "x64", machine: elf.EM_X86_64, files: []string{"LICENSE", "bin/rewake", "package.json"}},
+	{dir: "rewake-linux-arm64", platform: "linux-arm64", cpu: "arm64", machine: elf.EM_AARCH64, files: []string{"LICENSE", "bin/rewake", "package.json"}},
+	{dir: "rewake", files: []string{"LICENSE", "README.md", "bin/rewake", "package.json"}},
 }
+
+// version is the npm version this upload gets in a release: the release
+// itself for the entry, the release with the platform as a prerelease suffix
+// for a build, since npm takes one name and version only once.
+func (p pkg) version(release string) string {
+	if p.platform == "" {
+		return release
+	}
+	return release + "-" + p.platform
+}
+
+// ref is what npm calls this upload in a release.
+func (p pkg) ref(release string) string { return packageName + "@" + p.version(release) }
+
+// tag is the dist-tag the upload goes under. A platform build has a tag of its
+// own: published without one it would take latest, and the next install on
+// any other machine would get a package with no command in it. The entry of
+// a prerelease goes under next, so latest stays on the last release.
+func (p pkg) tag(release string) string {
+	switch {
+	case p.platform != "":
+		return p.platform
+	case strings.Contains(release, "-"):
+		return "next"
+	default:
+		return "latest"
+	}
+}
+
+// alias is the name the entry installs a platform build under, and the one
+// the shim looks for; scoped, so nothing from outside the organization can
+// sit in its place.
+func (p pkg) alias() string { return scope + "/rewake-" + p.platform }
 
 const packLimit = time.Minute
 
@@ -68,68 +108,76 @@ type packed struct {
 	} `json:"files"`
 }
 
-// checkPackage checks one built package: its manifest, what it would upload
-// and, for a platform package, the architecture of its binary.
+// checkPackage checks one built upload: its manifest, what it would upload
+// and, for a platform build, the architecture of its binary.
 func (g *gate) checkPackage(ctx context.Context, p pkg) {
-	dir := g.dist(p)
+	dir, ref := g.dist(p), p.ref(g.version)
 	raw, err := os.ReadFile(filepath.Join(dir, "package.json"))
 	if err != nil {
-		g.fail("%s: %v", p.name, err)
+		g.fail("%s: %v", ref, err)
 		return
 	}
 	var m manifest
 	if err := json.Unmarshal(raw, &m); err != nil {
-		g.fail("%s: package.json does not parse: %v", p.name, err)
+		g.fail("%s: package.json does not parse: %v", ref, err)
 		return
 	}
 	if problems := manifestProblems(p, m, g.version); len(problems) > 0 {
-		g.fail("%s: %s", p.name, strings.Join(problems, "; "))
+		g.fail("%s: %s", ref, strings.Join(problems, "; "))
+	} else if p.platform != "" {
+		g.pass("%s: name, version, license, repository, os and cpu as expected, no bin", ref)
 	} else {
-		g.pass("%s: name, version, license, repository, os and cpu as expected", p.name)
+		g.pass("%s: name, version, license, repository and bin as expected, the builds as its optional dependencies", ref)
 	}
 
 	r := g.run(ctx, packLimit, dir, "npm", "pack", "--dry-run", "--json", "--ignore-scripts")
 	if !r.ok() {
-		g.fail("%s: npm pack --dry-run failed: %s", p.name, r.why())
+		g.fail("%s: npm pack --dry-run failed: %s", ref, r.why())
 		return
 	}
 	var answer []packed
 	if err := json.Unmarshal([]byte(r.stdout), &answer); err != nil || len(answer) != 1 {
-		g.fail("%s: npm pack --dry-run --json gave no single package: %v", p.name, err)
+		g.fail("%s: npm pack --dry-run --json gave no single package: %v", ref, err)
 		return
 	}
 	if problems := fileProblems(p, answer[0]); len(problems) > 0 {
-		g.fail("%s: %s", p.name, strings.Join(problems, "; "))
+		g.fail("%s: %s", ref, strings.Join(problems, "; "))
 	} else {
-		g.pass("%s: uploads exactly %s, %s packed", p.name, strings.Join(p.files, ", "), size(answer[0].Size))
+		g.pass("%s: uploads exactly %s, %s packed", ref, strings.Join(p.files, ", "), size(answer[0].Size))
 	}
 
 	if p.cpu != "" {
 		if err := checkMachine(filepath.Join(dir, "bin", "rewake"), p.machine); err != nil {
-			g.fail("%s: %v", p.name, err)
+			g.fail("%s: %v", ref, err)
 		} else {
-			g.pass("%s: bin/rewake is a 64-bit %s executable", p.name, p.machine)
+			g.pass("%s: bin/rewake is a 64-bit %s executable", ref, p.machine)
 		}
 	}
 }
 
-// manifestProblems compares a package.json with what the package must say.
-func manifestProblems(p pkg, m manifest, version string) []string {
+// manifestProblems compares a package.json with what the upload must say.
+func manifestProblems(p pkg, m manifest, release string) []string {
 	var problems []string
 	want := func(what, got, expected string) {
 		if got != expected {
 			problems = append(problems, fmt.Sprintf("%s is %q, want %q", what, got, expected))
 		}
 	}
-	want("name", m.Name, p.name)
-	want("version", m.Version, version)
+	want("name", m.Name, packageName)
+	want("version", m.Version, p.version(release))
 	want("license", m.License, "MIT")
 	want("repository", m.Repository.URL, repository)
 	if p.cpu != "" {
 		want("os", strings.Join(m.OS, ","), "linux")
 		want("cpu", strings.Join(m.CPU, ","), p.cpu)
+		// A build is installed beside the entry under an alias: a bin here
+		// would be linked over the entry's command, and a dependency would
+		// be one more thing every install fetches.
 		if len(m.Bin) > 0 {
-			problems = append(problems, "a platform package declares a bin, which would shadow the entry's")
+			problems = append(problems, "a platform build declares a bin, which would shadow the entry's")
+		}
+		if len(m.OptionalDependencies) > 0 {
+			problems = append(problems, "a platform build declares optionalDependencies")
 		}
 		return problems
 	}
@@ -141,10 +189,12 @@ func manifestProblems(p pkg, m manifest, version string) []string {
 	if !maps.Equal(m.Bin, map[string]string{"rewake": "bin/rewake"}) {
 		problems = append(problems, fmt.Sprintf("bin is %v, want rewake: bin/rewake", m.Bin))
 	}
+	// Exactly this release's builds, each pinned by its whole version: a
+	// range would let npm pick another release's binary.
 	optional := map[string]string{}
-	for _, other := range packages {
-		if other.cpu != "" {
-			optional[other.name] = version
+	for _, build := range packages {
+		if build.platform != "" {
+			optional[build.alias()] = "npm:" + build.ref(release)
 		}
 	}
 	if !maps.Equal(m.OptionalDependencies, optional) {
@@ -153,7 +203,7 @@ func manifestProblems(p pkg, m manifest, version string) []string {
 	return problems
 }
 
-// fileProblems compares what a package would upload with its allowlist, both
+// fileProblems compares what an upload would carry with its allowlist, both
 // ways, and requires its command to be executable.
 func fileProblems(p pkg, answer packed) []string {
 	var problems []string

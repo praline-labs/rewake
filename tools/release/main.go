@@ -60,7 +60,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 }
 
 func usage(to io.Writer) {
-	_, _ = fmt.Fprint(to, `release — build, check and, only when told, publish the npm packages of rewake
+	_, _ = fmt.Fprint(to, `release — build, check and, only when told, publish the npm package of rewake
 
   go run ./tools/release <version>                        check everything, publish nothing
   go run ./tools/release <version> --publish [--otp <code>]
@@ -70,31 +70,40 @@ a dry run keeps going past a failed check so that one run shows every problem.
 With --publish a failed check before the build stops the release there, and
 nothing is published unless every check passed.
 
+One name carries the release: the entry, <version>, and a build per platform
+as a version of the same package, <version>-linux-x64 and <version>-linux-arm64,
+which the entry installs through npm aliases.
+
 The checks, in order:
   - the working tree is clean and origin/main contains HEAD;
   - internal/cli/registry.go at HEAD says var Version = "<version>", which
     the release commit sets;
   - the version is semver without build metadata, which npm would strip,
-    and none of the three packages has it in the
-    registry: only npm's own E404 counts as free, and any other answer —
-    a network failure, a 403, an answer that does not parse — stops the
-    release as unsafe to decide;
-  - scripts/pack.sh builds the packages into dist/npm;
-  - each package would upload exactly its allowlist of files, nothing missing
-    and nothing extra, and carries the right name, version, os and cpu;
+    and not a platform build's own version; the registry has none of the
+    three versions: only npm's own E404 counts as free, and any other
+    answer — a network failure, a 403, an answer that does not parse —
+    stops the release as unsafe to decide;
+  - scripts/pack.sh builds the uploads into dist/npm;
+  - each would upload exactly its allowlist of files, nothing missing and
+    nothing extra, and carries the right name, version, os and cpu; the
+    entry's optional dependencies are exactly this release's builds;
   - each platform binary is built for its architecture, and the one for this
     machine prints the version, built from HEAD with no local changes;
-  - the entry's shim, laid out in a node_modules with this machine's platform
-    package, runs that binary, and without it fails naming what to install;
+  - npm installs the release from a registry this process serves on the
+    loopback interface: this machine's build alone, and its command runs;
+    each other build alone for its cpu; none with --omit=optional, and the
+    command then fails naming the reinstall;
   - the shim's own tests, go test ./scripts.
 
---publish then uploads both platform packages first and the entry last, all
-with --access public to https://registry.npmjs.org/, and stops at the first
-failure, naming what was and was not published. It asks the registry for each
-package afterwards and reports; a package not visible yet a minute after its
-upload is reported and ends the run with 1 and no tag, since only a later
-look tells a delay from an upload npm skipped. The git tag is printed, not
-created.
+--publish then uploads both platform builds first, each under its own
+dist-tag (linux-x64, linux-arm64) so neither takes latest, and the entry last
+under latest (next for a prerelease), all with --access public to
+https://registry.npmjs.org/, and stops at the first failure, naming what was
+and was not published. It asks the registry for each version and the
+dist-tags afterwards and reports; a version not visible yet a minute after
+its upload, or a tag not on it, is reported and ends the run with 1 and no
+tag, since only a later look tells a delay from an upload npm skipped. The
+git tag is printed, not created.
 
   go run ./tools/release 1.0.0
   go run ./tools/release 1.0.0 --publish --otp 123456
@@ -106,8 +115,8 @@ Flags
 
 Exit codes
   0  every check passed; with --publish, every package was published
-  1  a check failed, a publish did not complete, or a package it published
-     is not visible yet
+  1  a check failed, a publish did not complete, or a version it published
+     or a dist-tag is not visible yet
   2  the call was wrong
 `)
 }

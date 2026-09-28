@@ -92,7 +92,7 @@ func (g *gate) release(ctx context.Context) int {
 	g.say("")
 	g.say("on this machine:")
 	g.checkBinary(ctx)
-	g.checkShim(ctx)
+	g.checkInstall(ctx)
 
 	if !g.publish {
 		g.say("")

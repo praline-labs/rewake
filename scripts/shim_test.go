@@ -10,7 +10,8 @@ import (
 	"testing"
 )
 
-// platformPackage is the npm package the shim looks for on this machine.
+// platformPackage is the alias the shim looks for on this machine: the entry
+// installs this machine's build of @praline-labs/rewake under it.
 func platformPackage(t *testing.T) string {
 	t.Helper()
 	architecture := map[string]string{"amd64": "x64", "arm64": "arm64"}[runtime.GOARCH]
@@ -38,7 +39,7 @@ func install(t *testing.T, root, at string) string {
 	return path
 }
 
-// platform lays out a platform package whose binary says who it is.
+// platform lays out a platform build whose binary says who it is.
 func platform(t *testing.T, root, at, name, says string) {
 	t.Helper()
 	bin := filepath.Join(root, at, "@praline-labs", name, "bin")
@@ -109,12 +110,16 @@ func TestTheShimRunsThroughTheBinLink(t *testing.T) {
 	}
 }
 
-func TestAMissingBinaryIsNamed(t *testing.T) {
+// A platform build is a version of the entry's own package, installed under an
+// alias, so there is no package of its own to install: the way back is the
+// entry, installed again with its optional dependencies.
+func TestAMissingBinaryNamesTheReinstall(t *testing.T) {
 	name := platformPackage(t)
 	shim := install(t, t.TempDir(), "node_modules")
 
 	_, errOut, err := runShim(t, shim)
-	if err == nil || !strings.Contains(errOut, "npm install -g @praline-labs/"+name) {
-		t.Errorf("err = %v, stderr = %q; want a failure that names the package to install", err, errOut)
+	if err == nil || !strings.Contains(errOut, "optional dependency @praline-labs/"+name) ||
+		!strings.Contains(errOut, "\nnpm install -g @praline-labs/rewake\n") {
+		t.Errorf("err = %v, stderr = %q; want a failure that names the alias and the reinstall of the entry", err, errOut)
 	}
 }

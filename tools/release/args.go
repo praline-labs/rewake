@@ -80,6 +80,14 @@ func parseArgs(args []string) (call, error) {
 	if !semver.MatchString(c.version) {
 		return c, fmt.Errorf("%q is not a semver version such as 1.0.0 or 1.1.0-rc.1", c.version)
 	}
+	for _, p := range packages {
+		// A build's version is a prerelease of its release: named as the
+		// release, it would build versions like 1.0.2-linux-x64-linux-x64
+		// beside an entry that is itself only a build's number.
+		if base, found := strings.CutSuffix(c.version, "-"+p.platform); found && p.platform != "" {
+			return c, fmt.Errorf("%s is the version of the %s build of %s, not a release: name the release, %s", c.version, p.platform, base, base)
+		}
+	}
 	if c.otp != "" && !c.publish {
 		return c, errors.New("--otp is for --publish: a dry run uploads nothing")
 	}

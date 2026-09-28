@@ -352,9 +352,20 @@ so they use a cheap model and short messages.
 
 - Build: `CGO_ENABLED=0 GOOS=linux GOARCH=amd64|arm64 go build`, a binary a few
   MB in size.
-- npm: `@praline-labs/rewake` with a shim, plus platform packages
-  `@praline-labs/rewake-linux-x64`, `-linux-arm64` in `optionalDependencies` (the
-  esbuild pattern). The scoped package is published with `--access public`.
+- npm: one package, `@praline-labs/rewake`, published with `--access public`. Owner
+  decision, September 28, 2026, replacing the September 16 layout of an entry plus a
+  separate package per platform (the esbuild pattern): one npm project for one tool,
+  where the old layout took three. Each platform build is a version of the same
+  package, `<version>-linux-x64` and `<version>-linux-arm64`, under a dist-tag of its
+  own (`linux-x64`, `linux-arm64`) so it never takes `latest`, and carries the `os` and
+  `cpu` npm filters by. The entry, `<version>` under `latest`, holds the POSIX shim and
+  names the builds in `optionalDependencies` through npm aliases,
+  `"@praline-labs/rewake-linux-x64": "npm:@praline-labs/rewake@<version>-linux-x64"`;
+  npm installs only the build that matches the machine, under the alias, where the shim
+  finds it. The aliases are scoped so nothing from outside the organization can sit
+  where the shim looks. The separate packages of the old layout, which 1.0.0 and 1.0.1
+  depend on, were removed from the registry on September 28, 2026; those two versions
+  now install without a binary and are deprecated once 1.0.2 is out.
 - A non-npm alternative: `go install`.
 - Owner decision, September 28, 2026: the repository lives in the GitHub
   organization `praline-labs`, the module path is `github.com/praline-labs/rewake`

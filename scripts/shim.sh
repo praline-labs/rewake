@@ -24,9 +24,11 @@ while [ -L "$self" ]; do
     *) self="$(dirname "$self")/$target" ;;
   esac
 done
+# The alias the entry installs this platform's build under: a version of
+# @praline-labs/rewake itself, placed in node_modules by this name.
 package="rewake-$platform-$architecture"
 
-# The platform package is found the way Node finds a dependency: the nearest
+# The platform build is found the way Node finds a dependency: the nearest
 # node_modules first, starting inside this package and going up. npm places a
 # dependency wherever that search reaches it — nested, beside, or hoisted
 # several levels up — so a fixed list of places misses some of them, and a
@@ -44,5 +46,13 @@ while :; do
 done
 
 echo "rewake: no binary for $platform-$architecture was installed." >&2
-echo "Install it with: npm install -g @praline-labs/$package" >&2
+case "$platform-$architecture" in
+  linux-x64|linux-arm64)
+    # The build is an optional dependency, and --omit=optional, or npm's
+    # omit setting, leaves it out without a word.
+    echo "It comes as the optional dependency @praline-labs/$package; reinstall with optional dependencies included:" >&2
+    echo "npm install -g @praline-labs/rewake" >&2 ;;
+  *)
+    echo "rewake is built for linux-x64 and linux-arm64 only; to build it from source, see https://github.com/praline-labs/rewake" >&2 ;;
+esac
 exit 1
