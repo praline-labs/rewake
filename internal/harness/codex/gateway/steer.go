@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/buildtime"
-	"github.com/iiiokojiadbi/rewake/internal/control"
+	"github.com/praline-labs/rewake/internal/buildtime"
+	"github.com/praline-labs/rewake/internal/control"
 )
 
 // interruptedText is what a stopped outcome says when a main aborted the turn

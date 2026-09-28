@@ -7,8 +7,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
-	"github.com/iiiokojiadbi/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/registry"
 )
 
 // marksOf plays the collector's side: who interrupted, until told.

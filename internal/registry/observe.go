@@ -1,6 +1,6 @@
 package registry
 
-import "github.com/iiiokojiadbi/rewake/internal/state"
+import "github.com/praline-labs/rewake/internal/state"
 
 // LookupReadOnly checks liveness without deleting stale records. Optional state
 // readers may hold another mailbox lock and must never enter name-lock cleanup.

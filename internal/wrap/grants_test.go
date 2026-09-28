@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/grantauth"
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
-	"github.com/iiiokojiadbi/rewake/internal/proc"
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/grantauth"
+	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 // ownEpoch is this process's run, standing for main's wrapper.

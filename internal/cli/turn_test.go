@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
-	"github.com/iiiokojiadbi/rewake/internal/registry"
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 // readFrom has api read a message from the given run of web.

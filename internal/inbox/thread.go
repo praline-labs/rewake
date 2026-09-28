@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 // ErrThreadUnavailable refuses delivery without making a task readable in an unknown conversation.

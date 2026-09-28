@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/harness"
 )
 
 // A registered harness has to say which of its flags it takes at most once.

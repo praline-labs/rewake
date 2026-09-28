@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/control"
+	"github.com/praline-labs/rewake/internal/control"
 )
 
 // An inline review runs on the conversation from its reply on, before its

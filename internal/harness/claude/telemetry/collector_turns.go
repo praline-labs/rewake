@@ -3,8 +3,8 @@ package telemetry
 import (
 	"context"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/inbox"
 )
 
 // StoppedText is what a stopped outcome says, the same words the Codex side

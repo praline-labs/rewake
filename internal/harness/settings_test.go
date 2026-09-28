@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/harness"
 )
 
 // settingsWorld puts a case in a home and a working directory of its own, so

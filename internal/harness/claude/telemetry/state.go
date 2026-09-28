@@ -3,7 +3,7 @@ package telemetry
 import (
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
+	"github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // Activity values, the same words the Codex side publishes.

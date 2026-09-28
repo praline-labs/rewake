@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 func TestNewBatchPreservesReservedAnswersAndExpiry(t *testing.T) {

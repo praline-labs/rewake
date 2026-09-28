@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/proc"
-	"github.com/iiiokojiadbi/rewake/internal/registry"
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 // liveSession publishes a session served by nobody, in an isolated state

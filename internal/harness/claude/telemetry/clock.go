@@ -1,6 +1,6 @@
 package telemetry
 
-import "github.com/iiiokojiadbi/rewake/internal/boottime"
+import "github.com/praline-labs/rewake/internal/boottime"
 
 // processStarted is when this sending process started, on the boot clock: the
 // order in which two hooks were started is what the collector needs, and the

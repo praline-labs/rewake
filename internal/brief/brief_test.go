@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/role"
 )
 
 func TestEveryRoleHasReviewedBriefings(t *testing.T) {

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 // A session name becomes a file path. Without a check, "../../victim" reads —

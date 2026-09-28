@@ -9,12 +9,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/iiiokojiadbi/rewake/internal/alias"
-	"github.com/iiiokojiadbi/rewake/internal/harness"
-	"github.com/iiiokojiadbi/rewake/internal/registry"
-	"github.com/iiiokojiadbi/rewake/internal/role"
-	"github.com/iiiokojiadbi/rewake/internal/state"
-	"github.com/iiiokojiadbi/rewake/internal/wrap"
+	"github.com/praline-labs/rewake/internal/alias"
+	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/wrap"
 )
 
 // handleLaunch starts one harness as a rewake session. It returns only when the

@@ -11,9 +11,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
-	"github.com/iiiokojiadbi/rewake/internal/state"
-	"github.com/iiiokojiadbi/rewake/internal/worktree"
+	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/worktree"
 )
 
 // worktreeProbe is a harness that takes its worktree flag as Codex does, and

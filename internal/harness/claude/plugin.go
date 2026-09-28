@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
-	"github.com/iiiokojiadbi/rewake/internal/harness/claude/telemetry"
+	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/harness/claude/telemetry"
 )
 
 // The function-hooks plugin: how rewake hears a turn a person interrupted.

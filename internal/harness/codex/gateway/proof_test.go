@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/control"
+	"github.com/praline-labs/rewake/internal/control"
 )
 
 // nothingPublished says no outcome was published for a while.

@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/role"
 
 	// The command table is derived from the harness catalog, so every test
 	// here needs it registered.
-	_ "github.com/iiiokojiadbi/rewake/internal/harness/catalog"
+	_ "github.com/praline-labs/rewake/internal/harness/catalog"
 )
 
 // run executes one invocation and returns code, stdout and stderr.

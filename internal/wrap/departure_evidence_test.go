@@ -9,10 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/proc"
-	"github.com/iiiokojiadbi/rewake/internal/registry"
-	"github.com/iiiokojiadbi/rewake/internal/role"
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 func departureFixture(t *testing.T) (string, registry.Session, registry.Session, *sessionNotices, string) {

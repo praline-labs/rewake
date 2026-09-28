@@ -17,14 +17,14 @@ import (
 	"os/exec"
 	"syscall"
 
-	"github.com/iiiokojiadbi/rewake/internal/control"
-	"github.com/iiiokojiadbi/rewake/internal/harness"
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
-	"github.com/iiiokojiadbi/rewake/internal/proc"
-	"github.com/iiiokojiadbi/rewake/internal/registry"
-	"github.com/iiiokojiadbi/rewake/internal/role"
-	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/control"
+	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/sessionstate"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 // Request is one launch.

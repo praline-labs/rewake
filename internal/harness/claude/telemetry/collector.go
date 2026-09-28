@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/control"
-	"github.com/iiiokojiadbi/rewake/internal/harness"
-	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
+	"github.com/praline-labs/rewake/internal/control"
+	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // maxCompactionEvents bounds the notification cues kept in a snapshot, the

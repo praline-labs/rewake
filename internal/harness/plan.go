@@ -3,10 +3,10 @@ package harness
 import (
 	"context"
 
-	"github.com/iiiokojiadbi/rewake/internal/brief"
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
-	"github.com/iiiokojiadbi/rewake/internal/registry"
-	"github.com/iiiokojiadbi/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/brief"
+	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/role"
 )
 
 // LaunchRequest is what the wrapper knows before starting a harness.

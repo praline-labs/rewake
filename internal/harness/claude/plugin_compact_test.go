@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/control"
+	"github.com/praline-labs/rewake/internal/control"
 )
 
 // The module's side of telling rewake which compaction a main asked for

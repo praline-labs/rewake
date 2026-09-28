@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 func reportFailureFixture(t *testing.T) (*Server, Message, *int) {

@@ -6,10 +6,10 @@ import (
 	"net"
 	"os"
 
-	"github.com/iiiokojiadbi/rewake/internal/grant"
-	"github.com/iiiokojiadbi/rewake/internal/proc"
-	"github.com/iiiokojiadbi/rewake/internal/registry"
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/grant"
+	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 // A cold resume starts a new run of the recipient, and its wrapper holds

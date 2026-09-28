@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/harness"
 )
 
 // A launch through a person's wrapper starts that program for both halves —

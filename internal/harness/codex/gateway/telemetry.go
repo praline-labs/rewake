@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/control"
-	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
+	"github.com/praline-labs/rewake/internal/control"
+	"github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 const (

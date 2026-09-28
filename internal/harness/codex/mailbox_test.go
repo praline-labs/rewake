@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness/codex/gateway"
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/harness/codex/gateway"
+	"github.com/praline-labs/rewake/internal/inbox"
 )
 
 func decodedMailbox(t *testing.T, params map[string]json.RawMessage) gateway.MailboxNotice {

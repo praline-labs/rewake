@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/control"
+	"github.com/praline-labs/rewake/internal/control"
 )
 
 // The server keeps an operation it accepted when the terminal disconnects, and

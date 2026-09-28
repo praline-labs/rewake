@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/inbox"
 )
 
 // Notice announces unread mail and shows the author's bounded first line.

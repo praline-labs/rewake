@@ -4,8 +4,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
-	"github.com/iiiokojiadbi/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/registry"
 )
 
 // messageKind is how send treats one kind of message. A kind lives in a file of

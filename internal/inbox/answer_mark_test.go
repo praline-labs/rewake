@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/boottime"
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/boottime"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 // writeMark writes a waiting send's mark with the given content and time.

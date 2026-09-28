@@ -1,6 +1,6 @@
 package cli
 
-import "github.com/iiiokojiadbi/rewake/internal/inbox"
+import "github.com/praline-labs/rewake/internal/inbox"
 
 // errorKind is hook-only. With no public flag, a sender cannot impersonate a
 // failed turn through send; error reports are routed by turn-ended.

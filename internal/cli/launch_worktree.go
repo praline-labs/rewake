@@ -7,9 +7,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
-	"github.com/iiiokojiadbi/rewake/internal/registry"
-	"github.com/iiiokojiadbi/rewake/internal/worktree"
+	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/worktree"
 )
 
 // launchCheckout is the worktree a launch asked for, once made.

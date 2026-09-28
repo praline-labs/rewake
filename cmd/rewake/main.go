@@ -4,9 +4,9 @@ package main
 import (
 	"os"
 
-	"github.com/iiiokojiadbi/rewake/internal/cli"
+	"github.com/praline-labs/rewake/internal/cli"
 	// The catalog registers every harness rewake can run.
-	_ "github.com/iiiokojiadbi/rewake/internal/harness/catalog"
+	_ "github.com/praline-labs/rewake/internal/harness/catalog"
 )
 
 func main() {

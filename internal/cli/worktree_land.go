@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/iiiokojiadbi/rewake/internal/worktree"
+	"github.com/praline-labs/rewake/internal/worktree"
 )
 
 // worktreeLanding is what land reports: which worktree, and what moved.

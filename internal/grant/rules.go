@@ -19,7 +19,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/iiiokojiadbi/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/registry"
 )
 
 // Rule is one protected directory and what it is.

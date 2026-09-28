@@ -35,7 +35,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 // RootEnv moves the directory rewake keeps its worktrees in.

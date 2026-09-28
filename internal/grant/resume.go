@@ -6,8 +6,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/iiiokojiadbi/rewake/internal/proc"
-	"github.com/iiiokojiadbi/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/registry"
 )
 
 // A journal follows the conversation its grants went into: each entry names

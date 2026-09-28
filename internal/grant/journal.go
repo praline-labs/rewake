@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/registry"
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 // Outcomes of an entry. A grant is written once its roots reached the

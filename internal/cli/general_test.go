@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/registry"
-	"github.com/iiiokojiadbi/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/role"
 )
 
 func TestGeneralIsTheReportingRoleAndReadsLegacyWorkers(t *testing.T) {

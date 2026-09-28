@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/inbox"
 )
 
 // sendCommand is send's entry in the command table.

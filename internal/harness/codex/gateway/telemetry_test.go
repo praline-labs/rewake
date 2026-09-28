@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
+	"github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 func number(value int64) *int64 { return &value }

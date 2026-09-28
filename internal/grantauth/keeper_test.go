@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/grant"
+	"github.com/praline-labs/rewake/internal/grant"
 )
 
 // keep serves a keeper for a wrapper at self whose hook answers what decide

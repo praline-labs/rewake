@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
-	"github.com/iiiokojiadbi/rewake/internal/harness/claude/telemetry"
+	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/harness/claude/telemetry"
 )
 
 // The plugin reads the auto-compact window where the harness does — the

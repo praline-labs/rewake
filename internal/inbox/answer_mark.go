@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/boottime"
+	"github.com/praline-labs/rewake/internal/boottime"
 )
 
 // A waiting send's mark says when it was last touched in its content, as a

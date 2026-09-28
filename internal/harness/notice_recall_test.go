@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/inbox"
 )
 
 // recallOf is the note inbox.Recall writes for a withdrawn task, its own text

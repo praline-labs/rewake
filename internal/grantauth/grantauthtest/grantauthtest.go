@@ -17,7 +17,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/proc"
 )
 
 // runEnv marks a test binary started again to be a run.

@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/test/workflow/record"
+	"github.com/praline-labs/rewake/test/workflow/record"
 )
 
 // The record a case leaves for whoever summarizes the run.

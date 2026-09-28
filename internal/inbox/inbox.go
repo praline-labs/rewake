@@ -19,9 +19,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/boottime"
-	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/boottime"
+	"github.com/praline-labs/rewake/internal/sessionstate"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 // Message is one delivery, as it waits on disk.

@@ -1,6 +1,6 @@
 package cli
 
-import "github.com/iiiokojiadbi/rewake/internal/harness"
+import "github.com/praline-labs/rewake/internal/harness"
 
 // Match the guide's general-role launch instead of implying that --name is
 // already a complete address. Direct sends still accept existing names as-is.

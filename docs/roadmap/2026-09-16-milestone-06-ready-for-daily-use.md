@@ -5,7 +5,7 @@
 - `README.md`: what it is, installation, the three commands, the trust
   boundary.
 - Switching the inbox from polling to inotify, with polling as a fallback.
-- Building for linux-amd64 and linux-arm64, publishing `@iiiokojiadbi/rewake`
+- Building for linux-amd64 and linux-arm64, publishing `@praline-labs/rewake`
   with platform packages; publish only on the owner's explicit word.
 
 Done so far: the mailbox is watched rather than polled and finished messages are
@@ -13,6 +13,9 @@ swept by age, both on September 16, 2026
 ([progress record](#milestone-6-progress-september-16-2026));
 `README.md` exists; `scripts/pack.sh` builds the platform packages without
 publishing ([local installation](../install.md)). Not done: the publication itself.
+On September 28, 2026 the owner moved the repository to the `praline-labs`
+organization, which is also the npm scope, and chose the MIT license
+([distribution](../design.md#distribution)).
 
 Acceptance: a week of use without manual intervention; not one case of a
 message silently getting lost.

@@ -3,7 +3,7 @@ package codex
 import (
 	"context"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/harness"
 )
 
 // PublisherForTest exercises the actual queue/journal, without a native process.

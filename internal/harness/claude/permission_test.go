@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/grant"
+	"github.com/praline-labs/rewake/internal/grant"
 )
 
 // hookPayload is a hook's payload as Claude Code 2.1.280 sent it in the

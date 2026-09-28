@@ -8,9 +8,9 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/iiiokojiadbi/rewake/internal/registry"
-	"github.com/iiiokojiadbi/rewake/internal/state"
-	"github.com/iiiokojiadbi/rewake/internal/worktree"
+	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/worktree"
 )
 
 // worktreeCommand lists the checkouts rewake made for launches, lands their

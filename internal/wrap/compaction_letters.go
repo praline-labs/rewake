@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/buildtime"
-	"github.com/iiiokojiadbi/rewake/internal/control"
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
-	"github.com/iiiokojiadbi/rewake/internal/registry"
-	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
+	"github.com/praline-labs/rewake/internal/buildtime"
+	"github.com/praline-labs/rewake/internal/control"
+	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // letterWait bounds how long a letter waits for its other half: the outcome

@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
-	"github.com/iiiokojiadbi/rewake/internal/harness/claude/telemetry"
+	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/harness/claude/telemetry"
 )
 
 // A launch with a telemetry socket gets the plugin: written beside the socket,

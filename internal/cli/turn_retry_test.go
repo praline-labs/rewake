@@ -7,8 +7,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 func TestRetriedTurnDoesNotConsumeLaterWork(t *testing.T) {

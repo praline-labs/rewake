@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness/codex/gateway"
+	"github.com/praline-labs/rewake/internal/harness/codex/gateway"
 )
 
 type integrationWire struct {

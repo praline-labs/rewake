@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/role"
 )
 
 // Regenerates the reviewed briefings. Run deliberately, never in an ordinary

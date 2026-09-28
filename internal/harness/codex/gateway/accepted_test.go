@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/control"
+	"github.com/praline-labs/rewake/internal/control"
 )
 
 // resumeA selects A again, its reply saying status with turns, and ends the

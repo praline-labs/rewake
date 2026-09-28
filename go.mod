@@ -1,4 +1,4 @@
-module github.com/iiiokojiadbi/rewake
+module github.com/praline-labs/rewake
 
 go 1.25
 

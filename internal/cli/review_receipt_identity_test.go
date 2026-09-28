@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/harness"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness/codex/gateway"
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
-	"github.com/iiiokojiadbi/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/harness/codex/gateway"
+	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/registry"
 )
 
 func reviewNativeEvent(t *testing.T, ui, native *integrationWire, method string, params any) {

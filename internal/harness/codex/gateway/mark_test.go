@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/control"
+	"github.com/praline-labs/rewake/internal/control"
 )
 
 const userAnswer = `{"method":"item/completed","params":{"threadId":"A","turnId":"U","item":{"id":"i1","type":"agentMessage","text":"user answer"},"completedAtMs":2}}`

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/state"
 ) // sweepFinished removes the messages and statuses that have been answered long
 
 // enough ago that nobody is coming back for them.

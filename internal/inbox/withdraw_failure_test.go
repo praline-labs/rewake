@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 // readOnly makes a mailbox directory refuse new files until the test ends, as

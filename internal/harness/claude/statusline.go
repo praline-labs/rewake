@@ -6,8 +6,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
-	"github.com/iiiokojiadbi/rewake/internal/harness/claude/telemetry"
+	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/harness/claude/telemetry"
 )
 
 // The tap finds the person's status line when it runs, from the harness's own

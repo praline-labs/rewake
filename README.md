@@ -39,7 +39,7 @@ and the exit codes.
 Not published yet. Build from source:
 
 ```bash
-go build -ldflags "-X github.com/iiiokojiadbi/rewake/internal/cli.built=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+go build -ldflags "-X github.com/praline-labs/rewake/internal/cli.built=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   -o rewake ./cmd/rewake
 ```
 
@@ -49,3 +49,7 @@ The `-ldflags` is optional: it passes in the build time, which `rewake --version
 ## Status
 
 Early. See `docs/roadmap/README.md` for what works today.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

@@ -155,7 +155,7 @@ func TestTheGuideOpensWithTheBuild(t *testing.T) {
 // without its .git would fail the stamp.
 func TestTheBuildTimeIsPassedIn(t *testing.T) {
 	binary := filepath.Join(t.TempDir(), "rewake")
-	build := exec.Command("go", "build", "-buildvcs=false", "-ldflags", "-X github.com/iiiokojiadbi/rewake/internal/cli.built=2026-09-25T11:58:03Z", "-o", binary, "../../cmd/rewake")
+	build := exec.Command("go", "build", "-buildvcs=false", "-ldflags", "-X github.com/praline-labs/rewake/internal/cli.built=2026-09-25T11:58:03Z", "-o", binary, "../../cmd/rewake")
 	if out, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("go build: %v\n%s", err, out)
 	}

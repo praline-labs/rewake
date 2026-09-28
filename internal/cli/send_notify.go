@@ -1,6 +1,6 @@
 package cli
 
-import "github.com/iiiokojiadbi/rewake/internal/inbox"
+import "github.com/praline-labs/rewake/internal/inbox"
 
 // noteKind is a heads-up. Reading it asks for nothing back, so the session does
 // not report its turn to the sender.

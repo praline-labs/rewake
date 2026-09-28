@@ -7,7 +7,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/proc"
 )
 
 // followStop stops the wrapper with a harness that stopped on its own, and

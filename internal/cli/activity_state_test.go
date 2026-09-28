@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
-	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
+	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 func TestActivityLabelsAndUnknownAreExplicit(t *testing.T) {

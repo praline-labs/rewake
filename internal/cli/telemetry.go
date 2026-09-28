@@ -3,8 +3,8 @@ package cli
 import (
 	"os"
 
-	"github.com/iiiokojiadbi/rewake/internal/boottime"
-	"github.com/iiiokojiadbi/rewake/internal/harness/claude/telemetry"
+	"github.com/praline-labs/rewake/internal/boottime"
+	"github.com/praline-labs/rewake/internal/harness/claude/telemetry"
 )
 
 // handleObserve is what a Claude Code hook and rewake's plugin run: it passes

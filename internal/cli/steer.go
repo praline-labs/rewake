@@ -10,12 +10,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/buildtime"
-	"github.com/iiiokojiadbi/rewake/internal/control"
-	"github.com/iiiokojiadbi/rewake/internal/harness"
-	"github.com/iiiokojiadbi/rewake/internal/registry"
-	"github.com/iiiokojiadbi/rewake/internal/role"
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/buildtime"
+	"github.com/praline-labs/rewake/internal/control"
+	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 // steerModel is what rewake compact and rewake interrupt answer.

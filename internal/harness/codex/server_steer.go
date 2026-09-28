@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/control"
+	"github.com/praline-labs/rewake/internal/control"
 )
 
 // controlPoll is how often the wrapper looks for a main's request; the asker

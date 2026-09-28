@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
-	"github.com/iiiokojiadbi/rewake/internal/harness/codex/gateway"
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/harness/codex/gateway"
+	"github.com/praline-labs/rewake/internal/inbox"
 )
 
 type reservedDelivery struct {

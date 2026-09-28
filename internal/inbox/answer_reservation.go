@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/boottime"
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/boottime"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 // ReserveAnswer starts the lease before a question can produce a reply. The

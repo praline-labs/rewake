@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 // A harness is told that mail is waiting, not handed the text, so the message

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/harness"
 )
 
 // codexHome writes a Codex home with the given config.toml content.

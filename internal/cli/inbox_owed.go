@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/iiiokojiadbi/rewake/internal/grant"
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
-	"github.com/iiiokojiadbi/rewake/internal/registry"
-	"github.com/iiiokojiadbi/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/grant"
+	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/role"
 )
 
 // owedView is one message read and still owed a report. Kept is false when the

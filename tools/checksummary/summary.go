@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/iiiokojiadbi/rewake/test/workflow/record"
+	"github.com/praline-labs/rewake/test/workflow/record"
 )
 
 // The summary built from the records a run publishes.

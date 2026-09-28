@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 func TestLaunchRefusesInvalidNamePrefixesWithoutStartingHarness(t *testing.T) {

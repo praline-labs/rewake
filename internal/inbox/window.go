@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/boottime"
-	"github.com/iiiokojiadbi/rewake/internal/buildtime"
+	"github.com/praline-labs/rewake/internal/boottime"
+	"github.com/praline-labs/rewake/internal/buildtime"
 )
 
 // Letters that ask for nothing come in bursts: three workers restarted give
@@ -40,7 +40,7 @@ type Window struct {
 var Coalescing = builtWindow(Window{Quiet: 3 * time.Second, Cap: 4 * time.Second}, builtQuiet, builtCap)
 
 // builtQuiet and builtCap, set at build with
-// -ldflags "-X github.com/iiiokojiadbi/rewake/internal/inbox.builtQuiet=1500ms", replace
+// -ldflags "-X github.com/praline-labs/rewake/internal/inbox.builtQuiet=1500ms", replace
 // Coalescing's durations. The workflow suite builds its binary so: dozens of its
 // cases wait for a heads-up or a report, and at the real window each such wait
 // costs three seconds more than the logic under test needs. A release build sets

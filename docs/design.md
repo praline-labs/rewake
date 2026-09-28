@@ -265,7 +265,7 @@ belongs to the harness.
   `modified` when the working tree differed from it; a binary built from an archive, or
   run with `go run`, carries no stamp and says `build unknown`. Go records no build
   time, so the build command passes it in, `-ldflags "-X
-  github.com/iiiokojiadbi/rewake/internal/cli.built=<RFC 3339 UTC>"` — `scripts/pack.sh`
+  github.com/praline-labs/rewake/internal/cli.built=<RFC 3339 UTC>"` — `scripts/pack.sh`
   and the local build in [install.md](install.md) do. A binary built without it shows
   the revision's commit time instead, labeled `committed <time>`; with neither, no
   time. Under `--json` both carry the same fields as an object, `build` in the guide's
@@ -352,10 +352,14 @@ so they use a cheap model and short messages.
 
 - Build: `CGO_ENABLED=0 GOOS=linux GOARCH=amd64|arm64 go build`, a binary a few
   MB in size.
-- npm: `@iiiokojiadbi/rewake` with a shim, plus platform packages
-  `@iiiokojiadbi/rewake-linux-x64`, `-linux-arm64` in `optionalDependencies` (the
+- npm: `@praline-labs/rewake` with a shim, plus platform packages
+  `@praline-labs/rewake-linux-x64`, `-linux-arm64` in `optionalDependencies` (the
   esbuild pattern). The scoped package is published with `--access public`.
 - A non-npm alternative: `go install`.
+- Owner decision, September 28, 2026: the repository lives in the GitHub
+  organization `praline-labs`, the module path is `github.com/praline-labs/rewake`
+  and the npm scope `@praline-labs` (the unscoped name `rewake` belongs to someone
+  else); the license is MIT, and every package carries `LICENSE`.
 
 ## Owner decisions, September 16, 2026
 

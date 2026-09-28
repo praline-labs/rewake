@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 // readIn has run read a task delivered into a conversation.

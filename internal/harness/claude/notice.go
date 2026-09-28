@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
-	"github.com/iiiokojiadbi/rewake/internal/harness/claude/telemetry"
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/harness/claude/telemetry"
+	"github.com/praline-labs/rewake/internal/inbox"
 )
 
 // notification wraps the notice in the tag Claude Code uses for its own

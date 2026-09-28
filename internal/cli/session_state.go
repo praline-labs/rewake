@@ -7,12 +7,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/iiiokojiadbi/rewake/internal/grant"
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
-	"github.com/iiiokojiadbi/rewake/internal/registry"
-	"github.com/iiiokojiadbi/rewake/internal/role"
-	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/grant"
+	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/sessionstate"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 // Visibility is deliberately independent of collection and of the observed role.

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/state"
-	"github.com/iiiokojiadbi/rewake/internal/worktree"
+	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/worktree"
 )
 
 // commitIn adds a file to a checkout and commits it, returning the new HEAD.

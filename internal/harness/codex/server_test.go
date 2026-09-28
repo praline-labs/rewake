@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/inbox"
 )
 
 func runtimeFixture(t *testing.T, publisher ...func(harness.Completion) error) (*serverSession, *rpcClient, <-chan harness.Completion) {

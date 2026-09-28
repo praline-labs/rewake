@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/harness"
 )
 
 func TestLaunchOwnsServerAndKeepsPromptOnTUI(t *testing.T) {

@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/grant"
-	"github.com/iiiokojiadbi/rewake/internal/grantauth/grantauthtest"
+	"github.com/praline-labs/rewake/internal/grant"
+	"github.com/praline-labs/rewake/internal/grantauth/grantauthtest"
 )
 
 // A test binary started again as a recipient's run confirms, as its wrapper

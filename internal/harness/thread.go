@@ -1,6 +1,6 @@
 package harness
 
-import "github.com/iiiokojiadbi/rewake/internal/registry"
+import "github.com/praline-labs/rewake/internal/registry"
 
 // ThreadTracker is optional: only harnesses whose conversations can change
 // within one wrapper run provide thread identity.

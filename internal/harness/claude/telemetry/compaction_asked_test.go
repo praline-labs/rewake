@@ -3,7 +3,7 @@ package telemetry
 import (
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
+	"github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 const (

@@ -8,7 +8,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/harness"
 )
 
 // worktreeFlag is the long spelling of Claude Code's own worktree flag, which

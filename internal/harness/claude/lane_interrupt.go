@@ -1,6 +1,6 @@
 package claude
 
-import "github.com/iiiokojiadbi/rewake/internal/inbox"
+import "github.com/praline-labs/rewake/internal/inbox"
 
 // interruptMarks is where the lane learns that a main interrupted the
 // session's last turn (telemetry.Collector), to say so in the next notice

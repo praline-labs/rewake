@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/iiiokojiadbi/rewake/internal/alias"
+	"github.com/praline-labs/rewake/internal/alias"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
-	"github.com/iiiokojiadbi/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/role"
 )
 
 // Version is the released version of the tool. A release build sets it from the

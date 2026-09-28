@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/boottime"
+	"github.com/praline-labs/rewake/internal/boottime"
 )
 
 // A completion carries when its turn started and ended on the boot clock, so a

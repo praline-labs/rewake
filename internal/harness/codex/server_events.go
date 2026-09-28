@@ -8,8 +8,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 // The protocol reader only enqueues. Disk writes and mailbox locks belong to the

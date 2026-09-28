@@ -7,11 +7,11 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
-	_ "github.com/iiiokojiadbi/rewake/internal/harness/catalog"
-	"github.com/iiiokojiadbi/rewake/internal/registry"
-	"github.com/iiiokojiadbi/rewake/internal/role"
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/harness"
+	_ "github.com/praline-labs/rewake/internal/harness/catalog"
+	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 type namedHarness struct {

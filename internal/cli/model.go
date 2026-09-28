@@ -13,7 +13,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/harness"
 )
 
 // Option is a flag of a command, or a global flag.

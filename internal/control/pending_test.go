@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/registry"
 )
 
 // Hold hands over the record as it is under the hold, not as it was listed:

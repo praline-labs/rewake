@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 func take(t *testing.T, dir, epoch string, started, ended int64) (string, bool) {

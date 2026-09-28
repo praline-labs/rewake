@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/control"
+	"github.com/praline-labs/rewake/internal/control"
 )
 
 // nothingSent says the gateway wrote nothing to the server for a while.

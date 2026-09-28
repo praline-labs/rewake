@@ -3,7 +3,7 @@ package claude
 import (
 	"strings"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/harness"
 )
 
 // addDirFlag gives Claude Code a working directory at launch. A cold resume

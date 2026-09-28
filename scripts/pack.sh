@@ -12,7 +12,7 @@
 set -eu
 
 version="${1:-0.0.1}"
-scope="@iiiokojiadbi"
+scope="@praline-labs"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 out="$root/dist/npm"
 # The build time, which the binary cannot know otherwise: rewake --version
@@ -35,7 +35,7 @@ for target in linux-amd64:linux-x64 linux-arm64:linux-arm64; do
   # The version reaches the binary too: a package that says 0.9.9 while its
   # rewake --version says something else is a package nobody can place.
   CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -C "$root" -trimpath \
-    -ldflags "-X github.com/iiiokojiadbi/rewake/internal/cli.Version=$version -X github.com/iiiokojiadbi/rewake/internal/cli.built=$built" \
+    -ldflags "-X github.com/praline-labs/rewake/internal/cli.Version=$version -X github.com/praline-labs/rewake/internal/cli.built=$built" \
     -o "$dir/bin/rewake" ./cmd/rewake
 
   cat > "$dir/package.json" <<JSON
@@ -46,9 +46,10 @@ for target in linux-amd64:linux-x64 linux-arm64:linux-arm64; do
   "license": "MIT",
   "os": ["$goos"],
   "cpu": ["$( [ "$goarch" = "amd64" ] && echo x64 || echo "$goarch" )"],
-  "files": ["bin/rewake"]
+  "files": ["bin/rewake", "LICENSE"]
 }
 JSON
+  cp "$root/LICENSE" "$dir/LICENSE"
 done
 
 # The entry package: the name people install.
@@ -61,7 +62,7 @@ cat > "$entry/package.json" <<JSON
   "description": "Let the coding agents running on your machine message each other",
   "license": "MIT",
   "bin": { "rewake": "bin/rewake" },
-  "files": ["bin/rewake", "README.md"],
+  "files": ["bin/rewake", "README.md", "LICENSE"],
   "optionalDependencies": {
     "$scope/rewake-linux-x64": "$version",
     "$scope/rewake-linux-arm64": "$version"
@@ -69,6 +70,7 @@ cat > "$entry/package.json" <<JSON
 }
 JSON
 cp "$root/README.md" "$entry/README.md"
+cp "$root/LICENSE" "$entry/LICENSE"
 
 cp "$root/scripts/shim.sh" "$entry/bin/rewake"
 chmod +x "$entry/bin/rewake"

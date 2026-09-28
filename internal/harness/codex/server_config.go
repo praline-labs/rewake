@@ -1,7 +1,7 @@
 package codex
 
 import (
-	"github.com/iiiokojiadbi/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/harness"
 )
 
 // Remote TUI configuration forwards only selected keys. The server must also

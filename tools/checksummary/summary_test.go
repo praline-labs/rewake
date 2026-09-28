@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/test/workflow/record"
+	"github.com/praline-labs/rewake/test/workflow/record"
 )
 
 // What the summarizer must get right, driven by recorded streams rather than

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/worktree"
+	"github.com/praline-labs/rewake/internal/worktree"
 )
 
 func writeGitPointer(t *testing.T, path, text string) {

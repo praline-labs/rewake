@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/grant"
+	"github.com/praline-labs/rewake/internal/grant"
 )
 
 // Every directory these tests grant lies in a temporary directory, which the

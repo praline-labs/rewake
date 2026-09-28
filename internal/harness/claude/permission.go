@@ -7,8 +7,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/iiiokojiadbi/rewake/internal/grant"
-	"github.com/iiiokojiadbi/rewake/internal/grantauth"
+	"github.com/praline-labs/rewake/internal/grant"
+	"github.com/praline-labs/rewake/internal/grantauth"
 )
 
 // A directory granted with a task reaches Claude Code through its permission

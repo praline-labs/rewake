@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/control"
+	"github.com/praline-labs/rewake/internal/control"
 )
 
 // The module carrying requests out, under the host in plugin_control_host_test.go.

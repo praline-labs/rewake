@@ -3,7 +3,7 @@ package cli
 import (
 	"encoding/json"
 
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/inbox"
 )
 
 type turnResult struct {

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
-	"github.com/iiiokojiadbi/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/registry"
 )
 
 // addendumRoot resolves send --to: the task this message adds to. An addendum

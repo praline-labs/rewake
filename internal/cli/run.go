@@ -6,9 +6,9 @@ import (
 	"io"
 	"strings"
 
-	"github.com/iiiokojiadbi/rewake/internal/alias"
-	"github.com/iiiokojiadbi/rewake/internal/harness"
-	"github.com/iiiokojiadbi/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/alias"
+	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/role"
 )
 
 // Run executes one invocation and returns the process exit code.

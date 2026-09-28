@@ -67,7 +67,7 @@ var suiteFlags = []string{"-ldflags", strings.Join([]string{
 }, " ")}
 
 func buildValue(pkg, name string, value time.Duration) string {
-	return fmt.Sprintf("-X github.com/iiiokojiadbi/rewake/internal/%s.%s=%s", pkg, name, value)
+	return fmt.Sprintf("-X github.com/praline-labs/rewake/internal/%s.%s=%s", pkg, name, value)
 }
 
 // The linker ignores -X for a variable that does not exist, silently: a knob
@@ -84,7 +84,7 @@ func TestSuiteBuildValuesNameRealVariables(t *testing.T) {
 		}
 		target, _, _ := strings.Cut(flag, "=")
 		dot := strings.LastIndex(target, ".")
-		pkg := strings.TrimPrefix(target[:dot], "github.com/iiiokojiadbi/rewake/")
+		pkg := strings.TrimPrefix(target[:dot], "github.com/praline-labs/rewake/")
 		name := target[dot+1:]
 		found, err := declaresString(filepath.Join(root, pkg), name)
 		if err != nil {

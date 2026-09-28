@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/test/workflow/record"
-	"github.com/iiiokojiadbi/rewake/tools/harnesscache/cache"
-	"github.com/iiiokojiadbi/rewake/tools/harnesscache/container"
+	"github.com/praline-labs/rewake/test/workflow/record"
+	"github.com/praline-labs/rewake/tools/harnesscache/cache"
+	"github.com/praline-labs/rewake/tools/harnesscache/container"
 )
 
 // codexVersionEnv names the Codex version the schema is generated from. It is

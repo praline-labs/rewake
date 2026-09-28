@@ -11,7 +11,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/harness"
 )
 
 // Where aliases are read from, weakest first. The project file wins because it

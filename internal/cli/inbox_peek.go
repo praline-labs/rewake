@@ -6,9 +6,9 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
-	"github.com/iiiokojiadbi/rewake/internal/sessionstate"
+	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // inboxMode is what a call of rewake inbox asked for: all unread mail, an

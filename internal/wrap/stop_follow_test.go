@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/proc"
 )
 
 // stopFollowerEnv makes the test binary a wrapper that follows one harness.

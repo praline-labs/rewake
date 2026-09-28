@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/inbox"
 )
 
 // receiptLine is a receipt as Claude Code writes it, read on 2.1.280 from the

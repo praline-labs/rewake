@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 func TestGroupedPreparationRechecksAnswerLeasesExpiryAndEpoch(t *testing.T) {

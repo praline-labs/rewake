@@ -10,7 +10,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/iiiokojiadbi/rewake/test/workflow/record"
+	"github.com/praline-labs/rewake/test/workflow/record"
 )
 
 // Where the stream comes from, and what is read out of it.

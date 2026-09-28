@@ -4,8 +4,8 @@ import (
 	"math"
 	"unicode/utf8"
 
-	"github.com/iiiokojiadbi/rewake/internal/control"
-	statedir "github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/control"
+	statedir "github.com/praline-labs/rewake/internal/state"
 )
 
 // Events the function-hooks plugin sends (internal/harness/claude/plugin.go).

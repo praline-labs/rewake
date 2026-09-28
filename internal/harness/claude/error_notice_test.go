@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/inbox"
 )
 
 func TestFailureNoticesUseFailedStatus(t *testing.T) {

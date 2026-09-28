@@ -6,8 +6,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
-	"github.com/iiiokojiadbi/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/proc"
 )
 
 func stopWithBackend(ctx context.Context, backend harness.Backend, child *os.Process, start uint64) {

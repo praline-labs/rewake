@@ -27,7 +27,7 @@ func install(t *testing.T, root, at string) string {
 	if err != nil {
 		t.Fatalf("read shim: %v", err)
 	}
-	bin := filepath.Join(root, at, "@iiiokojiadbi", "rewake", "bin")
+	bin := filepath.Join(root, at, "@praline-labs", "rewake", "bin")
 	if err := os.MkdirAll(bin, 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
@@ -41,7 +41,7 @@ func install(t *testing.T, root, at string) string {
 // platform lays out a platform package whose binary says who it is.
 func platform(t *testing.T, root, at, name, says string) {
 	t.Helper()
-	bin := filepath.Join(root, at, "@iiiokojiadbi", name, "bin")
+	bin := filepath.Join(root, at, "@praline-labs", name, "bin")
 	if err := os.MkdirAll(bin, 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestTheOwnDependencyWins(t *testing.T) {
 	name := platformPackage(t)
 	root := t.TempDir()
 	shim := install(t, root, "node_modules")
-	platform(t, root, "node_modules/@iiiokojiadbi/rewake/node_modules", name, "own")
+	platform(t, root, "node_modules/@praline-labs/rewake/node_modules", name, "own")
 	platform(t, root, "node_modules", name, "stale")
 
 	out, errOut, err := runShim(t, shim, "--version")
@@ -99,7 +99,7 @@ func TestTheShimRunsThroughTheBinLink(t *testing.T) {
 	if err := os.MkdirAll(filepath.Dir(link), 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
-	if err := os.Symlink("../@iiiokojiadbi/rewake/bin/rewake", link); err != nil {
+	if err := os.Symlink("../@praline-labs/rewake/bin/rewake", link); err != nil {
 		t.Fatalf("symlink: %v", err)
 	}
 
@@ -114,7 +114,7 @@ func TestAMissingBinaryIsNamed(t *testing.T) {
 	shim := install(t, t.TempDir(), "node_modules")
 
 	_, errOut, err := runShim(t, shim)
-	if err == nil || !strings.Contains(errOut, "npm install -g @iiiokojiadbi/"+name) {
+	if err == nil || !strings.Contains(errOut, "npm install -g @praline-labs/"+name) {
 		t.Errorf("err = %v, stderr = %q; want a failure that names the package to install", err, errOut)
 	}
 }

@@ -13,7 +13,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/iiiokojiadbi/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 // ReadBoundary is a causal mailbox cutoff, not a wall-clock estimate.

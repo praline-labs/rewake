@@ -31,7 +31,7 @@ type Build struct {
 }
 
 // built is the build time the build command passes in, in RFC 3339:
-// -ldflags "-X github.com/iiiokojiadbi/rewake/internal/cli.built=$(date -u +%Y-%m-%dT%H:%M:%SZ)".
+// -ldflags "-X github.com/praline-labs/rewake/internal/cli.built=$(date -u +%Y-%m-%dT%H:%M:%SZ)".
 var built string
 
 // thisBuild is the running binary's build, read once. A test replaces it, so

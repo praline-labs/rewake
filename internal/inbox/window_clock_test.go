@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/boottime"
+	"github.com/praline-labs/rewake/internal/boottime"
 )
 
 // The wall clock of a machine can be stepped by seconds while a window runs —

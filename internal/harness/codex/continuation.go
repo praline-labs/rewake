@@ -3,7 +3,7 @@ package codex
 import (
 	"strings"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/harness"
 )
 
 // Remote continuation rejects permission overrides before contacting the server.

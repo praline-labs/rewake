@@ -1,6 +1,6 @@
 package gateway
 
-import "github.com/iiiokojiadbi/rewake/internal/boottime"
+import "github.com/praline-labs/rewake/internal/boottime"
 
 // An explicit terminal event matching an acknowledged turn does not require a
 // preceding turn/started event. Missing start evidence must not hide real results.

@@ -5,7 +5,7 @@ Two ways, and they answer different questions.
 **To use it.** Build beside the installed command, then replace it atomically:
 
 ```bash
-go build -ldflags "-X github.com/iiiokojiadbi/rewake/internal/cli.built=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+go build -ldflags "-X github.com/praline-labs/rewake/internal/cli.built=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   -o ~/.local/bin/rewake.new ./cmd/rewake
 mv -f ~/.local/bin/rewake.new ~/.local/bin/rewake
 ```
@@ -42,7 +42,7 @@ rewake --version
 That exercises everything a registry release would except the registry itself:
 the package contents, the platform split, the shim resolving its binary, and the
 command landing in PATH. Uninstall with
-`npm uninstall -g @iiiokojiadbi/rewake @iiiokojiadbi/rewake-linux-x64`.
+`npm uninstall -g @praline-labs/rewake @praline-labs/rewake-linux-x64`.
 
 The entry package's `bin` is a POSIX script rather than a Node shim: it execs the
 binary and disappears, so the terminal, the signals and the exit code belong to

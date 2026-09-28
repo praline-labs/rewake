@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/harness"
 )
 
 func launchWith(t *testing.T, config string, args []string) harness.LaunchPlan {

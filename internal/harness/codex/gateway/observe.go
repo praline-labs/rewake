@@ -3,7 +3,7 @@ package gateway
 import (
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/boottime"
+	"github.com/praline-labs/rewake/internal/boottime"
 )
 
 // Completion carries only live outcomes. No resume/history item can reach this path.

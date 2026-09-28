@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/grant"
-	"github.com/iiiokojiadbi/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/grant"
+	"github.com/praline-labs/rewake/internal/proc"
 )
 
 // Keeper holds what was granted to one run of a session whose harness takes a

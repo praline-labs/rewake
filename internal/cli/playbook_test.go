@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iiiokojiadbi/rewake/internal/brief"
-	"github.com/iiiokojiadbi/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/brief"
+	"github.com/praline-labs/rewake/internal/role"
 )
 
 // Every step and every limit of every role has to appear in both places a

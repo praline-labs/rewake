@@ -34,7 +34,7 @@ package="rewake-$platform-$architecture"
 dir="$(cd "$(dirname "$self")/.." && pwd -P)"
 while :; do
   if [ "$(basename "$dir")" != node_modules ]; then
-    candidate="$dir/node_modules/@iiiokojiadbi/$package/bin/rewake"
+    candidate="$dir/node_modules/@praline-labs/$package/bin/rewake"
     if [ -x "$candidate" ]; then
       exec "$candidate" "$@"
     fi
@@ -44,5 +44,5 @@ while :; do
 done
 
 echo "rewake: no binary for $platform-$architecture was installed." >&2
-echo "Install it with: npm install -g @iiiokojiadbi/$package" >&2
+echo "Install it with: npm install -g @praline-labs/$package" >&2
 exit 1

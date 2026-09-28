@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/test/workflow/record"
+	"github.com/praline-labs/rewake/test/workflow/record"
 )
 
 // switchEnv turns the scenarios on. They skip themselves without it so that

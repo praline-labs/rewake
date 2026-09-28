@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iiiokojiadbi/rewake/internal/boottime"
+	"github.com/praline-labs/rewake/internal/boottime"
 )
 
 // Freshness goes by the boot clock reading a snapshot carries: a step of the
