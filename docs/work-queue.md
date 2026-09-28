@@ -167,10 +167,12 @@ the roadmap entries of that day), and so did the worktree lifecycle
 What the day of the 1.0.0 release left, recorded on September 28, 2026 at the owner's word
 ("what was not done goes to the debts"). Unordered until the owner orders it.
 
-- **Live checks on the released wrappers.** The room ran wrappers of September 27 through
-  the whole release; grants, delivery and worktrees as released have been seen only in
-  the suite. Restart the sessions and watch a grant, a resume and a worktree land live;
-  milestone 6's week of use counts from 1.0.0.
+- **Live checks on the released wrappers.** On September 28, 2026, on 1.0.2, a directory
+  grant was seen granted, taken back and refused on Codex, and a Claude Code worktree
+  session landed and finished
+  ([the record](roadmap/2026-09-28-live-grants-1.0.2.md)). Still to see: the Claude Code
+  grant hook in the default permission mode and a grant restored after a cold resume;
+  milestone 6's week of use counts from 1.0.x.
 - **A requested compaction left without its outcome**
   ([intermittent-bugs.md](intermittent-bugs.md#a-requested-compaction-counted-as-nobodys-with-no-outcome--open-september-28-2026)):
   the plugin's `told` swallows a failed call; check the exit, retry once, and put the mark
