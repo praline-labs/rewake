@@ -129,6 +129,13 @@ func (a *Authority) answer(conn *net.UnixConn) {
 			if err := a.register(conn, asked.Grant); err != nil {
 				answer.Error = err.Error()
 			}
+		case opCarry:
+			grant, held, err := a.carry(conn, asked.Replaces, asked.Grant)
+			if err != nil {
+				answer.Error = err.Error()
+			} else if held {
+				answer.Grant = &grant
+			}
 		case opConfirm, opReconfirm:
 			confirm := a.confirm
 			if asked.Op == opReconfirm {
@@ -150,6 +157,49 @@ func (a *Authority) answer(conn *net.UnixConn) {
 // register takes a grant from a process running below this wrapper: this
 // session's own `rewake send`. Nothing else may add one.
 func (a *Authority) register(conn *net.UnixConn, grant Grant) error {
+	if err := a.fromBelow(conn); err != nil {
+		return err
+	}
+	if grant.ID == "" || grant.To == "" || grant.ToEpoch == "" || len(grant.Dirs) == 0 && !grant.Git {
+		return errors.New("a grant names its message, its recipient's run and what it grants")
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.prune()
+	return a.hold(grant)
+}
+
+// carry registers for replacement, from the same callers as register, what
+// this wrapper holds for the message it replaces: what main granted, not
+// what the letter on disk says it did. Nothing held gives nothing.
+func (a *Authority) carry(conn *net.UnixConn, replaced string, replacement Grant) (Grant, bool, error) {
+	if err := a.fromBelow(conn); err != nil {
+		return Grant{}, false, err
+	}
+	if replaced == "" || replacement.ID == "" || replacement.ID == replaced {
+		return Grant{}, false, errors.New("a carry names the message replaced and its replacement")
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.prune()
+	held, ok := a.held[replaced]
+	if !ok {
+		return Grant{}, false, nil
+	}
+	if held.grant.To != replacement.To || held.grant.ToEpoch != replacement.ToEpoch {
+		return Grant{}, false, fmt.Errorf("message %s was granted to another run than its replacement goes to", replaced)
+	}
+	carried := held.grant
+	carried.ID = replacement.ID
+	if err := a.hold(carried); err != nil {
+		return Grant{}, false, err
+	}
+	return carried, true, nil
+}
+
+// fromBelow refuses a caller that is not a command this wrapper's session
+// runs, outside any sandbox.
+func (a *Authority) fromBelow(conn *net.UnixConn) error {
 	peer, err := peerOf(conn)
 	if err != nil {
 		return fmt.Errorf("cannot tell who asked: %v", err)
@@ -163,12 +213,12 @@ func (a *Authority) register(conn *net.UnixConn, grant Grant) error {
 	if err := sameNamespaces(int(peer.Pid)); err != nil {
 		return fmt.Errorf("a command in a sandbox of its own does not register a grant, even one this session started: %v", err)
 	}
-	if grant.ID == "" || grant.To == "" || grant.ToEpoch == "" || len(grant.Dirs) == 0 && !grant.Git {
-		return errors.New("a grant names its message, its recipient's run and what it grants")
-	}
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	a.prune()
+	return nil
+}
+
+// hold keeps a grant under its message's id; the same grant again is no
+// error. Call with the lock held.
+func (a *Authority) hold(grant Grant) error {
 	if held, ok := a.held[grant.ID]; ok {
 		if held.grant.Same(grant) {
 			return nil

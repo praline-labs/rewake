@@ -77,6 +77,9 @@ func (s *Server) prepareDelivery(ctx context.Context, message *Message) (read, a
 				return err
 			}
 			message.DeliveryThread = thread
+			if CarriesGrant(*message) && s.PinGrant != nil {
+				s.PinGrant(*message, thread)
+			}
 		}
 		return linkUnread(s.Dir, s.Name, message.ID)
 	}

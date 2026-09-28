@@ -83,6 +83,9 @@ func requestedDirGrants(call Call, sender, target registry.Session, senderErr er
 			return nil
 		}
 		if err == nil {
+			err = rules.Named(given, cwd, path)
+		}
+		if err == nil {
 			err = rules.Check(given, path, confirm)
 		}
 		var refusal *grant.Refusal
@@ -122,11 +125,16 @@ func requestedDirGrants(call Call, sender, target registry.Session, senderErr er
 	return result, nil
 }
 
-// writableLines say which granted directories were not carried, because the
-// recipient can write them already.
-func writableLines(session registry.Session, model sendModel) []string {
-	if len(model.AlreadyWritable) == 0 {
-		return nil
+// sentGrantLines say which directories the task grants, as resolved — a link
+// named on the command line leads elsewhere, and main reads here where — and
+// which were not carried, because the recipient can write them already.
+func sentGrantLines(session registry.Session, model sendModel) []string {
+	var lines []string
+	if len(model.GrantDirs) > 0 {
+		lines = append(lines, fmt.Sprintf("Rewake: grants %s write access to: %s", session.Name, strings.Join(model.GrantDirs, ", ")))
 	}
-	return []string{fmt.Sprintf("Rewake: already writable by %s, in its workspace %s; not granted: %s", session.Name, session.CWD, strings.Join(model.AlreadyWritable, ", "))}
+	if len(model.AlreadyWritable) > 0 {
+		lines = append(lines, fmt.Sprintf("Rewake: already writable by %s, in its workspace %s; not granted: %s", session.Name, session.CWD, strings.Join(model.AlreadyWritable, ", ")))
+	}
+	return lines
 }

@@ -105,7 +105,8 @@ func (c *ReadClock) Close() { _ = syscall.Munmap(c.data); _ = c.file.Close() }
 
 // The mailbox lock serializes writers. Persist waiter sequences before publishing
 // the shared word; an earlier captured boundary cannot absorb a later read.
-func markScopedAwaiting(dir, name, epoch string, message Message) error {
+// readAt is when the message was read, 0 for now.
+func markScopedAwaiting(dir, name, epoch string, message Message, readAt int64) error {
 	if message.FromEpoch == "" || !state.ValidName(message.From) {
 		return nil
 	}
@@ -137,7 +138,7 @@ func markScopedAwaiting(dir, name, epoch string, message Message) error {
 	if err := state.WriteAtomic(highPath, []byte(strconv.FormatUint(next+1, 10))); err != nil {
 		return err
 	}
-	if err := markAwaitingSequence(dir, name, epoch, message.From, message.FromEpoch, message.ID, next+1); err != nil {
+	if err := markAwaitingSequence(dir, name, epoch, message.From, message.FromEpoch, message.ID, next+1, readAt); err != nil {
 		return err
 	}
 	atomic.StoreUint64(c.word(), next+1)

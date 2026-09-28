@@ -196,7 +196,7 @@ func (s *serverSession) addGrantedRoots(roots *[]string, entries *[]grant.Entry,
 			}
 			// The metadata can lie outside the directory, and so outside
 			// what was checked when the grant was sent.
-			if err := rules.Check(path, path, false); err != nil {
+			if err := rules.CheckGitMetadata(path); err != nil {
 				notes = append(notes, fmt.Sprintf("no Git metadata granted for %s: %v", directory, err))
 				continue
 			}

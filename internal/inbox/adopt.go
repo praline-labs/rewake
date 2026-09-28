@@ -54,8 +54,8 @@ func mayResume(dir string, message Message, run string, wait Waiter) bool {
 }
 
 // AdoptWaits moves to this run the waits of earlier runs of the name for the
-// messages delivered into thread, as if this run had read them now. It
-// returns the ids taken over. The caller holds the mailbox lock.
+// messages delivered into thread, as if this run had read them when the
+// earlier one did. It returns the ids taken over. The caller holds the mailbox lock.
 func AdoptWaits(dir, name, epoch, thread string) []string {
 	if thread == "" {
 		return nil
@@ -70,11 +70,14 @@ func AdoptWaits(dir, name, epoch, thread string) []string {
 			continue
 		}
 		for _, waiter := range Waiters(dir, name, run.Name()) {
-			for _, id := range waiter.Messages {
+			for index, id := range waiter.Messages {
 				if !safeID(id) || !owedStands(run.Name(), waiter, id) || deliveryThread(dir, name, id) != thread || slices.Contains(adopted, id) {
 					continue
 				}
-				if markScopedAwaiting(dir, name, epoch, Message{ID: id, From: waiter.Name, FromEpoch: waiter.Epoch}) == nil {
+				// Read when the earlier run read it: taking it over does not
+				// start the window again, or a chain of resumes would keep a
+				// task, and its grant, owed for ever.
+				if markScopedAwaiting(dir, name, epoch, Message{ID: id, From: waiter.Name, FromEpoch: waiter.Epoch}, waiter.readAt(index)) == nil {
 					adopted = append(adopted, id)
 				}
 			}

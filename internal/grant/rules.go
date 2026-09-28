@@ -16,10 +16,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
-
-	"github.com/praline-labs/rewake/internal/registry"
 )
 
 // Rule is one protected directory and what it is.
@@ -44,103 +41,12 @@ type Rules struct {
 	// Sessions are where live rewake sessions work: a directory that is or
 	// holds one is broad, since it holds that session's configuration.
 	Sessions []string
-}
-
-// Env is what the rules are built from.
-type Env struct {
-	Home       string
-	PATH       string
-	StateRoot  string
-	Executable string
-	// Harness names each harness's own configuration.
-	Harness []string
-	// Mounts are the mount points, of which those under /mnt and /media are
-	// broad.
-	Mounts []string
-	// Sessions are the working directories of live rewake sessions.
-	Sessions []string
-	// Temp are the shared temporary directories.
+	// Temp are the shared temporary directories, as named and as resolved: a
+	// path given through one is refused wherever it leads.
 	Temp []string
-}
-
-// TempRoots are the shared temporary directories: /tmp and $TMPDIR. A Codex
-// sandbox lets its commands write both by default, and the worker could put a
-// link in place of a directory there once it is granted; the harness resolves
-// a root again when it applies it (docs/grants.md#what-a-grant-does-not-stop).
-// A variable only so that a test, whose every directory lies in one, can set
-// them aside.
-var TempRoots = func() []string { return []string{"/tmp", os.TempDir()} }
-
-// CurrentEnv reads the environment of this process. harnessDirs come from
-// the harness catalog, which this package does not import.
-func CurrentEnv(stateRoot string, harnessDirs []string) Env {
-	env := Env{PATH: os.Getenv("PATH"), StateRoot: stateRoot, Harness: harnessDirs}
-	env.Home, _ = os.UserHomeDir()
-	if executable, err := os.Executable(); err == nil {
-		env.Executable = executable
-	}
-	env.Mounts = mountPoints("/proc/self/mountinfo")
-	if stateRoot != "" {
-		env.Sessions = registry.WorkDirs(stateRoot)
-	}
-	env.Temp = TempRoots()
-	return env
-}
-
-// systemDirs are refused inside and out; / only as itself.
-var systemDirs = []string{"/etc", "/usr", "/bin", "/sbin", "/boot", "/dev", "/proc", "/sys", "/run", "/var", "/opt", "/root", "/srv", "/snap"}
-
-// Rules builds the two tiers.
-func (env Env) Rules() Rules {
-	var rules Rules
-	hard := func(path, what string) {
-		if path != "" && filepath.IsAbs(path) {
-			rules.Hard = append(rules.Hard, Rule{Path: resolve(path), What: what})
-		}
-	}
-	hard(env.StateRoot, "rewake's state directory")
-	if env.Executable != "" {
-		hard(filepath.Dir(resolve(env.Executable)), "the directory of the rewake binary")
-	}
-	for _, dir := range env.Harness {
-		hard(dir, "a harness's own configuration")
-	}
-	if env.Home != "" {
-		hard(filepath.Join(env.Home, ".config", "rewake"), "rewake's configuration")
-		for _, name := range []string{".ssh", ".gnupg", ".aws", ".kube", ".docker", ".password-store"} {
-			hard(filepath.Join(env.Home, name), "where login keys are kept")
-		}
-		for _, name := range []string{"git", "systemd", "autostart", "environment.d"} {
-			hard(filepath.Join(env.Home, ".config", name), "configuration that runs or signs as the owner")
-		}
-		rules.Home = resolve(env.Home)
-	}
-	for _, dir := range filepath.SplitList(env.PATH) {
-		hard(dir, "a directory on PATH")
-	}
-	for _, dir := range env.Temp {
-		hard(dir, "a shared temporary directory, where a sandboxed worker can write and swap a granted directory for a link")
-	}
-	rules.Hard = append(rules.Hard, Rule{Path: "/", What: "the root of the filesystem", Exact: true})
-	libs, _ := filepath.Glob("/lib*")
-	for _, dir := range append(slices.Clone(systemDirs), append([]string{"/lib"}, libs...)...) {
-		hard(dir, "a system directory")
-	}
-
-	for _, dir := range []string{"/home", "/mnt", "/media"} {
-		rules.Broad = append(rules.Broad, Rule{Path: resolve(dir), What: "the directory of every home or drive"})
-	}
-	for _, mount := range env.Mounts {
-		if within(mount, "/mnt") || within(mount, "/media") {
-			rules.Broad = append(rules.Broad, Rule{Path: resolve(mount), What: "a mounted drive"})
-		}
-	}
-	for _, dir := range env.Sessions {
-		if filepath.IsAbs(dir) {
-			rules.Sessions = append(rules.Sessions, resolve(dir))
-		}
-	}
-	return rules
+	// metadata judges the Git metadata --grant-git names: a shielded
+	// directory is what that grant is for.
+	metadata bool
 }
 
 // Refusal is a directory that cannot be granted, with the exit code the
@@ -167,6 +73,7 @@ func Resolve(given, cwd string) (string, error) {
 	if err != nil {
 		return "", &Refusal{Code: 1, Message: fmt.Sprintf("%s: %v", given, err)}
 	}
+	resolved = longNames(resolved)
 	info, err := os.Stat(resolved)
 	if err != nil {
 		return "", &Refusal{Code: 1, Message: fmt.Sprintf("%s: %v", given, err)}
@@ -175,6 +82,25 @@ func Resolve(given, cwd string) (string, error) {
 		return "", &Refusal{Code: 1, Message: fmt.Sprintf("%s is a file, not a directory; grant the directory that holds what the task writes", given)}
 	}
 	return resolved, nil
+}
+
+// Named refuses a directory given by a path through a shared temporary
+// directory: a sandboxed worker can write there, and a link it put in place
+// beforehand — /tmp/out leading to a directory of the owner's — would have
+// main grant what the link leads to while naming a scratch directory. The
+// hard tier refuses what lies there; this refuses what only passes through.
+func (rules Rules) Named(given, cwd, resolved string) error {
+	path := given
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(cwd, path)
+	}
+	path = filepath.Clean(path)
+	for _, temp := range rules.Temp {
+		if within(path, temp) && !within(resolved, temp) {
+			return &Refusal{Code: 2, Message: fmt.Sprintf("%s leads through %s, a shared temporary directory where a sandboxed worker can put a link, to %s; rewake grants no path through it. If %s is the directory the task needs, name it", given, temp, resolved, resolved)}
+		}
+	}
+	return nil
 }
 
 // Check refuses a resolved directory the tiers protect. broad says main
@@ -191,6 +117,9 @@ func (rules Rules) check(given, resolved string, broad, strict bool) error {
 	shown := given
 	if given != resolved {
 		shown = fmt.Sprintf("%s (%s)", given, resolved)
+	}
+	if element, ok := shortElement(resolved); ok {
+		return &Refusal{Code: 2, Message: fmt.Sprintf("%s goes through %s, a Windows short name rewake cannot match to its long one, and the checks compare long names; name the directory by its long name", shown, element)}
 	}
 	for _, rule := range rules.Hard {
 		relation := ""
@@ -227,6 +156,12 @@ func (rules Rules) broad(resolved string) (string, bool) {
 			return rule.What, true
 		}
 	}
+	if name, ok := shieldedElement(resolved); ok && !rules.metadata {
+		// Inside a grant these stay with the person (Covers); granted as the
+		// root, or below one, nothing inside would shield them, so the grant
+		// has to name them.
+		return fmt.Sprintf("inside %s, where a checkout keeps its metadata or a harness its configuration, and what reads it next runs what is written there", name), true
+	}
 	for _, session := range rules.Sessions {
 		if within(session, resolved) {
 			// Its .claude, .mcp.json and .rewake.toml tell a harness what to
@@ -248,6 +183,14 @@ func (rules Rules) broad(resolved string) (string, bool) {
 	return "", false
 }
 
+// CheckGitMetadata is Check for the Git metadata of a checkout --grant-git
+// gives along with it: .git is what main named there, so being one is no
+// reason for a confirmation; the rest of both tiers holds.
+func (rules Rules) CheckGitMetadata(path string) error {
+	rules.metadata = true
+	return rules.check(path, path, false, false)
+}
+
 // Recheck is Check again at delivery, on a path that was resolved when it was
 // sent: a link swapped in since then fails it, as does a directory gone.
 func (rules Rules) Recheck(path string, broad bool) error {
@@ -258,7 +201,7 @@ func (rules Rules) Recheck(path string, broad bool) error {
 	if err != nil {
 		return &Refusal{Code: 1, Message: fmt.Sprintf("%s is gone: %v", path, err)}
 	}
-	if resolved != path {
+	if resolved = longNames(resolved); resolved != path {
 		return &Refusal{Code: 1, Message: fmt.Sprintf("%s now leads to %s: a link changed since the grant was sent", path, resolved)}
 	}
 	if info, err := os.Stat(path); err != nil || !info.IsDir() {
@@ -303,7 +246,7 @@ func same(a, b string) bool { return fold(a) == fold(b) }
 // drive itself does: /mnt/c/Users and /mnt/C/users are one directory.
 func fold(path string) string {
 	path = filepath.Clean(path)
-	if len(path) >= 6 && strings.HasPrefix(path, "/mnt/") && isLetter(path[5]) && (len(path) == 6 || path[6] == '/') {
+	if windowsDrive(path) {
 		return strings.ToLower(path)
 	}
 	return path
@@ -317,7 +260,8 @@ func ResolveExisting(path string) string { return resolve(path) }
 
 // shielded are the directories inside a grant a harness keeps its own
 // configuration or a checkout its metadata in. A grant does not reach them,
-// at any depth: a task that needs one gets it by name, or from the owner.
+// at any depth: a task that needs one gets it by name — a directory with one
+// of them in its path is broad — or from the owner.
 var shielded = []string{".git", ".claude", ".codex", ".agents"}
 
 // Covers says whether a grant of root lets a session write path: path lies
@@ -327,14 +271,21 @@ func Covers(root, path string) bool {
 		return false
 	}
 	rel, _ := filepath.Rel(fold(root), fold(path))
-	for _, element := range strings.Split(rel, string(filepath.Separator)) {
+	_, inside := shieldedElement(rel)
+	return !inside
+}
+
+// shieldedElement names the first element of a path that is a shielded
+// directory, in any case.
+func shieldedElement(path string) (string, bool) {
+	for _, element := range strings.Split(path, string(filepath.Separator)) {
 		for _, name := range shielded {
 			if strings.EqualFold(element, name) {
-				return false
+				return element, true
 			}
 		}
 	}
-	return true
+	return "", false
 }
 
 // resolve resolves as much of a path as exists: a protected directory that is
@@ -342,7 +293,7 @@ func Covers(root, path string) bool {
 func resolve(path string) string {
 	path = filepath.Clean(path)
 	if resolved, err := filepath.EvalSymlinks(path); err == nil {
-		return resolved
+		return longNames(resolved)
 	}
 	parent := filepath.Dir(path)
 	if parent == path {

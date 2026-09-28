@@ -73,6 +73,10 @@ type Server struct {
 	// CheckGrant checks a message's granted directories again before it
 	// becomes readable (docs/grants.md). Nil refuses every directory grant.
 	CheckGrant func(Message) error
+	// PinGrant tells the sender of a granted task the conversation its letter
+	// is pinned to, under the mailbox lock as the letter becomes readable. Nil
+	// tells nobody.
+	PinGrant func(message Message, thread string)
 
 	// attempts remembers when each pending message was last tried.
 	attempts map[string]time.Time

@@ -248,7 +248,7 @@ func reportSent(ctx *Context, after sent, message inbox.Message, kind messageKin
 		// The id before the wait, which may be long: it is what an edit or an
 		// addendum to this message takes while the sender still waits.
 		if !ctx.JSON {
-			_ = emit(ctx, append(writableLines(session, model), idLines(model)...)...)
+			_ = emit(ctx, append(sentGrantLines(session, model), idLines(model)...)...)
 		}
 		after.model = model
 		return kind.after(ctx, after)
@@ -260,7 +260,7 @@ func reportSent(ctx *Context, after sent, message inbox.Message, kind messageKin
 func printDelivery(ctx *Context, session registry.Session, model sendModel) error {
 	line := sendLine(session, model)
 	if inbox.State(model.State) != inbox.Failed && model.ID != "" {
-		line += "\n" + strings.Join(append(writableLines(session, model), idLines(model)...), "\n")
+		line += "\n" + strings.Join(append(sentGrantLines(session, model), idLines(model)...), "\n")
 	}
 	switch inbox.State(model.State) {
 	case inbox.Delivered:

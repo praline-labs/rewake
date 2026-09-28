@@ -41,7 +41,9 @@ does only without the person's own `--allowedTools` ([launch.md](launch.md#claud
   nothing but the prompt stands in the way. Once the grant is a working directory the
   harness would run a file tool anywhere in it unasked, so PreToolUse answers `ask` for a
   file tool writing there; a shell command inside the grant reaches them unasked all the
-  same. A write outside every grant hears silence, and silence is also the answer to any
+  same. A directory with one of them in its path is not granted without main naming it
+  with `--grant-dir-broad` ([the broad tier](grants.md#the-broad-tier)): as the grant's
+  root nothing inside it would shield it. A write outside every grant hears silence, and silence is also the answer to any
   error or timeout: the hook never allows on a guess.
 - **Taking back** happens in `default` and `acceptEdits` only. After the task is settled,
   PreToolUse answers `ask` on the first read inside the working directory, and on every

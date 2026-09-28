@@ -111,7 +111,7 @@ func MarkRead(dir, name, epoch string, message Message, reports bool) error {
 	// a shell, or mail from before runs were recorded — has nowhere a report
 	// could go.
 	if reports && !retry && !withdrawn && Owed(message) {
-		if err := markScopedAwaiting(dir, name, epoch, message); err != nil {
+		if err := markScopedAwaiting(dir, name, epoch, message, 0); err != nil {
 			return err
 		}
 	}

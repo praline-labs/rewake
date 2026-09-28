@@ -61,18 +61,31 @@ Codex main, a command not run below main's wrapper — and nothing is written th
 A task carrying a grant waits at most 30 minutes, its time to live, for the worker to be
 idle; past that it expires and main is told. While it waits, `--to` refuses to add to
 it — the addition would be read first and worked on without the grant — and points to
-`rewake edit <id>`, which replaces the task and registers its grant again.
+`rewake edit <id>`, which replaces the task and carries its grant over. What it carries
+is what main's wrapper holds for the task, never what the letter on disk says: a worker
+can rewrite its own unread mail, and an edit would otherwise register a wider grant in
+main's name. A letter naming a grant the wrapper does not hold is refused with exit 1,
+pointing to `rewake withdraw` and a new send.
 
 Each directory is resolved the way the harness will see it: a relative path from the
 sender's directory, cleaned, links resolved. It must exist and be a directory, or the
-send fails with exit 1. The resolved path is what the message carries. A directory that
+send fails with exit 1. The resolved path is what the message carries, and the send
+names it (`Rewake: grants <worker> write access to: <dir>`), so main sees where a link
+led. A path that goes through a shared temporary directory, `/tmp` or `$TMPDIR`, to
+somewhere outside it is refused with exit 2, the refusal naming where it leads: a
+sandboxed worker can write there and put a link in place before main names it. A directory that
 lies in the recipient's workspace already is not carried and is named in the output as
 already writable (`alreadyWritable` in `--json`); a directory inside another granted one
 goes with it, so the message carries only the outermost.
 
 Paths are compared by elements through `filepath.Rel`, never as string prefixes, and a
 protected directory is resolved as far as it exists, so a link does not hide it. Under
-`/mnt/<letter>` the comparison ignores case, as a Windows drive does.
+`/mnt/<letter>` the comparison ignores case, as a Windows drive does, and a Windows
+short name such as `PROGRA~1` is read back to its long name: the drive answers both for
+one directory, and lists only the long one. The long name is found by the inode in the
+parent's listing; a short name that matches none is refused with exit 2, since every
+check compares long names. Checked live on WSL: `/mnt/c/PROGRA~1` and
+`/mnt/c/Program Files` report one inode.
 
 ### The hard tier
 
@@ -83,12 +96,18 @@ whatever flag names it:
 - each harness's own configuration, named by the harness through `ProtectedDirs()`:
   `$CODEX_HOME` or `~/.codex` for Codex; `$CLAUDE_CONFIG_DIR`, `~/.claude*` and
   `~/.local/share/claude` for Claude Code;
-- `~/.ssh`, `~/.gnupg`, `~/.aws`, `~/.kube`, `~/.docker`, `~/.password-store`;
-- every directory on the sender's `PATH`;
+- `~/.ssh`, `~/.gnupg`, `~/.aws`, `~/.kube`, `~/.docker`, `~/.password-store`,
+  `~/.config/gh`;
+- every directory on the sender's `PATH`, and for one named `bin` the toolchain it
+  belongs to — a Go, Node or Rust installation, a `GOPATH` — whose libraries its
+  programs load; not `/`, the home directory or `~/.local`, which hold far more;
+- what the owner's tools load and run unchecked: `~/go/pkg/mod`, `~/.cache/go-build`,
+  and `$GOMODCACHE` and `$GOCACHE` when set;
 - the shared temporary directories, `/tmp` and `$TMPDIR`: the Codex sandbox lets its
   commands write both by default, so the worker could swap a directory granted there for
   a link ([below](#what-a-grant-does-not-stop));
-- `~/.config/git`, `~/.config/systemd`, `~/.config/autostart`, `~/.config/environment.d`;
+- `~/.config/git`, `~/.config/systemd`, `~/.config/autostart`, `~/.config/environment.d`,
+  `~/.config/fish`, `~/.local/share/systemd`, `~/.local/share/applications`;
 - the system directories: `/etc`, `/usr`, `/bin`, `/sbin`, `/lib*`, `/boot`, `/dev`,
   `/proc`, `/sys`, `/run`, `/var`, `/opt`, `/root`, `/srv`, `/snap`; and `/` itself, which
   every path lies inside, only as itself and as what it contains.
@@ -111,6 +130,12 @@ Matched exactly, and granted only with `--grant-dir-broad <the same path>`:
 - `/home`, `/mnt`, `/media`;
 - each mount point under `/mnt` and `/media`, read from `/proc/self/mountinfo`;
 - each directory directly in `$HOME`;
+- a directory with `.git`, `.claude`, `.codex` or `.agents` anywhere in its path, in
+  any case. A checkout keeps its metadata there and a harness its configuration, and
+  what reads them next runs what was written. Inside a grant Claude Code keeps them with
+  the person ([grants-claude.md](grants-claude.md)); granted as the root, or below one,
+  nothing inside would, so the grant names them. The metadata `--grant-git` adds beside
+  a granted checkout is what that flag is for, and passes the hard tier alone;
 - each `~/.config/<app>` with a `credentials` file directly inside. Writing there does
   not raise an agent's own powers, so the owner chose to confirm it rather than refuse;
 - a directory where a live rewake session works, or one that holds it — main's own
@@ -204,8 +229,10 @@ a turn typed in this session's terminal has dropped it since` — because rewake
 a drop only when it comes to take the grant back; once the journal says a directory was
 revoked or dropped, the line says so instead.
 
-A task is settled once its reader has read it and reported on it, or its sender took it
-back. At every delivery to the session after that, while the journal holds live entries of
+A task is settled once its reader has read it and reported on it, its sender took it
+back, or it failed to arrive. A status saying taken back or failed settles it whatever a
+wait record says: such a task was never read, and a wait naming it is one the worker
+wrote to keep its grant. At every delivery to the session after that, while the journal holds live entries of
 settled tasks, the adapter reads the snapshot and sends it without their directories. A
 directory another live task still holds stays until that task is settled too. Nothing
 runs between deliveries: a grant whose task is settled lives until the next message to
@@ -240,6 +267,11 @@ A cold resume starts a new run; what it keeps of a grant is in
   `--grant-git` rides along — Codex keeps a checkout's `.git` read-only under a writable
   root otherwise — and whatever reads them next runs what the worker wrote. Only a directory where a live session
   works is recognized ([the broad tier](#the-broad-tier)).
+- **What the hard tier does not name.** The tier is the places rewake knows to run as
+  the owner; it is not every one. A shell's startup directory other than those named, an
+  editor's plugin directory, a toolchain whose programs are not on `PATH` are granted as
+  any other directory. The send names each directory as resolved, and reading it is
+  main's part.
 - **The shared metadata of a worktree.** `--grant-git` beside `--grant-dir` on a linked
   worktree would add the repository's common `.git`, hooks and configuration included,
   which every checkout of it runs — main's too, outside any sandbox. For a worktree of

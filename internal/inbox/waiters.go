@@ -68,10 +68,13 @@ func awaitingPath(dir, name, epoch string) (string, bool) {
 // for which message. A run that already waits gets the message added to its
 // wait; a different run of that name replaces it.
 func markAwaiting(dir, name, epoch, from, fromEpoch, messageID string) error {
-	return markAwaitingSequence(dir, name, epoch, from, fromEpoch, messageID, 0)
+	return markAwaitingSequence(dir, name, epoch, from, fromEpoch, messageID, 0, 0)
 }
 
-func markAwaitingSequence(dir, name, epoch, from, fromEpoch, messageID string, sequence uint64) error {
+// markAwaitingSequence is markAwaiting with the message's read sequence, and
+// when it was read: now when readAt is 0, the earlier run's reading for a
+// wait taken over (AdoptWaits), since the resume window counts from the read.
+func markAwaitingSequence(dir, name, epoch, from, fromEpoch, messageID string, sequence uint64, readAt int64) error {
 	path, ok := awaitingPath(dir, name, epoch)
 	if !ok || !state.ValidName(from) {
 		return nil
@@ -104,7 +107,10 @@ func markAwaitingSequence(dir, name, epoch, from, fromEpoch, messageID string, s
 		}
 		waiter.Messages = append(waiter.Messages, messageID)
 		waiter.ReadSequences = append(waiter.ReadSequences, sequence)
-		waiter.ReadAt = append(waiter.ReadAt, now)
+		if readAt == 0 {
+			readAt = now
+		}
+		waiter.ReadAt = append(waiter.ReadAt, readAt)
 	}
 	return writeWaiter(file, waiter)
 }

@@ -16,8 +16,11 @@ moment the address can be worked out it is taken; a `rewake send` registers only
 listener that runs above it, so a listener there first would not take a grant and have
 send report it as registered.
 
-1. **At send.** `rewake send` or `rewake edit` with a grant registers it with its own
-   session's wrapper before the letter is written. The wrapper takes it only from a
+1. **At send.** `rewake send` with a grant registers it with its own session's wrapper
+   before the letter is written. `rewake edit` asks the wrapper, from the same callers,
+   to carry over to the replacement what it holds for the task replaced; the letter's
+   own grant fields are no source, since the worker can rewrite its unread mail. Nothing
+   held carries nothing, and a letter that names a grant anyway is refused. The wrapper takes it only from a
    process below itself: the caller's uid and pid from `SO_PEERCRED`, then its chain of
    parents up to the wrapper, each no younger than its child, so a pid taken again on the
    way ends the walk; and it must share the wrapper's mount, user and PID namespaces. A
@@ -35,10 +38,16 @@ send report it as registered.
    before and after the answer, and in the same mount, user and PID namespaces as the
    asking wrapper. The grant confirmed must be the one the letter carries, for this
    recipient and this run. A letter main never registered, one naming a run it is not,
-   one answered from another process fail, and main is told. The question names the
-   conversation the task goes into; main's wrapper keeps the first one named beside the
-   grant, taken only from the wrapper of the run the grant went to, as the one
-   conversation a resume may take the grant into ([grants-resume.md](grants-resume.md)).
+   one answered from another process fail, and main is told. This question names no
+   conversation: a task that waits — for an idle reader, for a turn to end — may go into
+   another one than the session had when it was first checked. Once the letter is
+   pinned, under the mailbox lock as it becomes readable, the recipient's wrapper asks
+   again naming the conversation it was pinned to. Main's wrapper keeps the first one
+   named beside the grant, taken only from the wrapper of the run the grant went to, as
+   the one conversation a resume may take the grant into
+   ([grants-resume.md](grants-resume.md)). A main that does not answer that second
+   question leaves the grant with no conversation: it holds for the run, and a resume
+   does not restore it.
 3. **When main cannot answer.** While main's wrapper is alive and does not answer, the
    task stays pending and is asked again until it expires. Once that wrapper has ended,
    nobody can confirm the grant, now or later: the task fails, naming the main that sent

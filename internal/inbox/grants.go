@@ -1,11 +1,14 @@
 package inbox
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/state"
 )
 
@@ -83,14 +86,21 @@ func (s *Server) failGranted(message Message, result Result) {
 }
 
 // Settled says whether a task no longer needs what was granted with it: its
-// reader has read it and reported on it, or its sender took it back. A task
-// delivered and not read yet, or read and not reported on, is not settled.
+// reader has read it and reported on it, or its sender took it back, or it
+// failed to arrive. A task delivered and not read yet, or read and not
+// reported on, is not settled.
 //
 // The status is read before the waits: reading records the wait first and
 // the read status after it, so a read status seen here has its wait recorded
-// already, and a wait found gone was settled by a report.
+// already, and a wait found gone was settled by a report. A task taken back
+// or failed was never read — a withdrawal of a read task is refused, and a
+// failure archives the copy the reader would read — so a wait naming one is
+// none of its reader's, and does not keep it open.
 func Settled(dir, name, id string) bool {
 	status, known := ReadStatus(dir, name, id)
+	if known && closedUnread(status) {
+		return true
+	}
 	// Any run's wait counts: until a resumed run has taken over what the run
 	// before it owed (adopt.go), the wait is still that run's.
 	if owedByAnyRun(dir, name, id) {
@@ -109,6 +119,12 @@ func Settled(dir, name, id string) bool {
 	return true
 }
 
+// closedUnread is a status that ends a task no one read: taken back, or
+// failed to arrive.
+func closedUnread(status Status) bool {
+	return status.Withdrawn || status.State == Failed
+}
+
 // TaskOpen says, for the main that granted with a task, whether the task is
 // still open: on its way to its reader, delivered and not read, or read and
 // owed by a run of the reader — any run, since a run that resumed the
@@ -116,27 +132,52 @@ func Settled(dir, name, id string) bool {
 // false when nothing of the message is there: a grant is registered before
 // its letter is written, and one whose letter never was has no task to close.
 //
+// A task not read yet is open only while the run it was written for runs: a
+// run that resumes the conversation cannot read another run's mail, and its
+// sender reads that no report is coming (Awaited).
+//
 // Everything read here a worker could write. It can make a task look open
-// only, and that keeps its grant as long as not reporting on it would.
+// only while its status says neither taken back nor failed, and that keeps its
+// grant as long as not reporting on it would.
 func TaskOpen(dir, name, id string) (open, found bool) {
 	if !state.ValidName(name) || !safeID(id) {
 		return false, false
 	}
+	status, known := ReadStatus(dir, name, id)
+	if known && closedUnread(status) {
+		return false, true
+	}
 	if owedByAnyRun(dir, name, id) {
 		return true, true
 	}
-	if status, known := ReadStatus(dir, name, id); known {
-		return status.State != Read && status.State != Failed && !status.Withdrawn, true
+	if known && status.State == Read {
+		return false, true
 	}
 	for _, directory := range []string{state.InboxPath(dir, name), state.UnreadPath(dir, name)} {
-		if _, err := os.Stat(filepath.Join(directory, id+".json")); err == nil {
-			return true, true
+		raw, err := os.ReadFile(filepath.Join(directory, id+".json"))
+		if err != nil {
+			continue
 		}
+		var message Message
+		if json.Unmarshal(raw, &message) == nil && runEnded(message.ToEpoch) {
+			return false, true
+		}
+		return true, true
+	}
+	if known {
+		return true, true
 	}
 	if _, err := os.Stat(filepath.Join(state.DonePath(dir, name), id+".json")); err == nil {
 		return false, true
 	}
 	return false, false
+}
+
+// runEnded says whether a run is known to be over. A run that cannot be told
+// apart — no epoch, or one that does not parse — is not.
+func runEnded(epoch string) bool {
+	pid, start, ok := registry.ParseEpoch(epoch)
+	return ok && !proc.Alive(pid, start)
 }
 
 // owedByAnyRun says whether a wait record of any run of the name lists the

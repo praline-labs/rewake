@@ -33,8 +33,13 @@ const grantLifetime = inbox.DefaultTTL + 5*time.Minute
 // For a harness that takes a grant through its own hook, the grant then
 // waits for the session to be idle, as Codex's does, and goes into the
 // keeper the hook asks; keeper is nil for any other. thread is the session's
-// conversation, the one the delivery is pinned to; nil for a harness that
-// names none.
+// conversation; nil for a harness that names none.
+//
+// The confirmation here names no conversation: a message that waits — for an
+// idle session, or for a harness busy with a turn — may be pinned to another
+// one than the session had when it was first checked, and main keeps the
+// first conversation it is told. pinGrant tells it the one the letter is
+// pinned to.
 func checkGrant(dir, name, epoch string, keeper *grantauth.Keeper, busy func() bool, thread func() (string, error)) func(inbox.Message) error {
 	root := state.RootForRoom(dir)
 	return func(message inbox.Message) error {
@@ -44,20 +49,39 @@ func checkGrant(dir, name, epoch string, keeper *grantauth.Keeper, busy func() b
 				return err
 			}
 		}
-		conversation := ""
-		if thread != nil {
-			conversation, _ = thread()
-		}
-		if err := confirmGrant(dir, name, epoch, conversation, message); err != nil || keeper == nil || len(message.GrantDirs) == 0 {
+		if err := confirmGrant(dir, name, epoch, "", message); err != nil || keeper == nil || len(message.GrantDirs) == 0 {
 			return err
 		}
 		if busy != nil && busy() {
 			return fmt.Errorf("%w: %s", inbox.ErrNotYet, idleWait)
 		}
+		// Read once the session is idle, just before the letter is pinned:
+		// the conversation a resume would look for the grant in.
+		conversation := ""
+		if thread != nil {
+			conversation, _ = thread()
+		}
 		// Where it came from, so a run resuming the conversation can ask
 		// for it again (grant_resume.go).
 		origin := grant.Entry{Message: message.ID, At: time.Now(), Thread: conversation, From: message.From, FromEpoch: message.FromEpoch}
 		return keeper.GrantFrom(origin, message.GrantDirs, false)
+	}
+}
+
+// pinGrant tells the main that sent a granted task the conversation its
+// letter was pinned to, as the letter becomes readable: the only one a resume
+// may take the grant into again (docs/grants-resume.md). Told by this wrapper
+// and no other process, and told nothing else: the grant was confirmed
+// already. A main that does not answer leaves the grant without a
+// conversation, as one delivered into none — it holds for this run and is not
+// restored after a resume — rather than holding the letter back.
+func pinGrant(dir, name, epoch string) func(inbox.Message, string) {
+	return func(message inbox.Message, thread string) {
+		pid, start, ok := registry.ParseEpoch(message.FromEpoch)
+		if !ok || thread == "" {
+			return
+		}
+		_, _ = grantauth.Confirm(state.AuthorityAddress(dir, message.FromEpoch), grantauth.Expect{PID: pid, Start: start}, message.ID, name, epoch, thread)
 	}
 }
 

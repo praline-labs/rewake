@@ -64,6 +64,9 @@ const (
 	// opReconfirm asks for a grant again for a new run of its recipient: the
 	// conversation it went into was resumed cold (resume.go).
 	opReconfirm = "reconfirm"
+	// opCarry registers, for an edit's replacement, the grant held for the
+	// message it replaces.
+	opCarry = "carry"
 	// opDecide is a hook call to the keeper of a worker's grants.
 	opDecide = "decide"
 )
@@ -73,8 +76,10 @@ type request struct {
 	Grant Grant  `json:"grant"`
 	// Thread is the conversation a confirmed grant goes into, or the one a
 	// resumed run continues (resume.go).
-	Thread string          `json:"thread,omitempty"`
-	Call   json.RawMessage `json:"call,omitempty"`
+	Thread string `json:"thread,omitempty"`
+	// Replaces is the message whose grant a carry takes.
+	Replaces string          `json:"replaces,omitempty"`
+	Call     json.RawMessage `json:"call,omitempty"`
 }
 
 type response struct {
@@ -115,6 +120,34 @@ func Register(path string, grant Grant) error {
 		return fmt.Errorf("%w: %s", ErrNotConfirmed, answer.Error)
 	}
 	return nil
+}
+
+// Carry asks this session's wrapper to hold for replacement — a message an
+// edit writes in place of another — the grant it holds for the message
+// replaced, and returns it. The letter on disk is no source for it: a worker
+// can rewrite its own unread mail, and an edit would then register in main's
+// name a grant main never gave. held is false when the wrapper holds no grant
+// for that message, and the replacement then carries none.
+func Carry(path, replaced string, replacement Grant) (grant Grant, held bool, err error) {
+	conn, err := dial(path)
+	if err != nil {
+		return Grant{}, false, err
+	}
+	defer func() { _ = conn.Close() }()
+	if err := servesCaller(conn); err != nil {
+		return Grant{}, false, err
+	}
+	answer, err := exchange(conn, request{Op: opCarry, Grant: replacement, Replaces: replaced})
+	if err != nil {
+		return Grant{}, false, err
+	}
+	if answer.Error != "" {
+		return Grant{}, false, fmt.Errorf("%w: %s", ErrNotConfirmed, answer.Error)
+	}
+	if answer.Grant == nil {
+		return Grant{}, false, nil
+	}
+	return *answer.Grant, true, nil
 }
 
 // servesCaller checks that the listener at the other end of conn is a

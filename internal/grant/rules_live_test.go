@@ -59,3 +59,38 @@ func TestALiveSessionsDirectoryIsBroad(t *testing.T) {
 		t.Error("a call confirmed a directory that is not broad")
 	}
 }
+
+// A checkout's metadata or a harness's configuration granted as the root, or
+// below one, is broad: nothing inside the grant would shield it, and whatever
+// reads it next runs what the worker wrote. Named with --grant-dir-broad it
+// is granted, which is the task getting it by name.
+func TestAShieldedDirectoryIsGrantedOnlyByName(t *testing.T) {
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkout := filepath.Join(root, "work", "checkout")
+	for _, sub := range []string{".git/hooks", ".Claude/commands", ".codex", ".agents", "src"} {
+		if err := os.MkdirAll(filepath.Join(checkout, sub), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	rules := Env{}.Rules()
+	for _, sub := range []string{".git", ".git/hooks", ".Claude", ".Claude/commands", ".codex", ".agents"} {
+		path := filepath.Join(checkout, sub)
+		if err := rules.Check(path, path, false); err == nil || !strings.Contains(err.Error(), "--grant-dir-broad") {
+			t.Errorf("%s granted without its name: %v", sub, err)
+		}
+		if err := rules.Check(path, path, true); err != nil {
+			t.Errorf("%s confirmed: %v", sub, err)
+		}
+		if err := rules.Recheck(path, false); err == nil {
+			t.Errorf("%s rechecked without its confirmation", sub)
+		}
+	}
+	for _, path := range []string{checkout, filepath.Join(checkout, "src")} {
+		if err := rules.Check(path, path, false); err != nil {
+			t.Errorf("%s: %v", path, err)
+		}
+	}
+}

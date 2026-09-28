@@ -31,6 +31,13 @@ turn end ([delivery.md](delivery.md#a-resumed-conversation)). Without that, the 
 would be closed by the resume and its grant could never end by a report. A wait is taken
 over within a day of the task being read; past that the task is lost, its sender reads so, and
 main lets its grant go ([delivery-owed.md](delivery-owed.md#what-others-owe-you-rewake-inbox---awaited)).
+The day counts from the first reading: a wait taken over keeps the time the earlier run
+read the task, so a chain of resumes cannot keep a task, and its grant, owed for longer.
+
+A task not read yet belongs to the run it was written for. A run resuming the
+conversation cannot read another run's mail, and the sender reads that no report is
+coming; so once that run has ended, main counts the task closed and lets its grant go
+rather than hand it to a resume that will never see the task.
 
 ## The copy that follows the conversation
 
@@ -45,9 +52,12 @@ asked like any other, and main refuses it.
 
 ## Confirmed again
 
-At delivery the recipient's wrapper names, when it asks main to confirm a grant, the
-conversation the task goes into — the one the delivery pins — and main's wrapper keeps it
-beside the grant. It takes that name only from the wrapper of the run the grant went to —
+Once a delivery has pinned a granted task's conversation, under the mailbox lock as the
+letter becomes readable, the recipient's wrapper names that conversation to main, and
+main's wrapper keeps it beside the grant. The confirmation before it names none: a task
+that waited for an idle reader, or for a turn to end, may be pinned to another
+conversation than the one the session had when the grant was first checked — after a
+`/clear`, say — and main keeps only the first one it hears. It takes that name only from the wrapper of the run the grant went to —
 the same check as for a resumed run below — and keeps the first one named: a worker reads
 its letter before delivery, and it, or any other process of this user, could otherwise
 confirm the grant with a conversation of its own.
@@ -62,8 +72,9 @@ Main's wrapper hands the grant over only when every condition holds:
   the one a copy names, since a worker could write the copy and then resume a
   conversation of its own with it;
 - the run it belongs to has ended;
-- its task is open: on its way or unread, or read and not reported on by any run of the
-  recipient; neither withdrawn nor failed;
+- its task is open: on its way or unread to a run still running, or read and not
+  reported on by any run of the recipient; neither withdrawn nor failed, which a status
+  says before any wait record is looked at, since a worker can write a wait record;
 - the process asking is the wrapper of the run it names: that pid from `SO_PEERCRED`,
   alive with that start time, in main's mount, user and PID namespaces;
 - that run holds the recipient's name in the registry now.

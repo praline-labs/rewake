@@ -256,3 +256,18 @@ func TestAnAddendumToAWaitingGrantIsRefused(t *testing.T) {
 		t.Fatalf("the refused addendum was written: %d messages", len(messages))
 	}
 }
+
+// The text of a send names each granted directory as resolved: a name given
+// through a link leads elsewhere, and main reads here where.
+func TestASendNamesTheDirectoriesItGrants(t *testing.T) {
+	w := newGrantWorld(t, "main", "codex")
+	lib := filepath.Join(w.home, "work", "lib")
+	link := filepath.Join(w.home, "work", "out")
+	if err := os.Symlink(lib, link); err != nil {
+		t.Fatal(err)
+	}
+	code, out, stderr := run("send", w.peer.Name, "Write the output", "--wait=0", "--grant-dir", link)
+	if code != ExitPending || !strings.Contains(out+stderr, "Rewake: grants "+w.peer.Name+" write access to: "+lib+"\n") {
+		t.Fatalf("send: %d %q %q", code, out, stderr)
+	}
+}

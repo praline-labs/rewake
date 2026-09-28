@@ -94,15 +94,13 @@ func handleEdit(ctx *Context, call Call) error {
 		Kind: old.Kind, Text: text, CreatedAt: time.Now(), Replaces: old.ID, AddendumTo: old.AddendumTo,
 	}
 	// A grant goes on only while the sender is still the main that could
-	// give it. Its directories are checked again when the replacement is
-	// delivered, as the original's would have been.
+	// give it, and only as this session's wrapper holds it: the letter on
+	// disk may have been rewritten. Its directories are checked again when
+	// the replacement is delivered, as the original's would have been.
 	if self.Role == role.Main.ID {
-		replacement.GrantGit, replacement.GrantDirs, replacement.GrantBroad = old.GrantGit, old.GrantDirs, old.GrantBroad
-	}
-	// Registered under the replacement's own id: the original's registration
-	// confirms the original only.
-	if err := registerGrant(dir, self, epoch, replacement); err != nil {
-		return err
+		if err := carryGrant(dir, self, epoch, old, &replacement); err != nil {
+			return err
+		}
 	}
 	if kind.kind == inbox.Question {
 		release, err := inbox.ReserveAnswer(dir, self.Name, replacement.ID)

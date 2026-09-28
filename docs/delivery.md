@@ -345,7 +345,8 @@ What that run read and had not reported on is in the conversation, and only the 
 can finish it. So each delivery pins the conversation it went into
 (`inbox/<name>/threads/<id>`, written before the task becomes readable), and once the new
 run's harness names its conversation, the wrapper takes over the earlier runs' waits for
-the tasks pinned to that conversation, as if this run had read them now
+the tasks pinned to that conversation, as if this run had read them when the earlier
+one did
 (`internal/inbox/adopt.go`). Only then does it sweep the earlier runs' records. The
 report at the new run's next turn end settles those tasks for their senders; a task
 delivered into another conversation, or never pinned, is not taken over, and its sender

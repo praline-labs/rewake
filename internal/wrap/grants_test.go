@@ -146,3 +146,43 @@ func TestAGrantForAHookWaitsForIdleAndIsKept(t *testing.T) {
 		t.Fatalf("an unconfirmed grant: %v, kept %v", err, keeper.Entries())
 	}
 }
+
+// Main holds the conversation a grant's letter was pinned to, not the one its
+// recipient had when it first checked the grant: only that one may take the
+// grant again after a resume. This process stands for both wrappers.
+func TestMainHoldsTheConversationTheLetterWasPinnedTo(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "rooms", "default")
+	run := ownEpoch(t)
+	lib, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	address := state.AuthorityAddress(dir, run)
+	authority, err := grantauth.Listen(address, os.Getpid(), time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go authority.Serve(ctx)
+	defer authority.Close()
+	if err := grantauth.Register(address, grantauth.Grant{ID: "m1", To: "worker", ToEpoch: run, Dirs: []string{lib}}); err != nil {
+		t.Fatal(err)
+	}
+	message := inbox.Message{ID: "m1", From: "lead", FromEpoch: run, To: "worker", ToEpoch: run, Kind: inbox.Task, GrantDirs: []string{lib}}
+	check := checkGrant(dir, "worker", run, nil, nil, func() (string, error) { return "before-clear", nil })
+	if err := check(message); err != nil {
+		t.Fatal(err)
+	}
+	pinGrant(dir, "worker", run)(message, "after-clear")
+	expect := grantauth.Expect{PID: os.Getpid()}
+	if expect.Start, err = proc.StartTime(os.Getpid()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := grantauth.Reconfirm(address, expect, "m1", "worker", run, "before-clear"); err == nil {
+		t.Fatal("the grant would be taken into the conversation it was checked in")
+	}
+	if _, err := grantauth.Reconfirm(address, expect, "m1", "worker", run, "after-clear"); err != nil {
+		t.Fatalf("not taken into the conversation it was pinned to: %v", err)
+	}
+}
