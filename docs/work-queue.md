@@ -183,8 +183,13 @@ What the day of the 1.0.0 release left, recorded on September 28, 2026 at the ow
   `rewake pending "needs write to <dir>"`, and main answers with a task carrying
   `--grant-dir`); or hold the hook while main is asked, with a command for main to allow
   or deny, bounded by the hook's timeout; and for Codex, the approval requests its
-  app-server sends. Which sessions it applies to, and what a person at the keyboard keeps,
-  is part of the decision.
+  app-server sends. The owner decided on September 28, 2026: worker sessions only, never
+  main; what a grant or the workspace already allows passes without asking, and only a
+  request beyond that reaches main; main allows only what it may do itself, and anything
+  dangerous — deleting, a force push, writing another tool's settings — goes to the owner.
+  With that, a worker could run in the manual mode instead of auto mode, and what auto
+  mode's classifier refuses today would reach main as a request instead of a dead end.
+  Research of how long each harness lets such a request wait comes first.
 - **A requested compaction left without its outcome**
   ([intermittent-bugs.md](intermittent-bugs.md#a-requested-compaction-counted-as-nobodys-with-no-outcome--open-september-28-2026)):
   the plugin's `told` swallows a failed call; check the exit, retry once, and put the mark
