@@ -260,8 +260,7 @@ report and going unrecognized by whoever is waiting.
 
 ## How the CLI is organised
 
-The reference is `i-plane` (`~/code/self/free-plane/i-plane`), which took these
-patterns furthest.
+The patterns come from an earlier agent-facing CLI, which took them furthest.
 
 - **One command table** — `internal/cli/registry.go`. The parser, the guide, the
   help pages and the hint on a refusal are all derived from it. A table that has

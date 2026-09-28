@@ -236,8 +236,8 @@ receive messages — it has to be restarted through the wrapper.
 
 ## Interface
 
-The conventions are carried over from i-plane, where agents have already
-proven them out.
+The conventions are carried over from an earlier agent-facing CLI, where agents
+have already proven them out.
 
 ### Commands
 

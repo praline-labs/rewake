@@ -5,7 +5,7 @@ with. The heading is the symptom: that is what will be searched for.
 
 Moved here on September 22, 2026 from a handoff set deleted together with the
 archives. Traps of the craft — the ones about how we work rather than about rewake —
-stayed in `.shift/knowledge/traps.md`, along the line the owner drew on September 21.
+stayed in the owner's private notes, along the line the owner drew on September 21.
 
 Some entries have already sunk into the code and the rules; they stay here because a
 rule without its reason is the first thing forgotten.

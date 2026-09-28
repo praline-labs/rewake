@@ -27,7 +27,7 @@ const review = `
 harness = "claude"
 rewake  = ["--general", "--name", "review"]
 args    = []
-command = "claude-worker"
+command = "my-claude"
 `
 
 // The command field becomes rewake's --command, before the harness word, so
@@ -37,7 +37,7 @@ func TestTheCommandFieldBecomesTheFlag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "--command claude-worker --general --name review claude"
+	want := "--command my-claude --general --name review claude"
 	if strings.Join(got, " ") != want {
 		t.Errorf("got %q, want %q", strings.Join(got, " "), want)
 	}
@@ -51,7 +51,7 @@ func TestATypedCommandReplacesTheAliasCommand(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if joined := strings.Join(got, " "); strings.Contains(joined, "claude-worker") || strings.Count(joined, "--command") != 1 {
+		if joined := strings.Join(got, " "); strings.Contains(joined, "my-claude") || strings.Count(joined, "--command") != 1 {
 			t.Errorf("%v: got %q, want only the typed command", typed, joined)
 		}
 	}
@@ -61,9 +61,9 @@ func TestATypedCommandReplacesTheAliasCommand(t *testing.T) {
 // in either spelling.
 func TestAProjectAliasMayNotChooseTheProgram(t *testing.T) {
 	for name, contents := range map[string]string{
-		"field":  "[alias.x]\nharness = \"claude\"\ncommand = \"claude-worker\"\n",
-		"flag":   "[alias.x]\nharness = \"claude\"\nrewake = [\"--command\", \"claude-worker\"]\n",
-		"joined": "[alias.x]\nharness = \"claude\"\nrewake = [\"--command=claude-worker\"]\n",
+		"field":  "[alias.x]\nharness = \"claude\"\ncommand = \"my-claude\"\n",
+		"flag":   "[alias.x]\nharness = \"claude\"\nrewake = [\"--command\", \"my-claude\"]\n",
+		"joined": "[alias.x]\nharness = \"claude\"\nrewake = [\"--command=my-claude\"]\n",
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := set(t, contents).Expand([]string{"x"}, []string{"claude"}, valuedWithCommand, []string{"main", CommandFlag}, codexLike)

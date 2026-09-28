@@ -156,10 +156,10 @@ func TestALateEventDoesNotOverwriteANewerOne(t *testing.T) {
 // line leaves the key out rather than keeping it.
 func TestAModelWithoutEffortClearsIt(t *testing.T) {
 	var f folding
-	f.send(status("opus", "high", nil))
-	f.send(status("haiku", "", nil))
-	if snapshot := f.state.snapshot(); *snapshot.Model != "haiku" || snapshot.Effort != nil {
-		t.Errorf("model %v effort %v, want haiku and unknown", *snapshot.Model, snapshot.Effort)
+	f.send(status("model-a", "high", nil))
+	f.send(status("model-b", "", nil))
+	if snapshot := f.state.snapshot(); *snapshot.Model != "model-b" || snapshot.Effort != nil {
+		t.Errorf("model %v effort %v, want model-b and unknown", *snapshot.Model, snapshot.Effort)
 	}
 }
 

@@ -25,7 +25,7 @@ func TestACommandThatCannotRunIsRefused(t *testing.T) {
 	}
 	for _, tc := range []struct{ value, want string }{
 		{"no-such-wrapper-anywhere", "on PATH"},
-		{"/nonexistent/claude-worker", "at that path"},
+		{"/nonexistent/my-claude", "at that path"},
 		{plain, "at that path"},
 	} {
 		code, _, errOut := run("--command", tc.value, "claude")
@@ -78,15 +78,15 @@ func TestARelativeCommandIsFixedAgainstTheLaunchDirectory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(launchDir, "codex-worker"), []byte("#!/bin/sh\n"), 0o700); err != nil {
+	if err := os.WriteFile(filepath.Join(launchDir, "my-codex"), []byte("#!/bin/sh\n"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	call := Call{Command: findCommand("codex"), Flags: map[string]string{"command": "./codex-worker"}}
+	call := Call{Command: findCommand("codex"), Flags: map[string]string{"command": "./my-codex"}}
 	program, err := launchProgram(call)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := filepath.Join(launchDir, "codex-worker"); program != want {
+	if want := filepath.Join(launchDir, "my-codex"); program != want {
 		t.Errorf("program = %q, want %q", program, want)
 	}
 	call.Flags["command"] = "sh"

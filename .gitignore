@@ -1,7 +1,4 @@
 /rewake
 dist/
-handoffs/
 .rewake.env
-ideas/
-.shift/
 .rewake-checks/

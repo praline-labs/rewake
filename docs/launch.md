@@ -70,7 +70,7 @@ person's own wrapper script, which sets up an environment — a configuration di
 credentials — and then runs the harness. The harness is still named by its ordinary word:
 
 ```bash
-rewake --general --name review --command claude-worker claude
+rewake --general --name review --command my-claude claude
 ```
 
 - **Where it goes:** before the harness word, like `--name` — everything after that word
@@ -104,7 +104,7 @@ rewake --general --name review --command claude-worker claude
   before the harness word — in the user alias file only
   ([launch-defaults.md](launch-defaults.md#naming-a-whole-launch)). With it, a launch
   through a wrapper is one word: `[alias.review]` with `harness = "claude"`, `rewake =
-  ["--general", "--name", "review"]` and `command = "claude-worker"` is `rewake review`.
+  ["--general", "--name", "review"]` and `command = "my-claude"` is `rewake review`.
 - Owner decision, September 23, 2026: the harness is named, the program is given; no
   guessing from names and no probing.
 

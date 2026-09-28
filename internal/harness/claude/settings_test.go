@@ -289,18 +289,18 @@ func TestACommandReplacesOnlyTheProgram(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	request.Command = "claude-worker"
+	request.Command = "my-claude"
 	wrapped, err := New().Launch(request)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if plain.Command != "claude" || wrapped.Command != "claude-worker" {
+	if plain.Command != "claude" || wrapped.Command != "my-claude" {
 		t.Errorf("commands %q and %q", plain.Command, wrapped.Command)
 	}
 	if strings.Join(plain.Args, "\x00") != strings.Join(wrapped.Args, "\x00") || strings.Join(plain.Env, "\x00") != strings.Join(wrapped.Env, "\x00") {
 		t.Errorf("the wrapper changed more than the program")
 	}
-	if argv := tapArgv(t, onlySettings(t, wrapped)); argv[1] != "status-tap" || strings.Contains(argv[0], "claude-worker") {
+	if argv := tapArgv(t, onlySettings(t, wrapped)); argv[1] != "status-tap" || strings.Contains(argv[0], "my-claude") {
 		t.Errorf("the tap runs %q, want rewake", argv)
 	}
 }
