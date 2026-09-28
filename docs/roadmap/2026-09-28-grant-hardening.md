@@ -44,6 +44,11 @@ reconnaissance found missing there. The worktree findings are the next package.
 - **A failed delivery did not settle its task**, and a wait record a worker wrote
   outweighed a status saying taken back or failed. Such a status is read first now, in
   `inbox.Settled` and `inbox.TaskOpen` alike.
+- **The help taught the tiers from before.** Moved onto main after the CLI-truth round,
+  whose send notes and main's playbook listed the hard tier and the broad one as they
+  were; they now name the added places, a path through `/tmp` on its way elsewhere, a
+  short name that cannot be read back, and a directory with `.git`, `.claude`, `.codex`
+  or `.agents` in its path as broad.
 - **Tests** for each of those, each checked against the fix taken out, and for the gaps
   the reconnaissance listed in the grant authority, the keeper, the tiers, the Claude Code
   permission decisions, the Codex grant path and the resume.
