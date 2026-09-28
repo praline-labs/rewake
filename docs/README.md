@@ -128,23 +128,28 @@ everything else.
   file-tool write, what stays with the person, taking back and the modes it works in, and
   why it is a courtesy rather than a boundary. Open it when a Claude Code worker is asked,
   or not asked, about a write in a granted directory.
-- [grants-resume.md](grants-resume.md) — a grant after a cold resume: how the new run
-  finds its conversation and takes over the task's wait, the journal copy that follows the
-  conversation, main's wrapper confirming the grant again and what it checks, what Claude
-  Code and Codex each do with the answer, and what is not restored. Open it when a resumed
+- [grants-resume.md](grants-resume.md) — a grant after a cold resume: finding the
+  conversation and the task's wait, the journal copy, main's wrapper confirming it again,
+  what each harness does with the answer and what is not restored. Open it when a resumed
   session gains or lacks a granted directory.
-- [session-state.md](session-state.md) — the telemetry line main sees for its workers
-  (activity, context used, compactions): what is shown to whom, the availability
-  notifications main receives when a worker becomes ready, the context formula, how
-  model and effort are confirmed, the compaction counter, snapshot staleness, with its
-  acceptance log. Open it when `rewake list`, a header or an availability notice shows
-  a wrong or stale value.
+- [permission-requests.md](permission-requests.md) — design, not built: a worker's
+  permission request held while main answers with `rewake permission`, refused with the
+  next step past rewake's limit; the message kind, races, security, the live probe and the
+  owner's open choices, with its sources file by file in
+  [permission-requests-sources.md](permission-requests-sources.md). Open it before
+  building it or when a worker stalls on a prompt.
+- [conversation-reset.md](conversation-reset.md) — design, not built: `rewake clear` from
+  main and a conversation marker in `list`, notices and `--awaited`; what `/clear` and
+  `/new` do on each harness, why Codex cannot be switched from outside, races, the probe
+  and the owner's open choices. Open it before building either.
+- [session-state.md](session-state.md) — the telemetry line main sees for its workers:
+  who sees what, availability notifications, the context formula, confirmed model and
+  effort, the compaction counter, staleness, and its acceptance log. Open it when
+  `rewake list`, a header or an availability notice shows a wrong or stale value.
 - [claude-telemetry.md](claude-telemetry.md) — how a Claude Code session's telemetry is
-  collected: the background hooks, the status-line tap that runs the person's own status
-  line in its place, the settings layers it resolves at each call, the collector in the
-  wrapper, and the owner decisions that bound it. Open it when a Claude Code row of
-  `rewake list` is wrong or unknown, or when a person's status line misbehaves under
-  rewake.
+  collected: background hooks, the status-line tap running the person's own status line,
+  the settings layers, the collector and the owner decisions. Open it when a Claude Code
+  row of `rewake list` is wrong, or a status line misbehaves under rewake.
 - [claude-plugin.md](claude-plugin.md) — rewake's function-hooks plugin for Claude Code:
   what the launch carries, the four events it reports and the fields it never reads, how
   an interrupted turn becomes `stopped` without a second report for an ordinary one, how

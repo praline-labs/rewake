@@ -195,8 +195,16 @@ What the day of the 1.0.0 release left, recorded on September 28, 2026 at the ow
   approval request waits with no limit, and rewake's relay can answer it itself (the model
   then sees only "rejected by user"). The owner chose on September 28, 2026: hold the
   request while main decides, bounded by rewake's own limit, and fall back to refusing with
-  the next step when main does not answer in time. Next: the design and a live probe of a
-  long hook on Claude Code.
+  the next step when main does not answer in time. The design and the live probe of a
+  long hook on Claude Code are in [permission-requests.md](permission-requests.md); next,
+  the owner's answers to its open questions, then building it.
+- **Resetting a worker's conversation, and marking a session's conversation — to decide.**
+  The owner asked on September 28, 2026 for `rewake clear` from main and for a marker
+  that shows a session's conversation as new, cleared or resumed. The design and the
+  verified facts are in [conversation-reset.md](conversation-reset.md): Claude Code can
+  clear through its plugin, Codex cannot switch its terminal from outside, and the marker
+  works on both. Next, the owner's answers to its open choices, then the probe and the
+  build.
 - **A requested compaction left without its outcome**
   ([intermittent-bugs.md](intermittent-bugs.md#a-requested-compaction-counted-as-nobodys-with-no-outcome--open-september-28-2026)):
   the plugin's `told` swallows a failed call; check the exit, retry once, and put the mark
