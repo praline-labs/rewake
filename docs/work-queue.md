@@ -200,6 +200,11 @@ What the day of the 1.0.0 release left, recorded on September 28, 2026 at the ow
   and interrupt as commands, worktrees, grant restore after a resume, or a Codex main that
   cannot grant; the README's parity table of September 28 was checked against the code
   instead. Bring the map up to date and keep the two in step.
+- **A grant printed twice on Codex.** A send with `--grant-dir` names the grant in the
+  delivery line (`write granted: <dir>`) and again as `grants <name> write access to:
+  <dir>`, seen live on September 28, 2026 on 1.0.2
+  ([roadmap/2026-09-28-live-grants-1.0.2.md](roadmap/2026-09-28-live-grants-1.0.2.md)).
+  Print it once.
 - **Publishing from CI** with npm's trusted publishing and provenance: the repository is
   public since September 28, 2026, so nothing waits for it now.
 
