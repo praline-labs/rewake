@@ -15,7 +15,7 @@ import (
 
 // launchedElsewhere rewrites a checkout's record as if a rewake launch still
 // running in another process had made it and not yet claimed it.
-func (worktreeLab) launchedElsewhere(t *testing.T, record worktree.Record) {
+func (lab worktreeLab) launchedElsewhere(t *testing.T, record worktree.Record) {
 	t.Helper()
 	command := exec.Command("sleep", "60")
 	if err := command.Start(); err != nil {
@@ -29,6 +29,12 @@ func (worktreeLab) launchedElsewhere(t *testing.T, record worktree.Record) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	lab.launchedBy(t, record, strconv.Itoa(command.Process.Pid)+"."+strconv.FormatUint(start, 10), proc.Namespace())
+}
+
+// launchedBy rewrites a checkout's record to name a launcher and no session.
+func (worktreeLab) launchedBy(t *testing.T, record worktree.Record, epoch, namespace string) {
+	t.Helper()
 	path := filepath.Join(filepath.Dir(record.Path), filepath.Base(record.Path)+".json")
 	raw, err := os.ReadFile(path)
 	if err != nil {
@@ -38,7 +44,8 @@ func (worktreeLab) launchedElsewhere(t *testing.T, record worktree.Record) {
 	if err := json.Unmarshal(raw, &fields); err != nil {
 		t.Fatal(err)
 	}
-	fields["launcher"] = strconv.Itoa(command.Process.Pid) + "." + strconv.FormatUint(start, 10)
+	fields["launcher"] = map[string]string{"epoch": epoch, "pidNamespace": namespace}
+	delete(fields, "session")
 	if raw, err = json.Marshal(fields); err != nil {
 		t.Fatal(err)
 	}
@@ -61,6 +68,14 @@ func TestWorktreeRmKeepsACheckoutItsLaunchIsStillStarting(t *testing.T) {
 	}
 	if code, out, errOut := run("worktree", "rm", "starting", "--force"); code != ExitOK || !strings.Contains(out, "removed") {
 		t.Errorf("rm --force: %d %s %s", code, out, errOut)
+	}
+
+	// From another pid namespace every launcher looks ended; rm cannot tell
+	// and keeps the checkout rather than guess.
+	unseen := lab.made(t, "unseen")
+	lab.launchedBy(t, unseen, "1.1", "pid:[1]")
+	if code, _, errOut := run("worktree", "rm", "unseen"); code != ExitFailed || !strings.Contains(errOut, "cannot tell whether that launch still runs") {
+		t.Errorf("rm unseen: %d %s", code, errOut)
 	}
 }
 

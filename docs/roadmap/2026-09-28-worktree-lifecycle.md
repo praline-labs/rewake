@@ -50,6 +50,19 @@ repository hooks land runs.
   hooks.
 - **Tests** for each, each checked against the fix taken out.
 
+Acceptance on the Codex side found two more, both fixed on the branch:
+
+- **A launcher seen from another pid namespace looked ended.** The record named the
+  launch by pid and start time only, and `proc.Alive` answers false for a pid it cannot
+  see: rm from a sandbox, or with `/proc` unreadable, removed a checkout a launch had
+  just made. The record keeps the launcher's pid namespace, and a launcher this process
+  cannot judge counts as launching (`Launch.Judgeable`, as `registry.Session.Judgeable`);
+  the exclusion of this process's own launch minds the namespace too.
+- **The main checkout was found by the Git directory's name.** With
+  `--separate-git-dir` that directory is not called `.git`, and a root inside the main
+  checkout passed from a linked one. The main checkout now comes from `core.worktree`
+  and the first entry of `git worktree list`.
+
 ## What stays open
 
 - land, finish and the checks of ls and rm are still not serialized with a
@@ -58,3 +71,5 @@ repository hooks land runs.
   says what did.
 - The git calls without hooks — `git status` with a clean or smudge filter, say — have no
   time limit.
+- A repository made with `--separate-git-dir` and no `core.worktree` records its main
+  checkout nowhere git keeps, so from a linked checkout a root inside it is not refused.

@@ -69,11 +69,11 @@ type Record struct {
 	// the launch to tell; it is not kept.
 	Skipped   []string  `json:"-"`
 	CreatedAt time.Time `json:"createdAt"`
-	// Launcher is the rewake process that made the checkout, as pid.start:
-	// until the session is claimed, that it still runs is all that says the
-	// checkout is about to be used.
-	Launcher string `json:"launcher,omitempty"`
-	Session  *Owner `json:"session,omitempty"`
+	// Launcher is the rewake process that made the checkout: until the
+	// session is claimed, that it still runs is all that says the checkout is
+	// about to be used.
+	Launcher *Launch `json:"launcher,omitempty"`
+	Session  *Owner  `json:"session,omitempty"`
 }
 
 // Owner is the session a checkout was made for.
@@ -188,7 +188,7 @@ func Create(root, from, name string) (Record, error) {
 	// Git would list the checkout among the repository's own files, and an
 	// agent searching the repository would find a second copy of it. The main
 	// checkout is asked too: a launch from a linked one stands in another top.
-	for _, top := range []string{source.Source, mainCheckout(source.CommonDir)} {
+	for _, top := range append([]string{source.Source}, mainTops(source.CommonDir)...) {
 		if top != "" && inside(resolved(root), resolved(top)) {
 			return Record{}, &UnusableError{Reason: fmt.Sprintf("the worktree directory %s is inside the repository at %s; set %s to a directory outside it", root, top, RootEnv)}
 		}

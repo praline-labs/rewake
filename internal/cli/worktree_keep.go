@@ -55,7 +55,11 @@ func keepReasonsAndCheck(record worktree.Record) ([]string, worktree.Check, erro
 	if record.Launching() {
 		// Made and not yet claimed: the session registers only after the
 		// checkout is in place, and until then nothing else says it is used.
-		reasons = append(reasons, "a rewake launch that made it is still starting its session")
+		if record.Launcher.Judgeable() {
+			reasons = append(reasons, "a rewake launch that made it is still starting its session")
+		} else {
+			reasons = append(reasons, "a rewake launch made it and has not claimed it yet, and from here rewake cannot tell whether that launch still runs — it started in another pid namespace, or /proc cannot be read; run this where the launch ran, or use --force once you know it has ended")
+		}
 	}
 	check, err := worktree.Inspect(record)
 	if err != nil {

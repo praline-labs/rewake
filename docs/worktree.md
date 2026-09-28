@@ -71,7 +71,12 @@ bring the work back, and that Claude Code launches get the same checkout.
   the repository, where it would show up in `git status` and in the agent's own
   searches: a `$REWAKE_WORKTREES` inside it, compared with symbolic links resolved, is
   refused — inside the checkout the launch came from, or inside the main checkout when
-  the launch came from a linked one. One place for every repository, so
+  the launch came from a linked one. The main checkout is where git's data puts it:
+  `core.worktree` when the repository sets it, and the first entry of
+  `git worktree list` unless bare. A repository made with `--separate-git-dir` and no
+  `core.worktree` records its main checkout nowhere — git 2.43 lists the Git directory
+  there (checked September 28, 2026) — so from a linked checkout of it only a root inside
+  the Git directory is refused. One place for every repository, so
   `rewake worktree ls` sees them all.
 - **Where the launch starts.** At the launch directory's place within the checkout, as
   Codex does; at the checkout's top when that directory is not in the commit, an
@@ -92,7 +97,11 @@ bring the work back, and that Claude Code launches get the same checkout.
   name, room, run and the room's state directory. Between the checkout being made and
   the session being registered only the process that made it says the checkout is in
   use: while it runs and no session is claimed, `ls` shows the worktree as launching and
-  rm keeps it.
+  rm keeps it. The record names that process with its pid namespace, and a process that
+  cannot tell whether it runs — in another pid namespace, a sandbox, or with `/proc`
+  unreadable — takes it as running, as for a session: taking it for ended would remove
+  the checkout the launch is about to start in. rm and finish refuse such a checkout
+  until run where the launch ran, or rm is given `--force`.
 - **A new conversation only.** A continuation is refused with `--worktree`: it continues
   a conversation in the directory it was started in. For Codex that is `resume` and
   `fork`. The terminal's `thread/resume` carries a cwd only from its own `-C`/`--cd`,

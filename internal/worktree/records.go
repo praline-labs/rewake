@@ -6,8 +6,10 @@ import (
 	"os"
 	pathpkg "path"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/praline-labs/rewake/internal/proc"
 	"github.com/praline-labs/rewake/internal/registry"
@@ -38,34 +40,68 @@ func keepIncluded(record Record) Record {
 	return record
 }
 
-// launcher is this process as a record names its launcher, or "" when its
-// start time cannot be read.
-func launcher() string {
-	start, err := proc.StartTime(os.Getpid())
-	if err != nil {
-		return ""
-	}
-	return strconv.Itoa(os.Getpid()) + "." + strconv.FormatUint(start, 10)
+// Launch is the rewake process that made a checkout, with the pid namespace
+// its pid means something in.
+type Launch struct {
+	// Epoch is pid.start; a start time that could not be read is 0, which
+	// matches any.
+	Epoch        string `json:"epoch"`
+	PIDNamespace string `json:"pidNamespace,omitempty"`
+}
+
+// launcher is this process as a record names its launcher.
+func launcher() *Launch {
+	start, _ := proc.StartTime(os.Getpid())
+	return &Launch{Epoch: strconv.Itoa(os.Getpid()) + "." + strconv.FormatUint(start, 10), PIDNamespace: proc.Namespace()}
+}
+
+// Judgeable says whether this process can tell if the launcher runs: only
+// from the same pid namespace, as for a session (registry.Session.Judgeable).
+// From another one — a sandbox — every pid but its own looks gone, and so
+// does every pid when /proc cannot be read.
+func (l Launch) Judgeable() bool {
+	here := proc.Namespace()
+	return here != "" && l.PIDNamespace == here
 }
 
 // Launching says whether the checkout is still being made or its session
 // started, by a rewake process other than this one: the record names no
-// session yet, and the process that made it still runs.
+// session yet, and the process that made it still runs — or this process
+// cannot tell that it does not, since taking such a launch for ended would
+// remove the checkout it is about to start in.
 func (r Record) Launching() bool {
-	if r.Session != nil {
+	if r.Session != nil || r.Launcher == nil {
 		return false
 	}
-	pid, start, ok := registry.ParseEpoch(r.Launcher)
+	if !r.Launcher.Judgeable() {
+		return true
+	}
+	pid, start, ok := registry.ParseEpoch(r.Launcher.Epoch)
 	return ok && pid != os.Getpid() && proc.Alive(pid, start)
 }
 
-// mainCheckout is the checkout holding a repository's shared Git directory,
-// or "" for one kept apart from any, a bare repository's.
-func mainCheckout(commonDir string) string {
-	if filepath.Base(commonDir) != ".git" {
-		return ""
+// mainTops are where git places a repository's main checkout, from its own
+// data rather than from where the Git directory lies: core.worktree when the
+// repository sets it, relative to the Git directory, and the first entry of
+// git worktree list unless that is bare. With --separate-git-dir and no
+// core.worktree, git 2.43 names the Git directory itself there (checked
+// September 28, 2026): the main checkout is then written nowhere git keeps.
+func mainTops(commonDir string) []string {
+	var tops []string
+	if configured, err := gitDirOutput(commonDir, "config", "--get", "core.worktree"); err == nil && configured != "" {
+		if !filepath.IsAbs(configured) {
+			configured = filepath.Join(commonDir, configured)
+		}
+		tops = append(tops, filepath.Clean(configured))
 	}
-	return filepath.Dir(commonDir)
+	if list, err := gitDirOutput(commonDir, "worktree", "list", "--porcelain"); err == nil {
+		first, _, _ := strings.Cut(list, "\n\n")
+		lines := strings.Split(first, "\n")
+		if top, ok := strings.CutPrefix(lines[0], "worktree "); ok && !slices.Contains(lines, "bare") {
+			tops = append(tops, top)
+		}
+	}
+	return tops
 }
 
 // List returns every checkout recorded under root, by repository and name. A

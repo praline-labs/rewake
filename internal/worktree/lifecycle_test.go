@@ -43,11 +43,15 @@ func stored(t *testing.T, record Record) Record {
 	return held
 }
 
-// launchedBy rewrites a record as if another process had made it.
-func launchedBy(t *testing.T, record Record, launcher string) Record {
+// here names a launcher by its epoch, in this process's pid namespace.
+func here(epoch string) *Launch { return &Launch{Epoch: epoch, PIDNamespace: proc.Namespace()} }
+
+// launchedBy rewrites a record as if another process had made it and not
+// claimed it yet.
+func launchedBy(t *testing.T, record Record, launcher *Launch) Record {
 	t.Helper()
 	record = stored(t, record)
-	record.Launcher = launcher
+	record.Launcher, record.Session = launcher, nil
 	data, err := encode(record)
 	if err != nil {
 		t.Fatal(err)
@@ -132,7 +136,8 @@ func TestRemovalLooksAtWhatALaunchMadeNotAtItsClaim(t *testing.T) {
 // A checkout made and not yet claimed by its session is still being launched
 // while the process that made it runs; this process's own is not somebody
 // else's launch, a claimed one is the session's, and an ended launcher says
-// nothing.
+// nothing. A launcher this process cannot judge — another pid namespace, its
+// own pid there included, or /proc unreadable here — counts as launching.
 func TestALaunchStillStartingIsSeen(t *testing.T) {
 	isolate(t)
 	source := repository(t, "project")
@@ -140,16 +145,26 @@ func TestALaunchStillStartingIsSeen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if held := stored(t, record); held.Launcher == "" || held.Launching() {
-		t.Errorf("made by this process: launcher %q, launching %v", held.Launcher, held.Launching())
+	own := stored(t, record).Launcher.Epoch
+	if held := stored(t, record); held.Launcher == nil || held.Launcher.PIDNamespace == "" || held.Launching() {
+		t.Errorf("made by this process: launcher %+v, launching %v", held.Launcher, held.Launching())
 	}
-	if other := launchedBy(t, record, liveProcess(t)); !other.Launching() {
+	if other := launchedBy(t, record, here(liveProcess(t))); !other.Launching() {
 		t.Error("a launch by another live process is not seen")
 	} else if claimed, err := Claim(other, Owner{Name: "tree", Epoch: "1.1"}); err != nil || claimed.Launching() {
 		t.Errorf("claimed: %v, %v", claimed.Launching(), err)
 	}
-	if ended := launchedBy(t, record, "1.1"); ended.Launching() {
+	if ended := launchedBy(t, record, here("1.1")); ended.Launching() {
 		t.Error("a launcher that ended is taken for a launch")
+	}
+	for _, elsewhere := range []*Launch{{Epoch: "1.1", PIDNamespace: "pid:[1]"}, {Epoch: own, PIDNamespace: "pid:[1]"}, {Epoch: "1.1"}} {
+		if unseen := launchedBy(t, record, elsewhere); !unseen.Launching() {
+			t.Errorf("a launcher %+v this process cannot judge is taken for ended", elsewhere)
+		}
+	}
+	swap(t, &proc.Default, proc.Reader{Root: t.TempDir()})
+	if blind := launchedBy(t, record, here("1.1")); !blind.Launching() {
+		t.Error("with /proc unreadable a launcher is taken for ended")
 	}
 }
 
@@ -187,6 +202,36 @@ func TestARootInsideTheMainCheckoutIsRefusedFromALinkedOne(t *testing.T) {
 	var unusable *UnusableError
 	if !errors.As(err, &unusable) || !strings.Contains(err.Error(), source) {
 		t.Errorf("got %v", err)
+	}
+}
+
+// Where the main checkout is comes from git's data, not from the Git
+// directory's name: with --separate-git-dir that directory is called anything,
+// and core.worktree says where the checkout is; a root inside either is
+// refused from a linked checkout.
+func TestARootInsideASeparateGitDirsCheckoutIsRefused(t *testing.T) {
+	isolate(t)
+	base, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	top, gitDir := filepath.Join(base, "project"), filepath.Join(base, "metadata")
+	write(t, filepath.Join(top, "file"), "one\n")
+	must(t, base, "init", "-q", "-b", "main", "--separate-git-dir", gitDir, top)
+	must(t, top, "add", ".")
+	must(t, top, "commit", "-q", "-m", "First")
+	must(t, gitDir, "config", "core.worktree", "../project")
+	linked := filepath.Join(base, "linked")
+	must(t, top, "worktree", "add", "-q", "-b", "side", linked)
+	for _, root := range []string{filepath.Join(top, "trees"), filepath.Join(gitDir, "trees")} {
+		_, err := Create(root, linked, "work")
+		var unusable *UnusableError
+		if !errors.As(err, &unusable) {
+			t.Errorf("a root at %s: %v", root, err)
+		}
+	}
+	if _, err := Create(filepath.Join(base, "trees"), linked, "work"); err != nil {
+		t.Errorf("a root outside: %v", err)
 	}
 }
 
