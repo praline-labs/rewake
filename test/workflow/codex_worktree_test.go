@@ -302,7 +302,7 @@ var mutantWorktreeNotEntered = mutation{
 // remove.
 var mutantWorktreeRunningIgnored = mutation{
 	name:  "worktree-running-ignored",
-	file:  "internal/cli/worktree.go",
+	file:  "internal/cli/worktree_keep.go",
 	edits: []edit{{"\t\t\t\tif session.Alive() && (made ||", "\t\t\t\tif false && session.Alive() && (made ||"}},
 }
 
@@ -310,7 +310,7 @@ var mutantWorktreeRunningIgnored = mutation{
 // entry for a checkout that is gone, the moved one's included.
 var mutantWorktreeGitKept = mutation{
 	name:  "worktree-git-kept",
-	file:  "internal/worktree/git.go",
+	file:  "internal/worktree/remove.go",
 	edits: []edit{{"\t\tif err := gitDir(record.CommonDir, append(args, record.Path)...); err != nil {", "\t\tif err := os.RemoveAll(record.Path); err != nil {"}},
 }
 
@@ -348,14 +348,14 @@ var mutantWorktreeLandMerges = mutation{
 var mutantWorktreeFinishUnchecked = mutation{
 	name:  "worktree-finish-unchecked",
 	file:  "internal/cli/worktree_land.go",
-	edits: []edit{{"\tif len(reasons) > 0 {\n\t\treturn &FailedError{Message: fmt.Sprintf(\"%s is not finished", "\tif false {\n\t\treturn &FailedError{Message: fmt.Sprintf(\"%s is not finished"}},
+	edits: []edit{{"\t\tif len(reasons) > 0 {\n\t\t\treturn &FailedError{Message: fmt.Sprintf(\"%s is not finished", "\t\tif false {\n\t\t\treturn &FailedError{Message: fmt.Sprintf(\"%s is not finished"}},
 }
 
 // finish that leaves the branch behind.
 var mutantWorktreeFinishBranchKept = mutation{
 	name:  "worktree-finish-branch-kept",
 	file:  "internal/cli/worktree_land.go",
-	edits: []edit{{"\tresult.BranchDropped, result.BranchKept = dropBranch(record)\n\treturn printValue(ctx, result, func() []string {\n\t\tlines := append(", "\treturn printValue(ctx, result, func() []string {\n\t\tlines := append("}},
+	edits: []edit{{"\tresult.fateOfBranch(record)\n\treturn printValue(ctx, result, func() []string {\n\t\tlines := append(landing.lines()", "\treturn printValue(ctx, result, func() []string {\n\t\tlines := append(landing.lines()"}},
 }
 
 func TestAWorktreeWithoutABranchFails(t *testing.T) {

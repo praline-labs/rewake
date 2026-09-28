@@ -20,7 +20,7 @@ var mutantGrantFromAnywhere = mutation{
 var mutantGrantUnconfirmed = mutation{
 	name:  "grant-unconfirmed",
 	file:  "internal/wrap/grants.go",
-	edits: []edit{{"if err := confirmGrant(dir, name, epoch, conversation, message); err != nil", "if err := error(nil); err != nil"}},
+	edits: []edit{{"if err := confirmGrant(dir, name, epoch, \"\", message); err != nil", "if err := error(nil); err != nil"}},
 }
 
 // A confirmation counts from whichever process serves the address: the

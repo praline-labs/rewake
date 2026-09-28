@@ -189,7 +189,7 @@ func registeredCWD(rewake func(args ...string) (string, error), name string) str
 // it since loses its directory.
 var mutantWorktreeVisitorIgnored = mutation{
 	name:  "worktree-visitor-ignored",
-	file:  "internal/cli/worktree.go",
+	file:  "internal/cli/worktree_keep.go",
 	edits: []edit{{"(made || worktree.Within(session.CWD, record.Path))", "(made || false)"}},
 }
 
@@ -206,8 +206,8 @@ var mutantWorktreeBranchTrusted = mutation{
 	name: "worktree-branch-trusted",
 	file: "internal/worktree/git.go",
 	edits: []edit{{
-		"\tif check.Unreachable, err = unreachable(record.CommonDir, head); err != nil {\n\t\treturn Check{}, err\n\t}\n\treturn check, nil\n}\n\n// inspectMissing",
-		"\tif check.Unreachable, err = unreachable(record.CommonDir, head); err != nil {\n\t\treturn Check{}, err\n\t}\n\tcheck.Unreachable = check.Unreachable && head != record.Commit\n\treturn check, nil\n}\n\n// inspectMissing",
+		"\tif check.Unreachable, err = unreachable(record.CommonDir, head); err != nil {\n\t\treturn Check{}, err\n\t}\n\tentry, _, err := listed(record)",
+		"\tif check.Unreachable, err = unreachable(record.CommonDir, head); err != nil {\n\t\treturn Check{}, err\n\t}\n\tcheck.Unreachable = check.Unreachable && head != record.Commit\n\tentry, _, err := listed(record)",
 	}},
 }
 
@@ -217,7 +217,7 @@ var mutantWorktreeBranchTrusted = mutation{
 // worktree prune would take every missing checkout's, is the unit test's.)
 var mutantWorktreeMovedUnrefused = mutation{
 	name:  "worktree-moved-unrefused",
-	file:  "internal/cli/worktree.go",
+	file:  "internal/cli/worktree_keep.go",
 	edits: []edit{{"\tif check.Missing && !check.Forgotten {\n", "\tif false {\n"}},
 }
 
