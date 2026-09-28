@@ -189,7 +189,14 @@ What the day of the 1.0.0 release left, recorded on September 28, 2026 at the ow
   dangerous — deleting, a force push, writing another tool's settings — goes to the owner.
   With that, a worker could run in the manual mode instead of auto mode, and what auto
   mode's classifier refuses today would reach main as a request instead of a dead end.
-  Research of how long each harness lets such a request wait comes first.
+  The research is done: a Claude Code PermissionRequest hook waits 600 s by default and
+  its own `timeout` raises that without a maximum, the prompt shows at once while the hook
+  runs and the hook's answer closes it, and a deny carries a message to the model; a Codex
+  approval request waits with no limit, and rewake's relay can answer it itself (the model
+  then sees only "rejected by user"). The owner chose on September 28, 2026: hold the
+  request while main decides, bounded by rewake's own limit, and fall back to refusing with
+  the next step when main does not answer in time. Next: the design and a live probe of a
+  long hook on Claude Code.
 - **A requested compaction left without its outcome**
   ([intermittent-bugs.md](intermittent-bugs.md#a-requested-compaction-counted-as-nobodys-with-no-outcome--open-september-28-2026)):
   the plugin's `told` swallows a failed call; check the exit, retry once, and put the mark
