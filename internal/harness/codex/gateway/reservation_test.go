@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -115,6 +116,30 @@ func TestReservationDeadlineSendsNothingAndKeepsNativeConnection(t *testing.T) {
 		t.Fatal(err)
 	}
 	r.Close()
+}
+
+// The reservation can still be valid when Deliver checks it while the
+// delivery's own deadline has passed by the time the request would be
+// written. Nothing reaches the server then, and the delivery says so, so the
+// notice waits rather than failing for good.
+func TestADeadlinePassedAfterTheCheckIsNotSent(t *testing.T) {
+	g, ui, peers, _ := setup(t)
+	server := <-peers
+	defer func() { _ = server.conn.Close() }()
+	bindUI(t, g, ui, server)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	r, err := g.Reserve(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+	passed, stop := context.WithCancel(context.Background())
+	stop()
+	if _, err := r.Deliver(passed, "id", MailboxNotice{Notice: "notice"}, nil); !errors.Is(err, ErrNotSent) {
+		t.Fatalf("err = %v", err)
+	}
+	nothingSent(t, server)
 }
 
 func TestReservationExpiresWithoutHoldingNativeLifecycle(t *testing.T) {

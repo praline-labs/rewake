@@ -292,7 +292,7 @@ ignored without changing the parent session's waits.
 3. **A grant ends.** A directory granted with a task lives at least until this
    report; a stopped turn or a pending mark keeps it, and an error report or a
    withdrawal ends it as a report does. On Codex rewake takes it back at the next
-   delivery to the session after it, not at the report itself, and a person's own turn
+   delivery into the conversation it was granted in, not at the report itself, and a person's own turn
    in the terminal drops it at once. On Claude Code the hook takes it back at the first
    read or `rewake` command after the report in the `default` and `acceptEdits` modes;
    in `plan`, `bypassPermissions` and auto it stays until the session ends

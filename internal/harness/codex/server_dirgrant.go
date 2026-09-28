@@ -30,12 +30,14 @@ type rootsChange struct {
 }
 
 // planRoots works out the roots a notice carries: the snapshot as read, less
-// what rewake granted for tasks settled since, plus the thread's Git metadata
-// for --grant-git and the directories the message grants.
+// what rewake granted into this conversation for tasks settled since, plus the
+// thread's Git metadata for --grant-git and the directories the message grants.
+// Roots belong to a conversation: a grant made in another one is in that
+// one's roots, and is taken back at the next notice into it.
 func (s *serverSession) planRoots(thread string, read func() threadRead, git bool, granted inbox.Message) (rootsChange, error) {
 	var change rootsChange
 	entries := s.grantJournal()
-	settled := s.settledGrants(entries)
+	settled := s.settledGrants(entries, thread)
 	restoring := s.resumedHints(thread, entries)
 	if restoring == nil && !s.followedThread(thread) {
 		// Nothing a resume left to restore here; the next notice need not
@@ -66,7 +68,7 @@ func (s *serverSession) planRoots(thread string, read func() threadRead, git boo
 		var notes []string
 		notes, journaled, change.followed = s.restoreRoots(thread, restoring, &roots, &entries, environment, now)
 		change.notes = append(change.notes, notes...)
-		settled = s.settledGrants(entries)
+		settled = s.settledGrants(entries, thread)
 	}
 	var revoked []string
 	for _, index := range settled {
@@ -124,8 +126,9 @@ func (s *serverSession) planRoots(thread string, read func() threadRead, git boo
 
 // addGrantedRoots adds each granted directory a root does not cover already,
 // with its Git metadata when the task also carries --grant-git, and journals
-// what it added. A directory inside a root rewake itself granted for another
-// task is refused: the worker writes in its parent through that grant, and
+// what it added. A root is rewake's only when it granted it into this
+// conversation; any other is the person's, as far as rewake can tell. A
+// directory inside a root rewake itself granted for another task is refused: the worker writes in its parent through that grant, and
 // could put a link in its place before the harness resolves it again
 // (docs/grants.md#what-a-grant-does-not-stop). An error fails the task.
 func (s *serverSession) addGrantedRoots(roots *[]string, entries *[]grant.Entry, granted inbox.Message, git bool, cwd, thread string, now time.Time) (added, writable, notes []string, err error) {
@@ -133,7 +136,9 @@ func (s *serverSession) addGrantedRoots(roots *[]string, entries *[]grant.Entry,
 		return nil, nil, nil, fmt.Errorf("message %s was granted once already", granted.ID)
 	}
 	journaled := func(root string) bool {
-		return slices.ContainsFunc(*entries, func(entry grant.Entry) bool { return entry.Live() && entry.Path == root })
+		return slices.ContainsFunc(*entries, func(entry grant.Entry) bool {
+			return entry.Live() && entry.Path == root && entry.Thread == thread
+		})
 	}
 	covered := func(directory string) bool {
 		return slices.ContainsFunc(*roots, func(root string) bool { return grant.Within(directory, root) && !journaled(root) })
@@ -225,9 +230,12 @@ func sharedElsewhere(directory string, metadata []string, cwd string) error {
 	return fmt.Errorf("%s is a worktree of the repository at %s, whose Git metadata — hooks and configuration included — every checkout of it shares; --grant-git does not give that to a session working elsewhere: grant the directory without it, or have the owner give the access", directory, common)
 }
 
-// settledGrants lists the live entries whose tasks are settled, leaving out a
-// directory another live task still holds.
-func (s *serverSession) settledGrants(entries []grant.Entry) []int {
+// settledGrants lists the live entries granted into a conversation whose tasks
+// are settled, leaving out a directory another live task still holds there.
+// Another conversation's entries wait for a notice into it: taken back here,
+// they would be settled against roots they were never in, and remove a root
+// of this conversation's own.
+func (s *serverSession) settledGrants(entries []grant.Entry, thread string) []int {
 	if s.mailbox == "" {
 		return nil
 	}
@@ -241,13 +249,13 @@ func (s *serverSession) settledGrants(entries []grant.Entry) []int {
 	}
 	held := map[string]bool{}
 	for _, entry := range entries {
-		if entry.Live() && !settled(entry.Message) {
+		if entry.Live() && entry.Thread == thread && !settled(entry.Message) {
 			held[entry.Path] = true
 		}
 	}
 	var indexes []int
 	for index, entry := range entries {
-		if entry.Live() && settled(entry.Message) && !held[entry.Path] {
+		if entry.Live() && entry.Thread == thread && settled(entry.Message) && !held[entry.Path] {
 			indexes = append(indexes, index)
 		}
 	}

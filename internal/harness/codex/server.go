@@ -47,6 +47,10 @@ type serverSession struct {
 	// followed are the conversations whose grants from before a resume were
 	// restored or taken back, guarded by mu (server_dirgrant_resume.go).
 	followed map[string]bool
+	// answers are what the mains said, by conversation, when asked to
+	// confirm again the grants a resumed one had; guarded by mu
+	// (server_dirgrant_resume.go).
+	answers map[string]*resumeAnswers
 	// legacyLandlock says why this session's commands may run in rewake's
 	// own namespaces; set, it takes no grant.
 	legacyLandlock  string

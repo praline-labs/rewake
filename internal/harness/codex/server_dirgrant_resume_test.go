@@ -2,6 +2,7 @@ package codex
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -47,6 +48,13 @@ func endedRunOf(t *testing.T) string {
 // closed once delivered.
 func resumedMain(t *testing.T, server *serverSession, grants map[string]string, closed ...string) string {
 	t.Helper()
+	return slowResumedMain(t, server, grants, 0, closed...)
+}
+
+// slowResumedMain is resumedMain whose wrapper takes delay to answer each
+// request to confirm a grant again.
+func slowResumedMain(t *testing.T, server *serverSession, grants map[string]string, delay time.Duration, closed ...string) string {
+	t.Helper()
 	address := state.AuthorityAddress(server.mailbox, server.epoch)
 	authority, err := grantauth.Listen(address, os.Getpid(), time.Minute)
 	if err != nil {
@@ -55,6 +63,14 @@ func resumedMain(t *testing.T, server *serverSession, grants map[string]string, 
 	var delivered atomic.Bool
 	authority.Open = func(held grantauth.Grant) (bool, bool) {
 		return !delivered.Load() || !slices.Contains(closed, held.ID), true
+	}
+	// Asked once for each request, outside the lock the wrapper answers
+	// under, as its registry read is.
+	authority.Owns = func(string, string) bool {
+		if delivered.Load() {
+			time.Sleep(delay)
+		}
+		return true
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	go authority.Serve(ctx)
@@ -74,6 +90,20 @@ func resumedMain(t *testing.T, server *serverSession, grants map[string]string, 
 	}, grantauthtest.Delivery{Address: address, MainPID: self.PID, MainStart: self.Start, To: server.name, Grants: confirmed, Threads: []string{fixtureRoot}})
 	delivered.Store(true)
 	return previous
+}
+
+// deliverResumed delivers a notice into a resumed conversation, through the
+// tries that wait while its grants are confirmed again.
+func deliverResumed(t *testing.T, server *serverSession, captured <-chan map[string]json.RawMessage, message inbox.Message) ([]string, inbox.Result) {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		roots, result := deliverDirs(t, server, captured, message)
+		if result.State != inbox.Pending || !strings.Contains(result.Detail, resumeWait) || time.Now().After(deadline) {
+			return roots, result
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
 }
 
 // A cold resume leaves the thread with the roots it saved and this run with
@@ -102,7 +132,7 @@ func TestAResumedThreadHasItsGrantsConfirmedAgain(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	roots, result := deliverDirs(t, server, captured, inbox.Message{ID: "n1", Kind: inbox.Note})
+	roots, result := deliverResumed(t, server, captured, inbox.Message{ID: "n1", Kind: inbox.Note})
 	if result.State != inbox.Delivered || !slices.Equal(roots, []string{workspace, lib}) {
 		t.Fatalf("restore: roots=%q result=%+v", roots, result)
 	}
@@ -150,13 +180,13 @@ func TestAResumedThreadWaitsForAQuietMain(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	roots, result := deliverDirs(t, server, captured, inbox.Message{ID: "n1", Kind: inbox.Note})
+	roots, result := deliverResumed(t, server, captured, inbox.Message{ID: "n1", Kind: inbox.Note})
 	if result.State != inbox.Delivered || roots != nil || len(journal(server)) != 0 {
 		t.Fatalf("a quiet main: roots=%q result=%+v", roots, result)
 	}
 	_ = quiet.Process.Kill()
 	_ = quiet.Wait()
-	roots, result = deliverDirs(t, server, captured, inbox.Message{ID: "n2", Kind: inbox.Note})
+	roots, result = deliverResumed(t, server, captured, inbox.Message{ID: "n2", Kind: inbox.Note})
 	if !slices.Equal(roots, []string{workspace}) || !strings.Contains(result.Detail, "has ended") {
 		t.Fatalf("a main that ended: roots=%q result=%+v", roots, result)
 	}

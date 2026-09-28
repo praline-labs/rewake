@@ -36,6 +36,14 @@ func (s *serverSession) Reserve(ctx context.Context, message inbox.Message) (inb
 		return nil, reserveRefusal(err)
 	}
 	delivery := &reservedDelivery{session: s, reservation: reserved, ctx: ctx, cancel: cancel}
+	if s.confirming(reserved.Thread()) {
+		// The conversation reserved, not the one selected before: Reserve
+		// may wait for a resume to finish, or the person may switch. The
+		// mains may take longer to answer than a reservation lives, so it is
+		// let go while they are asked.
+		delivery.Close()
+		return nil, fmt.Errorf("%w: %s", inbox.ErrNotYet, resumeWait)
+	}
 	if s.appliesGrant(message) {
 		// Asked before the message becomes readable: a task read while it
 		// waits would go without its grant.
@@ -69,6 +77,11 @@ func (r *reservedDelivery) Close() { r.reservation.Close(); r.cancel() }
 func (r *reservedDelivery) Prepare(fn func(string) error) error {
 	entered := false
 	err := r.reservation.Prepare(func(thread string) error { entered = true; return fn(thread) })
+	if err != nil && !entered && errors.Is(err, gateway.ErrLapsed) {
+		// Nothing was made readable or sent: the notice waits for another
+		// reservation rather than failing for good.
+		return fmt.Errorf("%w: %v", inbox.ErrNotYet, err)
+	}
 	if err != nil && !entered {
 		return fmt.Errorf("%w: %v", inbox.ErrThreadUnavailable, err)
 	}
@@ -82,6 +95,9 @@ func (r *reservedDelivery) Deliver(_ context.Context, message inbox.Message) inb
 func (r *reservedDelivery) DeliverChecked(_ context.Context, message inbox.Message, valid func() bool) inbox.Result {
 	var thread string
 	if err := r.Prepare(func(value string) error { thread = value; return nil }); err != nil {
+		if errors.Is(err, inbox.ErrNotYet) {
+			return inbox.Result{State: inbox.Pending, Detail: err.Error()}
+		}
 		return inbox.Result{State: inbox.Failed, Detail: err.Error()}
 	}
 	if !r.rootsChecked {
@@ -98,6 +114,11 @@ func (r *reservedDelivery) DeliverChecked(_ context.Context, message inbox.Messa
 		// taken, and the message goes once the compaction has ended.
 		return inbox.Result{State: inbox.Pending, Detail: reserveRefusal(err).Error()}
 	}
+	if errors.Is(err, gateway.ErrNotSent) {
+		// Nothing reached the server, and the grants planned for the notice
+		// were neither applied nor journaled: it goes again as it is.
+		return inbox.Result{State: inbox.Pending, Detail: err.Error()}
+	}
 	if err != nil {
 		return inbox.Result{State: inbox.Failed, Detail: err.Error() + "; delivery was not retried automatically"}
 	}
@@ -105,7 +126,7 @@ func (r *reservedDelivery) DeliverChecked(_ context.Context, message inbox.Messa
 	if note := r.session.saveJournal(r.change.journal); note != "" {
 		notes = append(notes, note)
 	}
-	r.session.follow(r.change.followed)
+	r.session.follow(thread, r.change.followed)
 	return inbox.Result{State: inbox.Delivered, Via: "app-server", Detail: strings.Join(notes, "; "), GrantApplied: r.change.applied}
 }
 

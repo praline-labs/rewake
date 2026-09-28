@@ -84,7 +84,7 @@ func TestAResumeLooksOnlyAtGrantsThisRunDidNotJournal(t *testing.T) {
 	if len(hints) != 1 || hints[0].Message != "m2" {
 		t.Fatalf("hints = %+v", hints)
 	}
-	server.follow(fixtureRoot)
+	server.follow(fixtureRoot, fixtureRoot)
 	if hints := server.resumedHints(fixtureRoot, nil); hints != nil {
 		t.Fatalf("a conversation looked at once is looked at again: %+v", hints)
 	}

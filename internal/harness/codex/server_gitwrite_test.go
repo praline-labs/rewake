@@ -60,6 +60,15 @@ func gitDeliveryFixtureTraffic(t *testing.T, part role.Role, status string, befo
 // Same-turn mode models the native atomic start-or-steer decision.
 func gitDeliveryFixtureMode(t *testing.T, part role.Role, status string, sameTurn bool, beforeAck func(), peer func(net.Conn), reads ...gitReadFixture) (*serverSession, <-chan map[string]json.RawMessage) {
 	t.Helper()
+	server, captured, start := gitDeliveryFixtureUnstarted(t, part, status, sameTurn, beforeAck, peer, reads...)
+	start()
+	return server, captured
+}
+
+// gitDeliveryFixtureUnstarted is the fixture before the terminal has started
+// its thread: no conversation is selected until start is called.
+func gitDeliveryFixtureUnstarted(t *testing.T, part role.Role, status string, sameTurn bool, beforeAck func(), peer func(net.Conn), reads ...gitReadFixture) (*serverSession, <-chan map[string]json.RawMessage, func()) {
+	t.Helper()
 	codexHome(t, "")
 	server := gitLaunch(t, part, "resume", "--last").Backend.(*serverSession)
 	captured := make(chan map[string]json.RawMessage, 8)
@@ -136,8 +145,6 @@ func gitDeliveryFixtureMode(t *testing.T, part role.Role, status string, sameTur
 			serverMessage(c, map[string]any{"id": request.ID, "result": result})
 		}
 	})
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
 	server.gateway = gateway.New(gateway.Config{Upstream: path, Epoch: "test"})
 	downstream := filepath.Join(t.TempDir(), "gateway.sock")
 	listener, err := net.Listen("unix", downstream)
@@ -147,15 +154,20 @@ func gitDeliveryFixtureMode(t *testing.T, part role.Role, status string, sameTur
 	proxy := &http.Server{Handler: server.gateway, ReadHeaderTimeout: time.Second}
 	go func() { _ = proxy.Serve(listener) }()
 	t.Cleanup(func() { _ = proxy.Close(); server.gateway.Close() })
-	client, err := connectRPC(ctx, downstream, nil)
-	if err != nil {
-		t.Fatal(err)
+	start := func() {
+		t.Helper()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		client, err := connectRPC(ctx, downstream, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(client.close)
+		if err := client.call(ctx, "thread/start", map[string]any{"threadSource": "user", "runtimeWorkspaceRoots": []string{"/work"}}, nil); err != nil {
+			t.Fatal(err)
+		}
 	}
-	t.Cleanup(client.close)
-	if err := client.call(ctx, "thread/start", map[string]any{"threadSource": "user", "runtimeWorkspaceRoots": []string{"/work"}}, nil); err != nil {
-		t.Fatal(err)
-	}
-	return server, captured
+	return server, captured, start
 }
 
 func deliverGitTask(t *testing.T, server *serverSession, captured <-chan map[string]json.RawMessage, kind inbox.Kind) ([]string, inbox.Result) {

@@ -238,15 +238,24 @@ A task is settled once its reader has read it and reported on it, its sender too
 back, or it failed to arrive. A status saying taken back or failed settles it whatever a
 wait record says: such a task was never read, and a wait naming it is one the worker
 wrote to keep its grant. At every delivery to the session after that, while the journal holds live entries of
-settled tasks, the adapter reads the snapshot and sends it without their directories. A
-directory another live task still holds stays until that task is settled too. Nothing
-runs between deliveries: a grant whose task is settled lives until the next message to
-that session.
+settled tasks granted into the conversation the notice goes into, the adapter reads the
+snapshot and sends it without their directories. A directory another live task still
+holds in that conversation stays until that task is settled too. Nothing runs between
+deliveries: a grant whose task is settled lives until the next message into its
+conversation.
+
+Roots belong to a conversation, and the person can switch the terminal to another one
+between two notices. A grant is taken back only in the conversation it was granted in:
+in another one the same directory is either absent or a root of that conversation's own,
+and taking it back there would record the grant dropped while its conversation keeps it,
+or take out a root rewake did not give. For the same reason a root counts as rewake's
+only in the conversation its entry names: in any other it is the person's, covers a
+directory granted inside it, and is not journaled or taken back there.
 
 ## How long a grant lives
 
 At least until the task is reported on, and in practice until the next delivery after the
-report. It ends earlier in two ways the owner accepted, both observed live on Codex 0.155.1
+report into the conversation it was granted in. It ends earlier in two ways the owner accepted, both observed live on Codex 0.155.1
 and 0.157.1 ([research-codex.md](research-codex.md#runtime-workspace-roots)):
 
 - a person's own turn in the terminal sends only the launch directory, which replaces the

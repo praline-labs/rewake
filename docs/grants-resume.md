@@ -91,7 +91,7 @@ task is open, not for a fixed time, at most 256 at once
 **Main gone.** When the main that sent the grant has ended, nobody can confirm it, and
 the grant is not restored: a task sent again from the current main is the way on. A main
 that runs and does not answer yet is asked again: on Claude Code every two seconds while
-the session runs, on Codex at the next notice.
+the session runs, on Codex at the next notice into the conversation.
 
 ## Claude Code
 
@@ -123,8 +123,24 @@ grant given on the thread's first turn was not saved and is lost (live,
 `thread/resume` names roots of its own without the saved grant, so the grant is gone
 before the first notice (live, acceptance by review-codex on September 28, 2026).
 Either way the first notice settles it. At the first notice into a conversation the
-adapter looks for the hints of that conversation not in its own journal and asks for
-each:
+adapter looks for the hints of that conversation not in its own journal and asks the
+mains for all of them at once, in the background. The conversation is the one the
+notice's reservation holds, not the one selected a moment before: the reservation may wait
+for a resume to finish, and the person may switch conversations in between. A main's
+answer may take its full two seconds, and a reservation lasts three: asked while holding
+it, two slow answers would outlast it and fail the notice for good. So while an answer is
+missing the reservation is let go and the notice waits — it stays pending, retried as any
+other, with the detail saying the grants are being confirmed — and goes once every main
+has answered or run out of time; the answers are used for thirty seconds at most. A
+notice whose reservation lapsed before it was prepared or sent stays pending too: nothing
+was made readable or reached the terminal.
+
+With the answers in, every root a hint names is taken out first, for the confirmed and
+the refused alike, and only then are the confirmed grants added back. A root that a grant
+journaled in this conversation holds — one restored at an earlier notice among them — is
+not taken out. Two copies can name one directory — a task closed since and a later one
+still open — and whether the refused one is answered in the same notice or a later one,
+it takes out only what no confirmed grant holds. For each hint:
 
 - **confirmed** — its roots are taken out and added back through the ordinary grant
   path, so they are journaled for this run and taken back after the report; a root the
@@ -132,7 +148,9 @@ each:
 - **refused** — its task closed, its main ended, the copy forged — the roots the hint
   names are taken out of the thread, so a copy nobody confirms holds no right; the launch
   directory is never taken out;
-- **main not answering** — the roots stay as they are and the next notice asks again.
+- **main not answering** — the roots stay as they are and the next notice asks again; a
+  main that answers one request at a time can leave some of several hints for the next
+  notice, and each notice restores what was answered by then.
 
 A root no copy names is left alone: rewake cannot tell it from one the person gave.
 

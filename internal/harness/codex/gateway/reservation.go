@@ -37,6 +37,16 @@ var ErrCompacting = errors.New("a compaction of the conversation is running")
 // (docs/research-protocol.md, core/src/session/turn_input.rs).
 const compactionRefusal = "ActiveTurnNotSteerable { turn_kind: Compact }"
 
+// ErrNotSent is a Deliver refused before anything reached the server: the
+// reservation had lapsed or lost its conversation. The notice may go again,
+// so the caller keeps it waiting rather than failing it.
+var ErrNotSent = errors.New("the notice was not sent")
+
+// ErrLapsed is a reservation whose time ran out, or that was released, before
+// its notice was sent. Nothing reached the server, and a later reservation may
+// carry the same notice.
+var ErrLapsed = errors.New("the delivery reservation lapsed")
+
 // Reserve waits outside the admission FIFO and gate for justified read completion
 // and for a running compaction's end. A selection change while waiting refuses
 // the old request rather than retargeting it.
@@ -156,10 +166,10 @@ func (c *connection) reserve(ctx context.Context, want Binding) (*Reservation, e
 
 func (r *Reservation) valid() error {
 	if r.released {
-		return errors.New("delivery reservation released")
+		return fmt.Errorf("%w: released", ErrLapsed)
 	}
 	if err := r.ctx.Err(); err != nil {
-		return err
+		return fmt.Errorf("%w: %v", ErrLapsed, err)
 	}
 	r.c.mu.Lock()
 	defer r.c.mu.Unlock()
@@ -168,6 +178,9 @@ func (r *Reservation) valid() error {
 	}
 	return nil
 }
+
+// Thread is the conversation the reservation holds.
+func (r *Reservation) Thread() string { return r.binding.Thread }
 
 // Prepare keeps expiry from releasing the fence midway through making mail readable.
 func (r *Reservation) Prepare(fn func(string) error) error {
@@ -215,7 +228,7 @@ func (r *Reservation) Deliver(ctx context.Context, messageID string, notice Mail
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if err := r.valid(); err != nil {
-		return "", err
+		return "", fmt.Errorf("%w: %v", ErrNotSent, err)
 	}
 	if len(notice.Notice) > 64<<10 || messageID == "" {
 		return "", errors.New("invalid notice")
@@ -235,6 +248,11 @@ func (r *Reservation) Deliver(ctx context.Context, messageID string, notice Mail
 	// Native start-or-steer chooses active/idle atomically; a status snapshot
 	// cannot safely decide that for a concurrent terminal.
 	reply, err := r.c.callReserved(ctx, r.binding, "turn/start", params, r.admissionID)
+	// The deadline or the binding can change between valid and the request
+	// being written; a request never written is as unsent as one refused above.
+	if never := (unsent{}); errors.As(err, &never) {
+		return "", fmt.Errorf("%w: %v", ErrNotSent, err)
+	}
 	if err == nil {
 		r.c.displayNotice(r.binding, reply.turn, notice.Notice)
 	}
