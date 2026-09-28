@@ -195,6 +195,11 @@ What the day of the 1.0.0 release left, recorded on September 28, 2026 at the ow
 - **Worktrees:** a repository made with `--separate-git-dir` and no `core.worktree` keeps
   no record of its main checkout, so from a linked checkout only a root inside the Git
   directory is refused.
+- **The capability map is stale.** [harness-features.md](harness-features.md) is dated
+  September 21 and has no rows for pending, withdraw and edit, directory grants, compact
+  and interrupt as commands, worktrees, grant restore after a resume, or a Codex main that
+  cannot grant; the README's parity table of September 28 was checked against the code
+  instead. Bring the map up to date and keep the two in step.
 - **Publishing from CI** with npm's trusted publishing and provenance: the repository is
   public since September 28, 2026, so nothing waits for it now.
 
