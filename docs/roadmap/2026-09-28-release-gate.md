@@ -60,7 +60,5 @@ review-codex confirmed three findings in the gate, fixed the same day:
 
 ## What stays open
 
-- The dry run of 1.0.0 was made on an uncommitted tree whose version is still 0.0.1: its
-  failures were the changed tree, that version and the binary built from the tree, and
-  every other check passed. A dry run on the release commit, pushed, and the publish
-  on the owner's word are still to come.
+- Nothing: the dry run on the pushed release commit passed and 1.0.0 was published the
+  same day ([the record](2026-09-28-release-1.0.0.md)).

@@ -153,3 +153,33 @@ on the fix it passed 20 runs of 20 under `-race -shuffle=on`, and 20 without.
 **Why it mattered.** A wrapper left stopped serves no mailbox, and nothing says so:
 `rewake list` still shows the session alive. It needed a stop from outside to begin
 with, which no rewake path sends.
+
+## A requested compaction counted as nobody's, with no outcome — open, September 28, 2026
+
+main-claude ran `rewake compact write-claude` at about 12:05:45 while write-claude was
+idle. The command answered `requested (its start was not seen within 3 s)`.
+write-claude's telemetry counted compaction 20 at 12:06:58 with no request on it, so main
+got the plain "context compacted (compaction 20)" notice, and at 12:20:45 the bound letter
+"no outcome ... within 15m0s". The worker's snapshot holds no outcome for the request:
+neither the module's `compact.asked` nor its `compact.ended` reached the collector. The
+session was idle, so compaction 20 was most likely the module's own call.
+
+The wrappers ran a build of September 27; the installed binary, which the module and the
+hooks run by path, had been replaced by a newer build at 11:59:38. That binary's
+`rewake observe` delivers both events and the wire format did not change; hooks kept
+working through the same path, the plugin module was not edited, and no settings file
+changed. The last compaction attributed correctly was at 10:39. Host debug logging was
+off.
+
+The trigger is unknown. The module's `told` swallows any failure of `$.process.run`, and
+nothing else carries the mark or the outcome; whether the host's `$.process.run` fails for
+a module after its executable was replaced is unverified. A stale tracked turn in the
+module (no mark sent) would explain the unmarked count but not the missing outcome. The
+fix proposed: `told` checks the exit and retries once, and the module writes the mark and
+the outcome into the control directory beside the result, for the wrapper to take when
+the collector has none ([work-queue.md](work-queue.md#now-after-100)).
+
+On recurrence: before anything else, ask the same worker for another compaction; a
+refusal "the compaction rewake asked for last is still running" means the host call never
+settled. Note whether the rewake binary was replaced since the worker started, and run the
+worker with host debug logging if it can be arranged.

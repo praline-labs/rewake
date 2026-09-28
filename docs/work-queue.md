@@ -140,10 +140,19 @@ the roadmap entries of that day), and so did the worktree lifecycle
    The owner's idea: main's wrapper already sees, in its own app-server's stream, every
    command its model runs (`commandExecution` items); a `rewake send` seen there with
    the grant's arguments may be the confirmation, without a socket. To research first.
-3. **Does Codex resolve a root again on each command?** If it does, a granted directory
-   whose parent the worker can write can be swapped for a link after delivery; rewake
-   refuses the cases it can see ([grants.md](grants.md#what-a-grant-does-not-stop)). A
-   probe on the real sandbox settles which.
+3. **A granted directory whose parent the worker can write.** Settled from the source on
+   September 28, 2026 (Codex 0.155.1 and 0.157.1, `linux-sandbox/src/bwrap.rs`): every new
+   sandboxed process resolves the links in its roots again, so a worker that can write a
+   granted directory's parent can swap it for a link after delivery. A live probe was not
+   run — the sandbox cannot start nested inside a Codex session, and a request to run it
+   from a Claude Code session was stopped by the model's safety filter; the owner chose on
+   September 28 not to wait for it. The decision: refuse a grant when the recipient can
+   already write the directory or any of its ancestors, and write that into
+   [grants.md](grants.md#what-a-grant-does-not-stop). Built so far: the temporary
+   directories are hard, a directory inside another grant of the same run is refused at
+   delivery, and a directory the recipient can already write goes without a grant. Not
+   built: the ancestor check against everything the recipient can write — its workspace,
+   its other roots, the harness's own writable roots.
 4. **`land`, `finish` and the checks before `ls` and `rm` beside a foreign `git worktree
    add`.** Creating and removing are serialized per repository, and since September 28,
    2026 rm's checks and finish as a whole hold the same lock as the removal
@@ -152,6 +161,44 @@ the roadmap entries of that day), and so did the worktree lifecycle
    outside that lock: during it `land`, `finish` and the checks of `ls` and `rm` may
    still fail with git's message and have to be run again.
 5. **An owner file of extra rules for the grant tiers**, when a case needs it.
+
+## Now: after 1.0.0
+
+What the day of the 1.0.0 release left, recorded on September 28, 2026 at the owner's word
+("what was not done goes to the debts"). Unordered until the owner orders it.
+
+- **Live checks on the released wrappers.** The room ran wrappers of September 27 through
+  the whole release; grants, delivery and worktrees as released have been seen only in
+  the suite. Restart the sessions and watch a grant, a resume and a worktree land live;
+  milestone 6's week of use counts from 1.0.0.
+- **The repository opens** after the owner decides on the early history (verbatim Russian
+  notes before the translation) and the author identity; the HEAD audit is done.
+- **A requested compaction left without its outcome**
+  ([intermittent-bugs.md](intermittent-bugs.md#a-requested-compaction-counted-as-nobodys-with-no-outcome--open-september-28-2026)):
+  the plugin's `told` swallows a failed call; check the exit, retry once, and put the mark
+  and the outcome in the control directory as well.
+- **Item 3 above:** the ancestor check.
+- **Item 2 above:** a Codex main cannot grant.
+- **From the reconnaissance, not taken into 1.0.0:** a repeated grant on the same letter on
+  Claude Code is not refused though grants.md says it is, and the letter still shows the
+  grant; the keeper names the thread a few milliseconds before the pin; a failed `edit`
+  whose tombstone could not be written loses the new text, a crash between writing the
+  replacement and the withdrawn status leaves both tasks live, and an edit chain's link
+  breaks after the day-long sweep; `legacy_test.go` accepts marks the documented grep does
+  not find; `flagValue` in the Claude adapter reads `--` as a value and is a second parser
+  beside `harness.FlagValues`; dead code (`TurnEndedCommand`, `RecordPath`, helpers used
+  only by tests) and the duplicated cwd and flag parsing between the adapters.
+- **Suspected, to verify:** a compound shell command allowed by `Bash(rewake:*)` might
+  launch a harness past the nested-launch refusal; a `.git` file with `gitdir:` written by
+  the worker might point `--grant-git` at another repository's metadata.
+- **CLI details left out of the truth round:** switches that take values inconsistently
+  (`--notify=false` against `--notify=no`, `--peek=`), and git calls other than hooks with
+  no time limit.
+- **Worktrees:** a repository made with `--separate-git-dir` and no `core.worktree` keeps
+  no record of its main checkout, so from a linked checkout only a root inside the Git
+  directory is refused.
+- **Publishing from CI** with npm's trusted publishing and provenance, once the repository
+  is public.
 
 ## Also queued, not scheduled
 
