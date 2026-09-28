@@ -207,6 +207,10 @@ What the day of the 1.0.0 release left, recorded on September 28, 2026 at the ow
   <dir>`, seen live on September 28, 2026 on 1.0.2
   ([roadmap/2026-09-28-live-grants-1.0.2.md](roadmap/2026-09-28-live-grants-1.0.2.md)).
   Print it once.
+- **A Codex worktree session cannot run the five checks.** Seen September 28, 2026 on
+  1.0.2: its sandbox leaves `~/.cache/go-build` read-only, so `go vet` and `go test` fail
+  to write the build cache. Either the launch adds the Go caches to the session's writable
+  roots, or the worker's briefing says to point `GOCACHE` at a writable place.
 - **Publishing from CI** with npm's trusted publishing and provenance: the repository is
   public since September 28, 2026, so nothing waits for it now.
 

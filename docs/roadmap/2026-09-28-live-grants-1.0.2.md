@@ -31,6 +31,14 @@ session and its checkout in place; `finish` refused with exit 1, naming the runn
 session, and landed and removed nothing. Once the owner ended the session, `finish` said
 there was nothing left to land, removed the checkout, its record and the branch, exit 0.
 
+The same on Codex: `rewake --write codex --worktree=test/codex-probe` came up in its own
+checkout; a task sent with `--grant-git` was delivered with "Git metadata roots added", and
+the session committed inside its sandbox with no escalation. `land` fast-forwarded `main`
+while it ran, `finish` refused while it ran and removed the checkout and the branch after
+it ended. One limit showed: from the worktree the sandbox left `~/.cache/go-build`
+read-only, so the worker could run `go test ./docs/` from the cache but not the five
+checks; main ran them on `main` after landing.
+
 ## What stays open
 
 - The hook seen approving a write in a session in the `default` permission mode, and the
