@@ -50,10 +50,18 @@ package.
   under `--omit=optional`; into a project it omits them. The gate's check without a build
   installs into a project for that reason.
 
+## Published
+
+1.0.2 went out on the owner's word the same day from the release commit `4f3ea37`, tagged
+`v1.0.2`: the two builds under `linux-x64` and `linux-arm64`, the entry under `latest`,
+all visible after the registry's usual short delay; an install into an empty prefix ran
+`rewake 1.0.2`. Then 1.0.0 and 1.0.1 were deprecated, pointing at the latest release.
+
+The first deprecation named the range `<1.0.2` and so also marked `1.0.2-linux-x64` and
+`1.0.2-linux-arm64`: a build's suffix makes it a prerelease, and a prerelease sorts below
+its release. The mark was taken off them within a minute and set on 1.0.0 and 1.0.1 by
+exact version ([install.md](../install.md#releasing-to-npm)).
+
 ## What stays open
 
-- The old packages `@praline-labs/rewake-linux-x64` and `-linux-arm64` were removed from
-  the registry by the owner on September 28, 2026, so 1.0.0 and 1.0.1 now install the
-  shim without a binary. They are to be deprecated once 1.0.2 is out, by main with the
-  owner.
-- 1.0.2 is published only on the owner's word, through the gate.
+- Nothing of this change.

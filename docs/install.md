@@ -76,7 +76,13 @@ entry is `<version>` under `latest`; each platform build is the version
 `@praline-labs/rewake-linux-x64` and `-linux-arm64` (the reasons in
 [design.md](design.md#distribution)). 1.0.0 and 1.0.1 used separate platform packages of
 those names; the owner removed them from the registry on September 28, 2026, so those
-two versions now install without a binary, and they are deprecated once 1.0.2 is out.
+two versions now install without a binary and are deprecated, pointing at the latest
+release.
+
+A deprecation, or anything else that takes a version range, names exact versions: under
+this layout a range such as `<1.0.2` also matches `1.0.2-linux-x64` and
+`1.0.2-linux-arm64`, since a build's suffix makes it a prerelease that sorts below its
+release, and the mark would land on the builds the current release installs.
 
 Every release goes through the gate, `tools/release`:
 
