@@ -204,6 +204,20 @@ clean checkout can go from under it ([launch.md](launch.md#a-worktree-for-a-laun
 The same record would serve both: the directory each harness reports once it has
 started, not the wrapper's.
 
+**A turn cut short to send a message is not a stop — to research.** Observed on
+September 28, 2026 on Claude Code 2.1.280: the owner typed a message into a worker's
+running turn and sent it at once with Ctrl+Enter. The harness ended the running turn to
+take the message, the plugin saw `turn.complete` with reason `aborted`, and main got
+`stopped` — "the person at the keyboard stopped this turn" — although the person had
+redirected the worker, not stopped it, and the worker went on working. A sender reading
+`stopped` does not resend and waits for the person
+([turn-outcomes.md](turn-outcomes.md#keyboard-stops)), so the label sends it the wrong
+way. To research: what the harness tells a plugin or a hook when an interruption carries a
+new message — a prompt submitted right after the abort, a distinct reason, an ordering
+of events — and whether rewake can hold a `stopped` briefly to see it and report
+something truer ("redirected at the keyboard; still working"). Codex's side of the same
+question as well: a steer from the terminal during a turn.
+
 **Parsing the Codex configuration.** Today rewake looks for a mention of a key in the
 text of the file and substitutes nothing when it finds one — crude, and crude on
 purpose, because the hand-written parser was removed. With a library this can be done
