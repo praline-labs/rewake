@@ -49,11 +49,15 @@ The owner updated both and restarted the workers on rewake 1.0.3 the same evenin
 sent to a Claude Code 2.1.284 write session through its inbox socket and to a Codex 0.159.0
 session through the app-server was delivered and reported back on both; each named its
 harness version and the sections of the 1.0.3 briefing it was launched with, in order, and
-quoted a rule from it.
+quoted a rule from it. Then, still on rewake 1.0.3: an addition sent with `--to` while the
+Claude Code worker slept was answered in the same single report (the worker ran the sleep
+in the background and marked the turn pending, as its briefing says); `rewake interrupt`
+on the Codex worker gave main `stopped`, the task stayed open in `rewake inbox --awaited`,
+and the worker's next report settled it; `rewake compact` finished on both and sent its
+result letter (57148 to 3238 tokens on Claude Code, 25554 to 6357 on Codex).
 
 ## What stays open
 
-- The rest of the live check after the update: a mid-turn addition, `/new` then an
-  explicit resume on Codex, compaction and interrupt on both, a directory grant and Git
-  metadata on Codex, the plugin loaded and telemetry in `rewake list` on Claude Code, and a
-  `--resume` of an old worker to see whether the dialog shows.
+- `/new` then an explicit resume on Codex 0.159.0, a directory grant and Git metadata on it,
+  interrupt on Claude Code 2.1.284, and a `--resume` of an old Claude Code worker to see
+  whether the cold-resume dialog shows.
