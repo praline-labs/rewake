@@ -243,6 +243,20 @@ What the day of the 1.0.0 release left, recorded on September 28, 2026 at the ow
   1.0.2: its sandbox leaves `~/.cache/go-build` read-only, so `go vet` and `go test` fail
   to write the build cache. Either the launch adds the Go caches to the session's writable
   roots, or the worker's briefing says to point `GOCACHE` at a writable place.
+- **The role briefings carry the mechanics but not the craft.** Checked September 29, 2026
+  for a session in another project, with no rewake repository at hand: the briefing rewake
+  injects at launch, `rewake guide`, the help pages and the refusals teach both sides how
+  rewake works — tasks, reports, pending, grants, what not to resend. What they do not
+  teach is how to orchestrate well, which lives today only in this repository's
+  `AGENTS.md`, main's memory and the handoff notes: a brief that stands on its own with
+  exact paths and says what is verified and what assumed; compacting an idle worker before
+  a large task, and `rewake compact`, `interrupt` and `worktree` at all (main's briefing
+  names none of them); a long report handed over as a file; neutral wording; one final
+  message when the owner is away. The owner asked on September 29, 2026 to improve the
+  briefings of main and of the workers accordingly, and to check the result by running a
+  main and a worker in a fresh scratch project. What stays project-specific — who reviews,
+  who commits, which checks — belongs in that project's own `AGENTS.md`; a short template
+  for it may ship beside the briefings.
 - **Publishing from CI** with npm's trusted publishing and provenance: the repository is
   public since September 28, 2026, so nothing waits for it now.
 
