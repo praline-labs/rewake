@@ -43,9 +43,17 @@ were found safe to update with no change in rewake.
 - A new refusal of `--append-system-prompt` beside `--append-system-prompt-file` applies
   only to the carrier process a Remote Control daemon spawns, which `rewake claude` never is.
 
+## After the update
+
+The owner updated both and restarted the workers on rewake 1.0.3 the same evening. A task
+sent to a Claude Code 2.1.284 write session through its inbox socket and to a Codex 0.159.0
+session through the app-server was delivered and reported back on both; each named its
+harness version and the sections of the 1.0.3 briefing it was launched with, in order, and
+quoted a rule from it.
+
 ## What stays open
 
-- The short live check after the update: delivery and a mid-turn addition, `/new` then an
+- The rest of the live check after the update: a mid-turn addition, `/new` then an
   explicit resume on Codex, compaction and interrupt on both, a directory grant and Git
   metadata on Codex, the plugin loaded and telemetry in `rewake list` on Claude Code, and a
   `--resume` of an old worker to see whether the dialog shows.
