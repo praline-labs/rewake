@@ -260,6 +260,15 @@ What the day of the 1.0.0 release left, recorded on September 28, 2026 at the ow
   guide's YOUR ROLE carry titled sections of one-line rules with the craft of each role
   ([roles.md](roles.md#what-a-session-is-told)). Left: the check itself, a main and a
   worker run in a fresh scratch project.
+- **Defect: a failed resume delivers into a conversation nobody chose.** Seen September
+  29, 2026 on Codex 0.159.0 with rewake 1.0.3: the owner relaunched a worker through rewake
+  with `--resume` of a conversation another plain Codex session held through Codex's shared
+  app-server daemon; the terminal reported the conversation open elsewhere and went on in a
+  new, empty one, and rewake delivered main's next task there and returned the answer. The
+  owner's verdict: when the launch named a conversation and the terminal ends up in another,
+  rewake must not deliver — hold the message and tell main. Investigation from the source
+  under way; the conversation marker ([conversation-reset.md](conversation-reset.md)) would
+  also have shown main the change.
 - **Publishing from CI** with npm's trusted publishing and provenance: the repository is
   public since September 28, 2026, so nothing waits for it now.
 
