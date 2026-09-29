@@ -11,6 +11,8 @@ import (
 // The middle part — what it does — is not written here. It comes from the
 // playbook, the same text `rewake guide` prints for this role, so the first
 // thing a session reads and the thing it re-reads later cannot drift apart.
+// The briefing is not wrapped: a harness shows it as the model reads it, and a
+// rule broken across lines would read as two.
 
 func roleText(c Context) string {
 	play := c.Role.Play
@@ -22,19 +24,12 @@ func roleText(c Context) string {
 	for _, step := range play.Steps {
 		lines = append(lines, "  "+step.Do+" — "+step.Why)
 	}
-	lines = append(lines, "")
-	lines = append(lines, play.Limits...)
-	lines = append(lines, deliveryFacts...)
+	for _, section := range play.Sections {
+		lines = append(lines, "", section.Title)
+		for _, line := range section.Lines {
+			lines = append(lines, "- "+line)
+		}
+	}
 	lines = append(lines, "Run rewake guide for the complete rules, including this list.")
 	return strings.Join(lines, "\n")
-}
-
-// deliveryFacts describe how mail arrives. They are the same for every role and
-// they are not instructions: nothing here is a thing to do or to avoid, only
-// what a session will see happen to it, which is why they stay in the briefing
-// rather than joining the playbook. Anything that tells a session how to
-// behave belongs in a playbook, where the guide will repeat it.
-var deliveryFacts = []string{
-	"Mail is announced as \"Rewake: <sender> <kind>, N new message(s)\", with a preview of the author's first line.",
-	"Each notice has fixed members. Ready mail is submitted promptly: active work is steered, idle work is woken. Nothing waits for a peek or a finished turn, and old unread mail is not announced again.",
 }

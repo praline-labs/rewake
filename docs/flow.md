@@ -101,8 +101,10 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
    session is alive only while both processes are.
 8. **The intro.** The agent's first context names its session, room, selected
    role and the reason for that role, then the role's whole playbook — its steps and
-   its limits, the text `rewake guide` prints again in that session — how a waiting
-   message is announced with `Rewake:`, and that `rewake guide` has the complete rules.
+   its titled sections of rules, the text `rewake guide` prints again in that session —
+   ending with MAIL: the shared rule of a first line stating the point, how a waiting
+   message is announced with `Rewake:`, and that `rewake guide` has the complete rules
+   ([roles.md](roles.md#what-a-session-is-told)).
    The golden copies are in `internal/brief/testdata/`.
 9. **Serving.** The wrapper watches `inbox/<name>/` with inotify, polls every
    second as the safety net, sweeps old mail every ten minutes, and waits for
@@ -301,8 +303,9 @@ ignored without changing the parent session's waits.
    while that main still runs, in the same conversation, within a day of the read; a
    restarted main restores nothing, and a resume after the report gets nothing back
    ([grants-resume.md](grants-resume.md)). The Git metadata of a Codex worker's own
-   checkout, opened by `--grant-git` alone, is not journaled and never taken back: it
-   stays for the rest of the thread ([git-grants.md](git-grants.md)).
+   checkout, opened by `--grant-git` alone, is not journaled and rewake never takes it
+   back: it stays for the rest of the thread unless a typed turn replaces the roots
+   ([git-grants.md](git-grants.md)).
 4. **Forget the reported messages** after all reports are written and the turn
    receipt is marked done. Cleanup matches the original run and wait; newly
    read messages remain owed to the next result.

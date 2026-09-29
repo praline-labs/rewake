@@ -256,7 +256,10 @@ What the day of the 1.0.0 release left, recorded on September 28, 2026 at the ow
   briefings of main and of the workers accordingly, and to check the result by running a
   main and a worker in a fresh scratch project. What stays project-specific — who reviews,
   who commits, which checks — belongs in that project's own `AGENTS.md`; a short template
-  for it may ship beside the briefings.
+  for it may ship beside the briefings. Built September 29, 2026: the briefings and the
+  guide's YOUR ROLE carry titled sections of one-line rules with the craft of each role
+  ([roles.md](roles.md#what-a-session-is-told)). Left: the check itself, a main and a
+  worker run in a fresh scratch project.
 - **Publishing from CI** with npm's trusted publishing and provenance: the repository is
   public since September 28, 2026, so nothing waits for it now.
 

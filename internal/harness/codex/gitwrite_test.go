@@ -71,7 +71,7 @@ func TestNoRoleAutomaticallyReceivesGitWrites(t *testing.T) {
 			}
 			if part.ID == "write" {
 				intro, _ := configValue(plan.Args, introKey)
-				if !strings.Contains(intro, "commit changes") || !strings.Contains(intro, "end your turn") {
+				if !strings.Contains(intro, "You may commit when authorized") || !strings.Contains(intro, "end your turn") {
 					t.Errorf("writer intro=%s", intro)
 				}
 			}

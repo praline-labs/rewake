@@ -59,11 +59,38 @@ was applied or skipped.
 
 ## What a session is told
 
-A role's `Play` carries its heading, its steps and its limits; `internal/brief` renders
-them into the launch briefing and `rewake guide` prints them again, so the two cannot
-differ. One limit binds every role: each message and final reply starts with a line
-stating its point. Write and general share their steps and every limit but the one
-about Git (`executorLimits` in `internal/role/playbook.go`).
+A role's `Play` carries its heading, its steps and its sections — titled groups of
+one-line rules; `internal/brief` renders them into the launch briefing and `rewake guide`
+prints them again under YOUR ROLE, wrapped, with `--json` carrying them as `sections` of
+`title` and `lines`, so the two cannot differ. The briefing is the heading, the steps as
+`<command> — <what for>`, each section as its title and `- ` lines, and the line pointing
+to `rewake guide`. The last section, MAIL (`role.Mail`), is the same for every role: the
+one rule every role shares — each message and final reply starts with a line stating its
+point — and what a session sees happen to its mail. Main's sections are HANDING OUT WORK,
+READING WHAT COMES BACK, GRANTS AND LIMITS and OWNER DECISIONS
+(`internal/role/playbook_main.go`); write and general share their steps and the sections
+WORKING, REPORTING and MAIN AND PERMISSIONS, all but the line about Git
+(`executorSections` in `internal/role/playbook.go`). A test checks that every command a
+step names is in the command table, with each verb it spells — `worktree ls`, `land`,
+`finish` — in that command's arguments and each flag, in the command or in what the step
+says it is for, one that command takes: a session copies them. The one exception is the
+launch flag `--worktree` in worktree's explanation, which a harness declares.
+
+**Owner decision, September 29, 2026:** the briefings are what a session in any project
+gets, with no rewake repository at hand, so they teach the craft of the role and not
+only rewake's mechanics — a self-contained brief with acceptance criteria and exact
+paths, neutral wording, workers kept out of each other's files, a worker's context
+checked before a large task, a finished report read against the brief rather than taken
+as acceptance, questions to an absent owner batched into one message; and for a worker,
+keeping to the brief, following the project's own rules, a report that says what was
+verified and what assumed. They are structured as titled sections of one-line rules
+rather than one mixed list. Two statements of the earlier text were wrong and are
+corrected there: a stopped report leaves its task open, so what follows is not separate
+work and a later report may settle it; and grant lifetimes are stated as the contract
+does — a directory grant's revocation is scheduled by the report, its timing depends on
+the harness, typed terminal input or a fork can drop it earlier, and `--grant-git`
+metadata of a worker's own checkout is not revoked by rewake, though a typed terminal
+turn can replace the roots.
 
 **Owner decision, September 25, 2026:** four rules for write and general, after three
 failures of the day before — a worker that took main's word for a peer's and would not

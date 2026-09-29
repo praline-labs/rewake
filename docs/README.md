@@ -28,7 +28,7 @@ everything else.
   decisions. Open it for why the system has the shape it has, or for a canonical rule.
 - [roles.md](roles.md) — roles and names, split from design.md by subject and the one
   place their rules live: the role catalogue and what each role reports and may be
-  granted, what each role is told and the owner's rules behind its limits, how the role
+  granted, what each role is told and the owner's rules behind it, how the role
   is chosen under the room lock, why main is silent, and how a name is built from role,
   prefix and harness. Open it when a launch picks the wrong
   role or name.

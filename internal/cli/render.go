@@ -44,6 +44,18 @@ func printColumns(rows []column, indent string) []string {
 	return out
 }
 
+// wrapBullet wraps one rule of a list as "- " and the text, its continuation
+// lines under the text rather than under the dash, so each rule still reads as
+// one item.
+func wrapBullet(text, indent string) []string {
+	lines := wrapText(text, indent+"  ")
+	if len(lines) == 0 {
+		return nil
+	}
+	lines[0] = indent + "- " + strings.TrimPrefix(lines[0], indent+"  ")
+	return lines
+}
+
 // wrapText breaks prose at wrapWidth, indenting every line.
 func wrapText(text, indent string) []string {
 	words := strings.Fields(text)
@@ -86,10 +98,13 @@ func formatGuide(play *role.Playbook) string {
 		}
 		lines = append(lines, printColumns(rows, "  ")...)
 		lines = append(lines, "")
-		for _, limit := range play.Limits {
-			lines = append(lines, wrapText(limit, "  ")...)
+		for _, section := range play.Sections {
+			lines = append(lines, "  "+section.Title)
+			for _, line := range section.Lines {
+				lines = append(lines, wrapBullet(line, "  ")...)
+			}
+			lines = append(lines, "")
 		}
-		lines = append(lines, "")
 	}
 
 	for _, group := range Groups() {

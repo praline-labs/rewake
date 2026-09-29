@@ -21,13 +21,30 @@ func TestEveryRoleCarriesItsOwnPlaybook(t *testing.T) {
 			if len(part.Play.Steps) == 0 {
 				t.Error("no steps: the session would not be told what to do")
 			}
-			if len(part.Play.Limits) == 0 {
-				t.Error("no limits: every role has at least the ones shared by all of them")
-			}
 			for _, step := range part.Play.Steps {
 				if step.Do == "" || step.Why == "" {
 					t.Errorf("a step with a missing half: %+v", step)
 				}
+			}
+			sections := part.Play.Sections
+			if len(sections) < 2 {
+				t.Fatal("no sections of its own: every role has at least one besides the mail every role shares")
+			}
+			for _, section := range sections {
+				if section.Title == "" || len(section.Lines) == 0 {
+					t.Errorf("a section with no title or no rules: %+v", section)
+				}
+				for _, line := range section.Lines {
+					if line == "" {
+						t.Errorf("an empty rule in %s", section.Title)
+					}
+				}
+			}
+			// Mail is last and whole: it carries the rule every role shares
+			// and what every session sees happen to its mail.
+			last := sections[len(sections)-1]
+			if last.Title != Mail.Title || strings.Join(last.Lines, "\n") != strings.Join(Mail.Lines, "\n") {
+				t.Errorf("the last section is %q, not the shared mail section", last.Title)
 			}
 		})
 	}
@@ -36,19 +53,24 @@ func TestEveryRoleCarriesItsOwnPlaybook(t *testing.T) {
 // Two roles may share how the work flows — write and general both take tasks
 // and answer by finishing a turn — but not what they may do.
 //
-// The comparison is on the limits alone, and that is the whole point. Copying
-// a neighboring role and editing the heading is exactly how a new role gets
-// written: the heading names the role, so it is the first line anyone changes,
-// and a key that included it would let the copy through carrying a limit that
-// belongs to someone else — a prohibition about Git, say, in a role that has
-// nothing to do with repositories.
-func TestNoRoleCarriesAnotherRolesLimits(t *testing.T) {
+// The comparison is on the sections alone, and that is the whole point.
+// Copying a neighboring role and editing the heading is exactly how a new role
+// gets written: the heading names the role, so it is the first line anyone
+// changes, and a key that included it would let the copy through carrying a
+// rule that belongs to someone else — a prohibition about Git, say, in a role
+// that has nothing to do with repositories.
+func TestNoRoleCarriesAnotherRolesSections(t *testing.T) {
 	seen := map[string]string{}
 	for _, part := range All() {
-		key := strings.Join(part.Play.Limits, "\n")
-		if other, ok := seen[key]; ok {
-			t.Errorf("%s has exactly the limits of %s; a copied role carries a rule that is not about it", part.ID, other)
+		var key []string
+		for _, section := range part.Play.Sections {
+			key = append(key, section.Title)
+			key = append(key, section.Lines...)
 		}
-		seen[key] = part.ID
+		joined := strings.Join(key, "\n")
+		if other, ok := seen[joined]; ok {
+			t.Errorf("%s has exactly the sections of %s; a copied role carries a rule that is not about it", part.ID, other)
+		}
+		seen[joined] = part.ID
 	}
 }

@@ -169,7 +169,11 @@ func guideModel(play *role.Playbook) map[string]any {
 		for _, step := range play.Steps {
 			steps = append(steps, map[string]string{"do": step.Do, "why": step.Why})
 		}
-		model["role"] = map[string]any{"heading": play.Heading, "steps": steps, "limits": play.Limits}
+		sections := make([]map[string]any, 0, len(play.Sections))
+		for _, section := range play.Sections {
+			sections = append(sections, map[string]any{"title": section.Title, "lines": section.Lines})
+		}
+		model["role"] = map[string]any{"heading": play.Heading, "steps": steps, "sections": sections}
 	}
 	return model
 }
