@@ -394,3 +394,4 @@ nextCursor belongs in the next request (`thread_processor.rs:2732–2777`).
 the owner-accepted prototype and integration ordering; [ownership research](thread-ownership-investigation.md) preserves the earlier investigation.
 The [native resume matrix](thread-lock-probes.md) verifies conditional recreation on the fingerprinted 0.154.0 build; original live-event attribution remains open.
 [Primary state metadata](session-state.md) records the source-backed contract; [September 19 owner acceptance](session-activity.md#evidence-and-acceptance) separates observed activity/notices from unexercised live cases. [Native start-or-steer and outcome evidence](native-terminal-progress.md) separates prompt dispatch from terminal reporting.
+Claude Code 2.1.284 against 2.1.280 (bundles compared September 29, 2026), with its cold-resume dialog: [the record](roadmap/2026-09-29-harness-versions-checked.md).

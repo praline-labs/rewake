@@ -312,3 +312,7 @@ A compaction held against a task, a pair of real sessions driven end to end, and
 terminal's selection between two installed versions — the dated live probes of delivery
 and conversation selection — are in
 [research-codex-live-checks.md](research-codex-live-checks.md).
+
+Codex 0.159.0 against 0.157.1, read in the source on September 29, 2026 — what changed for
+rewake and the cached empty conversation it does not follow — is in
+[the record of that check](roadmap/2026-09-29-harness-versions-checked.md).
