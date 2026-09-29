@@ -62,6 +62,15 @@ The first deprecation named the range `<1.0.2` and so also marked `1.0.2-linux-x
 its release. The mark was taken off them within a minute and set on 1.0.0 and 1.0.1 by
 exact version ([install.md](../install.md#releasing-to-npm)).
 
+## 1.0.3
+
+The role briefings restructured into titled sections that teach each role's craft went out
+as 1.0.3 on September 29, 2026, from the release commit `b76b35b`, tagged `v1.0.3`. The
+dry run was run by main: the write session's classifier refused to build and run the gate,
+since it can publish. The registry showed the three versions and moved `latest`,
+`linux-x64` and `linux-arm64` after its usual short delay; an install into an empty prefix
+ran `rewake 1.0.3`.
+
 ## What stays open
 
 - Nothing of this change.
