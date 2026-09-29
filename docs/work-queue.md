@@ -269,7 +269,19 @@ What the day of the 1.0.0 release left, recorded on September 28, 2026 at the ow
   rewake must not deliver — hold the message and tell main. The same conversation also lacked
   what rewake's launch provides: its sandbox left rewake's state directory read-only, so
   `rewake inbox` and `rewake pending` failed with `read-only file system`, the next task stayed
-  unread, and the worker stood still, seeing only the notices. Investigation from the source
+  unread, and the worker stood still, seeing only the notices. The source shows two gaps in
+  rewake — the gateway forgets which conversation the launch asked for, and nothing checks
+  that the mail is reachable before a delivery — while Codex's own terminal, on an
+  active-writer refusal, opens the same conversation read-only rather than a new one; how
+  the new conversation began stays open. The owner decided on September 29, 2026: the
+  wrapper keeps the launch's intended conversation until the first successful resume, then
+  ordinary navigation applies; deliveries wait as pending, with main and the person told,
+  until the intended conversation is selected or the person explicitly accepts another —
+  `/new` alone does not; where the sandbox policy allows, the wrapper adds a minimal root
+  for rewake's state directory and never changes an explicit read-only policy; mail already
+  waiting is read in another conversation only after that explicit acceptance. Being
+  fixed, together with the conversation marker (the owner asked on the same day to build
+  the marker with it, for main's use). Investigation from the source
   under way; the conversation marker ([conversation-reset.md](conversation-reset.md)) would
   also have shown main the change.
 - **Publishing from CI** with npm's trusted publishing and provenance: the repository is
