@@ -266,7 +266,10 @@ What the day of the 1.0.0 release left, recorded on September 28, 2026 at the ow
   app-server daemon; the terminal reported the conversation open elsewhere and went on in a
   new, empty one, and rewake delivered main's next task there and returned the answer. The
   owner's verdict: when the launch named a conversation and the terminal ends up in another,
-  rewake must not deliver — hold the message and tell main. Investigation from the source
+  rewake must not deliver — hold the message and tell main. The same conversation also lacked
+  what rewake's launch provides: its sandbox left rewake's state directory read-only, so
+  `rewake inbox` and `rewake pending` failed with `read-only file system`, the next task stayed
+  unread, and the worker stood still, seeing only the notices. Investigation from the source
   under way; the conversation marker ([conversation-reset.md](conversation-reset.md)) would
   also have shown main the change.
 - **Publishing from CI** with npm's trusted publishing and provenance: the repository is
