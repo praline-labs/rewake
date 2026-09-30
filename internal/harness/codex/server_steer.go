@@ -2,9 +2,11 @@ package codex
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/control"
+	"github.com/praline-labs/rewake/internal/harness/codex/gateway"
 )
 
 // controlPoll is how often the wrapper looks for a main's request; the asker
@@ -25,7 +27,7 @@ const compactStart = 3 * time.Second
 // steer carries out a main's request on the owned app-server: Codex has no
 // plugin, and the wrapper is what holds the connection and knows the turn.
 func (s *serverSession) steer(ctx context.Context, request control.Request) control.Answer {
-	if request.Action != control.Compact && request.Action != control.Interrupt {
+	if request.Action != control.Compact && request.Action != control.Interrupt && request.Action != control.Accept {
 		return control.Answer{Outcome: control.Failed, Detail: "unknown action " + request.Action}
 	}
 	if s.gateway == nil {
@@ -33,6 +35,9 @@ func (s *serverSession) steer(ctx context.Context, request control.Request) cont
 		// only once the gateway is there. Nothing could record this answer as
 		// the outcome either, as the telemetry lives in the gateway.
 		return control.Answer{Outcome: control.Failed, Detail: "the app-server is not connected yet"}
+	}
+	if request.Action == control.Accept {
+		return s.accept(request.Conversation)
 	}
 	if request.Action == control.Interrupt {
 		ctx, cancel := context.WithTimeout(ctx, interruptWait)
@@ -69,4 +74,25 @@ func (s *serverSession) withdrawn(request control.Request, answer control.Answer
 	if request.Action == control.Compact && s.gateway != nil {
 		s.gateway.CompactionEnded(request.ID, request.From, answer)
 	}
+}
+
+// accept takes the selected conversation for the launch's own, at the
+// person's word (rewake accept): deliveries held for it go on.
+func (s *serverSession) accept(conversation string) control.Answer {
+	err := s.gateway.Accept(conversation)
+	switch {
+	case err == nil:
+		return control.Answer{Outcome: control.Done}
+	case errors.Is(err, gateway.ErrNothingHeld):
+		return control.Answer{Outcome: control.Refused, Reason: control.NothingHeld}
+	case errors.Is(err, gateway.ErrNoSelection):
+		return control.Answer{Outcome: control.Refused, Reason: control.NoSelection}
+	case errors.Is(err, gateway.ErrNotSelected):
+		detail := ""
+		if b := s.gateway.Binding(); b.Ready {
+			detail = "the selected conversation is " + b.Thread
+		}
+		return control.Answer{Outcome: control.Refused, Reason: control.NotSelected, Detail: detail}
+	}
+	return control.Answer{Outcome: control.Failed, Detail: err.Error()}
 }

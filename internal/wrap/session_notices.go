@@ -17,6 +17,7 @@ type knownWorker struct {
 	last        sessionstate.Snapshot
 	compactions uint64
 	departure   *inbox.Message
+	held        heldDeliveries
 }
 
 type sessionNotices struct {
@@ -64,6 +65,9 @@ func (n *sessionNotices) scan(ctx context.Context, dir string, self registry.Ses
 			worker.last = latest
 		}
 		if err := n.announceCompactions(ctx, dir, current, worker); err != nil {
+			continue
+		}
+		if err := n.announceHold(ctx, dir, current, worker); err != nil {
 			continue
 		}
 		reason, known := observeDeparture(dir, worker.session)

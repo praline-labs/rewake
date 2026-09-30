@@ -27,7 +27,10 @@ const introKey = "developer_instructions"
 
 type codexHarness struct{}
 
-var _ harness.Steerable = codexHarness{}
+var (
+	_ harness.Steerable = codexHarness{}
+	_ harness.Accepting = codexHarness{}
+)
 
 // New returns the Codex harness.
 func New() harness.Harness { return codexHarness{} }
@@ -115,6 +118,11 @@ func (codexHarness) Notes() []string {
 		"Arguments after codex reach it as written, beside the --remote rewake adds for its server, except: a --help first asks rewake for this page; beside --worktree, -C or --cd only says where the checkout is made from; --remote, --profile or -p, --oss and --local-provider are refused, since the session's own server needs local arguments; and a typed flag replaces an alias's copy of it.",
 	}
 }
+
+// AcceptsConversation: the wrapper keeps the conversation a resume launch
+// asked for until it is selected or the person accepts another
+// (gateway.LaunchIntent).
+func (codexHarness) AcceptsConversation() bool { return true }
 
 func (codexHarness) SupportsGitGrant() bool { return true }
 func (codexHarness) SupportsDirGrant() bool { return true }
@@ -262,6 +270,7 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 	server.program = request.Program("codex")
 	mode, _ := continuationMode(request.Args)
 	server.startupFork = mode == "fork"
+	server.intent = resumeIntent(request.Args)
 	return harness.LaunchPlan{
 		Backend:    server,
 		Socket:     socket,

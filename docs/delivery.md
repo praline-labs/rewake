@@ -211,9 +211,12 @@ has passed — 80 seconds for a compaction whose turn is not seen, 10 minutes fo
 seen running ([remote-control-codex.md](remote-control-codex.md)). A delivery the server
 itself refuses for a compaction running (`ActiveTurnNotSteerable { turn_kind: Compact }`,
 September 26, 2026) is `gateway.ErrCompacting` too, and `DeliverChecked` makes it
-`pending`: the message goes once the compaction has ended. Nothing else holds a delivery:
-an operation whose end the gateway has not read makes main's compaction refuse, not
-a delivery wait.
+`pending`: the message goes once the compaction has ended. One more hold keeps a Codex
+message `pending` rather than fail it (September 29, 2026): a conversation the launch did
+not ask for, until it is resumed or the person accepts another
+([delivery-conversation.md](delivery-conversation.md)). Nothing else holds a delivery: an
+operation whose end the gateway has not read makes main's compaction refuse, not a
+delivery wait.
 
 Only an answer accepted under a fresh reservation receives a new delivery
 window. `retention/<report id>` records that reservation and, on release, fixes
@@ -360,6 +363,12 @@ The conversation is the link, not the name: a new conversation under the same na
 nothing, and a fork (`--fork-session`) starts one. A harness that names no conversation
 sweeps at once. The grants of those tasks are confirmed again by main
 ([grants-resume.md](grants-resume.md)).
+
+### A conversation the launch did not ask for
+
+A Codex launch that resumes delivers only into the conversation it asked for until that
+one is resumed or the person runs `rewake accept`, and a worker there does not read its
+mail before. How, and who is told: [delivery-conversation.md](delivery-conversation.md).
 
 ### Owed reports
 

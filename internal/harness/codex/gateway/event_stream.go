@@ -3,6 +3,8 @@ package gateway
 import (
 	"strings"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 func (c *connection) readServer() {
@@ -22,6 +24,8 @@ func (c *connection) readServer() {
 			c.closeWith("server-to-tui", "projection", err, len(raw))
 			return
 		}
+		var warn *sessionstate.DeliveryHold
+		var warnAt Binding
 		if m.id == "" && (m.method == "turn/completed" || m.method == "thread/status/changed" && (m.status == "idle" || m.status == "systemError")) && c.owner.cfg.ReadSequence != nil {
 			m.readThrough = &receivedRead
 		}
@@ -53,6 +57,7 @@ func (c *connection) readServer() {
 			if p, ok := c.state.pending[m.id]; ok && p.method == "thread/compact/start" && m.failure {
 				c.compactionRefused(p.target, p.sent)
 			}
+			resumed := observationCorrelated && observationPending.intent && observationPending.method == "thread/resume" && observationPending.generation == c.state.Generation
 			m = c.state.response(m, raw)
 			c.replied(m, raw, observationPending, observationCorrelated, admission, admitted)
 			if c.state.Ready && c.owner.owns(c) {
@@ -60,6 +65,13 @@ func (c *connection) readServer() {
 				c.owner.reconnectThread = ""
 				c.owner.startupBound = true
 				c.owner.mu.Unlock()
+				c.owner.selected(c.state.Binding)
+				warn, warnAt = c.owner.launchHold(c.state.Binding), c.state.Binding
+			} else if resumed && c.owner.owns(c) {
+				// The terminal's resume selected nothing: the server refused
+				// it, or opened the conversation without the right to write.
+				c.owner.refusedResume(observationPending.target, resumeRefusal(m, raw))
+				warn, warnAt = c.owner.launchHold(c.state.Binding), c.state.Binding
 			}
 		} else if m.id == "" {
 			if m.method == "turn/started" && m.thread == c.state.Thread {
@@ -90,6 +102,11 @@ func (c *connection) readServer() {
 		if !c.queueResponse(raw) {
 			c.closeWith("server-to-tui", "response-queue-capacity", nil, len(raw))
 			return
+		}
+		// After the reply that selected the conversation, so the terminal
+		// shows the warning in it rather than before it.
+		if warn != nil {
+			c.warnHold(warnAt, warn)
 		}
 	}
 }
@@ -133,4 +150,27 @@ func (c *connection) tick() {
 			}
 		}
 	}
+}
+
+// resumeRefusal is the server's answer to a resume that selected nothing, as
+// the person would read it.
+func resumeRefusal(m meta, raw []byte) string {
+	if !m.failure && m.directKnown && !m.direct {
+		return "the conversation was opened without the right to write to it"
+	}
+	if !m.failure {
+		return "the resume selected no conversation that takes input"
+	}
+	reason := field(raw, "error", "message")
+	if len(reason) > 4096 {
+		return "the resume was refused"
+	}
+	text := decodeText(reason)
+	if len(text) > 300 {
+		text = text[:300] + "…"
+	}
+	if text == "" {
+		return "the resume was refused"
+	}
+	return "the resume was refused (" + text + ")"
 }

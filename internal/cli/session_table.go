@@ -52,7 +52,15 @@ func sessionTable(room string, sessions []sessionView, visible bool) []string {
 		_, _ = fmt.Fprintln(writer, strings.Join(row, "\t"))
 	}
 	_ = writer.Flush()
-	return append(lines, strings.TrimSuffix(buffer.String(), "\n"))
+	lines = append(lines, strings.TrimSuffix(buffer.String(), "\n"))
+	// A hold does not fit a cell, and it is what main needs to act on: senders
+	// read only pending (docs/delivery-conversation.md).
+	for _, session := range sessions {
+		if session.Telemetry != nil && session.Telemetry.DeliveryHold != nil {
+			lines = append(lines, fmt.Sprintf("Deliveries to %s wait: %s", session.Name, session.Telemetry.DeliveryHold.Detail))
+		}
+	}
+	return lines
 }
 
 func stateCells(snapshot *sessionstate.Snapshot) []string {

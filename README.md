@@ -123,6 +123,7 @@ works the same way.
 | Worktree per session (`--worktree`) | yes | yes |
 | Follow the conversation across `/clear`, `/new` | yes, not yet seen live | yes |
 | Grants back after a resume | partial: `--resume <id>` or `--continue`, not `/resume` | yes |
+| Mail held when a resume ends up in another conversation | no | yes, until resumed or `rewake accept` |
 | Act as main that grants | yes | no: main, but cannot grant |
 
 ## How it works
@@ -154,6 +155,7 @@ launch.
 | `rewake pending <text>` | Mark a turn that ends before the work does |
 | `rewake withdraw <id>`, `rewake edit <id> <text>` | Take back or replace an unread message |
 | `rewake compact <name>`, `rewake interrupt <name>` | Steer a worker (main only) |
+| `rewake accept <name> <conversation>` | Let a resumed Codex session take mail in the conversation its terminal went on in (the person, outside any session) |
 | `rewake worktree ls \| land \| finish \| rm` | List, land, finish or remove the worktrees made for `--worktree` launches |
 | `rewake whoami` | Show this session's name, room and role |
 

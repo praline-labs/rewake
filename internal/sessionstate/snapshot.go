@@ -45,7 +45,32 @@ type Snapshot struct {
 	// it: the publisher and the reader are different processes, and the wall
 	// clock can be stepped by seconds between the two.
 	PublishedBoot int64 `json:"publishedBoot,omitempty"`
+	// DeliveryHold says why deliveries into the session wait although a
+	// conversation is selected; nil when nothing holds them.
+	DeliveryHold *DeliveryHold `json:"deliveryHold,omitempty"`
 }
+
+// DeliveryHold is why deliveries wait, and what the person can do about it
+// (docs/delivery-conversation.md#when-the-selected-conversation-is-not-the-launchs).
+type DeliveryHold struct {
+	Reason string `json:"reason"`
+	// Expected is the conversation the launch asked to resume, empty when it
+	// named none (--last or the picker) and the terminal resumed none.
+	Expected string `json:"expectedConversation,omitempty"`
+	Selected string `json:"selectedConversation,omitempty"`
+	Detail   string `json:"detail"`
+}
+
+// Reasons of a DeliveryHold.
+const (
+	// HoldUnintended: the terminal selected a conversation other than the
+	// one its launch asked to resume, and the person has not accepted it.
+	HoldUnintended = "unintended-conversation"
+	// HoldMailClosed: the conversation the launch asked for is selected, and
+	// the record that opens the session's mail could not be written, so its
+	// worker could not read what would be delivered.
+	HoldMailClosed = "mail-closed"
+)
 
 // Values of Snapshot.Interruptions.
 const (

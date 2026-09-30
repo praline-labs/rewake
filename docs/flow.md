@@ -92,6 +92,9 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
      Git roots, and no notify program is installed. Resume/fork keep caller input
      and omit generated permission flags; incompatible
      remote/profile/local-provider launches refuse; `--worktree` never reaches it.
+     A resume tells the gateway which conversation it asked for — by id, or the
+     terminal's first resume for `--last` and the picker — and delivery waits for that
+     one ([delivery-conversation.md](delivery-conversation.md)).
 6. **The environment.** `REWAKE_SESSION=<name>`, `REWAKE_EPOCH=<epoch>`,
    `REWAKE_DIR=<root>` and `REWAKE_ROOM=<room>`; inherited Claude Code markers are stripped, so the harness
    never borrows another session's socket. A launch from inside a session never gets
@@ -191,7 +194,11 @@ in one notice. A task or a question does not wait, and takes whatever is waiting
      Codex; the wrapper then keeps it in memory, and the session's `grant-hook` adds the
      directory at the first file-tool write inside it ([grants-claude.md](grants-claude.md)).
      `--grant-git` to a Claude Code session is refused at send, with exit 1.
-   - Codex: call turn/start through the reserved TUI connection/generation with empty
+   - Codex: a launch that resumed and whose terminal went on in another conversation
+     keeps the message `pending` until that one is resumed or the person runs `rewake
+     accept`; main is told once, the terminal shows a warning
+     ([delivery-conversation.md](delivery-conversation.md)). Otherwise:
+     call turn/start through the reserved TUI connection/generation with empty
      input and [standalone mailbox output](native-mailbox.md): short notice plus fixed
      member identities, never full task bodies. A task or question carrying a grant
      goes on a notice of its own and waits, pending, while the thread is active, so the

@@ -21,6 +21,17 @@ A-B-A is a new generation even though the thread ID repeats. Helper connections,
 overview reads, activity, stored timestamps and loaded lists never select a target.
 Conflicting primary connections make new delivery unavailable.
 
+A launch that resumes carries its intent (`LaunchIntent`), kept by the gateway across
+connections: until the first successful resume of the conversation it asked for, a ready
+binding of any other is refused with `ErrUnintended` before anything else in the
+reservation, and so is no binding at all once the terminal's resume of it selected
+nothing; `/new` does not change that. The person's `rewake accept` of the conversation
+selected now lifts it, checked and lifted under the connection's and the gateway's locks,
+as the intended resume does; either lift first records that the session's mail may be
+read (`Config.Admit`), and a record that could not be written holds the intended
+conversation too. The gateway keeps no conversation's permissions: whether the worker
+can reach its mail is not judged here ([delivery-conversation.md](delivery-conversation.md)).
+
 `inbox.Server` asks a transport-neutral `Reservation` before making mail readable.
 It checks epoch, expiry and question leases, waits outside the mailbox lock for the
 native target, then rechecks mail under the lock. The reservation runs through

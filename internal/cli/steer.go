@@ -47,6 +47,7 @@ type steerModel struct {
 var steerLimits = map[string]control.Limits{
 	control.Compact:   {Pickup: steerPickup, Outcome: 10 * time.Second, Poll: 50 * time.Millisecond},
 	control.Interrupt: {Pickup: steerPickup, Outcome: 10 * time.Second, Poll: 50 * time.Millisecond},
+	control.Accept:    {Pickup: steerPickup, Outcome: 10 * time.Second, Poll: 50 * time.Millisecond},
 }
 
 // steerPickup is the pickup limit, five seconds unless a build set builtPickup

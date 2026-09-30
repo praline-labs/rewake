@@ -65,10 +65,10 @@ func (s *serverSession) Reserve(ctx context.Context, message inbox.Message) (inb
 }
 
 // reserveRefusal tells the inbox a refusal that passes with a running
-// compaction, so the message stays pending and goes after it, from one that
-// fails the delivery.
+// compaction, or with the person's word on the conversation, so the message
+// stays pending, from one that fails the delivery.
 func reserveRefusal(err error) error {
-	if errors.Is(err, gateway.ErrCompacting) {
+	if errors.Is(err, gateway.ErrCompacting) || errors.Is(err, gateway.ErrUnintended) {
 		return fmt.Errorf("%w: %v", inbox.ErrNotYet, err)
 	}
 	return err

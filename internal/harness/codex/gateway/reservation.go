@@ -57,12 +57,16 @@ func (g *Gateway) Reserve(ctx context.Context) (*Reservation, error) {
 	defer ticker.Stop()
 	for {
 		if err := ctx.Err(); err != nil {
-			if compacting {
-				return nil, ErrCompacting
-			}
-			return nil, err
+			return nil, g.unreserved(compacting, err)
 		}
 		c := g.currentConnection()
+		if c == nil {
+			// The launch's hold outlives a connection: a reconnect selects
+			// nothing until the terminal resumes again.
+			if hold := g.launchHold(Binding{}); hold != nil {
+				return nil, &HoldError{Hold: *hold}
+			}
+		}
 		if c != nil {
 			c.mu.Lock()
 			b := c.state.Binding
@@ -71,6 +75,12 @@ func (g *Gateway) Reserve(ctx context.Context) (*Reservation, error) {
 			c.mu.Unlock()
 			if want.Ready && !sameBinding(want, b) {
 				return nil, errors.New("conversation changed while waiting for delivery admission")
+			}
+			// Refused at once rather than waited for: the hold passes only
+			// at the person's word or with a resume, and the sender is told
+			// why. A refused resume holds with nothing selected too.
+			if hold := g.launchHold(b); hold != nil && (!b.Ready || g.owns(c)) {
+				return nil, &HoldError{Hold: *hold}
 			}
 			if b.Ready && g.owns(c) {
 				want = b
@@ -91,13 +101,22 @@ func (g *Gateway) Reserve(ctx context.Context) (*Reservation, error) {
 		}
 		select {
 		case <-ctx.Done():
-			if compacting {
-				return nil, ErrCompacting
-			}
-			return nil, fmt.Errorf("%w: selected conversation is not ready; wait for native resume to finish or select /resume or /new", ctx.Err())
+			return nil, g.unreserved(compacting, fmt.Errorf("%w: selected conversation is not ready; wait for native resume to finish or select /resume or /new", ctx.Err()))
 		case <-ticker.C:
 		}
 	}
+}
+
+// unreserved is why Reserve's time ran out: a compaction, or the launch's
+// resume still on its way, keep the delivery waiting; anything else is err.
+func (g *Gateway) unreserved(compacting bool, err error) error {
+	if compacting {
+		return ErrCompacting
+	}
+	if owed := g.resumeOwed(); owed != nil {
+		return owed
+	}
+	return err
 }
 
 func sameBinding(a, b Binding) bool {

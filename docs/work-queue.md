@@ -279,11 +279,17 @@ What the day of the 1.0.0 release left, recorded on September 28, 2026 at the ow
   until the intended conversation is selected or the person explicitly accepts another —
   `/new` alone does not; where the sandbox policy allows, the wrapper adds a minimal root
   for rewake's state directory and never changes an explicit read-only policy; mail already
-  waiting is read in another conversation only after that explicit acceptance. Being
-  fixed, together with the conversation marker (the owner asked on the same day to build
-  the marker with it, for main's use). Investigation from the source
-  under way; the conversation marker ([conversation-reset.md](conversation-reset.md)) would
-  also have shown main the change.
+  waiting is read in another conversation only after that explicit acceptance. Stage A,
+  those decisions, was built the same day
+  ([roadmap/2026-09-29-failed-resume-hold.md](roadmap/2026-09-29-failed-resume-hold.md),
+  [delivery-conversation.md](delivery-conversation.md)) and lands without the mail-reach
+  check: the check of the sandbox before a delivery, and the root it added, were taken
+  out on September 30, 2026 after three acceptance rounds, replaced by the owner's
+  decision below, mail that does not depend on the sandbox; the investigation from the source
+  is in [research-codex.md](research-codex.md#a-conversation-another-program-holds), and
+  how the new conversation began stays open. Stage B, the conversation marker
+  ([conversation-reset.md](conversation-reset.md)), comes next: the owner asked on the
+  same day to build it with this fix, for main's use.
 - **Mail that does not depend on the sandbox — decided September 30, 2026, to do now.** A
   Codex worker reads, marks and answers its mail by writing rewake's state directory from
   inside its sandbox, so a conversation whose policy closes `/tmp` cannot take mail at all

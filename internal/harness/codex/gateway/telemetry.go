@@ -64,9 +64,12 @@ type connectionObservations struct {
 	serial     uint64
 }
 
-// SessionState has no I/O and never promotes an unproved connection or selection.
+// SessionState never promotes an unproved connection or selection. Its only
+// I/O is a lift of the launch's hold that could not be recorded when the
+// intended conversation was selected, tried again here.
 func (g *Gateway) SessionState() sessionstate.Snapshot {
 	binding := g.Binding()
+	g.selected(binding)
 	g.telemetry.mu.Lock()
 	defer g.telemetry.mu.Unlock()
 	result := g.telemetry.last
@@ -85,6 +88,7 @@ func (g *Gateway) SessionState() sessionstate.Snapshot {
 		result.Selection = "unavailable"
 		result.Stale()
 	}
+	result.DeliveryHold = g.hold(binding)
 	return result
 }
 

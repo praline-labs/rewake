@@ -78,6 +78,12 @@ everything else.
   Claude Code socket line, its reply socket and receipts, held and late words, the startup
   gate and what a killed wrapper leaves behind; and the Codex gateway in brief. Open it
   when a delivery result for one harness is in question.
+- [delivery-conversation.md](delivery-conversation.md) — why a Codex message stays
+  pending in a conversation the launch did not ask for: the launch's intent, `rewake
+  accept`, the record that keeps the worker's inbox closed meanwhile, and how the sender,
+  main and the person at the terminal are told; and why a worker whose sandbox closes
+  rewake's state directory is not handled there yet. Open it when a Codex delivery waits
+  after a resume, or a worker cannot read its mail.
 - [turn-outcomes.md](turn-outcomes.md) — the turn ends that are not an ordinary report:
   a failed turn, a keyboard stop, and a turn end marked with `rewake pending`, which tells
   the waiters the work is still going and keeps their tasks owed, with the confirmation
@@ -233,6 +239,12 @@ everything else.
   compaction held against a task, two real sessions driven end to end through steering,
   `/new`, compaction and an interrupt, and the terminal's selection between two installed
   versions. Open it before touching delivery timing or conversation selection on Codex.
+- [research-codex-conversation.md](research-codex-conversation.md) — source facts about a
+  Codex conversation's permissions, split from research-codex.md by subject: what states
+  them, how a settings update is queued, applied and told, what a running turn keeps, and
+  the warning the terminal draws without a turn; read for a sandbox check that was
+  dropped, and why the event stream cannot carry one. Open it before reasoning about a
+  conversation's sandbox, the delivery hold, or after a Codex update.
 - [research-launch.md](research-launch.md) — what an installed binary answers when run:
   model and effort catalogues and the usable context window, which flags may repeat,
   undocumented aliases, when a `--help` probe can be trusted, how each harness is

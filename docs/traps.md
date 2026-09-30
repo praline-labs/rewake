@@ -311,6 +311,24 @@ compaction counted.
 
 *September 26, 2026.*
 
+### A resumed Codex worker got its task in a new, empty conversation
+
+The owner relaunched a worker with a resume of a conversation a plain Codex held through
+the shared daemon; the terminal went on in another, empty one, and rewake delivered the
+task there — where the worker's sandbox left rewake's state directory read-only, so it
+could not read the mail and stood still. Since September 29, 2026 the wrapper keeps the
+launch's conversation: a task sent then stays `pending`, `rewake send` exits 3 naming the
+expected and the selected conversation, main is told once, and the terminal shows a
+warning. Resume the intended conversation with `/resume` once the other program has let
+it go, or accept the selected one from a shell outside any session with `rewake accept
+<session> <conversation>` ([delivery-conversation.md](delivery-conversation.md)). A
+wrapper built before that day still delivers into whatever the terminal selected. A
+conversation whose sandbox closes rewake's state directory still takes the notice and
+cannot read the mail: making the mail independent of the sandbox is the next change
+([work-queue.md](work-queue.md#now-after-100)).
+
+*September 29, 2026.*
+
 ### A Codex 0.157.1 terminal is never selected
 
 The session registers and the terminal works, but `rewake send` refuses with

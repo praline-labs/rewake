@@ -146,6 +146,13 @@ type Steerable interface {
 	InterruptTrace() string
 }
 
+// Accepting is a harness whose wrapper holds deliveries when the terminal
+// ends up in a conversation other than the one its launch asked to resume,
+// until the person accepts that conversation with rewake accept.
+type Accepting interface {
+	AcceptsConversation() bool
+}
+
 // Flag is one parameter of a harness, by every spelling it answers to.
 //
 // TakesValue is here because dropping a flag means dropping what belongs to

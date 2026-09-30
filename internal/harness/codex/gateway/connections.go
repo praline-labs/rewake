@@ -8,7 +8,9 @@ import (
 
 // New waits for a recognized intent, not merely the first TCP/Unix connection.
 func New(cfg Config) *Gateway {
-	return &Gateway{cfg: cfg, conns: map[*connection]bool{}, owners: map[*connection]bool{}, gate: make(chan struct{}, 1), published: map[string]publishedOutcome{}, proofs: newProofs(), ops: newOperations()}
+	g := &Gateway{cfg: cfg, conns: map[*connection]bool{}, owners: map[*connection]bool{}, gate: make(chan struct{}, 1), published: map[string]publishedOutcome{}, proofs: newProofs(), ops: newOperations()}
+	g.intent.waiting, g.intent.thread = cfg.Intent.Resume, cfg.Intent.Thread
+	return g
 }
 
 // Close releases every helper and intent-bearing connection with the wrapper.

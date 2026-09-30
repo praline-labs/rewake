@@ -101,7 +101,7 @@ the next holder of the name:
 ```
 <REWAKE_DIR>/rooms/<room>/control/<name>.<epoch>/     0700
   lock                    flock of the asker; a second asker is refused, not queued
-  request.json            {id, action, focus, from}, 0600, put in place by rename
+  request.json            {id, action, focus, from, conversation}, 0600, put in place by rename
   <id>.taken              written by the served side the moment it picks the request up
   <id>.started            Claude Code: written by the collector when the compaction's PreCompact arrives
   <id>.result             {id, outcome, reason, detail, tokensBefore, tokensAfter}, written once
@@ -259,6 +259,14 @@ longer the previous one. A person's Esc sets no mark.
 
 The wrapper serves the directory itself, through the gateway that holds the
 app-server connection: [remote-control-codex.md](remote-control-codex.md).
+
+The same directory carries one action that is not main's: `accept`, which `rewake accept
+<session> <conversation>` writes from the person's shell to let a Codex session deliver
+into a conversation its launch did not ask for. It is answered `done`, or `refused` with
+`nothing held`, `no conversation selected` or `not the selected conversation` — the last
+naming the one selected now — or `failed` when the wrapper could not record that the
+session's mail may be read, which keeps the hold; the directory being the run's own is what binds the
+acceptance to that run ([delivery-conversation.md](delivery-conversation.md)).
 
 ## Known limits
 

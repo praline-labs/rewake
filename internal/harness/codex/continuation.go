@@ -1,9 +1,11 @@
 package codex
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/harness/codex/gateway"
 )
 
 // Remote continuation rejects permission overrides before contacting the server.
@@ -15,16 +17,44 @@ func continuationOptions(args []string) (bool, bool) {
 }
 
 func continuationMode(args []string) (command string, permissionOverride bool) {
+	words, permissionOverride, _ := continuationWords(args)
+	if len(words) > 0 {
+		command = words[0]
+	}
+	return command, permissionOverride
+}
+
+// uuidShape is a conversation id as Codex writes one: its resume takes a
+// session name too, and an id that parses wins (cli/src/main.rs,
+// ResumeCommand, 0.159.0).
+var uuidShape = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+
+// resumeIntent is the conversation a launch asks to resume: by id, or left to
+// --last, a name or the picker, when the terminal's first resume names it.
+func resumeIntent(args []string) gateway.LaunchIntent {
+	words, _, last := continuationWords(args)
+	if len(words) == 0 || words[0] != "resume" {
+		return gateway.LaunchIntent{}
+	}
+	intent := gateway.LaunchIntent{Resume: true}
+	if len(words) > 1 && !last && uuidShape.MatchString(words[1]) {
+		intent.Thread = strings.ToLower(words[1])
+	}
+	return intent
+}
+
+// continuationWords are the positional words of a launch, the flags' values
+// left out, whether a flag overrides permissions, and whether --last is set.
+func continuationWords(args []string) (words []string, permissionOverride, last bool) {
 	visible := harness.BeforeTerminator(args)
-	positional := false
 	for i := 0; i < len(visible); i++ {
 		arg := visible[i]
 		if !strings.HasPrefix(arg, "-") {
-			if !positional {
-				command = arg
-				positional = true
-			}
+			words = append(words, arg)
 			continue
+		}
+		if arg == "--last" {
+			last = true
 		}
 		name, value, joined := strings.Cut(arg, "=")
 		if !strings.HasPrefix(arg, "--") && len(arg) > 2 && strings.ContainsRune("cCmpisa", rune(arg[1])) {
@@ -53,7 +83,7 @@ func continuationMode(args []string) (command string, permissionOverride bool) {
 			}
 		}
 	}
-	return command, permissionOverride
+	return words, permissionOverride, last
 }
 
 // Match the session-layer keys inspected by the upstream remote startup guard,

@@ -271,6 +271,42 @@ directory grant ([grants.md](grants.md)) rests on:
   sandbox_workspace_write.writable_roots overrides are not supported with --remote.
   Configure additional workspace roots on the server.`
 
+### A conversation another program holds
+
+**[read in the source; Codex `rust-v0.159.0` and `rust-v0.157.1`; September 29, 2026;
+review-codex, investigating the failed-resume defect]** Paths relative to `codex-rs`.
+
+- **A shared daemon.** A plain `codex` starts or joins one shared app-server when its
+  configuration allows: `daemon_auto_start` is on by default on both tags
+  (`features/src/lib.rs:943–948` on 0.159.0, `:940–945` on 0.157.1); `--no-daemon`, a
+  profile, most `-c` overrides and some provider choices keep it off
+  (`tui/src/daemon_startup.rs:25–88`). rewake's own launch keeps its private server on its
+  socket (`--remote` selects it, `tui/src/lib.rs:1029–1040`); the daemon does not replace
+  it.
+- **A writer lock across processes.** Processes sharing one Codex home share
+  `thread-writer-locks/<id>.lock`, an exclusive `try_lock`; a second writer gets `thread
+  <id> already has an active writer`, code -32600 (`rollout/src/writer_lock.rs:35–70`,
+  `app-server/tests/suite/v2/thread_resume.rs:313–390`). So a conversation a plain Codex
+  holds through the daemon cannot be resumed by rewake's server either.
+- **The terminal's answer to it is a read-only view, not a new conversation.** On that
+  error (`app_server_session.rs:373`) the startup reads the same conversation for viewing
+  — `thread/read` without turns, then its history — sets it read-only and offers to retry
+  (`tui/src/app/startup.rs:463–582`, `app_server_session/rollout_history.rs:33–108`, the
+  text `This conversation is open in another app` in `chatwidget/rendering.rs`); `/resume`
+  inside a running terminal does the same (`app/session_lifecycle.rs:1307–1339`). No
+  `thread/start` follows from the error. Fresh starts come from `resume --last` finding
+  nothing (`tui/src/lib.rs:1604–1606`), the picker's start-fresh (`lib.rs:1704–1738`) and
+  ordinary startup. How the incident's new conversation began is not established.
+- **A remote terminal's resume drops permission overrides.** With `--remote` the
+  terminal sends no `runtimeWorkspaceRoots` (`app_server_session.rs:348–354`), its resume
+  clears approval, sandbox and permission overrides and drops the permission config
+  (`:2116–2122`), and a fresh start passes a reduced sandbox mode rather than the whole
+  local profile (`:1919–1939`, `:2003–2055`). A new conversation need not have the
+  permissions of the one before it.
+- The public form is `codex resume [SESSION_ID]`, a UUID or a name, with `--last`, `--all`
+  and `--include-non-interactive` (`cli/src/main.rs`, `ResumeCommand`); there is no
+  `--resume` flag (`tui/src/cli.rs:24–35`).
+
 ### The plan tool
 
 **[live against a local Responses stand-in, no model calls; Codex CLI 0.155.1 and

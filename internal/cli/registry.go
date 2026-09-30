@@ -266,7 +266,7 @@ func buildGroups() {
 		},
 	}
 
-	groups = []Group{run, talk, steer, help, internal}
+	groups = []Group{run, talk, steer, acceptGroup(), help, internal}
 }
 
 // nestedLaunchHelp is refuseNestedLaunch's rule, on every launch page: a

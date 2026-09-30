@@ -27,6 +27,9 @@ import (
 const (
 	Compact   = "compact"
 	Interrupt = "interrupt"
+	// Accept takes the conversation a Codex terminal selected for the one
+	// its launch asked to resume, at the person's word (rewake accept).
+	Accept = "accept"
 )
 
 // Outcomes of a request. A compaction is answered Started once the served
@@ -54,6 +57,9 @@ const (
 	NoControl          = "no control directory"
 	Withdrawn          = "withdrawn before it was taken"
 	Busy               = "another request in flight"
+	NothingHeld        = "nothing held"
+	NotSelected        = "not the selected conversation"
+	NoSelection        = "no conversation selected"
 )
 
 // Request is what the asker writes. From is the asking session's name: the
@@ -63,6 +69,8 @@ type Request struct {
 	Action string `json:"action"`
 	Focus  string `json:"focus,omitempty"`
 	From   string `json:"from"`
+	// Conversation is the one an acceptance names.
+	Conversation string `json:"conversation,omitempty"`
 }
 
 // Answer is what the served side writes: the outcome, a fixed reason word for

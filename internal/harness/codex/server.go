@@ -29,9 +29,12 @@ import (
 const lastObservedServerVersion = "codex-cli 0.155.1"
 
 type serverSession struct {
-	gatewayLog                 *os.File
-	capture                    func() *inbox.ReadBoundary
-	startupFork                bool
+	gatewayLog  *os.File
+	capture     func() *inbox.ReadBoundary
+	startupFork bool
+	// intent is the conversation the launch asked to resume, which
+	// deliveries wait for (gateway.LaunchIntent).
+	intent                     gateway.LaunchIntent
 	processStop                sync.Once
 	reportVersion, reportSaved uint64
 	reportOverflow             sync.Once
@@ -157,7 +160,14 @@ func (s *serverSession) Start(ctx context.Context, handler harness.CompletionHan
 	if s.capture != nil {
 		readSequence = func() uint64 { return s.capture().Through }
 	}
-	s.gateway = gateway.New(gateway.Config{Upstream: s.upstream, Epoch: s.epoch, StartupFork: s.startupFork, ReadSequence: readSequence, Closed: func(info gateway.CloseInfo) {
+	admit, err := s.holdMail()
+	if err != nil {
+		_ = listener.Close()
+		s.stopProcess()
+		cancel()
+		return err
+	}
+	s.gateway = gateway.New(gateway.Config{Upstream: s.upstream, Epoch: s.epoch, StartupFork: s.startupFork, Intent: s.intent, Name: s.name, Admit: admit, ReadSequence: readSequence, Closed: func(info gateway.CloseInfo) {
 		_, _ = fmt.Fprintf(s.gatewayLog, "connection=%d generation=%d direction=%s reason=%s error=%q bytes=%d requests=%d responses=%d sizeStage=%s messageBytes=%d limitBytes=%d\n", info.Connection, info.Generation, info.Direction, info.Reason, info.Error, info.Bytes, info.Requests, info.Responses, info.SizeStage, info.MessageBytes, info.LimitBytes)
 	}, Complete: func(result gateway.Completion) {
 		value := harness.Completion{ID: result.PublicationID(), Thread: result.Thread, Kind: inbox.Kind(result.Kind), Text: result.Text, Started: result.Started, Ended: result.Ended}
@@ -177,6 +187,25 @@ func (s *serverSession) Start(ctx context.Context, handler harness.CompletionHan
 	go func() { _ = s.proxy.Serve(listener); cancel() }()
 	go func() { <-runCtx.Done(); s.stopProcess() }()
 	return nil
+}
+
+// holdMail closes the run's mail before the terminal starts, when the launch
+// asked to resume a conversation: until it is resumed or the person accepts
+// another, rewake inbox reads nothing (sessionstate.MailHeld). It returns what
+// opens the mail again, which the gateway calls before the hold ends.
+func (s *serverSession) holdMail() (func() error, error) {
+	if !s.intent.Resume || s.mailbox == "" {
+		return nil, nil
+	}
+	intended := s.intent.Thread
+	if intended == "" {
+		intended = "a conversation"
+	}
+	detail := "the launch asked to resume " + intended + ", and it has not been resumed, nor has the person accepted the conversation selected instead"
+	if err := sessionstate.HoldMail(s.mailbox, s.name, s.epoch, detail); err != nil {
+		return nil, fmt.Errorf("could not record that the session's mail waits for its conversation: %w", err)
+	}
+	return func() error { return sessionstate.AdmitMail(s.mailbox, s.name, s.epoch) }, nil
 }
 
 // Startup probing initializes and closes a temporary client; it never chooses or resumes a root.

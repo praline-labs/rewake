@@ -18,8 +18,15 @@ func decodeText(raw []byte) string { var s string; _ = json.Unmarshal(raw, &s); 
 type (
 	// Config supplies wrapper-owned endpoints and metadata-only callbacks.
 	Config struct {
-		ReadSequence    func() uint64
-		StartupFork     bool
+		ReadSequence func() uint64
+		StartupFork  bool
+		// Intent is the conversation the launch asked to resume, if any.
+		Intent LaunchIntent
+		// Name is the session's, for the command a hold names.
+		Name string
+		// Admit records, before the launch's hold ends, that the session's
+		// mail may be read (sessionstate.AdmitMail). An error keeps the hold.
+		Admit           func() error
 		Upstream, Epoch string
 		Record          func(Record)
 		Closed          func(CloseInfo)
@@ -28,6 +35,7 @@ type (
 	// Gateway fences delivery by accepted intent on a single TUI incarnation.
 	Gateway struct {
 		telemetry         telemetryRun
+		intent            intent
 		startupForkOwner  uint64
 		startupForkParent string
 		startupBound      bool
@@ -67,6 +75,8 @@ type (
 		next                        uint64
 		prefix                      string
 		interrupted                 steered
+		// warned is the last hold this connection showed the terminal.
+		warned string
 		// unproven are outcomes whose turn is not yet shown to be work
 		// (proven).
 		unproven []unprovenWork
@@ -152,6 +162,9 @@ func (c *connection) readUI() {
 			m.startupFork = c.owner.startupForkIntent(c, m)
 			if recognized(m) || m.startupFork {
 				c.owner.claim(c)
+			}
+			if c.owner.owns(c) {
+				c.owner.pin(m)
 			}
 			c.mu.Lock()
 			if reply := c.refuseTerminalCompact(m, raw); reply != nil {

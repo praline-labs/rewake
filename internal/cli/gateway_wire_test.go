@@ -120,6 +120,11 @@ func connectWire(t *testing.T, path string) *integrationWire {
 
 func gatewayWireFixture(t *testing.T, epoch string, complete func(gateway.Completion)) (*gateway.Gateway, *integrationWire, *integrationWire) {
 	t.Helper()
+	return gatewayWireFixtureConfig(t, gateway.Config{Epoch: epoch, Complete: complete})
+}
+
+func gatewayWireFixtureConfig(t *testing.T, cfg gateway.Config) (*gateway.Gateway, *integrationWire, *integrationWire) {
+	t.Helper()
 	peers := make(chan *integrationWire, 1)
 	upstream := wireServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		conn, rw, err := w.(http.Hijacker).Hijack()
@@ -131,7 +136,8 @@ func gatewayWireFixture(t *testing.T, epoch string, complete func(gateway.Comple
 		_ = rw.Flush()
 		peers <- &integrationWire{Conn: conn, reader: rw.Reader}
 	}))
-	g := gateway.New(gateway.Config{Upstream: upstream, Epoch: epoch, Complete: complete})
+	cfg.Upstream = upstream
+	g := gateway.New(cfg)
 	t.Cleanup(g.Close)
 	ui := connectWire(t, wireServer(t, g))
 	native := <-peers
