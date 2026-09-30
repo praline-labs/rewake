@@ -2,3 +2,4 @@
 dist/
 .rewake.env
 .rewake-checks/
+.scratch/

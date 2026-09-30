@@ -311,6 +311,10 @@ carries the mark described in `docs/legacy.md`.
 
 ## Delegation and review
 
+Working files of a review or a delegation — probes, overlays, reports passed between
+sessions, backups of a tree — go to `.scratch/` in the repository: it is ignored by git
+and by the Go module, and unlike `/tmp` it survives a restart of the machine.
+
 Work is handed out through rewake, with a brief that stands on its own and names
 exact paths: the session that receives it runs on a different prompt and cannot
 see what the orchestrator sees. The orchestrator then waits for the final report
