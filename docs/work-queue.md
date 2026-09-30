@@ -319,6 +319,19 @@ What the day of the 1.0.0 release left, recorded on September 28, 2026 at the ow
   and a notify inside its room — no grants, paths or administration. A live probe on both
   harnesses comes before the build: new and resumed conversations, retries, a truncated
   answer, `pending` at a turn's end, and whether a harness asks approval for the tool.
+  The probe ran the same day on Codex 0.159.0 and Claude Code 2.1.284 (evidence outside
+  git): the tool works in new and resumed conversations and outside Codex's sandbox; each
+  harness names the calling conversation and call itself; Codex refuses an unapproved tool
+  under `approval_policy = never` and Claude Code under the default mode, so rewake must
+  approve its own tool per launch; Codex cuts a long result in the middle without the model
+  noticing, so reads are chunked below a measured limit and a letter is marked read only
+  when it arrived whole; a call that timed out may still run, so operations are idempotent
+  by call. The owner then chose, on September 30, 2026, a hybrid that keeps one interface:
+  the CLI stays the single implementation of the mail, and the MCP tool is only a transport
+  — one `rewake` tool whose arguments are the worker's CLI words, run by a server rewake
+  starts outside the sandbox with the session's identity from the launch, falling back to
+  the shell where the tool is missing, and telling main when neither works. Injecting the
+  server must keep every other MCP server and setting of the harness as the person has them.
 - **Publishing from CI** with npm's trusted publishing and provenance: the repository is
   public since September 28, 2026, so nothing waits for it now.
 
