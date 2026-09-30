@@ -299,6 +299,20 @@ What the day of the 1.0.0 release left, recorded on September 28, 2026 at the ow
   turn's input, the wrapper observing the command in its app-server stream, a socket, reads
   without writes — covering `rewake inbox`, `pending` and `--notify` alike, and making sure
   the channel is no way around the sandbox.
+  Research done the same day (review-codex, from the Codex 0.159.0 and 0.157.1 source): a
+  socket from the sandbox is refused (`connect` is blocked), reads without writes cover
+  neither the mark nor `pending` and `--notify`, the text in the turn's input covers only
+  incoming mail, and observing the worker's command cannot answer it; Codex's dynamic tools
+  are set only when a conversation starts; a local stdio MCP server, which the harness
+  starts outside the sandbox on every launch and resume, covers all three. The owner decided
+  on September 30, 2026: a mail tool for workers instead of the shell commands, one design
+  for every harness that takes MCP (Claude Code as well), with the logic of the mail
+  operations in one place and the CLI kept for people and as a fallback; a letter is read by
+  an explicit call, not automatically at delivery, so peek, withdrawal and the report
+  boundary stay as they are; the tool offers only the worker's own mail, its own `pending`
+  and a notify inside its room — no grants, paths or administration. A live probe on both
+  harnesses comes before the build: new and resumed conversations, retries, a truncated
+  answer, `pending` at a turn's end, and whether a harness asks approval for the tool.
 - **Publishing from CI** with npm's trusted publishing and provenance: the repository is
   public since September 28, 2026, so nothing waits for it now.
 
