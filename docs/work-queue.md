@@ -332,6 +332,16 @@ What the day of the 1.0.0 release left, recorded on September 28, 2026 at the ow
   starts outside the sandbox with the session's identity from the launch, falling back to
   the shell where the tool is missing, and telling main when neither works. Injecting the
   server must keep every other MCP server and setting of the harness as the person has them.
+  A second probe the same day proved that on both harnesses — the person's servers, their
+  settings, a project deny rule and a person's hook stay as they are, and the configuration
+  files are byte for byte the same — as long as the name is free: a server of the person's
+  own named `rewake` is silently merged over by Codex and replaced by Claude Code. The owner
+  decided on September 30, 2026 that a launch refuses in that case, naming the person's
+  server and how to go on, and never takes another name on its own. The same probe found
+  Codex calling the tool directly, outside code mode, when the server alone carries
+  `omit_tools_from=["code_mode"]`, results arriving whole up to about 48 KB on Codex and
+  60 KB on Claude Code, `pending` bound to the right turn on both, and the call visible in
+  the wrapper's own app-server stream under `--remote`.
 - **Publishing from CI** with npm's trusted publishing and provenance: the repository is
   public since September 28, 2026, so nothing waits for it now.
 
