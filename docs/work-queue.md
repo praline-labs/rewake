@@ -279,11 +279,29 @@ What the day of the 1.0.0 release left, recorded on September 28, 2026 at the ow
   until the intended conversation is selected or the person explicitly accepts another —
   `/new` alone does not; where the sandbox policy allows, the wrapper adds a minimal root
   for rewake's state directory and never changes an explicit read-only policy; mail already
-  waiting is read in another conversation only after that explicit acceptance. Being
-  fixed, together with the conversation marker (the owner asked on the same day to build
-  the marker with it, for main's use). Investigation from the source
-  under way; the conversation marker ([conversation-reset.md](conversation-reset.md)) would
-  also have shown main the change.
+  waiting is read in another conversation only after that explicit acceptance. Stage A,
+  those decisions, was built the same day
+  ([roadmap/2026-09-29-failed-resume-hold.md](roadmap/2026-09-29-failed-resume-hold.md),
+  [delivery-conversation.md](delivery-conversation.md)); the investigation from the source
+  is in [research-codex.md](research-codex.md#a-conversation-another-program-holds), and
+  how the new conversation began stays open. Stage B, the conversation marker
+  ([conversation-reset.md](conversation-reset.md)), comes next: the owner asked on the
+  same day to build it with this fix, for main's use.
+- **Mail that does not depend on the sandbox — decided September 30, 2026, to do now.** A
+  Codex worker reads, marks and answers its mail by writing rewake's state directory from
+  inside its sandbox, so a conversation whose policy closes `/tmp` cannot take mail at all
+  (seen September 29). Inferring the effective sandbox from Codex's event stream, tried in
+  three acceptance rounds of the failed-resume fix, did not converge: the protocol does not
+  state which settings change applied or which permissions a running turn keeps. The owner
+  chose on September 30, 2026 to make mail independent of the sandbox instead: the writes
+  move to the wrapper, which runs outside it. He also clarified the owner decision of
+  September 16 (a harness is told mail is waiting, not handed the text): what he meant is
+  that the agent gets the whole letter from one rewake call rather than searching for it —
+  handing the text over, with the wrapper marking it read, is within that decision. First
+  step: research of the channels from a sandboxed command to its wrapper — the text in the
+  turn's input, the wrapper observing the command in its app-server stream, a socket, reads
+  without writes — covering `rewake inbox`, `pending` and `--notify` alike, and making sure
+  the channel is no way around the sandbox.
 - **Publishing from CI** with npm's trusted publishing and provenance: the repository is
   public since September 28, 2026, so nothing waits for it now.
 
