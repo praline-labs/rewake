@@ -109,6 +109,9 @@ func EnsureSubdir(path string) error { return ensureDir(path) }
 // before it is published and the directory after, so a crash cannot leave a
 // name pointing at bytes that were never written.
 func WriteAtomic(path string, data []byte) error {
+	if err := fault(OpWrite, path); err != nil {
+		return err
+	}
 	name, err := writeTemp(filepath.Dir(path), data)
 	if err != nil {
 		return err
@@ -170,6 +173,9 @@ var ErrNameTaken = errors.New("name taken")
 // file and links it into place: link fails when the target exists, so two
 // processes claiming one name cannot both believe they won.
 func PublishExclusive(path string, data []byte) error {
+	if err := fault(OpPublish, path); err != nil {
+		return err
+	}
 	dir := filepath.Dir(path)
 	name, err := writeTemp(dir, data)
 	if err != nil {

@@ -96,5 +96,5 @@ func handleRetry(ctx *Context, call Call) error {
 	// is in that form already.
 	ctx.JSON = original.Call.Switch("json")
 	ctx.journaling = true
-	return runOperation(ctx, original.Call, handler, site, token)
+	return runOperation(ctx, original.Call, handler, site, token, false)
 }

@@ -71,6 +71,10 @@ type Shown struct {
 	CallID     string `json:"callId,omitempty"`
 	Transport  string `json:"transport"`
 	CalledBoot int64  `json:"calledBoot,omitempty"`
+	// Answer is the digest of the whole text the call printed
+	// (bridge.AnswerDigest), recorded before it was printed: the evidence
+	// of the part is a result with exactly that text.
+	Answer string `json:"answer,omitempty"`
 }
 
 // FrozenText is an output too long for one result, kept so its parts can be
@@ -112,7 +116,9 @@ func Sweep(dir, name, live string, cutoff time.Time, unread func(id string) bool
 		if latest, known := newest(journal); known && latest.Before(cutoff) {
 			sweepRun(dir, name, run.Name(), journal, func(Record) bool { return true })
 			// Empty now unless a record was held; then it goes next time.
-			_ = os.Remove(journal)
+			sweepBindings(journal, nil)
+			_ = state.Remove(filepath.Join(journal, callsDir))
+			_ = state.Remove(journal)
 		}
 	}
 }
@@ -141,17 +147,17 @@ func sweepRun(dir, name, epoch, journal string, removable func(Record) bool) {
 		}
 		// Decided again under the lock: a call may have changed it since.
 		if record, err := Load(dir, name, epoch, token); err == nil && removable(record) {
-			_ = os.Remove(recordPath(journal, token))
-			_ = os.Remove(lockPath(journal, token))
+			_ = state.Remove(recordPath(journal, token))
+			_ = state.Remove(lockPath(journal, token))
 			delete(kept, token)
 		}
 		release()
 	}
 	for _, entry := range entries {
 		if strings.HasPrefix(entry.Name(), "key-") {
-			raw, err := os.ReadFile(filepath.Join(journal, entry.Name()))
+			raw, err := state.ReadFile(filepath.Join(journal, entry.Name()))
 			if err == nil && !kept[strings.TrimSpace(string(raw))] {
-				_ = os.Remove(filepath.Join(journal, entry.Name()))
+				_ = state.Remove(filepath.Join(journal, entry.Name()))
 			}
 		}
 		// A lock file without its record is left by a call that lost the
@@ -160,12 +166,13 @@ func sweepRun(dir, name, epoch, journal string, removable func(Record) bool) {
 		if ok && ValidToken(token) && !kept[token] {
 			if release, err := Lock(now, dir, name, epoch, token); err == nil {
 				if _, err := os.Stat(recordPath(journal, token)); errors.Is(err, os.ErrNotExist) {
-					_ = os.Remove(lockPath(journal, token))
+					_ = state.Remove(lockPath(journal, token))
 				}
 				release()
 			}
 		}
 	}
+	sweepBindings(journal, kept)
 }
 
 // readSettled says a frozen read left nothing in progress: every letter whose

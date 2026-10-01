@@ -27,6 +27,11 @@ import (
 // mode: the words then come from a tool call, not from a shell.
 const TicketEnv = "REWAKE_BRIDGE_TICKET_FD"
 
+// CapabilityEnv names the variable that hands the server the per-launch
+// secret it presents to the wrapper's endpoint. The launch sets it in the
+// server's own environment, never the harness's.
+const CapabilityEnv = "REWAKE_BRIDGE_CAPABILITY"
+
 // The bounds of one tool result, measured on both harnesses (probe 2 in
 // docs/mail-bridge.md): a direct result arrived whole at about 47,000 bytes on
 // one and 60,000 on the other, so 4 KiB leaves more than tenfold margin.
@@ -68,6 +73,24 @@ type Ticket struct {
 	WordsDigest string `json:"wordsDigest"`
 	// Transport names the harness path, such as "codex-mcp".
 	Transport string `json:"transport"`
+	// Nonce makes the ticket one-time: the wrapper confirms it once, for
+	// one process, and never again.
+	Nonce string `json:"nonce"`
+}
+
+// The transports of the mail tool, as tickets and receipts name them.
+const (
+	CodexTransport  = "codex-mcp"
+	ClaudeTransport = "claude-mcp"
+)
+
+// CallKey names one native call within its run: the hex SHA-256 of the
+// transport, the conversation and the call id. It is the name of the call's
+// binding (docs/mail-bridge-server.md#running-the-child), which the server
+// and the wrapper both derive from the ticket.
+func CallKey(transport, conversation, callID string) string {
+	sum := sha256.Sum256([]byte(transport + "\x00" + conversation + "\x00" + callID))
+	return hex.EncodeToString(sum[:])
 }
 
 // Validator asks the wrapper of the run whether it issued this ticket. The
@@ -123,6 +146,8 @@ func ParseTicket(data []byte) (Ticket, error) {
 		return Ticket{}, errors.New("the ticket names no native call")
 	case ticket.WordsDigest == "":
 		return Ticket{}, errors.New("the ticket carries no digest of the words")
+	case ticket.Nonce == "":
+		return Ticket{}, errors.New("the ticket carries no nonce, so it could be used twice")
 	case ticket.CalledBoot <= 0 || ticket.DeadlineBoot <= ticket.CalledBoot:
 		return Ticket{}, errors.New("the ticket's call time or deadline is missing")
 	}
@@ -151,6 +176,30 @@ type Exposure struct {
 	ResultBytes int
 	// Shortened says the harness cut, persisted or previewed the result.
 	Shortened bool
+	// Answer is the first content item of the result the harness recorded,
+	// decoded from its JSON string and nothing else; nil when that item is
+	// not text. A part counts as shown only when its digest is the answer
+	// the call recorded before printing it (AnswerDigest).
+	Answer []byte
+}
+
+// AnswerDigest names the whole text a read call prints: the hex SHA-256 of
+// its stdout, which the call records with each part before printing it.
+func AnswerDigest(text []byte) string {
+	sum := sha256.Sum256(text)
+	return hex.EncodeToString(sum[:])
+}
+
+// EndGate orders a read's acknowledgment against the turn ends the wrapper
+// captures (docs/mail-bridge-turns.md#a-turns-end-meets-its-calls). The
+// acknowledgment calls Enter holding the mailbox lock, before its first
+// write: false says an end at or after calledBoot was noted, and nothing may
+// be written. Otherwise it is registered as writing, and calls leave once,
+// whatever its writes did, before it releases the mailbox lock: leave takes
+// the read clock's snapshot that an end captured meanwhile takes as its
+// boundary.
+type EndGate interface {
+	Enter(calledBoot int64) (leave func(), ok bool)
 }
 
 // Whole says whether the evidence proves the model got the entire result:

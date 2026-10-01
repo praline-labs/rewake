@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/boottime"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 // A waiting send's mark says when it was last touched in its content, as a
@@ -45,7 +46,7 @@ func touchMark(path string) {
 // than the touch it then finds, which made a live send look gone. An error says
 // a mark is there and could not be read: a live send may own it.
 func markFresh(path string) (bool, error) {
-	raw, err := os.ReadFile(path)
+	raw, err := state.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
 	}

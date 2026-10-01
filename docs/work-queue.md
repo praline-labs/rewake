@@ -343,9 +343,18 @@ What the day of the 1.0.0 release left, recorded on September 28, 2026 at the ow
   60 KB on Claude Code, `pending` bound to the right turn on both, and the call visible in
   the wrapper's own app-server stream under `--remote`.
   Stage M1, the CLI side, was accepted on October 1, 2026 after seventeen rounds
-  ([entry](roadmap/2026-10-01-mail-tool-cli-stage.md)). Next come M2, the MCP server that
-  runs the tool outside the sandbox, and M3, its injection at launch
-  ([mail-bridge.md](mail-bridge.md)).
+  ([entry](roadmap/2026-10-01-mail-tool-cli-stage.md)). Stage M2, the MCP server that
+  runs the tool outside the sandbox, was built and accepted the same day after four
+  acceptance rounds ([entry](roadmap/2026-10-01-mail-tool-server-stage.md)). Next is
+  M3: its injection at launch, the occupied-name refusal, the channel record and the
+  live checks ([mail-bridge.md](mail-bridge.md)).
+- **The window before the capture on Codex — a separate task, October 1, 2026.** Stage
+  M1's end on Codex is captured when the gateway reads `turn/completed`, but the
+  app-server may start the next turn before that: a read of the next turn can then
+  commit before the end is noted and fall inside the boundary of the turn before it.
+  Stage M2 orders the tool's acknowledgments against the capture, not the app-server's
+  own start of a turn. Found while building M2
+  ([entry](roadmap/2026-10-01-mail-tool-server-stage.md)).
 - **Upgrades without a cutover refusal — to verify, October 1, 2026.** A launch now
   refuses while a writer of an earlier build may still run. The wrapper could instead run
   its session's hooks and commands with its own binary, through `/proc/<pid>/exe`, so that

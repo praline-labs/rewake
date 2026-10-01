@@ -88,8 +88,8 @@ func TestAWaiterThatCannotBeReadLeavesTheMarkOpen(t *testing.T) {
 	if err := os.Chmod(waiter, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if code, out, errOut := run("retry", token); code != ExitOK || !strings.Contains(out, "marked pending") {
-		t.Fatalf("retry once the waiter reads: %d %s %s", code, out, errOut)
+	if retried := tool.run("retry", token); retried.code != ExitOK || !strings.Contains(retried.out, "marked pending") {
+		t.Fatalf("retry once the waiter reads: %+v", retried)
 	}
 }
 

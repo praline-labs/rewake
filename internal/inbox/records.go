@@ -75,6 +75,7 @@ var recordKinds = []recordKind{
 	{"claims/*", "a read in parts that claimed a letter", nil, true, "whether a read is showing the letter"},
 	{"receipts/*/.*.lock", "a call's receipt lock", nil, false, ""},
 	{"receipts/*/key-*", "the key a repeated call joins by", receipt.CheckKey, true, "which call a repeat joins"},
+	{"receipts/*/calls/*", "the operation a tool call holds", receipt.CheckBinding, true, "which operation a tool call held"},
 	{"receipts/*/*.json", "a call's receipt", receipt.CheckRecord, true, "what a call did and answered"},
 }
 

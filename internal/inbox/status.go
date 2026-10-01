@@ -49,7 +49,7 @@ func Answered(dir, to, id string) (bool, error) {
 // written. An error says it could not tell: a status that cannot be read may
 // say read or withdrawn, and nothing takes it for one never written.
 func ReadStatus(dir, to, id string) (Status, bool, error) {
-	raw, err := os.ReadFile(statusPath(dir, to, id))
+	raw, err := state.ReadFile(statusPath(dir, to, id))
 	if errors.Is(err, os.ErrNotExist) {
 		return Status{}, false, nil
 	}

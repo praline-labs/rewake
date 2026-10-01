@@ -71,7 +71,7 @@ func expiredCall(t *testing.T, words ...string) (Call, *Context, *bytes.Buffer, 
 	now := boottime.Now()
 	var out, errOut bytes.Buffer
 	ctx := &Context{Stdout: &out, Stderr: &errOut, scope: &callScope{
-		ticket: bridge.Ticket{Conversation: "conversation-1", Turn: "turn-1", CallID: "late", CalledBoot: now - 2, DeadlineBoot: now - 1, Transport: "test-tool", WordsDigest: bridge.Digest(normal)},
+		ticket: bridge.Ticket{Conversation: "conversation-1", Turn: "turn-1", CallID: "late-" + inbox.NewID(), CalledBoot: now - 2, DeadlineBoot: now - 1, Transport: bridge.CodexTransport, Nonce: "nonce-late", WordsDigest: bridge.Digest(normal)},
 		words:  normal, digest: bridge.Digest(normal),
 	}}
 	return result.Call, ctx, &out, &errOut

@@ -193,6 +193,7 @@ func everyKind(t *testing.T, lab conversionLab) {
 		"claims/" + letter.ID:                     "",
 		"receipts/e1/key-call":                    token,
 		"receipts/e1/" + token + ".json":          string(record),
+		"receipts/e1/calls/abababababababababababababababababababababababababababababababab": token,
 	} {
 		writeRaw(t, filepath.Join(box, path), content)
 	}

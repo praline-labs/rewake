@@ -87,7 +87,7 @@ func TestAnAcknowledgmentDoesNotWriteOverAWaiterItCannotRead(t *testing.T) {
 	part, got := ackLab(t, id, newToolCaller(t))
 	waiter := filepath.Join(state.AwaitingPath(dir, "api"), self.Epoch(), "web")
 	reopen := closed(t, waiter)
-	err := AcknowledgeRead(dir, "api", self.Epoch(), part.Receipt, whole(got))
+	err := AcknowledgeRead(dir, "api", self.Epoch(), part.Receipt, whole(got), nil)
 	reopen()
 	if kept, readErr := os.ReadFile(waiter); err == nil || readErr != nil || !strings.Contains(string(kept), earlier) {
 		t.Fatalf("acknowledged over an unreadable waiter: %v, the waiter now %q", err, kept)
@@ -112,7 +112,7 @@ func TestARetriedAcknowledgmentStopsOnAStatusItCannotRead(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.Chmod(done, 0o700) })
-	if err := AcknowledgeRead(dir, "api", self.Epoch(), part.Receipt, whole(got)); err == nil {
+	if err := AcknowledgeRead(dir, "api", self.Epoch(), part.Receipt, whole(got), nil); err == nil {
 		t.Fatal("the archive was not in the way")
 	}
 	// Reported on since: the waiter is gone, the letter still unread.
@@ -125,7 +125,7 @@ func TestARetriedAcknowledgmentStopsOnAStatusItCannotRead(t *testing.T) {
 		t.Fatal(err)
 	}
 	closed(t, filepath.Join(state.InboxPath(dir, "api"), id+".status"))
-	err := AcknowledgeRead(dir, "api", self.Epoch(), part.Receipt, whole(got))
+	err := AcknowledgeRead(dir, "api", self.Epoch(), part.Receipt, whole(got), nil)
 	record, loadErr := receipt.Load(dir, "api", self.Epoch(), part.Receipt)
 	if loadErr != nil {
 		t.Fatal(loadErr)

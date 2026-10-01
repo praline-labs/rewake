@@ -93,6 +93,7 @@ func authorize(result parsed) (*callScope, error) {
 	if err := validateTicket(dir, self.Name, epoch, ticket); err != nil {
 		return nil, failf("Rewake: the wrapper did not confirm this tool call (%v), so nothing ran; run the same words in the shell: rewake <words>", err)
 	}
+	state.Step("confirmed")
 	scope := &callScope{ticket: ticket, words: words, digest: digest}
 	if scope.remaining() <= 0 {
 		return nil, failf("Rewake: this tool call's deadline passed before it started, so nothing ran; call it again.")

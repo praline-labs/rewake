@@ -25,6 +25,16 @@ acts on it; it runs on the cheapest model only, as [check-runner.md](check-runne
 requires. The full ladder, including the owner's own eye on a terminal, is in
 [check-runner.md](check-runner.md#evidence-tiers-and-matrix).
 
+### The fault build inside the five checks
+
+The mail tool's server tests (`internal/bridge/server`) build rewake themselves, with the
+`rewakefault` tag, while the five checks run. A binary of that build reads `REWAKE_FAULT` (`internal/state/fault_build.go`) and logs, ends, fails or
+holds its process at a durable step, or leaves behind a process that keeps its output
+open past a kill, so the fault tests take their cases from the logged
+steps of clean runs rather than from a list kept by hand
+([mail-bridge-checks.md](mail-bridge-checks.md#how-the-checks-are-built)). A release build
+never reads the variable.
+
 ### Two columns, two meanings
 
 Every scenario runs twice: against a fixture that plays a Codex app-server, and against

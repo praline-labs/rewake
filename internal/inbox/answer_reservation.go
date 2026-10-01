@@ -87,7 +87,7 @@ func receiveAnswer(dir, name, epoch, question string, message Message) error {
 		return nil
 	}
 	for _, id := range message.InReplyTo {
-		received, err := os.ReadFile(filepath.Join(receipts, id))
+		received, err := state.ReadFile(filepath.Join(receipts, id))
 		if err != nil || string(received) != message.ID {
 			return nil
 		}

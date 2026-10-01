@@ -102,7 +102,7 @@ func owedIDs(dir, name, epoch string) (map[string]bool, error) {
 // error says a copy is there and could not be read.
 func readCopy(dir, name, id string) (Message, bool, error) {
 	for _, directory := range []string{state.DonePath(dir, name), state.UnreadPath(dir, name), state.InboxPath(dir, name)} {
-		raw, err := os.ReadFile(filepath.Join(directory, id+".json"))
+		raw, err := state.ReadFile(filepath.Join(directory, id+".json"))
 		if errors.Is(err, os.ErrNotExist) {
 			continue
 		}

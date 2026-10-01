@@ -213,3 +213,29 @@ func TestCloseRemovesThePluginOfACollectorThatNeverStarted(t *testing.T) {
 		t.Fatalf("the plugin directory survived Close: %v", err)
 	}
 }
+
+// With the mail tool's gate an interruption's boundary is taken through it,
+// not through the plain capture: an acknowledgment writing at that moment
+// lands on one side of the end (docs/mail-bridge-turns.md#a-turns-end-meets-its-calls).
+func TestAnInterruptionIsCapturedThroughTheGate(t *testing.T) {
+	path := filepath.Join(socketDir(t), "s.obs")
+	collector := NewCollector(path)
+	var out published
+	handler := out.handler()
+	gated := 0
+	handler.EndCapture = func() (*inbox.ReadBoundary, int64) {
+		gated++
+		return &inbox.ReadBoundary{Through: 9}, 4242
+	}
+	collector.ReportTurns(handler)
+	if err := collector.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer collector.Close()
+	Send(path, Event{Kind: TurnStart, Turn: "t1", At: 1})
+	Send(path, Event{Kind: TurnComplete, Turn: "t1", Reason: ReasonAborted, At: 2})
+	waitFor(t, "the stopped outcome", func() bool { return len(out.all()) == 1 })
+	if got := out.all()[0]; got.Boundary == nil || got.Boundary.Through != 9 || gated != 1 {
+		t.Fatalf("published %+v after %d captures through the gate", got, gated)
+	}
+}

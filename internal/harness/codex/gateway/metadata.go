@@ -116,8 +116,11 @@ func boolValue(b []byte, keys ...string) bool { return bytes.Equal(field(b, keys
 
 type meta struct {
 	// sent is a request's place in the order of writes (operations.sent).
-	sent                                                 uint64
-	readThrough                                          *uint64
+	sent        uint64
+	readThrough *uint64
+	// endedAt is when an end of the primary thread was noted through the
+	// mail tool's gate; zero when it was not.
+	endedAt                                              int64
 	resultObject                                         bool
 	startupFork, permissions                             bool
 	detachStatus                                         string

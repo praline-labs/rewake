@@ -23,7 +23,6 @@ import (
 	"github.com/praline-labs/rewake/internal/proc"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
-	"github.com/praline-labs/rewake/internal/sessionstate"
 	"github.com/praline-labs/rewake/internal/state"
 )
 
@@ -45,6 +44,8 @@ type Request struct {
 	// Role is explicit when its ID is set; empty always uses general.
 	Role   role.Role
 	OnTurn func(context.Context, registry.Session, harness.Completion) error
+	// MailTool serves the mail tool's endpoint; nil serves none.
+	MailTool *MailTool
 	// OnClaimed hears the session once its name is claimed, before the
 	// harness is planned: whatever was prepared for the launch learns whose
 	// it is. An error ends the launch.
@@ -178,62 +179,13 @@ func Run(ctx context.Context, request Request) (int, error) {
 	signals, restore := catchSignals()
 	defer restore()
 
-	if plan.Backend != nil {
-		reportSession := session
-		clock, err := inbox.OpenReadClock(ctx, request.Dir, name, epoch)
-		if err != nil {
-			return 0, err
-		}
-		defer clock.Close()
-		if err := plan.Backend.Start(ctx, harness.CompletionHandler{Capture: clock.Snapshot, Publish: func(ctx context.Context, result harness.Completion) error {
-			if request.OnTurn != nil {
-				return request.OnTurn(ctx, reportSession, result)
-			}
-			return nil
-		}}, func(note string) { _, _ = fmt.Fprintln(os.Stderr, "rewake: "+note) }); err != nil {
-			return 0, err
-		}
-		defer plan.Backend.Close()
-		if observer, ok := plan.Backend.(harness.ObservedBackend); ok {
-			defer sessionstate.Start(ctx, request.Dir, name, epoch, observer.SessionState)()
-		}
+	tool := startMailTool(request, name, epoch, plan)
+	defer tool.close()
+	stopServing, err := startServing(ctx, request, session, name, epoch, plan, tool)
+	if err != nil {
+		return 0, err
 	}
-
-	if plan.Backend == nil && plan.Observer != nil {
-		if reporter, ok := plan.Observer.(harness.TurnReporter); ok && request.OnTurn != nil {
-			// The outcomes the observer hears are published the way a
-			// backend's are, bounded by what was read when each was heard.
-			// Without the clock they are not published at all, and the
-			// session reports as it did before.
-			reportSession := session
-			if clock, err := inbox.OpenReadClock(ctx, request.Dir, name, epoch); err != nil {
-				_, _ = fmt.Fprintln(os.Stderr, "rewake: not reporting interrupted turns: "+err.Error())
-			} else {
-				defer clock.Close()
-				reporter.ReportTurns(harness.CompletionHandler{Capture: clock.Snapshot, Publish: func(ctx context.Context, result harness.Completion) error {
-					return request.OnTurn(ctx, reportSession, result)
-				}})
-			}
-		}
-		// Started before the harness, so its first hook finds the socket.
-		// Telemetry that cannot start costs telemetry, never the session.
-		// Closed either way: what the launch wrote beside the socket goes.
-		defer plan.Observer.Close()
-		if err := plan.Observer.Start(ctx); err != nil {
-			_, _ = fmt.Fprintln(os.Stderr, "rewake: not collecting telemetry: "+err.Error())
-		} else {
-			defer sessionstate.Start(ctx, request.Dir, name, epoch, plan.Observer.SessionState)()
-		}
-	}
-
-	if plan.Backend == nil && plan.Lane != nil {
-		// Before the harness, like the telemetry socket: its answer to the
-		// first notice goes to an address that has to exist by then.
-		if err := plan.Lane.Start(ctx); err != nil {
-			_, _ = fmt.Fprintln(os.Stderr, "rewake: "+err.Error())
-		}
-		defer plan.Lane.Close()
-	}
+	defer stopServing()
 
 	command := exec.Command(plan.Command, plan.Args...)
 	command.Env = plan.Env
@@ -251,6 +203,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 		return 0, err
 	}
 
+	tool.started(command.Process.Pid, plan.Backend)
 	if start, err := proc.StartTime(command.Process.Pid); err == nil {
 		session.HarnessPID = command.Process.Pid
 		session.HarnessStart = start

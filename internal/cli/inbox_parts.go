@@ -82,6 +82,9 @@ const readReserve = 400
 // the disk or a stop of the mailbox kept from freezing froze nothing, and those
 // words try again.
 func bridgeRead(ctx *Context, mode inboxMode, site readSite) error {
+	if err := toolReadRefused(ctx); err != nil {
+		return err
+	}
 	scope := ctx.scope
 	key := receipt.Key{Epoch: site.epoch, Conversation: scope.ticket.Conversation, Turn: scope.ticket.Turn, Digest: scope.digest}
 	record, joined, err := receipt.Begin(site.dir, site.self.Name, key, receipt.Record{Words: scope.words, Transport: scope.ticket.Transport, CalledBoot: scope.ticket.CalledBoot})
@@ -230,6 +233,10 @@ func freezeLetter(asJSON bool, view messageView, stored inbox.Message) (receipt.
 }
 
 // lockOperation holds a record for as long as the call's answer is wanted.
+// Every path that holds a record comes through here, and a tool call's
+// binding is written as soon as the record is held, before any step
+// (docs/mail-bridge-server.md#the-rules, rule 4): so a binding proven absent
+// proves the call made no effect.
 func lockOperation(ctx *Context, site readSite, token string) (func(), error) {
 	wait := readerLockWait
 	if ctx.scope != nil {
@@ -244,12 +251,33 @@ func lockOperation(ctx *Context, site readSite, token string) (func(), error) {
 	if err != nil {
 		return nil, failf("could not lock the receipt %s: %v", token, err)
 	}
+	if ctx.scope != nil {
+		ticket := ctx.scope.ticket
+		if err := receipt.Bind(site.dir, site.self.Name, site.epoch, bridge.CallKey(ticket.Transport, ticket.Conversation, ticket.CallID), token); err != nil {
+			release()
+			return nil, failf("could not record which operation this call holds (%v), so nothing was done; run the same words again", err)
+		}
+	}
 	return release, nil
+}
+
+// toolReadRefused refuses a read through the tool where a read cannot yet be
+// tied to the model that saw it: on Claude Code, a nested agent's call is not
+// yet shown to always name its agent, and only a read claims that a model saw
+// something (docs/mail-bridge-turns.md#the-turn-a-call-belongs-to).
+func toolReadRefused(ctx *Context) error {
+	if ctx.scope == nil || ctx.scope.ticket.Transport != bridge.ClaudeTransport {
+		return nil
+	}
+	return failf("letters are read in the shell in this session for now, so nothing was shown; run: rewake inbox (or the same words) in the shell")
 }
 
 // emitRead prints the part a continuation names, or the answer a read that
 // froze nothing gave.
 func emitRead(ctx *Context, site readSite, token string, letter, part int) error {
+	if err := toolReadRefused(ctx); err != nil {
+		return err
+	}
 	release, err := lockOperation(ctx, site, token)
 	if err != nil {
 		return err

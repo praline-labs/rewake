@@ -170,7 +170,7 @@ func Begin(dir, name string, key Key, fresh Record) (Record, bool, error) {
 		return Record{}, false, err
 	}
 	if key.Scoped() {
-		if token, err := os.ReadFile(filepath.Join(journal, key.index())); err == nil {
+		if token, err := state.ReadFile(filepath.Join(journal, key.index())); err == nil {
 			record, err := Load(dir, name, key.Epoch, strings.TrimSpace(string(token)))
 			return record, err == nil, err
 		}
@@ -193,8 +193,8 @@ func Begin(dir, name string, key Key, fresh Record) (Record, bool, error) {
 	// joins.
 	err = state.PublishExclusive(filepath.Join(journal, key.index()), []byte(fresh.Token))
 	if errors.Is(err, state.ErrNameTaken) {
-		_ = os.Remove(recordPath(journal, fresh.Token))
-		token, readErr := os.ReadFile(filepath.Join(journal, key.index()))
+		_ = state.Remove(recordPath(journal, fresh.Token))
+		token, readErr := state.ReadFile(filepath.Join(journal, key.index()))
 		if readErr != nil {
 			return Record{}, false, readErr
 		}
@@ -202,7 +202,7 @@ func Begin(dir, name string, key Key, fresh Record) (Record, bool, error) {
 		return record, loadErr == nil, loadErr
 	}
 	if err != nil {
-		_ = os.Remove(recordPath(journal, fresh.Token))
+		_ = state.Remove(recordPath(journal, fresh.Token))
 		return Record{}, false, err
 	}
 	return fresh, false, nil
@@ -217,7 +217,7 @@ func Load(dir, name, epoch, token string) (Record, error) {
 	if err != nil {
 		return Record{}, err
 	}
-	raw, err := os.ReadFile(recordPath(journal, token))
+	raw, err := state.ReadFile(recordPath(journal, token))
 	if errors.Is(err, os.ErrNotExist) {
 		return Record{}, ErrUnknown
 	}

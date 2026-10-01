@@ -178,7 +178,7 @@ func taskOpen(dir, name, id string) (open, found bool, err error) {
 		return false, true, nil
 	}
 	for _, directory := range []string{state.InboxPath(dir, name), state.UnreadPath(dir, name)} {
-		raw, err := os.ReadFile(filepath.Join(directory, id+".json"))
+		raw, err := state.ReadFile(filepath.Join(directory, id+".json"))
 		if errors.Is(err, os.ErrNotExist) {
 			continue
 		}

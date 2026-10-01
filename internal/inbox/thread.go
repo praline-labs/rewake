@@ -36,7 +36,7 @@ func deliveryThread(dir, name, id string) (string, error) {
 	if !state.ValidName(id) {
 		return "", nil
 	}
-	raw, err := os.ReadFile(filepath.Join(threadPath(dir, name), id))
+	raw, err := state.ReadFile(filepath.Join(threadPath(dir, name), id))
 	if errors.Is(err, os.ErrNotExist) {
 		return "", nil
 	}

@@ -132,7 +132,7 @@ func Withdraw(dir string, message Message, replacement *Message) (Withdrawal, er
 	result, err := withdrawSteps(dir, message, replacedBy, readable, waiting)
 	if err != nil {
 		if replacement != nil {
-			_ = os.Remove(filepath.Join(waitingDir, replacement.ID+".json"))
+			_ = state.Remove(filepath.Join(waitingDir, replacement.ID+".json"))
 			_ = state.SyncDir(waitingDir)
 		}
 		return 0, err
@@ -213,7 +213,7 @@ func tombstoneOf(message Message, replacedBy string) Message {
 // tombstoneIn says the copy of a message in one directory is a tombstone. An
 // error says the copy is there and could not be read.
 func tombstoneIn(directory, id string) (bool, error) {
-	raw, err := os.ReadFile(filepath.Join(directory, id+".json"))
+	raw, err := state.ReadFile(filepath.Join(directory, id+".json"))
 	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
 	}

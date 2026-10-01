@@ -45,7 +45,7 @@ func ReadClaimed(dir, name, id string) (string, bool) {
 	if !safeID(id) {
 		return "", false
 	}
-	raw, err := os.ReadFile(filepath.Join(claimsPath(dir, name), id))
+	raw, err := state.ReadFile(filepath.Join(claimsPath(dir, name), id))
 	if errors.Is(err, os.ErrNotExist) {
 		return "", false
 	}
@@ -66,7 +66,7 @@ func dropClaim(dir, name, id string) {
 	if !safeID(id) {
 		return
 	}
-	if err := os.Remove(filepath.Join(claimsPath(dir, name), id)); err == nil {
+	if err := state.Remove(filepath.Join(claimsPath(dir, name), id)); err == nil {
 		_ = state.SyncDir(claimsPath(dir, name))
 	}
 }
@@ -87,7 +87,7 @@ func sweepClaims(dir, name string, cutoff time.Time) {
 		if _, err := os.Stat(filepath.Join(state.UnreadPath(dir, name), entry.Name()+".json")); !errors.Is(err, os.ErrNotExist) {
 			continue
 		}
-		_ = os.Remove(filepath.Join(claimsPath(dir, name), entry.Name()))
+		_ = state.Remove(filepath.Join(claimsPath(dir, name), entry.Name()))
 	}
 }
 

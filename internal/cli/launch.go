@@ -77,6 +77,9 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 			Intro:   !call.Switch("no-intro"),
 			Role:    part,
 			Command: program,
+			// The mail tool's endpoint runs the CLI's own checks
+			// (docs/mail-bridge-server.md); stage 3 starts its server.
+			MailTool: &wrap.MailTool{Words: ToolWords, Acknowledge: AcknowledgeRead},
 
 			OnClaimed: onClaimed,
 		})

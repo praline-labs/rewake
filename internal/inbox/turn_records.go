@@ -42,7 +42,7 @@ func sweepTurnRecords(dir, name, live string, cutoff time.Time) {
 		switch {
 		case strings.HasPrefix(entry.Name(), "."):
 			// A write that never finished.
-			_ = os.Remove(path)
+			_ = state.Remove(path)
 		case !strings.HasSuffix(entry.Name(), doneSuffix):
 		default:
 			epoch, ok := recordEpoch(path)
@@ -52,7 +52,7 @@ func sweepTurnRecords(dir, name, live string, cutoff time.Time) {
 			case epoch == live:
 				_ = os.Chtimes(path, now, now)
 			default:
-				_ = os.Remove(path)
+				_ = state.Remove(path)
 			}
 		}
 	}
@@ -60,7 +60,7 @@ func sweepTurnRecords(dir, name, live string, cutoff time.Time) {
 
 // recordEpoch reads the run a journal belongs to.
 func recordEpoch(path string) (string, bool) {
-	raw, err := os.ReadFile(path)
+	raw, err := state.ReadFile(path)
 	if err != nil {
 		return "", false
 	}

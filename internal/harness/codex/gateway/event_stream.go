@@ -27,6 +27,9 @@ func (c *connection) readServer() {
 		var warn *sessionstate.DeliveryHold
 		var warnAt Binding
 		if m.id == "" && (m.method == "turn/completed" || m.method == "thread/status/changed" && (m.status == "idle" || m.status == "systemError")) && c.owner.cfg.ReadSequence != nil {
+			if capture := c.owner.cfg.EndCapture; capture != nil && c.primary(m.thread) {
+				receivedRead, m.endedAt = capture()
+			}
 			m.readThrough = &receivedRead
 		}
 		c.mu.Lock()
@@ -76,6 +79,9 @@ func (c *connection) readServer() {
 		} else if m.id == "" {
 			if m.method == "turn/started" && m.thread == c.state.Thread {
 				c.state.fresh = false
+			}
+			if c.owner.cfg.ToolEvent != nil && toolEvent(m, raw) && m.thread == c.state.Thread && c.owner.owns(c) {
+				c.owner.cfg.ToolEvent(raw)
 			}
 			c.admitted.event(m, raw, time.Now())
 			c.recordLateEnds()

@@ -44,7 +44,7 @@ func readAll(t *testing.T, tool *toolCaller, words ...string) []toolRun {
 }
 
 func whole(answer toolRun) bridge.Exposure {
-	return bridge.Exposure{CallID: answer.callID, Direct: true, Succeeded: true, ResultBytes: bridge.EncodedSize(answer.out, answer.errOut)}
+	return bridge.Exposure{CallID: answer.callID, Direct: true, Succeeded: true, ResultBytes: bridge.EncodedSize(answer.out, answer.errOut), Answer: []byte(answer.out)}
 }
 
 // A letter read through the tool is read once every part of it reached the
@@ -82,11 +82,11 @@ func TestAToolReadIsReadOnlyWhenEveryPartArrived(t *testing.T) {
 
 	shortened := whole(answers[0])
 	shortened.Shortened = true
-	if err := AcknowledgeRead(dir, "api", self.Epoch(), token, shortened); !errors.Is(err, ErrNotWhole) {
+	if err := AcknowledgeRead(dir, "api", self.Epoch(), token, shortened, nil); !errors.Is(err, ErrNotWhole) {
 		t.Fatalf("a shortened result acknowledged: %v", err)
 	}
 	for _, answer := range answers[:len(answers)-1] {
-		if err := AcknowledgeRead(dir, "api", self.Epoch(), token, whole(answer)); err != nil {
+		if err := AcknowledgeRead(dir, "api", self.Epoch(), token, whole(answer), nil); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -95,7 +95,7 @@ func TestAToolReadIsReadOnlyWhenEveryPartArrived(t *testing.T) {
 	}
 	last := answers[len(answers)-1]
 	for range 2 {
-		if err := AcknowledgeRead(dir, "api", self.Epoch(), token, whole(last)); err != nil {
+		if err := AcknowledgeRead(dir, "api", self.Epoch(), token, whole(last), nil); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -108,7 +108,7 @@ func TestAToolReadIsReadOnlyWhenEveryPartArrived(t *testing.T) {
 	if waiters := inbox.Waiters(dir, "api", self.Epoch()); len(waiters) != 1 || len(waiters[0].Messages) != 1 {
 		t.Fatalf("the task is owed %+v, want once", waiters)
 	}
-	if err := AcknowledgeRead(dir, "api", "another-run", token, whole(last)); err == nil {
+	if err := AcknowledgeRead(dir, "api", "another-run", token, whole(last), nil); err == nil {
 		t.Fatal("another run acknowledged this one's read")
 	}
 }

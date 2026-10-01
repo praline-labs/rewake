@@ -92,6 +92,21 @@ everything else.
   evidence, claims against withdrawal, the receipt journal behind notify and pending,
   `inbox --next` and `rewake retry` in either channel, and the readings of the
   specification it chose. Open it when a read in parts, a receipt or a retry is in question.
+- [mail-bridge-server.md](mail-bridge-server.md) — the server of that tool, built and not
+  yet started by any harness: its eleven rules and where each lives in the code, how a
+  call is matched to a native observation and given a ticket, the call's binding to its
+  operation, the child it runs, the bounded answer, the failure points of a call and the
+  channel record left to stage 3. Open it before changing the server or the context
+  endpoint.
+- [mail-bridge-turns.md](mail-bridge-turns.md) — the same design after the answer: which
+  turn a call belongs to, reads acknowledged on the call's own answer, a turn's end that
+  waits for no call, a pending mark that meets its turn's end, every wait's bound, and
+  the failure points after the answer. Open it before changing the observer or an adapter.
+- [mail-bridge-checks.md](mail-bridge-checks.md) — building and checking that design: what
+  it changes in stage 1, the tests without a live harness and how they are built (the
+  fault test from logged steps, the generated orders, the fault build's holds), the live
+  checks left to stage 3, and what the reviews of the rules found. Open it before
+  changing those tests or reviewing the stage.
 - [turn-end-recovery.md](turn-end-recovery.md) — how a turn end is recovered under rules 7
   and 8 of mail-bridge-cli.md, as the code keeps them: the operation's identity and
   scope by event form, the read clock for holds, pending marks and the interim record,

@@ -93,6 +93,7 @@ func handlePending(ctx *Context, call Call) error {
 	defer cancel()
 	var waiting []string
 	var late error
+	verdict := markWrite
 	err = state.WithMailboxLock(lockCtx, dir, self.Name, func() error {
 		// Under the lock, just before the mark: the wait for it may have
 		// outlasted the call.
@@ -123,6 +124,9 @@ func handlePending(ctx *Context, call Call) error {
 				waiting = append(waiting, name)
 			}
 		}
+		if verdict, err = judgeMark(ctx, dir, self, epoch, file, at); err != nil || verdict != markWrite {
+			return err
+		}
 		if len(waiting) == 0 {
 			return nil
 		}
@@ -131,13 +135,19 @@ func handlePending(ctx *Context, call Call) error {
 	if late != nil {
 		return late
 	}
+	switch verdict {
+	case markTurnEnded:
+		return failf("not marked: the turn ended first, so its end reported without this mark")
+	case markUnproven:
+		return failf("not marked: this call cannot show it runs in the turn the mark was for, and a mark is never written for another turn")
+	}
 	if err != nil && ctx.op != nil {
 		return &unfinishedError{message: fmt.Sprintf("Rewake: could not mark the turn pending (%v); mark it with: rewake retry %s", err, token)}
 	}
 	if err != nil {
 		return failf("could not mark the turn pending: %v", err)
 	}
-	if len(waiting) == 0 {
+	if len(waiting) == 0 && verdict != markFound {
 		return &UsageError{Command: call.Command, Message: "nothing is owed a report, so there is nothing to keep open; end the turn as usual."}
 	}
 	if ctx.op != nil {

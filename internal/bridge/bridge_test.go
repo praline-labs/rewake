@@ -12,7 +12,7 @@ import (
 
 func ticketBytes(t *testing.T, change func(*Ticket)) []byte {
 	t.Helper()
-	ticket := Ticket{Conversation: "c", Turn: "t", CallID: "call", CalledBoot: 10, DeadlineBoot: 20, WordsDigest: "d", Transport: "test"}
+	ticket := Ticket{Conversation: "c", Turn: "t", CallID: "call", CalledBoot: 10, DeadlineBoot: 20, WordsDigest: "d", Transport: "test", Nonce: "n"}
 	change(&ticket)
 	encoded, err := json.Marshal(ticket)
 	if err != nil {
@@ -32,6 +32,7 @@ func TestATicketMissingItsScopeIsRefused(t *testing.T) {
 		"no turn":         func(ticket *Ticket) { ticket.Turn = "" },
 		"no call":         func(ticket *Ticket) { ticket.CallID = "" },
 		"no digest":       func(ticket *Ticket) { ticket.WordsDigest = "" },
+		"no nonce":        func(ticket *Ticket) { ticket.Nonce = "" },
 		"no call time":    func(ticket *Ticket) { ticket.CalledBoot = 0 },
 		"deadline first":  func(ticket *Ticket) { ticket.DeadlineBoot = ticket.CalledBoot },
 	} {

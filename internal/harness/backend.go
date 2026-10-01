@@ -74,6 +74,16 @@ type Completion struct {
 type CompletionHandler struct {
 	Capture func() *inbox.ReadBoundary
 	Publish func(context.Context, Completion) error
+	// EndCapture captures the boundary of a turn's end through the gate
+	// the mail tool's acknowledgments enter
+	// (docs/mail-bridge-turns.md#a-turns-end-meets-its-calls), with the
+	// moment it noted the end on the boot clock. Nil where the run has no
+	// gate; Capture is then the end's boundary, as before.
+	EndCapture func() (*inbox.ReadBoundary, int64)
+	// ToolEvent takes a server notification of the primary thread that
+	// concerns the mail tool's calls: a turn's start or end, an item of the
+	// tool started or completed. It never waits. Nil where nobody listens.
+	ToolEvent func(raw []byte)
 }
 
 // Backend is an optional session-owned transport. Its implementation owns any
@@ -84,6 +94,12 @@ type Backend interface {
 	Thread() (string, error)
 	Done() <-chan struct{}
 	Close()
+}
+
+// ProcessBackend is a backend running a harness process of its own, below
+// which the harness starts its tool servers.
+type ProcessBackend interface {
+	ProcessID() int
 }
 
 // ReservingBackend holds its transport's destination through inbox publication.

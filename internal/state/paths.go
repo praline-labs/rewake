@@ -67,6 +67,18 @@ func ObservationPath(dir, name, run string) string {
 	return path
 }
 
+// ContextPath is where a run's wrapper answers the mail tool's server, its
+// children and its hooks (docs/mail-bridge-server.md#who-calls): beside the
+// observation socket, one per run, and short enough to bind.
+func ContextPath(dir, name, run string) string {
+	path := filepath.Join(dir, socketsDir, name+"."+run+".ctx")
+	if len(path) > 103 {
+		sum := sha256.Sum256([]byte(name + "\x00" + run))
+		path = filepath.Join(dir, socketsDir, fmt.Sprintf("%x.ctx", sum[:12]))
+	}
+	return path
+}
+
 // AuthorityAddress is where a main run's wrapper answers for the grants it
 // registered (docs/grants.md#who-can-grant): an abstract unix socket, named
 // by the state directory and the run. Abstract, because a file in the state

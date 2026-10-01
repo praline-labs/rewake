@@ -82,7 +82,7 @@ func (s *Server) sweepFinishedLocked() {
 					continue
 				}
 			}
-			_ = os.Remove(filepath.Join(directory, entry.Name()))
+			_ = state.Remove(filepath.Join(directory, entry.Name()))
 		}
 	}
 	sweepClaims(s.Dir, s.Name, cutoff)

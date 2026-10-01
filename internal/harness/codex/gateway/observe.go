@@ -182,7 +182,11 @@ func (o *observer) event(m meta, raw []byte, now time.Time) {
 		w.turn = m.turn
 		w.active = false
 		w.done = true
-		result := Completion{ID: m.thread + "/" + m.turn, Thread: m.thread, ReadThrough: endBoundary(w, m), Started: w.started, Ended: boottime.Now()}
+		ended := m.endedAt
+		if ended == 0 {
+			ended = boottime.Now()
+		}
+		result := Completion{ID: m.thread + "/" + m.turn, Thread: m.thread, ReadThrough: endBoundary(w, m), Started: w.started, Ended: ended}
 		switch m.status {
 		case "completed":
 			result.Kind = "finished"

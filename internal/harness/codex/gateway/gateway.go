@@ -31,6 +31,13 @@ type (
 		Record          func(Record)
 		Closed          func(CloseInfo)
 		Complete        func(Completion)
+		// EndCapture captures a turn's end of the primary thread through
+		// the mail tool's gate: the read sequence through which the end
+		// counts, and the moment it was noted. Nil: ReadSequence alone.
+		EndCapture func() (uint64, int64)
+		// ToolEvent takes the primary thread's notifications that concern
+		// the mail tool's calls (toolEvent); it never waits.
+		ToolEvent func(raw []byte)
 	}
 	// Gateway fences delivery by accepted intent on a single TUI incarnation.
 	Gateway struct {

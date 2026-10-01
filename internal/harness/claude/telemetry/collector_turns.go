@@ -64,7 +64,12 @@ func (c *Collector) interrupted(event Event, thread string) {
 		// published once.
 		completion.ID = "claude/" + event.Turn
 	}
-	if c.turns.Capture != nil {
+	// Through the mail tool's gate when the run has one, so an
+	// acknowledgment writing now lands on one side of this end
+	// (docs/mail-bridge-turns.md#a-turns-end-meets-its-calls).
+	if c.turns.EndCapture != nil {
+		completion.Boundary, _ = c.turns.EndCapture()
+	} else if c.turns.Capture != nil {
 		completion.Boundary = c.turns.Capture()
 	}
 	select {

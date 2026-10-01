@@ -162,8 +162,10 @@ func TestAPendingMarkIsNotMadeAfterItsDeadline(t *testing.T) {
 	if len(records) != 1 || !strings.Contains(errOut.String(), "rewake retry "+records[0].Token) {
 		t.Fatalf("records %+v, said %s", records, errOut)
 	}
-	if code, _, errOut := run("retry", records[0].Token); code != ExitOK {
-		t.Fatalf("retry: %d %s", code, errOut)
+	// Finished from the same turn: a retry from the shell could not show it
+	// runs in that turn, and would not mark (pending_turn.go).
+	if retried := newToolCaller(t).run("retry", records[0].Token); retried.code != ExitOK {
+		t.Fatalf("retry: %d %s", retried.code, retried.errOut)
 	}
 	if text, held, _ := markWithin(dir, "api", self.Epoch(), called-1, called); !held || text != "expired already" {
 		t.Fatalf("the retry did not mark at the call's time: %q %v", text, held)
@@ -270,7 +272,7 @@ func TestALateAcknowledgmentOwesNothingTwice(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = os.Remove(filepath.Join(state.DonePath(dir, "api"), id+".json"))
-	if err := AcknowledgeRead(dir, "api", self.Epoch(), part.Receipt, whole(first)); err != nil {
+	if err := AcknowledgeRead(dir, "api", self.Epoch(), part.Receipt, whole(first), nil); err != nil {
 		t.Fatal(err)
 	}
 	if waiters := inbox.Waiters(dir, "api", self.Epoch()); len(waiters) != 0 {

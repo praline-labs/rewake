@@ -3,7 +3,6 @@ package inbox
 import (
 	"context"
 	"errors"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -113,6 +112,6 @@ func answers(message Message, question string) bool {
 
 // removeMark releases a reservation after receipt or after the command ends.
 func removeMark(dir, name, mark string) {
-	_ = os.Remove(mark)
+	_ = state.Remove(mark)
 	_ = state.SyncDir(state.AnsweringPath(dir, name))
 }

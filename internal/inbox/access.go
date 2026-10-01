@@ -35,13 +35,13 @@ type fileAccess interface {
 
 type osAccess struct{}
 
-func (osAccess) ReadFile(path string) ([]byte, error)       { return os.ReadFile(path) }
+func (osAccess) ReadFile(path string) ([]byte, error)       { return state.ReadFile(path) }
 func (osAccess) ReadDir(path string) ([]fs.DirEntry, error) { return os.ReadDir(path) }
 func (osAccess) Stat(path string) (fs.FileInfo, error)      { return os.Stat(path) }
 func (osAccess) WriteFile(path string, raw []byte) error    { return state.WriteAtomic(path, raw) }
 func (osAccess) EnsureDir(path string) error                { return state.EnsureSubdir(path) }
-func (osAccess) Remove(path string) error                   { return os.Remove(path) }
-func (osAccess) Rename(from, to string) error               { return os.Rename(from, to) }
+func (osAccess) Remove(path string) error                   { return state.Remove(path) }
+func (osAccess) Rename(from, to string) error               { return state.Rename(from, to) }
 func (osAccess) SyncDir(path string) error                  { return state.SyncDir(path) }
 
 // testAccess holds, by state directory, the passAccess a test put in place

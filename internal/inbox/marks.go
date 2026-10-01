@@ -120,7 +120,7 @@ func MarkWithin(dir, name, epoch string, start, ended int64) (Mark, bool, error)
 		if at <= start || at > ended {
 			continue
 		}
-		raw, err := os.ReadFile(filepath.Join(path, entry.Name()))
+		raw, err := state.ReadFile(filepath.Join(path, entry.Name()))
 		var record markRecord
 		if err == nil {
 			err = json.Unmarshal(raw, &record)

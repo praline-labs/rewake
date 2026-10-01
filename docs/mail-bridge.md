@@ -1,8 +1,12 @@
 # Mail through one tool, outside the sandbox
 
-**Stage 1 of 3 built and accepted on October 1, 2026: the CLI side**
+**Stages 1 and 2 of 3 built and accepted on October 1, 2026.** Stage 1 is the CLI side
 ([mail-bridge-cli.md](mail-bridge-cli.md), [entry](roadmap/2026-10-01-mail-tool-cli-stage.md));
-the server and the launch injection are not. This is the build specification for the mail
+stage 2 the server, its context endpoint and the adapters
+([mail-bridge-server.md](mail-bridge-server.md), [mail-bridge-turns.md](mail-bridge-turns.md),
+[mail-bridge-checks.md](mail-bridge-checks.md),
+[entry](roadmap/2026-10-01-mail-tool-server-stage.md)); the launch injection, stage 3, is not built,
+so no harness starts the server yet. This is the build specification for the mail
 transport chosen on September 30, 2026 ([work queue](work-queue.md#now-after-100)). The CLI implements mail
 once; a local stdio MCP server runs it outside the shell sandbox. The agent uses one
 `rewake` tool with its ordinary CLI words. Reading remains explicit: delivery alone
@@ -12,9 +16,9 @@ continuation calls for a long letter, without searching for its text in files.
 The live facts below come from two probes on September 30, 2026: Codex 0.159.0 and
 Claude Code 2.1.284. Probe 2 uses an owned app-server and a `--remote` terminal for Codex,
 and `-p` new/resumed conversations for Claude Code. Both use a stub, not this unbuilt
-integration. Evidence stays outside git: `dist/mcp-probe-report.md`,
-`dist/mcp-probe-2-report.md`, `dist/_mcp-probe/` and `dist/_mcp-probe-2/README.md`, with
-scripts, request logs and captured native events beside them. An observation below
+integration. Evidence stays outside git, in the repository's ignored `.scratch/`:
+`mcp-probe-report.md`, `mcp-probe-2-report.md`, `mcp-probe/` and `mcp-probe-2/README.md`,
+with scripts, request logs and captured native events beside them. An observation below
 establishes that harness's behaviour on that version, not acceptance of the build.
 
 ## One implementation and a narrow surface
@@ -81,7 +85,8 @@ descriptor carries it, with the descriptor number in a server-set environment va
 the CLI validates it with the wrapper. No model-supplied identity, call ID, timestamp,
 path or environment assignment is accepted as authority.
 
-The endpoint is a private Unix socket, 0600 beneath a verified 0700 epoch directory,
+The endpoint is a private Unix socket of the run, 0600 under the state directory's socket
+directory ([where it lives](mail-bridge-server.md#what-the-server-knows-at-start)),
 with peer-process checks and a per-launch capability. These prevent cross-wiring; same
 UID or possession of an environment token alone does not authenticate a native call.
 The wrapper matches the exact tool, arguments and native observation before issuing a
@@ -252,11 +257,20 @@ unread text. Uncertain exposure retains the claim/receipt for recovery rather th
 expiring into permission to replace shown text. Finish with the existing waiter, status
 and archive order. Replaying a chunk creates no second read sequence or obligation.
 
-Each admitted operation carries a causal ticket. Turn completion captures its admitted
-reads/pending; delayed finalizers resolve those exact associations with the captured
-ReadBoundary, never a newly sampled global boundary or an unrelated later report.
-Recording failure or uncertainty blocks ordinary success for that operation and tells
-main. Pending waits for earlier complete-read effects before collecting its waits.
+Each admitted operation carries a causal ticket. A turn's end takes its read boundary at
+its own event and waits for no call that has not begun to write. An acknowledgment that
+meets the end — on record, or captured by the wrapper that runs it — commits nothing,
+and one already writing is taken in whole: the boundary is its own snapshot under the
+mailbox lock. A pending mark that meets the end's journal marks nothing, and only an
+attempt in its own turn marks. So after the end is noted, no acknowledgment that has
+not passed its check may begin writing; the acknowledgment already registered is
+included through its closing snapshot, and no read by a subsequent mailbox holder can
+extend that boundary. No mark is written after the end's journal. The two stage 1 limits that bound this
+promise — a turn the server starts before the gateway reads the last completion, and a
+turn start that failed to be recorded — are in
+[mail-bridge-turns.md](mail-bridge-turns.md#a-turns-end-meets-its-calls). Recording failure or
+uncertainty blocks ordinary success for that operation and tells main. Pending counts
+the letters a read is still showing among its waits (stage 1).
 
 ## Receipts, retries and deadlines
 
@@ -266,7 +280,9 @@ preserves literal text, and does not merge commands merely because their effects
 similar. Native call IDs correlate observations and detect conflicting metadata; they
 are not the retry key. Identical words in the same turn replay/join even after success.
 To continue a frozen read use its next token; new arrivals can be selected by message ID.
-A fresh identical operation belongs to a later verified turn, not a new native call ID.
+A fresh identical operation belongs to a later verified turn, not a new native call ID,
+and only once no operation of those words is unfinished or of unknown effect: it was
+decided on October 1, 2026 that such words stop at that operation, as the shell's do.
 
 **Live, probe 2:** retries get new `callId`/`tool_use_id` but the same turn/prompt ID and
 words. No native field links original and retry. This supersedes the draft's call-ID key
@@ -285,8 +301,9 @@ retry cannot republish a swept notify. Pending replays its recorded outcome with
 overwriting a newer mark. Reads resume recorded steps without recreating settled waits.
 
 Each child has a bounded deadline from trusted context, shorter than the transport's
-where possible; expiry cancels and reaps it. Check before commit and honor cancellation,
-but do not call a committed effect undone. Uncertainty returns its phase and receipt;
+where possible; past it a hard bound kills and reaps it. Check the deadline before commit;
+a cancellation drops the answer and leaves the child to that check, and a committed effect
+is never called undone. Uncertainty returns its phase and receipt;
 never start concurrent fallback on the assumption that timeout means no effect.
 **Live, probe 2:** Codex times out at five seconds without cancelling the stub, which
 finishes later. Claude Code sends PostToolUseFailure and `notifications/cancelled`; the
@@ -328,9 +345,10 @@ means “not sent”; an incomplete letter never means “read”.
 
 ## What stays open before acceptance
 
-- Build and test the context endpoint and both adapters. The CLI predicate, receipts,
-  chunk claims and the finalizer are built and tested in-process
-  ([mail-bridge-cli.md](mail-bridge-cli.md)); no harness has run them yet.
+- The launch injection and the live checks: stage 3. The context endpoint, the observer
+  and both adapters are built and accepted as stage 2, and the CLI predicate, receipts,
+  chunk claims and the finalizer as stage 1, all tested in-process; no harness has run
+  them yet.
 - Repeat preservation and exact-tool approval through rewake itself, including interactive
   Claude Code, cold resume, live `/clear` and `/resume`, nested calls and explicit denials.
 - Test the occupied-name refusal against effective configuration and caller overrides;
@@ -339,7 +357,12 @@ means “not sent”; an incomplete letter never means “read”.
   loss or error. The exact Claude Code boundary between 60 and 70 KB and Codex per-tool
   output-limit behaviour remain unmeasured; neither is needed to raise the conservative cap.
 - Exercise real pending at normal end, interruption immediately after pending, compaction,
-  late read finalization and overlapping turns; no report may collect another turn's read.
+  late read finalization and overlapping turns; no report may collect a read committed
+  after its end's capture.
+- Close stage 1's window before the capture: a turn the Codex server starts on its own
+  before the gateway reads the last `turn/completed` can commit a read inside that end's
+  boundary. It is older than stage 2, which does not widen it; until it is closed, no
+  report is promised clean of such a turn's reads.
 - Exercise timeout followed by tool/shell retry, Esc, server death during a remote turn,
   restart, and crashes at each receipt/read step; test concurrent CLI read/withdraw and
   replay after report publication. Verify main's notices when either or both channels fail.

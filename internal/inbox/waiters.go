@@ -91,7 +91,7 @@ func markAwaitingSequence(dir, name, epoch, from, fromEpoch, messageID string, s
 	file := filepath.Join(path, from)
 	now := time.Now().UnixNano()
 	waiter := Waiter{Name: from, Epoch: fromEpoch, Since: now}
-	raw, err := os.ReadFile(file)
+	raw, err := state.ReadFile(file)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}

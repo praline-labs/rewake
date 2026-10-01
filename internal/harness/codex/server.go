@@ -160,6 +160,16 @@ func (s *serverSession) Start(ctx context.Context, handler harness.CompletionHan
 	if s.capture != nil {
 		readSequence = func() uint64 { return s.capture().Through }
 	}
+	var endCapture func() (uint64, int64)
+	if handler.EndCapture != nil && s.capture != nil {
+		endCapture = func() (uint64, int64) {
+			boundary, noted := handler.EndCapture()
+			if boundary == nil {
+				return s.capture().Through, noted
+			}
+			return boundary.Through, noted
+		}
+	}
 	admit, err := s.holdMail()
 	if err != nil {
 		_ = listener.Close()
@@ -167,7 +177,7 @@ func (s *serverSession) Start(ctx context.Context, handler harness.CompletionHan
 		cancel()
 		return err
 	}
-	s.gateway = gateway.New(gateway.Config{Upstream: s.upstream, Epoch: s.epoch, StartupFork: s.startupFork, Intent: s.intent, Name: s.name, Admit: admit, ReadSequence: readSequence, Closed: func(info gateway.CloseInfo) {
+	s.gateway = gateway.New(gateway.Config{Upstream: s.upstream, Epoch: s.epoch, StartupFork: s.startupFork, Intent: s.intent, Name: s.name, Admit: admit, ReadSequence: readSequence, EndCapture: endCapture, ToolEvent: handler.ToolEvent, Closed: func(info gateway.CloseInfo) {
 		_, _ = fmt.Fprintf(s.gatewayLog, "connection=%d generation=%d direction=%s reason=%s error=%q bytes=%d requests=%d responses=%d sizeStage=%s messageBytes=%d limitBytes=%d\n", info.Connection, info.Generation, info.Direction, info.Reason, info.Error, info.Bytes, info.Requests, info.Responses, info.SizeStage, info.MessageBytes, info.LimitBytes)
 	}, Complete: func(result gateway.Completion) {
 		value := harness.Completion{ID: result.PublicationID(), Thread: result.Thread, Kind: inbox.Kind(result.Kind), Text: result.Text, Started: result.Started, Ended: result.Ended}
@@ -227,6 +237,16 @@ func (s *serverSession) probe(ctx context.Context) error {
 }
 
 func (s *serverSession) Done() <-chan struct{} { return s.exited }
+
+// ProcessID is the app-server's pid, zero before it started: the mail tool's
+// server runs below it, not below the terminal.
+func (s *serverSession) ProcessID() int {
+	if s.process == nil || s.process.Process == nil {
+		return 0
+	}
+	return s.process.Process.Pid
+}
+
 func (s *serverSession) Thread() (string, error) {
 	if s.gateway != nil {
 		binding := s.gateway.Binding()

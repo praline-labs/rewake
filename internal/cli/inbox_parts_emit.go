@@ -84,6 +84,12 @@ func emitReadLocked(ctx *Context, site readSite, record *receipt.Record, letter,
 			// would change must not count as shown.
 			return errors.New("the part does not fit one tool result")
 		}
+		if ctx.scope != nil {
+			// The whole answer, by digest: a part counts as shown only on a
+			// result that is exactly this text (rule 6). The call prints it
+			// and nothing else.
+			shown.Answer = bridge.AnswerDigest([]byte(text))
+		}
 		for _, segment := range segments {
 			current := &batch.Letters[segment.letter]
 			if !current.Read && !tombstone(*current) && inbox.StillUnread(site.dir, site.self.Name, current.ID) {

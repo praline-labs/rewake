@@ -70,7 +70,7 @@ func (c *toolCaller) run(words ...string) toolRun {
 	now := boottime.Now()
 	ticket := bridge.Ticket{
 		Capability: "capability", Conversation: c.conversation, Turn: c.turn, CallID: callID,
-		CalledBoot: now, DeadlineBoot: now + int64(30*time.Second), WordsDigest: digest, Transport: "test-tool",
+		CalledBoot: now, DeadlineBoot: now + int64(30*time.Second), WordsDigest: digest, Transport: bridge.CodexTransport, Nonce: "nonce-" + callID,
 	}
 	if c.late {
 		ticket.CalledBoot, ticket.DeadlineBoot = now-int64(2*time.Second), now-int64(time.Second)

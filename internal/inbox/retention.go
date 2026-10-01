@@ -21,7 +21,7 @@ func retentionPath(dir, name string) string {
 // and recorded once, so retries and server restarts cannot renew it forever.
 func (s *Server) answerExpired(message Message, reserved bool) (bool, error) {
 	path := filepath.Join(retentionPath(s.Dir, s.Name), message.ID)
-	raw, err := os.ReadFile(path)
+	raw, err := state.ReadFile(path)
 	var lifetime answerLifetime
 	if err == nil {
 		if err := json.Unmarshal(raw, &lifetime); err != nil {

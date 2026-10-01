@@ -36,7 +36,7 @@ func linkUnread(dir, to, id string) error {
 
 // dropUnread takes back a message that will not be announced after all.
 func dropUnread(dir, to, id string) {
-	_ = os.Remove(filepath.Join(state.UnreadPath(dir, to), id+".json"))
+	_ = state.Remove(filepath.Join(state.UnreadPath(dir, to), id+".json"))
 }
 
 // noticeContext chooses the newest available letter; active reservations stay
@@ -90,7 +90,7 @@ func UnreadCopy(dir, name, epoch, id string) (Message, bool, error) {
 	if !safeID(id) {
 		return Message{}, false, nil
 	}
-	raw, err := os.ReadFile(filepath.Join(state.UnreadPath(dir, name), id+".json"))
+	raw, err := state.ReadFile(filepath.Join(state.UnreadPath(dir, name), id+".json"))
 	if errors.Is(err, os.ErrNotExist) {
 		return Message{}, false, nil
 	}
@@ -202,7 +202,7 @@ func archiveTombstone(dir, name string, stone Message) error {
 	if err := state.WriteAtomic(filepath.Join(state.DonePath(dir, name), stone.ID+".json"), append(encoded, '\n')); err != nil {
 		return err
 	}
-	if err := os.Remove(filepath.Join(state.UnreadPath(dir, name), stone.ID+".json")); err != nil && !errors.Is(err, os.ErrNotExist) {
+	if err := state.Remove(filepath.Join(state.UnreadPath(dir, name), stone.ID+".json")); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 	_ = state.SyncDir(state.UnreadPath(dir, name))
@@ -216,7 +216,7 @@ func move(id, from, into string) error {
 	}
 	source := filepath.Join(from, id+".json")
 	target := filepath.Join(into, id+".json")
-	if err := os.Rename(source, target); err != nil {
+	if err := state.Rename(source, target); err != nil {
 		return err
 	}
 	// The age that matters is the age of the move: an old message refused at
@@ -255,7 +255,7 @@ func listIn(directory string) ([]Message, error) {
 
 	messages := make([]Message, 0, len(names))
 	for _, name := range names {
-		raw, err := os.ReadFile(filepath.Join(directory, name))
+		raw, err := state.ReadFile(filepath.Join(directory, name))
 		if errors.Is(err, os.ErrNotExist) {
 			continue
 		}
