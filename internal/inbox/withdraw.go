@@ -68,13 +68,32 @@ var (
 // the tombstone is in place, the serving process drops a copy left behind as
 // it settles the withdrawn status (settle), so a copy that would not go does
 // not make a finished withdrawal look unfinished.
+//
+// Every copy and record it decides by is looked up before anything is written,
+// and one that cannot be read stops it with nothing changed: the letter may be
+// read already, or being read in parts.
 func Withdraw(dir string, message Message, replacement *Message) (Withdrawal, error) {
 	to, id := message.To, message.ID
 	waitingDir, unreadDir, doneDir := state.InboxPath(dir, to), state.UnreadPath(dir, to), state.DonePath(dir, to)
-	status, known := ReadStatus(dir, to, id)
-	waiting, readable := isIn(waitingDir, id), isIn(unreadDir, id)
+	status, known, err := ReadStatus(dir, to, id)
+	if err != nil {
+		return 0, err
+	}
+	stages, err := lookUp(id, waitingDir, unreadDir, doneDir)
+	if err != nil {
+		return 0, err
+	}
+	waiting, readable, archived := stages[0], stages[1], stages[2]
+	stoneUnread, err := tombstoneIn(unreadDir, id)
+	if err != nil {
+		return 0, err
+	}
+	stoneDone, err := tombstoneIn(doneDir, id)
+	if err != nil {
+		return 0, err
+	}
 	already := known && status.Withdrawn || message.Withdrawn != nil
-	finished := tombstoneIn(unreadDir, id) || !readable && (!waiting || tombstoneIn(doneDir, id))
+	finished := stoneUnread || !readable && (!waiting || stoneDone)
 	switch {
 	case already && finished:
 		if waiting {
@@ -89,11 +108,13 @@ func Withdraw(dir string, message Message, replacement *Message) (Withdrawal, er
 		// read by hard link or served from its waiting copy.
 	case known && status.State == Read:
 		return 0, ErrAlreadyRead
+	case readable && claimed(dir, to, id):
+		return 0, ErrReadInProgress
 	case readable:
 	case waiting && (!known || status.State != Failed):
 	case known && status.State == Failed:
 		return 0, ErrNotDelivered
-	case isIn(doneDir, id):
+	case archived:
 		// Moved on without a status left to say how: read, or refused, and
 		// either way final.
 		return 0, ErrAlreadyRead
@@ -189,14 +210,35 @@ func tombstoneOf(message Message, replacedBy string) Message {
 	return stone
 }
 
-// tombstoneIn says the copy of a message in one directory is a tombstone.
-func tombstoneIn(directory, id string) bool {
+// tombstoneIn says the copy of a message in one directory is a tombstone. An
+// error says the copy is there and could not be read.
+func tombstoneIn(directory, id string) (bool, error) {
 	raw, err := os.ReadFile(filepath.Join(directory, id+".json"))
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
 	if err != nil {
-		return false
+		return false, err
 	}
 	var message Message
-	return json.Unmarshal(raw, &message) == nil && message.Withdrawn != nil
+	if err := json.Unmarshal(raw, &message); err != nil {
+		return false, fmt.Errorf("the copy of %s in %s is not readable: %w", id, directory, err)
+	}
+	return message.Withdrawn != nil, nil
+}
+
+// lookUp says, for each directory, whether it holds a message's file, or that
+// one of them could not tell.
+func lookUp(id string, directories ...string) ([]bool, error) {
+	found := make([]bool, len(directories))
+	for index, directory := range directories {
+		in, err := isIn(directory, id)
+		if err != nil {
+			return nil, err
+		}
+		found[index] = in
+	}
+	return found, nil
 }
 
 // putMessage writes a replacement; a test makes it fail.

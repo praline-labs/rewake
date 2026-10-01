@@ -28,7 +28,7 @@ func agedWaits(t *testing.T, dir, run string, age time.Duration) {
 // of the run it was written for.
 func awaitedBy(dir string, what RecipientRun) map[string]AwaitedMessage {
 	awaited := map[string]AwaitedMessage{}
-	for _, item := range Awaited(dir, "web", "sender-epoch", func(string, string) RecipientRun { return what }) {
+	for _, item := range must(Awaited(dir, "web", "sender-epoch", func(string, string) RecipientRun { return what })) {
 		awaited[item.ID] = item
 	}
 	return awaited
@@ -64,7 +64,7 @@ func TestATaskOfAnEndedRunIsLostOnlyWhenNoResumeCanTakeItOver(t *testing.T) {
 	if open, _ := TaskOpen(dir, "api", tasks[0].ID); open {
 		t.Error("past the window main still holds the task open")
 	}
-	if adopted := AdoptWaits(dir, "api", "resumed-epoch", "thread-a"); len(adopted) != 0 {
+	if adopted := must(AdoptWaits(dir, "api", "resumed-epoch", "thread-a")); len(adopted) != 0 {
 		t.Errorf("past the window a resume took over %v", adopted)
 	}
 }
@@ -92,7 +92,7 @@ func TestATaskReadLateIntoALongWaitMayStillBeResumed(t *testing.T) {
 	if open, _ := TaskOpen(dir, "api", tasks[1].ID); !open {
 		t.Error("main lets go of the grant of a task a resume may still take over")
 	}
-	if adopted := AdoptWaits(dir, "api", "resumed-epoch", "thread-a"); !slices.Equal(adopted, []string{tasks[1].ID}) {
+	if adopted := must(AdoptWaits(dir, "api", "resumed-epoch", "thread-a")); !slices.Equal(adopted, []string{tasks[1].ID}) {
 		t.Errorf("a resume took over %v", adopted)
 	}
 }

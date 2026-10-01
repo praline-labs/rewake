@@ -20,10 +20,8 @@ func TestFailedStatusWriteDoesNotRedeliver(t *testing.T) {
 	if err := Put(dir, sent); err != nil {
 		t.Fatalf("put: %v", err)
 	}
-	// A directory where the status file belongs: writing it can only fail.
-	if err := os.MkdirAll(statusPath(dir, "api", sent.ID), 0o700); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
+	// Writing the status can only fail.
+	failStatusWrites(t, dir, "api", sent.ID)
 
 	deliveries := 0
 	server := &Server{Dir: dir, Name: "api", Deliver: func(context.Context, Message) Result {
@@ -83,7 +81,7 @@ func TestShutdownKeepsADeliveredStatus(t *testing.T) {
 	}()
 	deadline := time.Now().Add(3 * time.Second)
 	for {
-		if status, ok := ReadStatus(dir, "api", sent.ID); ok && status.State == Delivered {
+		if status, ok, _ := ReadStatus(dir, "api", sent.ID); ok && status.State == Delivered {
 			break
 		}
 		if time.Now().After(deadline) {
@@ -96,7 +94,7 @@ func TestShutdownKeepsADeliveredStatus(t *testing.T) {
 	cancel()
 	<-finished
 
-	status, ok := ReadStatus(dir, "api", sent.ID)
+	status, ok, _ := ReadStatus(dir, "api", sent.ID)
 	if !ok || status.State != Delivered {
 		t.Fatalf("status after shutdown = %+v, want it to stay delivered", status)
 	}
@@ -124,14 +122,14 @@ func TestMessageWithoutAnEpochIsRefused(t *testing.T) {
 		return Result{State: Delivered}
 	}}
 	serveUntil(t, server, func() bool {
-		status, ok := ReadStatus(dir, "api", old.ID)
+		status, ok, _ := ReadStatus(dir, "api", old.ID)
 		return ok && status.State == Failed
 	})
 
 	if delivered {
 		t.Error("a message with no epoch was handed to the session")
 	}
-	status, _ := ReadStatus(dir, "api", old.ID)
+	status, _, _ := ReadStatus(dir, "api", old.ID)
 	if status.Detail == "" {
 		t.Error("the refusal does not say why")
 	}
@@ -200,7 +198,7 @@ func TestMailForTheNextOwnerIsLeftAlone(t *testing.T) {
 
 	deadline := time.Now().Add(3 * time.Second)
 	for {
-		if status, ok := ReadStatus(dir, "api", ours.ID); ok && status.State == Delivered {
+		if status, ok, _ := ReadStatus(dir, "api", ours.ID); ok && status.State == Delivered {
 			break
 		}
 		if time.Now().After(deadline) {
@@ -219,7 +217,7 @@ func TestMailForTheNextOwnerIsLeftAlone(t *testing.T) {
 	}
 	time.Sleep(600 * time.Millisecond)
 
-	if status, ok := ReadStatus(dir, "api", theirs.ID); ok {
+	if status, ok, _ := ReadStatus(dir, "api", theirs.ID); ok {
 		t.Fatalf("somebody else's message was answered while this session ran: %+v", status)
 	}
 
@@ -227,7 +225,7 @@ func TestMailForTheNextOwnerIsLeftAlone(t *testing.T) {
 	cancel()
 	<-finished
 
-	if status, ok := ReadStatus(dir, "api", theirs.ID); ok {
+	if status, ok, _ := ReadStatus(dir, "api", theirs.ID); ok {
 		t.Fatalf("somebody else's message was refused on the way out: %+v", status)
 	}
 	waiting, err := list(dir, "api")
@@ -252,7 +250,7 @@ func TestMailOfAPreviousSessionIsRefusedAtStartup(t *testing.T) {
 		return Result{State: Delivered}
 	}}
 	serveUntil(t, server, func() bool {
-		status, ok := ReadStatus(dir, "api", old.ID)
+		status, ok, _ := ReadStatus(dir, "api", old.ID)
 		return ok && status.State == Failed
 	})
 }
@@ -280,7 +278,7 @@ func TestOrderSurvivesTheSameMillisecond(t *testing.T) {
 		return Result{State: Delivered}
 	}}
 	serveUntil(t, server, func() bool {
-		status, ok := ReadStatus(dir, "api", sent[len(sent)-1].ID)
+		status, ok, _ := ReadStatus(dir, "api", sent[len(sent)-1].ID)
 		return ok && status.State == Delivered
 	})
 
@@ -300,10 +298,7 @@ func TestShutdownWritesAnOutcomeKeptOnlyInMemory(t *testing.T) {
 	if err := Put(dir, sent); err != nil {
 		t.Fatalf("put: %v", err)
 	}
-	blocked := statusPath(dir, "api", sent.ID)
-	if err := os.MkdirAll(blocked, 0o700); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
+	unblock := failStatusWrites(t, dir, "api", sent.ID)
 
 	delivered := make(chan struct{})
 	server := &Server{Dir: dir, Name: "api", Epoch: "5.5", Deliver: func(context.Context, Message) Result {
@@ -320,13 +315,11 @@ func TestShutdownWritesAnOutcomeKeptOnlyInMemory(t *testing.T) {
 	// The write has failed by now; clear the way and stop well inside the
 	// retry interval.
 	time.Sleep(100 * time.Millisecond)
-	if err := os.Remove(blocked); err != nil {
-		t.Fatalf("unblock: %v", err)
-	}
+	unblock()
 	cancel()
 	<-finished
 
-	if status, ok := ReadStatus(dir, "api", sent.ID); !ok || status.State != Delivered {
+	if status, ok, _ := ReadStatus(dir, "api", sent.ID); !ok || status.State != Delivered {
 		t.Errorf("status after shutdown = %+v, want delivered", status)
 	}
 }

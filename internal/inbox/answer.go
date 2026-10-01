@@ -25,17 +25,20 @@ const answeringFresh = 3 * time.Second
 const answerPoll = time.Second
 
 // awaitedHere reports whether a send in this session waits for this report now.
-// The caller holds the mailbox lock.
-func awaitedHere(dir, name string, message Message) bool {
+// The caller holds the mailbox lock. An error says a mark could not be read:
+// the report may belong to a waiting send, and showing it to the agent as well
+// would hand it over twice.
+func awaitedHere(dir, name string, message Message) (bool, error) {
 	if !Settles(message) {
-		return false
+		return false, nil
 	}
 	for _, id := range message.InReplyTo {
-		if markFresh(filepath.Join(state.AnsweringPath(dir, name), id)) {
-			return true
+		fresh, err := markFresh(filepath.Join(state.AnsweringPath(dir, name), id))
+		if err != nil || fresh {
+			return fresh, err
 		}
 	}
-	return false
+	return false, nil
 }
 
 // AwaitAnswer shows the matching report under the mailbox lock, then records
@@ -72,6 +75,11 @@ func takeAnswer(ctx context.Context, dir, name, epoch, question string, show fun
 		for _, message := range messages {
 			if !answers(message, question) {
 				continue
+			}
+			// Taking the answer reads the mailbox, which a stopped one does
+			// not do (8-stop): it stays unread, and the asker is told why.
+			if err := MailboxStopped(dir, name); err != nil {
+				return err
 			}
 			if err := show(message); err != nil {
 				return err

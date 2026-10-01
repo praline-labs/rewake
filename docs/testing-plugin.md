@@ -32,11 +32,13 @@ the worker must have published one stop in all. A second worker's ordinary turn 
 give exactly one `finished` and publish no stop, though the plugin heard its end too. A
 third is interrupted just as its turn ends, the way an Esc landing on the Stop hook was
 seen live: the Stop hook reports and `turn.complete` still says `aborted`; main must read
-one `finished`, and the worker must publish no stop. A stop is counted by the turn receipt
+one `finished`, and the worker must publish no stop. A stop is counted by the turn journal
 the worker keeps for it, not in main's inbox: a `stopped` after the `finished` that
 settled every wait goes to nobody
 ([turn-outcomes.md](turn-outcomes.md#keyboard-stops)), so main would never see it; on
-this column only a stop leaves a receipt, since the Stop hook's report names no turn. A fourth is interrupted in a session whose harness does not load the plugin:
+this column only a stop leaves a journal named by its event, since the Stop hook's report
+names no turn and its journal's name is drawn
+([turn-end-recovery.md](turn-end-recovery.md#the-operation)). A fourth is interrupted in a session whose harness does not load the plugin:
 interruptions read `unobserved`, nothing arrives, and the next `finished` settles the task,
 as before the plugin. Its four mutants — a collector that publishes nothing for
 `aborted`, one that takes every turn end for an interruption, a launch that never

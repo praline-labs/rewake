@@ -22,7 +22,7 @@ func reportLands(t *testing.T, dir, task string) {
 
 func withdrawn(t *testing.T, dir, id string) bool {
 	t.Helper()
-	status, _ := inbox.ReadStatus(dir, "api", id)
+	status, _, _ := inbox.ReadStatus(dir, "api", id)
 	return status.Withdrawn
 }
 

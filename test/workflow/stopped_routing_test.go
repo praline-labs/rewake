@@ -93,12 +93,9 @@ func playStoppedRouting(t *testing.T, c *Case, iso *Isolation, col column) []tel
 		}
 		return out
 	}
-	// The outcomes a session published, one receipt per turn end it acted on:
+	// The outcomes a session published, one journal per turn end it acted on:
 	// how an interruption that went to nobody is told from one never heard.
-	outcomes := func(session *codexSession) int {
-		found, _ := filepath.Glob(filepath.Join(iso.StateDir, "rooms", "default", "inbox", session.name, "turns", "*"))
-		return len(found)
-	}
+	outcomes := func(session *codexSession) int { return eventEnds(iso, session.name) }
 	// What main holds from a session, read or not: its own mailbox reads and
 	// the files it has not read. A report main gives itself goes straight to
 	// its unread mail and is not announced, so only the file shows it until

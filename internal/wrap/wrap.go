@@ -61,12 +61,19 @@ func Run(ctx context.Context, request Request) (int, error) {
 		return 0, fmt.Errorf("could not read the start time of this process: %w", err)
 	}
 
+	// A run of this build is named by the boot too (docs/protocol-cutover.md):
+	// without it the run's records could not be told from an earlier build's.
+	boot, err := registry.CurrentBoot()
+	if err != nil {
+		return 0, fmt.Errorf("could not read the machine's boot id, which names this run: %w", err)
+	}
+
 	cwd, err := os.Getwd()
 	if err != nil {
 		return 0, err
 	}
 	if request.Role.ID == role.Main.ID {
-		if authority := listenAuthority(request.Dir, registry.Session{ServicePID: self, ServiceStart: selfStart}.Epoch(), self); authority != nil {
+		if authority := listenAuthority(request.Dir, registry.RunEpoch(self, selfStart, boot), self); authority != nil {
 			defer authority.Close()
 			go authority.Serve(ctx)
 		}
@@ -75,10 +82,13 @@ func Run(ctx context.Context, request Request) (int, error) {
 	// The name is claimed before anything is prepared. Preparing first means a
 	// launch that loses the race has already touched what belongs to the session
 	// that won — its socket file, for one.
-	session, err := claimName(request, self, selfStart, cwd)
+	session, err := claimRun(request, self, selfStart, boot, cwd)
 	if err != nil {
 		return 0, err
 	}
+	// The fifth step: reports other mailboxes hold for this name's
+	// earlier-build runs come to this run now that it is ready.
+	takeHeld(ctx, request.Dir, session)
 	name := session.Name
 	epoch := session.Epoch()
 	defer func() {

@@ -86,8 +86,11 @@ func (s *Server) retryNow() {
 // underneath it: the agent may have read it on its own, and a status write that
 // failed earlier is repeated.
 func (s *Server) stillHeld(message Message, held Result) {
-	status, ok := ReadStatus(s.Dir, s.Name, message.ID)
+	status, ok, err := ReadStatus(s.Dir, s.Name, message.ID)
 	switch {
+	case err != nil:
+		// Still held for this pass: the status may be final, and a later
+		// pass reads it again.
 	case ok && status.final():
 		s.finish(message, status.result())
 	case !ok || status.State != Held:
@@ -225,7 +228,7 @@ const heldByEarlier = "an earlier session with this name held it and ended befor
 // failForeignHeld settles a message an earlier run of the name held and never
 // ended — it was killed. Its sender is told, as if that run had ended cleanly.
 func (s *Server) failForeignHeld(message Message) bool {
-	if status, ok := ReadStatus(s.Dir, s.Name, message.ID); !ok || status.State != Held {
+	if status, ok, err := ReadStatus(s.Dir, s.Name, message.ID); err != nil || !ok || status.State != Held {
 		return false
 	}
 	s.settleHeld(message, s.outcomeFor(message, Result{State: Failed, Detail: heldByEarlier}))
@@ -255,7 +258,10 @@ func (s *Server) tellUndelivered(message Message, detail string) {
 	// Its sender took it back: a hold that ends after that ends nothing the
 	// sender still waits on. Read from disk, because the outcome in memory
 	// is the harness's when the status could not be recorded under the lock.
-	if status, ok := ReadStatus(s.Dir, s.Name, message.ID); ok && status.Withdrawn {
+	// A status that cannot be read may say so too, and the note is not
+	// written on a guess: its sender still finds the failure under rewake
+	// inbox --awaited once the status can be read.
+	if status, ok, err := ReadStatus(s.Dir, s.Name, message.ID); err != nil || ok && status.Withdrawn {
 		return
 	}
 	kind := KindOf(message)

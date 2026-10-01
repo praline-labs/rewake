@@ -71,10 +71,10 @@ func TestPutStampsTheBootClock(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if stored, _ := readCopy(dir, "api", fresh.ID); stored.CreatedBoot < before {
+	if stored, _, _ := readCopy(dir, "api", fresh.ID); stored.CreatedBoot < before {
 		t.Errorf("the fresh letter carries %d, want a reading from %d on", stored.CreatedBoot, before)
 	}
-	if stored, _ := readCopy(dir, "api", given.ID); stored.CreatedBoot != 42 {
+	if stored, _, _ := readCopy(dir, "api", given.ID); stored.CreatedBoot != 42 {
 		t.Errorf("the given reading became %d", stored.CreatedBoot)
 	}
 }

@@ -56,8 +56,11 @@ func viewedMessages(dir string, messages []inbox.Message) []messageView {
 		view.SenderState, view.CreatedBoot = nil, 0
 		if message.AddendumTo != "" {
 			// The task as it is now: an edit leaves the addendum naming the
-			// letter it replaced.
-			view.AddendumTo = inbox.CurrentTask(dir, message.To, message.AddendumTo)
+			// letter it replaced. A copy on the way that cannot be read
+			// leaves the task it was sent to, which is still true.
+			if current, err := inbox.CurrentTask(dir, message.To, message.AddendumTo); err == nil {
+				view.AddendumTo = current
+			}
 		}
 		if visible {
 			view.Telemetry = sessionSnapshot(dir, message.From, message.FromEpoch)

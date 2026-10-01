@@ -144,20 +144,20 @@ func TestAwaitedShowsWhereEachTaskStands(t *testing.T) {
 	undelivered := room.put(working, "inbox", inbox.Pending, "a compaction is running", map[string]any{"text": "just sent"})
 
 	pending := room.sentAndRead(paused, "run the suite")
-	if err := inbox.MarkPending(room.dir, paused.Name, paused.Epoch(), "the suite is running", markAt); err != nil {
+	if err := markPending(room.dir, paused.Name, paused.Epoch(), "the suite is running", markAt); err != nil {
 		t.Fatal(err)
 	}
-	room.turnEnds(paused, turnResult{ID: "p/1", Text: "started the suite", Started: markAt - 1, Ended: boottime.Now()})
+	room.turnEnds(paused, turnResult{Boundary: boundaryNow(t, room.dir, paused), ID: "p/1", Text: "started the suite", Started: markAt - 1, Ended: boottime.Now()})
 
 	halted := room.sentAndRead(stopped, "refactor")
-	room.turnEnds(stopped, turnResult{ID: "s/1", Text: telemetry.StoppedText, Stopped: true})
+	room.turnEnds(stopped, turnResult{Boundary: boundaryNow(t, room.dir, stopped), ID: "s/1", Text: telemetry.StoppedText, Stopped: true})
 	// A main's rewake interrupt is not a person's Esc, and the listing says
 	// which it was.
 	interrupted := room.sentAndRead(aborted, "rename")
-	room.turnEnds(aborted, turnResult{ID: "a/1", Text: telemetry.InterruptedText("lead"), Stopped: true})
+	room.turnEnds(aborted, turnResult{Boundary: boundaryNow(t, room.dir, aborted), ID: "a/1", Text: telemetry.InterruptedText("lead"), Stopped: true})
 
 	settled := room.sentAndRead(done, "small fix")
-	room.turnEnds(done, turnResult{ID: "d/1", Text: "fixed"})
+	room.turnEnds(done, turnResult{Boundary: boundaryNow(t, room.dir, done), ID: "d/1", Text: "fixed"})
 
 	failed := room.put(refused, "done", inbox.Failed, "the harness refused the notice", map[string]any{"text": "never landed"})
 
@@ -247,7 +247,7 @@ func TestAwaitedIsOneLineWhenNothingIsOwed(t *testing.T) {
 	room := newAwaitedRoom(t)
 	worker := otherRun(t, room.dir, "worker")
 	room.sentAndRead(worker, "a task")
-	room.turnEnds(worker, turnResult{ID: "w/1", Text: "done"})
+	room.turnEnds(worker, turnResult{Boundary: boundaryNow(t, room.dir, worker), ID: "w/1", Text: "done"})
 	code, out, _ := run("inbox", "--awaited")
 	if code != ExitOK || out != "Rewake: nobody owes you a report.\n" {
 		t.Fatalf("exit %d: %q", code, out)
@@ -306,15 +306,15 @@ func TestAwaitedTakesTheLatestInterimOrStop(t *testing.T) {
 	room := newAwaitedRoom(t)
 	worker := otherRun(t, room.dir, "worker")
 	task := room.sentAndRead(worker, "a long task")
-	room.turnEnds(worker, turnResult{ID: "w/1", Text: "interrupted", Stopped: true})
+	room.turnEnds(worker, turnResult{Boundary: boundaryNow(t, room.dir, worker), ID: "w/1", Text: "interrupted", Stopped: true})
 	if view := byID(awaitedJSON(t))[task]; view.State != inbox.StageStopped {
 		t.Fatalf("after the stop: %+v", view)
 	}
 	time.Sleep(2 * time.Millisecond)
-	if err := inbox.MarkPending(room.dir, worker.Name, worker.Epoch(), "resumed, still running", markAt); err != nil {
+	if err := markPending(room.dir, worker.Name, worker.Epoch(), "resumed, still running", markAt); err != nil {
 		t.Fatal(err)
 	}
-	room.turnEnds(worker, turnResult{ID: "w/2", Text: "resumed", Started: markAt - 1, Ended: boottime.Now()})
+	room.turnEnds(worker, turnResult{Boundary: boundaryNow(t, room.dir, worker), ID: "w/2", Text: "resumed", Started: markAt - 1, Ended: boottime.Now()})
 	if view := byID(awaitedJSON(t))[task]; view.State != inbox.StagePending || view.Detail != "resumed, still running\n\nresumed" {
 		t.Fatalf("after the interim that followed the stop: %+v", view)
 	}
@@ -327,7 +327,7 @@ func TestAwaitedTrustsAnEndedRunsRecords(t *testing.T) {
 	room := newAwaitedRoom(t)
 	worker := otherRun(t, room.dir, "worker")
 	room.sentAndRead(worker, "a small task")
-	room.turnEnds(worker, turnResult{ID: "w/1", Text: "done"})
+	room.turnEnds(worker, turnResult{Boundary: boundaryNow(t, room.dir, worker), ID: "w/1", Text: "done"})
 	for _, report := range finishedFor(t, room.dir, room.lead.Name) {
 		if err := os.Remove(report); err != nil {
 			t.Fatal(err)

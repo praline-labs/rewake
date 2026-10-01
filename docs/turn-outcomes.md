@@ -48,18 +48,24 @@ the behaviour without it, never worse; a `finished` marker the worker had to rem
 would have left the obligation open for ever when forgotten, which is why it was not
 chosen.
 
-- **The mark** is `inbox/<name>/pending/mark.json`, changed only under the mailbox lock.
-  It belongs to the turn it was made in and to no other, and the tie is time on the
-  machine's boot clock (`CLOCK_BOOTTIME`, `internal/boottime`), one clock for every
-  process that a wall-clock jump after a WSL suspend does not move back. The mark records
-  when the `rewake pending` process started; a turn end honors it only if that lies
-  between the ending turn's start and end. A mark older than the turn's start was made in
-  an earlier turn whose end never reached rewake — an Esc interruption, a hook whose
-  payload never came, a mailbox lock not taken in time — and is removed unused, so the
-  next turn end is the report. A mark newer than the turn's end was made in a later turn
-  while this one was still being published, and is left for it. A turn whose start is not
-  known cannot be tied to the mark and ends as a report. Every failure falls to that side:
-  the behaviour without `pending`. A second `pending` in one turn replaces the text.
+- **The marks** are `inbox/<name>/pending/marks/<epoch>/<time>-<id>`
+  (`internal/inbox/marks.go`), one file per `rewake pending` call, written only under
+  the mailbox lock. A mark belongs to the turn it was made in and to no other, and the
+  tie is time on the machine's boot clock (`CLOCK_BOOTTIME`, `internal/boottime`), one
+  clock for every process that a wall-clock jump after a WSL suspend does not move back.
+  The mark records when the `rewake pending` process started; a turn end honors it only
+  if that lies in the turn's window: after the later of the turn's start and the latest
+  earlier end of the run a journal records, up to the turn's end. Of several marks in the
+  window the latest decides, so a second `pending` in one turn replaces the text. A mark
+  older than the window was made in an earlier turn whose end never reached rewake — an
+  Esc interruption, a hook whose payload never came, a mailbox lock not taken in time —
+  and decides nothing, so the next turn end is the report. A mark newer than the turn's
+  end was made in a later turn while this one was still being published, and is left for
+  it. No turn end removes a mark: a retry of an end finds the marks its first attempt
+  saw, and the marks go when the run's records are swept after it ends
+  ([turn-end-recovery.md](turn-end-recovery.md#pending-marks)). A turn whose start is not
+  known cannot be tied to a mark and ends as a report. Every failure falls to that side:
+  the behaviour without `pending`.
 - **The turn's start and end.** Codex: the gateway stamps `turn/started` and
   `turn/completed` as it sees them and carries both with the completion, so a turn
   published late — queued, or retried when the mailbox was busy — cannot take a mark made
@@ -92,7 +98,7 @@ chosen.
   the gateway, into the one function that prepares a turn's reports, which asks for the
   mark once per turn end.
 - **Only a normal finish is softened.** A failed or stopped turn reports `error` or
-  `stopped` as it would have; the mark is used up by it all the same.
+  `stopped` as it would have, with the mark in its window all the same.
 - **The message** has its own report id (the wait's id plus `-pending-<turn>`), like
   `stopped`, so the report that follows is not taken for a copy. A blocked `--question`
   does not take it for its answer: it is a turn outcome for being kept readable when
@@ -129,15 +135,25 @@ the mark.
   once, far below the harness's eight. Each later unmarked turn end after an interim
   one is asked again: every interim end starts a new episode.
 - **The records**, beside the mark in `inbox/<name>/pending/` and changed only under
-  the mailbox lock: `interim.json` holds the run's epoch and the pending line of its
-  last turn end when that end was interim — a finished or failed end removes it, a stop
-  leaves it, as a stop leaves the waits; `kept.json` holds the held answer.
+  the mailbox lock: `interim.json` holds the run's last word on the work — the epoch,
+  the end's operation and its end time, and either the pending line of an interim end
+  or that a finished or failed end settled it; a stop leaves it, as a stop leaves the
+  waits. Writing it is a step of the turn end's journal
+  ([delivery-turn-end.md](delivery-turn-end.md)), so an end that dies after its journal
+  is on record still leaves the interim end on record. Of two ends of one run the later
+  by end time wins, whatever order their retries come in; the journal of an ended run,
+  completed while the next run takes over, leaves the record of the run holding the name
+  alone, and one that cannot be read stops the journal rather than being written over
+  ([turn-end-recovery.md](turn-end-recovery.md#the-interim-record)). `kept.json` holds
+  the held answer.
 - **The report keeps the held answer.** The harness's second Stop carries only what the
   model said after the hold, so the next turn end heard puts the kept answer into its
   own outcome: a finish gives the kept answer, then the continuation; a pending mark
   made in the continuation gives the mark's line, the kept answer, then the
   continuation; a StopFailure gives its error, then the kept answer. The answer is
-  dropped once that outcome is published, not before.
+  dropped once that outcome is published, not before, as a step of the turn end's
+  journal ([delivery-turn-end.md](delivery-turn-end.md)); each kept answer has its own
+  version, and the step drops the version the outcome carried and never a later one.
 - **A hold is not an end.** `rewake turn-ended` records every turn end it hears as the
   next turn's start; a held one is not recorded, so a mark the continuation makes falls
   within the turn its end takes it from.
@@ -167,15 +183,15 @@ turning idle in the telemetry says all there is to say — the owner's decision 
 September 23, 2026, the same on both harnesses, since the routing
 (`internal/cli/turn_reports.go`) is shared. A waiter whose session has ended, or runs
 under another epoch, is no waiter any more: a `stopped` meant only for it is dropped too,
-where it used to go to main. The turn receipt is kept all the same, so a repeated event
+where it used to go to main. Its journal is kept all the same, so a repeated event
 publishes nothing either.
 On Claude Code a turn a main aborted with `rewake interrupt` is stopped the same way,
 with the text "<main> interrupted this turn with rewake interrupt" instead, and the same
 routing; its next notice tells the interrupted session so, once
 ([remote-control.md](remote-control.md#on-claude-code)).
 It owes no reply and has its own report id, separate from the eventual result.
-Its separate advisory turn receipt keeps the original waits intact. A finished
-or error outcome for the same native turn uses its final receipt and can settle
+Its own operation, and journal, keep the original waits intact. A finished
+or error outcome for the same native turn is an operation of its own and can settle
 those waits; retries of either outcome remain idempotent. Human continuation can then
 publish finished with the same inReplyTo and settle those waits. Main waits for
 the person instead of resending. A waiting question prints stopped and exits 1;

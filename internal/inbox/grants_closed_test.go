@@ -113,7 +113,7 @@ func TestAWaitTakenOverKeepsItsReading(t *testing.T) {
 	task := grantPending(t, dir, true)[0]
 	readIn(t, dir, "receiver-epoch", "thread-a", task)
 	agedWaits(t, dir, "receiver-epoch", resumeWindow-time.Hour)
-	if adopted := AdoptWaits(dir, "api", "second-epoch", "thread-a"); !slices.Equal(adopted, []string{task.ID}) {
+	if adopted := must(AdoptWaits(dir, "api", "second-epoch", "thread-a")); !slices.Equal(adopted, []string{task.ID}) {
 		t.Fatalf("the first resume took over %v", adopted)
 	}
 	sweepAwaiting(dir, "api", "second-epoch")
@@ -125,7 +125,7 @@ func TestAWaitTakenOverKeepsItsReading(t *testing.T) {
 	if open, _ := TaskOpen(dir, "api", task.ID); open {
 		t.Error("a day after it was read, the task is still open")
 	}
-	if adopted := AdoptWaits(dir, "api", "third-epoch", "thread-a"); len(adopted) != 0 {
+	if adopted := must(AdoptWaits(dir, "api", "third-epoch", "thread-a")); len(adopted) != 0 {
 		t.Errorf("a day after it was read, a second resume took over %v", adopted)
 	}
 }

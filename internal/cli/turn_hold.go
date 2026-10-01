@@ -20,23 +20,24 @@ import (
 // senders still wait. The work may be done, or the model may have forgotten
 // the mark, and a report sent too early closes the task; so it is asked once.
 // Every failure here falls to publishing, which is the behavior without the
-// hold (docs/turn-outcomes.md).
-func holdTurn(dir string, self registry.Session, event turnResult, waiters []inbox.Waiter) string {
+// hold (docs/turn-outcomes.md); a record that cannot be read is such a
+// failure, and a kept answer that cannot be read is never written over.
+func holdTurn(dir string, self registry.Session, event turnResult, waiters []inbox.Waiter, marked bool) string {
 	if !event.Holdable || event.Failed || event.Stopped {
 		return ""
 	}
-	line, interim := inbox.LastInterim(dir, self.Name, self.Epoch())
-	if !interim {
+	line, interim, err := inbox.LastInterim(dir, self.Name, self.Epoch())
+	if err != nil || !interim {
 		return ""
 	}
-	if _, held := inbox.KeptAnswer(dir, self.Name, self.Epoch()); held {
+	if _, held, err := inbox.KeptAnswer(dir, self.Name, self.Epoch()); err != nil || held {
 		// A turn end held before whose continuation was never heard of — an
 		// Esc where the plugin did not load. This end publishes that answer
 		// with its own, and asks nothing again.
 		return ""
 	}
 	senders := liveSenders(dir, waiters)
-	if len(senders) == 0 || inbox.MarkedWithin(dir, self.Name, self.Epoch(), event.Started, event.Ended) {
+	if len(senders) == 0 || marked {
 		return ""
 	}
 	if inbox.KeepAnswer(dir, self.Name, self.Epoch(), event.Text) != nil {

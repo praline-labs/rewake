@@ -2,11 +2,11 @@ package inbox
 
 import (
 	"context"
+	"errors"
 	"os"
 	"slices"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/proc"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/state"
 )
@@ -15,7 +15,7 @@ import (
 // run worked in. What that run read and had not reported on yet is in the
 // conversation, and the new run is the one that will finish it; so the new run
 // takes over those waits, and its turn's report settles them
-// (docs/delivery.md#a-resumed-conversation). A task is matched to the
+// (docs/delivery-conversation.md#a-resumed-conversation). A task is matched to the
 // conversation by the thread its delivery was pinned to (thread.go). A task
 // delivered into another conversation, or one nobody pinned, is not taken
 // over: the new run never saw it.
@@ -40,7 +40,7 @@ func owedStands(run string, waiter Waiter, id string) bool {
 	if index < 0 {
 		return false
 	}
-	if pid, start, ok := registry.ParseEpoch(run); ok && proc.Alive(pid, start) {
+	if registry.EpochAlive(run) {
 		return true
 	}
 	return time.Since(time.Unix(0, waiter.readAt(index))) < resumeWindow
@@ -49,41 +49,69 @@ func owedStands(run string, waiter Waiter, id string) bool {
 // mayResume says whether a message a run that ended still owes can yet be
 // reported on by a run resuming its conversation: it was delivered into one,
 // and the wait naming it stands.
-func mayResume(dir string, message Message, run string, wait Waiter) bool {
-	return deliveryThread(dir, message.To, message.ID) != "" && owedStands(run, wait, message.ID)
+func mayResume(dir string, message Message, run string, wait Waiter) (bool, error) {
+	thread, err := deliveryThread(dir, message.To, message.ID)
+	if err != nil {
+		return false, err
+	}
+	return thread != "" && owedStands(run, wait, message.ID), nil
 }
 
 // AdoptWaits moves to this run the waits of earlier runs of the name for the
 // messages delivered into thread, as if this run had read them when the
-// earlier one did. It returns the ids taken over. The caller holds the mailbox lock.
-func AdoptWaits(dir, name, epoch, thread string) []string {
+// earlier one did. It returns the ids taken over. The caller holds the mailbox
+// lock. An error says a wait or its thread could not be read, or a wait taken
+// over could not be written: the earlier runs' records must then stay, since
+// sweeping them would lose what they owe.
+//
+// An earlier run's turn end left unfinished is completed first: its reports
+// are out, and a wait they answered, taken over, would be answered again.
+func AdoptWaits(dir, name, epoch, thread string) ([]string, error) {
+	if err := Reconcile(context.Background(), dir, name); err != nil {
+		return nil, err
+	}
 	if thread == "" {
-		return nil
+		return nil, nil
 	}
 	runs, err := os.ReadDir(state.AwaitingPath(dir, name))
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	var adopted []string
 	for _, run := range runs {
 		if !run.IsDir() || run.Name() == epoch {
 			continue
 		}
-		for _, waiter := range Waiters(dir, name, run.Name()) {
+		waiters, err := ReadWaiters(dir, name, run.Name())
+		if err != nil {
+			return adopted, err
+		}
+		for _, waiter := range waiters {
 			for index, id := range waiter.Messages {
-				if !safeID(id) || !owedStands(run.Name(), waiter, id) || deliveryThread(dir, name, id) != thread || slices.Contains(adopted, id) {
+				if !safeID(id) || !owedStands(run.Name(), waiter, id) || slices.Contains(adopted, id) {
+					continue
+				}
+				delivered, err := deliveryThread(dir, name, id)
+				if err != nil {
+					return adopted, err
+				}
+				if delivered != thread {
 					continue
 				}
 				// Read when the earlier run read it: taking it over does not
 				// start the window again, or a chain of resumes would keep a
 				// task, and its grant, owed for ever.
-				if markScopedAwaiting(dir, name, epoch, Message{ID: id, From: waiter.Name, FromEpoch: waiter.Epoch}, waiter.readAt(index)) == nil {
-					adopted = append(adopted, id)
+				if err := markScopedAwaiting(dir, name, epoch, Message{ID: id, From: waiter.Name, FromEpoch: waiter.Epoch}, waiter.readAt(index)); err != nil {
+					return adopted, err
 				}
+				adopted = append(adopted, id)
 			}
 		}
 	}
-	return adopted
+	return adopted, nil
 }
 
 // followEarlierRun takes over, once this run's conversation is known, what the
@@ -105,7 +133,11 @@ func (s *Server) followEarlierRun(ctx context.Context) {
 		ctx = context.Background()
 	}
 	if s.lockWithContext(ctx, func() error {
-		AdoptWaits(s.Dir, s.Name, s.Epoch, thread)
+		// Not followed yet: the next pass tries again, and the earlier runs'
+		// waits stay until what they owe here has been taken over.
+		if _, err := AdoptWaits(s.Dir, s.Name, s.Epoch, thread); err != nil {
+			return err
+		}
 		sweepAwaiting(s.Dir, s.Name, s.Epoch)
 		return nil
 	}) == nil {
@@ -115,20 +147,27 @@ func (s *Server) followEarlierRun(ctx context.Context) {
 
 // adoptedBy finds the run of the recipient that took over a message's wait
 // from the run it was written for: the report will come from that run.
-func adoptedBy(dir string, message Message) (string, bool) {
+func adoptedBy(dir string, message Message) (string, bool, error) {
 	runs, err := os.ReadDir(state.AwaitingPath(dir, message.To))
+	if errors.Is(err, os.ErrNotExist) {
+		return "", false, nil
+	}
 	if err != nil {
-		return "", false
+		return "", false, err
 	}
 	for _, run := range runs {
 		if !run.IsDir() || run.Name() == message.ToEpoch {
 			continue
 		}
-		for _, waiter := range Waiters(dir, message.To, run.Name()) {
+		waiters, err := ReadWaiters(dir, message.To, run.Name())
+		if err != nil {
+			return "", false, err
+		}
+		for _, waiter := range waiters {
 			if waiter.Name == message.From && waiter.Epoch == message.FromEpoch && slices.Contains(waiter.Messages, message.ID) {
-				return run.Name(), true
+				return run.Name(), true, nil
 			}
 		}
 	}
-	return "", false
+	return "", false, nil
 }

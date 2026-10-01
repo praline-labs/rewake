@@ -75,7 +75,7 @@ func TestUnreservedReportsKeepTheirExpiry(t *testing.T) {
 	server.drain(context.Background())
 	server.sweepFinished()
 	left, _ := PeekUnread(dir, "api", "")
-	status, _ := ReadStatus(dir, "api", report.ID)
+	status, _, _ := ReadStatus(dir, "api", report.ID)
 	t.Logf("no reservation ever; attempts=%d unread=%d status=%s", attempts, len(left), status.State)
 	if status.State != Failed {
 		t.Fatal("unreserved undelivered report has no expiry and refreshes its retention")
@@ -113,7 +113,7 @@ func TestReleasedAnswerRetriesCannotRenewTheirDeadline(t *testing.T) {
 	}
 	server.attempts = map[string]time.Time{}
 	server.drain(context.Background())
-	status, _ := ReadStatus(dir, "api", answer.ID)
+	status, _, _ := ReadStatus(dir, "api", answer.ID)
 	if status.State != Failed {
 		t.Fatalf("released answer never expired: %+v", status)
 	}

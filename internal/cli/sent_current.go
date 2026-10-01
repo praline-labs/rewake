@@ -16,8 +16,14 @@ import (
 // rather than trusted: the caller's copy may predate an edit that ran beside
 // it, and under the mailbox lock this is the look that decides.
 func currentSent(dir string, self registry.Session, epoch string, message inbox.Message) (inbox.Message, error) {
-	id := inbox.CurrentTask(dir, message.To, message.ID)
-	matches := inbox.SentMatching(dir, self.Name, epoch, id)
+	id, err := inbox.CurrentTask(dir, message.To, message.ID)
+	if err != nil {
+		return message, err
+	}
+	matches, err := inbox.SentMatching(dir, self.Name, epoch, id)
+	if err != nil {
+		return message, err
+	}
 	if len(matches) == 1 && matches[0].ID == id {
 		return matches[0], nil
 	}

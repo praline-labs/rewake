@@ -49,10 +49,17 @@ func rootOf(dir string, self registry.Session, epoch string, message inbox.Messa
 		if current.AddendumTo != "" {
 			id = current.AddendumTo
 		}
-		if id = inbox.CurrentTask(dir, current.To, id); id == current.ID {
+		id, err := inbox.CurrentTask(dir, current.To, id)
+		if err != nil {
+			return inbox.Message{}, unreadableTask(message, err)
+		}
+		if id == current.ID {
 			return current, nil
 		}
-		matches := inbox.SentMatching(dir, self.Name, epoch, id)
+		matches, err := inbox.SentMatching(dir, self.Name, epoch, id)
+		if err != nil {
+			return inbox.Message{}, unreadableTask(message, err)
+		}
 		if len(matches) != 1 || matches[0].ID != id {
 			return inbox.Message{}, failf("the task %s, which %s leads to, is no longer kept; send a new task with: rewake send %s \"...\"", id, message.ID, target.Name)
 		}
@@ -117,7 +124,7 @@ func addendumRefusal(dir string, self registry.Session, epoch string, root inbox
 	case !inbox.AsksForWork(root):
 		return failf("%s is a %s, which owes nothing to add to; send another with: %s --notify", root.ID, inbox.KindOf(root), next)
 	}
-	item, settled := inbox.AwaitedOne(dir, self.Name, epoch, root, func(recipient, run string) inbox.RecipientRun {
+	item, settled, err := inbox.AwaitedOne(dir, self.Name, epoch, root, func(recipient, run string) inbox.RecipientRun {
 		live, err := registry.LookupReadOnly(dir, recipient)
 		switch {
 		case err == nil && live.Epoch() == run:
@@ -128,6 +135,8 @@ func addendumRefusal(dir string, self registry.Session, epoch string, root inbox
 		return inbox.RunEnded
 	})
 	switch {
+	case err != nil:
+		return unreadableTask(root, err)
 	case settled:
 		return failf("%s has already reported on your %s %s; send the addition as a new task: %s", target.Name, inbox.KindOf(root), root.ID, next)
 	case !item.Gone() && root.ToEpoch != target.Epoch():
@@ -145,4 +154,11 @@ func addendumRefusal(dir string, self registry.Session, epoch string, root inbox
 		return failf("your %s %s carries a grant and waits for %s to be idle, so an addition would reach it first; change the task itself with: rewake edit %s \"...\"", inbox.KindOf(root), root.ID, target.Name, shortRef(root.ID))
 	}
 	return nil
+}
+
+// unreadableTask refuses an addition while the task it would add to, or where
+// that task stands, cannot be read: the task may have been answered or
+// replaced, and an addition on a guess could owe a second report.
+func unreadableTask(task inbox.Message, err error) error {
+	return failf("could not read where your %s %s stands (%v), so nothing was added to it; run the same command again", inbox.KindOf(task), task.ID, err)
 }

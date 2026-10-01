@@ -2,7 +2,6 @@ package inbox
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -41,13 +40,13 @@ func TestGroupedPreparationRechecksAnswerLeasesExpiryAndEpoch(t *testing.T) {
 	if len(available) != 4 {
 		t.Fatal("lease did not protect ordinary reads")
 	}
-	if status, _ := ReadStatus(dir, "api", expired.ID); status.State != Failed {
+	if status, _, _ := ReadStatus(dir, "api", expired.ID); status.State != Failed {
 		t.Fatal("grouping postponed expiry")
 	}
-	if _, ok := ReadStatus(dir, "api", foreign.ID); ok {
+	if _, ok, _ := ReadStatus(dir, "api", foreign.ID); ok {
 		t.Fatal("foreign epoch mutated")
 	}
-	if _, ok := ReadStatus(dir, "api", reserved.ID); ok {
+	if _, ok, _ := ReadStatus(dir, "api", reserved.ID); ok {
 		t.Fatal("reserved answer was announced")
 	}
 }
@@ -110,7 +109,7 @@ func TestCancellationBeforeGroupAdmissionRetainsOnlyUnexpiredReports(t *testing.
 	cancel()
 	<-done
 	for _, m := range members {
-		status, ok := ReadStatus(dir, "api", m.ID)
+		status, ok, _ := ReadStatus(dir, "api", m.ID)
 		if !ok || status.State != Failed || status.ReportAvailable != IsReport(m) {
 			t.Fatalf("shutdown outcome %+v", status)
 		}
@@ -126,18 +125,14 @@ func TestGroupRemembersEveryACKWhenStatusWritesFail(t *testing.T) {
 	s := batchServer(dir)
 	members := mixedPending(t, dir)
 	calls := 0
+	var ids []string
 	for _, m := range members {
-		if err := os.Mkdir(statusPath(dir, "api", m.ID), 0o700); err != nil {
-			t.Fatal(err)
-		}
+		ids = append(ids, m.ID)
 	}
+	unblock := failStatusWrites(t, dir, "api", ids...)
 	s.Deliver = func(context.Context, Message) Result { calls++; return Result{State: Delivered} }
 	s.drain(context.Background())
-	for _, m := range members {
-		if err := os.Remove(statusPath(dir, "api", m.ID)); err != nil {
-			t.Fatal(err)
-		}
-	}
+	unblock()
 	s.attempts = map[string]time.Time{}
 	s.drain(context.Background())
 	s.refuseWaiting("session ended")
@@ -145,7 +140,7 @@ func TestGroupRemembersEveryACKWhenStatusWritesFail(t *testing.T) {
 		t.Fatal("partial receipt write retried a native group")
 	}
 	for _, m := range members {
-		status, ok := ReadStatus(dir, "api", m.ID)
+		status, ok, _ := ReadStatus(dir, "api", m.ID)
 		if !ok || status.State != Delivered {
 			t.Fatalf("lost accepted member: %+v", status)
 		}

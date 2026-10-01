@@ -8,8 +8,27 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/state"
 )
+
+// closeMailbox leaves name's mailbox readable and closed to writes: a report
+// into it fails as a plain failure a retry clears, while every mark it holds
+// still reads. A file in its place would hide those marks, an unknown that
+// stops the sender before any effect (rule 6).
+func closeMailbox(t *testing.T, dir, name string) func() {
+	t.Helper()
+	mailbox := state.InboxPath(dir, name)
+	if err := os.MkdirAll(mailbox, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(mailbox, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	unblock := func() { _ = os.Chmod(mailbox, 0o700) }
+	t.Cleanup(unblock)
+	return unblock
+}
 
 func TestRetriedTurnDoesNotConsumeLaterWork(t *testing.T) {
 	dir := liveSession(t, "api")
@@ -20,21 +39,21 @@ func TestRetriedTurnDoesNotConsumeLaterWork(t *testing.T) {
 	rawUnread(t, dir, "api", map[string]any{"from": first.Name, "fromEpoch": first.Epoch(), "toEpoch": epochOf(t, dir, "api"), "text": "first task"})
 	rawUnread(t, dir, "api", map[string]any{"from": second.Name, "fromEpoch": second.Epoch(), "toEpoch": epochOf(t, dir, "api"), "text": "second task"})
 	run("inbox")
-	blocked := state.InboxPath(dir, "two")
-	if err := os.WriteFile(blocked, []byte("temporarily unavailable mailbox"), 0o600); err != nil {
-		t.Fatal(err)
+	unblock := closeMailbox(t, dir, "two")
+	self, _ := registry.Lookup(dir, "api")
+	event := turnResult{Boundary: boundaryNow(t, dir, self), ID: "turn-before-new-task", Failed: true, Text: "failure on original tasks"}
+	if completeTurn(dir, self, event, "") == nil {
+		t.Fatal("the blocked report did not fail")
 	}
-	payload := `{"type":"agent-turn-complete","turn-id":"turn-before-new-task","error":"failure on original tasks"}`
-	run("turn-ended", payload)
 	if len(finishedFor(t, dir, "one")) != 1 {
 		t.Fatal("first partial delivery did not happen")
 	}
 	late := rawUnread(t, dir, "api", map[string]any{"from": first.Name, "fromEpoch": first.Epoch(), "toEpoch": epochOf(t, dir, "api"), "kind": "task", "text": "task arriving after failed publication"})
 	run("inbox")
-	if err := os.Remove(blocked); err != nil {
+	unblock()
+	if err := completeTurn(dir, self, event, ""); err != nil {
 		t.Fatal(err)
 	}
-	run("turn-ended", payload)
 	files := finishedFor(t, dir, "one")
 	waits := inbox.Waiters(dir, "api", epochOf(t, dir, "api"))
 	for _, file := range files {
@@ -52,12 +71,19 @@ func TestRetriedTurnDoesNotConsumeLaterWork(t *testing.T) {
 	if len(files) != 1 || len(waits) != 1 || !slices.Equal(waits[0].Messages, []string{late}) {
 		t.Fatal("retry duplicated original report and consumed later work")
 	}
-	// A replay must use the stored outcome, not a changed callback payload.
-	run("turn-ended", `{"type":"agent-turn-complete","turn-id":"turn-before-new-task","last-assistant-message":"different callback text"}`)
+	// Another outcome of the same turn is its own operation, and its scope is
+	// the same boundary: the later work is not its to answer.
+	changed := event
+	changed.Failed, changed.Text = false, "different callback text"
+	if err := completeTurn(dir, self, changed, ""); err != nil {
+		t.Fatal(err)
+	}
 	if len(finishedFor(t, dir, "one")) != 1 || len(inbox.Waiters(dir, "api", epochOf(t, dir, "api"))) != 1 {
 		t.Fatal("completed replay consumed later work")
 	}
-	run("turn-ended", `{"type":"agent-turn-complete","turn-id":"next-turn","last-assistant-message":"late task result"}`)
+	if err := completeTurn(dir, self, turnResult{Boundary: boundaryNow(t, dir, self), ID: "next-turn", Text: "late task result"}, ""); err != nil {
+		t.Fatal(err)
+	}
 	files = finishedFor(t, dir, "one")
 	if len(files) != 2 || len(inbox.Waiters(dir, "api", epochOf(t, dir, "api"))) != 0 {
 		t.Fatal("next real result did not settle later work")
@@ -83,16 +109,19 @@ func TestPartialTurnRetryKeepsOriginalOutcome(t *testing.T) {
 	markMain(t, dir, "web")
 	t.Setenv(state.SessionEnv, "api")
 	t.Setenv(state.EpochEnv, epochOf(t, dir, "api"))
-	blocked := state.InboxPath(dir, "web")
-	if err := os.WriteFile(blocked, nil, 0o600); err != nil {
-		t.Fatal(err)
+	unblock := closeMailbox(t, dir, "web")
+	self, _ := registry.Lookup(dir, "api")
+	event := turnResult{Boundary: boundaryNow(t, dir, self), ID: "original", Failed: true, Text: "original failure"}
+	if completeTurn(dir, self, event, "") == nil {
+		t.Fatal("the blocked report did not fail")
 	}
-	run("turn-ended", `{"turn-id":"original","error":"original failure"}`)
 	late := readFrom(t, dir, leader)
-	if err := os.Remove(blocked); err != nil {
+	unblock()
+	changed := event
+	changed.Failed, changed.Text = false, "changed payload"
+	if err := completeTurn(dir, self, changed, ""); err != nil {
 		t.Fatal(err)
 	}
-	run("turn-ended", `{"turn-id":"original","last_assistant_message":"changed payload"}`)
 	files := finishedFor(t, dir, "web")
 	if len(files) != 1 {
 		t.Fatalf("reports = %d, want original fallback report", len(files))

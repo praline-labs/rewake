@@ -46,10 +46,10 @@ func TestNewBatchPreservesReservedAnswersAndExpiry(t *testing.T) {
 	if available, _ := AvailableUnread(dir, s.Name, s.Epoch); len(available) != 1+len(later) {
 		t.Fatal("reserved answer became ordinary unread or new mail was lost")
 	}
-	if st, _ := ReadStatus(dir, s.Name, expired.ID); st.State != Failed {
+	if st, _, _ := ReadStatus(dir, s.Name, expired.ID); st.State != Failed {
 		t.Fatal("outstanding wake postponed expiry")
 	}
-	if _, known := ReadStatus(dir, s.Name, foreign.ID); known {
+	if _, known, _ := ReadStatus(dir, s.Name, foreign.ID); known {
 		t.Fatal("foreign epoch changed")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -114,7 +114,7 @@ func TestConsumedDuringPreparationNeverProducesAStaleAnnouncement(t *testing.T) 
 		t.Fatal("already consumed work produced a stale notice")
 	}
 	for _, m := range members {
-		if st, _ := ReadStatus(dir, s.Name, m.ID); st.State != Read {
+		if st, _, _ := ReadStatus(dir, s.Name, m.ID); st.State != Read {
 			t.Fatal("read outcome was undone")
 		}
 	}

@@ -158,18 +158,25 @@ func markers(calls []shimCall) []bool {
 }
 
 // epochPattern is a run's epoch where it appears in a path: after the session
-// name, before the socket's suffix.
-var epochPattern = regexp.MustCompile(`(same-(?:codex|claude))\.[0-9]+\.[0-9]+`)
+// name, before the socket's suffix, with the boot id a run of this build
+// carries.
+var epochPattern = regexp.MustCompile(`(same-(?:codex|claude))\.[0-9]+\.[0-9]+(?:\.[0-9a-f-]{36})?`)
+
+// digestPattern is a socket named by the digest of its name and epoch, the
+// form a path past 103 bytes takes (internal/state/paths.go): the digest
+// differs between two runs as the epoch does.
+var digestPattern = regexp.MustCompile(`/sock/(rewake-)?[0-9a-f]{24}\.`)
 
 // normalizedCalls are the calls with what differs between two rooms by
-// construction taken out — the room's name and the run's epoch — each call
-// one string, in a stable order.
+// construction taken out — the room's name and the run's epoch, or the
+// digest standing for it — each call one string, in a stable order.
 func normalizedCalls(calls []shimCall, room string) []string {
 	var out []string
 	for _, call := range calls {
 		joined := strings.Join(call.args, "\x1f")
 		joined = strings.ReplaceAll(joined, room, "<room>")
 		joined = epochPattern.ReplaceAllString(joined, "$1.<epoch>")
+		joined = digestPattern.ReplaceAllString(joined, "/sock/${1}<digest>.")
 		out = append(out, joined)
 	}
 	slices.Sort(out)

@@ -51,7 +51,11 @@ func AvailableUnread(dir, name, epoch string) ([]Message, error) {
 	}
 	available := make([]Message, 0, len(messages))
 	for _, message := range messages {
-		if !awaitedHere(dir, name, message) {
+		awaited, err := awaitedHere(dir, name, message)
+		if err != nil {
+			return nil, err
+		}
+		if !awaited {
 			available = append(available, message)
 		}
 	}
@@ -77,7 +81,9 @@ func receiveAnswer(dir, name, epoch, question string, message Message) error {
 		return err
 	}
 	removeMark(dir, name, filepath.Join(state.AnsweringPath(dir, name), question))
-	if awaitedHere(dir, name, message) {
+	// Only a report every question has received is archived: one still
+	// awaited, or whose mark cannot be read, stays for its other reader.
+	if awaited, err := awaitedHere(dir, name, message); err != nil || awaited {
 		return nil
 	}
 	for _, id := range message.InReplyTo {

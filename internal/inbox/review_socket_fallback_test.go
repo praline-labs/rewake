@@ -23,7 +23,7 @@ func TestReviewSocketNeverSuppressesLaterMail(t *testing.T) {
 			t.Fatal(err)
 		}
 		s.drain(context.Background())
-		st, ok := ReadStatus(dir, s.Name, m.ID)
+		st, ok, _ := ReadStatus(dir, s.Name, m.ID)
 		if !ok || st.State != Delivered || st.Detail != "" {
 			t.Fatalf("unexpected delivery result: %+v", st)
 		}

@@ -92,7 +92,7 @@ func showAwaited(ctx *Context, dir string, session registry.Session, epoch strin
 		runs[name] = found
 		return found
 	}
-	awaited := inbox.Awaited(dir, session.Name, epoch, func(recipient, run string) inbox.RecipientRun {
+	awaited, err := inbox.Awaited(dir, session.Name, epoch, func(recipient, run string) inbox.RecipientRun {
 		switch live := current(recipient); {
 		case live.found && live.run == run:
 			return inbox.RunLive
@@ -101,6 +101,11 @@ func showAwaited(ctx *Context, dir string, session registry.Session, epoch strin
 		}
 		return inbox.RunEnded
 	})
+	if err != nil {
+		// A partial list would show a task as answered, or lost and worth
+		// sending again.
+		return failf("could not read where what %s sent stands (%v); nothing is shown rather than part of it; run the same command again", session.Name, err)
+	}
 	model := awaitedModel{Session: session.Name, Recipients: []awaitedRecipient{}}
 	index := map[string]int{}
 	for _, message := range awaited {
@@ -116,8 +121,11 @@ func showAwaited(ctx *Context, dir string, session registry.Session, epoch strin
 			Resumable: message.Resumable,
 		}
 		if message.AddendumTo != "" {
-			// Under the task as it is now, an edit's replacement included.
-			view.AddendumTo = inbox.CurrentTask(dir, message.To, message.AddendumTo)
+			// Under the task as it is now, an edit's replacement included,
+			// or the one it was sent to while a copy cannot be read.
+			if current, err := inbox.CurrentTask(dir, message.To, message.AddendumTo); err == nil {
+				view.AddendumTo = current
+			}
 		}
 		switch {
 		case !message.Gone():

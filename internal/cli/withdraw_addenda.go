@@ -27,10 +27,10 @@ type takenAddendum struct {
 // withdrawAddenda takes back the addenda of a task being withdrawn. An addendum
 // is a task that only makes sense with its task: left standing, it would be
 // read on its own and owe a report on work its sender took back. The caller
-// holds the recipient's mailbox lock.
-func withdrawAddenda(dir string, task inbox.Message) []takenAddendum {
+// holds the recipient's mailbox lock, and listed the addenda under it.
+func withdrawAddenda(dir string, addenda []inbox.Message) []takenAddendum {
 	var taken []takenAddendum
-	for _, addendum := range inbox.AddendaOf(dir, task) {
+	for _, addendum := range addenda {
 		result, err := inbox.Withdraw(dir, addendum, nil)
 		taken = append(taken, takenAddendum{message: addendum, result: result, err: err})
 	}

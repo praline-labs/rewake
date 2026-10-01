@@ -76,8 +76,8 @@ func (r Record) Launching() bool {
 	if !r.Launcher.Judgeable() {
 		return true
 	}
-	pid, start, ok := registry.ParseEpoch(r.Launcher.Epoch)
-	return ok && pid != os.Getpid() && proc.Alive(pid, start)
+	pid, _, ok := registry.ParseEpoch(r.Launcher.Epoch)
+	return ok && pid != os.Getpid() && registry.EpochAlive(r.Launcher.Epoch)
 }
 
 // mainTops are where git places a repository's main checkout, from its own

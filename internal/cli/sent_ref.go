@@ -15,6 +15,9 @@ import (
 // it cannot act on is a dead end.
 func sentBySelf(call Call, dir, reference, retry string) (registry.Session, string, inbox.Message, error) {
 	self, epoch, err := ownRun(dir)
+	if errors.Is(err, errUpgraded) {
+		return registry.Session{}, "", inbox.Message{}, refuseUpgraded(dir, self)
+	}
 	if err != nil {
 		return registry.Session{}, "", inbox.Message{}, &UsageError{
 			Command: call.Command,
@@ -27,7 +30,10 @@ func sentBySelf(call Call, dir, reference, retry string) (registry.Session, stri
 			Message: fmt.Sprintf("%q is too short to name a message: give at least %d characters of its id, or of the part after the dash. rewake inbox --awaited lists the ids.", reference, inbox.MinReference),
 		}
 	}
-	matches := inbox.SentMatching(dir, self.Name, epoch, reference)
+	matches, err := inbox.SentMatching(dir, self.Name, epoch, reference)
+	if err != nil {
+		return self, epoch, inbox.Message{}, failf("could not read what this run sent (%v), so which message %s names is unknown; nothing was done; run the same command again", err, reference)
+	}
 	switch len(matches) {
 	case 1:
 		return self, epoch, matches[0], nil
@@ -64,6 +70,8 @@ func withdrawRefusal(dir string, message inbox.Message, err error, editing bool)
 		kind = message.Withdrawn.Kind
 	}
 	switch {
+	case errors.Is(err, inbox.ErrReadInProgress):
+		return failf("%s is reading your %s %s in parts right now, and part of it may be in front of it already, so it cannot be taken back or replaced; add to it with: rewake send %s \"...\"", message.To, kind, message.ID, message.To)
 	case errors.Is(err, inbox.ErrAlreadyRead):
 		next := fmt.Sprintf("rewake send %s \"...\"", message.To)
 		if inbox.AsksForWork(message) {
@@ -79,9 +87,14 @@ func withdrawRefusal(dir string, message inbox.Message, err error, editing bool)
 	}
 	// A withdrawal writes its status first, so the status on disk says how far
 	// it got: marked withdrawn, the recipient reads it as withdrawn already,
-	// and the next call finishes the rest.
-	status, _ := inbox.ReadStatus(dir, message.To, message.ID)
+	// and the next call finishes the rest. One that cannot be read says
+	// nothing of how far it got, and "nothing changed" would be a guess.
+	status, _, statusErr := inbox.ReadStatus(dir, message.To, message.ID)
 	switch {
+	case statusErr != nil && editing:
+		return failf("could not replace your %s %s to %s (%v), and how far it got cannot be read now (%v); try again: rewake edit %s \"...\"", kind, message.ID, message.To, err, statusErr, shortRef(message.ID))
+	case statusErr != nil:
+		return failf("could not withdraw your %s %s from %s (%v), and how far it got cannot be read now (%v); try again: rewake withdraw %s", kind, message.ID, message.To, err, statusErr, shortRef(message.ID))
 	case editing && status.Withdrawn:
 		return failf("your %s %s to %s is withdrawn, but its replacement was not sent (%v); send it with: rewake edit %s \"...\"", kind, message.ID, message.To, err, shortRef(message.ID))
 	case editing:

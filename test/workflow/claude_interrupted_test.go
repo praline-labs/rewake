@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -156,13 +157,11 @@ func playInterruptedTurn(t *testing.T, c *Case, iso *Isolation) []telemetryFindi
 		return "", ""
 	}
 	// The stops a worker published. A stop after the finished that settled
-	// every wait goes to nobody, so main's inbox cannot show it; the receipt
-	// the worker keeps for it can. On this column only a stop leaves one: the
-	// Stop hook's report names no turn, and a receipt is kept by turn.
-	stops := func(worker *codexSession) int {
-		found, _ := filepath.Glob(filepath.Join(iso.StateDir, "rooms", "default", "inbox", worker.name, "turns", "*"))
-		return len(found)
-	}
+	// every wait goes to nobody, so main's inbox cannot show it; the journal
+	// the worker keeps for it can. On this column only a stop leaves one named
+	// by its event: the Stop hook's report names no turn, and its journal's
+	// name is drawn.
+	stops := func(worker *codexSession) int { return eventEnds(iso, worker.name) }
 	// A worker's row in main's listing, as main's own rewake printed it.
 	row := func(worker *codexSession) (interruptedRow, string) {
 		code, machine, ok := asks.ask(c, "list", "--json")
@@ -324,3 +323,20 @@ func runInterruptedControl(t *testing.T, mutant mutation, breaks ...string) {
 	}
 	runFindingsControl(t, "claude-interrupted", playInterruptedTurn, mutant, breaks...)
 }
+
+// eventEnds counts the turn ends a session acted on that were named by their
+// event: each leaves a journal named from its run and event, 32 hex digits,
+// kept while the run lives; one heard once without an event has a drawn name
+// (docs/turn-end-recovery.md#the-operation).
+func eventEnds(iso *Isolation, name string) int {
+	found, _ := filepath.Glob(filepath.Join(iso.StateDir, "rooms", "default", "inbox", name, "journal", "*"))
+	count := 0
+	for _, path := range found {
+		if eventNamed.MatchString(strings.TrimSuffix(filepath.Base(path), ".done")) {
+			count++
+		}
+	}
+	return count
+}
+
+var eventNamed = regexp.MustCompile(`^[0-9a-f]{32}$`)

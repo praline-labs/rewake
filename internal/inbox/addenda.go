@@ -11,33 +11,46 @@ const maxReplacements = 64
 // never rewrites the addenda already in a mailbox — a letter's content does not
 // change once written — so the link is followed here, through the tombstone
 // each edit leaves under the old id. A tombstone no longer kept ends the walk
-// where it is.
-func CurrentTask(dir, to, id string) string {
+// where it is. An error says a copy on the way could not be read, and the
+// walk may have stopped short of the task that stands now.
+func CurrentTask(dir, to, id string) (string, error) {
 	for range maxReplacements {
 		if !safeID(id) {
-			return id
+			return id, nil
 		}
-		message, kept := readCopy(dir, to, id)
+		message, kept, err := readCopy(dir, to, id)
+		if err != nil {
+			return id, err
+		}
 		if !kept || message.Withdrawn == nil || message.Withdrawn.ReplacedBy == "" {
-			return id
+			return id, nil
 		}
 		id = message.Withdrawn.ReplacedBy
 	}
-	return id
+	return id, nil
 }
 
 // AddendaOf lists the addenda that add to a task now: sent by the same run to
 // the same recipient, not withdrawn, naming the task or a letter it replaced.
-// The caller that acts on them holds the recipient's mailbox lock.
-func AddendaOf(dir string, task Message) []Message {
+// The caller that acts on them holds the recipient's mailbox lock. An error
+// says a letter could not be read, which may be an addendum.
+func AddendaOf(dir string, task Message) ([]Message, error) {
+	all, err := everywhere(dir, task.To)
+	if err != nil {
+		return nil, err
+	}
 	var addenda []Message
-	for _, message := range everywhere(dir, task.To) {
+	for _, message := range all {
 		if message.AddendumTo == "" || message.Withdrawn != nil || message.From != task.From || message.FromEpoch != task.FromEpoch || message.ID == task.ID {
 			continue
 		}
-		if CurrentTask(dir, task.To, message.AddendumTo) == task.ID {
+		current, err := CurrentTask(dir, task.To, message.AddendumTo)
+		if err != nil {
+			return nil, err
+		}
+		if current == task.ID {
 			addenda = append(addenda, message)
 		}
 	}
-	return addenda
+	return addenda, nil
 }

@@ -71,7 +71,7 @@ func TestMixedBatchSharesNativeACK(t *testing.T) {
 					t.Fatal("a group without a grant carried roots")
 				}
 				for _, m := range members {
-					if status, ok := inbox.ReadStatus(dir, m.To, m.ID); ok && status.State == inbox.Delivered {
+					if status, ok, _ := inbox.ReadStatus(dir, m.To, m.ID); ok && status.State == inbox.Delivered {
 						t.Fatal("member settled before shared native ACK")
 					}
 				}
@@ -87,7 +87,7 @@ func TestMixedBatchSharesNativeACK(t *testing.T) {
 				for {
 					all := true
 					for _, m := range members {
-						status, ok := inbox.ReadStatus(dir, m.To, m.ID)
+						status, ok, _ := inbox.ReadStatus(dir, m.To, m.ID)
 						all = all && ok && status.State == inbox.Delivered
 					}
 					if all {

@@ -72,7 +72,7 @@ func TestAFailedResumeKeepsTheTaskPendingUntilAccepted(t *testing.T) {
 		t.Fatal(err)
 	}
 	waitIntegration(t, func() bool {
-		status, ok := inbox.ReadStatus(dir, self.Name, task.ID)
+		status, ok, _ := inbox.ReadStatus(dir, self.Name, task.ID)
 		return ok && status.State == inbox.Pending && strings.Contains(status.Detail, "resume X") && strings.Contains(status.Detail, "selected Y")
 	})
 	unread, err := inbox.PeekUnread(dir, self.Name, self.Epoch())

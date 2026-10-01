@@ -44,7 +44,7 @@ func TestReservationPrecedesReadabilityAndSurvivesFastRead(t *testing.T) {
 	}
 	r.prepare = func(fn func(string) error) error { return fn("A") }
 	r.deliver = func(_ context.Context, m Message) Result {
-		if r.closed || m.DeliveryThread != "A" || deliveryThread(dir, "api", m.ID) != "A" {
+		if r.closed || m.DeliveryThread != "A" || must(deliveryThread(dir, "api", m.ID)) != "A" {
 			t.Fatal("reservation/context lost before ACK")
 		}
 		if err := state.WithMailboxLock(context.Background(), dir, "api", func() error { return MarkRead(dir, "api", "1.1", m, true) }); err != nil {
@@ -53,7 +53,7 @@ func TestReservationPrecedesReadabilityAndSurvivesFastRead(t *testing.T) {
 		return Result{State: Failed, Detail: "notice acknowledgement lost"}
 	}
 	s.drain(context.Background())
-	status, _ := ReadStatus(dir, "api", task.ID)
+	status, _, _ := ReadStatus(dir, "api", task.ID)
 	if !r.closed || status.State != Read || !ReportThreadChanged(dir, "api", []string{task.ID}, "B") {
 		t.Fatalf("fast read or generation context lost: %+v", status)
 	}
@@ -70,7 +70,7 @@ func TestReservationRefusalKeepsOnlyReportsReadable(t *testing.T) {
 			}
 			s := &Server{Dir: dir, Name: "api", attempts: map[string]time.Time{}, outcomes: map[string]Result{}, Reserve: func(context.Context, Message) (Reservation, error) { return nil, errors.New("no accepted destination") }, Deliver: func(context.Context, Message) Result { t.Fatal("sent after refusal"); return Result{} }}
 			s.drain(context.Background())
-			status, _ := ReadStatus(dir, "api", m.ID)
+			status, _, _ := ReadStatus(dir, "api", m.ID)
 			unread, _ := PeekUnread(dir, "api", "")
 			if status.State != Failed || status.ReportAvailable != IsReport(m) || (len(unread) == 1) != IsReport(m) {
 				t.Fatalf("refusal lost report or exposed task: %+v unread=%d", status, len(unread))
@@ -109,7 +109,7 @@ func TestReportStaysReadableWhenReservedDestinationDisappears(t *testing.T) {
 	s := &Server{Dir: dir, Name: "api", attempts: map[string]time.Time{}, outcomes: map[string]Result{}, Reserve: func(context.Context, Message) (Reservation, error) { return r, nil }}
 	s.drain(context.Background())
 	unread, _ := PeekUnread(dir, "api", "")
-	status, _ := ReadStatus(dir, "api", m.ID)
+	status, _, _ := ReadStatus(dir, "api", m.ID)
 	if !r.closed || len(unread) != 1 || !status.ReportAvailable || status.State != Failed {
 		t.Fatalf("lost-binding report was discarded: %+v", status)
 	}
@@ -132,7 +132,7 @@ func TestReservationNotYetKeepsTheMessagePending(t *testing.T) {
 		return r, nil
 	}}
 	s.drain(context.Background())
-	status, _ := ReadStatus(dir, "api", m.ID)
+	status, _, _ := ReadStatus(dir, "api", m.ID)
 	unread, _ := PeekUnread(dir, "api", "")
 	if status.State != Pending || len(unread) != 0 {
 		t.Fatalf("while compacting: %+v, %d unread", status, len(unread))
@@ -140,7 +140,7 @@ func TestReservationNotYetKeepsTheMessagePending(t *testing.T) {
 	busy = false
 	s.attempts[m.ID] = time.Now().Add(-retryInterval)
 	s.drain(context.Background())
-	if status, _ := ReadStatus(dir, "api", m.ID); status.State != Delivered {
+	if status, _, _ := ReadStatus(dir, "api", m.ID); status.State != Delivered {
 		t.Fatalf("after the compaction: %+v", status)
 	}
 }

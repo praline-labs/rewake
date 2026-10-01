@@ -48,7 +48,7 @@ func TestAMarkIsJudgedByItsBootReading(t *testing.T) {
 		question := NewID()
 		writeMark(t, dir, question, c.content, time.Now().Add(c.touched))
 		report := Message{ID: NewID(), From: "api", To: "web", Kind: Finished, InReplyTo: []string{question}}
-		if got := awaitedHere(dir, "web", report); got != c.want {
+		if got := must(awaitedHere(dir, "web", report)); got != c.want {
 			t.Errorf("%s: awaited %v, want %v", c.name, got, c.want)
 		}
 	}
@@ -66,7 +66,7 @@ func TestTheHeartbeatDoesNotBringAMarkBack(t *testing.T) {
 	}
 	defer release()
 	mark := filepath.Join(state.AnsweringPath(dir, "web"), question)
-	if !markFresh(mark) {
+	if !must(markFresh(mark)) {
 		t.Fatal("a mark just reserved is not fresh")
 	}
 	if err := os.Remove(mark); err != nil {

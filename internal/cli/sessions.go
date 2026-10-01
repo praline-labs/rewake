@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -64,6 +65,9 @@ type whoamiModel struct {
 	Harness   string `json:"harness,omitempty"`
 	Directory string `json:"directory"`
 	Managed   bool   `json:"managed"`
+	// MailChannel is how this call reached the mail: "tool" through the
+	// rewake tool, "shell" otherwise; empty outside a session.
+	MailChannel string `json:"mailChannel,omitempty"`
 }
 
 func handleWhoami(ctx *Context, _ Call) error {
@@ -76,10 +80,14 @@ func handleWhoami(ctx *Context, _ Call) error {
 	model := whoamiModel{Name: name, Room: filepath.Base(dir), Directory: state.RootForRoom(dir), Managed: name != ""}
 	if name != "" {
 		session, _, err := ownRun(dir)
-		if err != nil {
+		if err != nil && !errors.Is(err, errUpgraded) {
 			return failf("cannot identify this session in room %s: %v", model.Room, err)
 		}
 		model.Harness, model.Role = session.Harness, role.Of(session.Role).ID
+		model.MailChannel = "shell"
+		if ctx.scope != nil {
+			model.MailChannel = "tool"
+		}
 	}
 
 	return printValue(ctx, model, func() []string {
@@ -93,7 +101,11 @@ func handleWhoami(ctx *Context, _ Call) error {
 		if model.Harness != "" {
 			line += "  " + model.Harness
 		}
-		return []string{line, "Others reach you with: rewake send " + name + " \"text\""}
+		lines := []string{line, "Others reach you with: rewake send " + name + " \"text\""}
+		if ctx.scope != nil {
+			lines = append(lines, "This call came through the rewake tool.")
+		}
+		return lines
 	})
 }
 

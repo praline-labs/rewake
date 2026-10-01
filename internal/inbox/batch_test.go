@@ -60,7 +60,7 @@ func TestMixedGroupUsesOneReservationAndIndependentReceipts(t *testing.T) {
 			if member.ID != members[i].ID || member.Kind != members[i].Kind || member.Text != members[i].Text {
 				t.Fatal("merged message identities or bodies")
 			}
-			if Owed(member) && deliveryThread(dir, "api", member.ID) != "root-A" {
+			if Owed(member) && must(deliveryThread(dir, "api", member.ID)) != "root-A" {
 				t.Fatal("missing per-member target association")
 			}
 		}
@@ -76,7 +76,7 @@ func TestMixedGroupUsesOneReservationAndIndependentReceipts(t *testing.T) {
 		t.Fatalf("reserve=%d prepare=%d announce=%d closed=%v", reserved, prepared, announced, r.closed)
 	}
 	for i, m := range members {
-		status, ok := ReadStatus(dir, "api", m.ID)
+		status, ok, _ := ReadStatus(dir, "api", m.ID)
 		want := Failed
 		if i == 0 {
 			want = Read
@@ -118,7 +118,7 @@ func TestGroupCollectsArrivalsWhileReservationWaits(t *testing.T) {
 		t.Fatalf("readiness wait split pending group: reservations=%d members=%d", reservations, len(captured.Batch))
 	}
 	for _, m := range append([]Message{first}, later...) {
-		if status, ok := ReadStatus(dir, "api", m.ID); !ok || status.State != Delivered {
+		if status, ok, _ := ReadStatus(dir, "api", m.ID); !ok || status.State != Delivered {
 			t.Fatalf("missing group ACK for %s", m.ID)
 		}
 	}
@@ -184,7 +184,7 @@ func TestGroupRefusalKeepsReportsAndDoesNotAcquireAgain(t *testing.T) {
 		t.Fatal("conflicting/repeated reservations")
 	}
 	for _, m := range members {
-		status, ok := ReadStatus(dir, "api", m.ID)
+		status, ok, _ := ReadStatus(dir, "api", m.ID)
 		if !ok || status.State != Failed || status.ReportAvailable != IsReport(m) {
 			t.Fatalf("refusal lost identity: %+v", status)
 		}

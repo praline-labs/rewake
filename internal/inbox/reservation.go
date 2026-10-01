@@ -23,13 +23,22 @@ type Reserver func(context.Context, Message) (Reservation, error)
 func (s *Server) prepareDelivery(ctx context.Context, message *Message) (read, answered, expired bool, reservation Reservation, release func(), err error) {
 	release = func() {}
 	check := func() error {
-		if status, ok := ReadStatus(s.Dir, s.Name, message.ID); ok && status.final() {
+		// A status or a mark that cannot be read stops the pass with nothing
+		// made readable: the message may be read, withdrawn, or awaited by a
+		// send, and it stays pending until they can be told.
+		status, known, err := ReadStatus(s.Dir, s.Name, message.ID)
+		if err != nil {
+			return err
+		}
+		if known && status.final() {
 			// Withdrawn goes the way of read: nothing is made readable, and
 			// recording the read keeps the withdrawal as it is.
 			read = true
 			return nil
 		}
-		answered = awaitedHere(s.Dir, s.Name, *message)
+		if answered, err = awaitedHere(s.Dir, s.Name, *message); err != nil {
+			return err
+		}
 		expired, err = s.answerExpired(*message, answered)
 		if err == nil && answered && !expired {
 			err = linkUnread(s.Dir, s.Name, message.ID)

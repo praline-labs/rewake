@@ -6,7 +6,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/praline-labs/rewake/internal/proc"
 	"github.com/praline-labs/rewake/internal/registry"
 )
 
@@ -65,7 +64,7 @@ func restorable(entries []Entry) bool {
 		if entry.Thread == "" || !entry.Live() && !entry.Revoking() {
 			continue
 		}
-		if pid, start, ok := registry.ParseEpoch(entry.FromEpoch); ok && proc.Alive(pid, start) {
+		if registry.EpochAlive(entry.FromEpoch) {
 			return true
 		}
 	}

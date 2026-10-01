@@ -16,6 +16,7 @@ import (
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/proc"
 	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/registry/registrytest"
 	"github.com/praline-labs/rewake/internal/state"
 )
 
@@ -35,7 +36,7 @@ func publicationSessions(t *testing.T) (string, registry.Session, registry.Sessi
 	if err != nil {
 		t.Fatal(err)
 	}
-	self := registry.Session{Name: "api", Harness: "codex", ServicePID: os.Getpid(), ServiceStart: start, CWD: dir, StartedAt: time.Now()}
+	self := registry.Session{Name: "api", Harness: "codex", ServicePID: os.Getpid(), ServiceStart: start, Boot: registrytest.Boot(t), CWD: dir, StartedAt: time.Now()}
 	peer := self
 	peer.Name = "web"
 	for _, s := range []registry.Session{self, peer} {

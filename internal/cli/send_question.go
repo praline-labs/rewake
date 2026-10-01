@@ -100,7 +100,8 @@ func watchRefusal(ctx context.Context, dir, to, id string, refused chan<- inbox.
 	ticker := time.NewTicker(refusalPoll)
 	defer ticker.Stop()
 	for {
-		if status, ok := inbox.ReadStatus(dir, to, id); ok && status.State == inbox.Failed {
+		// One that cannot be read is looked at again on the next tick.
+		if status, ok, err := inbox.ReadStatus(dir, to, id); err == nil && ok && status.State == inbox.Failed {
 			refused <- status
 			stop()
 			return

@@ -140,7 +140,7 @@ exposes no task; transport uncertainty is never automatically replayed.
 
 The admitted-work ledger preserves matching outcomes after selection changes.
 A separate publisher journals callbacks with causal read boundaries and uses the
-durable report/turn receipt path asynchronously; later reads cannot join an older
+durable report and turn journal path asynchronously; later reads cannot join an older
 result. See [stable publication](report-publication.md). Socket readers never wait on mailbox locks. Upstream
 completion observation is not proof of terminal receipt. The owner-run synthetic
 terminal evidence and current compatibility limits are recorded in

@@ -104,7 +104,7 @@ func TestGrantThatDoesNotPassIsNotDelivered(t *testing.T) {
 				return nil, nil
 			}
 			s.drain(context.Background())
-			status, ok := ReadStatus(dir, "api", members[0].ID)
+			status, ok, _ := ReadStatus(dir, "api", members[0].ID)
 			if !ok || status.State != Failed || !strings.Contains(status.Detail, "does not pass") {
 				t.Fatalf("status = %+v", status)
 			}
@@ -131,12 +131,12 @@ func TestGrantNotConfirmedYetWaits(t *testing.T) {
 		return nil
 	}
 	s.drain(context.Background())
-	if status, ok := ReadStatus(dir, "api", members[0].ID); !ok || status.State != Pending || !strings.Contains(status.Detail, "did not confirm the grant yet") {
+	if status, ok, _ := ReadStatus(dir, "api", members[0].ID); !ok || status.State != Pending || !strings.Contains(status.Detail, "did not confirm the grant yet") {
 		t.Fatalf("status = %+v", status)
 	}
 	answered, s.attempts = true, map[string]time.Time{}
 	s.drain(context.Background())
-	if status, ok := ReadStatus(dir, "api", members[0].ID); !ok || status.State != Delivered {
+	if status, ok, _ := ReadStatus(dir, "api", members[0].ID); !ok || status.State != Delivered {
 		t.Fatalf("status after the answer = %+v", status)
 	}
 }
@@ -157,7 +157,7 @@ func TestExpiredGrantFailsWithoutAReservation(t *testing.T) {
 		return nil, nil
 	}
 	s.drain(context.Background())
-	if status, ok := ReadStatus(dir, "api", m.ID); !ok || status.State != Failed {
+	if status, ok, _ := ReadStatus(dir, "api", m.ID); !ok || status.State != Failed {
 		t.Fatalf("status = %+v", status)
 	}
 }
@@ -180,7 +180,9 @@ func TestSettledFollowsTheTaskToItsReport(t *testing.T) {
 		t.Fatal("a task read and not reported on is settled")
 	}
 	for _, waiter := range Waiters(dir, "api", "receiver-epoch") {
-		ClearAwaiting(dir, "api", "receiver-epoch", waiter)
+		if err := ClearAwaiting(dir, "api", "receiver-epoch", waiter); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if !Settled(dir, "api", m.ID) {
 		t.Fatal("a task reported on is not settled")

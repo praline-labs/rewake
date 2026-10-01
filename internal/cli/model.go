@@ -119,6 +119,12 @@ type Context struct {
 	Stderr io.Writer
 	// JSON asks for the model behind the output instead of the printed lines.
 	JSON bool
+	// scope is the tool call a command runs for, nil in a shell.
+	scope *callScope
+	// op is the receipt a journaled command runs under, and journaling says
+	// the command already went through the journal or was found to need none.
+	op         *operation
+	journaling bool
 }
 
 // Call is one parsed invocation.

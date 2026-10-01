@@ -57,15 +57,20 @@ func (s *Server) answerExpired(message Message, reserved bool) (bool, error) {
 	return s.expired(Message{CreatedAt: lifetime.ReleasedAt}), nil
 }
 
-func retainedReceipts(dir, name string) map[string]bool {
+// retainedReceipts names the questions whose answer receipts a kept report
+// still needs. An error says a report could not be read, and may need any.
+func retainedReceipts(dir, name string) (map[string]bool, error) {
 	keep := map[string]bool{}
 	for _, directory := range []string{state.InboxPath(dir, name), state.UnreadPath(dir, name), state.DonePath(dir, name)} {
-		messages, _ := listIn(directory)
+		messages, err := listIn(directory)
+		if err != nil {
+			return nil, err
+		}
 		for _, message := range messages {
 			for _, id := range message.InReplyTo {
 				keep[id] = true
 			}
 		}
 	}
-	return keep
+	return keep, nil
 }

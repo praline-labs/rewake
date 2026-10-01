@@ -27,7 +27,7 @@ func TestAReleasedOldAnswerIsStillAnnounced(t *testing.T) {
 	release()
 	server.drain(context.Background())
 	after, _ := PeekUnread(dir, "api", "")
-	status, _ := ReadStatus(dir, "api", report.ID)
+	status, _, _ := ReadStatus(dir, "api", report.ID)
 	t.Logf("before=%d after=%d notices=%d status=%+v", len(before), len(after), notices, status)
 	if len(after) != 1 || notices != 1 {
 		t.Fatal("reserved answer discarded after release")

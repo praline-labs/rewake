@@ -137,7 +137,9 @@ func TestAnOwedMessageOutlivesTheSweep(t *testing.T) {
 	}
 	for _, waiter := range Waiters(dir, "api", "api-epoch") {
 		waiter.Messages = []string{reported.ID}
-		ClearAwaiting(dir, "api", "api-epoch", waiter)
+		if err := ClearAwaiting(dir, "api", "api-epoch", waiter); err != nil {
+			t.Fatal(err)
+		}
 	}
 	old := time.Now().Add(-2 * keepFinished)
 	for _, m := range []Message{owedTask, reported} {
@@ -152,7 +154,7 @@ func TestAnOwedMessageOutlivesTheSweep(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(state.DonePath(dir, "api"), reported.ID+".json")); !os.IsNotExist(err) {
 		t.Fatalf("a reported task outlived its age: %v", err)
 	}
-	if got := OwedMessages(dir, "api", "api-epoch"); len(got) != 1 || got[0].ID != owedTask.ID || !got[0].Kept {
+	if got := must(OwedMessages(dir, "api", "api-epoch")); len(got) != 1 || got[0].ID != owedTask.ID || !got[0].Kept {
 		t.Fatalf("owed %+v", got)
 	}
 }
@@ -184,7 +186,7 @@ func TestAnOwedMessageLeftUnreadOutlivesTheSweep(t *testing.T) {
 	if _, err := os.Stat(unread); err != nil {
 		t.Fatalf("an owed task left in unread/ was swept: %v", err)
 	}
-	if got := OwedMessages(dir, "api", "api-epoch"); len(got) != 1 || !got[0].Kept || got[0].Text != task.Text {
+	if got := must(OwedMessages(dir, "api", "api-epoch")); len(got) != 1 || !got[0].Kept || got[0].Text != task.Text {
 		t.Fatalf("owed %+v", got)
 	}
 }

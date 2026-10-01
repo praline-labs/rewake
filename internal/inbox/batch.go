@@ -5,8 +5,6 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/state"
@@ -152,8 +150,14 @@ func (s *Server) prepared(message Message, read, answered, expired bool, err err
 		return false
 	}
 	if errors.Is(err, ErrThreadUnavailable) {
-		_, readableErr := os.Stat(filepath.Join(state.UnreadPath(s.Dir, s.Name), message.ID+".json"))
-		s.failGranted(message, Result{State: Failed, Detail: err.Error(), ReportAvailable: IsReport(message) && readableErr == nil && !expired})
+		// Whether a report stays readable decides whether the failure
+		// archives it away from its reader; unknown, it is not failed yet.
+		readable, lookupErr := isIn(state.UnreadPath(s.Dir, s.Name), message.ID)
+		if lookupErr != nil {
+			s.attempts[message.ID] = time.Now()
+			return false
+		}
+		s.failGranted(message, Result{State: Failed, Detail: err.Error(), ReportAvailable: IsReport(message) && readable && !expired})
 		return false
 	}
 	if err != nil {

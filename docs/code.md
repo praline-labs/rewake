@@ -11,10 +11,14 @@ cmd/rewake/                      entry point, top-level parsing
 internal/cli/                    command table, parsing, overview, help, failures, printing
 internal/state/                  directory: checks, paths, atomic writes
 internal/buildtime/              durations a build may shorten through -ldflags, for the suite
-internal/registry/               session record, name publishing, liveness, listing
+internal/registry/               session record, name publishing, liveness, listing, run records and the successor
+internal/registry/registrytest/  for tests: the boot a session of this build carries
+internal/cutover/                the look for earlier-build writers a launch makes over /proc, and its refusal
 internal/proc/                   /proc: identity, liveness, job-control state, lineage and namespaces
 internal/boottime/               the boot clock, comparable across processes and never set back
 internal/inbox/                  message, status, sender-side write, servicing loop
+internal/receipt/                the journal of mail operations run through the tool's words: keys, records, frozen reads
+internal/bridge/                 what the CLI and the mail tool's server share: the ticket, result bounds, cutting parts
 internal/grant/                  which directories a task may grant, and the journal of what was granted
 internal/grantauth/              main's wrapper holding the grants its commands registered, and confirming them; a worker's wrapper keeping its own grants for its permission hook
 internal/grantauth/grantauthtest/ for tests: a helper process that is a recipient's run, confirms its grants at delivery and ends

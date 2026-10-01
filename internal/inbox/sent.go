@@ -12,19 +12,28 @@ const MinReference = 4
 // do. Only what a sender wrote itself is a candidate: tasks, questions, notes
 // and the tombstones of those, never a report or a notice rewake wrote on this
 // run's behalf, and only this run's: mail from a plain shell or an earlier run
-// is out of reach. An exact id wins over prefixes of it.
-func SentMatching(dir, name, epoch, reference string) []Message {
+// is out of reach. An exact id wins over prefixes of it. An error says a
+// letter could not be read, which may be the one referred to.
+func SentMatching(dir, name, epoch, reference string) ([]Message, error) {
 	if epoch == "" || len(reference) < MinReference {
-		return nil
+		return nil, nil
+	}
+	recipients, err := mailboxes(dir)
+	if err != nil {
+		return nil, err
 	}
 	var matches []Message
-	for _, recipient := range mailboxes(dir) {
-		for _, message := range everywhere(dir, recipient) {
+	for _, recipient := range recipients {
+		all, err := everywhere(dir, recipient)
+		if err != nil {
+			return nil, err
+		}
+		for _, message := range all {
 			if message.From != name || message.FromEpoch != epoch || !written(message) {
 				continue
 			}
 			if message.ID == reference {
-				return []Message{message}
+				return []Message{message}, nil
 			}
 			_, tail, _ := strings.Cut(message.ID, "-")
 			if strings.HasPrefix(message.ID, reference) || strings.HasPrefix(tail, reference) {
@@ -32,7 +41,7 @@ func SentMatching(dir, name, epoch, reference string) []Message {
 			}
 		}
 	}
-	return matches
+	return matches, nil
 }
 
 // written says a sender wrote this message itself, rather than rewake on its

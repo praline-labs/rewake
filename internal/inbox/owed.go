@@ -2,6 +2,8 @@ package inbox
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -24,8 +26,10 @@ type OwedMessage struct {
 // or a stop, so this is exactly what the end of a turn would report on.
 //
 // It only reads. Nothing is marked, recorded or announced, and no lock is
-// taken: every record read here is written whole or not at all.
-func OwedMessages(dir, name, epoch string) []OwedMessage {
+// taken: every record read here is written whole or not at all. An error says
+// a wait record or a copy could not be read: a list without it would show a
+// task as not owed, or its text as no longer kept.
+func OwedMessages(dir, name, epoch string) ([]OwedMessage, error) {
 	type reading struct {
 		owed     OwedMessage
 		sequence uint64
@@ -33,12 +37,19 @@ func OwedMessages(dir, name, epoch string) []OwedMessage {
 		order    int
 	}
 	var readings []reading
-	for _, waiter := range Waiters(dir, name, epoch) {
+	waiters, err := ReadWaiters(dir, name, epoch)
+	if err != nil {
+		return nil, err
+	}
+	for _, waiter := range waiters {
 		for index, id := range waiter.Messages {
 			if !safeID(id) {
 				continue
 			}
-			message, kept := readCopy(dir, name, id)
+			message, kept, err := readCopy(dir, name, id)
+			if err != nil {
+				return nil, err
+			}
 			if !kept {
 				message = Message{ID: id, From: waiter.Name, FromEpoch: waiter.Epoch, To: name}
 			}
@@ -70,34 +81,43 @@ func OwedMessages(dir, name, epoch string) []OwedMessage {
 	for _, r := range readings {
 		owed = append(owed, r.owed)
 	}
-	return owed
+	return owed, nil
 }
 
-// owedIDs is the set of message ids this run still owes a report for.
-func owedIDs(dir, name, epoch string) map[string]bool {
+// owedIDs is the set of message ids this run still owes a report for. An
+// error says a wait record could not be read, and the set may lack an id.
+func owedIDs(dir, name, epoch string) (map[string]bool, error) {
+	waiters, err := ReadWaiters(dir, name, epoch)
 	ids := map[string]bool{}
-	for _, waiter := range Waiters(dir, name, epoch) {
+	for _, waiter := range waiters {
 		for _, id := range waiter.Messages {
 			ids[id] = true
 		}
 	}
-	return ids
+	return ids, err
 }
 
 // readCopy finds a message wherever its mailbox keeps it. A read message is
-// normally in done/; a read whose last step failed left it in unread/.
-func readCopy(dir, name, id string) (Message, bool) {
+// normally in done/; a read whose last step failed left it in unread/. An
+// error says a copy is there and could not be read.
+func readCopy(dir, name, id string) (Message, bool, error) {
 	for _, directory := range []string{state.DonePath(dir, name), state.UnreadPath(dir, name), state.InboxPath(dir, name)} {
 		raw, err := os.ReadFile(filepath.Join(directory, id+".json"))
-		if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
 			continue
 		}
+		if err != nil {
+			return Message{}, false, err
+		}
 		var message Message
-		if json.Unmarshal(raw, &message) == nil && message.ID == id {
-			return message, true
+		if err := json.Unmarshal(raw, &message); err != nil {
+			return Message{}, false, fmt.Errorf("the copy of %s in %s is not readable: %w", id, directory, err)
+		}
+		if message.ID == id {
+			return message, true, nil
 		}
 	}
-	return Message{}, false
+	return Message{}, false, nil
 }
 
 // safeID keeps an id read from a record inside the mailbox it names.

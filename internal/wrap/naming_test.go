@@ -26,7 +26,7 @@ func TestLaunchNamesFollowSelectedRoleAndHarness(t *testing.T) {
 		for _, part := range role.All() {
 			t.Run(h.ID()+"/"+part.ID, func(t *testing.T) {
 				dir := stateDir(t)
-				session, err := claimName(Request{Dir: dir, Harness: h, Role: part}, os.Getpid(), selfStart(t), dir)
+				session, err := claimName(Request{Dir: dir, Harness: h, Role: part}, os.Getpid(), selfStart(t), thisBoot(t), dir, noWriters)
 				if err != nil || session.Name != part.ID+"-"+h.ID() || session.Role != part.ID {
 					t.Fatalf("claim=%+v err=%v", session, err)
 				}
@@ -89,7 +89,7 @@ func TestNamePrefixAndAssembledBoundaries(t *testing.T) {
 func TestGenericHarnessAndAutomaticSuffixLength(t *testing.T) {
 	dir := stateDir(t)
 	h := &namedHarness{id: "engine.v2"}
-	session, err := claimName(Request{Dir: dir, Harness: h, Role: role.Write}, os.Getpid(), selfStart(t), dir)
+	session, err := claimName(Request{Dir: dir, Harness: h, Role: role.Write}, os.Getpid(), selfStart(t), thisBoot(t), dir, noWriters)
 	if err != nil || session.Name != "write-engine.v2" {
 		t.Fatalf("generic claim=%+v err=%v", session, err)
 	}
@@ -98,11 +98,11 @@ func TestGenericHarnessAndAutomaticSuffixLength(t *testing.T) {
 			dir := stateDir(t)
 			h := &namedHarness{id: strings.Repeat("x", length)}
 			request := Request{Dir: dir, Harness: h, Role: role.Write}
-			first, err := claimName(request, os.Getpid(), selfStart(t), dir)
+			first, err := claimName(request, os.Getpid(), selfStart(t), thisBoot(t), dir, noWriters)
 			if err != nil {
 				t.Fatal(err)
 			}
-			second, err := claimName(request, os.Getpid(), selfStart(t), dir)
+			second, err := claimName(request, os.Getpid(), selfStart(t), thisBoot(t), dir, noWriters)
 			if length == 24 {
 				if err != nil || second.Name != first.Name+"-2" || len(second.Name) != 32 {
 					t.Fatalf("suffix boundary=%+v err=%v", second, err)
@@ -122,7 +122,7 @@ func TestConcurrentAutomaticNamesUseDefaultGeneral(t *testing.T) {
 	var group sync.WaitGroup
 	for range 8 {
 		group.Go(func() {
-			session, err := claimName(Request{Dir: dir, Harness: &fakeHarness{}}, os.Getpid(), start, dir)
+			session, err := claimName(Request{Dir: dir, Harness: &fakeHarness{}}, os.Getpid(), start, thisBoot(t), dir, noWriters)
 			if err != nil {
 				failures <- err
 			} else {
@@ -155,7 +155,7 @@ func TestHarnessLengthLeavesRoomForAPrefix(t *testing.T) {
 	dir := stateDir(t)
 	for _, size := range []int{30, 31, 32} {
 		h := &namedHarness{id: strings.Repeat("h", size)}
-		session, err := claimName(Request{Dir: dir, Name: "p", Harness: h, Role: role.Write}, os.Getpid(), selfStart(t), dir)
+		session, err := claimName(Request{Dir: dir, Name: "p", Harness: h, Role: role.Write}, os.Getpid(), selfStart(t), thisBoot(t), dir, noWriters)
 		if size == 30 {
 			if err != nil || len(session.Name) != 32 {
 				t.Fatalf("maximum harness suffix: %+v %v", session, err)

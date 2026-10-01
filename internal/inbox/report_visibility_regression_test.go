@@ -23,7 +23,7 @@ func TestFailedReportNoticeRemainsReadable(t *testing.T) {
 				return Result{State: Failed, Detail: "cannot identify the TUI among 2 loaded root threads"}
 			}}
 			s.drain(context.Background())
-			status, ok := ReadStatus(dir, m.To, m.ID)
+			status, ok, _ := ReadStatus(dir, m.To, m.ID)
 			if !ok || status.State != Failed {
 				t.Fatalf("notification failure lost: %+v", status)
 			}

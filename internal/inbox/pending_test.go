@@ -10,113 +10,147 @@ import (
 	"github.com/praline-labs/rewake/internal/state"
 )
 
-func take(t *testing.T, dir, epoch string, started, ended int64) (string, bool) {
+func mark(t *testing.T, dir, epoch, text string, at int64) string {
 	t.Helper()
-	text, ok, err := TakePending(dir, "api", epoch, started, ended)
+	file := MarkName(at, NewID())
+	if err := MarkPending(dir, "api", epoch, file, text, at); err != nil {
+		t.Fatal(err)
+	}
+	return file
+}
+
+func within(t *testing.T, dir, epoch string, start, ended int64) (string, bool) {
+	t.Helper()
+	found, ok, err := MarkWithin(dir, "api", epoch, start, ended)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return text, ok
+	return found.Text, ok
 }
 
-func mark(t *testing.T, dir, epoch, text string, at int64) {
-	t.Helper()
-	if err := MarkPending(dir, "api", epoch, text, at); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func marked(dir string) bool {
-	_, err := os.Stat(pendingPath(dir, "api"))
-	return err == nil
-}
-
-// A mark made within a turn holds for that turn's end, once.
-func TestAPendingMarkHoldsForItsOwnTurn(t *testing.T) {
+// A mark decides every end whose window holds it, as often as it is asked:
+// no turn end removes a mark, so a retry of an earlier end still finds the
+// mark a later end also saw (docs/turn-end-recovery.md#pending-marks).
+func TestAMarkIsNeverTakenAway(t *testing.T) {
 	dir := stateDir(t)
-	if _, ok := take(t, dir, "e1", 100, 200); ok {
+	if _, ok := within(t, dir, "e1", 100, 200); ok {
 		t.Fatal("a turn end without a mark was pending")
 	}
 	mark(t, dir, "e1", "the suite is running", 150)
-	if text, ok := take(t, dir, "e1", 100, 200); !ok || text != "the suite is running" {
-		t.Fatalf("the marked turn end = %q %v", text, ok)
-	}
-	if _, ok := take(t, dir, "e1", 100, 200); ok || marked(dir) {
-		t.Fatal("the mark reached a second turn end")
-	}
-}
-
-// A mark from a turn whose end never reached rewake — the person pressed Esc,
-// or the hook's payload never came — does not reach the next turn: that turn
-// started after the mark, so its end is a report, and the mark is gone.
-func TestAMarkFromAnInterruptedTurnIsAReportNext(t *testing.T) {
-	dir := stateDir(t)
-	mark(t, dir, "e1", "waiting", 150)
-	// No turn end for the turn it was made in; the next turn runs 300..400.
-	if _, ok := take(t, dir, "e1", 300, 400); ok {
-		t.Error("a mark from an earlier turn made this turn end interim")
-	}
-	if marked(dir) {
-		t.Error("the stale mark was left behind")
+	for range 2 {
+		if text, ok := within(t, dir, "e1", 100, 200); !ok || text != "the suite is running" {
+			t.Fatalf("the marked turn end = %q %v", text, ok)
+		}
 	}
 }
 
-// Codex publishes turn ends late. A mark made in turn K+1 while K's end is
-// still being published belongs to K+1: K's end is a report and leaves the mark
-// where it is, and K+1's end takes it.
-func TestALatePublishedTurnLeavesALaterMark(t *testing.T) {
-	dir := stateDir(t)
-	mark(t, dir, "e1", "K+1 waits", 250) // made during K+1 (220..300)
-	if _, ok := take(t, dir, "e1", 100, 200); ok || !marked(dir) {
-		t.Fatal("turn K took the mark made in K+1")
-	}
-	if text, ok := take(t, dir, "e1", 220, 300); !ok || text != "K+1 waits" {
-		t.Fatalf("turn K+1 = %q %v", text, ok)
+// The window runs from just after its start to its end, inclusive: a mark at
+// the very start is the turn before's, one at the very end is this turn's.
+func TestTheWindowOpensAfterItsStartAndClosesAtItsEnd(t *testing.T) {
+	for _, c := range []struct {
+		at   int64
+		want bool
+	}{{99, false}, {100, false}, {101, true}, {200, true}, {201, false}} {
+		dir := stateDir(t)
+		mark(t, dir, "e1", "waiting", c.at)
+		if _, ok := within(t, dir, "e1", 100, 200); ok != c.want {
+			t.Errorf("a mark at %d in (100, 200]: %v, want %v", c.at, ok, c.want)
+		}
 	}
 }
 
-// Where the turn's start or end is not known, the mark cannot be tied to it:
-// the turn end is a report. An unknown start removes the mark unless it is a
-// later turn's; an unknown end keeps it, since it might be.
-func TestAnUnknownTurnIsAReport(t *testing.T) {
+// Where the turn's end is not known, the mark cannot be tied to it; a start
+// of zero is before the run's first mark.
+func TestAnEndWithNoTimeTakesNoMark(t *testing.T) {
 	dir := stateDir(t)
 	mark(t, dir, "e1", "x", 150)
-	if _, ok := take(t, dir, "e1", 0, 200); ok || marked(dir) {
-		t.Error("a turn with no known start honored the mark, or kept it")
+	if _, ok := within(t, dir, "e1", 100, 0); ok {
+		t.Error("a turn with no known end honored the mark")
 	}
-	mark(t, dir, "e1", "x", 150)
-	if _, ok := take(t, dir, "e1", 100, 0); ok || !marked(dir) {
-		t.Error("a turn with no known end honored the mark, or dropped it")
-	}
-}
-
-// A late UserPromptSubmit of the current turn records an earlier time than the
-// mark and cannot move the start past it.
-func TestALateTurnStartOfTheSameTurnKeepsTheMark(t *testing.T) {
-	dir := stateDir(t)
-	mark(t, dir, "e1", "x", 150)
-	// The start the late hook records is its process start, 110: before the mark.
-	if text, ok := take(t, dir, "e1", 110, 200); !ok || text != "x" {
-		t.Errorf("got %q %v", text, ok)
+	if text, ok := within(t, dir, "e1", 0, 200); !ok || text != "x" {
+		t.Errorf("a window from the run's start missed its mark: %q %v", text, ok)
 	}
 }
 
-// A mark of an earlier run of the name is never honored.
-func TestAMarkOfAnEarlierRunIsIgnored(t *testing.T) {
+// A mark of another run of the name is never honored: it is kept with that
+// run's records and swept with them.
+func TestAMarkOfAnotherRunIsIgnoredAndSwept(t *testing.T) {
 	dir := stateDir(t)
 	mark(t, dir, "e1", "old run", 150)
-	if _, ok := take(t, dir, "e2", 100, 200); ok || marked(dir) {
-		t.Error("a mark of an earlier run was honored, or kept")
+	mark(t, dir, "e2", "this run", 160)
+	if text, ok := within(t, dir, "e2", 100, 200); !ok || text != "this run" {
+		t.Errorf("got %q %v", text, ok)
+	}
+	sweepMarks(dir, "api", "e2")
+	if _, ok := within(t, dir, "e1", 100, 200); ok {
+		t.Error("the sweep kept an ended run's mark")
+	}
+	if _, ok := within(t, dir, "e2", 100, 200); !ok {
+		t.Error("the sweep took the live run's mark")
 	}
 }
 
-// Marked twice in one turn, the later text is the one sent.
+// Marked twice in one turn, the later is the one sent; two of the same time
+// are ordered by name, whichever was written first.
 func TestTheLatestMarkInATurnWins(t *testing.T) {
 	dir := stateDir(t)
 	mark(t, dir, "e1", "first", 150)
 	mark(t, dir, "e1", "second", 160)
-	if text, ok := take(t, dir, "e1", 100, 200); !ok || text != "second" {
+	if text, ok := within(t, dir, "e1", 100, 200); !ok || text != "second" {
 		t.Errorf("got %q %v", text, ok)
+	}
+	for _, order := range [][]string{{"b", "a"}, {"a", "b"}} {
+		dir := stateDir(t)
+		for _, id := range order {
+			if err := MarkPending(dir, "api", "e1", MarkName(150, "0-"+id), "mark "+id, 150); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if text, ok := within(t, dir, "e1", 100, 200); !ok || text != "mark b" {
+			t.Errorf("written %v: %q %v, want the name that sorts last", order, text, ok)
+		}
+	}
+}
+
+// A retry of one call finds its mark and writes nothing; a mark with no time
+// or a name that does not say its time is refused.
+func TestAMarkIsWrittenOncePerCall(t *testing.T) {
+	dir := stateDir(t)
+	file := mark(t, dir, "e1", "first attempt", 150)
+	if err := MarkPending(dir, "api", "e1", file, "the retry", 150); err != nil {
+		t.Fatal(err)
+	}
+	if text, _ := within(t, dir, "e1", 100, 200); text != "first attempt" {
+		t.Errorf("a retry wrote over its mark: %q", text)
+	}
+	if err := MarkPending(dir, "api", "e1", MarkName(0, NewID()), "x", 0); err == nil {
+		t.Error("a mark with no time was written")
+	}
+	if err := MarkPending(dir, "api", "e1", MarkName(140, NewID()), "x", 150); err == nil {
+		t.Error("a mark whose name says another time was written")
+	}
+}
+
+// A mark in the window that cannot be read may be this turn's: the end stops.
+// One outside the window is another turn's and does not matter.
+func TestAnUnreadableMarkInTheWindowIsAnError(t *testing.T) {
+	dir := stateDir(t)
+	file := mark(t, dir, "e1", "x", 150)
+	path, _ := marksPath(dir, "api", "e1")
+	if err := os.WriteFile(filepath.Join(path, file), []byte("{"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := MarkWithin(dir, "api", "e1", 100, 200); err == nil {
+		t.Error("an unreadable mark in the window was passed over")
+	}
+	if _, _, err := MarkWithin(dir, "api", "e1", 150, 200); err != nil {
+		t.Errorf("an unreadable mark outside the window stopped the end: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(path, "stray"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := MarkWithin(dir, "api", "e1", 150, 200); err == nil {
+		t.Error("a file that names no mark was passed over")
 	}
 }
 
@@ -173,5 +207,40 @@ func TestAnInterimReportIsNotTakenByAWaitingQuestion(t *testing.T) {
 	server.drain(context.Background())
 	if notices != 1 {
 		t.Errorf("notices = %d, want the interim report announced", notices)
+	}
+}
+
+// The window opens after the later of the turn's start and the latest earlier
+// end of the same run a journal records, done or not, so a start that failed
+// to be recorded widens nothing; another run's ends, and this run's later
+// ones, move nothing. A journal that cannot be read may be the earlier end,
+// and is an error.
+func TestTheWindowOpensAfterTheRunsLatestEarlierEnd(t *testing.T) {
+	dir := stateDir(t)
+	for id, journal := range map[string]TurnJournal{
+		"earlier": {Epoch: "e1", Op: "earlier", Ended: 150},
+		"other":   {Epoch: "e2", Op: "other", Ended: 180},
+		"later":   {Epoch: "e1", Op: "later", Ended: 250},
+	} {
+		if err := WriteJournal(dir, "api", id, journal); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := live(dir).finishJournal(context.Background(), "api", "earlier"); err != nil {
+		t.Fatal(err)
+	}
+	for _, started := range []int64{0, 100, 150} {
+		if start, err := TurnWindowStart(dir, "api", "e1", started, 200); err != nil || start != 150 {
+			t.Errorf("started %d: the window opens at %d (%v), want 150", started, start, err)
+		}
+	}
+	if start, _ := TurnWindowStart(dir, "api", "e1", 160, 200); start != 160 {
+		t.Errorf("a recorded start after the earlier end opens it at %d, want 160", start)
+	}
+	if err := os.WriteFile(filepath.Join(JournalPath(dir, "api"), "broken"), []byte("{"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := TurnWindowStart(dir, "api", "e1", 100, 200); err == nil {
+		t.Error("an unreadable journal was passed over")
 	}
 }

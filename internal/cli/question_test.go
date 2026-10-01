@@ -44,7 +44,7 @@ func TestAQuestionPrintsTheAnswer(t *testing.T) {
 		t.Fatalf("exit = %d, out = %q, err = %q; want the answer printed", code, out, errOut)
 	}
 	report := <-answered
-	if status, _ := inbox.ReadStatus(dir, "web", report); status.State != inbox.Read {
+	if status, _, _ := inbox.ReadStatus(dir, "web", report); status.State != inbox.Read {
 		t.Errorf("the answer's status is %q, want read: it was handed over, not left to announce", status.State)
 	}
 	marks, _ := os.ReadDir(state.AnsweringPath(dir, "web"))

@@ -342,6 +342,36 @@ What the day of the 1.0.0 release left, recorded on September 28, 2026 at the ow
   `omit_tools_from=["code_mode"]`, results arriving whole up to about 48 KB on Codex and
   60 KB on Claude Code, `pending` bound to the right turn on both, and the call visible in
   the wrapper's own app-server stream under `--remote`.
+  Stage M1, the CLI side, was accepted on October 1, 2026 after seventeen rounds
+  ([entry](roadmap/2026-10-01-mail-tool-cli-stage.md)). Next come M2, the MCP server that
+  runs the tool outside the sandbox, and M3, its injection at launch
+  ([mail-bridge.md](mail-bridge.md)).
+- **Upgrades without a cutover refusal — to verify, October 1, 2026.** A launch now
+  refuses while a writer of an earlier build may still run. The wrapper could instead run
+  its session's hooks and commands with its own binary, through `/proc/<pid>/exe`, so that
+  a run lives on its own build to its end and an upgrade never meets a run of the build
+  before it. To verify on both harnesses before relying on it.
+- **A Codex session started through rewake missing from `codex resume` — to investigate,
+  October 1, 2026.** The owner saw it on September 30: the session did not show in the
+  list, though it could be resumed by its UUID. Codex hides sessions from that list after
+  its configuration changes; rewake launches with `-c` overrides and its own app-server,
+  and either may be the cause ([research-codex.md](research-codex.md#a-session-started-through-rewake-missing-from-codex-resume)).
+- **Two letters from one requested compaction — to check, October 1, 2026.** On Codex
+  0.159.0 a compaction main requested produced two letters: the plain "context compacted"
+  and the letter with the result. Check it against the contract of `rewake compact`,
+  where the result reaches main later as a letter
+  ([entry](roadmap/2026-09-25-compact-non-blocking.md)).
+- **Two documents over 400 lines — to split by subject, October 1, 2026.**
+  [README.md](README.md), the map of the documentation, has 448 lines, and this queue
+  passed 400.
+- **The rest of the older reads that take an error for absence — October 1, 2026.** Of
+  about 21 places in the delivery code older than M1 that read an error as "not there",
+  stage M1 closed all but one: `send` goes on when the registry lookup before it fails
+  with anything but "not found" (`internal/cli/send.go`). The effect is low, since the
+  epoch is checked again before the letter goes, but the rule is that only "no such
+  file" is absence. Four reads that only inform — a status not yet there, a changed
+  conversation, a notice's count and preview, a wait to clear — fold "unknown" into the
+  cautious answer on purpose and are not counted.
 - **Publishing from CI** with npm's trusted publishing and provenance: the repository is
   public since September 28, 2026, so nothing waits for it now.
 

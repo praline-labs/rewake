@@ -62,7 +62,7 @@ func TestALateHoldLeavesAReadMessageRead(t *testing.T) {
 	f.receipts <- Receipt{ID: id, Result: Result{State: Held, Detail: "held late"}}
 	f.receipts <- Receipt{ID: id, Result: Result{State: Failed, Detail: "expired"}}
 	time.Sleep(100 * time.Millisecond)
-	if status, _ := ReadStatus(f.dir, "api", f.task.ID); status.State != Read {
+	if status, _, _ := ReadStatus(f.dir, "api", f.task.ID); status.State != Read {
 		t.Fatalf("a read task became %+v", status)
 	}
 	if f.undelivered(t) != nil {
@@ -79,7 +79,7 @@ func TestASessionEndingFailsALateHold(t *testing.T) {
 	f.receipts <- Receipt{ID: id, Result: Result{State: Held, Detail: "held late"}}
 	f.until(t, Held)
 	f.stop()
-	if status, _ := ReadStatus(f.dir, "api", f.task.ID); status.State != Failed {
+	if status, _, _ := ReadStatus(f.dir, "api", f.task.ID); status.State != Failed {
 		t.Fatalf("a hold nothing can release now stayed %+v", status)
 	}
 	if f.told(t) == nil {
@@ -97,7 +97,7 @@ func TestAWordPastTheWindowIsIgnored(t *testing.T) {
 	recent.at = time.Now().Add(-2 * LateWordWindow)
 	f.server.recent[id] = recent
 	f.server.receive(Receipt{ID: id, Result: Result{State: Held, Detail: "held late"}})
-	if status, _ := ReadStatus(f.dir, "api", f.task.ID); status.State != Delivered {
+	if status, _, _ := ReadStatus(f.dir, "api", f.task.ID); status.State != Delivered {
 		t.Fatalf("a word past the window changed the status to %+v", status)
 	}
 }
@@ -130,10 +130,10 @@ func TestAHoldLeftByAKilledRunFailsWithTheNextOne(t *testing.T) {
 			return Result{State: Delivered}
 		}}
 		serveUntil(t, server, func() bool {
-			status, _ := ReadStatus(dir, "api", held.ID)
+			status, _, _ := ReadStatus(dir, "api", held.ID)
 			return status.State == Failed
 		})
-		status, _ := ReadStatus(dir, "api", held.ID)
+		status, _, _ := ReadStatus(dir, "api", held.ID)
 		if !strings.Contains(status.Detail, "held it and ended") {
 			t.Fatalf("taken back %v: %+v", taken, status)
 		}

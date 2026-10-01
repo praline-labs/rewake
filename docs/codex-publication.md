@@ -26,9 +26,9 @@ When the proof comes after the end — a reply travels apart from the turn's eve
 may follow its `turn/completed` — the outcome waits for it half a second, then goes as
 advisory and still waits: a proof that comes later publishes the turn's own outcome, of
 any kind, a stop included, with its start and end, and it is handled as any turn end —
-a finish or an error settles the task, and a pending mark made during the turn is
-taken by it. The advisory has an identity of its own, the turn's id with `/advisory`
-after it, so neither the gateway's publication nor the turn receipts take the two for
+a finish or an error settles the task, and the latest pending mark made during the turn
+decides it ([turn-end-recovery.md](turn-end-recovery.md#pending-marks)). The advisory has an identity of its own, the turn's id with `/advisory`
+after it, so neither the gateway's publication nor the turn journals take the two for
 one report; the advisory carries no start or end, and takes no pending mark. The waiting outcomes are kept per connection, 16 at most; one
 pushed out, or left when the connection ends, whose reply is lost with it, goes as
 advisory if it has not yet. The gateway keeps the proofs for all its connections

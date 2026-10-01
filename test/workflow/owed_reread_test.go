@@ -117,7 +117,7 @@ func playOwedReread(t *testing.T, c *Case, iso *Isolation, col column) []telemet
 var mutantOwedEmpty = mutation{
 	name:  "owed-empty",
 	file:  "internal/inbox/owed.go",
-	edits: []edit{{"\tvar readings []reading\n", "\tvar readings []reading\n\tif name != \"\" {\n\t\treturn nil\n\t}\n"}},
+	edits: []edit{{"\tvar readings []reading\n", "\tvar readings []reading\n\tif name != \"\" {\n\t\treturn nil, nil\n\t}\n"}},
 }
 
 func TestAnEmptyOwedFails(t *testing.T) {

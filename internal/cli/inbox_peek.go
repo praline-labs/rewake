@@ -13,10 +13,12 @@ import (
 
 // inboxMode is what a call of rewake inbox asked for: all unread mail, an
 // overview of it, one message of it, what was read and is still owed, or what
-// was sent and is still awaited.
+// was sent and is still awaited — or the next part of an output an earlier
+// call left unfinished.
 type inboxMode struct {
 	peek, owed, awaited bool
 	selected            string
+	next                string
 }
 
 func inboxSelection(call Call) (inboxMode, error) {
@@ -41,6 +43,15 @@ func inboxSelection(call Call) (inboxMode, error) {
 	}
 	if owed && owedValue != "true" {
 		return inboxMode{}, &UsageError{Command: call.Command, Message: "--owed is a switch and takes no value."}
+	}
+	if next, continued := call.Flags["next"]; continued {
+		if peek || owed || awaited || selected {
+			return inboxMode{}, &UsageError{Command: call.Command, Message: "--next is used alone: it continues the output it was printed with, in that output's mode."}
+		}
+		if next == "" || next == "true" || len(next) > 64 || strings.ContainsAny(next, "/\\") {
+			return inboxMode{}, &UsageError{Command: call.Command, Message: "--next needs the token a partial output printed, as in its next words."}
+		}
+		return inboxMode{next: next}, nil
 	}
 	if selected && (id == "" || len(id) > 128 || strings.ContainsAny(id, "/\\") || strings.ContainsFunc(id, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsControl(r) })) {
 		return inboxMode{}, &UsageError{Command: call.Command, Message: "--message needs one opaque ID from rewake inbox --peek."}

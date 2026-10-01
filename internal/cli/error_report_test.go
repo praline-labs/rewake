@@ -29,29 +29,68 @@ func reportObject(t *testing.T, dir, recipient string) map[string]any {
 	return result
 }
 
+// failedWaiters has api read a task from one and from two.
+func failedWaiters(t *testing.T) string {
+	t.Helper()
+	dir := liveSession(t, "api")
+	first := otherRun(t, dir, "one")
+	second := otherRun(t, dir, "two")
+	t.Setenv(state.SessionEnv, "api")
+	for _, peer := range []registry.Session{first, second} {
+		rawUnread(t, dir, "api", map[string]any{"from": peer.Name, "fromEpoch": peer.Epoch(), "toEpoch": epochOf(t, dir, "api"), "text": "task"})
+	}
+	run("inbox")
+	return dir
+}
+
 func TestFailedTurnsReachEveryWaitingSender(t *testing.T) {
+	check := func(t *testing.T, dir string) {
+		t.Helper()
+		for _, peer := range []string{"one", "two"} {
+			report := reportObject(t, dir, peer)
+			if report["kind"] != "error" || report["text"] != "verbatim failure" {
+				t.Fatalf("report=%v", report)
+			}
+		}
+	}
+	t.Run("hook", func(t *testing.T) {
+		dir := failedWaiters(t)
+		if code, _, errOut := run("turn-ended", `{"hook_event_name":"StopFailure","error":"unknown","last_assistant_message":"verbatim failure"}`); code != 0 {
+			t.Fatal(errOut)
+		}
+		check(t, dir)
+	})
+	t.Run("completion", func(t *testing.T) {
+		dir := failedWaiters(t)
+		self, _ := registry.Lookup(dir, "api")
+		if err := completeTurn(dir, self, turnResult{Boundary: boundaryNow(t, dir, self), ID: "failed", Failed: true, Text: "verbatim failure"}, ""); err != nil {
+			t.Fatal(err)
+		}
+		check(t, dir)
+	})
+}
+
+// A Codex notify names its turn and carries no read boundary: its scope is
+// unknown, so it reports nothing and its waits stay owed for the next end
+// (docs/turn-end-recovery.md#the-operation). Codex's turn ends come through
+// the gateway, which captures one.
+func TestACodexNotifyReportsNothing(t *testing.T) {
 	for _, payload := range []string{
 		`{"type":"agent-turn-complete","turn-id":"failed","error":"verbatim failure","last-assistant-message":null}`,
 		`{"type":"task_complete","turn_id":"failed","error":{"message":"verbatim failure"},"last_agent_message":null}`,
-		`{"hook_event_name":"StopFailure","error":"unknown","last_assistant_message":"verbatim failure"}`,
 	} {
 		t.Run(payload, func(t *testing.T) {
-			dir := liveSession(t, "api")
-			first := otherRun(t, dir, "one")
-			second := otherRun(t, dir, "two")
-			t.Setenv(state.SessionEnv, "api")
-			for _, peer := range []registry.Session{first, second} {
-				rawUnread(t, dir, "api", map[string]any{"from": peer.Name, "fromEpoch": peer.Epoch(), "toEpoch": epochOf(t, dir, "api"), "text": "task"})
-			}
-			run("inbox")
+			dir := failedWaiters(t)
 			if code, _, errOut := run("turn-ended", payload); code != 0 {
 				t.Fatal(errOut)
 			}
 			for _, peer := range []string{"one", "two"} {
-				report := reportObject(t, dir, peer)
-				if report["kind"] != "error" || report["text"] != "verbatim failure" {
-					t.Fatalf("report=%v", report)
+				if files := finishedFor(t, dir, peer); len(files) != 0 {
+					t.Fatalf("reports to %s: %v", peer, files)
 				}
+			}
+			if len(inbox.Waiters(dir, "api", epochOf(t, dir, "api"))) != 2 {
+				t.Fatal("the refused end cleared its waits")
 			}
 		})
 	}
@@ -68,7 +107,7 @@ func TestUnclaimedFailuresReachMainAndMainKeepsItsOwn(t *testing.T) {
 				otherRun(t, dir, "leader")
 				markMain(t, dir, "leader")
 			}
-			run("turn-ended", `{"type":"agent-turn-complete","turn-id":"unclaimed","error":"failure"}`)
+			run("turn-ended", `{"hook_event_name":"StopFailure","error":"unknown","last_assistant_message":"failure"}`)
 			if self {
 				messages, err := inbox.PeekUnread(dir, "api", epochOf(t, dir, "api"))
 				if err != nil || len(messages) != 1 || string(messages[0].Kind) != "error" {
@@ -116,9 +155,13 @@ func TestIdentifiedFailuresAreNotRoutedAgainAfterTheirWaitsClear(t *testing.T) {
 	otherRun(t, dir, "leader")
 	markMain(t, dir, "leader")
 	readFrom(t, dir, peer)
-	payload := `{"type":"agent-turn-complete","turn-id":"failure-once","error":"failure"}`
-	run("turn-ended", payload)
-	run("turn-ended", payload)
+	self, _ := registry.Lookup(dir, "api")
+	event := turnResult{Boundary: boundaryNow(t, dir, self), ID: "failure-once", Failed: true, Text: "failure"}
+	for range 2 {
+		if err := completeTurn(dir, self, event, ""); err != nil {
+			t.Fatal(err)
+		}
+	}
 	if len(finishedFor(t, dir, "web")) != 1 || len(finishedFor(t, dir, "leader")) != 0 {
 		t.Fatal("duplicate hook rerouted an already reported failure")
 	}

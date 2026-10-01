@@ -1,6 +1,7 @@
 package inbox
 
 import (
+	"errors"
 	"os"
 	"strconv"
 	"strings"
@@ -41,21 +42,31 @@ func touchMark(path string) {
 // markFresh reports whether the send that owns a mark touched it within
 // answeringFresh. The clock is read after the mark: the heartbeat touches it
 // without the mailbox lock, and a reading taken before the file could be older
-// than the touch it then finds, which made a live send look gone.
-func markFresh(path string) bool {
+// than the touch it then finds, which made a live send look gone. An error says
+// a mark is there and could not be read: a live send may own it.
+func markFresh(path string) (bool, error) {
 	raw, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
 	if err != nil {
-		return false
+		return false, err
 	}
 	boot := boottime.Now()
 	if text, whole := strings.CutSuffix(string(raw), "\n"); whole && boot != 0 {
 		if touched, err := strconv.ParseInt(text, 10, 64); err == nil && touched > 0 {
 			age := boot - touched
 			// Negative is a reading from before a reboot: not a live send.
-			return age >= 0 && time.Duration(age) < answeringFresh
+			return age >= 0 && time.Duration(age) < answeringFresh, nil
 		}
 	}
 	// legacy(rewake <2026-09-26): marks of earlier builds are empty and judged by their mtime; remove when no session started by such a build is registered, keeping the mtime for a half-written touch or no boot clock
 	info, err := os.Stat(path)
-	return err == nil && time.Since(info.ModTime()) < answeringFresh
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return time.Since(info.ModTime()) < answeringFresh, nil
 }

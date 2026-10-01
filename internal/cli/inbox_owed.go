@@ -52,7 +52,10 @@ func showOwed(ctx *Context, call Call, dir string, session registry.Session, epo
 	if err != nil {
 		return failf("could not look at the unread mail of %s: %v; run rewake inbox", session.Name, err)
 	}
-	owed := inbox.OwedMessages(dir, session.Name, epoch)
+	owed, err := inbox.OwedMessages(dir, session.Name, epoch)
+	if err != nil {
+		return failf("could not read what %s owes (%v); nothing is shown rather than part of it; run the same command again", session.Name, err)
+	}
 	messages := make([]inbox.Message, 0, len(owed))
 	for _, message := range owed {
 		messages = append(messages, message.Message)

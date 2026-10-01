@@ -45,7 +45,7 @@ func tombstone(t *testing.T, dir string, id string) *Message {
 func (f *heldFixture) stillWithdrawn(t *testing.T) {
 	t.Helper()
 	time.Sleep(150 * time.Millisecond)
-	status, _ := ReadStatus(f.dir, "api", f.task.ID)
+	status, _, _ := ReadStatus(f.dir, "api", f.task.ID)
 	if status.State != Failed || !status.Withdrawn || status.Detail != "withdrawn by web" {
 		t.Fatalf("a withdrawn task became %+v", status)
 	}
@@ -55,7 +55,7 @@ func (f *heldFixture) stillWithdrawn(t *testing.T) {
 	if f.undelivered(t) != nil {
 		t.Fatal("the sender of a withdrawn task was told it was not delivered")
 	}
-	if isIn(state.InboxPath(f.dir, "api"), f.task.ID) {
+	if must(isIn(state.InboxPath(f.dir, "api"), f.task.ID)) {
 		t.Fatal("the waiting copy of a withdrawn task stayed to be delivered again")
 	}
 }
@@ -152,10 +152,10 @@ func TestAWithdrawalBeforeTheNoticeLeavesNothingToRead(t *testing.T) {
 	if tombstone(t, f.dir, f.task.ID) != nil {
 		t.Fatal("a message withdrawn before its notice became readable")
 	}
-	if status, _ := ReadStatus(f.dir, "api", f.task.ID); !status.Withdrawn || status.State != Failed {
+	if status, _, _ := ReadStatus(f.dir, "api", f.task.ID); !status.Withdrawn || status.State != Failed {
 		t.Fatalf("status %+v", status)
 	}
-	if !isIn(state.DonePath(f.dir, "api"), f.task.ID) {
+	if !must(isIn(state.DonePath(f.dir, "api"), f.task.ID)) {
 		t.Fatal("the withdrawn message was not kept for diagnosis")
 	}
 }
@@ -172,7 +172,7 @@ func TestReadingATombstoneKeepsItWithdrawn(t *testing.T) {
 	if len(read) != 1 || read[0].Withdrawn == nil || !strings.Contains(read[0].Text, "web withdrew its task of") {
 		t.Fatalf("read %+v", read)
 	}
-	if status, _ := ReadStatus(f.dir, "api", f.task.ID); !status.Withdrawn {
+	if status, _, _ := ReadStatus(f.dir, "api", f.task.ID); !status.Withdrawn {
 		t.Fatalf("reading the tombstone turned it into %+v", status)
 	}
 	if len(Waiters(f.dir, "api", "api-epoch")) != 0 {
@@ -229,7 +229,7 @@ func TestAnEditReplacesUnderOneLock(t *testing.T) {
 	if stone == nil || stone.Withdrawn.ReplacedBy != replacement.ID || !strings.Contains(stone.Text, replacement.ID) {
 		t.Fatalf("tombstone %+v", stone)
 	}
-	if status, _ := ReadStatus(f.dir, "api", f.task.ID); !strings.Contains(status.Detail, "replaced by "+replacement.ID) {
+	if status, _, _ := ReadStatus(f.dir, "api", f.task.ID); !strings.Contains(status.Detail, "replaced by "+replacement.ID) {
 		t.Fatalf("status %+v", status)
 	}
 	another := message("again")
@@ -262,7 +262,7 @@ func TestSentMatchingTakesUniquePrefixesOfThisRunOnly(t *testing.T) {
 		"179":                              0, // too short
 	}
 	for reference, want := range cases {
-		if got := SentMatching(dir, "web", "web-epoch", reference); len(got) != want {
+		if got := must(SentMatching(dir, "web", "web-epoch", reference)); len(got) != want {
 			t.Errorf("%s: %d matches, want %d", reference, len(got), want)
 		}
 	}

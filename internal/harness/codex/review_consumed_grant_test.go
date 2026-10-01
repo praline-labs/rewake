@@ -59,7 +59,7 @@ func TestReviewConsumedGrantCannotAuthorizeRemainingNotice(t *testing.T) {
 	if !consumed {
 		t.Fatal("did not consume during metadata preparation")
 	}
-	st, ok := inbox.ReadStatus(dir, "receiver", task.ID)
+	st, ok, _ := inbox.ReadStatus(dir, "receiver", task.ID)
 	if !ok || st.State != inbox.Read {
 		t.Fatalf("lost actual read: %+v", st)
 	}

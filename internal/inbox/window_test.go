@@ -236,7 +236,7 @@ func TestASessionEndingInTheWindowKeepsTheReport(t *testing.T) {
 	report := f.put(Finished, "done")
 	deadline := time.Now().Add(2 * time.Second)
 	for {
-		status, ok := ReadStatus(f.dir, "api", note.ID)
+		status, ok, _ := ReadStatus(f.dir, "api", note.ID)
 		if ok && status.State == Pending && status.Detail == collectingDetail(f.server.Window) {
 			break
 		}
@@ -249,10 +249,10 @@ func TestASessionEndingInTheWindowKeepsTheReport(t *testing.T) {
 	if notices, _ := f.seen(0, 0); len(notices) != 0 {
 		t.Fatalf("announced during the window: %+v", notices)
 	}
-	if status, _ := ReadStatus(f.dir, "api", note.ID); status.State != Failed {
+	if status, _, _ := ReadStatus(f.dir, "api", note.ID); status.State != Failed {
 		t.Fatalf("note after the session ended: %+v", status)
 	}
-	status, _ := ReadStatus(f.dir, "api", report.ID)
+	status, _, _ := ReadStatus(f.dir, "api", report.ID)
 	available, err := AvailableUnread(f.dir, "api", "5.5")
 	if !status.ReportAvailable || err != nil || len(available) != 1 || available[0].ID != report.ID {
 		t.Fatalf("report after the session ended: status %+v, readable %v %v", status, available, err)

@@ -7,12 +7,17 @@ import (
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/alias"
+	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/role"
 )
 
 // Run executes one invocation and returns the process exit code.
 func Run(argv []string, stdout, stderr io.Writer) int {
+	if bridge.Active() {
+		// A tool call: its own surface, parser path and bounded answer.
+		return runBridge(argv, stdout, stderr)
+	}
 	ctx := &Context{Stdout: stdout, Stderr: stderr}
 
 	// Aliases first: everything downstream sees the arguments the alias stands

@@ -21,7 +21,7 @@ func TestDeliveryThreadIsRecordedBeforeAFastRead(t *testing.T) {
 	}
 	server := &Server{Dir: dir, Name: "api", Epoch: "1.1", attempts: map[string]time.Time{}, outcomes: map[string]Result{}, Thread: func() (string, error) { return "original", nil }}
 	server.Deliver = func(_ context.Context, delivered Message) Result {
-		if delivered.DeliveryThread != "original" || deliveryThread(dir, "api", task.ID) != "original" {
+		if delivered.DeliveryThread != "original" || must(deliveryThread(dir, "api", task.ID)) != "original" {
 			t.Error("delivery context was not durable before announcement")
 		}
 		err := state.WithMailboxLock(context.Background(), dir, "api", func() error {
@@ -46,8 +46,8 @@ func TestDeliveryThreadIsRecordedBeforeAFastRead(t *testing.T) {
 		return Result{State: Delivered}
 	}
 	server.drain(context.Background())
-	status, _ := ReadStatus(dir, "api", task.ID)
-	if status.State != Read || deliveryThread(dir, "api", task.ID) != "original" {
+	status, _, _ := ReadStatus(dir, "api", task.ID)
+	if status.State != Read || must(deliveryThread(dir, "api", task.ID)) != "original" {
 		t.Fatalf("read discarded delivery context: %+v", status)
 	}
 }
@@ -90,7 +90,9 @@ func TestAWaitingReportKeepsItsDeliveryThread(t *testing.T) {
 		t.Fatal("sweep discarded an unsettled wait's thread")
 	}
 	for _, waiter := range Waiters(dir, "api", "1.1") {
-		ClearAwaiting(dir, "api", "1.1", waiter)
+		if err := ClearAwaiting(dir, "api", "1.1", waiter); err != nil {
+			t.Fatal(err)
+		}
 	}
 	server.sweepFinished()
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
@@ -130,7 +132,7 @@ func TestUnavailableThreadFailsWithoutBecomingReadable(t *testing.T) {
 	}
 	server := &Server{Dir: dir, Name: "api", Epoch: "1.1", attempts: map[string]time.Time{}, outcomes: map[string]Result{}, Thread: func() (string, error) { return "", ErrThreadUnavailable }, Deliver: func(context.Context, Message) Result { t.Fatal("unknown thread was delivered"); return Result{} }}
 	server.drain(context.Background())
-	status, _ := ReadStatus(dir, "api", task.ID)
+	status, _, _ := ReadStatus(dir, "api", task.ID)
 	if status.State != Failed {
 		t.Fatalf("unavailable conversation left status %s", status.State)
 	}

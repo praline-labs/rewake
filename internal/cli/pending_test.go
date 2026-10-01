@@ -68,7 +68,7 @@ func TestAPendingTurnEndKeepsTheTaskOwed(t *testing.T) {
 		t.Fatalf("pending: %d %s %s", code, out, errOut)
 	}
 	end := boottime.Now()
-	if err := completeTurn(dir, self, turnResult{ID: "t/1", Text: "waiting for the suite", Started: markAt - 1, Ended: end}, "t"); err != nil {
+	if err := completeTurn(dir, self, turnResult{Boundary: boundaryNow(t, dir, self), ID: "t/1", Text: "waiting for the suite", Started: markAt - 1, Ended: end}, "t"); err != nil {
 		t.Fatal(err)
 	}
 	interim := reportsTo(t, dir, "web")
@@ -81,7 +81,7 @@ func TestAPendingTurnEndKeepsTheTaskOwed(t *testing.T) {
 		t.Fatal("the pending turn end settled the task")
 	}
 	// A retry of the same turn does not change its outcome.
-	if err := completeTurn(dir, self, turnResult{ID: "t/1", Text: "waiting for the suite", Started: markAt - 1, Ended: end}, "t"); err != nil {
+	if err := completeTurn(dir, self, turnResult{Boundary: boundaryNow(t, dir, self), ID: "t/1", Text: "waiting for the suite", Started: markAt - 1, Ended: end}, "t"); err != nil {
 		t.Fatal(err)
 	}
 	if got := kinds(reportsTo(t, dir, "web")); len(got) != 1 {
@@ -89,7 +89,7 @@ func TestAPendingTurnEndKeepsTheTaskOwed(t *testing.T) {
 	}
 
 	next := boottime.Now()
-	if err := completeTurn(dir, self, turnResult{ID: "t/2", Text: "the suite is green", Started: next, Ended: boottime.Now()}, "t"); err != nil {
+	if err := completeTurn(dir, self, turnResult{Boundary: boundaryNow(t, dir, self), ID: "t/2", Text: "the suite is green", Started: next, Ended: boottime.Now()}, "t"); err != nil {
 		t.Fatal(err)
 	}
 	got := strings.Join(kinds(reportsTo(t, dir, "web")), ",")
@@ -115,7 +115,7 @@ func TestAMarkDoesNotSurviveAnInterruptedTurn(t *testing.T) {
 	// Esc: no turn end. The person types "go on": a new turn starts.
 	next := boottime.Now()
 	turnStarted(t, dir, self, next)
-	if err := completeTurn(dir, self, turnResult{ID: "t/2", Text: "the final answer", Started: next, Ended: boottime.Now()}, "t"); err != nil {
+	if err := completeTurn(dir, self, turnResult{Boundary: boundaryNow(t, dir, self), ID: "t/2", Text: "the final answer", Started: next, Ended: boottime.Now()}, "t"); err != nil {
 		t.Fatal(err)
 	}
 	got := reportsTo(t, dir, "web")
@@ -139,7 +139,7 @@ func TestALatePublishedTurnIsAReportWithItsOwnText(t *testing.T) {
 		t.Fatalf("pending: %s", errOut)
 	}
 	// Turn K ran and ended before the mark; its end is published only now.
-	if err := completeTurn(dir, self, turnResult{ID: "t/K", Text: "K's own answer", Started: markAt - 10, Ended: markAt - 5}, "t"); err != nil {
+	if err := completeTurn(dir, self, turnResult{Boundary: boundaryNow(t, dir, self), ID: "t/K", Text: "K's own answer", Started: markAt - 10, Ended: markAt - 5}, "t"); err != nil {
 		t.Fatal(err)
 	}
 	got := reportsTo(t, dir, "web")
@@ -148,7 +148,7 @@ func TestALatePublishedTurnIsAReportWithItsOwnText(t *testing.T) {
 	}
 	// A second task keeps K+1 owing something, so its interim end has a waiter.
 	readFrom(t, dir, peer)
-	if err := completeTurn(dir, self, turnResult{ID: "t/K+1", Text: "still going", Started: markAt - 1, Ended: boottime.Now()}, "t"); err != nil {
+	if err := completeTurn(dir, self, turnResult{Boundary: boundaryNow(t, dir, self), ID: "t/K+1", Text: "still going", Started: markAt - 1, Ended: boottime.Now()}, "t"); err != nil {
 		t.Fatal(err)
 	}
 	var interim bool
@@ -170,7 +170,7 @@ func TestAPendingTurnEndWithoutTextIsItsMark(t *testing.T) {
 	if code, _, errOut := run("pending", "the suite is running"); code != ExitOK {
 		t.Fatalf("pending: %s", errOut)
 	}
-	if err := completeTurn(dir, self, turnResult{ID: "t/1", Text: " \n", Started: markAt - 1, Ended: boottime.Now()}, "t"); err != nil {
+	if err := completeTurn(dir, self, turnResult{Boundary: boundaryNow(t, dir, self), ID: "t/1", Text: " \n", Started: markAt - 1, Ended: boottime.Now()}, "t"); err != nil {
 		t.Fatal(err)
 	}
 	got := reportsTo(t, dir, "web")
@@ -185,7 +185,7 @@ func TestAnUnmarkedTurnEndStillReports(t *testing.T) {
 	peer := otherRun(t, dir, "web")
 	readFrom(t, dir, peer)
 	self, _ := registry.Lookup(dir, "api")
-	if err := completeTurn(dir, self, turnResult{ID: "t/1", Text: "done", Started: 1, Ended: boottime.Now()}, "t"); err != nil {
+	if err := completeTurn(dir, self, turnResult{Boundary: boundaryNow(t, dir, self), ID: "t/1", Text: "done", Started: 1, Ended: boottime.Now()}, "t"); err != nil {
 		t.Fatal(err)
 	}
 	if got := kinds(reportsTo(t, dir, "web")); len(got) != 1 || got[0] != "finished" {
@@ -194,7 +194,7 @@ func TestAnUnmarkedTurnEndStillReports(t *testing.T) {
 }
 
 // A failure or a stop says more than "still going": the mark does not soften
-// either, and it is used up by that turn end.
+// either, and stays, since no end removes a mark.
 func TestAFailedOrStoppedTurnIgnoresTheMark(t *testing.T) {
 	for name, event := range map[string]turnResult{
 		"error":   {ID: "t/1", Failed: true, Text: "the provider refused"},
@@ -209,15 +209,15 @@ func TestAFailedOrStoppedTurnIgnoresTheMark(t *testing.T) {
 			if code, _, errOut := run("pending", "waiting"); code != ExitOK {
 				t.Fatalf("pending: %s", errOut)
 			}
-			event.Started, event.Ended = markAt-1, boottime.Now()
+			event.Started, event.Ended, event.Boundary = markAt-1, boottime.Now(), boundaryNow(t, dir, self)
 			if err := completeTurn(dir, self, event, "t"); err != nil {
 				t.Fatal(err)
 			}
 			if got := kinds(reportsTo(t, dir, "web")); len(got) != 1 || got[0] != name {
 				t.Fatalf("web holds %v, want %s", got, name)
 			}
-			if _, ok, _ := inbox.TakePending(dir, "api", self.Epoch(), 1, boottime.Now()); ok {
-				t.Error("the mark outlived the turn end that ignored it")
+			if _, ok, _ := markWithin(dir, "api", self.Epoch(), 1, boottime.Now()); !ok {
+				t.Error("the turn end that ignored the mark removed it")
 			}
 		})
 	}
@@ -259,7 +259,7 @@ func TestAHeardTurnEndCorrectsALostOne(t *testing.T) {
 	readFrom(t, dir, peer)
 	self, _ := registry.Lookup(dir, "api")
 	turnStarted(t, dir, self, markAt-100)
-	if err := inbox.MarkPending(dir, "api", self.Epoch(), "waiting in K", markAt-50); err != nil {
+	if err := markPending(dir, "api", self.Epoch(), "waiting in K", markAt-50); err != nil {
 		t.Fatal(err)
 	}
 	// K's end is lost. K+1 ends and is heard: this process's start is its end.
@@ -272,7 +272,7 @@ func TestAHeardTurnEndCorrectsALostOne(t *testing.T) {
 	}
 	// K+2 starts by itself, with no UserPromptSubmit, and ends with the answer.
 	readFrom(t, dir, peer)
-	if err := completeTurn(dir, self, turnResult{ID: "t/K+2", Text: "the final answer", Started: telemetry.ReadTurnStart(path), Ended: boottime.Now()}, "t"); err != nil {
+	if err := completeTurn(dir, self, turnResult{Boundary: boundaryNow(t, dir, self), ID: "t/K+2", Text: "the final answer", Started: telemetry.ReadTurnStart(path), Ended: boottime.Now()}, "t"); err != nil {
 		t.Fatal(err)
 	}
 	var final bool
@@ -282,4 +282,16 @@ func TestAHeardTurnEndCorrectsALostOne(t *testing.T) {
 	if !final {
 		t.Fatalf("K+2's answer did not leave as a report: %v", kinds(reportsTo(t, dir, "web")))
 	}
+}
+
+// markPending makes a mark of its own, as one rewake pending call does.
+func markPending(dir, name, epoch, text string, at int64) error {
+	return inbox.MarkPending(dir, name, epoch, inbox.MarkName(at, inbox.NewID()), text, at)
+}
+
+// markWithin answers the line of the mark that decides a turn end whose
+// window is (start, ended].
+func markWithin(dir, name, epoch string, start, ended int64) (string, bool, error) {
+	mark, ok, err := inbox.MarkWithin(dir, name, epoch, start, ended)
+	return mark.Text, ok, err
 }

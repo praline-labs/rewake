@@ -104,7 +104,7 @@ func TestGatewayMailboxReservationAndDurableReports(t *testing.T) {
 			}
 			wireNoticeDisplay(t, ui, "A", "work")
 			waitIntegration(t, func() bool {
-				status, ok := inbox.ReadStatus(dir, self.Name, task.ID)
+				status, ok, _ := inbox.ReadStatus(dir, self.Name, task.ID)
 				return ok && status.State == inbox.Read
 			})
 			if mode == "side" {
@@ -133,7 +133,7 @@ func TestGatewayMailboxReservationAndDurableReports(t *testing.T) {
 			case <-time.After(time.Second):
 				t.Fatal("completion lost after selection change")
 			}
-			event := turnResult{ID: outcome.ID, Text: outcome.Text}
+			event := turnResult{Boundary: boundaryNow(t, dir, self), ID: outcome.ID, Text: outcome.Text}
 			if err := completeTurn(dir, self, event, outcome.Thread); err != nil {
 				t.Fatal(err)
 			}
@@ -173,7 +173,7 @@ func TestGatewayMailboxReservationAndDurableReports(t *testing.T) {
 			t.Cleanup(func() { stopFailed(); <-failedDone })
 			reportID, _ := report["id"].(string)
 			waitIntegration(t, func() bool {
-				status, ok := inbox.ReadStatus(dir, sender.Name, reportID)
+				status, ok, _ := inbox.ReadStatus(dir, sender.Name, reportID)
 				return ok && status.State == inbox.Failed && status.ReportAvailable
 			})
 			unread, err := inbox.AvailableUnread(dir, sender.Name, sender.Epoch())

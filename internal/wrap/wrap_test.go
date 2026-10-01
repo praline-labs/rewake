@@ -225,8 +225,8 @@ func TestSessionEnvironmentReachesTheHarness(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read: %v", err)
 	}
-	// The run is this wrapper's: its pid and start time.
-	want := fmt.Sprintf("api-fake %s %d.%d", state.RootForRoom(dir), os.Getpid(), selfStart(t))
+	// The run is this wrapper's: its pid, start time and boot.
+	want := fmt.Sprintf("api-fake %s %s", state.RootForRoom(dir), registry.RunEpoch(os.Getpid(), selfStart(t), thisBoot(t)))
 	if got := string(content); got != want {
 		t.Errorf("environment = %q, want %q", got, want)
 	}
@@ -269,6 +269,16 @@ func selfStart(t *testing.T) uint64 {
 		t.Fatalf("start time: %v", err)
 	}
 	return start
+}
+
+// thisBoot is the boot a run of this build started now is named by.
+func thisBoot(t *testing.T) string {
+	t.Helper()
+	boot, err := registry.CurrentBoot()
+	if err != nil {
+		t.Fatalf("boot id: %v", err)
+	}
+	return boot
 }
 
 func TestTheRoleIsRecorded(t *testing.T) {

@@ -15,6 +15,7 @@ import (
 	"github.com/praline-labs/rewake/internal/harness/claude"
 	"github.com/praline-labs/rewake/internal/proc"
 	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/registry/registrytest"
 	"github.com/praline-labs/rewake/internal/state"
 )
 
@@ -32,7 +33,7 @@ func TestTheGrantHookAsksItsWrapperWithoutTheRegistry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	epoch := registry.Session{ServicePID: os.Getpid(), ServiceStart: start}.Epoch()
+	epoch := registry.Session{ServicePID: os.Getpid(), ServiceStart: start, Boot: registrytest.Boot(t)}.Epoch()
 	t.Setenv(state.SessionEnv, "worker-claude")
 	t.Setenv(state.EpochEnv, epoch)
 

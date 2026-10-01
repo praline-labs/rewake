@@ -59,7 +59,7 @@ func TestAHalfDoneWithdrawalIsNeverReadAsTheTask(t *testing.T) {
 	if len(read) != 1 || read[0].Withdrawn == nil || read[0].Text == f.task.Text {
 		t.Fatalf("the reader got %+v", read)
 	}
-	if status, _ := ReadStatus(f.dir, "api", f.task.ID); status.State != Failed || !status.Withdrawn {
+	if status, _, _ := ReadStatus(f.dir, "api", f.task.ID); status.State != Failed || !status.Withdrawn {
 		t.Fatalf("reading turned the withdrawn status into %+v", status)
 	}
 	if waiters := Waiters(f.dir, "api", "api-epoch"); len(waiters) != 0 {
@@ -67,7 +67,7 @@ func TestAHalfDoneWithdrawalIsNeverReadAsTheTask(t *testing.T) {
 	}
 	// What is kept is what was read: an archive holding the original would
 	// show the task to whatever reads done/ later as if it had been read.
-	if !tombstoneIn(state.DonePath(f.dir, "api"), f.task.ID) || isIn(state.UnreadPath(f.dir, "api"), f.task.ID) {
+	if !must(tombstoneIn(state.DonePath(f.dir, "api"), f.task.ID)) || must(isIn(state.UnreadPath(f.dir, "api"), f.task.ID)) {
 		t.Fatal("done/ keeps the original, not the tombstone that was read")
 	}
 }
@@ -102,7 +102,7 @@ func TestAnEditThatCannotWriteItsReplacementChangesNothing(t *testing.T) {
 	if _, err := withdrawNow(t, f.dir, f.task, &replacement); err == nil {
 		t.Fatal("the replacement was not written, and edit said nothing")
 	}
-	if status, _ := ReadStatus(f.dir, "api", f.task.ID); status.Withdrawn || status.State != Delivered {
+	if status, _, _ := ReadStatus(f.dir, "api", f.task.ID); status.Withdrawn || status.State != Delivered {
 		t.Fatalf("the old task became %+v", status)
 	}
 	if stone := tombstone(t, f.dir, f.task.ID); stone == nil || stone.Withdrawn != nil {
@@ -168,7 +168,7 @@ func TestAWaitingCopyThatWillNotGoLeavesTheWithdrawalFinished(t *testing.T) {
 	if _, err := withdrawNow(t, f.dir, f.task, &replacement); !errors.Is(err, ErrAlreadyWithdrawn) {
 		t.Fatalf("an edit after it: %v", err)
 	}
-	if isIn(state.InboxPath(f.dir, "api"), replacement.ID) {
+	if must(isIn(state.InboxPath(f.dir, "api"), replacement.ID)) {
 		t.Fatal("a refused edit left its replacement to be announced")
 	}
 	stuck.Store(false)

@@ -307,6 +307,17 @@ review-codex, investigating the failed-resume defect]** Paths relative to `codex
   and `--include-non-interactive` (`cli/src/main.rs`, `ResumeCommand`); there is no
   `--resume` flag (`tui/src/cli.rs:24–35`).
 
+### A session started through rewake, missing from `codex resume`
+
+**[seen by the owner, September 30, 2026; not yet investigated]** A Codex session
+started through rewake did not show in the list `codex resume` offers, though it could
+still be resumed by its UUID. The owner's understanding is that Codex hides sessions
+from that list after its configuration changes. Whether that is the cause here is not
+established: rewake launches with `-c` overrides and its own app-server
+([Session-owned app-server](#session-owned-app-server)), and either may be what keeps
+the session out of the list. The investigation is queued in
+[work-queue.md](work-queue.md#now-after-100).
+
 ### The plan tool
 
 **[live against a local Responses stand-in, no model calls; Codex CLI 0.155.1 and

@@ -29,7 +29,7 @@ func TestAnExpiredGrantIsRefusedWithoutAskingMain(t *testing.T) {
 	if asked {
 		t.Error("main was asked about an expired grant")
 	}
-	status, ok := ReadStatus(dir, "api", task.ID)
+	status, ok, _ := ReadStatus(dir, "api", task.ID)
 	if !ok || status.State != Failed || !strings.Contains(status.Detail, "expired") {
 		t.Fatalf("status = %+v", status)
 	}

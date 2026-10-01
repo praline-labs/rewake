@@ -162,15 +162,16 @@ func lineWith(text, part string) string {
 // The turn end ignores the mark: the first turn end is the report again.
 var mutantPendingIgnored = mutation{
 	name:  "pending-ignored",
-	file:  "internal/cli/turn_reports.go",
-	edits: []edit{{"\t\t\tif pending && !event.Failed && !event.Stopped {\n", "\t\t\tif false && pending && !event.Failed && !event.Stopped {\n"}},
+	file:  "internal/cli/turnended.go",
+	edits: []edit{{"\tif event.Failed || event.Stopped || event.Ended == 0 {\n", "\tif true || event.Failed || event.Stopped || event.Ended == 0 {\n"}},
 }
 
-// The interim turn end settles the task anyway.
+// The interim turn end settles the task anyway: its journal clears the waits
+// it reported to.
 var mutantPendingSettles = mutation{
 	name:  "pending-settles",
 	file:  "internal/cli/turn_reports.go",
-	edits: []edit{{"\t\t\treceipt.KeepWaiters = event.Stopped || event.Pending\n", "\t\t\treceipt.KeepWaiters = event.Stopped\n"}},
+	edits: []edit{{"\tif !event.Stopped && !event.Pending {\n\t\tjournal.Clear = reported\n", "\tif !event.Stopped {\n\t\tjournal.Clear = reported\n"}},
 }
 
 // The interim turn end carries the mark's line alone, as before: whatever the
@@ -178,7 +179,7 @@ var mutantPendingSettles = mutation{
 var mutantPendingTextDropped = mutation{
 	name:  "pending-text-dropped",
 	file:  "internal/cli/turn_reports.go",
-	edits: []edit{{"\t\t\t\t\ttext += \"\\n\\n\" + turn\n", "\t\t\t\t\t_ = turn\n"}},
+	edits: []edit{{"\t\t\ttext += \"\\n\\n\" + turn\n", "\t\t\t_ = turn\n"}},
 }
 
 func TestAnIgnoredPendingMarkFails(t *testing.T) {

@@ -12,8 +12,15 @@ func (s *Server) validAnnouncement(ctx context.Context, members []Message) bool 
 			return nil
 		}
 		for _, message := range members {
-			status, known := ReadStatus(s.Dir, s.Name, message.ID)
-			reserved := awaitedHere(s.Dir, s.Name, message)
+			// What cannot be read is no proof the member still stands.
+			status, known, err := ReadStatus(s.Dir, s.Name, message.ID)
+			if err != nil {
+				return err
+			}
+			reserved, err := awaitedHere(s.Dir, s.Name, message)
+			if err != nil {
+				return err
+			}
 			expired, err := s.answerExpired(message, reserved)
 			if err != nil {
 				return err

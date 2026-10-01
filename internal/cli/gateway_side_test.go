@@ -61,7 +61,7 @@ func testSideWhilePrimaryWorks(t *testing.T, dir string, self, sender registry.S
 	}
 	wireNoticeDisplay(t, ui, "A", "work")
 	waitIntegration(t, func() bool {
-		status, ok := inbox.ReadStatus(dir, self.Name, note.ID)
+		status, ok, _ := inbox.ReadStatus(dir, self.Name, note.ID)
 		return ok && status.State == inbox.Delivered
 	})
 }

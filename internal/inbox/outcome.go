@@ -94,10 +94,26 @@ func (s *Server) record(id string, result Result) State {
 // out again or its sender told it was refused. Withdrawn is final the same
 // way: a late delivered would tell its sender the message arrived after all,
 // and a late failed would archive the tombstone its reader is to find.
+//
+// A letter being read in parts is delivered, whatever the harness says of
+// its notice: part of its text is in front of the agent. Recorded as failed,
+// its sender would hear it was refused and the settling would take it out of
+// unread/ in the middle of the read, which only a read may do.
+//
+// A status that cannot be read may be final, so nothing is written over it:
+// the error leaves the outcome to be recorded on a later pass.
 func (s *Server) recordLocked(id string, result Result) (State, error) {
-	if current, ok := ReadStatus(s.Dir, s.Name, id); ok && current.final() {
+	current, known, err := ReadStatus(s.Dir, s.Name, id)
+	if err != nil {
+		return "", err
+	}
+	if known && current.final() {
 		s.outcomes[id] = current.result()
 		return current.outcome(), nil
+	}
+	if result.State != Delivered && result.State != Read && claimed(s.Dir, s.Name, id) {
+		result = Result{State: Delivered, Via: result.Via, Detail: "being read in parts", GrantApplied: result.GrantApplied}
+		s.outcomes[id] = result
 	}
 	if err := writeStatus(s.Dir, s.Name, id, result); err != nil {
 		return "", err
@@ -136,6 +152,11 @@ func settle(dir, name, id string, outcome State) {
 			_ = state.SyncDir(state.InboxPath(dir, name))
 		}
 	default:
+		if claimed(dir, name, id) {
+			// Only a read takes a letter being read out of unread/; a failed
+			// status an earlier run left behind does not.
+			return
+		}
 		// A notice taken back after it was reported delivered has lost its
 		// waiting copy; the readable one is then the last, and goes to done/.
 		if err := move(id, state.InboxPath(dir, name), state.DonePath(dir, name)); errors.Is(err, os.ErrNotExist) {
@@ -146,7 +167,9 @@ func settle(dir, name, id string, outcome State) {
 }
 
 // alreadySettled reports whether this message has an outcome, from this run or
-// from a previous one whose status or archiving did not complete.
+// from a previous one whose status or archiving did not complete. A status
+// that cannot be read may be one, so the message is left alone for this pass,
+// neither delivered again nor refused.
 func (s *Server) alreadySettled(message Message) bool {
 	if result, known := s.outcomes[message.ID]; known {
 		if result.State == Held {
@@ -156,7 +179,11 @@ func (s *Server) alreadySettled(message Message) bool {
 		s.publish(message.ID, result)
 		return true
 	}
-	status, ok := ReadStatus(s.Dir, s.Name, message.ID)
+	status, ok, err := ReadStatus(s.Dir, s.Name, message.ID)
+	if err != nil {
+		s.attempts[message.ID] = time.Now()
+		return true
+	}
 	if !ok || status.State == Pending || status.State == Held {
 		// Held on disk and not in this run's memory was held by a run that
 		// died without saying how it ended — a wrapper killed outright. That

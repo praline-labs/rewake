@@ -52,7 +52,9 @@ a short notice and preview rather than the full body.
    grant is registered with the sender's own wrapper before it is written, and refused
    with exit 1 when the wrapper does not take it; the recipient's wrapper confirms it
    there at delivery ([grants.md](grants.md#who-can-grant)).
-4. Write `inbox/<name>/<id>.json.tmp`, rename it to `.json`.
+4. Write `inbox/<name>/<id>.json.tmp`, rename it to `.json`. A `notify` is journaled
+   first and written once under the recipient's lock, so a repeat or a retry cannot
+   publish it twice ([mail-bridge-cli.md](mail-bridge-cli.md#receipts)).
 5. Wait for `.status` up to `--wait` (5 seconds by default; a question gives its
    delivery 5 seconds of its `--wait` at most, the rest being its answer's) and print the
    result. The wait ends early once the recipient run is proven ended or its name taken
@@ -136,7 +138,10 @@ its notice is on the way. For that, `read` is final: whatever the harness says
 afterwards, the status stays `read` and the message is not linked or announced
 again. A withdrawal is final the same way: `failed` with `withdrawn: true` stays
 what it is whatever the notice's outcome turns out to be
-([delivery-sent.md](delivery-sent.md#withdraw-rewake-withdraw-id)). The Codex sandbox
+([delivery-sent.md](delivery-sent.md#withdraw-rewake-withdraw-id)). A letter the mail
+tool has started showing in parts is recorded `delivered` whatever the notice's outcome,
+and stays in `unread/` until it is read
+([mail-bridge-cli.md](mail-bridge-cli.md#reads-in-parts)). The Codex sandbox
 allows `flock` on files in `/tmp`.
 
 No wait for the lock is endless: a reader holds it while it prints, and its
@@ -334,6 +339,11 @@ status, then the move to `done/`, which is the commit. A failure at any step
 leaves the message unread, and the next `inbox` shows and records it again.
 Two readers at once are serialized: the second finds nothing new.
 
+Under the mail tool the read goes in parts instead, and a letter is read only once the
+wrapper confirms every part reached the model; `inbox --next` and `rewake retry`
+continue or show again a read or a long output from either channel
+([mail-bridge-cli.md](mail-bridge-cli.md#reads-in-parts)).
+
 A task that carries a directory grant is printed with one `grant: write <dir>` line per
 directory between its heading and its text, and `inbox --owed` repeats them while the
 task is owed: the roots changed without a word in the terminal, so the reader learns it
@@ -343,26 +353,8 @@ revoked or dropped ([grants.md](grants.md#taking-a-grant-back)).
 
 ### A resumed conversation
 
-A cold resume starts a new run of the name in a conversation an earlier run worked in.
-What that run read and had not reported on is in the conversation, and only the new run
-can finish it. So each delivery pins the conversation it went into
-(`inbox/<name>/threads/<id>`, written before the task becomes readable), and once the new
-run's harness names its conversation, the wrapper takes over the earlier runs' waits for
-the tasks pinned to that conversation, as if this run had read them when the earlier
-one did
-(`internal/inbox/adopt.go`). Only then does it sweep the earlier runs' records. The
-report at the new run's next turn end settles those tasks for their senders; a task
-delivered into another conversation, or never pinned, is not taken over, and its sender
-reads that no report is coming. A task is taken over only within a day of being read
-(`resumeWindow`, counted per task from the read time its wait record keeps, since one wait
-gathers what is read until the next report); until a resume or that day, the sender reads
-that a resume may still report, and is told not to send the task again
-([delivery-owed.md](delivery-owed.md#what-others-owe-you-rewake-inbox---awaited)).
-
-The conversation is the link, not the name: a new conversation under the same name owes
-nothing, and a fork (`--fork-session`) starts one. A harness that names no conversation
-sweeps at once. The grants of those tasks are confirmed again by main
-([grants-resume.md](grants-resume.md)).
+How a cold resume takes over what an earlier run of the name read and had not reported
+on: [delivery-conversation.md](delivery-conversation.md#a-resumed-conversation).
 
 ### A conversation the launch did not ask for
 

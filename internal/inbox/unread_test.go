@@ -95,7 +95,7 @@ func TestReadingHandsEachMessageOnce(t *testing.T) {
 		t.Fatalf("second read = %v, want nothing: a message is read once", again)
 	}
 
-	status, ok := ReadStatus(dir, "api", sent.ID)
+	status, ok, _ := ReadStatus(dir, "api", sent.ID)
 	if !ok || status.State != Read {
 		t.Errorf("status = %+v, want read", status)
 	}
@@ -147,7 +147,9 @@ func TestReadingRecordsWhoWaits(t *testing.T) {
 	}
 
 	for _, waiter := range waiting {
-		ClearAwaiting(dir, "api", "5.5", waiter)
+		if err := ClearAwaiting(dir, "api", "5.5", waiter); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if waiting := Waiters(dir, "api", "5.5"); len(waiting) != 0 {
 		t.Errorf("waiting = %v after clearing, want nobody", waiting)
@@ -222,7 +224,7 @@ func TestAReadDuringAPendingNoticeStands(t *testing.T) {
 	if reads != 1 || notices != 1 {
 		t.Errorf("reads = %d, notices = %d; want the task read once and announced once", reads, notices)
 	}
-	if status, _ := ReadStatus(dir, "api", sent.ID); status.State != Read {
+	if status, _, _ := ReadStatus(dir, "api", sent.ID); status.State != Read {
 		t.Errorf("status = %s, want read", status.State)
 	}
 }
@@ -243,7 +245,7 @@ func TestAReadIsNotUndoneByTheNoticeResult(t *testing.T) {
 				return Result{State: outcome, Detail: "said after the read"}
 			}
 			server.drain(context.Background())
-			if status, _ := ReadStatus(dir, "api", sent.ID); status.State != Read {
+			if status, _, _ := ReadStatus(dir, "api", sent.ID); status.State != Read {
 				t.Errorf("status = %s, want read", status.State)
 			}
 		})
@@ -262,7 +264,9 @@ func TestClearingAnOldRunKeepsTheNewOne(t *testing.T) {
 		t.Fatalf("markAwaiting: %v", err)
 	}
 
-	ClearAwaiting(dir, "api", "5.5", old)
+	if err := ClearAwaiting(dir, "api", "5.5", old); err != nil {
+		t.Fatal(err)
+	}
 	if remaining := Waiters(dir, "api", "5.5"); len(remaining) != 1 || remaining[0].Epoch != "41.4" {
 		t.Errorf("waiting = %v, want the newer run of web still owed", remaining)
 	}
@@ -281,7 +285,9 @@ func TestClearingAnOldWaitKeepsANewOneOfTheSameRun(t *testing.T) {
 		t.Fatalf("markAwaiting: %v", err)
 	}
 
-	ClearAwaiting(dir, "api", "5.5", old)
+	if err := ClearAwaiting(dir, "api", "5.5", old); err != nil {
+		t.Fatal(err)
+	}
 	remaining := Waiters(dir, "api", "5.5")
 	if len(remaining) != 1 || strings.Join(remaining[0].Messages, ",") != "m2" {
 		t.Fatalf("waiting = %v, want only the later message still owed", remaining)

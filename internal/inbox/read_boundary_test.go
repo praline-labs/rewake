@@ -42,7 +42,9 @@ func TestReadBoundaryExcludesLaterReadsAndIncludesSameTurnSteering(t *testing.T)
 	if len(readAt) != 3 || !slices.Equal(selected[0].ReadAt, readAt[:2]) {
 		t.Fatalf("read times %v, scoped %v", readAt, selected[0].ReadAt)
 	}
-	ClearAwaiting(dir, "api", "1.1", selected[0])
+	if err := ClearAwaiting(dir, "api", "1.1", selected[0]); err != nil {
+		t.Fatal(err)
+	}
 	remaining := Waiters(dir, "api", "1.1")
 	if len(remaining) != 1 || !slices.Equal(remaining[0].Messages, []string{"next-turn"}) || !slices.Equal(remaining[0].ReadAt, readAt[2:]) {
 		t.Fatal(remaining)
@@ -93,7 +95,9 @@ func TestReadBoundaryHighWatermarkPreventsReuseAfterCounterLoss(t *testing.T) {
 	}
 	boundary := clock.Snapshot()
 	for _, waiter := range Waiters(dir, "api", "1.1") {
-		ClearAwaiting(dir, "api", "1.1", waiter)
+		if err := ClearAwaiting(dir, "api", "1.1", waiter); err != nil {
+			t.Fatal(err)
+		}
 	}
 	atomic.StoreUint64(clock.word(), 0)
 	if err := markScopedAwaiting(dir, "api", "1.1", Message{ID: "later", From: "peer", FromEpoch: "2.2"}, 0); err != nil {

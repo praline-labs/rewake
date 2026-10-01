@@ -107,3 +107,33 @@ stay true and are kept in [research-codex-conversation.md](research-codex-conver
   refused resume left nothing selected. That path was read in the source of 0.159.0
   and not yet seen live ([research-codex-conversation.md](research-codex-conversation.md#a-warning-shown-without-a-turn));
   when the terminal has no room for it, main's notice and `rewake list` still say the same.
+
+## A resumed conversation
+
+Moved here from [delivery.md](delivery.md#a-resumed-conversation) by subject on September
+30, 2026: what a resumed run takes over, whichever harness it runs.
+
+A cold resume starts a new run of the name in a conversation an earlier run worked in.
+What that run read and had not reported on is in the conversation, and only the new run
+can finish it. So each delivery pins the conversation it went into
+(`inbox/<name>/threads/<id>`, written before the task becomes readable), and once the new
+run's harness names its conversation, the wrapper takes over the earlier runs' waits for
+the tasks pinned to that conversation, as if this run had read them when the earlier
+one did
+(`internal/inbox/adopt.go`). Only then does it sweep the earlier runs' records. Before it
+takes over anything, it runs the barrier over what the earlier runs left
+([delivery-turn-end.md](delivery-turn-end.md)): a turn end left unfinished is completed,
+so a wait whose report is out is cleared, not taken over and answered a second time, and
+an unknown stops the adoption with the mailbox. The
+report at the new run's next turn end settles those tasks for their senders; a task
+delivered into another conversation, or never pinned, is not taken over, and its sender
+reads that no report is coming. A task is taken over only within a day of being read
+(`resumeWindow`, counted per task from the read time its wait record keeps, since one wait
+gathers what is read until the next report); until a resume or that day, the sender reads
+that a resume may still report, and is told not to send the task again
+([delivery-owed.md](delivery-owed.md#what-others-owe-you-rewake-inbox---awaited)).
+
+The conversation is the link, not the name: a new conversation under the same name owes
+nothing, and a fork (`--fork-session`) starts one. A harness that names no conversation
+sweeps at once. The grants of those tasks are confirmed again by main
+([grants-resume.md](grants-resume.md)).

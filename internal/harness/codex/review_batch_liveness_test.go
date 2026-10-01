@@ -58,7 +58,7 @@ func (f *reviewBatchFixture) wait(t *testing.T, members []inbox.Message, want in
 	for {
 		all := true
 		for _, m := range members {
-			st, ok := inbox.ReadStatus(f.dir, m.To, m.ID)
+			st, ok, _ := inbox.ReadStatus(f.dir, m.To, m.ID)
 			all = all && ok && st.State == want
 		}
 		if all {
@@ -66,7 +66,7 @@ func (f *reviewBatchFixture) wait(t *testing.T, members []inbox.Message, want in
 		}
 		if time.Now().After(deadline) {
 			for _, m := range members {
-				st, ok := inbox.ReadStatus(f.dir, m.To, m.ID)
+				st, ok, _ := inbox.ReadStatus(f.dir, m.To, m.ID)
 				t.Logf("member %s kind=%s statusKnown=%v status=%+v", m.Text, m.Kind, ok, st)
 			}
 			t.Logf("binding=%+v", f.backend.gateway.Binding())
@@ -110,7 +110,7 @@ func (f *reviewBatchFixture) notice(t *testing.T, members []inbox.Message) {
 		}
 	case <-time.After(2500 * time.Millisecond):
 		for _, m := range members {
-			st, known := inbox.ReadStatus(f.dir, m.To, m.ID)
+			st, known, _ := inbox.ReadStatus(f.dir, m.To, m.ID)
 			t.Logf("unannounced %s: known=%v status=%+v", m.Text, known, st)
 		}
 		t.Fatal("new queued mail did not wake idle recipient")

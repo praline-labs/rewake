@@ -65,7 +65,7 @@ func TestAnUnusableLockDoesNotStopDelivery(t *testing.T) {
 		return Result{State: Delivered, Via: "socket"}
 	}}
 	serveUntil(t, server, func() bool {
-		status, ok := ReadStatus(dir, "api", sent.ID)
+		status, ok, _ := ReadStatus(dir, "api", sent.ID)
 		return ok && status.State == Delivered
 	})
 }
@@ -94,7 +94,7 @@ func TestAReaderDuringDeliveryGetsTheLock(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Fatal("a reader could not get the mailbox while a notice was on its way")
 	}
-	if status, _ := ReadStatus(dir, "api", sent.ID); status.State != Read {
+	if status, _, _ := ReadStatus(dir, "api", sent.ID); status.State != Read {
 		t.Errorf("status = %s, want read", status.State)
 	}
 }

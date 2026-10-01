@@ -1,14 +1,17 @@
 package inbox
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/receipt"
 	"github.com/praline-labs/rewake/internal/state"
-) // sweepFinished removes the messages and statuses that have been answered long
+)
 
+// sweepFinished removes the messages and statuses that have been answered long
 // enough ago that nobody is coming back for them.
 func (s *Server) sweepFinished() {
 	_ = s.lock(func() error {
@@ -17,16 +20,18 @@ func (s *Server) sweepFinished() {
 	})
 }
 
+// Nothing is removed on a guess: a record whose keeping depends on another
+// that could not be read stays, and the next sweep decides it.
 func (s *Server) sweepFinishedLocked() {
 	cutoff := time.Now().Add(-keepFinished)
-	receipts := retainedReceipts(s.Dir, s.Name)
+	receipts, receiptsErr := retainedReceipts(s.Dir, s.Name)
 	// A task read a day ago and still worked on is still owed, and rewake
 	// inbox --owed must be able to show it again.
-	owed := owedIDs(s.Dir, s.Name, s.Epoch)
+	owed, owedErr := owedIDs(s.Dir, s.Name, s.Epoch)
 	// Unread mail goes by age too: a notice nobody acted on for a day describes
 	// a conversation that has moved on, and the mailbox of a name reused for
 	// weeks would otherwise keep every one of them.
-	finished := []string{state.DonePath(s.Dir, s.Name), state.UnreadPath(s.Dir, s.Name), answerReceiptsPath(s.Dir, s.Name), state.AnsweringPath(s.Dir, s.Name), threadPath(s.Dir, s.Name), retentionPath(s.Dir, s.Name), filepath.Join(state.InboxPath(s.Dir, s.Name), "turns")}
+	finished := []string{state.DonePath(s.Dir, s.Name), state.UnreadPath(s.Dir, s.Name), answerReceiptsPath(s.Dir, s.Name), state.AnsweringPath(s.Dir, s.Name), threadPath(s.Dir, s.Name), retentionPath(s.Dir, s.Name)}
 	for _, directory := range append(finished, state.InboxPath(s.Dir, s.Name)) {
 		entries, err := os.ReadDir(directory)
 		if err != nil {
@@ -48,7 +53,7 @@ func (s *Server) sweepFinishedLocked() {
 			if directory == state.UnreadPath(s.Dir, s.Name) {
 				// Queued mail is still being served. Its readable copy records
 				// acceptance and must survive a long live answer reservation.
-				if _, err := os.Stat(filepath.Join(state.InboxPath(s.Dir, s.Name), entry.Name())); err == nil {
+				if _, err := os.Stat(filepath.Join(state.InboxPath(s.Dir, s.Name), entry.Name())); !errors.Is(err, os.ErrNotExist) {
 					continue
 				}
 			}
@@ -56,18 +61,33 @@ func (s *Server) sweepFinishedLocked() {
 				continue
 			}
 			// A read whose last step did not finish left the text in unread/.
-			if (directory == state.DonePath(s.Dir, s.Name) || directory == state.UnreadPath(s.Dir, s.Name)) && owed[strings.TrimSuffix(entry.Name(), ".json")] {
+			if (directory == state.DonePath(s.Dir, s.Name) || directory == state.UnreadPath(s.Dir, s.Name)) && (owedErr != nil || owed[strings.TrimSuffix(entry.Name(), ".json")]) {
 				continue
 			}
-			if directory == answerReceiptsPath(s.Dir, s.Name) && receipts[entry.Name()] {
+			if directory == answerReceiptsPath(s.Dir, s.Name) && (receiptsErr != nil || receipts[entry.Name()]) {
+				continue
+			}
+			if directory == state.UnreadPath(s.Dir, s.Name) && claimed(s.Dir, s.Name, strings.TrimSuffix(entry.Name(), ".json")) {
+				// Being read in parts: what the agent saw of it is uncertain.
+				continue
+			}
+			if (directory == state.DonePath(s.Dir, s.Name) || directory == state.UnreadPath(s.Dir, s.Name)) &&
+				!settleOnce(s.Dir, s.Name, s.Epoch, strings.TrimSuffix(entry.Name(), ".json")) {
+				// The letter is the only proof an intent was carried out; a
+				// retry finding neither would write it again.
 				continue
 			}
 			if directory == retentionPath(s.Dir, s.Name) {
-				if _, err := os.Stat(filepath.Join(state.InboxPath(s.Dir, s.Name), entry.Name()+".json")); err == nil {
+				if _, err := os.Stat(filepath.Join(state.InboxPath(s.Dir, s.Name), entry.Name()+".json")); !errors.Is(err, os.ErrNotExist) {
 					continue
 				}
 			}
 			_ = os.Remove(filepath.Join(directory, entry.Name()))
 		}
 	}
+	sweepClaims(s.Dir, s.Name, cutoff)
+	sweepOnce(s.Dir, s.Name, s.Epoch)
+	sweepTurnRecords(s.Dir, s.Name, s.Epoch, cutoff)
+	sweepMarks(s.Dir, s.Name, s.Epoch)
+	receipt.Sweep(s.Dir, s.Name, s.Epoch, cutoff, func(id string) bool { return stillUnread(s.Dir, s.Name, id) })
 }

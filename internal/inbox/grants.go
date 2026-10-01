@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/proc"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/state"
 )
@@ -96,27 +95,38 @@ func (s *Server) failGranted(message Message, result Result) {
 // or failed was never read — a withdrawal of a read task is refused, and a
 // failure archives the copy the reader would read — so a wait naming one is
 // none of its reader's, and does not keep it open.
+//
+// Settling a task lets its grant go, which cannot be taken back while its
+// reader still works on it; so what cannot be read keeps the grant, and only a
+// settlement every record proves is one.
 func Settled(dir, name, id string) bool {
-	status, known := ReadStatus(dir, name, id)
+	settled, err := settledTask(dir, name, id)
+	return err == nil && settled
+}
+
+func settledTask(dir, name, id string) (bool, error) {
+	status, known, err := ReadStatus(dir, name, id)
+	if err != nil {
+		return false, err
+	}
 	if known && closedUnread(status) {
-		return true
+		return true, nil
 	}
 	// Any run's wait counts: until a resumed run has taken over what the run
 	// before it owed (adopt.go), the wait is still that run's.
-	if owedByAnyRun(dir, name, id) {
-		return false
+	if owed, err := owedByAnyRun(dir, name, id); err != nil || owed {
+		return false, err
 	}
 	if known {
-		return status.final()
+		return status.final(), nil
 	}
 	// The status is swept a day after its outcome; a copy still waiting or
 	// readable is still ahead of its reader.
-	for _, directory := range []string{state.InboxPath(dir, name), state.UnreadPath(dir, name)} {
-		if _, err := os.Stat(filepath.Join(directory, id+".json")); err == nil {
-			return false
-		}
+	stages, err := lookUp(id, state.InboxPath(dir, name), state.UnreadPath(dir, name))
+	if err != nil {
+		return false, err
 	}
-	return true
+	return !stages[0] && !stages[1], nil
 }
 
 // closedUnread is a status that ends a task no one read: taken back, or
@@ -139,64 +149,89 @@ func closedUnread(status Status) bool {
 // Everything read here a worker could write. It can make a task look open
 // only while its status says neither taken back nor failed, and that keeps its
 // grant as long as not reporting on it would.
+//
+// A record that cannot be read answers open: closing lets the grant go, and
+// the task it came with may still be worked on.
 func TaskOpen(dir, name, id string) (open, found bool) {
-	if !state.ValidName(name) || !safeID(id) {
-		return false, false
-	}
-	status, known := ReadStatus(dir, name, id)
-	if known && closedUnread(status) {
-		return false, true
-	}
-	if owedByAnyRun(dir, name, id) {
+	open, found, err := taskOpen(dir, name, id)
+	if err != nil {
 		return true, true
 	}
+	return open, found
+}
+
+func taskOpen(dir, name, id string) (open, found bool, err error) {
+	if !state.ValidName(name) || !safeID(id) {
+		return false, false, nil
+	}
+	status, known, err := ReadStatus(dir, name, id)
+	if err != nil {
+		return false, false, err
+	}
+	if known && closedUnread(status) {
+		return false, true, nil
+	}
+	if owed, err := owedByAnyRun(dir, name, id); err != nil || owed {
+		return owed, owed, err
+	}
 	if known && status.State == Read {
-		return false, true
+		return false, true, nil
 	}
 	for _, directory := range []string{state.InboxPath(dir, name), state.UnreadPath(dir, name)} {
 		raw, err := os.ReadFile(filepath.Join(directory, id+".json"))
-		if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
 			continue
+		}
+		if err != nil {
+			return false, false, err
 		}
 		var message Message
 		if json.Unmarshal(raw, &message) == nil && runEnded(message.ToEpoch) {
-			return false, true
+			return false, true, nil
 		}
-		return true, true
+		return true, true, nil
 	}
 	if known {
-		return true, true
+		return true, true, nil
 	}
-	if _, err := os.Stat(filepath.Join(state.DonePath(dir, name), id+".json")); err == nil {
-		return false, true
+	archived, err := isIn(state.DonePath(dir, name), id)
+	if err != nil {
+		return false, false, err
 	}
-	return false, false
+	return false, archived, nil
 }
 
 // runEnded says whether a run is known to be over. A run that cannot be told
 // apart — no epoch, or one that does not parse — is not.
 func runEnded(epoch string) bool {
-	pid, start, ok := registry.ParseEpoch(epoch)
-	return ok && !proc.Alive(pid, start)
+	_, _, ok := registry.ParseEpoch(epoch)
+	return ok && !registry.EpochAlive(epoch)
 }
 
 // owedByAnyRun says whether a wait record of any run of the name lists the
 // message, and still stands: a run that ended owes it only within the resume
-// window (adopt.go).
-func owedByAnyRun(dir, name, id string) bool {
+// window (adopt.go). An error says a wait record could not be read.
+func owedByAnyRun(dir, name, id string) (bool, error) {
 	runs, err := os.ReadDir(state.AwaitingPath(dir, name))
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
 	if err != nil {
-		return false
+		return false, err
 	}
 	for _, run := range runs {
 		if !run.IsDir() {
 			continue
 		}
-		for _, waiter := range Waiters(dir, name, run.Name()) {
+		waiters, err := ReadWaiters(dir, name, run.Name())
+		if err != nil {
+			return false, err
+		}
+		for _, waiter := range waiters {
 			if owedStands(run.Name(), waiter, id) {
-				return true
+				return true, nil
 			}
 		}
 	}
-	return false
+	return false, nil
 }

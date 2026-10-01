@@ -61,6 +61,10 @@ type Message struct {
 	// FromEpoch names the run of the sending session, so an answer to it — a
 	// report that the receiver's turn ended — reaches that run and no other.
 	FromEpoch string `json:"fromEpoch,omitempty"`
+	// HeldFor names the run of the earlier build a report was written for,
+	// when it went to that name's successor instead (docs/protocol-cutover.md):
+	// its obligations were owed to that run.
+	HeldFor string `json:"heldFor,omitempty"`
 	// Kind says what the message is about, and it is what the receiver's notice
 	// names: a task, a note, a question, or the end of the sender's turn.
 	Kind Kind `json:"kind,omitempty"`
@@ -240,115 +244,39 @@ func NewID() string {
 }
 
 // Put writes a message into the mailbox of its receiver.
-func Put(dir string, message Message) error {
+func Put(dir string, message Message) error { return live(dir).put(message) }
+
+func (w world) put(message Message) error {
 	if message.CreatedBoot == 0 {
 		message.CreatedBoot = boottime.Now()
 	}
-	mailbox := state.InboxPath(dir, message.To)
-	if err := state.EnsureSubdir(mailbox); err != nil {
+	mailbox := state.InboxPath(w.dir, message.To)
+	if err := w.ensureDir(mailbox); err != nil {
 		return err
 	}
 	encoded, err := json.MarshalIndent(message, "", "  ")
 	if err != nil {
 		return err
 	}
-	return state.WriteAtomic(filepath.Join(mailbox, message.ID+".json"), append(encoded, '\n'))
+	return w.writeFile(filepath.Join(mailbox, message.ID+".json"), append(encoded, '\n'))
 }
 
 // PutOnce writes a message unless one with its id already exists in the
 // mailbox, whatever became of it since. A message moves forward only — waiting,
 // unread, done — so looking in that order cannot miss one on its way.
-func PutOnce(dir string, message Message) error {
-	for _, directory := range []string{
-		state.InboxPath(dir, message.To),
-		state.UnreadPath(dir, message.To),
-		state.DonePath(dir, message.To),
-	} {
-		if _, err := os.Stat(filepath.Join(directory, message.ID+".json")); err == nil {
-			return nil
-		}
-	}
-	return Put(dir, message)
-}
+func PutOnce(dir string, message Message) error { return live(dir).putOnce(message) }
 
-// Answered reports whether this message has left the mailbox — delivered or
-// refused — even if its status is no longer kept. Answers are swept after a
-// while, and a sender that came back later would otherwise be told its message
-// is still on its way.
-func Answered(dir, to, id string) bool {
-	if _, err := os.Stat(filepath.Join(state.InboxPath(dir, to), id+".json")); err == nil {
-		return false
+func (w world) putOnce(message Message) error {
+	found, err := w.present(message.To, message.ID)
+	if found {
+		return nil
 	}
-	_, err := os.Stat(filepath.Join(state.DonePath(dir, to), id+".json"))
-	return err == nil || os.IsNotExist(err)
-}
-
-// ReadStatus returns the status of a message, if one has been written.
-func ReadStatus(dir, to, id string) (Status, bool) {
-	raw, err := os.ReadFile(statusPath(dir, to, id))
 	if err != nil {
-		return Status{}, false
-	}
-	var status Status
-	if err := json.Unmarshal(raw, &status); err != nil {
-		return Status{}, false
-	}
-	return status, true
-}
-
-// statusPoll is how often a sender looks for its answer. It is short because the
-// wait is short and bounded by --wait: the server's own tick is the slow one, and
-// borrowing it here made every delivery look like it took a second.
-const statusPoll = 25 * time.Millisecond
-
-// runningPoll is how often a waiting sender asks whether the recipient still
-// runs: a registry read and two process checks, too much for every statusPoll.
-const runningPoll = 500 * time.Millisecond
-
-// Await waits for a status until the deadline, and returns the last one seen.
-// A message with no status yet is not lost: the mailbox is durable, and the
-// serving process writes one as soon as it can. running, when given, cuts the
-// wait short once it says the recipient no longer runs: a run that ended will
-// write no status, and a long wait for one outlived it by up to an hour.
-func Await(dir, to, id string, timeout time.Duration, running func() bool) (Status, bool) {
-	deadline := time.Now().Add(timeout)
-	nextCheck := time.Now().Add(runningPoll)
-	for {
-		// Held is not an answer yet: a release or an expiry usually follows
-		// within the wait, and the last word is the one worth printing.
-		if status, ok := ReadStatus(dir, to, id); ok && status.State != Pending && status.State != Held {
-			return status, true
-		} else if ok && time.Now().After(deadline) {
-			return status, true
-		}
-		if time.Now().After(deadline) {
-			return Status{}, false
-		}
-		if running != nil && time.Now().After(nextCheck) {
-			if !running() {
-				// One last look: the status may have been written just
-				// before the run ended.
-				status, ok := ReadStatus(dir, to, id)
-				return status, ok
-			}
-			nextCheck = time.Now().Add(runningPoll)
-		}
-		time.Sleep(statusPoll)
-	}
-}
-
-// writeStatus records what happened to a message.
-func writeStatus(dir, to, id string, result Result) error {
-	status := Status{State: result.State, Via: result.Via, Detail: result.Detail, ReportAvailable: result.ReportAvailable, Withdrawn: result.Withdrawn, GrantApplied: result.GrantApplied, At: time.Now()}
-	encoded, err := json.MarshalIndent(status, "", "  ")
-	if err != nil {
+		// A stage that cannot be searched may hold it: a second copy is the
+		// outcome that cannot be taken back.
 		return err
 	}
-	return state.WriteAtomic(statusPath(dir, to, id), append(encoded, '\n'))
-}
-
-func statusPath(dir, to, id string) string {
-	return filepath.Join(state.InboxPath(dir, to), id+".status")
+	return w.put(message)
 }
 
 // list returns the waiting messages of a mailbox, oldest first.

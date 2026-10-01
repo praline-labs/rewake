@@ -56,12 +56,17 @@ func handleWithdraw(ctx *Context, call Call) error {
 		if message, err = currentSent(dir, self, epoch, named); err != nil {
 			return err
 		}
+		// Listed before anything is withdrawn and under the same lock: an
+		// addendum left standing would be a task adding to nothing, still
+		// owing a report, so a list that cannot be read stops it all.
+		standing, err := inbox.AddendaOf(dir, message)
+		if err != nil {
+			return err
+		}
 		if result, err = inbox.Withdraw(dir, message, nil); err != nil {
 			return err
 		}
-		// Under the same lock: an addendum left standing would be a task
-		// adding to nothing, still owing a report.
-		addenda = withdrawAddenda(dir, message)
+		addenda = withdrawAddenda(dir, standing)
 		return nil
 	}); err != nil {
 		var refused *FailedError

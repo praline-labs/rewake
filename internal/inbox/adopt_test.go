@@ -80,7 +80,7 @@ func TestAResumedRunTakesOverWhatItsConversationOwes(t *testing.T) {
 		return RunReplaced
 	}
 	awaited := map[string]AwaitedMessage{}
-	for _, item := range Awaited(dir, "web", "sender-epoch", runOf) {
+	for _, item := range must(Awaited(dir, "web", "sender-epoch", runOf)) {
 		awaited[item.ID] = item
 	}
 	if item, ok := awaited[tasks[0].ID]; !ok || item.Gone() {
@@ -97,8 +97,10 @@ func TestAResumedRunTakesOverWhatItsConversationOwes(t *testing.T) {
 	if err := Put(dir, report); err != nil {
 		t.Fatal(err)
 	}
-	ClearAwaiting(dir, "api", "resumed-epoch", waiter)
-	for _, item := range Awaited(dir, "web", "sender-epoch", runOf) {
+	if err := ClearAwaiting(dir, "api", "resumed-epoch", waiter); err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range must(Awaited(dir, "web", "sender-epoch", runOf)) {
 		if item.ID == tasks[0].ID {
 			t.Errorf("reported on by the resumed run and still awaited: %+v", item)
 		}

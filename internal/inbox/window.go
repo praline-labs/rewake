@@ -80,8 +80,14 @@ type arrival struct {
 // a preview may have started, and three seconds is time to act on it. Nor does
 // an edit's replacement, whatever its kind: it sends no recall, so its own
 // preview is what sets the old notice aside, and it is the one to go at once.
+// A mark that cannot be read does not wait either: the delivery reads it again
+// under the lock, and keeps the report pending while it cannot.
 func (s *Server) canWait(message Message) bool {
-	return !AsksForWork(message) && message.Recall == nil && message.Replaces == "" && !awaitedHere(s.Dir, s.Name, message)
+	if AsksForWork(message) || message.Recall != nil || message.Replaces != "" {
+		return false
+	}
+	awaited, err := awaitedHere(s.Dir, s.Name, message)
+	return err == nil && !awaited
 }
 
 // noteArrivals learns when each waiting message was first seen and forgets the

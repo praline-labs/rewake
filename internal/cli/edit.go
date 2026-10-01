@@ -150,7 +150,13 @@ func handleEdit(ctx *Context, call Call) error {
 	// the replacement (inbox.CurrentTask), and the sender is told they came
 	// along, since a correction it meant to drop with the old text would
 	// otherwise go on being read.
-	for _, addendum := range inbox.AddendaOf(dir, replacement) {
+	addenda, err := inbox.AddendaOf(dir, replacement)
+	if err != nil && !ctx.JSON {
+		// The edit is done; only the list of what came along is unknown, and
+		// an empty one would say nothing did.
+		_ = emit(ctx, fmt.Sprintf("Rewake: could not read which addenda came along to %s (%v); see them with: rewake inbox --awaited", replacement.ID, err))
+	}
+	for _, addendum := range addenda {
 		after.addenda = append(after.addenda, addendum.ID)
 	}
 	return reportSent(ctx, after, replacement, kind, wait)

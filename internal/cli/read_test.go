@@ -16,6 +16,7 @@ import (
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/proc"
 	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/registry/registrytest"
 	"github.com/praline-labs/rewake/internal/state"
 )
 
@@ -37,8 +38,8 @@ func otherRun(t *testing.T, dir, name string) registry.Session {
 		t.Fatalf("start time: %v", err)
 	}
 	session := registry.Session{
-		Name: name, Harness: "claude", ServicePID: child.Process.Pid, ServiceStart: start,
-		CWD: dir, StartedAt: time.Now(),
+		Name: name, Harness: "claude", ServicePID: child.Process.Pid, ServiceStart: start, Boot: registrytest.Boot(t),
+		PIDNamespace: proc.Namespace(), CWD: dir, StartedAt: time.Now(),
 	}
 	_ = os.Remove(state.SessionPath(dir, name))
 	if err := registry.Publish(dir, session); err != nil {

@@ -33,9 +33,17 @@ inbox/<name>/awaiting/<epoch>/<peer>   who is owed a report by this run
 inbox/<name>/answering/<id>      a send --question is waiting for this answer
 inbox/<name>/received/<id>       id of the report printed for this question
 inbox/<name>/retention/<id>      fixed release time for a reserved report
-inbox/<name>/turns/<id>          completion retry receipt
+inbox/<name>/turns/<id>          an earlier build's turn receipt, until a run of this build converts it
+inbox/<name>/journal/<id>        what a turn end publishes, takes and clears, named by the end; <id>.done while its run lives
+inbox/<name>/journal/conversion  the earlier build's receipts converted, their evidence and the person's settles; for good
+inbox/<name>/pending/            this run's pending marks, its last word on the work, a held answer
+inbox/<name>/once/<epoch>/<id>   a letter's publication mark: intent, then published
+inbox/<name>/stopped             the stop the mailbox is in, until a look finds its cause gone
+runs/<name>/<boot>/<epoch>       a run of this build, with the build stamp; never swept
+runs/<name>/successor            the first run of this build under the name; never replaced
 inbox/<name>/threads/<id>        selected delivery thread, when supported
 inbox/<name>/.lock               the mailbox lock, one flock for every state change
+                                 (every kind a mailbox holds: docs/mailbox-records.md)
 sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
 sock/<name>.<epoch>.reply.sock   where that run's wrapper hears what the socket did with a line
 ```
@@ -60,9 +68,15 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
    refuse with the full address. Prefix and final name must fit the name syntax
    and 32-character limit. Publication uses `link()`: live names remain taken,
    dead records can be replaced, and other rooms may use the same address.
-3. **The run.** The wrapper's pid and start time make the **epoch**
-   (`<pid>.<ticks>`). A name can be started many times; the epoch says which
-   start this is.
+3. **The run.** The wrapper's pid, its start time and the machine's boot id make
+   the **epoch** (`<pid>.<ticks>.<boot>`). A name can be started many times; the epoch
+   says which start this is, and the boot keeps it from recurring after a restart. An
+   epoch without a boot is a run of an earlier build. Before the name is published the
+   launch proves every earlier-build writer of the name stopped — a look over the
+   person's processes — or refuses with exit 1 naming each one, then records its run
+   under `runs/` and binds itself as the name's successor; once published it takes the
+   reports held for the name's earlier-build runs
+   ([protocol-cutover.md](protocol-cutover.md#the-launch)).
 4. **The role.** An unflagged launch always becomes general, even in an empty
    room or after main exits. Only explicit `--main` creates main, and it refuses
    under the room lock if a live main already occupies the room. Explicit
@@ -132,7 +146,10 @@ session's shell, or from a person's shell in the same room. A shell without
    other two. A question to a silent recipient is refused here, before anything
    is written: that role never reports, so it could never answer.
 4. **The file.** `inbox/write-codex/<id>.json.tmp`, renamed to `.json`. The id is
-   time-sortable. Nothing else is touched: the sender does not deliver.
+   time-sortable. Nothing else is touched: the sender does not deliver. A `--notify`
+   is first journaled under a receipt in the sender's mailbox and then written once
+   under the recipient's lock, so a repeat or `rewake retry` cannot publish it twice
+   ([mail-bridge-cli.md](mail-bridge-cli.md#receipts)).
 5. **The wait.** The sender polls `<id>.status` for up to `--wait` seconds (5
    by default; a question's delivery 5 at most) and prints one line: `Rewake: delivered to write-codex via app-server`,
    `Rewake: pending for write-codex: …` or `Rewake: held for write-codex: …` (exit 3),
@@ -249,7 +266,8 @@ why it was refused or failed — comes later as a notify from the worker
    metadata without bodies, consumption, waiters or task-boundary changes; successful
    output has no dispatch side effect; new mail does not wait for an overview.
    `--message <id>` selects one available message; the flags are mutually exclusive.
-   Plain inbox retains read-all. Under the lock, the selected available messages are
+   Plain inbox retains read-all; through the mail tool it reads in parts
+   ([mail-bridge-cli.md](mail-bridge-cli.md#reads-in-parts)). Under the lock, the selected available messages are
    printed, oldest first, with its sender, kind and time. Reports reserved by a
    waiting `send --question` are skipped (Act 6). A verified main caller first
    sees a [session-state header](session-state.md) and blank line for each message;
@@ -285,19 +303,22 @@ a compaction. Only a turn with proof that it is work — a reply naming it or an
 other than a compaction's — settles a wait; one without is reported as advisory, and a
 turn its `contextCompaction` item shows to be a compaction reports nothing, so a
 compaction's turn never settles a wait ([codex-publication.md](codex-publication.md)). The hook and server events use the same internal
-reporting function and turn receipts. A callback with `agent_id` is from a nested agent and is
+reporting function and turn journals. A callback with `agent_id` is from a nested agent and is
 ignored without changing the parent session's waits.
 
 1. **Who is owed.** Under the lock, `turn-ended` reads
    `awaiting/<own epoch>/`. A silent role emits no successful reports;
-   failure callbacks still route errors. An identified turn persists its exact
-   waiter/message snapshot and full report batch before publishing any report.
+   failure callbacks still route errors. First the barrier completes what an
+   earlier end left unfinished (`inbox.Reconcile`); an unknown it cannot decide stops the
+   mailbox until `rewake settle`. An identified turn carries its read boundary, and its
+   journal records the full report batch and what it clears before any report goes out
+   ([delivery-turn-end.md](delivery-turn-end.md#the-end-of-a-turn)).
 2. **The report.** For each waiting run, a `finished` message into that
    sender's mailbox: text is the final reply, `inReplyTo` lists the messages
    read from that run since the last report, `toEpoch` is that run — not
    whoever holds the name now. The id is derived from the wait, so a retried
-   hook writes the same report once. Retries use the stored text, recipients
-   and message ids even when new work arrived between attempts.
+   hook writes the same report once. A retry finds its journal and completes it, and
+   answers nothing read above its boundary even when new work arrived between attempts.
 3. **A grant ends.** A directory granted with a task lives at least until this
    report; a stopped turn or a pending mark keeps it, and an error report or a
    withdrawal ends it as a report does. On Codex rewake takes it back at the next
@@ -313,9 +334,9 @@ ignored without changing the parent session's waits.
    checkout, opened by `--grant-git` alone, is not journaled and rewake never takes it
    back: it stays for the rest of the thread unless a typed turn replaces the roots
    ([git-grants.md](git-grants.md)).
-4. **Forget the reported messages** after all reports are written and the turn
-   receipt is marked done. Cleanup matches the original run and wait; newly
-   read messages remain owed to the next result.
+4. **Forget the reported messages** after all reports are written, as the journal's
+   next step; the journal is then marked done. Cleanup matches the original run and
+   wait; newly read messages remain owed to the next result.
 5. **The sender is woken** by its own wrapper, through Act 3, with
    `Rewake: write-codex finished, 1 new message(s)`. The sender reads it with
    `rewake inbox`; a `finished` asks for nothing back, so the exchange ends

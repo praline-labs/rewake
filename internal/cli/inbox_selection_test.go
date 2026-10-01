@@ -152,7 +152,7 @@ func TestSelectedReadPrintsBeforeMarkingAndKeepsNormalJSON(t *testing.T) {
 	if code := Run([]string{"inbox", "--message", id}, brokenWriter{}, brokenWriter{}); code == ExitOK {
 		t.Fatal("selected read ignored output failure")
 	}
-	if status, ok := inbox.ReadStatus(dir, self.Name, id); ok && status.State == inbox.Read {
+	if status, ok, _ := inbox.ReadStatus(dir, self.Name, id); ok && status.State == inbox.Read {
 		t.Fatal("failed output consumed selected message")
 	}
 	code, out, stderr := run("inbox", "--message", id, "--json")

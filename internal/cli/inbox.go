@@ -33,6 +33,9 @@ func handleInbox(ctx *Context, call Call) error {
 	if err != nil {
 		return err
 	}
+	if mode.next != "" {
+		return continueOutput(ctx, call, mode.next)
+	}
 	peek, selected := mode.peek, mode.selected
 	dir, err := state.Dir()
 	if err != nil {
@@ -47,6 +50,9 @@ func handleInbox(ctx *Context, call Call) error {
 		}
 	case errors.Is(err, errEarlierRun):
 		return failf("%v; its mail is not this shell's to read", err)
+	case errors.Is(err, errUpgraded) && !peek:
+		return refuseUpgraded(dir, session)
+	case errors.Is(err, errUpgraded):
 	case err != nil:
 		return failf("%v; its mail cannot be read", err)
 	}
@@ -58,6 +64,9 @@ func handleInbox(ctx *Context, call Call) error {
 			return err
 		}
 		return showOwed(ctx, call, dir, session, epoch)
+	}
+	if ctx.scope != nil && !peek {
+		return bridgeRead(ctx, mode, readSite{dir: dir, self: session, epoch: epoch})
 	}
 
 	// Held from looking to marking. Two readers at once — parallel tool calls,
@@ -71,6 +80,11 @@ func handleInbox(ctx *Context, call Call) error {
 		if err := mailAdmitted(dir, session.Name, epoch); err != nil {
 			failure = err
 			return nil
+		}
+		if !peek {
+			if failure = mailboxStopped(dir, session.Name); failure != nil {
+				return nil
+			}
 		}
 		messages, err := inbox.AvailableUnread(dir, session.Name, epoch)
 		if err != nil {
@@ -116,6 +130,17 @@ func handleInbox(ctx *Context, call Call) error {
 		return failf("could not lock the inbox of %s: %v", session.Name, err)
 	}
 	return failure
+}
+
+// mailboxStopped answers the stop of a mailbox whose records nothing can
+// decide (docs/turn-end-recovery.md#the-stop-and-rewake-settle): a read
+// would change it, so none is made, and the answer names the cause and the
+// way out. Letters go on arriving, and a peek shows them.
+func mailboxStopped(dir, name string) error {
+	if err := inbox.MailboxStopped(dir, name); err != nil {
+		return failf("%v", err)
+	}
+	return nil
 }
 
 // mailAdmitted refuses the mail of a run whose launch asked to resume a
@@ -167,19 +192,32 @@ func inboxLines(messages []messageView) []string {
 		if index > 0 {
 			lines = append(lines, "")
 		}
-		if message.Telemetry != nil {
-			lines = append(lines, stateLine(message.From, message.Telemetry, message.Availability != nil || message.Departure != nil), "")
-		}
-		lines = append(lines,
-			fmt.Sprintf("from %s · %s · %s%s", message.From, inbox.KindOf(message.Message), message.CreatedAt.Local().Format("15:04:05"), relation(message.Message)),
-		)
-		lines = append(lines, grantLines(message.Message)...)
-		lines = append(lines, message.Text)
-		if message.ThreadChanged {
-			lines = append(lines, inbox.ThreadChangedWarning)
-		}
+		lines = append(lines, letterHead(message)...)
+		lines = append(lines, letterBody(message))
 	}
 	return lines
+}
+
+// letterHead is what a letter shows above its text: the sender's state for a
+// main, then who sent what when, then the grants it carries.
+func letterHead(message messageView) []string {
+	var lines []string
+	if message.Telemetry != nil {
+		lines = append(lines, stateLine(message.From, message.Telemetry, message.Availability != nil || message.Departure != nil), "")
+	}
+	lines = append(lines,
+		fmt.Sprintf("from %s · %s · %s%s", message.From, inbox.KindOf(message.Message), message.CreatedAt.Local().Format("15:04:05"), relation(message.Message)),
+	)
+	return append(lines, grantLines(message.Message)...)
+}
+
+// letterBody is the letter's text, with the warning a report from another
+// conversation carries.
+func letterBody(message messageView) string {
+	if message.ThreadChanged {
+		return message.Text + "\n" + inbox.ThreadChangedWarning
+	}
+	return message.Text
 }
 
 // relation names the message a letter belongs with, for the heading line:

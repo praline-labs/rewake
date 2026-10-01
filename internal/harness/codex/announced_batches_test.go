@@ -52,7 +52,7 @@ func TestReadyRecipientAnnouncesNextFourWithoutOverviewOrTerminal(t *testing.T) 
 					for {
 						all := true
 						for _, m := range messages {
-							st, ok := inbox.ReadStatus(dir, s.Name, m.ID)
+							st, ok, _ := inbox.ReadStatus(dir, s.Name, m.ID)
 							all = all && ok && st.State == want
 						}
 						if all {

@@ -1,8 +1,7 @@
 package cli
 
 import (
-	"os"
-	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -10,7 +9,6 @@ import (
 	"github.com/praline-labs/rewake/internal/harness/codex/gateway"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // A run seen only as an active status and then idle, its turn unknown, may
@@ -69,8 +67,10 @@ func TestARunWithoutProofOfWorkIsAdvisory(t *testing.T) {
 
 // A turn whose reply comes after its advisory report still reports its own
 // outcome, a stopped one included, with its times: the advisory's identity is
-// its own in the gateway and in the turn receipts, and the pending mark made
-// during the turn is taken by the turn's own outcome, not by the advisory.
+// its own in the gateway and in the turn journals. The advisory has no time,
+// so it takes no pending mark; the stop says more than "still going" and is
+// not softened by one; and no end removes the mark
+// (docs/turn-end-recovery.md#pending-marks).
 func TestAProvenStopAfterTheAdvisoryReportsWithItsTimes(t *testing.T) {
 	dir := liveSession(t, "api")
 	peer := otherRun(t, dir, "web")
@@ -86,7 +86,7 @@ func TestAProvenStopAfterTheAdvisoryReportsWithItsTimes(t *testing.T) {
 		t.Fatal(err)
 	}
 	reviewNativeEvent(t, ui, native, "turn/started", map[string]any{"threadId": "A", "turn": map[string]any{"id": "U", "items": []any{}, "status": "inProgress"}})
-	if err := inbox.MarkPending(dir, self.Name, self.Epoch(), "still at it", boottime.Now()); err != nil {
+	if err := markPending(dir, self.Name, self.Epoch(), "still at it", boottime.Now()); err != nil {
 		t.Fatal(err)
 	}
 	reviewNativeEvent(t, ui, native, "turn/completed", map[string]any{"threadId": "A", "turn": map[string]any{"id": "U", "items": []any{}, "status": "interrupted"}})
@@ -95,8 +95,8 @@ func TestAProvenStopAfterTheAdvisoryReportsWithItsTimes(t *testing.T) {
 		t.Fatalf("advisory outcome %+v", advisory)
 	}
 	reviewPublish(t, dir, self, advisory)
-	if _, err := os.Stat(filepath.Join(state.InboxPath(dir, self.Name), "pending", "mark.json")); err != nil {
-		t.Fatalf("the advisory took the pending mark: %v", err)
+	if _, ok, err := markWithin(dir, self.Name, self.Epoch(), 0, boottime.Now()); err != nil || !ok {
+		t.Fatalf("the advisory took the pending mark away: %v %v", ok, err)
 	}
 	if err := native.write(map[string]any{"id": 2, "result": map[string]any{"turn": map[string]any{"id": "U", "items": []any{}, "status": "inProgress"}}}); err != nil {
 		t.Fatal(err)
@@ -109,10 +109,10 @@ func TestAProvenStopAfterTheAdvisoryReportsWithItsTimes(t *testing.T) {
 		t.Fatalf("the turn's own outcome %+v", stopped)
 	}
 	reviewPublish(t, dir, self, stopped)
-	if got := reportsTo(t, dir, peer.Name); len(got) != 2 || got[0].Text == got[1].Text {
+	if got := reportsTo(t, dir, peer.Name); len(got) != 2 || got[0].Text == got[1].Text || slices.Contains(kinds(got), string(inbox.Interim)) {
 		t.Fatalf("web holds %+v; want the advisory and the turn's own stop", got)
 	}
-	if _, err := os.Stat(filepath.Join(state.InboxPath(dir, self.Name), "pending", "mark.json")); !os.IsNotExist(err) {
-		t.Fatalf("the pending mark was not taken by the turn's own outcome: %v", err)
+	if _, ok, err := markWithin(dir, self.Name, self.Epoch(), 0, boottime.Now()); err != nil || !ok {
+		t.Fatalf("an end removed the pending mark: %v %v", ok, err)
 	}
 }

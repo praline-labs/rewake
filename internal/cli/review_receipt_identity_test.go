@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -132,40 +131,5 @@ func TestStoppedAndErrorRetriesSettleOriginalScopeOnce(t *testing.T) {
 	waiters := inbox.Waiters(dir, self.Name, self.Epoch())
 	if len(reports) != 2 || len(waiters) != 1 || len(waiters[0].Messages) != 1 || waiters[0].Messages[0] != second {
 		t.Fatalf("first=%s later=%s reports=%v remaining=%v", first, second, reports, waiters)
-	}
-}
-
-func TestLegacyStoppedReceiptDoesNotSuppressFinal(t *testing.T) {
-	dir := liveSession(t, "api")
-	peer := otherRun(t, dir, "web")
-	self, _ := registry.Lookup(dir, "api")
-	readFrom(t, dir, peer)
-	stopped := turnResult{ID: "A/legacy", Stopped: true, Text: "stopped"}
-	if err := completeTurn(dir, self, stopped, "A"); err != nil {
-		t.Fatal(err)
-	}
-	receipt, stopPath, err := loadTurnReceipt(dir, self, stopped)
-	if err != nil {
-		t.Fatal(err)
-	}
-	final := turnResult{ID: stopped.ID, Text: "final"}
-	_, legacyPath, err := loadTurnReceipt(dir, self, final)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := saveTurnReceipt(legacyPath, receipt); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Remove(stopPath); err != nil {
-		t.Fatal(err)
-	}
-	if err := completeTurn(dir, self, stopped, "A"); err != nil {
-		t.Fatal(err)
-	}
-	if err := completeTurn(dir, self, final, "A"); err != nil {
-		t.Fatal(err)
-	}
-	if len(finishedFor(t, dir, peer.Name)) != 2 || len(inbox.Waiters(dir, self.Name, self.Epoch())) != 0 {
-		t.Fatal("legacy stopped receipt suppressed final or duplicated stop")
 	}
 }

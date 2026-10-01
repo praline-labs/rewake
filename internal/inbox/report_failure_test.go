@@ -28,7 +28,7 @@ func reportFailureFixture(t *testing.T) (*Server, Message, *int) {
 
 func requireReportState(t *testing.T, s *Server, m Message, want State, visible bool) {
 	t.Helper()
-	status, ok := ReadStatus(s.Dir, s.Name, m.ID)
+	status, ok, _ := ReadStatus(s.Dir, s.Name, m.ID)
 	if !ok || status.State != want {
 		t.Fatalf("status=%+v want=%s", status, want)
 	}
@@ -83,7 +83,7 @@ func TestReportFailureAdmissionAndShutdown(t *testing.T) {
 				s.drain(context.Background())
 			}
 			if mode == "foreign shutdown" {
-				if _, ok := ReadStatus(s.Dir, s.Name, m.ID); ok {
+				if _, ok, _ := ReadStatus(s.Dir, s.Name, m.ID); ok {
 					t.Fatal("shutdown changed foreign mail")
 				}
 				return
@@ -107,15 +107,7 @@ func TestReportFailureRecovery(t *testing.T) {
 			var unblock func()
 			switch fault {
 			case "status":
-				path := statusPath(s.Dir, s.Name, m.ID)
-				if err := os.Mkdir(path, 0o700); err != nil {
-					t.Fatal(err)
-				}
-				unblock = func() {
-					if err := os.Remove(path); err != nil {
-						t.Fatal(err)
-					}
-				}
+				unblock = failStatusWrites(t, s.Dir, s.Name, m.ID)
 			case "removal":
 				original := removeWaiting
 				removeWaiting = func(string) error { return os.ErrPermission }

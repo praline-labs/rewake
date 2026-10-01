@@ -2,6 +2,8 @@ package cli
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -9,6 +11,7 @@ import (
 	"github.com/praline-labs/rewake/internal/harness/claude/telemetry"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 // stopPayload is a Claude Code Stop hook's stdin: the first call of a turn
@@ -40,7 +43,7 @@ func newInterimLab(t *testing.T) interimLab {
 	peer := otherRun(t, dir, "web")
 	readFrom(t, dir, peer)
 	self, _ := registry.Lookup(dir, "api")
-	if err := inbox.MarkPending(dir, "api", self.Epoch(), "the suite is running", markAt-8); err != nil {
+	if err := markPending(dir, "api", self.Epoch(), "the suite is running", markAt-8); err != nil {
 		t.Fatal(err)
 	}
 	if err := completeTurn(dir, self, turnResult{Text: "started the suite", Started: markAt - 10, Ended: markAt - 5}, "t"); err != nil {
@@ -105,10 +108,10 @@ func TestAnUnmarkedEndAfterAnInterimOneIsHeldOnce(t *testing.T) {
 	if report == nil || report.Text != "the suite is green: 40 pass\n\nnothing more to add" || lab.owed() != 0 {
 		t.Fatalf("after the continuation web holds %+v, %d owed", reports, lab.owed())
 	}
-	if _, kept := inbox.KeptAnswer(lab.dir, "api", lab.self.Epoch()); kept {
+	if _, kept, _ := inbox.KeptAnswer(lab.dir, "api", lab.self.Epoch()); kept {
 		t.Error("the kept answer outlived its report")
 	}
-	if _, interim := inbox.LastInterim(lab.dir, "api", lab.self.Epoch()); interim {
+	if _, interim, _ := inbox.LastInterim(lab.dir, "api", lab.self.Epoch()); interim {
 		t.Error("the report left the run marked interim")
 	}
 }
@@ -133,7 +136,7 @@ func TestAContinuationThatMarksPendingKeepsTheTaskOwed(t *testing.T) {
 	if len(reports) != 2 || len(texts) != 2 || !slices.Contains(texts, "the second half is running\n\nhalf of the suite passed\n\nmarked") || lab.owed() != 1 {
 		t.Fatalf("after the marked continuation web holds %+v, %d owed", reports, lab.owed())
 	}
-	if line, _ := inbox.LastInterim(lab.dir, "api", lab.self.Epoch()); line != "the second half is running" {
+	if line, _, _ := inbox.LastInterim(lab.dir, "api", lab.self.Epoch()); line != "the second half is running" {
 		t.Errorf("the run is interim with %q", line)
 	}
 	if reason := lab.held(t, "all green"); !strings.Contains(reason, "the second half is running") {
@@ -146,7 +149,7 @@ func TestAContinuationThatMarksPendingKeepsTheTaskOwed(t *testing.T) {
 func TestAStopAfterAHoldCarriesTheHeldAnswer(t *testing.T) {
 	lab := newInterimLab(t)
 	lab.held(t, "the report")
-	if err := completeTurn(lab.dir, lab.self, turnResult{ID: "claude/turn-2", Stopped: true, Text: telemetry.StoppedText, Started: lab.start, Ended: markAt + 1}, "t"); err != nil {
+	if err := completeTurn(lab.dir, lab.self, turnResult{Boundary: boundaryNow(t, lab.dir, lab.self), ID: "claude/turn-2", Stopped: true, Text: telemetry.StoppedText, Started: lab.start, Ended: markAt + 1}, "t"); err != nil {
 		t.Fatal(err)
 	}
 	var stopped []string
@@ -158,10 +161,10 @@ func TestAStopAfterAHoldCarriesTheHeldAnswer(t *testing.T) {
 	if len(stopped) != 1 || stopped[0] != telemetry.StoppedText+"\n\nthe report" || lab.owed() != 1 {
 		t.Fatalf("the stop after a hold sent %q, %d owed", stopped, lab.owed())
 	}
-	if _, kept := inbox.KeptAnswer(lab.dir, "api", lab.self.Epoch()); kept {
+	if _, kept, _ := inbox.KeptAnswer(lab.dir, "api", lab.self.Epoch()); kept {
 		t.Error("the stop left the answer kept")
 	}
-	if _, interim := inbox.LastInterim(lab.dir, "api", lab.self.Epoch()); !interim {
+	if _, interim, _ := inbox.LastInterim(lab.dir, "api", lab.self.Epoch()); !interim {
 		t.Error("a stop cleared the interim record; the work is as it was")
 	}
 }
@@ -210,19 +213,18 @@ func TestATurnEndIsHeldOnlyAfterAnInterimOne(t *testing.T) {
 		payload string
 	}{
 		{"after a report", func(t *testing.T, lab interimLab) {
-			if err := inbox.ClearInterim(lab.dir, "api"); err != nil {
+			if err := os.Remove(filepath.Join(state.InboxPath(lab.dir, "api"), "pending", "interim.json")); err != nil {
 				t.Fatal(err)
 			}
 		}, `{"hook_event_name":"Stop","session_id":"t","last_assistant_message":"done","stop_hook_active":false}`},
 		{"marked in this turn", func(t *testing.T, lab interimLab) {
-			if err := inbox.MarkPending(lab.dir, "api", lab.self.Epoch(), "still going", markAt-1); err != nil {
+			if err := markPending(lab.dir, "api", lab.self.Epoch(), "still going", markAt-1); err != nil {
 				t.Fatal(err)
 			}
 		}, `{"hook_event_name":"Stop","session_id":"t","last_assistant_message":"done","stop_hook_active":false}`},
 		{"a failure", nil, `{"hook_event_name":"StopFailure","session_id":"t","last_assistant_message":"broke","error":"api_error"}`},
 		{"after another hook's hold", nil, `{"hook_event_name":"Stop","session_id":"t","last_assistant_message":"done","stop_hook_active":true}`},
 		{"without stop_hook_active", nil, `{"hook_event_name":"Stop","session_id":"t","last_assistant_message":"done"}`},
-		{"Codex", nil, `{"type":"agent-turn-complete","turn-id":"x","last-assistant-message":"done"}`},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			lab := newInterimLab(t)
@@ -237,10 +239,27 @@ func TestATurnEndIsHeldOnlyAfterAnInterimOne(t *testing.T) {
 			}
 		})
 	}
+	// A Codex notify names its event and carries no read boundary: its scope
+	// is unknown, so it is refused and its waits stay owed
+	// (docs/turn-end-recovery.md#the-operation).
+	t.Run("Codex", func(t *testing.T) {
+		lab := newInterimLab(t)
+		if code, out, _ := run("turn-ended", `{"type":"agent-turn-complete","turn-id":"x","last-assistant-message":"done"}`); code != ExitOK || out != "" {
+			t.Fatalf("held: %q", out)
+		}
+		if got := kinds(reportsTo(t, lab.dir, "web")); len(got) != 1 {
+			t.Errorf("web holds %v, want the interim message alone", got)
+		}
+		if len(inbox.Waiters(lab.dir, "api", lab.self.Epoch())) == 0 {
+			t.Error("the refused end cleared its waits")
+		}
+	})
 	t.Run("nobody waiting", func(t *testing.T) {
 		lab := newInterimLab(t)
 		for _, waiter := range inbox.Waiters(lab.dir, "api", lab.self.Epoch()) {
-			inbox.ClearAwaiting(lab.dir, "api", lab.self.Epoch(), waiter)
+			if err := inbox.ClearAwaiting(lab.dir, "api", lab.self.Epoch(), waiter); err != nil {
+				t.Fatal(err)
+			}
 		}
 		if _, out, _ := run("turn-ended", stopPayload(t, "Stop", "done", false)); out != "" {
 			t.Fatalf("held with nobody waiting: %q", out)

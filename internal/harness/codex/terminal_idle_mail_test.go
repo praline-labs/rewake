@@ -31,7 +31,7 @@ func TestTerminalIdleOnlyWakesNewUnannouncedMembers(t *testing.T) {
 				t.Fatalf("unread=%d err=%v", len(unread), err)
 			}
 			for _, m := range first {
-				st, ok := inbox.ReadStatus(f.dir, m.To, m.ID)
+				st, ok, _ := inbox.ReadStatus(f.dir, m.To, m.ID)
 				if !ok || st.State != inbox.Delivered {
 					t.Fatal("old announced receipt changed")
 				}

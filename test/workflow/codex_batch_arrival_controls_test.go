@@ -85,11 +85,13 @@ var mutantReplay = mutation{
 		{
 			"if result, known := s.outcomes[message.ID]; known {\n" + heldBranch +
 				"\t\ts.publish(message.ID, result)\n\t\treturn true\n\t}\n" +
-				"\tstatus, ok := ReadStatus(s.Dir, s.Name, message.ID)\n" +
+				"\tstatus, ok, err := ReadStatus(s.Dir, s.Name, message.ID)\n" +
+				"\tif err != nil {\n\t\ts.attempts[message.ID] = time.Now()\n\t\treturn true\n\t}\n" +
 				"\tif !ok || status.State == Pending || status.State == Held {",
 			"if result, known := s.outcomes[message.ID]; known && result.State != Delivered {\n" + heldBranch +
 				"\t\ts.publish(message.ID, result)\n\t\treturn true\n\t}\n" +
-				"\tstatus, ok := ReadStatus(s.Dir, s.Name, message.ID)\n" +
+				"\tstatus, ok, err := ReadStatus(s.Dir, s.Name, message.ID)\n" +
+				"\tif err != nil {\n\t\ts.attempts[message.ID] = time.Now()\n\t\treturn true\n\t}\n" +
 				"\tif !ok || status.State == Pending || status.State == Held || status.State == Delivered {",
 		},
 	},

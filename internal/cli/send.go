@@ -11,6 +11,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/proc"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
 	"github.com/praline-labs/rewake/internal/sessionstate"
@@ -50,6 +51,8 @@ type sendModel struct {
 	// given when that letter is the replacement of an earlier edit.
 	Replaces string `json:"replaces,omitempty"`
 	Named    string `json:"named,omitempty"`
+	// Receipt names the journal record of a heads-up, for rewake retry.
+	Receipt string `json:"receipt,omitempty"`
 }
 
 func handleSend(ctx *Context, call Call) error {
@@ -76,6 +79,25 @@ func handleSend(ctx *Context, call Call) error {
 	if err != nil {
 		return err
 	}
+	if kind.kind == inbox.Note && !ctx.journaling {
+		// A heads-up is one of the tool's words: its receipt makes a repeat
+		// or a retry publish it once.
+		return journaled(ctx, call, handleSend)
+	}
+	if ctx.scope != nil {
+		wait = max(0, min(wait, ctx.scope.remaining()-toolMargin))
+	}
+	// A resumed heads-up is the one its first call fixed: the same run, the
+	// same text, stdin not read again.
+	pinned := false
+	if ctx.op != nil {
+		if err := ctx.op.resolveEndedRun(ctx); err != nil {
+			return err
+		}
+		if step := ctx.op.pinnedNotify(); step != nil {
+			text, pinned = step.Text, true
+		}
+	}
 
 	session, err := registry.Lookup(dir, target)
 	if errors.Is(err, registry.ErrNotFound) {
@@ -85,7 +107,7 @@ func handleSend(ctx *Context, call Call) error {
 		return &FailedError{Message: err.Error()}
 	}
 
-	if text == "-" {
+	if text == "-" && !pinned {
 		read, err := io.ReadAll(os.Stdin)
 		if err != nil {
 			return failf("could not read the message from stdin: %v", err)
@@ -105,6 +127,12 @@ func handleSend(ctx *Context, call Call) error {
 	// current: a report then reaches this run, and a process left over from an
 	// earlier run cannot speak for the next one.
 	self, epoch, selfErr := ownRun(dir)
+	if errors.Is(selfErr, errUpgraded) {
+		return refuseUpgraded(dir, self)
+	}
+	if session.EarlierBuild() && registry.ObserveRun(session.Epoch()) != proc.IdentityEnded {
+		return failf("%s was started by a rewake build before this one, and rewake was upgraded since: this build does not change the mailbox of a run of the earlier one. Ask the person to restart %s by resuming its conversation, then send again; nothing was sent", session.Name, session.Name)
+	}
 	if selfErr == nil && self.Name == session.Name {
 		// A task to itself would be announced into the turn that sent it and
 		// owe a report to that same turn; a question would wait for an answer
@@ -158,6 +186,12 @@ func handleSend(ctx *Context, call Call) error {
 	if selfErr == nil {
 		message.From, message.FromEpoch = self.Name, epoch
 	}
+	journaledSend := ctx.op != nil && message.AddendumTo == ""
+	if journaledSend {
+		if err := ctx.op.pinNotify(&message); err != nil {
+			return err
+		}
+	}
 	if kind.kind == inbox.Question {
 		release, err := inbox.ReserveAnswer(dir, self.Name, message.ID)
 		if err != nil {
@@ -168,92 +202,15 @@ func handleSend(ctx *Context, call Call) error {
 	if err := registerGrant(dir, self, epoch, message); err != nil {
 		return err
 	}
-	if err := writeSent(dir, self, epoch, message, session); err != nil {
+	if journaledSend {
+		err = ctx.op.publish(ctx, message)
+	} else {
+		err = writeSent(dir, self, epoch, message, session)
+	}
+	if err != nil {
 		return err
 	}
 	return reportSent(ctx, sent{dir: dir, self: self, epoch: epoch, target: session, deadline: started.Add(wait), writable: grantDirs.writable}, message, kind, wait)
-}
-
-// reportSent waits for the delivery result of a message just written and
-// prints it, then hands over to what its kind does next — a question waits
-// for its answer.
-func reportSent(ctx *Context, after sent, message inbox.Message, kind messageKind, wait time.Duration) error {
-	dir, session := after.dir, after.target
-	// A kind that waits for something after the delivery — a question's
-	// answer — gives the delivery a few seconds of its wait at most; any other
-	// waits for the delivery as long as --wait says.
-	delivery := wait
-	if kind.after != nil {
-		delivery = min(wait, defaultWait)
-	}
-	status, known := awaitStatus(dir, session.Name, message.ID, delivery, recipientRunning(dir, session))
-	model := sendModel{ID: message.ID, To: session.Name, From: message.From, GrantGit: message.GrantGit, GrantDirs: message.GrantDirs, AlreadyWritable: after.writable, Addenda: after.addenda, Replaces: message.Replaces, Named: after.named}
-	if !known && inbox.Answered(dir, session.Name, message.ID) {
-		// The message left the mailbox, and a status may have been written
-		// after the wait gave up. Absent a moment ago is not absent now:
-		// calling a fresh delivery lost sends the sender to do it twice.
-		status, known = inbox.ReadStatus(dir, session.Name, message.ID)
-	}
-	if known {
-		model.GrantApplied = status.GrantApplied
-	}
-	switch {
-	case known && status.State == inbox.Read:
-		// Read already, which is delivered and then some.
-		model.State, model.Via = string(inbox.Delivered), status.Via
-		model.Detail = "already read"
-	case known && status.State != inbox.Pending && status.State != inbox.Held:
-		model.State, model.Via, model.Detail = string(status.State), status.Via, status.Detail
-	default:
-		// No final answer. Held is none either: it waits for the session that
-		// holds it, and a session that is gone will never release it.
-		// Promising a later delivery is only honest while the session is still
-		// there to make one; a session that ended between the lookup and now
-		// leaves the message with nobody to take it.
-		// The name is not enough: it may already belong to a session that
-		// started after this message was written, and that session will refuse
-		// it. Promising a later delivery then would be a promise nobody keeps.
-		current, err := registry.Lookup(dir, session.Name)
-		if errors.Is(err, registry.ErrNotFound) {
-			model.State = string(inbox.Failed)
-			model.Detail = "the session ended before the message was delivered"
-			break
-		}
-		if err == nil && current.Epoch() != session.Epoch() {
-			model.State = string(inbox.Failed)
-			model.Detail = "the session ended and another one took its name before the message was delivered"
-			break
-		}
-		if !known && inbox.Answered(dir, session.Name, message.ID) {
-			// The message is out of the mailbox but has no status: it was
-			// answered long enough ago that the answer is no longer kept.
-			// Saying "pending" here would promise a delivery that has happened.
-			model.State = string(inbox.Failed)
-			model.Detail = "this message was answered earlier and the result is no longer kept"
-			break
-		}
-		if known && status.State == inbox.Held {
-			model.State, model.Via, model.Detail = string(inbox.Held), status.Via, status.Detail
-			break
-		}
-		model.State = string(inbox.Pending)
-		if known && status.Detail != "" {
-			model.Detail = status.Detail
-		} else {
-			model.Detail = fmt.Sprintf("no result yet after %s; the session has it and will take it", delivery)
-		}
-	}
-
-	if inbox.State(model.State) != inbox.Failed && kind.after != nil {
-		// The id before the wait, which may be long: it is what an edit or an
-		// addendum to this message takes while the sender still waits.
-		if !ctx.JSON {
-			_ = emit(ctx, append(sentGrantLines(session, model), idLines(model)...)...)
-		}
-		after.model = model
-		return kind.after(ctx, after)
-	}
-	return printDelivery(ctx, session, model)
 }
 
 // printDelivery prints the delivery result and turns it into the exit code.
@@ -294,24 +251,6 @@ func idLines(model sendModel) []string {
 		lines = append(lines, fmt.Sprintf("Rewake: your addenda %s now add to %s; take one back with: rewake withdraw <id>", strings.Join(model.Addenda, ", "), model.ID))
 	}
 	return lines
-}
-
-// awaitStatus waits for the status of a message; replaceable in tests.
-var awaitStatus = inbox.Await
-
-// recipientRunning says whether the run a message was written for still runs,
-// so a long --wait ends with it. A run in another pid namespace cannot be
-// judged from here and counts as running, as everywhere else: its wrapper,
-// which can see it, is the one that delivers. A record that cannot be read
-// says nothing either way.
-func recipientRunning(dir string, target registry.Session) func() bool {
-	return func() bool {
-		current, err := registry.LookupReadOnly(dir, target.Name)
-		if errors.Is(err, registry.ErrNotFound) {
-			return false
-		}
-		return err != nil || current.Epoch() == target.Epoch()
-	}
 }
 
 // sendLine is the one line a caller reads: what happened, by which path, and

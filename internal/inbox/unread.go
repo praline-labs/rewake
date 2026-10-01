@@ -3,6 +3,7 @@ package inbox
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -39,7 +40,9 @@ func dropUnread(dir, to, id string) {
 }
 
 // noticeContext chooses the newest available letter; active reservations stay
-// invisible to ordinary notifications just as they do to inbox reads.
+// invisible to ordinary notifications just as they do to inbox reads. What it
+// adds is the notice's count and preview, never whether the notice goes, so a
+// mailbox it cannot read leaves the notice about this one message.
 func noticeContext(dir, name, epoch string, message Message) Message {
 	messages, err := AvailableUnread(dir, name, epoch)
 	if err != nil {
@@ -57,7 +60,9 @@ func noticeContext(dir, name, epoch string, message Message) Message {
 
 // PeekUnread returns the unread messages of one run of a session, oldest first,
 // without marking anything. The caller shows them, then marks each one read: a
-// message marked before its text reached anybody would be lost.
+// message marked before its text reached anybody would be lost. An error says
+// a letter, or its status, could not be read, and so what is unread is not
+// known.
 func PeekUnread(dir, name, epoch string) ([]Message, error) {
 	messages, err := listIn(state.UnreadPath(dir, name))
 	if err != nil {
@@ -66,24 +71,63 @@ func PeekUnread(dir, name, epoch string) ([]Message, error) {
 	mine := make([]Message, 0, len(messages))
 	for _, message := range messages {
 		if epoch == "" || message.ToEpoch == epoch {
-			mine = append(mine, asWithdrawn(dir, name, message))
+			shown, err := asWithdrawn(dir, name, message)
+			if err != nil {
+				return nil, err
+			}
+			mine = append(mine, shown)
 		}
 	}
 	return mine, nil
 }
 
+// UnreadCopy is one letter of a run as unread/ holds it now, a withdrawn one as
+// its tombstone. It looks the letter up by itself, not through a listing that
+// passes over a file it cannot read: false says the letter is not unread, and
+// an error that it, or its status, could not be read. The caller holds the
+// mailbox lock.
+func UnreadCopy(dir, name, epoch, id string) (Message, bool, error) {
+	if !safeID(id) {
+		return Message{}, false, nil
+	}
+	raw, err := os.ReadFile(filepath.Join(state.UnreadPath(dir, name), id+".json"))
+	if errors.Is(err, os.ErrNotExist) {
+		return Message{}, false, nil
+	}
+	if err != nil {
+		return Message{}, false, err
+	}
+	var message Message
+	if err := json.Unmarshal(raw, &message); err != nil {
+		return Message{}, false, fmt.Errorf("the letter %s is not readable: %w", id, err)
+	}
+	if epoch != "" && message.ToEpoch != epoch {
+		return Message{}, false, nil
+	}
+	shown, err := asWithdrawn(dir, name, message)
+	if err != nil {
+		return Message{}, false, err
+	}
+	return shown, true, nil
+}
+
 // asWithdrawn shows a message its status calls withdrawn as its tombstone. A
 // withdrawal writes the status before the tombstone, and one that failed in
 // between leaves the original readable by hard link: its sender was told it
-// failed, but the text must not reach the reader as work all the same.
-func asWithdrawn(dir, name string, message Message) Message {
+// failed, but the text must not reach the reader as work all the same. A
+// status that cannot be read may say withdrawn, so it is an error.
+func asWithdrawn(dir, name string, message Message) (Message, error) {
 	if message.Withdrawn != nil {
-		return message
+		return message, nil
 	}
-	if status, ok := ReadStatus(dir, name, message.ID); ok && status.Withdrawn {
-		return tombstoneOf(message, "")
+	status, known, err := ReadStatus(dir, name, message.ID)
+	if err != nil {
+		return Message{}, err
 	}
-	return message
+	if known && status.Withdrawn {
+		return tombstoneOf(message, ""), nil
+	}
+	return message, nil
 }
 
 // MarkRead records that this run of the session has read a message. The caller
@@ -99,8 +143,12 @@ func MarkRead(dir, name, epoch string, message Message, reports bool) error {
 	// A read status is written only after the waiter, so finding one means
 	// this is a retry of a read whose last step failed: the waiter was recorded
 	// then, and may have been reported to since. Recording it again owed a
-	// second report for one message.
-	status, known := ReadStatus(dir, name, message.ID)
+	// second report for one message. A status that cannot be read may be
+	// that read one, so it stops the read here, still unread.
+	status, known, err := ReadStatus(dir, name, message.ID)
+	if err != nil {
+		return err
+	}
 	retry := known && status.State == Read
 	// Withdrawn is final like read, whatever copy the caller holds: a
 	// withdrawal that failed after its status leaves the original in unread/,
@@ -120,13 +168,23 @@ func MarkRead(dir, name, epoch string, message Message, reports bool) error {
 			return err
 		}
 	}
-	if withdrawn && !tombstoneIn(state.UnreadPath(dir, name), message.ID) {
-		// What is kept is what was read: the tombstone, not the original.
-		return archiveTombstone(dir, name, tombstoneOf(message, ""))
+	if withdrawn {
+		stone, err := tombstoneIn(state.UnreadPath(dir, name), message.ID)
+		if err != nil {
+			return err
+		}
+		if !stone {
+			// What is kept is what was read: the tombstone, not the original.
+			return archiveTombstone(dir, name, tombstoneOf(message, ""))
+		}
 	}
-	err := move(message.ID, state.UnreadPath(dir, name), state.DonePath(dir, name))
+	err = move(message.ID, state.UnreadPath(dir, name), state.DonePath(dir, name))
 	if errors.Is(err, os.ErrNotExist) {
-		return nil
+		err = nil
+	}
+	if err == nil {
+		// Read to the end, by whichever channel: no longer in progress.
+		dropClaim(dir, name, message.ID)
 	}
 	return err
 }
@@ -172,7 +230,10 @@ func move(id, from, into string) error {
 	return nil
 }
 
-// listIn returns the messages in one directory, oldest first.
+// listIn returns the messages in one directory, oldest first. A file that
+// left the directory after it was listed moved on, and is not listed; one that
+// is there and cannot be read, or does not parse, may be any letter at all, so
+// the listing is an error naming it rather than a list without it.
 func listIn(directory string) ([]Message, error) {
 	entries, err := os.ReadDir(directory)
 	if err != nil {
@@ -195,14 +256,17 @@ func listIn(directory string) ([]Message, error) {
 	messages := make([]Message, 0, len(names))
 	for _, name := range names {
 		raw, err := os.ReadFile(filepath.Join(directory, name))
-		if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
 			continue
+		}
+		if err != nil {
+			return nil, err
 		}
 		var message Message
 		if err := json.Unmarshal(raw, &message); err != nil {
-			// A file that is not a message is not ours to interpret; leave it
-			// where it is rather than deleting somebody else's data.
-			continue
+			// Nothing is deleted or passed over: the file stays where it is,
+			// and whoever lists the directory hears it cannot tell.
+			return nil, fmt.Errorf("%s is not a readable letter: %w", filepath.Join(directory, name), err)
 		}
 		messages = append(messages, message)
 	}

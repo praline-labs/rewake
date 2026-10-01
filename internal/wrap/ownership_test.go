@@ -99,7 +99,7 @@ func TestShutdownOnlyRefusesItsOwnMail(t *testing.T) {
 		t.Fatalf("Run: %v", err)
 	}
 
-	status, ok := inbox.ReadStatus(dir, "api-fake", foreign.ID)
+	status, ok, _ := inbox.ReadStatus(dir, "api-fake", foreign.ID)
 	if !ok || status.State != inbox.Failed {
 		t.Fatalf("status = %+v, want a refusal written while the session ran", status)
 	}
@@ -302,7 +302,7 @@ func isSocket(path string) bool {
 // it ends, and the next holder's socket — at a path of its own — stays.
 func TestEachRunCleansOnlyItsOwnSocket(t *testing.T) {
 	dir := stateDir(t)
-	ours := registry.SocketFor(dir, "api-fake", strconv.Itoa(os.Getpid())+"."+strconv.FormatUint(selfStart(t), 10))
+	ours := registry.SocketFor(dir, "api-fake", registry.RunEpoch(os.Getpid(), selfStart(t), thisBoot(t)))
 	theirs := registry.SocketFor(dir, "api-fake", "999.1")
 	if ours == theirs {
 		t.Fatalf("two runs of a name share the socket path %s", ours)

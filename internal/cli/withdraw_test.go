@@ -43,7 +43,7 @@ func sendOK(t *testing.T, argv ...string) string {
 
 func stored(t *testing.T, dir, id string) inbox.Message {
 	t.Helper()
-	for _, message := range inbox.SentMatching(dir, "web", epochOf(t, dir, "web"), id) {
+	for _, message := range must(inbox.SentMatching(dir, "web", epochOf(t, dir, "web"), id)) {
 		return message
 	}
 	t.Fatalf("%s is not kept", id)
@@ -57,7 +57,7 @@ func TestWithdrawTakesAUniquePrefix(t *testing.T) {
 	if code != ExitOK || !strings.Contains(out, "withdrew your task "+id+" from api before its notice went out") {
 		t.Fatalf("withdraw: %d %q %q", code, out, errOut)
 	}
-	if status, _ := inbox.ReadStatus(dir, "api", id); !status.Withdrawn || status.Detail != "withdrawn by web" {
+	if status, _, _ := inbox.ReadStatus(dir, "api", id); !status.Withdrawn || status.Detail != "withdrawn by web" {
 		t.Fatalf("status %+v", status)
 	}
 	if code, out, _ := run("withdraw", id); code != ExitOK || !strings.Contains(out, "already withdrawn") {
@@ -116,7 +116,7 @@ func TestEditSendsAReplacementInOneStep(t *testing.T) {
 	if replacement := stored(t, dir, fresh); replacement.Replaces != old || replacement.Text != "rerun the smoke on staging" || inbox.KindOf(replacement) != inbox.Task {
 		t.Fatalf("replacement %+v", replacement)
 	}
-	if status, _ := inbox.ReadStatus(dir, "api", old); !status.Withdrawn || !strings.Contains(status.Detail, "replaced by "+fresh) {
+	if status, _, _ := inbox.ReadStatus(dir, "api", old); !status.Withdrawn || !strings.Contains(status.Detail, "replaced by "+fresh) {
 		t.Fatalf("old status %+v", status)
 	}
 	// Withdrawn without a replacement, it is refused, by either id.
@@ -241,7 +241,7 @@ func TestAWithdrawalAfterTheNoticeTellsTheRecipient(t *testing.T) {
 		!strings.HasPrefix(told[0].Text, want) || !strings.HasSuffix(told[0].Text, "): withdrawn unread.") {
 		t.Fatalf("recalls %+v", told)
 	}
-	if len(inbox.SentMatching(dir, "web", epochOf(t, dir, "web"), told[0].ID)) != 0 {
+	if len(must(inbox.SentMatching(dir, "web", epochOf(t, dir, "web"), told[0].ID))) != 0 {
 		t.Fatal("the recall is taken for a letter of the sender's own")
 	}
 	if code, _, _ := run("withdraw", loud); code != ExitOK || len(recalls(t, dir)) != 1 {

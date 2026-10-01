@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 	"time"
@@ -37,6 +38,12 @@ func handleTurnEnded(ctx *Context, call Call) error {
 		return nil
 	}
 	self, _, err := ownRun(dir)
+	if errors.Is(err, errUpgraded) {
+		// The earlier build's hooks run whatever binary is installed now,
+		// while its wrapper keeps that build's protocol: a turn end this
+		// build published for it would mix the two.
+		return refuseUpgraded(dir, self)
+	}
 	if err != nil {
 		// A stale hook cannot report for a newer run of the same name.
 		return nil
@@ -104,6 +111,13 @@ func endTurnContext(parent context.Context, dir string, self registry.Session, e
 	if !registry.OwnsName(dir, self.Name, self.Epoch()) {
 		return "", nil
 	}
+	if event.ID != "" && event.Boundary == nil {
+		// Its scope could come only from a record written at its first
+		// attempt, and a retry after that write failed would fix the scope of
+		// its own moment instead (docs/turn-end-recovery.md#the-operation).
+		// Its waits stay owed for the next end.
+		return "", errors.New("a turn end named by an event id carries no read boundary, so its scope is unknown and it reports nothing; its waits stay owed for the next turn end")
+	}
 
 	// Under the mailbox lock, so two ends of a turn reported at once tell each
 	// waiter once, and a waiter recorded by a read in the meantime is not taken
@@ -112,17 +126,54 @@ func endTurnContext(parent context.Context, dir string, self registry.Session, e
 	defer cancel()
 	reason := ""
 	err := state.WithMailboxLock(ctx, dir, self.Name, func() error {
+		// Every record of the mailbox is reconciled first: a wait an
+		// unfinished journal answered would be answered again, and a stopped
+		// mailbox changes nothing (docs/turn-end-recovery.md#reconciliation).
+		if err := inbox.Reconcile(ctx, dir, self.Name); err != nil {
+			return err
+		}
+		op := turnOp(self, event)
+		if event.ID != "" {
+			// A retry whose journal is on record: the barrier has completed it.
+			recorded, err := inbox.JournalRecorded(dir, self.Name, op)
+			if err != nil || recorded {
+				return err
+			}
+		}
 		waiters, err := inbox.ScopedWaiters(dir, self.Name, self.Epoch(), event.Boundary)
 		if err != nil {
 			return err
 		}
-		if reason = holdTurn(dir, self, event, waiters); reason != "" {
+		mark, err := turnMark(dir, self, event)
+		if err != nil {
+			return err
+		}
+		if reason = holdTurn(dir, self, event, waiters, mark != nil); reason != "" {
 			return nil
 		}
 		beforeReports()
-		return publishTurnContext(ctx, dir, self, event, currentThread, waiters)
+		return publishTurnContext(ctx, dir, self, event, currentThread, waiters, op, mark)
 	})
 	return reason, err
+}
+
+// turnMark finds the pending mark that decides a turn end: this run's latest
+// in the end's window (docs/turn-end-recovery.md#pending-marks). Only a
+// finish is softened by one, and an end whose time is not known has no
+// window. A mark that cannot be read may be this turn's, and stops the end.
+func turnMark(dir string, self registry.Session, event turnResult) (*inbox.Mark, error) {
+	if event.Failed || event.Stopped || event.Ended == 0 {
+		return nil, nil
+	}
+	start, err := inbox.TurnWindowStart(dir, self.Name, self.Epoch(), event.Started, event.Ended)
+	if err != nil {
+		return nil, err
+	}
+	mark, ok, err := inbox.MarkWithin(dir, self.Name, self.Epoch(), start, event.Ended)
+	if err != nil || !ok {
+		return nil, err
+	}
+	return &mark, nil
 }
 
 // hookLockWait is how long the end of a turn waits for the mailbox. What it

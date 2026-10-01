@@ -15,7 +15,7 @@ import (
 
 func claimRole(t *testing.T, dir, name string, part role.Role) (registry.Session, error) {
 	t.Helper()
-	return claimName(Request{Dir: dir, Name: name, Harness: &fakeHarness{}, Role: part}, os.Getpid(), selfStart(t), dir)
+	return claimName(Request{Dir: dir, Name: name, Harness: &fakeHarness{}, Role: part}, os.Getpid(), selfStart(t), thisBoot(t), dir, noWriters)
 }
 
 func TestARoomReservesExplicitMainAndHonorsOtherRoles(t *testing.T) {
@@ -74,7 +74,7 @@ func TestConcurrentDefaultLaunchesStayGeneral(t *testing.T) {
 		go func() {
 			defer group.Done()
 			<-gate
-			session, err := claimName(Request{Dir: dir, Name: string(rune('a' + i)), Harness: &fakeHarness{}}, os.Getpid(), start, dir)
+			session, err := claimName(Request{Dir: dir, Name: string(rune('a' + i)), Harness: &fakeHarness{}}, os.Getpid(), start, thisBoot(t), dir, noWriters)
 			if err != nil {
 				failures <- err
 			} else {

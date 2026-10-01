@@ -16,7 +16,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -63,6 +62,10 @@ type Session struct {
 	// PIDNamespace is the pid namespace the two pids above belong to. A reader
 	// in a different one cannot judge whether they are alive.
 	PIDNamespace string `json:"pidNamespace,omitempty"`
+	// Boot and Build say which boot of the machine the run belongs to and
+	// which protocol it follows (run.go); an earlier build wrote neither.
+	Boot  string `json:"boot,omitempty"`
+	Build string `json:"build,omitempty"`
 }
 
 // alive is the liveness check, replaceable so tests can describe a machine
@@ -102,6 +105,11 @@ func (s Session) Judgeable() bool {
 // outlives its harness has nothing to deliver to, and a harness whose wrapper is
 // gone has nobody to deliver for it.
 func (s Session) Alive() bool {
+	if s.Boot != "" && !isCurrentBoot(s.Boot) {
+		// A run of another boot of the machine has ended, whatever runs now
+		// under its pid and start.
+		return false
+	}
 	if !s.Judgeable() {
 		// Cannot see those processes from here. Saying "alive" leaves delivery
 		// to the wrapper, which can see them; saying "dead" would drop mail and
@@ -115,13 +123,6 @@ func (s Session) Alive() bool {
 		return false
 	}
 	return true
-}
-
-// Epoch identifies this run of a session name. A message carries the epoch of
-// the session it was written for, so a later session that happens to take the
-// same name does not receive somebody else's mail.
-func (s Session) Epoch() string {
-	return strconv.Itoa(s.ServicePID) + "." + strconv.FormatUint(s.ServiceStart, 10)
 }
 
 // Age is how long the session has been published.

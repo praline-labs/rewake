@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/praline-labs/rewake/internal/state"
 )
@@ -27,6 +26,11 @@ func Names(dir string) []string {
 // ChooseName returns a free name. An explicit one is taken as given — a taken
 // name is a refusal, not a silent rename, because the caller is about to tell
 // somebody else that address. A default one grows a suffix until it is free.
+//
+// It removes nothing: a launch chooses its name before it proves the earlier
+// build's writers of that name stopped, and a record pruned here would be
+// the evidence that proof reads (docs/protocol-cutover.md). The dead record of
+// the name chosen goes when the launch publishes over it.
 func ChooseName(dir, explicit, base string) (string, error) {
 	if explicit != "" {
 		if !state.ValidName(explicit) {
@@ -42,7 +46,7 @@ func ChooseName(dir, explicit, base string) (string, error) {
 		if !state.ValidName(candidate) {
 			return "", fmt.Errorf("%w: automatic name %q must fit 32 characters and the session-name syntax; choose a shorter valid prefix with --name", ErrUnusableName, candidate)
 		}
-		if _, err := Lookup(dir, candidate); errors.Is(err, ErrNotFound) {
+		if _, err := LookupReadOnly(dir, candidate); errors.Is(err, ErrNotFound) {
 			return candidate, nil
 		}
 	}
@@ -60,20 +64,3 @@ func ControlFor(dir, name, epoch string) string { return state.ControlPath(dir, 
 
 // RecordPath is the file holding a session record.
 func RecordPath(dir, name string) string { return filepath.Clean(state.SessionPath(dir, name)) }
-
-// ParseEpoch reads back the wrapper an epoch names: its pid and start time.
-func ParseEpoch(epoch string) (int, uint64, bool) {
-	pid, start, found := strings.Cut(epoch, ".")
-	if !found {
-		return 0, 0, false
-	}
-	number, err := strconv.Atoi(pid)
-	if err != nil || number <= 0 {
-		return 0, 0, false
-	}
-	ticks, err := strconv.ParseUint(start, 10, 64)
-	if err != nil {
-		return 0, 0, false
-	}
-	return number, ticks, true
-}

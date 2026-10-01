@@ -23,9 +23,13 @@ everything else.
   and how a report notes that the reader's conversation changed underneath it. Open it
   for a question, a notify, a session's end, or a stall a reader met.
 - [design.md](design.md) — the specification: scope, the process model with no daemon,
-  the state directory, rooms, the session record, the environment a harness receives,
+  the state directory, rooms, the environment a harness receives,
   the CLI contract and exit codes, the code policy, the testing layers, and dated owner
   decisions. Open it for why the system has the shape it has, or for a canonical rule.
+- [session-record.md](session-record.md) — the session record, split from design.md by
+  subject: every field, the boot and build stamp that tell a run of this build from an
+  earlier one, and how a record is published, updated and pruned. Open it when reading or
+  changing what a session record says.
 - [roles.md](roles.md) — roles and names, split from design.md by subject and the one
   place their rules live: the role catalogue and what each role reports and may be
   granted, what each role is told and the owner's rules behind it, how the role
@@ -78,12 +82,45 @@ everything else.
   Claude Code socket line, its reply socket and receipts, held and late words, the startup
   gate and what a killed wrapper leaves behind; and the Codex gateway in brief. Open it
   when a delivery result for one harness is in question.
+- [mail-bridge.md](mail-bridge.md) — design, stage 1 of 3 built: one MCP tool carrying CLI words
+  outside the sandbox, its allowed operations, native call identity, per-launch approval
+  and configuration preservation, refusal on an occupied name, bounded reads, receipts
+  and fallback; the two live probes and remaining acceptance gates. Open it before
+  building the bridge or when judging its read and retry boundaries.
+- [mail-bridge-cli.md](mail-bridge-cli.md) — the CLI side of that tool as built: bridge
+  mode and its ticket, bounded parts, reads frozen and marked only on the wrapper's
+  evidence, claims against withdrawal, the receipt journal behind notify and pending,
+  `inbox --next` and `rewake retry` in either channel, and the readings of the
+  specification it chose. Open it when a read in parts, a receipt or a retry is in question.
+- [turn-end-recovery.md](turn-end-recovery.md) — how a turn end is recovered under rules 7
+  and 8 of mail-bridge-cli.md, as the code keeps them: the operation's identity and
+  scope by event form, the read clock for holds, pending marks and the interim record,
+  the evidence for each effect, the reconciliation order, the stop on an unknown and
+  `rewake settle`, and the table of every record and state. Open it before changing the
+  turn end's recovery.
+- [turn-end-recovery-findings.md](turn-end-recovery-findings.md) — what the acceptances
+  and reviews of the turn-end recovery found, each with the clause that closes it, and
+  what the probes of the earlier acceptances expect now. Open it when a finding comes
+  back, or before reading an old probe's verdict.
+- [mailbox-records.md](mailbox-records.md) — every kind of file a mailbox holds, as the
+  list in code names them; the reading of the whole mailbox and of every effect's marks
+  before any effect, the test that keeps the list complete, the stop on record and how
+  it goes, and the notes to main a journal owes. Open it before a writer adds a path
+  under a mailbox.
+- [protocol-cutover.md](protocol-cutover.md) — how a mailbox passes from an earlier
+  build's protocol to that one, as the code does it: the launch order, the states of
+  the successor, run records named by boot and epoch, the upgrade the automatic cutover
+  is bounded by and the look for earlier-build writers within it, and what this build
+  refuses or holds for a run of the earlier build. Open it before changing a launch or
+  anything that tells builds apart.
 - [delivery-conversation.md](delivery-conversation.md) — why a Codex message stays
   pending in a conversation the launch did not ask for: the launch's intent, `rewake
   accept`, the record that keeps the worker's inbox closed meanwhile, and how the sender,
   main and the person at the terminal are told; and why a worker whose sandbox closes
-  rewake's state directory is not handled there yet. Open it when a Codex delivery waits
-  after a resume, or a worker cannot read its mail.
+  rewake's state directory is not handled there yet; and, for either harness, how a
+  resumed run takes over the waits of the earlier runs in its conversation. Open it when a
+  Codex delivery waits after a resume, a worker cannot read its mail, or a resumed run's
+  report does not settle what an earlier run read.
 - [turn-outcomes.md](turn-outcomes.md) — the turn ends that are not an ordinary report:
   a failed turn, a keyboard stop, and a turn end marked with `rewake pending`, which tells
   the waiters the work is still going and keeps their tasks owed, with the confirmation

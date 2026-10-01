@@ -79,6 +79,8 @@ Created with 0700. [Optional primary observations](session-state.md) are collect
   rooms/<room>/
     .launch.lock              serializes role choice and name publication
     sessions/<name>.json       session record
+    runs/<name>/<boot>/<epoch> a run of this build and its build stamp, never swept (protocol-cutover.md)
+    runs/<name>/successor      the name's first run of this build, the successor of its earlier-build runs
     observations/<digest>.json latest bounded state for one name/epoch
     inbox/<name>/<id>.json     waiting for delivery
     inbox/<name>/<id>.status   pending, delivered, read or failed
@@ -87,10 +89,14 @@ Created with 0700. [Optional primary observations](session-state.md) are collect
     inbox/<name>/answering/<id> renewable question reservation
     inbox/<name>/received/<id> id of the report successfully printed
     inbox/<name>/retention/<id> reservation release time for reports
-    inbox/<name>/turns/<id>    completion retry receipts
+    inbox/<name>/turns/<id>    an earlier build's turn receipts, until a run of this build converts them
+    inbox/<name>/journal/<id>  what a turn end publishes, takes and clears, named by the end; `conversion`, the earlier build's receipts converted (turn-end-recovery.md)
     inbox/<name>/threads/<id>  selected delivery thread, when supported
     inbox/<name>/awaiting/<epoch>/<peer> reports owed by this run
-    inbox/<name>/pending/      the running turn's `rewake pending` mark; the last interim end and a held answer (turn-outcomes.md)
+    inbox/<name>/pending/      this run's `rewake pending` marks; its last word on the work and a held answer (turn-outcomes.md)
+    inbox/<name>/receipts/<epoch>/ journal of notify, pending, reads in parts and long outputs (mail-bridge-cli.md)
+    inbox/<name>/claims/<id>   a letter a tool read has started showing in parts
+    inbox/<name>/once/<epoch>/<id> a journaled notify or a turn end's report written into this mailbox, so a retry writes it once
     sock/<name>.<epoch>.sock   one inbound socket per run
     sock/<name>.<epoch>.reply.sock the wrapper's own: Claude Code's receipts for held lines
     sock/<name>.<epoch>.obs    Claude Code telemetry datagrams to the wrapper
@@ -104,6 +110,8 @@ All mailbox paths in the delivery specification are relative to the room.
 Socket names — the telemetry socket's too — fall back to a digest of name and epoch
 when the expanded path would exceed 103 bytes (the reply socket, which has to share the
 inbound socket's directory, to `rewake-<digest>.reply.sock` there); an excessively long state root still needs shortening.
+Since an epoch carries the machine's boot id, 36 characters, the digest is the usual
+form under an ordinary state root, and the expanded one the exception.
 
 One thing rewake keeps outside it: the checkouts it makes for a launch with
 `--worktree`, and their records. A checkout holds work that must outlive a restart, so
@@ -132,57 +140,8 @@ sessions, and an old record must not appear in a new room by accident.
 
 ### Session record
 
-```json
-{
-  "name": "general-claude-2",
-  "room": "default",
-  "role": "general",
-  "roleReason": "selected explicitly with --general",
-  "harness": "claude",
-  "servicePid": 12345,
-  "serviceStart": 1671399,
-  "harnessPid": 12346,
-  "harnessStart": 1671402,
-  "cwd": "/home/u/code/x",
-  "startedAt": "2026-09-16T00:08:03Z",
-  "messagingReadyAt": "2026-09-16T00:08:05Z",
-  "socket": "/tmp/rewake-1000/rooms/default/sock/general-claude-2.12345.1671399.sock",
-  "ownsSocket": true,
-  "pidNamespace": "pid:[4026531836]"
-}
-```
-
-- `serviceStart`, `harnessStart` — field 22 of `/proc/<pid>/stat` (start time in
-  ticks). Liveness = the process exists and the start time matches: pids get
-  reused.
-- `messagingReadyAt` — when the session first became ready to take messages; it marks
-  that the start succeeded, not that delivery works now. Absent until then.
-- `ownsSocket` — this session created the socket path, so it removes it when it ends;
-  absent for a harness without a socket, and for one whose socket path the caller named.
-- `cwd` — the directory rewake was launched from, taken when the name is claimed. A
-  harness that moves itself afterwards is not followed: Claude Code launched with `-w
-  <name>` runs in `.claude/worktrees/<name>`, while the record, `rewake list` and the
-  availability notices show the launch directory (live, 2.1.280, September 26, 2026,
-  [research-launch.md](research-launch.md#a-worktree-at-launch)). A known discrepancy,
-  not fixed yet.
-- `codexHome` — the `CODEX_HOME` a Codex session runs with; absent for other harnesses.
-- `pidNamespace` — the pid namespace the two pids belong to: a reader in another one
-  cannot judge whether they are alive, and does not try.
-- A session is alive as long as both the servicing process and the harness are
-  alive. A listing or a lookup deletes a dead record it reads, but only when the
-  record's name lock is free at that moment (`LOCK_NB`): both are reads and never wait
-  on a lock — a lookup runs inside `turn-ended`, the foreground Stop hook, where a wait
-  would stall the end of a turn. Whoever holds the lock is the run leaving or another
-  reader cleaning up, so a record left now goes with the next read, and a dead record
-  is reported as no session either way. Publishing still takes the lock and waits,
-  replacing a dead record under it. Decided September 23, 2026 over
-  a bounded wait, which would still make a read wait on something it cannot see.
-- Publishing a record is atomic and exclusive: write a temp file, then `link()`
-  it to the final name — `link` fails if the name is taken. If the existing
-  record belongs to a dead session, it's removed and the attempt retried; for a
-  live one, the name stays taken.
-- Updating one's own record (for example, the harness pid after launch) uses a
-  temp file and `rename()`.
+What a session record holds, field by field, and how it is published and pruned:
+[session-record.md](session-record.md).
 
 ### Roles and names
 

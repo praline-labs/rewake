@@ -65,8 +65,12 @@ in it lives:
 
 - a session record, as long as its session runs; it is removed when the session ends
   and pruned when found dead;
-- finished mail, statuses and turn receipts, a day after they were last written
-  (`keepFinished` in `internal/inbox/serve.go`);
+- finished mail and statuses, a day after they were last written (`keepFinished` in
+  `internal/inbox/serve.go`);
+- an earlier build's turn receipt, until a run of this build meets it at adoption or at
+  its next turn end and converts it; it is never swept by age, since it names no run of
+  this build ([turn-end-recovery.md](turn-end-recovery.md)), and a mailbox whose receipt could not be
+  decided keeps its conversion journal until the person settles it;
 - a task still owed, for as long as it is owed — which ends at its reader's next report,
   or with the reader's run.
 
@@ -108,7 +112,7 @@ In one change, in this order:
 
 | File | Mark | Count |
 |---|---|---|
-| `internal/cli/turn_receipt.go` | `rewake <2026-09-19` | 1 |
+| `internal/cli/turn_legacy_receipt_test.go` | `rewake <2026-09-30` | 1 |
 | `internal/harness/codex/gateway/connections.go` | `codex <0.157.1` | 1 |
 | `internal/harness/codex/gateway/fork.go` | `codex <0.157.1` | 1 |
 | `internal/harness/codex/gateway/metadata.go` | `codex <0.157.1` | 1 |
@@ -117,6 +121,9 @@ In one change, in this order:
 | `internal/harness/codex/gateway/state_test.go` | `codex <0.157.1` | 1 |
 | `internal/harness/codex/gateway/tui_paths_test.go` | `codex <0.157.1` | 2 |
 | `internal/inbox/answer_mark.go` | `rewake <2026-09-26` | 1 |
+| `internal/inbox/conversion.go` | `rewake <2026-09-30` | 1 |
+| `internal/inbox/conversion_decide.go` | `rewake <2026-09-30` | 1 |
+| `internal/inbox/turn_records.go` | `rewake <2026-09-30` | 1 |
 | `internal/inbox/waiters.go` | `rewake <2026-09-28` | 1 |
 | `internal/inbox/window.go` | `rewake <2026-09-26` | 1 |
 | `internal/registry/registry.go` | `rewake <2026-09-16` | 1 |

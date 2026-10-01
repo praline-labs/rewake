@@ -28,6 +28,17 @@ type turnResult struct {
 	Holdable bool
 }
 
+// kind names what the end says of the work, which is part of its event.
+func (r turnResult) kind() string {
+	switch {
+	case r.Stopped:
+		return "stopped"
+	case r.Failed:
+		return "failed"
+	}
+	return "finished"
+}
+
 func completedTurn(payload []byte) (turnResult, bool) {
 	var fields map[string]json.RawMessage
 	if json.Unmarshal(payload, &fields) != nil {

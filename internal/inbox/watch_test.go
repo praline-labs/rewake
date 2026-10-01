@@ -154,7 +154,7 @@ func TestASweptAnswerIsNotReportedAsPending(t *testing.T) {
 	if err := state.EnsureSubdir(state.DonePath(dir, "api")); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
-	if Answered(dir, "api", sent.ID) != true {
+	if must(Answered(dir, "api", sent.ID)) != true {
 		t.Error("a message that is nowhere to be found was reported as still waiting")
 	}
 
@@ -162,7 +162,7 @@ func TestASweptAnswerIsNotReportedAsPending(t *testing.T) {
 	if err := Put(dir, sent); err != nil {
 		t.Fatalf("put: %v", err)
 	}
-	if Answered(dir, "api", sent.ID) {
+	if must(Answered(dir, "api", sent.ID)) {
 		t.Error("a message still in the mailbox was reported as answered")
 	}
 }

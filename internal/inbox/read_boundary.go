@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -83,7 +84,16 @@ func OpenReadClock(ctx context.Context, dir, name, epoch string) (clock *ReadClo
 			return err
 		}
 		through := clock.Snapshot().Through
-		for _, waiter := range Waiters(dir, name, epoch) {
+		// A record that cannot be read may hold the highest sequence: the
+		// clock started below it would hand a later read a sequence already
+		// taken.
+		waiters, err := ReadWaiters(dir, name, epoch)
+		if err != nil {
+			clock.Close()
+			clock = nil
+			return err
+		}
+		for _, waiter := range waiters {
 			for _, seq := range waiter.ReadSequences {
 				through = max(through, seq)
 			}
@@ -110,13 +120,30 @@ func markScopedAwaiting(dir, name, epoch string, message Message, readAt int64) 
 	if message.FromEpoch == "" || !state.ValidName(message.From) {
 		return nil
 	}
+	return onReadClock(dir, name, epoch, func(position uint64) error {
+		return markAwaitingSequence(dir, name, epoch, message.From, message.FromEpoch, message.ID, position, readAt)
+	})
+}
+
+// onReadClock takes the next position on a run's read clock for one read or
+// one hold (docs/turn-end-recovery.md#the-read-clock), under the mailbox lock
+// the caller holds, in one order: the position is reserved in the durable
+// high-water record, write records it, and only then is the word that
+// completions capture their boundary from committed. So a boundary never
+// covers a position whose record is not yet written, and a position is never
+// issued twice: a failed write leaves a gap, and the high-water keeps it.
+func onReadClock(dir, name, epoch string, write func(uint64) error) error {
 	c, err := openReadClock(dir, name, epoch)
 	if err != nil {
 		return err
 	}
 	defer c.Close()
 	next := c.Snapshot().Through
-	for _, waiter := range Waiters(dir, name, epoch) {
+	waiters, err := ReadWaiters(dir, name, epoch)
+	if err != nil {
+		return err
+	}
+	for _, waiter := range waiters {
 		for _, seq := range waiter.ReadSequences {
 			next = max(next, seq)
 		}
@@ -138,7 +165,7 @@ func markScopedAwaiting(dir, name, epoch string, message Message, readAt int64) 
 	if err := state.WriteAtomic(highPath, []byte(strconv.FormatUint(next+1, 10))); err != nil {
 		return err
 	}
-	if err := markAwaitingSequence(dir, name, epoch, message.From, message.FromEpoch, message.ID, next+1, readAt); err != nil {
+	if err := write(next + 1); err != nil {
 		return err
 	}
 	atomic.StoreUint64(c.word(), next+1)
@@ -148,7 +175,10 @@ func markScopedAwaiting(dir, name, epoch string, message Message, readAt int64) 
 // ScopedWaiters resolves only still-owed messages committed before the captured
 // boundary. Later reads and recipient epochs cannot enter a delayed result.
 func ScopedWaiters(dir, name, epoch string, boundary *ReadBoundary) ([]Waiter, error) {
-	waiters := Waiters(dir, name, epoch)
+	waiters, err := ReadWaiters(dir, name, epoch)
+	if err != nil {
+		return nil, err
+	}
 	if boundary == nil {
 		return waiters, nil
 	}
@@ -181,6 +211,31 @@ func ScopedWaiters(dir, name, epoch string, boundary *ReadBoundary) ([]Waiter, e
 		}
 	}
 	return selected, nil
+}
+
+// OnlyMessages narrows waiters to the messages in ids, each with its read
+// sequence and time: what a turn end's first attempt found owed is all its
+// retries answer, whatever was read since.
+func OnlyMessages(waiters []Waiter, ids []string) []Waiter {
+	var selected []Waiter
+	for _, waiter := range waiters {
+		var kept Waiter
+		kept.Name, kept.Epoch, kept.Since = waiter.Name, waiter.Epoch, waiter.Since
+		for i, id := range waiter.Messages {
+			if !slices.Contains(ids, id) {
+				continue
+			}
+			kept.Messages = append(kept.Messages, id)
+			if i < len(waiter.ReadSequences) {
+				kept.ReadSequences = append(kept.ReadSequences, waiter.ReadSequences[i])
+			}
+			kept.ReadAt = append(kept.ReadAt, waiter.readAt(i))
+		}
+		if len(kept.Messages) > 0 {
+			selected = append(selected, kept)
+		}
+	}
+	return selected
 }
 
 func readHigh(path string) ([]byte, error) {

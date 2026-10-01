@@ -9,30 +9,109 @@ ordinary report are described.
 ### The end of a turn
 
 Callbacks with a nonempty `agent_id` belong to a nested agent and are ignored
-before touching turn receipts or waits. `agent_type` alone
+before touching turn journals or waits. `agent_type` alone
 does not imply nesting: a root session can select an agent profile.
 
 A hook runs `rewake turn-ended` with the last reply in its payload. The owned
 server backend sends completion events directly to the same internal reporting
-function, with explicit session epoch and thread identity. Backend completions
-carry an observation-time read boundary; only its eligible still-owed messages are
-selected. Under the mailbox lock, for every eligible run in `awaiting/<own epoch>/` it
-leaves a `finished` message whose text is that reply, and whose `inReplyTo`
-lists the messages read from that run since its last report, addressed to that run —
-not to whoever holds the name now. Before publishing an identified turn, its
-receipt in `turns/` stores the waiter/message snapshot and complete report batch:
-recipient epochs, ids, kind, text, timestamps and thread-change annotations.
-Retries load this batch, even if the callback payload or current waits changed.
-All reports must be published before the receipt is marked done. Cleanup removes
-only the recorded message ids from the same run and wait; later messages remain
-owed to the next result. A recipient whose run ended is skipped. The fallback
-target is also fixed before publication, never selected again on retry.
+function, with explicit session epoch and thread identity. Under the mailbox lock, for
+every eligible run in `awaiting/<own epoch>/` it leaves a `finished` message whose text
+is that reply, and whose `inReplyTo` lists the messages read from that run since its
+last report, addressed to that run — not to whoever holds the name now. The rules this
+follows are 7 and 8 of [mail-bridge-cli.md](mail-bridge-cli.md); how each record is
+recovered, record by record, is [turn-end-recovery.md](turn-end-recovery.md), and this
+section is the path through the code.
+
+A turn end is one operation, named by its cause: a hash of the run, the event's id, its
+kind and its start and end on the boot clock (`turnOp` in `internal/cli/turn_reports.go`).
+Its scope is fixed by what the event carries. An end that names an event carries a read
+boundary, a position on the run's read clock (`internal/inbox/read_boundary.go`): what
+was read or kept at or below it is this end's, and a task read or an answer kept above
+it belongs to a later end, however late a retry comes. An end that names an event and
+carries no boundary reports nothing, on any attempt, and its waits stay owed. An end
+heard once — a hook that names no event — has no retry, and its one attempt under the
+lock is its scope. The pending mark that makes the end interim is found in the turn's
+window: from the later of the turn's start and the latest earlier end of the run a
+journal records (`TurnWindowStart`), to its end. No end removes a mark: marks stay for
+the run's life ([turn-outcomes.md](turn-outcomes.md)).
+
+The journal, `journal/<op>` (`internal/inbox/journal.go`), is written before the first
+effect and is the one source of what the end does, and nothing but a journal publishes:
+the complete report batch — recipient epochs, ids, kind, text, timestamps and
+thread-change annotations — then the version of the kept answer the reports carry, the
+waits to clear, the mark used, and the end's word for the interim record: the pending
+line, or that the end settled the work. Completing publishes each report not yet
+published and records its id, drops the kept answer only when it is still the version
+published, clears only the recorded message ids — later messages remain owed to the next
+result — and records the interim end, never over a record of the same run that ended
+later, nor over the record of another run that holds the name (`internal/inbox/interim.go`). It then empties the journal to its
+operation and its end time, marks it done and renames it `<op>.done`, so the barrier
+does not read it again while a retry of the same end still finds it completed. A done
+journal is kept while its run lives: a retry comes only from that run, and the next
+end's window opens after it. The live run's sweep looks at them again a day later and
+removes those of ended runs; an unfinished journal is never swept, and a write of one
+that never finished (a dot name) is skipped and swept.
+
+A turn end that fails or dies anywhere in the sequence leaves its journal unfinished,
+and the barrier completes it under the mailbox lock before a wait is read again
+(`inbox.Reconcile`, `internal/inbox/reconcile.go`): every turn end runs it first, and so
+does adoption, which the server runs at its start. One it cannot complete stops that
+turn end, or that adoption, too. The turn end completes its own journal the same way,
+through the barrier, once it is written. Before any effect the barrier reads every file
+of the mailbox against the list of record kinds, then runs its remaining effects as a
+plan that writes nothing, so whatever they decide by is read first
+([mailbox-records.md](mailbox-records.md#the-plan-and-the-seam)), and changes nothing
+while one of them cannot be told, so a journal never publishes beside an unknown found
+late. The same plan is the stop every other call asks first (`inbox.MailboxStopped`): `rewake inbox` and each
+part of a read in parts, `rewake pending`, the acknowledgment of a read, and a question
+taking its answer all refuse while a record cannot be told. The stop is kept on record
+in the mailbox, and goes once a look finds its cause gone, or, for one only an effect
+met, once a barrier has run every effect through. The ids the journal records are its own proof of
+publication, and the recipient keeps one that covers the gap between writing a report
+and recording its id: each report is written under the marks of
+`inbox/<to>/once/<to-epoch>/<id>` that a journaled heads-up uses — `intent` before,
+`published` after — and the sweep settles an intent before it removes the report it
+names. The marks live as long as the recipient's run, which is as long as a journal can
+publish to it, so a journal completed after the recipient has read the report and swept
+it does not publish it again. A report found written without a mark is marked published
+before the journal goes on. A mark that says neither is unknown: it stops the mailbox before the journal's
+first effect, and stops a heads-up published once, the sweep's removal of the letter and the answer to what a run
+was sent. The marks are written without the recipient's lock, which a turn end holding
+its own must not wait on; the report is looked for before the mark is read, so a sweep
+removing it in between has marked it published first, or left no mark for this one to
+write. A report whose recipient is a run of this build that has ended is moot. One for a
+run of the earlier build is held in the journal and goes to that name's successor once
+it is ready ([protocol-cutover.md](protocol-cutover.md#what-this-build-refuses-or-holds)).
+The successor recorded as its recipient before a publication that did not finish is
+looked at again on every attempt: gone makes the report moot, with main told, and a
+publication its session did not take leaves it held. The plan reads the mark of the
+successor an attempt would choose before any effect, by the same decision.
+The fallback target is also fixed before publication, never selected again on retry.
+
+What a build before the journal left — its receipts in `turns/`, its kept answer, its
+pending marks and interim record — belongs to a run of that build, which has ended by the
+time a run of this build holds the name. The barrier converts the receipts once, into the
+conversion journal `journal/conversion` (`internal/inbox/conversion.go`), and decides
+their reports together by the evidence each has: the receipt's done mark, a `published`
+mark, or the letter itself, which is recorded there first since the sweep takes it
+(`conversion_decide.go`). A conversion that died between saving its journal and
+removing the receipts leaves receipts it holds already; the next barrier removes them,
+while a receipt that appeared or changed since stops the mailbox. A report closed by
+another proven one is superseded; a closing one for an ended run of this build is moot,
+and what it answered is cleared; one whose evidence is gone stops the mailbox — the turn
+end, `rewake inbox` and `rewake pending` refuse, naming `rewake settle`, and main is told
+once — until main or the person settles it (`internal/cli/settle.go`, which refuses a
+session other than main); a stop or interim note of unknown fate is withheld for good.
+The earlier run's kept answer, marks and interim record are never taken by this run's
+end. A run of the earlier build that is still running is refused by this build
+altogether: its hooks and calls exit 1, saying rewake was upgraded and the session must
+be resumed ([protocol-cutover.md](protocol-cutover.md)).
 
 The report's id is derived from the wait — the reporting run, the waiting run,
 when the wait began, and its message ids — and a report whose id is already in the recipient's
-mailbox, in any stage, is not written again. A waiter that could not be removed,
-or a hook that died between writing and forgetting, therefore costs nothing at
-the next turn. A read retried after its last step failed does not record the
+mailbox, in any stage, is not written again. A hook that died between writing
+and forgetting therefore costs nothing at the next turn: its retry, or whoever completes
+its journal, forgets the same wait. A read retried after its last step failed does not record the
 wait a second time: the `read` status, written after the wait, says it is a
 retry. A payload that does not
 arrive within three seconds is treated as no payload. Their wrappers announce it:

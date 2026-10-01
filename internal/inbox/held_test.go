@@ -60,7 +60,7 @@ func (f *heldFixture) until(t *testing.T, want State) Status {
 	t.Helper()
 	deadline := time.Now().Add(5 * time.Second)
 	for {
-		status, ok := ReadStatus(f.dir, "api", f.task.ID)
+		status, ok, _ := ReadStatus(f.dir, "api", f.task.ID)
 		if ok && status.State == want {
 			return status
 		}
@@ -119,7 +119,7 @@ func TestAHeldTaskIsNotDelivered(t *testing.T) {
 	if status.Detail != "the session holds the notice" {
 		t.Fatalf("the hold lost its reason: %+v", status)
 	}
-	if Answered(f.dir, "api", f.task.ID) {
+	if must(Answered(f.dir, "api", f.task.ID)) {
 		t.Fatal("a held task left the waiting set")
 	}
 }
@@ -172,7 +172,7 @@ func TestASessionEndingFailsWhatItHolds(t *testing.T) {
 	f.announced(t)
 	f.until(t, Held)
 	f.stop()
-	status, _ := ReadStatus(f.dir, "api", f.task.ID)
+	status, _, _ := ReadStatus(f.dir, "api", f.task.ID)
 	if status.State != Failed || !strings.Contains(status.Detail, "held") {
 		t.Fatalf("a hold nothing can release now stayed %+v", status)
 	}
@@ -191,7 +191,7 @@ func TestAHeldTaskReadAnywayStaysRead(t *testing.T) {
 	f.until(t, Read)
 	f.receipts <- Receipt{ID: id, Result: Result{State: Failed, Detail: "expired"}}
 	time.Sleep(100 * time.Millisecond)
-	if status, _ := ReadStatus(f.dir, "api", f.task.ID); status.State != Read {
+	if status, _, _ := ReadStatus(f.dir, "api", f.task.ID); status.State != Read {
 		t.Fatalf("a read task became %+v", status)
 	}
 	if f.undelivered(t) != nil {

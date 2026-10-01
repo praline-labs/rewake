@@ -10,6 +10,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/proc"
 	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/registry/registrytest"
 	"github.com/praline-labs/rewake/internal/state"
 )
 
@@ -31,6 +32,7 @@ func liveSession(t *testing.T, name string) string {
 	if err != nil {
 		t.Fatalf("state.Dir: %v", err)
 	}
+	checkRecordKinds(t, resolved)
 
 	start, err := proc.StartTime(os.Getpid())
 	if err != nil {
@@ -41,6 +43,10 @@ func liveSession(t *testing.T, name string) string {
 		Harness:      "claude",
 		ServicePID:   os.Getpid(),
 		ServiceStart: start,
+		Boot:         registrytest.Boot(t),
+		// A launch of this build records the namespace it runs in, and a
+		// record without one is a run out of sight (protocol-cutover.md).
+		PIDNamespace: proc.Namespace(),
 		CWD:          resolved,
 		StartedAt:    time.Now(),
 		Socket:       filepath.Join(resolved, "sock", name+".sock"),

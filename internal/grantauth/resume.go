@@ -81,7 +81,7 @@ func (a *Authority) reconfirm(conn *net.UnixConn, asked Grant, thread string) (G
 		// Asked again by the run it was handed to: a retry.
 		return held.grant, nil
 	}
-	if pid, start, ok := registry.ParseEpoch(held.grant.ToEpoch); ok && proc.Alive(pid, start) {
+	if registry.EpochAlive(held.grant.ToEpoch) {
 		return Grant{}, fmt.Errorf("the grant with message %s belongs to a run of %s that is still running", asked.ID, asked.To)
 	}
 	if a.Open != nil {
@@ -106,8 +106,8 @@ func askedByRun(conn *net.UnixConn, epoch string) error {
 	if int(peer.Uid) != os.Getuid() {
 		return errors.New("asked by another user")
 	}
-	pid, start, ok := registry.ParseEpoch(epoch)
-	if !ok || int(peer.Pid) != pid || !proc.Alive(pid, start) {
+	pid, _, ok := registry.ParseEpoch(epoch)
+	if !ok || int(peer.Pid) != pid || !registry.EpochAlive(epoch) {
 		return fmt.Errorf("asked by process %d, which is not the wrapper of run %s", peer.Pid, epoch)
 	}
 	if err := sameNamespaces(pid); err != nil {
@@ -145,7 +145,7 @@ func RestoreHint(dir, name, epoch, thread string, hint grant.Hint) Restored {
 	switch {
 	case !ok || !state.ValidName(hint.From):
 		outcome.Err = fmt.Errorf("%w: the copy names no main run that could confirm it", ErrNotConfirmed)
-	case !proc.Alive(pid, start):
+	case !registry.EpochAlive(hint.FromEpoch):
 		outcome.Err = gone
 	default:
 		outcome.Grant, outcome.Err = Reconfirm(state.AuthorityAddress(dir, hint.FromEpoch), Expect{PID: pid, Start: start}, hint.Message, name, epoch, thread)

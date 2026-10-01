@@ -21,6 +21,7 @@ func stateDir(t *testing.T) string {
 	if err != nil {
 		t.Fatalf("state.Dir: %v", err)
 	}
+	checkRecordKinds(t, resolved)
 	return resolved
 }
 
@@ -68,7 +69,7 @@ func TestDeliveredMessageWaitsToBeRead(t *testing.T) {
 	// is still waiting, which would rewrite the status this test is about.
 	var status Status
 	serveUntil(t, server, func() bool {
-		captured, ok := ReadStatus(dir, "api", sent.ID)
+		captured, ok, _ := ReadStatus(dir, "api", sent.ID)
 		if ok && captured.State == Delivered {
 			status = captured
 			return true
@@ -111,7 +112,7 @@ func TestPendingMessageStaysAndIsRetried(t *testing.T) {
 
 	began := time.Now()
 	serveUntil(t, server, func() bool {
-		status, ok := ReadStatus(dir, "api", sent.ID)
+		status, ok, _ := ReadStatus(dir, "api", sent.ID)
 		return ok && status.State == Delivered
 	})
 
@@ -139,7 +140,7 @@ func TestPendingReasonIsReadableBeforeDelivery(t *testing.T) {
 	// whatever is waiting, which would overwrite the reason under test.
 	var status Status
 	serveUntil(t, server, func() bool {
-		captured, ok := ReadStatus(dir, "api", sent.ID)
+		captured, ok, _ := ReadStatus(dir, "api", sent.ID)
 		if ok && captured.Detail != "" {
 			status = captured
 			return true
@@ -171,14 +172,14 @@ func TestExpiredMessageFails(t *testing.T) {
 		return Result{State: Delivered}
 	}}
 	serveUntil(t, server, func() bool {
-		status, ok := ReadStatus(dir, "api", old.ID)
+		status, ok, _ := ReadStatus(dir, "api", old.ID)
 		return ok && status.State == Failed
 	})
 
 	if delivered {
 		t.Error("an expired message was still handed to the harness")
 	}
-	status, _ := ReadStatus(dir, "api", old.ID)
+	status, _, _ := ReadStatus(dir, "api", old.ID)
 	if status.Detail == "" {
 		t.Error("the refusal does not say why")
 	}
@@ -207,7 +208,7 @@ func TestWaitingMessagesFailWhenTheSessionEnds(t *testing.T) {
 	cancel()
 	<-finished
 
-	status, ok := ReadStatus(dir, "api", sent.ID)
+	status, ok, _ := ReadStatus(dir, "api", sent.ID)
 	if !ok || status.State != Failed {
 		t.Fatalf("status = %+v, want failed", status)
 	}
