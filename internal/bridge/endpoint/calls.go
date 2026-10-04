@@ -12,6 +12,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/boottime"
 	"github.com/praline-labs/rewake/internal/bridge"
+	"github.com/praline-labs/rewake/internal/channel"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/proc"
 )
@@ -34,6 +35,9 @@ type observation struct {
 	// at is when the observation was heard, on the boot clock: a ticket is
 	// issued only while no end was noted since.
 	at int64
+	// limits are what a Claude Code hook saw of the call's limits; nil
+	// from a harness, or a hook, that sends none (limits.go).
+	limits *HookLimits
 }
 
 // call is one native call, from the first thing heard of it until it ages
@@ -162,7 +166,7 @@ func (e *Endpoint) observedWords(words []string, ok bool) (string, string) {
 // issue matches a server's request with the harness's observation of the same
 // call, and issues its one ticket.
 func (e *Endpoint) issue(asked TicketRequest) (bridge.Ticket, error) {
-	if e.cfg.Refusal != "" {
+	if e.cfg.Refusal != "" && e.cfg.Transport != bridge.ClaudeTransport {
 		return bridge.Ticket{}, errors.New(e.cfg.Refusal)
 	}
 	if asked.Transport != e.cfg.Transport || asked.CallID == "" {
@@ -180,6 +184,8 @@ func (e *Endpoint) issue(asked TicketRequest) (bridge.Ticket, error) {
 	select {
 	case <-entry.ready:
 	case <-timer.C:
+		// The observer is gone: every call is refused until it returns.
+		e.tell(channel.Event{Kind: channel.NotObserved})
 		return bridge.Ticket{}, fmt.Errorf("the harness did not report this call within %s", e.cfg.Wait)
 	case <-e.done:
 		return bridge.Ticket{}, errors.New("the wrapper is closing")
@@ -188,6 +194,10 @@ func (e *Endpoint) issue(asked TicketRequest) (bridge.Ticket, error) {
 	seen := *entry.observed
 	first := c.firstSeen[seen.prompt]
 	c.mu.Unlock()
+	deadline, refusal := e.deadline(seen)
+	if refusal != "" {
+		return bridge.Ticket{}, errors.New(refusal)
+	}
 	turn, err := e.turnOf(asked, seen, first)
 	if err != nil {
 		return bridge.Ticket{}, err
@@ -196,6 +206,7 @@ func (e *Endpoint) issue(asked TicketRequest) (bridge.Ticket, error) {
 	if _, err := rand.Read(nonce); err != nil {
 		return bridge.Ticket{}, err
 	}
+	readsOff := e.readsOffNow()
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	started, open := c.open[seen.turn]
@@ -226,8 +237,8 @@ func (e *Endpoint) issue(asked TicketRequest) (bridge.Ticket, error) {
 	}
 	ticket := bridge.Ticket{
 		Capability: e.cfg.Capability, Conversation: seen.conversation, Turn: turn, CallID: asked.CallID,
-		CalledBoot: now, DeadlineBoot: now + int64(e.cfg.Span), WordsDigest: seen.digest,
-		Transport: e.cfg.Transport, Nonce: hex.EncodeToString(nonce),
+		CalledBoot: now, DeadlineBoot: now + int64(deadline), WordsDigest: seen.digest,
+		Transport: e.cfg.Transport, Nonce: hex.EncodeToString(nonce), ReadsOff: readsOff,
 	}
 	entry.issued = &issued{ticket: ticket}
 	c.byNonce[ticket.Nonce] = entry.issued
@@ -293,6 +304,9 @@ func (e *Endpoint) confirm(conn *net.UnixConn, ticket bridge.Ticket) error {
 		return errors.New("the ticket's deadline passed")
 	}
 	held.used, held.pid, held.start = true, int(peer.Pid), start
+	// The tool's one evidence: a child that validated its ticket, whatever
+	// its words. Told under the lock is fine: the wrapper only queues it.
+	e.tell(channel.Event{Kind: channel.Validated, Issued: ticket.CalledBoot})
 	return nil
 }
 

@@ -36,8 +36,14 @@ type (
 		// counts, and the moment it was noted. Nil: ReadSequence alone.
 		EndCapture func() (uint64, int64)
 		// ToolEvent takes the primary thread's notifications that concern
-		// the mail tool's calls (toolEvent); it never waits.
+		// the mail tool's calls (toolEvent), and every MCP server's startup
+		// status (serverStatus); it never waits.
 		ToolEvent func(raw []byte)
+		// ThreadCheck, when set, is asked about every terminal request
+		// before it is forwarded: a refusal comes back as the request's
+		// error and nothing reaches the server. It may take seconds; the
+		// connection's requests wait behind it in order.
+		ThreadCheck func(method string, params json.RawMessage) string
 	}
 	// Gateway fences delivery by accepted intent on a single TUI incarnation.
 	Gateway struct {
@@ -161,6 +167,9 @@ func (c *connection) readUI() {
 			return
 		}
 		if !c.queueRequest(raw, func() {
+			if c.refuseThread(m, raw) {
+				return
+			}
 			if c.owner.acquire(c.ctx) != nil {
 				return
 			}

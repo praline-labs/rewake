@@ -34,7 +34,8 @@ func ReadFile(path string) ([]byte, error) {
 	if err := fault(OpRead, path); err != nil {
 		return nil, err
 	}
-	return os.ReadFile(path)
+	data, err := os.ReadFile(path)
+	return data, noteReach(err, false)
 }
 
 // Remove removes a file of the state directory.
@@ -42,7 +43,7 @@ func Remove(path string) error {
 	if err := fault(OpRemove, path); err != nil {
 		return err
 	}
-	return os.Remove(path)
+	return noteReach(os.Remove(path), true)
 }
 
 // Rename moves a file of the state directory to another name in it.
@@ -50,7 +51,7 @@ func Rename(from, to string) error {
 	if err := fault(OpRename, to); err != nil {
 		return err
 	}
-	return os.Rename(from, to)
+	return noteReach(os.Rename(from, to), true)
 }
 
 // Step names a step of a call's path that touches no file, so a fault plan

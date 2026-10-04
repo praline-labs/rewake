@@ -30,6 +30,22 @@ func roleText(c Context) string {
 			lines = append(lines, "- "+line)
 		}
 	}
+	lines = append(lines, "", transport(c.Tool))
 	lines = append(lines, "Run rewake guide for the complete rules, including this list.")
 	return strings.Join(lines, "\n")
+}
+
+// The transport sentence (docs/mail-bridge-channel.md#the-briefing). The shell
+// joins no operation by its words and the tool only in the same turn, so a
+// call whose answer was lost is continued by its receipt, never repeated.
+const (
+	transportFirst = "Run `rewake <words>` through the `rewake` tool when you have it, otherwise in the shell."
+	transportRest  = " A call the tool answered \"nothing ran\" may be made again in the shell. A call the harness refused for permission is not made another way; main is told. A call whose outcome is unknown is never repeated in the shell: continue it with `rewake retry <token>`, or with the same words through the tool in the same turn; with neither, leave it and say in your report which call it was."
+)
+
+func transport(tool bool) string {
+	if tool {
+		return transportFirst + transportRest
+	}
+	return transportFirst
 }

@@ -82,7 +82,7 @@ everything else.
   Claude Code socket line, its reply socket and receipts, held and late words, the startup
   gate and what a killed wrapper leaves behind; and the Codex gateway in brief. Open it
   when a delivery result for one harness is in question.
-- [mail-bridge.md](mail-bridge.md) — design, stage 1 of 3 built: one MCP tool carrying CLI words
+- [mail-bridge.md](mail-bridge.md) — design, all three stages built, stage 3's live checks open: one MCP tool carrying CLI words
   outside the sandbox, its allowed operations, native call identity, per-launch approval
   and configuration preservation, refusal on an occupied name, bounded reads, receipts
   and fallback; the two live probes and remaining acceptance gates. Open it before
@@ -92,8 +92,8 @@ everything else.
   evidence, claims against withdrawal, the receipt journal behind notify and pending,
   `inbox --next` and `rewake retry` in either channel, and the readings of the
   specification it chose. Open it when a read in parts, a receipt or a retry is in question.
-- [mail-bridge-server.md](mail-bridge-server.md) — the server of that tool, built and not
-  yet started by any harness: its eleven rules and where each lives in the code, how a
+- [mail-bridge-server.md](mail-bridge-server.md) — the server of that tool, built and
+  started by a launch only once stage 3's gates allow: its eleven rules and where each lives in the code, how a
   call is matched to a native observation and given a ticket, the call's binding to its
   operation, the child it runs, the bounded answer, the failure points of a call and the
   channel record left to stage 3. Open it before changing the server or the context
@@ -107,6 +107,28 @@ everything else.
   fault test from logged steps, the generated orders, the fault build's holds), the live
   checks left to stage 3, and what the reviews of the rules found. Open it before
   changing those tests or reviewing the stage.
+- [mail-bridge-launch.md](mail-bridge-launch.md) — stage 3 of that design, built, live
+  checks open:
+  how each harness's launch injects the server and approves only its tool, which sources
+  of a server named `rewake` each check covers before the run is published and what is
+  done where coverage is unknown, what a diagnostic may show, how the person's
+  configuration is proven untouched, the gates with the action each takes while open, and
+  `REWAKE_GATES_ASSUMED` for the live checks. Open it before changing the injection.
+- [mail-bridge-launch-codex.md](mail-bridge-launch-codex.md) — the Codex part of stage 3:
+  the `-c` values the launch adds, the name check by a separate app-server before the
+  claim, the injection check at start and at every thread with its step 0 for the thread
+  request itself (the terminal's keys, the trust rule), and the output limit. Open it
+  before changing the Codex injection or the gateway's thread check.
+- [mail-bridge-channel.md](mail-bridge-channel.md) — the rest of stage 3, built: the
+  run's mail channel as two observations, tool and shell, and a policy block, with
+  connections, generations, the failure interval and the hello timer, the derived
+  display, the notices with their suppression and publication identity, and the
+  briefing's sentence, and how the code reads it. Open it before changing the channel
+  record (`internal/channel`) or its notices.
+- [mail-bridge-live.md](mail-bridge-live.md) — the plan of stage 3's live checks: scratch
+  project folders in the owner's own logins, where each case sets its conditions, how
+  preservation is proven with the user configuration read-only, what only the user layer
+  could show, and the cases with the gates they close. Open it before running them.
 - [turn-end-recovery.md](turn-end-recovery.md) — how a turn end is recovered under rules 7
   and 8 of mail-bridge-cli.md, as the code keeps them: the operation's identity and
   scope by event form, the read clock for holds, pending marks and the interim record,

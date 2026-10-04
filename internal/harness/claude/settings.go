@@ -190,16 +190,18 @@ func (l launchLayer) merge(caller map[string]json.RawMessage) (string, error) {
 }
 
 // applySettings rewrites the launch arguments so they carry exactly one
-// --settings: the caller's, with rewake's merged in. When the caller's cannot
-// be read, it stays as they gave it and rewake adds nothing — a merge that
-// guessed would change settings they chose — and the note says what is lost.
-func applySettings(args []string, cwd string, silent, rewakeRule bool, socket string) ([]string, []string) {
+// --settings: the caller's, with rewake's merged in, and the mail tool's
+// observer hooks when bridge is the command that runs them. When the caller's
+// cannot be read, it stays as they gave it and rewake adds nothing — a merge
+// that guessed would change settings they chose — and the note says what is
+// lost. It says whether the merged layer was applied.
+func applySettings(args []string, cwd string, silent, rewakeRule bool, socket, bridge string) ([]string, []string, bool) {
 	var notes []string
 	caller := map[string]json.RawMessage{}
 	if values := harness.FlagValues(args, settingsFlag); len(values) > 0 {
 		read, err := readCallerLayer(values[len(values)-1], cwd)
 		if err != nil {
-			return args, []string{"not reporting the end of turns or collecting telemetry: the --settings given could not be read, and only one is read: " + err.Error()}
+			return args, []string{"not reporting the end of turns or collecting telemetry: the --settings given could not be read, and only one is read: " + err.Error()}, false
 		}
 		caller = read
 	}
@@ -216,11 +218,12 @@ func applySettings(args []string, cwd string, silent, rewakeRule bool, socket st
 	}
 	layer, err := newLaunchLayer(silent, rewakeRule, socket, launchSources(args), callerStatus)
 	if err != nil {
-		return args, append(notes, "not reporting the end of turns: "+err.Error())
+		return args, append(notes, "not reporting the end of turns: "+err.Error()), false
 	}
+	layer.observeTool(bridge)
 	merged, err := layer.merge(caller)
 	if err != nil {
-		return args, append(notes, "not reporting the end of turns or collecting telemetry: the --settings given could not be merged: "+err.Error())
+		return args, append(notes, "not reporting the end of turns or collecting telemetry: the --settings given could not be merged: "+err.Error()), false
 	}
-	return harness.AddFlags(harness.WithoutFlag(args, settingsFlag), settingsFlag, merged), notes
+	return harness.AddFlags(harness.WithoutFlag(args, settingsFlag), settingsFlag, merged), notes, true
 }

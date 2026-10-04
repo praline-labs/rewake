@@ -76,6 +76,10 @@ type Ticket struct {
 	// Nonce makes the ticket one-time: the wrapper confirms it once, for
 	// one process, and never again.
 	Nonce string `json:"nonce"`
+	// ReadsOff, when set, is why this run's tool may not read the mail:
+	// what it would show could reach the conversation other than direct
+	// and whole (docs/mail-bridge-launch-codex.md#the-output-limit).
+	ReadsOff string `json:"readsOff,omitempty"`
 }
 
 // The transports of the mail tool, as tickets and receipts name them.

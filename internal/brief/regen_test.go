@@ -16,9 +16,11 @@ func TestRegenerateGolden(t *testing.T) {
 		t.Skip("set REWAKE_REGENERATE to rewrite the reviewed briefings")
 	}
 	for _, part := range role.All() {
-		text := Intro(Context{Name: "api", Room: "work", Role: part, Reason: "selected explicitly"}) + "\n"
-		if err := os.WriteFile(filepath.Join("testdata", part.ID+"-intro.golden"), []byte(text), 0o644); err != nil {
-			t.Fatal(err)
+		for _, tool := range []bool{false, true} {
+			text := Intro(Context{Name: "api", Room: "work", Role: part, Reason: "selected explicitly", Tool: tool}) + "\n"
+			if err := os.WriteFile(filepath.Join("testdata", golden(part.ID, tool)), []byte(text), 0o644); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 }

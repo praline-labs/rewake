@@ -74,6 +74,10 @@ var recordKinds = []recordKind{
 	{"threads/*", "the conversation a letter was delivered into", nil, true, "where the letter was delivered"},
 	{"claims/*", "a read in parts that claimed a letter", nil, true, "whether a read is showing the letter"},
 	{"receipts/*/.*.lock", "a call's receipt lock", nil, false, ""},
+	// A shell observation tells the run's wrapper how the shell reached the
+	// mail; it decides nothing in the mailbox, so it is never opened, and one
+	// that cannot be read costs the observation, never the mail.
+	{"receipts/*/channel/*", "a shell observation of the mail channel", nil, false, ""},
 	{"receipts/*/key-*", "the key a repeated call joins by", receipt.CheckKey, true, "which call a repeat joins"},
 	{"receipts/*/calls/*", "the operation a tool call holds", receipt.CheckBinding, true, "which operation a tool call held"},
 	{"receipts/*/*.json", "a call's receipt", receipt.CheckRecord, true, "what a call did and answered"},

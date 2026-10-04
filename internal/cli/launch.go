@@ -54,6 +54,13 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 		if err != nil {
 			return err
 		}
+		// The verification switch of the live checks
+		// (docs/mail-bridge-launch.md#gates-taken-as-closed): a name off
+		// the gate table is a wrong call, refused before anything starts.
+		assumed, err := harness.ParseAssumedGates(os.Getenv(harness.GatesAssumedEnv))
+		if err != nil {
+			return &UsageError{Command: call.Command, Message: err.Error()}
+		}
 
 		// Last of the preparations: every refusal above leaves no checkout
 		// behind.
@@ -78,8 +85,10 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 			Role:    part,
 			Command: program,
 			// The mail tool's endpoint runs the CLI's own checks
-			// (docs/mail-bridge-server.md); stage 3 starts its server.
-			MailTool: &wrap.MailTool{Words: ToolWords, Acknowledge: AcknowledgeRead},
+			// (docs/mail-bridge-server.md).
+			MailTool:     &wrap.MailTool{Words: ToolWords, Acknowledge: AcknowledgeRead},
+			NoMailTool:   call.Switch("no-mail-tool"),
+			AssumedGates: assumed,
 
 			OnClaimed: onClaimed,
 		})

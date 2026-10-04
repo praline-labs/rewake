@@ -173,7 +173,7 @@ func TestSignalIsNotRepeatedToAHarnessThatGotIt(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		forward(incoming, command.Process, func() bool { return false })
+		forward(incoming, command.Process, func() bool { return false }, nil)
 	}()
 
 	incoming <- syscall.SIGTERM
@@ -197,7 +197,7 @@ func TestSignalAimedAtTheWrapperIsPassedOn(t *testing.T) {
 	go func() { exited <- command.Wait() }()
 
 	incoming := make(chan os.Signal, 1)
-	go forward(incoming, command.Process, func() bool { return true })
+	go forward(incoming, command.Process, func() bool { return true }, nil)
 	incoming <- syscall.SIGTERM
 
 	select {

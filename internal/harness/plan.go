@@ -50,6 +50,9 @@ type LaunchRequest struct {
 	// this launch resumes (Resumer); a harness that takes a directory at
 	// launch is started with them.
 	GrantDirs []string
+	// MailTool, when set, is the mail tool's server this launch adds
+	// (docs/mail-bridge-launch.md); nil adds none.
+	MailTool *ToolServer
 }
 
 // LaunchPlan is how the wrapper starts the harness.
@@ -76,6 +79,9 @@ type LaunchPlan struct {
 	// Lane, when set, delivers in place of the harness's Deliver for as long
 	// as the session runs. Only for a harness without a Backend.
 	Lane Lane
+	// ToolLeftOut, when the request carried the mail tool, says why the plan
+	// could not add it after all; empty when it did.
+	ToolLeftOut string
 	// Notes are things the caller should know about this launch: a setting that
 	// could not be read, a briefing that was skipped. They are printed once, to
 	// stderr, and do not stop the launch.
@@ -168,5 +174,5 @@ type Flag struct {
 
 // BriefContext carries identity to the shared text package without assembling prose.
 func (r LaunchRequest) BriefContext() brief.Context {
-	return brief.Context{Name: r.Name, Room: r.Room, Role: r.Role, Reason: r.RoleReason}
+	return brief.Context{Name: r.Name, Room: r.Room, Role: r.Role, Reason: r.RoleReason, Tool: r.MailTool != nil}
 }

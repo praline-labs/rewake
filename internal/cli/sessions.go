@@ -8,9 +8,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/channel"
 	"github.com/praline-labs/rewake/internal/grant"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/sessionstate"
 	"github.com/praline-labs/rewake/internal/state"
 )
 
@@ -68,6 +70,13 @@ type whoamiModel struct {
 	// MailChannel is how this call reached the mail: "tool" through the
 	// rewake tool, "shell" otherwise; empty outside a session.
 	MailChannel string `json:"mailChannel,omitempty"`
+	// Mail is how this run's mail travels, as its wrapper records it
+	// (docs/mail-bridge-channel.md#what-is-shown); Channel the record.
+	Mail    string          `json:"mail,omitempty"`
+	Channel *channel.Record `json:"channel,omitempty"`
+	// AssumedGates are the gates this run's launch took as closed, for
+	// verification only.
+	AssumedGates []string `json:"assumedGates,omitempty"`
 }
 
 func handleWhoami(ctx *Context, _ Call) error {
@@ -88,6 +97,8 @@ func handleWhoami(ctx *Context, _ Call) error {
 		if ctx.scope != nil {
 			model.MailChannel = "tool"
 		}
+		model.Channel = sessionstate.Load(dir, name, os.Getenv(state.EpochEnv)).Channel
+		model.Mail, model.AssumedGates = channel.Label(model.Channel), session.AssumedGates
 	}
 
 	return printValue(ctx, model, func() []string {
@@ -104,6 +115,10 @@ func handleWhoami(ctx *Context, _ Call) error {
 		lines := []string{line, "Others reach you with: rewake send " + name + " \"text\""}
 		if ctx.scope != nil {
 			lines = append(lines, "This call came through the rewake tool.")
+		}
+		lines = append(lines, model.Mail)
+		if len(model.AssumedGates) > 0 {
+			lines = append(lines, assumedLine(model.AssumedGates))
 		}
 		return lines
 	})
@@ -139,4 +154,10 @@ func unknownSessionFor(command *Command, dir, name string) error {
 		message += " No sessions are running. Run rewake for launch commands, then use the exact address from rewake list."
 	}
 	return &UsageError{Command: command, Message: message}
+}
+
+// assumedLine says which gates a run's launch took as closed: such a run
+// rests on an assumption the live checks are there to test.
+func assumedLine(gates []string) string {
+	return "Gates taken as closed for verification: " + strings.Join(gates, ", ") + "."
 }

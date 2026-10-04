@@ -2,8 +2,8 @@
 
 The first of three stages of [mail-bridge.md](mail-bridge.md), built September 30, 2026:
 what the CLI does when it runs one tool call, and what changed for the shell with it.
-The server (stage 2) is built and accepted; the launch injection (stage 3) is not, so nothing runs
-under the tool yet: no harness starts the server, and a ticket the wrapper's context
+The server (stage 2) is built and accepted; the launch injection (stage 3) is built and its code
+accepted, but until its gates close nothing runs under the tool: no harness starts the server, and a ticket the wrapper's context
 endpoint did not issue is refused (below). Where the specification left a choice open, this document records the choice
 and why; where it reads the specification one of two ways, it says which.
 

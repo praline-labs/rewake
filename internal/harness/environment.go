@@ -44,6 +44,27 @@ func SessionEnv(request LaunchRequest, strip []string) []string {
 	)
 }
 
+// CheckEnv is the environment a check before the claim runs in: the one the
+// harness will have, less the run's values — no run exists yet — and less
+// anything a tool call's child would carry, so a check never passes for one.
+func CheckEnv() []string {
+	var env []string
+	for _, entry := range os.Environ() {
+		name, value, found := strings.Cut(entry, "=")
+		switch {
+		case !found:
+		case name == state.SessionEnv, name == state.EpochEnv, name == state.DirEnv, name == state.RoomEnv:
+			continue
+		case strings.HasPrefix(name, "REWAKE_BRIDGE_"):
+			continue
+		case name == "PATH":
+			entry = "PATH=" + pathWithSelf(value)
+		}
+		env = append(env, entry)
+	}
+	return env
+}
+
 // pathWithSelf makes sure the agent can run the same rewake that started it.
 // Found by a live run: the agent was told to answer with rewake send, tried, and
 // got "command not found" because the binary was not on its PATH.

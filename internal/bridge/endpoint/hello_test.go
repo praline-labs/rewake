@@ -122,7 +122,7 @@ func TestTheConnectionsAreBounded(t *testing.T) {
 // which their callers tell from a refusal.
 func TestAMissingEndpointIsUnreachable(t *testing.T) {
 	path := t.TempDir() + "/none.ctx"
-	if err := Observe(path, []byte(`{}`), time.Second); !errors.Is(err, ErrUnreachable) {
+	if err := Observe(path, []byte(`{}`), HookLimits{}, time.Second); !errors.Is(err, ErrUnreachable) {
 		t.Fatalf("observe: %v", err)
 	}
 	if err := Confirm(path, bridge.Ticket{}); !errors.Is(err, ErrUnreachable) {
@@ -131,7 +131,7 @@ func TestAMissingEndpointIsUnreachable(t *testing.T) {
 	if _, err := Dial(path, "secret"); !errors.Is(err, ErrUnreachable) {
 		t.Fatalf("dial: %v", err)
 	}
-	if err := Observe(path, []byte(`not json`), time.Second); err == nil || errors.Is(err, ErrUnreachable) {
+	if err := Observe(path, []byte(`not json`), HookLimits{}, time.Second); err == nil || errors.Is(err, ErrUnreachable) {
 		t.Fatalf("observe of a broken input: %v", err)
 	}
 }

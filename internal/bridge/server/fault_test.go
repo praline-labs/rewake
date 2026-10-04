@@ -15,7 +15,7 @@ import (
 	"github.com/praline-labs/rewake/internal/state"
 )
 
-// The fault test (docs/mail-bridge-checks.md#the-fault-test). Each scenario's
+// The fault test (docs/mail-bridge-checks.md#testing-without-a-live-harness). Each scenario's
 // faulted call is run once clean with every operation logged, of the server,
 // its child and the wrapper's acknowledgment. Its steps, not a list written
 // by hand, give the cases: the child ended at each of its durable steps, the

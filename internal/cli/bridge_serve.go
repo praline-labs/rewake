@@ -74,6 +74,6 @@ func handleBridgeHook(_ *Context, call Call) error {
 	if event.Name != "PreToolUse" {
 		limit += endpoint.ConfirmWait
 	}
-	_ = endpoint.Observe(socket, payload, limit)
+	_ = endpoint.Observe(socket, payload, endpoint.LimitsFrom(os.LookupEnv), limit)
 	return nil
 }

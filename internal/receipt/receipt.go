@@ -264,11 +264,11 @@ func Lock(ctx context.Context, dir, name, epoch, token string) (func(), error) {
 	for {
 		file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
 		if err != nil {
-			return nil, err
+			return nil, state.NoteReach(err)
 		}
 		if err := flock(ctx, file); err != nil {
 			_ = file.Close()
-			return nil, err
+			return nil, state.NoteReach(err)
 		}
 		same, err := samePath(file, path)
 		if same {

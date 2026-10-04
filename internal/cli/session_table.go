@@ -7,6 +7,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/praline-labs/rewake/internal/channel"
 	"github.com/praline-labs/rewake/internal/sessionstate"
 )
 
@@ -28,7 +29,7 @@ func sessionTable(room string, sessions []sessionView, visible bool) []string {
 		header = append(header, "Harness")
 	}
 	if visible {
-		header = append(header, "Status", "Model", "Effort", "Context", "Compactions")
+		header = append(header, "Status", "Mail", "Model", "Effort", "Context", "Compactions")
 	}
 	header = append(header, "Age")
 	if !commonDirectory {
@@ -59,13 +60,16 @@ func sessionTable(room string, sessions []sessionView, visible bool) []string {
 		if session.Telemetry != nil && session.Telemetry.DeliveryHold != nil {
 			lines = append(lines, fmt.Sprintf("Deliveries to %s wait: %s", session.Name, session.Telemetry.DeliveryHold.Detail))
 		}
+		if len(session.AssumedGates) > 0 {
+			lines = append(lines, session.Name+": "+assumedLine(session.AssumedGates))
+		}
 	}
 	return lines
 }
 
 func stateCells(snapshot *sessionstate.Snapshot) []string {
 	if snapshot == nil {
-		return []string{"unknown", "unknown", "unknown", "unknown", "unknown"}
+		return []string{"unknown", channel.Word(nil), "unknown", "unknown", "unknown", "unknown"}
 	}
 	activity := activityText(snapshot)
 	if !snapshot.Fresh && !strings.Contains(activity, "stale") {
@@ -98,5 +102,5 @@ func stateCells(snapshot *sessionstate.Snapshot) []string {
 	if snapshot.Coverage == "partial" {
 		count += " (partial)"
 	}
-	return []string{activity, setting(snapshot.Model), setting(snapshot.Effort), context, count}
+	return []string{activity, channel.Word(snapshot.Channel), setting(snapshot.Model), setting(snapshot.Effort), context, count}
 }

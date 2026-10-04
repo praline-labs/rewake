@@ -113,6 +113,9 @@ func newRig(t *testing.T, transport string, change ...func(*endpoint.Config)) *r
 			return err
 		},
 		Conversation: func() string { return "conversation" },
+		// The rig's hooks send the default limits, as after G8 closed: the
+		// acknowledgment is what these tests are about.
+		LimitsProven: true,
 		// The server is another binary than the test that plays its
 		// wrapper; the build check is the endpoint's own test's.
 		SameBuild: func(int) error { return nil },
@@ -234,7 +237,7 @@ func (r *rig) observe(turn, id string, words []string) {
 		"tool_name": "mcp__rewake__rewake", "tool_input": map[string]any{"words": words}, "tool_use_id": id,
 		"mcp_server": map[string]any{"name": "rewake"},
 	})
-	if err := endpoint.Observe(state.ContextPath(r.dir, "api", r.self.Epoch()), payload, time.Second); err != nil {
+	if err := endpoint.Observe(state.ContextPath(r.dir, "api", r.self.Epoch()), payload, endpoint.HookLimits{}, time.Second); err != nil {
 		r.t.Fatalf("the hook: %v", err)
 	}
 }

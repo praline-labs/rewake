@@ -345,9 +345,11 @@ What the day of the 1.0.0 release left, recorded on September 28, 2026 at the ow
   Stage M1, the CLI side, was accepted on October 1, 2026 after seventeen rounds
   ([entry](roadmap/2026-10-01-mail-tool-cli-stage.md)). Stage M2, the MCP server that
   runs the tool outside the sandbox, was built and accepted the same day after four
-  acceptance rounds ([entry](roadmap/2026-10-01-mail-tool-server-stage.md)). Next is
-  M3: its injection at launch, the occupied-name refusal, the channel record and the
-  live checks ([mail-bridge.md](mail-bridge.md)).
+  acceptance rounds ([entry](roadmap/2026-10-01-mail-tool-server-stage.md)). The code of
+  stage M3 — its injection at launch, the occupied-name refusal and the channel record —
+  landed on October 4, 2026, accepted after five design passes and four acceptance rounds
+  ([entry](roadmap/2026-10-04-mail-tool-launch-stage.md)). Next are its live checks and
+  the gates they close ([mail-bridge-live.md](mail-bridge-live.md)).
 - **The window before the capture on Codex — a separate task, October 1, 2026.** Stage
   M1's end on Codex is captured when the gateway reads `turn/completed`, but the
   app-server may start the next turn before that: a read of the next turn can then

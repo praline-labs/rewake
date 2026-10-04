@@ -141,7 +141,7 @@ func Confirm(path string, ticket bridge.Ticket) error {
 
 // Observe hands a hook's input to the run's wrapper and returns once it
 // recorded it, or the bound ran out.
-func Observe(path string, payload []byte, limit time.Duration) error {
+func Observe(path string, payload []byte, limits HookLimits, limit time.Duration) error {
 	if !json.Valid(payload) {
 		return errors.New("the hook input is not JSON")
 	}
@@ -150,7 +150,7 @@ func Observe(path string, payload []byte, limit time.Duration) error {
 		return err
 	}
 	defer func() { _ = conn.Close() }()
-	return ask(conn, request{ID: 1, Op: opObserve, Payload: payload})
+	return ask(conn, request{ID: 1, Op: opObserve, Payload: payload, Limits: &limits})
 }
 
 // greet dials, checks the listener, and says hello; the deadline set here

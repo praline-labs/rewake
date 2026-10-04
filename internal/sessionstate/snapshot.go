@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"time"
 	"unicode/utf8"
+
+	"github.com/praline-labs/rewake/internal/channel"
 )
 
 // Snapshot describes the last reported primary state, not cumulative usage or
@@ -48,6 +50,10 @@ type Snapshot struct {
 	// DeliveryHold says why deliveries into the session wait although a
 	// conversation is selected; nil when nothing holds them.
 	DeliveryHold *DeliveryHold `json:"deliveryHold,omitempty"`
+	// Channel is how the run's mail travels (docs/mail-bridge-channel.md),
+	// kept by its wrapper only; nil from a run without the mail tool's
+	// harness or a build before it.
+	Channel *channel.Record `json:"channel,omitempty"`
 }
 
 // DeliveryHold is why deliveries wait, and what the person can do about it

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/bridge"
+	"github.com/praline-labs/rewake/internal/channel"
 	"github.com/praline-labs/rewake/internal/proc"
 )
 
@@ -39,6 +40,13 @@ type Config struct {
 	Conversation func() string
 	// Gate orders acknowledgments against this run's captured ends.
 	Gate *Gate
+	// LimitsProven says gate G8 closed: the limits a Claude Code hook sees
+	// at PreToolUse are the ones the harness applies to that call's result.
+	// Until then no Claude Code call acknowledges a read.
+	LimitsProven bool
+	// Channel takes the channel events the endpoint observes; nil drops
+	// them.
+	Channel func(channel.Event)
 
 	// Wait bounds a ticket request's wait for its observation; zero is the
 	// two seconds of the rules. Tests shorten it.
@@ -68,14 +76,19 @@ type Endpoint struct {
 	calls    *calls
 	acks     sync.WaitGroup
 
-	mu      sync.Mutex
-	roots   []int
-	servers int
-	others  int
-	conns   map[*net.UnixConn]struct{}
-	closed  bool
-	done    chan struct{}
-	once    sync.Once
+	mu    sync.Mutex
+	roots []int
+	// readsOff says why the run's tool may not read, as the backend's
+	// checks find it; nil until the backend is known.
+	readsOff func() string
+	servers  int
+	others   int
+	// generation numbers the server connections, counted up per run.
+	generation uint64
+	conns      map[*net.UnixConn]struct{}
+	closed     bool
+	done       chan struct{}
+	once       sync.Once
 }
 
 // Listen binds the run's context socket at path, mode 0600, replacing a file
@@ -112,6 +125,25 @@ func (e *Endpoint) SetRoots(pids ...int) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.roots = append([]int(nil), pids...)
+}
+
+// SetReadsOff names what says whether the run's tool may read: the
+// backend's own checks, known only once the plan is made.
+func (e *Endpoint) SetReadsOff(readsOff func() string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.readsOff = readsOff
+}
+
+// readsOffNow is why the tool may not read now, or "".
+func (e *Endpoint) readsOffNow() string {
+	e.mu.Lock()
+	readsOff := e.readsOff
+	e.mu.Unlock()
+	if readsOff == nil {
+		return ""
+	}
+	return readsOff()
 }
 
 // Gate is the gate the endpoint's acknowledgments enter.
@@ -166,6 +198,9 @@ func (e *Endpoint) serve(conn *net.UnixConn) {
 	writer := &lineWriter{conn: conn}
 	release, err := e.admit(conn, greeting)
 	if err != nil {
+		if greeting.Role == roleServer {
+			e.refused(conn)
+		}
 		writer.write(response{Error: err.Error()})
 		return
 	}
@@ -175,6 +210,7 @@ func (e *Endpoint) serve(conn *net.UnixConn) {
 		// A server's connection lasts as long as it does: its close is how
 		// the wrapper learns the server is gone.
 		_ = conn.SetDeadline(time.Time{})
+		defer e.connected()()
 	}
 	var running sync.WaitGroup
 	defer running.Wait()
@@ -270,8 +306,10 @@ func (e *Endpoint) answer(conn *net.UnixConn, role string, asked request) respon
 		reply.Ticket = &ticket
 	case role == roleChild && asked.Op == opConfirm && asked.Ticket != nil:
 		err = e.confirm(conn, *asked.Ticket)
+	case role == roleServer && asked.Op == opReport:
+		err = e.report(asked.Payload)
 	case role == roleHook && asked.Op == opObserve:
-		e.hook(asked.Payload)
+		e.hookWith(asked.Payload, asked.Limits)
 	default:
 		err = fmt.Errorf("a %s may not ask %q", role, asked.Op)
 	}

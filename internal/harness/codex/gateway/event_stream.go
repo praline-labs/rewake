@@ -80,7 +80,7 @@ func (c *connection) readServer() {
 			if m.method == "turn/started" && m.thread == c.state.Thread {
 				c.state.fresh = false
 			}
-			if c.owner.cfg.ToolEvent != nil && toolEvent(m, raw) && m.thread == c.state.Thread && c.owner.owns(c) {
+			if c.owner.cfg.ToolEvent != nil && (toolEvent(m, raw) && m.thread == c.state.Thread || serverStatus(m)) && c.owner.owns(c) {
 				c.owner.cfg.ToolEvent(raw)
 			}
 			c.admitted.event(m, raw, time.Now())

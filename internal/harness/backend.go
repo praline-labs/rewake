@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/praline-labs/rewake/internal/channel"
 	"github.com/praline-labs/rewake/internal/grant"
 	"github.com/praline-labs/rewake/internal/grantauth"
 	"github.com/praline-labs/rewake/internal/inbox"
@@ -82,8 +83,13 @@ type CompletionHandler struct {
 	EndCapture func() (*inbox.ReadBoundary, int64)
 	// ToolEvent takes a server notification of the primary thread that
 	// concerns the mail tool's calls: a turn's start or end, an item of the
-	// tool started or completed. It never waits. Nil where nobody listens.
+	// tool started or completed; and an MCP server's startup status of any
+	// thread. It never waits. Nil where nobody listens.
 	ToolEvent func(raw []byte)
+	// Channel takes the channel events the backend itself observes: a
+	// thread the gateway admitted, which starts the tool's servers. It
+	// never waits. Nil where nobody listens.
+	Channel func(channel.Event)
 }
 
 // Backend is an optional session-owned transport. Its implementation owns any

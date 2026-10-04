@@ -10,6 +10,7 @@ import (
 	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 // Run executes one invocation and returns the process exit code.
@@ -19,6 +20,8 @@ func Run(argv []string, stdout, stderr io.Writer) int {
 		return runBridge(argv, stdout, stderr)
 	}
 	ctx := &Context{Stdout: stdout, Stderr: stderr}
+	// What this invocation meets reaching the state is its own evidence.
+	state.ResetReach()
 
 	// Aliases first: everything downstream sees the arguments the alias stands
 	// for, so nothing else in the CLI has to know that aliases exist.
@@ -63,7 +66,9 @@ func Run(argv []string, stdout, stderr io.Writer) int {
 		return ExitOK
 	}
 
-	if err := result.Call.Command.Handler(ctx, result.Call); err != nil {
+	err = result.Call.Command.Handler(ctx, result.Call)
+	observeShell(result.Call, err)
+	if err != nil {
 		return report(ctx, err)
 	}
 	return ExitOK

@@ -56,6 +56,7 @@ func (c *capped) Write(data []byte) (int, error) {
 func (s *Server) runChild(ticket bridge.Ticket, words []string) answer {
 	reader, writer, err := os.Pipe()
 	if err != nil {
+		s.cannotStart()
 		return substitute(startFailed)
 	}
 	encoded, _ := json.Marshal(ticket)
@@ -70,6 +71,7 @@ func (s *Server) runChild(ticket bridge.Ticket, words []string) answer {
 	_ = reader.Close()
 	if err != nil {
 		_ = writer.Close()
+		s.cannotStart()
 		return substitute(startFailed)
 	}
 	// The ticket fits the pipe's buffer, and the child reads it to its end
@@ -111,6 +113,15 @@ func (s *Server) runChild(ticket bridge.Ticket, words []string) answer {
 		return substitute(overBound)
 	}
 	return answer{stdout: stdout.String(), stderr: stderr.String(), code: command.ProcessState.ExitCode()}
+}
+
+// cannotStart tells the run's wrapper the call's command could not start
+// (docs/mail-bridge-channel.md#the-tool-observation): the one failure only the
+// server sees. It waits for nothing; the call answers its model either way.
+func (s *Server) cannotStart() {
+	if client := s.connect(); client != nil {
+		client.Report()
+	}
 }
 
 // startFailed is what a call answers when its child could not start.

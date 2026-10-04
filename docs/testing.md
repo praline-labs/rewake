@@ -107,6 +107,19 @@ HOME on tmpfs, no capabilities, no network unless `--network` names one, and at 
 writable directory, given with `--write` and mounted at `/out`. Codex and Claude Code
 both work; `--help` lists flags and exit codes.
 
+### The stand-in API
+
+`tools/standin` answers for the model API a Claude Code harness talks to, so a live
+check of the mail tool can run in a scratch configuration with no login. The harness is
+pointed at it by its base-URL variable; when a request offers the tool, the reply calls
+it (`-words`, `-calls` times in one turn), which runs the harness's PreToolUse hook, our
+MCP server and PostToolUse, and the tool's result is answered with text quoting its
+start. `-delay` holds each answer, `-log` appends one JSON line per request without
+headers or message text. Its first stdout line is `listening <addr>`; `go run
+./tools/standin -h` prints the rest. It serves the live checks of stage 3
+([mail-bridge-live.md](mail-bridge-live.md)); no test of the five checks starts a harness
+against it.
+
 ## Checking a new harness version before updating
 
 1. Run the suite with `REWAKE_CODEX_VERSION=<version>`, the command in

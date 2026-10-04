@@ -94,11 +94,18 @@ const forwardGrace = 300 * time.Millisecond
 // wrapper alone reaches nobody else, and that is the case this covers. The
 // difference between them is not visible in the signal, so the answer comes from
 // the harness: if it is still running a moment later, it did not get one.
-func forward(incoming chan os.Signal, process *os.Process, alive func() bool) {
+//
+// ending is told of each signal accepted, before anything is passed on: the
+// run is ending from here, and what its mail tool meets on the way is the
+// end's, not a failure.
+func forward(incoming chan os.Signal, process *os.Process, alive func() bool, ending func()) {
 	for received := range incoming {
 		signalValue, ok := received.(syscall.Signal)
 		if !ok {
 			continue
+		}
+		if ending != nil {
+			ending()
 		}
 		time.Sleep(forwardGrace)
 		if !alive() {

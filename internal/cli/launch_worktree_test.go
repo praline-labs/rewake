@@ -98,7 +98,12 @@ func newWorktreeLab(t *testing.T) worktreeLab {
 
 func (worktreeLab) git(t *testing.T, dir string, args ...string) string {
 	t.Helper()
-	output, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput()
+	command := exec.Command("git", append([]string{"-C", dir}, args...)...)
+	// Started in dir, not in the test's own directory, which a failed
+	// launch may have removed: a shell wrapper in front of git complains
+	// about a missing working directory into the output read here.
+	command.Dir = dir
+	output, err := command.CombinedOutput()
 	if err != nil {
 		t.Fatalf("git %q: %v: %s", args, err, output)
 	}

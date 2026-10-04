@@ -12,6 +12,9 @@ type Context struct {
 	Room   string
 	Role   role.Role
 	Reason string
+	// Tool says the run has the mail tool: the briefing then carries the
+	// whole transport sentence, and the first clause alone otherwise.
+	Tool bool
 }
 
 // Intro renders the independent system briefing of the selected role.

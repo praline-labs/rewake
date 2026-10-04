@@ -49,6 +49,8 @@ type request struct {
 	Ask     *TicketRequest  `json:"ask,omitempty"`
 	Ticket  *bridge.Ticket  `json:"ticket,omitempty"`
 	Payload json.RawMessage `json:"payload,omitempty"`
+	// Limits ride with a hook's observation (limits.go).
+	Limits *HookLimits `json:"limits,omitempty"`
 }
 
 // response answers a hello (ID zero) or a request.

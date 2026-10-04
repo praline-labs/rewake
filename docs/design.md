@@ -96,11 +96,13 @@ Created with 0700. [Optional primary observations](session-state.md) are collect
     inbox/<name>/pending/      this run's `rewake pending` marks; its last word on the work and a held answer (turn-outcomes.md)
     inbox/<name>/receipts/<epoch>/ journal of notify, pending, reads in parts and long outputs (mail-bridge-cli.md)
     inbox/<name>/receipts/<epoch>/calls/<call> the operation a mail tool call holds, by its native call (mail-bridge-server.md)
+    inbox/<name>/receipts/<epoch>/channel/<boot>.<pid> a shell call's outcome for the run's wrapper to fold into the mail channel, removed once folded (mail-bridge-channel.md)
     inbox/<name>/claims/<id>   a letter a tool read has started showing in parts
     inbox/<name>/once/<epoch>/<id> a journaled notify or a turn end's report written into this mailbox, so a retry writes it once
     sock/<name>.<epoch>.sock   one inbound socket per run
     sock/<name>.<epoch>.reply.sock the wrapper's own: Claude Code's receipts for held lines
     sock/<name>.<epoch>.ctx    the wrapper's context endpoint for the mail tool's server, its children and hooks (mail-bridge-server.md)
+    sock/<name>.<epoch>.mcp.json the mail tool's server entry handed to Claude Code for one run, removed with it (mail-bridge-launch.md)
     sock/<name>.<epoch>.obs    Claude Code telemetry datagrams to the wrapper
     sock/<name>.<epoch>.obs.turn/ when its latest turn started, one file per reading, for `rewake pending`
     sock/<name>.<epoch>.obs.plugin/ rewake's function-hooks plugin for this run (claude-plugin.md)

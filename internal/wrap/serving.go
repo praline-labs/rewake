@@ -16,6 +16,7 @@ import (
 // what stops them, in the reverse order.
 func startServing(ctx context.Context, request Request, session registry.Session, name, epoch string, plan harness.LaunchPlan, tool *mailTool) (func(), error) {
 	var stops []func()
+	stated := false
 	stop := func() {
 		for i := len(stops) - 1; i >= 0; i-- {
 			stops[i]()
@@ -40,7 +41,8 @@ func startServing(ctx context.Context, request Request, session registry.Session
 		}
 		stops = append(stops, plan.Backend.Close)
 		if observer, ok := plan.Backend.(harness.ObservedBackend); ok {
-			stops = append(stops, sessionstate.Start(ctx, request.Dir, name, epoch, observer.SessionState))
+			stops = append(stops, sessionstate.Start(ctx, request.Dir, name, epoch, tool.keeper.source(epoch, observer.SessionState)))
+			stated = true
 		}
 	}
 
@@ -67,8 +69,14 @@ func startServing(ctx context.Context, request Request, session registry.Session
 		if err := plan.Observer.Start(ctx); err != nil {
 			_, _ = fmt.Fprintln(os.Stderr, "rewake: not collecting telemetry: "+err.Error())
 		} else {
-			stops = append(stops, sessionstate.Start(ctx, request.Dir, name, epoch, plan.Observer.SessionState))
+			stops = append(stops, sessionstate.Start(ctx, request.Dir, name, epoch, tool.keeper.source(epoch, plan.Observer.SessionState)))
+			stated = true
 		}
+	}
+	if !stated && tool.keeper != nil {
+		// The channel record is shown whether or not anything else of the
+		// session is observed: whoami prints it in every run.
+		stops = append(stops, sessionstate.Start(ctx, request.Dir, name, epoch, tool.keeper.source(epoch, nil)))
 	}
 
 	if plan.Backend == nil && plan.Lane != nil {

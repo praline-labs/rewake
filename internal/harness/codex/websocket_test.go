@@ -47,15 +47,17 @@ func readClientFrame(r io.Reader) (byte, []byte, bool, error) {
 	if _, err := io.ReadFull(r, header); err != nil {
 		return 0, nil, false, err
 	}
+	// The marker is read once: a 16-bit length of exactly 127 is a length,
+	// not a marker of a 64-bit one.
 	size := uint64(header[1] & 127)
-	if size == 126 {
+	switch size {
+	case 126:
 		var raw [2]byte
 		if _, err := io.ReadFull(r, raw[:]); err != nil {
 			return 0, nil, false, err
 		}
 		size = uint64(binary.BigEndian.Uint16(raw[:]))
-	}
-	if size == 127 {
+	case 127:
 		var raw [8]byte
 		if _, err := io.ReadFull(r, raw[:]); err != nil {
 			return 0, nil, false, err

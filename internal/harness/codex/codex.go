@@ -250,6 +250,10 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 	// caller's.
 	args, defaultNotes := harness.ApplyDefaults(args, codexDefaults())
 	notes = append(notes, defaultNotes...)
+	// The mail tool's leaves come after every caller's -c and after the
+	// defaults, and before the server's arguments are derived, so both
+	// halves load the same entry (mailtool.go).
+	args, leaves := injectTool(args, request.MailTool)
 
 	socket := request.Socket
 	if socket == "" {
@@ -271,6 +275,9 @@ func (codexHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, e
 	mode, _ := continuationMode(request.Args)
 	server.startupFork = mode == "fork"
 	server.intent = resumeIntent(request.Args)
+	if leaves != nil {
+		server.tool = &toolInjection{upstream: server.upstream, cwd: cwd, args: request.Args, leaves: leaves, gates: request.MailTool.Gates}
+	}
 	return harness.LaunchPlan{
 		Backend:    server,
 		Socket:     socket,

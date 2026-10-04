@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/bridge"
+	"github.com/praline-labs/rewake/internal/channel"
 	"github.com/praline-labs/rewake/internal/receipt"
 	"github.com/praline-labs/rewake/internal/state"
 )
@@ -16,6 +17,7 @@ import (
 // The tool as each harness names it.
 const (
 	toolName       = "rewake"
+	serverStatus   = "mcpServer/startupStatus/updated"
 	claudeToolName = "mcp__rewake__rewake"
 )
 
@@ -25,6 +27,9 @@ type codexMessage struct {
 	Params struct {
 		Thread string `json:"threadId"`
 		TurnID string `json:"turnId"`
+		// Name and Status are an MCP server's startup status.
+		Name   string `json:"name"`
+		Status string `json:"status"`
 		Turn   struct {
 			ID string `json:"id"`
 		} `json:"turn"`
@@ -45,7 +50,7 @@ type codexMessage struct {
 }
 
 // CodexEvent takes one server notification of the run's primary thread, as
-// the gateway read it. It does no filesystem work and never waits: the
+// the gateway read it, or an MCP server's startup status of any thread. It does no filesystem work and never waits: the
 // gateway's reader goes on at once.
 func (e *Endpoint) CodexEvent(raw []byte) {
 	var message codexMessage
@@ -58,6 +63,11 @@ func (e *Endpoint) CodexEvent(raw []byte) {
 		e.turnStarted(params.Turn.ID)
 	case "turn/completed":
 		e.turnEnded(params.Turn.ID)
+	case serverStatus:
+		// The status's own text is dropped: the class is the endpoint's.
+		if params.Name == toolName && params.Status == "failed" {
+			e.tell(channel.Event{Kind: channel.StartupFailed})
+		}
 	case "item/started", "item/completed":
 		item := params.Item
 		if item.Kind != "mcpToolCall" || item.Server != toolName || item.Tool != toolName {
@@ -96,7 +106,11 @@ type claudeHook struct {
 // hook takes what `rewake bridge-hook` was handed. The hook has exited only
 // once this returns, and the harness runs the call only after the hook
 // exits: so the observation is in place before the call reaches the server.
-func (e *Endpoint) hook(payload []byte) {
+func (e *Endpoint) hook(payload []byte) { e.hookWith(payload, nil) }
+
+// hookWith is hook with the limits the hook saw, nil from one that sent
+// none.
+func (e *Endpoint) hookWith(payload []byte, limits *HookLimits) {
 	var input claudeHook
 	if json.Unmarshal(payload, &input) != nil || input.Tool != claudeToolName || input.Server != nil && input.Server.Name != toolName {
 		return
@@ -104,14 +118,23 @@ func (e *Endpoint) hook(payload []byte) {
 	nested := input.AgentID != "" || input.AgentType != ""
 	switch input.Event {
 	case "PreToolUse":
+		// Claude Code starts its server on demand: a call seen while none
+		// lives opens the hello timer.
+		e.tell(channel.Event{Kind: channel.CallSeen})
 		e.promptSeen(input.Prompt)
 		digest, refusal := e.observedWords(wordsOf(input.Input))
 		if nested {
 			refusal = "a nested agent's call does not run through the tool"
 		}
-		e.observe(input.UseID, observation{conversation: input.Session, prompt: input.Prompt, digest: digest, refusal: refusal})
+		e.observe(input.UseID, observation{conversation: input.Session, prompt: input.Prompt, digest: digest, refusal: refusal, limits: limits})
 	case "PostToolUse":
-		e.complete(input.UseID, exposureOf(input.UseID, input.Response, true, !nested))
+		evidence := exposureOf(input.UseID, input.Response, true, !nested)
+		if !e.limitsAllow(input.UseID, limits) {
+			// Which limit the harness applied to the result is unknown: the
+			// call is completed, and acknowledges nothing.
+			evidence = bridge.Exposure{}
+		}
+		e.complete(input.UseID, evidence)
 	}
 }
 

@@ -5,7 +5,10 @@
 ## Launching a harness
 
 The common part of the wrapper:
-1. Check the shared state root and selected room directory. List the machine's
+1. Check the shared state root and selected room directory. Run the mail tool's name
+   check before anything is claimed, so a refusal leaves nothing behind; it decides
+   whether the launch carries the tool, and why not when it does not
+   ([mail-bridge-launch.md](mail-bridge-launch.md#the-launch-in-order)). List the machine's
    processes once, before the lock: a pass over `/proc` takes a moment. Under the
    room's launch lock, choose the role and the name, only reading: a dead session
    record is removed only by the publication over it, after the proof below reads

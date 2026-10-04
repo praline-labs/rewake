@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -71,6 +72,11 @@ type serverSession struct {
 	reportCancel    context.CancelFunc
 	emit            func(context.Context, harness.Completion) error
 	note            func(string)
+	// tool is the mail tool's injection this run checks, nil without one
+	// (server_mailtool.go); readsOff, once a check finds a read would not
+	// reach the conversation whole, says why for the rest of the run.
+	tool     *toolInjection
+	readsOff atomic.Pointer[string]
 }
 
 func newServer(path string, args, env []string, cwd string) *serverSession {
@@ -142,6 +148,11 @@ func (s *serverSession) Start(ctx context.Context, handler harness.CompletionHan
 		cancel()
 		return fmt.Errorf("app-server startup failed (log %s): %w", s.upstream+".log", err)
 	}
+	if err := s.checkTool(runCtx); err != nil {
+		s.stopProcess()
+		cancel()
+		return err
+	}
 	listener, err := net.Listen("unix", s.path)
 	if err != nil {
 		s.stopProcess()
@@ -177,7 +188,7 @@ func (s *serverSession) Start(ctx context.Context, handler harness.CompletionHan
 		cancel()
 		return err
 	}
-	s.gateway = gateway.New(gateway.Config{Upstream: s.upstream, Epoch: s.epoch, StartupFork: s.startupFork, Intent: s.intent, Name: s.name, Admit: admit, ReadSequence: readSequence, EndCapture: endCapture, ToolEvent: handler.ToolEvent, Closed: func(info gateway.CloseInfo) {
+	s.gateway = gateway.New(gateway.Config{Upstream: s.upstream, Epoch: s.epoch, StartupFork: s.startupFork, Intent: s.intent, Name: s.name, Admit: admit, ReadSequence: readSequence, EndCapture: endCapture, ToolEvent: handler.ToolEvent, ThreadCheck: s.threadCheck(runCtx, handler.Channel), Closed: func(info gateway.CloseInfo) {
 		_, _ = fmt.Fprintf(s.gatewayLog, "connection=%d generation=%d direction=%s reason=%s error=%q bytes=%d requests=%d responses=%d sizeStage=%s messageBytes=%d limitBytes=%d\n", info.Connection, info.Generation, info.Direction, info.Reason, info.Error, info.Bytes, info.Requests, info.Responses, info.SizeStage, info.MessageBytes, info.LimitBytes)
 	}, Complete: func(result gateway.Completion) {
 		value := harness.Completion{ID: result.PublicationID(), Thread: result.Thread, Kind: inbox.Kind(result.Kind), Text: result.Text, Started: result.Started, Ended: result.Ended}

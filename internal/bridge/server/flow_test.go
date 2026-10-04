@@ -184,3 +184,22 @@ func TestAClaudeCallRunsThroughTheHooksObservation(t *testing.T) {
 		t.Fatalf("whoami: %+v", who.result)
 	}
 }
+
+// A Codex run whose server reads off — omit_tools_from or the output limit
+// not ours — refuses a read through the tool and leaves the letter unread,
+// while the rest of the tool still answers.
+func TestAToolThatReadsOffLeavesTheLetterUnread(t *testing.T) {
+	t.Parallel()
+	r := newRig(t, bridge.CodexTransport)
+	r.endpoint.SetReadsOff(func() string { return "the output limit is not the default" })
+	r.start()
+	id := r.letter("the letter of a run that reads off")
+	r.nextTurn()
+	read := r.call("inbox")
+	if !read.result.IsError || !strings.Contains(read.result.text(), "the output limit is not the default") || !r.unread(id) {
+		t.Fatalf("a read: %+v", read.result)
+	}
+	if who := r.call("whoami"); who.result.IsError {
+		t.Fatalf("whoami: %+v", who.result)
+	}
+}

@@ -3,8 +3,9 @@
 The second of three stages of [mail-bridge.md](mail-bridge.md): the local stdio MCP
 server the harness starts outside its sandbox, which runs the CLI of
 [mail-bridge-cli.md](mail-bridge-cli.md) once per tool call, and the wrapper's context
-endpoint that tells it who is calling. **Built and accepted October 1, 2026; no harness starts it yet,
-since injecting it at launch is stage 3** ([where the rules live](#where-the-rules-live)). This
+endpoint that tells it who is calling. **Built and accepted October 1, 2026; the launch injection of stage 3
+is built and its code accepted, live checks pending, and no harness starts it until that stage's gates G2 and G7 close**
+([mail-bridge-launch.md](mail-bridge-launch.md#gates)). This
 document holds the rules and one call's path; what happens after a call — the
 acknowledgment of a read, the turn's end, a pending mark, the waits and their bounds — is
 in [mail-bridge-turns.md](mail-bridge-turns.md). The rules come before the code, because
@@ -218,7 +219,10 @@ own `tool_timeout_sec` to 30, so the deadline falls inside it. On Claude Code th
 transport's timeout is the person's `MCP_TOOL_TIMEOUT`, read from the wrapper's own
 environment at launch; when that is shorter, the deadline is that timeout less two
 seconds. A deadline under five seconds means the tool reads nothing: the call is
-refused, and the reason names the setting. Stage 1 already cuts `send --wait` to the
+refused, and the reason names the setting. That is stage 2 as built; stage 3 replaces
+the launch-time reading with the value each call's hook observes and our server's own
+`timeout`, as [mail-bridge-launch.md](mail-bridge-launch.md#claude-code) lays out, and
+the wrapper's inherited environment then decides nothing. Stage 1 already cuts `send --wait` to the
 deadline less half a second, and the heads-up's lock wait to the deadline.
 
 ## Running the child
@@ -341,30 +345,12 @@ write that is an effect comes before the binding.
 
 ## Fallback and what main sees
 
-**Moved to stage 3, decided October 1, 2026:** the channel record below, its notices to
-the worker and main, and its display in `whoami`, `rewake list` and main's header are
-built with the injection, since until then no harness starts the server. Stage 2 keeps
-the server's own outcomes — a tool call that ran, one refused, a transport that failed —
-as defined results the record will read.
-
-The briefing sentence of the specification stands: the tool when present, else the
-shell. The wrapper keeps one channel record per run, which `whoami`, `rewake list` and
-the main-only header read:
-
-| State | Entered by | The notice, once per entry |
-|---|---|---|
-| tool unconfirmed | the launch, until the first hello | — |
-| tool available | a hello accepted | — |
-| tool failing | a transport refusal, a server gone, a harness-reported transport error | to the worker and main: "tool unavailable; shell fallback unconfirmed" |
-| shell confirmed | a shell CLI call of this run, while the tool fails | to main: "mail through the shell" |
-| both failing | the tool failing, and the shell observed failing | to main: both diagnostics |
-
-The CLI notes shell use in a record of its run, which the wrapper reads at its
-heartbeat. Shell failure is seldom observable, so "both failing" needs an observed
-failure: a shell that is merely silent stays "unconfirmed". The wrapper writes these
-notices itself, as it writes other notes to main. With no live main they wait in the
-channel record for the next. A hello after a failure returns the channel to available
-(Claude Code restarts a dead server). Nothing is relaunched or granted automatically.
+**Moved to stage 3, decided October 1, 2026:** the channel record, its notices to the
+worker and main, and its display in `whoami`, `rewake list` and main's header are built
+with the injection, since until then no harness starts the server. They are designed in
+[mail-bridge-channel.md](mail-bridge-channel.md). Stage 2 keeps the server's own
+outcomes — a tool call that ran, one refused, a transport that failed — as defined
+results that record will read.
 
 ## What the server refuses
 

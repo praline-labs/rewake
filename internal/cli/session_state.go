@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/praline-labs/rewake/internal/channel"
 	"github.com/praline-labs/rewake/internal/grant"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
@@ -109,6 +110,9 @@ func stateLine(name string, snapshot *sessionstate.Snapshot, settings bool) stri
 		if snapshot.SettingsAt != nil && !snapshot.SettingsFresh {
 			line += " (stale)"
 		}
+	}
+	if snapshot.Channel != nil {
+		line += " | " + channel.Label(snapshot.Channel)
 	}
 	if !snapshot.Fresh {
 		line += " | state unavailable/stale"

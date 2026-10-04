@@ -21,6 +21,7 @@ internal/receipt/                the journal of mail operations run through the 
 internal/bridge/                 what the CLI and the mail tool's server share: the ticket, result bounds, cutting parts
 internal/bridge/server/          the mail tool's stdio MCP server: frames, the one encoder, a child per call
 internal/bridge/endpoint/        the wrapper's context endpoint: hellos, tickets, completions, the gate against a turn's end
+internal/channel/                the run's mail channel: tool and shell observations, the block, display and notices
 internal/grant/                  which directories a task may grant, and the journal of what was granted
 internal/grantauth/              main's wrapper holding the grants its commands registered, and confirming them; a worker's wrapper keeping its own grants for its permission hook
 internal/grantauth/grantauthtest/ for tests: a helper process that is a recipient's run, confirms its grants at delivery and ends
@@ -29,7 +30,7 @@ internal/role/                   the role catalogue: flag, briefing line, report
 internal/brief/                  text injected into an agent, independent of transport
 internal/alias/                  launch aliases: a short name turned into launch arguments
 internal/sessionstate/           optional, epoch-scoped observations of a harness (telemetry)
-internal/harness/                the Harness interface, launch plans, notices, hooks, defaults
+internal/harness/                the Harness interface, launch plans, notices, hooks, defaults, the mail tool's gates and bounded checks
 internal/harness/catalog/        the one list of harnesses that exist
 internal/harness/claude/         launch arguments, environment, socket delivery
 internal/harness/claude/telemetry/  what a Claude Code session says about itself, carried to its wrapper
@@ -46,6 +47,7 @@ tools/harnesscache/              fetches and caches harness versions, runs them 
 tools/harnesscache/cache/        resolving, downloading, verifying and keeping a version
 tools/harnesscache/container/    the disposable container a cached version runs in
 tools/release/                   the release gate: checks, builds with pack.sh, publishes only when told
+tools/standin/                   a stand-in model API that answers with a call of the mail tool, for live checks
 ```
 
 `cmd/` holds only what the project ships; `tools/` holds development programs that ship

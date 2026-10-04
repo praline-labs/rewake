@@ -66,6 +66,10 @@ func Root() (string, error) {
 // A new directory is flushed to its parent: a mailbox that exists only in the
 // page cache takes messages that a crash then takes away.
 func ensureDir(path string) error {
+	return noteReach(makeDir(path), false)
+}
+
+func makeDir(path string) error {
 	_, err := os.Stat(path)
 	fresh := err != nil
 
@@ -109,6 +113,10 @@ func EnsureSubdir(path string) error { return ensureDir(path) }
 // before it is published and the directory after, so a crash cannot leave a
 // name pointing at bytes that were never written.
 func WriteAtomic(path string, data []byte) error {
+	return noteReach(writeAtomic(path, data), true)
+}
+
+func writeAtomic(path string, data []byte) error {
 	if err := fault(OpWrite, path); err != nil {
 		return err
 	}
@@ -243,7 +251,7 @@ func WithMailboxLock(ctx context.Context, dir, name string, fn func() error) err
 	path := filepath.Join(mailbox, ".lock")
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
 	if err != nil {
-		return &LockUnusableError{Err: err}
+		return &LockUnusableError{Err: noteReach(err, false)}
 	}
 	defer func() { _ = file.Close() }()
 
@@ -253,7 +261,7 @@ func WithMailboxLock(ctx context.Context, dir, name string, fn func() error) err
 			break
 		}
 		if err != syscall.EWOULDBLOCK && err != syscall.EINTR {
-			return &LockUnusableError{Err: err}
+			return &LockUnusableError{Err: noteReach(err, false)}
 		}
 		select {
 		case <-ctx.Done():

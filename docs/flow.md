@@ -62,6 +62,11 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
    directory's HEAD on a new branch under rewake's worktree directory, and the wrapper
    moves into it, at the same place in the repository, before anything else
    ([launch.md](launch.md#a-worktree-for-a-launch)).
+   Then, before any name is claimed, the mail tool's check: whether the person already
+   has an MCP server named `rewake` in a source the harness reads — a find refuses the
+   launch with exit 1 and nothing published — and whether the tool can be given at all;
+   where a gate is open or `--no-mail-tool` was passed, the run goes on through the
+   shell and stderr says why ([mail-bridge-launch.md](mail-bridge-launch.md#the-launch-in-order)).
 2. **The name and role.** Under the room lock, first select the role (step 4),
    then append the harness ID to the role prefix or explicit `--name` prefix.
    Automatic collisions add -2, -3 after the harness suffix; explicit conflicts
@@ -99,7 +104,9 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
      ([claude-telemetry.md](claude-telemetry.md)), and `--plugin-dir` with
      `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` for rewake's plugin, which reports turn
      starts and ends — an interrupted one included — to the same socket
-     ([claude-plugin.md](claude-plugin.md));
+     ([claude-plugin.md](claude-plugin.md)); with the mail tool, also
+     `--mcp-config` naming the run's server file, `--allowedTools mcp__rewake__rewake`
+     and the tool's hooks in the same settings layer;
    - Codex: an owned foreground app-server on a private socket, initialized before
      the TUI starts with --remote. Explicit configuration and the briefing reach
      the server; an inline gateway follows accepted TUI intent. Launch roles add no
@@ -108,7 +115,10 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
      remote/profile/local-provider launches refuse; `--worktree` never reaches it.
      A resume tells the gateway which conversation it asked for — by id, or the
      terminal's first resume for `--last` and the picker — and delivery waits for that
-     one ([delivery-conversation.md](delivery-conversation.md)).
+     one ([delivery-conversation.md](delivery-conversation.md)). With the mail tool, `-c`
+     leaves under `mcp_servers.rewake` after the caller's own, for the terminal and the
+     server alike, and the gateway checks the injection at every thread
+     ([mail-bridge-launch-codex.md](mail-bridge-launch-codex.md)).
 6. **The environment.** `REWAKE_SESSION=<name>`, `REWAKE_EPOCH=<epoch>`,
    `REWAKE_DIR=<root>` and `REWAKE_ROOM=<room>`; inherited Claude Code markers are stripped, so the harness
    never borrows another session's socket. A launch from inside a session never gets

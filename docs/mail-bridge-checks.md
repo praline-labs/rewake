@@ -5,7 +5,8 @@ The third part of the stage 2 design, beside [mail-bridge-server.md](mail-bridge
 answer): what the build changes in stage 1, how it is tested without a live harness,
 what stage 3 must still show live, and what the reviews of the rules found and what
 meets each finding now. **Built and accepted October 1, 2026**, with the tests below
-([how the checks are built](#how-the-checks-are-built)); the live checks wait for stage 3.
+([how the checks are built](#how-the-checks-are-built)); the live checks come with stage 3, whose
+code is built and accepted.
 
 ## What stage 2 changes in stage 1
 
@@ -207,10 +208,12 @@ write failing needs Claude Code's prompt hook, and waits for stage 3.
   included, before a later Claude Code call may mark; how long a capture waits for a
   writing acknowledgment;
   server death under `--remote`; the notices of a failing channel.
-- **Lower configured output limits.** Codex's tool output limit and Claude Code's
-  `MAX_MCP_OUTPUT_TOKENS` are read from the effective configuration at launch. A limit
-  below the calibrated one leaves tool reads unavailable, with a launch note; the cap is
-  never raised to fit.
+- **Lower configured output limits.** Codex's limits are read from its effective
+  configuration at launch and at each admitted thread; Claude Code's
+  `MAX_MCP_OUTPUT_TOKENS` and `MCP_TOOL_TIMEOUT` are taken per call by the hook, and
+  acknowledge a read only once the gate G8 shows them to be the values the harness
+  applies ([mail-bridge-launch.md](mail-bridge-launch.md#claude-code)). A limit not proven safe
+  leaves that read unacknowledged; the cap is never raised to fit.
 
 ## What the first review found
 

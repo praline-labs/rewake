@@ -5,8 +5,10 @@
 stage 2 the server, its context endpoint and the adapters
 ([mail-bridge-server.md](mail-bridge-server.md), [mail-bridge-turns.md](mail-bridge-turns.md),
 [mail-bridge-checks.md](mail-bridge-checks.md),
-[entry](roadmap/2026-10-01-mail-tool-server-stage.md)); the launch injection, stage 3, is not built,
-so no harness starts the server yet. This is the build specification for the mail
+[entry](roadmap/2026-10-01-mail-tool-server-stage.md)); the launch injection, stage 3, is built
+([mail-bridge-launch.md](mail-bridge-launch.md), [mail-bridge-channel.md](mail-bridge-channel.md),
+[entry](roadmap/2026-10-04-mail-tool-launch-stage.md)) and its code accepted on October 4, 2026,
+with its live checks pending: until gates G2 and G7 close, a launch gives neither harness the server and says why. This is the build specification for the mail
 transport chosen on September 30, 2026 ([work queue](work-queue.md#now-after-100)). The CLI implements mail
 once; a local stdio MCP server runs it outside the shell sandbox. The agent uses one
 `rewake` tool with its ordinary CLI words. Reading remains explicit: delivery alone
@@ -345,7 +347,7 @@ means “not sent”; an incomplete letter never means “read”.
 
 ## What stays open before acceptance
 
-- The launch injection and the live checks: stage 3. The context endpoint, the observer
+- The live checks of stage 3, whose code is built and accepted. The context endpoint, the observer
   and both adapters are built and accepted as stage 2, and the CLI predicate, receipts,
   chunk claims and the finalizer as stage 1, all tested in-process; no harness has run
   them yet.

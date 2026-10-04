@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"sync/atomic"
 
 	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
@@ -27,21 +28,47 @@ type MailTool struct {
 // without the tool, or an endpoint that could not start, which costs the
 // tool and never the session.
 type mailTool struct {
-	endpoint *endpoint.Endpoint
-	clock    *inbox.ReadClock
+	endpoint   *endpoint.Endpoint
+	clock      *inbox.ReadClock
+	capability string
+	// observer is the plan's observer, set once the plan is made: the
+	// endpoint asks it for the conversation a call belongs to.
+	observer atomic.Pointer[harness.Observer]
+	// keeper keeps the run's channel record, nil for a harness without the
+	// tool; it exists whether or not the endpoint started.
+	keeper *channelKeeper
+}
+
+// config is the run's endpoint configuration. What a gate leaves unknown
+// is decided here: until G8 closes, no call's limits are proven, and no
+// result acknowledges a read.
+func (t *mailTool) config(request Request, name, epoch, transport string, clock *inbox.ReadClock, gates harness.Gates) endpoint.Config {
+	span, refusal := endpoint.DeadlineFor(transport, os.Getenv)
+	return endpoint.Config{
+		Dir: request.Dir, Name: name, Epoch: epoch, Transport: transport,
+		Capability: t.capability, Span: span, Refusal: refusal,
+		Words: request.MailTool.Words, Acknowledge: request.MailTool.Acknowledge,
+		Gate:         endpoint.NewGate(clock.Snapshot),
+		Conversation: t.conversation,
+		Channel:      t.keeper.tell,
+		LimitsProven: !gates.Open(harness.GateG8),
+	}
 }
 
 // transports names the tool's transport of each harness that has it.
 var transports = map[string]string{"codex": bridge.CodexTransport, "claude": bridge.ClaudeTransport}
 
 // startMailTool opens the run's context endpoint with a capability of its
-// own. Before the harness: its first hook may come with its first prompt.
-func startMailTool(request Request, name, epoch string, plan harness.LaunchPlan) *mailTool {
+// own. Before the plan: the plan names the endpoint and the capability to
+// the tool's server, and either failing leaves the tool out
+// (docs/mail-bridge-launch.md#the-launch-in-order).
+func startMailTool(request Request, name, epoch string, gates harness.Gates) *mailTool {
 	tool := &mailTool{}
 	transport := transports[request.Harness.ID()]
 	if request.MailTool == nil || transport == "" {
 		return tool
 	}
+	tool.keeper = newChannelKeeper(request.Dir, name, epoch, request.Harness.ID())
 	secret := make([]byte, 32)
 	if _, err := rand.Read(secret); err != nil {
 		return tool
@@ -51,17 +78,8 @@ func startMailTool(request Request, name, epoch string, plan harness.LaunchPlan)
 		_, _ = fmt.Fprintln(os.Stderr, "rewake: the mail tool is not served: "+err.Error())
 		return tool
 	}
-	span, refusal := endpoint.DeadlineFor(transport, os.Getenv)
-	cfg := endpoint.Config{
-		Dir: request.Dir, Name: name, Epoch: epoch, Transport: transport,
-		Capability: hex.EncodeToString(secret), Span: span, Refusal: refusal,
-		Words: request.MailTool.Words, Acknowledge: request.MailTool.Acknowledge,
-		Gate: endpoint.NewGate(clock.Snapshot),
-	}
-	if threads, ok := plan.Observer.(interface{ Thread() (string, error) }); ok {
-		cfg.Conversation = func() string { thread, _ := threads.Thread(); return thread }
-	}
-	served, err := endpoint.Listen(state.ContextPath(request.Dir, name, epoch), cfg)
+	tool.capability = hex.EncodeToString(secret)
+	served, err := endpoint.Listen(state.ContextPath(request.Dir, name, epoch), tool.config(request, name, epoch, transport, clock, gates))
 	if err != nil {
 		clock.Close()
 		_, _ = fmt.Fprintln(os.Stderr, "rewake: the mail tool is not served: "+err.Error())
@@ -71,10 +89,43 @@ func startMailTool(request Request, name, epoch string, plan harness.LaunchPlan)
 	return tool
 }
 
+// conversation is the plan observer's thread, "" before the plan or for an
+// observer that tracks none.
+func (t *mailTool) conversation() string {
+	observer := t.observer.Load()
+	if observer == nil {
+		return ""
+	}
+	if threads, ok := (*observer).(interface{ Thread() (string, error) }); ok {
+		thread, _ := threads.Thread()
+		return thread
+	}
+	return ""
+}
+
+// attach hands the endpoint what only the plan knows: the observer that
+// names a call's conversation, and the backend's word on whether the tool
+// may read (codex: the injection check's output conditions).
+func (t *mailTool) attach(plan harness.LaunchPlan) {
+	if t.endpoint == nil {
+		return
+	}
+	if plan.Observer != nil {
+		observer := plan.Observer
+		t.observer.Store(&observer)
+	}
+	if reads, ok := plan.Backend.(interface{ ToolReadsOff() string }); ok {
+		t.endpoint.SetReadsOff(reads.ToolReadsOff)
+	}
+}
+
 // handler is a completion handler whose ends are captured through the
 // tool's gate, when the run has one.
 func (t *mailTool) handler(capture func() *inbox.ReadBoundary, publish func(context.Context, harness.Completion) error) harness.CompletionHandler {
 	handler := harness.CompletionHandler{Capture: capture, Publish: publish}
+	if t.keeper != nil {
+		handler.Channel = t.keeper.tell
+	}
 	if t.endpoint != nil {
 		handler.EndCapture = t.endpoint.Gate().Capture
 		handler.ToolEvent = t.endpoint.CodexEvent
