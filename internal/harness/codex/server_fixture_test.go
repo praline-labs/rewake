@@ -34,6 +34,9 @@ func TestServerProcessHelper(_ *testing.T) {
 	args := os.Args
 	for _, arg := range args {
 		if arg == "--version" {
+			if asked := os.Getenv("RW_SERVER_VERSION_ASKED"); asked != "" {
+				_ = os.WriteFile(asked, nil, 0o600)
+			}
 			if version := os.Getenv("RW_SERVER_VERSION"); version != "" {
 				fmt.Println(version)
 			} else {
@@ -111,6 +114,14 @@ func TestServerProcessHelper(_ *testing.T) {
 		markers[key] = os.Getenv(key)
 	}
 	_ = os.WriteFile(socket+".pid", []byte(fmt.Sprint(os.Getpid())), 0o600)
+	if starts := os.Getenv("RW_SERVER_STARTS"); starts != "" {
+		// One line per start, with its arguments: the version confirmation
+		// starts the server again without the tool's leaves.
+		if f, err := os.OpenFile(starts, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600); err == nil {
+			_, _ = fmt.Fprintf(f, "%d %s\n", os.Getpid(), strings.Join(args, " "))
+			_ = f.Close()
+		}
+	}
 	raw, _ := json.Marshal(markers)
 	_ = os.WriteFile(socket+".env", raw, 0o600)
 	listener, err := net.Listen("unix", socket)
@@ -155,7 +166,15 @@ func TestServerProcessHelper(_ *testing.T) {
 			result := any(map[string]any{})
 			switch request.Method {
 			case "initialize":
+				if os.Getenv("RW_SERVER_INIT_ERROR") == "1" {
+					serverMessage(conn, map[string]any{"id": request.ID, "error": map[string]any{"code": -32600, "message": "fixture refuses initialize"}})
+					mu.Unlock()
+					continue
+				}
 				clients[conn] = true
+				if agent, set := os.LookupEnv("RW_SERVER_USER_AGENT"); set {
+					result = map[string]any{"userAgent": agent}
+				}
 			case "initialized":
 				mu.Unlock()
 				continue

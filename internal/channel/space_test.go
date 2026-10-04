@@ -29,7 +29,7 @@ type letter struct {
 
 func alphabet() []letter {
 	return []letter{
-		{name: "harness-started", event: Event{Kind: HarnessStarted}},
+		{name: "session-started", event: Event{Kind: SessionStarted}},
 		{name: "thread", event: Event{Kind: ThreadAdmitted}},
 		{name: "call-seen", event: Event{Kind: CallSeen}},
 		{name: "hello-1", event: Event{Kind: Hello, Generation: 1}},
@@ -256,10 +256,6 @@ func TestEveryEventSequenceKeepsTheRules(t *testing.T) {
 		}
 		if after.Tool == ToolNone && after.Blocked() {
 			fail("a run without the tool cannot be denied it")
-		}
-		if e.Kind == Closed && after.Harness == Claude && after.Open() && (after.Interval.Boot == e.At.Boot || after.ClassAt.Boot == e.At.Boot) &&
-			!slices.Contains(failureTimes(s.after.folded, Claude, false), e.At.Boot) {
-			fail("Claude Code's lost connection is not a failure")
 		}
 		if (e.Kind == HelloRefused && !e.Descendant) && !equal(before, after) {
 			fail("a stray process's refused hello changes nothing")

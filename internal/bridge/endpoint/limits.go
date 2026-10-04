@@ -60,13 +60,27 @@ func callSpan(limits *HookLimits) (time.Duration, string) {
 
 // acknowledges says whether a call may acknowledge a read on its limits:
 // the hooks' two snapshots agree, and the output limit is the default probe
-// 2 calibrated. Any value counts as lowered until gate L5 calibrates the
-// smallest allowed one.
-func acknowledges(pre, post *HookLimits) bool {
+// 2 calibrated or a whole number at or above the bound L5 calibrated for the
+// launch's version. Without a bound any value counts as lowered
+// (docs/mail-bridge-version.md).
+func acknowledges(pre, post *HookLimits, bound int64) bool {
 	if pre == nil || post == nil {
 		return false
 	}
-	return same(pre.Timeout, post.Timeout) && same(pre.Output, post.Output) && pre.Output == nil
+	return same(pre.Timeout, post.Timeout) && same(pre.Output, post.Output) && outputWhole(pre.Output, bound)
+}
+
+// outputWhole says whether an output limit keeps a read whole: unset, or
+// decimal digits naming at least the bound.
+func outputWhole(output *string, bound int64) bool {
+	if output == nil {
+		return true
+	}
+	if bound <= 0 {
+		return false
+	}
+	value, err := strconv.ParseUint(*output, 10, 64)
+	return err == nil && value >= uint64(bound)
 }
 
 func same(a, b *string) bool {
@@ -101,5 +115,5 @@ func (e *Endpoint) limitsAllow(id string, post *HookLimits) bool {
 	if pre == nil && post == nil {
 		return true
 	}
-	return e.cfg.LimitsProven && acknowledges(pre, post)
+	return e.cfg.LimitsProven && acknowledges(pre, post, e.cfg.OutputBound)
 }

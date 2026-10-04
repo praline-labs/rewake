@@ -62,7 +62,9 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
    directory's HEAD on a new branch under rewake's worktree directory, and the wrapper
    moves into it, at the same place in the repository, before anything else
    ([launch.md](launch.md#a-worktree-for-a-launch)).
-   Then, before any name is claimed, the mail tool's check: whether the person already
+   Then, before any name is claimed, Codex's one `--version` read — a read that cannot
+   show its process ended refuses the launch ([mail-bridge-version.md](mail-bridge-version.md))
+   — and the mail tool's check: whether the person already
    has an MCP server named `rewake` in a source the harness reads — a find refuses the
    launch with exit 1 and nothing published — and whether the tool can be given at all;
    where a gate is open or `--no-mail-tool` was passed, the run goes on through the
@@ -118,7 +120,9 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
      one ([delivery-conversation.md](delivery-conversation.md)). With the mail tool, `-c`
      leaves under `mcp_servers.rewake` after the caller's own, for the terminal and the
      server alike, and the gateway checks the injection at every thread
-     ([mail-bridge-launch-codex.md](mail-bridge-launch-codex.md)).
+     ([mail-bridge-launch-codex.md](mail-bridge-launch-codex.md)). The server's start
+     compares the version its `initialize` answer names with the launch's read; one not
+     confirmed starts the server again without the leaves unless assumed gates keep it.
 6. **The environment.** `REWAKE_SESSION=<name>`, `REWAKE_EPOCH=<epoch>`,
    `REWAKE_DIR=<root>` and `REWAKE_ROOM=<room>`; inherited Claude Code markers are stripped, so the harness
    never borrows another session's socket. A launch from inside a session never gets

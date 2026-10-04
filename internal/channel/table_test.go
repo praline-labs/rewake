@@ -53,7 +53,7 @@ func scenarios() []scenario {
 			display: "mail: tool connected, unused",
 		},
 		{
-			name: "working, then calls not observed", harness: Claude, injected: true,
+			name: "working, then calls refused for no hook observation", harness: Claude, injected: true,
 			steps:   []step{ev(1*s, Hello, gen(1)), ev(5*s, Validated, issued(4*s)), ev(60*s, NotObserved)},
 			display: "mail: tool failing (calls not observed) since 2026-10-04 12:01:00; shell unconfirmed; tool last worked 2026-10-04 12:00:05",
 			worker:  []string{FirstWorkerFailing}, main: []string{FirstMainFailing},
@@ -66,7 +66,7 @@ func scenarios() []scenario {
 			worker: []string{FirstWorkerFailing, FirstWorkerFailing}, main: []string{FirstMainFailing, FirstMainFailing},
 		},
 		{
-			name: "the same class again tells nothing more", harness: Codex, injected: true,
+			name: "the same failure several times between two shell observations", harness: Codex, injected: true,
 			steps:   []step{ev(1*s, Hello, gen(1)), ev(20*s, NotObserved), ev(40*s, NotObserved)},
 			display: "mail: tool failing (calls not observed) since 2026-10-04 12:00:20; shell unconfirmed",
 			worker:  []string{FirstWorkerFailing}, main: []string{FirstMainFailing},
@@ -82,13 +82,13 @@ func scenarios() []scenario {
 			display: "mail: tool connected, unused",
 		},
 		{
-			name: "the last of two servers closes, whichever is older", harness: Codex, injected: true,
+			name: "the last of two servers closes, the older one", harness: Codex, injected: true,
 			steps:   []step{ev(1*s, Hello, gen(1)), ev(2*s, Hello, gen(2)), ev(3*s, Closed, gen(2), alive), ev(4*s, Closed, gen(1), alive)},
 			display: "mail: tool failing (server gone) since 2026-10-04 12:00:04; shell unconfirmed",
 			worker:  []string{FirstWorkerFailing}, main: []string{FirstMainFailing},
 		},
 		{
-			name: "a hello told after another connection's close", harness: Codex, injected: true,
+			name: "a connection's hello delivered after another connection's close", harness: Codex, injected: true,
 			steps: []step{
 				ev(2*s, Hello, gen(2)), ev(3*s, Closed, gen(2), alive),
 				ev(4*s, Hello, gen(1), func(e *Event) { e.At = stampAt(1 * s) }),
@@ -98,7 +98,7 @@ func scenarios() []scenario {
 			worker: []string{FirstWorkerFailing}, main: []string{FirstMainFailing},
 		},
 		{
-			name: "a startup failure told after a later hello", harness: Codex, injected: true,
+			name: "a startup failure delivered after a later hello", harness: Codex, injected: true,
 			steps: []step{
 				ev(1*s, ThreadAdmitted), ev(3*s, Hello, gen(1)),
 				ev(4*s, StartupFailed, func(e *Event) { e.At = stampAt(2 * s) }),
@@ -107,39 +107,48 @@ func scenarios() []scenario {
 			worker:  []string{FirstWorkerFailing}, main: []string{FirstMainFailing},
 		},
 		{
-			name: "a stray refused hello while a server works", harness: Codex, injected: true,
+			name: "a stray process's refused hello while a server works", harness: Codex, injected: true,
 			steps:   []step{ev(1*s, Hello, gen(1)), ev(2*s, Validated, issued(2*s)), ev(3*s, HelloRefused)},
 			display: "mail: tool",
 		},
 		{
-			name: "Claude Code's server gone between turns", harness: Claude, injected: true,
+			name: "Claude Code's server gone an hour after its last call", harness: Claude, injected: true,
 			steps:   []step{ev(1*s, Hello, gen(1)), ev(2*s, Validated, issued(2*s)), ev(3600*s, Closed, gen(1), alive)},
-			display: "mail: tool not connected",
+			display: "mail: tool failing (server gone) since 2026-10-04 13:00:00; shell unconfirmed; tool last worked 2026-10-04 12:00:02",
+			worker:  []string{FirstWorkerFailing}, main: []string{FirstMainFailing},
 		},
 		{
 			name: "no hello within the timer", harness: Claude, injected: true,
-			steps:   []step{ev(0, HarnessStarted), ev(15*s, TimerPassed)},
+			steps:   []step{ev(0, SessionStarted), ev(15*s, TimerPassed)},
 			display: "mail: tool failing (no hello observed) since 2026-10-04 12:00:15; shell unconfirmed",
 			worker:  []string{FirstWorkerFailing}, main: []string{FirstMainFailing},
 		},
 		{
-			name: "a hello at the timer's end is in time", harness: Claude, injected: true,
-			steps:   []step{ev(0, HarnessStarted), ev(15*s, Hello, gen(1)), ev(16*s, TimerPassed)},
+			// The timer runs from the run's first SessionStart: /clear or /resume
+			// before any hello neither opens nor moves it.
+			name: "a later session start before any hello", harness: Claude, injected: true,
+			steps:   []step{ev(0, SessionStarted), ev(10*s, SessionStarted), ev(15*s, TimerPassed)},
+			display: "mail: tool failing (no hello observed) since 2026-10-04 12:00:15; shell unconfirmed",
+			worker:  []string{FirstWorkerFailing}, main: []string{FirstMainFailing},
+		},
+		{
+			name: "a hello at the timer's very end", harness: Claude, injected: true,
+			steps:   []step{ev(0, SessionStarted), ev(15*s, Hello, gen(1)), ev(16*s, TimerPassed)},
 			display: "mail: tool connected, unused",
 		},
 		{
-			name: "a startup failure while a server lives is none", harness: Codex, injected: true,
+			name: "a failed startup status while a server lives", harness: Codex, injected: true,
 			steps:   []step{ev(1*s, ThreadAdmitted), ev(2*s, Hello, gen(1)), ev(3*s, StartupFailed)},
 			display: "mail: tool connected, unused",
 		},
 		{
 			name: "a late hello after the timer, then a ticket", harness: Claude, injected: true,
-			steps:   []step{ev(0, HarnessStarted), ev(15*s, TimerPassed), ev(20*s, Hello, gen(1)), ev(30*s, Validated, issued(29*s))},
+			steps:   []step{ev(0, SessionStarted), ev(15*s, TimerPassed), ev(20*s, Hello, gen(1)), ev(30*s, Validated, issued(29*s))},
 			display: "mail: tool",
 			worker:  []string{FirstWorkerFailing}, main: []string{FirstMainFailing, FirstMainWorks},
 		},
 		{
-			name: "tool fails, the shell fails, then the shell works", harness: Codex, injected: true,
+			name: "the tool fails, then the shell fails, then the shell works", harness: Codex, injected: true,
 			steps: []step{
 				ev(1*s, Hello, gen(1)), ev(2*s, Closed, gen(1), alive), ev(3*s, ShellObserved, class(ShellReadOnly)),
 				ev(4*s, ShellObserved, ok),
@@ -163,7 +172,7 @@ func scenarios() []scenario {
 			worker:  []string{FirstWorkerFailing, FirstWorkerFailing}, main: []string{FirstMainFailing, FirstMainWorks, FirstMainFailing},
 		},
 		{
-			name: "a denial, then a disconnect, a hello and a timer", harness: Codex, injected: true,
+			name: "the block, then a disconnect, a transport error, a hello or a timer", harness: Codex, injected: true,
 			steps: []step{
 				ev(1*s, Hello, gen(1)), ev(2*s, Validated, issued(2*s)), ev(3*s, Denied), ev(4*s, Closed, gen(1), alive),
 				ev(5*s, ThreadAdmitted), ev(6*s, Hello, gen(2)), ev(30*s, TimerPassed),
@@ -171,7 +180,7 @@ func scenarios() []scenario {
 			display: "mail: tool denied by policy", main: []string{FirstMainDenied},
 		},
 		{
-			name: "a long call started, a denial, the old call answers", harness: Claude, injected: true,
+			name: "a long call started, a denial recorded, the old call answers", harness: Claude, injected: true,
 			steps:   []step{ev(1*s, Hello, gen(1)), ev(5*s, Denied), ev(9*s, Validated, issued(2*s))},
 			display: "mail: tool denied by policy", main: []string{FirstMainDenied},
 		},
@@ -206,7 +215,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestEachFailurePointShowsAndTellsWhatTheTextSays(t *testing.T) {
-	for _, sc := range scenarios() {
+	for _, sc := range append(scenarios(), codexScenarios()...) {
 		t.Run(sc.name, func(t *testing.T) {
 			record := New(sc.harness, sc.injected, sc.reason, stampAt(0))
 			var notices Notices

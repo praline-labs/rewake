@@ -40,17 +40,54 @@ func Stamp() channel.Stamp {
 // connected opens a server connection's generation; its close tells the
 // wrapper with the same number, so an older server's EOF after a newer hello
 // is known for what it is.
-func (e *Endpoint) connected() func() {
+func (e *Endpoint) connected() (uint64, func()) {
 	e.mu.Lock()
 	e.generation++
 	generation := e.generation
 	e.mu.Unlock()
 	e.tell(channel.Event{Kind: channel.Hello, Generation: generation})
-	return func() {
+	return generation, func() {
 		// Whether the harness lives and is not ending is the wrapper's to
 		// say, after the event: the endpoint only knows the connection ended.
 		e.tell(channel.Event{Kind: channel.Closed, Generation: generation})
 	}
+}
+
+// SetPrimary names what says which thread the run's gateway holds as
+// primary, "" while it holds none; known only once the backend is.
+func (e *Endpoint) SetPrimary(primary func() string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.primary = primary
+}
+
+// bind tells the thread the first request of a Codex server's connection
+// names — a server serves one thread for its life — and refuses a request
+// that is not the primary thread's at once: the gateway forwards no other
+// thread's items, so waiting for its observation could only time out and
+// take a sub-agent's call for the conversation's fault
+// (docs/mail-bridge-channel-codex.md#conversation-connections).
+func (e *Endpoint) bind(generation uint64, thread string) error {
+	e.mu.Lock()
+	first := thread != "" && generation != 0 && !e.bound[generation]
+	if first {
+		if e.bound == nil {
+			e.bound = map[uint64]bool{}
+		}
+		e.bound[generation] = true
+	}
+	primary := e.primary
+	e.mu.Unlock()
+	if first {
+		e.tell(channel.Event{Kind: channel.Bound, Generation: generation, Thread: thread})
+	}
+	if primary == nil {
+		return nil
+	}
+	if held := primary(); thread == "" || thread != held {
+		return errors.New("the call is another thread's than the conversation this run holds, a nested agent's among them, and does not run through the tool")
+	}
+	return nil
 }
 
 // refused tells of a server's hello the endpoint refused, and whether it
@@ -66,13 +103,14 @@ func (e *Endpoint) refused(conn *net.UnixConn) {
 	e.tell(channel.Event{Kind: channel.HelloRefused, Descendant: descendant})
 }
 
-// report takes what a server reports.
-func (e *Endpoint) report(payload json.RawMessage) error {
+// report takes what a server reports, with its connection's generation:
+// on Codex only the conversation's own server's report fails its channel.
+func (e *Endpoint) report(payload json.RawMessage, generation uint64) error {
 	var what string
 	if json.Unmarshal(payload, &what) != nil || what != reportCannotStart {
 		return errors.New("a report this endpoint does not take")
 	}
-	e.tell(channel.Event{Kind: channel.CannotStart})
+	e.tell(channel.Event{Kind: channel.CannotStart, Generation: generation})
 	return nil
 }
 

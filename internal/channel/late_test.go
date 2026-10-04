@@ -1,6 +1,7 @@
 package channel
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -29,16 +30,16 @@ func TestALateTicketKeepsTheFirstFailureAfterIt(t *testing.T) {
 }
 
 // A ticket folded after a later close on Claude Code ends the failure before
-// it, but the close stands: not connected, or connected again after a later
-// hello — never working, and main is told of no recovery.
+// it, but the close stands: the server gone from the close, with a later
+// hello noted as a reconnection — never working, and main is told of no
+// recovery.
 func TestALateTicketDoesNotUndoALaterClose(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
 		hello bool
-		want  string
 	}{
-		{name: "closed", want: ToolNotConnected},
-		{name: "closed, then a hello", hello: true, want: ToolConnected},
+		{name: "closed"},
+		{name: "closed, then a hello", hello: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			r := New(Claude, true, "", stampAt(0))
@@ -56,8 +57,9 @@ func TestALateTicketDoesNotUndoALaterClose(t *testing.T) {
 				r.Fold(Event{Kind: Hello, Generation: 2, At: stampAt(5 * time.Second)})
 			}
 			r.Fold(Event{Kind: Validated, At: stampAt(3 * time.Second), Issued: stampAt(2 * time.Second).Boot})
-			if r.Open() || r.Tool != tc.want || r.Working() {
-				t.Fatalf("open %v tool %q working %v, want the interval ended and %q", r.Open(), r.Tool, r.Working(), tc.want)
+			if r.Interval != stampAt(4*time.Second) || r.Class != ClassServerGone || r.Working() ||
+				(r.Reconnected == stampAt(5*time.Second)) != tc.hello {
+				t.Fatalf("%+v, want the server gone from the close at 4s", r)
 			}
 			if p, sent := notices.Plan(&r, to, stampAt(6*time.Second)); sent && strings.HasPrefix(p.Body, FirstMainWorks) {
 				t.Fatalf("main told of a recovery the later close undid: %q", p.Body)
@@ -68,5 +70,38 @@ func TestALateTicketDoesNotUndoALaterClose(t *testing.T) {
 				t.Fatalf("tool %q after a ticket later than the close", r.Tool)
 			}
 		})
+	}
+}
+
+// A's server gone and A resumed: a second server seen and closed before the
+// answer is the start the admission waited for, whether its binding to A is
+// known or not, and folded in either order its close is the failure shown,
+// never the timer's end (docs/mail-bridge-channel-codex.md#as-built).
+func TestAReselectedConversationsHelloEndsTheExpectedStartInEitherOrder(t *testing.T) {
+	for _, bound := range []bool{false, true} {
+		events := append(selectionPrefix(),
+			Event{Kind: Closed, Generation: 1, Alive: true, At: stampAt(6 * s)},
+			Event{Kind: SelectionAdmitted, Thread: "A", At: stampAt(10 * s)},
+			Event{Kind: Hello, Generation: 2, At: stampAt(11 * s)})
+		if bound {
+			events = append(events, Event{Kind: Bound, Generation: 2, Thread: "A", At: stampAt(12 * s)})
+		}
+		events = append(events,
+			Event{Kind: Closed, Generation: 2, Alive: true, At: stampAt(13 * s)},
+			Event{Kind: Selected, Thread: "A", At: stampAt(14 * s)},
+			Event{Kind: TimerPassed, At: stampAt(26 * s)})
+		for _, arrival := range []string{"in event order", "in reverse"} {
+			r := New(Codex, true, "", stampAt(0))
+			arranged := slices.Clone(events)
+			if arrival == "in reverse" {
+				slices.Reverse(arranged)
+			}
+			for _, e := range arranged {
+				r.Fold(e)
+			}
+			if r.Class != ClassServerGone || r.ClassAt != stampAt(13*s) {
+				t.Errorf("bound %v, %s: class %q at %v, want the server gone at 13s", bound, arrival, r.Class, r.ClassAt)
+			}
+		}
 	}
 }

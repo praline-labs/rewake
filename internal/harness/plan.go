@@ -53,6 +53,10 @@ type LaunchRequest struct {
 	// MailTool, when set, is the mail tool's server this launch adds
 	// (docs/mail-bridge-launch.md); nil adds none.
 	MailTool *ToolServer
+	// Version is what the launch read of the harness's version before the
+	// claim, for a harness that reads it on every launch
+	// (LaunchVersionReader); its start runs nothing more to learn it.
+	Version Version
 }
 
 // LaunchPlan is how the wrapper starts the harness.

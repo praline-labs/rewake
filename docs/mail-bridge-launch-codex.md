@@ -117,13 +117,68 @@ unknown source is never an empty one. So the check is the same at every thread, 
 launch directory or another, and the preflight above is what tells the person's entry
 apart from ours before ours exists.
 
+## The version, confirmed at start
+
+*Revised after the live checks, October 4, 2026, and built the same day*
+(`codex/server_version.go`). The launch decides
+before the claim with the version its one `--version` read gave ([the harness
+version](mail-bridge-version.md)); the startup probe then reads the
+owned app-server's `initialize` answer, whose `userAgent` is `<client name>/<version>
+(…)` (*live*, 0.159.0; *source* `login/src/auth/default_client.rs` 152), before the
+gateway listens and so before any thread. A version is proven only when both name it.
+
+| `--version` | `userAgent` | Proven | The injection | Gates and thread admission | L5 bound | Channel |
+|---|---|---|---|---|---|---|
+| V | V | V | as chosen | the table's for V, and assumed ones | V's | as chosen |
+| V | absent, not parsed, or another version | none | the choice is made again with no version: kept when it still injects — every gate it needs assumed — else withdrawn | assumed ones only | none | kept: as chosen; withdrawn: "no tool", `harness version not confirmed` |
+| unknown after cleanup | not consulted | none | chosen with no version: no tool unless every gate it needs is assumed | assumed ones only | none | as chosen; "no tool", `harness version unknown`, without assumptions |
+| cleanup failed | — | — | — | — | — | the launch refused under rule 6, before the claim |
+| any | `initialize` fails, errors or passes its bound | — | — | — | — | the start fails as it does today: the record removed |
+
+**Withdrawn** means the owned app-server is stopped, reaped, and started again without
+our leaves, then probed as a launch without the tool; nothing has connected to it and no
+thread exists, so no server of ours ever ran. The second start runs the program once
+more — a `--command` wrapper included — only in this case. **No bound** means any
+`tool_output_token_limit` set turns tool reads off: a calibration holds for the version
+it ran against and for no other, whatever gates were assumed. The unit fixture
+app-server answers `initialize` with any `userAgent` and checks every row without a model
+(`codex/server_version_test.go`); the workflow shim answers `--version` and `userAgent`
+with one version, as a matching install does.
+
+As built, the userAgent's version is what follows the last `/` of its first word. The
+withdrawal proves the first server's whole process group ended before anything else: a
+`--command` wrapper may end before the app-server it started, so the leader's exit
+proves nothing of the rest. SIGTERM goes to the group; whatever of it is left two
+seconds later gets SIGKILL; then a bounded wait of two more seconds until no member but
+a zombie is left and the leader is reaped (`proc.GroupAlive`, the check the name check's
+holder uses too). Past that bound the launch is refused as a failed start, with the
+group's id in the error, and nothing is started beside it (*revised after the build
+review, October 4, 2026*). Only then is its socket removed, which the second server would
+otherwise find in its place, and the plain arguments the plan derived without our leaves
+started. The
+terminal needs no change: its own `-c` leaves name our server, but the thread
+configuration a 0.159.0 terminal sends carries only the keys of step 0's list
+(`config_request_overrides_from_config`, *source*), never `mcp_servers`
+([the injection check](#the-injection-check-at-start-and-at-every-thread)), so the
+server it talks to starts no server of ours. The wrapper is told through
+`harness.ToolWithdrawer`: the channel record begins again as "no tool" with the reason,
+and the launch note says it.
+
 ## The output limit
 
 Two values decide it (*source*): `tool_output_token_limit`
 (`core/src/config/mod.rs`) and the per-tool `mcp_servers.rewake.tools.rewake.output_token_limit`
 (`codex-mcp/src/binding.rs` 267–276). The second can come only from a layer naming
-`rewake`, which step 1 refuses. The first, read by the injection check, must be unset,
-the default probe 2 calibrated; any value turns tool reads off until the gate L5
-calibrates the smallest allowed one. Managed requirements are read with
+`rewake`, which step 1 refuses. The first, read by the injection check, is taken against
+the bound L5 calibrated for the running version: the live checks of October 4, 2026
+found 861 the smallest limit that keeps a 4096-byte result whole on 0.159.0, and 860
+cuts it in the middle ([research-mail-tool.md](research-mail-tool.md#results-and-the-output-limit--l5)).
+Unset, the default probe 2 calibrated, or a value at or above that bound leaves tool
+reads on; a lower value, one that is not a whole number, or any value under a version
+the bounds table does not name turns them off (*revised after the live checks and built
+the same day*; before, any value turned them off). A value is the number the reply
+carries: a fraction, a string or any other type is not a whole number. The version is the launch's, read as [the
+harness version](mail-bridge-version.md) says; the bound holds for the
+direct path only, which `omit_tools_from` keeps ours on. Managed requirements are read with
 `configRequirements/read`; a requirement on MCP servers that does not admit ours means
 no tool (**gate G4**: its exact fields).

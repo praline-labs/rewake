@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"os"
 	"path/filepath"
 	"time"
@@ -50,10 +51,12 @@ const (
 	refusedNotUnderstood = "the request could not be read"
 )
 
-// readsOffOmit and readsOffLimit say why reads through the tool are off.
+// readsOffOmit, readsOffLimit and readsOffNoBound say why reads through the
+// tool are off.
 const (
-	readsOffOmit  = "omit_tools_from is not in effect on the mail tool's server"
-	readsOffLimit = "tool_output_token_limit is set, and the smallest limit that keeps a read whole is not calibrated (gate L5)"
+	readsOffOmit    = "omit_tools_from is not in effect on the mail tool's server"
+	readsOffLimit   = "tool_output_token_limit is below the smallest limit that keeps a read whole for this version, or not a whole number (L5)"
+	readsOffNoBound = "tool_output_token_limit is set, and no smallest limit that keeps a read whole is calibrated for this version (L5)"
 )
 
 // terminalKeys are the top-level keys of a thread request's config the
@@ -219,9 +222,25 @@ func (t *toolInjection) judge(reply configReply, requirements map[string]any) in
 		return injectionResult{refusal: refusedRequirements}
 	}
 	if limit, set := reply.Config["tool_output_token_limit"]; set && limit != nil && readsOff == "" {
-		readsOff = readsOffLimit
+		readsOff = t.limitReadsOff(limit)
 	}
 	return injectionResult{readsOff: readsOff}
+}
+
+// limitReadsOff takes a set tool_output_token_limit against the bound L5
+// calibrated for the launch's version: a whole number at or above it keeps
+// reads on; any other value, or any value at all without a bound, turns
+// them off (docs/mail-bridge-launch-codex.md#the-output-limit).
+func (t *toolInjection) limitReadsOff(limit any) string {
+	bound, calibrated := t.gates.OutputBound()
+	if !calibrated {
+		return readsOffNoBound
+	}
+	value, number := limit.(float64)
+	if !number || value != math.Trunc(value) || value < float64(bound) {
+		return readsOffLimit
+	}
+	return ""
 }
 
 // removeOurs takes our leaves out of the session flags' entry, each only by

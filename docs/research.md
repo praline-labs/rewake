@@ -15,7 +15,8 @@ by subject: what a running Codex session shows moved to
 [research-codex.md](research-codex.md), and this file keeps Claude Code, the other
 harnesses and the failed-turn observations. Later the same day, what reaches a running
 Claude Code session from outside besides a message — an interruption, a command, a
-prompt draft — moved to [research-claude-control.md](research-claude-control.md).
+prompt draft — moved to [research-claude-control.md](research-claude-control.md). The
+mail tool on both harnesses has its own: [research-mail-tool.md](research-mail-tool.md).
 
 **[verified live; September 21, 2026]** A fact about our own checks rather than about a
 harness, kept here because it is dated and ages like the rest: `go test` inherits a

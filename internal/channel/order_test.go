@@ -30,7 +30,7 @@ func TestEveryArrivalOrderFoldsAsEventTime(t *testing.T) {
 		{Kind: TimerPassed},
 		{Kind: ThreadAdmitted},
 		{Kind: CallSeen},
-		{Kind: HarnessStarted},
+		{Kind: SessionStarted},
 	}
 	length := 4
 	if testing.Short() {

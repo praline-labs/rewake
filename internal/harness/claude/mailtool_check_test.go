@@ -43,6 +43,10 @@ const (
 // path carries no sentinel, and returns it.
 func checkFiles(t *testing.T) string {
 	t.Helper()
+	// No managed MCP file: the machine's own policy decides nothing here.
+	previous := managedDir
+	managedDir = filepath.Join(t.TempDir(), "managed")
+	t.Cleanup(func() { managedDir = previous })
 	cwd := filepath.Join(t.TempDir(), "launch")
 	files := map[string]string{
 		"settings-" + sentinel + ".json":  `{"env":{"TOKEN":"` + sentinel + `"}}`,
@@ -160,7 +164,7 @@ type verdict struct {
 
 // judge reads a line's parts as the rules state them, not as the check
 // orders its steps: any part that leaves the tool out may be the reason.
-func judge(parts []part, g7Closed bool) verdict {
+func judge(parts []part, g7 g7Case) verdict {
 	var result verdict
 	for _, p := range parts {
 		if p.stops != "" {
@@ -170,8 +174,8 @@ func judge(parts []part, g7Closed bool) verdict {
 	if len(result.stops) > 0 {
 		return result
 	}
-	if !g7Closed {
-		result.stops = []string{"gate G7"}
+	if g7.open != "" {
+		result.stops = []string{g7.open}
 		return result
 	}
 	position := 0
@@ -223,23 +227,20 @@ func TestTheNameCheckOverEveryLaunchLine(t *testing.T) {
 						if mcpFirst {
 							parts = []part{m, w, b, s}
 						}
-						for _, g7Closed := range []bool{false, true} {
+						for _, g7 := range g7Cases() {
 							cases++
-							want := judge(parts, g7Closed)
+							want := judge(parts, g7)
 							if want.asked {
 								asked++
 							}
 							line := lineOf(parts)
 							_ = os.Remove(mark)
-							gates := harness.ResolveGates(ID, "", nil)
-							if g7Closed {
-								gates = harness.ResolveGates(ID, "", []string{harness.GateG7})
-							}
+							version := g7.version
 							decision, err := claudeHarness{}.CheckMailTool(harness.ToolCheckRequest{
-								Args: line, Command: program, Cwd: cwd, Env: env, Gates: gates,
+								Args: line, Command: program, Cwd: cwd, Env: env, Version: &version, Assumed: g7.assumed,
 							})
 							if problem := against(want, decision, err, mark); problem != "" {
-								t.Fatalf("%q, G7 closed %v: %s", line, g7Closed, problem)
+								t.Fatalf("%q, %s: %s", line, g7.name, problem)
 							}
 						}
 					}
@@ -250,6 +251,27 @@ func TestTheNameCheckOverEveryLaunchLine(t *testing.T) {
 	t.Logf("%d launch lines, mcp get asked in %d", cases, asked)
 	if asked == 0 || asked == cases {
 		t.Fatalf("the space never or always reached mcp get: %d of %d", asked, cases)
+	}
+}
+
+// g7Case is one way a launch takes G7: the version the launch read, the
+// gates assumed, and the reason the rules give when it stays open.
+type g7Case struct {
+	name    string
+	version harness.Version
+	assumed []string
+	open    string
+}
+
+// g7Cases are G7 closed by the table for the version read, assumed, open
+// for a version the table does not name, and open for an unknown one
+// (docs/mail-bridge-version.md).
+func g7Cases() []g7Case {
+	return []g7Case{
+		{"closed for 2.1.284", harness.Version{Value: "2.1.284"}, nil, ""},
+		{"assumed", harness.Version{Unknown: harness.VersionNotInPath}, []string{harness.GateG7}, ""},
+		{"open for 2.1.200", harness.Version{Value: "2.1.200"}, nil, "gate G7"},
+		{"unknown", harness.Version{Unknown: harness.VersionNotOnPath}, nil, "harness version unknown (no claude on PATH)"},
 	}
 }
 

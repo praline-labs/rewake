@@ -23,8 +23,18 @@ type ToolCheckRequest struct {
 	Env []string
 	// StateRoot is where a check's private directory goes.
 	StateRoot string
-	// Gates are this launch's gates.
-	Gates Gates
+	// Version is the version the launch already read, nil where the check
+	// takes its own (ClaudeVersion) once nothing else leaves the tool out.
+	Version *Version
+	// Assumed are the gates the caller takes as closed.
+	Assumed []string
+}
+
+// LaunchVersionReader is a harness whose launch reads its version before the
+// claim on every launch, with the tool or without: Codex's transport takes
+// the same read for its compatibility note.
+type LaunchVersionReader interface {
+	ReadLaunchVersion(program string, env []string, dir string) (Version, error)
 }
 
 // Executable is the program a check runs: the caller's --command, else the
@@ -42,6 +52,9 @@ type ToolDecision struct {
 	Inject bool
 	// Reason, when it does not, says why in the words a diagnostic allows.
 	Reason string
+	// Gates are the launch's gates, by the version the check took; all open
+	// but the assumed ones where it took none.
+	Gates Gates
 }
 
 // MailToolHarness is a harness that can carry the mail tool. Its check

@@ -29,19 +29,39 @@ var mcpGetBound = 10 * time.Second
 const mcpGetTemplate = "claude mcp get rewake"
 
 // CheckMailTool decides the tool for a launch and proves the name free.
+// The version is taken last among the reasons for no tool: only where a
+// closed gate could still change the choice (docs/mail-bridge-version.md).
 func (claudeHarness) CheckMailTool(request harness.ToolCheckRequest) (harness.ToolDecision, error) {
+	gates := harness.ResolveGates("claude", "", request.Assumed)
+	noTool := func(reason string) (harness.ToolDecision, error) {
+		return harness.ToolDecision{Reason: reason, Gates: gates}, nil
+	}
 	args := harness.BeforeTerminator(request.Args)
 	if ownWorktree(args) {
-		return harness.ToolDecision{Reason: "-w: the harness picks its worktree after the launch, where no check can run"}, nil
+		return noTool("-w: the harness picks its worktree after the launch, where no check can run")
 	}
 	if harness.HasFlag(args, bareFlag) {
-		return harness.ToolDecision{Reason: "--bare: no hook is known to observe the tool's calls"}, nil
+		return noTool("--bare: no hook is known to observe the tool's calls")
 	}
 	if !settingsMergeable(args, request.Cwd) {
-		return harness.ToolDecision{Reason: "the --settings given cannot be read or merged, so no hook would observe the tool's calls"}, nil
+		return noTool("the --settings given cannot be read or merged, so no hook would observe the tool's calls")
 	}
-	if request.Gates.Open(harness.GateG7) {
-		return harness.ToolDecision{Reason: "gate G7: whether a plugin's server can be named rewake is not settled"}, nil
+	if reason := managedMCP(); reason != "" {
+		return noTool(reason)
+	}
+	version := harness.Version{Unknown: harness.VersionNotRead}
+	switch {
+	case request.Version != nil:
+		version = *request.Version
+	case harness.GatesNeedVersion("claude"):
+		version = harness.ClaudeVersion(request.Env)
+	}
+	gates = harness.ResolveGates("claude", version.Value, request.Assumed)
+	if gates.Open(harness.GateG7) {
+		if version.Value == "" {
+			return noTool(version.Note())
+		}
+		return noTool("gate G7: whether a plugin's server can be named rewake is not settled")
 	}
 	if err := checkMCPConfigs(args, request.Cwd); err != nil {
 		return harness.ToolDecision{}, err
@@ -52,7 +72,7 @@ func (claudeHarness) CheckMailTool(request harness.ToolCheckRequest) (harness.To
 	if err := mcpGet(request); err != nil {
 		return harness.ToolDecision{}, err
 	}
-	return harness.ToolDecision{Inject: true}, nil
+	return harness.ToolDecision{Inject: true, Gates: gates}, nil
 }
 
 // ownWorktree says whether the harness's own -w is among the arguments, in

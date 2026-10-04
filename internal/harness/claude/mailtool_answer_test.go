@@ -95,7 +95,7 @@ func TestEveryAnswerOfMcpGet(t *testing.T) {
 			mark := filepath.Join(t.TempDir(), "mark")
 			program := fakeClaude(t, t.TempDir(), mark, tc.body)
 			_, err := claudeHarness{}.CheckMailTool(harness.ToolCheckRequest{
-				Command: program, Cwd: cwd, Gates: harness.ResolveGates(ID, "", []string{harness.GateG7}),
+				Command: program, Cwd: cwd, Assumed: []string{harness.GateG7},
 				Env: []string{"PATH=" + os.Getenv("PATH"), "CLAUDE_CONFIG_DIR=" + config},
 			})
 			if problem := tc.judge(err); problem != "" {
@@ -118,7 +118,7 @@ func TestEveryAnswerOfMcpGet(t *testing.T) {
 func TestAProgramThatCannotStartRefuses(t *testing.T) {
 	_, err := claudeHarness{}.CheckMailTool(harness.ToolCheckRequest{
 		Command: filepath.Join(t.TempDir(), "absent"), Cwd: t.TempDir(),
-		Gates: harness.ResolveGates(ID, "", []string{harness.GateG7}),
+		Assumed: []string{harness.GateG7},
 	})
 	var check *harness.CheckFailedError
 	if !errors.As(err, &check) || check.Outcome != harness.OutcomeNoStart {
@@ -168,7 +168,7 @@ func TestTheParentDirectoriesServerFiles(t *testing.T) {
 			program := fakeClaude(t, t.TempDir(), mark, absentAnswer)
 			_, err := claudeHarness{}.CheckMailTool(harness.ToolCheckRequest{
 				Command: program, Cwd: cwd, Env: []string{"PATH=" + os.Getenv("PATH")},
-				Gates: harness.ResolveGates(ID, "", []string{harness.GateG7}),
+				Assumed: []string{harness.GateG7},
 			})
 			if tc.refuses == "" {
 				if err != nil {

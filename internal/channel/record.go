@@ -14,12 +14,11 @@ import (
 
 // The tool observation's states.
 const (
-	ToolStarting     = "starting"
-	ToolConnected    = "connected"
-	ToolNotConnected = "not connected"
-	ToolWorking      = "working"
-	ToolFailing      = "failing"
-	ToolNone         = "no tool"
+	ToolStarting  = "starting"
+	ToolConnected = "connected"
+	ToolWorking   = "working"
+	ToolFailing   = "failing"
+	ToolNone      = "no tool"
 )
 
 // The transport failure classes: a closed list, each from the endpoint's own
@@ -92,8 +91,11 @@ type Record struct {
 	Live       []uint64 `json:"live,omitempty"`
 	Generation uint64   `json:"generation,omitempty"`
 	// Timer is when the hello timer passes; zero while none runs.
-	Timer int64  `json:"timer,omitempty"`
-	Shell *Shell `json:"shell,omitempty"`
+	Timer int64 `json:"timer,omitempty"`
+	// Conversation is the thread the gateway last selected on Codex, whose
+	// connections the tool observation counts; "" before the first.
+	Conversation string `json:"conversation,omitempty"`
+	Shell        *Shell `json:"shell,omitempty"`
 	// Block is the latest denial's time while the block is set; zero while
 	// none. Issued is the newest validated ticket's issue time: a denial
 	// before it was lifted by it, whenever either is folded.

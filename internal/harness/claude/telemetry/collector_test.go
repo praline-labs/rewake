@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -78,6 +79,29 @@ func TestTheCollectorNamesTheConversation(t *testing.T) {
 	waitFor(t, "the first conversation", func() bool { thread, _ := collector.Thread(); return thread == "conv-a" })
 	Send(path, Event{Kind: SessionStart, Source: "clear", Session: "conv-b"})
 	waitFor(t, "the conversation after /clear", func() bool { thread, _ := collector.Thread(); return thread == "conv-b" })
+}
+
+// Every SessionStart is told as it is read, and nothing else is: the mail
+// tool's channel times its hello from the first (docs/mail-bridge-channel.md).
+func TestEverySessionStartIsTold(t *testing.T) {
+	path := filepath.Join(socketDir(t), "s.obs")
+	collector := NewCollector(path)
+	var told atomic.Int32
+	collector.OnSessionStart(func() { told.Add(1) })
+	if err := collector.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer collector.Close()
+	Send(path, Event{Kind: Stop})
+	Send(path, Event{Kind: SessionStart, Source: "startup", Session: "conv-a"})
+	Send(path, Event{Kind: UserPromptSubmit})
+	Send(path, Event{Kind: SessionStart, Source: "clear", Session: "conv-b"})
+	waitFor(t, "both session starts", func() bool { return told.Load() == 2 })
+	Send(path, Event{Kind: Stop})
+	waitFor(t, "the event after them", func() bool { return collector.SessionState().Activity != nil })
+	if got := told.Load(); got != 2 {
+		t.Fatalf("told %d session starts, want 2", got)
+	}
 }
 
 // Garbage on the socket is dropped without stopping the reader.

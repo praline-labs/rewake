@@ -17,6 +17,9 @@ import (
 // toolChoice is what a launch decided before the claim.
 type toolChoice struct {
 	gates harness.Gates
+	// version is what the launch read of its harness's version, for a
+	// harness that reads it on every launch.
+	version harness.Version
 	// inject says the plan adds the tool; note, when it does not, says why.
 	inject bool
 	note   string
@@ -24,12 +27,24 @@ type toolChoice struct {
 
 // chooseTool decides the tool before the run is claimed, so a refusal
 // publishes nothing. The error is the harness's refusal, as it words it.
+// The version is taken only where a closed gate could change the choice
+// (docs/mail-bridge-version.md): under --no-mail-tool, or for a harness
+// without the tool, the gates are not consulted, apart from the read a
+// harness takes on every launch.
 func chooseTool(request Request, cwd string) (toolChoice, error) {
 	program := request.Command
 	if program == "" {
 		program = request.Harness.ID()
 	}
-	choice := toolChoice{gates: harness.GatesFor(request.Harness.ID(), program, harness.CheckEnv(), cwd, request.AssumedGates)}
+	choice := toolChoice{gates: harness.ResolveGates(request.Harness.ID(), "", request.AssumedGates)}
+	var read *harness.Version
+	if reader, ok := request.Harness.(harness.LaunchVersionReader); ok {
+		version, err := reader.ReadLaunchVersion(program, harness.CheckEnv(), cwd)
+		if err != nil {
+			return choice, err
+		}
+		choice.version, read = version, &version
+	}
 	checker, carries := request.Harness.(harness.MailToolHarness)
 	switch {
 	case !carries || request.MailTool == nil || transports[request.Harness.ID()] == "":
@@ -40,12 +55,17 @@ func chooseTool(request Request, cwd string) (toolChoice, error) {
 	}
 	decision, err := checker.CheckMailTool(harness.ToolCheckRequest{
 		Args: request.Args, Command: request.Command, Cwd: cwd,
-		Env: harness.CheckEnv(), StateRoot: state.RootForRoom(request.Dir), Gates: choice.gates,
+		Env: harness.CheckEnv(), StateRoot: state.RootForRoom(request.Dir),
+		Version: read, Assumed: request.AssumedGates,
 	})
 	if err != nil {
 		return choice, err
 	}
 	choice.inject, choice.note = decision.Inject, decision.Reason
+	if decision.Inject {
+		// Without the tool the gates decide nothing more.
+		choice.gates = decision.Gates
+	}
 	return choice, nil
 }
 

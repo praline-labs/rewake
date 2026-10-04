@@ -1,9 +1,6 @@
 package codex
 
 import (
-	"context"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -34,41 +31,6 @@ func TestLaunchOwnsServerAndKeepsPromptOnTUI(t *testing.T) {
 	}
 	if !strings.Contains(strings.Join(server.env, "\n"), "REWAKE_SESSION=writer") {
 		t.Fatal("server did not inherit session identity")
-	}
-}
-
-func TestDifferentServerVersionWarnsWithoutRefusing(t *testing.T) {
-	fakeServerExecutable(t)
-	codexHome(t, "")
-	t.Setenv("RW_SERVER_VERSION", "codex-cli 9.9.9")
-	dir := t.TempDir()
-	path := filepath.Join(dir, "s.sock")
-	server := newServer(path, []string{"app-server", "--listen", "unix://" + path}, os.Environ(), dir)
-	var notes []string
-	if err := server.Start(context.Background(), harness.CompletionHandler{}, func(note string) { notes = append(notes, note) }); err != nil {
-		t.Fatal(err)
-	}
-	defer server.Close()
-	if len(notes) != 1 || !strings.Contains(notes[0], lastObservedServerVersion) {
-		t.Fatalf("version mismatch warning=%v", notes)
-	}
-}
-
-// The fixture prints its own literal rather than the constant, so this test fails
-// on a typo in the pin instead of comparing the constant with itself.
-func TestMatchingServerVersionWarnsAboutNothing(t *testing.T) {
-	fakeServerExecutable(t)
-	codexHome(t, "")
-	dir := t.TempDir()
-	path := filepath.Join(dir, "s.sock")
-	server := newServer(path, []string{"app-server", "--listen", "unix://" + path}, os.Environ(), dir)
-	var notes []string
-	if err := server.Start(context.Background(), harness.CompletionHandler{}, func(note string) { notes = append(notes, note) }); err != nil {
-		t.Fatal(err)
-	}
-	defer server.Close()
-	if len(notes) != 0 {
-		t.Fatalf("pinned version produced notes=%v", notes)
 	}
 }
 

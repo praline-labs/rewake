@@ -110,7 +110,8 @@ func (k *channelKeeper) foldRipe(now channel.Stamp, alive bool) {
 	})
 }
 
-// started folds the harness's start and runs the heartbeat until exited.
+// started runs the heartbeat until exited. The start the hello timer waits
+// from is the harness's own first SessionStart, told by its telemetry.
 func (k *channelKeeper) started(ctx context.Context, alive func() bool) {
 	if k == nil {
 		return
@@ -118,7 +119,6 @@ func (k *channelKeeper) started(ctx context.Context, alive func() bool) {
 	k.mu.Lock()
 	k.alive = alive
 	k.mu.Unlock()
-	k.tell(channel.Event{Kind: channel.HarnessStarted})
 	ctx, cancel := context.WithCancel(ctx)
 	done := make(chan struct{})
 	k.mu.Lock()

@@ -163,9 +163,16 @@ func StartCheck(spec CheckSpec) (*CheckProcess, error) {
 		case <-time.After(holderBound):
 		}
 	}
-	_ = p.End()
+	if p.End() != nil {
+		return nil, ErrCheckNotEnded
+	}
 	return nil, errors.New("the check could not be started")
 }
+
+// ErrCheckNotEnded is a check that could not be started and whose holder
+// could not show that everything it began has ended: what a caller that
+// reads an unknown outcome as harmless must still refuse on (rule 6).
+var ErrCheckNotEnded = errors.New("the check could not be started, and what it began could not be shown to have ended")
 
 // readReports follows what the holder says: whether the program started,
 // how it exited, and how its tree ended. A holder that is gone says no more:

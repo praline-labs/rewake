@@ -334,7 +334,8 @@ this notice itself; a worker need not send it through broken mail. With no live 
 keep the diagnostic locally for a later main. No automatic relaunch or permission grant.
 
 Probe 1 observed Codex leaving a dead MCP server down and Claude Code restarting it on
-the next call. Durable state therefore belongs to the CLI journal, never server memory.
+the next call; Claude Code 2.1.284 no longer restarts it (live, October 4, 2026,
+[research-mail-tool.md](research-mail-tool.md)). Durable state therefore belongs to the CLI journal, never server memory.
 Existing wrappers keep their shell path; new wrappers use a matching bridge and CLI.
 Receipts/claims are additive and versioned; old CLI mutation alongside active new claims
 is unsupported. Ended epochs cannot replay into replacements. Committed waits retain

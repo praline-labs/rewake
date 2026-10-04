@@ -36,7 +36,7 @@ func (h *toolHarness) ID() string { return "claude" }
 
 func (h *toolHarness) CheckMailTool(request harness.ToolCheckRequest) (harness.ToolDecision, error) {
 	h.checked++
-	h.gates = request.Gates
+	h.gates = harness.ResolveGates("claude", "", request.Assumed)
 	return h.decision, h.refusal
 }
 

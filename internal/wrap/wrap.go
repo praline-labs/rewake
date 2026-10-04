@@ -170,6 +170,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 		ControlDir:        controlDir,
 		GrantDirs:         restored.dirs(),
 		MailTool:          toolServer,
+		Version:           choice.version,
 	})
 	if err != nil {
 		return 0, err

@@ -65,8 +65,9 @@ func (e *Endpoint) CodexEvent(raw []byte) {
 		e.turnEnded(params.Turn.ID)
 	case serverStatus:
 		// The status's own text is dropped: the class is the endpoint's.
+		// Its thread, absent or not, decides whose channel it fails.
 		if params.Name == toolName && params.Status == "failed" {
-			e.tell(channel.Event{Kind: channel.StartupFailed})
+			e.tell(channel.Event{Kind: channel.StartupFailed, Thread: params.Thread})
 		}
 	case "item/started", "item/completed":
 		item := params.Item

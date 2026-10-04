@@ -39,6 +39,9 @@ type (
 		// the mail tool's calls (toolEvent), and every MCP server's startup
 		// status (serverStatus); it never waits.
 		ToolEvent func(raw []byte)
+		// Selection takes the steps of the terminal's choice of a
+		// conversation (selection.go); it never waits.
+		Selection func(Selection)
 		// ThreadCheck, when set, is asked about every terminal request
 		// before it is forwarded: a refusal comes back as the request's
 		// error and nothing reaches the server. It may take seconds; the
@@ -100,6 +103,10 @@ func (c *connection) close() { c.closeWith("lifecycle", "shutdown", nil, 0) }
 
 func (c *connection) closeWith(direction, reason string, err error, size int) {
 	c.once.Do(func() {
+		// Whether this connection held the primary is asked before it is
+		// canceled, which ends its ownership: the selection it had pending
+		// fails with it.
+		owned := c.owner.owns(c)
 		c.cancel()
 		_ = c.up.conn.Close()
 		_ = c.down.conn.Close()
@@ -108,6 +115,9 @@ func (c *connection) closeWith(direction, reason string, err error, size int) {
 		c.observationClosed()
 		c.unanswered()
 		c.state.invalidate("connection lost; re-establish recognized primary intent")
+		if owned && c.owner.cfg.Selection != nil {
+			c.owner.cfg.Selection(Selection{Step: SelectionFailed})
+		}
 		c.state.pending = map[string]pending{}
 		c.injected = map[string]chan meta{}
 		proven := c.admitted.proven

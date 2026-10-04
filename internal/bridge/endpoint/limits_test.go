@@ -105,7 +105,7 @@ func TestEveryWrittenTimeoutGivesItsSpan(t *testing.T) {
 // limitsSpace are the snapshots a hook may send: none, empty, and each
 // setting at the default, raised, lowered or written badly.
 func limitsSpace() []*HookLimits {
-	values := []*string{nil, ptr("30000"), ptr("7000"), ptr("x"), ptr("")}
+	values := []*string{nil, ptr("30000"), ptr("7000"), ptr("x"), ptr(""), ptr("2047"), ptr("2048"), ptr("+2048"), ptr("2048.0")}
 	space := []*HookLimits{nil}
 	for _, timeout := range values {
 		for _, output := range values {
@@ -120,20 +120,25 @@ func ptr(value string) *string { return &value }
 func TestAReadIsAcknowledgedOnlyOnProvenAgreeingDefaultLimits(t *testing.T) {
 	space := limitsSpace()
 	cases, allowed := 0, 0
-	for _, proven := range []bool{false, true} {
-		for _, pre := range space {
-			for _, post := range space {
-				e := &Endpoint{cfg: Config{Transport: bridge.ClaudeTransport, LimitsProven: proven}, calls: newCalls()}
-				e.calls.byCall["call"] = &call{observed: &observation{limits: pre}}
-				want := pre == nil && post == nil ||
-					proven && pre != nil && post != nil && pre.Output == nil && post.Output == nil &&
-						sameValue(pre.Timeout, post.Timeout)
-				if got := e.limitsAllow("call", post); got != want {
-					t.Fatalf("proven %v pre %s post %s: got %v", proven, show(pre), show(post), got)
-				}
-				cases++
-				if want {
-					allowed++
+	// The bound of 2.1.284 (docs/mail-bridge-version.md), or none.
+	whole := map[string]bool{"30000": true, "7000": true, "2048": true}
+	for _, bound := range []int64{0, 2048} {
+		for _, proven := range []bool{false, true} {
+			for _, pre := range space {
+				for _, post := range space {
+					e := &Endpoint{cfg: Config{Transport: bridge.ClaudeTransport, LimitsProven: proven, OutputBound: bound}, calls: newCalls()}
+					e.calls.byCall["call"] = &call{observed: &observation{limits: pre}}
+					keeps := pre != nil && (pre.Output == nil || bound > 0 && whole[*pre.Output])
+					want := pre == nil && post == nil ||
+						proven && pre != nil && post != nil && keeps &&
+							sameValue(pre.Output, post.Output) && sameValue(pre.Timeout, post.Timeout)
+					if got := e.limitsAllow("call", post); got != want {
+						t.Fatalf("bound %d proven %v pre %s post %s: got %v", bound, proven, show(pre), show(post), got)
+					}
+					cases++
+					if want {
+						allowed++
+					}
 				}
 			}
 		}

@@ -54,7 +54,7 @@ func failureTimes(folded []Event, harness Harness, closes bool) []int64 {
 		switch {
 		case e.Kind == CallSeen && harness == Claude:
 			bound = HelloAtCall
-		case e.Kind == HarnessStarted && harness == Claude, e.Kind == ThreadAdmitted && harness == Codex:
+		case e.Kind == SessionStarted && harness == Claude, e.Kind == ThreadAdmitted && harness == Codex:
 			bound = HelloAtStart
 		}
 		if end := e.At.Boot + int64(bound); bound != 0 && end <= clock {
@@ -107,7 +107,7 @@ func equal(a, b Record) bool {
 	return shells && a.Harness == b.Harness && a.Tool == b.Tool && a.Class == b.Class && same(a.ClassAt, b.ClassAt) &&
 		a.Reason == b.Reason && same(a.Interval, b.Interval) && same(a.Worked, b.Worked) && same(a.Reconnected, b.Reconnected) &&
 		slices.Equal(a.Live, b.Live) && a.Generation == b.Generation && a.Timer == b.Timer &&
-		same(a.Block, b.Block) && a.Issued == b.Issued && a.Frozen == b.Frozen
+		same(a.Block, b.Block) && a.Issued == b.Issued && a.Frozen == b.Frozen && a.Conversation == b.Conversation
 }
 
 func same(a, b Stamp) bool { return a.Boot == b.Boot && a.Wall.Equal(b.Wall) }
@@ -115,7 +115,7 @@ func same(a, b Stamp) bool { return a.Boot == b.Boot && a.Wall.Equal(b.Wall) }
 // equal is written out field by field for speed; a field added to the
 // record without it would be compared by nothing.
 func TestEqualComparesEveryField(t *testing.T) {
-	if n := reflect.TypeFor[Record]().NumField(); n != 16 {
-		t.Fatalf("the record has %d fields; equal compares 15 and the history", n)
+	if n := reflect.TypeFor[Record]().NumField(); n != 17 {
+		t.Fatalf("the record has %d fields; equal compares 16 and the history", n)
 	}
 }

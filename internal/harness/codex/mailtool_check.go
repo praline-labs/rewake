@@ -15,7 +15,10 @@ import (
 // a separate app-server with the caller's -c values and none of ours, asked
 // for every layer, then ended.
 
-var _ harness.MailToolHarness = codexHarness{}
+var (
+	_ harness.MailToolHarness     = codexHarness{}
+	_ harness.LaunchVersionReader = codexHarness{}
+)
 
 // preflightBound bounds the whole check, from start to the group's end; a
 // variable so a test of a hanging server need not wait the whole of it.
@@ -30,13 +33,18 @@ const remoteControlOff = "CODEX_INTERNAL_APP_SERVER_REMOTE_CONTROL_DISABLED=1"
 
 // CheckMailTool decides the tool for a launch and proves the name free.
 func (codexHarness) CheckMailTool(request harness.ToolCheckRequest) (harness.ToolDecision, error) {
-	if request.Gates.Open(harness.GateG2) {
-		return harness.ToolDecision{Reason: "gate G2: the servers a thread registers beyond the configuration cannot be listed yet"}, nil
+	version := harness.Version{Unknown: harness.VersionNotRead}
+	if request.Version != nil {
+		version = *request.Version
+	}
+	gates := harness.ResolveGates("codex", version.Value, request.Assumed)
+	if reason := gatesLeaveOut(gates, version); reason != "" {
+		return harness.ToolDecision{Reason: reason, Gates: gates}, nil
 	}
 	cwd, err := gitWorkingDirectory(request.Args)
 	if err != nil {
 		// The launch refuses the same arguments itself, with this reason.
-		return harness.ToolDecision{Reason: "the working directory could not be resolved"}, nil
+		return harness.ToolDecision{Reason: "the working directory could not be resolved", Gates: gates}, nil
 	}
 	config, requirements, err := preflight(request, cwd)
 	if err != nil {
@@ -46,9 +54,29 @@ func (codexHarness) CheckMailTool(request harness.ToolCheckRequest) (harness.Too
 		return harness.ToolDecision{}, &harness.NameTakenError{Where: where}
 	}
 	if requiresMCP(requirements) {
-		return harness.ToolDecision{Reason: "gate G4: managed requirements name MCP servers, and which of them admit rewake's is not settled"}, nil
+		return harness.ToolDecision{Reason: "gate G4: managed requirements name MCP servers, and which of them admit rewake's is not settled", Gates: gates}, nil
 	}
-	return harness.ToolDecision{Inject: true}, nil
+	return harness.ToolDecision{Inject: true, Gates: gates}, nil
+}
+
+// gatesLeaveOut is the gates' share of the choice, "" when they leave the
+// tool in: the same before the claim and again at the start, when the
+// version is not confirmed and the choice is made with none.
+func gatesLeaveOut(gates harness.Gates, version harness.Version) string {
+	if !gates.Open(harness.GateG2) {
+		return ""
+	}
+	if version.Value == "" {
+		return version.Note()
+	}
+	return "gate G2: the servers a thread registers beyond the configuration cannot be listed yet"
+}
+
+// ReadLaunchVersion is the launch's one --version, before the claim and on
+// every launch: the transport's compatibility note takes it, and the gates
+// where the tool is chosen (docs/mail-bridge-version.md).
+func (codexHarness) ReadLaunchVersion(program string, env []string, dir string) (harness.Version, error) {
+	return harness.ReadVersion(program, env, dir)
 }
 
 // preflight runs the check's app-server and reads its answers.

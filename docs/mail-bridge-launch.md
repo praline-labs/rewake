@@ -6,8 +6,9 @@ exactly its one tool, refuses a launch whose person already has a server named `
 and proves that nothing of the person's configuration changed. The run's mail channel —
 its record, notices, display and the briefing — is in
 [mail-bridge-channel.md](mail-bridge-channel.md). **Design, third pass, October 4, 2026;
-built and its code accepted the same day, live checks pending**
-([mail-bridge-live.md](mail-bridge-live.md)): until
+built and its code accepted the same day; the live checks ran the same day**
+([mail-bridge-live.md](mail-bridge-live.md)); the rules they changed are marked
+*revised after the live checks*, and were built the same day. Until
 a gate closes, the launch takes the action this document gives for what it leaves unknown
 ([gates](#gates)). The reviews' findings and what meets each are in the stage's reports.
 
@@ -26,7 +27,8 @@ the action taken until then.
    tool, and the observer hooks inside the one settings layer rewake already passes. No
    configuration file, configuration home, global approval, sandbox, code mode, output
    limit or timeout is written or overridden; the timeouts our own entry carries are
-   part of it and bind our server only.
+   part of it and bind our server only. How that is proven, without a harness and live,
+   is in [mail-bridge-live.md](mail-bridge-live.md#proving-preservation).
 2. **The name is proven free, source by source, before the run is published.** Each
    harness has a table below: every source of an MCP server name it reads, the check
    that covers it, and what is done where coverage is unknown. A name found in a covered
@@ -79,7 +81,7 @@ the action taken until then.
 | 2, 6, 7 | `codex/mailtool_check.go` and `codex/mailtool_layers.go`, `claude/mailtool_check.go`, `internal/harness/check.go` (the bounded run), `check_holder.go` (the holder) and `check_diagnostic.go` (the closed list), called by `chooseTool` in `internal/wrap/mailtool_launch.go` before the claim |
 | 4 | `internal/wrap/mailtool_launch.go` (the choice and its note), `internal/wrap/mailtool.go` (the capability and endpoint before the plan), `--no-mail-tool` in `internal/cli/registry.go` |
 | 5 | `claude/settings.go` and `bridge-hook` (values per call), `internal/bridge/endpoint/limits.go` (deadline, acknowledgment), `codex/mailtool_inject.go` (reads off) |
-| gates | `internal/harness/gates.go`: the table, `REWAKE_GATES_ASSUMED`, what each launch takes as open; `gates_version.go`: the version read for it |
+| gates | `internal/harness/gates.go`: the table, `REWAKE_GATES_ASSUMED`, what each launch takes as open; `gates_version.go`: the version read for it ([mail-bridge-version.md](mail-bridge-version.md)) |
 
 ## The launch, in order
 
@@ -127,14 +129,27 @@ the output limit are in [mail-bridge-launch-codex.md](mail-bridge-launch-codex.m
   plus ours (probe 2).
 
 **No tool** (rule 4), with a launch note: the caller's `--settings` cannot be read or
-merged, so no hook would observe a call; `--bare`, whose hooks are unverified; the short
-`-w`, Claude Code's own worktree, whose directory and checkout the harness picks after
-the launch (*live*, [research-launch.md](research-launch.md#a-worktree-at-launch)), so no
-check can run there first. Every spelling the harness's parser takes counts — `-w` alone,
-its value as the next word or joined, and `w` among the letters of a group of short
-flags, which over-covers rather than misses; a test lists them against the parser of the
-installed version. rewake's own `--worktree` is not this: rewake makes that checkout and
-moves into it before the launch, so the check runs there.
+merged, so no hook would observe a call; `--bare`, whose hooks are unverified; a managed
+MCP file (below); the short `-w`, Claude Code's own worktree, whose directory and
+checkout the harness picks after the launch (*live*,
+[research-launch.md](research-launch.md#a-worktree-at-launch)), so no check can run there
+first. Every spelling of `-w` the harness's parser takes counts — alone, its value as the
+next word or joined, and `w` among the letters of a group of short flags, which
+over-covers rather than misses; a test lists them against the parser of the installed
+version. rewake's own `--worktree` is not this: rewake makes that checkout and moves
+into it before the launch, so the check runs there.
+
+**A managed `managed-mcp.json`** (*revised after the live checks; built*, `claude/managed.go`) makes
+the harness refuse every `--mcp-config` and exit 1 (*live*, 2.1.284), so ours would stop
+the launch. Only the file's existence is asked, by `lstat` in the harness's managed
+directory — `/etc/claude-code` on Linux, `/Library/Application Support/ClaudeCode` on
+macOS (*bundled source*). Present in any form — a link, a directory, unreadable or
+unparsed, which the harness treats as in control too (*bundled source*:
+"unusable-managed-mcp") — gives no tool, reason `a managed MCP configuration is
+present`; only `ENOENT` proves it absent, and any other error gives no tool with `the
+managed MCP configuration could not be checked`. A WSL policy chain under which the
+harness skips `/etc/claude-code` over-covers. A caller's own `--mcp-config` beside the
+file still stops the harness; rewake only adds no refusal of its own.
 
 **The name check, before the claim.** `<program> mcp get rewake`, in the launch
 directory, with the harness's environment (`CLAUDE_CONFIG_DIR` included), bounded at
@@ -155,7 +170,7 @@ Whatever the check started is ended and reaped as on Codex, by the check's holde
 | local scope, keyed by the directory | `mcp get` (`Local config`) | *verified* | — |
 | `.mcp.json` of the launch directory, approved, pending or rejected | `mcp get` (`Project config`) | *verified* | — |
 | `.mcp.json` of a parent directory | rewake: every parent up to `/`, read only | — | **gate G5**: whether the harness reads it; until it closes one naming `rewake` refuses, and one that cannot be read or parsed refuses as a check that failed (main's decision of October 4, 2026) |
-| managed `managed-mcp.json` | — | *source*: present, it takes exclusive control and ignores the others, ours too | **gate G6**: whether `mcp get` shows it; our server ignored is a channel without a hello, not a merge |
+| managed `managed-mcp.json` | rewake: whether the file exists, never its content | *live* on 2.1.284 (October 4, 2026): present, it takes exclusive control, `mcp get` shows only its servers, and a launch with `--mcp-config` exits 1 | present in any form: no tool, no name check (G6; *revised, built*) |
 | the caller's `--mcp-config` | rewake: every value of every occurrence | *probe*: repeated flags add | — |
 | `--setting-sources` | `mcp get` reads every source; one left out still refuses | — | over-covers, never under |
 | plugins' servers | — | names carry the plugin's prefix | **gate G7**: that no plugin server can be named `rewake` bare; until it closes, no tool, with a note naming the gate |
@@ -186,8 +201,13 @@ or PostToolUseFailure:
   setting — a refusal of one call, not a block and not evidence about the transport.
   Once G8 proves the server's own `timeout` binds, the deadline is 25 s as on Codex.
 - **output**: unset is the default probe 2 calibrated, and the call may acknowledge a
-  read; any value turns acknowledgment off for that call until the gate L5 calibrates
-  the smallest allowed one; a value that is not a whole number counts as lowered.
+  read; a whole number at or above the bound L5 calibrated for the running version —
+  2048 for 2.1.284 — leaves it so (*revised after the live checks; built*,
+  `endpoint.Config.OutputBound`), and
+  any other value, or any value under a version with no bound, turns acknowledgment off
+  for that call; a value that is not a whole number counts as lowered. Over the limit
+  the harness replaces the whole result with an error rather than cutting it (*live*),
+  so a smaller value loses the answer, not a tail of it.
 
 A call acknowledges a read only when its two snapshots agree, and only once G8 has shown
 that the PreToolUse value is the one the harness applies to that call's result. If G8
@@ -226,32 +246,6 @@ could not be established, the refusal says which check, its outcome class, and a
 template to run by hand — `claude mcp get rewake`, or `codex mcp get rewake` with the
 same `-c` values — without repeating them.
 
-## Proving nothing else changed
-
-**Without a live harness.** For generated combinations of the caller's arguments —
-allowances under both spellings or none, `--strict-mcp-config`, a caller's `--settings`,
-`--mcp-config` as files and inline, several values and repeated flags, `-c` in both
-spellings and under other tables, `--command`, aliases and defaults, `--` — the plan's
-arguments equal those of the adapter without stage 3, which already merges `--settings`
-and adds its own flags, plus exactly the additions above; the merged settings equal that
-adapter's plus our hook entries. A launch against a fake harness writes nothing outside
-the state directory: the configuration files of a temporary `HOME`, `CODEX_HOME` and
-`CLAUDE_CONFIG_DIR` stay as they were. Every diagnostic surface is searched for sentinels
-planted in env values, inline configuration, `-c` values and a check's output.
-
-**Live**, through rewake, as the [preservation check](mail-bridge.md#preservation-check)
-lays out, in the owner's own logged-in harnesses and scratch project folders (the
-owner's decision of October 4, 2026; the plan is
-[mail-bridge-live.md](mail-bridge-live.md)). The person's user configuration is read
-only: every case's conditions — a server named `rewake`, a deny rule, a limit — are set
-in the case folder's project layer or the caller's flags. The files rewake must never
-touch are compared byte for byte before and after each run; `~/.claude.json`, which the
-harness rewrites itself, as a whole less a named list of runtime fields, the case's own
-project entry included, with a baseline run under `--no-mail-tool` to show where each
-runtime write comes from. A real harness keeps runtime state, trust and
-history of its own, so the invariant is that rewake edits no configuration, and the
-effective values, replies and denials of baseline and injected runs are compared too.
-
 ## Failure points of a launch
 
 | Point | Proven | Unknown | Rewake does |
@@ -262,7 +256,9 @@ effective values, replies and denials of baseline and injected runs are compared
 | a check exits otherwise, answers unrecognized text or passes its bound | — | whether the name is free | refuses, with the check, its outcome class and the template |
 | a check's process cannot be ended or reaped | — | what it still runs | refuses, naming the check |
 | a caller's `--mcp-config` unreadable | — | what it holds | refuses, naming the value's position |
-| `-w` in any spelling, `--bare`, unmergeable `--settings`, `--no-mail-tool` | the tool could not be checked or observed | — | no tool, with a note |
+| `-w` in any spelling, `--bare`, unmergeable `--settings`, `--no-mail-tool`, a managed `managed-mcp.json` | the tool could not be checked, observed or added | — | no tool, with a note |
+| the harness version unknown (Claude Code: no `claude` on `PATH` or a path naming no version; Codex: an unreadable `--version`) | — | which gates hold for it | every gate open: no tool, with a note |
+| Codex: `initialize`'s `userAgent` names another version than the read, or none | — | which gates hold for it | the choice made again without a version: kept when every gate it needs is assumed, else withdrawn — no tool, with a note ([the version, confirmed at start](mail-bridge-launch-codex.md#the-version-confirmed-at-start)) |
 | G2 open (Codex), G7 open (Claude Code), G4 open with requirements naming MCP servers | — | a source of the name no check covers yet | no tool, with a note naming the gate; never a refusal |
 | the endpoint or the capability fails | — | — | no tool, with a note |
 | Codex: our effective entry holds a key not ours | something merged | from where | refuses; the record removed as after a failed start |
@@ -281,28 +277,37 @@ Each is a live or source check of the stage's plan, with sentinels that write wh
 started; the stage is accepted only with each closed, and how each is run is in
 [mail-bridge-live.md](mail-bridge-live.md). A gate is closed in code only by an entry in
 `closedGates` (`internal/harness/gates.go`) naming the harness and the versions its check
-ran against; a version not named keeps it open. So whenever the table names a version
-for the harness being launched, the launch reads that harness's version first — the
-program it will run, `--version`, bounded and reaped as a check (`gates_version.go`) —
-and a version it cannot read leaves every gate open. The table is empty: every launch
-takes the action of each open gate, given below in parentheses.
+ran against; a version not named keeps it open. The table holds G1 for codex-cli
+0.159.0 and G5 and G7 for Claude Code 2.1.284, closed by the live checks of October 4,
+2026 ([the run](mail-bridge-live.md#the-run-of-october-4-2026)); every other launch takes
+the action of each open gate, given below in parentheses, with the run's answer after it.
+
+Which version a launch takes for this table, and what an unknown one means, is in
+[mail-bridge-version.md](mail-bridge-version.md).
 
 - **G1** no MCP server starts in the check's app-server without a thread. (Nothing of
-  its own: the check's app-server runs only once G2 is closed.)
+  its own: the check's app-server runs only once G2 is closed.) *Closed for 0.159.0.*
 - **G2** a Codex call that lists the registrations a thread request will have — the
   plugins it selects, extensions, hosted apps, compatibility servers — without starting
-  them. (No tool on Codex, with a note naming the gate; no check runs.)
+  them. (No tool on Codex, with a note naming the gate; no check runs.) *Open: the source
+  of 0.159.0 has no such call.*
 - **G3** the cwd of a Codex resume or fork whose request names none. (Such a request is
-  refused.)
+  refused.) *Answered on 0.159.0: the thread's recorded cwd; open until the gateway checks
+  that one rather than the server's.*
 - **G4** Codex requirements on MCP servers, by their exact fields. (Requirements with any
   key naming MCP and a value set give no tool, with a note; taking G4 as closed does not
   change that, since which fields admit ours is what the gate settles.)
 - **G5** a parent directory's `.mcp.json` and `mcp get`. (rewake reads every parent's
-  file itself and refuses on one naming `rewake`.)
-- **G6** `managed-mcp.json` and `mcp get`. (Nothing of its own: a managed file that
-  ignores our server shows as a channel without a hello.)
+  file itself and refuses on one naming `rewake`.) *Closed for 2.1.284: the harness reads
+  a parent's file at any depth, across a git root.*
+- **G6** `managed-mcp.json` and `mcp get`. (Nothing of its own.) *Answered on 2.1.284:
+  the file makes the harness refuse any `--mcp-config` and exit 1, so a launch with our
+  server does not start.* For the name check it leaves nothing to check — no server of
+  ours can be added beside it — so no tool and no `mcp get` (above); the gate closes for
+  a version once a launch with the file present starts without the tool, live.
 - **G7** that no Claude Code plugin server can be named `rewake` bare. (No tool on
-  Claude Code, with a note naming the gate.)
+  Claude Code, with a note naming the gate.) *Closed for 2.1.284: every plugin server is
+  keyed `plugin:<plugin>:<server>`.*
 - **G8** which `MCP_TOOL_TIMEOUT` and `MAX_MCP_OUTPUT_TOKENS` Claude Code applies to a
   call: the values at PreToolUse and at the result, set in user, caller, project and
   managed settings, and changed in the same process between calls and during a long one;
@@ -314,17 +319,25 @@ takes the action of each open gate, given below in parentheses.
   cannot be run stays unproven, and a run where that layer's `env` names either variable
   — the launch reads the names only — acknowledges no read on Claude Code; a managed
   settings file present counts as naming them. (No call acknowledges a read on Claude
-  Code; tool reads there stay refused regardless, as above.)
+  Code; tool reads there stay refused regardless, as above.) *Partly answered on
+  2.1.284: our server's own `timeout` binds over `MCP_TOOL_TIMEOUT`, and the caller's
+  `env` limits apply; the other layers and a change during a session not run — open.*
 - **G9** the parameters of a Codex thread request that reach its layers, the injection,
   the limits or the registrations — `config`, `cwd`, `sandbox`, `permissions` and the
   trust branch they open — read in the source of each version accepted: the key Codex
   forms for a cwd's trust, and that no other path changes the active layers. Until it
   closes for a version, step 0 refuses what it does not cover. (A thread request naming a
-  cwd is refused.)
+  cwd is refused.) *Not closable as built on 0.159.0: a request's `config` reaches the
+  `sessionFlags` layer unfiltered, and `selectedCapabilityRoots` adds plugin
+  registrations.*
 - **L4** the native signal of a policy denial of our tool, on each harness. (No block is
-  ever set; a denied call is only the harness's own answer to the model.)
-- **L5** the smallest output limits that still deliver a 4 KiB result whole. (Any output
-  limit set turns acknowledgment, or on Codex tool reads, off.)
+  ever set; a denied call is only the harness's own answer to the model.) *Open: no
+  person-reachable denial on Codex 0.159.0, no distinct hook event on Claude Code 2.1.284.*
+- **L5** the smallest output limits that still deliver a 4 KiB result whole. (Under a version
+  without a bound, any output limit set turns acknowledgment, or on Codex tool reads, off.) *Answered: 861 for
+  `tool_output_token_limit` on 0.159.0, 2048 for `MAX_MCP_OUTPUT_TOKENS` on 2.1.284.
+  Revised and built: the code takes them per version from `outputBounds` beside
+  `closedGates` ([the harness version](mail-bridge-version.md)).*
 
 ### Gates taken as closed
 

@@ -24,8 +24,7 @@ func foldInEveryOrder(harness Harness, events []Event, check func(order []int, r
 
 // Two servers across a ticket: the newer closes, a startup failure comes
 // while the older lives and is none, the older's close is the server gone
-// on Codex — Claude Code starts its server again — and the last failure is
-// the class shown.
+// on both harnesses, and the last failure is the class shown.
 func TestTwoConnectionsAcrossATicketInEveryOrder(t *testing.T) {
 	events := []Event{
 		{Kind: Hello, Generation: 1, At: stampAt(time.Second)},
@@ -39,9 +38,6 @@ func TestTwoConnectionsAcrossATicketInEveryOrder(t *testing.T) {
 	}
 	for _, harness := range []Harness{Codex, Claude} {
 		interval, category := stampAt(6*time.Second), CategoryShell
-		if harness == Claude {
-			interval, category = stampAt(8*time.Second), CategoryFailing
-		}
 		foldInEveryOrder(harness, events, func(order []int, r Record) {
 			if r.Tool != ToolFailing || r.Interval != interval || r.Class != ClassNotObserved ||
 				r.ClassAt != stampAt(8*time.Second) || r.Worked != stampAt(3*time.Second) ||

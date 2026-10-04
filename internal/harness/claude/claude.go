@@ -18,7 +18,10 @@ const ID = "claude"
 // The collector is where a delivery learns its conversation; a change that
 // made it stop answering would leave every report without threadChanged and
 // nothing failing.
-var _ harness.ThreadSource = (*telemetry.Collector)(nil)
+var (
+	_ harness.ThreadSource       = (*telemetry.Collector)(nil)
+	_ harness.SessionStartSource = (*telemetry.Collector)(nil)
+)
 
 // Its plugin serves control requests; a change that dropped the method would
 // refuse every compact and interrupt as unsupported.

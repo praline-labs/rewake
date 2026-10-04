@@ -49,6 +49,9 @@ type (
 		readSerial   uint64
 		readClosedBy string
 		backfill     map[string]bool
+		// selection takes the steps of the terminal's choice of a
+		// conversation (selection.go); nil tells nothing.
+		selection func(Selection)
 	}
 )
 
@@ -56,7 +59,14 @@ func newState(epoch string, conn uint64) state {
 	return state{Binding: Binding{Epoch: epoch, Connection: conn, Reason: "waiting for recognized primary intent"}, pending: map[string]pending{}, events: newObserver(), ops: newOperations()}
 }
 
+// invalidate empties the primary, and tells so: a selection pending fails
+// with it.
 func (s *state) invalidate(reason string) {
+	s.reset(reason)
+	s.tell(SelectionFailed, "")
+}
+
+func (s *state) reset(reason string) {
 	s.fork = nil
 	s.side = ""
 	s.Generation++
@@ -121,7 +131,7 @@ func (s *state) request(m meta) error {
 		return nil
 	}
 	if recognized(m) {
-		s.invalidate("primary intent pending")
+		s.admit("primary intent pending", m.thread)
 		p.intent = true
 		p.generation = s.Generation
 		p.readSerial = s.readSerial
@@ -153,8 +163,21 @@ func (s *state) request(m meta) error {
 			}
 		}
 	}
+	if !p.intent {
+		s.otherThread(m)
+	}
 	s.pending[m.id] = p
 	return nil
+}
+
+// otherThread tells a thread request that is no selection: its thread's
+// servers start all the same, and the channel's timer waits for them while
+// nothing of the conversation lives.
+func (s *state) otherThread(m meta) {
+	switch m.method {
+	case "thread/start", "thread/resume", "thread/fork":
+		s.tell(ThreadAdmitted, m.thread)
+	}
 }
 
 func knownNonSelection(method string) bool {
@@ -194,8 +217,7 @@ func (s *state) response(m meta, raw ...[]byte) meta {
 		s.invalidate("primary reply refused, unknown or read-only; select a conversation with /resume or /new")
 		return m
 	}
-	s.Thread = m.thread
-	s.Ready = true
+	s.selected(m.thread)
 	s.Reason = "accepted primary intent"
 	s.fresh = p.method == "thread/start"
 	s.events.bind(m.thread, m.status, time.Now())

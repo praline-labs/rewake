@@ -49,7 +49,7 @@ func (g *Gateway) startupForkIntent(c *connection, m meta) bool {
 func (s *state) forkRequest(m meta, p *pending) bool {
 	if forkIntent(m) && (m.startupFork || s.Ready && m.thread == s.Thread) {
 		oldSide := s.side
-		s.invalidate("fork selection pending its native acknowledgements")
+		s.admit("fork selection pending its native acknowledgements", "")
 		s.fork = &forkSelection{generation: s.Generation, parent: m.thread, startup: m.startupFork, oldSide: oldSide, parentLive: true}
 		p.fork = true
 		p.generation = s.Generation
@@ -124,7 +124,8 @@ func (s *state) forkResponse(m meta, p pending) {
 			s.invalidate("side setup did not preserve a confirmed primary; select /resume or /new")
 			return
 		}
-		s.Thread, s.Ready, s.Reason = f.parent, true, "side confirmed; primary unchanged"
+		s.selected(f.parent)
+		s.Reason = "side confirmed; primary unchanged"
 		s.side = f.child
 		s.events.bind(f.parent, "idle", time.Now())
 		s.fork = nil
@@ -150,7 +151,8 @@ func (s *state) forkResponse(m meta, p pending) {
 
 func (s *state) acceptFork() {
 	f := s.fork
-	s.Thread, s.Ready, s.Reason = f.child, true, "accepted native fork selection"
+	s.selected(f.child)
+	s.Reason = "accepted native fork selection"
 	s.events.bind(f.child, f.status, time.Now())
 	s.fork = nil
 }

@@ -319,7 +319,9 @@ func (p *shimPeer) initialize(params json.RawMessage) (any, error) {
 		"codexHome":      os.Getenv("CODEX_HOME"),
 		"platformFamily": "unix",
 		"platformOs":     "linux",
-		"userAgent":      "rewake-shim/0.0.1",
+		// The real server's form, "<client name>/<version> (…)", with the
+		// version --version answers: the start confirms the two agree.
+		"userAgent": asked.ClientInfo.Name + "/" + strings.TrimPrefix(lastObservedServerVersionForShim(), "codex-cli ") + " (shim)",
 	}, nil
 }
 

@@ -90,8 +90,8 @@ rewake --general --name review --command my-claude claude
   rather than the last one winning. An alias's copy is replaced by one typed on the line.
 - **What it replaces:** the program, and nothing else. Every argument, variable, socket
   and settings layer the adapter adds is the same, and the telemetry hooks and the status
-  line still call rewake. For Codex both halves run through it — the version check, the
-  owned app-server and the terminal — because a server started beside the wrapper would
+  line still call rewake. For Codex both halves run through it — the version read before
+  the claim, the owned app-server and the terminal — because a server started beside the wrapper would
   run in a different environment from the terminal.
 - **The Codex home rewake reads** is still taken from its own environment at launch. A
   wrapper that sets `CODEX_HOME` runs both halves there, but rewake decides from its own
@@ -109,9 +109,12 @@ rewake --general --name review --command my-claude claude
   refused naming the value and the next action. The absolute path matters for Codex,
   whose server starts in the `-C` directory: a relative one would resolve there. rewake
   does not run the program to check it, and does not guess the harness from its name:
-  wrappers are named anything. For Codex, `<wrapper> --version` does run at start, as the
-  version check always does, through the wrapper like the other two processes; a wrapper
-  that does not answer it only produces the version note.
+  wrappers are named anything. For Codex, `<wrapper> --version` does run once before the
+  claim, as the version read always does ([the harness version](mail-bridge-version.md)),
+  through the wrapper like the other two processes; a wrapper that does not answer it
+  produces the version note and an unknown version, which leaves the mail tool out. On
+  Claude Code the version is read from the path of the `claude` on `PATH`, and the
+  wrapper is not run for it.
 - **In an alias** it is the field `command = "<program>"`, which becomes `--command`
   before the harness word — in the user alias file only
   ([launch-defaults.md](launch-defaults.md#naming-a-whole-launch)). With it, a launch
@@ -213,11 +216,11 @@ forward all configuration. Use explicit settings.
 
 Unknown TUI arguments are preserved, not interpreted as server configuration.
 
-Startup checks codex --version against the version the transport was last observed
-working on — 0.155.1 since September 21, 2026 — and warns, without refusing a different
-version. Moving the pin takes two edits that have to agree: the constant
-`lastObservedServerVersion` in `internal/harness/codex/server.go`, and the literal the test
-fixture prints. The duplication is deliberate: a fixture echoing the constant back
+The launch's one `codex --version` read, taken before the claim, is compared at startup
+with the version the transport was last observed working on — 0.155.1 since September
+21, 2026 — and a different or unreadable one warns, without refusing. Moving the pin
+takes two edits that have to agree: the constant `lastObservedServerVersion` in
+`internal/harness/codex/server_version.go`, and the literal the matching test names. The duplication is deliberate: a fixture echoing the constant back
 would make the matching test tautological and let a typo in the pin through. A fake
 executable and socket server cover the process and protocol contract. Real-model
 acceptance remains a separate owner-run check.

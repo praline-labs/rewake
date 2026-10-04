@@ -175,7 +175,11 @@ the same reach, and the specification draws the boundary there.
 | words | `arguments` normalized, digest equal | `tool_input` normalized, digest equal |
 
 On Codex the request's `threadId` and `turn_id` from `_meta` must equal the
-observation's. Missing, conflicting or duplicate correlation refuses: a second
+observation's; a request whose `threadId` is absent or not the primary thread is refused
+before any wait, since the gateway forwards no other thread's items and the wait could
+only time out (revised after the live checks of October 4, 2026, and built the same day:
+the primary comes from the backend's `Thread()`, so while a selection is pending every
+Codex call is refused this way). Missing, conflicting or duplicate correlation refuses: a second
 observation with the same call id; a call this run already gave a ticket, however long
 ago; a thread other than the primary one, which covers a sub-agent's thread; a Codex
 turn already completed, or one whose end was captured since the call was heard or the

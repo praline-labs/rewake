@@ -24,7 +24,6 @@ func TestTheChannelAndAssumedGatesAreShown(t *testing.T) {
 	records := []*channel.Record{
 		nil,
 		{Harness: channel.Claude, Tool: channel.ToolStarting},
-		{Harness: channel.Claude, Tool: channel.ToolNotConnected},
 		{Harness: channel.Claude, Tool: channel.ToolWorking},
 		{Harness: channel.Codex, Tool: channel.ToolFailing, Class: channel.ClassServerGone, Interval: now},
 		{Harness: channel.Claude, Tool: channel.ToolNone, Reason: "gate G7: not settled", Interval: now},

@@ -13,49 +13,8 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/channel"
 	"github.com/praline-labs/rewake/internal/proc"
 )
-
-// Config is what the wrapper of one run gives its endpoint.
-type Config struct {
-	// Dir, Name and Epoch name the run.
-	Dir, Name, Epoch string
-	// Transport is the harness path of this run's tool calls.
-	Transport string
-	// Capability is the per-launch secret a server and a child present.
-	Capability string
-	// Span is how long after it is issued a ticket's answer is wanted.
-	// Refusal, when set, is why this run's tool reads nothing: a deadline
-	// too short to run a call in (DeadlineFor).
-	Span    time.Duration
-	Refusal string
-	// Words normalizes the words a harness observed: the CLI's own check.
-	Words func([]string) ([]string, error)
-	// Acknowledge acknowledges a read's parts on the evidence of a result;
-	// the CLI's AcknowledgeRead.
-	Acknowledge func(dir, name, epoch, token string, evidence bridge.Exposure, gate bridge.EndGate) error
-	// Conversation is the conversation the run's collector holds, on Claude
-	// Code; "" while it has seen none.
-	Conversation func() string
-	// Gate orders acknowledgments against this run's captured ends.
-	Gate *Gate
-	// LimitsProven says gate G8 closed: the limits a Claude Code hook sees
-	// at PreToolUse are the ones the harness applies to that call's result.
-	// Until then no Claude Code call acknowledges a read.
-	LimitsProven bool
-	// Channel takes the channel events the endpoint observes; nil drops
-	// them.
-	Channel func(channel.Event)
-
-	// Wait bounds a ticket request's wait for its observation; zero is the
-	// two seconds of the rules. Tests shorten it.
-	Wait time.Duration
-	// SameBuild and Descends check a peer; nil takes the real checks.
-	// Tests, whose server is another binary than the test, replace them.
-	SameBuild func(pid int) error
-	Descends  func(pid, ancestor int) error
-}
 
 // The bounds of docs/mail-bridge-turns.md#waits-and-their-bounds.
 const (
@@ -83,8 +42,12 @@ type Endpoint struct {
 	readsOff func() string
 	servers  int
 	others   int
-	// generation numbers the server connections, counted up per run.
+	// generation numbers the server connections, counted up per run;
+	// bound marks those whose thread is told, primary names the thread the
+	// gateway holds (channel.go).
 	generation uint64
+	bound      map[uint64]bool
+	primary    func() string
 	conns      map[*net.UnixConn]struct{}
 	closed     bool
 	done       chan struct{}
@@ -206,11 +169,14 @@ func (e *Endpoint) serve(conn *net.UnixConn) {
 	}
 	defer release()
 	writer.write(response{})
+	var generation uint64
 	if greeting.Role == roleServer {
 		// A server's connection lasts as long as it does: its close is how
 		// the wrapper learns the server is gone.
 		_ = conn.SetDeadline(time.Time{})
-		defer e.connected()()
+		var closed func()
+		generation, closed = e.connected()
+		defer closed()
 	}
 	var running sync.WaitGroup
 	defer running.Wait()
@@ -226,7 +192,7 @@ func (e *Endpoint) serve(conn *net.UnixConn) {
 		running.Add(1)
 		go func() {
 			defer running.Done()
-			writer.write(e.answer(conn, greeting.Role, asked))
+			writer.write(e.answer(conn, greeting.Role, asked, generation))
 		}()
 	}
 }
@@ -295,19 +261,20 @@ func (e *Endpoint) below(pid int, roots []int) error {
 	return fmt.Errorf("process %d does not run below the harness of this run", pid)
 }
 
-// answer serves one request of a connection whose role was admitted.
-func (e *Endpoint) answer(conn *net.UnixConn, role string, asked request) response {
+// answer serves one request of a connection whose role was admitted; a
+// server's carries its connection's generation.
+func (e *Endpoint) answer(conn *net.UnixConn, role string, asked request, generation uint64) response {
 	reply := response{ID: asked.ID}
 	var err error
 	switch {
 	case role == roleServer && asked.Op == opTicket && asked.Ask != nil:
 		var ticket bridge.Ticket
-		ticket, err = e.issue(*asked.Ask)
+		ticket, err = e.issue(*asked.Ask, generation)
 		reply.Ticket = &ticket
 	case role == roleChild && asked.Op == opConfirm && asked.Ticket != nil:
 		err = e.confirm(conn, *asked.Ticket)
 	case role == roleServer && asked.Op == opReport:
-		err = e.report(asked.Payload)
+		err = e.report(asked.Payload, generation)
 	case role == roleHook && asked.Op == opObserve:
 		e.hookWith(asked.Payload, asked.Limits)
 	default:

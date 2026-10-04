@@ -185,50 +185,55 @@ func TestTheStepsOverEveryEntryTheServerMayHold(t *testing.T) {
 		{edit(ours, map[string]any{"enabled": false}, false), refusedNotOurs, false},
 		{edit(ours, map[string]any{"startup_timeout_sec": float64(5)}, false), refusedNotOurs, false},
 	}
+	// The limits around the bound L5 calibrated for 0.159.0, and values that
+	// are no whole number.
+	limits := []any{"unset", nil, float64(860), float64(861), float64(1000), float64(861.5), "861", true}
 	cases := 0
 	for _, session := range sessions {
 		for _, other := range others {
 			for _, effective := range effectives {
 				for _, requires := range []bool{false, true} {
-					for _, limit := range []any{"unset", nil, float64(1000)} {
-						var reply configReply
-						if other.kind != "" {
-							layer := layerOf(other.kind, true)
-							switch {
-							case other.empty:
-								layer.Config["mcp_servers"].(map[string]any)["rewake"] = map[string]any{}
-							case other.ours:
-								layer.Config["mcp_servers"].(map[string]any)["rewake"] = entryOf(ours)
+					for _, limit := range limits {
+						for _, version := range []string{"0.159.0", "0.159.1", ""} {
+							var reply configReply
+							if other.kind != "" {
+								layer := layerOf(other.kind, true)
+								switch {
+								case other.empty:
+									layer.Config["mcp_servers"].(map[string]any)["rewake"] = map[string]any{}
+								case other.ours:
+									layer.Config["mcp_servers"].(map[string]any)["rewake"] = entryOf(ours)
+								}
+								reply.Layers = append(reply.Layers, layer)
 							}
-							reply.Layers = append(reply.Layers, layer)
+							flags := map[string]any{}
+							if session.flat != nil {
+								flags["mcp_servers"] = map[string]any{"rewake": entryOf(session.flat)}
+							}
+							reply.Layers = append(reply.Layers, configLayer{Name: layerSource{Kind: layerSessionFlags}, Config: flags})
+							reply.Config = map[string]any{}
+							if effective.flat != nil {
+								reply.Config["mcp_servers"] = map[string]any{"rewake": entryOf(effective.flat)}
+							}
+							if limit != "unset" {
+								reply.Config["tool_output_token_limit"] = limit
+							}
+							requirements := map[string]any{"requirements": nil}
+							if requires {
+								requirements = map[string]any{"requirements": map[string]any{"mcpServers": map[string]any{}}}
+							}
+							refusal, readsOff := judgeOracle(other.kind, session.extra, effective.want, effective.reads, requires, limit, version)
+							injection := &toolInjection{args: []string{"-c", `model="x"`}, leaves: leaves, gates: harness.ResolveGates(ID, version, nil)}
+							got := injection.judge(reply, requirements)
+							if !strings.HasPrefix(got.refusal, refusal) || refusal == "" && got.refusal != "" || got.readsOff != readsOff {
+								t.Fatalf("session %v other %+v effective %v requires %v limit %v: got %+v, want %q %q",
+									session.flat, other, effective.flat, requires, limit, got, refusal, readsOff)
+							}
+							if strings.Contains(got.refusal, sentinel) {
+								t.Fatalf("the refusal carries a value: %s", got.refusal)
+							}
+							cases++
 						}
-						flags := map[string]any{}
-						if session.flat != nil {
-							flags["mcp_servers"] = map[string]any{"rewake": entryOf(session.flat)}
-						}
-						reply.Layers = append(reply.Layers, configLayer{Name: layerSource{Kind: layerSessionFlags}, Config: flags})
-						reply.Config = map[string]any{}
-						if effective.flat != nil {
-							reply.Config["mcp_servers"] = map[string]any{"rewake": entryOf(effective.flat)}
-						}
-						if limit != "unset" {
-							reply.Config["tool_output_token_limit"] = limit
-						}
-						requirements := map[string]any{"requirements": nil}
-						if requires {
-							requirements = map[string]any{"requirements": map[string]any{"mcpServers": map[string]any{}}}
-						}
-						refusal, readsOff := judgeOracle(other.kind, session.extra, effective.want, effective.reads, requires, limit)
-						injection := &toolInjection{args: []string{"-c", `model="x"`}, leaves: leaves}
-						got := injection.judge(reply, requirements)
-						if !strings.HasPrefix(got.refusal, refusal) || refusal == "" && got.refusal != "" || got.readsOff != readsOff {
-							t.Fatalf("session %v other %+v effective %v requires %v limit %v: got %+v, want %q %q",
-								session.flat, other, effective.flat, requires, limit, got, refusal, readsOff)
-						}
-						if strings.Contains(got.refusal, sentinel) {
-							t.Fatalf("the refusal carries a value: %s", got.refusal)
-						}
-						cases++
 					}
 				}
 			}
@@ -240,7 +245,7 @@ func TestTheStepsOverEveryEntryTheServerMayHold(t *testing.T) {
 // judgeOracle is the steps' answer as the rules order them: another source
 // of the name, then our entry leaf by leaf, then requirements, then the
 // output limit.
-func judgeOracle(other string, sessionExtra bool, effective string, omitOff, requires bool, limit any) (string, string) {
+func judgeOracle(other string, sessionExtra bool, effective string, omitOff, requires bool, limit any, version string) (string, string) {
 	switch {
 	case other == layerUser:
 		return "another MCP server named rewake is configured for it (user scope, /cfg/user.toml)", ""
@@ -256,7 +261,13 @@ func judgeOracle(other string, sessionExtra bool, effective string, omitOff, req
 		return refusedRequirements, ""
 	case omitOff:
 		return "", readsOffOmit
-	case limit != "unset" && limit != nil:
+	case limit == "unset" || limit == nil:
+		return "", ""
+	case version != "0.159.0":
+		// The bounds table names 0.159.0 alone (docs/mail-bridge-version.md).
+		return "", readsOffNoBound
+	}
+	if value, ok := limit.(float64); !ok || value < 861 || value != float64(int64(value)) {
 		return "", readsOffLimit
 	}
 	return "", ""

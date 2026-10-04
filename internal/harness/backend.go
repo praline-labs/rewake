@@ -140,6 +140,13 @@ type TurnReporter interface {
 	ReportTurns(CompletionHandler)
 }
 
+// SessionStartSource is an observer that hears the harness's own session
+// starts. The mail tool's channel times its hello from the first one: the
+// harness starts its servers then, not when the wrapper starts it.
+type SessionStartSource interface {
+	OnSessionStart(func())
+}
+
 // Observer is telemetry without a transport: something the harness reports to
 // on its own, which the wrapper listens to and publishes like a backend's.
 type Observer interface {
@@ -148,4 +155,12 @@ type Observer interface {
 	// Close is called whether Start succeeded or not, and cleans up what the
 	// launch prepared for it.
 	Close()
+}
+
+// ToolWithdrawer is a backend whose start may leave out a tool the launch
+// chose: Codex's, when its server does not confirm the version the choice
+// was made with (docs/mail-bridge-launch-codex.md#the-version-confirmed-at-start).
+// The reason is "" when the tool was kept.
+type ToolWithdrawer interface {
+	ToolWithdrawn() string
 }

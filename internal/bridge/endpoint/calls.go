@@ -53,12 +53,17 @@ type call struct {
 	completed bool
 }
 
-// issued is a ticket and who used it.
+// issued is a ticket and who used it. generation and thread are the
+// connection and thread its request came over: its proof is that
+// conversation's, whichever the run holds when it is used
+// (docs/mail-bridge-channel-codex.md#as-built).
 type issued struct {
-	ticket bridge.Ticket
-	used   bool
-	pid    int
-	start  uint64
+	ticket     bridge.Ticket
+	used       bool
+	pid        int
+	start      uint64
+	generation uint64
+	thread     string
 }
 
 // calls is the table, held only to record or take an entry.
@@ -164,8 +169,17 @@ func (e *Endpoint) observedWords(words []string, ok bool) (string, string) {
 }
 
 // issue matches a server's request with the harness's observation of the same
-// call, and issues its one ticket.
-func (e *Endpoint) issue(asked TicketRequest) (bridge.Ticket, error) {
+// call, and issues its one ticket. On Codex the request binds its connection
+// to the thread it names first, and one naming no thread or another than the
+// primary is refused before any wait.
+func (e *Endpoint) issue(asked TicketRequest, generation uint64) (bridge.Ticket, error) {
+	thread := ""
+	if e.cfg.Transport == bridge.CodexTransport {
+		if err := e.bind(generation, asked.Conversation); err != nil {
+			return bridge.Ticket{}, err
+		}
+		thread = asked.Conversation
+	}
 	if e.cfg.Refusal != "" && e.cfg.Transport != bridge.ClaudeTransport {
 		return bridge.Ticket{}, errors.New(e.cfg.Refusal)
 	}
@@ -185,7 +199,9 @@ func (e *Endpoint) issue(asked TicketRequest) (bridge.Ticket, error) {
 	case <-entry.ready:
 	case <-timer.C:
 		// The observer is gone: every call is refused until it returns.
-		e.tell(channel.Event{Kind: channel.NotObserved})
+		// The failure is the conversation's the call was admitted for, by
+		// its connection and thread, though another may be selected by now.
+		e.tell(channel.Event{Kind: channel.NotObserved, Generation: generation, Thread: thread})
 		return bridge.Ticket{}, fmt.Errorf("the harness did not report this call within %s", e.cfg.Wait)
 	case <-e.done:
 		return bridge.Ticket{}, errors.New("the wrapper is closing")
@@ -240,7 +256,7 @@ func (e *Endpoint) issue(asked TicketRequest) (bridge.Ticket, error) {
 		CalledBoot: now, DeadlineBoot: now + int64(deadline), WordsDigest: seen.digest,
 		Transport: e.cfg.Transport, Nonce: hex.EncodeToString(nonce), ReadsOff: readsOff,
 	}
-	entry.issued = &issued{ticket: ticket}
+	entry.issued = &issued{ticket: ticket, generation: generation, thread: thread}
 	c.byNonce[ticket.Nonce] = entry.issued
 	c.spent[asked.CallID] = true
 	return ticket, nil
@@ -306,7 +322,7 @@ func (e *Endpoint) confirm(conn *net.UnixConn, ticket bridge.Ticket) error {
 	held.used, held.pid, held.start = true, int(peer.Pid), start
 	// The tool's one evidence: a child that validated its ticket, whatever
 	// its words. Told under the lock is fine: the wrapper only queues it.
-	e.tell(channel.Event{Kind: channel.Validated, Issued: ticket.CalledBoot})
+	e.tell(channel.Event{Kind: channel.Validated, Issued: ticket.CalledBoot, Generation: held.generation, Thread: held.thread})
 	return nil
 }
 

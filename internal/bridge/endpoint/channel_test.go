@@ -42,14 +42,6 @@ func (c *told) wait(t *testing.T, n int) []channel.Event {
 	return nil
 }
 
-func kinds(events []channel.Event) []channel.Kind {
-	var out []channel.Kind
-	for _, e := range events {
-		out = append(out, e.Kind)
-	}
-	return out
-}
-
 func channelEndpoint(t *testing.T, transport string, change ...func(*Config)) (*Endpoint, string, *told) {
 	t.Helper()
 	got := &told{}
@@ -113,15 +105,15 @@ func TestAServerReportsACommandThatCannotStart(t *testing.T) {
 	defer client.Close()
 	client.Report()
 	events := got.wait(t, 2)
-	if events[1].Kind != channel.CannotStart {
-		t.Fatalf("%+v", kinds(events))
+	if events[1].Kind != channel.CannotStart || events[1].Generation != events[0].Generation || events[1].Generation == 0 {
+		t.Fatalf("the report is not told with its server's generation: %+v", events)
 	}
 	text, _ := json.Marshal("the server's own words")
-	reply := served.answer(nil, roleServer, request{ID: 9, Op: opReport, Payload: text})
+	reply := served.answer(nil, roleServer, request{ID: 9, Op: opReport, Payload: text}, 1)
 	if reply.Error == "" || len(got.wait(t, 2)) != 2 {
 		t.Fatal("an unknown report was taken")
 	}
-	if reply := served.answer(nil, roleChild, request{ID: 9, Op: opReport, Payload: json.RawMessage(`"cannot-start"`)}); reply.Error == "" {
+	if reply := served.answer(nil, roleChild, request{ID: 9, Op: opReport, Payload: json.RawMessage(`"cannot-start"`)}, 0); reply.Error == "" {
 		t.Fatal("a child reported for a server")
 	}
 }
@@ -139,8 +131,8 @@ func TestCallsTellTheirEvidence(t *testing.T) {
 		t.Fatal(err)
 	}
 	var calls []channel.Event
-	for _, e := range got.wait(t, 5) {
-		if e.Kind != channel.Hello && e.Kind != channel.Closed {
+	for _, e := range got.wait(t, 7) {
+		if e.Kind != channel.Hello && e.Kind != channel.Closed && e.Kind != channel.Bound {
 			calls = append(calls, e)
 		}
 	}

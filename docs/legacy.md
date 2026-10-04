@@ -54,7 +54,7 @@ the code, and fails once a harness mark is due.
 **A harness mark** is due when the oldest supported version of that harness reaches
 its bound. The oldest supported version is recorded below and raised only by an owner
 decision, written in the same row with its date. It is not the version pin in
-`internal/harness/codex/server.go` (`lastObservedServerVersion`): the pin names the
+`internal/harness/codex/server_version.go` (`lastObservedServerVersion`): the pin names the
 version last observed working and only chooses whether a launch prints a note; an older
 installed version may still be supported. When the row is raised, the test turns every
 mark below the new floor red, and those marks are removed in the same change.

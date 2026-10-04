@@ -38,9 +38,6 @@ func launchSources(args []string) string {
 	return strings.Join(named, ",")
 }
 
-// managedDir is where Claude Code reads a machine's policy on Linux.
-var managedDir = "/etc/claude-code"
-
 // policyStatusLine reports whether the machine's managed policy names a
 // status line: the file and the drop-in directory beside it. Such a policy
 // wins over the tap, so the tap never runs and its values stay unknown.

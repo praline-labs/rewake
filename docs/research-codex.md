@@ -5,7 +5,8 @@ project's 400-line limit again. The division is by subject: the facts here are o
 the same way as there — by watching a session behave — and are about Codex CLI, while
 research.md keeps Claude Code. What the generated protocol schema and the reference tree
 state is in [research-protocol.md](research-protocol.md); the Codex sandbox is in
-[research-permissions.md](research-permissions.md).
+[research-permissions.md](research-permissions.md); the mail tool's server, as Codex runs
+it, in [research-mail-tool.md](research-mail-tool.md).
 
 Tags: **[verified live]** — live on the named versions; **[source]** — read in the
 source; **[docs]** — official pages. Facts here age with harness versions: recheck

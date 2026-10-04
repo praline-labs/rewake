@@ -40,6 +40,14 @@ func startServing(ctx context.Context, request Request, session registry.Session
 			return func() {}, err
 		}
 		stops = append(stops, plan.Backend.Close)
+		if withdrawer, ok := plan.Backend.(harness.ToolWithdrawer); ok {
+			if reason := withdrawer.ToolWithdrawn(); reason != "" {
+				// Nothing has connected yet: the record begins again as a run
+				// without the tool, and the person is told why.
+				tool.keeper.begin(false, reason)
+				_, _ = fmt.Fprintln(os.Stderr, "rewake: "+toolNote(reason))
+			}
+		}
 		if observer, ok := plan.Backend.(harness.ObservedBackend); ok {
 			stops = append(stops, sessionstate.Start(ctx, request.Dir, name, epoch, tool.keeper.source(epoch, observer.SessionState)))
 			stated = true

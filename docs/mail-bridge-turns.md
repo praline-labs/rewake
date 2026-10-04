@@ -41,7 +41,14 @@ turn and the words).
   receipt. A pending mark from an earlier turn is never replayed as this turn's.
 - **A nested agent.** Codex runs a sub-agent on another thread, which the match refuses.
   Claude Code runs one in the same conversation, and whether its hook input always names
-  the agent is unverified. A hook input that names one is refused. Until stage 3 shows
+  the agent is unverified: on 2.1.284 a general-purpose subagent's call carried
+  `agent_id` and `agent_type` (live, October 4, 2026), one kind in one run. A Codex
+  sub-agent's call is not seen by the gateway, which forwards the primary thread's items
+  only; before the revision it was refused as unreported after 2 s, which the channel
+  took for a fault. Revised and built on October 4, 2026: the request's own `_meta.threadId` names the calling
+  thread, so a request naming another thread, or none, is refused at once as an agent's
+  call and never waits ([the channel](mail-bridge-channel-codex.md#conversation-connections)). A
+  hook input that names one is refused. Until stage 3 shows
   which field a nested agent's call always carries, the Claude Code adapter refuses tool
   reads — `inbox` and `inbox --message` answer "read in the shell" — since only a read
   claims that a model saw something. A heads-up, a pending mark, `whoami` and `--peek`

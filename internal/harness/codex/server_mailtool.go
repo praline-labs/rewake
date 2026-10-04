@@ -7,6 +7,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
 	"github.com/praline-labs/rewake/internal/channel"
+	"github.com/praline-labs/rewake/internal/harness/codex/gateway"
 )
 
 // The owned server's side of the mail tool's injection check: once at start,
@@ -28,9 +29,9 @@ func (s *serverSession) checkTool(ctx context.Context) error {
 }
 
 // threadCheck is the gateway's check of a thread request, or nil for a run
-// without the tool. A thread it admits starts the tool's servers, so it
-// opens the channel's hello timer.
-func (s *serverSession) threadCheck(ctx context.Context, tell func(channel.Event)) func(string, json.RawMessage) string {
+// without the tool. What it lets through the gateway tells as a selection
+// or another thread (selection).
+func (s *serverSession) threadCheck(ctx context.Context) func(string, json.RawMessage) string {
 	if s.tool == nil {
 		return nil
 	}
@@ -43,10 +44,28 @@ func (s *serverSession) threadCheck(ctx context.Context, tell func(channel.Event
 			return "rewake: this conversation was not opened: " + result.refusal + ". The session goes on; its other conversations are unaffected."
 		}
 		s.noteReadsOff(result.readsOff)
-		if tell != nil {
-			tell(channel.Event{Kind: channel.ThreadAdmitted, At: endpoint.Stamp()})
-		}
 		return ""
+	}
+}
+
+// selectionSteps are the channel's events of the gateway's selection steps.
+var selectionSteps = map[string]channel.Kind{
+	gateway.SelectionAdmitted: channel.SelectionAdmitted,
+	gateway.SelectionSelected: channel.Selected,
+	gateway.SelectionFailed:   channel.SelectionFailed,
+	gateway.ThreadAdmitted:    channel.ThreadAdmitted,
+}
+
+// selection tells the gateway's selection steps to the channel, each
+// stamped when the gateway took it; nil for a run without the tool.
+func (s *serverSession) selection(tell func(channel.Event)) func(gateway.Selection) {
+	if s.tool == nil || tell == nil {
+		return nil
+	}
+	return func(step gateway.Selection) {
+		if kind, ok := selectionSteps[step.Step]; ok {
+			tell(channel.Event{Kind: kind, Thread: step.Thread, At: endpoint.Stamp()})
+		}
 	}
 }
 

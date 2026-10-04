@@ -185,7 +185,7 @@ func TestThePreflightServerAnswersOrFails(t *testing.T) {
 			args := []string{"-c", `model="x"`, "--config=" + `tools.web=true`}
 			decision, err := codexHarness{}.CheckMailTool(harness.ToolCheckRequest{
 				Args: args, Command: program, StateRoot: root,
-				Gates: harness.ResolveGates(ID, "", []string{harness.GateG2}),
+				Assumed: []string{harness.GateG2},
 				Env: []string{
 					"PATH=" + os.Getenv("PATH"), "RW_PREFLIGHT_MODE=" + tc.mode, "RW_PREFLIGHT_EXE=" + os.Args[0],
 					"RW_PREFLIGHT_REPLY=" + reply, "RW_PREFLIGHT_MARK=" + mark,
@@ -224,18 +224,25 @@ func TestThePreflightServerAnswersOrFails(t *testing.T) {
 	}
 }
 
+// An open G2 leaves the tool out before any server is asked, naming the
+// gate for a version the table names and the unknown version's cause
+// otherwise (docs/mail-bridge-version.md).
 func TestAnOpenG2OrAnUnresolvedDirectoryAsksNoServer(t *testing.T) {
+	known := harness.Version{Value: "0.159.0"}
 	for _, tc := range []struct {
-		args   []string
-		gates  []string
-		reason string
+		args    []string
+		version *harness.Version
+		gates   []string
+		reason  string
 	}{
-		{nil, nil, "gate G2"},
-		{[]string{"-C"}, []string{harness.GateG2}, "working directory"},
+		{nil, &known, nil, "gate G2"},
+		{nil, nil, nil, "harness version unknown (not read)"},
+		{nil, &harness.Version{Unknown: harness.VersionNotRead}, nil, "harness version unknown (not read)"},
+		{[]string{"-C"}, nil, []string{harness.GateG2}, "working directory"},
 	} {
 		decision, err := codexHarness{}.CheckMailTool(harness.ToolCheckRequest{
 			Args: tc.args, Command: filepath.Join(t.TempDir(), "absent"), StateRoot: t.TempDir(),
-			Gates: harness.ResolveGates(ID, "", tc.gates),
+			Version: tc.version, Assumed: tc.gates,
 		})
 		if err != nil || decision.Inject || !strings.Contains(decision.Reason, tc.reason) {
 			t.Fatalf("%q: got %+v %v, want no tool for %s", tc.args, decision, err, tc.reason)

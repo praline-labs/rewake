@@ -119,12 +119,27 @@ everything else.
   claim, the injection check at start and at every thread with its step 0 for the thread
   request itself (the terminal's keys, the trust rule), and the output limit. Open it
   before changing the Codex injection or the gateway's thread check.
+- [mail-bridge-version.md](mail-bridge-version.md) — the harness version a launch takes
+  for the closed gates and the L5 bounds: when it is taken, from where without running
+  anything extra (Codex's one `--version` read, Claude Code's install path), what an
+  unknown one means, and a read whose cleanup failed; built, with how the code reads
+  it. Open it before changing `gates_version.go` or how a launch chooses the tool.
 - [mail-bridge-channel.md](mail-bridge-channel.md) — the rest of stage 3, built: the
   run's mail channel as two observations, tool and shell, and a policy block, with
   connections, generations, the failure interval and the hello timer, the derived
   display, the notices with their suppression and publication identity, and the
   briefing's sentence, and how the code reads it. Open it before changing the channel
   record (`internal/channel`) or its notices.
+- [mail-bridge-channel-codex.md](mail-bridge-channel-codex.md) — the channel's
+  conversations on Codex, where every thread runs its own server: which connections
+  serve the conversation, how a call's `_meta.threadId` binds one, and how selecting
+  another conversation moves the timer, held events and an open interval; built, with
+  the choices the code made. Open it before changing how the endpoint, the gateway's
+  selection steps or the keeper count Codex connections.
+- [mail-bridge-channel-failures.md](mail-bridge-channel-failures.md) — the channel's
+  failure points, one row each, with what is proven, what is unknown and what rewake
+  does, including the sequences of Codex's conversation connections. Open it when
+  writing or checking a channel test against the text.
 - [mail-bridge-live.md](mail-bridge-live.md) — the plan of stage 3's live checks: scratch
   project folders in the owner's own logins, where each case sets its conditions, how
   preservation is proven with the user configuration read-only, what only the user layer
@@ -319,6 +334,13 @@ everything else.
   the warning the terminal draws without a turn; read for a sandbox check that was
   dropped, and why the event stream cannot carry one. Open it before reasoning about a
   conversation's sandbox, the delivery hold, or after a Codex update.
+- [research-mail-tool.md](research-mail-tool.md) — what each harness does with rewake's
+  mail tool server, from the live checks of October 4, 2026, split from research.md and
+  research-codex.md by subject: the `-c` trust form and the trust key, which calls start
+  servers, a resume's cwd, results and output limits, timeouts, serial and parallel
+  calls, sub-agents and nested agents and their hook fields, permission signals, a
+  managed MCP file, server death and turn ends. Open it before touching the mail tool's
+  launch, endpoint or channel, and after a harness update.
 - [research-launch.md](research-launch.md) — what an installed binary answers when run:
   model and effort catalogues and the usable context window, which flags may repeat,
   undocumented aliases, when a `--help` probe can be trusted, how each harness is

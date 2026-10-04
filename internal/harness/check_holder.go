@@ -256,26 +256,7 @@ func procIDs(pid int) (parent, group, session int, ok bool) {
 
 // groupAlive says whether any process of a group is still there, zombies
 // that wait to be reaped aside.
-func groupAlive(pgid int) bool {
-	if syscall.Kill(-pgid, 0) != nil {
-		return false
-	}
-	entries, err := os.ReadDir("/proc")
-	if err != nil {
-		return true
-	}
-	for _, entry := range entries {
-		pid, err := strconv.Atoi(entry.Name())
-		if err != nil {
-			continue
-		}
-		_, group, _, ok := procIDs(pid)
-		if state, err := proc.State(pid); ok && group == pgid && (err != nil || state != "Z") {
-			return true
-		}
-	}
-	return false
-}
+func groupAlive(pgid int) bool { return proc.GroupAlive(pgid) }
 
 // setSubreaper makes this process the parent of the orphans of its
 // descendants.

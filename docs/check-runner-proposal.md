@@ -374,7 +374,7 @@ Two more were settled the same day:
 **The transport pin moved to 0.155.1** on September 21, 2026, on the owner's decision
 that the pin may be moved, and on two probes of that day: the ordinary path, and
 steer into an active turn. It now lives in one constant, `lastObservedServerVersion` in
-`internal/harness/codex/server.go`, so the real-harness tier no longer runs the
+`internal/harness/codex/server_version.go` since October 4, 2026, so the real-harness tier no longer runs the
 mismatch branch. Not observed on that version, and not to be claimed by the suite:
 conversation selection after `/new`, stale-target refusal, `stopped` from an
 interruption, and a group arriving during an active turn.

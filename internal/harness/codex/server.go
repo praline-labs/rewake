@@ -2,6 +2,7 @@ package codex
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -20,14 +21,6 @@ import (
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/sessionstate"
 )
-
-// lastObservedServerVersion is the native CLI the app-server transport was seen
-// working against: two probes on 0.155.1, the ordinary path and steer, not a full
-// re-verification. A mismatch only produces a note: an unobserved version is a reason
-// to warn, not to refuse a launch the owner asked for. The test fixture repeats this
-// string as its own literal on purpose, so a typo here fails a test instead of
-// matching itself.
-const lastObservedServerVersion = "codex-cli 0.155.1"
 
 type serverSession struct {
 	gatewayLog  *os.File
@@ -77,15 +70,28 @@ type serverSession struct {
 	// reach the conversation whole, says why for the rest of the run.
 	tool     *toolInjection
 	readsOff atomic.Pointer[string]
+	// version is what the launch read before the claim, plainArgs the
+	// server's arguments without the tool's leaves, and toolWithdrawn why
+	// the start left the tool out after all (server_version.go).
+	version       harness.Version
+	plainArgs     []string
+	toolWithdrawn string
 }
 
-func newServer(path string, args, env []string, cwd string) *serverSession {
+// upstreamArgs points the server's --listen at the upstream socket, behind
+// the gateway on path.
+func upstreamArgs(path string, args []string) []string {
 	args = append([]string(nil), args...)
 	for i, arg := range args {
 		if arg == "unix://"+path {
 			args[i] = arg + ".up"
 		}
 	}
+	return args
+}
+
+func newServer(path string, args, env []string, cwd string) *serverSession {
+	args = upstreamArgs(path, args)
 	epoch := ""
 	for _, value := range env {
 		if strings.HasPrefix(value, "REWAKE_EPOCH=") {
@@ -111,42 +117,11 @@ func (s *serverSession) Start(ctx context.Context, handler harness.CompletionHan
 	}
 	runCtx, cancel := context.WithCancel(ctx)
 	s.cancel = cancel
-	versionCtx, stopVersion := context.WithTimeout(ctx, 2*time.Second)
-	version := exec.CommandContext(versionCtx, s.executable(), "--version")
-	version.Env = s.env
-	// A wrapper that does not end in exec leaves the harness as its child,
-	// holding stdout after the wrapper is killed; without a delay Output
-	// would wait for that grandchild for ever.
-	version.WaitDelay = time.Second
-	raw, err := version.Output()
-	stopVersion()
-	if err != nil || string(raw) != lastObservedServerVersion+"\n" {
-		s.note("server transport was last observed working with " + lastObservedServerVersion + "; installed version differs or could not be read")
-	}
-	log, err := os.OpenFile(s.upstream+".log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
-	if err != nil {
-		cancel()
-		return err
-	}
-	command := exec.Command(s.executable(), s.args...)
-	command.Env = s.env
-	command.Dir = s.cwd
-	command.Stderr = log
-	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true, Pdeathsig: syscall.SIGKILL}
-	if err := command.Start(); err != nil {
-		_ = log.Close()
-		cancel()
-		return err
-	}
-	s.process = command
-	go func() { _ = command.Wait(); _ = log.Close(); close(s.exited); cancel() }()
-	connectCtx, stopConnect := context.WithTimeout(runCtx, 8*time.Second)
-	err = s.probe(connectCtx)
-	stopConnect()
-	if err != nil {
+	s.transportNote()
+	if err := s.startUpstream(runCtx, cancel); err != nil {
 		s.stopProcess()
 		cancel()
-		return fmt.Errorf("app-server startup failed (log %s): %w", s.upstream+".log", err)
+		return err
 	}
 	if err := s.checkTool(runCtx); err != nil {
 		s.stopProcess()
@@ -188,7 +163,7 @@ func (s *serverSession) Start(ctx context.Context, handler harness.CompletionHan
 		cancel()
 		return err
 	}
-	s.gateway = gateway.New(gateway.Config{Upstream: s.upstream, Epoch: s.epoch, StartupFork: s.startupFork, Intent: s.intent, Name: s.name, Admit: admit, ReadSequence: readSequence, EndCapture: endCapture, ToolEvent: handler.ToolEvent, ThreadCheck: s.threadCheck(runCtx, handler.Channel), Closed: func(info gateway.CloseInfo) {
+	s.gateway = gateway.New(gateway.Config{Upstream: s.upstream, Epoch: s.epoch, StartupFork: s.startupFork, Intent: s.intent, Name: s.name, Admit: admit, ReadSequence: readSequence, EndCapture: endCapture, ToolEvent: handler.ToolEvent, ThreadCheck: s.threadCheck(runCtx), Selection: s.selection(handler.Channel), Closed: func(info gateway.CloseInfo) {
 		_, _ = fmt.Fprintf(s.gatewayLog, "connection=%d generation=%d direction=%s reason=%s error=%q bytes=%d requests=%d responses=%d sizeStage=%s messageBytes=%d limitBytes=%d\n", info.Connection, info.Generation, info.Direction, info.Reason, info.Error, info.Bytes, info.Requests, info.Responses, info.SizeStage, info.MessageBytes, info.LimitBytes)
 	}, Complete: func(result gateway.Completion) {
 		value := harness.Completion{ID: result.PublicationID(), Thread: result.Thread, Kind: inbox.Kind(result.Kind), Text: result.Text, Started: result.Started, Ended: result.Ended}
@@ -229,19 +204,21 @@ func (s *serverSession) holdMail() (func() error, error) {
 	return func() error { return sessionstate.AdmitMail(s.mailbox, s.name, s.epoch) }, nil
 }
 
-// Startup probing initializes and closes a temporary client; it never chooses or resumes a root.
-func (s *serverSession) probe(ctx context.Context) error {
+// Startup probing initializes and closes a temporary client; it never
+// chooses or resumes a root. It answers initialize's userAgent.
+func (s *serverSession) probe(ctx context.Context) (string, error) {
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
 	for {
-		client, err := connectRPC(ctx, s.upstream, nil)
+		var answered json.RawMessage
+		client, err := dialRPC(ctx, s.upstream, nil, &answered)
 		if err == nil {
 			client.close()
-			return nil
+			return userAgent(answered), nil
 		}
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return "", ctx.Err()
 		case <-ticker.C:
 		}
 	}

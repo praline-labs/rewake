@@ -10,6 +10,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
+	"github.com/praline-labs/rewake/internal/channel"
 	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/state"
@@ -44,6 +45,7 @@ type mailTool struct {
 // result acknowledges a read.
 func (t *mailTool) config(request Request, name, epoch, transport string, clock *inbox.ReadClock, gates harness.Gates) endpoint.Config {
 	span, refusal := endpoint.DeadlineFor(transport, os.Getenv)
+	bound, _ := gates.OutputBound()
 	return endpoint.Config{
 		Dir: request.Dir, Name: name, Epoch: epoch, Transport: transport,
 		Capability: t.capability, Span: span, Refusal: refusal,
@@ -52,6 +54,7 @@ func (t *mailTool) config(request Request, name, epoch, transport string, clock 
 		Conversation: t.conversation,
 		Channel:      t.keeper.tell,
 		LimitsProven: !gates.Open(harness.GateG8),
+		OutputBound:  bound,
 	}
 }
 
@@ -113,6 +116,20 @@ func (t *mailTool) attach(plan harness.LaunchPlan) {
 	if plan.Observer != nil {
 		observer := plan.Observer
 		t.observer.Store(&observer)
+	}
+	if source, ok := plan.Observer.(harness.SessionStartSource); ok && t.keeper != nil {
+		source.OnSessionStart(func() { t.keeper.tell(channel.Event{Kind: channel.SessionStarted}) })
+	}
+	if backend := plan.Backend; backend != nil {
+		// The thread the gateway holds as primary, "" while a selection is
+		// pending: a call of any other thread is refused before its wait.
+		t.endpoint.SetPrimary(func() string {
+			thread, err := backend.Thread()
+			if err != nil {
+				return ""
+			}
+			return thread
+		})
 	}
 	if reads, ok := plan.Backend.(interface{ ToolReadsOff() string }); ok {
 		t.endpoint.SetReadsOff(reads.ToolReadsOff)

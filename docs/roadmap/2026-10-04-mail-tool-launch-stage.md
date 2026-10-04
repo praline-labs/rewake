@@ -189,8 +189,9 @@ bounds and the notice after the exit (`TestNoticesWaitForTheOneInFlight`,
 
 ## Open
 
-- The live checks with their gates: G1–G9, L4 (the native signal of a denial; until it
-  closes no block is ever set), L5, L10 and S1, by the plan of
-  [mail-bridge-live.md](../mail-bridge-live.md). The stage closes when they pass.
+- The live checks ran on October 4, 2026
+  ([the live checks](2026-10-04-mail-tool-live-checks.md)): G1, G5 and G7 closed, S1
+  passed with a corrected form; what stays open, and four findings that need code, are
+  listed there. The stage closes when they are settled.
 - The record's transport history has no upper bound: one entry per connection of the run
   and per transport event since the last ticket.

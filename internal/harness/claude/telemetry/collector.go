@@ -49,6 +49,9 @@ type Collector struct {
 	// compaction a main asked for is marked for the module to read as its
 	// start; empty without one.
 	controls string
+
+	// sessionStarted is called on every SessionStart; see OnSessionStart.
+	sessionStarted func()
 }
 
 // NewCollector listens at path once started.
@@ -70,6 +73,14 @@ func (c *Collector) Controls(dir string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.controls = dir
+}
+
+// OnSessionStart names what is called on each SessionStart the harness
+// reports, before Start.
+func (c *Collector) OnSessionStart(f func()) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.sessionStarted = f
 }
 
 // Drawn is closed once the harness has run its status line for the first time.
@@ -147,11 +158,18 @@ func (c *Collector) read(conn *net.UnixConn) {
 		c.folded.apply(event, time.Now())
 		c.noteInterrupter(event)
 		thread := c.folded.thread
+		var sessionStarted func()
+		if event.Kind == SessionStart {
+			sessionStarted = c.sessionStarted
+		}
 		began := ""
 		if asked := c.folded.asked; event.Kind == PreCompact && asked != nil && asked.started && c.controls != "" {
 			began = control.StartedPath(c.controls, asked.request)
 		}
 		c.mu.Unlock()
+		if sessionStarted != nil {
+			sessionStarted()
+		}
 		if began != "" {
 			// The module cannot see the hooks of the compaction it asked
 			// for; this mark is how it learns the host began it.

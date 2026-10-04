@@ -31,8 +31,24 @@ var gateNames = []string{GateG1, GateG2, GateG3, GateG4, GateG5, GateG6, GateG7,
 
 // closedGates records each gate a check closed: gate, harness, the versions
 // it ran against. A version the check did not run against keeps the gate
-// open, since what it settled is a property of that version.
-var closedGates = map[string]map[string][]string{}
+// open, since what it settled is a property of that version. The checks of
+// October 4, 2026 are in docs/mail-bridge-live.md#the-run-of-october-4-2026.
+var closedGates = map[string]map[string][]string{
+	GateG1: {"codex": {"0.159.0"}},
+	GateG5: {"claude": {"2.1.284"}},
+	GateG7: {"claude": {"2.1.284"}},
+}
+
+// outputBounds are the smallest output limits L5 calibrated, by harness and
+// version: a limit at or above one keeps a 4 KiB result whole. A version
+// without an entry has no bound, and any limit set under it counts as
+// lowered (docs/mail-bridge-version.md). Codex's is tool_output_token_limit,
+// Claude Code's MAX_MCP_OUTPUT_TOKENS; the runs are in
+// docs/research-mail-tool.md#results-and-the-output-limit--l5.
+var outputBounds = map[string]map[string]int64{
+	"codex":  {"0.159.0": 861},
+	"claude": {"2.1.284": 2048},
+}
 
 // GatesAssumedEnv names gates a launch takes as closed without their check.
 // It exists for the live checks of the stage, which cannot run while the
@@ -44,6 +60,9 @@ const GatesAssumedEnv = "REWAKE_GATES_ASSUMED"
 type Gates struct {
 	assumed []string
 	closed  map[string]bool
+	// bound is the output limit L5 calibrated for the launch's version,
+	// zero for none.
+	bound int64
 }
 
 // ParseAssumedGates reads REWAKE_GATES_ASSUMED: gate names separated by
@@ -71,6 +90,9 @@ func ParseAssumedGates(value string) ([]string, error) {
 // it was not read; assumed are the names ParseAssumedGates returned.
 func ResolveGates(harnessID, version string, assumed []string) Gates {
 	gates := Gates{assumed: append([]string(nil), assumed...), closed: map[string]bool{}}
+	if version != "" {
+		gates.bound = outputBounds[harnessID][version]
+	}
 	for gate, byHarness := range closedGates {
 		if version != "" && slices.Contains(byHarness[harnessID], version) {
 			gates.closed[gate] = true
@@ -95,6 +117,10 @@ func GatesNeedVersion(harnessID string) bool {
 func (g Gates) Open(name string) bool {
 	return !g.closed[name] && !slices.Contains(g.assumed, name)
 }
+
+// OutputBound is the smallest output limit that keeps a read whole for this
+// launch's version, false where no calibration names that version.
+func (g Gates) OutputBound() (int64, bool) { return g.bound, g.bound > 0 }
 
 // Assumed lists the gates this launch takes as closed without their check.
 func (g Gates) Assumed() []string { return append([]string(nil), g.assumed...) }

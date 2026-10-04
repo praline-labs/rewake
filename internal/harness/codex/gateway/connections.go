@@ -108,6 +108,7 @@ func (g *Gateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	g.serial++
 	c := &connection{cleaned: make(chan struct{}), owner: g, up: up, down: down, ctx: ctx, cancel: cancel, work: make(chan func(), transportQueueItems), toUI: make(chan []byte, transportQueueItems), state: newState(g.cfg.Epoch, g.serial), admitted: newAdmittedWork(), injected: map[string]chan meta{}, prefix: "rewake-inject-" + g.cfg.Epoch + "-" + itoa(g.serial) + "-"}
+	c.state.selection = g.selections(c)
 	c.admitted.proven = g.proofs
 	c.state.ops = g.ops
 	g.conns[c] = true

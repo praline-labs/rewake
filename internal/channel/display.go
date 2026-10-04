@@ -62,11 +62,8 @@ func (r *Record) Line() string {
 	case CategoryTool:
 		return "tool"
 	case CategoryPending:
-		switch r.Tool {
-		case ToolConnected:
+		if r.Tool == ToolConnected {
 			return "tool connected, unused"
-		case ToolNotConnected:
-			return "tool not connected"
 		}
 		return "tool starting"
 	case CategoryFailing:

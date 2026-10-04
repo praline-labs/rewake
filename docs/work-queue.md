@@ -348,8 +348,16 @@ What the day of the 1.0.0 release left, recorded on September 28, 2026 at the ow
   acceptance rounds ([entry](roadmap/2026-10-01-mail-tool-server-stage.md)). The code of
   stage M3 — its injection at launch, the occupied-name refusal and the channel record —
   landed on October 4, 2026, accepted after five design passes and four acceptance rounds
-  ([entry](roadmap/2026-10-04-mail-tool-launch-stage.md)). Next are its live checks and
-  the gates they close ([mail-bridge-live.md](mail-bridge-live.md)).
+  ([entry](roadmap/2026-10-04-mail-tool-launch-stage.md)). Its live checks ran the same
+  day on codex-cli 0.159.0 and Claude Code 2.1.284: G1, G5 and G7 closed, and four
+  findings — a killed server Claude Code does not start again, a trust dialog outlasting
+  the hello timer, a Codex sub-agent failing the parent's channel, a managed MCP file
+  stopping the launch — revised the rules, which were built and accepted the same day
+  after four rounds of fixes ([entry](roadmap/2026-10-04-mail-tool-live-checks.md)). Next
+  are the live checks of the revised rules — G6, L5 on the confirmed versions, the
+  unconfirmed `userAgent`, L8's three outcomes, G8b, the rest of L10, L11 on Codex, L3's
+  thread-request part, G4 — and the gates still open: G2, G3, G4, G6, G8, G9 and L4
+  ([mail-bridge-live.md](mail-bridge-live.md)).
 - **The window before the capture on Codex — a separate task, October 1, 2026.** Stage
   M1's end on Codex is captured when the gateway reads `turn/completed`, but the
   app-server may start the next turn before that: a read of the next turn can then

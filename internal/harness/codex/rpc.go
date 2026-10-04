@@ -34,6 +34,13 @@ type rpcClient struct {
 }
 
 func connectRPC(ctx context.Context, path string, onEvent func(string, json.RawMessage)) (*rpcClient, error) {
+	return dialRPC(ctx, path, onEvent, nil)
+}
+
+// dialRPC connects and initializes, keeping initialize's answer in
+// answered when it is not nil: the startup probe reads the server's
+// version from it.
+func dialRPC(ctx context.Context, path string, onEvent func(string, json.RawMessage), answered *json.RawMessage) (*rpcClient, error) {
 	socket, err := dialSocket(ctx, path)
 	if err != nil {
 		return nil, err
@@ -41,7 +48,11 @@ func connectRPC(ctx context.Context, path string, onEvent func(string, json.RawM
 	client := &rpcClient{socket: socket, pending: make(map[uint64]chan rpcReply), done: make(chan struct{}), onEvent: onEvent}
 	go client.read()
 	params := map[string]any{"clientInfo": map[string]string{"name": "rewake", "version": "1"}, "capabilities": map[string]bool{"experimentalApi": true}}
-	if err := client.call(ctx, "initialize", params, nil); err != nil {
+	var result any
+	if answered != nil {
+		result = answered
+	}
+	if err := client.call(ctx, "initialize", params, result); err != nil {
 		client.close()
 		return nil, err
 	}
