@@ -90,7 +90,7 @@ the moment of an interruption.
 So no immediate interruption signal is reachable by rewake within its boundaries through
 a hook or the wrapper. Catching Esc in the wrapper would mean reading the keyboard between
 the person and the harness — a pseudo-terminal proxy, which the project's boundaries
-exclude ([AGENTS.md](../AGENTS.md#boundaries)).
+exclude ([project.md](project.md#the-philosophy)).
 
 ### What a function-hooks plugin hears
 

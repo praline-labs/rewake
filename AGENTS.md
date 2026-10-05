@@ -1,30 +1,26 @@
 # rewake
 
-A tool that lets interactive coding-agent harnesses on one machine talk to each
-other. A person starts an agent through it — `rewake claude`, `rewake codex` —
-and gets the ordinary program in their terminal; the session is registered, and
-any other session writes to it with `rewake send <name> "text"`. The receiver
-is told in one line that a message is waiting, which wakes it when it is idle,
-and reads the text with `rewake inbox`.
-
-The caller of these commands is an agent running them from its own shell. So the
-machine-readable form matters more than the pretty one, a refusal must name the
-next action, and nothing ever waits for input: a CLI that prompts hangs an agent
-forever.
+rewake lets coding-agent sessions on one machine pass messages to each other. Before
+acting on any task in this repository, read `docs/project.md` in full — every section, not
+skimmed. It is the project's goal: the rules, the code, the reviews and the briefs you
+receive follow from it and assume you know it; a decision made without it is likely to
+contradict the goal and be refused or redone. It is about two hundred lines, one read.
 
 ## Where to start a session
 
-0. `docs/flow.md` — the whole path in one read: a session starts, a message is
+0. `docs/project.md` — first: the essence, the principles and what the tool does,
+   each linked to its specification, and what to read next by kind of work.
+1. `docs/flow.md` — the whole path in one read: a session starts, a message is
    sent, announced, read, and the report comes back.
-1. `docs/roadmap/README.md` — what is done and what comes next. A milestone is closed by
+2. `docs/roadmap/README.md` — what is done and what comes next. A milestone is closed by
    its acceptance criterion, not by code existing. Findings and fixes of the
    earlier review rounds are in `docs/reviews.md` and `docs/reviews-later.md`.
-2. `docs/design.md` — how it works: processes, state directory, interface. Two
+3. `docs/design.md` — how it works: processes, state directory, interface. Two
    parts live next to it: `docs/launch.md` (launching a harness, signals) and
    `docs/delivery.md` (sending, reading, reports, the answer to a question).
-3. `docs/traps.md` — what behaves other than expected, in rewake and in the
+4. `docs/traps.md` — what behaves other than expected, in rewake and in the
    harnesses it lives with, by symptom.
-4. `docs/research.md` — facts about each harness, marked with where they were
+5. `docs/research.md` — facts about each harness, marked with where they were
    verified. They age with harness versions: re-check before touching an adapter.
    Split by how a fact is obtained, because that is how it ages:
    `docs/research-launch.md` for what a binary answers when you run it — models,
@@ -58,6 +54,9 @@ documentation is part of every change, not a task after it:
   `docs/reviews-later.md`; a file that passes 400 lines is split by date.
 - An owner decision is written down where it applies, dated, as a plain
   statement of what was decided; the wording is not quoted.
+- The substance of `docs/project.md` — the essence, the principles and what the
+  tool does — changes only by the owner's decision. Its links are kept current like
+  any other: a document that moves or is renamed updates them in the same commit.
 - Before a commit, ask what the change taught that the documents do not yet
   say — and what they say that is no longer true. Rewriting what has gone
   stale is part of the same change: outdated text is corrected or removed,
@@ -260,38 +259,13 @@ report and going unrecognized by whoever is waiting.
 
 ## How the CLI is organised
 
-The patterns come from an earlier agent-facing CLI, which took them furthest.
+The principles are in `docs/project.md`; where they live in the code:
 
-- **One command table** — `internal/cli/registry.go`. The parser, the guide, the
-  help pages and the hint on a refusal are all derived from it. A table that has
-  drifted from behaviour is worse than none: it teaches a wrong call with
-  confidence.
-- **No arguments prints the guide**, not an error: the first call of a session
-  should teach how the tool behaves.
-- **Model and printing are separate**: a command builds a model, `printValue`
-  prints either the lines or that same model under `--json`. Forgetting `--json`
-  support is not possible this way.
-- **An unknown flag or a stray positional is always a refusal.** A silently
-  ignored flag returns an unfiltered answer with exit code 0, and the caller
-  believes it.
-- **A refusal** carries the reason, the syntax, the examples, the flags and
-  `full help:`.
-- **Examples are real invocations** — they get copied verbatim; a test parses
-  every one of them.
-- **No colour, no TTY detection**: the output is the same everywhere.
-
-Exit codes are a contract, printed in the guide: 0 done, 1 the target refused or
-could not be reached, 2 the call was wrong, 3 the message was accepted but not
-delivered yet.
-
-## Boundaries
-
-- No pseudo-terminal proxying and no typing into anyone's screen: delivery only
-  through handles a harness offers itself.
-- The user's harness configuration is never edited; what is needed is passed as
-  flags for a single launch.
-- Transcript contents are not read.
-- There is no daemon: a wrapper lives exactly as long as its session.
+- The command table is `internal/cli/registry.go`; the parser, the guide, the help
+  pages and a refusal's hint are derived from it, so a command is changed there.
+- A command builds a model and prints it through `printValue`, which gives the lines
+  or that same model under `--json`.
+- Every example in the table is a real invocation; a test parses each of them.
 
 ## Code
 

@@ -1,5 +1,7 @@
 # The documentation, mapped
 
+New to the project: read [project.md](project.md) first.
+
 Every document in this directory, grouped by what a reader wants from it, with what it
 holds and when to open it. A subdirectory has an index of its own, linked here rather
 than repeated: today that is the roadmap. `map_test.go` beside this file fails when a
@@ -10,6 +12,13 @@ updates this file in the same commit.
 
 The order to start a session in is in `AGENTS.md`; this file is where to look for
 everything else.
+
+## Start here
+
+- [project.md](project.md) — the project: what rewake is and the problem it solves,
+  the principles it holds with the source of each, what the tool does with a link to
+  where each part is specified, and what to read next by kind of work. Read it first.
+  Its substance changes only by the owner's decision.
 
 ## How it works
 
