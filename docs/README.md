@@ -489,7 +489,10 @@ the newer document says so.
   documents — the revision of 1.x (stage 1: what each package, test and document
   becomes, the layering faults, the proposals to the owner) and the design of 2.0
   (stage 2: layout, adapter API, core rules, the Claude Code mod, Codex, state, docs and
-  tests, the stage plan). Open it before any 2.0 work.
+  tests, the stage plan), and the rules of stage 3 (the build order, the steps and the
+  moves with their inventories, where every package goes, each rule with its tests, the
+  fixture adapter and its gate, state and builds, clearing 1.x, and apart from them the
+  operator decision: its model, its records and its recovery). Open it before any 2.0 work.
 - [work-queue.md](work-queue.md) — what comes next, in the owner's order: the rest of the
   workflow suite, the arrival-row check on the suite, a named harness version against a
   local responder, a two-way channel for Claude Code, the rest of stage 2 of the plugin

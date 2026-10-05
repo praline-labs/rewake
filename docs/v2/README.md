@@ -53,3 +53,49 @@ Stage 2, the design of 2.0, for review before any code:
   1.x on upgrade, one build per room.
 - [design-docs-tests.md](design-docs-tests.md) — the documents of 2.0 by part, each rule
   naming its tests, the workflow suite's columns, the review files renamed.
+
+Stage 3, the rules the core is built by — part A accepted in review round 4 on October 5,
+2026, part B, the operator decision, under review:
+
+- [stage3.md](stage3.md) — the overview: what holds in every step, the build order one
+  line per step, its two acceptances (part A, everything but the operator decision; part
+  B, the decision), what each step needs and from where, the documents, the corrections to
+  the accepted design, what is still unknown and the owner's answers of October 5, 2026.
+  Open it first.
+- [stage3-steps.md](stage3-steps.md) — steps S1–S6 in detail: the tests first, the
+  migration's removal, the per-cause stop, the turn-end inputs, the neutral confirmation
+  and the fixture, its gate; what each writes, deletes and tests, and what review checks.
+- [stage3-steps-adapters.md](stage3-steps-adapters.md) — steps S7–S11: the tool path on
+  the fixture, Codex and Claude Code's hook machinery leaving, the adapter API, the host
+  on the live set.
+- [stage3-moves.md](stage3-moves.md) — the moves S12–S16: the inventory each rests on
+  (declarations, string consumers, mutations, build values), the preparatory commits,
+  the move of the turn-end code and of the delivery server.
+- [stage3-packages.md](stage3-packages.md) — every package of `internal/` and
+  `cmd/rewake` by file group, and every split file by declaration, with its 2.0 place or
+  its removal and the step.
+- [stage3-tests.md](stage3-tests.md) — how a rule names its tests, `docs/rules_test.go`
+  with the build variants, and the effect rules E1–E8 and the turn outcomes with their
+  tests and gaps.
+- [stage3-tests-tcl.md](stage3-tests-tcl.md) — the tool rules T1–T11, the channel record
+  C1–C8, the launch rules L1–L3 and the host, with their tests, the neutral rig and the
+  gaps.
+- [stage3-fixture.md](stage3-fixture.md) — the fixture adapter on the 1.x contract, its
+  readiness exchange, what each step can prove on it, its program, its column, and the
+  gate across the steps.
+- [stage3-state.md](stage3-state.md) — the state root `v2/` and its inverse, what is a
+  writer, the build id and the room's lease with its bootstrap writes, the concurrent
+  tests, the cost of the hash.
+- [stage3-upgrade.md](stage3-upgrade.md) — clearing the state of 1.x: what 1.x does,
+  the supported upgrade, the exclusion protocol, its tests against a stand-in of 1.x.
+- [stage3-decision-model.md](stage3-decision-model.md) — part B, the operator decision as
+  an abstract model: the world's truth, evidence, choice and run lifetimes kept apart, the
+  excluded combinations, the transitions, the expected outcome of each world, what a
+  decision is answerable for, and correction 9 in its normative form.
+- [stage3-decision.md](stage3-decision.md) — part B, the operator decision on an unknown
+  outcome: its subject, its authority, the command, the write-once records and what every
+  reader consults.
+- [stage3-decision-recovery.md](stage3-decision-recovery.md) — part B, the protocol
+  derived from the model: the decision's record and observations, installing its effects
+  with proofs that outlive them, composition, the rules D1–D8 and their tests with the
+  model as the oracle.
