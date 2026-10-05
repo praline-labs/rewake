@@ -477,9 +477,10 @@ the newer document says so.
 ## Plans and history
 
 - [v2/README.md](v2/README.md) — rewake 2.0, built on the `v2` branch: the index of its
-  documents, starting with the revision of 1.x (stage 1) — what each package, test and
-  document becomes, the 2.0 layout, the layering faults and the proposals to the owner.
-  Open it before any 2.0 work.
+  documents — the revision of 1.x (stage 1: what each package, test and document
+  becomes, the layering faults, the proposals to the owner) and the design of 2.0
+  (stage 2: layout, adapter API, core rules, the Claude Code mod, Codex, state, docs and
+  tests, the stage plan). Open it before any 2.0 work.
 - [work-queue.md](work-queue.md) — what comes next, in the owner's order: the rest of the
   workflow suite, the arrival-row check on the suite, a named harness version against a
   local responder, a two-way channel for Claude Code, the rest of stage 2 of the plugin

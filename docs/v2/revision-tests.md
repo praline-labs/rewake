@@ -77,8 +77,10 @@ applies to the mod unchanged: the five checks do not start a module under its ho
 
 Proposals for the owner, not decided:
 
-- Rename the eleven test files named after a review round (632 lines) by subject:
+- Rename the test files named after a review round by subject: fifteen, 1 059 lines —
   `gateway/review_*_test.go` (six), `cli/review_*_test.go` (three),
-  `inbox/review_*_test.go` (two).
+  `harness/codex/review_*_test.go` (three), `inbox/review_*_test.go` (two),
+  `wrap/review_notice_edges_test.go` (one). The design corrects the count of eleven
+  this list first gave ([design-docs-tests.md](design-docs-tests.md#the-review-files)).
 - Give the Codex MCP server and the mod one shared suite scenario per tool, so "the
   same tools on every harness" (decision 9) is checked rather than assumed.
