@@ -146,7 +146,7 @@ the release.
 
 ## The owner's answers
 
-The owner answered the design's questions on October 5, 2026; question 4 is still open.
+The owner answered the design's questions on October 5, 2026.
 
 1. **1.x state is deleted on upgrade**, not set aside, after the check that no 1.x
    wrapper is alive, with one line saying what was dropped. That check reads two fields
@@ -159,13 +159,15 @@ The owner answered the design's questions on October 5, 2026; question 4 is stil
 3. **A session whose mod did not load has no live TurnBoundary**: a role that must
    report refuses to launch; a task or question to such a session exits 1, naming why;
    no new word `report` is added ([design-api.md](design-api.md#turnboundary)).
-4. **Open: a stop whose evidence cannot return** — a record that stays unreadable. The
-   accepted rule does not wait for the answer: the stop and its records stay until
-   evidence returns, and nothing removes a record to lift it (E1, E8). Main's
-   recommendation, pending the owner, is a separate option: an operator decision that
-   names the delivery fact as unproven, keeps the operation's identity and the original
-   evidence, and marks every later effect with itself, never a claim of delivery
-   ([design-rules.md](design-rules.md#not-accepted-an-operator-decision-on-an-unknown-outcome)).
+4. **A stop whose evidence cannot return is resolved by an operator decision**
+   (decided October 5, 2026). The stop and its records stay until evidence returns, and
+   nothing removes a record to lift it (E1, E8). Beside that, a command lets main — the
+   recipient, who can check whether the report arrived — or the person record "arrived"
+   or "did not arrive" for an operation whose outcome is unknown; it is recorded as an
+   operator decision with delivery marked unproven, the operation's identity and the
+   original evidence kept, and "did not arrive" sends the report again. Its authority,
+   retry rules and tests are designed in stage 3's rules
+   ([design-rules.md](design-rules.md#an-operator-decision-on-an-unknown-outcome)).
 5. **No Codex code on `v2` between stages 3 and 5**: the Codex packages leave the `v2`
    tree at stage 3 (they stay on `main` and in history as reference), so the builds of
    stages 3 and 4 launch Claude Code only ([design-codex.md](design-codex.md#meanwhile)).

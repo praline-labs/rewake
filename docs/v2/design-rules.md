@@ -78,32 +78,34 @@ transport (from `mail-bridge-server.md` 1–11), **C** the channel record (from
     plan would read "no such file", stop seeing the cause, and publish without the
     evidence E1 asks for. So the stop and every record it names stay until evidence
     returns — in the ordinary case by fixing what made the record unreadable (its mode,
-    its directory, the disk). No command goes around the barrier; this is the whole
-    accepted rule, with or without the option below.
+    its directory, the disk). No command goes around the barrier; the operator decision
+    below neither removes a record nor counts as evidence.
 
-### Not accepted: an operator decision on an unknown outcome
+### An operator decision on an unknown outcome
 
-An option for the owner (question 4 of [design.md](design.md#the-owners-answers)),
-outside E1–E8 until the owner accepts it and it has its own design and review. It is a
-**conscious choice under an unknown outcome, not evidence**: a decision proves what an
-operator chose, not whether the effect happened. Decided "not done" wrongly, the report
-can be published twice; decided "done" wrongly, an obligation closes with nothing
-delivered. That is the boundary of the guarantee it would trade away, and the reason it
-is not part of E8.
+Accepted by the owner on October 5, 2026 (answer 4 of
+[design.md](design.md#the-owners-answers)), as a bounded extension beside E1–E8, not a
+part of E8. It is a **conscious choice under an unknown outcome, not evidence**: a
+decision proves what an operator chose, not whether the effect happened. Decided "did
+not arrive" wrongly, the report is published twice; decided "arrived" wrongly, an
+obligation closes with nothing delivered. That is the boundary of the guarantee it
+trades away, and the reason it is kept apart from E8's proofs.
 
-If accepted, the contract is: a command by the room's verified main or the person at a
-shell writes an **operator decision** record that names the operation by its identity,
-states the delivery fact as **unproven**, and keeps the original records and the stop's
-evidence untouched, for good. Any effect taken after it — a publication, a closed
+The contract: a command by the report's recipient — main, who can check whether the
+report arrived — or the person at a shell records "arrived" or "did not arrive" for an
+operation whose outcome is unknown, as an **operator decision** record that names the
+operation by its identity, states the delivery fact as **unproven**, and keeps the
+original records and the stop's evidence untouched, for good. "Did not arrive" sends the
+report again; "arrived" closes it. Any effect taken after it — a publication, a closed
 obligation — carries the decision's id and never claims delivery. The decision applies
 only where the operation's identity — report, recipient, obligations — is known from
 something readable, as 1.x `settle` read them from a readable conversion journal
 (`inbox/reconcile.go:285`); a stop whose unreadable record is itself the only source of
-that identity has no subject to decide and stays. Before it lands it still needs the
-owner's decision, the authority's design (who is verified, how), the rules for a retry
-across the decision, and its acceptance tests. Until then nothing lifts a stop without
-returning proof. The 1.x migration that `settle` served (`cli/settle.go:28`,
-`inbox/conversion_decide.go:209`) does not return either way.
+that identity has no subject to decide and stays. The authority (who is verified, and
+how), the rules for a retry across the decision, and its tests are designed in stage 3's
+rules; until they land, nothing lifts a stop without returning proof. The 1.x migration
+that `settle` served (`cli/settle.go:28`, `inbox/conversion_decide.go:209`) does not
+return.
 
 Gone with the migration: 8-withheld, 8-settle, 8-cutover, 8-origin, the earlier-build
 evidence and the run and successor records ([revision-rules.md](revision-rules.md#mail-bridge-climd-rules-18)).
