@@ -78,9 +78,11 @@ only under its lock has no test of its own — closed in S3.
 **E3 — every check runs in the critical section, again on a retry.** Carry:
 `cli/bridge_rules_test.go:117,130,177,201,218`; `cli/addendum_test.go:31,43`;
 `inbox/claims_test.go:226,248`; `inbox/batch_edges_test.go:11`;
-`inbox/withdraw_test.go:294`; `inbox/window_test.go:264`. Gap: a turn end's retry
+`inbox/withdraw_test.go:294`; `inbox/window_test.go:264`. Gaps: a turn end's retry
 with its own deadline (only the tool's and the shell's retries are tested) — closed in
-S5, on the fixture's turns.
+S5, on the fixture's turns; a once-publication checks its recipient's run outside the
+recipient's critical section (`journal_held.go:145-161`, `cli/journal_steps.go:41`) —
+closed in S3, commit 1 ([stage3-publication.md](stage3-publication.md#tests)).
 
 **E4 — a read's completion is one durable fact.** `cli/read_ack.go` has no test file;
 `AcknowledgeRead` is held through: carry `cli/bridge_rules_test.go:253,285`;
@@ -135,7 +137,10 @@ closed in S3; every TurnBoundary names its event — closed in S10 with the adap
 `inbox/plan_faults_test.go:35` with `plan_pairs`, `plan_writes` and `seam_probe` (no
 functions of their own; they run inside it); retention `inbox/journal_test.go:171`,
 `cli/turn_journal_retry_test.go:114`, `receipt/receipt_test.go:173`,
-`inbox/sweep_test.go:120,164`. Rebuild in S2 on a two-session lab with journal records
+`inbox/sweep_test.go:120,164`; gap: a publication's proof retired while an attempt
+admitted to its run can still replay it, or by a sweeper that is not the live run
+(`sweep.go:74-89`, `once.go:206-216`) — closed in S3, commit 1
+([stage3-publication.md](stage3-publication.md#tests)). Rebuild in S2 on a two-session lab with journal records
 only: `inbox/evidence_test.go:27`, `effect_stop_test.go:22,80`,
 `late_unknown_test.go:23,115` (of its six evidence paths, "recipient" and "owed note"
 stay), `conversion_moot_test.go:13,38`, `conversion_test.go:293` (renamed by subject),
@@ -194,6 +199,7 @@ over a neutral TurnBoundary — closed in S10.
 |---|---|---|
 | E2 | the inbox sweep removes a record only under its lock | S3 |
 | E3 | a turn end's retry with its own deadline | S5 |
+| E3 | a once-publication checks its recipient's run inside the recipient's critical section | S3, commit 1 |
 | E4 | one durable read across every channel, the fixture's tool included | S7 |
 | E6 | informing readers fold an unknown into the cautious answer | S3 |
 | E7 | a hold's read-clock position: reserved, never twice, not covered before commit | S3 |
@@ -201,6 +207,7 @@ over a neutral TurnBoundary — closed in S10.
 | E8 | a stop lifts only on returning evidence (two tests say the opposite) | S3 |
 | E8 | a stop tells main once and lets letters from others arrive, whatever found it | S3 |
 | E8 | nothing that names no run is swept by age | S3 |
+| E8 | a publication's proof outlives every attempt admitted to its run, and only the live run's sweep retires it | S3, commit 1 |
 | E8 | a cause that recurs after its resolution is a new occurrence, lifted only by its own evidence | S3 |
 | E8, D | the operator decision | S18 (part B) |
 | O1 | a failing check falls to publishing | S5 |

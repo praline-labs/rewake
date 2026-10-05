@@ -135,6 +135,14 @@ journal retention still holds `sweep_test.go:120,164`.
 
 ## S3. A stop is resolved per cause, by evidence [codex]
 
+**Commit 1: one landing per copy.** Before the stop changes, every once-publication — a
+turn-end report, a heads-up, a channel note — reads its recipient's run, its evidence and
+writes inside one critical section of the recipient's mailbox lock, and the proof of a
+landing is retired only under that lock by the name's live run. The race it closes, the
+contract, why it is enough and its tests are in
+[stage3-publication.md](stage3-publication.md). The moot order below builds on it: the
+open occurrences, under the sender's lock, then that section.
+
 **Changed.** `inbox/stop.go` and its readers, as correction 2 of
 [stage3.md](stage3.md#corrections-to-the-accepted-design) proposes:
 

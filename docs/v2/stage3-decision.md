@@ -138,7 +138,13 @@ process runs below the wrapper of api."
   lead (verified), unproven; sent again as R'; api goes on.` When other causes remain:
   `...; api stays stopped on R2, decide each the same way.` Same words again: `recorded
   before as D at <time>; ...`, and the barrier runs. A resend that has completed since is
-  not sent again: the answer says `sent again as R' (published)` from its record.
+  not sent again: the answer says what its form keeps
+  ([the completion summary](stage3-decision-recovery.md#installing-the-effects)) —
+  `sent again as R' (published)`, `(moot: lead's run ended; whether it landed is not
+  known)`, `(unknown, decided by lead as D2)`; `(in progress)` from an open form;
+  `(completed, outcome not kept)` from a done form without a readable summary. A
+  completed name alone never reads as published. On a stopped mailbox the answer adds
+  that the resend and `api`'s tail run once the stop is settled.
 - **`--json`.** `{session, report, operation, decision: {id, choice, by: {kind, name,
   run, verified}, at, delivery: "unproven", parent}, recorded, resent, stopped,
   remaining, undecidable}`; the list form `{session, subjects: [...], undecidable: [...]}`.
@@ -161,7 +167,7 @@ record kinds (`inbox/records.go`).
 | its resolution | `stops/<key>/<occurrence>.resolved` | the plan decides its effect from evidence (S3) | the evidence |
 | a decision | `decisions/<report-id>` | at its linearization point, before any effect | id, choice, by, at, `delivery: "unproven"`, the subject, the parent decision if any, the occurrences it disposes, the runs to tell, the observations, and for "did not arrive" the resend journal whole |
 | a note told | `decisions/<report-id>.told-recipient`, `.told-main` | after the note's `PublishOnce` answered written, written before, or moot | the answer |
-| the resend | `journal/decided-<decision-id>`, later `.done` | the decision's first effect; saved by its own steps afterwards | an ordinary journal (one report, `resends`, `decision`); its done form kept while the mailbox lives |
+| the resend | `journal/decided-<decision-id>`, later `.done` | the decision's first effect; saved by its own steps afterwards | an ordinary journal (one report, `resends`, `decision`); its done form keeps the completion summary — the id of R', its disposition, D, a child decision's id — and is kept while the mailbox lives |
 
 An occurrence named by a decision is disposed: no separate record says so. Stop
 occurrences, their resolutions, decisions, their `told` records and the resend journals
@@ -178,10 +184,10 @@ live paths go on with their ordinary writers in both mailboxes.
 
 | Reader | Consults |
 |---|---|
-| the barrier (`reconcile.go`) | first each decision with an effect not installed — its resend's name in neither form, a note with no `told` record — and installs it; then unfinished journals, each reading the decisions for its reports; then `stopState` |
+| the barrier (`reconcile.go`) | first, before the plan and whatever the plan will meet, each decision with an effect not installed — its resend's name in neither form, a note with no `told` record — and installs it; then the plan, each journal reading the decisions for its reports and the open occurrences about them before the liveness check; then, only when the plan meets no unknown, the unfinished journals and their tails; then `stopState` |
 | `stopState` and every caller of it (S3's list) | occurrences without a resolution and not named by a decision |
 | the mailbox's sweeps | skip the paths open occurrences name; a disposed occurrence protects nothing |
 | the retention of journals (`sweepTurnRecords`) | keeps every journal named `decided-*` in its done form |
 | a journal's recovery — publishing a report, or writing a letter again for an intent with none (`inbox/claims_test.go:126`) | the decision for that report first: a decided report's step is closed, never published |
-| `inbox`, `awaited`, `owed`, `list` | decisions and resend fields, to say "closed by decision D, delivery unproven" and "sent again by decision of lead" |
+| `inbox`, `awaited`, `owed`, `list` | decisions, resend fields and the completion summary, to say "closed by decision D, delivery unproven", "sent again by decision of lead" and the resend's disposition as its form keeps it — moot never as "not delivered" |
 | `decide` | journals, occurrences, decisions |

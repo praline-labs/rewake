@@ -55,7 +55,8 @@ Stage 2, the design of 2.0, for review before any code:
   naming its tests, the workflow suite's columns, the review files renamed.
 
 Stage 3, the rules the core is built by — part A accepted in review round 4 on October 5,
-2026, part B, the operator decision, under review:
+2026, with the publication contract accepted in round 7; part B, the operator decision,
+accepted in review round 7:
 
 - [stage3.md](stage3.md) — the overview: what holds in every step, the build order one
   line per step, its two acceptances (part A, everything but the operator decision; part
@@ -65,6 +66,11 @@ Stage 3, the rules the core is built by — part A accepted in review round 4 on
 - [stage3-steps.md](stage3-steps.md) — steps S1–S6 in detail: the tests first, the
   migration's removal, the per-cause stop, the turn-end inputs, the neutral confirmation
   and the fixture, its gate; what each writes, deletes and tests, and what review checks.
+- [stage3-publication.md](stage3-publication.md) — S3's first commit, found in review
+  round 5: a once-publication reads its recipient's run and evidence and writes inside one
+  critical section of the recipient's lock, and the proof of a landing is retired only
+  there by the live run; the race it closes, why the contract is enough, its cost and
+  tests, and what the rules documents need.
 - [stage3-steps-adapters.md](stage3-steps-adapters.md) — steps S7–S11: the tool path on
   the fixture, Codex and Claude Code's hook machinery leaving, the adapter API, the host
   on the live set.
@@ -89,8 +95,8 @@ Stage 3, the rules the core is built by — part A accepted in review round 4 on
 - [stage3-upgrade.md](stage3-upgrade.md) — clearing the state of 1.x: what 1.x does,
   the supported upgrade, the exclusion protocol, its tests against a stand-in of 1.x.
 - [stage3-decision-model.md](stage3-decision-model.md) — part B, the operator decision as
-  an abstract model: the world's truth, evidence, choice and run lifetimes kept apart, the
-  excluded combinations, the transitions, the expected outcome of each world, what a
+  an abstract model: historical landing, evidence, the sender's disposition, choice, run
+  lifetimes and the mailbox's admission kept apart, the excluded combinations, the transitions, the expected outcome of each world, what a
   decision is answerable for, and correction 9 in its normative form.
 - [stage3-decision.md](stage3-decision.md) — part B, the operator decision on an unknown
   outcome: its subject, its authority, the command, the write-once records and what every

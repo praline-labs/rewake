@@ -13,6 +13,7 @@ there one reviewable commit at a time.
 |---|---|
 | this file | what holds in every step, the build order, what each step needs and from where, the documents, the corrections to the accepted design, what is still unknown, the owner's answers |
 | [stage3-steps.md](stage3-steps.md) | steps S1–S6: the tests first, the migration, the stop, the turn-end inputs, the confirmation and the fixture, its gate |
+| [stage3-publication.md](stage3-publication.md) | S3's first commit: a publication's liveness, evidence and write in one critical section of the recipient's lock, and the proof retired only under it |
 | [stage3-steps-adapters.md](stage3-steps-adapters.md) | steps S7–S11: the tool path, the removals of Codex and of the hooks, the adapter API, the host |
 | [stage3-moves.md](stage3-moves.md) | steps S12–S16: the inventories each move rests on, the preparatory extractions, the moves |
 | [stage3-packages.md](stage3-packages.md) | every 1.x package, file group and split declaration with its 2.0 place or its removal, and the step |
@@ -78,7 +79,7 @@ One line per step; S1–S6 are detailed in [stage3-steps.md](stage3-steps.md), S
 |---|---|---|---|
 | S1 | the tests first: `internal/layout_test.go` over every build variant, `docs/rules/`, `docs/rules_test.go`, the archive-aware link resolution and the archive's hash table | — | review |
 | S2 | the 1.x migration leaves; the live parts of `turn_records.go` and `registry/run.go` stay | yes | review [codex] |
-| S3 | a stop is a write-once record per cause, resolved per cause only by returning evidence | yes | review [codex] |
+| S3 | one landing per copy: a publication inside its recipient's lock (commit 1); a stop is a write-once record per cause, resolved per cause only by returning evidence | yes | review [codex] |
 | S4 | core-owned turn-end and read inputs, in place, five commits, behaviour unchanged | yes | review |
 | S5 | the neutral confirmation in the 1.x contract; the fixture adapter on it, its readiness exchange, its column beside Codex and Claude Code; the oracles of the Codex and hook paths rebuilt on it; the harness-free L1 and L2 tests | yes | review [codex] |
 | S6 | the fixture column becomes the gate | before and after | review |
@@ -117,7 +118,11 @@ reviewed in the same round.
 **Status, October 5, 2026.** Part A was accepted in review round 4, with two local
 corrections to S5's held-end identity, applied: the held operation kept in every form of
 the journal that took the kept answer, and a recovered hold completing its own clock
-position. S1 may start. Part B is not accepted yet; it is under review.
+position. S1 may start. Review round 5 found a race in the carried publication — an
+ordinary retry landing one report twice — and main placed its fix in part A as S3's first
+commit ([stage3-publication.md](stage3-publication.md)); that contract was accepted in
+review round 7, with two test wordings applied as the review gave them. Part B was
+accepted in review round 7.
 
 - **Part A — S1–S17 and S19**: everything but the operator decision, in every document
   except the three below.
@@ -137,7 +142,8 @@ the D rules in `docs/rules/`, `decide`'s forms in the command table, its row in 
 package map.
 
 **What part B relies on from part A**: S3's occurrences, each naming the operation it is
-about; S4's core-owned turn-end inputs; the fixture of S5 with its Control, for the
+about; S3's publication contract, on which I4 rests
+([stage3-publication.md](stage3-publication.md)); S4's core-owned turn-end inputs; the fixture of S5 with its Control, for the
 compaction case; S17's lease and write seam. A change to any of these after part A's
 acceptance is read by part B's review. **S19** closes the stage, so it is built after
 S18; nothing else in part A waits.
@@ -151,6 +157,7 @@ checks its rows.
 
 | Replacement | Made, run beside the old | First relied on | Predecessor goes |
 |---|---|---|---|
+| a once-publication inside its recipient's lock, its proof retired only there by the live run | S3, commit 1 | S3 (the moot order), S5, S7, S18 (I4) | the liveness check before the lock, S3 commit 1 |
 | core-owned turn-end and read inputs (`inbox.TurnEnd`, `AttemptScope`, `ReadEvidence`, `EndGate`) | S4 | S5 (the fixture's ends), S10, S14 | — (the CLI's own values, S4) |
 | the neutral confirmation of an end (`CompletionHandler.Confirm`) | S5, commit 1 | S5, commit 2 (the fixture; `TestPendingConfirm` on its column) | the Stop hook's hold, S9 |
 | the fixture adapter and its column | S5 | S6 (the gate) | the Codex column S8, the Claude Code column S9 |
