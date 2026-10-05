@@ -154,8 +154,15 @@ journal retention still holds `sweep_test.go:120,164`.
 - **An occurrence is resolved only by evidence about its effect**: the plan, under the
   mailbox lock, reads each named path and decides the effect it is about as done or not
   done (E8's first clause). "No such file" at a named path resolves nothing — the answer
-  adds "removed while stopped". An effect-only cause is resolved once a barrier has run
-  its effects through. The resolution is its own write-once record,
+  adds "removed while stopped". An effect-only cause is resolved the same way: once a
+  barrier has run its effect through to evidence about the operation it is about — done
+  or not done — not by the barrier having run. **A moot disposition is no such evidence**:
+  the sender's recovery finds the recipient's run ended before it reads any evidence and
+  records the report moot (`journal_held.go:24-35,145-155`), which says nothing of
+  whether the report landed; so it consults the open occurrences about a report before
+  that check, and a report with one stays where it is — the occurrence open, no moot
+  recorded — until evidence returns or, from S18, an operator decision disposes of it.
+  The resolution is its own write-once record,
   `stops/<key>/<occurrence>.resolved`, naming the evidence; no stop record is edited or
   removed, and a resolved occurrence never opens again.
 - **One reader.** `stopState(dir, name)` answers the open occurrences, and every reader
@@ -195,8 +202,11 @@ decide the effect and resolves the cause; the invalid bytes of the inverted case
 because they restore valid bytes or never remove the cause: `stop_gate_test.go:53,79`,
 `journal_unknown_test.go:23,148`, `journal_test.go:54`, `effect_stop_test.go:22`,
 `records_test.go:41` (its removal is cleanup). New: two causes, one resolved,
-the stop holds; an effect-only cause resolved by the barrier; main told once across
-barriers and calls; letters from others arrive into a stopped mailbox; a sweep beside a
+the stop holds; an effect-only cause resolved by the barrier once the effect reads
+evidence; the recipient's run ending while an occurrence about its report is open — the
+occurrence stays open, no moot is recorded, the stop holds across barriers;
+main told once across barriers and calls; letters from others arrive into a stopped
+mailbox; a sweep beside a
 stop removes no named path; a fault on each write of a cause and a resolution, through
 the stop's fault space (`plan_faults_test.go:35`). **A recurring cause**, for a record
 that names no operation — a malformed `pending/interim.json`, which its owner rewrites
