@@ -2,7 +2,6 @@ package cli
 
 import (
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/harness/claude/telemetry"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 )
@@ -19,15 +18,22 @@ import (
 // reused. A Claude Code prompt_id is not yet shown never to be reused, Esc
 // included, so there only the first attempt counts until stage 3 shows it.
 func inOwnTurn(ctx *Context, op *operation) bool {
+	scope := attemptScope(ctx, op)
+	return scope.First || scope.InOwnTurn
+}
+
+// attemptScope is inOwnTurn's answer in the core's terms: which of the two
+// ways the attempt is in its operation's turn, if either.
+func attemptScope(ctx *Context, op *operation) inbox.AttemptScope {
 	if op == nil || op.first {
-		return true
+		return inbox.AttemptScope{First: true}
 	}
 	if ctx.scope == nil {
-		return false
+		return inbox.AttemptScope{}
 	}
 	ticket := ctx.scope.ticket
-	return ticket.Transport == bridge.CodexTransport && op.record.Transport == bridge.CodexTransport &&
-		op.record.Turn != "" && op.record.Conversation == ticket.Conversation && op.record.Turn == ticket.Turn
+	return inbox.AttemptScope{InOwnTurn: ticket.Transport == bridge.CodexTransport && op.record.Transport == bridge.CodexTransport &&
+		op.record.Turn != "" && op.record.Conversation == ticket.Conversation && op.record.Turn == ticket.Turn}
 }
 
 // markVerdict is what an attempt found under the mailbox lock, just before
@@ -47,10 +53,11 @@ const (
 	markUnproven
 )
 
-// judgeMark decides an attempt's mark under the mailbox lock. An error leaves
-// the operation open: a mark or a journal that cannot be read may be this
-// turn's.
-func judgeMark(ctx *Context, dir string, self registry.Session, epoch, file string, at int64) (markVerdict, error) {
+// judgeMark decides an attempt's mark under the mailbox lock. scope says
+// where the attempt runs, and started is the latest turn start on record,
+// zero when none is. An error leaves the operation open: a mark or a journal
+// that cannot be read may be this turn's.
+func judgeMark(dir string, self registry.Session, epoch, file string, at int64, scope inbox.AttemptScope, started int64) (markVerdict, error) {
 	found, err := inbox.MarkExists(dir, self.Name, epoch, file)
 	if err != nil {
 		return 0, err
@@ -63,10 +70,10 @@ func judgeMark(ctx *Context, dir string, self registry.Session, epoch, file stri
 		return 0, err
 	}
 	// A later start proves the turn ended; its absence proves nothing.
-	if ended || telemetry.ReadTurnStart(telemetry.TurnStartPath(registry.ObservationFor(dir, self.Name, epoch))) > at {
+	if ended || started > at {
 		return markTurnEnded, nil
 	}
-	if !inOwnTurn(ctx, ctx.op) {
+	if !scope.First && !scope.InOwnTurn {
 		return markUnproven, nil
 	}
 	return markWrite, nil

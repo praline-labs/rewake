@@ -120,7 +120,10 @@ func handlePending(ctx *Context, call Call) error {
 				waiting = append(waiting, name)
 			}
 		}
-		if verdict, err = judgeMark(ctx, dir, self, epoch, file, at); err != nil || verdict != markWrite {
+		// The latest start comes from the telemetry file until the core keeps
+		// a record of its own (docs/v2/stage3-steps.md, S4 and S7).
+		started := telemetry.ReadTurnStart(telemetry.TurnStartPath(registry.ObservationFor(dir, self.Name, epoch)))
+		if verdict, err = judgeMark(dir, self, epoch, file, at, attemptScope(ctx, ctx.op), started); err != nil || verdict != markWrite {
 			return err
 		}
 		if len(waiting) == 0 {
