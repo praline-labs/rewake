@@ -69,7 +69,7 @@ func handleTurnEnded(ctx *Context, call Call) error {
 		currentThread, _ = harness.SessionThread(self)
 	}
 
-	if reason, _ := endTurnContext(context.Background(), dir, self, event.turnResult, event.Holdable, currentThread); reason != "" {
+	if reason, _ := endTurnContext(context.Background(), dir, self, event.TurnEnd, event.Holdable, currentThread); reason != "" {
 		// Held: the turn goes on, and its end is still to come. Recording
 		// this moment as a start would put a mark the continuation makes
 		// outside the turn it belongs to.
@@ -89,11 +89,11 @@ func handleTurnEnded(ctx *Context, call Call) error {
 	return nil
 }
 
-func completeTurn(dir string, self registry.Session, event turnResult, currentThread string) error {
+func completeTurn(dir string, self registry.Session, event inbox.TurnEnd, currentThread string) error {
 	return completeTurnContext(context.Background(), dir, self, event, currentThread)
 }
 
-func completeTurnContext(parent context.Context, dir string, self registry.Session, event turnResult, currentThread string) error {
+func completeTurnContext(parent context.Context, dir string, self registry.Session, event inbox.TurnEnd, currentThread string) error {
 	_, err := endTurnContext(parent, dir, self, event, false, currentThread)
 	return err
 }
@@ -102,7 +102,7 @@ func completeTurnContext(parent context.Context, dir string, self registry.Sessi
 // (turn_hold.go): then it publishes nothing and answers the reason to hand
 // the model. holdable says the end may be held at all, which only the
 // harness that reported it can say.
-func endTurnContext(parent context.Context, dir string, self registry.Session, event turnResult, holdable bool, currentThread string) (string, error) {
+func endTurnContext(parent context.Context, dir string, self registry.Session, event inbox.TurnEnd, holdable bool, currentThread string) (string, error) {
 	if !registry.OwnsName(dir, self.Name, self.Epoch()) {
 		return "", nil
 	}
@@ -156,7 +156,7 @@ func endTurnContext(parent context.Context, dir string, self registry.Session, e
 // in the end's window (docs/turn-end-recovery.md#pending-marks). Only a
 // finish is softened by one, and an end whose time is not known has no
 // window. A mark that cannot be read may be this turn's, and stops the end.
-func turnMark(dir string, self registry.Session, event turnResult) (*inbox.Mark, error) {
+func turnMark(dir string, self registry.Session, event inbox.TurnEnd) (*inbox.Mark, error) {
 	if event.Failed || event.Stopped || event.Ended == 0 {
 		return nil, nil
 	}

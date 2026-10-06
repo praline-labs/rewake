@@ -203,7 +203,7 @@ func TestAClearingThatFailedIsFinishedBeforeTheNextReport(t *testing.T) {
 	previous := beforeReports
 	beforeReports = func() { _ = os.Chmod(waiter, 0) }
 	t.Cleanup(func() { beforeReports = previous; _ = os.Chmod(waiter, 0o600) })
-	failed := completeTurn(dir, self, turnResult{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "the first is done"}, "")
+	failed := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "the first is done"}, "")
 	beforeReports = previous
 	if err := os.Chmod(waiter, 0o600); err != nil {
 		t.Fatal(err)
@@ -215,7 +215,7 @@ func TestAClearingThatFailedIsFinishedBeforeTheNextReport(t *testing.T) {
 		t.Fatalf("the unfinished clearing left %d records", left)
 	}
 	later := readFrom(t, dir, web)
-	if err := completeTurn(dir, self, turnResult{Boundary: boundaryNow(t, dir, self), ID: "second", Text: "the second is done"}, ""); err != nil {
+	if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "second", Text: "the second is done"}, ""); err != nil {
 		t.Fatal(err)
 	}
 	answered := map[string]int{}

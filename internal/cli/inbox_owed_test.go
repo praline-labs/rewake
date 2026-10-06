@@ -84,7 +84,7 @@ func TestOwedShowsWhatWasReadInFull(t *testing.T) {
 // A report settles what it answers, and then nothing is owed.
 func TestOwedIsEmptyOnceReported(t *testing.T) {
 	dir, self, _, _, _ := owedSetup(t)
-	if err := completeTurn(dir, self, turnResult{Boundary: boundaryNow(t, dir, self), ID: "t/1", Text: "done", Started: boottime.Now(), Ended: boottime.Now()}, "t"); err != nil {
+	if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "t/1", Text: "done", Started: boottime.Now(), Ended: boottime.Now()}, "t"); err != nil {
 		t.Fatal(err)
 	}
 	code, out, _ := run("inbox", "--owed")
@@ -106,7 +106,7 @@ func TestOwedSurvivesPendingAndAnInterim(t *testing.T) {
 	if got := owedIDs(owed(t)); strings.Join(got, ",") != task+","+question {
 		t.Fatalf("with the mark in place: %v", got)
 	}
-	if err := completeTurn(dir, self, turnResult{Boundary: boundaryNow(t, dir, self), ID: "t/1", Text: "waiting", Started: markAt - 1, Ended: boottime.Now()}, "t"); err != nil {
+	if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "t/1", Text: "waiting", Started: markAt - 1, Ended: boottime.Now()}, "t"); err != nil {
 		t.Fatal(err)
 	}
 	if kinds := kinds(reportsTo(t, dir, "web")); strings.Join(kinds, ",") != "pending" {
@@ -271,7 +271,7 @@ func TestOwedRefusals(t *testing.T) {
 // A turn a person stopped reports the stop and keeps the work owed.
 func TestOwedSurvivesAStoppedTurn(t *testing.T) {
 	dir, self, _, task, question := owedSetup(t)
-	if err := completeTurn(dir, self, turnResult{Boundary: boundaryNow(t, dir, self), ID: "t/1", Stopped: true, Started: boottime.Now(), Ended: boottime.Now()}, "t"); err != nil {
+	if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "t/1", Stopped: true, Started: boottime.Now(), Ended: boottime.Now()}, "t"); err != nil {
 		t.Fatal(err)
 	}
 	if kinds := kinds(reportsTo(t, dir, "web")); strings.Join(kinds, ",") != "stopped" {

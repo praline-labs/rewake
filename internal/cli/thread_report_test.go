@@ -55,7 +55,7 @@ func TestReportsMarkOnlyKnownThreadChanges(t *testing.T) {
 			if kind == "unknown" || kind == "other harness" {
 				currentThread = ""
 			}
-			if err := completeTurn(dir, self, turnResult{Text: "result"}, currentThread); err != nil {
+			if err := completeTurn(dir, self, inbox.TurnEnd{Text: "result"}, currentThread); err != nil {
 				t.Fatal(err)
 			}
 			files := finishedFor(t, dir, "web")

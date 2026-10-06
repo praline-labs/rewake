@@ -19,12 +19,12 @@ import (
 // finds its own journal. A hook heard once has no event to name it by and is
 // never retried: its name is drawn. The kind is part of the event: a stop
 // after an Esc and the finish of the same turn are two ends.
-func turnOp(self registry.Session, event turnResult) string {
+func turnOp(self registry.Session, event inbox.TurnEnd) string {
 	if event.ID == "" {
 		return inbox.NewID()
 	}
 	sum := sha256.Sum256([]byte(strings.Join([]string{
-		self.Epoch(), event.ID, event.kind(),
+		self.Epoch(), event.ID, event.Kind(),
 		strconv.FormatInt(event.Started, 10), strconv.FormatInt(event.Ended, 10),
 	}, "\x00")))
 	return fmt.Sprintf("%x", sum[:16])
@@ -38,7 +38,7 @@ func turnOp(self registry.Session, event turnResult) string {
 // The scope is the event's (docs/turn-end-recovery.md#the-operation): waits
 // and the kept answer at or below its read boundary, the pending mark in its
 // window. mark is that mark, nil when there is none.
-func publishTurnContext(ctx context.Context, dir string, self registry.Session, event turnResult, currentThread string, waiters []inbox.Waiter, op string, mark *inbox.Mark) error {
+func publishTurnContext(ctx context.Context, dir string, self registry.Session, event inbox.TurnEnd, currentThread string, waiters []inbox.Waiter, op string, mark *inbox.Mark) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -112,7 +112,7 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 	return inbox.Reconcile(ctx, dir, self.Name)
 }
 
-func prepareTurnReports(dir string, self registry.Session, event turnResult, pending bool, currentThread string, waiters []inbox.Waiter, op string) ([]inbox.Message, []inbox.Waiter, error) {
+func prepareTurnReports(dir string, self registry.Session, event inbox.TurnEnd, pending bool, currentThread string, waiters []inbox.Waiter, op string) ([]inbox.Message, []inbox.Waiter, error) {
 	if !event.Failed && !event.Stopped && strings.TrimSpace(event.Text) == "" {
 		if len(waiters) == 0 {
 			return nil, nil, nil

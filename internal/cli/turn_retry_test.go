@@ -41,7 +41,7 @@ func TestRetriedTurnDoesNotConsumeLaterWork(t *testing.T) {
 	run("inbox")
 	unblock := closeMailbox(t, dir, "two")
 	self, _ := registry.Lookup(dir, "api")
-	event := turnResult{Boundary: boundaryNow(t, dir, self), ID: "turn-before-new-task", Failed: true, Text: "failure on original tasks"}
+	event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "turn-before-new-task", Failed: true, Text: "failure on original tasks"}
 	if completeTurn(dir, self, event, "") == nil {
 		t.Fatal("the blocked report did not fail")
 	}
@@ -81,7 +81,7 @@ func TestRetriedTurnDoesNotConsumeLaterWork(t *testing.T) {
 	if len(finishedFor(t, dir, "one")) != 1 || len(inbox.Waiters(dir, "api", epochOf(t, dir, "api"))) != 1 {
 		t.Fatal("completed replay consumed later work")
 	}
-	if err := completeTurn(dir, self, turnResult{Boundary: boundaryNow(t, dir, self), ID: "next-turn", Text: "late task result"}, ""); err != nil {
+	if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "next-turn", Text: "late task result"}, ""); err != nil {
 		t.Fatal(err)
 	}
 	files = finishedFor(t, dir, "one")
@@ -111,7 +111,7 @@ func TestPartialTurnRetryKeepsOriginalOutcome(t *testing.T) {
 	t.Setenv(state.EpochEnv, epochOf(t, dir, "api"))
 	unblock := closeMailbox(t, dir, "web")
 	self, _ := registry.Lookup(dir, "api")
-	event := turnResult{Boundary: boundaryNow(t, dir, self), ID: "original", Failed: true, Text: "original failure"}
+	event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "original", Failed: true, Text: "original failure"}
 	if completeTurn(dir, self, event, "") == nil {
 		t.Fatal("the blocked report did not fail")
 	}

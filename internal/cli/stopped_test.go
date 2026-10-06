@@ -20,7 +20,7 @@ func TestStoppedKeepsWorkForTheHumanContinuation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	event := turnResult{Boundary: boundaryNow(t, dir, self), ID: "thread/stopped", Stopped: true, Text: "the person at the keyboard stopped this turn"}
+	event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "thread/stopped", Stopped: true, Text: "the person at the keyboard stopped this turn"}
 	if err := completeTurn(dir, self, event, "thread"); err != nil {
 		t.Fatal(err)
 	}
@@ -31,7 +31,7 @@ func TestStoppedKeepsWorkForTheHumanContinuation(t *testing.T) {
 	if report["kind"] != "stopped" || len(inbox.Waiters(dir, "api", self.Epoch())) != 1 {
 		t.Fatal("stopped settled the task or lost its kind")
 	}
-	if err := completeTurn(dir, self, turnResult{Boundary: boundaryNow(t, dir, self), ID: "thread/continued", Text: "continued result"}, "thread"); err != nil {
+	if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "thread/continued", Text: "continued result"}, "thread"); err != nil {
 		t.Fatal(err)
 	}
 	files := finishedFor(t, dir, "web")
@@ -64,7 +64,7 @@ func TestStoppedWithNobodyWaitingSendsNothing(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		event := turnResult{Boundary: boundaryNow(t, dir, self), ID: "thread/stop", Stopped: true, Text: "the person at the keyboard stopped this turn"}
+		event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "thread/stop", Stopped: true, Text: "the person at the keyboard stopped this turn"}
 		for range 2 {
 			if err := completeTurn(dir, self, event, "thread"); err != nil {
 				t.Fatal(err)
@@ -81,7 +81,7 @@ func TestStoppedWithNobodyWaitingSendsNothing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := completeTurn(dir, self, turnResult{Boundary: boundaryNow(t, dir, self), ID: "thread/fail", Failed: true, Text: "broken"}, "thread"); err != nil {
+	if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "thread/fail", Failed: true, Text: "broken"}, "thread"); err != nil {
 		t.Fatal(err)
 	}
 	if reportObject(t, dir, "leader")["kind"] != "error" {

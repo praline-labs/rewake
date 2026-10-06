@@ -14,5 +14,5 @@ func ReportCompletion(ctx context.Context, dir string, self registry.Session, re
 	if result.Boundary == nil {
 		return errors.New("completion lacks its captured read boundary; report remains pending")
 	}
-	return completeTurnContext(ctx, dir, self, turnResult{ID: result.ID, Text: result.Text, Failed: result.Kind == inbox.Error, Stopped: result.Kind == inbox.Stopped, Boundary: result.Boundary, Started: result.Started, Ended: result.Ended}, result.Thread)
+	return completeTurnContext(ctx, dir, self, inbox.TurnEnd{ID: result.ID, Text: result.Text, Failed: result.Kind == inbox.Error, Stopped: result.Kind == inbox.Stopped, Boundary: result.Boundary, Started: result.Started, Ended: result.Ended}, result.Thread)
 }

@@ -63,7 +63,7 @@ func TestFailedTurnsReachEveryWaitingSender(t *testing.T) {
 	t.Run("completion", func(t *testing.T) {
 		dir := failedWaiters(t)
 		self, _ := registry.Lookup(dir, "api")
-		if err := completeTurn(dir, self, turnResult{Boundary: boundaryNow(t, dir, self), ID: "failed", Failed: true, Text: "verbatim failure"}, ""); err != nil {
+		if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "failed", Failed: true, Text: "verbatim failure"}, ""); err != nil {
 			t.Fatal(err)
 		}
 		check(t, dir)
@@ -156,7 +156,7 @@ func TestIdentifiedFailuresAreNotRoutedAgainAfterTheirWaitsClear(t *testing.T) {
 	markMain(t, dir, "leader")
 	readFrom(t, dir, peer)
 	self, _ := registry.Lookup(dir, "api")
-	event := turnResult{Boundary: boundaryNow(t, dir, self), ID: "failure-once", Failed: true, Text: "failure"}
+	event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "failure-once", Failed: true, Text: "failure"}
 	for range 2 {
 		if err := completeTurn(dir, self, event, ""); err != nil {
 			t.Fatal(err)

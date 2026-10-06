@@ -46,7 +46,7 @@ func newInterimLab(t *testing.T) interimLab {
 	if err := markPending(dir, "api", self.Epoch(), "the suite is running", markAt-8); err != nil {
 		t.Fatal(err)
 	}
-	if err := completeTurn(dir, self, turnResult{Text: "started the suite", Started: markAt - 10, Ended: markAt - 5}, "t"); err != nil {
+	if err := completeTurn(dir, self, inbox.TurnEnd{Text: "started the suite", Started: markAt - 10, Ended: markAt - 5}, "t"); err != nil {
 		t.Fatal(err)
 	}
 	if got := kinds(reportsTo(t, dir, "web")); len(got) != 1 || got[0] != string(inbox.Interim) {
@@ -149,7 +149,7 @@ func TestAContinuationThatMarksPendingKeepsTheTaskOwed(t *testing.T) {
 func TestAStopAfterAHoldCarriesTheHeldAnswer(t *testing.T) {
 	lab := newInterimLab(t)
 	lab.held(t, "the report")
-	if err := completeTurn(lab.dir, lab.self, turnResult{Boundary: boundaryNow(t, lab.dir, lab.self), ID: "claude/turn-2", Stopped: true, Text: telemetry.StoppedText, Started: lab.start, Ended: markAt + 1}, "t"); err != nil {
+	if err := completeTurn(lab.dir, lab.self, inbox.TurnEnd{Boundary: boundaryNow(t, lab.dir, lab.self), ID: "claude/turn-2", Stopped: true, Text: telemetry.StoppedText, Started: lab.start, Ended: markAt + 1}, "t"); err != nil {
 		t.Fatal(err)
 	}
 	var stopped []string

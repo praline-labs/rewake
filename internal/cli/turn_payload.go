@@ -1,11 +1,15 @@
 package cli
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"github.com/praline-labs/rewake/internal/inbox"
+)
 
 // hookTurnEnd is a turn end decoded from a hook's or a notify program's
 // payload: the end itself, and what only such a payload says beside it.
 type hookTurnEnd struct {
-	turnResult
+	inbox.TurnEnd
 	// Thread is the conversation the turn ended in, when the payload names
 	// one: a Claude Code hook's session_id.
 	Thread string
@@ -34,7 +38,7 @@ func completedTurn(payload []byte) (hookTurnEnd, bool) {
 	if hook != "" && hook != "Stop" && hook != "StopFailure" {
 		return hookTurnEnd{}, false
 	}
-	result := hookTurnEnd{turnResult: turnResult{ID: text("turn-id")}}
+	result := hookTurnEnd{TurnEnd: inbox.TurnEnd{ID: text("turn-id")}}
 	if hook != "" {
 		// Only a hook's payload: Codex's notify has no session_id, and its
 		// conversation reaches the report through the gateway instead.

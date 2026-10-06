@@ -38,7 +38,7 @@ func TestAnUnreadableJournalStopsEveryCall(t *testing.T) {
 			} else if err := os.WriteFile(broken, []byte("{"), 0o600); err != nil {
 				t.Fatal(err)
 			}
-			if completeTurn(dir, self, turnResult{Text: "answer", Ended: 10}, "") == nil {
+			if completeTurn(dir, self, inbox.TurnEnd{Text: "answer", Ended: 10}, "") == nil {
 				t.Fatal("the turn end went on past an unreadable journal")
 			}
 			turnStarted(t, dir, self, markAt-1)
@@ -115,7 +115,7 @@ func TestUnknownEvidenceStopsTheCallsAfterTheEnd(t *testing.T) {
 	if err := inbox.WriteJournal(dir, "api", "end", inbox.TurnJournal{Epoch: self.Epoch(), Op: "end", Ended: 100, Reports: []inbox.Message{report}, Kept: &version}); err != nil {
 		t.Fatal(err)
 	}
-	if completeTurn(dir, self, turnResult{Text: "another answer", Ended: 200}, "") == nil {
+	if completeTurn(dir, self, inbox.TurnEnd{Text: "another answer", Ended: 200}, "") == nil {
 		t.Fatal("the end went on past an unknown kept answer")
 	}
 	turnStarted(t, dir, self, markAt-1)

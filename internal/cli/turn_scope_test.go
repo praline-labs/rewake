@@ -17,7 +17,7 @@ func TestARetryWhoseFirstAttemptRecordedNothingKeepsItsScope(t *testing.T) {
 	dir, self, web := toolSession(t)
 	original := readKind(t, dir, web, inbox.Task)
 	readOnlyJournals(t, dir)
-	event := turnResult{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT"}
+	event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT"}
 	if completeTurn(dir, self, event, "") == nil {
 		t.Fatal("the journal was not refused")
 	}
@@ -38,12 +38,12 @@ func TestARetryTakesOnlyTheAnswerItsFirstAttemptSaw(t *testing.T) {
 		dir, self, web := toolSession(t)
 		readKind(t, dir, web, inbox.Task)
 		readOnlyJournals(t, dir)
-		event := turnResult{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT"}
+		event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT"}
 		if completeTurn(dir, self, event, "") == nil {
 			t.Fatal("the journal was not refused")
 		}
 		writableJournals(t, dir)
-		if err := completeTurn(dir, self, turnResult{Boundary: boundaryNow(t, dir, self), ID: "second", Text: "the second is done"}, ""); err != nil {
+		if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "second", Text: "the second is done"}, ""); err != nil {
 			t.Fatal(err)
 		}
 		fresh := readKind(t, dir, web, inbox.Question)
@@ -65,7 +65,7 @@ func TestARetryTakesOnlyTheAnswerItsFirstAttemptSaw(t *testing.T) {
 			t.Fatal(err)
 		}
 		readOnlyJournals(t, dir)
-		event := turnResult{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT"}
+		event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT"}
 		if completeTurn(dir, self, event, "") == nil {
 			t.Fatal("the journal was not refused")
 		}
@@ -93,7 +93,7 @@ func TestARetryTakesOnlyTheAnswerItsFirstAttemptSaw(t *testing.T) {
 func TestAnEndWithNothingOwedKeepsItsScopeOnRetry(t *testing.T) {
 	dir, self, web := toolSession(t)
 	readOnlyJournals(t, dir)
-	event := turnResult{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT", Ended: 5}
+	event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT", Ended: 5}
 	if completeTurn(dir, self, event, "") == nil {
 		t.Fatal("the journal was not refused")
 	}

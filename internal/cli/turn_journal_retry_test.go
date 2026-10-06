@@ -80,7 +80,7 @@ func TestARecoveredPendingEndKeepsItsInterimOnRecord(t *testing.T) {
 	if err := markPending(dir, "api", self.Epoch(), "the suite is running", 100); err != nil {
 		t.Fatal(err)
 	}
-	event := turnResult{ID: "first", Text: "started", Started: 90, Ended: 110, Boundary: boundaryNow(t, dir, self)}
+	event := inbox.TurnEnd{ID: "first", Text: "started", Started: 90, Ended: 110, Boundary: boundaryNow(t, dir, self)}
 	records := filepath.Join(state.InboxPath(dir, "api"), "pending")
 	previous := beforeReports
 	beforeReports = func() { _ = os.Chmod(records, 0o500) }
@@ -116,7 +116,7 @@ func TestALateRetryAfterTheSweepPublishesNothing(t *testing.T) {
 		t.Run(string(kind), func(t *testing.T) {
 			dir, self, web := toolSession(t)
 			first := readKind(t, dir, web, kind)
-			event := turnResult{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT"}
+			event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT"}
 			if err := completeTurn(dir, self, event, ""); err != nil {
 				t.Fatal(err)
 			}
@@ -143,12 +143,12 @@ func TestARetryAnswersOnlyWhatItsFirstAttemptSaw(t *testing.T) {
 	dir, self, web := toolSession(t)
 	original := readKind(t, dir, web, inbox.Task)
 	readOnlyJournals(t, dir)
-	event := turnResult{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT"}
+	event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT"}
 	if completeTurn(dir, self, event, "") == nil {
 		t.Fatal("the journal was not refused")
 	}
 	writableJournals(t, dir)
-	if err := completeTurn(dir, self, turnResult{Boundary: boundaryNow(t, dir, self), ID: "second", Text: "the second is done"}, ""); err != nil {
+	if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "second", Text: "the second is done"}, ""); err != nil {
 		t.Fatal(err)
 	}
 	fresh := readKind(t, dir, web, inbox.Question)

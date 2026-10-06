@@ -133,7 +133,7 @@ func TestGatewayMailboxReservationAndDurableReports(t *testing.T) {
 			case <-time.After(time.Second):
 				t.Fatal("completion lost after selection change")
 			}
-			event := turnResult{Boundary: boundaryNow(t, dir, self), ID: outcome.ID, Text: outcome.Text}
+			event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: outcome.ID, Text: outcome.Text}
 			if err := completeTurn(dir, self, event, outcome.Thread); err != nil {
 				t.Fatal(err)
 			}
