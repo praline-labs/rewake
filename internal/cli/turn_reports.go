@@ -62,6 +62,7 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 			event.Text = joinTurnText(held, event.Text)
 		}
 	}
+	pending := false
 	if mark != nil {
 		// Only a normal finish is softened: a failure or a stop says more
 		// than "still working", and stays what it is. The mark's line comes
@@ -71,14 +72,14 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 		if turn := strings.TrimSpace(event.Text); turn != "" {
 			text += "\n\n" + turn
 		}
-		event.Pending, event.Text = true, text
+		pending, event.Text = true, text
 	}
-	reports, reported, err := prepareTurnReports(dir, self, event, currentThread, waiters, op)
+	reports, reported, err := prepareTurnReports(dir, self, event, pending, currentThread, waiters, op)
 	if err != nil {
 		return err
 	}
 	journal := inbox.TurnJournal{Epoch: self.Epoch(), Op: op, Ended: event.Ended, Reports: reports, Mark: mark}
-	if !event.Stopped && !event.Pending {
+	if !event.Stopped && !pending {
 		journal.Clear = reported
 	}
 	// What the next unmarked turn end is asked about, recorded by the journal
@@ -87,7 +88,7 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 	// leaves the record in place for the next end heard.
 	if event.Ended != 0 {
 		switch {
-		case event.Pending:
+		case pending:
 			journal.Interim = &mark.Text
 		case !event.Stopped:
 			journal.Settles = true
@@ -111,7 +112,7 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 	return inbox.Reconcile(ctx, dir, self.Name)
 }
 
-func prepareTurnReports(dir string, self registry.Session, event turnResult, currentThread string, waiters []inbox.Waiter, op string) ([]inbox.Message, []inbox.Waiter, error) {
+func prepareTurnReports(dir string, self registry.Session, event turnResult, pending bool, currentThread string, waiters []inbox.Waiter, op string) ([]inbox.Message, []inbox.Waiter, error) {
 	if !event.Failed && !event.Stopped && strings.TrimSpace(event.Text) == "" {
 		if len(waiters) == 0 {
 			return nil, nil, nil
@@ -128,7 +129,7 @@ func prepareTurnReports(dir string, self registry.Session, event turnResult, cur
 		kind = inbox.Stopped
 	case event.Failed:
 		kind = inbox.Error
-	case event.Pending:
+	case pending:
 		kind = inbox.Interim
 	}
 	var reports []inbox.Message
@@ -145,7 +146,7 @@ func prepareTurnReports(dir string, self registry.Session, event turnResult, cur
 		if event.Stopped {
 			id += "-stopped-" + op
 		}
-		if event.Pending {
+		if pending {
 			// Its own id, so the report that settles the wait later is not
 			// taken for a copy of this one.
 			id += "-pending-" + op

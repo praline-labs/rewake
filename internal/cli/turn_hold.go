@@ -22,8 +22,8 @@ import (
 // Every failure here falls to publishing, which is the behavior without the
 // hold (docs/turn-outcomes.md); a record that cannot be read is such a
 // failure, and a kept answer that cannot be read is never written over.
-func holdTurn(dir string, self registry.Session, event turnResult, waiters []inbox.Waiter, marked bool) string {
-	if !event.Holdable || event.Failed || event.Stopped {
+func holdTurn(dir string, self registry.Session, event turnResult, holdable bool, waiters []inbox.Waiter, marked bool) string {
+	if !holdable || event.Failed || event.Stopped {
 		return ""
 	}
 	line, interim, err := inbox.LastInterim(dir, self.Name, self.Epoch())

@@ -56,7 +56,7 @@ var (
 	// failure, a turn that answered ends without anyone being told.
 	mutantTurnEndedIgnoresStop = mutation{
 		name: "turn-ended-ignores-stop",
-		file: "internal/cli/turn_result.go",
+		file: "internal/cli/turn_payload.go",
 		edits: []edit{{
 			`if hook != "" && hook != "Stop" && hook != "StopFailure" {`,
 			`if hook != "" && hook != "StopFailure" {`,

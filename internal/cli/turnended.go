@@ -69,7 +69,7 @@ func handleTurnEnded(ctx *Context, call Call) error {
 		currentThread, _ = harness.SessionThread(self)
 	}
 
-	if reason, _ := endTurnContext(context.Background(), dir, self, event, currentThread); reason != "" {
+	if reason, _ := endTurnContext(context.Background(), dir, self, event.turnResult, event.Holdable, currentThread); reason != "" {
 		// Held: the turn goes on, and its end is still to come. Recording
 		// this moment as a start would put a mark the continuation makes
 		// outside the turn it belongs to.
@@ -94,14 +94,15 @@ func completeTurn(dir string, self registry.Session, event turnResult, currentTh
 }
 
 func completeTurnContext(parent context.Context, dir string, self registry.Session, event turnResult, currentThread string) error {
-	_, err := endTurnContext(parent, dir, self, event, currentThread)
+	_, err := endTurnContext(parent, dir, self, event, false, currentThread)
 	return err
 }
 
 // endTurnContext publishes a turn end, or holds it for the session to confirm
 // (turn_hold.go): then it publishes nothing and answers the reason to hand
-// the model.
-func endTurnContext(parent context.Context, dir string, self registry.Session, event turnResult, currentThread string) (string, error) {
+// the model. holdable says the end may be held at all, which only the
+// harness that reported it can say.
+func endTurnContext(parent context.Context, dir string, self registry.Session, event turnResult, holdable bool, currentThread string) (string, error) {
 	if !registry.OwnsName(dir, self.Name, self.Epoch()) {
 		return "", nil
 	}
@@ -142,7 +143,7 @@ func endTurnContext(parent context.Context, dir string, self registry.Session, e
 		if err != nil {
 			return err
 		}
-		if reason = holdTurn(dir, self, event, waiters, mark != nil); reason != "" {
+		if reason = holdTurn(dir, self, event, holdable, waiters, mark != nil); reason != "" {
 			return nil
 		}
 		beforeReports()

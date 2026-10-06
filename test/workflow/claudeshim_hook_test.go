@@ -328,7 +328,7 @@ func (s *claudeSession) runHook(event, command string, payload []byte) []byte {
 // hookInput is what the harness puts on the hook's stdin.
 //
 // What rewake reads from it is more than the message alone
-// (internal/cli/turn_result.go): agent_id, which decides whether the end
+// (internal/cli/turn_payload.go): agent_id, which decides whether the end
 // counts at all — an inherited hook in a child carries one and is ignored —
 // then type, hook_event_name, turn-id or turn_id, thread-id, the last message
 // under three spellings, and error with error_details for a failure. This

@@ -152,7 +152,7 @@ which the gate does not consult when it decides:
 - The Stop hook receives `last_assistant_message` on stdin. **[source; verified
   live]** What a hook that blocks the stop does to the turn — the second call, its
   payload, the limit — is in [research-claude-actions.md](research-claude-actions.md#holding-a-turns-end-from-the-stop-hook).
-- What rewake reads from that payload (`internal/cli/turn_result.go`): `agent_id`,
+- What rewake reads from that payload (`internal/cli/turn_payload.go`): `agent_id`,
   which decides whether the end counts at all — a child's inherited hook carries one
   and is ignored — then `type`, `hook_event_name`, `turn-id` or `turn_id`,
   `thread-id`, the last message under `last_assistant_message`,

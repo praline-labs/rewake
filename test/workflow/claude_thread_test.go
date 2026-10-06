@@ -136,7 +136,7 @@ var mutantDeliveryUnpinned = mutation{
 // The turn end does not read the conversation from the Stop hook's payload.
 var mutantStopThreadIgnored = mutation{
 	name:  "stop-thread-ignored",
-	file:  "internal/cli/turn_result.go",
+	file:  "internal/cli/turn_payload.go",
 	edits: []edit{{"\t\tresult.Thread = text(\"session_id\")\n", "\t\tresult.Thread = \"\"\n"}},
 }
 

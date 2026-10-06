@@ -163,7 +163,7 @@ func playPendingConfirm(t *testing.T, c *Case, iso *Isolation) []telemetryFindin
 var mutantPendingUnconfirmed = mutation{
 	name:  "pending-unconfirmed",
 	file:  "internal/cli/turn_hold.go",
-	edits: []edit{{"\tif !event.Holdable || event.Failed || event.Stopped {\n", "\tif true || !event.Holdable || event.Failed || event.Stopped {\n"}},
+	edits: []edit{{"\tif !holdable || event.Failed || event.Stopped {\n", "\tif true || !holdable || event.Failed || event.Stopped {\n"}},
 }
 
 // The held answer is not published: the report is the continuation alone,

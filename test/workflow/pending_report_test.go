@@ -171,7 +171,7 @@ var mutantPendingIgnored = mutation{
 var mutantPendingSettles = mutation{
 	name:  "pending-settles",
 	file:  "internal/cli/turn_reports.go",
-	edits: []edit{{"\tif !event.Stopped && !event.Pending {\n\t\tjournal.Clear = reported\n", "\tif !event.Stopped {\n\t\tjournal.Clear = reported\n"}},
+	edits: []edit{{"\tif !event.Stopped && !pending {\n\t\tjournal.Clear = reported\n", "\tif !event.Stopped {\n\t\tjournal.Clear = reported\n"}},
 }
 
 // The interim turn end carries the mark's line alone, as before: whatever the
