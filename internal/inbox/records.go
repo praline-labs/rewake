@@ -63,8 +63,6 @@ var recordKinds = []recordKind{
 	{"answering/*", "a question a send waits on", nil, true, "whether a send waits for its answer"},
 	{"received/*", "the report printed for a question", nil, true, "whether a question received its answer"},
 	{"retention/*", "when a reserved report is released", parseJSON[answerLifetime], true, "when the report is released"},
-	{"turns/*", "an earlier build's turn receipt", parseJSON[convertedReceipt], true, "what an earlier build's turn end published"},
-	{"journal/" + conversionFile, "the conversion of the earlier build's receipts", parseJSON[conversionJournal], true, "what the earlier build published, and the person's decisions"},
 	{"journal/*" + doneSuffix, "a completed turn journal", parseJournalFile, true, "where the next end's window opens"},
 	{"journal/*", "a turn journal", parseJournalFile, true, "what a turn end publishes, takes and clears"},
 	{"pending/kept.json", "a held answer", parseJSON[keptRecord], true, "which answer a turn end takes"},

@@ -152,10 +152,3 @@ func (w world) lookup(name string) (registry.Session, error) {
 	}
 	return registry.Lookup(w.dir, name)
 }
-
-func (w world) sessions() ([]registry.Session, error) {
-	if w.plan {
-		return registry.ListReadOnly(w.dir)
-	}
-	return registry.List(w.dir)
-}

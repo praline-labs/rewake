@@ -61,10 +61,8 @@ type Session struct {
 	// PIDNamespace is the pid namespace the two pids above belong to. A reader
 	// in a different one cannot judge whether they are alive.
 	PIDNamespace string `json:"pidNamespace,omitempty"`
-	// Boot and Build say which boot of the machine the run belongs to and
-	// which protocol it follows (run.go); an earlier build wrote neither.
-	Boot  string `json:"boot,omitempty"`
-	Build string `json:"build,omitempty"`
+	// Boot says which boot of the machine the run belongs to (run.go).
+	Boot string `json:"boot,omitempty"`
 	// AssumedGates are the gates this launch took as closed through the
 	// verification switch of the live checks
 	// (docs/mail-bridge-launch.md#gates-taken-as-closed), so whoami and

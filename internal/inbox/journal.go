@@ -60,20 +60,7 @@ type TurnJournal struct {
 	Published []string `json:",omitempty"`
 	// Moot lists the reports that can reach nobody: their run ended.
 	Moot []string `json:",omitempty"`
-	// Held lists the reports for a run of the earlier build, which this build
-	// does not write to (journal_held.go); the journal keeps each until its
-	// recipient's successor takes it or it is moot.
-	Held []string `json:",omitempty"`
-	// Successors names, for a held report, the run it went to, recorded
-	// before it is published there.
-	Successors map[string]string `json:",omitempty"`
-	// Notices lists the moot reports main is yet to be told of: recorded
-	// with the decision that made them moot, and dropped once the note is
-	// out, so a note that failed goes on the next attempt.
-	Notices []string `json:",omitempty"`
-	// Stepped says every step but the held reports is done.
-	Stepped bool `json:",omitempty"`
-	Done    bool `json:",omitempty"`
+	Done bool     `json:",omitempty"`
 }
 
 // JournalPath holds the turn journals of a mailbox, one per turn end.
@@ -139,9 +126,8 @@ func JournalRecorded(dir, name, id string) (bool, error) {
 
 // finishJournal completes the operation recorded under id and marks it done;
 // an error leaves the rest for the next attempt. A journal done already, or
-// never written, needs nothing. One holding a report for an earlier-build run
-// completes every other step and stays, carrying that report. Only the
-// barrier runs it, after its plan (Reconcile).
+// never written, needs nothing. Only the barrier runs it, after its plan
+// (Reconcile).
 func (w world) finishJournal(ctx context.Context, name, id string) error {
 	path := filepath.Join(JournalPath(w.dir, name), id)
 	journal, err := w.readJournalFile(path)
@@ -155,8 +141,7 @@ func (w world) finishJournal(ctx context.Context, name, id string) error {
 		return w.retireJournal(path)
 	}
 	save := func() error { return w.writeJournalFile(path, journal) }
-	complete, err := w.completeJournal(ctx, name, &journal, save)
-	if err != nil || !complete {
+	if err := w.completeJournal(ctx, name, &journal, save); err != nil {
 		return err
 	}
 	// Done in place first: an end that dies before the rename leaves a journal
@@ -168,38 +153,24 @@ func (w world) finishJournal(ctx context.Context, name, id string) error {
 }
 
 // completeJournal runs every step of a journal not done yet, saving its
-// progress after each, and answers whether it is complete: false while it
-// holds a report for a run of the earlier build.
-func (w world) completeJournal(ctx context.Context, name string, journal *TurnJournal, save func() error) (bool, error) {
-	if err := w.tellNotices(ctx, name, save, journal); err != nil {
-		return false, err
-	}
+// progress after each report.
+func (w world) completeJournal(ctx context.Context, name string, journal *TurnJournal, save func() error) error {
 	for _, report := range journal.Reports {
 		if slices.Contains(journal.Published, report.ID) || slices.Contains(journal.Moot, report.ID) {
 			continue
 		}
 		if err := ctx.Err(); err != nil {
-			return false, err
+			return err
 		}
-		if err := w.deliverReport(ctx, name, save, journal, report); err != nil {
-			return false, err
-		}
-	}
-	if !journal.Stepped {
-		if err := w.finishSteps(ctx, name, *journal); err != nil {
-			return false, err
-		}
-		journal.Stepped = true
-		if len(journal.Held) > 0 {
-			return false, save()
+		if err := w.deliverReport(name, save, journal, report); err != nil {
+			return err
 		}
 	}
-	return len(journal.Held) == 0, nil
+	return w.finishSteps(ctx, name, *journal)
 }
 
 // finishSteps takes the kept answer, clears the waits and records the
-// interim end. A held report hands its obligations to the journal, which now
-// carries the answer: its waits are cleared too.
+// interim end.
 func (w world) finishSteps(ctx context.Context, name string, journal TurnJournal) error {
 	if journal.Kept != nil {
 		if err := ctx.Err(); err != nil {
@@ -244,7 +215,7 @@ func TurnWindowStart(dir, name, epoch string, started, ended int64) (int64, erro
 	}
 	start := started
 	for _, entry := range entries {
-		if entry.IsDir() || entry.Name()[0] == '.' || entry.Name() == conversionFile {
+		if entry.IsDir() || entry.Name()[0] == '.' {
 			continue
 		}
 		journal, err := readJournalFile(filepath.Join(JournalPath(dir, name), entry.Name()))

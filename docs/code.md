@@ -12,9 +12,8 @@ internal/                        the layout test of 2.0: the import rule, harnes
 internal/cli/                    command table, parsing, overview, help, failures, printing
 internal/state/                  directory: checks, paths, atomic writes
 internal/buildtime/              durations a build may shorten through -ldflags, for the suite
-internal/registry/               session record, name publishing, liveness, listing, run records and the successor
+internal/registry/               session record, name publishing, liveness and listing
 internal/registry/registrytest/  for tests: the boot a session of this build carries
-internal/cutover/                the look for earlier-build writers a launch makes over /proc, and its refusal
 internal/proc/                   /proc: identity, liveness, job-control state, lineage and namespaces
 internal/boottime/               the boot clock, comparable across processes and never set back
 internal/inbox/                  message, status, sender-side write, servicing loop

@@ -33,14 +33,10 @@ inbox/<name>/awaiting/<epoch>/<peer>   who is owed a report by this run
 inbox/<name>/answering/<id>      a send --question is waiting for this answer
 inbox/<name>/received/<id>       id of the report printed for this question
 inbox/<name>/retention/<id>      fixed release time for a reserved report
-inbox/<name>/turns/<id>          an earlier build's turn receipt, until a run of this build converts it
 inbox/<name>/journal/<id>        what a turn end publishes, takes and clears, named by the end; <id>.done while its run lives
-inbox/<name>/journal/conversion  the earlier build's receipts converted, their evidence and the person's settles; for good
 inbox/<name>/pending/            this run's pending marks, its last word on the work, a held answer
 inbox/<name>/once/<epoch>/<id>   a letter's publication mark: intent, then published
 inbox/<name>/stopped             the stop the mailbox is in, until a look finds its cause gone
-runs/<name>/<boot>/<epoch>       a run of this build, with the build stamp; never swept
-runs/<name>/successor            the first run of this build under the name; never replaced
 inbox/<name>/threads/<id>        selected delivery thread, when supported
 inbox/<name>/.lock               the mailbox lock, one flock for every state change
                                  (every kind a mailbox holds: docs/mailbox-records.md)
@@ -77,13 +73,7 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
    dead records can be replaced, and other rooms may use the same address.
 3. **The run.** The wrapper's pid, its start time and the machine's boot id make
    the **epoch** (`<pid>.<ticks>.<boot>`). A name can be started many times; the epoch
-   says which start this is, and the boot keeps it from recurring after a restart. An
-   epoch without a boot is a run of an earlier build. Before the name is published the
-   launch proves every earlier-build writer of the name stopped — a look over the
-   person's processes — or refuses with exit 1 naming each one, then records its run
-   under `runs/` and binds itself as the name's successor; once published it takes the
-   reports held for the name's earlier-build runs
-   ([protocol-cutover.md](protocol-cutover.md#the-launch)).
+   says which start this is, and the boot keeps it from recurring after a restart.
 4. **The role.** An unflagged launch always becomes general, even in an empty
    room or after main exits. Only explicit `--main` creates main, and it refuses
    under the room lock if a live main already occupies the room. Explicit
@@ -324,7 +314,7 @@ ignored without changing the parent session's waits.
    `awaiting/<own epoch>/`. A silent role emits no successful reports;
    failure callbacks still route errors. First the barrier completes what an
    earlier end left unfinished (`inbox.Reconcile`); an unknown it cannot decide stops the
-   mailbox until `rewake settle`. An identified turn carries its read boundary, and its
+   mailbox until a later look finds its cause gone. An identified turn carries its read boundary, and its
    journal records the full report batch and what it clears before any report goes out
    ([delivery-turn-end.md](delivery-turn-end.md#the-end-of-a-turn)).
 2. **The report.** For each waiting run, a `finished` message into that

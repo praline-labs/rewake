@@ -131,7 +131,7 @@ func continueOutput(ctx *Context, call Call, raw string) error {
 		return &UsageError{Command: call.Command, Message: err.Error()}
 	}
 	self, epoch, err := ownRun(dir)
-	if err != nil && !errors.Is(err, errUpgraded) {
+	if err != nil {
 		return failf("%v; a continuation belongs to the run that printed it", err)
 	}
 	record, err := receipt.Load(dir, self.Name, epoch, token)

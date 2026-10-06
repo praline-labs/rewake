@@ -38,12 +38,6 @@ func handleTurnEnded(ctx *Context, call Call) error {
 		return nil
 	}
 	self, _, err := ownRun(dir)
-	if errors.Is(err, errUpgraded) {
-		// The earlier build's hooks run whatever binary is installed now,
-		// while its wrapper keeps that build's protocol: a turn end this
-		// build published for it would mix the two.
-		return refuseUpgraded(dir, self)
-	}
 	if err != nil {
 		// A stale hook cannot report for a newer run of the same name.
 		return nil

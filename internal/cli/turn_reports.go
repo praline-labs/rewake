@@ -33,8 +33,7 @@ func turnOp(self registry.Session, event turnResult) string {
 // publishTurnContext writes a turn end's journal before any of its effects
 // and completes it: the journal is the one source of what the end publishes,
 // takes, clears and records (inbox/journal.go). The caller holds the mailbox
-// lock and has run the barrier, so no journal of this run is unfinished but
-// one holding a report for a run of the earlier build.
+// lock and has run the barrier, so no journal of this run is unfinished.
 //
 // The scope is the event's (docs/turn-end-recovery.md#the-operation): waits
 // and the kept answer at or below its read boundary, the pending mark in its
@@ -134,18 +133,13 @@ func prepareTurnReports(dir string, self registry.Session, event turnResult, cur
 	}
 	var reports []inbox.Message
 	for _, waiter := range waiters {
-		// A report to a run of the earlier build is written whether or not
-		// that run still lives: the journal holds it for the name's successor
-		// (docs/protocol-cutover.md). One to an ended run of this build can
-		// reach nobody.
-		if !registry.EarlierBuildEpoch(waiter.Epoch) {
-			peer, err := registry.Lookup(dir, waiter.Name)
-			if err != nil && !errors.Is(err, registry.ErrNotFound) {
-				return nil, nil, err
-			}
-			if err != nil || peer.Epoch() != waiter.Epoch {
-				continue
-			}
+		// A report to an ended run can reach nobody.
+		peer, err := registry.Lookup(dir, waiter.Name)
+		if err != nil && !errors.Is(err, registry.ErrNotFound) {
+			return nil, nil, err
+		}
+		if err != nil || peer.Epoch() != waiter.Epoch {
+			continue
 		}
 		id := inbox.ReportID(self.Name, self.Epoch(), waiter)
 		if event.Stopped {

@@ -2,8 +2,6 @@ package workflow
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -62,19 +60,6 @@ var suiteFlags = []string{"-ldflags", strings.Join([]string{
 	buildValue("harness/codex/gateway", "builtCompactionRun", suiteCompactionRun),
 }, " ")}
 
-// buildFlags are suiteFlags with the process tree the launch's look for
-// earlier-build writers lists: an empty one of the build's own under dir, so
-// no launch of the suite depends on what else runs on the machine
-// (docs/protocol-cutover.md). The look's own judgements are the unit tests'
-// of internal/cutover, over trees they describe.
-func buildFlags(dir string) ([]string, error) {
-	tree := filepath.Join(dir, "proc")
-	if err := os.MkdirAll(tree, 0o700); err != nil {
-		return nil, err
-	}
-	return []string{"-ldflags", suiteFlags[1] + " -X github.com/praline-labs/rewake/internal/cutover.builtProcRoot=" + tree}, nil
-}
-
 func buildValue(pkg, name string, value time.Duration) string {
 	return fmt.Sprintf("-X github.com/praline-labs/rewake/internal/%s.%s=%s", pkg, name, value)
 }
@@ -88,15 +73,11 @@ func TestSuiteBuildValuesNameRealVariables(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	flags, err := buildFlags(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
 	build, err := loadSuiteBuild(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, flag := range strings.Fields(flags[1]) {
+	for _, flag := range strings.Fields(suiteFlags[1]) {
 		if flag == "-X" {
 			continue
 		}

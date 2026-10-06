@@ -200,13 +200,9 @@ func buildRewake(dir string) (string, error) {
 	ctx, stop := context.WithTimeout(context.Background(), buildTimeout)
 	defer stop()
 	binary := filepath.Join(dir, "rewake")
-	flags, err := buildFlags(dir)
-	if err != nil {
-		return "", err
-	}
 	// No VCS stamp: the suite asserts nothing about the build line, and a
 	// copy without .git would fail on the stamp.
-	build := exec.Command("go", append(append([]string{"build", "-buildvcs=false"}, flags...), "-o", binary, "./cmd/rewake")...)
+	build := exec.Command("go", append(append([]string{"build", "-buildvcs=false"}, suiteFlags...), "-o", binary, "./cmd/rewake")...)
 	build.Dir = root
 	build.Env = os.Environ()
 	// Through the same group machinery a case uses: `go build` starts

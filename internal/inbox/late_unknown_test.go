@@ -9,9 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/proc"
 	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/registry/registrytest"
 	"github.com/praline-labs/rewake/internal/state"
 )
 
@@ -24,15 +22,15 @@ func TestEveryDurableStopOutlivesAFailedRetry(t *testing.T) {
 	for _, stop := range []string{"effect", "record", "reading"} {
 		for _, retry := range []string{"canceled", "another stop", "failing effect"} {
 			t.Run(stop+"/"+retry, func(t *testing.T) {
-				lab := newConversionLab(t)
+				lab := newTwoSessionLab(t)
 				version := "v1"
-				raw, err := json.Marshal(keptRecord{Epoch: earlierRun, Text: "held", Version: version})
+				raw, err := json.Marshal(keptRecord{Epoch: lab.run, Text: "held", Version: version})
 				if err != nil {
 					t.Fatal(err)
 				}
 				kept := keptPath(lab.dir, "api")
 				writeRaw(t, kept, string(raw))
-				if err := WriteJournal(lab.dir, "api", "end", TurnJournal{Epoch: earlierRun, Op: "end", Kept: &version}); err != nil {
+				if err := WriteJournal(lab.dir, "api", "end", TurnJournal{Epoch: lab.run, Op: "end", Kept: &version}); err != nil {
 					t.Fatal(err)
 				}
 				cause := filepath.Join(JournalPath(lab.dir, "api"), "z")
@@ -113,69 +111,23 @@ func TestEveryDurableStopOutlivesAFailedRetry(t *testing.T) {
 // an absence (rule 6): the report of an earlier journal is not published
 // beside it, and the mailbox stays stopped.
 func TestEveryEvidencePathIsReadBeforeTheFirstEffect(t *testing.T) {
-	for _, path := range []string{"recipient", "recorded successor", "chosen successor", "owed note", "earlier receipt", "conversion"} {
+	for _, path := range []string{"recipient"} {
 		for _, fault := range []string{"not a directory", "no access"} {
 			t.Run(path+"/"+fault, func(t *testing.T) {
-				lab := newConversionLab(t)
+				lab := newTwoSessionLab(t)
 				lead, err := registry.Load(lab.dir, "lead")
 				if err != nil {
 					t.Fatal(err)
 				}
-				sender, first, to, epoch := "web", Message{}, "lead", lead.Epoch()
-				earlierJournal := func(reports ...Message) {
-					if err := WriteJournal(lab.dir, "web", "a", TurnJournal{Epoch: lab.web.Epoch(), Op: "end", Reports: reports}); err != nil {
-						t.Fatal(err)
-					}
-				}
-				later := func(journal TurnJournal) {
-					journal.Epoch, journal.Op = lab.web.Epoch(), "end"
-					if err := WriteJournal(lab.dir, "web", "b", journal); err != nil {
-						t.Fatal(err)
-					}
-				}
-				held := Message{ID: NewID(), From: "web", FromEpoch: lab.web.Epoch(), To: "api", ToEpoch: earlierRun, Kind: Finished, Text: "HELD", CreatedAt: time.Now()}
-				switch path {
-				case "recipient", "recorded successor", "chosen successor", "owed note":
-					first = Message{ID: NewID(), From: "web", FromEpoch: lab.web.Epoch(), To: "ops", ToEpoch: lab.session(t, "ops").Epoch(), Kind: Finished, Text: "FIRST", CreatedAt: time.Now()}
-					earlierJournal(first)
-				default:
-					sender, first = "api", lab.report(Finished, "one")
+				sender, to, epoch := "web", "lead", lead.Epoch()
+				first := Message{ID: NewID(), From: "web", FromEpoch: lab.web.Epoch(), To: "ops", ToEpoch: lab.session(t, "ops").Epoch(), Kind: Finished, Text: "FIRST", CreatedAt: time.Now()}
+				if err := WriteJournal(lab.dir, "web", "a", TurnJournal{Epoch: lab.web.Epoch(), Op: "end", Reports: []Message{first}}); err != nil {
+					t.Fatal(err)
 				}
 				second := lab.report(Finished, "two")
-				second.To, second.ToEpoch = "lead", lead.Epoch()
-				switch path {
-				case "recipient":
-					second.From, second.FromEpoch = "web", lab.web.Epoch()
-					later(TurnJournal{Reports: []Message{second}})
-				case "recorded successor", "chosen successor":
-					start, err := proc.StartTime(os.Getpid())
-					if err != nil {
-						t.Fatal(err)
-					}
-					successor := lab.bind(t, os.Getpid(), start)
-					if err := registry.Publish(lab.dir, successor); err != nil {
-						t.Fatal(err)
-					}
-					to, epoch = "api", successor.Epoch()
-					journal := TurnJournal{Reports: []Message{held}}
-					if path == "recorded successor" {
-						journal.Held, journal.Successors = []string{held.ID}, map[string]string{held.ID: epoch}
-					}
-					later(journal)
-				case "owed note":
-					later(TurnJournal{Reports: []Message{held}, Moot: []string{held.ID}, Notices: []string{held.ID}})
-				case "earlier receipt", "conversion":
-					lab.owe(t, "one", "two")
-					lab.receipt(t, false, false, first, second)
-					if path == "conversion" {
-						receipts, err := earlierReceipts(lab.dir, "api")
-						if err != nil {
-							t.Fatal(err)
-						}
-						if err := (&conversionJournal{Receipts: receipts}).save(lab.dir, "api"); err != nil {
-							t.Fatal(err)
-						}
-					}
+				second.From, second.FromEpoch, second.To, second.ToEpoch = "web", lab.web.Epoch(), "lead", lead.Epoch()
+				if err := WriteJournal(lab.dir, "web", "b", TurnJournal{Epoch: lab.web.Epoch(), Op: "end", Reports: []Message{second}}); err != nil {
+					t.Fatal(err)
 				}
 				blocked := filepath.Join(state.InboxPath(lab.dir, to), "once", epoch)
 				t.Cleanup(func() { _ = os.Chmod(blocked, 0o700); _ = os.RemoveAll(blocked) })
@@ -209,29 +161,4 @@ func TestEveryEvidencePathIsReadBeforeTheFirstEffect(t *testing.T) {
 			})
 		}
 	}
-}
-
-// session publishes a running session of this build under name.
-func (l conversionLab) session(t *testing.T, name string) registry.Session {
-	t.Helper()
-	start, err := proc.StartTime(os.Getpid())
-	if err != nil {
-		t.Fatal(err)
-	}
-	session := registry.Session{Name: name, ServicePID: os.Getpid(), ServiceStart: start, Boot: registrytest.Boot(t), CWD: l.dir, StartedAt: time.Now()}
-	if err := registry.Publish(l.dir, session); err != nil {
-		t.Fatal(err)
-	}
-	return session
-}
-
-// heldMootNote is the note tellMainHeldMoot leaves for report, looked up
-// without removing any record.
-func heldMootNote(dir, from, report string) (Message, bool, error) {
-	sessions, err := registry.ListReadOnly(dir)
-	if err != nil {
-		return Message{}, false, err
-	}
-	note, ok := mainNote(sessions, from, heldMootAbout+report, "")
-	return note, ok, nil
 }

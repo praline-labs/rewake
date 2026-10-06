@@ -50,9 +50,6 @@ func handleInbox(ctx *Context, call Call) error {
 		}
 	case errors.Is(err, errEarlierRun):
 		return failf("%v; its mail is not this shell's to read", err)
-	case errors.Is(err, errUpgraded) && !peek:
-		return refuseUpgraded(dir, session)
-	case errors.Is(err, errUpgraded):
 	case err != nil:
 		return failf("%v; its mail cannot be read", err)
 	}
@@ -133,7 +130,7 @@ func handleInbox(ctx *Context, call Call) error {
 }
 
 // mailboxStopped answers the stop of a mailbox whose records nothing can
-// decide (docs/turn-end-recovery.md#the-stop-and-rewake-settle): a read
+// decide (docs/turn-end-recovery.md#the-stop): a read
 // would change it, so none is made, and the answer names the cause and the
 // way out. Letters go on arriving, and a peek shows them.
 func mailboxStopped(dir, name string) error {

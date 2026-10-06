@@ -28,8 +28,7 @@ unknown. The first pattern that matches a path is its kind.
 | `awaiting/<run>/<peer>` | who a run owes a report | a wait, under a session's name |
 | `answering/<id>`, `received/<id>` | a question waited on; the report printed for it | readable |
 | `retention/<id>` | when a reserved report is released | its lifetime |
-| `turns/<id>` | an earlier build's turn receipt | a receipt of that build |
-| `journal/conversion`, `journal/<id>`, `journal/<id>.done` | the conversion, a turn journal, a completed one | a journal |
+| `journal/<id>`, `journal/<id>.done` | a turn journal, a completed one | a journal |
 | `pending/kept.json`, `pending/interim.json` | a held answer; a run's last word on the work | their records |
 | `pending/marks/<run>/<time>` | a pending mark | a mark that says what its name says |
 | `once/<run>/<id>` | a publication mark | `intent` or `published` |
@@ -44,10 +43,7 @@ A file named `.tmp-*`, in any directory, is a write that never finished
 
 The barrier, and every call that would change the mailbox by an effect — pending, a read
 and its parts, an acknowledgment, the answer a question takes — first plans (`plan` in
-`internal/inbox/reconcile.go`). A settle is not one of them: the decision of main or the
-person is written first, in a stopped mailbox too, since it is recovery's own record and
-the only thing that can lift a stop on a report nothing can decide; the barrier then
-runs with the decision among what its plan reads. The plan walks the whole tree: a file
+`internal/inbox/reconcile.go`). The plan walks the whole tree: a file
 that matches no kind, one that is not a regular file, one that does not read as its kind
 says, a directory where a record belongs or where no kind's files lie, and a directory
 that cannot be listed each stop the mailbox, named with what they leave unknown; a
@@ -56,18 +52,16 @@ directories say, and a file that left since it was listed moved on and is none o
 The walk reads every file of a kind it opens, the read clock among them, and hands the
 bytes to that kind's parser: no kind can leave its file unread.
 
-Then the plan runs the barrier's own effects, read-only: the conversion of the earlier
-build's receipts and every unfinished journal, with every write doing nothing and every
+Then the plan runs the barrier's own effects, read-only: every unfinished journal, with
+every write doing nothing and every
 decision kept in memory. Whatever an effect decides by is so read before the first
 effect, by the code that decides it: the recipient's publication mark and the letter in
-each of the recipient's stages, the successor recorded for a held report and the one the
-attempt would choose now (`heldSuccessor`), the mark of a note to main a journal already
-owes and of one the attempt itself is about to create, a kept answer, an interim record,
-a wait. A plan that meets an unknown records the stop and nothing changes. Only a plan
+each of the recipient's stages, the session registry that says whether the recipient's
+run lives, a kept answer, an interim record, a wait. A plan that meets an unknown records the stop and nothing changes. Only a plan
 that meets none lets the effects run, and they run the same code again on what they read
 then: the plan is not kept as data for an executor to follow, as decided on October 1,
-2026. A decision a race changes between the plan and the effects — a successor that
-became ready in between — is taken on the effects' own reads, and an unknown met only
+2026. A decision a race changes between the plan and the effects — a recipient that
+ended in between — is taken on the effects' own reads, and an unknown met only
 there is the stop of an effect, below.
 
 Every file operation of the barrier and the gates goes through one seam, `fileAccess`
@@ -83,11 +77,6 @@ cleanup an ordinary lookup does on the way. A registry that cannot be read in th
 is a stop the plan found; one that fails only in the effects is a plain failure,
 which a retry clears.
 
-A conversion stopped on reports nothing can decide is the plan's own outcome, not an
-unknown: the effects record it, with main told, and the gates answer it once it is
-recorded. Telling main is an effect like any other: a note whose mark is unknown stops
-the mailbox before the decision is recorded.
-
 ## The tests that hold it
 
 A test over the package's writers holds the list complete: every test of `inbox` and
@@ -99,10 +88,8 @@ path.
 
 What the plan reads is found by watching it, not by a list
 (`TestEveryReadOfThePlanStopsBeforeTheFirstEffect`, `plan_faults_test.go`). Scenes built
-as the tests of each effect build them — two journals to two recipients, a held report
-whose successor is chosen now, recorded, or gone with a new note, a note owed, an
-earlier receipt done, a conversion settled and one that stops, the steps of a journal,
-two journals that clear parts of one wait and share the kept answer and the interim
+as the tests of each effect build them — two journals to two recipients, a report
+recorded moot, the steps of a journal, two journals that clear parts of one wait and share the kept answer and the interim
 line, and a record of every kind — each run once through a seam that records every read.
 Then each read of the plan is failed in turn, in both passes, with every fault that
 applies: a path that cannot be followed, one closed to reading, a directory where a file
@@ -129,8 +116,8 @@ file where they were, so the scene does not end as it does in place.
 
 Three older tests stay beside it (`records_test.go`, `late_unknown_test.go`): a
 directory and a link at a sample path of every kind on the list stop the reading; the
-earlier evidence paths met through a file and through a closed directory stop before the
-first report of an earlier journal; and every durable stop outlives a canceled retry, a
+recipient's publication marks met through a file and through a closed directory stop
+before the first report of an earlier journal; and every durable stop outlives a canceled retry, a
 retry stopped by another cause, and a retry whose effect fails. A stop that neither of
 the barrier's writes could record is answered with both failures named and the effect's
 cause beside any the plan after it found (`effect_stop_test.go`). A gate whose record of
@@ -150,9 +137,8 @@ depends on what found it:
   failure: a cause that plan finds is no proof that it is the effect's, so it is
   recorded beside the effect's (`Met`), never in its place, and its going does not
   lift the stop. No plan shows the effect's cause, so every call answers it from the
-  record, and only the barrier removes it, once it has run every effect through, or
-  has run every effect before a conversion stopped on reports, which the mailbox then
-  answers. A barrier that was canceled, whose effect failed, or that met another cause
+  record, and only the barrier removes it, once it has run every effect through. A
+  barrier that was canceled, whose effect failed, or that met another cause
   has not, and keeps it.
 - The barrier holds the effect's cause itself until it returns and puts it into every
   record of the stop it writes: once when the effect fails, so a crash cannot lose it,
@@ -169,13 +155,3 @@ depends on what found it:
 
 A read that met a stop froze nothing: it is not kept as the answer of the read's
 receipt, and the same words read once the stop is gone.
-
-## Notes owed to main
-
-A held report found moot — its successor ended before taking it — is recorded moot in
-its journal together with a note owed to main (`Notices`), in one write. The note is
-sent after that write, and the owed entry is dropped only once it is out; a note that
-could not be published stays owed, and every later barrier sends it before any other
-effect of the journal. Its id is derived from the sender and the report, so a retry
-that meets its publication mark finds the one already written and publishes nothing
-again.

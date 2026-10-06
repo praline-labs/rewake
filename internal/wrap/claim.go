@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/boottime"
 	"github.com/praline-labs/rewake/internal/proc"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
@@ -24,19 +23,9 @@ func (e *MainTakenError) Error() string {
 // launch is already alive through its wrapper pid, so a second launch cannot
 // also claim explicit main while the first prepares its harness.
 //
-// Publishing is the fourth step of the launch order
-// (docs/protocol-cutover.md#the-launch): writers answers whether an
-// earlier-build writer of the chosen name is not proven stopped; then the run
-// record, then the binding as the name's successor, each before the session
-// record, so that a sender's barrier never finds a successor without its run
-// record, nor a ready run it could not tell the build of.
-//
-// Everything before that proof only reads: the listing that finds main, the
-// choice of the name, the look whether a live run holds it. A pruning read
-// would remove the dead record of the name — one of the earlier build names
-// no pid namespace, and the proof refuses on it as out of sight — and the
-// proof would pass on evidence the launch itself erased.
-func claimName(request Request, self int, selfStart uint64, boot, cwd string, writers func(dir, name string) error) (registry.Session, error) {
+// The listing that finds main and the choice of the name only read: a dead
+// record of the chosen name is replaced by Publish, under the name's lock.
+func claimName(request Request, self int, selfStart uint64, boot, cwd string) (registry.Session, error) {
 	var session registry.Session
 	err := state.WithRoomLock(request.Dir, func() error {
 		sessions, err := registry.ListReadOnly(request.Dir)
@@ -74,11 +63,7 @@ func claimName(request Request, self int, selfStart uint64, boot, cwd string, wr
 			session = registry.Session{
 				Name: name, Room: filepath.Base(request.Dir), Harness: request.Harness.ID(),
 				ServicePID: self, ServiceStart: selfStart, PIDNamespace: proc.Namespace(),
-				Boot: boot, Build: registry.BuildStamp,
-				Role: chosen.ID, RoleReason: reason, CWD: cwd, StartedAt: time.Now(),
-			}
-			if err := prepareRun(request.Dir, session, writers); err != nil {
-				return err
+				Boot: boot, Role: chosen.ID, RoleReason: reason, CWD: cwd, StartedAt: time.Now(),
 			}
 			err = registry.Publish(request.Dir, session)
 			if err == nil {
@@ -93,28 +78,4 @@ func claimName(request Request, self int, selfStart uint64, boot, cwd string, wr
 		return fmt.Errorf("could not claim a name for this session: every candidate was taken while starting")
 	})
 	return session, err
-}
-
-// prepareRun is the launch order's first three steps for a name no live run
-// holds. A name some live run holds is left to Publish, which refuses it:
-// bound as the successor, a launch that never ran would make every report
-// held for the name moot once it exits.
-func prepareRun(dir string, session registry.Session, writers func(dir, name string) error) error {
-	if err := writers(dir, session.Name); err != nil {
-		return err
-	}
-	if _, err := registry.LookupReadOnly(dir, session.Name); err == nil {
-		return nil
-	}
-	record := registry.RunRecord{
-		Name: session.Name, Boot: session.Boot, Epoch: session.Epoch(), Build: registry.BuildStamp,
-		Started: boottime.ProcessStarted, PIDNamespace: session.PIDNamespace,
-	}
-	if err := registry.WriteRunRecord(dir, record); err != nil {
-		return fmt.Errorf("could not record this run of %s: %w", session.Name, err)
-	}
-	if _, err := registry.BindSuccessor(dir, session.Name, session.Epoch()); err != nil {
-		return fmt.Errorf("could not bind this run as the successor of %s: %w", session.Name, err)
-	}
-	return nil
 }

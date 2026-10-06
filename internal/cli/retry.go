@@ -44,9 +44,6 @@ func handleRetry(ctx *Context, call Call) error {
 		return &UsageError{Command: call.Command, Message: err.Error()}
 	}
 	self, epoch, err := ownRun(dir)
-	if errors.Is(err, errUpgraded) {
-		return refuseUpgraded(dir, self)
-	}
 	if err != nil {
 		return failf("%v; a receipt belongs to the run that printed it", err)
 	}

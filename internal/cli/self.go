@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/role"
 
 	"github.com/praline-labs/rewake/internal/registry"
@@ -21,13 +20,6 @@ var errNoRun = errors.New("this shell was started by an older rewake that did no
 
 // errEarlierRun means the name now belongs to a later run than this process.
 var errEarlierRun = errors.New("this shell belongs to a session that has ended; its name is used by another one now")
-
-// errUpgraded means the run this process belongs to was started by a build
-// before the turn journal. Its wrapper keeps that build's code for its whole
-// life, so this build does not act for it (docs/protocol-cutover.md): a call
-// that would change a mailbox refuses with refuseUpgraded, and one that only
-// reads goes on.
-var errUpgraded = errors.New("rewake was upgraded after this session started")
 
 // ownRun returns the session this process belongs to and the run of it.
 //
@@ -55,19 +47,7 @@ func ownRun(dir string) (registry.Session, string, error) {
 	if epoch != session.Epoch() {
 		return session, epoch, errEarlierRun
 	}
-	if session.EarlierBuild() {
-		return session, epoch, errUpgraded
-	}
 	return session, epoch, nil
-}
-
-// refuseUpgraded is the answer to a call that would change a mailbox for a
-// run of the earlier build, and tells main once per run. Nothing is lost:
-// what the run read stays owed, and the run that resumes its conversation
-// takes it over.
-func refuseUpgraded(dir string, session registry.Session) error {
-	_ = inbox.TellMainUpgraded(dir, session.Name, session.Epoch())
-	return failf("%v, and this build does not act for a run of the earlier one: restart %s by resuming its conversation; nothing is lost, what it read stays owed and the resumed run answers it", errUpgraded, session.Name)
 }
 
 // callerPlaybook is the role guidance for the session running this command, or
@@ -89,7 +69,7 @@ func callerPlaybook() *role.Playbook {
 		return nil
 	}
 	session, _, err := ownRun(dir)
-	if err != nil && !errors.Is(err, errUpgraded) {
+	if err != nil {
 		return nil
 	}
 	play := role.Of(session.Role).Play

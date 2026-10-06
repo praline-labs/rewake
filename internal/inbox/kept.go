@@ -39,9 +39,8 @@ func keptPath(dir, name string) string { return filepath.Join(pendingDir(dir, na
 // directly in a mailbox is mail.
 func pendingDir(dir, name string) string { return filepath.Join(state.InboxPath(dir, name), "pending") }
 
-// readKept answers the kept answer when it is this run's. One of another run
-// — an ended one, or an earlier build's — is none: it is never taken
-// (docs/turn-end-recovery.md#the-cutover). One that cannot be read is an
+// readKept answers the kept answer when it is this run's. One of another run,
+// which has ended, is none: it is never taken. One that cannot be read is an
 // error, since it may be this run's, and nothing writes over it.
 func readKept(dir, name, epoch string) (keptRecord, bool, error) {
 	return live(dir).readKept(name, epoch)

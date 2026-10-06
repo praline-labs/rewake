@@ -36,7 +36,7 @@ func TestEveryReadOfThePlanStopsBeforeTheFirstEffect(t *testing.T) {
 	kinds := map[string]bool{}
 	var plans []map[seamRead]bool
 	for _, scene := range planScenes {
-		lab := newConversionLab(t)
+		lab := newTwoSessionLab(t)
 		mailbox := scene.build(t, lab)
 		template := lab.dir
 		t.Run(scene.name, func(t *testing.T) {
@@ -129,15 +129,13 @@ func outcome(err error) string {
 	switch {
 	case err == nil:
 		return "open"
-	case isStopped(err):
-		return "stopped on reports"
 	case errors.As(err, &unknown):
 		return "unknown: " + err.Error()
 	}
 	return "stopped: " + err.Error()
 }
 
-func open(outcome string) bool { return outcome == "open" || outcome == "stopped on reports" }
+func open(outcome string) bool { return outcome == "open" }
 
 // planFault is the fault in both passes: the plan meets it before any
 // effect, so nothing changes but the stop on record, and every call says so.

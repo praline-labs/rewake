@@ -27,10 +27,8 @@ func Names(dir string) []string {
 // name is a refusal, not a silent rename, because the caller is about to tell
 // somebody else that address. A default one grows a suffix until it is free.
 //
-// It removes nothing: a launch chooses its name before it proves the earlier
-// build's writers of that name stopped, and a record pruned here would be
-// the evidence that proof reads (docs/protocol-cutover.md). The dead record of
-// the name chosen goes when the launch publishes over it.
+// It removes nothing: choosing only reads, and the dead record of the name
+// chosen goes when the launch publishes over it, under the name's lock.
 func ChooseName(dir, explicit, base string) (string, error) {
 	if explicit != "" {
 		if !state.ValidName(explicit) {

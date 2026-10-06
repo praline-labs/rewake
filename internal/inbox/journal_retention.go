@@ -10,22 +10,12 @@ import (
 	"github.com/praline-labs/rewake/internal/state"
 )
 
-// TurnsPath holds the receipts the earlier build wrote for its turn ends.
-// This build writes none, and never sweeps them by age: each is met by the
-// conversion of the name's next run.
-//
-// legacy(rewake <2026-09-30): the earlier build kept a receipt per turn end here, which the barrier converts (conversion.go); remove when no session started by an earlier build is registered
-func TurnsPath(dir, name string) string {
-	return filepath.Join(state.InboxPath(dir, name), "turns")
-}
-
 // sweepTurnRecords keeps the done journals of the live run for as long as it
 // lives, and removes those of ended runs (docs/turn-end-recovery.md): a retry
 // of a turn end comes only from the run that heard it, and however late it
 // comes it must find its end completed, and the next end's window must open
 // after it. A live run's journal is looked at again a day later, not every
-// sweep. An unfinished journal is an obligation and stays, whoever's; the
-// conversion journal holds a person's decisions and stays for good.
+// sweep. An unfinished journal is an obligation and stays, whoever's.
 func sweepTurnRecords(dir, name, live string, cutoff time.Time) {
 	now := time.Now()
 	directory := JournalPath(dir, name)

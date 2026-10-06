@@ -2,7 +2,7 @@
 
 What `sessions/<name>.json` holds, field by field, and how it is published, updated and
 pruned. Split out of [design.md](design.md#session-record) by subject on September 30,
-2026, when the record gained the boot and the build stamp; the state directory it lives
+2026, when the record gained the boot; the state directory it lives
 in is described [there](design.md#state-directory).
 
 ```json
@@ -17,7 +17,6 @@ in is described [there](design.md#state-directory).
   "harnessPid": 12346,
   "harnessStart": 1671402,
   "boot": "0f0e0d0c-0b0a-4908-8706-050403020100",
-  "build": "rewake-protocol:turn-journal/2026-09-30",
   "cwd": "/home/u/code/x",
   "startedAt": "2026-09-16T00:08:03Z",
   "messagingReadyAt": "2026-09-16T00:08:05Z",
@@ -29,9 +28,8 @@ in is described [there](design.md#state-directory).
 
 - `serviceStart`, `harnessStart` — field 22 of `/proc/<pid>/stat` (start time in
   ticks). Liveness = the process exists and the start time matches: pids get reused.
-- `boot`, `build` — the machine's boot id, part of the epoch `<pid>.<ticks>.<boot>`,
-  and this build's protocol stamp; a record without them is a run of an earlier build
-  ([protocol-cutover.md](protocol-cutover.md#naming-a-run-across-restarts)).
+- `boot` — the machine's boot id, part of the epoch `<pid>.<ticks>.<boot>`: a pid and its
+  start recur after a restart of the machine, the boot id does not.
 - `messagingReadyAt` — when the session first became ready to take messages; it marks
   that the start succeeded, not that delivery works now. Absent until then.
 - `ownsSocket` — this session created the socket path, so it removes it when it ends;

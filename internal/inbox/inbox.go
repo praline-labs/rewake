@@ -61,10 +61,6 @@ type Message struct {
 	// FromEpoch names the run of the sending session, so an answer to it — a
 	// report that the receiver's turn ended — reaches that run and no other.
 	FromEpoch string `json:"fromEpoch,omitempty"`
-	// HeldFor names the run of the earlier build a report was written for,
-	// when it went to that name's successor instead (docs/protocol-cutover.md):
-	// its obligations were owed to that run.
-	HeldFor string `json:"heldFor,omitempty"`
 	// Kind says what the message is about, and it is what the receiver's notice
 	// names: a task, a note, a question, or the end of the sender's turn.
 	Kind Kind `json:"kind,omitempty"`

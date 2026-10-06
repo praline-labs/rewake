@@ -43,7 +43,6 @@ var transition = map[string]transit{
 	"internal/worktree":        {layer: host, step: "S16"},
 
 	// What goes is judged in the layer it holds today until its step removes it.
-	"internal/cutover":                  {layer: core, step: "S2", goes: true},
 	"internal/harness/codex":            {layer: api + "/codex", step: "S8", goes: true},
 	"internal/harness/codex/gateway":    {layer: api + "/codex", step: "S8", goes: true},
 	"internal/bridge/server":            {layer: tool, step: "S8", goes: true},
@@ -86,12 +85,6 @@ var importExceptions = []importException{
 		files:  []string{"internal/cli/bridge_serve.go"},
 		reason: "the hidden MCP server command",
 		step:   "S8",
-	},
-	{
-		from: "internal/cli", to: "internal/cutover",
-		files:  []string{"internal/cli/grant_temp_test.go"},
-		reason: "the package's TestMain serves the cutover's look",
-		step:   "S2",
 	},
 	{
 		from: "internal/cli", to: "internal/harness/codex/gateway",
@@ -155,12 +148,6 @@ var importExceptions = []importException{
 		files:  []string{"internal/wrap/grant_resume_test.go"},
 		reason: "the tests take a real adapter",
 		step:   "S10",
-	},
-	{
-		from: "internal/wrap", to: "internal/cutover",
-		files:  []string{"internal/wrap/cutover.go", "internal/wrap/launch_evidence_test.go", "internal/wrap/launch_order_test.go"},
-		reason: "the launch's look for earlier-build writers",
-		step:   "S2",
 	},
 	{
 		from: "internal/harness/catalog", to: "internal/harness/codex",

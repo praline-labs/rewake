@@ -45,7 +45,7 @@ func latestEnd(dir, name, epoch string) (int64, bool, error) {
 	}
 	latest := int64(0)
 	for _, entry := range entries {
-		if entry.IsDir() || entry.Name()[0] == '.' || entry.Name() == conversionFile {
+		if entry.IsDir() || entry.Name()[0] == '.' {
 			continue
 		}
 		journal, err := readJournalFile(filepath.Join(JournalPath(dir, name), entry.Name()))

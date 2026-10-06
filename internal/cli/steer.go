@@ -92,9 +92,6 @@ func steer(ctx *Context, call Call, action string) error {
 		return usage("%v", err)
 	}
 	self, _, err := ownRun(dir)
-	if errors.Is(err, errUpgraded) {
-		return refuseUpgraded(dir, self)
-	}
 	if err != nil {
 		return usage("only a main session may %s another, and this is not one: %v. Run it from the main session's shell, or ask main to do it.", action, err)
 	}

@@ -17,7 +17,7 @@ import (
 func TestAGateWhoseStopCannotBeWrittenStillStops(t *testing.T) {
 	for _, op := range []string{"make", "write"} {
 		t.Run(op, func(t *testing.T) {
-			lab := newConversionLab(t)
+			lab := newTwoSessionLab(t)
 			interim := interimPath(lab.dir, "api")
 			writeRaw(t, interim, "{")
 			rel := filepath.Join("inbox", "api", stopFile)
@@ -56,7 +56,7 @@ func TestALiftOfAStopThatFailsReachesTheCaller(t *testing.T) {
 	for _, caller := range []string{"gate", "barrier, a reading stop", "barrier, an effect's stop"} {
 		for _, op := range []string{"remove", "sync"} {
 			t.Run(caller+"/"+op, func(t *testing.T) {
-				lab := newConversionLab(t)
+				lab := newTwoSessionLab(t)
 				met := ""
 				if caller == "barrier, an effect's stop" {
 					met = "an earlier effect's cause"

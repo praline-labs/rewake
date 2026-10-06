@@ -218,10 +218,15 @@ nothing lifts a stop without returning evidence.
     meets no unknown lets the same code run for real.
   - A stop the plan found goes once the plan finds its cause gone; one only an effect
     met goes once a barrier has run every effect through.
-  - The barrier runs under the mailbox lock before a turn end reads a wait: plan; collect
-    the obligations proven publications closed; decide every other report — superseded,
-    published, or unknown and stopping — and complete the journal. (The 1.x steps 2, 3
-    and 5 — conversion, successor, held — go.)
+  - The barrier runs under the mailbox lock before a turn end reads a wait: plan; then
+    complete every unfinished journal in turn — each report published, or recorded moot
+    when its recipient's run has ended or was replaced, and saved before the next; then
+    the steps the journal named when it was written: the kept answer it takes, the waits
+    it clears, its interim record. Journal operations never overlap — an end reads only
+    the waits the barrier left, after the barrier has completed every journal — so no
+    report answers what another journal's report closed, and no report is decided
+    superseded. (The 1.x steps 2, 3 and 5 — conversion, successor, held — go, and with
+    the conversion its collection of closed obligations.)
   - Proof lives as long as anything could replay it; a journal is kept while its run may
     retry it, an unfinished one for good, and nothing that names no run is swept by age.
   - **A stop is lifted only by returning evidence, never by removing its cause.**
@@ -255,9 +260,9 @@ nothing lifts a stop without returning evidence.
   - `internal/inbox/effect_stop_test.go` `TestAStopThatCouldNotBeRecordedNamesEveryFailedWrite` — rebuilt in S2 on journal records only
   - `internal/inbox/late_unknown_test.go` `TestEveryDurableStopOutlivesAFailedRetry` — rebuilt in S2 on journal records only
   - `internal/inbox/late_unknown_test.go` `TestEveryEvidencePathIsReadBeforeTheFirstEffect` — rebuilt in S2 on journal records only
-  - `internal/inbox/conversion_moot_test.go` `TestAReportForAnEndedRunOfThisBuildIsMoot` — rebuilt in S2 on journal records only
-  - `internal/inbox/conversion_moot_test.go` `TestAMootReportClearsWhatItAnswered` — rebuilt in S2 on journal records only
-  - `internal/inbox/conversion_test.go` `TestReportsAreDecidedTogether` — rebuilt in S2 on journal records only
+  - `internal/inbox/journal_moot_test.go` `TestAReportForAnEndedRunIsMoot` — rebuilt in S2 on journal records only
+  - `internal/inbox/journal_moot_test.go` `TestAMootReportClearsWhatItAnswered` — rebuilt in S2 on journal records only
+  - `internal/inbox/reconcile_stop_test.go` `TestAnUnreadableJournalStopsEveryEffect` — its lift by a removed cause inverted in S3
   - Gap: a stop lifts only on returning evidence (two tests say the opposite) — closed in S3.
   - Gap: a stop tells main once and lets letters from others arrive, whatever found it — closed in S3.
   - Gap: nothing that names no run is swept by age — closed in S3.

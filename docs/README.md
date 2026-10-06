@@ -36,8 +36,8 @@ everything else.
   the CLI contract and exit codes, the code policy, the testing layers, and dated owner
   decisions. Open it for why the system has the shape it has, or for a canonical rule.
 - [session-record.md](session-record.md) — the session record, split from design.md by
-  subject: every field, the boot and build stamp that tell a run of this build from an
-  earlier one, and how a record is published, updated and pruned. Open it when reading or
+  subject: every field, the boot that keeps a run's name from recurring after a restart,
+  and how a record is published, updated and pruned. Open it when reading or
   changing what a session record says.
 - [roles.md](roles.md) — roles and names, split from design.md by subject and the one
   place their rules live: the role catalogue and what each role reports and may be
@@ -162,8 +162,8 @@ everything else.
 - [turn-end-recovery.md](turn-end-recovery.md) — how a turn end is recovered under rules 7
   and 8 of mail-bridge-cli.md, as the code keeps them: the operation's identity and
   scope by event form, the read clock for holds, pending marks and the interim record,
-  the evidence for each effect, the reconciliation order, the stop on an unknown and
-  `rewake settle`, and the table of every record and state. Open it before changing the
+  the evidence for each effect, the reconciliation order, the stop on an unknown, and
+  the table of every record and state. Open it before changing the
   turn end's recovery.
 - [turn-end-recovery-findings.md](turn-end-recovery-findings.md) — what the acceptances
   and reviews of the turn-end recovery found, each with the clause that closes it, and
@@ -171,15 +171,8 @@ everything else.
   back, or before reading an old probe's verdict.
 - [mailbox-records.md](mailbox-records.md) — every kind of file a mailbox holds, as the
   list in code names them; the reading of the whole mailbox and of every effect's marks
-  before any effect, the test that keeps the list complete, the stop on record and how
-  it goes, and the notes to main a journal owes. Open it before a writer adds a path
-  under a mailbox.
-- [protocol-cutover.md](protocol-cutover.md) — how a mailbox passes from an earlier
-  build's protocol to that one, as the code does it: the launch order, the states of
-  the successor, run records named by boot and epoch, the upgrade the automatic cutover
-  is bounded by and the look for earlier-build writers within it, and what this build
-  refuses or holds for a run of the earlier build. Open it before changing a launch or
-  anything that tells builds apart.
+  before any effect, the test that keeps the list complete, and the stop on record and
+  how it goes. Open it before a writer adds a path under a mailbox.
 - [delivery-conversation.md](delivery-conversation.md) — why a Codex message stays
   pending in a conversation the launch did not ask for: the launch's intent, `rewake
   accept`, the record that keeps the worker's inbox closed meanwhile, and how the sender,
@@ -510,6 +503,10 @@ the newer document says so.
   `YYYY-MM-DD-<subject>.md` by the day it closed, plus `risks.md` for the risks table and
   `later.md` for what is deferred without a date. The index has one line per entry and
   says what is open; it is the map of that directory.
+- [archive-1.x/README.md](archive-1.x/README.md) — the documents of 1.x code that stage 3
+  removes, moved unchanged by the step that removed the code, with a table of where each
+  was, the step and the SHA-256 of its bytes; the index of that directory. Open it to
+  read a record that links a document no longer at its path.
 - [reviews.md](reviews.md) — the first ten review rounds, all of September 16, 2026: each
   defect found and its fix, ending with the decision on Git metadata access by role.
 - [reviews-later.md](reviews-later.md) — the review rounds and repair chains from

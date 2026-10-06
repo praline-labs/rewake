@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -53,9 +52,6 @@ func handlePending(ctx *Context, call Call) error {
 		return &UsageError{Command: call.Command, Message: err.Error()}
 	}
 	self, epoch, err := ownRun(dir)
-	if errors.Is(err, errUpgraded) {
-		return refuseUpgraded(dir, self)
-	}
 	if err != nil {
 		return &UsageError{Command: call.Command, Message: "rewake pending marks the turn of the session running it, and this is not one: " + err.Error() + "."}
 	}

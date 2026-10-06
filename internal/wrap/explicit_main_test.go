@@ -18,7 +18,7 @@ func TestDefaultRoleStaysGeneralAcrossRoomLifecycle(t *testing.T) {
 			dir := stateDir(t)
 			claim := func(prefix string, part role.Role) registry.Session {
 				t.Helper()
-				session, err := claimName(Request{Dir: dir, Harness: h, Name: prefix, Role: part}, os.Getpid(), selfStart(t), thisBoot(t), dir, noWriters)
+				session, err := claimName(Request{Dir: dir, Harness: h, Name: prefix, Role: part}, os.Getpid(), selfStart(t), thisBoot(t), dir)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -39,7 +39,7 @@ func TestDefaultRoleStaysGeneralAcrossRoomLifecycle(t *testing.T) {
 			if main.HarnessPID != 0 {
 				t.Fatal("fixture unexpectedly started a harness")
 			}
-			if _, err := claimName(Request{Dir: dir, Harness: h, Name: "second-leader", Role: role.Main}, os.Getpid(), selfStart(t), thisBoot(t), dir, noWriters); err == nil {
+			if _, err := claimName(Request{Dir: dir, Harness: h, Name: "second-leader", Role: role.Main}, os.Getpid(), selfStart(t), thisBoot(t), dir); err == nil {
 				t.Fatal("starting main did not reserve the role")
 			}
 			checkGeneral("", "general-"+h.ID()+"-3")
@@ -75,7 +75,7 @@ func TestConcurrentExplicitMainClaimsHaveOneWinner(t *testing.T) {
 	for i := range 16 {
 		group.Go(func() {
 			<-gate
-			_, err := claimName(Request{Dir: dir, Harness: &fakeHarness{}, Name: string(rune('a' + i)), Role: role.Main}, os.Getpid(), start, thisBoot(t), dir, noWriters)
+			_, err := claimName(Request{Dir: dir, Harness: &fakeHarness{}, Name: string(rune('a' + i)), Role: role.Main}, os.Getpid(), start, thisBoot(t), dir)
 			results <- err
 		})
 	}

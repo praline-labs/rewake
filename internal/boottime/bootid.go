@@ -12,7 +12,7 @@ const bootIDPath = "/proc/sys/kernel/random/boot_id"
 // ID reads the kernel's boot id, drawn at random at every boot. A process is
 // named by its pid and its start in ticks since boot, and after a restart of
 // the machine the same pair can name another process; with the boot id beside
-// it the name never recurs (docs/protocol-cutover.md).
+// it the name never recurs.
 func ID() (string, error) {
 	raw, err := os.ReadFile(bootIDPath)
 	if err != nil {

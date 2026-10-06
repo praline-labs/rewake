@@ -15,9 +15,6 @@ import (
 // it cannot act on is a dead end.
 func sentBySelf(call Call, dir, reference, retry string) (registry.Session, string, inbox.Message, error) {
 	self, epoch, err := ownRun(dir)
-	if errors.Is(err, errUpgraded) {
-		return registry.Session{}, "", inbox.Message{}, refuseUpgraded(dir, self)
-	}
 	if err != nil {
 		return registry.Session{}, "", inbox.Message{}, &UsageError{
 			Command: call.Command,

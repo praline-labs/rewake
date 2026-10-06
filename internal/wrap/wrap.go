@@ -67,8 +67,8 @@ func Run(ctx context.Context, request Request) (int, error) {
 		return 0, fmt.Errorf("could not read the start time of this process: %w", err)
 	}
 
-	// A run of this build is named by the boot too (docs/protocol-cutover.md):
-	// without it the run's records could not be told from an earlier build's.
+	// A run is named by the boot too: after a restart of the machine the same
+	// pid and start can name another process.
 	boot, err := registry.CurrentBoot()
 	if err != nil {
 		return 0, fmt.Errorf("could not read the machine's boot id, which names this run: %w", err)
@@ -95,13 +95,10 @@ func Run(ctx context.Context, request Request) (int, error) {
 	// The name is claimed before anything is prepared. Preparing first means a
 	// launch that loses the race has already touched what belongs to the session
 	// that won — its socket file, for one.
-	session, err := claimRun(request, self, selfStart, boot, cwd)
+	session, err := claimName(request, self, selfStart, boot, cwd)
 	if err != nil {
 		return 0, err
 	}
-	// The fifth step: reports other mailboxes hold for this name's
-	// earlier-build runs come to this run now that it is ready.
-	takeHeld(ctx, request.Dir, session)
 	name := session.Name
 	epoch := session.Epoch()
 	defer func() {

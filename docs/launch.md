@@ -8,18 +8,11 @@ The common part of the wrapper:
 1. Check the shared state root and selected room directory. Run the mail tool's name
    check before anything is claimed, so a refusal leaves nothing behind; it decides
    whether the launch carries the tool, and why not when it does not
-   ([mail-bridge-launch.md](mail-bridge-launch.md#the-launch-in-order)). List the machine's
-   processes once, before the lock: a pass over `/proc` takes a moment. Under the
-   room's launch lock, choose the role and the name, only reading: a dead session
-   record is removed only by the publication over it, after the proof below reads
-   it. Refuse, exit 1, while a writer of the earlier build under that name is not
-   proven stopped, naming each process and why; write the run record and bind the
-   run as the name's successor — a successor record that cannot be read refuses the
-   launch — then publish the session record (the harness pid is still empty). The lock is released
-   before preparing the child. Once published, take the reports other mailboxes hold
-   for the name's earlier-build runs, a main also noting every earlier-build run that
-   still runs. The order and why each step comes where it does are in
-   [protocol-cutover.md](protocol-cutover.md#the-launch).
+   ([mail-bridge-launch.md](mail-bridge-launch.md#the-launch-in-order)). Under the room's
+   launch lock, choose the role and the name, only reading: a dead session record is
+   removed only by the publication over it, under the name's lock. Then publish the
+   session record (the harness pid is still empty). The lock is released before
+   preparing the child.
 2. Start an optional session-owned backend and wait for its connection. Then
    launch the harness: `exec.Cmd` with inherited stdin/stdout/stderr, the same
    terminal and process group. Arguments after the harness name are passed

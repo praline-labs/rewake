@@ -2,7 +2,6 @@ package cli
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"time"
 
@@ -84,9 +83,6 @@ func authorize(result parsed) (*callScope, error) {
 		return nil, failf("Rewake: %v; nothing ran.", err)
 	}
 	self, epoch, err := ownRun(dir)
-	if errors.Is(err, errUpgraded) {
-		return nil, refuseUpgraded(dir, self)
-	}
 	if err != nil {
 		return nil, failf("Rewake: %v; nothing ran.", err)
 	}

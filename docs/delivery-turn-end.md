@@ -79,33 +79,9 @@ first effect, and stops a heads-up published once, the sweep's removal of the le
 was sent. The marks are written without the recipient's lock, which a turn end holding
 its own must not wait on; the report is looked for before the mark is read, so a sweep
 removing it in between has marked it published first, or left no mark for this one to
-write. A report whose recipient is a run of this build that has ended is moot. One for a
-run of the earlier build is held in the journal and goes to that name's successor once
-it is ready ([protocol-cutover.md](protocol-cutover.md#what-this-build-refuses-or-holds)).
-The successor recorded as its recipient before a publication that did not finish is
-looked at again on every attempt: gone makes the report moot, with main told, and a
-publication its session did not take leaves it held. The plan reads the mark of the
-successor an attempt would choose before any effect, by the same decision.
+write. A report whose recipient is a run that has ended or was replaced is moot: the
+journal records it so, and what it answered is cleared.
 The fallback target is also fixed before publication, never selected again on retry.
-
-What a build before the journal left — its receipts in `turns/`, its kept answer, its
-pending marks and interim record — belongs to a run of that build, which has ended by the
-time a run of this build holds the name. The barrier converts the receipts once, into the
-conversion journal `journal/conversion` (`internal/inbox/conversion.go`), and decides
-their reports together by the evidence each has: the receipt's done mark, a `published`
-mark, or the letter itself, which is recorded there first since the sweep takes it
-(`conversion_decide.go`). A conversion that died between saving its journal and
-removing the receipts leaves receipts it holds already; the next barrier removes them,
-while a receipt that appeared or changed since stops the mailbox. A report closed by
-another proven one is superseded; a closing one for an ended run of this build is moot,
-and what it answered is cleared; one whose evidence is gone stops the mailbox — the turn
-end, `rewake inbox` and `rewake pending` refuse, naming `rewake settle`, and main is told
-once — until main or the person settles it (`internal/cli/settle.go`, which refuses a
-session other than main); a stop or interim note of unknown fate is withheld for good.
-The earlier run's kept answer, marks and interim record are never taken by this run's
-end. A run of the earlier build that is still running is refused by this build
-altogether: its hooks and calls exit 1, saying rewake was upgraded and the session must
-be resumed ([protocol-cutover.md](protocol-cutover.md)).
 
 The report's id is derived from the wait — the reporting run, the waiting run,
 when the wait began, and its message ids — and a report whose id is already in the recipient's

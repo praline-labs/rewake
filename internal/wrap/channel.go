@@ -261,7 +261,7 @@ func roomMain(dir string) (registry.Session, bool) {
 		return registry.Session{}, false
 	}
 	for _, session := range sessions {
-		if role.Of(session.Role).ID == role.Main.ID && !session.EarlierBuild() && session.MessagingReadyAt != nil {
+		if role.Of(session.Role).ID == role.Main.ID && session.MessagingReadyAt != nil {
 			return session, true
 		}
 	}

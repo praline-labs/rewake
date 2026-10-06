@@ -44,8 +44,7 @@ func liveSession(t *testing.T, name string) string {
 		ServicePID:   os.Getpid(),
 		ServiceStart: start,
 		Boot:         registrytest.Boot(t),
-		// A launch of this build records the namespace it runs in, and a
-		// record without one is a run out of sight (protocol-cutover.md).
+		// A launch records the namespace it runs in, as wrap does.
 		PIDNamespace: proc.Namespace(),
 		CWD:          resolved,
 		StartedAt:    time.Now(),

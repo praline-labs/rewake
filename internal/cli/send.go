@@ -11,7 +11,6 @@ import (
 
 	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/proc"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
 	"github.com/praline-labs/rewake/internal/sessionstate"
@@ -127,12 +126,6 @@ func handleSend(ctx *Context, call Call) error {
 	// current: a report then reaches this run, and a process left over from an
 	// earlier run cannot speak for the next one.
 	self, epoch, selfErr := ownRun(dir)
-	if errors.Is(selfErr, errUpgraded) {
-		return refuseUpgraded(dir, self)
-	}
-	if session.EarlierBuild() && registry.ObserveRun(session.Epoch()) != proc.IdentityEnded {
-		return failf("%s was started by a rewake build before this one, and rewake was upgraded since: this build does not change the mailbox of a run of the earlier one. Ask the person to restart %s by resuming its conversation, then send again; nothing was sent", session.Name, session.Name)
-	}
 	if selfErr == nil && self.Name == session.Name {
 		// A task to itself would be announced into the turn that sent it and
 		// owe a report to that same turn; a question would wait for an answer

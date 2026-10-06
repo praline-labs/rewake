@@ -20,9 +20,9 @@ import (
 // meet it again, so it answers the stop on record until the barrier runs the
 // effect again and it goes through.
 func TestAnUnknownOnlyAnEffectMetStopsUntilTheBarrier(t *testing.T) {
-	lab := newConversionLab(t)
+	lab := newTwoSessionLab(t)
 	version := "v1"
-	raw, err := json.Marshal(keptRecord{Epoch: earlierRun, Text: "held", Version: version})
+	raw, err := json.Marshal(keptRecord{Epoch: lab.run, Text: "held", Version: version})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,7 +32,7 @@ func TestAnUnknownOnlyAnEffectMetStopsUntilTheBarrier(t *testing.T) {
 	if err := os.WriteFile(keptPath(lab.dir, "api"), raw, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := WriteJournal(lab.dir, "api", "end", TurnJournal{Epoch: earlierRun, Op: "end", Kept: &version}); err != nil {
+	if err := WriteJournal(lab.dir, "api", "end", TurnJournal{Epoch: lab.run, Op: "end", Kept: &version}); err != nil {
 		t.Fatal(err)
 	}
 	kept := keptPath(lab.dir, "api")
@@ -80,15 +80,15 @@ func (s *stopWrites) WriteFile(path string, raw []byte) error {
 func TestAStopThatCouldNotBeRecordedNamesEveryFailedWrite(t *testing.T) {
 	for _, other := range []bool{false, true} {
 		t.Run(fmt.Sprintf("another cause after the effect: %v", other), func(t *testing.T) {
-			lab := newConversionLab(t)
+			lab := newTwoSessionLab(t)
 			version := "v1"
-			raw, err := json.Marshal(keptRecord{Epoch: earlierRun, Text: "held", Version: version})
+			raw, err := json.Marshal(keptRecord{Epoch: lab.run, Text: "held", Version: version})
 			if err != nil {
 				t.Fatal(err)
 			}
 			kept := keptPath(lab.dir, "api")
 			writeRaw(t, kept, string(raw))
-			if err := WriteJournal(lab.dir, "api", "end", TurnJournal{Epoch: earlierRun, Op: "end", Kept: &version}); err != nil {
+			if err := WriteJournal(lab.dir, "api", "end", TurnJournal{Epoch: lab.run, Op: "end", Kept: &version}); err != nil {
 				t.Fatal(err)
 			}
 			rel, err := filepath.Rel(lab.dir, kept)

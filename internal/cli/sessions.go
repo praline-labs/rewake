@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -89,7 +88,7 @@ func handleWhoami(ctx *Context, _ Call) error {
 	model := whoamiModel{Name: name, Room: filepath.Base(dir), Directory: state.RootForRoom(dir), Managed: name != ""}
 	if name != "" {
 		session, _, err := ownRun(dir)
-		if err != nil && !errors.Is(err, errUpgraded) {
+		if err != nil {
 			return failf("cannot identify this session in room %s: %v", model.Room, err)
 		}
 		model.Harness, model.Role = session.Harness, role.Of(session.Role).ID

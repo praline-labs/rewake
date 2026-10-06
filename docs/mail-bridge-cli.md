@@ -106,9 +106,9 @@ same day: [turn-end-recovery.md](turn-end-recovery.md) says how, record by recor
    ones. Neither a retry, nor converting a record to a newer format, nor a text found or
    not found settles an unknown. An unknown stops every change to the mailbox, as a
    receipt that cannot be read stops it: the records are kept, nothing is published,
-   cleared, adopted or read from it, and the stop names its exact cause. Three changes
-   go on, deciding no effect: letters from others arrive, recovery writes its own
-   records — the stop, the conversion, a person's decision — and main is told. What a
+   cleared, adopted or read from it, and the stop names its exact cause. Two changes go
+   on, deciding no effect: letters from others arrive, and recovery writes its own
+   record of the stop. What a
    stop is decided by is read before any effect, by the code that decides it: the
    barrier, and every call that would change the mailbox, first walks the whole mailbox
    against one list of the record kinds it holds (`internal/inbox/records.go`), then runs
@@ -122,57 +122,27 @@ same day: [turn-end-recovery.md](turn-end-recovery.md) says how, record by recor
    effect met, which no plan shows, is answered from the record by every later call, and
    goes only once a barrier has run every effect through, whatever a canceled or failed
    retry, or the plan after a failure, met. So a record or mark that could not be read
-   waits for a later look. One whose evidence is gone is irrecoverable: a report of the
-   earlier build with neither letter nor mark was never written, or written, read and
-   swept, and the bytes are the same either way. Main is told once, and the person settles
-   it report by report with `rewake settle`: the owner decided on September 30, 2026 that
-   such an unknown stops the whole mailbox and is resolved by one command, with no fence
-   on single tasks. A report that closes nothing — a stop, an interim note — is the one
-   exception: unknown, it is withheld for good, and the journal records that decision so
-   that no later barrier weighs it again, since losing a note repeats nothing; the kept
-   answer, the waits and the interim record of the same operation are still decided by
-   their own evidence. The proof that an effect is done lives as long as anything could
+   waits for a later look. A reading stop lifts as soon as its cause is gone, removed or
+   readable again, and that is the gap S3 of stage 3 of 2.0 closes: there a stop is
+   resolved only by evidence about its effect, and an effect whose evidence is gone
+   stays stopped until that evidence returns or the operator decides
+   ([rules/effects.md](rules/effects.md)). The proof that an effect is done lives as long as anything could
    replay it — the journal's entry and the recipient's marks, while the recipient's run
    lives; a report found without a mark is recorded in the sender's journal first and
    marked for the recipient after. A journal is kept while its run may retry it, an
-   unfinished one for good, a person's decisions for good beside the records they
-   settled, and a record that names no run is never swept by age. Recovery is one
+   unfinished one for good, and a record that names no run is never swept by age. Recovery is one
    barrier under the mailbox lock, before any turn end reads a wait and before adoption
-   takes one over. It takes every record at once and first establishes which obligations
-   proven publications closed: an obligation is a task or question of one sender's run,
-   answered by a closing report (finished or failed), and one report id says nothing
-   about another report closing the same obligation. Only then does it decide the rest:
-   an effect on obligations another proven publication closed is superseded and does
-   nothing; one proven not done is done, unless another publication closed part of its
-   obligations: then it is not published and the rest stays owed; one unknown stops the
-   mailbox, and so does one partly superseded, since whether it answered the rest is
-   unknown too. The owner decided on September 30, 2026 how a mailbox changes protocol:
-   a session started by an earlier build stays on that build's protocol for the rest of
-   its run. This build changes nothing in that session's mailbox — not for the session's
-   own hooks and calls, not for another session's send or report — and refuses instead,
-   saying that rewake was upgraded and the session must be restarted by resuming its
-   conversation, and main is told. That holds for main too: until it is resumed its mail
-   stands still, and reports to it wait at their senders. Nothing is restarted
-   automatically. Which build a run followed is proven by a record that outlives the
-   registry: a run of this build is named by the machine's boot and its epoch, since an
-   epoch alone recurs after a restart, and writes its run record under both, with the
-   build stamp, before its session record is published; run records are never swept, and
-   a run named by its epoch alone is an earlier build's. The first run of this build
-   under a name binds itself, as durably, as the successor of the name's earlier-build
-   runs, and stays it once ended; what is held for them waits while it starts, and is
-   moot only once it is proven gone. The new protocol takes a mailbox over only once
-   every earlier-build writer of it has stopped — its wrapper and every rewake process
-   acting for that run, hooks too, not merely the harness the session record calls alive
-   — by a look over the person's rewake processes, complete where the upgrade replaced
-   the binary at the paths the earlier runs use, which bounds the automatic cutover;
-   otherwise the launch refuses; and what that build left unfinished is met by the new
-   run's barrier at adoption. Its receipts keep their origin when converted: a missing
-   mark never proves their reports unpublished, and a done mark proves the reports it
-   lists and nothing after them. A kept answer, a pending mark or an interim record of a
+   takes one over. It reads every record before any effect,
+   and journals never overlap: an end reads only the waits the barrier left, and the
+   barrier completes every journal before that. A kept answer, a pending mark or an interim record of a
    run that has ended is never taken by another run's end, whatever its text. Every
    record and state, and what recovery does with each, is in
-   [turn-end-recovery.md](turn-end-recovery.md); the cutover in
-   [protocol-cutover.md](protocol-cutover.md). What each acceptance from the fourth on
+   [turn-end-recovery.md](turn-end-recovery.md). How a mailbox passed from the builds
+   before the journal to it — the owner's decisions of September 30, 2026 that a session
+   of an earlier build stays on its protocol and that an irrecoverable report is settled
+   by `rewake settle`, the run and successor records, the look for earlier-build writers
+   and the conversion of their receipts — was removed in stage 3 of 2.0 and is kept in
+   [archive-1.x/protocol-cutover.md](archive-1.x/protocol-cutover.md). What each acceptance from the fourth on
    found, and what closes it now, is in
    [turn-end-recovery-findings.md](turn-end-recovery-findings.md#what-each-earlier-finding-meets).
 

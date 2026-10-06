@@ -79,8 +79,6 @@ Created with 0700. [Optional primary observations](session-state.md) are collect
   rooms/<room>/
     .launch.lock              serializes role choice and name publication
     sessions/<name>.json       session record
-    runs/<name>/<boot>/<epoch> a run of this build and its build stamp, never swept (protocol-cutover.md)
-    runs/<name>/successor      the name's first run of this build, the successor of its earlier-build runs
     observations/<digest>.json latest bounded state for one name/epoch
     inbox/<name>/<id>.json     waiting for delivery
     inbox/<name>/<id>.status   pending, delivered, read or failed
@@ -89,8 +87,7 @@ Created with 0700. [Optional primary observations](session-state.md) are collect
     inbox/<name>/answering/<id> renewable question reservation
     inbox/<name>/received/<id> id of the report successfully printed
     inbox/<name>/retention/<id> reservation release time for reports
-    inbox/<name>/turns/<id>    an earlier build's turn receipts, until a run of this build converts them
-    inbox/<name>/journal/<id>  what a turn end publishes, takes and clears, named by the end; `conversion`, the earlier build's receipts converted (turn-end-recovery.md)
+    inbox/<name>/journal/<id>  what a turn end publishes, takes and clears, named by the end (turn-end-recovery.md)
     inbox/<name>/threads/<id>  selected delivery thread, when supported
     inbox/<name>/awaiting/<epoch>/<peer> reports owed by this run
     inbox/<name>/pending/      this run's `rewake pending` marks; its last word on the work and a held answer (turn-outcomes.md)
