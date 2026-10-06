@@ -162,7 +162,7 @@ func (w world) completeJournal(ctx context.Context, name string, journal *TurnJo
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		if err := w.deliverReport(name, save, journal, report); err != nil {
+		if err := w.deliverReport(ctx, name, save, journal, report); err != nil {
 			return err
 		}
 	}

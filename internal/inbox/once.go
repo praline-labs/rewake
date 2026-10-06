@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/state"
 )
 
@@ -24,6 +25,25 @@ const (
 	onceIntent    = "intent"
 	oncePublished = "published"
 )
+
+// The steps of a once-publication's section another step is ordered against
+// in a test: the recipient's run read live, and the first read of the
+// publication's evidence.
+const (
+	PublicationAdmitted = "admitted"
+	PublicationEvidence = "evidence"
+)
+
+// PublicationStep is told each step of a once-publication's section, inside
+// the recipient's lock, by the pass that writes: a test pauses a publisher
+// there while it ends the run or starts a sweep. Nil but in tests.
+var PublicationStep func(step string, message Message)
+
+func (w world) publicationStep(step string, message Message) {
+	if !w.plan && PublicationStep != nil {
+		PublicationStep(step, message)
+	}
+}
 
 // readOnceMark answers the mark at path: "" when there is none, onceIntent or
 // oncePublished. Anything else — a mark that cannot be read, or one that says
@@ -53,11 +73,19 @@ func oncePath(dir, to, epoch, id string) (string, bool) {
 	return filepath.Join(state.InboxPath(dir, to), "once", epoch, id), true
 }
 
+// ErrRecipientEnded says the run a letter was addressed to was not the live
+// run of its name when the recipient's lock was held: nothing was written.
+var ErrRecipientEnded = errors.New("the run the letter was addressed to has ended")
+
 // PublishOnce writes a letter into its recipient's mailbox unless an earlier
 // call did, under the recipient's mailbox lock. It answers whether this call
-// wrote it. before runs under that lock just before anything is written, and
-// an error from it writes nothing: a check made before the lock wait is stale
-// by the time the lock is held.
+// wrote it. The recipient's run is read inside that lock, before the
+// evidence, and one that is not the letter's answers ErrRecipientEnded: a
+// run read live before the lock could end, and its proof be swept, before
+// the evidence is read (docs/v2/stage3-publication.md#the-contract). before
+// runs under that lock just before anything is written, and an error from it
+// writes nothing: a check made before the lock wait is stale by the time the
+// lock is held.
 func PublishOnce(ctx context.Context, dir string, message Message, before func() error) (bool, error) {
 	path, ok := oncePath(dir, message.To, message.ToEpoch, message.ID)
 	if !ok {
@@ -65,6 +93,17 @@ func PublishOnce(ctx context.Context, dir string, message Message, before func()
 	}
 	wrote, w := false, live(dir)
 	err := state.WithMailboxLock(ctx, dir, message.To, func() error {
+		// Without the name lock's cleanup, which a holder of a mailbox lock
+		// must not enter.
+		current, err := registry.LookupReadOnly(dir, message.To)
+		if errors.Is(err, registry.ErrNotFound) || err == nil && current.Epoch() != message.ToEpoch {
+			return ErrRecipientEnded
+		}
+		if err != nil {
+			return err
+		}
+		w.publicationStep(PublicationAdmitted, message)
+		w.publicationStep(PublicationEvidence, message)
 		// A mark that cannot be read is not an absent one.
 		mark, err := w.readOnceMark(path)
 		if err != nil {
@@ -133,7 +172,7 @@ func (w world) present(to, id string) (bool, error) {
 // settleOnce records a letter as published before the sweep removes it, and
 // answers whether the letter may go: not while an intent stands that could
 // not be settled, nor beside a mark that is unknown. The caller holds the
-// mailbox lock.
+// mailbox lock and has read there that epoch is the name's live run.
 func settleOnce(dir, name, epoch, id string) bool {
 	path, ok := oncePath(dir, name, epoch, id)
 	if !ok {
@@ -202,7 +241,9 @@ func PublicationOf(ctx context.Context, dir, to, epoch, id string) (Publication,
 }
 
 // sweepOnce drops the marks of runs other than the live one: a retry pinned to
-// an ended run is refused before it looks.
+// an ended run is refused inside the recipient's lock before it looks. The
+// caller holds the mailbox lock and has read there that live is the name's
+// live run (sweepFinished).
 func sweepOnce(dir, name, live string) {
 	root := filepath.Join(state.InboxPath(dir, name), "once")
 	runs, err := os.ReadDir(root)

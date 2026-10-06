@@ -246,7 +246,8 @@ func (k *channelKeeper) attempt(ctx context.Context, publication channel.Publica
 		return k.notices.Writable(&k.record, publication)
 	})
 	switch {
-	case errors.Is(err, channel.ErrNotWritable):
+	case errors.Is(err, channel.ErrNotWritable), errors.Is(err, inbox.ErrRecipientEnded):
+		// The run it was fixed for is gone, as the recipient's lock showed.
 		return channel.Dropped, 0
 	case err != nil:
 		return "", 0

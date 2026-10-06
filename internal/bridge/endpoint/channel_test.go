@@ -57,6 +57,9 @@ func TestServerConnectionsAreNumberedAndTheirClosesNamed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The greeting is answered before the connection takes its generation, so
+	// Dial returning does not order the two; the first Hello does.
+	got.wait(t, 1)
 	second, err := Dial(path, "secret")
 	if err != nil {
 		t.Fatal(err)

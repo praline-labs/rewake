@@ -195,7 +195,8 @@ func TestATurnRecordThatCannotBeReadIsNotNone(t *testing.T) {
 // keeps it rather than guess.
 func TestTheSweepKeepsWhatAnUnreadableWaiterMayOwe(t *testing.T) {
 	dir := stateDir(t)
-	letter := Message{ID: NewID(), From: "web", FromEpoch: "w1", To: "api", ToEpoch: "e1", Kind: Task, Text: "owed", CreatedAt: time.Now()}
+	run := liveRunOf(t, dir, "api")
+	letter := Message{ID: NewID(), From: "web", FromEpoch: "w1", To: "api", ToEpoch: run, Kind: Task, Text: "owed", CreatedAt: time.Now()}
 	if err := state.EnsureSubdir(state.DonePath(dir, "api")); err != nil {
 		t.Fatal(err)
 	}
@@ -207,9 +208,9 @@ func TestTheSweepKeepsWhatAnUnreadableWaiterMayOwe(t *testing.T) {
 	if err := os.Chtimes(done, old, old); err != nil {
 		t.Fatal(err)
 	}
-	path, _ := awaitingPath(dir, "api", "e1")
+	path, _ := awaitingPath(dir, "api", run)
 	unreadable(t, filepath.Join(path, "web"), []byte(`{"name":"web","epoch":"w1","messages":["`+letter.ID+`"]}`))
-	(&Server{Dir: dir, Name: "api", Epoch: "e1", attempts: map[string]time.Time{}, outcomes: map[string]Result{}}).sweepFinished()
+	(&Server{Dir: dir, Name: "api", Epoch: run, attempts: map[string]time.Time{}, outcomes: map[string]Result{}}).sweepFinished()
 	if _, err := os.Stat(done); err != nil {
 		t.Fatalf("the sweep removed a letter an unreadable waiter may owe: %v", err)
 	}

@@ -66,7 +66,8 @@ func TestALetterBeingReadInPartsCannotBeTakenBack(t *testing.T) {
 // replaceable, and its reader may come back for the rest.
 func TestTheSweepKeepsALetterBeingRead(t *testing.T) {
 	dir := stateDir(t)
-	letter := announcedUnread(t, dir, Message{ID: NewID(), From: "web", To: "api", ToEpoch: "e1", Text: "long", CreatedAt: time.Now()})
+	run := liveRunOf(t, dir, "api")
+	letter := announcedUnread(t, dir, Message{ID: NewID(), From: "web", To: "api", ToEpoch: run, Text: "long", CreatedAt: time.Now()})
 	if err := ClaimRead(dir, "api", letter.ID, "token"); err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +75,7 @@ func TestTheSweepKeepsALetterBeingRead(t *testing.T) {
 	path := filepath.Join(state.UnreadPath(dir, "api"), letter.ID+".json")
 	_ = os.Chtimes(path, old, old)
 	_ = os.Chtimes(filepath.Join(claimsPath(dir, "api"), letter.ID), old, old)
-	(&Server{Dir: dir, Name: "api", Epoch: "e1"}).sweepFinished()
+	(&Server{Dir: dir, Name: "api", Epoch: run}).sweepFinished()
 	if _, err := os.Stat(path); err != nil {
 		t.Fatalf("the letter in progress was swept: %v", err)
 	}
@@ -87,7 +88,8 @@ func TestTheSweepKeepsALetterBeingRead(t *testing.T) {
 // was read, or after the sweep removed it, writes nothing.
 func TestALetterIsPublishedOnceAcrossReadAndSweep(t *testing.T) {
 	dir := stateDir(t)
-	letter := Message{ID: NewID(), From: "web", To: "api", ToEpoch: "e1", Kind: Note, Text: "heads-up", CreatedAt: time.Now()}
+	run := liveRunOf(t, dir, "api")
+	letter := Message{ID: NewID(), From: "web", To: "api", ToEpoch: run, Kind: Note, Text: "heads-up", CreatedAt: time.Now()}
 	publish := func() bool {
 		t.Helper()
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -109,13 +111,15 @@ func TestALetterIsPublishedOnceAcrossReadAndSweep(t *testing.T) {
 	if publish() || isPresent(t, dir, letter.ID) {
 		t.Fatal("a retry after the sweep wrote the letter again")
 	}
-	// A letter of another run is not this run's to settle.
+	// A run that has ended takes no letter, and its marks are not the live
+	// run's to keep.
 	other := letter
 	other.ToEpoch = "e0"
-	if _, err := PublishOnce(context.Background(), dir, other, nil); err != nil {
-		t.Fatal(err)
+	if _, err := PublishOnce(context.Background(), dir, other, nil); !errors.Is(err, ErrRecipientEnded) {
+		t.Fatalf("a letter to an ended run: %v", err)
 	}
-	sweepOnce(dir, "api", "e1")
+	writeRaw(t, filepath.Join(state.InboxPath(dir, "api"), "once", "e0", other.ID), oncePublished)
+	sweepOnce(dir, "api", run)
 	if _, err := os.Stat(filepath.Join(state.InboxPath(dir, "api"), "once", "e0")); !errors.Is(err, os.ErrNotExist) {
 		t.Fatal("the marks of an ended run stay")
 	}
@@ -125,8 +129,9 @@ func TestALetterIsPublishedOnceAcrossReadAndSweep(t *testing.T) {
 // is only settled.
 func TestAnIntentWithoutItsLetterIsWrittenAgain(t *testing.T) {
 	dir := stateDir(t)
-	letter := Message{ID: NewID(), From: "web", To: "api", ToEpoch: "e1", Kind: Note, Text: "heads-up", CreatedAt: time.Now()}
-	path, _ := oncePath(dir, "api", "e1", letter.ID)
+	run := liveRunOf(t, dir, "api")
+	letter := Message{ID: NewID(), From: "web", To: "api", ToEpoch: run, Kind: Note, Text: "heads-up", CreatedAt: time.Now()}
+	path, _ := oncePath(dir, "api", run, letter.ID)
 	_ = state.EnsureSubdir(state.InboxPath(dir, "api"))
 	_ = state.EnsureSubdir(filepath.Dir(filepath.Dir(path)))
 	_ = state.EnsureSubdir(filepath.Dir(path))
@@ -141,7 +146,7 @@ func TestAnIntentWithoutItsLetterIsWrittenAgain(t *testing.T) {
 	}
 	// The sweep settles an intent before removing the letter it names.
 	_ = os.WriteFile(path, []byte(onceIntent), 0o600)
-	settleOnce(dir, "api", "e1", letter.ID)
+	settleOnce(dir, "api", run, letter.ID)
 	if mark, _ := os.ReadFile(path); string(mark) != oncePublished {
 		t.Fatalf("settled mark = %q", mark)
 	}
@@ -196,8 +201,9 @@ func TestTheServerKeepsALetterBeingRead(t *testing.T) {
 // was written: without it a retry would write the letter again.
 func TestTheSweepKeepsALetterWhoseIntentItCouldNotSettle(t *testing.T) {
 	dir := stateDir(t)
-	letter := announcedUnread(t, dir, Message{ID: NewID(), From: "web", To: "api", ToEpoch: "e1", Kind: Note, Text: "old", CreatedAt: time.Now()})
-	path, _ := oncePath(dir, "api", "e1", letter.ID)
+	run := liveRunOf(t, dir, "api")
+	letter := announcedUnread(t, dir, Message{ID: NewID(), From: "web", To: "api", ToEpoch: run, Kind: Note, Text: "old", CreatedAt: time.Now()})
+	path, _ := oncePath(dir, "api", run, letter.ID)
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -210,7 +216,7 @@ func TestTheSweepKeepsALetterWhoseIntentItCouldNotSettle(t *testing.T) {
 	t.Cleanup(func() { _ = os.Chmod(filepath.Dir(path), 0o700) })
 	old := time.Now().Add(-keepFinished - time.Hour)
 	_ = os.Chtimes(filepath.Join(state.UnreadPath(dir, "api"), letter.ID+".json"), old, old)
-	(&Server{Dir: dir, Name: "api", Epoch: "e1"}).sweepFinished()
+	(&Server{Dir: dir, Name: "api", Epoch: run}).sweepFinished()
 	_ = os.Chmod(filepath.Dir(path), 0o700)
 	wrote, err := PublishOnce(context.Background(), dir, letter, nil)
 	if err != nil {
@@ -247,12 +253,13 @@ func TestPublicationOfReadsTheMailbox(t *testing.T) {
 // intent.
 func TestPublishOnceWritesNothingWhenItsCheckFails(t *testing.T) {
 	dir := stateDir(t)
-	letter := Message{ID: NewID(), From: "web", To: "api", ToEpoch: "e1", Kind: Note, Text: "late", CreatedAt: time.Now()}
+	run := liveRunOf(t, dir, "api")
+	letter := Message{ID: NewID(), From: "web", To: "api", ToEpoch: run, Kind: Note, Text: "late", CreatedAt: time.Now()}
 	late := errors.New("the deadline passed")
 	if _, err := PublishOnce(context.Background(), dir, letter, func() error { return late }); !errors.Is(err, late) {
 		t.Fatalf("got %v", err)
 	}
-	if isPresent(t, dir, letter.ID) || publicationOf(t, dir, letter.ID) != PublicationUnknown {
+	if publication, err := PublicationOf(context.Background(), dir, "api", run, letter.ID); err != nil || isPresent(t, dir, letter.ID) || publication != PublicationUnknown {
 		t.Fatal("a refused publication left a trace")
 	}
 }

@@ -73,14 +73,22 @@ and recording its id: each report is written under the marks of
 `published` after — and the sweep settles an intent before it removes the report it
 names. The marks live as long as the recipient's run, which is as long as a journal can
 publish to it, so a journal completed after the recipient has read the report and swept
-it does not publish it again. A report found written without a mark is marked published
+it does not publish it again: the sweep retires a letter or a run's marks only under the
+recipient's lock, and only when it reads there that its own run is the live one and the
+marks' run is not; a sweep that cannot take the lock, or a server of a run that has
+ended, retires nothing. A report found written without a mark is marked published
 before the journal goes on. A mark that says neither is unknown: it stops the mailbox before the journal's
 first effect, and stops a heads-up published once, the sweep's removal of the letter and the answer to what a run
-was sent. The marks are written without the recipient's lock, which a turn end holding
-its own must not wait on; the report is looked for before the mark is read, so a sweep
-removing it in between has marked it published first, or left no mark for this one to
-write. A report whose recipient is a run that has ended or was replaced is moot: the
-journal records it so, and what it answered is cleared.
+was sent. The recipient's run, the report and its marks are read, and the marks and the
+report written, in one section of the recipient's lock, which a turn end holding its own
+waits for, bounded; a report to the sender's own name is written inside the lock the
+turn end already holds. So a sweep never runs between the look and the write, and an
+attempt that finds the run live there also finds every earlier landing
+([stage3-publication.md](v2/stage3-publication.md#why-it-is-enough)). When the wait
+expires the turn end fails as for any busy mailbox: nothing is written, no stop is
+recorded, and the next barrier publishes the report once. A report whose recipient is a
+run that has ended or was replaced, as read inside that section, is moot: the journal
+records it so, and what it answered is cleared.
 The fallback target is also fixed before publication, never selected again on retry.
 
 The report's id is derived from the wait — the reporting run, the waiting run,

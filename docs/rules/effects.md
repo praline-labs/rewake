@@ -18,6 +18,11 @@ nothing lifts a stop without returning evidence.
   - `internal/cli/bridge_rules_test.go` `TestAnUncertainPublicationIsNotDiscarded`
   - `internal/cli/bridge_rules_test.go` `TestAHeadsUpToAnEndedRunWithNothingLeftStaysUnknown`
   - `internal/cli/bridge_rules_test.go` `TestAnOpenOperationIsNotBypassedByAge`
+  - `internal/inbox/settle_copy_test.go` `TestAFailedArchiveKeepsTheLastCopy`
+  - `internal/inbox/settle_copy_test.go` `TestSettlingADeliveredLetterKeepsItsOnlyCopy`
+  - `internal/inbox/settle_copy_test.go` `TestAnIntentWhoseLetterIsRefusedKeepsItsProof`
+  - `internal/inbox/settle_copy_test.go` `TestADirectoryAtTheArchiveIsNoCopy`
+  - `internal/inbox/settle_copy_test.go` `TestASymbolicLinkIsNoLandingProof`
   - `internal/inbox/journal_unknown_test.go` `TestAReportFoundWithoutItsMarkIsMarkedPublished`
   - `internal/inbox/journal_unknown_test.go` `TestAnUnknownPublicationMarkIsNeverPermission`
   - `internal/inbox/claims_test.go` `TestAnIntentWithoutItsLetterIsWrittenAgain`
@@ -40,7 +45,7 @@ nothing lifts a stop without returning evidence.
   - `internal/state/held_test.go` `TestTryHoldRefusesAFileReplacedBeforeItsLock`
   - `internal/state/lock_test.go` `TestNameLockHoldsBetweenProcesses`
   - `internal/state/state_test.go` `TestNameLockSerialisesClaims`
-  - Gap: the inbox sweep removing a record only under its lock has no test of its own — closed in S3.
+  - `internal/inbox/publication_bounds_test.go` `TestASweepWithoutTheLockRetiresNothing`
 
 - **E3. Every check that decides an effect runs inside the critical section, right
   before the effect, and again on a retry**, which is a new call with its own deadline
@@ -59,7 +64,16 @@ nothing lifts a stop without returning evidence.
   - `internal/inbox/withdraw_test.go` `TestTheLastCheckBeforeANoticeSeesAWithdrawal`
   - `internal/inbox/window_test.go` `TestARetryDoesNotRestartTheWindow`
   - Gap: a turn end's retry with its own deadline (only the tool's and the shell's retries are tested) — closed in S5, on the fixture's turns.
-  - Gap: a once-publication checks its recipient's run outside the recipient's critical section (journal_held.go:145-161, cli/journal_steps.go:41, wrap/channel.go:230) — closed in S3.
+  - `internal/inbox/publication_race_test.go` `TestTheSweepWaitsForAnAttemptsEvidence`
+  - `internal/inbox/publication_race_test.go` `TestAdmissionIsInsideTheSection`
+  - `internal/cli/publication_race_test.go` `TestTheSweepWaitsForAHeadsUpsEvidence`
+  - `internal/cli/publication_race_test.go` `TestAHeadsUpsAdmissionIsInsideTheSection`
+  - `internal/wrap/channel_publication_test.go` `TestANoticeForAMainThatEndsAtItsLockIsDropped`
+  - `internal/inbox/publication_bounds_test.go` `TestAFirstLandingAcrossRunEndIsWrittenOnce`
+  - `internal/inbox/publication_bounds_test.go` `TestABusyRecipientFailsTheTurnWithoutAStop`
+  - `internal/inbox/publication_bounds_test.go` `TestTwoMailboxesPublishingToEachOtherDoNotDeadlock`
+  - `internal/inbox/publication_bounds_test.go` `TestAReportToItselfIsPublishedInsideItsOwnLock`
+  - `internal/inbox/publication_bounds_test.go` `TestAPublicationReadsTheRunWithoutCleaningUp`
 
 - **E4. A read's completion is one durable fact every channel shares.** A letter leaves
   `unread/` only by being read once a part of it was shown, and never comes back; a late
@@ -133,6 +147,7 @@ nothing lifts a stop without returning evidence.
   - `internal/cli/bridge_lookups_test.go` `TestAnUnreadableResultIsNotFailedWhenTheNameMovesOn`
   - `internal/cli/bridge_lookups_test.go` `TestAClearingThatFailedIsFinishedBeforeTheNextReport`
   - `internal/inbox/confirm_test.go` `TestAnUnreadableKeptAnswerIsNotWrittenOver`
+  - `internal/inbox/settle_copy_test.go` `TestAPublishedMarkDoesNotOutweighAStageThatCannotBeSearched`
   - Gap: readers that only inform (`awaited`, `owed`, `list`) folding an unknown into their most cautious answer — closed in S3.
 
 - **E7. Every effect has an immutable identity and a proven scope, and recovery advances
@@ -266,7 +281,10 @@ nothing lifts a stop without returning evidence.
   - Gap: a stop lifts only on returning evidence (two tests say the opposite) — closed in S3.
   - Gap: a stop tells main once and lets letters from others arrive, whatever found it — closed in S3.
   - Gap: nothing that names no run is swept by age — closed in S3.
-  - Gap: a publication's proof is retired while an attempt admitted to its run can still replay it (sweep.go:74-89, once.go:206-216), and by a sweeper that is not the live run — closed in S3.
+  - `internal/inbox/publication_race_test.go` `TestASavedPublishedStays`
+  - `internal/inbox/publication_race_test.go` `TestACrashBeforeTheSaveLeavesTheReportMoot`
+  - `internal/inbox/publication_bounds_test.go` `TestAStaleSweeperRetiresNothing`
+  - `internal/inbox/publication_crash_test.go` `TestAKillAtAnyWriteLandsTheReportAtMostOnce`
   - Gap: a cause that recurs after its resolution is a new occurrence, lifted only by its own evidence — closed in S3.
   - Gap: the operator decision — closed in S18 (part B).
 

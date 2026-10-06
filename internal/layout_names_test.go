@@ -235,7 +235,7 @@ var nameExceptions = map[nameException]excuse{
 	{"internal/worktree/name.go", "claude"}:                       {explainsByOneHarness, "S19", 2, "3a201afd2d72"},
 	{"internal/worktree/worktree.go", "codex"}:                    {codexLeaves, "S8", 1, "bcd3e6a474ba"},
 	{"internal/worktree/worktree_test.go", "codex"}:               {codexLeaves, "S8", 5, "5942dd05217b"},
-	{"internal/wrap/channel_order_test.go", "codex"}:              {codexLeaves, "S8", 8, "9d1199258f7e"},
+	{"internal/wrap/channel_order_test.go", "codex"}:              {codexLeaves, "S8", 1, "32d31dd97b30"},
 	{"internal/wrap/channel_test.go", "codex"}:                    {codexLeaves, "S8", 3, "4bf9bdd81639"},
 	{"internal/wrap/compaction_letters.go", "claude"}:             {explainsByOneHarness, "S19", 2, "4827558520b0"},
 	{"internal/wrap/compaction_letters.go", "codex"}:              {codexLeaves, "S8", 1, "fb8ad86148fe"},

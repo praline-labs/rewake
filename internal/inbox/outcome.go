@@ -138,6 +138,13 @@ func (s *Server) settleOutcome(id string, outcome State, reportAvailable bool) {
 // settle takes a message with an outcome out of the waiting set. One the harness
 // was told about stays readable in unread/ — or has been read already — so only
 // the waiting copy goes. A refused one is taken back from unread/ and archived.
+//
+// Settling never removes a letter's last copy. The letter is the proof that a
+// publication landed while its mark may still say only intent, and retiring
+// that proof is the sweep's alone, under the lock and by the live run
+// (docs/v2/stage3-publication.md#the-contract); settling may run without the
+// lock (Server.lock). So a copy goes only beside another that stands, and a
+// copy whose archive failed stays where it is for the next pass.
 func settle(dir, name, id string, outcome State) {
 	switch outcome {
 	case Held:
@@ -147,6 +154,9 @@ func settle(dir, name, id string, outcome State) {
 	case Delivered, Read, withdrawn:
 		// A withdrawal takes the waiting copy itself; one left behind goes
 		// here, and the tombstone stays where its reader will look.
+		if !standsIn(id, state.UnreadPath(dir, name), state.DonePath(dir, name)) {
+			return
+		}
 		waiting := filepath.Join(state.InboxPath(dir, name), id+".json")
 		if err := removeWaiting(waiting); err == nil {
 			_ = state.SyncDir(state.InboxPath(dir, name))
@@ -162,8 +172,23 @@ func settle(dir, name, id string, outcome State) {
 		if err := move(id, state.InboxPath(dir, name), state.DonePath(dir, name)); errors.Is(err, os.ErrNotExist) {
 			_ = move(id, state.UnreadPath(dir, name), state.DonePath(dir, name))
 		}
-		dropUnread(dir, name, id)
+		if standsIn(id, state.InboxPath(dir, name), state.DonePath(dir, name)) {
+			dropUnread(dir, name, id)
+		}
 	}
+}
+
+// standsIn says whether a copy of the letter stands in one of the stages:
+// a letter, its tombstone, or the link unread/ shares with the waiting copy,
+// each a regular file. A directory or a symbolic link at the path is no copy,
+// whatever it points at, and neither is a stage that cannot be looked at.
+func standsIn(id string, stages ...string) bool {
+	for _, stage := range stages {
+		if info, err := os.Lstat(filepath.Join(stage, id+".json")); err == nil && info.Mode().IsRegular() {
+			return true
+		}
+	}
+	return false
 }
 
 // alreadySettled reports whether this message has an outcome, from this run or

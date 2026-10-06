@@ -1,12 +1,12 @@
 package inbox
 
 import (
+	"context"
 	"errors"
 	"io/fs"
 	"os"
 	"sync"
 
-	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/state"
 )
 
@@ -31,6 +31,9 @@ type fileAccess interface {
 	Remove(path string) error
 	Rename(from, to string) error
 	SyncDir(path string) error
+	// Lock runs fn under the lock of the mailbox at path
+	// (state.WithMailboxLockAt): the lock file is a file of that mailbox.
+	Lock(ctx context.Context, mailbox string, fn func() error) error
 }
 
 type osAccess struct{}
@@ -43,6 +46,9 @@ func (osAccess) EnsureDir(path string) error                { return state.Ensur
 func (osAccess) Remove(path string) error                   { return state.Remove(path) }
 func (osAccess) Rename(from, to string) error               { return state.Rename(from, to) }
 func (osAccess) SyncDir(path string) error                  { return state.SyncDir(path) }
+func (osAccess) Lock(ctx context.Context, mailbox string, fn func() error) error {
+	return state.WithMailboxLockAt(ctx, mailbox, fn)
+}
 
 // testAccess holds, by state directory, the passAccess a test put in place
 // of the file system: one that records what each pass read, or fails a path
@@ -135,20 +141,18 @@ func (w world) rename(from, to string) error {
 	return w.files.Rename(from, to)
 }
 
+// lock holds the mailbox lock of name, in the pass that writes; the plan
+// takes no lock, since it writes nothing and decides nothing for good.
+func (w world) lock(ctx context.Context, name string, fn func() error) error {
+	if w.plan {
+		return fn()
+	}
+	return w.files.Lock(ctx, state.InboxPath(w.dir, name), fn)
+}
+
 func (w world) syncDir(path string) error {
 	if w.plan {
 		return nil
 	}
 	return w.files.SyncDir(path)
-}
-
-// The registry is not behind the seam: which runs live is live state, which
-// changes between any two looks. A plan asks it without the cleanup a lookup
-// does on the way, and gets the same answer.
-
-func (w world) lookup(name string) (registry.Session, error) {
-	if w.plan {
-		return registry.LookupReadOnly(w.dir, name)
-	}
-	return registry.Lookup(w.dir, name)
 }

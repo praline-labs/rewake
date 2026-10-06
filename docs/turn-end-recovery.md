@@ -162,6 +162,15 @@ adoption takes one over (8-reconcile). In order:
    recipient's run is the one it was addressed to, recorded moot when that run has ended
    or was replaced, since it can reach nobody. The journal is saved after each report,
    so an earlier report may be out before a later one is found moot.
+   The recipient's run, the report's evidence and its writes are read and made in one
+   section of the recipient's mailbox lock, which the barrier waits for, bounded, while
+   it holds its own; a report to the sender's own name is published inside the lock the
+   barrier already holds ([stage3-publication.md](v2/stage3-publication.md#the-contract)).
+   A run that ends after that section read it live still gets the letter, once. When
+   the wait expires the barrier fails as for any busy mailbox: nothing is written, no
+   stop is recorded, the journal stays unfinished with its waits owed, and the next
+   barrier publishes the report once. A turn end can therefore fail on a busy
+   recipient, where before this it wrote without the recipient's lock.
 3. Then the journal's own steps, named when it was written: take the kept answer by
    version, clear the waits it names, write the interim record, mark done.
 

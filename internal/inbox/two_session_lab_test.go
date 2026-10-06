@@ -117,3 +117,18 @@ func (l twoSessionLab) journal(t *testing.T, id string, journal TurnJournal) {
 func withLock(dir, name string, fn func() error) error {
 	return state.WithMailboxLock(context.Background(), dir, name, fn)
 }
+
+// liveRunOf publishes name as a session this process serves, and answers its
+// run: a publication to it and a sweep by it find it live.
+func liveRunOf(t *testing.T, dir, name string) string {
+	t.Helper()
+	start, err := proc.StartTime(os.Getpid())
+	if err != nil {
+		t.Fatal(err)
+	}
+	session := registry.Session{Name: name, ServicePID: os.Getpid(), ServiceStart: start, Boot: registrytest.Boot(t), CWD: dir, StartedAt: time.Now()}
+	if err := registry.Publish(dir, session); err != nil {
+		t.Fatal(err)
+	}
+	return session.Epoch()
+}

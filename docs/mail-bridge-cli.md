@@ -305,7 +305,10 @@ replays a finished one; it cannot reach another run's journal.
   before it publishes; a retry takes the text from there, never from stdin again.
   Publication happens under the recipient's mailbox lock, against a mark in
   `inbox/<to>/once/<to-epoch>/<id>`: `intent` before the letter is written, `published`
-  after. The deadline is checked under that lock, just before the mark and the letter
+  after. The recipient's run is read under that lock too: when it is no longer the run
+  the record fixed, nothing is written, and the call names `rewake retry <receipt>`,
+  which settles the heads-up from that run's mailbox as below. The run read before the
+  lock is an early answer only. The deadline is checked under that lock, just before the mark and the letter
   are written. The sweep turns an intent into published before it removes the letter it
   names, and keeps the letter when that write fails, so an intent without a letter
   always means the letter was never written, and a retry a day later writes nothing
@@ -356,7 +359,10 @@ day, open records included: no call can reach it — a receipt names a record of
 run only. That is the clean-up of a journal nobody can reach, not proof that its effects
 are absent. A journal whose age cannot be read is kept. Each record goes under its own
 lock (rule 2).
-Once-marks of runs other than the live one go at every sweep.
+Once-marks of runs other than the live one go at every sweep, which retires them, and
+any letter, only under the mailbox lock and only while its own run is the name's live
+run, read under that lock; a sweep that cannot take the lock, or a server of a run that
+has ended, retires nothing ([stage3-publication.md](v2/stage3-publication.md#the-contract)).
 
 ## Left to the next stages
 

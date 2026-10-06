@@ -1,8 +1,11 @@
 package inbox
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/state"
@@ -12,8 +15,8 @@ import (
 // in the journal what came of it before anything else is done: to a running
 // run it is published, under its marks; to a run that has ended or was
 // replaced it is moot: it can reach nobody.
-func (w world) deliverReport(name string, save func() error, journal *TurnJournal, report Message) error {
-	published, err := w.publishReport(name, report)
+func (w world) deliverReport(ctx context.Context, name string, save func() error, journal *TurnJournal, report Message) error {
+	published, err := w.publishReport(ctx, name, report)
 	if err != nil {
 		return err
 	}
@@ -25,12 +28,54 @@ func (w world) deliverReport(name string, save func() error, journal *TurnJourna
 	return save()
 }
 
+// recipientLockWait bounds how long a barrier, holding its own mailbox lock,
+// waits for a recipient's: two mailboxes publishing to each other at once
+// then end with both waits expired, never with both waiting for good.
+var recipientLockWait = 2 * time.Second
+
 // publishReport leaves one report in its recipient's mailbox unless it is
 // there already, and answers false, writing nothing, when the recipient's run
 // has ended: the report was addressed to that run, not to whoever holds the
 // name now.
-func (w world) publishReport(name string, report Message) (bool, error) {
-	peer, err := w.lookup(report.To)
+//
+// The run is read, the evidence looked for and the report written in one
+// section of the recipient's mailbox lock, and the proof of a landing is
+// retired only under that lock (docs/v2/stage3-publication.md#the-contract).
+// A run read live before the lock could end, and its proof be swept, before
+// the evidence is read; the report would then be written a second time. A
+// lock that is busy past the wait is a plain failure, not an unknown: the
+// journal stays unfinished and the next barrier publishes. A report to the
+// sender's own name is published inside the barrier's own lock, which is not
+// reentrant. The plan takes no lock: it predicts, and only the real pass, in
+// the section, decides.
+func (w world) publishReport(ctx context.Context, name string, report Message) (bool, error) {
+	put := world.putOnce
+	if report.To == name && len(report.InReplyTo) == 0 {
+		// A failed main must not wake itself into another failing turn.
+		put = world.putLocal
+	}
+	if report.To == name {
+		return w.publishAdmitted(report, put)
+	}
+	wait, cancel := context.WithTimeout(ctx, recipientLockWait)
+	defer cancel()
+	published := false
+	err := w.lock(wait, report.To, func() error {
+		var err error
+		published, err = w.publishAdmitted(report, put)
+		return err
+	})
+	if errors.Is(err, state.ErrMailboxBusy) {
+		return false, fmt.Errorf("the mailbox of %s was busy, so the report to it was not published yet: %w", report.To, err)
+	}
+	return published, err
+}
+
+// publishAdmitted publishes a report whose recipient's run it reads first,
+// inside the section. The read leaves stale records where they are: the
+// caller holds a mailbox lock, and the cleanup a lookup does takes the name's.
+func (w world) publishAdmitted(report Message, put func(world, Message) error) (bool, error) {
+	peer, err := registry.LookupReadOnly(w.dir, report.To)
 	if errors.Is(err, registry.ErrNotFound) {
 		return false, nil
 	}
@@ -40,11 +85,8 @@ func (w world) publishReport(name string, report Message) (bool, error) {
 	if peer.Epoch() != report.ToEpoch {
 		return false, nil
 	}
-	if report.To == name && len(report.InReplyTo) == 0 {
-		// A failed main must not wake itself into another failing turn.
-		return true, w.publishMarked(report, world.putLocal)
-	}
-	return true, w.publishMarked(report, world.putOnce)
+	w.publicationStep(PublicationAdmitted, report)
+	return true, w.publishMarked(report, put)
 }
 
 // publishMarked puts a report under the marks its recipient's mailbox keeps
@@ -58,17 +100,14 @@ func (w world) publishReport(name string, report Message) (bool, error) {
 //
 // A report found already written, by an attempt that died before its mark, is
 // marked published before the journal goes on: the letter is proof only until
-// the sweep removes it.
-//
-// Without the recipient's lock, which a turn end holding its own must not
-// wait on: the report is looked for before the mark is read, so a sweep
-// removing it in between has already marked it published, or left no mark and
-// this one writes it.
+// the sweep removes it. The caller holds the recipient's lock, so no sweep
+// runs between the reads and the writes.
 func (w world) publishMarked(report Message, put func(world, Message) error) error {
 	path, ok := oncePath(w.dir, report.To, report.ToEpoch, report.ID)
 	if !ok {
 		return put(w, report)
 	}
+	w.publicationStep(PublicationEvidence, report)
 	found, err := w.present(report.To, report.ID)
 	if err != nil {
 		return err

@@ -59,7 +59,8 @@ func TestANewMessageIsNoticedWithoutWaitingForThePoll(t *testing.T) {
 // for weeks should not collect a mailbox full of last month's conversations.
 func TestFinishedMessagesAreSweptByAge(t *testing.T) {
 	dir := stateDir(t)
-	server := &Server{Dir: dir, Name: "api"}
+	run := liveRunOf(t, dir, "api")
+	server := &Server{Dir: dir, Name: "api", Epoch: run}
 
 	done := state.DonePath(dir, "api")
 	if err := state.EnsureSubdir(done); err != nil {
@@ -119,9 +120,10 @@ func TestFinishedMessagesAreSweptByAge(t *testing.T) {
 // to be able to show it again. What is no longer owed goes by age as before.
 func TestAnOwedMessageOutlivesTheSweep(t *testing.T) {
 	dir := stateDir(t)
+	run := liveRunOf(t, dir, "api")
 	owedTask, reported := message("still being worked on"), message("reported long ago")
 	for _, m := range []*Message{&owedTask, &reported} {
-		m.Kind, m.FromEpoch, m.ToEpoch = Task, "web-epoch", "api-epoch"
+		m.Kind, m.FromEpoch, m.ToEpoch = Task, "web-epoch", run
 		if err := Put(dir, *m); err != nil {
 			t.Fatal(err)
 		}
@@ -131,13 +133,13 @@ func TestAnOwedMessageOutlivesTheSweep(t *testing.T) {
 		if err := os.Remove(filepath.Join(state.InboxPath(dir, "api"), m.ID+".json")); err != nil {
 			t.Fatal(err)
 		}
-		if err := MarkRead(dir, "api", "api-epoch", *m, true); err != nil {
+		if err := MarkRead(dir, "api", run, *m, true); err != nil {
 			t.Fatal(err)
 		}
 	}
-	for _, waiter := range Waiters(dir, "api", "api-epoch") {
+	for _, waiter := range Waiters(dir, "api", run) {
 		waiter.Messages = []string{reported.ID}
-		if err := ClearAwaiting(dir, "api", "api-epoch", waiter); err != nil {
+		if err := ClearAwaiting(dir, "api", run, waiter); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -147,14 +149,14 @@ func TestAnOwedMessageOutlivesTheSweep(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	(&Server{Dir: dir, Name: "api", Epoch: "api-epoch"}).sweepFinished()
+	(&Server{Dir: dir, Name: "api", Epoch: run}).sweepFinished()
 	if _, err := os.Stat(filepath.Join(state.DonePath(dir, "api"), owedTask.ID+".json")); err != nil {
 		t.Fatalf("an owed task was swept: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(state.DonePath(dir, "api"), reported.ID+".json")); !os.IsNotExist(err) {
 		t.Fatalf("a reported task outlived its age: %v", err)
 	}
-	if got := must(OwedMessages(dir, "api", "api-epoch")); len(got) != 1 || got[0].ID != owedTask.ID || !got[0].Kept {
+	if got := must(OwedMessages(dir, "api", run)); len(got) != 1 || got[0].ID != owedTask.ID || !got[0].Kept {
 		t.Fatalf("owed %+v", got)
 	}
 }
@@ -163,8 +165,9 @@ func TestAnOwedMessageOutlivesTheSweep(t *testing.T) {
 // the age sweep leaves it there too.
 func TestAnOwedMessageLeftUnreadOutlivesTheSweep(t *testing.T) {
 	dir := stateDir(t)
+	run := liveRunOf(t, dir, "api")
 	task := message("read, but the move to done/ failed")
-	task.Kind, task.FromEpoch, task.ToEpoch = Task, "web-epoch", "api-epoch"
+	task.Kind, task.FromEpoch, task.ToEpoch = Task, "web-epoch", run
 	if err := Put(dir, task); err != nil {
 		t.Fatal(err)
 	}
@@ -174,7 +177,7 @@ func TestAnOwedMessageLeftUnreadOutlivesTheSweep(t *testing.T) {
 	if err := os.Remove(filepath.Join(state.InboxPath(dir, "api"), task.ID+".json")); err != nil {
 		t.Fatal(err)
 	}
-	if err := markAwaiting(dir, "api", "api-epoch", "web", "web-epoch", task.ID); err != nil {
+	if err := markAwaiting(dir, "api", run, "web", "web-epoch", task.ID); err != nil {
 		t.Fatal(err)
 	}
 	unread := filepath.Join(state.UnreadPath(dir, "api"), task.ID+".json")
@@ -182,11 +185,11 @@ func TestAnOwedMessageLeftUnreadOutlivesTheSweep(t *testing.T) {
 	if err := os.Chtimes(unread, old, old); err != nil {
 		t.Fatal(err)
 	}
-	(&Server{Dir: dir, Name: "api", Epoch: "api-epoch"}).sweepFinished()
+	(&Server{Dir: dir, Name: "api", Epoch: run}).sweepFinished()
 	if _, err := os.Stat(unread); err != nil {
 		t.Fatalf("an owed task left in unread/ was swept: %v", err)
 	}
-	if got := must(OwedMessages(dir, "api", "api-epoch")); len(got) != 1 || !got[0].Kept || got[0].Text != task.Text {
+	if got := must(OwedMessages(dir, "api", run)); len(got) != 1 || !got[0].Kept || got[0].Text != task.Text {
 		t.Fatalf("owed %+v", got)
 	}
 }

@@ -1,6 +1,7 @@
 package inbox
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"maps"
@@ -173,6 +174,10 @@ func (p *seamProbe) SyncDir(path string) error {
 	return p.wrote("sync", path)
 }
 
+func (p *seamProbe) Lock(ctx context.Context, mailbox string, fn func() error) error {
+	return p.base.Lock(ctx, mailbox, fn)
+}
+
 func (p *seamProbe) written() []seamWrite {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -224,6 +229,10 @@ func (r remapped) Remove(path string) error { return osAccess{}.Remove(r.at(path
 func (r remapped) Rename(from, to string) error { return osAccess{}.Rename(r.at(from), r.at(to)) }
 
 func (r remapped) SyncDir(path string) error { return osAccess{}.SyncDir(r.at(path)) }
+
+func (r remapped) Lock(ctx context.Context, mailbox string, fn func() error) error {
+	return osAccess{}.Lock(ctx, r.at(mailbox), fn)
+}
 
 // probeDir makes an empty state directory a parallel test may use: it sets
 // no environment, which only a test of its own may.

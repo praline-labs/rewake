@@ -69,14 +69,15 @@ func TestAnUnknownDeliveryThreadWaitsBeforeReadability(t *testing.T) {
 
 func TestAWaitingReportKeepsItsDeliveryThread(t *testing.T) {
 	dir := stateDir(t)
+	run := liveRunOf(t, dir, "api")
 	task := message("work")
 	task.FromEpoch = "2.2"
-	task.ToEpoch = "1.1"
+	task.ToEpoch = run
 	unread(t, dir, task)
 	if err := recordDeliveryThread(dir, "api", task.ID, "old"); err != nil {
 		t.Fatal(err)
 	}
-	if err := MarkRead(dir, "api", "1.1", task, true); err != nil {
+	if err := MarkRead(dir, "api", run, task, true); err != nil {
 		t.Fatal(err)
 	}
 	path := filepath.Join(threadPath(dir, "api"), task.ID)
@@ -84,13 +85,13 @@ func TestAWaitingReportKeepsItsDeliveryThread(t *testing.T) {
 	if err := os.Chtimes(path, old, old); err != nil {
 		t.Fatal(err)
 	}
-	server := &Server{Dir: dir, Name: "api", Epoch: "1.1"}
+	server := &Server{Dir: dir, Name: "api", Epoch: run}
 	server.sweepFinished()
 	if !ReportThreadChanged(dir, "api", []string{task.ID}, "new") {
 		t.Fatal("sweep discarded an unsettled wait's thread")
 	}
-	for _, waiter := range Waiters(dir, "api", "1.1") {
-		if err := ClearAwaiting(dir, "api", "1.1", waiter); err != nil {
+	for _, waiter := range Waiters(dir, "api", run) {
+		if err := ClearAwaiting(dir, "api", run, waiter); err != nil {
 			t.Fatal(err)
 		}
 	}

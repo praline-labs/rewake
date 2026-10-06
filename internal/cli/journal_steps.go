@@ -98,6 +98,10 @@ func (op *operation) publish(ctx *Context, message inbox.Message) error {
 	switch {
 	case errors.As(err, &unfinished):
 		return err
+	case errors.Is(err, inbox.ErrRecipientEnded):
+		// Read inside the recipient's lock: the retry learns from that run's
+		// mailbox what an earlier attempt did there.
+		return &unfinishedError{message: "Rewake: the run of " + message.To + " this heads-up was written for ended before it was published, so this attempt wrote nothing; settle it with: rewake retry " + op.record.Token}
 	case errors.Is(err, state.ErrMailboxBusy):
 		return &unfinishedError{message: "Rewake: the mailbox of " + message.To + " was busy, so the heads-up was not published yet; publish it with: rewake retry " + op.record.Token}
 	case err != nil:

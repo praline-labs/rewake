@@ -164,7 +164,12 @@ told about it may run `rewake inbox` at once — count the unread mail, call the
 adapter with the notice, write the status (`.status.tmp`, then rename).
 `delivered` removes the waiting copy, leaving the one in `unread/`; `failed`
 normally removes the `unread/` copy and archives the message in `done/`;
-`pending` stays and is retried every 2 seconds. An accepted finished/error/stopped
+`pending` stays and is retried every 2 seconds. Neither removes a letter's last
+copy: a copy goes only beside another that stands, a regular file (a directory or a
+symbolic link at its path is none), so an archive into `done/` that
+fails leaves the readable copy where it is for the next pass. The letter may be the
+only proof a publication landed, and retiring that proof is the sweep's alone
+([stage3-publication.md](v2/stage3-publication.md#the-contract)). An accepted finished/error/stopped
 report whose notification fails keeps its readable copy and failed diagnostic,
 with `reportAvailable: true` in its status. Only its waiting copy is removed;
 there is no automatic notice retry. Durable recovery respects this flag, and a

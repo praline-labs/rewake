@@ -244,7 +244,11 @@ func (e *LockUnusableError) Unwrap() error { return e.Err }
 // as a reader's stdout is — a pager, a pipe nobody drains — and waiting without
 // an end let that stop delivery, the end of turns and the wrapper's own exit.
 func WithMailboxLock(ctx context.Context, dir, name string, fn func() error) error {
-	mailbox := InboxPath(dir, name)
+	return WithMailboxLockAt(ctx, InboxPath(dir, name), fn)
+}
+
+// WithMailboxLockAt is WithMailboxLock for a mailbox named by its path.
+func WithMailboxLockAt(ctx context.Context, mailbox string, fn func() error) error {
 	if err := EnsureSubdir(mailbox); err != nil {
 		return &LockUnusableError{Err: err}
 	}
@@ -255,13 +259,16 @@ func WithMailboxLock(ctx context.Context, dir, name string, fn func() error) err
 	}
 	defer func() { _ = file.Close() }()
 
-	for {
+	for waited := false; ; waited = true {
 		err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
 		if err == nil {
 			break
 		}
 		if err != syscall.EWOULDBLOCK && err != syscall.EINTR {
 			return &LockUnusableError{Err: noteReach(err, false)}
+		}
+		if !waited && LockWait != nil {
+			LockWait(mailbox)
 		}
 		select {
 		case <-ctx.Done():
@@ -272,6 +279,11 @@ func WithMailboxLock(ctx context.Context, dir, name string, fn func() error) err
 	defer func() { _ = syscall.Flock(int(file.Fd()), syscall.LOCK_UN) }()
 	return fn()
 }
+
+// LockWait is told the mailbox whose lock a caller found held, once per
+// wait, before it waits: a test orders another step against a section only by
+// knowing the section has made someone wait. Nil but in tests.
+var LockWait func(mailbox string)
 
 // lockPoll is how often a busy mailbox lock is tried again. Holders keep it for
 // a file operation or two, so the wait is short in the common case.

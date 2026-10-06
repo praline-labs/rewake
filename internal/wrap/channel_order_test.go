@@ -20,7 +20,7 @@ import (
 // next.
 
 func TestACloseFoldedAfterLaterFailuresLandsWhereItHappened(t *testing.T) {
-	k := newChannelKeeper(stateDir(t), "api", "1.2.b", "codex")
+	k := keeperOf(t, stateDir(t), "api")
 	k.begin(true, "")
 	k.alive = func() bool { return true }
 	hello, closed, refused := ago(4*heartbeat), ago(3*heartbeat), ago(2*heartbeat)
@@ -43,7 +43,7 @@ func TestACloseFoldedAfterLaterFailuresLandsWhereItHappened(t *testing.T) {
 // place: the interval starts at the first failure after it, not at the
 // latest.
 func TestATicketToldAfterLaterFailuresFoldsInItsPlace(t *testing.T) {
-	k := newChannelKeeper(stateDir(t), "api", "1.2.b", "codex")
+	k := keeperOf(t, stateDir(t), "api")
 	k.begin(true, "")
 	k.alive = func() bool { return true }
 	k.tell(channel.Event{Kind: channel.Hello, Generation: 1, At: ago(8 * heartbeat)})
@@ -61,7 +61,7 @@ func TestATicketToldAfterLaterFailuresFoldsInItsPlace(t *testing.T) {
 }
 
 func TestACloseYoungerThanAHeartbeatWaits(t *testing.T) {
-	k := newChannelKeeper(stateDir(t), "api", "1.2.b", "codex")
+	k := keeperOf(t, stateDir(t), "api")
 	k.begin(true, "")
 	k.tell(channel.Event{Kind: channel.Hello, Generation: 1, At: ago(3 * heartbeat)})
 	now := ago(0)
@@ -86,7 +86,7 @@ func TestACloseYoungerThanAHeartbeatWaits(t *testing.T) {
 // up: one is in flight, the rest wait for it to settle.
 func TestNoticesWaitForTheOneInFlight(t *testing.T) {
 	dir := stateDir(t)
-	k := newChannelKeeper(dir, "api", "1.2.b", "codex")
+	k := keeperOf(t, dir, "api")
 	k.begin(true, "")
 	worker := channel.Recipient{Role: channel.ToWorker, Name: "api", Epoch: k.epoch}
 	planned := 0
@@ -132,7 +132,7 @@ func TestANoticeFixedBeforeTheExitIsNotWrittenAfterIt(t *testing.T) {
 // A backend gone ends the run from the wrapper's side: the record freezes
 // before the harness is told to end.
 func TestALostBackendFreezesTheRecordBeforeTheHarnessEnds(t *testing.T) {
-	k := newChannelKeeper(stateDir(t), "api", "1.2.b", "codex")
+	k := keeperOf(t, stateDir(t), "api")
 	k.begin(true, "")
 	child := exec.Command("sleep", "30")
 	if err := child.Start(); err != nil {
@@ -169,7 +169,7 @@ func (goneBackend) Done() <-chan struct{} {
 
 // A signal the wrapper accepts ends the run: the record freezes at once.
 func TestAnAcceptedSignalFreezesTheRecord(t *testing.T) {
-	k := newChannelKeeper(stateDir(t), "api", "1.2.b", "codex")
+	k := keeperOf(t, stateDir(t), "api")
 	k.begin(true, "")
 	incoming := make(chan os.Signal, 1)
 	incoming <- syscall.SIGTERM
@@ -201,7 +201,7 @@ func TestADenialToldWhileACloseWaitsStopsAdviceAtOnce(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dir := stateDir(t)
-			k := newChannelKeeper(dir, "api", "1.2.b", "codex")
+			k := keeperOf(t, dir, "api")
 			k.begin(true, "")
 			k.alive = func() bool { return true }
 			k.tell(channel.Event{Kind: channel.NotObserved, At: ago(9 * heartbeat)})

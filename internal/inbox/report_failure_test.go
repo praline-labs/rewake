@@ -14,7 +14,7 @@ func reportFailureFixture(t *testing.T) (*Server, Message, *int) {
 	t.Helper()
 	dir := stateDir(t)
 	m := message("retained result")
-	m.Kind, m.ToEpoch, m.FromEpoch = Finished, "1.1", "2.2"
+	m.Kind, m.ToEpoch, m.FromEpoch = Finished, liveRunOf(t, dir, "api"), "2.2"
 	if err := Put(dir, m); err != nil {
 		t.Fatal(err)
 	}

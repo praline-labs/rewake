@@ -275,7 +275,9 @@ block is set or once the record froze, so nothing is written, and the record mar
 notice dropped so no retry takes it up. Its ID and body are never reused or rewritten.
 A letter that landed before the block stays as it is; the briefing governs it.
 A later notice of the same category, an hour or a minute later, has a new number and so
-a new letter. A main of a new epoch gets the current category once under its own number,
+a new letter. The main's run is read again under its mailbox lock, before the letter is looked for:
+a notice whose main ended while the keeper waited for that lock is dropped, as one for a
+main that left before it. A main of a new epoch gets the current category once under its own number,
 unless it is "tool" and nothing was told before; with no live main the notice waits in
 the record for the next.
 

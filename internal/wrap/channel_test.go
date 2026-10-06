@@ -38,6 +38,24 @@ func mainPeer(t *testing.T, dir, name string) registry.Session {
 	return peer
 }
 
+// keeperOf is the channel keeper of name's live run, which this process
+// serves: a notice to the run lands only while the run lives.
+func keeperOf(t *testing.T, dir, name string) *channelKeeper {
+	t.Helper()
+	if current, err := registry.LookupReadOnly(dir, name); err == nil {
+		return newChannelKeeper(dir, name, current.Epoch(), "codex")
+	}
+	at := time.Now().Add(-time.Minute)
+	run := registry.Session{
+		Name: name, Harness: "fixture", Room: filepath.Base(dir), CWD: "/workspace",
+		ServicePID: os.Getpid(), ServiceStart: selfStart(t), Boot: thisBoot(t), PIDNamespace: proc.Namespace(), StartedAt: at, MessagingReadyAt: &at,
+	}
+	if err := registry.Publish(dir, run); err != nil {
+		t.Fatal(err)
+	}
+	return newChannelKeeper(dir, name, run.Epoch(), "codex")
+}
+
 // ago is a moment a while back on both clocks.
 func ago(d time.Duration) channel.Stamp {
 	now := endpoint.Stamp()
@@ -49,7 +67,7 @@ func ago(d time.Duration) channel.Stamp {
 // down, a failure.
 func failingKeeper(t *testing.T, dir, name string, alive bool) *channelKeeper {
 	t.Helper()
-	k := newChannelKeeper(dir, name, "1.2.b", "codex")
+	k := keeperOf(t, dir, name)
 	k.begin(true, "")
 	k.alive = func() bool { return alive }
 	k.tell(channel.Event{Kind: channel.Hello, Generation: 1, At: ago(2 * heartbeat)})
@@ -147,7 +165,7 @@ func TestANoticeForAMainThatLeftIsDropped(t *testing.T) {
 
 func TestTheShellObservationsAreFoldedAndTaken(t *testing.T) {
 	dir := stateDir(t)
-	k := newChannelKeeper(dir, "api", "1.2.b", "codex")
+	k := keeperOf(t, dir, "api")
 	k.begin(false, "gate G2: not settled")
 	now := endpoint.Stamp()
 	receipt.WriteShell(dir, "api", k.epoch, receipt.ShellNote{OK: false, Class: receipt.ShellReadOnly, Boot: now.Boot, Wall: now.Wall})

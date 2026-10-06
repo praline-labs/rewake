@@ -13,19 +13,20 @@ import (
 
 func TestReceiptsOutliveTheirSharedAnswer(t *testing.T) {
 	dir := stateDir(t)
+	run := liveRunOf(t, dir, "api")
 	first, second := reserve(t, dir, "q1"), reserve(t, dir, "q2")
 	defer first()
 	defer second()
 	report := message("shared result")
-	report.Kind = Finished
+	report.Kind, report.ToEpoch = Finished, run
 	report.InReplyTo = []string{"q1", "q2"}
 	if err := Put(dir, report); err != nil {
 		t.Fatal(err)
 	}
 	notices := 0
-	server := &Server{Dir: dir, Name: "api", attempts: map[string]time.Time{}, outcomes: map[string]Result{}, Deliver: func(context.Context, Message) Result { notices++; return Result{State: Delivered} }}
+	server := &Server{Dir: dir, Name: "api", Epoch: run, attempts: map[string]time.Time{}, outcomes: map[string]Result{}, Deliver: func(context.Context, Message) Result { notices++; return Result{State: Delivered} }}
 	server.drain(context.Background())
-	if _, found, err := AwaitAnswer(context.Background(), dir, "api", "", "q1", func(Message) error { return nil }); err != nil || !found {
+	if _, found, err := AwaitAnswer(context.Background(), dir, "api", run, "q1", func(Message) error { return nil }); err != nil || !found {
 		t.Fatalf("first: %v %v", found, err)
 	}
 	receipt := filepath.Join(answerReceiptsPath(dir, "api"), "q1")
@@ -34,11 +35,11 @@ func TestReceiptsOutliveTheirSharedAnswer(t *testing.T) {
 		t.Fatal(err)
 	}
 	server.sweepFinished()
-	if _, found, err := AwaitAnswer(context.Background(), dir, "api", "", "q2", func(Message) error { return nil }); err != nil || !found {
+	if _, found, err := AwaitAnswer(context.Background(), dir, "api", run, "q2", func(Message) error { return nil }); err != nil || !found {
 		t.Fatalf("second: %v %v", found, err)
 	}
 	server.drain(context.Background())
-	left, _ := PeekUnread(dir, "api", "")
+	left, _ := PeekUnread(dir, "api", run)
 	t.Logf("both outputs succeeded; unread=%d notices=%d", len(left), notices)
 	if len(left) != 0 || notices != 0 {
 		t.Fatal("shared report is announced again after both questions received it")
@@ -47,13 +48,14 @@ func TestReceiptsOutliveTheirSharedAnswer(t *testing.T) {
 
 func TestUnreservedReportsKeepTheirExpiry(t *testing.T) {
 	dir := stateDir(t)
+	run := liveRunOf(t, dir, "api")
 	report := message("never reserved")
-	report.Kind = Finished
+	report.Kind, report.ToEpoch = Finished, run
 	if err := Put(dir, report); err != nil {
 		t.Fatal(err)
 	}
 	attempts := 0
-	server := &Server{Dir: dir, Name: "api", attempts: map[string]time.Time{}, outcomes: map[string]Result{}, Deliver: func(context.Context, Message) Result { attempts++; return Result{State: Pending} }}
+	server := &Server{Dir: dir, Name: "api", Epoch: run, attempts: map[string]time.Time{}, outcomes: map[string]Result{}, Deliver: func(context.Context, Message) Result { attempts++; return Result{State: Pending} }}
 	server.drain(context.Background())
 	path := filepath.Join(state.InboxPath(dir, "api"), report.ID+".json")
 	old := time.Now().Add(-2 * keepFinished)
@@ -74,7 +76,7 @@ func TestUnreservedReportsKeepTheirExpiry(t *testing.T) {
 	server.attempts = map[string]time.Time{}
 	server.drain(context.Background())
 	server.sweepFinished()
-	left, _ := PeekUnread(dir, "api", "")
+	left, _ := PeekUnread(dir, "api", run)
 	status, _, _ := ReadStatus(dir, "api", report.ID)
 	t.Logf("no reservation ever; attempts=%d unread=%d status=%s", attempts, len(left), status.State)
 	if status.State != Failed {

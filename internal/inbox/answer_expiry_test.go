@@ -36,9 +36,10 @@ func TestAReleasedOldAnswerIsStillAnnounced(t *testing.T) {
 
 func TestAcceptedAnswersSurviveRetentionAndServerRestart(t *testing.T) {
 	dir := stateDir(t)
+	run := liveRunOf(t, dir, "api")
 	release := reserve(t, dir, "q1")
 	report := message("old accepted result")
-	report.Kind = Finished
+	report.Kind, report.ToEpoch = Finished, run
 	report.InReplyTo = []string{"q1"}
 	report.CreatedAt = time.Now().Add(-2 * keepFinished)
 	if err := Put(dir, report); err != nil {
@@ -46,7 +47,7 @@ func TestAcceptedAnswersSurviveRetentionAndServerRestart(t *testing.T) {
 	}
 	notices := 0
 	newServer := func() *Server {
-		return &Server{Dir: dir, Name: "api", attempts: map[string]time.Time{}, outcomes: map[string]Result{}, Deliver: func(context.Context, Message) Result { notices++; return Result{State: Delivered} }}
+		return &Server{Dir: dir, Name: "api", Epoch: run, attempts: map[string]time.Time{}, outcomes: map[string]Result{}, Deliver: func(context.Context, Message) Result { notices++; return Result{State: Delivered} }}
 	}
 	server := newServer()
 	server.drain(context.Background())
@@ -60,7 +61,7 @@ func TestAcceptedAnswersSurviveRetentionAndServerRestart(t *testing.T) {
 	server = newServer()
 	server.drain(context.Background())
 	server.sweepFinished()
-	messages, err := PeekUnread(dir, "api", "")
+	messages, err := PeekUnread(dir, "api", run)
 	if err != nil || len(messages) != 1 || notices != 1 {
 		t.Fatalf("accepted report lost: messages=%v notices=%d err=%v", messages, notices, err)
 	}
