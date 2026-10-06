@@ -127,7 +127,7 @@ func prepareTurnReports(dir string, self registry.Session, event turnResult, cur
 	case event.Stopped:
 		kind = inbox.Stopped
 	case event.Failed:
-		kind = errorKind.kind
+		kind = inbox.Error
 	case event.Pending:
 		kind = inbox.Interim
 	}
