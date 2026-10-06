@@ -36,7 +36,7 @@ inbox/<name>/retention/<id>      fixed release time for a reserved report
 inbox/<name>/journal/<id>        what a turn end publishes, takes and clears, named by the end; <id>.done while its run lives
 inbox/<name>/pending/            this run's pending marks, its last word on the work, a held answer
 inbox/<name>/once/<epoch>/<id>   a letter's publication mark: intent, then published
-inbox/<name>/stopped             the stop the mailbox is in, until a look finds its cause gone
+inbox/<name>/stops/<key>/<occ>   one occurrence of a stop's cause; <occ>.resolved names its evidence
 inbox/<name>/threads/<id>        selected delivery thread, when supported
 inbox/<name>/.lock               the mailbox lock, one flock for every state change
                                  (every kind a mailbox holds: docs/mailbox-records.md)
@@ -133,7 +133,8 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
 
 `rewake list` shows only this room: name, harness, age, cwd, room and role
 for every session. It reads the records, checks that both pids are alive with
-matching start times, and deletes any record whose session is dead.
+matching start times, and deletes any record whose session is dead. A record it
+cannot read is shown as a session whose state is unknown and left in place.
 
 ## Act 2. A task is sent
 

@@ -27,7 +27,11 @@ the answer in the same command.
    Output failure exits 1 without a receipt, so the answer is kept.
 5. **When the sender is gone** — timeout (exit 3), kill, or crash — the mark
    goes stale within three seconds and the wrapper announces the report the
-   ordinary way. Nothing is lost, only blocked for a while.
+   ordinary way. Nothing is lost, only blocked for a while. A send that ends
+   on its own takes its mark away under the lock, unless an open occurrence of
+   its mailbox's stop names the mark: it then stays, no longer refreshed, as
+   evidence the occurrence waits to read
+   ([mailbox-records.md](mailbox-records.md#the-stop-on-record)).
 
 ## Act 7. A notify, when nothing is owed
 

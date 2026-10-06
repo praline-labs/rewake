@@ -80,7 +80,7 @@ var mutantReplay = mutation{
 	edits: []edit{
 		{
 			"\tcase Delivered, Read, withdrawn:\n",
-			"\tcase Delivered:\n\tcase Read, withdrawn:\n",
+			"\tcase Delivered:\n\t\treturn true\n\tcase Read, withdrawn:\n",
 		},
 		{
 			"if result, known := s.outcomes[message.ID]; known {\n" + heldBranch +

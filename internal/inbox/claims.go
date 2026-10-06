@@ -79,9 +79,10 @@ func sweepClaims(dir, name string, cutoff time.Time) {
 	if err != nil {
 		return
 	}
+	kept := keptByStopOf(dir, name)
 	for _, entry := range entries {
 		info, err := entry.Info()
-		if err != nil || info.ModTime().After(cutoff) {
+		if err != nil || info.ModTime().After(cutoff) || kept.keeps(filepath.Join(claimsPath(dir, name), entry.Name())) {
 			continue
 		}
 		if _, err := os.Stat(filepath.Join(state.UnreadPath(dir, name), entry.Name()+".json")); !errors.Is(err, os.ErrNotExist) {

@@ -6,7 +6,7 @@ import "context"
 // snapshot must not send another input or confer grants through another member.
 func (s *Server) validAnnouncement(ctx context.Context, members []Message) bool {
 	valid := true
-	err := s.lockWithContext(ctx, func() error {
+	err := s.lockOrAlone(ctx, func() error {
 		if !s.owned() {
 			valid = false
 			return nil

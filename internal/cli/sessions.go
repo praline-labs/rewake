@@ -20,6 +20,16 @@ type listModel struct {
 	Directory string        `json:"directory"`
 	Room      string        `json:"room"`
 	Sessions  []sessionView `json:"sessions"`
+	// Unknown are the sessions whose record cannot be read: whether they
+	// run is unknown, so they are shown rather than left out.
+	Unknown []unknownSessionView `json:"unknown,omitempty"`
+}
+
+// unknownSessionView is a session whose record cannot be read.
+type unknownSessionView struct {
+	Name  string `json:"name"`
+	State string `json:"state"`
+	Error string `json:"error"`
 }
 
 func handleList(ctx *Context, _ Call) error {
@@ -30,6 +40,12 @@ func handleList(ctx *Context, _ Call) error {
 	sessions, err := registry.List(dir)
 	if err != nil {
 		return failf("could not read the sessions in %s: %v", dir, err)
+	}
+	// Read-only: a record that does not read is never pruned on a guess.
+	unreadable, _ := registry.UnreadableRecords(dir)
+	var unknown []unknownSessionView
+	for _, record := range unreadable {
+		unknown = append(unknown, unknownSessionView{Name: record.Name, State: "unknown", Error: record.Err.Error()})
 	}
 
 	visible := canSeeSessionState(dir)
@@ -47,14 +63,23 @@ func handleList(ctx *Context, _ Call) error {
 		}
 		views = append(views, view)
 	}
-	return printValue(ctx, listModel{Directory: state.RootForRoom(dir), Room: room, Sessions: views}, func() []string {
-		if len(sessions) == 0 {
+	return printValue(ctx, listModel{Directory: state.RootForRoom(dir), Room: room, Sessions: views, Unknown: unknown}, func() []string {
+		var lines []string
+		switch {
+		case len(sessions) > 0:
+			lines = sessionTable(room, views, visible)
+		case len(unknown) > 0:
+			lines = []string{"Room: " + room}
+		default:
 			return []string{
 				fmt.Sprintf("No sessions are running in room %s.", room),
 				"Start one: rewake --name api claude",
 			}
 		}
-		return sessionTable(room, views, visible)
+		for _, session := range unknown {
+			lines = append(lines, fmt.Sprintf("%s  state unknown: %s", session.Name, session.Error))
+		}
+		return lines
 	})
 }
 

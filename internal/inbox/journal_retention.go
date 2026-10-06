@@ -23,9 +23,10 @@ func sweepTurnRecords(dir, name, live string, cutoff time.Time) {
 	if err != nil {
 		return
 	}
+	kept := keptByStopOf(dir, name)
 	for _, entry := range entries {
 		info, err := entry.Info()
-		if err != nil || entry.IsDir() || info.ModTime().After(cutoff) {
+		if err != nil || entry.IsDir() || info.ModTime().After(cutoff) || kept.keeps(filepath.Join(directory, entry.Name())) {
 			continue
 		}
 		path := filepath.Join(directory, entry.Name())

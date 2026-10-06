@@ -2,7 +2,7 @@ package inbox
 
 import (
 	"fmt"
-	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -20,9 +20,8 @@ import (
 // many of them were run so.
 func causePairs(t *testing.T, template, work, mailbox string, base sceneRun) (pairs, unrecorded int) {
 	t.Helper()
-	stop := filepath.Join("inbox", mailbox, stopFile)
 	for _, first := range sorted(base.applied) {
-		if first.rel == stop {
+		if ofStop(first.rel, mailbox) {
 			continue
 		}
 		for _, second := range sorted(base.planned) {
@@ -40,9 +39,13 @@ func causePairs(t *testing.T, template, work, mailbox string, base sceneRun) (pa
 	return pairs, unrecorded
 }
 
-// pairFault answers whether the scene produced the pair, and the stop it
-// recorded when that stop holds both causes.
-func pairFault(t *testing.T, dir, mailbox string, first, second seamFault, base sceneRun) (bool, *stopRecord) {
+// pairCauses are the causes a pair left on record: the effect's and the
+// plan's after it.
+type pairCauses struct{ effect, plan string }
+
+// pairFault answers whether the scene produced the pair, and the causes it
+// recorded when both are on record.
+func pairFault(t *testing.T, dir, mailbox string, first, second seamFault, base sceneRun) (bool, *pairCauses) {
 	t.Helper()
 	label := fmt.Sprintf("in the effects %s, then in the plan after them %s", first.label(), second.label())
 	plan, live := newProbe(dir, osAccess{}, nil), newProbe(dir, osAccess{}, &first)
@@ -54,17 +57,20 @@ func pairFault(t *testing.T, dir, mailbox string, first, second seamFault, base 
 	if live.hits == 0 || plan.hits == 0 {
 		return false, nil
 	}
-	recorded, read := recordedStop(dir, mailbox)
-	if open(outcome(err)) || read != nil || recorded == nil || !recorded.Effect {
-		t.Errorf("%s: barrier %s, stop on record %+v %v", label, outcome(err), recorded, read)
+	stops, read := stopState(dir, mailbox)
+	effect := occurrenceOf(stops, causeEffect, first.at.rel)
+	planned := occurrenceOf(stops, "", second.at.rel)
+	if answer := outcome(err); open(answer) || read != nil || effect == nil {
+		t.Errorf("%s: barrier %s, the effect's occurrence %+v %v", label, answer, effect, read)
 		return true, nil
 	}
-	whole := recorded
-	if !strings.Contains(recorded.Met, first.at.rel) || !strings.Contains(recorded.Cause, second.at.rel) {
-		t.Errorf("%s: the record does not keep both causes: %+v", label, recorded)
-		whole = nil
+	var whole *pairCauses
+	if planned == nil {
+		t.Errorf("%s: the plan's cause is not on record beside the effect's: %+v", label, stops)
+	} else {
+		whole = &pairCauses{effect: effect.record.Cause, plan: planned.record.Cause}
 	}
-	if !strings.Contains(err.Error(), recorded.Met) {
+	if !strings.Contains(err.Error(), effect.record.Cause) {
 		t.Errorf("%s: the barrier answers %v, which does not name the effect's cause", label, err)
 	}
 	plan.arm(nil)
@@ -80,4 +86,16 @@ func pairFault(t *testing.T, dir, mailbox string, first, second seamFault, base 
 		t.Errorf("%s: past both the mailboxes differ from the scene's: %v", label, changed)
 	}
 	return true, whole
+}
+
+// occurrenceOf is the open occurrence of a kind — any the plan finds, when
+// kind is empty — that names rel.
+func occurrenceOf(stops []openStop, kind, rel string) *openStop {
+	for index, stop := range stops {
+		effect := stop.record.Kind == causeEffect
+		if (kind == causeEffect) == effect && slices.Contains(stop.record.Paths, rel) {
+			return &stops[index]
+		}
+	}
+	return nil
 }

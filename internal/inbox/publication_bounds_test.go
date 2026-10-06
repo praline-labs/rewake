@@ -137,8 +137,8 @@ func TestABusyRecipientFailsTheTurnWithoutAStop(t *testing.T) {
 	if writes := lab.letters.of(lab.report.ID); writes != 0 {
 		t.Fatalf("R was written %d times past a busy lock", writes)
 	}
-	if recorded, err := recordedStop(lab.dir, "api"); recorded != nil || err != nil {
-		t.Fatalf("a busy recipient recorded a stop: %+v %v", recorded, err)
+	if open, err := stopState(lab.dir, "api"); len(open) > 0 || err != nil {
+		t.Fatalf("a busy recipient recorded a stop: %+v %v", open, err)
 	}
 	if err := MailboxStopped(lab.dir, "api"); err != nil {
 		t.Fatalf("a busy recipient stopped the mailbox: %v", err)

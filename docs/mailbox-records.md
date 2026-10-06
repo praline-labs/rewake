@@ -21,7 +21,7 @@ unknown. The first pattern that matches a path is its kind.
 | Path | Kind | Read as |
 |---|---|---|
 | `.lock` | the mailbox lock | nothing: it says nothing |
-| `stopped` | the stop this mailbox is in | by the stop itself, below |
+| `stops/<key>/<occurrence>`, `.resolved`, `.told` | an occurrence of a stop's cause; its resolution; that main was told | by the stop itself, below |
 | `<id>.json`, `unread/<id>.json`, `done/<id>.json` | a letter | a message |
 | `<id>.status` | a letter's delivery status | a status |
 | `awaiting/<run>/.read-clock`, `.read-high` | a run's read clock and its highest place | one word, or none yet; a number |
@@ -120,38 +120,84 @@ recipient's publication marks met through a file and through a closed directory 
 before the first report of an earlier journal; and every durable stop outlives a canceled retry, a
 retry stopped by another cause, and a retry whose effect fails. A stop that neither of
 the barrier's writes could record is answered with both failures named and the effect's
-cause beside any the plan after it found (`effect_stop_test.go`). A gate whose record of
-a stop could not be made or written still answers the stop, and a lift whose remove or
-sync failed reaches its caller, the gate's or the barrier's (`stop_writes_test.go`).
+cause beside any the plan after it found (`effect_stop_test.go`). A gate whose
+occurrence could not be recorded still answers the stop, and a resolution whose write
+failed reaches its caller, the gate's or the barrier's, and the next call writes it
+(`stop_writes_test.go`). The occurrences themselves — a cause removed while stopped,
+two causes and one resolved, a recurring cause, main told once, a report held past its
+recipient's end, a sweep beside a stop — are in `stop_occurrence_test.go`,
+`reconcile_stop_test.go` and `stop_sweep_test.go`; a resolution that does not read, a
+path whose presence was unknown or a file on its way, and the settling and the release
+beside a stop are in `stop_unknown_test.go`; a server that cannot take its lock settles
+nothing, and settles it on a later pass that can (`settle_lock_test.go`); a settling
+cut short, by the lock, a stop, a failed archive or a restart, is found again by its
+status and copies (`settle_recorded_test.go`), and settled by the status read under the
+lock, whatever changed while it was waited for (`settle_recheck_test.go`).
 
 ## The stop on record
 
-A stop, once found, is written as `inbox/<name>/stopped`, with its cause and whether an
-effect met it. Every call that would change the mailbox answers it first. How it goes
-depends on what found it:
+A stop is records under `inbox/<name>/stops/` (`internal/inbox/stop.go`). Each cause
+has a key: a fixed-length hash of its kind — a record that does not read, a path of no
+kind, an unknown an effect met, a plan that failed on nothing a path names — the paths
+it rests on, relative to the state directory, and the operation it is about, a journal
+or a journal and one of its reports. Each time a cause is found while no occurrence of
+its key is open is an occurrence: one record, `stops/<key>/<occurrence>`, published
+write-once, holding the key's parts, the cause in words, which of its paths were there,
+which a look found not there, and the time. Not there is "no such file", or "not a
+directory": a component on the way is a file, so nothing stands at the path. A path in
+neither could not be looked at — permission, input and output: whether it was there is
+unknown, and E6 keeps that apart from absent. A key found again while open is that
+occurrence. The stop holds while any
+occurrence is open, and `stopState` is its one reader: the barrier, every gate and every
+sweep read it. Every call that would change the mailbox answers it first.
 
-- One the plan found is found again by the same plan every call makes; the first plan
-  that finds its cause gone removes the record, whichever call made it.
+An occurrence is resolved only by evidence, written as `<occurrence>.resolved`, naming
+it; nothing of a stop is edited or removed, and a resolved occurrence never opens again.
+A cause found after its resolution is a new occurrence, with its own evidence to find.
+`stopState` reads the resolution before it counts the occurrence closed: one whose bytes
+do not parse, that names no evidence or an entry that says nothing — empty, blank or
+null — or that cannot be read leaves whether the occurrence was resolved unknown, so it
+stays open, the answer says so, nothing resolves it again, and the sweeps keep its
+paths; once it reads, the occurrence is closed.
+
+- One the plan found is resolved once a plan, under the mailbox lock, reads every path
+  it names as its kind and decides the operation it is about. A path that was there
+  when the occurrence was recorded and is gone since was removed while stopped: that is
+  no evidence of what it said, and the answer says so. So is one gone since whose
+  presence was unknown then: it may have been there. A path a look found not there then
+  is read as the operation reads it.
 - One only an effect met — an unknown that came after the barrier's plan — is recorded
   as soon as the effect meets it, before the barrier plans again to explain the
-  failure: a cause that plan finds is no proof that it is the effect's, so it is
-  recorded beside the effect's (`Met`), never in its place, and its going does not
-  lift the stop. No plan shows the effect's cause, so every call answers it from the
-  record, and only the barrier removes it, once it has run every effect through. A
-  barrier that was canceled, whose effect failed, or that met another cause
-  has not, and keeps it.
-- The barrier holds the effect's cause itself until it returns and puts it into every
-  record of the stop it writes: once when the effect fails, so a crash cannot lose it,
-  and once more after the plan that explains the failure, with what that plan found
-  beside it. It never takes the effect's cause from the record, which a write that
-  failed in this same call may not hold, so one failed write of the stop leaves the
-  next one whole. Its answer names the effect's cause beside any the plan found, as
-  the record does. A stop that no write of the call could record is answered so, with
-  every failed write named: the answer is then the one place the effect's cause is
-  left. Until a later barrier records it, a call's own plan is what stops the mailbox,
-  and it finds every cause that is still there.
-- A record of the stop that cannot be read is a stop of the second kind, with its cause
+  failure: a cause that plan finds is no proof that it is the effect's, so it is an
+  occurrence of its own beside the effect's, never in its place. No plan shows the
+  effect's cause, so every call answers it from the record. It is resolved once its
+  operation is decided by evidence: a barrier has run that journal through to its
+  completion, or the journal is on record as completed. A barrier that was canceled,
+  whose effect failed, or that met another cause has not.
+- An occurrence that could not be recorded is tried once more after the plan that
+  explains the failure; the answer names every cause and every failed write, and is
+  then the one place the effect's cause is left. Until a later call records it, a
+  call's own plan is what stops the mailbox, and it finds every cause still there.
+- An occurrence whose record cannot be read stays open until it reads, with its cause
   unknown.
+- A report an open occurrence is about stays where it is when its recipient's run
+  ends: that the run ended says nothing of whether it landed, so it is not recorded
+  moot and its journal stays unfinished until evidence returns.
+
+Main is told of each occurrence once, by a note published once under the occurrence's
+id, whatever call found it, and `<occurrence>.told` records that it was; a new
+occurrence of the key tells main again. A mailbox that is main's own tells nobody,
+since every call it makes answers the stop. Letters from others still arrive. No sweep
+of the mailbox removes a path an open occurrence names, and none removes anything while
+the stop cannot be read (`inbox/stop_keep.go`). Nothing else in the mailbox removes or
+moves such a path either: the server settles no letter an occurrence names, by its own
+path or a directory it lies in, until the occurrence is resolved, and the release of an
+answer's reservation leaves a mark an occurrence names, its lease no longer refreshed,
+for the sweep once nothing names it. Both decide under the mailbox lock, never
+without it: a server whose lock cannot be taken writes statuses alone and settles
+nothing until a pass holds it. What is still to settle is read from the statuses and
+the copies on every pass, not remembered, so a letter a stop kept is settled by the
+first pass after the occurrence is resolved, by this run or the next.
 
 A read that met a stop froze nothing: it is not kept as the answer of the read's
 receipt, and the same words read once the stop is gone.

@@ -27,6 +27,9 @@ type fileAccess interface {
 	Stat(path string) (fs.FileInfo, error)
 	// WriteFile replaces a file in one step (state.WriteAtomic).
 	WriteFile(path string, raw []byte) error
+	// Publish writes a file once (state.PublishExclusive): one that exists
+	// answers state.ErrNameTaken.
+	Publish(path string, raw []byte) error
 	EnsureDir(path string) error
 	Remove(path string) error
 	Rename(from, to string) error
@@ -42,6 +45,7 @@ func (osAccess) ReadFile(path string) ([]byte, error)       { return state.ReadF
 func (osAccess) ReadDir(path string) ([]fs.DirEntry, error) { return os.ReadDir(path) }
 func (osAccess) Stat(path string) (fs.FileInfo, error)      { return os.Stat(path) }
 func (osAccess) WriteFile(path string, raw []byte) error    { return state.WriteAtomic(path, raw) }
+func (osAccess) Publish(path string, raw []byte) error      { return state.PublishExclusive(path, raw) }
 func (osAccess) EnsureDir(path string) error                { return state.EnsureSubdir(path) }
 func (osAccess) Remove(path string) error                   { return state.Remove(path) }
 func (osAccess) Rename(from, to string) error               { return state.Rename(from, to) }
@@ -73,6 +77,12 @@ type world struct {
 	dir   string
 	files fileAccess
 	plan  bool
+	// held are the open stop occurrences about a report, by its id: such a
+	// report is never recorded moot (stop.go).
+	held map[string]openStop
+	// decided collects, in a plan, the operations it ran through: the
+	// journals and the reports.
+	decided map[string]bool
 }
 
 func live(dir string) world { return world{dir: dir, files: accessFor(dir, false)} }
@@ -114,6 +124,13 @@ func (w world) writeFile(path string, raw []byte) error {
 		return nil
 	}
 	return w.files.WriteFile(path, raw)
+}
+
+func (w world) publish(path string, raw []byte) error {
+	if w.plan {
+		return nil
+	}
+	return w.files.Publish(path, raw)
 }
 
 func (w world) ensureDir(path string) error {

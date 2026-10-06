@@ -321,8 +321,9 @@ func sweepAwaiting(dir, name, epoch string) {
 	if err != nil {
 		return
 	}
+	kept := keptByStopOf(dir, name)
 	for _, entry := range entries {
-		if entry.Name() != epoch {
+		if entry.Name() != epoch && !kept.keeps(filepath.Join(state.AwaitingPath(dir, name), entry.Name())) {
 			_ = os.RemoveAll(filepath.Join(state.AwaitingPath(dir, name), entry.Name()))
 		}
 	}

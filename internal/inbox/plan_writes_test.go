@@ -2,7 +2,6 @@ package inbox
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -16,9 +15,10 @@ import (
 // the stop is recorded with a cause beside it. Whatever write failed, nothing
 // may be lost or done twice — a barrier past it ends where the scene ends —
 // and no stop may be weaker than what the barrier knew: once an effect met
-// its unknown, the stop on record is that effect's, and the gate stays closed
-// until a barrier runs the effects through. It answers how many writes it
-// broke.
+// its unknown, an occurrence of that effect's is on record, and the gate stays
+// closed until a barrier runs the effects through. The writes of the
+// resolution that barrier makes are broken too (resolutionFaults). It answers
+// how many writes it broke.
 func writeFaults(t *testing.T, template, work, mailbox string, base sceneRun) int {
 	t.Helper()
 	broken := 0
@@ -26,9 +26,8 @@ func writeFaults(t *testing.T, template, work, mailbox string, base sceneRun) in
 		breakWrite(t, fresh(t, template, work), mailbox, write, nil, false, base)
 		broken++
 	}
-	stop := filepath.Join("inbox", mailbox, stopFile)
 	for _, read := range sorted(base.applied) {
-		if read.rel == stop {
+		if ofStop(read.rel, mailbox) {
 			continue
 		}
 		fault := seamFault{at: read, kind: "no access"}
@@ -41,6 +40,51 @@ func writeFaults(t *testing.T, template, work, mailbox string, base sceneRun) in
 				breakWrite(t, fresh(t, template, work), mailbox, write, &fault, second, base)
 				broken++
 			}
+			if !second {
+				broken += resolutionFaults(t, template, work, mailbox, fault, base)
+			}
+		}
+	}
+	return broken
+}
+
+// resolutionFaults breaks, once each, the writes of the stop a barrier makes
+// once the effect's fault is gone: the resolution of the effect's occurrence.
+// A resolution whose write fails reaches the caller and the stop holds; the
+// next call writes it, and a barrier ends where the scene ends.
+func resolutionFaults(t *testing.T, template, work, mailbox string, fault seamFault, base sceneRun) int {
+	t.Helper()
+	dir := fresh(t, template, work)
+	writeRun(dir, mailbox, nil, &fault, false)
+	learned := writeRun(dir, mailbox, nil, nil, false)
+	broken := 0
+	for _, write := range learned.written {
+		if !ofStop(write.rel, mailbox) {
+			continue
+		}
+		label := fmt.Sprintf("write %s fails once, after the effects failed on %s", write, fault.label())
+		dir := fresh(t, template, work)
+		writeRun(dir, mailbox, nil, &fault, false)
+		run := writeRun(dir, mailbox, &write, nil, false)
+		broken++
+		if !run.broke {
+			t.Errorf("%s: the barrier did not make it again", label)
+			continue
+		}
+		if strings.HasSuffix(write.rel, resolvedSuffix) && open(run.barrier) {
+			t.Errorf("%s: the barrier answers %s with its resolution unwritten", label, run.barrier)
+		}
+		// The journal is completed by now, which is the evidence: the next
+		// call, a gate, writes the resolution.
+		if gate := outcome(MailboxStopped(dir, mailbox)); !open(gate) || len(stopsOnRecord(t, dir, mailbox)) > 0 {
+			t.Errorf("%s: the next gate answers %s and leaves %d occurrences open", label, gate, len(stopsOnRecord(t, dir, mailbox)))
+		}
+		clean := runScene(t, dir, mailbox, nil, nil, true)
+		if clean.barrier != base.barrier || clean.gateAfter != base.gateAfter {
+			t.Errorf("%s: past it the barrier answers %s and the gate %s, without it %s and %s", label, clean.barrier, clean.gateAfter, base.barrier, base.gateAfter)
+		}
+		if changed := differ(base.tree, clean.tree, true); len(changed) > 0 {
+			t.Errorf("%s: past it the mailboxes differ from the scene's: %v", label, changed)
 		}
 	}
 	return broken
@@ -82,9 +126,9 @@ func breakWrite(t *testing.T, dir, mailbox string, write seamWrite, fault *seamF
 		return
 	}
 	if run.met {
-		recorded, err := recordedStop(dir, mailbox)
-		if open(run.barrier) || err != nil || recorded == nil || !recorded.Effect || !strings.Contains(recorded.Met, fault.at.rel) {
-			t.Errorf("%s: barrier %s, a stop weaker than the effect's on record: %+v %v", label, run.barrier, recorded, err)
+		stops, err := stopState(dir, mailbox)
+		if open(run.barrier) || err != nil || occurrenceOf(stops, causeEffect, fault.at.rel) == nil {
+			t.Errorf("%s: barrier %s, a stop weaker than the effect's on record: %+v %v", label, run.barrier, stops, err)
 		}
 	}
 	// The gate asks with the effects' fault still in place and the plan's
@@ -109,24 +153,24 @@ func breakWrite(t *testing.T, dir, mailbox string, write seamWrite, fault *seamF
 // unrecordedPair runs a pair of causes again with every write of the stop
 // failing: no stop is on record, so the barrier's answer is the only place
 // left that holds what it met, and it must name the effect's cause beside the
-// plan's, as recorded holds them when the writes go through, and both failed
-// writes.
-func unrecordedPair(t *testing.T, dir, mailbox string, faults [2]seamFault, recorded stopRecord) {
+// plan's, as the records hold them when the writes go through, and every
+// failed write.
+func unrecordedPair(t *testing.T, dir, mailbox string, faults [2]seamFault, recorded pairCauses) {
 	t.Helper()
-	label := fmt.Sprintf("both writes of the stop fail, with the effects failing on %s and the plan after them on %s", faults[0].label(), faults[1].label())
-	writes := &stopWrites{fileAccess: osAccess{}, path: stopPath(dir, mailbox)}
+	label := fmt.Sprintf("every write of the stop fails, with the effects failing on %s and the plan after them on %s", faults[0].label(), faults[1].label())
+	writes := &stopWrites{fileAccess: osAccess{}, under: stopsPath(dir, mailbox)}
 	plan, live := newProbe(dir, osAccess{}, nil), newProbe(dir, writes, &faults[0])
 	testAccess.Store(dir, passAccess{live: live, plan: plan})
 	defer testAccess.Delete(dir)
 	afterEffect = func() { plan.arm(&faults[1]) }
 	defer func() { afterEffect = func() {} }()
 	err := barrier(dir, mailbox, true)
-	if writes.failed != 2 || err == nil {
+	if writes.failed < 2 || err == nil {
 		t.Errorf("%s: %d writes failed, the barrier answers %v", label, writes.failed, err)
 		return
 	}
 	answer := err.Error()
-	if !strings.Contains(answer, recorded.Met) || !strings.Contains(answer, recorded.Cause) || strings.Count(answer, "could not record the stop") != 2 {
-		t.Errorf("%s: the barrier answers %q, which does not name the effect's cause %q, the plan's %q and both failed writes", label, answer, recorded.Met, recorded.Cause)
+	if !strings.Contains(answer, recorded.effect) || !strings.Contains(answer, recorded.plan) || strings.Count(answer, "could not record the stop") != writes.failed {
+		t.Errorf("%s: the barrier answers %q, which does not name the effect's cause %q, the plan's %q and all %d failed writes", label, answer, recorded.effect, recorded.plan, writes.failed)
 	}
 }

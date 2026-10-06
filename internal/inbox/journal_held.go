@@ -15,17 +15,31 @@ import (
 // in the journal what came of it before anything else is done: to a running
 // run it is published, under its marks; to a run that has ended or was
 // replaced it is moot: it can reach nobody.
+//
+// A moot disposition says nothing of whether the report landed, so it is no
+// evidence for a stop: a report an open occurrence is about is consulted
+// before the run's end can make it moot, and stays where it is, its
+// occurrence open and nothing recorded, until evidence returns (stop.go).
+// Its run still live, the publication reads that evidence in the section.
 func (w world) deliverReport(ctx context.Context, name string, save func() error, journal *TurnJournal, report Message) error {
+	held, isHeld := w.held[report.ID]
 	published, err := w.publishReport(ctx, name, report)
 	if err != nil {
-		return err
+		return inOp(report.ID, err)
 	}
-	if published {
+	switch {
+	case published:
 		journal.Published = append(journal.Published, report.ID)
-	} else {
+	case isHeld:
+		return &heldReportError{stop: held}
+	default:
 		journal.Moot = append(journal.Moot, report.ID)
 	}
-	return save()
+	if err := save(); err != nil {
+		return inOp(report.ID, err)
+	}
+	w.decide(report.ID)
+	return nil
 }
 
 // recipientLockWait bounds how long a barrier, holding its own mailbox lock,

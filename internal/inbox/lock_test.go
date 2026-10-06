@@ -50,8 +50,8 @@ func TestAStuckReaderDoesNotHoldTheServer(t *testing.T) {
 	}
 }
 
-// A lock nobody can take does not stop delivery: the server is then the only
-// writer, and the sender hears what happened instead of a silent pending.
+// A lock the server cannot take does not stop delivery: its status is written
+// without it, and the sender hears what happened instead of a silent pending.
 func TestAnUnusableLockDoesNotStopDelivery(t *testing.T) {
 	dir := stateDir(t)
 	if err := os.MkdirAll(filepath.Join(state.InboxPath(dir, "api"), ".lock"), 0o700); err != nil {

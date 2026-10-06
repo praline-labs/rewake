@@ -3,7 +3,8 @@
 Stage 3 of 2.0 builds the core of the rewrite in nineteen steps, S1–S19
 ([stage3.md](../v2/stage3.md)). On October 5, 2026 its rules were written and accepted
 after seven review rounds, S1 was built and accepted after four, and S2 was built and
-accepted after two. **The stage is not closed**: S3–S19 follow in the order of the build
+accepted after two. **The stage is not closed**: S3 was accepted on October 6
+([its entry](2026-10-06-stage3-s3.md)), and S4–S19 follow in the order of the build
 table.
 
 ## The rules, in seven rounds
@@ -117,6 +118,7 @@ commit that adds this entry.
 
 ## What stays open
 
-- S3–S19 in the order of the build table, S18 on part B's accepted rules.
+- S4–S19 in the order of the build table, S18 on part B's accepted rules; S3 is in
+  [its own entry](2026-10-06-stage3-s3.md).
 - The gaps each rule in [rules/](../rules/README.md) names, each with the step that
   closes it; from S19 any gap fails the rules test.

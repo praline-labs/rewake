@@ -47,9 +47,8 @@ func TestEveryReadOfThePlanStopsBeforeTheFirstEffect(t *testing.T) {
 			}
 			plan, applied := base.planned, base.applied
 			plans = append(plans, plan)
-			stop := filepath.Join("inbox", mailbox, stopFile)
 			for read := range applied {
-				if read.rel != stop && !plan[read] {
+				if !ofStop(read.rel, mailbox) && !plan[read] {
 					t.Errorf("an effect read %s %s, which the plan did not", read.op, read.rel)
 				}
 			}
@@ -151,7 +150,6 @@ func planFault(t *testing.T, dir, mailbox string, fault seamFault) {
 	if open(run.gateBefore) || open(run.barrier) || open(run.gateAfter) {
 		t.Errorf("%s: gate %s, barrier %s, gate after %s", label, run.gateBefore, run.barrier, run.gateAfter)
 	}
-	delete(run.tree, filepath.Join("inbox", mailbox, stopFile))
 	if changed := differ(before, run.tree, false); len(changed) > 0 {
 		t.Errorf("%s: an effect ran past it: %v", label, changed)
 	}
@@ -216,9 +214,17 @@ func aside(t *testing.T, dir, mailbox string, base sceneRun) {
 	}
 }
 
+// effectStop says an occurrence an effect met is open.
 func effectStop(dir, mailbox string) bool {
-	recorded, err := recordedStop(dir, mailbox)
-	return err == nil && recorded != nil && recorded.Effect
+	open, err := stopState(dir, mailbox)
+	return err == nil && slices.ContainsFunc(open, func(stop openStop) bool { return stop.record.Kind == causeEffect })
+}
+
+// ofStop says rel is the stop's own: its records, which the barrier reads
+// itself, not as a pass does.
+func ofStop(rel, mailbox string) bool {
+	stops := filepath.Join("inbox", mailbox, stopsDir)
+	return rel == stops || strings.HasPrefix(rel, stops+string(filepath.Separator))
 }
 
 // faultsOf is every fault that applies to one read.
@@ -245,16 +251,6 @@ func faultsOf(t *testing.T, read seamRead) []seamFault {
 }
 
 func (f seamFault) label() string { return fmt.Sprintf("%s %s: %s", f.at.op, f.at.rel, f.kind) }
-
-// kindAt is the kind of a path under the state directory, in whichever
-// mailbox.
-func kindAt(rel string) (recordKind, bool) {
-	parts := strings.SplitN(rel, string(filepath.Separator), 3)
-	if len(parts) < 3 || parts[0] != "inbox" {
-		return recordKind{}, false
-	}
-	return kindOf(parts[2])
-}
 
 func sorted(reads map[seamRead]bool) []seamRead {
 	return slices.SortedFunc(maps.Keys(reads), func(a, b seamRead) int {

@@ -12,36 +12,60 @@ import (
 
 // A journal that cannot be read stops the mailbox for every call that would
 // change it, not only for the turn end that found it (8-stop): a pending mark
-// or a read taken meanwhile would change what the stopped end decides. Once
-// the journal reads again the calls go on.
+// or a read taken meanwhile would change what the stopped end decides.
+// Removing the journal is no evidence of what it would have done: the calls
+// stay refused, naming the removed path. The same journal with valid bytes,
+// closed to reading and opened again, is, and the calls go on.
 func TestAnUnreadableJournalStopsEveryCall(t *testing.T) {
-	dir, self, web := toolSession(t)
-	readKind(t, dir, web, inbox.Task)
-	unread := rawUnread(t, dir, "api", map[string]any{"from": "web", "fromEpoch": web.Epoch(), "toEpoch": self.Epoch(), "kind": string(inbox.Task), "text": "arrives while stopped"})
-	if err := os.MkdirAll(inbox.JournalPath(dir, "api"), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	broken := filepath.Join(inbox.JournalPath(dir, "api"), "broken")
-	if err := os.WriteFile(broken, []byte("{"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if completeTurn(dir, self, turnResult{Text: "answer", Ended: 10}, "") == nil {
-		t.Fatal("the turn end went on past an unreadable journal")
-	}
-	turnStarted(t, dir, self, markAt-1)
-	for _, words := range [][]string{{"pending", "waiting"}, {"inbox"}} {
-		if code, out, errOut := run(words...); code != ExitFailed {
-			t.Fatalf("%s on a stopped mailbox: %d %s %s", words[0], code, out, errOut)
-		}
-	}
-	if owes(t, dir, self, unread) {
-		t.Fatal("a stopped mailbox was read")
-	}
-	if err := os.Remove(broken); err != nil {
-		t.Fatal(err)
-	}
-	if code, out, errOut := run("pending", "waiting on"); code != ExitOK {
-		t.Fatalf("pending once the journal is gone: %d %s %s", code, out, errOut)
+	for _, bytes := range []string{"invalid, removed", "valid, closed and reopened"} {
+		t.Run(bytes, func(t *testing.T) {
+			dir, self, web := toolSession(t)
+			readKind(t, dir, web, inbox.Task)
+			unread := rawUnread(t, dir, "api", map[string]any{"from": "web", "fromEpoch": web.Epoch(), "toEpoch": self.Epoch(), "kind": string(inbox.Task), "text": "arrives while stopped"})
+			if err := os.MkdirAll(inbox.JournalPath(dir, "api"), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			broken := filepath.Join(inbox.JournalPath(dir, "api"), "broken")
+			valid := bytes != "invalid, removed"
+			if valid {
+				if err := inbox.WriteJournal(dir, "api", "broken", inbox.TurnJournal{Epoch: self.Epoch(), Op: "end"}); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Chmod(broken, 0); err != nil {
+					t.Fatal(err)
+				}
+				t.Cleanup(func() { _ = os.Chmod(broken, 0o600) })
+			} else if err := os.WriteFile(broken, []byte("{"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if completeTurn(dir, self, turnResult{Text: "answer", Ended: 10}, "") == nil {
+				t.Fatal("the turn end went on past an unreadable journal")
+			}
+			turnStarted(t, dir, self, markAt-1)
+			for _, words := range [][]string{{"pending", "waiting"}, {"inbox"}} {
+				if code, out, errOut := run(words...); code != ExitFailed {
+					t.Fatalf("%s on a stopped mailbox: %d %s %s", words[0], code, out, errOut)
+				}
+			}
+			if owes(t, dir, self, unread) {
+				t.Fatal("a stopped mailbox was read")
+			}
+			if valid {
+				if err := os.Chmod(broken, 0o600); err != nil {
+					t.Fatal(err)
+				}
+				if code, out, errOut := run("pending", "waiting on"); code != ExitOK {
+					t.Fatalf("pending once the journal reads: %d %s %s", code, out, errOut)
+				}
+				return
+			}
+			if err := os.Remove(broken); err != nil {
+				t.Fatal(err)
+			}
+			if code, out, errOut := run("pending", "waiting on"); code != ExitFailed || !strings.Contains(errOut, broken+" was removed while stopped") {
+				t.Fatalf("pending once the journal is removed: %d %s %s", code, out, errOut)
+			}
+		})
 	}
 }
 

@@ -17,23 +17,35 @@ import (
 const shutdownLockWait = 2 * time.Second
 
 // lock runs fn under the mailbox lock, waiting no longer than the server's
-// lock context allows.
-//
-// A lock nobody can take — its file unopenable, say — does not stop the
-// server: fn runs without it. That is safe because every other user of the
-// lock fails on it too and says so, which leaves the server the only writer.
-// Stopping instead left senders with a pending that explained nothing and a
-// status that could not be written.
+// lock context allows. A lock that cannot be taken leaves fn unrun.
 func (s *Server) lock(fn func() error) error {
-	ctx := s.lockContext
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	return s.lockWithContext(ctx, fn)
+	return s.lockWithContext(s.lockCtx(), fn)
 }
 
 func (s *Server) lockWithContext(ctx context.Context, fn func() error) error {
-	err := state.WithMailboxLock(ctx, s.Dir, s.Name, fn)
+	return state.WithMailboxLock(ctx, s.Dir, s.Name, fn)
+}
+
+func (s *Server) lockCtx() context.Context {
+	if s.lockContext == nil {
+		return context.Background()
+	}
+	return s.lockContext
+}
+
+// lockOrAlone is lockWithContext for what moves and removes nothing: a
+// status, the link that makes a letter readable, a look. A lock whose file
+// cannot be opened or locked does not stop those: fn runs without it.
+// Stopping instead left senders with a pending that explained nothing and a
+// status that could not be written.
+//
+// That an open fails proves nobody else holds the lock no more than it
+// proves anything of a descriptor opened earlier: a holder from before the
+// file's mode changed keeps its lock. So what fn decides alone, another may
+// decide at once; nothing that takes a copy away runs here (settle runs
+// under lock only).
+func (s *Server) lockOrAlone(ctx context.Context, fn func() error) error {
+	err := s.lockWithContext(ctx, fn)
 	var unusable *state.LockUnusableError
 	if errors.As(err, &unusable) {
 		return fn()
@@ -60,27 +72,37 @@ func (s *Server) finish(message Message, result Result) {
 // The retry waits, though. Writing the status is itself a change to the mailbox,
 // and a directory that cannot be archived into turned that into a loop: write,
 // event, pass, write again, hundreds of times a second.
-func (s *Server) publish(id string, result Result) {
+//
+// A lock that cannot be taken still lets the status be written, alone; the
+// settling waits for a pass that holds the lock (lockOrAlone). It answers
+// whether the letter is settled now.
+func (s *Server) publish(id string, result Result) bool {
 	if last, tried := s.attempts[id]; tried && time.Since(last) < retryInterval && !s.stopping {
-		return
+		return false
 	}
 	s.attempts[id] = time.Now()
 
-	_ = s.lock(func() error {
+	settled := false
+	err := s.lock(func() error {
 		outcome, err := s.recordLocked(id, result)
 		if err != nil {
 			return err
 		}
-		s.settleOutcome(id, outcome, result.ReportAvailable)
+		settled = s.settleOutcome(id, outcome, result.ReportAvailable)
 		return nil
 	})
+	var unusable *state.LockUnusableError
+	if errors.As(err, &unusable) {
+		_, _ = s.recordLocked(id, result)
+	}
+	return settled
 }
 
 // record writes what delivery did, unless the agent has read the message
 // already, and returns the outcome that stands.
 func (s *Server) record(id string, result Result) State {
 	var outcome State
-	_ = s.lock(func() error {
+	_ = s.lockOrAlone(s.lockCtx(), func() error {
 		var err error
 		outcome, err = s.recordLocked(id, result)
 		return err
@@ -88,7 +110,8 @@ func (s *Server) record(id string, result Result) State {
 	return outcome
 }
 
-// recordLocked is record under a lock the caller holds. Read is final: the
+// recordLocked writes the status in a mailbox section or in the server's
+// status-only fallback; it never settles the letter. Read is final: the
 // agent has the text, so whatever the harness said about the notice afterwards
 // — pending, failed, even delivered — must not undo that, or the task is handed
 // out again or its sender told it was refused. Withdrawn is final the same
@@ -127,45 +150,65 @@ var removeWaiting = os.Remove
 
 // The durable flag distinguishes a failed wake-up from expired or foreign
 // mail. Recovery never manufactures an unread copy for an old failed status.
-func (s *Server) settleOutcome(id string, outcome State, reportAvailable bool) {
+func (s *Server) settleOutcome(id string, outcome State, reportAvailable bool) bool {
 	if outcome == Failed && reportAvailable {
-		settle(s.Dir, s.Name, id, Delivered)
-		return
+		return settle(s.Dir, s.Name, id, Delivered)
 	}
-	settle(s.Dir, s.Name, id, outcome)
+	return settle(s.Dir, s.Name, id, outcome)
 }
 
 // settle takes a message with an outcome out of the waiting set. One the harness
 // was told about stays readable in unread/ — or has been read already — so only
 // the waiting copy goes. A refused one is taken back from unread/ and archived.
+// The caller holds the mailbox lock: a server whose lock cannot be taken
+// settles nothing (lockOrAlone).
 //
 // Settling never removes a letter's last copy. The letter is the proof that a
 // publication landed while its mark may still say only intent, and retiring
 // that proof is the sweep's alone, under the lock and by the live run
-// (docs/v2/stage3-publication.md#the-contract); settling may run without the
-// lock (Server.lock). So a copy goes only beside another that stands, and a
-// copy whose archive failed stays where it is for the next pass.
-func settle(dir, name, id string, outcome State) {
+// (docs/v2/stage3-publication.md#the-contract), which settling is not. So a
+// copy goes only beside another that stands, and a copy whose archive failed
+// stays where it is for the next pass.
+//
+// Nor does it remove or move a copy an open occurrence of the mailbox's stop
+// names, or one inside a directory an occurrence names (stop.go): that copy
+// is what the occurrence waits to read again, and one settled away would
+// leave its stop to an operator. The letter stays where it is, its outcome
+// recorded, and a pass after the stop is resolved settles it; letters the
+// stop does not name settle as ever.
+//
+// It answers whether the letter now stands where its outcome puts it. A
+// letter it left — named by a stop, or its archive or removal failed — is
+// still owed, and the passes find it again by its status and its copies
+// (settleRecorded), not by anything remembered here.
+func settle(dir, name, id string, outcome State) bool {
+	kept := keptByStopOf(dir, name)
+	waiting := filepath.Join(state.InboxPath(dir, name), id+".json")
 	switch outcome {
 	case Held:
 		// Neither delivered nor refused yet, so both copies stay: its status
 		// keeps it from being announced again, and the readable copy is there
 		// for an agent that reads its mail on its own.
+		return true
 	case Delivered, Read, withdrawn:
 		// A withdrawal takes the waiting copy itself; one left behind goes
 		// here, and the tombstone stays where its reader will look.
-		if !standsIn(id, state.UnreadPath(dir, name), state.DonePath(dir, name)) {
-			return
+		if kept.keeps(waiting) || !standsIn(id, state.UnreadPath(dir, name), state.DonePath(dir, name)) {
+			return gone(waiting)
 		}
-		waiting := filepath.Join(state.InboxPath(dir, name), id+".json")
 		if err := removeWaiting(waiting); err == nil {
 			_ = state.SyncDir(state.InboxPath(dir, name))
 		}
+		return gone(waiting)
 	default:
+		unread := filepath.Join(state.UnreadPath(dir, name), id+".json")
 		if claimed(dir, name, id) {
 			// Only a read takes a letter being read out of unread/; a failed
-			// status an earlier run left behind does not.
-			return
+			// status an earlier run left behind does not. The read settles it.
+			return true
+		}
+		if kept.keeps(waiting) || kept.keeps(unread) || kept.names(filepath.Join(state.DonePath(dir, name), id+".json")) {
+			return false
 		}
 		// A notice taken back after it was reported delivered has lost its
 		// waiting copy; the readable one is then the last, and goes to done/.
@@ -175,7 +218,15 @@ func settle(dir, name, id string, outcome State) {
 		if standsIn(id, state.InboxPath(dir, name), state.DonePath(dir, name)) {
 			dropUnread(dir, name, id)
 		}
+		return gone(waiting) && gone(unread)
 	}
+}
+
+// gone says whether nothing stands at the path. One that cannot be looked at
+// may still be there.
+func gone(path string) bool {
+	_, err := os.Lstat(path)
+	return errors.Is(err, os.ErrNotExist)
 }
 
 // standsIn says whether a copy of the letter stands in one of the stages:
@@ -194,7 +245,9 @@ func standsIn(id string, stages ...string) bool {
 // alreadySettled reports whether this message has an outcome, from this run or
 // from a previous one whose status or archiving did not complete. A status
 // that cannot be read may be one, so the message is left alone for this pass,
-// neither delivered again nor refused.
+// neither delivered again nor refused. Settling it takes the lock; one that
+// cannot be taken leaves it for a later pass, which finds it by its waiting
+// copy again, at the retry interval.
 func (s *Server) alreadySettled(message Message) bool {
 	if result, known := s.outcomes[message.ID]; known {
 		if result.State == Held {
@@ -215,10 +268,30 @@ func (s *Server) alreadySettled(message Message) bool {
 		// is no outcome: like pending, the message is still to be decided.
 		return false
 	}
-	s.outcomes[message.ID] = status.result()
+	if last, tried := s.attempts[message.ID]; tried && time.Since(last) < retryInterval && !s.stopping {
+		return true
+	}
+	s.attempts[message.ID] = time.Now()
 	_ = s.lock(func() error {
-		s.settleOutcome(message.ID, status.outcome(), status.ReportAvailable)
+		s.settleOnRecord(message.ID)
 		return nil
 	})
 	return true
+}
+
+// settleOnRecord settles a letter by its status as it stands under the lock
+// the caller holds, not as it was read before the lock was taken: a
+// withdrawal, a read or a claim that came while the lock was waited for
+// decides instead (settle), and a status that no longer reads or no longer
+// holds an outcome settles nothing. A letter settled is forgotten; one left
+// is tried again once the retry interval has passed.
+func (s *Server) settleOnRecord(id string) {
+	status, ok, err := ReadStatus(s.Dir, s.Name, id)
+	if err != nil || !ok || status.State == Pending || status.State == Held {
+		return
+	}
+	s.outcomes[id] = status.result()
+	if s.settleOutcome(id, status.outcome(), status.ReportAvailable) {
+		delete(s.attempts, id)
+	}
 }

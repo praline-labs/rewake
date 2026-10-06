@@ -74,6 +74,15 @@ nothing lifts a stop without returning evidence.
   - `internal/inbox/publication_bounds_test.go` `TestTwoMailboxesPublishingToEachOtherDoNotDeadlock`
   - `internal/inbox/publication_bounds_test.go` `TestAReportToItselfIsPublishedInsideItsOwnLock`
   - `internal/inbox/publication_bounds_test.go` `TestAPublicationReadsTheRunWithoutCleaningUp`
+  - `internal/inbox/settle_lock_test.go` `TestSettlingWaitsForALockTheServerHolds`
+  - `internal/inbox/settle_lock_test.go` `TestADeferredSettlementGetsAnotherPass`
+  - `internal/inbox/settle_recorded_test.go` `TestARestartSettlesALateRefusalLeftUnread`
+  - `internal/inbox/settle_recorded_test.go` `TestASettlingCutShortIsSettledOnceItCan`
+  - `internal/inbox/settle_recorded_test.go` `TestALateRefusalItsStatusMissedIsRecordedThenSettled`
+  - `internal/inbox/settle_recorded_test.go` `TestALetterReadableOnPurposeStaysUnread`
+  - `internal/inbox/settle_recheck_test.go` `TestAForeignLetterSettlesByItsStatusUnderTheLock`
+  - `internal/inbox/settle_recheck_test.go` `TestARecordedRefusalIsRecheckedUnderTheLock`
+  - `internal/inbox/settle_recheck_test.go` `TestARefusalOnRecordAStopKeepsWaitsTheRetryInterval`
 
 - **E4. A read's completion is one durable fact every channel shares.** A letter leaves
   `unread/` only by being read once a part of it was shown, and never comes back; a late
@@ -115,10 +124,14 @@ nothing lifts a stop without returning evidence.
   - `internal/bridge/server/bound_test.go` `FuzzEveryMessageWrittenFits` — rebuilt in S7 on the host endpoint's one encoder
   - `internal/bridge/server/bound_test.go` `FuzzFramesAreBounded` — rebuilt in S7 on the host endpoint's one encoder
 
-- **E6. A check has three outcomes: found, proven absent, unknown.** Only "no such file"
-  proves absence; an unknown stops the effect and leaves the operation where a retry
-  takes it up. Readers that only inform fold an unknown into their most cautious answer.
-  (M1 rule 6.)
+- **E6. A check has three outcomes: found, proven absent, unknown.** "No such file"
+  proves absence. When recording a stop's original observation, Lstat finding a
+  component that is not a directory (ENOTDIR) also proves that exact path absent at that
+  time. Every other lookup error leaves its presence unknown. A later ENOTDIR is not
+  evidence that resolves an occurrence; nor does a later absence resolve a path whose
+  original presence was found or unknown. An unknown stops the effect and leaves the
+  operation where a retry takes it up. Readers that only inform fold an unknown into
+  their most cautious answer. (M1 rule 6.)
   Tests:
   - `internal/inbox/lookups_test.go` `TestALetterThatCannotBeReadIsNotLeftOut`
   - `internal/inbox/lookups_test.go` `TestAStatusIsFoundAbsentOrUnknown`
@@ -148,7 +161,10 @@ nothing lifts a stop without returning evidence.
   - `internal/cli/bridge_lookups_test.go` `TestAClearingThatFailedIsFinishedBeforeTheNextReport`
   - `internal/inbox/confirm_test.go` `TestAnUnreadableKeptAnswerIsNotWrittenOver`
   - `internal/inbox/settle_copy_test.go` `TestAPublishedMarkDoesNotOutweighAStageThatCannotBeSearched`
-  - Gap: readers that only inform (`awaited`, `owed`, `list`) folding an unknown into their most cautious answer — closed in S3.
+  - `internal/cli/awaited_unknown_test.go` `TestAwaitedTakesAnUnreadableRecipientForLive`
+  - `internal/cli/owed_grant_unknown_test.go` `TestAnUnreadableGrantJournalDoesNotEndTheGrant`
+  - `internal/cli/list_unknown_test.go` `TestListShowsAnUnreadableSessionAsUnknown`
+  - `internal/inbox/stop_unknown_test.go` `TestANotADirectoryOnTheWayRecordsThePathAbsent`
 
 - **E7. Every effect has an immutable identity and a proven scope, and recovery advances
   it only from durable evidence tied to that identity.** (M1 rule 7, clauses identity,
@@ -213,7 +229,8 @@ nothing lifts a stop without returning evidence.
   - `internal/cli/review_receipt_identity_test.go` `TestReviewStoppedReceiptAllowsSameTurnFinal` — rebuilt in S5 on neutral completions
   - `internal/cli/turn_test.go` `TestTwoTurnEndsAtOnceReportOnce` — rebuilt in S5 on neutral completions
   - `internal/cli/error_report_test.go` `TestACodexNotifyReportsNothing` — rebuilt in S5 on neutral completions
-  - Gap: a hold reserving its read-clock position, never issued twice, never covered by a boundary before it commits (`inbox/kept.go:70-80`; only reads are tested) — closed in S3.
+  - `internal/inbox/kept_clock_test.go` `TestAHoldReservesItsPositionBeforeItCommits`
+  - `internal/inbox/kept_clock_test.go` `TestAFailedHoldLeavesAGapAndNoPositionIsIssuedTwice`
   - Gap: every TurnBoundary names its event — closed in S10 with the adapter API.
 
 - **E8. Each effect is proven done, proven not done, or unknown; an unknown stops every
@@ -258,10 +275,10 @@ nothing lifts a stop without returning evidence.
   - `internal/inbox/claims_test.go` `TestAnIntentWithoutItsLetterIsWrittenAgain`
   - `internal/inbox/journal_test.go` `TestAJournalDoesNotRepublishASweptReport`
   - `internal/inbox/journal_test.go` `TestAReportWhoseEntryFailedIsNotRepublishedAfterTheSweep`
-  - `internal/inbox/stop_writes_test.go` `TestAGateWhoseStopCannotBeWrittenStillStops` — its lift by a removed cause inverted in S3
-  - `internal/inbox/stop_writes_test.go` `TestALiftOfAStopThatFailsReachesTheCaller` — its lift by a removed cause inverted in S3
-  - `internal/inbox/answer_stop_test.go` `TestAStoppedMailboxDoesNotTakeAnAnswer` — its lift by a removed cause inverted in S3
-  - `internal/cli/stop_gate_test.go` `TestAnUnreadableJournalStopsEveryCall` — its lift by a removed cause inverted in S3
+  - `internal/inbox/stop_writes_test.go` `TestAGateWhoseStopCannotBeWrittenStillStops`
+  - `internal/inbox/stop_writes_test.go` `TestAFailedResolutionReachesTheCaller`
+  - `internal/inbox/answer_stop_test.go` `TestAStoppedMailboxDoesNotTakeAnAnswer`
+  - `internal/cli/stop_gate_test.go` `TestAnUnreadableJournalStopsEveryCall`
   - `internal/cli/stop_gate_test.go` `TestAReadInPartsStopsWithTheMailbox`
   - `internal/cli/stop_gate_test.go` `TestUnknownEvidenceStopsTheCallsAfterTheEnd`
   - `internal/inbox/plan_faults_test.go` `TestEveryReadOfThePlanStopsBeforeTheFirstEffect`
@@ -277,15 +294,26 @@ nothing lifts a stop without returning evidence.
   - `internal/inbox/late_unknown_test.go` `TestEveryEvidencePathIsReadBeforeTheFirstEffect` — rebuilt in S2 on journal records only
   - `internal/inbox/journal_moot_test.go` `TestAReportForAnEndedRunIsMoot` — rebuilt in S2 on journal records only
   - `internal/inbox/journal_moot_test.go` `TestAMootReportClearsWhatItAnswered` — rebuilt in S2 on journal records only
-  - `internal/inbox/reconcile_stop_test.go` `TestAnUnreadableJournalStopsEveryEffect` — its lift by a removed cause inverted in S3
-  - Gap: a stop lifts only on returning evidence (two tests say the opposite) — closed in S3.
-  - Gap: a stop tells main once and lets letters from others arrive, whatever found it — closed in S3.
-  - Gap: nothing that names no run is swept by age — closed in S3.
+  - `internal/inbox/reconcile_stop_test.go` `TestAnUnreadableJournalStopsEveryEffect`
+  - `internal/inbox/reconcile_stop_test.go` `TestAnUnreadableRecordStopsTheMailbox`
+  - `internal/inbox/stop_occurrence_test.go` `TestTwoCausesOneResolvedTheStopHolds`
+  - `internal/inbox/stop_occurrence_test.go` `TestARecipientsEndLeavesAHeldReportUnsettled`
+  - `internal/inbox/stop_occurrence_test.go` `TestMainIsToldOnceAcrossBarriersAndCalls`
+  - `internal/inbox/stop_occurrence_test.go` `TestLettersArriveIntoAStoppedMailbox`
+  - `internal/inbox/stop_sweep_test.go` `TestASweepBesideAStopRemovesNoNamedPath`
+  - `internal/inbox/sweep_norun_test.go` `TestNothingThatNamesNoRunIsSweptByAge`
   - `internal/inbox/publication_race_test.go` `TestASavedPublishedStays`
   - `internal/inbox/publication_race_test.go` `TestACrashBeforeTheSaveLeavesTheReportMoot`
   - `internal/inbox/publication_bounds_test.go` `TestAStaleSweeperRetiresNothing`
   - `internal/inbox/publication_crash_test.go` `TestAKillAtAnyWriteLandsTheReportAtMostOnce`
-  - Gap: a cause that recurs after its resolution is a new occurrence, lifted only by its own evidence — closed in S3.
+  - `internal/inbox/stop_occurrence_test.go` `TestARecurringCauseOfARecordIsANewOccurrence`
+  - `internal/inbox/stop_occurrence_test.go` `TestARecurringCauseAboutAnOperationIsANewOccurrence`
+  - `internal/inbox/stop_unknown_test.go` `TestAResolutionIsReadBeforeItLiftsTheStop`
+  - `internal/inbox/stop_unknown_test.go` `TestAnOccurrenceRecordsAPathsPresenceUnknownApartFromAbsent`
+  - `internal/inbox/stop_unknown_test.go` `TestAProofWhosePresenceWasUnknownResolvesNothingOnceGone`
+  - `internal/inbox/stop_unknown_test.go` `TestReleasingAnAnswerKeepsAMarkTheStopNames`
+  - `internal/inbox/stop_unknown_test.go` `TestSettlingKeepsALetterTheStopNames`
+  - `internal/inbox/stop_unknown_test.go` `TestAnEffectsOccurrenceWhoseResolutionDoesNotReadHoldsTheEffects`
   - Gap: the operator decision — closed in S18 (part B).
 
 ## How E8 lifts a stop
@@ -299,6 +327,10 @@ occurrence is resolved only by evidence about its effect — the effect proven d
 not done — never by its path becoming absent or merely readable; an effect-only cause is
 resolved the same way, once a barrier has run its effect through to evidence, not by the
 barrier having run; one resolution never resolves another, and a cause that recurs after
-its resolution is a new occurrence. S3 builds it
+its resolution is a new occurrence. S3 built it
 ([stage3-steps.md](../v2/stage3-steps.md#s3-a-stop-is-resolved-per-cause-by-evidence-codex)),
-and the tests above that lift a stop by a removed cause are inverted there.
+and inverted the tests above that lifted a stop by a removed cause; each keeps a half on
+valid bytes closed to reading, where opening them again resolves the cause. The wording
+of E8 above is the accepted one: the single record it names, `stopped`, is from S3 one
+record per occurrence, `stops/<key>/<occurrence>`, with its resolution beside it
+([mailbox-records.md](../mailbox-records.md#the-stop-on-record)).

@@ -111,19 +111,9 @@ type Server struct {
 // is still waiting: once the session is gone, nothing will ever deliver it, and
 // a sender waiting on a status deserves to hear that rather than time out.
 func (s *Server) Serve(ctx context.Context) {
-	s.attempts = map[string]time.Time{}
-	s.outcomes = map[string]Result{}
-	s.held = map[string][]Message{}
-	s.recent = map[string]recentAnnouncement{}
-	s.arrivals = map[string]*arrival{}
-	s.lockContext = ctx
-	if ctx.Err() != nil || !s.owned() {
-		// Canceled before it began, or the name already belongs to somebody
-		// else: refusing their mail on the way past is not this session's to do.
+	if !s.begin(ctx) {
 		return
 	}
-	s.sweepForeign()
-	s.sweepFinished()
 
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
@@ -185,10 +175,34 @@ func (s *Server) Serve(ctx context.Context) {
 	}
 }
 
+// begin is what a run does before its first pass, and all it knows: nothing of
+// an earlier run's memory survives, so whatever is owed is found on disk. It
+// answers false when the run is not to serve at all.
+func (s *Server) begin(ctx context.Context) bool {
+	s.attempts = map[string]time.Time{}
+	s.outcomes = map[string]Result{}
+	s.held = map[string][]Message{}
+	s.recent = map[string]recentAnnouncement{}
+	s.arrivals = map[string]*arrival{}
+	s.lockContext = ctx
+	if ctx.Err() != nil || !s.owned() {
+		// Canceled before it began, or the name already belongs to somebody
+		// else: refusing their mail on the way past is not this session's to do.
+		return false
+	}
+	s.sweepForeign()
+	// Before the sweep: a refused letter still in unread/ goes to done/
+	// first, and is then kept for as long as any other archived letter.
+	s.settleRecorded()
+	s.sweepFinished()
+	return true
+}
+
 // drain makes one pass over the mailbox and answers how long the mail it found
 // may still wait for company, zero once it has gone.
 func (s *Server) drain(ctx context.Context) time.Duration {
 	s.followEarlierRun(ctx)
+	s.settleRecorded()
 	pending := s.pendingMessages(ctx)
 	if s.gated() {
 		s.waitForOpening(pending)
@@ -213,6 +227,13 @@ func (s *Server) pendingMessages(ctx context.Context) []Message {
 			return nil
 		}
 		if s.Epoch != "" && message.ToEpoch != s.Epoch {
+			// Not this run's to decide; but one decided already, by this
+			// run at its start or by the run it was for, is settled like
+			// any other, since nobody else will. Its status says so, and
+			// mail with none stays for whoever takes the name next.
+			if s.outcomes[message.ID].State != Held {
+				s.alreadySettled(message)
+			}
 			continue
 		}
 		if s.alreadySettled(message) {
@@ -259,7 +280,7 @@ func (s *Server) refuseWaiting(reason string) {
 		if IsReport(message) {
 			// Shutdown may precede the first drain. Admission still respects
 			// expiry and reservations before making the report readable.
-			err := s.lock(func() error {
+			err := s.lockOrAlone(s.lockCtx(), func() error {
 				status, known, err := ReadStatus(s.Dir, s.Name, message.ID)
 				if err != nil {
 					return err

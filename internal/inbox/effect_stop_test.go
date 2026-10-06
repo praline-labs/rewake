@@ -16,9 +16,10 @@ import (
 )
 
 // An unknown only an effect met — the reading before it and the one after it
-// both clean — is kept as the effect's: a call other than the barrier cannot
-// meet it again, so it answers the stop on record until the barrier runs the
-// effect again and it goes through.
+// both clean — is kept as the effect's occurrence: a call other than the
+// barrier cannot meet it again, so it answers the stop on record until the
+// barrier runs the effect again and it goes through; the resolution names
+// the operation completed as its evidence.
 func TestAnUnknownOnlyAnEffectMetStopsUntilTheBarrier(t *testing.T) {
 	lab := newTwoSessionLab(t)
 	version := "v1"
@@ -49,31 +50,41 @@ func TestAnUnknownOnlyAnEffectMetStopsUntilTheBarrier(t *testing.T) {
 	if err := MailboxStopped(lab.dir, "api"); !errors.As(err, &stopped) {
 		t.Fatalf("a call other than the barrier forgot the stop an effect met: %v", err)
 	}
+	stops := stopsOnRecord(t, lab.dir, "api")
+	if len(stops) != 1 || stops[0].record.Kind != causeEffect || stops[0].record.Op != "end" {
+		t.Fatalf("the effect's occurrence: %+v", stops)
+	}
 	if err := withLock(lab.dir, "api", func() error { return Reconcile(context.Background(), lab.dir, "api") }); err != nil {
 		t.Fatalf("the barrier kept a stop whose effect now goes through: %v", err)
 	}
 	if err := MailboxStopped(lab.dir, "api"); err != nil {
 		t.Fatalf("the stop outlived the barrier: %v", err)
 	}
+	// The evidence is the operation run through, not the barrier having run.
+	raw, err = os.ReadFile(stops[0].path(lab.dir, "api") + resolvedSuffix)
+	if err != nil || !strings.Contains(string(raw), "turn journal end") {
+		t.Fatalf("the resolution names no evidence of the operation: %s %v", raw, err)
+	}
 }
 
-// stopWrites fails every write of the stop record and counts them.
+// stopWrites fails every write of a stop's records under its directory, and
+// counts them.
 type stopWrites struct {
 	fileAccess
-	path   string
+	under  string
 	failed int
 }
 
-func (s *stopWrites) WriteFile(path string, raw []byte) error {
-	if path == s.path {
+func (s *stopWrites) Publish(path string, raw []byte) error {
+	if strings.HasPrefix(path, s.under+string(filepath.Separator)) {
 		s.failed++
-		return &fs.PathError{Op: "write", Path: path, Err: syscall.EIO}
+		return &fs.PathError{Op: "publish", Path: path, Err: syscall.EIO}
 	}
-	return s.fileAccess.WriteFile(path, raw)
+	return s.fileAccess.Publish(path, raw)
 }
 
 // A stop the barrier could write neither when the effect met its unknown nor
-// once the plan after it had looked is answered with both failures beside the
+// once the plan after it had looked is answered with every failure beside the
 // unknown: the caller learns why no stop is on record, and what to look at.
 // The effect's cause is named even when the plan after it found another: the
 // answer is the only place left that holds it.
@@ -95,7 +106,7 @@ func TestAStopThatCouldNotBeRecordedNamesEveryFailedWrite(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			writes := &stopWrites{fileAccess: osAccess{}, path: stopPath(lab.dir, "api")}
+			writes := &stopWrites{fileAccess: osAccess{}, under: stopsPath(lab.dir, "api")}
 			effects := newProbe(lab.dir, writes, &seamFault{at: seamRead{op: "read", rel: rel}, kind: "no access"})
 			testAccess.Store(lab.dir, passAccess{live: effects, plan: osAccess{}})
 			t.Cleanup(func() { testAccess.Delete(lab.dir) })
@@ -106,7 +117,13 @@ func TestAStopThatCouldNotBeRecordedNamesEveryFailedWrite(t *testing.T) {
 			}
 			err = lab.reconcile(t)
 			var unknown *UnknownRecordError
-			if !errors.As(err, &unknown) || writes.failed != 2 || strings.Count(err.Error(), "could not record the stop") != 2 {
+			// The effect's occurrence when the effect met it and once more
+			// after the plan, and the plan's own cause when there is one.
+			want := 2
+			if other {
+				want = 3
+			}
+			if !errors.As(err, &unknown) || writes.failed != want || strings.Count(err.Error(), "could not record the stop") != want {
 				t.Fatalf("after %d failed writes of the stop the barrier answers %v", writes.failed, err)
 			}
 			if !strings.Contains(err.Error(), kept) || other && !strings.Contains(err.Error(), interim) {

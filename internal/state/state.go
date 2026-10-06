@@ -225,8 +225,10 @@ func TryWithNameLock(dir, name string, fn func() error) (bool, error) {
 var ErrMailboxBusy = errors.New("the mailbox is busy")
 
 // LockUnusableError means the mailbox lock could not be taken at all — its file
-// cannot be opened or locked. Nobody can hold such a lock, which is what lets
-// the one process that must keep working carry on without it.
+// cannot be opened or locked. That says nothing of a holder that opened it
+// earlier: a descriptor opened before the file's mode changed keeps its lock.
+// So carrying on without it is safe only for writes that move and remove
+// nothing.
 type LockUnusableError struct{ Err error }
 
 func (e *LockUnusableError) Error() string {

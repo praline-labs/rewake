@@ -1,6 +1,7 @@
 package inbox
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"time"
@@ -38,8 +39,25 @@ func ReserveAnswer(dir, name, question string) (func(), error) {
 	return func() {
 		close(stop)
 		<-done
-		removeMark(dir, name, mark)
+		releaseMark(dir, name, mark)
 	}, nil
+}
+
+// releaseMark takes a reservation's mark away once its command ends, under
+// the mailbox lock, unless an open occurrence of the mailbox's stop names it
+// (stop.go): the mark is then evidence the occurrence waits to read again.
+// A mark left behind is no longer refreshed, so its lease runs out as a
+// stopped process's would, and the sweep retires it once nothing names it. A
+// lock that cannot be taken leaves the mark to the sweep the same way.
+func releaseMark(dir, name, mark string) {
+	ctx, cancel := context.WithTimeout(context.Background(), recipientLockWait)
+	defer cancel()
+	_ = state.WithMailboxLock(ctx, dir, name, func() error {
+		if !keptByStopOf(dir, name).keeps(mark) {
+			removeMark(dir, name, mark)
+		}
+		return nil
+	})
 }
 
 // AvailableUnread excludes reports owned by waiting sends. The caller holds

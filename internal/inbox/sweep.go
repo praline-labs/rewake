@@ -49,6 +49,7 @@ func (s *Server) liveRun() bool {
 // that could not be read stays, and the next sweep decides it.
 func (s *Server) sweepFinishedLocked() {
 	cutoff := time.Now().Add(-keepFinished)
+	kept := keptByStopOf(s.Dir, s.Name)
 	receipts, receiptsErr := retainedReceipts(s.Dir, s.Name)
 	// A task read a day ago and still worked on is still owed, and rewake
 	// inbox --owed must be able to show it again.
@@ -63,7 +64,7 @@ func (s *Server) sweepFinishedLocked() {
 			continue
 		}
 		for _, entry := range entries {
-			if entry.IsDir() {
+			if entry.IsDir() || kept.keeps(filepath.Join(directory, entry.Name())) {
 				continue
 			}
 			// In the mailbox itself only statuses are old news; a message still
@@ -114,5 +115,9 @@ func (s *Server) sweepFinishedLocked() {
 	sweepOnce(s.Dir, s.Name, s.Epoch)
 	sweepTurnRecords(s.Dir, s.Name, s.Epoch, cutoff)
 	sweepMarks(s.Dir, s.Name, s.Epoch)
-	receipt.Sweep(s.Dir, s.Name, s.Epoch, cutoff, func(id string) bool { return stillUnread(s.Dir, s.Name, id) })
+	// The receipts sweep their own records under their own locks: one an
+	// open occurrence names keeps all of them.
+	if !kept.keeps(filepath.Join(state.InboxPath(s.Dir, s.Name), "receipts")) {
+		receipt.Sweep(s.Dir, s.Name, s.Epoch, cutoff, func(id string) bool { return stillUnread(s.Dir, s.Name, id) })
+	}
 }

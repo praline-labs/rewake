@@ -40,7 +40,8 @@ refusal on September 17, 2026 cleared after recipient restart.
 - [Milestone 6. Ready for daily use](2026-09-16-milestone-06-ready-for-daily-use.md)
   — the publication is not done; the file keeps what is.
 - [Stage 3 of 2.0](2026-10-05-stage3-rules-s1-s2.md) — on branch `v2` since
-  October 5, 2026: the rules accepted, S1 and S2 built, S3–S19 to come.
+  October 5, 2026: the rules accepted, S1 and S2 built,
+  [S3 built](2026-10-06-stage3-s3.md) on October 6, S4–S19 to come.
 - [The workflow suite](2026-09-21-workflow-suite.md) — in progress since
   September 21, 2026; what exists and what remains are listed there and in
   [work-queue.md](../work-queue.md).
@@ -132,6 +133,7 @@ without a date. Local installation without publishing is in
 | October 4, 2026 | [Stage M3 of the mail tool: the launch injection, built and its code accepted](2026-10-04-mail-tool-launch-stage.md) | built and its code accepted after five design passes and four acceptance rounds: the gates and their actions, the name check before the claim, the injection on both harnesses, the gateway's thread check, the channel record derived from the transport's history by event time; the decisions of October 4; live checks and gates open |
 | October 4, 2026 | [Stage M3 of the mail tool: the live checks, run](2026-10-04-mail-tool-live-checks.md) | the live checks in the owner's logins on codex-cli 0.159.0 and Claude Code 2.1.284: G1, G5 and G7 closed; four findings — a killed server not restarted by Claude Code, a trust dialog past the hello timer, a Codex sub-agent failing the parent's channel, a managed MCP file stopping the launch; L5's bounds measured; the rules revised in four passes and built the same day, `wrapped-launch` green, the code accepted after four rounds of fixes; the owner's decision on the Claude Code version; the live checks of the revised rules and the gates G2, G3, G4, G6, G8, G9 and L4 stay open |
 | October 5, 2026 | [Stage 3 of 2.0: the rules accepted, S1 and S2 built](2026-10-05-stage3-rules-s1-s2.md) | in progress: the rules of S1–S19 accepted after seven rounds, split into part A and part B (the operator decision), with the publication race a probe found placed in S3; S1's checks accepted after four rounds that closed what they let through; S2, the 1.x migration removed, accepted in the second round once two documentation findings were corrected |
+| October 6, 2026 | [Stage 3 of 2.0: S3 built and accepted](2026-10-06-stage3-s3.md) | one landing per copy, in two commits: every once-publication inside its recipient's lock, accepted after three rounds; the stop as a record per occurrence resolved only by evidence, accepted after six — unknown presence kept unknown, named paths kept by every remover, settling under the real lock only, owed settling read from the statuses and copies, and the status that settles read again under the lock |
 
 ## Remaining work — owner decisions, September 19–21, 2026
 

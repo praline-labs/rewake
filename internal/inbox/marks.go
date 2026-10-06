@@ -146,8 +146,9 @@ func sweepMarks(dir, name, live string) {
 	if err != nil {
 		return
 	}
+	kept := keptByStopOf(dir, name)
 	for _, run := range runs {
-		if run.Name() != live {
+		if run.Name() != live && !kept.keeps(filepath.Join(root, run.Name())) {
 			_ = os.RemoveAll(filepath.Join(root, run.Name()))
 		}
 	}

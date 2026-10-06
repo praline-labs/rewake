@@ -20,7 +20,10 @@ import (
 // reads each file by its kind: one that matches no kind, is not a regular
 // file, or does not read as its kind says stops the mailbox before any effect,
 // and so does a directory anywhere but on the way to a kind's files
-// (8-stop). An unknown found only by the effect that needed it comes too late,
+// (8-stop). The reading does not stop at the first: every cause it finds is
+// a stop of its own (stop.go), and one left unnamed behind another would be
+// recorded only once the first is settled. An unknown found only by the
+// effect that needed it comes too late,
 // since effects before it went through; so nothing is left for an effect to
 // find first. A writer that adds a path adds its kind here, or its first file
 // stops every mailbox it lands in, and the test over the package's writers
@@ -39,7 +42,7 @@ type recordKind struct {
 	parse func(path string, raw []byte) error
 	// opened says the reading reads the file even with nothing to parse:
 	// its being readable is what it says. A lock is not opened, and neither
-	// is the stop record, which the barrier reads itself (stop.go).
+	// are the stop's records, which the barrier reads itself (stop.go).
 	opened bool
 	// unknown is what one that cannot be read leaves unknown.
 	unknown string
@@ -52,7 +55,9 @@ const unfinishedWrite = ".tmp-*"
 
 var recordKinds = []recordKind{
 	{".lock", "the mailbox lock", nil, false, ""},
-	{stopFile, "the stop this mailbox is in", nil, false, "why it stopped; the barrier reads it itself (stop.go)"},
+	{stopsDir + "/*/*" + resolvedSuffix, "the resolution of a stop", nil, false, ""},
+	{stopsDir + "/*/*" + toldSuffix, "main told of a stop", nil, false, ""},
+	{stopsDir + "/*/*", "an occurrence of a stop", nil, false, ""},
 	{"*.json", "a letter not announced yet", parseJSON[Message], true, "which letter it is, and whether it is owed a report"},
 	{"*.status", "a letter's delivery status", parseJSON[Status], true, "whether the letter arrived"},
 	{"unread/*.json", "a letter announced and not read", parseJSON[Message], true, "which letter it is, and whether it is owed a report"},
@@ -109,46 +114,64 @@ func holdsRecords(rel string) bool {
 	return false
 }
 
-// readMailbox walks the mailbox and reads every file by its kind; the first
-// that cannot be told stops it, named with what it leaves unknown. A file
-// that left since it was listed moved on, and is not one.
+// readMailbox walks the mailbox and reads every file by its kind; each that
+// cannot be told stops it, named with what it leaves unknown. A file that
+// left since it was listed moved on, and is not one.
 func (w world) readMailbox(name string) error {
 	root := state.InboxPath(w.dir, name)
-	return w.walkMailbox(name, root, root)
+	return errors.Join(w.walkMailbox(root, root)...)
 }
 
-func (w world) walkMailbox(name, root, directory string) error {
+// unlistedRecordError is a path of the mailbox that is of no kind on the
+// list, or of a kind in a shape it is never written in: what it says is not
+// known, as for one that does not read, but no reading will ever tell.
+type unlistedRecordError struct {
+	Path string
+	Err  error
+}
+
+func (e *unlistedRecordError) Error() string { return e.Err.Error() }
+
+func (e *unlistedRecordError) Unwrap() error { return e.Err }
+
+func unlisted(path, format string, args ...any) error {
+	return &unlistedRecordError{Path: path, Err: fmt.Errorf(format, args...)}
+}
+
+func (w world) walkMailbox(root, directory string) []error {
 	entries, err := w.readDir(directory)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("the mailbox record %s cannot be listed, so what it holds is unknown: %w", directory, err)
+		return []error{fmt.Errorf("the mailbox record %s cannot be listed, so what it holds is unknown: %w", directory, err)}
 	}
+	var found []error
 	for _, entry := range entries {
 		path := filepath.Join(directory, entry.Name())
 		rel, err := filepath.Rel(root, path)
 		if err != nil {
-			return err
+			return append(found, err)
 		}
 		kind, ok := kindOf(rel)
 		if entry.IsDir() {
 			switch {
 			case holdsRecords(rel):
-				if err := w.walkMailbox(name, root, path); err != nil {
-					return err
-				}
-				continue
+				found = append(found, w.walkMailbox(root, path)...)
 			case ok:
-				return fmt.Errorf("%s, where %s belongs, is a directory, so what it says is unknown", path, kind.what)
+				found = append(found, unlisted(path, "%s, where %s belongs, is a directory, so what it says is unknown", path, kind.what))
+			default:
+				found = append(found, unlisted(path, "%s is no directory a mailbox holds, so what it holds is unknown", path))
 			}
-			return fmt.Errorf("%s is no directory a mailbox holds, so what it holds is unknown; nothing changes in %s until it is removed", path, name)
+			continue
 		}
 		if !ok {
-			return fmt.Errorf("%s is no kind of record a mailbox holds, so what it says is unknown; nothing changes in %s until it is removed", path, name)
+			found = append(found, unlisted(path, "%s is no kind of record a mailbox holds, so what it says is unknown", path))
+			continue
 		}
 		if !entry.Type().IsRegular() {
-			return fmt.Errorf("%s, %s, is not a regular file, so what it says is unknown", path, kind.what)
+			found = append(found, unlisted(path, "%s, %s, is not a regular file, so what it says is unknown", path, kind.what))
+			continue
 		}
 		if !kind.opened {
 			continue
@@ -161,10 +184,10 @@ func (w world) walkMailbox(name, root, directory string) error {
 			err = unknownRead(path, kind.parse(path, raw))
 		}
 		if err != nil {
-			return fmt.Errorf("%s, %s, cannot be read, so %s is unknown: %w", path, kind.what, kind.unknown, err)
+			found = append(found, fmt.Errorf("%s, %s, cannot be read, so %s is unknown: %w", path, kind.what, kind.unknown, err))
 		}
 	}
-	return nil
+	return found
 }
 
 // UnlistedRecords names the files of a mailbox that are of no kind on the

@@ -15,9 +15,12 @@ import (
 
 // Every durable stop outlives a barrier that did not run its effects
 // through: canceled, stopped by another unknown the reading found and that
-// then left, or failing on the effect itself. Only a barrier that ran every
-// effect lifts a stop an effect met, or one whose record does not read; one
-// the reading found stands while its cause does (stop.go).
+// then read again, or failing on the effect itself. Only a barrier that ran
+// every effect resolves an occurrence an effect met; one whose record does
+// not read stays open until it reads; one the reading found is resolved once
+// the plan reads its path again (stop.go). Each cause here has valid bytes,
+// made unreadable by mode 0000 and restored: a removed one resolves nothing
+// (reconcile_stop_test.go).
 func TestEveryDurableStopOutlivesAFailedRetry(t *testing.T) {
 	for _, stop := range []string{"effect", "record", "reading"} {
 		for _, retry := range []string{"canceled", "another stop", "failing effect"} {
@@ -45,9 +48,21 @@ func TestEveryDurableStopOutlivesAFailedRetry(t *testing.T) {
 					}
 					afterReading, afterEffect = func() {}, func() {}
 				case "record":
-					writeRaw(t, stopPath(lab.dir, "api"), "{")
+					rel, err := filepath.Rel(lab.dir, kept)
+					if err != nil {
+						t.Fatal(err)
+					}
+					occurrence, err := live(lab.dir).recordOccurrence("api", stopCause{Kind: causeUnreadable, Paths: []string{rel}, Op: "end", Cause: "the kept answer did not read"})
+					if err != nil {
+						t.Fatal(err)
+					}
+					cause = occurrence.path(lab.dir, "api")
+					closeToReading(t, cause)
 				case "reading":
-					writeRaw(t, cause, "{")
+					if err := WriteJournal(lab.dir, "api", "z", TurnJournal{Epoch: lab.run, Op: "end"}); err != nil {
+						t.Fatal(err)
+					}
+					closeToReading(t, cause)
 					if lab.reconcile(t) == nil {
 						t.Fatal("an unreadable journal went through")
 					}
@@ -61,13 +76,16 @@ func TestEveryDurableStopOutlivesAFailedRetry(t *testing.T) {
 					}
 				case "another stop":
 					other := interimPath(lab.dir, "api")
-					writeRaw(t, other, "{")
+					raw, err := json.Marshal(interimRecord{Epoch: lab.run, Op: "earlier", Text: "later"})
+					if err != nil {
+						t.Fatal(err)
+					}
+					writeRaw(t, other, string(raw))
+					closeToReading(t, other)
 					if lab.reconcile(t) == nil {
 						t.Fatal("the barrier went on past an unreadable interim record")
 					}
-					if err := os.Remove(other); err != nil {
-						t.Fatal(err)
-					}
+					readable(t, other)
 				case "failing effect":
 					pending := filepath.Dir(kept)
 					if err := os.Chmod(pending, 0o500); err != nil {
@@ -85,10 +103,8 @@ func TestEveryDurableStopOutlivesAFailedRetry(t *testing.T) {
 				if MailboxStopped(lab.dir, "api") == nil {
 					t.Fatalf("a %s retry lifted the %s stop without running its effect", retry, stop)
 				}
-				if stop == "reading" {
-					if err := os.Remove(cause); err != nil {
-						t.Fatal(err)
-					}
+				if stop != "effect" {
+					readable(t, cause)
 				}
 				if err := lab.reconcile(t); err != nil {
 					t.Fatalf("the barrier that runs the effect through: %v", err)
@@ -160,5 +176,21 @@ func TestEveryEvidencePathIsReadBeforeTheFirstEffect(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+// closeToReading closes a record to reading, until readable opens it again.
+func closeToReading(t *testing.T, path string) {
+	t.Helper()
+	if err := os.Chmod(path, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(path, 0o600) })
+}
+
+func readable(t *testing.T, path string) {
+	t.Helper()
+	if err := os.Chmod(path, 0o600); err != nil {
+		t.Fatal(err)
 	}
 }

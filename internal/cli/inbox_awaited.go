@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -76,6 +77,10 @@ func showAwaited(ctx *Context, dir string, session registry.Session, epoch strin
 		run    string
 		silent bool
 		found  bool
+		// unknown says the recipient's record could not be read: this view
+		// only informs, so it is taken for the live run, which may still
+		// report, and never for one that ended and lost the task.
+		unknown bool
 	}
 	runs := map[string]recipientRun{}
 	current := func(name string) recipientRun {
@@ -85,7 +90,7 @@ func showAwaited(ctx *Context, dir string, session registry.Session, epoch strin
 		// Read-only on purpose: Lookup prunes a dead record, and this view
 		// writes nothing.
 		live, err := registry.LookupReadOnly(dir, name)
-		found := recipientRun{found: err == nil}
+		found := recipientRun{found: err == nil, unknown: err != nil && !errors.Is(err, registry.ErrNotFound)}
 		if found.found {
 			found.run, found.silent = live.Epoch(), role.Of(live.Role).Silent
 		}
@@ -94,7 +99,7 @@ func showAwaited(ctx *Context, dir string, session registry.Session, epoch strin
 	}
 	awaited, err := inbox.Awaited(dir, session.Name, epoch, func(recipient, run string) inbox.RecipientRun {
 		switch live := current(recipient); {
-		case live.found && live.run == run:
+		case live.unknown, live.found && live.run == run:
 			return inbox.RunLive
 		case live.found:
 			return inbox.RunReplaced

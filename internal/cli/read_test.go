@@ -135,16 +135,14 @@ func TestAFailedReadRecordIsRetried(t *testing.T) {
 	t.Setenv(state.SessionEnv, "api")
 	rawUnread(t, dir, "api", map[string]any{"from": "web", "fromEpoch": web.Epoch(), "toEpoch": epochOf(t, dir, "api"), "text": "report back"})
 
+	// Closed to writes, not replaced by a file: a file where the waits belong
+	// stops the mailbox, and removing it is no evidence of what it held.
 	blocked := state.AwaitingPath(dir, "api")
-	if err := os.WriteFile(blocked, nil, 0o600); err != nil {
-		t.Fatalf("block: %v", err)
-	}
+	block(t, blocked)
 	if code, _, _ := run("inbox"); code == ExitOK {
 		t.Error("inbox reported success although the read could not be recorded")
 	}
-	if err := os.Remove(blocked); err != nil {
-		t.Fatalf("unblock: %v", err)
-	}
+	unblock(t, blocked)
 	if _, out, _ := run("inbox"); !strings.Contains(out, "report back") {
 		t.Errorf("second read = %q, want the message shown again", out)
 	}
@@ -254,5 +252,24 @@ func TestSendRereadsAStatusThatLandedLate(t *testing.T) {
 	code, out, errOut := run("send", "api", "hello", "--wait", "0")
 	if code != ExitOK || !strings.Contains(out, "delivered") {
 		t.Errorf("exit = %d, out = %q, err = %q; want the late delivery reported", code, out, errOut)
+	}
+}
+
+// block closes a directory to writes, until unblock opens it.
+func block(t *testing.T, path string) {
+	t.Helper()
+	if err := os.MkdirAll(path, 0o700); err != nil {
+		t.Fatalf("block: %v", err)
+	}
+	if err := os.Chmod(path, 0o500); err != nil {
+		t.Fatalf("block: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(path, 0o700) })
+}
+
+func unblock(t *testing.T, path string) {
+	t.Helper()
+	if err := os.Chmod(path, 0o700); err != nil {
+		t.Fatalf("unblock: %v", err)
 	}
 }

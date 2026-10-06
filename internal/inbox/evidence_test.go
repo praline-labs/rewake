@@ -47,8 +47,8 @@ func TestTheEvidenceOfEveryEffectIsReadBeforeTheFirst(t *testing.T) {
 			if copies := lab.copies(t, first.ID); copies != 0 {
 				t.Fatalf("the first report went out before the unknown %s was found: %d", cause, copies)
 			}
-			if _, err := os.Stat(stopPath(lab.dir, "api")); err != nil {
-				t.Fatalf("the stop was not recorded: %v", err)
+			if len(stopsOnRecord(t, lab.dir, "api")) == 0 {
+				t.Fatal("the stop was not recorded")
 			}
 			if MailboxStopped(lab.dir, "api") == nil {
 				t.Fatalf("a later call went on past the unknown %s", cause)

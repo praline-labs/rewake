@@ -47,7 +47,7 @@ func (s *Server) prepareDelivery(ctx context.Context, message *Message) (read, a
 	}
 	refuse := func(cause error) error {
 		if IsReport(*message) {
-			if err := s.lock(func() error {
+			if err := s.lockOrAlone(s.lockCtx(), func() error {
 				if !s.owned() {
 					return ErrThreadUnavailable
 				}
@@ -64,7 +64,7 @@ func (s *Server) prepareDelivery(ctx context.Context, message *Message) (read, a
 		}
 		return fmt.Errorf("%w: %v", ErrThreadUnavailable, cause)
 	}
-	if err = s.lock(check); err != nil || read || answered || expired {
+	if err = s.lockOrAlone(s.lockCtx(), check); err != nil || read || answered || expired {
 		return
 	}
 	deliveryCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
@@ -92,10 +92,11 @@ func (s *Server) prepareDelivery(ctx context.Context, message *Message) (read, a
 		}
 		return linkUnread(s.Dir, s.Name, message.ID)
 	}
-	lock := s.lock
+	lockCtx := s.lockCtx()
 	if reservation != nil {
-		lock = func(fn func() error) error { return s.lockWithContext(deliveryCtx, fn) }
+		lockCtx = deliveryCtx
 	}
+	lock := func(fn func() error) error { return s.lockOrAlone(lockCtx, fn) }
 	err = lock(func() error {
 		if err := check(); err != nil || read || answered || expired {
 			return err

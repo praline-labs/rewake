@@ -64,15 +64,12 @@ func TestTurnEndKeepsTheWaitWhenTheReportFails(t *testing.T) {
 	web := otherRun(t, dir, "web")
 	readFrom(t, dir, web)
 
+	// Closed to writes, not replaced by a file: a look through a file
+	// leaves the letter's presence unknown, which no later absence resolves.
 	mailbox := state.InboxPath(dir, "web")
-	_ = os.RemoveAll(mailbox)
-	if err := os.WriteFile(mailbox, nil, 0o600); err != nil {
-		t.Fatalf("block: %v", err)
-	}
+	block(t, mailbox)
 	run("turn-ended", turnPayload)
-	if err := os.Remove(mailbox); err != nil {
-		t.Fatalf("unblock: %v", err)
-	}
+	unblock(t, mailbox)
 
 	run("turn-ended", turnPayload)
 	if found := finishedFor(t, dir, "web"); len(found) != 1 {
@@ -146,14 +143,10 @@ func TestARetriedReadReportsOnce(t *testing.T) {
 	t.Setenv(state.SessionEnv, "api")
 	rawUnread(t, dir, "api", map[string]any{"from": "web", "fromEpoch": web.Epoch(), "toEpoch": epochOf(t, dir, "api"), "text": "execute once"})
 	blocked := state.DonePath(dir, "api")
-	if err := os.WriteFile(blocked, nil, 0o600); err != nil {
-		t.Fatalf("block: %v", err)
-	}
+	block(t, blocked)
 	run("inbox")
 	run("turn-ended", turnPayload)
-	if err := os.Remove(blocked); err != nil {
-		t.Fatalf("unblock: %v", err)
-	}
+	unblock(t, blocked)
 	run("inbox")
 	run("turn-ended", turnPayload)
 

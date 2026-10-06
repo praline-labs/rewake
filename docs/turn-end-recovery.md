@@ -155,13 +155,15 @@ adoption takes one over (8-reconcile). In order:
    kinds, then run the remaining steps below as a plan that writes nothing, so what each
    decides by is read first ([mailbox-records.md](mailbox-records.md#the-plan-and-the-seam)).
    One that cannot be read stops the mailbox (8-stop). The same plan gates every other
-   call that would change the mailbox, and the stop is recorded, so a stop found late
-   lets no effect through.
+   call that would change the mailbox, and each cause is recorded as an occurrence of
+   the stop, so a stop found late lets no effect through.
 2. Complete every unfinished journal in turn. Each report the journal has not
    settled yet is established from the evidence above and settled: published when its
    recipient's run is the one it was addressed to, recorded moot when that run has ended
    or was replaced, since it can reach nobody. The journal is saved after each report,
-   so an earlier report may be out before a later one is found moot.
+   so an earlier report may be out before a later one is found moot. A report an open
+   occurrence of the stop is about is neither: it stays, its journal unfinished, since
+   a run that ended says nothing of whether the report landed.
    The recipient's run, the report's evidence and its writes are read and made in one
    section of the recipient's mailbox lock, which the barrier waits for, bounded, while
    it holds its own; a report to the sender's own name is published inside the lock the
@@ -187,14 +189,13 @@ A stopped mailbox (8-stop) keeps every record. Its session reads, reports and cl
 nothing, and adoption takes nothing over: each of its hooks and calls that would change
 the mailbox answers the exact cause instead, and a hook exits so the harness goes on,
 never blocking a stop. Letters from others still arrive and wait unread, since none
-decides an effect, and recovery writes its own record of the stop. The stop names the
-path that could not be read or parsed; it is kept on record, and goes as
-[mailbox-records.md](mailbox-records.md#the-stop-on-record) says. Today a stop the
-reading found lifts once a later reading finds its cause gone, even when the cause went
-by being removed rather than by its evidence returning; a stop only an effect met holds
-until a barrier has run every effect through. Main is not told of a stop, and a stop
-resolved only by returning evidence is not built yet: both are gaps of E8 that S3 of
-stage 3 closes ([rules/effects.md](rules/effects.md)).
+decides an effect, and recovery writes its own records of the stop. The stop is one
+occurrence per cause, each naming the path that could not be read or parsed and the
+operation it is about, and each is resolved only by evidence returning, never by its
+path being removed ([mailbox-records.md](mailbox-records.md#the-stop-on-record)): a
+cause the reading found once a plan reads its paths again and decides its operation,
+one only an effect met once its journal is completed. Main is told of each occurrence
+once, and the mailbox's sweeps remove nothing an open occurrence names.
 
 ## Every record and state
 

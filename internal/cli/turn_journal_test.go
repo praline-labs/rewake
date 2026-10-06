@@ -109,7 +109,10 @@ func TestAnUnpublishedReportIsCompletedByTheNextTurnEnd(t *testing.T) {
 				t.Fatal(err)
 			}
 			previous := beforeReports
-			beforeReports = func() { _ = os.Chmod(mailbox, 0) }
+			// Closed to writes: closed to reading, the look at the letter
+			// would leave its presence unknown, which no later absence
+			// resolves.
+			beforeReports = func() { _ = os.Chmod(mailbox, 0o500) }
 			t.Cleanup(func() { beforeReports = previous; _ = os.Chmod(mailbox, 0o700) })
 			failed := completeTurn(dir, self, turnResult{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "the first is done"}, "")
 			beforeReports = previous
@@ -364,27 +367,27 @@ func boundaryNow(t *testing.T, dir string, self registry.Session) *inbox.ReadBou
 }
 
 // blockMailbox makes the next turn end fail to write into name's mailbox,
-// after its journal is on record: a file stands where the mailbox was.
+// after its journal is on record: the mailbox is closed to writes.
 func blockMailbox(t *testing.T, dir, name string) {
 	t.Helper()
 	mailbox := state.InboxPath(dir, name)
-	previous := beforeReports
-	beforeReports = func() {
-		_ = os.Rename(mailbox, mailbox+".away")
-		_ = os.WriteFile(mailbox, nil, 0o600)
+	if err := state.EnsureSubdir(mailbox); err != nil {
+		t.Fatal(err)
 	}
-	t.Cleanup(func() { beforeReports = previous })
+	previous := beforeReports
+	// Closed to writes, not replaced or closed to reading: a look that
+	// cannot see whether a letter is there leaves its presence unknown, and
+	// the stop that records it is not resolved by the letter being absent
+	// once the mailbox comes back (docs/mailbox-records.md#the-stop-on-record).
+	beforeReports = func() { _ = os.Chmod(mailbox, 0o500) }
+	t.Cleanup(func() { beforeReports = previous; _ = os.Chmod(mailbox, 0o700) })
 }
 
 // unblockMailbox puts name's mailbox back.
 func unblockMailbox(t *testing.T, dir, name string) {
 	t.Helper()
-	mailbox := state.InboxPath(dir, name)
 	beforeReports = func() {}
-	if err := os.Remove(mailbox); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Rename(mailbox+".away", mailbox); err != nil && !os.IsNotExist(err) {
+	if err := os.Chmod(state.InboxPath(dir, name), 0o700); err != nil {
 		t.Fatal(err)
 	}
 }

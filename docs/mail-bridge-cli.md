@@ -164,6 +164,15 @@ kept answer), and the owed and retained sets the sweep keeps by. The fourth acce
 sender's wait could not read, a wait record left uncleared after a report, and a wait
 record whose numbers did not parse. Each is described below.
 
+The readers that only inform fold an unknown into their most cautious answer rather than
+stop (stage 3, S3). `rewake inbox --awaited` takes a recipient whose session record
+cannot be read for its live run, which may still report: its task stays owed, never "no
+report coming", which would tell the sender to send it again. `rewake inbox --owed`
+reads a grant journal it cannot read as a grant not ended, shown with the caveat a
+counted grant always carries. `rewake list` shows a session whose record cannot be read
+as a row whose state is unknown, in the text and in the `unknown` field of `--json`; its
+exit is the list's usual one, and it prunes nothing it could not read.
+
 Each caller decides what an unknown stops, and it always stops the effect: a read, an
 acknowledgment, a withdrawal, a mark, an announcement, a status written over one that
 could not be read, a removal by the sweep, the adoption of an earlier run's waits. The
@@ -363,6 +372,9 @@ Once-marks of runs other than the live one go at every sweep, which retires them
 any letter, only under the mailbox lock and only while its own run is the name's live
 run, read under that lock; a sweep that cannot take the lock, or a server of a run that
 has ended, retires nothing ([stage3-publication.md](v2/stage3-publication.md#the-contract)).
+No sweep of a mailbox removes a path an open occurrence of its stop names, and none
+removes anything while the stop cannot be read (`inbox/stop_keep.go`,
+[turn-end-recovery.md](turn-end-recovery.md)).
 
 ## Left to the next stages
 

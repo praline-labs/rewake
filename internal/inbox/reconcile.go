@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/state"
@@ -16,87 +17,144 @@ import (
 // (docs/turn-end-recovery.md#reconciliation). The caller holds the mailbox
 // lock. It plans first: it reads every record, then runs every effect left to
 // make read-only (plan), so whatever an effect will decide by is read before
-// the first one, and changes nothing while one of them is unknown. The stop
-// found is recorded (stop.go); a plan that finds nothing lifts one the reading
-// found, and one an effect met is lifted only once every effect has run
-// through. Then the same code runs for real: it completes every unfinished
-// journal, whichever run wrote it: an ended run's reports are out, and its
-// waits may be taken over by the next run, which must not report on them
-// again. An error stops whatever the caller was about to change: a record
-// that could not be read, which a later look may settle.
+// the first one, and changes nothing while one of them is unknown. Every
+// cause found is an occurrence of a stop, and only evidence resolves one
+// (stop.go): the plan resolves those it found once it decides their
+// operation, and the barrier those an effect met once it has run every
+// effect through. Then the same code runs for real: it completes every
+// unfinished journal, whichever run wrote it: an ended run's reports are out,
+// and its waits may be taken over by the next run, which must not report on
+// them again. An error stops whatever the caller was about to change.
 func Reconcile(ctx context.Context, dir, name string) error {
-	recorded, err := recordedStop(dir, name)
+	open, err := stopState(dir, name)
 	if err != nil {
 		return err
 	}
-	// A stop an effect met stands until that effect has run through; a plan
-	// that finds nothing proves only that the reading's causes left.
-	effect := recorded != nil && recorded.Effect
-	records, err := plan(dir, name)
-	if err != nil && !isStopped(err) {
-		return keepStop(dir, name, err)
-	}
-	if recorded != nil && !effect {
-		if err := liftStop(dir, name); err != nil {
-			return err
-		}
+	look := lookAtStop(dir, name, open)
+	if look.holdsEffects() {
+		return look.answer()
 	}
 	afterReading()
-	if err := live(dir).reconcileRecords(ctx, name, records); err != nil {
-		// An unknown an effect met is the effect's stop before anything else
-		// is looked at, recorded at once so that a crash cannot lose it. The
-		// plan after it may stop on some cause, which has not shown that cause
-		// to be the effect's, so it goes beside the effect's, never in its
-		// place; and the stop is recorded again with all this call knows, since
-		// the first record may not have been written. The answer names both
-		// causes, as the record does: when neither write went through, it is
-		// the one place the effect's cause is left. A plain failure the plan
-		// explains becomes the plan's stop.
-		var met string
-		var early error
-		var unknown *UnknownRecordError
-		if errors.As(err, &unknown) {
-			met = err.Error()
-			early = recordStop(dir, name, err, met)
-		}
-		afterEffect()
-		cause := err
-		if _, again := plan(dir, name); again != nil && !isStopped(again) {
-			cause = again
-		} else if met == "" {
-			return err
-		}
-		answer := cause
-		if met != "" && cause != err {
-			answer = errors.Join(cause, fmt.Errorf("before it, an effect met: %w", err))
-		}
-		if final := recordStop(dir, name, cause, met); final != nil {
-			return errors.Join(answer, early, final)
-		}
-		return answer
+	w := live(dir)
+	w.held = heldReports(look.open)
+	if err := w.reconcileRecords(ctx, name, look.records); err != nil {
+		return failedEffect(dir, name, err)
 	}
-	if effect {
-		return liftStop(dir, name)
+	return ranThrough(dir, name, look)
+}
+
+// failedEffect records the stop of an effect that failed. An unknown an
+// effect met is the effect's stop before anything else is looked at, recorded
+// at once so that a crash cannot lose it. The plan after it may find a cause,
+// which has not shown that cause to be the effect's, so it is an occurrence
+// beside the effect's, never in its place; and an occurrence that could not
+// be written is tried once more. The answer names both causes and every
+// write that failed: when none went through, it is the one place the
+// effect's cause is left. A plain failure the plan explains becomes the
+// plan's stop; one it does not is answered as it is, and stops nothing.
+func failedEffect(dir, name string, err error) error {
+	w := live(dir)
+	var unknown *UnknownRecordError
+	met := errors.As(err, &unknown)
+	var unwritten []stopCause
+	var failed []error
+	if met {
+		open, _ := w.stopState(name)
+		for _, cause := range causesOf(dir, err, causeEffect) {
+			if cause.Kind != causeEffect || slices.ContainsFunc(open, func(stop openStop) bool { return stop.key == cause.key() }) {
+				continue
+			}
+			if _, early := w.recordOccurrence(name, cause); early != nil {
+				failed = append(failed, early)
+				unwritten = append(unwritten, cause)
+			}
+		}
 	}
-	return nil
+	afterEffect()
+	open, stateErr := w.stopState(name)
+	if stateErr != nil {
+		return errors.Join(err, stateErr)
+	}
+	after := lookAtStop(dir, name, open)
+	if after.found == nil && !met {
+		return err
+	}
+	for _, cause := range unwritten {
+		if _, final := w.recordOccurrence(name, cause); final != nil {
+			failed = append(failed, final)
+		}
+	}
+	answer := err
+	switch {
+	case after.found != nil && met:
+		answer = errors.Join(after.found, fmt.Errorf("before it, an effect met: %w", err))
+	case after.found != nil:
+		answer = after.found
+	}
+	return errors.Join(answer, errors.Join(after.failed...), errors.Join(failed...))
+}
+
+// ranThrough resolves the occurrences an effect met, once the barrier has run
+// every effect through: the journal each is about is completed, which is
+// evidence of what its operation did. One whose journal is neither completed
+// now nor on record as completed stays open.
+func ranThrough(dir, name string, look stopLook) error {
+	w := live(dir)
+	var left []openStop
+	var failed []error
+	for _, stop := range look.open {
+		journal, _, _ := strings.Cut(stop.record.Op, "/")
+		evidence := w.completedOf(name, stop)
+		if journal != "" && slices.Contains(look.records.journals, journal) {
+			evidence = fmt.Sprintf("the barrier ran the turn journal %s through to its completion", journal)
+		}
+		if evidence == "" {
+			left = append(left, stop)
+			continue
+		}
+		if err := w.resolveStop(name, stop, []string{evidence}); err != nil {
+			failed = append(failed, err)
+			left = append(left, stop)
+		}
+	}
+	return errors.Join(recordedStopError(dir, name, left), errors.Join(failed...))
+}
+
+// completedOf is the evidence that the journal an occurrence is about is
+// completed, empty when it is not: an operation done is decided, whatever its
+// effects have since removed.
+func (w world) completedOf(name string, stop openStop) string {
+	journal, _, _ := strings.Cut(stop.record.Op, "/")
+	if journal == "" {
+		return ""
+	}
+	done := filepath.Join(JournalPath(w.dir, name), journal+doneSuffix)
+	if _, err := w.stat(done); err != nil {
+		return ""
+	}
+	return fmt.Sprintf("the turn journal %s is completed: %s", journal, done)
+}
+
+// planned is what a plan read and found.
+type planned struct {
+	records mailboxRecords
+	found   error
+	decided decidedOps
 }
 
 // plan runs the barrier's own code read-only: the reading of every record,
 // then every effect left to make, which read what they decide by and write
-// nothing (access.go). It answers what the reading found.
-func plan(dir, name string) (mailboxRecords, error) {
+// nothing (access.go). It answers what the reading found, every cause of it,
+// and the operations it ran through. A journal that fails does not hide the
+// next: each cause is an occurrence of its own.
+func plan(dir, name string, held map[string]openStop) planned {
 	w := planning(dir)
+	w.held, w.decided = held, decidedOps{}
 	records, err := w.inspectMailbox(name)
-	if err != nil {
-		return records, err
+	if err == nil {
+		err = w.reconcileRecords(context.Background(), name, records)
 	}
-	return records, w.reconcileRecords(context.Background(), name, records)
-}
-
-// isStopped says err is a stop on record, which keepStop answers as it is.
-func isStopped(err error) bool {
-	var stopped *RecordedStopError
-	return errors.As(err, &stopped)
+	return planned{records: records, found: err, decided: w.decided}
 }
 
 // afterReading runs between the barrier's plan and its first effect, and
@@ -104,33 +162,44 @@ func isStopped(err error) bool {
 // a record there, which only an effect then meets.
 var afterReading, afterEffect = func() {}, func() {}
 
+// reconcileRecords completes every unfinished journal, each named as the
+// operation its errors come from. The effects stop at the first that fails;
+// a plan goes on to the next and answers them all.
 func (w world) reconcileRecords(ctx context.Context, name string, records mailboxRecords) error {
+	var found []error
 	for _, id := range records.journals {
-		if err := w.finishJournal(ctx, name, id); err != nil {
+		err := inOp(id, w.finishJournal(ctx, name, id))
+		switch {
+		case err == nil:
+			w.decide(id)
+		case !w.plan:
 			return err
+		default:
+			found = append(found, err)
 		}
 	}
-	return nil
+	return errors.Join(found...)
+}
+
+// decide notes, in a plan, that it ran op through.
+func (w world) decide(op string) {
+	if w.decided != nil {
+		w.decided[op] = true
+	}
 }
 
 // MailboxStopped answers the stop a mailbox is in, nil when it is not stopped. A
 // call that would change the mailbox asks it first, and answers the stop
-// instead. A stop an effect met answers as recorded, since only the barrier
-// can meet it again; otherwise the barrier's own plan decides, and what it
-// finds is recorded in turn, or it lifts the stop on record (stop.go).
+// instead. It looks as the barrier does — the plan, its causes recorded, the
+// ones it decided resolved (stop.go) — but runs no effect, so an occurrence
+// only an effect met stays open until the barrier runs the effect through.
 func MailboxStopped(dir, name string) error {
-	recorded, err := recordedStop(dir, name)
+	open, err := stopState(dir, name)
 	if err != nil {
 		return err
 	}
-	if recorded != nil && recorded.Effect {
-		return recorded.err(name)
-	}
-	if _, planned := plan(dir, name); planned != nil && !isStopped(planned) {
-		return keepStop(dir, name, planned)
-	}
-	if recorded != nil {
-		return liftStop(dir, name)
+	if look := lookAtStop(dir, name, open); look.stopped() {
+		return look.answer()
 	}
 	return nil
 }

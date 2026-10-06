@@ -148,9 +148,24 @@ No wait for the lock is endless: a reader holds it while it prints, and its
 stdout can block for as long as nobody drains the pipe. The server waits while
 its session lives and gives its last writes two seconds; `turn-ended` waits
 five and leaves the rest owed; `inbox` waits ten and says the mailbox is busy.
-A lock nobody can take — its file cannot be opened — stops nobody but the
-readers, who say why: the server is then the only writer and carries on
-without it. Sweeping old mail happens under the lock too.
+A lock the server cannot take — its file cannot be opened — stops the readers,
+who say why, and not the server's statuses: it writes them without the lock, along
+with the links that make letters readable. That an open fails does not prove nobody
+holds the lock, since a descriptor opened before the file's mode changed keeps it, so
+nothing that moves or removes a letter runs without it: settling waits for a pass that
+holds the lock, and so does taking over an earlier run's waits. What a settling still
+owes is read from the mailbox, not remembered: a status that records an outcome beside a
+copy its outcome takes away. A waiting copy is found by every pass, one for an earlier
+session included; a late refusal whose readable copy is the only one left is found by
+its failed status beside a letter in `unread/` with no waiting copy, at a run's start and
+on every pass. Such a letter is settled once the lock can be taken, an open stop naming
+it is resolved, or its archive can be written, and a restart loses none of it; its
+sender is not told again. Only a refusal owes the archive: a letter held, delivered,
+made readable as a report, withdrawn or being read in parts stays in `unread/`, and a
+status that does not read decides nothing. The status a settling goes by is the one read
+under the lock that moves the letter: a withdrawal, a read or a claim that came while the
+lock was waited for decides, not what was read before it. Sweeping old mail happens under
+the lock too.
 
 ### Servicing process (the wrapper)
 

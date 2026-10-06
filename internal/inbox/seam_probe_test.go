@@ -7,6 +7,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -43,6 +44,9 @@ type seamProbe struct {
 	writes []seamWrite
 	broken *seamWrite
 	broke  bool
+	// occurrences are the ids of the occurrences this pass recorded: a write
+	// that names one — main's note of it — is the same write in another run.
+	occurrences []string
 }
 
 // seamWrite is one write through the seam: the n-th of its operation on its
@@ -53,6 +57,17 @@ type seamWrite struct {
 }
 
 func (w seamWrite) String() string { return fmt.Sprintf("%s %s (#%d)", w.op, w.rel, w.n) }
+
+// occurrenceName is a stop occurrence's record or one beside it, by the
+// occurrence's id.
+var occurrenceName = regexp.MustCompile(`^(inbox/[^/]+/` + stopsDir + `/[0-9a-f]+/)[0-9]{19}-[0-9a-f]{12}(.*)$`)
+
+// sameOccurrence names a write of a stop's records without the occurrence's
+// id, which is fresh in every run: the same write is found again in another
+// run of a scene by its key, which is not.
+func sameOccurrence(rel string) string {
+	return occurrenceName.ReplaceAllString(filepath.ToSlash(rel), "${1}<occurrence>${2}")
+}
 
 func newProbe(dir string, base fileAccess, fault *seamFault) *seamProbe {
 	return &seamProbe{base: base, dir: dir, fault: fault, reads: map[seamRead]bool{}}
@@ -68,6 +83,13 @@ func (p *seamProbe) wrote(op, path string) error {
 	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	if match := occurrenceName.FindStringSubmatch(filepath.ToSlash(rel)); match != nil && match[2] == "" {
+		p.occurrences = append(p.occurrences, strings.TrimPrefix(filepath.ToSlash(rel), match[1]))
+	}
+	rel = sameOccurrence(rel)
+	for _, id := range p.occurrences {
+		rel = strings.ReplaceAll(rel, id, "<occurrence>")
+	}
 	at := seamWrite{op: op, rel: rel, n: 1}
 	for _, earlier := range p.writes {
 		if earlier.op == op && earlier.rel == rel {
@@ -143,6 +165,13 @@ func (p *seamProbe) WriteFile(path string, raw []byte) error {
 		return err
 	}
 	return p.base.WriteFile(path, raw)
+}
+
+func (p *seamProbe) Publish(path string, raw []byte) error {
+	if err := p.wrote("publish", path); err != nil {
+		return err
+	}
+	return p.base.Publish(path, raw)
 }
 
 func (p *seamProbe) EnsureDir(path string) error {
@@ -222,6 +251,10 @@ func (r remapped) WriteFile(path string, raw []byte) error {
 	return osAccess{}.WriteFile(r.at(path), raw)
 }
 
+func (r remapped) Publish(path string, raw []byte) error {
+	return osAccess{}.Publish(r.at(path), raw)
+}
+
 func (r remapped) EnsureDir(path string) error { return osAccess{}.EnsureDir(r.at(path)) }
 
 func (r remapped) Remove(path string) error { return osAccess{}.Remove(r.at(path)) }
@@ -289,7 +322,9 @@ func fresh(t *testing.T, src, dst string) string {
 }
 
 // snapshot is every file of a state directory with its content, and every
-// directory, by path under it; the lock files the callers take are left out.
+// directory, by path under it; the lock files the callers take are left out,
+// and so is a stop: its records, and the letters that told main of it and
+// what holds them. A stop is compared by what the calls answer.
 func snapshot(t *testing.T, dir string) map[string]string {
 	t.Helper()
 	tree := map[string]string{}
@@ -311,6 +346,42 @@ func snapshot(t *testing.T, dir string) map[string]string {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	return withoutStops(tree)
+}
+
+func withoutStops(tree map[string]string) map[string]string {
+	var ids []string
+	for rel := range tree {
+		if match := occurrenceName.FindStringSubmatch(filepath.ToSlash(rel)); match != nil && match[2] == "" {
+			ids = append(ids, strings.TrimPrefix(filepath.ToSlash(rel), match[1]))
+		}
+	}
+	dropped := map[string]bool{}
+	for rel := range tree {
+		parts := strings.Split(filepath.ToSlash(rel), "/")
+		if len(parts) > 2 && parts[0] == "inbox" && parts[2] == stopsDir || slices.ContainsFunc(ids, func(id string) bool { return strings.Contains(rel, id) }) {
+			dropped[rel] = true
+		}
+	}
+	// A directory that held only what was left out was made for it.
+	for rel, content := range tree {
+		if content != "<directory>" || dropped[rel] {
+			continue
+		}
+		held, kept := false, false
+		for other := range tree {
+			if strings.HasPrefix(other, rel+string(filepath.Separator)) && tree[other] != "<directory>" {
+				held = held || dropped[other]
+				kept = kept || !dropped[other]
+			}
+		}
+		if held && !kept {
+			dropped[rel] = true
+		}
+	}
+	for rel := range dropped {
+		delete(tree, rel)
 	}
 	return tree
 }
