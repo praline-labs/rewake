@@ -37,17 +37,29 @@ var ErrTurnEnded = errors.New("the call's turn ended before its read was acknowl
 const ackBudget = 2 * time.Second
 
 // AcknowledgeRead records that the tool call named in the evidence reached the
-// model whole, and marks read each letter of the read whose parts are now all
-// acknowledged. The evidence must carry the very text the call recorded, by
-// digest, before printing it. It meets the call's turn end under the mailbox
-// lock: an end on record at or after the call, or one gate noted, and nothing
-// is written, the receipt included; otherwise gate holds it as writing until
-// it leaves, which it does before releasing the lock (rules 7 and 8). It is
-// idempotent: an acknowledgment seen twice changes nothing the second time,
-// and a letter is marked once. A nil gate stands for a process that captures
-// no ends.
+// model whole: acknowledgeRead, given the wrapper's observation in the core's
+// terms. Whether the result is whole is decided first, as before anything is
+// read, and the digest of its text is only compared once the record is.
 func AcknowledgeRead(dir, name, epoch, token string, evidence bridge.Exposure, gate bridge.EndGate) error {
-	if !evidence.Whole() {
+	read := inbox.ReadEvidence{CallID: evidence.CallID, Whole: evidence.Whole()}
+	if evidence.Answer != nil {
+		read.AnswerDigest = bridge.AnswerDigest(evidence.Answer)
+	}
+	return acknowledgeRead(dir, name, epoch, token, read, gate)
+}
+
+// acknowledgeRead records that the tool call named in the evidence reached
+// the model whole, and marks read each letter of the read whose parts are now
+// all acknowledged. The evidence must carry the very text the call recorded,
+// by digest, before printing it. It meets the call's turn end under the
+// mailbox lock: an end on record at or after the call, or one gate noted, and
+// nothing is written, the receipt included; otherwise gate holds it as
+// writing until it leaves, which it does before releasing the lock (rules 7
+// and 8). It is idempotent: an acknowledgment seen twice changes nothing the
+// second time, and a letter is marked once. A nil gate stands for a process
+// that captures no ends.
+func acknowledgeRead(dir, name, epoch, token string, evidence inbox.ReadEvidence, gate inbox.EndGate) error {
+	if !evidence.Whole {
 		return ErrNotWhole
 	}
 	session, err := registry.LookupReadOnly(dir, name)
@@ -104,7 +116,7 @@ func AcknowledgeRead(dir, name, epoch, token string, evidence bridge.Exposure, g
 		// they ended before the lock goes.
 		defer leave()
 		acknowledge(record.Read, carried)
-		if err := markWhole(readSite{dir: dir, self: session, epoch: epoch}, record.Read, reports); err != nil {
+		if err := markWhole(dir, session, epoch, record.Read, reports); err != nil {
 			_ = receipt.Save(dir, name, record)
 			return err
 		}
@@ -123,11 +135,11 @@ func AcknowledgeRead(dir, name, epoch, token string, evidence bridge.Exposure, g
 // the parts it carried, and the call's time: every entry of the call names the
 // digest of exactly the text in the result. An entry with no digest was
 // recorded by a build that kept none, and proves nothing.
-func answeredBy(batch *receipt.ReadBatch, evidence bridge.Exposure) (int64, bool) {
-	if evidence.Answer == nil {
+func answeredBy(batch *receipt.ReadBatch, evidence inbox.ReadEvidence) (int64, bool) {
+	if evidence.AnswerDigest == "" {
 		return 0, false
 	}
-	digest := bridge.AnswerDigest(evidence.Answer)
+	digest := evidence.AnswerDigest
 	var calledBoot int64
 	found := false
 	for _, letter := range batch.Letters {
@@ -173,7 +185,7 @@ func settleLetters(site readSite, record *receipt.Record, carried func(letter, p
 		if err := inbox.MailboxStopped(site.dir, site.self.Name); err != nil {
 			return err
 		}
-		return markWhole(site, record.Read, reports)
+		return markWhole(site.dir, site.self, site.epoch, record.Read, reports)
 	})
 	if saveErr := receipt.Save(site.dir, site.self.Name, *record); err == nil {
 		err = saveErr
@@ -184,15 +196,15 @@ func settleLetters(site readSite, record *receipt.Record, carried func(letter, p
 	return nil
 }
 
-// markWhole marks read each letter whose parts are all acknowledged. The
-// caller holds the mailbox lock.
-func markWhole(site readSite, batch *receipt.ReadBatch, reports bool) error {
+// markWhole marks read each letter whose parts are all acknowledged, in the
+// mailbox of self's run epoch. The caller holds the mailbox lock.
+func markWhole(dir string, self registry.Session, epoch string, batch *receipt.ReadBatch, reports bool) error {
 	for index := range batch.Letters {
 		letter := &batch.Letters[index]
 		if letter.Read || !letter.Complete() {
 			continue
 		}
-		if !inbox.StillUnread(site.dir, site.self.Name, letter.ID) {
+		if !inbox.StillUnread(dir, self.Name, letter.ID) {
 			// Read already, through another call or the shell: a letter
 			// shown in part leaves unread/ only so. Marking the stored copy
 			// again would owe its report a second time once the first
@@ -204,7 +216,7 @@ func markWhole(site readSite, batch *receipt.ReadBatch, reports bool) error {
 		if err := json.Unmarshal(letter.Message, &message); err != nil {
 			return fmt.Errorf("the read's copy of %s is not readable: %w", letter.ID, err)
 		}
-		if err := inbox.MarkRead(site.dir, site.self.Name, site.epoch, message, reports); err != nil {
+		if err := inbox.MarkRead(dir, self.Name, epoch, message, reports); err != nil {
 			return err
 		}
 		letter.Read = true
