@@ -2,12 +2,8 @@ package workflow
 
 import (
 	"fmt"
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -84,8 +80,9 @@ func buildValue(pkg, name string, value time.Duration) string {
 }
 
 // The linker ignores -X for a variable that does not exist, silently: a knob
-// renamed in the product would leave the suite running at the real length with
-// nothing to say so. So each one is looked up in its package's source.
+// renamed in the product, or moved to a file the suite's build leaves out, would
+// leave the suite running at the real length with nothing to say so. So each one
+// is looked up in the package the suite's binary compiles.
 func TestSuiteBuildValuesNameRealVariables(t *testing.T) {
 	root, err := moduleRoot()
 	if err != nil {
@@ -95,55 +92,22 @@ func TestSuiteBuildValuesNameRealVariables(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	build, err := loadSuiteBuild(root)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, flag := range strings.Fields(flags[1]) {
 		if flag == "-X" {
 			continue
 		}
 		target, _, _ := strings.Cut(flag, "=")
 		dot := strings.LastIndex(target, ".")
-		pkg := strings.TrimPrefix(target[:dot], "github.com/praline-labs/rewake/")
-		name := target[dot+1:]
-		found, err := declaresString(filepath.Join(root, pkg), name)
+		why, err := build.settable(target[:dot], target[dot+1:])
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !found {
-			t.Errorf("-X %s names no string variable of %s: the build would ignore it", flag, pkg)
+		if why != "" {
+			t.Errorf("-X %s: %s %s, so the build would leave it unset", flag, target, why)
 		}
 	}
-}
-
-// declaresString reports whether a non-test file of dir declares name as an
-// uninitialized string variable, the only kind -X sets.
-func declaresString(dir, name string) (bool, error) {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return false, err
-	}
-	for _, entry := range entries {
-		if !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
-			continue
-		}
-		file, err := parser.ParseFile(token.NewFileSet(), filepath.Join(dir, entry.Name()), nil, 0)
-		if err != nil {
-			return false, err
-		}
-		for _, decl := range file.Decls {
-			gen, ok := decl.(*ast.GenDecl)
-			if !ok || gen.Tok != token.VAR {
-				continue
-			}
-			for _, spec := range gen.Specs {
-				value := spec.(*ast.ValueSpec)
-				kind, ok := value.Type.(*ast.Ident)
-				if !ok || kind.Name != "string" || len(value.Values) > 0 {
-					continue
-				}
-				if slices.ContainsFunc(value.Names, func(ident *ast.Ident) bool { return ident.Name == name }) {
-					return true, nil
-				}
-			}
-		}
-	}
-	return false, nil
 }

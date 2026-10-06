@@ -7,7 +7,6 @@
 package docs
 
 import (
-	"bufio"
 	"fmt"
 	"io/fs"
 	"os"
@@ -75,8 +74,20 @@ func TestEveryDocumentIsOnTheMap(t *testing.T) {
 // TestEveryLinkResolves requires every relative link in every document to
 // name a file that exists and, when it carries an anchor, a heading that file
 // has. A map that points at a renamed document, or at a section that was
-// retitled, teaches the wrong place with confidence.
+// retitled, teaches the wrong place with confidence. A link of an archived
+// document or a record into what moved resolves by the archive's table
+// (map_archive_test.go).
 func TestEveryLinkResolves(t *testing.T) {
+	for _, problem := range linkProblems(t) {
+		t.Error(problem)
+	}
+}
+
+// linkProblems walks the working directory, so a case can run it on a
+// synthetic tree.
+func linkProblems(t *testing.T) []string {
+	t.Helper()
+	var problems []string
 	anchors := map[string][]string{}
 	err := filepath.WalkDir(".", func(path string, entry fs.DirEntry, err error) error {
 		if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".md") {
@@ -84,7 +95,7 @@ func TestEveryLinkResolves(t *testing.T) {
 		}
 		for _, target := range links(t, path) {
 			if _, statErr := os.Stat(target.file); statErr != nil {
-				t.Errorf("docs/%s links %s, which does not exist: correct the link or the file name", path, target.file)
+				problems = append(problems, fmt.Sprintf("docs/%s links %s, which does not exist: correct the link or the file name", path, target.file))
 				continue
 			}
 			if target.anchor == "" || !strings.HasSuffix(target.file, ".md") {
@@ -94,7 +105,7 @@ func TestEveryLinkResolves(t *testing.T) {
 				anchors[target.file] = headings(t, target.file)
 			}
 			if !slices.Contains(anchors[target.file], target.anchor) {
-				t.Errorf("docs/%s links %s#%s, and %s has no heading with that anchor: correct the anchor to the heading's current title", path, target.file, target.anchor, target.file)
+				problems = append(problems, fmt.Sprintf("docs/%s links %s#%s, and %s has no heading with that anchor: correct the anchor to the heading's current title", path, target.file, target.anchor, target.file))
 			}
 		}
 		return nil
@@ -102,6 +113,7 @@ func TestEveryLinkResolves(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	return problems
 }
 
 type target struct{ file, anchor string }
@@ -122,8 +134,16 @@ func links(t *testing.T, document string) []target {
 	if err != nil {
 		t.Fatalf("docs/%s is missing: the map of the documentation is docs/%s, see AGENTS.md", document, mapFile)
 	}
+	table, err := archiveTable()
+	if err != nil {
+		t.Fatal(err)
+	}
 	var found []target
-	for _, match := range link.FindAllStringSubmatch(withoutCode(string(text)), -1) {
+	prose, err := withoutCode(string(text))
+	if err != nil {
+		t.Fatalf("docs/%s: %v", document, err)
+	}
+	for _, match := range link.FindAllStringSubmatch(prose, -1) {
 		file, anchor := match[1], match[2]
 		if strings.Contains(file, "://") || strings.HasPrefix(file, "mailto:") {
 			continue
@@ -131,7 +151,7 @@ func links(t *testing.T, document string) []target {
 		if file == "" {
 			file = document
 		} else {
-			file = filepath.Clean(filepath.Join(filepath.Dir(document), file))
+			file = resolve(document, file, table)
 		}
 		found = append(found, target{file: file, anchor: anchor})
 	}
@@ -141,9 +161,9 @@ func links(t *testing.T, document string) []target {
 // withoutCode blanks what a reader never sees as a link: fenced code blocks,
 // inline code and HTML comments. A document linked only from one of those is
 // on no map a reader can follow.
-func withoutCode(text string) string {
-	text = htmlComment.ReplaceAllStringFunc(text, blankKeepingLines)
-	return inlineCode.ReplaceAllString(withoutFences(text), "")
+func withoutCode(text string) (string, error) {
+	text, err := withoutFences(htmlComment.ReplaceAllStringFunc(text, blankKeepingLines))
+	return inlineCode.ReplaceAllString(text, ""), err
 }
 
 var (
@@ -160,22 +180,24 @@ func blankKeepingLines(match string) string {
 	return strings.Repeat("\n", strings.Count(match, "\n"))
 }
 
-func withoutFences(text string) string {
-	var kept strings.Builder
-	fenced := false
-	for _, line := range strings.SplitAfter(text, "\n") {
-		if strings.HasPrefix(strings.TrimSpace(line), "```") {
-			fenced = !fenced
-			kept.WriteString("\n")
-			continue
-		}
-		if fenced {
-			kept.WriteString("\n")
-			continue
-		}
-		kept.WriteString(line)
+// withoutFences blanks fenced blocks as the Markdown reader of the rules
+// checks marks them (markdown_test.go), so a link and a rule are code or prose
+// by one rule.
+func withoutFences(text string) (string, error) {
+	lines, err := mdLines(text)
+	if err != nil {
+		return "", err
 	}
-	return kept.String()
+	var kept strings.Builder
+	for i, line := range lines {
+		if i > 0 {
+			kept.WriteString("\n")
+		}
+		if line.kind == proseLine {
+			kept.WriteString(line.text)
+		}
+	}
+	return kept.String(), nil
 }
 
 // headings are the anchors a document's headings get, by the rule GitHub
@@ -183,25 +205,21 @@ func withoutFences(text string) string {
 // spaces turned into hyphens, and a repeated slug numbered -1, -2 and so on.
 func headings(t *testing.T, document string) []string {
 	t.Helper()
-	file, err := os.Open(document)
+	text, err := os.ReadFile(document)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = file.Close() }()
+	lines, err := mdLines(htmlComment.ReplaceAllStringFunc(string(text), blankKeepingLines))
+	if err != nil {
+		t.Fatalf("docs/%s: %v", document, err)
+	}
 	seen := map[string]int{}
 	var anchors []string
-	fenced := false
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(strings.TrimSpace(line), "```") {
-			fenced = !fenced
+	for _, line := range lines {
+		if line.kind != proseLine || !heading.MatchString(line.text) {
 			continue
 		}
-		if fenced || !heading.MatchString(line) {
-			continue
-		}
-		title := strings.TrimSpace(strings.TrimLeft(line, "#"))
+		title := strings.TrimSpace(strings.TrimLeft(line.text, "#"))
 		slug := slugOf(title)
 		if n := seen[slug]; n > 0 {
 			anchors = append(anchors, fmt.Sprintf("%s-%d", slug, n))
@@ -209,9 +227,6 @@ func headings(t *testing.T, document string) []string {
 			anchors = append(anchors, slug)
 		}
 		seen[slug]++
-	}
-	if err := scanner.Err(); err != nil {
-		t.Fatal(err)
 	}
 	return anchors
 }

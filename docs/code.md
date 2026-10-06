@@ -8,6 +8,7 @@ this file is what to open when looking for where something is in the tree. `go l
 
 ```
 cmd/rewake/                      entry point, top-level parsing
+internal/                        the layout test of 2.0: the import rule, harness names outside the adapters, no registry
 internal/cli/                    command table, parsing, overview, help, failures, printing
 internal/state/                  directory: checks, paths, atomic writes
 internal/buildtime/              durations a build may shorten through -ldflags, for the suite

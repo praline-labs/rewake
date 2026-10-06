@@ -45,6 +45,12 @@ everything else.
   is chosen under the room lock, why main is silent, and how a name is built from role,
   prefix and harness. Open it when a launch picks the wrong
   role or name.
+- [rules/README.md](rules/README.md) — the numbered rules of 2.0 in their full wording,
+  each naming the tests that hold it: the effects E1–E8, the turn outcomes O1–O2, every
+  tool transport T1–T11, the channel record C1–C8, what a launch adds L1–L3, and the
+  host's tests with the grant scheme; and how `docs/rules_test.go` checks that every named
+  test exists and runs. Open it before changing a rule's behaviour or the test that holds
+  it.
 - [code.md](code.md) — the source tree, package by package, with the harness interface
   every adapter implements. Open it to find where something lives, or before adding a
   package.

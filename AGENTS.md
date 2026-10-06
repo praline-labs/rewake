@@ -18,6 +18,8 @@ contradict the goal and be refused or redone. It is about two hundred lines, one
 3. `docs/design.md` — how it works: processes, state directory, interface. Two
    parts live next to it: `docs/launch.md` (launching a harness, signals) and
    `docs/delivery.md` (sending, reading, reports, the answer to a question).
+   The rules 2.0 keeps, each with the tests that hold it, are in `docs/rules/`: open the
+   group a change touches before changing how mail, tools, channels or launches behave.
 4. `docs/traps.md` — what behaves other than expected, in rewake and in the
    harnesses it lives with, by symptom.
 5. `docs/research.md` — facts about each harness, marked with where they were
@@ -33,7 +35,9 @@ purpose, with what it contains and when to open it. A change that adds, removes 
 renames a document, or changes what one is for, updates the map in the same commit.
 `docs/map_test.go` runs with the five checks and fails when a document, in `docs/` or
 any directory below it, is on no map, or when a link in `docs/` names a missing file or
-heading.
+heading. A document moved to `docs/archive-1.x/` keeps its bytes, checked against the
+hash table in that directory's index; the links of an archived document and of a record
+resolve through that table, every other document's links are rewritten.
 
 ## Keeping the documentation true
 
@@ -88,8 +92,8 @@ documentation is part of every change, not a task after it:
 
 ```bash
 gofumpt -l $(go list -f '{{.Dir}}' ./...)   # empty; the module, not the tree, see below
-go vet ./...
-staticcheck ./...
+go vet ./... && go vet -tags rewakefault ./...
+staticcheck ./... && staticcheck -tags rewakefault ./...
 golangci-lint run ./...         # config in .golangci.yml; golangci-lint fmt formats
 env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
   go test -race -shuffle=on ./...
@@ -102,6 +106,18 @@ Two forms differ from the obvious one. `gofumpt` walks the filesystem rather
 than the module: a plain `.` formats whatever Go file happens to lie under the
 working directory, which is not the same set as the project. The package list
 asks the module what belongs to it, and that is the answer this check wants.
+
+Production code also builds under a tag: `rewakefault` adds the fault seam of the state
+directory. Vet and staticcheck run once without it and once with it, so tagged code is
+compiled and analysed by the checks rather than only by the rig that builds it.
+
+The `go test` line carries two tests of the shape of the code and the documents.
+`internal/layout_test.go` holds the import rule of 2.0 over every build variant, with
+and without `-race`, keeps harness names inside the adapters and forbids a registry of
+adapters; its exception tables shrink as stage 3 moves packages. An entry records how many findings it excuses
+and which, so one added beside them fails, and an entry nothing matches fails.
+`docs/rules_test.go` requires every rule in `docs/rules/` to name tests that exist, that
+`go test` would take for tests, and that a `go test` of the five checks reaches and builds.
 
 And `go test` inherits this session's `REWAKE_*` variables unless they are
 cleared. Clear them: the risk is not a red run but a test writing into the
