@@ -8,6 +8,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 // holdTurn decides, under the mailbox lock, whether this turn end is held for
@@ -22,7 +23,10 @@ import (
 // Every failure here falls to publishing, which is the behavior without the
 // hold (docs/turn-outcomes.md); a record that cannot be read is such a
 // failure, and a kept answer that cannot be read is never written over.
-func holdTurn(dir string, self registry.Session, event inbox.TurnEnd, holdable bool, waiters []inbox.Waiter, marked bool) string {
+//
+// op is the end's operation: the kept answer records it with the reason, so
+// the same end confirmed again is answered from the record (endTurnContext).
+func holdTurn(dir string, self registry.Session, event inbox.TurnEnd, op string, holdable bool, waiters []inbox.Waiter, marked bool) string {
 	if !holdable || event.Failed || event.Stopped {
 		return ""
 	}
@@ -40,17 +44,23 @@ func holdTurn(dir string, self registry.Session, event inbox.TurnEnd, holdable b
 	if len(senders) == 0 || marked {
 		return ""
 	}
-	if inbox.KeepAnswer(dir, self.Name, self.Epoch(), event.Text) != nil {
+	reason := holdReason(line, senders)
+	if inbox.KeepAnswer(dir, self.Name, self.Epoch(), event.Text, op, reason) != nil {
 		return ""
 	}
-	return holdReason(line, senders)
+	return reason
 }
 
 // liveSenders names the waiters whose sessions still run the run that sent the
-// task: the ones a report would reach.
+// task: the ones a report would reach. A lookup that fails names nobody, and
+// the fault seam is asked first, so a test fails it like the check's other
+// reads.
 func liveSenders(dir string, waiters []inbox.Waiter) []string {
 	var names []string
 	for _, waiter := range waiters {
+		if state.AskRead(state.SessionPath(dir, waiter.Name)) != nil {
+			continue
+		}
 		peer, err := registry.Lookup(dir, waiter.Name)
 		if err == nil && peer.Epoch() == waiter.Epoch && !slices.Contains(names, peer.Name) {
 			names = append(names, peer.Name)

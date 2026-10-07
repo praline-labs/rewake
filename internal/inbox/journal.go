@@ -46,6 +46,11 @@ type TurnJournal struct {
 	// Kept is the version of the kept answer the reports carry; nil when they
 	// carry none.
 	Kept *string `json:",omitempty"`
+	// Held is the operation of the end whose kept answer this one takes: an
+	// end held earlier, which a retry may confirm again. It stays in every
+	// form the journal takes, done included, so that retry learns its end was
+	// published with its continuation (HeldEndTaken).
+	Held string `json:",omitempty"`
 	// Mark is the pending mark that made the end interim. Using it is no
 	// effect: it stays for its run's life.
 	Mark *Mark `json:",omitempty"`
@@ -124,6 +129,32 @@ func JournalRecorded(dir, name, id string) (bool, error) {
 	return false, nil
 }
 
+// HeldEndTaken says whether a journal of run epoch, open or done, took the kept
+// answer of the end held as op: that end was published with its continuation.
+// A journal that cannot be read may be that one, and is an error.
+func HeldEndTaken(dir, name, epoch, op string) (bool, error) {
+	entries, err := os.ReadDir(JournalPath(dir, name))
+	if errors.Is(err, os.ErrNotExist) || op == "" {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	for _, entry := range entries {
+		if entry.IsDir() || entry.Name()[0] == '.' {
+			continue
+		}
+		journal, err := readJournalFile(filepath.Join(JournalPath(dir, name), entry.Name()))
+		if err != nil {
+			return false, err
+		}
+		if journal.Epoch == epoch && journal.Held == op {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // finishJournal completes the operation recorded under id and marks it done;
 // an error leaves the rest for the next attempt. A journal done already, or
 // never written, needs nothing. Only the barrier runs it, after its plan
@@ -146,7 +177,7 @@ func (w world) finishJournal(ctx context.Context, name, id string) error {
 	}
 	// Done in place first: an end that dies before the rename leaves a journal
 	// that reads as done, not one whose operation would be run again.
-	if err := w.writeJournalFile(path, TurnJournal{Epoch: journal.Epoch, Op: journal.Op, Ended: journal.Ended, Done: true}); err != nil {
+	if err := w.writeJournalFile(path, TurnJournal{Epoch: journal.Epoch, Op: journal.Op, Ended: journal.Ended, Held: journal.Held, Done: true}); err != nil {
 		return err
 	}
 	return w.retireJournal(path)

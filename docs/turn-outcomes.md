@@ -171,6 +171,18 @@ the mark.
 - **Telemetry during a hold.** The Stop telemetry hook runs beside `rewake turn-ended` and
   cannot know of the hold, so `rewake list` shows the session idle while the model is
   asked again, until its next event. Delivery does not read that state.
+- **The neutral confirmation (stage 3, S5).** The same check runs for an adapter that can
+  hold an end open without a hook: it calls the completion handler's `Confirm` in place
+  of `Publish`, and `ConfirmCompletion` answers `""` when the end was published, or the
+  reason above when it was held; the adapter continues the turn with that reason and
+  confirms the next end again. Unlike the Stop hook's first call, such an end names its
+  event and may be retried, so it is refused without its event id and read boundary,
+  and a hold records the held end's operation and its reason in `kept.json` with the
+  answer. The same end confirmed again — its answer lost — gets the same reason, and
+  nothing is published or kept again; once a continuation took the kept answer, its
+  journal names the held end in every form it takes, and the held end confirmed again is
+  answered as published ([turn-end-recovery.md](turn-end-recovery.md#a-held-end-confirmed-again)).
+  No adapter calls it yet; the fixture adapter does from S5's second commit.
 
 ## Keyboard stops
 

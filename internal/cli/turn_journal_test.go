@@ -272,7 +272,7 @@ func failFirstClear(t *testing.T, kept string) (string, registry.Session, regist
 	dir, self, web := toolSession(t)
 	readKind(t, dir, web, inbox.Question)
 	if kept != "" {
-		if err := inbox.KeepAnswer(dir, "api", self.Epoch(), kept); err != nil {
+		if err := inbox.KeepAnswer(dir, "api", self.Epoch(), kept, "", ""); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -316,7 +316,7 @@ func TestALateRetryKeepsALaterAnswer(t *testing.T) {
 	if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "second", Text: "nothing more"}, ""); err != nil {
 		t.Fatal(err)
 	}
-	if err := inbox.KeepAnswer(dir, "api", self.Epoch(), "THE_LATER_ANSWER"); err != nil {
+	if err := inbox.KeepAnswer(dir, "api", self.Epoch(), "THE_LATER_ANSWER", "", ""); err != nil {
 		t.Fatal(err)
 	}
 	if err := completeTurn(dir, self, event, ""); err != nil {

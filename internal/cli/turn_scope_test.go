@@ -47,7 +47,7 @@ func TestARetryTakesOnlyTheAnswerItsFirstAttemptSaw(t *testing.T) {
 			t.Fatal(err)
 		}
 		fresh := readKind(t, dir, web, inbox.Question)
-		if err := inbox.KeepAnswer(dir, "api", self.Epoch(), "FRESH_HELD_ANSWER"); err != nil {
+		if err := inbox.KeepAnswer(dir, "api", self.Epoch(), "FRESH_HELD_ANSWER", "", ""); err != nil {
 			t.Fatal(err)
 		}
 		if err := completeTurn(dir, self, event, ""); err != nil {
@@ -61,7 +61,7 @@ func TestARetryTakesOnlyTheAnswerItsFirstAttemptSaw(t *testing.T) {
 	t.Run("seen", func(t *testing.T) {
 		dir, self, web := toolSession(t)
 		task := readKind(t, dir, web, inbox.Task)
-		if err := inbox.KeepAnswer(dir, "api", self.Epoch(), "HELD_BEFORE_THE_END"); err != nil {
+		if err := inbox.KeepAnswer(dir, "api", self.Epoch(), "HELD_BEFORE_THE_END", "", ""); err != nil {
 			t.Fatal(err)
 		}
 		readOnlyJournals(t, dir)

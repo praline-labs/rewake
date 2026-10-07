@@ -35,6 +35,11 @@ func startServing(ctx context.Context, request Request, session registry.Session
 			}
 			return nil
 		})
+		if request.OnConfirm != nil {
+			handler.Confirm = func(ctx context.Context, result harness.Completion) (string, error) {
+				return request.OnConfirm(ctx, reportSession, result)
+			}
+		}
 		if err := plan.Backend.Start(ctx, handler, func(note string) { _, _ = fmt.Fprintln(os.Stderr, "rewake: "+note) }); err != nil {
 			stop()
 			return func() {}, err

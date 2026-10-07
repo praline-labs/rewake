@@ -171,7 +171,7 @@ var mutantPendingUnconfirmed = mutation{
 var mutantConfirmAnswerDropped = mutation{
 	name:  "confirm-answer-dropped",
 	file:  "internal/cli/turn_reports.go",
-	edits: []edit{{"\t\t\tevent.Text = joinTurnText(held, event.Text)\n", "\t\t\tevent.Text = joinTurnText(\"\", event.Text)\n"}},
+	edits: []edit{{"\t\t\tevent.Text = joinTurnText(held.Text, event.Text)\n", "\t\t\tevent.Text = joinTurnText(\"\", event.Text)\n"}},
 }
 
 func TestAnUnconfirmedPendingFails(t *testing.T) {

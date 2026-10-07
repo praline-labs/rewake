@@ -44,6 +44,9 @@ type Request struct {
 	// Role is explicit when its ID is set; empty always uses general.
 	Role   role.Role
 	OnTurn func(context.Context, registry.Session, harness.Completion) error
+	// OnConfirm runs an end the adapter may hold open, beside OnTurn
+	// (harness.CompletionHandler.Confirm).
+	OnConfirm func(context.Context, registry.Session, harness.Completion) (string, error)
 	// MailTool serves the mail tool's endpoint; nil serves none.
 	MailTool *MailTool
 	// NoMailTool leaves the tool out of this launch (--no-mail-tool).

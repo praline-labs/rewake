@@ -51,15 +51,15 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 	// short, adds to it. A failure or a stop leads, as the preview, and the
 	// answer follows. One that cannot be read stops the end here: published
 	// without it, the report would lose the answer.
-	held, version, kept, err := inbox.KeptAnswerThrough(dir, self.Name, self.Epoch(), through)
+	held, kept, err := inbox.KeptAnswerThrough(dir, self.Name, self.Epoch(), through)
 	if err != nil {
 		return err
 	}
 	if kept {
 		if event.Failed || event.Stopped {
-			event.Text = joinTurnText(event.Text, held)
+			event.Text = joinTurnText(event.Text, held.Text)
 		} else {
-			event.Text = joinTurnText(held, event.Text)
+			event.Text = joinTurnText(held.Text, event.Text)
 		}
 	}
 	pending := false
@@ -96,8 +96,9 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 	}
 	if kept {
 		// Taken once published, and only this version of it: an answer kept
-		// after it is a later turn end's.
-		journal.Kept = &version
+		// after it is a later turn end's. The held end is named beside it, so
+		// that end confirmed again learns it was published with this one.
+		journal.Kept, journal.Held = &held.Version, held.Held
 	}
 	// Every end whose time is known writes one, done too: its Ended opens the
 	// next end's window (inbox.TurnWindowStart).

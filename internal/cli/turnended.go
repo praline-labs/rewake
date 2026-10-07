@@ -129,9 +129,22 @@ func endTurnContext(parent context.Context, dir string, self registry.Session, e
 		}
 		op := turnOp(self, event)
 		if event.ID != "" {
-			// A retry whose journal is on record: the barrier has completed it.
+			// An end on record is answered from the record, never run again: a
+			// journal of it, which the barrier has completed; a hold of it,
+			// answered with the same reason and nothing kept again; or a
+			// journal that took its kept answer, so it was published with its
+			// continuation. Only an end of another identity takes a kept
+			// answer.
 			recorded, err := inbox.JournalRecorded(dir, self.Name, op)
 			if err != nil || recorded {
+				return err
+			}
+			held, ok, err := inbox.HeldEnd(dir, self.Name, self.Epoch(), op)
+			if err != nil || ok {
+				reason = held
+				return err
+			}
+			if taken, err := inbox.HeldEndTaken(dir, self.Name, self.Epoch(), op); err != nil || taken {
 				return err
 			}
 		}
@@ -143,7 +156,7 @@ func endTurnContext(parent context.Context, dir string, self registry.Session, e
 		if err != nil {
 			return err
 		}
-		if reason = holdTurn(dir, self, event, holdable, waiters, mark != nil); reason != "" {
+		if reason = holdTurn(dir, self, event, op, holdable, waiters, mark != nil); reason != "" {
 			return nil
 		}
 		beforeReports()

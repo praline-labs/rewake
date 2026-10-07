@@ -26,11 +26,17 @@ import (
 // position, so an end with a read boundary takes the answer only when it was
 // kept at or below the boundary, and Version tells one kept answer from the
 // next, so the end that published one removes that one and never a later one.
+// Held names the operation of the end that was held and Reason what it was
+// answered, so the same end confirmed again — its answer lost — is answered
+// the same and never taken for its own continuation
+// (docs/turn-end-recovery.md#a-held-end-confirmed-again).
 type keptRecord struct {
 	Epoch   string `json:"epoch"`
 	Text    string `json:"text"`
 	Version string `json:"version,omitempty"`
 	Seq     uint64 `json:"seq,omitempty"`
+	Held    string `json:"held,omitempty"`
+	Reason  string `json:"reason,omitempty"`
 }
 
 func keptPath(dir, name string) string { return filepath.Join(pendingDir(dir, name), "kept.json") }
@@ -66,10 +72,11 @@ func (w world) readKept(name, epoch string) (keptRecord, bool, error) {
 }
 
 // KeepAnswer keeps the answer of a turn end that was held, at the next
-// position of the run's read clock. The caller holds the mailbox lock. A kept
-// answer that cannot be read is never written over: it may be one no end has
-// published yet.
-func KeepAnswer(dir, name, epoch, text string) error {
+// position of the run's read clock, with the held end's operation and the
+// reason it was answered, in one write. The caller holds the mailbox lock. A
+// kept answer that cannot be read is never written over: it may be one no end
+// has published yet.
+func KeepAnswer(dir, name, epoch, text, held, reason string) error {
 	if _, _, err := readKept(dir, name, epoch); err != nil {
 		return err
 	}
@@ -77,7 +84,7 @@ func KeepAnswer(dir, name, epoch, text string) error {
 		return err
 	}
 	return onReadClock(dir, name, epoch, func(position uint64) error {
-		raw, err := json.Marshal(keptRecord{Epoch: epoch, Text: text, Version: NewID(), Seq: position})
+		raw, err := json.Marshal(keptRecord{Epoch: epoch, Text: text, Version: NewID(), Seq: position, Held: held, Reason: reason})
 		if err != nil {
 			return err
 		}
@@ -91,21 +98,43 @@ func KeptAnswer(dir, name, epoch string) (string, bool, error) {
 	return record.Text, ok, err
 }
 
+// KeptTaken is the kept answer a turn end takes: its text, the version the
+// end's journal names to take it, and the operation of the end that was held.
+type KeptTaken struct {
+	Text, Version, Held string
+}
+
 // KeptAnswerThrough answers this run's kept answer that a turn end takes: for
 // an end with a read boundary, only one kept at or below through; for an end
 // heard once (through nil), whatever it finds, since nothing can be kept
-// between its reading and its journal, which share the lock. The version is
-// what the end's journal names to take it.
-func KeptAnswerThrough(dir, name, epoch string, through *uint64) (string, string, bool, error) {
+// between its reading and its journal, which share the lock.
+func KeptAnswerThrough(dir, name, epoch string, through *uint64) (KeptTaken, bool, error) {
 	record, ok, err := readKept(dir, name, epoch)
 	if err != nil || !ok {
-		return "", "", false, err
+		return KeptTaken{}, false, err
 	}
 	if through != nil && (record.Seq == 0 || record.Seq > *through) {
 		// Kept after the boundary was captured: a later end's.
-		return "", "", false, nil
+		return KeptTaken{}, false, nil
 	}
-	return record.Text, record.Version, true, nil
+	return KeptTaken{Text: record.Text, Version: record.Version, Held: record.Held}, true, nil
+}
+
+// HeldEnd answers, when op is the end this run's kept answer holds, the reason
+// it was answered — the answer to the same end confirmed again. The caller
+// holds the mailbox lock. A hold whose clock commit was lost to a crash
+// leaves its position above the clock's word; it is raised here, before the
+// answer, so the continuation's boundary takes the kept answer
+// (docs/turn-end-recovery.md#the-read-clock).
+func HeldEnd(dir, name, epoch, op string) (string, bool, error) {
+	record, ok, err := readKept(dir, name, epoch)
+	if err != nil || !ok || op == "" || record.Held != op {
+		return "", false, err
+	}
+	if err := raiseReadClock(dir, name, epoch, record.Seq); err != nil {
+		return "", false, err
+	}
+	return record.Reason, true, nil
 }
 
 // dropKeptVersion forgets the kept answer of run epoch once a turn end has

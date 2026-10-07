@@ -172,6 +172,23 @@ func onReadClock(dir, name, epoch string, write func(uint64) error) error {
 	return c.file.Sync()
 }
 
+// raiseReadClock commits a position a hold reserved and recorded, when a crash
+// before its commit left the clock's word below it. The caller holds the
+// mailbox lock. No position is allocated, and a word at or above seq stays as
+// it is, so no boundary captured for another end is widened.
+func raiseReadClock(dir, name, epoch string, seq uint64) error {
+	c, err := openReadClock(dir, name, epoch)
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+	if c.Snapshot().Through >= seq {
+		return nil
+	}
+	atomic.StoreUint64(c.word(), seq)
+	return c.file.Sync()
+}
+
 // ScopedWaiters resolves only still-owed messages committed before the captured
 // boundary. Later reads and recipient epochs cannot enter a delayed result.
 func ScopedWaiters(dir, name, epoch string, boundary *ReadBoundary) ([]Waiter, error) {

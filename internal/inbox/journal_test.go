@@ -85,17 +85,18 @@ func TestAJournalDoesNotRepublishASweptReport(t *testing.T) {
 // after it is a later turn end's.
 func TestAJournalTakesOnlyTheAnswerItCarried(t *testing.T) {
 	dir, epoch, report := journalLab(t)
-	if err := KeepAnswer(dir, "api", epoch, "the carried answer"); err != nil {
+	if err := KeepAnswer(dir, "api", epoch, "the carried answer", "", ""); err != nil {
 		t.Fatal(err)
 	}
-	_, version, _, err := KeptAnswerThrough(dir, "api", epoch, nil)
+	taken, _, err := KeptAnswerThrough(dir, "api", epoch, nil)
+	version := taken.Version
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := WriteJournal(dir, "api", "end", TurnJournal{Epoch: epoch, Reports: []Message{report}, Kept: &version}); err != nil {
 		t.Fatal(err)
 	}
-	if err := KeepAnswer(dir, "api", epoch, "a later answer"); err != nil {
+	if err := KeepAnswer(dir, "api", epoch, "a later answer", "", ""); err != nil {
 		t.Fatal(err)
 	}
 	if err := finishAll(t, dir); err != nil {

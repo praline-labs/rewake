@@ -60,7 +60,7 @@ func (k keptClock) high(t *testing.T) uint64 {
 }
 
 func (k keptClock) keep(text string) error {
-	return withLock(k.dir, "api", func() error { return KeepAnswer(k.dir, "api", k.epoch, text) })
+	return withLock(k.dir, "api", func() error { return KeepAnswer(k.dir, "api", k.epoch, text, "", "") })
 }
 
 func (k keptClock) read(id string) error {
@@ -93,11 +93,11 @@ func TestAHoldReservesItsPositionBeforeItCommits(t *testing.T) {
 	if err != nil || !ok || record.Seq != reserved || during.Through >= reserved {
 		t.Fatalf("kept at %d, reserved %d, the word %d while it was written: %v", record.Seq, reserved, during.Through, err)
 	}
-	if _, _, ok, err := KeptAnswerThrough(k.dir, "api", k.epoch, &during.Through); ok || err != nil {
+	if _, ok, err := KeptAnswerThrough(k.dir, "api", k.epoch, &during.Through); ok || err != nil {
 		t.Fatalf("a boundary captured while the hold wrote covers it: %v", err)
 	}
 	after := k.clock.Snapshot()
-	if _, _, ok, err := KeptAnswerThrough(k.dir, "api", k.epoch, &after.Through); !ok || err != nil {
+	if _, ok, err := KeptAnswerThrough(k.dir, "api", k.epoch, &after.Through); !ok || err != nil {
 		t.Fatalf("a boundary captured after the hold does not cover it: %v", err)
 	}
 }

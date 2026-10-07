@@ -75,6 +75,14 @@ type Completion struct {
 type CompletionHandler struct {
 	Capture func() *inbox.ReadBoundary
 	Publish func(context.Context, Completion) error
+	// Confirm runs an end that the adapter can hold open, in place of
+	// Publish (docs/v2/design-api.md#turnboundary): it answers "" when the
+	// end was published, or the reason to continue the turn with when it was
+	// held and its answer kept. The adapter continues the turn with that
+	// reason and confirms its next end again. The end names its event, and
+	// the same end confirmed again gets the same answer. Nil where the
+	// wrapper was given none.
+	Confirm func(context.Context, Completion) (string, error)
 	// EndCapture captures the boundary of a turn's end through the gate
 	// the mail tool's acknowledgments enter
 	// (docs/mail-bridge-turns.md#a-turns-end-meets-its-calls), with the

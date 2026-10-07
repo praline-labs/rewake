@@ -175,7 +175,9 @@ nothing lifts a stop without returning evidence.
   - Its scope is fixed once, before its first effect, from evidence the event carries.
     The read boundary is a position on the run's read clock, which numbers every read
     and every hold; a hold reserves its position, keeps the answer, then commits the
-    clock, and a position is never issued twice.
+    clock, and a position is never issued twice. A held end confirmed again after a
+    crash before the commit raises the clock to the position its kept answer records,
+    allocating none, so its continuation's boundary takes the answer (S5).
   - The turn's window on the boot clock picks the pending marks that make it interim,
     opening after the turn's start or the latest earlier end a journal records,
     whichever is later; no end removes a pending mark, which lives as long as its run.
@@ -225,6 +227,8 @@ nothing lifts a stop without returning evidence.
   - `internal/cli/turn_journal_test.go` `TestAnEndWhoseJournalFailedIsPreparedAgainOnRetry`
   - `internal/cli/turn_journal_test.go` `TestAnEndRecordedBeforeItsEffectsIsNotPreparedAgain`
   - `internal/inbox/journal_test.go` `TestAnAbandonedJournalWriteIsNotAJournal`
+  - `internal/inbox/held_end_test.go` `TestAHeldEndRaisesTheClockToItsPosition`
+  - `internal/cli/turn_confirm_repeat_test.go` `TestAHoldCutByACrashIsHeldOnceWhenConfirmedAgain`
   - `internal/cli/review_receipt_identity_test.go` `TestReviewScopedGapReceiptsRemainDistinct` — rebuilt in S5 on neutral completions
   - `internal/cli/review_receipt_identity_test.go` `TestReviewStoppedReceiptAllowsSameTurnFinal` — rebuilt in S5 on neutral completions
   - `internal/cli/turn_test.go` `TestTwoTurnEndsAtOnceReportOnce` — rebuilt in S5 on neutral completions

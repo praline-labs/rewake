@@ -77,6 +77,9 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 			OnTurn: func(ctx context.Context, self registry.Session, result harness.Completion) error {
 				return ReportCompletion(ctx, dir, self, result)
 			},
+			OnConfirm: func(ctx context.Context, self registry.Session, result harness.Completion) (string, error) {
+				return ConfirmCompletion(ctx, dir, self, result)
+			},
 			Harness: h,
 			Dir:     dir,
 			Name:    call.Flag("name", ""),

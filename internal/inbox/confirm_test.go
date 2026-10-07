@@ -14,13 +14,14 @@ import (
 // only the version a journal names is taken.
 func TestAKeptAnswerBelongsToItsRun(t *testing.T) {
 	dir := stateDir(t)
-	if err := KeepAnswer(dir, "api", "1.1", "the answer"); err != nil {
+	if err := KeepAnswer(dir, "api", "1.1", "the answer", "", ""); err != nil {
 		t.Fatal(err)
 	}
 	if _, ok, _ := KeptAnswer(dir, "api", "2.2"); ok {
 		t.Error("another run read this run's kept answer")
 	}
-	_, version, ok, err := KeptAnswerThrough(dir, "api", "1.1", nil)
+	taken, ok, err := KeptAnswerThrough(dir, "api", "1.1", nil)
+	version := taken.Version
 	if err != nil || !ok {
 		t.Fatalf("the answer: %v %v", ok, err)
 	}
@@ -46,7 +47,7 @@ func TestAKeptAnswerBelongsToItsRun(t *testing.T) {
 // end heard once takes it as it finds it (docs/turn-end-recovery.md#the-read-clock).
 func TestAKeptAnswerIsTakenOnlyAtOrBelowTheBoundary(t *testing.T) {
 	dir := stateDir(t)
-	if err := KeepAnswer(dir, "api", "1.1", "held"); err != nil {
+	if err := KeepAnswer(dir, "api", "1.1", "held", "", ""); err != nil {
 		t.Fatal(err)
 	}
 	record, _, err := readKept(dir, "api", "1.1")
@@ -57,11 +58,11 @@ func TestAKeptAnswerIsTakenOnlyAtOrBelowTheBoundary(t *testing.T) {
 		through *uint64
 		want    bool
 	}{{ptr(record.Seq - 1), false}, {ptr(record.Seq), true}, {ptr(record.Seq + 5), true}, {nil, true}} {
-		if _, _, ok, err := KeptAnswerThrough(dir, "api", "1.1", c.through); err != nil || ok != c.want {
+		if _, ok, err := KeptAnswerThrough(dir, "api", "1.1", c.through); err != nil || ok != c.want {
 			t.Errorf("through %v: %v %v, want %v", c.through, ok, err, c.want)
 		}
 	}
-	if err := KeepAnswer(dir, "api", "1.1", "held again"); err != nil {
+	if err := KeepAnswer(dir, "api", "1.1", "held again", "", ""); err != nil {
 		t.Fatal(err)
 	}
 	if next, _, _ := readKept(dir, "api", "1.1"); next.Seq <= record.Seq {
@@ -73,16 +74,16 @@ func TestAKeptAnswerIsTakenOnlyAtOrBelowTheBoundary(t *testing.T) {
 // end has published yet.
 func TestAnUnreadableKeptAnswerIsNotWrittenOver(t *testing.T) {
 	dir := stateDir(t)
-	if err := KeepAnswer(dir, "api", "1.1", "held"); err != nil {
+	if err := KeepAnswer(dir, "api", "1.1", "held", "", ""); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(keptPath(dir, "api"), []byte("{"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := KeepAnswer(dir, "api", "1.1", "another"); err == nil {
+	if err := KeepAnswer(dir, "api", "1.1", "another", "", ""); err == nil {
 		t.Error("an unreadable kept answer was written over")
 	}
-	if _, _, _, err := KeptAnswerThrough(dir, "api", "1.1", nil); err == nil {
+	if _, _, err := KeptAnswerThrough(dir, "api", "1.1", nil); err == nil {
 		t.Error("an unreadable kept answer read as none")
 	}
 }

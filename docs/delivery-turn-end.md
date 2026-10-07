@@ -38,14 +38,14 @@ the run's life ([turn-outcomes.md](turn-outcomes.md)).
 The journal, `journal/<op>` (`internal/inbox/journal.go`), is written before the first
 effect and is the one source of what the end does, and nothing but a journal publishes:
 the complete report batch — recipient epochs, ids, kind, text, timestamps and
-thread-change annotations — then the version of the kept answer the reports carry, the
-waits to clear, the mark used, and the end's word for the interim record: the pending
+thread-change annotations — then the version of the kept answer the reports carry with
+the operation of the end that was held, the waits to clear, the mark used, and the end's word for the interim record: the pending
 line, or that the end settled the work. Completing publishes each report not yet
 published and records its id, drops the kept answer only when it is still the version
 published, clears only the recorded message ids — later messages remain owed to the next
 result — and records the interim end, never over a record of the same run that ended
 later, nor over the record of another run that holds the name (`internal/inbox/interim.go`). It then empties the journal to its
-operation and its end time, marks it done and renames it `<op>.done`, so the barrier
+operation, its end time and the held end it took, marks it done and renames it `<op>.done`, so the barrier
 does not read it again while a retry of the same end still finds it completed. A done
 journal is kept while its run lives: a retry comes only from that run, and the next
 end's window opens after it. The live run's sweep looks at them again a day later and

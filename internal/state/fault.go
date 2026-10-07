@@ -54,6 +54,11 @@ func Rename(from, to string) error {
 	return noteReach(os.Rename(from, to), true)
 }
 
+// AskRead asks Fault about a read of the state directory that another package
+// makes with its own reader, so a test can fail it like any read here. It
+// reads nothing.
+func AskRead(path string) error { return fault(OpRead, path) }
+
 // Step names a step of a call's path that touches no file, so a fault plan
 // can end the process there as it ends it before a write. It cannot fail.
 func Step(name string) { _ = fault(OpStep, name) }

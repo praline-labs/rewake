@@ -27,13 +27,37 @@ Its scope (7-scope) comes from the event, fixed by the event's form:
 | Event | Where its scope comes from | Retry |
 |---|---|---|
 | A hook that names no event (Claude Code's Stop and StopFailure) | the state at its one attempt, under the mailbox lock: this run's waits, this run's kept answer, the pending marks in its turn's window | none: it is heard once |
-| A completion with an id and a read boundary (a Codex completion, the plugin's stop after an Esc) | the event: waits read at or below `Through`, a kept answer held at or below `Through`, pending marks in its window (pending marks), and `Ended` for its interim record | the same event, the same scope |
+| A completion with an id and a read boundary (a Codex completion, the plugin's stop after an Esc, an end an adapter confirms) | the event: waits read at or below `Through`, a kept answer held at or below `Through`, pending marks in its window (pending marks), and `Ended` for its interim record | the same event, the same scope |
 | An id without a boundary (a Codex notify payload through `turn-ended`; rewake installs none) | none | refused on every attempt: no effect, and its waits stay owed for the next end |
 
 The third row is refused rather than scoped by a receipt: a receipt written on a retry,
 after the first attempt's write failed, would fix the scope of the moment it was
 written — questions read since, an answer kept since — and nothing in it could tell
 that retry from a first attempt.
+
+### A held end confirmed again
+
+A hook's first call is heard once, so any end after a hold is its continuation. An end
+an adapter confirms names its event and may be retried: if the answer to its hold is
+lost and the same end comes again, it finds no journal, since a hold writes none. So a
+hold records, in the one write of `kept.json`, the held end's operation (`held`) and
+the reason it was answered (`reason`), and the journal of the end that takes the kept
+answer names that operation (`Held`) beside the version, in every form it takes —
+open, done in place and renamed done. Under the mailbox lock, after the barrier and
+before the hold check, an end that names its event is answered from the record:
+
+- a journal of its own operation — published before;
+- the kept answer's `held` naming it — the same reason again, nothing published and
+  nothing kept again;
+- a journal that took the kept answer naming it — published before, with its
+  continuation.
+
+Only an end of another identity takes the kept answer. Done journals stay while their
+run lives, and retries come only from that run. A journal that cannot be read may be the
+one that took the kept answer, so the lookup fails and the end reports nothing, as an
+unreadable record stops any end. The third check is the one a continuation that marked
+pending needs: it leaves the task owed and the run interim, so without it the held end
+confirmed again would be held, or published, a second time.
 
 ## The read clock
 
@@ -49,6 +73,14 @@ that completions capture their boundary from. So:
   leaves a gap, and a restart resumes above the high-water;
 - a kept answer held after a boundary was captured is above it, and belongs to a later
   end even on the first attempt of this one.
+
+A crash after `kept.json` is written and before the commit leaves the hold's position
+durable and the word below it, and a clock opened again recovers from the waits only; a
+continuation with no read between would then capture a boundary below the kept answer
+and leave it out. So a held end confirmed again first raises the word to the position
+its kept answer records, when the word is below it: no position is allocated, the answer
+is not rewritten, and a word already at or above it stays, so no boundary captured for
+another end is widened.
 
 An end with a boundary takes the kept answer only when its position is at or below
 `Through`, and only by the version it names in the journal. A hook heard once takes
@@ -207,6 +239,8 @@ once, and the mailbox's sweeps remove nothing an open occurrence names.
 | Journal | unreadable | — | everything | the mailbox stops |
 | `kept.json` | this run's, at or below the boundary | its version and position | — | taken by the version the journal names |
 | `kept.json` | this run's, above the boundary | a later hold | — | left for a later end |
+| `kept.json` | this run's, `held` naming the end confirmed | that end was held, and its reason | — | the same reason again; the word raised to its position |
+| Journal | any form, `Held` naming the end confirmed | that end was published with its continuation | — | answered as published |
 | `kept.json` | another run's | an ended run's | whether it was ever published | never taken; written over by the next hold |
 | `kept.json` | unreadable | — | its owner | the mailbox stops before any effect, and nothing writes over it |
 | Pending mark | any | as the pending table | — | as the pending table |
