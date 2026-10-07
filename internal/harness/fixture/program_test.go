@@ -30,6 +30,7 @@ const (
 	switchHelper = "FIXTURE_TEST_HELPER"     // say hello from a child, in the program's name
 	switchSilent = "FIXTURE_TEST_SILENT"     // connect and never say hello
 	switchOrphan = "FIXTURE_TEST_ORPHAN"     // once probed, leave the socket to a child and exit
+	switchMute   = "FIXTURE_TEST_MUTE_PROBE" // a capability served whose probe is never answered
 	childEnv     = "FIXTURE_TEST_CHILD_OF"
 	programThrd  = "fixture-test-thread"
 )
@@ -122,6 +123,9 @@ func speak(socket string, pid int, drop bool) error {
 		reply := Frame{Op: opAnswer, ID: frame.ID, OK: true}
 		switch frame.Op {
 		case opProbe:
+			if frame.Capability == os.Getenv(switchMute) {
+				continue
+			}
 			reply.State = map[string]string{TurnBoundary: "idle", Telemetry: "none", Control: "ready"}[frame.Capability]
 			if frame.Capability == os.Getenv(switchFail) {
 				reply.OK, reply.Error = false, "withheld"

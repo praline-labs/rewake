@@ -52,7 +52,11 @@ type backend struct {
 	ctx      context.Context
 	cancel   context.CancelFunc
 
-	// hello is closed once a hello and its probes have run on a connection.
+	// greeted is closed once a hello from the program is taken, hello once
+	// its probes have run too: the hello has the start's bound, and each probe
+	// its own, so a probe that is never answered costs only its capability.
+	greeted   chan struct{}
+	greetOnce sync.Once
 	hello     chan struct{}
 	helloOnce sync.Once
 
@@ -65,6 +69,16 @@ type backend struct {
 	turns   map[string]turnRecord
 	ends    map[string]harness.Completion
 
+	// closing stops new connections and new calls into the wrapper's
+	// handler; Close then waits for the goroutines reading the program
+	// (routines) and for every call into the handler under way (users),
+	// because the wrapper unmaps the read clock those calls capture from once
+	// Close returns. waiting holds the connections not yet past their hello.
+	closing  bool
+	waiting  map[net.Conn]bool
+	routines sync.WaitGroup
+	users    sync.WaitGroup
+
 	stopOnce  sync.Once
 	closeOnce sync.Once
 }
@@ -73,8 +87,9 @@ func newBackend(program string, args, env []string, dir, socket, epoch string) *
 	return &backend{
 		program: program, args: args, env: env, dir: dir, socket: socket, epoch: epoch, bound: readinessBound,
 		endWait: endDeadline,
-		exited:  make(chan struct{}), hello: make(chan struct{}),
+		exited:  make(chan struct{}), greeted: make(chan struct{}), hello: make(chan struct{}),
 		live: map[string]bool{}, turns: map[string]turnRecord{}, ends: map[string]harness.Completion{},
+		waiting: map[net.Conn]bool{},
 	}
 }
 
@@ -100,18 +115,29 @@ func (b *backend) Start(ctx context.Context, handler harness.CompletionHandler, 
 		b.cancel()
 		return err
 	}
+	b.routines.Add(1)
 	go b.accept()
 	timer := time.NewTimer(b.bound)
 	defer timer.Stop()
 	select {
-	case <-b.hello:
-		return nil
+	case <-b.greeted:
 	case <-b.exited:
 		b.Close()
 		return errors.New("the fixture ended before its hello")
 	case <-timer.C:
 		b.Close()
 		return fmt.Errorf("the fixture sent no hello from its own process within %s", b.bound)
+	case <-ctx.Done():
+		b.Close()
+		return ctx.Err()
+	}
+	// The probes are bounded each, so this wait is too.
+	select {
+	case <-b.hello:
+		return nil
+	case <-b.exited:
+		b.Close()
+		return errors.New("the fixture ended before its probes were answered")
 	case <-ctx.Done():
 		b.Close()
 		return ctx.Err()
@@ -151,11 +177,21 @@ func (b *backend) spawn() error {
 // against the process the backend started; a reconnect from it starts the
 // exchange again.
 func (b *backend) accept() {
+	defer b.routines.Done()
 	for {
 		conn, err := b.listener.Accept()
 		if err != nil {
 			return
 		}
+		b.mu.Lock()
+		if b.closing {
+			b.mu.Unlock()
+			_ = conn.Close()
+			return
+		}
+		b.waiting[conn] = true
+		b.mu.Unlock()
+		b.routines.Add(1)
 		go b.admit(conn)
 	}
 }
@@ -163,6 +199,12 @@ func (b *backend) accept() {
 // admit runs one connection: the peer check, one hello, the probes, then
 // whatever the program sends until it closes.
 func (b *backend) admit(conn net.Conn) {
+	defer b.routines.Done()
+	defer func() {
+		b.mu.Lock()
+		delete(b.waiting, conn)
+		b.mu.Unlock()
+	}()
 	unix, ok := conn.(*net.UnixConn)
 	if !ok || !b.fromProgram(unix) {
 		_ = conn.Close()
@@ -178,7 +220,7 @@ func (b *backend) admit(conn net.Conn) {
 	}
 	_ = conn.SetReadDeadline(time.Time{})
 	b.mu.Lock()
-	if b.link != nil {
+	if b.link != nil || b.closing {
 		// One hello per connection, one connection at a time: a second
 		// connection while the first holds is not a reconnect.
 		b.mu.Unlock()
@@ -188,7 +230,12 @@ func (b *backend) admit(conn net.Conn) {
 	b.link, b.thread, b.version = l, first.Thread, first.Version
 	b.live = map[string]bool{}
 	b.mu.Unlock()
-	go l.serve(reader, func(frame Frame) { b.handle(l, frame) })
+	b.greetOnce.Do(func() { close(b.greeted) })
+	b.routines.Add(1)
+	go func() {
+		defer b.routines.Done()
+		l.serve(reader, func(frame Frame) { b.handle(l, frame) })
+	}()
 	live := b.probe(l, first.Serves)
 	b.mu.Lock()
 	if b.link == l {
@@ -265,21 +312,6 @@ func probeAnswered(capability string, answer Frame) bool {
 	return true
 }
 
-// withdraw ends what a connection made live, at once. A nil link is the
-// program's end, which withdraws whatever connection there is.
-func (b *backend) withdraw(l *link) {
-	b.mu.Lock()
-	current := b.link
-	if l == nil || current == l {
-		b.link, b.live = nil, map[string]bool{}
-		b.telem = telemetry{}
-	}
-	b.mu.Unlock()
-	if l == nil && current != nil {
-		current.close()
-	}
-}
-
 // Live answers the capabilities live now, for the package's tests and for
 // the decisions below.
 func (b *backend) Live() []string {
@@ -315,38 +347,3 @@ func (b *backend) Done() <-chan struct{} { return b.exited }
 
 // ProcessID is the program's pid, zero before it started.
 func (b *backend) ProcessID() int { return b.pid }
-
-func (b *backend) Close() {
-	b.closeOnce.Do(func() {
-		if b.listener != nil {
-			_ = b.listener.Close()
-		}
-		if b.cancel != nil {
-			b.cancel()
-		}
-		b.withdraw(nil)
-		b.stopProgram()
-		_ = os.Remove(b.socket)
-	})
-}
-
-// stopProgram ends the program's group: SIGTERM, then SIGKILL.
-func (b *backend) stopProgram() {
-	if b.process == nil {
-		return
-	}
-	b.stopOnce.Do(func() {
-		select {
-		case <-b.exited:
-			return
-		default:
-		}
-		_ = syscall.Kill(-b.pid, syscall.SIGTERM)
-		select {
-		case <-b.exited:
-		case <-time.After(stopGrace):
-			_ = syscall.Kill(-b.pid, syscall.SIGKILL)
-			<-b.exited
-		}
-	})
-}

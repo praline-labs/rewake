@@ -92,6 +92,9 @@ func TestEachSwitchWithholdsItsCapability(t *testing.T) {
 // withheldStops checks that what rests on a capability stops without it.
 func withheldStops(t *testing.T, b *backend, capability string) {
 	t.Helper()
+	b.mu.Lock()
+	l := b.link
+	b.mu.Unlock()
 	switch capability {
 	case Wake:
 		if _, err := b.Thread(); !errors.Is(err, inbox.ErrThreadUnavailable) {
@@ -111,16 +114,16 @@ func withheldStops(t *testing.T, b *backend, capability string) {
 			Publish: func(context.Context, harness.Completion) error { taken++; return nil },
 			Confirm: func(context.Context, harness.Completion) (string, error) { taken++; return "", nil },
 		}
-		if answer := b.turnStarted(Frame{Turn: "t1"}); answer.OK {
+		if answer := b.turnStarted(l, Frame{Turn: "t1"}); answer.OK {
 			t.Fatal("a turn start taken without a turn boundary")
 		}
 		for _, hold := range []bool{false, true} {
-			if answer := b.turnEnded(Frame{Turn: "t1", End: "t1/1", Outcome: OutcomeCompleted, Hold: hold}); answer.OK || taken != 0 {
+			if answer := b.turnEnded(l, Frame{Turn: "t1", End: "t1/1", Outcome: OutcomeCompleted, Hold: hold}); answer.OK || taken != 0 {
 				t.Fatalf("an end taken without a turn boundary: %+v, %d handed on", answer, taken)
 			}
 		}
 	case Telemetry:
-		b.activity(Frame{State: "working"})
+		b.activity(l, Frame{State: "working"})
 		if state := b.SessionState(); state.Fresh || state.Activity != nil {
 			t.Fatalf("a state without telemetry: %+v", state)
 		}

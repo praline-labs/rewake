@@ -138,8 +138,9 @@ func (l *link) read(reader *bufio.Reader) (Frame, error) {
 }
 
 // serve reads until the connection ends, routing answers to their waiters and
-// every other frame to handle, each on its own goroutine: a turn's end waits
-// for the core, and nothing behind it on the line should.
+// every other frame to handle, on this goroutine: what a frame fixes about its
+// moment — a turn's boundary — is fixed before the next line is read, and
+// handle starts whatever waits on its own goroutine.
 func (l *link) serve(reader *bufio.Reader, handle func(Frame)) {
 	defer l.close()
 	for {
@@ -157,7 +158,7 @@ func (l *link) serve(reader *bufio.Reader, handle func(Frame)) {
 			}
 			continue
 		}
-		go handle(frame)
+		handle(frame)
 	}
 }
 

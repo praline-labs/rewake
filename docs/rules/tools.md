@@ -201,6 +201,8 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/cli/turn_journal_retry_test.go` `TestARetryAnswersOnlyWhatItsFirstAttemptSaw`
   - `internal/cli/turn_retry_test.go` `TestRetriedTurnDoesNotConsumeLaterWork`
   - `internal/cli/turn_retry_test.go` `TestPartialTurnRetryKeepsOriginalOutcome`
+  - `internal/harness/fixture/order_test.go` `TestAnEndCapturesItsBoundaryWhenItsFrameArrives`
+  - `internal/harness/fixture/order_test.go` `TestATurnStartCapturesItsBoundaryWhenItsFrameArrives`
   - `internal/bridge/server/order_test.go` `TestAnEndCapturedDuringAnAcknowledgmentIncludesIt` — rebuilt in S7 on the neutral rig
   - `internal/bridge/server/order_cut_test.go` `TestAnAcknowledgmentCutMidway` — rebuilt in S7 on the neutral rig
   - `internal/bridge/server/order_cut_test.go` `TestAnEscNobodyHeard` — rebuilt in S7 on the neutral rig
@@ -219,6 +221,9 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/cli/bridge_rules_test.go` `TestAnExpiredReadShowsAndClaimsNothing`
   - `internal/cli/bridge_rules_test.go` `TestAPendingMarkIsNotMadeAfterItsDeadline`
   - `internal/bridge/bridge_test.go` `TestAnOpenTicketDescriptorDoesNotHang`
+  - `internal/harness/fixture/order_test.go` `TestASilentProbeCostsOnlyItsCapability`
+  - `internal/harness/fixture/order_test.go` `TestCloseWaitsForACallIntoTheHandler`
+  - `internal/harness/fixture/order_test.go` `TestNothingReachesTheHandlerOnceClosed`
   - `internal/bridge/server/child_bound_test.go` `TestAChildPastItsDeadline` — rebuilt in S7 on the neutral rig
   - `internal/bridge/server/stdout_bound_test.go` `TestAClientThatStopsReading` — rebuilt in S7 on the neutral rig
   - `internal/bridge/server/stdout_bound_test.go` `TestAReaderThatResumesInTimeGetsEveryReply` — rebuilt in S7 on the neutral rig
