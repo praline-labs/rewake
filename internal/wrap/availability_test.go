@@ -21,7 +21,7 @@ func availabilityPeer(t *testing.T, dir, name, roleName string, epoch uint64, re
 		t.Fatal(err)
 	}
 	at := time.Now().Add(-time.Minute)
-	peer := registry.Session{Name: name, Role: roleName, Harness: "fixture", Room: filepath.Base(dir), CWD: "/workspace", ServicePID: 111, ServiceStart: epoch, PIDNamespace: "fixture-foreign", StartedAt: at}
+	peer := registry.Session{Name: name, Role: roleName, Harness: "stub", Room: filepath.Base(dir), CWD: "/workspace", ServicePID: 111, ServiceStart: epoch, PIDNamespace: "fixture-foreign", StartedAt: at}
 	if ready {
 		peer.MessagingReadyAt = &at
 	}

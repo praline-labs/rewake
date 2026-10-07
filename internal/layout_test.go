@@ -27,6 +27,11 @@ const (
 // build compiles is judged like any other.
 var buildTags = []string{"rewakefault", "rewakefixture"}
 
+// testOnlyHarnesses are the catalog's harnesses built only for tests, by id;
+// layout_fixture_test.go adds the fixture under its tag. nameWords says what
+// rule 2 looks for of them.
+var testOnlyHarnesses []string
+
 // ownWords belong to one harness without being its id or title. The list grows
 // when a review finds a word.
 var ownWords = []string{"mcp__", "CLAUDE_", "app-server", ".claude", ".codex", ".agents"}
@@ -42,11 +47,12 @@ func TestImportsFollowTheLayers(t *testing.T) {
 }
 
 func TestNoHarnessIsNamedOutsideTheAdapters(t *testing.T) {
-	var names []string
+	var catalog [][2]string
 	for _, h := range harness.All() {
-		names = append(names, h.ID(), h.Title())
+		catalog = append(catalog, [2]string{h.ID(), h.Title()})
 	}
-	for _, problem := range nameProblems(t, harnessWords(names, ownWords), nameExceptions) {
+	words, literals := nameWords(catalog, testOnlyHarnesses)
+	for _, problem := range nameProblems(t, words, nameExceptions, literals...) {
 		t.Error(problem)
 	}
 }
@@ -86,12 +92,14 @@ func importProblems(t *testing.T, table map[string]transit, exceptions []importE
 	return append(problems, unmatchedImports(exceptions, found)...)
 }
 
-func nameProblems(t *testing.T, words []string, table map[nameException]excuse) []string {
+// nameProblems answers the mentions rule 2 finds that the table does not
+// excuse: of words anywhere, and of literals as a whole string literal.
+func nameProblems(t *testing.T, words []string, table map[nameException]excuse, literals ...string) []string {
 	t.Helper()
-	return excused(mentions(t, words), nameKey, table)
+	return excused(mentions(t, words, literals), nameKey, table)
 }
 
-func mentions(t *testing.T, words []string) []mention {
+func mentions(t *testing.T, words, literals []string) []mention {
 	t.Helper()
 	var found []mention
 	for _, dir := range packageDirs(t, named) {
@@ -100,7 +108,7 @@ func mentions(t *testing.T, words []string) []mention {
 			if err != nil {
 				t.Fatal(err)
 			}
-			mentions, err := findMentions(name, src, words)
+			mentions, err := findMentions(name, src, words, literals...)
 			if err != nil {
 				t.Fatal(err)
 			}

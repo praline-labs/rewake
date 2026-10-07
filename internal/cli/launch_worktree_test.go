@@ -281,10 +281,14 @@ func TestAFailedLaunchKeepsATouchedCheckoutAndSaysSo(t *testing.T) {
 // Both harnesses hand --worktree to rewake. Claude Code's -w stays its own:
 // it reaches the harness untouched and makes no checkout of rewake's, and the
 // two together are refused.
+//
+// The launches in this file prove both do. Here, every harness that takes a
+// worktree flag spells it --worktree; a harness may take none, as the fixture
+// does.
 func TestClaudeHandsItsLongWorktreeFlagToRewake(t *testing.T) {
 	for _, h := range harness.All() {
-		if taker, ok := h.(harness.WorktreeHarness); !ok || taker.WorktreeFlag() != "--worktree" {
-			t.Errorf("%s does not take --worktree", h.ID())
+		if taker, ok := h.(harness.WorktreeHarness); ok && taker.WorktreeFlag() != "--worktree" {
+			t.Errorf("%s takes %s, not --worktree", h.ID(), taker.WorktreeFlag())
 		}
 	}
 	lab := newWorktreeLab(t)

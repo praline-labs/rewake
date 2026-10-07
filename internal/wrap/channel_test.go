@@ -29,7 +29,7 @@ func mainPeer(t *testing.T, dir, name string) registry.Session {
 	}
 	at := time.Now().Add(-time.Minute)
 	peer := registry.Session{
-		Name: name, Role: role.Main.ID, Harness: "fixture", Room: filepath.Base(dir), CWD: "/workspace",
+		Name: name, Role: role.Main.ID, Harness: "stub", Room: filepath.Base(dir), CWD: "/workspace",
 		ServicePID: os.Getpid(), ServiceStart: selfStart(t), Boot: thisBoot(t), PIDNamespace: proc.Namespace(), StartedAt: at, MessagingReadyAt: &at,
 	}
 	if err := registry.Publish(dir, peer); err != nil {
@@ -47,7 +47,7 @@ func keeperOf(t *testing.T, dir, name string) *channelKeeper {
 	}
 	at := time.Now().Add(-time.Minute)
 	run := registry.Session{
-		Name: name, Harness: "fixture", Room: filepath.Base(dir), CWD: "/workspace",
+		Name: name, Harness: "stub", Room: filepath.Base(dir), CWD: "/workspace",
 		ServicePID: os.Getpid(), ServiceStart: selfStart(t), Boot: thisBoot(t), PIDNamespace: proc.Namespace(), StartedAt: at, MessagingReadyAt: &at,
 	}
 	if err := registry.Publish(dir, run); err != nil {

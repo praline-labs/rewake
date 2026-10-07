@@ -288,10 +288,34 @@ func harnessWords(catalog, own []string) []string {
 	return words
 }
 
+// nameWords splits the catalog into what rule 2 looks for. A harness the
+// product ships is looked for by its id and title in any text. A harness built
+// only for tests is looked for by its title in any text, and by its id only as
+// a whole string literal: the fixture's id is the plain noun the core's own
+// tests use in its ordinary sense — a fake, a canned frame — while a literal
+// equal to the id is how code would select that harness. The policy is that
+// narrow on purpose: the title still names it anywhere, the import rule still
+// keeps its package out of the core, and every shipped harness keeps the
+// whole rule (layout_names_policy_test.go holds both).
+func nameWords(catalog [][2]string, testOnly []string) (words, literals []string) {
+	var names []string
+	for _, entry := range catalog {
+		id, title := entry[0], entry[1]
+		if slices.Contains(testOnly, id) {
+			names = append(names, title)
+			literals = append(literals, id)
+			continue
+		}
+		names = append(names, id, title)
+	}
+	return harnessWords(names, ownWords), literals
+}
+
 // findMentions parses one file and reports every identifier, string literal
-// and comment naming a harness word. Import paths are left to rule 1, which
-// judges them with their layers.
-func findMentions(name string, src []byte, words []string) ([]mention, error) {
+// and comment naming a harness word, and every string literal whose whole
+// value is one of literals. Import paths are left to rule 1, which judges
+// them with their layers.
+func findMentions(name string, src []byte, words []string, literals ...string) ([]mention, error) {
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, name, src, parser.ParseComments|parser.SkipObjectResolution)
 	if err != nil {
@@ -334,6 +358,9 @@ func findMentions(name string, src []byte, words []string) ([]mention, error) {
 					value = n.Value
 				}
 				note(n.Pos(), value, "string", strings.HasPrefix(n.Value, "`"))
+				if slices.Contains(literals, value) {
+					found = append(found, mention{file: name, line: fset.Position(n.Pos()).Line, word: value, kind: "string", text: value})
+				}
 			}
 		}
 		return true

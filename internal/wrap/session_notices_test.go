@@ -20,7 +20,7 @@ import (
 func noticeState(t *testing.T, dir string, peer registry.Session, activity string, count uint64, events []sessionstate.CompactionEvent) {
 	t.Helper()
 	now := time.Now()
-	model := "fixture"
+	model := "stub-model"
 	effort := "high"
 	snapshot := sessionstate.Snapshot{Fresh: true, Selection: "ready", PublishedAt: &now, Activity: &activity, ActivityAt: &now, ActivityFresh: true, WaitingFor: []string{}, Compactions: &count, Coverage: "observed", CompactionEvents: events, Model: &model, Effort: &effort, SettingsFresh: true, SettingsAt: &now}
 	if err := sessionstate.Save(dir, peer.Name, peer.Epoch(), snapshot); err != nil {

@@ -50,7 +50,7 @@ func (f *windowFixture) deliver(_ context.Context, m Message) Result {
 	if f.answer != nil {
 		return f.answer(len(f.notices))
 	}
-	return Result{State: Delivered, Via: "fixture"}
+	return Result{State: Delivered, Via: "stub"}
 }
 
 func (f *windowFixture) stop() {
@@ -269,7 +269,7 @@ func TestARetryDoesNotRestartTheWindow(t *testing.T) {
 		if call == 1 {
 			return Result{State: Pending, Detail: "not yet"}
 		}
-		return Result{State: Delivered, Via: "fixture"}
+		return Result{State: Delivered, Via: "stub"}
 	}
 	f.put(Note, "available")
 	_, at := f.seen(2, 10*time.Second)

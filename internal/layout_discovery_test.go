@@ -86,7 +86,7 @@ func TestANameExceptionAdmitsNoNewMention(t *testing.T) {
 	const before = "package mail\n\n// wait as codex does\n\n// and codex again\nvar mode int\n"
 	write := syntheticModule(t, map[string]string{name: before})
 	words := []string{"codex"}
-	table := snapshot(mentions(t, words), nameKey)
+	table := snapshot(mentions(t, words, nil), nameKey)
 	if got := nameProblems(t, words, table); len(got) > 0 {
 		t.Fatalf("the recorded file fails: %q", got)
 	}

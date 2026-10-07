@@ -36,7 +36,7 @@ func endableMain(t *testing.T, dir, name string) (registry.Session, func()) {
 	}
 	at := time.Now().Add(-time.Minute)
 	main := registry.Session{
-		Name: name, Role: role.Main.ID, Harness: "fixture", Room: filepath.Base(dir), CWD: "/workspace",
+		Name: name, Role: role.Main.ID, Harness: "stub", Room: filepath.Base(dir), CWD: "/workspace",
 		ServicePID: child.Process.Pid, ServiceStart: start, Boot: thisBoot(t), PIDNamespace: proc.Namespace(), StartedAt: at, MessagingReadyAt: &at,
 	}
 	if err := registry.Publish(dir, main); err != nil {

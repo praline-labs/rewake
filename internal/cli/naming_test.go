@@ -2,6 +2,7 @@ package cli
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -15,8 +16,8 @@ func TestLaunchRefusesInvalidNamePrefixesWithoutStartingHarness(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv(state.DirEnv, dir)
-	t.Setenv("PATH", t.TempDir())
 	for _, h := range harness.All() {
+		t.Setenv("PATH", launchPath(t, h))
 		for _, prefix := range []string{"", "Upper", "../escape", strings.Repeat("x", 32)} {
 			code, _, errOut := run("--write", "--name", prefix, h.ID())
 			if code != ExitUsage || !strings.Contains(errOut, "prefix") || !strings.Contains(errOut, "full help:") {
@@ -60,11 +61,43 @@ func TestExplicitPrefixConflictNamesFinalAddress(t *testing.T) {
 			liveSession(t, address)
 			// The launch comes from a shell outside any session.
 			outsideAnySession(t)
-			t.Setenv("PATH", t.TempDir())
+			t.Setenv("PATH", launchPath(t, h))
 			code, _, errOut := run("--write", "--name", "taken", h.ID())
 			if code != ExitUsage || !strings.Contains(errOut, address) || !strings.Contains(errOut, "prefix") {
 				t.Fatalf("conflict=%d %s", code, errOut)
 			}
 		})
 	}
+}
+
+// launchPath is the PATH of a launch these tests expect refused by its name: an
+// empty one, so no harness can start. A harness that refuses an unreadable
+// version before the claim — as a version is read before the name is taken —
+// finds a program answering only --version there, so its refusal is the name's
+// and not the version's; the program fails the test if it is run for anything
+// else.
+func launchPath(t *testing.T, h harness.Harness) string {
+	t.Helper()
+	path := t.TempDir()
+	reader, ok := h.(harness.LaunchVersionReader)
+	if !ok {
+		return path
+	}
+	if _, err := reader.ReadLaunchVersion(filepath.Join(path, h.ID()), nil, path); err == nil {
+		return path
+	}
+	calls := filepath.Join(t.TempDir(), "calls")
+	script := "#!/bin/sh\necho \"$*\" >> " + calls + "\n[ \"$*\" = --version ] && echo 999.0.0\n"
+	if err := os.WriteFile(filepath.Join(path, h.ID()), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		raw, _ := os.ReadFile(calls)
+		for _, call := range strings.Fields(strings.ReplaceAll(string(raw), " ", "_")) {
+			if call != "--version" {
+				t.Errorf("%s was started for %q, not only asked its version", h.ID(), call)
+			}
+		}
+	})
+	return path
 }
