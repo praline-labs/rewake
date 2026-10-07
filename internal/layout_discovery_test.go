@@ -18,7 +18,12 @@ import (
 // the module the rules read. It returns a writer for later edits.
 func syntheticModule(t *testing.T, files map[string]string) func(name, src string) {
 	t.Helper()
-	root := t.TempDir()
+	return syntheticModuleIn(t, t.TempDir(), files)
+}
+
+// syntheticModuleIn is syntheticModule written at root.
+func syntheticModuleIn(t *testing.T, root string, files map[string]string) func(name, src string) {
+	t.Helper()
 	write := func(name, src string) {
 		t.Helper()
 		path := filepath.Join(root, filepath.FromSlash(name))
@@ -58,6 +63,22 @@ func oneContaining(t *testing.T, got []string, want ...string) {
 	if len(got) != 1 || slices.ContainsFunc(want, func(w string) bool { return !strings.Contains(got[0], w) }) {
 		t.Fatalf("got %q, want one problem containing %q", got, want)
 	}
+}
+
+// TestAStrayGitAboveTheModuleIsNotRead: a temporary directory may lie below an
+// empty .git that is no repository, as a sandbox can leave one; the rules
+// judge the module's files and never its version-control state.
+func TestAStrayGitAboveTheModuleIsNotRead(t *testing.T) {
+	above := t.TempDir()
+	if err := os.Mkdir(filepath.Join(above, ".git"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	syntheticModuleIn(t, filepath.Join(above, "module"), map[string]string{
+		"internal/core/mail/mail.go":    "package mail\n",
+		"internal/infra/state/state.go": "package state\n\nimport _ \"" + module + "/internal/core/mail\"\n",
+	})
+	oneContaining(t, importProblems(t, transition, nil),
+		"internal/infra/state/state.go: internal/infra/state (infra) imports internal/core/mail (core)")
 }
 
 func TestANameExceptionAdmitsNoNewMention(t *testing.T) {

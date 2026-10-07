@@ -145,6 +145,19 @@ the variable ([design.md](design.md#rooms)). Put `--room` before the harness nam
 
 *September 26, 2026.*
 
+### An empty `.git` in `/tmp` turned the layout tests red
+
+Six tests of `./internal` failed on an unchanged tree with `go list: …: error obtaining
+VCS status: exit status 128`. They write a synthetic module into a temporary directory
+and read it with `go list`, and an empty `/tmp/.git` had appeared above it: it comes and
+goes while a sandboxed command of a harness runs, which masks `.git` in its writable
+roots. The go command took it for a repository, asked git for the module's state, and
+git refused. The module's version-control state is nothing the layout rules judge, so
+their `go list` runs with `-buildvcs=false`, and a test puts an empty `.git` above a
+synthetic module to keep it so.
+
+*October 7, 2026.*
+
 ## Arguments and continuing a conversation
 
 ### Under `--remote`, continuing a thread refuses because of our own flag

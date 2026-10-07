@@ -34,7 +34,10 @@ type listed struct {
 
 func goList(t *testing.T, args ...string) []listed {
 	t.Helper()
-	cmd := exec.Command("go", append([]string{"list", "-e", "-json"}, args...)...)
+	// The module's version-control state is not read: a synthetic module lies
+	// in a temporary directory, where a stray .git above it would make go list
+	// ask git, fail, and turn every rule red for a reason outside the module.
+	cmd := exec.Command("go", append([]string{"list", "-e", "-json", "-buildvcs=false"}, args...)...)
 	cmd.Dir = moduleRoot
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
