@@ -185,7 +185,7 @@ func codexSchemaSource() schemaSource {
 
 // againstForRun is what the run record says the run was checked against, in
 // words that match what happened: the schema came from a real Codex, or from
-// none; the scenarios, in both columns, ran against the fixture.
+// none; the scenarios, in every column, ran against the fixture.
 func againstForRun() []record.Against {
 	suite.mu.Lock()
 	defer suite.mu.Unlock()
@@ -196,5 +196,5 @@ func againstForRun() []record.Against {
 	if !suite.schemaUsed && suite.schema.err == nil {
 		schema = record.Against{What: "schema", How: "not generated: the schema case did not run"}
 	}
-	return []record.Against{schema, {What: "scenarios", How: "against the fixture in both columns"}}
+	return []record.Against{schema, {What: "scenarios", How: "against the fixture in every column"}}
 }

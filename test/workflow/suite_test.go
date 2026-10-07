@@ -48,8 +48,11 @@ func TestMain(m *testing.M) {
 	// build a binary and run a suite inside the shim.
 	if os.Getenv(shimEnv) != "" {
 		recordShimCall(os.Args)
-		if os.Getenv(shimHarness) == "claude" {
+		switch os.Getenv(shimHarness) {
+		case "claude":
 			os.Exit(runClaudeShim(os.Args))
+		case "fixture":
+			os.Exit(runFixture(os.Args))
 		}
 		os.Exit(runShim(os.Args))
 	}

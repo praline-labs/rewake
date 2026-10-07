@@ -261,6 +261,6 @@ look under the lock in `internal/cli/addendum_test.go`; withdraw and edit by an 
 replaced, and a second withdrawal that sends no second recall, in
 `internal/cli/sent_current_test.go`; an edited notify announced at once
 beside the recall in `internal/inbox/recall_test.go`. End to end,
-`withdraw-after-notice`, `edit-after-notice` and `addendum-owed` run in both columns and
+`withdraw-after-notice`, `edit-after-notice` and `addendum-owed` run in every column and
 check the notice the worker was shown, and `withdraw-mid-turn` holds a Codex worker's
 turn open and sees the recall steered into it ([testing-cases.md](testing-cases.md#actions-on-a-sent-message)).

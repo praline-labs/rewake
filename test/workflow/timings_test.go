@@ -47,6 +47,10 @@ const (
 	suiteCompactionRun   = 6 * time.Second
 )
 
+// suiteTags are the build tags of the binary under test and every mutant:
+// rewakefixture puts the fixture harness in the catalog, for its column.
+const suiteTags = "rewakefixture"
+
 // suiteFlags are the build flags that set those values, for the binary under
 // test and every mutant alike: a mutant built at the real lengths would be
 // judged against windows its cases no longer wait for.
@@ -58,7 +62,7 @@ var suiteFlags = []string{"-ldflags", strings.Join([]string{
 	buildValue("wrap", "builtNoticeScan", suiteNoticeScan),
 	buildValue("harness/codex/gateway", "builtCompactionStart", suiteCompactionStart),
 	buildValue("harness/codex/gateway", "builtCompactionRun", suiteCompactionRun),
-}, " ")}
+}, " "), "-tags", suiteTags}
 
 func buildValue(pkg, name string, value time.Duration) string {
 	return fmt.Sprintf("-X github.com/praline-labs/rewake/internal/%s.%s=%s", pkg, name, value)

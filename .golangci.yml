@@ -3,6 +3,13 @@
 # `gofumpt -l .` agree.
 version: "2"
 
+# The fixture harness exists only under its tag, so the run lints with it.
+# The one file it leaves out, the catalog's test that the fixture is absent
+# without the tag, is vetted and checked by the untagged runs of AGENTS.md.
+run:
+  build-tags:
+    - rewakefixture
+
 linters:
   default: standard
   enable:

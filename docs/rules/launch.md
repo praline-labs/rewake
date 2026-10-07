@@ -12,12 +12,13 @@ What rewake adds to a harness's launch, in the full wording of
   Tests:
   - `internal/harness/claude/claude_test.go` `TestAddedFlagsStayBeforeTheTerminator`
   - `internal/harness/defaults_test.go` `TestAnExplicitFlagIsNotReplaced`
-  - Gap: a launch leaves the person's configuration as it was, without a harness — closed in S5 on the fixture.
+  - `internal/harness/fixture/launch_test.go` `TestALaunchLeavesThePersonsFilesAsTheyWere`
+  - `internal/harness/fixture/launch_test.go` `TestACallerCannotPassTheFixturesOwnFlags`
 
 - **L2. Diagnostics say where, never what**: no configuration content or argument value
   is printed. (Rule 7.)
   Tests:
-  - Gap: a fixture launch whose configuration and arguments hold a marker, every refusal and note of the launch checked not to contain it — closed in S5.
+  - `internal/harness/fixture/launch_test.go` `TestALaunchsDiagnosticsNeverCarryWhatTheyPointAt`
 
 - **L3. Nothing persists past the run**: what a launch writes lives in the run's
   directory and goes with it. (Rule 8.)

@@ -8,11 +8,13 @@ import (
 	"time"
 )
 
-// TestPendingConfirm is the Stop hook's confirmation on the Claude Code column.
-// A worker reads a task and ends its first turn pending. Woken by another
-// session's mail, its next turn ends with no mark — the turn a finished
-// subagent starts, where the mark is easily forgotten — and rewake's Stop hook
-// holds it once, quoting the pending line. The fixture's model, asked, marks
+// TestPendingConfirm is the confirmation of a turn end on the columns that can
+// hold one: the Claude Code column's Stop hook, and the fixture's end, which
+// asks the core through the contract (docs/v2/stage3-fixture.md). A worker
+// reads a task and ends its first turn pending. Woken by another session's
+// mail, its next turn ends with no mark — the turn a finished subagent starts,
+// where the mark is easily forgotten — and rewake holds it once, quoting the
+// pending line. The fixture's model, asked, marks
 // pending: the sender reads an interim message with the new line, then the
 // held answer, then the continuation, and the task stays owed. Woken again,
 // the worker ends a turn with no mark once more, is held once more, and this
@@ -23,21 +25,30 @@ import (
 // settings layer and calls the hook again as the fixture does. That was seen
 // live on 2.1.280 and is recorded in docs/research.md.
 func TestPendingConfirm(t *testing.T) {
-	binary := enterScenario(t, "pending-confirm")
-	c := Start(t, Spec{
-		Name:         "pending-confirm",
-		Harness:      claudeColumn.harness,
-		Observations: confirmObservations,
-		Deadline:     90 * time.Second,
-	})
-	for _, finding := range playPendingConfirm(t, c, Isolate(t, c, binary)) {
-		if finding.held {
-			c.Observed(finding.observation, finding.detail)
-		} else {
-			c.Contradicted(finding.observation, "%s", finding.detail)
-		}
+	runParallel(t)
+	for _, col := range confirmColumns {
+		t.Run(col.harness, func(t *testing.T) {
+			binary := enterScenario(t, "pending-confirm")
+			c := Start(t, Spec{
+				Name:         "pending-confirm",
+				Harness:      col.harness,
+				Observations: confirmObservations,
+				Deadline:     90 * time.Second,
+			})
+			for _, finding := range playPendingConfirmOn(col)(t, c, Isolate(t, c, binary)) {
+				if finding.held {
+					c.Observed(finding.observation, finding.detail)
+				} else {
+					c.Contradicted(finding.observation, "%s", finding.detail)
+				}
+			}
+		})
 	}
 }
+
+// confirmColumns are the columns whose turn end can be held. Codex's cannot:
+// its turn has ended when the core hears of it.
+var confirmColumns = []column{claudeColumn, fixtureColumn}
 
 const (
 	obsConfirmAsked   = "the unmarked turn end after an interim one is held exactly once, and the hold quotes the pending line"
@@ -52,9 +63,15 @@ const (
 
 var confirmObservations = []string{obsConfirmAsked, obsConfirmMarked, obsConfirmReports}
 
-func playPendingConfirm(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
+// playPendingConfirmOn plays the scenario on one column.
+func playPendingConfirmOn(col column) func(*testing.T, *Case, *Isolation) []telemetryFinding {
+	return func(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
+		return playPendingConfirm(t, c, iso, col)
+	}
+}
+
+func playPendingConfirm(t *testing.T, c *Case, iso *Isolation, col column) []telemetryFinding {
 	t.Helper()
-	col := claudeColumn
 	worker := startHarnessSession(t, c, iso, col.harness, "worker", "--general", shimInboxJSON+"=1",
 		shimPendingOnce+"="+confirmFirstLine, shimPendingOnHold+"="+confirmSecondLine)
 	defer stopSession(t, c, worker)
@@ -182,7 +199,15 @@ func TestAConfirmationThatDropsTheAnswerFails(t *testing.T) {
 	runConfirmControl(t, mutantConfirmAnswerDropped, obsConfirmMarked, obsConfirmReports)
 }
 
+// runConfirmControl runs a control on every column that can hold an end: a
+// mutant the fixture's confirmation survived would be a hole in the contract,
+// not in one adapter.
 func runConfirmControl(t *testing.T, mutant mutation, breaks ...string) {
 	t.Helper()
-	runFindingsControlOn(t, claudeColumn.harness, "pending-confirm", playPendingConfirm, mutant, breaks...)
+	runParallel(t)
+	for _, col := range confirmColumns {
+		t.Run(col.harness, func(t *testing.T) {
+			runFindingsControlOn(t, col.harness, "pending-confirm", playPendingConfirmOn(col), mutant, breaks...)
+		})
+	}
 }

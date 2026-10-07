@@ -225,7 +225,7 @@ func TestARaceOnlyFileIsJudged(t *testing.T) {
 		"internal/harness/norace.go":   "//go:build !race\n\npackage harness\n\nvar plain []Harness\n",
 	})
 	oneContaining(t, importProblems(t, transition, nil),
-		"internal/infra/state/race.go: internal/infra/state (infra) imports internal/core/mail (core)", "(only under -race; -race -tags rewakefault)")
+		"internal/infra/state/race.go: internal/infra/state (infra) imports internal/core/mail (core)", "(only under -race; -race -tags rewakefault; -race -tags rewakefixture; -race -tags rewakefault,rewakefixture)")
 	got := registryProblems(t, nil)
 	slices.Sort(got)
 	if len(got) != 2 || !strings.HasPrefix(got[0], "internal/harness/norace.go:5: package-level variable plain") ||

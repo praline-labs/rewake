@@ -38,7 +38,7 @@ they catch a wait, a lock or a heavy start rather than a busy machine.
 
 ## Launch, reports and what a main waits on
 
-`wrapped-launch` runs in both columns, twice each, in two rooms: a plain launch and one
+`wrapped-launch` runs in every column, twice each, in two rooms: a plain launch and one
 with `--command ./<harness>-worker`, a stand-in wrapper that exports a marker and execs the
 fixture. Every fixture process records its arguments and whether it saw the marker, and
 the case requires the wrapped processes — one for Claude Code; for Codex the version
@@ -48,7 +48,7 @@ carry `-C` into a directory holding another script of the same name, which must 
 run. It has no control in the suite; with the relative path left relative, it went red on
 three of its four observations (September 23, 2026).
 
-`pending-report` runs in both columns with three sessions. A worker reads a task and,
+`pending-report` runs in every column with three sessions. A worker reads a task and,
 in that turn, runs `rewake pending` before ending it; the sender must read a `pending`
 message about the task first — the mark's line, then the turn's own text — and the
 worker's awaiting record must still be there.
@@ -60,7 +60,7 @@ telemetry controls, each names what it must break and requires the rest to hold.
 Claude Code column the unmarked turn end is now held once by the Stop hook first; the
 fixture's model then only ends the turn, so the report follows as before.
 
-`pending-confirm` runs in the Claude Code column with four sessions. A worker ends its
+`pending-confirm` runs in the Claude Code and fixture columns with four sessions. A worker ends its
 first turn about a task pending; woken by a second session's mail, its next turn ends
 with no mark, and the Stop hook must hold it exactly once, quoting the pending line. The
 fixture answers a block as the harness does — it asks its model again and runs the Stop
@@ -70,9 +70,12 @@ interim message with that line, then the held answer, then the continuation, and
 task must stay owed. Woken by a third session, the worker ends unmarked again, is held
 once more about the second line, and only ends the turn: the report must be the held
 answer and then the continuation, and it must settle the task. Its two mutants never
-hold, and publish the continuation without the held answer (September 26, 2026).
+hold, and publish the continuation without the held answer (September 26, 2026). On the
+fixture column the worker's program asks the core through the adapter's `Confirm` before
+an end closes and goes on only with the reason it is given; the case and both controls
+run there too (October 7, 2026).
 
-`owed-reread` runs in both columns with a main and a worker. The worker reads a
+`owed-reread` runs in every column with a main and a worker. The worker reads a
 multi-line task and, in the same turn, runs `rewake inbox --owed` in both forms, as a
 session re-reading its task after a compaction would. Both must print that task in full;
 the machine form carries the id the worker read it under, and the text form opens with
@@ -81,7 +84,7 @@ The turn end must then report it once and
 settle it: asking changed nothing. Its mutant, an `--owed` that finds nothing, must break
 the first observation and hold the second.
 
-`awaited-view` runs in both columns with a main and two workers. main runs its own
+`awaited-view` runs in every column with a main and two workers. main runs its own
 commands when the scenario asks (the fixture's request directory): it sends one task to
 each worker. One reports at once; the other runs `rewake pending` in its turn, so its
 task stays owed. main's `rewake inbox --awaited`, in both forms, must then list exactly
@@ -249,7 +252,7 @@ lack it. Main's side of the confirmation, the hints and the adopted waits are un
 
 ## Actions on a sent message
 
-`withdraw-after-notice`, `edit-after-notice` and `addendum-owed` run in both columns with a
+`withdraw-after-notice`, `edit-after-notice` and `addendum-owed` run in every column with a
 main and a worker whose read waits at a gate (`RW_SHIM_READ_GATE`): its turn has started
 on the notice and it has not read yet. main, through its request directory, then
 withdraws the task, replaces it, or adds to it, each by the short id its send printed.
@@ -260,8 +263,9 @@ old id replaced by the new, the new text only, a notice that shows `Replaces <sh
 (withdrawn): ` before the new text, no recall, and one report on the replacement; and
 `--owed` with the addendum under its task, then one report settling both. What a
 notice showed is read from the worker's own record of its deliveries, on both columns.
-`withdraw-mid-turn` runs the withdrawal on the Codex column alone with the worker's
-first turn held open (`RW_SHIM_HOLD_TURN`; the read gate alone leaves no turn open to
+`withdraw-mid-turn` runs the withdrawal on every column that has a turn in progress to
+deliver into — Codex's and the fixture's; the Claude Code column records it unsupported —
+with the worker's first turn held open (`RW_SHIM_HOLD_TURN`; the read gate alone leaves no turn open to
 steer into): the recall must be steered into the turn the task started, as a member
 whose `recalls` names the task. Their mutants run on the Claude Code column, except
 recall-unnamed, which drops that member field and runs on Codex; recall-sender-first

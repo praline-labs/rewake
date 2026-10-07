@@ -36,6 +36,7 @@ internal/harness/claude/         launch arguments, environment, socket delivery
 internal/harness/claude/telemetry/  what a Claude Code session says about itself, carried to its wrapper
 internal/harness/codex/          owned app-server, WebSocket RPC, thread events and delivery
 internal/harness/codex/gateway/  the terminal gateway: selection, reservation, native mailbox
+internal/harness/fixture/        the test harness behind rewakefixture: a scripted program over a socket, every contract interface
 internal/wrap/                   wrapper: launch, signals, lifecycle
 internal/worktree/               checkouts rewake makes for a launch: git worktree add, records, land, removal
 scripts/                         packaging scripts and the tests of the npm shim

@@ -87,10 +87,11 @@ func runWrappedLaunch(t *testing.T, col column) {
 	}
 	c.Observed(obsWrappedReady, "both launches ready")
 
-	// Codex's three processes are started one after another; each records
+	// Codex's three processes are started one after another, and so are the
+	// fixture's — its version, its session half and its terminal; each records
 	// itself on start, so the counts settle once the sessions are ready.
 	want := 1
-	if col.harness == codexColumn.harness {
+	if col.harness == codexColumn.harness || col.harness == fixtureColumn.harness {
 		want = 3
 	}
 	waitFor(c, 10*time.Second, func() bool {
@@ -160,7 +161,7 @@ func markers(calls []shimCall) []bool {
 // epochPattern is a run's epoch where it appears in a path: after the session
 // name, before the socket's suffix, with the boot id a run of this build
 // carries.
-var epochPattern = regexp.MustCompile(`(same-(?:codex|claude))\.[0-9]+\.[0-9]+(?:\.[0-9a-f-]{36})?`)
+var epochPattern = regexp.MustCompile(`(same-(?:codex|claude|fixture))\.[0-9]+\.[0-9]+(?:\.[0-9a-f-]{36})?`)
 
 // digestPattern is a socket named by the digest of its name and epoch, the
 // form a path past 103 bytes takes (internal/state/paths.go): the digest

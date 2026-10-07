@@ -34,6 +34,7 @@ var transition = map[string]transit{
 
 	"internal/harness":         {layer: api, step: "S10"},
 	"internal/harness/claude":  {layer: api + "/claude", step: "S10"},
+	"internal/harness/fixture": {layer: api + "/fixture", step: "S10"},
 	"internal/harness/catalog": {layer: catalog, step: "S10"},
 
 	"internal/bridge":          {layer: tool, step: "S16"},
@@ -284,6 +285,9 @@ var registryExceptions = map[registryException]excuse{
 	},
 	{"internal/harness/catalog/catalog.go", "func init in a package under adapter"}: {
 		"the catalog registers every adapter from init; S10 makes it a constructor", "S10", 1, "dc886ebafbc2",
+	},
+	{"internal/harness/catalog/fixture.go", "func init in a package under adapter"}: {
+		"the fixture joins the catalog from a tagged init, beside the others, until S10 makes the catalog a constructor", "S10", 1, "08005cc75894",
 	},
 	{"internal/harness/check_holder.go", "func init in a package under adapter"}: {
 		"the name check's holder enters from init when the binary is re-executed as it", "S8", 1, "7bab8cf35620",

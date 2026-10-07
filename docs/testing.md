@@ -35,14 +35,19 @@ steps of clean runs rather than from a list kept by hand
 ([mail-bridge-checks.md](mail-bridge-checks.md#how-the-checks-are-built)). A release build
 never reads the variable.
 
-### Two columns, two meanings
+### Three columns, three meanings
 
-Every scenario runs twice: against a fixture that plays a Codex app-server, and against
-one that plays a Claude Code session. **Codex is the regression gate**: a red there
-blocks, and an absent capability there is red too, because a gate that stopped checking
-must not look green. **Claude Code is the search column**: a red there is a finding to
-investigate, and an absent capability is reported as `unsupported`, by name. The summary
-names the column of every result and promotes neither; ending the asymmetry is the
+Every scenario runs three times: against a fixture that plays a Codex app-server, one
+that plays a Claude Code session, and the fixture harness — a harness of its own, built
+only under the `rewakefixture` tag, which the suite's rewake is built with
+([stage3-fixture.md](v2/stage3-fixture.md)). **Codex is the regression gate**: a red
+there blocks, and an absent capability there is red too, because a gate that stopped
+checking must not look green. **Claude Code is the search column**: a red there is a
+finding to investigate, and an absent capability is reported as `unsupported`, by name.
+**The fixture column runs beside them**, not as the gate, until stage 3 makes it one
+([stage3-fixture.md](v2/stage3-fixture.md#the-gate-across-the-steps)); it proves the
+core through the adapter contract, and its program can withhold each capability. The
+summary names the column of every result and promotes none; ending the asymmetry is the
 owner's decision, recorded in [harness-features.md](harness-features.md).
 
 ## Running it
@@ -153,7 +158,7 @@ one; build the binary to keep them apart):
 
 ```
 workflow  24 scenarios, 36 cases: 33 pass, 3 unsupported   2m0.7s
-against   schema from codex 0.156.0 (…); scenarios against the fixture in both columns
+against   schema from codex 0.156.0 (…); scenarios against the fixture in every column
           unsupported  mid-turn/claude  observes-mid-turn-arrival
 FAIL  batch-arrival/claude   fail
       fail        "the recipient can receive mail before the letters leave"
@@ -230,7 +235,9 @@ and be served by the shim, and its answer to the resume's `thread/goal/get` must
 `ThreadGoalGetResponse`.
 
 **A harness column** is a `column` value with its capabilities and a fixture; the
-scenarios do not change. What building the second one taught is in
+scenarios do not change. The fixture harness's program is `test/workflow/fixtureshim_test.go`
+and `fixtureshim_turn_test.go`; its adapter, with its own tests of the readiness
+exchange, each switch, the versions, L1, L2 and E3, is `internal/harness/fixture`. What building the second one taught is in
 [2026-09-22-fixture-claude-code.md](roadmap/2026-09-22-fixture-claude-code.md).
 
 ### The cases

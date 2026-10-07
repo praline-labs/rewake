@@ -154,7 +154,10 @@ goes while a sandboxed command of a harness runs, which masks `.git` in its writ
 roots. The go command took it for a repository, asked git for the module's state, and
 git refused. The module's version-control state is nothing the layout rules judge, so
 their `go list` runs with `-buildvcs=false`, and a test puts an empty `.git` above a
-synthetic module to keep it so.
+synthetic module to keep it so. The workflow suite's check of its `-X` values reads a
+module of its own the same way and failed the same evening for the same reason
+(`TestABuildValueTheLinkerWouldIgnoreFails`); its `go list` takes the same flag, and
+its test the same empty `.git`.
 
 *October 7, 2026.*
 

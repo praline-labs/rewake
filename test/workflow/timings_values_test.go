@@ -33,7 +33,10 @@ type builtPackage struct {
 }
 
 func loadSuiteBuild(root string) (suiteBuild, error) {
-	cmd := exec.Command("go", "list", "-e", "-json", "-deps", "-export", "./cmd/rewake")
+	// Without the version-control state, which no value here depends on: a
+	// stray .git above a temporary module makes go list ask git, which refuses
+	// (docs/traps.md).
+	cmd := exec.Command("go", "list", "-e", "-json", "-deps", "-export", "-buildvcs=false", "-tags", suiteTags, "./cmd/rewake")
 	cmd.Dir = root
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -115,7 +118,12 @@ func (b suiteBuild) settable(path, name string) (string, error) {
 // values on a module of its own, read through the same go list: each name
 // below is one the linker sets, or one it skips without a word.
 func TestABuildValueTheLinkerWouldIgnoreFails(t *testing.T) {
-	root := t.TempDir()
+	// An empty .git above the module, as one appears in /tmp at times.
+	above := t.TempDir()
+	if err := os.Mkdir(filepath.Join(above, ".git"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	root := filepath.Join(above, "module")
 	for name, text := range map[string]string{
 		"go.mod":             "module example.org/knobs\n\ngo 1.25\n",
 		"cmd/rewake/main.go": "package main\n\nimport _ \"example.org/knobs/knob\"\n\nfunc main() {}\n",

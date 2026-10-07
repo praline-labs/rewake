@@ -63,7 +63,8 @@ nothing lifts a stop without returning evidence.
   - `internal/inbox/batch_edges_test.go` `TestGroupedPreparationRechecksAnswerLeasesExpiryAndEpoch`
   - `internal/inbox/withdraw_test.go` `TestTheLastCheckBeforeANoticeSeesAWithdrawal`
   - `internal/inbox/window_test.go` `TestARetryDoesNotRestartTheWindow`
-  - Gap: a turn end's retry with its own deadline (only the tool's and the shell's retries are tested) — closed in S5, on the fixture's turns.
+  - `internal/harness/fixture/turns_test.go` `TestATurnEndIsRetriedWithItsOwnDeadline`
+  - `internal/harness/fixture/turns_test.go` `TestATurnEndThatNeverTakesIsRefusedAfterItsAttempts`
   - `internal/inbox/publication_race_test.go` `TestTheSweepWaitsForAnAttemptsEvidence`
   - `internal/inbox/publication_race_test.go` `TestAdmissionIsInsideTheSection`
   - `internal/cli/publication_race_test.go` `TestTheSweepWaitsForAHeadsUpsEvidence`
@@ -229,10 +230,15 @@ nothing lifts a stop without returning evidence.
   - `internal/inbox/journal_test.go` `TestAnAbandonedJournalWriteIsNotAJournal`
   - `internal/inbox/held_end_test.go` `TestAHeldEndRaisesTheClockToItsPosition`
   - `internal/cli/turn_confirm_repeat_test.go` `TestAHoldCutByACrashIsHeldOnceWhenConfirmedAgain`
-  - `internal/cli/review_receipt_identity_test.go` `TestReviewScopedGapReceiptsRemainDistinct` — rebuilt in S5 on neutral completions
-  - `internal/cli/review_receipt_identity_test.go` `TestReviewStoppedReceiptAllowsSameTurnFinal` — rebuilt in S5 on neutral completions
-  - `internal/cli/turn_test.go` `TestTwoTurnEndsAtOnceReportOnce` — rebuilt in S5 on neutral completions
-  - `internal/cli/error_report_test.go` `TestACodexNotifyReportsNothing` — rebuilt in S5 on neutral completions
+  - `internal/cli/review_receipt_identity_test.go` `TestReviewScopedGapReceiptsRemainDistinct` — the gateway's case, goes in S8
+  - `internal/cli/review_receipt_identity_test.go` `TestReviewStoppedReceiptAllowsSameTurnFinal` — the gateway's case, goes in S8
+  - `internal/cli/turn_test.go` `TestTwoTurnEndsAtOnceReportOnce` — the hook's case, goes in S9
+  - `internal/cli/error_report_test.go` `TestACodexNotifyReportsNothing` — the notify's case, goes in S8
+  - `internal/cli/neutral_end_test.go` `TestNeutralEndsWithDistinctIDsReportTwice`
+  - `internal/cli/neutral_end_test.go` `TestNeutralStoppedThenFinishedEndsOfOneTurnReportTwice`
+  - `internal/cli/neutral_end_test.go` `TestNeutralTwoEndsAtOnceReportOnce`
+  - `internal/cli/neutral_end_test.go` `TestNeutralEndsWithoutTheirScopeReportNothing`
+  - `internal/harness/fixture/turns_test.go` `TestAnEndSentAgainIsTheSameCompletion`
   - `internal/inbox/kept_clock_test.go` `TestAHoldReservesItsPositionBeforeItCommits`
   - `internal/inbox/kept_clock_test.go` `TestAFailedHoldLeavesAGapAndNoPositionIsIssuedTwice`
   - Gap: every TurnBoundary names its event — closed in S10 with the adapter API.

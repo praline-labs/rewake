@@ -1,18 +1,20 @@
 package workflow
 
-// The two columns a scenario runs in, and what each of them can show.
+// The columns a scenario runs in, and what each of them can show.
 //
-// The scenarios are the same text in both: the same observations, the same
+// The scenarios are the same text in each: the same observations, the same
 // controls. What differs is the evidence a harness makes available, and that
 // difference is named rather than worked around. A column that cannot show
 // something records the observation as unsupported with the capability it
 // lacks — check-runner.md is explicit that a capability applies to a single
 // observation as well as to a whole case, and that unsupported is not a pass.
 //
-// The two are not equal in what a red result means, either. Codex is the
+// They are not equal in what a red result means, either. Codex is the
 // regression gate and Claude Code is the search column, because that adapter
-// is younger and less exercised; the summary names the column of every red and
-// nothing here promotes one on its own.
+// is younger and less exercised; the fixture runs beside them until stage 3
+// makes it the gate (docs/v2/stage3-fixture.md#the-gate-across-the-steps). The
+// summary names the column of every red and nothing here promotes one on its
+// own.
 
 import (
 	"errors"
@@ -72,6 +74,13 @@ var (
 		capabilityMidTurn:      true,
 	}}
 	claudeColumn = column{harness: "claude", caps: map[string]bool{}}
+	// fixtureColumn is the harness the core is proven on without a real one
+	// (docs/v2/stage3-fixture.md): it names its members and steers into a
+	// running turn; it reports no selection, which is Codex's alone.
+	fixtureColumn = column{harness: "fixture", caps: map[string]bool{
+		capabilityNamesMembers: true,
+		capabilityMidTurn:      true,
+	}}
 )
 
 // unsupported records an observation this column cannot make, by name and with
@@ -223,7 +232,7 @@ func (col column) replayedAnnouncement(worker *codexSession) (string, error) {
 	return "", nil
 }
 
-// runInColumns runs one scenario body in both columns, under a subtest each.
+// runInColumns runs one scenario body in every column, under a subtest each.
 // The scenario keeps one name: the column is a property of the case, which is
 // what the summary prints beside it, not a second scenario.
 //
@@ -232,7 +241,7 @@ func (col column) replayedAnnouncement(worker *codexSession) (string, error) {
 func runInColumns(t *testing.T, name string, body func(t *testing.T, col column)) {
 	t.Helper()
 	runParallel(t)
-	for _, col := range []column{codexColumn, claudeColumn} {
+	for _, col := range []column{codexColumn, claudeColumn, fixtureColumn} {
 		t.Run(col.harness, func(t *testing.T) { body(t, col) })
 	}
 	_ = name

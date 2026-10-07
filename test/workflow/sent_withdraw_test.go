@@ -31,20 +31,25 @@ func TestWithdrawAfterNotice(t *testing.T) {
 	})
 }
 
-// TestWithdrawMidTurn is the same on the Codex column with the worker's turn
-// held open, as a session is while it works on what a preview told it: the
-// recall must reach that running turn by steer rather than wait for the next
-// one, and name the task it stops. The other column has no turn in progress to
-// deliver into (capabilityMidTurn).
+// TestWithdrawMidTurn is the same with the worker's turn held open, as a
+// session is while it works on what a preview told it: the recall must reach
+// that running turn by steer rather than wait for the next one, and name the
+// task it stops. A column with no turn in progress to deliver into records it
+// unsupported (capabilityMidTurn).
 func TestWithdrawMidTurn(t *testing.T) {
-	binary := enterScenario(t, "withdraw-mid-turn")
-	c := Start(t, Spec{
-		Name:         "withdraw-mid-turn",
-		Harness:      codexColumn.harness,
-		Observations: withdrawMidTurnObservations,
-		Deadline:     90 * time.Second,
+	runInColumns(t, "withdraw-mid-turn", func(t *testing.T, col column) {
+		binary := enterScenario(t, "withdraw-mid-turn")
+		c := Start(t, Spec{
+			Name:         "withdraw-mid-turn",
+			Harness:      col.harness,
+			Observations: withdrawMidTurnObservations,
+			Deadline:     90 * time.Second,
+		})
+		if !offersMidTurn(c, col) {
+			return
+		}
+		judge(c, playWithdrawMidTurnOn(col)(t, c, Isolate(t, c, binary)))
 	})
-	judge(c, playWithdrawMidTurn(t, c, Isolate(t, c, binary)))
 }
 
 const (
@@ -209,8 +214,11 @@ func noticeCarrying(c *Case, session *codexSession, text string) (groupDelivery,
 	return found, shown
 }
 
-func playWithdrawMidTurn(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
-	return playWithdrawAfterNotice(t, c, iso, codexColumn, true)
+// playWithdrawMidTurnOn plays the held scenario on one column.
+func playWithdrawMidTurnOn(col column) func(*testing.T, *Case, *Isolation) []telemetryFinding {
+	return func(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
+		return playWithdrawAfterNotice(t, c, iso, col, true)
+	}
 }
 
 // playWithdrawAfterNotice plays the scenario; held keeps the worker's first
@@ -371,5 +379,5 @@ func TestARecallLedBySenderFails(t *testing.T) {
 }
 
 func TestAnUnnamedRecallFails(t *testing.T) {
-	runFindingsControlOn(t, codexColumn.harness, "withdraw-mid-turn", playWithdrawMidTurn, mutantRecallUnnamed, obsWithdrawSteered)
+	runFindingsControlOn(t, codexColumn.harness, "withdraw-mid-turn", playWithdrawMidTurnOn(codexColumn), mutantRecallUnnamed, obsWithdrawSteered)
 }

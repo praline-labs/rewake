@@ -91,12 +91,16 @@ documentation is part of every change, not a task after it:
 ## Checks
 
 ```bash
-gofumpt -l $(go list -f '{{.Dir}}' ./...)   # empty; the module, not the tree, see below
-go vet ./... && go vet -tags rewakefault ./...
-staticcheck ./... && staticcheck -tags rewakefault ./...
+gofumpt -l $(go list -tags rewakefixture -f '{{.Dir}}' ./...)   # empty; the module, not the tree
+go vet ./... && go vet -tags rewakefault ./... && go vet -tags rewakefixture ./... &&
+  go vet -tags rewakefault,rewakefixture ./...
+staticcheck ./... && staticcheck -tags rewakefault ./... && staticcheck -tags rewakefixture ./... &&
+  staticcheck -tags rewakefault,rewakefixture ./...
 golangci-lint run ./...         # config in .golangci.yml; golangci-lint fmt formats
 env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
   go test -race -shuffle=on ./...
+env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
+  go test -race -shuffle=on -tags rewakefault,rewakefixture ./internal/harness/fixture/... ./internal/harness/catalog/...
 ```
 
 All five green is the condition for a commit. A red check is never somebody
@@ -107,9 +111,16 @@ than the module: a plain `.` formats whatever Go file happens to lie under the
 working directory, which is not the same set as the project. The package list
 asks the module what belongs to it, and that is the answer this check wants.
 
-Production code also builds under a tag: `rewakefault` adds the fault seam of the state
-directory. Vet and staticcheck run once without it and once with it, so tagged code is
-compiled and analysed by the checks rather than only by the rig that builds it.
+Production code also builds under two tags: `rewakefault` adds the fault seam of the state
+directory, and `rewakefixture` the fixture harness the workflow suite runs as its third
+column (`docs/v2/stage3-fixture.md`). Vet and staticcheck run without them, with each and
+with both, so tagged code is compiled and analysed by the checks rather than only by the
+rig that builds it; the package list `gofumpt` reads and golangci-lint's run name the
+fixture's tag for the same reason. The fixture's own tests, and the catalogue's with the
+fixture in it, run under both tags on a `go test` line of their own. That line does not
+take `./...`: in a tagged test binary the fixture is a harness like any other, so the
+layout test would read the word "fixture" — which the core's tests use in its ordinary
+sense — as a harness named outside the adapters.
 
 The `go test` line carries two tests of the shape of the code and the documents.
 `internal/layout_test.go` holds the import rule of 2.0 over every build variant, with

@@ -38,9 +38,10 @@ that they are checked like the rest ([stage3-tests.md](../v2/stage3-tests.md#how
   - `internal/cli/turn_hold_test.go` `TestAFailureAfterAHoldCarriesTheHeldAnswer` — the Stop hook's case, goes in S9
   - `internal/cli/turn_hold_test.go` `TestAnAnswerHeldAndNeverContinuedGoesWithTheNextEnd` — the Stop hook's case, goes in S9
   - `internal/cli/turn_hold_test.go` `TestATurnEndIsHeldOnlyAfterAnInterimOne` — the Stop hook's case, goes in S9
-  - `test/workflow/pending_confirm_test.go` `TestPendingConfirm` — rebuilt in S5 on the neutral confirmation
-  - `test/workflow/pending_confirm_test.go` `TestAnUnconfirmedPendingFails` — rebuilt in S5 on the neutral confirmation
-  - `test/workflow/pending_confirm_test.go` `TestAConfirmationThatDropsTheAnswerFails` — rebuilt in S5 on the neutral confirmation
+  - `test/workflow/pending_confirm_test.go` `TestPendingConfirm` — on the fixture column since S5; its Claude Code case goes in S9
+  - `test/workflow/pending_confirm_test.go` `TestAnUnconfirmedPendingFails` — on the fixture column since S5; its Claude Code case goes in S9
+  - `test/workflow/pending_confirm_test.go` `TestAConfirmationThatDropsTheAnswerFails` — on the fixture column since S5; its Claude Code case goes in S9
+  - `internal/harness/fixture/turns_test.go` `TestAnEndIsConfirmedWhenItCanBeHeld`
   - `internal/cli/turn_confirm_test.go` `TestAConfirmedEndAfterAnInterimOneIsHeldOnce`
   - `internal/cli/turn_confirm_test.go` `TestAConfirmedContinuationThatMarksPendingKeepsTheTaskOwed`
   - `internal/cli/turn_confirm_test.go` `TestAFailedOrStoppedContinuationCarriesTheHeldAnswer`
@@ -71,8 +72,12 @@ that they are checked like the rest ([stage3-tests.md](../v2/stage3-tests.md#how
   - `internal/cli/error_report_test.go` `TestQuestionsReturnAnErrorOutcome`
   - `test/workflow/stopped_routing_test.go` `TestStoppedRouting`
   - `test/workflow/stopped_routing_test.go` `TestAStoppedSentToMainFails`
-  - `internal/cli/error_report_test.go` `TestFailedTurnsReachEveryWaitingSender` — rebuilt in S5 on the fixture's turns
-  - `internal/cli/error_report_test.go` `TestACodexNotifyReportsNothing` — rebuilt in S5 on the fixture's turns
-  - `internal/cli/error_report_test.go` `TestUnclaimedFailuresReachMainAndMainKeepsItsOwn` — rebuilt in S5 on the fixture's turns
-  - `internal/cli/error_report_test.go` `TestEmptyCompletionAfterWorkReportsAnErrorWithoutText` — rebuilt in S5 on the fixture's turns
+  - `internal/cli/error_report_test.go` `TestFailedTurnsReachEveryWaitingSender` — its hook leg goes in S9
+  - `internal/cli/error_report_test.go` `TestACodexNotifyReportsNothing` — the notify's case, goes in S8
+  - `internal/cli/error_report_test.go` `TestUnclaimedFailuresReachMainAndMainKeepsItsOwn` — the hook's case, goes in S9
+  - `internal/cli/error_report_test.go` `TestEmptyCompletionAfterWorkReportsAnErrorWithoutText` — the notify's case, goes in S8
+  - `internal/cli/neutral_end_test.go` `TestNeutralFailedEndsReachEveryWaitingSender`
+  - `internal/cli/neutral_end_test.go` `TestNeutralEndsWithoutTheirScopeReportNothing`
+  - `internal/cli/neutral_end_test.go` `TestNeutralUnclaimedFailuresReachMainAndMainKeepsItsOwn`
+  - `internal/cli/neutral_end_test.go` `TestNeutralAnEmptyEndAfterWorkReportsAnError`
   - Gap: the reason taken from the adapter's end event over a neutral TurnBoundary — closed in S10.

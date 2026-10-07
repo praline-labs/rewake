@@ -297,7 +297,7 @@ cheapest first. Unit tests beside the code, run by the five checks in
 expiry, the owned server's framing, correlation and reconnects on a fake socket, and a
 parse of every example in the command table. The workflow suite in `test/workflow`,
 switched on by `REWAKE_WORKFLOW=1`: a built rewake end to end against a fixture of each
-harness, in both columns, with negative controls of two kinds: some build rewake with
+harness, in every column, with negative controls of two kinds: some build rewake with
 one line mutated (batch-arrival's four, three of task-report's, mid-turn's
 wait-for-idle), the others change the fixture's world (task-report's other four, the
 readiness controls, mid-turn's late and failed-operation); what each runs and why is in

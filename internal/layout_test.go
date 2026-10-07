@@ -25,7 +25,7 @@ const (
 // buildTags are the tags production code exists under. The import rule runs
 // over the graph of every combination of them, so an edge that only a tagged
 // build compiles is judged like any other.
-var buildTags = []string{"rewakefault"}
+var buildTags = []string{"rewakefault", "rewakefixture"}
 
 // ownWords belong to one harness without being its id or title. The list grows
 // when a review finds a word.
