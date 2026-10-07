@@ -92,7 +92,8 @@ packages (`bridge/server/order_marks_test.go:58`, `rig_test.go:111`,
 the hook command of `cli/turnended.go`; its turn-end functions remain.
 
 **The inventory at `b6ed4ed`** (the cli files' declarations, by reading and grep —
-retaken with `go/types` at the step):
+retaken with `go/types` at the step; S4 retook it at `b24dcad` and `8663fcc` and found
+no dependency outside it; the corrections its review agreed are applied below):
 
 | Declarations | Goes to | Why |
 |---|---|---|
@@ -102,8 +103,8 @@ retaken with `go/types` at the step):
 | `holdTurn`, `holdReason` | `core/mail` (`turn_hold.go`) | the hold, taken as an argument since S4 and set by the neutral confirmation since S5, with the held end's identity |
 | `printHold` | stays in `cli` | it writes the command's output |
 | `markVerdict` and its constants, `judgeMark` | `core/mail` (`pending_mark.go`) | the mark's verdict |
-| `inOwnTurn` | stays with its callers in `cli` (`journal.go:182`, `pending.go:127`) | it reads the ticket and the binding's declared property; the core gets the boolean |
-| `acknowledge`, `answeredBy`, `markWhole`, `ackBudget`, `ErrNotWhole`, `ErrTurnEnded` | `core/mail` (`read_ack.go`) | the read's acknowledgment |
+| `inOwnTurn`, `attemptScope` | stay with their callers in `cli` (`journal.go:182`, `pending.go:126`) | they read the ticket and the binding's declared property; the core gets the booleans, as `inbox.AttemptScope` since S4 |
+| `acknowledgeRead`, `acknowledge`, `answeredBy`, `markWhole`, `ackBudget`, `ErrNotWhole`, `ErrTurnEnded` | `core/mail` (`read_ack.go`) | the read's acknowledgment |
 | `ReportCompletion`, `ConfirmCompletion`, `AcknowledgeRead` | stay in `cli` as shims | they convert the adapter's completion and the tool's exposure; `cli/launch.go:77-89` keeps passing them, `ConfirmCompletion` beside `ReportCompletion` since S5 |
 | `settleLetters`, `readSite` | stay in `cli` | the shell read's path (`inbox_parts_emit.go:123`) |
 
@@ -114,9 +115,11 @@ variable, so no test reaches into another package's variable; `hookLockWait`, wh
 every end waits under (`turnended.go:125`), is renamed for what it is.
 
 **The move**: those declarations to `core/mail` files; `cli` imports them back.
-**String consumers**: the mutations of `turn_reports.go` (5), `turn_result.go` (2),
-`turn_hold.go` (1) and `turnended.go` (1, on `turnMark`, `:165`) get their new paths in
-the same commit.
+**String consumers**: the mutations of `turn_reports.go` (5), `turn_hold.go` (1) and
+`turnended.go` (1, on `turnMark`, `:165`) get their new paths in the same commit. The two
+that named `turn_result.go` name `cli/turn_payload.go` since S4: they edit the payload
+decoder, which stays in `cli` and leaves in S8 and S9, so they are retired or rebuilt
+there and do not move here.
 
 **Tests: none moves.** The closure rule above keeps them in `cli`: `turn_scope_test.go`
 reaches `readKind`, which runs `rewake inbox` (`cli/turn_journal_test.go:25-32`), and
