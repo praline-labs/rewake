@@ -48,6 +48,8 @@ that they are checked like the rest ([stage3-tests.md](../v2/stage3-tests.md#how
   - `internal/cli/turn_confirm_test.go` `TestAnAnswerHeldAndNeverContinuedGoesWithTheNextConfirmedEnd`
   - `internal/cli/turn_confirm_test.go` `TestAConfirmedEndIsHeldOnlyAfterAnInterimOne`
   - `internal/cli/turn_confirm_test.go` `TestEveryFailureOfTheConfirmationCheckFallsToPublishing`
+  - `internal/cli/turn_hold_senders_test.go` `TestOneUnreadableSenderAbandonsTheHold`
+  - `internal/cli/turn_hold_senders_test.go` `TestAGoneSenderLeavesTheHoldToTheLiveOne`
   - `internal/cli/turn_confirm_test.go` `TestAConfirmedEndWithoutItsEventIsRefused`
   - `internal/cli/turn_confirm_repeat_test.go` `TestTheSameEndConfirmedAgainGetsTheSameAnswer`
   - `internal/cli/turn_confirm_repeat_test.go` `TestTwoEqualConfirmationsAtOnceHoldOnce`

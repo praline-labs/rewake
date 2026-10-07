@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"slices"
 	"strings"
@@ -40,8 +41,8 @@ func holdTurn(dir string, self registry.Session, event inbox.TurnEnd, op string,
 		// with its own, and asks nothing again.
 		return ""
 	}
-	senders := liveSenders(dir, waiters)
-	if len(senders) == 0 || marked {
+	senders, err := liveSenders(dir, waiters)
+	if err != nil || len(senders) == 0 || marked {
 		return ""
 	}
 	reason := holdReason(line, senders)
@@ -52,21 +53,29 @@ func holdTurn(dir string, self registry.Session, event inbox.TurnEnd, op string,
 }
 
 // liveSenders names the waiters whose sessions still run the run that sent the
-// task: the ones a report would reach. A lookup that fails names nobody, and
-// the fault seam is asked first, so a test fails it like the check's other
-// reads.
-func liveSenders(dir string, waiters []inbox.Waiter) []string {
+// task: the ones a report would reach. A sender proven gone — no record, or a
+// record of another run — is left out; a lookup that could not be completed
+// fails the whole check, since the hold would then be asked of a set the check
+// never saw. The fault seam is asked first, so a test fails the lookup like
+// the check's other reads.
+func liveSenders(dir string, waiters []inbox.Waiter) ([]string, error) {
 	var names []string
 	for _, waiter := range waiters {
-		if state.AskRead(state.SessionPath(dir, waiter.Name)) != nil {
-			continue
+		if err := state.AskRead(state.SessionPath(dir, waiter.Name)); err != nil {
+			return nil, err
 		}
 		peer, err := registry.Lookup(dir, waiter.Name)
-		if err == nil && peer.Epoch() == waiter.Epoch && !slices.Contains(names, peer.Name) {
+		if errors.Is(err, registry.ErrNotFound) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		if peer.Epoch() == waiter.Epoch && !slices.Contains(names, peer.Name) {
 			names = append(names, peer.Name)
 		}
 	}
-	return names
+	return names, nil
 }
 
 // holdReason is what the model reads after its turn was held. Claude Code

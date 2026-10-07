@@ -123,7 +123,10 @@ the mark.
 - **When.** `rewake turn-ended` holds a turn end only when all of these are true: it is
   a Stop, not a StopFailure; its `stop_hook_active` is `false`; this run's last
   published turn end was interim; a sender whose session still runs waits on a task;
-  the ending turn made no mark; and no answer is kept from an earlier hold. Then it
+  the ending turn made no mark; and no answer is kept from an earlier hold. A sender
+  proven gone — no record, or one of another run — is left out of the senders; a sender
+  whose record could not be read fails the check, and the end is published to every
+  sender, since the hold would otherwise be asked for a set the check never saw. Then it
   publishes nothing, keeps `last_assistant_message`, and prints
   `{"decision":"block","reason":"…"}`. The reason quotes the pending line, names the
   senders, and says both ways on: still waiting — run `rewake pending` and end the turn;
