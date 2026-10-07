@@ -224,6 +224,8 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/harness/fixture/order_test.go` `TestASilentProbeCostsOnlyItsCapability`
   - `internal/harness/fixture/order_test.go` `TestCloseWaitsForACallIntoTheHandler`
   - `internal/harness/fixture/order_test.go` `TestNothingReachesTheHandlerOnceClosed`
+  - `internal/harness/fixture/order_test.go` `TestCloseWaitsForAFrameBeingHandled`
+  - `internal/harness/fixture/order_test.go` `TestNothingReachesTheHandlerWhileClosing`
   - `internal/bridge/server/child_bound_test.go` `TestAChildPastItsDeadline` — rebuilt in S7 on the neutral rig
   - `internal/bridge/server/stdout_bound_test.go` `TestAClientThatStopsReading` — rebuilt in S7 on the neutral rig
   - `internal/bridge/server/stdout_bound_test.go` `TestAReaderThatResumesInTimeGetsEveryReply` — rebuilt in S7 on the neutral rig

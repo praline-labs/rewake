@@ -116,6 +116,29 @@ func TestCloseWaitsForACallIntoTheHandler(t *testing.T) {
 	}
 }
 
+// Nor does it return while a frame is still being handled: what the frame's
+// goroutine does next would answer on a backend the wrapper has let go of.
+func TestCloseWaitsForAFrameBeingHandled(t *testing.T) {
+	b, p := paired(t, harness.CompletionHandler{Capture: boundary}, Served...)
+	received, release := holdDispatch(t, opTurnStarted)
+	p.write(t, Frame{Op: opTurnStarted, ID: 1, Turn: "t1"})
+	<-received
+	closed := make(chan struct{})
+	go func() { b.Close(); close(closed) }()
+	select {
+	case <-closed:
+		close(release)
+		t.Fatal("Close returned while a frame was still being handled")
+	case <-time.After(100 * time.Millisecond):
+	}
+	close(release)
+	select {
+	case <-closed:
+	case <-time.After(time.Second):
+		t.Fatal("Close did not return after the frame was handled")
+	}
+}
+
 // Once Close has begun, nothing more is handed to the wrapper.
 func TestNothingReachesTheHandlerOnceClosed(t *testing.T) {
 	var calls atomic.Int32
@@ -130,6 +153,26 @@ func TestNothingReachesTheHandlerOnceClosed(t *testing.T) {
 	}
 	if answer := b.turnEnded(l, Frame{Turn: "t1", End: "t1/e1", Outcome: OutcomeCompleted}); answer.OK || calls.Load() != 0 {
 		t.Fatalf("an end was taken after Close: %+v, %d calls", answer, calls.Load())
+	}
+}
+
+// Close stops calls into the handler from the moment it begins, before the
+// connection is withdrawn: a frame taken in between is refused, not handed on.
+func TestNothingReachesTheHandlerWhileClosing(t *testing.T) {
+	var calls atomic.Int32
+	b, _ := paired(t, harness.CompletionHandler{
+		Capture: func() *inbox.ReadBoundary { calls.Add(1); return boundary() },
+		Publish: func(context.Context, harness.Completion) error { calls.Add(1); return nil },
+	}, Served...)
+	l := currentLink(b)
+	b.mu.Lock()
+	b.closing = true
+	b.mu.Unlock()
+	if answer := b.turnStarted(l, Frame{Turn: "t1"}); answer.OK {
+		t.Fatal("a turn start was taken while closing")
+	}
+	if answer := b.turnEnded(l, Frame{Turn: "t1", End: "t1/e1", Outcome: OutcomeCompleted}); answer.OK || calls.Load() != 0 {
+		t.Fatalf("an end was taken while closing: %+v, %d calls", answer, calls.Load())
 	}
 }
 
@@ -184,9 +227,15 @@ func TestASilentProbeCostsOnlyItsCapability(t *testing.T) {
 	shorten(t)
 	for _, capability := range Served {
 		t.Run(capability, func(t *testing.T) {
+			began := time.Now()
 			b, err := startProgram(t, switchMute+"="+capability)
 			if err != nil {
 				t.Fatalf("one unanswered probe failed the start: %v", err)
+			}
+			// The hello and one probe's bound, with room for a loaded machine;
+			// a probe allowed more than its own bound would take far longer.
+			if took := time.Since(began); took > 3*readinessBound {
+				t.Fatalf("the start took %s with one probe silent, past its bound of %s", took, readinessBound)
 			}
 			want := slices.DeleteFunc(slices.Clone(Served), func(c string) bool { return c == capability })
 			if got := b.Live(); !slices.Equal(got, want) {
@@ -206,5 +255,19 @@ func TestActivityBeforeTelemetryIsProvenStaysUnknown(t *testing.T) {
 	b.mu.Unlock()
 	if state := b.SessionState(); state.Activity != nil {
 		t.Fatalf("a sample taken before telemetry was live became the state: %+v", state)
+	}
+}
+
+// Nor is a sample from a connection the backend no longer holds, even when
+// Telemetry is live on the one that replaced it.
+func TestActivityFromAWithdrawnConnectionIsDropped(t *testing.T) {
+	b, _ := paired(t, harness.CompletionHandler{}, Served...)
+	old := currentLink(b)
+	b.mu.Lock()
+	b.link = newLink(nil)
+	b.mu.Unlock()
+	b.activity(old, Frame{State: "working"})
+	if state := b.SessionState(); state.Activity != nil {
+		t.Fatalf("a sample from the old connection became the state: %+v", state)
 	}
 }

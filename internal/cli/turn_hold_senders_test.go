@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"os"
 	"strings"
 	"testing"
@@ -77,5 +78,22 @@ func TestAGoneSenderLeavesTheHoldToTheLiveOne(t *testing.T) {
 	reason := lab.confirm(t, lab.end("turn-2", 1, inbox.Finished, "the work is done"))
 	if !strings.Contains(reason, "web still wait") || !lab.kept() {
 		t.Fatalf("the hold with one sender gone: reason=%q kept=%v", reason, lab.kept())
+	}
+}
+
+// A sender whose record is there but cannot be read as one is not taken for
+// gone: the check fails as for a read that failed, and the end is not held
+// for the other sender. Whether it then publishes is the publication's own
+// matter; the record stops that too.
+func TestAnUndecodableSenderIsNotTakenForGone(t *testing.T) {
+	lab := senderLab(t)
+	if err := os.WriteFile(state.SessionPath(lab.dir, "second"), []byte("{not a record"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	end := lab.end("turn-2", 1, inbox.Finished, "the work is done")
+	end.Boundary = boundaryNow(t, lab.dir, lab.self)
+	reason, _ := ConfirmCompletion(context.Background(), lab.dir, lab.self, end)
+	if reason != "" || lab.kept() {
+		t.Fatalf("an undecodable sender was taken for gone and the end held: reason=%q kept=%v", reason, lab.kept())
 	}
 }
