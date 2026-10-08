@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/boottime"
 )
 
 // The fixture program's turns: a notice starts one, or is steered into the one
@@ -69,7 +71,9 @@ func (s *fixtureSession) delivered(frame, reply fixtureFrame) fixtureFrame {
 // work is what the session does with a turn: say it started, read the mail,
 // and end it through the adapter.
 func (s *fixtureSession) work(id string, notice mailboxNotice) {
-	if answer, err := s.ask(fixtureFrame{Op: "turn-started", Turn: id}, fixtureAskBound); err != nil || !answer.OK {
+	// The program times its own start, before the turn does anything, as a
+	// harness that knows when its turn began does.
+	if answer, err := s.ask(fixtureFrame{Op: "turn-started", Turn: id, At: boottime.Now()}, fixtureAskBound); err != nil || !answer.OK {
 		s.recordTurnEvent("start-refused", id, refusal(answer, err))
 	}
 	s.reportActivity("working")

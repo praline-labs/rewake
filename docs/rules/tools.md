@@ -221,6 +221,7 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/cli/journal_test.go` `TestAPendingMarkRepeatedInOneTurnIsOneMark`
   - `internal/bridge/endpoint/input_test.go` `TestATicketCarriesItsTransportsDeclaration`
   - `internal/bridge/endpoint/input_test.go` `TestATimedTurnStartIsRecordedInTheMailbox`
+  - `test/workflow/fixture_turn_start_test.go` `TestFixtureTurnStart`
   - `internal/inbox/turn_start_test.go` `TestTheLatestTurnStartIsTheLargestReading`
   - `internal/inbox/turn_start_test.go` `TestAnUnreadableTurnStartIsAnError`
 

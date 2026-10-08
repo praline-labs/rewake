@@ -93,6 +93,8 @@ type fixtureFrame struct {
 	Notice     string          `json:"notice,omitempty"`
 	Members    json.RawMessage `json:"members,omitempty"`
 	Steered    bool            `json:"steered,omitempty"`
+	// At is the program's own time of a turn's start, on the boot clock.
+	At int64 `json:"at,omitempty"`
 	// The tool transport's fields: the probe's offer, what the program
 	// registered, and a call's report and result.
 	Tools     []bridge.ToolDescriptor `json:"tools,omitempty"`

@@ -122,8 +122,10 @@ func playToolScenario(t *testing.T, c *Case, iso *Isolation, col column, scenari
 	}) {
 		return unjudged(fmt.Sprintf("the worker's turn made %d of %d calls through the tool (%v): %s", len(run.calls), len(calls), problem, worker.acceptedTurns()))
 	}
-	// The turn's end: the lead reads the worker's answer about its task.
-	if !waitFor(c, 30*time.Second, func() bool {
+	// The turn's end: the lead reads the worker's answer about its task. A
+	// turn that answered nothing is the judges' to weigh: a read that never
+	// committed leaves nothing owed, so its end reports nothing.
+	waitFor(c, 30*time.Second, func() bool {
 		for _, message := range run.from() {
 			if len(message.InReplyTo) > 0 {
 				run.task = reportView{ID: message.InReplyTo[0]}
@@ -131,9 +133,7 @@ func playToolScenario(t *testing.T, c *Case, iso *Isolation, col column, scenari
 			}
 		}
 		return false
-	}) {
-		return unjudged(fmt.Sprintf("the lead never read the worker's answer about its task; calls %v", run.calls))
-	}
+	})
 	return scenario.judge(run)
 }
 
@@ -157,6 +157,19 @@ func toolRecords(worker *codexSession) ([]fixtureToolRecord, error) {
 	return records, nil
 }
 
+// lastTurnEvent is the detail of the last event of a kind in a session's turn
+// log, "" when there is none.
+func lastTurnEvent(session *codexSession, kind string) string {
+	events, _ := session.turnEvents()
+	detail := ""
+	for _, event := range events {
+		if event.Kind == kind {
+			detail = event.Detail
+		}
+	}
+	return detail
+}
+
 func toolFinding(observation string, held bool, detail string, args ...any) telemetryFinding {
 	return telemetryFinding{observation: observation, held: held, judged: true, detail: fmt.Sprintf(detail, args...)}
 }
@@ -171,128 +184,160 @@ const (
 	obsToolListSessions = "the tool's list answer names the worker and the lead"
 )
 
-func TestToolInbox(t *testing.T) {
-	runToolScenario(t, toolScenario{
-		name:         "tool-inbox",
-		observations: []string{obsToolInboxShows, obsToolInboxReads},
-		calls: func(string) []fixtureToolCall {
-			return []fixtureToolCall{{Tool: "inbox"}}
-		},
-		judge: func(run toolRun) []telemetryFinding {
-			read := run.calls[0]
-			finished := slices.ContainsFunc(run.from(), func(message reportView) bool {
-				return message.Kind == "finished" && slices.Contains(message.InReplyTo, run.task.ID)
-			})
-			settled := waitFor(run.c, 5*time.Second, func() bool { return len(run.owed()) == 0 })
-			return []telemetryFinding{
-				toolFinding(obsToolInboxShows, !read.IsError && read.Error == "" && strings.Contains(read.answer(), toolTaskText), "%s", read),
-				toolFinding(obsToolInboxReads, finished && settled, "a finished report on %s: %v; settled: %v; the worker's turns: %s", run.task.ID, finished, settled, run.worker.acceptedTurns()),
+func TestToolInbox(t *testing.T)   { runToolScenario(t, toolInbox) }
+func TestToolSend(t *testing.T)    { runToolScenario(t, toolSend) }
+func TestToolPending(t *testing.T) { runToolScenario(t, toolPending) }
+func TestToolWhoami(t *testing.T)  { runToolScenario(t, toolWhoami) }
+func TestToolRetry(t *testing.T)   { runToolScenario(t, toolRetry) }
+func TestToolList(t *testing.T)    { runToolScenario(t, toolList) }
+
+// toolInbox reads through the tool. Its schedule is a choice the scenario
+// makes and checks: the read commits before the turn goes on (AwaitRead), so
+// what the turn's end reports is what the read showed. The other order, an end
+// that overtakes the acknowledgment, is the rule's and is held in
+// test/toolrig.
+var toolInbox = toolScenario{
+	name:         "tool-inbox",
+	observations: []string{obsToolInboxShows, obsToolInboxReads},
+	calls: func(string) []fixtureToolCall {
+		return []fixtureToolCall{{Tool: "inbox", AwaitRead: true}}
+	},
+	judge: func(run toolRun) []telemetryFinding {
+		read := run.calls[0]
+		committed := lastTurnEvent(run.worker, toolAckEventKind) == "true"
+		finished := slices.ContainsFunc(run.from(), func(message reportView) bool {
+			return message.Kind == "finished" && slices.Contains(message.InReplyTo, run.task.ID)
+		})
+		settled := waitFor(run.c, 5*time.Second, func() bool { return len(run.owed()) == 0 })
+		return []telemetryFinding{
+			toolFinding(obsToolInboxShows, !read.IsError && read.Error == "" && strings.Contains(read.answer(), toolTaskText), "%s", read),
+			toolFinding(obsToolInboxReads, committed && finished && settled, "the read committed before the turn went on: %v; a finished report on %s: %v; settled: %v; the worker's turns: %s", committed, run.task.ID, finished, settled, run.worker.acceptedTurns()),
+		}
+	},
+}
+
+var toolSend = toolScenario{
+	name:         "tool-send",
+	observations: []string{obsToolSendOnce},
+	calls: func(lead string) []fixtureToolCall {
+		return []fixtureToolCall{{Tool: "send", Arguments: map[string]any{"notify": true, "wait": "0", "name": lead, "text": toolNoteText}}}
+	},
+	judge: func(run toolRun) []telemetryFinding {
+		notes := run.awaitNotes()
+		return []telemetryFinding{toolFinding(obsToolSendOnce, notes == 1 && run.calls[0].Error == "", "%d notes read; %s", notes, run.calls[0])}
+	},
+}
+
+var toolPending = toolScenario{
+	name:         "tool-pending",
+	observations: []string{obsToolPendingMark},
+	calls: func(string) []fixtureToolCall {
+		return []fixtureToolCall{{Tool: "pending", Arguments: map[string]any{"text": toolMarkText}}}
+	},
+	judge: func(run toolRun) []telemetryFinding {
+		mark := run.calls[0]
+		var first reportView
+		for _, message := range run.from() {
+			if slices.Contains(message.InReplyTo, run.task.ID) {
+				first = message
+				break
 			}
-		},
-	})
+		}
+		owed := run.owed()
+		held := !mark.IsError && mark.Error == "" && first.Kind == "pending" && strings.HasPrefix(first.Text, toolMarkText) && len(owed) > 0
+		return []telemetryFinding{toolFinding(obsToolPendingMark, held, "%s; the first answer on the task was %s %q; owed %v", mark, first.Kind, first.Text, owed)}
+	},
 }
 
-func TestToolSend(t *testing.T) {
-	runToolScenario(t, toolScenario{
-		name:         "tool-send",
-		observations: []string{obsToolSendOnce},
-		calls: func(lead string) []fixtureToolCall {
-			return []fixtureToolCall{{Tool: "send", Arguments: map[string]any{"notify": true, "wait": "0", "name": lead, "text": toolNoteText}}}
-		},
-		judge: func(run toolRun) []telemetryFinding {
-			notes := func() int {
-				n := 0
-				for _, message := range run.from() {
-					if message.Kind == "notify" && strings.Contains(message.Text, toolNoteText) {
-						n++
-					}
-				}
-				return n
+var toolWhoami = toolScenario{
+	name:         "tool-whoami",
+	observations: []string{obsToolWhoamiNames},
+	calls: func(string) []fixtureToolCall {
+		return []fixtureToolCall{{Tool: "whoami"}}
+	},
+	judge: func(run toolRun) []telemetryFinding {
+		who := run.calls[0]
+		held := !who.IsError && strings.Contains(who.answer(), run.worker.name) && strings.Contains(who.answer(), "came through the rewake tool")
+		return []telemetryFinding{toolFinding(obsToolWhoamiNames, held, "%s", who)}
+	},
+}
+
+// toolRetry sends a heads-up with --wait 0, which answers before the
+// recipient takes it (exit 3), and retries it by its receipt. The retry is
+// judged by what it answered, parsed: the same operation — the heads-up's id,
+// recipient and receipt — replayed or finished, and no second heads-up.
+var toolRetry = toolScenario{
+	name:         "tool-retry",
+	observations: []string{obsToolRetryJoins},
+	calls: func(lead string) []fixtureToolCall {
+		return []fixtureToolCall{
+			{Tool: "send", Arguments: map[string]any{"notify": true, "json": true, "wait": "0", "name": lead, "text": toolNoteText}},
+			{Tool: "retry", Arguments: map[string]any{"receipt": "{receipt}", "json": true}},
+		}
+	},
+	judge: func(run toolRun) []telemetryFinding {
+		sent, retried := run.calls[0], run.calls[1]
+		original, sentOK := sendAnswer(sent)
+		replayed, retriedOK := sendAnswer(retried)
+		notes := run.awaitNotes()
+		if !sentOK || original.Receipt == "" {
+			// No heads-up to retry: the question has no subject.
+			return []telemetryFinding{{observation: obsToolRetryJoins, detail: fmt.Sprintf("the send left no receipt to retry: %s", sent)}}
+		}
+		held := sentOK && retriedOK && original.Receipt != "" && replayed.ID == original.ID &&
+			replayed.Receipt == original.Receipt && replayed.To == run.lead.name && replayed.From == run.worker.name &&
+			replayed.State != "" && notes == 1
+		return []telemetryFinding{toolFinding(obsToolRetryJoins, held, "the send: %s; the retry: %s; %d notes read", sent, retried, notes)}
+	},
+}
+
+var toolList = toolScenario{
+	name:         "tool-list",
+	observations: []string{obsToolListSessions},
+	calls: func(string) []fixtureToolCall {
+		return []fixtureToolCall{{Tool: "list"}}
+	},
+	judge: func(run toolRun) []telemetryFinding {
+		list := run.calls[0]
+		held := !list.IsError && strings.Contains(list.answer(), run.worker.name) && strings.Contains(list.answer(), run.lead.name)
+		return []telemetryFinding{toolFinding(obsToolListSessions, held, "%s", list)}
+	},
+}
+
+// toolScenarios are the six, for their controls.
+var toolScenarios = []toolScenario{toolInbox, toolSend, toolPending, toolWhoami, toolRetry, toolList}
+
+// sentHeadsUp is what send --json answers of a heads-up.
+type sentHeadsUp struct {
+	ID      string `json:"id"`
+	To      string `json:"to"`
+	From    string `json:"from"`
+	State   string `json:"state"`
+	Receipt string `json:"receipt"`
+}
+
+// sendAnswer parses the JSON a call printed on its stdout: a send's answer,
+// or a retry's replay of it.
+func sendAnswer(record fixtureToolRecord) (sentHeadsUp, bool) {
+	var answer sentHeadsUp
+	if record.Error != "" || len(record.Texts) == 0 || json.Unmarshal([]byte(record.Texts[0]), &answer) != nil {
+		return answer, false
+	}
+	return answer, answer.ID != ""
+}
+
+// awaitNotes counts the heads-ups the lead read from the worker, once one
+// came or ten seconds passed.
+func (r toolRun) awaitNotes() int {
+	count := func() int {
+		n := 0
+		for _, message := range r.from() {
+			if message.Kind == "notify" && strings.Contains(message.Text, toolNoteText) {
+				n++
 			}
-			waitFor(run.c, 10*time.Second, func() bool { return notes() > 0 })
-			return []telemetryFinding{toolFinding(obsToolSendOnce, notes() == 1 && run.calls[0].Error == "", "%d notes read; %s", notes(), run.calls[0])}
-		},
-	})
-}
-
-func TestToolPending(t *testing.T) {
-	runToolScenario(t, toolScenario{
-		name:         "tool-pending",
-		observations: []string{obsToolPendingMark},
-		calls: func(string) []fixtureToolCall {
-			return []fixtureToolCall{{Tool: "pending", Arguments: map[string]any{"text": toolMarkText}}}
-		},
-		judge: func(run toolRun) []telemetryFinding {
-			mark := run.calls[0]
-			var first reportView
-			for _, message := range run.from() {
-				if slices.Contains(message.InReplyTo, run.task.ID) {
-					first = message
-					break
-				}
-			}
-			owed := run.owed()
-			held := !mark.IsError && mark.Error == "" && first.Kind == "pending" && strings.HasPrefix(first.Text, toolMarkText) && len(owed) > 0
-			return []telemetryFinding{toolFinding(obsToolPendingMark, held, "%s; the first answer on the task was %s %q; owed %v", mark, first.Kind, first.Text, owed)}
-		},
-	})
-}
-
-func TestToolWhoami(t *testing.T) {
-	runToolScenario(t, toolScenario{
-		name:         "tool-whoami",
-		observations: []string{obsToolWhoamiNames},
-		calls: func(string) []fixtureToolCall {
-			return []fixtureToolCall{{Tool: "whoami"}}
-		},
-		judge: func(run toolRun) []telemetryFinding {
-			who := run.calls[0]
-			held := !who.IsError && strings.Contains(who.answer(), run.worker.name) && strings.Contains(who.answer(), "came through the rewake tool")
-			return []telemetryFinding{toolFinding(obsToolWhoamiNames, held, "%s", who)}
-		},
-	})
-}
-
-func TestToolRetry(t *testing.T) {
-	runToolScenario(t, toolScenario{
-		name:         "tool-retry",
-		observations: []string{obsToolRetryJoins},
-		calls: func(lead string) []fixtureToolCall {
-			return []fixtureToolCall{
-				{Tool: "send", Arguments: map[string]any{"notify": true, "json": true, "wait": "0", "name": lead, "text": toolNoteText}},
-				{Tool: "retry", Arguments: map[string]any{"receipt": "{receipt}", "json": true}},
-			}
-		},
-		judge: func(run toolRun) []telemetryFinding {
-			sent, retried := run.calls[0], run.calls[1]
-			found := toolReceipt.FindStringSubmatch(sent.answer())
-			notes := 0
-			waitFor(run.c, 10*time.Second, func() bool {
-				notes = 0
-				for _, message := range run.from() {
-					if message.Kind == "notify" && strings.Contains(message.Text, toolNoteText) {
-						notes++
-					}
-				}
-				return notes > 0
-			})
-			held := found != nil && retried.Error == "" && strings.Contains(retried.answer(), found[1]) && notes == 1
-			return []telemetryFinding{toolFinding(obsToolRetryJoins, held, "the send: %s; the retry: %s; %d notes read", sent, retried, notes)}
-		},
-	})
-}
-
-func TestToolList(t *testing.T) {
-	runToolScenario(t, toolScenario{
-		name:         "tool-list",
-		observations: []string{obsToolListSessions},
-		calls: func(string) []fixtureToolCall {
-			return []fixtureToolCall{{Tool: "list"}}
-		},
-		judge: func(run toolRun) []telemetryFinding {
-			list := run.calls[0]
-			held := !list.IsError && strings.Contains(list.answer(), run.worker.name) && strings.Contains(list.answer(), run.lead.name)
-			return []telemetryFinding{toolFinding(obsToolListSessions, held, "%s", list)}
-		},
-	})
+		}
+		return n
+	}
+	waitFor(r.c, 10*time.Second, func() bool { return count() > 0 })
+	return count()
 }

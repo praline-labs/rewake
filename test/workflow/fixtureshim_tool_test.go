@@ -30,7 +30,8 @@ const (
 	shimReusedTurns = "RW_SHIM_REUSED_TURNS"
 	// shimToolCalls is a JSON list of the calls the first turn makes through
 	// the tool, each {"tool": ..., "arguments": {...}}. An argument
-	// "{receipt}" is replaced by the receipt an earlier answer named.
+	// "{receipt}" is replaced by the receipt an earlier answer named, and
+	// "awaitRead" on an inbox call holds the turn until its read commits.
 	shimToolCalls = "RW_SHIM_TOOL_CALLS"
 )
 
@@ -50,6 +51,9 @@ type fixtureTools struct {
 type fixtureToolCall struct {
 	Tool      string         `json:"tool"`
 	Arguments map[string]any `json:"arguments,omitempty"`
+	// AwaitRead is a scenario's choice of schedule: the turn goes on only
+	// once the read this call showed has committed, or toolAckBound passed.
+	AwaitRead bool `json:"awaitRead,omitempty"`
 }
 
 // fixtureToolRecord is what the turn log keeps of a call: what was asked,
@@ -82,12 +86,16 @@ var (
 	toolLetter  = regexp.MustCompile(`Rewake: (\d+-[0-9a-f]+), part \d+ of \d+`)
 )
 
-// toolAckBound is how long the program's model goes on after a read through
-// the tool before its turn may end: the read counts only once its
-// acknowledgment is in, and an end captured before it would show the letters
-// again (T7, T8). A real harness's model takes its time over the result; this
-// one looks for the letters to leave the unread overview instead.
+// toolAckBound bounds the wait a scenario asks for with AwaitRead. The read
+// counts only once its acknowledgment is in, and an end captured before it
+// leaves the letters unread (T7, T8): that order is the rule, held in
+// test/toolrig, and a scenario that judges the read's commit asks for the other
+// order explicitly and checks, from the event this records, that it got it.
 const toolAckBound = 10 * time.Second
+
+// toolAckEventKind marks whether the schedule a scenario asked for held: the
+// read committed before the turn went on.
+const toolAckEventKind = "tool-acknowledged"
 
 // toolCalls are the calls shimToolCalls asks for, taken once: the first turn
 // makes them.
@@ -117,8 +125,9 @@ func readsThroughTool(calls []fixtureToolCall) bool {
 }
 
 // callTools makes the calls in the turn and answers what an inbox call read.
-// A read waits for its letters to leave the unread overview before the next
-// call, so the turn's end comes after its acknowledgment.
+// An inbox call that asks for it waits for its letters to leave the unread
+// overview before the next call, so the turn's end comes after its
+// acknowledgment.
 func (s *fixtureSession) callTools(turn string, calls []fixtureToolCall) string {
 	read, receipt := "", ""
 	for i, call := range calls {
@@ -138,18 +147,25 @@ func (s *fixtureSession) callTools(turn string, calls []fixtureToolCall) string 
 		}
 		if call.Tool == "inbox" {
 			read = "read through the tool: " + text
-			s.recordTurnEvent("tool-acknowledged", turn, strconv.FormatBool(s.awaitAcknowledged(text)))
+			if call.AwaitRead {
+				s.recordTurnEvent(toolAckEventKind, turn, strconv.FormatBool(s.awaitAcknowledged(text)))
+			}
 		}
 	}
 	return read
 }
 
 // awaitAcknowledged waits, within toolAckBound, until no letter a tool's
-// read showed is unread any more.
+// read showed is unread any more; false when none was named or one stayed.
 func (s *fixtureSession) awaitAcknowledged(answer string) bool {
 	var shown []string
 	for _, found := range toolLetter.FindAllStringSubmatch(answer, -1) {
 		shown = append(shown, found[1])
+	}
+	// No letter named in the answer is nothing to wait for: the schedule
+	// asked for was not established.
+	if len(shown) == 0 {
+		return false
 	}
 	for until := time.Now().Add(toolAckBound); time.Now().Before(until); time.Sleep(50 * time.Millisecond) {
 		unread, err := s.peekOverview()
