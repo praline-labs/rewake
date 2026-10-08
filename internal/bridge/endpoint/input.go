@@ -6,7 +6,6 @@ import (
 	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/receipt"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // The neutral input (docs/v2/stage3-steps-adapters.md, S7):
@@ -112,7 +111,7 @@ func (e *Endpoint) complete(id string, evidence bridge.Exposure) {
 			// unknown, and a later call shows the letter under its own.
 			return
 		}
-		state.Step("acknowledge")
+		e.step("acknowledge")
 		_ = e.cfg.Acknowledge(e.cfg.Dir, e.cfg.Name, e.cfg.Epoch, token, evidence, e.cfg.Gate)
 	}()
 }

@@ -34,6 +34,8 @@ type Endpoint struct {
 	path     string
 	calls    *calls
 	acks     sync.WaitGroup
+	// running are the transport's calls under way; Close lets them answer.
+	running sync.WaitGroup
 
 	mu    sync.Mutex
 	roots []int
@@ -48,7 +50,8 @@ type Endpoint struct {
 	generation uint64
 	bound      map[uint64]bool
 	primary    func() string
-	conns      map[*net.UnixConn]struct{}
+	// conns are the connections open now; true marks a transport's call.
+	conns map[*net.UnixConn]bool
 	// transport is the process a transport's calls come from, childEnv
 	// their children's environment, children the children running now and
 	// slots the calls running at once (transport.go, run.go).
@@ -83,7 +86,7 @@ func Listen(path string, cfg Config) (*Endpoint, error) {
 	}
 	listener.SetUnlinkOnClose(true)
 	_ = os.Chmod(path, 0o600)
-	e := &Endpoint{cfg: cfg, listener: listener, path: path, calls: newCalls(), conns: map[*net.UnixConn]struct{}{}, slots: make(chan struct{}, maxChildren), done: make(chan struct{})}
+	e := &Endpoint{cfg: cfg, listener: listener, path: path, calls: newCalls(), conns: map[*net.UnixConn]bool{}, slots: make(chan struct{}, maxChildren), done: make(chan struct{})}
 	go e.accept()
 	return e, nil
 }
@@ -119,20 +122,26 @@ func (e *Endpoint) readsOffNow() string {
 // Gate is the gate the endpoint's acknowledgments enter.
 func (e *Endpoint) Gate() *Gate { return e.cfg.Gate }
 
-// Close stops serving, closes every connection, and waits for the
-// acknowledgments under way: each is bounded before its check and runs its
-// writes to their end.
+// Close stops serving, closes every connection but those of the transport's
+// calls under way, and waits for those calls and for the acknowledgments
+// under way. A call finishes and is answered as at any other time, except
+// that a child its kill did not reach is waited for only reapWait more
+// (run.go); an acknowledgment is bounded before its check and runs its writes
+// to their end.
 func (e *Endpoint) Close() {
 	e.once.Do(func() {
 		e.mu.Lock()
 		e.closed = true
-		for conn := range e.conns {
-			_ = conn.Close()
+		for conn, call := range e.conns {
+			if !call {
+				_ = conn.Close()
+			}
 		}
 		e.mu.Unlock()
 		close(e.done)
 		_ = e.listener.Close()
 	})
+	e.running.Wait()
 	e.acks.Wait()
 }
 
@@ -265,12 +274,19 @@ func (e *Endpoint) admit(conn *net.UnixConn, greeting hello) (func(), error) {
 		return nil, errors.New("too many connections to this run's wrapper right now")
 	}
 	*count++
-	e.conns[conn] = struct{}{}
+	call := greeting.Role == roleTransport
+	e.conns[conn] = call
+	if call {
+		e.running.Add(1)
+	}
 	return func() {
 		e.mu.Lock()
 		*count--
 		delete(e.conns, conn)
 		e.mu.Unlock()
+		if call {
+			e.running.Done()
+		}
 	}, nil
 }
 

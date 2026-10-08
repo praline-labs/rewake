@@ -77,7 +77,7 @@ func (e *Endpoint) runChild(ticket bridge.Ticket, words []string) childAnswer {
 	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	var stdout, stderr capped
 	command.Stdout, command.Stderr = &stdout, &stderr
-	state.Step("start")
+	e.step("start")
 	err = command.Start()
 	_ = reader.Close()
 	if err != nil {

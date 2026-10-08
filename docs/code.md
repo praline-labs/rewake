@@ -20,7 +20,7 @@ internal/inbox/                  message, status, sender-side write, servicing l
 internal/receipt/                the journal of mail operations run through the tool's words: keys, records, frozen reads
 internal/bridge/                 what the CLI and the mail tool's server share: the ticket, result bounds, cutting parts
 internal/bridge/server/          the mail tool's stdio MCP server: frames, the one encoder, a child per call
-internal/bridge/endpoint/        the wrapper's context endpoint: hellos, tickets, completions, the gate against a turn's end
+internal/bridge/endpoint/        the wrapper's context endpoint: hellos, tickets, completions, the gate against a turn's end, a transport's calls
 internal/channel/                the run's mail channel: tool and shell observations, the block, display and notices
 internal/grant/                  which directories a task may grant, and the journal of what was granted
 internal/grantauth/              main's wrapper holding the grants its commands registered, and confirming them; a worker's wrapper keeping its own grants for its permission hook
@@ -43,6 +43,7 @@ scripts/                         packaging scripts and the tests of the npm shim
 docs/                            the documentation, and the tests that keep it true to the tree
 test/workflow/                   the workflow suite: end-to-end scenarios against fixtures
 test/workflow/record/            the record format a suite run prints and the summarizer reads
+test/toolrig/                    the neutral rig: the tool path's oracles on the fixture's program and the host endpoint
 tools/checksummary/              summarizes a suite run into a few lines and summary.json
 tools/harnesscache/              fetches and caches harness versions, runs them in a container
 tools/harnesscache/cache/        resolving, downloading, verifying and keeping a version

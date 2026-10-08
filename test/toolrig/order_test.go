@@ -1,4 +1,6 @@
-package server_test
+//go:build rewakefixture
+
+package toolrig
 
 import (
 	"strings"
@@ -6,17 +8,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/state"
 )
+
+// The order test's written-out cases, rebuilt from
+// bridge/server/order_test.go on the fixture's transport.
 
 // A turn's end captured while an acknowledgment writes waits for it and takes
 // the snapshot it closes with: the read it commits is inside the end's
 // boundary, whatever happens to the mailbox after.
 func TestAnEndCapturedDuringAnAcknowledgmentIncludesIt(t *testing.T) {
 	t.Parallel()
-	r := newRig(t, bridge.CodexTransport)
+	r := newRig(t)
 	r.start()
 	id := r.letter("the letter of the order test")
 	r.nextTurn()
@@ -29,7 +33,6 @@ func TestAnEndCapturedDuringAnAcknowledgmentIncludesIt(t *testing.T) {
 	t.Cleanup(free)
 	var once sync.Once
 	r.plan(&wrapperPlan{pause: func(op, _ string) {
-		// The endpoint's steps are no write of the acknowledgment's.
 		if op == state.OpRead || op == state.OpStep {
 			return
 		}
@@ -77,28 +80,32 @@ func TestAnEndCapturedDuringAnAcknowledgmentIncludesIt(t *testing.T) {
 	}
 }
 
-// Two servers asking for one call's ticket at once — a harness that
-// restarted its server mid-call — get one ticket between them, and the
-// harness's record may come after both asked.
-func TestOneCallRunsOnceAcrossServers(t *testing.T) {
+// One call asked for twice at once — two of the harness's requests under one
+// call id, the old rig's two servers — gets one ticket between them, and the
+// harness's record of the call may come after both asked.
+func TestOneCallRunsOnceAcrossRequests(t *testing.T) {
 	t.Parallel()
-	r := newRig(t, bridge.CodexTransport)
-	first, second := r.start(), startServer(t, r.env())
-	second.initialize(t)
-	r.nextTurn()
+	r := newRig(t)
+	r.start()
+	turn := r.nextTurn()
 	words := []string{"send", "--notify", "--wait", "0", "web", faultHeadsUp}
-	answers := make(chan callResult, 2)
-	for _, server := range []*mcpClient{first, second} {
+	tool, arguments := toolOf(words)
+	answers := make(chan reply, 2)
+	for range 2 {
 		go func() {
-			result, _ := server.call(t, words, r.meta("turn-1", "shared"))
-			answers <- result
+			answer, _ := r.ask(command{Op: "request", Turn: turn, Call: "shared", Tool: tool, Arguments: arguments})
+			answers <- answer
 		}()
 	}
 	time.Sleep(200 * time.Millisecond)
-	r.observe("turn-1", "shared", words)
+	r.observe(turn, "shared", words)
 	ran := 0
 	for range 2 {
-		if answer := <-answers; !answer.IsError || !strings.Contains(answer.text(), "issued no ticket") {
+		answer := <-answers
+		if answer.Error != "" {
+			t.Fatalf("a request: %s", answer.Error)
+		}
+		if text := strings.Join(answer.Texts, ""); !answer.IsError || !strings.Contains(text, "issued no ticket") {
 			ran++
 		}
 	}

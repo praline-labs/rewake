@@ -106,7 +106,7 @@ func (e *Endpoint) serveCall(conn *net.UnixConn, reader *bufio.Reader, writer *l
 		// answer to a model. What the call did is in its receipt.
 		return
 	}
-	state.Step("answer")
+	e.step("answer")
 	_ = conn.SetWriteDeadline(time.Now().Add(shortExchange))
 	writer.write(response{ID: asked.ID, Answer: &answer})
 }
@@ -134,7 +134,7 @@ func (e *Endpoint) runCall(call ToolCall, arrived int64) ToolAnswer {
 		return substitute(busy).encoded()
 	}
 	defer func() { <-e.slots }()
-	state.Step("ticket")
+	e.step("ticket")
 	ticket, err := e.issue(TicketRequest{
 		Transport: e.cfg.Transport, Conversation: call.Conversation, Turn: call.Turn, CallID: call.CallID,
 		TurnsNeverReused: call.TurnsNeverReused, Words: normalized, Digest: bridge.Digest(normalized), Arrived: arrived,
@@ -176,3 +176,8 @@ func readBounded(reader *bufio.Reader, limit int) ([]byte, error) {
 		}
 	}
 }
+
+// step names a step of this run's call path to the fault seam, by the run's
+// context path: a test that plays several wrappers in one process tells their
+// steps apart by it, as it tells their files apart by their paths.
+func (e *Endpoint) step(name string) { state.Step(e.path + "/" + name) }

@@ -68,6 +68,25 @@ The program's turn starts and ends reach the same input (`TurnStarted` with the
 program's own time of the start, `TurnEnded` after the end's capture), so a call is bound
 only inside a turn the program was seen to start and not yet seen to end.
 
+## Closing
+
+As the wrapper ends, `Close` refuses new connections and drops the ones not running a
+transport's call, then waits for the calls it took: each runs to its answer, under its
+child's deadline, and only then does `Close` return, as the old server finished its calls at
+the end of its input. An answer goes to its connection with a write deadline; at most
+`bridge.ResultCap` bytes, it fits a socket's buffer, so a transport that stopped reading
+never holds the endpoint. An acknowledgment in flight is waited for the same way.
+
+## Faults and the rig
+
+The endpoint's own steps pass the state directory's fault seam under names qualified by the
+context's path — `<path>/ticket`, `<path>/start`, `<path>/answer`, `<path>/acknowledge` —
+so a rig can hold or kill the harness's process at one of them for one endpoint among
+several. `test/toolrig` is that rig: the fixture's program is the harness's process, the
+test plays the wrapper, and the faults reach the program, the child and these steps. It
+holds the oracles `bridge/server`'s rig held, transport-neutral
+([rules/tools.md](rules/tools.md#the-carried-order-and-fault-tests)).
+
 ## Until S8
 
 The child's steps in `endpoint/run.go` repeat `bridge/server/child.go`: the server and its

@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"bytes"
 	"encoding/json"
 	"os"
 
@@ -34,7 +33,7 @@ func handleBridgeServe(ctx *Context, _ Call) error {
 	cfg := server.Config{
 		Name: os.Getenv(state.SessionEnv), Epoch: os.Getenv(state.EpochEnv),
 		Capability: os.Getenv(bridge.CapabilityEnv),
-		Words:      toolCheck,
+		Words:      ToolCheck,
 		Executable: "/proc/self/exe",
 		Env:        server.ChildEnv(os.Getenv),
 		Version:    Version,
@@ -43,18 +42,6 @@ func handleBridgeServe(ctx *Context, _ Call) error {
 		cfg.Dir, cfg.Endpoint = dir, state.ContextPath(dir, cfg.Name, cfg.Epoch)
 	}
 	return server.Run(cfg, os.Stdin, ctx.Stdout)
-}
-
-// toolCheck is the server's check of a call's words: the normalized words,
-// or the CLI's own refusal as a shell would print it, cut to a tool result.
-func toolCheck(words []string) ([]string, string) {
-	normalized, err := ToolWords(words)
-	if err == nil {
-		return normalized, ""
-	}
-	var out, errOut bytes.Buffer
-	report(&Context{Stdout: &out, Stderr: &errOut}, err)
-	return nil, cutDiagnostic(out.String() + errOut.String())
 }
 
 // handleBridgeHook passes a hook's input to the wrapper and returns once the

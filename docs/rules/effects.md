@@ -110,7 +110,7 @@ nothing lifts a stop without returning evidence.
   - `internal/cli/read_test.go` `TestSendCountsAReadMessageAsDelivered`
   - `internal/cli/read_test.go` `TestTwoReadersAtOnceShowATaskOnce`
   - `internal/cli/stop_gate_test.go` `TestAReadInPartsStopsWithTheMailbox`
-  - Gap: one fact across every channel — today tool and shell only — closed in S7 with the fixture's tool.
+  - `test/toolrig/gaps_test.go` `TestAReadIsOneFactAcrossTheToolAndTheShell`
 
 - **E5. The size bound holds on the final encoded bytes of every answer, in one place**;
   every text part names its letter, part, count and byte range. (M1 rule 5.)
@@ -121,11 +121,16 @@ nothing lifts a stop without returning evidence.
   - `internal/cli/bridge_rules_test.go` `TestAnAnswerThatCannotBeKeptStillFits`
   - `internal/cli/bridge_rules_test.go` `TestEveryTextPartNamesItself`
   - `internal/cli/bridge_tool_test.go` `TestALongAnswerComesInParts`
-  - `internal/bridge/server/encoder_test.go` `TestTheEncoderReplacesAnAnswerThatDoesNotFit` — rebuilt in S7 on the host endpoint's one encoder
-  - `internal/bridge/server/encoder_test.go` `TestAChildsOutputIsCapped` — rebuilt in S7 on the host endpoint's one encoder
-  - `internal/bridge/server/encoder_test.go` `TestOnlyTheEncoderWritesToStdout` — rebuilt in S7 on the host endpoint's one encoder
-  - `internal/bridge/server/bound_test.go` `FuzzEveryMessageWrittenFits` — rebuilt in S7 on the host endpoint's one encoder
-  - `internal/bridge/server/bound_test.go` `FuzzFramesAreBounded` — rebuilt in S7 on the host endpoint's one encoder
+  - `internal/bridge/server/encoder_test.go` `TestTheEncoderReplacesAnAnswerThatDoesNotFit` — leaves with `bridge/server` in S8
+  - `internal/bridge/endpoint/answer_test.go` `TestTheEncoderReplacesAnAnswerThatDoesNotFit`
+  - `internal/bridge/server/encoder_test.go` `TestAChildsOutputIsCapped` — leaves with `bridge/server` in S8
+  - `internal/bridge/endpoint/answer_test.go` `TestAChildsOutputIsCapped`
+  - `internal/bridge/server/encoder_test.go` `TestOnlyTheEncoderWritesToStdout` — leaves with `bridge/server` in S8
+  - `internal/bridge/endpoint/answer_test.go` `TestOnlyTheEncoderAnswers`
+  - `internal/bridge/server/bound_test.go` `FuzzEveryMessageWrittenFits` — leaves with `bridge/server` in S8
+  - `internal/bridge/endpoint/answer_test.go` `FuzzEveryAnswerFits`
+  - `internal/bridge/server/bound_test.go` `FuzzFramesAreBounded` — leaves with `bridge/server` in S8
+  - `internal/bridge/endpoint/answer_test.go` `FuzzRequestsAreBounded`
 
 - **E6. A check has three outcomes: found, proven absent, unknown.** "No such file"
   proves absence. When recording a stop's original observation, Lstat finding a

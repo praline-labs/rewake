@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"fmt"
 	"sort"
 	"strconv"
@@ -153,4 +154,17 @@ func contains(list []string, value string) bool {
 		}
 	}
 	return false
+}
+
+// ToolCheck is every transport's check of a call's words: the normalized
+// words, or the CLI's own refusal as a shell would print it, cut to a tool
+// result.
+func ToolCheck(words []string) ([]string, string) {
+	normalized, err := ToolWords(words)
+	if err == nil {
+		return normalized, ""
+	}
+	var out, errOut bytes.Buffer
+	report(&Context{Stdout: &out, Stderr: &errOut}, err)
+	return nil, cutDiagnostic(out.String() + errOut.String())
 }

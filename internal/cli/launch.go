@@ -89,7 +89,7 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 			Command: program,
 			// The mail tool's endpoint runs the CLI's own checks
 			// (docs/mail-bridge-server.md).
-			MailTool:     &wrap.MailTool{Words: ToolWords, Acknowledge: AcknowledgeRead, Check: toolCheck, Tools: ToolDescriptors()},
+			MailTool:     &wrap.MailTool{Words: ToolWords, Acknowledge: AcknowledgeRead, Check: ToolCheck, Tools: ToolDescriptors()},
 			NoMailTool:   call.Switch("no-mail-tool"),
 			AssumedGates: assumed,
 
