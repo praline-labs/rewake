@@ -54,6 +54,7 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/bridge/endpoint/transport_test.go` `TestATransportsCallRunsInAChildOfTheWrapper`
   - `internal/bridge/endpoint/transport_test.go` `TestOnlyTheTransportsOwnProcessIsServed`
   - `test/toolrig/transport_test.go` `TestOnlyTheHarnesssOwnProcessIsServed`
+  - `internal/bridge/endpoint/close_test.go` `TestARequestAfterTheTransportIsWithdrawnRunsNothing`
   - `internal/bridge/endpoint/transport_test.go` `TestAnAnswerGoesOnlyToTheTransportThatAsked`
   - `internal/bridge/endpoint/transport_test.go` `TestACallTheToolsDoNotOfferRunsNothing`
   - `internal/harness/fixture/tool_test.go` `TestALiveToolTransportNamesTheProgramToTheEndpoint`
@@ -283,6 +284,7 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/bridge/server/stdout_bound_test.go` `TestAReaderThatResumesInTimeGetsEveryReply` — leaves with `bridge/server` in S8
   - `internal/bridge/server/mcp_test.go` `TestTheServerFinishesItsCallsAtTheEnd` — leaves with `bridge/server` in S8
   - `test/toolrig/transport_test.go` `TestTheEndpointFinishesItsCallsAsItCloses`
+  - `internal/bridge/endpoint/close_test.go` `TestCloseLetsTheCallsItTookConfirmTheirChildren`
   - `test/toolrig/transport_test.go` `TestAFifthCallIsBusy`
   - `test/toolrig/transport_test.go` `TestACallNobodyWaitsForIsNotAnswered`
 

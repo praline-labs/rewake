@@ -22,6 +22,10 @@ const helperTransport = "ENDPOINT_TEST_TRANSPORT"
 // helperChildPrint makes a child print this many bytes after its words.
 const helperChildPrint = "ENDPOINT_TEST_PRINT"
 
+// helperChildHold names a directory where a child, before it confirms its
+// ticket, leaves "started" and waits for "go".
+const helperChildHold = "ENDPOINT_TEST_HOLD"
+
 func TestMain(m *testing.M) {
 	switch {
 	case os.Getenv(bridge.TicketEnv) != "":
@@ -41,6 +45,14 @@ func runAsChild() int {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
+	}
+	if dir := os.Getenv(helperChildHold); dir != "" {
+		_ = os.WriteFile(filepath.Join(dir, "started"), nil, 0o600)
+		for until := time.Now().Add(10 * time.Second); time.Now().Before(until); time.Sleep(10 * time.Millisecond) {
+			if _, err := os.Stat(filepath.Join(dir, "go")); err == nil {
+				break
+			}
+		}
 	}
 	if err := Confirm(filepath.Join(os.Getenv(state.DirEnv), "api.ctx"), ticket); err != nil {
 		fmt.Fprintln(os.Stderr, "not confirmed:", err)

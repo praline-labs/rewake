@@ -48,9 +48,11 @@ refuses before its first effect (T6).
    one request per connection. The peer of the connection (`SO_PEERCRED`) must be exactly
    the process the backend named, alive with its start time — never a descendant, since a
    command the model runs is one — and no capability is involved.
-3. The request is read within its bound before it is parsed (`maxCall`); then the tool is
-   found among those offered, its arguments become words, and the CLI's own check refuses
-   what the shell would. A refusal runs nothing and gets no ticket.
+3. The request is read within its bound before it is parsed (`maxCall`), and the peer is
+   checked again as it arrives: the hello's proof does not carry over to a request sent
+   after the transport was withdrawn or its process ended, which runs nothing. Then the
+   tool is found among those offered, its arguments become words, and the CLI's own check
+   refuses what the shell would. A refusal runs nothing and gets no ticket.
 4. The endpoint issues the call's ticket from the request's binding — conversation, turn,
    call id, and the transport's declaration that its turn ids are never reused — matched
    with the observed call as on every transport, and runs the words in a child of its own
@@ -70,10 +72,12 @@ only inside a turn the program was seen to start and not yet seen to end.
 
 ## Closing
 
-As the wrapper ends, `Close` refuses new connections and drops the ones not running a
-transport's call, then waits for the calls it took: each runs to its answer, under its
-child's deadline, and only then does `Close` return, as the old server finished its calls at
-the end of its input. An answer goes to its connection with a write deadline; at most
+As the wrapper ends, `Close` refuses new calls and drops every connection but a
+transport's call under way and the confirmation of a child the endpoint runs, then waits
+for the calls it took: each runs to its answer, under its child's deadline, and only then
+does `Close` return, as the old server finished its calls at the end of its input. The
+socket stays open meanwhile, to the endpoint's own children alone, so a call taken before
+its child started or confirmed still confirms; it closes once the last such call ends. An answer goes to its connection with a write deadline; at most
 `bridge.ResultCap` bytes, it fits a socket's buffer, so a transport that stopped reading
 never holds the endpoint. An acknowledgment in flight is waited for the same way.
 

@@ -9,7 +9,6 @@ import (
 	"net"
 	"os"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/bridge"
@@ -50,7 +49,8 @@ type Endpoint struct {
 	generation uint64
 	bound      map[uint64]bool
 	primary    func() string
-	// conns are the connections open now; true marks a transport's call.
+	// conns are the connections open now; true marks one Close drains: a
+	// transport's call, or the confirmation of a child the endpoint runs.
 	conns map[*net.UnixConn]bool
 	// transport is the process a transport's calls come from, childEnv
 	// their children's environment, children the children running now and
@@ -122,42 +122,47 @@ func (e *Endpoint) readsOffNow() string {
 // Gate is the gate the endpoint's acknowledgments enter.
 func (e *Endpoint) Gate() *Gate { return e.cfg.Gate }
 
-// Close stops serving, closes every connection but those of the transport's
-// calls under way, and waits for those calls and for the acknowledgments
-// under way. A call finishes and is answered as at any other time, except
-// that a child its kill did not reach is waited for only reapWait more
-// (run.go); an acknowledgment is bounded before its check and runs its writes
-// to their end.
+// Close stops taking calls, closes every connection but those it drains, and
+// waits for the transport's calls under way and for the acknowledgments under
+// way. A call it took finishes and is answered as at any other time: the
+// socket stays open to its child's confirmation until the last such call ends,
+// and only then closes. A child its kill did not reach is waited for only
+// reapWait more (run.go); an acknowledgment is bounded before its check and
+// runs its writes to their end.
 func (e *Endpoint) Close() {
 	e.once.Do(func() {
 		e.mu.Lock()
 		e.closed = true
-		for conn, call := range e.conns {
-			if !call {
+		for conn, drains := range e.conns {
+			if !drains {
 				_ = conn.Close()
 			}
 		}
 		e.mu.Unlock()
 		close(e.done)
-		_ = e.listener.Close()
 	})
 	e.running.Wait()
+	_ = e.listener.Close()
 	e.acks.Wait()
+}
+
+// closing says whether Close has begun.
+func (e *Endpoint) closing() bool {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.closed
 }
 
 func (e *Endpoint) accept() {
 	for {
 		conn, err := e.listener.AcceptUnix()
 		if err != nil {
+			// The listener outlives the start of Close while the calls it
+			// took confirm their children; only its own close ends this.
 			if errors.Is(err, net.ErrClosed) {
 				return
 			}
-			select {
-			case <-e.done:
-				return
-			default:
-				continue
-			}
+			continue
 		}
 		go e.serve(conn)
 	}
@@ -177,7 +182,9 @@ func (e *Endpoint) serve(conn *net.UnixConn) {
 	writer := &lineWriter{conn: conn}
 	release, err := e.admit(conn, greeting)
 	if err != nil {
-		if greeting.Role == roleServer {
+		// A server refused because the wrapper closes is not a refusal of
+		// its hello.
+		if greeting.Role == roleServer && !e.closing() {
 			e.refused(conn)
 		}
 		writer.write(response{Error: err.Error()})
@@ -246,13 +253,14 @@ func (e *Endpoint) admit(conn *net.UnixConn, greeting hello) (func(), error) {
 	default:
 		return nil, fmt.Errorf("a role this endpoint does not serve: %q", greeting.Role)
 	}
+	// A transport's call runs below the wrapper itself, in a child the
+	// endpoint started and knows by its pid.
+	own := greeting.Role == roleChild && e.isOwnChild(int(peer.Pid))
 	if greeting.Role != roleTransport {
 		e.mu.Lock()
 		roots := e.roots
 		e.mu.Unlock()
-		// A transport's call runs below the wrapper itself, in a child the
-		// endpoint started and knows by its pid.
-		if greeting.Role != roleChild || !e.isOwnChild(int(peer.Pid)) {
+		if !own {
 			if err := e.below(int(peer.Pid), roots); err != nil {
 				return nil, err
 			}
@@ -263,7 +271,8 @@ func (e *Endpoint) admit(conn *net.UnixConn, greeting hello) (func(), error) {
 	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	if e.closed {
+	// A closing wrapper still confirms the children of the calls it took.
+	if e.closed && !own {
 		return nil, errors.New("the wrapper is closing")
 	}
 	count, limit := &e.others, maxOthers
@@ -275,7 +284,7 @@ func (e *Endpoint) admit(conn *net.UnixConn, greeting hello) (func(), error) {
 	}
 	*count++
 	call := greeting.Role == roleTransport
-	e.conns[conn] = call
+	e.conns[conn] = call || own
 	if call {
 		e.running.Add(1)
 	}
@@ -360,40 +369,4 @@ func readLine(reader *bufio.Reader) ([]byte, error) {
 			return line, nil
 		}
 	}
-}
-
-// peerOf reads the credentials of the process at the other end of a unix
-// socket, as the kernel recorded them when it connected or listened.
-func peerOf(conn *net.UnixConn) (*syscall.Ucred, error) {
-	raw, err := conn.SyscallConn()
-	if err != nil {
-		return nil, err
-	}
-	var cred *syscall.Ucred
-	var credErr error
-	if err := raw.Control(func(fd uintptr) {
-		cred, credErr = syscall.GetsockoptUcred(int(fd), syscall.SOL_SOCKET, syscall.SO_PEERCRED)
-	}); err != nil {
-		return nil, err
-	}
-	return cred, credErr
-}
-
-// sameBuild says whether a process runs the file this one runs: the same
-// device and inode behind /proc/<pid>/exe. A file replaced on disk since is
-// another inode, so a server or child started from a newer install is
-// refused, however its version reads.
-func sameBuild(pid int) error {
-	own, err := os.Stat("/proc/self/exe")
-	if err != nil {
-		return err
-	}
-	theirs, err := os.Stat(fmt.Sprintf("/proc/%d/exe", pid))
-	if err != nil {
-		return err
-	}
-	if !os.SameFile(own, theirs) {
-		return errors.New("its executable is another file")
-	}
-	return nil
 }

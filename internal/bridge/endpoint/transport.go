@@ -98,6 +98,12 @@ func (e *Endpoint) serveCall(conn *net.UnixConn, reader *bufio.Reader, writer *l
 		writer.write(response{ID: asked.ID, Error: "a transport asks only to run a call; nothing ran"})
 		return
 	}
+	// The hello proved the peer when it came; the request is admitted only
+	// if the peer is still the transport's process as it arrives.
+	if err := e.fromTransport(pid); err != nil {
+		writer.write(response{ID: asked.ID, Error: err.Error() + "; nothing ran"})
+		return
+	}
 	// The call is bounded by its child's deadline, not by the exchange's.
 	_ = conn.SetDeadline(time.Time{})
 	answer := e.runCall(*asked.Call, boottime.Now())
