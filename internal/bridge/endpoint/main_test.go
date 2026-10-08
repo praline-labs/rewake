@@ -26,6 +26,10 @@ const helperChildPrint = "ENDPOINT_TEST_PRINT"
 // ticket, leaves "started" and waits for "go".
 const helperChildHold = "ENDPOINT_TEST_HOLD"
 
+// helperChildHoldGreeted holds a child the same way after the endpoint
+// admitted its hello and before it asks for the confirmation.
+const helperChildHoldGreeted = "ENDPOINT_TEST_HOLD_GREETED"
+
 func TestMain(m *testing.M) {
 	switch {
 	case os.Getenv(bridge.TicketEnv) != "":
@@ -46,15 +50,8 @@ func runAsChild() int {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
-	if dir := os.Getenv(helperChildHold); dir != "" {
-		_ = os.WriteFile(filepath.Join(dir, "started"), nil, 0o600)
-		for until := time.Now().Add(10 * time.Second); time.Now().Before(until); time.Sleep(10 * time.Millisecond) {
-			if _, err := os.Stat(filepath.Join(dir, "go")); err == nil {
-				break
-			}
-		}
-	}
-	if err := Confirm(filepath.Join(os.Getenv(state.DirEnv), "api.ctx"), ticket); err != nil {
+	holdChild(os.Getenv(helperChildHold))
+	if err := confirmHeld(filepath.Join(os.Getenv(state.DirEnv), "api.ctx"), ticket); err != nil {
 		fmt.Fprintln(os.Stderr, "not confirmed:", err)
 		return 1
 	}
@@ -65,4 +62,34 @@ func runAsChild() int {
 		fmt.Print(strings.Repeat("x", n))
 	}
 	return 0
+}
+
+// confirmHeld is Confirm, held between the hello and the request when the
+// test asks for it.
+func confirmHeld(path string, ticket bridge.Ticket) error {
+	dir := os.Getenv(helperChildHoldGreeted)
+	if dir == "" {
+		return Confirm(path, ticket)
+	}
+	conn, err := greet(path, hello{Role: roleChild, Capability: ticket.Capability}, ConfirmWait)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = conn.Close() }()
+	holdChild(dir)
+	return ask(conn, request{ID: 1, Op: opConfirm, Ticket: &ticket})
+}
+
+// holdChild leaves "started" in dir and waits, bounded, for "go"; an empty
+// dir holds nothing.
+func holdChild(dir string) {
+	if dir == "" {
+		return
+	}
+	_ = os.WriteFile(filepath.Join(dir, "started"), nil, 0o600)
+	for until := time.Now().Add(10 * time.Second); time.Now().Before(until); time.Sleep(10 * time.Millisecond) {
+		if _, err := os.Stat(filepath.Join(dir, "go")); err == nil {
+			return
+		}
+	}
 }

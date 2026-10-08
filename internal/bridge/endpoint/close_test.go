@@ -52,10 +52,11 @@ func TestARequestAfterTheTransportIsWithdrawnRunsNothing(t *testing.T) {
 }
 
 // A call the endpoint took before Close began runs and answers: its child
-// still confirms, whether it had not yet started or not yet confirmed when
-// Close began, and the socket closes only after it.
+// still confirms, whether it had not yet started, not yet greeted the
+// endpoint, or greeted it and not yet asked when Close began, and the socket
+// closes only after it.
 func TestCloseLetsTheCallsItTookConfirmTheirChildren(t *testing.T) {
-	for _, before := range []string{"its child starts", "its child confirms"} {
+	for _, before := range []string{"its child starts", "its child confirms", "its child asks"} {
 		t.Run(before, func(t *testing.T) {
 			served, path := transportEndpoint(t)
 			openTurn(served, "th", "t1")
@@ -74,10 +75,16 @@ func TestCloseLetsTheCallsItTookConfirmTheirChildren(t *testing.T) {
 					return nil
 				}
 				defer func() { state.Fault = oldFault }()
-			case "its child confirms":
+			case "its child confirms", "its child asks":
+				hold := helperChildHold
+				if before == "its child asks" {
+					// Admitted before Close, the child's connection is one
+					// Close leaves open.
+					hold = helperChildHoldGreeted
+				}
 				dir := t.TempDir()
 				served.mu.Lock()
-				served.childEnv = append(served.childEnv, helperChildHold+"="+dir)
+				served.childEnv = append(served.childEnv, hold+"="+dir)
 				served.mu.Unlock()
 				go func() {
 					for until := time.Now().Add(10 * time.Second); time.Now().Before(until); time.Sleep(10 * time.Millisecond) {

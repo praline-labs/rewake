@@ -77,9 +77,10 @@ transport's call under way and the confirmation of a child the endpoint runs, th
 for the calls it took: each runs to its answer, under its child's deadline, and only then
 does `Close` return, as the old server finished its calls at the end of its input. The
 socket stays open meanwhile, to the endpoint's own children alone, so a call taken before
-its child started or confirmed still confirms; it closes once the last such call ends. An answer goes to its connection with a write deadline; at most
-`bridge.ResultCap` bytes, it fits a socket's buffer, so a transport that stopped reading
-never holds the endpoint. An acknowledgment in flight is waited for the same way.
+its child started, greeted the endpoint or asked for its confirmation still confirms; it
+closes once the last such call ends. An answer goes to its connection with a write
+deadline; at most `bridge.ResultCap` bytes, it fits a socket's buffer, so a transport that
+stopped reading never holds the endpoint. An acknowledgment in flight is waited for the same way.
 
 ## Faults and the rig
 
