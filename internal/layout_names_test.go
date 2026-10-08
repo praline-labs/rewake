@@ -40,7 +40,7 @@ var nameExceptions = map[nameException]excuse{
 	{"internal/cli/inbox_parts.go", "claude"}:                  {hooksLeave, "S9", 2, "292d2f7998a1"},
 	{"internal/cli/launch.go", "claude"}:                       {harnessWordsInTexts, "S10", 1, "48cb0b1e954c"},
 	{"internal/cli/launch_nested_test.go", "claude"}:           {realAdapterIDs, "S10", 1, "546748e7e9b9"},
-	{"internal/cli/launch_worktree_test.go", "claude"}:         {realAdapterIDs, "S10", 10, "913edbc3847f"},
+	{"internal/cli/launch_worktree_test.go", "claude"}:         {realAdapterIDs, "S10", 10, "52ee4f2672bb"},
 	{"internal/cli/model.go", "claude"}:                        {harnessWordsInTexts, "S10", 1, "b65954e036ba"},
 	{"internal/cli/pending.go", "claude"}:                      {hooksLeave, "S9", 6, "435d5d5a56c5"},
 	{"internal/cli/pending_test.go", "claude"}:                 {hooksLeave, "S9", 1, "18f2ef1f656b"},

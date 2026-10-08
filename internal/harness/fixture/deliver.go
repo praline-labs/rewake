@@ -111,7 +111,7 @@ func members(message inbox.Message) []Member {
 	}
 	out := make([]Member, 0, len(letters))
 	for _, letter := range letters {
-		member := Member{ID: letter.ID, From: letter.From, FromEpoch: letter.FromEpoch, To: letter.To, ToEpoch: letter.ToEpoch, Replaces: letter.Replaces}
+		member := Member{ID: letter.ID, From: letter.From, FromEpoch: letter.FromEpoch, To: letter.To, ToEpoch: letter.ToEpoch, Replaces: letter.Replaces, Grants: letter.GrantDirs}
 		if letter.Recall != nil {
 			member.Recalls = letter.Recall.ID
 		}

@@ -50,6 +50,7 @@ func (fixtureHarness) Notes() []string {
 	return []string{
 		"The fixture is a program the workflow suite provides: it proves the core without a real harness, and a test can withhold each thing it serves.",
 		"Arguments after fixture reach its terminal as written, after a --; its own flags are rewake's to pass and are refused here.",
+		"--worktree=<name> starts the session in a new checkout of HEAD on a new branch of that name under rewake's worktree directory, at the same place within the repository; --worktree alone names it.",
 	}
 }
 
@@ -61,6 +62,9 @@ func (fixtureHarness) SingleUseFlags() []harness.Flag {
 		{Spellings: []string{"--role"}, TakesValue: true},
 		{Spellings: []string{"--brief"}, TakesValue: true},
 		{Spellings: []string{"--connect"}, TakesValue: true},
+		// rewake's own (worktree.go), read only with =<name>, so a switch
+		// here: a typed one replaces an alias's.
+		{Spellings: []string{worktreeFlag}},
 	}
 }
 
@@ -118,6 +122,18 @@ func (fixtureHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan,
 		Notes:      notes,
 	}, nil
 }
+
+// SupportsDirGrant: a directory granted with a task reaches the program with
+// the letter that carries it, once the wrapper has checked it again and main's
+// wrapper has confirmed it, and the program says it was offered one. Applying
+// it to what the program may write, and taking it back, is the Permissions
+// capability stage 6 designs (docs/v2/design-api.md#permissions); here the
+// fixture holds the core's part of a grant on the gate column.
+func (fixtureHarness) SupportsDirGrant() bool { return true }
+
+// ReachesWrapper: the program runs its commands without a sandbox of its own,
+// so a fixture main's send reaches its wrapper and can grant.
+func (fixtureHarness) ReachesWrapper() bool { return true }
 
 func room(request harness.LaunchRequest) string {
 	if request.Room == "" {

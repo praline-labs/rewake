@@ -126,6 +126,9 @@ type Member struct {
 	ToEpoch   string `json:"toEpoch,omitempty"`
 	Recalls   string `json:"recalls,omitempty"`
 	Replaces  string `json:"replaces,omitempty"`
+	// Grants are the directories granted with the letter, which its wrapper
+	// rechecked and main's confirmed before the delivery.
+	Grants []string `json:"grants,omitempty"`
 }
 
 // maxFrame bounds one line: a notice, its members and a turn's text.

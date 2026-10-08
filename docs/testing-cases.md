@@ -10,7 +10,9 @@ The Codex column and its cases — `codex-steered`, `codex-compact-hold`,
 `codex-tui-later-shape`, `codex-worktree`, `codex-grant-dir`, `codex-grant-forgery`,
 `codex-grant-resume` and `readiness` with their controls — left with the Codex adapter in
 S8, October 8, 2026; they are kept with its code in
-[archive/1.x/codex](../archive/1.x/codex/README.md), as they last ran.
+[archive/1.x/codex](../archive/1.x/codex/README.md), as they last ran. The fixes of S8's
+review brought the neutral part of three of them back on the gate column:
+`fixture-worktree`, `fixture-grant-forgery` and `fixture-grant-dir`, below.
 
 ## Claude Code telemetry budgets
 
@@ -117,14 +119,48 @@ task go breaks both.
 
 ## A worktree for a Codex launch
 
-`codex-worktree` left with the Codex column in S8, October 8, 2026: its scenario and
-eleven mutants are kept in [archive/1.x/codex](../archive/1.x/codex/README.md), and the
-records that cite it read it there.
+`codex-worktree` left with the Codex column in S8, October 8, 2026, and is kept as it
+last ran in [archive/1.x/codex](../archive/1.x/codex/README.md), where the records that
+cite it read it. Every observation and all eleven mutants held the core's worktree code,
+and they run again on the gate column as `fixture-worktree`.
+
+## A worktree on the gate column
+
+`fixture-worktree` runs on the fixture column, which takes rewake's `--worktree` for the
+purpose. A worker is launched from `src/nested` of a fresh repository with
+`--worktree=probe`, the worktree directory left at its default under the case's home,
+and each half of the fixture's program writes the directory it started in
+(`RW_SHIM_CWD_FILE`). The checkout must be one of the source's HEAD on a new branch
+`probe`, the source still on `main`, under that directory, and the session's record, the
+terminal and the session half must all work in its `src/nested`; a task a main sends must
+be delivered there; `rewake worktree rm` must refuse the checkout while the worker runs
+and say so. While the worker runs, a commit made in the checkout is landed — `main` moves
+to it, its file appears in the source, the checkout stays on `probe` and the worker keeps
+running — and after a second commit `finish` must refuse, naming the worker, and move
+nothing. After the worker has ended, rm must still refuse while a visitor session
+started in the checkout runs. Three spare checkouts, launched and ended for the purpose,
+show what else rm keeps: one holding a `.env` the repository ignores (and `--force`
+removes it), one whose commit no ref holds once its checkout is detached and every ref
+holding it is deleted (and removed once they are back), and one whose directory was moved
+away, where the refusal points at `git worktree repair` and `--force` takes out its record
+and git's entry. Once nothing holds the first checkout, `finish` must land the second
+commit and remove the checkout, its record, git's own entry and the branch. Its eleven
+mutants each name what they break and require the rest to hold: a launch that never
+enters its checkout; a removal that takes no session for a running one, which also leaves
+nothing to visit and lets finish go ahead; one that sees only the session the checkout
+was made for, which removes it from under the visitor; one that deletes the directory
+behind git's back, whose entries stay; one blind to ignored files; one that asks whether
+a commit is held only after the HEAD moved; one that removes a moved checkout without
+`--force`; a checkout made detached, which nothing can land and finish will not take; a
+land that makes a merge commit; a finish that asks nothing first; and one that leaves the
+branch behind. That the removal of a missing checkout takes out its own entry and no
+other, where `git worktree prune` would take every missing checkout's, is held by
+`internal/worktree` (`TestAMissingCheckoutIsRemovedAlone`).
 
 ## A worktree for a Claude Code launch
 
-`claude-worktree` runs on the Claude column, the one worktree case since the Codex
-column's eleven-mutant `codex-worktree` left with it in S8. A worker is launched from
+`claude-worktree` runs on the Claude column and holds the adapter's part, where its
+launch works; `fixture-worktree` above holds the core's. A worker is launched from
 `src/nested` of a fresh repository with `--worktree=probe`, and the fixture writes the
 directory it started in. The checkout must be one of the source's HEAD on a new branch
 `probe`, and the session's record and the harness must work in its `src/nested`; the
@@ -138,6 +174,49 @@ observations say; the refusals of `-w`, `--tmux` and the continuations are unit 
 `internal/cli`.
 
 ## A directory granted with a task
+
+`fixture-grant-dir` holds the core's part of a grant on the gate column, with a fixture
+main and two fixture write workers. The fixture takes `--grant-dir` and a fixture main
+can grant; its adapter passes a letter's granted directories with the delivery, and its
+program records each letter that came with them. It applies nothing: waiting for an idle
+session, adding the directory and taking it out are the Permissions capability's,
+designed in stage 6, and on Claude Code its hooks hold them in `claude-grant-dir` below.
+Main sends the first worker, which holds its first turn open, a task with `--grant-dir`
+on a directory in the user's cache: the program must be offered that directory with that
+letter alone, and a plain task steered into the same turn must offer none. Asked from the
+test process, main's wrapper must confirm the grant while the task is open and refuse it
+once the task is reported on. The second worker's program refuses every reservation
+until the case lets it (`RW_SHIM_HOLD_RESERVE`); main sends it a task granting another
+directory, which must wait `pending`; the directory is removed and the program let go,
+and the letter must fail `its grant does not pass: … is gone` without the program being
+offered it, and main must read the note that it was not delivered. Its mutants deliver
+without checking the directories again (`grant-not-rechecked`, which breaks the recheck
+alone), fail a grant without telling its sender (`grant-refusal-untold`, which breaks the
+recheck alone), write the letter without registering its grant (`grant-unregistered`,
+which breaks all three: no wrapper confirms it), and keep a reported task's grant on
+main's wrapper (`grant-held-after-report`, which breaks the lifetime alone). The three
+mutants of the archived `codex-grant-dir` changed the Codex adapter's sandbox roots and
+stay with it.
+
+`fixture-grant-forgery` is a fixture write worker trying to grant itself a directory in
+the name of a running fixture main, five ways. Its own process runs `rewake send` with
+main's `REWAKE_SESSION` and `REWAKE_EPOCH`, and so does a process it detached through
+`setsid`: both must exit 1 and leave no letter. The test process, outside main's tree,
+writes a registration straight to main's address, as a forger's own client would,
+skipping the checks `rewake send` makes of its listener, and puts the letter in the
+worker's mailbox: main's wrapper must refuse the registration and the letter fail. A
+letter carrying a grant is put in by hand in main's name, and another in main's name
+whose run is the worker's own while a listener in the test process answers at that run's
+address and confirms the grant: both must fail without the program being offered the
+directory — the first because main never registered it, the second because the answer
+came from a process other than the run the letter names. What it does not prove is the
+namespace check: every process in the suite shares the wrappers' namespaces, as a worker
+outside a sandbox does, so those checks have their own unit tests in
+`internal/grantauth`. Its mutants take registrations from any process
+(`grant-from-anywhere`, which breaks the direct registration alone — `rewake send` still
+registers only with a listener above it), deliver a grant without asking main's wrapper
+(`grant-unconfirmed`, which breaks the three letters), and take an answer from any
+listener (`grant-any-listener`, which breaks the foreign answer alone).
 
 `claude-grant-dir` runs on the Claude Code column only, with a Claude Code main and write
 worker. The fixture calls tools when told to (`RW_SHIM_TOOLS`): each line `tool <Write|Read|Bash>
@@ -287,3 +366,6 @@ switches have no single form in the code to find them by, and the row is kept by
 | edit-after-notice | `edit-keeps-old-text`, `edit-unlinked`, `replacement-unmarked` | — |
 | addendum-owed | `owed-flat` | — |
 | claude-worktree | `claude-worktree-parent` | — |
+| fixture-worktree | `worktree-not-entered`, `worktree-running-ignored`, `worktree-visitor-ignored`, `worktree-git-kept`, `worktree-ignored-unseen`, `worktree-branch-trusted`, `worktree-moved-unrefused`, `worktree-detached`, `worktree-land-merges`, `worktree-finish-unchecked`, `worktree-finish-branch-kept` | — |
+| fixture-grant-dir | `grant-not-rechecked`, `grant-refusal-untold`, `grant-unregistered`, `grant-held-after-report` | `RW_SHIM_HOLD_RESERVE` |
+| fixture-grant-forgery | `grant-from-anywhere`, `grant-unconfirmed`, `grant-any-listener` | — |
