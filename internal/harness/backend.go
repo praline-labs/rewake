@@ -52,7 +52,9 @@ type GrantIssuer interface {
 }
 
 // LaunchRefuser refuses launch arguments rewake has a way of its own for, and
-// names that way. The refusal is a call to change: exit 2.
+// names that way. The refusal is a call to change: exit 2. No adapter in the
+// catalogue offers one; S10 turns the launch's assertion into a capability
+// query and removes this interface if none offers the refusal then.
 type LaunchRefuser interface {
 	RefuseLaunch(args []string) error
 }

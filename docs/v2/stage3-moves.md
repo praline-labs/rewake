@@ -75,6 +75,9 @@ may move whole with them; none of these packages imports `harness`, `bridge`,
 consumers**: the mutations in `inbox` (12), `control`, `grant`, `grantauth`; the build
 values `inbox.builtQuiet` and `inbox.builtCap`.
 
+`control` moves with `Serve`, which S11 connects to the fixture's live Control; until S11
+only its tests reach it (S8's review, October 8, 2026).
+
 The delivery server's files stay together in `core/mail` until S15, which the transition
 table records as a file-group entry — `core/mail`: `serve`, `batch`, `window`,
 `watch_linux`, `held`, `retention`, `announcement`, `availability`, `thread`, `outcome`

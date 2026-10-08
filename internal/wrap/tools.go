@@ -49,10 +49,10 @@ type mailTool struct {
 	// observer is the plan's observer, set once the plan is made: the
 	// endpoint asks it for the conversation a call belongs to.
 	observer atomic.Pointer[harness.Observer]
-	// keeper keeps the run's channel record. Nothing makes one yet: the
-	// record's producer comes with the adapter capabilities, and until then
-	// every use of it is a no-op and the session shows its mail channel as
-	// unknown.
+	// keeper keeps the run's channel record. Nothing makes one yet: S10
+	// defines the neutral channel inputs and S11 wires the keeper to the
+	// live set and the shell's evidence; until then every use of it is a
+	// no-op and the session shows its mail channel as unknown.
 	keeper *channelKeeper
 	// tools and path are what a backend that carries the calls itself is
 	// offered: the tools to register, and the endpoint to ask.

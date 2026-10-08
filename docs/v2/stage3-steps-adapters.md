@@ -142,6 +142,19 @@ S9.
   `GrantIssuer` and `LaunchRefuser` (`cli/send_*.go`, `cli/launch.go`) become
   capability queries.
 
+**What S8 left for S10** (S8's review, October 8, 2026). Three things only tests reach
+after S8, each closed here, not carried to stage 5:
+
+- `LaunchRefuser` (`harness/backend.go`, asserted in `cli/launch.go`): no adapter offers
+  the refusal; the assertion becomes a capability query, and the empty interface and
+  its assertion go if no adapter offers it then.
+- The endpoint's server hello and client (`bridge/endpoint`, `roleServer`, `Dial`):
+  no adapter starts a server since S8; the channel's hello and close are mapped onto
+  the adapter capability's lifecycle, and the secret-based server ticket protocol is
+  retired if no adapter consumes it.
+- The channel's inputs: S10 defines the neutral channel and capability inputs the
+  keeper takes; S11 wires the keeper.
+
 **Tests.** `wrap/thread_test.go` tests the wrapper's use of `ThreadTracker` and
 `ThreadSource` through its own fakes (`threadedHarness`, `threadObserver`); it is kept
 and recast on the API's interfaces, whether or not a real adapter implements them in
@@ -167,3 +180,16 @@ capability dropped and reconnected leaves the run and its grants' authority unch
 The existing assertions this changes — a send, task or question to a session that is
 up but not yet live — are listed by a search of the tests that send to a session started
 in the same test, and each is assigned to this commit.
+
+**What S8 left for S11** (S8's review, October 8, 2026), each closed here:
+
+- The channel keeper (`wrap/tools.go`, `channelKeeper`): nothing makes one after S8, so
+  every session shows its mail channel as unknown. S11 wires it to the live set and the
+  shell's evidence, and covers on the fixture column a channel offered and absent, live
+  and lost, denied, the shell's evidence, and the record frozen at the run's exit. Until
+  then C1–C8 prove the record and the keeper under synthetic inputs only, not end to end.
+- `control.Serve`: S11 connects the fixture's live Control to its request and answer
+  path; the package moves to the core in S13.
+- `brief.Context.Tool`: no launch sets it after S8; S11 derives it from the live tool
+  capability when it builds the briefing. It is the briefing's flag, not a field of the
+  tool input.

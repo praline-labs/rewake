@@ -13,7 +13,9 @@ type Context struct {
 	Role   role.Role
 	Reason string
 	// Tool says the run has the mail tool: the briefing then carries the
-	// whole transport sentence, and the first clause alone otherwise.
+	// whole transport sentence, and the first clause alone otherwise. No
+	// launch sets it yet; S11 derives it from the live tool capability when
+	// it builds the briefing.
 	Tool bool
 }
 

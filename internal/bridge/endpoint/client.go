@@ -30,7 +30,11 @@ const (
 	HookWait    = 2 * time.Second
 )
 
-// Client is a server's connection to its run's wrapper.
+// Client is a server's connection to its run's wrapper. No adapter starts a
+// server since the bridge server left in S8; the hello and its secret-based
+// ticket stay for their tests only, and S10 maps the channel's hello and close
+// onto the adapter capability's lifecycle and retires this protocol if no
+// adapter takes it up.
 type Client struct {
 	conn    *net.UnixConn
 	writeMu sync.Mutex

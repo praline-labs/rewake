@@ -43,7 +43,6 @@ test/workflow/record/            the record format a suite run prints and the su
 test/toolrig/                    the neutral rig: the tool path's oracles on the fixture's program and the host endpoint
 tools/checksummary/              summarizes a suite run into a few lines and summary.json
 tools/release/                   the release gate: checks, builds with pack.sh, publishes only when told
-tools/standin/                   a stand-in model API that answers with a call of the mail tool, for live checks
 ```
 
 `cmd/` holds only what the project ships; `tools/` holds development programs that ship
@@ -87,8 +86,11 @@ takes arguments rewake has a way of its own for implements `LaunchRefuser` —
 the catalog implements it (Codex, which refused `--add-dir` and a `writable_roots`
 override there, left the product). A harness whose main can grant
 implements `GrantIssuer` — `ReachesWrapper()`, whether its commands reach their wrapper's
-socket; only Claude Code does, and a grant from a main of any other harness is refused
-with exit 1 ([grants.md](grants.md#who-can-grant)). A harness that takes a grant through
+socket; Claude Code does, and so does the fixture in a build that carries it, and a
+grant from a main of any other harness is refused with exit 1
+([grants.md](grants.md#who-can-grant)). The fixture also implements `DirGrantHarness`
+and `WorktreeHarness`, so the workflow suite holds the core's part of grants and
+worktrees on its gate column ([testing-cases.md](testing-cases.md)). A harness that takes a grant through
 a permission hook rather than at delivery implements `HookGranter` —
 `DecideGrant(call, entries)`, the answer from the grants the wrapper keeps. The hidden
 `rewake grant-hook` knows which harness runs it: it trims the payload with that

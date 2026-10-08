@@ -17,9 +17,10 @@ passing, a denial, a shell observation and the exit. What only one harness told 
 Claude Code session start, a call no hook observed, a Codex conversation selected or
 bound, a server reporting its command cannot start — left with the 1.x adapter and the
 MCP injection ([archive/1.x/codex](../archive/1.x/codex/README.md)). No launch starts
-the keeper until a harness offers a tool transport again (stage 3, S10 or S11): until
-then every run shows `mail: unknown`, and the text below is the record that keeper will
-keep.
+the keeper until S11 wires it to the live set and the shell's evidence, on the neutral
+inputs S10 defines ([stage3-steps-adapters.md](v2/stage3-steps-adapters.md#s11-the-host-on-the-live-set-codex)):
+until then every run shows `mail: unknown`, and the text below is the record that keeper
+will keep.
 
 ## The rules
 
