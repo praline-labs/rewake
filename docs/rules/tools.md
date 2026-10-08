@@ -46,7 +46,13 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/bridge/bridge_test.go` `TestNoEndpointRefusesEveryTicket`
   - `internal/bridge/bridge_test.go` `TestTheDigestSeparatesWords`
   - `internal/cli/bridge_tool_test.go` `TestAToolCallWithoutAValidTicketRunsNothing`
-  - Gap: a binding from the harness's own ids, checked per request on the exact harness process — closed in S7.
+  - `internal/bridge/endpoint/transport_test.go` `TestATransportsCallRunsInAChildOfTheWrapper`
+  - `internal/bridge/endpoint/transport_test.go` `TestOnlyTheTransportsOwnProcessIsServed`
+  - `internal/bridge/endpoint/transport_test.go` `TestAnAnswerGoesOnlyToTheTransportThatAsked`
+  - `internal/bridge/endpoint/transport_test.go` `TestACallTheToolsDoNotOfferRunsNothing`
+  - `internal/harness/fixture/tool_test.go` `TestALiveToolTransportNamesTheProgramToTheEndpoint`
+  - `internal/harness/fixture/tool_test.go` `TestTheProgramsReportsBecomeTheNeutralInput`
+  - `internal/wrap/mailtool_transport_test.go` `TestAHarnessThatCarriesItsCallsIsOfferedTheTools`
 
 - **T3. Every effect happens in the core operation, under its receipt**; a transport
   never repeats, finishes or undoes one, and starts no second operation for a call
@@ -103,7 +109,9 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/bridge/server/bound_test.go` `FuzzFramesAreBounded` — rebuilt in S7 on the endpoint's encoder
   - `internal/bridge/server/stdout_bound_test.go` `TestAClientThatStopsReading` — rebuilt in S7 on the endpoint's encoder
   - `internal/bridge/server/stdout_bound_test.go` `TestAReaderThatResumesInTimeGetsEveryReply` — rebuilt in S7 on the endpoint's encoder
-  - Gap: a request bounded before it is parsed at the endpoint — closed in S7.
+  - `internal/bridge/endpoint/transport_test.go` `TestATransportsRequestIsBoundedBeforeItIsParsed`
+  - `internal/bridge/endpoint/transport_test.go` `TestAnAnswerPastItsBoundIsReplacedWhole`
+  - `internal/bridge/descriptor_test.go` `TestACallsArgumentsBecomeTheCommandsWords`
 
 - **T6. A letter is read only on proof that the call's own whole result reached the
   model.** The proof is the harness's record of the result for that native call, equal

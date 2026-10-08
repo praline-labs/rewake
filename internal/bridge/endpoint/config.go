@@ -22,6 +22,15 @@ type Config struct {
 	Refusal string
 	// Words normalizes the words a harness observed: the CLI's own check.
 	Words func([]string) ([]string, error)
+	// Check is the same check for a call a transport asks to run: the
+	// normalized words, or the CLI's own refusal as a shell prints it.
+	Check func([]string) ([]string, string)
+	// Tools are the tools a transport offers, from the command table; a
+	// call names one of them.
+	Tools []bridge.ToolDescriptor
+	// Executable is the image a transport's call runs in, the wrapper's own
+	// unless a test names another.
+	Executable string
 	// Acknowledge acknowledges a read's parts on the evidence of a result;
 	// the CLI's AcknowledgeRead.
 	Acknowledge func(dir, name, epoch, token string, evidence bridge.Exposure, gate bridge.EndGate) error

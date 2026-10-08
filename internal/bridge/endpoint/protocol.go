@@ -24,6 +24,9 @@ const (
 	roleServer = "server"
 	roleChild  = "child"
 	roleHook   = "hook"
+	// roleTransport is a harness's own side of a tool call: the process
+	// the wrapper started, asking for one call to run (transport.go).
+	roleTransport = "transport"
 )
 
 // The operations each role may ask.
@@ -31,6 +34,7 @@ const (
 	opTicket  = "ticket"
 	opConfirm = "confirm"
 	opObserve = "observe"
+	opCall    = "call"
 )
 
 // hello is the first line of every connection.
@@ -51,6 +55,8 @@ type request struct {
 	Payload json.RawMessage `json:"payload,omitempty"`
 	// Limits ride with a hook's observation (limits.go).
 	Limits *HookLimits `json:"limits,omitempty"`
+	// Call is a transport's call to run.
+	Call *ToolCall `json:"call,omitempty"`
 }
 
 // response answers a hello (ID zero) or a request.
@@ -58,6 +64,7 @@ type response struct {
 	ID     uint64         `json:"id"`
 	Error  string         `json:"error,omitempty"`
 	Ticket *bridge.Ticket `json:"ticket,omitempty"`
+	Answer *ToolAnswer    `json:"answer,omitempty"`
 }
 
 // TicketRequest is what the server knows of a call when it asks for a

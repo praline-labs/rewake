@@ -68,6 +68,7 @@ type backend struct {
 	telem   telemetry
 	turns   map[string]turnRecord
 	ends    map[string]harness.Completion
+	tools   toolOffer
 
 	// closing stops new connections and new calls into the wrapper's
 	// handler; Close then waits for the goroutines reading the program
@@ -242,6 +243,7 @@ func (b *backend) admit(conn net.Conn) {
 		b.live = live
 	}
 	b.mu.Unlock()
+	b.toolsLive()
 	b.helloOnce.Do(func() { close(b.hello) })
 	<-l.closed
 	b.withdraw(l)
@@ -279,11 +281,18 @@ func (b *backend) probe(l *link, serves []string) map[string]bool {
 		if !slices.Contains(serves, capability) {
 			continue
 		}
+		request := Frame{Op: opProbe, Capability: capability}
+		if capability == ToolTransport {
+			// Without tools offered there is nothing to register.
+			if request = b.toolProbe(); request.Op == "" {
+				continue
+			}
+		}
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			answer, err := l.ask(Frame{Op: opProbe, Capability: capability}, b.bound)
-			if err == nil && probeAnswered(capability, answer) {
+			answer, err := l.ask(request, b.bound)
+			if err == nil && probeAnswered(capability, answer) && b.toolsRegistered(capability, answer) {
 				mu.Lock()
 				live[capability] = true
 				mu.Unlock()
@@ -296,7 +305,8 @@ func (b *backend) probe(l *link, serves []string) map[string]bool {
 
 // probeAnswered says whether a probe's answer is the one its capability
 // gives: an acknowledgment for Wake, a turn state for TurnBoundary, a sample
-// or none for Telemetry, ready for Control.
+// or none for Telemetry, ready for Control, whether results are proven for
+// ToolTransport, whose registration toolsRegistered checks.
 func probeAnswered(capability string, answer Frame) bool {
 	if !answer.OK {
 		return false
@@ -308,6 +318,8 @@ func probeAnswered(capability string, answer Frame) bool {
 		return answer.State == "none" || answer.State == "working" || answer.State == "idle"
 	case Control:
 		return answer.State == "ready"
+	case ToolTransport:
+		return answer.State == ToolProven || answer.State == ToolUnproven
 	}
 	return true
 }

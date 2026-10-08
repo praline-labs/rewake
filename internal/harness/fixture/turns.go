@@ -52,6 +52,12 @@ func (b *backend) handle(l *link, frame Frame) {
 		b.dispatch(frame, func() { _ = l.answer(frame, b.decide(l, completion, frame.Hold, err)) })
 	case opActivity:
 		b.activity(l, frame)
+	case opToolCall:
+		reply := b.toolCall(l, frame)
+		b.dispatch(frame, func() { _ = l.answer(frame, reply) })
+	case opToolResult:
+		reply := b.toolResult(l, frame)
+		b.dispatch(frame, func() { _ = l.answer(frame, reply) })
 	default:
 		if frame.ID != 0 {
 			b.dispatch(frame, func() { _ = l.answer(frame, Frame{Error: "the adapter does not take " + frame.Op}) })
@@ -81,7 +87,12 @@ func (b *backend) turnStarted(l *link, frame Frame) Frame {
 	if _, known := b.turns[frame.Turn]; !known {
 		b.turns[frame.Turn] = record
 	}
+	thread := b.thread
 	b.mu.Unlock()
+	if b.handler.Tool != nil {
+		// The program's own time of the start, not this frame's arrival.
+		b.handler.Tool.TurnStarted(thread, frame.Turn, frame.At)
+	}
 	return Frame{OK: true}
 }
 
@@ -144,6 +155,10 @@ func (b *backend) endOf(l *link, frame Frame) (harness.Completion, error) {
 		completion.Ended = boottime.Now()
 	}
 	b.ends[frame.End] = completion
+	if b.handler.Tool != nil {
+		// After the end's capture: a call heard from here on is outside it.
+		b.handler.Tool.TurnEnded(b.thread, frame.Turn)
+	}
 	return completion, nil
 }
 

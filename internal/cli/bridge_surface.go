@@ -12,8 +12,8 @@ import (
 // The words a tool call may run (docs/mail-bridge.md#one-implementation-and-a-narrow-surface).
 // The mail tool reaches the CLI from outside the harness's sandbox, so it runs
 // the mail and nothing else: reading, the pending mark, a heads-up to a live
-// session, who this is, and continuing or reconciling what an earlier call
-// began. A command added to the CLI later stays out until it is reviewed for
+// session, who this is, the sessions of the room, and continuing or
+// reconciling what an earlier call began. A command added to the CLI later stays out until it is reviewed for
 // this surface, which is why the list names what is allowed rather than what
 // is not.
 
@@ -24,6 +24,7 @@ var toolFlags = map[string][]string{
 	"send":    {"notify", "json", "wait"},
 	"whoami":  {"json"},
 	"retry":   {"json"},
+	"list":    {"json"},
 }
 
 // maxToolWait bounds send's --wait under the tool: the call has a deadline of
@@ -118,7 +119,7 @@ func toolShape(call Call) error {
 
 // toolRefusal is a refusal that names the shell as the place for the rest.
 func toolRefusal(command *Command, reason string) error {
-	return &UsageError{Command: command, Message: "Rewake: " + reason + ". The tool runs: inbox (--peek, --message, --owed, --awaited, --next), pending, send --notify, whoami and retry."}
+	return &UsageError{Command: command, Message: "Rewake: " + reason + ". The tool runs: inbox (--peek, --message, --owed, --awaited, --next), pending, send --notify, whoami, retry and list."}
 }
 
 // normalized is the canonical form of a call: the command, its flags sorted

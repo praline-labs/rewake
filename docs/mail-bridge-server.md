@@ -102,6 +102,9 @@ wrapper in `internal/wrap/mailtool.go`; the CLI side of rules 4, 6 and 7 is stag
 | 10, one build | `endpoint/endpoint.go` (`admit`: uid, capability, descent, build); the child execs `/proc/self/exe` |
 | 11, the shell stays | the CLI is unchanged under the shell; the channel record is stage 3 ([below](#fallback-and-what-main-sees)) |
 
+A harness that carries the calls itself, with no server of rewake's, reaches the same
+rules through the endpoint's `transport` role: [mail-bridge-transport.md](mail-bridge-transport.md).
+
 The tests are listed in [mail-bridge-checks.md](mail-bridge-checks.md#how-the-checks-are-built).
 
 ## Who calls

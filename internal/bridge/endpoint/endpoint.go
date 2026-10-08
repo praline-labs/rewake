@@ -49,9 +49,16 @@ type Endpoint struct {
 	bound      map[uint64]bool
 	primary    func() string
 	conns      map[*net.UnixConn]struct{}
-	closed     bool
-	done       chan struct{}
-	once       sync.Once
+	// transport is the process a transport's calls come from, childEnv
+	// their children's environment, children the children running now and
+	// slots the calls running at once (transport.go, run.go).
+	transport transportPeer
+	childEnv  []string
+	children  map[int]uint64
+	slots     chan struct{}
+	closed    bool
+	done      chan struct{}
+	once      sync.Once
 }
 
 // Listen binds the run's context socket at path, mode 0600, replacing a file
@@ -76,7 +83,7 @@ func Listen(path string, cfg Config) (*Endpoint, error) {
 	}
 	listener.SetUnlinkOnClose(true)
 	_ = os.Chmod(path, 0o600)
-	e := &Endpoint{cfg: cfg, listener: listener, path: path, calls: newCalls(), conns: map[*net.UnixConn]struct{}{}, done: make(chan struct{})}
+	e := &Endpoint{cfg: cfg, listener: listener, path: path, calls: newCalls(), conns: map[*net.UnixConn]struct{}{}, slots: make(chan struct{}, maxChildren), done: make(chan struct{})}
 	go e.accept()
 	return e, nil
 }
@@ -169,6 +176,12 @@ func (e *Endpoint) serve(conn *net.UnixConn) {
 	}
 	defer release()
 	writer.write(response{})
+	if greeting.Role == roleTransport {
+		if peer, err := peerOf(conn); err == nil {
+			e.serveCall(conn, reader, writer, int(peer.Pid))
+		}
+		return
+	}
 	var generation uint64
 	if greeting.Role == roleServer {
 		// A server's connection lasts as long as it does: its close is how
@@ -215,17 +228,29 @@ func (e *Endpoint) admit(conn *net.UnixConn, greeting hello) (func(), error) {
 			return nil, errors.New("the capability is not this launch's")
 		}
 	case roleHook:
+	case roleTransport:
+		// The harness's own process, exactly: not a build of rewake, and
+		// never something running below it.
+		if err := e.fromTransport(int(peer.Pid)); err != nil {
+			return nil, err
+		}
 	default:
 		return nil, fmt.Errorf("a role this endpoint does not serve: %q", greeting.Role)
 	}
-	e.mu.Lock()
-	roots := e.roots
-	e.mu.Unlock()
-	if err := e.below(int(peer.Pid), roots); err != nil {
-		return nil, err
-	}
-	if err := e.cfg.SameBuild(int(peer.Pid)); err != nil {
-		return nil, fmt.Errorf("the peer is another build of rewake than this run's wrapper: %v", err)
+	if greeting.Role != roleTransport {
+		e.mu.Lock()
+		roots := e.roots
+		e.mu.Unlock()
+		// A transport's call runs below the wrapper itself, in a child the
+		// endpoint started and knows by its pid.
+		if greeting.Role != roleChild || !e.isOwnChild(int(peer.Pid)) {
+			if err := e.below(int(peer.Pid), roots); err != nil {
+				return nil, err
+			}
+		}
+		if err := e.cfg.SameBuild(int(peer.Pid)); err != nil {
+			return nil, fmt.Errorf("the peer is another build of rewake than this run's wrapper: %v", err)
+		}
 	}
 	e.mu.Lock()
 	defer e.mu.Unlock()

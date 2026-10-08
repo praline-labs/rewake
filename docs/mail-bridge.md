@@ -51,6 +51,7 @@ receipt/continuation. It never implements those operations a second time.
 | `send NAME TEXT --notify` | A live session in this room; literal nonempty text. |
 | `whoami` | This run's identity and observed mail channel. |
 | `retry TOKEN` | Reconcile this run's CLI receipt; a new CLI form. |
+| `list` | The sessions of this room, read only; added in S7 with the transports' tools. |
 
 Help for these forms and `--json` are allowed. Existing inbox modes remain exclusive;
 `--next` retains the original mode. Send accepts only `--notify`, `--json` and `--wait`

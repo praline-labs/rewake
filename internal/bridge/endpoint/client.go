@@ -139,6 +139,40 @@ func Confirm(path string, ticket bridge.Ticket) error {
 	return ask(conn, request{ID: 1, Op: opConfirm, Ticket: &ticket})
 }
 
+// CallTool asks the run's wrapper to run one call for a transport, and
+// waits at most limit for its answer. The caller must be the transport's
+// process itself: the wrapper refuses any other, a child of it among them.
+func CallTool(path string, call ToolCall, limit time.Duration) (ToolAnswer, error) {
+	conn, err := greet(path, hello{Role: roleTransport}, shortExchange)
+	if err != nil {
+		return ToolAnswer{}, err
+	}
+	defer func() { _ = conn.Close() }()
+	_ = conn.SetDeadline(time.Now().Add(limit))
+	encoded, err := json.Marshal(request{ID: 1, Op: opCall, Call: &call})
+	if err != nil {
+		return ToolAnswer{}, err
+	}
+	if _, err := conn.Write(append(encoded, '\n')); err != nil {
+		return ToolAnswer{}, fmt.Errorf("%w: %v", ErrUnreachable, err)
+	}
+	line, err := readLine(bufio.NewReader(conn))
+	if err != nil {
+		return ToolAnswer{}, fmt.Errorf("%w: no answer: %v", ErrUnreachable, err)
+	}
+	var answer response
+	if err := json.Unmarshal(line, &answer); err != nil {
+		return ToolAnswer{}, errors.New("an answer that does not parse")
+	}
+	if answer.Error != "" {
+		return ToolAnswer{}, errors.New(answer.Error)
+	}
+	if answer.Answer == nil {
+		return ToolAnswer{}, errors.New("the wrapper answered with no result")
+	}
+	return *answer.Answer, nil
+}
+
 // Observe hands a hook's input to the run's wrapper and returns once it
 // recorded it, or the bound ran out.
 func Observe(path string, payload []byte, limits HookLimits, limit time.Duration) error {

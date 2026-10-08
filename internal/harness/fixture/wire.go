@@ -10,6 +10,8 @@ import (
 	"net"
 	"sync"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/bridge"
 )
 
 // The exchange between the adapter and its program: one JSON object per line
@@ -17,8 +19,9 @@ import (
 // answer carries the id of the request it answers, and each side numbers its
 // own requests, so an answer always belongs to the side that receives it.
 
-// Operations. The program says hello, answers, and reports its turns and
-// activity; the adapter probes, reserves, delivers and releases.
+// Operations. The program says hello, answers, and reports its turns, its
+// activity and its tool calls and their results; the adapter probes,
+// reserves, delivers and releases.
 const (
 	opHello       = "hello"
 	opAnswer      = "answer"
@@ -29,6 +32,8 @@ const (
 	opReserve     = "reserve"
 	opDeliver     = "deliver"
 	opRelease     = "release"
+	opToolCall    = "tool-call"
+	opToolResult  = "tool-result"
 )
 
 // The capabilities a program may serve, as its hello names them.
@@ -37,11 +42,15 @@ const (
 	TurnBoundary = "turn-boundary"
 	Telemetry    = "telemetry"
 	Control      = "control"
+	// ToolTransport is the harness's side of the mail tool's calls
+	// (tool.go): the program registers the tools it is offered and asks the
+	// wrapper's endpoint to run each call.
+	ToolTransport = "tool-transport"
 )
 
 // Served is every capability a program can serve, in the order a hello
 // lists them.
-var Served = []string{Wake, TurnBoundary, Telemetry, Control}
+var Served = []string{Wake, TurnBoundary, Telemetry, Control, ToolTransport}
 
 // The outcomes a turn's end reports.
 const (
@@ -79,6 +88,8 @@ type Frame struct {
 	Text    string `json:"text,omitempty"`
 	Hold    bool   `json:"hold,omitempty"`
 	Reason  string `json:"reason,omitempty"`
+	// At is when the program started the turn, on the boot clock.
+	At int64 `json:"at,omitempty"`
 
 	// A delivery: its own id, the notice the session is shown and the
 	// letters it carries.
@@ -86,6 +97,24 @@ type Frame struct {
 	Notice  string   `json:"notice,omitempty"`
 	Members []Member `json:"members,omitempty"`
 	Steered bool     `json:"steered,omitempty"`
+
+	// The tool transport's probe offers the tools and the endpoint their
+	// calls go to; its answer names the tools registered and their digest.
+	Tools    []bridge.ToolDescriptor `json:"tools,omitempty"`
+	Endpoint string                  `json:"endpoint,omitempty"`
+	Names    []string                `json:"names,omitempty"`
+	Digest   string                  `json:"digest,omitempty"`
+
+	// A tool call the program observed, by its own id, and the result it
+	// handed the model for it: its texts, whether it failed, and whether the
+	// program cut or replaced it so that no text is the whole answer.
+	Call      string          `json:"call,omitempty"`
+	Tool      string          `json:"tool,omitempty"`
+	Arguments json.RawMessage `json:"arguments,omitempty"`
+	Nested    bool            `json:"nested,omitempty"`
+	Texts     []string        `json:"texts,omitempty"`
+	IsError   bool            `json:"isError,omitempty"`
+	Shortened bool            `json:"shortened,omitempty"`
 }
 
 // Member is one letter a delivery carries, by its identities.

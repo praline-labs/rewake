@@ -36,6 +36,10 @@ func startProgram(t *testing.T, switches ...string) (*backend, error) {
 	env := append(append(os.Environ(), programEnv+"=1"), switches...)
 	b := newBackend(exe, []string{"--connect", socket}, env, dir, socket, "e1")
 	t.Cleanup(b.Close)
+	served := &servedPeer{}
+	toolPeers.Store(b, served)
+	t.Cleanup(func() { toolPeers.Delete(b) })
+	b.OfferTools(programTools, filepath.Join(dir, "api.ctx"), served.set)
 	return b, b.Start(context.Background(), harness.CompletionHandler{}, nil)
 }
 
@@ -63,6 +67,9 @@ func TestTheExchangeMakesLiveWhatItsProbesAnswer(t *testing.T) {
 	}
 	if b.ProcessID() == 0 || b.ProcessID() != b.process.Process.Pid {
 		t.Fatalf("process id %d", b.ProcessID())
+	}
+	if peerOf(b) != b.pid {
+		t.Fatalf("the endpoint serves %d, not the program", peerOf(b))
 	}
 	if state := b.SessionState(); state.Thread != programThrd || !state.Fresh {
 		t.Fatalf("a live telemetry shows no state: %+v", state)
@@ -127,6 +134,15 @@ func withheldStops(t *testing.T, b *backend, capability string) {
 		if state := b.SessionState(); state.Fresh || state.Activity != nil {
 			t.Fatalf("a state without telemetry: %+v", state)
 		}
+	case ToolTransport:
+		if pid := peerOf(b); pid != 0 {
+			t.Fatalf("the endpoint serves process %d without a tool transport", pid)
+		}
+		heard := &toolInput{}
+		b.handler = harness.CompletionHandler{Tool: heard}
+		if answer := b.toolCall(l, Frame{Call: "c1", Turn: "t1", Tool: "inbox"}); answer.OK || len(heard.events()) != 0 {
+			t.Fatalf("a call reported without a tool transport: %+v %v", answer, heard.events())
+		}
 	}
 }
 
@@ -138,6 +154,9 @@ func TestADisconnectWithdrawsEverythingAtOnce(t *testing.T) {
 	eventually(t, "the withdrawal", func() bool { return len(b.Live()) == 0 })
 	if _, err := b.Thread(); !errors.Is(err, inbox.ErrThreadUnavailable) {
 		t.Fatalf("a conversation after the disconnect: %v", err)
+	}
+	if pid := peerOf(b); pid != 0 {
+		t.Fatalf("the endpoint still serves process %d after the disconnect", pid)
 	}
 	select {
 	case <-b.Done():
@@ -153,6 +172,9 @@ func TestAReconnectFromTheSameProcessIsAFreshExchange(t *testing.T) {
 	}
 	eventually(t, "the withdrawal", func() bool { return len(b.Live()) == 0 })
 	eventually(t, "the second exchange", func() bool { return slices.Equal(b.Live(), Served) })
+	if pid := peerOf(b); pid != b.pid {
+		t.Fatalf("after the second exchange the endpoint serves %d, not the program's %d", pid, b.pid)
+	}
 }
 
 // A hello from any process but the one the adapter started is refused, even
@@ -193,6 +215,9 @@ func TestTheProgramsEndWithdrawsEverything(t *testing.T) {
 				t.Fatal("the program's end was not seen")
 			}
 			eventually(t, "the withdrawal", func() bool { return len(b.Live()) == 0 })
+			if pid := peerOf(b); pid != 0 {
+				t.Fatalf("the endpoint still serves process %d after the program's end", pid)
+			}
 		})
 	}
 }

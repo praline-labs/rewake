@@ -113,6 +113,10 @@ everything else.
   operation, the child it runs, the bounded answer, the failure points of a call and the
   channel record left to stage 3. Open it before changing the server or the context
   endpoint.
+- [mail-bridge-transport.md](mail-bridge-transport.md) — the tool carried by a harness's
+  own process, from S7: the descriptors the CLI builds, what the launch offers the
+  backend, and a call from the harness's report through the endpoint's peer check, ticket,
+  child and bounded answer. Open it before changing a transport that is not a tool server.
 - [mail-bridge-turns.md](mail-bridge-turns.md) — the same design after the answer: which
   turn a call belongs to, reads acknowledged on the call's own answer, a turn's end that
   waits for no call, a pending mark that meets its turn's end, every wait's bound, and

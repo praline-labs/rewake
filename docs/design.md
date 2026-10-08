@@ -98,7 +98,7 @@ Created with 0700. [Optional primary observations](session-state.md) are collect
     inbox/<name>/once/<epoch>/<id> a journaled notify or a turn end's report written into this mailbox, so a retry writes it once
     sock/<name>.<epoch>.sock   one inbound socket per run
     sock/<name>.<epoch>.reply.sock the wrapper's own: Claude Code's receipts for held lines
-    sock/<name>.<epoch>.ctx    the wrapper's context endpoint for the mail tool's server, its children and hooks (mail-bridge-server.md)
+    sock/<name>.<epoch>.ctx    the wrapper's context endpoint for the mail tool's server or transport, its children and hooks (mail-bridge-server.md, mail-bridge-transport.md)
     sock/<name>.<epoch>.mcp.json the mail tool's server entry handed to Claude Code for one run, removed with it (mail-bridge-launch.md)
     sock/<name>.<epoch>.obs    Claude Code telemetry datagrams to the wrapper
     sock/<name>.<epoch>.obs.turn/ when its latest turn started, one file per reading, for `rewake pending`

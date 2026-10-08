@@ -153,6 +153,8 @@ func TestTheToolSurface(t *testing.T) {
 		{"whoami"},
 		{"whoami", "--json"},
 		{"retry", "0123456789abcdef01234567"},
+		{"list"},
+		{"list", "--json"},
 		{"inbox", "--help"},
 		{"send", "--help"},
 	} {
@@ -162,7 +164,7 @@ func TestTheToolSurface(t *testing.T) {
 	}
 	for _, words := range [][]string{
 		{},
-		{"list"},
+		{"edit", "x", "y"},
 		{"claude"},
 		{"--version"},
 		{"withdraw", "x"},
@@ -218,8 +220,8 @@ func TestAToolCallWithoutAValidTicketRunsNothing(t *testing.T) {
 		t.Fatalf("past its deadline: %+v", answer)
 	}
 	tool.late = false
-	if answer := tool.run("list"); answer.code != ExitUsage || !strings.Contains(answer.errOut, "does not run through the rewake tool") {
-		t.Fatalf("list through the tool: %+v", answer)
+	if answer := tool.run("withdraw", "x"); answer.code != ExitUsage || !strings.Contains(answer.errOut, "does not run through the rewake tool") {
+		t.Fatalf("withdraw through the tool: %+v", answer)
 	}
 	if !unreadIDs(t, dir, self)[id] {
 		t.Fatal("a refused call touched the letter")
