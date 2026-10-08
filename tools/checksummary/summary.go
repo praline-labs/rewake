@@ -198,9 +198,10 @@ func contains(list []string, value string) bool {
 // and one path to its evidence.
 //
 // The column is named because a red result does not mean the same thing in
-// both: Codex is the regression gate and Claude Code is the search column, and
-// check-runner-scenarios.md forbids this program from promoting the second on
-// its own. It says which column, and stops there.
+// each: the fixture column is the regression gate — its records carry gate —
+// and Codex and Claude Code search beside it, and check-runner-scenarios.md
+// forbids this program from promoting a search column on its own. It says
+// which column, and stops there.
 func (s *summary) renderFailures(to io.Writer) {
 	budget := excerptBudget
 	for _, one := range s.Cases {

@@ -110,7 +110,7 @@ func playEditAfterNotice(t *testing.T, c *Case, iso *Isolation, col column) []te
 		replacement, found, report.InReplyTo, old, aboutTo(iso, lead, old), awaited, kindsFrom(lead, worker)))
 }
 
-// The controls, on the Claude Code column. An edit that sends the old text
+// The controls, on the gate column. An edit that sends the old text
 // again under the new id: everything is linked, and the worker reads what the
 // edit was meant to replace.
 var mutantEditKeepsOldText = mutation{
@@ -119,8 +119,8 @@ var mutantEditKeepsOldText = mutation{
 	edits: []edit{{"Kind: old.Kind, Text: text,", "Kind: old.Kind, Text: old.Text,"}},
 }
 
-func playEditOnClaude(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
-	return playEditAfterNotice(t, c, iso, claudeColumn)
+func playEditOnGate(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
+	return playEditAfterNotice(t, c, iso, gateColumn())
 }
 
 // A tombstone that does not name its replacement: everything arrives, and the
@@ -140,13 +140,13 @@ var mutantReplacementUnmarked = mutation{
 }
 
 func TestAnUnmarkedReplacementFails(t *testing.T) {
-	runFindingsControl(t, "edit-after-notice", playEditOnClaude, mutantReplacementUnmarked, obsEditNoticed)
+	runGateControl(t, "edit-after-notice", playEditOnGate, mutantReplacementUnmarked, obsEditNoticed)
 }
 
 func TestAnEditThatKeepsTheOldTextFails(t *testing.T) {
-	runFindingsControl(t, "edit-after-notice", playEditOnClaude, mutantEditKeepsOldText, obsEditRead, obsEditNoticed)
+	runGateControl(t, "edit-after-notice", playEditOnGate, mutantEditKeepsOldText, obsEditRead, obsEditNoticed)
 }
 
 func TestAnUnlinkedEditFails(t *testing.T) {
-	runFindingsControl(t, "edit-after-notice", playEditOnClaude, mutantEditUnlinked, obsEditRead)
+	runGateControl(t, "edit-after-notice", playEditOnGate, mutantEditUnlinked, obsEditRead)
 }

@@ -36,10 +36,10 @@ func runBatchArrival(t *testing.T, col column) {
 	c := Start(t, Spec{
 		Name:    "batch-arrival",
 		Harness: col.harness,
-		Observations: []string{
-			obsReady, obsListening, obsGroupOfTwo, obsPreviewLatest, obsThirdOutside,
+		Observations: append(col.only(capabilitySelection, obsReady),
+			obsListening, obsGroupOfTwo, obsPreviewLatest, obsThirdOutside,
 			obsNotesTogether, obsPeekConsumedNothing, obsReadOneByOne, obsNoReplay, obsAlive,
-		},
+		),
 		Deadline: 90 * time.Second,
 	})
 	iso := Isolate(t, c, binary)
@@ -147,12 +147,12 @@ func startBatchSessions(t *testing.T, c *Case, iso *Isolation, col column, contr
 }
 
 // awaitBatchReady waits for whatever readiness this column has, and records
-// the observation it can support. One column reports an accepted conversation;
-// the other has none, and says so by name — while still waiting for the
-// recipient to be listening, which on that column is a file it writes itself.
+// the observation it can support. A column that offers selection reports an
+// accepted conversation; the others do not make that observation at all, and
+// wait for the recipient to be listening, which there is a file it writes
+// itself.
 func awaitBatchReady(c *Case, col column, worker, sender *codexSession) bool {
 	if !col.offers(capabilitySelection) {
-		col.unsupported(c, obsReady, capabilitySelection)
 		// No conversation here, but the recipient still has to be able to
 		// receive before the letters leave, and it says so by creating a file.
 		// A red line about that names this, not the grouping that never got a

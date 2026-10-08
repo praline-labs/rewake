@@ -47,10 +47,12 @@ break and require the rest to hold.
 
 ## Where a stop goes
 
-`stopped-routing` runs on both columns, the Claude Code one through the plugin as above
-and unsupported for `node` without it, and the Codex one through the fixture's switch
-`RW_SHIM_INTERRUPT_FIRST_TURN`, which ends a session's first turn with `turn/completed`
-of status `interrupted`, the shape the schema case checks. A main, running its own
+`stopped-routing` runs on every column. The Claude Code one goes through the plugin as
+above, and is unsupported for `node` without it: that need is keyed to the Claude Code
+column by name, since that harness is the one that runs the module. The Codex one goes
+through the fixture's switch `RW_SHIM_INTERRUPT_FIRST_TURN`, which ends a session's first
+turn with `turn/completed` of status `interrupted`, the shape the schema case checks; the
+fixture harness's program takes the same switch and ends its first turn interrupted. A main, running its own
 commands, sends one worker a task and another a `--notify`, which owes nothing; both
 workers and main have their first turn interrupted. main must read `stopped` about the
 task and list it as `stopped` in `--awaited`; the notified worker's stop, once its

@@ -9,12 +9,12 @@ package workflow
 // lacks — check-runner.md is explicit that a capability applies to a single
 // observation as well as to a whole case, and that unsupported is not a pass.
 //
-// They are not equal in what a red result means, either. Codex is the
-// regression gate and Claude Code is the search column, because that adapter
-// is younger and less exercised; the fixture runs beside them until stage 3
-// makes it the gate (docs/v2/stage3-fixture.md#the-gate-across-the-steps). The
-// summary names the column of every red and nothing here promotes one on its
-// own.
+// They are not equal in what a red result means, either. The fixture is the
+// regression gate: the harness the core is proven on, where every observation
+// has to be made (docs/v2/stage3-fixture.md#the-gate-across-the-steps). Codex
+// and Claude Code search beside it until their columns go. Which column is the
+// gate is a field of the column, set on exactly one, and the summary names the
+// column of every red; nothing here promotes one on its own.
 
 import (
 	"errors"
@@ -50,20 +50,40 @@ var (
 	capabilityNamesMembers = capability("names-delivered-message-ids")
 )
 
-// column is one harness fixture: the name rewake launches it by, and what it
-// can show.
+// column is one harness fixture: the name rewake launches it by, what it can
+// show, and whether its red blocks.
 type column struct {
 	harness string
 	caps    map[string]bool
+	gate    bool
 }
 
 func (col column) offers(name string) bool { return col.caps[name] }
 
-// isGate reports whether a case ran on the column whose red blocks. Codex is
-// that column: the path that must not break, where every observation has to
-// be made. The other column searches, and a capability absent there is a fact
-// about a younger harness rather than a hole in the gate.
-func isGate(harness string) bool { return harness == codexColumn.harness }
+// isGate reports whether a case ran on the column whose red blocks: the path
+// that must not break, where every observation has to be made. The others
+// search, and a capability absent there is a fact about that harness rather
+// than a hole in the gate.
+func isGate(harness string) bool {
+	for _, col := range columns {
+		if col.harness == harness {
+			return col.gate
+		}
+	}
+	return false
+}
+
+// gateColumn is the column whose red blocks; column_gate_test.go holds that
+// there is exactly one. A control runs there: a control is a mutant of the
+// product, and the column that must catch it is the one whose red blocks.
+func gateColumn() column {
+	for _, col := range columns {
+		if col.gate {
+			return col
+		}
+	}
+	panic("workflow: no column is the gate")
+}
 
 // The columns the suite runs. mid-turn's capability is declared here too, so
 // one table answers every question about what a column can show.
@@ -75,13 +95,35 @@ var (
 	}}
 	claudeColumn = column{harness: "claude", caps: map[string]bool{}}
 	// fixtureColumn is the harness the core is proven on without a real one
-	// (docs/v2/stage3-fixture.md): it names its members and steers into a
-	// running turn; it reports no selection, which is Codex's alone.
-	fixtureColumn = column{harness: "fixture", caps: map[string]bool{
+	// (docs/v2/stage3-fixture.md), and the gate: it names its members and
+	// steers into a running turn; it reports no selection, which is Codex's
+	// alone — the gate's one exception, until the Codex column goes
+	// (gateExceptions).
+	fixtureColumn = column{harness: "fixture", gate: true, caps: map[string]bool{
 		capabilityNamesMembers: true,
 		capabilityMidTurn:      true,
 	}}
+	// columns is every column, in the order a scenario runs them.
+	columns = []column{codexColumn, claudeColumn, fixtureColumn}
 )
+
+// only is the observations a column records of those about one capability:
+// all of them where the column offers it, none where it does not. An
+// observation of a mechanism a harness does not have is not that column's to
+// make — the column proves the same step its own way — and recording it as
+// unsupported everywhere else would only repeat that, case after case.
+func (col column) only(name string, observations ...string) []string {
+	if col.offers(name) {
+		return observations
+	}
+	return nil
+}
+
+// runsPluginModule reports whether this column's harness runs rewake's plugin
+// module under node, so a scenario needs node on PATH there. By name: it is
+// the Claude Code column's harness that loads the module, not any column that
+// happens to lack some capability.
+func (col column) runsPluginModule() bool { return col.harness == claudeColumn.harness }
 
 // unsupported records an observation this column cannot make, by name and with
 // the capability it needs. Saying so is the point: a missing mechanism that
@@ -241,7 +283,7 @@ func (col column) replayedAnnouncement(worker *codexSession) (string, error) {
 func runInColumns(t *testing.T, name string, body func(t *testing.T, col column)) {
 	t.Helper()
 	runParallel(t)
-	for _, col := range []column{codexColumn, claudeColumn, fixtureColumn} {
+	for _, col := range columns {
 		t.Run(col.harness, func(t *testing.T) { body(t, col) })
 	}
 	_ = name

@@ -32,7 +32,8 @@ func main() {
 // Exit codes, printed in the usage text because a caller scripting this needs
 // them to mean something stable.
 const (
-	// exitGreen: every case passed, or was unsupported for a named capability.
+	// exitGreen: every case passed, or was unsupported for a named capability
+	// off the gate column, the fixture's; on the gate unsupported is red.
 	exitGreen = 0
 	// exitRed: a case failed, the run produced no scenarios, or the engine
 	// itself reported a failure.
@@ -161,8 +162,11 @@ Flags
   --stdin        read the stream from standard input instead of running a command
   --help         this text
 
+The gate is the fixture column: a case there is red when it is unsupported,
+and a column searching beside it may be unsupported for a named capability.
+
 Exit codes
-  0  every case passed, or was unsupported for a named capability
+  0  every case passed, or was unsupported for a named capability off the gate
   1  a case failed, no scenario ran, or the engine reported a failure
   2  the call was wrong
   3  the stream could not be read or carried an event this program cannot parse

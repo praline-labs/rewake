@@ -200,11 +200,13 @@ HF-22) and the reader (HF-12) reached Claude Code at different times — the rea
 **live** there since September 21, 2026, the source since September 23, 2026. One cell
 cannot hold halves with different evidence.
 
-The two columns carry the same scenarios with different jobs. **Codex is the regression
-gate:** a failure there blocks, because that path must not break. **Claude Code is the
-search column:** a failure there is a finding to investigate. The same scenario text
-runs on both; what differs is what red means, and that difference belongs in the
-summary, not in the reader's head.
+The columns carry the same scenarios with different jobs. **The gate** is where a
+failure blocks, because that path must not break; **a search column** is where a failure
+is a finding to investigate. The same scenario text runs on each; what differs is what
+red means, and that difference belongs in the summary, not in the reader's head. Codex
+was the gate and Claude Code the search column from September 21, 2026; since stage 3's
+S6 the fixture column is the gate, and Codex and Claude Code both search
+([testing.md](testing.md#three-columns-three-meanings)).
 
 **The asymmetry is temporary, and ending it is the owner's call** — the decision of
 September 21, 2026 and its wording live in the legend of

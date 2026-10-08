@@ -13,29 +13,31 @@ import (
 // contract names, and one is a mutation of the product; each names the
 // observation its breakage must take down.
 //
-// Why only one is a mutant. The scenario asks about a fork the *server* owns:
-// rewake sends the same turn/start either way, and what differs is whether a
-// turn was already running. Most ways to break that are ways to make the
-// fixture behave differently — a turn that is not held open, a letter sent
+// Why only one is a mutant. The scenario asks about a fork the *harness*
+// owns: rewake hands over the same notice either way, and what differs is
+// whether a turn was already running. Most ways to break that are ways to make
+// the fixture behave differently — a turn that is not held open, a letter sent
 // after it ends — and those are worlds, not defects. The one place the product
 // decides anything here is whether it delivers while the recipient is working,
 // and that is what `wait-for-idle` mutates.
+//
+// The controls run on the gate column, whatever its harness: a control is
+// there to show that the column whose red blocks catches the defect.
 
-// The product mutant. A comment in the delivery path says why the wrapper does
-// not look at a status snapshot: "native start-or-steer chooses active/idle
-// atomically; a status snapshot cannot safely decide that for a concurrent
-// terminal". This does the thing that comment warns against — waits while the
-// snapshot says working — which is exactly "rewake waited for the turn to end".
+// The product mutant, in the gate's adapter. The adapter hands every notice to
+// the program, which steers it into a held turn or starts one; it never asks
+// whether the session is working, because a status snapshot cannot decide
+// that for a turn starting at the same moment. This does the thing it avoids —
+// refuses the reservation for now while the snapshot says working — which is
+// exactly "rewake waited for the turn to end".
 var mutantWaitForIdle = mutation{
 	name: "wait-for-idle",
-	file: "internal/harness/codex/gateway/reservation.go",
+	file: "internal/harness/fixture/deliver.go",
 	edits: []edit{{
-		"\t\tvalid := sameBinding(want, c.state.Binding) && c.owner.owns(c)\n" +
-			"\t\tclosed := c.state.deliverySettled()\n",
-		"\t\tvalid := sameBinding(want, c.state.Binding) && c.owner.owns(c)\n" +
-			"\t\tclosed := c.state.deliverySettled()\n" +
-			"\t\tif entry := c.observationThread(want.Thread); entry != nil && entry.snapshot.Activity != nil && *entry.snapshot.Activity == \"working\" {\n" +
-			"\t\t\tclosed = false\n\t\t}\n",
+		"\t\treturn nil, fmt.Errorf(\"%w: the fixture has no live wake\", inbox.ErrThreadUnavailable)\n\t}\n",
+		"\t\treturn nil, fmt.Errorf(\"%w: the fixture has no live wake\", inbox.ErrThreadUnavailable)\n\t}\n" +
+			"\tif state := b.SessionState(); state.Activity != nil && *state.Activity == \"working\" {\n" +
+			"\t\treturn nil, fmt.Errorf(\"%w: the session is working\", inbox.ErrNotYet)\n\t}\n",
 	}},
 }
 
@@ -147,7 +149,7 @@ func runNamedMidTurnControl(t *testing.T, name string, control midTurnControl, e
 	// The case first, then the mutant, for the reason given in buildMutant.
 	c := Start(t, Spec{
 		Name:         name,
-		Harness:      "codex",
+		Harness:      gateColumn().harness,
 		Observations: []string{want.observation()},
 		Deadline:     150 * time.Second,
 	})
@@ -160,11 +162,11 @@ func runNamedMidTurnControl(t *testing.T, name string, control midTurnControl, e
 		}
 		binary = built
 	}
-	if !offersMidTurn(c, codexColumn) {
+	if !offersMidTurn(c, gateColumn()) {
 		return
 	}
 	iso := Isolate(t, c, binary)
-	worker, sender := startMidTurnSessions(t, c, iso, codexColumn, control.timing, control.shim...)
+	worker, sender := startMidTurnSessions(t, c, iso, gateColumn(), control.timing, control.shim...)
 	defer stopSession(t, c, worker)
 	defer stopSession(t, c, sender)
 

@@ -54,7 +54,7 @@ message about the task first — the mark's line, then the turn's own text — a
 worker's awaiting record must still be there.
 A third session then sends the worker a task of its own, and that turn end — with no
 mark — must be the `finished` report settling the first task. Its three mutants, each in
-both columns, ignore the mark, let the interim turn end settle the task, and drop the
+every column, ignore the mark, let the interim turn end settle the task, and drop the
 turn's text from the interim message; like the
 telemetry controls, each names what it must break and requires the rest to hold. On the
 Claude Code column the unmarked turn end is now held once by the Stop hook first; the
@@ -103,9 +103,9 @@ task stays owed. main's `rewake inbox --awaited`, in both forms, must then list 
 that second task, by id, as `pending` with the interim's text, under `to <worker>`, and
 leave the first out. A note from main wakes the second worker, whose next turn end
 reports; the view must then be `Rewake: nobody owes you a report.` Its two mutants run on
-the Claude Code column only — the view reads files the same way whichever harness wrote
-them: one blind to interim reports breaks the first observation alone, one that never
-lets a task go breaks both.
+the gate column only — the view reads files the same way whichever harness wrote them:
+one blind to interim reports breaks the first observation alone, one that never lets a
+task go breaks both.
 
 `codex-tui-later-shape` runs on the Codex column with a main and two workers whose
 fixture terminal speaks the form of Codex 0.157.1 (`RW_SHIM_TUI_SHAPE`): its start and
@@ -274,13 +274,13 @@ marked as the recall of the task, shown in a notice on a line of its own that be
 old id replaced by the new, the new text only, a notice that shows `Replaces <short id>
 (withdrawn): ` before the new text, no recall, and one report on the replacement; and
 `--owed` with the addendum under its task, then one report settling both. What a
-notice showed is read from the worker's own record of its deliveries, on both columns.
+notice showed is read from the worker's own record of its deliveries, on every column.
 `withdraw-mid-turn` runs the withdrawal on every column that has a turn in progress to
 deliver into — Codex's and the fixture's; the Claude Code column records it unsupported —
 with the worker's first turn held open (`RW_SHIM_HOLD_TURN`; the read gate alone leaves no turn open to
 steer into): the recall must be steered into the turn the task started, as a member
-whose `recalls` names the task. Their mutants run on the Claude Code column, except
-recall-unnamed, which drops that member field and runs on Codex; recall-sender-first
+whose `recalls` names the task. Their mutants run on the gate column; recall-unnamed
+drops that member field from the gate's adapter; recall-sender-first
 brings back the first wording, which led with the sender, and replacement-unmarked a
 replacement previewed like any letter. The one that leaves the task readable also skips
 the withdrawn status: the reader shows a message with that status as its tombstone, so a

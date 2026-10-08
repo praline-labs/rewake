@@ -158,8 +158,8 @@ func playAwaitedView(t *testing.T, c *Case, iso *Isolation, col column) []teleme
 		"--awaited printed %q", plain))
 }
 
-// The controls, on the Claude Code column only: the view reads files the same
-// way whichever harness wrote them.
+// The controls, on the gate column only: the view reads files the same way
+// whichever harness wrote them.
 
 // A view blind to interim reports shows the slow task as plainly owed.
 var mutantAwaitedInterimIgnored = mutation{
@@ -179,14 +179,14 @@ var mutantAwaitedNeverSettled = mutation{
 	},
 }
 
-func playAwaitedOnClaude(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
-	return playAwaitedView(t, c, iso, claudeColumn)
+func playAwaitedOnGate(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
+	return playAwaitedView(t, c, iso, gateColumn())
 }
 
 func TestAnAwaitedViewBlindToInterimsFails(t *testing.T) {
-	runFindingsControl(t, "awaited-view", playAwaitedOnClaude, mutantAwaitedInterimIgnored, obsAwaitedOther)
+	runGateControl(t, "awaited-view", playAwaitedOnGate, mutantAwaitedInterimIgnored, obsAwaitedOther)
 }
 
 func TestAnAwaitedViewThatNeverSettlesFails(t *testing.T) {
-	runFindingsControl(t, "awaited-view", playAwaitedOnClaude, mutantAwaitedNeverSettled, obsAwaitedOther, obsAwaitedEmpty)
+	runGateControl(t, "awaited-view", playAwaitedOnGate, mutantAwaitedNeverSettled, obsAwaitedOther, obsAwaitedEmpty)
 }

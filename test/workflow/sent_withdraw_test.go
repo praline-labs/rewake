@@ -325,7 +325,7 @@ func steeredRecall(c *Case, worker *codexSession, task string) telemetryFinding 
 		"the task came in turn %q; the worker's turn events: %+v", taskTurn, events)
 }
 
-// The control, on the Claude Code column: a withdrawal that writes its
+// The control, on the gate column: a withdrawal that writes its
 // tombstone where nobody reads and no withdrawn status, so the reader has
 // nothing to show the task as withdrawn by. The answer still says withdrawn
 // and the recall still goes; the worker reads the task and reports on it.
@@ -346,8 +346,8 @@ var mutantWithdrawSilent = mutation{
 	edits: []edit{{"\tif recallTask {\n", "\tif recallTask && false {\n"}},
 }
 
-func playWithdrawOnClaude(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
-	return playWithdrawAfterNotice(t, c, iso, claudeColumn, false)
+func playWithdrawOnGate(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
+	return playWithdrawAfterNotice(t, c, iso, gateColumn(), false)
 }
 
 // A recall whose text leads with its sender, as it first did: the note still
@@ -358,26 +358,27 @@ var mutantRecallSenderFirst = mutation{
 	edits: []edit{{`"Do not act on %s %s from %s (%s): withdrawn unread.", kind, ShortID(message.ID), message.From, at`, `"Rewake: %[3]s withdrew its %[1]s of %[4]s (%[2]s) before you read it — do not act on it.", kind, ShortID(message.ID), message.From, at`}},
 }
 
-// On Codex, a recall member that does not name what it recalls: the recall is
-// steered into the turn all the same, and only its entry is mute.
+// On the gate's adapter, a recall member that does not name what it recalls:
+// the recall is steered into the turn all the same, and only its entry is
+// mute.
 var mutantRecallUnnamed = mutation{
 	name:  "recall-unnamed",
-	file:  "internal/harness/codex/server_delivery.go",
-	edits: []edit{{"\t\t\tentry.Recalls = member.Recall.ID\n", ""}},
+	file:  "internal/harness/fixture/deliver.go",
+	edits: []edit{{"\t\t\tmember.Recalls = letter.Recall.ID\n", ""}},
 }
 
 func TestAWithdrawalThatLeavesTheTaskFails(t *testing.T) {
-	runFindingsControl(t, "withdraw-after-notice", playWithdrawOnClaude, mutantWithdrawLeavesTask, obsWithdrawRead, obsWithdrawOwed)
+	runGateControl(t, "withdraw-after-notice", playWithdrawOnGate, mutantWithdrawLeavesTask, obsWithdrawRead, obsWithdrawOwed)
 }
 
 func TestASilentWithdrawalFails(t *testing.T) {
-	runFindingsControl(t, "withdraw-after-notice", playWithdrawOnClaude, mutantWithdrawSilent, obsWithdrawRecalled, obsWithdrawNoticed)
+	runGateControl(t, "withdraw-after-notice", playWithdrawOnGate, mutantWithdrawSilent, obsWithdrawRecalled, obsWithdrawNoticed)
 }
 
 func TestARecallLedBySenderFails(t *testing.T) {
-	runFindingsControl(t, "withdraw-after-notice", playWithdrawOnClaude, mutantRecallSenderFirst, obsWithdrawNoticed)
+	runGateControl(t, "withdraw-after-notice", playWithdrawOnGate, mutantRecallSenderFirst, obsWithdrawNoticed)
 }
 
 func TestAnUnnamedRecallFails(t *testing.T) {
-	runFindingsControlOn(t, codexColumn.harness, "withdraw-mid-turn", playWithdrawMidTurnOn(codexColumn), mutantRecallUnnamed, obsWithdrawSteered)
+	runFindingsControlOn(t, gateColumn().harness, "withdraw-mid-turn", playWithdrawMidTurnOn(gateColumn()), mutantRecallUnnamed, obsWithdrawSteered)
 }

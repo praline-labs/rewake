@@ -425,8 +425,8 @@ everything else.
   learn why the suite is shaped as it is.
 - [check-runner-scenarios.md](check-runner-scenarios.md) — the scenarios themselves: each
   one's invariant, observations and negative controls, links to how it was built, the
-  deferred ones, and the scenario-by-harness matrix with Codex as the gate and Claude Code
-  as the search column. Open it when adding a scenario or reading what one proves.
+  deferred ones, and the scenario-by-harness matrix, with which column is the gate and
+  which search. Open it when adding a scenario or reading what one proves.
 - [native-mailbox-check.md](native-mailbox-check.md) — a runbook for repeating the
   owner-facing check of Codex mailbox delivery: the environment, the permission it needs,
   the exact launch commands and the idle and active delivery script. Open it to run that

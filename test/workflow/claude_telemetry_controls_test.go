@@ -75,6 +75,14 @@ func runFindingsControl(t *testing.T, scenario string, play func(*testing.T, *Ca
 	runFindingsControlOn(t, claudeColumn.harness, scenario, play, mutant, breaks...)
 }
 
+// runGateControl is runFindingsControl on the gate column: where a control of
+// a scenario every column runs belongs, since the gate's red is the one that
+// blocks.
+func runGateControl(t *testing.T, scenario string, play func(*testing.T, *Case, *Isolation) []telemetryFinding, mutant mutation, breaks ...string) {
+	t.Helper()
+	runFindingsControlOn(t, gateColumn().harness, scenario, play, mutant, breaks...)
+}
+
 // runFindingsControlOn is runFindingsControl on a column named by its harness.
 func runFindingsControlOn(t *testing.T, harness, scenario string, play func(*testing.T, *Case, *Isolation) []telemetryFinding, mutant mutation, breaks ...string) {
 	t.Helper()

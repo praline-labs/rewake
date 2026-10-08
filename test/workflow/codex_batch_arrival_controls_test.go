@@ -124,7 +124,7 @@ func TestAReplayedAnnouncementFails(t *testing.T) { failedBatchArrival(t, batchC
 func TestAnUnwindowedWrapperFails(t *testing.T)   { failedBatchArrival(t, batchControls[4]) }
 
 // failedBatchArrival runs the scenario against the control's own mutant, in
-// both columns, and requires the observation it names to be the one that
+// every column, and requires the observation it names to be the one that
 // breaks. Every one of these mutants is in shared service code, so what they
 // break is the same on either side of the fixture line.
 func failedBatchArrival(t *testing.T, control batchControl) {

@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// TestStoppedRouting is where a stopped goes, on both columns: only to the
+// TestStoppedRouting is where a stopped goes, on every column: only to the
 // sessions waiting for a report from the interrupted one (the owner's decision
 // of September 23, 2026). A main hands one worker a task and another a notify,
 // which owes nothing; both workers, and main itself, have their first turn
@@ -33,7 +33,7 @@ func TestStoppedRouting(t *testing.T) {
 			Observations: stoppedRoutingObservations,
 			Deadline:     90 * time.Second,
 		})
-		if !col.offers(capabilitySelection) {
+		if col.runsPluginModule() {
 			if _, err := exec.LookPath("node"); err != nil {
 				for _, observation := range stoppedRoutingObservations {
 					c.UnsupportedCapability(observation, "node", "no node on PATH to run the plugin's module")
@@ -64,7 +64,7 @@ var stoppedRoutingObservations = []string{obsStoppedToWaiter, obsStoppedToNobody
 func playStoppedRouting(t *testing.T, c *Case, iso *Isolation, col column) []telemetryFinding {
 	t.Helper()
 	controls := []string{shimInboxJSON + "=1", shimInterruptFirst + "=1"}
-	if !col.offers(capabilitySelection) {
+	if col.runsPluginModule() {
 		node, err := exec.LookPath("node")
 		if err != nil {
 			var out []telemetryFinding
@@ -213,7 +213,7 @@ func TestAStoppedSentToMainFails(t *testing.T) {
 		play := func(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 			return playStoppedRouting(t, c, iso, col)
 		}
-		if !col.offers(capabilitySelection) {
+		if col.runsPluginModule() {
 			if _, err := exec.LookPath("node"); err != nil {
 				name := "stopped-routing-control-" + mutantStoppedToMain.name
 				enterScenario(t, name)

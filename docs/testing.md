@@ -40,15 +40,19 @@ never reads the variable.
 Every scenario runs three times: against a fixture that plays a Codex app-server, one
 that plays a Claude Code session, and the fixture harness — a harness of its own, built
 only under the `rewakefixture` tag, which the suite's rewake is built with
-([stage3-fixture.md](v2/stage3-fixture.md)). **Codex is the regression gate**: a red
-there blocks, and an absent capability there is red too, because a gate that stopped
-checking must not look green. **Claude Code is the search column**: a red there is a
-finding to investigate, and an absent capability is reported as `unsupported`, by name.
-**The fixture column runs beside them**, not as the gate, until stage 3 makes it one
-([stage3-fixture.md](v2/stage3-fixture.md#the-gate-across-the-steps)); it proves the
-core through the adapter contract, and its program can withhold each capability. The
-summary names the column of every result and promotes none; ending the asymmetry is the
-owner's decision, recorded in [harness-features.md](harness-features.md).
+([stage3-fixture.md](v2/stage3-fixture.md)). **The fixture column is the regression
+gate** since S6 ([stage3-fixture.md](v2/stage3-fixture.md#the-gate-across-the-steps)):
+a red there blocks, and an absent capability there is red too, because a gate that
+stopped checking must not look green. It proves the core through the adapter contract,
+and its program can withhold each capability. **Codex and Claude Code are search
+columns** until their columns go: a red there is a finding to investigate, and an
+absent capability is reported as `unsupported`, by name. The gate is a field of the
+column (`gate` in `test/workflow/column_test.go`), set on exactly one; the gate declares
+every registered capability but those its exception table names, each with its reason
+and the step that retires it — today one, conversation selection, Codex's own, until S8.
+An observation of selection is recorded only on a column that offers it. The summary
+names the column of every result and promotes none; ending the asymmetry is the owner's
+decision, recorded in [harness-features.md](harness-features.md).
 
 ## Running it
 
@@ -192,7 +196,7 @@ made and contradicted the claim, or cleanup failed, or the deadline expired — 
 over everything below. `incomplete`: the case ran and a declared observation was never
 made, which includes one recorded as `skip` or `not-run`; never green, because "we never
 looked" is not "we looked and it was right". `unsupported`: the column lacks a
-capability an observation needs; acceptable on the search column, red on the gate,
+capability an observation needs; acceptable on a search column, red on the gate,
 where it would mean the regression check had quietly stopped checking. `pass`: every
 declared observation was made and held. `skip` and `not-run` appear on observations,
 never as a case's outcome: a declared observation nobody made is listed as `not-run`,
@@ -204,8 +208,10 @@ and a case that has not finished has no verdict yet.
 an observation the code forgot to make is `incomplete`, not silently absent. It runs
 through `runInColumns`, and anything a column cannot show goes through
 `col.unsupported` with a capability registered by `capability(...)` — per observation,
-not per case. The gate column must declare every registered capability; a test fails
-otherwise. Waits are anchored on a condition the case can observe (`Await`, `waitFor`),
+not per case. The gate column must declare every registered capability but those in
+its exception table (`column_gate_test.go`), and an exception that no longer matches
+fails too. A control runs on the gate column (`gateColumn()`) unless it breaks a path
+only another column has. Waits are anchored on a condition the case can observe (`Await`, `waitFor`),
 never on a sleep: a sleep makes a slow machine look like a defect and a lost wakeup look
 like slowness.
 

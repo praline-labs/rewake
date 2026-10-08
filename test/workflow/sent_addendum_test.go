@@ -118,7 +118,7 @@ func playAddendumOwed(t *testing.T, c *Case, iso *Isolation, col column) []telem
 		"reports read by main: %+v; in its mailbox: %v; --awaited printed %q", reports, aboutTo(iso, lead, task, addendum), awaited))
 }
 
-// The control, on the Claude Code column: --owed that places no addendum
+// The control, on the gate column: --owed that places no addendum
 // under its task, so a session re-reading its work takes the addendum for a
 // task of its own.
 var mutantOwedFlat = mutation{
@@ -127,10 +127,10 @@ var mutantOwedFlat = mutation{
 	edits: []edit{{"\t\tif message.AddendumTo == \"\" {\n\t\t\troots[message.ID] = true\n", "\t\tif false {\n\t\t\troots[message.ID] = true\n"}},
 }
 
-func playAddendumOnClaude(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
-	return playAddendumOwed(t, c, iso, claudeColumn)
+func playAddendumOnGate(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
+	return playAddendumOwed(t, c, iso, gateColumn())
 }
 
 func TestAFlatOwedFails(t *testing.T) {
-	runFindingsControl(t, "addendum-owed", playAddendumOnClaude, mutantOwedFlat, obsAddendumOwed)
+	runGateControl(t, "addendum-owed", playAddendumOnGate, mutantOwedFlat, obsAddendumOwed)
 }

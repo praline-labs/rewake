@@ -29,20 +29,23 @@ func TestTaskReport(t *testing.T) {
 	runInColumns(t, "task-report", runTaskReport)
 }
 
+// obsTRAccepted is the scenario's one observation of selection, made only on
+// a column that offers it.
+const obsTRAccepted = "the recipient reaches an accepted conversation"
+
 func runTaskReport(t *testing.T, col column) {
 	binary := enterScenario(t, "task-report")
 
 	c := Start(t, Spec{
 		Name:    "task-report",
 		Harness: col.harness,
-		Observations: []string{
-			"the recipient reaches an accepted conversation",
+		Observations: append(col.only(capabilitySelection, obsTRAccepted),
 			"the recipient accepts the delivered turn",
 			"the recipient read its own mailbox",
 			"the report reaches the sender",
 			"the report corresponds to the message that was delivered",
 			"both sessions are still running when the case is judged",
-		},
+		),
 		Deadline: 90 * time.Second,
 	})
 	iso := Isolate(t, c, binary)
@@ -62,13 +65,11 @@ func runTaskReport(t *testing.T, col column) {
 		readinessSwitch(col, worker))
 	defer stopSession(t, c, sender)
 
-	if !col.offers(capabilitySelection) {
-		// This column hears its conversation only from hooks, after the fact,
-		// and selects none, so there is no accepted selection to report. Said
-		// by name rather than left out: an absent mechanism that stayed silent
-		// would read as a defect that swallowed the evidence.
-		col.unsupported(c, "the recipient reaches an accepted conversation", capabilitySelection)
-	} else {
+	// The accepted conversation is an observation of selection, and only a
+	// column that offers selection makes it. Elsewhere the recipient proves it
+	// can receive by the file it writes, which the sender waits for before the
+	// task leaves (readinessSwitch).
+	if col.offers(capabilitySelection) {
 		// Telemetry is visible to a main, and the main here is the sender — so
 		// the recipient's selection is read from the sender's listing. The
 		// sender's own readiness shows itself by the fact that it managed to
@@ -77,10 +78,10 @@ func runTaskReport(t *testing.T, col column) {
 			_, selection, _, found := l.find(worker.name)
 			return found && selection == "ready"
 		}); !ok {
-			c.Contradicted("the recipient reaches an accepted conversation", "%s never became ready", worker.name)
+			c.Contradicted(obsTRAccepted, "%s never became ready", worker.name)
 			return
 		}
-		c.Observed("the recipient reaches an accepted conversation", "selection ready")
+		c.Observed(obsTRAccepted, "selection ready")
 	}
 
 	// The recipient's own read is the proof that the turn was accepted and

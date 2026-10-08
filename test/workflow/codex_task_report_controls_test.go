@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// The delivery scenario's negative controls, in both columns. Each one breaks
+// The delivery scenario's negative controls, in every column. Each one breaks
 // exactly one thing and must take down the observation that covers it —
 // otherwise the scenario would pass on a fixture and a wrapper agreeing with
 // each other.
@@ -16,8 +16,8 @@ import (
 // Three break the product, where the product is reachable: the Stop hook left
 // out of the launch settings, `rewake turn-ended` not taking a Stop as the end
 // of a turn, and a report that settles nothing. Two of those three exist only
-// on the socket column — the other column's reports do not travel through a
-// hook or through turn-ended — and a control that cannot break anything on a
+// on the Claude Code column — the other columns' reports do not travel through
+// a hook or through turn-ended — and a control that cannot break anything on a
 // column would pass there for the wrong reason, so it is not run there.
 
 // The observations the controls name. Four are the scenario's own; the fifth,
@@ -86,21 +86,20 @@ type taskReportControl struct {
 	// leaving yet and the control passed on timing.
 	leaves   bool
 	expected string
-	// columns it runs in. A product mutant of the socket path cannot break
-	// anything on the other column, and would pass there for the wrong reason.
+	// columns it runs in. A product mutant of the Claude Code column's hook
+	// path cannot break anything on the others, and would pass there for the
+	// wrong reason.
 	columns []column
 }
 
-var bothColumns = []column{codexColumn, claudeColumn}
-
 var taskReportControls = []taskReportControl{
-	{name: "wrong-report", shim: []string{shimWrongReportID + "=1"}, reports: reportsFinished, expected: obsTRCorrelates, columns: bothColumns},
-	{name: "read-fails", shim: []string{shimReadFails + "=1"}, reports: reportsNothing, expected: obsTRRead, columns: bothColumns},
-	{name: "failure-before-report", shim: []string{shimLateFailure + "=1"}, reports: reportsError, expected: obsTRFinished, columns: bothColumns},
-	{name: "early-exit", shim: []string{shimExitAfterTurn + "=1"}, reports: reportsFinished, leaves: true, expected: obsTRAlive, columns: bothColumns},
+	{name: "wrong-report", shim: []string{shimWrongReportID + "=1"}, reports: reportsFinished, expected: obsTRCorrelates, columns: columns},
+	{name: "read-fails", shim: []string{shimReadFails + "=1"}, reports: reportsNothing, expected: obsTRRead, columns: columns},
+	{name: "failure-before-report", shim: []string{shimLateFailure + "=1"}, reports: reportsError, expected: obsTRFinished, columns: columns},
+	{name: "early-exit", shim: []string{shimExitAfterTurn + "=1"}, reports: reportsFinished, leaves: true, expected: obsTRAlive, columns: columns},
 	{name: "no-stop-hook", mutant: &mutantNoStopHook, reports: reportsNothing, expected: obsTRReaches, columns: []column{claudeColumn}},
 	{name: "turn-ended-ignores-stop", mutant: &mutantTurnEndedIgnoresStop, reports: reportsNothing, expected: obsTRReaches, columns: []column{claudeColumn}},
-	{name: "settles-nothing", mutant: &mutantSettlesNothing, reports: reportsFinished, expected: obsTRCorrelates, columns: bothColumns},
+	{name: "settles-nothing", mutant: &mutantSettlesNothing, reports: reportsFinished, expected: obsTRCorrelates, columns: columns},
 }
 
 func TestReportNotMatchingTheMessageFails(t *testing.T) { failedTaskReport(t, "wrong-report") }
@@ -166,7 +165,7 @@ func TestTaskReportControlsCrosswise(t *testing.T) {
 		t.Skipf("crosswise check skipped: set %s=1 to run every control against every other world", crossSwitch)
 	}
 	runParallel(t)
-	for _, col := range bothColumns {
+	for _, col := range columns {
 		t.Run(col.harness, func(t *testing.T) {
 			enterScenarioAround(t, "task-report-crosswise")
 			for _, observation := range taskReportObservations(col) {
