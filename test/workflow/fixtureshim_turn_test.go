@@ -95,6 +95,9 @@ func (s *fixtureSession) work(id string, notice mailboxNotice) {
 	if s.takeAborted() || s.interruptNow() {
 		outcome = "interrupted"
 	}
+	if reason := os.Getenv(shimEndReason); reason != "" && outcome != "completed" {
+		text = reason
+	}
 	s.end(id, text, outcome)
 	s.reportActivity("idle")
 	if outcome == "interrupted" {

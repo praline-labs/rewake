@@ -97,6 +97,10 @@ const (
 	shimHoldTurn = "RW_SHIM_HOLD_TURN"
 	// shimFailHeldTurn ends the held turn with a failure instead of an answer.
 	shimFailHeldTurn = "RW_SHIM_FAIL_HELD_TURN"
+	// shimEndReason is what the fixture program's turn says when it ends
+	// failed or interrupted, in place of what it read: the reason a scenario
+	// looks for in the report, distinct from any text the mail carried.
+	shimEndReason = "RW_SHIM_END_REASON"
 	// shimSendWhenWorking and shimSendWhenIdle name the session whose telemetry
 	// the sender watches before its second letter leaves: working for a
 	// delivery that must land inside a turn, idle again for the control that

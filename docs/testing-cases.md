@@ -75,6 +75,18 @@ fixture column the worker's program asks the core through the adapter's `Confirm
 an end closes and goes on only with the reason it is given; the case and both controls
 run there too (October 7, 2026).
 
+`turn-reasons` runs in the fixture column only, with five sessions: the path it holds — a
+turn's outcome and text in the program's end frame, the adapter's neutral completion and
+the wrapper's confirmation — is the fixture's own, and the other columns hear their ends
+through their harness's events. A worker whose turns fail holds a task from main and one
+from a peer; each sender must read an `error` about its own task carrying the turn's
+reason, and a session that waits on nothing must receive nothing from it. A second
+worker's first turn is interrupted while it holds a task from main, which must read it
+`stopped` with that turn's reason. The reasons are set by `RW_SHIM_END_REASON` and differ
+from anything the mail carried. Its three mutants drop the text on the way to the
+completion, take a failure for a finished turn, and take an interruption for one; each
+names what it must break and requires the rest to hold (October 7, 2026).
+
 `owed-reread` runs in every column with a main and a worker. The worker reads a
 multi-line task and, in the same turn, runs `rewake inbox --owed` in both forms, as a
 session re-reading its task after a compaction would. Both must print that task in full;
@@ -352,6 +364,7 @@ switches have no single form in the code to find them by, and the row is kept by
 | claude-grant-resume | `claude-resume-not-given`, `claude-resume-not-held`, `claude-resume-closed-held` | `RW_SHIM_TOOLS` |
 | codex-grant-resume | `codex-resume-not-restored`, `resume-waits-dropped`, `codex-resume-closed-held` | `RW_SHIM_THREAD_STORE` |
 | stopped-routing | `stopped-to-main` | — |
+| turn-reasons | `reason-dropped`, `failure-completed`, `stop-completed` | — |
 | withdraw-after-notice | `withdraw-leaves-task`, `withdraw-silent`, `recall-sender-first` | — |
 | withdraw-mid-turn | `recall-unnamed` | — |
 | edit-after-notice | `edit-keeps-old-text`, `edit-unlinked`, `replacement-unmarked` | — |

@@ -83,4 +83,6 @@ that they are checked like the rest ([stage3-tests.md](../v2/stage3-tests.md#how
   - `internal/cli/neutral_end_test.go` `TestNeutralEndsWithoutTheirScopeReportNothing`
   - `internal/cli/neutral_end_test.go` `TestNeutralUnclaimedFailuresReachMainAndMainKeepsItsOwn`
   - `internal/cli/neutral_end_test.go` `TestNeutralAnEmptyEndAfterWorkReportsAnError`
-  - Gap: the reason taken from the adapter's end event over a neutral TurnBoundary — closed in S10.
+  - `test/workflow/turn_reasons_test.go` `TestTurnReasons` — the fixture's end frame to the report
+  - `test/workflow/turn_reasons_test.go` `TestTurnReasonControls`
+  - Gap: the reason through a TurnBoundary interface, beyond the fixture's end frame — closed in S10.
