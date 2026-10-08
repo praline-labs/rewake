@@ -136,7 +136,7 @@ func TestARefusedHelloDeliveredAfterAHelloKeepsItsFailure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer refused.Close()
+	defer func() { _ = refused.Close() }()
 	greeting, _ := json.Marshal(hello{Role: roleServer, Capability: "guess"})
 	if _, err := refused.Write(append(greeting, '\n')); err != nil {
 		t.Fatal(err)

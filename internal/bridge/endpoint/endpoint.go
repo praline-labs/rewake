@@ -43,10 +43,8 @@ type Endpoint struct {
 	readsOff func() string
 	servers  int
 	others   int
-	// generation numbers the server connections, counted up per run;
-	// bound marks those whose thread is told (channel.go).
+	// generation numbers the server connections, counted up per run.
 	generation uint64
-	bound      map[uint64]bool
 	// conns are the connections open now; true marks one Close drains: a
 	// transport's call, or the confirmation of a child the endpoint runs.
 	conns map[*net.UnixConn]bool
