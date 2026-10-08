@@ -43,7 +43,8 @@ refusal on September 17, 2026 cleared after recipient restart.
   October 5, 2026: the rules accepted, S1 and S2 built,
   [S3 built](2026-10-06-stage3-s3.md) on October 6, [S4](2026-10-06-stage3-s4.md) the
   same day, [S5](2026-10-07-stage3-s5.md) on October 7, [S6](2026-10-08-stage3-s6.md) on
-  October 8, [S7](2026-10-08-stage3-s7.md) the same day, S8–S19 to come.
+  October 8, [S7](2026-10-08-stage3-s7.md) the same day, [S8](2026-10-08-stage3-s8.md)
+  built the same day and in its second review round, S9–S19 to come.
 - [The workflow suite](2026-09-21-workflow-suite.md) — in progress since
   September 21, 2026; what exists and what remains are listed there and in
   [work-queue.md](../work-queue.md).
@@ -140,6 +141,7 @@ without a date. Local installation without publishing is in
 | October 7, 2026 | [Stage 3 of 2.0: S5 built and accepted](2026-10-07-stage3-s5.md) | the neutral confirmation and the fixture harness as the suite's third column, in two commits; three review rounds and six fix commits landed as new commits after a branch rewrite was refused — O1 with several senders, four fixture defects, the tagged layout workaround replaced by a fixed name rule, O2's scenario, a non-equivalent mutant, the closed-link window; the checks retaken on clean trees, one per commit |
 | October 8, 2026 | [Stage 3 of 2.0: S6 built and accepted](2026-10-08-stage3-s6.md) | the fixture column made the gate, in one commit: the gate a column's field with one exception, selection until S8; selection's observations the Codex column's own; every control on the gate; the suite and the crosswise check compared case by case before and after, nothing green lost; one review round, PASS, and one documentation edit |
 | October 8, 2026 | [Stage 3 of 2.0: S7 built and accepted](2026-10-08-stage3-s7.md) | the tool path on the fixture, in six commits: one neutral input for the endpoint, the turn-id contract, the turn start in the core, the fixture's tool transport, the neutral rig, a workflow scenario per tool; two review rounds and six fix commits — the transport rechecked per request, Close draining its calls, M3 and the complementary acknowledgment order held, the retry scenario's false pass, timed fixture starts, an explicit read schedule; the owner's rule that the five checks run once, on a step's last commit |
+| October 8, 2026 | [Stage 3 of 2.0: S8 built, first review round answered](2026-10-08-stage3-s8.md) | Codex, the MCP injection and the bridge server out of the product into `archive/1.x/codex`, in six commits; the first review round's fixes in four: the neutral worktree and grant scenarios back on the fixture column with their controls, the stand-in archived, each piece of code only tests reach given its closing step; where Codex is still named, and why |
 
 ## Remaining work — owner decisions, September 19–21, 2026
 
