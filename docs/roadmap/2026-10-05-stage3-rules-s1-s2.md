@@ -5,8 +5,8 @@ Stage 3 of 2.0 builds the core of the rewrite in nineteen steps, S1–S19
 after seven review rounds, S1 was built and accepted after four, and S2 was built and
 accepted after two. **The stage is not closed**: S3 and S4 were accepted on October 6
 ([S3's entry](2026-10-06-stage3-s3.md), [S4's](2026-10-06-stage3-s4.md)), S5 on
-October 7 ([S5's](2026-10-07-stage3-s5.md)), and S6–S19 follow in the order of the build
-table.
+October 7 ([S5's](2026-10-07-stage3-s5.md)), S6 on October 8
+([S6's](2026-10-08-stage3-s6.md)), and S7–S19 follow in the order of the build table.
 
 ## The rules, in seven rounds
 
@@ -119,8 +119,9 @@ commit that adds this entry.
 
 ## What stays open
 
-- S6–S19 in the order of the build table, S18 on part B's accepted rules; S3, S4 and
-  S5 are in their own entries, [S3's](2026-10-06-stage3-s3.md),
-  [S4's](2026-10-06-stage3-s4.md) and [S5's](2026-10-07-stage3-s5.md).
+- S7–S19 in the order of the build table, S18 on part B's accepted rules; S3 to S6
+  are in their own entries, [S3's](2026-10-06-stage3-s3.md),
+  [S4's](2026-10-06-stage3-s4.md), [S5's](2026-10-07-stage3-s5.md) and
+  [S6's](2026-10-08-stage3-s6.md).
 - The gaps each rule in [rules/](../rules/README.md) names, each with the step that
   closes it; from S19 any gap fails the rules test.

@@ -37,7 +37,8 @@ never reads the variable.
 
 ### Three columns, three meanings
 
-Every scenario runs three times: against a fixture that plays a Codex app-server, one
+Shared scenarios run across the three columns; adapter-specific scenarios and controls
+run on the columns they exercise. The columns: a fixture that plays a Codex app-server, one
 that plays a Claude Code session, and the fixture harness — a harness of its own, built
 only under the `rewakefixture` tag, which the suite's rewake is built with
 ([stage3-fixture.md](v2/stage3-fixture.md)). **The fixture column is the regression
