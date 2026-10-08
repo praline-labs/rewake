@@ -405,6 +405,10 @@ everything else.
   worktrees, a directory granted with a task, the awaited view, withdrawing, editing and adding to a sent message, a changed
   conversation, and the inbound gate. Open it before changing one of those cases or the
   behaviour it guards.
+- [testing-tools.md](testing-tools.md) — the workflow cases that make rewake's calls
+  through the fixture program's tool transport, one per tool, and the program's timed
+  turn start: what each claims, the read's checked schedule, the controls and the
+  crosswise check's exclusion. Open it before changing a tool case or the transport.
 - [testing-plugin.md](testing-plugin.md) — the workflow cases that run rewake's
   function-hooks plugin under node: how the fixture hosts the module and answers its
   calls on the session, and what `claude-interrupted`, `stopped-routing` and
