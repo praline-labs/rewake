@@ -110,8 +110,10 @@ constructor and hands it to `cli`.
 
 ## Outside `internal/`
 
-`tools/standin` loses its MCP answer in S8 and gains a fixture-tool answer in S7 [its
-use beyond the suite unverified]; `tools/checksummary` stays. `tools/harnesscache` and
+`tools/standin` leaves in S8 with its MCP answer, moved whole to
+`archive/1.x/codex/tools/standin`: no launch offers that tool after S8, and S7 gave it no
+fixture-tool answer; stage 4 rebuilds a stand-in that answers with the mod's tool contract
+for its live checks (S8's review, October 8, 2026). `tools/checksummary` stays. `tools/harnesscache` and
 `REWAKE_CODEX_VERSION` fetch and run only Codex, so under answer 5 they leave in S8 with
 the Codex column, and the commands of `AGENTS.md` that name them with it; they return in
 stage 5. `test/toolrig` is new in S7. `test/workflow` as

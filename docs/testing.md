@@ -95,16 +95,14 @@ to prove that a scenario missing an observation turns the run red.
 
 ### The stand-in API
 
-`tools/standin` answers for the model API a Claude Code harness talks to, so a live
-check of the mail tool can run in a scratch configuration with no login. The harness is
-pointed at it by its base-URL variable; when a request offers the tool, the reply calls
-it (`-words`, `-calls` times in one turn), and the tool's result is answered with text
-quoting its start. `-delay` holds each answer, `-log` appends one JSON line per request without
-headers or message text. Its first stdout line is `listening <addr>`; `go run
-./tools/standin -h` prints the rest. It served the live checks of stage 3
-([mail-bridge-live.md](mail-bridge-live.md)), whose MCP server left in S8; it stays for
-the live checks of a tool transport an adapter offers again, and no test of the five
-checks starts a harness against it.
+Until S8, October 8, 2026, `tools/standin` answered for the model API a Claude Code
+harness talks to, replying with a call of the 1.x mail tool's MCP name, so a live check of
+that tool could run in a scratch configuration with no login. It served the live checks of
+stage 3 ([mail-bridge-live.md](mail-bridge-live.md)). The fixes of S8's review moved it to
+the 1.x archive with the MCP contract it answered
+([archive/1.x/codex](../archive/1.x/codex/README.md)); no product launch offers that tool.
+Stage 4 rebuilds a stand-in for the mod's live checks, answering with a call of the tool
+contract that stage defines.
 
 ## Checking a new harness version before updating
 

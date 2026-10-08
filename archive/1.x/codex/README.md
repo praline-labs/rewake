@@ -3,14 +3,15 @@
 This directory holds the code of rewake 1.x that connected it to Codex, and the mail
 tool's MCP injection that went with it. Stage 3 of 2.0 removed both from the product in
 step S8 ([stage3-steps-adapters.md](../../../docs/v2/stage3-steps-adapters.md)). The
-files are copied byte for byte from commit `cf7f430`, the last commit of `v2` before S8.
+files are copied byte for byte from commit `cf7f430`, the last commit of `v2` before S8;
+`tools/standin` joined them in the fixes of S8's review, moved unchanged.
 
 **It is not live code.** The directory is a Go module of its own (`go.mod` here), so the
 main module's `go list ./...`, its build, its five checks, the layout test, the rules
-test and the legacy-mark test never reach it. Nothing here is built or tested. Its
-imports still name the main module's internal packages, which a nested module may not
-import, and several of those packages have since changed or gone. Read it; do not try to
-build it.
+test and the legacy-mark test never reach it. Nothing here is built or tested. It is an
+incomplete historical snapshot: its imports name the main module's packages, its
+`go.mod` sets up no dependency that would resolve them, and several of those packages
+and their APIs have changed or gone since the copy. Read it; do not try to build it.
 
 **Why it is kept.** The 1.x Codex adapter took a long time to get right, and the owner
 decided on October 8, 2026 to keep it in the repository rather than only in git history.
@@ -83,9 +84,40 @@ under this directory.
   the `codex_` prefix stayed in the suite under names by subject.
 - **`tools/harnesscache/`** — fetched a named Codex version into a cache, so that the
   schema check could run against it.
+- **`tools/standin/`** — a stand-in model API for the live checks of the injection: it
+  answered every request that offered the tool with a call of `mcp__rewake__rewake`, the
+  1.x tool's MCP name. No launch offers that tool after S8; stage 4 rebuilds a stand-in
+  for the mod's tool contract
+  ([stage3-packages.md](../../../docs/v2/stage3-packages.md#outside-internal)).
 
-[mail-bridge-live.md](../../../docs/archive-1.x/mail-bridge-live.md) records the live run
-of October 4, 2026 that exercised the injection on both harnesses.
+[mail-bridge-live.md](../../../docs/mail-bridge-live.md) records the live run of October
+4, 2026 that exercised the injection on both harnesses; it stays among the live documents
+as a record.
+
+## The Codex column's neutral scenarios
+
+Three scenarios of the Codex column held core code more than Codex's. S8 archived them
+with the column, and the fixes of its review brought their neutral part back on the
+fixture, the gate column ([testing-cases.md](../../../docs/testing-cases.md)).
+
+- **`codex_worktree_test.go`, `codex_worktree_keep_test.go`** — the checkout, rm, land and
+  finish around a running session. All ten observations and all eleven controls mutate
+  the core's worktree code, so they came back whole as `fixture-worktree`; the fixture
+  takes rewake's `--worktree` for the purpose. Codex's `-C`, its fork and resume forms
+  and its sandbox stay here.
+- **`codex_grant_forgery_test.go`** — five forgeries of main's grant. The checks they
+  meet and the three controls are the core's, so they came back whole as
+  `fixture-grant-forgery`, with the fixture's program recording what its adapter offered
+  it in place of Codex's workspace roots.
+- **`codex_grant_dir_test.go`** — split. Its three controls mutate
+  `internal/harness/codex/server_delivery.go` and `server_dirgrant.go`: waiting for a turn
+  before changing the sandbox's roots, adding the root, and taking it out. They are the
+  adapter's application of a grant, stay here for the Permissions capability's design
+  (stage 6), and are not rebuilt in the fixture. Its neutral obligations — main's
+  registration and confirmation, the receiving wrapper's check again at delivery and the
+  grant's lifetime on main's wrapper — came back as `fixture-grant-dir`, with controls
+  of their own against the core: `grant-not-rechecked`, `grant-refusal-untold`,
+  `grant-unregistered` and `grant-held-after-report`.
 
 ## The cli tests on the gateway
 
