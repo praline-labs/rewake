@@ -128,48 +128,61 @@ func TestAnExpiredReadShowsAndClaimsNothing(t *testing.T) {
 // it that outlasts the call marks nothing, and neither does a call that
 // expired before.
 func TestAPendingMarkIsNotMadeAfterItsDeadline(t *testing.T) {
-	dir, self, web := toolSession(t)
-	readFrom(t, dir, web)
-	turnStarted(t, dir, self, markAt-1)
-	call, ctx, out, _ := expiredCall(t, "pending", "still waiting")
-	ctx.scope.ticket.CalledBoot = boottime.Now()
-	ctx.scope.ticket.DeadlineBoot = boottime.Now() + int64(100*time.Millisecond)
-	locked, unlocked := make(chan struct{}), make(chan struct{})
-	go func() {
-		defer close(unlocked)
-		_ = state.WithMailboxLock(context.Background(), dir, "api", func() error {
-			close(locked)
-			time.Sleep(300 * time.Millisecond)
-			return nil
-		})
-	}()
-	<-locked
-	err := handlePending(ctx, call)
-	<-unlocked
-	if err == nil {
-		t.Fatalf("pending succeeded after its deadline: %s", out)
-	}
+	eachDeclaration(t, func(t *testing.T, reused bool) {
+		dir, self, web := toolSession(t)
+		readFrom(t, dir, web)
+		turnStarted(t, dir, self, markAt-1)
+		call, ctx, out, _ := expiredCall(t, "pending", "still waiting")
+		ctx.scope.ticket.CalledBoot = boottime.Now()
+		ctx.scope.ticket.DeadlineBoot = boottime.Now() + int64(100*time.Millisecond)
+		locked, unlocked := make(chan struct{}), make(chan struct{})
+		go func() {
+			defer close(unlocked)
+			_ = state.WithMailboxLock(context.Background(), dir, "api", func() error {
+				close(locked)
+				time.Sleep(300 * time.Millisecond)
+				return nil
+			})
+		}()
+		<-locked
+		err := handlePending(ctx, call)
+		<-unlocked
+		if err == nil {
+			t.Fatalf("pending succeeded after its deadline: %s", out)
+		}
 
-	call, ctx, _, errOut := expiredCall(t, "pending", "expired already")
-	if err := handlePending(ctx, call); err == nil {
-		t.Fatal("an expired mark succeeded")
-	}
-	called := ctx.scope.ticket.CalledBoot
-	if _, held, _ := markWithin(dir, "api", self.Epoch(), called-1, called); held {
-		t.Fatal("an expired call marked the turn")
-	}
-	records := unresolved(t, dir, self.Epoch(), ctx.scope.digest)
-	if len(records) != 1 || !strings.Contains(errOut.String(), "rewake retry "+records[0].Token) {
-		t.Fatalf("records %+v, said %s", records, errOut)
-	}
-	// Finished from the same turn: a retry from the shell could not show it
-	// runs in that turn, and would not mark (pending_turn.go).
-	if retried := newToolCaller(t).run("retry", records[0].Token); retried.code != ExitOK {
-		t.Fatalf("retry: %d %s", retried.code, retried.errOut)
-	}
-	if text, held, _ := markWithin(dir, "api", self.Epoch(), called-1, called); !held || text != "expired already" {
-		t.Fatalf("the retry did not mark at the call's time: %q %v", text, held)
-	}
+		call, ctx, _, errOut := expiredCall(t, "pending", "expired already")
+		if err := handlePending(ctx, call); err == nil {
+			t.Fatal("an expired mark succeeded")
+		}
+		called := ctx.scope.ticket.CalledBoot
+		if _, held, _ := markWithin(dir, "api", self.Epoch(), called-1, called); held {
+			t.Fatal("an expired call marked the turn")
+		}
+		records := unresolved(t, dir, self.Epoch(), ctx.scope.digest)
+		if len(records) != 1 || !strings.Contains(errOut.String(), "rewake retry "+records[0].Token) {
+			t.Fatalf("records %+v, said %s", records, errOut)
+		}
+		// Finished from the same turn: a retry from the shell could not show it
+		// runs in that turn, and would not mark (pending_turn.go); nor can a call
+		// whose transport does not declare its turn ids never reused.
+		tool := newToolCaller(t)
+		tool.reused = reused
+		retried := tool.run("retry", records[0].Token)
+		_, held, _ := markWithin(dir, "api", self.Epoch(), called-1, called)
+		if reused {
+			if retried.code != ExitFailed || !strings.Contains(retried.errOut, unproven) || held {
+				t.Fatalf("a retry that cannot show its turn: %d %s, marked %v", retried.code, retried.errOut, held)
+			}
+			return
+		}
+		if retried.code != ExitOK {
+			t.Fatalf("retry: %d %s", retried.code, retried.errOut)
+		}
+		if text, held, _ := markWithin(dir, "api", self.Epoch(), called-1, called); !held || text != "expired already" {
+			t.Fatalf("the retry did not mark at the call's time: %q %v", text, held)
+		}
+	})
 }
 
 // Rule 3. A continuation looks at a letter before any part of it is first

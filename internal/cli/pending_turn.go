@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 )
@@ -14,9 +13,10 @@ import (
 
 // inOwnTurn says whether this attempt runs in the turn its operation was made
 // in: the attempt that created the record, or a later tool call whose ticket
-// names the same conversation and turn on a transport whose turn ids are never
-// reused. A Claude Code prompt_id is not yet shown never to be reused, Esc
-// included, so there only the first attempt counts until stage 3 shows it.
+// names the same conversation and turn on the same transport, where both the
+// ticket and the record carry the transport's declaration that its turn ids
+// are never reused. Without it only the first attempt counts: a prompt's id
+// on the hook path, for one, is not shown never to be reused, Esc included.
 func inOwnTurn(ctx *Context, op *operation) bool {
 	scope := attemptScope(ctx, op)
 	return scope.First || scope.InOwnTurn
@@ -32,8 +32,9 @@ func attemptScope(ctx *Context, op *operation) inbox.AttemptScope {
 		return inbox.AttemptScope{}
 	}
 	ticket := ctx.scope.ticket
-	return inbox.AttemptScope{InOwnTurn: ticket.Transport == bridge.CodexTransport && op.record.Transport == bridge.CodexTransport &&
-		op.record.Turn != "" && op.record.Conversation == ticket.Conversation && op.record.Turn == ticket.Turn}
+	record := op.record
+	return inbox.AttemptScope{InOwnTurn: ticket.TurnsNeverReused && record.TurnsNeverReused && record.Transport == ticket.Transport &&
+		record.Turn != "" && record.Conversation == ticket.Conversation && record.Turn == ticket.Turn}
 }
 
 // markVerdict is what an attempt found under the mailbox lock, just before

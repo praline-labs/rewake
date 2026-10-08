@@ -13,7 +13,6 @@ const (
 	acceptLeaves             = "accept serves only a Codex resume and leaves with it (correction 5)"
 	claudeInjectionLeaves    = "the Claude Code MCP injection and its transport leave"
 	hooksLeave               = "Claude Code's hook machinery, its telemetry and the grant keeper leave"
-	ticketsOnATransport      = "the ticket keys on a harness's transport; S7 puts it on a neutral transport with its turn-id declaration"
 	channelCarriesTheHarness = "the channel record carries the harness; S8 removes the field and the MCP letters"
 	realAdapterIDs           = "a test or a comment takes a real adapter's id; from S10 the catalog value and the fixture supply it"
 	harnessWordsInTexts      = "a help or role text names a harness; from S10 the harness words come from the adapter"
@@ -104,7 +103,6 @@ var nameExceptions = map[nameException]excuse{
 	{"internal/cli/accept_test.go", "codex"}:                      {acceptLeaves, "S8", 6, "a8ab4bc057f6"},
 	{"internal/cli/accept_test.go", "claude"}:                     {acceptLeaves, "S8", 1, "0bac7c392141"},
 	{"internal/cli/args.go", "claude"}:                            {harnessWordsInTexts, "S10", 2, "ae90d4831642"},
-	{"internal/cli/bridge_tool_test.go", "codex"}:                 {ticketsOnATransport, "S7", 1, "4afe5c2b025b"},
 	{"internal/cli/bridge_tool_test.go", "claude"}:                {realAdapterIDs, "S10", 1, "0bac7c392141"},
 	{"internal/cli/channel_display_test.go", "claude"}:            {realAdapterIDs, "S10", 3, "2b3e014abd12"},
 	{"internal/cli/channel_display_test.go", "codex"}:             {codexLeaves, "S8", 1, "32d31dd97b30"},
@@ -122,7 +120,6 @@ var nameExceptions = map[nameException]excuse{
 	{"internal/cli/inbox_owed.go", "codex"}:                       {codexLeaves, "S8", 1, "937fb123862d"},
 	{"internal/cli/inbox_parts.go", "claude"}:                     {claudeInjectionLeaves, "S8", 2, "292d2f7998a1"},
 	{"internal/cli/inbox_test.go", "codex"}:                       {codexLeaves, "S8", 1, "9e22f2cd1e53"},
-	{"internal/cli/journal_test.go", "codex"}:                     {ticketsOnATransport, "S7", 1, "4afe5c2b025b"},
 	{"internal/cli/launch.go", "claude"}:                          {harnessWordsInTexts, "S10", 1, "48cb0b1e954c"},
 	{"internal/cli/launch.go", "codex"}:                           {codexLeaves, "S8", 2, "fb1c557fa900"},
 	{"internal/cli/launch_nested_test.go", "claude"}:              {realAdapterIDs, "S10", 1, "546748e7e9b9"},
@@ -132,8 +129,6 @@ var nameExceptions = map[nameException]excuse{
 	{"internal/cli/pending.go", "claude"}:                         {hooksLeave, "S9", 6, "435d5d5a56c5"},
 	{"internal/cli/pending_test.go", "codex"}:                     {codexLeaves, "S8", 1, "e195bedc56d9"},
 	{"internal/cli/pending_test.go", "claude"}:                    {hooksLeave, "S9", 1, "18f2ef1f656b"},
-	{"internal/cli/pending_turn.go", "codex"}:                     {ticketsOnATransport, "S7", 2, "07453687996f"},
-	{"internal/cli/pending_turn.go", "claude"}:                    {ticketsOnATransport, "S7", 1, "ff2353177870"},
 	{"internal/cli/read_test.go", "claude"}:                       {realAdapterIDs, "S10", 1, "0bac7c392141"},
 	{"internal/cli/registry.go", "claude"}:                        {harnessWordsInTexts, "S10", 11, "059ca837ca41"},
 	{"internal/cli/registry.go", "codex"}:                         {codexLeaves, "S8", 4, "6c756ffc57f8"},

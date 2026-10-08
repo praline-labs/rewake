@@ -18,6 +18,10 @@ import (
 	"github.com/praline-labs/rewake/internal/state"
 )
 
+// testTransport is a transport of no harness: what a ticket's transport means
+// to the CLI is only what its binding declares.
+const testTransport = "test-transport"
+
 // toolCaller runs words the way the mail tool's server will: the ticket on an
 // inherited descriptor, the variable naming it set, and the wrapper's
 // confirmation stood in for, since its endpoint comes with the server.
@@ -31,6 +35,9 @@ type toolCaller struct {
 	forge []string
 	// late shifts the call's deadline into the past.
 	late bool
+	// reused withholds the transport's declaration that its turn ids are
+	// never reused; by default the tickets carry it.
+	reused bool
 	// tickets are the tickets the stand-in confirmed, in order.
 	tickets []bridge.Ticket
 }
@@ -70,7 +77,8 @@ func (c *toolCaller) run(words ...string) toolRun {
 	now := boottime.Now()
 	ticket := bridge.Ticket{
 		Capability: "capability", Conversation: c.conversation, Turn: c.turn, CallID: callID,
-		CalledBoot: now, DeadlineBoot: now + int64(30*time.Second), WordsDigest: digest, Transport: bridge.CodexTransport, Nonce: "nonce-" + callID,
+		CalledBoot: now, DeadlineBoot: now + int64(30*time.Second), WordsDigest: digest, Transport: testTransport, Nonce: "nonce-" + callID,
+		TurnsNeverReused: !c.reused,
 	}
 	if c.late {
 		ticket.CalledBoot, ticket.DeadlineBoot = now-int64(2*time.Second), now-int64(time.Second)

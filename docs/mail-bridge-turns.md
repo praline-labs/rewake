@@ -189,9 +189,12 @@ process start in a shell) and its mark's file name before it marks (stage 1).
   by an Esc no one heard, which cut the call off, so no model reads its answer;
 - a later tool call whose ticket names the same turn as the operation's key (stage 1's
   scope carries the turn): the same words joining in the same turn, or `retry` and
-  `--next` from it. On Claude Code that also needs a `prompt_id` that is never reused
-  for a later prompt, Esc included; until stage 3 shows that live, only the first
-  attempt marks there.
+  `--next` from it. That also needs the transport's declaration, made in the binding it
+  asks the ticket with, that its turn ids are never reused; the ticket carries it and the
+  record keeps the creating call's, and both must carry it, on the same transport. The
+  Codex transport declares it; Claude Code's does not — a `prompt_id` is not yet shown
+  never to be reused for a later prompt, Esc included — so there only the first attempt
+  marks.
 
 Any other attempt does not mark: a `retry` from the shell, which names no turn; a tool
 call from another turn; a call on an operation the shell began, whose key has no turn.

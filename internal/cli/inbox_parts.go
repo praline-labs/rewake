@@ -87,7 +87,7 @@ func bridgeRead(ctx *Context, mode inboxMode, site readSite) error {
 	}
 	scope := ctx.scope
 	key := receipt.Key{Epoch: site.epoch, Conversation: scope.ticket.Conversation, Turn: scope.ticket.Turn, Digest: scope.digest}
-	record, joined, err := receipt.Begin(site.dir, site.self.Name, key, receipt.Record{Words: scope.words, Transport: scope.ticket.Transport, CalledBoot: scope.ticket.CalledBoot})
+	record, joined, err := receipt.Begin(site.dir, site.self.Name, key, receipt.Record{Words: scope.words, Transport: scope.ticket.Transport, TurnsNeverReused: scope.ticket.TurnsNeverReused, CalledBoot: scope.ticket.CalledBoot})
 	if err != nil {
 		return failf("could not journal the read, so nothing was shown: %v", err)
 	}

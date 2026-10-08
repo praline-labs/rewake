@@ -71,7 +71,7 @@ func expiredCall(t *testing.T, words ...string) (Call, *Context, *bytes.Buffer, 
 	now := boottime.Now()
 	var out, errOut bytes.Buffer
 	ctx := &Context{Stdout: &out, Stderr: &errOut, scope: &callScope{
-		ticket: bridge.Ticket{Conversation: "conversation-1", Turn: "turn-1", CallID: "late-" + inbox.NewID(), CalledBoot: now - 2, DeadlineBoot: now - 1, Transport: bridge.CodexTransport, Nonce: "nonce-late", WordsDigest: bridge.Digest(normal)},
+		ticket: bridge.Ticket{Conversation: "conversation-1", Turn: "turn-1", CallID: "late-" + inbox.NewID(), CalledBoot: now - 2, DeadlineBoot: now - 1, Transport: testTransport, TurnsNeverReused: true, Nonce: "nonce-late", WordsDigest: bridge.Digest(normal)},
 		words:  normal, digest: bridge.Digest(normal),
 	}}
 	return result.Call, ctx, &out, &errOut
@@ -153,24 +153,31 @@ func TestTheShellRefersAnOpenOperationToItsReceipt(t *testing.T) {
 }
 
 // A mark repeated in one turn is the first mark: its time stays the first
-// call's, so it cannot stretch into a later turn.
+// call's, so it cannot stretch into a later turn. Without the transport's
+// declaration the repeat cannot show it is in that turn, and says so.
 func TestAPendingMarkRepeatedInOneTurnIsOneMark(t *testing.T) {
-	dir, self, web := toolSession(t)
-	readFrom(t, dir, web)
-	turnStarted(t, dir, self, markAt-1)
-	tool := newToolCaller(t)
-	first := tool.run("pending", "the suite is running")
-	if first.code != ExitOK || !strings.Contains(first.out, "receipt") {
-		t.Fatalf("first mark: %+v", first)
-	}
-	again := tool.run("pending", "the suite is running")
-	if again.code != ExitOK || !strings.Contains(again.out, "ran earlier") {
-		t.Fatalf("repeat: %+v", again)
-	}
-	called := tool.tickets[0].CalledBoot
-	if text, held, err := markWithin(dir, "api", self.Epoch(), called-1, called); err != nil || !held || text != "the suite is running" {
-		t.Fatalf("the mark does not carry the first call's time: %q %v %v", text, held, err)
-	}
+	eachDeclaration(t, func(t *testing.T, reused bool) {
+		dir, self, web := toolSession(t)
+		readFrom(t, dir, web)
+		turnStarted(t, dir, self, markAt-1)
+		tool := newToolCaller(t)
+		tool.reused = reused
+		first := tool.run("pending", "the suite is running")
+		if first.code != ExitOK || !strings.Contains(first.out, "receipt") {
+			t.Fatalf("first mark: %+v", first)
+		}
+		again := tool.run("pending", "the suite is running")
+		switch {
+		case !reused && (again.code != ExitOK || !strings.Contains(again.out, "ran earlier")):
+			t.Fatalf("repeat: %+v", again)
+		case reused && (again.code != ExitFailed || !strings.Contains(again.errOut, "one this call cannot name")):
+			t.Fatalf("a repeat that cannot name its turn: %+v", again)
+		}
+		called := tool.tickets[0].CalledBoot
+		if text, held, err := markWithin(dir, "api", self.Epoch(), called-1, called); err != nil || !held || text != "the suite is running" {
+			t.Fatalf("the mark does not carry the first call's time: %q %v %v", text, held, err)
+		}
+	})
 }
 
 // A refusal is an answer like any other: the same words in the same turn get

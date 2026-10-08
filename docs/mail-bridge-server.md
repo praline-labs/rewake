@@ -204,8 +204,11 @@ observation and runs nothing.
 
 The wrapper fills `bridge.Ticket` with the capability; the conversation, turn and call as
 matched; `CalledBoot`, the time it issues the ticket on the boot clock, inside the call
-and so inside the turn; `DeadlineBoot`; the digest; the transport; and a one-time nonce,
-a field stage 1 does not have yet. The ticket validates once, for one process, and never
+and so inside the turn; `DeadlineBoot`; the digest; the transport; the transport's
+declaration, as its request made it, that its turn ids are never reused
+(`TurnsNeverReused`, which the receipt of an operation the call begins keeps too —
+[who may mark](mail-bridge-turns.md#a-pending-mark-at-its-turns-end)); and a one-time
+nonce, a field stage 1 does not have yet. The ticket validates once, for one process, and never
 after its deadline.
 
 `CalledBoot` is what an acknowledgment's check compares with a noted end, so the wrapper

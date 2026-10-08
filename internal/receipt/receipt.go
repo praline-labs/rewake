@@ -76,9 +76,12 @@ type Record struct {
 	Digest       string   `json:"digest"`
 	Words        []string `json:"words"`
 	Transport    string   `json:"transport"`
-	Calls        []string `json:"calls,omitempty"`
-	CalledBoot   int64    `json:"calledBoot,omitempty"`
-	Phase        Phase    `json:"phase"`
+	// TurnsNeverReused is the creating call's ticket's declaration: its
+	// transport never gives Turn to another turn.
+	TurnsNeverReused bool     `json:"turnsNeverReused,omitempty"`
+	Calls            []string `json:"calls,omitempty"`
+	CalledBoot       int64    `json:"calledBoot,omitempty"`
+	Phase            Phase    `json:"phase"`
 	// Uncertain marks a finished operation whose effect nobody can prove
 	// either way any more; it is kept while its run lives.
 	Uncertain bool      `json:"uncertain,omitempty"`

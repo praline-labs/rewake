@@ -73,6 +73,9 @@ type Ticket struct {
 	WordsDigest string `json:"wordsDigest"`
 	// Transport names the harness path, such as "codex-mcp".
 	Transport string `json:"transport"`
+	// TurnsNeverReused carries the binding's declaration that the
+	// transport never gives a turn id to another turn.
+	TurnsNeverReused bool `json:"turnsNeverReused,omitempty"`
 	// Nonce makes the ticket one-time: the wrapper confirms it once, for
 	// one process, and never again.
 	Nonce string `json:"nonce"`

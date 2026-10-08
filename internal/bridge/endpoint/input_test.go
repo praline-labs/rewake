@@ -66,3 +66,18 @@ func TestTheWholeResultAndItsSize(t *testing.T) {
 		}
 	}
 }
+
+// The ticket carries the transport's declaration that its turn ids are never
+// reused exactly as its binding made it: declared, and absent.
+func TestATicketCarriesItsTransportsDeclaration(t *testing.T) {
+	for _, declared := range []bool{true, false} {
+		served, path := testEndpoint(t, testTransport)
+		served.TurnStarted("th", "t1")
+		seenCall(served, "th", "t1", "c1", words)
+		asked := neutralRequest("th", "t1", "c1", words)
+		asked.TurnsNeverReused = declared
+		if ticket := mustTicket(t, path, asked); ticket.TurnsNeverReused != declared || ticket.Transport != testTransport {
+			t.Fatalf("declared %v: the ticket says %+v", declared, ticket)
+		}
+	}
+}

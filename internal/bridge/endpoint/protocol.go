@@ -67,6 +67,11 @@ type TicketRequest struct {
 	Conversation string `json:"conversation,omitempty"`
 	Turn         string `json:"turn,omitempty"`
 	CallID       string `json:"callId"`
+	// TurnsNeverReused is the transport's word that a turn id it binds a call
+	// to is never given to another turn: a later attempt bound to the same
+	// conversation and turn then runs in that turn
+	// (docs/mail-bridge-turns.md#a-pending-mark-at-its-turns-end).
+	TurnsNeverReused bool `json:"turnsNeverReused,omitempty"`
 	// Words are the normalized words and Digest their digest.
 	Words  []string `json:"words"`
 	Digest string   `json:"digest"`

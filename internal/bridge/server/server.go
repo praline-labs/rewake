@@ -335,6 +335,8 @@ func (s *Server) run(params callParams, words []string, arrived int64) answer {
 	case meta.CodexCall != "" && meta.ClaudeCall == "":
 		asked.Transport, asked.CallID = bridge.CodexTransport, meta.CodexCall
 		asked.Conversation, asked.Turn = meta.CodexThread, meta.CodexTurn.Turn
+		// Such a turn id is never given to another turn.
+		asked.TurnsNeverReused = true
 	default:
 		return substitute("Rewake: this call carries no native ids the wrapper can match, so nothing ran; run the same words in the shell.\n")
 	}

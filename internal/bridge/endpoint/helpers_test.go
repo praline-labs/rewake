@@ -70,9 +70,10 @@ func codexEvent(method, thread, turn, call string, words []string, content any) 
 const testTransport = "test-transport"
 
 // neutralRequest is a transport's ask for the ticket of a call it binds to
-// the harness's own thread and turn.
+// the harness's own thread and turn, declaring that its turn ids are never
+// reused.
 func neutralRequest(thread, turn, call string, words []string) TicketRequest {
-	return TicketRequest{Transport: testTransport, Conversation: thread, Turn: turn, CallID: call, Words: words, Digest: bridge.Digest(words)}
+	return TicketRequest{Transport: testTransport, Conversation: thread, Turn: turn, CallID: call, Words: words, Digest: bridge.Digest(words), TurnsNeverReused: true}
 }
 
 // request is the server's ask for the ticket of a Codex call.

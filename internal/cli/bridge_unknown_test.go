@@ -70,27 +70,37 @@ func TestALetterThatCannotBeLookedUpIsNotShown(t *testing.T) {
 
 // A waiter that cannot be read may be owed: "nothing owed" is no answer then,
 // and the mark stays open for rewake retry instead of being refused for good.
+// The retry in the same turn marks where the transport declares its turn ids
+// never reused; without that it cannot show it runs in that turn, and the
+// mark is finished as not made.
 func TestAWaiterThatCannotBeReadLeavesTheMarkOpen(t *testing.T) {
-	dir, self, web := toolSession(t)
-	readFrom(t, dir, web)
-	turnStarted(t, dir, self, markAt-1)
-	waiter := filepath.Join(state.AwaitingPath(dir, "api"), self.Epoch(), "web")
-	if err := os.Chmod(waiter, 0); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.Chmod(waiter, 0o600) })
-	tool := newToolCaller(t)
-	blind := tool.run("pending", "the suite is running")
-	if blind.code != ExitFailed || !strings.Contains(blind.errOut, "rewake retry ") {
-		t.Fatalf("a mark past a waiter it could not read: %+v", blind)
-	}
-	token := blind.errOut[strings.Index(blind.errOut, "rewake retry ")+len("rewake retry "):][:24]
-	if err := os.Chmod(waiter, 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if retried := tool.run("retry", token); retried.code != ExitOK || !strings.Contains(retried.out, "marked pending") {
-		t.Fatalf("retry once the waiter reads: %+v", retried)
-	}
+	eachDeclaration(t, func(t *testing.T, reused bool) {
+		dir, self, web := toolSession(t)
+		readFrom(t, dir, web)
+		turnStarted(t, dir, self, markAt-1)
+		waiter := filepath.Join(state.AwaitingPath(dir, "api"), self.Epoch(), "web")
+		if err := os.Chmod(waiter, 0); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = os.Chmod(waiter, 0o600) })
+		tool := newToolCaller(t)
+		tool.reused = reused
+		blind := tool.run("pending", "the suite is running")
+		if blind.code != ExitFailed || !strings.Contains(blind.errOut, "rewake retry ") {
+			t.Fatalf("a mark past a waiter it could not read: %+v", blind)
+		}
+		token := blind.errOut[strings.Index(blind.errOut, "rewake retry ")+len("rewake retry "):][:24]
+		if err := os.Chmod(waiter, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		retried := tool.run("retry", token)
+		switch {
+		case !reused && (retried.code != ExitOK || !strings.Contains(retried.out, "marked pending")):
+			t.Fatalf("retry once the waiter reads: %+v", retried)
+		case reused && (retried.code != ExitFailed || !strings.Contains(retried.errOut, unproven)):
+			t.Fatalf("a retry that cannot show its turn: %+v", retried)
+		}
+	})
 }
 
 // A recipient whose record cannot be read may still be the run the heads-up

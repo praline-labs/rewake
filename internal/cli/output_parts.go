@@ -84,7 +84,7 @@ func freezeOutput(ctx *Context, out string) (string, error) {
 		start = end
 	}
 	record, _, err := receipt.Begin(dir, self.Name, receipt.Key{Epoch: epoch, Digest: ctx.scope.digest},
-		receipt.Record{Words: ctx.scope.words, Transport: ctx.scope.ticket.Transport, CalledBoot: ctx.scope.ticket.CalledBoot, Output: frozen})
+		receipt.Record{Words: ctx.scope.words, Transport: ctx.scope.ticket.Transport, TurnsNeverReused: ctx.scope.ticket.TurnsNeverReused, CalledBoot: ctx.scope.ticket.CalledBoot, Output: frozen})
 	if err != nil {
 		return "", err
 	}

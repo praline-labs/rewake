@@ -254,7 +254,7 @@ func (e *Endpoint) issue(asked TicketRequest, generation uint64) (bridge.Ticket,
 	ticket := bridge.Ticket{
 		Capability: e.cfg.Capability, Conversation: seen.conversation, Turn: turn, CallID: asked.CallID,
 		CalledBoot: now, DeadlineBoot: now + int64(deadline), WordsDigest: seen.digest,
-		Transport: e.cfg.Transport, Nonce: hex.EncodeToString(nonce), ReadsOff: readsOff,
+		Transport: e.cfg.Transport, TurnsNeverReused: asked.TurnsNeverReused, Nonce: hex.EncodeToString(nonce), ReadsOff: readsOff,
 	}
 	entry.issued = &issued{ticket: ticket, generation: generation, thread: thread}
 	c.byNonce[ticket.Nonce] = entry.issued

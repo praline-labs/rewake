@@ -65,6 +65,7 @@ func journaled(ctx *Context, call Call, handler func(*Context, Call) error) erro
 	if scope := ctx.scope; scope != nil {
 		key.Conversation, key.Turn = scope.ticket.Conversation, scope.ticket.Turn
 		fresh.Transport, fresh.CalledBoot = scope.ticket.Transport, scope.ticket.CalledBoot
+		fresh.TurnsNeverReused = scope.ticket.TurnsNeverReused
 	}
 	// The same words in the same turn join their operation. Anything else —
 	// the shell, or a tool call whose turn holds no operation of these words
