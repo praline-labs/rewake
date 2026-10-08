@@ -144,7 +144,9 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   its own turn.** Two conditions, both needed:
   - **Not ended.** A pending mark or a read's acknowledgment checks, under the mailbox
     lock, for an end of the run on record at or after its time, or a turn start
-    recorded after it, and in the host for ends it has heard and not yet recorded;
+    recorded after it — the later of the start the host records in the mailbox from
+    the neutral input and, until S9, the telemetry file — and in the host for ends it
+    has heard and not yet recorded;
     found, nothing is committed and the letter shows again.
   - **Its own turn, proven.** A pending mark is written only by an attempt proven to
     run in the turn its operation was made in: the attempt that created the operation,
@@ -179,6 +181,9 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/cli/bridge_unknown_test.go` `TestAWaiterThatCannotBeReadLeavesTheMarkOpen`
   - `internal/cli/journal_test.go` `TestAPendingMarkRepeatedInOneTurnIsOneMark`
   - `internal/bridge/endpoint/input_test.go` `TestATicketCarriesItsTransportsDeclaration`
+  - `internal/bridge/endpoint/input_test.go` `TestATimedTurnStartIsRecordedInTheMailbox`
+  - `internal/inbox/turn_start_test.go` `TestTheLatestTurnStartIsTheLargestReading`
+  - `internal/inbox/turn_start_test.go` `TestAnUnreadableTurnStartIsAnError`
 
 - **T8. An end's boundary is a cut between commits**, taken at the end's own event —
   the clock when no acknowledgment is between its check and its close, or the snapshot

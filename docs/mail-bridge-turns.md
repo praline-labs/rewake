@@ -204,6 +204,16 @@ turn's start does not show it either: UserPromptSubmit writes it in the backgrou
 write failed. The rule uses a recorded start only one way: one after `At` proves the
 operation's turn ended. Its absence proves nothing.
 
+The recorded start is the later of two records. The host keeps one in the core: when the
+neutral input hears a turn start with the harness's own time for it, the endpoint writes
+that time into the mailbox (`inbox.RecordTurnStart`, `awaiting/<run>/.turn-starts/`,
+beside the read clock), and a heard end moves it up to the end. The time must be the
+harness's, taken at or before anything the turn ran — never the moment the report
+arrived, or a shell `pending` of that same turn, run before the report came in, would
+find a start after its own time and read its turn as ended. A transport that gives no
+such time records none, which proves nothing, as above. The other record is the
+telemetry file the UserPromptSubmit hook writes, read until S9 removes it.
+
 Under the mailbox lock, just before the mark, the attempt decides:
 
 | Found under the lock | Proven | The operation |

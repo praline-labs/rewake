@@ -59,7 +59,9 @@ func (e *Endpoint) CodexEvent(raw []byte) {
 	params := message.Params
 	switch message.Method {
 	case "turn/started":
-		e.TurnStarted(params.Thread, params.Turn.ID)
+		// The event carries no time of the turn's own, and the time it
+		// arrived may be later than a command the turn ran: none is given.
+		e.TurnStarted(params.Thread, params.Turn.ID, 0)
 	case "turn/completed":
 		e.TurnEnded(params.Thread, params.Turn.ID)
 	case serverStatus:

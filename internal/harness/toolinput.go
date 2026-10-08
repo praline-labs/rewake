@@ -9,8 +9,10 @@ package harness
 type ToolInput interface {
 	// TurnStarted and TurnEnded follow the turns of the run's conversation:
 	// a call is bound to a turn the harness was seen to start and not yet
-	// seen to end.
-	TurnStarted(conversation, turn string)
+	// seen to end. at is when the turn started on the boot clock, at or
+	// before anything it ran — a time the harness took, never the time its
+	// report arrived; 0 where the harness gives none.
+	TurnStarted(conversation, turn string, at int64)
 	TurnEnded(conversation, turn string)
 	// CallSeen is the harness's own record that the model made a call: what
 	// a request for the call's binding is matched against.

@@ -3,12 +3,10 @@ package cli
 import (
 	"encoding/json"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/boottime"
-	"github.com/praline-labs/rewake/internal/harness/claude/telemetry"
 
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
@@ -40,15 +38,23 @@ func kinds(messages []inbox.Message) []string {
 	return out
 }
 
-// turnStarted records the start of the turn now running, the way the
-// UserPromptSubmit hook does: at the given time on the boot clock.
+// turnStarted records the start of the turn now running, the way the host
+// does when it hears one: at the given time on the boot clock, in the core.
 func turnStarted(t *testing.T, dir string, self registry.Session, at int64) {
 	t.Helper()
-	path := registry.ObservationFor(dir, self.Name, self.Epoch())
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+	if err := inbox.RecordTurnStart(dir, self.Name, self.Epoch(), at); err != nil {
 		t.Fatal(err)
 	}
-	telemetry.RecordTurnStart(path, at)
+}
+
+// recordedStart is the latest turn start the run has on record.
+func recordedStart(t *testing.T, dir string, self registry.Session) int64 {
+	t.Helper()
+	started, err := latestTurnStart(dir, self, self.Epoch())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return started
 }
 
 // markAt is the time this test process's `rewake pending` marks carry: the
@@ -266,13 +272,12 @@ func TestAHeardTurnEndCorrectsALostOne(t *testing.T) {
 	if code, _, errOut := run("turn-ended", `{"hook_event_name":"Stop","last_assistant_message":"K+1 said something"}`); code != ExitOK {
 		t.Fatalf("turn-ended: %s", errOut)
 	}
-	path := telemetry.TurnStartPath(registry.ObservationFor(dir, self.Name, self.Epoch()))
-	if got := telemetry.ReadTurnStart(path); got != markAt {
+	if got := recordedStart(t, dir, self); got != markAt {
 		t.Fatalf("the recorded start is %d after a heard end at %d", got, markAt)
 	}
 	// K+2 starts by itself, with no UserPromptSubmit, and ends with the answer.
 	readFrom(t, dir, peer)
-	if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "t/K+2", Text: "the final answer", Started: telemetry.ReadTurnStart(path), Ended: boottime.Now()}, "t"); err != nil {
+	if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "t/K+2", Text: "the final answer", Started: recordedStart(t, dir, self), Ended: boottime.Now()}, "t"); err != nil {
 		t.Fatal(err)
 	}
 	var final bool

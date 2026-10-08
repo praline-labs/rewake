@@ -58,7 +58,11 @@ func handlePending(ctx *Context, call Call) error {
 	if role.Of(self.Role).Silent {
 		return &UsageError{Command: call.Command, Message: "the " + self.Role + " session's turns are reported to nobody, so there is nothing to keep open; end the turn as usual."}
 	}
-	if self.Harness == claudeHarnessID && telemetry.ReadTurnStart(telemetry.TurnStartPath(registry.ObservationFor(dir, self.Name, epoch))) == 0 {
+	started, err := latestTurnStart(dir, self, epoch)
+	if err != nil {
+		return failf("the latest start of this turn cannot be read, so a mark could not be tied to this turn; nothing was marked: %v", err)
+	}
+	if self.Harness == claudeHarnessID && started == 0 {
 		// Claude Code tells rewake a turn started only through the telemetry
 		// hook. Without its record the mark could not be tied to this turn,
 		// and a mark that might belong to another is worse than none.
@@ -120,9 +124,10 @@ func handlePending(ctx *Context, call Call) error {
 				waiting = append(waiting, name)
 			}
 		}
-		// The latest start comes from the telemetry file until the core keeps
-		// a record of its own (docs/v2/stage3-steps.md, S4 and S7).
-		started := telemetry.ReadTurnStart(telemetry.TurnStartPath(registry.ObservationFor(dir, self.Name, epoch)))
+		started, err := latestTurnStart(dir, self, epoch)
+		if err != nil {
+			return fmt.Errorf("the latest start of this turn cannot be read, so the mark cannot be tied to its turn: %w", err)
+		}
 		if verdict, err = judgeMark(dir, self, epoch, file, at, attemptScope(ctx, ctx.op), started); err != nil || verdict != markWrite {
 			return err
 		}
@@ -175,4 +180,16 @@ func pendingTime(ctx *Context, text string) (int64, string, error) {
 	}
 	ctx.op.record.Pending = &receipt.PendingStep{Text: text, At: at, Mark: inbox.MarkName(at, inbox.NewID())}
 	return at, ctx.op.record.Pending.Mark, ctx.op.save()
+}
+
+// latestTurnStart is the latest start of the run's turn on record: the later
+// of the core's record, which the host keeps from the neutral input, and the
+// telemetry file a hook writes until S9 removes it
+// (docs/v2/stage3-steps-adapters.md, S7).
+func latestTurnStart(dir string, self registry.Session, epoch string) (int64, error) {
+	recorded, err := inbox.LatestTurnStart(dir, self.Name, epoch)
+	if err != nil {
+		return 0, err
+	}
+	return max(recorded, telemetry.ReadTurnStart(telemetry.TurnStartPath(registry.ObservationFor(dir, self.Name, epoch)))), nil
 }

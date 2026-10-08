@@ -75,8 +75,8 @@ var importExceptions = []importException{
 	{
 		from: "internal/cli", to: "internal/harness/claude/telemetry",
 		files: []string{
-			"internal/cli/pending.go", "internal/cli/telemetry.go", "internal/cli/turnended.go",
-			"internal/cli/inbox_awaited_test.go", "internal/cli/pending_test.go", "internal/cli/turn_hold_test.go",
+			"internal/cli/pending.go", "internal/cli/telemetry.go",
+			"internal/cli/inbox_awaited_test.go", "internal/cli/turn_hold_test.go",
 		},
 		reason: "the telemetry receiver, the turn-start file and the stop texts",
 		step:   "S9",

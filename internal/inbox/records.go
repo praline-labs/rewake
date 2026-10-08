@@ -64,6 +64,7 @@ var recordKinds = []recordKind{
 	{"done/*.json", "a letter read or refused", parseJSON[Message], true, "which letter it is, and whether it was answered"},
 	{"awaiting/*/.read-clock", "a run's read clock", parseClock, true, "the order of the run's reads and holds"},
 	{"awaiting/*/.read-high", "the highest place taken on a run's read clock", parseHigh, true, "the order of the run's reads and holds"},
+	{"awaiting/*/" + turnStartsDir + "/*", "a turn start the host heard", parseTurnStart, true, "whether a pending mark's turn ended"},
 	{"awaiting/*/*", "who a run owes a report", parseWait, true, "what is owed, and to whom"},
 	{"answering/*", "a question a send waits on", nil, true, "whether a send waits for its answer"},
 	{"received/*", "the report printed for a question", nil, true, "whether a question received its answer"},
@@ -245,6 +246,16 @@ func parseClock(_ string, raw []byte) error {
 		return fmt.Errorf("a read clock of %d bytes", size)
 	}
 	return nil
+}
+
+// parseTurnStart reads a turn start as LatestTurnStart takes it: its name is
+// the reading, and the file holds nothing.
+func parseTurnStart(path string, raw []byte) error {
+	if len(raw) != 0 {
+		return errors.New("a turn start holds nothing but its name")
+	}
+	_, err := strconv.ParseInt(filepath.Base(path), 10, 64)
+	return err
 }
 
 // parseHigh reads the high place as readHigh takes it: a number, in at most

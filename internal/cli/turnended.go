@@ -9,7 +9,6 @@ import (
 
 	"github.com/praline-labs/rewake/internal/boottime"
 	"github.com/praline-labs/rewake/internal/harness"
-	"github.com/praline-labs/rewake/internal/harness/claude/telemetry"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/state"
@@ -56,12 +55,11 @@ func handleTurnEnded(ctx *Context, call Call) error {
 		return nil
 	}
 	// The end of this turn is this process's start: the harness runs the
-	// hook as the turn ends. Its start is the latest UserPromptSubmit the
-	// telemetry hook recorded; without one it is unknown, and a pending mark
-	// cannot be tied to the turn.
-	observation := registry.ObservationFor(dir, self.Name, self.Epoch())
+	// hook as the turn ends. Its start is the latest one on record; without
+	// one, or with a record that cannot be read, it is unknown, and a pending
+	// mark cannot be tied to the turn.
 	event.Ended = boottime.ProcessStarted
-	event.Started = telemetry.ReadTurnStart(telemetry.TurnStartPath(observation))
+	event.Started, _ = latestTurnStart(dir, self, self.Epoch())
 	// The conversation the turn ended in, as the harness itself names it;
 	// a tracker is asked only when the payload named none.
 	currentThread := event.Thread
@@ -85,7 +83,7 @@ func handleTurnEnded(ctx *Context, call Call) error {
 	// never came — is then corrected by the next one heard: a mark made
 	// before it cannot be taken by a later turn, even one that starts without
 	// a UserPromptSubmit.
-	telemetry.RecordTurnStart(observation, event.Ended)
+	_ = inbox.RecordTurnStart(dir, self.Name, self.Epoch(), event.Ended)
 	return nil
 }
 

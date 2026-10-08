@@ -103,6 +103,9 @@ func everyKind(t *testing.T, lab twoSessionLab) {
 	if err := MarkPending(lab.dir, "api", lab.run, MarkName(150, NewID()), "waiting", 150); err != nil {
 		t.Fatal(err)
 	}
+	if err := RecordTurnStart(lab.dir, "api", lab.run, 120); err != nil {
+		t.Fatal(err)
+	}
 	token := "0123456789abcdef01234567"
 	record, err := json.Marshal(map[string]any{"version": 1, "token": token, "epoch": "e1"})
 	if err != nil {

@@ -5,6 +5,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/receipt"
 )
 
@@ -14,7 +15,7 @@ import (
 func TestOnlyAUsedTicketWithItsBindingIsAcknowledged(t *testing.T) {
 	var got acknowledged
 	served, path := testEndpoint(t, testTransport, func(c *Config) { c.Acknowledge = got.record })
-	served.TurnStarted("th", "t1")
+	openTurn(served, "th", "t1")
 	result := harness.ToolResult{Succeeded: true, Direct: true, Texts: []string{"a letter"}}
 	seen := func(call string) {
 		served.CallSeen(harness.ObservedCall{ID: call, Conversation: "th", Turn: "t1", Words: words})
@@ -72,12 +73,28 @@ func TestTheWholeResultAndItsSize(t *testing.T) {
 func TestATicketCarriesItsTransportsDeclaration(t *testing.T) {
 	for _, declared := range []bool{true, false} {
 		served, path := testEndpoint(t, testTransport)
-		served.TurnStarted("th", "t1")
+		openTurn(served, "th", "t1")
 		seenCall(served, "th", "t1", "c1", words)
 		asked := neutralRequest("th", "t1", "c1", words)
 		asked.TurnsNeverReused = declared
 		if ticket := mustTicket(t, path, asked); ticket.TurnsNeverReused != declared || ticket.Transport != testTransport {
 			t.Fatalf("declared %v: the ticket says %+v", declared, ticket)
 		}
+	}
+}
+
+// A turn start the harness timed is recorded in the mailbox, as the latest
+// start a pending mark is judged by; one without a time records nothing.
+func TestATimedTurnStartIsRecordedInTheMailbox(t *testing.T) {
+	served, _ := testEndpoint(t, testTransport)
+	cfg := served.cfg
+	served.TurnStarted("th", "t1", 0)
+	if got, err := inbox.LatestTurnStart(cfg.Dir, cfg.Name, cfg.Epoch); got != 0 || err != nil {
+		t.Fatalf("a start without a time: %d %v", got, err)
+	}
+	served.TurnStarted("th", "t2", 500)
+	served.TurnStarted("th", "t3", 900)
+	if got, err := inbox.LatestTurnStart(cfg.Dir, cfg.Name, cfg.Epoch); got != 900 || err != nil {
+		t.Fatalf("the latest start: %d %v", got, err)
 	}
 }

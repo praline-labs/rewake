@@ -4,6 +4,7 @@ import (
 	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/channel"
 	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/receipt"
 	"github.com/praline-labs/rewake/internal/state"
 )
@@ -16,8 +17,16 @@ import (
 var _ harness.ToolInput = (*Endpoint)(nil)
 
 // TurnStarted opens a turn a call may be bound to. The table keys a turn by
-// its id alone: a run holds one conversation.
-func (e *Endpoint) TurnStarted(_, turn string) { e.turnStarted(turn) }
+// its id alone: a run holds one conversation. A start the harness timed is
+// recorded in the mailbox first, so a pending mark of an earlier turn whose
+// end was lost finds its turn over
+// (docs/mail-bridge-turns.md#a-pending-mark-at-its-turns-end).
+func (e *Endpoint) TurnStarted(_, turn string, at int64) {
+	if at > 0 {
+		_ = inbox.RecordTurnStart(e.cfg.Dir, e.cfg.Name, e.cfg.Epoch, at)
+	}
+	e.turnStarted(turn)
+}
 
 // TurnEnded closes it: no call is bound to it after.
 func (e *Endpoint) TurnEnded(_, turn string) { e.turnEnded(turn) }

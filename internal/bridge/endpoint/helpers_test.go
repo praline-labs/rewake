@@ -93,7 +93,7 @@ func ticketFor(t *testing.T, path string, asked TicketRequest) (bridge.Ticket, e
 }
 
 // openTurn starts a turn on thread through the neutral input.
-func openTurn(served *Endpoint, thread, turn string) { served.TurnStarted(thread, turn) }
+func openTurn(served *Endpoint, thread, turn string) { served.TurnStarted(thread, turn, 0) }
 
 // seenCall reports a call through the neutral input, as an adapter does.
 func seenCall(served *Endpoint, thread, turn, call string, words []string) {

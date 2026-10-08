@@ -25,6 +25,7 @@ unknown. The first pattern that matches a path is its kind.
 | `<id>.json`, `unread/<id>.json`, `done/<id>.json` | a letter | a message |
 | `<id>.status` | a letter's delivery status | a status |
 | `awaiting/<run>/.read-clock`, `.read-high` | a run's read clock and its highest place | one word, or none yet; a number |
+| `awaiting/<run>/.turn-starts/<time>` | a turn start the host heard, one file per reading, the latest the largest | empty, its name a number |
 | `awaiting/<run>/<peer>` | who a run owes a report | a wait, under a session's name |
 | `answering/<id>`, `received/<id>` | a question waited on; the report printed for it | readable |
 | `retention/<id>` | when a reserved report is released | its lifetime |

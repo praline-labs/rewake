@@ -59,9 +59,7 @@ func newInterimLab(t *testing.T) interimLab {
 
 func (lab interimLab) owed() int { return len(inbox.Waiters(lab.dir, "api", lab.self.Epoch())) }
 
-func (lab interimLab) turnStart() int64 {
-	return telemetry.ReadTurnStart(telemetry.TurnStartPath(registry.ObservationFor(lab.dir, lab.self.Name, lab.self.Epoch())))
-}
+func (lab interimLab) turnStart(t *testing.T) int64 { return recordedStart(t, lab.dir, lab.self) }
 
 // held runs a first Stop that must be held, and answers the reason.
 func (lab interimLab) held(t *testing.T, text string) string {
@@ -90,7 +88,7 @@ func TestAnUnmarkedEndAfterAnInterimOneIsHeldOnce(t *testing.T) {
 	}
 	// A mark the continuation makes must fall inside the turn: the hold is
 	// not an end, and records no start.
-	if got := lab.turnStart(); got != lab.start {
+	if got := lab.turnStart(t); got != lab.start {
 		t.Errorf("the hold moved the turn's start from %d to %d", lab.start, got)
 	}
 
