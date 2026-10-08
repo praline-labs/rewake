@@ -12,7 +12,6 @@ import (
 
 	"github.com/praline-labs/rewake/internal/boottime"
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/channel"
 	"github.com/praline-labs/rewake/internal/proc"
 	"github.com/praline-labs/rewake/internal/receipt"
 	"github.com/praline-labs/rewake/internal/state"
@@ -60,7 +59,6 @@ func (c *capped) Write(data []byte) (int, error) {
 func (e *Endpoint) runChild(ticket bridge.Ticket, words []string) childAnswer {
 	reader, writer, err := os.Pipe()
 	if err != nil {
-		e.tell(channel.Event{Kind: channel.CannotStart})
 		return substitute(startFailed)
 	}
 	encoded, _ := json.Marshal(ticket)
@@ -82,7 +80,6 @@ func (e *Endpoint) runChild(ticket bridge.Ticket, words []string) childAnswer {
 	_ = reader.Close()
 	if err != nil {
 		_ = writer.Close()
-		e.tell(channel.Event{Kind: channel.CannotStart})
 		return substitute(startFailed)
 	}
 	pid := command.Process.Pid

@@ -7,10 +7,10 @@ import (
 
 // Rule 5 of docs/mail-bridge-channel.md: events are ordered by when they
 // happened, not by when they were folded. Every few events at distinct
-// times — hellos and closes of two connections, the starts a timer waits
-// for and the timer itself, every failure, the ticket, the denial and the
-// shell's observations — folded in each of their arrival orders, leave the
-// record that folding them by event time leaves.
+// times — hellos and closes of two connections, the timer from the launch,
+// every failure, the ticket, the denial and the shell's observations —
+// folded in each of their arrival orders, leave the record that folding
+// them by event time leaves.
 
 func TestEveryArrivalOrderFoldsAsEventTime(t *testing.T) {
 	t.Parallel()
@@ -19,18 +19,13 @@ func TestEveryArrivalOrderFoldsAsEventTime(t *testing.T) {
 		{Kind: Hello, Generation: 2},
 		{Kind: Closed, Generation: 1, Alive: true},
 		{Kind: Closed, Generation: 2, Alive: true},
-		{Kind: StartupFailed},
 		{Kind: HelloRefused, Descendant: true},
-		{Kind: CannotStart},
-		{Kind: NotObserved},
+		{Kind: HelloRefused},
 		{Kind: Validated},
 		{Kind: Denied},
 		{Kind: ShellObserved, OK: true},
 		{Kind: ShellObserved, Class: ShellReadOnly},
 		{Kind: TimerPassed},
-		{Kind: ThreadAdmitted},
-		{Kind: CallSeen},
-		{Kind: SessionStarted},
 	}
 	length := 4
 	if testing.Short() {
@@ -38,34 +33,32 @@ func TestEveryArrivalOrderFoldsAsEventTime(t *testing.T) {
 	}
 	orders := permutations(length)
 	cases := 0
-	for _, harness := range []Harness{Codex, Claude} {
-		for picks := range combinations(len(kinds), length) {
-			events, ok := atTimes(kinds, picks)
-			if !ok {
-				continue
+	for picks := range combinations(len(kinds), length) {
+		events, ok := atTimes(kinds, picks)
+		if !ok {
+			continue
+		}
+		fold := func(order []int) Record {
+			r := New(true, "", stampAt(0))
+			for _, index := range order {
+				r.Fold(events[index])
 			}
-			fold := func(order []int) Record {
-				r := New(harness, true, "", stampAt(0))
-				for _, index := range order {
-					r.Fold(events[index])
-				}
-				return r
+			return r
+		}
+		want := fold(orders[0])
+		for _, order := range orders[1:] {
+			if got := fold(order); !equal(got, want) {
+				t.Fatalf("%v in order %v:\n got  %+v\n want %+v", events, order, got, want)
 			}
-			want := fold(orders[0])
-			for _, order := range orders[1:] {
-				if got := fold(order); !equal(got, want) {
-					t.Fatalf("%s %v in order %v:\n got  %+v\n want %+v", harness, events, order, got, want)
-				}
-				cases++
-			}
+			cases++
 		}
 	}
 	t.Logf("%d arrival orders", cases)
 }
 
-// atTimes places the picked events eight seconds apart — past the shorter
-// timer's end from one start to the next — and says whether they make a
-// run: a connection's hello once, before its close, which comes once.
+// atTimes places the picked events eight seconds apart, so the timer's end
+// from the launch falls between the first two, and says whether they make
+// a run: a connection's hello once, before its close, which comes once.
 func atTimes(kinds []Event, picks []int) ([]Event, bool) {
 	events := make([]Event, len(picks))
 	hellos, closes := map[uint64]int{}, map[uint64]int{}

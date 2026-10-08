@@ -11,7 +11,7 @@ import (
 
 // The generated space of the channel: every sequence of events up to a
 // length, over an alphabet that covers each kind with the parameters that
-// change its meaning, on both harnesses and from either launch. Each step is
+// change its meaning, from either launch: the tool offered, or no tool. Each step is
 // checked against the rules of docs/mail-bridge-channel.md, not against what
 // the fold happens to do.
 
@@ -29,9 +29,6 @@ type letter struct {
 
 func alphabet() []letter {
 	return []letter{
-		{name: "session-started", event: Event{Kind: SessionStarted}},
-		{name: "thread", event: Event{Kind: ThreadAdmitted}},
-		{name: "call-seen", event: Event{Kind: CallSeen}},
 		{name: "hello-1", event: Event{Kind: Hello, Generation: 1}},
 		{name: "hello-2", event: Event{Kind: Hello, Generation: 2}},
 		// A hello told late, as a connection's callback delayed behind
@@ -44,17 +41,12 @@ func alphabet() []letter {
 		{name: "close-1-ending", event: Event{Kind: Closed, Generation: 1}},
 		{name: "refused-descendant", event: Event{Kind: HelloRefused, Descendant: true}},
 		{name: "refused-stray", event: Event{Kind: HelloRefused}},
-		{name: "cannot-start", event: Event{Kind: CannotStart}},
-		{name: "startup-failed", event: Event{Kind: StartupFailed}},
-		// A startup status the gateway read before a hello the endpoint
-		// told first.
-		{name: "startup-failed-late", event: Event{Kind: StartupFailed}, earlier: 35 * time.Second},
-		{name: "not-observed", event: Event{Kind: NotObserved}},
-		{name: "validated", event: Event{Kind: Validated}},
-		{name: "validated-late", event: Event{Kind: Validated}, earlier: 90 * time.Second},
+		// A call that met its binding.
+		{name: "bound", event: Event{Kind: Validated}},
+		{name: "bound-late", event: Event{Kind: Validated}, earlier: 90 * time.Second},
 		// A ticket folded two and a half steps late: from the fourth step it
 		// falls between the failures of earlier steps.
-		{name: "validated-behind", event: Event{Kind: Validated}, earlier: 5 * stepGap / 2},
+		{name: "bound-behind", event: Event{Kind: Validated}, earlier: 5 * stepGap / 2},
 		{name: "timer", event: Event{Kind: TimerPassed}},
 		{name: "timer-early", event: Event{Kind: TimerPassed}, earlier: stepGap / 2},
 		{name: "denied", event: Event{Kind: Denied}},
@@ -67,15 +59,13 @@ func alphabet() []letter {
 	}
 }
 
-// start is the launch the space begins from.
-type start struct {
-	harness  Harness
-	injected bool
-}
+// starts are the launches the space begins from: the tool offered, and no
+// tool.
+func starts() []bool { return []bool{true, false} }
 
-func starts() []start {
-	return []start{{Codex, true}, {Claude, true}, {Codex, false}, {Claude, false}}
-}
+// launchReason is why a run started without the tool, as its launch note
+// gives it.
+const launchReason = "no tool offered"
 
 // stepGap is the time between two steps: past the hello timer, so a timer
 // event after any start passes it.
@@ -91,8 +81,8 @@ func stampAt(boot time.Duration) Stamp {
 
 // The recipients of the space's notices: the run's worker and its main.
 var (
-	spaceWorker = Recipient{Role: ToWorker, Name: "write-codex", Epoch: "e1"}
-	spaceMain   = Recipient{Role: ToMain, Name: "main-claude", Epoch: "e2"}
+	spaceWorker = Recipient{Role: ToWorker, Name: "writer", Epoch: "e1"}
+	spaceMain   = Recipient{Role: ToMain, Name: "main", Epoch: "e2"}
 )
 
 // world is a point of the space: the record and the notices it has fixed,
@@ -161,9 +151,9 @@ func walk(t *testing.T, depth int, check func(t *testing.T, s spaceStep)) int {
 			visit(after, append(path, l.name), at+1)
 		}
 	}
-	for _, s := range starts() {
-		w := world{record: New(s.harness, s.injected, "--no-mail-tool", stampAt(0))}
-		visit(w, []string{fmt.Sprintf("%s/injected=%v:", s.harness, s.injected)}, 0)
+	for _, offered := range starts() {
+		w := world{record: New(offered, launchReason, stampAt(0))}
+		visit(w, []string{fmt.Sprintf("offered=%v:", offered)}, 0)
 	}
 	return count
 }
@@ -195,7 +185,7 @@ func cloneWorld(w world) world {
 // interval.
 func failure(k Kind) bool {
 	switch k {
-	case Closed, HelloRefused, CannotStart, StartupFailed, NotObserved, TimerPassed:
+	case Closed, HelloRefused, TimerPassed:
 		return true
 	}
 	return false
@@ -230,11 +220,8 @@ func TestEveryEventSequenceKeepsTheRules(t *testing.T) {
 			e.At.Boot > before.Interval.Boot {
 			fail("rule 5: the interval's start moves only by an event no later than it, or by the clock passing a timer")
 		}
-		if after.Open() && after.Tool != ToolNone && !intervalAfterTickets(s.after.folded, after.Harness, after.Interval) {
+		if after.Open() && after.Tool != ToolNone && !intervalAfterTickets(s.after.folded, after.Interval) {
 			fail("rule 5: the interval starts at the earliest failure after the last ticket, by event time, whenever the ticket is folded")
-		}
-		if before.Open() && after.Open() && unconditional(e.Kind) && e.At.Boot < before.ClassAt.Boot && after.Class != before.Class {
-			fail("rule 5: the class shown is the latest failure's by event time")
 		}
 		if before.Open() && !after.Open() && e.Kind != Validated && (e.Kind != Hello || e.At.Boot > before.Interval.Boot) {
 			fail("rule 2: only a validated ticket closes an interval, or a hello no later than it that shows a server was live, not " + string(e.Kind))

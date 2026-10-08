@@ -173,7 +173,6 @@ func (e *Endpoint) observedWords(words []string, ok bool) (string, string) {
 func (e *Endpoint) issue(asked TicketRequest, generation uint64) (bridge.Ticket, error) {
 	thread := ""
 	if !e.hookPath() {
-		e.bind(generation, asked.Conversation)
 		thread = asked.Conversation
 	}
 	if e.cfg.Refusal != "" && !e.hookPath() {
@@ -195,9 +194,6 @@ func (e *Endpoint) issue(asked TicketRequest, generation uint64) (bridge.Ticket,
 	case <-entry.ready:
 	case <-timer.C:
 		// The observer is gone: every call is refused until it returns.
-		// The failure is the conversation's the call was admitted for, by
-		// its connection and thread, though another may be selected by now.
-		e.tell(channel.Event{Kind: channel.NotObserved, Generation: generation, Thread: thread})
 		return bridge.Ticket{}, fmt.Errorf("the harness did not report this call within %s", e.cfg.Wait)
 	case <-e.done:
 		return bridge.Ticket{}, errors.New("the wrapper is closing")
@@ -318,7 +314,7 @@ func (e *Endpoint) confirm(conn *net.UnixConn, ticket bridge.Ticket) error {
 	held.used, held.pid, held.start = true, int(peer.Pid), start
 	// The tool's one evidence: a child that validated its ticket, whatever
 	// its words. Told under the lock is fine: the wrapper only queues it.
-	e.tell(channel.Event{Kind: channel.Validated, Issued: ticket.CalledBoot, Generation: held.generation, Thread: held.thread})
+	e.tell(channel.Event{Kind: channel.Validated, Issued: ticket.CalledBoot})
 	return nil
 }
 

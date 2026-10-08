@@ -1,13 +1,11 @@
 package endpoint
 
 import (
-	"encoding/json"
 	"errors"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/channel"
 )
 
@@ -97,32 +95,8 @@ func TestARefusedServerHelloIsToldWithItsAncestry(t *testing.T) {
 	}
 }
 
-// A server reports only that a command cannot start, in the endpoint's own
-// word; anything else is refused and tells nothing.
-func TestAServerReportsACommandThatCannotStart(t *testing.T) {
-	served, path, got := channelEndpoint(t, testTransport)
-	client, err := Dial(path, "secret")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer client.Close()
-	client.Report()
-	events := got.wait(t, 2)
-	if events[1].Kind != channel.CannotStart || events[1].Generation != events[0].Generation || events[1].Generation == 0 {
-		t.Fatalf("the report is not told with its server's generation: %+v", events)
-	}
-	text, _ := json.Marshal("the server's own words")
-	reply := served.answer(nil, roleServer, request{ID: 9, Op: opReport, Payload: text}, 1)
-	if reply.Error == "" || len(got.wait(t, 2)) != 2 {
-		t.Fatal("an unknown report was taken")
-	}
-	if reply := served.answer(nil, roleChild, request{ID: 9, Op: opReport, Payload: json.RawMessage(`"cannot-start"`)}, 0); reply.Error == "" {
-		t.Fatal("a child reported for a server")
-	}
-}
-
-// A call refused for want of an observation says the observer is gone; a
-// validated ticket carries when it was issued; a call seen opens a wait.
+// A validated ticket carries when it was issued; a call refused for want of
+// an observation tells nothing, since silence proves nothing.
 func TestCallsTellTheirEvidence(t *testing.T) {
 	served, path, got := channelEndpoint(t, testTransport)
 	openTurn(served, "th", "t1")
@@ -134,22 +108,18 @@ func TestCallsTellTheirEvidence(t *testing.T) {
 		t.Fatal(err)
 	}
 	var calls []channel.Event
-	for _, e := range got.wait(t, 7) {
-		if e.Kind != channel.Hello && e.Kind != channel.Closed && e.Kind != channel.Bound {
-			calls = append(calls, e)
+	deadline := time.Now().Add(3 * time.Second)
+	for len(calls) == 0 && time.Now().Before(deadline) {
+		got.mu.Lock()
+		for _, e := range got.events {
+			if e.Kind != channel.Hello && e.Kind != channel.Closed {
+				calls = append(calls, e)
+			}
 		}
+		got.mu.Unlock()
+		time.Sleep(10 * time.Millisecond)
 	}
-	if len(calls) != 2 || calls[0].Kind != channel.NotObserved || calls[1].Kind != channel.Validated || calls[1].Issued != ticket.CalledBoot {
+	if len(calls) != 1 || calls[0].Kind != channel.Validated || calls[0].Issued != ticket.CalledBoot {
 		t.Fatalf("%+v", calls)
-	}
-
-	hooked, _, seen := channelEndpoint(t, bridge.ClaudeTransport)
-	payload, _ := json.Marshal(map[string]any{
-		"hook_event_name": "PreToolUse", "tool_name": claudeToolName, "tool_use_id": "u1",
-		"tool_input": map[string]any{"words": words}, "session_id": "s", "prompt_id": "p",
-	})
-	hooked.hook(payload)
-	if e := seen.wait(t, 1)[0]; e.Kind != channel.CallSeen {
-		t.Fatalf("%+v", e)
 	}
 }

@@ -26,15 +26,17 @@ func TestACloseFoldedAfterLaterFailuresLandsWhereItHappened(t *testing.T) {
 	hello, closed, refused := ago(4*heartbeat), ago(3*heartbeat), ago(2*heartbeat)
 	k.tell(channel.Event{Kind: channel.Hello, Generation: 1, At: hello})
 	k.tell(channel.Event{Kind: channel.Closed, Generation: 1, At: closed})
-	k.tell(channel.Event{Kind: channel.NotObserved, At: refused})
-	if record := k.snapshot(); record.Interval != refused || len(k.held) != 1 {
-		t.Fatalf("interval %v with %d held, want the failure told at once and the close waiting", record.Interval, len(k.held))
+	// While the close waits the connection lives, so the refused hello is
+	// folded at once and fails nothing.
+	k.tell(channel.Event{Kind: channel.HelloRefused, Descendant: true, At: refused})
+	if record := k.snapshot(); record.Open() || len(k.held) != 1 {
+		t.Fatalf("%+v with %d held, want the refusal folded as none and the close waiting", record, len(k.held))
 	}
 	k.mu.Lock()
 	k.foldRipe(ago(0), true)
 	k.mu.Unlock()
 	record := k.snapshot()
-	if record.Interval != closed || record.Class != channel.ClassNotObserved {
+	if record.Interval != closed || record.Class != channel.ClassServerRefused {
 		t.Fatalf("interval %v class %q, want the close's time and the later failure's class", record.Interval, record.Class)
 	}
 }
@@ -49,8 +51,8 @@ func TestATicketToldAfterLaterFailuresFoldsInItsPlace(t *testing.T) {
 	k.tell(channel.Event{Kind: channel.Hello, Generation: 1, At: ago(8 * heartbeat)})
 	k.tell(channel.Event{Kind: channel.Closed, Generation: 1, At: ago(6 * heartbeat)})
 	first, latest := ago(4*heartbeat), ago(3*heartbeat)
-	k.tell(channel.Event{Kind: channel.NotObserved, At: first})
-	k.tell(channel.Event{Kind: channel.NotObserved, At: latest})
+	k.tell(channel.Event{Kind: channel.HelloRefused, Descendant: true, At: first})
+	k.tell(channel.Event{Kind: channel.HelloRefused, Descendant: true, At: latest})
 	k.tell(channel.Event{Kind: channel.Validated, At: ago(5 * heartbeat), Issued: ago(5 * heartbeat).Boot})
 	k.mu.Lock()
 	k.foldRipe(ago(0), true)
@@ -93,10 +95,10 @@ func TestNoticesWaitForTheOneInFlight(t *testing.T) {
 	for i := range 8 {
 		class := channel.ClassServerGone
 		if i%2 == 1 {
-			class = channel.ClassNotObserved
+			class = channel.ClassServerRefused
 		}
 		at := ago(time.Duration(8-i) * time.Second)
-		k.record = channel.Record{Harness: channel.Codex, Tool: channel.ToolFailing, Class: class, Interval: at}
+		k.record = channel.Record{Tool: channel.ToolFailing, Class: class, Interval: at}
 		if _, ok := k.notices.Plan(&k.record, worker, at); ok {
 			planned++
 		}
@@ -204,7 +206,7 @@ func TestADenialToldWhileACloseWaitsStopsAdviceAtOnce(t *testing.T) {
 			k := keeperOf(t, dir, "api")
 			k.begin(true, "")
 			k.alive = func() bool { return true }
-			k.tell(channel.Event{Kind: channel.NotObserved, At: ago(9 * heartbeat)})
+			k.tell(channel.Event{Kind: channel.HelloRefused, Descendant: true, At: ago(9 * heartbeat)})
 			advice, ok := k.notices.Plan(&k.record, channel.Recipient{Role: channel.ToWorker, Name: k.name, Epoch: k.epoch}, ago(9*heartbeat))
 			if !ok || !advice.Advice {
 				t.Fatal("no shell advice fixed")

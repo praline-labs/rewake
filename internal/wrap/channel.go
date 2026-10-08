@@ -28,7 +28,6 @@ const heartbeat = time.Second
 
 type channelKeeper struct {
 	dir, name, epoch string
-	harness          channel.Harness
 
 	mu      sync.Mutex
 	begun   bool
@@ -44,18 +43,18 @@ type channelKeeper struct {
 	stop  func()
 }
 
-func newChannelKeeper(dir, name, epoch, harnessID string) *channelKeeper {
-	return &channelKeeper{dir: dir, name: name, epoch: epoch, harness: channel.Harness(harnessID)}
+func newChannelKeeper(dir, name, epoch string) *channelKeeper {
+	return &channelKeeper{dir: dir, name: name, epoch: epoch}
 }
 
 // begin opens the record: the plan decided whether the run has the tool.
-func (k *channelKeeper) begin(injected bool, reason string) {
+func (k *channelKeeper) begin(offered bool, reason string) {
 	if k == nil {
 		return
 	}
 	k.mu.Lock()
 	defer k.mu.Unlock()
-	k.record = channel.New(k.harness, injected, reason, endpoint.Stamp())
+	k.record = channel.New(offered, reason, endpoint.Stamp())
 	k.begun = true
 }
 
@@ -110,8 +109,8 @@ func (k *channelKeeper) foldRipe(now channel.Stamp, alive bool) {
 	})
 }
 
-// started runs the heartbeat until exited. The start the hello timer waits
-// from is the harness's own first SessionStart, told by its telemetry.
+// started runs the heartbeat until exited. The hello timer runs from the
+// record's begin.
 func (k *channelKeeper) started(ctx context.Context, alive func() bool) {
 	if k == nil {
 		return

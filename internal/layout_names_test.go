@@ -8,12 +8,11 @@ package internal
 
 // Why a mention is still there.
 const (
-	hooksLeave               = "Claude Code's hook machinery, its telemetry and the grant keeper leave"
-	channelCarriesTheHarness = "the channel record carries the harness; S8 removes the field and the MCP letters"
-	realAdapterIDs           = "a test or a comment takes a real adapter's id; from S10 the catalog value and the fixture supply it"
-	harnessWordsInTexts      = "a help or role text names a harness; from S10 the harness words come from the adapter"
-	harnessDirectories       = "the harness directories come from each adapter's ProtectedDirs from S10"
-	explainsByOneHarness     = "a comment explains core code by one harness's behavior; reworded when the tables empty"
+	hooksLeave           = "Claude Code's hook machinery, its telemetry and the grant keeper leave"
+	realAdapterIDs       = "a test or a comment takes a real adapter's id; from S10 the catalog value and the fixture supply it"
+	harnessWordsInTexts  = "a help or role text names a harness; from S10 the harness words come from the adapter"
+	harnessDirectories   = "the harness directories come from each adapter's ProtectedDirs from S10"
+	explainsByOneHarness = "a comment explains core code by one harness's behavior; reworded when the tables empty"
 )
 
 var nameExceptions = map[nameException]excuse{
@@ -22,9 +21,8 @@ var nameExceptions = map[nameException]excuse{
 	{"internal/alias/harness_flags_test.go", "claude"}:         {realAdapterIDs, "S10", 1, "e0f23a0152d7"},
 	{"internal/bridge/bridge.go", "claude"}:                    {hooksLeave, "S9", 2, "303de3b7f224"},
 	{"internal/bridge/endpoint/calls.go", "claude"}:            {hooksLeave, "S9", 4, "5c8e1dfe4b8c"},
-	{"internal/bridge/endpoint/channel_test.go", "claude"}:     {hooksLeave, "S9", 2, "a1d60ff04231"},
 	{"internal/bridge/endpoint/config.go", "claude"}:           {hooksLeave, "S9", 3, "739723509bbe"},
-	{"internal/bridge/endpoint/events.go", "claude"}:           {hooksLeave, "S9", 7, "f5d8aa335167"},
+	{"internal/bridge/endpoint/events.go", "claude"}:           {hooksLeave, "S9", 6, "82c9986653a4"},
 	{"internal/bridge/endpoint/events.go", "mcp__"}:            {hooksLeave, "S9", 1, "aff126afa440"},
 	{"internal/bridge/endpoint/events_test.go", "claude"}:      {hooksLeave, "S9", 11, "98d090f3cd9f"},
 	{"internal/bridge/endpoint/events_test.go", "mcp__"}:       {hooksLeave, "S9", 3, "e83bc9956297"},
@@ -33,22 +31,8 @@ var nameExceptions = map[nameException]excuse{
 	{"internal/bridge/endpoint/protocol.go", "claude"}:         {hooksLeave, "S9", 1, "c88dd4b060fa"},
 	{"internal/bridge/endpoint/tickets_end_test.go", "claude"}: {hooksLeave, "S9", 4, "2552c2f3e33c"},
 	{"internal/bridge/endpoint/tickets_end_test.go", "mcp__"}:  {hooksLeave, "S9", 1, "66776d034851"},
-	{"internal/channel/connections_test.go", "claude"}:         {channelCarriesTheHarness, "S8", 1, "29bc7c514426"},
-	{"internal/channel/events.go", "claude"}:                   {channelCarriesTheHarness, "S8", 3, "d73d7102822f"},
-	{"internal/channel/history.go", "claude"}:                  {channelCarriesTheHarness, "S8", 7, "c16f8ef1b659"},
-	{"internal/channel/late_test.go", "claude"}:                {channelCarriesTheHarness, "S8", 2, "a98b93c99c4d"},
-	{"internal/channel/notices.go", "claude"}:                  {channelCarriesTheHarness, "S8", 2, "377c6a8cb469"},
-	{"internal/channel/notices_test.go", "claude"}:             {channelCarriesTheHarness, "S8", 1, "29bc7c514426"},
-	{"internal/channel/order_test.go", "claude"}:               {channelCarriesTheHarness, "S8", 1, "29bc7c514426"},
-	{"internal/channel/record.go", "claude"}:                   {channelCarriesTheHarness, "S8", 2, "413d3c83721f"},
-	{"internal/channel/selection.go", "claude"}:                {channelCarriesTheHarness, "S8", 1, "edf76db7403b"},
-	{"internal/channel/space_oracle_test.go", "claude"}:        {channelCarriesTheHarness, "S8", 2, "775023417f27"},
-	{"internal/channel/space_test.go", "claude"}:               {channelCarriesTheHarness, "S8", 3, "7074b7c8770b"},
-	{"internal/channel/table_codex_test.go", "claude"}:         {channelCarriesTheHarness, "S8", 6, "0856b834e375"},
-	{"internal/channel/table_test.go", "claude"}:               {channelCarriesTheHarness, "S8", 10, "9d75f9c1d020"},
 	{"internal/cli/args.go", "claude"}:                         {harnessWordsInTexts, "S10", 2, "ae90d4831642"},
 	{"internal/cli/bridge_tool_test.go", "claude"}:             {realAdapterIDs, "S10", 1, "0bac7c392141"},
-	{"internal/cli/channel_display_test.go", "claude"}:         {realAdapterIDs, "S10", 3, "2b3e014abd12"},
 	{"internal/cli/cli_test.go", "claude"}:                     {realAdapterIDs, "S10", 4, "c2d29210c047"},
 	{"internal/cli/command_flag_test.go", "claude"}:            {realAdapterIDs, "S10", 6, "1cb6709ff94e"},
 	{"internal/cli/granthook.go", "claude"}:                    {hooksLeave, "S9", 3, "13ceeca52feb"},
@@ -71,7 +55,6 @@ var nameExceptions = map[nameException]excuse{
 	{"internal/cli/send_dir_test.go", "claude"}:                {hooksLeave, "S9", 4, "0dc2c0c5f2e9"},
 	{"internal/cli/sessions.go", "claude"}:                     {harnessWordsInTexts, "S10", 1, "e9424ee9757f"},
 	{"internal/cli/sessions_test.go", "claude"}:                {realAdapterIDs, "S10", 2, "29fc6a495088"},
-	{"internal/cli/shell_channel_test.go", "claude"}:           {realAdapterIDs, "S10", 3, "2b3e014abd12"},
 	{"internal/cli/steer.go", "claude"}:                        {explainsByOneHarness, "S19", 1, "88a93d4a5671"},
 	{"internal/cli/steer_test.go", "claude"}:                   {realAdapterIDs, "S10", 3, "f034a576dfed"},
 	{"internal/cli/telemetry.go", "claude"}:                    {hooksLeave, "S9", 4, "472cd9aa2827"},

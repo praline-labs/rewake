@@ -11,6 +11,16 @@ they changed are marked *revised* and were built after them, the same day. It re
 stage 2 left for it, which let a hello stand for a usable tool and could keep a shell
 failure forever.
 
+**Cut to the neutral alphabet in S8, October 8, 2026.** The record no longer knows a
+harness: its events are a hello, a close, a refused hello, a validated ticket, the timer
+passing, a denial, a shell observation and the exit. What only one harness told it — a
+Claude Code session start, a call no hook observed, a Codex conversation selected or
+bound, a server reporting its command cannot start — left with the 1.x adapter and the
+MCP injection ([archive/1.x/codex](../archive/1.x/codex/README.md)). No launch starts
+the keeper until a harness offers a tool transport again (stage 3, S10 or S11): until
+then every run shows `mail: unknown`, and the text below is the record that keeper will
+keep.
+
 ## The rules
 
 1. **Two observations and a block, one derived display.** The wrapper keeps a tool
@@ -55,35 +65,23 @@ generation is newer, and whatever order the endpoint's goroutines told them in. 
 endpoint already admits up to four, enough for a restarted server overlapping its
 predecessor and for nested threads.
 
-**Conversation connections** (*revised after the live checks, October 4, 2026; built
-the same day*). Wherever this document says a connection lives, a hello, a close or "no
-connection", it means a conversation connection: on Claude Code every connection, since
-a nested agent calls over the session's one; on Codex one that serves the primary
-thread or is not bound yet, a failed startup status counting only when it names that
-thread or none. Which those are, how a binding is folded, and how selecting another
-conversation moves them is in [mail-bridge-channel-codex.md](mail-bridge-channel-codex.md).
-
 | Event | Source | The tool observation becomes |
 |---|---|---|
-| launch, tool injected | the plan | **starting**; the hello timer waits for the run's start: on Claude Code its first SessionStart, on Codex its first admitted thread (below) |
+| launch, tool offered | the plan | **starting**; the hello timer runs from the launch (below) |
 | launch, no tool | rule 4 of the launch | **no tool** with its reason, for the whole run; its interval opens at the launch |
 | a hello accepted | the endpoint | **connected**, unless working; the timer cancelled; an open interval stays open |
 | a child validated its ticket | the endpoint | **working**; the interval closed |
-| the last live connection that may serve the conversation closes (above), harness alive and not ending | the endpoint | **failing**, class "server gone", on both harnesses: neither starts a dead server again on its own. Codex leaves it down for the run (probe 1); Claude Code 2.1.284 drops the tool until the person reconnects it in `/mcp` (*live*, October 4, 2026, [research-mail-tool.md](research-mail-tool.md#faults-and-turn-ends--l6-l10-l11)). *Revised and built; before, Claude Code's row was "not connected, no notice", which left the session untold* |
-| one connection closes, others that may serve the conversation live at its time | the endpoint | unchanged, whichever generation is older |
-| a hello refused (build mismatch, capability) from a descendant of the harness, no conversation connection live | the endpoint, by pid ancestry | **failing**, class "server refused" |
-| a hello refused from a process outside the harness's tree, or while a conversation connection lives | the endpoint | unchanged, logged |
-| the server reports that its command cannot start | the server, over its connection (an addition to stage 2's protocol) | **failing**, class "command cannot start" |
-| Codex: an `mcpServer/startupStatus/updated` naming `rewake` with a failed status, its `threadId` the primary or absent, no conversation connection live | the gateway | **failing**, class "command cannot start"; the timer cancelled; the status's own text is dropped, never a class |
-| a call of the conversation's own thread refused before its ticket because no hook observation of it came | the endpoint | **failing**, class "calls not observed": the observer is gone, and every call will be refused until it returns |
-| a call refused before its ticket for any other reason: busy, a timeout too short, conflicting ids, a completed turn, an agent's call | the endpoint | unchanged: that call's outcome, told to the model in its answer |
-| Codex: a request whose `_meta.threadId` is absent or not the primary thread | the endpoint, before any wait | the call is refused at once as an agent's, as on Claude Code; it never waits for an observation the gateway does not forward, so it never counts as unobserved (*revised and built; before, it waited 2 s and failed the parent's channel*). The refusal changes nothing; the binding the request carries is folded as its own event (above) |
-| a call timed out, was cancelled or stopped by Esc, or failed while its connection lives (PostToolUseFailure, a failed Codex item) | the hook, the gateway | unchanged: the call's outcome is its receipt's, and its child may still be running |
-| the hello timer passes with no conversation connection | the wrapper | **failing**, class "no hello observed" |
+| the last live connection closes (above), harness alive and not ending | the endpoint | **failing**, class "server gone": no harness is taken to start a dead server again on its own |
+| one connection closes, others live at its time | the endpoint | unchanged, whichever generation is older |
+| a hello refused (build mismatch, capability) from a descendant of the harness, no connection live | the endpoint, by pid ancestry | **failing**, class "server refused" |
+| a hello refused from a process outside the harness's tree, or while a connection lives | the endpoint | unchanged, logged |
+| a call refused before its ticket: busy, a timeout too short, conflicting ids, a completed turn, an agent's call | the endpoint | unchanged: that call's outcome, told to the model in its answer |
+| a call timed out, was cancelled or stopped by Esc, or failed while its connection lives | the harness, as the call's own outcome | unchanged: the call's outcome is its receipt's, and its child may still be running |
+| the hello timer passes with no connection | the wrapper | **failing**, class "no hello observed" |
 | the run ends: the harness's process exits, or the wrapper accepts SIGTERM or SIGHUP, or loses the backend it would end the harness for | the wrapper | frozen: no further event, no notice, nothing fixed is written; open waits cancelled |
 
-So the transport failure classes are a closed list — server gone, server refused,
-command cannot start, calls not observed, no hello observed — and each comes from the
+So the transport failure classes are a closed list — server gone, server refused, no
+hello observed — and each comes from the
 endpoint's own evidence or its timer, never from a harness's error text. A timeout or a
 cancellation is not among them: stage 2 leaves that child to its deadline, and a notice
 sending the worker to the shell then would invite a second operation beside a live one.
@@ -92,9 +90,9 @@ sending the worker to the shell then would invite a second operation beside a li
 4, 2026): the harness's process exit as the wrapper observes it, and the wrapper's own
 teardown — a SIGTERM or SIGHUP it accepted, or the backend gone, for which it ends the
 harness. A harness that ends on its own is seen at its process exit only. Nothing
-earlier is taken for an end: not an EOF, which is what the end would explain, and not
-Claude Code's `SessionEnd`, until a live check shows it tells an exit from a cleared
-conversation and comes in time. So a close is folded only once a full heartbeat has
+earlier is taken for an end: not an EOF, which is what the end would explain, and not a
+harness's own end-of-session signal, until a live check shows it tells an exit from a
+cleared conversation and comes in time. So a close is folded only once a full heartbeat has
 passed since it happened (below): a server that closed less than that before the exit
 was the end's, one that closed earlier was a failure while the harness ran.
 
@@ -105,44 +103,29 @@ when one happened before it — a failure folded after a later one. A hello does
 close it — a server that reconnected has carried no call yet — and only a validated
 ticket does. A ticket ends every failure up to its own time, whenever it is folded: when
 failures after it were folded first, the interval goes on from the first of them, and
-when none, the tool is as the ticket and what came after it left it — on Claude Code a
-later close opens a new interval as any server gone, and a later hello leaves it
+when none, the tool is as the ticket and what came after it left it — a later close
+opens a new interval as any server gone, and a later hello leaves it
 connected, not working.
 
-Some failures hold only while no conversation connection lives — a server gone, a refused hello, a
-failed startup status, a timer passing. A hello folded late, at a time before such a
-failure, shows a server was live then, and the failure never happened: the interval it
-opened goes, or starts at the next failure. A close folded late does the reverse. The
-other two — the server's own report that its command cannot start, and a call refused
-for want of an observation — are failures whatever was live.
+Every failure holds only while no connection lives — a server gone, a refused hello, a
+timer passing. A hello folded late, at a time before such a failure, shows a server was
+live then, and the failure never happened: the interval it opened goes, or starts at the
+next failure. A close folded late does the reverse.
 
-**The hello timer** waits for a start the run expects, never for an idle server. Its
-bounds, 15 s and 10 s, are chosen with room over the cold starts of probe 2, not
-measured norms; live runs may change them.
-
-- **Codex** starts its servers with a thread. The timer opens at the admission of a
-  selection request, as [selecting a conversation](mail-bridge-channel-codex.md#selecting-a-conversation) says,
-  and at the admission of any other thread while no conversation connection lives and
-  no timer runs; a later thread does not move it. It stops at a hello, at a failed
-  `mcpServer/startupStatus/updated` naming `rewake` (the row above), at a selection
-  that fails, or at exit.
-- **Claude Code** starts its servers when the session starts, which is after every
-  startup dialog is answered — a new folder's trust, a project's external imports — and
-  together with the SessionStart hook: 30 ms apart after the dialogs and with none
-  (*live*, 2.1.284, October 4, 2026; nothing started while a dialog stood open for 20 s).
-  So the start timer runs 15 s from the run's first SessionStart the wrapper's
-  telemetry observes, not from the harness's start (*revised and built; before, it counted
-  from the start and a dialog left open past 15 s sent the session to the shell*); a later
-  SessionStart (`/clear`, `/resume`) never opens or moves it, and a launch whose
-  telemetry is off has none. A hello folded at a time before that SessionStart means a
-  connection lived then, so it does not open. A second timer runs 10 s from the first
-  PreToolUse of our tool seen while no connection lives and no timer runs; later calls
-  do not move it. Each stops at a hello or at exit.
-
-On both, a validated ticket stops it as a hello does: it proves a server is connected.
-The timer passes at its end, which is the failure's time, once the wrapper's heartbeat
+**The hello timer** waits for the start the run expects, never for an idle server. It
+runs 15 s from the run's start, the time the keeper opens the record at launch: a bound
+chosen with room over the cold starts of probe 2, not a measured norm. It stops at a
+hello, at a validated ticket — which proves a server is connected as a hello does — or
+at exit. It passes at its end, which is the failure's time, once the wrapper's heartbeat
 or a later transport event shows the end has gone by; a hello at the end itself is in
 time.
+
+Until S8 the timer waited for a harness's own start — Claude Code's first SessionStart,
+since its servers start only after every startup dialog is answered, and Codex's first
+admitted thread — and a second one ran from the first call of the tool seen with no
+connection. Both signals left with the 1.x adapter; an adapter that offers a tool
+transport again and starts its servers later than its launch tells the record its start
+through that capability, which S10 defines.
 
 A hello after the timer passed is a late start: the observation becomes connected, and
 the interval closes with the next validated ticket as after any failure.
@@ -246,9 +229,9 @@ The worker's second line: `a call whose outcome is unknown: rewake retry <token>
 its words in the shell.` A denial sends the worker nothing, and no notice outranks the
 briefing: a call the harness refused for permission is not made in the shell whatever a
 notice said before. No tool with a failing shell is the category "no channel", and main
-is told it like any other. A server gone on Claude Code gives main's notice the second
-line `the person can reconnect it with /mcp in that session`: the one way back the
-harness offers, and the person's, not the worker's (*revised, built*). Worker
+is told it like any other. Until S8 a server gone on Claude Code gave main's notice a
+second line naming the person's way back through `/mcp`; it left with the record's
+harness, and an adapter that has such a way back will say it through its own text. Worker
 and main are each told once under the windows below, as for any failure.
 
 **Suppression and publication are apart.** Suppression is keyed by the run, the
@@ -318,42 +301,24 @@ shell's side `internal/cli/shell_channel.go`, `internal/receipt/shell.go` and
   block at once, and the close, folded late, lands where it happened by event time.
 - **The record keeps the transport's history** in the wrapper's memory, never in the
   session state (`internal/channel/history.go`): every connection's hello and close by
-  generation, for the run, and the other transport events — the starts a timer waits
-  for and the failures — since the last ticket, which ends everything before it. It
-  grows by one entry per server connection and one per event since the last ticket;
-  on Codex every event is kept for the run, since a selection's answer replays what
-  its admission held and asks which connections lived at the admission, and so is
-  every validated ticket, one entry per call: a ticket there is the proof of the
-  conversation its call's connection serves, folded by its own time like any event
-  rather than ending the history ([as built](mail-bridge-channel-codex.md#as-built)).
-  The policy block, the shell observation and the ticket's own times are kept as the
-  latest by event time and need no history. No order of arrival changes the record:
-  `internal/channel/order_test.go` folds every four events of the alphabet, two
-  connections' hellos and closes among them, in all their orders; the generated space
-  (`space_test.go`) folds each path again by event time and in reverse;
-  `connections_test.go` folds two connections across a ticket, the timer's end and a
-  late hello in every order against states written out by hand; and
+  generation, for the run, and the refused hellos since the last ticket, which ends
+  everything before it. It grows by one entry per server connection and one per refused
+  hello since the last ticket. The policy block, the shell observation and the ticket's
+  own times are kept as the latest by event time and need no history. No order of
+  arrival changes the record: `internal/channel/order_test.go` folds every four events
+  of the alphabet, two connections' hellos and closes among them, in all their orders;
+  the generated space (`space_test.go`) walks every sequence of its letters to depth 4
+  from both starts, with the tool and without, and folds each path again by event time
+  and in reverse; `silence_test.go` holds that a run with nothing observed shows no
+  failure; `connections_test.go` folds two connections across a ticket, the timer's end
+  and a late hello in every order against states written out by hand; and
   `internal/bridge/endpoint/channel_order_test.go` holds one connection's hello, or a
-  startup status, behind another connection's events on a real endpoint.
+  refused hello, behind another connection's events on a real endpoint.
 - **Only the exit is taken in arrival order**: an event told after the record froze is
   not of the run (rule 8), and the keeper folds its held closes before it freezes.
-- **On Codex the hello timer opens at the gateway's selection steps**
-  (`gateway/selection.go`): a primary admitted opens it, unless a connection already
-  bound to the target lives at admission; a lifecycle request the gateway lets through
-  that selects nothing is told as another thread admitted, and opens it only while no
-  conversation connection lives and no selection is pending, since that thread's
-  servers start all the same. The steps are told only by the connection that owns the
-  primary, under its lock and never waiting; a connection lost while it owns the primary
-  tells the selection failed.
-- **On Claude Code the timer's start is the first SessionStart** the collector reads
-  (`telemetry.Collector.OnSessionStart`, wired in `wrap/mailtool.go`); a launch whose
-  telemetry is off opens none.
-- **The endpoint binds and refuses before any wait** (`bridge/endpoint/channel.go`):
-  a Codex request naming a thread binds its connection's generation the first time, told
-  once; one naming no thread or another than the primary is refused at once. The
-  primary comes from the backend's `Thread()`, "" while a selection is pending, so every
-  call is refused then; an endpoint not told a primary checks nothing, as a test of the
-  endpoint alone runs.
+- **The channel writes no grant and decides no permission**:
+  `internal/wrap/channel_effects_test.go` tells the keeper every kind of the alphabet
+  and finds only the notices' letters written under the state directory.
 - **Main is told only of another run's channel.** A main's own notices go to it as the
   worker of its run; the main copy would be the same news twice.
 - **A notice fixed for a main that has left is dropped**, not delivered to its

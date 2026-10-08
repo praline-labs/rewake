@@ -43,7 +43,7 @@ func mainPeer(t *testing.T, dir, name string) registry.Session {
 func keeperOf(t *testing.T, dir, name string) *channelKeeper {
 	t.Helper()
 	if current, err := registry.LookupReadOnly(dir, name); err == nil {
-		return newChannelKeeper(dir, name, current.Epoch(), "codex")
+		return newChannelKeeper(dir, name, current.Epoch())
 	}
 	at := time.Now().Add(-time.Minute)
 	run := registry.Session{
@@ -53,7 +53,7 @@ func keeperOf(t *testing.T, dir, name string) *channelKeeper {
 	if err := registry.Publish(dir, run); err != nil {
 		t.Fatal(err)
 	}
-	return newChannelKeeper(dir, name, run.Epoch(), "codex")
+	return newChannelKeeper(dir, name, run.Epoch())
 }
 
 // ago is a moment a while back on both clocks.
@@ -62,9 +62,8 @@ func ago(d time.Duration) channel.Stamp {
 	return channel.Stamp{Boot: now.Boot - int64(d), Wall: now.Wall.Add(-d)}
 }
 
-// failingKeeper is a keeper whose server said hello and closed a heartbeat
-// ago while the harness lives or not: on Codex, which leaves a dead server
-// down, a failure.
+// failingKeeper is a keeper whose transport said hello and closed a
+// heartbeat ago while the harness lives or not: a failure while it lives.
 func failingKeeper(t *testing.T, dir, name string, alive bool) *channelKeeper {
 	t.Helper()
 	k := keeperOf(t, dir, name)
@@ -166,7 +165,7 @@ func TestANoticeForAMainThatLeftIsDropped(t *testing.T) {
 func TestTheShellObservationsAreFoldedAndTaken(t *testing.T) {
 	dir := stateDir(t)
 	k := keeperOf(t, dir, "api")
-	k.begin(false, "gate G2: not settled")
+	k.begin(false, "no tool offered")
 	now := endpoint.Stamp()
 	receipt.WriteShell(dir, "api", k.epoch, receipt.ShellNote{OK: false, Class: receipt.ShellReadOnly, Boot: now.Boot, Wall: now.Wall})
 	k.beat(context.Background())

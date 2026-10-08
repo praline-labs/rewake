@@ -1,8 +1,9 @@
 package harness
 
 // ToolInput is what a harness reports of the mail tool's calls, in no
-// harness's terms: the five inputs the wrapper's endpoint takes
-// (docs/v2/stage3-steps-adapters.md, S7).
+// harness's terms: the inputs the wrapper's endpoint takes
+// (docs/v2/stage3-steps-adapters.md, S7). S7's fifth, a startup that
+// failed, left in S8 with the channel letter it fed.
 // An adapter reads its harness's own records — a stream of events, a hook's
 // input, a frame of its program — and calls these; none of them waits, so the
 // adapter's reader goes on at once.
@@ -20,9 +21,6 @@ type ToolInput interface {
 	// CallResult is the result the harness handed the model for a call,
 	// which acknowledges a read when it proves the whole answer arrived.
 	CallResult(callID string, result ToolResult)
-	// StartupFailed says the harness could not start the tool for a
-	// conversation, "" when it named none.
-	StartupFailed(conversation string)
 }
 
 // ObservedCall is one call as the harness recorded it.

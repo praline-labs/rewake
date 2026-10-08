@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/channel"
 	"github.com/praline-labs/rewake/internal/harness"
 )
 
@@ -51,9 +50,6 @@ func (e *Endpoint) hookWith(payload []byte, limits *HookLimits) {
 	nested := input.AgentID != "" || input.AgentType != ""
 	switch input.Event {
 	case "PreToolUse":
-		// Claude Code starts its server on demand: a call seen while none
-		// lives opens the hello timer.
-		e.tell(channel.Event{Kind: channel.CallSeen})
 		e.promptSeen(input.Prompt)
 		words, _ := wordsOf(input.Input)
 		e.callSeen(harness.ObservedCall{ID: input.UseID, Conversation: input.Session, Words: words, Nested: nested}, input.Prompt, limits)

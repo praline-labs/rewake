@@ -25,9 +25,9 @@ func TestEveryShellCommandLeavesItsEvidence(t *testing.T) {
 	now := channel.Stamp{Boot: boottime.Now(), Wall: time.Now()}
 	records := map[string]*channel.Record{
 		"no record": nil,
-		"working":   {Harness: channel.Claude, Tool: channel.ToolWorking},
-		"failing":   {Harness: channel.Claude, Tool: channel.ToolFailing, Class: channel.ClassServerGone, Interval: now},
-		"no tool":   {Harness: channel.Claude, Tool: channel.ToolNone, Reason: "gate G7", Interval: now},
+		"working":   {Tool: channel.ToolWorking},
+		"failing":   {Tool: channel.ToolFailing, Class: channel.ClassServerGone, Interval: now},
+		"no tool":   {Tool: channel.ToolNone, Reason: "no tool offered", Interval: now},
 	}
 	commands := []struct {
 		name string

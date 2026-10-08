@@ -30,10 +30,6 @@ const (
 	FirstMainNoTool    = "started without the rewake tool; shell only."
 )
 
-// MainReconnect is main's second line when Claude Code's server is gone:
-// the harness starts it again only when the person reconnects it.
-const MainReconnect = "the person can reconnect it with /mcp in that session"
-
 // WorkerAdvice is the worker's second line: a call whose outcome is unknown
 // is continued, never repeated by its words.
 const WorkerAdvice = "a call whose outcome is unknown: rewake retry <token>; never its words in the shell."
@@ -112,9 +108,6 @@ func due(r *Record, to Recipient, told string) (key, body string, advice, reset 
 	switch category {
 	case CategoryFailing:
 		first, key = FirstMainFailing, key+"/"+r.Class
-		if r.Harness == Claude && r.Class == ClassServerGone {
-			first += "\n" + MainReconnect
-		}
 	case CategoryShell:
 		first, key = FirstMainShell, key+"/"+r.toolPart()
 	case CategoryNoChannel:

@@ -1,6 +1,8 @@
 package endpoint
 
 import (
+	"encoding/json"
+	"net"
 	"slices"
 	"sync"
 	"testing"
@@ -10,8 +12,7 @@ import (
 )
 
 // The endpoint tells each connection's events from that connection's own
-// goroutine, and a startup status from the gateway's reader: nothing orders
-// their delivery. These tests hold one event's delivery after it was
+// goroutine: nothing orders their delivery. These tests hold one event's delivery after it was
 // stamped while other events go through, and fold everything into a record
 // as the keeper would (docs/mail-bridge-channel.md, rule 5).
 
@@ -30,7 +31,7 @@ type folding struct {
 
 func newFolding(t *testing.T, holds func(channel.Event) bool) *folding {
 	f := &folding{
-		t: t, record: channel.New(channel.Codex, true, "", Stamp()), holds: holds,
+		t: t, record: channel.New(true, "", Stamp()), holds: holds,
 		held: make(chan struct{}), release: make(chan struct{}),
 	}
 	t.Cleanup(f.let)
@@ -125,17 +126,25 @@ func TestAHelloDeliveredLateKeepsItsConnectionLive(t *testing.T) {
 	}
 }
 
-// A startup failure the gateway read before a hello, delivered after it,
-// keeps its failure: the interval opens at its time, and the hello is a
-// reconnection during it.
-func TestAStartupFailureDeliveredAfterAHelloKeepsItsFailure(t *testing.T) {
-	f := newFolding(t, func(e channel.Event) bool { return e.Kind == channel.StartupFailed })
-	served, path := testEndpoint(t, testTransport, func(c *Config) { c.Channel = f.take })
-	go served.StartupFailed("")
+// A refused hello from the harness's tree, told before a good hello and
+// delivered after it, keeps its failure: no connection lived at its time,
+// so the interval opens there, and the hello is a reconnection during it.
+func TestARefusedHelloDeliveredAfterAHelloKeepsItsFailure(t *testing.T) {
+	f := newFolding(t, func(e channel.Event) bool { return e.Kind == channel.HelloRefused })
+	_, path := testEndpoint(t, testTransport, func(c *Config) { c.Channel = f.take })
+	refused, err := net.Dial("unix", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer refused.Close()
+	greeting, _ := json.Marshal(hello{Role: roleServer, Capability: "guess"})
+	if _, err := refused.Write(append(greeting, '\n')); err != nil {
+		t.Fatal(err)
+	}
 	select {
 	case <-f.held:
 	case <-time.After(3 * time.Second):
-		t.Fatal("the startup status was never told")
+		t.Fatal("the refused hello was never told")
 	}
 	server, err := Dial(path, "secret")
 	if err != nil {
@@ -144,15 +153,15 @@ func TestAStartupFailureDeliveredAfterAHelloKeepsItsFailure(t *testing.T) {
 	defer server.Close()
 	f.until("the hello", arrivedAs(channel.Hello, 1))
 	f.let()
-	f.until("the startup failure", func(events []channel.Event) bool { return len(events) == 2 })
+	f.until("the refusal", func(events []channel.Event) bool { return len(events) == 2 })
 
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	failed, hello, r := f.arrived[1], f.arrived[0], f.record
-	if failed.Kind != channel.StartupFailed || failed.At.Boot >= hello.At.Boot {
+	if failed.Kind != channel.HelloRefused || !failed.Descendant || failed.At.Boot >= hello.At.Boot {
 		t.Fatalf("the schedule did not happen, nothing is proven: %+v", f.arrived)
 	}
-	if r.Interval != failed.At || r.Class != channel.ClassCannotStart || r.Reconnected != hello.At {
+	if r.Interval != failed.At || r.Class != channel.ClassServerRefused || r.Reconnected != hello.At {
 		t.Fatalf("interval %v class %q reconnected %v, want the failure at %v and the hello after it", r.Interval, r.Class, r.Reconnected, failed.At)
 	}
 }

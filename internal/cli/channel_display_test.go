@@ -22,10 +22,10 @@ func TestTheChannelIsShown(t *testing.T) {
 	now := channel.Stamp{Boot: boottime.Now(), Wall: time.Now()}
 	records := []*channel.Record{
 		nil,
-		{Harness: channel.Claude, Tool: channel.ToolStarting},
-		{Harness: channel.Claude, Tool: channel.ToolWorking},
-		{Harness: channel.Codex, Tool: channel.ToolFailing, Class: channel.ClassServerGone, Interval: now},
-		{Harness: channel.Claude, Tool: channel.ToolNone, Reason: "the endpoint could not start", Interval: now},
+		{Tool: channel.ToolStarting},
+		{Tool: channel.ToolWorking},
+		{Tool: channel.ToolFailing, Class: channel.ClassServerGone, Interval: now},
+		{Tool: channel.ToolNone, Reason: "the endpoint could not start", Interval: now},
 	}
 	for _, record := range records {
 		dir := liveSession(t, "lead")

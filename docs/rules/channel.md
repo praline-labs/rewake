@@ -14,37 +14,40 @@ one adapter needs beyond the neutral events lives in the adapter.
   Tests:
   - `internal/channel/space_oracle_test.go` `TestEqualComparesEveryField`
   - `internal/wrap/channel_test.go` `TestTheShellObservationsAreFoldedAndTaken`
-  - `internal/channel/space_test.go` `TestEveryEventSequenceKeepsTheRules` — rebuilt in S8 on the neutral alphabet
-  - `internal/channel/table_test.go` `TestEachFailurePointShowsAndTellsWhatTheTextSays` — rebuilt in S8 on the neutral alphabet
+  - `internal/channel/space_test.go` `TestEveryEventSequenceKeepsTheRules`
+  - `internal/channel/table_test.go` `TestEachFailurePointShowsAndTellsWhatTheTextSays`
 
 - **C2. Connected is not working.** A transport's hello proves it reached the host; only
   a call that met its binding proves the tool carried one.
   Tests:
-  - `internal/channel/connections_test.go` `TestTwoConnectionsAcrossATicketInEveryOrder` — rebuilt in S8 on the neutral alphabet
-  - `internal/channel/connections_test.go` `TestAHelloAtTheTimersEndIsInTime` — rebuilt in S8 on the neutral alphabet
-  - `internal/channel/connections_test.go` `TestALateHelloUndoesFailuresUntilTheLastClose` — rebuilt in S8 on the neutral alphabet
-  - `internal/wrap/channel_test.go` `TestAClosedServerFailsOnlyWhileItsHarnessLives` — rebuilt in S8 on the neutral alphabet
+  - `internal/channel/connections_test.go` `TestTwoConnectionsAcrossATicketInEveryOrder`
+  - `internal/channel/connections_test.go` `TestAHelloAtTheTimersEndIsInTime`
+  - `internal/channel/connections_test.go` `TestATicketStopsTheTimer`
+  - `internal/channel/connections_test.go` `TestALateHelloUndoesFailuresUntilTheLastClose`
+  - `internal/wrap/channel_test.go` `TestAClosedServerFailsOnlyWhileItsHarnessLives`
 
 - **C3. Silence proves nothing.** No hello, no call, no shell command are not failures;
   a wait names what was not observed, never what did not happen.
   Tests:
-  - `internal/channel/table_test.go` `TestEachFailurePointShowsAndTellsWhatTheTextSays` — rebuilt in S8 with C1: the "not observed" rows and the label check
-  - Gap: no test of its own that a wait names what was not observed and never claims a failure — closed in S8 with the rebuilt table.
+  - `internal/channel/silence_test.go` `TestSilenceProvesNothing`
+  - `internal/channel/table_test.go` `TestEachFailurePointShowsAndTellsWhatTheTextSays`
 
 - **C4.** Each channel has one kind of evidence: the tool's, a call bound (T2); the
   shell's, a mail operation that wrote under a lock or failed to reach it.
   Tests:
   - `internal/wrap/channel_test.go` `TestTheShellObservationsAreFoldedAndTaken`
-  - `internal/channel/space_test.go` `TestEveryEventSequenceKeepsTheRules` — rebuilt in S8 with C1
+  - `internal/channel/space_test.go` `TestEveryEventSequenceKeepsTheRules`
 
 - **C5.** Events fold by when they happened, not by when they arrived.
   Tests:
-  - `internal/channel/order_test.go` `TestEveryArrivalOrderFoldsAsEventTime` — rebuilt in S8 on the neutral alphabet
-  - `internal/channel/late_test.go` `TestALateTicketKeepsTheFirstFailureAfterIt` — rebuilt in S8 on the neutral alphabet
-  - `internal/channel/late_test.go` `TestALateTicketDoesNotUndoALaterClose` — rebuilt in S8 on the neutral alphabet
-  - `internal/wrap/channel_order_test.go` `TestACloseFoldedAfterLaterFailuresLandsWhereItHappened` — rebuilt in S8 on the neutral alphabet
-  - `internal/wrap/channel_order_test.go` `TestATicketToldAfterLaterFailuresFoldsInItsPlace` — rebuilt in S8 on the neutral alphabet
-  - `internal/wrap/channel_order_test.go` `TestACloseYoungerThanAHeartbeatWaits` — rebuilt in S8 on the neutral alphabet
+  - `internal/channel/order_test.go` `TestEveryArrivalOrderFoldsAsEventTime`
+  - `internal/channel/late_test.go` `TestALateTicketKeepsTheFirstFailureAfterIt`
+  - `internal/channel/late_test.go` `TestALateTicketDoesNotUndoALaterClose`
+  - `internal/wrap/channel_order_test.go` `TestACloseFoldedAfterLaterFailuresLandsWhereItHappened`
+  - `internal/wrap/channel_order_test.go` `TestATicketToldAfterLaterFailuresFoldsInItsPlace`
+  - `internal/wrap/channel_order_test.go` `TestACloseYoungerThanAHeartbeatWaits`
+  - `internal/bridge/endpoint/channel_order_test.go` `TestAHelloDeliveredLateKeepsItsConnectionLive`
+  - `internal/bridge/endpoint/channel_order_test.go` `TestARefusedHelloDeliveredAfterAHelloKeepsItsFailure`
 
 - **C6.** A notice states an action first and fits the preview.
   Tests:
@@ -74,7 +77,7 @@ one adapter needs beyond the neutral events lives in the adapter.
   Tests:
   - `internal/wrap/channel_test.go` `TestAdviceFixedBeforeTheBlockIsDropped`
   - `internal/wrap/channel_order_test.go` `TestADenialToldWhileACloseWaitsStopsAdviceAtOnce`
-  - `internal/channel/space_test.go` `TestEveryEventSequenceKeepsTheRules` — rebuilt in S8 with C1
+  - `internal/channel/space_test.go` `TestEveryEventSequenceKeepsTheRules`
 
 - **C8.** Nothing is relaunched, granted or approved by the channel.
   Tests:
@@ -83,5 +86,5 @@ one adapter needs beyond the neutral events lives in the adapter.
   - `internal/wrap/channel_order_test.go` `TestANoticeFixedBeforeTheExitIsNotWrittenAfterIt`
   - `internal/wrap/channel_order_test.go` `TestALostBackendFreezesTheRecordBeforeTheHarnessEnds`
   - `internal/wrap/channel_order_test.go` `TestAnAcceptedSignalFreezesTheRecord`
-  - `internal/channel/space_test.go` `TestEveryEventSequenceKeepsTheRules` — rebuilt in S8 with C1: the frozen record
-  - Gap: nothing granted or approved by the channel has no test of its own — closed in S8 (no event of any letter writes a grant record or a permission decision).
+  - `internal/channel/space_test.go` `TestEveryEventSequenceKeepsTheRules`
+  - `internal/wrap/channel_effects_test.go` `TestTheChannelGrantsAndApprovesNothing`

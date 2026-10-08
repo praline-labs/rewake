@@ -321,8 +321,6 @@ func (e *Endpoint) answer(conn *net.UnixConn, role string, asked request, genera
 		reply.Ticket = &ticket
 	case role == roleChild && asked.Op == opConfirm && asked.Ticket != nil:
 		err = e.confirm(conn, *asked.Ticket)
-	case role == roleServer && asked.Op == opReport:
-		err = e.report(asked.Payload, generation)
 	case role == roleHook && asked.Op == opObserve:
 		e.hookWith(asked.Payload, asked.Limits)
 	default:

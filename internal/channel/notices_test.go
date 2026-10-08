@@ -7,7 +7,7 @@ import (
 )
 
 func failing(at time.Duration) Record {
-	r := New(Codex, true, "", stampAt(0))
+	r := New(true, "", stampAt(0))
 	r.Fold(Event{Kind: Hello, Generation: 1, At: stampAt(at - time.Second)})
 	r.Fold(Event{Kind: Closed, Generation: 1, Alive: true, At: stampAt(at)})
 	return r
@@ -30,7 +30,7 @@ func TestTheKeyWindowHoldsARepeatUntilItEnds(t *testing.T) {
 	} else {
 		n.Settle(p.Seq, Landed, stampAt(4*time.Second).Boot)
 	}
-	r.Fold(Event{Kind: NotObserved, At: stampAt(5 * time.Second)})
+	r.Fold(Event{Kind: HelloRefused, Descendant: true, At: stampAt(5 * time.Second)})
 	r.Fold(Event{Kind: Validated, At: stampAt(6 * time.Second), Issued: stampAt(6 * time.Second).Boot})
 	r.Fold(Event{Kind: Closed, Generation: 1, Alive: true, At: stampAt(7 * time.Second)})
 	r.Fold(Event{Kind: Hello, Generation: 2, At: stampAt(8 * time.Second)})
@@ -47,14 +47,16 @@ func TestTheKeyWindowHoldsARepeatUntilItEnds(t *testing.T) {
 func TestNoMoreThanSixAnHourToOneRecipient(t *testing.T) {
 	var n Notices
 	main := Recipient{Role: ToMain, Name: "m", Epoch: "1"}
-	classes := []Kind{NotObserved, CannotStart, TimerPassed}
+	failures := []Event{{Kind: HelloRefused, Descendant: true}, {Kind: TimerPassed}}
 	landed := 0
 	for i := 0; i < 20; i++ {
 		at := time.Duration(i) * time.Minute
-		r := New(Codex, true, "", stampAt(0))
+		r := New(true, "", stampAt(0))
 		switch i % 2 {
 		case 0:
-			r.Fold(Event{Kind: classes[(i/2)%len(classes)], At: stampAt(at)})
+			e := failures[(i/2)%len(failures)]
+			e.At = stampAt(at)
+			r.Fold(e)
 		default:
 			r.Fold(Event{Kind: Validated, At: stampAt(at), Issued: stampAt(at).Boot})
 		}
@@ -80,7 +82,7 @@ func TestANewMainGetsTheCurrentCategory(t *testing.T) {
 	if !ok || a.Seq == b.Seq || a.ID("w", "e") == b.ID("w", "e") {
 		t.Fatalf("the new epoch was not told under its own number: %+v %+v", a, b)
 	}
-	working := New(Claude, true, "", stampAt(0))
+	working := New(true, "", stampAt(0))
 	working.Fold(Event{Kind: Validated, At: stampAt(time.Second), Issued: stampAt(time.Second).Boot})
 	if _, ok := n.Plan(&working, Recipient{Role: ToMain, Name: "m", Epoch: "3"}, stampAt(4*time.Second)); ok {
 		t.Fatal("a new main was told the tool works with nothing told before")

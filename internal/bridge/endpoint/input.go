@@ -2,7 +2,6 @@ package endpoint
 
 import (
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/channel"
 	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/receipt"
@@ -46,12 +45,6 @@ func (e *Endpoint) callSeen(call harness.ObservedCall, prompt string, limits *Ho
 // CallResult hands a call's result to the acknowledgment.
 func (e *Endpoint) CallResult(callID string, result harness.ToolResult) {
 	e.complete(callID, exposure(callID, result))
-}
-
-// StartupFailed fails the channel of the conversation the tool could not
-// start for. The harness's own text is not taken: the class is the endpoint's.
-func (e *Endpoint) StartupFailed(conversation string) {
-	e.tell(channel.Event{Kind: channel.StartupFailed, Thread: conversation})
 }
 
 // exposure is what a result proves of one call's answer reaching the model:

@@ -80,7 +80,6 @@ func (r *toolInput) CallSeen(call harness.ObservedCall) {
 func (r *toolInput) CallResult(id string, result harness.ToolResult) {
 	r.add("result %s %+v", id, result)
 }
-func (r *toolInput) StartupFailed(conversation string) { r.add("failed %s", conversation) }
 
 // The endpoint serves the program's own process once the probe proved the
 // tools registered, and reads count only where the program can show results.

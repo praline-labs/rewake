@@ -26,8 +26,6 @@ const (
 const (
 	ClassServerGone    = "server gone"
 	ClassServerRefused = "server refused"
-	ClassCannotStart   = "command cannot start"
-	ClassNotObserved   = "calls not observed"
 	ClassNoHello       = "no hello observed"
 )
 
@@ -39,22 +37,9 @@ const (
 	ShellIOError    = receipt.ShellIOError
 )
 
-// The hello timer's bounds: chosen with room over probe 2's cold starts, not
-// measured norms.
-const (
-	HelloAtStart = 15 * time.Second
-	HelloAtCall  = 10 * time.Second
-)
-
-// Harness says how the run's harness starts its servers, which decides the
-// timer and what a lost connection means.
-type Harness string
-
-// The harnesses the channel knows.
-const (
-	Codex  Harness = "codex"
-	Claude Harness = "claude"
-)
+// HelloAtStart is the hello timer's bound from the run's start: chosen with
+// room over the cold starts probed in 1.x, not a measured norm.
+const HelloAtStart = 15 * time.Second
 
 // Stamp is an event's time: the boot clock orders, the wall clock is shown.
 type Stamp struct {
@@ -72,8 +57,7 @@ type Shell struct {
 // Record is the channel record of a run. The state shown is derived from it
 // (Display) and never stored apart.
 type Record struct {
-	Harness Harness `json:"harness"`
-	Tool    string  `json:"tool"`
+	Tool string `json:"tool"`
 	// Class is the failure class shown while an interval is open, the latest
 	// failure's by event time, which ClassAt keeps; Reason, for no tool, is
 	// why, in the words a launch note allows.
@@ -91,11 +75,8 @@ type Record struct {
 	Live       []uint64 `json:"live,omitempty"`
 	Generation uint64   `json:"generation,omitempty"`
 	// Timer is when the hello timer passes; zero while none runs.
-	Timer int64 `json:"timer,omitempty"`
-	// Conversation is the thread the gateway last selected on Codex, whose
-	// connections the tool observation counts; "" before the first.
-	Conversation string `json:"conversation,omitempty"`
-	Shell        *Shell `json:"shell,omitempty"`
+	Timer int64  `json:"timer,omitempty"`
+	Shell *Shell `json:"shell,omitempty"`
 	// Block is the latest denial's time while the block is set; zero while
 	// none. Issued is the newest validated ticket's issue time: a denial
 	// before it was lifted by it, whenever either is folded.
@@ -121,13 +102,16 @@ func (r *Record) Working() bool {
 	return r.Tool == ToolWorking && !r.Open() && !r.Blocked()
 }
 
-// New is the record at launch: the tool injected, or not with its reason,
-// whose interval opens at the launch.
-func New(harness Harness, injected bool, reason string, at Stamp) Record {
-	if injected {
-		return Record{Harness: harness, Tool: ToolStarting}
+// New is the record at launch: the tool offered, whose hello timer runs
+// from the launch, or no tool with its reason, whose interval opens at the
+// launch.
+func New(offered bool, reason string, at Stamp) Record {
+	if offered {
+		r := Record{Tool: ToolStarting, h: history{start: at, clock: at.Boot}}
+		r.derive()
+		return r
 	}
-	return Record{Harness: harness, Tool: ToolNone, Reason: reason, Interval: at}
+	return Record{Tool: ToolNone, Reason: reason, Interval: at}
 }
 
 func (r *Record) live(generation uint64) bool { return slices.Contains(r.Live, generation) }
