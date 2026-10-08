@@ -124,15 +124,20 @@ func playFixtureGrantDir(t *testing.T, c *Case, iso *Isolation) []telemetryFindi
 	if task == "" {
 		return unjudgedAll(fixtureGrantObservations, "the grant was not sent: exit %d, %q", code, sent)
 	}
+	// A grant that failed is offered nothing and never reported on: the
+	// waits end with it rather than at their bounds.
+	failed := func(id string) bool { return statusState(iso, worker, id) == "failed" }
 	var events []turnEvent
 	waitFor(c, 30*time.Second, func() bool {
 		events, _ = worker.turnEvents()
-		return eventOf(events, grantEventKind) != nil
+		return eventOf(events, grantEventKind) != nil || failed(task)
 	})
 	heldOpen, openDetail := holds(task)
 	_, sent, _ = asks.ask(c, "send", worker.name, fixtureGrantSteered)
 	steered := printedID(sent)
-	reported := waitFor(c, 30*time.Second, func() bool { return reportedOn(c, asks, task) && reportedOn(c, asks, steered) })
+	reported := waitFor(c, 30*time.Second, func() bool {
+		return failed(task) || reportedOn(c, asks, task) && reportedOn(c, asks, steered)
+	}) && !failed(task)
 	events, eventsErr := worker.turnEvents()
 	offers := allOf(events, grantEventKind)
 	var out []telemetryFinding
@@ -157,15 +162,20 @@ func rechecked(c *Case, iso *Isolation, lead, held *scenarioSession, doomed, rel
 	if id == "" {
 		return judged(obsFixtureGrantRechecked, false, "the grant was not sent: exit %d, %q", code, sent)
 	}
-	waiting := waitFor(c, 20*time.Second, func() bool { return statusState(iso, held, id) == "pending" })
+	waiting := waitFor(c, 20*time.Second, func() bool {
+		state := statusState(iso, held, id)
+		return state == "pending" || state == "failed"
+	}) && statusState(iso, held, id) == "pending"
 	removeErr := os.RemoveAll(doomed)
 	if err := os.WriteFile(release, nil, 0o600); err != nil {
 		return judged(obsFixtureGrantRechecked, false, "cannot let the program take a reservation: %v", err)
 	}
-	failed := waitFor(c, 20*time.Second, func() bool { return statusState(iso, held, id) == "failed" })
+	// A letter delivered after all is final as well: no note follows it.
+	settled := func() bool { state := statusState(iso, held, id); return state == "failed" || state == "delivered" }
+	failed := waitFor(c, 20*time.Second, settled) && statusState(iso, held, id) == "failed"
 	detail := statusDetail(iso, held, id)
 	var told reportView
-	toldOK := waitFor(c, 30*time.Second, func() bool {
+	toldOK := failed && waitFor(c, 30*time.Second, func() bool {
 		for _, message := range readMessages(lead) {
 			if message.Undelivered != nil && message.Undelivered.ID == id {
 				told = message
