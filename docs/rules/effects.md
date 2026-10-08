@@ -66,6 +66,7 @@ nothing lifts a stop without returning evidence.
   - `internal/harness/fixture/turns_test.go` `TestATurnEndIsRetriedWithItsOwnDeadline`
   - `internal/harness/fixture/turns_test.go` `TestATurnEndThatNeverTakesIsRefusedAfterItsAttempts`
   - `internal/harness/fixture/order_test.go` `TestAWithdrawalStopsAnEndsAttempts`
+  - `internal/harness/fixture/order_test.go` `TestAClosedConnectionTakesNoTurn`
   - `internal/inbox/publication_race_test.go` `TestTheSweepWaitsForAnAttemptsEvidence`
   - `internal/inbox/publication_race_test.go` `TestAdmissionIsInsideTheSection`
   - `internal/cli/publication_race_test.go` `TestTheSweepWaitsForAHeadsUpsEvidence`

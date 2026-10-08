@@ -32,11 +32,12 @@ func (b *backend) withdraw(l *link) {
 }
 
 // liveOn answers whether a capability is live on this connection: the one the
-// backend holds now, not a later one that made the same capability live again.
+// backend holds now, not a later one that made the same capability live again,
+// and not one already closed whose withdrawal has yet to land.
 func (b *backend) liveOn(l *link, capability string) bool {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	return l != nil && b.link == l && b.live[capability]
+	return l != nil && !l.gone() && b.link == l && b.live[capability]
 }
 
 // enter admits one call into the wrapper's handler, and refuses it once Close

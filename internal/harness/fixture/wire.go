@@ -218,6 +218,18 @@ func (l *link) close() {
 	})
 }
 
+// gone answers whether the connection has closed. The reader closes it the
+// moment it sees the disconnect; the withdrawal that follows runs apart from
+// it, so this, not the backend's link, is what tells a closed connection first.
+func (l *link) gone() bool {
+	select {
+	case <-l.closed:
+		return true
+	default:
+		return false
+	}
+}
+
 // readLine reads one line within maxFrame.
 func readLine(reader *bufio.Reader) ([]byte, error) {
 	var line []byte

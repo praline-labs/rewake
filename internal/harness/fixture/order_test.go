@@ -5,6 +5,7 @@ package fixture
 import (
 	"context"
 	"errors"
+	"net"
 	"slices"
 	"sync/atomic"
 	"testing"
@@ -176,12 +177,13 @@ func TestNothingReachesTheHandlerWhileClosing(t *testing.T) {
 	}
 }
 
-// A withdrawal stops an end's attempts: the one under way runs out, and no
-// other starts — not even once a new connection makes the turn boundary live
-// again, since the end came on the old one.
+// A withdrawal or a close stops an end's attempts: the one under way runs out,
+// and no other starts — not once a new connection makes the turn boundary live
+// again, since the end came on the old one, and not in the moment between the
+// reader closing the connection and the withdrawal that follows it.
 func TestAWithdrawalStopsAnEndsAttempts(t *testing.T) {
-	for _, reconnect := range []bool{false, true} {
-		t.Run(map[bool]string{false: "withdrawn", true: "reconnected"}[reconnect], func(t *testing.T) {
+	for _, cut := range []string{"withdrawn", "reconnected", "closed"} {
+		t.Run(cut, func(t *testing.T) {
 			first, release := make(chan struct{}), make(chan struct{})
 			var calls atomic.Int32
 			b, _ := paired(t, harness.CompletionHandler{
@@ -196,29 +198,73 @@ func TestAWithdrawalStopsAnEndsAttempts(t *testing.T) {
 				},
 			}, Served...)
 			l := currentLink(b)
+			if cut == "closed" {
+				l = unservedLink(t, b)
+			}
 			finished := make(chan Frame, 1)
 			go func() {
 				finished <- b.turnEnded(l, Frame{Turn: "t1", End: "t1/e1", Outcome: OutcomeCompleted, Hold: true})
 			}()
 			<-first
-			b.withdraw(l)
-			if reconnect {
+			switch cut {
+			case "withdrawn":
+				b.withdraw(l)
+			case "reconnected":
+				b.withdraw(l)
 				b.mu.Lock()
 				b.link = newLink(nil)
 				b.live = map[string]bool{TurnBoundary: true}
 				b.mu.Unlock()
+			case "closed":
+				l.close()
 			}
 			close(release)
 			select {
 			case answer := <-finished:
 				if calls.Load() != 1 || answer.OK {
-					t.Fatalf("the end was attempted again after its withdrawal: %d calls, %+v", calls.Load(), answer)
+					t.Fatalf("the end was attempted again after its connection was %s: %d calls, %+v", cut, calls.Load(), answer)
 				}
 			case <-time.After(2 * time.Second):
-				t.Fatal("the end did not finish after the withdrawal")
+				t.Fatalf("the end did not finish after its connection was %s", cut)
 			}
 		})
 	}
+}
+
+// A connection already closed takes no turn and no end, though its withdrawal
+// has yet to land: its first attempt is refused as a retry would be.
+func TestAClosedConnectionTakesNoTurn(t *testing.T) {
+	var calls atomic.Int32
+	b, _ := paired(t, harness.CompletionHandler{
+		Capture: func() *inbox.ReadBoundary { calls.Add(1); return boundary() },
+		Confirm: func(context.Context, harness.Completion) (string, error) { calls.Add(1); return "", nil },
+	}, Served...)
+	l := unservedLink(t, b)
+	l.close()
+	if answer := b.turnStarted(l, Frame{Turn: "t1"}); answer.OK {
+		t.Fatalf("a closed connection started a turn: %+v", answer)
+	}
+	if answer := b.turnEnded(l, Frame{Turn: "t1", End: "t1/e1", Outcome: OutcomeCompleted, Hold: true}); answer.OK {
+		t.Fatalf("a closed connection's end was taken: %+v", answer)
+	}
+	if calls.Load() != 0 {
+		t.Fatalf("a closed connection reached the handler %d times", calls.Load())
+	}
+}
+
+// unservedLink makes the backend hold a connection no reader serves, with the
+// turn boundary live on it. Nothing withdraws it when it closes, which holds
+// the moment between the reader closing a connection and the withdrawal that
+// follows for as long as a test needs it.
+func unservedLink(t *testing.T, b *backend) *link {
+	t.Helper()
+	near, far := net.Pipe()
+	t.Cleanup(func() { _ = far.Close() })
+	l := newLink(near)
+	b.mu.Lock()
+	b.link, b.live = l, map[string]bool{TurnBoundary: true}
+	b.mu.Unlock()
+	return l
 }
 
 // A probe the program never answers makes only its capability unavailable:

@@ -163,8 +163,10 @@ func endKind(outcome string) (inbox.Kind, error) {
 // held end and the wrapper takes confirmations, Publish otherwise. A failed
 // attempt is retried as a new call with its own deadline (E3), never by
 // stretching the one that failed — and only while the connection the end came
-// on still holds a live turn boundary: an attempt under way when it is
-// withdrawn runs out, but none starts after.
+// on is open and still holds a live turn boundary: an attempt under way when it
+// closes or is withdrawn runs out, but none starts after. liveOn is that one
+// check for every attempt, the first included: a close that lands during the
+// backoff is seen when it ends, and Close's cancellation ends it at once.
 func (b *backend) settle(l *link, completion harness.Completion, holdable bool) (string, error) {
 	if !b.enter() {
 		return "", errClosing
@@ -176,12 +178,11 @@ func (b *backend) settle(l *link, completion harness.Completion, holdable bool) 
 			select {
 			case <-b.ctx.Done():
 				return "", b.ctx.Err()
-			case <-l.closed:
 			case <-time.After(endBackoff):
 			}
 		}
 		if !b.liveOn(l, TurnBoundary) {
-			return "", fmt.Errorf("the turn boundary was withdrawn: %w", last)
+			return "", fmt.Errorf("the connection the end came on closed or lost its turn boundary: %w", last)
 		}
 		reason, err := b.attempt(completion, holdable)
 		if err == nil {
