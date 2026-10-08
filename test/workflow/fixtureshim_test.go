@@ -27,6 +27,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/bridge"
 )
 
 // The program's switches. Each withholds one capability from the hello, or
@@ -66,6 +68,7 @@ var fixtureServed = []struct{ name, withheld string }{
 	{"turn-boundary", shimNoBoundary},
 	{"telemetry", shimNoTelemetry},
 	{"control", shimNoControl},
+	{"tool-transport", shimNoTool},
 }
 
 // fixtureFrame is one line of the exchange.
@@ -90,6 +93,17 @@ type fixtureFrame struct {
 	Notice     string          `json:"notice,omitempty"`
 	Members    json.RawMessage `json:"members,omitempty"`
 	Steered    bool            `json:"steered,omitempty"`
+	// The tool transport's fields: the probe's offer, what the program
+	// registered, and a call's report and result.
+	Tools     []bridge.ToolDescriptor `json:"tools,omitempty"`
+	Endpoint  string                  `json:"endpoint,omitempty"`
+	Names     []string                `json:"names,omitempty"`
+	Digest    string                  `json:"digest,omitempty"`
+	Call      string                  `json:"call,omitempty"`
+	Tool      string                  `json:"tool,omitempty"`
+	Arguments json.RawMessage         `json:"arguments,omitempty"`
+	Texts     []string                `json:"texts,omitempty"`
+	IsError   bool                    `json:"isError,omitempty"`
 }
 
 // fixtureLaunch is what the program was started with.
@@ -221,6 +235,7 @@ type fixtureSession struct {
 	waiting map[int64]chan fixtureFrame
 	// turns counts the turns worked, for shimDropAfter.
 	turns int
+	tools fixtureTools
 }
 
 func fixtureSessionStart(launch fixtureLaunch) (*fixtureSession, error) {
@@ -359,6 +374,8 @@ func (s *fixtureSession) probe(frame, reply fixtureFrame) fixtureFrame {
 		reply.State = "none"
 	case "control":
 		reply.State = "ready"
+	case "tool-transport":
+		reply = s.registerTools(frame, reply)
 	}
 	return reply
 }

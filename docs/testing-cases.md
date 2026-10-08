@@ -87,6 +87,23 @@ from anything the mail carried. Its three mutants drop the text on the way to th
 completion, take a failure for a finished turn, and take an interruption for one; each
 names what it must break and requires the rest to hold (October 7, 2026).
 
+`tool-inbox`, `tool-send`, `tool-pending`, `tool-whoami`, `tool-retry` and `tool-list` run
+in the fixture column only, one per tool of the set, each with a main and a worker: the
+transport is the fixture's own program, which registers the tools the probe offers and,
+asked by `RW_SHIM_TOOL_CALLS`, makes its first turn's calls as a harness would — the
+native call reported to the adapter, the request to the wrapper's endpoint, the result it
+would hand the model reported back — and logs each answer. The main sends a task; the
+worker's turn makes the call and ends. `tool-inbox` reads the task through the tool: the
+answer must show it, and the turn's end must report and settle it, so the read counted.
+The program's model goes on until the letter leaves the unread overview, as a real
+model takes its time over a result: an end that came first would show the letter again
+(T7, T8), which the fixture's ends otherwise do within milliseconds. `tool-send` must
+reach the main as one heads-up; `tool-pending` must be accepted and reach the main as an
+interim message with its line while the task stays owed; `tool-whoami` must name the
+worker and say the call came through the tool; `tool-retry` retries a heads-up by the
+receipt its answer named and must answer that receipt with the heads-up still one;
+`tool-list` must name both sessions. None has a control yet (October 8, 2026).
+
 `owed-reread` runs in every column with a main and a worker. The worker reads a
 multi-line task and, in the same turn, runs `rewake inbox --owed` in both forms, as a
 session re-reading its task after a compaction would. Both must print that task in full;
