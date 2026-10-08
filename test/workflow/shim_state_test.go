@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -35,7 +36,7 @@ func shimReportState() int {
 		if _, err := os.Stat(os.Getenv(shimExitFile)); err == nil {
 			return 0
 		}
-		if os.Getenv(shimExitAfterTurn) != "" && workedATurn() {
+		if os.Getenv(shimExitAfterTurn) != "" && endedATurn() {
 			// Nobody asked it to stop. This is the control for "the session
 			// was still there when the case was judged".
 			return 0
@@ -55,4 +56,17 @@ func workedATurn() bool {
 	}
 	info, err := os.Stat(turns)
 	return err == nil && info.Size() > 0
+}
+
+// endedATurn reports whether the fixture's program has ended a turn. Its turn
+// records what it read before it ends, so a record alone may still have the
+// end, and the report it carries, to come; the completed event is written
+// after both.
+func endedATurn() bool {
+	turns := os.Getenv(shimTurnsFile)
+	if turns == "" {
+		return false
+	}
+	raw, err := os.ReadFile(turns)
+	return err == nil && strings.Contains(string(raw), turnEventMark+"\tcompleted\t")
 }
