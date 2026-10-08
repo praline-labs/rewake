@@ -214,10 +214,9 @@ func TestTheProgramsEndWithdrawsEverything(t *testing.T) {
 			case <-time.After(5 * time.Second):
 				t.Fatal("the program's end was not seen")
 			}
-			eventually(t, "the withdrawal", func() bool { return len(b.Live()) == 0 })
-			if pid := peerOf(b); pid != 0 {
-				t.Fatalf("the endpoint still serves process %d after the program's end", pid)
-			}
+			// The withdrawal empties the live set before it tells the endpoint
+			// to stop serving the process, so both are waited for.
+			eventually(t, "the withdrawal", func() bool { return len(b.Live()) == 0 && peerOf(b) == 0 })
 		})
 	}
 }
