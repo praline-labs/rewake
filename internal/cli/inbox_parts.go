@@ -235,7 +235,7 @@ func freezeLetter(asJSON bool, view messageView, stored inbox.Message) (receipt.
 // lockOperation holds a record for as long as the call's answer is wanted.
 // Every path that holds a record comes through here, and a tool call's
 // binding is written as soon as the record is held, before any step
-// (docs/mail-bridge-server.md#the-rules, rule 4): so a binding proven absent
+// (docs/archive-1.x/mail-bridge-server.md#the-rules, rule 4): so a binding proven absent
 // proves the call made no effect.
 func lockOperation(ctx *Context, site readSite, token string) (func(), error) {
 	wait := readerLockWait

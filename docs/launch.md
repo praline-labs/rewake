@@ -8,7 +8,7 @@ The common part of the wrapper:
 1. Check the shared state root and selected room directory. Run the mail tool's name
    check before anything is claimed, so a refusal leaves nothing behind; it decides
    whether the launch carries the tool, and why not when it does not
-   ([mail-bridge-launch.md](mail-bridge-launch.md#the-launch-in-order)). Under the room's
+   ([mail-bridge-launch.md](archive-1.x/mail-bridge-launch.md#the-launch-in-order)). Under the room's
    launch lock, choose the role and the name, only reading: a dead session record is
    removed only by the publication over it, under the name's lock. Then publish the
    session record (the harness pid is still empty). The lock is released before
@@ -103,7 +103,7 @@ rewake --general --name review --command my-claude claude
   whose server starts in the `-C` directory: a relative one would resolve there. rewake
   does not run the program to check it, and does not guess the harness from its name:
   wrappers are named anything. For Codex, `<wrapper> --version` does run once before the
-  claim, as the version read always does ([the harness version](mail-bridge-version.md)),
+  claim, as the version read always does ([the harness version](archive-1.x/mail-bridge-version.md)),
   through the wrapper like the other two processes; a wrapper that does not answer it
   produces the version note and an unknown version, which leaves the mail tool out. On
   Claude Code the version is read from the path of the `claude` on `PATH`, and the
@@ -170,11 +170,11 @@ to the adjacent private `.up.log` file. Server death terminates the TUI and refu
 pending mail as session ended.
 
 The adjacent `.gateway.log` records bounded, payload-free connection-close reasons;
-see [startup transport diagnostics and limits](startup-transport.md).
+see [startup transport diagnostics and limits](archive-1.x/startup-transport.md).
 
 Once the app-server is up the wrapper also serves the run's control directory, polling
 it every 100 ms and carrying a main's `rewake compact` or `rewake interrupt` out through
-the gateway ([remote-control-codex.md](remote-control-codex.md)).
+the gateway ([remote-control-codex.md](archive-1.x/remote-control-codex.md)).
 
 The adapter initializes and closes a startup probe before starting the TUI; it
 never discovers or resumes a root. The gateway forwards the TUI connection. Explicit -c overrides and the generated developer_instructions are passed

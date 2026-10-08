@@ -92,7 +92,7 @@ const (
 
 // CallKey names one native call within its run: the hex SHA-256 of the
 // transport, the conversation and the call id. It is the name of the call's
-// binding (docs/mail-bridge-server.md#running-the-child), which the server
+// binding (docs/archive-1.x/mail-bridge-server.md#running-the-child), which the server
 // and the wrapper both derive from the ticket.
 func CallKey(transport, conversation, callID string) string {
 	sum := sha256.Sum256([]byte(transport + "\x00" + conversation + "\x00" + callID))

@@ -120,5 +120,5 @@ thread/status/changed via `thread_status.rs:223–251` and
 `outgoing_message.rs:737–746`, without a thread subscription. Name changes also
 broadcast thread/name/updated (:672), but are not guaranteed on resume. The former observer used metadata hints plus loaded-list polling. The integrated
 gateway instead sees the caller's request and matching reply, so no discovery or
-observer resume is required; see [gateway selection](gateway.md).
+observer resume is required; see [gateway selection](archive-1.x/gateway.md).
 

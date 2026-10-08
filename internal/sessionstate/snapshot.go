@@ -57,7 +57,7 @@ type Snapshot struct {
 }
 
 // DeliveryHold is why deliveries wait, and what the person can do about it
-// (docs/delivery-conversation.md#when-the-selected-conversation-is-not-the-launchs).
+// (docs/archive-1.x/delivery-conversation.md#when-the-selected-conversation-is-not-the-launchs).
 type DeliveryHold struct {
 	Reason string `json:"reason"`
 	// Expected is the conversation the launch asked to resume, empty when it

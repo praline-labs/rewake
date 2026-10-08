@@ -2,7 +2,7 @@
 
 What proves `rewake compact` and `rewake interrupt`, part by part: the design is in
 [remote-control.md](remote-control.md), the Codex side in
-[remote-control-codex.md](remote-control-codex.md), and how the workflow cases are
+[remote-control-codex.md](archive-1.x/remote-control-codex.md), and how the workflow cases are
 built in [testing-plugin.md](testing-plugin.md#steering-a-session).
 
 - `internal/control/control_test.go` — the protocol: a done answer and the cleanup, the
@@ -167,7 +167,7 @@ built in [testing-plugin.md](testing-plugin.md#steering-a-session).
   server does: past the mark's start bound the hold lasts to the compaction's end and
   the server is never asked; past its running bound the task is refused, waits and goes
   after the end, and main's letter comes from the late end with its tokens; four product
-  mutants ([testing-plugin.md](testing-plugin.md#a-long-compaction-on-codex)).
+  mutants ([archive/1.x/codex](../archive/1.x/codex/README.md)).
   `internal/harness/codex/gateway/compact_hold_test.go` holds the same at the gateway,
   and `internal/wrap/compaction_letters_running_test.go` the letter waiting past an
   outcome of `started`.

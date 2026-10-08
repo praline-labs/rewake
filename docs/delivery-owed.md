@@ -88,7 +88,7 @@ A `finished` or `error` report in this run's own mailbox that names the id in
 conversation reports on what it took over — and so does a wait record that no longer
 names it; the record is cleared only once the report is written. A message whose wait a
 resumed run took over is followed in that run's records
-([delivery.md](delivery-conversation.md#a-resumed-conversation)), and listed as that run's. Settled messages are not listed.
+([delivery.md](archive-1.x/delivery-conversation.md#a-resumed-conversation)), and listed as that run's. Settled messages are not listed.
 
 A message read by a run that then ended, still named by its wait record, and delivered
 into a conversation is not lost yet: a resume of that conversation takes the wait over and

@@ -17,7 +17,7 @@ import (
 	"github.com/praline-labs/rewake/internal/proc"
 )
 
-// What the wrapper matches (docs/mail-bridge-server.md#what-the-wrapper-matches).
+// What the wrapper matches (docs/archive-1.x/mail-bridge-server.md#what-the-wrapper-matches).
 // The harness's own event records a call first or second — neither harness
 // orders the two — and the server's request waits for it, on its own
 // channel, holding nothing the observation needs. One observation gives one

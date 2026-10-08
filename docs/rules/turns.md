@@ -76,9 +76,7 @@ that they are checked like the rest ([stage3-tests.md](../v2/stage3-tests.md#how
   - `test/workflow/stopped_routing_test.go` `TestStoppedRouting`
   - `test/workflow/stopped_routing_test.go` `TestAStoppedSentToMainFails`
   - `internal/cli/error_report_test.go` `TestFailedTurnsReachEveryWaitingSender` — its hook leg goes in S9
-  - `internal/cli/error_report_test.go` `TestACodexNotifyReportsNothing` — the notify's case, goes in S8
   - `internal/cli/error_report_test.go` `TestUnclaimedFailuresReachMainAndMainKeepsItsOwn` — the hook's case, goes in S9
-  - `internal/cli/error_report_test.go` `TestEmptyCompletionAfterWorkReportsAnErrorWithoutText` — the notify's case, goes in S8
   - `internal/cli/neutral_end_test.go` `TestNeutralFailedEndsReachEveryWaitingSender`
   - `internal/cli/neutral_end_test.go` `TestNeutralEndsWithoutTheirScopeReportNothing`
   - `internal/cli/neutral_end_test.go` `TestNeutralUnclaimedFailuresReachMainAndMainKeepsItsOwn`

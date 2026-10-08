@@ -15,7 +15,7 @@ import (
 
 // A run that asked to resume a conversation keeps its mail closed until that
 // conversation is resumed or the person accepts the one selected
-// (docs/delivery-conversation.md). The snapshot cannot say so: it is published
+// (docs/archive-1.x/delivery-conversation.md). The snapshot cannot say so: it is published
 // on a tick and reads as "no hold" when missing. So the wrapper writes this
 // record itself, before the terminal starts, and rewrites it before the hold
 // ends; rewake inbox refuses while it says the mail is held, and when it

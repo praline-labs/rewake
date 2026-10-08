@@ -143,7 +143,7 @@ func mailboxStopped(dir, name string) error {
 // mailAdmitted refuses the mail of a run whose launch asked to resume a
 // conversation that is neither resumed nor replaced at the person's word: the
 // shell may be running in a conversation nobody chose
-// (docs/delivery-conversation.md). The wrapper's own record decides, written
+// (docs/archive-1.x/delivery-conversation.md). The wrapper's own record decides, written
 // before the terminal starts; the published snapshot only names the
 // conversations, since it is written on a tick and may not show the hold yet.
 func mailAdmitted(dir, name, epoch string) error {

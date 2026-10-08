@@ -18,7 +18,7 @@ to ask for.
 ## Which conversation a run continues
 
 Each delivery pins the conversation it went into before the task becomes readable
-(`inbox/<name>/threads/<id>`, [delivery.md](delivery-conversation.md#a-resumed-conversation)). A new
+(`inbox/<name>/threads/<id>`, [delivery.md](archive-1.x/delivery-conversation.md#a-resumed-conversation)). A new
 run learns its own conversation from its harness: on Claude Code from the session's
 telemetry (`session_id`, which `--resume` keeps), on Codex from the thread the terminal
 started or resumed. A conversation is a link between runs only through those two; the
@@ -27,7 +27,7 @@ nothing.
 
 A run that continues a conversation takes over what the runs before it owe there: their
 waits for tasks delivered into it move to the new run, which reports on them at its next
-turn end ([delivery.md](delivery-conversation.md#a-resumed-conversation)). Without that, the task
+turn end ([delivery.md](archive-1.x/delivery-conversation.md#a-resumed-conversation)). Without that, the task
 would be closed by the resume and its grant could never end by a report. A wait is taken
 over within a day of the task being read; past that the task is lost, its sender reads so, and
 main lets its grant go ([delivery-owed.md](delivery-owed.md#what-others-owe-you-rewake-inbox---awaited)).

@@ -13,45 +13,47 @@ and controls, and the roadmap records named below for how each piece was built.
 
 | Tier | Runs | Proves | Does not prove | Costs |
 | --- | --- | --- | --- | --- |
-| The five checks | formatting, vet, two linters, `go test -race -shuffle=on ./...` | unit invariants: parsing, publishing races, liveness, inbox order and expiry, the owned server's framing on a fake socket, the map of `docs/`; the suite's own classifier and summarizer | anything end to end: every workflow scenario skips itself | about half an hour at `-p 4` on an idle machine, nearly all of it the three `-race` test runs; no network, no harness, no container |
-| Workflow suite (**F**) | a built rewake end to end against a fixture of each harness, in two columns, with negative controls: some mutate the product, the others change the fixture's world | that the shared service code delivers, groups, steers and reports as each scenario claims, and that each claim can fail | that the real harness parses, renders or behaves as its fixture does | about three minutes — 3m06s and 3m10s on September 25, 2026, 102 cases six at a time, against 19m22s one after another the same evening; 2m23s eight at a time. The longest cases are `claude-steered`'s controls, about 30 s each. It fits in `go test`'s default ten minutes; the longer `-timeout` of the documented commands is for a first download of a named Codex version (below); no network; under `REWAKE_WORKFLOW=1` the schema case also runs a real Codex (next row) |
-| Schema of a Codex version | the installed Codex, or a named version fetched into a cache and run in a container, generating its protocol schema; every message the fixture sends is checked against it | that the fixture speaks the shape that version accepts: no missing required field, no field it does not have, no delivery it refuses and the fixture accepts | behaviour: order of events, readiness, reactions to a refusal — a schema has none of that | seconds from the cache; a first download is 150 MB and about half a minute |
+| The five checks | formatting, vet, two linters, `go test -race -shuffle=on ./...` | unit invariants: parsing, publishing races, liveness, inbox order and expiry, the context endpoint's framing, the map of `docs/`; the suite's own classifier and summarizer | anything end to end: every workflow scenario skips itself | about half an hour at `-p 4` on an idle machine, nearly all of it the three `-race` test runs; no network, no harness, no container |
+| Workflow suite (**F**) | a built rewake end to end against a fixture of each harness, in two columns, with negative controls: some mutate the product, the others change the fixture's world | that the shared service code delivers, groups, steers and reports as each scenario claims, and that each claim can fail | that the real harness parses, renders or behaves as its fixture does | about three minutes — 3m06s and 3m10s on September 25, 2026, 102 cases six at a time, against 19m22s one after another the same evening; 2m23s eight at a time. The longest cases are `claude-steered`'s controls, about 30 s each. It fits in `go test`'s default ten minutes, which the documented commands name; no network |
 
 Two tiers are planned and not built. **P**, a real harness of a named version against a
 local responder instead of a model provider, would catch a change of behaviour that a
-schema cannot see; the fetch and the container it needs exist already. **M**, a real
-model through a real harness, paid, would show that a model actually reads its mail and
-acts on it; it runs on the cheapest model only, as [check-runner.md](check-runner.md)
-requires. The full ladder, including the owner's own eye on a terminal, is in
+schema cannot see; the fetch and the container it would need left with
+`tools/harnesscache` in S8 and are kept in
+[archive/1.x/codex](../archive/1.x/codex/README.md). **M**, a real model through a real
+harness, paid, would show that a model actually reads its mail and acts on it; it runs on
+the cheapest model only, as [check-runner.md](check-runner.md) requires. The full ladder,
+including the owner's own eye on a terminal, is in
 [check-runner.md](check-runner.md#evidence-tiers-and-matrix).
 
 ### The fault build inside the five checks
 
-The mail tool's server tests (`internal/bridge/server`) build rewake themselves, with the
-`rewakefault` tag, while the five checks run. A binary of that build reads `REWAKE_FAULT` (`internal/state/fault_build.go`) and logs, ends, fails or
-holds its process at a durable step, or leaves behind a process that keeps its output
-open past a kill, so the fault tests take their cases from the logged
-steps of clean runs rather than from a list kept by hand
-([mail-bridge-checks.md](mail-bridge-checks.md#how-the-checks-are-built)). A release build
-never reads the variable.
+The neutral rig's tests (`test/toolrig`) build rewake themselves, with the `rewakefault`
+tag, while the five checks run. A binary of that build reads `REWAKE_FAULT`
+(`internal/state/fault_build.go`) and logs, ends, fails or holds its process at a durable
+step, or leaves behind a process that keeps its output open past a kill, so the fault
+tests take their cases from the logged steps of clean runs rather than from a list kept
+by hand ([mail-bridge-checks.md](mail-bridge-checks.md#how-the-checks-are-built)). A
+release build never reads the variable.
 
 ### Three columns, three meanings
 
-Shared scenarios run across the three columns; adapter-specific scenarios and controls
-run on the columns they exercise. The columns: a fixture that plays a Codex app-server, one
-that plays a Claude Code session, and the fixture harness — a harness of its own, built
+Since S8, October 8, 2026, there are two: the Codex column left with its adapter. Shared
+scenarios run across the columns; adapter-specific scenarios and controls run on the
+columns they exercise. The columns: a fixture that plays a Claude Code session, and the
+fixture harness — a harness of its own, built
 only under the `rewakefixture` tag, which the suite's rewake is built with
 ([stage3-fixture.md](v2/stage3-fixture.md)). **The fixture column is the regression
 gate** since S6 ([stage3-fixture.md](v2/stage3-fixture.md#the-gate-across-the-steps)):
 a red there blocks, and an absent capability there is red too, because a gate that
 stopped checking must not look green. It proves the core through the adapter contract,
-and its program can withhold each capability. **Codex and Claude Code are search
-columns** until their columns go: a red there is a finding to investigate, and an
+and its program can withhold each capability. **Claude Code is a search
+column** until its column goes: a red there is a finding to investigate, and an
 absent capability is reported as `unsupported`, by name. The gate is a field of the
 column (`gate` in `test/workflow/column_test.go`), set on exactly one; the gate declares
 every registered capability but those its exception table names, each with its reason
-and the step that retires it — today one, conversation selection, Codex's own, until S8.
-An observation of selection is recorded only on a column that offers it. The summary
+and the step that retires it — since S8 none: conversation selection, Codex's own, left
+with it. The summary
 names the column of every result and promotes none; ending the asymmetry is the owner's
 decision, recorded in [harness-features.md](harness-features.md).
 
@@ -81,14 +83,6 @@ suite's binary runs seven of the product's waits shorter than a release.
 leaves its neighbours alone, and which values the suite does not run at their real
 length.
 
-**`REWAKE_CODEX_VERSION`** takes an exact version, `latest` or `installed`, and makes
-the schema case use that Codex, fetched once into the harness cache before any case
-starts and run in a container. The fetch gets half of `-timeout`, at most ten minutes,
-which is why a first run of a new version raises `-timeout`: a slow first download
-takes up to ten minutes of it, and the suite about three more.
-Docker is needed only when a version is named; without it the run is red with the
-reason. Run it before updating Codex, as described below.
-
 **`REWAKE_WORKFLOW_CROSS=1`** with `-run Crosswise` turns on the crosswise checks: each
 control's observations are run again in every other control's world — under the other
 product mutants and under the other fixture switches — and each must stand, so a control
@@ -99,62 +93,29 @@ against 7m02s one pair after another. Run it after adding or changing a control.
 `REWAKE_WORKFLOW_SELFCHECK` is not for people: the suite sets it on a child of itself
 to prove that a scenario missing an observation turns the run red.
 
-### The harness cache
-
-`tools/harnesscache` fetches a harness version from the npm registry once, checks it
-against the registry's sha512 before unpacking it, and keeps it in
-`~/.cache/rewake/harness/<harness>/<version>/` (`REWAKE_HARNESS_CACHE` moves it). The
-suite reads the same cache. Nothing is ever removed automatically.
-
-```bash
-go run ./tools/harnesscache fetch codex 0.156.0     # prints the executable's path
-go run ./tools/harnesscache run codex 0.156.0 -- --version
-go run ./tools/harnesscache list
-go run ./tools/harnesscache remove codex <version>
-```
-
-`run` starts the version in a fresh container: read-only root and harness, a private
-HOME on tmpfs, no capabilities, no network unless `--network` names one, and at most one
-writable directory, given with `--write` and mounted at `/out`. Codex and Claude Code
-both work; `--help` lists flags and exit codes.
-
 ### The stand-in API
 
 `tools/standin` answers for the model API a Claude Code harness talks to, so a live
 check of the mail tool can run in a scratch configuration with no login. The harness is
 pointed at it by its base-URL variable; when a request offers the tool, the reply calls
-it (`-words`, `-calls` times in one turn), which runs the harness's PreToolUse hook, our
-MCP server and PostToolUse, and the tool's result is answered with text quoting its
-start. `-delay` holds each answer, `-log` appends one JSON line per request without
+it (`-words`, `-calls` times in one turn), and the tool's result is answered with text
+quoting its start. `-delay` holds each answer, `-log` appends one JSON line per request without
 headers or message text. Its first stdout line is `listening <addr>`; `go run
-./tools/standin -h` prints the rest. It serves the live checks of stage 3
-([mail-bridge-live.md](mail-bridge-live.md)); no test of the five checks starts a harness
-against it.
+./tools/standin -h` prints the rest. It served the live checks of stage 3
+([mail-bridge-live.md](mail-bridge-live.md)), whose MCP server left in S8; it stays for
+the live checks of a tool transport an adapter offers again, and no test of the five
+checks starts a harness against it.
 
 ## Checking a new harness version before updating
 
-1. Run the suite with `REWAKE_CODEX_VERSION=<version>`, the command in
-   [AGENTS.md](../AGENTS.md#checks). The first run downloads
-   it; the `against` line says `downloaded this run`, and every later run says
-   `from the cache without a download`.
-2. **Green** means every message the fixture sends matches the schema that version
-   generates, and the fixture accepts no delivery that schema refuses. It says nothing
-   about behaviour — the same messages in a different order, a different moment of
-   readiness, a different answer to a refusal would all still be green. Codex 0.157.1
-   was green on the schema and still undeliverable: its terminal sent a field null
-   that the gateway recognized it by. So the fixture's terminal speaks each form a
-   version was seen to send (`RW_SHIM_TUI_SHAPE`), and the suite delivers through it.
-3. **Red on the schema case** names the message and the field: the version requires a
-   field the fixture leaves out, dropped one it sends, or changed a type. Look at what
-   changed in the schema before touching the adapter; the shim is fixed to match the
-   real shape, never loosened to pass.
-4. **Red with `run FAIL`** is not a verdict on the version: it could not be resolved,
-   fetched or run, and the line says why.
-5. To see what changed beyond what the fixture uses, generate both schemas with
-   `harnesscache run codex <version> --write <dir> -- app-server generate-json-schema
-   --experimental --out /out` and compare them. The record of the first such comparison,
-   0.155.1 against 0.156.0, is in
-   [2026-09-23-harness-versions.md](roadmap/2026-09-23-harness-versions.md).
+Until S8, October 8, 2026, the suite checked a Codex version before an update: it fetched
+the named version into a harness cache, generated its protocol schema in a container and
+held the fixture's messages to it. That check, `REWAKE_CODEX_VERSION` and
+`tools/harnesscache` left with the Codex adapter and are kept in
+[archive/1.x/codex](../archive/1.x/codex/README.md). Claude Code's launch reads the
+installed version before the claim and refuses one below its minimum; a new version's
+behaviour is checked live, as [research.md](research.md) records. Stage 5 brings a
+version check back with the Codex adapter.
 
 ## Reading a result
 
@@ -164,7 +125,7 @@ one; build the binary to keep them apart):
 
 ```
 workflow  24 scenarios, 36 cases: 33 pass, 3 unsupported   2m0.7s
-against   schema from codex 0.156.0 (…); scenarios against the fixture in every column
+against   scenarios against the suite's own harness programs in every column
           unsupported  mid-turn/claude  observes-mid-turn-arrival
 FAIL  batch-arrival/claude   fail
       fail        "the recipient can receive mail before the letters leave"
@@ -179,8 +140,7 @@ checked against. An `unsupported` line names the case, the column and the capabi
 lacks. A `FAIL` block names the case and column, each observation that did not pass
 with its detail, one evidence directory, and a `stderr` line for each session that
 printed to its standard error, at most four: the file and the last line in it.
-`run FAIL` is a failure of the run itself, such as a version that could not be
-fetched; `engine FAIL` means `go test` failed with no case to explain it, and the
+`run FAIL` is a failure of the run itself, such as a binary that could not be built; `engine FAIL` means `go test` failed with no case to explain it, and the
 failed tests are listed. `summary.json` holds all of it,
 every case and every observation, under `.rewake-checks/`, which git ignores.
 
@@ -234,13 +194,7 @@ broken, cannot judge — and a record that is unreadable or empty is "cannot jud
 
 **A fixture** is stricter than the harness it plays, never looser: a fixture that
 accepts what the harness refuses lets a scenario pass on a product the harness would
-reject. The Codex fixture builds every message through the constructors the schema case
-reads (`turnReply`, `turnStartedEvent`, `threadStatusChangedEvent` and their
-neighbours), so a message the scenarios send cannot escape the shape check. The
-requests its terminal sends go the other way: the 0.157.1 start and resume from
-`terminalLifecycle` must match the schema's `ThreadStartParams` and `ThreadResumeParams`
-and be served by the shim, and its answer to the resume's `thread/goal/get` must match
-`ThreadGoalGetResponse`.
+reject.
 
 **A harness column** is a `column` value with its capabilities and a fixture; the
 scenarios do not change. The fixture harness's program is `test/workflow/fixtureshim_test.go`

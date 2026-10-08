@@ -9,7 +9,7 @@ and, for Codex, [research-protocol.md](research-protocol.md#compaction-and-inter
 
 Built on September 24, 2026 for Claude Code, with unit and module tests and a workflow
 case, and the same day for Codex (part B), where the wrapper serves the requests itself
-([remote-control-codex.md](remote-control-codex.md)).
+([remote-control-codex.md](archive-1.x/remote-control-codex.md)).
 
 **Accepted live** on September 24, 2026, on Claude Code 2.1.280 with the installed
 rewake built from `e65b865`, in the owner's sessions started through their launch
@@ -257,16 +257,12 @@ longer the previous one. A person's Esc sets no mark.
 
 ## On Codex
 
-The wrapper serves the directory itself, through the gateway that holds the
-app-server connection: [remote-control-codex.md](remote-control-codex.md).
-
-The same directory carries one action that is not main's: `accept`, which `rewake accept
-<session> <conversation>` writes from the person's shell to let a Codex session deliver
-into a conversation its launch did not ask for. It is answered `done`, or `refused` with
-`nothing held`, `no conversation selected` or `not the selected conversation` — the last
-naming the one selected now — or `failed` when the wrapper could not record that the
-session's mail may be read, which keeps the hold; the directory being the run's own is what binds the
-acceptance to that run ([delivery-conversation.md](delivery-conversation.md)).
+In 1.x the wrapper served the directory itself, through the gateway that held the
+app-server connection ([remote-control-codex.md](archive-1.x/remote-control-codex.md)),
+and the directory carried one action that was not main's, `accept`
+([delivery-conversation.md](archive-1.x/delivery-conversation.md)). Both left with the
+Codex adapter in S8; no action of the directory is served by a harness of this build
+other than through the plugin.
 
 ## Known limits
 

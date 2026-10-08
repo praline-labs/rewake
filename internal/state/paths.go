@@ -68,7 +68,7 @@ func ObservationPath(dir, name, run string) string {
 }
 
 // ContextPath is where a run's wrapper answers the mail tool's server, its
-// children and its hooks (docs/mail-bridge-server.md#who-calls): beside the
+// children and its hooks (docs/archive-1.x/mail-bridge-server.md#who-calls): beside the
 // observation socket, one per run, and short enough to bind.
 func ContextPath(dir, name, run string) string {
 	path := filepath.Join(dir, socketsDir, name+"."+run+".ctx")

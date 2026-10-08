@@ -107,12 +107,6 @@ everything else.
   evidence, claims against withdrawal, the receipt journal behind notify and pending,
   `inbox --next` and `rewake retry` in either channel, and the readings of the
   specification it chose. Open it when a read in parts, a receipt or a retry is in question.
-- [mail-bridge-server.md](mail-bridge-server.md) — the server of that tool, built and
-  started by a launch only once stage 3's gates allow: its eleven rules and where each lives in the code, how a
-  call is matched to a native observation and given a ticket, the call's binding to its
-  operation, the child it runs, the bounded answer, the failure points of a call and the
-  channel record left to stage 3. Open it before changing the server or the context
-  endpoint.
 - [mail-bridge-transport.md](mail-bridge-transport.md) — the tool carried by a harness's
   own process, from S7: the descriptors the CLI builds, what the launch offers the
   backend, and a call from the harness's report through the endpoint's peer check, ticket,
@@ -126,38 +120,16 @@ everything else.
   fault test from logged steps, the generated orders, the fault build's holds), the live
   checks left to stage 3, and what the reviews of the rules found. Open it before
   changing those tests or reviewing the stage.
-- [mail-bridge-launch.md](mail-bridge-launch.md) — stage 3 of that design, built, live
-  checks open:
-  how each harness's launch injects the server and approves only its tool, which sources
-  of a server named `rewake` each check covers before the run is published and what is
-  done where coverage is unknown, what a diagnostic may show, how the person's
-  configuration is proven untouched, the gates with the action each takes while open, and
-  `REWAKE_GATES_ASSUMED` for the live checks. Open it before changing the injection.
-- [mail-bridge-launch-codex.md](mail-bridge-launch-codex.md) — the Codex part of stage 3:
-  the `-c` values the launch adds, the name check by a separate app-server before the
-  claim, the injection check at start and at every thread with its step 0 for the thread
-  request itself (the terminal's keys, the trust rule), and the output limit. Open it
-  before changing the Codex injection or the gateway's thread check.
-- [mail-bridge-version.md](mail-bridge-version.md) — the harness version a launch takes
-  for the closed gates and the L5 bounds: when it is taken, from where without running
-  anything extra (Codex's one `--version` read, Claude Code's install path), what an
-  unknown one means, and a read whose cleanup failed; built, with how the code reads
-  it. Open it before changing `gates_version.go` or how a launch chooses the tool.
 - [mail-bridge-channel.md](mail-bridge-channel.md) — the rest of stage 3, built: the
   run's mail channel as two observations, tool and shell, and a policy block, with
   connections, generations, the failure interval and the hello timer, the derived
   display, the notices with their suppression and publication identity, and the
-  briefing's sentence, and how the code reads it. Open it before changing the channel
-  record (`internal/channel`) or its notices.
-- [mail-bridge-channel-codex.md](mail-bridge-channel-codex.md) — the channel's
-  conversations on Codex, where every thread runs its own server: which connections
-  serve the conversation, how a call's `_meta.threadId` binds one, and how selecting
-  another conversation moves the timer, held events and an open interval; built, with
-  the choices the code made. Open it before changing how the endpoint, the gateway's
-  selection steps or the keeper count Codex connections.
+  briefing's sentence, and how the code reads it; cut to the neutral alphabet in S8, with
+  no launch keeping the record until a harness offers a tool transport again. Open it
+  before changing the channel record (`internal/channel`) or its notices.
 - [mail-bridge-channel-failures.md](mail-bridge-channel-failures.md) — the channel's
   failure points, one row each, with what is proven, what is unknown and what rewake
-  does, including the sequences of Codex's conversation connections. Open it when
+  does, on the neutral alphabet since S8. Open it when
   writing or checking a channel test against the text.
 - [mail-bridge-live.md](mail-bridge-live.md) — the plan of stage 3's live checks: scratch
   project folders in the owner's own logins, where each case sets its conditions, how
@@ -177,39 +149,18 @@ everything else.
   list in code names them; the reading of the whole mailbox and of every effect's marks
   before any effect, the test that keeps the list complete, and the stop on record and
   how it goes. Open it before a writer adds a path under a mailbox.
-- [delivery-conversation.md](delivery-conversation.md) — why a Codex message stays
-  pending in a conversation the launch did not ask for: the launch's intent, `rewake
-  accept`, the record that keeps the worker's inbox closed meanwhile, and how the sender,
-  main and the person at the terminal are told; and why a worker whose sandbox closes
-  rewake's state directory is not handled there yet; and, for either harness, how a
-  resumed run takes over the waits of the earlier runs in its conversation. Open it when a
-  Codex delivery waits after a resume, a worker cannot read its mail, or a resumed run's
-  report does not settle what an earlier run read.
 - [turn-outcomes.md](turn-outcomes.md) — the turn ends that are not an ordinary report:
   a failed turn, a keyboard stop, and a turn end marked with `rewake pending`, which tells
   the waiters the work is still going and keeps their tasks owed, with the confirmation
   Claude Code's Stop hook asks once after it when a later turn ends unmarked; including the rule that
   a failed or interrupted turn is woken only by new mail. Open it when a report is an
   error, stopped or pending, or when one of them settled or left open the wrong thing.
-- [gateway.md](gateway.md) — the Codex delivery gateway from the inside: how the primary
-  terminal connection and its conversation are selected and reserved before mail goes
-  in, the ledger of admitted work, report publication, forks and side conversations, and
-  the regression and acceptance coverage. Open it only when working on the gateway; it
-  is dense with evidence, not an overview.
 - [inbox-groups.md](inbox-groups.md) — the contract for grouped incoming mail: the
   session table's columns, `--peek` and `--message <id>`, the 150 ms window that fixes a
   group's members — and, since September 25, the longer wait of notifies and reports for
   company, detailed in delivery.md — start-or-steer dispatch without waiting for a finished turn, and the
   group digest the notice carries. Open it when grouping, the table or selected reads
   are in question.
-- [native-mailbox.md](native-mailbox.md) — how the Codex adapter delivers a notice as the
-  output of a `rewake_mailbox_notice` tool call in a turn start: its JSON, the briefing
-  text that explains it, and the workspace-write permission it needs. Open it when a
-  Codex notice arrives wrong or not at all.
-- [native-mailbox-ui.md](native-mailbox-ui.md) — the arrival row a Codex terminal shows
-  (`rewake notice --display-only`): where it is inserted, why it bypasses admission and
-  telemetry, that it is not persisted, and its installed acceptance. Open it for what the
-  person at a Codex terminal sees when mail arrives.
 - [report-publication.md](report-publication.md) — how a finished turn's report is
   captured and published: the completion handler's capture and publish steps, the shared
   sequence word a reader snapshots without a lock, receipt keys that tell a stop from a
@@ -277,23 +228,6 @@ everything else.
   `rewake interrupt`, file by file: the control protocol, the commands, the module under
   node, the collector, main's letters, the Codex gateway, and the workflow cases with
   their mutants. Open it to find what proves a part before changing it.
-- [remote-control-codex.md](remote-control-codex.md) — how a Codex session serves those
-  requests through its gateway: the three safety properties, when a compaction is
-  refused as busy, uncertain or as nothing to compact, the open operations kept across
-  reconnects, the mark that ties main's compaction to its turn and what happens to it
-  when the request fails, the terminal's `/compact` answered while main's runs, and the
-  interrupt naming main. Open it when a Codex compaction or interrupt from main
-  misbehaves.
-- [remote-control-codex-limits.md](remote-control-codex-limits.md) — the known limits of
-  that service: a goal's turn compacting before main's compaction, a reply after its
-  turn's end, a request left unanswered, a compaction lost sight of or ending unseen,
-  work accepted and lost, a running turn whose id is unknown. Open it when main's
-  compaction is refused as uncertain, or its answer or letter looks wrong.
-- [codex-publication.md](codex-publication.md) — which Codex turn outcomes reach the
-  waiters: proof of work, the advisory report of a turn without it or of a run that
-  passed unseen, a compaction's turn reporting nothing, and why no outcome is dropped
-  and no compaction settles a task. Open it when a Codex report is missing, advisory
-  when it should settle, or settles when it should not.
 - [session-activity.md](session-activity.md) — extends session-state: the activity labels
   and how fresh they must be, compaction notices, and how a worker's departure or
   replacement is detected and announced to main, with owner-run acceptance. Open it when
@@ -473,10 +407,6 @@ the newer document says so.
   installed acceptance of the arrival row: two prototype rounds, its promotion into the
   adapter, the binary's hash, and the quoted observations, with the limit that the row is
   transient.
-- [startup-transport.md](startup-transport.md) — the Codex transport's startup failures
-  and their repair: a request queue that overflowed in startup bursts, a message size
-  limit hit later, the sizes chosen and the live acceptance. Open it for why those limits
-  are what they are.
 - [server-observation.md](server-observation.md) — the observer approach to reading turn
   outcomes that preceded the gateway: subscription versus identity, a race after turn
   start and the completion grace. The gateway replaced it, as the file says.

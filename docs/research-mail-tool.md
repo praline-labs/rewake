@@ -1,7 +1,7 @@
 # The mail tool on a running harness
 
 What each harness does with rewake's mail tool — the `rewake` MCP server the launch
-injects ([mail-bridge-launch.md](mail-bridge-launch.md)) — as the live checks of
+injects ([mail-bridge-launch.md](archive-1.x/mail-bridge-launch.md)) — as the live checks of
 October 4, 2026 found it ([mail-bridge-live.md](mail-bridge-live.md#the-run-of-october-4-2026)).
 Split from [research.md](research.md) and [research-codex.md](research-codex.md) by
 subject: everything about the tool's transport on both harnesses is here. Versions:

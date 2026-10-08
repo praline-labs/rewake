@@ -9,7 +9,7 @@ import (
 	"github.com/praline-labs/rewake/internal/bridge"
 )
 
-// The per-call limits (docs/mail-bridge-launch.md#claude-code, rule 5): every
+// The per-call limits (docs/archive-1.x/mail-bridge-launch.md#claude-code, rule 5): every
 // short string over the characters a timeout might be written in, judged by an
 // oracle that reads numbers without the check's parser.
 
@@ -120,7 +120,7 @@ func ptr(value string) *string { return &value }
 func TestAReadIsAcknowledgedOnlyOnProvenAgreeingDefaultLimits(t *testing.T) {
 	space := limitsSpace()
 	cases, allowed := 0, 0
-	// The bound of 2.1.284 (docs/mail-bridge-version.md), or none.
+	// The bound of 2.1.284 (docs/archive-1.x/mail-bridge-version.md), or none.
 	whole := map[string]bool{"30000": true, "7000": true, "2048": true}
 	for _, bound := range []int64{0, 2048} {
 		for _, proven := range []bool{false, true} {

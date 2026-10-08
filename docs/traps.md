@@ -321,7 +321,7 @@ with `ActiveTurnNotSteerable { turn_kind: Compact }`, and the task was `failed` 
 finished half a minute later. Since September 26, 2026 a compaction seen running holds
 deliveries up to 10 minutes, that refusal leaves the message `pending` to go after the
 end, and a compaction outliving the wait is reported by its end
-([remote-control-codex.md](remote-control-codex.md)). A running wrapper built before
+([remote-control-codex.md](archive-1.x/remote-control-codex.md)). A running wrapper built before
 that day still does the old thing: send the task again once `rewake list` shows the
 compaction counted.
 
@@ -337,11 +337,12 @@ launch's conversation: a task sent then stays `pending`, `rewake send` exits 3 n
 expected and the selected conversation, main is told once, and the terminal shows a
 warning. Resume the intended conversation with `/resume` once the other program has let
 it go, or accept the selected one from a shell outside any session with `rewake accept
-<session> <conversation>` ([delivery-conversation.md](delivery-conversation.md)). A
+<session> <conversation>` ([delivery-conversation.md](archive-1.x/delivery-conversation.md)). A
 wrapper built before that day still delivers into whatever the terminal selected. A
 conversation whose sandbox closes rewake's state directory still takes the notice and
 cannot read the mail: making the mail independent of the sandbox is the next change
-([work-queue.md](work-queue.md#now-after-100)).
+([work-queue.md](work-queue.md#now-after-100)). Codex and `rewake accept` left the
+product in S8 (October 8, 2026); this trap applies to 1.x builds only.
 
 *September 29, 2026.*
 
@@ -352,7 +353,7 @@ The session registers and the terminal works, but `rewake send` refuses with
 first launch, `/new`, `/resume` and `codex resume <id>` alike. Codex 0.157.1 sends
 `runtimeWorkspaceRoots: null` in remote mode, and the gateway recognized the terminal's
 start and resume by those roots. Since September 26, 2026 its configuration's
-`web_search` marks them instead ([gateway.md](gateway.md#compatibility-and-limits)); a
+`web_search` marks them instead ([gateway.md](archive-1.x/gateway.md#compatibility-and-limits)); a
 wrapper built before that day stays unavailable on 0.157.1 — run it on 0.155.1.
 
 *September 26, 2026.*

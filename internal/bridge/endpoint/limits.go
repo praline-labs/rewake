@@ -7,7 +7,7 @@ import (
 	"github.com/praline-labs/rewake/internal/bridge"
 )
 
-// The limits of one Claude Code call (docs/mail-bridge-launch.md#claude-code):
+// The limits of one Claude Code call (docs/archive-1.x/mail-bridge-launch.md#claude-code):
 // the hook sends the raw MCP_TOOL_TIMEOUT and MAX_MCP_OUTPUT_TOKENS of its own
 // environment with each observation, since which value the harness applies
 // to a call is gate G8, not the launch's environment.
@@ -62,7 +62,7 @@ func callSpan(limits *HookLimits) (time.Duration, string) {
 // the hooks' two snapshots agree, and the output limit is the default probe
 // 2 calibrated or a whole number at or above the bound L5 calibrated for the
 // launch's version. Without a bound any value counts as lowered
-// (docs/mail-bridge-version.md).
+// (docs/archive-1.x/mail-bridge-version.md).
 func acknowledges(pre, post *HookLimits, bound int64) bool {
 	if pre == nil || post == nil {
 		return false

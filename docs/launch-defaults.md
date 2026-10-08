@@ -16,8 +16,6 @@ models the same way nor take the reasoning effort the same way:
 
 | Variable | What it sets |
 | --- | --- |
-| `REWAKE_CODEX_MODEL` | the model for a Codex launch |
-| `REWAKE_CODEX_EFFORT` | its reasoning effort |
 | `REWAKE_CLAUDE_MODEL` | the model for a Claude Code launch |
 | `REWAKE_CLAUDE_EFFORT` | its reasoning effort |
 

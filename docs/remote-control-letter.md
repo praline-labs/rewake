@@ -3,7 +3,7 @@
 How the outcome of a compaction main asked for with `rewake compact` reaches main after
 the command has ended. The commands, the control directory and each harness's served
 side are in [remote-control.md](remote-control.md); the Codex side in
-[remote-control-codex.md](remote-control-codex.md); the tests in
+[remote-control-codex.md](archive-1.x/remote-control-codex.md); the tests in
 [remote-control-tests.md](remote-control-tests.md).
 
 When a compaction the command answered `started`, `requested` or an open `failed` — one

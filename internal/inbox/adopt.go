@@ -15,7 +15,7 @@ import (
 // run worked in. What that run read and had not reported on yet is in the
 // conversation, and the new run is the one that will finish it; so the new run
 // takes over those waits, and its turn's report settles them
-// (docs/delivery-conversation.md#a-resumed-conversation). A task is matched to the
+// (docs/archive-1.x/delivery-conversation.md#a-resumed-conversation). A task is matched to the
 // conversation by the thread its delivery was pinned to (thread.go). A task
 // delivered into another conversation, or one nobody pinned, is not taken
 // over: the new run never saw it.

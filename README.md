@@ -2,10 +2,14 @@
 
 Let the coding agents running on your machine message each other.
 
-You have several Claude Code and Codex sessions open, each in its own terminal, and
-none of them knows the others exist. With rewake, one session hands out work, the
+You have several Claude Code sessions open, each in its own terminal, and none of them
+knows the others exist. With rewake, one session hands out work, the
 others take it, and their reports come back by themselves. A session that sits idle
 wakes up when mail arrives.
+
+This branch is rewake 2.0 in the making. Codex sessions took part in 1.x; their adapter
+left the product while the core is rebuilt and returns, designed afresh, in a later
+stage. Until then Claude Code is the one harness rewake launches.
 
 ```bash
 npm install -g @praline-labs/rewake
@@ -14,30 +18,29 @@ rewake guide
 
 ## Quick start
 
-Install and log in to Claude Code or Codex as usual. Then start each session through
+Install and log in to Claude Code as usual. Then start each session through
 rewake, from its own terminal:
 
 ```bash
 rewake --main --name lead claude   # terminal 1: lead-claude hands out work
-rewake --write codex               # terminal 2: write-codex takes it
+rewake --write claude              # terminal 2: write-claude takes it
 ```
 
 Each agent is briefed at launch and told to run `rewake guide` on its first task, so
 you talk to it in plain words. In lead-claude, type:
 
-> Ask write-codex to run the test suite and tell me what fails.
+> Ask write-claude to run the test suite and tell me what fails.
 
 Here is what happens:
 
-1. lead-claude runs `rewake send write-codex "run the test suite and report what fails"`.
-2. write-codex is idle. It wakes with a line like `Rewake: lead-claude task, 1 new message`,
+1. lead-claude runs `rewake send write-claude "run the test suite and report what fails"`.
+2. write-claude is idle. It wakes with a line like `Rewake: lead-claude task, 1 new message`,
    and reads the task with `rewake inbox`.
-3. write-codex does the work and ends its turn. Its final message goes back to
-   lead-claude as `Rewake: write-codex finished`, with the report.
+3. write-claude does the work and ends its turn. Its final message goes back to
+   lead-claude as `Rewake: write-claude finished`, with the report.
 
 Nobody copies text between windows or reminds a worker to reply. Run `rewake list` in
-any terminal to see who is up. Either harness can take either role: `rewake --write claude`
-works the same way.
+any terminal to see who is up.
 
 ## What it can do
 
@@ -70,7 +73,7 @@ works the same way.
 - **Rooms.** `--room <name>` keeps separate groups of sessions apart. Sessions see and
   address only their own room.
 - **Addresses.** A session's address is `<prefix>-<harness>`, for example `lead-claude`
-  or `write-codex`. The prefix is the role, or `--name`.
+  or `write-claude`. The prefix is the role, or `--name`.
 
 **Control from main**
 
@@ -84,9 +87,7 @@ works the same way.
 **Write grants**
 
 - **Directories.** `send --grant-dir <dir>` lets the recipient write a directory outside
-  its workspace while the task is open; when it is taken back depends on the harness.
-- **Git.** `send --grant-git` opens a Codex write session's Git metadata, so that it can
-  commit.
+  its workspace while the task is open, and takes it back with the report.
 
 **Parallel work**
 
@@ -106,35 +107,13 @@ works the same way.
 - **Built for scripts.** Every command takes `--json`, nothing ever prompts, and a
   refusal names the next thing to try.
 
-## Claude Code and Codex side by side
-
-| Capability | Claude Code | Codex |
-|---|---|---|
-| Wake an idle session | yes | yes |
-| Reach a session mid-turn | yes, at its next tool call | yes, steers the running turn |
-| Report when the turn ends, or fails | yes | yes |
-| Report a stop by Esc at the keyboard | yes | yes |
-| `pending`, `--question`, `withdraw`, `edit` | yes | yes |
-| Telemetry in main's `rewake list` | yes | yes |
-| `rewake compact` | yes, with a focus | partial: no focus |
-| `rewake interrupt` | yes | yes |
-| Directory grant | partial: spares prompts, no boundary | yes: a sandbox root, when sandboxed |
-| Git grant (`--grant-git`) | no: commits within its own permissions | yes, to a write session |
-| Worktree per session (`--worktree`) | yes | yes |
-| Follow the conversation across `/clear`, `/new` | yes, not yet seen live | yes |
-| Grants back after a resume | partial: `--resume <id>` or `--continue`, not `/resume` | yes |
-| Mail held when a resume ends up in another conversation | no | yes, until resumed or `rewake accept` |
-| Act as main that grants | yes | no: main, but cannot grant |
-
 ## How it works
 
-`rewake claude` or `rewake codex` starts the harness as a child process in your
+`rewake claude` starts the harness as a child process in your
 terminal, with the same flags, login and screen. rewake registers the session under
 a name. Messages are files in a private state directory. The session's wrapper
-announces each message through a channel the harness offers itself:
-
-- Claude Code: its session inbox socket.
-- Codex: a private app-server that starts or steers a turn.
+announces each message through a channel the harness offers itself: for Claude Code,
+its session inbox socket.
 
 When a turn ends, its final message goes back to whoever is waiting for it.
 
@@ -148,14 +127,13 @@ launch.
 | Command | What it does |
 |---|---|
 | `rewake`, `rewake guide` | The map: every command, the usual order of work, the exit codes |
-| `rewake claude [args]`, `rewake codex [args]` | Start a session; your arguments pass through to the harness |
+| `rewake claude [args]` | Start a session; your arguments pass through to the harness |
 | `rewake list` | The running sessions of this room |
 | `rewake send <name> <text>` | Send a task; add `--question` or `--notify` for the other kinds |
 | `rewake inbox` | Read waiting mail; `--peek` previews it, `--owed` shows what you owe, `--awaited` what others owe you |
 | `rewake pending <text>` | Mark a turn that ends before the work does |
 | `rewake withdraw <id>`, `rewake edit <id> <text>` | Take back or replace an unread message |
 | `rewake compact <name>`, `rewake interrupt <name>` | Steer a worker (main only) |
-| `rewake accept <name> <conversation>` | Let a resumed Codex session take mail in the conversation its terminal went on in (the person, outside any session) |
 | `rewake worktree ls \| land \| finish \| rm` | List, land, finish or remove the worktrees made for `--worktree` launches |
 | `rewake whoami` | Show this session's name, room and role |
 
@@ -166,9 +144,8 @@ launch.
 - Linux on x64 or arm64.
 - Node and npm, to install only. rewake is a single static binary and does not run on
   Node.
-- Claude Code or Codex, installed and logged in on its own. Tested with Claude Code
-  2.1.280 and Codex 0.155.1 and 0.157.1. A Codex launch prints a note when the
-  installed version differs from the one the transport was last observed with.
+- Claude Code 2.1.287 or newer, installed and logged in on its own; a launch reads the
+  installed version first and refuses an older one.
 
 ## Limits
 
@@ -178,8 +155,8 @@ launch.
 - A task sent from a plain shell gets no report back: there is no session to deliver it
   to. `--question` needs one too.
 - A directory grant on Claude Code spares prompts but is no boundary: an approved shell
-  command writes anywhere anyway. A Codex main cannot grant, and `--grant-git` reaches
-  only a Codex write session.
+  command writes anywhere anyway. No harness of this build takes `--grant-git`: a write
+  session commits within its own permissions.
 - rewake depends on each harness's behaviour, which can change with a new release.
   What was checked, and on which version, is recorded in `docs/research*.md`.
 

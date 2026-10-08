@@ -1,8 +1,8 @@
 # Message delivery
 
-Owned native announcements use the [mailbox output](native-mailbox.md);
+Owned native announcements use the [mailbox output](archive-1.x/native-mailbox.md);
 actual inbox reads still establish reporting obligations. A separate
-[transient display-only row](native-mailbox-ui.md) follows a successful ACK on the
+[transient display-only row](archive-1.x/native-mailbox-ui.md) follows a successful ACK on the
 primary TUI; losing that row never retries mail or changes its delivered status.
 
 [Back to the design](design.md).
@@ -233,13 +233,13 @@ the gateway's `Reserve` then returns `gateway.ErrCompacting`, which `Reserve` in
 lets that one through unwrapped, so the message stays `pending` and goes on a later
 pass, once the compaction has ended, the wrapper's wait for its end has, or its mark's bound
 has passed — 80 seconds for a compaction whose turn is not seen, 10 minutes for one
-seen running ([remote-control-codex.md](remote-control-codex.md)). A delivery the server
+seen running ([remote-control-codex.md](archive-1.x/remote-control-codex.md)). A delivery the server
 itself refuses for a compaction running (`ActiveTurnNotSteerable { turn_kind: Compact }`,
 September 26, 2026) is `gateway.ErrCompacting` too, and `DeliverChecked` makes it
 `pending`: the message goes once the compaction has ended. One more hold keeps a Codex
 message `pending` rather than fail it (September 29, 2026): a conversation the launch did
 not ask for, until it is resumed or the person accepts another
-([delivery-conversation.md](delivery-conversation.md)). Nothing else holds a delivery: an
+([delivery-conversation.md](archive-1.x/delivery-conversation.md)). Nothing else holds a delivery: an
 operation whose end the gateway has not read makes main's compaction refuse, not a
 delivery wait.
 
@@ -374,13 +374,13 @@ revoked or dropped ([grants.md](grants.md#taking-a-grant-back)).
 ### A resumed conversation
 
 How a cold resume takes over what an earlier run of the name read and had not reported
-on: [delivery-conversation.md](delivery-conversation.md#a-resumed-conversation).
+on: [delivery-conversation.md](archive-1.x/delivery-conversation.md#a-resumed-conversation).
 
 ### A conversation the launch did not ask for
 
-A Codex launch that resumes delivers only into the conversation it asked for until that
-one is resumed or the person runs `rewake accept`, and a worker there does not read its
-mail before. How, and who is told: [delivery-conversation.md](delivery-conversation.md).
+A Codex launch in 1.x held its mail for a conversation it had not asked for until the
+person ran `rewake accept`. Both left with the Codex adapter in S8:
+[delivery-conversation.md](archive-1.x/delivery-conversation.md).
 
 ### Owed reports
 

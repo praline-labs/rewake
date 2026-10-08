@@ -1,6 +1,6 @@
 # Building and checking the server of the mail tool
 
-The third part of the stage 2 design, beside [mail-bridge-server.md](mail-bridge-server.md)
+The third part of the stage 2 design, beside [mail-bridge-server.md](archive-1.x/mail-bridge-server.md)
 (the rules and one call) and [mail-bridge-turns.md](mail-bridge-turns.md) (after the
 answer): what the build changes in stage 1, how it is tested without a live harness,
 what stage 3 must still show live, and what the reviews of the rules found and what
@@ -42,8 +42,9 @@ code is built and accepted.
 
 ## Testing without a live harness
 
-- **A fake MCP client over stdio** drives the real `rewake bridge-serve`, built once per
-  test binary. It works against a real endpoint in a temporary state directory, with
+- **A fake MCP client over stdio** drove the real `rewake bridge-serve`, built once per
+  test binary, until the server left in S8; its tests are kept in
+  [archive/1.x/codex](../archive/1.x/codex/README.md). It works against a real endpoint in a temporary state directory, with
   observations fed by the test through each adapter's own parser.
 - **Recorded events from probe 2**, cut to the fields used, are the adapters' parser
   fixtures: Codex `item/started`, `item/completed` and `turn/completed`, and Claude Code
@@ -212,7 +213,7 @@ write failing needs Claude Code's prompt hook, and waits for stage 3.
   configuration at launch and at each admitted thread; Claude Code's
   `MAX_MCP_OUTPUT_TOKENS` and `MCP_TOOL_TIMEOUT` are taken per call by the hook, and
   acknowledge a read only once the gate G8 shows them to be the values the harness
-  applies ([mail-bridge-launch.md](mail-bridge-launch.md#claude-code)). A limit not proven safe
+  applies ([mail-bridge-launch.md](archive-1.x/mail-bridge-launch.md#claude-code)). A limit not proven safe
   leaves that read unacknowledged; the cap is never raised to fit.
 
 ## What the first review found

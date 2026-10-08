@@ -14,7 +14,7 @@ import (
 // heldDeliveries tells main once when a worker starts holding its deliveries,
 // and once more each time its reason, its conversations or its cause change: senders see
 // pending and nothing else, and only the person can clear an unintended
-// conversation (docs/delivery-conversation.md). A hold that ends says nothing — the mail
+// conversation (docs/archive-1.x/delivery-conversation.md). A hold that ends says nothing — the mail
 // simply goes — and one that comes back later is told again.
 type heldDeliveries struct {
 	// told is the hold last told, as holdKey renders it; empty while none.

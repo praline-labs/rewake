@@ -121,15 +121,10 @@ nothing lifts a stop without returning evidence.
   - `internal/cli/bridge_rules_test.go` `TestAnAnswerThatCannotBeKeptStillFits`
   - `internal/cli/bridge_rules_test.go` `TestEveryTextPartNamesItself`
   - `internal/cli/bridge_tool_test.go` `TestALongAnswerComesInParts`
-  - `internal/bridge/server/encoder_test.go` `TestTheEncoderReplacesAnAnswerThatDoesNotFit` — leaves with `bridge/server` in S8
   - `internal/bridge/endpoint/answer_test.go` `TestTheEncoderReplacesAnAnswerThatDoesNotFit`
-  - `internal/bridge/server/encoder_test.go` `TestAChildsOutputIsCapped` — leaves with `bridge/server` in S8
   - `internal/bridge/endpoint/answer_test.go` `TestAChildsOutputIsCapped`
-  - `internal/bridge/server/encoder_test.go` `TestOnlyTheEncoderWritesToStdout` — leaves with `bridge/server` in S8
   - `internal/bridge/endpoint/answer_test.go` `TestOnlyTheEncoderAnswers`
-  - `internal/bridge/server/bound_test.go` `FuzzEveryMessageWrittenFits` — leaves with `bridge/server` in S8
   - `internal/bridge/endpoint/answer_test.go` `FuzzEveryAnswerFits`
-  - `internal/bridge/server/bound_test.go` `FuzzFramesAreBounded` — leaves with `bridge/server` in S8
   - `internal/bridge/endpoint/answer_test.go` `FuzzRequestsAreBounded`
 
 - **E6. A check has three outcomes: found, proven absent, unknown.** "No such file"
@@ -199,7 +194,7 @@ nothing lifts a stop without returning evidence.
   - `internal/cli/turn_journal_retry_test.go` `TestALateRetryAfterTheSweepPublishesNothing`
   - `internal/cli/turn_journal_retry_test.go` `TestARetryAnswersOnlyWhatItsFirstAttemptSaw`
   - `internal/cli/turn_test.go` `TestARetriedReadReportsOnce`
-  - `internal/cli/review_receipt_identity_test.go` `TestStoppedAndErrorRetriesSettleOriginalScopeOnce`
+  - `internal/cli/stopped_error_retry_test.go` `TestStoppedAndErrorRetriesSettleOriginalScopeOnce`
   - `internal/cli/turn_retry_test.go` `TestRetriedTurnDoesNotConsumeLaterWork`
   - `internal/cli/turn_retry_test.go` `TestPartialTurnRetryKeepsOriginalOutcome`
   - `internal/cli/turn_scope_test.go` `TestARetryWhoseFirstAttemptRecordedNothingKeepsItsScope`
@@ -237,10 +232,7 @@ nothing lifts a stop without returning evidence.
   - `internal/inbox/journal_test.go` `TestAnAbandonedJournalWriteIsNotAJournal`
   - `internal/inbox/held_end_test.go` `TestAHeldEndRaisesTheClockToItsPosition`
   - `internal/cli/turn_confirm_repeat_test.go` `TestAHoldCutByACrashIsHeldOnceWhenConfirmedAgain`
-  - `internal/cli/review_receipt_identity_test.go` `TestReviewScopedGapReceiptsRemainDistinct` — the gateway's case, goes in S8
-  - `internal/cli/review_receipt_identity_test.go` `TestReviewStoppedReceiptAllowsSameTurnFinal` — the gateway's case, goes in S8
   - `internal/cli/turn_test.go` `TestTwoTurnEndsAtOnceReportOnce` — the hook's case, goes in S9
-  - `internal/cli/error_report_test.go` `TestACodexNotifyReportsNothing` — the notify's case, goes in S8
   - `internal/cli/neutral_end_test.go` `TestNeutralEndsWithDistinctIDsReportTwice`
   - `internal/cli/neutral_end_test.go` `TestNeutralStoppedThenFinishedEndsOfOneTurnReportTwice`
   - `internal/cli/neutral_end_test.go` `TestNeutralTwoEndsAtOnceReportOnce`

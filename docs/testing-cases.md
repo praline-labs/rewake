@@ -6,6 +6,12 @@ can fail. How to write a scenario, a control, a fixture or a column, and what ev
 shares, is in [testing.md](testing.md#extending-the-suite); each scenario's invariant as
 first argued is in [check-runner-scenarios.md](check-runner-scenarios.md).
 
+The Codex column and its cases — `codex-steered`, `codex-compact-hold`,
+`codex-tui-later-shape`, `codex-worktree`, `codex-grant-dir`, `codex-grant-forgery`,
+`codex-grant-resume` and `readiness` with their controls — left with the Codex adapter in
+S8, October 8, 2026; they are kept with its code in
+[archive/1.x/codex](../archive/1.x/codex/README.md), as they last ran.
+
 ## Claude Code telemetry budgets
 
 `claude-telemetry` runs on the Claude Code column only, with a main and a worker: the
@@ -41,11 +47,8 @@ they catch a wait, a lock or a heavy start rather than a busy machine.
 `wrapped-launch` runs in every column, twice each, in two rooms: a plain launch and one
 with `--command ./<harness>-worker`, a stand-in wrapper that exports a marker and execs the
 fixture. Every fixture process records its arguments and whether it saw the marker, and
-the case requires the wrapped processes — one for Claude Code; for Codex the version
-check, the app-server and the terminal — to get argument for argument what the plain
-launch gets, all to see the marker, and none of the plain ones to. The Codex launches
-carry `-C` into a directory holding another script of the same name, which must never
-run. It has no control in the suite; with the relative path left relative, it went red on
+the case requires the wrapped processes to get argument for argument what the plain
+launch gets, all to see the marker, and none of the plain ones to. It has no control in the suite; with the relative path left relative, it went red on
 three of its four observations (September 23, 2026).
 
 `pending-report` runs in every column with three sessions. A worker reads a task and,
@@ -112,106 +115,29 @@ the gate column only — the view reads files the same way whichever harness wro
 one blind to interim reports breaks the first observation alone, one that never lets a
 task go breaks both.
 
-`codex-tui-later-shape` runs on the Codex column with a main and two workers whose
-fixture terminal speaks the form of Codex 0.157.1 (`RW_SHIM_TUI_SHAPE`): its start and
-resume carry `runtimeWorkspaceRoots: null`, `permissions: null` and a configuration
-holding only `web_search`, the resume by id with `history` and `path` null. One worker
-starts fresh, the other resumes a conversation and then reads its goal, as the terminal
-does. main sends each a task, and each must report it `finished`: the gateway took the
-terminal's selection from its configuration. Its mutant, `roots-only-recognition`,
-restores the rule that asked for roots or permissions, and must break both observations
-([research-codex-live-checks.md](research-codex-live-checks.md#the-terminals-selection-on-01571)).
-
 ## A worktree for a Codex launch
 
-`codex-worktree` runs on the Codex column only; the Claude Code launch has its own case
-below. A worker is launched from `src/nested` of a fresh repository with
-`--worktree=probe`, the worktree directory left at its default under the case's home,
-and each half of the fixture writes the directory it started in (`RW_SHIM_CWD_FILE`).
-The checkout must be one of the source's HEAD on a new branch `probe`, the source still
-on `main`, under that directory, and the session's record, the terminal and the
-app-server must all work in its `src/nested`; a task a main sends must be delivered
-there; `rewake worktree rm` must refuse the checkout while the worker runs and say so.
-While the worker runs, a commit made in the checkout is landed — `main` moves to it, its
-file appears in the source, the checkout stays on `probe` and the worker keeps running
-— and after a second commit `finish` must refuse, naming the worker, and move nothing.
-After the worker has ended, rm must still refuse while a visitor session started in the
-checkout runs. Three spare checkouts, launched and ended for the purpose, show what
-else rm keeps: one holding a `.env` the repository ignores (and `--force` removes it),
-one whose commit no ref holds once its checkout is detached and every ref holding it is
-deleted (and removed once they are back), and one whose directory was moved away, where
-the refusal points at `git worktree repair` and `--force` takes out its record and git's
-entry. Once nothing holds the first checkout, `finish` must land the second commit and
-remove the checkout, its record, git's own entry and the branch. Its eleven mutants each
-name what they break and require the rest to hold: a launch that never enters its
-checkout; a removal that takes no session for a running one, which also leaves nothing
-to visit and lets finish go ahead; one that sees only the session the checkout was made
-for, which removes it from under the visitor; one that deletes the directory behind
-git's back, whose entries stay; one blind to ignored files; one that asks whether a
-commit is held only after the HEAD moved; one that removes a moved checkout without
-`--force`; a checkout made detached, which nothing can land and finish will not take; a
-land that makes a merge commit; a finish that asks nothing first; and one that leaves
-the branch behind. That the removal of a missing checkout takes out its own entry and no
-other, where `git worktree prune` would take every missing checkout's, is held by
-`internal/worktree` (`TestAMissingCheckoutIsRemovedAlone`).
+`codex-worktree` left with the Codex column in S8, October 8, 2026: its scenario and
+eleven mutants are kept in [archive/1.x/codex](../archive/1.x/codex/README.md), and the
+records that cite it read it there.
 
 ## A worktree for a Claude Code launch
 
-`claude-worktree` runs on the Claude column. A worker is launched from `src/nested` of a
-fresh repository with `--worktree=probe`, and the fixture writes the directory it
-started in. The checkout must be one of the source's HEAD on a new branch `probe`, and
-the session's record and the harness must work in its `src/nested`; the fixture refuses
-an option it does not know, so a `--worktree` passed on would end the launch. After a
-commit in the checkout and the worker's end, `finish` must land the commit in `main`
-with its hash and remove the checkout, its record and the branch. Its mutant,
-`claude-worktree-parent`, names the parent of the launch directory and must break only
-the first observation. A mutant that passed the flag on is not used: the launch it
+`claude-worktree` runs on the Claude column, the one worktree case since the Codex
+column's eleven-mutant `codex-worktree` left with it in S8. A worker is launched from
+`src/nested` of a fresh repository with `--worktree=probe`, and the fixture writes the
+directory it started in. The checkout must be one of the source's HEAD on a new branch
+`probe`, and the session's record and the harness must work in its `src/nested`; the
+fixture refuses an option it does not know, so a `--worktree` passed on would end the
+launch. After a commit in the checkout and the worker's end, `finish` must land the
+commit in `main` with its hash and remove the checkout, its record and the branch. Its
+mutant, `claude-worktree-parent`, names the parent of the launch directory and must break
+only the first observation. A mutant that passed the flag on is not used: the launch it
 breaks exits 2, and a case whose process failed fails its cleanup whatever its
 observations say; the refusals of `-w`, `--tmux` and the continuations are unit tests in
 `internal/cli`.
 
 ## A directory granted with a task
-
-`codex-grant-dir` runs on the Codex column only: Claude Code takes a grant through its
-permission hooks, and `claude-grant-dir` below is its case. Its main is a Claude Code
-session, because a Codex main cannot grant ([grants.md](grants.md#who-can-grant)), and the granted directory lies in
-the user's cache directory rather than under `/tmp`, which is never granted. The fixture
-keeps the thread's workspace roots as the
-server was seen to — set by the start, replaced by a `turn/start` that carries them —
-answers `thread/read` with them in `environments` and with the status of the turn in
-progress, and records the roots each delivery that carried them named. A write worker holds its
-first turn open; main sends it a task with `--grant-dir` on a directory outside its
-workspace, which must be accepted pending (exit 3), start a turn of its own after the
-held one closes and never be steered into it, and name the directory beside `/work` in
-its roots. After the worker's report, the next plain task must carry the roots without
-the directory, and main's `rewake list --json` must show it `revoked`. Its mutants skip
-the idle wait (`grant-steered`, which breaks the wait alone), journal the directory
-without adding it (`grant-not-added`, which breaks the roots and the revocation, the
-journal then saying `dropped`), and keep it after the report (`grant-kept`, which breaks
-the revocation alone). The shape case checks the fixture's `thread/read` reply of a
-working thread against `ThreadReadResponse`. The path rules, the journal and the
-refusals are unit tests in `internal/grant`, `internal/cli` and `internal/harness/codex`.
-
-`codex-grant-forgery` is a Codex write worker trying to grant itself a directory in the
-name of a running Claude Code main, five ways. Its own process runs `rewake send` with
-main's `REWAKE_SESSION` and `REWAKE_EPOCH`, and so does a process it detached through
-`setsid`: both must exit 1 and leave no letter. The test process, outside main's tree,
-writes a registration straight to main's address, as a forger's own client would,
-skipping the checks `rewake send` makes of its listener, and puts the letter in the
-worker's mailbox: main's wrapper must refuse the registration and the letter fail. A
-letter carrying a grant is put in by hand in main's name, and another in main's name
-whose run is the worker's own while a listener in the test process answers at that
-run's address and confirms the grant: both must fail and never reach the worker's roots
-— the first because main never registered it, the second because the answer came from
-a process other than the run the letter names. What it does not prove is the namespace
-check: every process in the suite shares the wrappers' namespaces, as a worker outside
-a sandbox does, so those checks have their own unit tests in `internal/grantauth`, the
-registration's from a helper in a real user namespace. Its mutants take registrations
-from any process (`grant-from-anywhere`, which breaks the direct registration alone —
-`rewake send` still registers only with a listener above it), deliver a grant without
-asking main's wrapper (`grant-unconfirmed`, which breaks the three letters), and take
-an answer from any listener (`grant-any-listener`, which breaks the foreign answer
-alone).
 
 `claude-grant-dir` runs on the Claude Code column only, with a Claude Code main and write
 worker. The fixture calls tools when told to (`RW_SHIM_TOOLS`): each line `tool <Write|Read|Bash>
@@ -237,35 +163,23 @@ learn that a task was reported on (`claude-grant-kept`, which breaks the taking 
 alone). The decisions themselves, and the keeper's checks of who asks, are unit tests in
 `internal/harness/claude` and `internal/grantauth`.
 
-`claude-grant-resume` and `codex-grant-resume` are a grant across a cold resume
-([grants-resume.md](grants-resume.md)), one per column, each with a Claude Code main. The
+`claude-grant-resume` is a grant across a cold resume
+([grants-resume.md](grants-resume.md)), with a Claude Code main. The
 worker writes in the grant, marks its turn pending and is stopped; it is started again in
 the same conversation, reports, and is stopped and started once more. The Claude Code
 fixture takes `--resume <id>` and `--add-dir`: it keeps the conversation's id the resume
 names, starts with the given directories as working ones, says `resume` as the
-SessionStart source and records the launch among its turns. The Codex fixture keeps a
-thread's roots in a file between runs (`RW_SHIM_THREAD_STORE`), as the server was seen
-to: those a start names and those of every completed turn after the first, restored by a
-resume that names none — so a grant given on the first turn is lost by the resume, and
-the resumed terminal sends no roots, in 0.157.1's shape. After the first resume the
-Claude Code run must be launched with `--add-dir` for the directory and run a command in
-it unasked, and the Codex one must name it among the roots at the first delivery, the
-listing showing it granted. The resumed run's report must settle the task, and then the
+SessionStart source and records the launch among its turns. After the first resume the
+run must be launched with `--add-dir` for the directory and run a command in it unasked,
+the listing showing it granted. The resumed run's report must settle the task, and then the
 grant goes as any other: a write denied, the directory taken out, the listing `revoked`.
-After the second resume the Claude Code run is launched with no directory, and the Codex
-run's first delivery names none and journals nothing of it, though the old copy still
-names the grant live. Their mutants give the harness no confirmed directory
-(`claude-resume-not-given`, which breaks the giving alone), keep it as one the hook never
-added (`claude-resume-not-held`, which breaks the taking back alone), restore nothing on
-Codex (`codex-resume-not-restored`, which breaks the giving and the taking back), take over
-no wait of an earlier run (`resume-waits-dropped`, which breaks the same two, the task
-closed by the resume), and have main hold a grant after its report
-(`claude-resume-closed-held` and `codex-resume-closed-held`, which break the resume after
-the report alone). On Codex the report the run finds would take such a grant out again in
-the same delivery, so the case asks that the run journal nothing, not only that the roots
-lack it. Main's side of the confirmation, the hints and the adopted waits are unit tests in
-`internal/grantauth`, `internal/grant`, `internal/wrap`, `internal/harness/codex` and
-`internal/inbox`.
+After the second resume the run is launched with no directory. Its mutants give the
+harness no confirmed directory (`claude-resume-not-given`, which breaks the giving
+alone), keep it as one the hook never added (`claude-resume-not-held`, which breaks the
+taking back alone), and have main hold a grant after its report
+(`claude-resume-closed-held`, which breaks the resume after the report alone). Main's
+side of the confirmation, the hints and the adopted waits are unit tests in
+`internal/grantauth`, `internal/grant`, `internal/wrap` and `internal/inbox`.
 
 ## Actions on a sent message
 
@@ -281,7 +195,7 @@ old id replaced by the new, the new text only, a notice that shows `Replaces <sh
 `--owed` with the addendum under its task, then one report settling both. What a
 notice showed is read from the worker's own record of its deliveries, on every column.
 `withdraw-mid-turn` runs the withdrawal on every column that has a turn in progress to
-deliver into — Codex's and the fixture's; the Claude Code column records it unsupported —
+deliver into — the fixture's; the Claude Code column records it unsupported —
 with the worker's first turn held open (`RW_SHIM_HOLD_TURN`; the read gate alone leaves no turn open to
 steer into): the recall must be steered into the turn the task started, as a member
 whose `recalls` names the task. Their mutants run on the gate column; recall-unnamed
@@ -306,8 +220,8 @@ takes every known conversation for a change must mark the worker that stayed. Be
 this case the fixture's status line named a conversation of its own while its hooks
 named the session, which a tracker would have read as a `/clear` in every case.
 
-`claude-inbound` runs on the Claude Code column only: Codex has no inbound gate, and its
-column is unchanged. The fixture plays the gate as the binary does — it holds whatever
+`claude-inbound` runs on the Claude Code column only: no other harness has an inbound
+gate. The fixture plays the gate as the binary does — it holds whatever
 arrives in the first 600 ms after its socket listens, longer than the real two hundred so
 a notice that does not wait is caught every time, and it answers held, released, expired
 or refused lines with receipts on the reply socket, after checking that socket is in its
@@ -330,9 +244,7 @@ the rest to hold.
 
 The cases that run rewake's function-hooks plugin under node — `claude-interrupted`,
 `stopped-routing` and `claude-steered` — and what the fixture's plugin host plays for
-them are in [testing-plugin.md](testing-plugin.md), with `codex-steered`, the same
-commands on the Codex column, and `codex-compact-hold`, a task sent into a long Codex
-compaction.
+them are in [testing-plugin.md](testing-plugin.md).
 
 ## Every control
 
@@ -349,7 +261,6 @@ switches have no single form in the code to find them by, and the row is kept by
 |---|---|---|
 | batch-arrival | `preview`, `window`, `unwindowed`, `replay`, `peek-consumes` | — |
 | task-report | `no-stop-hook`, `turn-ended-ignores-stop`, `settles-nothing` | `wrong-report`, `read-fails`, `failure-before-report`, `early-exit` |
-| readiness | — | `no-direct-input`, `wrong-thread`, `no-correlated-reply` |
 | mid-turn | `wait-for-idle` | `late`, `failed-operation` |
 | claude-telemetry | `tap-without-owner`, `uncounted-compaction`, `silent-compaction`, `model-window` | — |
 | pending-report | `pending-ignored`, `pending-settles`, `pending-text-dropped` | — |
@@ -360,14 +271,8 @@ switches have no single form in the code to find them by, and the row is kept by
 | awaited-view | `awaited-interim-ignored`, `awaited-never-settled` | — |
 | claude-interrupted | `interrupt-unpublished`, `every-end-stopped`, `plugin-not-passed`, `stop-not-heard` | — |
 | claude-steered | `compact-not-run`, `in-turn-unmapped`, `interrupter-unnamed`, `line-repeated`, `idle-interrupt-done`, `silent-not-answering`, `any-role-steers`, `own-compaction-announced`, `letter-uncounted`, `waits-for-the-end`, `ended-uncounted`, `asker-untold`, `orphan-unlettered`, `stop-by-a-person` | — |
-| codex-steered | `busy-unchecked`, `codex-asker-untold`, `codex-waits-for-the-end`, `codex-outcome-unkept`, `codex-interrupter-unnamed`, `codex-idle-interrupt-done`, `focus-taken` | — |
-| codex-tui-later-shape | `roots-only-recognition` | — |
-| codex-compact-hold | `hold-ends-at-start`, `compaction-refusal-final`, `late-end-unrecorded`, `running-taken-for-an-outcome` | — |
-| codex-grant-dir | `grant-steered`, `grant-not-added`, `grant-kept` | — |
-| codex-grant-forgery | `grant-from-anywhere`, `grant-unconfirmed`, `grant-any-listener` | — |
 | claude-grant-dir | `claude-grant-silent`, `claude-grant-unshielded`, `claude-grant-kept` | `RW_SHIM_TOOLS` |
 | claude-grant-resume | `claude-resume-not-given`, `claude-resume-not-held`, `claude-resume-closed-held` | `RW_SHIM_TOOLS` |
-| codex-grant-resume | `codex-resume-not-restored`, `resume-waits-dropped`, `codex-resume-closed-held` | `RW_SHIM_THREAD_STORE` |
 | stopped-routing | `stopped-to-main` | — |
 | turn-reasons | `reason-dropped`, `failure-completed`, `stop-completed` | — |
 | tool-inbox | `tool-inbox-unshown`, `tool-read-unacknowledged` | — |
@@ -381,5 +286,4 @@ switches have no single form in the code to find them by, and the row is kept by
 | withdraw-mid-turn | `recall-unnamed` | — |
 | edit-after-notice | `edit-keeps-old-text`, `edit-unlinked`, `replacement-unmarked` | — |
 | addendum-owed | `owed-flat` | — |
-| codex-worktree | `worktree-not-entered`, `worktree-running-ignored`, `worktree-visitor-ignored`, `worktree-git-kept`, `worktree-ignored-unseen`, `worktree-branch-trusted`, `worktree-moved-unrefused`, `worktree-detached`, `worktree-land-merges`, `worktree-finish-unchecked`, `worktree-finish-branch-kept` | — |
 | claude-worktree | `claude-worktree-parent` | — |

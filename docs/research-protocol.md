@@ -151,7 +151,7 @@ rewake injects the request itself through the gateway's `callReserved`
 (`internal/harness/codex/gateway/gateway.go`). The gateway marks a thread as being in
 manual compaction when the terminal asks (the `thread/compact/start` branch of its
 request loop), and since part B of stage 2 also when `rewake compact` does
-([remote-control-codex.md](remote-control-codex.md)).
+([remote-control-codex.md](archive-1.x/remote-control-codex.md)).
 
 The terminal's commands and what they send:
 

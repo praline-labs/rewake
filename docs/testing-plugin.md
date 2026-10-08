@@ -49,10 +49,9 @@ break and require the rest to hold.
 
 `stopped-routing` runs on every column. The Claude Code one goes through the plugin as
 above, and is unsupported for `node` without it: that need is keyed to the Claude Code
-column by name, since that harness is the one that runs the module. The Codex one goes
-through the fixture's switch `RW_SHIM_INTERRUPT_FIRST_TURN`, which ends a session's first
-turn with `turn/completed` of status `interrupted`, the shape the schema case checks; the
-fixture harness's program takes the same switch and ends its first turn interrupted. A main, running its own
+column by name, since that harness is the one that runs the module. The fixture
+harness's program takes the switch `RW_SHIM_INTERRUPT_FIRST_TURN` and ends its first turn
+interrupted. A main, running its own
 commands, sends one worker a task and another a `--notify`, which owes nothing; both
 workers and main have their first turn interrupted. main must read `stopped` about the
 task and list it as `stopped` in `--awaited`; the notified worker's stop, once its
@@ -65,8 +64,10 @@ first.
 
 ## Steering a session
 
-`claude-steered` runs on the Claude Code column, and `codex-steered`, below, on the Codex
-one. In `claude-steered` a main, running its own commands,
+`claude-steered` runs on the Claude Code column; `codex-steered` and `codex-compact-hold`,
+the same commands and a task sent into a long compaction on the Codex column, left with
+it in S8 and are kept in [archive/1.x/codex](../archive/1.x/codex/README.md). In
+`claude-steered` a main, running its own commands,
 steers three workers with `rewake compact` and `rewake interrupt`, and each request
 travels the product's whole path — the command, the control directory, the module
 polling it, the session carrying it out, and back. Like `claude-interrupted` it is
@@ -167,80 +168,9 @@ cover.
 
 ### On Codex
 
-`codex-steered` runs the same commands on the Codex column, where there is no plugin:
-the worker's wrapper serves the control directory and carries a request out over its
-app-server connection. The fixture's shim answers the two requests as the server of
-0.155.1 does ([research-protocol.md](research-protocol.md#compaction-and-interrupt-on-request)):
-`thread/compact/start` with `{}`, then the compaction as a turn of its own — the status
-active, `turn/started`, the `contextCompaction` item started, a token usage of 9000, the
-item completed, the status idle, `turn/completed`, the last four `RW_SHIM_COMPACT_TAKES`
-later when it is set — and `turn/interrupt` with `{}`,
-ending the held turn as interrupted, or refused in the server's words with no turn
-running or another turn's id. A compaction that arrives while a turn is held aborts that
-turn first, as Codex's `compact()` does, so a wrapper that does not refuse it breaks the
-turn rather than passing. A work turn reports a usage of 120000 before it completes. The
-switch `RW_SHIM_HOLD_TURN` holds busy's first turn for ten seconds at most. The shape
-case checks the shim's reply and events for both requests against the schema, and that
-the shim accepts neither request in a form the schema refuses.
-
-calm works its task to the end and busy is held in its first turn; main is a Codex
-session too. The observations:
-
-- a compaction of calm with a focus is a wrong call, exit 2, naming the focus, and calm's
-  compaction count afterwards is the one of the plain compaction below;
-- a compaction of busy is refused as `in a turn`, exit 1, and busy still reads `working`
-  with nothing reported about its task;
-- an interrupt of busy is `done`, exit 0, and main reads `stopped` with "lead-codex
-  interrupted this turn with rewake interrupt", as its `rewake inbox --awaited` does;
-- busy's next notice carries no line about the interrupt;
-- an interrupt of calm, idle, is refused as `no turn running`, exit 1;
-- a compaction of calm, which takes five seconds, is `started`, exit 0, within three,
-  before the telemetry counts it;
-- its end reaches main as a notify with 120000 tokens before and 9000 after and
-  "(compaction 1)";
-- the telemetry then counts one compaction, and main is sent no compaction notice within
-  five seconds;
-- calm asking for a compaction is a wrong call, exit 2, refused as not main.
-
-Its seven mutants: a wrapper that sends a compaction whatever runs, which breaks the
-refusal and, the held turn being aborted by it, the interrupt; a telemetry that counts
-the compaction without its request and asker; a wrapper that answers only at the
-compaction's end, which the bound of the start then answers `requested`; one that never
-keeps how the compaction ended, so the letter has no tokens; a wrapper that interrupts without keeping
-who asked; one that answers an idle interrupt as done; and a Codex harness that lets a
-focus through to the wrapper.
-
-What it cannot show: what the terminal does meanwhile — the live run of September 24,
-2026 saw it hold a message typed during the compaction and send it after — and how long
-a real compaction takes.
+`codex-steered` left with the Codex column in S8, October 8, 2026; the scenario and its
+controls are kept in [archive/1.x/codex](../archive/1.x/codex/README.md).
 
 ### A long compaction on Codex
 
-`codex-compact-hold` sends a task to a Codex worker right after main's compaction of
-it, the order a main hands a compacted worker its next task, with the compaction taking
-longer than the mark's bounds. The shim refuses a `turn/start` while its compaction runs,
-in the words of 0.155.1 (`ActiveTurnNotSteerable { turn_kind: Compact }`, code -32603),
-and logs the refusal and the compaction's end, so a case can tell the two apart in
-time. The suite's build runs the bounds at 2 s until the compaction's turn is seen and
-6 s once it runs ([testing-pool.md](testing-pool.md#waits-the-suite-shortens)).
-
-Each worker first works a task to its end — a conversation with no turn is not
-compacted. slow's compaction takes 4 s, past the start bound and within the running one;
-slower's takes 10 s, past both; main is a Codex session. The observations:
-
-- slow takes the task after its compaction, the task's status is not `failed`, and the
-  shim refused no notice: the mark, tied to the compaction's turn, held the task to the
-  end;
-- slower takes the task too, not `failed`, and the shim refused it at least once before
-  the compaction's end: the refusal is a wait, not a failure;
-- main reads one letter from slower, the compaction's end with 120000 tokens before,
-  9000 after and "(compaction 1)", though the wrapper's wait ended before it.
-
-Its four mutants: a hold of a running compaction that ends at the start bound, which
-the shim then refuses for slow; a refusal for a compaction taken as final, which fails
-slower's task; a late end not recorded, and a wrapper of main's that takes an outcome of
-`started` for the outcome — each leaves main without the letter from the end.
-
-What it cannot show: how long a real compaction takes — the one seen live took about
-104 seconds on a conversation 85% full — and whether a later Codex refuses in the same
-words; the gateway recognizes the refusal by its text.
+`codex-compact-hold` left with it; kept there as well.

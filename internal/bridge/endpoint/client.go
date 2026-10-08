@@ -247,7 +247,7 @@ func servesCaller(conn *net.UnixConn) error {
 	return nil
 }
 
-// The deadline of a ticket (docs/mail-bridge-server.md#the-ticket).
+// The deadline of a ticket (docs/archive-1.x/mail-bridge-server.md#the-ticket).
 const (
 	span      = 25 * time.Second
 	minSpan   = 5 * time.Second

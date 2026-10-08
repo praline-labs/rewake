@@ -1,10 +1,10 @@
 # The mail tool across a turn
 
 What happens to a call of the mail tool after its answer, by the rules of
-[mail-bridge-server.md](mail-bridge-server.md): which turn a call belongs to, how a read
+[mail-bridge-server.md](archive-1.x/mail-bridge-server.md): which turn a call belongs to, how a read
 is acknowledged, how a turn's end meets the calls of its turn, what becomes of a pending
 mark that comes late, and the bound on every wait. **Built and accepted October 1, 2026**
-([where the rules live](mail-bridge-server.md#where-the-rules-live)). The changes this makes to stage 1, the tests, what stage 3 must show live, and
+([where the rules live](archive-1.x/mail-bridge-server.md#where-the-rules-live)). The changes this makes to stage 1, the tests, what stage 3 must show live, and
 what the first review found are in [mail-bridge-checks.md](mail-bridge-checks.md).
 
 Everything here leans on what stage 1 already proves, and adds no parallel mechanism.
@@ -47,7 +47,7 @@ turn and the words).
   only; before the revision it was refused as unreported after 2 s, which the channel
   took for a fault. Revised and built on October 4, 2026: the request's own `_meta.threadId` names the calling
   thread, so a request naming another thread, or none, is refused at once as an agent's
-  call and never waits ([the channel](mail-bridge-channel-codex.md#conversation-connections)). A
+  call and never waits ([the channel](archive-1.x/mail-bridge-channel-codex.md#conversation-connections)). A
   hook input that names one is refused. Until stage 3 shows
   which field a nested agent's call always carries, the Claude Code adapter refuses tool
   reads — `inbox` and `inbox --message` answer "read in the shell" — since only a read
@@ -142,8 +142,9 @@ writes of one acknowledgment already past its check, which stage 1 does not time
 a held lock either, and while it lasts no read of the mailbox commits. That is the one
 exception to rule 9, accepted for a stalled filesystem as everywhere in rewake. The
 Codex gateway hands a read's completion to the observer and reads on; its reader stops
-only in such a capture. On Claude Code, `rewake bridge-hook` forwards PostToolUse and
-returns on the wrapper's reply or its timeout; the acknowledgment goes on either way. An
+only in such a capture. On Claude Code in 1.x, `rewake bridge-hook` forwarded
+PostToolUse and returned on the wrapper's reply or its timeout (the command left with the
+injection in S8); the acknowledgment goes on either way. An
 end does not wait for tickets, processes or acknowledgments that have not begun to
 write, so the Stop hook keeps stage 1's bounds (a five-second mailbox wait, a hook
 timeout of ten).
@@ -158,7 +159,7 @@ nothing, whatever the first one's acknowledgment did.
 the ticket's `CalledBoot`, so a ticket issued after the note would let a call of the
 ended turn write above its boundary. The wrapper therefore issues a ticket under the
 same mutex, and only while no end was noted since the call was heard, or on Codex since
-its turn started ([the ticket](mail-bridge-server.md#the-ticket)): a call heard before
+its turn started ([the ticket](archive-1.x/mail-bridge-server.md#the-ticket)): a call heard before
 the end gets no ticket after it, even while `turn/completed` has not reached the table.
 
 **What this proves, and what it leaves to stage 1.** After the end is noted, no

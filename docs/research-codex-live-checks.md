@@ -81,7 +81,7 @@ interrupted without a model response.
   /resume or /new`. The 0.155.1 control selected and delivered after every path.
 - **What changed is `runtimeWorkspaceRoots`**: 0.155.1 sends an array on these
   requests, 0.157.1 sends null; `permissions` was null on both. The gateway of that
-  day asked for one of the two ([gateway.md](gateway.md#compatibility-and-limits)).
+  day asked for one of the two ([gateway.md](archive-1.x/gateway.md#compatibility-and-limits)).
 - **The request forms, 0.157.1.** Startup keeps a `startup-thread-start-<uuid>` id;
   `/new` a numeric id and `threadSource: "user"`. An ordinary resume has a numeric id,
   `threadId`, `history: null`, `path: null`, `excludeTurns: true` and no

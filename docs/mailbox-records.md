@@ -35,7 +35,7 @@ unknown. The first pattern that matches a path is its kind.
 | `once/<run>/<id>` | a publication mark | `intent` or `published` |
 | `threads/<id>`, `claims/<id>` | a delivery thread; a read in parts that claimed a letter | readable |
 | `receipts/<run>/.<token>.lock`, `key-*`, `<token>.json` | a call's receipt lock, key and receipt | nothing; a token; a receipt that says what its place says |
-| `receipts/<run>/calls/<call>` | the operation a tool call holds, by its native call ([mail-bridge-server.md](mail-bridge-server.md)) | a token whose receipt is in the same run |
+| `receipts/<run>/calls/<call>` | the operation a tool call holds, by its native call ([mail-bridge-server.md](archive-1.x/mail-bridge-server.md)) | a token whose receipt is in the same run |
 
 A file named `.tmp-*`, in any directory, is a write that never finished
 (`state.WriteAtomic`), never a record.

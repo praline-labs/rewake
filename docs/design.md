@@ -301,9 +301,8 @@ harness, in every column, with negative controls of two kinds: some build rewake
 one line mutated (batch-arrival's four, three of task-report's, mid-turn's
 wait-for-idle), the others change the fixture's world (task-report's other four, the
 readiness controls, mid-turn's late and failed-operation); what each runs and why is in
-[check-runner-scenarios.md](check-runner-scenarios.md). Under the same switch, the
-schema case checks the fixture's messages against the protocol schema of a real Codex,
-the installed one or a version named by `REWAKE_CODEX_VERSION` and run in a container.
+[check-runner-scenarios.md](check-runner-scenarios.md). The schema case that held the
+fixture's messages to a real Codex's protocol schema left with the Codex adapter in S8.
 And live runs with real harnesses in a separate `/tmp` state directory, done by hand and
 recorded in the dated acceptance documents; live Codex runs spend subscription quota,
 so they use a cheap model and short messages.

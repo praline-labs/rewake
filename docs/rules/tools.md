@@ -17,13 +17,9 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/cli/bridge_tool_test.go` `TestTheToolSurface`
   - `internal/cli/bridge_tool_test.go` `TestWhoamiNamesTheMailChannel`
   - `internal/cli/bridge_rules_test.go` `TestAToolRetryKeepsToTheToolSurface`
-  - `internal/bridge/server/flow_test.go` `TestAToolReadIsReadOnceItsAnswerArrived` — leaves with `bridge/server` in S8
   - `test/toolrig/flow_test.go` `TestAToolReadIsReadOnceItsAnswerArrived`
-  - `internal/bridge/server/flow_test.go` `TestACallWithoutItsIdsRunsNothing` — leaves with `bridge/server` in S8
   - `test/toolrig/flow_test.go` `TestACallWithoutItsIdsRunsNothing`
-  - `internal/bridge/server/flow_test.go` `TestWordsOffTheSurfaceAreRefused` — leaves with `bridge/server` in S8
   - `test/toolrig/flow_test.go` `TestWordsOffTheSurfaceAreRefused`
-  - `internal/bridge/server/stdout_bound_test.go` `TestALostAnswerOfAnEffectIsFoundAgain` — leaves with `bridge/server` in S8
   - `test/toolrig/answer_bound_test.go` `TestALostAnswerOfAnEffectIsFoundAgain`
   - `test/toolrig/gaps_test.go` `TestARestartedTransportChangesNoAnswer`
   - `test/toolrig/transport_test.go` `TestTheTransportIsOfferedTheCLIsTools`
@@ -59,7 +55,7 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/bridge/endpoint/transport_test.go` `TestACallTheToolsDoNotOfferRunsNothing`
   - `internal/harness/fixture/tool_test.go` `TestALiveToolTransportNamesTheProgramToTheEndpoint`
   - `internal/harness/fixture/tool_test.go` `TestTheProgramsReportsBecomeTheNeutralInput`
-  - `internal/wrap/mailtool_transport_test.go` `TestAHarnessThatCarriesItsCallsIsOfferedTheTools`
+  - `internal/wrap/tools_test.go` `TestAHarnessThatCarriesItsCallsIsOfferedTheTools`
 
 - **T3. Every effect happens in the core operation, under its receipt**; a transport
   never repeats, finishes or undoes one, and starts no second operation for a call
@@ -80,9 +76,7 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/cli/bridge_rules_test.go` `TestALateAcknowledgmentOwesNothingTwice`
   - `internal/cli/bridge_read_test.go` `TestARepeatedToolReadInOneTurnIsTheSameRead`
   - `internal/cli/bridge_read_test.go` `TestAnEmptyToolReadIsTheSameNothingInItsTurn`
-  - `internal/bridge/server/order_test.go` `TestOneCallRunsOnceAcrossServers` — leaves with `bridge/server` in S8
   - `test/toolrig/order_test.go` `TestOneCallRunsOnceAcrossRequests`
-  - `internal/bridge/server/fault_test.go` `TestEveryStepOfACallSurvivesAFault` — leaves with `bridge/server` in S8
   - `test/toolrig/fault_test.go` `TestEveryStepOfACallSurvivesAFault`
 
 - **T4. A call is bound to its operation before its first effect**: a record keyed by
@@ -94,11 +88,8 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/cli/bridge_rules_test.go` `TestAShellRetryDoesNotReadStdinAgain`
   - `internal/cli/bridge_read_test.go` `TestTheShellFinishesALostToolRead`
   - `internal/cli/journal_test.go` `TestTheShellRefersAnOpenOperationToItsReceipt`
-  - `internal/bridge/server/child_bound_test.go` `TestAnOutlivedCallWithABindingNamesItsRetry` — leaves with `bridge/server` in S8
   - `test/toolrig/child_bound_test.go` `TestAnOutlivedCallWithABindingNamesItsRetry`
-  - `internal/bridge/server/stdout_bound_test.go` `TestALostAnswerOfAnEffectIsFoundAgain` — leaves with `bridge/server` in S8
   - `test/toolrig/answer_bound_test.go` `TestALostAnswerOfAnEffectIsFoundAgain`
-  - `internal/bridge/server/fault_test.go` `TestEveryStepOfACallSurvivesAFault` — leaves with `bridge/server` in S8
   - `test/toolrig/fault_test.go` `TestEveryStepOfACallSurvivesAFault`
   - `test/toolrig/gaps_test.go` `TestTheShellRunsTheSameWordsOnTheProofOfAbsence`
 
@@ -114,19 +105,12 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/cli/bridge_rules_test.go` `TestAnAnswerThatCannotBeKeptStillFits`
   - `internal/cli/bridge_rules_test.go` `TestEveryTextPartNamesItself`
   - `internal/bridge/endpoint/hello_test.go` `TestTheConnectionsAreBounded`
-  - `internal/bridge/server/encoder_test.go` `TestTheEncoderReplacesAnAnswerThatDoesNotFit` — leaves with `bridge/server` in S8
   - `internal/bridge/endpoint/answer_test.go` `TestTheEncoderReplacesAnAnswerThatDoesNotFit`
-  - `internal/bridge/server/encoder_test.go` `TestAChildsOutputIsCapped` — leaves with `bridge/server` in S8
   - `internal/bridge/endpoint/answer_test.go` `TestAChildsOutputIsCapped`
-  - `internal/bridge/server/encoder_test.go` `TestOnlyTheEncoderWritesToStdout` — leaves with `bridge/server` in S8
   - `internal/bridge/endpoint/answer_test.go` `TestOnlyTheEncoderAnswers`
-  - `internal/bridge/server/bound_test.go` `FuzzEveryMessageWrittenFits` — leaves with `bridge/server` in S8
   - `internal/bridge/endpoint/answer_test.go` `FuzzEveryAnswerFits`
-  - `internal/bridge/server/bound_test.go` `FuzzFramesAreBounded` — leaves with `bridge/server` in S8
   - `internal/bridge/endpoint/answer_test.go` `FuzzRequestsAreBounded`
-  - `internal/bridge/server/stdout_bound_test.go` `TestAClientThatStopsReading` — leaves with `bridge/server` in S8
   - `test/toolrig/answer_bound_test.go` `TestATransportThatStopsReading`
-  - `internal/bridge/server/stdout_bound_test.go` `TestAReaderThatResumesInTimeGetsEveryReply` — leaves with `bridge/server` in S8
   - `internal/bridge/endpoint/transport_test.go` `TestATransportsRequestIsBoundedBeforeItIsParsed`
   - `test/toolrig/transport_test.go` `TestTheEndpointBoundsWhatComesIn`
   - `internal/bridge/endpoint/transport_test.go` `TestAnAnswerPastItsBoundIsReplacedWhole`
@@ -158,18 +142,11 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/cli/bridge_rules_test.go` `TestALetterReadElsewhereShowsAsGone`
   - `internal/bridge/endpoint/input_test.go` `TestOnlyAUsedTicketWithItsBindingIsAcknowledged`
   - `internal/bridge/endpoint/input_test.go` `TestTheWholeResultAndItsSize`
-  - `internal/bridge/endpoint/events_test.go` `TestTheExposureOfEachResultShape` — the decoding of Codex result shapes; leaves with Codex in S8
-  - `internal/bridge/server/flow_test.go` `TestAToolReadIsReadOnceItsAnswerArrived` — leaves with `bridge/server` in S8
   - `test/toolrig/flow_test.go` `TestAToolReadIsReadOnceItsAnswerArrived`
-  - `internal/bridge/server/flow_test.go` `TestALongReadGoesOnThroughItsNextWords` — leaves with `bridge/server` in S8
   - `test/toolrig/flow_test.go` `TestALongReadGoesOnThroughItsNextWords`
-  - `internal/bridge/server/flow_test.go` `TestAFailedResultReadsNothing` — leaves with `bridge/server` in S8
   - `test/toolrig/flow_test.go` `TestAFailedResultReadsNothing`
-  - `internal/bridge/server/flow_test.go` `TestAToolThatReadsOffLeavesTheLetterUnread` — leaves with `bridge/server` in S8
   - `test/toolrig/flow_test.go` `TestAToolThatReadsOffLeavesTheLetterUnread`
-  - `internal/bridge/server/evidence_test.go` `TestOnlyTheRecordedAnswerItselfIsEvidence` — leaves with `bridge/server` in S8
   - `test/toolrig/evidence_test.go` `TestOnlyTheRecordedAnswerItselfIsEvidence`
-  - `internal/bridge/server/evidence_test.go` `TestACompletionWhoseBindingCannotBeReadIsSpent` — leaves with `bridge/server` in S8
   - `test/toolrig/evidence_test.go` `TestACompletionWhoseBindingCannotBeReadIsSpent`
 
 - **T7. A call's commits stop at its turn's end, and a pending mark speaks only for
@@ -204,13 +181,9 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/cli/pending_test.go` `TestAFailedOrStoppedTurnIgnoresTheMark`
   - `internal/cli/bridge_rules_test.go` `TestAPendingMarkIsNotMadeAfterItsDeadline`
   - `internal/cli/journal_test.go` `TestARefusedMarkIsReplayedInItsTurn`
-  - `internal/bridge/server/order_call_test.go` `TestEveryOrderOfACallAgainstItsTurnsEnd` — leaves with `bridge/server` in S8
   - `test/toolrig/order_call_test.go` `TestEveryOrderOfACallAgainstItsTurnsEnd`
-  - `internal/bridge/server/order_gen_test.go` `TestEveryOrderOfTwoTurnsKeepsTheEndsBoundary` — leaves with `bridge/server` in S8
   - `test/toolrig/order_gen_test.go` `TestEveryOrderOfTwoTurnsKeepsTheEndsBoundary`
-  - `internal/bridge/server/order_marks_test.go` `TestAMarkBetweenCaptureAndJournal` — leaves with `bridge/server` in S8
   - `test/toolrig/order_marks_test.go` `TestAMarkBetweenCaptureAndJournal`
-  - `internal/bridge/server/flow_test.go` `TestAnAnswerAfterTheEndReadsNothing` — leaves with `bridge/server` in S8
   - `test/toolrig/flow_test.go` `TestAnAnswerAfterTheEndReadsNothing`
   - `test/toolrig/flow_test.go` `TestACallOutsideAnOpenTurnRunsNothing`
   - `test/toolrig/order_end_test.go` `TestAnEndOnRecordTheGateNeverHeardRefusesTheAcknowledgment`
@@ -253,15 +226,10 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/cli/turn_retry_test.go` `TestPartialTurnRetryKeepsOriginalOutcome`
   - `internal/harness/fixture/order_test.go` `TestAnEndCapturesItsBoundaryWhenItsFrameArrives`
   - `internal/harness/fixture/order_test.go` `TestATurnStartCapturesItsBoundaryWhenItsFrameArrives`
-  - `internal/bridge/server/order_test.go` `TestAnEndCapturedDuringAnAcknowledgmentIncludesIt` — leaves with `bridge/server` in S8
   - `test/toolrig/order_test.go` `TestAnEndCapturedDuringAnAcknowledgmentIncludesIt`
-  - `internal/bridge/server/order_cut_test.go` `TestAnAcknowledgmentCutMidway` — leaves with `bridge/server` in S8
   - `test/toolrig/order_cut_test.go` `TestAnAcknowledgmentCutMidway`
-  - `internal/bridge/server/order_cut_test.go` `TestAnEscNobodyHeard` — leaves with `bridge/server` in S8
   - `test/toolrig/order_cut_test.go` `TestAnEscNobodyHeard`
-  - `internal/bridge/server/order_gen_test.go` `TestEveryOrderOfTwoTurnsKeepsTheEndsBoundary` — leaves with `bridge/server` in S8
   - `test/toolrig/order_gen_test.go` `TestEveryOrderOfTwoTurnsKeepsTheEndsBoundary`
-  - `internal/bridge/server/order_marks_test.go` `TestAMarkBetweenCaptureAndJournal` — leaves with `bridge/server` in S8
   - `test/toolrig/order_marks_test.go` `TestAMarkBetweenCaptureAndJournal`
 
 - **T9. Every wait has a bound, and nothing waits holding what it waits for**; a wait
@@ -281,12 +249,8 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/harness/fixture/order_test.go` `TestNothingReachesTheHandlerOnceClosed`
   - `internal/harness/fixture/order_test.go` `TestCloseWaitsForAFrameBeingHandled`
   - `internal/harness/fixture/order_test.go` `TestNothingReachesTheHandlerWhileClosing`
-  - `internal/bridge/server/child_bound_test.go` `TestAChildPastItsDeadline` — leaves with `bridge/server` in S8
   - `test/toolrig/child_bound_test.go` `TestAChildPastItsDeadline`
-  - `internal/bridge/server/stdout_bound_test.go` `TestAClientThatStopsReading` — leaves with `bridge/server` in S8
   - `test/toolrig/answer_bound_test.go` `TestATransportThatStopsReading`
-  - `internal/bridge/server/stdout_bound_test.go` `TestAReaderThatResumesInTimeGetsEveryReply` — leaves with `bridge/server` in S8
-  - `internal/bridge/server/mcp_test.go` `TestTheServerFinishesItsCallsAtTheEnd` — leaves with `bridge/server` in S8
   - `test/toolrig/transport_test.go` `TestTheEndpointFinishesItsCallsAsItCloses`
   - `internal/bridge/endpoint/close_test.go` `TestCloseLetsTheCallsItTookConfirmTheirChildren`
   - `test/toolrig/transport_test.go` `TestAFifthCallIsBusy`
@@ -314,7 +278,6 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/receipt/shell_test.go` `TestAnUnwritableStateLosesTheObservation`
   - `internal/cli/journal_test.go` `TestTheShellRefersAnOpenOperationToItsReceipt`
   - `internal/bridge/bridge_test.go` `TestNoEndpointRefusesEveryTicket`
-  - `internal/bridge/server/fault_test.go` `TestEveryStepOfACallSurvivesAFault` — leaves with `bridge/server` in S8
   - `test/toolrig/fault_test.go` `TestEveryStepOfACallSurvivesAFault`
   - `test/toolrig/gaps_test.go` `TestOneSetOfWordsThroughTheToolAndTheShellIsOneOperation`
 
@@ -327,5 +290,6 @@ are transport-neutral and run against every transport
 rig ([stage3-tests-tcl.md](../v2/stage3-tests-tcl.md#the-neutral-rig)) in `test/toolrig`:
 the fixture's program is the harness's process, its tool calls reach the host endpoint's
 transport role, and the faults reach the program, the child and the endpoint's own steps.
-Each rebuilt oracle fails under the mutation its old one failed under. The old ones run
-beside them in `bridge/server`'s rig, which leaves in S8.
+Each rebuilt oracle fails under the mutation its old one failed under. The old ones left
+with `bridge/server`'s rig in S8 and are kept in
+[archive/1.x/codex](../../archive/1.x/codex/README.md).

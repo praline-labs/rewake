@@ -18,8 +18,7 @@ internal/proc/                   /proc: identity, liveness, job-control state, l
 internal/boottime/               the boot clock, comparable across processes and never set back
 internal/inbox/                  message, status, sender-side write, servicing loop
 internal/receipt/                the journal of mail operations run through the tool's words: keys, records, frozen reads
-internal/bridge/                 what the CLI and the mail tool's server share: the ticket, result bounds, cutting parts
-internal/bridge/server/          the mail tool's stdio MCP server: frames, the one encoder, a child per call
+internal/bridge/                 what the CLI and the context endpoint share: the ticket, result bounds, cutting parts
 internal/bridge/endpoint/        the wrapper's context endpoint: hellos, tickets, completions, the gate against a turn's end, a transport's calls
 internal/channel/                the run's mail channel: tool and shell observations, the block, display and notices
 internal/grant/                  which directories a task may grant, and the journal of what was granted
@@ -30,12 +29,10 @@ internal/role/                   the role catalogue: flag, briefing line, report
 internal/brief/                  text injected into an agent, independent of transport
 internal/alias/                  launch aliases: a short name turned into launch arguments
 internal/sessionstate/           optional, epoch-scoped observations of a harness (telemetry)
-internal/harness/                the Harness interface, launch plans, notices, hooks, defaults, the mail tool's gates and bounded checks
+internal/harness/                the Harness interface, launch plans, notices, hooks, defaults, the bounded version read
 internal/harness/catalog/        the one list of harnesses that exist
 internal/harness/claude/         launch arguments, environment, socket delivery
 internal/harness/claude/telemetry/  what a Claude Code session says about itself, carried to its wrapper
-internal/harness/codex/          owned app-server, WebSocket RPC, thread events and delivery
-internal/harness/codex/gateway/  the terminal gateway: selection, reservation, native mailbox
 internal/harness/fixture/        the test harness behind rewakefixture: a scripted program over a socket, every contract interface
 internal/wrap/                   wrapper: launch, signals, lifecycle
 internal/worktree/               checkouts rewake makes for a launch: git worktree add, records, land, removal
@@ -45,9 +42,6 @@ test/workflow/                   the workflow suite: end-to-end scenarios agains
 test/workflow/record/            the record format a suite run prints and the summarizer reads
 test/toolrig/                    the neutral rig: the tool path's oracles on the fixture's program and the host endpoint
 tools/checksummary/              summarizes a suite run into a few lines and summary.json
-tools/harnesscache/              fetches and caches harness versions, runs them in a container
-tools/harnesscache/cache/        resolving, downloading, verifying and keeping a version
-tools/harnesscache/container/    the disposable container a cached version runs in
 tools/release/                   the release gate: checks, builds with pack.sh, publishes only when told
 tools/standin/                   a stand-in model API that answers with a call of the mail tool, for live checks
 ```
@@ -89,8 +83,9 @@ A harness that takes a directory into a running session for one task implements
 `DirGrantHarness` — `SupportsDirGrant()`; `rewake send --grant-dir` to a session of any
 other harness is refused with exit 1 ([grants.md](grants.md)). A harness whose launch
 takes arguments rewake has a way of its own for implements `LaunchRefuser` —
-`RefuseLaunch(args)`, asked before anything else of the launch; Codex refuses
-`--add-dir` and a `writable_roots` override there. A harness whose main can grant
+`RefuseLaunch(args)`, asked before anything else of the launch; since S8 no harness of
+the catalog implements it (Codex, which refused `--add-dir` and a `writable_roots`
+override there, left the product). A harness whose main can grant
 implements `GrantIssuer` — `ReachesWrapper()`, whether its commands reach their wrapper's
 socket; only Claude Code does, and a grant from a main of any other harness is refused
 with exit 1 ([grants.md](grants.md#who-can-grant)). A harness that takes a grant through
@@ -104,9 +99,8 @@ A harness that gives rewake's worktree to a launch implements `WorktreeHarness` 
 `WorktreeFlag()`, the spelling the launch command takes for itself;
 `WorktreeRefusal(args)`, what the harness cannot do in a checkout of its own, asked
 before anything is made (a continued conversation, which stays in the directory it was
-started in; for Codex the arguments its launch refuses anyway, for Claude Code its own
-`-w` and `--tmux` beside rewake's); and `LaunchDirectory(args)`, the directory the
-launch would work in and the arguments without what chose it. The launch command then
+started in; for Claude Code its own `-w` and `--tmux` beside rewake's); and
+`LaunchDirectory(args)`, the directory the launch would work in and the arguments
+without what chose it. The launch command then
 makes the checkout in `internal/worktree` and starts the session inside it
-([worktree.md](worktree.md)). Codex and Claude Code both implement it: Codex's terminal
-cannot make its worktree under `--remote`, and Claude Code keeps `-w` for its own.
+([worktree.md](worktree.md)). Claude Code implements it, keeping `-w` for its own.

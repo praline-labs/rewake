@@ -58,13 +58,10 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
    directory's HEAD on a new branch under rewake's worktree directory, and the wrapper
    moves into it, at the same place in the repository, before anything else
    ([launch.md](launch.md#a-worktree-for-a-launch)).
-   Then, before any name is claimed, Codex's one `--version` read — a read that cannot
-   show its process ended refuses the launch ([mail-bridge-version.md](mail-bridge-version.md))
-   — and the mail tool's check: whether the person already
-   has an MCP server named `rewake` in a source the harness reads — a find refuses the
-   launch with exit 1 and nothing published — and whether the tool can be given at all;
-   where a gate is open or `--no-mail-tool` was passed, the run goes on through the
-   shell and stderr says why ([mail-bridge-launch.md](mail-bridge-launch.md#the-launch-in-order)).
+   Then, before any name is claimed, the bounded read of Claude Code's version: one
+   older than 2.1.287, or a read that cannot show its process ended, refuses the launch
+   with nothing published. The mail tool's injection and its checks left with Codex in
+   S8 ([mail-bridge-launch.md](archive-1.x/mail-bridge-launch.md#the-launch-in-order)).
 2. **The name and role.** Under the room lock, first select the role (step 4),
    then append the harness ID to the role prefix or explicit `--name` prefix.
    Automatic collisions add -2, -3 after the harness suffix; explicit conflicts
@@ -107,10 +104,10 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
      remote/profile/local-provider launches refuse; `--worktree` never reaches it.
      A resume tells the gateway which conversation it asked for — by id, or the
      terminal's first resume for `--last` and the picker — and delivery waits for that
-     one ([delivery-conversation.md](delivery-conversation.md)). With the mail tool, `-c`
+     one ([delivery-conversation.md](archive-1.x/delivery-conversation.md)). With the mail tool, `-c`
      leaves under `mcp_servers.rewake` after the caller's own, for the terminal and the
      server alike, and the gateway checks the injection at every thread
-     ([mail-bridge-launch-codex.md](mail-bridge-launch-codex.md)). The server's start
+     ([mail-bridge-launch-codex.md](archive-1.x/mail-bridge-launch-codex.md)). The server's start
      compares the version its `initialize` answer names with the launch's read; one not
      confirmed starts the server again without the leaves unless assumed gates keep it.
 6. **The environment.** `REWAKE_SESSION=<name>`, `REWAKE_EPOCH=<epoch>`,
@@ -219,9 +216,9 @@ in one notice. A task or a question does not wait, and takes whatever is waiting
    - Codex: a launch that resumed and whose terminal went on in another conversation
      keeps the message `pending` until that one is resumed or the person runs `rewake
      accept`; main is told once, the terminal shows a warning
-     ([delivery-conversation.md](delivery-conversation.md)). Otherwise:
+     ([delivery-conversation.md](archive-1.x/delivery-conversation.md)). Otherwise:
      call turn/start through the reserved TUI connection/generation with empty
-     input and [standalone mailbox output](native-mailbox.md): short notice plus fixed
+     input and [standalone mailbox output](archive-1.x/native-mailbox.md): short notice plus fixed
      member identities, never full task bodies. A task or question carrying a grant
      goes on a notice of its own and waits, pending, while the thread is active, so the
      grant holds from its first turn; its directories are checked again first, and the
@@ -239,7 +236,7 @@ in one notice. A task or a question does not wait, and takes whatever is waiting
      ([grants.md](grants.md#taking-a-grant-back)). Other notices start idle work or
      steer the active turn. A successful RPC result means delivered. A stale
      or unavailable thread fails; it is not silently retargeted or queued. After ACK,
-     a best-effort [display-only row](native-mailbox-ui.md) goes only to the owning
+     a best-effort [display-only row](archive-1.x/native-mailbox-ui.md) goes only to the owning
      primary TUI. It does not execute a command, add context or change delivery status;
      native streaming may defer its visible appearance.
 
@@ -307,7 +304,7 @@ is a gap, reported as an advisory `stopped` that settles nothing, since it may h
 a compaction. Only a turn with proof that it is work — a reply naming it or an item
 other than a compaction's — settles a wait; one without is reported as advisory, and a
 turn its `contextCompaction` item shows to be a compaction reports nothing, so a
-compaction's turn never settles a wait ([codex-publication.md](codex-publication.md)). The hook and server events use the same internal
+compaction's turn never settles a wait ([codex-publication.md](archive-1.x/codex-publication.md)). The hook and server events use the same internal
 reporting function and turn journals. A callback with `agent_id` is from a nested agent and is
 ignored without changing the parent session's waits.
 

@@ -158,7 +158,7 @@ still compiling and analyzing the code. To run it:
 
 ```bash
 env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
-  REWAKE_WORKFLOW=1 go test -count=1 -timeout 30m -v ./test/workflow/...
+  REWAKE_WORKFLOW=1 go test -count=1 -timeout 10m -v ./test/workflow/...
 ```
 
 It builds its own binary and runs in a private HOME, state directory and PATH;
@@ -172,8 +172,8 @@ exercised all four.
 
 The suite runs its cases in parallel, six at a time by default (`-parallel 8` on an
 idle machine, `4` on a busy one; `docs/testing.md`), and takes about three minutes.
-The `-timeout 30m` leaves room for the first download of a named Codex version below;
-without enough room the run dies with `panic: test timed out` and no case to say why.
+The `-timeout 10m` is about three times that; a run past it dies with
+`panic: test timed out` and no case to say why.
 
 A change to the Claude Code plugin module (`internal/harness/claude/plugin.js`)
 or to the fixture that hosts it also runs the workflow suite before the commit.
@@ -187,7 +187,7 @@ prints a handful of lines and writes the whole result to a file:
 ```bash
 env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
   REWAKE_WORKFLOW=1 go run ./tools/checksummary \
-  -- go test -count=1 -timeout 30m -json ./test/workflow/...
+  -- go test -count=1 -timeout 10m -json ./test/workflow/...
 ```
 
 It exits 0 only when every case passed or was unsupported for a named capability,
@@ -195,27 +195,6 @@ and names the failing observation and its evidence directory when one did not.
 `go run ./tools/checksummary --help` prints the flags and what each exit code means.
 `go run` reports every non-zero exit as 1 and prints the real one as `exit status N`,
 so a script that needs the codes apart builds the binary first.
-
-To check a Codex version before installing it, name it — an exact version, `latest` or
-`installed` — and give go test room for a first download:
-
-```bash
-env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
-  REWAKE_WORKFLOW=1 REWAKE_CODEX_VERSION=0.156.0 go run ./tools/checksummary \
-  -- go test -count=1 -timeout 30m -json ./test/workflow/...
-```
-
-The version is fetched once, before any case starts, into
-`~/.cache/rewake/harness/codex/<version>/` (`REWAKE_HARNESS_CACHE` moves it), and the
-schema is generated in a disposable docker container; only the schema comes from it,
-the scenarios run against the fixture. The fetch gets half of `-timeout`, at most ten
-minutes, and the suite the rest: under go test's default of ten minutes a slow first
-download would be cut at five, and a download that outlived the timeout would kill the
-test binary with no case to say why. The suite alone takes about three minutes, so
-a slow first download taking its full ten minutes still fits in the thirty. The
-variable is read only under `REWAKE_WORKFLOW`.
-`go run ./tools/harnesscache --help` lists, fetches and removes cached versions;
-nothing is removed automatically.
 
 The crosswise check runs each control's observations in every other control's world;
 run it after adding or changing a control:
@@ -237,7 +216,7 @@ go install honnef.co/go/tools/cmd/staticcheck@latest mvdan.cc/gofumpt@latest \
 Sessions working on this repository share one machine, and heavy runs collide when two
 of them go at once: the five checks with `-race`, the workflow suite, the crosswise check,
 container probes. Before starting one, check whether another session is running one
-(`go test`, `checksummary`, `test/workflow`, `harnesscache` in the process list). If it
+(`go test`, `checksummary`, `test/workflow` in the process list). If it
 is, wait for it with a bounded wait, or run only the narrow part needed — one package,
 `-run` on one scenario. A timing measured while another heavy run was going is not
 evidence: re-measure it, or say it was taken under load.

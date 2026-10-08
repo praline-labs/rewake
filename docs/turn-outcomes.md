@@ -219,7 +219,7 @@ cannot tell work from a compaction. It publishes a `stopped` with the text "a ru
 this conversation passed unseen by rewake; whether it did your task is not known here",
 routed and kept like a keyboard stop: current waiters only, waits intact, the next
 finished settling the task. Why it cannot settle anything is in
-[codex-publication.md](codex-publication.md).
+[codex-publication.md](archive-1.x/codex-publication.md).
 
 **A turn that ended unproven** (Codex, September 25, 2026, main's decision in round 8):
 a turn with no reply naming it and no item but a compaction's — a goal's turn failing

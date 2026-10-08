@@ -12,7 +12,7 @@ One comment line, in the code it keeps:
 // legacy(<subject> <<bound>): <why it is kept>; remove when <condition>
 ```
 
-- **subject** — whose old form: `codex` or `claude` for a harness, `rewake` for what
+- **subject** — whose old form: a harness's id, such as `claude`, `rewake` for what
   an earlier build of rewake itself wrote: records in the state directory, the
   environment it passed to a harness.
 - **bound** — below which the old form is kept, and only one kind per subject, so the
@@ -53,10 +53,9 @@ the code, and fails once a harness mark is due.
 
 **A harness mark** is due when the oldest supported version of that harness reaches
 its bound. The oldest supported version is recorded below and raised only by an owner
-decision, written in the same row with its date. It is not the version pin in
-`internal/harness/codex/server_version.go` (`lastObservedServerVersion`): the pin names the
-version last observed working and only chooses whether a launch prints a note; an older
-installed version may still be supported. When the row is raised, the test turns every
+decision, written in the same row with its date. It is not a version an adapter pins as
+last observed working to choose whether a launch prints a note; an older installed
+version may still be supported. When the row is raised, the test turns every
 mark below the new floor red, and those marks are removed in the same change.
 
 **A `rewake` mark** is due when nothing written by a build before its date can still
@@ -88,33 +87,19 @@ In one change, in this order:
 
 ### Documents per bound
 
-- **`codex <0.157.1`** — the roots and permissions that marked the terminal's requests
-  until 0.155.1: [gateway.md](gateway.md#compatibility-and-limits) (the terminal's
-  recognition and the reconnect), [gateway-native-evidence.md](gateway-native-evidence.md)
-  (the construction of the primary start and resume),
-  [thread-ownership-investigation.md](thread-ownership-investigation.md) (the ordinary
-  resume's fields), [traps.md](traps.md) (a wrapper built before September 26, 2026 on
-  0.157.1), [research-codex-live-checks.md](research-codex-live-checks.md#the-terminals-selection-on-01571)
-  (0.155.1 as the control of the probe).
+None open: the marks of `codex <0.157.1` left with the Codex adapter in S8, October 8,
+2026, kept in [archive/1.x/codex](../archive/1.x/codex/README.md) as written.
 
 ## Oldest supported versions
 
 | Harness | Oldest supported | Decided |
 |---|---|---|
-| codex | 0.155.1 | The version installed and pinned since September 21, 2026, owner decision; 0.157.1 is supported beside it since September 26, 2026. |
 | claude | not set | No mark depends on it yet; set it with the first `claude` mark. |
 
 ## Current marks
 
 | File | Mark | Count |
 |---|---|---|
-| `internal/harness/codex/gateway/connections.go` | `codex <0.157.1` | 1 |
-| `internal/harness/codex/gateway/fork.go` | `codex <0.157.1` | 1 |
-| `internal/harness/codex/gateway/metadata.go` | `codex <0.157.1` | 1 |
-| `internal/harness/codex/gateway/metadata_validation.go` | `codex <0.157.1` | 1 |
-| `internal/harness/codex/gateway/state.go` | `codex <0.157.1` | 2 |
-| `internal/harness/codex/gateway/state_test.go` | `codex <0.157.1` | 1 |
-| `internal/harness/codex/gateway/tui_paths_test.go` | `codex <0.157.1` | 2 |
 | `internal/inbox/answer_mark.go` | `rewake <2026-09-26` | 1 |
 | `internal/inbox/waiters.go` | `rewake <2026-09-28` | 1 |
 | `internal/inbox/window.go` | `rewake <2026-09-26` | 1 |
@@ -122,6 +107,3 @@ In one change, in this order:
 | `internal/worktree/land.go` | `rewake <2026-09-27` | 1 |
 | `internal/role/role.go` | `rewake <2026-09-17` | 1 |
 | `internal/sessionstate/store.go` | `rewake <2026-09-26` | 1 |
-| `test/workflow/codexshim_client_test.go` | `codex <0.157.1` | 1 |
-| `test/workflow/codexshim_params_test.go` | `codex <0.157.1` | 1 |
-| `test/workflow/codexshim_served_test.go` | `codex <0.157.1` | 1 |

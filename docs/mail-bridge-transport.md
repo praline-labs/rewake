@@ -4,7 +4,7 @@ From S7 a harness may carry the mail tool's calls itself, without a tool server 
 rewake's: the harness registers the tools and its own process asks the wrapper's endpoint
 to run each call (`docs/v2/design-api.md#tooltransport`). The fixture is the first harness
 to do so ([stage3-fixture.md](v2/stage3-fixture.md#the-tool-transport)); the Claude Code
-mod is meant to be the next. The rules of [mail-bridge-server.md](mail-bridge-server.md)
+mod is meant to be the next. The rules of [mail-bridge-server.md](archive-1.x/mail-bridge-server.md)
 hold unchanged — T1–T11 in [rules/tools.md](rules/tools.md) bind every transport — and this
 page says where the path differs.
 
@@ -28,8 +28,8 @@ functions every transport uses (`wrap.MailTool`). A harness that carries its own
 names the transport its calls are bound under (`ToolTransport()`); the wrapper starts the
 endpoint under it, keeps no channel record (that record is the tool servers'), and offers
 the backend the tools, the endpoint's path, and a function that names the process the
-endpoint serves (`OfferTools`). Under `--no-mail-tool` nothing is offered and no endpoint
-starts.
+endpoint serves (`OfferTools`). Since S8 no launch offers the tool, and
+`--no-mail-tool` left with the injection.
 
 The fixture's backend hands the tools and the path to its program in the tool transport's
 probe; the program answers the names it registered and their digest. The capability is

@@ -108,7 +108,7 @@ ACK checks remain mandatory; role-gated root grants still obey the selected poli
 ## Installed primary/side delivery acceptance — September 19, 2026
 
 The reviewed integration and startup fixes passed all five checks. Owner fresh
-and resume runs with the usual configuration were stable; [startup evidence](startup-transport.md#owner-acceptance-and-installation--september-19-2026)
+and resume runs with the usual configuration were stable; [startup evidence](archive-1.x/startup-transport.md#owner-acceptance-and-installation--september-19-2026)
 records the installed binary. All three sessions restarted. The orchestrator sent
 a short task to the general session and received automatic `NEW-REVIEW-OK` / `1.25`.
 The write session then committed and pushed `e465729` and returned automatic

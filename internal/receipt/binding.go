@@ -11,7 +11,7 @@ import (
 	"github.com/praline-labs/rewake/internal/state"
 )
 
-// A call's binding (docs/mail-bridge-server.md#running-the-child) names the
+// A call's binding (docs/archive-1.x/mail-bridge-server.md#running-the-child) names the
 // record a tool call holds. Every path that holds a record writes it right
 // after taking the record's lock and before its first step, so its absence,
 // read as "no such file", proves the call made no effect, and its presence

@@ -27,7 +27,7 @@ delivery after `/new` were observed on September 26, 2026
 ([research-codex-live-checks.md](research-codex-live-checks.md#live-messaging-checks-of-september-26-2026)).
 Every fact below carries the version it was
 taken on; a fact tagged 0.154.0 has not been re-checked on 0.155.1.
-September 20: [native mailbox contract](native-mailbox.md) and
+September 20: [native mailbox contract](archive-1.x/native-mailbox.md) and
 [owner/installed acceptance with evidence limits](native-mailbox-acceptance.md).
 
 ## Codex CLI

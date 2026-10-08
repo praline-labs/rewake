@@ -3,10 +3,10 @@
 **Stages 1 and 2 of 3 built and accepted on October 1, 2026.** Stage 1 is the CLI side
 ([mail-bridge-cli.md](mail-bridge-cli.md), [entry](roadmap/2026-10-01-mail-tool-cli-stage.md));
 stage 2 the server, its context endpoint and the adapters
-([mail-bridge-server.md](mail-bridge-server.md), [mail-bridge-turns.md](mail-bridge-turns.md),
+([mail-bridge-server.md](archive-1.x/mail-bridge-server.md), [mail-bridge-turns.md](mail-bridge-turns.md),
 [mail-bridge-checks.md](mail-bridge-checks.md),
 [entry](roadmap/2026-10-01-mail-tool-server-stage.md)); the launch injection, stage 3, is built
-([mail-bridge-launch.md](mail-bridge-launch.md), [mail-bridge-channel.md](mail-bridge-channel.md),
+([mail-bridge-launch.md](archive-1.x/mail-bridge-launch.md), [mail-bridge-channel.md](mail-bridge-channel.md),
 [entry](roadmap/2026-10-04-mail-tool-launch-stage.md)) and its code accepted on October 4, 2026,
 with its live checks pending: until gates G2 and G7 close, a launch gives neither harness the server and says why. This is the build specification for the mail
 transport chosen on September 30, 2026 ([work queue](work-queue.md#now-after-100)). The CLI implements mail
@@ -89,7 +89,7 @@ the CLI validates it with the wrapper. No model-supplied identity, call ID, time
 path or environment assignment is accepted as authority.
 
 The endpoint is a private Unix socket of the run, 0600 under the state directory's socket
-directory ([where it lives](mail-bridge-server.md#what-the-server-knows-at-start)),
+directory ([where it lives](archive-1.x/mail-bridge-server.md#what-the-server-knows-at-start)),
 with peer-process checks and a per-launch capability. These prevent cross-wiring; same
 UID or possession of an environment token alone does not authenticate a native call.
 The wrapper matches the exact tool, arguments and native observation before issuing a

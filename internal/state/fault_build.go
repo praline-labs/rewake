@@ -15,14 +15,13 @@ import (
 )
 
 // A binary built with the rewakefault tag takes its faults from REWAKE_FAULT,
-// so a test can break a step of a process it does not run itself: the mail
-// tool's server and the CLI child it starts
-// (docs/mail-bridge-checks.md#testing-without-a-live-harness). A release is
+// so a test can break a step of a process it does not run itself: the CLI
+// child a tool call starts (docs/mail-bridge-checks.md#testing-without-a-live-harness). A release is
 // never built with the tag, and has no such variable.
 //
 // The value is a list of role:action=argument separated by semicolons. The
-// role is child (a process running one tool call), server (bridge-serve) or
-// other (any other command, as the shell runs it); the actions:
+// role is child (a process running one tool call) or other (any other
+// command, as the shell runs it); the actions:
 //
 //	log=<file>       append "<role> <op> <path>" for every operation
 //	crash=<n>        die by SIGKILL just before the n-th durable step
@@ -57,11 +56,8 @@ func init() {
 		return
 	}
 	role := "other"
-	switch {
-	case os.Getenv("REWAKE_BRIDGE_TICKET_FD") != "":
+	if os.Getenv("REWAKE_BRIDGE_TICKET_FD") != "" {
 		role = "child"
-	case len(os.Args) > 1 && os.Args[1] == "bridge-serve":
-		role = "server"
 	}
 	plan := faultPlan{role: role}
 	for _, item := range strings.Split(spec, ";") {

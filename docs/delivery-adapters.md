@@ -130,7 +130,7 @@ The wrapper's gateway follows the native TUI's own accepted primary intent and
 matching direct-input reply. It does not discover a loaded root or attach an
 observer through resume. The transport reserves epoch/connection/generation/thread
 before inbox readability and holds admission through the delivery ACK. A-B-A never
-reuses an old reservation. See [gateway selection and admission](gateway.md).
+reuses an old reservation. See [gateway selection and admission](archive-1.x/gateway.md).
 
 Readiness waits for ordinary resume backfill outside the mailbox lock, admission
 FIFO and global gate. Native reads and approval replies remain able to progress.

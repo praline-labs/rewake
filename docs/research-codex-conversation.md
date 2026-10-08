@@ -2,14 +2,14 @@
 
 Split from [research-codex.md](research-codex.md) by subject on September 30, 2026: that
 document carries the standing facts about Codex CLI; this one carries the source facts
-read for [delivery-conversation.md](delivery-conversation.md) — what states a
+read for [delivery-conversation.md](archive-1.x/delivery-conversation.md) — what states a
 conversation's permissions, how the server applies a change of them and tells it, and the
 warning the terminal draws without a turn. All of it was read in the source, none of it
 seen live, and it ages with the version it was read in: recheck before relying on it.
 
 The first two sections were read for a check of the sandbox before each delivery, taken
 out of the failed-resume fix on September 30, 2026
-([delivery-conversation.md](delivery-conversation.md#when-the-worker-could-not-read-its-mail)).
+([delivery-conversation.md](archive-1.x/delivery-conversation.md#when-the-worker-could-not-read-its-mail)).
 The facts stay true of 0.159.0 and are kept for what comes next. What they showed is why
 the check was dropped: the stream says what the settings are, not which request they
 answer, and not which permissions a running turn keeps.
@@ -93,4 +93,4 @@ review-codex]** How a change of permissions is applied and told:
 server notification `warning` `{threadId?, message}` is drawn by the terminal as a warning
 line without a turn of the model (`tui/src/chatwidget/protocol.rs:233`, routed by thread in
 `app/app_server_event_targets.rs:185`). rewake sends one through the gateway to show the
-person why deliveries wait ([delivery-conversation.md](delivery-conversation.md#who-is-told)).
+person why deliveries wait ([delivery-conversation.md](archive-1.x/delivery-conversation.md#who-is-told)).

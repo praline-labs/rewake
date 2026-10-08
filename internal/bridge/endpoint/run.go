@@ -17,7 +17,7 @@ import (
 	"github.com/praline-labs/rewake/internal/state"
 )
 
-// Running a transport's call (docs/mail-bridge-server.md#running-the-child,
+// Running a transport's call (docs/archive-1.x/mail-bridge-server.md#running-the-child,
 // the same steps in the wrapper). Every effect of a call happens in its child,
 // under its receipt; the endpoint only starts it, bounds it, and reads what it
 // left. It never repeats, finishes or undoes what the child did.
