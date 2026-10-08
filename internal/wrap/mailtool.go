@@ -44,7 +44,11 @@ type mailTool struct {
 // is decided here: until G8 closes, no call's limits are proven, and no
 // result acknowledges a read.
 func (t *mailTool) config(request Request, name, epoch, transport string, clock *inbox.ReadClock, gates harness.Gates) endpoint.Config {
-	span, refusal := endpoint.DeadlineFor(transport, os.Getenv)
+	timeout := ""
+	if timed, ok := request.Harness.(harness.ToolTimeout); ok {
+		timeout = timed.ToolTimeoutVariable()
+	}
+	span, refusal := endpoint.DeadlineFor(timeout, os.Getenv)
 	bound, _ := gates.OutputBound()
 	return endpoint.Config{
 		Dir: request.Dir, Name: name, Epoch: epoch, Transport: transport,
@@ -146,6 +150,7 @@ func (t *mailTool) handler(capture func() *inbox.ReadBoundary, publish func(cont
 	if t.endpoint != nil {
 		handler.EndCapture = t.endpoint.Gate().Capture
 		handler.ToolEvent = t.endpoint.CodexEvent
+		handler.Tool = t.endpoint
 	}
 	return handler
 }

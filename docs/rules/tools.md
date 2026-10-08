@@ -129,8 +129,9 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/cli/bridge_unknown_test.go` `TestAWaiterThatCannotBeReadLeavesTheMarkOpen`
   - `internal/cli/bridge_rules_test.go` `TestAnExpiredReadShowsAndClaimsNothing`
   - `internal/cli/bridge_rules_test.go` `TestALetterReadElsewhereShowsAsGone`
-  - `internal/bridge/endpoint/events_test.go` `TestOnlyAUsedTicketWithItsBindingIsAcknowledged` — split in S7: its neutral oracle on the neutral input
-  - `internal/bridge/endpoint/events_test.go` `TestTheExposureOfEachResultShape` — split in S7: its neutral oracle on the neutral input
+  - `internal/bridge/endpoint/input_test.go` `TestOnlyAUsedTicketWithItsBindingIsAcknowledged`
+  - `internal/bridge/endpoint/input_test.go` `TestTheWholeResultAndItsSize`
+  - `internal/bridge/endpoint/events_test.go` `TestTheExposureOfEachResultShape` — the decoding of Codex result shapes; leaves with Codex in S8
   - `internal/bridge/server/flow_test.go` `TestAToolReadIsReadOnceItsAnswerArrived` — rebuilt in S7 on the neutral rig
   - `internal/bridge/server/flow_test.go` `TestALongReadGoesOnThroughItsNextWords` — rebuilt in S7 on the neutral rig
   - `internal/bridge/server/flow_test.go` `TestAFailedResultReadsNothing` — rebuilt in S7 on the neutral rig
@@ -159,7 +160,7 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   The carried test includes a lost end with a `retry` from another turn.
   Tests:
   - `internal/bridge/endpoint/gate_test.go` `TestAnAcknowledgmentAfterANotedEndWritesNothing`
-  - `internal/bridge/endpoint/tickets_end_test.go` `TestACapturedCodexTurnIssuesNoMoreTickets`
+  - `internal/bridge/endpoint/tickets_end_test.go` `TestACapturedTurnIssuesNoMoreTickets`
   - `internal/bridge/endpoint/tickets_end_test.go` `TestARunPastTheTicketsItRemembersRefuses`
   - `internal/bridge/endpoint/tickets_end_test.go` `TestTheLastTicketARunRemembersIsIssuedOnce`
   - `internal/bridge/endpoint/tickets_end_test.go` `TestNoTicketWhileACaptureWaitsForAWriter`

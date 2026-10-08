@@ -71,7 +71,7 @@ type asked struct {
 }
 
 func runTableOrder(t *testing.T, order []string) {
-	served, path := testEndpoint(t, bridge.CodexTransport, func(c *Config) { c.Wait = 100 * time.Millisecond })
+	served, path := testEndpoint(t, testTransport, func(c *Config) { c.Wait = 100 * time.Millisecond })
 	clock := time.Now()
 	served.calls.mu.Lock()
 	served.calls.now = func() time.Time { return clock }
@@ -95,7 +95,7 @@ func runTableOrder(t *testing.T, order []string) {
 	request := func() {
 		pending++
 		go func() {
-			ticket, err := ticketFor(t, path, codexRequest("th", "t1", "original", words))
+			ticket, err := ticketFor(t, path, neutralRequest("th", "t1", "original", words))
 			results <- asked{ticket, err}
 		}()
 		// Until the request is answered or waits in the table, so the
@@ -117,7 +117,7 @@ func runTableOrder(t *testing.T, order []string) {
 	for n, event := range order {
 		switch event {
 		case "observe", "observe again":
-			served.CodexEvent(codexEvent("item/started", "th", "t1", "original", words, nil))
+			seenCall(served, "th", "t1", "original", words)
 			collect()
 		case "request", "request again":
 			request()
@@ -130,7 +130,7 @@ func runTableOrder(t *testing.T, order []string) {
 			}
 		case "pressure":
 			for i := range maxCalls {
-				served.CodexEvent(codexEvent("item/started", "th", "t1", fmt.Sprintf("pressure-%d-%d", n, i), words, nil))
+				seenCall(served, "th", "t1", fmt.Sprintf("pressure-%d-%d", n, i), words)
 			}
 		case "age":
 			served.calls.mu.Lock()

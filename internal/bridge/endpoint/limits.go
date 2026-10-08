@@ -90,10 +90,15 @@ func same(a, b *string) bool {
 	return *a == *b
 }
 
-// deadline is how long a call's ticket lasts: on Claude Code by the limits
+// hookPath says this run's calls are reported by hooks, which name a call's
+// turn from its prompt and send the limits it runs under; on every other
+// transport the binding names the turn.
+func (e *Endpoint) hookPath() bool { return e.cfg.Transport == bridge.ClaudeTransport }
+
+// deadline is how long a call's ticket lasts: on the hook path by the limits
 // its hook saw, when it sent them, else by the launch's.
 func (e *Endpoint) deadline(seen observation) (time.Duration, string) {
-	if e.cfg.Transport == bridge.ClaudeTransport && seen.limits != nil {
+	if e.hookPath() && seen.limits != nil {
 		return callSpan(seen.limits)
 	}
 	return e.cfg.Span, e.cfg.Refusal

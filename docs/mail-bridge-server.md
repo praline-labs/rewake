@@ -91,11 +91,11 @@ wrapper in `internal/wrap/mailtool.go`; the CLI side of rules 4, 6 and 7 is stag
 | Rule | Where |
 |---|---|
 | 1, a transport | `server.go`: the loop, four slots, nothing kept between calls |
-| 2, a ticket per native call | `endpoint/calls.go`: `observe`, `issue` (one per call, kept in `spent` for the run; the turn open, its time from `endpoint/gate.go` `Stamp`), `confirm` (once, before the deadline) |
+| 2, a ticket per native call | `endpoint/input.go`: the neutral input every harness's observations reach — a turn started or ended, a call seen, a call's result, a startup failed — which the Codex parser and the Claude Code hook path (`endpoint/events.go`) call; `endpoint/calls.go`: `observe`, `issue` (one per call, kept in `spent` for the run; the turn open, its time from `endpoint/gate.go` `Stamp`), `confirm` (once, before the deadline) |
 | 3, effects in the child | `child.go`: one child per call, never restarted or killed on a cancellation |
 | 4, the binding first | `cli/inbox_parts.go` (`lockOperation`), `receipt/binding.go`; `child.go` `afterDeath` reads it |
 | 5, bounds | `frames.go` (frames, ids), `encoder.go` (the one writer of stdout), `child.go` (`capped`) |
-| 6, a part on its answer | `endpoint/events.go` (`exposureOf`, `complete`: the first result of a call only), `cli/read_ack.go` (`answeredBy`, digest) |
+| 6, a part on its answer | `endpoint/events.go` (`resultOf`, each harness's result decoded), `endpoint/input.go` (`exposure`: the first text and the whole result's size; `complete`: the first result of a call only), `cli/read_ack.go` (`answeredBy`, digest) |
 | 7, commits stop at the end | `cli/pending_turn.go` (`judgeMark`), `cli/read_ack.go` with `endpoint/gate.go` (`Enter`) |
 | 8, the boundary a cut | `endpoint/gate.go` (`Capture`), taken by the Codex gateway (`event_stream.go`) and Claude Code's collector (`collector_turns.go`) |
 | 9, bounded waits | `endpoint/calls.go` (the observation's wait), `cli/read_ack.go` (`ackBudget`), `child.go` (the hard bound, and `reapWait` past it once stdin ended), `server.go` (`outputWait`) |
@@ -221,7 +221,8 @@ long as the run, and a ticket means nothing to another run.
 The deadline is `CalledBoot` plus 25 seconds. On Codex, stage 3 sets the transport's
 own `tool_timeout_sec` to 30, so the deadline falls inside it. On Claude Code the
 transport's timeout is the person's `MCP_TOOL_TIMEOUT`, read from the wrapper's own
-environment at launch; when that is shorter, the deadline is that timeout less two
+environment at launch — the adapter names the variable (`ToolTimeoutVariable`), and
+`DeadlineFor` reads it; when that is shorter, the deadline is that timeout less two
 seconds. A deadline under five seconds means the tool reads nothing: the call is
 refused, and the reason names the setting. That is stage 2 as built; stage 3 replaces
 the launch-time reading with the value each call's hook observes and our server's own

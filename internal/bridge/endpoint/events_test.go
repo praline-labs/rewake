@@ -130,35 +130,6 @@ func TestTheRecordedClaudeHooksGiveEvidence(t *testing.T) {
 	}
 }
 
-// Only a call whose ticket a child used, and whose binding names a record,
-// reaches the acknowledgment.
-func TestOnlyAUsedTicketWithItsBindingIsAcknowledged(t *testing.T) {
-	var got acknowledged
-	served, path := testEndpoint(t, bridge.CodexTransport, func(c *Config) { c.Acknowledge = got.record })
-	openTurn(served, "th", "t1")
-	content := []map[string]string{{"type": "text", "text": "a letter"}}
-	served.CodexEvent(codexEvent("item/started", "th", "t1", "never-asked", words, nil))
-	served.CodexEvent(codexEvent("item/completed", "th", "t1", "never-asked", words, content))
-	served.CodexEvent(codexEvent("item/started", "th", "t1", "not-used", words, nil))
-	mustTicket(t, path, codexRequest("th", "t1", "not-used", words))
-	// Bound all the same, so only the unused ticket keeps it out.
-	cfg := served.cfg
-	if err := receipt.Bind(cfg.Dir, cfg.Name, cfg.Epoch, bridge.CallKey(bridge.CodexTransport, "th", "not-used"), token(1)); err != nil {
-		t.Fatal(err)
-	}
-	served.CodexEvent(codexEvent("item/completed", "th", "t1", "not-used", words, content))
-	served.CodexEvent(codexEvent("item/started", "th", "t1", "unbound", words, nil))
-	used(t, served, path, codexRequest("th", "t1", "unbound", words), "")
-	served.CodexEvent(codexEvent("item/completed", "th", "t1", "unbound", words, content))
-	served.CodexEvent(codexEvent("item/started", "th", "t1", "bound", words, nil))
-	used(t, served, path, codexRequest("th", "t1", "bound", words), token(0))
-	served.CodexEvent(codexEvent("item/completed", "th", "t1", "bound", words, content))
-	served.Close()
-	if len(got.seen) != 1 || got.seen[0].CallID != "bound" || string(got.seen[0].Answer) != "a letter" {
-		t.Fatalf("acknowledged %+v", got.seen)
-	}
-}
-
 // A Codex result that failed, or that the harness marked an error, proves no
 // success.
 func TestAFailedCodexResultIsNoSuccess(t *testing.T) {

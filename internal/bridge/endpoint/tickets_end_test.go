@@ -13,25 +13,24 @@ import (
 )
 
 // A ticket is issued only while no end was noted since its call was heard,
-// or, on Codex, since its turn started: the capture closes the turn for new
-// tickets before the turn's completion reaches the table.
+// or, where the binding names the turn, since its turn started: the capture
+// closes the turn for new tickets before the turn's end reaches the table.
 
-// A Codex turn whose end was captured — on thread/status/changed, say, with
-// turn/completed not yet heard — gives a call of it reported afterwards no
-// ticket.
-func TestACapturedCodexTurnIssuesNoMoreTickets(t *testing.T) {
-	served, path := testEndpoint(t, bridge.CodexTransport)
+// A turn whose end was captured, with the harness's report of its end not yet
+// heard, gives a call of it reported afterwards no ticket.
+func TestACapturedTurnIssuesNoMoreTickets(t *testing.T) {
+	served, path := testEndpoint(t, testTransport)
 	openTurn(served, "th", "t1")
 	served.Gate().Capture()
-	served.CodexEvent(codexEvent("item/started", "th", "t1", "late", words, nil))
-	_, err := ticketFor(t, path, codexRequest("th", "t1", "late", words))
+	seenCall(served, "th", "t1", "late", words)
+	_, err := ticketFor(t, path, neutralRequest("th", "t1", "late", words))
 	if err == nil || !strings.Contains(err.Error(), "ended before its ticket") {
 		t.Fatalf("a call of a captured turn: %v", err)
 	}
 	// The next turn starts after the end, and its calls are served.
 	openTurn(served, "th", "t2")
-	served.CodexEvent(codexEvent("item/started", "th", "t2", "next", words, nil))
-	mustTicket(t, path, codexRequest("th", "t2", "next", words))
+	seenCall(served, "th", "t2", "next", words)
+	mustTicket(t, path, neutralRequest("th", "t2", "next", words))
 }
 
 // On Claude Code an interruption is the captured end: a call heard before it
@@ -54,15 +53,15 @@ func TestAClaudeCallHeardBeforeACaptureGetsNoTicketAfterIt(t *testing.T) {
 // A run remembers every call it gave a ticket, up to maxSpent; past that it
 // refuses, rather than forget one and serve it twice.
 func TestARunPastTheTicketsItRemembersRefuses(t *testing.T) {
-	served, path := testEndpoint(t, bridge.CodexTransport)
+	served, path := testEndpoint(t, testTransport)
 	openTurn(served, "th", "t1")
 	served.calls.mu.Lock()
 	for n := range maxSpent {
 		served.calls.spent["spent-"+strconv.Itoa(n)] = true
 	}
 	served.calls.mu.Unlock()
-	served.CodexEvent(codexEvent("item/started", "th", "t1", "one-more", words, nil))
-	_, err := ticketFor(t, path, codexRequest("th", "t1", "one-more", words))
+	seenCall(served, "th", "t1", "one-more", words)
+	_, err := ticketFor(t, path, neutralRequest("th", "t1", "one-more", words))
 	if err == nil || !strings.Contains(err.Error(), "all the tickets it can remember") {
 		t.Fatalf("a ticket past the run's memory: %v", err)
 	}
@@ -72,7 +71,7 @@ func TestARunPastTheTicketsItRemembersRefuses(t *testing.T) {
 // once, and stays spent when its call ages, is pushed out of the table and
 // is heard again.
 func TestTheLastTicketARunRemembersIsIssuedOnce(t *testing.T) {
-	served, path := testEndpoint(t, bridge.CodexTransport)
+	served, path := testEndpoint(t, testTransport)
 	openTurn(served, "th", "t1")
 	served.calls.mu.Lock()
 	for n := range maxSpent - 1 {
@@ -81,7 +80,7 @@ func TestTheLastTicketARunRemembersIsIssuedOnce(t *testing.T) {
 	served.calls.mu.Unlock()
 	calls := []string{"last-a", "last-b"}
 	for _, call := range calls {
-		served.CodexEvent(codexEvent("item/started", "th", "t1", call, words, nil))
+		seenCall(served, "th", "t1", call, words)
 	}
 	start := make(chan struct{})
 	results := make(chan asked, len(calls))
@@ -91,7 +90,7 @@ func TestTheLastTicketARunRemembersIsIssuedOnce(t *testing.T) {
 		go func() {
 			defer both.Done()
 			<-start
-			ticket, err := ticketFor(t, path, codexRequest("th", "t1", call, words))
+			ticket, err := ticketFor(t, path, neutralRequest("th", "t1", call, words))
 			results <- asked{ticket, err}
 		}()
 	}
@@ -119,10 +118,10 @@ func TestTheLastTicketARunRemembersIsIssuedOnce(t *testing.T) {
 	served.calls.now = func() time.Time { return time.Now().Add(callLife + time.Second) }
 	served.calls.mu.Unlock()
 	for n := range maxCalls + 1 {
-		served.CodexEvent(codexEvent("item/started", "th", "t1", fmt.Sprintf("pressure-%d", n), words, nil))
+		seenCall(served, "th", "t1", fmt.Sprintf("pressure-%d", n), words)
 	}
-	served.CodexEvent(codexEvent("item/started", "th", "t1", last.CallID, words, nil))
-	if _, err := ticketFor(t, path, codexRequest("th", "t1", last.CallID, words)); err == nil {
+	seenCall(served, "th", "t1", last.CallID, words)
+	if _, err := ticketFor(t, path, neutralRequest("th", "t1", last.CallID, words)); err == nil {
 		t.Fatal("the last ticket was issued again after its call left the table")
 	}
 	served.calls.mu.Lock()
@@ -138,9 +137,9 @@ func TestTheLastTicketARunRemembersIsIssuedOnce(t *testing.T) {
 // A capture that noted its end and waits for an acknowledgment still writing
 // already refuses tickets, before it returns.
 func TestNoTicketWhileACaptureWaitsForAWriter(t *testing.T) {
-	served, path := testEndpoint(t, bridge.CodexTransport)
+	served, path := testEndpoint(t, testTransport)
 	openTurn(served, "th", "t1")
-	served.CodexEvent(codexEvent("item/started", "th", "t1", "late", words, nil))
+	seenCall(served, "th", "t1", "late", words)
 	leave, ok := served.Gate().Enter(boottime.Now())
 	if !ok {
 		t.Fatal("the writing acknowledgment was refused")
@@ -156,7 +155,7 @@ func TestNoTicketWhileACaptureWaitsForAWriter(t *testing.T) {
 			t.Fatal("the capture never noted its end")
 		}
 	}
-	if _, err := ticketFor(t, path, codexRequest("th", "t1", "late", words)); err == nil || !strings.Contains(err.Error(), "ended before its ticket") {
+	if _, err := ticketFor(t, path, neutralRequest("th", "t1", "late", words)); err == nil || !strings.Contains(err.Error(), "ended before its ticket") {
 		t.Fatalf("a ticket while the capture waits: %v", err)
 	}
 	select {

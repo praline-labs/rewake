@@ -15,7 +15,14 @@ import (
 // (docs/mail-bridge-launch.md#claude-code): which launches get no tool, and
 // for the rest every source of a server named rewake the check covers.
 
-var _ harness.MailToolHarness = claudeHarness{}
+var (
+	_ harness.MailToolHarness = claudeHarness{}
+	_ harness.ToolTimeout     = claudeHarness{}
+)
+
+// ToolTimeoutVariable is where the person sets how long Claude Code waits
+// for an MCP tool call.
+func (claudeHarness) ToolTimeoutVariable() string { return "MCP_TOOL_TIMEOUT" }
 
 // mcpConfigFlag takes a list: every word up to the next one that starts with
 // a dash, the =form, and repeated flags.

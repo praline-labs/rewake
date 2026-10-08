@@ -92,8 +92,13 @@ type CompletionHandler struct {
 	// ToolEvent takes a server notification of the primary thread that
 	// concerns the mail tool's calls: a turn's start or end, an item of the
 	// tool started or completed; and an MCP server's startup status of any
-	// thread. It never waits. Nil where nobody listens.
+	// thread. It never waits. Nil where nobody listens. Codex's raw form of
+	// what Tool takes, it leaves with Codex in S8.
 	ToolEvent func(raw []byte)
+	// Tool takes what the harness reports of the mail tool's calls in no
+	// harness's terms: turns, calls seen, their results, a failed start.
+	// It never waits. Nil where the run has no tool.
+	Tool ToolInput
 	// Channel takes the channel events the backend itself observes: a
 	// thread the gateway admitted, which starts the tool's servers. It
 	// never waits. Nil where nobody listens.

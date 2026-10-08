@@ -2,17 +2,16 @@ package endpoint
 
 import (
 	"encoding/json"
-	"strings"
 
 	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/channel"
-	"github.com/praline-labs/rewake/internal/receipt"
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/harness"
 )
 
-// The adapters: each harness's own record of a call, read into an
-// observation, and of its result, into the evidence a read's acknowledgment
-// needs (docs/mail-bridge-turns.md#acknowledging-a-read).
+// The two parsers of 1.x: each harness's own record of a call, decoded and
+// handed to the neutral input (input.go), and of its result, into the result a
+// read's acknowledgment needs (docs/mail-bridge-turns.md#acknowledging-a-read).
+// Each leaves with its adapter, in S8 and S9.
 
 // The tool as each harness names it.
 const (
@@ -60,14 +59,14 @@ func (e *Endpoint) CodexEvent(raw []byte) {
 	params := message.Params
 	switch message.Method {
 	case "turn/started":
-		e.turnStarted(params.Turn.ID)
+		e.TurnStarted(params.Thread, params.Turn.ID)
 	case "turn/completed":
-		e.turnEnded(params.Turn.ID)
+		e.TurnEnded(params.Thread, params.Turn.ID)
 	case serverStatus:
-		// The status's own text is dropped: the class is the endpoint's.
-		// Its thread, absent or not, decides whose channel it fails.
+		// The status's own text is dropped. Its thread, absent or not,
+		// decides whose channel it fails.
 		if params.Name == toolName && params.Status == "failed" {
-			e.tell(channel.Event{Kind: channel.StartupFailed, Thread: params.Thread})
+			e.StartupFailed(params.Thread)
 		}
 	case "item/started", "item/completed":
 		item := params.Item
@@ -75,8 +74,8 @@ func (e *Endpoint) CodexEvent(raw []byte) {
 			return
 		}
 		if message.Method == "item/started" {
-			digest, refusal := e.observedWords(wordsOf(item.Arguments))
-			e.observe(item.ID, observation{conversation: params.Thread, turn: params.TurnID, digest: digest, refusal: refusal})
+			words, _ := wordsOf(item.Arguments)
+			e.CallSeen(harness.ObservedCall{ID: item.ID, Conversation: params.Thread, Turn: params.TurnID, Words: words})
 			return
 		}
 		succeeded := item.Status == "completed" && item.Result != nil && !item.Result.IsError && isNull(item.Error)
@@ -84,7 +83,7 @@ func (e *Endpoint) CodexEvent(raw []byte) {
 		if item.Result != nil {
 			content = item.Result.Content
 		}
-		e.complete(item.ID, exposureOf(item.ID, content, succeeded, true))
+		e.CallResult(item.ID, resultOf(content, succeeded, true))
 	}
 }
 
@@ -123,23 +122,21 @@ func (e *Endpoint) hookWith(payload []byte, limits *HookLimits) {
 		// lives opens the hello timer.
 		e.tell(channel.Event{Kind: channel.CallSeen})
 		e.promptSeen(input.Prompt)
-		digest, refusal := e.observedWords(wordsOf(input.Input))
-		if nested {
-			refusal = "a nested agent's call does not run through the tool"
-		}
-		e.observe(input.UseID, observation{conversation: input.Session, prompt: input.Prompt, digest: digest, refusal: refusal, limits: limits})
+		words, _ := wordsOf(input.Input)
+		e.callSeen(harness.ObservedCall{ID: input.UseID, Conversation: input.Session, Words: words, Nested: nested}, input.Prompt, limits)
 	case "PostToolUse":
-		evidence := exposureOf(input.UseID, input.Response, true, !nested)
+		result := resultOf(input.Response, true, !nested)
 		if !e.limitsAllow(input.UseID, limits) {
 			// Which limit the harness applied to the result is unknown: the
 			// call is completed, and acknowledges nothing.
-			evidence = bridge.Exposure{}
+			result = harness.ToolResult{}
 		}
-		e.complete(input.UseID, evidence)
+		e.CallResult(input.UseID, result)
 	}
 }
 
-// wordsOf reads a call's arguments: one key, words, an array of strings.
+// wordsOf reads a call's arguments: one key, words, an array of strings; nil
+// for anything else.
 func wordsOf(arguments json.RawMessage) ([]string, bool) {
 	var shape map[string]json.RawMessage
 	if json.Unmarshal(arguments, &shape) != nil || len(shape) != 1 {
@@ -156,73 +153,30 @@ func isNull(raw json.RawMessage) bool {
 	return len(raw) == 0 || string(raw) == "null"
 }
 
-// exposureOf reads the result a harness recorded: a list of content items,
-// of which the first, a text, is the answer. Anything else — a string where
-// the harness kept the result in a file, an image, nothing — is a result
-// shortened or replaced, which proves no exposure.
-func exposureOf(id string, content json.RawMessage, succeeded, direct bool) bridge.Exposure {
-	evidence := bridge.Exposure{CallID: id, Direct: direct, Succeeded: succeeded}
+// resultOf reads the result an MCP harness recorded: a list of content items,
+// all text. Anything else — a string where the harness kept the result in a
+// file, an image, nothing — is a result shortened or replaced.
+func resultOf(content json.RawMessage, succeeded, direct bool) harness.ToolResult {
+	result := harness.ToolResult{Succeeded: succeeded, Direct: direct}
 	var items []struct {
 		Kind string  `json:"type"`
 		Text *string `json:"text"`
 	}
 	if json.Unmarshal(content, &items) != nil || len(items) == 0 {
-		evidence.Shortened = true
-		return evidence
+		result.Shortened = true
+		return result
 	}
-	texts := make([]string, 0, len(items))
 	for _, item := range items {
 		if item.Kind != "text" || item.Text == nil {
-			evidence.Shortened = true
-			return evidence
+			return harness.ToolResult{Succeeded: succeeded, Direct: direct, Shortened: true}
 		}
-		texts = append(texts, *item.Text)
+		result.Texts = append(result.Texts, *item.Text)
 	}
-	evidence.Answer = []byte(texts[0])
-	evidence.ResultBytes = bridge.EncodedSize(texts[0], strings.Join(texts[1:], ""))
-	return evidence
+	return result
 }
 
-// complete hands a call's result to the acknowledgment, which runs on its
-// own: the event's reader never waits for it. Only a call whose ticket a
-// child used can have shown anything, and only its first result is handled:
-// the attempt is spent before anything is read or waited for, so a repeat
-// cannot retry an acknowledgment the first one dropped
-// (docs/mail-bridge-turns.md#acknowledging-a-read).
-func (e *Endpoint) complete(id string, evidence bridge.Exposure) {
-	c := e.calls
-	c.mu.Lock()
-	entry := c.byCall[id]
-	if entry == nil || entry.completed {
-		c.mu.Unlock()
-		return
-	}
-	entry.completed = true
-	var ticket bridge.Ticket
-	used := entry.issued != nil && entry.issued.used
-	if used {
-		ticket = entry.issued.ticket
-	}
-	c.mu.Unlock()
-	if !used || e.cfg.Acknowledge == nil {
-		return
-	}
-	e.mu.Lock()
-	if e.closed {
-		e.mu.Unlock()
-		return
-	}
-	e.acks.Add(1)
-	e.mu.Unlock()
-	go func() {
-		defer e.acks.Done()
-		token, err := receipt.Bound(e.cfg.Dir, e.cfg.Name, e.cfg.Epoch, bridge.CallKey(ticket.Transport, ticket.Conversation, ticket.CallID))
-		if err != nil {
-			// Missing or unreadable: which read the call showed is
-			// unknown, and a later call shows the letter under its own.
-			return
-		}
-		state.Step("acknowledge")
-		_ = e.cfg.Acknowledge(e.cfg.Dir, e.cfg.Name, e.cfg.Epoch, token, evidence, e.cfg.Gate)
-	}()
+// exposureOf is the evidence an MCP result proves: its decoding, then the
+// neutral reading of the whole result and its size.
+func exposureOf(id string, content json.RawMessage, succeeded, direct bool) bridge.Exposure {
+	return exposure(id, resultOf(content, succeeded, direct))
 }

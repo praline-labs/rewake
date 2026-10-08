@@ -38,7 +38,7 @@ func hold(t *testing.T, path string, greeting hello) (*net.UnixConn, string) {
 // A hello is admitted only from a process below the harness, of this build,
 // carrying this launch's capability where its role needs one.
 func TestAHelloIsChecked(t *testing.T) {
-	_, path := testEndpoint(t, bridge.CodexTransport)
+	_, path := testEndpoint(t, testTransport)
 	cases := []struct {
 		greeting hello
 		refusal  string
@@ -57,18 +57,18 @@ func TestAHelloIsChecked(t *testing.T) {
 		}
 	}
 
-	unrooted, unrootedPath := testEndpoint(t, bridge.CodexTransport)
+	unrooted, unrootedPath := testEndpoint(t, testTransport)
 	unrooted.SetRoots()
 	if _, refusal := hold(t, unrootedPath, hello{Role: roleHook}); !strings.Contains(refusal, "not started") {
 		t.Fatalf("before the harness started: %q", refusal)
 	}
-	_, outsidePath := testEndpoint(t, bridge.CodexTransport, func(c *Config) {
+	_, outsidePath := testEndpoint(t, testTransport, func(c *Config) {
 		c.Descends = func(int, int) error { return errors.New("not below") }
 	})
 	if _, refusal := hold(t, outsidePath, hello{Role: roleServer, Capability: "secret"}); !strings.Contains(refusal, "does not run below") {
 		t.Fatalf("a process outside the harness: %q", refusal)
 	}
-	_, otherPath := testEndpoint(t, bridge.CodexTransport, func(c *Config) {
+	_, otherPath := testEndpoint(t, testTransport, func(c *Config) {
 		c.SameBuild = func(int) error { return errors.New("another image") }
 	})
 	if _, refusal := hold(t, otherPath, hello{Role: roleHook}); !strings.Contains(refusal, "another build") {
@@ -78,12 +78,12 @@ func TestAHelloIsChecked(t *testing.T) {
 
 // Each role asks only its own question.
 func TestARoleAsksOnlyItsOwnQuestion(t *testing.T) {
-	_, path := testEndpoint(t, bridge.CodexTransport)
+	_, path := testEndpoint(t, testTransport)
 	conn, refusal := hold(t, path, hello{Role: roleHook})
 	if refusal != "" {
 		t.Fatal(refusal)
 	}
-	asked := TicketRequest{Transport: bridge.CodexTransport, CallID: "c1"}
+	asked := TicketRequest{Transport: testTransport, CallID: "c1"}
 	encoded, _ := json.Marshal(request{ID: 7, Op: opTicket, Ask: &asked})
 	_, _ = conn.Write(append(encoded, '\n'))
 	line, err := bufio.NewReader(conn).ReadBytes('\n')
@@ -99,7 +99,7 @@ func TestARoleAsksOnlyItsOwnQuestion(t *testing.T) {
 
 // The connections are bounded: sixteen besides the servers, four servers.
 func TestTheConnectionsAreBounded(t *testing.T) {
-	_, path := testEndpoint(t, bridge.CodexTransport)
+	_, path := testEndpoint(t, testTransport)
 	for range maxOthers {
 		if _, refusal := hold(t, path, hello{Role: roleHook}); refusal != "" {
 			t.Fatal(refusal)
@@ -139,7 +139,7 @@ func TestAMissingEndpointIsUnreachable(t *testing.T) {
 // A server's connection lives as long as the wrapper serves it; its end
 // tells the server to dial again.
 func TestAServersConnectionEndsWithTheWrapper(t *testing.T) {
-	served, path := testEndpoint(t, bridge.CodexTransport)
+	served, path := testEndpoint(t, testTransport)
 	client, err := Dial(path, "secret")
 	if err != nil {
 		t.Fatal(err)
@@ -152,7 +152,7 @@ func TestAServersConnectionEndsWithTheWrapper(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Fatal("the connection outlived its wrapper")
 	}
-	if _, err := client.Ticket(codexRequest("th", "t1", "c1", words), time.Second); !errors.Is(err, ErrUnreachable) {
+	if _, err := client.Ticket(neutralRequest("th", "t1", "c1", words), time.Second); !errors.Is(err, ErrUnreachable) {
 		t.Fatalf("a ticket after the wrapper closed: %v", err)
 	}
 }

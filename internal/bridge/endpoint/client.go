@@ -220,22 +220,22 @@ const (
 	timeoutLe = 2 * time.Second
 )
 
-// DeadlineFor is how long a ticket of this transport lasts, and why the tool
-// reads nothing when that is too short. On Claude Code the transport's own
-// timeout is the person's MCP_TOOL_TIMEOUT, in milliseconds, read from the
-// wrapper's environment at launch.
-func DeadlineFor(transport string, getenv func(string) string) (time.Duration, string) {
-	if transport != bridge.ClaudeTransport {
+// DeadlineFor is how long a ticket of a transport lasts, and why the tool
+// reads nothing when that is too short. variable names the setting of the
+// transport's own timeout, in milliseconds, read from the wrapper's
+// environment at launch; "" for a transport without one.
+func DeadlineFor(variable string, getenv func(string) string) (time.Duration, string) {
+	if variable == "" {
 		return span, ""
 	}
-	setting := getenv("MCP_TOOL_TIMEOUT")
+	setting := getenv(variable)
 	millis, err := strconv.ParseInt(setting, 10, 64)
 	if setting == "" || err != nil {
 		return span, ""
 	}
 	limit := min(span, time.Duration(millis)*time.Millisecond-timeoutLe)
 	if limit < minSpan {
-		return limit, "MCP_TOOL_TIMEOUT=" + setting + " leaves under five seconds for a tool call, so the tool runs nothing; raise it, or use the same words in the shell"
+		return limit, variable + "=" + setting + " leaves under five seconds for a tool call, so the tool runs nothing; raise it, or use the same words in the shell"
 	}
 	return limit, ""
 }

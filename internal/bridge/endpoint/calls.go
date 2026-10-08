@@ -174,13 +174,13 @@ func (e *Endpoint) observedWords(words []string, ok bool) (string, string) {
 // primary is refused before any wait.
 func (e *Endpoint) issue(asked TicketRequest, generation uint64) (bridge.Ticket, error) {
 	thread := ""
-	if e.cfg.Transport == bridge.CodexTransport {
+	if !e.hookPath() {
 		if err := e.bind(generation, asked.Conversation); err != nil {
 			return bridge.Ticket{}, err
 		}
 		thread = asked.Conversation
 	}
-	if e.cfg.Refusal != "" && e.cfg.Transport != bridge.ClaudeTransport {
+	if e.cfg.Refusal != "" && !e.hookPath() {
 		return bridge.Ticket{}, errors.New(e.cfg.Refusal)
 	}
 	if asked.Transport != e.cfg.Transport || asked.CallID == "" {
@@ -235,7 +235,7 @@ func (e *Endpoint) issue(asked TicketRequest, generation uint64) (bridge.Ticket,
 		return bridge.Ticket{}, errors.New("this run has issued all the tickets it can remember")
 	case seen.digest != asked.Digest:
 		return bridge.Ticket{}, errors.New("the harness recorded other words for this call")
-	case e.cfg.Transport == bridge.CodexTransport && !open:
+	case !e.hookPath() && !open:
 		return bridge.Ticket{}, errors.New("the call's turn is completed or was never seen to start")
 	}
 	// The ticket's time says the call belongs to a turn still open: so it
@@ -244,7 +244,7 @@ func (e *Endpoint) issue(asked TicketRequest, generation uint64) (bridge.Ticket,
 	// captured before turn/completed reaches the table closes the turn
 	// already (docs/mail-bridge-turns.md#a-turns-end-meets-its-calls).
 	since := seen.at
-	if e.cfg.Transport == bridge.CodexTransport {
+	if !e.hookPath() {
 		since = min(since, started)
 	}
 	now, ok := e.cfg.Gate.Stamp(since)
@@ -268,7 +268,7 @@ func (e *Endpoint) turnOf(asked TicketRequest, seen observation, first int64) (s
 	if seen.refusal != "" {
 		return "", errors.New(seen.refusal)
 	}
-	if e.cfg.Transport == bridge.CodexTransport {
+	if !e.hookPath() {
 		if asked.Conversation != seen.conversation || asked.Turn != seen.turn || seen.turn == "" {
 			return "", errors.New("the call's thread or turn is not the one the harness reported")
 		}

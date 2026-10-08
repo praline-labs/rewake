@@ -64,6 +64,13 @@ type MailToolHarness interface {
 	CheckMailTool(request ToolCheckRequest) (ToolDecision, error)
 }
 
+// ToolTimeout is a harness whose tool calls time out by a setting of its own:
+// the variable that holds it, in milliseconds, which bounds a ticket's
+// deadline.
+type ToolTimeout interface {
+	ToolTimeoutVariable() string
+}
+
 // ToolServer is the mail tool's server as the plan adds it.
 type ToolServer struct {
 	// Executable is this rewake, resolved once.

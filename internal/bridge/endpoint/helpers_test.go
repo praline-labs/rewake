@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/bridge"
+	"github.com/praline-labs/rewake/internal/harness"
 )
 
 // testEndpoint serves a run in a temporary state directory, as the wrapper
@@ -64,6 +65,16 @@ func codexEvent(method, thread, turn, call string, words []string, content any) 
 	return encoded
 }
 
+// testTransport is a transport of no harness: the endpoint's turn path for
+// every transport but the hook path, whose hooks name a call's turn.
+const testTransport = "test-transport"
+
+// neutralRequest is a transport's ask for the ticket of a call it binds to
+// the harness's own thread and turn.
+func neutralRequest(thread, turn, call string, words []string) TicketRequest {
+	return TicketRequest{Transport: testTransport, Conversation: thread, Turn: turn, CallID: call, Words: words, Digest: bridge.Digest(words)}
+}
+
 // request is the server's ask for the ticket of a Codex call.
 func codexRequest(thread, turn, call string, words []string) TicketRequest {
 	return TicketRequest{Transport: bridge.CodexTransport, Conversation: thread, Turn: turn, CallID: call, Words: words, Digest: bridge.Digest(words)}
@@ -80,9 +91,12 @@ func ticketFor(t *testing.T, path string, asked TicketRequest) (bridge.Ticket, e
 	return client.Ticket(asked, 3*time.Second)
 }
 
-// openTurn starts a Codex turn on thread.
-func openTurn(served *Endpoint, thread, turn string) {
-	served.CodexEvent(codexEvent("turn/started", thread, turn, "", nil, nil))
+// openTurn starts a turn on thread through the neutral input.
+func openTurn(served *Endpoint, thread, turn string) { served.TurnStarted(thread, turn) }
+
+// seenCall reports a call through the neutral input, as an adapter does.
+func seenCall(served *Endpoint, thread, turn, call string, words []string) {
+	served.CallSeen(harness.ObservedCall{ID: call, Conversation: thread, Turn: turn, Words: words})
 }
 
 func mustTicket(t *testing.T, path string, asked TicketRequest) bridge.Ticket {

@@ -80,7 +80,7 @@ the action taken until then.
 | 1, 3 | `internal/harness/codex/mailtool.go` (the leaves), `internal/harness/claude/mailtool.go` (the server file and the allowance), `claude/settings.go` (the hooks) |
 | 2, 6, 7 | `codex/mailtool_check.go` and `codex/mailtool_layers.go`, `claude/mailtool_check.go`, `internal/harness/check.go` (the bounded run), `check_holder.go` (the holder) and `check_diagnostic.go` (the closed list), called by `chooseTool` in `internal/wrap/mailtool_launch.go` before the claim |
 | 4 | `internal/wrap/mailtool_launch.go` (the choice and its note), `internal/wrap/mailtool.go` (the capability and endpoint before the plan), `--no-mail-tool` in `internal/cli/registry.go` |
-| 5 | `claude/settings.go` and `bridge-hook` (values per call), `internal/bridge/endpoint/limits.go` (deadline, acknowledgment), `codex/mailtool_inject.go` (reads off) |
+| 5 | `claude/settings.go` and `bridge-hook` (values per call), `internal/bridge/endpoint/limits.go` (deadline, acknowledgment), `claude/mailtool_check.go` (`ToolTimeoutVariable`, the setting the launch's deadline reads), `codex/mailtool_inject.go` (reads off) |
 | gates | `internal/harness/gates.go`: the table, `REWAKE_GATES_ASSUMED`, what each launch takes as open; `gates_version.go`: the version read for it ([mail-bridge-version.md](mail-bridge-version.md)) |
 
 ## The launch, in order
