@@ -105,3 +105,10 @@ accepted in review round 7:
   derived from the model: the decision's record and observations, installing its effects
   with proofs that outlive them, composition, the rules D1–D8 and their tests with the
   model as the oracle.
+
+Not scheduled:
+
+- [ideas.md](ideas.md) — the ideas the owner recorded on October 8, 2026 (sessions as
+  tabs inside Claude Code through a terminal bridge, a room panel, checks for the stage 4
+  probe, headless workers) and the recon of Claude Code mods that bears on them: what
+  each is, what was found, what blocks it, its stage and the probe that would settle it.

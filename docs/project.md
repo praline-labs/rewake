@@ -67,9 +67,11 @@ Each principle names where it comes from.
   do, and a new harness is added without touching the core. (The owner's decisions,
   recorded in [v2/design-api.md](v2/design-api.md#why-capabilities) and
   [v2/design.md](v2/design.md#the-import-rule).)
-- **Delivery only through what a harness offers itself.** rewake does not stand between
-  a person and their terminal and never types into anyone's screen; it reaches a session
-  only through the ways that harness provides. ([design.md](design.md#scope-of-the-first-version),
+- **Delivery only through what a harness offers itself.** rewake never intervenes in a
+  session the person started themselves — it does not stand between them and its
+  terminal — and never types into anyone's screen; it reaches a session only through the
+  ways that harness provides. For a session the person asks it to host in a tab, rewake
+  provides the terminal bridge, and only that. ([design.md](design.md#scope-of-the-first-version),
   [v2/design.md](v2/design.md#what-does-not-change).)
 - **The person's configuration is never edited.** Whatever a session needs is passed as
   options of that one launch. ([v2/design.md](v2/design.md#what-does-not-change),
@@ -188,10 +190,12 @@ sessions working on one repository do not step on each other. See
 **One build per room.** Every session of a room, and every rewake process acting for
 them, is one build of rewake; another build is refused, not mixed in. See [v2/design-state.md](v2/design-state.md#one-build-per-room).
 
-**What it never does.** It does not stand between a person and their terminal or type
-into anyone's screen; it does not edit the person's harness configuration; it does not
-read transcripts; it runs no service of its own beside the sessions; it does not guess an
-outcome it cannot prove.
+**What it never does.** It never intervenes in a session the person started themselves
+— it does not stand between them and its terminal — and never types into anyone's
+screen; for a session the person asks it to host in a tab, it provides the terminal
+bridge and nothing beyond it. It does not edit the person's harness configuration; it
+does not read transcripts; it runs no service of its own beside the sessions; it does not
+guess an outcome it cannot prove.
 
 **How the project is checked.** A change lands only when the project's checks pass —
 formatting, static analysis and the tests. An end-to-end suite runs rewake against a
