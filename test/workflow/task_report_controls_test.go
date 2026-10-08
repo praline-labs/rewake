@@ -58,8 +58,8 @@ var (
 		name: "turn-ended-ignores-stop",
 		file: "internal/cli/turn_payload.go",
 		edits: []edit{{
-			`if hook != "" && hook != "Stop" && hook != "StopFailure" {`,
-			`if hook != "" && hook != "StopFailure" {`,
+			`if hook != "Stop" && hook != "StopFailure" {`,
+			`if hook != "StopFailure" {`,
 		}},
 	}
 	// A report names the messages it settles. Emptied, it arrives and settles

@@ -18,8 +18,8 @@ import (
 // process of the fixture records how it was started.
 //
 // rewake must start the wrapper wherever it would have started the harness —
-// for the fixture that is the version read and the session half as well as the
-// terminal — with exactly the arguments the plain launch gets, and each of
+// the version read as well as the terminal, and for the fixture its session
+// half too — with exactly the arguments the plain launch gets, and each of
 // those processes must run in the wrapper's environment.
 //
 // The wrapper is named by a relative path, and another directory holds a
@@ -83,10 +83,10 @@ func runWrappedLaunch(t *testing.T, col column) {
 	}
 	c.Observed(obsWrappedReady, "both launches ready")
 
-	// The fixture's three processes are started one after another — its
-	// version, its session half and its terminal; each records itself on
-	// start, so the counts settle once the sessions are ready.
-	want := 1
+	// The processes are started one after another — the version read, the
+	// fixture's session half and the terminal; each records itself on start,
+	// so the counts settle once the sessions are ready.
+	want := 2
 	if col.harness == fixtureColumn.harness {
 		want = 3
 	}

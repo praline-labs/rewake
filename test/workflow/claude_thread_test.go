@@ -136,7 +136,7 @@ var mutantDeliveryUnpinned = mutation{
 var mutantStopThreadIgnored = mutation{
 	name:  "stop-thread-ignored",
 	file:  "internal/cli/turn_payload.go",
-	edits: []edit{{"\t\tresult.Thread = text(\"session_id\")\n", "\t\tresult.Thread = \"\"\n"}},
+	edits: []edit{{"result := hookTurnEnd{Thread: text(\"session_id\")}", "result := hookTurnEnd{}"}},
 }
 
 // Any known delivery conversation counts as changed.
