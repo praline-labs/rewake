@@ -213,6 +213,8 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/bridge/server/flow_test.go` `TestAnAnswerAfterTheEndReadsNothing` — leaves with `bridge/server` in S8
   - `test/toolrig/flow_test.go` `TestAnAnswerAfterTheEndReadsNothing`
   - `test/toolrig/flow_test.go` `TestACallOutsideAnOpenTurnRunsNothing`
+  - `test/toolrig/order_end_test.go` `TestAnEndOnRecordTheGateNeverHeardRefusesTheAcknowledgment`
+  - `test/toolrig/order_end_test.go` `TestAnEndCapturedBeforeAnAcknowledgmentsCheckLeavesTheLetterUnread`
   - `internal/cli/turn_declared_test.go` `TestAnAttemptNotProvenInItsTurnIsMarkUnproven`
   - `internal/cli/turn_declared_test.go` `TestALostEndWithARetryFromAnotherTurnMarksNothing`
   - `internal/cli/bridge_unknown_test.go` `TestAWaiterThatCannotBeReadLeavesTheMarkOpen`
