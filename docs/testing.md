@@ -13,7 +13,7 @@ and controls, and the roadmap records named below for how each piece was built.
 
 | Tier | Runs | Proves | Does not prove | Costs |
 | --- | --- | --- | --- | --- |
-| The five checks | formatting, vet, two linters, `go test -race -shuffle=on ./...` | unit invariants: parsing, publishing races, liveness, inbox order and expiry, the owned server's framing on a fake socket, the map of `docs/`; the suite's own classifier and summarizer | anything end to end: every workflow scenario skips itself | about a minute; no network, no harness, no container |
+| The five checks | formatting, vet, two linters, `go test -race -shuffle=on ./...` | unit invariants: parsing, publishing races, liveness, inbox order and expiry, the owned server's framing on a fake socket, the map of `docs/`; the suite's own classifier and summarizer | anything end to end: every workflow scenario skips itself | about half an hour at `-p 4` on an idle machine, nearly all of it the three `-race` test runs; no network, no harness, no container |
 | Workflow suite (**F**) | a built rewake end to end against a fixture of each harness, in two columns, with negative controls: some mutate the product, the others change the fixture's world | that the shared service code delivers, groups, steers and reports as each scenario claims, and that each claim can fail | that the real harness parses, renders or behaves as its fixture does | about three minutes — 3m06s and 3m10s on September 25, 2026, 102 cases six at a time, against 19m22s one after another the same evening; 2m23s eight at a time. The longest cases are `claude-steered`'s controls, about 30 s each. It fits in `go test`'s default ten minutes; the longer `-timeout` of the documented commands is for a first download of a named Codex version (below); no network; under `REWAKE_WORKFLOW=1` the schema case also runs a real Codex (next row) |
 | Schema of a Codex version | the installed Codex, or a named version fetched into a cache and run in a container, generating its protocol schema; every message the fixture sends is checked against it | that the fixture speaks the shape that version accepts: no missing required field, no field it does not have, no delivery it refuses and the fixture accepts | behaviour: order of events, readiness, reactions to a refusal — a schema has none of that | seconds from the cache; a first download is 150 MB and about half a minute |
 
@@ -58,14 +58,15 @@ decision, recorded in [harness-features.md](harness-features.md).
 ## Running it
 
 The commands live in one place, the [Checks section of AGENTS.md](../AGENTS.md#checks),
-which every agent session loads and whose five checks are the condition for a commit.
+which every agent session loads and whose five checks are the condition for the commit
+that lands a step; the commits before it need only build.
 What follows is what their variables and flags do, and when each run is the right one.
 
 **The five checks** clear `REWAKE_SESSION`, `REWAKE_EPOCH`, `REWAKE_DIR` and
 `REWAKE_ROOM`, because a test that inherits them reads the live session's state as its
 own. They start no harness, no container and no network request, whatever else the
-environment says: every real-harness step is behind the suite switch. Run them before
-every commit.
+environment says: every real-harness step is behind the suite switch. Run them on the
+commit that lands a step, and once before a fix after review is accepted.
 
 **The workflow suite** is switched on by `REWAKE_WORKFLOW=1`; without it every scenario
 skips itself. Run it through `tools/checksummary` to read a result, which prints a few

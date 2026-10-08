@@ -105,8 +105,16 @@ env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
   go test -race -shuffle=on -tags rewakefault,rewakefixture ./...
 ```
 
-All five green is the condition for a commit. A red check is never somebody
-else's: everything in the working tree belongs to the current work.
+All five green is the condition for the commit that lands a step on `v2` — the step's
+last commit. The step's intermediate commits need only build: `go build ./...` and
+`go vet ./...`. Fixes after a review run the tests of the packages they touch while the
+work goes on, and the five checks once, on the last commit, before acceptance. A red
+check is never somebody else's: everything in the working tree belongs to the current
+work.
+
+The three test runs take most of the time, and `-p` sets how many packages build and
+test at once. Pass `-p 4` when the process list shows no other heavy run (below), and
+`-p 2` when one is going.
 
 Two forms differ from the obvious one. `gofumpt` walks the filesystem rather
 than the module: a plain `.` formats whatever Go file happens to lie under the
