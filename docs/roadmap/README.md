@@ -42,7 +42,7 @@ refusal on September 17, 2026 cleared after recipient restart.
 - [Stage 3 of 2.0](2026-10-05-stage3-rules-s1-s2.md) — on branch `v2` since
   October 5, 2026: the rules accepted, S1 and S2 built,
   [S3 built](2026-10-06-stage3-s3.md) on October 6, [S4](2026-10-06-stage3-s4.md) the
-  same day, S5–S19 to come.
+  same day, [S5](2026-10-07-stage3-s5.md) on October 7, S6–S19 to come.
 - [The workflow suite](2026-09-21-workflow-suite.md) — in progress since
   September 21, 2026; what exists and what remains are listed there and in
   [work-queue.md](../work-queue.md).
@@ -136,6 +136,7 @@ without a date. Local installation without publishing is in
 | October 5, 2026 | [Stage 3 of 2.0: the rules accepted, S1 and S2 built](2026-10-05-stage3-rules-s1-s2.md) | in progress: the rules of S1–S19 accepted after seven rounds, split into part A and part B (the operator decision), with the publication race a probe found placed in S3; S1's checks accepted after four rounds that closed what they let through; S2, the 1.x migration removed, accepted in the second round once two documentation findings were corrected |
 | October 6, 2026 | [Stage 3 of 2.0: S3 built and accepted](2026-10-06-stage3-s3.md) | one landing per copy, in two commits: every once-publication inside its recipient's lock, accepted after three rounds; the stop as a record per occurrence resolved only by evidence, accepted after six — unknown presence kept unknown, named paths kept by every remover, settling under the real lock only, owed settling read from the statuses and copies, and the status that settles read again under the lock |
 | October 6, 2026 | [Stage 3 of 2.0: S4 built and accepted](2026-10-06-stage3-s4.md) | the turn-end and read code on core-owned inputs, in place, in five commits with behaviour unchanged: test outcomes, records and the workflow suite identical per commit; one review round, PASS, and three corrections to S14's inventory |
+| October 7, 2026 | [Stage 3 of 2.0: S5 built and accepted](2026-10-07-stage3-s5.md) | the neutral confirmation and the fixture harness as the suite's third column, in two commits; three review rounds and six fix commits landed as new commits after a branch rewrite was refused — O1 with several senders, four fixture defects, the tagged layout workaround replaced by a fixed name rule, O2's scenario, a non-equivalent mutant, the closed-link window; the checks retaken on clean trees, one per commit |
 
 ## Remaining work — owner decisions, September 19–21, 2026
 
