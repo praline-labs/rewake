@@ -48,6 +48,17 @@ func TestATransportThatStopsReading(t *testing.T) {
 				if err := r.complete(c, true); err != nil || r.unread(id) {
 					t.Fatalf("the late answer's read: %v, unread %v", err, r.unread(id))
 				}
+				// The late reader is served on as before: its call in the next
+				// turn reads the letter that came after.
+				after := r.letter("the letter after a late read")
+				r.nextTurn()
+				next := r.call("inbox")
+				if next.ended || !strings.Contains(next.result.text(), "the letter after a late read") {
+					t.Fatalf("the call after a late read: %+v", next.result)
+				}
+				if err := r.complete(next, true); err != nil || r.unread(after) {
+					t.Fatalf("the call after a late read: %v, unread %v", err, r.unread(after))
+				}
 				return
 			}
 			asked.Unread = true
