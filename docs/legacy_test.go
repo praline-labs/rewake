@@ -54,7 +54,7 @@ func (m mark) head() string { return m.subject + " <" + m.bound }
 // supported version: once that version has passed the bound, the mark is due,
 // and this test says so rather than waiting for somebody to look.
 func TestEveryLegacyMarkIsWellFormedAndListed(t *testing.T) {
-	found := legacyMarks(t)
+	found := legacyMarks(t, legacyModuleDir)
 	listed := markTable(t)
 	oldest := oldestSupported(t)
 
@@ -98,18 +98,26 @@ func TestEveryLegacyMarkIsWellFormedAndListed(t *testing.T) {
 	}
 }
 
-// legacyMarks reads the comments of every Go file in the module and returns the
-// marks in them, failing on any comment line that names the word but is not a
-// mark in the one form.
-func legacyMarks(t *testing.T) []mark {
+// legacyMarks reads the comments of every Go file in the module at root and
+// returns the marks in them, failing on any comment line that names the word but
+// is not a mark in the one form. A directory with its own go.mod is another
+// module and is not read: archive/ keeps 1.x code that way, as a record whose
+// marks are history rather than support anybody has to remove.
+func legacyMarks(t *testing.T, root string) []mark {
 	t.Helper()
 	var marks []mark
-	err := filepath.WalkDir(legacyModuleDir, func(path string, entry fs.DirEntry, err error) error {
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if entry.IsDir() {
-			if path != legacyModuleDir && strings.HasPrefix(entry.Name(), ".") {
+			if path == root {
+				return nil
+			}
+			if strings.HasPrefix(entry.Name(), ".") {
+				return filepath.SkipDir
+			}
+			if _, err := os.Stat(filepath.Join(path, "go.mod")); err == nil {
 				return filepath.SkipDir
 			}
 			return nil
@@ -121,7 +129,7 @@ func legacyMarks(t *testing.T) []mark {
 		if err != nil {
 			return err
 		}
-		relative, err := filepath.Rel(legacyModuleDir, path)
+		relative, err := filepath.Rel(root, path)
 		if err != nil {
 			return err
 		}
@@ -148,6 +156,32 @@ func legacyMarks(t *testing.T) []mark {
 		t.Fatal(err)
 	}
 	return marks
+}
+
+// TestLegacyMarksStopAtANestedModule: the walk reads the module's own files and
+// none of a module nested in it, so a record kept there with its marks neither
+// counts toward the table nor comes due.
+func TestLegacyMarksStopAtANestedModule(t *testing.T) {
+	root := t.TempDir()
+	write := func(name, src string) {
+		t.Helper()
+		path := filepath.Join(root, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(src), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	const kept = "package a\n\n// legacy(rewake <2026-01-01): kept; remove when gone\nvar A int\n"
+	write("go.mod", "module example.org/outer\n\ngo 1.25\n")
+	write("internal/a/a.go", kept)
+	write("archive/old/go.mod", "module example.org/outer/archive/old\n\ngo 1.25\n")
+	write("archive/old/internal/b/b.go", "package b\n\n// legacy(rewake <2026-01-01): archived; remove when gone\nvar B int\n")
+	found := legacyMarks(t, root)
+	if len(found) != 1 || found[0].file != "internal/a/a.go" {
+		t.Fatalf("got %+v, want only the mark of internal/a/a.go: a nested module's files are not this module's", found)
+	}
 }
 
 // markTable reads the rows under marksHeading: a file, a mark's head and how

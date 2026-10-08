@@ -515,6 +515,10 @@ the newer document says so.
   removes, moved unchanged by the step that removed the code, with a table of where each
   was, the step and the SHA-256 of its bytes; the index of that directory. Open it to
   read a record that links a document no longer at its path.
+- [../archive/1.x/codex/README.md](../archive/1.x/codex/README.md) — not live code: the
+  1.x Codex adapter, the MCP mail server and the launch injection as S8 removed them, a
+  nested module nothing builds, kept as the reference stage 5 designs the Codex adapter
+  from; the index says where each part was.
 - [reviews.md](reviews.md) — the first ten review rounds, all of September 16, 2026: each
   defect found and its fix, ending with the decision on Git metadata access by role.
 - [reviews-later.md](reviews-later.md) — the review rounds and repair chains from

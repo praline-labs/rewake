@@ -29,6 +29,8 @@ contradict the goal and be refused or redone. It is about two hundred lines, one
    efforts, argument forms; `docs/research-protocol.md` for what the generated
    schema and the reference tree state; `docs/research.md` for what only a running
    session shows, with Codex's share of that in `docs/research-codex.md`.
+6. `archive/` — not live code: the 1.x Codex adapter and MCP injection kept as a
+   reference for stage 5, a nested module no check builds (`archive/1.x/codex/README.md`).
 
 The full map of the documentation is `docs/README.md`: every document, grouped by
 purpose, with what it contains and when to open it. A change that adds, removes or

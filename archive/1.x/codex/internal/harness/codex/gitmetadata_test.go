@@ -1,0 +1,204 @@
+package codex
+
+import (
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/praline-labs/rewake/internal/worktree"
+)
+
+func writeGitPointer(t *testing.T, path, text string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestGitPointersGrantTheActualMetadataDirectories(t *testing.T) {
+	for _, kind := range []string{"submodule", "worktree", "absolute worktree", "same common directory"} {
+		t.Run(kind, func(t *testing.T) {
+			codexHome(t, "")
+			base := t.TempDir()
+			cwd := filepath.Join(base, "checkout")
+			common := filepath.Join(base, "main.git")
+			metadata := filepath.Join(common, "worktrees", "branch")
+			if err := os.MkdirAll(metadata, 0o700); err != nil {
+				t.Fatal(err)
+			}
+			populateGitMetadata(t, common, true)
+			populateGitMetadata(t, metadata, true)
+			pointer := "../main.git/worktrees/branch"
+			if kind == "absolute worktree" {
+				pointer = metadata
+			}
+			writeGitPointer(t, filepath.Join(cwd, ".git"), "gitdir: "+pointer+"\r\n")
+			expected := []string{metadata}
+			switch kind {
+			case "worktree":
+				writeGitPointer(t, filepath.Join(metadata, "commondir"), "../..\n")
+				expected = append(expected, common)
+			case "absolute worktree":
+				writeGitPointer(t, filepath.Join(metadata, "commondir"), common+"\n")
+				expected = append(expected, common)
+			case "same common directory":
+				writeGitPointer(t, filepath.Join(metadata, "commondir"), ".\n")
+			}
+			got, err := gitMetadataDirectories(cwd)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.Join(got, "\x00") != strings.Join(expected, "\x00") {
+				t.Fatalf("roots=%q want=%q", got, expected)
+			}
+		})
+	}
+}
+
+func TestMalformedGitPointersNeverGrantPartialAccess(t *testing.T) {
+	for _, kind := range []string{"bad prefix", "empty gitdir", "missing gitdir", "multiline", "oversize", "common missing", "common malformed", "common symlink", "metadata symlink", "parent symlink", "symlink then parent"} {
+		t.Run(kind, func(t *testing.T) {
+			codexHome(t, "")
+			base := t.TempDir()
+			cwd := filepath.Join(base, "checkout")
+			metadata := filepath.Join(base, "metadata")
+			if err := os.Mkdir(metadata, 0o700); err != nil {
+				t.Fatal(err)
+			}
+			populateGitMetadata(t, metadata, true)
+			pointer := "gitdir: ../metadata\n"
+			switch kind {
+			case "bad prefix":
+				pointer = "gitdir ../metadata\n"
+			case "empty gitdir":
+				pointer = "gitdir: \n"
+			case "missing gitdir":
+				pointer = "gitdir: ../missing\n"
+			case "multiline":
+				pointer = "gitdir: ../metadata\n../other\n"
+			case "oversize":
+				pointer = "gitdir: " + strings.Repeat("x", 64*1024)
+			case "common missing":
+				writeGitPointer(t, filepath.Join(metadata, "commondir"), "../missing\n")
+			case "common malformed":
+				writeGitPointer(t, filepath.Join(metadata, "commondir"), "\n")
+			case "common symlink":
+				other := filepath.Join(base, "elsewhere")
+				writeGitPointer(t, other, ".\n")
+				if err := os.Symlink(other, filepath.Join(metadata, "commondir")); err != nil {
+					t.Fatal(err)
+				}
+			case "metadata symlink":
+				if err := os.Symlink(metadata, filepath.Join(base, "linked")); err != nil {
+					t.Fatal(err)
+				}
+				pointer = "gitdir: ../linked\n"
+			case "symlink then parent":
+				outside := t.TempDir()
+				for _, name := range []string{"child", "metadata"} {
+					if err := os.Mkdir(filepath.Join(outside, name), 0o700); err != nil {
+						t.Fatal(err)
+					}
+				}
+				if err := os.Symlink(filepath.Join(outside, "child"), filepath.Join(base, "linked")); err != nil {
+					t.Fatal(err)
+				}
+				pointer = "gitdir: ../linked/../metadata\n"
+			case "parent symlink":
+				if err := os.Mkdir(filepath.Join(metadata, "child"), 0o700); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(metadata, filepath.Join(base, "linked")); err != nil {
+					t.Fatal(err)
+				}
+				pointer = "gitdir: ../linked/child\n"
+			}
+			writeGitPointer(t, filepath.Join(cwd, ".git"), pointer)
+			if got, err := gitMetadataDirectories(cwd); err == nil || len(got) != 0 {
+				t.Fatalf("invalid pointer resolved %q, err=%v", got, err)
+			}
+		})
+	}
+}
+
+// Compare with Git's own interpretation of real layouts, without requiring Git
+// for production discovery or for environments that cannot run this check.
+func TestMetadataResolutionMatchesGitLayouts(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git is not installed")
+	}
+	codexHome(t, "")
+	base := t.TempDir()
+	git := func(directory string, args ...string) string {
+		t.Helper()
+		cmd := exec.Command("git", append([]string{"-c", "core.hooksPath=/dev/null", "-c", "user.name=Test", "-c", "user.email=test@example.invalid", "-c", "protocol.file.allow=always"}, args...)...)
+		cmd.Dir = directory
+		cmd.Env = append(os.Environ(), "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null")
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %q: %v: %s", args, err, output)
+		}
+		return strings.TrimSpace(string(output))
+	}
+	main := filepath.Join(base, "main")
+	source := filepath.Join(base, "source")
+	for _, dir := range []string{main, source} {
+		if err := os.Mkdir(dir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		git(dir, "init", "-q")
+		git(dir, "commit", "--allow-empty", "-m", "Initialize metadata fixture")
+	}
+	linked := filepath.Join(base, "linked")
+	git(main, "worktree", "add", "-b", "linked", linked)
+	git(main, "submodule", "add", source, "child")
+	// A checkout rewake makes for a launch with --worktree is an ordinary
+	// linked worktree to Git, and its metadata is found as that of one made
+	// by hand: a grant reaches its private directory and the common one.
+	t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
+	t.Setenv("GIT_CONFIG_SYSTEM", os.DevNull)
+	made, err := worktree.Create(filepath.Join(base, "trees"), main, "made")
+	if err != nil {
+		t.Fatal(err)
+	}
+	manual, _ := gitMetadataDirectories(linked)
+	rewakes, _ := gitMetadataDirectories(made.Path)
+	if len(manual) != 2 || len(rewakes) != 2 || rewakes[1] != manual[1] || filepath.Dir(rewakes[0]) != filepath.Dir(manual[0]) {
+		t.Errorf("rewake's worktree resolves to %q, a manual one to %q", rewakes, manual)
+	}
+	checkouts := []string{main, linked, made.Path, filepath.Join(main, "child")}
+	for _, checkout := range append([]string{}, checkouts...) {
+		nested := filepath.Join(checkout, "src", "nested")
+		if err := os.MkdirAll(nested, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		checkouts = append(checkouts, nested)
+	}
+	for _, cwd := range checkouts {
+		paths := strings.Split(git(cwd, "rev-parse", "--path-format=absolute", "--git-dir", "--git-common-dir"), "\n")
+		expected := paths[:1]
+		if paths[1] != paths[0] {
+			expected = append(expected, paths[1])
+		}
+		if got, err := gitMetadataDirectories(cwd); err != nil || strings.Join(got, "\x00") != strings.Join(expected, "\x00") {
+			t.Errorf("cwd=%s roots=%q want=%q err=%v", cwd, got, expected, err)
+		}
+	}
+}
+
+func populateGitMetadata(t *testing.T, directory string, shared bool) {
+	t.Helper()
+	writeGitPointer(t, filepath.Join(directory, "HEAD"), "ref: refs/heads/main\n")
+	if shared {
+		for _, name := range []string{"objects", "refs"} {
+			if err := os.MkdirAll(filepath.Join(directory, name), 0o700); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+}

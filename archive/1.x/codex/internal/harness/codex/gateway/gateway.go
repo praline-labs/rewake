@@ -1,0 +1,318 @@
+// Package gateway reserves connection-owned delivery without changing native payloads.
+package gateway
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"strconv"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+)
+
+func itoa(v uint64) string         { return strconv.FormatUint(v, 10) }
+func decodeText(raw []byte) string { var s string; _ = json.Unmarshal(raw, &s); return s }
+
+type (
+	// Config supplies wrapper-owned endpoints and metadata-only callbacks.
+	Config struct {
+		ReadSequence func() uint64
+		StartupFork  bool
+		// Intent is the conversation the launch asked to resume, if any.
+		Intent LaunchIntent
+		// Name is the session's, for the command a hold names.
+		Name string
+		// Admit records, before the launch's hold ends, that the session's
+		// mail may be read (sessionstate.AdmitMail). An error keeps the hold.
+		Admit           func() error
+		Upstream, Epoch string
+		Record          func(Record)
+		Closed          func(CloseInfo)
+		Complete        func(Completion)
+		// EndCapture captures a turn's end of the primary thread through
+		// the mail tool's gate: the read sequence through which the end
+		// counts, and the moment it was noted. Nil: ReadSequence alone.
+		EndCapture func() (uint64, int64)
+		// ToolEvent takes the primary thread's notifications that concern
+		// the mail tool's calls (toolEvent), and every MCP server's startup
+		// status (serverStatus); it never waits.
+		ToolEvent func(raw []byte)
+		// Selection takes the steps of the terminal's choice of a
+		// conversation (selection.go); it never waits.
+		Selection func(Selection)
+		// ThreadCheck, when set, is asked about every terminal request
+		// before it is forwarded: a refusal comes back as the request's
+		// error and nothing reaches the server. It may take seconds; the
+		// connection's requests wait behind it in order.
+		ThreadCheck func(method string, params json.RawMessage) string
+	}
+	// Gateway fences delivery by accepted intent on a single TUI incarnation.
+	Gateway struct {
+		telemetry         telemetryRun
+		intent            intent
+		startupForkOwner  uint64
+		startupForkParent string
+		startupBound      bool
+		cfg               Config
+		workers           sync.WaitGroup
+		mu                sync.Mutex
+		serial            uint64
+		current           *connection
+		conns             map[*connection]bool
+		owners            map[*connection]bool
+		closed            bool
+		reconnectThread   string
+		gate              chan struct{}
+		published         map[string]publishedOutcome
+		publishOrder      []string
+		markHold          time.Duration
+		runHold           time.Duration
+		proofHold         time.Duration
+		proofs            *proofs
+		ops               *operations
+	}
+	connection struct {
+		observations                connectionObservations
+		requestBytes, responseBytes atomic.Int64
+		owner                       *Gateway
+		up, down                    *socketClient
+		ctx                         context.Context
+		cancel                      context.CancelFunc
+		once                        sync.Once
+		cleaned                     chan struct{}
+		mu                          sync.Mutex
+		state                       state
+		admitted                    admittedWork
+		work                        chan func()
+		toUI                        chan []byte
+		injected                    map[string]chan meta
+		next                        uint64
+		prefix                      string
+		interrupted                 steered
+		// warned is the last hold this connection showed the terminal.
+		warned string
+		// unproven are outcomes whose turn is not yet shown to be work
+		// (proven).
+		unproven []unprovenWork
+	}
+)
+
+func (c *connection) close() { c.closeWith("lifecycle", "shutdown", nil, 0) }
+
+func (c *connection) closeWith(direction, reason string, err error, size int) {
+	c.once.Do(func() {
+		// Whether this connection held the primary is asked before it is
+		// canceled, which ends its ownership: the selection it had pending
+		// fails with it.
+		owned := c.owner.owns(c)
+		c.cancel()
+		_ = c.up.conn.Close()
+		_ = c.down.conn.Close()
+		c.mu.Lock()
+		previous := c.state.Binding
+		c.observationClosed()
+		c.unanswered()
+		c.state.invalidate("connection lost; re-establish recognized primary intent")
+		if owned && c.owner.cfg.Selection != nil {
+			c.owner.cfg.Selection(Selection{Step: SelectionFailed})
+		}
+		c.state.pending = map[string]pending{}
+		c.injected = map[string]chan meta{}
+		proven := c.admitted.proven
+		c.admitted = newAdmittedWork()
+		c.admitted.proven = proven
+		abandoned := c.abandon()
+		c.mu.Unlock()
+		c.complete(abandoned)
+		c.owner.release(c, previous)
+		if c.owner.cfg.Closed != nil {
+			info := CloseInfo{Connection: previous.Connection, Generation: previous.Generation, Direction: direction, Reason: reason, Error: closeError(err), Bytes: size, Requests: len(c.work), Responses: len(c.toUI)}
+			var limit *sizeError
+			if errors.As(err, &limit) {
+				info.SizeStage, info.MessageBytes, info.LimitBytes = limit.Stage, limit.Size, limit.Limit
+			}
+			c.owner.cfg.Closed(info)
+		}
+		close(c.cleaned)
+	})
+}
+
+func (c *connection) schedule() {
+	defer c.close()
+	for {
+		select {
+		case <-c.ctx.Done():
+			return
+		case run := <-c.work:
+			run()
+		}
+	}
+}
+
+func (c *connection) readUI() {
+	for {
+		raw, err := c.down.readMessage()
+		if err != nil {
+			c.closeWith("tui-to-server", "read", err, 0)
+			return
+		}
+		m, err := project(raw)
+		if err != nil {
+			c.closeWith("tui-to-server", "projection", err, len(raw))
+			return
+		}
+		// Continue reading approval replies even while a queued lifecycle request
+		// waits behind injected admission. Otherwise this can deadlock on the human.
+		if m.method == "" {
+			if err := c.up.writeFrame(1, raw); err != nil {
+				c.closeWith("tui-to-server", "approval-write", err, len(raw))
+				return
+			}
+			continue
+		}
+		if strings.HasPrefix(m.idText, c.prefix) {
+			c.closeWith("tui-to-server", "reserved-id", nil, len(raw))
+			return
+		}
+		if !c.queueRequest(raw, func() {
+			if c.refuseThread(m, raw) {
+				return
+			}
+			if c.owner.acquire(c.ctx) != nil {
+				return
+			}
+			defer func() { <-c.owner.gate }()
+			m.reconnect = c.owner.reconnectIntent(c, m)
+			m.startupFork = c.owner.startupForkIntent(c, m)
+			if recognized(m) || m.startupFork {
+				c.owner.claim(c)
+			}
+			if c.owner.owns(c) {
+				c.owner.pin(m)
+			}
+			c.mu.Lock()
+			if reply := c.refuseTerminalCompact(m, raw); reply != nil {
+				c.record("tui-request-refused", m)
+				c.mu.Unlock()
+				if !c.queueResponse(reply) {
+					c.closeWith("server-to-tui", "response-queue-capacity", nil, len(reply))
+				}
+				return
+			}
+			m.readClass = c.state.readContext(m)
+			m.sent = c.state.ops.next()
+			var err error
+			if isTurnAdmission(m.method) && !isHelper(m) && c.owner.owns(c) && c.state.Ready && m.thread == c.state.Thread {
+				err = c.admitted.prepare(m.id, c.state.Binding, false, m.sent)
+				if err == nil {
+					c.admitted.capture(c.state.events, m.thread)
+				}
+			}
+			if err == nil {
+				err = c.state.request(m)
+				c.lostSight()
+			}
+			if m.method == "thread/compact/start" && err == nil {
+				if !c.admitted.manualStart(m.thread, c.state.events, m.sent, c.state.Generation, time.Now()) {
+					err = errors.New("manual-scope capacity reached; control not forwarded")
+				} else {
+					c.state.ops.opened(m.thread, m.sent, "")
+				}
+			}
+
+			c.observeRequest(m)
+			c.record("tui-request", m)
+			c.mu.Unlock()
+			if err == nil {
+				c.owner.auxiliaryReadBoundary(c, m)
+				err = c.up.writeFrame(1, raw)
+			}
+			if err != nil {
+				c.closeWith("tui-to-server", "request", err, len(raw))
+			}
+		}) {
+			c.closeWith("tui-to-server", "request-queue-capacity", nil, len(raw))
+			return
+		}
+	}
+}
+
+// unsent is a failure of callReserved before its request was written: the
+// server never saw it.
+type unsent struct{ error }
+
+func (e unsent) Unwrap() error { return e.error }
+
+func (c *connection) callReserved(ctx context.Context, want Binding, method string, params map[string]any, admissionID ...string) (meta, error) {
+	if err := ctx.Err(); err != nil {
+		return meta{}, unsent{err}
+	}
+	c.mu.Lock()
+	now := c.state.Binding
+	if !c.owner.owns(c) || !now.Ready || now.Epoch != want.Epoch || now.Connection != want.Connection || now.Generation != want.Generation || now.Thread != want.Thread {
+		c.mu.Unlock()
+		return meta{}, unsent{errors.New("binding unavailable or changed; inspect status and explicitly resume primary")}
+	}
+	var id string
+	if len(admissionID) > 0 {
+		id = admissionID[0]
+		pending, ok := c.admitted.pending["s:"+id]
+		if !ok || !sameBinding(pending.binding, now) {
+			c.mu.Unlock()
+			return meta{}, unsent{errors.New("admission reservation expired; nothing sent")}
+		}
+	} else {
+		c.next++
+		id = c.prefix + itoa(c.next)
+		if isTurnAdmission(method) {
+			if err := c.admitted.prepare("s:"+id, now, true, c.state.ops.next()); err != nil {
+				c.mu.Unlock()
+				return meta{}, unsent{err}
+			}
+			c.admitted.capture(c.state.events, now.Thread)
+		}
+	}
+	wait := make(chan meta, 1)
+	c.injected["s:"+id] = wait
+	params["threadId"] = now.Thread
+	raw, err := json.Marshal(map[string]any{"id": id, "method": method, "params": params})
+	if err == nil && endsReadWorkflow(method) {
+		c.state.closeReadContext("injected " + method)
+	}
+	c.record("injected-request", meta{method: method, thread: now.Thread})
+	c.mu.Unlock()
+	if err != nil {
+		return meta{}, unsent{err}
+	}
+	if err = c.up.writeFrameContext(ctx, 1, raw); err != nil {
+		c.closeWith("injected-to-server", "write", err, len(raw))
+		return meta{}, errors.New("delivery transport ended; outcome unknown, do not replay")
+	}
+	select {
+	case reply := <-wait:
+		if reply.failure {
+			return meta{}, errors.New("native request refused: " + reply.refusal)
+		}
+		if method == "turn/start" && reply.turn == "" {
+			c.closeWith("server-to-injection", "missing-turn-ack", nil, 0)
+			return meta{}, errors.New("missing turn acknowledgement; outcome unknown, do not replay")
+		}
+		return reply, nil
+	case <-ctx.Done():
+		// A read, and a main's compaction or interrupt, admit no work: a
+		// reply that comes after the wait is dropped as a reserved id, and
+		// the terminal keeps its connection.
+		if method == "thread/read" || method == "thread/compact/start" || method == "turn/interrupt" {
+			c.mu.Lock()
+			delete(c.injected, "s:"+id)
+			c.mu.Unlock()
+			return meta{}, ctx.Err()
+		}
+		c.closeWith("injected-to-server", "admission-timeout", ctx.Err(), 0)
+		return meta{}, errors.New("admission timed out; outcome unknown, do not replay")
+	case <-c.ctx.Done():
+		return meta{}, errors.New("connection ended; outcome unknown, do not replay")
+	}
+}

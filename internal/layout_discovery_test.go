@@ -278,3 +278,18 @@ func TestAnExampleInAnyFenceNamesNoStep(t *testing.T) {
 		}
 	}
 }
+
+// TestADirectoryWithItsOwnModuleIsNoPackage: the walk that finds packages on
+// disk stops at a go.mod of its own, as ./... does, so a module kept inside
+// the tree — a record, never built — is judged by none of the rules.
+func TestADirectoryWithItsOwnModuleIsNoPackage(t *testing.T) {
+	syntheticModule(t, map[string]string{
+		"internal/old/go.mod":        "module example.org/old\n\ngo 1.25\n",
+		"internal/old/codex/old.go":  "package codex\n",
+		"internal/core/mail/mail.go": "package mail\n",
+	})
+	got := packageDirs(t, nil)
+	if !slices.Contains(got, "internal/core/mail") || slices.ContainsFunc(got, func(dir string) bool { return strings.HasPrefix(dir, "internal/old") }) {
+		t.Fatalf("got %q, want internal/core/mail and nothing under the nested module internal/old", got)
+	}
+}
