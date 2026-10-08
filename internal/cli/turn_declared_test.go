@@ -1,10 +1,13 @@
 package cli
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 // unproven is the answer of an attempt that cannot show it runs in its mark's
@@ -89,4 +92,48 @@ func TestALostEndWithARetryFromAnotherTurnMarksNothing(t *testing.T) {
 			t.Fatalf("the task is not shown again: %d %s %s", code, out, errOut)
 		}
 	})
+}
+
+// The declaration is both ends': the receipt's, written by the attempt that
+// made the record, and the retrying ticket's. A record made without it is not
+// made declared by a later ticket that carries it, and a declared record does
+// not lend it to a ticket without it; either way the retry in the same turn
+// cannot show it runs there, and the mark is finished as not made.
+func TestADeclarationOnOneEndOnlyProvesNoTurn(t *testing.T) {
+	for _, test := range []struct {
+		name          string
+		made, retried bool // whether each end withholds the declaration
+	}{
+		{"record without, ticket with", true, false},
+		{"record with, ticket without", false, true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			dir, self, web := toolSession(t)
+			readFrom(t, dir, web)
+			turnStarted(t, dir, self, markAt-1)
+			waiter := filepath.Join(state.AwaitingPath(dir, "api"), self.Epoch(), "web")
+			if err := os.Chmod(waiter, 0); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = os.Chmod(waiter, 0o600) })
+			tool := newToolCaller(t)
+			tool.reused = test.made
+			blind := tool.run("pending", "the suite is running")
+			if blind.code != ExitFailed || !strings.Contains(blind.errOut, "rewake retry ") {
+				t.Fatalf("a mark past a waiter it could not read: %+v", blind)
+			}
+			token := blind.errOut[strings.Index(blind.errOut, "rewake retry ")+len("rewake retry "):][:24]
+			if err := os.Chmod(waiter, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			tool.reused = test.retried
+			retried := tool.run("retry", token)
+			if retried.code != ExitFailed || !strings.Contains(retried.errOut, unproven) {
+				t.Fatalf("a retry the declaration of one end only let in: %+v", retried)
+			}
+			if again := tool.run("retry", token); again.code != ExitFailed || !strings.Contains(again.errOut, unproven) {
+				t.Fatalf("the finished receipt's answer: %+v", again)
+			}
+		})
+	}
 }

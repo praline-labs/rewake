@@ -217,6 +217,7 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `test/toolrig/order_end_test.go` `TestAnEndCapturedBeforeAnAcknowledgmentsCheckLeavesTheLetterUnread`
   - `internal/cli/turn_declared_test.go` `TestAnAttemptNotProvenInItsTurnIsMarkUnproven`
   - `internal/cli/turn_declared_test.go` `TestALostEndWithARetryFromAnotherTurnMarksNothing`
+  - `internal/cli/turn_declared_test.go` `TestADeclarationOnOneEndOnlyProvesNoTurn`
   - `internal/cli/bridge_unknown_test.go` `TestAWaiterThatCannotBeReadLeavesTheMarkOpen`
   - `internal/cli/journal_test.go` `TestAPendingMarkRepeatedInOneTurnIsOneMark`
   - `internal/bridge/endpoint/input_test.go` `TestATicketCarriesItsTransportsDeclaration`
