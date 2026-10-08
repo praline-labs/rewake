@@ -35,7 +35,7 @@ const (
 // into words, and splitting words means quoting rules — the part of this that
 // has broken twice before.
 type Alias struct {
-	// Harness is the launch command, by its id: codex, claude.
+	// Harness is the launch command, by its id in the catalog.
 	Harness string `toml:"harness"`
 	// Rewake are flags read by rewake itself, such as --write or --name.
 	Rewake []string `toml:"rewake"`
@@ -95,8 +95,8 @@ func (s *Set) Lookup(name string) (Alias, string, bool) {
 //
 // A flag typed on the line replaces the alias's copy of it — but only for the
 // flags the harness takes at most once, which the harness itself names through
-// singleUse. Ordering alone would not do: Codex refuses to parse a repeated
-// --model rather than taking the last one, so an alias naming a model plus a
+// singleUse. Ordering alone would not do: a harness may refuse to parse a
+// repeated --model rather than take the last one, so an alias naming a model plus a
 // model typed on the line would end the launch complaining about a flag the
 // person wrote once.
 //
@@ -188,7 +188,7 @@ func rewakeFlags(takesValue func(string) bool, lists ...[]string) []harness.Flag
 // commandWord is where the command or alias stands in argv, or -1.
 //
 // It has to step over the value of a flag that takes one: in
-// `rewake --name mine wcodex`, the first word that is not a flag is "mine",
+// `rewake --name mine wmain`, the first word that is not a flag is "mine",
 // and treating that as the command would leave the alias unexpanded and the
 // launch subtly different from what was asked for. Which flags take a value is
 // the caller's knowledge, not this package's.

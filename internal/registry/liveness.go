@@ -23,8 +23,8 @@ func (s Session) Reachable() bool { return s.Alive() }
 
 // Judgeable reports whether this reader can tell if the session is running.
 //
-// Only a reader in the same pid namespace can. A Codex agent runs its commands
-// in a sandbox with its own namespace, where every pid but its own is missing —
+// Only a reader in the same pid namespace can. A sandboxed agent runs its
+// commands in a namespace of its own, where every pid but its own is missing —
 // and a reader that mistook that for death reported live sessions as gone and
 // deleted their records. Found by running it.
 func (s Session) Judgeable() bool {

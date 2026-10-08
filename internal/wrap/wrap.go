@@ -49,11 +49,6 @@ type Request struct {
 	OnConfirm func(context.Context, registry.Session, harness.Completion) (string, error)
 	// MailTool serves the mail tool's endpoint; nil serves none.
 	MailTool *MailTool
-	// NoMailTool leaves the tool out of this launch (--no-mail-tool).
-	NoMailTool bool
-	// AssumedGates are the gates taken as closed, already checked against
-	// the gate table (harness.ParseAssumedGates).
-	AssumedGates []string
 	// OnClaimed hears the session once its name is claimed, before the
 	// harness is planned: whatever was prepared for the launch learns whose
 	// it is. An error ends the launch.
@@ -81,10 +76,9 @@ func Run(ctx context.Context, request Request) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	// The name is checked before the run is claimed, so a refusal leaves no
+	// The version is read before the run is claimed, so a refusal leaves no
 	// record, no session and no socket behind.
-	announceGates(request.AssumedGates)
-	choice, err := chooseTool(request, cwd)
+	version, err := readVersion(request, cwd)
 	if err != nil {
 		return 0, err
 	}
@@ -146,12 +140,8 @@ func Run(ctx context.Context, request Request) (int, error) {
 		restored = resumeGrants(request.Dir, name, epoch, request.Harness, request.Args)
 	}
 
-	tool := startMailTool(request, name, epoch, choice.gates)
+	tool := startMailTool(request, name, epoch)
 	defer tool.close()
-	toolServer, toolLeftOut := choice.server(request, sessionNames{session.Room, name, epoch}, tool)
-	if toolServer != nil {
-		defer func() { _ = os.Remove(toolServer.ConfigFile) }()
-	}
 
 	plan, err := request.Harness.Launch(harness.LaunchRequest{
 		Name:       name,
@@ -169,21 +159,13 @@ func Run(ctx context.Context, request Request) (int, error) {
 		ObservationSocket: registry.ObservationFor(request.Dir, name, epoch),
 		ControlDir:        controlDir,
 		GrantDirs:         restored.dirs(),
-		MailTool:          toolServer,
-		Version:           choice.version,
+		Version:           version,
 	})
 	if err != nil {
 		return 0, err
 	}
 	plan.Notes = append(plan.Notes, restored.notes...)
-	if plan.ToolLeftOut != "" {
-		toolLeftOut = plan.ToolLeftOut
-	}
-	if note := toolNote(toolLeftOut); note != "" {
-		plan.Notes = append(plan.Notes, note)
-	}
 	tool.attach(plan)
-	tool.keeper.begin(toolServer != nil && plan.ToolLeftOut == "", toolLeftOut)
 	if keeper != nil {
 		followResumed(ctx, request.Dir, name, epoch, keeper, restored, plan.Observer)
 	}
@@ -197,8 +179,6 @@ func Run(ctx context.Context, request Request) (int, error) {
 
 	session.Socket = plan.Socket
 	session.OwnsSocket = plan.OwnsSocket
-	session.CodexHome = plan.CodexHome
-	session.AssumedGates = request.AssumedGates
 	if err := registry.Update(request.Dir, session); err != nil {
 		return 0, err
 	}
@@ -356,7 +336,7 @@ func waitForHarness(pid int) int {
 }
 
 // current re-reads the session record so delivery sees the latest one. The
-// harness may have moved on — a new Codex thread, a recreated socket — and the
+// harness may have moved on — a new conversation, a recreated socket — and the
 // record is where that shows up. A record that is no longer ours is ignored:
 // once the name has changed hands it describes a different session.
 func current(dir, name string, fallback registry.Session) registry.Session {

@@ -50,9 +50,6 @@ type LaunchRequest struct {
 	// this launch resumes (Resumer); a harness that takes a directory at
 	// launch is started with them.
 	GrantDirs []string
-	// MailTool, when set, is the mail tool's server this launch adds
-	// (docs/mail-bridge-launch.md); nil adds none.
-	MailTool *ToolServer
 	// Version is what the launch read of the harness's version before the
 	// claim, for a harness that reads it on every launch
 	// (LaunchVersionReader); its start runs nothing more to learn it.
@@ -74,8 +71,6 @@ type LaunchPlan struct {
 	// the session ends. A path the caller named belongs to the caller: deleting
 	// it could cut off a session that is still running on it.
 	OwnsSocket bool
-	// CodexHome, when set, is recorded so delivery uses the same state.
-	CodexHome string
 	// Observer, when set, is a session-owned telemetry source for a harness
 	// that has no Backend. The wrapper starts it before the harness and
 	// publishes what it reports for as long as the session runs.
@@ -83,9 +78,6 @@ type LaunchPlan struct {
 	// Lane, when set, delivers in place of the harness's Deliver for as long
 	// as the session runs. Only for a harness without a Backend.
 	Lane Lane
-	// ToolLeftOut, when the request carried the mail tool, says why the plan
-	// could not add it after all; empty when it did.
-	ToolLeftOut string
 	// Notes are things the caller should know about this launch: a setting that
 	// could not be read, a briefing that was skipped. They are printed once, to
 	// stderr, and do not stop the launch.
@@ -120,8 +112,8 @@ type Harness interface {
 	//
 	// It exists because an alias and a launch line can both name the same
 	// thing, and what happens then is the harness's property, not a rule we
-	// get to make. Codex refuses to parse a repeated --model, while a repeated
-	// --add-dir is how a second directory is added — so the first has to be
+	// get to make. A harness may refuse to parse a repeated --model, while a
+	// repeated --add-dir is how a second directory is added — so the first has to be
 	// replaced and the second must not be. A flag missing from this list is
 	// simply appended, which is the safe answer for anything unlisted.
 	//
@@ -156,13 +148,6 @@ type Steerable interface {
 	InterruptTrace() string
 }
 
-// Accepting is a harness whose wrapper holds deliveries when the terminal
-// ends up in a conversation other than the one its launch asked to resume,
-// until the person accepts that conversation with rewake accept.
-type Accepting interface {
-	AcceptsConversation() bool
-}
-
 // Flag is one parameter of a harness, by every spelling it answers to.
 //
 // TakesValue is here because dropping a flag means dropping what belongs to
@@ -178,5 +163,5 @@ type Flag struct {
 
 // BriefContext carries identity to the shared text package without assembling prose.
 func (r LaunchRequest) BriefContext() brief.Context {
-	return brief.Context{Name: r.Name, Room: r.Room, Role: r.Role, Reason: r.RoleReason, Tool: r.MailTool != nil}
+	return brief.Context{Name: r.Name, Room: r.Room, Role: r.Role, Reason: r.RoleReason}
 }

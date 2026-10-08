@@ -12,8 +12,8 @@ import (
 )
 
 // worktreeFlag is the long spelling of Claude Code's own worktree flag, which
-// rewake takes (harness.WorktreeHarness) so a Claude Code session gets the same
-// checkout, branch and record as a Codex one. The short -w stays Claude Code's:
+// rewake takes (harness.WorktreeHarness) so a Claude Code session gets the
+// checkout, branch and record every harness's does. The short -w stays Claude Code's:
 // its own worktree inside the repository, on a branch worktree-<name>, which it
 // removes itself on exit (docs/research-launch.md).
 const worktreeFlag = "--worktree"
@@ -86,10 +86,10 @@ func (claudeHarness) WorktreeRefusal(args []string) error {
 
 // claudeContinuation is the first continuation among the arguments, or "": a
 // flag, a cluster of short flags in which c or r acts as a flag, or a
-// subcommand word. Like Codex's refusal it asks of the words rather than of the
-// grammar: a value that happens to be one is refused too, and the refusal says
-// where such text goes. After -- a word is the prompt's; Claude Code does not
-// take it for a subcommand there (seen on 2.1.280).
+// subcommand word. It asks of the words rather than of the grammar: a value
+// that happens to be one is refused too, and the refusal says where such text
+// goes. After -- a word is the prompt's; Claude Code does not take it for a
+// subcommand there (seen on 2.1.280).
 func claudeContinuation(args []string) string {
 	for _, arg := range args {
 		for _, flag := range continuationFlags {

@@ -121,7 +121,7 @@ func TestWorktreeRmKeepsIgnoredFiles(t *testing.T) {
 // one it wrote in stays.
 func TestAnErrorExitTakesAnUntouchedCheckoutBack(t *testing.T) {
 	lab := newWorktreeLab(t)
-	probe := codexProbe(t)
+	probe := aWorktreeProbe(t)
 	probe.command = "/bin/false"
 	told, err := lab.launchTold(t, probe, lab.repo, "--worktree=short")
 	var exit *ExitCodeError
@@ -132,7 +132,7 @@ func TestAnErrorExitTakesAnUntouchedCheckoutBack(t *testing.T) {
 		t.Errorf("the checkout stayed: %+v; told %q", records, told)
 	}
 
-	probe = codexProbe(t)
+	probe = aWorktreeProbe(t)
 	probe.command = filepath.Join(t.TempDir(), "writes")
 	if err := os.WriteFile(probe.command, []byte("#!/bin/sh\necho x > made\nexit 3\n"), 0o755); err != nil {
 		t.Fatal(err)
@@ -151,10 +151,10 @@ func TestAnErrorExitTakesAnUntouchedCheckoutBack(t *testing.T) {
 func TestATakenSessionNameLeavesNoCheckout(t *testing.T) {
 	lab := newWorktreeLab(t)
 	trees, _ := state.RoomDir(lab.state, "trees")
-	otherRun(t, trees, "tree-codex")
-	told, err := lab.launchTold(t, codexProbe(t), lab.repo, "--worktree=late")
+	otherRun(t, trees, "tree-"+aWorktreeProbe(t).ID())
+	told, err := lab.launchTold(t, aWorktreeProbe(t), lab.repo, "--worktree=late")
 	var usage *UsageError
-	if !errors.As(err, &usage) || !strings.Contains(usage.Message, "tree-codex") {
+	if !errors.As(err, &usage) || !strings.Contains(usage.Message, "tree-"+aWorktreeProbe(t).ID()) {
 		t.Fatalf("the launch ended with %v", err)
 	}
 	if records := lab.records(t); len(records) != 0 {

@@ -46,28 +46,6 @@ func internalGroup() Group {
 				Hidden:   true,
 				Handler:  handleStatusTap,
 			},
-			{
-				Name:           BridgeServe,
-				MaxPositionals: 0,
-				Summary:        "The mail tool's server: a stdio MCP server the harness starts, which runs one rewake command per tool call under a ticket from the session's wrapper.",
-				Examples:       []string{"rewake bridge-serve"},
-				Notes: []string{
-					"Started by the harness with the launch values in its environment: REWAKE_DIR, REWAKE_ROOM, REWAKE_SESSION, REWAKE_EPOCH and REWAKE_BRIDGE_CAPABILITY. Everything it writes to stdout is a JSON-RPC message.",
-					"A call that the wrapper did not see natively runs nothing; a refusal before a command starts says so, and names the shell when the tool itself failed.",
-				},
-				Hidden:  true,
-				Handler: handleBridgeServe,
-			},
-			{
-				Name:     BridgeHook,
-				Args:     "<socket>",
-				Summary:  "Called by a Claude Code hook before and after a call of the mail tool; tells the session's wrapper what the harness recorded of the call.",
-				Examples: []string{"rewake bridge-hook /tmp/rewake-1000/rooms/default/sock/worker-claude.1.ctx"},
-				Notes:    []string{"Prints nothing and exits 0 whatever happens: a wrapper that does not answer within its bound leaves the call without an observation, and the call then runs nothing."},
-				Raw:      true,
-				Hidden:   true,
-				Handler:  handleBridgeHook,
-			},
 		},
 	}
 }

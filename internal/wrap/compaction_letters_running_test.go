@@ -8,8 +8,8 @@ import (
 	"github.com/praline-labs/rewake/internal/sessionstate"
 )
 
-// runningDetail is what a Codex worker says when its wait for the end ran out
-// with the compaction still running.
+// runningDetail is what a worker's wrapper may say when its wait for the end
+// ran out with the compaction still running.
 const runningDetail = "the compaction was not seen to end within 10m0s; it may still be running, and its end is reported when seen"
 
 // A worker that stopped waiting with the compaction still running says so as

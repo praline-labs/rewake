@@ -18,14 +18,13 @@ import (
 // process of the fixture records how it was started.
 //
 // rewake must start the wrapper wherever it would have started the harness —
-// for Codex that is the version check and the owned server as well as the
+// for the fixture that is the version read and the session half as well as the
 // terminal — with exactly the arguments the plain launch gets, and each of
 // those processes must run in the wrapper's environment.
 //
-// The wrapper is named by a relative path, and the Codex launch moves its
-// server with -C into a directory holding another script of the same name: a
-// relative path resolved there instead of in the launch directory would start
-// that one.
+// The wrapper is named by a relative path, and another directory holds a
+// script of the same name: a relative path resolved anywhere but the launch
+// directory would start that one.
 func TestWrappedLaunch(t *testing.T) {
 	runInColumns(t, "wrapped-launch", runWrappedLaunch)
 }
@@ -60,16 +59,13 @@ func runWrappedLaunch(t *testing.T, col column) {
 	// In the launch directory, which is where the case starts rewake.
 	writeScript(t, filepath.Join(iso.Home, name),
 		"export "+shimWrappedMarker+"=1\nprintf x >> '"+log+"'\nexec "+col.harness+" \"$@\"\n")
-	// The same name in the directory Codex is told to work in.
+	// The same name in another directory, which must never run.
 	other := filepath.Join(iso.Home, "other-repository")
 	if err := os.MkdirAll(other, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	writeScript(t, filepath.Join(other, name), "printf x >> '"+wrong+"'\nexit 1\n")
 	var harnessArgs []string
-	if col.harness == codexColumn.harness {
-		harnessArgs = []string{"-C", other}
-	}
 
 	plainCalls, wrappedCalls := filepath.Join(iso.Home, "plain.calls"), filepath.Join(iso.Home, "wrapped.calls")
 	plain := startSessionWith(t, c, iso, col.harness, "same", "--main", []string{"--room", plainRoom}, harnessArgs,
@@ -79,19 +75,19 @@ func runWrappedLaunch(t *testing.T, col column) {
 		shimCallsFile+"="+wrappedCalls)
 	defer stopSession(t, c, wrapped)
 
-	for _, session := range []*codexSession{plain, wrapped} {
-		if !sessionReady(c, col, session) {
+	for _, session := range []*scenarioSession{plain, wrapped} {
+		if !sessionReady(c, session) {
 			c.Contradicted(obsWrappedReady, "a session never became ready")
 			return
 		}
 	}
 	c.Observed(obsWrappedReady, "both launches ready")
 
-	// Codex's three processes are started one after another, and so are the
-	// fixture's — its version, its session half and its terminal; each records
-	// itself on start, so the counts settle once the sessions are ready.
+	// The fixture's three processes are started one after another — its
+	// version, its session half and its terminal; each records itself on
+	// start, so the counts settle once the sessions are ready.
 	want := 1
-	if col.harness == codexColumn.harness || col.harness == fixtureColumn.harness {
+	if col.harness == fixtureColumn.harness {
 		want = 3
 	}
 	waitFor(c, 10*time.Second, func() bool {
@@ -139,14 +135,7 @@ func writeScript(t *testing.T, path, body string) {
 	}
 }
 
-func sessionReady(c *Case, col column, session *codexSession) bool {
-	if col.offers(capabilitySelection) {
-		_, ready := session.await(c, "a selection for "+session.name, func(l listing) bool {
-			_, selection, _, found := l.find(session.name)
-			return found && selection == "ready"
-		})
-		return ready
-	}
+func sessionReady(c *Case, session *scenarioSession) bool {
 	return waitFor(c, 20*time.Second, func() bool { _, err := os.Stat(session.ready); return err == nil })
 }
 
@@ -161,7 +150,7 @@ func markers(calls []shimCall) []bool {
 // epochPattern is a run's epoch where it appears in a path: after the session
 // name, before the socket's suffix, with the boot id a run of this build
 // carries.
-var epochPattern = regexp.MustCompile(`(same-(?:codex|claude|fixture))\.[0-9]+\.[0-9]+(?:\.[0-9a-f-]{36})?`)
+var epochPattern = regexp.MustCompile(`(same-(?:claude|fixture))\.[0-9]+\.[0-9]+(?:\.[0-9a-f-]{36})?`)
 
 // digestPattern is a socket named by the digest of its name and epoch, the
 // form a path past 103 bytes takes (internal/state/paths.go): the digest

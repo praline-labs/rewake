@@ -36,12 +36,12 @@ func requestedGitGrant(call Call, sender, target registry.Session, senderErr err
 		return refuse("only tasks and questions can carry an explicit grant; notify/report paths cannot")
 	}
 	if !role.Of(target.Role).GitWrite {
-		return refuse(fmt.Sprintf("%s is a %s session, and only a write session takes repository Git metadata grants. Send the task to a --write Codex session, or do the Git part yourself.", target.Name, role.Of(target.Role).ID))
+		return refuse(fmt.Sprintf("%s is a %s session, and only a write session takes repository Git metadata grants. Send the task to a --write session whose harness takes a Git grant, or do the Git part yourself.", target.Name, role.Of(target.Role).ID))
 	}
-	adapter, _ := harness.Find(target.Harness)
+	adapter, _ := findHarness(target.Harness)
 	capability, supported := adapter.(harness.GitGrantHarness)
 	if !supported || !capability.SupportsGitGrant() {
-		return false, &FailedError{Message: fmt.Sprintf("--grant-git: %s runs %s, which takes no per-message Git grant; only a Codex write session does. Do the Git part yourself, or send the task to a --write Codex session.", target.Name, target.Harness)}
+		return false, &FailedError{Message: fmt.Sprintf("--grant-git: %s runs %s, which takes no per-message Git grant. Do the Git part yourself, or send the task to a --write session whose harness takes one.", target.Name, target.Harness)}
 	}
 	return true, nil
 }

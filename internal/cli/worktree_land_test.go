@@ -68,17 +68,17 @@ func TestWorktreeFinishLandsAndRemoves(t *testing.T) {
 	tip := lab.commitIn(t, record.Path, "one")
 
 	roomDir, _ := state.RoomDir(lab.state, "trees")
-	session := otherRun(t, roomDir, "busy-codex")
-	if _, err := worktree.Claim(record, worktree.Owner{Name: session.Name, Room: "trees", Epoch: session.Epoch(), Harness: "codex", Dir: roomDir}); err != nil {
+	session := otherRun(t, roomDir, "busy-worker")
+	if _, err := worktree.Claim(record, worktree.Owner{Name: session.Name, Room: "trees", Epoch: session.Epoch(), Harness: session.Harness, Dir: roomDir}); err != nil {
 		t.Fatal(err)
 	}
-	if code, _, errOut := run("worktree", "finish", "fix"); code != ExitFailed || !strings.Contains(errOut, "still run in it: busy-codex") || !strings.Contains(errOut, "Nothing was landed") {
+	if code, _, errOut := run("worktree", "finish", "fix"); code != ExitFailed || !strings.Contains(errOut, "still run in it: busy-worker") || !strings.Contains(errOut, "Nothing was landed") {
 		t.Errorf("finish while running: %d %s", code, errOut)
 	}
 	if head := lab.git(t, lab.repo, "rev-parse", "main"); head != record.Commit {
 		t.Errorf("a refused finish moved main to %s", head)
 	}
-	if _, err := worktree.Claim(record, worktree.Owner{Name: session.Name, Room: "trees", Epoch: "1.1", Harness: "codex", Dir: roomDir}); err != nil {
+	if _, err := worktree.Claim(record, worktree.Owner{Name: session.Name, Room: "trees", Epoch: "1.1", Harness: "harness", Dir: roomDir}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -161,7 +161,7 @@ func TestWorktreeRmDropsOnlyABranchNothingIsLostWith(t *testing.T) {
 // below a branch the repository has is refused with the branch in the way.
 func TestWorktreeWithASlashInItsName(t *testing.T) {
 	lab := newWorktreeLab(t)
-	if err := lab.launch(t, codexProbe(t), lab.repo, "--worktree=feat/super-feature"); err != nil {
+	if err := lab.launch(t, aWorktreeProbe(t), lab.repo, "--worktree=feat/super-feature"); err != nil {
 		t.Fatal(err)
 	}
 	records := lab.records(t)
@@ -180,7 +180,7 @@ func TestWorktreeWithASlashInItsName(t *testing.T) {
 		t.Errorf("main at %s, want %s", head, tip)
 	}
 
-	err := lab.launch(t, codexProbe(t), lab.repo, "--worktree=feat/super-feature/more")
+	err := lab.launch(t, aWorktreeProbe(t), lab.repo, "--worktree=feat/super-feature/more")
 	var usage *UsageError
 	if !errors.As(err, &usage) || !strings.Contains(err.Error(), "has a branch feat/super-feature, so git can make no branch feat/super-feature/more") {
 		t.Errorf("a name below a branch: %v", err)

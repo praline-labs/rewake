@@ -52,11 +52,7 @@ func TestVerdictIsPublishedThroughTheRealPath(t *testing.T) {
 		// means the deliberate failure does not litter /tmp on every run.
 		"TMPDIR="+t.TempDir(),
 		// The child must not inherit this session's identity either.
-		"REWAKE_SESSION=", "REWAKE_EPOCH=", "REWAKE_DIR=", "REWAKE_ROOM=",
-		// Nor a harness version: the child is switched on, so a version
-		// named here would send it to the registry and to docker from inside
-		// the five ordinary checks, which start neither.
-		codexVersionEnv+"=")
+		"REWAKE_SESSION=", "REWAKE_EPOCH=", "REWAKE_DIR=", "REWAKE_ROOM=")
 	// Bounded through the group machinery: the child builds a binary of its
 	// own, so its descendants have to be ended with it rather than left to
 	// hold the pipe open.

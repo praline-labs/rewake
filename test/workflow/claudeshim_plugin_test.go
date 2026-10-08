@@ -34,8 +34,8 @@ import (
 const (
 	// shimInterruptFirst makes the session's first turn one a person
 	// interrupts: it reads its mail and ends with turn.complete reason
-	// "aborted" and no Stop hook, as the harness does after an Esc. The Codex
-	// fixture takes it too and ends that turn with status "interrupted".
+	// "aborted" and no Stop hook, as the harness does after an Esc. The
+	// fixture harness's program takes it too and ends that turn interrupted.
 	shimInterruptFirst = "RW_SHIM_INTERRUPT_FIRST_TURN"
 	// shimInterruptAtStop makes the first turn one a person interrupts just
 	// as it ends: its Stop hook runs, and the turn still ends with

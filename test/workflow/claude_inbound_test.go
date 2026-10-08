@@ -1,6 +1,7 @@
 package workflow
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -18,7 +19,7 @@ import (
 // refuses it, and one whose gate says it holds the task only after rewake has
 // counted it delivered, and then lets it expire.
 //
-// Only this column: Codex has no such gate, and its column is unchanged.
+// Only this column: the gate is Claude Code's own.
 //
 // What it does not prove: that the real harness holds, releases and reports
 // as its fixture does. The fixture plays what was read in the binary and seen
@@ -64,7 +65,7 @@ var inboundObservations = []string{
 // inboundPair is a worker whose gate does what its mode says, and the session
 // that sends it one task.
 type inboundPair struct {
-	worker, sender *codexSession
+	worker, sender *scenarioSession
 	inbound        string
 }
 
@@ -262,7 +263,7 @@ func undeliveredFrom(p inboundPair) bool {
 }
 
 // taskState is the status of the one message in a worker's mailbox.
-func taskState(iso *Isolation, worker *codexSession) string {
+func taskState(iso *Isolation, worker *scenarioSession) string {
 	statuses, _ := filepath.Glob(filepath.Join(iso.StateDir, "rooms", "default", "inbox", worker.name, "*.status"))
 	if len(statuses) != 1 {
 		return ""
@@ -274,7 +275,7 @@ func taskState(iso *Isolation, worker *codexSession) string {
 	var status struct {
 		State string `json:"state"`
 	}
-	if unmarshalJSON(raw, &status) != nil {
+	if json.Unmarshal(raw, &status) != nil {
 		return ""
 	}
 	return status.State

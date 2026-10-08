@@ -98,9 +98,6 @@ type whoamiModel struct {
 	// (docs/mail-bridge-channel.md#what-is-shown); Channel the record.
 	Mail    string          `json:"mail,omitempty"`
 	Channel *channel.Record `json:"channel,omitempty"`
-	// AssumedGates are the gates this run's launch took as closed, for
-	// verification only.
-	AssumedGates []string `json:"assumedGates,omitempty"`
 }
 
 func handleWhoami(ctx *Context, _ Call) error {
@@ -122,7 +119,7 @@ func handleWhoami(ctx *Context, _ Call) error {
 			model.MailChannel = "tool"
 		}
 		model.Channel = sessionstate.Load(dir, name, os.Getenv(state.EpochEnv)).Channel
-		model.Mail, model.AssumedGates = channel.Label(model.Channel), session.AssumedGates
+		model.Mail = channel.Label(model.Channel)
 	}
 
 	return printValue(ctx, model, func() []string {
@@ -141,9 +138,6 @@ func handleWhoami(ctx *Context, _ Call) error {
 			lines = append(lines, "This call came through the rewake tool.")
 		}
 		lines = append(lines, model.Mail)
-		if len(model.AssumedGates) > 0 {
-			lines = append(lines, assumedLine(model.AssumedGates))
-		}
 		return lines
 	})
 }
@@ -182,6 +176,3 @@ func unknownSessionFor(command *Command, dir, name string) error {
 
 // assumedLine says which gates a run's launch took as closed: such a run
 // rests on an assumption the live checks are there to test.
-func assumedLine(gates []string) string {
-	return "Gates taken as closed for verification: " + strings.Join(gates, ", ") + "."
-}

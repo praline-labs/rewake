@@ -11,8 +11,8 @@ package workflow
 //
 // They are not equal in what a red result means, either. The fixture is the
 // regression gate: the harness the core is proven on, where every observation
-// has to be made (docs/v2/stage3-fixture.md#the-gate-across-the-steps). Codex
-// and Claude Code search beside it until their columns go. Which column is the
+// has to be made (docs/v2/stage3-fixture.md#the-gate-across-the-steps). Claude
+// Code searches beside it until its column goes. Which column is the
 // gate is a field of the column, set on exactly one, and the summary names the
 // column of every red; nothing here promotes one on its own.
 
@@ -38,12 +38,6 @@ func capability(name string) string {
 // Each capability traces to a row of the feature map, and each is absent for
 // a reason that belongs to the harness rather than to the fixture.
 var (
-	// capabilitySelection: the session reports which conversation it has
-	// selected and accepted, which is the Codex server's selection fencing.
-	// The socket column learns the conversation only from hooks after the
-	// fact — one line goes in, nothing comes back — so there is no selection
-	// to report.
-	capabilitySelection = capability("reports-conversation-selection")
 	// capabilityNamesMembers: a delivery names the messages it carries. The
 	// socket column's notification carries an id for the announcement, a
 	// count and a preview, and never the member ids.
@@ -88,36 +82,17 @@ func gateColumn() column {
 // The columns the suite runs. mid-turn's capability is declared here too, so
 // one table answers every question about what a column can show.
 var (
-	codexColumn = column{harness: "codex", caps: map[string]bool{
-		capabilitySelection:    true,
-		capabilityNamesMembers: true,
-		capabilityMidTurn:      true,
-	}}
 	claudeColumn = column{harness: "claude", caps: map[string]bool{}}
 	// fixtureColumn is the harness the core is proven on without a real one
 	// (docs/v2/stage3-fixture.md), and the gate: it names its members and
-	// steers into a running turn; it reports no selection, which is Codex's
-	// alone — the gate's one exception, until the Codex column goes
-	// (gateExceptions).
+	// steers into a running turn.
 	fixtureColumn = column{harness: "fixture", gate: true, caps: map[string]bool{
 		capabilityNamesMembers: true,
 		capabilityMidTurn:      true,
 	}}
 	// columns is every column, in the order a scenario runs them.
-	columns = []column{codexColumn, claudeColumn, fixtureColumn}
+	columns = []column{claudeColumn, fixtureColumn}
 )
-
-// only is the observations a column records of those about one capability:
-// all of them where the column offers it, none where it does not. An
-// observation of a mechanism a harness does not have is not that column's to
-// make — the column proves the same step its own way — and recording it as
-// unsupported everywhere else would only repeat that, case after case.
-func (col column) only(name string, observations ...string) []string {
-	if col.offers(name) {
-		return observations
-	}
-	return nil
-}
 
 // runsPluginModule reports whether this column's harness runs rewake's plugin
 // module under node, so a scenario needs node on PATH there. By name: it is
@@ -147,7 +122,7 @@ func noticeID(id string) string {
 // message. The two columns name a message differently — one by its id, the
 // other by the tag an announcement carries — and both are the delivery's own
 // word about what it carried.
-func (col column) deliveryNamed(worker *codexSession, id string) bool {
+func (col column) deliveryNamed(worker *scenarioSession, id string) bool {
 	named := worker.deliveredIDs()
 	if col.offers(capabilityNamesMembers) {
 		return slices.Contains(named, id)
@@ -172,7 +147,7 @@ var errRecordBehind = errors.New("the recipient's record is still being written"
 // reconstruction is checked against the count the notice carried — a
 // membership that does not have the announced size is a contradiction, not a
 // detail — so the answer is either both records agreeing or an error.
-func (col column) announcedDeliveries(worker *codexSession) ([]groupDelivery, error) {
+func (col column) announcedDeliveries(worker *scenarioSession) ([]groupDelivery, error) {
 	deliveries, err := worker.groupDeliveries()
 	if err != nil {
 		return nil, err
@@ -235,7 +210,7 @@ func (col column) announcedDeliveries(worker *codexSession) ([]groupDelivery, er
 // a *different* id, and comparing ids would miss it. What that column shows
 // instead is arithmetic: a delivery announcing more messages than newly became
 // available has announced something that was already announced.
-func (col column) replayedAnnouncement(worker *codexSession) (string, error) {
+func (col column) replayedAnnouncement(worker *scenarioSession) (string, error) {
 	deliveries, err := worker.groupDeliveries()
 	if err != nil {
 		return "", err
@@ -289,13 +264,9 @@ func runInColumns(t *testing.T, name string, body func(t *testing.T, col column)
 	_ = name
 }
 
-// readinessSwitch is how a sender waits for its recipient on this column. One
-// reports an accepted conversation in the room's telemetry; the other has none
-// and says it is listening by creating a file. Both are the recipient's own
-// word, read before the first letter leaves.
-func readinessSwitch(col column, recipient *codexSession) string {
-	if col.offers(capabilitySelection) {
-		return shimSendWhenReady + "=" + recipient.name
-	}
+// readinessSwitch is how a sender waits for its recipient: the recipient says
+// it is listening by creating a file, its own word, read before the first
+// letter leaves.
+func readinessSwitch(recipient *scenarioSession) string {
 	return shimWaitForFile + "=" + recipient.ready
 }

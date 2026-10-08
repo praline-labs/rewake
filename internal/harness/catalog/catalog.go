@@ -12,10 +12,8 @@ package catalog
 import (
 	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/harness/claude"
-	"github.com/praline-labs/rewake/internal/harness/codex"
 )
 
 func init() {
 	harness.Register(claude.New())
-	harness.Register(codex.New())
 }

@@ -28,8 +28,8 @@ type Env struct {
 	Caches []string
 }
 
-// TempRoots are the shared temporary directories: /tmp and $TMPDIR. A Codex
-// sandbox lets its commands write both by default, and the worker could put a
+// TempRoots are the shared temporary directories: /tmp and $TMPDIR. A harness's
+// sandbox may let its commands write both by default, and the worker could put a
 // link in place of a directory there once it is granted; the harness resolves
 // a root again when it applies it (docs/grants.md#what-a-grant-does-not-stop).
 // A variable only so that a test, whose every directory lies in one, can set

@@ -2,7 +2,7 @@
 // forge (docs/grants.md#who-can-grant).
 //
 // Everything a message carries lives in the state directory, which a
-// sandboxed Codex worker can write: a letter with grantDirs dropped in its own
+// sandboxed worker can write: a letter with grantDirs dropped in its own
 // mailbox, or a send run with main's variables, would otherwise pass for
 // main's. So a grant stands only on what main's wrapper — a process no
 // session's sandbox reaches into — holds in memory. `rewake send` registers

@@ -82,14 +82,14 @@ func TestOneAdapterMayNotImportAnother(t *testing.T) {
 func TestANameFailsInACommentAStringAndAnIdentifier(t *testing.T) {
 	src := `package mail
 
-import "example.com/codex"
+import "example.com/relay"
 
-// wait as Codex does
-var codexMode = "on codex"
+// wait as Relay does
+var relayMode = "on relay"
 
-var _ = codex.X
+var _ = relay.X
 `
-	found, err := findMentions("internal/core/mail/mail.go", []byte(src), []string{"codex"})
+	found, err := findMentions("internal/core/mail/mail.go", []byte(src), []string{"relay"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,10 +99,10 @@ var _ = codex.X
 	}
 	slices.Sort(got)
 	want := []string{
-		`internal/core/mail/mail.go:5: the comment names the harness word "codex"`,
-		`internal/core/mail/mail.go:6: the identifier names the harness word "codex"`,
-		`internal/core/mail/mail.go:6: the string names the harness word "codex"`,
-		`internal/core/mail/mail.go:8: the identifier names the harness word "codex"`,
+		`internal/core/mail/mail.go:5: the comment names the harness word "relay"`,
+		`internal/core/mail/mail.go:6: the identifier names the harness word "relay"`,
+		`internal/core/mail/mail.go:6: the string names the harness word "relay"`,
+		`internal/core/mail/mail.go:8: the identifier names the harness word "relay"`,
 	}
 	if len(got) != len(want) {
 		t.Fatalf("got %q, want %q: the import path is rule 1's and is not a mention", got, want)
@@ -117,8 +117,8 @@ var _ = codex.X
 // TestAStringIsReadByItsValue: an escape spells the same name, a decoded
 // newline is not a line of the source, and a raw string's lines are.
 func TestAStringIsReadByItsValue(t *testing.T) {
-	src := "package mail\n\nvar a = \"\\x63odex\"\n\nvar b = \"one\\ncodex\"\n\nvar c = `one\ntwo codex`\n"
-	found, err := findMentions("internal/core/mail/mail.go", []byte(src), []string{"codex"})
+	src := "package mail\n\nvar a = \"\\x72elay\"\n\nvar b = \"one\\nrelay\"\n\nvar c = `one\ntwo relay`\n"
+	found, err := findMentions("internal/core/mail/mail.go", []byte(src), []string{"relay"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,15 +126,15 @@ func TestAStringIsReadByItsValue(t *testing.T) {
 	for _, m := range found {
 		got = append(got, fmt.Sprintf("%d %s %q", m.line, m.kind, m.text))
 	}
-	want := []string{`3 string "codex"`, `5 string "one\ncodex"`, `8 string "one\ntwo codex"`}
+	want := []string{`3 string "relay"`, `5 string "one\nrelay"`, `8 string "one\ntwo relay"`}
 	if !slices.Equal(got, want) {
 		t.Fatalf("got %q, want %q", got, want)
 	}
 }
 
 func TestAWordContainingAnotherFailsOnce(t *testing.T) {
-	got := harnessWords([]string{"claude", "Claude Code", "codex", "Codex"}, ownWords)
-	want := []string{".agents", "app-server", "claude", "codex", "mcp__"}
+	got := harnessWords([]string{"claude", "Claude Code", "relay", "Relay"}, ownWords)
+	want := []string{".agents", ".codex", "app-server", "claude", "mcp__", "relay"}
 	if !slices.Equal(got, want) {
 		t.Fatalf("got %q, want %q", got, want)
 	}
@@ -194,11 +194,11 @@ func TestAnExceptionNothingMatchesFails(t *testing.T) {
 	found := []edge{{file: "internal/cli/a.go", from: "internal/cli", to: "internal/harness/claude"}}
 	oneMessage(t, unmatchedImports([]importException{x}, found), "the import exception internal/cli -> internal/harness/claude for internal/cli/b.go matches nothing any more")
 
-	names := map[nameException]excuse{{file: "internal/cli/a.go", word: "codex"}: {"why", "S8", 1, "000000000000"}}
-	oneMessage(t, excused([]mention{}, nameKey, names), `the name exception for "codex" in internal/cli/a.go matches nothing any more`)
+	names := map[nameException]excuse{{file: "internal/cli/a.go", word: "relay"}: {"why", "S8", 1, "000000000000"}}
+	oneMessage(t, excused([]mention{}, nameKey, names), `the name exception for "relay" in internal/cli/a.go matches nothing any more`)
 
-	left := excused([]mention{{file: "internal/cli/b.go", line: 3, word: "codex", kind: "comment"}}, nameKey, map[nameException]excuse{})
-	oneMessage(t, left, `internal/cli/b.go:3: the comment names the harness word "codex"`)
+	left := excused([]mention{{file: "internal/cli/b.go", line: 3, word: "relay", kind: "comment"}}, nameKey, map[nameException]excuse{})
+	oneMessage(t, left, `internal/cli/b.go:3: the comment names the harness word "relay"`)
 }
 
 // TestATransitionEntryAtItsPlaceOrGoneFails takes its steps from the real build

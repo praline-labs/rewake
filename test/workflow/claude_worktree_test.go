@@ -11,7 +11,7 @@ import (
 )
 
 // TestClaudeWorktree is `rewake claude --worktree` end to end on the Claude
-// column: the same checkout, branch and record a Codex launch gets. A worker
+// column: the same checkout, branch and record any launch gets. A worker
 // launched from a directory inside a repository with --worktree=probe runs at
 // that directory's place in a checkout on the new branch probe; the flag does
 // not reach the harness, whose fixture refuses a flag it does not know. After

@@ -7,8 +7,8 @@ import (
 	"github.com/praline-labs/rewake/internal/inbox"
 )
 
-// StoppedText is what a stopped outcome says, the same words the Codex side
-// sends, so a sender reads one outcome whichever harness its worker runs.
+// StoppedText is what a stopped outcome says, the same words for every
+// harness, so a sender reads one outcome whichever harness its worker runs.
 const StoppedText = "the person at the keyboard stopped this turn"
 
 // InterruptedText is what a stopped outcome says when a main session aborted

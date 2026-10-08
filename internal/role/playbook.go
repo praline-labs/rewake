@@ -98,7 +98,7 @@ func executorSections(git string) []Section {
 var writePlaybook = Playbook{
 	Heading:  "You are a worker: you take tasks from main or another session, do them, and answer by ending your turn.",
 	Steps:    executorSteps,
-	Sections: executorSections("You may commit when authorized: on Codex, Git metadata needs an explicit --grant-git task from main or permissions the owner already gave; on Claude Code, which takes no --grant-git, within your own permissions."),
+	Sections: executorSections("You may commit when authorized: where your harness takes a Git grant, Git metadata needs an explicit --grant-git task from main or permissions the owner already gave; on Claude Code, which takes no --grant-git, within your own permissions."),
 }
 
 var generalPlaybook = Playbook{

@@ -46,8 +46,7 @@ func TestPendingConfirm(t *testing.T) {
 	}
 }
 
-// confirmColumns are the columns whose turn end can be held. Codex's cannot:
-// its turn has ended when the core hears of it.
+// confirmColumns are the columns whose turn end can be held.
 var confirmColumns = []column{claudeColumn, fixtureColumn}
 
 const (
@@ -76,7 +75,7 @@ func playPendingConfirm(t *testing.T, c *Case, iso *Isolation, col column) []tel
 		shimPendingOnce+"="+confirmFirstLine, shimPendingOnHold+"="+confirmSecondLine)
 	defer stopSession(t, c, worker)
 	sender := startHarnessSession(t, c, iso, col.harness, pendingSenderLabel, "--main",
-		shimSendTo+"="+worker.name, shimSendText+"="+confirmTaskText, shimInboxJSON+"=1", readinessSwitch(col, worker))
+		shimSendTo+"="+worker.name, shimSendText+"="+confirmTaskText, shimInboxJSON+"=1", readinessSwitch(worker))
 	defer stopSession(t, c, sender)
 
 	unjudged := func(from int, detail string) []telemetryFinding {

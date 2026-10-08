@@ -286,7 +286,7 @@ func (r checkedReservation) DeliverChecked(_ context.Context, _ Message, valid f
 		return Result{State: Pending, Detail: "changed"}
 	}
 	r.announced.Add(1)
-	return Result{State: Delivered, Via: "codex"}
+	return Result{State: Delivered, Via: "socket"}
 }
 
 // The last check before the notice commits sees a withdrawal made after the

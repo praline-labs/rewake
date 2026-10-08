@@ -34,7 +34,7 @@ func worktreeCommand() *Command {
 			"rewake worktree rm rewake-3f9a1c/fix-login --force",
 			"rewake worktree land feat/login",
 		},
-		Next: []string{"rewake codex --worktree", "rewake claude --worktree"},
+		Next: []string{"rewake claude --worktree"},
 		Notes: []string{
 			"They live under " + worktreeRootHelp + ", one directory per repository, each worktree with a record beside it: the session it was made for, the repository, the commit. Each is on a branch of its own name; a slash in a name, feat/login, is + in its directory.",
 			"A worktree is named by its name, or by <repository>/<name> as ls prints it when two repositories share one; a word that could be either is taken as <repository>/<name> when both parts match.",

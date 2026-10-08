@@ -44,10 +44,10 @@ func SessionEnv(request LaunchRequest, strip []string) []string {
 	)
 }
 
-// CheckEnv is the environment a check before the claim runs in: the one the
+// ProbeEnv is the environment a probe before the claim runs in: the one the
 // harness will have, less the run's values — no run exists yet — and less
-// anything a tool call's child would carry, so a check never passes for one.
-func CheckEnv() []string {
+// anything a tool call's child would carry, so a probe never passes for one.
+func ProbeEnv() []string {
 	var env []string
 	for _, entry := range os.Environ() {
 		name, value, found := strings.Cut(entry, "=")

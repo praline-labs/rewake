@@ -7,7 +7,7 @@ import (
 )
 
 // A catalog with the test-only harness in it, as a tagged build has.
-var taggedCatalog = [][2]string{{"claude", "Claude Code"}, {"codex", "Codex"}, {"fixture", "Fixture harness (tests only)"}}
+var taggedCatalog = [][2]string{{"claude", "Claude Code"}, {"relay", "Relay"}, {"fixture", "Fixture harness (tests only)"}}
 
 const policySource = `package mail
 
@@ -18,7 +18,7 @@ var a = "the fixture frame"
 
 var b = "fixture"
 
-var c = "codex"
+var c = "relay"
 
 var d = "Fixture harness (tests only)"
 `
@@ -42,7 +42,7 @@ func policyMentions(t *testing.T, testOnly []string) []string {
 // whole string literal; its id in prose, an identifier or a longer string is
 // the ordinary noun. The shipped harnesses keep the whole rule beside it.
 func TestATestOnlyHarnessIsFoundByItsTitleAndItsIDAsALiteral(t *testing.T) {
-	want := []string{`10 string "codex"`, `12 string "fixture harness (tests only)"`, `3 comment "claude"`, `8 string "fixture"`}
+	want := []string{`10 string "relay"`, `12 string "fixture harness (tests only)"`, `3 comment "claude"`, `8 string "fixture"`}
 	if got := policyMentions(t, []string{"fixture"}); !slices.Equal(got, want) {
 		t.Fatalf("got %q, want %q", got, want)
 	}
@@ -52,7 +52,7 @@ func TestATestOnlyHarnessIsFoundByItsTitleAndItsIDAsALiteral(t *testing.T) {
 // harness the product carries: the policy is for test-only harnesses alone.
 func TestAShippedHarnessIsFoundByItsIDInEveryText(t *testing.T) {
 	want := []string{
-		`10 string "codex"`, `12 string "fixture"`, `3 comment "claude"`, `3 comment "fixture"`,
+		`10 string "relay"`, `12 string "fixture"`, `3 comment "claude"`, `3 comment "fixture"`,
 		`4 identifier "fixture"`, `6 string "fixture"`, `8 string "fixture"`,
 	}
 	if got := policyMentions(t, nil); !slices.Equal(got, want) {
@@ -65,7 +65,7 @@ func TestAShippedHarnessIsFoundByItsIDInEveryText(t *testing.T) {
 func TestTheTestOnlyIDIsALiteralAndNotAWord(t *testing.T) {
 	words, literals := nameWords(taggedCatalog, []string{"fixture"})
 	if slices.Contains(words, "fixture") || !slices.Equal(literals, []string{"fixture"}) ||
-		!slices.Contains(words, "claude") || !slices.Contains(words, "codex") {
+		!slices.Contains(words, "claude") || !slices.Contains(words, "relay") {
 		t.Fatalf("words %q, literals %q", words, literals)
 	}
 }

@@ -49,7 +49,7 @@ func playOwedReread(t *testing.T, c *Case, iso *Isolation, col column) []telemet
 	worker := startHarnessSession(t, c, iso, col.harness, "worker", "--general", shimInboxJSON+"=1", shimOwedFile+"="+record)
 	defer stopSession(t, c, worker)
 	sender := startHarnessSession(t, c, iso, col.harness, pendingSenderLabel, "--main",
-		shimSendTo+"="+worker.name, shimSendText+"="+owedTaskText, shimInboxJSON+"=1", readinessSwitch(col, worker))
+		shimSendTo+"="+worker.name, shimSendText+"="+owedTaskText, shimInboxJSON+"=1", readinessSwitch(worker))
 	defer stopSession(t, c, sender)
 
 	finding := func(observation string, held bool, detail string, args ...any) telemetryFinding {

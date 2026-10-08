@@ -95,7 +95,7 @@ func TestTheMainSessionReportsNothing(t *testing.T) {
 }
 
 func TestWriteIsALaunchRole(t *testing.T) {
-	result, err := parse([]string{"--write", "codex"})
+	result, err := parse([]string{"--write", aHarness(t)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +107,7 @@ func TestWriteIsALaunchRole(t *testing.T) {
 	if code != ExitUsage || !strings.Contains(errOut, "list does not take --write") {
 		t.Errorf("write accepted on list: %d %s", code, errOut)
 	}
-	for _, args := range [][]string{{"guide"}, {"codex", "--help"}} {
+	for _, args := range [][]string{{"guide"}, {aHarness(t), "--help"}} {
 		code, out, errOut := run(args...)
 		if code != 0 || !strings.Contains(out, "--write") {
 			t.Errorf("help lacks write: %d %s %s", code, out, errOut)
@@ -116,7 +116,7 @@ func TestWriteIsALaunchRole(t *testing.T) {
 }
 
 func TestAWriterCannotAlsoBeMain(t *testing.T) {
-	result, err := parse([]string{"--write", "--main", "codex"})
+	result, err := parse([]string{"--write", "--main", aHarness(t)})
 	if err != nil {
 		t.Fatal(err)
 	}

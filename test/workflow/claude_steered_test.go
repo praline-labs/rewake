@@ -115,7 +115,7 @@ func playSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 	steer, about, row, kinds := sg.steer, sg.about, sg.row, reportKinds
 
 	var sends []string
-	for _, worker := range []*codexSession{calm, busy} {
+	for _, worker := range []*scenarioSession{calm, busy} {
 		code, out, _ := asks.ask(c, "send", worker.name, steeredTask)
 		sends = append(sends, fmt.Sprintf("to %s: exit %d, %s", worker.name, code, firstLine(out)))
 	}
@@ -126,9 +126,9 @@ func playSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 	code, view, said := steer("compact", bare.name)
 	out = append(out, finding(obsNotAnswering, code == 1 && view.Outcome == "refused" && view.Reason == "not answering", "%s", said))
 
-	tasks := map[*codexSession]string{}
+	tasks := map[*scenarioSession]string{}
 	if !waitFor(c, 20*time.Second, func() bool {
-		for _, worker := range []*codexSession{calm, busy} {
+		for _, worker := range []*scenarioSession{calm, busy} {
 			message, read := messageCarrying(worker, "claude-steered:")
 			if !read {
 				return false
@@ -230,7 +230,7 @@ func playSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 // killHarness kills a session's harness outright, as a crash does, and waits
 // for its wrapper to end the session: nothing of the harness writes anything
 // afterwards, while the wrapper still cleans up after it.
-func killHarness(c *Case, iso *Isolation, session *codexSession) {
+func killHarness(c *Case, iso *Isolation, session *scenarioSession) {
 	var record struct {
 		HarnessPID int `json:"harnessPid"`
 	}

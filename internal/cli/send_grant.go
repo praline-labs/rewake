@@ -19,7 +19,7 @@ func registerGrant(dir string, self registry.Session, epoch string, message inbo
 	if !inbox.CarriesGrant(message) {
 		return nil
 	}
-	adapter, _ := harness.Find(self.Harness)
+	adapter, _ := findHarness(self.Harness)
 	if issuer, ok := adapter.(harness.GrantIssuer); !ok || !issuer.ReachesWrapper() {
 		return &FailedError{Message: fmt.Sprintf("a grant: %s runs %s, whose commands cannot reach its wrapper to register one — its sandbox refuses unix sockets — and a grant nobody registered is refused on delivery. Send the task without it, or ask the owner to grant the access from a main on a harness that can.", self.Name, self.Harness)}
 	}
@@ -42,7 +42,7 @@ func registerGrant(dir string, self registry.Session, epoch string, message inbo
 // the edit is refused rather than sent without the grant main may think it
 // carries.
 func carryGrant(dir string, self registry.Session, epoch string, old inbox.Message, replacement *inbox.Message) error {
-	adapter, _ := harness.Find(self.Harness)
+	adapter, _ := findHarness(self.Harness)
 	if issuer, ok := adapter.(harness.GrantIssuer); !ok || !issuer.ReachesWrapper() {
 		// Such a main registers nothing, so nothing here can be carried.
 		if inbox.CarriesGrant(old) {

@@ -50,9 +50,6 @@ type Session struct {
 	// OwnsSocket says this session created the socket path, and so may remove
 	// it when it ends.
 	OwnsSocket bool `json:"ownsSocket,omitempty"`
-	// CodexHome is the CODEX_HOME the session runs with, for harnesses that
-	// keep their state there.
-	CodexHome string `json:"codexHome,omitempty"`
 	// Role is what the session is for, an id from package role. Empty means
 	// the default role.
 	Role string `json:"role"`
@@ -63,11 +60,6 @@ type Session struct {
 	PIDNamespace string `json:"pidNamespace,omitempty"`
 	// Boot says which boot of the machine the run belongs to (run.go).
 	Boot string `json:"boot,omitempty"`
-	// AssumedGates are the gates this launch took as closed through the
-	// verification switch of the live checks
-	// (docs/mail-bridge-launch.md#gates-taken-as-closed), so whoami and
-	// list show a run whose tool rests on an assumption.
-	AssumedGates []string `json:"assumedGates,omitempty"`
 }
 
 // ErrNotFound is returned when no session answers to a name.

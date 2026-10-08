@@ -1,7 +1,6 @@
 package endpoint
 
 import (
-	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -42,29 +41,6 @@ func testEndpoint(t *testing.T, transport string, change ...func(*Config)) (*End
 	return served, path
 }
 
-// codexEvent is a Codex notification in the shape of the recorded stream
-// (testdata/codex-stream.jsonl).
-func codexEvent(method, thread, turn, call string, words []string, content any) []byte {
-	params := map[string]any{"threadId": thread}
-	switch method {
-	case "turn/started", "turn/completed":
-		params["turn"] = map[string]any{"id": turn, "status": "inProgress"}
-	default:
-		status := "inProgress"
-		var result any
-		if method == "item/completed" {
-			status, result = "completed", map[string]any{"content": content}
-		}
-		params["turnId"] = turn
-		params["item"] = map[string]any{
-			"type": "mcpToolCall", "id": call, "server": "rewake", "tool": "rewake", "status": status,
-			"arguments": map[string]any{"words": words}, "error": nil, "result": result,
-		}
-	}
-	encoded, _ := json.Marshal(map[string]any{"method": method, "params": params})
-	return encoded
-}
-
 // testTransport is a transport of no harness: the endpoint's turn path for
 // every transport but the hook path, whose hooks name a call's turn.
 const testTransport = "test-transport"
@@ -74,11 +50,6 @@ const testTransport = "test-transport"
 // reused.
 func neutralRequest(thread, turn, call string, words []string) TicketRequest {
 	return TicketRequest{Transport: testTransport, Conversation: thread, Turn: turn, CallID: call, Words: words, Digest: bridge.Digest(words), TurnsNeverReused: true}
-}
-
-// request is the server's ask for the ticket of a Codex call.
-func codexRequest(thread, turn, call string, words []string) TicketRequest {
-	return TicketRequest{Transport: bridge.CodexTransport, Conversation: thread, Turn: turn, CallID: call, Words: words, Digest: bridge.Digest(words)}
 }
 
 // ticketFor asks for a ticket over a server's connection.

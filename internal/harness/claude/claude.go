@@ -19,8 +19,7 @@ const ID = "claude"
 // made it stop answering would leave every report without threadChanged and
 // nothing failing.
 var (
-	_ harness.ThreadSource       = (*telemetry.Collector)(nil)
-	_ harness.SessionStartSource = (*telemetry.Collector)(nil)
+	_ harness.ThreadSource = (*telemetry.Collector)(nil)
 )
 
 // Its plugin serves control requests; a change that dropped the method would
@@ -125,7 +124,7 @@ func (claudeHarness) Examples() []string {
 // model there and also sets the environment variable gets the variable, which
 // is the one they set for rewake specifically.
 //
-// Unlike Codex, neither setting has a configuration-key form to check.
+// Neither setting has a configuration-key form to check.
 func claudeDefaults() []harness.Default {
 	return []harness.Default{
 		{
@@ -158,11 +157,10 @@ func (claudeHarness) Notes() []string {
 // SingleUseFlags are the flags Claude Code resolves to a single value. Read
 // from `claude --help` on 2.1.270; it has no short spellings for these.
 //
-// The reason differs from Codex's, and the difference matters: Claude Code
-// accepts a repeated flag and takes the last occurrence, so replacing the
-// alias's copy is a convenience here — it keeps the command readable and the
-// two harnesses behaving alike — where on Codex it is what keeps the launch
-// from failing to parse at all.
+// Claude Code accepts a repeated flag and takes the last occurrence, so
+// replacing the alias's copy is a convenience here — it keeps the command
+// readable and harnesses behaving alike — where a harness that refuses a
+// repeat needs it to parse the launch at all.
 //
 // Absent on purpose: --add-dir, --plugin-dir, --plugin-url, --mcp-config and
 // the other lists it spells with `<values...>` — each of those is repeated to
@@ -177,7 +175,7 @@ func (claudeHarness) SingleUseFlags() []harness.Flag {
 		{Spellings: []string{"--settings"}, TakesValue: true},
 		{Spellings: []string{"--agent"}, TakesValue: true},
 		// rewake's own, taken before the launch and read only with =<name>, so
-		// a switch here as on Codex: a typed one replaces an alias's.
+		// a switch here: a typed one replaces an alias's.
 		{Spellings: []string{"--worktree"}},
 	}
 }
@@ -252,29 +250,10 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 	}
 	// Decided once, since the grant hook is told whether the rule is ours.
 	rewakeRule := len(harness.FlagValues(args, toolFlag, toolFlagKebab)) == 0
-	bridge := ""
-	if request.MailTool != nil {
-		bridge = BridgeHookCommand(request.MailTool)
-	}
-	args, settingsNotes, hooked := applySettings(args, cwd, request.Role.Silent, rewakeRule, observation, bridge)
+	args, settingsNotes, _ := applySettings(args, cwd, request.Role.Silent, rewakeRule, observation)
 	notes = append(notes, settingsNotes...)
-	toolLeftOut := ""
-	if request.MailTool != nil {
-		if hooked {
-			injected, err := injectTool(args, request.MailTool)
-			if err != nil {
-				toolLeftOut = err.Error()
-			} else {
-				args = injected
-			}
-		} else {
-			toolLeftOut = "the settings layer carrying the tool's hooks could not be applied"
-		}
-	}
 	if briefed {
-		about := request.BriefContext()
-		about.Tool = about.Tool && toolLeftOut == ""
-		args = harness.AddFlags(args, introFlag, brief.Intro(about))
+		args = harness.AddFlags(args, introFlag, brief.Intro(request.BriefContext()))
 	}
 	args, env, pluginNotes := applyPlugin(args, env, observation, request.ControlDir)
 	notes = append(notes, pluginNotes...)
@@ -292,8 +271,6 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 		Notes:      notes,
 		Observer:   observer,
 		Lane:       newLane(reply, owns, drawn, marks),
-
-		ToolLeftOut: toolLeftOut,
 	}, nil
 }
 

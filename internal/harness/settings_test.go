@@ -53,11 +53,11 @@ func writeProjectSettings(t *testing.T, working, content string) string {
 // it means.
 func TestSettingsOrderFromClosestToFurthest(t *testing.T) {
 	home, working := settingsWorld(t)
-	writeUserSettings(t, home, "REWAKE_CODEX_MODEL=from-the-user-file\n")
-	writeProjectSettings(t, working, "REWAKE_CODEX_MODEL=from-the-project-file\n")
+	writeUserSettings(t, home, "REWAKE_CLAUDE_MODEL=from-the-user-file\n")
+	writeProjectSettings(t, working, "REWAKE_CLAUDE_MODEL=from-the-project-file\n")
 
 	settings := harness.LoadSettings()
-	value, source, ok := settings.Lookup("REWAKE_CODEX_MODEL")
+	value, source, ok := settings.Lookup("REWAKE_CLAUDE_MODEL")
 	if !ok || value != "from-the-project-file" {
 		t.Fatalf("value=%q source=%q, want the project file to win over the user file", value, source)
 	}
@@ -65,9 +65,9 @@ func TestSettingsOrderFromClosestToFurthest(t *testing.T) {
 		t.Errorf("source=%q does not name the project file", source)
 	}
 
-	t.Setenv("REWAKE_CODEX_MODEL", "from-the-environment")
+	t.Setenv("REWAKE_CLAUDE_MODEL", "from-the-environment")
 	settings = harness.LoadSettings()
-	value, source, _ = settings.Lookup("REWAKE_CODEX_MODEL")
+	value, source, _ = settings.Lookup("REWAKE_CLAUDE_MODEL")
 	if value != "from-the-environment" {
 		t.Errorf("value=%q, want a variable already set to beat both files", value)
 	}
@@ -85,7 +85,7 @@ func TestOnlyOurOwnKeysAreReadFromAFile(t *testing.T) {
 		// point a session at another state directory or room.
 		"REWAKE_DIR=/somewhere/else",
 		"REWAKE_ROOM=somebody-elses",
-		"REWAKE_CODEX_MODEL=ours",
+		"REWAKE_CLAUDE_MODEL=ours",
 	}, "\n"))
 
 	settings := harness.LoadSettings()
@@ -96,7 +96,7 @@ func TestOnlyOurOwnKeysAreReadFromAFile(t *testing.T) {
 			t.Errorf("%s came from %s, which is not one of the settings a file may decide", forbidden, source)
 		}
 	}
-	if value, _, ok := settings.Lookup("REWAKE_CODEX_MODEL"); !ok || value != "ours" {
+	if value, _, ok := settings.Lookup("REWAKE_CLAUDE_MODEL"); !ok || value != "ours" {
 		t.Errorf("our own setting was not read: %q", value)
 	}
 	// Silently: a file found in whatever directory somebody is in must not be
@@ -113,10 +113,10 @@ func TestOnlyOurOwnKeysAreReadFromAFile(t *testing.T) {
 // dropping it would lose the setting without a word.
 func TestTheExportFormIsAccepted(t *testing.T) {
 	_, working := settingsWorld(t)
-	writeProjectSettings(t, working, "export REWAKE_CODEX_MODEL=exported\n")
+	writeProjectSettings(t, working, "export REWAKE_CLAUDE_MODEL=exported\n")
 
 	settings := harness.LoadSettings()
-	if value, _, ok := settings.Lookup("REWAKE_CODEX_MODEL"); !ok || value != "exported" {
+	if value, _, ok := settings.Lookup("REWAKE_CLAUDE_MODEL"); !ok || value != "exported" {
 		t.Errorf("value=%q ok=%v, want the exported form to be read", value, ok)
 	}
 }
@@ -125,12 +125,12 @@ func TestTheExportFormIsAccepted(t *testing.T) {
 // files must not answer behind it.
 func TestAnEmptyVariableTurnsTheDefaultOff(t *testing.T) {
 	home, working := settingsWorld(t)
-	writeUserSettings(t, home, "REWAKE_CODEX_MODEL=from-the-user-file\n")
-	writeProjectSettings(t, working, "REWAKE_CODEX_MODEL=from-the-project-file\n")
-	t.Setenv("REWAKE_CODEX_MODEL", "")
+	writeUserSettings(t, home, "REWAKE_CLAUDE_MODEL=from-the-user-file\n")
+	writeProjectSettings(t, working, "REWAKE_CLAUDE_MODEL=from-the-project-file\n")
+	t.Setenv("REWAKE_CLAUDE_MODEL", "")
 
 	settings := harness.LoadSettings()
-	if value, _, ok := settings.Lookup("REWAKE_CODEX_MODEL"); ok || value != "" {
+	if value, _, ok := settings.Lookup("REWAKE_CLAUDE_MODEL"); ok || value != "" {
 		t.Errorf("value=%q ok=%v, want an empty variable to mean no default at all", value, ok)
 	}
 }
@@ -139,7 +139,7 @@ func TestAnEmptyVariableTurnsTheDefaultOff(t *testing.T) {
 // every time would teach people to skip these notes.
 func TestOrdinaryProjectPermissionsAreNotWarnedAbout(t *testing.T) {
 	_, working := settingsWorld(t)
-	path := writeProjectSettings(t, working, "REWAKE_CODEX_MODEL=fine\n")
+	path := writeProjectSettings(t, working, "REWAKE_CLAUDE_MODEL=fine\n")
 	if err := os.Chmod(path, 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -150,34 +150,30 @@ func TestOrdinaryProjectPermissionsAreNotWarnedAbout(t *testing.T) {
 
 func TestTheFormatIsTheSmallestThingThatWorks(t *testing.T) {
 	_, working := settingsWorld(t)
-	writeProjectSettings(t, working, strings.Join([]string{
-		"# a comment",
-		"",
-		"  REWAKE_CODEX_MODEL = \"quoted value\"  ",
-		"REWAKE_CODEX_EFFORT=low  # the cheapest one",
-		"REWAKE_CLAUDE_MODEL=$NOT_EXPANDED",
-		"REWAKE_CLAUDE_EFFORT=keeps#the-hash",
-	}, "\n"))
-
-	settings := harness.LoadSettings()
-	for key, want := range map[string]string{
-		"REWAKE_CODEX_MODEL":   "quoted value",
-		"REWAKE_CODEX_EFFORT":  "low",
-		"REWAKE_CLAUDE_MODEL":  "$NOT_EXPANDED",
-		"REWAKE_CLAUDE_EFFORT": "keeps#the-hash",
+	// Two rounds: four shapes, over the two settings a file may decide.
+	for _, round := range []struct {
+		lines       []string
+		model, rest string
+	}{
+		{[]string{"# a comment", "", "  REWAKE_CLAUDE_MODEL = \"quoted value\"  ", "REWAKE_CLAUDE_EFFORT=low  # the cheapest one"}, "quoted value", "low"},
+		{[]string{"REWAKE_CLAUDE_MODEL=$NOT_EXPANDED", "REWAKE_CLAUDE_EFFORT=keeps#the-hash"}, "$NOT_EXPANDED", "keeps#the-hash"},
 	} {
-		if value, _, ok := settings.Lookup(key); !ok || value != want {
-			t.Errorf("%s=%q, want %q", key, value, want)
+		writeProjectSettings(t, working, strings.Join(round.lines, "\n"))
+		settings := harness.LoadSettings()
+		for key, want := range map[string]string{"REWAKE_CLAUDE_MODEL": round.model, "REWAKE_CLAUDE_EFFORT": round.rest} {
+			if value, _, ok := settings.Lookup(key); !ok || value != want {
+				t.Errorf("%s=%q, want %q", key, value, want)
+			}
 		}
 	}
 }
 
 func TestAMalformedLineIsReportedAndSkipped(t *testing.T) {
 	_, working := settingsWorld(t)
-	writeProjectSettings(t, working, "this line has no equals sign\nREWAKE_CODEX_MODEL=still-read\n")
+	writeProjectSettings(t, working, "this line has no equals sign\nREWAKE_CLAUDE_MODEL=still-read\n")
 
 	settings := harness.LoadSettings()
-	if value, _, ok := settings.Lookup("REWAKE_CODEX_MODEL"); !ok || value != "still-read" {
+	if value, _, ok := settings.Lookup("REWAKE_CLAUDE_MODEL"); !ok || value != "still-read" {
 		t.Errorf("a bad line stopped the rest of the file: %q", value)
 	}
 	if len(settings.Notes) == 0 {
@@ -187,14 +183,14 @@ func TestAMalformedLineIsReportedAndSkipped(t *testing.T) {
 
 func TestAnUnreadableFileIsReportedNotIgnored(t *testing.T) {
 	_, working := settingsWorld(t)
-	path := writeProjectSettings(t, working, "REWAKE_CODEX_MODEL=unreachable\n")
+	path := writeProjectSettings(t, working, "REWAKE_CLAUDE_MODEL=unreachable\n")
 	if err := os.Chmod(path, 0o000); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.Chmod(path, 0o600) })
 
 	settings := harness.LoadSettings()
-	if _, _, ok := settings.Lookup("REWAKE_CODEX_MODEL"); ok {
+	if _, _, ok := settings.Lookup("REWAKE_CLAUDE_MODEL"); ok {
 		t.Skip("this user can read a 0000 file, so the case cannot be made here")
 	}
 	if len(settings.Notes) == 0 {
@@ -206,13 +202,13 @@ func TestAnUnreadableFileIsReportedNotIgnored(t *testing.T) {
 // up holding more than a model name.
 func TestWidePermissionsOnTheUserFileAreWarnedAbout(t *testing.T) {
 	home, _ := settingsWorld(t)
-	path := writeUserSettings(t, home, "REWAKE_CODEX_MODEL=readable-by-everyone\n")
+	path := writeUserSettings(t, home, "REWAKE_CLAUDE_MODEL=readable-by-everyone\n")
 	if err := os.Chmod(path, 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	settings := harness.LoadSettings()
-	if value, _, ok := settings.Lookup("REWAKE_CODEX_MODEL"); !ok || value != "readable-by-everyone" {
+	if value, _, ok := settings.Lookup("REWAKE_CLAUDE_MODEL"); !ok || value != "readable-by-everyone" {
 		t.Error("the file was not read despite being readable")
 	}
 	warned := false
@@ -232,7 +228,7 @@ func TestNoFilesIsNotAProblem(t *testing.T) {
 	if len(settings.Notes) != 0 {
 		t.Errorf("absent files were reported as trouble: %v", settings.Notes)
 	}
-	if _, _, ok := settings.Lookup("REWAKE_CODEX_MODEL"); ok {
+	if _, _, ok := settings.Lookup("REWAKE_CLAUDE_MODEL"); ok {
 		t.Error("a value appeared from nowhere")
 	}
 }

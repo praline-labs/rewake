@@ -83,22 +83,22 @@ func TestAStrayGitAboveTheModuleIsNotRead(t *testing.T) {
 
 func TestANameExceptionAdmitsNoNewMention(t *testing.T) {
 	const name = "internal/core/mail/mail.go"
-	const before = "package mail\n\n// wait as codex does\n\n// and codex again\nvar mode int\n"
+	const before = "package mail\n\n// wait as relay does\n\n// and relay again\nvar mode int\n"
 	write := syntheticModule(t, map[string]string{name: before})
-	words := []string{"codex"}
+	words := []string{"relay"}
 	table := snapshot(mentions(t, words, nil), nameKey)
 	if got := nameProblems(t, words, table); len(got) > 0 {
 		t.Fatalf("the recorded file fails: %q", got)
 	}
 	for _, c := range []struct{ what, src, want string }{
-		{"a new identifier beside an excepted comment", before + "var codexMode int\n", "and the file now has 3"},
-		{"a new string beside an excepted comment", before + "var mode2 = \"on codex\"\n", "and the file now has 3"},
-		{"a new escaped string", before + "var mode2 = \"\\x63odex\"\n", "and the file now has 3"},
-		{"a partial deletion", "package mail\n\n// wait as codex does\nvar mode int\n", "and the file now has 1"},
-		{"an old mention replaced by another", strings.Replace(before, "and codex again", "or codex once", 1), "and the file now has 2"},
+		{"a new identifier beside an excepted comment", before + "var relayMode int\n", "and the file now has 3"},
+		{"a new string beside an excepted comment", before + "var mode2 = \"on relay\"\n", "and the file now has 3"},
+		{"a new escaped string", before + "var mode2 = \"\\x72elay\"\n", "and the file now has 3"},
+		{"a partial deletion", "package mail\n\n// wait as relay does\nvar mode int\n", "and the file now has 1"},
+		{"an old mention replaced by another", strings.Replace(before, "and relay again", "or relay once", 1), "and the file now has 2"},
 	} {
 		write(name, c.src)
-		oneContaining(t, nameProblems(t, words, table), `the name exception for "codex" in internal/core/mail/mail.go records 2`, c.want)
+		oneContaining(t, nameProblems(t, words, table), `the name exception for "relay" in internal/core/mail/mail.go records 2`, c.want)
 	}
 	write(name, "package mail\n")
 	oneContaining(t, nameProblems(t, words, table), "matches nothing any more")
@@ -126,13 +126,13 @@ func TestAnInitExceptionAdmitsNoSecondInit(t *testing.T) {
 // transition table.
 func TestEveryFileIsReadWhateverItsConstraint(t *testing.T) {
 	write := syntheticModule(t, map[string]string{
-		"internal/core/tagonly/name.go":  "//go:build rewakefault\n\npackage tagonly\n\nvar mode = \"codex\"\n",
-		"internal/core/never/name.go":    "//go:build ignore\n\npackage never\n\nvar mode = \"codex\"\n",
+		"internal/core/tagonly/name.go":  "//go:build rewakefault\n\npackage tagonly\n\nvar mode = \"relay\"\n",
+		"internal/core/never/name.go":    "//go:build ignore\n\npackage never\n\nvar mode = \"relay\"\n",
 		"internal/adapter/fake/fault.go": "//go:build rewakefault\n\npackage fake\n\nimport \"" + module + "/internal/harness\"\n\nvar all []harness.Harness\n",
 		"internal/adapter/fake/never.go": "//go:build ignore\n\npackage fake\n\nfunc init() {}\n",
 		"internal/adapter/fake/plain.go": "package fake\n",
 	})
-	got := nameProblems(t, []string{"codex"}, nil)
+	got := nameProblems(t, []string{"relay"}, nil)
 	slices.Sort(got)
 	if len(got) != 2 || !strings.HasPrefix(got[0], "internal/core/never/name.go:5: the string") ||
 		!strings.HasPrefix(got[1], "internal/core/tagonly/name.go:5: the string") {
@@ -285,7 +285,7 @@ func TestAnExampleInAnyFenceNamesNoStep(t *testing.T) {
 func TestADirectoryWithItsOwnModuleIsNoPackage(t *testing.T) {
 	syntheticModule(t, map[string]string{
 		"internal/old/go.mod":        "module example.org/old\n\ngo 1.25\n",
-		"internal/old/codex/old.go":  "package codex\n",
+		"internal/old/relay/old.go":  "package relay\n",
 		"internal/core/mail/mail.go": "package mail\n",
 	})
 	got := packageDirs(t, nil)

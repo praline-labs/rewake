@@ -13,8 +13,7 @@ import (
 	"github.com/praline-labs/rewake/internal/sessionstate"
 )
 
-// maxCompactionEvents bounds the notification cues kept in a snapshot, the
-// same bound the Codex side keeps: a reader that falls further behind than
+// maxCompactionEvents bounds the notification cues kept in a snapshot: a reader that falls further behind than
 // this has missed the cue, not the count.
 const maxCompactionEvents = 64
 

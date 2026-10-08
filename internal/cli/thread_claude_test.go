@@ -68,16 +68,14 @@ func TestAClaudeTurnEndComparesItsSessionID(t *testing.T) {
 	}
 }
 
-// Only a hook's payload names the conversation: a Codex notify carries its
-// thread through the gateway, and a stray session_id there says nothing.
-func TestOnlyAHookPayloadNamesTheConversation(t *testing.T) {
+// A hook's payload names the conversation: its session_id, on either end.
+func TestAHookPayloadNamesTheConversation(t *testing.T) {
 	for _, tc := range []struct {
 		payload string
 		want    string
 	}{
 		{`{"hook_event_name":"Stop","session_id":"conv-a","last_assistant_message":"x"}`, "conv-a"},
 		{`{"hook_event_name":"StopFailure","session_id":"conv-a","last_assistant_message":"x"}`, "conv-a"},
-		{`{"type":"agent-turn-complete","thread-id":"t","session_id":"conv-a","last-assistant-message":"x"}`, ""},
 	} {
 		event, ok := completedTurn([]byte(tc.payload))
 		if !ok || event.Thread != tc.want {

@@ -14,14 +14,10 @@ type gateException struct {
 // longer matches — the gate declares the capability after all, the column is
 // not the gate, the capability is not asked about — fails rather than
 // lingering as a hole nobody remembers opening.
-var gateExceptions = []gateException{
-	{
-		capability: capabilitySelection,
-		column:     fixtureColumn.harness,
-		reason:     "selection fencing is the Codex server's own; its observations are recorded only on a column that offers it",
-		retiredBy:  "S8",
-	},
-}
+//
+// None is open: the last, conversation selection, left with the column that
+// offered it.
+var gateExceptions = []gateException{}
 
 // Exactly one column is the gate, and it is the fixture's: two gates would
 // make a red on either block, none would let every red through.

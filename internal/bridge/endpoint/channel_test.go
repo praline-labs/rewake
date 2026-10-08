@@ -52,7 +52,7 @@ func channelEndpoint(t *testing.T, transport string, change ...func(*Config)) (*
 // Each server connection has its own generation, and its close names it:
 // the wrapper can tell an older server's EOF from the newer one's.
 func TestServerConnectionsAreNumberedAndTheirClosesNamed(t *testing.T) {
-	_, path, got := channelEndpoint(t, bridge.CodexTransport)
+	_, path, got := channelEndpoint(t, testTransport)
 	first, err := Dial(path, "secret")
 	if err != nil {
 		t.Fatal(err)
@@ -80,7 +80,7 @@ func TestServerConnectionsAreNumberedAndTheirClosesNamed(t *testing.T) {
 // A server's refused hello is told with whether it came from the harness's
 // tree; a child's or a hook's is not the server's and is not told.
 func TestARefusedServerHelloIsToldWithItsAncestry(t *testing.T) {
-	_, path, got := channelEndpoint(t, bridge.CodexTransport)
+	_, path, got := channelEndpoint(t, testTransport)
 	_, _ = hold(t, path, hello{Role: roleChild})
 	_, _ = hold(t, path, hello{Role: roleServer, Capability: "guess"})
 	events := got.wait(t, 1)
@@ -88,7 +88,7 @@ func TestARefusedServerHelloIsToldWithItsAncestry(t *testing.T) {
 		t.Fatalf("%+v", events)
 	}
 
-	_, strayPath, stray := channelEndpoint(t, bridge.CodexTransport, func(c *Config) {
+	_, strayPath, stray := channelEndpoint(t, testTransport, func(c *Config) {
 		c.Descends = func(int, int) error { return errors.New("not below") }
 	})
 	_, _ = hold(t, strayPath, hello{Role: roleServer, Capability: "secret"})
@@ -100,7 +100,7 @@ func TestARefusedServerHelloIsToldWithItsAncestry(t *testing.T) {
 // A server reports only that a command cannot start, in the endpoint's own
 // word; anything else is refused and tells nothing.
 func TestAServerReportsACommandThatCannotStart(t *testing.T) {
-	served, path, got := channelEndpoint(t, bridge.CodexTransport)
+	served, path, got := channelEndpoint(t, testTransport)
 	client, err := Dial(path, "secret")
 	if err != nil {
 		t.Fatal(err)
@@ -124,12 +124,12 @@ func TestAServerReportsACommandThatCannotStart(t *testing.T) {
 // A call refused for want of an observation says the observer is gone; a
 // validated ticket carries when it was issued; a call seen opens a wait.
 func TestCallsTellTheirEvidence(t *testing.T) {
-	served, path, got := channelEndpoint(t, bridge.CodexTransport)
+	served, path, got := channelEndpoint(t, testTransport)
 	openTurn(served, "th", "t1")
-	_, err := ticketFor(t, path, codexRequest("th", "t1", "unseen", words))
+	_, err := ticketFor(t, path, neutralRequest("th", "t1", "unseen", words))
 	refusedWith(t, err, "an unobserved call")
-	served.CodexEvent(codexEvent("item/started", "th", "t1", "c1", words, nil))
-	ticket := mustTicket(t, path, codexRequest("th", "t1", "c1", words))
+	seenCall(served, "th", "t1", "c1", words)
+	ticket := mustTicket(t, path, neutralRequest("th", "t1", "c1", words))
 	if err := Confirm(path, ticket); err != nil {
 		t.Fatal(err)
 	}

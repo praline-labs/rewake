@@ -350,8 +350,8 @@ func findMentions(name string, src []byte, words []string, literals ...string) (
 		case *ast.Ident:
 			note(n.Pos(), n.Name, "identifier", false)
 		case *ast.BasicLit:
-			// The value, not the spelling: "\x63odex" names the harness as
-			// surely as "codex". Only a raw string's newlines are the source's.
+			// The value, not the spelling: "\x63laude" names the harness as
+			// surely as "claude". Only a raw string's newlines are the source's.
 			if n.Kind == token.STRING && !imports[n] {
 				value, err := strconv.Unquote(n.Value)
 				if err != nil {

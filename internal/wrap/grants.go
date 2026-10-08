@@ -31,7 +31,7 @@ const grantLifetime = inbox.DefaultTTL + 5*time.Minute
 // itself proves who wrote it (docs/grants.md#who-can-grant).
 //
 // For a harness that takes a grant through its own hook, the grant then
-// waits for the session to be idle, as Codex's does, and goes into the
+// waits for the session to be idle, as every grant does, and goes into the
 // keeper the hook asks; keeper is nil for any other. thread is the session's
 // conversation; nil for a harness that names none.
 //

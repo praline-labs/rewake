@@ -57,7 +57,7 @@ func requestedDirGrants(call Call, sender, target registry.Session, senderErr er
 	if kind.kind != inbox.Task && kind.kind != inbox.Question {
 		return refuse("only a task or a question carries a grant; a heads-up asks for no work to write.")
 	}
-	adapter, _ := harness.Find(target.Harness)
+	adapter, _ := findHarness(target.Harness)
 	if capable, ok := adapter.(harness.DirGrantHarness); !ok || !capable.SupportsDirGrant() {
 		return dirGrants{}, &FailedError{Message: fmt.Sprintf("--grant-dir: %s runs %s, which cannot take a directory into a running session yet. Do that part of the work yourself, or ask the owner to add the directory to that session in its own terminal.", target.Name, target.Harness)}
 	}

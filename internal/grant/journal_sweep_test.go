@@ -21,7 +21,7 @@ func TestSavingSweepsTheJournalsOfEndedRuns(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	live := registry.Session{Name: "writer", Harness: "codex", ServicePID: os.Getpid(), ServiceStart: start, Boot: registrytest.Boot(t), CWD: dir, StartedAt: time.Now()}
+	live := registry.Session{Name: "writer", ServicePID: os.Getpid(), ServiceStart: start, Boot: registrytest.Boot(t), CWD: dir, StartedAt: time.Now()}
 	if err := state.EnsureSubdir(state.SessionsPath(dir)); err != nil {
 		t.Fatal(err)
 	}

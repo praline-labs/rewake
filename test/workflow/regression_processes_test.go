@@ -25,7 +25,7 @@ func TestDeadlineBoundsDescendantsToo(t *testing.T) {
 	rec := &recorder{}
 	c := newCase(rec, Spec{Name: "descendants", Observations: []string{"a"}, Deadline: 30 * time.Millisecond})
 	base := t.TempDir()
-	iso := &Isolation{binary: "/bin/sh", forCase: c, Home: base, StateDir: base, CodexHome: base, ShimDir: base}
+	iso := &Isolation{binary: "/bin/sh", forCase: c, Home: base, StateDir: base, ShimDir: base}
 
 	started := time.Now()
 	_, err := iso.Output(iso.Command("-c", "sleep 5 & wait"))
@@ -127,8 +127,8 @@ func TestPreparationChecksDescendantsOnSuccess(t *testing.T) {
 }
 
 // setsid moves a process out of the group it was started in, after which the
-// original group id proves nothing. The Codex adapter does exactly this for
-// the native app-server, so a session could otherwise keep running while the
+// original group id proves nothing. An adapter may do exactly this for a
+// process of its harness, so a session could otherwise keep running while the
 // case reported a clean finish.
 func TestDescendantInItsOwnGroupCannotKeepGreen(t *testing.T) {
 	rec := &recorder{}
@@ -346,7 +346,7 @@ func TestExpectedFailureDoesNotFailTheCase(t *testing.T) {
 	rec := &recorder{}
 	c := newCase(rec, Spec{Name: "expected-failure", Observations: []string{"a"}})
 	base := t.TempDir()
-	iso := &Isolation{binary: "/bin/sh", forCase: c, Home: base, StateDir: base, CodexHome: base, ShimDir: base}
+	iso := &Isolation{binary: "/bin/sh", forCase: c, Home: base, StateDir: base, ShimDir: base}
 	if _, err := c.OutputAllowingFailure(iso.Command("-c", "exit 7")); err == nil {
 		t.Fatal("precondition: the command was supposed to fail")
 	}
@@ -364,7 +364,7 @@ func TestFinishJoinsProcessesBeforeCheckingCleanup(t *testing.T) {
 	rec := &recorder{}
 	c := newCase(rec, Spec{Name: "ordering", Observations: []string{"a"}})
 	base := t.TempDir()
-	iso := &Isolation{binary: "/bin/sh", forCase: c, Home: base, StateDir: base, CodexHome: base, ShimDir: base}
+	iso := &Isolation{binary: "/bin/sh", forCase: c, Home: base, StateDir: base, ShimDir: base}
 
 	process, err := c.start(iso.Command("-c", "sleep 30"), false)
 	if err != nil {

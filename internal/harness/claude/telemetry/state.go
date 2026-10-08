@@ -6,7 +6,7 @@ import (
 	"github.com/praline-labs/rewake/internal/sessionstate"
 )
 
-// Activity values, the same words the Codex side publishes.
+// Activity values, the same words for every harness.
 const (
 	activityIdle    = "idle"
 	activityWorking = "working"

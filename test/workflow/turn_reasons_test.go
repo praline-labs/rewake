@@ -88,7 +88,7 @@ func playTurnReasons(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 	}
 	// from is what a reader has read from one session, as kind, the tasks it
 	// answers and its text.
-	from := func(reader, sender *codexSession) []reportView {
+	from := func(reader, sender *scenarioSession) []reportView {
 		var out []reportView
 		for _, message := range readMessages(reader) {
 			if message.From == sender.name && message.Kind != "notify" {

@@ -14,8 +14,8 @@ import (
 	"github.com/praline-labs/rewake/internal/state"
 )
 
-// grantWorld is a main caller, a Codex worker in a workspace of its own, and a
-// home with directories to grant.
+// grantWorld is a main caller, a worker in a workspace of its own, and a home
+// with directories to grant.
 type grantWorld struct {
 	dir, home, workspace string
 	peer                 registry.Session
@@ -37,7 +37,10 @@ func newGrantWorld(t *testing.T, senderRole, harnessID string) grantWorld {
 	}
 	t.Setenv("HOME", world.home)
 	t.Setenv("PATH", "/usr/bin:/bin")
-	peer.Role, peer.Harness, peer.CWD = "write", harnessID, world.workspace
+	peer.Role, peer.CWD = "write", world.workspace
+	if harnessID != "" {
+		peer.Harness = harnessID
+	}
 	if err := registry.Update(dir, peer); err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +67,7 @@ func (w grantWorld) sent(t *testing.T) []inbox.Message {
 }
 
 func TestDirGrantIsCarriedResolvedAndCollapsed(t *testing.T) {
-	w := newGrantWorld(t, "main", "codex")
+	w := newGrantWorld(t, "main", "")
 	lib, pkg, wide := filepath.Join(w.home, "work/lib"), filepath.Join(w.home, "work/lib/pkg"), filepath.Join(w.home, "wide")
 	t.Chdir(filepath.Join(w.home, "work"))
 	code, out, stderr := run("send", w.peer.Name, "Bump the client", "--wait=0", "--json",
@@ -118,8 +121,7 @@ func TestDirGrantIsCarriedResolvedAndCollapsed(t *testing.T) {
 }
 
 // A Claude Code session takes a grant through its permission hook, which
-// asks its wrapper (docs/grants.md#claude-code): the task goes out like one to
-// Codex.
+// asks its wrapper (docs/grants.md#claude-code): the task goes out carrying it.
 func TestAClaudeCodeSessionIsSentADirectoryGrant(t *testing.T) {
 	w := newGrantWorld(t, "main", "claude")
 	lib := filepath.Join(w.home, "work/lib")
@@ -133,7 +135,7 @@ func TestAClaudeCodeSessionIsSentADirectoryGrant(t *testing.T) {
 }
 
 func TestDirGrantInWorkspaceIsNotCarried(t *testing.T) {
-	w := newGrantWorld(t, "main", "codex")
+	w := newGrantWorld(t, "main", "")
 	code, out, stderr := run("send", w.peer.Name, "Tidy src", "--wait=0", "--grant-dir", filepath.Join(w.workspace, "src"))
 	if code != ExitPending || !strings.Contains(out, "already writable by "+w.peer.Name) {
 		t.Fatalf("send: %d %s %s", code, out, stderr)
@@ -176,9 +178,6 @@ func TestDirGrantRefusals(t *testing.T) {
 			sender, peer := c.sender, c.peer
 			if sender == "" {
 				sender = "main"
-			}
-			if peer == "" {
-				peer = "codex"
 			}
 			w := newGrantWorld(t, sender, peer)
 			args := append([]string{"send", w.peer.Name, "Write there", "--wait=0"}, c.args(w)...)
@@ -224,25 +223,11 @@ func TestRepeatableFlagsCollectAndOthersRefuseRepeats(t *testing.T) {
 	}
 }
 
-// The refusal comes before anything else of the launch: a program that does
-// not exist would be refused next, with a text that names no grant.
-func TestCodexLaunchRefusesAddDir(t *testing.T) {
-	for _, args := range [][]string{
-		{"--command", "/nonexistent/codex", "codex", "--add-dir", "/tmp"},
-		{"--command", "/nonexistent/codex", "codex", "-c", "sandbox_workspace_write.writable_roots=[\"/tmp\"]"},
-	} {
-		code, out, stderr := run(args...)
-		if code != ExitUsage || !strings.Contains(stderr, "rewake send --grant-dir") {
-			t.Errorf("%q: got %d %s %s", args, code, out, stderr)
-		}
-	}
-}
-
 // An addition to a task whose grant waits for the worker to be idle would be
 // read first, and worked on without the grant: --to refuses it and names
 // rewake edit, which changes the task itself.
 func TestAnAddendumToAWaitingGrantIsRefused(t *testing.T) {
-	w := newGrantWorld(t, "main", "codex")
+	w := newGrantWorld(t, "main", "")
 	code, out, stderr := run("send", w.peer.Name, "Write there", "--wait=0", "--grant-dir", w.home+"/work/lib")
 	if code != ExitPending {
 		t.Fatalf("send: %d %s %s", code, out, stderr)
@@ -260,7 +245,7 @@ func TestAnAddendumToAWaitingGrantIsRefused(t *testing.T) {
 // The text of a send names each granted directory as resolved: a name given
 // through a link leads elsewhere, and main reads here where.
 func TestASendNamesTheDirectoriesItGrants(t *testing.T) {
-	w := newGrantWorld(t, "main", "codex")
+	w := newGrantWorld(t, "main", "")
 	lib := filepath.Join(w.home, "work", "lib")
 	link := filepath.Join(w.home, "work", "out")
 	if err := os.Symlink(lib, link); err != nil {

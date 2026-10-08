@@ -40,18 +40,15 @@ const defaultPool = 6
 const arrivalSettle = 200 * time.Millisecond
 
 // longScenarios name the scenarios measured longest, by the prefix of the case
-// name, and how long one case took on the run of 2026-09-25 (codex-compact-hold
-// on 2026-09-26). Only the order matters: a scenario not listed starts after
-// these, in arrival order.
+// name, and how long one case took on the run of 2026-09-25. Only the order
+// matters: a scenario not listed starts after these, in arrival order.
 var longScenarios = []struct {
 	prefix  string
 	seconds int
 }{
 	{"claude-steered", 32},
 	{"claude-interrupted", 26},
-	{"codex-compact-hold", 22},
 	{"claude-inbound", 20},
-	{"codex-steered", 19},
 	{"mid-turn", 12},
 }
 

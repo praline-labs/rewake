@@ -16,7 +16,7 @@ import (
 // the immediate child, so a descendant keeps the pipe open and decides when
 // the call returns — a 30 ms deadline was seen returning after 252 ms. It
 // kills with SIGKILL, which for the rewake wrapper skips the signal forwarding
-// and teardown the Codex path exists to do. And a parent that exits leaves its
+// and teardown the wrapper exists to do. And a parent that exits leaves its
 // descendants running: waiting on the parent says nothing about the group.
 
 // groupPoll is how often a dying group is checked. A group has no channel to

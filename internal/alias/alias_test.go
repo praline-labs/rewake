@@ -30,10 +30,10 @@ func set(t *testing.T, contents string) *Set {
 // valued stands in for the CLI's own knowledge of which flags take a value.
 func valued(name string) bool { return name == "name" || name == "room" }
 
-// codexLike stands in for what a harness publishes about its own flags: the
+// agentLike stands in for what a harness publishes about its own flags: the
 // ones it takes at most once, each with all its spellings. Anything absent is
 // appended rather than replaced.
-func codexLike(string) []harness.Flag {
+func agentLike(string) []harness.Flag {
 	return []harness.Flag{
 		{Spellings: []string{"--model", "-m"}, TakesValue: true},
 		{Spellings: []string{"--sandbox", "-s"}, TakesValue: true},
@@ -41,36 +41,36 @@ func codexLike(string) []harness.Flag {
 	}
 }
 
-const wcodex = `
-[alias.wcodex]
-harness = "codex"
+const wagent = `
+[alias.wagent]
+harness = "agent"
 rewake = ["--write", "--name", "writer"]
 args = ["--model", "a-model", "-c", "key=value"]
 `
 
 func TestExpandPutsTheAliasBeforeWhatWasTyped(t *testing.T) {
-	s := set(t, wcodex)
-	got, err := s.Expand([]string{"wcodex"}, []string{"codex"}, valued, nil, codexLike)
+	s := set(t, wagent)
+	got, err := s.Expand([]string{"wagent"}, []string{"agent"}, valued, nil, agentLike)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"--write", "--name", "writer", "codex", "--model", "a-model", "-c", "key=value"}
+	want := []string{"--write", "--name", "writer", "agent", "--model", "a-model", "-c", "key=value"}
 	if strings.Join(got, " ") != strings.Join(want, " ") {
 		t.Fatalf("got %v, want %v", got, want)
 	}
 }
 
 // A flag typed on the line replaces the alias's copy of it — the copy is
-// dropped, not merely outranked. Ordering alone is not enough: Codex refuses a
-// repeated --model outright, so leaving both would end the launch with a
+// dropped, not merely outranked. Ordering alone is not enough: a harness may refuse
+// a repeated --model outright, so leaving both would end the launch with a
 // complaint about a flag the person wrote once.
 //
 // This checks the arguments that come out, not the order they come out in. The
 // first version of it compared the order and would have passed on a command
 // the harness refuses to parse.
 func TestATypedFlagReplacesTheAliasCopy(t *testing.T) {
-	s := set(t, wcodex)
-	got, err := s.Expand([]string{"--name", "reviewer", "wcodex", "--model", "another"}, []string{"codex"}, valued, nil, codexLike)
+	s := set(t, wagent)
+	got, err := s.Expand([]string{"--name", "reviewer", "wagent", "--model", "another"}, []string{"agent"}, valued, nil, agentLike)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,14 +97,14 @@ func TestATypedFlagReplacesTheAliasCopy(t *testing.T) {
 func TestSettingsArePassedThroughUntouched(t *testing.T) {
 	s := set(t, `
 [alias.x]
-harness = "codex"
+harness = "agent"
 args = ["-c", "effort=high", "-c", "sandbox=off"]
 `)
-	got, err := s.Expand([]string{"x", "-c", "effort=low"}, []string{"codex"}, valued, nil, codexLike)
+	got, err := s.Expand([]string{"x", "-c", "effort=low"}, []string{"agent"}, valued, nil, agentLike)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if joined := strings.Join(got, " "); joined != "codex -c effort=high -c sandbox=off -c effort=low" {
+	if joined := strings.Join(got, " "); joined != "agent -c effort=high -c sandbox=off -c effort=low" {
 		t.Fatalf("settings were rearranged: %s", joined)
 	}
 }
@@ -114,10 +114,10 @@ args = ["-c", "effort=high", "-c", "sandbox=off"]
 func TestAnAccumulatingFlagKeepsBoth(t *testing.T) {
 	s := set(t, `
 [alias.x]
-harness = "codex"
+harness = "agent"
 args = ["--add-dir", "/one", "--enable", "a-feature"]
 `)
-	got, err := s.Expand([]string{"x", "--add-dir", "/two"}, []string{"codex"}, valued, nil, codexLike)
+	got, err := s.Expand([]string{"x", "--add-dir", "/two"}, []string{"agent"}, valued, nil, agentLike)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,8 +133,8 @@ args = ["--add-dir", "/one", "--enable", "a-feature"]
 // One parameter, two spellings: a typed -m replaces the alias's --model,
 // because the harness says they are the same thing.
 func TestAShortFormReplacesTheLongOne(t *testing.T) {
-	s := set(t, wcodex)
-	got, err := s.Expand([]string{"wcodex", "-m", "typed"}, []string{"codex"}, valued, nil, codexLike)
+	s := set(t, wagent)
+	got, err := s.Expand([]string{"wagent", "-m", "typed"}, []string{"agent"}, valued, nil, agentLike)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,14 +152,14 @@ func TestAShortFormReplacesTheLongOne(t *testing.T) {
 func TestAnUnlistedFlagIsAppended(t *testing.T) {
 	s := set(t, `
 [alias.x]
-harness = "codex"
+harness = "agent"
 args = ["--unlisted", "one"]
 `)
-	got, err := s.Expand([]string{"x", "--unlisted", "two"}, []string{"codex"}, valued, nil, codexLike)
+	got, err := s.Expand([]string{"x", "--unlisted", "two"}, []string{"agent"}, valued, nil, agentLike)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if joined := strings.Join(got, " "); joined != "codex --unlisted one --unlisted two" {
+	if joined := strings.Join(got, " "); joined != "agent --unlisted one --unlisted two" {
 		t.Fatalf("an unlisted flag was treated as single-use: %s", joined)
 	}
 }
@@ -189,10 +189,10 @@ func value(arguments []string, flag string) string {
 func TestReplacingASwitchKeepsWhatFollowsIt(t *testing.T) {
 	s := set(t, `
 [alias.x]
-harness = "codex"
+harness = "agent"
 args = ["--search", "the prompt the alias carries"]
 `)
-	got, err := s.Expand([]string{"x", "--search"}, []string{"codex"}, valued, nil, codexLike)
+	got, err := s.Expand([]string{"x", "--search"}, []string{"agent"}, valued, nil, agentLike)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -213,8 +213,8 @@ args = ["--search", "the prompt the alias carries"]
 // there that looks like a flag is text, and reading it as one took the model
 // out of an alias because the prompt happened to contain "--model".
 func TestATerminatorOnTheLineEndsReplacement(t *testing.T) {
-	s := set(t, wcodex)
-	got, err := s.Expand([]string{"wcodex", "x", "--", "--model", "words of a prompt"}, []string{"codex"}, valued, nil, codexLike)
+	s := set(t, wagent)
+	got, err := s.Expand([]string{"wagent", "x", "--", "--model", "words of a prompt"}, []string{"agent"}, valued, nil, agentLike)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -229,10 +229,10 @@ func TestATerminatorOnTheLineEndsReplacement(t *testing.T) {
 func TestATerminatorInTheAliasEndsReplacement(t *testing.T) {
 	s := set(t, `
 [alias.x]
-harness = "codex"
+harness = "agent"
 args = ["--", "--model", "a prompt the alias carries"]
 `)
-	got, err := s.Expand([]string{"x", "--model", "typed"}, []string{"codex"}, valued, nil, codexLike)
+	got, err := s.Expand([]string{"x", "--model", "typed"}, []string{"agent"}, valued, nil, agentLike)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -248,10 +248,10 @@ args = ["--", "--model", "a prompt the alias carries"]
 func TestATerminatorInTheAliasEndsTheTypedTailToo(t *testing.T) {
 	s := set(t, `
 [alias.x]
-harness = "codex"
+harness = "agent"
 args = ["--model", "a-model", "--"]
 `)
-	got, err := s.Expand([]string{"x", "--model"}, []string{"codex"}, valued, nil, codexLike)
+	got, err := s.Expand([]string{"x", "--model"}, []string{"agent"}, valued, nil, agentLike)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -269,10 +269,10 @@ args = ["--model", "a-model", "--"]
 func TestTerminatorsOnBothSidesLeaveEverythingAlone(t *testing.T) {
 	s := set(t, `
 [alias.x]
-harness = "codex"
+harness = "agent"
 args = ["--model", "a-model", "--", "first prompt"]
 `)
-	got, err := s.Expand([]string{"x", "--sandbox", "read-only", "--", "--model"}, []string{"codex"}, valued, nil, codexLike)
+	got, err := s.Expand([]string{"x", "--sandbox", "read-only", "--", "--model"}, []string{"agent"}, valued, nil, agentLike)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -290,10 +290,10 @@ args = ["--model", "a-model", "--", "first prompt"]
 func TestAJoinedShortFormAfterATerminatorIsInput(t *testing.T) {
 	s := set(t, `
 [alias.x]
-harness = "codex"
+harness = "agent"
 args = ["-ma-model", "--"]
 `)
-	got, err := s.Expand([]string{"x", "-mtyped"}, []string{"codex"}, valued, nil, codexLike)
+	got, err := s.Expand([]string{"x", "-mtyped"}, []string{"agent"}, valued, nil, agentLike)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -306,11 +306,11 @@ args = ["-ma-model", "--"]
 	}
 }
 
-// -mvalue is the same parameter as --model value. Codex accepts the joined
-// form and refuses the duplicate, so missing it breaks the launch.
+// -mvalue is the same parameter as --model value. A harness may accept the
+// joined form and refuse the duplicate, so missing it breaks the launch.
 func TestAJoinedShortFormOnTheLineReplaces(t *testing.T) {
-	s := set(t, wcodex)
-	got, err := s.Expand([]string{"wcodex", "-mtyped"}, []string{"codex"}, valued, nil, codexLike)
+	s := set(t, wagent)
+	got, err := s.Expand([]string{"wagent", "-mtyped"}, []string{"agent"}, valued, nil, agentLike)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -327,10 +327,10 @@ func TestAJoinedShortFormOnTheLineReplaces(t *testing.T) {
 func TestAJoinedShortFormInTheAliasIsReplaced(t *testing.T) {
 	s := set(t, `
 [alias.x]
-harness = "codex"
+harness = "agent"
 args = ["-ma-model", "--sandbox", "read-only"]
 `)
-	got, err := s.Expand([]string{"x", "--model", "typed"}, []string{"codex"}, valued, nil, codexLike)
+	got, err := s.Expand([]string{"x", "--model", "typed"}, []string{"agent"}, valued, nil, agentLike)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -346,12 +346,12 @@ args = ["-ma-model", "--sandbox", "read-only"]
 // And before the alias name: a terminator ends rewake's own flags too, so the
 // word behind it is not a command and not an alias.
 func TestATerminatorBeforeTheNameLeavesItAlone(t *testing.T) {
-	s := set(t, wcodex)
-	got, err := s.Expand([]string{"--", "wcodex"}, []string{"codex"}, valued, nil, codexLike)
+	s := set(t, wagent)
+	got, err := s.Expand([]string{"--", "wagent"}, []string{"agent"}, valued, nil, agentLike)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Join(got, " ") != "-- wcodex" {
+	if strings.Join(got, " ") != "-- wagent" {
 		t.Fatalf("an alias behind the terminator was expanded: %v", got)
 	}
 }

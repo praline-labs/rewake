@@ -84,7 +84,7 @@ type sentView struct {
 
 // sentRead is every message a session's own inbox calls returned, with those
 // fields, in the order they were read.
-func sentRead(reader *codexSession) []sentView {
+func sentRead(reader *scenarioSession) []sentView {
 	var all []sentView
 	for _, chunk := range strings.Split(reader.mailboxRead(), "\n---\n") {
 		var model struct {
@@ -98,7 +98,7 @@ func sentRead(reader *codexSession) []sentView {
 }
 
 // readByID picks out what a session read under one id.
-func readByID(reader *codexSession, id string) []sentView {
+func readByID(reader *scenarioSession, id string) []sentView {
 	var out []sentView
 	for _, message := range sentRead(reader) {
 		if message.ID == id {
@@ -129,7 +129,7 @@ func shortOf(id string) string {
 }
 
 // mailboxPath is a file or directory of a session's mailbox.
-func mailboxPath(iso *Isolation, session *codexSession, parts ...string) string {
+func mailboxPath(iso *Isolation, session *scenarioSession, parts ...string) string {
 	return filepath.Join(append([]string{iso.StateDir, "rooms", "default", "inbox", session.name}, parts...)...)
 }
 
@@ -147,7 +147,7 @@ func openReadGate(gate string) { _ = os.WriteFile(gate, nil, 0o600) }
 // aboutTo lists the messages in a session's mailbox, read or not, that answer
 // one of the ids or say it was not delivered: what a sender would learn about
 // them.
-func aboutTo(iso *Isolation, reader *codexSession, ids ...string) []string {
+func aboutTo(iso *Isolation, reader *scenarioSession, ids ...string) []string {
 	var found []string
 	for _, where := range [][]string{{}, {"unread"}, {"done"}} {
 		files, _ := filepath.Glob(filepath.Join(mailboxPath(iso, reader, where...), "*.json"))
@@ -199,7 +199,7 @@ func recallLine(task string) string { return "\n  ↳ Do not act on task " + sho
 // noticeCarrying is the first notice a session was shown that holds text. A
 // notice may be recorded after the read it announced — the text is readable
 // before the notice goes — so it is waited for.
-func noticeCarrying(c *Case, session *codexSession, text string) (groupDelivery, bool) {
+func noticeCarrying(c *Case, session *scenarioSession, text string) (groupDelivery, bool) {
 	var found groupDelivery
 	shown := waitFor(c, 10*time.Second, func() bool {
 		deliveries, _ := session.groupDeliveries()
@@ -303,7 +303,7 @@ func playWithdrawAfterNotice(t *testing.T, c *Case, iso *Isolation, col column, 
 
 // steeredRecall judges whether the recall came into the turn the task's notice
 // started, while it was still open, as a member naming the task.
-func steeredRecall(c *Case, worker *codexSession, task string) telemetryFinding {
+func steeredRecall(c *Case, worker *scenarioSession, task string) telemetryFinding {
 	var events []turnEvent
 	waitFor(c, 10*time.Second, func() bool {
 		events, _ = worker.turnEvents()

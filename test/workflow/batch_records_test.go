@@ -28,7 +28,7 @@ type groupDelivery struct {
 // groupDeliveries are the deliveries in the order they arrived. A line that
 // cannot be parsed is an error, not an empty delivery: a record the scenario
 // cannot read is a scenario that cannot judge.
-func (s *codexSession) groupDeliveries() ([]groupDelivery, error) {
+func (s *scenarioSession) groupDeliveries() ([]groupDelivery, error) {
 	raw, err := os.ReadFile(s.groups)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -75,7 +75,7 @@ type readRecord struct {
 	Detail string
 }
 
-func (s *codexSession) readRecords() ([]readRecord, error) {
+func (s *scenarioSession) readRecords() ([]readRecord, error) {
 	raw, err := os.ReadFile(s.reads)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -118,7 +118,7 @@ func (s *codexSession) readRecords() ([]readRecord, error) {
 // them. One overview per delivery on a column that reads that way, which is
 // what makes "what this delivery announced" answerable where the notice does
 // not say.
-func (s *codexSession) overviews() ([][]string, error) {
+func (s *scenarioSession) overviews() ([][]string, error) {
 	records, err := s.readRecords()
 	if err != nil {
 		return nil, err
@@ -143,7 +143,7 @@ type peekedMessage struct {
 // peekedMessages are every row of every overview the session took, in order.
 // Overviews are told apart from reads by their shape: a read carries bodies,
 // an overview carries previews.
-func (s *codexSession) peekedMessages() []peekedMessage {
+func (s *scenarioSession) peekedMessages() []peekedMessage {
 	var all []peekedMessage
 	for _, chunk := range strings.Split(s.mailboxRead(), "\n---\n") {
 		if strings.TrimSpace(chunk) == "" {
@@ -166,7 +166,7 @@ func (s *codexSession) peekedMessages() []peekedMessage {
 
 // peekedCarrying finds the overview row whose preview carries a marker: that
 // is how a scenario learns the id and the time of a letter it knows by text.
-func (s *codexSession) peekedCarrying(marker string) (peekedMessage, bool) {
+func (s *scenarioSession) peekedCarrying(marker string) (peekedMessage, bool) {
 	for _, message := range s.peekedMessages() {
 		if strings.Contains(message.Preview, marker) {
 			return message, true

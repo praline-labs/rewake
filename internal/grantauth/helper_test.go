@@ -79,8 +79,8 @@ func helper(t *testing.T, wrap []string, env string) *exec.Cmd {
 	return command
 }
 
-// A command main started inside a sandbox of its own — Codex run from
-// main's shell, say — runs below main's wrapper, and still does not register
+// A command main started inside a sandbox of its own — a sandboxed harness
+// run from main's shell, say — runs below main's wrapper, and still does not register
 // a grant: nothing it does is main's.
 func TestARegistrationFromOtherNamespacesIsRefused(t *testing.T) {
 	if err := exec.Command("unshare", "-Ur", "--pid", "--fork", "true").Run(); err != nil {

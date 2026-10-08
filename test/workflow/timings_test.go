@@ -27,7 +27,7 @@ const (
 	suiteCap   = 3 * time.Second
 	// suitePickup is how long rewake compact and rewake interrupt wait for
 	// the target to take a request (internal/cli, five seconds). The plugin
-	// polls four times a second and the Codex wrapper faster; the cases where
+	// polls four times a second; the cases where
 	// nobody takes it wait out all of it.
 	suitePickup = 1500 * time.Millisecond
 	// suiteLetterWait is how long a compaction letter waits for its other half
@@ -38,13 +38,6 @@ const (
 	// comings, goings and compactions (internal/wrap, one second). The cases
 	// that prove no notice was sent wait out a scan and the coalescing cap.
 	suiteNoticeScan = 250 * time.Millisecond
-	// suiteCompactionStart and suiteCompactionRun are the bounds of a Codex
-	// compaction's mark (internal/harness/codex/gateway, 80 seconds while its
-	// turn has not been seen to start, 10 minutes once it has). compact-hold
-	// runs one compaction past the first and one past the second; the steered
-	// cases' compactions start at once and end well inside the second.
-	suiteCompactionStart = 2 * time.Second
-	suiteCompactionRun   = 6 * time.Second
 )
 
 // suiteTags are the build tags of the binary under test and every mutant:
@@ -60,8 +53,6 @@ var suiteFlags = []string{"-ldflags", strings.Join([]string{
 	buildValue("cli", "builtPickup", suitePickup),
 	buildValue("wrap", "builtLetterWait", suiteLetterWait),
 	buildValue("wrap", "builtNoticeScan", suiteNoticeScan),
-	buildValue("harness/codex/gateway", "builtCompactionStart", suiteCompactionStart),
-	buildValue("harness/codex/gateway", "builtCompactionRun", suiteCompactionRun),
 }, " "), "-tags", suiteTags}
 
 func buildValue(pkg, name string, value time.Duration) string {

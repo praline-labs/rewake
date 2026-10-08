@@ -34,18 +34,12 @@ var suite struct {
 
 	mu  sync.Mutex
 	ran []string
-	// schema is where the schema comes from, decided before any case
-	// starts, and schemaUsed whether a case asked for it; see
-	// harness_version_test.go.
-	schema         schemaSource
-	schemaPrepared bool
-	schemaUsed     bool
 }
 
 func TestMain(m *testing.M) {
-	// Re-executed as `codex` by a scenario: be the harness and nothing else.
-	// Checked before anything else because the ordinary path would otherwise
-	// build a binary and run a suite inside the shim.
+	// Re-executed as a harness by a scenario: be the harness and nothing
+	// else. Checked before anything else because the ordinary path would
+	// otherwise build a binary and run a suite inside the shim.
 	if os.Getenv(shimEnv) != "" {
 		recordShimCall(os.Args)
 		switch os.Getenv(shimHarness) {
@@ -54,7 +48,8 @@ func TestMain(m *testing.M) {
 		case "fixture":
 			os.Exit(runFixture(os.Args))
 		}
-		os.Exit(runShim(os.Args))
+		fmt.Fprintf(os.Stderr, "workflow: %s=%q names no harness this suite plays\n", shimHarness, os.Getenv(shimHarness))
+		os.Exit(2)
 	}
 	enabled, err := switchedOn(os.Getenv(switchEnv))
 	if err != nil {
@@ -62,8 +57,6 @@ func TestMain(m *testing.M) {
 		os.Exit(2)
 	}
 	suite.enabled = enabled
-	// Parsed here rather than by m.Run, because the fetch before the cases
-	// takes its budget from -timeout.
 	flag.Parse()
 	os.Exit(run(m))
 }
@@ -104,13 +97,6 @@ func run(m *testing.M) int {
 			return 1
 		}
 		suite.binary = binary
-		suite.schema, suite.schemaPrepared = prepareSchemaSource()
-		if suite.schema.err != nil {
-			// Stated before the cases run, and again in the run record: a
-			// named version that could not be had is the run's failure
-			// whether or not the schema case is among those selected.
-			fmt.Fprintf(os.Stderr, "workflow: %v\n", suite.schema.err)
-		}
 	}
 
 	if err := takePoolWidth(); err != nil {
@@ -119,9 +105,6 @@ func run(m *testing.M) int {
 	}
 	code := m.Run()
 	var failures []string
-	if suite.schema.err != nil {
-		failures = append(failures, suite.schema.err.Error())
-	}
 	// Every case has finished and swept what carried its label. Whatever is
 	// still below this process was accounted for by no case — an unlabeled
 	// descendant, or one a sweep could not read — and the run fails on it:
@@ -151,6 +134,16 @@ func run(m *testing.M) int {
 		return 1
 	}
 	return reportScenarios(scenarios, against)
+}
+
+// againstForRun is what the run's scenarios ran against: the harness programs
+// this binary plays, never a real harness. A run switched off ran against
+// nothing.
+func againstForRun() []record.Against {
+	if !suite.enabled {
+		return nil
+	}
+	return []record.Against{{What: "scenarios", How: "against the suite's own harness programs in every column"}}
 }
 
 // ranScenarios is what actually ran, in a stable order.

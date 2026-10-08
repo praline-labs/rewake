@@ -105,8 +105,8 @@ func (r Reader) Alive(pid int, startTime uint64) bool {
 
 // Namespace identifies the pid namespace of the reading process.
 //
-// It matters because a pid means nothing outside the namespace it came from. A
-// sandboxed agent — Codex runs its commands in one — sees only its own
+// It matters because a pid means nothing outside the namespace it came from. An
+// agent whose harness runs its commands in a sandbox sees only its own
 // processes, so every other pid looks dead to it. Comparing namespaces is how a
 // reader knows it cannot judge rather than concluding the session has ended.
 func (r Reader) Namespace() string {

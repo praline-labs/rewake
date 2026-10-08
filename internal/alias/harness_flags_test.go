@@ -11,9 +11,14 @@ import (
 // The alias help promises that a typed flag replaces the alias's copy, and
 // --worktree is one a line types beside an alias: on Claude Code the two once
 // reached rewake together and the launch was refused as naming two worktrees.
-// Checked against what each real harness publishes, not a stand-in.
+// Checked against what each harness that takes a worktree publishes, not a
+// stand-in.
 func TestATypedWorktreeReplacesTheAliasOnEveryHarness(t *testing.T) {
-	for _, id := range []string{"claude", "codex"} {
+	for _, h := range harness.All() {
+		if _, ok := h.(harness.WorktreeHarness); !ok {
+			continue
+		}
+		id := h.ID()
 		t.Run(id, func(t *testing.T) {
 			s := set(t, `
 [alias.w]

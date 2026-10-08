@@ -3,6 +3,7 @@ package claude
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 
@@ -37,6 +38,15 @@ func launchSources(args []string) string {
 	}
 	return strings.Join(named, ",")
 }
+
+// managedDir is the harness's managed directory, where it reads a machine's
+// policy (bundled source). A variable so a test can point it elsewhere.
+var managedDir = func() string {
+	if runtime.GOOS == "darwin" {
+		return "/Library/Application Support/ClaudeCode"
+	}
+	return "/etc/claude-code"
+}()
 
 // policyStatusLine reports whether the machine's managed policy names a
 // status line: the file and the drop-in directory beside it. Such a policy

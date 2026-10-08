@@ -82,7 +82,7 @@ func TestRoomAndRoleAreVisibleInIdentity(t *testing.T) {
 }
 
 func TestRoomsAndWorkerAreLaunchFlagsOnly(t *testing.T) {
-	for _, args := range [][]string{{"--room", "red", "--general", "codex"}, {"--room=blue", "--main", "claude"}} {
+	for _, args := range [][]string{{"--room", "red", "--general", aHarness(t)}, {"--room=blue", "--main", "claude"}} {
 		if _, err := parse(args); err != nil {
 			t.Errorf("launch %q: %v", args, err)
 		}

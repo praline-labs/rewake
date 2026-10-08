@@ -54,14 +54,6 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 		if err != nil {
 			return err
 		}
-		// The verification switch of the live checks
-		// (docs/mail-bridge-launch.md#gates-taken-as-closed): a name off
-		// the gate table is a wrong call, refused before anything starts.
-		assumed, err := harness.ParseAssumedGates(os.Getenv(harness.GatesAssumedEnv))
-		if err != nil {
-			return &UsageError{Command: call.Command, Message: err.Error()}
-		}
-
 		// Last of the preparations: every refusal above leaves no checkout
 		// behind.
 		args, checkout, err := takeWorktree(h, call, ctx.Stderr)
@@ -88,10 +80,8 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 			Role:    part,
 			Command: program,
 			// The mail tool's endpoint runs the CLI's own checks
-			// (docs/mail-bridge-server.md).
-			MailTool:     &wrap.MailTool{Words: ToolWords, Acknowledge: AcknowledgeRead, Check: ToolCheck, Tools: ToolDescriptors()},
-			NoMailTool:   call.Switch("no-mail-tool"),
-			AssumedGates: assumed,
+			// (docs/mail-bridge.md).
+			MailTool: &wrap.MailTool{Words: ToolWords, Acknowledge: AcknowledgeRead, Check: ToolCheck, Tools: ToolDescriptors()},
 
 			OnClaimed: onClaimed,
 		})
@@ -168,9 +158,9 @@ func launchProgram(call Call) (string, error) {
 			program, where, err, call.Command.Name)}
 	}
 	if strings.Contains(program, "/") {
-		// Fixed against the launch directory now. Codex starts its owned
-		// server in the directory given with -C, and a relative path would
-		// resolve there — to another file of the same name, or to none.
+		// Fixed against the launch directory now. A harness may start a part
+		// of itself in another directory, and a relative path would resolve
+		// there — to another file of the same name, or to none.
 		absolute, err := filepath.Abs(program)
 		if err != nil {
 			return "", &UsageError{Command: call.Command, Message: fmt.Sprintf("--command %s: %v", program, err)}
@@ -228,8 +218,8 @@ func projectForbidden() []string {
 }
 
 // singleUseFlags asks a harness which of its flags it takes at most once. The
-// answer belongs to the harness — Codex refuses a repeated --model while
-// accepting a repeated --add-dir — so this only looks it up.
+// answer belongs to the harness — one may refuse a repeated --model while
+// accepting another flag repeated — so this only looks it up.
 func singleUseFlags(id string) []harness.Flag {
 	for _, candidate := range harness.All() {
 		if candidate.ID() == id {

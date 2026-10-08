@@ -85,7 +85,7 @@ func playAwaitedView(t *testing.T, c *Case, iso *Isolation, col column) []teleme
 		return out
 	}
 	// A report main has read about one task, of one kind.
-	readAbout := func(worker *codexSession, task, kind string) bool {
+	readAbout := func(worker *scenarioSession, task, kind string) bool {
 		for _, message := range readMessages(lead) {
 			if message.From == worker.name && message.Kind == kind && slices.Contains(message.InReplyTo, task) {
 				return true
@@ -107,7 +107,7 @@ func playAwaitedView(t *testing.T, c *Case, iso *Isolation, col column) []teleme
 
 	var sends []string
 	for _, letter := range []struct {
-		to   *codexSession
+		to   *scenarioSession
 		text string
 	}{{quick, awaitedQuick}, {slow, awaitedSlow}} {
 		code, out, _ := asks.ask(c, "send", letter.to.name, letter.text)

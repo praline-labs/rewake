@@ -42,8 +42,8 @@ func (b *backend) Deliver(ctx context.Context, message inbox.Message) inbox.Resu
 }
 
 // Reserve asks the program to hold its conversation for one notice, which it
-// answers before any letter of the notice is readable — the order Codex's
-// turn start gives the batch path.
+// answers before any letter of the notice is readable — the order the batch
+// path needs from a harness's turn start.
 func (b *backend) Reserve(_ context.Context, _ inbox.Message) (inbox.Reservation, error) {
 	l, live := b.isLive(Wake)
 	if !live {

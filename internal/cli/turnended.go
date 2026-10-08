@@ -28,8 +28,7 @@ const payloadWait = 3 * time.Second
 // that the turn is over, and passes the last reply along.
 //
 // It never fails loudly. It runs inside the harness's own machinery — a Claude
-// Code Stop hook, a Codex notify program — where an error is at best noise on
-// the screen and at worst a turn that will not end. What it could not do stays
+// Code Stop hook — where an error is at best noise on the screen and at worst a turn that will not end. What it could not do stays
 // owed and is tried again at the end of the next turn.
 func handleTurnEnded(ctx *Context, call Call) error {
 	dir, err := state.Dir()
@@ -44,7 +43,7 @@ func handleTurnEnded(ctx *Context, call Call) error {
 
 	var payload []byte
 	if len(call.Positionals) > 0 {
-		// Codex passes the payload as the last argument.
+		// Given as the last argument, the payload is taken as it is.
 		payload = []byte(call.Positionals[len(call.Positionals)-1])
 	} else {
 		// A Claude Code hook gets it on stdin.

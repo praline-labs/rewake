@@ -22,7 +22,7 @@ func steerWorld(t *testing.T, workerHarness string) (string, registry.Session, s
 	markMain(t, dir, "lead")
 	t.Setenv(state.SessionEnv, "lead")
 	worker := otherRun(t, dir, "worker")
-	if workerHarness != "claude" {
+	if workerHarness != "" {
 		worker.Harness = workerHarness
 		if err := registry.Update(dir, worker); err != nil {
 			t.Fatal(err)
@@ -67,7 +67,7 @@ func answerOnce(t *testing.T, controlDir string, answer func(control.Request) st
 // result comes to main as a letter, which main's own wrapper owes from the
 // record the command leaves.
 func TestCompactStartedEndsTheCommand(t *testing.T) {
-	dir, worker, controlDir := steerWorld(t, "claude")
+	dir, worker, controlDir := steerWorld(t, "")
 	seen := answerOnce(t, controlDir, func(r control.Request) string { return `{"id":"` + r.ID + `","outcome":"started"}` })
 	code, out, errOut := run("compact", "worker", "keep the plan")
 	if code != ExitOK || out != "Rewake: the compaction of worker started; its result comes to you as a letter, with the token counts and its number.\n" {
@@ -92,7 +92,7 @@ func TestCompactStartedEndsTheCommand(t *testing.T) {
 // promises the letter. The same holds for a command killed after the pickup,
 // which never gets to remove it.
 func TestACompactionTakenAndUnansweredKeepsItsRecord(t *testing.T) {
-	dir, worker, controlDir := steerWorld(t, "claude")
+	dir, worker, controlDir := steerWorld(t, "")
 	taken := make(chan string, 1)
 	go func() {
 		for deadline := time.Now().Add(2 * time.Second); time.Now().Before(deadline); time.Sleep(2 * time.Millisecond) {
@@ -142,7 +142,7 @@ func TestAFinalFailureClosesTheRecord(t *testing.T) {
 		{`"outcome":"failed","detail":"compaction is disabled"`, "Rewake: the compaction failed on worker (compaction is disabled).\n", false},
 		{`"outcome":"failed","detail":"no answer to the compaction request; it may still start","open":true`, "Rewake: the compaction failed on worker (no answer to the compaction request; it may still start); its result comes to you as a letter, whether it compacts or not.\n", true},
 	} {
-		dir, _, controlDir := steerWorld(t, "codex")
+		dir, _, controlDir := steerWorld(t, "")
 		answerOnce(t, controlDir, func(r control.Request) string { return `{"id":"` + r.ID + `",` + tc.answer + `}` })
 		code, _, errOut := run("compact", "worker")
 		if code != ExitFailed || errOut != tc.line {
@@ -157,7 +157,7 @@ func TestAFinalFailureClosesTheRecord(t *testing.T) {
 // A command that could not leave the record says no letter comes, rather
 // than promising one.
 func TestCompactWithNoRecordPromisesNoLetter(t *testing.T) {
-	_, _, controlDir := steerWorld(t, "claude")
+	_, _, controlDir := steerWorld(t, "")
 	saved := remember
 	remember = func(string, string, control.Pending) (func(), error) { return nil, os.ErrPermission }
 	t.Cleanup(func() { remember = saved })
@@ -171,7 +171,7 @@ func TestCompactWithNoRecordPromisesNoLetter(t *testing.T) {
 // A start the served side did not see in time is said as it is: requested,
 // with the letter still to come.
 func TestCompactRequestedSaysSo(t *testing.T) {
-	_, _, controlDir := steerWorld(t, "codex")
+	_, _, controlDir := steerWorld(t, "")
 	answerOnce(t, controlDir, func(r control.Request) string {
 		return `{"id":"` + r.ID + `","outcome":"requested","detail":"the server has not answered the request within 3s"}`
 	})
@@ -186,7 +186,7 @@ func TestCompactRequestedSaysSo(t *testing.T) {
 }
 
 func TestInterruptDoneAsJSON(t *testing.T) {
-	_, _, controlDir := steerWorld(t, "claude")
+	_, _, controlDir := steerWorld(t, "")
 	answerOnce(t, controlDir, func(r control.Request) string { return `{"id":"` + r.ID + `","outcome":"done"}` })
 	code, out, errOut := run("interrupt", "worker", "--json")
 	var model steerModel
@@ -196,15 +196,20 @@ func TestInterruptDoneAsJSON(t *testing.T) {
 }
 
 // The answer says what the interrupted session's model is shown, which
-// differs by harness: a line in its next notice on Claude Code, nothing of
-// rewake's on Codex, which records the interrupt itself.
+// differs by harness: a line in its next notice on Claude Code, and whatever
+// another harness says it shows.
 func TestTheInterruptAnswerSaysWhatTheModelIsShown(t *testing.T) {
-	for workerHarness, want := range map[string]string{
+	for name, want := range map[string]string{
 		"claude": "reads stopped, and its next notice says you interrupted it.\n",
-		"codex":  "reads stopped, and Codex records the interrupt in its model's history.\n",
+		"stub":   "reads stopped, and the stub records it in its model's history.\n",
 	} {
-		t.Run(workerHarness, func(t *testing.T) {
-			_, _, controlDir := steerWorld(t, workerHarness)
+		t.Run(name, func(t *testing.T) {
+			_, _, controlDir := steerWorld(t, "")
+			if name == "stub" {
+				stubSteering(t, func(found harness.Harness) harness.Harness {
+					return steerStub{Harness: found, trace: "the stub records it in its model's history"}
+				})
+			}
 			answerOnce(t, controlDir, func(r control.Request) string { return `{"id":"` + r.ID + `","outcome":"done"}` })
 			if code, out, errOut := run("interrupt", "worker"); code != ExitOK || !strings.HasSuffix(out, want) {
 				t.Fatalf("exit %d, %q, %q", code, out, errOut)
@@ -214,7 +219,7 @@ func TestTheInterruptAnswerSaysWhatTheModelIsShown(t *testing.T) {
 }
 
 func TestARefusalExitsOneAndNamesTheNextAction(t *testing.T) {
-	dir, _, controlDir := steerWorld(t, "claude")
+	dir, _, controlDir := steerWorld(t, "")
 	answerOnce(t, controlDir, func(r control.Request) string {
 		return `{"id":"` + r.ID + `","outcome":"refused","reason":"in a turn","detail":"$.session.compact: a turn is running (t1)"}`
 	})
@@ -236,7 +241,7 @@ func TestARefusalExitsOneAndNamesTheNextAction(t *testing.T) {
 }
 
 func TestAWorkerThatTakesNothingIsNotAnswering(t *testing.T) {
-	_, _, controlDir := steerWorld(t, "claude")
+	_, _, controlDir := steerWorld(t, "")
 	code, _, errOut := run("interrupt", "worker")
 	if code != ExitFailed || !strings.Contains(errOut, "refused the interrupt: not answering") || !strings.Contains(errOut, "plugin is not loaded") {
 		t.Fatalf("exit %d, %q", code, errOut)
@@ -261,7 +266,7 @@ func TestAWorkerThatTakesNothingIsNotAnswering(t *testing.T) {
 // the worker is silent. Without the handler the signal would end this test
 // binary.
 func TestASIGTERMDuringPickupWithdrawsTheRequest(t *testing.T) {
-	_, _, controlDir := steerWorld(t, "claude")
+	_, _, controlDir := steerWorld(t, "")
 	steerLimits = map[string]control.Limits{control.Compact: {Pickup: 5 * time.Second, Outcome: 5 * time.Second, Poll: 5 * time.Millisecond}}
 	go func() {
 		for deadline := time.Now().Add(3 * time.Second); time.Now().Before(deadline); time.Sleep(time.Millisecond) {
@@ -285,7 +290,7 @@ func TestASIGTERMDuringPickupWithdrawsTheRequest(t *testing.T) {
 // Every wrong call is refused with exit 2, and nothing is written for the
 // worker to take.
 func TestWrongCallsAreRefusedBeforeAnythingIsSent(t *testing.T) {
-	dir, _, controlDir := steerWorld(t, "claude")
+	dir, _, controlDir := steerWorld(t, "")
 	cases := []struct {
 		name string
 		env  map[string]string
@@ -326,20 +331,43 @@ func TestWrongCallsAreRefusedBeforeAnythingIsSent(t *testing.T) {
 // unsteerable is a harness that takes no control requests.
 type unsteerable struct{ harness.Harness }
 
-func TestAHarnessThatCannotTakeItIsAWrongCall(t *testing.T) {
-	_, _, controlDir := steerWorld(t, "codex")
+func (unsteerable) Title() string { return "Stub harness" }
+
+// steerStub is a harness that takes control requests, with what it takes set
+// by the test: no harness in the catalog refuses a focus or shows its model a
+// trace of its own.
+type steerStub struct {
+	harness.Harness
+	focus bool
+	trace string
+}
+
+func (steerStub) Title() string            { return "Stub harness" }
+func (s steerStub) CompactFocus() bool     { return s.focus }
+func (s steerStub) InterruptTrace() string { return s.trace }
+
+// stubSteering makes every harness answer as the one replace returns until the
+// test ends.
+func stubSteering(t *testing.T, replace func(harness.Harness) harness.Harness) {
+	t.Helper()
 	saved := findHarness
 	findHarness = func(id string) (harness.Harness, bool) {
 		found, ok := saved(id)
-		return unsteerable{found}, ok
+		return replace(found), ok
 	}
+	t.Cleanup(func() { findHarness = saved })
+}
+
+func TestAHarnessThatCannotTakeItIsAWrongCall(t *testing.T) {
+	_, _, controlDir := steerWorld(t, "")
+	stubSteering(t, func(found harness.Harness) harness.Harness { return unsteerable{found} })
 	code, _, errOut := run("compact", "worker")
-	findHarness = saved
-	if code != ExitUsage || !strings.Contains(errOut, "worker is a Codex session, which does not take rewake compact yet") {
+	if code != ExitUsage || !strings.Contains(errOut, "worker is a Stub harness session, which does not take rewake compact yet") {
 		t.Fatalf("exit %d, %q", code, errOut)
 	}
+	stubSteering(t, func(found harness.Harness) harness.Harness { return steerStub{Harness: found} })
 	code, _, errOut = run("compact", "worker", "keep the plan")
-	if code != ExitUsage || !strings.Contains(errOut, "focus not supported by Codex") {
+	if code != ExitUsage || !strings.Contains(errOut, "focus not supported by Stub harness") {
 		t.Fatalf("exit %d, %q", code, errOut)
 	}
 	if entries, _ := os.ReadDir(controlDir); len(entries) != 0 {

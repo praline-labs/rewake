@@ -134,7 +134,7 @@ func TestPendingReasonIsReadableBeforeDelivery(t *testing.T) {
 	}
 
 	server := &Server{Dir: dir, Name: "api", Deliver: func(context.Context, Message) Result {
-		return Result{State: Pending, Detail: "the codex session has no conversation yet"}
+		return Result{State: Pending, Detail: "the session has no conversation yet"}
 	}}
 	// The status is captured while the server still runs: stopping it refuses
 	// whatever is waiting, which would overwrite the reason under test.
@@ -151,7 +151,7 @@ func TestPendingReasonIsReadableBeforeDelivery(t *testing.T) {
 	if status.State != Pending {
 		t.Errorf("state = %q, want pending", status.State)
 	}
-	if status.Detail != "the codex session has no conversation yet" {
+	if status.Detail != "the session has no conversation yet" {
 		t.Errorf("detail = %q, want the delivery reason", status.Detail)
 	}
 }

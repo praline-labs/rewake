@@ -22,7 +22,7 @@ func newMachine(t *testing.T) machine {
 	root := t.TempDir()
 	home := filepath.Join(root, "home")
 	for _, dir := range []string{
-		"home/.ssh/keys", "home/.codex/sessions", "home/.config/git", "home/.config/svc",
+		"home/.ssh/keys", "home/.agentcfg/sessions", "home/.config/git", "home/.config/svc",
 		"home/.config/plain", "home/code/proj/sub", "home/code/other", "state/rooms",
 		"bin", "pathbin", "elsewhere",
 	} {
@@ -39,7 +39,7 @@ func newMachine(t *testing.T) machine {
 		PATH:       filepath.Join(root, "pathbin") + string(os.PathListSeparator) + "relative/bin",
 		StateRoot:  filepath.Join(root, "state"),
 		Executable: filepath.Join(root, "bin", "rewake"),
-		Harness:    []string{filepath.Join(home, ".codex"), filepath.Join(home, ".claude")},
+		Harness:    []string{filepath.Join(home, ".agentcfg"), filepath.Join(home, ".claude")},
 		Mounts:     []string{"/mnt/c", "/media/usb", "/boot/efi", "/srv/data"},
 	}
 	return machine{root: root, home: home, rules: env.Rules()}
@@ -90,7 +90,7 @@ func TestDirectoriesAreResolvedAndChecked(t *testing.T) {
 		{name: "inside keys", given: "home/.ssh/keys", code: 2, says: "lies inside"},
 		{name: "contains keys", given: ".", code: 2, says: "contains"},
 		{name: "home contains keys", given: "home", code: 2, says: "contains"},
-		{name: "harness config", given: "home/.codex/sessions", code: 2, says: "a harness's own configuration"},
+		{name: "harness config", given: "home/.agentcfg/sessions", code: 2, says: "a harness's own configuration"},
 		{name: "git config", given: "home/.config/git", code: 2, says: "runs or signs as the owner"},
 		{name: "state", given: "state/rooms", code: 2, says: "rewake's state directory"},
 		{name: "binary", given: "bin", code: 2, says: "the rewake binary"},

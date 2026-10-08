@@ -154,7 +154,6 @@ func newRig(t *testing.T, change ...func(*endpoint.Config)) *rig {
 		t.Fatal(err)
 	}
 	t.Cleanup(r.endpoint.Close)
-	r.endpoint.SetPrimary(func() string { return thread })
 	r.endpoint.SetReadsOff(func() string {
 		if reads, ok := r.current().(interface{ ToolReadsOff() string }); ok {
 			return reads.ToolReadsOff()

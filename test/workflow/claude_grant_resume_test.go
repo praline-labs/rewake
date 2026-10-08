@@ -155,15 +155,11 @@ func launchedWith(turns string) string {
 
 // restartSession starts a session again under the name it had, with harness
 // arguments, once the earlier run has ended, and waits for it to come up: the
-// Claude Code fixture mounted, the Codex one holding its conversation. The
-// files the earlier run left that would stop or announce the new one are
-// cleared first.
-func restartSession(t *testing.T, c *Case, iso *Isolation, earlier *codexSession, harness, name, role string, harnessArgs []string, controls ...string) *codexSession {
+// Claude Code fixture mounted. The files the earlier run left that would stop
+// or announce the new one are cleared first.
+func restartSession(t *testing.T, c *Case, iso *Isolation, earlier *scenarioSession, harness, name, role string, harnessArgs []string, controls ...string) *scenarioSession {
 	t.Helper()
 	up := earlier.ready + ".mounted"
-	if harness == codexColumn.harness {
-		up = earlier.accepted
-	}
 	for _, path := range []string{earlier.exitFile, earlier.ready, up} {
 		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 			t.Fatalf("clearing %s before the restart: %v", path, err)

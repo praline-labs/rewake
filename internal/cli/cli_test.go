@@ -197,7 +197,7 @@ func TestTableIsComplete(t *testing.T) {
 			}
 		}
 	}
-	for _, name := range []string{"claude", "codex", "list", "send", "whoami", "guide"} {
+	for _, name := range []string{"claude", "list", "send", "whoami", "guide"} {
 		if !seen[name] {
 			t.Errorf("command %q is missing from the table", name)
 		}

@@ -9,7 +9,7 @@ import (
 )
 
 func TestGeneralIsTheReportingRoleAndReadsLegacyWorkers(t *testing.T) {
-	parsed, err := parse([]string{"--general", "codex"})
+	parsed, err := parse([]string{"--general", aHarness(t)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func TestGeneralIsTheReportingRoleAndReadsLegacyWorkers(t *testing.T) {
 	if code != 0 || !strings.Contains(out, `"role": "general"`) {
 		t.Fatalf("legacy record=%d %s %s", code, out, errOut)
 	}
-	if _, err := parse([]string{"--worker", "codex"}); err == nil {
+	if _, err := parse([]string{"--worker", aHarness(t)}); err == nil {
 		t.Fatal("legacy flag should not create new worker records")
 	}
 }

@@ -237,21 +237,6 @@ func TestATurnEndIsHeldOnlyAfterAnInterimOne(t *testing.T) {
 			}
 		})
 	}
-	// A Codex notify names its event and carries no read boundary: its scope
-	// is unknown, so it is refused and its waits stay owed
-	// (docs/turn-end-recovery.md#the-operation).
-	t.Run("Codex", func(t *testing.T) {
-		lab := newInterimLab(t)
-		if code, out, _ := run("turn-ended", `{"type":"agent-turn-complete","turn-id":"x","last-assistant-message":"done"}`); code != ExitOK || out != "" {
-			t.Fatalf("held: %q", out)
-		}
-		if got := kinds(reportsTo(t, lab.dir, "web")); len(got) != 1 {
-			t.Errorf("web holds %v, want the interim message alone", got)
-		}
-		if len(inbox.Waiters(lab.dir, "api", lab.self.Epoch())) == 0 {
-			t.Error("the refused end cleared its waits")
-		}
-	})
 	t.Run("nobody waiting", func(t *testing.T) {
 		lab := newInterimLab(t)
 		for _, waiter := range inbox.Waiters(lab.dir, "api", lab.self.Epoch()) {

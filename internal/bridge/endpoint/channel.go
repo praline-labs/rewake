@@ -53,21 +53,9 @@ func (e *Endpoint) connected() (uint64, func()) {
 	}
 }
 
-// SetPrimary names what says which thread the run's gateway holds as
-// primary, "" while it holds none; known only once the backend is.
-func (e *Endpoint) SetPrimary(primary func() string) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	e.primary = primary
-}
-
-// bind tells the thread the first request of a Codex server's connection
-// names — a server serves one thread for its life — and refuses a request
-// that is not the primary thread's at once: the gateway forwards no other
-// thread's items, so waiting for its observation could only time out and
-// take a sub-agent's call for the conversation's fault
-// (docs/mail-bridge-channel-codex.md#conversation-connections).
-func (e *Endpoint) bind(generation uint64, thread string) error {
+// bind tells the thread the first request of a server's connection names: a
+// server serves one thread for its life.
+func (e *Endpoint) bind(generation uint64, thread string) {
 	e.mu.Lock()
 	first := thread != "" && generation != 0 && !e.bound[generation]
 	if first {
@@ -76,18 +64,10 @@ func (e *Endpoint) bind(generation uint64, thread string) error {
 		}
 		e.bound[generation] = true
 	}
-	primary := e.primary
 	e.mu.Unlock()
 	if first {
 		e.tell(channel.Event{Kind: channel.Bound, Generation: generation, Thread: thread})
 	}
-	if primary == nil {
-		return nil
-	}
-	if held := primary(); thread == "" || thread != held {
-		return errors.New("the call is another thread's than the conversation this run holds, a nested agent's among them, and does not run through the tool")
-	}
-	return nil
 }
 
 // refused tells of a server's hello the endpoint refused, and whether it
@@ -103,8 +83,7 @@ func (e *Endpoint) refused(conn *net.UnixConn) {
 	e.tell(channel.Event{Kind: channel.HelloRefused, Descendant: descendant})
 }
 
-// report takes what a server reports, with its connection's generation:
-// on Codex only the conversation's own server's report fails its channel.
+// report takes what a server reports, with its connection's generation.
 func (e *Endpoint) report(payload json.RawMessage, generation uint64) error {
 	var what string
 	if json.Unmarshal(payload, &what) != nil || what != reportCannotStart {

@@ -37,11 +37,6 @@
 //   - A scenario that starts a session ends it itself, before the case
 //     finishes. Cleanup would otherwise end it, and correctly report that the
 //     scenario left work running — again a symptom far from its cause.
-//   - One case steps outside the isolation, and only that one: the schema
-//     check generates the protocol schema with the Codex installed on the
-//     machine, because inside a case `codex` is the shim. Nothing runs inside
-//     the case and no credentials are touched — a file is generated and read.
-//     Every other case stays inside its private world.
 //
 // # Where things are
 //
@@ -55,21 +50,14 @@
 //   - isolation_test.go: the private world of a case and its cleanup checks.
 //   - suite_test.go: TestMain, the switch, building the binary under test.
 //   - stub_scenario_test.go: the stage-0 scenario, the shape to copy.
-//   - websocket_test.go: the small WebSocket the Codex wire needs.
-//   - codexshim_test.go: the server half of the shim that plays a Codex
-//     session, and codexshim_client_test.go the half the wrapper proxies.
-//   - codexsession_test.go: launching a session on that shim and reading what
-//     it reports about itself.
-//   - codex_ready_scenario_test.go and codex_ready_controls_test.go: the first
-//     scenario with a real harness, and its negative controls.
-//   - schema_test.go: getting the schema from the installed Codex.
-//   - schema_check_test.go: the closed register of schema keywords and the
-//     walker that applies them; schema_kinds_test.go the JSON value kinds it
-//     compares against; schema_register_test.go what neither may let past.
-//   - codex_shape_test.go: the case that checks the shim's replies with it.
-//   - codexshim_shape_test.go: the shape half of the shim's obligations.
-//   - codexshim_contract_test.go: what the shim owes the protocol in
-//     behavior — handshake ownership, silence, event order, refusals.
+//   - session_test.go: launching a session on a column's program and reading
+//     what it reports about itself.
+//   - shim_env_test.go: how a case tells a program what to be;
+//     shim_session_test.go, shim_read_test.go, shim_send_test.go and
+//     shim_state_test.go: what every program of the suite does as a session;
+//     shim_served_test.go: the closed shapes a program accepts.
+//   - fixtureshim_test.go: the fixture harness's program, the gate's;
+//     claudeshim_test.go: the Claude Code column's.
 //   - classification_test.go, regression_test.go, regression_processes_test.go
 //     and publication_test.go: the suite's tests of itself.
 //

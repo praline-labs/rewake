@@ -55,8 +55,7 @@ type call struct {
 
 // issued is a ticket and who used it. generation and thread are the
 // connection and thread its request came over: its proof is that
-// conversation's, whichever the run holds when it is used
-// (docs/mail-bridge-channel-codex.md#as-built).
+// conversation's, whichever the run holds when it is used.
 type issued struct {
 	ticket     bridge.Ticket
 	used       bool
@@ -72,7 +71,7 @@ type calls struct {
 	byCall  map[string]*call
 	order   []string
 	byNonce map[string]*issued
-	// open are the Codex turns of the primary thread seen started and not
+	// open are the turns seen started through the neutral input and not
 	// completed, with when each started; firstSeen when each Claude Code
 	// prompt was first heard.
 	open      map[string]int64
@@ -169,15 +168,12 @@ func (e *Endpoint) observedWords(words []string, ok bool) (string, string) {
 }
 
 // issue matches a server's request with the harness's observation of the same
-// call, and issues its one ticket. On Codex the request binds its connection
-// to the thread it names first, and one naming no thread or another than the
-// primary is refused before any wait.
+// call, and issues its one ticket. Off the hook path the request binds its
+// connection to the thread it names first.
 func (e *Endpoint) issue(asked TicketRequest, generation uint64) (bridge.Ticket, error) {
 	thread := ""
 	if !e.hookPath() {
-		if err := e.bind(generation, asked.Conversation); err != nil {
-			return bridge.Ticket{}, err
-		}
+		e.bind(generation, asked.Conversation)
 		thread = asked.Conversation
 	}
 	if e.cfg.Refusal != "" && !e.hookPath() {
@@ -240,7 +236,7 @@ func (e *Endpoint) issue(asked TicketRequest, generation uint64) (bridge.Ticket,
 	}
 	// The ticket's time says the call belongs to a turn still open: so it
 	// is taken under the gate, and only while no end was noted since the
-	// call was heard — or, on Codex, since its turn started. An end
+	// call was heard — or, off the hook path, since its turn started. An end
 	// captured before turn/completed reaches the table closes the turn
 	// already (docs/mail-bridge-turns.md#a-turns-end-meets-its-calls).
 	since := seen.at
@@ -326,7 +322,7 @@ func (e *Endpoint) confirm(conn *net.UnixConn, ticket bridge.Ticket) error {
 	return nil
 }
 
-// turnStarted and turnEnded follow the Codex turns of the primary thread.
+// turnStarted and turnEnded follow the turns the neutral input reports.
 func (e *Endpoint) turnStarted(turn string) {
 	c := e.calls
 	c.mu.Lock()

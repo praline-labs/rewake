@@ -53,7 +53,7 @@ func playPendingReport(t *testing.T, c *Case, iso *Isolation, col column) []tele
 	worker := startHarnessSession(t, c, iso, col.harness, "worker", "--general", shimInboxJSON+"=1", shimPendingOnce+"="+pendingText)
 	defer stopSession(t, c, worker)
 	sender := startHarnessSession(t, c, iso, col.harness, pendingSenderLabel, "--main",
-		shimSendTo+"="+worker.name, shimSendText+"="+pendingTaskText, shimInboxJSON+"=1", readinessSwitch(col, worker))
+		shimSendTo+"="+worker.name, shimSendText+"="+pendingTaskText, shimInboxJSON+"=1", readinessSwitch(worker))
 	defer stopSession(t, c, sender)
 
 	unjudged := func(detail string) []telemetryFinding {
@@ -106,8 +106,8 @@ func playPendingReport(t *testing.T, c *Case, iso *Isolation, col column) []tele
 	}
 
 	// The wake: another session's task starts the worker's next turn, which
-	// ends without a mark. A session rather than a shell, because the Codex
-	// path refuses mail from outside a session.
+	// ends without a mark. A session rather than a shell, as a person's other
+	// session would send it.
 	// No readiness wait: the worker has taken mail already, and a general
 	// session cannot see the telemetry that wait reads.
 	waker := startHarnessSession(t, c, iso, col.harness, "waker", "--general",
@@ -132,12 +132,12 @@ func playPendingReport(t *testing.T, c *Case, iso *Isolation, col column) []tele
 
 // awaiting lists the worker's open obligations as files: one per sender whose
 // task it read and has not reported on yet.
-func awaiting(iso *Isolation, worker *codexSession) []string {
+func awaiting(iso *Isolation, worker *scenarioSession) []string {
 	found, _ := filepath.Glob(filepath.Join(iso.StateDir, "rooms", "default", "inbox", worker.name, "awaiting", "*", pendingSenderLabel+"-*"))
 	return found
 }
 
-func kindsFrom(reader, about *codexSession) []string {
+func kindsFrom(reader, about *scenarioSession) []string {
 	var kinds []string
 	for _, message := range readMessages(reader) {
 		if message.From == about.name {

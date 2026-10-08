@@ -44,9 +44,6 @@ var transition = map[string]transit{
 	"internal/worktree":        {layer: host, step: "S16"},
 
 	// What goes is judged in the layer it holds today until its step removes it.
-	"internal/harness/codex":            {layer: api + "/codex", step: "S8", goes: true},
-	"internal/harness/codex/gateway":    {layer: api + "/codex", step: "S8", goes: true},
-	"internal/bridge/server":            {layer: tool, step: "S8", goes: true},
 	"internal/harness/claude/telemetry": {layer: api + "/claude", step: "S9", goes: true},
 }
 
@@ -82,55 +79,16 @@ var importExceptions = []importException{
 		step:   "S9",
 	},
 	{
-		from: "internal/cli", to: "internal/bridge/server",
-		files:  []string{"internal/cli/bridge_serve.go"},
-		reason: "the hidden MCP server command",
-		step:   "S8",
-	},
-	{
-		from: "internal/cli", to: "internal/harness/codex/gateway",
-		files: []string{
-			"internal/cli/gap_advisory_test.go", "internal/cli/gateway_integration_test.go", "internal/cli/gateway_intent_test.go",
-			"internal/cli/gateway_side_test.go", "internal/cli/gateway_wire_test.go", "internal/cli/review_receipt_identity_test.go",
-		},
-		reason: "Codex fixtures: the gateway's turn ends driven through the CLI",
-		step:   "S8",
-	},
-	{
 		from: "internal/cli", to: "internal/harness/catalog",
 		files:  []string{"internal/cli/cli_test.go"},
 		reason: "the parser's tests read the registry the catalog fills; from S10 cmd/rewake passes the catalog value",
 		step:   "S10",
 	},
 	{
-		from: "internal/harness", to: "internal/bridge",
-		files:  []string{"internal/harness/mailtool.go"},
-		reason: "the 1.x contract carries tool values: the injected MCP server's transport",
-		step:   "S8",
-	},
-	{
 		from: "internal/channel", to: "internal/harness",
 		files:  []string{"internal/channel/preview_test.go"},
 		reason: "the notice text is the harness package's until it moves to the core",
 		step:   "S10",
-	},
-	{
-		from: "internal/bridge/server", to: "internal/bridge/endpoint",
-		files:  []string{"internal/bridge/server/server.go", "internal/bridge/server/child_bound_test.go", "internal/bridge/server/rig_test.go"},
-		reason: "the MCP server reaches the host endpoint itself",
-		step:   "S8",
-	},
-	{
-		from: "internal/bridge/server", to: "internal/cli",
-		files:  []string{"internal/bridge/server/rig_test.go", "internal/bridge/server/order_marks_test.go"},
-		reason: "the rig runs the CLI's read and completion",
-		step:   "S8",
-	},
-	{
-		from: "internal/bridge/server", to: "internal/harness",
-		files:  []string{"internal/bridge/server/order_marks_test.go"},
-		reason: "the rig completes turns through the 1.x contract",
-		step:   "S8",
 	},
 	{
 		from: "internal/alias", to: "internal/harness/catalog",
@@ -151,12 +109,6 @@ var importExceptions = []importException{
 		step:   "S10",
 	},
 	{
-		from: "internal/harness/catalog", to: "internal/harness/codex",
-		files:  []string{"internal/harness/catalog/catalog.go"},
-		reason: "the catalog lists Codex until it leaves",
-		step:   "S8",
-	},
-	{
 		from: "internal/harness/claude", to: "internal/harness/claude/telemetry",
 		files: []string{
 			"internal/harness/claude/claude.go", "internal/harness/claude/notice.go", "internal/harness/claude/plugin.go",
@@ -165,24 +117,6 @@ var importExceptions = []importException{
 		},
 		reason: "the hook machinery and the status line feed the telemetry that leaves with them",
 		step:   "S9",
-	},
-	{
-		from: "internal/harness/codex", to: "internal/bridge/endpoint",
-		files:  []string{"internal/harness/codex/server_mailtool.go"},
-		reason: "the Codex server's mail tool reaches the endpoint",
-		step:   "S8",
-	},
-	{
-		from: "internal/harness/codex", to: "internal/worktree",
-		files:  []string{"internal/harness/codex/gitmetadata_test.go"},
-		reason: "a Codex fixture of a linked worktree",
-		step:   "S8",
-	},
-	{
-		from: "internal/harness/codex", to: "internal/cli",
-		files:  []string{"internal/harness/codex/report_boundary_test.go"},
-		reason: "a Codex notify driven through the CLI",
-		step:   "S8",
 	},
 }
 
@@ -284,13 +218,13 @@ var registryExceptions = map[registryException]excuse{
 		"the 1.x registry Register fills", "S10", 1, "26c51dca7432",
 	},
 	{"internal/harness/catalog/catalog.go", "func init in a package under adapter"}: {
-		"the catalog registers every adapter from init; S10 makes it a constructor", "S10", 1, "dc886ebafbc2",
+		"the catalog registers every adapter from init; S10 makes it a constructor", "S10", 1, "64f06d049785",
 	},
 	{"internal/harness/catalog/fixture.go", "func init in a package under adapter"}: {
 		"the fixture joins the catalog from a tagged init, beside the others, until S10 makes the catalog a constructor", "S10", 1, "08005cc75894",
 	},
-	{"internal/harness/check_holder.go", "func init in a package under adapter"}: {
-		"the name check's holder enters from init when the binary is re-executed as it", "S8", 1, "7bab8cf35620",
+	{"internal/harness/probe_holder.go", "func init in a package under adapter"}: {
+		"the probe's holder enters from init when the binary is re-executed as it; S10 moves the probe to the host, which cmd/rewake enters", "S10", 1, "38b34aaf1399",
 	},
 }
 

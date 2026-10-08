@@ -16,10 +16,9 @@ import (
 var errGone = errors.New("process gone")
 
 // A process that calls setsid leaves the group it was started in, and the
-// original group id then proves nothing about it. This is not hypothetical
-// here: the Codex adapter starts the native app-server in a group of its own
-// (internal/harness/codex/server.go), so on the first real scenario a session
-// could go on running while the case reported a clean finish.
+// original group id then proves nothing about it. An adapter may start a
+// process of its harness in a group of its own, and then a session could go
+// on running while the case reported a clean finish.
 //
 // Identifiers do not survive setsid, so the group cannot be followed. What
 // does survive is descent: an orphan is re-parented to the nearest ancestor

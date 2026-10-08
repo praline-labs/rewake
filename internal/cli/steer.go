@@ -47,7 +47,6 @@ type steerModel struct {
 var steerLimits = map[string]control.Limits{
 	control.Compact:   {Pickup: steerPickup, Outcome: 10 * time.Second, Poll: 50 * time.Millisecond},
 	control.Interrupt: {Pickup: steerPickup, Outcome: 10 * time.Second, Poll: 50 * time.Millisecond},
-	control.Accept:    {Pickup: steerPickup, Outcome: 10 * time.Second, Poll: 50 * time.Millisecond},
 }
 
 // steerPickup is the pickup limit, five seconds unless a build set builtPickup
@@ -60,8 +59,8 @@ var builtPickup string
 // remember leaves a compaction for main's wrapper; replaceable in tests.
 var remember = control.Remember
 
-// findHarness looks a harness up; replaceable in tests, where no harness
-// without a focus is registered yet.
+// findHarness looks a harness up; replaceable in tests, where a stub adapter
+// offers or withholds what no registered harness does.
 var findHarness = harness.Find
 
 func handleCompact(ctx *Context, call Call) error   { return steer(ctx, call, control.Compact) }

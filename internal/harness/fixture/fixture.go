@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/brief"
@@ -140,47 +139,7 @@ func (fixtureHarness) ReadLaunchVersion(program string, env []string, dir string
 	if err != nil {
 		return version, err
 	}
-	return version, checkVersion(version)
-}
-
-// checkVersion is the launch's refusal by version.
-func checkVersion(version harness.Version) error {
-	if version.Value == "" {
-		return fmt.Errorf("the fixture's version could not be read (%s); it needs %s or later", version.Note(), MinimumVersion)
-	}
-	if older(version.Value, MinimumVersion) {
-		return fmt.Errorf("the fixture is %s, below the %s it needs", version.Value, MinimumVersion)
-	}
-	return nil
-}
-
-// older reports whether version a comes before b, by their numeric parts.
-// A part that is not a number counts as zero, which only makes a version
-// older.
-func older(a, b string) bool {
-	left, right := strings.Split(a, "."), strings.Split(b, ".")
-	for i := range max(len(left), len(right)) {
-		x, y := part(left, i), part(right, i)
-		if x != y {
-			return x < y
-		}
-	}
-	return false
-}
-
-func part(parts []string, i int) int {
-	if i >= len(parts) {
-		return 0
-	}
-	digits := parts[i]
-	if cut := strings.IndexFunc(digits, func(r rune) bool { return r < '0' || r > '9' }); cut >= 0 {
-		digits = digits[:cut]
-	}
-	n, err := strconv.Atoi(digits)
-	if err != nil {
-		return 0
-	}
-	return n
+	return version, harness.RequireVersion("the fixture", version, MinimumVersion)
 }
 
 // settings is what the adapter reads of the program's configuration.

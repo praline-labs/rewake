@@ -28,13 +28,13 @@ func TestWorktreeLsReportsOwnerAndState(t *testing.T) {
 	if code, out, _ := run("worktree", "ls"); code != ExitOK || !strings.Contains(out, "No worktrees under "+lab.root) {
 		t.Fatalf("empty: %d %q", code, out)
 	}
-	if err := lab.launch(t, codexProbe(t), lab.repo, "--worktree=ended"); err != nil {
+	if err := lab.launch(t, aWorktreeProbe(t), lab.repo, "--worktree=ended"); err != nil {
 		t.Fatal(err)
 	}
 	live := lab.made(t, "live")
 	roomDir, _ := state.RoomDir(lab.state, "trees")
-	session := otherRun(t, roomDir, "busy-codex")
-	if _, err := worktree.Claim(live, worktree.Owner{Name: session.Name, Room: "trees", Epoch: session.Epoch(), Harness: "codex", Dir: roomDir}); err != nil {
+	session := otherRun(t, roomDir, "busy-worker")
+	if _, err := worktree.Claim(live, worktree.Owner{Name: session.Name, Room: "trees", Epoch: session.Epoch(), Harness: session.Harness, Dir: roomDir}); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(live.Path, "new"), []byte("x\n"), 0o644); err != nil {
@@ -45,7 +45,7 @@ func TestWorktreeLsReportsOwnerAndState(t *testing.T) {
 	if code != ExitOK {
 		t.Fatalf("ls: %d %s", code, errOut)
 	}
-	for _, want := range []string{"root: " + lab.root, "WORKTREE", live.Ref(), "busy-codex (running)", "changes", "tree-codex (ended)", "clean"} {
+	for _, want := range []string{"root: " + lab.root, "WORKTREE", live.Ref(), "busy-worker (running)", "changes", "tree-" + aWorktreeProbe(t).ID() + " (ended)", "clean"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("ls lacks %q:\n%s", want, out)
 		}
@@ -60,7 +60,7 @@ func TestWorktreeLsReportsOwnerAndState(t *testing.T) {
 	for _, view := range listing.Worktrees {
 		byName[view.Name] = view
 	}
-	if view := byName["live"]; !view.Running || !view.Check.Changes || view.Session == nil || view.Session.Name != "busy-codex" {
+	if view := byName["live"]; !view.Running || !view.Check.Changes || view.Session == nil || view.Session.Name != "busy-worker" {
 		t.Errorf("live: %+v", view)
 	}
 	if view := byName["ended"]; view.Running || view.Check.Dirty() || view.Commit == "" || view.Path == "" {
@@ -81,14 +81,14 @@ func TestWorktreeRmRefusesWhatHoldsWork(t *testing.T) {
 	lab.git(t, detached.Path, "commit", "-q", "--allow-empty", "-m", "Only here")
 	running := lab.made(t, "running")
 	roomDir, _ := state.RoomDir(lab.state, "trees")
-	session := otherRun(t, roomDir, "busy-codex")
-	if _, err := worktree.Claim(running, worktree.Owner{Name: session.Name, Room: "trees", Epoch: session.Epoch(), Harness: "codex", Dir: roomDir}); err != nil {
+	session := otherRun(t, roomDir, "busy-worker")
+	if _, err := worktree.Claim(running, worktree.Owner{Name: session.Name, Room: "trees", Epoch: session.Epoch(), Harness: session.Harness, Dir: roomDir}); err != nil {
 		t.Fatal(err)
 	}
 	for name, want := range map[string]string{
 		"changed":  "has changes",
 		"detached": "on no branch",
-		"running":  "still run in it: busy-codex in room trees",
+		"running":  "still run in it: busy-worker in room trees",
 	} {
 		code, _, errOut := run("worktree", "rm", name)
 		if code != ExitFailed || !strings.Contains(errOut, want) || !strings.Contains(errOut, "--force") {
@@ -114,8 +114,8 @@ func TestWorktreeRmRemovesAnEndedSessionsCheckout(t *testing.T) {
 	lab := newWorktreeLab(t)
 	record := lab.made(t, "done")
 	roomDir, _ := state.RoomDir(lab.state, "trees")
-	otherRun(t, roomDir, "busy-codex")
-	if _, err := worktree.Claim(record, worktree.Owner{Name: "busy-codex", Room: "trees", Epoch: "1.1", Harness: "codex", Dir: roomDir}); err != nil {
+	otherRun(t, roomDir, "busy-worker")
+	if _, err := worktree.Claim(record, worktree.Owner{Name: "busy-worker", Room: "trees", Epoch: "1.1", Harness: "harness", Dir: roomDir}); err != nil {
 		t.Fatal(err)
 	}
 	code, out, errOut := run("worktree", "rm", record.Ref(), "--json")

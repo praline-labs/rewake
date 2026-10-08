@@ -133,7 +133,7 @@ func TestAMarkDoesNotSurviveAnInterruptedTurn(t *testing.T) {
 	}
 }
 
-// Codex publishes turn K late. A mark made in K+1 meanwhile belongs to K+1:
+// A harness may publish turn K late. A mark made in K+1 meanwhile belongs to K+1:
 // K is a report with its own text, and K+1 is the interim turn end.
 func TestALatePublishedTurnIsAReportWithItsOwnText(t *testing.T) {
 	dir := liveSession(t, "api")

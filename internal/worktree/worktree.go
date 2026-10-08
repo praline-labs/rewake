@@ -1,9 +1,8 @@
 /*
 Package worktree makes and keeps the checkouts rewake creates for a launch.
 
-A harness that cannot make its own worktree under rewake — Codex's terminal
-refuses its --worktree beside the --remote rewake always passes — gets one from
-rewake instead: a checkout of the launch directory's HEAD on a new branch of the
+A harness that cannot make its own worktree under rewake gets one from rewake
+instead: a checkout of the launch directory's HEAD on a new branch of the
 checkout's name, added with the public `git worktree add`, and a record of whose
 it is. Nothing of a harness's private layout is repeated: that layout is no
 contract, and a copy of it would drift from the next version silently.

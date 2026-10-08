@@ -48,7 +48,7 @@ var Main = Role{
 // Write takes work and can commit changes in its working repository.
 var Write = Role{
 	ID:       "write",
-	Summary:  "As general, and may commit: on Codex once main's --grant-git task opens the Git metadata, on Claude Code within its own permissions. The owner's permissions stay as they are.",
+	Summary:  "As general, and may commit: on a harness that takes a Git grant once main's --grant-git task opens the Git metadata, on Claude Code within its own permissions. The owner's permissions stay as they are.",
 	GitWrite: true,
 	Play:     writePlaybook,
 }

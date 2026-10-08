@@ -3,8 +3,8 @@ Package inbox carries messages between sessions as files.
 
 A sender writes a file into the receiver's mailbox; the process that serves that
 mailbox — the wrapper holding the harness — delivers it and writes back a status
-the sender reads. Files, not a socket, because a sandboxed Codex agent may write
-into /tmp but may not connect to a socket at all. The same path therefore works
+the sender reads. Files, not a socket, because a sandboxed agent may write into
+/tmp but may not connect to a socket at all. The same path therefore works
 from a plain shell, from a Claude Code tool call and from inside the sandbox.
 */
 package inbox
@@ -177,7 +177,7 @@ type Result struct {
 	State State
 	// ReportAvailable preserves an accepted report when only its notice failed.
 	ReportAvailable bool
-	// Via names the path used, such as "socket" or "codex queue".
+	// Via names the path used, such as "socket".
 	Via string
 	// Detail explains a pending or failed result in one sentence.
 	Detail string

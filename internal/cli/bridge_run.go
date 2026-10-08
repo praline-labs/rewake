@@ -7,6 +7,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/boottime"
 	"github.com/praline-labs/rewake/internal/bridge"
+	"github.com/praline-labs/rewake/internal/bridge/endpoint"
 	"github.com/praline-labs/rewake/internal/state"
 )
 
@@ -15,10 +16,15 @@ import (
 // the run's wrapper, and the whole answer is bounded before it leaves: a
 // result the harness would cut is a result the model did not get.
 
-// validateTicket asks the wrapper of the run whether it issued a ticket. The
-// wrapper's context endpoint comes with the mail tool's server; until then
-// every ticket is refused, so bridge mode authorizes nothing by itself.
-var validateTicket bridge.Validator = bridge.NoEndpoint
+// validateTicket asks the wrapper of the run whether it issued a ticket;
+// replaceable in tests, which have no wrapper to ask.
+var validateTicket bridge.Validator = confirmTicket
+
+// confirmTicket has the run's wrapper confirm a ticket, once, for this
+// process.
+func confirmTicket(dir, name, epoch string, ticket bridge.Ticket) error {
+	return endpoint.Confirm(state.ContextPath(dir, name, epoch), ticket)
+}
 
 // callScope is a validated tool call.
 type callScope struct {

@@ -5,7 +5,7 @@ package workflow
 // test-to-harness protocol — the environment at launch and the files after
 // it — so the neutral scenarios run on it unchanged.
 //
-// It has two halves, as Codex does. The adapter's backend starts the session
+// It has two halves. The adapter's backend starts the session
 // half with --connect: it says hello on the adapter's socket, answers the
 // probes of what it serves, takes notices and works its turns. The wrapper
 // starts the terminal half: the session's foreground, which sends as asked,

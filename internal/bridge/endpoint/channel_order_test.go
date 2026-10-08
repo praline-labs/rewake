@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/channel"
 )
 
@@ -81,7 +80,7 @@ func arrivedAs(kind channel.Kind, generation uint64) func([]channel.Event) bool 
 // "server gone". Once the first connection closes too, the server is gone.
 func TestAHelloDeliveredLateKeepsItsConnectionLive(t *testing.T) {
 	f := newFolding(t, func(e channel.Event) bool { return e.Kind == channel.Hello && e.Generation == 1 })
-	_, path := testEndpoint(t, bridge.CodexTransport, func(c *Config) { c.Channel = f.take })
+	_, path := testEndpoint(t, testTransport, func(c *Config) { c.Channel = f.take })
 	first, err := Dial(path, "secret")
 	if err != nil {
 		t.Fatal(err)
@@ -131,8 +130,8 @@ func TestAHelloDeliveredLateKeepsItsConnectionLive(t *testing.T) {
 // reconnection during it.
 func TestAStartupFailureDeliveredAfterAHelloKeepsItsFailure(t *testing.T) {
 	f := newFolding(t, func(e channel.Event) bool { return e.Kind == channel.StartupFailed })
-	served, path := testEndpoint(t, bridge.CodexTransport, func(c *Config) { c.Channel = f.take })
-	go served.CodexEvent([]byte(`{"method":"mcpServer/startupStatus/updated","params":{"name":"rewake","status":"failed"}}`))
+	served, path := testEndpoint(t, testTransport, func(c *Config) { c.Channel = f.take })
+	go served.StartupFailed("")
 	select {
 	case <-f.held:
 	case <-time.After(3 * time.Second):

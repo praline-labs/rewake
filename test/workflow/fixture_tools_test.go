@@ -42,7 +42,7 @@ type toolScenario struct {
 type toolRun struct {
 	c            *Case
 	iso          *Isolation
-	lead, worker *codexSession
+	lead, worker *scenarioSession
 	task         reportView
 	calls        []fixtureToolRecord
 }
@@ -111,7 +111,7 @@ func playToolScenario(t *testing.T, c *Case, iso *Isolation, col column, scenari
 	worker := startHarnessSession(t, c, iso, col.harness, "worker", "--general", shimInboxJSON+"=1", shimToolCalls+"="+string(encoded))
 	defer stopSession(t, c, worker)
 	lead := startHarnessSession(t, c, iso, col.harness, toolLead, "--main",
-		shimSendTo+"="+worker.name, shimSendText+"="+toolTaskText, shimInboxJSON+"=1", readinessSwitch(col, worker))
+		shimSendTo+"="+worker.name, shimSendText+"="+toolTaskText, shimInboxJSON+"=1", readinessSwitch(worker))
 	defer stopSession(t, c, lead)
 
 	run := toolRun{c: c, iso: iso, lead: lead, worker: worker}
@@ -138,7 +138,7 @@ func playToolScenario(t *testing.T, c *Case, iso *Isolation, col column, scenari
 }
 
 // toolRecords are the calls the worker's turn log recorded.
-func toolRecords(worker *codexSession) ([]fixtureToolRecord, error) {
+func toolRecords(worker *scenarioSession) ([]fixtureToolRecord, error) {
 	events, err := worker.turnEvents()
 	if err != nil {
 		return nil, err
@@ -159,7 +159,7 @@ func toolRecords(worker *codexSession) ([]fixtureToolRecord, error) {
 
 // lastTurnEvent is the detail of the last event of a kind in a session's turn
 // log, "" when there is none.
-func lastTurnEvent(session *codexSession, kind string) string {
+func lastTurnEvent(session *scenarioSession, kind string) string {
 	events, _ := session.turnEvents()
 	detail := ""
 	for _, event := range events {

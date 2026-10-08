@@ -185,7 +185,7 @@ func TestAgeIsMeasuredFromTheStart(t *testing.T) {
 	}
 }
 
-// A sandboxed agent — Codex runs its commands in one — sees its own pid
+// An agent whose harness runs its commands in a sandbox sees its own pid
 // namespace only, where every other process is missing. Reading a session from
 // there must neither report it gone nor delete its record: found by running
 // `rewake list` inside the sandbox, which wiped a live session.

@@ -12,7 +12,7 @@ import (
 func TestAnEditByASessionThatIsNotMainCarriesNoGrant(t *testing.T) {
 	for _, sender := range []string{"write", "general"} {
 		t.Run(sender, func(t *testing.T) {
-			w := newGrantWorld(t, sender, "codex")
+			w := newGrantWorld(t, sender, "")
 			if code, out, stderr := run("send", w.peer.Name, "Look at the logs", "--wait=0"); code != ExitPending && code != ExitOK {
 				t.Fatalf("send: %d %s %s", code, out, stderr)
 			}

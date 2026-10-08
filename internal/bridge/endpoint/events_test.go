@@ -68,35 +68,6 @@ func used(t *testing.T, served *Endpoint, path string, asked TicketRequest, toke
 
 func token(n int) string { return strings.Repeat("0", 23) + string(rune('a'+n)) }
 
-// The recorded Codex stream reads as calls of the primary thread whose
-// results are lists of text items: each answer is its first text.
-func TestTheRecordedCodexStreamGivesEvidence(t *testing.T) {
-	var got acknowledged
-	served, path := testEndpoint(t, bridge.CodexTransport, func(c *Config) { c.Acknowledge = got.record })
-	calls := 0
-	for _, line := range fixture(t, "codex-stream.jsonl") {
-		var m codexMessage
-		if err := json.Unmarshal(line, &m); err != nil {
-			t.Fatal(err)
-		}
-		if m.Method == "item/completed" {
-			words, _ := wordsOf(m.Params.Item.Arguments)
-			used(t, served, path, codexRequest(m.Params.Thread, m.Params.TurnID, m.Params.Item.ID, words), token(calls))
-			calls++
-		}
-		served.CodexEvent(line)
-	}
-	served.Close()
-	if calls == 0 || len(got.seen) != calls {
-		t.Fatalf("%d acknowledgments for %d calls", len(got.seen), calls)
-	}
-	for i, evidence := range got.seen {
-		if !evidence.Succeeded || !evidence.Direct || evidence.Shortened || len(evidence.Answer) == 0 || evidence.ResultBytes < len(evidence.Answer) || got.tokens[i] != token(i) {
-			t.Fatalf("call %d: %+v under %s", i, evidence, got.tokens[i])
-		}
-	}
-}
-
 // The recorded hooks: a result the harness kept in a file arrives as a string
 // and proves nothing; a list of texts is the answer.
 func TestTheRecordedClaudeHooksGiveEvidence(t *testing.T) {
@@ -126,34 +97,6 @@ func TestTheRecordedClaudeHooksGiveEvidence(t *testing.T) {
 	for i, evidence := range got.seen {
 		if want := i >= 2; evidence.Shortened == want || want != (len(evidence.Answer) > 0) || !evidence.Direct {
 			t.Fatalf("call %d: %+v", i, evidence)
-		}
-	}
-}
-
-// A Codex result that failed, or that the harness marked an error, proves no
-// success.
-func TestAFailedCodexResultIsNoSuccess(t *testing.T) {
-	var got acknowledged
-	served, path := testEndpoint(t, bridge.CodexTransport, func(c *Config) { c.Acknowledge = got.record })
-	openTurn(served, "th", "t1")
-	failures := []string{
-		`"status":"failed","error":{"message":"x"},"result":{"content":[{"type":"text","text":"a"}]}`,
-		`"status":"completed","error":null,"result":{"content":[{"type":"text","text":"a"}],"isError":true}`,
-		`"status":"completed","error":null,"result":null`,
-	}
-	for i, shape := range failures {
-		call := "failed-" + string(rune('a'+i))
-		served.CodexEvent(codexEvent("item/started", "th", "t1", call, words, nil))
-		used(t, served, path, codexRequest("th", "t1", call, words), token(i))
-		served.CodexEvent([]byte(`{"method":"item/completed","params":{"threadId":"th","turnId":"t1","item":{"type":"mcpToolCall","id":"` + call + `","server":"rewake","tool":"rewake","arguments":{"words":["inbox"]},` + shape + `}}}`))
-	}
-	served.Close()
-	if len(got.seen) != len(failures) {
-		t.Fatalf("%d acknowledgments", len(got.seen))
-	}
-	for _, evidence := range got.seen {
-		if evidence.Succeeded {
-			t.Fatalf("a failed result counted as a success: %+v", evidence)
 		}
 	}
 }

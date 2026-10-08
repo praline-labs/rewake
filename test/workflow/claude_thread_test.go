@@ -14,8 +14,7 @@ import (
 // /clear after its task arrives and works it in the new conversation, the
 // other works its task where it landed.
 //
-// Only this column: on Codex the conversation reaches the report through the
-// gateway, which its own tests cover.
+// Only this column: the fixture's conversation does not change.
 //
 // What it does not prove: that the real harness names its conversation in
 // the hooks as the fixture does. The session_id and its change on /clear are
@@ -48,7 +47,7 @@ const (
 var threadObservations = []string{obsThreadMarked, obsThreadUnmarked, obsClearedSettles}
 
 // threadPair is a worker and the session that sends it one task.
-type threadPair struct{ worker, sender *codexSession }
+type threadPair struct{ worker, sender *scenarioSession }
 
 func startThreadPair(t *testing.T, c *Case, iso *Isolation, label, text string, controls ...string) threadPair {
 	t.Helper()

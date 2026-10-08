@@ -34,7 +34,7 @@ func TestACommandThatCannotRunIsRefused(t *testing.T) {
 			t.Errorf("%s: exit %d, stderr %q", tc.value, code, errOut)
 		}
 	}
-	if code, _, errOut := run("--command=", "codex"); code != ExitUsage || !strings.Contains(errOut, "--command needs a program") {
+	if code, _, errOut := run("--command=", aHarness(t)); code != ExitUsage || !strings.Contains(errOut, "--command needs a program") {
 		t.Errorf("empty: exit %d, stderr %q", code, errOut)
 	}
 }
@@ -71,22 +71,22 @@ func TestTheCommandOptionIsALaunchFlag(t *testing.T) {
 }
 
 // A path with a slash is fixed against the launch directory, so a harness part
-// started elsewhere — Codex's server, in its -C directory — runs the same file.
+// started elsewhere, in a directory of its own, runs the same file.
 func TestARelativeCommandIsFixedAgainstTheLaunchDirectory(t *testing.T) {
 	isolateAliases(t)
 	launchDir, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(launchDir, "my-codex"), []byte("#!/bin/sh\n"), 0o700); err != nil {
+	if err := os.WriteFile(filepath.Join(launchDir, "my-harness"), []byte("#!/bin/sh\n"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	call := Call{Command: findCommand("codex"), Flags: map[string]string{"command": "./my-codex"}}
+	call := Call{Command: findCommand(aHarness(t)), Flags: map[string]string{"command": "./my-harness"}}
 	program, err := launchProgram(call)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := filepath.Join(launchDir, "my-codex"); program != want {
+	if want := filepath.Join(launchDir, "my-harness"); program != want {
 		t.Errorf("program = %q, want %q", program, want)
 	}
 	call.Flags["command"] = "sh"

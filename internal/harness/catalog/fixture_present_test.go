@@ -17,7 +17,7 @@ func TestTheFixtureIsPresentWithItsTag(t *testing.T) {
 			found++
 		}
 	}
-	if found != 1 || len(harness.All()) < 3 {
+	if found != 1 || len(harness.All()) < 2 {
 		t.Fatalf("the fixture is in the catalog %d times among %d harnesses", found, len(harness.All()))
 	}
 }

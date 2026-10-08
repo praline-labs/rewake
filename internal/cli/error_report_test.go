@@ -70,32 +70,6 @@ func TestFailedTurnsReachEveryWaitingSender(t *testing.T) {
 	})
 }
 
-// A Codex notify names its turn and carries no read boundary: its scope is
-// unknown, so it reports nothing and its waits stay owed for the next end
-// (docs/turn-end-recovery.md#the-operation). Codex's turn ends come through
-// the gateway, which captures one.
-func TestACodexNotifyReportsNothing(t *testing.T) {
-	for _, payload := range []string{
-		`{"type":"agent-turn-complete","turn-id":"failed","error":"verbatim failure","last-assistant-message":null}`,
-		`{"type":"task_complete","turn_id":"failed","error":{"message":"verbatim failure"},"last_agent_message":null}`,
-	} {
-		t.Run(payload, func(t *testing.T) {
-			dir := failedWaiters(t)
-			if code, _, errOut := run("turn-ended", payload); code != 0 {
-				t.Fatal(errOut)
-			}
-			for _, peer := range []string{"one", "two"} {
-				if files := finishedFor(t, dir, peer); len(files) != 0 {
-					t.Fatalf("reports to %s: %v", peer, files)
-				}
-			}
-			if len(inbox.Waiters(dir, "api", epochOf(t, dir, "api"))) != 2 {
-				t.Fatal("the refused end cleared its waits")
-			}
-		})
-	}
-}
-
 func TestUnclaimedFailuresReachMainAndMainKeepsItsOwn(t *testing.T) {
 	for _, self := range []bool{false, true} {
 		t.Run(map[bool]string{true: "self", false: "leader"}[self], func(t *testing.T) {
@@ -120,17 +94,6 @@ func TestUnclaimedFailuresReachMainAndMainKeepsItsOwn(t *testing.T) {
 				t.Fatal("not an error")
 			}
 		})
-	}
-}
-
-func TestEmptyCompletionAfterWorkReportsAnErrorWithoutText(t *testing.T) {
-	dir := liveSession(t, "api")
-	peer := otherRun(t, dir, "web")
-	readFrom(t, dir, peer)
-	run("turn-ended", `{"type":"agent-turn-complete","last-assistant-message":null}`)
-	report := reportObject(t, dir, "web")
-	if report["kind"] != "error" || report["text"] != "" {
-		t.Fatalf("report=%v", report)
 	}
 }
 

@@ -1,7 +1,7 @@
 /*
 Package endpoint is the wrapper's context endpoint of the mail tool
 (docs/mail-bridge-server.md#who-calls): the one place that knows which native
-call a tool call is. The harness's own events — the Codex gateway's stream, the
+call a tool call is. The harness's own events — a transport's neutral input, the
 Claude Code hooks — record what the model called; the server asks for a ticket
 naming one of those calls; the child running the call has the ticket confirmed
 once; and the result the harness recorded acknowledges a read. The endpoint

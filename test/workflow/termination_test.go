@@ -15,19 +15,17 @@ import (
 // one per signal: a stuck group would otherwise hold the run for twice as
 // long as anything here claims.
 //
-// It is the sum of the stages an ordinary rewake shutdown runs, read from the
-// code:
+// It was set as the sum of the stages an ordinary rewake shutdown ran, read
+// from the code, rounded up to 12 s for a loaded machine. Two remain:
 //
-//   - 5 s for the completion publisher to drain after cancellation
-//     (internal/harness/codex/server_events.go);
-//   - 2 s for the server session to stop its own child group, SIGTERM then
-//     SIGKILL (internal/harness/codex/server.go);
 //   - 2 s for the last mailbox writes to get the lock
 //     (internal/inbox/outcome.go, shutdownLockWait);
 //   - 300 ms of signal-forwarding grace (internal/wrap/wrap.go).
 //
-// That is 9.3 s of stages that can follow one another, rounded up to 12 for a
-// loaded machine. The wrapper's own 2 s child stop (internal/wrap/backend.go)
+// The other 7 s belonged to an adapter that left in S8. The budget is
+// kept: a tighter one is a decision about the shutdown of the adapters that
+// come next, not one to take while removing one. The wrapper's own 2 s child
+// stop (internal/wrap/backend.go)
 // is deliberately not in the sum: it is the refusal branch, not a stage every
 // ordinary shutdown passes through. Killing earlier would cut off exactly the
 // teardown this suite exists to observe.

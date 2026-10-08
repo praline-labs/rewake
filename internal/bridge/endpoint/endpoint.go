@@ -44,11 +44,9 @@ type Endpoint struct {
 	servers  int
 	others   int
 	// generation numbers the server connections, counted up per run;
-	// bound marks those whose thread is told, primary names the thread the
-	// gateway holds (channel.go).
+	// bound marks those whose thread is told (channel.go).
 	generation uint64
 	bound      map[uint64]bool
-	primary    func() string
 	// conns are the connections open now; true marks one Close drains: a
 	// transport's call, or the confirmation of a child the endpoint runs.
 	conns map[*net.UnixConn]bool

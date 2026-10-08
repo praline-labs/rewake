@@ -187,8 +187,8 @@ func buildGroups() {
 				Next:           []string{"rewake list"},
 				Notes: []string{
 					"Refused at once while the session is in a turn; nothing waits for the turn to end. Interrupt it first, or ask again once rewake list shows it idle.",
-					"A focus is refused for Codex before anything is sent: it has no way to pass one.",
-					"Waits up to 5 seconds for the session to take the request — its rewake plugin on Claude Code, its wrapper on Codex — then up to 10 for its answer, and returns once the compaction has started. \"requested\" means the start was not seen in time and may still come. The result then arrives as a notify from the session, in place of the \"context compacted\" notice: token counts before and after where the harness gives them and its count of compactions, or why it was refused or failed; never the summary.",
+					"A focus is refused before anything is sent where the harness has no way to pass one.",
+					"Waits up to 5 seconds for the session to take the request — its rewake plugin on Claude Code — then up to 10 for its answer, and returns once the compaction has started. \"requested\" means the start was not seen in time and may still come. The result then arrives as a notify from the session, in place of the \"context compacted\" notice: token counts before and after where the harness gives them and its count of compactions, or why it was refused or failed; never the summary.",
 					"Exit 0 started or requested; 1 refused (in a turn, compaction switched off, nothing to compact, remote conversation, not answering, cut short, no control directory, withdrawn before it was taken, another request in flight) or failed; 2 a wrong call — not a main, no such session, a harness that does not take it or cannot take a focus.",
 				},
 				Handler: handleCompact,
@@ -202,7 +202,7 @@ func buildGroups() {
 				Examples:       []string{"rewake interrupt worker-claude", "rewake interrupt worker-claude --json"},
 				Next:           []string{"rewake inbox --awaited"},
 				Notes: []string{
-					"A session waiting on that turn reads stopped, naming who interrupted it. On Claude Code the session's next notice tells it once that you interrupted its turn; Codex records the interrupt in its model's history itself.",
+					"A session waiting on that turn reads stopped, naming who interrupted it. On Claude Code the session's next notice tells it once that you interrupted its turn; the answer to this command says what the session's model is shown.",
 					"Refused when no turn runs. Waits as rewake compact does: 5 seconds for the session to take the request, then 10 for its answer.",
 					"Exit 0 done; 1 refused (no turn running, not answering, cut short, no control directory, withdrawn before it was taken, another request in flight) or failed; 2 a wrong call — not a main, no such session, a harness that does not take it.",
 				},
@@ -225,7 +225,7 @@ func buildGroups() {
 		},
 	}
 
-	groups = []Group{run, talk, steer, acceptGroup(), help, internalGroup()}
+	groups = []Group{run, talk, steer, help, internalGroup()}
 }
 
 // nestedLaunchHelp is refuseNestedLaunch's rule, on every launch page: a
@@ -243,9 +243,8 @@ func launchCommand(h harness.Harness) *Command {
 		Summary:        h.Summary(),
 		Options: append(append([]Option{nameOption, roomOption, commandOption}, roleOptions()...),
 			Option{Flag: "--no-intro", Summary: "Do not add the system-layer briefing."},
-			Option{Flag: "--no-mail-tool", Summary: "Do not add the mail tool and skip its check for an MCP server you named rewake: letters are read in the shell with rewake inbox."},
 		),
-		Examples: append(h.Examples(), "rewake --room work --general --name helper "+h.ID(), "rewake --no-mail-tool "+h.ID()),
+		Examples: append(h.Examples(), "rewake --room work --general --name helper "+h.ID()),
 		Next:     []string{"rewake list", "rewake send <name> \"text\""},
 		Notes:    notes,
 		Raw:      true,
@@ -327,7 +326,7 @@ func notes() []Note {
 		},
 		{
 			Title: "Delivery speed differs by harness",
-			Body:  "Claude Code receives through its inbox socket; Codex through its own app-server, which starts or steers a turn, in a fresh conversation too. Every send reports acceptance or why delivery failed.",
+			Body:  "Claude Code receives through its inbox socket. Every send reports acceptance or why delivery failed.",
 		},
 	}
 }

@@ -73,7 +73,9 @@ under this directory.
 - **`internal/cli/bridge_serve.go`, `accept.go`, `turn_payload.go`** — the
   `bridge-serve` and `bridge-hook` commands; `rewake accept`, the person's word on a
   resumed Codex launch that ended up in another conversation; and the decoder of Codex's
-  notify payload beside the hook's.
+  notify payload beside the hook's. The confirmation of a call's ticket with the wrapper, which
+  `bridge_serve.go` installed, is neutral and stayed in the product, in
+  `internal/cli/bridge_run.go`.
 - **`test/workflow/codexshim*`, `websocket_test.go`, `schema*_test.go`,
   `harness_version_test.go`, `codex_*_test.go`** — the suite's Codex column. It held a
   shim app-server over WebSocket, checked the shim's answers against the schema of a
@@ -105,3 +107,23 @@ archived here whole.
   The rest of `error_report_test.go` stays as well.
 
 `accept_test.go` went with `accept.go`.
+
+## Codex's own cases among the other cli tests
+
+Most `internal/cli` tests that ran a session on Codex tested product behaviour that does
+not depend on Codex. In S8 they were moved to another harness, to a stub adapter, or to
+a harness id taken from the catalog, and they stay in the product. The cases below were
+Codex's own: what only Codex's launch or Codex's notify did. They left the product, and
+the files that held them are archived here whole, as they were before S8.
+
+- `launch_worktree_test.go`: `:186`, a worktree launch that follows Codex's `-C`
+  directory flag. In `:203`, the refusals of Codex's launch arguments: `-C` without a
+  value, `resume --last`, `fork`, `--remote` and `--profile`. In `:362`, the Codex tail
+  of the space-name test.
+- `send_dir_test.go`: `:229`, a Codex launch refuses `--add-dir` and a writable root
+  set through `-c`.
+- `inbox_test.go`: `:82`, the turn-end tests fed Codex's notify payload. They now take a
+  Claude Code `Stop` payload.
+- `turn_hold_test.go`: the `Codex` subtest at `:243`, a notify that carries no read
+  boundary.
+- `thread_claude_test.go`: the Codex row of `:73`, a notify that names no conversation.

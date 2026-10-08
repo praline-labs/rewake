@@ -199,7 +199,7 @@ func contains(list []string, value string) bool {
 //
 // The column is named because a red result does not mean the same thing in
 // each: the fixture column is the regression gate — its records carry gate —
-// and Codex and Claude Code search beside it, and check-runner-scenarios.md
+// and Claude Code searches beside it, and check-runner-scenarios.md
 // forbids this program from promoting a search column on its own. It says
 // which column, and stops there.
 func (s *summary) renderFailures(to io.Writer) {

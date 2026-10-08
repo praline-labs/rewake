@@ -67,12 +67,6 @@ func ObservationPath(dir, name, run string) string {
 	return path
 }
 
-// ToolConfigPath is the file a harness that takes the mail tool's server as
-// a file reads it from, beside the run's sockets and removed with them.
-func ToolConfigPath(dir, name, run string) string {
-	return filepath.Join(dir, socketsDir, name+"."+run+".mcp.json")
-}
-
 // ContextPath is where a run's wrapper answers the mail tool's server, its
 // children and its hooks (docs/mail-bridge-server.md#who-calls): beside the
 // observation socket, one per run, and short enough to bind.

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/praline-labs/rewake/internal/channel"
 	"github.com/praline-labs/rewake/internal/grant"
 	"github.com/praline-labs/rewake/internal/grantauth"
 	"github.com/praline-labs/rewake/internal/inbox"
@@ -89,20 +88,10 @@ type CompletionHandler struct {
 	// moment it noted the end on the boot clock. Nil where the run has no
 	// gate; Capture is then the end's boundary, as before.
 	EndCapture func() (*inbox.ReadBoundary, int64)
-	// ToolEvent takes a server notification of the primary thread that
-	// concerns the mail tool's calls: a turn's start or end, an item of the
-	// tool started or completed; and an MCP server's startup status of any
-	// thread. It never waits. Nil where nobody listens. Codex's raw form of
-	// what Tool takes, it leaves with Codex in S8.
-	ToolEvent func(raw []byte)
 	// Tool takes what the harness reports of the mail tool's calls in no
 	// harness's terms: turns, calls seen, their results, a failed start.
 	// It never waits. Nil where the run has no tool.
 	Tool ToolInput
-	// Channel takes the channel events the backend itself observes: a
-	// thread the gateway admitted, which starts the tool's servers. It
-	// never waits. Nil where nobody listens.
-	Channel func(channel.Event)
 }
 
 // Backend is an optional session-owned transport. Its implementation owns any
@@ -153,13 +142,6 @@ type TurnReporter interface {
 	ReportTurns(CompletionHandler)
 }
 
-// SessionStartSource is an observer that hears the harness's own session
-// starts. The mail tool's channel times its hello from the first one: the
-// harness starts its servers then, not when the wrapper starts it.
-type SessionStartSource interface {
-	OnSessionStart(func())
-}
-
 // Observer is telemetry without a transport: something the harness reports to
 // on its own, which the wrapper listens to and publishes like a backend's.
 type Observer interface {
@@ -168,12 +150,4 @@ type Observer interface {
 	// Close is called whether Start succeeded or not, and cleans up what the
 	// launch prepared for it.
 	Close()
-}
-
-// ToolWithdrawer is a backend whose start may leave out a tool the launch
-// chose: Codex's, when its server does not confirm the version the choice
-// was made with (docs/mail-bridge-launch-codex.md#the-version-confirmed-at-start).
-// The reason is "" when the tool was kept.
-type ToolWithdrawer interface {
-	ToolWithdrawn() string
 }

@@ -24,12 +24,12 @@ func TestExplicitGitGrantRequiresMainAndEligibleTask(t *testing.T) {
 			}
 			dir, self, peer := stateCaller(t, senderRole)
 			grantingMain(t, dir, self, os.Getpid())
-			peer.Role, peer.Harness = "write", "codex"
+			peer.Role = "write"
 			if scenario == "ineligible" {
 				peer.Role = "general"
 			}
-			if scenario == "unsupported" {
-				peer.Harness = "claude"
+			if scenario != "unsupported" {
+				stubGrants(t, peer.Harness, true, true)
 			}
 			if err := registry.Update(dir, peer); err != nil {
 				t.Fatal(err)
@@ -67,7 +67,7 @@ func TestExplicitGitGrantRequiresMainAndEligibleTask(t *testing.T) {
 				if code != want || len(files) != 0 || !strings.Contains(stderr, "--grant-git") {
 					t.Fatalf("unauthorized grant: %d %s %s files=%v", code, out, stderr, files)
 				}
-				if (scenario == "unsupported" || scenario == "ineligible") && !strings.Contains(stderr, "--write Codex session") {
+				if (scenario == "unsupported" || scenario == "ineligible") && !strings.Contains(stderr, "--write session whose harness takes") {
 					t.Fatalf("refusal names no next action: %s", stderr)
 				}
 				return

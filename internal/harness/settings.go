@@ -45,8 +45,6 @@ const (
 // whatever directory somebody is in could end up steering another session's
 // state. What a file may decide is listed here, not inferred from a name.
 var readable = map[string]bool{
-	"REWAKE_CODEX_MODEL":   true,
-	"REWAKE_CODEX_EFFORT":  true,
 	"REWAKE_CLAUDE_MODEL":  true,
 	"REWAKE_CLAUDE_EFFORT": true,
 }
@@ -55,8 +53,8 @@ var readable = map[string]bool{
 // with every launch command's help. Somebody who has to read the documentation
 // to learn where a setting lives will not find it.
 const SettingsHelp = "Launch defaults come as KEY=VALUE lines from ~/.config/" + userSettingsDir + "/" + userSettingsFile +
-	" and " + projectSettingsFile + " in the working directory: REWAKE_CODEX_MODEL, REWAKE_CODEX_EFFORT, " +
-	"REWAKE_CLAUDE_MODEL, REWAKE_CLAUDE_EFFORT. The environment beats both files, an empty variable turns a " +
+	" and " + projectSettingsFile + " in the working directory: REWAKE_CLAUDE_MODEL, " +
+	"REWAKE_CLAUDE_EFFORT. The environment beats both files, an empty variable turns a " +
 	"default off for the launch, and a typed flag beats everything."
 
 // Settings are the launch defaults available to this process.

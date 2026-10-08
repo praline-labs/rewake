@@ -15,8 +15,8 @@ import (
 // environment would run the case against the owner's live sessions and call
 // whatever came out a result.
 //
-// The boundaries here are the ones the free tiers need — a private HOME, state
-// directory and Codex home, and a PATH that leads to the shims rather than to
+// The boundaries here are the ones the free tiers need — a private HOME and
+// state directory, and a PATH that leads to the shims rather than to
 // anything installed. Network, mount and PID namespaces stay mandatory for the
 // paid tier only; the reasons are in docs/check-runner-proposal.md.
 type Isolation struct {
@@ -24,13 +24,6 @@ type Isolation struct {
 	Home string
 	// StateDir is REWAKE_DIR: the mailbox, registry and locks of this case.
 	StateDir string
-	// CodexHome is the private CODEX_HOME, kept separate from Home so a
-	// scenario can point one harness elsewhere without moving the other.
-	//
-	// It is the one harness-specific detail in the common layer, and it is
-	// here because isolation needs it before any harness code exists. It moves
-	// into the Codex fixture when the fixtures appear.
-	CodexHome string
 	// ShimDir is first on PATH. It is empty in stage 0; the harness shims that
 	// will live here arrive with the first harness-specific scenario.
 	ShimDir string
@@ -50,13 +43,12 @@ func Isolate(t *testing.T, c *Case, binary string) *Isolation {
 	// otherwise leave this directory in /tmp for good.
 	c.RemoveOnFinish(base)
 	iso := &Isolation{
-		Home:      filepath.Join(base, "home"),
-		StateDir:  filepath.Join(base, "state"),
-		CodexHome: filepath.Join(base, "codex"),
-		ShimDir:   filepath.Join(base, "shim"),
-		binary:    binary,
+		Home:     filepath.Join(base, "home"),
+		StateDir: filepath.Join(base, "state"),
+		ShimDir:  filepath.Join(base, "shim"),
+		binary:   binary,
 	}
-	for _, dir := range []string{iso.Home, iso.StateDir, iso.CodexHome, iso.ShimDir} {
+	for _, dir := range []string{iso.Home, iso.StateDir, iso.ShimDir} {
 		// 0o700 rather than the umask default: the state directory refuses to
 		// be group- or world-readable, and a case that cannot write its own
 		// receipts is not a finding about rewake.
@@ -84,7 +76,7 @@ func Isolate(t *testing.T, c *Case, binary string) *Isolation {
 // the child, and that no rewake is reachable through the case's PATH.
 func (iso *Isolation) verify() error {
 	for name, dir := range map[string]string{
-		"HOME": iso.Home, "REWAKE_DIR": iso.StateDir, "CODEX_HOME": iso.CodexHome,
+		"HOME": iso.Home, "REWAKE_DIR": iso.StateDir,
 	} {
 		if !filepath.IsAbs(dir) {
 			return fmt.Errorf("%s is not absolute: %s", name, dir)
@@ -152,16 +144,15 @@ func (iso *Isolation) registerCleanupChecks(c *Case) {
 	})
 }
 
-// noLiveSockets looks for sockets by file type. The server keeps ordinary
-// artifacts beside its socket — `<name>.sock.up.log`, `<name>.sock.gateway.log`
-// and `<name>.sock.outcomes.json` — and Close removes the sockets, not those.
-// Forbidding every file in the directory would fail the first working Codex
-// scenario over its normal leftovers, and the check would then be weakened
-// until it caught nothing.
+// noLiveSockets looks for sockets by file type. A harness's server may keep
+// ordinary artifacts beside its socket — logs, an outcomes file — and Close
+// removes the sockets, not those. Forbidding every file in the directory would
+// fail a working scenario over its normal leftovers, and the check would then
+// be weakened until it caught nothing.
 //
-// Matching on the name instead would be the same mistake one level down: the
-// wrapper's upstream socket is `<name>.sock.up`, which a `.sock` suffix misses
-// entirely. A socket is a socket because of what it is, not what it is called.
+// Matching on the name instead would be the same mistake one level down: a
+// socket named `<name>.sock.up` is one a `.sock` suffix misses entirely. A
+// socket is a socket because of what it is, not what it is called.
 func (iso *Isolation) noLiveSockets() error {
 	found, err := iso.inEveryRoomByType("sock", func(info os.FileInfo) bool {
 		return info.Mode()&os.ModeSocket != 0
@@ -263,7 +254,6 @@ func (iso *Isolation) Env() []string {
 		"PATH=" + iso.ShimDir + string(os.PathListSeparator) + "/usr/bin" + string(os.PathListSeparator) + "/bin",
 		"HOME=" + iso.Home,
 		"REWAKE_DIR=" + iso.StateDir,
-		"CODEX_HOME=" + iso.CodexHome,
 		// Deliberately absent: REWAKE_SESSION, REWAKE_EPOCH and REWAKE_ROOM.
 		// Inheriting them makes the case believe it is the session running it.
 	}

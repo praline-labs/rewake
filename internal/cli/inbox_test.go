@@ -79,7 +79,7 @@ func TestInboxOutsideASessionIsRefused(t *testing.T) {
 	}
 }
 
-const turnPayload = `{"type":"agent-turn-complete","thread-id":"t","last-assistant-message":"the smoke is green"}`
+const turnPayload = `{"hook_event_name":"Stop","session_id":"t","last_assistant_message":"the smoke is green"}`
 
 // The end of a turn is reported to whoever wrote during it, with the last reply,
 // and only once.
@@ -132,8 +132,8 @@ func TestTurnEndReportsEvenAfterADirectMessage(t *testing.T) {
 	}
 }
 
-// Codex calls its notify program for other events too; only the end of a turn
-// is one.
+// The hook command is called for other events too; only the end of a turn is
+// one.
 func TestTurnEndIgnoresOtherEvents(t *testing.T) {
 	dir := liveSession(t, "api")
 	web := otherRun(t, dir, "web")
@@ -144,7 +144,7 @@ func TestTurnEndIgnoresOtherEvents(t *testing.T) {
 		t.Fatalf("waiting = %v; without a waiter this test proves nothing", waiting)
 	}
 
-	run("turn-ended", `{"type":"approval-requested"}`)
+	run("turn-ended", `{"hook_event_name":"PreToolUse","session_id":"t"}`)
 	waiting, _ := filepath.Glob(filepath.Join(state.InboxPath(dir, "web"), "*.json"))
 	if len(waiting) != 0 {
 		t.Errorf("web holds %d messages after an event that is not the end of a turn", len(waiting))

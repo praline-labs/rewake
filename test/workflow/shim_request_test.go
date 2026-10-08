@@ -88,13 +88,6 @@ func (r *requests) ask(c *Case, args ...string) (int, string, bool) {
 	return r.send(c, encoded, strings.Join(args, " "))
 }
 
-// askWith runs a request with more than arguments: variables over the
-// session's own, or a process that leaves the session's tree first.
-func (r *requests) askWith(c *Case, request shimRequest) (int, string, bool) {
-	encoded, _ := json.Marshal(request)
-	return r.send(c, encoded, strings.Join(request.Args, " "))
-}
-
 func (r *requests) send(c *Case, encoded []byte, shown string) (int, string, bool) {
 	if err := os.MkdirAll(r.dir, 0o700); err != nil {
 		return -1, err.Error(), false

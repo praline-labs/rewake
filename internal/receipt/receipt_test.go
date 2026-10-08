@@ -137,7 +137,7 @@ func TestTheLockHoldsOneCallAtATime(t *testing.T) {
 // answer.
 func TestUnresolvedFindsOpenOperations(t *testing.T) {
 	dir := journalDir(t)
-	tool, _, _ := Begin(dir, "api", scoped, Record{Transport: "codex-mcp"})
+	tool, _, _ := Begin(dir, "api", scoped, Record{Transport: "test"})
 	tool.Created = time.Now().Add(-48 * time.Hour)
 	_ = Save(dir, "api", tool)
 	shell, _, _ := Begin(dir, "api", Key{Epoch: "run1", Digest: "d"}, Record{Transport: Shell})

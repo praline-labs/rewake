@@ -4,8 +4,8 @@
 //
 // The asking side is `rewake compact` and `rewake interrupt`; the answering
 // side is whatever serves the target: rewake's function-hooks module in a
-// Claude Code session, which can read and write files but not delete them, and
-// on Codex the wrapper. So the protocol is files only, the asker owns every
+// Claude Code session, which can read and write files but not delete them, or
+// a wrapper. So the protocol is files only, the asker owns every
 // removal, and an answer is written once and never rewritten.
 package control
 
@@ -27,9 +27,6 @@ import (
 const (
 	Compact   = "compact"
 	Interrupt = "interrupt"
-	// Accept takes the conversation a Codex terminal selected for the one
-	// its launch asked to resume, at the person's word (rewake accept).
-	Accept = "accept"
 )
 
 // Outcomes of a request. A compaction is answered Started once the served

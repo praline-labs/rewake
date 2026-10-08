@@ -10,7 +10,8 @@ import (
 
 // Serve answers the requests put into a run's control directory until ctx
 // ends: the served side for a harness whose wrapper carries requests out
-// itself, as on Codex, where it holds the app-server connection. It follows
+// itself, holding the harness's connection. No adapter does at present; it
+// stays for the ones that will. It follows
 // the same steps as the Claude Code module (docs/remote-control.md): take a
 // request, mark it taken, check it is still in place, act, and write the answer
 // once. One request at a time: act runs on this goroutine, and the asker's lock

@@ -95,14 +95,14 @@ func playStoppedRouting(t *testing.T, c *Case, iso *Isolation, col column) []tel
 	}
 	// The outcomes a session published, one journal per turn end it acted on:
 	// how an interruption that went to nobody is told from one never heard.
-	outcomes := func(session *codexSession) int { return eventEnds(iso, session.name) }
+	outcomes := func(session *scenarioSession) int { return eventEnds(iso, session.name) }
 	// What main holds from a session, read or not: its own mailbox reads and
 	// the files it has not read. A report main gives itself goes straight to
 	// its unread mail and is not announced, so only the file shows it until
 	// some other notice wakes main — and a notice that asks for nothing now
 	// waits seconds for company, past this look. Mail still waiting for its
 	// server is counted as well.
-	holds := func(from *codexSession) []string {
+	holds := func(from *scenarioSession) []string {
 		var kinds []string
 		for _, message := range readMessages(lead) {
 			if message.From == from.name && message.Kind != "notify" {
@@ -136,7 +136,7 @@ func playStoppedRouting(t *testing.T, c *Case, iso *Isolation, col column) []tel
 		}
 		return "", ""
 	}
-	activity := func(worker *codexSession) string {
+	activity := func(worker *scenarioSession) string {
 		code, machine, ok := asks.ask(c, "list", "--json")
 		var listed struct {
 			Sessions []struct {

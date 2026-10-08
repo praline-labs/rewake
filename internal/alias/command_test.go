@@ -33,7 +33,7 @@ command = "my-claude"
 // The command field becomes rewake's --command, before the harness word, so
 // the whole launch is one name.
 func TestTheCommandFieldBecomesTheFlag(t *testing.T) {
-	got, err := userSet(t, review).Expand([]string{"review"}, []string{"claude"}, valuedWithCommand, []string{"general", CommandFlag}, codexLike)
+	got, err := userSet(t, review).Expand([]string{"review"}, []string{"claude"}, valuedWithCommand, []string{"general", CommandFlag}, agentLike)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,7 +47,7 @@ func TestTheCommandFieldBecomesTheFlag(t *testing.T) {
 func TestATypedCommandReplacesTheAliasCommand(t *testing.T) {
 	for _, typed := range [][]string{{"--command", "other"}, {"--command=other"}} {
 		argv := append(append([]string{}, typed...), "review")
-		got, err := userSet(t, review).Expand(argv, []string{"claude"}, valuedWithCommand, nil, codexLike)
+		got, err := userSet(t, review).Expand(argv, []string{"claude"}, valuedWithCommand, nil, agentLike)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -66,7 +66,7 @@ func TestAProjectAliasMayNotChooseTheProgram(t *testing.T) {
 		"joined": "[alias.x]\nharness = \"claude\"\nrewake = [\"--command=my-claude\"]\n",
 	} {
 		t.Run(name, func(t *testing.T) {
-			_, err := set(t, contents).Expand([]string{"x"}, []string{"claude"}, valuedWithCommand, []string{"main", CommandFlag}, codexLike)
+			_, err := set(t, contents).Expand([]string{"x"}, []string{"claude"}, valuedWithCommand, []string{"main", CommandFlag}, agentLike)
 			if err == nil || !strings.Contains(err.Error(), "the program a launch starts belongs in the user alias file") {
 				t.Fatalf("got %v, want the program refused in a project file", err)
 			}
@@ -77,7 +77,7 @@ func TestAProjectAliasMayNotChooseTheProgram(t *testing.T) {
 // The program named twice in one alias is refused rather than guessed.
 func TestAnAliasNamingTheProgramTwiceIsRefused(t *testing.T) {
 	s := userSet(t, "[alias.x]\nharness = \"claude\"\ncommand = \"a\"\nrewake = [\"--command\", \"b\"]\n")
-	if _, err := s.Expand([]string{"x"}, []string{"claude"}, valuedWithCommand, nil, codexLike); err == nil || !strings.Contains(err.Error(), "names the program twice") {
+	if _, err := s.Expand([]string{"x"}, []string{"claude"}, valuedWithCommand, nil, agentLike); err == nil || !strings.Contains(err.Error(), "names the program twice") {
 		t.Fatalf("got %v", err)
 	}
 }

@@ -16,8 +16,8 @@ import (
 
 func TestSettingsComments(t *testing.T) {
 	for _, tc := range []struct{ raw, want string }{
-		{`REWAKE_CODEX_EFFORT= # disabled`, ""},
-		{`REWAKE_CODEX_MODEL="name # suffix"`, "name # suffix"},
+		{`REWAKE_CLAUDE_EFFORT= # disabled`, ""},
+		{`REWAKE_CLAUDE_MODEL="name # suffix"`, "name # suffix"},
 	} {
 		_, got, note := parseSetting(tc.raw)
 		if got != tc.want || note != "" {

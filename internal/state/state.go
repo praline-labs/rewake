@@ -1,7 +1,7 @@
 /*
 Package state owns the directory rewake keeps its sessions and mailboxes in.
 
-The directory lives in /tmp on purpose. The Codex sandbox may write there by
+The directory lives in /tmp on purpose. A harness's sandbox may write there by
 default, while $XDG_RUNTIME_DIR is out of its reach — and an agent that cannot
 write a message file cannot talk to anyone. Everything inside is per-user and
 mode 0700, which is the same trust boundary the harnesses use for their own
@@ -27,8 +27,8 @@ import (
 const DirEnv = "REWAKE_DIR"
 
 // SessionEnv names the environment variable carrying the session's own name.
-// The name avoids KEY, SECRET and TOKEN: Codex strips such variables from the
-// environment of the commands its agent runs.
+// The name avoids KEY, SECRET and TOKEN: a harness may strip such variables
+// from the environment of the commands its agent runs.
 const SessionEnv = "REWAKE_SESSION"
 
 // EpochEnv names the variable carrying the run of that name, the session

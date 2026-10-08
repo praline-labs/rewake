@@ -19,10 +19,8 @@ func TestReportsMarkOnlyKnownThreadChanges(t *testing.T) {
 			dir := liveSession(t, "api")
 			sender := otherRun(t, dir, "web")
 			self, _ := registry.Lookup(dir, "api")
-			self.Harness = "codex"
 			self.HarnessPID = os.Getpid()
 			self.HarnessStart = self.ServiceStart
-			self.CodexHome = t.TempDir()
 			if kind == "other harness" {
 				self.Harness = "claude"
 			}

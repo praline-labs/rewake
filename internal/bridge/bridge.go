@@ -71,7 +71,7 @@ type Ticket struct {
 	DeadlineBoot int64 `json:"deadlineBoot"`
 	// WordsDigest is Digest of the normalized words the call carried.
 	WordsDigest string `json:"wordsDigest"`
-	// Transport names the harness path, such as "codex-mcp".
+	// Transport names the harness path the call came over.
 	Transport string `json:"transport"`
 	// TurnsNeverReused carries the binding's declaration that the
 	// transport never gives a turn id to another turn.
@@ -81,13 +81,12 @@ type Ticket struct {
 	Nonce string `json:"nonce"`
 	// ReadsOff, when set, is why this run's tool may not read the mail:
 	// what it would show could reach the conversation other than direct
-	// and whole (docs/mail-bridge-launch-codex.md#the-output-limit).
+	// and whole.
 	ReadsOff string `json:"readsOff,omitempty"`
 }
 
 // The transports of the mail tool, as tickets and receipts name them.
 const (
-	CodexTransport  = "codex-mcp"
 	ClaudeTransport = "claude-mcp"
 )
 

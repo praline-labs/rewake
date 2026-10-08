@@ -239,7 +239,7 @@ func TestClaimRecordsTheSession(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	owner := Owner{Name: "writer-codex", Room: "default", Epoch: "10.20", Harness: "codex", Dir: "/state/rooms/default"}
+	owner := Owner{Name: "writer", Room: "default", Epoch: "10.20", Harness: "harness", Dir: "/state/rooms/default"}
 	if _, err := Claim(record, owner); err != nil {
 		t.Fatal(err)
 	}
@@ -291,13 +291,13 @@ func TestRootComesFromTheEnvironment(t *testing.T) {
 	}
 }
 
-// Codex takes a linked worktree's trust from its main checkout, and only when
-// the metadata has the layout git worktree add writes: the checkout's .git
-// file names <common>/worktrees/<name>, whose gitdir names that .git back and
-// whose commondir leads to the common directory, the main checkout's .git
-// (git-utils/src/trust.rs, docs/research-codex.md). A checkout of rewake's
-// must keep that layout, or a trusted repository's launch would not be.
-func TestTheCheckoutHasTheLayoutCodexTrusts(t *testing.T) {
+// A harness may take a linked worktree's trust from its main checkout, and
+// only when the metadata has the layout git worktree add writes: the
+// checkout's .git file names <common>/worktrees/<name>, whose gitdir names that
+// .git back and whose commondir leads to the common directory, the main
+// checkout's .git. A checkout of rewake's must keep that layout, or a trusted
+// repository's launch would not be.
+func TestTheCheckoutHasTheLayoutGitWorktreeAddWrites(t *testing.T) {
 	isolate(t)
 	source := repository(t, "project")
 	record, err := Create(t.TempDir(), source, "trusted")

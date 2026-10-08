@@ -42,7 +42,7 @@ const ownerStatusCommand = `sed -n 's/.*"id":"\([^"]*\)".*/owner \1/p'`
 // same; a compaction on the worker is announced to the main; the person's
 // status line is still what is shown; and the commands stay cheap.
 //
-// Only this column: the Codex column's telemetry comes from its server and is
+// Only this column: the fixture's telemetry comes from its session half and is
 // exercised by every scenario that waits on it.
 //
 // What it does not prove: that the real harness calls these commands when it
@@ -237,7 +237,7 @@ type telemetryRow struct {
 
 // awaitTelemetry reads a session's listing until the named row satisfies the
 // predicate or the case runs out of time.
-func awaitTelemetry(c *Case, session *codexSession, name string, ready func(telemetryRow) bool) (telemetryRow, bool) {
+func awaitTelemetry(c *Case, session *scenarioSession, name string, ready func(telemetryRow) bool) (telemetryRow, bool) {
 	var last telemetryRow
 	c.Note("waiting for the telemetry to settle")
 	for !c.Expired() {

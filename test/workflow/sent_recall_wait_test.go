@@ -23,7 +23,7 @@ const recallAnnounceWait = 10 * time.Second
 // That is the product doing right, so the scenario waits it out. withdraw
 // writes the recall before it returns, so a recall that is not there at all
 // is not waited for: that is what a control that silences it looks like.
-func recallAnnounced(c *Case, iso *Isolation, worker *codexSession, task string) (string, bool) {
+func recallAnnounced(c *Case, iso *Isolation, worker *scenarioSession, task string) (string, bool) {
 	recall := recallFor(iso, worker, task)
 	if recall == "" {
 		return fmt.Sprintf("no recall of %s was in %s's mailbox when the gate opened", task, worker.name), false
@@ -41,7 +41,7 @@ func recallAnnounced(c *Case, iso *Isolation, worker *codexSession, task string)
 // recallFor is the id of the letter in a session's mailbox that recalls task:
 // queued in the mailbox itself before its notice goes, in unread/ once it is
 // readable, in done/ once read.
-func recallFor(iso *Isolation, session *codexSession, task string) string {
+func recallFor(iso *Isolation, session *scenarioSession, task string) string {
 	for _, box := range []string{"", "unread", "done"} {
 		paths, _ := filepath.Glob(mailboxPath(iso, session, box, "*.json"))
 		for _, path := range paths {
@@ -60,7 +60,7 @@ func recallFor(iso *Isolation, session *codexSession, task string) string {
 
 // statusState is the state a letter's status file holds, or "" while it has
 // none.
-func statusState(iso *Isolation, session *codexSession, id string) string {
+func statusState(iso *Isolation, session *scenarioSession, id string) string {
 	raw, err := os.ReadFile(mailboxPath(iso, session, id+".status"))
 	if err != nil {
 		return ""

@@ -31,7 +31,7 @@ type steeredRow struct {
 type steering struct {
 	c    *Case
 	asks *requests
-	lead *codexSession
+	lead *scenarioSession
 }
 
 // steer runs one command as main and reads what it printed.
@@ -45,7 +45,7 @@ func (s steering) steer(args ...string) (int, steeredView, string) {
 }
 
 // about is the messages main read from a worker about its task.
-func (s steering) about(worker *codexSession, task string) []reportView {
+func (s steering) about(worker *scenarioSession, task string) []reportView {
 	var found []reportView
 	for _, message := range readMessages(s.lead) {
 		if message.From == worker.name && slices.Contains(message.InReplyTo, task) {
@@ -56,7 +56,7 @@ func (s steering) about(worker *codexSession, task string) []reportView {
 }
 
 // row is the worker's telemetry as main's listing shows it.
-func (s steering) row(worker *codexSession) (steeredRow, string) {
+func (s steering) row(worker *scenarioSession) (steeredRow, string) {
 	code, machine, ok := s.asks.ask(s.c, "list", "--json")
 	var listed struct {
 		Sessions []struct {
@@ -76,7 +76,7 @@ func (s steering) row(worker *codexSession) (steeredRow, string) {
 }
 
 // stoppedAbout waits for the stopped message about a worker's task.
-func (s steering) stoppedAbout(worker *codexSession, task string) reportView {
+func (s steering) stoppedAbout(worker *scenarioSession, task string) reportView {
 	var stopped reportView
 	waitFor(s.c, 10*time.Second, func() bool {
 		for _, message := range s.about(worker, task) {
@@ -119,7 +119,7 @@ const startedWithin = 2 * time.Second
 // letter with the counts, and no notice besides. The fixture's worker has
 // compacted nothing before. A focus, where the column takes one, goes with the
 // request.
-func (s steering) compactIdle(worker *codexSession, before, after int64, focus ...string) []telemetryFinding {
+func (s steering) compactIdle(worker *scenarioSession, before, after int64, focus ...string) []telemetryFinding {
 	finding := func(observation string, held bool, detail string, args ...any) telemetryFinding {
 		return telemetryFinding{observation: observation, held: held, judged: true, detail: fmt.Sprintf(detail, args...)}
 	}

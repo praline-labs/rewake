@@ -16,8 +16,8 @@ import (
 
 // No notice precedes a reserved letter's readability: through the mailbox
 // server the wrapper runs, the program is asked to reserve while the letter is
-// not yet readable, and when the notice reaches it the letter is — the half of
-// the Codex gateway's integration test that holds for any ReservingBackend.
+// not yet readable, and when the notice reaches it the letter is: what holds
+// for any ReservingBackend.
 func TestNoNoticePrecedesAReservedLettersReadability(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.Chmod(dir, 0o700); err != nil {

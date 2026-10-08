@@ -60,9 +60,6 @@ func sessionTable(room string, sessions []sessionView, visible bool) []string {
 		if session.Telemetry != nil && session.Telemetry.DeliveryHold != nil {
 			lines = append(lines, fmt.Sprintf("Deliveries to %s wait: %s", session.Name, session.Telemetry.DeliveryHold.Detail))
 		}
-		if len(session.AssumedGates) > 0 {
-			lines = append(lines, session.Name+": "+assumedLine(session.AssumedGates))
-		}
 	}
 	return lines
 }

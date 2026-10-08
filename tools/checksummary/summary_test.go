@@ -69,7 +69,7 @@ func summarize(t *testing.T, text string) *summary {
 
 func TestGreenRunIsGreenAndSaysWhatRan(t *testing.T) {
 	text := stream(t, []string{
-		caseLine(t, record.Case{Case: "task-report", Harness: "codex", Outcome: outcomePass}),
+		caseLine(t, record.Case{Case: "task-report", Harness: "claude", Outcome: outcomePass}),
 		runRecordLine("task-report"),
 	}, false)
 	found := summarize(t, text)
@@ -90,7 +90,7 @@ func TestGreenRunIsGreenAndSaysWhatRan(t *testing.T) {
 func TestRedRunNamesTheObservationAndTheEvidence(t *testing.T) {
 	text := stream(t, []string{
 		caseLine(t, record.Case{
-			Case: "batch-arrival", Harness: "codex", Outcome: "fail",
+			Case: "batch-arrival", Harness: "claude", Outcome: "fail",
 			Reason: "observation not satisfied",
 			Observations: []record.Observation{
 				{Name: "two close letters are one group", Outcome: "fail", Detail: "the delivery named three"},
@@ -106,7 +106,7 @@ func TestRedRunNamesTheObservationAndTheEvidence(t *testing.T) {
 		t.Error("a run with a failing case was green")
 	}
 	rendered := render(t, found)
-	for _, want := range []string{"FAIL", "batch-arrival/codex", "two close letters are one group", "the delivery named three", "/tmp/rewake-case-1", "lead.stderr: rewake: git worktree add failed"} {
+	for _, want := range []string{"FAIL", "batch-arrival/claude", "two close letters are one group", "the delivery named three", "/tmp/rewake-case-1", "lead.stderr: rewake: git worktree add failed"} {
 		if !strings.Contains(rendered, want) {
 			t.Errorf("the failure does not carry %q:\n%s", want, rendered)
 		}
@@ -149,9 +149,9 @@ func TestUnsupportedIsGreenAndNamed(t *testing.T) {
 func TestUnsupportedOnTheGateIsRed(t *testing.T) {
 	text := stream(t, []string{
 		caseLine(t, record.Case{
-			Case: "task-report", Harness: "codex", Gate: true, Outcome: outcomeUnsupported,
+			Case: "task-report", Harness: "fixture", Gate: true, Outcome: outcomeUnsupported,
 			Observations: []record.Observation{
-				{Name: "the recipient reaches an accepted conversation", Outcome: outcomeUnsupported, Capability: "reports-conversation-selection"},
+				{Name: "the delivery names its members", Outcome: outcomeUnsupported, Capability: "names-delivered-message-ids"},
 			},
 		}),
 		runRecordLine("task-report"),
@@ -161,7 +161,7 @@ func TestUnsupportedOnTheGateIsRed(t *testing.T) {
 		t.Error("an unsupported case on the gate was green")
 	}
 	rendered := render(t, found)
-	if !strings.Contains(rendered, "FAIL  task-report/codex") || !strings.Contains(rendered, "the recipient reaches an accepted conversation") {
+	if !strings.Contains(rendered, "FAIL  task-report/fixture") || !strings.Contains(rendered, "the delivery names its members") {
 		t.Errorf("the gate's lost observation is not named as a failure:\n%s", rendered)
 	}
 }
@@ -218,7 +218,7 @@ func TestAFailingEngineWithNoRedCaseIsStillRed(t *testing.T) {
 
 func TestSummaryFileHoldsTheRecords(t *testing.T) {
 	found := summarize(t, stream(t, []string{
-		caseLine(t, record.Case{Case: "stub", Harness: "codex", Outcome: outcomePass, DurationMs: 7}),
+		caseLine(t, record.Case{Case: "stub", Harness: "claude", Outcome: outcomePass, DurationMs: 7}),
 		runRecordLine("stub"),
 	}, false))
 	into := t.TempDir()
@@ -261,7 +261,7 @@ func render(t *testing.T, found *summary) string {
 // a case with a dozen observations is long. Reading each event as a line cut
 // the first real run's records in half — this is that, in miniature.
 func TestARecordSplitAcrossEventsIsReassembled(t *testing.T) {
-	whole := caseLine(t, record.Case{Case: "mid-turn", Harness: "codex", Outcome: outcomePass})
+	whole := caseLine(t, record.Case{Case: "mid-turn", Harness: "claude", Outcome: outcomePass})
 	half := len(whole) / 2
 	text := chunks(t, []string{whole[:half], whole[half:] + "\n", runRecordLine("mid-turn") + "\n"})
 	found := summarize(t, text)
@@ -319,37 +319,36 @@ func TestAnUnexplainedRedEngineNamesItsFailedTests(t *testing.T) {
 // A run says what it ran against, from the run record, in the same words the
 // suite's own -v line uses.
 func TestTheSummaryNamesWhatEachColumnRanAgainst(t *testing.T) {
-	encoded, _ := json.Marshal(record.Run{Enabled: true, Scenarios: []string{"shim-answers-match-schema"}, Against: []record.Against{
-		{What: "schema", Harness: "codex", Version: "0.156.0", How: "named by REWAKE_CODEX_VERSION, in a container"},
-		{What: "scenarios", How: "against the fixture in both columns"},
+	encoded, _ := json.Marshal(record.Run{Enabled: true, Scenarios: []string{"task-report"}, Against: []record.Against{
+		{What: "scenarios", How: "against the suite's own harness programs in every column"},
 	}})
 	text := stream(t, []string{
-		caseLine(t, record.Case{Case: "shim-answers-match-schema", Harness: "codex", Gate: true, Outcome: outcomePass}),
+		caseLine(t, record.Case{Case: "task-report", Harness: "fixture", Gate: true, Outcome: outcomePass}),
 		record.RunMark + string(encoded),
 	}, false)
 	rendered := render(t, summarize(t, text))
-	want := "against   schema from codex 0.156.0 (named by REWAKE_CODEX_VERSION, in a container); scenarios against the fixture in both columns"
+	want := "against   scenarios against the suite's own harness programs in every column"
 	if !strings.Contains(rendered, want) {
 		t.Errorf("the summary does not say what the run was against:\n%s", rendered)
 	}
 }
 
-// A failure of the run itself — a named version that could not be fetched —
-// is red and named, even when every case that ran passed.
+// A failure of the run itself — processes that outlived their cases — is red
+// and named, even when every case that ran passed.
 func TestARunFailureIsRedAndNamed(t *testing.T) {
 	encoded, _ := json.Marshal(record.Run{
 		Enabled: true, Scenarios: []string{"task-report"},
-		Failure: "REWAKE_CODEX_VERSION=0.0.1: the registry has no codex 0.0.1",
+		Failure: "processes outlived their cases: 4242 sleep",
 	})
 	text := stream(t, []string{
-		caseLine(t, record.Case{Case: "task-report", Harness: "codex", Gate: true, Outcome: outcomePass}),
+		caseLine(t, record.Case{Case: "task-report", Harness: "fixture", Gate: true, Outcome: outcomePass}),
 		record.RunMark + string(encoded),
 	}, false)
 	found := summarize(t, text)
 	if found.green() {
 		t.Fatal("a run with a failure of its own was green")
 	}
-	if rendered := render(t, found); !strings.Contains(rendered, "run       FAIL  REWAKE_CODEX_VERSION=0.0.1") {
+	if rendered := render(t, found); !strings.Contains(rendered, "run       FAIL  processes outlived their cases: 4242 sleep") {
 		t.Errorf("the run failure is not named:\n%s", rendered)
 	}
 }

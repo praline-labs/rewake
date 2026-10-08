@@ -26,7 +26,7 @@ type owedModel struct {
 	// Unread counts the tasks and questions waiting unread, whoever sent
 	// them: it says work is waiting, not that a report is. --owed shows only
 	// what was read, and a session that asks it after a compaction must not
-	// take "nothing owed" for "no work": a Codex worker skipped a new task
+	// take "nothing owed" for "no work": a worker once skipped a new task
 	// twice that way.
 	Unread int `json:"unread"`
 }

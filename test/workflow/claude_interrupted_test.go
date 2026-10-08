@@ -19,7 +19,7 @@ import (
 //     the turn reads the task and ends with turn.complete reason "aborted" and
 //     no Stop hook. Its plugin reports that, so main hears stopped at once and
 //     still waits; woken by a note, the worker's next turn ends in Stop, and
-//     that finished settles the task, as on Codex.
+//     that finished settles the task, as on the fixture.
 //   - One works an ordinary turn: the plugin hears its end as well, and main
 //     still reads exactly one finished.
 //   - One is interrupted just as its turn ends: the Stop hook has run and
@@ -119,7 +119,7 @@ func playInterruptedTurn(t *testing.T, c *Case, iso *Isolation) []telemetryFindi
 		return out
 	}
 	// The kinds main read from a worker about one task, in the order read.
-	about := func(worker *codexSession, task string) []string {
+	about := func(worker *scenarioSession, task string) []string {
 		var kinds []string
 		for _, message := range readMessages(lead) {
 			if message.From == worker.name && slices.Contains(message.InReplyTo, task) {
@@ -130,7 +130,7 @@ func playInterruptedTurn(t *testing.T, c *Case, iso *Isolation) []telemetryFindi
 	}
 	// Every report main read from a worker, whatever it names. The
 	// availability notice comes from the worker too and answers nothing.
-	reports := func(worker *codexSession) []string {
+	reports := func(worker *scenarioSession) []string {
 		var kinds []string
 		for _, kind := range kindsFrom(lead, worker) {
 			if kind != "notify" {
@@ -161,9 +161,9 @@ func playInterruptedTurn(t *testing.T, c *Case, iso *Isolation) []telemetryFindi
 	// the worker keeps for it can. On this column only a stop leaves one named
 	// by its event: the Stop hook's report names no turn, and its journal's
 	// name is drawn.
-	stops := func(worker *codexSession) int { return eventEnds(iso, worker.name) }
+	stops := func(worker *scenarioSession) int { return eventEnds(iso, worker.name) }
 	// A worker's row in main's listing, as main's own rewake printed it.
-	row := func(worker *codexSession) (interruptedRow, string) {
+	row := func(worker *scenarioSession) (interruptedRow, string) {
 		code, machine, ok := asks.ask(c, "list", "--json")
 		var listed struct {
 			Sessions []struct {
@@ -183,12 +183,12 @@ func playInterruptedTurn(t *testing.T, c *Case, iso *Isolation) []telemetryFindi
 	}
 
 	var sends []string
-	workers := []*codexSession{heard, ordinary, late, unheard}
+	workers := []*scenarioSession{heard, ordinary, late, unheard}
 	for _, worker := range workers {
 		code, out, _ := asks.ask(c, "send", worker.name, interruptedTask)
 		sends = append(sends, fmt.Sprintf("to %s: exit %d, %s", worker.name, code, firstLine(out)))
 	}
-	tasks := map[*codexSession]string{}
+	tasks := map[*scenarioSession]string{}
 	if !waitFor(c, 30*time.Second, func() bool {
 		for _, worker := range workers {
 			message, read := messageCarrying(worker, "claude-interrupted:")
@@ -235,11 +235,11 @@ func playInterruptedTurn(t *testing.T, c *Case, iso *Isolation) []telemetryFindi
 		"activity %q, interruptions %q %s", heardRow.Activity, heardRow.Interruptions, failure))
 
 	// The wake: a note starts the next turn, which ends in Stop.
-	for _, worker := range []*codexSession{heard, unheard} {
+	for _, worker := range []*scenarioSession{heard, unheard} {
 		code, sent, _ := asks.ask(c, "send", worker.name, interruptedWake, "--notify")
 		sends = append(sends, fmt.Sprintf("note to %s: exit %d, %s", worker.name, code, firstLine(sent)))
 	}
-	settled := func(worker *codexSession) bool { return slices.Contains(about(worker, tasks[worker]), "finished") }
+	settled := func(worker *scenarioSession) bool { return slices.Contains(about(worker, tasks[worker]), "finished") }
 	waitFor(c, 30*time.Second, func() bool { return settled(heard) && settled(unheard) })
 	// Anything a mutant adds after the finished arrives beside it.
 	time.Sleep(time.Second)

@@ -71,7 +71,7 @@ func TestUnfinishedSessionRecordIsNotAcceptedAsClean(t *testing.T) {
 	}
 
 	// The lock outlives every session by design.
-	if err := os.WriteFile(filepath.Join(dir, ".worker-codex.lock"), nil, 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, ".worker-fixture.lock"), nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if err := recordCheck(); err != nil {
@@ -79,7 +79,7 @@ func TestUnfinishedSessionRecordIsNotAcceptedAsClean(t *testing.T) {
 	}
 
 	// A temporary file from an interrupted atomic write does not.
-	if err := os.WriteFile(filepath.Join(dir, ".tmp-worker-codex-1234"), nil, 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, ".tmp-worker-fixture-1234"), nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if err := recordCheck(); err == nil {
@@ -87,9 +87,9 @@ func TestUnfinishedSessionRecordIsNotAcceptedAsClean(t *testing.T) {
 	}
 }
 
-// The server keeps these beside its socket in the ordinary course of events,
-// and removes only the sockets themselves. A cleanup check that called them
-// leftovers would fail the first working Codex scenario over nothing.
+// A harness's server may keep these beside its socket in the ordinary course
+// of events, and remove only the sockets themselves. A cleanup check that
+// called them leftovers would fail a working scenario over nothing.
 func TestOrdinaryServerArtifactsAreNotLiveSockets(t *testing.T) {
 	iso := &Isolation{StateDir: t.TempDir()}
 	dir := filepath.Join(iso.StateDir, "rooms", "default", "sock")

@@ -107,7 +107,7 @@ func TestASessionFoldsIntoTheSnapshot(t *testing.T) {
 	}
 }
 
-// Sequence numbers only grow, and the cues are bounded like the Codex side's.
+// Sequence numbers only grow, and the cues are bounded.
 func TestCompactionSequenceIsMonotonicAndBounded(t *testing.T) {
 	var f folding
 	for range maxCompactionEvents + 5 {

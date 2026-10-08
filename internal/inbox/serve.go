@@ -13,7 +13,7 @@ const (
 	// messages and covers a watch that could not be set up — so it can be slow.
 	pollInterval = time.Second
 	// retryInterval is how long a pending message waits before the next attempt.
-	// Pending means the receiver cannot take it yet — a Codex session with no
+	// Pending means the receiver cannot take it yet — a session with no
 	// conversation, a socket not created yet — so retrying fast buys nothing.
 	retryInterval = 2 * time.Second
 	// collectionInterval is fixed from the first wake, never extended by

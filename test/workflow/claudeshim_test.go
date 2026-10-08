@@ -2,11 +2,11 @@ package workflow
 
 // The shim that plays a Claude Code session.
 //
-// It is the other column's fixture, and it is a different animal from the
-// Codex one. There is no protocol here and nothing to answer: the wrapper
-// dials a unix socket, writes one line, and closes. The session learns that
-// mail is waiting and nothing else — no turn, no acknowledgement, no
-// conversation — which is why several observations that Codex supports are
+// It is the Claude Code column's fixture, and a different animal from the
+// fixture harness's program. There is no protocol here and nothing to answer:
+// the wrapper dials a unix socket, writes one line, and closes. The session
+// learns that mail is waiting and nothing else — no turn, no acknowledgement,
+// no conversation — which is why several observations the gate supports are
 // declared absent on this column rather than quietly dropped.
 //
 // What it must be strict about is the one thing it does receive. A fixture
@@ -22,16 +22,27 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"time"
 )
+
+// claudeShimVersion is the release the shim answers --version as: the
+// adapter's minimum, the oldest one a launch accepts.
+const claudeShimVersion = "2.1.287"
 
 // runClaudeShim is the entry point when the test binary is re-executed as
 // `claude`. It parses what the wrapper passed, listens where it was told, and
 // then behaves as a session does: reads its mail when told there is some, and
 // reports the end of each turn through the hook the wrapper configured.
 func runClaudeShim(args []string) int {
+	// The launch reads the version before the claim and refuses below the
+	// adapter's minimum, so the shim answers as that release does.
+	if slices.Contains(harnessArgs(args), "--version") {
+		fmt.Println(claudeShimVersion + " (Claude Code)")
+		return 0
+	}
 	launch, err := parseClaudeLaunch(harnessArgs(args))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "claude-shim: %v\n", err)
@@ -350,8 +361,8 @@ func checkedEnvelope(line []byte) (claudeNotice, error) {
 	return parseNotification(envelope.Message.Content)
 }
 
-// waitToBeStopped keeps the session alive the way the Codex client half does:
-// until it is asked to stop, or until its own ceiling — the longer one when it
+// waitToBeStopped keeps the session alive the way the fixture's terminal half
+// does: until it is asked to stop, or until its own ceiling — the longer one when it
 // serves a scenario's requests, whose scenarios run longest.
 func (s *claudeSession) waitToBeStopped() int {
 	deadline := time.Now().Add(25 * time.Second)

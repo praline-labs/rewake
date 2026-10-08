@@ -34,7 +34,7 @@ func grantingMain(t *testing.T, dir string, self registry.Session, wrapper int) 
 // A send that registers its grant leaves it confirmable by the recipient's
 // wrapper, as the message carries it.
 func TestADirGrantIsRegisteredWithMainsWrapper(t *testing.T) {
-	w := newGrantWorld(t, "main", "codex")
+	w := newGrantWorld(t, "main", "")
 	lib := filepath.Join(w.home, "work", "lib")
 	if code, out, stderr := run("send", w.peer.Name, "Write in lib", "--wait=0", "--grant-dir", lib); code != ExitPending {
 		t.Fatalf("send: %d %s %s", code, out, stderr)
@@ -64,7 +64,8 @@ func TestAGrantSentFromOutsideMainsWrapperIsRefused(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = stranger.Process.Kill(); _ = stranger.Wait() })
 	grantingMain(t, dir, self, stranger.Process.Pid)
-	peer.Role, peer.Harness = "write", "codex"
+	peer.Role = "write"
+	stubGrants(t, peer.Harness, true, true)
 	if err := registry.Update(dir, peer); err != nil {
 		t.Fatal(err)
 	}
@@ -79,16 +80,13 @@ func TestAGrantSentFromOutsideMainsWrapperIsRefused(t *testing.T) {
 
 // A main whose commands cannot reach its wrapper cannot grant: its grant
 // would be refused on delivery, so it is refused before it is sent.
-func TestACodexMainCannotGrant(t *testing.T) {
-	w := newGrantWorld(t, "main", "codex")
+func TestAMainThatCannotReachItsWrapperCannotGrant(t *testing.T) {
+	w := newGrantWorld(t, "main", "")
 	self, err := registry.Load(w.dir, os.Getenv(state.SessionEnv))
 	if err != nil {
 		t.Fatal(err)
 	}
-	self.Harness = "codex"
-	if err := registry.Update(w.dir, self); err != nil {
-		t.Fatal(err)
-	}
+	stubGrants(t, self.Harness, true, false)
 	for _, grant := range [][]string{{"--grant-dir", filepath.Join(w.home, "work", "lib")}, {"--grant-git"}} {
 		args := append([]string{"send", w.peer.Name, "Write there", "--wait=0"}, grant...)
 		code, out, stderr := run(args...)
@@ -97,7 +95,7 @@ func TestACodexMainCannotGrant(t *testing.T) {
 		}
 	}
 	if messages := w.sent(t); len(messages) != 0 {
-		t.Fatalf("a Codex main sent %d grants", len(messages))
+		t.Fatalf("a main that cannot reach its wrapper sent %d grants", len(messages))
 	}
 }
 
@@ -138,7 +136,7 @@ func (w grantWorld) replacementOf(t *testing.T, id string) (inbox.Message, bool)
 // not the one its letter names: a worker that widened the grant in its
 // unread letter gets the directory main gave, and no more.
 func TestAnEditCarriesTheGrantMainsWrapperHolds(t *testing.T) {
-	w := newGrantWorld(t, "main", "codex")
+	w := newGrantWorld(t, "main", "")
 	lib, wide := filepath.Join(w.home, "work", "lib"), filepath.Join(w.home, "wide")
 	if code, out, stderr := run("send", w.peer.Name, "Write in lib", "--wait=0", "--grant-dir", lib); code != ExitPending {
 		t.Fatalf("send: %d %s %s", code, out, stderr)
@@ -171,7 +169,7 @@ func TestAnEditCarriesTheGrantMainsWrapperHolds(t *testing.T) {
 // edited into a grant main never gave: main's wrapper holds none for it, and
 // the edit is refused with the reason.
 func TestAnEditOfALetterGivenAForgedGrantIsRefused(t *testing.T) {
-	w := newGrantWorld(t, "main", "codex")
+	w := newGrantWorld(t, "main", "")
 	wide := filepath.Join(w.home, "wide")
 	if code, out, stderr := run("send", w.peer.Name, "Look at the logs", "--wait=0"); code != ExitPending && code != ExitOK {
 		t.Fatalf("send: %d %s %s", code, out, stderr)

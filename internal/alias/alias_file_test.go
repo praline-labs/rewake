@@ -16,8 +16,8 @@ import (
 // A file carried by a directory may not choose the role of the session
 // launching there: the role decides what a session sees and may ask for.
 func TestAProjectAliasMayNotSetARole(t *testing.T) {
-	s := set(t, "[alias.x]\nharness = \"codex\"\nrewake = [\"--main\"]\n")
-	_, err := s.Expand([]string{"x"}, []string{"codex"}, valued, []string{"main", "write", "general"}, codexLike)
+	s := set(t, "[alias.x]\nharness = \"agent\"\nrewake = [\"--main\"]\n")
+	_, err := s.Expand([]string{"x"}, []string{"agent"}, valued, []string{"main", "write", "general"}, agentLike)
 	if err == nil {
 		t.Fatal("a project alias set a role")
 	}
@@ -30,12 +30,12 @@ func TestAProjectAliasMayNotSetARole(t *testing.T) {
 func TestAUserAliasMaySetARole(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, userFile)
-	if err := os.WriteFile(path, []byte("[alias.x]\nharness = \"codex\"\nrewake = [\"--main\"]\n"), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte("[alias.x]\nharness = \"agent\"\nrewake = [\"--main\"]\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	s := newSet()
 	s.read(path, "the user alias file", true)
-	if _, err := s.Expand([]string{"x"}, []string{"codex"}, valued, []string{"main"}, codexLike); err != nil {
+	if _, err := s.Expand([]string{"x"}, []string{"agent"}, valued, []string{"main"}, agentLike); err != nil {
 		t.Fatalf("a user alias could not set a role: %v", err)
 	}
 	if len(s.Notes) != 0 {
@@ -48,7 +48,7 @@ func TestAUserAliasMaySetARole(t *testing.T) {
 func TestAUserFileOpenToOthersIsReported(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, userFile)
-	if err := os.WriteFile(path, []byte("[alias.x]\nharness = \"codex\"\n"), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte("[alias.x]\nharness = \"agent\"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	s := newSet()
@@ -62,8 +62,8 @@ func TestAUserFileOpenToOthersIsReported(t *testing.T) {
 }
 
 func TestAnUnknownNameIsLeftAlone(t *testing.T) {
-	s := set(t, wcodex)
-	got, err := s.Expand([]string{"inbox"}, []string{"codex"}, valued, nil, codexLike)
+	s := set(t, wagent)
+	got, err := s.Expand([]string{"inbox"}, []string{"agent"}, valued, nil, agentLike)
 	if err != nil || len(got) != 1 || got[0] != "inbox" {
 		t.Fatalf("got %v, %v", got, err)
 	}
@@ -76,12 +76,12 @@ func TestAnAliasThatMakesNoSenseIsRefused(t *testing.T) {
 	for _, tc := range []struct{ name, file, want string }{
 		{"no-harness", "[alias.x]\nrewake = [\"--write\"]\n", "names no harness"},
 		{"unknown-harness", "[alias.x]\nharness = \"nothing\"\n", "which is not a harness"},
-		{"a-command-in-rewake", "[alias.x]\nharness = \"codex\"\nrewake = [\"send\"]\n", "only takes flags"},
-		{"an-empty-argument", "[alias.x]\nharness = \"codex\"\nargs = [\"\"]\n", "empty argument"},
+		{"a-command-in-rewake", "[alias.x]\nharness = \"agent\"\nrewake = [\"send\"]\n", "only takes flags"},
+		{"an-empty-argument", "[alias.x]\nharness = \"agent\"\nargs = [\"\"]\n", "empty argument"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			s := set(t, tc.file)
-			_, err := s.Expand([]string{"x"}, []string{"codex", "claude"}, valued, nil, codexLike)
+			_, err := s.Expand([]string{"x"}, []string{"agent", "claude"}, valued, nil, agentLike)
 			if err == nil {
 				t.Fatal("an unusable alias was accepted")
 			}
@@ -105,8 +105,8 @@ func TestABrokenFileIsReported(t *testing.T) {
 }
 
 func TestNamesAreListedForARefusal(t *testing.T) {
-	s := set(t, wcodex+"\n[alias.claude-main]\nharness = \"claude\"\n")
-	if got := strings.Join(s.Names(), ","); got != "claude-main,wcodex" {
+	s := set(t, wagent+"\n[alias.claude-main]\nharness = \"claude\"\n")
+	if got := strings.Join(s.Names(), ","); got != "claude-main,wagent" {
 		t.Fatalf("got %q", got)
 	}
 }

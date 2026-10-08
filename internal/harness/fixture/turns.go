@@ -66,7 +66,7 @@ func (b *backend) handle(l *link, frame Frame) {
 }
 
 // turnStarted notes the turn's start on the boot clock and captures its read
-// boundary, as Codex's turn start does. Answered only once noted, so a mark
+// boundary, as a harness's turn start does. Answered only once noted, so a mark
 // the program makes after this answer falls inside the turn.
 func (b *backend) turnStarted(l *link, frame Frame) Frame {
 	if !b.liveOn(l, TurnBoundary) {
