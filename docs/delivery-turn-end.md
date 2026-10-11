@@ -2,7 +2,7 @@
 
 Split from [delivery.md](delivery.md) by subject on September 27, 2026: that document
 carries how a message is sent, queued and read; this one carries what happens once the
-reader's turn ends — how `turn-ended` turns it into a report, how a report notes that
+reader's turn ends — how it becomes a report, how a report notes that
 the reader's conversation changed underneath it, and where the turn ends that are not an
 ordinary report are described.
 
@@ -12,9 +12,13 @@ Callbacks with a nonempty `agent_id` belong to a nested agent and are ignored
 before touching turn journals or waits. `agent_type` alone
 does not imply nesting: a root session can select an agent profile.
 
-A hook runs `rewake turn-ended` with the last reply in its payload. The owned
-server backend sends completion events directly to the same internal reporting
-function, with explicit session epoch and thread identity. Under the mailbox lock, for
+The harness's adapter hands each turn's end to its wrapper, which passes it to the
+internal reporting function (`ReportCompletion`, or `ConfirmCompletion` for an end the
+adapter can hold open, in `internal/cli/completion.go`) with explicit session epoch,
+thread identity and the read boundary it captured. Until S9, October 11, 2026, Claude
+Code's Stop and StopFailure hooks ran the hidden `rewake turn-ended` with the last
+reply in their payload; that path left with the hooks, and Claude Code reports no turn
+end in this build. Under the mailbox lock, for
 every eligible run in `awaiting/<own epoch>/` it leaves a `finished` message whose text
 is that reply, and whose `inReplyTo` lists the messages read from that run since its
 last report, addressed to that run — not to whoever holds the name now. The rules this
@@ -29,7 +33,7 @@ boundary, a position on the run's read clock (`internal/inbox/read_boundary.go`)
 was read or kept at or below it is this end's, and a task read or an answer kept above
 it belongs to a later end, however late a retry comes. An end that names an event and
 carries no boundary reports nothing, on any attempt, and its waits stay owed. An end
-heard once — a hook that names no event — has no retry, and its one attempt under the
+heard once — one that names no event — has no retry, and its one attempt under the
 lock is its scope. The pending mark that makes the end interim is found in the turn's
 window: from the later of the turn's start and the latest earlier end of the run a
 journal records (`TurnWindowStart`), to its end. No end removes a mark: marks stay for
@@ -93,17 +97,15 @@ The fallback target is also fixed before publication, never selected again on re
 
 The report's id is derived from the wait — the reporting run, the waiting run,
 when the wait began, and its message ids — and a report whose id is already in the recipient's
-mailbox, in any stage, is not written again. A hook that died between writing
+mailbox, in any stage, is not written again. An end cut off between writing
 and forgetting therefore costs nothing at the next turn: its retry, or whoever completes
 its journal, forgets the same wait. A read retried after its last step failed does not record the
 wait a second time: the `read` status, written after the wait, says it is a
-retry. A payload that does not
-arrive within three seconds is treated as no payload. Their wrappers announce it:
+retry. Their wrappers announce it:
 `Rewake: cx finished, 1 new message`.
 
-The hook only records; waking is the recipient wrapper's job, through the same
-notice as any message. A hook cannot wake anything out of deep idle, and it
-runs while its own session is still awake anyway.
+The turn end only records; waking is the recipient wrapper's job, through the same
+notice as any message.
 
 Two rules keep this from turning into a loop:
 
@@ -117,22 +119,19 @@ earlier version spared it by treating any message to a waiting run as the
 answer, and lost the report whenever that message was a new request or a note
 sent mid-turn.
 
-`turn-ended` is hidden from the guide and never fails loudly: it runs inside the
-harness's own machinery, where an error is noise at best.
-
-
 ### Reports after a thread change
 
-Both harnesses can change conversations inside one wrapper run: Codex with `/new`,
-Claude Code with `/clear` or `/resume`. Before an owed message is made readable, the
-wrapper records the selected thread in `inbox/<name>/threads/<message id>` under the
-mailbox lock — Codex's from its server, Claude Code's the conversation its telemetry
-collector heard last ([delivery-adapters.md](delivery-adapters.md#claude-code-adapter)).
-On Codex the server call uses that same thread. The context survives reads and status rewrites, and is retained
+A harness can change conversations inside one wrapper run, as a person's `/new` or
+`/clear` does. Before an owed message is made readable, the wrapper records the selected
+thread in `inbox/<name>/threads/<message id>` under the mailbox lock, as its adapter
+names it (a `ThreadSource`, `internal/harness/thread.go`); an adapter that names none
+records nothing. Claude Code named its conversation through its hooks until S9,
+October 11, 2026, and names none in this build
+([delivery-adapters.md](delivery-adapters.md#claude-code-adapter)). The context survives reads and status rewrites, and is retained
 while the message is queued, unread or included in an unsettled wait.
 
-At the end of a turn the current thread comes from the harness: Codex's completion
-carries it through the gateway, and Claude Code's Stop hook names it as `session_id`.
+At the end of a turn the current thread comes from the harness, in the completion its
+adapter hands the wrapper.
 If any known delivery thread in the wait's message ids differs, the report carries
 `threadChanged: true`. Otherwise the field is omitted, including when either identity
 is unavailable. This is an advisory comparison, not a change to report routing

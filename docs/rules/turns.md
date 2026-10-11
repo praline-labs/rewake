@@ -33,14 +33,14 @@ that they are checked like the rest ([stage3-tests.md](../v2/stage3-tests.md#how
   - `test/workflow/pending_report_test.go` `TestAPendingTurnEndThatSettlesFails`
   - `test/workflow/pending_report_test.go` `TestAPendingTurnEndWithoutItsTextFails`
   - `internal/cli/turn_hold_test.go` `TestAStopAfterAHoldCarriesTheHeldAnswer`
-  - `internal/cli/turn_hold_test.go` `TestAnUnmarkedEndAfterAnInterimOneIsHeldOnce` — the Stop hook's case, goes in S9
-  - `internal/cli/turn_hold_test.go` `TestAContinuationThatMarksPendingKeepsTheTaskOwed` — the Stop hook's case, goes in S9
-  - `internal/cli/turn_hold_test.go` `TestAFailureAfterAHoldCarriesTheHeldAnswer` — the Stop hook's case, goes in S9
-  - `internal/cli/turn_hold_test.go` `TestAnAnswerHeldAndNeverContinuedGoesWithTheNextEnd` — the Stop hook's case, goes in S9
-  - `internal/cli/turn_hold_test.go` `TestATurnEndIsHeldOnlyAfterAnInterimOne` — the Stop hook's case, goes in S9
-  - `test/workflow/pending_confirm_test.go` `TestPendingConfirm` — on the fixture column since S5; its Claude Code case goes in S9
-  - `test/workflow/pending_confirm_test.go` `TestAnUnconfirmedPendingFails` — on the fixture column since S5; its Claude Code case goes in S9
-  - `test/workflow/pending_confirm_test.go` `TestAConfirmationThatDropsTheAnswerFails` — on the fixture column since S5; its Claude Code case goes in S9
+  - `internal/cli/turn_hold_test.go` `TestAnUnmarkedEndAfterAnInterimOneIsHeldOnce` — a holdable end handed to the core since S9
+  - `internal/cli/turn_hold_test.go` `TestAContinuationThatMarksPendingKeepsTheTaskOwed` — a holdable end handed to the core since S9
+  - `internal/cli/turn_hold_test.go` `TestAFailureAfterAHoldCarriesTheHeldAnswer` — a holdable end handed to the core since S9
+  - `internal/cli/turn_hold_test.go` `TestAnAnswerHeldAndNeverContinuedGoesWithTheNextEnd` — a holdable end handed to the core since S9
+  - `internal/cli/turn_hold_test.go` `TestATurnEndIsHeldOnlyAfterAnInterimOne` — a holdable end handed to the core since S9
+  - `test/workflow/pending_confirm_test.go` `TestPendingConfirm` — on the fixture column since S5, the only one since S9
+  - `test/workflow/pending_confirm_test.go` `TestAnUnconfirmedPendingFails` — on the fixture column since S5, the only one since S9
+  - `test/workflow/pending_confirm_test.go` `TestAConfirmationThatDropsTheAnswerFails` — on the fixture column since S5, the only one since S9
   - `internal/harness/fixture/turns_test.go` `TestAnEndIsConfirmedWhenItCanBeHeld`
   - `internal/cli/turn_confirm_test.go` `TestAConfirmedEndAfterAnInterimOneIsHeldOnce`
   - `internal/cli/turn_confirm_test.go` `TestAConfirmedContinuationThatMarksPendingKeepsTheTaskOwed`
@@ -75,8 +75,8 @@ that they are checked like the rest ([stage3-tests.md](../v2/stage3-tests.md#how
   - `internal/cli/error_report_test.go` `TestQuestionsReturnAnErrorOutcome`
   - `test/workflow/stopped_routing_test.go` `TestStoppedRouting`
   - `test/workflow/stopped_routing_test.go` `TestAStoppedSentToMainFails`
-  - `internal/cli/error_report_test.go` `TestFailedTurnsReachEveryWaitingSender` — its hook leg goes in S9
-  - `internal/cli/error_report_test.go` `TestUnclaimedFailuresReachMainAndMainKeepsItsOwn` — the hook's case, goes in S9
+  - `internal/cli/error_report_test.go` `TestFailedTurnsReachEveryWaitingSender` — a boundary end handed to the core since S9
+  - `internal/cli/error_report_test.go` `TestUnclaimedFailuresReachMainAndMainKeepsItsOwn` — a boundary end handed to the core since S9
   - `internal/cli/neutral_end_test.go` `TestNeutralFailedEndsReachEveryWaitingSender`
   - `internal/cli/neutral_end_test.go` `TestNeutralEndsWithoutTheirScopeReportNothing`
   - `internal/cli/neutral_end_test.go` `TestNeutralUnclaimedFailuresReachMainAndMainKeepsItsOwn`

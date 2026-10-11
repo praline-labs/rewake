@@ -232,7 +232,7 @@ nothing lifts a stop without returning evidence.
   - `internal/inbox/journal_test.go` `TestAnAbandonedJournalWriteIsNotAJournal`
   - `internal/inbox/held_end_test.go` `TestAHeldEndRaisesTheClockToItsPosition`
   - `internal/cli/turn_confirm_repeat_test.go` `TestAHoldCutByACrashIsHeldOnceWhenConfirmedAgain`
-  - `internal/cli/turn_test.go` `TestTwoTurnEndsAtOnceReportOnce` — the hook's case, goes in S9
+  - `internal/cli/turn_test.go` `TestTwoTurnEndsAtOnceReportOnce` — a boundary end handed to the core since S9
   - `internal/cli/neutral_end_test.go` `TestNeutralEndsWithDistinctIDsReportTwice`
   - `internal/cli/neutral_end_test.go` `TestNeutralStoppedThenFinishedEndsOfOneTurnReportTwice`
   - `internal/cli/neutral_end_test.go` `TestNeutralTwoEndsAtOnceReportOnce`

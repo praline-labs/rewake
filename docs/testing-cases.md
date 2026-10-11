@@ -14,35 +14,43 @@ S8, October 8, 2026; they are kept with its code in
 review brought the neutral part of three of them back on the gate column:
 `fixture-worktree`, `fixture-grant-forgery` and `fixture-grant-dir`, below.
 
+## The retired Claude Code column
+
+The Claude Code column and its cases — `claude-telemetry`, `claude-interrupted`,
+`claude-steered`, `claude-inbound`, `claude-grant-dir`, `claude-grant-resume` and
+`claude-worktree`, with their controls, and the column's share of every case run in all
+columns — retired in S9, October 11, 2026, when Claude Code's hooks, plugin and
+telemetry left; the column returns with stage 4, when Claude Code gets a turn boundary
+again. Their code is in the history at `98acc3b` (`test/workflow/claude*_test.go`), and
+how they ran is in [testing-plugin.md](archive-1.x/testing-plugin.md) and the S9 entry
+of the roadmap. What they held of the code that stays is held now by the fixture's cases
+— `fixture-steered`, `thread-changed` and `stopped-routing` below took the neutral part
+of `claude-steered`, `thread-changed` and `claude-interrupted` — and, for the code only
+Claude Code runs, by unit tests, each killing the column's mutant of it:
+
+| Retired mutant | Kept code | The unit test that kills it |
+|---|---|---|
+| `ungated` | `internal/inbox/serve.go` | `internal/inbox` `TestTheFirstNoticeWaitsForTheOpening` |
+| `expiry-unannounced` | `internal/inbox/held.go` | `internal/inbox` `TestAnExpiredTaskIsFailedAndItsSenderTold` |
+| `held-as-delivered` | `internal/harness/claude/receipt.go` | `internal/harness/claude` `TestLaneHeldThenReleased`, `TestParseReceipt` |
+| `refusal-as-delivered` | `internal/harness/claude/receipt.go` | `internal/harness/claude` `TestLaneRefusalFails`, `TestParseReceipt` |
+| `late-word-dropped` | `internal/harness/claude/lane.go` | `internal/harness/claude` `TestLaneLateWordReachesTheServer` |
+| `claude-grant-unshielded` | `internal/grant/rules.go` | `internal/grant` `TestAShieldedDirectoryIsGrantedOnlyByName` |
+| `claude-resume-not-given` | `internal/wrap/wrap.go` | `internal/wrap` `TestAResumedLaunchStartsTheHarnessWithTheGrantsConfirmedAgain` |
+| `claude-resume-closed-held` | `internal/wrap/grants.go` | `internal/wrap` `TestMainsAuthorityAsksTheMailboxWhetherATaskIsOpen` |
+| `claude-worktree-parent` | `internal/harness/claude/worktree.go` | `internal/harness/claude` `TestALaunchWorksInTheDirectoryItWasStartedIn` |
+
+The other mutants of the column broke code that left with it: the plugin's module, the
+telemetry collector and tap, the permission hook and the grant keeper. The gap until
+stage 4: no workflow case runs Claude Code's inbound lane — its gate, its receipts, its
+late word — end to end against a session; the unit tests above hold each link, and the
+live check of S9 woke a Claude Code main through it.
+
 ## Claude Code telemetry budgets
 
-`claude-telemetry` runs on the Claude Code column only, with a main and a worker: the
-fixture plays the worker's hooks and status line through `/bin/sh -c` with the payloads
-seen live, including their conversation fields, and the case reads the result from the
-main's side — its `rewake list`, its header on a message from the worker, and the
-compaction notice its wrapper sends. The worker tells the main only once its wrapper has
-published it idle — the header is drawn from that publication, a quarter second apart,
-and a main whose first notice waited for its status line once read the worker's message
-inside that gap. A listing the main's fixture could not finish in five seconds is
-recorded and fails the observations that needed it. The worker runs rewake's plugin
-under node with a 150K `CLAUDE_CODE_AUTO_COMPACT_WINDOW` in its settings, under the
-status line's 200K, so both must show 33% of 150K; without node it is unjudged. Accepted
-September 24, 2026: no case plays a plugin-less session end to end; its model window and
-`interruptions unheard` header rest on unit tests and claude-interrupted's `unobserved`.
-The case also times the commands, cold each time, because a telemetry hook sits in front
-of every prompt. Its four controls are mutants, and each names every observation it must
-break and requires all the others to hold, which stands in for a crosswise run: a mutant
-that broke everything would not pass as the control of one thing.
-
-Measured on the development machine, September 23, 2026, 40 runs each: a telemetry hook
-(shell plus a cold `rewake observe` sending one datagram) median 5.4 ms, p95 6.7 ms, and
-on UserPromptSubmit, which also records the turn's start on disk, median 5.1 ms, p95 5.9
-ms against the same budget; the
-tap in front of a one-line `sed` status line added a median of 4.8 ms, p95 6.8 ms, to
-that line's own 2.6 ms. The hooks run in the background (`"async": true`), so the agent
-does not wait even for that. The case's budgets are a median of 20 ms and a p95 of 50 ms
-for a hook, and a median of 20 ms added by the tap: several times the measurement, so
-they catch a wait, a lock or a heavy start rather than a busy machine.
+Retired with the Claude Code column in S9, October 11, 2026, with the telemetry they
+measured: the budgets, their measurement and their controls are in
+[claude-telemetry.md](archive-1.x/claude-telemetry.md) and in the history at `98acc3b`.
 
 ## Launch, reports and what a main waits on
 
@@ -60,30 +68,25 @@ worker's awaiting record must still be there.
 A third session then sends the worker a task of its own, and that turn end — with no
 mark — must be the `finished` report settling the first task. Its three mutants, each in
 every column, ignore the mark, let the interim turn end settle the task, and drop the
-turn's text from the interim message; like the
-telemetry controls, each names what it must break and requires the rest to hold. On the
-Claude Code column the unmarked turn end is now held once by the Stop hook first; the
-fixture's model then only ends the turn, so the report follows as before.
+turn's text from the interim message; each names
+what it must break and requires the rest to hold.
 
-`pending-confirm` runs in the Claude Code and fixture columns with four sessions. A worker ends its
-first turn about a task pending; woken by a second session's mail, its next turn ends
-with no mark, and the Stop hook must hold it exactly once, quoting the pending line. The
-fixture answers a block as the harness does — it asks its model again and runs the Stop
-hooks once more with `stop_hook_active: true` and the new answer alone — and its model,
-asked the first time, runs `rewake pending` with a second line: the sender must read an
-interim message with that line, then the held answer, then the continuation, and the
-task must stay owed. Woken by a third session, the worker ends unmarked again, is held
-once more about the second line, and only ends the turn: the report must be the held
-answer and then the continuation, and it must settle the task. Its two mutants never
-hold, and publish the continuation without the held answer (September 26, 2026). On the
-fixture column the worker's program asks the core through the adapter's `Confirm` before
-an end closes and goes on only with the reason it is given; the case and both controls
-run there too (October 7, 2026).
+`pending-confirm` runs in the fixture column with four sessions; the Claude Code column
+ran it through the Stop hook until S9. A worker ends its first turn about a task pending;
+woken by a second session's mail, its next turn ends with no mark, and rewake must hold
+it exactly once, quoting the pending line. The worker's program asks the core through
+the adapter's `Confirm` before an end closes and goes on only with the reason it is
+given; its model, asked the first time, runs `rewake pending` with a second line: the
+sender must read an interim message with that line, then the held answer, then the
+continuation, and the task must stay owed. Woken by a third session, the worker ends
+unmarked again, is held once more about the second line, and only ends the turn: the
+report must be the held answer and then the continuation, and it must settle the task.
+Its two mutants never hold, and publish the continuation without the held answer
+(September 26, 2026; on the fixture since October 7, 2026).
 
-`turn-reasons` runs in the fixture column only, with five sessions: the path it holds — a
+`turn-reasons` runs in the fixture column, with five sessions: the path it holds — a
 turn's outcome and text in the program's end frame, the adapter's neutral completion and
-the wrapper's confirmation — is the fixture's own, and the other columns hear their ends
-through their harness's events. A worker whose turns fail holds a task from main and one
+the wrapper's confirmation — is the fixture's own. A worker whose turns fail holds a task from main and one
 from a peer; each sender must read an `error` about its own task carrying the turn's
 reason, and a session that waits on nothing must receive nothing from it. A second
 worker's first turn is interrupted while it holds a task from main, which must read it
@@ -159,19 +162,11 @@ other, where `git worktree prune` would take every missing checkout's, is held b
 
 ## A worktree for a Claude Code launch
 
-`claude-worktree` runs on the Claude column and holds the adapter's part, where its
-launch works; `fixture-worktree` above holds the core's. A worker is launched from
-`src/nested` of a fresh repository with `--worktree=probe`, and the fixture writes the
-directory it started in. The checkout must be one of the source's HEAD on a new branch
-`probe`, and the session's record and the harness must work in its `src/nested`; the
-fixture refuses an option it does not know, so a `--worktree` passed on would end the
-launch. After a commit in the checkout and the worker's end, `finish` must land the
-commit in `main` with its hash and remove the checkout, its record and the branch. Its
-mutant, `claude-worktree-parent`, names the parent of the launch directory and must break
-only the first observation. A mutant that passed the flag on is not used: the launch it
-breaks exits 2, and a case whose process failed fails its cleanup whatever its
-observations say; the refusals of `-w`, `--tmux` and the continuations are unit tests in
-`internal/cli`.
+`claude-worktree` retired with the Claude Code column in S9, October 11, 2026. It held
+the adapter's part, where its launch works, and its mutant `claude-worktree-parent` is
+killed now by `TestALaunchWorksInTheDirectoryItWasStartedIn` in `internal/harness/claude`;
+the refusals of `-w`, `--tmux` and the continuations are unit tests there and in
+`internal/cli`. `fixture-worktree` above holds the core's part.
 
 ## A directory granted with a task
 
@@ -180,7 +175,7 @@ main and two fixture write workers. The fixture takes `--grant-dir` and a fixtur
 can grant; its adapter passes a letter's granted directories with the delivery, and its
 program records each letter that came with them. It applies nothing: waiting for an idle
 session, adding the directory and taking it out are the Permissions capability's,
-designed in stage 6, and on Claude Code its hooks hold them in `claude-grant-dir` below.
+designed in stage 6; Claude Code's hooks held them until S9.
 Main sends the first worker, which holds its first turn open, a task with `--grant-dir`
 on a directory in the user's cache: the program must be offered that directory with that
 letter alone, and a plain task steered into the same turn must offer none. Asked from the
@@ -218,48 +213,6 @@ registers only with a listener above it), deliver a grant without asking main's 
 (`grant-unconfirmed`, which breaks the three letters), and take an answer from any
 listener (`grant-any-listener`, which breaks the foreign answer alone).
 
-`claude-grant-dir` runs on the Claude Code column only, with a Claude Code main and write
-worker. The fixture calls tools when told to (`RW_SHIM_TOOLS`): each line `tool <Write|Read|Bash>
-<path>` in the mail it read is one call, made before the turn ends. It keeps its working
-directories — its own and those a hook added — and passes each call through the grant
-hooks as the harness was seen to in `acceptEdits` on 2.1.280: PreToolUse for the tools its
-matcher names, where deny ends the call and ask forces a PermissionRequest; a
-PermissionRequest for a write outside every working directory, suggesting its parent;
-allow applying `addDirectories` and `removeDirectories`, silence going to a person, who
-never answers. An answer outside that shape — an update beyond the session, a kind the
-hook does not make — is recorded as refused. Main grants a directory in the user's
-cache; the worker runs a command in it, writes in it, runs another command in it, writes
-its `.git/config` and a directory beside it: the first command goes to the person, the
-write runs and adds the directory, the second command then runs unasked, and the last
-two go to the person. After the report the next task writes in it, runs a command in it,
-reads `README` in the worker's own directory and writes in it again: denied, to the
-person, run with the directory removed, then to the person; main's `rewake list --json`
-must show it `revoked`. Its mutants never
-allow a write in a grant (`claude-grant-silent`, which breaks the giving and the taking
-back, the grant ending at the report with nothing added), let a grant reach its Git
-metadata (`claude-grant-unshielded`, which breaks the shielded writes alone), and never
-learn that a task was reported on (`claude-grant-kept`, which breaks the taking back
-alone). The decisions themselves, and the keeper's checks of who asks, are unit tests in
-`internal/harness/claude` and `internal/grantauth`.
-
-`claude-grant-resume` is a grant across a cold resume
-([grants-resume.md](grants-resume.md)), with a Claude Code main. The
-worker writes in the grant, marks its turn pending and is stopped; it is started again in
-the same conversation, reports, and is stopped and started once more. The Claude Code
-fixture takes `--resume <id>` and `--add-dir`: it keeps the conversation's id the resume
-names, starts with the given directories as working ones, says `resume` as the
-SessionStart source and records the launch among its turns. After the first resume the
-run must be launched with `--add-dir` for the directory and run a command in it unasked,
-the listing showing it granted. The resumed run's report must settle the task, and then the
-grant goes as any other: a write denied, the directory taken out, the listing `revoked`.
-After the second resume the run is launched with no directory. Its mutants give the
-harness no confirmed directory (`claude-resume-not-given`, which breaks the giving
-alone), keep it as one the hook never added (`claude-resume-not-held`, which breaks the
-taking back alone), and have main hold a grant after its report
-(`claude-resume-closed-held`, which breaks the resume after the report alone). Main's
-side of the confirmation, the hints and the adopted waits are unit tests in
-`internal/grantauth`, `internal/grant`, `internal/wrap` and `internal/inbox`.
-
 ## Actions on a sent message
 
 `withdraw-after-notice`, `edit-after-notice` and `addendum-owed` run in every column with a
@@ -274,8 +227,7 @@ old id replaced by the new, the new text only, a notice that shows `Replaces <sh
 `--owed` with the addendum under its task, then one report settling both. What a
 notice showed is read from the worker's own record of its deliveries, on every column.
 `withdraw-mid-turn` runs the withdrawal on every column that has a turn in progress to
-deliver into — the fixture's; the Claude Code column records it unsupported —
-with the worker's first turn held open (`RW_SHIM_HOLD_TURN`; the read gate alone leaves no turn open to
+deliver into — the fixture's — with the worker's first turn held open (`RW_SHIM_HOLD_TURN`; the read gate alone leaves no turn open to
 steer into): the recall must be steered into the turn the task started, as a member
 whose `recalls` names the task. Their mutants run on the gate column; recall-unnamed
 drops that member field from the gate's adapter; recall-sender-first
@@ -284,46 +236,57 @@ replacement previewed like any letter. The one that leaves the task readable als
 the withdrawn status: the reader shows a message with that status as its tombstone, so a
 tombstone written in the wrong place alone no longer reaches the worker as the task.
 
-## Conversations and the inbound gate on Claude Code
+## Conversations
 
-`thread-changed` runs on the Claude Code column only, with two workers and a sender
-for each. The fixture names one conversation, the session's own, in every hook and in its
-status line, and on a switch plays `/clear` once its first task has arrived: a
-SessionStart with source `clear` and a new `session_id`, which every later event then
-carries. The report from that worker must carry `threadChanged` and still arrive once
-and settle its task; the report from the worker that stayed where its task landed must
-carry none. Its three mutants, like the telemetry controls, name what they break and
-require the rest to hold: a wrapper that never pins the delivery and a turn end that
-ignores the Stop hook's `session_id` must each lose the mark, and a comparison that
-takes every known conversation for a change must mark the worker that stayed. Before
-this case the fixture's status line named a conversation of its own while its hooks
-named the session, which a tracker would have read as a `/clear` in every case.
+`thread-changed` runs on the fixture column with two workers and a sender for each; it
+ran on the Claude Code column until S9, through the hooks' `session_id`. One worker's
+program starts a new conversation once its task has arrived, as a person's `/clear`
+does, tells its adapter, and works the task there; the other works its task where it
+landed. The report from the first must carry `threadChanged` and still arrive once and
+settle its task; the report from the worker that stayed must carry none. Its three
+mutants name what they break and require the rest to hold: a wrapper that never pins
+the delivery and a turn end that drops the conversation it ended in
+(`end-thread-ignored`, in place of the column's `stop-thread-ignored`) must each lose
+the mark, and a comparison that takes every known conversation for a change must mark
+the worker that stayed.
 
-`claude-inbound` runs on the Claude Code column only: no other harness has an inbound
-gate. The fixture plays the gate as the binary does — it holds whatever
-arrives in the first 600 ms after its socket listens, longer than the real two hundred so
-a notice that does not wait is caught every time, and it answers held, released, expired
-or refused lines with receipts on the reply socket, after checking that socket is in its
-own directory and listened on by the process that wrote the line. It refuses a line that
-does not ask for receipts, which the real one would merely not answer, and in one mode
-reports a hold 900 ms late, past rewake's 300 ms wait for a first word, since nothing
-bounds how soon the real one speaks under load. Five workers each get one task from a
-sender of their own: one sent as soon as the socket appears, which must go out once the
-session is up and not be held; one held and released, reported delivered after the hold
-and then worked; one held until it expires, reported `held` with exit 3, its sender sent a
-note that it never arrived, and the task failed, unread and not owed; one refused,
-reported failed with exit 1 and never worked; one held late, whose task must end failed
-and unworked with its sender told, whatever `send` said first. Its six mutants deliver
-without waiting, wait for SessionStart instead of the status line, read a held receipt as
-a delivery, settle an expiry without telling the sender, read a refusal as a delivery,
-and drop a word that comes after the window; each names what it must break and requires
-the rest to hold.
+`claude-inbound`, the inbound gate on Claude Code, retired with its column in S9; its
+mutants on the code that stays are killed by the unit tests in the table at the top.
 
-## The plugin's cases
+## A stop, and steering a session
 
-The cases that run rewake's function-hooks plugin under node — `claude-interrupted`,
-`stopped-routing` and `claude-steered` — and what the fixture's plugin host plays for
-them are in [testing-plugin.md](testing-plugin.md).
+`stopped-routing` runs on every column. The fixture harness's program takes the switch
+`RW_SHIM_INTERRUPT_FIRST_TURN` and ends its first turn interrupted. A main, running its
+own commands, sends one worker a task and another a `--notify`, which owes nothing; both
+workers and main have their first turn interrupted. main must read `stopped` about the
+task and list it as `stopped` in `--awaited`; the notified worker's stop, once its
+receipt shows it was acted on, must leave nothing in main's inbox, read or not, and the
+worker must read `idle`; main's own stop must leave nothing in its own inbox, unread
+mail included, where a report main gives itself lies unannounced. Its mutant,
+stopped-to-main, restores the rule the owner removed on September 23, 2026 — a stop
+nobody waits on goes to main — and must break the last two observations and leave the
+first.
+
+`fixture-steered` is `rewake compact` and `rewake interrupt` on the gate column, where
+the fixture is the one Steerable harness from S9 until stage 4. A main, running its own
+commands, steers three workers, and each request travels the command, the control
+directory, the program serving it, the session carrying it out, and back. calm works its
+task to the end and is idle: a compaction with a focus must answer `started` while it
+still runs, before the telemetry counts it; its end must reach main as a notify with the
+token counts and the compaction's number, and main, which asked, must get no notice of
+it besides; an interrupt must be refused as `no turn running`; calm killed in the middle
+of a second compaction must still leave main a letter, from its own wrapper's record.
+busy is held in its first turn: a compaction must be refused as `in a turn` with the turn
+going on; an interrupt must end it, and main must read `stopped` naming itself, as its
+`--awaited` does. bare serves no control: every request must be `not answering`. A
+worker asking is a wrong call. Its six mutants each break one link of the core's path and
+name what they break: a request nobody took reported as failed (`silent-not-answering`),
+any role steering (`any-role-steers`), main noticed of its own compaction
+(`own-compaction-announced`), a letter without the count (`letter-uncounted`), a letter
+lost with its worker (`orphan-unlettered`), and every stop put down to a person
+(`stop-by-a-person`). The eight mutants of `claude-steered` that broke the plugin's
+module left with it. What it does not prove: that a real harness carries these calls out
+as the program does.
 
 ## Every control
 
@@ -339,19 +302,14 @@ switches have no single form in the code to find them by, and the row is kept by
 | Scenario | Mutants | Fixture switches |
 |---|---|---|
 | batch-arrival | `preview`, `window`, `unwindowed`, `replay`, `peek-consumes` | — |
-| task-report | `no-stop-hook`, `turn-ended-ignores-stop`, `settles-nothing` | `wrong-report`, `read-fails`, `failure-before-report`, `early-exit` |
+| task-report | `settles-nothing` | `wrong-report`, `read-fails`, `failure-before-report`, `early-exit` |
 | mid-turn | `wait-for-idle` | `late`, `failed-operation` |
-| claude-telemetry | `tap-without-owner`, `uncounted-compaction`, `silent-compaction`, `model-window` | — |
 | pending-report | `pending-ignored`, `pending-settles`, `pending-text-dropped` | — |
 | pending-confirm | `pending-unconfirmed`, `confirm-answer-dropped` | — |
-| claude-inbound | `ungated`, `gate-on-session-start`, `held-as-delivered`, `expiry-unannounced`, `refusal-as-delivered`, `late-word-dropped` | — |
 | owed-reread | `owed-empty` | — |
-| thread-changed | `delivery-unpinned`, `stop-thread-ignored`, `thread-always-changed` | — |
+| thread-changed | `delivery-unpinned`, `end-thread-ignored`, `thread-always-changed` | — |
 | awaited-view | `awaited-interim-ignored`, `awaited-never-settled` | — |
-| claude-interrupted | `interrupt-unpublished`, `every-end-stopped`, `plugin-not-passed`, `stop-not-heard` | — |
-| claude-steered | `compact-not-run`, `in-turn-unmapped`, `interrupter-unnamed`, `line-repeated`, `idle-interrupt-done`, `silent-not-answering`, `any-role-steers`, `own-compaction-announced`, `letter-uncounted`, `waits-for-the-end`, `ended-uncounted`, `asker-untold`, `orphan-unlettered`, `stop-by-a-person` | — |
-| claude-grant-dir | `claude-grant-silent`, `claude-grant-unshielded`, `claude-grant-kept` | `RW_SHIM_TOOLS` |
-| claude-grant-resume | `claude-resume-not-given`, `claude-resume-not-held`, `claude-resume-closed-held` | `RW_SHIM_TOOLS` |
+| fixture-steered | `silent-not-answering`, `any-role-steers`, `own-compaction-announced`, `letter-uncounted`, `orphan-unlettered`, `stop-by-a-person` | — |
 | stopped-routing | `stopped-to-main` | — |
 | turn-reasons | `reason-dropped`, `failure-completed`, `stop-completed` | — |
 | tool-inbox | `tool-inbox-unshown`, `tool-read-unacknowledged` | — |
@@ -365,7 +323,6 @@ switches have no single form in the code to find them by, and the row is kept by
 | withdraw-mid-turn | `recall-unnamed` | — |
 | edit-after-notice | `edit-keeps-old-text`, `edit-unlinked`, `replacement-unmarked` | — |
 | addendum-owed | `owed-flat` | — |
-| claude-worktree | `claude-worktree-parent` | — |
 | fixture-worktree | `worktree-not-entered`, `worktree-running-ignored`, `worktree-visitor-ignored`, `worktree-git-kept`, `worktree-ignored-unseen`, `worktree-branch-trusted`, `worktree-moved-unrefused`, `worktree-detached`, `worktree-land-merges`, `worktree-finish-unchecked`, `worktree-finish-branch-kept` | — |
 | fixture-grant-dir | `grant-not-rechecked`, `grant-refusal-untold`, `grant-unregistered`, `grant-held-after-report` | `RW_SHIM_HOLD_RESERVE` |
 | fixture-grant-forgery | `grant-from-anywhere`, `grant-unconfirmed`, `grant-any-listener` | — |

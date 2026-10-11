@@ -3,9 +3,10 @@
 `rewake send <worker> --grant-dir <dir> "task"` lets a worker write a directory outside
 its workspace for one task. It is `--grant-git`'s sibling ([git-grants.md](git-grants.md)):
 main decides per task, rewake carries the decision with the message, and the harness
-adapter applies it when the task is delivered. Codex takes a grant as a workspace root
-of its sandbox; Claude Code, which has no sandbox, takes it through its permission hooks
-and is spared the prompts, not fenced in ([Claude Code](#claude-code)). Main's wrapper confirms every grant at delivery, so a worker inside the
+adapter applies it when the task is delivered. Codex took a grant as a workspace root
+of its sandbox; Claude Code took it through its permission hooks until S9, October 11,
+2026, and takes no task in this build ([Claude Code](#claude-code)); in this build only
+the fixture harness receives one, for the core's part of it. Main's wrapper confirms every grant at delivery, so a worker inside the
 Codex sandbox cannot grant itself one ([who can grant](#who-can-grant)).
 
 ## What the owner decided
@@ -137,9 +138,9 @@ Matched exactly, and granted only with `--grant-dir-broad <the same path>`:
 - each directory directly in `$HOME`;
 - a directory with `.git`, `.claude`, `.codex` or `.agents` anywhere in its path, in
   any case. A checkout keeps its metadata there and a harness its configuration, and
-  what reads them next runs what was written. Inside a grant Claude Code keeps them with
-  the person ([grants-claude.md](grants-claude.md)); granted as the root, or below one,
-  nothing inside would, so the grant names them. The metadata `--grant-git` adds beside
+  what reads them next runs what was written. Inside a grant Claude Code's hook kept them
+  with the person in 1.x ([grants-claude.md](archive-1.x/grants-claude.md)); granted as the
+  root, or below one, nothing inside would, so the grant names them. The metadata `--grant-git` adds beside
   a granted checkout is what that flag is for, and passes the hard tier alone;
 - each `~/.config/<app>` with a `credentials` file directly inside. Writing there does
   not raise an agent's own powers, so the owner chose to confirm it rather than refuse;
@@ -296,19 +297,24 @@ A cold resume starts a new run; what it keeps of a grant is in
 
 ## Claude Code
 
-Claude Code has no sandbox, so a grant goes through its permission hooks. Rewake's
-`grant-hook` asks the worker's wrapper, which keeps the confirmed grants in memory; the
-first file-tool write inside a grant adds its root as a working directory, `.git` and the
-harness directories inside it stay with the person, and after the report a forced
-question takes the root out. It spares the worker prompts and draws no line. How each
-step works, and in which permission modes, is in [grants-claude.md](grants-claude.md).
+Claude Code has no sandbox, so in 1.x a grant went through its permission hooks: rewake's
+`grant-hook` asked the worker's wrapper, which kept the confirmed grants in memory; the
+first file-tool write inside a grant added its root as a working directory, `.git` and
+the harness directories inside it stayed with the person, and after the report a forced
+question took the root out ([grants-claude.md](archive-1.x/grants-claude.md)). The hooks,
+the keeper in the worker's wrapper and the hidden command left in S9, October 11, 2026.
+A grant rides only on a task, and a task to a Claude Code session is refused in this
+build; stage 6 designs how a grant reaches Claude Code again.
 
 ## After a cold resume
 
 A resumed run asks main's wrapper to confirm again each grant the journal copies name
-for its conversation; main hands one over while its task is open. Claude Code is started
-with the directory; Codex has the roots journaled again, and one nobody confirms taken
-out. A main that has ended restores nothing ([grants-resume.md](grants-resume.md)).
+for its conversation; main hands one over while its task is open, and the harness is
+started with the directory. Code only tests reach since S9, October 11, 2026: no adapter
+of this build both resumes a conversation and takes directory grants, and stage 6 decides
+how a resumed run's grants are kept (`internal/wrap/grant_resume.go`). In 1.x Claude Code
+was started with the directory and Codex had the roots journaled again, one nobody
+confirms taken out. A main that has ended restores nothing ([grants-resume.md](grants-resume.md)).
 
 ## At launch
 

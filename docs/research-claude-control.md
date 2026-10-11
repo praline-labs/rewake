@@ -96,7 +96,7 @@ exclude ([project.md](project.md#the-philosophy)).
 
 Probed on September 23, 2026, Claude Code 2.1.280, same setup **[live]**, with the
 event list read in the binary **[source]**. rewake builds its interruption signal on
-this ([claude-plugin.md](claude-plugin.md)).
+this ([claude-plugin.md](archive-1.x/claude-plugin.md)).
 
 - **Enabling it** takes `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` and `--plugin-dir <dir>`
   (or `CLAUDE_CODE_PLUGIN_DIRS`) for one launch. It loads only in a trusted workspace,
@@ -146,8 +146,8 @@ this ([claude-plugin.md](claude-plugin.md)).
   is [below](#built-in-plugins-and-what-the-switch-adds).
 - **After a compaction** the context counts are zero until the next response, as the
   status line's are ([research.md](research.md#telemetry-sources-the-status-line-and-hooks)).
-  Not checked for `session.measure` itself; rewake reads zero tokens as unknown either
-  way.
+  Not checked for `session.measure` itself; rewake read zero tokens as unknown either
+  way until its telemetry left in S9, October 11, 2026.
 
 ### Built-in plugins and what the switch adds
 
@@ -335,7 +335,8 @@ repository. rewake's confirmation after an interim turn end rests on it
 - Blocks in a row are capped: eight are honored in one turn; after the ninth the harness
   ends the turn and calls no Stop hook again.
 - An Esc while the model answers after a block runs neither Stop nor StopFailure; only
-  rewake's plugin hears the end, as `turn.complete` with reason `aborted`.
+  rewake's plugin heard the end, as `turn.complete` with reason `aborted` (the plugin
+  left in S9, October 11, 2026).
 
 ## Commands from outside
 

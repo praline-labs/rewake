@@ -45,8 +45,8 @@ in is described [there](design.md#state-directory).
 - A session is alive as long as both the servicing process and the harness are
   alive. A listing or a lookup deletes a dead record it reads, but only when the
   record's name lock is free at that moment (`LOCK_NB`): both are reads and never wait
-  on a lock — a lookup runs inside `turn-ended`, the foreground Stop hook, where a wait
-  would stall the end of a turn. Whoever holds the lock is the run leaving or another
+  on a lock — a lookup runs inside a turn's end, where a wait would stall it (until S9,
+  October 11, 2026, inside `turn-ended`, Claude Code's foreground Stop hook). Whoever holds the lock is the run leaving or another
   reader cleaning up, so a record left now goes with the next read, and a dead record
   is reported as no session either way. Publishing still takes the lock and waits,
   replacing a dead record under it. Decided September 23, 2026 over a bounded wait,

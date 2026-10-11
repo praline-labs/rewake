@@ -50,12 +50,16 @@ not answer the task (HF-10, [delivery-adapters.md](delivery-adapters.md#claude-c
 
 Mitigated, not removed, since September 23, 2026: rewake's function-hooks plugin hears
 the interruption, and the sender reads `stopped` for the task at once and waits for the
-person, as on Codex ([claude-plugin.md](claude-plugin.md)). The task stays owed, and the
+person, as on Codex ([claude-plugin.md](archive-1.x/claude-plugin.md)). The task stays owed, and the
 next turn end that finishes still settles it — the owner's decision, the same on both
 harnesses. The remaining risk is a person who, after Esc, turns the session to unrelated
 work: that work's `finished` then settles the interrupted task. Where the plugin does
 not load — `--bare`, an untrusted workspace, another harness version — the session's
 telemetry reads `interruptions: unobserved` and the defect is as before.
+
+Since S9, October 11, 2026, the plugin, the Stop hook and the telemetry are gone, and no
+task reaches a Claude Code session: a role that owes reports refuses to launch on it.
+The trap waits for stage 4, where Claude Code's turn boundary meets it again.
 
 *September 23, 2026.*
 
@@ -276,8 +280,9 @@ Now every line names the wrapper's reply socket, and a held line is reported `he
 (exit 3), then delivered or failed as the receipts come; a held task that expires
 sends its sender a note. A hold reported after rewake's 300 ms wait for a first word
 takes the delivery back, so `delivered` from `send` is final only for work the agent has
-read; a late failure sends the same note. The first notice to a new session waits for its status line,
-so the startup hold no longer applies. What stays: a hold is still a hold — the
+read; a late failure sends the same note. The first notice to a new session waits — for
+its status line until S9, October 11, 2026, for a fixed three seconds since the status
+line left — so the startup hold no longer applies. What stays: a hold is still a hold — the
 message waits for the person at the receiving session, and rewake does not release it.
 The mechanism is in [delivery-adapters.md](delivery-adapters.md#claude-code-adapter). Details: [research-launch.md](research-launch.md#claude-codes-cross-session-inbound-gate),
 [research.md](research.md#the-inbound-gate-on-rewakes-line).

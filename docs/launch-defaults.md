@@ -176,9 +176,7 @@ not from memory:
   around the key allowed, because the CLI trims it.
 
 Not consulted for these defaults, deliberately: the harnesses' own configuration files,
-and settings passed with `--settings` or a Codex profile. (The Claude Code status line
-is read from those files for another purpose, [in launch.md](launch.md#claude-code);
-nothing else of them is.) rewake neither reads nor edits a person's configuration, and cannot see into a file it was handed — so a model set
+and settings passed with `--settings` or a Codex profile. rewake neither reads nor edits a person's configuration, and cannot see into a file it was handed — so a model set
 there and a variable set for rewake would be two answers with no way to compare them.
 The variable wins, being the one set for rewake specifically. A Codex launch with a
 profile is refused outright before any of this, as are `--oss` and

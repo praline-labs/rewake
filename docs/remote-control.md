@@ -1,15 +1,24 @@
 # Remote control: `rewake compact` and `rewake interrupt`
 
 A main session acts on a running worker without a person at its keyboard: it compacts
-the worker's conversation, or interrupts the worker's turn. This is stage 2 of rewake's
-function-hooks plugin for Claude Code ([claude-plugin.md](claude-plugin.md) is stage 1,
-which only listens). What the harness offers for it is in
+the worker's conversation, or interrupts the worker's turn. It was built as stage 2 of
+rewake's function-hooks plugin for Claude Code ([claude-plugin.md](archive-1.x/claude-plugin.md)
+is stage 1, which only listened). What the harness offers for it is in
 [research-claude-actions.md](research-claude-actions.md)
 and, for Codex, [research-protocol.md](research-protocol.md#compaction-and-interrupt-on-request).
 
 Built on September 24, 2026 for Claude Code, with unit and module tests and a workflow
 case, and the same day for Codex (part B), where the wrapper serves the requests itself
 ([remote-control-codex.md](archive-1.x/remote-control-codex.md)).
+
+**No product harness serves it since S9, October 11, 2026.** The Codex side left in S8,
+and the Claude Code side — rewake's plugin module — left with the plugin in S9; stage 4
+gives Claude Code an adapter with its own control. Until then `rewake compact` and
+`rewake interrupt` refuse a Claude Code session with exit 2, saying it does not take
+them yet, and the fixture harness's program serves the run's control directory as the
+module did, so the commands, the directory and the letter keep their workflow case
+(`fixture-steered`, [testing-cases.md](testing-cases.md#a-stop-and-steering-a-session)).
+What follows about Claude Code is how the module served it in 1.x.
 
 **Accepted live** on September 24, 2026, on Claude Code 2.1.280 with the installed
 rewake built from `e65b865`, in the owner's sessions started through their launch
@@ -72,7 +81,7 @@ request, not the compaction's end:
 | `refused`, `compaction switched off` | 1 | the worker runs with compaction switched off |
 | `refused`, `nothing to compact` | 1 | the conversation is too short to compact: on Claude Code by the host's measure, on Codex one that has run no turn |
 | `refused`, `remote conversation` | 1 | the Claude Code session is a thin client, whose conversation lives on a remote session: compact that one |
-| `refused`, `not answering` | 1 | nothing took the request within 5 seconds: the plugin is not loaded, or the session is stalled — stopped, or its process frozen; on Codex, the wrapper is stalled |
+| `refused`, `not answering` | 1 | nothing took the request within 5 seconds: the served side is not running, or the session is stalled — stopped, or its process frozen |
 | `refused`, `cut short` | 1 | the command itself was interrupted before anything took the request; the request is withdrawn and nothing was done |
 | `refused`, `no control directory` | 1 | the session was started by an earlier rewake, or its wrapper could not make one: restart it |
 | `refused`, `withdrawn before it was taken` | 1 | the session took the request in the instant the command gave up, and did nothing |
@@ -103,7 +112,7 @@ the next holder of the name:
   lock                    flock of the asker; a second asker is refused, not queued
   request.json            {id, action, focus, from, conversation}, 0600, put in place by rename
   <id>.taken              written by the served side the moment it picks the request up
-  <id>.started            Claude Code: written by the collector when the compaction's PreCompact arrives
+  <id>.started            written once the compaction's start is seen; in 1.x by Claude Code's collector, when its PreCompact arrived
   <id>.result             {id, outcome, reason, detail, tokensBefore, tokensAfter}, written once
 ```
 
@@ -114,8 +123,8 @@ cannot be made the launch goes on without one, and every request to that run is 
 as `no control directory`. The id is 32 lowercase hex
 characters, and the served side refuses any other: it builds file names from it.
 
-The served side — rewake's module in a Claude Code session, the wrapper itself on Codex
-— can write files but not remove them, so the asker owns every removal
+The served side — in 1.x rewake's module in a Claude Code session, and in this build the
+fixture's program — can write files but not remove them, so the asker owns every removal
 (`internal/control`):
 
 1. Take the lock, and remove everything a dead asker or an expired request left.
@@ -159,87 +168,34 @@ before a pickup, `failed` after one. So a stalled target that resumes later find
 to carry out. The withdrawal waits for nothing, so it fits in the 1.5 s: a probe of the
 same day saw exit 1 in 53 ms with the request removed.
 
-The limits: pickup 5 seconds for both — the module polls four times a second — and
-outcome 10 seconds for both. A compaction is answered once it has started, which the
-served side waits up to 3 seconds to see; its end is waited for apart from the command,
-by the module or the wrapper, and reaches main as the letter. Until September 25, 2026
+The limits: pickup 5 seconds — the module polled four times a second — and outcome 10
+seconds. A compaction is answered once it has started, which the served side waits up
+to 3 seconds to see; its end is waited for apart from the command, by the served side,
+and reaches main as the letter. Until September 25, 2026
 the command waited up to 90 seconds for the end.
 
 ## On Claude Code
 
-The wrapper writes the directory's path into the module (`__REWAKE_CONTROL__`, empty
-without one). On `session.start` the module starts `$.clock.every(250, …)` once per
-load; each tick, unless the previous one is still acting, it asks `$.fs.exists` for the
-request — a `$.fs.read` of a missing file is logged by the host as an error — reads and
-checks it, skips an id this load has handled or that has a taken mark (a hot reload
-runs `session.start` again with an empty memory), writes the mark, checks the request is
-still in place, acts, and writes the result.
+Until S9, October 11, 2026, rewake's plugin module served the directory inside the
+session ([claude-plugin.md](archive-1.x/claude-plugin.md) has the module): the wrapper
+wrote the directory's path into it, and it polled for a request four times a second.
+A compaction called the host's `$.session.compact()`, with the host's own refusals
+mapped to `in a turn`, `compaction switched off`, `remote conversation` and `nothing
+to compact` (read in the 2.1.280 binary); the telemetry collector marked its start on
+`PreCompact` and counted its end on `PostCompact`, and the module told rewake who had
+asked so main's notice could be skipped. An interrupt aborted the turn the module had
+seen start, and its `turn.complete` with reason `aborted` carried the asker's name to
+the collector, which published the `stopped`. The module, the collector and the hooks
+they read left with S9; the 1.x text of this section is in the history at `98acc3b`.
 
-- **Compact** calls `$.session.compact()`, or `$.session.compact({ instructions })`
-  with a focus. The module does not check for a turn: the host refuses mid-turn by
-  itself, atomically, and its text becomes `in a turn`, as does "a turn is in flight",
-  its refusal while another compaction runs (seen live during a typed `/compact`), and
-  "an external turn is driving the conversation"; "switched off" becomes `compaction
-  switched off`; "a thin client's conversation lives on the remote session" becomes
-  `remote conversation`; "Not enough messages to compact" becomes `nothing to compact`;
-  anything else is `failed` with the host's text. The table holds every refusal the
-  host has before a compaction starts (read in the 2.1.280 binary), so a `failed` is an
-  error after the start — the summary's request, or applying it. Such a
-  refusal, when it comes before the start is seen, is the answer.
-- **When it has started.** The host's call resolves only at the compaction's end, and
-  the module does not see the hooks of its own compaction (below). The collector does:
-  when a `PreCompact` arrives while a main's word is waiting for its compaction, it
-  writes `<id>.started` into the control directory. The module races the call, a watch
-  for that file every 100 ms, and a bound of 3 seconds: the file answers `started`; the
-  call settling first answers `started` when it succeeded and with its refusal when it
-  failed; the bound answers `requested`. A too-short conversation is refused after
-  `PreCompact`, so it may be answered `started` and end in a refusal letter.
-- **Its end.** After writing the answer the module goes on waiting for the call, then
-  sends `compact.ended` with the request, the asker, the outcome and `tokensBefore` and
-  `tokensAfter` only — never the summary the host returns, since transcripts are not
-  read, and the detail cut to 400 bytes. A second request while it runs is refused as
-  `in a turn`: its word would take the first compaction's place. The compaction is
-  counted by the existing telemetry like any other (`completedCompactions`). A final
-  answer — a refusal, a failure — is sent as `compact.ended` too, once written, for a
-  command whose wait ended before it ([remote-control-letter.md](remote-control-letter.md)).
-- **Who asked for a compaction.** Before it asks the host, while it knows no turn is
-  running, the module tells rewake who asked — `compact.asked` with the request id and
-  the asker — and waits until that report is sent: `$.process.run` resolves only once
-  `rewake observe` has ended (read in the 2.1.280 binary). Datagrams reach the
-  collector in the order they were sent, so the mark is there before any hook of that
-  compaction, and the next `PostCompact` takes it up. A refusal or failure is reported
-  as `compact.refused` and sent before the answer is written; it lays the mark aside.
-  It says whether the host had started the compaction — "Not enough messages" and a
-  `failed` come after `PreCompact`, the other refusals before the host starts — so the
-  collector
-  ends the listing's `compacting` for it, or lets its `PreCompact`, a background hook
-  that may come after the refusal, start nothing. Mid-turn no mark is sent: the host
-  refuses that compaction, and the turn may compact on its own.
-- **The module's `session.compact` handler** never sees the compaction its own call
-  raised: the host skips a plugin's handlers for an event that plugin's code raised,
-  as re-entry (seen live and read in the binary, 2.1.280). It sees every other one,
-  with the compaction itself beneath `next(e)`, and uses only its end.
-- **What the mark guarantees.** The collector gives it to the next `PostCompact` it
-  receives, whichever compaction that belongs to. The hooks run as separate processes,
-  so a compaction's `PostCompact` can arrive a moment after its end. After the end of
-  a compaction the module did not ask for — a person's `/compact`, an automatic one —
-  it waits a second before it sends the mark and asks the host for the main's, so that
-  compaction's `PostCompact` is in first. Within a second of the other's end the request waits rather than being
-  refused; while the other still runs, the host refuses it as `in a turn`.
-- **Interrupt** needs the running turn's id, which only the module knows: it keeps it
-  from `turn.start` and `turn.complete` of its own events, those without an `agentId`.
-  No turn known: `no turn running` without asking the host. Otherwise it remembers the
-  turn and the asker, calls `$.turn.abort({ turnId })`, and passes a host refusal on as
-  `no turn running`.
+What stays, on every harness that serves the directory:
 
-**What an interrupt from main produces.** The aborted turn ends through stage 1's path:
-`turn.complete` with reason `aborted`, now with `by` — the asker's name, sent only when
-the aborted turn is the one that request asked for. The collector publishes `stopped`
-with the text "`<main>` interrupted this turn with rewake interrupt" instead of the
-person-at-the-keyboard text, and routing is unchanged: the `stopped` goes only to the
-sessions waiting on that worker. main's `rewake inbox --awaited` shows the task as
-`stopped:` followed by the stop's own text, so it names who stopped the turn: the person
-at the keyboard, or the main.
+**What an interrupt from main produces.** A `stopped` with the text "`<main>`
+interrupted this turn with rewake interrupt" instead of the person-at-the-keyboard
+text, and routing unchanged: the `stopped` goes only to the sessions waiting on that
+worker. main's `rewake inbox --awaited` shows the task as `stopped:` followed by the
+stop's own text, so it names who stopped the turn: the person at the keyboard, or the
+main.
 
 **Main gets a letter instead of a notice of its own compaction.** main's wrapper sends a
 notice "Rewake: context compacted (compaction N)." for each compaction of a worker. It
@@ -247,13 +203,11 @@ skips a compaction whose cue names this main as the asker, because the letter ca
 the tokens and the count. A compaction the worker makes itself, or one another main
 asked for, keeps its notice.
 
-**The line in the next notice.** A plugin abort leaves no trace for the model: the
-prompt stays, nothing marks the stop (unlike Codex's `<turn_aborted>`). So after an
-interrupt from main, the worker's next rewake notice ends with
-"`<main>` interrupted your previous turn with rewake interrupt." Once: the mark is used
-up only by a notice that was delivered, and only if no newer interrupt replaced it. Any
-turn that starts or ends before a notice lays it aside — the interrupted turn is no
-longer the previous one. A person's Esc sets no mark.
+**The line in the next notice** was Claude Code's: a plugin abort left no trace for the
+model, so after an interrupt from main the worker's next rewake notice ended with
+"`<main>` interrupted your previous turn with rewake interrupt.", once. The collector
+that kept the mark left in S9, and no adapter of this build adds the line; the fixture's
+program ends the turn saying who interrupted it.
 
 ## On Codex
 
@@ -261,8 +215,7 @@ In 1.x the wrapper served the directory itself, through the gateway that held th
 app-server connection ([remote-control-codex.md](archive-1.x/remote-control-codex.md)),
 and the directory carried one action that was not main's, `accept`
 ([delivery-conversation.md](archive-1.x/delivery-conversation.md)). Both left with the
-Codex adapter in S8; no action of the directory is served by a harness of this build
-other than through the plugin.
+Codex adapter in S8.
 
 ## Known limits
 
@@ -273,36 +226,13 @@ other than through the plugin.
   answered `started`, which is no outcome yet: main's letter waits for its end and comes
   from it. One still not ended at main's bound gets the bound letter saying it may still
   be running. One whose turn is not seen within 80 seconds of the request ends in a
-  `failed` letter, and may still start. On Claude Code the module waits for the host's
-  call, which has no bound of rewake's; a compaction there, or anywhere, with no word of
-  it within 15 minutes gets main's bound letter, and its later end gives no second
-  letter.
+  `failed` letter, and may still start. A compaction anywhere with no word of it within
+  15 minutes gets main's bound letter, and its later end gives no second letter.
 - **A worker whose wrapper ends just after its compaction**, before its snapshot is next
   written — within a quarter second — takes the outcome with it: the 3 seconds main's
   wrapper waits after a departure cover a snapshot published late, not one never
   published. The letter then says the worker left before the compaction ended, while
   `rewake list` of that run would have shown it compacted.
-- **A module reloaded during a compaction** loses its wait: no `compact.ended` comes, and
-  main's letter is sent from the count alone, without the tokens, 3 seconds after the
-  telemetry counts it.
-- **A hot reload of the module in the middle of a turn loses the tracked turn**: the
-  reloaded module has not seen that turn start, so an interrupt answers `no turn
-  running` until the next turn. rewake never changes the module's file once the
-  session runs; only an edit from outside causes it.
-- **A `PostCompact` later than a second** after the end of a compaction the module did
-  not ask for, arriving after the mark of a main's compaction, is taken for that one:
-  the worker's compaction counts as main's, and main gets no notice of it, while main's
-  own gets a notice and its letter carries the other compaction's number. The
-  wait narrows this to a hook process that took more than a second to start and send;
-  nothing ties a `PostCompact` to its compaction by identity, since the hook carries
-  none.
-- **A compaction whose `PostCompact` never reaches the collector** — a hook that
-  failed — leaves its mark in place. The session's next compaction then takes the mark
-  and counts as main's, so main gets no notice of it. The letter of the request it was
-  goes without a count, after its wait.
-- **Without the module** — `--bare`, function hooks switched off, a harness version
-  without them — every request is `not answering`; such a session shows interruptions
-  unobserved in `rewake list`.
 
 ## Owner decisions
 
@@ -316,7 +246,8 @@ other than through the plugin.
   to be researched later ([work-queue.md](work-queue.md)) (September 24, 2026).
 - After an interrupt from main, the Claude Code worker's next rewake notice carries a
   line saying so, once, so that its model sees roughly what Codex's does
-  (September 24, 2026).
+  (September 24, 2026). The line left with the plugin in S9, October 11, 2026; stage 4
+  decides it again for Claude Code's adapter.
 - On Codex no such line is added: Codex puts `<turn_aborted>` into the model's history
   itself, and the line on Claude Code exists to match it. The two harnesses differ here
   on purpose (September 24, 2026).
@@ -340,5 +271,5 @@ other than through the plugin.
 
 ## Tests
 
-What proves each part — the unit tests, the module under node, and the workflow cases
+What proves each part — the unit tests and the workflow cases
 with their mutants — is listed in [remote-control-tests.md](remote-control-tests.md).

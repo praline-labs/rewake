@@ -76,11 +76,12 @@ nothing. Without a reply socket the line goes without `from` and `msg_id`, the
 wrapper says so on stderr, and a successful write means `delivered` as before.
 
 The gate also holds whatever arrives in the first moments after the socket appears.
-The wrapper therefore keeps the first notice back until the session draws its status
-line, which is when it stops holding — not SessionStart, which live runs showed comes
-too early ([research.md](research.md#the-inbound-gate-on-rewakes-line)). With no
-status line — the settings were refused, or a managed policy owns the status line —
-the first notice waits three seconds.
+The wrapper therefore keeps the first notice back for three seconds from the start of
+its lane. Until S9, October 11, 2026, the status line rewake installed said sooner when
+the session had drawn its interface, which is when the gate stops holding — not
+SessionStart, which live runs showed comes too early
+([research.md](research.md#the-inbound-gate-on-rewakes-line)); with the status line gone
+the three seconds are the only gate.
 
 A wrapper killed outright closes nothing: its reply socket stays in `sock/`, and what
 its session held stays `held` on disk. The next lane to start in that directory removes
@@ -92,37 +93,18 @@ what the dead one held and tells each sender, as the dead one would have on a cl
 `ENOENT` and `ECONNREFUSED` mean `pending` as long as the harness is alive (the socket
 hasn't been created yet, or is being recreated); otherwise `failed`.
 
-**Which conversation a message went into.** Claude Code names its conversation in every
-hook and status line as `session_id`, which `/clear` replaces with a new one, `/resume`
-with the resumed conversation's, and a compaction keeps
-([research-claude-control.md](research-claude-control.md#interrupting-a-turn-and-changing-the-conversation)).
-The telemetry collector keeps the last one it heard, and the wrapper asks it when it pins
-an owed message to a conversation before making it readable
-([delivery-turn-end.md](delivery-turn-end.md#reports-after-a-thread-change)). At the end of the turn
-`rewake turn-ended` takes the conversation from the Stop or StopFailure payload's own
-`session_id`, so the comparison is with where the turn actually ended rather than with a
-snapshot of the collector. Either side unknown — no telemetry socket, no event heard yet,
-a payload without the field — leaves `threadChanged` out.
-
-One window marks a report that did not need it: a message delivered after a `/clear` but
-before that SessionStart hook reached the collector — the hooks run in the background — is
-pinned to the old conversation, and its report then reads as changed. The mark is
-advisory, so a false one costs the sender a resend it did not need, where a missing one
-would let an answer from a fresh conversation pass for an answer to the task. Covered by
-the `thread-changed` workflow case on the fixture since September 23, 2026
-([testing.md](testing.md)); not yet observed live (HF-10).
-
-**How a turn ends for rewake.** The Stop hook for a turn that answered, StopFailure for
-one that failed, each running `rewake turn-ended`, and — since September 23, 2026 — the
-plugin's `turn.complete` with reason `aborted` for a turn a person interrupted, which
-runs neither hook ([claude-plugin.md](claude-plugin.md)). The last one reaches the
-wrapper through the telemetry collector rather than a hook process, and the wrapper
-publishes it as `stopped` itself, with the read boundary it holds at that moment. The
-plugin's other turn ends are not reported, so an ordinary turn still gives one report;
-nor is an `aborted` end after the turn's Stop or StopFailure hook ran, which the module
-itself leaves out.
-Where the plugin does not load, an interruption is not heard at all, and the session's
-telemetry says so (`interruptions: unobserved`).
+**Which conversation a message went into, and how a turn ends.** Neither, in this
+build. Until S9, October 11, 2026, the hooks and the status line named the conversation
+as `session_id` to a telemetry collector in the wrapper, which pinned an owed message to
+it, and the Stop and StopFailure hooks ran `rewake turn-ended` at each turn's end, with
+rewake's plugin reporting a turn a person interrupted
+([claude-plugin.md](archive-1.x/claude-plugin.md),
+[claude-telemetry.md](archive-1.x/claude-telemetry.md)). All of it left with S9: the
+adapter offers launch and delivery only, so the wrapper never hears a Claude Code turn
+end, a role that owes reports refuses to launch on it, and a task or a question to such
+a session is refused at send. The `thread-changed` workflow case holds the core's side
+of a changed conversation on the fixture; Claude Code's turn boundary, and its
+conversation with it, come back in stage 4.
 
 ## Codex adapter
 

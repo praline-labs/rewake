@@ -117,5 +117,5 @@ Tests:
 - `internal/wrap/grants_test.go` `TestMainHoldsTheConversationTheLetterWasPinnedTo`
 - `internal/wrap/grant_checks_test.go` `TestAGrantWhoseDirectoryBecameALinkIsRefusedBeforeMainIsAsked`
 - `internal/wrap/grant_checks_test.go` `TestAGrantFromAnInvalidSenderNameIsRefused`
-- `internal/wrap/grant_resume_test.go` `TestAQuietMainIsAskedAgain`
+- `internal/wrap/grant_checks_test.go` `TestAGrantWhoseMainHasEndedFailsNamingThatMain`
 - Gap: step 3's "the task fails, naming the main that sent it" — closed in S9.

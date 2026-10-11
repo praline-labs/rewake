@@ -16,7 +16,9 @@ The facts below were checked on September 29, 2026 against the installed Claude 
 reference (`openagent`), the Codex tree at the release commits `be2951ea3` (0.155.1) and
 `36650394c` (0.157.1), and rewake at `afd38ff`. Codex paths are under `codex-rs/`, lines
 0.157.1's unless both are given. Nothing was run; what only a run can settle is in
-[the probe](#the-probe).
+[the probe](#the-probe). Since S9, October 11, 2026, rewake loads no plugin and registers
+no hook on Claude Code, so the handle and the hooks below are what stage 4's turn
+boundary would have to bring back.
 
 ## Claude Code: the facts
 

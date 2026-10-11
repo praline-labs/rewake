@@ -34,7 +34,8 @@ their waits; room/epoch and live-recipient checks continue to apply. Clearing a
 subset also preserves the remaining messages' sequences.
 
 Waiter files retain their existing epoch/since/message fields and add a parallel
-sequence column. Synchronous legacy hooks retain their prior behavior. A backend
+sequence column. Synchronous legacy hooks kept their prior behavior until they left in
+S9, October 11, 2026. A backend
 completion without a captured boundary, or a waiter without a provable sequence,
 is refused and retained rather than guessed from the current mailbox. Matching
 wrapper/CLI binaries and the planned session restart are required at installation.

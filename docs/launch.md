@@ -82,8 +82,7 @@ rewake --general --name review --command my-claude claude
   belongs to the harness. It is single-use: named twice there, the launch is refused
   rather than the last one winning. An alias's copy is replaced by one typed on the line.
 - **What it replaces:** the program, and nothing else. Every argument, variable, socket
-  and settings layer the adapter adds is the same, and the telemetry hooks and the status
-  line still call rewake. For Codex both halves run through it — the version read before
+  the adapter adds is the same. For Codex both halves run through it — the version read before
   the claim, the owned app-server and the terminal — because a server started beside the wrapper would
   run in a different environment from the terminal.
 - **The Codex home rewake reads** is still taken from its own environment at launch. A
@@ -125,38 +124,29 @@ rewake --general --name review --command my-claude claude
 - Add `--messaging-socket-path <root>/rooms/<room>/sock/<name>.<epoch>.sock` unless the user passed
   their own; before launch, remove a stale socket file at the same path.
 - Add `--append-system-prompt <intro>` (turned off by `--no-intro`).
-- Add one `--settings` layer carrying the Stop and StopFailure hooks that run
-  `rewake turn-ended` (see "The end of a turn"), the telemetry hooks and the status-line
-  tap ([claude-telemetry.md](claude-telemetry.md)). Claude Code merges settings layers, so the
-  hooks run next to the user's own. It reads only one `--settings` and takes the last,
-  so a caller's own is merged into rather than replaced or skipped: their keys stay,
-  their hooks for an event come first and ours are appended, their status line keeps
-  every field but the command. A caller's layer that cannot be read or merged is left
-  as given, alone, and rewake says on stderr what is not happening. Since September 23,
-  2026 a caller's `--settings` file is read at launch and passed to the harness inline,
-  as the merged JSON, instead of as its path (`internal/harness/claude/settings.go`). Two
-  consequences: everything in that file, environment values included, is visible in the
-  harness's `/proc/<pid>/cmdline`; and edits to the file during the session are not
-  picked up.
 - Allow the tool's own commands without confirmation:
   `--allowedTools "Bash(rewake:*)"`, only when the caller passed no allow list of their
-  own under either spelling, `--allowedTools` or `--allowed-tools`. This adds a rule for the run without touching the user's settings. The
-  grant hook's command carries `--rewake-allowed` exactly when the rule was added, since
-  only then may a plain `rewake` command take a grant back
-  ([grants.md](grants.md#claude-code)). **Verify live** that the flag adds to the user's
-  permissions rather than replacing them; if it replaces them, drop the flag and
-  have the overview say which rule to add to settings once.
-
-- Pass rewake's function-hooks plugin: `--plugin-dir sock/<name>.<epoch>.obs.plugin`,
-  a directory the wrapper writes for the run, and `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`
-  in the harness's environment. Left out under `--bare` and when the person set that
-  variable off, with a launch note ([claude-plugin.md](claude-plugin.md)).
+  own under either spelling, `--allowedTools` or `--allowed-tools`. This adds a rule for
+  the run without touching the user's settings. **Verify live** that the flag adds to
+  the user's permissions rather than replacing them; if it replaces them, drop the flag
+  and have the overview say which rule to add to settings once.
+- A caller's `--settings` reaches the harness as given: rewake neither reads nor merges
+  it.
+- Only main launches here. Claude Code has no turn boundary in this build, so a role
+  that owes reports — general, write, and a launch with no role flag — is refused before
+  anything is claimed, exit 1, naming the missing turn boundary and that the role is
+  available on Claude Code from stage 4.
 
 ### Claude Code telemetry
 
-The telemetry hooks, the status-line tap and the collector they report to are specified
-in [claude-telemetry.md](claude-telemetry.md); the plugin that reports to the same
-collector in [claude-plugin.md](claude-plugin.md).
+Until S9, October 11, 2026, the launch added one `--settings` layer — merged into a
+caller's own — carrying the Stop and StopFailure hooks that ran `rewake turn-ended`, the
+telemetry hooks and the status-line tap, the grant hook, and rewake's function-hooks
+plugin with `--plugin-dir`. All of it left with S9: the hooks and the tap are in
+[claude-telemetry.md](archive-1.x/claude-telemetry.md), the plugin in
+[claude-plugin.md](archive-1.x/claude-plugin.md), the grant hook in
+[grants-claude.md](archive-1.x/grants-claude.md). A Claude Code session reports no
+telemetry in this build, and its row of `rewake list` carries none.
 
 ### Codex
 

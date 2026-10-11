@@ -27,6 +27,10 @@ was.
 | [mail-bridge-launch-codex.md](mail-bridge-launch-codex.md) | `mail-bridge-launch-codex.md` | S8 | `e66620d47d2b1d478a3f785617f948bccb70e251bf03474372f32ad9b210b883` |
 | [mail-bridge-version.md](mail-bridge-version.md) | `mail-bridge-version.md` | S8 | `36b5dde6b5d86bdc932272e4530ec84132f70967fde27148ad091b2901c424b6` |
 | [mail-bridge-channel-codex.md](mail-bridge-channel-codex.md) | `mail-bridge-channel-codex.md` | S8 | `9c7ed43e38ddfa5950a007fa67bbb64860c0c03c095acc735d457d3c0893ad9b` |
+| [claude-plugin.md](claude-plugin.md) | `claude-plugin.md` | S9 | `384ad65bb9d2dd763597d295d95cce73b3b25febec23943f5871634316f20b41` |
+| [claude-telemetry.md](claude-telemetry.md) | `claude-telemetry.md` | S9 | `ee0b695597a08bb3ab5bc11d8e7e17687cfaacda2727b7b46fcdb1e601cf8ffe` |
+| [grants-claude.md](grants-claude.md) | `grants-claude.md` | S9 | `92fc50ed80864ec9ae521584ed5554af2bbac17d4268a008ed0fedcecedc0e5e` |
+| [testing-plugin.md](testing-plugin.md) | `testing-plugin.md` | S9 | `82adeaec3a4e19ad1f234bc324c6ee62790891bba2ed08935bdd45da4d769b6b` |
 
 - [protocol-cutover.md](protocol-cutover.md) — how a mailbox passed from the protocol of
   builds before September 30, 2026 to the one of turn-end journals: the launch order, the
@@ -111,3 +115,30 @@ stay may name text since rewritten for the neutral alphabet.
   another conversation moves the timer, held events and an open interval; built, with
   the choices the code made. Open it before changing how the endpoint, the gateway's
   selection steps or the keeper count Codex connections.
+
+Moved in S9, October 11, 2026, with Claude Code's hooks, plugin and telemetry; their code
+is in the history at `98acc3b`, and stage 4 writes Claude Code's adapter anew, stage 6
+its grants. Their links into documents that stay may name sections since removed with
+the Claude Code column of the suite.
+
+- [claude-telemetry.md](claude-telemetry.md) — how a Claude Code session's telemetry is
+  collected: background hooks, the status-line tap running the person's own status line,
+  the settings layers, the collector and the owner decisions. Open it to read a record
+  that names a telemetry budget, the tap or the collector.
+- [claude-plugin.md](claude-plugin.md) — rewake's function-hooks plugin for Claude Code:
+  what the launch carries, the four events it reports and the fields it never reads, how
+  an interrupted turn becomes `stopped` without a second report for an ordinary one, how
+  a session says whether interruptions are heard, and its limits. Open it as the 1.x
+  account when stage 4 gives Claude Code a turn boundary again.
+- [grants-claude.md](grants-claude.md) — a grant to a Claude Code session through its
+  permission hooks: the keeper in the worker's wrapper, the idle wait, giving on the first
+  file-tool write, what stays with the person, taking back and the modes it works in, and
+  why it is a courtesy rather than a boundary. Open it as the 1.x account when stage 6
+  designs grants for Claude Code.
+- [testing-plugin.md](testing-plugin.md) — the workflow cases that run rewake's
+  function-hooks plugin under node: how the fixture hosts the module and answers its
+  calls on the session, and what `claude-interrupted`, `stopped-routing` and
+  `claude-steered` claim, with their controls, `codex-steered`, the same commands
+  served by the Codex wrapper, and `codex-compact-hold`, a task sent into a long Codex
+  compaction. Its neutral cases are described now in
+  [testing-cases.md](../testing-cases.md); open it to read how the retired ones ran.

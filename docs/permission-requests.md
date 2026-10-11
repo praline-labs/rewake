@@ -7,7 +7,8 @@ request while main decides, on both harnesses, and falling back to a refusal tha
 the next step when main does not answer in time. Nothing here is code; the facts it rests
 on are marked with where they were seen, with file and line in
 [permission-requests-sources.md](permission-requests-sources.md), and what is still a
-guess is listed at the end.
+guess is listed at the end. Since S9, October 11, 2026, rewake registers no hook on
+Claude Code and its grant hook is gone, so the Claude Code half below waits for stage 4.
 
 ## What the owner decided
 
@@ -28,7 +29,7 @@ On September 28, 2026 the owner decided:
 
 1. The harness raises a permission request it would put to the person.
 2. The worker's wrapper decides at once what it can: a write inside a grant is allowed as
-   today ([grants-claude.md](grants-claude.md)); a request reserved for the person
+   today ([grants-claude.md](archive-1.x/grants-claude.md)); a request reserved for the person
    ([what goes to the owner](#what-goes-to-the-owner)) is left to the person, and main is
    told of it; everything else is **held**.
 3. A held request goes to the room's current verified main as a letter of the new kind

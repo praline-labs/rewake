@@ -195,8 +195,8 @@ and `rewake interrupt` would have to send on Codex; their design is in
   reference tree; September 24, 2026; review-claude]**.
 - **The model sees the interrupt.** The core records
   `<turn_aborted>The user interrupted the previous turn on purpose…` in the history;
-  Claude Code's plugin abort records nothing, which is why rewake adds a line to the
-  interrupted session's next notice there.
+  Claude Code's plugin abort records nothing, which is why rewake added a line to the
+  interrupted session's next notice there until the plugin left in S9, October 11, 2026.
 
 **[verified live; Codex CLI 0.155.1; September 24, 2026; write-claude]** Part B built,
 run in a private state directory with a stand-in main, the cheapest model the CLI

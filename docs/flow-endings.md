@@ -87,14 +87,14 @@ question to a silent role.
 | fresh server thread, no turn yet | turn/start begins its first turn | delivered after RPC acceptance |
 | a notify or a report with nothing else arriving | it waits three seconds for company, then goes alone; a task arriving meanwhile takes it along at once | delivered after about three seconds, pending meanwhile with why |
 | a turn interrupted with Esc or Ctrl+C | stopped advises the waiters to wait, and goes to nobody when none waits; original work stays owed | yellow notice; human continuation reports its result |
-| a compaction main asked for with `rewake compact` | the command waits up to 5 seconds for the session to take the request and up to 10 for its answer, and returns once the compaction has started, or says requested when its start was not seen in that time; the worker's module or wrapper waits for its end ([remote-control.md](remote-control.md)) | exit 0, then a notify with the tokens and the count, or the refusal or failure |
-| a turn interrupted by main's `rewake interrupt` | the same stopped, naming main instead of the person; on Claude Code the worker's next notice says main interrupted it, once, and on Codex the harness records it in the model's history itself ([remote-control.md](remote-control.md)) | yellow notice naming main |
+| a compaction main asked for with `rewake compact` | the command waits up to 5 seconds for the session to take the request and up to 10 for its answer, and returns once the compaction has started, or says requested when its start was not seen in that time; the worker's program waits for its end ([remote-control.md](remote-control.md)); since S9, October 11, 2026, only the fixture harness takes it, and a Claude Code worker is refused with exit 2 | exit 0, then a notify with the tokens and the count, or the refusal or failure |
+| a turn interrupted by main's `rewake interrupt` | the same stopped, naming main instead of the person ([remote-control.md](remote-control.md)); until S9, October 11, 2026, a Claude Code worker's next notice said main interrupted it, and until S8 Codex recorded it in the model's history itself; since S9 only the fixture harness takes it, and a Claude Code worker is refused with exit 2 | yellow notice naming main |
 | recipient's wrapper gone | record evicted on the next read | exit 2, no such session |
-| a reader's stdout blocks | it holds the lock; server waits, `turn-ended` five seconds, `inbox` ten | delays, then "mailbox is busy" |
+| a reader's stdout blocks | it holds the lock; server waits, a turn end five seconds, `inbox` ten | delays, then "mailbox is busy" |
 | the main session is asked a question | refused before publication | exit 2 with a hint |
 | a process of an ended run | its epoch no longer holds the name | `inbox` and `send` refuse |
 | Claude Code's socket not yet up | `ENOENT` while the harness lives | `pending`, then delivered |
-| Claude Code up, status line not drawn yet | the first notice waits, three seconds at most | `pending`, then delivered |
+| Claude Code up, its lane just started | the first notice waits three seconds from the lane's start; until S9, October 11, 2026, a drawn status line opened it sooner | `pending`, then delivered |
 | Claude Code's gate holds the line | both copies stay, no retry | `held` (exit 3), then delivered, or failed and a note |
 | Claude Code's gate says it holds only after the 300 ms | the delivery is taken back, for up to a minute | `delivered` (exit 0), then `held`; if it fails, a note |
 | the wrapper is killed while its session holds a line | the next session with the name fails it | `failed`, the session ended, if send still waits; a note once the name is taken again |
@@ -108,7 +108,7 @@ updates and remains while a report is owed.
 
 A `/new` in Codex, or a `/clear` in Claude Code, changes the conversation without
 changing the wrapper epoch. At turn
-end, the hook compares the current thread with the delivery thread of every
+end, the core compares the thread the adapter reports with the delivery thread of every
 message in `inReplyTo`. Any known mismatch adds `threadChanged: true` to the
 report. Inbox prints a warning beneath the result; a waiting question preserves
 it too. No message is automatically resent and no wait is discarded because of

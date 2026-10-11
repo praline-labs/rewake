@@ -22,7 +22,7 @@ internal/bridge/                 what the CLI and the context endpoint share: th
 internal/bridge/endpoint/        the wrapper's context endpoint: hellos, tickets, completions, the gate against a turn's end, a transport's calls
 internal/channel/                the run's mail channel: tool and shell observations, the block, display and notices
 internal/grant/                  which directories a task may grant, and the journal of what was granted
-internal/grantauth/              main's wrapper holding the grants its commands registered, and confirming them; a worker's wrapper keeping its own grants for its permission hook
+internal/grantauth/              main's wrapper holding the grants its commands registered, and confirming them
 internal/grantauth/grantauthtest/ for tests: a helper process that is a recipient's run, confirms its grants at delivery and ends
 internal/control/                a main's control request to a run and its answer, as files
 internal/role/                   the role catalogue: flag, briefing line, reporting duty
@@ -32,7 +32,6 @@ internal/sessionstate/           optional, epoch-scoped observations of a harnes
 internal/harness/                the Harness interface, launch plans, notices, hooks, defaults, the bounded version read
 internal/harness/catalog/        the one list of harnesses that exist
 internal/harness/claude/         launch arguments, environment, socket delivery
-internal/harness/claude/telemetry/  what a Claude Code session says about itself, carried to its wrapper
 internal/harness/fixture/        the test harness behind rewakefixture: a scripted program over a socket, every contract interface
 internal/wrap/                   wrapper: launch, signals, lifecycle
 internal/worktree/               checkouts rewake makes for a launch: git worktree add, records, land, removal

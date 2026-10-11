@@ -14,7 +14,7 @@ and controls, and the roadmap records named below for how each piece was built.
 | Tier | Runs | Proves | Does not prove | Costs |
 | --- | --- | --- | --- | --- |
 | The five checks | formatting, vet, two linters, `go test -race -shuffle=on ./...` | unit invariants: parsing, publishing races, liveness, inbox order and expiry, the context endpoint's framing, the map of `docs/`; the suite's own classifier and summarizer | anything end to end: every workflow scenario skips itself | about half an hour at `-p 4` on an idle machine, nearly all of it the three `-race` test runs; no network, no harness, no container |
-| Workflow suite (**F**) | a built rewake end to end against a fixture of each harness, in two columns, with negative controls: some mutate the product, the others change the fixture's world | that the shared service code delivers, groups, steers and reports as each scenario claims, and that each claim can fail | that the real harness parses, renders or behaves as its fixture does | about three minutes — 3m06s and 3m10s on September 25, 2026, 102 cases six at a time, against 19m22s one after another the same evening; 2m23s eight at a time. The longest cases are `claude-steered`'s controls, about 30 s each. It fits in `go test`'s default ten minutes, which the documented commands name; no network |
+| Workflow suite (**F**) | a built rewake end to end against a fixture harness, in one column since S9, with negative controls: some mutate the product, the others change the fixture's world | that the shared service code delivers, groups, steers and reports as each scenario claims, and that each claim can fail | that the real harness parses, renders or behaves as its fixture does | about three minutes — 3m06s and 3m10s on September 25, 2026, 102 cases six at a time, against 19m22s one after another the same evening; 2m23s eight at a time. The longest cases then were `claude-steered`'s controls, about 30 s each. It fits in `go test`'s default ten minutes, which the documented commands name; no network |
 
 Two tiers are planned and not built. **P**, a real harness of a named version against a
 local responder instead of a model provider, would catch a change of behaviour that a
@@ -38,18 +38,22 @@ release build never reads the variable.
 
 ### Three columns, three meanings
 
-Since S8, October 8, 2026, there are two: the Codex column left with its adapter. Shared
-scenarios run across the columns; adapter-specific scenarios and controls run on the
-columns they exercise. The columns: a fixture that plays a Claude Code session, and the
+Since S8, October 8, 2026, there were two: the Codex column left with its adapter. Since
+S9, October 11, 2026, there is one: the column of a fixture that played a Claude Code
+session left with the hooks and the plugin it played
+([testing-cases.md](testing-cases.md#the-retired-claude-code-column)), and stage 4 brings
+a Claude Code column back. Shared scenarios run across the columns; adapter-specific
+scenarios and controls run on the columns they exercise. The column left is the
 fixture harness — a harness of its own, built
 only under the `rewakefixture` tag, which the suite's rewake is built with
 ([stage3-fixture.md](v2/stage3-fixture.md)). **The fixture column is the regression
 gate** since S6 ([stage3-fixture.md](v2/stage3-fixture.md#the-gate-across-the-steps)):
 a red there blocks, and an absent capability there is red too, because a gate that
 stopped checking must not look green. It proves the core through the adapter contract,
-and its program can withhold each capability. **Claude Code is a search
-column** until its column goes: a red there is a finding to investigate, and an
-absent capability is reported as `unsupported`, by name. The gate is a field of the
+and its program can withhold each capability. Until S9 **Claude Code was a search
+column**: a red there was a finding to investigate, and an absent capability was
+reported as `unsupported`, by name; a search column returned with stage 4 takes that
+meaning again. The gate is a field of the
 column (`gate` in `test/workflow/column_test.go`), set on exactly one; the gate declares
 every registered capability but those its exception table names, each with its reason
 and the step that retires it — since S8 none: conversation selection, Codex's own, left
@@ -124,12 +128,12 @@ one; build the binary to keep them apart):
 ```
 workflow  24 scenarios, 36 cases: 33 pass, 3 unsupported   2m0.7s
 against   scenarios against the suite's own harness programs in every column
-          unsupported  mid-turn/claude  observes-mid-turn-arrival
-FAIL  batch-arrival/claude   fail
+          unsupported  mid-turn/fixture  observes-mid-turn-arrival
+FAIL  batch-arrival/fixture   fail
       fail        "the recipient can receive mail before the letters leave"
-        worker-claude never started listening
+        worker-fixture never started listening
       evidence  /tmp/rewake-case-270015062
-      stderr    worker.stderr: claude-shim: a delivery carried more than one line
+      stderr    worker.stderr: fixture: a delivery carried more than one line
 summary   .rewake-checks/<time>/summary.json
 ```
 
@@ -203,9 +207,9 @@ exchange, each switch, the versions, L1, L2 and E3, is `internal/harness/fixture
 ### The cases
 
 What each case claims, with its controls, is in [testing-cases.md](testing-cases.md):
-the Claude Code telemetry budgets, launching and reporting, the worktrees, a directory
-granted with a task, actions on a sent message, conversations and the inbound gate, and a
-pointer to the plugin's cases.
+launching and reporting, the worktrees, a directory granted with a task, actions on a
+sent message, conversations and the inbound gate, and the Claude Code column retired in
+S9 with the telemetry budgets and the plugin's cases it ran.
 
 ## Traps this suite has already paid for
 

@@ -53,6 +53,12 @@ directory and reads the running session as its own.
   seconds. **[verified live]**
   Officially: "When the receiving session is idle, Claude Code starts a new turn
   with the message". **[docs: code.claude.com/docs/en/cross-session-messaging]**
+- **Needs no hook, plugin or status line.** A session launched with only
+  `--messaging-socket-path`, `--append-system-prompt` and the caller's `--settings` — no
+  hooks, no `--plugin-dir`, no status-line tap — started a turn on a message while idle,
+  and took one sent during a running `sleep 40` into that same turn once the command
+  returned. **[verified live 2.1.296, October 11, 2026]**
+  ([the S9 entry](roadmap/2026-10-11-stage3-s9.md#the-live-check-october-11-2026))
 - The model sees text headed "Another Claude session sent a message", followed by
   a paragraph noting that the peer session cannot grant elevated permissions. **[verified live]**
 - The token is optional on Linux and macOS; trust rests on the 0700 directory, the
@@ -152,7 +158,8 @@ which the gate does not consult when it decides:
 - The Stop hook receives `last_assistant_message` on stdin. **[source; verified
   live]** What a hook that blocks the stop does to the turn — the second call, its
   payload, the limit — is in [research-claude-actions.md](research-claude-actions.md#holding-a-turns-end-from-the-stop-hook).
-- What rewake reads from that payload (`internal/cli/turn_payload.go`): `agent_id`,
+- What rewake read from that payload until S9, October 11, 2026, when the hook left
+  (`internal/cli/turn_payload.go`, removed then): `agent_id`,
   which decides whether the end counts at all — a child's inherited hook carries one
   and is ignored — then `type`, `hook_event_name`, `turn-id` or `turn_id`,
   `thread-id`, the last message under `last_assistant_message`,
@@ -326,8 +333,8 @@ Code 2.1.280, against a stand-in API server; the evidence was kept outside the r
   `$.env.get("CLAUDE_CODE_AUTO_COMPACT_WINDOW")` returned what the harness used in every
   case, the value left behind by a removed key included; `$.settings.read()` returns the
   `autoCompactWindow` key; `$.config.list` has only the boolean `autoCompact`. The flag
-  is not visible to a plugin at all; rewake reads it from the launch's arguments
-  ([claude-telemetry.md](claude-telemetry.md)).
+  is not visible to a plugin at all; until S9, October 11, 2026, rewake read it from the launch's arguments
+  ([claude-telemetry.md](archive-1.x/claude-telemetry.md)).
 
 ### Interrupting a turn, commands and prompt drafts
 

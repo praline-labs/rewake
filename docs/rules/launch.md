@@ -8,7 +8,7 @@ What rewake adds to a harness's launch, in the full wording of
 
 - **L1. The mail is added and nothing else changes.** The person's configuration is
   never edited; what a run needs is passed for that one launch. (`mail-bridge-launch.md`
-  rule 1; on Claude Code, one `--plugin-dir`.)
+  rule 1; until S9, on Claude Code, one `--plugin-dir`.)
   Tests:
   - `internal/harness/claude/claude_test.go` `TestAddedFlagsStayBeforeTheTerminator`
   - `internal/harness/defaults_test.go` `TestAnExplicitFlagIsNotReplaced`

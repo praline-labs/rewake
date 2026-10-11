@@ -276,9 +276,10 @@ review's answer to each is noted.
   harness [unverified: a grep for the ids]. S1 writes the exceptions it finds.
 - **The cost of hashing the executable cold.** One warm measurement under load, not
   evidence; S17 measures ([stage3-state.md](stage3-state.md#the-cost-of-the-hash)).
-- **Whether the inbound messaging line works without the 1.x hooks** that S9 removes
-  (`harness/claude/lane.go:1-4` [unverified beyond the file heads]); checked live
-  before S9's commit.
+- **Whether the inbound messaging line works without the 1.x hooks** that S9 removes —
+  answered on October 11, 2026, live on Claude Code 2.1.296 before S9's commit: it
+  wakes an idle main and reaches one in a turn
+  ([the S9 entry](../roadmap/2026-10-11-stage3-s9.md#the-live-check-october-11-2026)).
 
 ## The owner's answers
 

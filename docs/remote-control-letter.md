@@ -31,16 +31,17 @@ treats it as one.
 worker's telemetry snapshot (`compactionOutcomes`: request, asker, outcome, reason,
 detail, tokens, time; the last 16 within a 3 KiB budget, each detail cut to 300 bytes,
 so the snapshot stays under its 16 KiB limit with 64 compaction events beside them —
-a snapshot over it would not be saved at all, and the whole telemetry would stop) — on Claude Code the module's `compact.ended`, which the collector
-folds; on Codex the wrapper's background wait. A final answer — a refusal, a final
+a snapshot over it would not be saved at all, and the whole telemetry would stop) — in
+this build the fixture's program, through its adapter; in 1.x Claude Code's module, whose
+`compact.ended` the collector folded, and Codex's wrapper, from its background wait. A final answer — a refusal, a final
 failure — is recorded as the outcome too, after it is written: a command whose wait was
 cut short once the request was taken holds an open answer, and its letter then comes
 from this at once rather than at the bound. A command that read the final answer has
 already closed its record, so for it the outcome sends nothing. main's wrapper already reads each
 worker's snapshot once a second for the compaction notices; it pairs the outcome with the
 compaction the telemetry counted under the same request and sends one letter for the
-pair. The two halves come apart — on Claude Code the count comes from the `PostCompact`
-hook, which runs in the background — so a done outcome waits up to 3 seconds for its
+pair. The two halves can come apart — on Claude Code the count came from the `PostCompact`
+hook, which ran in the background — so a done outcome waits up to 3 seconds for its
 count, and a count for its outcome; after that the letter goes with what came and says
 the telemetry has not counted it. A refusal or failure has no count to wait for. A
 worker that leaves sends what it has at once. The letter's id is derived from both runs
@@ -48,8 +49,9 @@ and the request, so a scan repeated after a failed write sends it once.
 
 **Who owes it.** main's side, not the worker's — a design choice of the orchestrating
 session after the first review of September 25, 2026, not an owner decision. The worker's side
-may never record an outcome: a worker killed mid-compaction, a module reloaded, a report
-to the collector that failed, a Codex wrapper whose background wait died with it. So
+may never record an outcome: a worker killed mid-compaction, a served side that lost its
+wait — in 1.x a module reloaded, a report to the collector that failed, a Codex wrapper
+whose background wait died with it. So
 `rewake compact` leaves a record in main's state
 (`<REWAKE_DIR>/rooms/<room>/letters/<main>/<id>.json`: the request, the worker's
 registry record, main's run, the time) before it writes the request, with the request's
@@ -95,8 +97,8 @@ main's own wrapper closes each record kept exactly once, by the first of:
 - **15 minutes** from the request with neither seen while the worker lives on: "Rewake:
   no outcome of the compaction of `<worker>` you asked for was seen within 15m0s; rewake
   list shows whether it compacted." The bound is well past the 10 minutes the Codex
-  wrapper waits for a running compaction and gives a Claude Code compaction, whose host
-  call rewake does not bound, the same 15 minutes. A worker's outcome of `started` — the
+  wrapper waited for a running compaction and gave a Claude Code compaction, whose host
+  call rewake did not bound, the same 15 minutes. A worker's outcome of `started` — the
   Codex wrapper's wait ended with the compaction still running — is no outcome: the
   record waits on for the compaction's end, which the worker records as a second outcome
   of the same request, with the tokens. If the bound comes first, the letter says what

@@ -47,8 +47,9 @@ owns thread execution and sandboxing; the TUI keeps the inherited terminal.
 An optional Backend in LaunchPlan encapsulates this lifecycle, delivery, thread
 identity and completion events. An optional transport-neutral reservation holds
 a destination across inbox readability and ACK; native RPC stays inside its adapter.
-The socket adapter continues using its existing direct delivery and hook path, and
-its wrapper also listens on a reply socket of its own beside the session's: Claude
+The socket adapter keeps its direct delivery — since S9, October 11, 2026, without the
+hooks that told its wrapper when a turn ended (Claude Code has no turn boundary until
+stage 4) — and its wrapper also listens on a reply socket of its own beside the session's: Claude
 Code reports there what its inbound gate did with a line, and only to the process that
 wrote the line, so the wrapper — the one writer of its session's notices — is the one
 listener ([delivery-adapters.md](delivery-adapters.md#claude-code-adapter)).
@@ -98,17 +99,14 @@ Created with 0700. [Optional primary observations](session-state.md) are collect
     inbox/<name>/once/<epoch>/<id> a journaled notify or a turn end's report written into this mailbox, so a retry writes it once
     sock/<name>.<epoch>.sock   one inbound socket per run
     sock/<name>.<epoch>.reply.sock the wrapper's own: Claude Code's receipts for held lines
-    sock/<name>.<epoch>.ctx    the wrapper's context endpoint for the mail tool's server or transport, its children and hooks (mail-bridge-server.md, mail-bridge-transport.md)
+    sock/<name>.<epoch>.ctx    the wrapper's context endpoint for the mail tool's server or transport and its children (mail-bridge-server.md, mail-bridge-transport.md)
     sock/<name>.<epoch>.mcp.json the mail tool's server entry handed to Claude Code for one run, removed with it (mail-bridge-launch.md)
-    sock/<name>.<epoch>.obs    Claude Code telemetry datagrams to the wrapper
-    sock/<name>.<epoch>.obs.turn/ when its latest turn started, one file per reading, for `rewake pending`
-    sock/<name>.<epoch>.obs.plugin/ rewake's function-hooks plugin for this run (claude-plugin.md)
     control/<name>.<epoch>/    a main's compact or interrupt request and its answer (remote-control.md)
     letters/<name>/<id>.json   a compaction this main asked for, held by the command while it asks, kept on an answer that leaves the outcome open until its letter goes (remote-control-letter.md)
 ```
 
 All mailbox paths in the delivery specification are relative to the room.
-Socket names — the telemetry socket's too — fall back to a digest of name and epoch
+Socket names fall back to a digest of name and epoch
 when the expanded path would exceed 103 bytes (the reply socket, which has to share the
 inbound socket's directory, to `rewake-<digest>.reply.sock` there); an excessively long state root still needs shortening.
 Since an epoch carries the machine's boot id, 36 characters, the digest is the usual

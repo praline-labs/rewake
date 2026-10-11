@@ -3,9 +3,17 @@
 A cold resume — the session ended, then started again with `--resume` — starts a new run
 of the recipient, with a new epoch and a new wrapper. Everything rewake held for the
 grant lived in the old wrapper's memory ([grants.md](grants.md#taking-a-grant-back)), so
-without more the new run holds nothing: on Claude Code the directory is gone and the task
-continues without it; on Codex the thread may restore the root, and then rewake never
-takes it back. This page is how the new run gets the grant again, and what it takes to do
+without more the new run holds nothing: in 1.x on Claude Code the directory was gone and
+the task continued without it; on Codex the thread could restore the root, and then rewake
+never took it back.
+
+**Since S9, October 11, 2026, code only tests reach.** No adapter of this build both
+resumes a conversation and takes directory grants: Claude Code takes no task, and with it
+no grant, and the fixture names no conversation a launch resumes. The confirmation below
+— main's wrapper asked again, the directories checked again — stays in
+`internal/wrap/grant_resume.go` and `internal/grantauth`, held by their unit tests, and
+stage 6 decides how a resumed run's grants are kept. What follows describes it as 1.x ran
+it. This page is how the new run gets the grant again, and what it takes to do
 it without trusting a file a worker could write.
 
 ## What the owner decided
@@ -19,9 +27,9 @@ to ask for.
 
 Each delivery pins the conversation it went into before the task becomes readable
 (`inbox/<name>/threads/<id>`, [delivery.md](archive-1.x/delivery-conversation.md#a-resumed-conversation)). A new
-run learns its own conversation from its harness: on Claude Code from the session's
-telemetry (`session_id`, which `--resume` keeps), on Codex from the thread the terminal
-started or resumed. A conversation is a link between runs only through those two; the
+run learns its own conversation from its harness: on Claude Code in 1.x from the
+session's telemetry (`session_id`, which `--resume` keeps), on Codex from the thread the
+terminal started or resumed. A conversation is a link between runs only through those two; the
 session's name alone is not one, since a new conversation under the same name owes
 nothing.
 
@@ -90,29 +98,20 @@ task is open, not for a fixed time, at most 256 at once
 
 **Main gone.** When the main that sent the grant has ended, nobody can confirm it, and
 the grant is not restored: a task sent again from the current main is the way on. A main
-that runs and does not answer yet is asked again: on Claude Code every two seconds while
-the session runs, on Codex at the next notice into the conversation.
+that runs and does not answer yet is asked again: on Claude Code in 1.x every two seconds
+while the session ran, on Codex at the next notice into the conversation.
 
 ## Claude Code
 
-When the launch names the conversation — `--resume <id>` or `-r <id>`, not with
-`--fork-session` — the wrapper asks before the harness starts and passes each confirmed
+In 1.x, when the launch named the conversation — `--resume <id>` or `-r <id>`, not with
+`--fork-session` — the wrapper asked before the harness started and passed each confirmed
 directory as `--add-dir`, which a cold resume keeps, while a directory added by the hook
 is not kept (seen live on 2.1.280, [research-claude-actions.md](research-claude-actions.md)).
-The grant goes into the keeper as one the session has, so the hook takes it out after
-the report as it takes out one it added: the harness removes a directory given with
-`--add-dir` through the same answer. What was restored and what was not is printed
-among the launch notes.
-
-`--continue` names the conversation only through telemetry: the wrapper asks once the
-session's first `session_id` arrives and keeps what is confirmed, and the hook adds the
-directory at the first write in it, as for any grant. The picker (`--resume` with no id)
-restores the grant only if the first `session_id` the session reports is the conversation
-picked; that is not verified. A `/resume` inside a session that has already worked in
-another conversation restores nothing: the new run takes over and sweeps the earlier runs'
-waits once, at its first conversation, and the task is closed by then.
-
-`--grant-git` alone gives Claude Code nothing to restore.
+The grant went into the keeper as one the session had, so the permission hook took it out
+after the report. `--continue` named the conversation only through telemetry, and the
+picker restored the grant only if the first `session_id` reported was the conversation
+picked. The hook, the keeper and the telemetry left in S9; the adapter still passes the
+directories it is given as `--add-dir`, and no launch gives it any.
 
 ## Codex
 
@@ -163,5 +162,7 @@ A root no copy names is left alone: rewake cannot tell it from one the person ga
 - A `/resume` inside a Claude Code session that already worked in another conversation
   restores nothing, and neither does a resume a day or more after the task was read.
 - The real harnesses were not run through a resume with a grant end to end; the
-  workflow cases `claude-grant-resume` and `codex-grant-resume` run the fixtures, which
-  keep a conversation's id and its saved roots the way the harnesses were seen to.
+  workflow cases `claude-grant-resume` and `codex-grant-resume` ran the fixtures, which
+  kept a conversation's id and its saved roots the way the harnesses were seen to, and
+  retired with their columns in S8 and S9. Their mutants on the code that stays are
+  killed by unit tests ([testing-cases.md](testing-cases.md#the-retired-claude-code-column)).

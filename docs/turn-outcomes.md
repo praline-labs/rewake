@@ -13,7 +13,7 @@ continuation nor a peek to reach it. Owner decision, September 19, 2026; the evi
 is in [native-terminal-progress.md](native-terminal-progress.md). This holds for the
 keyboard stops below as well.
 
-The hidden hook emits error with the harness reason unchanged. Received empty
+The adapter that heard the turn end emits error with the harness reason unchanged. Received empty
 completion after read work produces an error with empty text. Successful turns
 still produce finished. Error is in the kind catalog but has no send flag;
 `send --error` is refused. It creates no reply obligation.
@@ -24,9 +24,9 @@ session's own unread mailbox without announcing it to itself. Identified turns
 are idempotent; callbacks without turn ids are separate invocations. Delivery uses failed task-notification status on the socket path and a red circle on
 the server path. A waiting question consumes the error and exits 1.
 
-Failure observation depends on the harness providing a callback. The current
-server backend observes terminal failures directly. Hooks on other transports
-still depend on the harness providing a callback.
+Failure observation depends on the harness providing a callback: the adapter that
+hears a turn's end hears a failed one. Claude Code, whose StopFailure hook reported its
+failures until S9, October 11, 2026, reports none in this build.
 
 ## Interim turn ends (`rewake pending`)
 
@@ -58,7 +58,7 @@ chosen.
   earlier end of the run a journal records, up to the turn's end. Of several marks in the
   window the latest decides, so a second `pending` in one turn replaces the text. A mark
   older than the window was made in an earlier turn whose end never reached rewake — an
-  Esc interruption, a hook whose payload never came, a mailbox lock not taken in time —
+  Esc interruption a harness did not report, a mailbox lock not taken in time —
   and decides nothing, so the next turn end is the report. A mark newer than the turn's
   end was made in a later turn while this one was still being published, and is left for
   it. No turn end removes a mark: a retry of an end finds the marks its first attempt
@@ -66,37 +66,28 @@ chosen.
   ([turn-end-recovery.md](turn-end-recovery.md#pending-marks)). A turn whose start is not
   known cannot be tied to a mark and ends as a report. Every failure falls to that side:
   the behaviour without `pending`.
-- **The turn's start and end.** Codex: the gateway stamps `turn/started` and
-  `turn/completed` as it sees them and carries both with the completion, so a turn
-  published late — queued, or retried when the mailbox was busy — cannot take a mark made
-  in the turn after it. Claude Code: the end is the moment the Stop hook's `rewake
-  turn-ended` started; the start is the latest UserPromptSubmit, which fires for typed
-  input and for mail delivered through the inbox socket alike. That hook runs in the
-  background and must not wait, so it takes no lock: `rewake observe` records its own
-  process start as a file of its own, named by the reading and never overwritten, in the
-  directory `sock/<name>.<epoch>.obs.turn/`, and the start read back is the largest name
-  there — two hooks at once cannot leave the older reading on top. A late hook of the
-  current turn therefore records an earlier time than the mark's and cannot clear it; a
-  turn started after the mark always records a later one. Every turn end that reaches
-  `rewake turn-ended` also records its own end there, and so does an interruption the
-  plugin reports ([claude-plugin.md](claude-plugin.md)), so the next turn is known to
-  start after it even without a UserPromptSubmit. Without any reading — the telemetry hooks are
-  not running — `rewake pending` is refused on Claude Code.
-- **The gap that remains.** If a turn end with a mark is lost — an Esc where the plugin
-  did not load, a stdin or lock timeout — and Claude Code then starts a turn by itself, without UserPromptSubmit, and
-  that turn's end is the first one heard, its final answer leaves as an interim message
-  and the report does not come. Not verified live: whether Claude Code fires
-  UserPromptSubmit for a turn it starts by itself, to report a background task. Recording
-  every heard turn end narrows the gap to that one sequence.
+- **The turn's start and end.** The adapter times both as its harness reports them and
+  carries them with the completion, so a turn published late — queued, or retried when
+  the mailbox was busy — cannot take a mark made in the turn after it. The start is
+  also recorded for the host as the harness reports it (`inbox.RecordTurnStart`, from
+  the endpoint's `TurnStarted`): each reading a file of its own under the run's
+  `awaiting/<epoch>/.turn-starts/`, named by the reading and never overwritten, the
+  latest being the largest name, so two writers at once cannot leave the older reading
+  on top; a start recorded after a mark's time proves the mark's turn over when its end
+  was lost. A directory of readings that cannot be read refuses `rewake pending`. Until
+  S9, October 11, 2026, Claude Code's UserPromptSubmit and Stop hooks recorded the same
+  through `rewake observe`; in this build no reporting role runs on Claude Code, so no
+  mark is made there.
+- **The gap that remains.** If a turn end with a mark is lost and the harness then
+  starts a turn by itself, reporting no start, and that turn's end is the first one
+  heard, its final answer leaves as an interim message and the report does not come.
 - **A turn background work woke.** A worker that marked a turn and was then woken by a
   finished subagent or background task must mark that turn too, or its end is the
-  report; the briefing says so. On Claude Code the Stop hook asks once when the mark is
-  missing ([below](#the-confirmation-on-claude-code)); on Codex the briefing is all
-  there is.
-- **Both harnesses** take the same path from there: the Stop hook through `rewake
-  turn-ended`, the plugin's interruption from the collector, and Codex's completion from
-  the gateway, into the one function that prepares a turn's reports, which asks for the
-  mark once per turn end.
+  report; the briefing says so. An adapter that can hold an end open lets the core ask
+  once when the mark is missing ([below](#the-confirmation-on-claude-code)); elsewhere
+  the briefing is all there is.
+- **Every adapter** takes the same path from there: its completion goes into the one
+  function that prepares a turn's reports, which asks for the mark once per turn end.
 - **Only a normal finish is softened.** A failed or stopped turn reports `error` or
   `stopped` as it would have, with the mark in its window all the same.
 - **The message** has its own report id (the wait's id plus `-pending-<turn>`), like
@@ -105,38 +96,42 @@ chosen.
   its notice fails (`inbox.IsReport`), but not one that settles (`inbox.Settles`), and
   a question waiting in the sender's session leaves it to be announced. The notice reads
   `Rewake: <session> pending, …` with the mark's text as its preview; Claude Code draws it as
-  status `running`, which it has no color for, and Codex marks it with ⏳.
+  status `running`, which it has no color for, and Codex marked it with ⏳.
 - **Refused** outside a session, for main — whose turns are reported to nobody — without
   text, and when no read task or question in this run waits for a report; each refusal
   says why.
 
 ## The confirmation on Claude Code
 
-Owner decision, September 26, 2026: after an interim turn end, rewake's Stop hook holds
-the next turn end that carries no mark, once, and asks the session whether the work is
-done. It catches the mark forgotten on a turn a finished subagent woke — three tasks
-were closed early that way that day — without a marker the worker must remember: the
-turn end stays the report by default, as decided on September 23. Codex is untouched:
-its turn end cannot be held through the gateway, and there the briefing alone asks for
-the mark.
+Owner decision, September 26, 2026: after an interim turn end, rewake holds the next
+turn end that carries no mark, once, and asks the session whether the work is done. It
+catches the mark forgotten on a turn a finished subagent woke — three tasks were closed
+early that way that day — without a marker the worker must remember: the turn end stays
+the report by default, as decided on September 23. The section keeps its name from
+where it began: Claude Code's Stop hook held the end until S9, October 11, 2026, when
+the hooks left ([research-claude-control.md](research-claude-control.md#a-stop-hook-that-holds-the-turn)
+has how the harness took the hold). Since S5 the same check runs for any adapter that
+can hold an end open, and in this build that is the fixture's; an adapter that cannot
+leaves the briefing alone to ask for the mark.
 
-- **When.** `rewake turn-ended` holds a turn end only when all of these are true: it is
-  a Stop, not a StopFailure; its `stop_hook_active` is `false`; this run's last
-  published turn end was interim; a sender whose session still runs waits on a task;
-  the ending turn made no mark; and no answer is kept from an earlier hold. A sender
-  proven gone — no record, or one of another run — is left out of the senders; a sender
-  whose record could not be read fails the check, and the end is published to every
-  sender, since the hold would otherwise be asked for a set the check never saw. Then it
-  publishes nothing, keeps `last_assistant_message`, and prints
-  `{"decision":"block","reason":"…"}`. The reason quotes the pending line, names the
-  senders, and says both ways on: still waiting — run `rewake pending` and end the turn;
-  done — end the turn, and the answer just given goes as the report with whatever is
-  added after it. Claude Code shows the reason to the model as a hook's blocking error
-  and asks it again ([research-claude-control.md](research-claude-control.md#a-stop-hook-that-holds-the-turn)).
-- **Once.** The call after a hold carries `stop_hook_active: true` and is never held,
-  and neither is a turn end while an answer is still kept. So a turn is held at most
-  once, far below the harness's eight. Each later unmarked turn end after an interim
-  one is asked again: every interim end starts a new episode.
+- **How.** The adapter calls the completion handler's `Confirm` in place of `Publish`,
+  and `ConfirmCompletion` answers `""` when the end was published, or a reason when it
+  was held; the adapter continues the turn with that reason and confirms the next end
+  again. Such an end names its event and may be retried, so it is refused without its
+  event id and read boundary.
+- **When.** An end is held only when all of these are true: the adapter says it may be
+  held; it did not fail; this run's last published turn end was interim; a sender whose
+  session still runs waits on a task; the ending turn made no mark; and no answer is
+  kept from an earlier hold. A sender proven gone — no record, or one of another run —
+  is left out of the senders; a sender whose record could not be read fails the check,
+  and the end is published to every sender, since the hold would otherwise be asked for
+  a set the check never saw. Then it publishes nothing and keeps the turn's answer. The
+  reason quotes the pending line, names the senders, and says both ways on: still
+  waiting — run `rewake pending` and end the turn; done — end the turn, and the answer
+  just given goes as the report with whatever is added after it.
+- **Once.** A turn end while an answer is still kept is never held, so a turn is held at
+  most once. Each later unmarked turn end after an interim one is asked again: every
+  interim end starts a new episode.
 - **The records**, beside the mark in `inbox/<name>/pending/` and changed only under
   the mailbox lock: `interim.json` holds the run's last word on the work — the epoch,
   the end's operation and its end time, and either the pending line of an interim end
@@ -148,44 +143,22 @@ the mark.
   completed while the next run takes over, leaves the record of the run holding the name
   alone, and one that cannot be read stops the journal rather than being written over
   ([turn-end-recovery.md](turn-end-recovery.md#the-interim-record)). `kept.json` holds
-  the held answer.
-- **The report keeps the held answer.** The harness's second Stop carries only what the
+  the held answer, the held end's operation and its reason.
+- **The same end confirmed again** — its answer lost — gets the same reason, and nothing
+  is published or kept again; once a continuation took the kept answer, its journal
+  names the held end in every form it takes, and the held end confirmed again is
+  answered as published ([turn-end-recovery.md](turn-end-recovery.md#a-held-end-confirmed-again)).
+- **The report keeps the held answer.** The continuation's end carries only what the
   model said after the hold, so the next turn end heard puts the kept answer into its
   own outcome: a finish gives the kept answer, then the continuation; a pending mark
   made in the continuation gives the mark's line, the kept answer, then the
-  continuation; a StopFailure gives its error, then the kept answer. The answer is
-  dropped once that outcome is published, not before, as a step of the turn end's
-  journal ([delivery-turn-end.md](delivery-turn-end.md)); each kept answer has its own
-  version, and the step drops the version the outcome carried and never a later one.
-- **A hold is not an end.** `rewake turn-ended` records every turn end it hears as the
-  next turn's start; a held one is not recorded, so a mark the continuation makes falls
-  within the turn its end takes it from.
-- **An Esc after a hold.** Nothing runs Stop or StopFailure then. rewake's plugin reports
-  the stop, and that `stopped` carries its line and then the kept answer; the waits stay
-  open, as after any stop. Where the plugin did not load nothing is heard, and the kept
-  answer goes out with the next turn end heard, which is not held again.
-- **Someone else's blocking Stop hook — left as it is.** A person's own Stop hook may
-  block a turn end rewake did not hold. rewake's hook has already published on the first
-  call, with the answer before the block, and settled the waits; the continuation's end
-  finds nobody waiting, and its text reaches nobody. rewake cannot tell on the first call
-  that another hook will block, since the hooks of one event run side by side, and
-  holding every report until a chain of blocks ends would need a signal the harness
-  does not give. Found by reading; not observed.
-- **Telemetry during a hold.** The Stop telemetry hook runs beside `rewake turn-ended` and
-  cannot know of the hold, so `rewake list` shows the session idle while the model is
-  asked again, until its next event. Delivery does not read that state.
-- **The neutral confirmation (stage 3, S5).** The same check runs for an adapter that can
-  hold an end open without a hook: it calls the completion handler's `Confirm` in place
-  of `Publish`, and `ConfirmCompletion` answers `""` when the end was published, or the
-  reason above when it was held; the adapter continues the turn with that reason and
-  confirms the next end again. Unlike the Stop hook's first call, such an end names its
-  event and may be retried, so it is refused without its event id and read boundary,
-  and a hold records the held end's operation and its reason in `kept.json` with the
-  answer. The same end confirmed again — its answer lost — gets the same reason, and
-  nothing is published or kept again; once a continuation took the kept answer, its
-  journal names the held end in every form it takes, and the held end confirmed again is
-  answered as published ([turn-end-recovery.md](turn-end-recovery.md#a-held-end-confirmed-again)).
-  No adapter calls it yet; the fixture adapter does from S5's second commit.
+  continuation; a failure gives its error, then the kept answer; a stop gives its line,
+  then the kept answer, with the waits open as after any stop. The answer is dropped
+  once that outcome is published, not before, as a step of the turn end's journal
+  ([delivery-turn-end.md](delivery-turn-end.md)); each kept answer has its own version,
+  and the step drops the version the outcome carried and never a later one.
+- **A hold is not an end.** A held end publishes nothing and journals no end of the
+  run, so a mark the continuation makes falls within the turn its end takes it from.
 
 ## Keyboard stops
 
@@ -194,16 +167,16 @@ A stopped outcome is advisory and comes from the adapter that heard the turn end
 keyboard stopped this turn". With no waiter it goes nowhere: unlike an error, it does not
 fall back to main, and main's own interruption puts nothing into its own inbox. A person
 interrupting a turn no rewake task depends on is their own business, and the session
-turning idle in the telemetry says all there is to say — the owner's decision of
-September 23, 2026, the same on both harnesses, since the routing
+turning idle says all there is to say — the owner's decision of
+September 23, 2026, the same for every adapter, since the routing
 (`internal/cli/turn_reports.go`) is shared. A waiter whose session has ended, or runs
 under another epoch, is no waiter any more: a `stopped` meant only for it is dropped too,
 where it used to go to main. Its journal is kept all the same, so a repeated event
 publishes nothing either.
-On Claude Code a turn a main aborted with `rewake interrupt` is stopped the same way,
+A turn a main aborted with `rewake interrupt` is stopped the same way,
 with the text "<main> interrupted this turn with rewake interrupt" instead, and the same
 routing; its next notice tells the interrupted session so, once
-([remote-control.md](remote-control.md#on-claude-code)).
+([remote-control.md](remote-control.md)).
 It owes no reply and has its own report id, separate from the eventual result.
 Its own operation, and journal, keep the original waits intact. A finished
 or error outcome for the same native turn is an operation of its own and can settle
@@ -232,16 +205,14 @@ handled as any turn end: a finish or an error settles the task, and a pending ma
 made during the turn is taken by it, never by the advisory. A turn whose only item is
 `contextCompaction` is a compaction and reports nothing.
 
-**Where a stop comes from.** Codex: the owned gateway sees `turn/completed` with status
-`interrupted` (`internal/harness/codex/gateway/admitted_terminal.go`). Claude Code,
-since September 23, 2026: rewake's function-hooks plugin reports `turn.complete` with
-reason `aborted`, which no hook reports, and the collector in the wrapper publishes it
-at once ([claude-plugin.md](claude-plugin.md)). Both reach the same publication with the
-same text, notice and kept waits, and on both the next turn end that finishes settles
-the task — owner decision, September 23, 2026: the two harnesses do not diverge here.
-Where the Claude Code plugin does not load, nothing is heard, and the next finished
-settles the task without a `stopped` before it
-([traps.md](traps.md#an-interrupted-claude-code-task-is-reported-finished-with-an-unrelated-answer)).
+**Where a stop comes from.** The adapter that hears the turn end says it was
+interrupted, and every adapter's stop reaches the same publication with the same text,
+notice and kept waits; the next turn end that finishes settles the task — owner
+decision, September 23, 2026: harnesses do not diverge here. In 1.x Codex's gateway saw
+`turn/completed` with status `interrupted`, and Claude Code's stop came from rewake's
+function-hooks plugin, reporting `turn.complete` with reason `aborted`
+([claude-plugin.md](archive-1.x/claude-plugin.md)); the plugin left in S9, October 11,
+2026, and in this build the fixture's program is the one that reports a stop.
 
 Answer receipts store the report id in received/<question id>. Only an exact
 match confirms that report; stopped does not acknowledge a later finished with

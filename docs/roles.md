@@ -115,10 +115,11 @@ read "nothing owed" and skipped a new unread task twice:
   subagent or background task woke included: a worker woken that way wrote "waiting for
   two more", ended without the mark, and closed its task (September 26, 2026). The
   turn's text goes with the mark, so findings can be written in the answer itself
-  ([turn-outcomes.md](turn-outcomes.md#interim-turn-ends-rewake-pending)). On Claude
-  Code a forgotten mark after an interim end is caught once by the Stop hook's question
-  ([turn-outcomes.md](turn-outcomes.md#the-confirmation-on-claude-code)); the rule
-  stands, since Codex has no such net.
+  ([turn-outcomes.md](turn-outcomes.md#interim-turn-ends-rewake-pending)). Until S9,
+  October 11, 2026, a forgotten mark after an interim end was caught once on Claude Code
+  by its Stop hook's question; the core still holds such an end once for an adapter that
+  can hold it ([turn-outcomes.md](turn-outcomes.md#the-confirmation-on-claude-code)), and
+  only the fixture harness can in this build, so the rule is the net.
 - After a compaction the task is re-read with `rewake inbox --owed` and new mail with
   `rewake inbox`; `--owed` counts what waits unread in a last line
   ([delivery-owed.md](delivery-owed.md#reading-again-what-is-owed-rewake-inbox---owed)).

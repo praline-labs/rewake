@@ -175,11 +175,11 @@ idle machine, `4` on a busy one; `docs/testing.md`), and takes about three minut
 The `-timeout 10m` is about three times that; a run past it dies with
 `panic: test timed out` and no case to say why.
 
-A change to the Claude Code plugin module (`internal/harness/claude/plugin.js`)
-or to the fixture that hosts it also runs the workflow suite before the commit.
-The five checks do not start the module under the harness's host, and a module
-that fails there unloads silently: every plugin case goes red while the five
-checks stay green.
+A change to the fixture harness — its adapter in `internal/harness/fixture` or its
+program in `test/workflow/fixtureshim*` — also runs the workflow suite before the
+commit. The five checks drive the adapter only through `test/toolrig`'s own program
+and never start the suite's, and the fixture is the suite's only column until stage 4:
+a program that breaks there turns every case red while the five checks stay green.
 
 For reading rather than watching, the same run goes through the summarizer, which
 prints a handful of lines and writes the whole result to a file:

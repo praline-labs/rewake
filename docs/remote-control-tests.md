@@ -2,8 +2,12 @@
 
 What proves `rewake compact` and `rewake interrupt`, part by part: the design is in
 [remote-control.md](remote-control.md), the Codex side in
-[remote-control-codex.md](archive-1.x/remote-control-codex.md), and how the workflow cases are
-built in [testing-plugin.md](testing-plugin.md#steering-a-session).
+[remote-control-codex.md](archive-1.x/remote-control-codex.md), and the workflow case in
+[testing-cases.md](testing-cases.md#a-stop-and-steering-a-session). The tests of the
+Claude Code module and its collector — the module under node against a strict host, the
+interrupter mark, the compaction marks — left with the plugin in S9, October 11, 2026;
+they are in the history at `98acc3b`, and how the retired `claude-steered` case was
+built is in [testing-plugin.md](archive-1.x/testing-plugin.md#steering-a-session).
 
 - `internal/control/control_test.go` — the protocol: a done answer and the cleanup, the
   modes, `not answering` with the request removed, a taken request without an outcome
@@ -24,34 +28,6 @@ built in [testing-plugin.md](testing-plugin.md#steering-a-session).
   with exit 2 and nothing written; a harness that is not steerable, and one without a
   focus; and a SIGTERM during the pickup, which ends the call as `cut short` with the
   request withdrawn instead of ending the process.
-- `internal/harness/claude/plugin_control_test.go` and `plugin_compact_test.go`, with the host in `plugin_control_host_test.go` — the module under node against a
-  strict host with the research's forms and refusals of `$.clock.every`,
-  `$.clock.sleep`, `$.fs`,
-  `$.session.compact` and `$.turn.abort`: an idle compaction answered started and its
-  end told with the counts, an answer written before the end of a compaction that takes
-  a while — on the collector's start mark — with a second request refused meanwhile, a
-  start not seen within the bound answered requested, a failure after the answer told
-  as failed, a host call failed before its start was seen answered as a final failure,
-  the host's refusals passed
-  on, "in flight", "an external turn" and the thin client's among them, and an error
-  after the start counted as started, the asker reported and sent before the host compacts, a
-  refusal reported and sent before the answer with whether the host had started, no
-  mark sent mid-turn, a second waited out after the end of a compaction the module did
-  not ask for, the host itself held to the re-entry rule, the interrupter reported, a request carried out once across a reload, a request
-  withdrawn or replaced as it is marked left undone, an answer the host failed to write
-  still ending the compaction and freeing the next request, a final answer — a refusal
-  mid-turn, a failed host call — told as the outcome after it is written, and no polling without a
-  directory.
-- `internal/harness/claude/telemetry/interrupter_test.go` and
-  `internal/harness/claude/lane_interrupt_test.go` — the stopped text naming main, the
-  mark and when it is used up or laid aside, and the notice line;
-  `internal/harness/claude/telemetry/compaction_asked_test.go` — the mark decoded, taken
-  up by the next compaction and laid aside by its refusal, which ends `compacting` for
-  a started compaction, also when its `PreCompact` comes after the refusal, and leaves
-  another compaction's alone; `compaction_ended_test.go` — `compact.ended` decoded, its
-  detail cut, an outcome a compaction cannot have refused, the outcome kept in the
-  snapshot, and the collector's start mark written for the `PreCompact` of the
-  compaction a main asked for and for no other.
 - `internal/wrap/session_notices_test.go` — no notice of a compaction this main asked
   for, and one each for a compaction another main asked for and one nobody asked for;
   `compaction_letters_test.go` — one letter, a note from the worker owing nothing, with
@@ -67,17 +43,16 @@ built in [testing-plugin.md](testing-plugin.md#steering-a-session).
   — the hold taken only once the writer lets go, and refused on a file removed or
   replaced between the open and the lock; `internal/control/pending_test.go` — the
   record read again under the hold, and a closed one not held.
-- The workflow case `claude-steered` — both commands end to end from a main against
-  workers whose module runs under node in the fixture: an idle compaction that takes
-  five seconds answered started within three, before the telemetry counts it, then its
-  letter to main with the tokens and the count, the count in the telemetry and no notice
-  of it to main, a second compaction whose worker leaves before its end still ending
-  in a failed letter to main, a compaction
-  refused mid-turn with the turn going on, an interrupt giving main the stopped text,
-  also in its awaited list, and the worker the notice line once, an idle interrupt
-  refused, a worker without the module not answering, and a worker's call refused as a
-  wrong call; fourteen product mutants, one per link
-  ([testing-plugin.md](testing-plugin.md#steering-a-session)).
+- The workflow case `fixture-steered` — both commands end to end from a main against
+  fixture workers whose program serves the control directory as the module did: an idle
+  compaction with a focus answered started while it still runs, before the telemetry
+  counts it, then its letter to main with the tokens and the count and no notice of it
+  to main; a second compaction whose worker is killed before its end still ending in a
+  letter to main; a compaction refused mid-turn with the turn going on; an interrupt
+  giving main the stopped text naming it, also in its awaited list; an idle interrupt
+  refused; a worker serving no control not answering; and a worker's call refused as a
+  wrong call; six product mutants, one per link of the core's path
+  ([testing-cases.md](testing-cases.md#a-stop-and-steering-a-session)).
 - `internal/control/serve_test.go` — the served side the Codex wrapper runs: an answer
   written once with the request's id, a request carried out once across a second look
   and a fresh server, one withdrawn or replaced as it is marked left undone and handed
@@ -160,7 +135,7 @@ built in [testing-plugin.md](testing-plugin.md#steering-a-session).
   compaction refused mid-turn with the turn going on, an interrupt giving main the
   stopped text, also in its awaited list, and the worker's next notice no line, an idle
   interrupt refused, and a worker's call refused; seven product mutants
-  ([testing-plugin.md](testing-plugin.md#steering-a-session)). The shape case checks the
+  ([testing-plugin.md](archive-1.x/testing-plugin.md#steering-a-session)). The shape case checks the
   shim's reply and events for both requests against the schema.
 - The workflow case `codex-compact-hold` — a task sent right after main's compaction of
   a Codex worker whose compaction runs long, the shim refusing input meanwhile as the

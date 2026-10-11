@@ -82,7 +82,7 @@ refusals and help come from there.
 | `question` | `--question` | the same | with the answer, up to `--wait` (600 s by default) |
 | `notify` | `--notify`; also main's wrapper for availability, departure and compaction notices, and the letter that ends a compaction main asked for with `rewake compact` ([remote-control.md](remote-control-letter.md)) | nothing | once delivered, after waiting up to four seconds for company ([the notice](#the-notice)) |
 | `finished` | successful turn end | nothing | — |
-| `error` | failed turn hook only | nothing | failure, exit 1 for a waiting question |
+| `error` | a failed turn end only | nothing | failure, exit 1 for a waiting question |
 | `stopped` | a turn stopped at the keyboard, or by a main's `rewake interrupt`; on Codex also a run that passed unseen, or a turn that ended with no proof of work | nothing | exit 1 for a waiting question |
 | `pending` | a normal turn end marked with `rewake pending` only | nothing | — a waiting question keeps waiting |
 
@@ -92,7 +92,9 @@ rewake delivers that message. A notify is not answered at all.
 
 A question needs a sender session and a recipient whose role reports turns.
 A silent recipient refuses `--question` before publication, with exit 2 and a
-hint to use plain `send` or `--notify`.
+hint to use plain `send` or `--notify`. A recipient on a harness whose contract reports
+no turn's end — Claude Code in this build, since S9, October 11, 2026 — refuses a task
+and a question alike, exit 1, with nothing sent; a note still goes.
 
 Before publishing a question, `send` creates `answering/<question id>` in its
 own mailbox. A separate heartbeat writes the boot clock's reading into the mark every
@@ -129,7 +131,7 @@ and final peek are needed to prevent an unannounced answer from being stranded.
 
 ### One lock per mailbox
 
-The server, `rewake inbox`, and `turn-ended` are separate processes acting on
+The server, `rewake inbox`, and the turn end the wrapper publishes are separate actors on
 the same messages and waiters. Every change of state happens under the
 mailbox's `flock` (`inbox/<name>/.lock`): making a message readable, recording
 what delivery did, reading, and reporting a turn. The call into the harness is
@@ -146,7 +148,7 @@ allows `flock` on files in `/tmp`.
 
 No wait for the lock is endless: a reader holds it while it prints, and its
 stdout can block for as long as nobody drains the pipe. The server waits while
-its session lives and gives its last writes two seconds; `turn-ended` waits
+its session lives and gives its last writes two seconds; a turn end waits
 five and leaves the rest owed; `inbox` waits ten and says the mailbox is busy.
 A lock the server cannot take — its file cannot be opened — stops the readers,
 who say why, and not the server's statuses: it writes them without the lock, along
@@ -210,8 +212,9 @@ other: a later expiry changes nothing and tells nobody.
 **The first notice.** An adapter may say its harness cannot take a notice yet. Until
 it can, waiting mail stays `pending` with the detail "the session is still starting",
 is not made readable, and goes out on the next pass once the harness opens. The
-Claude Code adapter opens on the session's first status line, or after three seconds
-if none comes.
+Claude Code adapter opens three seconds after its lane starts: until S9, October 11,
+2026, the status line rewake installed opened it sooner, and with the status line gone
+the bound is the only gate.
 
 **A reservation that cannot be taken in three seconds fails the message, it does not
 hold it.** September 22, 2026: the reservation is bounded at three seconds twice, by
@@ -396,6 +399,6 @@ under way — `rewake withdraw`, `rewake edit`, `rewake send --to` — are in
 
 ### The end of a turn, and after
 
-How `turn-ended` turns a finished turn into a report, how a report notes that the
+How the end of a turn becomes a report, how a report notes that the
 reader's conversation changed underneath it, and where the turn ends that are not an
 ordinary report are described: in [delivery-turn-end.md](delivery-turn-end.md).

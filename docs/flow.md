@@ -15,7 +15,7 @@ from the code.
 | **harness** | Claude Code or Codex, the ordinary program in the terminal | the session |
 | **agent** | the model inside the harness, calling `rewake send`, `rewake inbox`, `rewake whoami` from its shell | a turn at a time |
 | **sender** | any `rewake send` process: an agent's shell, a person's shell | until the status arrives |
-| **hook** | `rewake turn-ended`, run by the harness at the end of every turn | a moment |
+| **turn boundary** | the harness's word that a turn ended, which its adapter in the wrapper hands the core; Claude Code has none in this build (Act 5) | a moment |
 
 There is no daemon. Each wrapper services exactly one mailbox: its own
 session's. Everything the processes share is files under the state directory,
@@ -75,7 +75,11 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
    room or after main exits. Only explicit `--main` creates main, and it refuses
    under the room lock if a live main already occupies the room. Explicit
    `--general` and `--write` remain unchanged; a --name prefix never selects a
-   role. Main stays silent; write reports like general. A write session on Codex is the
+   role. Main stays silent; write reports like general. A role that owes reports, on a
+   harness whose contract reports no turn's end — Claude Code in this build — is refused
+   before the worktree and the version read, exit 1, naming the missing turn boundary
+   and that the role is available there from stage 4 ([launch.md](launch.md)).
+   A write session on Codex is the
    one recipient of an explicit Git metadata grant requested by main — Claude Code takes
    none, and main cannot send to itself — and every role of a directory grant
    ([grants.md](grants.md)); selecting a role does not request access. The record and intro say default general for an omitted
@@ -85,17 +89,13 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
    `--worktree`, a flag the line types again in place of an alias's copy, and the Codex
    flags that name another server or configuration, which are refused. rewake adds, for one launch only and never into a config file:
    - Claude Code: `--messaging-socket-path sock/<name>.<epoch>.sock`,
-     `--append-system-prompt <intro>`, `--allowedTools "Bash(rewake:*)"`, and
-     one `--settings` layer — merged into the user's own if they passed one — with
-     StopFailure for every role and Stop for reporting roles, both running
-     `rewake turn-ended`, plus background telemetry hooks and the status-line tap
-     that report to the wrapper's `sock/<name>.<epoch>.obs`
-     ([claude-telemetry.md](claude-telemetry.md)), and `--plugin-dir` with
-     `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` for rewake's plugin, which reports turn
-     starts and ends — an interrupted one included — to the same socket
-     ([claude-plugin.md](claude-plugin.md)); with the mail tool, also
-     `--mcp-config` naming the run's server file, `--allowedTools mcp__rewake__rewake`
-     and the tool's hooks in the same settings layer;
+     `--append-system-prompt <intro>`, `--allowedTools "Bash(rewake:*)"` unless the
+     line gives its own. Nothing else: the settings layer with the Stop, StopFailure and
+     telemetry hooks, the status-line tap and rewake's plugin left in S9, October 11,
+     2026 ([claude-telemetry.md](archive-1.x/claude-telemetry.md),
+     [claude-plugin.md](archive-1.x/claude-plugin.md)), so the wrapper is not told when
+     a Claude Code turn ends, and a role that owes reports refuses to launch on it
+     with exit 1, naming the missing turn boundary and stage 4;
    - Codex: an owned foreground app-server on a private socket, initialized before
      the TUI starts with --remote. Explicit configuration and the briefing reach
      the server; an inline gateway follows accepted TUI intent. Launch roles add no
@@ -146,7 +146,10 @@ session's shell, or from a person's shell in the same room. A shell without
    names listed.
 3. **The kind.** Plain `send` is a `task`; `--question` and `--notify` are the
    other two. A question to a silent recipient is refused here, before anything
-   is written: that role never reports, so it could never answer.
+   is written: that role never reports, so it could never answer. A task or a
+   question to a session on a harness that reports no turn's end — Claude Code in
+   this build — is refused the same way, exit 1: nothing would carry its answer back.
+   A note still goes.
 4. **The file.** `inbox/write-codex/<id>.json.tmp`, renamed to `.json`. The id is
    time-sortable. Nothing else is touched: the sender does not deliver. A `--notify`
    is first journaled under a receipt in the sender's mailbox and then written once
@@ -206,13 +209,13 @@ in one notice. A task or a question does not wait, and takes whatever is waiting
      an id, and the session's inbound gate answers there if it holds or refuses
      the line; silence for 300 ms counts as taken, and a word after that for a
      minute takes the delivery back. The first notice to a new
-     session waits for its first status line, since until then the gate holds
-     everything ([delivery-adapters.md](delivery-adapters.md#claude-code-adapter)).
-     A task or question carrying a directory grant waits, pending, while the session's
-     telemetry says a turn is running, and main's wrapper confirms the grant as on
-     Codex; the wrapper then keeps it in memory, and the session's `grant-hook` adds the
-     directory at the first file-tool write inside it ([grants-claude.md](grants-claude.md)).
-     `--grant-git` to a Claude Code session is refused at send, with exit 1.
+     session waits three seconds from the launch, since until the session
+     has drawn its interface the gate holds everything
+     ([delivery-adapters.md](delivery-adapters.md#claude-code-adapter)). Only notes
+     and reports reach a Claude Code session in this build: a task or a question to
+     it is refused at send with exit 1, since nothing would report its end, and with
+     it every grant ([grants-claude.md](archive-1.x/grants-claude.md) is how 1.x
+     granted to one).
    - Codex: a launch that resumed and whose terminal went on in another conversation
      keeps the message `pending` until that one is resumed or the person runs `rewake
      accept`; main is told once, the terminal shows a warning
@@ -294,8 +297,10 @@ why it was refused or failed — comes later as a notify from the worker
 
 ## Act 5. The turn ends and the report goes back
 
-The harness itself says when a turn is over: Claude Code through Stop or StopFailure,
-Codex through turn/completed on its own TUI connection. The gateway retains
+The harness itself says when a turn is over, through its adapter in the wrapper: the
+fixture's program with an end frame, Codex in 1.x through turn/completed on its own TUI
+connection. Claude Code said it through its Stop and StopFailure hooks until S9, October
+11, 2026; in this build it says nothing, which is why no reporting role runs on it. The gateway retains
 admitted outcomes across selection changes; no observer attachment is needed.
 An asynchronous publisher journals callbacks before the durable report path. An observed active-to-idle interval missing
 completion after a short grace produces error with "completion not observed",
@@ -304,11 +309,11 @@ is a gap, reported as an advisory `stopped` that settles nothing, since it may h
 a compaction. Only a turn with proof that it is work — a reply naming it or an item
 other than a compaction's — settles a wait; one without is reported as advisory, and a
 turn its `contextCompaction` item shows to be a compaction reports nothing, so a
-compaction's turn never settles a wait ([codex-publication.md](archive-1.x/codex-publication.md)). The hook and server events use the same internal
-reporting function and turn journals. A callback with `agent_id` is from a nested agent and is
+compaction's turn never settles a wait ([codex-publication.md](archive-1.x/codex-publication.md)). Every
+adapter's end goes through the same internal reporting function and turn journals. A callback with `agent_id` is from a nested agent and is
 ignored without changing the parent session's waits.
 
-1. **Who is owed.** Under the lock, `turn-ended` reads
+1. **Who is owed.** Under the lock, the turn end reads
    `awaiting/<own epoch>/`. A silent role emits no successful reports;
    failure callbacks still route errors. First the barrier completes what an
    earlier end left unfinished (`inbox.Reconcile`); an unknown it cannot decide stops the
@@ -319,16 +324,13 @@ ignored without changing the parent session's waits.
    sender's mailbox: text is the final reply, `inReplyTo` lists the messages
    read from that run since the last report, `toEpoch` is that run — not
    whoever holds the name now. The id is derived from the wait, so a retried
-   hook writes the same report once. A retry finds its journal and completes it, and
+   end writes the same report once. A retry finds its journal and completes it, and
    answers nothing read above its boundary even when new work arrived between attempts.
 3. **A grant ends.** A directory granted with a task lives at least until this
    report; a stopped turn or a pending mark keeps it, and an error report or a
    withdrawal ends it as a report does. On Codex rewake takes it back at the next
    delivery into the conversation it was granted in, not at the report itself, and a person's own turn
-   in the terminal drops it at once. On Claude Code the hook takes it back at the first
-   read or `rewake` command after the report in the `default` and `acceptEdits` modes;
-   in `plan`, `bypassPermissions` and auto it stays until the session ends
-   ([grants-claude.md](grants-claude.md)). A cold resume before the report starts a new
+   in the terminal drops it at once. A cold resume before the report starts a new
    run, which takes over the task's wait and has main confirm the grant again — only
    while that main still runs, in the same conversation, within a day of the read; a
    restarted main restores nothing, and a resume after the report gets nothing back
@@ -368,9 +370,8 @@ turn: background work still running, the owner, a refusal to be cleared — runs
 `rewake pending "<what it waits for>"` first. That one turn end then reaches the
 waiters as a `pending` message with that text first and the turn's own answer after it,
 owing nothing and settling nothing, and the next turn end without a mark is the report
-([turn-outcomes.md](turn-outcomes.md#interim-turn-ends-rewake-pending)) — on Claude Code
-after the Stop hook has held it once to ask whether the work is done
-([the confirmation](turn-outcomes.md#the-confirmation-on-claude-code)).
+([turn-outcomes.md](turn-outcomes.md#interim-turn-ends-rewake-pending)), after the core
+has held it once, through the adapter, to ask whether the work is done.
 
 The rest of the flow — a blocking question (Act 6), a notify (Act 7), the session's
 end (Act 8), one exchange traced through its files, where the flow can stall, and

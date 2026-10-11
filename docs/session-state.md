@@ -176,65 +176,17 @@ may be displayed with explicit labels; cached data is not a fresh measurement.
 
 ## Claude Code source
 
-Everything above describes the Codex source, a server whose events the gateway reads. A
-Claude Code session has none; its wrapper collects the same snapshot from the session's
-hooks and status line instead ([claude-telemetry.md](claude-telemetry.md)), and the
-readers — `rewake list`, the main-only header, the compaction notice — are unchanged.
-What each field means there — observed live on September 23, 2026, Claude Code 2.1.280,
-rewake built from `d975dd7`, for model, effort, context, activity and a compaction notice
-([harness-features.md](harness-features.md), HF-11 and HF-22):
-
-- **Activity**: `working` from UserPromptSubmit, which fires for a message delivered
-  through the inbox socket too; `idle` from Stop, StopFailure, a SessionStart that is
-  not a compaction's, and an `idle_prompt` notification. Waiting stays unknown during a
-  turn, except `approval` after a `permission_prompt` notification, cleared when the
-  context count next moves — which happens only after a response. Hooks run in the
-  background, so an event whose process started earlier than the one applied is
-  ignored; each sender stamps its process start on the machine's boot clock
-  (`CLOCK_BOOTTIME`), one clock for every process that a wall-clock jump after a WSL
-  suspend does not move back.
-  The plugin's `turn.start` and `turn.complete` set `working` and `idle` too, and they
-  are what ends a turn a person interrupted, which runs no hook
-  ([claude-plugin.md](claude-plugin.md)). Where the plugin did not load, a session a
-  person interrupts with Esc stays `working` until the next event that ends a turn or
-  starts one afresh: a UserPromptSubmit or Stop, a SessionStart that is not a
-  compaction's (`/clear` and `/resume`; the reset after `/clear` was seen live), or an
-  `idle_prompt` notification, which did not come within 80 seconds of an Esc
-  ([research-claude-control.md](research-claude-control.md#interrupting-a-turn-and-changing-the-conversation)).
-- **Interruptions**: `interruptions` says whether an interrupted turn is heard —
-  `observed` once the plugin's first event arrived, `unobserved` once a turn was heard
-  through the hooks without one, absent before either. The machine form carries the
-  value; the text forms add `interruptions unheard` to the activity for `unobserved`
-  only ([session-activity.md](session-activity.md#current-activity)).
-- **Model and effort**: from the status line, which states both each time; a model the
-  status line gives no effort for clears the effort to unknown. SessionStart and the
-  turn hooks fill them earlier when they carry them.
-- **Context**: the harness's own figures — `total_input_tokens` of the last response,
-  `context_window_size` and `used_percentage` — not the Codex formula above; while the
-  status line has given none, the plugin's `session.measure` fills them in. Where the
-  person capped the window below the model's — `CLAUDE_CODE_AUTO_COMPACT_WINDOW`,
-  `--autocompact` or `autoCompactWindow` — the window is that cap and the percent is of
-  it, as the plugin reported the values
-  ([claude-telemetry.md](claude-telemetry.md)); a percent past 100 is shown as it is.
-  Without the plugin the window is the model's whatever the person set. Before the
-  first response and after a compaction the harness sends zeros, the usage null or
-  itself zero; a zero count reads as unknown, not as an empty context. A compaction's
-  end also drops the fill counted before it, keeping the window, and a status line or
-  measure started before that end is not taken — so after a compaction the listing
-  reads `unknown` until the next response, as at startup, rather than `0%` or the old
-  value.
-- **Compactions**: PreCompact sets in progress; PostCompact counts one and adds a
-  notification cue with a monotonic sequence; a Stop, StopFailure or new prompt clears
-  a compaction that never completed. The count and coverage `observed` appear only after
-  the first hook arrives: hooks can be switched off, and a zero nobody could count would
-  be a claim.
-- **Conversation**: `primaryThread` is the harness's `session_id`, which `/clear`
-  replaces. The wrapper pins a delivery to the same value, read from the collector
-  rather than from this publication, and a report from another conversation carries
-  `threadChanged` ([delivery-adapters.md](delivery-adapters.md#claude-code-adapter), HF-10).
-
-Freshness is the wrapper's heartbeat, as for Codex: the values are the last each event
-reported, and they read stale only when the wrapper stops publishing.
+Everything above describes the Codex source of 1.x, a server whose events the gateway
+read; in this build the fixture harness's adapter is the one source that publishes a
+snapshot. Until S9, October 11, 2026, a Claude Code session's wrapper collected the same
+snapshot from the session's hooks, its status line and rewake's plugin — activity,
+whether interruptions are heard, model and effort, context, compactions and the
+conversation, observed live on September 23, 2026 on Claude Code 2.1.280
+([harness-features.md](harness-features.md), HF-11 and HF-22). All of it left with the
+hooks: how each field was read is in [claude-telemetry.md](archive-1.x/claude-telemetry.md)
+and [claude-plugin.md](archive-1.x/claude-plugin.md). A Claude Code session publishes no
+snapshot in this build, and every reader — `rewake list`, the main-only header, the
+compaction notice — shows its values unknown, as for any adapter without one.
 
 ## Evidence and acceptance
 

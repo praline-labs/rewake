@@ -22,7 +22,8 @@ turn and the words).
 
 - **Codex** names each turn once: a `turnId` is never reused after its `turn/completed`,
   and the gateway knows which turns are open. The ticket's turn is that id.
-- **Claude Code** names a turn by the `prompt_id` every hook input carries, and the
+- **Claude Code**, as 1.x did it — the hooks this bullet rests on left in S9, October 11,
+  2026 — names a turn by the `prompt_id` every hook input carries, and the
   PreToolUse hook that observes the call carries its own, so the correlation needs no
   other event: the UserPromptSubmit telemetry stays what stage 1 uses it for, the start
   of an end's window. A `prompt_id` can outlive an end, though. A Stop that stage 1
@@ -146,8 +147,8 @@ only in such a capture. On Claude Code in 1.x, `rewake bridge-hook` forwarded
 PostToolUse and returned on the wrapper's reply or its timeout (the command left with the
 injection in S8); the acknowledgment goes on either way. An
 end does not wait for tickets, processes or acknowledgments that have not begun to
-write, so the Stop hook keeps stage 1's bounds (a five-second mailbox wait, a hook
-timeout of ten).
+write, so the Stop hook kept stage 1's bounds (a five-second mailbox wait, a hook
+timeout of ten) until it left in S9, October 11, 2026.
 
 An acknowledgment that ran out of its budget or failed is dropped, never retried, and
 the letter shows again through `inbox --next` or `retry`. The endpoint spends a call's
@@ -212,8 +213,9 @@ beside the read clock), and a heard end moves it up to the end. The time must be
 harness's, taken at or before anything the turn ran — never the moment the report
 arrived, or a shell `pending` of that same turn, run before the report came in, would
 find a start after its own time and read its turn as ended. A transport that gives no
-such time records none, which proves nothing, as above. The other record is the
-telemetry file the UserPromptSubmit hook writes, read until S9 removes it.
+such time records none, which proves nothing, as above. The other record was the
+telemetry file the UserPromptSubmit hook wrote, read until it left with the hooks in S9,
+October 11, 2026.
 
 Under the mailbox lock, just before the mark, the attempt decides:
 

@@ -181,11 +181,6 @@ everything else.
   delivery by pid, start time and namespaces, the conversation it keeps for a resume, and
   what the scheme holds against and what not. Open it when a grant is refused as not
   confirmed, or to judge whether a worker could grant itself one.
-- [grants-claude.md](grants-claude.md) — a grant to a Claude Code session through its
-  permission hooks: the keeper in the worker's wrapper, the idle wait, giving on the first
-  file-tool write, what stays with the person, taking back and the modes it works in, and
-  why it is a courtesy rather than a boundary. Open it when a Claude Code worker is asked,
-  or not asked, about a write in a granted directory.
 - [grants-resume.md](grants-resume.md) — a grant after a cold resume: finding the
   conversation and the task's wait, the journal copy, main's wrapper confirming it again,
   what each harness does with the answer and what is not restored. Open it when a resumed
@@ -204,15 +199,6 @@ everything else.
   who sees what, availability notifications, the context formula, confirmed model and
   effort, the compaction counter, staleness, and its acceptance log. Open it when
   `rewake list`, a header or an availability notice shows a wrong or stale value.
-- [claude-telemetry.md](claude-telemetry.md) — how a Claude Code session's telemetry is
-  collected: background hooks, the status-line tap running the person's own status line,
-  the settings layers, the collector and the owner decisions. Open it when a Claude Code
-  row of `rewake list` is wrong, or a status line misbehaves under rewake.
-- [claude-plugin.md](claude-plugin.md) — rewake's function-hooks plugin for Claude Code:
-  what the launch carries, the four events it reports and the fields it never reads, how
-  an interrupted turn becomes `stopped` without a second report for an ordinary one, how
-  a session says whether interruptions are heard, and its limits. Open it when an Esc on
-  a Claude Code worker is not reported, is reported twice, or when the plugin API changes.
 - [remote-control.md](remote-control.md) — `rewake compact` and `rewake interrupt`, a
   main acting on a running worker: who may call them and every refusal, the per-run
   control directory and its files, why giving up on a request is honest in every order,
@@ -334,22 +320,15 @@ everything else.
   depth behind it.
 - [testing-cases.md](testing-cases.md) — what each end-to-end case claims, with its
   sessions, what the fixture plays and its controls, with a table of every control by
-  scenario that `controls_test.go` keeps equal to the suite: the Claude Code telemetry budgets
-  and their measurement, launching through a wrapper, pending and owed reports, the
+  scenario that `controls_test.go` keeps equal to the suite: the Claude Code column retired
+  in S9 and the unit tests that hold its kept code until stage 4, launching through a wrapper, pending and owed reports, the
   worktrees, a directory granted with a task, the awaited view, withdrawing, editing and adding to a sent message, a changed
-  conversation, and the inbound gate. Open it before changing one of those cases or the
+  conversation, a stop and steering a session. Open it before changing one of those cases or the
   behaviour it guards.
 - [testing-tools.md](testing-tools.md) — the workflow cases that make rewake's calls
   through the fixture program's tool transport, one per tool, and the program's timed
   turn start: what each claims, the read's checked schedule, the controls and the
   crosswise check's exclusion. Open it before changing a tool case or the transport.
-- [testing-plugin.md](testing-plugin.md) — the workflow cases that run rewake's
-  function-hooks plugin under node: how the fixture hosts the module and answers its
-  calls on the session, and what `claude-interrupted`, `stopped-routing` and
-  `claude-steered` claim, with their controls, `codex-steered`, the same commands
-  served by the Codex wrapper, and `codex-compact-hold`, a task sent into a long Codex
-  compaction. Open it before changing the plugin, the control
-  directory, the Codex side of `rewake compact` and `rewake interrupt`, or those cases.
 - [testing-pool.md](testing-pool.md) — how the workflow suite runs its cases side by
   side: choosing `-parallel`, the pool that starts the longest scenarios first, the
   owner labels that keep one case's cleanup off its neighbours' processes, the sweep
