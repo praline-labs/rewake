@@ -16,6 +16,8 @@ type Reservation interface {
 }
 
 // Reserver binds one shared admission before its members become readable.
+// No reservation and no error is a destination that holds nothing for this
+// notice: the letter takes the path of a server without a Reserver.
 type Reserver func(context.Context, Message) (Reservation, error)
 
 // prepareDelivery checks leases before reserving a destination, then rechecks under
@@ -77,8 +79,9 @@ func (s *Server) prepareDelivery(ctx context.Context, message *Message) (read, a
 			}
 			return
 		}
-
-		release = sync.OnceFunc(func() { reservation.Close(); cancel() })
+		if reservation != nil {
+			release = sync.OnceFunc(func() { reservation.Close(); cancel() })
+		}
 	}
 	makeReadable := func(thread string) error {
 		if thread != "" && Owed(*message) {

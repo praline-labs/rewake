@@ -13,6 +13,21 @@ var mutantSendUnwoken = mutation{
 	edits: []edit{{"if !session.HasLive(string(adapter.WakeCapability)) {", "if false && !session.HasLive(string(adapter.WakeCapability)) {"}},
 }
 
+// A reservation goes to the Wake whether it is live or not, and the
+// adapter's refusal fails the letter the sender was told it could read.
+var mutantReserveUnguarded = mutation{
+	name:  "reserve-unguarded",
+	file:  "internal/wrap/wrap.go",
+	edits: []edit{{"server.Reserve = reserveIfLive(reserver, live)", "server.Reserve = reserver.Reserve"}},
+}
+
+// A letter owed a report asks the conversation of a run whose Wake is gone.
+var mutantThreadUnguarded = mutation{
+	name:  "thread-unguarded",
+	file:  "internal/wrap/wrap.go",
+	edits: []edit{{"Thread: threadIfLive(thread, live),", "Thread: thread,"}},
+}
+
 // A task goes to a run whatever its boundary's live mark says.
 var mutantTaskUnbounded = mutation{
 	name:  "task-unbounded",
@@ -72,6 +87,14 @@ var mutantBriefToolless = mutation{
 
 func TestAnUnwokenLetterWaitingForADeliveryFails(t *testing.T) {
 	runLiveControl(t, mutantSendUnwoken, obsLiveUnwoken)
+}
+
+func TestAReservationWithoutALiveWakeFails(t *testing.T) {
+	runLiveControl(t, mutantReserveUnguarded, obsLiveUnwoken)
+}
+
+func TestAConversationAskedWithoutALiveWakeFails(t *testing.T) {
+	runLiveControl(t, mutantThreadUnguarded, obsLiveUnwoken)
 }
 
 func TestATaskWithoutALiveBoundaryAcceptedFails(t *testing.T) {

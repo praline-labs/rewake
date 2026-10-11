@@ -144,3 +144,33 @@ func TestReservationNotYetKeepsTheMessagePending(t *testing.T) {
 		t.Fatalf("after the compaction: %+v", status)
 	}
 }
+
+// A Reserver that holds nothing for a notice sends its letters the plain way:
+// readable, then handed to Deliver, whose waiting answer keeps them pending.
+func TestNoReservationTakesThePlainPath(t *testing.T) {
+	for _, kind := range []Kind{Task, Note} {
+		t.Run(string(kind), func(t *testing.T) {
+			dir := stateDir(t)
+			m := message("unreserved")
+			m.Kind = kind
+			if err := Put(dir, m); err != nil {
+				t.Fatal(err)
+			}
+			delivered := 0
+			s := &Server{
+				Dir: dir, Name: "api", attempts: map[string]time.Time{}, outcomes: map[string]Result{},
+				Reserve: func(context.Context, Message) (Reservation, error) { return nil, nil },
+				Deliver: func(context.Context, Message) Result {
+					delivered++
+					return Result{State: Pending, Detail: "no notice can reach this session"}
+				},
+			}
+			s.drain(context.Background())
+			status, _, _ := ReadStatus(dir, "api", m.ID)
+			unread, _ := PeekUnread(dir, "api", "")
+			if delivered != 1 || status.State != Pending || len(unread) != 1 || unread[0].ID != m.ID {
+				t.Fatalf("delivered %d, status %+v, unread %d", delivered, status, len(unread))
+			}
+		})
+	}
+}

@@ -118,6 +118,8 @@ Tests:
 - `internal/wrap/live_test.go` `TestABoundaryNeverReportedIsRefusedAtTheBound`
 - `internal/wrap/live_test.go` `TestARunThatReportsNoneHasItsPlanLive`
 - `internal/wrap/live_test.go` `TestADeliveryWithoutALiveWakeWaits`
+- `internal/wrap/live_test.go` `TestWithoutALiveWakeNothingIsReservedOrPinned`
+- `internal/inbox/reservation_test.go` `TestNoReservationTakesThePlainPath`
 - `internal/cli/live_set_test.go` `TestASendToARunWithoutALiveWakeIsAcceptedUnwoken`
 - `internal/cli/live_set_test.go` `TestATaskToARunWithoutALiveBoundaryFails`
 - `internal/cli/live_set_test.go` `TestTheLiveBoundaryDecidesNotTheOffer`

@@ -108,6 +108,46 @@ func wakeIfLive(wake adapter.Wake, live *liveSet) func(context.Context, inbox.Me
 	}
 }
 
+// reserveIfLive reserves through the run's Wake while it is live. Otherwise it
+// reserves nothing, and the letter takes the plain path: made readable, then
+// handed to wakeIfLive, which leaves it waiting. A Wake withdrawn while the
+// reservation was asked is the same case, so the letter a sender was told it
+// could read is never failed for want of a notice.
+func reserveIfLive(reserver adapter.Reserver, live *liveSet) inbox.Reserver {
+	return func(ctx context.Context, message inbox.Message) (inbox.Reservation, error) {
+		if !live.has(adapter.WakeCapability) {
+			return nil, nil
+		}
+		reservation, err := reserver.Reserve(ctx, message)
+		if err != nil && !live.has(adapter.WakeCapability) {
+			return nil, nil
+		}
+		return reservation, err
+	}
+}
+
+// threadIfLive asks the run's conversation while its Wake is live. Without
+// it, as when the conversation rests on the Wake and went with it, a letter
+// owed a report is made readable in no conversation rather than failed: the
+// state of a letter whose sender's wrapper did not answer its pin, which
+// holds for this run and is not taken into a resume (wrap/grants.go). A
+// delivery tried again once the Wake is live pins it then.
+func threadIfLive(thread func() (string, error), live *liveSet) func() (string, error) {
+	if thread == nil {
+		return nil
+	}
+	return func() (string, error) {
+		if !live.has(adapter.WakeCapability) {
+			return "", nil
+		}
+		conversation, err := thread()
+		if err != nil && !live.has(adapter.WakeCapability) {
+			return "", nil
+		}
+		return conversation, err
+	}
+}
+
 // plannedLive is the live set of a run that reports none: each capability
 // its plan carries, and Control where it is offered and the run has its
 // control directory. The order is the API's, as a reporting run's.

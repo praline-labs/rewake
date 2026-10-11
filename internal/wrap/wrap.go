@@ -272,7 +272,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 		server := &inbox.Server{
 			Ready:  func() { close(serviceReady) },
 			Dir:    request.Dir,
-			Thread: thread,
+			Thread: threadIfLive(thread, live),
 			Name:   name,
 			Epoch:  epoch,
 			// Asked before the mailbox is touched at all: a serving goroutine
@@ -286,7 +286,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 			Deliver:    wakeIfLive(plan.Wake, live),
 		}
 		if reserver, ok := plan.Wake.(adapter.Reserver); ok {
-			server.Reserve = reserver.Reserve
+			server.Reserve = reserveIfLive(reserver, live)
 		}
 		if receiver, ok := plan.Wake.(adapter.Receiver); ok {
 			server.Receipts, server.Opened = receiver.Receipts(), receiver.Opened()

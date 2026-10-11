@@ -103,7 +103,12 @@ with exit 2 and a hint to use plain `send` or `--notify`.
 A letter to a run whose Wake is not live is still written: `send` reports it accepted,
 exit 3, without waiting, and says no notice can reach the session, which reads its mail
 when it runs `rewake inbox`. The recipient's wrapper keeps the letter pending rather
-than failing it, so a Wake made live again carries the next attempt (S11).
+than failing it, so a Wake made live again carries the next attempt (S11). It reserves
+nothing through that Wake and asks it for no conversation: the letter is made readable
+the plain way, a letter owed a report in no conversation — as one whose sender's wrapper
+did not answer its pin, its grant held for this run and not taken into a resume — and
+pinned when a later attempt finds the Wake live. A Wake withdrawn while a reservation is
+asked is the same case, so the promise `send` made is never broken by a failed letter.
 
 Before publishing a question, `send` creates `answering/<question id>` in its
 own mailbox. A separate heartbeat writes the boot clock's reading into the mark every

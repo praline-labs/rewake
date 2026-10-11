@@ -302,8 +302,10 @@ withholding what its program's switch says, and judges what main's `rewake list 
 and the commands show. full proves everything: its record's live set names every
 capability, its channel shows the tool connected, its briefing carries the whole
 transport sentence, and once stopped its last snapshot keeps the channel record frozen at
-the exit. wakeless (`RW_SHIM_NO_WAKE`) has no Wake live: a letter to it is accepted at
-once, exit 3, saying no notice can reach it. toolless (`RW_SHIM_NO_TOOL`) shows no tool
+the exit. wakeless (`RW_SHIM_NO_WAKE`) has no Wake live: a note and a task to it are
+each accepted at once, exit 3, by send's own answer that no notice can reach it, and once
+its server has tried them each waits readable in its inbox with its stored status
+pending. toolless (`RW_SHIM_NO_TOOL`) shows no tool
 with its reason, says so on its standard error at launch, carries the shell's clause
 alone in its briefing, and its shell read lands in its record. dropper
 (`RW_SHIM_DROP_AFTER=1`) closes its connection after its first turn: its whole live set
@@ -361,4 +363,4 @@ switches have no single form in the code to find them by, and the row is kept by
 | fixture-worktree | `worktree-not-entered`, `worktree-running-ignored`, `worktree-visitor-ignored`, `worktree-git-kept`, `worktree-ignored-unseen`, `worktree-branch-trusted`, `worktree-moved-unrefused`, `worktree-detached`, `worktree-land-merges`, `worktree-finish-unchecked`, `worktree-finish-branch-kept` | — |
 | fixture-grant-dir | `grant-not-rechecked`, `grant-refusal-untold`, `grant-unregistered`, `grant-held-after-report` | `RW_SHIM_HOLD_RESERVE` |
 | fixture-grant-forgery | `grant-from-anywhere`, `grant-unconfirmed`, `grant-any-listener` | — |
-| fixture-live | `send-unwoken`, `task-unbounded`, `launch-unawaited`, `lost-kept`, `no-tool-unrecorded`, `denial-dropped`, `shell-unread`, `exit-unfrozen`, `brief-toolless` | `RW_SHIM_NO_WAKE`, `RW_SHIM_NO_TOOL`, `RW_SHIM_DROP_AFTER`, `RW_SHIM_NO_BOUNDARY` |
+| fixture-live | `send-unwoken`, `reserve-unguarded`, `thread-unguarded`, `task-unbounded`, `launch-unawaited`, `lost-kept`, `no-tool-unrecorded`, `denial-dropped`, `shell-unread`, `exit-unfrozen`, `brief-toolless` | `RW_SHIM_NO_WAKE`, `RW_SHIM_NO_TOOL`, `RW_SHIM_DROP_AFTER`, `RW_SHIM_NO_BOUNDARY` |

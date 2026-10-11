@@ -2,6 +2,7 @@ package wrap
 
 import (
 	"context"
+	"errors"
 	"os"
 	"slices"
 	"strings"
@@ -187,5 +188,65 @@ func TestADeliveryWithoutALiveWakeWaits(t *testing.T) {
 	}
 	if result := wakeIfLive(nil, live)(context.Background(), message); result.State != inbox.Pending {
 		t.Fatalf("a plan with no Wake: %+v", result)
+	}
+}
+
+// fakeReserver answers each reservation with what its hook says.
+type fakeReserver struct {
+	calls int
+	hook  func() (inbox.Reservation, error)
+}
+
+func (f *fakeReserver) Reserve(context.Context, inbox.Message) (inbox.Reservation, error) {
+	f.calls++
+	return f.hook()
+}
+
+type heldReservation struct{ inbox.Reservation }
+
+// Without a live Wake nothing is reserved and no conversation is asked, so
+// the letter goes the plain way, readable and waiting; a Wake withdrawn while
+// it was asked is the same. With the Wake live again both go through, and a
+// refusal while it is live stays a refusal.
+func TestWithoutALiveWakeNothingIsReservedOrPinned(t *testing.T) {
+	dir, session := liveRun(t)
+	live := newLiveSet(dir, session.Name, session.Epoch())
+	held := heldReservation{}
+	reserver := &fakeReserver{hook: func() (inbox.Reservation, error) { return held, nil }}
+	reserve := reserveIfLive(reserver, live)
+	asked := 0
+	thread := threadIfLive(func() (string, error) { asked++; return "A", nil }, live)
+
+	live.report([]adapter.Capability{adapter.TurnBoundaryCapability})
+	if r, err := reserve(context.Background(), inbox.Message{}); r != nil || err != nil || reserver.calls != 0 {
+		t.Fatalf("without a live Wake: %v %v, asked %d times", r, err, reserver.calls)
+	}
+	if conversation, err := thread(); conversation != "" || err != nil || asked != 0 {
+		t.Fatalf("a conversation without a live Wake: %q %v", conversation, err)
+	}
+
+	live.report([]adapter.Capability{adapter.WakeCapability})
+	if r, err := reserve(context.Background(), inbox.Message{}); r != held || err != nil {
+		t.Fatalf("with the Wake live again: %v %v", r, err)
+	}
+	if conversation, err := thread(); conversation != "A" || err != nil {
+		t.Fatalf("the conversation with the Wake live again: %q %v", conversation, err)
+	}
+
+	reserver.hook = func() (inbox.Reservation, error) {
+		live.report(nil)
+		return nil, inbox.ErrThreadUnavailable
+	}
+	if r, err := reserve(context.Background(), inbox.Message{}); r != nil || err != nil {
+		t.Fatalf("a Wake withdrawn while reserving: %v %v", r, err)
+	}
+
+	live.report([]adapter.Capability{adapter.WakeCapability})
+	reserver.hook = func() (inbox.Reservation, error) { return nil, inbox.ErrThreadUnavailable }
+	if _, err := reserve(context.Background(), inbox.Message{}); !errors.Is(err, inbox.ErrThreadUnavailable) {
+		t.Fatalf("a refusal with the Wake live: %v", err)
+	}
+	if threadIfLive(nil, live) != nil {
+		t.Fatal("a run with no conversation got one")
 	}
 }

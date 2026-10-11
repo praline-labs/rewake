@@ -69,7 +69,7 @@ func (s *Server) deliverGroup(ctx context.Context, pending []Message) {
 					refresh()
 				}
 			}
-			if reserveErr != nil {
+			if reserveErr != nil || shared == nil {
 				return nil, reserveErr
 			}
 			return borrowedReservation{shared}, nil

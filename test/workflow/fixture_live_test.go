@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/channel"
+	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/sessionstate"
 )
@@ -35,7 +36,7 @@ import (
 
 const (
 	obsLiveRecorded  = "each run's record carries what its exchange proved: everything for a full run, nothing it withheld"
-	obsLiveUnwoken   = "a letter to a run without a live Wake is accepted at once, exit 3, saying no notice can reach it"
+	obsLiveUnwoken   = "a letter to a run without a live Wake is accepted at once, exit 3, saying no notice can reach it, and waits readable in its inbox, a task as a note"
 	obsLiveDropped   = "a connection lost after a turn withdraws the run's whole live set at once, and a task to it then fails, exit 1, with nothing sent"
 	obsLiveLaunch    = "a worker whose run proves no turn boundary is refused at launch, exit 1, saying so, and leaves no session"
 	obsChannelLive   = "a run with the tool live shows it connected, and its briefing carries the whole transport sentence"
@@ -185,8 +186,8 @@ func playLive(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 		slices.Contains(rows[wakeless.name].Live, "turn-boundary") && !slices.Contains(rows[toolless.name].Live, "tool-transport")
 	finding(obsLiveRecorded, recorded, "full %v, wakeless %v, toolless %v", rows[full.name].Live, rows[wakeless.name].Live, rows[toolless.name].Live)
 
-	code, said, _ = asks.ask(c, "send", wakeless.name, liveNote, "--notify")
-	finding(obsLiveUnwoken, code == 3 && strings.Contains(said, "no notice can reach this session"), "exit %d, %q", code, firstLine(said))
+	unwoken, detail := w.unwoken(wakeless, rows[wakeless.name].Epoch())
+	finding(obsLiveUnwoken, unwoken, "%s", detail)
 
 	connected, _ := w.await(10*time.Second, full.name, func(r liveRow) bool { return r.channel() != nil && r.channel().Tool == channel.ToolConnected })
 	fullBrief := w.brief("full")
@@ -296,4 +297,41 @@ func refusedLaunch(t *testing.T, c *Case, iso *Isolation, harness, name, role st
 		code = process.cmd.ProcessState.ExitCode()
 	}
 	return code, string(stderr), ended
+}
+
+// unwoken sends a note and a task to a run without a live Wake and says
+// whether each was accepted at once, exit 3, with the promise that the
+// session reads it, and whether the promise holds once the run's server has tried it: the
+// letter readable in the inbox, its stored status still waiting.
+func (w *liveWorld) unwoken(session *scenarioSession, epoch string) (bool, string) {
+	room := filepath.Join(w.iso.StateDir, "rooms", "default")
+	held, details := true, []string{}
+	for _, text := range []string{liveNote, liveTask} {
+		args := []string{"send", session.name, text, "--json"}
+		if text == liveNote {
+			args = append(args, "--notify")
+		}
+		code, said, _ := w.asks.ask(w.c, args...)
+		var accepted struct {
+			ID     string `json:"id"`
+			Detail string `json:"detail"`
+		}
+		_ = json.Unmarshal([]byte(said), &accepted)
+		var status inbox.Status
+		var unread []inbox.Message
+		tried := accepted.ID != "" && waitFor(w.c, 8*time.Second, func() bool {
+			status, _, _ = inbox.ReadStatus(room, session.name, accepted.ID)
+			unread, _ = inbox.PeekUnread(room, session.name, epoch)
+			// The coalescing window keeps a note pending before its try.
+			return status.State == inbox.Failed || strings.Contains(status.Detail, "no notice can reach this session")
+		})
+		readable := slices.ContainsFunc(unread, func(m inbox.Message) bool { return m.ID == accepted.ID })
+		// The answer is send's own, decided by the live set before any try:
+		// a send that waited for the server's try would carry its detail.
+		decided := strings.HasPrefix(accepted.Detail, "accepted; no notice can reach this session")
+		ok := code == 3 && decided && tried && readable && status.State == inbox.Pending
+		held = held && ok
+		details = append(details, fmt.Sprintf("%q: exit %d, answered %q, readable %t, stored %s %q", text, code, accepted.Detail, readable, status.State, status.Detail))
+	}
+	return held, strings.Join(details, "; ")
 }
