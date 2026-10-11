@@ -71,13 +71,13 @@ func IsTombstone(directory, id string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	var copy struct {
+	var letter struct {
 		Withdrawn json.RawMessage `json:"withdrawn"`
 	}
-	if err := json.Unmarshal(raw, &copy); err != nil {
+	if err := json.Unmarshal(raw, &letter); err != nil {
 		return false, err
 	}
-	return len(copy.Withdrawn) > 0 && string(copy.Withdrawn) != "null", nil
+	return len(letter.Withdrawn) > 0 && string(letter.Withdrawn) != "null", nil
 }
 
 // Owe writes the wait of from's run fromEpoch on name's run epoch for ids, as
