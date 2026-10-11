@@ -35,7 +35,7 @@ var ErrTurnEnded = errors.New("the call's turn ended before its read was acknowl
 // write begun is finished (docs/mail-bridge-turns.md#waits-and-their-bounds).
 const ackBudget = 2 * time.Second
 
-// acknowledgeRead records that the tool call named in the evidence reached
+// Acknowledge records that the tool call named in the evidence reached
 // the model whole, and marks read each letter of the read whose parts are now
 // all acknowledged. The evidence must carry the very text the call recorded,
 // by digest, before printing it. It meets the call's turn end under the
@@ -45,7 +45,7 @@ const ackBudget = 2 * time.Second
 // and 8). It is idempotent: an acknowledgment seen twice changes nothing the
 // second time, and a letter is marked once. A nil gate stands for a process
 // that captures no ends.
-func acknowledgeRead(dir, name, epoch, token string, evidence mail.ReadEvidence, gate mail.EndGate) error {
+func Acknowledge(dir, name, epoch, token string, evidence mail.ReadEvidence, gate mail.EndGate) error {
 	if !evidence.Whole {
 		return ErrNotWhole
 	}
@@ -102,8 +102,8 @@ func acknowledgeRead(dir, name, epoch, token string, evidence mail.ReadEvidence,
 		// Past the check, whatever the writes do, the gate learns where
 		// they ended before the lock goes.
 		defer leave()
-		acknowledge(record.Read, carried)
-		if err := markWhole(dir, session, epoch, record.Read, reports); err != nil {
+		AcknowledgeParts(record.Read, carried)
+		if err := MarkWholeRead(dir, session, epoch, record.Read, reports); err != nil {
 			_ = receipt.Save(dir, name, record)
 			return err
 		}
@@ -145,8 +145,8 @@ func answeredBy(batch *receipt.ReadBatch, evidence mail.ReadEvidence) (int64, bo
 	return calledBoot, found
 }
 
-// acknowledge marks acknowledged each part a matching call carried.
-func acknowledge(batch *receipt.ReadBatch, carried func(letter, part int, shown receipt.Shown) bool) {
+// AcknowledgeParts marks acknowledged each part a matching call carried.
+func AcknowledgeParts(batch *receipt.ReadBatch, carried func(letter, part int, shown receipt.Shown) bool) {
 	for index := range batch.Letters {
 		letter := &batch.Letters[index]
 		for number := range letter.Parts {
@@ -159,9 +159,9 @@ func acknowledge(batch *receipt.ReadBatch, carried func(letter, part int, shown 
 	}
 }
 
-// markWhole marks read each letter whose parts are all acknowledged, in the
+// MarkWholeRead marks read each letter whose parts are all acknowledged, in the
 // mailbox of self's run epoch. The caller holds the mailbox lock.
-func markWhole(dir string, self registry.Session, epoch string, batch *receipt.ReadBatch, reports bool) error {
+func MarkWholeRead(dir string, self registry.Session, epoch string, batch *receipt.ReadBatch, reports bool) error {
 	for index := range batch.Letters {
 		letter := &batch.Letters[index]
 		if letter.Read || !letter.Complete() {

@@ -24,7 +24,7 @@ import (
 // failure, and a kept answer that cannot be read is never written over.
 //
 // op is the end's operation: the kept answer records it with the reason, so
-// the same end confirmed again is answered from the record (endTurnContext).
+// the same end confirmed again is answered from the record (EndTurn).
 func holdTurn(dir string, self registry.Session, event mail.TurnEnd, op string, holdable bool, waiters []mail.Waiter, marked bool) string {
 	if !holdable || event.Failed || event.Stopped {
 		return ""

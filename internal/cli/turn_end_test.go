@@ -26,7 +26,7 @@ var smokeEnd = boundaryEnd{text: "the smoke is green"}
 // completeTurn ends a turn that may not be held, as an adapter's boundary
 // that cannot hold one reports it.
 func completeTurn(dir string, self registry.Session, event mail.TurnEnd, currentThread string) error {
-	return completeTurnContext(context.Background(), dir, self, event, currentThread, TurnEndOptions{BeforeReports: beforeReports})
+	return CompleteTurn(context.Background(), dir, self, event, currentThread, TurnEndOptions{BeforeReports: beforeReports})
 }
 
 // endTurn ends the turn of the session this test's environment names, as
@@ -46,7 +46,7 @@ func endTurn(t *testing.T, end boundaryEnd) (string, error) {
 	}
 	event := mail.TurnEnd{Text: end.text, Failed: end.failed, Ended: boottime.Now()}
 	event.Started, _ = mail.LatestTurnStart(dir, self.Name, self.Epoch())
-	return endTurnContext(context.Background(), dir, self, event, end.holdable, end.thread, TurnEndOptions{BeforeReports: beforeReports})
+	return EndTurn(context.Background(), dir, self, event, end.holdable, end.thread, TurnEndOptions{BeforeReports: beforeReports})
 }
 
 // mustEndTurn ends the turn as endTurn does, for a test that only needs the

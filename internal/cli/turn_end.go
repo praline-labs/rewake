@@ -15,8 +15,10 @@ import (
 // it through the hidden turn-ended command until S9; S14 moves these to the
 // core.
 
-func completeTurnContext(parent context.Context, dir string, self registry.Session, event mail.TurnEnd, currentThread string, options TurnEndOptions) error {
-	_, err := endTurnContext(parent, dir, self, event, false, currentThread, options)
+// CompleteTurn publishes a turn end that may not be held: EndTurn for a
+// harness whose boundary cannot hold one open.
+func CompleteTurn(parent context.Context, dir string, self registry.Session, event mail.TurnEnd, currentThread string, options TurnEndOptions) error {
+	_, err := EndTurn(parent, dir, self, event, false, currentThread, options)
 	return err
 }
 
@@ -27,11 +29,11 @@ type TurnEndOptions struct {
 	BeforeReports func()
 }
 
-// endTurnContext publishes a turn end, or holds it for the session to confirm
+// EndTurn publishes a turn end, or holds it for the session to confirm
 // (turn_hold.go): then it publishes nothing and answers the reason to hand
 // the model. holdable says the end may be held at all, which only the
 // harness that reported it can say.
-func endTurnContext(parent context.Context, dir string, self registry.Session, event mail.TurnEnd, holdable bool, currentThread string, options TurnEndOptions) (string, error) {
+func EndTurn(parent context.Context, dir string, self registry.Session, event mail.TurnEnd, holdable bool, currentThread string, options TurnEndOptions) (string, error) {
 	if !registry.OwnsName(dir, self.Name, self.Epoch()) {
 		return "", nil
 	}
