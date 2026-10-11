@@ -145,11 +145,13 @@ session's shell, or from a person's shell in the same room. A shell without
 2. **Who receives.** The recipient must be alive in this room; otherwise exit 2 with the live
    names listed.
 3. **The kind.** Plain `send` is a `task`; `--question` and `--notify` are the
-   other two. A task or a question to a session on a harness that reports no turn's
-   end — Claude Code in this build, where every session is a main — is refused here,
-   before anything is written, exit 1: nothing would carry its answer back. A note
-   still goes. On a harness that reports, a question to a silent recipient is refused
-   next, exit 2: that role never reports, so it could never answer.
+   other two. A task or a question to a session whose TurnBoundary is not live — its
+   record's live set, which a run on Claude Code never has in this build — is refused
+   here, before anything is written, exit 1: nothing would carry its answer back. A note
+   still goes. Where the boundary is live, a question to a silent recipient is refused
+   next, exit 2: that role never reports, so it could never answer. A letter to a run
+   whose Wake is not live is written and reported accepted, exit 3, at once: no notice
+   can reach it until its Wake is live, and it reads the letter with `rewake inbox`.
 4. **The file.** `inbox/write-codex/<id>.json.tmp`, renamed to `.json`. The id is
    time-sortable. Nothing else is touched: the sender does not deliver. A `--notify`
    is first journaled under a receipt in the sender's mailbox and then written once

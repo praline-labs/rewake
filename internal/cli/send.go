@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
@@ -154,8 +155,13 @@ func handleSend(ctx *Context, call Call) error {
 	// Reading stdin can take a while, and a session can end in that time. The
 	// epoch pins the message to this run of the name, so a later session that
 	// takes the same name does not receive somebody else's mail.
-	if _, err := registry.Lookup(dir, session.Name); errors.Is(err, registry.ErrNotFound) {
+	latest, err := registry.Lookup(dir, session.Name)
+	if errors.Is(err, registry.ErrNotFound) {
 		return unknownSessionFor(ctx.table.findCommand("send"), dir, target)
+	}
+	if err == nil && latest.Epoch() == session.Epoch() {
+		// The live set as it stands now, for the notice below.
+		session.Live = latest.Live
 	}
 
 	addendumTo, err := addendumRoot(call, dir, kind, session)
@@ -207,7 +213,11 @@ func handleSend(ctx *Context, call Call) error {
 	if err != nil {
 		return err
 	}
-	return reportSent(ctx, sent{dir: dir, self: self, epoch: epoch, target: session, deadline: started.Add(wait), writable: grantDirs.writable}, message, kind, wait)
+	after := sent{dir: dir, self: self, epoch: epoch, target: session, deadline: started.Add(wait), writable: grantDirs.writable}
+	if !session.HasLive(string(adapter.WakeCapability)) {
+		return reportUnwoken(ctx, after, message)
+	}
+	return reportSent(ctx, after, message, kind, wait)
 }
 
 // printDelivery prints the delivery result and turns it into the exit code.

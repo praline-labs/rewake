@@ -283,15 +283,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 			Window:     inbox.Coalescing,
 			CheckGrant: checkGrant(request.Dir, name, epoch, request.Protected),
 			PinGrant:   pinGrant(request.Dir, name, epoch),
-			Deliver: func(ctx context.Context, message inbox.Message) inbox.Result {
-				if plan.Wake == nil || !live.has(adapter.WakeCapability) {
-					// The letter stays readable and waits for a Wake that
-					// becomes live; the sender was told already
-					// (docs/v2/design-api.md#the-capabilities).
-					return inbox.Result{State: inbox.Pending, Detail: noWake}
-				}
-				return plan.Wake.Deliver(ctx, message)
-			},
+			Deliver:    wakeIfLive(plan.Wake, live),
 		}
 		if reserver, ok := plan.Wake.(adapter.Reserver); ok {
 			server.Reserve = reserver.Reserve

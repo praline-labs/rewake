@@ -35,6 +35,7 @@ const (
 	switchMute   = "FIXTURE_TEST_MUTE_PROBE"  // a capability served whose probe is never answered
 	switchOther  = "FIXTURE_TEST_OTHER_TOOLS" // register tools other than those offered
 	switchProof  = "FIXTURE_TEST_UNPROVEN"    // a tool transport that cannot show its results
+	switchBrief  = "FIXTURE_TEST_BRIEF_FILE"  // where the briefing the adapter hands over is written
 	childEnv     = "FIXTURE_TEST_CHILD_OF"
 	programThrd  = "fixture-test-thread"
 )
@@ -142,6 +143,12 @@ func speak(socket string, pid int, drop bool) error {
 			reply.Thread = programThrd
 		case opRelease:
 			continue
+		case opBrief:
+			if path := os.Getenv(switchBrief); path != "" {
+				_ = os.WriteFile(path, []byte(frame.Text), 0o600)
+			}
+		case opControl:
+			reply.Outcome, reply.Reason = "done", frame.Action+" from "+frame.From
 		}
 		if err := write(reply); err != nil {
 			return err

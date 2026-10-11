@@ -125,6 +125,11 @@ func steer(ctx *Context, call Call, action string) error {
 	if focus != "" && !verbs.CompactFocus {
 		return usage("focus not supported by %s: it has no way to pass a focus for one compaction. Run rewake compact %s without it.", harnessTitle(found, session.Harness), session.Name)
 	}
+	// The offer says the harness can be steered; whether this run can is what
+	// its readiness exchange proved and has not lost since.
+	if !session.HasLive(string(adapter.ControlCapability)) {
+		return failf("%s's control is not live: its run has not proven, or has lost, the way to carry a request into it, so a %s would reach nothing; nothing was asked. rewake list --json shows what each run has live.", session.Name, action)
+	}
 
 	// An Esc or Ctrl+C on the calling session ends this shell call with
 	// SIGTERM, and SIGKILL 1.5 s later (docs/research-claude-control.md); the

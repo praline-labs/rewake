@@ -9,6 +9,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/bridge"
+	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
 )
@@ -92,6 +93,18 @@ func (l *liveSet) await(ctx context.Context, capability adapter.Capability, boun
 		case <-ctx.Done():
 			return false
 		}
+	}
+}
+
+// wakeIfLive delivers through the run's Wake while it is live. Otherwise the
+// letter stays readable and waits for a Wake that becomes live; the sender was
+// told already (docs/v2/design-api.md#the-capabilities).
+func wakeIfLive(wake adapter.Wake, live *liveSet) func(context.Context, inbox.Message) inbox.Result {
+	return func(ctx context.Context, message inbox.Message) inbox.Result {
+		if wake == nil || !live.has(adapter.WakeCapability) {
+			return inbox.Result{State: inbox.Pending, Detail: noWake}
+		}
+		return wake.Deliver(ctx, message)
 	}
 }
 

@@ -21,6 +21,13 @@ import (
 // switches, and answers what Start answered.
 func startProgram(t *testing.T, switches ...string) (*backend, error) {
 	t.Helper()
+	return startConfigured(t, nil, switches...)
+}
+
+// startConfigured is startProgram with what setup sets on the backend
+// before its start.
+func startConfigured(t *testing.T, setup func(*backend), switches ...string) (*backend, error) {
+	t.Helper()
 	// A short directory of its own: a socket path has a bound, and a test
 	// name under the system's temporary directory can pass it.
 	dir, err := os.MkdirTemp("", "fx")
@@ -41,6 +48,9 @@ func startProgram(t *testing.T, switches ...string) (*backend, error) {
 	t.Cleanup(func() { toolPeers.Delete(b) })
 	b.OfferTools(programTools, filepath.Join(dir, "api.ctx"), served.set)
 	b.ReportTurns(adapter.TurnHandler{})
+	if setup != nil {
+		setup(b)
+	}
 	return b, b.Start(context.Background(), nil)
 }
 

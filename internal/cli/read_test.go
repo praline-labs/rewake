@@ -39,7 +39,7 @@ func otherRun(t *testing.T, dir, name string) registry.Session {
 	}
 	session := registry.Session{
 		Name: name, Harness: agentID, ServicePID: child.Process.Pid, ServiceStart: start, Boot: registrytest.Boot(t),
-		PIDNamespace: proc.Namespace(), CWD: dir, StartedAt: time.Now(),
+		PIDNamespace: proc.Namespace(), CWD: dir, StartedAt: time.Now(), Live: allLive(),
 	}
 	_ = os.Remove(state.SessionPath(dir, name))
 	if err := registry.Publish(dir, session); err != nil {

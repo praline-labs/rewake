@@ -137,7 +137,7 @@ func TestPeekTelemetryIsMainOnlyAndBodyFree(t *testing.T) {
 					args = append(args, "--json")
 				}
 				code, out, stderr := run(args...)
-				visible := strings.Contains(out, `"telemetry"`) || strings.Contains(out, " | context")
+				visible := strings.Contains(out, `"telemetry":`) || strings.Contains(out, " | context")
 				if code != ExitOK || visible != (role == "main") || strings.Contains(out, "FULL SECRET") {
 					t.Fatalf("peek visibility: %d %s %s", code, out, stderr)
 				}

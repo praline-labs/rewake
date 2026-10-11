@@ -60,7 +60,7 @@ func TestSessionStateVisibilityInListTextAndJSON(t *testing.T) {
 				if code != ExitOK {
 					t.Fatalf("%d %s", code, errOut)
 				}
-				visible := strings.Contains(out, "42% / 272K") || strings.Contains(out, `"telemetry"`)
+				visible := strings.Contains(out, "42% / 272K") || strings.Contains(out, `"telemetry":`)
 				if visible != (role == "main") {
 					t.Fatalf("role=%s output=%s", role, out)
 				}
@@ -73,12 +73,12 @@ func TestSessionStateVisibilityInListTextAndJSON(t *testing.T) {
 			}
 			t.Setenv(state.EpochEnv, "stale-wrapper")
 			_, out, _ := run("list", "--json")
-			if strings.Contains(out, `"telemetry"`) {
+			if strings.Contains(out, `"telemetry":`) {
 				t.Fatal("stale epoch granted orchestrator visibility")
 			}
 			t.Setenv(state.SessionEnv, "")
 			_, out, _ = run("list", "--json")
-			if strings.Contains(out, `"telemetry"`) {
+			if strings.Contains(out, `"telemetry":`) {
 				t.Fatal("shell granted orchestrator visibility")
 			}
 		})
@@ -167,7 +167,7 @@ func TestDirectQuestionAnswerUsesSameVisibilityAndEpoch(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				visible := strings.Contains(out.String(), " | context") || strings.Contains(out.String(), `"telemetry"`)
+				visible := strings.Contains(out.String(), " | context") || strings.Contains(out.String(), `"telemetry":`)
 				if visible != (role == "main") || !strings.Contains(out.String(), "Original answer") {
 					t.Fatal("direct answer visibility or body changed")
 				}
@@ -222,7 +222,7 @@ func TestBootReadingsStayOutOfTheJSON(t *testing.T) {
 	frozen.Epoch = peer.Epoch()
 	leaveUnread(t, dir, inbox.Message{From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: inbox.Note, Text: "gone", Departure: &inbox.DepartureNotice{Reason: "ended"}, SenderState: &frozen})
 	_, out, _ := run("inbox", "--json")
-	if !strings.Contains(out, `"telemetry"`) || strings.Contains(out, "createdBoot") || strings.Contains(out, "publishedBoot") {
+	if !strings.Contains(out, `"telemetry":`) || strings.Contains(out, "createdBoot") || strings.Contains(out, "publishedBoot") {
 		t.Fatalf("inbox --json: %s", out)
 	}
 }

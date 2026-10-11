@@ -14,8 +14,8 @@ import (
 // session of a reporting role there would owe reports nobody sends, and a task
 // or a question to any session there would wait for an answer that never
 // comes. So both are refused before anything is claimed or written, exit 1
-// (docs/v2/stage3-steps-adapters.md, S9). S11 decides the same by the live
-// TurnBoundary.
+// (docs/v2/stage3-steps-adapters.md, S9). Once a session runs, a task or a
+// question to it is decided by its live TurnBoundary (S11).
 
 // reportsTurns says a harness reports every turn's end. A var, so the tests
 // whose sessions stand on a harness of no particular contract can take one
@@ -42,21 +42,30 @@ func refuseReportingRole(h adapter.Harness, part role.Role) error {
 		name, h.Title(), name, h.Title(), name)}
 }
 
-// refuseUnreported refuses a task or a question to a session on a harness
-// that reports no turn's end.
+// refuseUnreported refuses a task or a question to a session whose turn
+// boundary is not live: the end of its turn reaches nobody, so nothing would
+// answer it. The decision reads the live set alone; what the harness offers
+// only picks the words — a harness with no boundary at all, or a run of one
+// that has not made its boundary live.
 func refuseUnreported(catalog adapter.Catalog, session registry.Session, kind inbox.Kind) error {
 	if kind != inbox.Task && kind != inbox.Question {
 		return nil
 	}
-	found, _ := catalog.Find(session.Harness)
-	if reportsTurns(found) {
+	if session.HasLive(string(adapter.TurnBoundaryCapability)) {
 		return nil
 	}
 	what := "task"
 	if kind == inbox.Question {
 		what = "question"
 	}
+	found, _ := catalog.Find(session.Harness)
+	title := harnessTitle(found, session.Harness)
+	if !reportsTurns(found) {
+		return &FailedError{Message: fmt.Sprintf(
+			"%s runs %s, which has no turn boundary in this rewake, so the end of its turn reaches nobody and a %s to it would never be answered; nothing was sent. Send it a note with --notify, or the %s to a session on another harness; %s reports its turns from stage 4.",
+			session.Name, title, what, what, title)}
+	}
 	return &FailedError{Message: fmt.Sprintf(
-		"%s runs %s, which has no turn boundary in this rewake, so the end of its turn reaches nobody and a %s to it would never be answered; nothing was sent. Send it a note with --notify, or the %s to a session on another harness; %s reports its turns from stage 4.",
-		session.Name, harnessTitle(found, session.Harness), what, what, harnessTitle(found, session.Harness))}
+		"%s's turn boundary is not live: its run has not proven, or has lost, the report of its turns' ends, so the end of its turn reaches nobody and a %s to it would never be answered; nothing was sent. Send it a note with --notify, or the %s to another session; rewake list --json shows what each run has live.",
+		session.Name, what, what)}
 }

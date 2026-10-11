@@ -275,7 +275,7 @@ belongs to the harness.
 | 0 | done; for `send` — delivered |
 | 1 | the target failed or is unreachable: delivery `failed`, or the session died while waiting |
 | 2 | invalid invocation: unknown command or flag, extra argument, no such session, name taken, unsafe directory |
-| 3 | `send`: accepted but not yet delivered (`pending` at the end of `--wait`); the message will still deliver on its own |
+| 3 | `send`: accepted but not yet delivered (`pending` at the end of `--wait`, or at once when the recipient's Wake is not live); the message will still deliver on its own |
 
 An invocation failure shows: the reason, the syntax, an example, the flags, and
 `full help: rewake <cmd> --help`. An unknown command gets the closest name ("did

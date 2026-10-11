@@ -80,6 +80,8 @@ func TestATaskToASessionThatReportsNoTurnsFails(t *testing.T) {
 	dir := liveSession(t, "api")
 	web := otherRun(t, dir, "web")
 	web.Role = role.Main.ID
+	// A run of a harness with no boundary never makes one live.
+	web.Live = withoutLive(web.Live, adapter.TurnBoundaryCapability)
 	if err := registry.Update(dir, web); err != nil {
 		t.Fatal(err)
 	}

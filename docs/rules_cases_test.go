@@ -60,7 +60,8 @@ func wholeGroups(skip string) string {
 }
 
 const wholeHost = "# The host\n\n## The wrapper\n\nIts run.\n\nTests:\n- `internal/mail/mail_test.go` `TestHeld`\n\n" +
-	"## Grants\n\nThe scheme.\n\nTests:\n- `internal/mail/mail_test.go` `TestHeld`\n"
+	"## Grants\n\nThe scheme.\n\nTests:\n- `internal/mail/mail_test.go` `TestHeld`\n\n" +
+	"## The live set\n\nWhat a run proved.\n\nTests:\n- `internal/mail/mail_test.go` `TestHeld`\n"
 
 func rulesProblems(t *testing.T, extra string, skip string) []string {
 	t.Helper()

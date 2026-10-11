@@ -93,7 +93,7 @@ func TestWhatTheReaderCannotClassifyIsRefused(t *testing.T) {
 	}
 	documents := map[string]string{"rules/all.md": wholeGroups(""), "rules/host.md": wholeHost + "\n<!-- hidden -->\n"}
 	got := checkRules(documents, world)
-	if !slices.ContainsFunc(got, func(p string) bool { return strings.HasPrefix(p, "docs/rules/host.md: line 17: an HTML comment") }) {
+	if !slices.ContainsFunc(got, func(p string) bool { return strings.HasPrefix(p, "docs/rules/host.md: line 24: an HTML comment") }) {
 		t.Fatalf("host.md: got %q, want the comment refused", got)
 	}
 }
@@ -107,8 +107,9 @@ func TestAnExampleOfTheRulesIsNoRule(t *testing.T) {
 		"rules/host.md": "~~~markdown\n" + wholeHost + "\n## End of the example\n~~~\n",
 	}
 	got := checkRules(documents, world)
-	if len(got) != 2 || !strings.Contains(got[0], "rules/host.md#Grants is in no document") || !strings.Contains(got[1], "rules/host.md#The wrapper is in no document") {
-		t.Fatalf("got %q, want both host rules missing", got)
+	if len(got) != 3 || !strings.Contains(got[0], "rules/host.md#Grants is in no document") || !strings.Contains(got[1], "rules/host.md#The live set is in no document") ||
+		!strings.Contains(got[2], "rules/host.md#The wrapper is in no document") {
+		t.Fatalf("got %q, want every host rule missing", got)
 	}
 	documents = map[string]string{
 		"rules/all.md":  wholeGroups("E2") + "````markdown\n```\n" + held("internal/mail/mail_test.go", "TestHeld") + "```\n````\n",

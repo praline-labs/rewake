@@ -8,11 +8,33 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/proc"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/registry/registrytest"
 	"github.com/praline-labs/rewake/internal/state"
 )
+
+// allLive is the live set of a run that proved every capability a session
+// can have live: the made-up sessions stand for runs past their readiness
+// exchange unless a test says otherwise.
+func allLive() []string {
+	return []string{
+		string(adapter.WakeCapability), string(adapter.TurnBoundaryCapability), string(adapter.TelemetryCapability),
+		string(adapter.ControlCapability), string(adapter.ToolTransportCapability),
+	}
+}
+
+// withoutLive is a live set with one capability taken out.
+func withoutLive(live []string, gone adapter.Capability) []string {
+	var out []string
+	for _, c := range live {
+		if c != string(gone) {
+			out = append(out, c)
+		}
+	}
+	return out
+}
 
 // liveSession publishes a session served by nobody, in an isolated state
 // directory. This process stands in for the wrapper: it is alive, so the record
@@ -49,6 +71,7 @@ func liveSession(t *testing.T, name string) string {
 		CWD:          resolved,
 		StartedAt:    time.Now(),
 		Socket:       filepath.Join(resolved, "sock", name+".sock"),
+		Live:         allLive(),
 	}
 	if err := registry.Publish(resolved, session); err != nil {
 		t.Fatalf("publish: %v", err)

@@ -97,6 +97,36 @@ Tests:
 - `internal/host/launch/probe_test.go` `TestWhatAProbeLeftInASessionOfItsOwnIsEnded`
 - `internal/host/launch/probe_test.go` `TestAProbeLeavesOtherChildrenAlone`
 
+## The live set
+
+What a run has proven of its adapter's capabilities is recorded in its session record as
+it changes — set by the readiness exchange, withdrawn at once when lost — and every
+decision another session makes about the run reads it, never the offer
+([design-api.md](../v2/design-api.md#two-levels-offered-and-live)): a letter to a run
+without a live Wake is accepted, exit 3, and waits in its inbox; a task or a question to
+one without a live TurnBoundary fails, exit 1, nothing sent; a compaction or an interrupt
+of one without a live Control fails, exit 1, nothing asked; a launch of a role that owes
+reports waits for its TurnBoundary up to the readiness bound and is refused after.
+Liveness never changes the run: a capability withdrawn and made live again leaves its
+epoch, name, role and grants as they were. Since S11.
+
+Tests:
+- `internal/registry/live_test.go` `TestModifyChangesTheRecordAsItStands`
+- `internal/wrap/live_test.go` `TestTheLiveSetIsRecordedAndADropLeavesTheRun`
+- `internal/wrap/live_test.go` `TestTheLiveSetDoesNotWriteAnotherRunsRecord`
+- `internal/wrap/live_test.go` `TestAReportingRoleWaitsForItsBoundary`
+- `internal/wrap/live_test.go` `TestABoundaryNeverReportedIsRefusedAtTheBound`
+- `internal/wrap/live_test.go` `TestARunThatReportsNoneHasItsPlanLive`
+- `internal/wrap/live_test.go` `TestADeliveryWithoutALiveWakeWaits`
+- `internal/cli/live_set_test.go` `TestASendToARunWithoutALiveWakeIsAcceptedUnwoken`
+- `internal/cli/live_set_test.go` `TestATaskToARunWithoutALiveBoundaryFails`
+- `internal/cli/live_set_test.go` `TestTheLiveBoundaryDecidesNotTheOffer`
+- `internal/cli/live_set_test.go` `TestSteeringARunWithoutALiveControlFails`
+- `internal/adapter/fixture/live_test.go` `TestTheRunReportsItsLiveSetAsItChanges`
+- `internal/adapter/fixture/live_test.go` `TestTheFirstReportLeavesOutWhatTheExchangeDidNotProve`
+- `internal/adapter/fixture/live_test.go` `TestTheBriefingFollowsTheLiveTool`
+- `internal/adapter/fixture/live_test.go` `TestControlIsCarriedOnlyWhileLive`
+
 ## Grants
 
 The three steps of the unforgeable grant carry over unchanged (`docs/grants-authority.md`,

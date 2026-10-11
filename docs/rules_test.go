@@ -32,7 +32,7 @@ var ruleGroups = map[string]int{"E": 8, "O": 2, "T": 11, "C": 8, "L": 3}
 // heading, not by its Tests line, so deleting the block cannot delete the rule
 // from the check.
 var unnumbered = map[string][]string{
-	"rules/host.md": {"The wrapper", "Grants"},
+	"rules/host.md": {"The wrapper", "The live set", "Grants"},
 }
 
 var (

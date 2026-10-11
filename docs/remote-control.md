@@ -70,7 +70,13 @@ and refusals. The call is checked whole before anything is written:
   1.x both harnesses took them and Codex took no focus, so a focus to a Codex session
   was refused (owner decision below).
 
-Every one of these is exit 2 and writes nothing. Then the request is sent and the
+Every one of these is exit 2 and writes nothing. Then **its run must have Control live**
+— the record's live set, which the run's readiness exchange sets and a lost connection
+withdraws at once ([design-api.md](v2/design-api.md#two-levels-offered-and-live)): a
+target whose harness offers the verb but whose run has not proven Control, or has lost
+it, is refused exit 1, nothing asked (S11, October 11, 2026). The offer says the harness
+can be steered; only the live set says this run can. The design's `clear` verb has no
+command in this build, so it has no refusal yet. Then the request is sent and the
 command waits for its answer, within bounds — for a compaction, the answer to the
 request, not the compaction's end:
 
