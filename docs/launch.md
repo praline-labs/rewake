@@ -75,7 +75,7 @@ person's own wrapper script, which sets up an environment — a configuration di
 credentials — and then runs the harness. The harness is still named by its ordinary word:
 
 ```bash
-rewake --general --name review --command my-claude claude
+rewake --main --name lead --command my-claude claude
 ```
 
 - **Where it goes:** before the harness word, like `--name` — everything after that word
@@ -110,8 +110,10 @@ rewake --general --name review --command my-claude claude
 - **In an alias** it is the field `command = "<program>"`, which becomes `--command`
   before the harness word — in the user alias file only
   ([launch-defaults.md](launch-defaults.md#naming-a-whole-launch)). With it, a launch
-  through a wrapper is one word: `[alias.review]` with `harness = "claude"`, `rewake =
-  ["--general", "--name", "review"]` and `command = "my-claude"` is `rewake review`.
+  through a wrapper is one word: `[alias.lead]` with `harness = "claude"`, `rewake =
+  ["--main", "--name", "lead"]` and `command = "my-claude"` is `rewake lead`. A Claude
+  Code launch takes `--main` since S9, October 11, 2026: a role that owes reports is
+  refused there until stage 4.
 - Owner decision, September 23, 2026: the harness is named, the program is given; no
   guessing from names and no probing.
 
@@ -210,7 +212,7 @@ acceptance remains a separate owner-run check.
 
 ### A worktree for a launch
 
-`rewake codex --worktree` and `rewake claude --worktree` give a session a checkout of its
+`rewake codex --worktree` and `rewake --main claude --worktree` give a session a checkout of its
 own, on a branch of its own, under rewake's worktree directory. `rewake worktree land`
 fast-forwards a branch of the checkout it came from to the worktree's commits, `finish`
 lands once more and removes the worktree and its branch, and `ls` and `rm` list and
@@ -220,7 +222,8 @@ remove. What the flag does for each harness, where the checkout goes, what
 
 A session cannot start another ([no session inside a session](#no-session-inside-a-session)),
 so the owner starts each writer, in a checkout of its own with `--worktree=<topic>`, from
-a terminal outside any session. The main session then takes the accepted work with
+a terminal outside any session — on a harness that reports turns, since a write session
+is refused on Claude Code until stage 4. The main session then takes the accepted work with
 `rewake worktree land <topic>` and closes the checkout with
 `rewake worktree finish <topic>`, rather than making one by hand with `git worktree add`.
 A writer's uncommitted edits then never mix with what is being checked or committed in

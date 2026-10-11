@@ -175,7 +175,8 @@ where it used to go to main. Its journal is kept all the same, so a repeated eve
 publishes nothing either.
 A turn a main aborted with `rewake interrupt` is stopped the same way,
 with the text "<main> interrupted this turn with rewake interrupt" instead, and the same
-routing; its next notice tells the interrupted session so, once
+routing. The interrupted session itself is told nothing more: the line its next notice
+carried on Claude Code left with the plugin in S9, October 11, 2026
 ([remote-control.md](remote-control.md)).
 It owes no reply and has its own report id, separate from the eventual result.
 Its own operation, and journal, keep the original waits intact. A finished

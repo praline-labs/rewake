@@ -63,9 +63,11 @@ and refusals. The call is checked whole before anything is written:
 - **The target** is a running session of the same room, not the caller itself; an
   unknown name gets the same refusal as `send`, with the live names.
 - **Its harness must take control requests** (`harness.Steerable`), and a focus only
-  where the harness can pass one for a single compaction (`CompactFocus`). Both
-  harnesses take the requests; Codex takes no focus, so a focus to a Codex session is
-  refused here, before anything is sent (owner decision below).
+  where the harness can pass one for a single compaction (`CompactFocus`). Since S9,
+  October 11, 2026, only the fixture harness takes the requests, and it takes a focus;
+  a Claude Code session is refused here, before anything is sent, until stage 4. In
+  1.x both harnesses took them and Codex took no focus, so a focus to a Codex session
+  was refused (owner decision below).
 
 Every one of these is exit 2 and writes nothing. Then the request is sent and the
 command waits for its answer, within bounds — for a compaction, the answer to the

@@ -53,11 +53,12 @@ directory and reads the running session as its own.
   seconds. **[verified live]**
   Officially: "When the receiving session is idle, Claude Code starts a new turn
   with the message". **[docs: code.claude.com/docs/en/cross-session-messaging]**
-- **Needs no hook, plugin or status line.** A session launched with only
-  `--messaging-socket-path`, `--append-system-prompt` and the caller's `--settings` — no
-  hooks, no `--plugin-dir`, no status-line tap — started a turn on a message while idle,
-  and took one sent during a running `sleep 40` into that same turn once the command
-  returned. **[verified live 2.1.296, October 11, 2026]**
+- **Needs none of rewake's hooks, plugin or status-line tap.** A session launched with
+  only `--messaging-socket-path`, `--append-system-prompt` and the caller's `--settings` —
+  no hook settings, `--plugin-dir` or status-line tap from rewake; the person's own
+  configuration, their status line included, loaded as usual — started a turn on a
+  message while idle, and took one sent during a running `sleep 40` into that same turn
+  once the command returned. **[verified live 2.1.296, October 11, 2026]**
   ([the S9 entry](roadmap/2026-10-11-stage3-s9.md#the-live-check-october-11-2026))
 - The model sees text headed "Another Claude session sent a message", followed by
   a paragraph noting that the peer session cannot grant elevated permissions. **[verified live]**

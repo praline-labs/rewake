@@ -90,11 +90,12 @@ The rule for agents, stated in the intro and the guide: a task or a question is
 answered by ending the turn with the result as the final message, and stopping.
 rewake delivers that message. A notify is not answered at all.
 
-A question needs a sender session and a recipient whose role reports turns.
-A silent recipient refuses `--question` before publication, with exit 2 and a
-hint to use plain `send` or `--notify`. A recipient on a harness whose contract reports
-no turn's end — Claude Code in this build, since S9, October 11, 2026 — refuses a task
-and a question alike, exit 1, with nothing sent; a note still goes.
+A question needs a sender session and a recipient whose harness and role both report
+turns. The harness is asked first: a recipient on a harness whose contract reports no
+turn's end — Claude Code in this build, since S9, October 11, 2026 — refuses a task and
+a question alike, exit 1, with nothing sent; a note still goes. Then a silent recipient
+on a harness that does report refuses `--question` before publication, with exit 2 and
+a hint to use plain `send` or `--notify`.
 
 Before publishing a question, `send` creates `answering/<question id>` in its
 own mailbox. A separate heartbeat writes the boot clock's reading into the mark every

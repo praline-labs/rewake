@@ -165,6 +165,19 @@ its test the same empty `.git`.
 
 *October 7, 2026.*
 
+### A launch under a deep state directory exits 1 about its socket path
+
+A Claude Code launch with `REWAKE_DIR` inside a case folder of a live check exited 1
+before the harness started: `the socket path <path> is longer than the 103 bytes a unix
+socket allows; use a shorter session name or REWAKE_DIR`. A unix socket's path is
+bounded, and the session's messaging socket lies under the state directory, in
+`rooms/<room>/sock/`. A long name already falls back to a digest of name and epoch, so
+the path that failed was mostly the state directory's own; a shorter session name does
+not help then. Put the state directory on a short path — a directory under `/tmp`,
+linked from the case folder if the case wants it there — and pass that as `REWAKE_DIR`.
+
+*October 11, 2026.*
+
 ## Arguments and continuing a conversation
 
 ### Under `--remote`, continuing a thread refuses because of our own flag
@@ -281,9 +294,13 @@ Now every line names the wrapper's reply socket, and a held line is reported `he
 sends its sender a note. A hold reported after rewake's 300 ms wait for a first word
 takes the delivery back, so `delivered` from `send` is final only for work the agent has
 read; a late failure sends the same note. The first notice to a new session waits — for
-its status line until S9, October 11, 2026, for a fixed three seconds since the status
-line left — so the startup hold no longer applies. What stays: a hold is still a hold — the
-message waits for the person at the receiving session, and rewake does not release it.
+its status line until S9, October 11, 2026, and since the status line left for a fixed
+three seconds from the start of the session's lane. That makes the startup hold rarer,
+but proves nothing about readiness: nothing tells rewake the session's interface is up,
+and a session slower to start can still hold the first line. It is then reported like
+any hold — `held` to the sender, delivered or failed as the receipts come. What stays: a
+hold is still a hold — the message waits for the person at the receiving session, and
+rewake does not release it.
 The mechanism is in [delivery-adapters.md](delivery-adapters.md#claude-code-adapter). Details: [research-launch.md](research-launch.md#claude-codes-cross-session-inbound-gate),
 [research.md](research.md#the-inbound-gate-on-rewakes-line).
 
