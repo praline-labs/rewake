@@ -6,15 +6,15 @@ import (
 	"os"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // startServing starts what serves the session beside the harness — the run's
 // turn boundary, its service and its telemetry — before the harness itself,
 // and returns what stops them, in the reverse order.
-func startServing(ctx context.Context, request Request, session registry.Session, name, epoch string, plan adapter.LaunchPlan, tool *mailTool, live *liveSet) (func(), error) {
+func startServing(ctx context.Context, request Request, self registry.Session, name, epoch string, plan adapter.LaunchPlan, tool *mailTool, live *liveSet) (func(), error) {
 	var stops []func()
 	stop := func() {
 		for i := len(stops) - 1; i >= 0; i-- {
@@ -25,8 +25,8 @@ func startServing(ctx context.Context, request Request, session registry.Session
 		// The ends the boundary reports are published bounded by what was
 		// read when each was heard, so the clock is open before the first
 		// can be.
-		reportSession := session
-		clock, err := inbox.OpenReadClock(ctx, request.Dir, name, epoch)
+		reportSession := self
+		clock, err := mail.OpenReadClock(ctx, request.Dir, name, epoch)
 		if err != nil {
 			return stop, err
 		}
@@ -36,7 +36,7 @@ func startServing(ctx context.Context, request Request, session registry.Session
 		// (docs/mail-bridge-turns.md#a-pending-mark-at-its-turns-end); a
 		// start that cannot be recorded leaves the mark unproven, which
 		// fails to the side of a report.
-		record := func(at int64) { _ = inbox.RecordTurnStart(request.Dir, name, epoch, at) }
+		record := func(at int64) { _ = mail.RecordTurnStart(request.Dir, name, epoch, at) }
 		handler := tool.handler(record, clock.Snapshot, func(ctx context.Context, end adapter.TurnEnd) error {
 			if request.OnTurn != nil {
 				return request.OnTurn(ctx, reportSession, end)
@@ -74,12 +74,12 @@ func startServing(ctx context.Context, request Request, session registry.Session
 
 	// The channel record is shown whether or not anything else of the
 	// session is observed: whoami prints it in every run.
-	var observed func() sessionstate.Snapshot
+	var observed func() session.Snapshot
 	if plan.Telemetry != nil {
 		observed = plan.Telemetry.SessionState
 	}
 	if observed != nil || tool.keeper != nil {
-		stops = append(stops, sessionstate.Start(ctx, request.Dir, name, epoch, tool.keeper.source(epoch, observed)))
+		stops = append(stops, session.Start(ctx, request.Dir, name, epoch, tool.keeper.source(epoch, observed)))
 	}
 	return stop, nil
 }

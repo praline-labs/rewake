@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 )
 
@@ -114,7 +114,7 @@ func runOrder(t *testing.T, order []string) {
 	started := boottime.Now()
 	r.nextTurn()
 	var first toolCall
-	var boundary *inbox.ReadBoundary
+	var boundary *mail.ReadBoundary
 	acknowledged, completions := false, 0
 	readAt := uint64(0)
 	for _, event := range order {
@@ -178,7 +178,7 @@ func runOrder(t *testing.T, order []string) {
 	if !acknowledged && readAt != 0 {
 		t.Fatal("a boundary taken without an acknowledgment")
 	}
-	if got := report(r); contains(order, "journal") && acknowledged && got != inbox.Finished {
+	if got := report(r); contains(order, "journal") && acknowledged && got != mail.Finished {
 		t.Fatalf("T read the task and its end reported %q", got)
 	}
 	if got := report(r); !acknowledged && got != "" && !contains(order, "next call") {

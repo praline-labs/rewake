@@ -12,9 +12,9 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/grant"
-	"github.com/praline-labs/rewake/internal/grantauth"
-	"github.com/praline-labs/rewake/internal/grantauth/grantauthtest"
-	"github.com/praline-labs/rewake/internal/inbox"
+	authority "github.com/praline-labs/rewake/internal/grantauth"
+	authoritytest "github.com/praline-labs/rewake/internal/grantauth/grantauthtest"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -30,9 +30,9 @@ func TestAGrantWhoseDirectoryBecameALinkIsRefusedBeforeMainIsAsked(t *testing.T)
 		t.Fatal(err)
 	}
 	// Nobody listens for main, and main runs: asked, it would say "not yet".
-	message := inbox.Message{ID: "m1", From: "lead", FromEpoch: ownEpoch(t), To: "worker", ToEpoch: "9.9", Kind: inbox.Task, GrantDirs: []string{swapped}}
+	message := mail.Message{ID: "m1", From: "lead", FromEpoch: ownEpoch(t), To: "worker", ToEpoch: "9.9", Kind: mail.Task, GrantDirs: []string{swapped}}
 	err := checkGrant(dir, "worker", "9.9", adapter.Protected{})(message)
-	if err == nil || errors.Is(err, inbox.ErrNotYet) || !strings.Contains(err.Error(), "now leads to") {
+	if err == nil || errors.Is(err, mail.ErrNotYet) || !strings.Contains(err.Error(), "now leads to") {
 		t.Fatalf("a swapped directory: %v", err)
 	}
 }
@@ -43,9 +43,9 @@ func TestAGrantWhoseDirectoryBecameALinkIsRefusedBeforeMainIsAsked(t *testing.T)
 func TestAGrantFromAnInvalidSenderNameIsRefused(t *testing.T) {
 	dir := t.TempDir()
 	for _, from := range []string{"", "../lead", "lead/x"} {
-		message := inbox.Message{ID: "m1", From: from, FromEpoch: ownEpoch(t), To: "worker", ToEpoch: "9.9", Kind: inbox.Task, GrantDirs: []string{"/src/lib"}}
+		message := mail.Message{ID: "m1", From: from, FromEpoch: ownEpoch(t), To: "worker", ToEpoch: "9.9", Kind: mail.Task, GrantDirs: []string{"/src/lib"}}
 		err := confirmGrant(dir, "worker", "9.9", "c1", message)
-		if err == nil || errors.Is(err, inbox.ErrNotYet) || !strings.Contains(err.Error(), "not a session run") {
+		if err == nil || errors.Is(err, mail.ErrNotYet) || !strings.Contains(err.Error(), "not a session run") {
 			t.Errorf("from %q: %v", from, err)
 		}
 	}
@@ -78,23 +78,23 @@ func TestAResumedLaunchStartsTheHarnessWithTheGrantsConfirmedAgain(t *testing.T)
 	name := "worker-fake"
 	lib := realDir(t)
 	address := state.AuthorityAddress(dir, main)
-	authority, err := grantauth.Listen(address, os.Getpid(), time.Minute)
+	server, err := authority.Listen(address, os.Getpid(), time.Minute)
 	if err != nil {
 		t.Fatal(err)
 	}
-	authority.Open = func(grantauth.Grant) (bool, bool) { return true, true }
+	server.Open = func(authority.Grant) (bool, bool) { return true, true }
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go authority.Serve(ctx)
-	defer authority.Close()
-	self := grantauth.Expect{PID: os.Getpid()}
+	go server.Serve(ctx)
+	defer server.Close()
+	self := authority.Expect{PID: os.Getpid()}
 	self.Start, _ = proc.StartTime(os.Getpid())
 	grants := map[string][]string{"m1": {lib}}
-	previous := grantauthtest.EndedRun(t, func(run string) {
-		if err := grantauth.Register(address, grantauth.Grant{ID: "m1", To: name, ToEpoch: run, Dirs: []string{lib}}); err != nil {
+	previous := authoritytest.EndedRun(t, func(run string) {
+		if err := authority.Register(address, authority.Grant{ID: "m1", To: name, ToEpoch: run, Dirs: []string{lib}}); err != nil {
 			t.Fatal(err)
 		}
-	}, grantauthtest.Delivery{Dir: dir, Address: address, MainPID: self.PID, MainStart: self.Start, From: "lead", FromEpoch: main, To: name, Grants: grants, Threads: []string{"s1"}})
+	}, authoritytest.Delivery{Dir: dir, Address: address, MainPID: self.PID, MainStart: self.Start, From: "lead", FromEpoch: main, To: name, Grants: grants, Threads: []string{"s1"}})
 	if err := grant.Save(dir, name, previous, []grant.Entry{{Path: lib, Message: "m1", Outcome: grant.Granted, Thread: "s1", From: "lead", FromEpoch: main}}); err != nil {
 		t.Fatal(err)
 	}
@@ -120,15 +120,15 @@ func TestAResumedLaunchStartsTheHarnessWithTheGrantsConfirmedAgain(t *testing.T)
 func TestAGrantWhoseMainHasEndedFailsNamingThatMain(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "rooms", "default")
 	lib := realDir(t)
-	message := inbox.Message{ID: "m1", From: "lead", FromEpoch: ownEpoch(t), To: "worker", ToEpoch: "9.9", Kind: inbox.Task, GrantDirs: []string{lib}}
+	message := mail.Message{ID: "m1", From: "lead", FromEpoch: ownEpoch(t), To: "worker", ToEpoch: "9.9", Kind: mail.Task, GrantDirs: []string{lib}}
 	check := checkGrant(dir, "worker", "9.9", adapter.Protected{})
 
-	if err := check(message); !errors.Is(err, inbox.ErrNotYet) || !strings.Contains(err.Error(), "lead") {
+	if err := check(message); !errors.Is(err, mail.ErrNotYet) || !strings.Contains(err.Error(), "lead") {
 		t.Fatalf("a quiet main that runs: %v, want the task to wait for it", err)
 	}
 	message.FromEpoch = endedEpoch(t)
 	err := check(message)
-	if err == nil || errors.Is(err, inbox.ErrNotYet) {
+	if err == nil || errors.Is(err, mail.ErrNotYet) {
 		t.Fatalf("a main that has ended: %v, want the task to fail", err)
 	}
 	for _, said := range []string{"lead, which sent it, has ended", "send the task again from the current main"} {

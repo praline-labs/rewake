@@ -10,7 +10,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
 	"github.com/praline-labs/rewake/internal/channel"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/receipt"
@@ -74,7 +74,7 @@ func failingKeeper(t *testing.T, dir, name string, alive bool) *channelKeeper {
 	return k
 }
 
-func bodies(messages []inbox.Message) string {
+func bodies(messages []mail.Message) string {
 	var texts []string
 	for _, message := range messages {
 		texts = append(texts, message.Text)
@@ -107,7 +107,7 @@ func TestANoticeLandsOnceAcrossHeartbeats(t *testing.T) {
 	for range 3 {
 		k.beat(context.Background())
 	}
-	if got := availabilityFiles(t, dir, "api"); len(got) != 1 || got[0].Kind != inbox.Note || got[0].From != "api" {
+	if got := availabilityFiles(t, dir, "api"); len(got) != 1 || got[0].Kind != mail.Note || got[0].From != "api" {
 		t.Fatalf("worker mailbox %+v", got)
 	}
 }

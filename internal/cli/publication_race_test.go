@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/receipt"
@@ -124,7 +124,7 @@ func (l *headsUpLab) nextRunSweeps(t *testing.T) <-chan struct{} {
 	next, _ := webRun(t, l.dir)
 	ctx, cancel := context.WithCancel(context.Background())
 	swept, served := make(chan struct{}), make(chan struct{})
-	server := &inbox.Server{Dir: l.dir, Name: "web", Epoch: next.Epoch(), Ready: func() { close(swept) }}
+	server := &mail.Server{Dir: l.dir, Name: "web", Epoch: next.Epoch(), Ready: func() { close(swept) }}
 	go func() {
 		defer close(served)
 		server.Serve(ctx)
@@ -178,7 +178,7 @@ func (l *headsUpLab) retry(t *testing.T) {
 func (l *headsUpLab) at(t *testing.T, step string, fn func()) <-chan struct{} {
 	t.Helper()
 	var once, waited sync.Once
-	inbox.PublicationStep = func(at string, message inbox.Message) {
+	mail.PublicationStep = func(at string, message mail.Message) {
 		if at == step && message.ID == l.id {
 			once.Do(fn)
 		}
@@ -189,7 +189,7 @@ func (l *headsUpLab) at(t *testing.T, step string, fn func()) <-chan struct{} {
 			waited.Do(func() { close(waiting) })
 		}
 	}
-	t.Cleanup(func() { inbox.PublicationStep, state.LockWait = nil, nil })
+	t.Cleanup(func() { mail.PublicationStep, state.LockWait = nil, nil })
 	return waiting
 }
 
@@ -203,7 +203,7 @@ func TestTheSweepWaitsForAHeadsUpsEvidence(t *testing.T) {
 	lab := newHeadsUpLab(t)
 	var swept <-chan struct{}
 	var waiting <-chan struct{}
-	waiting = lab.at(t, inbox.PublicationEvidence, func() {
+	waiting = lab.at(t, mail.PublicationEvidence, func() {
 		swept = lab.nextRunSweeps(t)
 		select {
 		case <-waiting:
@@ -231,7 +231,7 @@ func TestAHeadsUpsAdmissionIsInsideTheSection(t *testing.T) {
 	lab := newHeadsUpLab(t)
 	var swept <-chan struct{}
 	var waiting <-chan struct{}
-	waiting = lab.at(t, inbox.PublicationAdmitted, func() {
+	waiting = lab.at(t, mail.PublicationAdmitted, func() {
 		swept = lab.nextRunSweeps(t)
 		select {
 		case <-waiting:

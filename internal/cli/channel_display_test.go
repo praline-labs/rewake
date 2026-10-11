@@ -11,7 +11,7 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // What is shown (docs/mail-bridge-channel.md#what-is-shown): whoami and the
@@ -29,20 +29,20 @@ func TestTheChannelIsShown(t *testing.T) {
 	}
 	for _, record := range records {
 		dir := liveSession(t, "lead")
-		session, err := registry.Load(dir, "lead")
+		lead, err := registry.Load(dir, "lead")
 		if err != nil {
 			t.Fatal(err)
 		}
 		if err := registry.Remove(dir, "lead"); err != nil {
 			t.Fatal(err)
 		}
-		session.Role = role.Main.ID
-		if err := registry.Publish(dir, session); err != nil {
+		lead.Role = role.Main.ID
+		if err := registry.Publish(dir, lead); err != nil {
 			t.Fatal(err)
 		}
 		t.Setenv(state.SessionEnv, "lead")
-		t.Setenv(state.EpochEnv, session.Epoch())
-		if err := sessionstate.Save(dir, "lead", session.Epoch(), sessionstate.Snapshot{Channel: record, PublishedBoot: boottime.Now()}); err != nil {
+		t.Setenv(state.EpochEnv, lead.Epoch())
+		if err := session.Save(dir, "lead", lead.Epoch(), session.Snapshot{Channel: record, PublishedBoot: boottime.Now()}); err != nil {
 			t.Fatal(err)
 		}
 

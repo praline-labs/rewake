@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 )
 
 // holdDispatch holds the goroutine a frame of one operation is handled on
@@ -45,7 +45,7 @@ func TestAnEndCapturesItsBoundaryWhenItsFrameArrives(t *testing.T) {
 	clock.Store(1)
 	seen := make(chan adapter.TurnEnd, 1)
 	handler := adapter.TurnHandler{
-		EndCapture: func() (*inbox.ReadBoundary, int64) { return &inbox.ReadBoundary{Through: clock.Load()}, 100 },
+		EndCapture: func() (*mail.ReadBoundary, int64) { return &mail.ReadBoundary{Through: clock.Load()}, 100 },
 		Publish:    func(_ context.Context, completion adapter.TurnEnd) error { seen <- completion; return nil },
 	}
 	_, p := paired(t, handler, Served...)
@@ -66,7 +66,7 @@ func TestAnEndCapturesItsBoundaryWhenItsFrameArrives(t *testing.T) {
 func TestATurnStartCapturesItsBoundaryWhenItsFrameArrives(t *testing.T) {
 	var clock atomic.Uint64
 	clock.Store(1)
-	handler := adapter.TurnHandler{Capture: func() *inbox.ReadBoundary { return &inbox.ReadBoundary{Through: clock.Load()} }}
+	handler := adapter.TurnHandler{Capture: func() *mail.ReadBoundary { return &mail.ReadBoundary{Through: clock.Load()} }}
 	b, p := paired(t, handler, Served...)
 	received, release := holdDispatch(t, opTurnStarted)
 	p.write(t, Frame{Op: opTurnStarted, ID: 1, Turn: "t1"})
@@ -88,7 +88,7 @@ func TestATurnStartCapturesItsBoundaryWhenItsFrameArrives(t *testing.T) {
 // wrapper unmaps the read clock those calls capture from after it.
 func TestCloseWaitsForACallIntoTheHandler(t *testing.T) {
 	entered, release := make(chan struct{}), make(chan struct{})
-	b, _ := paired(t, adapter.TurnHandler{Capture: func() *inbox.ReadBoundary {
+	b, _ := paired(t, adapter.TurnHandler{Capture: func() *mail.ReadBoundary {
 		close(entered)
 		<-release
 		return boundary()
@@ -144,7 +144,7 @@ func TestCloseWaitsForAFrameBeingHandled(t *testing.T) {
 func TestNothingReachesTheHandlerOnceClosed(t *testing.T) {
 	var calls atomic.Int32
 	b, _ := paired(t, adapter.TurnHandler{
-		Capture: func() *inbox.ReadBoundary { calls.Add(1); return boundary() },
+		Capture: func() *mail.ReadBoundary { calls.Add(1); return boundary() },
 		Publish: func(context.Context, adapter.TurnEnd) error { calls.Add(1); return nil },
 	}, Served...)
 	l := currentLink(b)
@@ -162,7 +162,7 @@ func TestNothingReachesTheHandlerOnceClosed(t *testing.T) {
 func TestNothingReachesTheHandlerWhileClosing(t *testing.T) {
 	var calls atomic.Int32
 	b, _ := paired(t, adapter.TurnHandler{
-		Capture: func() *inbox.ReadBoundary { calls.Add(1); return boundary() },
+		Capture: func() *mail.ReadBoundary { calls.Add(1); return boundary() },
 		Publish: func(context.Context, adapter.TurnEnd) error { calls.Add(1); return nil },
 	}, Served...)
 	l := currentLink(b)
@@ -236,7 +236,7 @@ func TestAWithdrawalStopsAnEndsAttempts(t *testing.T) {
 func TestAClosedConnectionTakesNoTurn(t *testing.T) {
 	var calls atomic.Int32
 	b, _ := paired(t, adapter.TurnHandler{
-		Capture: func() *inbox.ReadBoundary { calls.Add(1); return boundary() },
+		Capture: func() *mail.ReadBoundary { calls.Add(1); return boundary() },
 		Confirm: func(context.Context, adapter.TurnEnd) (string, error) { calls.Add(1); return "", nil },
 	}, Served...)
 	l := unservedLink(t, b)

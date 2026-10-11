@@ -6,17 +6,17 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 type knownWorker struct {
 	session     registry.Session
-	last        sessionstate.Snapshot
+	last        session.Snapshot
 	compactions uint64
-	departure   *inbox.Message
+	departure   *mail.Message
 	held        heldDeliveries
 }
 
@@ -56,11 +56,11 @@ func (n *sessionNotices) scan(ctx context.Context, dir string, self registry.Ses
 			continue
 		}
 		if n.known[id] == nil {
-			n.known[id] = &knownWorker{session: peer, last: sessionstate.Unknown(peer.Epoch())}
+			n.known[id] = &knownWorker{session: peer, last: session.Unknown(peer.Epoch())}
 		}
 	}
 	for id, worker := range n.known {
-		latest := sessionstate.Load(dir, worker.session.Name, worker.session.Epoch())
+		latest := session.Load(dir, worker.session.Name, worker.session.Epoch())
 		if latest.PublishedAt != nil {
 			worker.last = latest
 		}
@@ -91,10 +91,10 @@ func (n *sessionNotices) scan(ctx context.Context, dir string, self registry.Ses
 	return nil
 }
 
-func compactionMessage(self, peer registry.Session, event sessionstate.CompactionEvent) inbox.Message {
+func compactionMessage(self, peer registry.Session, event session.CompactionEvent) mail.Message {
 	identity := fmt.Sprintf("compaction\x00%s\x00%s\x00%s\x00%s\x00%d", self.Name, self.Epoch(), peer.Name, peer.Epoch(), event.Sequence)
 	sum := sha256.Sum256([]byte(identity))
-	return inbox.Message{ID: fmt.Sprintf("%019d-%x", event.ObservedAt.UnixNano(), sum[:12]), From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: inbox.Note, CreatedAt: time.Now(), Text: fmt.Sprintf("Rewake: context compacted (compaction %d).", event.Sequence), Compaction: &inbox.CompactionNotice{Count: event.Sequence, ObservedAt: event.ObservedAt}}
+	return mail.Message{ID: fmt.Sprintf("%019d-%x", event.ObservedAt.UnixNano(), sum[:12]), From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: mail.Note, CreatedAt: time.Now(), Text: fmt.Sprintf("Rewake: context compacted (compaction %d).", event.Sequence), Compaction: &mail.CompactionNotice{Count: event.Sequence, ObservedAt: event.ObservedAt}}
 }
 
 func (n *sessionNotices) announceCompactions(ctx context.Context, dir string, self registry.Session, worker *knownWorker) error {

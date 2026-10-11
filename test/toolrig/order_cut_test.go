@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -68,7 +68,7 @@ func TestAnAcknowledgmentCutMidway(t *testing.T) {
 			case <-time.After(10 * time.Second):
 				t.Fatal("the acknowledgment never reached its second write")
 			}
-			captured := make(chan *inbox.ReadBoundary, 1)
+			captured := make(chan *mail.ReadBoundary, 1)
 			go func() { captured <- r.endTurn() }()
 			shellRead := make(chan string, 1)
 			go func() { out, _ := r.shell("inbox"); shellRead <- out }()
@@ -153,7 +153,7 @@ func TestAnEscNobodyHeard(t *testing.T) {
 			if err := r.journal(boundary, started); err != nil {
 				t.Fatal(err)
 			}
-			if got := report(r); got != inbox.Finished {
+			if got := report(r); got != mail.Finished {
 				t.Fatalf("T+1's end reported %q", got)
 			}
 		})

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/receipt"
 )
@@ -57,7 +57,7 @@ func TestAClaimedLetterThatCannotBeReadLeavesTheMarkOpen(t *testing.T) {
 	if first := tool.run("inbox", "--message", id); first.code != ExitOK {
 		t.Fatal(first)
 	}
-	if _, claimed := inbox.ReadClaimed(dir, "api", id); !claimed {
+	if _, claimed := mail.ReadClaimed(dir, "api", id); !claimed {
 		t.Fatal("the read claimed nothing")
 	}
 	turnStarted(t, dir, self, markAt-1)
@@ -116,8 +116,8 @@ func TestARetriedAcknowledgmentStopsOnAStatusItCannotRead(t *testing.T) {
 		t.Fatal("the archive was not in the way")
 	}
 	// Reported on since: the waiter is gone, the letter still unread.
-	for _, waiter := range must(inbox.ReadWaiters(dir, "api", self.Epoch())) {
-		if err := inbox.ClearAwaiting(dir, "api", self.Epoch(), waiter); err != nil {
+	for _, waiter := range must(mail.ReadWaiters(dir, "api", self.Epoch())) {
+		if err := mail.ClearAwaiting(dir, "api", self.Epoch(), waiter); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -130,7 +130,7 @@ func TestARetriedAcknowledgmentStopsOnAStatusItCannotRead(t *testing.T) {
 	if loadErr != nil {
 		t.Fatal(loadErr)
 	}
-	if waiters := must(inbox.ReadWaiters(dir, "api", self.Epoch())); err == nil || len(waiters) != 0 || record.Read.Letters[0].Read {
+	if waiters := must(mail.ReadWaiters(dir, "api", self.Epoch())); err == nil || len(waiters) != 0 || record.Read.Letters[0].Read {
 		t.Fatalf("acknowledged past an unreadable status: %v, waiters %+v", err, waiters)
 	}
 }
@@ -144,7 +144,7 @@ func TestAKeptAnswerThatCannotBeReadIsNotDropped(t *testing.T) {
 	closed(t, kept)
 	_, _ = endTurn(t, stopEnd("nothing more to add", true))
 	for _, report := range reportsTo(t, lab.dir, "web") {
-		if inbox.KindOf(report) == inbox.Finished {
+		if mail.KindOf(report) == mail.Finished {
 			t.Fatalf("published without the held answer: %q", report.Text)
 		}
 	}
@@ -160,7 +160,7 @@ func TestAnUnreadableResultIsNotFailedWhenTheNameMovesOn(t *testing.T) {
 	for _, where := range []string{"archived", "waiting"} {
 		t.Run(where, func(t *testing.T) {
 			dir, self, web := toolSession(t)
-			message := inbox.Message{ID: inbox.NewID(), From: self.Name, FromEpoch: self.Epoch(), To: web.Name, ToEpoch: web.Epoch(), Kind: inbox.Note, Text: "taken already", CreatedAt: time.Now()}
+			message := mail.Message{ID: mail.NewID(), From: self.Name, FromEpoch: self.Epoch(), To: web.Name, ToEpoch: web.Epoch(), Kind: mail.Note, Text: "taken already", CreatedAt: time.Now()}
 			directory := state.DonePath(dir, "web")
 			recorded := `{"state":"read"}`
 			if where == "waiting" {
@@ -186,7 +186,7 @@ func TestAnUnreadableResultIsNotFailedWhenTheNameMovesOn(t *testing.T) {
 			if err := json.Unmarshal(out.Bytes(), &model); err != nil {
 				t.Fatalf("%s (%v): %v", out.String(), failure, err)
 			}
-			if model.State != string(inbox.Pending) || !strings.Contains(model.Detail, "could not be read") {
+			if model.State != string(mail.Pending) || !strings.Contains(model.Detail, "could not be read") {
 				t.Fatalf("an unreadable result after the name moved on: %+v", model)
 			}
 		})
@@ -203,7 +203,7 @@ func TestAClearingThatFailedIsFinishedBeforeTheNextReport(t *testing.T) {
 	previous := beforeReports
 	beforeReports = func() { _ = os.Chmod(waiter, 0) }
 	t.Cleanup(func() { beforeReports = previous; _ = os.Chmod(waiter, 0o600) })
-	failed := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "the first is done"}, "")
+	failed := completeTurn(dir, self, mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "the first is done"}, "")
 	beforeReports = previous
 	if err := os.Chmod(waiter, 0o600); err != nil {
 		t.Fatal(err)
@@ -215,7 +215,7 @@ func TestAClearingThatFailedIsFinishedBeforeTheNextReport(t *testing.T) {
 		t.Fatalf("the unfinished clearing left %d records", left)
 	}
 	later := readFrom(t, dir, web)
-	if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "second", Text: "the second is done"}, ""); err != nil {
+	if err := completeTurn(dir, self, mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "second", Text: "the second is done"}, ""); err != nil {
 		t.Fatal(err)
 	}
 	answered := map[string]int{}

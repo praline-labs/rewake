@@ -10,7 +10,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/registry"
 )
@@ -42,7 +42,7 @@ func TestABoundaryWithoutAToolRecordsItsStart(t *testing.T) {
 	boundary.handler.Started("thread", "turn-2", 0)
 	// The read `rewake pending` makes (internal/cli/pending.go): a start
 	// after a mark's time proves the mark's turn over.
-	if got, err := inbox.LatestTurnStart(dir, "api", "1.1"); got != 123 || err != nil {
+	if got, err := mail.LatestTurnStart(dir, "api", "1.1"); got != 123 || err != nil {
 		t.Fatalf("the latest start: %d %v, want 123", got, err)
 	}
 }

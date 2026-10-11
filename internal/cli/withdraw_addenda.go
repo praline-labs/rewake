@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 )
 
 // addendumModel is what withdrawing a task did to one of its addenda: unseen,
@@ -19,8 +19,8 @@ type addendumModel struct {
 
 // takenAddendum is one addendum's withdrawal, before anything is printed.
 type takenAddendum struct {
-	message inbox.Message
-	result  inbox.Withdrawal
+	message mail.Message
+	result  mail.Withdrawal
 	err     error
 }
 
@@ -28,10 +28,10 @@ type takenAddendum struct {
 // is a task that only makes sense with its task: left standing, it would be
 // read on its own and owe a report on work its sender took back. The caller
 // holds the recipient's mailbox lock, and listed the addenda under it.
-func withdrawAddenda(dir string, addenda []inbox.Message) []takenAddendum {
+func withdrawAddenda(dir string, addenda []mail.Message) []takenAddendum {
 	var taken []takenAddendum
 	for _, addendum := range addenda {
-		result, err := inbox.Withdraw(dir, addendum, nil)
+		result, err := mail.Withdraw(dir, addendum, nil)
 		taken = append(taken, takenAddendum{message: addendum, result: result, err: err})
 	}
 	return taken
@@ -40,7 +40,7 @@ func withdrawAddenda(dir string, addenda []inbox.Message) []takenAddendum {
 // readAddendum says whether the recipient read one of the addenda already.
 func readAddendum(taken []takenAddendum) bool {
 	for _, addendum := range taken {
-		if errors.Is(addendum.err, inbox.ErrAlreadyRead) {
+		if errors.Is(addendum.err, mail.ErrAlreadyRead) {
 			return true
 		}
 	}
@@ -61,22 +61,22 @@ func addendaLines(dir, to string, taken []takenAddendum, again bool, model *with
 		case addendum.err == nil:
 			entry.Result = withdrawalNames[addendum.result]
 			switch addendum.result {
-			case inbox.WithdrawnUnseen:
+			case mail.WithdrawnUnseen:
 				lines = append(lines, fmt.Sprintf("Rewake: withdrew its addendum %s too, before its notice went out.", id))
-			case inbox.WithdrawnAnnounced:
+			case mail.WithdrawnAnnounced:
 				lines = append(lines, fmt.Sprintf("Rewake: withdrew its addendum %s too; its notice may have gone out, so %s is told not to act on it.", id, to))
 				lines = append(lines, recallLine(dir, addendum.message, &entry.Recall)...)
-			case inbox.WithdrawnHeld:
+			case mail.WithdrawnHeld:
 				lines = append(lines, fmt.Sprintf("Rewake: withdrew its addendum %s too; its notice still waits in the approval queue of %s's harness.", id, to))
 			}
-		case errors.Is(addendum.err, inbox.ErrAlreadyRead):
+		case errors.Is(addendum.err, mail.ErrAlreadyRead):
 			entry.Result = "read"
 			told := "is told the task was withdrawn"
 			if again {
 				told = "was told the task was withdrawn when it was"
 			}
 			lines = append(lines, fmt.Sprintf("Rewake: %s has read its addendum %s already, and a read message is final; %s %s and reports on the addendum as usual.", to, id, to, told))
-		case errors.Is(addendum.err, inbox.ErrNotDelivered), errors.Is(addendum.err, inbox.ErrNoLongerKept):
+		case errors.Is(addendum.err, mail.ErrNotDelivered), errors.Is(addendum.err, mail.ErrNoLongerKept):
 			// Never read and never will be: nothing to take back or to say.
 			entry.Result = "undelivered"
 		default:

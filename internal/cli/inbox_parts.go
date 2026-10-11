@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/receipt"
 	"github.com/praline-labs/rewake/internal/registry"
@@ -39,16 +39,16 @@ type segment struct{ letter, part int }
 // letterHeadModel is a letter's heading under --json: what the text part does
 // not carry, repeated in every part so each envelope stands alone.
 type letterHeadModel struct {
-	ID            string     `json:"id"`
-	From          string     `json:"from"`
-	Kind          inbox.Kind `json:"kind"`
-	CreatedAt     time.Time  `json:"createdAt"`
-	AddendumTo    string     `json:"addendumTo,omitempty"`
-	Replaces      string     `json:"replaces,omitempty"`
-	GrantDirs     []string   `json:"grantDirs,omitempty"`
-	GrantGit      bool       `json:"grantGit,omitempty"`
-	ThreadChanged bool       `json:"threadChanged,omitempty"`
-	SenderState   string     `json:"senderState,omitempty"`
+	ID            string    `json:"id"`
+	From          string    `json:"from"`
+	Kind          mail.Kind `json:"kind"`
+	CreatedAt     time.Time `json:"createdAt"`
+	AddendumTo    string    `json:"addendumTo,omitempty"`
+	Replaces      string    `json:"replaces,omitempty"`
+	GrantDirs     []string  `json:"grantDirs,omitempty"`
+	GrantGit      bool      `json:"grantGit,omitempty"`
+	ThreadChanged bool      `json:"threadChanged,omitempty"`
+	SenderState   string    `json:"senderState,omitempty"`
 	// Gone says the letter was no longer unread when this read reached it,
 	// and its text is not shown.
 	Gone bool `json:"gone,omitempty"`
@@ -144,7 +144,7 @@ func freezeRead(ctx *Context, mode inboxMode, site readSite, record *receipt.Rec
 		if stop = mailboxStopped(site.dir, site.self.Name); stop != nil {
 			return nil
 		}
-		messages, err := inbox.AvailableUnread(site.dir, site.self.Name, site.epoch)
+		messages, err := mail.AvailableUnread(site.dir, site.self.Name, site.epoch)
 		if err != nil {
 			return fmt.Errorf("could not read the inbox of %s: %w", site.self.Name, err)
 		}
@@ -178,17 +178,17 @@ func freezeRead(ctx *Context, mode inboxMode, site readSite, record *receipt.Rec
 	return refusal, nil
 }
 
-func only(messages []inbox.Message, id string) []inbox.Message {
+func only(messages []mail.Message, id string) []mail.Message {
 	for _, message := range messages {
 		if message.ID == id {
-			return []inbox.Message{message}
+			return []mail.Message{message}
 		}
 	}
 	return nil
 }
 
 // freezeLetter keeps one letter as it stands, cut into parts.
-func freezeLetter(asJSON bool, view messageView, stored inbox.Message) (receipt.Letter, error) {
+func freezeLetter(asJSON bool, view messageView, stored mail.Message) (receipt.Letter, error) {
 	raw, err := json.Marshal(stored)
 	if err != nil {
 		return receipt.Letter{}, err
@@ -197,7 +197,7 @@ func freezeLetter(asJSON bool, view messageView, stored inbox.Message) (receipt.
 	letter := receipt.Letter{ID: stored.ID, Version: hex.EncodeToString(sum[:8]), Message: raw, Body: letterBody(view)}
 	if asJSON {
 		head := letterHeadModel{
-			ID: view.ID, From: view.From, Kind: inbox.KindOf(view.Message), CreatedAt: view.CreatedAt,
+			ID: view.ID, From: view.From, Kind: mail.KindOf(view.Message), CreatedAt: view.CreatedAt,
 			AddendumTo: view.AddendumTo, Replaces: view.Replaces, GrantDirs: view.GrantDirs, GrantGit: view.GrantGit,
 			ThreadChanged: view.ThreadChanged,
 		}

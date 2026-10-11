@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -24,7 +24,7 @@ import (
 // captured with, which a retry carries unchanged.
 func (lab interimLab) heldEnd(t *testing.T) adapter.TurnEnd {
 	t.Helper()
-	end := lab.end("turn-2", 1, inbox.Finished, "the held answer")
+	end := lab.end("turn-2", 1, mail.Finished, "the held answer")
 	end.Boundary = boundaryNow(t, lab.dir, lab.self)
 	return end
 }
@@ -76,10 +76,10 @@ func (lab interimLab) keptRaw(t *testing.T) string {
 // and checks that its report carries the held answer exactly once.
 func (lab interimLab) continued(t *testing.T) {
 	t.Helper()
-	if reason := lab.confirm(t, lab.end("turn-2b", 2, inbox.Finished, "the continuation")); reason != "" {
+	if reason := lab.confirm(t, lab.end("turn-2b", 2, mail.Finished, "the continuation")); reason != "" {
 		t.Fatalf("the continuation was held: %s", reason)
 	}
-	got := lab.reportsOf(t, inbox.Finished)
+	got := lab.reportsOf(t, mail.Finished)
 	if len(got) != 1 || got[0] != "the held answer\n\nthe continuation" || lab.kept() {
 		t.Fatalf("after the continuation web holds %q, kept %v", got, lab.kept())
 	}
@@ -233,7 +233,7 @@ func TestAHeldEndConfirmedAfterItsContinuationIsPublished(t *testing.T) {
 						t.Fatal(err)
 					}
 				}
-				continuation := lab.end("turn-2b", 3, inbox.Finished, "the continuation")
+				continuation := lab.end("turn-2b", 3, mail.Finished, "the continuation")
 				continuation.Boundary = boundaryNow(t, lab.dir, lab.self)
 				if c.crash != nil {
 					crashAt(t, c.crash, func() { lab.again(t, continuation) })
@@ -251,9 +251,9 @@ func TestAHeldEndConfirmedAfterItsContinuationIsPublished(t *testing.T) {
 				if got := reportsTo(t, lab.dir, "web"); len(got) != len(published) || lab.kept() {
 					t.Fatalf("the held end published again: web holds %v, was %v, kept %v", kinds(got), kinds(published), lab.kept())
 				}
-				want, kind := "the held answer\n\nthe continuation", inbox.Finished
+				want, kind := "the held answer\n\nthe continuation", mail.Finished
 				if marked {
-					want, kind = "the second half is running\n\n"+want, inbox.Interim
+					want, kind = "the second half is running\n\n"+want, mail.Interim
 				}
 				if got := lab.reportsOf(t, kind); !slices.Contains(got, want) || len(published) != 2 {
 					t.Fatalf("web holds %q of %d reports, want %q once", got, len(published), want)

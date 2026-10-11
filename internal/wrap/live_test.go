@@ -13,7 +13,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/grant"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
@@ -175,10 +175,10 @@ func TestADeliveryWithoutALiveWakeWaits(t *testing.T) {
 	fake := &fakeHarness{}
 	live := newLiveSet(dir, session.Name, session.Epoch())
 	deliver := wakeIfLive(fake, live)
-	message := inbox.Message{ID: inbox.NewID(), Text: "hello"}
+	message := mail.Message{ID: mail.NewID(), Text: "hello"}
 	for _, set := range [][]adapter.Capability{nil, {adapter.TurnBoundaryCapability}} {
 		live.report(set)
-		if result := deliver(context.Background(), message); result.State != inbox.Pending || result.Detail != noWake {
+		if result := deliver(context.Background(), message); result.State != mail.Pending || result.Detail != noWake {
 			t.Fatalf("with %v live: %+v", set, result)
 		}
 	}
@@ -186,10 +186,10 @@ func TestADeliveryWithoutALiveWakeWaits(t *testing.T) {
 		t.Fatal("a notice went through a Wake that is not live")
 	}
 	live.report([]adapter.Capability{adapter.WakeCapability})
-	if result := deliver(context.Background(), message); result.State != inbox.Delivered || len(fake.seen()) != 1 {
+	if result := deliver(context.Background(), message); result.State != mail.Delivered || len(fake.seen()) != 1 {
 		t.Fatalf("with the Wake live again: %+v", result)
 	}
-	if result := wakeIfLive(nil, live)(context.Background(), message); result.State != inbox.Pending {
+	if result := wakeIfLive(nil, live)(context.Background(), message); result.State != mail.Pending {
 		t.Fatalf("a plan with no Wake: %+v", result)
 	}
 }
@@ -197,15 +197,15 @@ func TestADeliveryWithoutALiveWakeWaits(t *testing.T) {
 // fakeReserver answers each reservation with what its hook says.
 type fakeReserver struct {
 	calls int
-	hook  func() (inbox.Reservation, error)
+	hook  func() (mail.Reservation, error)
 }
 
-func (f *fakeReserver) Reserve(context.Context, inbox.Message) (inbox.Reservation, error) {
+func (f *fakeReserver) Reserve(context.Context, mail.Message) (mail.Reservation, error) {
 	f.calls++
 	return f.hook()
 }
 
-type heldReservation struct{ inbox.Reservation }
+type heldReservation struct{ mail.Reservation }
 
 // Without a live Wake nothing is reserved and no conversation is asked, so
 // the letter goes the plain way, readable and waiting; a Wake withdrawn while
@@ -215,13 +215,13 @@ func TestWithoutALiveWakeNothingIsReservedOrPinned(t *testing.T) {
 	dir, session := liveRun(t)
 	live := newLiveSet(dir, session.Name, session.Epoch())
 	held := heldReservation{}
-	reserver := &fakeReserver{hook: func() (inbox.Reservation, error) { return held, nil }}
+	reserver := &fakeReserver{hook: func() (mail.Reservation, error) { return held, nil }}
 	reserve := reserveIfLive(reserver, live)
 	asked := 0
 	thread := threadIfLive(func() (string, error) { asked++; return "A", nil }, live)
 
 	live.report([]adapter.Capability{adapter.TurnBoundaryCapability})
-	if r, err := reserve(context.Background(), inbox.Message{}); r != nil || err != nil || reserver.calls != 0 {
+	if r, err := reserve(context.Background(), mail.Message{}); r != nil || err != nil || reserver.calls != 0 {
 		t.Fatalf("without a live Wake: %v %v, asked %d times", r, err, reserver.calls)
 	}
 	if conversation, err := thread(); conversation != "" || err != nil || asked != 0 {
@@ -229,24 +229,24 @@ func TestWithoutALiveWakeNothingIsReservedOrPinned(t *testing.T) {
 	}
 
 	live.report([]adapter.Capability{adapter.WakeCapability})
-	if r, err := reserve(context.Background(), inbox.Message{}); r != held || err != nil {
+	if r, err := reserve(context.Background(), mail.Message{}); r != held || err != nil {
 		t.Fatalf("with the Wake live again: %v %v", r, err)
 	}
 	if conversation, err := thread(); conversation != "A" || err != nil {
 		t.Fatalf("the conversation with the Wake live again: %q %v", conversation, err)
 	}
 
-	reserver.hook = func() (inbox.Reservation, error) {
+	reserver.hook = func() (mail.Reservation, error) {
 		live.report(nil)
-		return nil, inbox.ErrThreadUnavailable
+		return nil, mail.ErrThreadUnavailable
 	}
-	if r, err := reserve(context.Background(), inbox.Message{}); r != nil || err != nil {
+	if r, err := reserve(context.Background(), mail.Message{}); r != nil || err != nil {
 		t.Fatalf("a Wake withdrawn while reserving: %v %v", r, err)
 	}
 
 	live.report([]adapter.Capability{adapter.WakeCapability})
-	reserver.hook = func() (inbox.Reservation, error) { return nil, inbox.ErrThreadUnavailable }
-	if _, err := reserve(context.Background(), inbox.Message{}); !errors.Is(err, inbox.ErrThreadUnavailable) {
+	reserver.hook = func() (mail.Reservation, error) { return nil, mail.ErrThreadUnavailable }
+	if _, err := reserve(context.Background(), mail.Message{}); !errors.Is(err, mail.ErrThreadUnavailable) {
 		t.Fatalf("a refusal with the Wake live: %v", err)
 	}
 	if threadIfLive(nil, live) != nil {

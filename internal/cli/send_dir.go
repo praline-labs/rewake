@@ -10,7 +10,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/grant"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
@@ -54,7 +54,7 @@ func requestedDirGrants(catalog adapter.Catalog, call Call, sender, target regis
 	if err != nil {
 		return result, err
 	}
-	if kind.kind != inbox.Task && kind.kind != inbox.Question {
+	if kind.kind != mail.Task && kind.kind != mail.Question {
 		return refuse("only a task or a question carries a grant; a heads-up asks for no work to write.")
 	}
 	if !catalog.Offers(target.Harness).Permissions.Dir {

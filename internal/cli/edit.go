@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
@@ -56,7 +56,7 @@ func handleEdit(ctx *Context, call Call) error {
 	}
 	target, err := registry.Lookup(dir, old.To)
 	if errors.Is(err, registry.ErrNotFound) || err == nil && target.Epoch() != old.ToEpoch {
-		return failf("the session run your %s %s was written for has ended, so it will never be read; see what you sent with: rewake inbox --awaited", inbox.KindOf(old), old.ID)
+		return failf("the session run your %s %s was written for has ended, so it will never be read; see what you sent with: rewake inbox --awaited", mail.KindOf(old), old.ID)
 	}
 	if err != nil {
 		return failf("could not read the record of %s: %v", old.To, err)
@@ -80,7 +80,7 @@ func handleEdit(ctx *Context, call Call) error {
 	}
 	kind := sendKinds[0]
 	for _, candidate := range sendKinds {
-		if candidate.kind == inbox.KindOf(old) {
+		if candidate.kind == mail.KindOf(old) {
 			kind = candidate
 		}
 	}
@@ -89,8 +89,8 @@ func handleEdit(ctx *Context, call Call) error {
 		return err
 	}
 	started := time.Now()
-	replacement := inbox.Message{
-		ID: inbox.NewID(), From: self.Name, FromEpoch: epoch, To: old.To, ToEpoch: old.ToEpoch,
+	replacement := mail.Message{
+		ID: mail.NewID(), From: self.Name, FromEpoch: epoch, To: old.To, ToEpoch: old.ToEpoch,
 		Kind: old.Kind, Text: text, CreatedAt: time.Now(), Replaces: old.ID, AddendumTo: old.AddendumTo,
 	}
 	// A grant goes on only while the sender is still the main that could
@@ -102,8 +102,8 @@ func handleEdit(ctx *Context, call Call) error {
 			return err
 		}
 	}
-	if kind.kind == inbox.Question {
-		release, err := inbox.ReserveAnswer(dir, self.Name, replacement.ID)
+	if kind.kind == mail.Question {
+		release, err := mail.ReserveAnswer(dir, self.Name, replacement.ID)
 		if err != nil {
 			return failf("could not reserve the answer: %v", err)
 		}
@@ -124,7 +124,7 @@ func handleEdit(ctx *Context, call Call) error {
 			return editedWithdrawn(current)
 		}
 		old, replacement.Replaces = current, current.ID
-		_, err = inbox.Withdraw(dir, old, &replacement)
+		_, err = mail.Withdraw(dir, old, &replacement)
 		return err
 	}
 	if old.AddendumTo == "" {
@@ -147,10 +147,10 @@ func handleEdit(ctx *Context, call Call) error {
 		}
 	}
 	// Addenda are never rewritten: they name the old id, which now leads to
-	// the replacement (inbox.CurrentTask), and the sender is told they came
+	// the replacement (mail.CurrentTask), and the sender is told they came
 	// along, since a correction it meant to drop with the old text would
 	// otherwise go on being read.
-	addenda, err := inbox.AddendaOf(dir, replacement)
+	addenda, err := mail.AddendaOf(dir, replacement)
 	if err != nil && !ctx.JSON {
 		// The edit is done; only the list of what came along is unknown, and
 		// an empty one would say nothing did.
@@ -163,6 +163,6 @@ func handleEdit(ctx *Context, call Call) error {
 }
 
 // editedWithdrawn refuses an edit of a letter withdrawn outright.
-func editedWithdrawn(old inbox.Message) error {
+func editedWithdrawn(old mail.Message) error {
 	return failf("your %s %s to %s was already withdrawn; send a new one with: rewake send %s \"...\"", old.Withdrawn.Kind, old.ID, old.To, old.To)
 }

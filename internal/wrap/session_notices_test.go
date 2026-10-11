@@ -9,26 +9,26 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
-func noticeState(t *testing.T, dir string, peer registry.Session, activity string, count uint64, events []sessionstate.CompactionEvent) {
+func noticeState(t *testing.T, dir string, peer registry.Session, activity string, count uint64, events []session.CompactionEvent) {
 	t.Helper()
 	now := time.Now()
 	model := "stub-model"
 	effort := "high"
-	snapshot := sessionstate.Snapshot{Fresh: true, Selection: "ready", PublishedAt: &now, Activity: &activity, ActivityAt: &now, ActivityFresh: true, WaitingFor: []string{}, Compactions: &count, Coverage: "observed", CompactionEvents: events, Model: &model, Effort: &effort, SettingsFresh: true, SettingsAt: &now}
-	if err := sessionstate.Save(dir, peer.Name, peer.Epoch(), snapshot); err != nil {
+	snapshot := session.Snapshot{Fresh: true, Selection: "ready", PublishedAt: &now, Activity: &activity, ActivityAt: &now, ActivityFresh: true, WaitingFor: []string{}, Compactions: &count, Coverage: "observed", CompactionEvents: events, Model: &model, Effort: &effort, SettingsFresh: true, SettingsAt: &now}
+	if err := session.Save(dir, peer.Name, peer.Epoch(), snapshot); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func noticeKinds(t *testing.T, dir, name string) (available, compacted, departed []inbox.Message) {
+func noticeKinds(t *testing.T, dir, name string) (available, compacted, departed []mail.Message) {
 	t.Helper()
 	for _, m := range availabilityFiles(t, dir, name) {
 		if m.Availability != nil {
@@ -49,7 +49,7 @@ func TestCompactionNoticesDedupAndLateMain(t *testing.T) {
 	main := availabilityPeer(t, dir, "main-fixture", role.Main.ID, 1, true)
 	peer := availabilityPeer(t, dir, "worker-fixture", role.General.ID, 2, true)
 	past := main.StartedAt.Add(-time.Second)
-	noticeState(t, dir, peer, "idle", 1, []sessionstate.CompactionEvent{{Sequence: 1, ObservedAt: past}})
+	noticeState(t, dir, peer, "idle", 1, []session.CompactionEvent{{Sequence: 1, ObservedAt: past}})
 	observer := newSessionNotices()
 	if err := observer.scan(context.Background(), dir, main); err != nil {
 		t.Fatal(err)
@@ -59,7 +59,7 @@ func TestCompactionNoticesDedupAndLateMain(t *testing.T) {
 		t.Fatal("late main received historical compaction/departure")
 	}
 	current := time.Now()
-	events := []sessionstate.CompactionEvent{{Sequence: 1, ObservedAt: past}, {Sequence: 2, ObservedAt: current}}
+	events := []session.CompactionEvent{{Sequence: 1, ObservedAt: past}, {Sequence: 2, ObservedAt: current}}
 	noticeState(t, dir, peer, "working", 2, events)
 	for range 3 {
 		if err := observer.scan(context.Background(), dir, main); err != nil {
@@ -67,13 +67,13 @@ func TestCompactionNoticesDedupAndLateMain(t *testing.T) {
 		}
 	}
 	_, completed, _ = noticeKinds(t, dir, main.Name)
-	if len(completed) != 1 || completed[0].Compaction.Count != 2 || completed[0].FromEpoch != peer.Epoch() || completed[0].ToEpoch != main.Epoch() || inbox.Owed(completed[0]) {
+	if len(completed) != 1 || completed[0].Compaction.Count != 2 || completed[0].FromEpoch != peer.Epoch() || completed[0].ToEpoch != main.Epoch() || mail.Owed(completed[0]) {
 		t.Fatal("compaction notice scope/dedup incorrect")
 	}
 	// Model state changes do not invent a new completion, including reconnect/staleness.
-	snapshot := sessionstate.Load(dir, peer.Name, peer.Epoch())
+	snapshot := session.Load(dir, peer.Name, peer.Epoch())
 	snapshot.Stale()
-	if err := sessionstate.Save(dir, peer.Name, peer.Epoch(), snapshot); err != nil {
+	if err := session.Save(dir, peer.Name, peer.Epoch(), snapshot); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Remove(filepath.Join(state.InboxPath(dir, main.Name), completed[0].ID+".json")); err != nil {
@@ -106,7 +106,7 @@ func TestACompactionMainAskedForGetsNoNotice(t *testing.T) {
 		t.Fatal(err)
 	}
 	now := time.Now()
-	noticeState(t, dir, peer, "idle", 3, []sessionstate.CompactionEvent{
+	noticeState(t, dir, peer, "idle", 3, []session.CompactionEvent{
 		{Sequence: 1, ObservedAt: now, RequestedBy: main.Name, Request: "0123456789abcdef0123456789abcdef"},
 		{Sequence: 2, ObservedAt: now, RequestedBy: "other-main", Request: "fedcba9876543210fedcba9876543210"},
 		{Sequence: 3, ObservedAt: now},
@@ -165,7 +165,7 @@ func TestKnownDepartureRetainsOldStateAndDeduplicates(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				var saved sessionstate.Snapshot
+				var saved session.Snapshot
 				if json.Unmarshal(raw, &saved) != nil {
 					t.Fatal("bad state fixture")
 				}
@@ -186,7 +186,7 @@ func TestKnownDepartureRetainsOldStateAndDeduplicates(t *testing.T) {
 			}
 			note := departed[0]
 			snapshot := note.SenderState
-			if note.FromEpoch != peer.Epoch() || note.Departure.Identity.CWD != peer.CWD || note.Departure.Identity.Role != role.Write.ID || snapshot == nil || snapshot.Epoch != peer.Epoch() || snapshot.Activity == nil || *snapshot.Activity != "working" || snapshot.Fresh || snapshot.ActivityFresh || *snapshot.Compactions != 2 || inbox.Owed(note) {
+			if note.FromEpoch != peer.Epoch() || note.Departure.Identity.CWD != peer.CWD || note.Departure.Identity.Role != role.Write.ID || snapshot == nil || snapshot.Epoch != peer.Epoch() || snapshot.Activity == nil || *snapshot.Activity != "working" || snapshot.Fresh || snapshot.ActivityFresh || *snapshot.Compactions != 2 || mail.Owed(note) {
 				t.Fatal("departed epoch identity/state was lost, replaced or fresh")
 			}
 			if strings.Contains(note.Text, "crash") {
@@ -217,11 +217,11 @@ func TestDepartureIgnoresUnknownLivenessStaleStateAndOldAbsence(t *testing.T) {
 	if err := registry.Update(dir, peer); err != nil {
 		t.Fatal(err)
 	}
-	snapshot := sessionstate.Load(dir, peer.Name, peer.Epoch())
+	snapshot := session.Load(dir, peer.Name, peer.Epoch())
 	old := time.Now().Add(-time.Hour)
 	snapshot.PublishedAt = &old
 	snapshot.Stale()
-	if err := sessionstate.Save(dir, peer.Name, peer.Epoch(), snapshot); err != nil {
+	if err := session.Save(dir, peer.Name, peer.Epoch(), snapshot); err != nil {
 		t.Fatal(err)
 	}
 	if err := observer.scan(context.Background(), dir, main); err != nil {
@@ -301,7 +301,7 @@ func TestObservedCompactionSurvivesDepartureBeforeNextScan(t *testing.T) {
 	if err := observer.scan(context.Background(), dir, main); err != nil {
 		t.Fatal(err)
 	}
-	noticeState(t, dir, peer, "idle", 1, []sessionstate.CompactionEvent{{Sequence: 1, ObservedAt: time.Now()}})
+	noticeState(t, dir, peer, "idle", 1, []session.CompactionEvent{{Sequence: 1, ObservedAt: time.Now()}})
 	if err := registry.Remove(dir, peer.Name); err != nil {
 		t.Fatal(err)
 	}
@@ -324,8 +324,8 @@ func TestStateNoticeObserverStaysInRoomAndDoesNotNotifyItself(t *testing.T) {
 		t.Fatal(err)
 	}
 	foreign := availabilityPeer(t, other, "foreign-worker", role.General.ID, 2, true)
-	noticeState(t, other, foreign, "idle", 1, []sessionstate.CompactionEvent{{Sequence: 1, ObservedAt: time.Now()}})
-	noticeState(t, dir, main, "idle", 1, []sessionstate.CompactionEvent{{Sequence: 1, ObservedAt: time.Now()}})
+	noticeState(t, other, foreign, "idle", 1, []session.CompactionEvent{{Sequence: 1, ObservedAt: time.Now()}})
+	noticeState(t, dir, main, "idle", 1, []session.CompactionEvent{{Sequence: 1, ObservedAt: time.Now()}})
 	observer := newSessionNotices()
 	if err := observer.scan(context.Background(), dir, main); err != nil {
 		t.Fatal(err)

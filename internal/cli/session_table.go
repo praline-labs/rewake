@@ -8,7 +8,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/praline-labs/rewake/internal/channel"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 func sessionTable(room string, sessions []sessionView, visible bool) []string {
@@ -64,7 +64,7 @@ func sessionTable(room string, sessions []sessionView, visible bool) []string {
 	return lines
 }
 
-func stateCells(snapshot *sessionstate.Snapshot) []string {
+func stateCells(snapshot *session.Snapshot) []string {
 	if snapshot == nil {
 		return []string{"unknown", channel.Word(nil), "unknown", "unknown", "unknown", "unknown"}
 	}

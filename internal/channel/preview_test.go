@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/channel"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 )
 
 // Every first line reaches the reader whole: alone and grouped, from a
@@ -18,10 +18,10 @@ func TestEveryFirstLineFitsThePreview(t *testing.T) {
 		channel.FirstMainDenied, channel.FirstMainWorks, channel.FirstMainNoTool,
 	}
 	for _, first := range firsts {
-		letter := inbox.Message{ID: "1", From: sender, Kind: inbox.Note, Text: first + "\nsecond line", CreatedAt: time.Now()}
-		other := inbox.Message{ID: "0", From: "other", Kind: inbox.Note, Text: "x", CreatedAt: time.Now().Add(-time.Second)}
-		alone := inbox.Notice(letter)
-		grouped := inbox.Notice(inbox.Message{Batch: []inbox.Message{other, letter}})
+		letter := mail.Message{ID: "1", From: sender, Kind: mail.Note, Text: first + "\nsecond line", CreatedAt: time.Now()}
+		other := mail.Message{ID: "0", From: "other", Kind: mail.Note, Text: "x", CreatedAt: time.Now().Add(-time.Second)}
+		alone := mail.Notice(letter)
+		grouped := mail.Notice(mail.Message{Batch: []mail.Message{other, letter}})
 		for _, shown := range []string{alone, grouped} {
 			if !strings.Contains(shown, first) || strings.Contains(shown, "…") {
 				t.Errorf("cut: %q", shown)

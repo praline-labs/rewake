@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 )
 
 // counterGate is a gate over a read clock the test moves by hand.
 func counterGate(clock *atomic.Uint64) *Gate {
-	return NewGate(func() *inbox.ReadBoundary { return &inbox.ReadBoundary{Through: clock.Load()} })
+	return NewGate(func() *mail.ReadBoundary { return &mail.ReadBoundary{Through: clock.Load()} })
 }
 
 // An acknowledgment that reaches its check after an end was noted, for a call
@@ -48,7 +48,7 @@ func TestACaptureTakesTheClosingSnapshotOfTheWritingAcknowledgment(t *testing.T)
 		if !ok {
 			t.Fatal("the first acknowledgment was refused")
 		}
-		captured := make(chan *inbox.ReadBoundary)
+		captured := make(chan *mail.ReadBoundary)
 		go func() { boundary, _ := gate.Capture(); captured <- boundary }()
 		waitFor(t, func() bool { return gate.Noted() != 0 })
 		if late, ok := gate.Enter(2); ok {
@@ -81,9 +81,9 @@ func TestACaptureTakesTheClosingSnapshotOfTheWritingAcknowledgment(t *testing.T)
 // second one could not go unseen.
 func TestACaptureThatWaitedDoesNotSampleAgain(t *testing.T) {
 	var clock atomic.Uint64
-	gate := NewGate(func() *inbox.ReadBoundary { return &inbox.ReadBoundary{Through: clock.Add(1)} })
+	gate := NewGate(func() *mail.ReadBoundary { return &mail.ReadBoundary{Through: clock.Add(1)} })
 	leave, _ := gate.Enter(1)
-	captured := make(chan *inbox.ReadBoundary)
+	captured := make(chan *mail.ReadBoundary)
 	go func() { boundary, _ := gate.Capture(); captured <- boundary }()
 	waitFor(t, func() bool { return gate.Noted() != 0 })
 	leave()
@@ -97,12 +97,12 @@ func TestACaptureThatWaitedDoesNotSampleAgain(t *testing.T) {
 func TestACaptureWithNothingWritingSamplesUnderTheMutex(t *testing.T) {
 	var gate *Gate
 	held := false
-	gate = NewGate(func() *inbox.ReadBoundary {
+	gate = NewGate(func() *mail.ReadBoundary {
 		held = !gate.mu.TryLock()
 		if !held {
 			gate.mu.Unlock()
 		}
-		return &inbox.ReadBoundary{Through: 3}
+		return &mail.ReadBoundary{Through: 3}
 	})
 	boundary, noted := gate.Capture()
 	if !held || boundary.Through != 3 || noted == 0 {

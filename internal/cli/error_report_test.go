@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 )
@@ -63,7 +63,7 @@ func TestFailedTurnsReachEveryWaitingSender(t *testing.T) {
 	t.Run("completion", func(t *testing.T) {
 		dir := failedWaiters(t)
 		self, _ := registry.Lookup(dir, "api")
-		if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "failed", Failed: true, Text: "verbatim failure"}, ""); err != nil {
+		if err := completeTurn(dir, self, mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "failed", Failed: true, Text: "verbatim failure"}, ""); err != nil {
 			t.Fatal(err)
 		}
 		check(t, dir)
@@ -85,7 +85,7 @@ func TestUnclaimedFailuresReachMainAndMainKeepsItsOwn(t *testing.T) {
 				t.Fatal(err)
 			}
 			if self {
-				messages, err := inbox.PeekUnread(dir, "api", epochOf(t, dir, "api"))
+				messages, err := mail.PeekUnread(dir, "api", epochOf(t, dir, "api"))
 				if err != nil || len(messages) != 1 || string(messages[0].Kind) != "error" {
 					t.Fatalf("local error=%+v %v", messages, err)
 				}
@@ -105,7 +105,7 @@ func TestReadingAnErrorOwesNothing(t *testing.T) {
 	t.Setenv(state.SessionEnv, "api")
 	rawUnread(t, dir, "api", map[string]any{"kind": "error", "text": "failure", "from": "web", "fromEpoch": peer.Epoch(), "toEpoch": epochOf(t, dir, "api")})
 	run("inbox")
-	if len(inbox.Waiters(dir, "api", epochOf(t, dir, "api"))) != 0 {
+	if len(mail.Waiters(dir, "api", epochOf(t, dir, "api"))) != 0 {
 		t.Fatal("error created a reply obligation")
 	}
 	code, _, errOut := run("send", "web", "fake failure", "--error")
@@ -121,7 +121,7 @@ func TestIdentifiedFailuresAreNotRoutedAgainAfterTheirWaitsClear(t *testing.T) {
 	markMain(t, dir, "leader")
 	readFrom(t, dir, peer)
 	self, _ := registry.Lookup(dir, "api")
-	event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "failure-once", Failed: true, Text: "failure"}
+	event := mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "failure-once", Failed: true, Text: "failure"}
 	for range 2 {
 		if err := completeTurn(dir, self, event, ""); err != nil {
 			t.Fatal(err)
@@ -134,9 +134,9 @@ func TestIdentifiedFailuresAreNotRoutedAgainAfterTheirWaitsClear(t *testing.T) {
 
 func TestQuestionsReturnAnErrorOutcome(t *testing.T) {
 	dir, peer := questionSender(t)
-	awaitStatus = func(_, _, id string, _ time.Duration, _ func() bool) (inbox.Status, bool) {
+	awaitStatus = func(_, _, id string, _ time.Duration, _ func() bool) (mail.Status, bool) {
 		rawUnread(t, dir, "web", map[string]any{"kind": "error", "text": "failure", "toEpoch": peer.Epoch(), "inReplyTo": []string{id}})
-		return inbox.Status{State: inbox.Delivered}, true
+		return mail.Status{State: mail.Delivered}, true
 	}
 	code, out, errOut := run("send", "api", "question", "--question", "--wait", "0.2", "--json")
 	if code != ExitFailed || !strings.Contains(out, `"kind": "error"`) || !strings.Contains(out, `"answer": "failure"`) {

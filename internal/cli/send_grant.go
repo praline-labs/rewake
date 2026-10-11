@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/grantauth"
-	"github.com/praline-labs/rewake/internal/inbox"
+	authority "github.com/praline-labs/rewake/internal/grantauth"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 )
@@ -15,14 +15,14 @@ import (
 // confirm it and refuses a grant it does not hold, so a letter nobody
 // registered — one a worker wrote into its own mailbox, or sent with main's
 // variables — carries none (docs/grants.md#who-can-grant).
-func registerGrant(catalog adapter.Catalog, dir string, self registry.Session, epoch string, message inbox.Message) error {
-	if !inbox.CarriesGrant(message) {
+func registerGrant(catalog adapter.Catalog, dir string, self registry.Session, epoch string, message mail.Message) error {
+	if !mail.CarriesGrant(message) {
 		return nil
 	}
 	if !catalog.Offers(self.Harness).Permissions.ReachesWrapper {
 		return &FailedError{Message: fmt.Sprintf("a grant: %s runs %s, whose commands cannot reach its wrapper to register one — its sandbox refuses unix sockets — and a grant nobody registered is refused on delivery. Send the task without it, or ask the owner to grant the access from a main on a harness that can.", self.Name, self.Harness)}
 	}
-	err := grantauth.Register(state.AuthorityAddress(dir, epoch), grantauth.Grant{
+	err := authority.Register(state.AuthorityAddress(dir, epoch), authority.Grant{
 		ID: message.ID, To: message.To, ToEpoch: message.ToEpoch,
 		Dirs: message.GrantDirs, Broad: message.GrantBroad, Git: message.GrantGit,
 	})
@@ -40,24 +40,24 @@ func registerGrant(catalog adapter.Catalog, dir string, self registry.Session, e
 // a letter that names a grant the wrapper does not hold was rewritten, and
 // the edit is refused rather than sent without the grant main may think it
 // carries.
-func carryGrant(catalog adapter.Catalog, dir string, self registry.Session, epoch string, old inbox.Message, replacement *inbox.Message) error {
+func carryGrant(catalog adapter.Catalog, dir string, self registry.Session, epoch string, old mail.Message, replacement *mail.Message) error {
 	if !catalog.Offers(self.Harness).Permissions.ReachesWrapper {
 		// Such a main registers nothing, so nothing here can be carried.
-		if inbox.CarriesGrant(old) {
-			return failf("your %s %s names a grant this session never registered — %s cannot reach its wrapper — so its letter was written by someone else; withdraw it with rewake withdraw %s and send the task again", inbox.KindOf(old), old.ID, self.Harness, shortRef(old.ID))
+		if mail.CarriesGrant(old) {
+			return failf("your %s %s names a grant this session never registered — %s cannot reach its wrapper — so its letter was written by someone else; withdraw it with rewake withdraw %s and send the task again", mail.KindOf(old), old.ID, self.Harness, shortRef(old.ID))
 		}
 		return nil
 	}
-	carried, held, err := grantauth.Carry(state.AuthorityAddress(dir, epoch), old.ID, grantauth.Grant{ID: replacement.ID, To: replacement.To, ToEpoch: replacement.ToEpoch})
+	carried, held, err := authority.Carry(state.AuthorityAddress(dir, epoch), old.ID, authority.Grant{ID: replacement.ID, To: replacement.To, ToEpoch: replacement.ToEpoch})
 	switch {
-	case err != nil && inbox.CarriesGrant(old):
+	case err != nil && mail.CarriesGrant(old):
 		return failf("a grant: this session's wrapper did not carry the grant of %s over to its replacement, and its recipient would refuse it unregistered: %v", old.ID, err)
 	case err != nil:
 		// Nothing to carry by the letter, and nothing learned from the
 		// wrapper: an edit of a task with no grant goes on without one.
 		return nil
-	case !held && inbox.CarriesGrant(old):
-		return failf("your %s %s names a grant this session's wrapper does not hold, so its letter was rewritten since it was sent; withdraw it with rewake withdraw %s and send the task again", inbox.KindOf(old), old.ID, shortRef(old.ID))
+	case !held && mail.CarriesGrant(old):
+		return failf("your %s %s names a grant this session's wrapper does not hold, so its letter was rewritten since it was sent; withdraw it with rewake withdraw %s and send the task again", mail.KindOf(old), old.ID, shortRef(old.ID))
 	case !held:
 		return nil
 	}

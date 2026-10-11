@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 )
@@ -20,7 +20,7 @@ func TestStoppedKeepsWorkForTheHumanContinuation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "thread/stopped", Stopped: true, Text: "the person at the keyboard stopped this turn"}
+	event := mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "thread/stopped", Stopped: true, Text: "the person at the keyboard stopped this turn"}
 	if err := completeTurn(dir, self, event, "thread"); err != nil {
 		t.Fatal(err)
 	}
@@ -28,14 +28,14 @@ func TestStoppedKeepsWorkForTheHumanContinuation(t *testing.T) {
 		t.Fatal(err)
 	}
 	report := reportObject(t, dir, "web")
-	if report["kind"] != "stopped" || len(inbox.Waiters(dir, "api", self.Epoch())) != 1 {
+	if report["kind"] != "stopped" || len(mail.Waiters(dir, "api", self.Epoch())) != 1 {
 		t.Fatal("stopped settled the task or lost its kind")
 	}
-	if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "thread/continued", Text: "continued result"}, "thread"); err != nil {
+	if err := completeTurn(dir, self, mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "thread/continued", Text: "continued result"}, "thread"); err != nil {
 		t.Fatal(err)
 	}
 	files := finishedFor(t, dir, "web")
-	if len(files) != 2 || len(inbox.Waiters(dir, "api", self.Epoch())) != 0 {
+	if len(files) != 2 || len(mail.Waiters(dir, "api", self.Epoch())) != 0 {
 		t.Fatal("continuation did not settle the original task")
 	}
 	for _, file := range files {
@@ -43,11 +43,11 @@ func TestStoppedKeepsWorkForTheHumanContinuation(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		var message inbox.Message
+		var message mail.Message
 		if err := json.Unmarshal(raw, &message); err != nil {
 			t.Fatal(err)
 		}
-		if len(message.InReplyTo) != 1 || message.InReplyTo[0] != task || inbox.Owed(message) {
+		if len(message.InReplyTo) != 1 || message.InReplyTo[0] != task || mail.Owed(message) {
 			t.Fatalf("wrong continuation contract: %+v", message)
 		}
 	}
@@ -64,7 +64,7 @@ func TestStoppedWithNobodyWaitingSendsNothing(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "thread/stop", Stopped: true, Text: "the person at the keyboard stopped this turn"}
+		event := mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "thread/stop", Stopped: true, Text: "the person at the keyboard stopped this turn"}
 		for range 2 {
 			if err := completeTurn(dir, self, event, "thread"); err != nil {
 				t.Fatal(err)
@@ -81,7 +81,7 @@ func TestStoppedWithNobodyWaitingSendsNothing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "thread/fail", Failed: true, Text: "broken"}, "thread"); err != nil {
+	if err := completeTurn(dir, self, mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "thread/fail", Failed: true, Text: "broken"}, "thread"); err != nil {
 		t.Fatal(err)
 	}
 	if reportObject(t, dir, "leader")["kind"] != "error" {
@@ -95,10 +95,10 @@ func TestStoppedWithNobodyWaitingSendsNothing(t *testing.T) {
 func TestAStoppedQuestionReturnsAndLeavesTheLaterResultReadable(t *testing.T) {
 	dir, web := questionSender(t)
 	var question string
-	awaitStatus = func(_, _, id string, _ time.Duration, _ func() bool) (inbox.Status, bool) {
+	awaitStatus = func(_, _, id string, _ time.Duration, _ func() bool) (mail.Status, bool) {
 		question = id
 		rawUnread(t, dir, "web", map[string]any{"from": "api", "kind": "stopped", "toEpoch": web.Epoch(), "inReplyTo": []string{id}, "text": "the person at the keyboard stopped this turn"})
-		return inbox.Status{State: inbox.Delivered}, true
+		return mail.Status{State: mail.Delivered}, true
 	}
 	code, _, errOut := run("send", "api", "work", "--question", "--wait", "1")
 	if code != ExitFailed {

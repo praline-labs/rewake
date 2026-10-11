@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/buildtime"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
@@ -87,7 +87,7 @@ func markMessagingReady(dir string, self registry.Session) error {
 	})
 }
 
-func availabilityMessage(self, peer registry.Session) inbox.Message {
+func availabilityMessage(self, peer registry.Session) mail.Message {
 	sum := sha256.Sum256([]byte("availability\x00" + self.Name + "\x00" + self.Epoch() + "\x00" + peer.Name + "\x00" + peer.Epoch()))
 	timestamp := max(self.StartedAt.UnixNano(), peer.StartedAt.UnixNano())
 	id := fmt.Sprintf("%019d-%x", timestamp, sum[:12])
@@ -96,9 +96,9 @@ func availabilityMessage(self, peer registry.Session) inbox.Message {
 	if existing {
 		label = "Session already available in this room."
 	}
-	identity := &inbox.Availability{Name: peer.Name, Role: role.Of(peer.Role).ID, Harness: peer.Harness, Room: peer.Room, CWD: peer.CWD, Existing: existing}
+	identity := &mail.Availability{Name: peer.Name, Role: role.Of(peer.Role).ID, Harness: peer.Harness, Room: peer.Room, CWD: peer.CWD, Existing: existing}
 	body := fmt.Sprintf("%s\nname: %s\nrole: %s\nharness: %s\nroom: %s\ncwd: %q", label, identity.Name, identity.Role, identity.Harness, identity.Room, identity.CWD)
-	return inbox.Message{ID: id, From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: inbox.Note, Text: body, CreatedAt: time.Now(), Availability: identity}
+	return mail.Message{ID: id, From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: mail.Note, Text: body, CreatedAt: time.Now(), Availability: identity}
 }
 
 func announceAvailable(ctx context.Context, dir string, self registry.Session, seen map[string]registry.Session) error {
@@ -139,7 +139,7 @@ func announceAvailable(ctx context.Context, dir string, self registry.Session, s
 }
 
 // Revalidation inside the receiver mailbox must never take a sender name lock.
-func putAvailability(ctx context.Context, dir string, current, peer registry.Session, message inbox.Message) error {
+func putAvailability(ctx context.Context, dir string, current, peer registry.Session, message mail.Message) error {
 	return putMainNotice(ctx, dir, current, message, func() error {
 		subject, err := registry.LookupReadOnly(dir, peer.Name)
 		if err != nil || subject.Epoch() != peer.Epoch() || subject.MessagingReadyAt == nil {
@@ -149,12 +149,12 @@ func putAvailability(ctx context.Context, dir string, current, peer registry.Ses
 	})
 }
 
-func putMainNotice(ctx context.Context, dir string, current registry.Session, message inbox.Message, validate func() error) error {
+func putMainNotice(ctx context.Context, dir string, current registry.Session, message mail.Message, validate func() error) error {
 	return withMainMailbox(ctx, dir, current, func() error {
 		if err := validate(); err != nil {
 			return err
 		}
-		return inbox.PutOnce(dir, message)
+		return mail.PutOnce(dir, message)
 	})
 }
 
@@ -183,7 +183,7 @@ func putAvailabilityPass(ctx context.Context, dir string, current registry.Sessi
 				continue
 			}
 			message := availabilityMessage(current, peer)
-			if err := inbox.PutOnce(dir, message); err != nil {
+			if err := mail.PutOnce(dir, message); err != nil {
 				return err
 			}
 			seen[message.ID] = peer

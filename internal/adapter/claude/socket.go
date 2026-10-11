@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 )
 
 // The socket path of delivery: the notice written to the session's messaging
@@ -19,7 +19,7 @@ import (
 // maxSocketPath is the limit the kernel puts on a unix socket path.
 const maxSocketPath = 103
 
-func newEnvelope(message inbox.Message) envelope {
+func newEnvelope(message mail.Message) envelope {
 	return envelope{
 		Type:     "user",
 		Message:  payload{Role: "user", Content: notification(message)},
@@ -30,14 +30,14 @@ func newEnvelope(message inbox.Message) envelope {
 // writeNotice writes one line to the session's inbox socket. Without a reply
 // address in it the session reports nothing back, and a successful write is
 // all there is to know: what the lane does when it cannot listen.
-func writeNotice(ctx context.Context, socket string, notice envelope) inbox.Result {
+func writeNotice(ctx context.Context, socket string, notice envelope) mail.Result {
 	if socket == "" {
-		return inbox.Result{State: inbox.Failed, Detail: "this session has no inbox socket"}
+		return mail.Result{State: mail.Failed, Detail: "this session has no inbox socket"}
 	}
 
 	line, err := json.Marshal(notice)
 	if err != nil {
-		return inbox.Result{State: inbox.Failed, Detail: "the message could not be encoded: " + err.Error()}
+		return mail.Result{State: mail.Failed, Detail: "the message could not be encoded: " + err.Error()}
 	}
 	dialer := net.Dialer{Timeout: dialTimeout}
 	connection, err := dialer.DialContext(ctx, "unix", socket)
@@ -46,17 +46,17 @@ func writeNotice(ctx context.Context, socket string, notice envelope) inbox.Resu
 		// recreated across a restart, so a session that is still alive gets
 		// another attempt rather than a refusal.
 		if errors.Is(err, os.ErrNotExist) || errors.Is(err, syscall.ECONNREFUSED) {
-			return inbox.Result{State: inbox.Pending, Detail: "the session is not listening yet"}
+			return mail.Result{State: mail.Pending, Detail: "the session is not listening yet"}
 		}
-		return inbox.Result{State: inbox.Failed, Detail: "could not reach the session: " + err.Error()}
+		return mail.Result{State: mail.Failed, Detail: "could not reach the session: " + err.Error()}
 	}
 	defer func() { _ = connection.Close() }()
 
 	_ = connection.SetWriteDeadline(time.Now().Add(dialTimeout))
 	if _, err := connection.Write(append(line, '\n')); err != nil {
-		return inbox.Result{State: inbox.Failed, Detail: "could not write to the session: " + err.Error()}
+		return mail.Result{State: mail.Failed, Detail: "could not write to the session: " + err.Error()}
 	}
-	return inbox.Result{State: inbox.Delivered, Via: "socket"}
+	return mail.Result{State: mail.Delivered, Via: "socket"}
 }
 
 // envelope is one line of the session inbox protocol. Priority "next" puts the

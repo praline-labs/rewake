@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/receipt"
 	"github.com/praline-labs/rewake/internal/registry"
@@ -51,15 +51,15 @@ func (op *operation) resolveEndedRun(ctx *Context) error {
 	}
 	lockCtx, cancel := context.WithTimeout(context.Background(), wait)
 	defer cancel()
-	publication, err := inbox.PublicationOf(lockCtx, op.site.dir, step.To, step.ToEpoch, step.MessageID)
+	publication, err := mail.PublicationOf(lockCtx, op.site.dir, step.To, step.ToEpoch, step.MessageID)
 	if err != nil {
 		return &unfinishedError{message: fmt.Sprintf("Rewake: the run of %s this heads-up was written for has ended, and its mailbox could not be read to tell whether it got there (%v); nothing was sent, and it does not go to the session that took the name since; look again with: rewake retry %s", step.To, err, op.record.Token)}
 	}
 	switch publication {
-	case inbox.PublicationWritten:
+	case mail.PublicationWritten:
 		step.Published = true
 		return failf("this heads-up was written into the mailbox of the run of %s that has since ended, and does not go to the session that took the name since", step.To)
-	case inbox.PublicationAbsent:
+	case mail.PublicationAbsent:
 		return failf("the run of %s this heads-up was written for ended before it was published, so it was not; it does not go to the session that took the name since", step.To)
 	}
 	op.record.Uncertain = true
@@ -69,7 +69,7 @@ func (op *operation) resolveEndedRun(ctx *Context) error {
 // pinNotify fixes a heads-up's id, its text and its recipient's run in the
 // journal before anything is published; a resumed operation takes its id from
 // there, and handleSend its text, before it would read stdin again.
-func (op *operation) pinNotify(message *inbox.Message) error {
+func (op *operation) pinNotify(message *mail.Message) error {
 	step := op.record.Notify
 	if step == nil {
 		op.record.Notify = &receipt.NotifyStep{MessageID: message.ID, To: message.To, ToEpoch: message.ToEpoch, Text: message.Text}
@@ -84,21 +84,21 @@ func (op *operation) pinNotify(message *inbox.Message) error {
 
 // publish writes a journaled heads-up into its recipient's mailbox once. The
 // deadline is checked under the recipient's lock, just before the write.
-func (op *operation) publish(ctx *Context, message inbox.Message) error {
+func (op *operation) publish(ctx *Context, message mail.Message) error {
 	wait := readerLockWait
 	if ctx.scope != nil {
 		wait = max(time.Millisecond, min(wait, ctx.scope.remaining()))
 	}
 	lockCtx, cancel := context.WithTimeout(context.Background(), wait)
 	defer cancel()
-	_, err := inbox.PublishOnce(lockCtx, op.site.dir, message, func() error {
+	_, err := mail.PublishOnce(lockCtx, op.site.dir, message, func() error {
 		return beforeCommit(ctx, op.record.Token, "the heads-up was published")
 	})
 	var unfinished *unfinishedError
 	switch {
 	case errors.As(err, &unfinished):
 		return err
-	case errors.Is(err, inbox.ErrRecipientEnded):
+	case errors.Is(err, mail.ErrRecipientEnded):
 		// Read inside the recipient's lock: the retry learns from that run's
 		// mailbox what an earlier attempt did there.
 		return &unfinishedError{message: "Rewake: the run of " + message.To + " this heads-up was written for ended before it was published, so this attempt wrote nothing; settle it with: rewake retry " + op.record.Token}

@@ -10,7 +10,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter/fixture"
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/receipt"
 )
 
@@ -161,7 +161,7 @@ func (r *rig) acknowledges(c toolCall) bool {
 // unread says whether api's letter id still waits.
 func (r *rig) unread(id string) bool {
 	r.t.Helper()
-	messages, err := inbox.PeekUnread(r.dir, "api", r.self.Epoch())
+	messages, err := mail.PeekUnread(r.dir, "api", r.self.Epoch())
 	if err != nil {
 		r.t.Fatal(err)
 	}

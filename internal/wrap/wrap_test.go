@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
@@ -30,8 +30,8 @@ type fakeHarness struct {
 	notInherited []string
 
 	mu        sync.Mutex
-	delivered []inbox.Message
-	result    inbox.Result
+	delivered []mail.Message
+	result    mail.Result
 }
 
 func (f *fakeHarness) ID() string         { return "fake" }
@@ -63,20 +63,20 @@ func (f *fakeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan,
 	return plan, nil
 }
 
-func (f *fakeHarness) Deliver(_ context.Context, message inbox.Message) inbox.Result {
+func (f *fakeHarness) Deliver(_ context.Context, message mail.Message) mail.Result {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.delivered = append(f.delivered, message)
 	if f.result.State == "" {
-		return inbox.Result{State: inbox.Delivered, Via: "fake"}
+		return mail.Result{State: mail.Delivered, Via: "fake"}
 	}
 	return f.result
 }
 
-func (f *fakeHarness) seen() []inbox.Message {
+func (f *fakeHarness) seen() []mail.Message {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	return append([]inbox.Message{}, f.delivered...)
+	return append([]mail.Message{}, f.delivered...)
 }
 
 func stateDir(t *testing.T) string {
@@ -171,8 +171,8 @@ func TestMailboxIsServedWhileTheHarnessRuns(t *testing.T) {
 				time.Sleep(20 * time.Millisecond)
 				continue
 			}
-			_ = inbox.Put(dir, inbox.Message{
-				ID:        inbox.NewID(),
+			_ = mail.Put(dir, mail.Message{
+				ID:        mail.NewID(),
 				From:      "web",
 				To:        "api-fake",
 				ToEpoch:   session.Epoch(),
@@ -197,8 +197,8 @@ func TestMailboxIsServedWhileTheHarnessRuns(t *testing.T) {
 // session that happens to take the same name.
 func TestMailOfAPreviousSessionIsRefused(t *testing.T) {
 	dir := stateDir(t)
-	if err := inbox.Put(dir, inbox.Message{
-		ID:        inbox.NewID(),
+	if err := mail.Put(dir, mail.Message{
+		ID:        mail.NewID(),
 		From:      "web",
 		To:        "api-fake",
 		ToEpoch:   "999.999",

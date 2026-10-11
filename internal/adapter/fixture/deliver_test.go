@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -30,19 +30,19 @@ func TestNoNoticePrecedesAReservedLettersReadability(t *testing.T) {
 	}
 	b, p := paired(t, adapter.TurnHandler{}, Served...)
 	var reserving adapter.Reserver = b
-	server := &inbox.Server{Dir: dir, Name: "api", Epoch: "1.1", Thread: b.Thread, Deliver: b.Deliver, Reserve: reserving.Reserve}
+	server := &mail.Server{Dir: dir, Name: "api", Epoch: "1.1", Thread: b.Thread, Deliver: b.Deliver, Reserve: reserving.Reserve}
 	ctx, cancel := context.WithCancel(context.Background())
 	served := make(chan struct{})
 	go func() { defer close(served); server.Serve(ctx) }()
 	t.Cleanup(func() { cancel(); <-served })
 
-	task := inbox.Message{ID: inbox.NewID(), From: "web", FromEpoch: "2.2", To: "api", ToEpoch: "1.1", Kind: inbox.Task, Text: "work", CreatedAt: time.Now()}
-	if err := inbox.Put(dir, task); err != nil {
+	task := mail.Message{ID: mail.NewID(), From: "web", FromEpoch: "2.2", To: "api", ToEpoch: "1.1", Kind: mail.Task, Text: "work", CreatedAt: time.Now()}
+	if err := mail.Put(dir, task); err != nil {
 		t.Fatal(err)
 	}
 	readable := func() bool {
-		unread, err := inbox.PeekUnread(dir, "api", "1.1")
-		return err == nil && slices.ContainsFunc(unread, func(m inbox.Message) bool { return m.ID == task.ID })
+		unread, err := mail.PeekUnread(dir, "api", "1.1")
+		return err == nil && slices.ContainsFunc(unread, func(m mail.Message) bool { return m.ID == task.ID })
 	}
 	reserve := p.read(t)
 	if reserve.Op != opReserve {
@@ -64,7 +64,7 @@ func TestNoNoticePrecedesAReservedLettersReadability(t *testing.T) {
 		t.Fatalf("the reservation was not let go: %+v", release)
 	}
 	eventually(t, "the delivery", func() bool {
-		status, ok, _ := inbox.ReadStatus(dir, "api", task.ID)
-		return ok && status.State == inbox.Delivered
+		status, ok, _ := mail.ReadStatus(dir, "api", task.ID)
+		return ok && status.State == mail.Delivered
 	})
 }

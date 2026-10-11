@@ -13,7 +13,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter/fixture"
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/receipt"
 )
@@ -114,7 +114,7 @@ func runCallOrder(t *testing.T, order []string, first string) {
 	t.Cleanup(child.free)
 
 	var observed, requested, asked, issued, confirmed, captured, acknowledged bool
-	var boundary *inbox.ReadBoundary
+	var boundary *mail.ReadBoundary
 	readAt := uint64(0)
 	// ticket waits, once the call was both heard and asked for, for the
 	// endpoint to be held before its child, or for its refusal.
@@ -213,7 +213,7 @@ func runCallOrder(t *testing.T, order []string, first string) {
 	}
 	got := report(r)
 	switch {
-	case contains(order, "journal") && acknowledged && got != inbox.Finished:
+	case contains(order, "journal") && acknowledged && got != mail.Finished:
 		t.Fatalf("T read the task and its end reported %q", got)
 	case !acknowledged && got != "":
 		t.Fatalf("T read nothing and its end reported %q", got)

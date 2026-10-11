@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 )
 
@@ -370,7 +370,7 @@ func (b *backend) Thread() (string, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if b.link == nil || !b.live[Wake] {
-		return "", inbox.ErrThreadUnavailable
+		return "", mail.ErrThreadUnavailable
 	}
 	return b.thread, nil
 }

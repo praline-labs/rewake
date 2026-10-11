@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
@@ -48,7 +48,7 @@ func departureReason(dir string, peer registry.Session) string {
 	return reason
 }
 
-func putDepartureNotice(ctx context.Context, dir string, current, peer registry.Session, message inbox.Message) error {
+func putDepartureNotice(ctx context.Context, dir string, current, peer registry.Session, message mail.Message) error {
 	return putMainNotice(ctx, dir, current, message, func() error {
 		if departureReason(dir, peer) == "" {
 			return registry.ErrNotFound
@@ -57,7 +57,7 @@ func putDepartureNotice(ctx context.Context, dir string, current, peer registry.
 	})
 }
 
-func departureMessage(self registry.Session, worker *knownWorker, reason string) inbox.Message {
+func departureMessage(self registry.Session, worker *knownWorker, reason string) mail.Message {
 	peer := worker.session
 	sum := sha256.Sum256([]byte("departure\x00" + self.Name + "\x00" + self.Epoch() + "\x00" + peer.Name + "\x00" + peer.Epoch()))
 	now := time.Now()
@@ -65,9 +65,9 @@ func departureMessage(self registry.Session, worker *knownWorker, reason string)
 	snapshot.Epoch = peer.Epoch()
 	snapshot.Stale()
 	snapshot.CompactionEvents, snapshot.CompactionOutcomes = nil, nil
-	identity := inbox.Availability{Name: peer.Name, Role: role.Of(peer.Role).ID, Harness: peer.Harness, Room: peer.Room, CWD: peer.CWD}
+	identity := mail.Availability{Name: peer.Name, Role: role.Of(peer.Role).ID, Harness: peer.Harness, Room: peer.Room, CWD: peer.CWD}
 	body := fmt.Sprintf("Session is no longer available in this room (%s).\nname: %s\nrole: %s\nharness: %s\nroom: %s\ncwd: %q", reason, identity.Name, identity.Role, identity.Harness, identity.Room, identity.CWD)
 	// The observer retains this message across failed publication attempts, including
 	// its timestamp. PutOnce protects a write that succeeded before reporting error.
-	return inbox.Message{ID: fmt.Sprintf("%019d-%x", now.UnixNano(), sum[:12]), From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: inbox.Note, CreatedAt: now, Text: body, Departure: &inbox.DepartureNotice{Identity: identity, Reason: reason}, SenderState: &snapshot}
+	return mail.Message{ID: fmt.Sprintf("%019d-%x", now.UnixNano(), sum[:12]), From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: mail.Note, CreatedAt: now, Text: body, Departure: &mail.DepartureNotice{Identity: identity, Reason: reason}, SenderState: &snapshot}
 }

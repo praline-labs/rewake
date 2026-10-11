@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/control"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/buildtime"
 	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // letterWait bounds how long a letter waits for its other half: the outcome
@@ -38,13 +38,13 @@ var letterBound = 15 * time.Minute
 // retried with the same id.
 type heldLetter struct {
 	seen, gone time.Time
-	message    *inbox.Message
+	message    *mail.Message
 }
 
 // letterParts are the two halves of a letter.
 type letterParts struct {
-	outcome *sessionstate.CompactionOutcome
-	event   *sessionstate.CompactionEvent
+	outcome *session.CompactionOutcome
+	event   *session.CompactionEvent
 }
 
 // closeRequests sends main a letter for each compaction its `rewake compact`
@@ -101,7 +101,7 @@ func (n *sessionNotices) closeRequest(ctx context.Context, dir string, self regi
 	}
 	if held.message == nil {
 		found := halves(dir, self, pending)
-		var running *sessionstate.CompactionOutcome
+		var running *session.CompactionOutcome
 		if found.outcome != nil && found.outcome.Outcome == control.Started {
 			running, found.outcome = found.outcome, nil
 		}
@@ -112,7 +112,7 @@ func (n *sessionNotices) closeRequest(ctx context.Context, dir string, self regi
 			held.seen = now
 		}
 		whole := found.outcome != nil && (found.outcome.Outcome != control.Done || found.event != nil)
-		var message inbox.Message
+		var message mail.Message
 		switch {
 		case whole || some && (gone || now.Sub(held.seen) >= letterWait):
 			message = outcomeLetter(self, pending, found)
@@ -147,7 +147,7 @@ func (n *sessionNotices) closeRequest(ctx context.Context, dir string, self regi
 // stands, except that started — no outcome yet — never stands over a final
 // one, whichever order a worker recorded them in.
 func halves(dir string, self registry.Session, pending control.Pending) letterParts {
-	snapshot := sessionstate.Load(dir, pending.Worker.Name, pending.Worker.Epoch())
+	snapshot := session.Load(dir, pending.Worker.Name, pending.Worker.Epoch())
 	var found letterParts
 	for i, outcome := range snapshot.CompactionOutcomes {
 		if outcome.Request != pending.ID || outcome.RequestedBy != self.Name {
@@ -169,7 +169,7 @@ func halves(dir string, self registry.Session, pending control.Pending) letterPa
 // closingLetter is one letter for a pending compaction: a note from the
 // worker, which owes main nothing and is announced as a notify. Its id is
 // derived from both runs and the request.
-func closingLetter(self registry.Session, pending control.Pending, text string) inbox.Message {
+func closingLetter(self registry.Session, pending control.Pending, text string) mail.Message {
 	peer := pending.Worker
 	identity := fmt.Sprintf("compaction-outcome\x00%s\x00%s\x00%s\x00%s\x00%s", self.Name, self.Epoch(), peer.Name, peer.Epoch(), pending.ID)
 	sum := sha256.Sum256([]byte(identity))
@@ -177,14 +177,14 @@ func closingLetter(self registry.Session, pending control.Pending, text string) 
 	if pending.AskerEpoch != self.Epoch() {
 		text += " You asked for it in an earlier run of this session."
 	}
-	return inbox.Message{ID: fmt.Sprintf("%019d-%x", at.UnixNano(), sum[:12]), From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: inbox.Note, CreatedAt: at, Text: text}
+	return mail.Message{ID: fmt.Sprintf("%019d-%x", at.UnixNano(), sum[:12]), From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: mail.Note, CreatedAt: at, Text: text}
 }
 
 // outcomeLetter is the letter from what the worker's snapshot holds. It
 // carries what the command used to: the token counts and the session's count
 // of compactions with this one, which the "context compacted" notice it
 // replaces carried.
-func outcomeLetter(self registry.Session, pending control.Pending, found letterParts) inbox.Message {
+func outcomeLetter(self registry.Session, pending control.Pending, found letterParts) mail.Message {
 	name := pending.Worker.Name
 	outcome := found.outcome
 	detail := ""
@@ -210,7 +210,7 @@ func outcomeLetter(self registry.Session, pending control.Pending, found letterP
 	}
 	message := closingLetter(self, pending, text)
 	if event := found.event; event != nil {
-		message.Compaction = &inbox.CompactionNotice{Count: event.Sequence, ObservedAt: event.ObservedAt}
+		message.Compaction = &mail.CompactionNotice{Count: event.Sequence, ObservedAt: event.ObservedAt}
 	}
 	return message
 }

@@ -10,17 +10,17 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // defaultWait is how long send waits for a result before reporting what it
 // knows. It is short because the answer for a healthy delivery arrives in well
 // under a second — a heads-up in a few, once it has waited for company
-// (inbox.Coalescing, whose cap is set to fit inside this) — and a caller that
+// (mail.Coalescing, whose cap is set to fit inside this) — and a caller that
 // has to wait longer wants to hear why.
 const defaultWait = 5 * time.Second
 
@@ -30,20 +30,20 @@ type sendModel struct {
 	// GrantDirs are the directories the task grants, as resolved; GrantApplied
 	// those the recipient's harness took with the notice, and
 	// AlreadyWritable those found in the recipient's workspace, not carried.
-	GrantDirs       []string               `json:"grantDirs,omitempty"`
-	GrantApplied    []string               `json:"grantApplied,omitempty"`
-	AlreadyWritable []string               `json:"alreadyWritable,omitempty"`
-	Telemetry       *sessionstate.Snapshot `json:"telemetry,omitempty"`
-	ID              string                 `json:"id"`
-	To              string                 `json:"to"`
-	From            string                 `json:"from"`
-	State           string                 `json:"state"`
-	Via             string                 `json:"via,omitempty"`
-	Detail          string                 `json:"detail,omitempty"`
+	GrantDirs       []string          `json:"grantDirs,omitempty"`
+	GrantApplied    []string          `json:"grantApplied,omitempty"`
+	AlreadyWritable []string          `json:"alreadyWritable,omitempty"`
+	Telemetry       *session.Snapshot `json:"telemetry,omitempty"`
+	ID              string            `json:"id"`
+	To              string            `json:"to"`
+	From            string            `json:"from"`
+	State           string            `json:"state"`
+	Via             string            `json:"via,omitempty"`
+	Detail          string            `json:"detail,omitempty"`
 	// Answer is the receiver's last reply, for a question that got one.
-	Answer        string     `json:"answer,omitempty"`
-	Kind          inbox.Kind `json:"kind,omitempty"`
-	ThreadChanged bool       `json:"threadChanged,omitempty"`
+	Answer        string    `json:"answer,omitempty"`
+	Kind          mail.Kind `json:"kind,omitempty"`
+	ThreadChanged bool      `json:"threadChanged,omitempty"`
 	// Addenda are the addenda that now add to an edit's replacement.
 	Addenda []string `json:"addenda,omitempty"`
 	// Replaces is the letter an edit replaced, and Named the id the edit was
@@ -78,7 +78,7 @@ func handleSend(ctx *Context, call Call) error {
 	if err != nil {
 		return err
 	}
-	if kind.kind == inbox.Note && !ctx.journaling {
+	if kind.kind == mail.Note && !ctx.journaling {
 		// A heads-up is one of the tool's words: its receipt makes a repeat
 		// or a retry publish it once.
 		return journaled(ctx, call, handleSend)
@@ -122,7 +122,7 @@ func handleSend(ctx *Context, call Call) error {
 	if err := refuseUnreported(ctx.table.catalog, session, kind.kind); err != nil {
 		return err
 	}
-	if kind.kind == inbox.Question && role.Of(session.Role).Silent {
+	if kind.kind == mail.Question && role.Of(session.Role).Silent {
 		return &UsageError{Command: command, Message: fmt.Sprintf("Session %s does not report its turns, so it cannot answer --question; use plain send or --notify instead.", session.Name)}
 	}
 	started := time.Now()
@@ -179,13 +179,13 @@ func handleSend(ctx *Context, call Call) error {
 		return err
 	}
 
-	message := inbox.Message{
+	message := mail.Message{
 		AddendumTo: addendumTo,
 		GrantGit:   grantGit,
 		GrantDirs:  grantDirs.dirs,
 		GrantBroad: grantDirs.broad,
-		ID:         inbox.NewID(),
-		From:       inbox.ShellSender,
+		ID:         mail.NewID(),
+		From:       mail.ShellSender,
 		To:         session.Name,
 		ToEpoch:    session.Epoch(),
 		Kind:       kind.kind,
@@ -205,8 +205,8 @@ func handleSend(ctx *Context, call Call) error {
 			return err
 		}
 	}
-	if kind.kind == inbox.Question {
-		release, err := inbox.ReserveAnswer(dir, self.Name, message.ID)
+	if kind.kind == mail.Question {
+		release, err := mail.ReserveAnswer(dir, self.Name, message.ID)
 		if err != nil {
 			return failf("could not reserve the answer: %v", err)
 		}
@@ -233,13 +233,13 @@ func handleSend(ctx *Context, call Call) error {
 // printDelivery prints the delivery result and turns it into the exit code.
 func printDelivery(ctx *Context, session registry.Session, model sendModel) error {
 	line := sendLine(session, model)
-	if inbox.State(model.State) != inbox.Failed && model.ID != "" {
+	if mail.State(model.State) != mail.Failed && model.ID != "" {
 		line += "\n" + strings.Join(append(sentGrantLines(session, model), idLines(model)...), "\n")
 	}
-	switch inbox.State(model.State) {
-	case inbox.Delivered:
+	switch mail.State(model.State) {
+	case mail.Delivered:
 		return printValue(ctx, model, func() []string { return []string{line} })
-	case inbox.Pending, inbox.Held:
+	case mail.Pending, mail.Held:
 		// Held is accepted and not delivered, the same promise as pending: the
 		// agent has not been told, and it may yet be or not be.
 		if ctx.JSON {
@@ -273,8 +273,8 @@ func idLines(model sendModel) []string {
 // sendLine is the one line a caller reads: what happened, by which path, and
 // what it means when the answer is not "delivered".
 func sendLine(session registry.Session, model sendModel) string {
-	switch inbox.State(model.State) {
-	case inbox.Delivered:
+	switch mail.State(model.State) {
+	case mail.Delivered:
 		line := fmt.Sprintf("Rewake: delivered to %s", session.Name)
 		if model.Via != "" {
 			line += " via " + model.Via
@@ -283,9 +283,9 @@ func sendLine(session registry.Session, model sendModel) string {
 			line += "; " + model.Detail
 		}
 		return line
-	case inbox.Pending:
+	case mail.Pending:
 		return fmt.Sprintf("Rewake: pending for %s: %s", session.Name, model.Detail)
-	case inbox.Held:
+	case mail.Held:
 		return fmt.Sprintf("Rewake: held for %s: %s", session.Name, model.Detail)
 	default:
 		return fmt.Sprintf("Rewake: failed for %s: %s", session.Name, model.Detail)

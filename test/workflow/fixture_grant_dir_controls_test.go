@@ -30,7 +30,7 @@ var mutantGrantRefusalUntold = mutation{
 var mutantGrantUnregistered = mutation{
 	name:  "grant-unregistered",
 	file:  "internal/cli/send_grant.go",
-	edits: []edit{{"\tif !inbox.CarriesGrant(message) {\n\t\treturn nil\n\t}", "\tif true || !inbox.CarriesGrant(message) {\n\t\treturn nil\n\t}"}},
+	edits: []edit{{"\tif !mail.CarriesGrant(message) {\n\t\treturn nil\n\t}", "\tif true || !mail.CarriesGrant(message) {\n\t\treturn nil\n\t}"}},
 }
 
 // Main's wrapper keeps a grant whose task was reported on until its lifetime

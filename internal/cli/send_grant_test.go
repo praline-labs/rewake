@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/grantauth"
-	"github.com/praline-labs/rewake/internal/inbox"
+	authority "github.com/praline-labs/rewake/internal/grantauth"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 )
@@ -22,7 +22,7 @@ import (
 // below it; a wrapper elsewhere takes no registration from them.
 func grantingMain(t *testing.T, dir string, self registry.Session, wrapper int) {
 	t.Helper()
-	authority, err := grantauth.Listen(state.AuthorityAddress(dir, self.Epoch()), wrapper, time.Minute)
+	authority, err := authority.Listen(state.AuthorityAddress(dir, self.Epoch()), wrapper, time.Minute)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,8 +48,8 @@ func TestADirGrantIsRegisteredWithMainsWrapper(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	confirmed, err := grantauth.Confirm(state.AuthorityAddress(w.dir, self.Epoch()), grantauth.Expect{PID: self.ServicePID, Start: self.ServiceStart}, message.ID, w.peer.Name, w.peer.Epoch(), "c1")
-	if err != nil || !confirmed.Same(grantauth.Grant{ID: message.ID, To: w.peer.Name, ToEpoch: w.peer.Epoch(), Dirs: []string{lib}}) {
+	confirmed, err := authority.Confirm(state.AuthorityAddress(w.dir, self.Epoch()), authority.Expect{PID: self.ServicePID, Start: self.ServiceStart}, message.ID, w.peer.Name, w.peer.Epoch(), "c1")
+	if err != nil || !confirmed.Same(authority.Grant{ID: message.ID, To: w.peer.Name, ToEpoch: w.peer.Epoch(), Dirs: []string{lib}}) {
 		t.Fatalf("confirmed %+v, %v", confirmed, err)
 	}
 }
@@ -101,14 +101,14 @@ func TestAMainThatCannotReachItsWrapperCannotGrant(t *testing.T) {
 
 // forgeLetter rewrites the unread letter of a message in its recipient's
 // mailbox, as a sandboxed worker can: the state directory is writable to it.
-func (w grantWorld) forgeLetter(t *testing.T, id string, change func(*inbox.Message)) {
+func (w grantWorld) forgeLetter(t *testing.T, id string, change func(*mail.Message)) {
 	t.Helper()
 	path := filepath.Join(state.InboxPath(w.dir, w.peer.Name), id+".json")
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var message inbox.Message
+	var message mail.Message
 	if err := json.Unmarshal(raw, &message); err != nil {
 		t.Fatal(err)
 	}
@@ -122,14 +122,14 @@ func (w grantWorld) forgeLetter(t *testing.T, id string, change func(*inbox.Mess
 }
 
 // replacementOf finds the letter an edit wrote in place of id.
-func (w grantWorld) replacementOf(t *testing.T, id string) (inbox.Message, bool) {
+func (w grantWorld) replacementOf(t *testing.T, id string) (mail.Message, bool) {
 	t.Helper()
 	for _, message := range w.sent(t) {
 		if message.Replaces == id {
 			return message, true
 		}
 	}
-	return inbox.Message{}, false
+	return mail.Message{}, false
 }
 
 // An edit carries the grant main's wrapper holds for the task it replaces,
@@ -142,7 +142,7 @@ func TestAnEditCarriesTheGrantMainsWrapperHolds(t *testing.T) {
 		t.Fatalf("send: %d %s %s", code, out, stderr)
 	}
 	original := w.sent(t)[0]
-	w.forgeLetter(t, original.ID, func(message *inbox.Message) {
+	w.forgeLetter(t, original.ID, func(message *mail.Message) {
 		message.GrantDirs, message.GrantBroad, message.GrantGit = []string{lib, wide}, []string{wide}, true
 	})
 	if code, out, stderr := w.run("edit", original.ID, "Write in lib, and test it", "--wait=0"); code != ExitPending {
@@ -159,8 +159,8 @@ func TestAnEditCarriesTheGrantMainsWrapperHolds(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	confirmed, err := grantauth.Confirm(state.AuthorityAddress(w.dir, self.Epoch()), grantauth.Expect{PID: self.ServicePID, Start: self.ServiceStart}, replacement.ID, w.peer.Name, w.peer.Epoch(), "c1")
-	if err != nil || !confirmed.Same(grantauth.Grant{ID: replacement.ID, To: w.peer.Name, ToEpoch: w.peer.Epoch(), Dirs: []string{lib}}) {
+	confirmed, err := authority.Confirm(state.AuthorityAddress(w.dir, self.Epoch()), authority.Expect{PID: self.ServicePID, Start: self.ServiceStart}, replacement.ID, w.peer.Name, w.peer.Epoch(), "c1")
+	if err != nil || !confirmed.Same(authority.Grant{ID: replacement.ID, To: w.peer.Name, ToEpoch: w.peer.Epoch(), Dirs: []string{lib}}) {
 		t.Fatalf("confirmed %+v, %v", confirmed, err)
 	}
 }
@@ -175,7 +175,7 @@ func TestAnEditOfALetterGivenAForgedGrantIsRefused(t *testing.T) {
 		t.Fatalf("send: %d %s %s", code, out, stderr)
 	}
 	original := w.sent(t)[0]
-	w.forgeLetter(t, original.ID, func(message *inbox.Message) {
+	w.forgeLetter(t, original.ID, func(message *mail.Message) {
 		message.GrantDirs, message.GrantBroad, message.GrantGit = []string{wide}, []string{wide}, true
 	})
 	code, out, stderr := w.run("edit", original.ID, "Look at the logs of yesterday", "--wait=0")

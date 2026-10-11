@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 )
 
 // startProgram starts the scripted program under a backend with the given
@@ -127,13 +127,13 @@ func withheldStops(t *testing.T, b *backend, capability string) {
 	b.mu.Unlock()
 	switch capability {
 	case Wake:
-		if _, err := b.Thread(); !errors.Is(err, inbox.ErrThreadUnavailable) {
+		if _, err := b.Thread(); !errors.Is(err, mail.ErrThreadUnavailable) {
 			t.Fatalf("a conversation without wake: %v", err)
 		}
-		if _, err := b.Reserve(context.Background(), inbox.Message{}); !errors.Is(err, inbox.ErrThreadUnavailable) {
+		if _, err := b.Reserve(context.Background(), mail.Message{}); !errors.Is(err, mail.ErrThreadUnavailable) {
 			t.Fatalf("a reservation without wake: %v", err)
 		}
-		if result := b.Deliver(context.Background(), inbox.Message{ID: "m1"}); result.State != inbox.Failed {
+		if result := b.Deliver(context.Background(), mail.Message{ID: "m1"}); result.State != mail.Failed {
 			t.Fatalf("a delivery without wake: %+v", result)
 		}
 	case TurnBoundary:
@@ -175,7 +175,7 @@ func TestADisconnectWithdrawsEverythingAtOnce(t *testing.T) {
 		t.Fatal(err)
 	}
 	eventually(t, "the withdrawal", func() bool { return len(live(b)) == 0 })
-	if _, err := b.Thread(); !errors.Is(err, inbox.ErrThreadUnavailable) {
+	if _, err := b.Thread(); !errors.Is(err, mail.ErrThreadUnavailable) {
 		t.Fatalf("a conversation after the disconnect: %v", err)
 	}
 	if pid := peerOf(b); pid != 0 {

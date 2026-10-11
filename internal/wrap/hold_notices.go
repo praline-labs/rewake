@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // heldDeliveries tells main once when a worker starts holding its deliveries,
@@ -26,7 +26,7 @@ type heldDeliveries struct {
 	at time.Time
 }
 
-func holdKey(hold *sessionstate.DeliveryHold) string {
+func holdKey(hold *session.DeliveryHold) string {
 	if hold == nil {
 		return ""
 	}
@@ -57,12 +57,12 @@ func (n *sessionNotices) announceHold(ctx context.Context, dir string, self regi
 	return nil
 }
 
-func holdMessage(self, peer registry.Session, hold sessionstate.DeliveryHold, count uint64, at time.Time) inbox.Message {
+func holdMessage(self, peer registry.Session, hold session.DeliveryHold, count uint64, at time.Time) mail.Message {
 	identity := fmt.Sprintf("hold\x00%s\x00%s\x00%s\x00%s\x00%d\x00%s", self.Name, self.Epoch(), peer.Name, peer.Epoch(), count, holdKey(&hold))
 	sum := sha256.Sum256([]byte(identity))
-	return inbox.Message{
+	return mail.Message{
 		ID: fmt.Sprintf("%019d-%x", at.UnixNano(), sum[:12]), From: peer.Name, FromEpoch: peer.Epoch(),
-		To: self.Name, ToEpoch: self.Epoch(), Kind: inbox.Note, CreatedAt: time.Now(),
+		To: self.Name, ToEpoch: self.Epoch(), Kind: mail.Note, CreatedAt: time.Now(),
 		Text: fmt.Sprintf("Rewake: deliveries to %s wait: %s", peer.Name, hold.Detail),
 	}
 }

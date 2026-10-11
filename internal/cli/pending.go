@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/receipt"
@@ -52,7 +52,7 @@ func handlePending(ctx *Context, call Call) error {
 	if role.Of(self.Role).Silent {
 		return &UsageError{Command: call.Command, Message: "the " + self.Role + " session's turns are reported to nobody, so there is nothing to keep open; end the turn as usual."}
 	}
-	if _, err := inbox.LatestTurnStart(dir, self.Name, epoch); err != nil {
+	if _, err := mail.LatestTurnStart(dir, self.Name, epoch); err != nil {
 		return failf("the latest start of this turn cannot be read, so a mark could not be tied to this turn; nothing was marked: %v", err)
 	}
 	at, file, err := pendingTime(ctx, text)
@@ -88,12 +88,12 @@ func handlePending(ctx *Context, call Call) error {
 			return nil
 		}
 		// A stopped mailbox changes nothing until a person settles it.
-		if err := inbox.MailboxStopped(dir, self.Name); err != nil {
+		if err := mail.MailboxStopped(dir, self.Name); err != nil {
 			return err
 		}
 		// A record that cannot be read may be a waiter: "nothing owed" is
 		// an answer only when every one of them was read.
-		waiters, err := inbox.ReadWaiters(dir, self.Name, epoch)
+		waiters, err := mail.ReadWaiters(dir, self.Name, epoch)
 		if err != nil {
 			return fmt.Errorf("could not read who waits for this turn: %w", err)
 		}
@@ -102,7 +102,7 @@ func handlePending(ctx *Context, call Call) error {
 		}
 		// A letter a tool read showed and the wrapper has not confirmed yet
 		// is owed as surely: its confirmation comes before the turn ends.
-		claimedBy, err := inbox.ClaimedOwedBy(dir, self.Name, epoch)
+		claimedBy, err := mail.ClaimedOwedBy(dir, self.Name, epoch)
 		if err != nil {
 			return fmt.Errorf("could not read the letters being read in parts: %w", err)
 		}
@@ -111,7 +111,7 @@ func handlePending(ctx *Context, call Call) error {
 				waiting = append(waiting, name)
 			}
 		}
-		started, err := inbox.LatestTurnStart(dir, self.Name, epoch)
+		started, err := mail.LatestTurnStart(dir, self.Name, epoch)
 		if err != nil {
 			return fmt.Errorf("the latest start of this turn cannot be read, so the mark cannot be tied to its turn: %w", err)
 		}
@@ -121,7 +121,7 @@ func handlePending(ctx *Context, call Call) error {
 		if len(waiting) == 0 {
 			return nil
 		}
-		return inbox.MarkPending(dir, self.Name, epoch, file, text, at)
+		return mail.MarkPending(dir, self.Name, epoch, file, text, at)
 	})
 	if late != nil {
 		return late
@@ -160,11 +160,11 @@ func pendingTime(ctx *Context, text string) (int64, string, error) {
 		at = ctx.scope.ticket.CalledBoot
 	}
 	if ctx.op == nil {
-		return at, inbox.MarkName(at, inbox.NewID()), nil
+		return at, mail.MarkName(at, mail.NewID()), nil
 	}
 	if step := ctx.op.record.Pending; step != nil {
 		return step.At, step.Mark, nil
 	}
-	ctx.op.record.Pending = &receipt.PendingStep{Text: text, At: at, Mark: inbox.MarkName(at, inbox.NewID())}
+	ctx.op.record.Pending = &receipt.PendingStep{Text: text, At: at, Mark: mail.MarkName(at, mail.NewID())}
 	return at, ctx.op.record.Pending.Mark, ctx.op.save()
 }

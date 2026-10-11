@@ -3,7 +3,7 @@ package cli
 import (
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 )
 
 // A session that is not main gives no grant, so an edit of its letter carries
@@ -17,7 +17,7 @@ func TestAnEditByASessionThatIsNotMainCarriesNoGrant(t *testing.T) {
 				t.Fatalf("send: %d %s %s", code, out, stderr)
 			}
 			original := w.sent(t)[0]
-			w.forgeLetter(t, original.ID, func(message *inbox.Message) {
+			w.forgeLetter(t, original.ID, func(message *mail.Message) {
 				message.GrantDirs, message.GrantGit = []string{w.home}, true
 			})
 			if code, out, stderr := w.run("edit", original.ID, "Look at the logs of yesterday", "--wait=0"); code != ExitPending && code != ExitOK {
@@ -27,7 +27,7 @@ func TestAnEditByASessionThatIsNotMainCarriesNoGrant(t *testing.T) {
 			if !ok {
 				t.Fatal("the edit wrote no replacement")
 			}
-			if inbox.CarriesGrant(replacement) || len(replacement.GrantBroad) != 0 {
+			if mail.CarriesGrant(replacement) || len(replacement.GrantBroad) != 0 {
 				t.Fatalf("the replacement carries %v git %v", replacement.GrantDirs, replacement.GrantGit)
 			}
 		})

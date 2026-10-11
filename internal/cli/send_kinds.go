@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 )
 
@@ -12,7 +12,7 @@ import (
 // its own and is listed in sendKinds; the flags, the refusal and the help come
 // from here.
 type messageKind struct {
-	kind    inbox.Kind
+	kind    mail.Kind
 	summary string
 	// flag selects the kind. The default kind has none.
 	flag Option

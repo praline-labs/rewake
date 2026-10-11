@@ -9,29 +9,29 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 func TestMixedGroupPeekThenSelectedReadAndReadAll(t *testing.T) {
 	dir, self, peer := stateCaller(t, "write")
-	clock, err := inbox.OpenReadClock(context.Background(), dir, self.Name, self.Epoch())
+	clock, err := mail.OpenReadClock(context.Background(), dir, self.Name, self.Epoch())
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer clock.Close()
-	var messages []inbox.Message
-	for _, kind := range []inbox.Kind{inbox.Task, inbox.Question, inbox.Note, inbox.Finished} {
-		m := inbox.Message{ID: inbox.NewID(), From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: kind, CreatedAt: time.Now(), Text: strings.Repeat("preview", 40) + "\nPRIVATE FULL BODY " + string(kind)}
-		if err := inbox.Put(dir, m); err != nil {
+	var messages []mail.Message
+	for _, kind := range []mail.Kind{mail.Task, mail.Question, mail.Note, mail.Finished} {
+		m := mail.Message{ID: mail.NewID(), From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: kind, CreatedAt: time.Now(), Text: strings.Repeat("preview", 40) + "\nPRIVATE FULL BODY " + string(kind)}
+		if err := mail.Put(dir, m); err != nil {
 			t.Fatal(err)
 		}
 		messages = append(messages, m)
 	}
-	delivered := make(chan inbox.Message, 4)
-	server := &inbox.Server{Dir: dir, Name: self.Name, Epoch: self.Epoch(), Thread: func() (string, error) { return "selected-thread", nil }, Deliver: func(_ context.Context, m inbox.Message) inbox.Result {
+	delivered := make(chan mail.Message, 4)
+	server := &mail.Server{Dir: dir, Name: self.Name, Epoch: self.Epoch(), Thread: func() (string, error) { return "selected-thread", nil }, Deliver: func(_ context.Context, m mail.Message) mail.Result {
 		delivered <- m
-		return inbox.Result{State: inbox.Delivered}
+		return mail.Result{State: mail.Delivered}
 	}}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
@@ -71,20 +71,20 @@ func TestMixedGroupPeekThenSelectedReadAndReadAll(t *testing.T) {
 			}
 		}
 	}
-	if len(inbox.Waiters(dir, self.Name, self.Epoch())) != 0 || clock.Snapshot().Through != 0 {
+	if len(mail.Waiters(dir, self.Name, self.Epoch())) != 0 || clock.Snapshot().Through != 0 {
 		t.Fatal("peek created a waiter or advanced the read boundary")
 	}
-	if unread, err := inbox.PeekUnread(dir, self.Name, self.Epoch()); err != nil || len(unread) != 4 {
+	if unread, err := mail.PeekUnread(dir, self.Name, self.Epoch()); err != nil || len(unread) != 4 {
 		t.Fatal("peek consumed mail")
 	}
 	code, out, stderr := run("inbox", "--message", messages[0].ID)
 	if code != ExitOK || !strings.Contains(out, messages[0].Text) || strings.Contains(out, "PRIVATE FULL BODY question") {
 		t.Fatalf("selected view: %d %s %s", code, out, stderr)
 	}
-	if unread, err := inbox.PeekUnread(dir, self.Name, self.Epoch()); err != nil || len(unread) != 3 {
+	if unread, err := mail.PeekUnread(dir, self.Name, self.Epoch()); err != nil || len(unread) != 3 {
 		t.Fatal("selected read consumed neighbors")
 	}
-	if len(inbox.Waiters(dir, self.Name, self.Epoch())) != 1 || clock.Snapshot().Through != 1 {
+	if len(mail.Waiters(dir, self.Name, self.Epoch())) != 1 || clock.Snapshot().Through != 1 {
 		t.Fatal("selected task did not create exactly one obligation")
 	}
 	code, out, stderr = run("inbox", "--json")
@@ -92,7 +92,7 @@ func TestMixedGroupPeekThenSelectedReadAndReadAll(t *testing.T) {
 	if code != ExitOK || json.Unmarshal([]byte(out), &all) != nil || len(all.Messages) != 3 {
 		t.Fatalf("old read-all: %d %s %s", code, out, stderr)
 	}
-	if unread, _ := inbox.PeekUnread(dir, self.Name, self.Epoch()); len(unread) != 0 {
+	if unread, _ := mail.PeekUnread(dir, self.Name, self.Epoch()); len(unread) != 0 {
 		t.Fatal("read-all left available mail")
 	}
 	select {
@@ -105,7 +105,7 @@ func TestMixedGroupPeekThenSelectedReadAndReadAll(t *testing.T) {
 func TestInboxSelectionRefusesReservedOldAndInvalidIDs(t *testing.T) {
 	dir, self, peer := stateCaller(t, "general")
 	id := rawUnread(t, dir, self.Name, map[string]any{"from": peer.Name, "fromEpoch": peer.Epoch(), "toEpoch": self.Epoch(), "kind": "finished", "inReplyTo": []string{"question"}, "text": "reserved body"})
-	release, err := inbox.ReserveAnswer(dir, self.Name, "question")
+	release, err := mail.ReserveAnswer(dir, self.Name, "question")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,7 +130,7 @@ func TestPeekTelemetryIsMainOnlyAndBodyFree(t *testing.T) {
 	for _, role := range []string{"main", "write", "general"} {
 		t.Run(role, func(t *testing.T) {
 			dir, self, peer := stateCaller(t, role)
-			leaveUnread(t, dir, inbox.Message{From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Text: "preview\nFULL SECRET", Kind: inbox.Note})
+			leaveUnread(t, dir, mail.Message{From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Text: "preview\nFULL SECRET", Kind: mail.Note})
 			for _, asJSON := range []bool{false, true} {
 				args := []string{"inbox", "--peek"}
 				if asJSON {
@@ -152,7 +152,7 @@ func TestSelectedReadPrintsBeforeMarkingAndKeepsNormalJSON(t *testing.T) {
 	if code := Run(testCatalog(), []string{"inbox", "--message", id}, brokenWriter{}, brokenWriter{}); code == ExitOK {
 		t.Fatal("selected read ignored output failure")
 	}
-	if status, ok, _ := inbox.ReadStatus(dir, self.Name, id); ok && status.State == inbox.Read {
+	if status, ok, _ := mail.ReadStatus(dir, self.Name, id); ok && status.State == mail.Read {
 		t.Fatal("failed output consumed selected message")
 	}
 	code, out, stderr := run("inbox", "--message", id, "--json")

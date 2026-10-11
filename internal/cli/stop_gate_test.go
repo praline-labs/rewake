@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -20,15 +20,15 @@ func TestAnUnreadableJournalStopsEveryCall(t *testing.T) {
 	for _, bytes := range []string{"invalid, removed", "valid, closed and reopened"} {
 		t.Run(bytes, func(t *testing.T) {
 			dir, self, web := toolSession(t)
-			readKind(t, dir, web, inbox.Task)
-			unread := rawUnread(t, dir, "api", map[string]any{"from": "web", "fromEpoch": web.Epoch(), "toEpoch": self.Epoch(), "kind": string(inbox.Task), "text": "arrives while stopped"})
-			if err := os.MkdirAll(inbox.JournalPath(dir, "api"), 0o700); err != nil {
+			readKind(t, dir, web, mail.Task)
+			unread := rawUnread(t, dir, "api", map[string]any{"from": "web", "fromEpoch": web.Epoch(), "toEpoch": self.Epoch(), "kind": string(mail.Task), "text": "arrives while stopped"})
+			if err := os.MkdirAll(mail.JournalPath(dir, "api"), 0o700); err != nil {
 				t.Fatal(err)
 			}
-			broken := filepath.Join(inbox.JournalPath(dir, "api"), "broken")
+			broken := filepath.Join(mail.JournalPath(dir, "api"), "broken")
 			valid := bytes != "invalid, removed"
 			if valid {
-				if err := inbox.WriteJournal(dir, "api", "broken", inbox.TurnJournal{Epoch: self.Epoch(), Op: "end"}); err != nil {
+				if err := mail.WriteJournal(dir, "api", "broken", mail.TurnJournal{Epoch: self.Epoch(), Op: "end"}); err != nil {
 					t.Fatal(err)
 				}
 				if err := os.Chmod(broken, 0); err != nil {
@@ -38,7 +38,7 @@ func TestAnUnreadableJournalStopsEveryCall(t *testing.T) {
 			} else if err := os.WriteFile(broken, []byte("{"), 0o600); err != nil {
 				t.Fatal(err)
 			}
-			if completeTurn(dir, self, inbox.TurnEnd{Text: "answer", Ended: 10}, "") == nil {
+			if completeTurn(dir, self, mail.TurnEnd{Text: "answer", Ended: 10}, "") == nil {
 				t.Fatal("the turn end went on past an unreadable journal")
 			}
 			turnStarted(t, dir, self, markAt-1)
@@ -83,10 +83,10 @@ func TestAReadInPartsStopsWithTheMailbox(t *testing.T) {
 	if first.code != ExitOK || next == nil {
 		t.Fatalf("first part: %+v", first)
 	}
-	if err := os.MkdirAll(inbox.JournalPath(dir, "api"), 0o700); err != nil {
+	if err := os.MkdirAll(mail.JournalPath(dir, "api"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(inbox.JournalPath(dir, "api"), "broken"), []byte("{"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(mail.JournalPath(dir, "api"), "broken"), []byte("{"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if answer := tool.run(next...); answer.code != ExitFailed || !strings.Contains(answer.errOut, "broken") {
@@ -102,9 +102,9 @@ func TestAReadInPartsStopsWithTheMailbox(t *testing.T) {
 // leaves pending, a read and its parts refused.
 func TestUnknownEvidenceStopsTheCallsAfterTheEnd(t *testing.T) {
 	dir, self, web := toolSession(t)
-	readKind(t, dir, web, inbox.Task)
+	readKind(t, dir, web, mail.Task)
 	version := "v1"
-	report := inbox.Message{ID: inbox.NewID(), From: "api", FromEpoch: self.Epoch(), To: "web", ToEpoch: web.Epoch(), Kind: inbox.Finished, Text: "answer"}
+	report := mail.Message{ID: mail.NewID(), From: "api", FromEpoch: self.Epoch(), To: "web", ToEpoch: web.Epoch(), Kind: mail.Finished, Text: "answer"}
 	kept := filepath.Join(state.InboxPath(dir, "api"), "pending", "kept.json")
 	if err := os.MkdirAll(filepath.Dir(kept), 0o700); err != nil {
 		t.Fatal(err)
@@ -112,10 +112,10 @@ func TestUnknownEvidenceStopsTheCallsAfterTheEnd(t *testing.T) {
 	if err := os.WriteFile(kept, []byte("{"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := inbox.WriteJournal(dir, "api", "end", inbox.TurnJournal{Epoch: self.Epoch(), Op: "end", Ended: 100, Reports: []inbox.Message{report}, Kept: &version}); err != nil {
+	if err := mail.WriteJournal(dir, "api", "end", mail.TurnJournal{Epoch: self.Epoch(), Op: "end", Ended: 100, Reports: []mail.Message{report}, Kept: &version}); err != nil {
 		t.Fatal(err)
 	}
-	if completeTurn(dir, self, inbox.TurnEnd{Text: "another answer", Ended: 200}, "") == nil {
+	if completeTurn(dir, self, mail.TurnEnd{Text: "another answer", Ended: 200}, "") == nil {
 		t.Fatal("the end went on past an unknown kept answer")
 	}
 	turnStarted(t, dir, self, markAt-1)

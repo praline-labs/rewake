@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 )
 
@@ -15,12 +15,12 @@ import (
 // and sending main to write the task out again. The record is read afresh
 // rather than trusted: the caller's copy may predate an edit that ran beside
 // it, and under the mailbox lock this is the look that decides.
-func currentSent(dir string, self registry.Session, epoch string, message inbox.Message) (inbox.Message, error) {
-	id, err := inbox.CurrentTask(dir, message.To, message.ID)
+func currentSent(dir string, self registry.Session, epoch string, message mail.Message) (mail.Message, error) {
+	id, err := mail.CurrentTask(dir, message.To, message.ID)
 	if err != nil {
 		return message, err
 	}
-	matches, err := inbox.SentMatching(dir, self.Name, epoch, id)
+	matches, err := mail.SentMatching(dir, self.Name, epoch, id)
 	if err != nil {
 		return message, err
 	}
@@ -30,7 +30,7 @@ func currentSent(dir string, self registry.Session, epoch string, message inbox.
 	if id == message.ID {
 		return message, nil
 	}
-	kind := inbox.KindOf(message)
+	kind := mail.KindOf(message)
 	if message.Withdrawn != nil {
 		kind = message.Withdrawn.Kind
 	}

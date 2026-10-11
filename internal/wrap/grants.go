@@ -9,8 +9,8 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/grant"
-	"github.com/praline-labs/rewake/internal/grantauth"
-	"github.com/praline-labs/rewake/internal/inbox"
+	authority "github.com/praline-labs/rewake/internal/grantauth"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
@@ -19,8 +19,8 @@ import (
 // grantLifetime is how long main's wrapper keeps a grant whose letter it
 // cannot find: the wait of the task that carries it, and some to spare for the
 // pass that delivers it. One whose task it finds it keeps until that task is
-// closed (grantauth.Authority).
-const grantLifetime = inbox.DefaultTTL + 5*time.Minute
+// closed (authority.Authority).
+const grantLifetime = mail.DefaultTTL + 5*time.Minute
 
 // checkGrant checks a message's grant again at delivery, with this session's
 // own view of the machine — its home, its PATH, where each harness keeps its
@@ -34,9 +34,9 @@ const grantLifetime = inbox.DefaultTTL + 5*time.Minute
 // when it was first checked, and main keeps the conversation this wrapper
 // names, not a guess. pinGrant tells it the one the letter is pinned to, and
 // again at each pin of a delivery tried again.
-func checkGrant(dir, name, epoch string, protected adapter.Protected) func(inbox.Message) error {
+func checkGrant(dir, name, epoch string, protected adapter.Protected) func(mail.Message) error {
 	root := state.RootForRoom(dir)
-	return func(message inbox.Message) error {
+	return func(message mail.Message) error {
 		rules := grant.CurrentEnv(root, protected.Dirs, protected.Names).Rules()
 		for _, directory := range message.GrantDirs {
 			if err := rules.Recheck(directory, slices.Contains(message.GrantBroad, directory)); err != nil {
@@ -56,13 +56,13 @@ func checkGrant(dir, name, epoch string, protected adapter.Protected) func(inbox
 // already. A main that does not answer leaves the grant without a
 // conversation, as one delivered into none — it holds for this run and is not
 // restored after a resume — rather than holding the letter back.
-func pinGrant(dir, name, epoch string) func(inbox.Message, string) {
-	return func(message inbox.Message, thread string) {
+func pinGrant(dir, name, epoch string) func(mail.Message, string) {
+	return func(message mail.Message, thread string) {
 		pid, start, ok := registry.ParseEpoch(message.FromEpoch)
 		if !ok || thread == "" {
 			return
 		}
-		_, _ = grantauth.Confirm(state.AuthorityAddress(dir, message.FromEpoch), grantauth.Expect{PID: pid, Start: start}, message.ID, name, epoch, thread)
+		_, _ = authority.Confirm(state.AuthorityAddress(dir, message.FromEpoch), authority.Expect{PID: pid, Start: start}, message.ID, name, epoch, thread)
 	}
 }
 
@@ -71,23 +71,23 @@ func pinGrant(dir, name, epoch string) func(inbox.Message, string) {
 // while it runs may be busy: the message waits, within its own time to live.
 // One that has ended can confirm nothing, now or later. thread tells it the
 // conversation the message goes into.
-func confirmGrant(dir, name, epoch, thread string, message inbox.Message) error {
+func confirmGrant(dir, name, epoch, thread string, message mail.Message) error {
 	pid, start, ok := registry.ParseEpoch(message.FromEpoch)
 	if !ok || !state.ValidName(message.From) {
 		return errors.New("its sender is not a session run that can be asked to confirm it")
 	}
-	expect := grantauth.Expect{PID: pid, Start: start}
-	confirmed, err := grantauth.Confirm(state.AuthorityAddress(dir, message.FromEpoch), expect, message.ID, name, epoch, thread)
+	expect := authority.Expect{PID: pid, Start: start}
+	confirmed, err := authority.Confirm(state.AuthorityAddress(dir, message.FromEpoch), expect, message.ID, name, epoch, thread)
 	switch {
 	case err == nil:
-	case errors.Is(err, grantauth.ErrUnreachable) && proc.Alive(pid, start):
-		return fmt.Errorf("%w: the wrapper of %s did not confirm the grant yet: %v", inbox.ErrNotYet, message.From, err)
-	case errors.Is(err, grantauth.ErrUnreachable):
+	case errors.Is(err, authority.ErrUnreachable) && proc.Alive(pid, start):
+		return fmt.Errorf("%w: the wrapper of %s did not confirm the grant yet: %v", mail.ErrNotYet, message.From, err)
+	case errors.Is(err, authority.ErrUnreachable):
 		return fmt.Errorf("%s, which sent it, has ended, so nobody can confirm the grant; send the task again from the current main", message.From)
 	default:
 		return fmt.Errorf("%s did not confirm the grant: %v", message.From, err)
 	}
-	carried := grantauth.Grant{ID: message.ID, To: name, ToEpoch: epoch, Dirs: message.GrantDirs, Broad: message.GrantBroad, Git: message.GrantGit}
+	carried := authority.Grant{ID: message.ID, To: name, ToEpoch: epoch, Dirs: message.GrantDirs, Broad: message.GrantBroad, Git: message.GrantGit}
 	if !confirmed.Same(carried) {
 		return fmt.Errorf("%s registered another grant with this message than the message carries", message.From)
 	}
@@ -99,13 +99,13 @@ func confirmGrant(dir, name, epoch, thread string, message inbox.Message) error 
 // no socket. It binds before the run's record is written: from then on the
 // address can be computed, and a listener there first would take main's
 // registrations. Nil when it cannot bind, and the session is told why.
-func listenAuthority(dir, epoch string, self int) *grantauth.Authority {
-	authority, err := grantauth.Listen(state.AuthorityAddress(dir, epoch), self, grantLifetime)
+func listenAuthority(dir, epoch string, self int) *authority.Authority {
+	server, err := authority.Listen(state.AuthorityAddress(dir, epoch), self, grantLifetime)
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, "rewake: this session cannot grant directories or Git access: "+err.Error())
 		return nil
 	}
-	authority.Open = func(held grantauth.Grant) (bool, bool) { return inbox.TaskOpen(dir, held.To, held.ID) }
-	authority.Owns = func(name, epoch string) bool { return registry.OwnsName(dir, name, epoch) }
-	return authority
+	server.Open = func(held authority.Grant) (bool, bool) { return mail.TaskOpen(dir, held.To, held.ID) }
+	server.Owns = func(name, epoch string) bool { return registry.OwnsName(dir, name, epoch) }
+	return server
 }

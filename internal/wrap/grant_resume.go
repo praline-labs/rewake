@@ -8,7 +8,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/grant"
-	"github.com/praline-labs/rewake/internal/grantauth"
+	authority "github.com/praline-labs/rewake/internal/grantauth"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -30,7 +30,7 @@ import (
 // resumes, before the harness starts.
 type resumed struct {
 	thread string
-	grants []grantauth.Restored
+	grants []authority.Restored
 	notes  []string
 }
 
@@ -62,9 +62,9 @@ func resumeGrants(dir, name, epoch string, h adapter.Harness, args []string, pro
 // confirmedAgain asks for the grants the copies name for a conversation, and
 // keeps those confirmed whose directories pass this session's rules again. It
 // says in a note what it restored and what it did not.
-func confirmedAgain(dir, name, epoch, thread string, protected adapter.Protected) (confirmed []grantauth.Restored, notes []string) {
+func confirmedAgain(dir, name, epoch, thread string, protected adapter.Protected) (confirmed []authority.Restored, notes []string) {
 	rules := grant.CurrentEnv(state.RootForRoom(dir), protected.Dirs, protected.Names).Rules()
-	for _, restored := range grantauth.Restore(dir, name, epoch, thread) {
+	for _, restored := range authority.Restore(dir, name, epoch, thread) {
 		err := restored.Err
 		if err == nil {
 			for _, directory := range restored.Grant.Dirs {
@@ -75,8 +75,8 @@ func confirmedAgain(dir, name, epoch, thread string, protected adapter.Protected
 		}
 		if err != nil {
 			notes = append(notes, fmt.Sprintf("the grant of task %s is not restored after the resume: %v", restored.Hint.Message, err))
-			if errors.Is(err, grantauth.ErrUnreachable) {
-				confirmed = append(confirmed, grantauth.Restored{Hint: restored.Hint, Err: err})
+			if errors.Is(err, authority.ErrUnreachable) {
+				confirmed = append(confirmed, authority.Restored{Hint: restored.Hint, Err: err})
 			}
 			continue
 		}

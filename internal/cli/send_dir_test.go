@@ -10,7 +10,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/grant"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 )
@@ -63,16 +63,16 @@ func newGrantWorld(t *testing.T, senderRole, harnessID string) grantWorld {
 	return world
 }
 
-func (w grantWorld) sent(t *testing.T) []inbox.Message {
+func (w grantWorld) sent(t *testing.T) []mail.Message {
 	t.Helper()
 	files, _ := filepath.Glob(filepath.Join(state.InboxPath(w.dir, w.peer.Name), "*.json"))
-	var messages []inbox.Message
+	var messages []mail.Message
 	for _, file := range files {
 		raw, err := os.ReadFile(file)
 		if err != nil {
 			t.Fatal(err)
 		}
-		var message inbox.Message
+		var message mail.Message
 		if err := json.Unmarshal(raw, &message); err != nil {
 			t.Fatal(err)
 		}

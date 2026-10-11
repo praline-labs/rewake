@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 )
 
 // EndReason is why a turn ended, as the adapter's end event says
@@ -52,7 +52,7 @@ type TurnEnd struct {
 	Thread string
 	// Boundary is what had been read when the end was heard: the end's
 	// scope, fixed before its first effect. An end without one is refused.
-	Boundary *inbox.ReadBoundary
+	Boundary *mail.ReadBoundary
 	// Started and Ended bound the turn on the boot clock (internal/infra/boottime),
 	// zero where unknown; a pending mark counts for this turn only if it was
 	// made between them.
@@ -86,7 +86,7 @@ type TurnHandler struct {
 	// for the mail tool's calls where the run has a tool. Call it before the
 	// start is answered, so whatever the turn does next is after it.
 	Started func(conversation, turn string, at int64)
-	Capture func() *inbox.ReadBoundary
+	Capture func() *mail.ReadBoundary
 	Publish func(context.Context, TurnEnd) error
 	// Confirm runs an end that the adapter can hold open, in place of
 	// Publish (docs/v2/design-api.md#turnboundary): it answers "" when the
@@ -100,7 +100,7 @@ type TurnHandler struct {
 	// (docs/mail-bridge-turns.md#a-turns-end-meets-its-calls), with the
 	// moment it noted the end on the boot clock. Nil where the run has no
 	// gate; Capture is then the end's boundary.
-	EndCapture func() (*inbox.ReadBoundary, int64)
+	EndCapture func() (*mail.ReadBoundary, int64)
 	// Tool takes what the harness reports of the mail tool's calls in no
 	// harness's terms: a turn's end, calls seen, their results. Starts are
 	// not among them: they go to Started, tool or none.

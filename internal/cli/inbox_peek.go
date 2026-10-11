@@ -6,8 +6,8 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	mail "github.com/praline-labs/rewake/internal/inbox"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // inboxMode is what a call of rewake inbox asked for: all unread mail, an
@@ -60,12 +60,12 @@ func inboxSelection(call Call) (inboxMode, error) {
 
 // No embedded Message: overview JSON must never acquire bodies or private fields.
 type messagePreview struct {
-	ID        string                 `json:"id"`
-	From      string                 `json:"from"`
-	Kind      inbox.Kind             `json:"kind"`
-	CreatedAt time.Time              `json:"createdAt"`
-	Preview   string                 `json:"preview"`
-	Telemetry *sessionstate.Snapshot `json:"telemetry,omitempty"`
+	ID        string            `json:"id"`
+	From      string            `json:"from"`
+	Kind      mail.Kind         `json:"kind"`
+	CreatedAt time.Time         `json:"createdAt"`
+	Preview   string            `json:"preview"`
+	Telemetry *session.Snapshot `json:"telemetry,omitempty"`
 	// AddendumTo and Replaces link a letter to the one it belongs with, as
 	// the heading of a plain read does.
 	AddendumTo string `json:"addendumTo,omitempty"`
@@ -82,7 +82,7 @@ func writeInboxPeek(ctx *Context, name string, messages []messageView) error {
 	model := inboxPeekModel{Session: name, Messages: make([]messagePreview, 0, len(messages))}
 	for _, message := range messages {
 		model.Messages = append(model.Messages, messagePreview{
-			ID: message.ID, From: message.From, Kind: inbox.KindOf(message.Message), CreatedAt: message.CreatedAt, Preview: inbox.Preview(message.Text), Telemetry: message.Telemetry,
+			ID: message.ID, From: message.From, Kind: mail.KindOf(message.Message), CreatedAt: message.CreatedAt, Preview: mail.Preview(message.Text), Telemetry: message.Telemetry,
 			AddendumTo: message.AddendumTo, Replaces: message.Replaces, relation: relation(message.Message),
 		})
 	}

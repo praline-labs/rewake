@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
@@ -42,7 +42,7 @@ func (r *awaitedRoom) asLead() {
 // put writes a message into a worker's mailbox: "inbox" where send leaves it,
 // "unread" where an announced one waits, "done" where a read or refused one
 // goes. A status is written beside it when one is given.
-func (r *awaitedRoom) put(to registry.Session, where string, status inbox.State, detail string, fields map[string]any) string {
+func (r *awaitedRoom) put(to registry.Session, where string, status mail.State, detail string, fields map[string]any) string {
 	r.t.Helper()
 	time.Sleep(time.Microsecond)
 	id := fmt.Sprintf("%019d-000000000000", time.Now().UnixNano())
@@ -59,7 +59,7 @@ func (r *awaitedRoom) put(to registry.Session, where string, status inbox.State,
 		r.t.Fatal(err)
 	}
 	if status != "" {
-		encoded, _ := json.Marshal(inbox.Status{State: status, Detail: detail, At: time.Now()})
+		encoded, _ := json.Marshal(mail.Status{State: status, Detail: detail, At: time.Now()})
 		if err := os.WriteFile(filepath.Join(state.InboxPath(r.dir, to.Name), id+".status"), encoded, 0o600); err != nil {
 			r.t.Fatal(err)
 		}
@@ -82,12 +82,12 @@ func (r *awaitedRoom) read(worker registry.Session) {
 // sentAndRead is a task from lead that the worker has read.
 func (r *awaitedRoom) sentAndRead(worker registry.Session, text string) string {
 	r.t.Helper()
-	id := r.put(worker, "unread", inbox.Delivered, "", map[string]any{"text": text})
+	id := r.put(worker, "unread", mail.Delivered, "", map[string]any{"text": text})
 	r.read(worker)
 	return id
 }
 
-func (r *awaitedRoom) turnEnds(worker registry.Session, result inbox.TurnEnd) {
+func (r *awaitedRoom) turnEnds(worker registry.Session, result mail.TurnEnd) {
 	r.t.Helper()
 	if err := completeTurn(r.dir, worker, result, ""); err != nil {
 		r.t.Fatal(err)
@@ -132,38 +132,38 @@ func TestAwaitedShowsWhereEachTaskStands(t *testing.T) {
 
 	// Read before this run's task: a wait recorded for another run of the same
 	// sender replaces the one before it.
-	room.put(working, "unread", inbox.Delivered, "", map[string]any{"fromEpoch": "an-earlier-run", "text": "from before"})
+	room.put(working, "unread", mail.Delivered, "", map[string]any{"fromEpoch": "an-earlier-run", "text": "from before"})
 	room.read(working)
 	owed := room.sentAndRead(working, "fix the parser\nand the tests")
-	room.put(working, "unread", inbox.Delivered, "", map[string]any{"kind": "notify", "text": "heads-up"})
-	room.put(working, "unread", inbox.Delivered, "", map[string]any{"from": "shell", "fromEpoch": "", "text": "from a shell"})
+	room.put(working, "unread", mail.Delivered, "", map[string]any{"kind": "notify", "text": "heads-up"})
+	room.put(working, "unread", mail.Delivered, "", map[string]any{"from": "shell", "fromEpoch": "", "text": "from a shell"})
 	room.read(working)
-	unread := room.put(working, "unread", inbox.Delivered, "", map[string]any{"kind": "question", "text": "which port?"})
-	held := room.put(working, "inbox", inbox.Held, "waiting for the person to approve", map[string]any{"text": "held one"})
-	undelivered := room.put(working, "inbox", inbox.Pending, "a compaction is running", map[string]any{"text": "just sent"})
+	unread := room.put(working, "unread", mail.Delivered, "", map[string]any{"kind": "question", "text": "which port?"})
+	held := room.put(working, "inbox", mail.Held, "waiting for the person to approve", map[string]any{"text": "held one"})
+	undelivered := room.put(working, "inbox", mail.Pending, "a compaction is running", map[string]any{"text": "just sent"})
 
 	pending := room.sentAndRead(paused, "run the suite")
 	if err := markPending(room.dir, paused.Name, paused.Epoch(), "the suite is running", markAt); err != nil {
 		t.Fatal(err)
 	}
-	room.turnEnds(paused, inbox.TurnEnd{Boundary: boundaryNow(t, room.dir, paused), ID: "p/1", Text: "started the suite", Started: markAt - 1, Ended: boottime.Now()})
+	room.turnEnds(paused, mail.TurnEnd{Boundary: boundaryNow(t, room.dir, paused), ID: "p/1", Text: "started the suite", Started: markAt - 1, Ended: boottime.Now()})
 
 	halted := room.sentAndRead(stopped, "refactor")
-	room.turnEnds(stopped, inbox.TurnEnd{Boundary: boundaryNow(t, room.dir, stopped), ID: "s/1", Text: "the person at the keyboard stopped this turn", Stopped: true})
+	room.turnEnds(stopped, mail.TurnEnd{Boundary: boundaryNow(t, room.dir, stopped), ID: "s/1", Text: "the person at the keyboard stopped this turn", Stopped: true})
 	// A main's rewake interrupt is not a person's Esc, and the listing says
 	// which it was.
 	interrupted := room.sentAndRead(aborted, "rename")
-	room.turnEnds(aborted, inbox.TurnEnd{Boundary: boundaryNow(t, room.dir, aborted), ID: "a/1", Text: "lead interrupted this turn with rewake interrupt", Stopped: true})
+	room.turnEnds(aborted, mail.TurnEnd{Boundary: boundaryNow(t, room.dir, aborted), ID: "a/1", Text: "lead interrupted this turn with rewake interrupt", Stopped: true})
 
 	settled := room.sentAndRead(done, "small fix")
-	room.turnEnds(done, inbox.TurnEnd{Boundary: boundaryNow(t, room.dir, done), ID: "d/1", Text: "fixed"})
+	room.turnEnds(done, mail.TurnEnd{Boundary: boundaryNow(t, room.dir, done), ID: "d/1", Text: "fixed"})
 
-	failed := room.put(refused, "done", inbox.Failed, "the harness refused the notice", map[string]any{"text": "never landed"})
+	failed := room.put(refused, "done", mail.Failed, "the harness refused the notice", map[string]any{"text": "never landed"})
 
 	views := byID(awaitedJSON(t))
-	want := map[string]inbox.Stage{
-		owed: inbox.StageOwed, unread: inbox.StageUnread, held: inbox.StageHeld, undelivered: inbox.StageUndelivered,
-		pending: inbox.StagePending, halted: inbox.StageStopped, interrupted: inbox.StageStopped, failed: inbox.StageFailed,
+	want := map[string]mail.Stage{
+		owed: mail.StageOwed, unread: mail.StageUnread, held: mail.StageHeld, undelivered: mail.StageUndelivered,
+		pending: mail.StagePending, halted: mail.StageStopped, interrupted: mail.StageStopped, failed: mail.StageFailed,
 	}
 	for id, stage := range want {
 		if views[id].State != stage || views[id].Gone != "" {
@@ -176,7 +176,7 @@ func TestAwaitedShowsWhereEachTaskStands(t *testing.T) {
 	if _, listed := views[settled]; listed {
 		t.Errorf("a task reported on is still listed")
 	}
-	if views[owed].Text != "fix the parser\nand the tests" || views[held].Detail != "waiting for the person to approve" || views[pending].Detail != "the suite is running\n\nstarted the suite" || views[unread].Kind != inbox.Question {
+	if views[owed].Text != "fix the parser\nand the tests" || views[held].Detail != "waiting for the person to approve" || views[pending].Detail != "the suite is running\n\nstarted the suite" || views[unread].Kind != mail.Question {
 		t.Errorf("the machine form lost the text or the detail: %+v", views)
 	}
 
@@ -210,7 +210,7 @@ func TestAwaitedNamesARecipientThatIsGone(t *testing.T) {
 	ended := otherRun(t, room.dir, "ended")
 	replaced := otherRun(t, room.dir, "replaced")
 	lost := room.sentAndRead(ended, "long job")
-	unreadLost := room.put(ended, "unread", inbox.Delivered, "", map[string]any{"text": "never read"})
+	unreadLost := room.put(ended, "unread", mail.Delivered, "", map[string]any{"text": "never read"})
 	swept := room.sentAndRead(replaced, "another job")
 	if err := os.Remove(state.SessionPath(room.dir, ended.Name)); err != nil {
 		t.Fatal(err)
@@ -236,7 +236,7 @@ func TestAwaitedNamesARecipientThatIsGone(t *testing.T) {
 
 	// The new run's own work is owed as usual.
 	fresh := room.sentAndRead(next, "fresh job")
-	if view := byID(awaitedJSON(t))[fresh]; view.State != inbox.StageOwed || view.Gone != "" {
+	if view := byID(awaitedJSON(t))[fresh]; view.State != mail.StageOwed || view.Gone != "" {
 		t.Fatalf("the new run's task: %+v", view)
 	}
 }
@@ -246,7 +246,7 @@ func TestAwaitedIsOneLineWhenNothingIsOwed(t *testing.T) {
 	room := newAwaitedRoom(t)
 	worker := otherRun(t, room.dir, "worker")
 	room.sentAndRead(worker, "a task")
-	room.turnEnds(worker, inbox.TurnEnd{Boundary: boundaryNow(t, room.dir, worker), ID: "w/1", Text: "done"})
+	room.turnEnds(worker, mail.TurnEnd{Boundary: boundaryNow(t, room.dir, worker), ID: "w/1", Text: "done"})
 	code, out, _ := run("inbox", "--awaited")
 	if code != ExitOK || out != "Rewake: nobody owes you a report.\n" {
 		t.Fatalf("exit %d: %q", code, out)
@@ -305,16 +305,16 @@ func TestAwaitedTakesTheLatestInterimOrStop(t *testing.T) {
 	room := newAwaitedRoom(t)
 	worker := otherRun(t, room.dir, "worker")
 	task := room.sentAndRead(worker, "a long task")
-	room.turnEnds(worker, inbox.TurnEnd{Boundary: boundaryNow(t, room.dir, worker), ID: "w/1", Text: "interrupted", Stopped: true})
-	if view := byID(awaitedJSON(t))[task]; view.State != inbox.StageStopped {
+	room.turnEnds(worker, mail.TurnEnd{Boundary: boundaryNow(t, room.dir, worker), ID: "w/1", Text: "interrupted", Stopped: true})
+	if view := byID(awaitedJSON(t))[task]; view.State != mail.StageStopped {
 		t.Fatalf("after the stop: %+v", view)
 	}
 	time.Sleep(2 * time.Millisecond)
 	if err := markPending(room.dir, worker.Name, worker.Epoch(), "resumed, still running", markAt); err != nil {
 		t.Fatal(err)
 	}
-	room.turnEnds(worker, inbox.TurnEnd{Boundary: boundaryNow(t, room.dir, worker), ID: "w/2", Text: "resumed", Started: markAt - 1, Ended: boottime.Now()})
-	if view := byID(awaitedJSON(t))[task]; view.State != inbox.StagePending || view.Detail != "resumed, still running\n\nresumed" {
+	room.turnEnds(worker, mail.TurnEnd{Boundary: boundaryNow(t, room.dir, worker), ID: "w/2", Text: "resumed", Started: markAt - 1, Ended: boottime.Now()})
+	if view := byID(awaitedJSON(t))[task]; view.State != mail.StagePending || view.Detail != "resumed, still running\n\nresumed" {
 		t.Fatalf("after the interim that followed the stop: %+v", view)
 	}
 }
@@ -326,7 +326,7 @@ func TestAwaitedTrustsAnEndedRunsRecords(t *testing.T) {
 	room := newAwaitedRoom(t)
 	worker := otherRun(t, room.dir, "worker")
 	room.sentAndRead(worker, "a small task")
-	room.turnEnds(worker, inbox.TurnEnd{Boundary: boundaryNow(t, room.dir, worker), ID: "w/1", Text: "done"})
+	room.turnEnds(worker, mail.TurnEnd{Boundary: boundaryNow(t, room.dir, worker), ID: "w/1", Text: "done"})
 	for _, report := range finishedFor(t, room.dir, room.lead.Name) {
 		if err := os.Remove(report); err != nil {
 			t.Fatal(err)

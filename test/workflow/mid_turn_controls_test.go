@@ -34,10 +34,10 @@ var mutantWaitForIdle = mutation{
 	name: "wait-for-idle",
 	file: "internal/adapter/fixture/deliver.go",
 	edits: []edit{{
-		"\t\treturn nil, fmt.Errorf(\"%w: the fixture has no live wake\", inbox.ErrThreadUnavailable)\n\t}\n",
-		"\t\treturn nil, fmt.Errorf(\"%w: the fixture has no live wake\", inbox.ErrThreadUnavailable)\n\t}\n" +
+		"\t\treturn nil, fmt.Errorf(\"%w: the fixture has no live wake\", mail.ErrThreadUnavailable)\n\t}\n",
+		"\t\treturn nil, fmt.Errorf(\"%w: the fixture has no live wake\", mail.ErrThreadUnavailable)\n\t}\n" +
 			"\tif state := b.SessionState(); state.Activity != nil && *state.Activity == \"working\" {\n" +
-			"\t\treturn nil, fmt.Errorf(\"%w: the session is working\", inbox.ErrNotYet)\n\t}\n",
+			"\t\treturn nil, fmt.Errorf(\"%w: the session is working\", mail.ErrNotYet)\n\t}\n",
 	}},
 }
 

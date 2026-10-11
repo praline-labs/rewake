@@ -7,11 +7,11 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/channel"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/receipt"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // The shell observation (docs/mail-bridge-channel.md#the-shell-observation):
@@ -52,8 +52,8 @@ func TestEveryShellCommandLeavesItsEvidence(t *testing.T) {
 					epoch := epochOf(t, dir, "api")
 					t.Setenv(state.SessionEnv, "api")
 					t.Setenv(state.EpochEnv, epoch)
-					leaveUnread(t, dir, inbox.Message{From: "web", To: "api", ToEpoch: epoch, Text: "a letter"})
-					if err := sessionstate.Save(dir, "api", epoch, sessionstate.Snapshot{Channel: record, PublishedBoot: boottime.Now()}); err != nil {
+					leaveUnread(t, dir, mail.Message{From: "web", To: "api", ToEpoch: epoch, Text: "a letter"})
+					if err := session.Save(dir, "api", epoch, session.Snapshot{Channel: record, PublishedBoot: boottime.Now()}); err != nil {
 						t.Fatal(err)
 					}
 					if fault {

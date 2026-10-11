@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/control"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // runningDetail is what a worker's wrapper may say when its wait for the end
@@ -18,8 +18,8 @@ const runningDetail = "the compaction was not seen to end within 10m0s; it may s
 func TestACompactionStillRunningIsReportedByItsEnd(t *testing.T) {
 	dir, main, peer, observer := lettersFixture(t)
 	now := time.Now()
-	running := sessionstate.CompactionOutcome{Request: letterA, RequestedBy: main.Name, Outcome: control.Started, Detail: runningDetail, EndedAt: now}
-	letterState(t, dir, peer, nil, []sessionstate.CompactionOutcome{running})
+	running := session.CompactionOutcome{Request: letterA, RequestedBy: main.Name, Outcome: control.Started, Detail: runningDetail, EndedAt: now}
+	letterState(t, dir, peer, nil, []session.CompactionOutcome{running})
 	pend(t, dir, main, peer, letterA)
 	scanTimes(t, observer, dir, main, 2)
 	time.Sleep(letterWait)
@@ -29,8 +29,8 @@ func TestACompactionStillRunningIsReportedByItsEnd(t *testing.T) {
 	}
 	before, after := int64(120000), int64(9000)
 	letterState(t, dir, peer,
-		[]sessionstate.CompactionEvent{{Sequence: 1, ObservedAt: now, RequestedBy: main.Name, Request: letterA}},
-		[]sessionstate.CompactionOutcome{running, {Request: letterA, RequestedBy: main.Name, Outcome: control.Done, TokensBefore: &before, TokensAfter: &after, EndedAt: now}})
+		[]session.CompactionEvent{{Sequence: 1, ObservedAt: now, RequestedBy: main.Name, Request: letterA}},
+		[]session.CompactionOutcome{running, {Request: letterA, RequestedBy: main.Name, Outcome: control.Done, TokensBefore: &before, TokensAfter: &after, EndedAt: now}})
 	scanTimes(t, observer, dir, main, 2)
 	want := "Rewake: compacted worker-fixture: 120000 tokens before, 9000 after (compaction 1)."
 	if got := letters(t, dir, main.Name); len(got) != 1 || got[0].Text != want {
@@ -45,7 +45,7 @@ func TestACompactionStillRunningAtTheBoundSaysSo(t *testing.T) {
 	letterBound = 100 * time.Millisecond
 	t.Cleanup(func() { letterBound = saved })
 	dir, main, peer, observer := lettersFixture(t)
-	letterState(t, dir, peer, nil, []sessionstate.CompactionOutcome{{Request: letterA, RequestedBy: main.Name, Outcome: control.Started, Detail: runningDetail, EndedAt: time.Now()}})
+	letterState(t, dir, peer, nil, []session.CompactionOutcome{{Request: letterA, RequestedBy: main.Name, Outcome: control.Started, Detail: runningDetail, EndedAt: time.Now()}})
 	pend(t, dir, main, peer, letterA)
 	time.Sleep(letterBound)
 	scanTimes(t, observer, dir, main, 2)
@@ -63,19 +63,19 @@ func TestAStartedRecordedAfterTheEndDoesNotHideIt(t *testing.T) {
 	before, after := int64(120000), int64(9000)
 	for _, c := range []struct {
 		name   string
-		final  sessionstate.CompactionOutcome
-		events []sessionstate.CompactionEvent
+		final  session.CompactionOutcome
+		events []session.CompactionEvent
 		want   string
 	}{
 		{
 			name:  "failed",
-			final: sessionstate.CompactionOutcome{Request: letterA, Outcome: control.Failed, Detail: "the compaction was interrupted", EndedAt: now},
+			final: session.CompactionOutcome{Request: letterA, Outcome: control.Failed, Detail: "the compaction was interrupted", EndedAt: now},
 			want:  "Rewake: the compaction of worker-fixture you asked for failed (the compaction was interrupted).",
 		},
 		{
 			name:   "done",
-			final:  sessionstate.CompactionOutcome{Request: letterA, Outcome: control.Done, TokensBefore: &before, TokensAfter: &after, EndedAt: now},
-			events: []sessionstate.CompactionEvent{{Sequence: 1, ObservedAt: now, Request: letterA}},
+			final:  session.CompactionOutcome{Request: letterA, Outcome: control.Done, TokensBefore: &before, TokensAfter: &after, EndedAt: now},
+			events: []session.CompactionEvent{{Sequence: 1, ObservedAt: now, Request: letterA}},
 			want:   "Rewake: compacted worker-fixture: 120000 tokens before, 9000 after (compaction 1).",
 		},
 	} {
@@ -85,8 +85,8 @@ func TestAStartedRecordedAfterTheEndDoesNotHideIt(t *testing.T) {
 			for i := range c.events {
 				c.events[i].RequestedBy = main.Name
 			}
-			running := sessionstate.CompactionOutcome{Request: letterA, RequestedBy: main.Name, Outcome: control.Started, Detail: runningDetail, EndedAt: now.Add(time.Millisecond)}
-			letterState(t, dir, peer, c.events, []sessionstate.CompactionOutcome{c.final, running})
+			running := session.CompactionOutcome{Request: letterA, RequestedBy: main.Name, Outcome: control.Started, Detail: runningDetail, EndedAt: now.Add(time.Millisecond)}
+			letterState(t, dir, peer, c.events, []session.CompactionOutcome{c.final, running})
 			pend(t, dir, main, peer, letterA)
 			scanTimes(t, observer, dir, main, 2)
 			if got := letters(t, dir, main.Name); len(got) != 1 || got[0].Text != c.want {

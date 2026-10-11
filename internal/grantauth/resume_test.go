@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/grant"
-	"github.com/praline-labs/rewake/internal/grantauth/grantauthtest"
+	authoritytest "github.com/praline-labs/rewake/internal/grantauth/grantauthtest"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -50,12 +50,12 @@ func (o *taskOpen) check(Grant) (bool, bool) { return o.open.Load(), o.found.Loa
 func deliveredBy(t *testing.T, path string, granted Grant, threads ...string) Grant {
 	t.Helper()
 	own := ownExpect(t)
-	granted.ToEpoch = grantauthtest.EndedRun(t, func(run string) {
+	granted.ToEpoch = authoritytest.EndedRun(t, func(run string) {
 		granted.ToEpoch = run
 		if err := Register(path, granted); err != nil {
 			t.Fatal(err)
 		}
-	}, grantauthtest.Delivery{Address: path, MainPID: own.PID, MainStart: own.Start, To: granted.To, Grants: map[string][]string{granted.ID: nil}, Threads: threads})
+	}, authoritytest.Delivery{Address: path, MainPID: own.PID, MainStart: own.Start, To: granted.To, Grants: map[string][]string{granted.ID: nil}, Threads: threads})
 	return granted
 }
 
@@ -140,13 +140,13 @@ func TestAGrantIsNotHandedOverWithoutEveryCondition(t *testing.T) {
 		"a run still running": func(t *testing.T) (string, string, string) {
 			_, path := listen(t, os.Getpid(), time.Minute)
 			own := ownExpect(t)
-			grantauthtest.LiveRun(t, func(alive string) {
+			authoritytest.LiveRun(t, func(alive string) {
 				grant := lib
 				grant.ToEpoch = alive
 				if err := Register(path, grant); err != nil {
 					t.Fatal(err)
 				}
-			}, grantauthtest.Delivery{Address: path, MainPID: own.PID, MainStart: own.Start, To: lib.To, Grants: map[string][]string{lib.ID: nil}, Threads: []string{"c1"}})
+			}, authoritytest.Delivery{Address: path, MainPID: own.PID, MainStart: own.Start, To: lib.To, Grants: map[string][]string{lib.ID: nil}, Threads: []string{"c1"}})
 			return path, lib.To, run
 		},
 		"a process that is not the run": func(t *testing.T) (string, string, string) {

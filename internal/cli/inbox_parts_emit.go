@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/receipt"
 )
@@ -92,8 +92,8 @@ func emitReadLocked(ctx *Context, site readSite, record *receipt.Record, letter,
 		}
 		for _, segment := range segments {
 			current := &batch.Letters[segment.letter]
-			if !current.Read && !tombstone(*current) && inbox.StillUnread(site.dir, site.self.Name, current.ID) {
-				if err := inbox.ClaimRead(site.dir, site.self.Name, current.ID, record.Token); err != nil {
+			if !current.Read && !tombstone(*current) && mail.StillUnread(site.dir, site.self.Name, current.ID) {
+				if err := mail.ClaimRead(site.dir, site.self.Name, current.ID, record.Token); err != nil {
 					return err
 				}
 			}
@@ -157,7 +157,7 @@ func refresh(site readSite, batch *receipt.ReadBatch, index int) (bool, error) {
 		*letter = goneLetter(batch.JSON, *letter)
 		return true, nil
 	}
-	views := viewedMessages(site.dir, []inbox.Message{current})
+	views := viewedMessages(site.dir, []mail.Message{current})
 	fresh, err := freezeLetter(batch.JSON, views[0], current)
 	if err != nil {
 		return false, fmt.Errorf("could not take %s as it stands now: %w", letter.ID, err)
@@ -171,11 +171,11 @@ func refresh(site readSite, batch *receipt.ReadBatch, index int) (bool, error) {
 
 // goneLetter is what a frozen letter shows once it is no longer unread.
 func goneLetter(asJSON bool, letter receipt.Letter) receipt.Letter {
-	var message inbox.Message
+	var message mail.Message
 	_ = json.Unmarshal(letter.Message, &message)
 	gone := receipt.Letter{ID: letter.ID, Version: "gone", Message: letter.Message, Parts: []receipt.Part{{}}, Read: true}
 	if asJSON {
-		encoded, _ := json.Marshal(letterHeadModel{ID: message.ID, From: message.From, Kind: inbox.KindOf(message), CreatedAt: message.CreatedAt, Gone: true})
+		encoded, _ := json.Marshal(letterHeadModel{ID: message.ID, From: message.From, Kind: mail.KindOf(message), CreatedAt: message.CreatedAt, Gone: true})
 		gone.Head = string(encoded)
 	} else {
 		gone.Head = fmt.Sprintf("Rewake: %s from %s is no longer unread — read through another call, or its delivery ended — so its text is not shown here.", message.ID, message.From)
@@ -185,12 +185,12 @@ func goneLetter(asJSON bool, letter receipt.Letter) receipt.Letter {
 
 // unreadCopy is a letter as the mailbox holds it now, a withdrawn one as its
 // tombstone.
-func unreadCopy(site readSite, id string) (inbox.Message, bool, error) {
-	return inbox.UnreadCopy(site.dir, site.self.Name, site.epoch, id)
+func unreadCopy(site readSite, id string) (mail.Message, bool, error) {
+	return mail.UnreadCopy(site.dir, site.self.Name, site.epoch, id)
 }
 
 func tombstone(letter receipt.Letter) bool {
-	var message inbox.Message
+	var message mail.Message
 	return json.Unmarshal(letter.Message, &message) == nil && message.Withdrawn != nil
 }
 

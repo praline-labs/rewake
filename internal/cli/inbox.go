@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/role"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // inboxModel is the machine form of the messages a session fetched.
@@ -83,7 +83,7 @@ func handleInbox(ctx *Context, call Call) error {
 				return nil
 			}
 		}
-		messages, err := inbox.AvailableUnread(dir, session.Name, epoch)
+		messages, err := mail.AvailableUnread(dir, session.Name, epoch)
 		if err != nil {
 			failure = failf("could not read the inbox of %s: %v", session.Name, err)
 			return nil
@@ -92,7 +92,7 @@ func handleInbox(ctx *Context, call Call) error {
 			var found bool
 			for _, message := range messages {
 				if message.ID == selected {
-					messages, found = []inbox.Message{message}, true
+					messages, found = []mail.Message{message}, true
 					break
 				}
 			}
@@ -113,7 +113,7 @@ func handleInbox(ctx *Context, call Call) error {
 			return nil
 		}
 		for _, message := range messages {
-			if err := inbox.MarkRead(dir, session.Name, epoch, message, !role.Of(session.Role).Silent); err != nil {
+			if err := mail.MarkRead(dir, session.Name, epoch, message, !role.Of(session.Role).Silent); err != nil {
 				failure = failf("the messages were shown, but recording that failed, so they stay unread and show again next time: %v", err)
 				return nil
 			}
@@ -134,7 +134,7 @@ func handleInbox(ctx *Context, call Call) error {
 // would change it, so none is made, and the answer names the cause and the
 // way out. Letters go on arriving, and a peek shows them.
 func mailboxStopped(dir, name string) error {
-	if err := inbox.MailboxStopped(dir, name); err != nil {
+	if err := mail.MailboxStopped(dir, name); err != nil {
 		return failf("%v", err)
 	}
 	return nil
@@ -147,14 +147,14 @@ func mailboxStopped(dir, name string) error {
 // before the terminal starts; the published snapshot only names the
 // conversations, since it is written on a tick and may not show the hold yet.
 func mailAdmitted(dir, name, epoch string) error {
-	held, detail, err := sessionstate.MailHeld(dir, name, epoch)
+	held, detail, err := session.MailHeld(dir, name, epoch)
 	if err != nil {
 		return failf("could not tell whether the mail of %s may be read in this conversation, so none was read: %v", name, err)
 	}
 	if !held {
 		return nil
 	}
-	if hold := sessionstate.Load(dir, name, epoch).DeliveryHold; hold != nil && (hold.Reason == sessionstate.HoldUnintended || hold.Reason == sessionstate.HoldMailClosed) {
+	if hold := session.Load(dir, name, epoch).DeliveryHold; hold != nil && (hold.Reason == session.HoldUnintended || hold.Reason == session.HoldMailClosed) {
 		detail = hold.Detail
 	}
 	return failf("the mail of %s waits for its conversation: %s", name, detail)
@@ -203,7 +203,7 @@ func letterHead(message messageView) []string {
 		lines = append(lines, stateLine(message.From, message.Telemetry, message.Availability != nil || message.Departure != nil), "")
 	}
 	lines = append(lines,
-		fmt.Sprintf("from %s · %s · %s%s", message.From, inbox.KindOf(message.Message), message.CreatedAt.Local().Format("15:04:05"), relation(message.Message)),
+		fmt.Sprintf("from %s · %s · %s%s", message.From, mail.KindOf(message.Message), message.CreatedAt.Local().Format("15:04:05"), relation(message.Message)),
 	)
 	return append(lines, grantLines(message.Message)...)
 }
@@ -212,14 +212,14 @@ func letterHead(message messageView) []string {
 // conversation carries.
 func letterBody(message messageView) string {
 	if message.ThreadChanged {
-		return message.Text + "\n" + inbox.ThreadChangedWarning
+		return message.Text + "\n" + mail.ThreadChangedWarning
 	}
 	return message.Text
 }
 
 // relation names the message a letter belongs with, for the heading line:
 // the task an addendum adds to, the letter an edit replaced.
-func relation(message inbox.Message) string {
+func relation(message mail.Message) string {
 	var parts []string
 	if message.AddendumTo != "" {
 		parts = append(parts, " · addendum to "+message.AddendumTo)
@@ -232,7 +232,7 @@ func relation(message inbox.Message) string {
 
 // grantLines name each directory the task lets its reader write: the roots
 // changed without a word in the terminal, so the reader learns it here.
-func grantLines(message inbox.Message) []string {
+func grantLines(message mail.Message) []string {
 	lines := make([]string, 0, len(message.GrantDirs))
 	for _, dir := range message.GrantDirs {
 		lines = append(lines, "grant: write "+dir)

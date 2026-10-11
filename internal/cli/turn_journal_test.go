@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 )
@@ -19,10 +19,10 @@ import (
 // (inbox/journal.go). A question's answer is published and cleared the same
 // way as a task's report, so each case runs for both.
 
-var journalKinds = []inbox.Kind{inbox.Task, inbox.Question}
+var journalKinds = []mail.Kind{mail.Task, mail.Question}
 
 // readKind is readFrom for a message of kind.
-func readKind(t *testing.T, dir string, web registry.Session, kind inbox.Kind) string {
+func readKind(t *testing.T, dir string, web registry.Session, kind mail.Kind) string {
 	t.Helper()
 	current, _ := registry.Lookup(dir, "api")
 	id := rawUnread(t, dir, "api", map[string]any{"from": "web", "fromEpoch": web.Epoch(), "toEpoch": current.Epoch(), "kind": string(kind), "text": "rerun"})
@@ -47,14 +47,14 @@ func answersTo(t *testing.T, dir, id string) int {
 // unfinishedJournals counts the journals of api not marked done.
 func unfinishedJournals(t *testing.T, dir string) int {
 	t.Helper()
-	entries, _ := os.ReadDir(inbox.JournalPath(dir, "api"))
+	entries, _ := os.ReadDir(mail.JournalPath(dir, "api"))
 	count := 0
 	for _, entry := range entries {
-		raw, err := os.ReadFile(filepath.Join(inbox.JournalPath(dir, "api"), entry.Name()))
+		raw, err := os.ReadFile(filepath.Join(mail.JournalPath(dir, "api"), entry.Name()))
 		if err != nil {
 			t.Fatal(err)
 		}
-		var journal inbox.TurnJournal
+		var journal mail.TurnJournal
 		if err := json.Unmarshal(raw, &journal); err != nil {
 			t.Fatal(err)
 		}
@@ -73,11 +73,11 @@ func TestATurnEndThatCannotRecordItsSequencePublishesNothing(t *testing.T) {
 		t.Run(string(kind), func(t *testing.T) {
 			dir, self, web := toolSession(t)
 			earlier := readKind(t, dir, web, kind)
-			journals := inbox.JournalPath(dir, "api")
+			journals := mail.JournalPath(dir, "api")
 			previous := beforeReports
 			beforeReports = func() { _ = os.WriteFile(journals, []byte("in the way"), 0o600) }
 			t.Cleanup(func() { beforeReports = previous })
-			failed := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "the first is done"}, "")
+			failed := completeTurn(dir, self, mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "the first is done"}, "")
 			beforeReports = previous
 			if failed == nil || answersTo(t, dir, earlier) != 0 {
 				t.Fatalf("published without its journal: %v, %d reports", failed, answersTo(t, dir, earlier))
@@ -86,7 +86,7 @@ func TestATurnEndThatCannotRecordItsSequencePublishesNothing(t *testing.T) {
 				t.Fatal(err)
 			}
 			later := readKind(t, dir, web, kind)
-			if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "second", Text: "the second is done"}, ""); err != nil {
+			if err := completeTurn(dir, self, mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "second", Text: "the second is done"}, ""); err != nil {
 				t.Fatal(err)
 			}
 			if answersTo(t, dir, earlier) != 1 || answersTo(t, dir, later) != 1 {
@@ -114,7 +114,7 @@ func TestAnUnpublishedReportIsCompletedByTheNextTurnEnd(t *testing.T) {
 			// resolves.
 			beforeReports = func() { _ = os.Chmod(mailbox, 0o500) }
 			t.Cleanup(func() { beforeReports = previous; _ = os.Chmod(mailbox, 0o700) })
-			failed := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "the first is done"}, "")
+			failed := completeTurn(dir, self, mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "the first is done"}, "")
 			beforeReports = previous
 			if err := os.Chmod(mailbox, 0o700); err != nil {
 				t.Fatal(err)
@@ -123,7 +123,7 @@ func TestAnUnpublishedReportIsCompletedByTheNextTurnEnd(t *testing.T) {
 				t.Fatalf("the report went out: %v", failed)
 			}
 			later := readKind(t, dir, web, kind)
-			if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "second", Text: "the second is done"}, ""); err != nil {
+			if err := completeTurn(dir, self, mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "second", Text: "the second is done"}, ""); err != nil {
 				t.Fatal(err)
 			}
 			if answersTo(t, dir, earlier) != 1 || answersTo(t, dir, later) != 1 {
@@ -150,7 +150,7 @@ func TestAnAdoptedWaitWhoseReportIsOutIsNotAnsweredAgain(t *testing.T) {
 			previous := beforeReports
 			beforeReports = func() { _ = os.Chmod(waits, 0o500) }
 			t.Cleanup(func() { beforeReports = previous; _ = os.Chmod(waits, 0o700) })
-			if err := completeTurn(dir, old, inbox.TurnEnd{Boundary: boundaryNow(t, dir, old), ID: "first", Text: "the first is done"}, "thread-a"); err == nil {
+			if err := completeTurn(dir, old, mail.TurnEnd{Boundary: boundaryNow(t, dir, old), ID: "first", Text: "the first is done"}, "thread-a"); err == nil {
 				t.Fatal("a turn end whose clearing failed answered success")
 			}
 			beforeReports = previous
@@ -171,7 +171,7 @@ func TestAnAdoptedWaitWhoseReportIsOutIsNotAnsweredAgain(t *testing.T) {
 			var adopted []string
 			if err := state.WithMailboxLock(context.Background(), dir, "api", func() error {
 				var err error
-				adopted, err = inbox.AdoptWaits(dir, "api", resumed.Epoch(), "thread-a")
+				adopted, err = mail.AdoptWaits(dir, "api", resumed.Epoch(), "thread-a")
 				return err
 			}); err != nil {
 				t.Fatal(err)
@@ -179,7 +179,7 @@ func TestAnAdoptedWaitWhoseReportIsOutIsNotAnsweredAgain(t *testing.T) {
 			if len(adopted) != 0 {
 				t.Fatalf("took over a wait whose report is out: %v", adopted)
 			}
-			if err := completeTurn(dir, resumed, inbox.TurnEnd{Boundary: boundaryNow(t, dir, resumed), ID: "resumed", Text: "the resumed turn is done"}, "thread-a"); err != nil {
+			if err := completeTurn(dir, resumed, mail.TurnEnd{Boundary: boundaryNow(t, dir, resumed), ID: "resumed", Text: "the resumed turn is done"}, "thread-a"); err != nil {
 				t.Fatal(err)
 			}
 			if answersTo(t, dir, id) != 1 {
@@ -193,7 +193,7 @@ func TestAnAdoptedWaitWhoseReportIsOutIsNotAnsweredAgain(t *testing.T) {
 // beforeReports on: what is on record still reads, and only the write fails.
 func readOnlyJournals(t *testing.T, dir string) {
 	t.Helper()
-	journals := inbox.JournalPath(dir, "api")
+	journals := mail.JournalPath(dir, "api")
 	if err := state.EnsureSubdir(journals); err != nil {
 		t.Fatal(err)
 	}
@@ -206,7 +206,7 @@ func readOnlyJournals(t *testing.T, dir string) {
 func writableJournals(t *testing.T, dir string) {
 	t.Helper()
 	beforeReports = func() {}
-	if err := os.Chmod(inbox.JournalPath(dir, "api"), 0o700); err != nil {
+	if err := os.Chmod(mail.JournalPath(dir, "api"), 0o700); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -220,7 +220,7 @@ func TestAnEndWhoseJournalFailedIsPreparedAgainOnRetry(t *testing.T) {
 			dir, self, web := toolSession(t)
 			earlier := readKind(t, dir, web, kind)
 			readOnlyJournals(t, dir)
-			event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "the first is done"}
+			event := mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "the first is done"}
 			if completeTurn(dir, self, event, "") == nil {
 				t.Fatal("the journal was not refused")
 			}
@@ -243,7 +243,7 @@ func TestAnEndRecordedBeforeItsEffectsIsNotPreparedAgain(t *testing.T) {
 		t.Run(string(kind), func(t *testing.T) {
 			dir, self, web := toolSession(t)
 			earlier := readKind(t, dir, web, kind)
-			event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "the first is done"}
+			event := mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "the first is done"}
 			// The journal is written, and its first report cannot be: the
 			// state of an end that died between the two.
 			blockMailbox(t, dir, "web")
@@ -267,12 +267,12 @@ func TestAnEndRecordedBeforeItsEffectsIsNotPreparedAgain(t *testing.T) {
 
 // failFirstClear ends api's turn with a kept answer, if any, published and its
 // wait not cleared.
-func failFirstClear(t *testing.T, kept string) (string, registry.Session, registry.Session, inbox.TurnEnd) {
+func failFirstClear(t *testing.T, kept string) (string, registry.Session, registry.Session, mail.TurnEnd) {
 	t.Helper()
 	dir, self, web := toolSession(t)
-	readKind(t, dir, web, inbox.Question)
+	readKind(t, dir, web, mail.Question)
 	if kept != "" {
-		if err := inbox.KeepAnswer(dir, "api", self.Epoch(), kept, "", ""); err != nil {
+		if err := mail.KeepAnswer(dir, "api", self.Epoch(), kept, "", ""); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -280,7 +280,7 @@ func failFirstClear(t *testing.T, kept string) (string, registry.Session, regist
 	previous := beforeReports
 	beforeReports = func() { _ = os.Chmod(waiter, 0) }
 	t.Cleanup(func() { beforeReports = previous; _ = os.Chmod(waiter, 0o600) })
-	event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "the continuation"}
+	event := mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "the continuation"}
 	if completeTurn(dir, self, event, "") == nil {
 		t.Fatal("the clearing did not fail")
 	}
@@ -295,8 +295,8 @@ func failFirstClear(t *testing.T, kept string) (string, registry.Session, regist
 // journal: left, it would be joined to the answer of the next question too.
 func TestARecoveredEndTakesTheAnswerItPublished(t *testing.T) {
 	dir, self, web, _ := failFirstClear(t, "THE_KEPT_ANSWER")
-	fresh := readKind(t, dir, web, inbox.Question)
-	if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "second", Text: "the new answer"}, ""); err != nil {
+	fresh := readKind(t, dir, web, mail.Question)
+	if err := completeTurn(dir, self, mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "second", Text: "the new answer"}, ""); err != nil {
 		t.Fatal(err)
 	}
 	for _, report := range reportsTo(t, dir, "web") {
@@ -304,7 +304,7 @@ func TestARecoveredEndTakesTheAnswerItPublished(t *testing.T) {
 			t.Fatalf("the next question got the old answer: %q", report.Text)
 		}
 	}
-	if _, kept, err := inbox.KeptAnswer(dir, "api", self.Epoch()); err != nil || kept {
+	if _, kept, err := mail.KeptAnswer(dir, "api", self.Epoch()); err != nil || kept {
 		t.Fatalf("the published answer is still kept: %v %v", kept, err)
 	}
 }
@@ -313,16 +313,16 @@ func TestARecoveredEndTakesTheAnswerItPublished(t *testing.T) {
 // since is a later end's.
 func TestALateRetryKeepsALaterAnswer(t *testing.T) {
 	dir, self, _, event := failFirstClear(t, "")
-	if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "second", Text: "nothing more"}, ""); err != nil {
+	if err := completeTurn(dir, self, mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "second", Text: "nothing more"}, ""); err != nil {
 		t.Fatal(err)
 	}
-	if err := inbox.KeepAnswer(dir, "api", self.Epoch(), "THE_LATER_ANSWER", "", ""); err != nil {
+	if err := mail.KeepAnswer(dir, "api", self.Epoch(), "THE_LATER_ANSWER", "", ""); err != nil {
 		t.Fatal(err)
 	}
 	if err := completeTurn(dir, self, event, ""); err != nil {
 		t.Fatal(err)
 	}
-	if text, kept, err := inbox.KeptAnswer(dir, "api", self.Epoch()); err != nil || !kept || text != "THE_LATER_ANSWER" {
+	if text, kept, err := mail.KeptAnswer(dir, "api", self.Epoch()); err != nil || !kept || text != "THE_LATER_ANSWER" {
 		t.Fatalf("the late retry took a later answer: %q %v %v", text, kept, err)
 	}
 }
@@ -331,12 +331,12 @@ func TestALateRetryKeepsALaterAnswer(t *testing.T) {
 // journal failed is still pending on retry, not reported as finished.
 func TestAPendingEndWhoseJournalFailedStaysPending(t *testing.T) {
 	dir, self, web := toolSession(t)
-	earlier := readKind(t, dir, web, inbox.Task)
+	earlier := readKind(t, dir, web, mail.Task)
 	if err := markPending(dir, "api", self.Epoch(), "the suite is running", 100); err != nil {
 		t.Fatal(err)
 	}
 	readOnlyJournals(t, dir)
-	event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "started", Started: 90, Ended: 110}
+	event := mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "started", Started: 90, Ended: 110}
 	if completeTurn(dir, self, event, "") == nil {
 		t.Fatal("the journal was not refused")
 	}
@@ -345,8 +345,8 @@ func TestAPendingEndWhoseJournalFailedStaysPending(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, report := range reportsTo(t, dir, "web") {
-		if slices.Contains(report.InReplyTo, earlier) && inbox.KindOf(report) != inbox.Interim {
-			t.Fatalf("a pending end was reported as %s", inbox.KindOf(report))
+		if slices.Contains(report.InReplyTo, earlier) && mail.KindOf(report) != mail.Interim {
+			t.Fatalf("a pending end was reported as %s", mail.KindOf(report))
 		}
 	}
 	if answersTo(t, dir, earlier) != 1 {
@@ -356,9 +356,9 @@ func TestAPendingEndWhoseJournalFailedStaysPending(t *testing.T) {
 
 // boundaryNow is the read boundary of a completion observed now: the reads
 // of self's run so far, and none after. An event keeps it for every retry.
-func boundaryNow(t *testing.T, dir string, self registry.Session) *inbox.ReadBoundary {
+func boundaryNow(t *testing.T, dir string, self registry.Session) *mail.ReadBoundary {
 	t.Helper()
-	clock, err := inbox.OpenReadClock(context.Background(), dir, self.Name, self.Epoch())
+	clock, err := mail.OpenReadClock(context.Background(), dir, self.Name, self.Epoch())
 	if err != nil {
 		t.Fatal(err)
 	}

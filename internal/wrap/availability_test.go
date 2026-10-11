@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
@@ -31,19 +31,19 @@ func availabilityPeer(t *testing.T, dir, name, roleName string, epoch uint64, re
 	return peer
 }
 
-func availabilityFiles(t *testing.T, dir, name string) []inbox.Message {
+func availabilityFiles(t *testing.T, dir, name string) []mail.Message {
 	t.Helper()
 	paths, err := filepath.Glob(filepath.Join(state.InboxPath(dir, name), "*.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	var messages []inbox.Message
+	var messages []mail.Message
 	for _, p := range paths {
 		raw, err := os.ReadFile(p)
 		if err != nil {
 			t.Fatal(err)
 		}
-		var m inbox.Message
+		var m mail.Message
 		if json.Unmarshal(raw, &m) != nil {
 			t.Fatal("invalid announcement")
 		}
@@ -76,7 +76,7 @@ func TestAvailabilityMainOnlyReadinessEpochAndRetryDedup(t *testing.T) {
 		t.Fatalf("duplicate availability: %d", len(messages))
 	}
 	m := messages[0]
-	if m.From != peer.Name || m.FromEpoch != peer.Epoch() || m.ToEpoch != main.Epoch() || m.Kind != inbox.Note || inbox.Owed(m) || m.Availability == nil || m.Availability.Role != role.Write.ID || m.Availability.CWD != peer.CWD {
+	if m.From != peer.Name || m.FromEpoch != peer.Epoch() || m.ToEpoch != main.Epoch() || m.Kind != mail.Note || mail.Owed(m) || m.Availability == nil || m.Availability.Role != role.Write.ID || m.Availability.CWD != peer.CWD {
 		t.Fatalf("wrong service message: %+v", m)
 	}
 	// A retry after losing the in-memory receipt still finds the durable message.
@@ -209,7 +209,7 @@ func TestAvailabilityUsesNormalWrapperNotifyDelivery(t *testing.T) {
 	dir := stateDir(t)
 	peer := availabilityPeer(t, dir, "worker-fixture", role.General.ID, 1, true)
 	// Long enough for the notice's window: a notify waits for company
-	// (inbox.Coalescing) before it is announced.
+	// (mail.Coalescing) before it is announced.
 	shortWindow(t)
 	fake := &fakeHarness{script: "sleep 2"}
 	code, err := Run(context.Background(), Request{Harness: fake, Dir: dir, Role: role.Main})
@@ -217,7 +217,7 @@ func TestAvailabilityUsesNormalWrapperNotifyDelivery(t *testing.T) {
 		t.Fatalf("wrapper failed: %d %v", code, err)
 	}
 	messages := fake.seen()
-	if len(messages) != 1 || messages[0].FromEpoch != peer.Epoch() || inbox.KindOf(messages[0]) != inbox.Note || inbox.Owed(messages[0]) {
+	if len(messages) != 1 || messages[0].FromEpoch != peer.Epoch() || mail.KindOf(messages[0]) != mail.Note || mail.Owed(messages[0]) {
 		t.Fatalf("normal notification path: %+v", messages)
 	}
 }

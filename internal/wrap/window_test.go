@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 )
 
@@ -14,9 +14,9 @@ import (
 // the real three seconds would only add to every run.
 func shortWindow(t *testing.T) {
 	t.Helper()
-	previous := inbox.Coalescing
-	inbox.Coalescing = inbox.Window{Quiet: time.Second, Cap: 1500 * time.Millisecond}
-	t.Cleanup(func() { inbox.Coalescing = previous })
+	previous := mail.Coalescing
+	mail.Coalescing = mail.Window{Quiet: time.Second, Cap: 1500 * time.Millisecond}
+	t.Cleanup(func() { mail.Coalescing = previous })
 }
 
 // The wrapper serves its mailbox with the collection window: notes that
@@ -47,9 +47,9 @@ func TestWrapperGathersNotesApartIntoOneNotice(t *testing.T) {
 			if index > 0 {
 				time.Sleep(400 * time.Millisecond)
 			}
-			_ = inbox.Put(dir, inbox.Message{
-				ID: inbox.NewID(), From: "web", To: "api-fake", ToEpoch: session.Epoch(),
-				Kind: inbox.Note, Text: text, CreatedAt: time.Now(),
+			_ = mail.Put(dir, mail.Message{
+				ID: mail.NewID(), From: "web", To: "api-fake", ToEpoch: session.Epoch(),
+				Kind: mail.Note, Text: text, CreatedAt: time.Now(),
 			})
 		}
 	}()

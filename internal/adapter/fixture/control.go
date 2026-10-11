@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/control"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // The served side of rewake compact and rewake interrupt
@@ -63,7 +63,7 @@ func (b *backend) withdrawnRequest(request control.Request, answer control.Answe
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.compact.outcomes = sessionstate.KeepOutcome(b.compact.outcomes, sessionstate.CompactionOutcome{
+	b.compact.outcomes = session.KeepOutcome(b.compact.outcomes, session.CompactionOutcome{
 		Request: request.ID, RequestedBy: request.From, Outcome: answer.Outcome, Reason: answer.Reason, EndedAt: time.Now(),
 	})
 }

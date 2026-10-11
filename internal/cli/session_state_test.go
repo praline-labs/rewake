@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 func stateCaller(t *testing.T, role string) (string, registry.Session, registry.Session) {
@@ -41,8 +41,8 @@ func saveState(t *testing.T, dir, name, epoch string, count uint64) {
 	filled := 42
 	model, effort := "fixture-model", "high"
 	activity := "working"
-	snapshot := sessionstate.Snapshot{Activity: &activity, ActivityAt: &now, ActivityFresh: true, WaitingFor: []string{}, Selection: "ready", Fresh: true, ContextFresh: true, SettingsFresh: true, PublishedAt: &now, ObservedAt: &now, ContextAt: &now, SettingsAt: &now, ContextUsed: &used, ContextWindow: &window, FilledPercent: &filled, Compactions: &count, Coverage: "observed", Model: &model, Effort: &effort}
-	if err := sessionstate.Save(dir, name, epoch, snapshot); err != nil {
+	snapshot := session.Snapshot{Activity: &activity, ActivityAt: &now, ActivityFresh: true, WaitingFor: []string{}, Selection: "ready", Fresh: true, ContextFresh: true, SettingsFresh: true, PublishedAt: &now, ObservedAt: &now, ContextAt: &now, SettingsAt: &now, ContextUsed: &used, ContextWindow: &window, FilledPercent: &filled, Compactions: &count, Coverage: "observed", Model: &model, Effort: &effort}
+	if err := session.Save(dir, name, epoch, snapshot); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -86,14 +86,14 @@ func TestSessionStateVisibilityInListTextAndJSON(t *testing.T) {
 }
 
 func TestInboxStatePrecedesEveryKindAndPreservesText(t *testing.T) {
-	kinds := []inbox.Kind{inbox.Task, inbox.Question, inbox.Note, inbox.Finished, inbox.Error, inbox.Stopped}
+	kinds := []mail.Kind{mail.Task, mail.Question, mail.Note, mail.Finished, mail.Error, mail.Stopped}
 	for _, role := range []string{"main", "write", "general"} {
 		for _, asJSON := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/%v", role, asJSON), func(t *testing.T) {
 				dir, self, peer := stateCaller(t, role)
 				text := "Original text\n\n" + strings.Repeat("unchanged ", 1000)
 				for _, kind := range kinds {
-					leaveUnread(t, dir, inbox.Message{From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: kind, Text: text})
+					leaveUnread(t, dir, mail.Message{From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: kind, Text: text})
 				}
 				args := []string{"inbox"}
 				if asJSON {
@@ -141,7 +141,7 @@ func TestInboxStatePrecedesEveryKindAndPreservesText(t *testing.T) {
 func TestSenderEpochPreventsReusedNameTelemetry(t *testing.T) {
 	dir, self, peer := stateCaller(t, "main")
 	saveState(t, dir, peer.Name, "old-epoch", 1)
-	leaveUnread(t, dir, inbox.Message{From: peer.Name, FromEpoch: "old-epoch", To: self.Name, ToEpoch: self.Epoch(), Text: "old sender"})
+	leaveUnread(t, dir, mail.Message{From: peer.Name, FromEpoch: "old-epoch", To: self.Name, ToEpoch: self.Epoch(), Text: "old sender"})
 	_, out, _ := run("inbox", "--json")
 	var result struct {
 		Messages []messageView `json:"messages"`
@@ -182,8 +182,8 @@ func TestDirectQuestionAnswerUsesSameVisibilityAndEpoch(t *testing.T) {
 func TestAvailabilityHeaderIncludesListStateAndFrozenIdentity(t *testing.T) {
 	for _, asJSON := range []bool{false, true} {
 		dir, self, peer := stateCaller(t, "main")
-		identity := &inbox.Availability{Name: peer.Name, Role: peer.Role, Harness: peer.Harness, Room: peer.Room, CWD: peer.CWD, Existing: true}
-		leaveUnread(t, dir, inbox.Message{From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: inbox.Note, Text: "Session already available in this room.", Availability: identity})
+		identity := &mail.Availability{Name: peer.Name, Role: peer.Role, Harness: peer.Harness, Room: peer.Room, CWD: peer.CWD, Existing: true}
+		leaveUnread(t, dir, mail.Message{From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: mail.Note, Text: "Session already available in this room.", Availability: identity})
 		args := []string{"inbox"}
 		if asJSON {
 			args = append(args, "--json")
@@ -212,15 +212,15 @@ func TestAvailabilityHeaderIncludesListStateAndFrozenIdentity(t *testing.T) {
 func TestBootReadingsStayOutOfTheJSON(t *testing.T) {
 	dir, self, peer := stateCaller(t, "main")
 	now := time.Now()
-	snapshot := sessionstate.Snapshot{Selection: "ready", Fresh: true, PublishedAt: &now, PublishedBoot: boottime.Now()}
-	if err := sessionstate.Save(dir, peer.Name, peer.Epoch(), snapshot); err != nil {
+	snapshot := session.Snapshot{Selection: "ready", Fresh: true, PublishedAt: &now, PublishedBoot: boottime.Now()}
+	if err := session.Save(dir, peer.Name, peer.Epoch(), snapshot); err != nil {
 		t.Fatal(err)
 	}
-	leaveUnread(t, dir, inbox.Message{From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Text: "stamped", CreatedBoot: boottime.Now()})
+	leaveUnread(t, dir, mail.Message{From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Text: "stamped", CreatedBoot: boottime.Now()})
 	// A departure carries the sender's last snapshot, readings and all.
 	frozen := snapshot
 	frozen.Epoch = peer.Epoch()
-	leaveUnread(t, dir, inbox.Message{From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: inbox.Note, Text: "gone", Departure: &inbox.DepartureNotice{Reason: "ended"}, SenderState: &frozen})
+	leaveUnread(t, dir, mail.Message{From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: mail.Note, Text: "gone", Departure: &mail.DepartureNotice{Reason: "ended"}, SenderState: &frozen})
 	_, out, _ := run("inbox", "--json")
 	if !strings.Contains(out, `"telemetry":`) || strings.Contains(out, "createdBoot") || strings.Contains(out, "publishedBoot") {
 		t.Fatalf("inbox --json: %s", out)

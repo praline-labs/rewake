@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
 )
@@ -47,15 +47,15 @@ func refuseReportingRole(h adapter.Harness, part role.Role) error {
 // answer it. The decision reads the live set alone; what the harness offers
 // only picks the words — a harness with no boundary at all, or a run of one
 // that has not made its boundary live.
-func refuseUnreported(catalog adapter.Catalog, session registry.Session, kind inbox.Kind) error {
-	if kind != inbox.Task && kind != inbox.Question {
+func refuseUnreported(catalog adapter.Catalog, session registry.Session, kind mail.Kind) error {
+	if kind != mail.Task && kind != mail.Question {
 		return nil
 	}
 	if session.HasLive(string(adapter.TurnBoundaryCapability)) {
 		return nil
 	}
 	what := "task"
-	if kind == inbox.Question {
+	if kind == mail.Question {
 		what = "question"
 	}
 	found, _ := catalog.Find(session.Harness)

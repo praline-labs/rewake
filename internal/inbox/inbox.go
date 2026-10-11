@@ -21,7 +21,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // Message is one delivery, as it waits on disk.
@@ -30,13 +30,13 @@ type Message struct {
 	// GrantDirs are the directories main gave the reader write access to for
 	// this task, resolved when it was sent; GrantBroad are those of them main
 	// confirmed as broad (docs/grants.md).
-	GrantDirs    []string               `json:"grantDirs,omitempty"`
-	GrantBroad   []string               `json:"grantBroad,omitempty"`
-	Compaction   *CompactionNotice      `json:"compaction,omitempty"`
-	Departure    *DepartureNotice       `json:"departure,omitempty"`
-	SenderState  *sessionstate.Snapshot `json:"senderState,omitempty"`
-	Availability *Availability          `json:"availability,omitempty"`
-	Undelivered  *UndeliveredNotice     `json:"undelivered,omitempty"`
+	GrantDirs    []string           `json:"grantDirs,omitempty"`
+	GrantBroad   []string           `json:"grantBroad,omitempty"`
+	Compaction   *CompactionNotice  `json:"compaction,omitempty"`
+	Departure    *DepartureNotice   `json:"departure,omitempty"`
+	SenderState  *session.Snapshot  `json:"senderState,omitempty"`
+	Availability *Availability      `json:"availability,omitempty"`
+	Undelivered  *UndeliveredNotice `json:"undelivered,omitempty"`
 	// Withdrawn marks a tombstone: its sender took the message back before it
 	// was read, and this text, under the same id, says so (withdraw.go).
 	Withdrawn *WithdrawnNotice `json:"withdrawn,omitempty"`

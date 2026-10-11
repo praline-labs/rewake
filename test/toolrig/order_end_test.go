@@ -11,7 +11,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/cli"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 )
 
@@ -74,7 +74,7 @@ func TestAnEndCapturedBeforeAnAcknowledgmentsCheckLeavesTheLetterUnread(t *testi
 	if err := r.journal(r.endTurn(), started); err != nil {
 		t.Fatal(err)
 	}
-	if got := report(r); got != inbox.Finished {
+	if got := report(r); got != mail.Finished {
 		t.Fatalf("the next turn's end reported %q", got)
 	}
 	r.nextTurn()

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 )
@@ -28,9 +28,9 @@ func TestAnAnswerSurvivesFailedOutput(t *testing.T) {
 	for _, format := range []string{"text", "json"} {
 		t.Run(format, func(t *testing.T) {
 			dir, web := questionSender(t)
-			awaitStatus = func(_, _, id string, _ time.Duration, _ func() bool) (inbox.Status, bool) {
+			awaitStatus = func(_, _, id string, _ time.Duration, _ func() bool) (mail.Status, bool) {
 				rawUnread(t, dir, "web", map[string]any{"from": "api", "kind": "finished", "toEpoch": web.Epoch(), "inReplyTo": []string{id}, "text": "irreplaceable result"})
-				return inbox.Status{State: inbox.Delivered}, true
+				return mail.Status{State: mail.Delivered}, true
 			}
 			args := []string{"send", "api", "question", "--question", "--wait", "0.2"}
 			if format == "json" {
@@ -51,7 +51,7 @@ func TestAnAnswerSurvivesFailedOutput(t *testing.T) {
 
 func TestInboxLeavesAReservedAnswerForSend(t *testing.T) {
 	dir, web := questionSender(t)
-	awaitStatus = func(_, _, id string, _ time.Duration, _ func() bool) (inbox.Status, bool) {
+	awaitStatus = func(_, _, id string, _ time.Duration, _ func() bool) (mail.Status, bool) {
 		// Existing waits also reserve their answer, independently of when send
 		// first creates the mark.
 		marks := state.AnsweringPath(dir, "web")
@@ -67,7 +67,7 @@ func TestInboxLeavesAReservedAnswerForSend(t *testing.T) {
 		if code != 0 || !strings.Contains(out, "unrelated update") || strings.Contains(out, "reserved answer") {
 			t.Errorf("inbox stole reserved answer: %d %s %s", code, out, errOut)
 		}
-		return inbox.Status{State: inbox.Delivered}, true
+		return mail.Status{State: mail.Delivered}, true
 	}
 	code, out, errOut := run("send", "api", "question", "--question", "--wait", "0.2")
 	if code != 0 || !strings.Contains(out, "reserved answer") {
@@ -79,10 +79,10 @@ func TestEveryQuestionReceivesASharedAnswer(t *testing.T) {
 	dir, web := questionSender(t)
 	ids := make(chan string, 2)
 	ready := make(chan struct{})
-	awaitStatus = func(_, _, id string, _ time.Duration, _ func() bool) (inbox.Status, bool) {
+	awaitStatus = func(_, _, id string, _ time.Duration, _ func() bool) (mail.Status, bool) {
 		ids <- id
 		<-ready
-		return inbox.Status{State: inbox.Delivered}, true
+		return mail.Status{State: mail.Delivered}, true
 	}
 	results := make(chan string, 2)
 	for range 2 {
@@ -120,8 +120,8 @@ func TestAQuestionToASilentSessionIsRefused(t *testing.T) {
 	if err := registry.Update(dir, target); err != nil {
 		t.Fatal(err)
 	}
-	awaitStatus = func(_, _, _ string, _ time.Duration, _ func() bool) (inbox.Status, bool) {
-		return inbox.Status{State: inbox.Delivered}, true
+	awaitStatus = func(_, _, _ string, _ time.Duration, _ func() bool) (mail.Status, bool) {
+		return mail.Status{State: mail.Delivered}, true
 	}
 	code, _, errOut := run("send", "api", "question", "--question", "--wait", "0")
 	if code != ExitUsage || !strings.Contains(errOut, "--notify") || !strings.Contains(errOut, "report") {

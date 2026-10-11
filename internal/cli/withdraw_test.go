@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 )
@@ -19,8 +19,8 @@ import (
 func sender(t *testing.T) (string, registry.Session) {
 	t.Helper()
 	dir, web := questionSender(t)
-	awaitStatus = func(string, string, string, time.Duration, func() bool) (inbox.Status, bool) {
-		return inbox.Status{State: inbox.Delivered, Via: "socket"}, true
+	awaitStatus = func(string, string, string, time.Duration, func() bool) (mail.Status, bool) {
+		return mail.Status{State: mail.Delivered, Via: "socket"}, true
 	}
 	return dir, web
 }
@@ -41,13 +41,13 @@ func sendOK(t *testing.T, argv ...string) string {
 	return found[1]
 }
 
-func stored(t *testing.T, dir, id string) inbox.Message {
+func stored(t *testing.T, dir, id string) mail.Message {
 	t.Helper()
-	for _, message := range must(inbox.SentMatching(dir, "web", epochOf(t, dir, "web"), id)) {
+	for _, message := range must(mail.SentMatching(dir, "web", epochOf(t, dir, "web"), id)) {
 		return message
 	}
 	t.Fatalf("%s is not kept", id)
-	return inbox.Message{}
+	return mail.Message{}
 }
 
 func TestWithdrawTakesAUniquePrefix(t *testing.T) {
@@ -57,7 +57,7 @@ func TestWithdrawTakesAUniquePrefix(t *testing.T) {
 	if code != ExitOK || !strings.Contains(out, "withdrew your task "+id+" from api before its notice went out") {
 		t.Fatalf("withdraw: %d %q %q", code, out, errOut)
 	}
-	if status, _, _ := inbox.ReadStatus(dir, "api", id); !status.Withdrawn || status.Detail != "withdrawn by web" {
+	if status, _, _ := mail.ReadStatus(dir, "api", id); !status.Withdrawn || status.Detail != "withdrawn by web" {
 		t.Fatalf("status %+v", status)
 	}
 	if code, out, _ := run("withdraw", id); code != ExitOK || !strings.Contains(out, "already withdrawn") {
@@ -85,7 +85,7 @@ func TestAnAmbiguousPrefixListsTheCandidates(t *testing.T) {
 func TestWithdrawRefusesAReadMessageAndPointsToAnAddendum(t *testing.T) {
 	dir, _ := sender(t)
 	id := sendOK(t, "api", "rerun the smoke")
-	if err := inbox.MarkRead(dir, "api", epochOf(t, dir, "api"), stored(t, dir, id), true); err != nil {
+	if err := mail.MarkRead(dir, "api", epochOf(t, dir, "api"), stored(t, dir, id), true); err != nil {
 		t.Fatal(err)
 	}
 	code, _, errOut := run("withdraw", id)
@@ -113,10 +113,10 @@ func TestEditSendsAReplacementInOneStep(t *testing.T) {
 		}
 		return idLine.FindStringSubmatch(out)[1]
 	}()
-	if replacement := stored(t, dir, fresh); replacement.Replaces != old || replacement.Text != "rerun the smoke on staging" || inbox.KindOf(replacement) != inbox.Task {
+	if replacement := stored(t, dir, fresh); replacement.Replaces != old || replacement.Text != "rerun the smoke on staging" || mail.KindOf(replacement) != mail.Task {
 		t.Fatalf("replacement %+v", replacement)
 	}
-	if status, _, _ := inbox.ReadStatus(dir, "api", old); !status.Withdrawn || !strings.Contains(status.Detail, "replaced by "+fresh) {
+	if status, _, _ := mail.ReadStatus(dir, "api", old); !status.Withdrawn || !strings.Contains(status.Detail, "replaced by "+fresh) {
 		t.Fatalf("old status %+v", status)
 	}
 	// Withdrawn without a replacement, it is refused, by either id.
@@ -139,7 +139,7 @@ func TestAnAddendumGoesWithItsTask(t *testing.T) {
 	first := sendOK(t, "api", "also rerun the lint", "--to", shortRef(root))
 	second := sendOK(t, "api", "and the vet", "--to", first)
 	for _, id := range []string{first, second} {
-		if message := stored(t, dir, id); message.AddendumTo != root || inbox.KindOf(message) != inbox.Task {
+		if message := stored(t, dir, id); message.AddendumTo != root || mail.KindOf(message) != mail.Task {
 			t.Fatalf("addendum %+v", message)
 		}
 	}
@@ -206,13 +206,13 @@ func announce(t *testing.T, dir, id string) {
 }
 
 // recalls are the notes api holds telling it not to act on a notice.
-func recalls(t *testing.T, dir string) []inbox.Message {
+func recalls(t *testing.T, dir string) []mail.Message {
 	t.Helper()
-	var out []inbox.Message
+	var out []mail.Message
 	files, _ := filepath.Glob(filepath.Join(state.InboxPath(dir, "api"), "*.json"))
 	for _, file := range files {
 		raw, err := os.ReadFile(file)
-		var message inbox.Message
+		var message mail.Message
 		if err == nil && json.Unmarshal(raw, &message) == nil && message.Recall != nil {
 			out = append(out, message)
 		}
@@ -237,11 +237,11 @@ func TestAWithdrawalAfterTheNoticeTellsTheRecipient(t *testing.T) {
 	}
 	told := recalls(t, dir)
 	want := "Do not act on task " + shortRef(loud) + " from web ("
-	if len(told) != 1 || told[0].Recall.ID != loud || inbox.KindOf(told[0]) != inbox.Note || told[0].From != "web" ||
+	if len(told) != 1 || told[0].Recall.ID != loud || mail.KindOf(told[0]) != mail.Note || told[0].From != "web" ||
 		!strings.HasPrefix(told[0].Text, want) || !strings.HasSuffix(told[0].Text, "): withdrawn unread.") {
 		t.Fatalf("recalls %+v", told)
 	}
-	if len(must(inbox.SentMatching(dir, "web", epochOf(t, dir, "web"), told[0].ID))) != 0 {
+	if len(must(mail.SentMatching(dir, "web", epochOf(t, dir, "web"), told[0].ID))) != 0 {
 		t.Fatal("the recall is taken for a letter of the sender's own")
 	}
 	if code, _, _ := run("withdraw", loud); code != ExitOK || len(recalls(t, dir)) != 1 {

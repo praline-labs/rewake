@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
 )
@@ -20,11 +20,11 @@ func TestLateMainDiscoveryPassGetsOneGroupedWake(t *testing.T) {
 	if err := registry.Update(dir, main); err != nil {
 		t.Fatal(err)
 	}
-	delivered := make(chan inbox.Message, 4)
+	delivered := make(chan mail.Message, 4)
 	ready, done := make(chan struct{}), make(chan struct{})
-	server := &inbox.Server{Dir: dir, Name: main.Name, Epoch: main.Epoch(), Ready: func() { close(ready) }, Deliver: func(_ context.Context, m inbox.Message) inbox.Result {
+	server := &mail.Server{Dir: dir, Name: main.Name, Epoch: main.Epoch(), Ready: func() { close(ready) }, Deliver: func(_ context.Context, m mail.Message) mail.Result {
 		delivered <- m
-		return inbox.Result{State: inbox.Delivered}
+		return mail.Result{State: mail.Delivered}
 	}}
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() { defer close(done); server.Serve(ctx) }()

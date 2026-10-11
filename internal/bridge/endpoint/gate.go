@@ -3,7 +3,7 @@ package endpoint
 import (
 	"sync"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 )
 
@@ -18,7 +18,7 @@ type Gate struct {
 	mu       sync.Mutex
 	noted    int64
 	writing  *slot
-	snapshot func() *inbox.ReadBoundary
+	snapshot func() *mail.ReadBoundary
 	now      func() int64
 }
 
@@ -26,16 +26,16 @@ type Gate struct {
 // filled once, by its own acknowledgment, so no later one can stand in for it.
 type slot struct {
 	done     chan struct{}
-	boundary *inbox.ReadBoundary
+	boundary *mail.ReadBoundary
 }
 
 // NewGate makes the gate of a run whose read clock snapshot reads. A nil
 // snapshot captures no boundary, as a run without a clock reports none.
-func NewGate(snapshot func() *inbox.ReadBoundary) *Gate {
+func NewGate(snapshot func() *mail.ReadBoundary) *Gate {
 	return &Gate{snapshot: snapshot, now: boottime.Now}
 }
 
-func (g *Gate) sample() *inbox.ReadBoundary {
+func (g *Gate) sample() *mail.ReadBoundary {
 	if g.snapshot == nil {
 		return nil
 	}
@@ -78,7 +78,7 @@ func (g *Gate) Enter(calledBoot int64) (func(), bool) {
 // mutex: the one wait of rule 9 without a bound of its own. With none, the
 // clock is sampled before the mutex goes, so no acknowledgment can register
 // in between.
-func (g *Gate) Capture() (*inbox.ReadBoundary, int64) {
+func (g *Gate) Capture() (*mail.ReadBoundary, int64) {
 	g.mu.Lock()
 	noted := g.now()
 	g.noted = max(g.noted, noted)

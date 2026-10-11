@@ -37,7 +37,7 @@ var mutantUnwindowed = mutation{
 	name: "unwindowed",
 	file: "internal/wrap/wrap.go",
 	edits: []edit{{
-		"\t\t\tWindow:     inbox.Coalescing,\n",
+		"\t\t\tWindow:     mail.Coalescing,\n",
 		"",
 	}},
 }
@@ -64,7 +64,7 @@ var mutantPeekConsumes = mutation{
 		"failure = failf(\"could not print the inbox overview: %v\", err)\n" +
 			"\t\t\t\treturn nil\n\t\t\t}\n" +
 			"\t\t\tfor _, message := range messages {\n" +
-			"\t\t\t\t_ = inbox.MarkRead(dir, session.Name, epoch, message, !role.Of(session.Role).Silent)\n" +
+			"\t\t\t\t_ = mail.MarkRead(dir, session.Name, epoch, message, !role.Of(session.Role).Silent)\n" +
 			"\t\t\t}\n\t\t\treturn nil",
 	}},
 }

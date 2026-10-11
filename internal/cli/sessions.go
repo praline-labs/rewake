@@ -12,7 +12,7 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // listModel is the machine form of the session list.
@@ -109,16 +109,16 @@ func handleWhoami(ctx *Context, _ Call) error {
 	name := os.Getenv(state.SessionEnv)
 	model := whoamiModel{Name: name, Room: filepath.Base(dir), Directory: state.RootForRoom(dir), Managed: name != ""}
 	if name != "" {
-		session, _, err := ownRun(dir)
+		own, _, err := ownRun(dir)
 		if err != nil {
 			return failf("cannot identify this session in room %s: %v", model.Room, err)
 		}
-		model.Harness, model.Role = session.Harness, role.Of(session.Role).ID
+		model.Harness, model.Role = own.Harness, role.Of(own.Role).ID
 		model.MailChannel = "shell"
 		if ctx.scope != nil {
 			model.MailChannel = "tool"
 		}
-		model.Channel = sessionstate.Load(dir, name, os.Getenv(state.EpochEnv)).Channel
+		model.Channel = session.Load(dir, name, os.Getenv(state.EpochEnv)).Channel
 		model.Mail = channel.Label(model.Channel)
 	}
 

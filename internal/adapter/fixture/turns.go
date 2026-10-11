@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // endAttempts bounds how often an end is handed to the core before the
@@ -28,7 +28,7 @@ var (
 // boundary captured then, which no later read is part of.
 type turnRecord struct {
 	started  int64
-	boundary *inbox.ReadBoundary
+	boundary *mail.ReadBoundary
 }
 
 // telemetry is the last activity the program reported.
@@ -246,17 +246,17 @@ func (b *backend) activity(l *link, frame Frame) {
 }
 
 // SessionState is what the program has reported, while Telemetry is live.
-func (b *backend) SessionState() sessionstate.Snapshot {
+func (b *backend) SessionState() session.Snapshot {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	snapshot := sessionstate.Unknown(b.epoch)
+	snapshot := session.Unknown(b.epoch)
 	if b.link == nil || !b.live[Telemetry] {
 		return snapshot
 	}
 	now := time.Now()
 	snapshot.Selection, snapshot.Thread = "ready", b.thread
 	snapshot.Fresh, snapshot.ObservedAt = true, &now
-	snapshot.Interruptions = sessionstate.InterruptionsObserved
+	snapshot.Interruptions = session.InterruptionsObserved
 	if b.telem.activity != "" {
 		activity, at := b.telem.activity, b.telem.at
 		snapshot.Activity, snapshot.ActivityAt, snapshot.ActivityFresh = &activity, &at, true

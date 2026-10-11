@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	mail "github.com/praline-labs/rewake/internal/inbox"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // The capabilities of one run, as the plan of a launch carries them
@@ -41,19 +41,19 @@ type ProcessService interface {
 // (docs/v2/design-api.md#wake). The host's delivery loop decides what to send
 // and when; the adapter only carries it.
 type Wake interface {
-	Deliver(context.Context, inbox.Message) inbox.Result
+	Deliver(context.Context, mail.Message) mail.Result
 }
 
 // Reserver is a Wake that holds its destination through the inbox's
 // publication of a notice, so what is published is what is delivered.
 type Reserver interface {
-	Reserve(context.Context, inbox.Message) (inbox.Reservation, error)
+	Reserve(context.Context, mail.Message) (mail.Reservation, error)
 }
 
 // Receiver is a Wake whose word on a notice it answered held comes later: the
 // inbox server settles the message when it arrives.
 type Receiver interface {
-	Receipts() <-chan inbox.Receipt
+	Receipts() <-chan mail.Receipt
 	// Opened is closed once the session can take its first notice.
 	Opened() <-chan struct{}
 }
@@ -61,7 +61,7 @@ type Receiver interface {
 // Telemetry is a run's report of its state, folded into the session-state
 // snapshot.
 type Telemetry interface {
-	SessionState() sessionstate.Snapshot
+	SessionState() session.Snapshot
 }
 
 // ToolTransport is a run that registers the mail tools with its harness and

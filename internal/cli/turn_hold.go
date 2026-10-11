@@ -5,7 +5,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 )
@@ -25,15 +25,15 @@ import (
 //
 // op is the end's operation: the kept answer records it with the reason, so
 // the same end confirmed again is answered from the record (endTurnContext).
-func holdTurn(dir string, self registry.Session, event inbox.TurnEnd, op string, holdable bool, waiters []inbox.Waiter, marked bool) string {
+func holdTurn(dir string, self registry.Session, event mail.TurnEnd, op string, holdable bool, waiters []mail.Waiter, marked bool) string {
 	if !holdable || event.Failed || event.Stopped {
 		return ""
 	}
-	line, interim, err := inbox.LastInterim(dir, self.Name, self.Epoch())
+	line, interim, err := mail.LastInterim(dir, self.Name, self.Epoch())
 	if err != nil || !interim {
 		return ""
 	}
-	if _, held, err := inbox.KeptAnswer(dir, self.Name, self.Epoch()); err != nil || held {
+	if _, held, err := mail.KeptAnswer(dir, self.Name, self.Epoch()); err != nil || held {
 		// A turn end held before whose continuation was never heard of — a
 		// stop the harness did not report. This end publishes that answer
 		// with its own, and asks nothing again.
@@ -44,7 +44,7 @@ func holdTurn(dir string, self registry.Session, event inbox.TurnEnd, op string,
 		return ""
 	}
 	reason := holdReason(line, senders)
-	if inbox.KeepAnswer(dir, self.Name, self.Epoch(), event.Text, op, reason) != nil {
+	if mail.KeepAnswer(dir, self.Name, self.Epoch(), event.Text, op, reason) != nil {
 		return ""
 	}
 	return reason
@@ -56,7 +56,7 @@ func holdTurn(dir string, self registry.Session, event inbox.TurnEnd, op string,
 // fails the whole check, since the hold would then be asked of a set the check
 // never saw. The fault seam is asked first, so a test fails the lookup like
 // the check's other reads.
-func liveSenders(dir string, waiters []inbox.Waiter) ([]string, error) {
+func liveSenders(dir string, waiters []mail.Waiter) ([]string, error) {
 	var names []string
 	for _, waiter := range waiters {
 		if err := state.AskRead(state.SessionPath(dir, waiter.Name)); err != nil {

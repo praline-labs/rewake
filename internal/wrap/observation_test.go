@@ -9,14 +9,14 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/role"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 type observedFixture struct{ *backendFixture }
 
-func (*observedFixture) SessionState() sessionstate.Snapshot {
+func (*observedFixture) SessionState() session.Snapshot {
 	count := uint64(7)
-	return sessionstate.Snapshot{Compactions: &count, Coverage: "observed"}
+	return session.Snapshot{Compactions: &count, Coverage: "observed"}
 }
 
 type observedHarness struct {
@@ -50,7 +50,7 @@ func TestWrapperCollectsStateForEveryRoleDespiteDisplayPolicy(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			var snapshot sessionstate.Snapshot
+			var snapshot session.Snapshot
 			if json.Unmarshal(raw, &snapshot) != nil || snapshot.Epoch == "" || snapshot.Compactions == nil || *snapshot.Compactions != 7 {
 				t.Fatal("snapshot not scoped to wrapper epoch")
 			}

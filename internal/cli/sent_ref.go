@@ -5,87 +5,87 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 )
 
 // sentBySelf finds the message a reference names among what this run sent.
 // Every refusal says what to run next: the caller is an agent, and a refusal
 // it cannot act on is a dead end.
-func sentBySelf(call Call, dir, reference, retry string) (registry.Session, string, inbox.Message, error) {
+func sentBySelf(call Call, dir, reference, retry string) (registry.Session, string, mail.Message, error) {
 	self, epoch, err := ownRun(dir)
 	if err != nil {
-		return registry.Session{}, "", inbox.Message{}, &UsageError{
+		return registry.Session{}, "", mail.Message{}, &UsageError{
 			Command: call.Command,
 			Message: fmt.Sprintf("Only the session run that sent a message may change it, and this shell is not one (%v).", err),
 		}
 	}
-	if len(reference) < inbox.MinReference {
-		return self, epoch, inbox.Message{}, &UsageError{
+	if len(reference) < mail.MinReference {
+		return self, epoch, mail.Message{}, &UsageError{
 			Command: call.Command,
-			Message: fmt.Sprintf("%q is too short to name a message: give at least %d characters of its id, or of the part after the dash. rewake inbox --awaited lists the ids.", reference, inbox.MinReference),
+			Message: fmt.Sprintf("%q is too short to name a message: give at least %d characters of its id, or of the part after the dash. rewake inbox --awaited lists the ids.", reference, mail.MinReference),
 		}
 	}
-	matches, err := inbox.SentMatching(dir, self.Name, epoch, reference)
+	matches, err := mail.SentMatching(dir, self.Name, epoch, reference)
 	if err != nil {
-		return self, epoch, inbox.Message{}, failf("could not read what this run sent (%v), so which message %s names is unknown; nothing was done; run the same command again", err, reference)
+		return self, epoch, mail.Message{}, failf("could not read what this run sent (%v), so which message %s names is unknown; nothing was done; run the same command again", err, reference)
 	}
 	switch len(matches) {
 	case 1:
 		return self, epoch, matches[0], nil
 	case 0:
-		return self, epoch, inbox.Message{}, failf("no message this run sent matches %s; list what you sent with: rewake inbox --awaited", reference)
+		return self, epoch, mail.Message{}, failf("no message this run sent matches %s; list what you sent with: rewake inbox --awaited", reference)
 	}
 	lines := []string{fmt.Sprintf("%s matches %d messages this run sent; give more of the id:", reference, len(matches))}
 	for _, message := range matches {
-		line := fmt.Sprintf("  %s · %s to %s · %s", message.ID, inbox.KindOf(message), message.To, message.CreatedAt.Local().Format("15:04:05"))
+		line := fmt.Sprintf("  %s · %s to %s · %s", message.ID, mail.KindOf(message), message.To, message.CreatedAt.Local().Format("15:04:05"))
 		if message.Withdrawn != nil {
 			// Its text is the tombstone's, which says nothing about which
 			// message it was.
 			line = fmt.Sprintf("  %s · %s (withdrawn) to %s · %s", message.ID, message.Withdrawn.Kind, message.To, message.CreatedAt.Local().Format("15:04:05"))
 		} else {
-			line += " · " + inbox.Preview(message.Text)
+			line += " · " + mail.Preview(message.Text)
 		}
 		lines = append(lines, line)
 	}
 	// The placeholder stays: any one id filled in would be a guess, and a
 	// ready line is copied as it stands.
 	lines = append(lines, "then: "+retry)
-	return self, epoch, inbox.Message{}, &FailedError{Message: strings.Join(lines, "\n")}
+	return self, epoch, mail.Message{}, &FailedError{Message: strings.Join(lines, "\n")}
 }
 
 // shortRef is the reference a hint offers: the tail of the id, which is
 // enough to tell the messages of one run apart.
-func shortRef(id string) string { return inbox.ShortID(id) }
+func shortRef(id string) string { return mail.ShortID(id) }
 
 // withdrawRefusal explains why a message cannot be taken back, and what to do
 // instead. editing says the call was rewake edit, whose retry is its own.
-func withdrawRefusal(dir string, message inbox.Message, err error, editing bool) error {
-	kind := inbox.KindOf(message)
+func withdrawRefusal(dir string, message mail.Message, err error, editing bool) error {
+	kind := mail.KindOf(message)
 	if message.Withdrawn != nil {
 		kind = message.Withdrawn.Kind
 	}
 	switch {
-	case errors.Is(err, inbox.ErrReadInProgress):
+	case errors.Is(err, mail.ErrReadInProgress):
 		return failf("%s is reading your %s %s in parts right now, and part of it may be in front of it already, so it cannot be taken back or replaced; add to it with: rewake send %s \"...\"", message.To, kind, message.ID, message.To)
-	case errors.Is(err, inbox.ErrAlreadyRead):
+	case errors.Is(err, mail.ErrAlreadyRead):
 		next := fmt.Sprintf("rewake send %s \"...\"", message.To)
-		if inbox.AsksForWork(message) {
+		if mail.AsksForWork(message) {
 			next = fmt.Sprintf("rewake send %s \"...\" --to %s", message.To, shortRef(message.ID))
 		}
 		return failf("%s has read your %s %s, and a read message is final; add to it with: %s", message.To, kind, message.ID, next)
-	case errors.Is(err, inbox.ErrNotDelivered):
+	case errors.Is(err, mail.ErrNotDelivered):
 		return failf("your %s %s was not delivered to %s and never will be, so there is nothing to take back; see why with: rewake inbox --awaited", kind, message.ID, message.To)
-	case errors.Is(err, inbox.ErrAlreadyWithdrawn):
+	case errors.Is(err, mail.ErrAlreadyWithdrawn):
 		return failf("your %s %s to %s was already withdrawn; send a new one with: rewake send %s \"...\"", kind, message.ID, message.To, message.To)
-	case errors.Is(err, inbox.ErrNoLongerKept):
+	case errors.Is(err, mail.ErrNoLongerKept):
 		return failf("your %s %s is no longer kept in the mailbox of %s; see what you sent with: rewake inbox --awaited", kind, message.ID, message.To)
 	}
 	// A withdrawal writes its status first, so the status on disk says how far
 	// it got: marked withdrawn, the recipient reads it as withdrawn already,
 	// and the next call finishes the rest. One that cannot be read says
 	// nothing of how far it got, and "nothing changed" would be a guess.
-	status, _, statusErr := inbox.ReadStatus(dir, message.To, message.ID)
+	status, _, statusErr := mail.ReadStatus(dir, message.To, message.ID)
 	switch {
 	case statusErr != nil && editing:
 		return failf("could not replace your %s %s to %s (%v), and how far it got cannot be read now (%v); try again: rewake edit %s \"...\"", kind, message.ID, message.To, err, statusErr, shortRef(message.ID))

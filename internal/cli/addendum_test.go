@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -22,7 +22,7 @@ func reportLands(t *testing.T, dir, task string) {
 
 func withdrawn(t *testing.T, dir, id string) bool {
 	t.Helper()
-	status, _, _ := inbox.ReadStatus(dir, "api", id)
+	status, _, _ := mail.ReadStatus(dir, "api", id)
 	return status.Withdrawn
 }
 
@@ -88,7 +88,7 @@ func TestAReadAddendumStaysAndItsTaskIsRecalled(t *testing.T) {
 	dir, _ := sender(t)
 	task := sendOK(t, "api", "rerun the smoke")
 	addendum := sendOK(t, "api", "also rerun the lint", "--to", task)
-	if err := inbox.MarkRead(dir, "api", epochOf(t, dir, "api"), stored(t, dir, addendum), true); err != nil {
+	if err := mail.MarkRead(dir, "api", epochOf(t, dir, "api"), stored(t, dir, addendum), true); err != nil {
 		t.Fatal(err)
 	}
 	code, out, errOut := run("withdraw", task)
@@ -132,7 +132,7 @@ func TestAnEditsReplacementKeepsTheAddenda(t *testing.T) {
 
 	api := epochOf(t, dir, "api")
 	for _, id := range []string{replacement, addendum} {
-		if err := inbox.MarkRead(dir, "api", api, stored(t, dir, id), true); err != nil {
+		if err := mail.MarkRead(dir, "api", api, stored(t, dir, id), true); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -152,7 +152,7 @@ func TestAnEditOfANotifyKeepsItsKind(t *testing.T) {
 	if code != ExitOK {
 		t.Fatalf("edit: %d %q %q", code, out, errOut)
 	}
-	if replacement := stored(t, dir, idLine.FindStringSubmatch(out)[1]); inbox.KindOf(replacement) != inbox.Note || replacement.Replaces != old {
+	if replacement := stored(t, dir, idLine.FindStringSubmatch(out)[1]); mail.KindOf(replacement) != mail.Note || replacement.Replaces != old {
 		t.Fatalf("replacement %+v", replacement)
 	}
 }

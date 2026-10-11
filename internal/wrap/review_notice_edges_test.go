@@ -12,7 +12,7 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 func TestReviewUnreadableProcessIdentityDoesNotAnnounceDeparture(t *testing.T) {
@@ -90,7 +90,7 @@ func TestReviewCompactionRetryTailGapAndDeparture(t *testing.T) {
 		t.Fatal(err)
 	}
 	observed := time.Now()
-	events := []sessionstate.CompactionEvent{{Sequence: 7, ObservedAt: observed}, {Sequence: 8, ObservedAt: observed.Add(time.Nanosecond)}}
+	events := []session.CompactionEvent{{Sequence: 7, ObservedAt: observed}, {Sequence: 8, ObservedAt: observed.Add(time.Nanosecond)}}
 	noticeState(t, dir, peer, "working", 8, events)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

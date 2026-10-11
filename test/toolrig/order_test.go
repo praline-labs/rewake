@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -48,7 +48,7 @@ func TestAnEndCapturedDuringAnAcknowledgmentIncludesIt(t *testing.T) {
 	case <-time.After(10 * time.Second):
 		t.Fatal("the acknowledgment never began writing")
 	}
-	captured := make(chan *inbox.ReadBoundary, 1)
+	captured := make(chan *mail.ReadBoundary, 1)
 	go func() { boundary, _ := r.endpoint.Gate().Capture(); captured <- boundary }()
 	deadline := time.Now().Add(5 * time.Second)
 	for r.endpoint.Gate().Noted() == 0 {
@@ -66,7 +66,7 @@ func TestAnEndCapturedDuringAnAcknowledgmentIncludesIt(t *testing.T) {
 	if err := <-acknowledged; err != nil {
 		t.Fatalf("the acknowledgment: %v", err)
 	}
-	var boundary *inbox.ReadBoundary
+	var boundary *mail.ReadBoundary
 	select {
 	case boundary = <-captured:
 	case <-time.After(5 * time.Second):

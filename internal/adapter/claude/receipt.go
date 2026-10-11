@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 )
 
 // receiptLine is a receipt as Claude Code writes it, read on 2.1.280 from the
@@ -35,7 +35,7 @@ type receiptLine struct {
 // word is what one receipt says about one line rewake wrote.
 type word struct {
 	msgID  string
-	result inbox.Result
+	result mail.Result
 }
 
 // parseReceipt reads one line. Anything that is not a receipt, or names a
@@ -67,7 +67,7 @@ func parseReceipt(raw []byte) []word {
 
 // receiptResult turns a status into what the sender is told. The reason is the
 // harness's own sentence and is passed on as it came.
-func receiptResult(line receiptLine) (inbox.Result, bool) {
+func receiptResult(line receiptLine) (mail.Result, bool) {
 	because := func(what, reason string) string {
 		if reason = strings.TrimSpace(reason); reason != "" {
 			return what + ": " + reason
@@ -76,20 +76,20 @@ func receiptResult(line receiptLine) (inbox.Result, bool) {
 	}
 	switch line.Status {
 	case "held":
-		return inbox.Result{State: inbox.Held, Via: "socket", Detail: because("the session holds the notice and has not shown it to the agent", line.Reason)}, true
+		return mail.Result{State: mail.Held, Via: "socket", Detail: because("the session holds the notice and has not shown it to the agent", line.Reason)}, true
 	case "delivered":
-		return inbox.Result{State: inbox.Delivered, Via: "socket", Detail: "released after being held"}, true
+		return mail.Result{State: mail.Delivered, Via: "socket", Detail: "released after being held"}, true
 	case "expired":
 		if line.StatusDetail == "refused" {
-			return inbox.Result{State: inbox.Failed, Via: "socket", Detail: because("the session refuses messages from other sessions", line.Reason)}, true
+			return mail.Result{State: mail.Failed, Via: "socket", Detail: because("the session refuses messages from other sessions", line.Reason)}, true
 		}
-		return inbox.Result{State: inbox.Failed, Via: "socket", Detail: because("the session held the notice and it expired unreleased", line.Reason)}, true
+		return mail.Result{State: mail.Failed, Via: "socket", Detail: because("the session held the notice and it expired unreleased", line.Reason)}, true
 	case "denied":
-		return inbox.Result{State: inbox.Failed, Via: "socket", Detail: because("the person at the session declined the notice", line.Reason)}, true
+		return mail.Result{State: mail.Failed, Via: "socket", Detail: because("the person at the session declined the notice", line.Reason)}, true
 	case "dropped":
-		return inbox.Result{State: inbox.Failed, Via: "socket", Detail: because("the session dropped the notice", line.DropReason)}, true
+		return mail.Result{State: mail.Failed, Via: "socket", Detail: because("the session dropped the notice", line.DropReason)}, true
 	}
-	return inbox.Result{}, false
+	return mail.Result{}, false
 }
 
 // sameUser reports whether the connected peer runs as this user.

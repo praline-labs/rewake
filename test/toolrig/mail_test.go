@@ -12,7 +12,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/cli"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -28,7 +28,7 @@ func (r *rig) shell(words ...string) (string, error) {
 }
 
 // journal publishes the end the gate noted the way the wrapper does.
-func (r *rig) journal(boundary *inbox.ReadBoundary, started int64) error {
+func (r *rig) journal(boundary *mail.ReadBoundary, started int64) error {
 	return cli.ReportCompletion(context.Background(), r.dir, r.self, adapter.TurnEnd{
 		Boundary: boundary, Event: thread + "/" + r.turnID(), Thread: thread,
 		Reason: adapter.Answered, Answer: "the turn's last words", Started: started, Ended: r.endpoint.Gate().Noted(),
@@ -36,7 +36,7 @@ func (r *rig) journal(boundary *inbox.ReadBoundary, started int64) error {
 }
 
 // report is the kind of the report api's end sent web.
-func report(r *rig) inbox.Kind {
+func report(r *rig) mail.Kind {
 	r.t.Helper()
 	for _, dir := range []string{state.InboxPath(r.dir, "web"), state.UnreadPath(r.dir, "web")} {
 		entries, _ := os.ReadDir(dir)
@@ -45,8 +45,8 @@ func report(r *rig) inbox.Kind {
 			if err != nil || entry.IsDir() {
 				continue
 			}
-			var message inbox.Message
-			if json.Unmarshal(raw, &message) == nil && message.From == "api" && message.Kind != inbox.Note {
+			var message mail.Message
+			if json.Unmarshal(raw, &message) == nil && message.From == "api" && message.Kind != mail.Note {
 				return message.Kind
 			}
 		}
@@ -70,7 +70,7 @@ func headsUps(r *rig) int {
 			if err != nil || entry.IsDir() {
 				continue
 			}
-			var message inbox.Message
+			var message mail.Message
 			if json.Unmarshal(raw, &message) == nil && message.Text == faultHeadsUp && message.From == "api" {
 				count++
 			}

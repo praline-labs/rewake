@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 )
 
@@ -24,16 +24,16 @@ func inOwnTurn(ctx *Context, op *operation) bool {
 
 // attemptScope is inOwnTurn's answer in the core's terms: which of the two
 // ways the attempt is in its operation's turn, if either.
-func attemptScope(ctx *Context, op *operation) inbox.AttemptScope {
+func attemptScope(ctx *Context, op *operation) mail.AttemptScope {
 	if op == nil || op.first {
-		return inbox.AttemptScope{First: true}
+		return mail.AttemptScope{First: true}
 	}
 	if ctx.scope == nil {
-		return inbox.AttemptScope{}
+		return mail.AttemptScope{}
 	}
 	ticket := ctx.scope.ticket
 	record := op.record
-	return inbox.AttemptScope{InOwnTurn: ticket.TurnsNeverReused && record.TurnsNeverReused && record.Transport == ticket.Transport &&
+	return mail.AttemptScope{InOwnTurn: ticket.TurnsNeverReused && record.TurnsNeverReused && record.Transport == ticket.Transport &&
 		record.Turn != "" && record.Conversation == ticket.Conversation && record.Turn == ticket.Turn}
 }
 
@@ -58,15 +58,15 @@ const (
 // where the attempt runs, and started is the latest turn start on record,
 // zero when none is. An error leaves the operation open: a mark or a journal
 // that cannot be read may be this turn's.
-func judgeMark(dir string, self registry.Session, epoch, file string, at int64, scope inbox.AttemptScope, started int64) (markVerdict, error) {
-	found, err := inbox.MarkExists(dir, self.Name, epoch, file)
+func judgeMark(dir string, self registry.Session, epoch, file string, at int64, scope mail.AttemptScope, started int64) (markVerdict, error) {
+	found, err := mail.MarkExists(dir, self.Name, epoch, file)
 	if err != nil {
 		return 0, err
 	}
 	if found {
 		return markFound, nil
 	}
-	ended, err := inbox.EndedSince(dir, self.Name, epoch, at)
+	ended, err := mail.EndedSince(dir, self.Name, epoch, at)
 	if err != nil {
 		return 0, err
 	}

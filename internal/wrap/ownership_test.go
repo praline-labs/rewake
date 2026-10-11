@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
@@ -83,15 +83,15 @@ func TestShutdownOnlyRefusesItsOwnMail(t *testing.T) {
 	dir := stateDir(t)
 	fake := &fakeHarness{script: "sleep 1"}
 
-	foreign := inbox.Message{
-		ID:        inbox.NewID(),
+	foreign := mail.Message{
+		ID:        mail.NewID(),
 		From:      "web",
 		To:        "api-fake",
 		ToEpoch:   "999.999",
 		Text:      "for a session that came before",
 		CreatedAt: time.Now(),
 	}
-	if err := inbox.Put(dir, foreign); err != nil {
+	if err := mail.Put(dir, foreign); err != nil {
 		t.Fatalf("put: %v", err)
 	}
 
@@ -99,8 +99,8 @@ func TestShutdownOnlyRefusesItsOwnMail(t *testing.T) {
 		t.Fatalf("Run: %v", err)
 	}
 
-	status, ok, _ := inbox.ReadStatus(dir, "api-fake", foreign.ID)
-	if !ok || status.State != inbox.Failed {
+	status, ok, _ := mail.ReadStatus(dir, "api-fake", foreign.ID)
+	if !ok || status.State != mail.Failed {
 		t.Fatalf("status = %+v, want a refusal written while the session ran", status)
 	}
 	if status.Detail == "" || status.Detail == "the session ended before this message could be delivered" {

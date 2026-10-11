@@ -6,7 +6,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/receipt"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // The shell's evidence for the mail channel
@@ -62,7 +62,7 @@ func observeShell(call Call, err error) {
 		return
 	}
 	// A record that cannot be read is no proof the tool works: write.
-	if record := sessionstate.Load(dir, name, epoch).Channel; record != nil && record.Working() {
+	if record := session.Load(dir, name, epoch).Channel; record != nil && record.Working() {
 		return
 	}
 	receipt.WriteShell(dir, name, epoch, note)

@@ -5,31 +5,31 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 )
 
 func TestNoticesPreviewOnlyTheAuthorsFirstLine(t *testing.T) {
-	for _, kind := range []inbox.Kind{inbox.Task, inbox.Finished, inbox.Error} {
-		message := inbox.Message{From: "writer", Kind: kind, Text: "The result is ready\nfull details stay in inbox"}
-		got := inbox.Notice(message)
+	for _, kind := range []mail.Kind{mail.Task, mail.Finished, mail.Error} {
+		message := mail.Message{From: "writer", Kind: kind, Text: "The result is ready\nfull details stay in inbox"}
+		got := mail.Notice(message)
 		if !strings.HasSuffix(got, "\n  ↳ The result is ready") || strings.Contains(got, "full details") {
 			t.Errorf("notice=%q", got)
 		}
 	}
-	if got := inbox.Notice(inbox.Message{Text: "\nnot a preview"}); strings.Contains(got, "\n") {
+	if got := mail.Notice(mail.Message{Text: "\nnot a preview"}); strings.Contains(got, "\n") {
 		t.Errorf("empty first line was skipped: %q", got)
 	}
 }
 
 func TestPreviewsAreBoundedAndCannotAddTerminalLines(t *testing.T) {
 	for _, line := range []string{strings.Repeat("x", 200), strings.Repeat("界", 200)} {
-		got := inbox.Notice(inbox.Message{From: "writer", Text: line + "\nprivate tail"})
+		got := mail.Notice(mail.Message{From: "writer", Text: line + "\nprivate tail"})
 		parts := strings.Split(got, "\n")
 		if len(parts) != 2 || utf8.RuneCountInString(parts[1]) > 100 || !strings.HasSuffix(parts[1], "…") {
 			t.Errorf("unbounded preview=%q", got)
 		}
 	}
-	got := inbox.Notice(inbox.Message{Text: "one\rsecond\nthird"})
+	got := mail.Notice(mail.Message{Text: "one\rsecond\nthird"})
 	if !strings.HasSuffix(got, "\n  ↳ one") {
 		t.Errorf("extra lines leaked: %q", got)
 	}
@@ -37,7 +37,7 @@ func TestPreviewsAreBoundedAndCannotAddTerminalLines(t *testing.T) {
 
 func TestWidePreviewFitsOneHundredColumns(t *testing.T) {
 	for _, count := range []int{48, 49, 50, 200} {
-		parts := strings.Split(inbox.Notice(inbox.Message{Text: strings.Repeat("界", count)}), "\n")
+		parts := strings.Split(mail.Notice(mail.Message{Text: strings.Repeat("界", count)}), "\n")
 		if len(parts) != 2 || !strings.HasPrefix(parts[1], "  ↳ ") {
 			t.Fatalf("missing preview: %q", parts)
 		}
@@ -57,16 +57,16 @@ func TestWidePreviewFitsOneHundredColumns(t *testing.T) {
 }
 
 func TestGroupedNoticeKeepsCompactPreviewWithoutInstructions(t *testing.T) {
-	latest := inbox.Message{ID: "b", From: "writer", Kind: inbox.Finished, Text: "Result ready\nprivate details"}
-	old := inbox.Message{ID: "a", From: "sender", Kind: inbox.Task, Text: "older summary"}
-	message := inbox.Message{ID: "group", Batch: []inbox.Message{latest, old}}
+	latest := mail.Message{ID: "b", From: "writer", Kind: mail.Finished, Text: "Result ready\nprivate details"}
+	old := mail.Message{ID: "a", From: "sender", Kind: mail.Task, Text: "older summary"}
+	message := mail.Message{ID: "group", Batch: []mail.Message{latest, old}}
 	want := "Rewake: 2 new messages\n  ↳ writer finished: Result ready"
-	if got := inbox.Notice(message); got != want {
+	if got := mail.Notice(message); got != want {
 		t.Fatalf("notice = %q, want %q", got, want)
 	}
 	for _, body := range []string{strings.Repeat("界", 200) + "\nprivate details", "\nprivate details", "one\rhidden\nprivate details", "one\u2028hidden"} {
 		message.Batch[0].Text = body
-		got := inbox.Notice(message)
+		got := mail.Notice(message)
 		parts := strings.Split(got, "\n")
 		if len(parts) != 2 || !strings.HasPrefix(parts[1], "  ↳ writer finished: ") || strings.Contains(got, "private details") || strings.Contains(got, "hidden") || strings.Contains(got, "Run rewake") || strings.Contains(got, "--peek") {
 			t.Fatal(got)

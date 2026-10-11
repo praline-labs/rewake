@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
@@ -76,7 +76,7 @@ func TestOwedShowsWhatWasReadInFull(t *testing.T) {
 	}
 	model := owed(t)
 	if len(model.Messages) != 2 || model.Messages[0].ID != task || model.Messages[1].ID != question || !model.Messages[0].Kept || model.Messages[0].Text != "rerun the smoke\nand paste the tail" ||
-		model.Messages[1].Kind != inbox.Question || model.Messages[0].From != "web" || model.Messages[0].CreatedAt.IsZero() {
+		model.Messages[1].Kind != mail.Question || model.Messages[0].From != "web" || model.Messages[0].CreatedAt.IsZero() {
 		t.Fatalf("got %+v", model)
 	}
 }
@@ -84,7 +84,7 @@ func TestOwedShowsWhatWasReadInFull(t *testing.T) {
 // A report settles what it answers, and then nothing is owed.
 func TestOwedIsEmptyOnceReported(t *testing.T) {
 	dir, self, _, _, _ := owedSetup(t)
-	if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "t/1", Text: "done", Started: boottime.Now(), Ended: boottime.Now()}, "t"); err != nil {
+	if err := completeTurn(dir, self, mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "t/1", Text: "done", Started: boottime.Now(), Ended: boottime.Now()}, "t"); err != nil {
 		t.Fatal(err)
 	}
 	code, out, _ := run("inbox", "--owed")
@@ -106,7 +106,7 @@ func TestOwedSurvivesPendingAndAnInterim(t *testing.T) {
 	if got := owedIDs(owed(t)); strings.Join(got, ",") != task+","+question {
 		t.Fatalf("with the mark in place: %v", got)
 	}
-	if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "t/1", Text: "waiting", Started: markAt - 1, Ended: boottime.Now()}, "t"); err != nil {
+	if err := completeTurn(dir, self, mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "t/1", Text: "waiting", Started: markAt - 1, Ended: boottime.Now()}, "t"); err != nil {
 		t.Fatal(err)
 	}
 	if kinds := kinds(reportsTo(t, dir, "web")); strings.Join(kinds, ",") != "pending" {
@@ -125,7 +125,7 @@ func TestOwedLeavesOutWhatWasNotRead(t *testing.T) {
 	t.Setenv(state.SessionEnv, "api")
 	t.Setenv(epochEnv, self.Epoch())
 	held := rawUnread(t, dir, "api", map[string]any{"from": "web", "fromEpoch": web.Epoch(), "toEpoch": self.Epoch(), "kind": "task", "text": "held"})
-	status, _ := json.Marshal(inbox.Status{State: inbox.Held, Via: "socket", At: time.Now()})
+	status, _ := json.Marshal(mail.Status{State: mail.Held, Via: "socket", At: time.Now()})
 	if err := os.WriteFile(filepath.Join(state.InboxPath(dir, "api"), held+".status"), status, 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -271,7 +271,7 @@ func TestOwedRefusals(t *testing.T) {
 // A turn a person stopped reports the stop and keeps the work owed.
 func TestOwedSurvivesAStoppedTurn(t *testing.T) {
 	dir, self, _, task, question := owedSetup(t)
-	if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "t/1", Stopped: true, Started: boottime.Now(), Ended: boottime.Now()}, "t"); err != nil {
+	if err := completeTurn(dir, self, mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "t/1", Stopped: true, Started: boottime.Now(), Ended: boottime.Now()}, "t"); err != nil {
 		t.Fatal(err)
 	}
 	if kinds := kinds(reportsTo(t, dir, "web")); strings.Join(kinds, ",") != "stopped" {

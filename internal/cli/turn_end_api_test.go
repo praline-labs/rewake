@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 )
 
@@ -29,14 +29,14 @@ func endPaths() map[string]endPath {
 // not is refused on either path, reports nothing, and its waits stay owed for
 // the next end (E7; an end's reason is never guessed, O2).
 func TestATurnEndWithoutItsEventOrAKnownReasonIsRefused(t *testing.T) {
-	ends := map[string]func(*inbox.ReadBoundary) adapter.TurnEnd{
-		"no event": func(b *inbox.ReadBoundary) adapter.TurnEnd {
+	ends := map[string]func(*mail.ReadBoundary) adapter.TurnEnd{
+		"no event": func(b *mail.ReadBoundary) adapter.TurnEnd {
 			return adapter.TurnEnd{Thread: "A", Reason: adapter.Answered, Answer: "done", Boundary: b}
 		},
-		"no reason": func(b *inbox.ReadBoundary) adapter.TurnEnd {
+		"no reason": func(b *mail.ReadBoundary) adapter.TurnEnd {
 			return adapter.TurnEnd{Event: "run/A/1", Thread: "A", Answer: "done", Boundary: b}
 		},
-		"an unknown reason": func(b *inbox.ReadBoundary) adapter.TurnEnd {
+		"an unknown reason": func(b *mail.ReadBoundary) adapter.TurnEnd {
 			return adapter.TurnEnd{Event: "run/A/1", Thread: "A", Reason: "completed", Answer: "done", Boundary: b}
 		},
 	}
@@ -53,7 +53,7 @@ func TestATurnEndWithoutItsEventOrAKnownReasonIsRefused(t *testing.T) {
 						t.Fatalf("reports to %s: %v", peer, files)
 					}
 				}
-				if len(inbox.Waiters(dir, "api", self.Epoch())) != 2 {
+				if len(mail.Waiters(dir, "api", self.Epoch())) != 2 {
 					t.Fatal("the refused end cleared its waits")
 				}
 			})
@@ -66,11 +66,11 @@ func TestATurnEndWithoutItsEventOrAKnownReasonIsRefused(t *testing.T) {
 // aborted one stopped, a failed or refused one an error with the harness's
 // words unchanged (O2).
 func TestEachEndReasonReportsItsOutcome(t *testing.T) {
-	want := map[adapter.EndReason]inbox.Kind{
-		adapter.Answered: inbox.Finished,
-		adapter.Aborted:  inbox.Stopped,
-		adapter.Failed:   inbox.Error,
-		adapter.Refused:  inbox.Error,
+	want := map[adapter.EndReason]mail.Kind{
+		adapter.Answered: mail.Finished,
+		adapter.Aborted:  mail.Stopped,
+		adapter.Failed:   mail.Error,
+		adapter.Refused:  mail.Error,
 	}
 	for path, end := range endPaths() {
 		for reason, kind := range want {

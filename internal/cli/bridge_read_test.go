@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 )
@@ -76,7 +76,7 @@ func TestAToolReadIsReadOnlyWhenEveryPartArrived(t *testing.T) {
 	if !unreadIDs(t, dir, self)[id] {
 		t.Fatal("printing the parts read the letter")
 	}
-	if _, claimed := inbox.ReadClaimed(dir, "api", id); !claimed {
+	if _, claimed := mail.ReadClaimed(dir, "api", id); !claimed {
 		t.Fatal("a letter shown in part is not claimed")
 	}
 
@@ -90,7 +90,7 @@ func TestAToolReadIsReadOnlyWhenEveryPartArrived(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if !unreadIDs(t, dir, self)[id] || len(inbox.Waiters(dir, "api", self.Epoch())) != 0 {
+	if !unreadIDs(t, dir, self)[id] || len(mail.Waiters(dir, "api", self.Epoch())) != 0 {
 		t.Fatal("a letter with a part not arrived was read")
 	}
 	last := answers[len(answers)-1]
@@ -102,10 +102,10 @@ func TestAToolReadIsReadOnlyWhenEveryPartArrived(t *testing.T) {
 	if unreadIDs(t, dir, self)[id] {
 		t.Fatal("the letter is unread with every part arrived")
 	}
-	if _, claimed := inbox.ReadClaimed(dir, "api", id); claimed {
+	if _, claimed := mail.ReadClaimed(dir, "api", id); claimed {
 		t.Fatal("the claim outlived the read")
 	}
-	if waiters := inbox.Waiters(dir, "api", self.Epoch()); len(waiters) != 1 || len(waiters[0].Messages) != 1 {
+	if waiters := mail.Waiters(dir, "api", self.Epoch()); len(waiters) != 1 || len(waiters[0].Messages) != 1 {
 		t.Fatalf("the task is owed %+v, want once", waiters)
 	}
 	if err := AcknowledgeRead(dir, "api", "another-run", token, whole(last), nil); err == nil {
@@ -212,10 +212,10 @@ func TestAWithdrawalMeetsAToolRead(t *testing.T) {
 	if first.code != ExitOK || strings.Contains(first.out, "secret") {
 		t.Fatalf("first part: %+v", first)
 	}
-	if err := withdrawLocked(dir, letterWith(t, dir, self, longText)); !errors.Is(err, inbox.ErrReadInProgress) {
+	if err := withdrawLocked(dir, letterWith(t, dir, self, longText)); !errors.Is(err, mail.ErrReadInProgress) {
 		t.Fatalf("withdrawing a letter shown in part: %v", err)
 	}
-	refusal := withdrawRefusal(dir, letterWith(t, dir, self, longText), inbox.ErrReadInProgress, false)
+	refusal := withdrawRefusal(dir, letterWith(t, dir, self, longText), mail.ErrReadInProgress, false)
 	if !strings.Contains(refusal.Error(), "in parts") {
 		t.Fatalf("refusal: %v", refusal)
 	}
@@ -244,11 +244,11 @@ func TestAWithdrawalMeetsAToolRead(t *testing.T) {
 	}
 }
 
-func withdrawLocked(dir string, message inbox.Message) error {
+func withdrawLocked(dir string, message mail.Message) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	return state.WithMailboxLock(ctx, dir, message.To, func() error {
-		_, err := inbox.Withdraw(dir, message, nil)
+		_, err := mail.Withdraw(dir, message, nil)
 		return err
 	})
 }
@@ -270,14 +270,14 @@ func TestPendingCountsALetterBeingRead(t *testing.T) {
 }
 
 // letterWith is the unread letter holding this text.
-func letterWith(t *testing.T, dir string, self registry.Session, text string) inbox.Message {
+func letterWith(t *testing.T, dir string, self registry.Session, text string) mail.Message {
 	t.Helper()
-	messages, _ := inbox.PeekUnread(dir, "api", self.Epoch())
+	messages, _ := mail.PeekUnread(dir, "api", self.Epoch())
 	for _, message := range messages {
 		if message.Text == text {
 			return message
 		}
 	}
 	t.Fatalf("no unread letter holds %.20q", text)
-	return inbox.Message{}
+	return mail.Message{}
 }

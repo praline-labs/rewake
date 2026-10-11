@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 )
 
@@ -17,7 +17,7 @@ func TestStoppedAndErrorRetriesSettleOriginalScopeOnce(t *testing.T) {
 	peer := otherRun(t, dir, "web")
 	self, _ := registry.Lookup(dir, "api")
 	first := readFrom(t, dir, peer)
-	clock, err := inbox.OpenReadClock(context.Background(), dir, self.Name, self.Epoch())
+	clock, err := mail.OpenReadClock(context.Background(), dir, self.Name, self.Epoch())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +34,7 @@ func TestStoppedAndErrorRetriesSettleOriginalScopeOnce(t *testing.T) {
 		}
 	}
 	reports := finishedFor(t, dir, peer.Name)
-	waiters := inbox.Waiters(dir, self.Name, self.Epoch())
+	waiters := mail.Waiters(dir, self.Name, self.Epoch())
 	if len(reports) != 2 || len(waiters) != 1 || len(waiters[0].Messages) != 1 || waiters[0].Messages[0] != second {
 		t.Fatalf("first=%s later=%s reports=%v remaining=%v", first, second, reports, waiters)
 	}

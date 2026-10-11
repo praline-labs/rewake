@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/grantauth"
+	authority "github.com/praline-labs/rewake/internal/grantauth"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 )
@@ -103,7 +103,7 @@ func playFixtureGrantDir(t *testing.T, c *Case, iso *Isolation) []telemetryFindi
 	// Asked from this process, which is not the worker's run: the answer
 	// says what main's wrapper holds and marks nothing delivered.
 	holds := func(id string) (bool, string) {
-		confirmed, err := grantauth.Confirm(state.AuthorityAddress(room, leadRun), grantauth.Expect{PID: pid, Start: start}, id, worker.name, workerRun, "")
+		confirmed, err := authority.Confirm(state.AuthorityAddress(room, leadRun), authority.Expect{PID: pid, Start: start}, id, worker.name, workerRun, "")
 		if err != nil {
 			return false, err.Error()
 		}

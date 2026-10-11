@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
 )
@@ -20,9 +20,9 @@ import (
 // boundary hands over since the Stop hook left in S9, only the tests' — is
 // never retried: its name is drawn. The kind is part of the event: a stop
 // after an Esc and the finish of the same turn are two ends.
-func turnOp(self registry.Session, event inbox.TurnEnd) string {
+func turnOp(self registry.Session, event mail.TurnEnd) string {
 	if event.ID == "" {
-		return inbox.NewID()
+		return mail.NewID()
 	}
 	sum := sha256.Sum256([]byte(strings.Join([]string{
 		self.Epoch(), event.ID, event.Kind(),
@@ -39,7 +39,7 @@ func turnOp(self registry.Session, event inbox.TurnEnd) string {
 // The scope is the event's (docs/turn-end-recovery.md#the-operation): waits
 // and the kept answer at or below its read boundary, the pending mark in its
 // window. mark is that mark, nil when there is none.
-func publishTurnContext(ctx context.Context, dir string, self registry.Session, event inbox.TurnEnd, currentThread string, waiters []inbox.Waiter, op string, mark *inbox.Mark) error {
+func publishTurnContext(ctx context.Context, dir string, self registry.Session, event mail.TurnEnd, currentThread string, waiters []mail.Waiter, op string, mark *mail.Mark) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 	// short, adds to it. A failure or a stop leads, as the preview, and the
 	// answer follows. One that cannot be read stops the end here: published
 	// without it, the report would lose the answer.
-	held, kept, err := inbox.KeptAnswerThrough(dir, self.Name, self.Epoch(), through)
+	held, kept, err := mail.KeptAnswerThrough(dir, self.Name, self.Epoch(), through)
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 	if err != nil {
 		return err
 	}
-	journal := inbox.TurnJournal{Epoch: self.Epoch(), Op: op, Ended: event.Ended, Reports: reports, Mark: mark}
+	journal := mail.TurnJournal{Epoch: self.Epoch(), Op: op, Ended: event.Ended, Reports: reports, Mark: mark}
 	if !event.Stopped && !pending {
 		journal.Clear = reported
 	}
@@ -102,19 +102,19 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 		journal.Kept, journal.Held = &held.Version, held.Held
 	}
 	// Every end whose time is known writes one, done too: its Ended opens the
-	// next end's window (inbox.TurnWindowStart).
+	// next end's window (mail.TurnWindowStart).
 	if event.Ended == 0 && len(journal.Reports) == 0 && len(journal.Clear) == 0 && journal.Kept == nil {
 		return nil
 	}
-	if err := inbox.WriteJournal(dir, self.Name, op, journal); err != nil {
+	if err := mail.WriteJournal(dir, self.Name, op, journal); err != nil {
 		return err
 	}
 	// The barrier completes it, as any journal: its plan reads what every
 	// effect will decide by before the first one.
-	return inbox.Reconcile(ctx, dir, self.Name)
+	return mail.Reconcile(ctx, dir, self.Name)
 }
 
-func prepareTurnReports(dir string, self registry.Session, event inbox.TurnEnd, pending bool, currentThread string, waiters []inbox.Waiter, op string) ([]inbox.Message, []inbox.Waiter, error) {
+func prepareTurnReports(dir string, self registry.Session, event mail.TurnEnd, pending bool, currentThread string, waiters []mail.Waiter, op string) ([]mail.Message, []mail.Waiter, error) {
 	if !event.Failed && !event.Stopped && strings.TrimSpace(event.Text) == "" {
 		if len(waiters) == 0 {
 			return nil, nil, nil
@@ -125,16 +125,16 @@ func prepareTurnReports(dir string, self registry.Session, event inbox.TurnEnd, 
 	if !event.Failed && !event.Stopped && (role.Of(self.Role).Silent || len(waiters) == 0) {
 		return nil, nil, nil
 	}
-	kind := inbox.Finished
+	kind := mail.Finished
 	switch {
 	case event.Stopped:
-		kind = inbox.Stopped
+		kind = mail.Stopped
 	case event.Failed:
-		kind = inbox.Error
+		kind = mail.Error
 	case pending:
-		kind = inbox.Interim
+		kind = mail.Interim
 	}
-	var reports []inbox.Message
+	var reports []mail.Message
 	for _, waiter := range waiters {
 		// A report to an ended run can reach nobody.
 		peer, err := registry.Lookup(dir, waiter.Name)
@@ -144,7 +144,7 @@ func prepareTurnReports(dir string, self registry.Session, event inbox.TurnEnd, 
 		if err != nil || peer.Epoch() != waiter.Epoch {
 			continue
 		}
-		id := inbox.ReportID(self.Name, self.Epoch(), waiter)
+		id := mail.ReportID(self.Name, self.Epoch(), waiter)
 		if event.Stopped {
 			id += "-stopped-" + op
 		}
@@ -153,7 +153,7 @@ func prepareTurnReports(dir string, self registry.Session, event inbox.TurnEnd, 
 			// taken for a copy of this one.
 			id += "-pending-" + op
 		}
-		reports = append(reports, inbox.Message{ID: id, From: self.Name, FromEpoch: self.Epoch(), To: waiter.Name, ToEpoch: waiter.Epoch, Kind: kind, Text: event.Text, InReplyTo: waiter.Messages, CreatedAt: time.Now(), ThreadChanged: inbox.ReportThreadChanged(dir, self.Name, waiter.Messages, currentThread)})
+		reports = append(reports, mail.Message{ID: id, From: self.Name, FromEpoch: self.Epoch(), To: waiter.Name, ToEpoch: waiter.Epoch, Kind: kind, Text: event.Text, InReplyTo: waiter.Messages, CreatedAt: time.Now(), ThreadChanged: mail.ReportThreadChanged(dir, self.Name, waiter.Messages, currentThread)})
 	}
 	// A failure nobody waits on still goes to main, which has to learn that a
 	// session is broken. A stop does not: a person interrupting a turn no
@@ -174,7 +174,7 @@ func prepareTurnReports(dir string, self registry.Session, event inbox.TurnEnd, 
 				}
 			}
 		}
-		reports = append(reports, inbox.Message{ID: reportOfOp(op), From: self.Name, FromEpoch: self.Epoch(), To: target.Name, ToEpoch: target.Epoch(), Kind: kind, Text: event.Text, CreatedAt: time.Now()})
+		reports = append(reports, mail.Message{ID: reportOfOp(op), From: self.Name, FromEpoch: self.Epoch(), To: target.Name, ToEpoch: target.Epoch(), Kind: kind, Text: event.Text, CreatedAt: time.Now()})
 	}
 	return reports, waiters, nil
 }

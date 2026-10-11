@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 )
 
 func launch(t *testing.T, args []string, socket string) adapter.LaunchPlan {
@@ -161,11 +161,11 @@ func TestDeliveryWritesOneProtocolLine(t *testing.T) {
 	socket := filepath.Join(t.TempDir(), "api.sock")
 	received := listenOnce(t, socket)
 
-	message := inbox.Message{ID: "1789544450793-34464b10aaaa", From: "web", To: "api", Text: "pull and rerun the smoke\nprivate full details"}
+	message := mail.Message{ID: "1789544450793-34464b10aaaa", From: "web", To: "api", Text: "pull and rerun the smoke\nprivate full details"}
 
 	// A lane that does not listen writes the notice plainly.
 	result := newLane(socket, "", false).Deliver(context.Background(), message)
-	if result.State != inbox.Delivered || result.Via != "socket" {
+	if result.State != mail.Delivered || result.Via != "socket" {
 		t.Fatalf("result = %+v, want delivered via socket", result)
 	}
 
@@ -214,9 +214,9 @@ const inboxID = "1789544450793-34464b10aaaa"
 
 func TestMissingSocketIsPendingNotFailed(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "missing.sock")
-	result := newLane(missing, "", false).Deliver(context.Background(), inbox.Message{ID: inboxID, From: "web", Text: "hello"})
+	result := newLane(missing, "", false).Deliver(context.Background(), mail.Message{ID: inboxID, From: "web", Text: "hello"})
 
-	if result.State != inbox.Pending {
+	if result.State != mail.Pending {
 		t.Fatalf("result = %+v, want pending: the socket appears a moment after the process", result)
 	}
 }

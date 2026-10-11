@@ -7,7 +7,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 )
@@ -41,7 +41,7 @@ func TestRetriedTurnDoesNotConsumeLaterWork(t *testing.T) {
 	run("inbox")
 	unblock := closeMailbox(t, dir, "two")
 	self, _ := registry.Lookup(dir, "api")
-	event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "turn-before-new-task", Failed: true, Text: "failure on original tasks"}
+	event := mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "turn-before-new-task", Failed: true, Text: "failure on original tasks"}
 	if completeTurn(dir, self, event, "") == nil {
 		t.Fatal("the blocked report did not fail")
 	}
@@ -55,13 +55,13 @@ func TestRetriedTurnDoesNotConsumeLaterWork(t *testing.T) {
 		t.Fatal(err)
 	}
 	files := finishedFor(t, dir, "one")
-	waits := inbox.Waiters(dir, "api", epochOf(t, dir, "api"))
+	waits := mail.Waiters(dir, "api", epochOf(t, dir, "api"))
 	for _, file := range files {
 		raw, err := os.ReadFile(file)
 		if err != nil {
 			t.Fatal(err)
 		}
-		var m inbox.Message
+		var m mail.Message
 		if err := json.Unmarshal(raw, &m); err != nil {
 			t.Fatal(err)
 		}
@@ -78,14 +78,14 @@ func TestRetriedTurnDoesNotConsumeLaterWork(t *testing.T) {
 	if err := completeTurn(dir, self, changed, ""); err != nil {
 		t.Fatal(err)
 	}
-	if len(finishedFor(t, dir, "one")) != 1 || len(inbox.Waiters(dir, "api", epochOf(t, dir, "api"))) != 1 {
+	if len(finishedFor(t, dir, "one")) != 1 || len(mail.Waiters(dir, "api", epochOf(t, dir, "api"))) != 1 {
 		t.Fatal("completed replay consumed later work")
 	}
-	if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "next-turn", Text: "late task result"}, ""); err != nil {
+	if err := completeTurn(dir, self, mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "next-turn", Text: "late task result"}, ""); err != nil {
 		t.Fatal(err)
 	}
 	files = finishedFor(t, dir, "one")
-	if len(files) != 2 || len(inbox.Waiters(dir, "api", epochOf(t, dir, "api"))) != 0 {
+	if len(files) != 2 || len(mail.Waiters(dir, "api", epochOf(t, dir, "api"))) != 0 {
 		t.Fatal("next real result did not settle later work")
 	}
 	for _, file := range files {
@@ -93,7 +93,7 @@ func TestRetriedTurnDoesNotConsumeLaterWork(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		var report inbox.Message
+		var report mail.Message
 		if err := json.Unmarshal(raw, &report); err != nil {
 			t.Fatal(err)
 		}
@@ -111,7 +111,7 @@ func TestPartialTurnRetryKeepsOriginalOutcome(t *testing.T) {
 	t.Setenv(state.EpochEnv, epochOf(t, dir, "api"))
 	unblock := closeMailbox(t, dir, "web")
 	self, _ := registry.Lookup(dir, "api")
-	event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "original", Failed: true, Text: "original failure"}
+	event := mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "original", Failed: true, Text: "original failure"}
 	if completeTurn(dir, self, event, "") == nil {
 		t.Fatal("the blocked report did not fail")
 	}
@@ -130,14 +130,14 @@ func TestPartialTurnRetryKeepsOriginalOutcome(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var report inbox.Message
+	var report mail.Message
 	if err := json.Unmarshal(raw, &report); err != nil {
 		t.Fatal(err)
 	}
-	if report.Kind != inbox.Error || report.Text != "original failure" || len(report.InReplyTo) != 0 {
+	if report.Kind != mail.Error || report.Text != "original failure" || len(report.InReplyTo) != 0 {
 		t.Fatalf("retry changed the original outcome: %+v", report)
 	}
-	waits := inbox.Waiters(dir, "api", epochOf(t, dir, "api"))
+	waits := mail.Waiters(dir, "api", epochOf(t, dir, "api"))
 	if len(waits) != 1 || !slices.Equal(waits[0].Messages, []string{late}) {
 		t.Fatal("retry consumed work read after the original fallback")
 	}

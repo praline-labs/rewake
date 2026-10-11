@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
 )
@@ -18,14 +18,14 @@ import (
 // conversation a resume may still continue and report from: not lost yet, so
 // not to be sent again.
 type awaitedView struct {
-	ID        string      `json:"id"`
-	Kind      inbox.Kind  `json:"kind"`
-	CreatedAt time.Time   `json:"createdAt"`
-	State     inbox.Stage `json:"state"`
-	Detail    string      `json:"detail,omitempty"`
-	Gone      string      `json:"gone,omitempty"`
-	Resumable bool        `json:"resumable,omitempty"`
-	Text      string      `json:"text"`
+	ID        string     `json:"id"`
+	Kind      mail.Kind  `json:"kind"`
+	CreatedAt time.Time  `json:"createdAt"`
+	State     mail.Stage `json:"state"`
+	Detail    string     `json:"detail,omitempty"`
+	Gone      string     `json:"gone,omitempty"`
+	Resumable bool       `json:"resumable,omitempty"`
+	Text      string     `json:"text"`
 	// AddendumTo names the task this one adds to.
 	AddendumTo string `json:"addendumTo,omitempty"`
 	// nested is an addendum listed under its task.
@@ -56,7 +56,7 @@ func afterTheirTask(messages []awaitedView) []awaitedView {
 }
 
 // coming says whether a report on it can still arrive.
-func (v awaitedView) coming() bool { return v.Gone == "" && v.State != inbox.StageFailed }
+func (v awaitedView) coming() bool { return v.Gone == "" && v.State != mail.StageFailed }
 
 type awaitedRecipient struct {
 	Name     string        `json:"name"`
@@ -96,14 +96,14 @@ func showAwaited(ctx *Context, dir string, session registry.Session, epoch strin
 		runs[name] = found
 		return found
 	}
-	awaited, err := inbox.Awaited(dir, session.Name, epoch, func(recipient, run string) inbox.RecipientRun {
+	awaited, err := mail.Awaited(dir, session.Name, epoch, func(recipient, run string) mail.RecipientRun {
 		switch live := current(recipient); {
 		case live.unknown, live.found && live.run == run:
-			return inbox.RunLive
+			return mail.RunLive
 		case live.found:
-			return inbox.RunReplaced
+			return mail.RunReplaced
 		}
-		return inbox.RunEnded
+		return mail.RunEnded
 	})
 	if err != nil {
 		// A partial list would show a task as answered, or lost and worth
@@ -120,22 +120,22 @@ func showAwaited(ctx *Context, dir string, session registry.Session, epoch strin
 			continue
 		}
 		view := awaitedView{
-			ID: message.ID, Kind: inbox.KindOf(message.Message), CreatedAt: message.CreatedAt,
+			ID: message.ID, Kind: mail.KindOf(message.Message), CreatedAt: message.CreatedAt,
 			State: message.Stage, Detail: message.Detail, Text: message.Text,
 			Resumable: message.Resumable,
 		}
 		if message.AddendumTo != "" {
 			// Under the task as it is now, an edit's replacement included,
 			// or the one it was sent to while a copy cannot be read.
-			if current, err := inbox.CurrentTask(dir, message.To, message.AddendumTo); err == nil {
+			if current, err := mail.CurrentTask(dir, message.To, message.AddendumTo); err == nil {
 				view.AddendumTo = current
 			}
 		}
 		switch {
 		case !message.Gone():
-		case message.Run == inbox.RunEnded:
+		case message.Run == mail.RunEnded:
 			view.Gone = "ended"
-		case message.Run == inbox.RunReplaced:
+		case message.Run == mail.RunReplaced:
 			view.Gone = "replaced"
 		}
 		at, ok := index[message.To]
@@ -191,7 +191,7 @@ func awaitedLines(recipients []awaitedRecipient) []string {
 			}
 			lines = append(lines,
 				fmt.Sprintf("%s%s · %s · %s · %s", indent, message.ID, kind, message.CreatedAt.Local().Format("15:04:05"), awaitedState(recipient.Name, message)),
-				strings.Repeat(" ", len(indent))+inbox.Preview(message.Text),
+				strings.Repeat(" ", len(indent))+mail.Preview(message.Text),
 			)
 		}
 	}
@@ -211,25 +211,25 @@ func awaitedState(recipient string, message awaitedView) string {
 		return "no report coming: " + recipient + " was replaced by a new run"
 	}
 	detail := func(prefix string) string {
-		if line := inbox.Preview(message.Detail); line != "" {
+		if line := mail.Preview(message.Detail); line != "" {
 			return prefix + ": " + line
 		}
 		return prefix
 	}
 	switch message.State {
-	case inbox.StageUndelivered:
+	case mail.StageUndelivered:
 		return detail("not delivered yet")
-	case inbox.StageHeld:
+	case mail.StageHeld:
 		return detail("held")
-	case inbox.StageUnread:
+	case mail.StageUnread:
 		return "delivered, unread"
-	case inbox.StagePending:
+	case mail.StagePending:
 		return detail("pending")
-	case inbox.StageStopped:
+	case mail.StageStopped:
 		// The stop's own text says who stopped the turn: the person at the
 		// keyboard, or a main by name with rewake interrupt.
 		return detail("stopped")
-	case inbox.StageFailed:
+	case mail.StageFailed:
 		return detail("not delivered, no report coming")
 	default:
 		return "read, being worked on"

@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/control"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 const (
@@ -19,20 +19,20 @@ const (
 )
 
 // letterState saves a worker's snapshot with compactions and their outcomes.
-func letterState(t *testing.T, dir string, peer registry.Session, events []sessionstate.CompactionEvent, outcomes []sessionstate.CompactionOutcome) {
+func letterState(t *testing.T, dir string, peer registry.Session, events []session.CompactionEvent, outcomes []session.CompactionOutcome) {
 	t.Helper()
 	noticeState(t, dir, peer, "idle", uint64(len(events)), events)
-	snapshot := sessionstate.Load(dir, peer.Name, peer.Epoch())
+	snapshot := session.Load(dir, peer.Name, peer.Epoch())
 	snapshot.CompactionOutcomes = outcomes
-	if err := sessionstate.Save(dir, peer.Name, peer.Epoch(), snapshot); err != nil {
+	if err := session.Save(dir, peer.Name, peer.Epoch(), snapshot); err != nil {
 		t.Fatal(err)
 	}
 }
 
 // letters answers the letters main holds, other than availability notices.
-func letters(t *testing.T, dir, name string) []inbox.Message {
+func letters(t *testing.T, dir, name string) []mail.Message {
 	t.Helper()
-	var found []inbox.Message
+	var found []mail.Message
 	for _, m := range availabilityFiles(t, dir, name) {
 		if m.Availability == nil {
 			found = append(found, m)
@@ -86,13 +86,13 @@ func TestACompactionMainAskedForEndsInOneLetter(t *testing.T) {
 	now := time.Now()
 	before, after := int64(120000), int64(9000)
 	letterState(t, dir, peer,
-		[]sessionstate.CompactionEvent{{Sequence: 1, ObservedAt: now, RequestedBy: main.Name, Request: letterA}},
-		[]sessionstate.CompactionOutcome{{Request: letterA, RequestedBy: main.Name, Outcome: control.Done, TokensBefore: &before, TokensAfter: &after, EndedAt: now}})
+		[]session.CompactionEvent{{Sequence: 1, ObservedAt: now, RequestedBy: main.Name, Request: letterA}},
+		[]session.CompactionOutcome{{Request: letterA, RequestedBy: main.Name, Outcome: control.Done, TokensBefore: &before, TokensAfter: &after, EndedAt: now}})
 	pend(t, dir, main, peer, letterA)
 	scanTimes(t, observer, dir, main, 3)
 	got := letters(t, dir, main.Name)
 	want := "Rewake: compacted worker-fixture: 120000 tokens before, 9000 after (compaction 1)."
-	if len(got) != 1 || got[0].Text != want || got[0].Kind != inbox.Note || inbox.Owed(got[0]) || got[0].From != peer.Name ||
+	if len(got) != 1 || got[0].Text != want || got[0].Kind != mail.Note || mail.Owed(got[0]) || got[0].From != peer.Name ||
 		got[0].FromEpoch != peer.Epoch() || got[0].ToEpoch != main.Epoch() || got[0].Compaction == nil || got[0].Compaction.Count != 1 {
 		t.Fatalf("letters %+v, want one saying %q", got, want)
 	}
@@ -107,7 +107,7 @@ func TestACompactionMainAskedForEndsInOneLetter(t *testing.T) {
 func TestARefusedOrFailedCompactionIsALetterToo(t *testing.T) {
 	dir, main, peer, observer := lettersFixture(t)
 	now := time.Now()
-	letterState(t, dir, peer, nil, []sessionstate.CompactionOutcome{
+	letterState(t, dir, peer, nil, []session.CompactionOutcome{
 		{Request: letterA, RequestedBy: main.Name, Outcome: control.Refused, Reason: control.NothingToCompact, Detail: "Not enough messages to compact.", EndedAt: now},
 		{Request: letterB, RequestedBy: main.Name, Outcome: control.Failed, Detail: "the connection ended during the compaction", EndedAt: now},
 		{Request: "00000000000000000000000000000000", RequestedBy: "other-main", Outcome: control.Failed, EndedAt: now},
@@ -136,7 +136,7 @@ func TestALetterWaitsForItsOtherHalfOnlyAMoment(t *testing.T) {
 	t.Cleanup(func() { letterWait = saved })
 	dir, main, peer, observer := lettersFixture(t)
 	now := time.Now()
-	letterState(t, dir, peer, nil, []sessionstate.CompactionOutcome{{Request: letterA, RequestedBy: main.Name, Outcome: control.Done, EndedAt: now}})
+	letterState(t, dir, peer, nil, []session.CompactionOutcome{{Request: letterA, RequestedBy: main.Name, Outcome: control.Done, EndedAt: now}})
 	pend(t, dir, main, peer, letterA)
 	pend(t, dir, main, peer, letterB)
 	scanTimes(t, observer, dir, main, 1)
@@ -150,13 +150,13 @@ func TestALetterWaitsForItsOtherHalfOnlyAMoment(t *testing.T) {
 		t.Fatalf("letters %+v", got)
 	}
 	letterWait = time.Hour
-	letterState(t, dir, peer, []sessionstate.CompactionEvent{{Sequence: 1, ObservedAt: now, RequestedBy: main.Name, Request: letterB}}, nil)
+	letterState(t, dir, peer, []session.CompactionEvent{{Sequence: 1, ObservedAt: now, RequestedBy: main.Name, Request: letterB}}, nil)
 	scanTimes(t, observer, dir, main, 1)
 	if err := registry.Remove(dir, peer.Name); err != nil {
 		t.Fatal(err)
 	}
 	scanTimes(t, observer, dir, main, 1)
-	var count *inbox.Message
+	var count *mail.Message
 	for _, m := range letters(t, dir, main.Name) {
 		if m.Compaction != nil && m.Departure == nil {
 			count = &m
@@ -199,8 +199,8 @@ func TestALetterComesWhenTheWorkerLeavesWithoutAWord(t *testing.T) {
 		t.Fatalf("a failed letter before the worker's last snapshot could come: %q", got)
 	}
 	now := time.Now()
-	letterState(t, dir, peer, []sessionstate.CompactionEvent{{Sequence: 1, ObservedAt: now, RequestedBy: main.Name, Request: letterB}},
-		[]sessionstate.CompactionOutcome{{Request: letterB, RequestedBy: main.Name, Outcome: control.Done, EndedAt: now}})
+	letterState(t, dir, peer, []session.CompactionEvent{{Sequence: 1, ObservedAt: now, RequestedBy: main.Name, Request: letterB}},
+		[]session.CompactionOutcome{{Request: letterB, RequestedBy: main.Name, Outcome: control.Done, EndedAt: now}})
 	time.Sleep(letterWait)
 	scanTimes(t, observer, dir, main, 2)
 	got := strings.Join(compactions(), "\n")
@@ -245,7 +245,7 @@ func TestALetterComesAtTheBoundWithoutAWord(t *testing.T) {
 func TestAnEarlierRunsRequestIsClosedByTheNext(t *testing.T) {
 	dir, main, peer, observer := lettersFixture(t)
 	earlier := main.StartedAt.Add(-time.Hour)
-	letterState(t, dir, peer, nil, []sessionstate.CompactionOutcome{{Request: letterA, RequestedBy: main.Name, Outcome: control.Failed, Detail: "the connection ended during the compaction", EndedAt: earlier}})
+	letterState(t, dir, peer, nil, []session.CompactionOutcome{{Request: letterA, RequestedBy: main.Name, Outcome: control.Failed, Detail: "the connection ended during the compaction", EndedAt: earlier}})
 	pendAt(t, dir, main, peer, letterA, "111.0", earlier)
 	scanTimes(t, observer, dir, main, 1)
 	want := "Rewake: the compaction of worker-fixture you asked for failed (the connection ended during the compaction). You asked for it in an earlier run of this session."

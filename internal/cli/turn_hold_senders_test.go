@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -28,7 +28,7 @@ func senderLab(t *testing.T) interimLab {
 func finishedTo(t *testing.T, dir, name, text string) bool {
 	t.Helper()
 	for _, report := range reportsTo(t, dir, name) {
-		if inbox.KindOf(report) == inbox.Finished && report.Text == text {
+		if mail.KindOf(report) == mail.Finished && report.Text == text {
 			return true
 		}
 	}
@@ -51,7 +51,7 @@ func TestOneUnreadableSenderAbandonsTheHold(t *testing.T) {
 				return nil
 			}
 			t.Cleanup(func() { state.Fault = nil })
-			reason := lab.confirm(t, lab.end("turn-2", 1, inbox.Finished, "the work is done"))
+			reason := lab.confirm(t, lab.end("turn-2", 1, mail.Finished, "the work is done"))
 			state.Fault = nil
 			if !failed {
 				t.Fatalf("the read of %s never reached the fault seam", failing)
@@ -75,7 +75,7 @@ func TestAGoneSenderLeavesTheHoldToTheLiveOne(t *testing.T) {
 	if err := os.Remove(state.SessionPath(lab.dir, "second")); err != nil {
 		t.Fatal(err)
 	}
-	reason := lab.confirm(t, lab.end("turn-2", 1, inbox.Finished, "the work is done"))
+	reason := lab.confirm(t, lab.end("turn-2", 1, mail.Finished, "the work is done"))
 	if !strings.Contains(reason, "web still wait") || !lab.kept() {
 		t.Fatalf("the hold with one sender gone: reason=%q kept=%v", reason, lab.kept())
 	}
@@ -90,7 +90,7 @@ func TestAnUndecodableSenderIsNotTakenForGone(t *testing.T) {
 	if err := os.WriteFile(state.SessionPath(lab.dir, "second"), []byte("{not a record"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	end := lab.end("turn-2", 1, inbox.Finished, "the work is done")
+	end := lab.end("turn-2", 1, mail.Finished, "the work is done")
 	end.Boundary = boundaryNow(t, lab.dir, lab.self)
 	reason, _ := ConfirmCompletion(context.Background(), lab.dir, lab.self, end)
 	if reason != "" || lab.kept() {

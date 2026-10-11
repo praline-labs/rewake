@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 )
 
@@ -36,8 +36,8 @@ func ConfirmCompletion(ctx context.Context, dir string, self registry.Session, e
 // from its reason (docs/rules/turns.md, O2). An aborted turn reports stopped;
 // a failed one an error with the harness's words unchanged, and so does a
 // refused one, whose words are no answer to the work it was given.
-func turnEndOf(end adapter.TurnEnd) inbox.TurnEnd {
-	return inbox.TurnEnd{
+func turnEndOf(end adapter.TurnEnd) mail.TurnEnd {
+	return mail.TurnEnd{
 		ID: end.Event, Text: end.Answer,
 		Failed:   end.Reason == adapter.Failed || end.Reason == adapter.Refused,
 		Stopped:  end.Reason == adapter.Aborted,

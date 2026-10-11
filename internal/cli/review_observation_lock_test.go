@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 )
@@ -17,7 +17,7 @@ func TestReviewSenderObservationCannotBlockReceiverMailbox(t *testing.T) {
 	if err := registry.Update(dir, peer); err != nil {
 		t.Fatal(err)
 	}
-	leaveUnread(t, dir, inbox.Message{From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: inbox.Finished, Text: "report must remain readable"})
+	leaveUnread(t, dir, mail.Message{From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: mail.Finished, Text: "report must remain readable"})
 	held, release, unlocked := make(chan struct{}), make(chan struct{}), make(chan struct{})
 	go func() {
 		defer close(unlocked)

@@ -6,24 +6,24 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
-func holdState(t *testing.T, dir string, peer registry.Session, hold *sessionstate.DeliveryHold) {
+func holdState(t *testing.T, dir string, peer registry.Session, hold *session.DeliveryHold) {
 	t.Helper()
 	now := time.Now()
-	snapshot := sessionstate.Snapshot{Epoch: peer.Epoch(), Fresh: true, PublishedAt: &now, WaitingFor: []string{}, DeliveryHold: hold}
-	if err := sessionstate.Save(dir, peer.Name, peer.Epoch(), snapshot); err != nil {
+	snapshot := session.Snapshot{Epoch: peer.Epoch(), Fresh: true, PublishedAt: &now, WaitingFor: []string{}, DeliveryHold: hold}
+	if err := session.Save(dir, peer.Name, peer.Epoch(), snapshot); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func holdNotices(t *testing.T, dir, name string) []inbox.Message {
+func holdNotices(t *testing.T, dir, name string) []mail.Message {
 	t.Helper()
-	var held []inbox.Message
+	var held []mail.Message
 	for _, m := range availabilityFiles(t, dir, name) {
 		if strings.HasPrefix(m.Text, "Rewake: deliveries to ") {
 			held = append(held, m)
@@ -49,11 +49,11 @@ func TestMainIsToldOncePerHold(t *testing.T) {
 		}
 	}
 	scan(1)
-	unintended := &sessionstate.DeliveryHold{Reason: sessionstate.HoldUnintended, Expected: "X", Selected: "Y", Detail: "the launch asked to resume X, and the terminal selected Y"}
+	unintended := &session.DeliveryHold{Reason: session.HoldUnintended, Expected: "X", Selected: "Y", Detail: "the launch asked to resume X, and the terminal selected Y"}
 	holdState(t, dir, peer, unintended)
 	scan(3)
 	held := holdNotices(t, dir, main.Name)
-	if len(held) != 1 || held[0].From != peer.Name || held[0].ToEpoch != main.Epoch() || inbox.Owed(held[0]) || !strings.Contains(held[0].Text, "selected Y") {
+	if len(held) != 1 || held[0].From != peer.Name || held[0].ToEpoch != main.Epoch() || mail.Owed(held[0]) || !strings.Contains(held[0].Text, "selected Y") {
 		t.Fatalf("%+v", held)
 	}
 	moved := *unintended
@@ -83,7 +83,7 @@ func TestAChangedCauseIsToldAgain(t *testing.T) {
 	main := availabilityPeer(t, dir, "main-fixture", role.Main.ID, 1, true)
 	peer := availabilityPeer(t, dir, "worker-fixture", role.General.ID, 2, true)
 	observer := newSessionNotices()
-	hold := &sessionstate.DeliveryHold{Reason: sessionstate.HoldMailClosed, Expected: "X", Selected: "X", Detail: "the session's mail could not be opened: disk full"}
+	hold := &session.DeliveryHold{Reason: session.HoldMailClosed, Expected: "X", Selected: "X", Detail: "the session's mail could not be opened: disk full"}
 	holdState(t, dir, peer, hold)
 	if err := observer.scan(context.Background(), dir, main); err != nil {
 		t.Fatal(err)

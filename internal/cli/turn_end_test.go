@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -37,8 +37,8 @@ func endTurn(t *testing.T, end boundaryEnd) (string, error) {
 	if err != nil {
 		return "", nil
 	}
-	event := inbox.TurnEnd{Text: end.text, Failed: end.failed, Ended: boottime.Now()}
-	event.Started, _ = inbox.LatestTurnStart(dir, self.Name, self.Epoch())
+	event := mail.TurnEnd{Text: end.text, Failed: end.failed, Ended: boottime.Now()}
+	event.Started, _ = mail.LatestTurnStart(dir, self.Name, self.Epoch())
 	return endTurnContext(context.Background(), dir, self, event, end.holdable, end.thread)
 }
 

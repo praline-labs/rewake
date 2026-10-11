@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/channel"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // The live set and the channel record on the fixture column (S11,
@@ -224,7 +224,7 @@ func playLive(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 
 	epoch := rows[full.name].Epoch()
 	stopSession(t, c, full)
-	last := sessionstate.Load(filepath.Join(iso.StateDir, "rooms", "default"), full.name, epoch).Channel
+	last := session.Load(filepath.Join(iso.StateDir, "rooms", "default"), full.name, epoch).Channel
 	finding(obsChannelFrozen, last != nil && last.Frozen && last.Category() != channel.CategoryFailing, "the last snapshot's channel %s", showChannel(last))
 	return out
 }
@@ -322,19 +322,19 @@ func (w *liveWorld) unwoken(session *scenarioSession, epoch string) (bool, strin
 			Detail string `json:"detail"`
 		}
 		_ = json.Unmarshal([]byte(said), &accepted)
-		var status inbox.Status
-		var unread []inbox.Message
+		var status mail.Status
+		var unread []mail.Message
 		tried := accepted.ID != "" && waitFor(w.c, 8*time.Second, func() bool {
-			status, _, _ = inbox.ReadStatus(room, session.name, accepted.ID)
-			unread, _ = inbox.PeekUnread(room, session.name, epoch)
+			status, _, _ = mail.ReadStatus(room, session.name, accepted.ID)
+			unread, _ = mail.PeekUnread(room, session.name, epoch)
 			// The coalescing window keeps a note pending before its try.
-			return status.State == inbox.Failed || strings.Contains(status.Detail, "no notice can reach this session")
+			return status.State == mail.Failed || strings.Contains(status.Detail, "no notice can reach this session")
 		})
-		readable := slices.ContainsFunc(unread, func(m inbox.Message) bool { return m.ID == accepted.ID })
+		readable := slices.ContainsFunc(unread, func(m mail.Message) bool { return m.ID == accepted.ID })
 		// The answer is send's own, decided by the live set before any try:
 		// a send that waited for the server's try would carry its detail.
 		decided := strings.HasPrefix(accepted.Detail, "accepted; no notice can reach this session")
-		ok := code == 3 && decided && tried && readable && status.State == inbox.Pending
+		ok := code == 3 && decided && tried && readable && status.State == mail.Pending
 		held = held && ok
 		details = append(details, fmt.Sprintf("%q: exit %d, answered %q, readable %t, stored %s %q", text, code, accepted.Detail, readable, status.State, status.Detail))
 	}

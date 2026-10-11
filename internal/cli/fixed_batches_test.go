@@ -6,32 +6,32 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 )
 
 func TestFixedTwoThenFourThroughPeekAndSelectedReads(t *testing.T) {
 	for _, mode := range []string{"peek", "selected", "read-all"} {
 		t.Run(mode, func(t *testing.T) {
 			dir, self, peer := stateCaller(t, "write")
-			put := func(kind inbox.Kind) inbox.Message {
+			put := func(kind mail.Kind) mail.Message {
 				t.Helper()
-				m := inbox.Message{ID: inbox.NewID(), From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: kind, Text: "batch content", CreatedAt: time.Now()}
-				if err := inbox.Put(dir, m); err != nil {
+				m := mail.Message{ID: mail.NewID(), From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: kind, Text: "batch content", CreatedAt: time.Now()}
+				if err := mail.Put(dir, m); err != nil {
 					t.Fatal(err)
 				}
 				return m
 			}
-			first := []inbox.Message{put(inbox.Note), put(inbox.Note)}
-			signals := make(chan inbox.Message, 4)
-			s := &inbox.Server{Dir: dir, Name: self.Name, Epoch: self.Epoch(), Deliver: func(_ context.Context, m inbox.Message) inbox.Result {
+			first := []mail.Message{put(mail.Note), put(mail.Note)}
+			signals := make(chan mail.Message, 4)
+			s := &mail.Server{Dir: dir, Name: self.Name, Epoch: self.Epoch(), Deliver: func(_ context.Context, m mail.Message) mail.Result {
 				signals <- m
-				return inbox.Result{State: inbox.Delivered}
+				return mail.Result{State: mail.Delivered}
 			}}
 			ctx, cancel := context.WithCancel(context.Background())
 			done := make(chan struct{})
 			go func() { defer close(done); s.Serve(ctx) }()
 			defer func() { cancel(); <-done }()
-			wait := func(messages []inbox.Message, want inbox.State) {
+			wait := func(messages []mail.Message, want mail.State) {
 				t.Helper()
 				end := time.NewTimer(3 * time.Second)
 				defer end.Stop()
@@ -40,7 +40,7 @@ func TestFixedTwoThenFourThroughPeekAndSelectedReads(t *testing.T) {
 				for {
 					all := true
 					for _, m := range messages {
-						st, ok, _ := inbox.ReadStatus(dir, self.Name, m.ID)
+						st, ok, _ := mail.ReadStatus(dir, self.Name, m.ID)
 						all = all && ok && st.State == want
 					}
 					if all {
@@ -53,7 +53,7 @@ func TestFixedTwoThenFourThroughPeekAndSelectedReads(t *testing.T) {
 					}
 				}
 			}
-			signal := func(want []inbox.Message) {
+			signal := func(want []mail.Message) {
 				t.Helper()
 				select {
 				case m := <-signals:
@@ -69,7 +69,7 @@ func TestFixedTwoThenFourThroughPeekAndSelectedReads(t *testing.T) {
 					t.Fatal("missing signal")
 				}
 			}
-			wait(first, inbox.Delivered)
+			wait(first, mail.Delivered)
 			signal(first)
 			if code := Run(testCatalog(), []string{"inbox", "--peek"}, brokenWriter{}, brokenWriter{}); code == ExitOK {
 				t.Fatal("failed peek reported success")
@@ -98,11 +98,11 @@ func TestFixedTwoThenFourThroughPeekAndSelectedReads(t *testing.T) {
 					t.Fatal("overview acknowledged unannounced members")
 				}
 			}
-			if len(inbox.Waiters(dir, self.Name, self.Epoch())) != 0 {
+			if len(mail.Waiters(dir, self.Name, self.Epoch())) != 0 {
 				t.Fatal("overview created task obligations")
 			}
-			later := []inbox.Message{put(inbox.Task), put(inbox.Question), put(inbox.Note), put(inbox.Finished)}
-			wait(later, inbox.Delivered)
+			later := []mail.Message{put(mail.Task), put(mail.Question), put(mail.Note), put(mail.Finished)}
+			wait(later, mail.Delivered)
 			signal(later)
 			expected := 6
 			if mode == "selected" {
@@ -111,13 +111,13 @@ func TestFixedTwoThenFourThroughPeekAndSelectedReads(t *testing.T) {
 			if mode == "read-all" {
 				expected = 4
 			}
-			if list, _ := inbox.PeekUnread(dir, self.Name, self.Epoch()); len(list) != expected {
+			if list, _ := mail.PeekUnread(dir, self.Name, self.Epoch()); len(list) != expected {
 				t.Fatal("old unread lost or next members inflated")
 			}
 			if code, _, stderr := run("inbox", "--message", later[0].ID); code != ExitOK {
 				t.Fatal(stderr)
 			}
-			if len(inbox.Waiters(dir, self.Name, self.Epoch())) != 1 {
+			if len(mail.Waiters(dir, self.Name, self.Epoch())) != 1 {
 				t.Fatal("actual selected task lost obligation")
 			}
 		})

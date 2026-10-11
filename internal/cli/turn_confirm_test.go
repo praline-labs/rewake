@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -19,16 +19,16 @@ import (
 
 // end is a turn end of the interim lab's session, as an adapter reports it:
 // its event and its moment on the boot clock, after the lab's turn start.
-func (lab interimLab) end(id string, at int64, kind inbox.Kind, text string) adapter.TurnEnd {
+func (lab interimLab) end(id string, at int64, kind mail.Kind, text string) adapter.TurnEnd {
 	return adapter.TurnEnd{Event: id, Reason: reasonReporting(kind), Answer: text, Started: lab.start, Ended: markAt + at}
 }
 
 // reasonReporting is the end reason whose report is of the kind.
-func reasonReporting(kind inbox.Kind) adapter.EndReason {
+func reasonReporting(kind mail.Kind) adapter.EndReason {
 	switch kind {
-	case inbox.Error:
+	case mail.Error:
 		return adapter.Failed
-	case inbox.Stopped:
+	case mail.Stopped:
 		return adapter.Aborted
 	}
 	return adapter.Answered
@@ -46,11 +46,11 @@ func (lab interimLab) confirm(t *testing.T, end adapter.TurnEnd) string {
 }
 
 // reportsOf answers the texts of web's reports of one kind.
-func (lab interimLab) reportsOf(t *testing.T, kind inbox.Kind) []string {
+func (lab interimLab) reportsOf(t *testing.T, kind mail.Kind) []string {
 	t.Helper()
 	var texts []string
 	for _, report := range reportsTo(t, lab.dir, "web") {
-		if inbox.KindOf(report) == kind {
+		if mail.KindOf(report) == kind {
 			texts = append(texts, report.Text)
 		}
 	}
@@ -58,13 +58,13 @@ func (lab interimLab) reportsOf(t *testing.T, kind inbox.Kind) []string {
 }
 
 func (lab interimLab) kept() bool {
-	_, kept, _ := inbox.KeptAnswer(lab.dir, "api", lab.self.Epoch())
+	_, kept, _ := mail.KeptAnswer(lab.dir, "api", lab.self.Epoch())
 	return kept
 }
 
 func TestAConfirmedEndAfterAnInterimOneIsHeldOnce(t *testing.T) {
 	lab := newInterimLab(t)
-	reason := lab.confirm(t, lab.end("turn-2", 1, inbox.Finished, "the suite is green: 40 pass"))
+	reason := lab.confirm(t, lab.end("turn-2", 1, mail.Finished, "the suite is green: 40 pass"))
 	for _, want := range []string{`ended pending ("the suite is running")`, "web still wait", "rewake pending", "do not repeat it"} {
 		if !strings.Contains(reason, want) {
 			t.Errorf("the reason lacks %q: %s", want, reason)
@@ -73,32 +73,32 @@ func TestAConfirmedEndAfterAnInterimOneIsHeldOnce(t *testing.T) {
 	if got := kinds(reportsTo(t, lab.dir, "web")); len(got) != 1 || lab.owed() != 1 {
 		t.Fatalf("the hold published %v and left %d owed", got, lab.owed())
 	}
-	if reason := lab.confirm(t, lab.end("turn-2b", 2, inbox.Finished, "nothing more to add")); reason != "" {
+	if reason := lab.confirm(t, lab.end("turn-2b", 2, mail.Finished, "nothing more to add")); reason != "" {
 		t.Fatalf("the continuation was held again: %s", reason)
 	}
-	if got := lab.reportsOf(t, inbox.Finished); len(got) != 1 || got[0] != "the suite is green: 40 pass\n\nnothing more to add" || lab.owed() != 0 {
+	if got := lab.reportsOf(t, mail.Finished); len(got) != 1 || got[0] != "the suite is green: 40 pass\n\nnothing more to add" || lab.owed() != 0 {
 		t.Fatalf("after the continuation web holds %q, %d owed", got, lab.owed())
 	}
 	if lab.kept() {
 		t.Error("the kept answer outlived its report")
 	}
-	if _, interim, _ := inbox.LastInterim(lab.dir, "api", lab.self.Epoch()); interim {
+	if _, interim, _ := mail.LastInterim(lab.dir, "api", lab.self.Epoch()); interim {
 		t.Error("the report left the run marked interim")
 	}
 }
 
 func TestAConfirmedContinuationThatMarksPendingKeepsTheTaskOwed(t *testing.T) {
 	lab := newInterimLab(t)
-	lab.confirm(t, lab.end("turn-2", 1, inbox.Finished, "half of the suite passed"))
+	lab.confirm(t, lab.end("turn-2", 1, mail.Finished, "half of the suite passed"))
 	if code, _, errOut := run("pending", "the second half is running"); code != ExitOK {
 		t.Fatalf("pending: %s", errOut)
 	}
-	lab.confirm(t, lab.end("turn-2b", 2, inbox.Finished, "marked"))
-	texts := lab.reportsOf(t, inbox.Interim)
+	lab.confirm(t, lab.end("turn-2b", 2, mail.Finished, "marked"))
+	texts := lab.reportsOf(t, mail.Interim)
 	if len(reportsTo(t, lab.dir, "web")) != 2 || !slices.Contains(texts, "the second half is running\n\nhalf of the suite passed\n\nmarked") || lab.owed() != 1 {
 		t.Fatalf("after the marked continuation web holds %q, %d owed", texts, lab.owed())
 	}
-	if reason := lab.confirm(t, lab.end("turn-3", 3, inbox.Finished, "all green")); !strings.Contains(reason, "the second half is running") {
+	if reason := lab.confirm(t, lab.end("turn-3", 3, mail.Finished, "all green")); !strings.Contains(reason, "the second half is running") {
 		t.Errorf("the next hold asks about %q", reason)
 	}
 }
@@ -106,10 +106,10 @@ func TestAConfirmedContinuationThatMarksPendingKeepsTheTaskOwed(t *testing.T) {
 // A failed and an interrupted continuation are never held, and each takes the
 // kept answer after its own line.
 func TestAFailedOrStoppedContinuationCarriesTheHeldAnswer(t *testing.T) {
-	for _, kind := range []inbox.Kind{inbox.Error, inbox.Stopped} {
+	for _, kind := range []mail.Kind{mail.Error, mail.Stopped} {
 		t.Run(string(kind), func(t *testing.T) {
 			lab := newInterimLab(t)
-			lab.confirm(t, lab.end("turn-2", 1, inbox.Finished, "the report"))
+			lab.confirm(t, lab.end("turn-2", 1, mail.Finished, "the report"))
 			if reason := lab.confirm(t, lab.end("turn-2b", 2, kind, "cut short")); reason != "" {
 				t.Fatalf("a %s continuation was held: %s", kind, reason)
 			}
@@ -125,11 +125,11 @@ func TestAFailedOrStoppedContinuationCarriesTheHeldAnswer(t *testing.T) {
 
 func TestAnAnswerHeldAndNeverContinuedGoesWithTheNextConfirmedEnd(t *testing.T) {
 	lab := newInterimLab(t)
-	lab.confirm(t, lab.end("turn-2", 1, inbox.Finished, "the lost report"))
-	if reason := lab.confirm(t, lab.end("turn-3", 2, inbox.Finished, "the next answer")); reason != "" {
+	lab.confirm(t, lab.end("turn-2", 1, mail.Finished, "the lost report"))
+	if reason := lab.confirm(t, lab.end("turn-3", 2, mail.Finished, "the next answer")); reason != "" {
 		t.Fatalf("a second hold with an answer kept: %q", reason)
 	}
-	if got := lab.reportsOf(t, inbox.Finished); len(got) != 1 || got[0] != "the lost report\n\nthe next answer" {
+	if got := lab.reportsOf(t, mail.Finished); len(got) != 1 || got[0] != "the lost report\n\nthe next answer" {
 		t.Fatalf("web holds %q", got)
 	}
 }
@@ -141,27 +141,27 @@ func TestAConfirmedEndIsHeldOnlyAfterAnInterimOne(t *testing.T) {
 	for _, c := range []struct {
 		name    string
 		prepare func(t *testing.T, lab interimLab)
-		kind    inbox.Kind
+		kind    mail.Kind
 	}{
 		{"after a report", func(t *testing.T, lab interimLab) {
 			if err := os.Remove(filepath.Join(state.InboxPath(lab.dir, "api"), "pending", "interim.json")); err != nil {
 				t.Fatal(err)
 			}
-		}, inbox.Finished},
+		}, mail.Finished},
 		{"marked in this turn", func(t *testing.T, lab interimLab) {
 			if err := markPending(lab.dir, "api", lab.self.Epoch(), "still going", markAt-1); err != nil {
 				t.Fatal(err)
 			}
-		}, inbox.Finished},
+		}, mail.Finished},
 		{"nobody waiting", func(t *testing.T, lab interimLab) {
-			for _, waiter := range inbox.Waiters(lab.dir, "api", lab.self.Epoch()) {
-				if err := inbox.ClearAwaiting(lab.dir, "api", lab.self.Epoch(), waiter); err != nil {
+			for _, waiter := range mail.Waiters(lab.dir, "api", lab.self.Epoch()) {
+				if err := mail.ClearAwaiting(lab.dir, "api", lab.self.Epoch(), waiter); err != nil {
 					t.Fatal(err)
 				}
 			}
-		}, inbox.Finished},
-		{"a failure", nil, inbox.Error},
-		{"a stop", nil, inbox.Stopped},
+		}, mail.Finished},
+		{"a failure", nil, mail.Error},
+		{"a stop", nil, mail.Stopped},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			lab := newInterimLab(t)
@@ -182,7 +182,7 @@ func TestAConfirmedEndIsHeldOnlyAfterAnInterimOne(t *testing.T) {
 	}
 	t.Run("through Publish", func(t *testing.T) {
 		lab := newInterimLab(t)
-		end := lab.end("turn-2", 1, inbox.Finished, "done")
+		end := lab.end("turn-2", 1, mail.Finished, "done")
 		end.Boundary = boundaryNow(t, lab.dir, lab.self)
 		if err := ReportCompletion(context.Background(), lab.dir, lab.self, end); err != nil {
 			t.Fatal(err)
@@ -224,14 +224,14 @@ func TestEveryFailureOfTheConfirmationCheckFallsToPublishing(t *testing.T) {
 				return nil
 			}
 			t.Cleanup(func() { state.Fault = nil })
-			if reason := lab.confirm(t, lab.end("turn-2", 1, inbox.Finished, "done")); reason != "" {
+			if reason := lab.confirm(t, lab.end("turn-2", 1, mail.Finished, "done")); reason != "" {
 				t.Fatalf("held despite the failure: %q", reason)
 			}
 			state.Fault = nil
 			if !failed {
 				t.Fatalf("nothing asked to %s %s", c.op, c.suffix)
 			}
-			if got := lab.reportsOf(t, inbox.Finished); len(got) != 1 || got[0] != "done" || lab.owed() != 0 || lab.kept() {
+			if got := lab.reportsOf(t, mail.Finished); len(got) != 1 || got[0] != "done" || lab.owed() != 0 || lab.kept() {
 				t.Fatalf("after the failure web holds %q, %d owed, kept %v", got, lab.owed(), lab.kept())
 			}
 		})
@@ -244,7 +244,7 @@ func TestAConfirmedEndWithoutItsEventIsRefused(t *testing.T) {
 	lab := newInterimLab(t)
 	for _, end := range []adapter.TurnEnd{
 		{Reason: adapter.Answered, Answer: "done", Boundary: boundaryNow(t, lab.dir, lab.self), Started: lab.start, Ended: markAt + 1},
-		lab.end("turn-2", 1, inbox.Finished, "done"),
+		lab.end("turn-2", 1, mail.Finished, "done"),
 	} {
 		if reason, err := ConfirmCompletion(context.Background(), lab.dir, lab.self, end); err == nil || reason != "" {
 			t.Fatalf("confirmed %+v: %q %v", end, reason, err)

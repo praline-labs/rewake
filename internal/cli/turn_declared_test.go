@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -35,12 +35,12 @@ func TestAnAttemptNotProvenInItsTurnIsMarkUnproven(t *testing.T) {
 	dir, self, _ := toolSession(t)
 	at := markAt
 	for _, test := range []struct {
-		scope inbox.AttemptScope
+		scope mail.AttemptScope
 		want  markVerdict
 	}{
-		{inbox.AttemptScope{}, markUnproven},
-		{inbox.AttemptScope{First: true}, markWrite},
-		{inbox.AttemptScope{InOwnTurn: true}, markWrite},
+		{mail.AttemptScope{}, markUnproven},
+		{mail.AttemptScope{First: true}, markWrite},
+		{mail.AttemptScope{InOwnTurn: true}, markWrite},
 	} {
 		got, err := judgeMark(dir, self, self.Epoch(), "mark-file", at, test.scope, 0)
 		if err != nil || got != test.want {
@@ -48,7 +48,7 @@ func TestAnAttemptNotProvenInItsTurnIsMarkUnproven(t *testing.T) {
 		}
 	}
 	// A later start proves the turn ended, whoever asks.
-	if got, _ := judgeMark(dir, self, self.Epoch(), "mark-file", at, inbox.AttemptScope{}, at+1); got != markTurnEnded {
+	if got, _ := judgeMark(dir, self, self.Epoch(), "mark-file", at, mail.AttemptScope{}, at+1); got != markTurnEnded {
 		t.Fatalf("a later start: %v", got)
 	}
 }

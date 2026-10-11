@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // threadedHarness learns its conversation from the harness's own state, as an
@@ -36,7 +36,7 @@ func TestTheWrapperPinsDeliveryToTheHarnessThread(t *testing.T) {
 		for time.Now().Before(end) {
 			session, err := registry.Lookup(dir, "api-fake")
 			if err == nil {
-				sent <- inbox.Put(dir, inbox.Message{ID: inbox.NewID(), From: "sender", FromEpoch: "2.2", To: "api-fake", ToEpoch: session.Epoch(), Text: "task", CreatedAt: time.Now()})
+				sent <- mail.Put(dir, mail.Message{ID: mail.NewID(), From: "sender", FromEpoch: "2.2", To: "api-fake", ToEpoch: session.Epoch(), Text: "task", CreatedAt: time.Now()})
 				return
 			}
 			time.Sleep(10 * time.Millisecond)
@@ -69,7 +69,7 @@ var (
 	_ adapter.ThreadSource = threadObserver{}
 )
 
-func (threadObserver) SessionState() sessionstate.Snapshot { return sessionstate.Unknown("") }
+func (threadObserver) SessionState() session.Snapshot { return session.Unknown("") }
 func (threadObserver) Start(context.Context, func(string)) error {
 	return nil
 }
@@ -99,7 +99,7 @@ func TestTheWrapperPinsDeliveryToTheObservedThread(t *testing.T) {
 		for time.Now().Before(end) {
 			session, err := registry.Lookup(dir, "api-fake")
 			if err == nil {
-				sent <- inbox.Put(dir, inbox.Message{ID: inbox.NewID(), From: "sender", FromEpoch: "2.2", To: "api-fake", ToEpoch: session.Epoch(), Text: "task", CreatedAt: time.Now()})
+				sent <- mail.Put(dir, mail.Message{ID: mail.NewID(), From: "sender", FromEpoch: "2.2", To: "api-fake", ToEpoch: session.Epoch(), Text: "task", CreatedAt: time.Now()})
 				return
 			}
 			time.Sleep(10 * time.Millisecond)

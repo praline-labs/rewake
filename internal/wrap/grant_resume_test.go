@@ -12,8 +12,8 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/grant"
-	"github.com/praline-labs/rewake/internal/grantauth"
-	"github.com/praline-labs/rewake/internal/grantauth/grantauthtest"
+	authority "github.com/praline-labs/rewake/internal/grantauth"
+	authoritytest "github.com/praline-labs/rewake/internal/grantauth/grantauthtest"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -36,30 +36,30 @@ func TestAResumedRunKeepsOnlyWhatMainConfirmsAgain(t *testing.T) {
 	main := ownEpoch(t)
 	lib, doc, forged := realDir(t), realDir(t), realDir(t)
 
-	authority, err := grantauth.Listen(state.AuthorityAddress(dir, main), os.Getpid(), time.Minute)
+	server, err := authority.Listen(state.AuthorityAddress(dir, main), os.Getpid(), time.Minute)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var closed atomic.Value
 	closed.Store("")
-	authority.Open = func(held grantauth.Grant) (bool, bool) { return held.ID != closed.Load(), true }
+	server.Open = func(held authority.Grant) (bool, bool) { return held.ID != closed.Load(), true }
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go authority.Serve(ctx)
-	defer authority.Close()
+	go server.Serve(ctx)
+	defer server.Close()
 	address := state.AuthorityAddress(dir, main)
 	grants := map[string][]string{"m1": {lib}, "m2": {doc}}
 	// The run before confirmed them at delivery, naming its conversation,
 	// and ended.
-	self := grantauth.Expect{PID: os.Getpid()}
+	self := authority.Expect{PID: os.Getpid()}
 	self.Start, _ = proc.StartTime(os.Getpid())
-	previous := grantauthtest.EndedRun(t, func(run string) {
+	previous := authoritytest.EndedRun(t, func(run string) {
 		for id, directories := range grants {
-			if err := grantauth.Register(address, grantauth.Grant{ID: id, To: "worker", ToEpoch: run, Dirs: directories}); err != nil {
+			if err := authority.Register(address, authority.Grant{ID: id, To: "worker", ToEpoch: run, Dirs: directories}); err != nil {
 				t.Fatal(err)
 			}
 		}
-	}, grantauthtest.Delivery{Dir: dir, Address: address, MainPID: self.PID, MainStart: self.Start, From: "lead", FromEpoch: main, To: "worker", Grants: grants, Threads: []string{"s1"}})
+	}, authoritytest.Delivery{Dir: dir, Address: address, MainPID: self.PID, MainStart: self.Start, From: "lead", FromEpoch: main, To: "worker", Grants: grants, Threads: []string{"s1"}})
 	closed.Store("m2")
 	copied := []grant.Entry{
 		{Path: lib, Message: "m1", Outcome: grant.Granted, Thread: "s1", From: "lead", FromEpoch: main},

@@ -8,15 +8,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 )
 
 // leaveUnread puts a message where a serving process puts one it has announced.
-func leaveUnread(t *testing.T, dir string, message inbox.Message) {
+func leaveUnread(t *testing.T, dir string, message mail.Message) {
 	t.Helper()
-	message.ID, message.CreatedAt = inbox.NewID(), time.Now()
+	message.ID, message.CreatedAt = mail.NewID(), time.Now()
 	unread := state.UnreadPath(dir, message.To)
 	if err := state.EnsureSubdir(state.InboxPath(dir, message.To)); err != nil {
 		t.Fatalf("mailbox: %v", err)
@@ -42,7 +42,7 @@ func epochOf(t *testing.T, dir, name string) string {
 func TestInboxShowsTheTextOnce(t *testing.T) {
 	dir := liveSession(t, "api")
 	t.Setenv(state.SessionEnv, "api")
-	leaveUnread(t, dir, inbox.Message{From: "web", To: "api", ToEpoch: epochOf(t, dir, "api"), Kind: inbox.Question, Text: "which port?"})
+	leaveUnread(t, dir, mail.Message{From: "web", To: "api", ToEpoch: epochOf(t, dir, "api"), Kind: mail.Question, Text: "which port?"})
 
 	code, out, errOut := run("inbox")
 	if code != ExitOK {
@@ -61,7 +61,7 @@ func TestInboxShowsTheTextOnce(t *testing.T) {
 func TestInboxLeavesAnEarlierSessionsMail(t *testing.T) {
 	dir := liveSession(t, "api")
 	t.Setenv(state.SessionEnv, "api")
-	leaveUnread(t, dir, inbox.Message{From: "web", To: "api", ToEpoch: "1.1", Text: "for someone else"})
+	leaveUnread(t, dir, mail.Message{From: "web", To: "api", ToEpoch: "1.1", Text: "for someone else"})
 
 	_, out, _ := run("inbox")
 	if strings.Contains(out, "for someone else") {
@@ -85,7 +85,7 @@ func TestTurnEndTellsTheSessionsThatWrote(t *testing.T) {
 	dir := liveSession(t, "api")
 	web := otherRun(t, dir, "web")
 	t.Setenv(state.SessionEnv, "api")
-	leaveUnread(t, dir, inbox.Message{From: "web", FromEpoch: web.Epoch(), To: "api", ToEpoch: epochOf(t, dir, "api"), Text: "rerun the smoke"})
+	leaveUnread(t, dir, mail.Message{From: "web", FromEpoch: web.Epoch(), To: "api", ToEpoch: epochOf(t, dir, "api"), Text: "rerun the smoke"})
 	if code, _, errOut := run("inbox"); code != ExitOK {
 		t.Fatalf("inbox exit = %d (%s)", code, errOut)
 	}
@@ -98,11 +98,11 @@ func TestTurnEndTellsTheSessionsThatWrote(t *testing.T) {
 		t.Fatalf("web holds %v, want one finished notice", waiting)
 	}
 	raw, _ := os.ReadFile(waiting[0])
-	var notice inbox.Message
+	var notice mail.Message
 	if err := json.Unmarshal(raw, &notice); err != nil {
 		t.Fatalf("notice: %v", err)
 	}
-	if notice.Kind != inbox.Finished || notice.From != "api" || notice.Text != "the smoke is green" || notice.ToEpoch != web.Epoch() {
+	if notice.Kind != mail.Finished || notice.From != "api" || notice.Text != "the smoke is green" || notice.ToEpoch != web.Epoch() {
 		t.Errorf("notice = %+v, want a finished message from api with the last reply, for this run of web", notice)
 	}
 
@@ -119,7 +119,7 @@ func TestTurnEndReportsEvenAfterADirectMessage(t *testing.T) {
 	dir := liveSession(t, "api")
 	web := otherRun(t, dir, "web")
 	t.Setenv(state.SessionEnv, "api")
-	leaveUnread(t, dir, inbox.Message{From: "web", FromEpoch: web.Epoch(), To: "api", ToEpoch: epochOf(t, dir, "api"), Text: "rerun the smoke"})
+	leaveUnread(t, dir, mail.Message{From: "web", FromEpoch: web.Epoch(), To: "api", ToEpoch: epochOf(t, dir, "api"), Text: "rerun the smoke"})
 	run("inbox")
 	run("send", "web", "started", "--wait", "0")
 

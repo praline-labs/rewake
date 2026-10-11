@@ -5,7 +5,7 @@ package fixture
 import (
 	"time"
 
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // compactions is what the adapter keeps of the program's compactions: how many
@@ -14,8 +14,8 @@ import (
 // the program's — and published only while Control and Telemetry are live.
 type compactions struct {
 	count    uint64
-	events   []sessionstate.CompactionEvent
-	outcomes []sessionstate.CompactionOutcome
+	events   []session.CompactionEvent
+	outcomes []session.CompactionOutcome
 }
 
 // maxCompactionEvents bounds the cues a snapshot carries, as Claude Code's
@@ -34,7 +34,7 @@ func (b *backend) compacted(l *link, frame Frame) {
 	now := time.Now()
 	if frame.Outcome == "done" {
 		b.compact.count++
-		b.compact.events = append(b.compact.events, sessionstate.CompactionEvent{
+		b.compact.events = append(b.compact.events, session.CompactionEvent{
 			Sequence: b.compact.count, ObservedAt: now, RequestedBy: frame.From, Request: frame.Request,
 		})
 		if len(b.compact.events) > maxCompactionEvents {
@@ -42,7 +42,7 @@ func (b *backend) compacted(l *link, frame Frame) {
 		}
 	}
 	if frame.Request != "" && frame.From != "" {
-		b.compact.outcomes = sessionstate.KeepOutcome(b.compact.outcomes, sessionstate.CompactionOutcome{
+		b.compact.outcomes = session.KeepOutcome(b.compact.outcomes, session.CompactionOutcome{
 			Request: frame.Request, RequestedBy: frame.From, Outcome: frame.Outcome, Reason: frame.Reason,
 			Detail: frame.Detail, TokensBefore: frame.TokensBefore, TokensAfter: frame.TokensAfter, EndedAt: now,
 		})
@@ -52,12 +52,12 @@ func (b *backend) compacted(l *link, frame Frame) {
 // publishCompactions adds the compactions to a snapshot taken under b.mu
 // while Control is live: the count is known only from a program that can
 // compact on request.
-func (b *backend) publishCompactions(snapshot *sessionstate.Snapshot) {
+func (b *backend) publishCompactions(snapshot *session.Snapshot) {
 	if !b.live[Control] {
 		return
 	}
 	count := b.compact.count
 	snapshot.Compactions, snapshot.Coverage = &count, "observed"
-	snapshot.CompactionEvents = append([]sessionstate.CompactionEvent{}, b.compact.events...)
-	snapshot.CompactionOutcomes = append([]sessionstate.CompactionOutcome{}, b.compact.outcomes...)
+	snapshot.CompactionEvents = append([]session.CompactionEvent{}, b.compact.events...)
+	snapshot.CompactionOutcomes = append([]session.CompactionOutcome{}, b.compact.outcomes...)
 }

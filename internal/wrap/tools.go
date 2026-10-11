@@ -13,7 +13,7 @@ import (
 	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
 	"github.com/praline-labs/rewake/internal/host/launch"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -35,7 +35,7 @@ type MailTool struct {
 // which costs the tool and never the session.
 type mailTool struct {
 	endpoint   *endpoint.Endpoint
-	clock      *inbox.ReadClock
+	clock      *mail.ReadClock
 	capability string
 	// keeper keeps the run's channel record, for a harness that offers a
 	// tool transport (docs/mail-bridge-channel.md): the endpoint's events,
@@ -53,7 +53,7 @@ type mailTool struct {
 }
 
 // config is the run's endpoint configuration.
-func (t *mailTool) config(request Request, name, epoch, transport string, clock *inbox.ReadClock) endpoint.Config {
+func (t *mailTool) config(request Request, name, epoch, transport string, clock *mail.ReadClock) endpoint.Config {
 	span, refusal := endpoint.DeadlineFor("", os.Getenv)
 	return endpoint.Config{
 		Dir: request.Dir, Name: name, Epoch: epoch, Transport: transport,
@@ -82,7 +82,7 @@ func startMailTool(request Request, name, epoch string) *mailTool {
 	if _, err := rand.Read(secret); err != nil {
 		return tool
 	}
-	clock, err := inbox.OpenReadClock(context.Background(), request.Dir, name, epoch)
+	clock, err := mail.OpenReadClock(context.Background(), request.Dir, name, epoch)
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, "rewake: the mail tool is not served: "+err.Error())
 		return tool
@@ -147,7 +147,7 @@ func (t *mailTool) exchanged(live []adapter.Capability) {
 // serves and whose ends are captured through the tool's gate, when the run
 // has one. A start goes to the endpoint's table only after record: one record
 // per start, and the endpoint records none of its own.
-func (t *mailTool) handler(record func(at int64), capture func() *inbox.ReadBoundary, publish func(context.Context, adapter.TurnEnd) error) adapter.TurnHandler {
+func (t *mailTool) handler(record func(at int64), capture func() *mail.ReadBoundary, publish func(context.Context, adapter.TurnEnd) error) adapter.TurnHandler {
 	handler := adapter.TurnHandler{Capture: capture, Publish: publish}
 	handler.Started = func(conversation, turn string, at int64) {
 		if at > 0 {

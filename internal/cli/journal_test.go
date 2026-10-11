@@ -10,23 +10,23 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/receipt"
 )
 
 // headsUps are the letters with this text waiting in web's mailbox.
-func headsUps(t *testing.T, dir, text string) []inbox.Message {
+func headsUps(t *testing.T, dir, text string) []mail.Message {
 	t.Helper()
-	var found []inbox.Message
+	var found []mail.Message
 	files, _ := filepath.Glob(filepath.Join(state.InboxPath(dir, "web"), "*.json"))
 	for _, file := range files {
 		raw, err := os.ReadFile(file)
 		if err != nil {
 			t.Fatal(err)
 		}
-		var message inbox.Message
+		var message mail.Message
 		if json.Unmarshal(raw, &message) == nil && message.Text == text {
 			found = append(found, message)
 		}
@@ -71,7 +71,7 @@ func expiredCall(t *testing.T, words ...string) (Call, *Context, *bytes.Buffer, 
 	now := boottime.Now()
 	var out, errOut bytes.Buffer
 	ctx := &Context{Stdout: &out, Stderr: &errOut, scope: &callScope{
-		ticket: bridge.Ticket{Conversation: "conversation-1", Turn: "turn-1", CallID: "late-" + inbox.NewID(), CalledBoot: now - 2, DeadlineBoot: now - 1, Transport: testTransport, TurnsNeverReused: true, Nonce: "nonce-late", WordsDigest: bridge.Digest(normal)},
+		ticket: bridge.Ticket{Conversation: "conversation-1", Turn: "turn-1", CallID: "late-" + mail.NewID(), CalledBoot: now - 2, DeadlineBoot: now - 1, Transport: testTransport, TurnsNeverReused: true, Nonce: "nonce-late", WordsDigest: bridge.Digest(normal)},
 		words:  normal, digest: bridge.Digest(normal),
 	}, table: testTable()}
 	return result.Call, ctx, &out, &errOut

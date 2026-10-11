@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/grant"
-	"github.com/praline-labs/rewake/internal/grantauth/grantauthtest"
-	"github.com/praline-labs/rewake/internal/inbox"
+	authoritytest "github.com/praline-labs/rewake/internal/grantauth/grantauthtest"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 )
 
 // Every directory these tests grant lies in a temporary directory, which the
@@ -16,8 +16,8 @@ import (
 // delivery, as its wrapper does, before anything is tested.
 func TestMain(m *testing.M) {
 	grant.TempRoots = func() []string { return nil }
-	grantauthtest.Child(func(run, id, thread string, delivery grantauthtest.Delivery) error {
-		letter := inbox.Message{ID: id, From: delivery.From, FromEpoch: delivery.FromEpoch, GrantDirs: delivery.Grants[id]}
+	authoritytest.Child(func(run, id, thread string, delivery authoritytest.Delivery) error {
+		letter := mail.Message{ID: id, From: delivery.From, FromEpoch: delivery.FromEpoch, GrantDirs: delivery.Grants[id]}
 		return confirmGrant(delivery.Dir, delivery.To, run, thread, letter)
 	})
 	os.Exit(m.Run())

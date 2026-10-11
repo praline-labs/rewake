@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 )
 
 // What a send does by the recipient's live set, the capabilities its run has
@@ -16,12 +16,12 @@ const unwoken = "accepted; no notice can reach this session, which reads its mai
 // accepted, exit 3, without waiting for a delivery no notice can make. The
 // letter stays in the mailbox, read when the session runs rewake inbox, and
 // noticed if a Wake becomes live before then.
-func reportUnwoken(ctx *Context, after sent, message inbox.Message) error {
+func reportUnwoken(ctx *Context, after sent, message mail.Message) error {
 	model := sendModel{
 		ID: message.ID, To: after.target.Name, From: message.From,
 		GrantGit: message.GrantGit, GrantDirs: message.GrantDirs, AlreadyWritable: after.writable,
 		Addenda: after.addenda, Replaces: message.Replaces, Named: after.named,
-		State: string(inbox.Pending), Detail: unwoken,
+		State: string(mail.Pending), Detail: unwoken,
 	}
 	if ctx.op != nil {
 		model.Receipt = ctx.op.record.Token

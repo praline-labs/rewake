@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 )
 
 // notification wraps the notice in the tag Claude Code uses for its own
@@ -14,20 +14,20 @@ import (
 //
 // Only the summary and the status are shown, and nothing else goes in: the
 // person watching the session should see exactly what the agent is told.
-func notification(message inbox.Message) string {
+func notification(message mail.Message) string {
 	status := "completed"
-	if inbox.NoticeKind(message) == inbox.Stopped {
+	if mail.NoticeKind(message) == mail.Stopped {
 		status = "killed"
 	}
-	if inbox.NoticeKind(message) == inbox.Error {
+	if mail.NoticeKind(message) == mail.Error {
 		status = "failed"
 	}
-	if inbox.NoticeKind(message) == inbox.Interim {
+	if mail.NoticeKind(message) == mail.Interim {
 		// Neither completed nor failed: the interface draws a status it has no
 		// color for as a plain line, which is what "still going" should look like.
 		status = "running"
 	}
-	summary := inbox.Notice(message)
+	summary := mail.Notice(message)
 	return strings.Join([]string{
 		"<task-notification>",
 		fmt.Sprintf("<task-id>%s</task-id>", noticeID(message)),
@@ -49,7 +49,7 @@ func escape(text string) string {
 // hex characters of the random tail, not four: the id only has to make
 // otherwise identical messages different, and a four-character tail repeats
 // often enough to matter.
-func noticeID(message inbox.Message) string {
+func noticeID(message mail.Message) string {
 	id := message.ID
 	if len(id) > 8 {
 		id = id[len(id)-8:]

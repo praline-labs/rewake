@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 )
 
@@ -109,9 +109,9 @@ func TestAMarkBetweenCaptureAndJournal(t *testing.T) {
 					}
 				}
 				switch {
-				case order.marked && (!strings.Contains(text, "marked pending") || report(r) != inbox.Interim):
+				case order.marked && (!strings.Contains(text, "marked pending") || report(r) != mail.Interim):
 					t.Fatalf("a mark before the journal: %q, the end reported %q", text, report(r))
-				case !order.marked && (!strings.Contains(text, "not marked") || report(r) != inbox.Finished):
+				case !order.marked && (!strings.Contains(text, "not marked") || report(r) != mail.Finished):
 					t.Fatalf("a mark after the journal: %q, the end reported %q", text, report(r))
 				}
 			})

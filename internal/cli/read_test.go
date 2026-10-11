@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
@@ -240,12 +240,12 @@ func TestTwoReadersAtOnceShowATaskOnce(t *testing.T) {
 func TestSendRereadsAStatusThatLandedLate(t *testing.T) {
 	liveSession(t, "api")
 	previous := awaitStatus
-	awaitStatus = func(dir, to, id string, _ time.Duration, _ func() bool) (inbox.Status, bool) {
+	awaitStatus = func(dir, to, id string, _ time.Duration, _ func() bool) (mail.Status, bool) {
 		// What the server does in that gap: announce, record, clear the copy.
 		status := filepath.Join(state.InboxPath(dir, to), id+".status")
 		_ = os.WriteFile(status, []byte(`{"state":"delivered","via":"socket","at":"2026-09-16T00:00:00Z"}`), 0o600)
 		_ = os.Remove(filepath.Join(state.InboxPath(dir, to), id+".json"))
-		return inbox.Status{}, false
+		return mail.Status{}, false
 	}
 	t.Cleanup(func() { awaitStatus = previous })
 

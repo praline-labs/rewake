@@ -7,13 +7,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	mail "github.com/praline-labs/rewake/internal/inbox"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 func TestActivityLabelsAndUnknownAreExplicit(t *testing.T) {
 	now := time.Now()
-	snapshot := sessionstate.Unknown("epoch")
+	snapshot := session.Unknown("epoch")
 	snapshot.Fresh = true
 	if got := activityText(&snapshot); got != "unknown" {
 		t.Fatal(got)
@@ -51,11 +51,11 @@ func TestActivityLabelsAndUnknownAreExplicit(t *testing.T) {
 	// A session whose interruptions go unheard says so; one that hears them
 	// adds nothing.
 	snapshot.Compacting = nil
-	snapshot.Interruptions = sessionstate.InterruptionsObserved
+	snapshot.Interruptions = session.InterruptionsObserved
 	if got := activityText(&snapshot); got != "working" {
 		t.Fatal(got)
 	}
-	snapshot.Interruptions = sessionstate.InterruptionsUnobserved
+	snapshot.Interruptions = session.InterruptionsUnobserved
 	if got := activityText(&snapshot); got != "working; interruptions unheard" {
 		t.Fatal(got)
 	}
@@ -68,14 +68,14 @@ func TestActivityLabelsAndUnknownAreExplicit(t *testing.T) {
 func TestCompactionRetrievalShowsLatestActivityWithoutEventTail(t *testing.T) {
 	for _, asJSON := range []bool{false, true} {
 		dir, self, peer := stateCaller(t, "main")
-		snapshot := sessionstate.Load(dir, peer.Name, peer.Epoch())
+		snapshot := session.Load(dir, peer.Name, peer.Epoch())
 		idle := "idle"
 		snapshot.Activity = &idle
-		snapshot.CompactionEvents = []sessionstate.CompactionEvent{{Sequence: 2, ObservedAt: time.Now()}}
-		if err := sessionstate.Save(dir, peer.Name, peer.Epoch(), snapshot); err != nil {
+		snapshot.CompactionEvents = []session.CompactionEvent{{Sequence: 2, ObservedAt: time.Now()}}
+		if err := session.Save(dir, peer.Name, peer.Epoch(), snapshot); err != nil {
 			t.Fatal(err)
 		}
-		leaveUnread(t, dir, inbox.Message{From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: inbox.Note, Text: "Rewake: context compacted (compaction 2).", Compaction: &inbox.CompactionNotice{Count: 2, ObservedAt: time.Now()}})
+		leaveUnread(t, dir, mail.Message{From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: mail.Note, Text: "Rewake: context compacted (compaction 2).", Compaction: &mail.CompactionNotice{Count: 2, ObservedAt: time.Now()}})
 		args := []string{"inbox"}
 		if asJSON {
 			args = append(args, "--json")
@@ -106,12 +106,12 @@ func TestDepartureFrozenStateIsMainOnlyAndNeverUsesReplacement(t *testing.T) {
 		for _, asJSON := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/json=%v", role, asJSON), func(t *testing.T) {
 				dir, self, peer := stateCaller(t, role)
-				frozen := sessionstate.Load(dir, peer.Name, peer.Epoch())
+				frozen := session.Load(dir, peer.Name, peer.Epoch())
 				frozen.Epoch = "old-epoch"
 				activity := "idle"
 				frozen.Activity = &activity
-				frozen.CompactionEvents = []sessionstate.CompactionEvent{{Sequence: 99, ObservedAt: time.Now()}}
-				leaveUnread(t, dir, inbox.Message{From: peer.Name, FromEpoch: "old-epoch", To: self.Name, ToEpoch: self.Epoch(), Kind: inbox.Note, Text: "Session is no longer available.", Departure: &inbox.DepartureNotice{Identity: inbox.Availability{Name: peer.Name, CWD: "/old"}, Reason: "not registered"}, SenderState: &frozen})
+				frozen.CompactionEvents = []session.CompactionEvent{{Sequence: 99, ObservedAt: time.Now()}}
+				leaveUnread(t, dir, mail.Message{From: peer.Name, FromEpoch: "old-epoch", To: self.Name, ToEpoch: self.Epoch(), Kind: mail.Note, Text: "Session is no longer available.", Departure: &mail.DepartureNotice{Identity: mail.Availability{Name: peer.Name, CWD: "/old"}, Reason: "not registered"}, SenderState: &frozen})
 				args := []string{"inbox"}
 				if asJSON {
 					args = append(args, "--json")

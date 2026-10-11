@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 )
@@ -23,7 +23,7 @@ import (
 // owes says whether api still owes id.
 func owes(t *testing.T, dir string, self registry.Session, id string) bool {
 	t.Helper()
-	waiters, err := inbox.ReadWaiters(dir, "api", self.Epoch())
+	waiters, err := mail.ReadWaiters(dir, "api", self.Epoch())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +61,7 @@ func sweepAsServer(t *testing.T, dir string, session registry.Session) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	stopped := make(chan struct{})
-	server := inbox.Server{Dir: dir, Name: session.Name, Epoch: session.Epoch(), Ready: cancel}
+	server := mail.Server{Dir: dir, Name: session.Name, Epoch: session.Epoch(), Ready: cancel}
 	go func() { server.Serve(ctx); close(stopped) }()
 	select {
 	case <-stopped:
@@ -76,11 +76,11 @@ func sweepAsServer(t *testing.T, dir string, session registry.Session) {
 // (docs/turn-end-recovery.md#pending-marks).
 func TestARecoveredPendingEndKeepsItsInterimOnRecord(t *testing.T) {
 	dir, self, web := toolSession(t)
-	task := readKind(t, dir, web, inbox.Task)
+	task := readKind(t, dir, web, mail.Task)
 	if err := markPending(dir, "api", self.Epoch(), "the suite is running", 100); err != nil {
 		t.Fatal(err)
 	}
-	event := inbox.TurnEnd{ID: "first", Text: "started", Started: 90, Ended: 110, Boundary: boundaryNow(t, dir, self)}
+	event := mail.TurnEnd{ID: "first", Text: "started", Started: 90, Ended: 110, Boundary: boundaryNow(t, dir, self)}
 	records := filepath.Join(state.InboxPath(dir, "api"), "pending")
 	previous := beforeReports
 	beforeReports = func() { _ = os.Chmod(records, 0o500) }
@@ -97,14 +97,14 @@ func TestARecoveredPendingEndKeepsItsInterimOnRecord(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, report := range reportsTo(t, dir, "web") {
-		if slices.Contains(report.InReplyTo, task) && inbox.KindOf(report) != inbox.Interim {
-			t.Fatalf("the pending end was reported as %s", inbox.KindOf(report))
+		if slices.Contains(report.InReplyTo, task) && mail.KindOf(report) != mail.Interim {
+			t.Fatalf("the pending end was reported as %s", mail.KindOf(report))
 		}
 	}
 	if answersTo(t, dir, task) != 1 || !owes(t, dir, self, task) {
 		t.Fatalf("reports %d, still owed %v", answersTo(t, dir, task), owes(t, dir, self, task))
 	}
-	if line, ok, err := inbox.LastInterim(dir, "api", self.Epoch()); err != nil || !ok || line != "the suite is running" {
+	if line, ok, err := mail.LastInterim(dir, "api", self.Epoch()); err != nil || !ok || line != "the suite is running" {
 		t.Fatalf("the interim end is not on record: %q %v %v", line, ok, err)
 	}
 }
@@ -116,7 +116,7 @@ func TestALateRetryAfterTheSweepPublishesNothing(t *testing.T) {
 		t.Run(string(kind), func(t *testing.T) {
 			dir, self, web := toolSession(t)
 			first := readKind(t, dir, web, kind)
-			event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT"}
+			event := mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT"}
 			if err := completeTurn(dir, self, event, ""); err != nil {
 				t.Fatal(err)
 			}
@@ -141,17 +141,17 @@ func TestALateRetryAfterTheSweepPublishesNothing(t *testing.T) {
 // is not answered with the first end's text.
 func TestARetryAnswersOnlyWhatItsFirstAttemptSaw(t *testing.T) {
 	dir, self, web := toolSession(t)
-	original := readKind(t, dir, web, inbox.Task)
+	original := readKind(t, dir, web, mail.Task)
 	readOnlyJournals(t, dir)
-	event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT"}
+	event := mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT"}
 	if completeTurn(dir, self, event, "") == nil {
 		t.Fatal("the journal was not refused")
 	}
 	writableJournals(t, dir)
-	if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "second", Text: "the second is done"}, ""); err != nil {
+	if err := completeTurn(dir, self, mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "second", Text: "the second is done"}, ""); err != nil {
 		t.Fatal(err)
 	}
-	fresh := readKind(t, dir, web, inbox.Question)
+	fresh := readKind(t, dir, web, mail.Question)
 	if err := completeTurn(dir, self, event, ""); err != nil {
 		t.Fatal(err)
 	}

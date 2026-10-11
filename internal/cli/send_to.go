@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 )
 
@@ -18,7 +18,7 @@ func addendumRoot(call Call, dir string, kind messageKind, target registry.Sessi
 	if reference == "" {
 		return "", nil
 	}
-	if kind.kind != inbox.Task {
+	if kind.kind != mail.Task {
 		return "", &UsageError{Command: call.Command, Message: "--to adds to a task already sent and is a task itself; it excludes " + kind.flag.Flag + "."}
 	}
 	if _, grant := call.Flags["grant-git"]; grant {
@@ -42,26 +42,26 @@ func addendumRoot(call Call, dir string, kind messageKind, target registry.Sessi
 // to an addendum adds to the task they both belong to — and, for a letter
 // rewake edit replaced, what replaced it, through every edit since. Two steps
 // at most: from an edited addendum to its replacement, then to its task.
-func rootOf(dir string, self registry.Session, epoch string, message inbox.Message, target registry.Session) (inbox.Message, error) {
+func rootOf(dir string, self registry.Session, epoch string, message mail.Message, target registry.Session) (mail.Message, error) {
 	current := message
 	for range 2 {
 		id := current.ID
 		if current.AddendumTo != "" {
 			id = current.AddendumTo
 		}
-		id, err := inbox.CurrentTask(dir, current.To, id)
+		id, err := mail.CurrentTask(dir, current.To, id)
 		if err != nil {
-			return inbox.Message{}, unreadableTask(message, err)
+			return mail.Message{}, unreadableTask(message, err)
 		}
 		if id == current.ID {
 			return current, nil
 		}
-		matches, err := inbox.SentMatching(dir, self.Name, epoch, id)
+		matches, err := mail.SentMatching(dir, self.Name, epoch, id)
 		if err != nil {
-			return inbox.Message{}, unreadableTask(message, err)
+			return mail.Message{}, unreadableTask(message, err)
 		}
 		if len(matches) != 1 || matches[0].ID != id {
-			return inbox.Message{}, failf("the task %s, which %s leads to, is no longer kept; send a new task with: rewake send %s \"...\"", id, message.ID, target.Name)
+			return mail.Message{}, failf("the task %s, which %s leads to, is no longer kept; send a new task with: rewake send %s \"...\"", id, message.ID, target.Name)
 		}
 		current = matches[0]
 	}
@@ -80,7 +80,7 @@ var beforeAddendumLock = func() {}
 // before this look, which then refuses, or after the addendum is in the
 // mailbox — read with the task and settled by that report, or read after it
 // and owed on its own.
-func underAddendumLock(dir string, self registry.Session, epoch string, addendum inbox.Message, target registry.Session, write func() error) error {
+func underAddendumLock(dir string, self registry.Session, epoch string, addendum mail.Message, target registry.Session, write func() error) error {
 	beforeAddendumLock()
 	return underMailboxLock(dir, target.Name, func() error {
 		root, err := rootOf(dir, self, epoch, addendum, target)
@@ -96,8 +96,8 @@ func underAddendumLock(dir string, self registry.Session, epoch string, addendum
 
 // writeSent puts a new message into its recipient's mailbox; an addendum goes
 // in under the lock, with its task asked again.
-func writeSent(dir string, self registry.Session, epoch string, message inbox.Message, target registry.Session) error {
-	write := func() error { return inbox.Put(dir, message) }
+func writeSent(dir string, self registry.Session, epoch string, message mail.Message, target registry.Session) error {
+	write := func() error { return mail.Put(dir, message) }
 	var err error
 	if message.AddendumTo == "" {
 		err = write()
@@ -114,44 +114,44 @@ func writeSent(dir string, self registry.Session, epoch string, message inbox.Me
 // addendumRefusal says why nothing more can be added to a task, or nil when
 // a report on it can still come. rewake edit asks it again of an addendum it
 // replaces: the task may have been reported on since the addendum was sent.
-func addendumRefusal(dir string, self registry.Session, epoch string, root inbox.Message, target registry.Session) error {
+func addendumRefusal(dir string, self registry.Session, epoch string, root mail.Message, target registry.Session) error {
 	next := fmt.Sprintf("rewake send %s \"...\"", target.Name)
 	switch {
 	case root.To != target.Name:
 		return failf("%s went to %s, not %s; add to it with: rewake send %s \"...\" --to %s", root.ID, root.To, target.Name, root.To, shortRef(root.ID))
 	case root.Withdrawn != nil:
 		return failf("your %s %s was withdrawn; send a new task with: %s", root.Withdrawn.Kind, root.ID, next)
-	case !inbox.AsksForWork(root):
-		return failf("%s is a %s, which owes nothing to add to; send another with: %s --notify", root.ID, inbox.KindOf(root), next)
+	case !mail.AsksForWork(root):
+		return failf("%s is a %s, which owes nothing to add to; send another with: %s --notify", root.ID, mail.KindOf(root), next)
 	}
-	item, settled, err := inbox.AwaitedOne(dir, self.Name, epoch, root, func(recipient, run string) inbox.RecipientRun {
+	item, settled, err := mail.AwaitedOne(dir, self.Name, epoch, root, func(recipient, run string) mail.RecipientRun {
 		live, err := registry.LookupReadOnly(dir, recipient)
 		switch {
 		case err == nil && live.Epoch() == run:
-			return inbox.RunLive
+			return mail.RunLive
 		case err == nil || !errors.Is(err, registry.ErrNotFound):
-			return inbox.RunReplaced
+			return mail.RunReplaced
 		}
-		return inbox.RunEnded
+		return mail.RunEnded
 	})
 	switch {
 	case err != nil:
 		return unreadableTask(root, err)
 	case settled:
-		return failf("%s has already reported on your %s %s; send the addition as a new task: %s", target.Name, inbox.KindOf(root), root.ID, next)
+		return failf("%s has already reported on your %s %s; send the addition as a new task: %s", target.Name, mail.KindOf(root), root.ID, next)
 	case !item.Gone() && root.ToEpoch != target.Epoch():
 		// The work may still be finished by the run that resumes, or has
 		// resumed, its conversation; an addition cannot follow it there.
-		return failf("the session run your %s %s was written for has ended, and an addition cannot reach the run that resumes its conversation, which may still report on it; wait for that report before sending anything again, or send a separate task with: %s", inbox.KindOf(root), root.ID, next)
+		return failf("the session run your %s %s was written for has ended, and an addition cannot reach the run that resumes its conversation, which may still report on it; wait for that report before sending anything again, or send a separate task with: %s", mail.KindOf(root), root.ID, next)
 	case item.Gone() || root.ToEpoch != target.Epoch():
-		return failf("the session run your %s %s was written for has ended, so no report on it is coming; send a new task with: %s", inbox.KindOf(root), root.ID, next)
-	case item.Stage == inbox.StageFailed:
-		return failf("your %s %s was not delivered to %s; send the task again, with the addition, as: %s", inbox.KindOf(root), root.ID, target.Name, next)
-	case inbox.CarriesGrant(root) && (item.Stage == inbox.StageUndelivered || item.Stage == inbox.StageHeld):
+		return failf("the session run your %s %s was written for has ended, so no report on it is coming; send a new task with: %s", mail.KindOf(root), root.ID, next)
+	case item.Stage == mail.StageFailed:
+		return failf("your %s %s was not delivered to %s; send the task again, with the addition, as: %s", mail.KindOf(root), root.ID, target.Name, next)
+	case mail.CarriesGrant(root) && (item.Stage == mail.StageUndelivered || item.Stage == mail.StageHeld):
 		// A task carrying a grant waits for its reader to be idle, and an
 		// addendum does not: it would be read first, and worked on without
 		// the grant (docs/grants.md#delivery).
-		return failf("your %s %s carries a grant and waits for %s to be idle, so an addition would reach it first; change the task itself with: rewake edit %s \"...\"", inbox.KindOf(root), root.ID, target.Name, shortRef(root.ID))
+		return failf("your %s %s carries a grant and waits for %s to be idle, so an addition would reach it first; change the task itself with: rewake edit %s \"...\"", mail.KindOf(root), root.ID, target.Name, shortRef(root.ID))
 	}
 	return nil
 }
@@ -159,6 +159,6 @@ func addendumRefusal(dir string, self registry.Session, epoch string, root inbox
 // unreadableTask refuses an addition while the task it would add to, or where
 // that task stands, cannot be read: the task may have been answered or
 // replaced, and an addition on a guess could owe a second report.
-func unreadableTask(task inbox.Message, err error) error {
-	return failf("could not read where your %s %s stands (%v), so nothing was added to it; run the same command again", inbox.KindOf(task), task.ID, err)
+func unreadableTask(task mail.Message, err error) error {
+	return failf("could not read where your %s %s stands (%v), so nothing was added to it; run the same command again", mail.KindOf(task), task.ID, err)
 }

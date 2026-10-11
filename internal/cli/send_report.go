@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 )
 
 // reportSent waits for the delivery result of a message just written and
 // prints it, then hands over to what its kind does next — a question waits
 // for its answer.
-func reportSent(ctx *Context, after sent, message inbox.Message, kind messageKind, wait time.Duration) error {
+func reportSent(ctx *Context, after sent, message mail.Message, kind messageKind, wait time.Duration) error {
 	dir, session := after.dir, after.target
 	// A kind that waits for something after the delivery — a question's
 	// answer — gives the delivery a few seconds of its wait at most; any other
@@ -32,28 +32,28 @@ func reportSent(ctx *Context, after sent, message inbox.Message, kind messageKin
 	var answered bool
 	var unknown error
 	if !known {
-		status, known, unknown = inbox.ReadStatus(dir, session.Name, message.ID)
+		status, known, unknown = mail.ReadStatus(dir, session.Name, message.ID)
 		known = known && unknown == nil
 	}
 	if !known && unknown == nil {
-		answered, unknown = inbox.Answered(dir, session.Name, message.ID)
+		answered, unknown = mail.Answered(dir, session.Name, message.ID)
 	}
 	if answered {
 		// The message left the mailbox, and a status may have been written
 		// after the wait gave up. Absent a moment ago is not absent now:
 		// calling a fresh delivery lost sends the sender to do it twice.
-		status, known, unknown = inbox.ReadStatus(dir, session.Name, message.ID)
+		status, known, unknown = mail.ReadStatus(dir, session.Name, message.ID)
 		known = known && unknown == nil
 	}
 	if known {
 		model.GrantApplied = status.GrantApplied
 	}
 	switch {
-	case known && status.State == inbox.Read:
+	case known && status.State == mail.Read:
 		// Read already, which is delivered and then some.
-		model.State, model.Via = string(inbox.Delivered), status.Via
+		model.State, model.Via = string(mail.Delivered), status.Via
 		model.Detail = "already read"
-	case known && status.State != inbox.Pending && status.State != inbox.Held:
+	case known && status.State != mail.Pending && status.State != mail.Held:
 		model.State, model.Via, model.Detail = string(status.State), status.Via, status.Detail
 	default:
 		// No final answer. Held is none either: it waits for the session that
@@ -67,18 +67,18 @@ func reportSent(ctx *Context, after sent, message inbox.Message, kind messageKin
 		// None of that holds for a result that could not be read: it may say
 		// delivered or read, whoever holds the name now.
 		if unknown != nil {
-			model.State = string(inbox.Pending)
+			model.State = string(mail.Pending)
 			model.Detail = fmt.Sprintf("its result could not be read (%v); the session has it, and rewake inbox --awaited shows where it stands", unknown)
 			break
 		}
 		current, err := registry.Lookup(dir, session.Name)
 		if errors.Is(err, registry.ErrNotFound) {
-			model.State = string(inbox.Failed)
+			model.State = string(mail.Failed)
 			model.Detail = "the session ended before the message was delivered"
 			break
 		}
 		if err == nil && current.Epoch() != session.Epoch() {
-			model.State = string(inbox.Failed)
+			model.State = string(mail.Failed)
 			model.Detail = "the session ended and another one took its name before the message was delivered"
 			break
 		}
@@ -86,15 +86,15 @@ func reportSent(ctx *Context, after sent, message inbox.Message, kind messageKin
 			// The message is out of the mailbox but has no status: it was
 			// answered long enough ago that the answer is no longer kept.
 			// Saying "pending" here would promise a delivery that has happened.
-			model.State = string(inbox.Failed)
+			model.State = string(mail.Failed)
 			model.Detail = "this message was answered earlier and the result is no longer kept"
 			break
 		}
-		if known && status.State == inbox.Held {
-			model.State, model.Via, model.Detail = string(inbox.Held), status.Via, status.Detail
+		if known && status.State == mail.Held {
+			model.State, model.Via, model.Detail = string(mail.Held), status.Via, status.Detail
 			break
 		}
-		model.State = string(inbox.Pending)
+		model.State = string(mail.Pending)
 		if known && status.Detail != "" {
 			model.Detail = status.Detail
 		} else {
@@ -102,7 +102,7 @@ func reportSent(ctx *Context, after sent, message inbox.Message, kind messageKin
 		}
 	}
 
-	if inbox.State(model.State) != inbox.Failed && kind.after != nil {
+	if mail.State(model.State) != mail.Failed && kind.after != nil {
 		// The id before the wait, which may be long: it is what an edit or an
 		// addendum to this message takes while the sender still waits.
 		if !ctx.JSON {
@@ -115,7 +115,7 @@ func reportSent(ctx *Context, after sent, message inbox.Message, kind messageKin
 }
 
 // awaitStatus waits for the status of a message; replaceable in tests.
-var awaitStatus = inbox.Await
+var awaitStatus = mail.Await
 
 // recipientRunning says whether the run a message was written for still runs,
 // so a long --wait ends with it. A run in another pid namespace cannot be

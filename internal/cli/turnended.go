@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 )
@@ -15,11 +15,11 @@ import (
 // it through the hidden turn-ended command until S9; S14 moves these to the
 // core.
 
-func completeTurn(dir string, self registry.Session, event inbox.TurnEnd, currentThread string) error {
+func completeTurn(dir string, self registry.Session, event mail.TurnEnd, currentThread string) error {
 	return completeTurnContext(context.Background(), dir, self, event, currentThread)
 }
 
-func completeTurnContext(parent context.Context, dir string, self registry.Session, event inbox.TurnEnd, currentThread string) error {
+func completeTurnContext(parent context.Context, dir string, self registry.Session, event mail.TurnEnd, currentThread string) error {
 	_, err := endTurnContext(parent, dir, self, event, false, currentThread)
 	return err
 }
@@ -28,7 +28,7 @@ func completeTurnContext(parent context.Context, dir string, self registry.Sessi
 // (turn_hold.go): then it publishes nothing and answers the reason to hand
 // the model. holdable says the end may be held at all, which only the
 // harness that reported it can say.
-func endTurnContext(parent context.Context, dir string, self registry.Session, event inbox.TurnEnd, holdable bool, currentThread string) (string, error) {
+func endTurnContext(parent context.Context, dir string, self registry.Session, event mail.TurnEnd, holdable bool, currentThread string) (string, error) {
 	if !registry.OwnsName(dir, self.Name, self.Epoch()) {
 		return "", nil
 	}
@@ -50,7 +50,7 @@ func endTurnContext(parent context.Context, dir string, self registry.Session, e
 		// Every record of the mailbox is reconciled first: a wait an
 		// unfinished journal answered would be answered again, and a stopped
 		// mailbox changes nothing (docs/turn-end-recovery.md#reconciliation).
-		if err := inbox.Reconcile(ctx, dir, self.Name); err != nil {
+		if err := mail.Reconcile(ctx, dir, self.Name); err != nil {
 			return err
 		}
 		op := turnOp(self, event)
@@ -61,20 +61,20 @@ func endTurnContext(parent context.Context, dir string, self registry.Session, e
 			// journal that took its kept answer, so it was published with its
 			// continuation. Only an end of another identity takes a kept
 			// answer.
-			recorded, err := inbox.JournalRecorded(dir, self.Name, op)
+			recorded, err := mail.JournalRecorded(dir, self.Name, op)
 			if err != nil || recorded {
 				return err
 			}
-			held, ok, err := inbox.HeldEnd(dir, self.Name, self.Epoch(), op)
+			held, ok, err := mail.HeldEnd(dir, self.Name, self.Epoch(), op)
 			if err != nil || ok {
 				reason = held
 				return err
 			}
-			if taken, err := inbox.HeldEndTaken(dir, self.Name, self.Epoch(), op); err != nil || taken {
+			if taken, err := mail.HeldEndTaken(dir, self.Name, self.Epoch(), op); err != nil || taken {
 				return err
 			}
 		}
-		waiters, err := inbox.ScopedWaiters(dir, self.Name, self.Epoch(), event.Boundary)
+		waiters, err := mail.ScopedWaiters(dir, self.Name, self.Epoch(), event.Boundary)
 		if err != nil {
 			return err
 		}
@@ -95,15 +95,15 @@ func endTurnContext(parent context.Context, dir string, self registry.Session, e
 // in the end's window (docs/turn-end-recovery.md#pending-marks). Only a
 // finish is softened by one, and an end whose time is not known has no
 // window. A mark that cannot be read may be this turn's, and stops the end.
-func turnMark(dir string, self registry.Session, event inbox.TurnEnd) (*inbox.Mark, error) {
+func turnMark(dir string, self registry.Session, event mail.TurnEnd) (*mail.Mark, error) {
 	if event.Failed || event.Stopped || event.Ended == 0 {
 		return nil, nil
 	}
-	start, err := inbox.TurnWindowStart(dir, self.Name, self.Epoch(), event.Started, event.Ended)
+	start, err := mail.TurnWindowStart(dir, self.Name, self.Epoch(), event.Started, event.Ended)
 	if err != nil {
 		return nil, err
 	}
-	mark, ok, err := inbox.MarkWithin(dir, self.Name, self.Epoch(), start, event.Ended)
+	mark, ok, err := mail.MarkWithin(dir, self.Name, self.Epoch(), start, event.Ended)
 	if err != nil || !ok {
 		return nil, err
 	}

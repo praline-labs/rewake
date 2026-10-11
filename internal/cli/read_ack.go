@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/receipt"
 	"github.com/praline-labs/rewake/internal/registry"
@@ -41,7 +41,7 @@ const ackBudget = 2 * time.Second
 // terms. Whether the result is whole is decided first, as before anything is
 // read, and the digest of its text is only compared once the record is.
 func AcknowledgeRead(dir, name, epoch, token string, evidence bridge.Exposure, gate bridge.EndGate) error {
-	read := inbox.ReadEvidence{CallID: evidence.CallID, Whole: evidence.Whole()}
+	read := mail.ReadEvidence{CallID: evidence.CallID, Whole: evidence.Whole()}
 	if evidence.Answer != nil {
 		read.AnswerDigest = bridge.AnswerDigest(evidence.Answer)
 	}
@@ -58,7 +58,7 @@ func AcknowledgeRead(dir, name, epoch, token string, evidence bridge.Exposure, g
 // and 8). It is idempotent: an acknowledgment seen twice changes nothing the
 // second time, and a letter is marked once. A nil gate stands for a process
 // that captures no ends.
-func acknowledgeRead(dir, name, epoch, token string, evidence inbox.ReadEvidence, gate inbox.EndGate) error {
+func acknowledgeRead(dir, name, epoch, token string, evidence mail.ReadEvidence, gate mail.EndGate) error {
 	if !evidence.Whole {
 		return ErrNotWhole
 	}
@@ -94,10 +94,10 @@ func acknowledgeRead(dir, name, epoch, token string, evidence inbox.ReadEvidence
 	var ended bool
 	err = state.WithMailboxLock(budget, dir, name, func() error {
 		// The check: before the first write, the receipt's included.
-		if err := inbox.MailboxStopped(dir, name); err != nil {
+		if err := mail.MailboxStopped(dir, name); err != nil {
 			return err
 		}
-		onRecord, err := inbox.EndedSince(dir, name, epoch, calledBoot)
+		onRecord, err := mail.EndedSince(dir, name, epoch, calledBoot)
 		if err != nil {
 			return err
 		}
@@ -135,7 +135,7 @@ func acknowledgeRead(dir, name, epoch, token string, evidence inbox.ReadEvidence
 // the parts it carried, and the call's time: every entry of the call names the
 // digest of exactly the text in the result. An entry with no digest was
 // recorded by a build that kept none, and proves nothing.
-func answeredBy(batch *receipt.ReadBatch, evidence inbox.ReadEvidence) (int64, bool) {
+func answeredBy(batch *receipt.ReadBatch, evidence mail.ReadEvidence) (int64, bool) {
 	if evidence.AnswerDigest == "" {
 		return 0, false
 	}
@@ -182,7 +182,7 @@ func settleLetters(site readSite, record *receipt.Record, carried func(letter, p
 	defer cancel()
 	err := state.WithMailboxLock(wait, site.dir, site.self.Name, func() error {
 		// A read frozen before the mailbox stopped is not marked read after.
-		if err := inbox.MailboxStopped(site.dir, site.self.Name); err != nil {
+		if err := mail.MailboxStopped(site.dir, site.self.Name); err != nil {
 			return err
 		}
 		return markWhole(site.dir, site.self, site.epoch, record.Read, reports)
@@ -204,7 +204,7 @@ func markWhole(dir string, self registry.Session, epoch string, batch *receipt.R
 		if letter.Read || !letter.Complete() {
 			continue
 		}
-		if !inbox.StillUnread(dir, self.Name, letter.ID) {
+		if !mail.StillUnread(dir, self.Name, letter.ID) {
 			// Read already, through another call or the shell: a letter
 			// shown in part leaves unread/ only so. Marking the stored copy
 			// again would owe its report a second time once the first
@@ -212,11 +212,11 @@ func markWhole(dir string, self registry.Session, epoch string, batch *receipt.R
 			letter.Read = true
 			continue
 		}
-		var message inbox.Message
+		var message mail.Message
 		if err := json.Unmarshal(letter.Message, &message); err != nil {
 			return fmt.Errorf("the read's copy of %s is not readable: %w", letter.ID, err)
 		}
-		if err := inbox.MarkRead(dir, self.Name, epoch, message, reports); err != nil {
+		if err := mail.MarkRead(dir, self.Name, epoch, message, reports); err != nil {
 			return err
 		}
 		letter.Read = true

@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/grantauth"
-	"github.com/praline-labs/rewake/internal/inbox"
+	authority "github.com/praline-labs/rewake/internal/grantauth"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 )
@@ -133,10 +133,10 @@ func playGrantForgery(t *testing.T, c *Case, iso *Isolation) []telemetryFinding 
 			"exit %d, answered %v, a letter written %v: %q", code, ok, written, printed))
 	}
 
-	raw := inbox.Message{ID: inbox.NewID(), From: lead.name, FromEpoch: leadRun, To: worker.name, ToEpoch: workerRun, Kind: inbox.Task, Text: rawRegisterText, GrantDirs: []string{granted[obsRawRegister]}, CreatedAt: time.Now()}
+	raw := mail.Message{ID: mail.NewID(), From: lead.name, FromEpoch: leadRun, To: worker.name, ToEpoch: workerRun, Kind: mail.Task, Text: rawRegisterText, GrantDirs: []string{granted[obsRawRegister]}, CreatedAt: time.Now()}
 	registered, registerErr := registerRaw(room, raw)
-	hand := inbox.Message{ID: inbox.NewID(), From: lead.name, FromEpoch: leadRun, To: worker.name, ToEpoch: workerRun, Kind: inbox.Task, Text: handLetterText, GrantDirs: []string{granted[obsHandLetter]}, CreatedAt: time.Now()}
-	foreign := inbox.Message{ID: inbox.NewID(), From: lead.name, FromEpoch: workerRun, To: worker.name, ToEpoch: workerRun, Kind: inbox.Task, Text: foreignAnswerText, GrantDirs: []string{granted[obsForeignAnswer]}, CreatedAt: time.Now()}
+	hand := mail.Message{ID: mail.NewID(), From: lead.name, FromEpoch: leadRun, To: worker.name, ToEpoch: workerRun, Kind: mail.Task, Text: handLetterText, GrantDirs: []string{granted[obsHandLetter]}, CreatedAt: time.Now()}
+	foreign := mail.Message{ID: mail.NewID(), From: lead.name, FromEpoch: workerRun, To: worker.name, ToEpoch: workerRun, Kind: mail.Task, Text: foreignAnswerText, GrantDirs: []string{granted[obsForeignAnswer]}, CreatedAt: time.Now()}
 	letters := []string{obsRawRegister, obsHandLetter, obsForeignAnswer}
 	if registerErr != nil {
 		return append(out, unjudgedAll(letters, "main's address could not be asked: %v", registerErr)...)
@@ -146,14 +146,14 @@ func playGrantForgery(t *testing.T, c *Case, iso *Isolation) []telemetryFinding 
 		return append(out, unjudgedAll(letters, "the other listener could not start: %v", listenErr)...)
 	}
 	defer stop()
-	for _, letter := range []inbox.Message{raw, hand, foreign} {
-		if err := inbox.Put(room, letter); err != nil {
+	for _, letter := range []mail.Message{raw, hand, foreign} {
+		if err := mail.Put(room, letter); err != nil {
 			return append(out, unjudgedAll(letters, "cannot write the letter: %v", err)...)
 		}
 	}
 	for _, letter := range []struct {
 		observation string
-		message     inbox.Message
+		message     mail.Message
 	}{{obsRawRegister, raw}, {obsHandLetter, hand}, {obsForeignAnswer, foreign}} {
 		failed := waitFor(c, 20*time.Second, func() bool { return statusState(iso, worker, letter.message.ID) == "failed" })
 		events, err := worker.turnEvents()
@@ -169,17 +169,17 @@ func playGrantForgery(t *testing.T, c *Case, iso *Isolation) []telemetryFinding 
 // answerInMainsPlace starts a listener that confirms a letter's grant, at
 // the address the letter's run leads to. It runs in this process, which the
 // letter's run does not name.
-func answerInMainsPlace(room string, letter inbox.Message) (func(), error) {
+func answerInMainsPlace(room string, letter mail.Message) (func(), error) {
 	address := state.AuthorityAddress(room, letter.FromEpoch)
-	authority, err := grantauth.Listen(address, os.Getpid(), time.Minute)
+	server, err := authority.Listen(address, os.Getpid(), time.Minute)
 	if err != nil {
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	go authority.Serve(ctx)
-	stop := func() { cancel(); authority.Close() }
-	grant := grantauth.Grant{ID: letter.ID, To: letter.To, ToEpoch: letter.ToEpoch, Dirs: letter.GrantDirs}
-	if err := grantauth.Register(address, grant); err != nil {
+	go server.Serve(ctx)
+	stop := func() { cancel(); server.Close() }
+	grant := authority.Grant{ID: letter.ID, To: letter.To, ToEpoch: letter.ToEpoch, Dirs: letter.GrantDirs}
+	if err := authority.Register(address, grant); err != nil {
 		stop()
 		return nil, fmt.Errorf("registering with it: %w", err)
 	}
@@ -189,14 +189,14 @@ func answerInMainsPlace(room string, letter inbox.Message) (func(), error) {
 // registerRaw writes a registration of a letter's grant straight to the
 // address of the main its run names, from this process, which runs outside
 // main's tree, and returns the answer line.
-func registerRaw(room string, letter inbox.Message) (string, error) {
+func registerRaw(room string, letter mail.Message) (string, error) {
 	conn, err := net.DialTimeout("unix", state.AuthorityAddress(room, letter.FromEpoch), 2*time.Second)
 	if err != nil {
 		return "", err
 	}
 	defer func() { _ = conn.Close() }()
 	_ = conn.SetDeadline(time.Now().Add(2 * time.Second))
-	grant := grantauth.Grant{ID: letter.ID, To: letter.To, ToEpoch: letter.ToEpoch, Dirs: letter.GrantDirs}
+	grant := authority.Grant{ID: letter.ID, To: letter.To, ToEpoch: letter.ToEpoch, Dirs: letter.GrantDirs}
 	if err := json.NewEncoder(conn).Encode(map[string]any{"op": "register", "grant": grant}); err != nil {
 		return "", err
 	}

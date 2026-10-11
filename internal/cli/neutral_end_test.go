@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 )
@@ -46,7 +46,7 @@ func TestNeutralEndsWithDistinctIDsReportTwice(t *testing.T) {
 	if reports := finishedFor(t, dir, peer.Name); len(reports) != 2 {
 		t.Fatalf("two ends with distinct ids made %d reports", len(reports))
 	}
-	if waiters := inbox.Waiters(dir, self.Name, self.Epoch()); len(waiters) != 0 {
+	if waiters := mail.Waiters(dir, self.Name, self.Epoch()); len(waiters) != 0 {
 		t.Fatalf("waits remain: %v", waiters)
 	}
 }
@@ -61,7 +61,7 @@ func TestNeutralStoppedThenFinishedEndsOfOneTurnReportTwice(t *testing.T) {
 	readFrom(t, dir, peer)
 	stopped := adapter.TurnEnd{Event: "run/A/T", Thread: "A", Reason: adapter.Aborted, Answer: "stopped", Boundary: boundaryNow(t, dir, self)}
 	confirm(t, dir, self, stopped)
-	if waiters := inbox.Waiters(dir, self.Name, self.Epoch()); len(waiters) != 1 {
+	if waiters := mail.Waiters(dir, self.Name, self.Epoch()); len(waiters) != 1 {
 		t.Fatalf("the stopped end settled the wait: %v", waiters)
 	}
 	final := stopped
@@ -70,7 +70,7 @@ func TestNeutralStoppedThenFinishedEndsOfOneTurnReportTwice(t *testing.T) {
 	if reports := finishedFor(t, dir, peer.Name); len(reports) != 2 {
 		t.Fatalf("a stopped and a finished end made %d reports", len(reports))
 	}
-	if waiters := inbox.Waiters(dir, self.Name, self.Epoch()); len(waiters) != 0 {
+	if waiters := mail.Waiters(dir, self.Name, self.Epoch()); len(waiters) != 0 {
 		t.Fatalf("the finished end did not settle: %v", waiters)
 	}
 }
@@ -131,11 +131,11 @@ func TestNeutralFailedEndsReachEveryWaitingSender(t *testing.T) {
 // nothing, and its waits stay owed for the next end. One without its event's
 // id cannot be known again, and is refused too.
 func TestNeutralEndsWithoutTheirScopeReportNothing(t *testing.T) {
-	for name, completion := range map[string]func(*inbox.ReadBoundary) adapter.TurnEnd{
-		"no boundary": func(*inbox.ReadBoundary) adapter.TurnEnd {
+	for name, completion := range map[string]func(*mail.ReadBoundary) adapter.TurnEnd{
+		"no boundary": func(*mail.ReadBoundary) adapter.TurnEnd {
 			return adapter.TurnEnd{Event: "run/A/failed", Thread: "A", Reason: adapter.Failed, Answer: "verbatim failure"}
 		},
-		"no id": func(boundary *inbox.ReadBoundary) adapter.TurnEnd {
+		"no id": func(boundary *mail.ReadBoundary) adapter.TurnEnd {
 			return adapter.TurnEnd{Thread: "A", Reason: adapter.Failed, Answer: "verbatim failure", Boundary: boundary}
 		},
 	} {
@@ -150,7 +150,7 @@ func TestNeutralEndsWithoutTheirScopeReportNothing(t *testing.T) {
 					t.Fatalf("reports to %s: %v", peer, files)
 				}
 			}
-			if len(inbox.Waiters(dir, "api", self.Epoch())) != 2 {
+			if len(mail.Waiters(dir, "api", self.Epoch())) != 2 {
 				t.Fatal("the refused end cleared its waits")
 			}
 		})
@@ -172,8 +172,8 @@ func TestNeutralUnclaimedFailuresReachMainAndMainKeepsItsOwn(t *testing.T) {
 			self := selfOf(t, dir)
 			confirm(t, dir, self, adapter.TurnEnd{Event: "run/A/failed", Thread: "A", Reason: adapter.Failed, Answer: "failure", Boundary: boundaryNow(t, dir, self)})
 			if own {
-				messages, err := inbox.PeekUnread(dir, "api", self.Epoch())
-				if err != nil || len(messages) != 1 || messages[0].Kind != inbox.Error {
+				messages, err := mail.PeekUnread(dir, "api", self.Epoch())
+				if err != nil || len(messages) != 1 || messages[0].Kind != mail.Error {
 					t.Fatalf("main's own failure: %+v %v", messages, err)
 				}
 				if len(finishedFor(t, dir, "api")) != 0 {

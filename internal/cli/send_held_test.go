@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -18,11 +18,11 @@ func holdEverything(t *testing.T, then func(id string)) {
 	t.Helper()
 	previous := awaitStatus
 	t.Cleanup(func() { awaitStatus = previous })
-	awaitStatus = func(_ string, _ string, id string, _ time.Duration, _ func() bool) (inbox.Status, bool) {
+	awaitStatus = func(_ string, _ string, id string, _ time.Duration, _ func() bool) (mail.Status, bool) {
 		if then != nil {
 			then(id)
 		}
-		return inbox.Status{State: inbox.Held, Via: "socket", Detail: "the session holds the notice"}, true
+		return mail.Status{State: mail.Held, Via: "socket", Detail: "the session holds the notice"}, true
 	}
 }
 
@@ -41,7 +41,7 @@ func TestAHeldSendIsNotReportedDelivered(t *testing.T) {
 	var model struct {
 		State string `json:"state"`
 	}
-	if code != 3 || json.Unmarshal([]byte(out), &model) != nil || model.State != string(inbox.Held) {
+	if code != 3 || json.Unmarshal([]byte(out), &model) != nil || model.State != string(mail.Held) {
 		t.Fatalf("exit %d, json %q", code, out)
 	}
 }
@@ -71,7 +71,7 @@ func TestAQuestionStopsWaitingWhenItsHoldFails(t *testing.T) {
 	holdEverything(t, func(id string) {
 		go func() {
 			time.Sleep(300 * time.Millisecond)
-			status, _ := json.Marshal(inbox.Status{State: inbox.Failed, Via: "socket", Detail: "the hold expired", At: time.Now()})
+			status, _ := json.Marshal(mail.Status{State: mail.Failed, Via: "socket", Detail: "the hold expired", At: time.Now()})
 			if err := state.WriteAtomic(filepath.Join(state.InboxPath(dir, "api"), id+".status"), status); err != nil {
 				t.Error(err)
 			}
@@ -92,7 +92,7 @@ func TestAQuestionStopsWaitingWhenItsHoldFails(t *testing.T) {
 // later. A second covers the first collection and the harness taking the
 // notice, with room to spare.
 func TestTheWindowFitsSendsWait(t *testing.T) {
-	if inbox.Coalescing.Cap+time.Second > defaultWait {
-		t.Fatalf("the window's cap %s leaves send's %s wait no second to see the notice go", inbox.Coalescing.Cap, defaultWait)
+	if mail.Coalescing.Cap+time.Second > defaultWait {
+		t.Fatalf("the window's cap %s leaves send's %s wait no second to see the notice go", mail.Coalescing.Cap, defaultWait)
 	}
 }

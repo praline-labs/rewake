@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -23,7 +23,7 @@ func checkRecordKinds(t *testing.T, dir string) {
 			if !entry.IsDir() {
 				continue
 			}
-			unlisted, err := inbox.UnlistedRecords(dir, entry.Name())
+			unlisted, err := mail.UnlistedRecords(dir, entry.Name())
 			if err != nil {
 				continue
 			}

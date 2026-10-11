@@ -28,7 +28,7 @@ import (
 	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
 	"github.com/praline-labs/rewake/internal/cli"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
@@ -71,7 +71,7 @@ type rig struct {
 	root, dir string
 	self, web registry.Session
 	endpoint  *endpoint.Endpoint
-	clock     *inbox.ReadClock
+	clock     *mail.ReadClock
 	// fault is the plan of the next program started, of every child it
 	// asks for, and of the shell: roles transport, child and other.
 	fault string
@@ -94,7 +94,7 @@ type rig struct {
 	control string
 	starts  int
 	// boundary is the end the current turn captured, once it did.
-	boundary *inbox.ReadBoundary
+	boundary *mail.ReadBoundary
 }
 
 const capability = "rig-capability"
@@ -121,7 +121,7 @@ func newRig(t *testing.T, change ...func(*endpoint.Config)) *rig {
 	t.Cleanup(func() { _ = sleeper.Process.Kill(); _, _ = sleeper.Process.Wait() })
 	r.web = publish(t, dir, "web", sleeper.Process.Pid)
 
-	r.clock, err = inbox.OpenReadClock(context.Background(), dir, "api", r.self.Epoch())
+	r.clock, err = mail.OpenReadClock(context.Background(), dir, "api", r.self.Epoch())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -255,7 +255,7 @@ func (r *rig) start() {
 		// start recorded once, then opened in the endpoint's table.
 		Started: func(conversation, turn string, at int64) {
 			if at > 0 {
-				_ = inbox.RecordTurnStart(r.dir, "api", epoch, at)
+				_ = mail.RecordTurnStart(r.dir, "api", epoch, at)
 			}
 			r.endpoint.TurnStarted(conversation, turn)
 		},
@@ -288,7 +288,7 @@ func (r *rig) ask(c command) (reply, error) {
 
 // endCapture is the wrapper's capture of an end through the gate, once per
 // turn: an end the rig captured itself is the one the program's end reports.
-func (r *rig) endCapture() (*inbox.ReadBoundary, int64) {
+func (r *rig) endCapture() (*mail.ReadBoundary, int64) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.boundary == nil {
@@ -301,11 +301,11 @@ func (r *rig) endCapture() (*inbox.ReadBoundary, int64) {
 // mailbox, as the run's wrapper leaves it once it told the harness.
 func (r *rig) letter(text string) string {
 	r.t.Helper()
-	message := inbox.Message{ID: inbox.NewID(), From: "web", FromEpoch: r.web.Epoch(), To: "api", ToEpoch: r.self.Epoch(), Kind: inbox.Task, Text: text, CreatedAt: time.Now()}
-	if err := inbox.Put(r.dir, message); err != nil {
+	message := mail.Message{ID: mail.NewID(), From: "web", FromEpoch: r.web.Epoch(), To: "api", ToEpoch: r.self.Epoch(), Kind: mail.Task, Text: text, CreatedAt: time.Now()}
+	if err := mail.Put(r.dir, message); err != nil {
 		r.t.Fatal(err)
 	}
-	if err := inbox.PutLocal(r.dir, message); err != nil {
+	if err := mail.PutLocal(r.dir, message); err != nil {
 		r.t.Fatal(err)
 	}
 	return message.ID
@@ -333,7 +333,7 @@ func (r *rig) nextTurn() string {
 // endTurn ends the current turn: the program reports its end, which the
 // adapter captures through the gate and hands the endpoint. A program that
 // ended reports nothing; the rig, which plays the wrapper, notes the end then.
-func (r *rig) endTurn() *inbox.ReadBoundary {
+func (r *rig) endTurn() *mail.ReadBoundary {
 	r.t.Helper()
 	answer, err := r.ask(command{Op: "turn-ended", Turn: r.turnID(), End: r.turnID() + "/end"})
 	if errors.Is(err, errEnded) {

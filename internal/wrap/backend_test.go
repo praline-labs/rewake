@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 )
 
@@ -41,8 +41,8 @@ func (b *backendFixture) ProcessID() int          { return 0 }
 func (b *backendFixture) Done() <-chan struct{}   { return b.done }
 func (b *backendFixture) Close()                  { b.closed = true }
 func (b *backendFixture) Thread() (string, error) { return "root", nil }
-func (b *backendFixture) Deliver(context.Context, inbox.Message) inbox.Result {
-	return inbox.Result{State: inbox.Delivered}
+func (b *backendFixture) Deliver(context.Context, mail.Message) mail.Result {
+	return mail.Result{State: mail.Delivered}
 }
 
 type backendHarness struct {

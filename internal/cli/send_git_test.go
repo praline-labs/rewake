@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 )
@@ -80,7 +80,7 @@ func TestExplicitGitGrantRequiresMainAndEligibleTask(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			var m inbox.Message
+			var m mail.Message
 			if json.Unmarshal(raw, &m) != nil || m.GrantGit != requested || m.FromEpoch != self.Epoch() {
 				t.Fatal("durable explicit decision lost")
 			}
@@ -100,7 +100,7 @@ func TestExplicitGitGrantRequiresMainAndEligibleTask(t *testing.T) {
 				if code != ExitOK || !strings.Contains(out, `"grantGit": true`) {
 					t.Fatalf("selected read lost decision: %d %s %s", code, out, stderr)
 				}
-				if len(inbox.Waiters(dir, peer.Name, peer.Epoch())) != 1 {
+				if len(mail.Waiters(dir, peer.Name, peer.Epoch())) != 1 {
 					t.Fatal("grant task lost normal causal read receipt")
 				}
 			}

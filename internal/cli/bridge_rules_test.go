@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/receipt"
@@ -34,8 +34,8 @@ func TestAnUncertainPublicationIsNotDiscarded(t *testing.T) {
 	}
 	record := records[0]
 	// A crash after publication, before the journal recorded it.
-	letter := inbox.Message{ID: record.Notify.MessageID, From: "api", FromEpoch: self.Epoch(), To: "web", ToEpoch: web.Epoch(), Kind: inbox.Note, Text: "crash publication", CreatedAt: time.Now()}
-	if _, err := inbox.PublishOnce(context.Background(), dir, letter, nil); err != nil {
+	letter := mail.Message{ID: record.Notify.MessageID, From: "api", FromEpoch: self.Epoch(), To: "web", ToEpoch: web.Epoch(), Kind: mail.Note, Text: "crash publication", CreatedAt: time.Now()}
+	if _, err := mail.PublishOnce(context.Background(), dir, letter, nil); err != nil {
 		t.Fatal(err)
 	}
 	replacement := otherRun(t, dir, "web")
@@ -119,7 +119,7 @@ func TestAnExpiredReadShowsAndClaimsNothing(t *testing.T) {
 	id := rawUnread(t, dir, "api", map[string]any{"from": "web", "fromEpoch": web.Epoch(), "toEpoch": self.Epoch(), "kind": "task", "text": longText})
 	call, ctx, out, _ := expiredCall(t, "inbox")
 	err := handleInbox(ctx, call)
-	if _, claimed := inbox.ReadClaimed(dir, "api", id); err == nil || claimed || out.Len() != 0 {
+	if _, claimed := mail.ReadClaimed(dir, "api", id); err == nil || claimed || out.Len() != 0 {
 		t.Fatalf("an expired read: err=%v claimed=%v, %d bytes shown", err, claimed, out.Len())
 	}
 }
@@ -233,7 +233,7 @@ func TestAShellRetryDoesNotReadStdinAgain(t *testing.T) {
 	words := []string{"send", "web", "-", "--notify", "--wait", "0"}
 	record, _, err := receipt.Begin(dir, "api", receipt.Key{Epoch: self.Epoch(), Digest: "shell"}, receipt.Record{
 		Words: words, Transport: receipt.Shell,
-		Notify: &receipt.NotifyStep{MessageID: inbox.NewID(), To: "web", ToEpoch: web.Epoch(), Text: "the first input"},
+		Notify: &receipt.NotifyStep{MessageID: mail.NewID(), To: "web", ToEpoch: web.Epoch(), Text: "the first input"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -275,8 +275,8 @@ func TestALateAcknowledgmentOwesNothingTwice(t *testing.T) {
 	if code, _, errOut := run("inbox"); code != ExitOK {
 		t.Fatal(errOut)
 	}
-	for _, waiter := range inbox.Waiters(dir, "api", self.Epoch()) {
-		if err := inbox.ClearAwaiting(dir, "api", self.Epoch(), waiter); err != nil {
+	for _, waiter := range mail.Waiters(dir, "api", self.Epoch()) {
+		if err := mail.ClearAwaiting(dir, "api", self.Epoch(), waiter); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -288,7 +288,7 @@ func TestALateAcknowledgmentOwesNothingTwice(t *testing.T) {
 	if err := AcknowledgeRead(dir, "api", self.Epoch(), part.Receipt, whole(first), nil); err != nil {
 		t.Fatal(err)
 	}
-	if waiters := inbox.Waiters(dir, "api", self.Epoch()); len(waiters) != 0 {
+	if waiters := mail.Waiters(dir, "api", self.Epoch()); len(waiters) != 0 {
 		t.Fatalf("a settled task is owed again: %+v", waiters)
 	}
 }

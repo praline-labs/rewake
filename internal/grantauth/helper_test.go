@@ -14,13 +14,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/grantauth/grantauthtest"
+	authoritytest "github.com/praline-labs/rewake/internal/grantauth/grantauthtest"
 )
 
 // A test binary started again as a recipient's run confirms, as its wrapper
 // would at delivery, before anything is tested.
 func TestMain(m *testing.M) {
-	grantauthtest.Child(func(run, id, thread string, delivery grantauthtest.Delivery) error {
+	authoritytest.Child(func(run, id, thread string, delivery authoritytest.Delivery) error {
 		_, err := Confirm(delivery.Address, Expect{PID: delivery.MainPID, Start: delivery.MainStart}, id, delivery.To, run, thread)
 		return err
 	})

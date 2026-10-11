@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 )
@@ -53,7 +53,7 @@ func TestReportsMarkOnlyKnownThreadChanges(t *testing.T) {
 			if kind == "unknown" || kind == "other harness" {
 				currentThread = ""
 			}
-			if err := completeTurn(dir, self, inbox.TurnEnd{Text: "result"}, currentThread); err != nil {
+			if err := completeTurn(dir, self, mail.TurnEnd{Text: "result"}, currentThread); err != nil {
 				t.Fatal(err)
 			}
 			files := finishedFor(t, dir, "web")
@@ -98,9 +98,9 @@ func TestAQuestionPreservesTheThreadWarning(t *testing.T) {
 	for _, format := range []string{"text", "json"} {
 		t.Run(format, func(t *testing.T) {
 			dir, web := questionSender(t)
-			awaitStatus = func(_, _, id string, _ time.Duration, _ func() bool) (inbox.Status, bool) {
+			awaitStatus = func(_, _, id string, _ time.Duration, _ func() bool) (mail.Status, bool) {
 				rawUnread(t, dir, "web", map[string]any{"from": "api", "kind": "finished", "toEpoch": web.Epoch(), "inReplyTo": []string{id}, "text": "new turn", "threadChanged": true})
-				return inbox.Status{State: inbox.Delivered}, true
+				return mail.Status{State: mail.Delivered}, true
 			}
 			args := []string{"send", "api", "task", "--question", "--wait", "1"}
 			if format == "json" {

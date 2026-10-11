@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -35,7 +35,7 @@ import (
 // gets none, so every accepted delivery waits this long; a held one was
 // answered within 30 ms live on 2.1.280. Past the window the delivery counts
 // as accepted, as it did before receipts — but only for now: a machine under
-// load may answer later, so the line is kept for inbox.LateWordWindow, and a
+// load may answer later, so the line is kept for mail.LateWordWindow, and a
 // late word goes to the inbox server, which takes the delivery back.
 const receiptWindow = 300 * time.Millisecond
 
@@ -70,9 +70,9 @@ type lane struct {
 	// queue holds words for the inbox server in the order they came. It is
 	// drained by one goroutine so that neither Deliver, which runs on the
 	// server's own goroutine, nor the reader ever blocks on the server.
-	queue    []inbox.Receipt
+	queue    []mail.Receipt
 	queued   chan struct{}
-	receipts chan inbox.Receipt
+	receipts chan mail.Receipt
 	opened   chan struct{}
 	done     chan struct{}
 	once     sync.Once
@@ -84,13 +84,13 @@ type sentNotice struct {
 	id    string
 	msgID string
 	// first carries the first word to Deliver while it waits.
-	first chan inbox.Result
+	first chan mail.Result
 	// answered says the first word has been passed to Deliver.
 	answered bool
 	// claimed says Deliver returned held: every further word is the server's.
 	claimed bool
 	// backlog keeps words that came after the first and before the claim.
-	backlog []inbox.Result
+	backlog []mail.Result
 	// at is when a line counted delivered from silence was counted so.
 	at time.Time
 }
@@ -105,13 +105,13 @@ func newLane(socket, reply string, ownDir bool) *lane {
 		limit:    openingLimit,
 		sent:     map[string]*sentNotice{},
 		queued:   make(chan struct{}, 1),
-		receipts: make(chan inbox.Receipt),
+		receipts: make(chan mail.Receipt),
 		opened:   make(chan struct{}),
 		done:     make(chan struct{}),
 	}
 }
 
-func (l *lane) Receipts() <-chan inbox.Receipt { return l.receipts }
+func (l *lane) Receipts() <-chan mail.Receipt { return l.receipts }
 
 func (l *lane) Opened() <-chan struct{} { return l.opened }
 
@@ -189,7 +189,7 @@ func (l *lane) Close() {
 // Deliver writes the notice with a reply address and waits a moment for the
 // first word about it. Held is returned as held; a refusal as failed; silence
 // as delivered, which is what the gate says by saying nothing.
-func (l *lane) Deliver(ctx context.Context, message inbox.Message) inbox.Result {
+func (l *lane) Deliver(ctx context.Context, message mail.Message) mail.Result {
 	l.mu.Lock()
 	listening := l.listener != nil
 	l.mu.Unlock()
@@ -198,13 +198,13 @@ func (l *lane) Deliver(ctx context.Context, message inbox.Message) inbox.Result 
 		return writeNotice(ctx, l.socket, notice)
 	}
 	notice.From, notice.MsgID = "uds:"+l.reply, newMsgID()
-	waiting := &sentNotice{id: message.ID, msgID: notice.MsgID, first: make(chan inbox.Result, 1)}
+	waiting := &sentNotice{id: message.ID, msgID: notice.MsgID, first: make(chan mail.Result, 1)}
 	l.mu.Lock()
 	l.sent[notice.MsgID] = waiting
 	l.mu.Unlock()
 
 	result := writeNotice(ctx, l.socket, notice)
-	if result.State != inbox.Delivered {
+	if result.State != mail.Delivered {
 		l.forget(notice.MsgID)
 		return result
 	}
@@ -232,8 +232,8 @@ func (l *lane) Deliver(ctx context.Context, message inbox.Message) inbox.Result 
 
 // answered returns the first word Deliver got. After a hold the later words are
 // the server's; after anything else the line is done.
-func (l *lane) answered(waiting *sentNotice, word inbox.Result) inbox.Result {
-	if word.State == inbox.Held {
+func (l *lane) answered(waiting *sentNotice, word mail.Result) mail.Result {
+	if word.State == mail.Held {
 		l.claim(waiting)
 		return word
 	}
@@ -251,7 +251,7 @@ func (l *lane) pruneSilent(now time.Time) {
 		switch {
 		case !ok || waiting.at.IsZero():
 			// Settled, or held after all and waiting for its last word.
-		case now.Sub(waiting.at) > inbox.LateWordWindow || len(l.silent)-index > inbox.LateWordKeep:
+		case now.Sub(waiting.at) > mail.LateWordWindow || len(l.silent)-index > mail.LateWordKeep:
 			delete(l.sent, msgID)
 		default:
 			keep = append(keep, msgID)
@@ -267,8 +267,8 @@ func (l *lane) claim(waiting *sentNotice) {
 	defer l.mu.Unlock()
 	waiting.claimed = true
 	for _, word := range waiting.backlog {
-		l.enqueue(inbox.Receipt{ID: waiting.id, Result: word})
-		if word.State != inbox.Held {
+		l.enqueue(mail.Receipt{ID: waiting.id, Result: word})
+		if word.State != mail.Held {
 			delete(l.sent, waiting.msgID)
 		}
 	}
@@ -287,22 +287,22 @@ func (l *lane) forget(msgID string) {
 // its own, so two that follow closely may be routed in either order. A final
 // word wins either way: once one is routed the line is forgotten, and a "held"
 // read after it goes nowhere.
-func (l *lane) route(msgID string, word inbox.Result) {
+func (l *lane) route(msgID string, word mail.Result) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	waiting, ok := l.sent[msgID]
 	if !ok {
 		return
 	}
-	if !waiting.at.IsZero() && time.Since(waiting.at) > inbox.LateWordWindow {
+	if !waiting.at.IsZero() && time.Since(waiting.at) > mail.LateWordWindow {
 		// Too late for the server too; the next prune would have dropped it.
 		delete(l.sent, msgID)
 		return
 	}
 	switch {
 	case waiting.claimed:
-		l.enqueue(inbox.Receipt{ID: waiting.id, Result: word})
-		if word.State != inbox.Held {
+		l.enqueue(mail.Receipt{ID: waiting.id, Result: word})
+		if word.State != mail.Held {
 			delete(l.sent, msgID)
 		} else {
 			// A hold outlives the window for late words: its end may be minutes off.
@@ -318,7 +318,7 @@ func (l *lane) route(msgID string, word inbox.Result) {
 }
 
 // enqueue adds a word for the server. The caller holds the lock.
-func (l *lane) enqueue(receipt inbox.Receipt) {
+func (l *lane) enqueue(receipt mail.Receipt) {
 	l.queue = append(l.queue, receipt)
 	select {
 	case l.queued <- struct{}{}:
@@ -330,7 +330,7 @@ func (l *lane) enqueue(receipt inbox.Receipt) {
 func (l *lane) forward() {
 	for {
 		l.mu.Lock()
-		var next *inbox.Receipt
+		var next *mail.Receipt
 		if len(l.queue) > 0 {
 			next = &l.queue[0]
 			l.queue = l.queue[1:]

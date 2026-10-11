@@ -5,7 +5,7 @@ import (
 	"slices"
 
 	"github.com/praline-labs/rewake/internal/grant"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
 )
@@ -48,15 +48,15 @@ func showOwed(ctx *Context, call Call, dir string, session registry.Session, epo
 	// other order could miss it twice and answer "nothing owed" with nothing
 	// unread — the trap the count is there for. One in both is counted once,
 	// as owed.
-	unread, err := inbox.PeekUnread(dir, session.Name, epoch)
+	unread, err := mail.PeekUnread(dir, session.Name, epoch)
 	if err != nil {
 		return failf("could not look at the unread mail of %s: %v; run rewake inbox", session.Name, err)
 	}
-	owed, err := inbox.OwedMessages(dir, session.Name, epoch)
+	owed, err := mail.OwedMessages(dir, session.Name, epoch)
 	if err != nil {
 		return failf("could not read what %s owes (%v); nothing is shown rather than part of it; run the same command again", session.Name, err)
 	}
-	messages := make([]inbox.Message, 0, len(owed))
+	messages := make([]mail.Message, 0, len(owed))
 	for _, message := range owed {
 		messages = append(messages, message.Message)
 	}
@@ -70,7 +70,7 @@ func showOwed(ctx *Context, call Call, dir string, session registry.Session, epo
 		listed[message.ID] = true
 	}
 	for _, message := range unread {
-		if inbox.AsksForWork(message) && !listed[message.ID] {
+		if mail.AsksForWork(message) && !listed[message.ID] {
 			model.Unread++
 		}
 	}
@@ -107,7 +107,7 @@ func owedLines(messages []owedView) []string {
 		if message.Telemetry != nil {
 			lines = append(lines, stateLine(message.From, message.Telemetry, message.Availability != nil || message.Departure != nil), "")
 		}
-		heading := fmt.Sprintf("from %s · %s · %s%s", message.From, inbox.KindOf(message.Message), message.CreatedAt.Local().Format("15:04:05"), relation(message.Message))
+		heading := fmt.Sprintf("from %s · %s · %s%s", message.From, mail.KindOf(message.Message), message.CreatedAt.Local().Format("15:04:05"), relation(message.Message))
 		if message.nested {
 			heading = fmt.Sprintf("+ addendum from %s · %s", message.From, message.CreatedAt.Local().Format("15:04:05"))
 		}
@@ -115,7 +115,7 @@ func owedLines(messages []owedView) []string {
 		lines = append(lines, owedGrantLines(message.owedView)...)
 		lines = append(lines, message.Text)
 		if message.ThreadChanged {
-			lines = append(lines, inbox.ThreadChangedWarning)
+			lines = append(lines, mail.ThreadChangedWarning)
 		}
 	}
 	return lines
@@ -159,7 +159,7 @@ func nestAddenda(messages []owedView) []nestedOwed {
 }
 
 // grantEnded is what the journal says ended of a message's grant.
-func grantEnded(message inbox.Message, journal []grant.Entry) map[string]string {
+func grantEnded(message mail.Message, journal []grant.Entry) map[string]string {
 	var ended map[string]string
 	for _, entry := range journal {
 		if entry.Message == message.ID && !entry.Live() && slices.Contains(message.GrantDirs, entry.Path) {

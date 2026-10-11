@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 )
 
 // receiver stands in for a Claude Code session: it reads each line on its
@@ -91,21 +91,21 @@ func startLane(t *testing.T, dir string) *lane {
 
 // deliver hands the lane one task for the receiver's socket, which is the
 // session's.
-func deliver(l *lane, r *receiver, id string) inbox.Result {
+func deliver(l *lane, r *receiver, id string) mail.Result {
 	if l.socket != r.socket {
 		panic("the lane writes to " + l.socket + ", not to the receiver at " + r.socket)
 	}
-	return l.Deliver(context.Background(), inbox.Message{ID: id, Kind: inbox.Task, Text: "work"})
+	return l.Deliver(context.Background(), mail.Message{ID: id, Kind: mail.Task, Text: "work"})
 }
 
-func nextReceipt(t *testing.T, l *lane) inbox.Receipt {
+func nextReceipt(t *testing.T, l *lane) mail.Receipt {
 	t.Helper()
 	select {
 	case receipt := <-l.Receipts():
 		return receipt
 	case <-time.After(2 * time.Second):
 		t.Fatal("no receipt reached the server")
-		return inbox.Receipt{}
+		return mail.Receipt{}
 	}
 }
 
@@ -114,7 +114,7 @@ func TestLaneSilenceIsDelivered(t *testing.T) {
 	r := startReceiver(t, dir)
 	l := startLane(t, dir)
 	result := deliver(l, r, "m1")
-	if result.State != inbox.Delivered {
+	if result.State != mail.Delivered {
 		t.Fatalf("an accepted line is delivered, got %+v", result)
 	}
 	line := <-r.lines
@@ -128,12 +128,12 @@ func TestLaneHeldThenReleased(t *testing.T) {
 	r := startReceiver(t, dir, "held")
 	l := startLane(t, dir)
 	result := deliver(l, r, "m1")
-	if result.State != inbox.Held || !strings.Contains(result.Detail, "held for approval") {
+	if result.State != mail.Held || !strings.Contains(result.Detail, "held for approval") {
 		t.Fatalf("a held line is held, with the harness's reason, got %+v", result)
 	}
 	line := <-r.lines
 	answer(t, l.reply, line["msg_id"].(string), "delivered")
-	if receipt := nextReceipt(t, l); receipt.ID != "m1" || receipt.Result.State != inbox.Delivered {
+	if receipt := nextReceipt(t, l); receipt.ID != "m1" || receipt.Result.State != mail.Delivered {
 		t.Fatalf("the release goes to the server under the message id, got %+v", receipt)
 	}
 }
@@ -146,9 +146,9 @@ func TestLaneCloseWordsEndWithTheFinalOne(t *testing.T) {
 	r := startReceiver(t, dir, "held", "expired")
 	l := startLane(t, dir)
 	switch result := deliver(l, r, "m1"); result.State {
-	case inbox.Failed:
-	case inbox.Held:
-		if receipt := nextReceipt(t, l); receipt.ID != "m1" || receipt.Result.State != inbox.Failed {
+	case mail.Failed:
+	case mail.Held:
+		if receipt := nextReceipt(t, l); receipt.ID != "m1" || receipt.Result.State != mail.Failed {
 			t.Fatalf("the expiry goes to the server, got %+v", receipt)
 		}
 	default:
@@ -161,7 +161,7 @@ func TestLaneRefusalFails(t *testing.T) {
 	r := startReceiver(t, dir, "refused")
 	l := startLane(t, dir)
 	result := deliver(l, r, "m1")
-	if result.State != inbox.Failed || !strings.Contains(result.Detail, "refuses messages from other sessions") {
+	if result.State != mail.Failed || !strings.Contains(result.Detail, "refuses messages from other sessions") {
 		t.Fatalf("a refused line fails, got %+v", result)
 	}
 	if len(l.sent) != 0 {
@@ -175,21 +175,21 @@ func TestLaneLateWordReachesTheServer(t *testing.T) {
 	dir := t.TempDir()
 	r := startReceiver(t, dir)
 	l := startLane(t, dir)
-	if result := deliver(l, r, "m1"); result.State != inbox.Delivered {
+	if result := deliver(l, r, "m1"); result.State != mail.Delivered {
 		t.Fatalf("got %+v", result)
 	}
 	line := <-r.lines
 	msgID := line["msg_id"].(string)
 	answer(t, l.reply, msgID, "held")
-	if receipt := nextReceipt(t, l); receipt.ID != "m1" || receipt.Result.State != inbox.Held {
+	if receipt := nextReceipt(t, l); receipt.ID != "m1" || receipt.Result.State != mail.Held {
 		t.Fatalf("a late hold goes to the server, got %+v", receipt)
 	}
 	// Held, the line waits for its end however long that takes.
 	l.mu.Lock()
-	l.pruneSilent(time.Now().Add(2 * inbox.LateWordWindow))
+	l.pruneSilent(time.Now().Add(2 * mail.LateWordWindow))
 	l.mu.Unlock()
 	answer(t, l.reply, msgID, "expired")
-	if receipt := nextReceipt(t, l); receipt.ID != "m1" || receipt.Result.State != inbox.Failed {
+	if receipt := nextReceipt(t, l); receipt.ID != "m1" || receipt.Result.State != mail.Failed {
 		t.Fatalf("the end of a late hold goes to the server, got %+v", receipt)
 	}
 }
@@ -200,12 +200,12 @@ func TestLaneForgetsSilentLines(t *testing.T) {
 	dir := t.TempDir()
 	r := startReceiver(t, dir)
 	l := startLane(t, dir)
-	if result := deliver(l, r, "m1"); result.State != inbox.Delivered {
+	if result := deliver(l, r, "m1"); result.State != mail.Delivered {
 		t.Fatalf("got %+v", result)
 	}
 	line := <-r.lines
 	l.mu.Lock()
-	l.sent[line["msg_id"].(string)].at = time.Now().Add(-2 * inbox.LateWordWindow)
+	l.sent[line["msg_id"].(string)].at = time.Now().Add(-2 * mail.LateWordWindow)
 	l.mu.Unlock()
 	answer(t, l.reply, line["msg_id"].(string), "held")
 	select {
@@ -217,14 +217,14 @@ func TestLaneForgetsSilentLines(t *testing.T) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	now := time.Now()
-	for index := range inbox.LateWordKeep + 5 {
+	for index := range mail.LateWordKeep + 5 {
 		id := fmt.Sprint(index)
 		l.sent[id] = &sentNotice{id: id, msgID: id, claimed: true, at: now}
 		l.silent = append(l.silent, id)
 	}
 	l.pruneSilent(now)
-	if len(l.silent) != inbox.LateWordKeep || len(l.sent) != inbox.LateWordKeep || l.sent["0"] != nil {
-		t.Fatalf("kept %d silent lines, %d sent, want the last %d", len(l.silent), len(l.sent), inbox.LateWordKeep)
+	if len(l.silent) != mail.LateWordKeep || len(l.sent) != mail.LateWordKeep || l.sent["0"] != nil {
+		t.Fatalf("kept %d silent lines, %d sent, want the last %d", len(l.silent), len(l.sent), mail.LateWordKeep)
 	}
 }
 
@@ -288,7 +288,7 @@ func TestLaneWithoutReplySocketWritesPlainly(t *testing.T) {
 		t.Fatalf("a lane with no reply socket has to say it hears nothing back, and start: %q, %v", noted, err)
 	}
 	defer l.Close()
-	if result := deliver(l, r, "m1"); result.State != inbox.Delivered {
+	if result := deliver(l, r, "m1"); result.State != mail.Delivered {
 		t.Fatalf("got %+v", result)
 	}
 	if line := <-r.lines; line["from"] != nil || line["msg_id"] != nil {
@@ -347,13 +347,13 @@ func TestParseReceipt(t *testing.T) {
 	cases := []struct {
 		line  string
 		ids   []string
-		state inbox.State
+		state mail.State
 	}{
-		{`{"type":"control","action":"peer_message_status","status":"held","orig_msg_id":"a"}`, []string{"a"}, inbox.Held},
-		{`{"type":"control","action":"peer_message_status","status":"delivered","orig_msg_id":"a"}`, []string{"a"}, inbox.Delivered},
-		{`{"type":"control","action":"peer_message_status","status":"expired","status_detail":"refused","orig_msg_id":"a"}`, []string{"a"}, inbox.Failed},
-		{`{"type":"control","action":"peer_message_status","status":"denied","orig_msg_id":"a"}`, []string{"a"}, inbox.Failed},
-		{`{"type":"control","action":"peer_message_status","status":"dropped","orig_msg_id":"a","dropped_msg_ids":["b","a"]}`, []string{"a", "b"}, inbox.Failed},
+		{`{"type":"control","action":"peer_message_status","status":"held","orig_msg_id":"a"}`, []string{"a"}, mail.Held},
+		{`{"type":"control","action":"peer_message_status","status":"delivered","orig_msg_id":"a"}`, []string{"a"}, mail.Delivered},
+		{`{"type":"control","action":"peer_message_status","status":"expired","status_detail":"refused","orig_msg_id":"a"}`, []string{"a"}, mail.Failed},
+		{`{"type":"control","action":"peer_message_status","status":"denied","orig_msg_id":"a"}`, []string{"a"}, mail.Failed},
+		{`{"type":"control","action":"peer_message_status","status":"dropped","orig_msg_id":"a","dropped_msg_ids":["b","a"]}`, []string{"a", "b"}, mail.Failed},
 		{`{"type":"control","action":"peer_message_status","status":"pondering","orig_msg_id":"a"}`, nil, ""},
 		{`{"type":"user","status":"held","orig_msg_id":"a"}`, nil, ""},
 		{`not json`, nil, ""},

@@ -9,11 +9,11 @@ import (
 
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
 	"github.com/praline-labs/rewake/internal/channel"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/receipt"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
-	"github.com/praline-labs/rewake/internal/sessionstate"
+	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // The run's channel keeper (docs/mail-bridge-channel.md): it folds what the
@@ -169,9 +169,9 @@ func (k *channelKeeper) snapshot() *channel.Record {
 }
 
 // source adds the record to a session-state source.
-func (k *channelKeeper) source(epoch string, source func() sessionstate.Snapshot) func() sessionstate.Snapshot {
-	return func() sessionstate.Snapshot {
-		snapshot := sessionstate.Unknown(epoch)
+func (k *channelKeeper) source(epoch string, source func() session.Snapshot) func() session.Snapshot {
+	return func() session.Snapshot {
+		snapshot := session.Unknown(epoch)
 		if source != nil {
 			snapshot = source()
 		}
@@ -232,20 +232,20 @@ func (k *channelKeeper) attempt(ctx context.Context, publication channel.Publica
 			return channel.Dropped, 0
 		}
 	}
-	message := inbox.Message{
+	message := mail.Message{
 		ID: publication.ID(k.name, k.epoch), From: k.name, FromEpoch: k.epoch,
-		To: publication.To.Name, ToEpoch: publication.To.Epoch, Kind: inbox.Note,
+		To: publication.To.Name, ToEpoch: publication.To.Epoch, Kind: mail.Note,
 		CreatedAt: publication.Fixed.Wall, Text: publication.Body,
 	}
 	wait, cancel := context.WithTimeout(ctx, 250*time.Millisecond)
 	defer cancel()
-	_, err := inbox.PublishOnce(wait, k.dir, message, func() error {
+	_, err := mail.PublishOnce(wait, k.dir, message, func() error {
 		k.mu.Lock()
 		defer k.mu.Unlock()
 		return k.notices.Writable(&k.record, publication)
 	})
 	switch {
-	case errors.Is(err, channel.ErrNotWritable), errors.Is(err, inbox.ErrRecipientEnded):
+	case errors.Is(err, channel.ErrNotWritable), errors.Is(err, mail.ErrRecipientEnded):
 		// The run it was fixed for is gone, as the recipient's lock showed.
 		return channel.Dropped, 0
 	case err != nil:

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
 )
@@ -32,7 +32,7 @@ func requestedGitGrant(catalog adapter.Catalog, call Call, sender, target regist
 	if err != nil {
 		return false, err
 	}
-	if kind.kind != inbox.Task && kind.kind != inbox.Question {
+	if kind.kind != mail.Task && kind.kind != mail.Question {
 		return refuse("only tasks and questions can carry an explicit grant; notify/report paths cannot")
 	}
 	if !role.Of(target.Role).GitWrite {

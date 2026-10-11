@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 )
 
 // A retry answers and takes only what its event's read boundary covers,
@@ -15,14 +15,14 @@ import (
 // boundary and not answered with its text.
 func TestARetryWhoseFirstAttemptRecordedNothingKeepsItsScope(t *testing.T) {
 	dir, self, web := toolSession(t)
-	original := readKind(t, dir, web, inbox.Task)
+	original := readKind(t, dir, web, mail.Task)
 	readOnlyJournals(t, dir)
-	event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT"}
+	event := mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT"}
 	if completeTurn(dir, self, event, "") == nil {
 		t.Fatal("the journal was not refused")
 	}
 	writableJournals(t, dir)
-	fresh := readKind(t, dir, web, inbox.Question)
+	fresh := readKind(t, dir, web, mail.Question)
 	if err := completeTurn(dir, self, event, ""); err != nil {
 		t.Fatal(err)
 	}
@@ -36,36 +36,36 @@ func TestARetryWhoseFirstAttemptRecordedNothingKeepsItsScope(t *testing.T) {
 func TestARetryTakesOnlyTheAnswerItsFirstAttemptSaw(t *testing.T) {
 	t.Run("kept since", func(t *testing.T) {
 		dir, self, web := toolSession(t)
-		readKind(t, dir, web, inbox.Task)
+		readKind(t, dir, web, mail.Task)
 		readOnlyJournals(t, dir)
-		event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT"}
+		event := mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT"}
 		if completeTurn(dir, self, event, "") == nil {
 			t.Fatal("the journal was not refused")
 		}
 		writableJournals(t, dir)
-		if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "second", Text: "the second is done"}, ""); err != nil {
+		if err := completeTurn(dir, self, mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "second", Text: "the second is done"}, ""); err != nil {
 			t.Fatal(err)
 		}
-		fresh := readKind(t, dir, web, inbox.Question)
-		if err := inbox.KeepAnswer(dir, "api", self.Epoch(), "FRESH_HELD_ANSWER", "", ""); err != nil {
+		fresh := readKind(t, dir, web, mail.Question)
+		if err := mail.KeepAnswer(dir, "api", self.Epoch(), "FRESH_HELD_ANSWER", "", ""); err != nil {
 			t.Fatal(err)
 		}
 		if err := completeTurn(dir, self, event, ""); err != nil {
 			t.Fatal(err)
 		}
-		text, kept, err := inbox.KeptAnswer(dir, "api", self.Epoch())
+		text, kept, err := mail.KeptAnswer(dir, "api", self.Epoch())
 		if err != nil || !kept || text != "FRESH_HELD_ANSWER" || !owes(t, dir, self, fresh) {
 			t.Fatalf("kept %q %v (%v); fresh owed %v", text, kept, err, owes(t, dir, self, fresh))
 		}
 	})
 	t.Run("seen", func(t *testing.T) {
 		dir, self, web := toolSession(t)
-		task := readKind(t, dir, web, inbox.Task)
-		if err := inbox.KeepAnswer(dir, "api", self.Epoch(), "HELD_BEFORE_THE_END", "", ""); err != nil {
+		task := readKind(t, dir, web, mail.Task)
+		if err := mail.KeepAnswer(dir, "api", self.Epoch(), "HELD_BEFORE_THE_END", "", ""); err != nil {
 			t.Fatal(err)
 		}
 		readOnlyJournals(t, dir)
-		event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT"}
+		event := mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT"}
 		if completeTurn(dir, self, event, "") == nil {
 			t.Fatal("the journal was not refused")
 		}
@@ -73,7 +73,7 @@ func TestARetryTakesOnlyTheAnswerItsFirstAttemptSaw(t *testing.T) {
 		if err := completeTurn(dir, self, event, ""); err != nil {
 			t.Fatal(err)
 		}
-		if _, kept, err := inbox.KeptAnswer(dir, "api", self.Epoch()); err != nil || kept {
+		if _, kept, err := mail.KeptAnswer(dir, "api", self.Epoch()); err != nil || kept {
 			t.Fatalf("the answer it saw is still kept: %v %v", kept, err)
 		}
 		for _, report := range reportsTo(t, dir, "web") {
@@ -93,12 +93,12 @@ func TestARetryTakesOnlyTheAnswerItsFirstAttemptSaw(t *testing.T) {
 func TestAnEndWithNothingOwedKeepsItsScopeOnRetry(t *testing.T) {
 	dir, self, web := toolSession(t)
 	readOnlyJournals(t, dir)
-	event := inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT", Ended: 5}
+	event := mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT", Ended: 5}
 	if completeTurn(dir, self, event, "") == nil {
 		t.Fatal("the journal was not refused")
 	}
 	writableJournals(t, dir)
-	fresh := readKind(t, dir, web, inbox.Task)
+	fresh := readKind(t, dir, web, mail.Task)
 	if err := completeTurn(dir, self, event, ""); err != nil {
 		t.Fatal(err)
 	}

@@ -11,7 +11,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
 )
@@ -179,10 +179,10 @@ func (l *liveSet) await(ctx context.Context, capability adapter.Capability, boun
 // wakeIfLive delivers through the run's Wake while it is live. Otherwise the
 // letter stays readable and waits for a Wake that becomes live; the sender was
 // told already (docs/v2/design-api.md#the-capabilities).
-func wakeIfLive(wake adapter.Wake, live *liveSet) func(context.Context, inbox.Message) inbox.Result {
-	return func(ctx context.Context, message inbox.Message) inbox.Result {
+func wakeIfLive(wake adapter.Wake, live *liveSet) func(context.Context, mail.Message) mail.Result {
+	return func(ctx context.Context, message mail.Message) mail.Result {
 		if wake == nil || !live.has(adapter.WakeCapability) {
-			return inbox.Result{State: inbox.Pending, Detail: noWake}
+			return mail.Result{State: mail.Pending, Detail: noWake}
 		}
 		return wake.Deliver(ctx, message)
 	}
@@ -193,8 +193,8 @@ func wakeIfLive(wake adapter.Wake, live *liveSet) func(context.Context, inbox.Me
 // handed to wakeIfLive, which leaves it waiting. A Wake withdrawn while the
 // reservation was asked is the same case, so the letter a sender was told it
 // could read is never failed for want of a notice.
-func reserveIfLive(reserver adapter.Reserver, live *liveSet) inbox.Reserver {
-	return func(ctx context.Context, message inbox.Message) (inbox.Reservation, error) {
+func reserveIfLive(reserver adapter.Reserver, live *liveSet) mail.Reserver {
+	return func(ctx context.Context, message mail.Message) (mail.Reservation, error) {
 		if !live.has(adapter.WakeCapability) {
 			return nil, nil
 		}

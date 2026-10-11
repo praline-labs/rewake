@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/grantauth"
-	"github.com/praline-labs/rewake/internal/inbox"
+	authority "github.com/praline-labs/rewake/internal/grantauth"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -52,26 +52,26 @@ func endedEpoch(t *testing.T) string {
 func TestAGrantIsConfirmedWithTheMainThatSentIt(t *testing.T) {
 	dir := t.TempDir()
 	epoch := ownEpoch(t)
-	message := inbox.Message{ID: "m1", From: "lead", FromEpoch: epoch, To: "worker", ToEpoch: "9.9", Kind: inbox.Task, GrantDirs: []string{"/src/lib"}}
+	message := mail.Message{ID: "m1", From: "lead", FromEpoch: epoch, To: "worker", ToEpoch: "9.9", Kind: mail.Task, GrantDirs: []string{"/src/lib"}}
 
 	// Nobody listens yet, and main is alive: the message waits.
-	if err := confirmGrant(dir, "worker", "9.9", "c1", message); !errors.Is(err, inbox.ErrNotYet) {
+	if err := confirmGrant(dir, "worker", "9.9", "c1", message); !errors.Is(err, mail.ErrNotYet) {
 		t.Fatalf("before main listens: %v", err)
 	}
 
-	authority, err := grantauth.Listen(state.AuthorityAddress(dir, epoch), os.Getpid(), time.Minute)
+	server, err := authority.Listen(state.AuthorityAddress(dir, epoch), os.Getpid(), time.Minute)
 	if err != nil {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go authority.Serve(ctx)
-	defer authority.Close()
+	go server.Serve(ctx)
+	defer server.Close()
 	if err := confirmGrant(dir, "worker", "9.9", "c1", message); err == nil || !strings.Contains(err.Error(), "did not confirm") {
 		t.Fatalf("a grant main never registered: %v", err)
 	}
-	registered := grantauth.Grant{ID: "m1", To: "worker", ToEpoch: "9.9", Dirs: []string{"/src/lib"}}
-	if err := grantauth.Register(state.AuthorityAddress(dir, epoch), registered); err != nil {
+	registered := authority.Grant{ID: "m1", To: "worker", ToEpoch: "9.9", Dirs: []string{"/src/lib"}}
+	if err := authority.Register(state.AuthorityAddress(dir, epoch), registered); err != nil {
 		t.Fatal(err)
 	}
 	if err := confirmGrant(dir, "worker", "9.9", "c1", message); err != nil {
@@ -88,7 +88,7 @@ func TestAGrantIsConfirmedWithTheMainThatSentIt(t *testing.T) {
 
 	ended := message
 	ended.FromEpoch = endedEpoch(t)
-	if err := confirmGrant(dir, "worker", "9.9", "c1", ended); err == nil || errors.Is(err, inbox.ErrNotYet) || !strings.Contains(err.Error(), "has ended") {
+	if err := confirmGrant(dir, "worker", "9.9", "c1", ended); err == nil || errors.Is(err, mail.ErrNotYet) || !strings.Contains(err.Error(), "has ended") {
 		t.Fatalf("a main that has ended: %v", err)
 	}
 	forged := message
@@ -109,31 +109,31 @@ func TestMainHoldsTheConversationTheLetterWasPinnedTo(t *testing.T) {
 		t.Fatal(err)
 	}
 	address := state.AuthorityAddress(dir, run)
-	authority, err := grantauth.Listen(address, os.Getpid(), time.Minute)
+	server, err := authority.Listen(address, os.Getpid(), time.Minute)
 	if err != nil {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go authority.Serve(ctx)
-	defer authority.Close()
-	if err := grantauth.Register(address, grantauth.Grant{ID: "m1", To: "worker", ToEpoch: run, Dirs: []string{lib}}); err != nil {
+	go server.Serve(ctx)
+	defer server.Close()
+	if err := authority.Register(address, authority.Grant{ID: "m1", To: "worker", ToEpoch: run, Dirs: []string{lib}}); err != nil {
 		t.Fatal(err)
 	}
-	message := inbox.Message{ID: "m1", From: "lead", FromEpoch: run, To: "worker", ToEpoch: run, Kind: inbox.Task, GrantDirs: []string{lib}}
+	message := mail.Message{ID: "m1", From: "lead", FromEpoch: run, To: "worker", ToEpoch: run, Kind: mail.Task, GrantDirs: []string{lib}}
 	check := checkGrant(dir, "worker", run, adapter.Protected{})
 	if err := check(message); err != nil {
 		t.Fatal(err)
 	}
 	pinGrant(dir, "worker", run)(message, "after-clear")
-	expect := grantauth.Expect{PID: os.Getpid()}
+	expect := authority.Expect{PID: os.Getpid()}
 	if expect.Start, err = proc.StartTime(os.Getpid()); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := grantauth.Reconfirm(address, expect, "m1", "worker", run, "before-clear"); err == nil {
+	if _, err := authority.Reconfirm(address, expect, "m1", "worker", run, "before-clear"); err == nil {
 		t.Fatal("the grant would be taken into the conversation it was checked in")
 	}
-	if _, err := grantauth.Reconfirm(address, expect, "m1", "worker", run, "after-clear"); err != nil {
+	if _, err := authority.Reconfirm(address, expect, "m1", "worker", run, "after-clear"); err != nil {
 		t.Fatalf("not taken into the conversation it was pinned to: %v", err)
 	}
 }
@@ -143,17 +143,17 @@ func TestMainHoldsTheConversationTheLetterWasPinnedTo(t *testing.T) {
 // confirmed again after the report.
 func TestMainsAuthorityAsksTheMailboxWhetherATaskIsOpen(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "rooms", "default")
-	authority := listenAuthority(dir, ownEpoch(t), os.Getpid())
-	if authority == nil {
+	server := listenAuthority(dir, ownEpoch(t), os.Getpid())
+	if server == nil {
 		t.Fatal("main's wrapper did not bind its address")
 	}
-	defer authority.Close()
-	task := inbox.Message{ID: "m1", From: "lead", To: "worker", Kind: inbox.Task, Text: "go"}
-	if err := inbox.Put(dir, task); err != nil {
+	defer server.Close()
+	task := mail.Message{ID: "m1", From: "lead", To: "worker", Kind: mail.Task, Text: "go"}
+	if err := mail.Put(dir, task); err != nil {
 		t.Fatal(err)
 	}
-	held := grantauth.Grant{ID: task.ID, To: "worker", ToEpoch: endedEpoch(t)}
-	if open, found := authority.Open(held); !open || !found {
+	held := authority.Grant{ID: task.ID, To: "worker", ToEpoch: endedEpoch(t)}
+	if open, found := server.Open(held); !open || !found {
 		t.Fatalf("a waiting task: open %v, found %v", open, found)
 	}
 	if err := state.EnsureSubdir(state.DonePath(dir, "worker")); err != nil {
@@ -162,7 +162,7 @@ func TestMainsAuthorityAsksTheMailboxWhetherATaskIsOpen(t *testing.T) {
 	if err := os.Rename(filepath.Join(state.InboxPath(dir, "worker"), task.ID+".json"), filepath.Join(state.DonePath(dir, "worker"), task.ID+".json")); err != nil {
 		t.Fatal(err)
 	}
-	if open, found := authority.Open(held); open || !found {
+	if open, found := server.Open(held); open || !found {
 		t.Fatalf("a done task: open %v, found %v", open, found)
 	}
 }

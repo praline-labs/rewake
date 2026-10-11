@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
@@ -125,7 +125,7 @@ func nextFrom(out string) []string {
 
 func unreadIDs(t *testing.T, dir string, self registry.Session) map[string]bool {
 	t.Helper()
-	messages, err := inbox.PeekUnread(dir, self.Name, self.Epoch())
+	messages, err := mail.PeekUnread(dir, self.Name, self.Epoch())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -226,7 +226,7 @@ func TestAToolCallWithoutAValidTicketRunsNothing(t *testing.T) {
 	if !unreadIDs(t, dir, self)[id] {
 		t.Fatal("a refused call touched the letter")
 	}
-	if _, claimed := inbox.ReadClaimed(dir, "api", id); claimed {
+	if _, claimed := mail.ReadClaimed(dir, "api", id); claimed {
 		t.Fatal("a refused call claimed the letter")
 	}
 }

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -30,7 +30,7 @@ func TestAwaitedTakesAnUnreadableRecipientForLive(t *testing.T) {
 				}
 				t.Cleanup(func() { _ = os.Chmod(path, 0o600) })
 			}
-			if view := byID(awaitedJSON(t))[task]; view.State != inbox.StageOwed || view.Gone != "" {
+			if view := byID(awaitedJSON(t))[task]; view.State != mail.StageOwed || view.Gone != "" {
 				t.Fatalf("a task to a recipient whose record does not read: %+v", view)
 			}
 			if code, out, _ := run("inbox", "--awaited"); code != ExitOK || strings.Contains(out, "no report coming") {

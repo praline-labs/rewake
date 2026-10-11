@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 )
@@ -205,7 +205,7 @@ func TestAReportNamesWhatItAnswers(t *testing.T) {
 		t.Fatalf("web holds %v, want one report", found)
 	}
 	raw, _ := os.ReadFile(found[0])
-	var report inbox.Message
+	var report mail.Message
 	if err := json.Unmarshal(raw, &report); err != nil || len(report.InReplyTo) != 1 || report.InReplyTo[0] != questionID {
 		t.Errorf("report = %s, want it to name the message it answers", raw)
 	}

@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 )
 
 // paired is a backend whose program is the test itself, on the other end of
@@ -98,7 +98,7 @@ func (c *calls) enter(ctx context.Context) int {
 	return len(c.deadlines)
 }
 
-func boundary() *inbox.ReadBoundary { return &inbox.ReadBoundary{} }
+func boundary() *mail.ReadBoundary { return &mail.ReadBoundary{} }
 
 func TestAnEndIsConfirmedWhenItCanBeHeld(t *testing.T) {
 	var c calls

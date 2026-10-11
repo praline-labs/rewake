@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/inbox"
+	mail "github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -63,9 +63,9 @@ func TestSendWaitsForTheDeliveryAsLongAsAsked(t *testing.T) {
 			_, _, peer := stateCaller(t, "main")
 			var waited time.Duration
 			previous := awaitStatus
-			awaitStatus = func(_, _, _ string, wait time.Duration, _ func() bool) (inbox.Status, bool) {
+			awaitStatus = func(_, _, _ string, wait time.Duration, _ func() bool) (mail.Status, bool) {
 				waited = wait
-				return inbox.Status{State: inbox.Delivered}, true
+				return mail.Status{State: mail.Delivered}, true
 			}
 			t.Cleanup(func() { awaitStatus = previous })
 			args := []string{"send", peer.Name, "do it", "--wait", "12"}
@@ -102,8 +102,8 @@ func TestALongWaitEndsWithTheRecipient(t *testing.T) {
 // edit; taking it back stays possible.
 func TestAnEditDoesNotSendToItself(t *testing.T) {
 	dir, self, _ := stateCaller(t, "general")
-	old := inbox.Message{ID: inbox.NewID(), From: self.Name, FromEpoch: self.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: inbox.Task, Text: "old", CreatedAt: time.Now()}
-	if err := inbox.Put(dir, old); err != nil {
+	old := mail.Message{ID: mail.NewID(), From: self.Name, FromEpoch: self.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: mail.Task, Text: "old", CreatedAt: time.Now()}
+	if err := mail.Put(dir, old); err != nil {
 		t.Fatal(err)
 	}
 	code, _, stderr := run("edit", old.ID, "new text", "--wait=0")
