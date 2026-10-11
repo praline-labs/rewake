@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // A resolution lifts its occurrence only once it reads as one: bytes that do

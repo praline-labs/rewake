@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/boottime"
 	"github.com/praline-labs/rewake/internal/bridge"
+	"github.com/praline-labs/rewake/internal/infra/boottime"
 )
 
 // A ticket is issued only while no end was noted since its turn started: the

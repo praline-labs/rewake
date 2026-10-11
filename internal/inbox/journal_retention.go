@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // sweepTurnRecords keeps the done journals of the live run for as long as it

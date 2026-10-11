@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/boottime"
+	"github.com/praline-labs/rewake/internal/infra/boottime"
 )
 
 // The shell's evidence is dated when the state was reached, not when the

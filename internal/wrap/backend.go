@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/infra/proc"
 )
 
 // stopWithProcess ends the harness when the process that speaks for it is

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 type reservationFixture struct {

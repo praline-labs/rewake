@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // The shared lookups answer found, proven absent, or an error: only a file

@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/boottime"
 	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/infra/boottime"
 )
 
 // The order test's generated part, rebuilt from

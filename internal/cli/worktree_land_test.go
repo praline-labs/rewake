@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/worktree"
 )
 

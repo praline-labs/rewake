@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/boottime"
 	"github.com/praline-labs/rewake/internal/cli"
 	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/infra/boottime"
 )
 
 // Two orders of an acknowledgment against its turn's end that the generated

@@ -11,8 +11,8 @@ import (
 
 	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // longText is a letter several results long, with characters that take more

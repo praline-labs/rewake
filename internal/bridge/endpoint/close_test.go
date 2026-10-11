@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // Admission of a transport's request as it arrives, and a Close that drains

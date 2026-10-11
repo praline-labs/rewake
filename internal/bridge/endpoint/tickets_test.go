@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/boottime"
+	"github.com/praline-labs/rewake/internal/infra/boottime"
 )
 
 var words = []string{"inbox"}

@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/receipt"
 	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // sweepFinished removes the messages and statuses that have been answered long

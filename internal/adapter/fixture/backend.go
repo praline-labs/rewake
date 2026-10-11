@@ -17,7 +17,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/infra/proc"
 )
 
 // readinessBound is how long the program has to say hello, and each probe to

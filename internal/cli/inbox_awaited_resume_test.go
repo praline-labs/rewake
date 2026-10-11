@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // pinned records the conversation a task was delivered into, as the delivery

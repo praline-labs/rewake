@@ -15,8 +15,8 @@ import (
 
 	"github.com/praline-labs/rewake/internal/grantauth"
 	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // TestFixtureGrantForgery is a worker that tries to grant itself a directory

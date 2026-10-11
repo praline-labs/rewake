@@ -10,11 +10,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/boottime"
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/infra/boottime"
+	"github.com/praline-labs/rewake/internal/infra/proc"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/receipt"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // Running a transport's call (docs/archive-1.x/mail-bridge-server.md#running-the-child,

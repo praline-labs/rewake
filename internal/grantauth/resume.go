@@ -7,9 +7,9 @@ import (
 	"os"
 
 	"github.com/praline-labs/rewake/internal/grant"
-	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/infra/proc"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // A cold resume starts a new run of the recipient, and its wrapper holds

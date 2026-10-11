@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // holdEverything makes the recipient's harness hold whatever it is sent, and

@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/bridge"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/receipt"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // An answer longer than one tool result — a help page, a long --owed — is

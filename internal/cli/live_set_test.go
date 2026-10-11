@@ -7,9 +7,9 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/control"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // The decisions another session makes about a run read the live set its

@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // OwedMessage is a message this run has read and still owes a report for.

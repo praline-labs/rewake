@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // withdrawModel is the machine form of one withdrawal. Result is unseen (no

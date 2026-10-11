@@ -168,7 +168,7 @@ func markers(calls []shimCall) []bool {
 var epochPattern = regexp.MustCompile(`(same-(?:claude|fixture))\.[0-9]+\.[0-9]+(?:\.[0-9a-f-]{36})?`)
 
 // digestPattern is a socket named by the digest of its name and epoch, the
-// form a path past 103 bytes takes (internal/state/paths.go): the digest
+// form a path past 103 bytes takes (internal/infra/state/paths.go): the digest
 // differs between two runs as the epoch does.
 var digestPattern = regexp.MustCompile(`/sock/(rewake-)?[0-9a-f]{24}\.`)
 

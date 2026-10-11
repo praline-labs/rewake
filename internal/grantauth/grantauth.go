@@ -27,7 +27,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/infra/proc"
 )
 
 // Grant is what main registered for one message.

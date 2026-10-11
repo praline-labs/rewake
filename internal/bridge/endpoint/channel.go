@@ -4,8 +4,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/boottime"
 	"github.com/praline-labs/rewake/internal/channel"
+	"github.com/praline-labs/rewake/internal/infra/boottime"
 )
 
 // The endpoint's share of the channel record

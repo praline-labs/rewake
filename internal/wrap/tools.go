@@ -14,7 +14,7 @@ import (
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
 	"github.com/praline-labs/rewake/internal/host/launch"
 	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // MailTool is what the CLI lends the wrapper for the mail tool's endpoint

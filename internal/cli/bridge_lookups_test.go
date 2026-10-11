@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/receipt"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // The effects that rule 6 stops when a shared lookup cannot tell

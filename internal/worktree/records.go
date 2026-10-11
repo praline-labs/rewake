@@ -11,9 +11,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/infra/proc"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // Claim writes the session a checkout was made for into its record.

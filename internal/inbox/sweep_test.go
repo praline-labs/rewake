@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // A message arriving while the session runs is delivered at once, not when the

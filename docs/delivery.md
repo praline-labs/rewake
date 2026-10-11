@@ -35,7 +35,7 @@ a short notice and preview rather than the full body.
    could give. `rewake edit` refuses to replace such a message, which only an earlier
    build could have written, and names `rewake withdraw` for it.
 3. The message: `{"id","from","fromEpoch","to","toEpoch","kind","text","createdAt","createdBoot"}`.
-   `createdBoot` is the boot clock's reading (`internal/boottime`), stamped where the
+   `createdBoot` is the boot clock's reading (`internal/infra/boottime`), stamped where the
    letter is put into the mailbox; the coalescing window counts from it
    ([the notice](#the-notice)). It is for the processes of this machine and stays on
    disk: `inbox --json` leaves it out.

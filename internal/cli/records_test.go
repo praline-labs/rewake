@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // checkRecordKinds fails a test whose calls left a file in a mailbox of no

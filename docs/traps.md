@@ -327,7 +327,7 @@ writer's `createdAt`, so a step forward inside the window closed it early and a 
 went out as two notices; `TestNotesSecondsApartAreAnnouncedOnce` failed now and then
 for that alone. A waiting `send --question` was judged gone by its mark's
 modification time, and a telemetry snapshot read stale by its `publishedAt`. All three
-compare the boot clock now (`internal/boottime`), which every process shares and nothing
+compare the boot clock now (`internal/infra/boottime`), which every process shares and nothing
 steps. A new comparison between processes over seconds belongs on it too; a term of
 minutes or hours stays on the wall clock, which counts a sleeping host
 ([delivery.md](delivery.md#the-notice)).

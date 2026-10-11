@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // While a send waits for its answer, the answer goes to that send and the agent

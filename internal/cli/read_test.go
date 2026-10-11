@@ -14,10 +14,10 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/infra/proc"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/registry/registrytest"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // epochEnv is the variable a wrapper gives its harness to say which run of the

@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/boottime"
 	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/infra/boottime"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/sessionstate"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 func stateCaller(t *testing.T, role string) (string, registry.Session, registry.Session) {

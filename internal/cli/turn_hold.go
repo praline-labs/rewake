@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // holdTurn decides, under the mailbox lock, whether this turn end is held for

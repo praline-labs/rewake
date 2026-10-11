@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // A harness can take a notice and keep it from the agent: Claude Code parks a

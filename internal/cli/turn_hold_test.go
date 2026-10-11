@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // stopEnd is a turn end from a harness that lets an end be held once: the

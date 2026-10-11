@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/infra/proc"
 )
 
 // The clients of the endpoint: a child's one confirmation, and a transport's

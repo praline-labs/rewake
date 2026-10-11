@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // A letter a tool call started showing in parts is being read: part of its

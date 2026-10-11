@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // realReporting gives back each harness's own answer for the test.

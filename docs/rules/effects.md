@@ -40,11 +40,11 @@ nothing lifts a stop without returning evidence.
   Tests:
   - `internal/receipt/receipt_test.go` `TestTheLockHoldsOneCallAtATime`
   - `internal/receipt/receipt_test.go` `TestTheSweepRespectsAHeldLock`
-  - `internal/state/held_test.go` `TestTryHoldWaitsForTheWriter`
-  - `internal/state/held_test.go` `TestTryHoldRefusesAFileRemovedBeforeItsLock`
-  - `internal/state/held_test.go` `TestTryHoldRefusesAFileReplacedBeforeItsLock`
-  - `internal/state/lock_test.go` `TestNameLockHoldsBetweenProcesses`
-  - `internal/state/state_test.go` `TestNameLockSerialisesClaims`
+  - `internal/infra/state/held_test.go` `TestTryHoldWaitsForTheWriter`
+  - `internal/infra/state/held_test.go` `TestTryHoldRefusesAFileRemovedBeforeItsLock`
+  - `internal/infra/state/held_test.go` `TestTryHoldRefusesAFileReplacedBeforeItsLock`
+  - `internal/infra/state/lock_test.go` `TestNameLockHoldsBetweenProcesses`
+  - `internal/infra/state/state_test.go` `TestNameLockSerialisesClaims`
   - `internal/inbox/publication_bounds_test.go` `TestASweepWithoutTheLockRetiresNothing`
 
 - **E3. Every check that decides an effect runs inside the critical section, right

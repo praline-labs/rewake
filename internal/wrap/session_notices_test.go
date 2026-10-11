@@ -10,11 +10,11 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/infra/proc"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
 	"github.com/praline-labs/rewake/internal/sessionstate"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 func noticeState(t *testing.T, dir string, peer registry.Session, activity string, count uint64, events []sessionstate.CompactionEvent) {

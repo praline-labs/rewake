@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // A question blocks until the other session ends its turn, and prints its

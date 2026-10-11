@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // Delivery is the step that cannot be undone. If the status write fails, the

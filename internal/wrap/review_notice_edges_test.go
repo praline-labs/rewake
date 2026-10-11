@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/infra/proc"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
 	"github.com/praline-labs/rewake/internal/sessionstate"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 func TestReviewUnreadableProcessIdentityDoesNotAnnounceDeparture(t *testing.T) {

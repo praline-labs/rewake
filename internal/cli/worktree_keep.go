@@ -6,8 +6,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/state"
 	"github.com/praline-labs/rewake/internal/worktree"
 )
 

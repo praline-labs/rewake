@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // LookupReadOnly checks liveness without deleting stale records. Optional state

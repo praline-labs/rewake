@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 func TestReportsMarkOnlyKnownThreadChanges(t *testing.T) {

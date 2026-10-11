@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/boottime"
 	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/infra/boottime"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/receipt"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // headsUps are the letters with this text waiting in web's mailbox.

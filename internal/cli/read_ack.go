@@ -9,10 +9,10 @@ import (
 
 	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/receipt"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // The read boundary. A part counts as shown only on evidence that the model

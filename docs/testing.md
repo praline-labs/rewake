@@ -30,7 +30,7 @@ including the owner's own eye on a terminal, is in
 
 The neutral rig's tests (`test/toolrig`) build rewake themselves, with the `rewakefault`
 tag, while the five checks run. A binary of that build reads `REWAKE_FAULT`
-(`internal/state/fault_build.go`) and logs, ends, fails or holds its process at a durable
+(`internal/infra/state/fault_build.go`) and logs, ends, fails or holds its process at a durable
 step, or leaves behind a process that keeps its output open past a kill, so the fault
 tests take their cases from the logged steps of clean runs rather than from a list kept
 by hand ([mail-bridge-checks.md](mail-bridge-checks.md#how-the-checks-are-built)). A

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"slices"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // HasLive says whether the run has proven a capability. Every decision another

@@ -15,8 +15,8 @@ import (
 	"github.com/praline-labs/rewake/internal/grantauth"
 	"github.com/praline-labs/rewake/internal/grantauth/grantauthtest"
 	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/proc"
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/proc"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // A directory swapped for a link after the grant was sent fails at delivery,

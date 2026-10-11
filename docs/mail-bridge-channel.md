@@ -321,7 +321,7 @@ is a table of its own, with the sequences the generated tests assert:
 The record, its events and notices are `internal/channel` (`record.go`, `events.go`, `history.go`,
 `display.go`, `notices.go`); the wrapper's keeper is `internal/wrap/channel.go`, the
 shell's side `internal/cli/shell_channel.go`, `internal/receipt/shell.go` and
-`internal/state/reach.go`. Where the text above left a choice, the code reads it so:
+`internal/infra/state/reach.go`. Where the text above left a choice, the code reads it so:
 
 - **A close waits a full heartbeat** (1 s) after it happened before it is folded, with
   whether the harness still lives then; at the end the held closes fold as ones the

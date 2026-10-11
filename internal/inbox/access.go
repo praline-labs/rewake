@@ -7,7 +7,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // The barrier decides by what its effects read, and a stop is worth something

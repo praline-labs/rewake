@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/infra/proc"
 )
 
 // runOf names a run of a process: this one while the test runs, or one that

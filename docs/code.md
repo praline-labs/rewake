@@ -10,12 +10,12 @@ this file is what to open when looking for where something is in the tree. `go l
 cmd/rewake/                      entry point, top-level parsing
 internal/                        the layout test of 2.0: the import rule, harness names outside the adapters, no registry
 internal/cli/                    command table, parsing, overview, help, failures, printing
-internal/state/                  directory: checks, paths, atomic writes
-internal/buildtime/              durations a build may shorten through -ldflags, for the suite
+internal/infra/state/            directory: checks, paths, atomic writes
+internal/infra/buildtime/        durations a build may shorten through -ldflags, for the suite
 internal/registry/               session record, name publishing, liveness and listing
 internal/registry/registrytest/  for tests: the boot a session of this build carries
-internal/proc/                   /proc: identity, liveness, job-control state, lineage and namespaces
-internal/boottime/               the boot clock, comparable across processes and never set back
+internal/infra/proc/             /proc: identity, liveness, job-control state, lineage and namespaces
+internal/infra/boottime/         the boot clock, comparable across processes and never set back
 internal/inbox/                  message, status, sender-side write, servicing loop
 internal/receipt/                the journal of mail operations run through the tool's words: keys, records, frozen reads
 internal/bridge/                 what the CLI and the context endpoint share: the ticket, result bounds, cutting parts

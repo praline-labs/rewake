@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // The test binary plays two other processes when run again: a call's child,

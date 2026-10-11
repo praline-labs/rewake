@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/infra/proc"
 )
 
 func ownRun(t *testing.T) string {

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // ReadBatch is an explicit read, frozen by its first call: which letters, in

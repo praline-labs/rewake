@@ -10,10 +10,10 @@ import (
 
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
 	"github.com/praline-labs/rewake/internal/channel"
-	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/infra/proc"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // endableMain publishes a ready main of this build served by a process of its

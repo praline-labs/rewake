@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // keptClock is a run of api with its read clock open, as its wrapper holds

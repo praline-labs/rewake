@@ -29,7 +29,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // Key scopes an operation. Two calls with the same key are one operation.

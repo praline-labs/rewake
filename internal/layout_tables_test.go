@@ -14,11 +14,6 @@ import (
 // docs/v2/stage3-packages.md). An entry fails once its package is at its 2.0
 // path or gone, so the table empties with the moves.
 var transition = map[string]transit{
-	"internal/state":     {layer: infra, step: "S12"},
-	"internal/proc":      {layer: infra, step: "S12"},
-	"internal/boottime":  {layer: infra, step: "S12"},
-	"internal/buildtime": {layer: infra, step: "S12"},
-
 	"internal/receipt":                 {layer: core, step: "S13"},
 	"internal/registry":                {layer: core, step: "S13"},
 	"internal/registry/registrytest":   {layer: core, step: "S13"},

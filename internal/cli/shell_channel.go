@@ -4,9 +4,9 @@ import (
 	"errors"
 	"os"
 
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/receipt"
 	"github.com/praline-labs/rewake/internal/sessionstate"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // The shell's evidence for the mail channel

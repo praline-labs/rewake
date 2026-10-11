@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/grantauth"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // TestFixtureGrantDir is the core's part of a directory granted with a task,

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/praline-labs/rewake/internal/boottime"
-	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/infra/boottime"
+	"github.com/praline-labs/rewake/internal/infra/proc"
 )
 
 // currentBoot reads the id of the machine's boot once: it does not change for

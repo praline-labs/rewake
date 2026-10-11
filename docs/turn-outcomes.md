@@ -54,7 +54,7 @@ chosen.
 - **The marks** are `inbox/<name>/pending/marks/<epoch>/<time>-<id>`
   (`internal/inbox/marks.go`), one file per `rewake pending` call, written only under
   the mailbox lock. A mark belongs to the turn it was made in and to no other, and the
-  tie is time on the machine's boot clock (`CLOCK_BOOTTIME`, `internal/boottime`), one
+  tie is time on the machine's boot clock (`CLOCK_BOOTTIME`, `internal/infra/boottime`), one
   clock for every process that a wall-clock jump after a WSL suspend does not move back.
   The mark records when the `rewake pending` process started; a turn end honors it only
   if that lies in the turn's window: after the later of the turn's start and the latest

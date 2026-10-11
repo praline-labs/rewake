@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // Session is what one running harness looks like to everybody else.

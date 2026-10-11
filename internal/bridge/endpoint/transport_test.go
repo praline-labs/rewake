@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/proc"
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/proc"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // The transport's side of a call (transport.go): the harness's own process

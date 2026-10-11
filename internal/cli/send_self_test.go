@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // A session writing to itself is refused before anything is written: a task

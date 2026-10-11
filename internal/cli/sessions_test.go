@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/infra/proc"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/registry/registrytest"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // allLive is the live set of a run that proved every capability a session

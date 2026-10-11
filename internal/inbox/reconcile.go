@@ -9,7 +9,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // Reconcile is the barrier every record of a mailbox passes before any turn

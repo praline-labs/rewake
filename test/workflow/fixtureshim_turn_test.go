@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/boottime"
+	"github.com/praline-labs/rewake/internal/infra/boottime"
 )
 
 // The fixture program's turns: a notice starts one, or is steered into the one

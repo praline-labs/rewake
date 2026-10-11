@@ -13,9 +13,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // stopLook is what one call learned of a mailbox's stop: what its plan

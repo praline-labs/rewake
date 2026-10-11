@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/boottime"
 	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/boottime"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // unproven is the answer of an attempt that cannot show it runs in its mark's

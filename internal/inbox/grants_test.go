@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 func grantPending(t *testing.T, dir string, grants ...bool) []Message {

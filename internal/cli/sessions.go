@@ -9,10 +9,10 @@ import (
 
 	"github.com/praline-labs/rewake/internal/channel"
 	"github.com/praline-labs/rewake/internal/grant"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
 	"github.com/praline-labs/rewake/internal/sessionstate"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // listModel is the machine form of the session list.

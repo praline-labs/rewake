@@ -3,8 +3,8 @@ package wrap
 import (
 	"fmt"
 
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // Role resolution precedes naming under the room lock, so an automatic name

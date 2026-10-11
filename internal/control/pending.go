@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // Pending is a compaction whose command answered started or requested and

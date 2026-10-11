@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 func TestPeekHasNoConsumptionOrDispatchAcknowledgement(t *testing.T) {

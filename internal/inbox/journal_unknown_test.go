@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/infra/proc"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/registry/registrytest"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // What the journal cannot recognize is unknown, never permission, and what it

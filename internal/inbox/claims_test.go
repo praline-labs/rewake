@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // announcedUnread leaves a letter where a serving process leaves one it has

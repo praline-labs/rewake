@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // An unknown only an effect met — the reading before it and the one after it

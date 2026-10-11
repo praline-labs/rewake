@@ -3,7 +3,7 @@ package registry
 import (
 	"time"
 
-	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/infra/proc"
 )
 
 // Whether a published session is still the run it names, and how long it

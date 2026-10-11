@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/boottime"
-	"github.com/praline-labs/rewake/internal/buildtime"
+	"github.com/praline-labs/rewake/internal/infra/boottime"
+	"github.com/praline-labs/rewake/internal/infra/buildtime"
 )
 
 // Letters that ask for nothing come in bursts: three workers restarted give

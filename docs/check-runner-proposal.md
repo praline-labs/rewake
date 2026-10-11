@@ -41,7 +41,7 @@ under the project's line limit.
 | Five required checks | gofumpt, go vet, staticcheck, golangci-lint, `go test -race -shuffle=on` (AGENTS.md) | The tree builds, is formatted, and every unit test passes | Nothing about a real process, a real harness or a real message path |
 | Unit and domain tests | 521 tests, 19 070 lines, across 14 packages; heaviest in `internal/harness/codex/gateway`, `internal/cli`, `internal/inbox` | Deterministic domain invariants, refusal reasons, receipt accounting, queue bounds | In-process doubles only |
 | In-process integration | `internal/cli/gateway_integration_test.go` wires a real reservation to a real mailbox inside one process | Correlation across components | No process boundary, no harness binary |
-| Cross-process helper | `internal/state/lock_test.go` re-execs the test binary through `TestMain` to prove a file lock holds between processes | That the pattern we need already works here, with no dependency | Used for exactly one invariant |
+| Cross-process helper | `internal/infra/state/lock_test.go` re-execs the test binary through `TestMain` to prove a file lock holds between processes | That the pattern we need already works here, with no dependency | Used for exactly one invariant |
 | Process fixtures | `internal/wrap/process_fixture_test.go`, `ownership_test.go`, `scripts/shim_test.go` | Wrapper lifecycle against spawned children | Children are shims, not harnesses |
 | Hand-written acceptance | [inbox-acceptance.md](inbox-acceptance.md), [native-mailbox-acceptance.md](native-mailbox-acceptance.md), [claude-parity-2026-09-21.md](claude-parity-2026-09-21.md) | The live behaviour the marks in [harness-features.md](harness-features.md) rest on | Manual, unrepeatable, one run each |
 
@@ -111,7 +111,7 @@ a few milliseconds for a standard-library package whose tests skip — and that
 compilation is what keeps the code from rotting. One condition follows from the skip
 form: nothing needing an installed harness may run at package initialisation.
 
-The shape to copy is the re-exec helper in `internal/state/lock_test.go`, which already
+The shape to copy is the re-exec helper in `internal/infra/state/lock_test.go`, which already
 runs a second process to prove a cross-process invariant. Not
 `internal/cli/gateway_integration_test.go`: it lives inside package `cli` and assembles
 a reservation through unexported helpers, which an external `test/workflow` package

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/buildtime"
 	"github.com/praline-labs/rewake/internal/control"
 	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/infra/buildtime"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/sessionstate"
 )

@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // planScene is a state the barrier of one mailbox runs on, built as the

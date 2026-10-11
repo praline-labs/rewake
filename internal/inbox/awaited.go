@@ -6,7 +6,7 @@ import (
 	"slices"
 	"sort"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // Stage is where a task or question stands on its way to the report its sender

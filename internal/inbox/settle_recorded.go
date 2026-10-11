@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // settleRecorded settles the letters a recorded outcome still owes that no

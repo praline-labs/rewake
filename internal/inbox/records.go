@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/receipt"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // Every file a mailbox holds is of one kind on this list

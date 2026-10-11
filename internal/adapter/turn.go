@@ -53,7 +53,7 @@ type TurnEnd struct {
 	// Boundary is what had been read when the end was heard: the end's
 	// scope, fixed before its first effect. An end without one is refused.
 	Boundary *inbox.ReadBoundary
-	// Started and Ended bound the turn on the boot clock (internal/boottime),
+	// Started and Ended bound the turn on the boot clock (internal/infra/boottime),
 	// zero where unknown; a pending mark counts for this turn only if it was
 	// made between them.
 	Started, Ended int64

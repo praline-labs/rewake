@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/boottime"
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/boottime"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // A waiting send's mark says when it was last touched in its content, as a

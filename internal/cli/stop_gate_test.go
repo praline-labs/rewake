@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // A journal that cannot be read stops the mailbox for every call that would

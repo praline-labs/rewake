@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // senderLab is the interim lab with a second sender: web and second both wait

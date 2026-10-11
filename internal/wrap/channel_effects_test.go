@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/channel"
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // C8, nothing is relaunched, granted or approved by the channel

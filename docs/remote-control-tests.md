@@ -39,7 +39,7 @@ built is in [testing-plugin.md](archive-1.x/testing-plugin.md#steering-a-session
   late getting that outcome's letter, no word within the bound as the bound's letter, and a record an
   earlier run of main left closed by the next; `compaction_letters_hold_test.go` — a record
   its command holds left alone while its worker leaves, and a command killed with
-  SIGKILL letting go of its record, which is then closed. `internal/state/held_test.go`
+  SIGKILL letting go of its record, which is then closed. `internal/infra/state/held_test.go`
   — the hold taken only once the writer lets go, and refused on a file removed or
   replaced between the open and the lock; `internal/control/pending_test.go` — the
   record read again under the hold, and a closed one not held.

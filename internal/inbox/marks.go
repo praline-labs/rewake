@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // A pending mark says the turn now running is not the end of the work

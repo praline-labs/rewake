@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/infra/proc"
 )
 
 // maxHeld bounds what one main holds at once. A registration past it is

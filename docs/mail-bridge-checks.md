@@ -124,7 +124,7 @@ code is built and accepted.
 
 The server's tests are in `internal/bridge/server`, the endpoint's in
 `internal/bridge/endpoint`, and the adapters' beside each adapter. The test binary builds
-rewake with the `rewakefault` tag, whose `REWAKE_FAULT` (`internal/state/fault_build.go`)
+rewake with the `rewakefault` tag, whose `REWAKE_FAULT` (`internal/infra/state/fault_build.go`)
 logs, ends, fails or holds a server, child or shell process at a durable step; the test's
 own process plays the wrapper, and its writes go through the same seam in-process
 (`wrapper_fault_test.go`).

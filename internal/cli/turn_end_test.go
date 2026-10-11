@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/boottime"
 	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/boottime"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // boundaryEnd is a turn end as a harness's boundary hands it to the core:

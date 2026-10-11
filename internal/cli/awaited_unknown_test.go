@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // rewake inbox --awaited only informs, so a recipient whose session record

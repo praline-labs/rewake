@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/infra/proc"
 )
 
 // realStranger is a process that is not this one, as it started: a pid and

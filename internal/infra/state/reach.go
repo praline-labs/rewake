@@ -6,7 +6,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/boottime"
+	"github.com/praline-labs/rewake/internal/infra/boottime"
 )
 
 // What this process met reaching the state directory, for the shell

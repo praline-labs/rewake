@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/grant"
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // rewake inbox --owed only informs, so a grant journal it cannot read is

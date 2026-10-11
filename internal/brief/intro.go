@@ -2,8 +2,8 @@
 package brief
 
 import (
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/role"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // Context identifies a session and explains its role selection.

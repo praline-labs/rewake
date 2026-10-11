@@ -3,8 +3,8 @@ package endpoint
 import (
 	"sync"
 
-	"github.com/praline-labs/rewake/internal/boottime"
 	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/infra/boottime"
 )
 
 // Gate orders the acknowledgments of reads against the turn ends this

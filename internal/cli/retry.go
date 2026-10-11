@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/receipt"
-	"github.com/praline-labs/rewake/internal/state"
 )
 
 // retryCommand is retry, which finishes or shows again what a call with a

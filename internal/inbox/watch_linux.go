@@ -8,7 +8,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 /*

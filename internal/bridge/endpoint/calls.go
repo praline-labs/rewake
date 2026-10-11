@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/boottime"
 	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/channel"
-	"github.com/praline-labs/rewake/internal/proc"
+	"github.com/praline-labs/rewake/internal/infra/boottime"
+	"github.com/praline-labs/rewake/internal/infra/proc"
 )
 
 // What the wrapper matches (docs/archive-1.x/mail-bridge-server.md#what-the-wrapper-matches).

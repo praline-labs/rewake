@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/boottime"
 	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/infra/boottime"
 )
 
 // A pending mark between a turn's capture and its journal, rebuilt from

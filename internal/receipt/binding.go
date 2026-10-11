@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // A call's binding (docs/archive-1.x/mail-bridge-server.md#running-the-child) names the

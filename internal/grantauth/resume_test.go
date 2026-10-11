@@ -13,8 +13,8 @@ import (
 
 	"github.com/praline-labs/rewake/internal/grant"
 	"github.com/praline-labs/rewake/internal/grantauth/grantauthtest"
-	"github.com/praline-labs/rewake/internal/proc"
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/proc"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // ended is the run of a process that has exited.

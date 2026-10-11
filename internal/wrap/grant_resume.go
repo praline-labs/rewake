@@ -9,7 +9,7 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/grant"
 	"github.com/praline-labs/rewake/internal/grantauth"
-	"github.com/praline-labs/rewake/internal/state"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // A cold resume of a conversation that held a grant starts a new run, whose
