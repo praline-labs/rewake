@@ -92,12 +92,12 @@ the prefix; file names drop `.go` and their tests go with them unless
 | the commands: `inbox*`, `send*`, `sent_*`, `pending`, `retry`, `withdraw*`, `edit`, `sessions`, `session_table`, `session_state`, `steer`, `worktree*`, `launch*` | `cli` | — | `launch` takes the catalogue value from `cmd/rewake` in S10 |
 | the tool receipts of a command: `journal`, `journal_steps`, `shell_channel`, `bridge_run` | `cli` | — | a CLI child runs them |
 | `bridge_surface` (`ToolWords`, the allowlist) | `cli` | S7 | becomes the descriptors |
-| `turnended`: `endTurnContext`, `completeTurnContext`, `turnMark`, `hookLockWait` | `core/mail` | S14 | |
+| `turnended`: `endTurnContext`, `completeTurnContext`, `turnMark`, `hookLockWait` | `core/mail` (`turn_end.go`) | S14 | `hookLockWait` is `turnEndLockWait` since S9; exported as `EndTurn` and `CompleteTurn` |
 | `turnended`: `handleTurnEnded`, `readPayload`, `isTerminal` | removed | S9 | the hook command |
-| `turn_result`: the neutral value and `kind()` | `core/mail` as `TurnEnd` | S4 in place, S14 move | |
+| `turn_result`: the neutral value and `kind()` | `core/mail` as `TurnEnd` | S4 | in `core/mail/turn_inputs.go` since S4; nothing left for S14 |
 | `turn_result`: `completedTurn` | `cli/turn_payload`, then removed | S4, S8 and S9 | the hook and notify decoder |
-| `turn_reports`, `turn_hold` (less `printHold`), `pending_turn` (less `inOwnTurn` and `attemptScope`), `read_ack` (less the shim) | `core/mail` | S14 | the inventory in [stage3-moves.md](stage3-moves.md#s14-the-turn-end-and-read-code-to-coremail) |
-| `completion` (`ReportCompletion`, `ConfirmCompletion` from S5), `read_ack` (`AcknowledgeRead`), `printHold`, `inOwnTurn`, `attemptScope`, `completeTurn` | `cli` | — | shims and the shell's side |
+| `turn_reports`, `turn_hold`, `pending_turn` (less `inOwnTurn` and `attemptScope`, as `pending_mark`), `read_ack` (less `AcknowledgeRead` and `settleLetters`) | `core/mail` | S14 | the inventory in [stage3-moves.md](stage3-moves.md#s14-the-turn-end-and-read-code-to-coremail) |
+| `completion` (`ReportCompletion`, `ConfirmCompletion` from S5), `read_ack` (`AcknowledgeRead`, `settleLetters`, as `read_settle`), `inOwnTurn`, `attemptScope`, `completeTurn` | `cli` | — | shims and the shell's side; `printHold` left with the hook command in S9, `completeTurn` lives in a test file from S14 |
 | `self` | `cli` | S2 cut | the `errUpgraded` branches go |
 | `telemetry` (`observe`, `status-tap`), `granthook` | removed | S9 | |
 | `bridge_serve` | removed | S8 | |

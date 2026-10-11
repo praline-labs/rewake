@@ -98,48 +98,69 @@ rewrite; doing it here, before the turn-end code joins it, would split it twice.
 `(dir, session, epoch)`. After S8 and S9 the external test callers are gone with their
 packages (`bridge/server/order_marks_test.go:58`, `rig_test.go:111`,
 `harness/codex/report_boundary_test.go:84`), and so are the hook payload decoder and
-the hook command of `cli/turnended.go`; its turn-end functions remain.
+the hook command of `cli/turnended.go`; its turn-end functions remain. S9 also renamed
+`hookLockWait`, which every end waits under, to `turnEndLockWait`, and `printHold` left
+with the hook command.
 
-**The inventory at `b6ed4ed`** (the cli files' declarations, by reading and grep —
-retaken with `go/types` at the step; S4 retook it at `b24dcad` and `8663fcc` and found
-no dependency outside it; the corrections its review agreed are applied below):
+**The inventory**, taken with `go/types` over the four build variants at `2846a50`
+(October 11, 2026; the first, at `b6ed4ed`, was by reading and grep). What moves reaches
+nothing in `cli` outside itself and no package `core/mail` does not already import:
 
 | Declarations | Goes to | Why |
 |---|---|---|
-| `endTurnContext`, `completeTurnContext`, `turnMark`, `hookLockWait` (`cli/turnended.go:102-187`) | `core/mail` (`turn_end.go`) | the end under the mailbox lock; the wait serves every end, not only a hook's |
-| `prepareTurnReports`, `publishTurnContext`, `turnOp`, `reportOfOp`, `liveSenders`, `joinTurnText` | `core/mail` (`turn_reports.go`) | the journal, the reports and their identities |
-| `completeTurn` (`turnended.go:98`) | stays in `cli` | a wrapper only tests call |
-| `holdTurn`, `holdReason` | `core/mail` (`turn_hold.go`) | the hold, taken as an argument since S4 and set by the neutral confirmation since S5, with the held end's identity |
-| `printHold` | stays in `cli` | it writes the command's output |
+| `endTurnContext`, `completeTurnContext`, `turnMark`, `turnEndLockWait` (`cli/turnended.go`) | `core/mail` (`turn_end.go`) | the end under the mailbox lock; the wait serves every end, not only a hook's |
+| `prepareTurnReports`, `publishTurnContext`, `turnOp`, `reportOfOp` | `core/mail` (`turn_reports.go`) | the journal, the reports and their identities |
+| `holdTurn`, `holdReason`, `liveSenders`, `joinTurnText` | `core/mail` (`turn_hold.go`) | the hold, taken as an argument since S4 and set by the neutral confirmation since S5, with the held end's identity; the last two sit in `turn_hold.go` and move with it |
+| `completeTurn` (`turnended.go:18`) | stays in `cli`, in a test file | a wrapper only tests call (65 uses); production code with no production caller does not stay in a production file |
 | `markVerdict` and its constants, `judgeMark` | `core/mail` (`pending_mark.go`) | the mark's verdict |
-| `inOwnTurn`, `attemptScope` | stay with their callers in `cli` (`journal.go:182`, `pending.go:126`) | they read the ticket and the binding's declared property; the core gets the booleans, as `inbox.AttemptScope` since S4 |
+| `inOwnTurn`, `attemptScope` | stay with their callers in `cli` (`journal.go:183`, `pending.go:118`) | they read the ticket and the binding's declared property; the core gets the booleans, as `inbox.AttemptScope` since S4 |
 | `acknowledgeRead`, `acknowledge`, `answeredBy`, `markWhole`, `ackBudget`, `ErrNotWhole`, `ErrTurnEnded` | `core/mail` (`read_ack.go`) | the read's acknowledgment |
-| `ReportCompletion`, `ConfirmCompletion`, `AcknowledgeRead` | stay in `cli` as shims | they convert the adapter's completion and the tool's exposure; `cli/launch.go:77-89` keeps passing them, `ConfirmCompletion` beside `ReportCompletion` since S5 |
+| `ReportCompletion`, `ConfirmCompletion`, `AcknowledgeRead` | stay in `cli` as shims | they convert the adapter's completion and the tool's exposure; `cli/launch.go:68-85` keeps passing them |
 | `settleLetters`, `readSite` | stay in `cli` | the shell read's path (`inbox_parts_emit.go:123`) |
 
-**The preparatory commit**, in place: the test seam `beforeReports`, a package variable
-that cli tests set (`cli/turn_test.go:116-132`, `bridge_lookups_test.go:203-207`),
-becomes a field of the options the core function takes, which `cli` fills from its own
-variable, so no test reaches into another package's variable; `hookLockWait`, which
-every end waits under (`turnended.go:125`), is renamed for what it is.
+**The preparatory commits**, in place, behaviour unchanged (decided October 11, 2026):
 
-**The move**: those declarations to `core/mail` files; `cli` imports them back.
-**String consumers**: the mutations of `turn_reports.go` (5), `turn_hold.go` (1) and
-`turnended.go` (1, on `turnMark`, `:165`) get their new paths in the same commit. The two
-that named `turn_result.go` name `cli/turn_payload.go` since S4: they edit the payload
-decoder, which stays in `cli` and leaves in S8 and S9, so they are retired or rebuilt
-there and do not move here.
+1. The test seam `beforeReports`, a package variable read inside the end, becomes the
+   field `BeforeReports` of `TurnEndOptions`, which the core function takes; `cli` keeps
+   its variable and fills the option at its four calls (`ReportCompletion`,
+   `ConfirmCompletion`, `completeTurn`, the test helper `endTurn`), so no test reaches
+   into another package's variable and none changes. Its setters:
+   `cli/turn_test.go:90-106`, `neutral_end_test.go:89-106`,
+   `bridge_lookups_test.go:203-207`, `turn_journal_retry_test.go:85-89` and eight places
+   in `turn_journal_test.go`; each assigns it before the end that should see it.
+2. The three files that hold both sides are split so each moving file moves whole:
+   `turnended.go` becomes `turn_end.go` without `completeTurn` (to `turn_end_test.go`)
+   and `beforeReports` (to `completion.go`); the verdict and `judgeMark` leave
+   `pending_turn.go` for `pending_mark.go`; `AcknowledgeRead` and `settleLetters` leave
+   `read_ack.go` for `read_settle.go`.
+3. The names `cli`'s staying code calls are exported under their `core/mail` names:
+   `EndTurn`, `CompleteTurn`, `JudgeMark`, `MarkVerdict` with `VerdictWrite`,
+   `VerdictFound`, `VerdictTurnEnded`, `VerdictUnproven` (the type's word, so none reads
+   as an action beside `mail.MarkRead`), `Acknowledge` (`AcknowledgeRead` is the shim's),
+   `AcknowledgeParts` and `MarkWholeRead`.
 
-**Tests: none moves.** The closure rule above keeps them in `cli`: `turn_scope_test.go`
+**The move**: the five whole files `git mv`ed to `core/mail`, `mail.` dropped inside
+them and added at `cli`'s calls; `ErrNotWhole` and `ErrTurnEnded` move without an
+alias, their consumers (`cli/bridge_read_test.go:85`,
+`test/toolrig/order_end_test.go:52,109`) taking the new qualifier. **String
+consumers**: the mutations of `turn_reports.go` (5), `turn_hold.go` (1) and
+`turnended.go` (1, on `turnMark`) get their new paths; their texts name only locals,
+fields and `joinTurnText`. One more, `end-thread-ignored`
+(`test/workflow/fixture_thread_test.go`), edits `cli/completion.go`, which stays, but
+quotes its two calls into the end, so its texts follow the option, the export and the
+qualifier. None names `turn_result.go` or `turn_payload.go` since S8 and S9 (recounted
+October 11, 2026).
+
+**Tests: none moves.** The closure rule above keeps them in `cli`: 328 of its 336 tests
+reach the moving code, and each also reaches `cli`'s own helpers — `turn_scope_test.go`
 reaches `readKind`, which runs `rewake inbox` (`cli/turn_journal_test.go:25-32`), and
 `completeTurn`, `toolSession`, `boundaryNow`, `owes`, `answersTo` of other `cli` test
 files; `turn_journal_retry_test.go` the same helpers; `review_receipt_identity_test.go`
-drove the gateway until S8 and keeps only `:109`, which calls `ReportCompletion`. None of
-the `cli` tests names an unexported identifier that moves (a search for each of the
-table's names at `b6ed4ed`; `turnResult` is `inbox.TurnEnd` from S4, `ErrNotWhole` is
-exported, `beforeReports` is the option of the preparatory commit), so each keeps
-holding its rule through `cli`'s entry points. A test written later on the core's own
-types belongs in `core/mail`.
+is gone since S8. Two name the moving code directly: the helper `endTurn` calls the end,
+and `TestAnAttemptNotProvenInItsTurnIsMarkUnproven` (`cli/turn_declared_test.go`) calls
+`judgeMark` with the verdict's constants; it stays in `cli` against `mail.JudgeMark`,
+its other helpers being `cli`'s (decided October 11, 2026). A test written later on the
+core's own types belongs in `core/mail`.
 
 ## S15. The delivery server to `host/delivery` [codex]
 
@@ -161,7 +182,9 @@ methods read inside those six methods.
    the types `Availability` and `UndeliveredNotice` (fields of `Message`,
    `inbox.go:38-39`), `removeWaiting` (`withdraw.go:187`), `answerLifetime`
    (`records.go:65`), `keepFinished` (`adopt.go:34`), `deliveryThread`
-   (`adopt.go:53,97`), the errors `ErrThreadUnavailable` and `ErrNotYet`, and whichever
+   (`adopt.go:53,97`), the errors `ErrThreadUnavailable` and `ErrNotYet`,
+   `ReportThreadChanged` (`thread.go:53`, which calls `deliveryThread`), called by the
+   turn-end reports in `core/mail/turn_reports.go` since S14, and whichever
    of `retentionPath`, `retainedReceipts`, `threadPath`, `keepThreadRecord` the retaken
    inventory still finds on the mail side.
 3. A mail identifier delivery uses is exported, with a doc comment that says why
