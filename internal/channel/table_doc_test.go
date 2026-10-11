@@ -23,7 +23,7 @@ var elsewhere = map[string]string{
 // Every row of the failure table is held by a test: a scenario of the
 // same name, or the test named for it.
 func TestEveryFailurePointOfTheTableIsHeld(t *testing.T) {
-	table, err := os.ReadFile(filepath.Join("..", "..", "docs", "mail-bridge-channel-failures.md"))
+	table, err := os.ReadFile(filepath.Join(moduleRoot(t), "docs", "mail-bridge-channel-failures.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,14 +54,19 @@ func TestEveryFailurePointOfTheTableIsHeld(t *testing.T) {
 }
 
 // testSources are the test files of the packages the table's rows are
-// held in.
+// held in: this one and internal/wrap, named from the module's root so the
+// list holds wherever either package lives. A directory with no test files
+// fails, rather than drop its tests from the sources unseen.
 func testSources(t *testing.T) string {
 	t.Helper()
 	var all strings.Builder
-	for _, dir := range []string{".", filepath.Join("..", "wrap")} {
+	for _, dir := range []string{".", filepath.Join(moduleRoot(t), "internal", "wrap")} {
 		files, err := filepath.Glob(filepath.Join(dir, "*_test.go"))
 		if err != nil {
 			t.Fatal(err)
+		}
+		if len(files) == 0 {
+			t.Fatalf("no test files in %s", dir)
 		}
 		for _, file := range files {
 			raw, err := os.ReadFile(file)
@@ -72,4 +77,23 @@ func testSources(t *testing.T) string {
 		}
 	}
 	return all.String()
+}
+
+// moduleRoot walks up from the package's directory to the go.mod above it.
+func moduleRoot(t *testing.T) string {
+	t.Helper()
+	dir, err := filepath.Abs(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			t.Fatal("no go.mod above the package")
+		}
+		dir = parent
+	}
 }
