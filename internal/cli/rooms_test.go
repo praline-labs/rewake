@@ -20,7 +20,7 @@ func TestCommandsCannotSeeAnotherRoom(t *testing.T) {
 	}
 	rawUnread(t, red, "api", map[string]any{"text": "red secret", "toEpoch": session.Epoch()})
 	t.Setenv("REWAKE_ROOM", "blue")
-	if code, out, errOut := run("list"); code != 0 || strings.Contains(out, "claude") && !strings.Contains(out, "No sessions") {
+	if code, out, errOut := run("list"); code != 0 || strings.Contains(out, agentID) && !strings.Contains(out, "No sessions") {
 		t.Errorf("foreign list: %d %s %s", code, out, errOut)
 	}
 	if code, _, _ := run("send", "api", "hello", "--wait", "0"); code != ExitUsage {
@@ -82,7 +82,7 @@ func TestRoomAndRoleAreVisibleInIdentity(t *testing.T) {
 }
 
 func TestRoomsAndWorkerAreLaunchFlagsOnly(t *testing.T) {
-	for _, args := range [][]string{{"--room", "red", "--general", aHarness(t)}, {"--room=blue", "--main", "claude"}} {
+	for _, args := range [][]string{{"--room", "red", "--general", aHarness(t)}, {"--room=blue", "--main", agentID}} {
 		if _, err := testTable().parse(args); err != nil {
 			t.Errorf("launch %q: %v", args, err)
 		}
@@ -117,7 +117,7 @@ func TestAnOccupiedMainIsAUsageRefusal(t *testing.T) {
 	markMain(t, dir, "leader")
 	// The launch comes from a shell outside any session.
 	outsideAnySession(t)
-	code, _, errOut := run("--main", "--name", "other", "claude")
+	code, _, errOut := run("--main", "--name", "other", agentID)
 	if code != ExitUsage || !strings.Contains(errOut, "leader") || !strings.Contains(errOut, "without --main") {
 		t.Errorf("refusal=%d %s", code, errOut)
 	}

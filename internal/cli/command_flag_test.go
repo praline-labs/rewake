@@ -25,12 +25,12 @@ func TestACommandThatCannotRunIsRefused(t *testing.T) {
 	}
 	for _, tc := range []struct{ value, want string }{
 		{"no-such-wrapper-anywhere", "on PATH"},
-		{"/nonexistent/my-claude", "at that path"},
+		{"/nonexistent/my-agent", "at that path"},
 		{plain, "at that path"},
 	} {
-		code, _, errOut := run("--command", tc.value, "claude")
+		code, _, errOut := run("--command", tc.value, agentID)
 		if code != ExitUsage || !strings.Contains(errOut, "--command "+tc.value) || !strings.Contains(errOut, tc.want) ||
-			!strings.Contains(errOut, "omit --command to start claude itself") {
+			!strings.Contains(errOut, "omit --command to start "+agentID+" itself") {
 			t.Errorf("%s: exit %d, stderr %q", tc.value, code, errOut)
 		}
 	}
@@ -43,7 +43,7 @@ func TestACommandThatCannotRunIsRefused(t *testing.T) {
 // silently winning.
 func TestACommandGivenTwiceIsRefused(t *testing.T) {
 	isolateAliases(t)
-	code, _, errOut := run("--command", "sh", "--name", "x", "--command=sh", "claude")
+	code, _, errOut := run("--command", "sh", "--name", "x", "--command=sh", agentID)
 	if code != ExitUsage || !strings.Contains(errOut, "--command given twice") || !strings.Contains(errOut, "full help:") {
 		t.Errorf("exit %d, stderr %q", code, errOut)
 	}
@@ -53,7 +53,7 @@ func TestACommandGivenTwiceIsRefused(t *testing.T) {
 // read it there.
 func TestACommandAfterTheHarnessIsTheHarnesss(t *testing.T) {
 	isolateAliases(t)
-	if err := testTable().singleProgram([]string{"claude", "--command", "a", "--command", "b"}); err != nil {
+	if err := testTable().singleProgram([]string{agentID, "--command", "a", "--command", "b"}); err != nil {
 		t.Errorf("flags after the harness word were read as rewake's: %v", err)
 	}
 }
@@ -64,7 +64,7 @@ func TestTheCommandOptionIsALaunchFlag(t *testing.T) {
 	if !testTable().launchFlagTakesValue("command") {
 		t.Fatal("--command is not a launch flag taking a value")
 	}
-	code, out, _ := run("claude", "--help")
+	code, out, _ := run(agentID, "--help")
 	if code != ExitOK || !strings.Contains(out, "--command <program>") || !strings.Contains(out, "command = \"<program>\"") {
 		t.Errorf("help does not show --command and the alias field:\n%s", out)
 	}

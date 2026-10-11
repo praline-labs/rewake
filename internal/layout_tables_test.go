@@ -54,26 +54,7 @@ func (x importException) excuses(e edge) bool {
 
 // importExceptions are the forbidden edges of the 1.x tree, from the first
 // run of the test (docs/v2/stage3-steps.md#s1-the-tests-first).
-var importExceptions = []importException{
-	{
-		from: "internal/cli", to: "internal/adapter/catalog",
-		files:  []string{"internal/cli/cli_test.go"},
-		reason: "the parser's tests read the registry the catalog fills; from S10 cmd/rewake passes the catalog value",
-		step:   "S10",
-	},
-	{
-		from: "internal/alias", to: "internal/adapter/catalog",
-		files:  []string{"internal/alias/harness_flags_test.go"},
-		reason: "the tests take a real adapter",
-		step:   "S10",
-	},
-	{
-		from: "internal/wrap", to: "internal/adapter/catalog",
-		files:  []string{"internal/wrap/naming_test.go"},
-		reason: "the tests take a real adapter",
-		step:   "S10",
-	},
-}
+var importExceptions = []importException{}
 
 // nameException is a known harness word in a file outside the adapters. Its
 // excuse records exactly which mentions of the word the file had, so a new one

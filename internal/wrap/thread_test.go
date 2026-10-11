@@ -43,8 +43,8 @@ func TestTheWrapperPinsDeliveryToTheHarnessThread(t *testing.T) {
 	}
 }
 
-// threadObserver is telemetry that follows the conversation, as Claude Code's
-// collector does.
+// threadObserver is telemetry that follows the conversation, as a harness's
+// collector may.
 type threadObserver struct{}
 
 func (threadObserver) SessionState() sessionstate.Snapshot { return sessionstate.Unknown("") }
@@ -61,7 +61,8 @@ func (h *threadObservedHarness) Launch(request adapter.LaunchRequest) (adapter.L
 }
 
 // A harness with no backend pins a delivery to the conversation its observer
-// heard last, which is how Claude Code's reports learn of a /clear.
+// heard last, which is how a harness's reports learn its conversation was
+// cleared.
 func TestTheWrapperPinsDeliveryToTheObservedThread(t *testing.T) {
 	dir := stateDir(t)
 	fake := &threadObservedHarness{fakeHarness: fakeHarness{script: "sleep 1.5"}}

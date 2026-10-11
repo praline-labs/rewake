@@ -30,7 +30,7 @@ func outsideAnySession(t *testing.T) {
 func TestALaunchFromInsideASessionIsRefused(t *testing.T) {
 	for _, h := range testCatalog().All() {
 		for _, marker := range []string{state.SessionEnv, state.EpochEnv} {
-			for _, value := range []string{"worker-claude", ""} {
+			for _, value := range []string{"worker-" + agentID, ""} {
 				t.Run(h.ID()+"/"+marker+"="+value, func(t *testing.T) {
 					dir := t.TempDir()
 					if err := os.Chmod(dir, 0o700); err != nil {

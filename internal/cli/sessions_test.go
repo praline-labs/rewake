@@ -40,7 +40,7 @@ func liveSession(t *testing.T, name string) string {
 	}
 	session := registry.Session{
 		Name:         name,
-		Harness:      "claude",
+		Harness:      agentID,
 		ServicePID:   os.Getpid(),
 		ServiceStart: start,
 		Boot:         registrytest.Boot(t),
@@ -70,7 +70,7 @@ func TestListShowsALiveSession(t *testing.T) {
 	if strings.Contains(out, "No sessions are running") {
 		t.Fatalf("list reported nothing running: %q", out)
 	}
-	if !strings.Contains(out, "Room: default") || !strings.Contains(out, "Harness: \"claude\"") || !strings.Contains(out, "api") {
+	if !strings.Contains(out, "Room: default") || !strings.Contains(out, "Harness: \""+agentID+"\"") || !strings.Contains(out, "api") {
 		t.Errorf("first line = %q, want the session name and its harness", out)
 	}
 }

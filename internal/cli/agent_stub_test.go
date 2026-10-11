@@ -1,0 +1,94 @@
+package cli
+
+import (
+	"context"
+	"errors"
+	"os"
+	"path/filepath"
+
+	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/registry"
+)
+
+// agentID is the launch command of the adapter these tests run on.
+const agentID = "agent"
+
+// agentHarness is the adapter the CLI's tests run on. The catalogue they build
+// holds it alone: what the CLI does with an adapter is proven on one of its
+// own, and what a product adapter does is its package's to test.
+type agentHarness struct{}
+
+func (agentHarness) ID() string      { return agentID }
+func (agentHarness) Title() string   { return "Test agent" }
+func (agentHarness) Summary() string { return "Start the test agent as a rewake session." }
+
+func (agentHarness) Examples() []string {
+	return []string{"rewake --main agent", "rewake --main --name api agent --model chosen", "rewake --main agent --worktree=fix-login"}
+}
+
+func (agentHarness) Notes() []string {
+	return []string{"The test agent stands for any harness in the CLI's tests."}
+}
+
+func (agentHarness) SingleUseFlags() []adapter.Flag {
+	return []adapter.Flag{
+		{Spellings: []string{"--model"}, TakesValue: true},
+		{Spellings: []string{"--worktree"}},
+	}
+}
+
+// ProtectedDirs: a directory under the home and a name inside a project,
+// read when asked, so a test's HOME is the one they lie under.
+func (agentHarness) ProtectedDirs() adapter.Protected {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return adapter.Protected{Names: []string{".agentcfg"}}
+	}
+	return adapter.Protected{Dirs: []string{filepath.Join(home, ".agentcfg")}, Names: []string{".agentcfg"}}
+}
+
+func (agentHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error) {
+	return adapter.LaunchPlan{Command: request.Program(agentID), Args: request.Args, Env: request.Env}, nil
+}
+
+func (agentHarness) Deliver(context.Context, registry.Session, inbox.Message) inbox.Result {
+	return inbox.Result{State: inbox.Failed, Detail: "the test agent takes no delivery"}
+}
+
+// Version: no gate, so a launch in these tests reads no program's version.
+func (agentHarness) Version() adapter.VersionGate { return adapter.VersionGate{} }
+
+func (agentHarness) EnvNotInherited() []string { return nil }
+
+// ReachesWrapper: a main on it can grant.
+func (agentHarness) ReachesWrapper() bool { return true }
+
+func (agentHarness) WorktreeFlag() string { return "--worktree" }
+
+// WorktreeNameSpaced: its own flag would take a name after a space, so a
+// word there is refused rather than taken for the prompt.
+func (agentHarness) WorktreeNameSpaced() bool { return true }
+
+func (agentHarness) LaunchDirectory(args []string) (string, []string, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", nil, err
+	}
+	resolved, err := filepath.EvalSymlinks(dir)
+	return resolved, args, err
+}
+
+// WorktreeRefusal: --continue would continue a conversation kept where it
+// began, not in the new checkout.
+func (agentHarness) WorktreeRefusal(args []string) error {
+	if adapter.HasFlag(args, "--continue") {
+		return errors.New("--continue continues a conversation kept elsewhere; " + adapter.ContinueInWorktree("rewake --main agent", "--continue"))
+	}
+	return nil
+}
+
+var (
+	_ adapter.GrantIssuer     = agentHarness{}
+	_ adapter.WorktreeHarness = agentHarness{}
+)

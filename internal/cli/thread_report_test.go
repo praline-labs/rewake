@@ -22,7 +22,7 @@ func TestReportsMarkOnlyKnownThreadChanges(t *testing.T) {
 			self.HarnessPID = os.Getpid()
 			self.HarnessStart = self.ServiceStart
 			if kind == "other harness" {
-				self.Harness = "claude"
+				self.Harness = agentID
 			}
 			if err := registry.Update(dir, self); err != nil {
 				t.Fatal(err)

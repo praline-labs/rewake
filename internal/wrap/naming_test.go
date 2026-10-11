@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/adapter/catalog"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
 	"github.com/praline-labs/rewake/internal/state"
@@ -166,5 +165,8 @@ func TestHarnessLengthLeavesRoomForAPrefix(t *testing.T) {
 	}
 }
 
-// adapters are the ones the tests here run each case on.
-func adapters() []adapter.Harness { return catalog.New().All() }
+// adapters are the ones the tests here run each case on: two, so a name that
+// leaves out the harness would collide.
+func adapters() []adapter.Harness {
+	return []adapter.Harness{&namedHarness{id: "agent"}, &namedHarness{id: "other"}}
+}

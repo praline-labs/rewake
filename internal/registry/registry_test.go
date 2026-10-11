@@ -39,7 +39,7 @@ func stateDir(t *testing.T, living map[int]uint64) string {
 func session(name string, pid int, start uint64) Session {
 	return Session{
 		Name:         name,
-		Harness:      "claude",
+		Harness:      "agent",
 		ServicePID:   pid,
 		ServiceStart: start,
 		CWD:          "/tmp",
@@ -258,21 +258,21 @@ func TestLookupDoesNotWaitOnAHeldNameLock(t *testing.T) {
 func TestChooseName(t *testing.T) {
 	dir := stateDir(t, map[int]uint64{10: 100})
 
-	name, err := ChooseName(dir, "", "claude")
-	if err != nil || name != "claude" {
-		t.Fatalf("ChooseName = %q, %v; want claude", name, err)
+	name, err := ChooseName(dir, "", "agent")
+	if err != nil || name != "agent" {
+		t.Fatalf("ChooseName = %q, %v; want agent", name, err)
 	}
-	if err := Publish(dir, session("claude", 10, 100)); err != nil {
+	if err := Publish(dir, session("agent", 10, 100)); err != nil {
 		t.Fatalf("publish: %v", err)
 	}
-	name, err = ChooseName(dir, "", "claude")
-	if err != nil || name != "claude-2" {
-		t.Fatalf("ChooseName = %q, %v; want claude-2", name, err)
+	name, err = ChooseName(dir, "", "agent")
+	if err != nil || name != "agent-2" {
+		t.Fatalf("ChooseName = %q, %v; want agent-2", name, err)
 	}
 
 	// An explicit name is never silently changed: the caller is about to hand
 	// that address to somebody else.
-	if _, err := ChooseName(dir, "Api Session", "claude"); err == nil {
+	if _, err := ChooseName(dir, "Api Session", "agent"); err == nil {
 		t.Error("an unusable explicit name was accepted")
 	}
 }

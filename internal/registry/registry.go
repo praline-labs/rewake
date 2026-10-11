@@ -30,7 +30,7 @@ type Session struct {
 	Name string `json:"name"`
 	// Room scopes the name and all mailbox paths.
 	Room string `json:"room"`
-	// Harness is the id of the harness being run, such as "claude".
+	// Harness is the id of the harness being run: its adapter's ID.
 	Harness string `json:"harness"`
 	// ServicePID is the rewake process that serves this session's inbox, and
 	// whose life defines the life of the session.

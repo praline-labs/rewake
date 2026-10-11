@@ -165,7 +165,7 @@ func TestTheToolSurface(t *testing.T) {
 	for _, words := range [][]string{
 		{},
 		{"edit", "x", "y"},
-		{"claude"},
+		{agentID},
 		{"--version"},
 		{"withdraw", "x"},
 		{"send", "web", "look"},

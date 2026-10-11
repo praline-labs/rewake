@@ -14,7 +14,7 @@ import (
 )
 
 func TestMainIsALaunchFlag(t *testing.T) {
-	result, err := testTable().parse([]string{"--main", "--name", "lead", "claude", "--main"})
+	result, err := testTable().parse([]string{"--main", "--name", "lead", agentID, "--main"})
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -29,7 +29,7 @@ func TestMainIsALaunchFlag(t *testing.T) {
 }
 
 func TestOmittedRoleStaysUnsetUntilDefaultResolution(t *testing.T) {
-	result, err := testTable().parse([]string{"claude"})
+	result, err := testTable().parse([]string{agentID})
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}

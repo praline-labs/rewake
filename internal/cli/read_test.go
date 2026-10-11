@@ -38,7 +38,7 @@ func otherRun(t *testing.T, dir, name string) registry.Session {
 		t.Fatalf("start time: %v", err)
 	}
 	session := registry.Session{
-		Name: name, Harness: "claude", ServicePID: child.Process.Pid, ServiceStart: start, Boot: registrytest.Boot(t),
+		Name: name, Harness: agentID, ServicePID: child.Process.Pid, ServiceStart: start, Boot: registrytest.Boot(t),
 		PIDNamespace: proc.Namespace(), CWD: dir, StartedAt: time.Now(),
 	}
 	_ = os.Remove(state.SessionPath(dir, name))

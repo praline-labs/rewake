@@ -29,7 +29,7 @@ func TestCleanupLeavesTheNextOwnerAlone(t *testing.T) {
 	// ours is gone: same name, another epoch.
 	successor := registry.Session{
 		Name:         "api-fake",
-		Harness:      "claude",
+		Harness:      "agent",
 		ServicePID:   os.Getpid(),
 		ServiceStart: selfStart(t) + 1, // a different epoch, still this process
 		PIDNamespace: proc.Namespace(),

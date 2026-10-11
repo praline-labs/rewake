@@ -23,8 +23,8 @@ import (
 type fakeHarness struct {
 	script      string
 	launchDelay time.Duration
-	// socket makes the launch claim the socket path it is given, as Claude
-	// Code's does.
+	// socket makes the launch claim the socket path it is given, as a
+	// harness listening on a socket of its own does.
 	socket bool
 	// notInherited is what the fake says its runs must not inherit.
 	notInherited []string

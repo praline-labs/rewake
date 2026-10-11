@@ -112,7 +112,7 @@ func TestPublishExclusiveRefusesATakenName(t *testing.T) {
 }
 
 func TestValidName(t *testing.T) {
-	for _, name := range []string{"api", "claude-2", "web.1", "a_b"} {
+	for _, name := range []string{"api", "agent-2", "web.1", "a_b"} {
 		if !ValidName(name) {
 			t.Errorf("%q was refused", name)
 		}

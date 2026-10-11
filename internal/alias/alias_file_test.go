@@ -81,7 +81,7 @@ func TestAnAliasThatMakesNoSenseIsRefused(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			s := set(t, tc.file)
-			_, err := s.Expand([]string{"x"}, []string{"agent", "claude"}, valued, nil, agentLike)
+			_, err := s.Expand([]string{"x"}, []string{"agent", "other"}, valued, nil, agentLike)
 			if err == nil {
 				t.Fatal("an unusable alias was accepted")
 			}
@@ -105,8 +105,8 @@ func TestABrokenFileIsReported(t *testing.T) {
 }
 
 func TestNamesAreListedForARefusal(t *testing.T) {
-	s := set(t, wagent+"\n[alias.claude-main]\nharness = \"claude\"\n")
-	if got := strings.Join(s.Names(), ","); got != "claude-main,wagent" {
+	s := set(t, wagent+"\n[alias.other-main]\nharness = \"other\"\n")
+	if got := strings.Join(s.Names(), ","); got != "other-main,wagent" {
 		t.Fatalf("got %q", got)
 	}
 }

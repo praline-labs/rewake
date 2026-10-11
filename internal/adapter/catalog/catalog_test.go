@@ -5,6 +5,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/praline-labs/rewake/internal/adapter"
 )
 
 // A registered harness has to say which of its flags it takes at most once.
@@ -75,5 +77,29 @@ func TestTheCatalogueProtectsTheHarnessesItHasNoAdapterFor(t *testing.T) {
 	}
 	if want := filepath.Join(home, ".codex"); !slices.Contains(protected.Dirs, want) {
 		t.Errorf("%s is not among the protected directories %v", want, protected.Dirs)
+	}
+}
+
+// An adapter that takes rewake's worktree lists the flag as a switch it takes
+// once: rewake reads it only with =<name>, and a typed one then replaces an
+// alias's instead of reaching the launch beside it (alias's
+// TestATypedWorktreeReplacesTheAlias).
+func TestEveryWorktreeFlagIsTakenOnce(t *testing.T) {
+	for _, h := range New().All() {
+		taker, ok := h.(adapter.WorktreeHarness)
+		if !ok {
+			continue
+		}
+		t.Run(h.ID(), func(t *testing.T) {
+			for _, flag := range h.SingleUseFlags() {
+				if slices.Contains(flag.Spellings, taker.WorktreeFlag()) {
+					if flag.TakesValue {
+						t.Fatalf("%s is listed as taking a value; rewake reads it as a switch", taker.WorktreeFlag())
+					}
+					return
+				}
+			}
+			t.Fatalf("%s is not among the flags taken once", taker.WorktreeFlag())
+		})
 	}
 }

@@ -3,17 +3,26 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/adapter/catalog"
 	"github.com/praline-labs/rewake/internal/role"
 )
 
-// testCatalog is the catalogue the tests run against.
-func testCatalog() adapter.Catalog { return catalog.New() }
+// testCatalog is the catalogue the tests run against: the test agent, and
+// what the catalogue declares for a harness it has no adapter for, read when
+// asked so a test's HOME is the one it lies under.
+func testCatalog() adapter.Catalog {
+	foreign := adapter.Protected{Names: []string{".othercfg"}}
+	if home, err := os.UserHomeDir(); err == nil {
+		foreign.Dirs = []string{filepath.Join(home, ".othercfg")}
+	}
+	return adapter.NewCatalog(foreign, agentHarness{})
+}
 
 // testTable is the command table built from it, for the tests that read the
 // table rather than run a command.
@@ -141,12 +150,12 @@ func TestLoosePositionalsAreRefused(t *testing.T) {
 }
 
 func TestHarnessArgumentsStayRaw(t *testing.T) {
-	result, err := testTable().parse([]string{"--name", "api", "claude", "--model", "chosen-model", "--", "write the notes", "", "--json"})
+	result, err := testTable().parse([]string{"--name", "api", agentID, "--model", "chosen-model", "--", "write the notes", "", "--json"})
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	if result.Call.Command == nil || result.Call.Command.Name != "claude" {
-		t.Fatalf("command = %v, want claude", result.Call.Command)
+	if result.Call.Command == nil || result.Call.Command.Name != agentID {
+		t.Fatalf("command = %v, want %s", result.Call.Command, agentID)
 	}
 	if got := result.Call.Flag("name", ""); got != "api" {
 		t.Errorf("name = %q, want api", got)
@@ -216,7 +225,7 @@ func TestTableIsComplete(t *testing.T) {
 			}
 		}
 	}
-	for _, name := range []string{"claude", "list", "send", "whoami", "guide"} {
+	for _, name := range []string{agentID, "list", "send", "whoami", "guide"} {
 		if !seen[name] {
 			t.Errorf("command %q is missing from the table", name)
 		}

@@ -2,7 +2,6 @@ package cli
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -253,20 +252,19 @@ func TestAFailedLaunchKeepsATouchedCheckoutAndSaysSo(t *testing.T) {
 	}
 }
 
-// Claude Code hands --worktree to rewake. Its -w stays its own: it reaches
-// the harness untouched and makes no checkout of rewake's, and the two
-// together are refused.
-//
-// Here, every harness that takes a worktree flag spells it --worktree; a
-// harness may take none.
-func TestClaudeHandsItsLongWorktreeFlagToRewake(t *testing.T) {
+// The adapter's own worktree flag goes to rewake: its checkout, and the rest
+// of the arguments reach the harness; without the flag nothing is checked out
+// and the arguments reach it as written. A refusal the adapter gives beside
+// the flag stops the launch before a checkout is made. What each product
+// adapter refuses there is its package's test.
+func TestTheAdaptersWorktreeFlagGoesToRewake(t *testing.T) {
 	for _, h := range testCatalog().All() {
 		if taker, ok := h.(adapter.WorktreeHarness); ok && taker.WorktreeFlag() != "--worktree" {
 			t.Errorf("%s takes %s, not --worktree", h.ID(), taker.WorktreeFlag())
 		}
 	}
 	lab := newWorktreeLab(t)
-	probe := harnessProbe(t, "claude")
+	probe := harnessProbe(t, agentID)
 	if err := lab.launch(t, probe, filepath.Join(lab.repo, "src", "nested"), "--worktree=fix", "--model", "m"); err != nil {
 		t.Fatal(err)
 	}
@@ -277,64 +275,33 @@ func TestClaudeHandsItsLongWorktreeFlagToRewake(t *testing.T) {
 	if want := []string{"--model", "m"}; !reflect.DeepEqual(probe.request.Args, want) {
 		t.Errorf("harness got %q, want %q", probe.request.Args, want)
 	}
-	native := harnessProbe(t, "claude")
-	if err := lab.launch(t, native, lab.repo, "-w", "own"); err != nil {
+	plain := harnessProbe(t, agentID)
+	if err := lab.launch(t, plain, lab.repo, "--model", "own"); err != nil {
 		t.Fatal(err)
 	}
-	if want := []string{"-w", "own"}; !reflect.DeepEqual(native.request.Args, want) || native.cwd != lab.repo || len(lab.records(t)) != 1 {
-		t.Errorf("-w: harness got %q in %s", native.request.Args, native.cwd)
+	if want := []string{"--model", "own"}; !reflect.DeepEqual(plain.request.Args, want) || plain.cwd != lab.repo || len(lab.records(t)) != 1 {
+		t.Errorf("without the flag: harness got %q in %s", plain.request.Args, plain.cwd)
 	}
-	for _, args := range [][]string{
-		{"--worktree", "-w"},
-		{"--worktree", "--tmux"},
-		{"--worktree", "--continue"},
-		{"--worktree", "-c"},
-		{"--worktree", "-pc"},
-		{"--worktree", "--resume", "0199"},
-		{"--worktree", "-r0199"},
-		{"--worktree=a", "--resume=0199", "--fork-session"},
-		{"--worktree", "--from-pr", "12"},
-		{"--worktree", "--teleport"},
-		{"--worktree", "-pw"},
-		{"--worktree", "-prID"},
-		{"--worktree", "--cloud"},
-		{"--worktree", "--cloud=0199"},
-		{"--worktree", "--environment", "env_01"},
-		{"--worktree", "--environment=env_01"},
-		{"--worktree", "attach", "a1b2"},
-		{"--worktree", "--model", "m", "respawn"},
-	} {
-		err := lab.launch(t, harnessProbe(t, "claude"), lab.repo, args...)
-		var usage *UsageError
-		if !errors.As(err, &usage) {
-			t.Errorf("%q: %v, want a refusal", args, err)
-		}
-		if records := lab.records(t); len(records) != 1 {
-			t.Errorf("%q left %d checkouts", args, len(records))
-		}
+	err := lab.launch(t, harnessProbe(t, agentID), lab.repo, "--worktree", "--continue")
+	var usage *UsageError
+	if !errors.As(err, &usage) || !strings.Contains(usage.Message, "--continue") {
+		t.Errorf("got %v, want the adapter's refusal", err)
 	}
-	// A prompt after --, a value of -d or -n that holds c, and the id of a new
-	// conversation are not continuations.
-	for index, args := range [][]string{
-		{"--", "--continue"},
-		{"--", "attach"},
-		{"-dcache"},
-		{"-ncircle"},
-		{"--session-id", "0199"},
-	} {
-		named := append([]string{fmt.Sprintf("--worktree=kept-%d", index)}, args...)
-		if err := lab.launch(t, harnessProbe(t, "claude"), lab.repo, named...); err != nil {
-			t.Errorf("%q: %v", named, err)
-		}
+	if records := lab.records(t); len(records) != 1 {
+		t.Errorf("a refused launch left %d checkouts", len(records))
+	}
+	// After -- a word is the prompt's, not the adapter's to refuse.
+	if err := lab.launch(t, harnessProbe(t, agentID), lab.repo, "--worktree=kept", "--", "--continue"); err != nil {
+		t.Errorf("a prompt after --: %v", err)
 	}
 }
 
-// Claude Code's own flag is --worktree [name], so a word after rewake's is the
-// name the person meant: refused with the spelling that names it, where it
-// once made a checkout of a generated name and sent the word as the prompt.
-func TestClaudeWorktreeNameAfterASpaceIsRefused(t *testing.T) {
+// An adapter whose own flag takes a name after a space has a word after
+// rewake's refused, with the spelling that names it: it once made a checkout
+// of a generated name and sent the word as the prompt.
+func TestAWorktreeNameAfterASpaceIsRefused(t *testing.T) {
 	lab := newWorktreeLab(t)
-	err := lab.launch(t, harnessProbe(t, "claude"), lab.repo, "--worktree", "fix-login")
+	err := lab.launch(t, harnessProbe(t, agentID), lab.repo, "--worktree", "fix-login")
 	var usage *UsageError
 	if !errors.As(err, &usage) || !strings.Contains(usage.Message, "--worktree=fix-login") || !strings.Contains(usage.Message, `--worktree -- "fix-login"`) {
 		t.Fatalf("got %v, want a refusal naming --worktree=fix-login", err)
@@ -343,7 +310,7 @@ func TestClaudeWorktreeNameAfterASpaceIsRefused(t *testing.T) {
 		t.Fatalf("a refused launch left %d checkouts", len(records))
 	}
 	for _, args := range [][]string{{"--worktree", "--", "fix the login"}, {"--worktree", "--model", "m"}} {
-		if err := lab.launch(t, harnessProbe(t, "claude"), lab.repo, args...); err != nil {
+		if err := lab.launch(t, harnessProbe(t, agentID), lab.repo, args...); err != nil {
 			t.Errorf("%q: %v", args, err)
 		}
 	}
