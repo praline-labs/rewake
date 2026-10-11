@@ -1,8 +1,9 @@
 # Stable completion publication
 
 September 18, 2026. The reporting boundary is independent of native RPC. The
-backend receives a CompletionHandler with nonblocking Capture and context-aware
-Publish functions; since stage 3's S5 also Confirm, which an adapter that can hold an
+backend receives a handler with nonblocking Capture and context-aware Publish
+functions — since S10 the `TurnHandler` a run's `TurnBoundary` takes, each end a
+`TurnEnd` naming its event and reason ([code.md](code.md#the-adapter-api)); since stage 3's S5 also Confirm, which an adapter that can hold an
 end open calls in place of Publish ([turn-outcomes.md](turn-outcomes.md#the-confirmation-on-claude-code)). The wrapper owns the mailbox/epoch association and closes it
 only after backend event producers and the publisher have stopped.
 

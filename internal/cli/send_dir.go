@@ -57,8 +57,7 @@ func requestedDirGrants(catalog adapter.Catalog, call Call, sender, target regis
 	if kind.kind != inbox.Task && kind.kind != inbox.Question {
 		return refuse("only a task or a question carries a grant; a heads-up asks for no work to write.")
 	}
-	own, _ := catalog.Find(target.Harness)
-	if capable, ok := own.(adapter.DirGrantHarness); !ok || !capable.SupportsDirGrant() {
+	if !catalog.Offers(target.Harness).Permissions.Dir {
 		return dirGrants{}, &FailedError{Message: fmt.Sprintf("--grant-dir: %s runs %s, which cannot take a directory into a running session yet. Do that part of the work yourself, or ask the owner to add the directory to that session in its own terminal.", target.Name, target.Harness)}
 	}
 

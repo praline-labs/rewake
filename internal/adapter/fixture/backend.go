@@ -41,7 +41,7 @@ type backend struct {
 	bound   time.Duration
 	endWait time.Duration
 
-	handler adapter.CompletionHandler
+	handler adapter.TurnHandler
 	note    func(string)
 
 	listener net.Listener
@@ -67,7 +67,7 @@ type backend struct {
 	live    map[string]bool
 	telem   telemetry
 	turns   map[string]turnRecord
-	ends    map[string]adapter.Completion
+	ends    map[string]adapter.TurnEnd
 	tools   toolOffer
 	compact compactions
 
@@ -90,16 +90,19 @@ func newBackend(program string, args, env []string, dir, socket, epoch string) *
 		program: program, args: args, env: env, dir: dir, socket: socket, epoch: epoch, bound: readinessBound,
 		endWait: endDeadline,
 		exited:  make(chan struct{}), greeted: make(chan struct{}), hello: make(chan struct{}),
-		live: map[string]bool{}, turns: map[string]turnRecord{}, ends: map[string]adapter.Completion{},
+		live: map[string]bool{}, turns: map[string]turnRecord{}, ends: map[string]adapter.TurnEnd{},
 		waiting: map[net.Conn]bool{},
 	}
 }
 
+// ReportTurns takes where the program's turns go, before Start.
+func (b *backend) ReportTurns(handler adapter.TurnHandler) { b.handler = handler }
+
 // Start listens, starts the program and returns once its hello and the probes
 // of what it serves have run. A program that never says hello from its own
 // process fails the start.
-func (b *backend) Start(ctx context.Context, handler adapter.CompletionHandler, note func(string)) error {
-	b.handler, b.note = handler, note
+func (b *backend) Start(ctx context.Context, note func(string)) error {
+	b.note = note
 	if b.note == nil {
 		b.note = func(string) {}
 	}
@@ -325,15 +328,16 @@ func probeAnswered(capability string, answer Frame) bool {
 	return true
 }
 
-// Live answers the capabilities live now, for the package's tests and for
-// the decisions below.
-func (b *backend) Live() []string {
+// Live answers the capabilities live now: those whose probes the program
+// answered on the connection held now, and nothing else. The host records
+// them as the run's live set from S11.
+func (b *backend) Live() []adapter.Capability {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	var out []string
+	var out []adapter.Capability
 	for _, capability := range Served {
 		if b.live[capability] {
-			out = append(out, capability)
+			out = append(out, adapter.Capability(capability))
 		}
 	}
 	return out

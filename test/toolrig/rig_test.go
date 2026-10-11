@@ -90,7 +90,7 @@ type rig struct {
 	completed map[string]bool
 
 	mu      sync.Mutex
-	backend adapter.Backend
+	backend adapter.Service
 	control string
 	starts  int
 	// boundary is the end the current turn captured, once it did.
@@ -199,7 +199,7 @@ func (r *rig) env() []string {
 	return env
 }
 
-func (r *rig) current() adapter.Backend {
+func (r *rig) current() adapter.Service {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.backend
@@ -244,22 +244,20 @@ func (r *rig) start() {
 	if err != nil {
 		r.t.Fatal(err)
 	}
-	offer, ok := plan.Backend.(interface {
-		OfferTools([]bridge.ToolDescriptor, string, func(int, uint64))
-	})
-	if !ok {
-		r.t.Fatal("the fixture's backend takes no tools")
+	offer, ok := plan.Service.(adapter.ToolTransport[bridge.ToolDescriptor])
+	if !ok || plan.TurnBoundary == nil {
+		r.t.Fatal("the fixture's run carries no tools or reports no turns")
 	}
 	offer.OfferTools(cli.ToolDescriptors(), state.ContextPath(r.dir, "api", r.self.Epoch()), r.endpoint.SetTransport)
-	handler := adapter.CompletionHandler{
+	plan.TurnBoundary.ReportTurns(adapter.TurnHandler{
 		Tool: r.endpoint, EndCapture: r.endCapture,
-		Publish: func(context.Context, adapter.Completion) error { return nil },
-	}
-	if err := plan.Backend.Start(context.Background(), handler, nil); err != nil {
+		Publish: func(context.Context, adapter.TurnEnd) error { return nil },
+	})
+	if err := plan.Service.Start(context.Background(), nil); err != nil {
 		r.t.Fatalf("the program: %v", err)
 	}
 	r.mu.Lock()
-	r.backend, r.control = plan.Backend, control
+	r.backend, r.control = plan.Service, control
 	r.mu.Unlock()
 }
 

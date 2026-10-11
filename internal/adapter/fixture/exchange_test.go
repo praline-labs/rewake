@@ -40,7 +40,17 @@ func startProgram(t *testing.T, switches ...string) (*backend, error) {
 	toolPeers.Store(b, served)
 	t.Cleanup(func() { toolPeers.Delete(b) })
 	b.OfferTools(programTools, filepath.Join(dir, "api.ctx"), served.set)
-	return b, b.Start(context.Background(), adapter.CompletionHandler{}, nil)
+	b.ReportTurns(adapter.TurnHandler{})
+	return b, b.Start(context.Background(), nil)
+}
+
+// live is the run's live set by the names the exchange gives them.
+func live(b *backend) []string {
+	var names []string
+	for _, capability := range b.Live() {
+		names = append(names, string(capability))
+	}
+	return names
 }
 
 func eventually(t *testing.T, what string, cond func() bool) {
@@ -59,7 +69,7 @@ func TestTheExchangeMakesLiveWhatItsProbesAnswer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := b.Live(); !slices.Equal(got, Served) {
+	if got := live(b); !slices.Equal(got, Served) {
 		t.Fatalf("live %v, want %v", got, Served)
 	}
 	if thread, err := b.Thread(); err != nil || thread != programThrd {
@@ -87,7 +97,7 @@ func TestEachSwitchWithholdsItsCapability(t *testing.T) {
 					t.Fatal(err)
 				}
 				want := slices.DeleteFunc(slices.Clone(Served), func(c string) bool { return c == capability })
-				if got := b.Live(); !slices.Equal(got, want) {
+				if got := live(b); !slices.Equal(got, want) {
 					t.Fatalf("live %v, want %v", got, want)
 				}
 				withheldStops(t, b, capability)
@@ -117,9 +127,9 @@ func withheldStops(t *testing.T, b *backend, capability string) {
 		// A wrapper that would take any end, so only the adapter's refusal
 		// keeps one from being published.
 		taken := 0
-		b.handler = adapter.CompletionHandler{
-			Publish: func(context.Context, adapter.Completion) error { taken++; return nil },
-			Confirm: func(context.Context, adapter.Completion) (string, error) { taken++; return "", nil },
+		b.handler = adapter.TurnHandler{
+			Publish: func(context.Context, adapter.TurnEnd) error { taken++; return nil },
+			Confirm: func(context.Context, adapter.TurnEnd) (string, error) { taken++; return "", nil },
 		}
 		if answer := b.turnStarted(l, Frame{Turn: "t1"}); answer.OK {
 			t.Fatal("a turn start taken without a turn boundary")
@@ -139,7 +149,7 @@ func withheldStops(t *testing.T, b *backend, capability string) {
 			t.Fatalf("the endpoint serves process %d without a tool transport", pid)
 		}
 		heard := &toolInput{}
-		b.handler = adapter.CompletionHandler{Tool: heard}
+		b.handler = adapter.TurnHandler{Tool: heard}
 		if answer := b.toolCall(l, Frame{Call: "c1", Turn: "t1", Tool: "inbox"}); answer.OK || len(heard.events()) != 0 {
 			t.Fatalf("a call reported without a tool transport: %+v %v", answer, heard.events())
 		}
@@ -151,7 +161,7 @@ func TestADisconnectWithdrawsEverythingAtOnce(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, "the withdrawal", func() bool { return len(b.Live()) == 0 })
+	eventually(t, "the withdrawal", func() bool { return len(live(b)) == 0 })
 	if _, err := b.Thread(); !errors.Is(err, inbox.ErrThreadUnavailable) {
 		t.Fatalf("a conversation after the disconnect: %v", err)
 	}
@@ -170,8 +180,8 @@ func TestAReconnectFromTheSameProcessIsAFreshExchange(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, "the withdrawal", func() bool { return len(b.Live()) == 0 })
-	eventually(t, "the second exchange", func() bool { return slices.Equal(b.Live(), Served) })
+	eventually(t, "the withdrawal", func() bool { return len(live(b)) == 0 })
+	eventually(t, "the second exchange", func() bool { return slices.Equal(live(b), Served) })
 	if pid := peerOf(b); pid != b.pid {
 		t.Fatalf("after the second exchange the endpoint serves %d, not the program's %d", pid, b.pid)
 	}
@@ -216,7 +226,7 @@ func TestTheProgramsEndWithdrawsEverything(t *testing.T) {
 			}
 			// The withdrawal empties the live set before it tells the endpoint
 			// to stop serving the process, so both are waited for.
-			eventually(t, "the withdrawal", func() bool { return len(b.Live()) == 0 && peerOf(b) == 0 })
+			eventually(t, "the withdrawal", func() bool { return len(live(b)) == 0 && peerOf(b) == 0 })
 		})
 	}
 }

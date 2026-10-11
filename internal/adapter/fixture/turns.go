@@ -109,7 +109,7 @@ func (b *backend) turnEnded(l *link, frame Frame) Frame {
 
 // decide hands an end to the core and answers with its decision: "" when it
 // was published, the reason to continue with when it was held.
-func (b *backend) decide(l *link, completion adapter.Completion, holdable bool, err error) Frame {
+func (b *backend) decide(l *link, completion adapter.TurnEnd, holdable bool, err error) Frame {
 	if err != nil {
 		return Frame{Error: err.Error()}
 	}
@@ -123,19 +123,19 @@ func (b *backend) decide(l *link, completion adapter.Completion, holdable bool, 
 // endOf is the completion an end frame names, captured when the frame
 // arrives. An end sent again under its name is the same completion — the same
 // boundary and times — so the core knows it for the end it already answered.
-func (b *backend) endOf(l *link, frame Frame) (adapter.Completion, error) {
+func (b *backend) endOf(l *link, frame Frame) (adapter.TurnEnd, error) {
 	if !b.liveOn(l, TurnBoundary) {
-		return adapter.Completion{}, errors.New("no live turn boundary")
+		return adapter.TurnEnd{}, errors.New("no live turn boundary")
 	}
 	if frame.End == "" || frame.Turn == "" {
-		return adapter.Completion{}, errors.New("an end names its turn and its event")
+		return adapter.TurnEnd{}, errors.New("an end names its turn and its event")
 	}
-	kind, err := endKind(frame.Outcome)
+	reason, err := endReason(frame.Outcome)
 	if err != nil {
-		return adapter.Completion{}, err
+		return adapter.TurnEnd{}, err
 	}
 	if !b.enter() {
-		return adapter.Completion{}, errClosing
+		return adapter.TurnEnd{}, errClosing
 	}
 	defer b.leave()
 	b.mu.Lock()
@@ -143,8 +143,8 @@ func (b *backend) endOf(l *link, frame Frame) (adapter.Completion, error) {
 	if known, ok := b.ends[frame.End]; ok {
 		return known, nil
 	}
-	completion := adapter.Completion{
-		ID: ID + "/" + frame.End, Thread: b.thread, Kind: kind, Text: frame.Text,
+	completion := adapter.TurnEnd{
+		Event: ID + "/" + frame.End, Thread: b.thread, Reason: reason, Answer: frame.Text,
 		Started: b.turns[frame.Turn].started,
 	}
 	// Through the run's gate when it has one, so a read acknowledged now
@@ -166,14 +166,16 @@ func (b *backend) endOf(l *link, frame Frame) (adapter.Completion, error) {
 	return completion, nil
 }
 
-func endKind(outcome string) (inbox.Kind, error) {
+// endReason is the API's reason for the program's outcome; the host decides
+// what each reports.
+func endReason(outcome string) (adapter.EndReason, error) {
 	switch outcome {
 	case OutcomeCompleted:
-		return inbox.Finished, nil
+		return adapter.Answered, nil
 	case OutcomeFailed:
-		return inbox.Error, nil
+		return adapter.Failed, nil
 	case OutcomeInterrupted:
-		return inbox.Stopped, nil
+		return adapter.Aborted, nil
 	}
 	return "", fmt.Errorf("an end with an outcome the adapter does not know")
 }
@@ -186,7 +188,7 @@ func endKind(outcome string) (inbox.Kind, error) {
 // closes or is withdrawn runs out, but none starts after. liveOn is that one
 // check for every attempt, the first included: a close that lands during the
 // backoff is seen when it ends, and Close's cancellation ends it at once.
-func (b *backend) settle(l *link, completion adapter.Completion, holdable bool) (string, error) {
+func (b *backend) settle(l *link, completion adapter.TurnEnd, holdable bool) (string, error) {
 	if !b.enter() {
 		return "", errClosing
 	}
@@ -212,7 +214,7 @@ func (b *backend) settle(l *link, completion adapter.Completion, holdable bool) 
 	return "", fmt.Errorf("the end was not taken after %d attempts: %w", endAttempts, last)
 }
 
-func (b *backend) attempt(completion adapter.Completion, holdable bool) (string, error) {
+func (b *backend) attempt(completion adapter.TurnEnd, holdable bool) (string, error) {
 	ctx, cancel := context.WithTimeout(b.ctx, b.endWait)
 	defer cancel()
 	if holdable && b.handler.Confirm != nil {

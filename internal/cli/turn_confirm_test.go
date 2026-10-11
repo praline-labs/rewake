@@ -19,12 +19,23 @@ import (
 
 // end is a turn end of the interim lab's session, as an adapter reports it:
 // its event and its moment on the boot clock, after the lab's turn start.
-func (lab interimLab) end(id string, at int64, kind inbox.Kind, text string) adapter.Completion {
-	return adapter.Completion{ID: id, Kind: kind, Text: text, Started: lab.start, Ended: markAt + at}
+func (lab interimLab) end(id string, at int64, kind inbox.Kind, text string) adapter.TurnEnd {
+	return adapter.TurnEnd{Event: id, Reason: reasonReporting(kind), Answer: text, Started: lab.start, Ended: markAt + at}
+}
+
+// reasonReporting is the end reason whose report is of the kind.
+func reasonReporting(kind inbox.Kind) adapter.EndReason {
+	switch kind {
+	case inbox.Error:
+		return adapter.Failed
+	case inbox.Stopped:
+		return adapter.Aborted
+	}
+	return adapter.Answered
 }
 
 // confirm confirms an end with the boundary the run's clock gives now.
-func (lab interimLab) confirm(t *testing.T, end adapter.Completion) string {
+func (lab interimLab) confirm(t *testing.T, end adapter.TurnEnd) string {
 	t.Helper()
 	end.Boundary = boundaryNow(t, lab.dir, lab.self)
 	reason, err := ConfirmCompletion(context.Background(), lab.dir, lab.self, end)
@@ -231,8 +242,8 @@ func TestEveryFailureOfTheConfirmationCheckFallsToPublishing(t *testing.T) {
 // confirmed again could not be known. Its waits stay owed.
 func TestAConfirmedEndWithoutItsEventIsRefused(t *testing.T) {
 	lab := newInterimLab(t)
-	for _, end := range []adapter.Completion{
-		{Kind: inbox.Finished, Text: "done", Boundary: boundaryNow(t, lab.dir, lab.self), Started: lab.start, Ended: markAt + 1},
+	for _, end := range []adapter.TurnEnd{
+		{Reason: adapter.Answered, Answer: "done", Boundary: boundaryNow(t, lab.dir, lab.self), Started: lab.start, Ended: markAt + 1},
 		lab.end("turn-2", 1, inbox.Finished, "done"),
 	} {
 		if reason, err := ConfirmCompletion(context.Background(), lab.dir, lab.self, end); err == nil || reason != "" {

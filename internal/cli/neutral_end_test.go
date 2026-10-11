@@ -17,10 +17,10 @@ import (
 // S8 and S9 (docs/v2/stage3-steps.md#s5).
 
 // confirm hands one end to the core as an adapter that can hold it does.
-func confirm(t *testing.T, dir string, self registry.Session, completion adapter.Completion) {
+func confirm(t *testing.T, dir string, self registry.Session, completion adapter.TurnEnd) {
 	t.Helper()
 	if reason, err := ConfirmCompletion(context.Background(), dir, self, completion); err != nil || reason != "" {
-		t.Fatalf("confirming %s: reason %q, %v", completion.ID, reason, err)
+		t.Fatalf("confirming %s: reason %q, %v", completion.Event, reason, err)
 	}
 }
 
@@ -41,7 +41,7 @@ func TestNeutralEndsWithDistinctIDsReportTwice(t *testing.T) {
 	self := selfOf(t, dir)
 	for _, id := range []string{"run/A/1", "run/A/2"} {
 		readFrom(t, dir, peer)
-		confirm(t, dir, self, adapter.Completion{ID: id, Thread: "A", Kind: inbox.Finished, Text: "done", Boundary: boundaryNow(t, dir, self)})
+		confirm(t, dir, self, adapter.TurnEnd{Event: id, Thread: "A", Reason: adapter.Answered, Answer: "done", Boundary: boundaryNow(t, dir, self)})
 	}
 	if reports := finishedFor(t, dir, peer.Name); len(reports) != 2 {
 		t.Fatalf("two ends with distinct ids made %d reports", len(reports))
@@ -59,13 +59,13 @@ func TestNeutralStoppedThenFinishedEndsOfOneTurnReportTwice(t *testing.T) {
 	peer := otherRun(t, dir, "web")
 	self := selfOf(t, dir)
 	readFrom(t, dir, peer)
-	stopped := adapter.Completion{ID: "run/A/T", Thread: "A", Kind: inbox.Stopped, Text: "stopped", Boundary: boundaryNow(t, dir, self)}
+	stopped := adapter.TurnEnd{Event: "run/A/T", Thread: "A", Reason: adapter.Aborted, Answer: "stopped", Boundary: boundaryNow(t, dir, self)}
 	confirm(t, dir, self, stopped)
 	if waiters := inbox.Waiters(dir, self.Name, self.Epoch()); len(waiters) != 1 {
 		t.Fatalf("the stopped end settled the wait: %v", waiters)
 	}
 	final := stopped
-	final.Kind, final.Text = inbox.Finished, "continued result"
+	final.Reason, final.Answer = adapter.Answered, "continued result"
 	confirm(t, dir, self, final)
 	if reports := finishedFor(t, dir, peer.Name); len(reports) != 2 {
 		t.Fatalf("a stopped and a finished end made %d reports", len(reports))
@@ -82,7 +82,7 @@ func TestNeutralTwoEndsAtOnceReportOnce(t *testing.T) {
 	peer := otherRun(t, dir, "web")
 	self := selfOf(t, dir)
 	readFrom(t, dir, peer)
-	end := adapter.Completion{ID: "run/A/1", Thread: "A", Kind: inbox.Finished, Text: "done", Boundary: boundaryNow(t, dir, self)}
+	end := adapter.TurnEnd{Event: "run/A/1", Thread: "A", Reason: adapter.Answered, Answer: "done", Boundary: boundaryNow(t, dir, self)}
 
 	second := make(chan error, 1)
 	first := true
@@ -118,7 +118,7 @@ func TestNeutralTwoEndsAtOnceReportOnce(t *testing.T) {
 func TestNeutralFailedEndsReachEveryWaitingSender(t *testing.T) {
 	dir := failedWaiters(t)
 	self := selfOf(t, dir)
-	confirm(t, dir, self, adapter.Completion{ID: "run/A/failed", Thread: "A", Kind: inbox.Error, Text: "verbatim failure", Boundary: boundaryNow(t, dir, self)})
+	confirm(t, dir, self, adapter.TurnEnd{Event: "run/A/failed", Thread: "A", Reason: adapter.Failed, Answer: "verbatim failure", Boundary: boundaryNow(t, dir, self)})
 	for _, peer := range []string{"one", "two"} {
 		report := reportObject(t, dir, peer)
 		if report["kind"] != "error" || report["text"] != "verbatim failure" {
@@ -131,12 +131,12 @@ func TestNeutralFailedEndsReachEveryWaitingSender(t *testing.T) {
 // nothing, and its waits stay owed for the next end. One without its event's
 // id cannot be known again, and is refused too.
 func TestNeutralEndsWithoutTheirScopeReportNothing(t *testing.T) {
-	for name, completion := range map[string]func(*inbox.ReadBoundary) adapter.Completion{
-		"no boundary": func(*inbox.ReadBoundary) adapter.Completion {
-			return adapter.Completion{ID: "run/A/failed", Thread: "A", Kind: inbox.Error, Text: "verbatim failure"}
+	for name, completion := range map[string]func(*inbox.ReadBoundary) adapter.TurnEnd{
+		"no boundary": func(*inbox.ReadBoundary) adapter.TurnEnd {
+			return adapter.TurnEnd{Event: "run/A/failed", Thread: "A", Reason: adapter.Failed, Answer: "verbatim failure"}
 		},
-		"no id": func(boundary *inbox.ReadBoundary) adapter.Completion {
-			return adapter.Completion{Thread: "A", Kind: inbox.Error, Text: "verbatim failure", Boundary: boundary}
+		"no id": func(boundary *inbox.ReadBoundary) adapter.TurnEnd {
+			return adapter.TurnEnd{Thread: "A", Reason: adapter.Failed, Answer: "verbatim failure", Boundary: boundary}
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -170,7 +170,7 @@ func TestNeutralUnclaimedFailuresReachMainAndMainKeepsItsOwn(t *testing.T) {
 				markMain(t, dir, "leader")
 			}
 			self := selfOf(t, dir)
-			confirm(t, dir, self, adapter.Completion{ID: "run/A/failed", Thread: "A", Kind: inbox.Error, Text: "failure", Boundary: boundaryNow(t, dir, self)})
+			confirm(t, dir, self, adapter.TurnEnd{Event: "run/A/failed", Thread: "A", Reason: adapter.Failed, Answer: "failure", Boundary: boundaryNow(t, dir, self)})
 			if own {
 				messages, err := inbox.PeekUnread(dir, "api", self.Epoch())
 				if err != nil || len(messages) != 1 || messages[0].Kind != inbox.Error {
@@ -193,7 +193,7 @@ func TestNeutralAnEmptyEndAfterWorkReportsAnError(t *testing.T) {
 	peer := otherRun(t, dir, "web")
 	self := selfOf(t, dir)
 	readFrom(t, dir, peer)
-	confirm(t, dir, self, adapter.Completion{ID: "run/A/1", Thread: "A", Kind: inbox.Finished, Boundary: boundaryNow(t, dir, self)})
+	confirm(t, dir, self, adapter.TurnEnd{Event: "run/A/1", Thread: "A", Reason: adapter.Answered, Boundary: boundaryNow(t, dir, self)})
 	report := reportObject(t, dir, peer.Name)
 	if report["kind"] != "error" || report["text"] != "" {
 		t.Fatalf("report=%v", report)

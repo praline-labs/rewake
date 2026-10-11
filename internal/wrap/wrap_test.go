@@ -46,12 +46,16 @@ func (f *fakeHarness) ProtectedDirs() adapter.Protected { return adapter.Protect
 func (f *fakeHarness) Version() adapter.VersionGate     { return adapter.VersionGate{} }
 func (f *fakeHarness) EnvNotInherited() []string        { return f.notInherited }
 
+// Offers: notices reach the fake, which is its own run's Wake.
+func (f *fakeHarness) Offers() adapter.Offer { return adapter.Offer{Wake: true} }
+
 func (f *fakeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error) {
 	time.Sleep(f.launchDelay)
 	plan := adapter.LaunchPlan{
 		Command: "/bin/sh",
 		Args:    []string{"-c", f.script},
 		Env:     request.Env,
+		Wake:    f,
 	}
 	if f.socket {
 		plan.Socket, plan.OwnsSocket = request.Socket, true
@@ -59,7 +63,7 @@ func (f *fakeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan,
 	return plan, nil
 }
 
-func (f *fakeHarness) Deliver(_ context.Context, _ registry.Session, message inbox.Message) inbox.Result {
+func (f *fakeHarness) Deliver(_ context.Context, message inbox.Message) inbox.Result {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.delivered = append(f.delivered, message)

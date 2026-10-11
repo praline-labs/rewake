@@ -1,14 +1,11 @@
 package cli
 
 import (
-	"context"
 	"errors"
 	"os"
 	"path/filepath"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/registry"
 )
 
 // agentID is the launch command of the adapter these tests run on.
@@ -52,17 +49,15 @@ func (agentHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, e
 	return adapter.LaunchPlan{Command: request.Program(agentID), Args: request.Args, Env: request.Env}, nil
 }
 
-func (agentHarness) Deliver(context.Context, registry.Session, inbox.Message) inbox.Result {
-	return inbox.Result{State: inbox.Failed, Detail: "the test agent takes no delivery"}
-}
-
 // Version: no gate, so a launch in these tests reads no program's version.
 func (agentHarness) Version() adapter.VersionGate { return adapter.VersionGate{} }
 
 func (agentHarness) EnvNotInherited() []string { return nil }
 
-// ReachesWrapper: a main on it can grant.
-func (agentHarness) ReachesWrapper() bool { return true }
+// Offers: Launch alone, and a main on it can grant.
+func (agentHarness) Offers() adapter.Offer {
+	return adapter.Offer{Permissions: adapter.PermissionsOffer{ReachesWrapper: true}}
+}
 
 func (agentHarness) WorktreeFlag() string { return "--worktree" }
 
@@ -88,7 +83,4 @@ func (agentHarness) WorktreeRefusal(args []string) error {
 	return nil
 }
 
-var (
-	_ adapter.GrantIssuer     = agentHarness{}
-	_ adapter.WorktreeHarness = agentHarness{}
-)
+var _ adapter.WorktreeHarness = agentHarness{}

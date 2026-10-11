@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/bridge"
 )
 
@@ -39,16 +40,18 @@ const (
 	opThread      = "thread"
 )
 
-// The capabilities a program may serve, as its hello names them.
+// The capabilities a program may serve, as its hello names them: the API's
+// own names, so what the exchange proves is the run's live set as the host
+// reads it (adapter.LiveReporter).
 const (
-	Wake         = "wake"
-	TurnBoundary = "turn-boundary"
-	Telemetry    = "telemetry"
-	Control      = "control"
+	Wake         = string(adapter.WakeCapability)
+	TurnBoundary = string(adapter.TurnBoundaryCapability)
+	Telemetry    = string(adapter.TelemetryCapability)
+	Control      = string(adapter.ControlCapability)
 	// ToolTransport is the harness's side of the mail tool's calls
 	// (tool.go): the program registers the tools it is offered and asks the
 	// wrapper's endpoint to run each call.
-	ToolTransport = "tool-transport"
+	ToolTransport = string(adapter.ToolTransportCapability)
 )
 
 // Served is every capability a program can serve, in the order a hello

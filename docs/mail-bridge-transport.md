@@ -25,9 +25,9 @@ the same command the shell would run.
 
 The CLI lends the wrapper its descriptors and its check of a call's words beside the two
 functions every transport uses (`wrap.MailTool`). A harness that carries its own calls
-names the transport its calls are bound under (`ToolTransport()`); the wrapper starts the
+names the transport its calls are bound under (`Offer.ToolTransport`); the wrapper starts the
 endpoint under it, keeps no channel record (that record is the tool servers'), and offers
-the backend the tools, the endpoint's path, and a function that names the process the
+the run's service, through its `ToolTransport` capability, the tools, the endpoint's path, and a function that names the process the
 endpoint serves (`OfferTools`). Since S8 no launch offers the tool, and
 `--no-mail-tool` left with the injection.
 

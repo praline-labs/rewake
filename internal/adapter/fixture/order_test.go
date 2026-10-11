@@ -43,10 +43,10 @@ func currentLink(b *backend) *link {
 func TestAnEndCapturesItsBoundaryWhenItsFrameArrives(t *testing.T) {
 	var clock atomic.Uint64
 	clock.Store(1)
-	seen := make(chan adapter.Completion, 1)
-	handler := adapter.CompletionHandler{
+	seen := make(chan adapter.TurnEnd, 1)
+	handler := adapter.TurnHandler{
 		EndCapture: func() (*inbox.ReadBoundary, int64) { return &inbox.ReadBoundary{Through: clock.Load()}, 100 },
-		Publish:    func(_ context.Context, completion adapter.Completion) error { seen <- completion; return nil },
+		Publish:    func(_ context.Context, completion adapter.TurnEnd) error { seen <- completion; return nil },
 	}
 	_, p := paired(t, handler, Served...)
 	received, release := holdDispatch(t, opTurnEnded)
@@ -66,7 +66,7 @@ func TestAnEndCapturesItsBoundaryWhenItsFrameArrives(t *testing.T) {
 func TestATurnStartCapturesItsBoundaryWhenItsFrameArrives(t *testing.T) {
 	var clock atomic.Uint64
 	clock.Store(1)
-	handler := adapter.CompletionHandler{Capture: func() *inbox.ReadBoundary { return &inbox.ReadBoundary{Through: clock.Load()} }}
+	handler := adapter.TurnHandler{Capture: func() *inbox.ReadBoundary { return &inbox.ReadBoundary{Through: clock.Load()} }}
 	b, p := paired(t, handler, Served...)
 	received, release := holdDispatch(t, opTurnStarted)
 	p.write(t, Frame{Op: opTurnStarted, ID: 1, Turn: "t1"})
@@ -88,7 +88,7 @@ func TestATurnStartCapturesItsBoundaryWhenItsFrameArrives(t *testing.T) {
 // wrapper unmaps the read clock those calls capture from after it.
 func TestCloseWaitsForACallIntoTheHandler(t *testing.T) {
 	entered, release := make(chan struct{}), make(chan struct{})
-	b, _ := paired(t, adapter.CompletionHandler{Capture: func() *inbox.ReadBoundary {
+	b, _ := paired(t, adapter.TurnHandler{Capture: func() *inbox.ReadBoundary {
 		close(entered)
 		<-release
 		return boundary()
@@ -120,7 +120,7 @@ func TestCloseWaitsForACallIntoTheHandler(t *testing.T) {
 // Nor does it return while a frame is still being handled: what the frame's
 // goroutine does next would answer on a backend the wrapper has let go of.
 func TestCloseWaitsForAFrameBeingHandled(t *testing.T) {
-	b, p := paired(t, adapter.CompletionHandler{Capture: boundary}, Served...)
+	b, p := paired(t, adapter.TurnHandler{Capture: boundary}, Served...)
 	received, release := holdDispatch(t, opTurnStarted)
 	p.write(t, Frame{Op: opTurnStarted, ID: 1, Turn: "t1"})
 	<-received
@@ -143,9 +143,9 @@ func TestCloseWaitsForAFrameBeingHandled(t *testing.T) {
 // Once Close has begun, nothing more is handed to the wrapper.
 func TestNothingReachesTheHandlerOnceClosed(t *testing.T) {
 	var calls atomic.Int32
-	b, _ := paired(t, adapter.CompletionHandler{
+	b, _ := paired(t, adapter.TurnHandler{
 		Capture: func() *inbox.ReadBoundary { calls.Add(1); return boundary() },
-		Publish: func(context.Context, adapter.Completion) error { calls.Add(1); return nil },
+		Publish: func(context.Context, adapter.TurnEnd) error { calls.Add(1); return nil },
 	}, Served...)
 	l := currentLink(b)
 	b.Close()
@@ -161,9 +161,9 @@ func TestNothingReachesTheHandlerOnceClosed(t *testing.T) {
 // connection is withdrawn: a frame taken in between is refused, not handed on.
 func TestNothingReachesTheHandlerWhileClosing(t *testing.T) {
 	var calls atomic.Int32
-	b, _ := paired(t, adapter.CompletionHandler{
+	b, _ := paired(t, adapter.TurnHandler{
 		Capture: func() *inbox.ReadBoundary { calls.Add(1); return boundary() },
-		Publish: func(context.Context, adapter.Completion) error { calls.Add(1); return nil },
+		Publish: func(context.Context, adapter.TurnEnd) error { calls.Add(1); return nil },
 	}, Served...)
 	l := currentLink(b)
 	b.mu.Lock()
@@ -186,9 +186,9 @@ func TestAWithdrawalStopsAnEndsAttempts(t *testing.T) {
 		t.Run(cut, func(t *testing.T) {
 			first, release := make(chan struct{}), make(chan struct{})
 			var calls atomic.Int32
-			b, _ := paired(t, adapter.CompletionHandler{
+			b, _ := paired(t, adapter.TurnHandler{
 				Capture: boundary,
-				Confirm: func(context.Context, adapter.Completion) (string, error) {
+				Confirm: func(context.Context, adapter.TurnEnd) (string, error) {
 					if calls.Add(1) == 1 {
 						close(first)
 						<-release
@@ -235,9 +235,9 @@ func TestAWithdrawalStopsAnEndsAttempts(t *testing.T) {
 // has yet to land: its first attempt is refused as a retry would be.
 func TestAClosedConnectionTakesNoTurn(t *testing.T) {
 	var calls atomic.Int32
-	b, _ := paired(t, adapter.CompletionHandler{
+	b, _ := paired(t, adapter.TurnHandler{
 		Capture: func() *inbox.ReadBoundary { calls.Add(1); return boundary() },
-		Confirm: func(context.Context, adapter.Completion) (string, error) { calls.Add(1); return "", nil },
+		Confirm: func(context.Context, adapter.TurnEnd) (string, error) { calls.Add(1); return "", nil },
 	}, Served...)
 	l := unservedLink(t, b)
 	l.close()
@@ -284,7 +284,7 @@ func TestASilentProbeCostsOnlyItsCapability(t *testing.T) {
 				t.Fatalf("the start took %s with one probe silent, past its bound of %s", took, readinessBound)
 			}
 			want := slices.DeleteFunc(slices.Clone(Served), func(c string) bool { return c == capability })
-			if got := b.Live(); !slices.Equal(got, want) {
+			if got := live(b); !slices.Equal(got, want) {
 				t.Fatalf("live %v, want %v", got, want)
 			}
 		})
@@ -294,7 +294,7 @@ func TestASilentProbeCostsOnlyItsCapability(t *testing.T) {
 // A sample that arrives before Telemetry is proven is not the session's state
 // once its probe succeeds: when it was taken cannot be told.
 func TestActivityBeforeTelemetryIsProvenStaysUnknown(t *testing.T) {
-	b, _ := paired(t, adapter.CompletionHandler{}, Wake)
+	b, _ := paired(t, adapter.TurnHandler{}, Wake)
 	b.activity(currentLink(b), Frame{State: "working"})
 	b.mu.Lock()
 	b.live[Telemetry] = true
@@ -307,7 +307,7 @@ func TestActivityBeforeTelemetryIsProvenStaysUnknown(t *testing.T) {
 // Nor is a sample from a connection the backend no longer holds, even when
 // Telemetry is live on the one that replaced it.
 func TestActivityFromAWithdrawnConnectionIsDropped(t *testing.T) {
-	b, _ := paired(t, adapter.CompletionHandler{}, Served...)
+	b, _ := paired(t, adapter.TurnHandler{}, Served...)
 	old := currentLink(b)
 	b.mu.Lock()
 	b.link = newLink(nil)

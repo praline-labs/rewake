@@ -131,8 +131,8 @@ func TestANoticeFixedBeforeTheExitIsNotWrittenAfterIt(t *testing.T) {
 	}
 }
 
-// A backend gone ends the run from the wrapper's side: the record freezes
-// before the harness is told to end.
+// A process service gone ends the run from the wrapper's side: the record
+// freezes before the harness is told to end.
 func TestALostBackendFreezesTheRecordBeforeTheHarnessEnds(t *testing.T) {
 	k := keeperOf(t, stateDir(t), "api")
 	k.begin(true, "")
@@ -154,16 +154,16 @@ func TestALostBackendFreezesTheRecordBeforeTheHarnessEnds(t *testing.T) {
 		// Nothing to wait for after the signal: the test ends there.
 		cancel()
 	}
-	stopWithBackend(ctx, goneBackend{}, child.Process, start, ending)
+	stopWithProcess(ctx, goneProcess{}, child.Process, start, ending)
 	if record := k.snapshot(); !record.Frozen || !frozenFirst {
 		t.Fatalf("frozen %v, before the harness was signaled %v", record.Frozen, frozenFirst)
 	}
 }
 
-// goneBackend is a backend that is already gone.
-type goneBackend struct{ adapter.Backend }
+// goneProcess is a process service that is already gone.
+type goneProcess struct{ adapter.ProcessService }
 
-func (goneBackend) Done() <-chan struct{} {
+func (goneProcess) Done() <-chan struct{} {
 	done := make(chan struct{})
 	close(done)
 	return done

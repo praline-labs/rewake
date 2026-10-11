@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"context"
 	"io"
 	"os"
 	"strings"
@@ -9,8 +8,6 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/brief"
-	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
 	"github.com/praline-labs/rewake/internal/state"
 )
@@ -23,10 +20,6 @@ type roleLaunchProbe struct {
 func (p *roleLaunchProbe) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error) {
 	p.request = request
 	return adapter.LaunchPlan{Command: "/bin/true", Env: request.Env}, nil
-}
-
-func (*roleLaunchProbe) Deliver(context.Context, registry.Session, inbox.Message) inbox.Result {
-	return inbox.Result{State: inbox.Delivered}
 }
 
 func TestCLIResolvesDefaultGeneralAndPreservesExplicitCapabilities(t *testing.T) {

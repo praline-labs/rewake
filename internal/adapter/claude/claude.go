@@ -151,9 +151,13 @@ func (claudeHarness) SingleUseFlags() []adapter.Flag {
 	}
 }
 
-// ReachesWrapper: Claude Code runs its commands without a sandbox of its own,
-// so `rewake send` reaches the wrapper's socket to register a grant.
-func (claudeHarness) ReachesWrapper() bool { return true }
+// Offers: Launch and Wake only in stage 3, with no turn boundary until the
+// mod brings one in stage 4 (docs/v2/stage3-steps-adapters.md, S9). Claude
+// Code runs its commands without a sandbox of its own, so `rewake send`
+// reaches the wrapper's socket to register a grant.
+func (claudeHarness) Offers() adapter.Offer {
+	return adapter.Offer{Wake: true, Permissions: adapter.PermissionsOffer{ReachesWrapper: true}}
+}
 
 func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error) {
 	args := append([]string{}, request.Args...)
@@ -198,6 +202,7 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 	}
 	args = grantDirs(args, request.GrantDirs)
 
+	wake := newLane(socket, reply, owns)
 	return adapter.LaunchPlan{
 		Command:    request.Program("claude"),
 		Args:       args,
@@ -205,7 +210,8 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 		Socket:     socket,
 		OwnsSocket: owns,
 		Notes:      notes,
-		Lane:       newLane(reply, owns),
+		Service:    wake,
+		Wake:       wake,
 	}, nil
 }
 

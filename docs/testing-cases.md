@@ -272,7 +272,7 @@ nobody waits on goes to main — and must break the last two observations and le
 first.
 
 `fixture-steered` is `rewake compact` and `rewake interrupt` on the gate column, where
-the fixture is the one Steerable harness from S9 until stage 4. A main, running its own
+the fixture is the one harness offering Control from S9 until stage 4. A main, running its own
 commands, steers three workers, and each request travels the command, the control
 directory, the program serving it, the session carrying it out, and back. calm works its
 task to the end and is idle: a compaction with a focus must answer `started` while it

@@ -28,11 +28,6 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 		if prefix, present := call.Flags["name"]; present && prefix == "" {
 			return &UsageError{Command: call.Command, Message: "--name needs a nonempty prefix; omit --name to use the selected role."}
 		}
-		if refuser, ok := h.(adapter.LaunchRefuser); ok {
-			if err := refuser.RefuseLaunch(call.Raw); err != nil {
-				return &UsageError{Command: call.Command, Message: err.Error() + "."}
-			}
-		}
 		program, err := launchProgram(call)
 		if err != nil {
 			return err
@@ -69,10 +64,10 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 		}
 
 		code, err := wrap.Run(context.Background(), wrap.Request{
-			OnTurn: func(ctx context.Context, self registry.Session, result adapter.Completion) error {
+			OnTurn: func(ctx context.Context, self registry.Session, result adapter.TurnEnd) error {
 				return ReportCompletion(ctx, dir, self, result)
 			},
-			OnConfirm: func(ctx context.Context, self registry.Session, result adapter.Completion) (string, error) {
+			OnConfirm: func(ctx context.Context, self registry.Session, result adapter.TurnEnd) (string, error) {
 				return ConfirmCompletion(ctx, dir, self, result)
 			},
 			Harness: h,

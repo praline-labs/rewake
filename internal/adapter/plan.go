@@ -1,11 +1,7 @@
 package adapter
 
 import (
-	"context"
-
 	"github.com/praline-labs/rewake/internal/brief"
-	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
 )
 
@@ -68,9 +64,9 @@ type VersionGate struct {
 	Args    []string
 }
 
-// LaunchPlan is how the wrapper starts the harness.
+// LaunchPlan is how the wrapper starts the harness, and the capabilities of
+// the run it starts: each one nil where the run has none.
 type LaunchPlan struct {
-	Backend Backend
 	// Command is the executable to run, looked up in PATH.
 	Command string
 	// Args is the full argument list.
@@ -83,17 +79,25 @@ type LaunchPlan struct {
 	// the session ends. A path the caller named belongs to the caller: deleting
 	// it could cut off a session that is still running on it.
 	OwnsSocket bool
-	// Observer, when set, is a session-owned telemetry source for a harness
-	// that has no Backend. The wrapper starts it before the harness and
-	// publishes what it reports for as long as the session runs.
-	Observer Observer
-	// Lane, when set, delivers in place of the harness's Deliver for as long
-	// as the session runs. Only for a harness without a Backend.
-	Lane Lane
 	// Notes are things the caller should know about this launch: a setting that
 	// could not be read, a briefing that was skipped. They are printed once, to
 	// stderr, and do not stop the launch.
 	Notes []string
+
+	// Service is what of the run's own serves the session beside the
+	// harness, started before it and closed after it.
+	Service Service
+	// Wake carries notices; without it the letter is written and no notice
+	// reaches the session.
+	Wake Wake
+	// TurnBoundary reports the run's turns; without it no turn's end
+	// reports.
+	TurnBoundary TurnBoundary
+	// Telemetry reports the run's state; without it the state is unknown.
+	Telemetry Telemetry
+	// Thread follows the run's conversation; without it a ThreadTracker
+	// harness is asked, or the conversation is unknown.
+	Thread ThreadSource
 }
 
 // Program is the executable a launch starts: the one named with --command, or
@@ -105,8 +109,9 @@ func (r LaunchRequest) Program(own string) string {
 	return own
 }
 
-// Harness describes one coding-agent CLI: how it is presented, how it is
-// started, and how a message reaches a running session of it.
+// Harness is the Launch capability, which every adapter has: how one
+// coding-agent CLI is presented and started. What else it offers is its Offer;
+// what one run of it can do is in the run's plan.
 type Harness interface {
 	// ID is the launch command and the value stored in a session record.
 	ID() string
@@ -145,25 +150,11 @@ type Harness interface {
 	// exports to its children, which would point a new session at its
 	// parent's. The host leaves them out of LaunchRequest.Env.
 	EnvNotInherited() []string
-	// Launch turns a request into the command to run.
+	// Offers is what the adapter offers beyond Launch, before any launch.
+	Offers() Offer
+	// Launch turns a request into the command to run and the capabilities
+	// of the run.
 	Launch(request LaunchRequest) (LaunchPlan, error)
-	// Deliver hands one message to a running session and says what happened.
-	Deliver(ctx context.Context, session registry.Session, message inbox.Message) inbox.Result
-}
-
-// Steerable is a harness whose running sessions take a main's control
-// requests — `rewake compact` and `rewake interrupt` — through their run's
-// control directory (docs/remote-control.md). A harness that is not one is
-// refused before anything is written.
-type Steerable interface {
-	// CompactFocus says whether a compaction may carry a focus: text the
-	// summary is to keep. Where the harness has no way to pass one for a
-	// single compaction, a focus is a wrong call, refused before sending.
-	CompactFocus() bool
-	// InterruptTrace says what the interrupted session's model is shown of an
-	// interrupt, completing "whoever waits on it reads stopped, and …" in the
-	// answer to `rewake interrupt`.
-	InterruptTrace() string
 }
 
 // Flag is one parameter of a harness, by every spelling it answers to.

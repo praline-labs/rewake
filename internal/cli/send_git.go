@@ -38,9 +38,7 @@ func requestedGitGrant(catalog adapter.Catalog, call Call, sender, target regist
 	if !role.Of(target.Role).GitWrite {
 		return refuse(fmt.Sprintf("%s is a %s session, and only a write session takes repository Git metadata grants. Send the task to a --write session whose harness takes a Git grant, or do the Git part yourself.", target.Name, role.Of(target.Role).ID))
 	}
-	own, _ := catalog.Find(target.Harness)
-	capability, supported := own.(adapter.GitGrantHarness)
-	if !supported || !capability.SupportsGitGrant() {
+	if !catalog.Offers(target.Harness).Permissions.Git {
 		return false, &FailedError{Message: fmt.Sprintf("--grant-git: %s runs %s, which takes no per-message Git grant. Do the Git part yourself, or send the task to a --write session whose harness takes one.", target.Name, target.Harness)}
 	}
 	return true, nil

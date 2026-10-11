@@ -48,10 +48,11 @@ tools/release/                   the release gate: checks, builds with pack.sh, 
 `cmd/` holds only what the project ships; `tools/` holds development programs that ship
 with nobody, and `test/` and `docs/` hold packages that exist only for their tests.
 
-## The harness interface
+## The adapter API
 
-A harness adapter implements one interface, `internal/adapter/plan.go`, shown here
-without its comments:
+An adapter implements the capabilities of [design-api.md](v2/design-api.md), declared in
+`internal/adapter`. Launch, which every adapter has, is the `Harness` interface of
+`internal/adapter/plan.go`, shown here without its comments:
 
 ```go
 type Harness interface {
@@ -62,8 +63,10 @@ type Harness interface {
     Notes() []string
     SingleUseFlags() []Flag
     ProtectedDirs() Protected
+    Version() VersionGate
+    EnvNotInherited() []string
+    Offers() Offer
     Launch(request LaunchRequest) (LaunchPlan, error)
-    Deliver(ctx context.Context, session registry.Session, message inbox.Message) inbox.Result
 }
 ```
 
@@ -71,7 +74,41 @@ type Harness interface {
 flag for the same parameter replace rather than repeat each other. `ProtectedDirs` names
 the harness's own configuration, which no task may grant a session to write
 ([grants.md](grants.md)): `Dirs`, absolute directories outside any project, and `Names`,
-the directories it keeps inside one.
+the directories it keeps inside one. `Version` is the gate the host reads before the
+claim, and `EnvNotInherited` the variables the host leaves out of `LaunchRequest.Env`.
+
+What an adapter offers beyond Launch is a value, `Offers()` (`internal/adapter/offer.go`),
+known before any launch: whether it wakes a session, the tool transport it carries,
+whether it reports turn ends and can hold one, whether it collects telemetry, which
+Control verbs it takes (`rewake compact`, `rewake interrupt`, a compaction's focus), and
+which Permissions it serves (a directory into a running session, Git metadata, a main's
+grant reaching its wrapper). The CLI asks this value, through `Catalog.Offers(id)`, before
+it writes anything: a verb or a grant the target's adapter does not offer is refused
+there ([remote-control.md](remote-control.md), [grants.md](grants.md#who-can-grant)).
+That an adapter offers a capability says nothing of one run; what a run serves is its
+`LaunchPlan`, and what it made live in its exchange its `LiveReporter`
+(`internal/adapter/run.go`).
+
+The plan carries one run's capabilities as interfaces the wrapper calls and never
+asserts on the adapter: `Service`, started before the harness and closed with it, a
+`ProcessService` when it owns a process; `Wake`, which delivers the notice built by
+`inbox.Notice` and never `message.Text`, a `Reserver` and a `Receiver` where the run
+answers before the letter; `TurnBoundary`, handed a `TurnHandler` before the service
+starts; `Telemetry`; and `Thread`, the run's conversation. A run without a `Wake`
+answers each delivery that no notice can reach the session. A tool transport is the
+service's `ToolTransport`, generic over the descriptor so the API names no tool-layer
+type. An adapter that follows the conversation from the outside is a `ThreadTracker`,
+given the run's process; one that continues a conversation a launch names is a
+`Resumer`.
+
+Every turn end a `TurnBoundary` reports is a `TurnEnd` (`internal/adapter/turn.go`):
+the event it came from, the end's reason — answered, aborted, refused or failed — and
+the answer in the harness's words, with the scope captured from the run's read clock.
+The core refuses an end that names no event or no reason it knows, and derives the
+report from the reason: answered reports finished, aborted stopped, failed and refused
+an error ([turn-outcomes.md](turn-outcomes.md)). An adapter that can hold an end
+confirms it through `TurnHandler.Confirm` rather than publishing it, so the core can
+continue the turn instead of closing it.
 
 The adapters reach the CLI as one value. `catalog.New()` returns an `adapter.Catalog` in
 guide order; `cmd/rewake` builds it and passes it to `cli.Run`, which derives the command
@@ -80,32 +117,12 @@ registers one from `init` (rule 3 of [design.md](v2/design.md#the-test-that-hold
 so a test builds a catalogue of its own. `Catalog.Protected()` is the set the grant rules
 receive: every adapter's `ProtectedDirs`, and what the catalogue declares for harnesses
 this build has no adapter for — `~/.codex`, `.codex` and `.agents` until stage 5's
-adapter declares them itself. `Deliver` sends the
-notice for `message`, built by `inbox.Notice`; it never sends `message.Text`.
+adapter declares them itself.
 
-A harness whose sessions take `rewake compact` and `rewake interrupt` also implements
-`Steerable` — `CompactFocus() bool`, whether a compaction may carry a focus. One that
-does not is refused before anything is sent ([remote-control.md](remote-control.md)).
-
-
-A harness that takes a directory into a running session for one task implements
-`DirGrantHarness` — `SupportsDirGrant()`; `rewake send --grant-dir` to a session of any
-other harness is refused with exit 1 ([grants.md](grants.md)). A harness whose launch
-takes arguments rewake has a way of its own for implements `LaunchRefuser` —
-`RefuseLaunch(args)`, asked before anything else of the launch; since S8 no harness of
-the catalog implements it (Codex, which refused `--add-dir` and a `writable_roots`
-override there, left the product). A harness whose main can grant
-implements `GrantIssuer` — `ReachesWrapper()`, whether its commands reach their wrapper's
-socket; Claude Code does, and so does the fixture in a build that carries it, and a
-grant from a main of any other harness is refused with exit 1
-([grants.md](grants.md#who-can-grant)). The fixture also implements `DirGrantHarness`
-and `WorktreeHarness`, so the workflow suite holds the core's part of grants and
-worktrees on its gate column ([testing-cases.md](testing-cases.md)). A harness that takes a grant through
-a permission hook rather than at delivery implements `HookGranter` —
-`DecideGrant(call, entries)`, the answer from the grants the wrapper keeps. The hidden
-`rewake grant-hook` knows which harness runs it: it trims the payload with that
-package's `GrantCall` and asks the wrapper over its keeper socket
-([grants.md](grants.md#claude-code)).
+The fixture offers every capability the core has a part in, in a build that carries it,
+so the workflow suite holds the core's part of control, grants and worktrees on its gate
+column ([testing-cases.md](testing-cases.md)); Claude Code offers Wake and a main's grant
+reaching its wrapper.
 
 A harness that gives rewake's worktree to a launch implements `WorktreeHarness` —
 `WorktreeFlag()`, the spelling the launch command takes for itself;

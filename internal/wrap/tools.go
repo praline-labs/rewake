@@ -29,16 +29,6 @@ type MailTool struct {
 	Tools []bridge.ToolDescriptor
 }
 
-// toolTransport is a harness whose own process carries the tool's calls to
-// the endpoint, named by the transport its calls are bound under.
-type toolTransport interface{ ToolTransport() string }
-
-// toolOffer is a backend that registers the tools with its harness and names
-// the process that asks the endpoint to run their calls.
-type toolOffer interface {
-	OfferTools(tools []bridge.ToolDescriptor, endpoint string, serve func(pid int, start uint64))
-}
-
 // mailTool is a run's endpoint, or nothing where the run has none: a harness
 // that carries no tool calls of its own, or an endpoint that could not start,
 // which costs the tool and never the session.
@@ -76,10 +66,7 @@ func (t *mailTool) config(request Request, name, epoch, transport string, clock 
 // the tool out.
 func startMailTool(request Request, name, epoch string) *mailTool {
 	tool := &mailTool{}
-	transport := ""
-	if own, ok := request.Harness.(toolTransport); ok {
-		transport = own.ToolTransport()
-	}
+	transport := request.Harness.Offers().ToolTransport
 	if request.MailTool == nil || transport == "" {
 		return tool
 	}
@@ -104,17 +91,19 @@ func startMailTool(request Request, name, epoch string) *mailTool {
 	return tool
 }
 
-// attach hands the endpoint what only the plan knows: the backend's word on
-// whether the tool may read.
+// attach hands the endpoint what only the plan knows: the run's word on
+// whether the tool may read, and the tools for the run to register.
 func (t *mailTool) attach(plan adapter.LaunchPlan) {
 	if t.endpoint == nil {
 		return
 	}
-	if reads, ok := plan.Backend.(interface{ ToolReadsOff() string }); ok {
-		t.endpoint.SetReadsOff(reads.ToolReadsOff)
+	transport, ok := plan.Service.(adapter.ToolTransport[bridge.ToolDescriptor])
+	if !ok {
+		return
 	}
-	if offer, ok := plan.Backend.(toolOffer); ok && len(t.tools) > 0 {
-		// A call's child gets the harness's launch values; the backend names
+	t.endpoint.SetReadsOff(transport.ToolReadsOff)
+	if len(t.tools) > 0 {
+		// A call's child gets the harness's launch values; the run names
 		// the process that asks for it.
 		env := map[string]string{}
 		for _, entry := range plan.Env {
@@ -123,14 +112,14 @@ func (t *mailTool) attach(plan adapter.LaunchPlan) {
 			}
 		}
 		t.endpoint.SetChildEnv(func(key string) string { return env[key] })
-		offer.OfferTools(t.tools, t.path, t.endpoint.SetTransport)
+		transport.OfferTools(t.tools, t.path, t.endpoint.SetTransport)
 	}
 }
 
 // handler is a completion handler whose ends are captured through the
 // tool's gate, when the run has one.
-func (t *mailTool) handler(capture func() *inbox.ReadBoundary, publish func(context.Context, adapter.Completion) error) adapter.CompletionHandler {
-	handler := adapter.CompletionHandler{Capture: capture, Publish: publish}
+func (t *mailTool) handler(capture func() *inbox.ReadBoundary, publish func(context.Context, adapter.TurnEnd) error) adapter.TurnHandler {
+	handler := adapter.TurnHandler{Capture: capture, Publish: publish}
 	if t.endpoint != nil {
 		handler.EndCapture = t.endpoint.Gate().Capture
 		handler.Tool = t.endpoint
@@ -139,14 +128,14 @@ func (t *mailTool) handler(capture func() *inbox.ReadBoundary, publish func(cont
 }
 
 // started names the processes the tool's calls may come from below: the
-// harness, and a backend's own process.
-func (t *mailTool) started(harnessPID int, backend adapter.Backend) {
+// harness, and the process of the run's own that speaks for it.
+func (t *mailTool) started(harnessPID int, process adapter.ProcessService) {
 	if t.endpoint == nil {
 		return
 	}
 	roots := []int{harnessPID}
-	if owner, ok := backend.(adapter.ProcessBackend); ok && owner.ProcessID() > 0 {
-		roots = append(roots, owner.ProcessID())
+	if process != nil && process.ProcessID() > 0 {
+		roots = append(roots, process.ProcessID())
 	}
 	t.endpoint.SetRoots(roots...)
 }

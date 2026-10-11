@@ -20,7 +20,7 @@ import (
 // a pipe, with the given capabilities live — the state a finished exchange
 // leaves. What is tested here is what the adapter does with a live
 // connection; the exchange that makes one is exchange_test.go's.
-func paired(t *testing.T, handler adapter.CompletionHandler, live ...string) (*backend, *peer) {
+func paired(t *testing.T, handler adapter.TurnHandler, live ...string) (*backend, *peer) {
 	t.Helper()
 	near, far := net.Pipe()
 	b := newBackend("", nil, nil, "", "", "e1")
@@ -83,8 +83,8 @@ func (p *peer) ask(t *testing.T, frame Frame) Frame {
 // it came with as the call began.
 type calls struct {
 	mu        sync.Mutex
-	confirmed []adapter.Completion
-	published []adapter.Completion
+	confirmed []adapter.TurnEnd
+	published []adapter.TurnEnd
 	deadlines []time.Time
 	expired   []bool
 }
@@ -102,16 +102,16 @@ func boundary() *inbox.ReadBoundary { return &inbox.ReadBoundary{} }
 
 func TestAnEndIsConfirmedWhenItCanBeHeld(t *testing.T) {
 	var c calls
-	handler := adapter.CompletionHandler{
+	handler := adapter.TurnHandler{
 		Capture: boundary,
-		Confirm: func(ctx context.Context, completion adapter.Completion) (string, error) {
+		Confirm: func(ctx context.Context, completion adapter.TurnEnd) (string, error) {
 			c.enter(ctx)
 			c.mu.Lock()
 			c.confirmed = append(c.confirmed, completion)
 			c.mu.Unlock()
 			return "the reason", nil
 		},
-		Publish: func(ctx context.Context, completion adapter.Completion) error {
+		Publish: func(ctx context.Context, completion adapter.TurnEnd) error {
 			c.enter(ctx)
 			c.mu.Lock()
 			c.published = append(c.published, completion)
@@ -133,11 +133,11 @@ func TestAnEndIsConfirmedWhenItCanBeHeld(t *testing.T) {
 		t.Fatalf("an end without hold: %+v, confirmed %d, published %d", plain, len(c.confirmed), len(c.published))
 	}
 	first := c.confirmed[0]
-	if first.ID != ID+"/t1/1" || first.Thread != programThrd || first.Kind != inbox.Finished || first.Text != "done" ||
+	if first.Event != ID+"/t1/1" || first.Thread != programThrd || first.Reason != adapter.Answered || first.Answer != "done" ||
 		first.Boundary == nil || first.Started == 0 || first.Ended < first.Started {
 		t.Fatalf("the completion: %+v", first)
 	}
-	if c.published[0].ID == first.ID {
+	if c.published[0].Event == first.Event {
 		t.Fatal("two ends of one turn with one id")
 	}
 }
@@ -145,11 +145,11 @@ func TestAnEndIsConfirmedWhenItCanBeHeld(t *testing.T) {
 // The same end sent again — its answer lost — is the same completion: the
 // same id, boundary and times, so the core knows it for the one it answered.
 func TestAnEndSentAgainIsTheSameCompletion(t *testing.T) {
-	var seen []adapter.Completion
+	var seen []adapter.TurnEnd
 	var mu sync.Mutex
-	handler := adapter.CompletionHandler{
+	handler := adapter.TurnHandler{
 		Capture: boundary,
-		Confirm: func(_ context.Context, completion adapter.Completion) (string, error) {
+		Confirm: func(_ context.Context, completion adapter.TurnEnd) (string, error) {
 			mu.Lock()
 			defer mu.Unlock()
 			seen = append(seen, completion)
@@ -162,13 +162,13 @@ func TestAnEndSentAgainIsTheSameCompletion(t *testing.T) {
 	p.ask(t, end)
 	time.Sleep(5 * time.Millisecond)
 	p.ask(t, end)
-	if len(seen) != 2 || seen[0] != seen[1] || seen[0].Kind != inbox.Stopped {
+	if len(seen) != 2 || seen[0] != seen[1] || seen[0].Reason != adapter.Aborted {
 		t.Fatalf("the end sent again: %+v", seen)
 	}
 }
 
 func TestAnEndWithAnUnknownOutcomeIsRefused(t *testing.T) {
-	_, p := paired(t, adapter.CompletionHandler{Publish: func(context.Context, adapter.Completion) error { return nil }}, Served...)
+	_, p := paired(t, adapter.TurnHandler{Publish: func(context.Context, adapter.TurnEnd) error { return nil }}, Served...)
 	if answer := p.ask(t, Frame{Op: opTurnEnded, Turn: "t1", End: "t1/1", Outcome: "elsewhere"}); answer.OK {
 		t.Fatal("an end of no known outcome was taken")
 	}
@@ -181,9 +181,9 @@ func TestAnEndWithAnUnknownOutcomeIsRefused(t *testing.T) {
 // never by stretching the one that failed, and a bounded number of times.
 func TestATurnEndIsRetriedWithItsOwnDeadline(t *testing.T) {
 	var c calls
-	handler := adapter.CompletionHandler{
+	handler := adapter.TurnHandler{
 		Capture: boundary,
-		Confirm: func(ctx context.Context, _ adapter.Completion) (string, error) {
+		Confirm: func(ctx context.Context, _ adapter.TurnEnd) (string, error) {
 			if c.enter(ctx) == 1 {
 				<-ctx.Done()
 				return "", ctx.Err()
@@ -205,9 +205,9 @@ func TestATurnEndIsRetriedWithItsOwnDeadline(t *testing.T) {
 func TestATurnEndThatNeverTakesIsRefusedAfterItsAttempts(t *testing.T) {
 	var c calls
 	failed := errors.New("the journal is unavailable")
-	handler := adapter.CompletionHandler{
+	handler := adapter.TurnHandler{
 		Capture: boundary,
-		Publish: func(ctx context.Context, _ adapter.Completion) error { c.enter(ctx); return failed },
+		Publish: func(ctx context.Context, _ adapter.TurnEnd) error { c.enter(ctx); return failed },
 	}
 	_, p := paired(t, handler, Served...)
 	answer := p.ask(t, Frame{Op: opTurnEnded, Turn: "t1", End: "t1/1", Outcome: OutcomeFailed})
@@ -217,7 +217,7 @@ func TestATurnEndThatNeverTakesIsRefusedAfterItsAttempts(t *testing.T) {
 }
 
 func TestActivityIsTheSessionState(t *testing.T) {
-	backend, other := paired(t, adapter.CompletionHandler{}, Served...)
+	backend, other := paired(t, adapter.TurnHandler{}, Served...)
 	other.write(t, Frame{Op: opActivity, State: "working"})
 	eventually(t, "the activity", func() bool {
 		state := backend.SessionState()

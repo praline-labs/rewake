@@ -62,8 +62,9 @@ and refusals. The call is checked whole before anything is written:
   role is a wrong call.
 - **The target** is a running session of the same room, not the caller itself; an
   unknown name gets the same refusal as `send`, with the live names.
-- **Its harness must take control requests** (`harness.Steerable`), and a focus only
-  where the harness can pass one for a single compaction (`CompactFocus`). Since S9,
+- **Its harness must offer the verb** (`Offer.Control`, [code.md](code.md#the-adapter-api)),
+  and a focus only where the harness can pass one for a single compaction
+  (`CompactFocus`); each verb is offered on its own since S10. Since S9,
   October 11, 2026, only the fixture harness takes the requests, and it takes a focus;
   a Claude Code session is refused here, before anything is sent, until stage 4. In
   1.x both harnesses took them and Codex took no focus, so a focus to a Codex session
@@ -119,7 +120,7 @@ the next holder of the name:
 ```
 
 The wrapper makes the directory before the harness starts and removes it when the
-session ends, only for a harness that serves it (`harness.Steerable`): a directory
+session ends, only for a harness that offers a Control verb (`Offer.Control`): a directory
 nobody serves would say `not answering` where the true next step is a restart. If it
 cannot be made the launch goes on without one, and every request to that run is refused
 as `no control directory`. The id is 32 lowercase hex

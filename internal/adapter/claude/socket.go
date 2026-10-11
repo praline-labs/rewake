@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/registry"
 )
 
 // The socket path of delivery: the notice written to the session's messaging
@@ -19,14 +18,6 @@ import (
 
 // maxSocketPath is the limit the kernel puts on a unix socket path.
 const maxSocketPath = 103
-
-// Deliver writes the notice with no reply address, so the session reports
-// nothing back and a successful write is all there is to know. The lane
-// (lane.go) is the path a running wrapper uses; this one is what is left when
-// it cannot listen.
-func (claudeHarness) Deliver(ctx context.Context, session registry.Session, message inbox.Message) inbox.Result {
-	return writeNotice(ctx, session, newEnvelope(message))
-}
 
 func newEnvelope(message inbox.Message) envelope {
 	return envelope{
@@ -36,9 +27,11 @@ func newEnvelope(message inbox.Message) envelope {
 	}
 }
 
-// writeNotice writes one line to the session's inbox socket.
-func writeNotice(ctx context.Context, session registry.Session, notice envelope) inbox.Result {
-	if session.Socket == "" {
+// writeNotice writes one line to the session's inbox socket. Without a reply
+// address in it the session reports nothing back, and a successful write is
+// all there is to know: what the lane does when it cannot listen.
+func writeNotice(ctx context.Context, socket string, notice envelope) inbox.Result {
+	if socket == "" {
 		return inbox.Result{State: inbox.Failed, Detail: "this session has no inbox socket"}
 	}
 
@@ -47,7 +40,7 @@ func writeNotice(ctx context.Context, session registry.Session, notice envelope)
 		return inbox.Result{State: inbox.Failed, Detail: "the message could not be encoded: " + err.Error()}
 	}
 	dialer := net.Dialer{Timeout: dialTimeout}
-	connection, err := dialer.DialContext(ctx, "unix", session.Socket)
+	connection, err := dialer.DialContext(ctx, "unix", socket)
 	if err != nil {
 		// The socket appears a moment after the process does, and it is
 		// recreated across a restart, so a session that is still alive gets

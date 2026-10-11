@@ -97,9 +97,9 @@ func TestAnEndOnRecordTheGateNeverHeardRefusesTheAcknowledgment(t *testing.T) {
 	if c.ended || c.result.IsError {
 		t.Fatalf("the read: %+v", c)
 	}
-	if err := cli.ReportCompletion(context.Background(), r.dir, r.self, adapter.Completion{
-		ID: "an-end-elsewhere", Thread: thread, Kind: inbox.Finished,
-		Text: "finished elsewhere", Started: started, Ended: boottime.Now(), Boundary: r.clock.Snapshot(),
+	if err := cli.ReportCompletion(context.Background(), r.dir, r.self, adapter.TurnEnd{
+		Event: "an-end-elsewhere", Thread: thread, Reason: adapter.Answered,
+		Answer: "finished elsewhere", Started: started, Ended: boottime.Now(), Boundary: r.clock.Snapshot(),
 	}); err != nil {
 		t.Fatal(err)
 	}

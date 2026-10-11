@@ -11,7 +11,7 @@ import (
 // A compaction's end is counted once done, and the outcome of one a main asked
 // for is kept for that main's letter; a refusal leaves an outcome and no count.
 func TestACompactionsEndIsCountedAndItsOutcomeKept(t *testing.T) {
-	b, _ := paired(t, adapter.CompletionHandler{}, Served...)
+	b, _ := paired(t, adapter.TurnHandler{}, Served...)
 	l := currentLink(b)
 	before, after := int64(100), int64(10)
 	b.compacted(l, Frame{Request: "r1", From: "lead", Outcome: "done", TokensBefore: &before, TokensAfter: &after})
@@ -34,7 +34,7 @@ func TestACompactionsEndIsCountedAndItsOutcomeKept(t *testing.T) {
 // Without a live Control nothing is counted, and no count is published: zero
 // would claim a coverage the program has not shown.
 func TestCompactionsNeedALiveControl(t *testing.T) {
-	b, _ := paired(t, adapter.CompletionHandler{}, Wake, Telemetry)
+	b, _ := paired(t, adapter.TurnHandler{}, Wake, Telemetry)
 	b.compacted(currentLink(b), Frame{Request: "r1", From: "lead", Outcome: "done"})
 	b.mu.Lock()
 	counted := b.compact.count
@@ -47,7 +47,7 @@ func TestCompactionsNeedALiveControl(t *testing.T) {
 // A new conversation the program reports is the one delivered to from then
 // on, while Wake is live on the connection it came on.
 func TestANewConversationIsTakenWhileWakeIsLive(t *testing.T) {
-	b, _ := paired(t, adapter.CompletionHandler{}, Served...)
+	b, _ := paired(t, adapter.TurnHandler{}, Served...)
 	b.threadChanged(currentLink(b), Frame{Thread: "next"})
 	if thread, err := b.Thread(); err != nil || thread != "next" {
 		t.Fatalf("thread %q, %v", thread, err)

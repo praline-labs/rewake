@@ -22,7 +22,7 @@ import (
 
 // heldEnd is the end the repeated cases hold, with the boundary it was
 // captured with, which a retry carries unchanged.
-func (lab interimLab) heldEnd(t *testing.T) adapter.Completion {
+func (lab interimLab) heldEnd(t *testing.T) adapter.TurnEnd {
 	t.Helper()
 	end := lab.end("turn-2", 1, inbox.Finished, "the held answer")
 	end.Boundary = boundaryNow(t, lab.dir, lab.self)
@@ -30,7 +30,7 @@ func (lab interimLab) heldEnd(t *testing.T) adapter.Completion {
 }
 
 // again confirms an end as it is, its boundary included.
-func (lab interimLab) again(t *testing.T, end adapter.Completion) string {
+func (lab interimLab) again(t *testing.T, end adapter.TurnEnd) string {
 	t.Helper()
 	reason, err := ConfirmCompletion(context.Background(), lab.dir, lab.self, end)
 	if err != nil {

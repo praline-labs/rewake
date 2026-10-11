@@ -140,7 +140,7 @@ func TestDirGrantIsCarriedResolvedAndCollapsed(t *testing.T) {
 func TestASessionThatTakesNoDirectoryIsSentNoGrant(t *testing.T) {
 	takesNone := ""
 	for _, h := range testCatalog().All() {
-		if taker, ok := h.(adapter.DirGrantHarness); !ok || !taker.SupportsDirGrant() {
+		if !h.Offers().Permissions.Dir {
 			takesNone = h.ID()
 			break
 		}

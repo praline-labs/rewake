@@ -98,8 +98,8 @@ func TestALiveToolTransportNamesTheProgramToTheEndpoint(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Contains(unproven.Live(), ToolTransport) || unproven.ToolReadsOff() == "" {
-		t.Fatalf("a transport that cannot show its results: live %v, reads off %q", unproven.Live(), unproven.ToolReadsOff())
+	if !slices.Contains(live(unproven), ToolTransport) || unproven.ToolReadsOff() == "" {
+		t.Fatalf("a transport that cannot show its results: live %v, reads off %q", live(unproven), unproven.ToolReadsOff())
 	}
 }
 
@@ -110,8 +110,8 @@ func TestOtherToolsRegisteredLeaveTheTransportOff(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if slices.Contains(b.Live(), ToolTransport) || peerOf(b) != 0 {
-		t.Fatalf("live %v, serving %d", b.Live(), peerOf(b))
+	if slices.Contains(live(b), ToolTransport) || peerOf(b) != 0 {
+		t.Fatalf("live %v, serving %d", live(b), peerOf(b))
 	}
 }
 
@@ -120,8 +120,8 @@ func TestOtherToolsRegisteredLeaveTheTransportOff(t *testing.T) {
 // start at the program's own time.
 func TestTheProgramsReportsBecomeTheNeutralInput(t *testing.T) {
 	heard := &toolInput{}
-	publish := func(context.Context, adapter.Completion) error { return nil }
-	b, p := paired(t, adapter.CompletionHandler{Tool: heard, Publish: publish}, Served...)
+	publish := func(context.Context, adapter.TurnEnd) error { return nil }
+	b, p := paired(t, adapter.TurnHandler{Tool: heard, Publish: publish}, Served...)
 	b.tools.tools = programTools
 	if answer := p.ask(t, Frame{Op: opTurnStarted, Turn: "t1", At: 4242}); !answer.OK {
 		t.Fatalf("the turn's start: %+v", answer)
@@ -160,7 +160,7 @@ func TestTheProgramsReportsBecomeTheNeutralInput(t *testing.T) {
 // Without a live transport the program's reports of calls reach nothing.
 func TestACallReportWithoutTheTransportIsRefused(t *testing.T) {
 	heard := &toolInput{}
-	b, p := paired(t, adapter.CompletionHandler{Tool: heard}, Wake, TurnBoundary)
+	b, p := paired(t, adapter.TurnHandler{Tool: heard}, Wake, TurnBoundary)
 	b.tools.tools = programTools
 	for _, frame := range []Frame{
 		{Op: opToolCall, Call: "c1", Turn: "t1", Tool: "inbox"},

@@ -32,7 +32,7 @@ import (
 //
 // And a worker asking is a wrong call.
 //
-// The fixture is the only Steerable harness from S9 until stage 4 gives a
+// The fixture is the only harness offering Control from S9 until stage 4 gives a
 // real adapter Control again; Claude Code's served side left with its plugin
 // module. What it does not prove: that any real harness carries these calls
 // out as the program does; the refusals are the words of internal/control.

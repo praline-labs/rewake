@@ -62,6 +62,18 @@ var remember = control.Remember
 func handleCompact(ctx *Context, call Call) error   { return steer(ctx, call, control.Compact) }
 func handleInterrupt(ctx *Context, call Call) error { return steer(ctx, call, control.Interrupt) }
 
+// offersVerb says the adapter offers the verb: one it does not is refused
+// before a request is written (docs/v2/design-api.md#control).
+func offersVerb(verbs adapter.ControlOffer, action string) bool {
+	switch action {
+	case control.Compact:
+		return verbs.Compact
+	case control.Interrupt:
+		return verbs.Interrupt
+	}
+	return false
+}
+
 // steer sends one control request to a session and reports its outcome.
 // Everything that makes the call wrong is refused before anything is written:
 // who is asking, whom, and what the target's harness can carry out.
@@ -106,11 +118,11 @@ func steer(ctx *Context, call Call, action string) error {
 		return usage("a session cannot %s itself: its own turn is running this command.", action)
 	}
 	found, _ := ctx.table.catalog.Find(session.Harness)
-	steerable, ok := found.(adapter.Steerable)
-	if !ok {
+	verbs := ctx.table.catalog.Offers(session.Harness).Control
+	if !offersVerb(verbs, action) {
 		return usage("%s is a %s session, which does not take rewake %s yet.", session.Name, harnessTitle(found, session.Harness), action)
 	}
-	if focus != "" && !steerable.CompactFocus() {
+	if focus != "" && !verbs.CompactFocus {
 		return usage("focus not supported by %s: it has no way to pass a focus for one compaction. Run rewake compact %s without it.", harnessTitle(found, session.Harness), session.Name)
 	}
 
@@ -120,7 +132,7 @@ func steer(ctx *Context, call Call, action string) error {
 	// to carry out later, unseen. SIGKILL cannot be caught.
 	asking, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	model := steerModel{Session: session.Name, Action: action, Focus: focus, trace: steerable.InterruptTrace()}
+	model := steerModel{Session: session.Name, Action: action, Focus: focus, trace: verbs.InterruptTrace}
 	request := control.Request{ID: control.NewID(), Action: action, Focus: focus, From: self.Name}
 	// main's own wrapper owns a compaction's letter: the record is left
 	// before the request is written, so a command killed once the request is

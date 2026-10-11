@@ -59,6 +59,16 @@ func (c Catalog) Find(id string) (Harness, bool) {
 	return nil, false
 }
 
+// Offers is what the adapter with the given id offers, and nothing beyond
+// Launch for an id the catalogue does not know: a session recorded by another
+// build is asked nothing it cannot be shown to do.
+func (c Catalog) Offers(id string) Offer {
+	if h, ok := c.Find(id); ok {
+		return h.Offers()
+	}
+	return Offer{}
+}
+
 // IDs lists the id of every adapter, in guide order.
 func (c Catalog) IDs() []string {
 	out := make([]string, 0, len(c.adapters))

@@ -7,7 +7,6 @@
 package fixture
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -16,8 +15,6 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/brief"
-	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/registry"
 )
 
 // ID is the launch command, the program's name and the session record's
@@ -118,8 +115,9 @@ func (fixtureHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan,
 	terminal := append(append(append([]string{}, description...), "--"), request.Args...)
 	env := request.Env
 	cwd, _ := os.Getwd()
+	run := newBackend(request.Program(ID), server, env, cwd, socket, request.Epoch)
 	return adapter.LaunchPlan{
-		Backend:    newBackend(request.Program(ID), server, env, cwd, socket, request.Epoch),
+		Service: run, Wake: run, TurnBoundary: run, Telemetry: run, Thread: run,
 		Socket:     socket,
 		OwnsSocket: true,
 		Command:    request.Program(ID),
@@ -129,36 +127,39 @@ func (fixtureHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan,
 	}, nil
 }
 
-// SupportsDirGrant: a directory granted with a task reaches the program with
+// Offers: what the program can serve — every capability a test can withhold
+// — and the core's part of a directory grant.
+//
+// Permissions.Dir: a directory granted with a task reaches the program with
 // the letter that carries it, once the wrapper has checked it again and main's
 // wrapper has confirmed it, and the program says it was offered one. Applying
 // it to what the program may write, and taking it back, is the Permissions
 // capability stage 6 designs (docs/v2/design-api.md#permissions); here the
-// fixture holds the core's part of a grant on the gate column.
-func (fixtureHarness) SupportsDirGrant() bool { return true }
-
-// ReportsTurns: the plan's Backend reports every turn's end.
-func (fixtureHarness) ReportsTurns() bool { return true }
-
-// ReachesWrapper: the program runs its commands without a sandbox of its own,
-// so a fixture main's send reaches its wrapper and can grant.
-func (fixtureHarness) ReachesWrapper() bool { return true }
-
-// The fixture is Steerable while no product adapter is: Claude Code's served
-// side left with its plugin module in S9, and stage 4 gives a real adapter
-// Control again (docs/v2/design-api.md#control). Until then the program serves
-// the run's control directory itself, as the module did, so rewake compact and
-// rewake interrupt keep their workflow cases on the gate column; S11 moves the
-// served side behind the fixture's live Control (control.Serve).
-var _ adapter.Steerable = fixtureHarness{}
-
-// CompactFocus: the program takes a focus with a compaction.
-func (fixtureHarness) CompactFocus() bool { return true }
-
-// InterruptTrace: the program ends the turn with the interrupter's name as its
-// text, which is what the stopped report carries.
-func (fixtureHarness) InterruptTrace() string {
-	return "the fixture ends the turn saying who interrupted it"
+// fixture holds the core's part of a grant on the gate column. ReachesWrapper:
+// the program runs its commands without a sandbox of its own, so a fixture
+// main's send reaches its wrapper and can grant.
+//
+// Control: the fixture offers it while no product adapter does: Claude Code's
+// served side left with its plugin module in S9, and stage 4 gives a real
+// adapter Control again (docs/v2/design-api.md#control). Until then the
+// program serves the run's control directory itself, as the module did, so
+// rewake compact and rewake interrupt keep their workflow cases on the gate
+// column; S11 moves the served side behind the fixture's live Control
+// (control.Serve). It takes a focus with a compaction, and ends an
+// interrupted turn with the interrupter's name as its text, which is what the
+// stopped report carries.
+func (fixtureHarness) Offers() adapter.Offer {
+	return adapter.Offer{
+		Wake:          true,
+		ToolTransport: Transport,
+		TurnBoundary:  adapter.TurnBoundaryOffer{Reports: true, HoldsEnd: true},
+		Telemetry:     true,
+		Control: adapter.ControlOffer{
+			Compact: true, Interrupt: true, CompactFocus: true,
+			InterruptTrace: "the fixture ends the turn saying who interrupted it",
+		},
+		Permissions: adapter.PermissionsOffer{Dir: true, ReachesWrapper: true},
+	}
 }
 
 func room(request adapter.LaunchRequest) string {
@@ -166,12 +167,6 @@ func room(request adapter.LaunchRequest) string {
 		return "default"
 	}
 	return request.Room
-}
-
-// Deliver is the path for a session without the fixture's backend, which a
-// fixture session never is.
-func (fixtureHarness) Deliver(context.Context, registry.Session, inbox.Message) inbox.Result {
-	return inbox.Result{State: inbox.Failed, Detail: "this session needs the fixture's backend; restart it through rewake"}
 }
 
 // Version: the program answers --version with its name and its version,

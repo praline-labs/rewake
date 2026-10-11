@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/registry"
 )
 
 // receiver stands in for a Claude Code session: it reads each line on its
@@ -80,18 +79,23 @@ func answer(t *testing.T, reply, id, status string) {
 
 func startLane(t *testing.T, dir string) *lane {
 	t.Helper()
-	l := newLane(filepath.Join(dir, "session.reply.sock"), false)
+	l := newLane(filepath.Join(dir, "session.sock"), filepath.Join(dir, "session.reply.sock"), false)
 	l.window, l.limit = 200*time.Millisecond, 100*time.Millisecond
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(func() { cancel(); l.Close() })
-	if err := l.Start(ctx); err != nil {
+	if err := l.Start(ctx, func(note string) { t.Fatal(note) }); err != nil {
 		t.Fatal(err)
 	}
 	return l
 }
 
+// deliver hands the lane one task for the receiver's socket, which is the
+// session's.
 func deliver(l *lane, r *receiver, id string) inbox.Result {
-	return l.Deliver(context.Background(), registry.Session{Socket: r.socket}, inbox.Message{ID: id, Kind: inbox.Task, Text: "work"})
+	if l.socket != r.socket {
+		panic("the lane writes to " + l.socket + ", not to the receiver at " + r.socket)
+	}
+	return l.Deliver(context.Background(), inbox.Message{ID: id, Kind: inbox.Task, Text: "work"})
 }
 
 func nextReceipt(t *testing.T, l *lane) inbox.Receipt {
@@ -278,9 +282,10 @@ func TestLaneSweepsDeadReplySockets(t *testing.T) {
 func TestLaneWithoutReplySocketWritesPlainly(t *testing.T) {
 	dir := t.TempDir()
 	r := startReceiver(t, dir)
-	l := newLane("", false)
-	if err := l.Start(context.Background()); err == nil {
-		t.Fatal("a lane with no reply socket has to say it hears nothing back")
+	l := newLane(r.socket, "", false)
+	noted := ""
+	if err := l.Start(context.Background(), func(note string) { noted = note }); err != nil || noted == "" {
+		t.Fatalf("a lane with no reply socket has to say it hears nothing back, and start: %q, %v", noted, err)
 	}
 	defer l.Close()
 	if result := deliver(l, r, "m1"); result.State != inbox.Delivered {
@@ -301,18 +306,18 @@ func TestLaneOpens(t *testing.T) {
 		}
 	}
 	t.Run("after the limit", func(t *testing.T) {
-		l := newLane("", false)
+		l := newLane("", "", false)
 		l.limit = 10 * time.Millisecond
-		_ = l.Start(context.Background())
+		_ = l.Start(context.Background(), nil)
 		defer l.Close()
 		if !opened(l) {
 			t.Fatal("the gate stays shut past its limit")
 		}
 	})
 	t.Run("not before it", func(t *testing.T) {
-		l := newLane("", false)
+		l := newLane("", "", false)
 		l.limit = time.Hour
-		_ = l.Start(context.Background())
+		_ = l.Start(context.Background(), nil)
 		defer l.Close()
 		select {
 		case <-l.Opened():
@@ -324,9 +329,9 @@ func TestLaneOpens(t *testing.T) {
 
 func TestLaneMakesItsOwnDirectory(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "sock")
-	l := newLane(filepath.Join(dir, "a.reply.sock"), true)
+	l := newLane(filepath.Join(dir, "a.sock"), filepath.Join(dir, "a.reply.sock"), true)
 	defer l.Close()
-	if err := l.Start(context.Background()); err != nil {
+	if err := l.Start(context.Background(), func(note string) { t.Fatal(note) }); err != nil {
 		t.Fatal(err)
 	}
 	if info, err := os.Lstat(l.reply); err != nil || info.Mode()&os.ModeSocket == 0 || info.Mode().Perm() != 0o600 {

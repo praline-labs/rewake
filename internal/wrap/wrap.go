@@ -46,11 +46,12 @@ type Request struct {
 	Command string
 
 	// Role is explicit when its ID is set; empty always uses general.
-	Role   role.Role
-	OnTurn func(context.Context, registry.Session, adapter.Completion) error
+	Role role.Role
+	// OnTurn publishes a turn's end the run's TurnBoundary reported.
+	OnTurn func(context.Context, registry.Session, adapter.TurnEnd) error
 	// OnConfirm runs an end the adapter may hold open, beside OnTurn
-	// (adapter.CompletionHandler.Confirm).
-	OnConfirm func(context.Context, registry.Session, adapter.Completion) (string, error)
+	// (adapter.TurnHandler.Confirm).
+	OnConfirm func(context.Context, registry.Session, adapter.TurnEnd) (string, error)
 	// MailTool serves the mail tool's endpoint; nil serves none.
 	MailTool *MailTool
 	// OnClaimed hears the session once its name is claimed, before the
@@ -125,7 +126,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	// harness that serves it: a directory nobody serves would answer "not
 	// answering" where "no control directory" names the real next step.
 	controlDir := ""
-	if _, steerable := request.Harness.(adapter.Steerable); steerable {
+	if request.Harness.Offers().Control.Any() {
 		made := registry.ControlFor(request.Dir, name, epoch)
 		if control.Prepare(made) == nil {
 			controlDir = made
@@ -205,16 +206,17 @@ func Run(ctx context.Context, request Request) (int, error) {
 		return 0, err
 	}
 
-	tool.started(command.Process.Pid, plan.Backend)
+	process, _ := plan.Service.(adapter.ProcessService)
+	tool.started(command.Process.Pid, process)
 	if start, err := proc.StartTime(command.Process.Pid); err == nil {
 		session.HarnessPID = command.Process.Pid
 		session.HarnessStart = start
 		_ = registry.Update(request.Dir, session)
 	}
-	if plan.Backend != nil {
+	if process != nil {
 		watchCtx, stopWatching := context.WithCancel(ctx)
 		defer stopWatching()
-		go stopWithBackend(watchCtx, plan.Backend, command.Process, session.HarnessStart, tool.keeper.exited)
+		go stopWithProcess(watchCtx, process, command.Process, session.HarnessStart, tool.keeper.exited)
 	}
 	harnessStart := session.HarnessStart
 	tool.keeper.started(ctx, func() bool { return proc.Alive(command.Process.Pid, harnessStart) })
@@ -230,8 +232,10 @@ func Run(ctx context.Context, request Request) (int, error) {
 		if !proc.Alive(command.Process.Pid, harnessStart) {
 			return false
 		}
-		if plan.Backend != nil {
-			thread, err := plan.Backend.Thread()
+		// A process that speaks for the harness makes it available once it
+		// names the conversation.
+		if process != nil && plan.Thread != nil {
+			thread, err := plan.Thread.Thread()
 			return err == nil && thread != ""
 		}
 		if plan.Socket != "" {
@@ -243,17 +247,17 @@ func Run(ctx context.Context, request Request) (int, error) {
 	defer stopAvailability()
 	go func() {
 		defer close(served)
+		// No adapter follows its conversation outside a service since S9;
+		// wrap/thread_test.go holds the tracker's use until one does.
 		var thread func() (string, error)
 		if tracker, ok := request.Harness.(adapter.ThreadTracker); ok {
-			thread = func() (string, error) { return tracker.Thread(current(request.Dir, name, session)) }
+			thread = func() (string, error) {
+				record := current(request.Dir, name, session)
+				return tracker.Thread(adapter.RunProcess{PID: record.HarnessPID, Start: record.HarnessStart})
+			}
 		}
-		// No adapter sets an Observer since S9; S10 keeps this on the adapter
-		// API, reached until then by wrap/thread_test.go.
-		if source, ok := plan.Observer.(adapter.ThreadSource); ok && plan.Backend == nil {
-			thread = source.Thread
-		}
-		if plan.Backend != nil {
-			thread = plan.Backend.Thread
+		if plan.Thread != nil {
+			thread = plan.Thread.Thread
 		}
 		server := &inbox.Server{
 			Ready:  func() { close(serviceReady) },
@@ -270,20 +274,17 @@ func Run(ctx context.Context, request Request) (int, error) {
 			CheckGrant: checkGrant(request.Dir, name, epoch, request.Protected),
 			PinGrant:   pinGrant(request.Dir, name, epoch),
 			Deliver: func(ctx context.Context, message inbox.Message) inbox.Result {
-				if plan.Backend != nil {
-					return plan.Backend.Deliver(ctx, message)
+				if plan.Wake == nil {
+					return inbox.Result{State: inbox.Failed, Detail: "no notice can reach this session; it reads its mail when it runs rewake inbox"}
 				}
-				if plan.Lane != nil {
-					return plan.Lane.Deliver(ctx, current(request.Dir, name, session), message)
-				}
-				return request.Harness.Deliver(ctx, current(request.Dir, name, session), message)
+				return plan.Wake.Deliver(ctx, message)
 			},
 		}
-		if backend, ok := plan.Backend.(adapter.ReservingBackend); ok {
-			server.Reserve = backend.Reserve
+		if reserver, ok := plan.Wake.(adapter.Reserver); ok {
+			server.Reserve = reserver.Reserve
 		}
-		if plan.Backend == nil && plan.Lane != nil {
-			server.Receipts, server.Opened = plan.Lane.Receipts(), plan.Lane.Opened()
+		if receiver, ok := plan.Wake.(adapter.Receiver); ok {
+			server.Receipts, server.Opened = receiver.Receipts(), receiver.Opened()
 		}
 		server.Serve(serveCtx)
 	}()

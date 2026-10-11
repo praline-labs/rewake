@@ -13,18 +13,23 @@ import (
 	"github.com/praline-labs/rewake/internal/registry"
 )
 
+// backendFixture is a run's process service that also wakes, reports turns
+// and follows its conversation, as the fixture's backend does.
 type backendFixture struct {
-	marker string
-	die    bool
-	done   chan struct{}
-	closed bool
+	marker  string
+	die     bool
+	done    chan struct{}
+	closed  bool
+	handler adapter.TurnHandler
 }
 
-func (b *backendFixture) Start(_ context.Context, handler adapter.CompletionHandler, _ func(string)) error {
+func (b *backendFixture) ReportTurns(handler adapter.TurnHandler) { b.handler = handler }
+
+func (b *backendFixture) Start(context.Context, func(string)) error {
 	if err := os.WriteFile(b.marker, nil, 0o600); err != nil {
 		return err
 	}
-	if err := handler.Publish(context.Background(), adapter.Completion{ID: "event", Kind: inbox.Finished, Text: "result"}); err != nil {
+	if err := b.handler.Publish(context.Background(), adapter.TurnEnd{Event: "event", Reason: adapter.Answered, Answer: "result"}); err != nil {
 		return err
 	}
 	if b.die {
@@ -32,6 +37,7 @@ func (b *backendFixture) Start(_ context.Context, handler adapter.CompletionHand
 	}
 	return nil
 }
+func (b *backendFixture) ProcessID() int          { return 0 }
 func (b *backendFixture) Done() <-chan struct{}   { return b.done }
 func (b *backendFixture) Close()                  { b.closed = true }
 func (b *backendFixture) Thread() (string, error) { return "root", nil }
@@ -46,7 +52,7 @@ type backendHarness struct {
 
 func (h *backendHarness) Launch(r adapter.LaunchRequest) (adapter.LaunchPlan, error) {
 	plan, err := h.fakeHarness.Launch(r)
-	plan.Backend = h.backend
+	plan.Service, plan.Wake, plan.TurnBoundary, plan.Thread = h.backend, h.backend, h.backend, h.backend
 	if h.backend.die {
 		plan.Command = "/bin/sleep"
 		plan.Args = []string{"2"}
@@ -63,8 +69,8 @@ func TestBackendStartsBeforeTUIAndSharesItsLifetime(t *testing.T) {
 			fake := &backendHarness{fakeHarness: fakeHarness{script: fmt.Sprintf("test -f %q", marker)}, backend: backend}
 			observed := false
 			started := time.Now()
-			code, err := Run(context.Background(), Request{Harness: fake, Dir: dir, Name: "api", OnTurn: func(_ context.Context, self registry.Session, result adapter.Completion) error {
-				observed = self.Name == "api-fake" && result.Text == "result"
+			code, err := Run(context.Background(), Request{Harness: fake, Dir: dir, Name: "api", OnTurn: func(_ context.Context, self registry.Session, result adapter.TurnEnd) error {
+				observed = self.Name == "api-fake" && result.Answer == "result"
 				return nil
 			}})
 			if err != nil || !observed || !backend.closed {

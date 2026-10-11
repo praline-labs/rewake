@@ -40,9 +40,6 @@ type toolOffer struct {
 	unproven bool
 }
 
-// ToolTransport is the transport the fixture's calls are bound under.
-func (fixtureHarness) ToolTransport() string { return Transport }
-
 // OfferTools hands the backend the tools and the endpoint its program asks to
 // run them, before Start; serve is how the endpoint learns which process asks.
 func (b *backend) OfferTools(tools []bridge.ToolDescriptor, endpoint string, serve func(pid int, start uint64)) {

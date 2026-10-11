@@ -2,33 +2,45 @@ package cli
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 )
 
-// ReportCompletion publishes a captured backend result without sampling newer reads.
-func ReportCompletion(ctx context.Context, dir string, self registry.Session, result adapter.Completion) error {
-	if result.Boundary == nil {
-		return errors.New("completion lacks its captured read boundary; report remains pending")
+// ReportCompletion publishes a turn's end with the scope it captured, without
+// sampling newer reads. An end without its event, its scope or a known reason
+// is refused, and the waits it would answer stay owed for the next end
+// (docs/rules/effects.md, E7).
+func ReportCompletion(ctx context.Context, dir string, self registry.Session, end adapter.TurnEnd) error {
+	if err := end.Check(); err != nil {
+		return fmt.Errorf("%w; report remains pending", err)
 	}
-	return completeTurnContext(ctx, dir, self, turnEndOf(result), result.Thread)
+	return completeTurnContext(ctx, dir, self, turnEndOf(end), end.Thread)
 }
 
 // ConfirmCompletion runs an end the adapter can hold open: it publishes it and
 // answers "", or holds it, keeps its answer and answers the reason the adapter
-// continues the turn with (docs/v2/design-api.md#turnboundary). The end must
-// name its event: a held end confirmed again — its answer lost — is known by
-// it, and answered the same.
-func ConfirmCompletion(ctx context.Context, dir string, self registry.Session, result adapter.Completion) (string, error) {
-	if result.ID == "" || result.Boundary == nil {
-		return "", errors.New("a confirmed turn end names its event and its captured read boundary; report remains pending")
+// continues the turn with (docs/v2/design-api.md#turnboundary). A held end
+// confirmed again — its answer lost — is known by its event, and answered the
+// same.
+func ConfirmCompletion(ctx context.Context, dir string, self registry.Session, end adapter.TurnEnd) (string, error) {
+	if err := end.Check(); err != nil {
+		return "", fmt.Errorf("%w; report remains pending", err)
 	}
-	return endTurnContext(ctx, dir, self, turnEndOf(result), true, result.Thread)
+	return endTurnContext(ctx, dir, self, turnEndOf(end), true, end.Thread)
 }
 
-func turnEndOf(result adapter.Completion) inbox.TurnEnd {
-	return inbox.TurnEnd{ID: result.ID, Text: result.Text, Failed: result.Kind == inbox.Error, Stopped: result.Kind == inbox.Stopped, Boundary: result.Boundary, Started: result.Started, Ended: result.Ended}
+// turnEndOf is the core's end for an adapter's: what the end reports follows
+// from its reason (docs/rules/turns.md, O2). An aborted turn reports stopped;
+// a failed one an error with the harness's words unchanged, and so does a
+// refused one, whose words are no answer to the work it was given.
+func turnEndOf(end adapter.TurnEnd) inbox.TurnEnd {
+	return inbox.TurnEnd{
+		ID: end.Event, Text: end.Answer,
+		Failed:   end.Reason == adapter.Failed || end.Reason == adapter.Refused,
+		Stopped:  end.Reason == adapter.Aborted,
+		Boundary: end.Boundary, Started: end.Started, Ended: end.Ended,
+	}
 }

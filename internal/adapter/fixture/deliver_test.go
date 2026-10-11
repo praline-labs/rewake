@@ -17,7 +17,7 @@ import (
 // No notice precedes a reserved letter's readability: through the mailbox
 // server the wrapper runs, the program is asked to reserve while the letter is
 // not yet readable, and when the notice reaches it the letter is: what holds
-// for any ReservingBackend.
+// for any Reserver.
 func TestNoNoticePrecedesAReservedLettersReadability(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.Chmod(dir, 0o700); err != nil {
@@ -28,8 +28,8 @@ func TestNoNoticePrecedesAReservedLettersReadability(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, p := paired(t, adapter.CompletionHandler{}, Served...)
-	var reserving adapter.ReservingBackend = b
+	b, p := paired(t, adapter.TurnHandler{}, Served...)
+	var reserving adapter.Reserver = b
 	server := &inbox.Server{Dir: dir, Name: "api", Epoch: "1.1", Thread: b.Thread, Deliver: b.Deliver, Reserve: reserving.Reserve}
 	ctx, cancel := context.WithCancel(context.Background())
 	served := make(chan struct{})

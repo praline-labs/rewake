@@ -17,8 +17,9 @@ type steeredHarness struct {
 	mode       os.FileMode
 }
 
-func (s *steeredHarness) CompactFocus() bool     { return true }
-func (s *steeredHarness) InterruptTrace() string { return "" }
+func (s *steeredHarness) Offers() adapter.Offer {
+	return adapter.Offer{Wake: true, Control: adapter.ControlOffer{Compact: true, Interrupt: true, CompactFocus: true}}
+}
 
 func (s *steeredHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error) {
 	s.controlDir = request.ControlDir

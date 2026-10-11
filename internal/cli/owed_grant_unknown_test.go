@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/grant"
 	"github.com/praline-labs/rewake/internal/state"
 )
@@ -74,7 +73,7 @@ func TestAnUnreadableGrantJournalDoesNotEndTheGrant(t *testing.T) {
 func dirGrantHarness(t *testing.T) string {
 	t.Helper()
 	for _, h := range testCatalog().All() {
-		if capable, ok := h.(adapter.DirGrantHarness); ok && capable.SupportsDirGrant() {
+		if h.Offers().Permissions.Dir {
 			return h.ID()
 		}
 	}

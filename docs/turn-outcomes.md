@@ -13,7 +13,10 @@ continuation nor a peek to reach it. Owner decision, September 19, 2026; the evi
 is in [native-terminal-progress.md](native-terminal-progress.md). This holds for the
 keyboard stops below as well.
 
-The adapter that heard the turn end emits error with the harness reason unchanged. Received empty
+The adapter that heard the turn end emits error with the harness reason unchanged. Since
+S10, October 11, 2026, the end names its reason (`adapter.TurnEnd`,
+[code.md](code.md#the-adapter-api)): a failed end and a refused one — the harness declined
+the turn — both report error, an aborted one stopped. Received empty
 completion after read work produces an error with empty text. Successful turns
 still produce finished. Error is in the kind catalog but has no send flag;
 `send --error` is refused. It creates no reply obligation.

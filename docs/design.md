@@ -44,8 +44,10 @@ its own session only.
 The server adapter has three processes: wrapper, app-server and TUI. The wrapper
 starts and stops both children, owns the inline RPC gateway and routes reports; the server
 owns thread execution and sandboxing; the TUI keeps the inherited terminal.
-An optional Backend in LaunchPlan encapsulates this lifecycle, delivery, thread
-identity and completion events. An optional transport-neutral reservation holds
+Since S10 the LaunchPlan carries one run's capabilities as separate interfaces — a
+Service for this lifecycle, Wake for delivery, TurnBoundary for its turn ends, Telemetry
+and the thread — and what an adapter offers before any launch is its `Offers()` value
+([code.md](code.md#the-adapter-api)). An optional transport-neutral reservation holds
 a destination across inbox readability and ACK; native RPC stays inside its adapter.
 The socket adapter keeps its direct delivery — since S9, October 11, 2026, without the
 hooks that told its wrapper when a turn ended (Claude Code has no turn boundary until

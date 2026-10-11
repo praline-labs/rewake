@@ -29,9 +29,9 @@ func (r *rig) shell(words ...string) (string, error) {
 
 // journal publishes the end the gate noted the way the wrapper does.
 func (r *rig) journal(boundary *inbox.ReadBoundary, started int64) error {
-	return cli.ReportCompletion(context.Background(), r.dir, r.self, adapter.Completion{
-		Boundary: boundary, ID: thread + "/" + r.turnID(), Thread: thread,
-		Kind: inbox.Finished, Text: "the turn's last words", Started: started, Ended: r.endpoint.Gate().Noted(),
+	return cli.ReportCompletion(context.Background(), r.dir, r.self, adapter.TurnEnd{
+		Boundary: boundary, Event: thread + "/" + r.turnID(), Thread: thread,
+		Reason: adapter.Answered, Answer: "the turn's last words", Started: started, Ended: r.endpoint.Gate().Noted(),
 	})
 }
 

@@ -23,8 +23,7 @@ import (
 var reportsTurns = harnessReportsTurns
 
 func harnessReportsTurns(h adapter.Harness) bool {
-	reporting, ok := h.(adapter.TurnReportingHarness)
-	return ok && reporting.ReportsTurns()
+	return h != nil && h.Offers().TurnBoundary.Reports
 }
 
 // refuseReportingRole refuses a launch of a role that owes reports on a

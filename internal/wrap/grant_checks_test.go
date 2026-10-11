@@ -58,7 +58,9 @@ type resumingHarness struct {
 	contextHarness
 }
 
-func (h *resumingHarness) SupportsDirGrant() bool { return true }
+func (h *resumingHarness) Offers() adapter.Offer {
+	return adapter.Offer{Wake: true, Permissions: adapter.PermissionsOffer{Dir: true}}
+}
 
 func (h *resumingHarness) ResumedConversation(args []string) string {
 	if len(args) == 2 && args[0] == "--resume" {

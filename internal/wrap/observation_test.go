@@ -26,7 +26,8 @@ type observedHarness struct {
 
 func (h *observedHarness) Launch(r adapter.LaunchRequest) (adapter.LaunchPlan, error) {
 	plan, err := h.fakeHarness.Launch(r)
-	plan.Backend = h.backend
+	plan.Service, plan.Wake, plan.TurnBoundary, plan.Thread = h.backend, h.backend, h.backend, h.backend
+	plan.Telemetry = h.backend
 	return plan, err
 }
 

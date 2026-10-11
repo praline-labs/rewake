@@ -19,8 +19,7 @@ func registerGrant(catalog adapter.Catalog, dir string, self registry.Session, e
 	if !inbox.CarriesGrant(message) {
 		return nil
 	}
-	own, _ := catalog.Find(self.Harness)
-	if issuer, ok := own.(adapter.GrantIssuer); !ok || !issuer.ReachesWrapper() {
+	if !catalog.Offers(self.Harness).Permissions.ReachesWrapper {
 		return &FailedError{Message: fmt.Sprintf("a grant: %s runs %s, whose commands cannot reach its wrapper to register one — its sandbox refuses unix sockets — and a grant nobody registered is refused on delivery. Send the task without it, or ask the owner to grant the access from a main on a harness that can.", self.Name, self.Harness)}
 	}
 	err := grantauth.Register(state.AuthorityAddress(dir, epoch), grantauth.Grant{
@@ -42,8 +41,7 @@ func registerGrant(catalog adapter.Catalog, dir string, self registry.Session, e
 // the edit is refused rather than sent without the grant main may think it
 // carries.
 func carryGrant(catalog adapter.Catalog, dir string, self registry.Session, epoch string, old inbox.Message, replacement *inbox.Message) error {
-	own, _ := catalog.Find(self.Harness)
-	if issuer, ok := own.(adapter.GrantIssuer); !ok || !issuer.ReachesWrapper() {
+	if !catalog.Offers(self.Harness).Permissions.ReachesWrapper {
 		// Such a main registers nothing, so nothing here can be carried.
 		if inbox.CarriesGrant(old) {
 			return failf("your %s %s names a grant this session never registered — %s cannot reach its wrapper — so its letter was written by someone else; withdraw it with rewake withdraw %s and send the task again", inbox.KindOf(old), old.ID, self.Harness, shortRef(old.ID))

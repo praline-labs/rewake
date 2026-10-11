@@ -38,6 +38,12 @@ wrapper drives it by the path it drives Codex by, and the column works the day i
   too. From S7 the tool's inputs reach the endpoint through the neutral input
   instead of `ToolEvent`'s raw bytes (`:88`), which leave with Codex in S8.
 
+Since S10 the same parts are the run's capabilities of the adapter API
+([code.md](../code.md#the-adapter-api)): the backend is the plan's `Service`, `Wake`,
+`TurnBoundary`, `Telemetry` and `Thread`, a `ProcessService` and a `Reserver`, and its
+readiness exchange reports the capabilities it made live (`Live`), named on the wire by
+the API's own names.
+
 **Launch.** Id `fixture`, title "Fixture harness (tests only)". The plan runs the program
 `fixture` found on the run's `PATH` — the suite puts a script of that name there, as it
 does `claude` and `codex` (`codexsession_test.go:221`, `installShim`) — with the neutral

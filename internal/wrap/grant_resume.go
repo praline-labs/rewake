@@ -21,7 +21,7 @@ import (
 //
 // Code only tests reach from S9: the permission hook that applied and took
 // back these grants, and the keeper that fed it, left with the hooks,
-// and no adapter is both a Resumer and a DirGrantHarness. Stage 6 designs the
+// and no adapter is both a Resumer and offers Permissions.Dir. Stage 6 designs the
 // Permissions capability (docs/v2/design-api.md#permissions), which applies a
 // grant to a run and withdraws it, and decides there how a resumed run's
 // grants are kept.
@@ -47,8 +47,7 @@ func (r resumed) dirs() []string {
 // arguments name, for a harness that takes directory grants.
 func resumeGrants(dir, name, epoch string, h adapter.Harness, args []string, protected adapter.Protected) resumed {
 	resumer, ok := h.(adapter.Resumer)
-	granter, grants := h.(adapter.DirGrantHarness)
-	if !ok || !grants || !granter.SupportsDirGrant() {
+	if !ok || !h.Offers().Permissions.Dir {
 		return resumed{}
 	}
 	thread := resumer.ResumedConversation(args)

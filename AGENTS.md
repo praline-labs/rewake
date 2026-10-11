@@ -233,7 +233,8 @@ Meant to be one move:
 
 1. A new package `internal/adapter/<name>` with a type implementing
    `adapter.Harness`: `ID`, `Title`, `Summary`, `Examples`, `Notes`,
-   `SingleUseFlags`, and from milestone 3 on, launch and delivery.
+   `SingleUseFlags`, `ProtectedDirs`, `Version`, `EnvNotInherited`, `Offers` and
+   `Launch`.
    `SingleUseFlags` names the flags that harness takes at most once, each with
    all its spellings and whether it carries a value. Returning nothing is not a
    neutral answer — it says every flag may be repeated, and a launch alias plus
@@ -243,6 +244,11 @@ Meant to be one move:
    task may grant a session to write (`docs/grants.md`) — those outside a project
    and the names it keeps inside one; a harness that keeps none returns nothing,
    and one that forgets them leaves them grantable.
+   `Offers` says what the adapter offers beyond Launch, and the plan `Launch`
+   returns carries what one run serves — its service, wake, turn boundary,
+   telemetry — as the interfaces of `internal/adapter` (`docs/code.md`). An offer
+   with nothing in the plan behind it is a capability the CLI admits and the run
+   cannot serve.
 2. One entry in `New` of `internal/adapter/catalog/catalog.go`.
 
 Everything else follows: the launch command, the guide entry, its own `--help`

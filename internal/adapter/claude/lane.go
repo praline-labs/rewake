@@ -15,7 +15,6 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/state"
 )
 
@@ -46,9 +45,13 @@ const receiptWindow = 300 * time.Millisecond
 // for a session without it; with the status line gone it is the only gate.
 const openingLimit = 3 * time.Second
 
-// lane delivers notices with a reply address and routes what comes back.
+// lane is the run's Wake: it writes each notice to the session's inbox socket
+// with a reply address, and routes what comes back.
 type lane struct {
-	reply string
+	// socket is the session's inbox socket, fixed at launch: the session
+	// recreates it at the same path across a restart.
+	socket string
+	reply  string
 	// ownDir says the reply socket's directory is rewake's own, to be made if
 	// the session has not made it yet; beside a socket the caller named it is
 	// left as it is.
@@ -92,9 +95,10 @@ type sentNotice struct {
 	at time.Time
 }
 
-// newLane listens at reply once started.
-func newLane(reply string, ownDir bool) *lane {
+// newLane writes to socket and listens at reply once started.
+func newLane(socket, reply string, ownDir bool) *lane {
 	return &lane{
+		socket:   socket,
 		reply:    reply,
 		ownDir:   ownDir,
 		window:   receiptWindow,
@@ -112,8 +116,16 @@ func (l *lane) Receipts() <-chan inbox.Receipt { return l.receipts }
 func (l *lane) Opened() <-chan struct{} { return l.opened }
 
 // Start opens the gate on time and listens for receipts. The gate opens even
-// when listening fails: that costs the receipts, not delivery.
-func (l *lane) Start(ctx context.Context) error {
+// when listening fails: that costs the receipts, not delivery, so it is noted
+// and the start goes on.
+func (l *lane) Start(ctx context.Context, note func(string)) error {
+	if err := l.listen(ctx); err != nil && note != nil {
+		note(err.Error())
+	}
+	return nil
+}
+
+func (l *lane) listen(ctx context.Context) error {
 	go l.open(ctx)
 	go l.forward()
 	if l.reply == "" {
@@ -177,13 +189,13 @@ func (l *lane) Close() {
 // Deliver writes the notice with a reply address and waits a moment for the
 // first word about it. Held is returned as held; a refusal as failed; silence
 // as delivered, which is what the gate says by saying nothing.
-func (l *lane) Deliver(ctx context.Context, session registry.Session, message inbox.Message) inbox.Result {
+func (l *lane) Deliver(ctx context.Context, message inbox.Message) inbox.Result {
 	l.mu.Lock()
 	listening := l.listener != nil
 	l.mu.Unlock()
 	notice := newEnvelope(message)
 	if !listening {
-		return writeNotice(ctx, session, notice)
+		return writeNotice(ctx, l.socket, notice)
 	}
 	notice.From, notice.MsgID = "uds:"+l.reply, newMsgID()
 	waiting := &sentNotice{id: message.ID, msgID: notice.MsgID, first: make(chan inbox.Result, 1)}
@@ -191,7 +203,7 @@ func (l *lane) Deliver(ctx context.Context, session registry.Session, message in
 	l.sent[notice.MsgID] = waiting
 	l.mu.Unlock()
 
-	result := writeNotice(ctx, session, notice)
+	result := writeNotice(ctx, l.socket, notice)
 	if result.State != inbox.Delivered {
 		l.forget(notice.MsgID)
 		return result

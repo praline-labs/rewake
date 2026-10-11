@@ -16,8 +16,8 @@ import (
 
 // steerWorld is a main session "lead" and a running worker whose control
 // directory exists, with limits short enough for a test. The worker's harness
-// takes both requests and a focus: no product harness of an untagged build is
-// Steerable from S9 until stage 4.
+// takes both requests and a focus: no product harness of an untagged build offers
+// Control from S9 until stage 4.
 func steerWorld(t *testing.T, workerHarness string) (string, registry.Session, string) {
 	t.Helper()
 	dir := liveSession(t, "lead")
@@ -328,19 +328,21 @@ func (unsteerable) Title() string { return "Stub harness" }
 // trace of its own.
 type steerStub struct {
 	adapter.Harness
-	focus bool
-	trace string
+	verbs adapter.ControlOffer
 }
 
-func (steerStub) Title() string            { return "Stub harness" }
-func (s steerStub) CompactFocus() bool     { return s.focus }
-func (s steerStub) InterruptTrace() string { return s.trace }
+func (steerStub) Title() string { return "Stub harness" }
+
+func (s steerStub) Offers() adapter.Offer { return adapter.Offer{Control: s.verbs} }
 
 // steerRun runs one invocation with every harness answering as a steerStub
-// that takes a focus.
+// that takes both verbs and a focus.
 func steerRun(argv ...string) (int, string, string) {
 	return runOn(remap(testCatalog(), func(found adapter.Harness) adapter.Harness {
-		return steerStub{Harness: found, focus: true, trace: "the stub records it in its model's history"}
+		return steerStub{Harness: found, verbs: adapter.ControlOffer{
+			Compact: true, Interrupt: true, CompactFocus: true,
+			InterruptTrace: "the stub records it in its model's history",
+		}}
 	}), argv...)
 }
 
@@ -351,7 +353,9 @@ func TestAHarnessThatCannotTakeItIsAWrongCall(t *testing.T) {
 	if code != ExitUsage || !strings.Contains(errOut, "worker is a Stub harness session, which does not take rewake compact yet") {
 		t.Fatalf("exit %d, %q", code, errOut)
 	}
-	unfocused := remap(testCatalog(), func(found adapter.Harness) adapter.Harness { return steerStub{Harness: found} })
+	unfocused := remap(testCatalog(), func(found adapter.Harness) adapter.Harness {
+		return steerStub{Harness: found, verbs: adapter.ControlOffer{Compact: true, Interrupt: true}}
+	})
 	code, _, errOut = runOn(unfocused, "compact", "worker", "keep the plan")
 	if code != ExitUsage || !strings.Contains(errOut, "focus not supported by Stub harness") {
 		t.Fatalf("exit %d, %q", code, errOut)
@@ -362,5 +366,24 @@ func TestAHarnessThatCannotTakeItIsAWrongCall(t *testing.T) {
 	answerOnce(t, controlDir, func(r control.Request) string { return `{"id":"` + r.ID + `","outcome":"started"}` })
 	if code, out, errOut := runOn(unfocused, "compact", "worker"); code != ExitOK || !strings.HasPrefix(out, "Rewake: the compaction of worker started;") {
 		t.Fatalf("without a focus: exit %d, %q, %q", code, out, errOut)
+	}
+}
+
+// Each verb is offered on its own: a harness that offers one refuses the other
+// before a request is written (docs/v2/design-api.md#control).
+func TestAVerbTheHarnessDoesNotOfferIsAWrongCall(t *testing.T) {
+	_, _, controlDir := steerWorld(t, "")
+	for verb, verbs := range map[string]adapter.ControlOffer{
+		"compact":   {Interrupt: true},
+		"interrupt": {Compact: true, CompactFocus: true},
+	} {
+		only := remap(testCatalog(), func(found adapter.Harness) adapter.Harness { return steerStub{Harness: found, verbs: verbs} })
+		code, _, errOut := runOn(only, verb, "worker")
+		if code != ExitUsage || !strings.Contains(errOut, "worker is a Stub harness session, which does not take rewake "+verb+" yet") {
+			t.Fatalf("%s: exit %d, %q", verb, code, errOut)
+		}
+	}
+	if entries, _ := os.ReadDir(controlDir); len(entries) != 0 {
+		t.Fatalf("a wrong call wrote %v", entries)
 	}
 }

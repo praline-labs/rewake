@@ -10,14 +10,14 @@ import (
 	"github.com/praline-labs/rewake/internal/proc"
 )
 
-// stopWithBackend ends the harness when its backend is gone. ending is told
-// first: the wrapper's own teardown has begun, and the mail tool, which the
-// backend hosted, goes with it rather than failing.
-func stopWithBackend(ctx context.Context, backend adapter.Backend, child *os.Process, start uint64, ending func()) {
+// stopWithProcess ends the harness when the process that speaks for it is
+// gone. ending is told first: the wrapper's own teardown has begun, and the
+// mail tool, which that process hosted, goes with it rather than failing.
+func stopWithProcess(ctx context.Context, process adapter.ProcessService, child *os.Process, start uint64, ending func()) {
 	select {
 	case <-ctx.Done():
 		return
-	case <-backend.Done():
+	case <-process.Done():
 	}
 	if !proc.Alive(child.Pid, start) {
 		return

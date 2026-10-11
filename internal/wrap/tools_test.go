@@ -10,21 +10,24 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
-	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/proc"
 	"github.com/praline-labs/rewake/internal/state"
 )
 
 // A harness whose own process carries the tool's calls: the wrapper starts the
-// endpoint under the harness's transport, offers the backend the tools and the
-// endpoint, and lets the backend name the process the endpoint serves.
+// endpoint under the transport the adapter offers, offers the run's service
+// the tools and the endpoint, and lets it name the process the endpoint
+// serves.
 
 // carrierHarness is the fake harness as one with a transport of its own.
 type carrierHarness struct{ *fakeHarness }
 
-func (carrierHarness) ToolTransport() string { return "test-transport" }
+func (carrierHarness) Offers() adapter.Offer {
+	return adapter.Offer{Wake: true, ToolTransport: "test-transport"}
+}
 
-// offeringBackend records what the wrapper offered it.
+// offeringBackend is a run's service that carries the tool, and records what
+// the wrapper offered it.
 type offeringBackend struct {
 	tools    []bridge.ToolDescriptor
 	endpoint string
@@ -35,14 +38,11 @@ func (b *offeringBackend) OfferTools(tools []bridge.ToolDescriptor, path string,
 	b.tools, b.endpoint, b.serve = tools, path, serve
 }
 
-func (*offeringBackend) Start(context.Context, adapter.CompletionHandler, func(string)) error {
-	return nil
-}
+var _ adapter.ToolTransport[bridge.ToolDescriptor] = (*offeringBackend)(nil)
 
-func (*offeringBackend) Deliver(context.Context, inbox.Message) inbox.Result { return inbox.Result{} }
-func (*offeringBackend) Thread() (string, error)                             { return "", nil }
-func (*offeringBackend) Done() <-chan struct{}                               { return nil }
-func (*offeringBackend) Close()                                              {}
+func (*offeringBackend) ToolReadsOff() string                      { return "" }
+func (*offeringBackend) Start(context.Context, func(string)) error { return nil }
+func (*offeringBackend) Close()                                    {}
 
 var carriedTools = []bridge.ToolDescriptor{{Name: "whoami", Summary: "who"}}
 
@@ -70,7 +70,7 @@ func TestAHarnessThatCarriesItsCallsIsOfferedTheTools(t *testing.T) {
 		t.Fatal("a channel record kept for a transport with no server")
 	}
 	backend := &offeringBackend{}
-	tool.attach(adapter.LaunchPlan{Backend: backend, Env: []string{state.DirEnv + "=" + tool.path, "UNRELATED=1"}})
+	tool.attach(adapter.LaunchPlan{Service: backend, Env: []string{state.DirEnv + "=" + tool.path, "UNRELATED=1"}})
 	if len(backend.tools) != 1 || backend.tools[0].Name != "whoami" || backend.endpoint != tool.path || backend.serve == nil {
 		t.Fatalf("the offer: %+v", backend)
 	}
