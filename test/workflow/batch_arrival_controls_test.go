@@ -79,10 +79,6 @@ var mutantReplay = mutation{
 	file: "internal/core/mail/outcome.go",
 	edits: []edit{
 		{
-			"\tcase Delivered, Read, withdrawn:\n",
-			"\tcase Delivered:\n\t\treturn true\n\tcase Read, withdrawn:\n",
-		},
-		{
 			"if result, known := s.outcomes[message.ID]; known {\n" + heldBranch +
 				"\t\ts.publish(message.ID, result)\n\t\treturn true\n\t}\n" +
 				"\tstatus, ok, err := ReadStatus(s.Dir, s.Name, message.ID)\n" +
@@ -95,6 +91,14 @@ var mutantReplay = mutation{
 				"\tif !ok || status.State == Pending || status.State == Held || status.State == Delivered {",
 		},
 	},
+	// The settling of a delivered letter is mail's, the replay the server's.
+	also: []part{{
+		file: "internal/core/mail/settle.go",
+		edits: []edit{{
+			"\tcase Delivered, Read, withdrawn:\n",
+			"\tcase Delivered:\n\t\treturn true\n\tcase Read, withdrawn:\n",
+		}},
+	}},
 }
 
 // heldBranch is the held message's way out of alreadySettled, which the replay

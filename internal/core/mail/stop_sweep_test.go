@@ -76,7 +76,7 @@ func TestASweepBesideAStopRemovesNoNamedPath(t *testing.T) {
 				closeToReading(t, occurrence.path(dir, "api"))
 			}
 			(&Server{Dir: dir, Name: "api", Epoch: run}).sweepFinished()
-			sweepAwaiting(dir, "api", run)
+			SweepAwaitingLocked(dir, "api", run)
 			for what, path := range records {
 				_, err := os.Stat(path)
 				if gone := os.IsNotExist(err); gone != (stop == "none" || stop == "resolved") {

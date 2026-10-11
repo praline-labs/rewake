@@ -201,7 +201,7 @@ func TestWithdrawRefusesWhatIsFinal(t *testing.T) {
 	if err := writeStatus(dir, "api", failed.ID, Result{State: Failed, Detail: "the session ended"}); err != nil {
 		t.Fatal(err)
 	}
-	settle(dir, "api", failed.ID, Failed)
+	SettleLocked(dir, "api", failed.ID, Failed)
 	if _, err := withdrawNow(t, dir, failed, nil); !errors.Is(err, ErrNotDelivered) {
 		t.Fatalf("a failed task: %v", err)
 	}

@@ -191,7 +191,7 @@ func TestTheServerKeepsALetterBeingRead(t *testing.T) {
 	if status, _, _ := ReadStatus(dir, "api", letter.ID); status.State != Delivered {
 		t.Fatalf("its sender reads %s", status.State)
 	}
-	settle(dir, "api", letter.ID, Failed)
+	SettleLocked(dir, "api", letter.ID, Failed)
 	if !stillUnread(dir, "api", letter.ID) {
 		t.Fatal("an old failed status took a letter being read out of unread/")
 	}

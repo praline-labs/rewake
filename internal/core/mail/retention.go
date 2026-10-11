@@ -1,11 +1,13 @@
 package mail
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -73,4 +75,36 @@ func retainedReceipts(dir, name string) (map[string]bool, error) {
 		}
 	}
 	return keep, nil
+}
+
+// sweepFinished removes the messages and statuses that have been answered long
+// enough ago that nobody is coming back for them.
+//
+// It retires the proof of what was published to the mailbox — a letter, the
+// marks of a run — so it removes only under the mailbox lock, never in the
+// unlocked fallback the server's other work takes, and only while its own run
+// is the live run of the name, read inside that section. A publisher reads the
+// run, the proof and writes in one section of the same lock, so a sweep never
+// runs between them; a server of a run that has ended would otherwise remove
+// the live run's marks and letters (docs/v2/stage3-publication.md#the-contract).
+func (s *Server) sweepFinished() {
+	ctx := s.lockContext
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	_ = state.WithMailboxLock(ctx, s.Dir, s.Name, func() error {
+		if !s.liveRun() {
+			return nil
+		}
+		SweepFinishedLocked(s.Dir, s.Name, s.Epoch)
+		return nil
+	})
+}
+
+// liveRun says whether this server's run is the live run of its name, read
+// without the name lock's cleanup, which a holder of a mailbox lock must not
+// enter.
+func (s *Server) liveRun() bool {
+	current, err := registry.LookupReadOnly(s.Dir, s.Name)
+	return err == nil && s.Epoch != "" && current.Epoch() == s.Epoch
 }

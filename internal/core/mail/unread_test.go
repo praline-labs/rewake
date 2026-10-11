@@ -52,7 +52,7 @@ func unread(t *testing.T, dir string, messages ...Message) {
 		if err := linkUnread(dir, sent.To, sent.ID); err != nil {
 			t.Fatalf("linkUnread: %v", err)
 		}
-		settle(dir, sent.To, sent.ID, Delivered)
+		SettleLocked(dir, sent.To, sent.ID, Delivered)
 	}
 }
 

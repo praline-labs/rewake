@@ -108,7 +108,7 @@ from the reports still expected. Only that line means the task may be sent again
 
 Whether a missing wait record can be trusted depends on who could have removed it. Only
 the report removes one, and only a new run of the name sweeps the old run's directory
-(`sweepAwaiting`). So while the recipient's run lives, and after it ended with nobody
+(`SweepAwaitingLocked`). So while the recipient's run lives, and after it ended with nobody
 taking the name — its `awaiting/<run>/` directory is still there — a record that no
 longer names the message means answered, even once this run's own server has swept the
 report after a day (`keepFinished`), while the ended recipient's mailbox, with no server

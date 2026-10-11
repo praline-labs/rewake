@@ -20,7 +20,7 @@ var mutantGrantNotRechecked = mutation{
 // works on it.
 var mutantGrantRefusalUntold = mutation{
 	name:  "grant-refusal-untold",
-	file:  "internal/core/mail/grants.go",
+	file:  "internal/core/mail/batch.go",
 	edits: []edit{{"if result.State == Failed && !result.Withdrawn && CarriesGrant(message) {", "if false && result.State == Failed && !result.Withdrawn && CarriesGrant(message) {"}},
 }
 

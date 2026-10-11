@@ -223,7 +223,7 @@ reads as a task, so each of these decides it:
   it is no turn's outcome and answers no question;
 - `internal/core/mail/window.go` — `canWait` lets whatever asks for no work wait up to four
   seconds for company; this kind is announced at once, since its limit is running;
-- `internal/core/mail/serve.go`, `batch.go`, `reservation.go` — through `IsReport`: a letter
+- `internal/core/mail/serve.go`, `batch.go`, `prepare.go` — through `IsReport`: a letter
   that cannot be delivered is not kept readable as a report is; it fails, and the
   worker's wrapper falls back at once;
 - `internal/cli/send_kinds.go`, `send.go` — no `messageKind` and no line in `sendKinds`:

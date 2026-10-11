@@ -245,10 +245,10 @@ the bound is the only gate.
 
 **A reservation that cannot be taken in three seconds fails the message, it does not
 hold it.** September 22, 2026: the reservation is bounded at three seconds twice, by
-the delivery context in `internal/core/mail/reservation.go` and again by `Reserve` in
+the delivery context in `internal/core/mail/prepare.go` and again by `Reserve` in
 `internal/adapter/codex/server_delivery.go`. On a timeout, `Reserve` in
 `internal/adapter/codex/gateway/reservation.go` returns a plain context error; `refuse`
-in `internal/core/mail/reservation.go` wraps it into `ErrThreadUnavailable`, declared in
+in `internal/core/mail/prepare.go` wraps it into `ErrThreadUnavailable`, declared in
 `internal/core/mail/thread.go`; and `internal/core/mail/batch.go` turns that into `failed`
 rather than `pending`. So a wrapper
 that waited for the thread to go idle before delivering would not deliver late — it

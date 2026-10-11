@@ -28,6 +28,15 @@ type mutation struct {
 	name  string
 	file  string
 	edits []edit
+	// also carries the edits to further files, for a property whose code is
+	// split between packages; each part is held to the same rule.
+	also []part
+}
+
+// part is the edits one further file of a mutation takes.
+type part struct {
+	file  string
+	edits []edit
 }
 
 type edit struct{ old, new string }
@@ -59,23 +68,31 @@ func buildMutant(c *Case, m mutation) (string, error) {
 	if err != nil {
 		return fail("%v", err)
 	}
-	original := filepath.Join(root, m.file)
-	source, err := os.ReadFile(original)
-	if err != nil {
-		return fail("reading %s: %v", m.file, err)
-	}
-	text := string(source)
-	for _, e := range m.edits {
-		if n := strings.Count(text, e.old); n != 1 {
-			return fail("the text to change occurs %d times in %s, not once; the product has moved and the control no longer breaks what it says", n, m.file)
+	replace := map[string]string{}
+	for index, p := range append([]part{{m.file, m.edits}}, m.also...) {
+		original := filepath.Join(root, p.file)
+		source, err := os.ReadFile(original)
+		if err != nil {
+			return fail("reading %s: %v", p.file, err)
 		}
-		text = strings.Replace(text, e.old, e.new, 1)
+		text := string(source)
+		for _, e := range p.edits {
+			if n := strings.Count(text, e.old); n != 1 {
+				return fail("the text to change occurs %d times in %s, not once; the product has moved and the control no longer breaks what it says", n, p.file)
+			}
+			text = strings.Replace(text, e.old, e.new, 1)
+		}
+		base := filepath.Base(p.file)
+		if index > 0 {
+			base = fmt.Sprintf("%d-%s", index, base)
+		}
+		mutated := filepath.Join(dir, base)
+		if err := os.WriteFile(mutated, []byte(text), 0o600); err != nil {
+			return fail("%v", err)
+		}
+		replace[original] = mutated
 	}
-	mutated := filepath.Join(dir, filepath.Base(m.file))
-	if err := os.WriteFile(mutated, []byte(text), 0o600); err != nil {
-		return fail("%v", err)
-	}
-	overlay, err := json.Marshal(map[string]any{"Replace": map[string]string{original: mutated}})
+	overlay, err := json.Marshal(map[string]any{"Replace": replace})
 	if err != nil {
 		return fail("%v", err)
 	}
@@ -99,4 +116,10 @@ func buildMutant(c *Case, m mutation) (string, error) {
 	return binary, nil
 }
 
-func (m mutation) String() string { return fmt.Sprintf("mutant %s (%s)", m.name, m.file) }
+func (m mutation) String() string {
+	files := []string{m.file}
+	for _, p := range m.also {
+		files = append(files, p.file)
+	}
+	return fmt.Sprintf("mutant %s (%s)", m.name, strings.Join(files, ", "))
+}

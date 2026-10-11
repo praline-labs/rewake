@@ -116,7 +116,7 @@ func TestAWaitTakenOverKeepsItsReading(t *testing.T) {
 	if adopted := must(AdoptWaits(dir, "api", "second-epoch", "thread-a")); !slices.Equal(adopted, []string{task.ID}) {
 		t.Fatalf("the first resume took over %v", adopted)
 	}
-	sweepAwaiting(dir, "api", "second-epoch")
+	SweepAwaitingLocked(dir, "api", "second-epoch")
 	waits := Waiters(dir, "api", "second-epoch")
 	if len(waits) != 1 || time.Since(time.Unix(0, waits[0].readAt(0))) < resumeWindow-time.Hour {
 		t.Fatalf("the wait taken over was read at %+v", waits)

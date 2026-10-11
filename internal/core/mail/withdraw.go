@@ -66,7 +66,7 @@ var (
 // is finished by the next call, withdraw or edit alike; only a finished one
 // answers that it was withdrawn already. The waiting copy is not a step: once
 // the tombstone is in place, the serving process drops a copy left behind as
-// it settles the withdrawn status (settle), so a copy that would not go does
+// it settles the withdrawn status (SettleLocked), so a copy that would not go does
 // not make a finished withdrawal look unfinished.
 //
 // Every copy and record it decides by is looked up before anything is written,

@@ -82,7 +82,7 @@ func (s *Server) settleUnreadOnly(id string) {
 			settled = true
 			return nil
 		}
-		settled = settle(s.Dir, s.Name, id, Failed)
+		settled = SettleLocked(s.Dir, s.Name, id, Failed)
 		return nil
 	})
 	if settled {

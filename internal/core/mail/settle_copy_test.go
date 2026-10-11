@@ -57,7 +57,7 @@ func TestAFailedArchiveKeepsTheLastCopy(t *testing.T) {
 	unblock := blockDone(t, lab.dir, report.To)
 	settleLocked := func() {
 		if err := withLock(lab.dir, report.To, func() error {
-			settle(lab.dir, report.To, report.ID, Failed)
+			SettleLocked(lab.dir, report.To, report.ID, Failed)
 			return nil
 		}); err != nil {
 			t.Fatal(err)
@@ -86,14 +86,14 @@ func TestSettlingADeliveredLetterKeepsItsOnlyCopy(t *testing.T) {
 		t.Fatal(err)
 	}
 	waiting := filepath.Join(state.InboxPath(lab.dir, report.To), report.ID+".json")
-	settle(lab.dir, report.To, report.ID, Delivered)
+	SettleLocked(lab.dir, report.To, report.ID, Delivered)
 	if _, err := os.Stat(waiting); err != nil {
 		t.Fatalf("the only copy of a delivered letter went: %v", err)
 	}
 	if err := linkUnread(lab.dir, report.To, report.ID); err != nil {
 		t.Fatal(err)
 	}
-	settle(lab.dir, report.To, report.ID, Delivered)
+	SettleLocked(lab.dir, report.To, report.ID, Delivered)
 	if _, err := os.Stat(waiting); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("the waiting copy stayed beside its readable one: %v", err)
 	}
@@ -116,7 +116,7 @@ func TestAnIntentWhoseLetterIsRefusedKeepsItsProof(t *testing.T) {
 	unread := landUnread(t, lab.dir, report)
 	unblock := blockDone(t, lab.dir, report.To)
 	if err := withLock(lab.dir, report.To, func() error {
-		settle(lab.dir, report.To, report.ID, Failed)
+		SettleLocked(lab.dir, report.To, report.ID, Failed)
 		return nil
 	}); err != nil {
 		t.Fatal(err)
@@ -178,7 +178,7 @@ func TestADirectoryAtTheArchiveIsNoCopy(t *testing.T) {
 	}
 	settleLocked := func() {
 		if err := withLock(lab.dir, report.To, func() error {
-			settle(lab.dir, report.To, report.ID, Failed)
+			SettleLocked(lab.dir, report.To, report.ID, Failed)
 			return nil
 		}); err != nil {
 			t.Fatal(err)
@@ -217,7 +217,7 @@ func TestASymbolicLinkIsNoLandingProof(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := withLock(lab.dir, report.To, func() error {
-		settle(lab.dir, report.To, report.ID, Delivered)
+		SettleLocked(lab.dir, report.To, report.ID, Delivered)
 		return nil
 	}); err != nil {
 		t.Fatal(err)

@@ -315,8 +315,12 @@ func (w world) clearAwaiting(name, epoch string, peer Waiter) error {
 	return w.writeWaiter(file, current)
 }
 
-// sweepAwaiting forgets what earlier runs of this name were waited on for.
-func sweepAwaiting(dir, name, epoch string) {
+// SweepAwaitingLocked forgets what earlier runs of this name were waited on
+// for. The delivery server's followEarlierRun calls it inside the mailbox
+// section in which AdoptWaits took over what those runs owe, and only once that
+// succeeded; it takes no lock of its own, since the mailbox lock is not
+// reentrant. An open stop keeps the waits it names.
+func SweepAwaitingLocked(dir, name, epoch string) {
 	entries, err := os.ReadDir(state.AwaitingPath(dir, name))
 	if err != nil {
 		return

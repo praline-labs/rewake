@@ -269,7 +269,7 @@ func TestSettlingKeepsALetterTheStopNames(t *testing.T) {
 					t.Fatal(err)
 				}
 				settles := func(id string) bool {
-					settle(dir, "api", id, outcome)
+					SettleLocked(dir, "api", id, outcome)
 					_, err := os.Stat(waiting(id))
 					return errors.Is(err, os.ErrNotExist)
 				}

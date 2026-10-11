@@ -5,7 +5,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/state"
@@ -33,55 +32,6 @@ func grantAlone(pending []Message) []Message {
 // nothing beside one.
 func joins(group []Message, message Message) bool {
 	return !CarriesGrant(message) && (len(group) == 0 || !CarriesGrant(group[0]))
-}
-
-// checkGrants checks each grant again before the message becomes readable —
-// its directories, and that the main it names did send it — and refuses the
-// message whose grant does not pass: a task is never handed over without the
-// grant it was sent with. Its sender is told. A grant expired is refused here
-// too.
-func (s *Server) checkGrants(pending []Message) []Message {
-	kept := make([]Message, 0, len(pending))
-	for _, message := range pending {
-		if CarriesGrant(message) && s.expired(message) {
-			// Before the harness is asked whether its reader is idle: a
-			// grant that is not going out needs no answer.
-			s.failGranted(message, Result{State: Failed, Detail: "expired before the session could take it"})
-			continue
-		}
-		if !CarriesGrant(message) {
-			kept = append(kept, message)
-			continue
-		}
-		detail := "this session cannot check a grant"
-		if s.CheckGrant != nil {
-			err := s.CheckGrant(message)
-			if err == nil {
-				kept = append(kept, message)
-				continue
-			}
-			if errors.Is(err, ErrNotYet) {
-				// The sender's wrapper is there and did not answer: asked
-				// again on a later pass, until the message expires.
-				s.attempts[message.ID] = time.Now()
-				s.record(message.ID, Result{State: Pending, Detail: err.Error()})
-				continue
-			}
-			detail = err.Error()
-		}
-		s.failGranted(message, Result{State: Failed, Detail: "its grant does not pass: " + detail})
-	}
-	return kept
-}
-
-// failGranted records a failed outcome, and for a message that carries a
-// grant tells its sender why: a grant that fails leaves a task nobody works
-// on, and its sender may have stopped waiting for the status long ago.
-func (s *Server) failGranted(message Message, result Result) {
-	s.finish(message, result)
-	if result.State == Failed && !result.Withdrawn && CarriesGrant(message) {
-		s.tellUndelivered(message, result.Detail)
-	}
 }
 
 // Settled says whether a task no longer needs what was granted with it: its

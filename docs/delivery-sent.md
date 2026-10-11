@@ -119,7 +119,7 @@ tombstone written, the next withdraw or edit does the steps again. The refusal s
 far it got, from the status on disk: marked withdrawn (the recipient reads it so; finish
 with `rewake withdraw <id>`), or nothing changed. Removing the waiting copy is not a step:
 once the tombstone is written a copy that will not go is left to the serving process,
-which removes it as it settles the withdrawn status (`settle`), and the withdrawal counts
+which removes it as it settles the withdrawn status (`SettleLocked`), and the withdrawal counts
 as finished. The second review found that counting it as a step sent the next call to a
 refusal: the edit it suggested met the tombstone and was refused as withdrawn already.
 
@@ -127,7 +127,7 @@ refusal: the edit it suggested met the tombstone and was refused as withdrawn al
 can land while it is on the way, and the harness's word can come after. From the moment
 the status is written, nothing the server learns about the notice changes it: the
 recorded outcome keeps `withdrawn` (`recordLocked`), settling it removes only the waiting
-copy and never archives the tombstone (`settle`), a message withdrawn before its notice
+copy and never archives the tombstone (`SettleLocked`), a message withdrawn before its notice
 is not made readable again and a group notice whose member was withdrawn is rebuilt
 (`prepareDelivery`, `validAnnouncement`), a late held or failed word leaves it withdrawn
 (`takeBack`, `stillHeld`, the batch pass), and a hold that ends after the withdrawal
