@@ -63,7 +63,7 @@ func TestEveryHarnessNamesItsProtectedDirs(t *testing.T) {
 }
 
 // The metadata directories of harnesses this build has no adapter for are
-// the catalogue's to declare, so the core is handed them and names none: a
+// the catalog's to declare, so the core is handed them and names none: a
 // grant into a checkout still refuses another harness's own directories
 // (docs/grants.md). Stage 5's Codex adapter takes them over.
 func TestTheCatalogueProtectsTheHarnessesItHasNoAdapterFor(t *testing.T) {

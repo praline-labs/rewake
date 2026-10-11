@@ -282,16 +282,16 @@ func TestASendNamesTheDirectoriesItGrants(t *testing.T) {
 	}
 }
 
-// What the catalogue protects reaches the grant check whole: each directory
+// What the catalog protects reaches the grant check whole: each directory
 // name it hands the rules is refused inside a checkout, at any depth, unless
 // named as broad, and each of its directories under the home is refused
-// outright. The catalogue declares the names of harnesses this build has no
+// outright. The catalog declares the names of harnesses this build has no
 // adapter for as well as its adapters' (TestTheCatalogueProtectsTheHarnessesItHasNoAdapterFor).
 func TestAGrantRefusesWhatTheCatalogueProtects(t *testing.T) {
 	w := newGrantWorld(t, "main", "")
 	protected := w.catalog.Protected()
 	if len(protected.Names) == 0 {
-		t.Fatal("the catalogue protects no directory names")
+		t.Fatal("the catalog protects no directory names")
 	}
 	for _, name := range protected.Names {
 		for _, inside := range []string{filepath.Join(w.home, "work", "lib", name), filepath.Join(w.home, "work", "lib", "pkg", name)} {

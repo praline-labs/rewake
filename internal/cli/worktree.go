@@ -274,7 +274,7 @@ func stateLabel(view worktreeView) string {
 }
 
 // worktreeLaunch is the launch that makes a worktree, on the first harness of
-// the catalogue that gives one to a launch; none offers nothing to run next.
+// the catalog that gives one to a launch; none offers nothing to run next.
 func worktreeLaunch(catalog adapter.Catalog) []string {
 	for _, h := range catalog.All() {
 		if _, ok := h.(adapter.WorktreeHarness); ok {

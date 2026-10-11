@@ -17,7 +17,7 @@ const (
 	PersonUICapability      Capability = "person-ui"
 )
 
-// Offer is what an adapter offers: static, known from the catalogue before any
+// Offer is what an adapter offers: static, known from the catalog before any
 // launch. Whether one run of it can do what is offered is that run's live set,
 // which only the run can prove (docs/v2/design-api.md#two-levels-offered-and-live).
 // The zero value offers Launch alone, which every adapter has.

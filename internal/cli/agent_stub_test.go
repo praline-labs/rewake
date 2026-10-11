@@ -11,7 +11,7 @@ import (
 // agentID is the launch command of the adapter these tests run on.
 const agentID = "agent"
 
-// agentHarness is the adapter the CLI's tests run on. The catalogue they build
+// agentHarness is the adapter the CLI's tests run on. The catalog they build
 // holds it alone: what the CLI does with an adapter is proven on one of its
 // own, and what a product adapter does is its package's to test.
 type agentHarness struct{}

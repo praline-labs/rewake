@@ -13,7 +13,7 @@ import (
 	"github.com/praline-labs/rewake/internal/state"
 )
 
-// Run executes one invocation against the catalogue the binary built and
+// Run executes one invocation against the catalog the binary built and
 // returns the process exit code.
 func Run(catalog adapter.Catalog, argv []string, stdout, stderr io.Writer) int {
 	t := newTable(catalog)

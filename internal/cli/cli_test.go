@@ -13,8 +13,8 @@ import (
 	"github.com/praline-labs/rewake/internal/role"
 )
 
-// testCatalog is the catalogue the tests run against: the test agent, and
-// what the catalogue declares for a harness it has no adapter for, read when
+// testCatalog is the catalog the tests run against: the test agent, and
+// what the catalog declares for a harness it has no adapter for, read when
 // asked so a test's HOME is the one it lies under.
 func testCatalog() adapter.Catalog {
 	foreign := adapter.Protected{Names: []string{".othercfg"}}
@@ -31,14 +31,14 @@ func testTable() *table { return newTable(testCatalog()) }
 // run executes one invocation and returns code, stdout and stderr.
 func run(argv ...string) (int, string, string) { return runOn(testCatalog(), argv...) }
 
-// runOn executes one invocation against a catalogue of the test's own.
+// runOn executes one invocation against a catalog of the test's own.
 func runOn(c adapter.Catalog, argv ...string) (int, string, string) {
 	var out, errOut bytes.Buffer
 	code := Run(c, argv, &out, &errOut)
 	return code, out.String(), errOut.String()
 }
 
-// remap is a catalogue with each adapter replaced as replace says: a stub
+// remap is a catalog with each adapter replaced as replace says: a stub
 // that offers or withholds what no adapter of it does. It protects what base
 // does.
 func remap(base adapter.Catalog, replace func(adapter.Harness) adapter.Harness) adapter.Catalog {

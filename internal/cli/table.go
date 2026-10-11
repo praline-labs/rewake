@@ -6,9 +6,9 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter"
 )
 
-// table is the command table of one invocation. It is built from the catalogue
+// table is the command table of one invocation. It is built from the catalog
 // the binary hands to Run rather than held by the package, so the launch
-// commands are exactly the adapters of that catalogue and a test builds its own
+// commands are exactly the adapters of that catalog and a test builds its own
 // from adapters of its own.
 type table struct {
 	catalog adapter.Catalog

@@ -35,13 +35,14 @@ var toolFlags = map[string][]string{
 const maxToolWait = 5
 
 // ToolWords checks the words of a tool call against the surface and returns
-// them normalized: the form the receipt digest is taken over. The server
-// calls it before starting the CLI, and the CLI calls it again once it is
-// running in bridge mode; neither trusts the other to have done it.
+// them normalized: the form the receipt digest is taken over. It is the check
+// on a table of no adapter, the surface alone; a run checks with its own
+// table's (launch.go), on which a harness's name is a launch command and is
+// refused as one, where here it is an unknown command.
 func ToolWords(words []string) ([]string, error) { return surfaceTable().toolWords(words) }
 
 // surfaceTable is the table the exported surface checks words against when no
-// catalogue is at hand: a tool never starts a harness, so the surface is the
+// catalog is at hand: a tool never starts a harness, so the surface is the
 // same with or without adapters, except that a launch word is refused as an
 // unknown command instead of as a command outside the tool.
 func surfaceTable() *table { return newTable(adapter.Catalog{}) }

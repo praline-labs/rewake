@@ -1,6 +1,6 @@
 /*
 Package catalog is the one place that says which harnesses exist: New returns
-the catalogue value, which cmd/rewake builds and hands to the CLI.
+the catalog value, which cmd/rewake builds and hands to the CLI.
 
 Adding a harness is two lines: import its package and add it to New.
 */
@@ -14,7 +14,7 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter/claude"
 )
 
-// New returns the catalogue in guide order: the adapters of this build, the
+// New returns the catalog in guide order: the adapters of this build, the
 // fixture's only in a build with its tag (testOnly).
 func New() adapter.Catalog {
 	return adapter.NewCatalog(foreign(), append([]adapter.Harness{claude.New()}, testOnly()...)...)

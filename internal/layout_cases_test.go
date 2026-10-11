@@ -168,12 +168,12 @@ var _ Adapter = one{}
 
 var count int
 
-type catalogue struct {
+type adapterSet struct {
 	name     string
 	adapters []Adapter
 }
 
-var kept = catalogue{}
+var kept = adapterSet{}
 
 type node struct{ next *node }
 

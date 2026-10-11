@@ -95,7 +95,7 @@ func findAdapterVars(fset *token.FileSet, files []*ast.File, info *types.Info, a
 }
 
 // holdsAdapter looks through pointers, containers and struct fields: a
-// catalogue value kept at package level is a registry as much as a slice is.
+// catalog value kept at package level is a registry as much as a slice is.
 func holdsAdapter(typ types.Type, adapters []*types.Interface) bool {
 	return holds(typ, adapters, map[types.Type]bool{})
 }

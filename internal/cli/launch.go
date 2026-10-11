@@ -71,7 +71,7 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 				return ConfirmCompletion(ctx, dir, self, result)
 			},
 			Harness: h,
-			// What no task may grant a session to write, as the catalogue
+			// What no task may grant a session to write, as the catalog
 			// declares it (docs/grants.md).
 			Protected: ctx.table.catalog.Protected(),
 			Dir:       dir,

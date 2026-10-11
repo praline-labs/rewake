@@ -11,7 +11,7 @@ import (
 // --worktree is one a line types beside an alias: on one harness the two once
 // reached rewake together and the launch was refused as naming two worktrees.
 // A harness that takes rewake's worktree lists the flag as a switch it takes
-// once, which the catalogue's test holds for every adapter
+// once, which the catalog's test holds for every adapter
 // (TestEveryWorktreeFlagIsTakenOnce); given that, the typed one wins.
 func TestATypedWorktreeReplacesTheAlias(t *testing.T) {
 	s := set(t, `

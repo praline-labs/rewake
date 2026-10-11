@@ -47,7 +47,7 @@ var roomOption = Option{
 }
 
 // buildGroups builds the command table in guide order. Launch commands are
-// derived from the catalogue, so an adapter in it is always runnable and always
+// derived from the catalog, so an adapter in it is always runnable and always
 // documented.
 func buildGroups(catalog adapter.Catalog) []Group {
 	run := Group{

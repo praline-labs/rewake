@@ -32,7 +32,7 @@ type Request struct {
 	// Harness is what to run.
 	Harness adapter.Harness
 	// Protected is what no task may grant the session to write: the
-	// catalogue's set, every adapter's and the foreign ones it declares.
+	// catalog's set, every adapter's and the foreign ones it declares.
 	Protected adapter.Protected
 	// Dir is the room-scoped state directory.
 	Dir string

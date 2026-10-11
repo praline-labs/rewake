@@ -124,7 +124,7 @@ type Context struct {
 	// the command already went through the journal or was found to need none.
 	op         *operation
 	journaling bool
-	// table is the command table of this invocation, built from the catalogue
+	// table is the command table of this invocation, built from the catalog
 	// the binary handed to Run.
 	table *table
 }
