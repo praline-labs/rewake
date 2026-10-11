@@ -27,11 +27,6 @@ import (
 // mode: the words then come from a tool call, not from a shell.
 const TicketEnv = "REWAKE_BRIDGE_TICKET_FD"
 
-// CapabilityEnv names the variable that hands the server the per-launch
-// secret it presents to the wrapper's endpoint. The launch sets it in the
-// server's own environment, never the harness's.
-const CapabilityEnv = "REWAKE_BRIDGE_CAPABILITY"
-
 // The bounds of one tool result, measured on both harnesses (probe 2 in
 // docs/mail-bridge.md): a direct result arrived whole at about 47,000 bytes on
 // one and 60,000 on the other, so 4 KiB leaves more than tenfold margin.

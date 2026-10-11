@@ -36,10 +36,12 @@ type mailTool struct {
 	endpoint   *endpoint.Endpoint
 	clock      *inbox.ReadClock
 	capability string
-	// keeper keeps the run's channel record. Nothing makes one yet: S10
-	// defines the neutral channel inputs and S11 wires the keeper to the
-	// live set and the shell's evidence; until then every use of it is a
-	// no-op and the session shows its mail channel as unknown.
+	// keeper keeps the run's channel record. Its inputs are neutral since
+	// S10: the endpoint's events, whose hello and close are the tool
+	// transport's lifecycle, the offered transport at its start, and the
+	// run's live set (adapter.LiveReporter). Nothing makes one yet: S11
+	// wires it to the live set and the shell's evidence; until then every
+	// use of it is a no-op and the session shows its mail channel as unknown.
 	keeper *channelKeeper
 	// tools and path are what a backend that carries the calls itself is
 	// offered: the tools to register, and the endpoint to ask.

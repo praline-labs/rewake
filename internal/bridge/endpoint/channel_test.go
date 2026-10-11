@@ -2,6 +2,7 @@ package endpoint
 
 import (
 	"errors"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -47,49 +48,59 @@ func channelEndpoint(t *testing.T, transport string, change ...func(*Config)) (*
 	return served, path, got
 }
 
-// Each server connection has its own generation, and its close names it:
-// the wrapper can tell an older server's EOF from the newer one's.
-func TestServerConnectionsAreNumberedAndTheirClosesNamed(t *testing.T) {
-	_, path, got := channelEndpoint(t, testTransport)
-	first, err := Dial(path, "secret")
-	if err != nil {
-		t.Fatal(err)
+// Each process the run names as its transport is a generation of the
+// channel, and its end names it: naming another ends the one before, naming
+// none ends it, and so does the endpoint's close — the tool transport's
+// lifecycle is the channel's hello and close, so the wrapper can tell an
+// older transport's end from the newer one's.
+func TestEachTransportNamedIsAGenerationAndItsEndNamed(t *testing.T) {
+	served, _, got := channelEndpoint(t, testTransport)
+	served.SetTransport(101, 1)
+	served.SetTransport(102, 2)
+	served.SetTransport(0, 0)
+	served.SetTransport(103, 3)
+	served.Close()
+	served.SetTransport(104, 4)
+	events := got.wait(t, 6)
+	want := []channel.Event{
+		{Kind: channel.Hello, Generation: 1},
+		{Kind: channel.Closed, Generation: 1},
+		{Kind: channel.Hello, Generation: 2},
+		{Kind: channel.Closed, Generation: 2},
+		{Kind: channel.Hello, Generation: 3},
+		{Kind: channel.Closed, Generation: 3},
 	}
-	// The greeting is answered before the connection takes its generation, so
-	// Dial returning does not order the two; the first Hello does.
-	got.wait(t, 1)
-	second, err := Dial(path, "secret")
-	if err != nil {
-		t.Fatal(err)
+	if len(events) != len(want) {
+		t.Fatalf("a transport named after the close opened a generation: %+v", events)
 	}
-	got.wait(t, 2)
-	first.Close()
-	events := got.wait(t, 3)
-	second.Close()
-	events = append(events[:3:3], got.wait(t, 4)[3])
-	want := []channel.Event{{Kind: channel.Hello, Generation: 1}, {Kind: channel.Hello, Generation: 2}, {Kind: channel.Closed, Generation: 1}, {Kind: channel.Closed, Generation: 2}}
 	for i, e := range events {
 		if e.Kind != want[i].Kind || e.Generation != want[i].Generation || e.At.Boot == 0 || e.At.Wall.IsZero() {
 			t.Fatalf("event %d: %+v, want %+v", i, e, want[i])
 		}
+		if i > 0 && e.At.Boot < events[i-1].At.Boot {
+			t.Fatalf("event %d stamped before the one it follows: %+v", i, events)
+		}
 	}
 }
 
-// A server's refused hello is told with whether it came from the harness's
-// tree; a child's or a hook's is not the server's and is not told.
-func TestARefusedServerHelloIsToldWithItsAncestry(t *testing.T) {
-	_, path, got := channelEndpoint(t, testTransport)
+// A transport's refused hello is told with whether it came from the
+// harness's tree; a child's is not the transport's and is not told.
+func TestARefusedTransportHelloIsToldWithItsAncestry(t *testing.T) {
+	served, path, got := channelEndpoint(t, testTransport)
 	_, _ = hold(t, path, hello{Role: roleChild})
-	_, _ = hold(t, path, hello{Role: roleServer, Capability: "guess"})
-	events := got.wait(t, 1)
-	if len(events) != 1 || events[0].Kind != channel.HelloRefused || !events[0].Descendant {
+	// The run's transport is another process: this one, below the harness
+	// as a command the model runs is, asks in its place.
+	served.SetTransport(os.Getppid(), 1)
+	_, _ = hold(t, path, hello{Role: roleTransport})
+	events := got.wait(t, 2)
+	if len(events) != 2 || events[1].Kind != channel.HelloRefused || !events[1].Descendant {
 		t.Fatalf("%+v", events)
 	}
 
 	_, strayPath, stray := channelEndpoint(t, testTransport, func(c *Config) {
 		c.Descends = func(int, int) error { return errors.New("not below") }
 	})
-	_, _ = hold(t, strayPath, hello{Role: roleServer, Capability: "secret"})
+	_, _ = hold(t, strayPath, hello{Role: roleTransport})
 	if e := stray.wait(t, 1)[0]; e.Kind != channel.HelloRefused || e.Descendant {
 		t.Fatalf("a stray hello: %+v", e)
 	}

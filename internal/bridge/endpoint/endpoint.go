@@ -11,18 +11,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/proc"
 )
 
 // The bounds of docs/mail-bridge-turns.md#waits-and-their-bounds.
 const (
 	observationWait = 2 * time.Second
-	// maxOthers bounds the connections besides the servers'; maxServers the
-	// servers', which a harness restarts and which live as long as it does.
-	maxOthers  = 16
-	maxServers = 4
-	// shortExchange bounds a connection that is not a server's.
+	// maxOthers bounds the connections open at once.
+	maxOthers = 16
+	// shortExchange bounds a connection's exchange.
 	shortExchange = 5 * time.Second
 )
 
@@ -41,10 +38,11 @@ type Endpoint struct {
 	// readsOff says why the run's tool may not read, as the backend's
 	// checks find it; nil until the backend is known.
 	readsOff func() string
-	servers  int
 	others   int
-	// generation numbers the server connections, counted up per run.
+	// generation numbers the transports named, counted up per run, and
+	// live is the one named now, zero for none (transport.go).
 	generation uint64
+	live       uint64
 	// conns are the connections open now; true marks one Close drains: a
 	// transport's call, or the confirmation of a child the endpoint runs.
 	conns map[*net.UnixConn]bool
@@ -88,8 +86,9 @@ func Listen(path string, cfg Config) (*Endpoint, error) {
 }
 
 // SetRoots names the processes this wrapper started that may run the tool:
-// the harness, and a backend's own server. Until it is called no hello is
-// accepted, since no peer can be shown to descend from the harness.
+// the harness, and a service the run started beside it. Until it is called
+// no child's hello is accepted, since no peer can be shown to descend from
+// the harness.
 func (e *Endpoint) SetRoots(pids ...int) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -136,6 +135,7 @@ func (e *Endpoint) Close() {
 		}
 		e.mu.Unlock()
 		close(e.done)
+		e.closedLive()
 	})
 	e.running.Wait()
 	_ = e.listener.Close()
@@ -178,9 +178,9 @@ func (e *Endpoint) serve(conn *net.UnixConn) {
 	writer := &lineWriter{conn: conn}
 	release, err := e.admit(conn, greeting)
 	if err != nil {
-		// A server refused because the wrapper closes is not a refusal of
-		// its hello.
-		if greeting.Role == roleServer && !e.closing() {
+		// A transport refused because the wrapper closes is not a refusal
+		// of its hello.
+		if greeting.Role == roleTransport && !e.closing() {
 			e.refused(conn)
 		}
 		writer.write(response{Error: err.Error()})
@@ -193,15 +193,6 @@ func (e *Endpoint) serve(conn *net.UnixConn) {
 			e.serveCall(conn, reader, writer, int(peer.Pid))
 		}
 		return
-	}
-	var generation uint64
-	if greeting.Role == roleServer {
-		// A server's connection lasts as long as it does: its close is how
-		// the wrapper learns the server is gone.
-		_ = conn.SetDeadline(time.Time{})
-		var closed func()
-		generation, closed = e.connected()
-		defer closed()
 	}
 	var running sync.WaitGroup
 	defer running.Wait()
@@ -217,14 +208,14 @@ func (e *Endpoint) serve(conn *net.UnixConn) {
 		running.Add(1)
 		go func() {
 			defer running.Done()
-			writer.write(e.answer(conn, greeting.Role, asked, generation))
+			writer.write(e.answer(conn, greeting.Role, asked))
 		}()
 	}
 }
 
 // admit checks a hello: the peer is this user, runs below a process this
-// wrapper started, is this build, and — a server or a child — carries this
-// launch's capability. It also holds the peer's place among the bounded
+// wrapper started, is this build, and — a child — carries this launch's
+// capability; or it is the transport's own process. It also holds the peer's place among the bounded
 // connections.
 func (e *Endpoint) admit(conn *net.UnixConn, greeting hello) (func(), error) {
 	peer, err := peerOf(conn)
@@ -235,7 +226,7 @@ func (e *Endpoint) admit(conn *net.UnixConn, greeting hello) (func(), error) {
 		return nil, errors.New("the peer runs as another user")
 	}
 	switch greeting.Role {
-	case roleServer, roleChild:
+	case roleChild:
 		if subtle.ConstantTimeCompare([]byte(greeting.Capability), []byte(e.cfg.Capability)) != 1 || e.cfg.Capability == "" {
 			return nil, errors.New("the capability is not this launch's")
 		}
@@ -270,14 +261,10 @@ func (e *Endpoint) admit(conn *net.UnixConn, greeting hello) (func(), error) {
 	if e.closed && !own {
 		return nil, errors.New("the wrapper is closing")
 	}
-	count, limit := &e.others, maxOthers
-	if greeting.Role == roleServer {
-		count, limit = &e.servers, maxServers
-	}
-	if *count >= limit {
+	if e.others >= maxOthers {
 		return nil, errors.New("too many connections to this run's wrapper right now")
 	}
-	*count++
+	e.others++
 	call := greeting.Role == roleTransport
 	e.conns[conn] = call || own
 	if call {
@@ -285,7 +272,7 @@ func (e *Endpoint) admit(conn *net.UnixConn, greeting hello) (func(), error) {
 	}
 	return func() {
 		e.mu.Lock()
-		*count--
+		e.others--
 		delete(e.conns, conn)
 		e.mu.Unlock()
 		if call {
@@ -306,16 +293,11 @@ func (e *Endpoint) below(pid int, roots []int) error {
 	return fmt.Errorf("process %d does not run below the harness of this run", pid)
 }
 
-// answer serves one request of a connection whose role was admitted; a
-// server's carries its connection's generation.
-func (e *Endpoint) answer(conn *net.UnixConn, role string, asked request, generation uint64) response {
+// answer serves one request of a connection whose role was admitted.
+func (e *Endpoint) answer(conn *net.UnixConn, role string, asked request) response {
 	reply := response{ID: asked.ID}
 	var err error
 	switch {
-	case role == roleServer && asked.Op == opTicket && asked.Ask != nil:
-		var ticket bridge.Ticket
-		ticket, err = e.issue(*asked.Ask, generation)
-		reply.Ticket = &ticket
 	case role == roleChild && asked.Op == opConfirm && asked.Ticket != nil:
 		err = e.confirm(conn, *asked.Ticket)
 	default:

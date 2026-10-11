@@ -45,16 +45,15 @@ type call struct {
 	completed bool
 }
 
-// issued is a ticket and who used it. generation and thread are the
-// connection and thread its request came over: its proof is that
-// conversation's, whichever the run holds when it is used.
+// issued is a ticket and who used it. thread is the conversation its call
+// was bound to: its proof is that conversation's, whichever the run holds
+// when it is used.
 type issued struct {
-	ticket     bridge.Ticket
-	used       bool
-	pid        int
-	start      uint64
-	generation uint64
-	thread     string
+	ticket bridge.Ticket
+	used   bool
+	pid    int
+	start  uint64
+	thread string
 }
 
 // calls is the table, held only to record or take an entry.
@@ -155,10 +154,9 @@ func (e *Endpoint) observedWords(words []string, ok bool) (string, string) {
 	return bridge.Digest(normalized), ""
 }
 
-// issue matches a server's request with the harness's observation of the same
-// call, and issues its one ticket. The request binds its connection to the
-// thread it names first.
-func (e *Endpoint) issue(asked TicketRequest, generation uint64) (bridge.Ticket, error) {
+// issue matches a transport's call with the harness's observation of the
+// same call, and issues its one ticket.
+func (e *Endpoint) issue(asked TicketRequest) (bridge.Ticket, error) {
 	thread := asked.Conversation
 	if e.cfg.Refusal != "" {
 		return bridge.Ticket{}, errors.New(e.cfg.Refusal)
@@ -224,7 +222,7 @@ func (e *Endpoint) issue(asked TicketRequest, generation uint64) (bridge.Ticket,
 		CalledBoot: now, DeadlineBoot: now + int64(e.cfg.Span), WordsDigest: seen.digest,
 		Transport: e.cfg.Transport, TurnsNeverReused: asked.TurnsNeverReused, Nonce: hex.EncodeToString(nonce), ReadsOff: readsOff,
 	}
-	entry.issued = &issued{ticket: ticket, generation: generation, thread: thread}
+	entry.issued = &issued{ticket: ticket, thread: thread}
 	c.byNonce[ticket.Nonce] = entry.issued
 	c.spent[asked.CallID] = true
 	return ticket, nil

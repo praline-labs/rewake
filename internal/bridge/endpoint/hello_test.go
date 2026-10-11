@@ -35,18 +35,21 @@ func hold(t *testing.T, path string, greeting hello) (*net.UnixConn, string) {
 	return conn, answer.Error
 }
 
-// A hello is admitted only from a process below the harness, of this build,
-// carrying this launch's capability where its role needs one.
+// A child's hello is admitted only from a process below the harness, of this
+// build, carrying this launch's capability; a transport's only from the
+// process the run named.
 func TestAHelloIsChecked(t *testing.T) {
 	_, path := testEndpoint(t, testTransport)
 	cases := []struct {
 		greeting hello
 		refusal  string
 	}{
-		{hello{Role: roleServer, Capability: "secret"}, ""},
 		{hello{Role: roleChild, Capability: "secret"}, ""},
-		{hello{Role: roleServer, Capability: "guess"}, "capability"},
+		{hello{Role: roleChild, Capability: "guess"}, "capability"},
 		{hello{Role: roleChild}, "capability"},
+		{hello{Role: roleTransport, Capability: "secret"}, "no tool transport"},
+		// The server's hello, which no adapter has made since S8, left in S10.
+		{hello{Role: "server", Capability: "secret"}, "role"},
 		{hello{Role: "admin", Capability: "secret"}, "role"},
 	}
 	for _, test := range cases {
@@ -64,7 +67,7 @@ func TestAHelloIsChecked(t *testing.T) {
 	_, outsidePath := testEndpoint(t, testTransport, func(c *Config) {
 		c.Descends = func(int, int) error { return errors.New("not below") }
 	})
-	if _, refusal := hold(t, outsidePath, hello{Role: roleServer, Capability: "secret"}); !strings.Contains(refusal, "does not run below") {
+	if _, refusal := hold(t, outsidePath, hello{Role: roleChild, Capability: "secret"}); !strings.Contains(refusal, "does not run below") {
 		t.Fatalf("a process outside the harness: %q", refusal)
 	}
 	_, otherPath := testEndpoint(t, testTransport, func(c *Config) {
@@ -82,8 +85,8 @@ func TestARoleAsksOnlyItsOwnQuestion(t *testing.T) {
 	if refusal != "" {
 		t.Fatal(refusal)
 	}
-	asked := TicketRequest{Transport: testTransport, CallID: "c1"}
-	encoded, _ := json.Marshal(request{ID: 7, Op: opTicket, Ask: &asked})
+	call := ToolCall{Tool: "inbox", CallID: "c1"}
+	encoded, _ := json.Marshal(request{ID: 7, Op: opCall, Call: &call})
 	_, _ = conn.Write(append(encoded, '\n'))
 	line, err := bufio.NewReader(conn).ReadBytes('\n')
 	if err != nil {
@@ -91,12 +94,12 @@ func TestARoleAsksOnlyItsOwnQuestion(t *testing.T) {
 	}
 	var answer response
 	_ = json.Unmarshal(line, &answer)
-	if answer.ID != 7 || !strings.Contains(answer.Error, "may not ask") || answer.Ticket != nil {
-		t.Fatalf("a child asked for a ticket: %+v", answer)
+	if answer.ID != 7 || !strings.Contains(answer.Error, "may not ask") || answer.Answer != nil {
+		t.Fatalf("a child asked to run a call: %+v", answer)
 	}
 }
 
-// The connections are bounded: sixteen besides the servers, four servers.
+// The connections are bounded: sixteen at once.
 func TestTheConnectionsAreBounded(t *testing.T) {
 	_, path := testEndpoint(t, testTransport)
 	for range maxOthers {
@@ -107,45 +110,16 @@ func TestTheConnectionsAreBounded(t *testing.T) {
 	if _, refusal := hold(t, path, hello{Role: roleChild, Capability: "secret"}); !strings.Contains(refusal, "too many") {
 		t.Fatalf("a seventeenth connection: %q", refusal)
 	}
-	for range maxServers {
-		if _, refusal := hold(t, path, hello{Role: roleServer, Capability: "secret"}); refusal != "" {
-			t.Fatal(refusal)
-		}
-	}
-	if _, refusal := hold(t, path, hello{Role: roleServer, Capability: "secret"}); !strings.Contains(refusal, "too many") {
-		t.Fatalf("a fifth server: %q", refusal)
-	}
 }
 
-// A server and a child that cannot reach the endpoint fail as unreachable,
-// which their callers tell from a refusal.
+// A child and a transport that cannot reach the endpoint fail as
+// unreachable, which their callers tell from a refusal.
 func TestAMissingEndpointIsUnreachable(t *testing.T) {
 	path := t.TempDir() + "/none.ctx"
 	if err := Confirm(path, bridge.Ticket{}); !errors.Is(err, ErrUnreachable) {
 		t.Fatalf("confirm: %v", err)
 	}
-	if _, err := Dial(path, "secret"); !errors.Is(err, ErrUnreachable) {
-		t.Fatalf("dial: %v", err)
-	}
-}
-
-// A server's connection lives as long as the wrapper serves it; its end
-// tells the server to dial again.
-func TestAServersConnectionEndsWithTheWrapper(t *testing.T) {
-	served, path := testEndpoint(t, testTransport)
-	client, err := Dial(path, "secret")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer client.Close()
-	time.Sleep(shortExchange / 50)
-	served.Close()
-	select {
-	case <-client.Gone():
-	case <-time.After(3 * time.Second):
-		t.Fatal("the connection outlived its wrapper")
-	}
-	if _, err := client.Ticket(neutralRequest("th", "t1", "c1", words), time.Second); !errors.Is(err, ErrUnreachable) {
-		t.Fatalf("a ticket after the wrapper closed: %v", err)
+	if _, err := CallTool(path, ToolCall{Tool: "inbox"}, time.Second); !errors.Is(err, ErrUnreachable) {
+		t.Fatalf("call: %v", err)
 	}
 }

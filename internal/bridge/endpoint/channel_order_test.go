@@ -1,6 +1,7 @@
 package endpoint
 
 import (
+	"cmp"
 	"encoding/json"
 	"net"
 	"slices"
@@ -21,6 +22,7 @@ import (
 type folding struct {
 	t       *testing.T
 	mu      sync.Mutex
+	begun   channel.Stamp
 	record  channel.Record
 	arrived []channel.Event
 	holds   func(channel.Event) bool
@@ -30,8 +32,9 @@ type folding struct {
 }
 
 func newFolding(t *testing.T, holds func(channel.Event) bool) *folding {
+	begun := Stamp()
 	f := &folding{
-		t: t, record: channel.New(true, "", Stamp()), holds: holds,
+		t: t, begun: begun, record: channel.New(true, "", begun), holds: holds,
 		held: make(chan struct{}), release: make(chan struct{}),
 	}
 	t.Cleanup(f.let)
@@ -70,74 +73,85 @@ func (f *folding) until(what string, done func([]channel.Event) bool) {
 	f.t.Fatalf("%s did not arrive: %+v", what, f.arrived)
 }
 
+// inOrder is the record the same events give folded in the order they
+// happened: what a late delivery must not change.
+func (f *folding) inOrder() channel.Record {
+	events := slices.Clone(f.arrived)
+	slices.SortStableFunc(events, func(a, b channel.Event) int { return cmp.Compare(a.At.Boot, b.At.Boot) })
+	r := channel.New(true, "", f.begun)
+	for _, e := range events {
+		r.Fold(e)
+	}
+	return r
+}
+
+// sameRecord says whether two records show the same thing.
+func sameRecord(a, b channel.Record) bool {
+	left, _ := json.Marshal(a.View())
+	right, _ := json.Marshal(b.View())
+	return string(left) == string(right)
+}
+
 func arrivedAs(kind channel.Kind, generation uint64) func([]channel.Event) bool {
 	return func(events []channel.Event) bool {
 		return slices.ContainsFunc(events, func(e channel.Event) bool { return e.Kind == kind && e.Generation == generation })
 	}
 }
 
-// A connection's hello delivered after another connection opened and closed
-// still counts at its own time: that close left a server live, so it is no
-// "server gone". Once the first connection closes too, the server is gone.
+// A transport's hello delivered after its own close — the run named another
+// transport meanwhile — still counts at its own time: the record is the one
+// the events give in the order they happened, the newer transport live as a
+// reconnection after the first one's end, and once that one ends too, nothing
+// is live.
 func TestAHelloDeliveredLateKeepsItsConnectionLive(t *testing.T) {
 	f := newFolding(t, func(e channel.Event) bool { return e.Kind == channel.Hello && e.Generation == 1 })
-	_, path := testEndpoint(t, testTransport, func(c *Config) { c.Channel = f.take })
-	first, err := Dial(path, "secret")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer first.Close()
+	served, _ := testEndpoint(t, testTransport, func(c *Config) { c.Channel = f.take })
+	go served.SetTransport(101, 1)
 	select {
 	case <-f.held:
 	case <-time.After(3 * time.Second):
 		t.Fatal("the first hello was never told")
 	}
-	second, err := Dial(path, "secret")
-	if err != nil {
-		t.Fatal(err)
-	}
-	second.Close()
-	f.until("the second connection's close", arrivedAs(channel.Closed, 2))
-	f.mu.Lock()
-	gone := f.record.Open()
-	f.mu.Unlock()
+	served.SetTransport(102, 2)
+	f.until("the second transport's hello", arrivedAs(channel.Hello, 2))
 	f.let()
 	f.until("the first hello", arrivedAs(channel.Hello, 1))
 
 	f.mu.Lock()
-	arrived, r := slices.Clone(f.arrived), f.record
+	arrived, r, want := slices.Clone(f.arrived), f.record, f.inOrder()
 	f.mu.Unlock()
-	if arrived[0].Generation != 2 || arrived[2].Generation != 1 || arrived[2].At.Boot >= arrived[0].At.Boot {
+	if arrived[0].Kind != channel.Closed || arrived[0].Generation != 1 || arrived[2].Generation != 1 || arrived[2].At.Boot >= arrived[0].At.Boot {
 		t.Fatalf("the schedule did not happen, nothing is proven: %+v", arrived)
 	}
-	if !gone {
-		t.Fatal("with the first hello not yet told, the second close did not read as the server gone")
+	if !sameRecord(r, want) {
+		t.Fatalf("the late hello changed the record:\n%+v\nin event order:\n%+v", r.View(), want.View())
 	}
-	if r.Open() || !slices.Equal(r.Live, []uint64{1}) || r.Tool != channel.ToolConnected {
-		t.Fatalf("open %v class %q live %v tool %q, want the first connection live and no failure", r.Open(), r.Class, r.Live, r.Tool)
+	if !slices.Equal(r.Live, []uint64{2}) || r.Tool != channel.ToolConnected || r.Interval != arrived[0].At || r.Reconnected != arrived[1].At {
+		t.Fatalf("live %v tool %q interval %v reconnected %v, want the second transport live, reconnected after the first one's end", r.Live, r.Tool, r.Interval, r.Reconnected)
 	}
 
-	first.Close()
-	f.until("the first connection's close", arrivedAs(channel.Closed, 1))
+	served.SetTransport(0, 0)
+	f.until("the second transport's end", arrivedAs(channel.Closed, 2))
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	if r := f.record; r.Class != channel.ClassServerGone || r.Interval != f.arrived[3].At {
-		t.Fatalf("class %q since %v, want the server gone at the last close", r.Class, r.Interval)
+	if r := f.record; len(r.Live) != 0 || r.Class != channel.ClassServerGone || !r.Open() {
+		t.Fatalf("live %v class %q open %v, want nothing live and the channel gone", r.Live, r.Class, r.Open())
 	}
 }
 
-// A refused hello from the harness's tree, told before a good hello and
-// delivered after it, keeps its failure: no connection lived at its time,
-// so the interval opens there, and the hello is a reconnection during it.
+// A refused transport hello from the harness's tree, told before the run
+// names its transport and delivered after that hello, keeps its failure: no
+// transport lived at its time, so the interval opens there, and the hello is
+// a reconnection during it.
 func TestARefusedHelloDeliveredAfterAHelloKeepsItsFailure(t *testing.T) {
 	f := newFolding(t, func(e channel.Event) bool { return e.Kind == channel.HelloRefused })
-	_, path := testEndpoint(t, testTransport, func(c *Config) { c.Channel = f.take })
+	served, path := testEndpoint(t, testTransport, func(c *Config) { c.Channel = f.take })
 	refused, err := net.Dial("unix", path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer func() { _ = refused.Close() }()
-	greeting, _ := json.Marshal(hello{Role: roleServer, Capability: "guess"})
+	greeting, _ := json.Marshal(hello{Role: roleTransport})
 	if _, err := refused.Write(append(greeting, '\n')); err != nil {
 		t.Fatal(err)
 	}
@@ -146,11 +160,7 @@ func TestARefusedHelloDeliveredAfterAHelloKeepsItsFailure(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Fatal("the refused hello was never told")
 	}
-	server, err := Dial(path, "secret")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer server.Close()
+	served.SetTransport(101, 1)
 	f.until("the hello", arrivedAs(channel.Hello, 1))
 	f.let()
 	f.until("the refusal", func(events []channel.Event) bool { return len(events) == 2 })

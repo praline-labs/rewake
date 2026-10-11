@@ -23,6 +23,8 @@ one adapter needs beyond the neutral events lives in the adapter.
   - `internal/channel/connections_test.go` `TestTwoConnectionsAcrossATicketInEveryOrder`
   - `internal/channel/connections_test.go` `TestAHelloAtTheTimersEndIsInTime`
   - `internal/channel/connections_test.go` `TestATicketStopsTheTimer`
+  - `internal/bridge/endpoint/channel_test.go` `TestEachTransportNamedIsAGenerationAndItsEndNamed` — the hello and close are the tool transport's lifecycle since S10
+  - `internal/bridge/endpoint/channel_test.go` `TestARefusedTransportHelloIsToldWithItsAncestry`
   - `internal/channel/connections_test.go` `TestALateHelloUndoesFailuresUntilTheLastClose`
   - `internal/wrap/channel_test.go` `TestAClosedServerFailsOnlyWhileItsHarnessLives`
 

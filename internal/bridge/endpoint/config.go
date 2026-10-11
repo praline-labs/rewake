@@ -13,7 +13,7 @@ type Config struct {
 	Dir, Name, Epoch string
 	// Transport is the harness path of this run's tool calls.
 	Transport string
-	// Capability is the per-launch secret a server and a child present.
+	// Capability is the per-launch secret a child presents from its ticket.
 	Capability string
 	// Span is how long after it is issued a ticket's answer is wanted.
 	// Refusal, when set, is why this run's tool reads nothing: a deadline

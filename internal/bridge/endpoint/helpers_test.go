@@ -41,8 +41,14 @@ func testEndpoint(t *testing.T, transport string, change ...func(*Config)) (*End
 	}
 	served.SetRoots(os.Getpid())
 	t.Cleanup(served.Close)
+	byPath.Store(path, served)
+	t.Cleanup(func() { byPath.Delete(path) })
 	return served, path
 }
+
+// byPath finds a test's endpoint by its socket, for the helpers that take
+// the path a child or a transport would dial.
+var byPath sync.Map
 
 // testTransport is a transport of no harness, on the endpoint's one turn path.
 const testTransport = "test-transport"
@@ -54,15 +60,16 @@ func neutralRequest(thread, turn, call string, words []string) TicketRequest {
 	return TicketRequest{Transport: testTransport, Conversation: thread, Turn: turn, CallID: call, Words: words, Digest: bridge.Digest(words), TurnsNeverReused: true}
 }
 
-// ticketFor asks for a ticket over a server's connection.
+// ticketFor has the endpoint at path issue the ticket of a call, as it
+// does for a transport's call before running it: the rules of a ticket are
+// the endpoint's, whoever brings the call.
 func ticketFor(t *testing.T, path string, asked TicketRequest) (bridge.Ticket, error) {
 	t.Helper()
-	client, err := Dial(path, "secret")
-	if err != nil {
-		return bridge.Ticket{}, err
+	served, ok := byPath.Load(path)
+	if !ok {
+		t.Fatalf("no endpoint serves %s", path)
 	}
-	defer client.Close()
-	return client.Ticket(asked, 3*time.Second)
+	return served.(*Endpoint).issue(asked)
 }
 
 // openTurn starts a turn on thread through the neutral input.

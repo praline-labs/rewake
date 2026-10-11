@@ -48,15 +48,15 @@ type transportPeer struct {
 }
 
 // SetTransport names the transport's process, by pid and start time: the
-// only process whose requests run calls. Until it is called none does.
+// only process whose requests run calls. Until it is called none does, and
+// a pid of zero names none again. Each naming is the channel's hello and
+// ends the one before (named).
 func (e *Endpoint) SetTransport(pid int, start uint64) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	e.transport = transportPeer{pid: pid, start: start}
+	e.named(transportPeer{pid: pid, start: start})
 }
 
 // SetChildEnv names the environment of a transport's call: the run's launch
-// values from the harness's environment, as a server's children get them.
+// values from the harness's environment, as the harness's own children get them.
 func (e *Endpoint) SetChildEnv(getenv func(string) string) {
 	env := ChildEnv(getenv)
 	e.mu.Lock()
@@ -144,7 +144,7 @@ func (e *Endpoint) runCall(call ToolCall, arrived int64) ToolAnswer {
 	ticket, err := e.issue(TicketRequest{
 		Transport: e.cfg.Transport, Conversation: call.Conversation, Turn: call.Turn, CallID: call.CallID,
 		TurnsNeverReused: call.TurnsNeverReused, Words: normalized, Digest: bridge.Digest(normalized), Arrived: arrived,
-	}, 0)
+	})
 	if err != nil {
 		return substitute("Rewake: the wrapper issued no ticket for this call (" + err.Error() + "), so nothing ran; run the same words in the shell.\n").encoded()
 	}

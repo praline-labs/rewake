@@ -30,7 +30,7 @@ func peerOf(conn *net.UnixConn) (*syscall.Ucred, error) {
 
 // sameBuild says whether a process runs the file this one runs: the same
 // device and inode behind /proc/<pid>/exe. A file replaced on disk since is
-// another inode, so a server or child started from a newer install is
+// another inode, so a child started from a newer install is
 // refused, however its version reads.
 func sameBuild(pid int) error {
 	own, err := os.Stat("/proc/self/exe")

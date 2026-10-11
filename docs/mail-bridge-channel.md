@@ -22,6 +22,20 @@ inputs S10 defines ([stage3-steps-adapters.md](v2/stage3-steps-adapters.md#s11-t
 until then every run shows `mail: unknown`, and the text below is the record that keeper
 will keep.
 
+**The hello and the close are the tool transport's lifecycle since S10, October 11,
+2026.** No adapter has started a server since S8, so the endpoint's server hello, its
+client and the ticket a server asked for left the endpoint. A hello is now the run
+naming the process that carries its calls (`SetTransport`, through the serve function
+an adapter's `ToolTransport` is offered): naming one is the capability going live, a
+generation of its own; naming another, naming none, or the endpoint closing ends the
+generation before, and both events are stamped under the lock that names the process.
+A refused hello is a transport's call from a process the run did not name — a command
+the model runs, posing as the harness's own process — with whether it came from the
+harness's tree. Where the text below says a server, read the transport that carries the
+calls; a restarted transport is a close and a new hello, as a restarted server was.
+The keeper's inputs are these events (`channel.Event`), the offered transport
+(`Offer.ToolTransport`) at its start, and from S11 the run's live set.
+
 ## The rules
 
 1. **Two observations and a block, one derived display.** The wrapper keeps a tool
@@ -57,14 +71,14 @@ will keep.
 
 ## The tool observation
 
-**Connections.** Each hello the endpoint accepts opens a connection with a generation
-number counted up per run, the server's pid and its start time. The transport is the
+**Connections.** Each hello opens a connection with a generation number counted up per
+run: since S10 each transport the run names, by its pid and start time. The transport is the
 set of live connections, counted per connection by event time: a connection is live
 from its hello to its own close, a close removes only its own connection, and the
 server is gone only when no connection is live at the close's time — whichever
-generation is newer, and whatever order the endpoint's goroutines told them in. The
-endpoint already admits up to four, enough for a restarted server overlapping its
-predecessor and for nested threads.
+generation is newer, and whatever order the endpoint's goroutines told them in. Since S10 a
+transport the run names ends the one before, so two generations never overlap on the
+endpoint; the record keeps the set for the order its events arrive in.
 
 | Event | Source | The tool observation becomes |
 |---|---|---|
@@ -74,7 +88,7 @@ predecessor and for nested threads.
 | a child validated its ticket | the endpoint | **working**; the interval closed |
 | the last live connection closes (above), harness alive and not ending | the endpoint | **failing**, class "server gone": no harness is taken to start a dead server again on its own |
 | one connection closes, others live at its time | the endpoint | unchanged, whichever generation is older |
-| a hello refused (build mismatch, capability) from a descendant of the harness, no connection live | the endpoint, by pid ancestry | **failing**, class "server refused" |
+| a transport's hello refused (not the process the run named) from a descendant of the harness, no connection live | the endpoint, by pid ancestry | **failing**, class "server refused" |
 | a hello refused from a process outside the harness's tree, or while a connection lives | the endpoint | unchanged, logged |
 | a call refused before its ticket: busy, a timeout too short, conflicting ids, a completed turn, an agent's call | the endpoint | unchanged: that call's outcome, told to the model in its answer |
 | a call timed out, was cancelled or stopped by Esc, or failed while its connection lives | the harness, as the call's own outcome | unchanged: the call's outcome is its receipt's, and its child may still be running |
@@ -303,7 +317,7 @@ shell's side `internal/cli/shell_channel.go`, `internal/receipt/shell.go` and
 - **The record keeps the transport's history** in the wrapper's memory, never in the
   session state (`internal/channel/history.go`): every connection's hello and close by
   generation, for the run, and the refused hellos since the last ticket, which ends
-  everything before it. It grows by one entry per server connection and one per refused
+  everything before it. It grows by one entry per transport named and one per refused
   hello since the last ticket. The policy block, the shell observation and the ticket's
   own times are kept as the latest by event time and need no history. No order of
   arrival changes the record: `internal/channel/order_test.go` folds every four events
@@ -313,8 +327,8 @@ shell's side `internal/cli/shell_channel.go`, `internal/receipt/shell.go` and
   and in reverse; `silence_test.go` holds that a run with nothing observed shows no
   failure; `connections_test.go` folds two connections across a ticket, the timer's end
   and a late hello in every order against states written out by hand; and
-  `internal/bridge/endpoint/channel_order_test.go` holds one connection's hello, or a
-  refused hello, behind another connection's events on a real endpoint.
+  `internal/bridge/endpoint/channel_order_test.go` holds one transport's hello, or a
+  refused hello, behind the next transport's events on a real endpoint.
 - **Only the exit is taken in arrival order**: an event told after the record froze is
   not of the run (rule 8), and the keeper folds its held closes before it freezes.
 - **The channel writes no grant and decides no permission**:
