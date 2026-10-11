@@ -41,8 +41,10 @@ docs/
   true"); only the links into it are rewritten.
 - **Research is split by harness and by how a fact was obtained**, as today: what a
   binary answers, what the types or the schema state, what only a running session shows.
-  The mod's API facts from the recon (`.scratch/v2-recon/claude-mods.md`) move into
-  `research/claude/` with their marks, re-checked by the stage 4 probe.
+  The mod's API facts are not moved into the research documents: the `mods` skill
+  carries them (owner's decision, October 11, 2026), and the documents point to it. What
+  the research documents take is what rewake's own stage 4 probes observe, with the
+  version each was made on.
 - **`AGENTS.md` follows in stage 3**: the five checks with `internal/layout_test.go`,
   "Adding a harness" as capabilities plus one line in the catalogue's constructor, the
   rule that a change to the mod runs the workflow suite, and the reading order pointing

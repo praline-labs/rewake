@@ -4,8 +4,9 @@ The harness contract, the Claude Code adapter against the mod, the Codex adapter
 gateway, and the mail tool's endpoint and server. The overview is in
 [revision.md](revision.md); figures are code / tests in lines. Facts about the mod are
 from the stage 0 reconnaissance of Claude Code 2.1.287–2.1.289 (its documentation,
-the type declarations 2.1.289 writes beside a mod, and live probes); they go into
-`docs/research*.md` in stage 2 with where each was verified.
+the type declarations 2.1.289 writes beside a mod, and live probes). The mod API itself is
+not copied into `docs/research*.md`: the `mods` skill carries it. Only what rewake's own
+probes observe goes there, with where each was verified.
 
 ## The harness contract
 
@@ -87,7 +88,7 @@ whether gates become ranges is stage 2 (proposal 8).
 | directory grants | `permission.go`, `cli/granthook.go`, `grantauth/keeper.go` | change, stage 6: `classic.PermissionRequest` and `classic.PreToolUse` in the mod instead of a process per tool call |
 | compact | `plugin.js:94` `$.session.compact` | rewrite as mod, same call |
 | interrupt | `plugin.js:131` `$.turn.abort` | rewrite as mod, same call; `InterruptTrace` stays |
-| clear | none in the plugin | `session.end` with `reason: clear` and no new `session.start`; whether registered tools survive `/clear` is for the probe |
+| clear | none in the plugin | `session.end` with `reason: clear` and no new `session.start`; whether registered tools survive `/clear` is for the probe; the `mods` skill documents `$.command.run`, on which [conversation-reset.md](../conversation-reset.md) builds the clear (P7) |
 | telemetry | `telemetry/*` | rewrite as mod: `session.measure`, `session.usage` |
 | the person's status line | `statusline.go`, `telemetry/{tap,statusline}.go` | drop; the person's UI is stage 8 |
 
@@ -123,7 +124,7 @@ session; what the person sees (the plugin's frame against "● …"); is a submi
 | `event.go`, `plugin.go`, `send.go` | 323 | rewrite as mod: the wire from the mod to the wrapper; `HookEvents` and the status-line kind go |
 | `collector.go`, `collector_turns.go`, `state.go`, `turnstart.go`, `clock.go` | 795 | rewrite as mod (the Go receiving side): the fold and the stopped-turn publication stay; `Drawn` and `LaunchedWith(--autocompact)` go; the turn start becomes a core record written from `turn.start` |
 | `decode.go`, `statusline.go`, `tap.go` | 417 | drop |
-| `window.go` | 243 | drop if the probe shows `session.usage` plus the environment give the auto-compact window; otherwise its environment-and-settings half moves into the mod |
+| `window.go` | 243 | drop if the probe shows `session.usage` plus the environment give the auto-compact window (the `mods` skill says `percent` is against the model's window, so only the breakdown call reaches the compaction window: P6); otherwise its environment-and-settings half moves into the mod |
 
 ## Codex
 

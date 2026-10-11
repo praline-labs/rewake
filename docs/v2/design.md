@@ -18,9 +18,10 @@ October 5, 2026 ([below](#the-owners-answers)); one is still open.
 | [design-docs-tests.md](design-docs-tests.md) | how the documents and the tests of 2.0 are laid out |
 
 Where a fact is marked, the marks are those of the recon: **[doc]** official
-documentation, **[types]** the declarations Claude Code 2.1.289 writes for a mod
-(`.scratch/v2-recon/cc-2.1.289.d.ts`), **[live]** seen on 2.1.289
-(`.scratch/v2-recon/claude-mods.md`), **[code]** read in the tree at `8a20bdd`.
+documentation, **[live]** seen on a running harness, **[code]** read in the tree at
+`8a20bdd`. A fact about the Claude Code mod API carries no mark here: the `mods` skill
+holds it ([design-claude.md](design-claude.md#where-the-api-facts-live)), and a claim
+about the mod that still needs a live check says so and names its stage 4 probe.
 
 ## What does not change
 

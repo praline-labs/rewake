@@ -13,8 +13,10 @@ to, and the probe that would settle it.
 - the source of published mods.
 
 The local Claude Code is 2.1.294 since that day, and the mod API is early access and
-changes between releases. Re-read every fact here against the installed version before a
-stage relies on it, and refresh the types before the stage 4 probe
+changes between releases. The `mods` skill holds the current API (October 11, 2026
+decision: the documents do not copy it); where a fact below is about the mod API, read the
+skill, not this record, before a stage relies on it, and check it against the installed
+version before the stage 4 probe
 ([design-claude.md](design-claude.md#the-stage-4-probe)). Each fact is marked:
 
 - *(types)* — the 2.1.289 types;
@@ -57,8 +59,9 @@ owed reports, pending, questions, remote compact or interrupt, and no other harn
   split (`teammateMode`), coordinated through files under `~/.claude/teams/`;
 - a split-pane teammate runs no loop in the lead, and its status is the last word it
   wrote to its team's roster *(types)*;
-- a mod cannot create one through `agent.spawn`: the hook only chooses the model or
-  denies *(types)*.
+- a mod cannot create one through the `agent.spawn` hook, which only chooses the model
+  or denies *(types)*; the `mods` skill documents a `$.agent.spawn` call as well, and
+  whether it can start a teammate is open until a stage that takes the idea up probes it.
 
 Split panes depend on the terminal multiplexer and do not draw inside the lead's screen.
 *(docs)*

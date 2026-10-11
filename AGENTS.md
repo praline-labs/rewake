@@ -256,6 +256,21 @@ page, the step in FLOW, the `harnesses` field of the machine form. A harness
 cannot be half-registered — either it is in the catalogue and fully described, or
 it does not exist.
 
+## Working on the Claude Code mod
+
+Claude Code's adapter in 2.0 is one mod ([docs/v2/design-claude.md](docs/v2/design-claude.md)).
+The mod API — its events, `$`, rendering, the plugin layout, how a mod is loaded, tested and
+debugged, and what changed between versions — is not written down in this repository, and it
+changes with every Claude Code release. Load the `mods` skill before planning, writing or
+reviewing anything the mod does, and compare the version the skill was taken from with the
+installed `claude --version`; where they differ, the skill says what to check. A brief for mod
+work names the skill; a mod change made without it is refused in review.
+
+The project's documents do not copy the mod API; they cite the skill, which is kept current
+with every Claude Code release. What stays in the documents is rewake's own decisions and
+invariants about the mod, and dated records of what its probes observed, each with the
+version it was made on.
+
 ## Adding a role or a message kind
 
 **A role** is a value in `internal/core/role/role.go` plus its line in the list. Its

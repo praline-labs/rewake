@@ -191,6 +191,7 @@ table of oldest supported versions holding the minimums above. The table and the
 adapters' declared minimums are one fact: the test reads both and fails when they
 differ. The first raise of a minimum in 2.x turns the marks below it red, as designed.
 
-Still unknown: the mod API's own compatibility policy across Claude Code versions; the
-recon found the GitHub copy of the types two weeks stale (`claude-mods.md:14`). Each
-stage 4 probe result is written with the version it ran on.
+The mod API promises no stability: the `mods` skill states that it changes in patch
+releases too, and the skill is kept current for that reason. A stage 4 run starts by
+comparing the skill's version with the installed one; each probe result is written with
+the version it ran on.

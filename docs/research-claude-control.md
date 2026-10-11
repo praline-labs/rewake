@@ -5,6 +5,8 @@ running Claude Code session besides a message, and what it lets rewake hear back
 interruption, the session's own commands, text put into its input box. The Codex side of
 the same questions is in [research-protocol.md](research-protocol.md#compaction-and-the-terminals-commands-over-the-protocol).
 
+This is a record of 2.1.280. The current mod API is in the `mods` skill, which this record does not follow.
+
 Tags, with the version in each section: **[live]** — observed in a private HOME against
 a fake API on a local port, keys typed through tmux; **[source]** — read in the installed
 binary's bundled source; **[docs]** — the official pages. An older source tree of the
