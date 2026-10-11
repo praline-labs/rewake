@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"sync/atomic"
 	"testing"
-	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail/mailtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
@@ -144,55 +143,4 @@ func TestAnEditThatCannotWithdrawTakesItsReplacementBack(t *testing.T) {
 	if stone := tombstone(t, f.dir, f.task.ID); stone == nil || stone.Withdrawn == nil || stone.Withdrawn.ReplacedBy != second.ID {
 		t.Fatalf("tombstone %+v", stone)
 	}
-}
-
-// The waiting copy is not a step of the withdrawal: with the tombstone in
-// place, one that would not go leaves a finished withdrawal, which a retry
-// answers as done — withdraw and edit alike — and the serving process clears
-// the copy as it settles the status.
-func TestAWaitingCopyThatWillNotGoLeavesTheWithdrawalFinished(t *testing.T) {
-	// Set before the server starts, which reads it; switched through the flag.
-	var stuck atomic.Bool
-	removeWaiting = func(path string) error {
-		if stuck.Load() {
-			return os.ErrPermission
-		}
-		return os.Remove(path)
-	}
-	t.Cleanup(func() { removeWaiting = os.Remove })
-	f := startHeld(t, Task, false)
-	id := f.announced(t)
-	f.until(t, Held)
-	stuck.Store(true)
-	if result, err := withdrawNow(t, f.dir, f.task, nil); err != nil || result != WithdrawnHeld {
-		t.Fatalf("withdraw: %v %v", result, err)
-	}
-	waiting := filepath.Join(state.InboxPath(f.dir, "api"), f.task.ID+".json")
-	if _, err := os.Stat(waiting); err != nil {
-		t.Fatalf("the seam did not keep the waiting copy: %v", err)
-	}
-	if result, err := withdrawNow(t, f.dir, f.task, nil); err != nil || result != AlreadyWithdrawn {
-		t.Fatalf("the retry: %v %v", result, err)
-	}
-	replacement := message("rerun the smoke on staging")
-	replacement.Kind, replacement.FromEpoch, replacement.ToEpoch, replacement.Replaces = Task, "web-epoch", "api-epoch", f.task.ID
-	if _, err := withdrawNow(t, f.dir, f.task, &replacement); !errors.Is(err, ErrAlreadyWithdrawn) {
-		t.Fatalf("an edit after it: %v", err)
-	}
-	if must(IsIn(state.InboxPath(f.dir, "api"), replacement.ID)) {
-		t.Fatal("a refused edit left its replacement to be announced")
-	}
-	stuck.Store(false)
-	f.receipts <- Receipt{ID: id, Result: Result{State: Delivered, Via: "socket"}}
-	deadline := time.Now().Add(5 * time.Second)
-	for {
-		if _, err := os.Stat(waiting); os.IsNotExist(err) {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatal("the serving process never cleared the waiting copy")
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
-	f.stillWithdrawn(t)
 }

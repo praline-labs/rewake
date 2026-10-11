@@ -236,7 +236,7 @@ built on exported operations, files or `state.Fault`: a waiting copy whose remov
 while the server settles (the failing removal is mail's `removeWaiting`, not a state
 operation), and the witness that settlement lists the mailbox's stops only while
 holding the lock. For them, and only them, package mail carries test operations in a
-file built under `rewakefault` — an exact-path failure of a waiting copy's removal that
+file built under `rewakefault` (`internal/core/mail/faultops.go`) — an exact-path failure of a waiting copy's removal that
 counts its attempts, and an observer scoped to one mailbox's listing of its stops — and
 the delivery tests that use them are built under the same tag, so they run in the
 `rewakefault,rewakefixture` race run of the five checks. The operations are exported

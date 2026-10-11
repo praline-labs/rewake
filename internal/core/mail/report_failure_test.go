@@ -101,19 +101,16 @@ func TestReportFailureAdmissionAndShutdown(t *testing.T) {
 	}
 }
 
+// A failed removal of the waiting copy is the same recovery under the
+// rewakefault tag, in TestReportFailureRecoveryAfterAFailedRemoval.
 func TestReportFailureRecovery(t *testing.T) {
-	for _, fault := range []string{"status", "removal", "archive"} {
+	for _, fault := range []string{"status", "archive"} {
 		t.Run(fault, func(t *testing.T) {
 			s, m, calls := reportFailureFixture(t)
 			var unblock func()
 			switch fault {
 			case "status":
 				unblock = failStatusWrites(t, s.Dir, s.Name, m.ID)
-			case "removal":
-				original := removeWaiting
-				removeWaiting = func(string) error { return os.ErrPermission }
-				t.Cleanup(func() { removeWaiting = original })
-				unblock = func() { removeWaiting = original }
 			case "archive":
 				if err := os.WriteFile(state.DonePath(s.Dir, s.Name), nil, 0o600); err != nil {
 					t.Fatal(err)

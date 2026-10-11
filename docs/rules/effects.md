@@ -77,7 +77,7 @@ nothing lifts a stop without returning evidence.
   - `internal/core/mail/publication_bounds_test.go` `TestTwoMailboxesPublishingToEachOtherDoNotDeadlock`
   - `internal/core/mail/publication_bounds_test.go` `TestAReportToItselfIsPublishedInsideItsOwnLock`
   - `internal/core/mail/publication_bounds_test.go` `TestAPublicationReadsTheRunWithoutCleaningUp`
-  - `internal/core/mail/settle_lock_test.go` `TestSettlingWaitsForALockTheServerHolds`
+  - `internal/core/mail/settle_listing_test.go` `TestSettlingWaitsForALockTheServerHolds`
   - `internal/core/mail/settle_lock_test.go` `TestADeferredSettlementGetsAnotherPass`
   - `internal/core/mail/settle_recorded_test.go` `TestARestartSettlesALateRefusalLeftUnread`
   - `internal/core/mail/settle_recorded_test.go` `TestASettlingCutShortIsSettledOnceItCan`

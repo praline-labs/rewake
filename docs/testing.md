@@ -41,8 +41,8 @@ schedule must cross a package boundary and neither an exported operation, a file
 fixture nor `state.Fault` can build it, the package that owns the step may carry exported
 test operations in a file built only under `rewakefault`, and the tests in the other
 package that use them carry the same tag. They run in the `rewakefault,rewakefixture`
-race run; an untagged build has no such operation. The only such file is decided by S15
-for `core/mail` and named there ([stage3-moves.md](v2/stage3-moves.md#s15-the-delivery-server-to-hostdelivery-codex)):
+race run; an untagged build has no such operation. The only such file is
+`internal/core/mail/faultops.go`, decided by S15 for `core/mail` ([stage3-moves.md](v2/stage3-moves.md#s15-the-delivery-server-to-hostdelivery-codex)):
 a waiting copy's removal that fails, and the listing of a mailbox's stops observed.
 
 ### Three columns, three meanings
