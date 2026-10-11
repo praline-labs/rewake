@@ -39,7 +39,7 @@ func endTurn(t *testing.T, end boundaryEnd) (string, error) {
 	}
 	event := mail.TurnEnd{Text: end.text, Failed: end.failed, Ended: boottime.Now()}
 	event.Started, _ = mail.LatestTurnStart(dir, self.Name, self.Epoch())
-	return endTurnContext(context.Background(), dir, self, event, end.holdable, end.thread)
+	return endTurnContext(context.Background(), dir, self, event, end.holdable, end.thread, TurnEndOptions{BeforeReports: beforeReports})
 }
 
 // mustEndTurn ends the turn as endTurn does, for a test that only needs the

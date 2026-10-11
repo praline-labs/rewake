@@ -16,19 +16,26 @@ import (
 // core.
 
 func completeTurn(dir string, self registry.Session, event mail.TurnEnd, currentThread string) error {
-	return completeTurnContext(context.Background(), dir, self, event, currentThread)
+	return completeTurnContext(context.Background(), dir, self, event, currentThread, TurnEndOptions{BeforeReports: beforeReports})
 }
 
-func completeTurnContext(parent context.Context, dir string, self registry.Session, event mail.TurnEnd, currentThread string) error {
-	_, err := endTurnContext(parent, dir, self, event, false, currentThread)
+func completeTurnContext(parent context.Context, dir string, self registry.Session, event mail.TurnEnd, currentThread string, options TurnEndOptions) error {
+	_, err := endTurnContext(parent, dir, self, event, false, currentThread, options)
 	return err
+}
+
+// TurnEndOptions is what a caller adds to a turn end beyond the end itself.
+type TurnEndOptions struct {
+	// BeforeReports runs between reading the waiters and reporting to them;
+	// nil does nothing. A test widens that window through it.
+	BeforeReports func()
 }
 
 // endTurnContext publishes a turn end, or holds it for the session to confirm
 // (turn_hold.go): then it publishes nothing and answers the reason to hand
 // the model. holdable says the end may be held at all, which only the
 // harness that reported it can say.
-func endTurnContext(parent context.Context, dir string, self registry.Session, event mail.TurnEnd, holdable bool, currentThread string) (string, error) {
+func endTurnContext(parent context.Context, dir string, self registry.Session, event mail.TurnEnd, holdable bool, currentThread string, options TurnEndOptions) (string, error) {
 	if !registry.OwnsName(dir, self.Name, self.Epoch()) {
 		return "", nil
 	}
@@ -85,7 +92,9 @@ func endTurnContext(parent context.Context, dir string, self registry.Session, e
 		if reason = holdTurn(dir, self, event, op, holdable, waiters, mark != nil); reason != "" {
 			return nil
 		}
-		beforeReports()
+		if options.BeforeReports != nil {
+			options.BeforeReports()
+		}
 		return publishTurnContext(ctx, dir, self, event, currentThread, waiters, op, mark)
 	})
 	return reason, err
@@ -114,6 +123,6 @@ func turnMark(dir string, self registry.Session, event mail.TurnEnd) (*mail.Mark
 // could not report stays owed until the next turn ends.
 const turnEndLockWait = 5 * time.Second
 
-// beforeReports runs between reading the waiters and reporting to them. It
-// does nothing; a test widens that window through it.
+// beforeReports is the BeforeReports every turn end of cli passes. It does
+// nothing; a test widens that window through it.
 var beforeReports = func() {}
