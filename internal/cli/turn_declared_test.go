@@ -12,7 +12,7 @@ import (
 )
 
 // unproven is the answer of an attempt that cannot show it runs in its mark's
-// turn (pending.go, VerdictUnproven).
+// turn (pending.go, mail.VerdictUnproven).
 const unproven = "not marked: this call cannot show it runs in the turn the mark was for"
 
 // eachDeclaration runs a test on a transport that declares its turn ids are
@@ -30,25 +30,25 @@ func eachDeclaration(t *testing.T, test func(t *testing.T, reused bool)) {
 }
 
 // An attempt that is neither the first nor shown to run in its operation's
-// turn is VerdictUnproven; the first attempt, and one in its own turn, mark.
+// turn is mail.VerdictUnproven; the first attempt, and one in its own turn, mark.
 func TestAnAttemptNotProvenInItsTurnIsMarkUnproven(t *testing.T) {
 	dir, self, _ := toolSession(t)
 	at := markAt
 	for _, test := range []struct {
 		scope mail.AttemptScope
-		want  MarkVerdict
+		want  mail.MarkVerdict
 	}{
-		{mail.AttemptScope{}, VerdictUnproven},
-		{mail.AttemptScope{First: true}, VerdictWrite},
-		{mail.AttemptScope{InOwnTurn: true}, VerdictWrite},
+		{mail.AttemptScope{}, mail.VerdictUnproven},
+		{mail.AttemptScope{First: true}, mail.VerdictWrite},
+		{mail.AttemptScope{InOwnTurn: true}, mail.VerdictWrite},
 	} {
-		got, err := JudgeMark(dir, self, self.Epoch(), "mark-file", at, test.scope, 0)
+		got, err := mail.JudgeMark(dir, self, self.Epoch(), "mark-file", at, test.scope, 0)
 		if err != nil || got != test.want {
 			t.Fatalf("%+v: %v %v, want %v", test.scope, got, err, test.want)
 		}
 	}
 	// A later start proves the turn ended, whoever asks.
-	if got, _ := JudgeMark(dir, self, self.Epoch(), "mark-file", at, mail.AttemptScope{}, at+1); got != VerdictTurnEnded {
+	if got, _ := mail.JudgeMark(dir, self, self.Epoch(), "mark-file", at, mail.AttemptScope{}, at+1); got != mail.VerdictTurnEnded {
 		t.Fatalf("a later start: %v", got)
 	}
 }

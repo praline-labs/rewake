@@ -1,7 +1,6 @@
-package cli
+package mail
 
 import (
-	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
 )
 
@@ -27,15 +26,15 @@ const (
 // where the attempt runs, and started is the latest turn start on record,
 // zero when none is. An error leaves the operation open: a mark or a journal
 // that cannot be read may be this turn's.
-func JudgeMark(dir string, self registry.Session, epoch, file string, at int64, scope mail.AttemptScope, started int64) (MarkVerdict, error) {
-	found, err := mail.MarkExists(dir, self.Name, epoch, file)
+func JudgeMark(dir string, self registry.Session, epoch, file string, at int64, scope AttemptScope, started int64) (MarkVerdict, error) {
+	found, err := MarkExists(dir, self.Name, epoch, file)
 	if err != nil {
 		return 0, err
 	}
 	if found {
 		return VerdictFound, nil
 	}
-	ended, err := mail.EndedSince(dir, self.Name, epoch, at)
+	ended, err := EndedSince(dir, self.Name, epoch, at)
 	if err != nil {
 		return 0, err
 	}

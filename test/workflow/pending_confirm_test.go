@@ -179,7 +179,7 @@ func playPendingConfirm(t *testing.T, c *Case, iso *Isolation, col column) []tel
 // at once, and a forgotten mark closes the task early.
 var mutantPendingUnconfirmed = mutation{
 	name:  "pending-unconfirmed",
-	file:  "internal/cli/turn_hold.go",
+	file:  "internal/core/mail/turn_hold.go",
 	edits: []edit{{"\tif !holdable || event.Failed || event.Stopped {\n", "\tif true || !holdable || event.Failed || event.Stopped {\n"}},
 }
 
@@ -187,7 +187,7 @@ var mutantPendingUnconfirmed = mutation{
 // which is what the harness's second Stop carries.
 var mutantConfirmAnswerDropped = mutation{
 	name:  "confirm-answer-dropped",
-	file:  "internal/cli/turn_reports.go",
+	file:  "internal/core/mail/turn_reports.go",
 	edits: []edit{{"\t\t\tevent.Text = joinTurnText(held.Text, event.Text)\n", "\t\t\tevent.Text = joinTurnText(\"\", event.Text)\n"}},
 }
 

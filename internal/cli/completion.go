@@ -17,7 +17,7 @@ func ReportCompletion(ctx context.Context, dir string, self registry.Session, en
 	if err := end.Check(); err != nil {
 		return fmt.Errorf("%w; report remains pending", err)
 	}
-	return CompleteTurn(ctx, dir, self, turnEndOf(end), end.Thread, TurnEndOptions{BeforeReports: beforeReports})
+	return mail.CompleteTurn(ctx, dir, self, turnEndOf(end), end.Thread, mail.TurnEndOptions{BeforeReports: beforeReports})
 }
 
 // ConfirmCompletion runs an end the adapter can hold open: it publishes it and
@@ -29,7 +29,7 @@ func ConfirmCompletion(ctx context.Context, dir string, self registry.Session, e
 	if err := end.Check(); err != nil {
 		return "", fmt.Errorf("%w; report remains pending", err)
 	}
-	return EndTurn(ctx, dir, self, turnEndOf(end), true, end.Thread, TurnEndOptions{BeforeReports: beforeReports})
+	return mail.EndTurn(ctx, dir, self, turnEndOf(end), true, end.Thread, mail.TurnEndOptions{BeforeReports: beforeReports})
 }
 
 // turnEndOf is the core's end for an adapter's: what the end reports follows

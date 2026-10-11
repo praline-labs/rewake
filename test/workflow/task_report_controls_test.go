@@ -47,7 +47,7 @@ const (
 // call a pass.
 var mutantSettlesNothing = mutation{
 	name:  "settles-nothing",
-	file:  "internal/cli/turn_reports.go",
+	file:  "internal/core/mail/turn_reports.go",
 	edits: []edit{{"InReplyTo: waiter.Messages,", "InReplyTo: nil,"}},
 }
 

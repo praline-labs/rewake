@@ -137,8 +137,8 @@ var mutantEndThreadIgnored = mutation{
 	name: "end-thread-ignored",
 	file: "internal/cli/completion.go",
 	edits: []edit{
-		{"return CompleteTurn(ctx, dir, self, turnEndOf(end), end.Thread, TurnEndOptions{BeforeReports: beforeReports})", "return CompleteTurn(ctx, dir, self, turnEndOf(end), \"\", TurnEndOptions{BeforeReports: beforeReports})"},
-		{"return EndTurn(ctx, dir, self, turnEndOf(end), true, end.Thread, TurnEndOptions{BeforeReports: beforeReports})", "return EndTurn(ctx, dir, self, turnEndOf(end), true, \"\", TurnEndOptions{BeforeReports: beforeReports})"},
+		{"return mail.CompleteTurn(ctx, dir, self, turnEndOf(end), end.Thread, mail.TurnEndOptions{BeforeReports: beforeReports})", "return mail.CompleteTurn(ctx, dir, self, turnEndOf(end), \"\", mail.TurnEndOptions{BeforeReports: beforeReports})"},
+		{"return mail.EndTurn(ctx, dir, self, turnEndOf(end), true, end.Thread, mail.TurnEndOptions{BeforeReports: beforeReports})", "return mail.EndTurn(ctx, dir, self, turnEndOf(end), true, \"\", mail.TurnEndOptions{BeforeReports: beforeReports})"},
 	},
 }
 

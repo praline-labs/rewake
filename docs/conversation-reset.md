@@ -147,8 +147,8 @@ The same on both harnesses unless said.
 
 - **Owed tasks stay owed.** They belong to the run, not the conversation. The next report
   settles them, marked `threadChanged` with the line "the reader's thread changed after
-  delivery" (`internal/core/mail/thread.go`, `internal/cli/turn_reports.go`). On Codex seen live
-  on 0.155.1 ([record](roadmap/2026-09-26-live-checks.md)); on Claude Code it passes the
+  delivery" (`internal/core/mail/thread.go`, `turn_reports.go`). On Codex seen live on
+  0.155.1 ([record](roadmap/2026-09-26-live-checks.md)); on Claude Code it passes the
   fixture case only (HF-10 in [harness-features.md](harness-features.md)). The model in
   the new conversation does not know the task, so that report answers other work.
 - **Grants.** A grant records the conversation it went into

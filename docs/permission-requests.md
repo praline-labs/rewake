@@ -237,7 +237,7 @@ reads as a task, so each of these decides it:
   the wait runs up to ten minutes, past the limit, so a main blocked on a question to this
   worker is told of the request: the wait ends with exit 3, printing the request and its
   command; the answer to the question still arrives as a report;
-- `internal/cli/turn_reports.go`, `completion.go`,
+- `internal/core/mail/turn_reports.go`, `internal/cli/completion.go`,
   `internal/harness/claude/telemetry/collector_turns.go` — a turn's outcome is never this
   kind; nothing to add;
 - `internal/harness/notice.go`, `claude/notice.go`, `codex/notice.go` — the notice line

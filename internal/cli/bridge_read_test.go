@@ -82,7 +82,7 @@ func TestAToolReadIsReadOnlyWhenEveryPartArrived(t *testing.T) {
 
 	shortened := whole(answers[0])
 	shortened.Shortened = true
-	if err := AcknowledgeRead(dir, "api", self.Epoch(), token, shortened, nil); !errors.Is(err, ErrNotWhole) {
+	if err := AcknowledgeRead(dir, "api", self.Epoch(), token, shortened, nil); !errors.Is(err, mail.ErrNotWhole) {
 		t.Fatalf("a shortened result acknowledged: %v", err)
 	}
 	for _, answer := range answers[:len(answers)-1] {

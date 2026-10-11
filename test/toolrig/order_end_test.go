@@ -49,7 +49,7 @@ func TestAnEndCapturedBeforeAnAcknowledgmentsCheckLeavesTheLetterUnread(t *testi
 		t.Fatal("the end captured no boundary")
 	}
 	held.free()
-	if err := <-acknowledged; !errors.Is(err, cli.ErrTurnEnded) {
+	if err := <-acknowledged; !errors.Is(err, mail.ErrTurnEnded) {
 		t.Fatalf("the acknowledgment after the end: %v", err)
 	}
 	if !r.unread(id) {
@@ -106,7 +106,7 @@ func TestAnEndOnRecordTheGateNeverHeardRefusesTheAcknowledgment(t *testing.T) {
 	if r.endpoint.Gate().Noted() != 0 {
 		t.Fatal("the end on record reached the endpoint's gate")
 	}
-	if err := r.complete(c, true); !errors.Is(err, cli.ErrTurnEnded) {
+	if err := r.complete(c, true); !errors.Is(err, mail.ErrTurnEnded) {
 		t.Fatalf("the acknowledgment after an end on record: %v", err)
 	}
 	if !r.unread(id) {

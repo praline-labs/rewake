@@ -162,7 +162,7 @@ func lineWith(text, part string) string {
 // The turn end ignores the mark: the first turn end is the report again.
 var mutantPendingIgnored = mutation{
 	name:  "pending-ignored",
-	file:  "internal/cli/turn_end.go",
+	file:  "internal/core/mail/turn_end.go",
 	edits: []edit{{"\tif event.Failed || event.Stopped || event.Ended == 0 {\n", "\tif true || event.Failed || event.Stopped || event.Ended == 0 {\n"}},
 }
 
@@ -170,7 +170,7 @@ var mutantPendingIgnored = mutation{
 // it reported to.
 var mutantPendingSettles = mutation{
 	name:  "pending-settles",
-	file:  "internal/cli/turn_reports.go",
+	file:  "internal/core/mail/turn_reports.go",
 	edits: []edit{{"\tif !event.Stopped && !pending {\n\t\tjournal.Clear = reported\n", "\tif !event.Stopped {\n\t\tjournal.Clear = reported\n"}},
 }
 
@@ -178,7 +178,7 @@ var mutantPendingSettles = mutation{
 // turn itself said is lost.
 var mutantPendingTextDropped = mutation{
 	name:  "pending-text-dropped",
-	file:  "internal/cli/turn_reports.go",
+	file:  "internal/core/mail/turn_reports.go",
 	edits: []edit{{"\t\t\ttext += \"\\n\\n\" + turn\n", "\t\t\t_ = turn\n"}},
 }
 

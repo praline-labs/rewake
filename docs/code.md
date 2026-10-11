@@ -16,7 +16,7 @@ internal/core/registry/                       session record, name publishing, l
 internal/core/registry/registrytest/          for tests: the boot a session of this build carries
 internal/infra/proc/                          /proc: identity, liveness, job-control state, lineage and namespaces
 internal/infra/boottime/                      the boot clock, comparable across processes and never set back
-internal/core/mail/                           message, status, sender-side write, servicing loop
+internal/core/mail/                           message, status, sender-side write, servicing loop, turn ends and the read's acknowledgment
 internal/core/receipt/                        the journal of mail operations run through the tool's words: keys, records, frozen reads
 internal/bridge/                              what the CLI and the context endpoint share: the ticket, result bounds, cutting parts
 internal/bridge/endpoint/                     the wrapper's context endpoint: hellos, tickets, completions, the gate against a turn's end, a transport's calls

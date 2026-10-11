@@ -184,7 +184,7 @@ func playStoppedRouting(t *testing.T, c *Case, iso *Isolation, col column) []tel
 // goes to main, as it did before the owner's decision.
 var mutantStoppedToMain = mutation{
 	name:  "stopped-to-main",
-	file:  "internal/cli/turn_reports.go",
+	file:  "internal/core/mail/turn_reports.go",
 	edits: []edit{{"\tif event.Failed && !event.Stopped && len(reports) == 0 {\n", "\tif (event.Failed || event.Stopped) && len(reports) == 0 {\n"}},
 }
 

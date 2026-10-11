@@ -1,4 +1,4 @@
-package cli
+package mail
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
@@ -17,7 +16,8 @@ import (
 // The read boundary. A part counts as shown only on evidence that the model
 // got the whole result carrying it; a letter is read once every part of its
 // version was. The wrapper's observer is what sees that evidence, and it calls
-// AcknowledgeRead: there is no command an agent could run to the same effect.
+// cli's AcknowledgeRead, which hands it to Acknowledge: there is no command an
+// agent could run to the same effect.
 
 // ErrNotWhole says the evidence does not prove a whole result: a truncated,
 // persisted or failed result, one returned inside a script, one over the
@@ -45,7 +45,7 @@ const ackBudget = 2 * time.Second
 // and 8). It is idempotent: an acknowledgment seen twice changes nothing the
 // second time, and a letter is marked once. A nil gate stands for a process
 // that captures no ends.
-func Acknowledge(dir, name, epoch, token string, evidence mail.ReadEvidence, gate mail.EndGate) error {
+func Acknowledge(dir, name, epoch, token string, evidence ReadEvidence, gate EndGate) error {
 	if !evidence.Whole {
 		return ErrNotWhole
 	}
@@ -81,10 +81,10 @@ func Acknowledge(dir, name, epoch, token string, evidence mail.ReadEvidence, gat
 	var ended bool
 	err = state.WithMailboxLock(budget, dir, name, func() error {
 		// The check: before the first write, the receipt's included.
-		if err := mail.MailboxStopped(dir, name); err != nil {
+		if err := MailboxStopped(dir, name); err != nil {
 			return err
 		}
-		onRecord, err := mail.EndedSince(dir, name, epoch, calledBoot)
+		onRecord, err := EndedSince(dir, name, epoch, calledBoot)
 		if err != nil {
 			return err
 		}
@@ -122,7 +122,7 @@ func Acknowledge(dir, name, epoch, token string, evidence mail.ReadEvidence, gat
 // the parts it carried, and the call's time: every entry of the call names the
 // digest of exactly the text in the result. An entry with no digest was
 // recorded by a build that kept none, and proves nothing.
-func answeredBy(batch *receipt.ReadBatch, evidence mail.ReadEvidence) (int64, bool) {
+func answeredBy(batch *receipt.ReadBatch, evidence ReadEvidence) (int64, bool) {
 	if evidence.AnswerDigest == "" {
 		return 0, false
 	}
@@ -167,7 +167,7 @@ func MarkWholeRead(dir string, self registry.Session, epoch string, batch *recei
 		if letter.Read || !letter.Complete() {
 			continue
 		}
-		if !mail.StillUnread(dir, self.Name, letter.ID) {
+		if !StillUnread(dir, self.Name, letter.ID) {
 			// Read already, through another call or the shell: a letter
 			// shown in part leaves unread/ only so. Marking the stored copy
 			// again would owe its report a second time once the first
@@ -175,11 +175,11 @@ func MarkWholeRead(dir string, self registry.Session, epoch string, batch *recei
 			letter.Read = true
 			continue
 		}
-		var message mail.Message
+		var message Message
 		if err := json.Unmarshal(letter.Message, &message); err != nil {
 			return fmt.Errorf("the read's copy of %s is not readable: %w", letter.ID, err)
 		}
-		if err := mail.MarkRead(dir, self.Name, epoch, message, reports); err != nil {
+		if err := MarkRead(dir, self.Name, epoch, message, reports); err != nil {
 			return err
 		}
 		letter.Read = true

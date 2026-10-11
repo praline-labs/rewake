@@ -11,9 +11,9 @@ that they are checked like the rest ([stage3-tests.md](../v2/stage3-tests.md#how
   that ends without a new mark, while its senders still run, is asked once before its
   end closes: the core keeps the answer and hands the session a reason to go on; the
   next end publishes that answer with its own, and every failure of the check falls to
-  publishing, the behaviour without it (`cli/turn_hold.go:13-24`; held by
+  publishing, the behaviour without it (`core/mail/turn_hold.go:12-23`; held by
   `cli/turn_hold_test.go:80,122,149` and `test/workflow/pending_confirm_test.go:25`, with
-  negative controls at 177 and 181). The mechanism is the adapter's TurnBoundary
+  negative controls at 180 and 188). The mechanism is the adapter's TurnBoundary
   ([design-api.md](../v2/design-api.md#turnboundary)): since S5 an adapter that can hold
   an end confirms it (`cli/completion.go`, `ConfirmCompletion`). An end held once is
   known by its event: confirmed again, it gets the same reason and nothing is published

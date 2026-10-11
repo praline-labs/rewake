@@ -80,7 +80,7 @@ func handlePending(ctx *Context, call Call) error {
 	defer cancel()
 	var waiting []string
 	var late error
-	verdict := VerdictWrite
+	verdict := mail.VerdictWrite
 	err = state.WithMailboxLock(lockCtx, dir, self.Name, func() error {
 		// Under the lock, just before the mark: the wait for it may have
 		// outlasted the call.
@@ -115,7 +115,7 @@ func handlePending(ctx *Context, call Call) error {
 		if err != nil {
 			return fmt.Errorf("the latest start of this turn cannot be read, so the mark cannot be tied to its turn: %w", err)
 		}
-		if verdict, err = JudgeMark(dir, self, epoch, file, at, attemptScope(ctx, ctx.op), started); err != nil || verdict != VerdictWrite {
+		if verdict, err = mail.JudgeMark(dir, self, epoch, file, at, attemptScope(ctx, ctx.op), started); err != nil || verdict != mail.VerdictWrite {
 			return err
 		}
 		if len(waiting) == 0 {
@@ -127,9 +127,9 @@ func handlePending(ctx *Context, call Call) error {
 		return late
 	}
 	switch verdict {
-	case VerdictTurnEnded:
+	case mail.VerdictTurnEnded:
 		return failf("not marked: the turn ended first, so its end reported without this mark")
-	case VerdictUnproven:
+	case mail.VerdictUnproven:
 		return failf("not marked: this call cannot show it runs in the turn the mark was for, and a mark is never written for another turn")
 	}
 	if err != nil && ctx.op != nil {
@@ -138,7 +138,7 @@ func handlePending(ctx *Context, call Call) error {
 	if err != nil {
 		return failf("could not mark the turn pending: %v", err)
 	}
-	if len(waiting) == 0 && verdict != VerdictFound {
+	if len(waiting) == 0 && verdict != mail.VerdictFound {
 		return &UsageError{Command: call.Command, Message: "nothing is owed a report, so there is nothing to keep open; end the turn as usual."}
 	}
 	if ctx.op != nil {

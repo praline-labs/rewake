@@ -172,7 +172,7 @@ fall back to main, and main's own interruption puts nothing into its own inbox. 
 interrupting a turn no rewake task depends on is their own business, and the session
 turning idle says all there is to say — the owner's decision of
 September 23, 2026, the same for every adapter, since the routing
-(`internal/cli/turn_reports.go`) is shared. A waiter whose session has ended, or runs
+(`internal/core/mail/turn_reports.go`) is shared. A waiter whose session has ended, or runs
 under another epoch, is no waiter any more: a `stopped` meant only for it is dropped too,
 where it used to go to main. Its journal is kept all the same, so a repeated event
 publishes nothing either.

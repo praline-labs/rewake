@@ -163,7 +163,7 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
     whose turn ids are proven never reused. No absence proves the turn still open —
     of a later turn's start, of an end. An attempt that cannot prove it does not mark:
     the outcome is **unproven**, the mark is finished as not made, and the answer says
-    why (`cli/pending_turn.go:7-22`, `inOwnTurn`; `cli/pending_mark.go:47`,
+    why (`cli/pending_turn.go:7-22`, `inOwnTurn`; `core/mail/pending_mark.go:46`,
     `VerdictUnproven`). This binds the shell, `retry` and every tool transport alike:
     a `retry` from a later turn never writes an earlier turn's mark. Until an adapter
     proves its turn ids are never reused — on Claude Code across an interrupt, a

@@ -27,17 +27,17 @@ recovered, record by record, is [turn-end-recovery.md](turn-end-recovery.md), an
 section is the path through the code.
 
 A turn end is one operation, named by its cause: a hash of the run, the event's id, its
-kind and its start and end on the boot clock (`turnOp` in `internal/cli/turn_reports.go`).
-Its scope is fixed by what the event carries. An end that names an event carries a read
-boundary, a position on the run's read clock (`internal/core/mail/read_boundary.go`): what
-was read or kept at or below it is this end's, and a task read or an answer kept above
-it belongs to a later end, however late a retry comes. An end that names an event and
-carries no boundary reports nothing, on any attempt, and its waits stay owed. An end
-heard once — one that names no event — has no retry, and its one attempt under the
-lock is its scope. The pending mark that makes the end interim is found in the turn's
-window: from the later of the turn's start and the latest earlier end of the run a
-journal records (`TurnWindowStart`), to its end. No end removes a mark: marks stay for
-the run's life ([turn-outcomes.md](turn-outcomes.md)).
+kind and its start and end on the boot clock (`turnOp` in
+`internal/core/mail/turn_reports.go`). Its scope is fixed by what the event carries. An
+end that names an event carries a read boundary, a position on the run's read clock
+(`internal/core/mail/read_boundary.go`): what was read or kept at or below it is this
+end's, and a task read or an answer kept above it belongs to a later end, however late a
+retry comes. An end that names an event and carries no boundary reports nothing, on any
+attempt, and its waits stay owed. An end heard once — one that names no event — has no
+retry, and its one attempt under the lock is its scope. The pending mark that makes the
+end interim is found in the turn's window: from the later of the turn's start and the
+latest earlier end of the run a journal records (`TurnWindowStart`), to its end. No end
+removes a mark: marks stay for the run's life ([turn-outcomes.md](turn-outcomes.md)).
 
 The journal, `journal/<op>` (`internal/core/mail/journal.go`), is written before the first
 effect and is the one source of what the end does, and nothing but a journal publishes:
