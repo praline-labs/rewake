@@ -30,6 +30,12 @@ func roleText(c Context) string {
 			lines = append(lines, "- "+line)
 		}
 	}
+	if len(c.Harness.Lines) > 0 {
+		lines = append(lines, "", c.Harness.Title)
+		for _, line := range c.Harness.Lines {
+			lines = append(lines, "- "+line)
+		}
+	}
 	lines = append(lines, "", transport(c.Tool))
 	lines = append(lines, "Run rewake guide for the complete rules, including this list.")
 	return strings.Join(lines, "\n")

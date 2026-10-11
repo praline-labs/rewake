@@ -17,6 +17,11 @@ type Context struct {
 	// launch sets it yet; S11 derives it from the live tool capability when
 	// it builds the briefing.
 	Tool bool
+	// Harness is what the session's own harness adds: the sentences the
+	// role texts need about it — how it commits, how a grant behaves on it —
+	// which the role texts, naming no harness, leave to its adapter
+	// (docs/v2/design-api.md#launch). Empty adds nothing.
+	Harness role.Section
 }
 
 // Intro renders the independent system briefing of the selected role.

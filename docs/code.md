@@ -77,6 +77,14 @@ the harness's own configuration, which no task may grant a session to write
 the directories it keeps inside one. `Version` is the gate the host reads before the
 claim, and `EnvNotInherited` the variables the host leaves out of `LaunchRequest.Env`.
 
+The role texts and the CLI's help name no harness. A help text that needs one takes it
+from the catalogue it was built from (`internal/cli/registry_words.go`): which harnesses
+lack a grant, the metadata names a grant refuses, a launch to show. A briefing that
+needs a sentence about its own harness — how a session on it commits — gets it from the
+adapter that builds it, as `brief.Context.Harness`, a section after the role's own; the
+Claude Code adapter tells a role that may commit that it does so within its own
+permissions.
+
 What an adapter offers beyond Launch is a value, `Offers()` (`internal/adapter/offer.go`),
 known before any launch: whether it wakes a session, the tool transport it carries,
 whether it reports turn ends and can hold one, whether it collects telemetry, which

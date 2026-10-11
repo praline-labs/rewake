@@ -8,6 +8,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/brief"
+	"github.com/praline-labs/rewake/internal/role"
 )
 
 // ID is the launch command and the harness field of a session record.
@@ -196,7 +197,7 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 		reply = ""
 	}
 	if request.Intro && !adapter.HasFlag(args, introFlag) {
-		args = adapter.AddFlags(args, introFlag, brief.Intro(request.BriefContext()))
+		args = adapter.AddFlags(args, introFlag, brief.Intro(briefContext(request)))
 	}
 	if len(adapter.FlagValues(args, toolFlag, toolFlagKebab)) == 0 {
 		args = adapter.AddFlags(args, toolFlag, "Bash(rewake:*)")
@@ -228,4 +229,17 @@ func flagValue(args []string, flag string) string {
 		}
 	}
 	return ""
+}
+
+// briefContext is the request's briefing with what the role texts leave to
+// the harness: a session that may commit does so within its own permissions,
+// since Claude Code takes no --grant-git.
+func briefContext(request adapter.LaunchRequest) brief.Context {
+	context := request.BriefContext()
+	if request.Role.GitWrite {
+		context.Harness = role.Section{Title: "ON CLAUDE CODE", Lines: []string{
+			"Claude Code takes no --grant-git: you commit within your own permissions, as the owner set them.",
+		}}
+	}
+	return context
 }
