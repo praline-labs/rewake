@@ -45,6 +45,9 @@ func TestMain(m *testing.M) {
 	if os.Getenv(controlEnv) != "" {
 		os.Exit(runProgram(os.Args[1:]))
 	}
+	if os.Getenv(relayEnv) != "" {
+		os.Exit(runRelay(os.Args[1:]))
+	}
 	dir, err := os.MkdirTemp("", "toolrig")
 	if err != nil {
 		panic(err)

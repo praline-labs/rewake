@@ -41,7 +41,7 @@ scripts/                                      packaging scripts and the tests of
 docs/                                         the documentation, and the tests that keep it true to the tree
 test/workflow/                                the workflow suite: end-to-end scenarios against fixtures
 test/workflow/record/                         the record format a suite run prints and the summarizer reads
-test/toolrig/                                 the neutral rig: the tool path's oracles on the fixture's program and the host endpoint
+test/toolrig/                                 the neutral rig: the tool path's oracles on the fixture's program and the host endpoint; the delivery server against the fixture's reservation, the test playing the program
 tools/checksummary/                           summarizes a suite run into a few lines and summary.json
 tools/release/                                the release gate: checks, builds with pack.sh, publishes only when told
 ```
