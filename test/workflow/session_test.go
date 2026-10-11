@@ -101,6 +101,26 @@ func startSessionWith(t *testing.T, c *Case, iso *Isolation, harness, name, role
 // home, for a scenario about where a launch works.
 func startSessionIn(t *testing.T, c *Case, iso *Isolation, dir, harness, name, role string, flags, harnessArgs []string, controls ...string) *scenarioSession {
 	t.Helper()
+	session, launch := sessionLaunch(t, c, iso, dir, harness, name, role, flags, harnessArgs, controls...)
+	// Not marked as an expected failure: the shim is *asked* to stop and
+	// exits cleanly, so anything else is a real failure of the session and has
+	// to reach the verdict. The earlier blanket "failure expected" here hid an
+	// exit code of 42 completely.
+	release := c.captureStderr(launch, iso.Home, name)
+	process, err := c.start(launch, false)
+	release()
+	if err != nil {
+		t.Fatalf("launching the session: %v", err)
+	}
+	session.home = iso.Home
+	session.process = process
+	return session
+}
+
+// sessionLaunch is the session a launch will make and the command that
+// makes it, not yet started.
+func sessionLaunch(t *testing.T, c *Case, iso *Isolation, dir, harness, name, role string, flags, harnessArgs []string, controls ...string) (*scenarioSession, *exec.Cmd) {
+	t.Helper()
 	installShim(t, c, iso)
 	// rewake appends the harness to the requested name.
 	session := &scenarioSession{
@@ -138,19 +158,7 @@ func startSessionIn(t *testing.T, c *Case, iso *Isolation, dir, harness, name, r
 		shimTurnsFile+"="+session.turns, shimDeliveredFile+"="+session.delivered,
 		shimGroupsFile+"="+session.groups, shimReadsFile+"="+session.reads,
 		shimSendsFile+"="+session.sends)
-	// Not marked as an expected failure: the shim is *asked* to stop and
-	// exits cleanly, so anything else is a real failure of the session and has
-	// to reach the verdict. The earlier blanket "failure expected" here hid an
-	// exit code of 42 completely.
-	release := c.captureStderr(launch, iso.Home, name)
-	process, err := c.start(launch, false)
-	release()
-	if err != nil {
-		t.Fatalf("launching the session: %v", err)
-	}
-	session.home = iso.Home
-	session.process = process
-	return session
+	return session, launch
 }
 
 // stop asks the session to end the way a person would, and waits for it. A

@@ -282,15 +282,46 @@ it besides; an interrupt must be refused as `no turn running`; calm killed in th
 of a second compaction must still leave main a letter, from its own wrapper's record.
 busy is held in its first turn: a compaction must be refused as `in a turn` with the turn
 going on; an interrupt must end it, and main must read `stopped` naming itself, as its
-`--awaited` does. bare serves no control: every request must be `not answering`. A
-worker asking is a wrong call. Its six mutants each break one link of the core's path and
-name what they break: a request nobody took reported as failed (`silent-not-answering`),
+`--awaited` does. bare serves no control, so its run never makes Control live: every
+request must be refused, exit 1, before anything is asked (S11). A worker asking is a
+wrong call. Its six mutants each break one link of the core's path and name what they
+break: a request sent whatever the live set says (`steers-unlive`; until S11
+`silent-not-answering`, a request nobody took reported as failed, which no run reaches
+since a run without Control is refused first),
 any role steering (`any-role-steers`), main noticed of its own compaction
 (`own-compaction-announced`), a letter without the count (`letter-uncounted`), a letter
 lost with its worker (`orphan-unlettered`), and every stop put down to a person
 (`stop-by-a-person`). The eight mutants of `claude-steered` that broke the plugin's
 module left with it. What it does not prove: that a real harness carries these calls out
 as the program does.
+
+## The live set and the channel
+
+`fixture-live` (S11, October 11, 2026) runs six fixture sessions under one main, each
+withholding what its program's switch says, and judges what main's `rewake list --json`
+and the commands show. full proves everything: its record's live set names every
+capability, its channel shows the tool connected, its briefing carries the whole
+transport sentence, and once stopped its last snapshot keeps the channel record frozen at
+the exit. wakeless (`RW_SHIM_NO_WAKE`) has no Wake live: a letter to it is accepted at
+once, exit 3, saying no notice can reach it. toolless (`RW_SHIM_NO_TOOL`) shows no tool
+with its reason, says so on its standard error at launch, carries the shell's clause
+alone in its briefing, and its shell read lands in its record. dropper
+(`RW_SHIM_DROP_AFTER=1`) closes its connection after its first turn: its whole live set
+is withdrawn at once, its channel shows the tool failing with the server gone, and a
+second task to it fails, exit 1, with nothing written. denied makes one call its harness
+refuses for permission (a call marked `denied` in `RW_SHIM_TOOL_CALLS`, the program's
+`tool-denied` frame): its channel shows the tool denied by policy. stuck
+(`RW_SHIM_NO_BOUNDARY`) is a worker whose run proves no turn boundary: its launch is
+refused, exit 1, and leaves no session. The steering refusal without a live Control is
+`fixture-steered`'s bare. Its nine mutants each break one decision by the live set or
+one transition of the channel keeper: a letter waiting for a delivery nothing makes
+(`send-unwoken`), a task sent whatever the boundary's mark says (`task-unbounded`), a
+worker's launch that does not wait (`launch-unawaited`), a lost connection kept in the
+record (`lost-kept`), an unproven tool left waiting in the record (`no-tool-unrecorded`),
+a denial reaching nothing (`denial-dropped`), the shell's observations never folded
+(`shell-unread`), the record not frozen at the exit (`exit-unfrozen`), and a briefing
+built as if no tool were live (`brief-toolless`). What it does not prove: that a real
+harness proves or loses a capability as the program does.
 
 ## Every control
 
@@ -313,7 +344,7 @@ switches have no single form in the code to find them by, and the row is kept by
 | owed-reread | `owed-empty` | — |
 | thread-changed | `delivery-unpinned`, `end-thread-ignored`, `thread-always-changed` | — |
 | awaited-view | `awaited-interim-ignored`, `awaited-never-settled` | — |
-| fixture-steered | `silent-not-answering`, `any-role-steers`, `own-compaction-announced`, `letter-uncounted`, `orphan-unlettered`, `stop-by-a-person` | — |
+| fixture-steered | `steers-unlive`, `any-role-steers`, `own-compaction-announced`, `letter-uncounted`, `orphan-unlettered`, `stop-by-a-person` | — |
 | stopped-routing | `stopped-to-main` | — |
 | turn-reasons | `reason-dropped`, `failure-completed`, `stop-completed` | — |
 | tool-inbox | `tool-inbox-unshown`, `tool-read-unacknowledged` | — |
@@ -330,3 +361,4 @@ switches have no single form in the code to find them by, and the row is kept by
 | fixture-worktree | `worktree-not-entered`, `worktree-running-ignored`, `worktree-visitor-ignored`, `worktree-git-kept`, `worktree-ignored-unseen`, `worktree-branch-trusted`, `worktree-moved-unrefused`, `worktree-detached`, `worktree-land-merges`, `worktree-finish-unchecked`, `worktree-finish-branch-kept` | — |
 | fixture-grant-dir | `grant-not-rechecked`, `grant-refusal-untold`, `grant-unregistered`, `grant-held-after-report` | `RW_SHIM_HOLD_RESERVE` |
 | fixture-grant-forgery | `grant-from-anywhere`, `grant-unconfirmed`, `grant-any-listener` | — |
+| fixture-live | `send-unwoken`, `task-unbounded`, `launch-unawaited`, `lost-kept`, `no-tool-unrecorded`, `denial-dropped`, `shell-unread`, `exit-unfrozen`, `brief-toolless` | `RW_SHIM_NO_WAKE`, `RW_SHIM_NO_TOOL`, `RW_SHIM_DROP_AFTER`, `RW_SHIM_NO_BOUNDARY` |

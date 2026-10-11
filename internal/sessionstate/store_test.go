@@ -76,3 +76,26 @@ func TestTelemetryStorageFailureDoesNotStopCollection(t *testing.T) {
 		t.Fatal("failed persistence invented measurements")
 	}
 }
+
+// The stop publishes what the source holds then, so a run's last change — a
+// channel record frozen at its exit — is what stays, whenever the last tick
+// came.
+func TestTheStopPublishesTheLastWord(t *testing.T) {
+	dir := privateDir(t)
+	var compactions atomic.Uint64
+	stop := Start(context.Background(), dir, "worker", "epoch", func() Snapshot {
+		snapshot := Unknown("epoch")
+		count := compactions.Load()
+		snapshot.Compactions = &count
+		return snapshot
+	})
+	deadline := time.Now().Add(time.Second)
+	for Load(dir, "worker", "epoch").Compactions == nil && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	compactions.Store(7)
+	stop()
+	if got := Load(dir, "worker", "epoch").Compactions; got == nil || *got != 7 {
+		t.Fatalf("the snapshot that stayed counts %v, want the source's 7 at the stop", got)
+	}
+}

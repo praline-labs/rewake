@@ -28,7 +28,8 @@ import (
 //   - busy is held in its first turn: a compaction is refused as in a turn and
 //     the turn goes on; an interrupt ends it, and main reads stopped naming
 //     itself, as its list of what it is owed does.
-//   - bare serves no control: every request is not answering.
+//   - bare serves no control, so its run never makes Control live: every
+//     request is refused before anything is asked, exit 1.
 //
 // And a worker asking is a wrong call.
 //
@@ -61,7 +62,7 @@ const (
 	obsCompactQuiet   = "main's own compaction: the telemetry counts it, and main gets no compaction notice of it"
 	obsInterruptIdle  = "main interrupts an idle worker: refused as no turn running"
 	obsCompactOrphan  = "a worker killed in the middle of a compaction main asked for: main still gets one letter of it"
-	obsNotAnswering   = "a request to a worker whose control nobody serves is refused as not answering"
+	obsNotAnswering   = "a request to a worker whose run has no live Control is refused, exit 1, with nothing asked"
 	obsNotMain        = "a worker that is not main asking for a compaction is a wrong call"
 	steeredTask       = "fixture-steered: work the long task"
 	steeredFocus      = "keep the plan"
@@ -102,10 +103,10 @@ func playSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 	}
 	var out []telemetryFinding
 
-	// While the two work: nothing serves bare's directory, so the request
-	// waits out the pickup limit and is withdrawn.
+	// While the two work: bare's run proved no Control, so the command asks
+	// nothing and says so.
 	code, view, said := steer("compact", bare.name)
-	out = append(out, finding(obsNotAnswering, code == 1 && view.Outcome == "refused" && view.Reason == "not answering", "%s", said))
+	out = append(out, finding(obsNotAnswering, code == 1 && view.Outcome == "" && strings.Contains(said, "control is not live") && strings.Contains(said, "nothing was asked"), "%s", said))
 
 	tasks := map[*scenarioSession]string{}
 	if !waitFor(c, 20*time.Second, func() bool {

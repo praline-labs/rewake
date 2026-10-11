@@ -126,6 +126,7 @@ Tests:
 - `internal/adapter/fixture/live_test.go` `TestTheFirstReportLeavesOutWhatTheExchangeDidNotProve`
 - `internal/adapter/fixture/live_test.go` `TestTheBriefingFollowsTheLiveTool`
 - `internal/adapter/fixture/live_test.go` `TestControlIsCarriedOnlyWhileLive`
+- `test/workflow/fixture_live_test.go` `TestFixtureLive`
 
 ## Grants
 

@@ -16,11 +16,22 @@ harness: its events are a hello, a close, a refused hello, a validated ticket, t
 passing, a denial, a shell observation and the exit. What only one harness told it — a
 Claude Code session start, a call no hook observed, a Codex conversation selected or
 bound, a server reporting its command cannot start — left with the 1.x adapter and the
-MCP injection ([archive/1.x/codex](../archive/1.x/codex/README.md)). No launch starts
-the keeper until S11 wires it to the live set and the shell's evidence, on the neutral
-inputs S10 defines ([stage3-steps-adapters.md](v2/stage3-steps-adapters.md#s11-the-host-on-the-live-set-codex)):
-until then every run shows `mail: unknown`, and the text below is the record that keeper
-will keep.
+MCP injection ([archive/1.x/codex](../archive/1.x/codex/README.md)).
+
+**The keeper runs again since S11, October 11, 2026**
+([stage3-steps-adapters.md](v2/stage3-steps-adapters.md#s11-the-host-on-the-live-set-codex)),
+for every run whose adapter offers a tool transport. The record is begun when the plan
+is attached: the tool offered when the plan carries a transport and the tools, no tool
+with its reason when it does not. Its inputs are the endpoint's hello and close, the
+shell's observations taken at each heartbeat, and a call the harness denied for
+permission (`ToolInput.CallDenied`, the fixture's `tool-denied`); the harness's exit
+freezes it, and the run's session state publishes it once more as it stops, so the
+frozen record is the one that stays. A tool the readiness exchange did not make live
+turns the record to no tool, with "the harness did not make the mail tool live", and the
+launch says so on its standard error; that holds for the whole run, as for a run started
+without a tool — a later reconnect that makes the tool live serves its calls, but the
+record keeps no tool. A run whose adapter offers no transport keeps no record and shows
+`mail: unknown`.
 
 **The hello and the close are the tool transport's lifecycle since S10, October 11,
 2026.** No adapter has started a server since S8, so the endpoint's server hello, its
@@ -34,7 +45,8 @@ the model runs, posing as the harness's own process — with whether it came fro
 harness's tree. Where the text below says a server, read the transport that carries the
 calls; a restarted transport is a close and a new hello, as a restarted server was.
 The keeper's inputs are these events (`channel.Event`), the offered transport
-(`Offer.ToolTransport`) at its start, and from S11 the run's live set.
+(`Offer.ToolTransport`) at its start, and from S11 the run's live set after its readiness
+exchange: an offered tool the exchange did not prove is no tool.
 
 ## The rules
 

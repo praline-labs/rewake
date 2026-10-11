@@ -15,8 +15,10 @@ case, and the same day for Codex (part B), where the wrapper serves the requests
 and the Claude Code side — rewake's plugin module — left with the plugin in S9; stage 4
 gives Claude Code an adapter with its own control. Until then `rewake compact` and
 `rewake interrupt` refuse a Claude Code session with exit 2, saying it does not take
-them yet, and the fixture harness's program serves the run's control directory as the
-module did, so the commands, the directory and the letter keep their workflow case
+them yet, and the fixture harness's run serves the run's control directory as the module
+did — with `control.Serve`, carrying each request to its program over the readiness
+connection while Control is live (since S11; until then the program polled the directory
+itself) — so the commands, the directory and the letter keep their workflow case
 (`fixture-steered`, [testing-cases.md](testing-cases.md#a-stop-and-steering-a-session)).
 What follows about Claude Code is how the module served it in 1.x.
 
@@ -133,7 +135,7 @@ as `no control directory`. The id is 32 lowercase hex
 characters, and the served side refuses any other: it builds file names from it.
 
 The served side — in 1.x rewake's module in a Claude Code session, and in this build the
-fixture's program — can write files but not remove them, so the asker owns every removal
+fixture's run through `control.Serve` — can write files but not remove them, so the asker owns every removal
 (`internal/control`):
 
 1. Take the lock, and remove everything a dead asker or an expired request left.

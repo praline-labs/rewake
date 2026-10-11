@@ -94,8 +94,13 @@ grant reaching its wrapper). The CLI asks this value, through `Catalog.Offers(id
 it writes anything: a verb or a grant the target's adapter does not offer is refused
 there ([remote-control.md](remote-control.md), [grants.md](grants.md#who-can-grant)).
 That an adapter offers a capability says nothing of one run; what a run serves is its
-`LaunchPlan`, and what it made live in its exchange its `LiveReporter`
-(`internal/adapter/run.go`).
+`LaunchPlan`, and what it made live in its exchange it reports through `LiveReporter`
+(`internal/adapter/run.go`): the whole set once the exchange has run and again at every
+change, a lost capability at once. The host records each set in the session record
+(`registry.Session.Live`, written under the name's lock by `registry.Modify`), and every
+decision another session makes about the run reads it there — a send, a task or a
+question, a steer — never the offer (S11). A run whose plan carries no reporter has live
+what its plan carries, from its start.
 
 The plan carries one run's capabilities as interfaces the wrapper calls and never
 asserts on the adapter: `Service`, started before the harness and closed with it, a

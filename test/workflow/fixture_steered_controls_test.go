@@ -7,11 +7,11 @@ import "testing"
 // wrapper and its letters, main's awaited list — and the observations resting
 // on that link go with it.
 
-// A request nobody took is reported as a failure, not as not answering.
-var mutantSilentNotAnswering = mutation{
-	name:  "silent-not-answering",
-	file:  "internal/control/control.go",
-	edits: []edit{{"Outcome: Refused, Reason: NotAnswering, Detail: detail}", "Outcome: Failed, Detail: detail}"}},
+// A request is sent to a run whatever its live set says.
+var mutantSteersUnlive = mutation{
+	name:  "steers-unlive",
+	file:  "internal/cli/steer.go",
+	edits: []edit{{"if !session.HasLive(string(adapter.ControlCapability)) {", "if false && !session.HasLive(string(adapter.ControlCapability)) {"}},
 }
 
 // Any session may steer another.
@@ -67,8 +67,8 @@ func TestAnInterruptListedAsAPersonsStopFails(t *testing.T) {
 	runSteeredControl(t, mutantStopByAPerson, obsInterruptBusy)
 }
 
-func TestANotAnsweringReportedAsFailedFails(t *testing.T) {
-	runSteeredControl(t, mutantSilentNotAnswering, obsNotAnswering)
+func TestASteerWithoutALiveControlFails(t *testing.T) {
+	runSteeredControl(t, mutantSteersUnlive, obsNotAnswering)
 }
 
 func TestAWorkerThatSteersFails(t *testing.T) {

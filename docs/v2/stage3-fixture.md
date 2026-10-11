@@ -81,11 +81,21 @@ fails its probe; `RW_SHIM_DROP_AFTER=<turns>` closes the socket after that many 
 must refuse; `RW_SHIM_NO_HOLD` reports ends that cannot be held; from S7
 `RW_SHIM_REUSED_TURNS` withholds the declaration that turn ids are never reused.
 
+**What rides the connection besides.** After the first exchange's probes the adapter
+hands the program its briefing (`brief`), built for whether the tool came out live; a
+request from the run's control directory reaches the program as `control` while Control
+is live, served by the run with `control.Serve`; a call the program's harness denies for
+permission is its `tool-denied`. Since S11, October 11, 2026; until then the briefing and
+the control directory were flags (`--brief`, `--control`) and the program polled the
+directory itself. `RW_SHIM_BRIEF_FILE` makes the suite's program write the briefing it
+was handed.
+
 **Who reads liveness, when.** In S5 the adapter keeps the live set itself: `Start`
 returns once the exchange is done, `Deliver` answers a failed delivery without a live
-Wake, and no `Publish` happens without a live TurnBoundary. The host reads the live set
-only from S11, when the session record carries it and the host decides by it; S10
-expresses the same set as the capabilities the adapter makes live.
+Wake, and no `Publish` happens without a live TurnBoundary. Since S11 the host reads it
+too: the adapter reports the set after the exchange and at every change (`ReportLive`),
+the host records it in the session record and decides by it, and a worker's launch
+waits for its TurnBoundary up to the readiness bound.
 
 ## What each step can prove on the fixture
 

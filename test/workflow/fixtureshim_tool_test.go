@@ -54,6 +54,9 @@ type fixtureToolCall struct {
 	// AwaitRead is a scenario's choice of schedule: the turn goes on only
 	// once the read this call showed has committed, or toolAckBound passed.
 	AwaitRead bool `json:"awaitRead,omitempty"`
+	// Denied plays the harness refusing the call for permission: reported,
+	// then denied, and never sent to the endpoint.
+	Denied bool `json:"denied,omitempty"`
 }
 
 // fixtureToolRecord is what the turn log keeps of a call: what was asked,
@@ -138,7 +141,13 @@ func (s *fixtureSession) callTools(turn string, calls []fixtureToolCall) string 
 			}
 			arguments[name] = value
 		}
-		record := s.callTool(turn, turn+"-call-"+strconv.Itoa(i+1), call.Tool, arguments)
+		id := turn + "-call-" + strconv.Itoa(i+1)
+		var record fixtureToolRecord
+		if call.Denied {
+			record = s.denyTool(turn, id, call.Tool, arguments)
+		} else {
+			record = s.callTool(turn, id, call.Tool, arguments)
+		}
 		encoded, _ := json.Marshal(record)
 		s.recordTurnEvent(toolEventKind, turn, string(encoded))
 		text := record.answer()
@@ -192,6 +201,21 @@ func (s *fixtureSession) callTool(turn, id, tool string, arguments map[string]an
 	record.Texts, record.IsError = texts, isError
 	if answer, err := s.ask(fixtureFrame{Op: "tool-result", Call: id, Texts: texts, IsError: isError}, fixtureAskBound); err != nil || !answer.OK {
 		record.Error = "the result's report: " + refusal(answer, err)
+	}
+	return record
+}
+
+// denyTool reports a call and the harness's refusal of it for permission, as
+// a harness whose policy denied the tool does: the call never runs.
+func (s *fixtureSession) denyTool(turn, id, tool string, arguments map[string]any) fixtureToolRecord {
+	record := fixtureToolRecord{Call: id, Tool: tool, Arguments: arguments, Error: "denied by policy"}
+	encoded, _ := json.Marshal(arguments)
+	if answer, err := s.ask(fixtureFrame{Op: "tool-call", Call: id, Turn: turn, Tool: tool, Arguments: encoded}, fixtureAskBound); err != nil || !answer.OK {
+		record.Error = "the call's report: " + refusal(answer, err)
+		return record
+	}
+	if answer, err := s.ask(fixtureFrame{Op: "tool-denied", Call: id}, fixtureAskBound); err != nil || !answer.OK {
+		record.Error = "the denial's report: " + refusal(answer, err)
 	}
 	return record
 }
