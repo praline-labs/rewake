@@ -140,6 +140,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	tool := startMailTool(request, name, epoch)
 	defer tool.close()
 	live := newLiveSet(request.Dir, name, epoch)
+	defer live.stop()
 
 	launchRequest := adapter.LaunchRequest{
 		Name:       name,

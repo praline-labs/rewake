@@ -113,6 +113,14 @@ did not answer its pin, its grant held for this run and not taken into a resume 
 pinned when a later attempt finds the Wake live. A Wake withdrawn while a reservation is
 asked is the same case, so the promise `send` made is never broken by a failed letter.
 
+The live set reaches the record through a write that can fail like any other. A failed
+write is not taken for recorded: the wrapper tries once more at once, then again with a
+growing wait up to a second, until the record carries the set reported last or the run
+ends, and says on stderr that it is trying. Meanwhile the run's own view already follows
+the new set, so a letter it handles waits readable as above, and another session acts on
+the set before — a task sent to a boundary already lost is admitted and waits readable in
+the inbox, the window the retries keep to a second or two. A record that has become a later run's is never written; the retries stop there.
+
 Before publishing a question, `send` creates `answering/<question id>` in its
 own mailbox. A separate heartbeat writes the boot clock's reading into the mark every
 second throughout delivery, answer waiting and output, and never creates it again once

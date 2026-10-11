@@ -108,12 +108,16 @@ one without a live TurnBoundary fails, exit 1, nothing sent; a compaction or an 
 of one without a live Control fails, exit 1, nothing asked; a launch of a role that owes
 reports waits for its TurnBoundary up to the readiness bound and is refused after.
 Liveness never changes the run: a capability withdrawn and made live again leaves its
-epoch, name, role and grants as they were. Since S11.
+epoch, name, role and grants as they were. A set whose write fails is not taken for
+recorded: the run's own view takes it at once, and the record is written again, once at
+once and then with retries, until it lands or the run ends — never once the record has
+become a later run's. Since S11.
 
 Tests:
 - `internal/registry/live_test.go` `TestModifyChangesTheRecordAsItStands`
 - `internal/wrap/live_test.go` `TestTheLiveSetIsRecordedAndADropLeavesTheRun`
 - `internal/wrap/live_test.go` `TestTheLiveSetDoesNotWriteAnotherRunsRecord`
+- `internal/wrap/live_test.go` `TestAWithdrawalThatFailsToLandIsWrittenAgain`
 - `internal/wrap/live_test.go` `TestAReportingRoleWaitsForItsBoundary`
 - `internal/wrap/live_test.go` `TestABoundaryNeverReportedIsRefusedAtTheBound`
 - `internal/wrap/live_test.go` `TestARunThatReportsNoneHasItsPlanLive`

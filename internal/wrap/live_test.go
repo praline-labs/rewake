@@ -2,10 +2,12 @@ package wrap
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -14,6 +16,7 @@ import (
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/state"
 )
 
 // liveRun publishes a write session of this process with no live set yet.
@@ -248,5 +251,72 @@ func TestWithoutALiveWakeNothingIsReservedOrPinned(t *testing.T) {
 	}
 	if threadIfLive(nil, live) != nil {
 		t.Fatal("a run with no conversation got one")
+	}
+}
+
+// A withdrawal whose write fails is not taken for published: the record is
+// owed it and written again until it lands, so a reader stops admitting what
+// the run has lost. A record that has become another run's is never written.
+func TestAWithdrawalThatFailsToLandIsWrittenAgain(t *testing.T) {
+	dir, session := liveRun(t)
+	live := newLiveSet(dir, session.Name, session.Epoch())
+	t.Cleanup(live.stop)
+	both := []adapter.Capability{adapter.WakeCapability, adapter.TurnBoundaryCapability}
+	live.report(both)
+	previous := state.Fault
+	t.Cleanup(func() { state.Fault = previous })
+	var failing atomic.Int32
+	state.Fault = func(op, path string) error {
+		if op == state.OpWrite && path == state.SessionPath(dir, session.Name) && failing.Add(-1) >= 0 {
+			return errors.New("a transient write failure")
+		}
+		return nil
+	}
+	// One failure is written again at once: no moment with the old set.
+	failing.Store(1)
+	live.report([]adapter.Capability{adapter.WakeCapability})
+	if record := recordedLive(t, dir); !live.published() || !slices.Equal(record.Live, []string{"wake"}) {
+		t.Fatalf("one failed write: published %t, record %v", live.published(), record.Live)
+	}
+
+	// More are owed and retried.
+	failing.Store(3)
+	live.report(nil)
+	if live.has(adapter.TurnBoundaryCapability) {
+		t.Fatal("the run's own view kept what it lost")
+	}
+	if live.published() || !recordedLive(t, dir).HasLive(string(adapter.WakeCapability)) {
+		t.Fatalf("a withdrawal that did not land counted as published: %v", recordedLive(t, dir).Live)
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for !live.published() && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if record := recordedLive(t, dir); !live.published() || len(record.Live) != 0 {
+		t.Fatalf("the withdrawal never landed: published %t, record %v", live.published(), record.Live)
+	}
+
+	// Owed when a later run takes the name: the retry finds the record no
+	// longer this run's, gives up, and leaves the later run's set as it is.
+	failing.Store(1 << 20)
+	live.report(both)
+	live.writing.Lock()
+	state.Fault = previous
+	later := session
+	later.ServiceStart++
+	encoded, err := json.Marshal(later)
+	if err == nil {
+		err = state.WriteAtomic(state.SessionPath(dir, session.Name), encoded)
+	}
+	live.writing.Unlock()
+	if err != nil {
+		t.Fatal(err)
+	}
+	deadline = time.Now().Add(5 * time.Second)
+	for !live.published() && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if record := recordedLive(t, dir); !live.published() || len(record.Live) != 0 || record.Epoch() != later.Epoch() {
+		t.Fatalf("a retry after the name changed hands: given up %t, record %v of %s", live.published(), record.Live, record.Epoch())
 	}
 }

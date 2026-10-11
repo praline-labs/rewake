@@ -2,7 +2,9 @@ package wrap
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
 	"slices"
 	"sync"
 	"time"
@@ -32,8 +34,18 @@ type liveSet struct {
 	exchanged func([]adapter.Capability)
 
 	// writing orders the reports with their records: the run reports one
-	// at a time, and the record written last is the set reported last.
+	// at a time, and the record written last is the set reported last. What
+	// follows it until mu is written under it.
 	writing sync.Mutex
+	// owed says the record has yet to carry names, the set reported last:
+	// its write failed, and retrying writes it again until it lands.
+	owed     bool
+	names    []string
+	retrying bool
+	// done ends the retries with the run.
+	done     chan struct{}
+	stopOnce sync.Once
+
 	mu      sync.Mutex
 	set     []adapter.Capability
 	ready   bool
@@ -41,11 +53,24 @@ type liveSet struct {
 }
 
 func newLiveSet(dir, name, epoch string) *liveSet {
-	return &liveSet{dir: dir, name: name, epoch: epoch, changed: make(chan struct{})}
+	return &liveSet{dir: dir, name: name, epoch: epoch, changed: make(chan struct{}), done: make(chan struct{})}
 }
 
-// report records the whole live set. A record that cannot be written keeps
-// its last set, which a reader takes as it stands; the run goes on.
+// liveRetry is the first wait before a failed record is written again, and
+// liveRetryMax the longest: a withdrawal that has not landed lets other
+// sessions act on what the run no longer has, so it is tried again soon.
+const (
+	liveRetry    = 50 * time.Millisecond
+	liveRetryMax = time.Second
+)
+
+// report records the whole live set. The run's own view takes it at once,
+// so its own decisions — a notice through a Wake it lost — follow it. A
+// record that cannot be written is owed the set and written again until it
+// lands, a later report taking its place; until then a reader acts on the
+// set before, and what it sends meanwhile waits readable in the inbox, as a
+// letter to a run without a live Wake does. A record no longer this run's is
+// never written: a later run under the name keeps its own.
 func (l *liveSet) report(set []adapter.Capability) {
 	l.writing.Lock()
 	defer l.writing.Unlock()
@@ -53,7 +78,12 @@ func (l *liveSet) report(set []adapter.Capability) {
 	for _, capability := range set {
 		names = append(names, string(capability))
 	}
-	_ = registry.Modify(l.dir, l.name, l.epoch, func(session *registry.Session) { session.Live = names })
+	l.names, l.owed = names, true
+	// Once more at once before the retries: a write that failed once and
+	// would land now leaves no moment in which a reader acts on the old set.
+	for attempt := 0; attempt < 2 && l.owed; attempt++ {
+		l.publish(attempt == 1)
+	}
 	l.mu.Lock()
 	first := !l.ready
 	l.set, l.ready = slices.Clone(set), true
@@ -65,6 +95,57 @@ func (l *liveSet) report(set []adapter.Capability) {
 		l.exchanged(set)
 	}
 }
+
+// publish writes the set owed, under writing, and leaves it owed when the
+// write fails for any reason but the record no longer being this run's; with
+// retry, the retries run until it lands.
+func (l *liveSet) publish(retry bool) {
+	names := l.names
+	err := registry.Modify(l.dir, l.name, l.epoch, func(session *registry.Session) { session.Live = names })
+	if err == nil || errors.Is(err, registry.ErrNotFound) {
+		l.owed = false
+		return
+	}
+	if retry && !l.retrying {
+		l.retrying = true
+		_, _ = fmt.Fprintf(os.Stderr, "rewake: could not record what this run has live (%v); trying again\n", err)
+		go l.retry()
+	}
+}
+
+// retry writes the owed set again, waiting longer each time, until it lands
+// or the run ends.
+func (l *liveSet) retry() {
+	for wait := liveRetry; ; wait = min(2*wait, liveRetryMax) {
+		select {
+		case <-l.done:
+			return
+		case <-time.After(wait):
+		}
+		l.writing.Lock()
+		if l.owed {
+			l.publish(true)
+		}
+		landed := !l.owed
+		if landed {
+			l.retrying = false
+		}
+		l.writing.Unlock()
+		if landed {
+			return
+		}
+	}
+}
+
+// published says whether the record carries the set reported last.
+func (l *liveSet) published() bool {
+	l.writing.Lock()
+	defer l.writing.Unlock()
+	return !l.owed
+}
+
+// stop ends the retries: the run is over, and its record goes with it.
+func (l *liveSet) stop() { l.stopOnce.Do(func() { close(l.done) }) }
 
 // has says whether a capability is live now.
 func (l *liveSet) has(capability adapter.Capability) bool {
