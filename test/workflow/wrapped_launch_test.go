@@ -139,6 +139,21 @@ func sessionReady(c *Case, session *scenarioSession) bool {
 	return waitFor(c, 20*time.Second, func() bool { _, err := os.Stat(session.ready); return err == nil })
 }
 
+// sessionsUp waits for each recipient to say it is listening. Its harness
+// says so once the wrapper has started it, after the readiness exchange, so
+// its live set is recorded by then; a task to a run whose set is not recorded
+// yet is refused (docs/v2/design-api.md#two-levels-offered-and-live). A
+// scenario that sends to sessions it started waits for this first, as a
+// session's own sends do through readinessSwitch.
+func sessionsUp(c *Case, sessions ...*scenarioSession) error {
+	for _, session := range sessions {
+		if !sessionReady(c, session) {
+			return fmt.Errorf("%s never said it was listening", session.name)
+		}
+	}
+	return nil
+}
+
 func markers(calls []shimCall) []bool {
 	var out []bool
 	for _, call := range calls {

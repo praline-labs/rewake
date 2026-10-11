@@ -135,6 +135,9 @@ func playStoppedRouting(t *testing.T, c *Case, iso *Isolation, col column) []tel
 	}
 
 	var sends []string
+	if err := sessionsUp(c, owed, free); err != nil {
+		sends = append(sends, err.Error())
+	}
 	code, sent, _ := asks.ask(c, "send", owed.name, stoppedRoutingTask)
 	sends = append(sends, fmt.Sprintf("task: exit %d, %s", code, firstLine(sent)))
 	code, sent, _ = asks.ask(c, "send", free.name, stoppedRoutingNote, "--notify")

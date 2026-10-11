@@ -97,6 +97,9 @@ func playSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 	stoppedText := lead.name + " interrupted this turn with rewake interrupt"
 
 	var sends []string
+	if err := sessionsUp(c, calm, busy, bare); err != nil {
+		sends = append(sends, err.Error())
+	}
 	for _, worker := range []*scenarioSession{calm, busy} {
 		code, out, _ := asks.ask(c, "send", worker.name, steeredTask)
 		sends = append(sends, fmt.Sprintf("to %s: exit %d, %s", worker.name, code, firstLine(out)))

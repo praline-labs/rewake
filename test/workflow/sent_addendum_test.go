@@ -50,6 +50,9 @@ func playAddendumOwed(t *testing.T, c *Case, iso *Isolation, col column) []telem
 	defer stopSession(t, c, lead)
 	defer openReadGate(gate)
 
+	if err := sessionsUp(c, worker); err != nil {
+		return unjudgedAll(addendumObservations, "%v", err)
+	}
 	code, sent, _ := asks.ask(c, "send", worker.name, addendumTaskText)
 	task := printedID(sent)
 	if code != 0 || task == "" || !atReadGate(c, gate) {

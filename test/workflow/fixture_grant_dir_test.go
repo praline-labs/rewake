@@ -96,6 +96,9 @@ func playFixtureGrantDir(t *testing.T, c *Case, iso *Isolation) []telemetryFindi
 	}) {
 		return unjudgedAll(fixtureGrantObservations, "the sessions were never registered")
 	}
+	if err := sessionsUp(c, worker, held); err != nil {
+		return unjudgedAll(fixtureGrantObservations, "%v", err)
+	}
 	pid, start, _ := registry.ParseEpoch(leadRun)
 	// Asked from this process, which is not the worker's run: the answer
 	// says what main's wrapper holds and marks nothing delivered.

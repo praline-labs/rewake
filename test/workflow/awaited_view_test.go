@@ -106,6 +106,9 @@ func playAwaitedView(t *testing.T, c *Case, iso *Isolation, col column) []teleme
 	}
 
 	var sends []string
+	if err := sessionsUp(c, quick, slow); err != nil {
+		sends = append(sends, err.Error())
+	}
 	for _, letter := range []struct {
 		to   *scenarioSession
 		text string

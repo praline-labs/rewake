@@ -119,6 +119,9 @@ func playTurnReasons(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 	}
 
 	var sends []string
+	if err := sessionsUp(c, failing, stopping); err != nil {
+		sends = append(sends, err.Error())
+	}
 	for _, send := range []struct {
 		asks     *requests
 		to, text string

@@ -47,6 +47,9 @@ func playEditAfterNotice(t *testing.T, c *Case, iso *Isolation, col column) []te
 	defer stopSession(t, c, lead)
 	defer openReadGate(gate)
 
+	if err := sessionsUp(c, worker); err != nil {
+		return unjudgedAll(editObservations, "%v", err)
+	}
 	code, sent, _ := asks.ask(c, "send", worker.name, editOldText)
 	old := printedID(sent)
 	if code != 0 || old == "" || !atReadGate(c, gate) {

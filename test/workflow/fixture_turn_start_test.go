@@ -51,6 +51,9 @@ func playTurnStart(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 	lead := startHarnessSession(t, c, iso, harness, "lead", "--main", shimInboxJSON+"=1", leadAsks.env())
 	defer stopSession(t, c, lead)
 
+	if err := sessionsUp(c, worker); err != nil {
+		return []telemetryFinding{{observation: obsTurnStartRecorded, detail: err.Error()}}
+	}
 	var starts []int64
 	for _, text := range []string{turnStartFirst, turnStartSecond} {
 		code, sent, _ := leadAsks.ask(c, "send", worker.name, text)

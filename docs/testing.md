@@ -213,6 +213,15 @@ S9 with the telemetry budgets and the plugin's cases it ran.
 
 ## Traps this suite has already paid for
 
+- **A recipient started but not yet live.** Since S11 a task goes only to a run whose
+  turn boundary is live, and the record says so once the readiness exchange has run. Ten
+  cases sent from main to workers they had just started, waiting for nothing or only
+  for the record's service pid; main is started last, so its first request usually came
+  after the workers' exchanges, and the full run after the step's second commit was
+  green. The next run, eight cases at a time, had a worker's exchange finish after main's
+  and the task refused. A scenario now waits with `sessionsUp` for each recipient's
+  listening file, which its harness writes after the exchange, as a session's own sends
+  do through `readinessSwitch` (October 11, 2026).
 - **A shim rewritten while it runs.** Every session a case starts installed the shim
   scripts again, writing them in place, while an earlier session of the same case was
   executing them: an exec of a file open for writing fails with ETXTBSY. Seen once while

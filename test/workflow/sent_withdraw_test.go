@@ -238,6 +238,9 @@ func playWithdrawAfterNotice(t *testing.T, c *Case, iso *Isolation, col column, 
 	defer stopSession(t, c, lead)
 	defer openReadGate(gate)
 
+	if err := sessionsUp(c, worker); err != nil {
+		return unjudgedAll(observations, "%v", err)
+	}
 	code, sent, _ := asks.ask(c, "send", worker.name, withdrawTaskText)
 	task := printedID(sent)
 	if code != 0 || task == "" || !atReadGate(c, gate) {
