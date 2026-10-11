@@ -96,7 +96,7 @@ func (t *table) parseKnowing(argv []string, aliases []string) (parsed, error) {
 	if command.Raw {
 		rest := argv[index:]
 		// A launch command hands everything after its name to the harness, so
-		// "rewake claude --help" is claude's own help. Asking rewake for this
+		// "rewake <harness> --help" is the harness's own help. Asking rewake for this
 		// page instead is the one exception, and only as the first token: any
 		// later --help is an argument of a real harness call.
 		if len(rest) > 0 && (rest[0] == "--help" || rest[0] == "-h") {

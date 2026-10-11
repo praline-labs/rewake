@@ -76,7 +76,7 @@ func executorSections(git string) []Section {
 	return []Section{
 		{Title: "WORKING", Lines: []string{
 			"Keep to the brief. If missing information blocks part of it, ask main with --notify and go on with what does not depend on the answer; report partial work as final only when main has accepted the reduced scope.",
-			"Follow the project's own rules — its AGENTS.md or CLAUDE.md: the checks before a commit, who reviews, the commit style.",
+			"Follow the project's own rules — its AGENTS.md or the instruction file its harness reads: the checks before a commit, who reviews, the commit style.",
 			"Other sessions may work in the same repository: change only the files your task is about, and when you commit, stage only your own.",
 		}},
 		{Title: "REPORTING", Lines: []string{
@@ -98,7 +98,7 @@ func executorSections(git string) []Section {
 var writePlaybook = Playbook{
 	Heading:  "You are a worker: you take tasks from main or another session, do them, and answer by ending your turn.",
 	Steps:    executorSteps,
-	Sections: executorSections("You may commit when authorized: where your harness takes a Git grant, Git metadata needs an explicit --grant-git task from main or permissions the owner already gave; on Claude Code, which takes no --grant-git, within your own permissions."),
+	Sections: executorSections("You may commit when authorized: where your harness takes a Git grant, Git metadata needs an explicit --grant-git task from main or permissions the owner already gave; on a harness that takes none, within your own permissions."),
 }
 
 var generalPlaybook = Playbook{

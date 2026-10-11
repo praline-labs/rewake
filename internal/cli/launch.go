@@ -113,8 +113,8 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 // refuseNestedLaunch refuses a launch from a shell inside a rewake session
 // (docs/launch.md#no-session-inside-a-session). A worker's rewake commands may
 // run without asking the person, and a launch among them would start an agent
-// with none of the worker's limits — rewake claude
-// --dangerously-skip-permissions, say. The environment alone decides: a live
+// with none of the worker's limits — a harness told to skip its own
+// permission prompts, say. The environment alone decides: a live
 // record is not required, since a worker could remove or rewrite its own, and
 // refusing a shell whose session has ended costs a new shell. A variable set
 // to nothing counts too: emptying it is as deliberate as removing it, and

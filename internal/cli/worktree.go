@@ -7,13 +7,14 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/worktree"
 )
 
 // worktreeCommand lists the checkouts rewake made for launches, lands their
 // work and removes them. One command with a verb, as the table has no
 // subcommands: the verb is its first positional.
-func worktreeCommand() *Command {
+func worktreeCommand(catalog adapter.Catalog) *Command {
 	return &Command{
 		Name:           "worktree",
 		Args:           "ls | land <name> | finish <name> | rm <name>",
@@ -34,7 +35,7 @@ func worktreeCommand() *Command {
 			"rewake worktree rm rewake-3f9a1c/fix-login --force",
 			"rewake worktree land feat/login",
 		},
-		Next: []string{"rewake --main claude --worktree"},
+		Next: worktreeLaunch(catalog),
 		Notes: []string{
 			"They live under " + worktreeRootHelp + ", one directory per repository, each worktree with a record beside it: the session it was made for, the repository, the commit. Each is on a branch of its own name; a slash in a name, feat/login, is + in its directory.",
 			"A worktree is named by its name, or by <repository>/<name> as ls prints it when two repositories share one; a word that could be either is taken as <repository>/<name> when both parts match.",
@@ -270,4 +271,15 @@ func stateLabel(view worktreeView) string {
 		return "clean"
 	}
 	return strings.Join(parts, ", ")
+}
+
+// worktreeLaunch is the launch that makes a worktree, on the first harness of
+// the catalogue that gives one to a launch; none offers nothing to run next.
+func worktreeLaunch(catalog adapter.Catalog) []string {
+	for _, h := range catalog.All() {
+		if _, ok := h.(adapter.WorktreeHarness); ok {
+			return []string{"rewake --main " + h.ID() + " --worktree"}
+		}
+	}
+	return nil
 }

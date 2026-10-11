@@ -57,7 +57,7 @@ func buildGroups(catalog adapter.Catalog) []Group {
 	for _, h := range catalog.All() {
 		run.Commands = append(run.Commands, launchCommand(h))
 	}
-	run.Commands = append(run.Commands, worktreeCommand())
+	run.Commands = append(run.Commands, worktreeCommand(catalog))
 
 	talk := Group{
 		Title:   "TALK",
@@ -172,7 +172,7 @@ func buildGroups(catalog adapter.Catalog) []Group {
 				MaxPositionals: 2,
 				Summary:        "Compact an idle session's conversation now, optionally telling the summary what to keep.",
 				Options:        []Option{jsonOption},
-				Examples:       []string{"rewake compact worker-claude", "rewake compact worker-claude \"keep the review findings and the open questions\"", "rewake compact worker-claude --json"},
+				Examples:       []string{"rewake compact worker", "rewake compact worker \"keep the review findings and the open questions\"", "rewake compact worker --json"},
 				Next:           []string{"rewake list"},
 				Notes: []string{
 					"Refused at once while the session is in a turn; nothing waits for the turn to end. Interrupt it first, or ask again once rewake list shows it idle.",
@@ -188,7 +188,7 @@ func buildGroups(catalog adapter.Catalog) []Group {
 				MaxPositionals: 1,
 				Summary:        "Stop the turn a session is working on, as Esc would.",
 				Options:        []Option{jsonOption},
-				Examples:       []string{"rewake interrupt worker-claude", "rewake interrupt worker-claude --json"},
+				Examples:       []string{"rewake interrupt worker", "rewake interrupt worker --json"},
 				Next:           []string{"rewake inbox --awaited"},
 				Notes: []string{
 					"A session waiting on that turn reads stopped, naming who interrupted it. The answer to this command says what the session's model is shown.",
@@ -300,7 +300,7 @@ func notes() []Note {
 		},
 		{
 			Title: "Exit codes are distinguishable",
-			Body:  "0 done; a Claude Code session may still say within a minute that it held the message, and a task or question taken back that way returns to its sender as a note. 1 the target refused or could not be reached. 2 the call was wrong: unknown command or flag, missing argument, no such session. 3 accepted, not delivered yet: pending lands once the session can take it; held waits for the person at the receiving session to release it or let it expire, and an expired task or question returns to its sender as a note. Branch on the code, not on the text.",
+			Body:  "0 done; a session may still say within a minute that its harness held the message, and a task or question taken back that way returns to its sender as a note. 1 the target refused or could not be reached. 2 the call was wrong: unknown command or flag, missing argument, no such session. 3 accepted, not delivered yet: pending lands once the session can take it; held waits for the person at the receiving session to release it or let it expire, and an expired task or question returns to its sender as a note. Branch on the code, not on the text.",
 		},
 		{
 			Title: "Only sessions started through rewake take part",
@@ -336,7 +336,7 @@ func notes() []Note {
 		},
 		{
 			Title: "Delivery speed differs by harness",
-			Body:  "Claude Code receives through its inbox socket. Every send reports acceptance or why delivery failed.",
+			Body:  "Each harness receives in its own way, which rewake <harness> --help describes. Every send reports acceptance or why delivery failed.",
 		},
 	}
 }

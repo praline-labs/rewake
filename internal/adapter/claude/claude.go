@@ -121,6 +121,7 @@ func (claudeHarness) Notes() []string {
 		"Messages arrive through the session's inbox socket within seconds and wake an idle session.",
 		"This rewake is not told when a Claude Code turn ends, so Claude Code runs a main session only: a role that owes reports refuses to start on it, and a task or question to it fails, until stage 4 gives it a turn boundary.",
 		"Arguments after claude reach it as written, beside the flags rewake adds for delivery, except: a --help first asks rewake for this page; --worktree is rewake's, below; and a typed flag replaces an alias's copy of it.",
+		"Claude Code takes no grant in this rewake: not a directory, since the permission hook it took them through is gone until stage 6, and not Git metadata, so a write session commits within its own permissions. A directory a session needs, the owner adds: --add-dir at the launch or /add-dir in its terminal.",
 		"--worktree starts the session in a new checkout of HEAD on a new branch under rewake's worktree directory, at the same place within the repository; --worktree=<name> names both, and a name after a space is refused, since it would reach claude as the prompt. rewake worktree --help says how to land and remove it. It starts a new conversation only: --continue or -c, --resume or -r, --from-pr, --teleport, --fork-session, the attach and respawn commands, Claude Code's own -w and --tmux, --cloud and --environment are refused beside it. -w alone stays Claude Code's own worktree, inside the repository.",
 	}
 }
