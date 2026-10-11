@@ -185,7 +185,6 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 	}
 
 	args, notes := adapter.ApplyDefaults(args, claudeDefaults())
-	env := adapter.SessionEnv(request, childMarkers)
 	reply := replyPath(request, socket, owns)
 	if len(reply) > maxSocketPath {
 		notes = append(notes, "not hearing back about held messages: the socket path "+reply+" is longer than a unix socket allows")
@@ -202,7 +201,7 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 	return adapter.LaunchPlan{
 		Command:    request.Program("claude"),
 		Args:       args,
-		Env:        env,
+		Env:        request.Env,
 		Socket:     socket,
 		OwnsSocket: owns,
 		Notes:      notes,

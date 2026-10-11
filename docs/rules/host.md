@@ -13,7 +13,11 @@ wrapper carries, and each block below names the tests that hold them
 
 The wrapper's ownership of its run, signals and its following of a stop, control, availability,
 compaction letters, departure, notices, naming, roles, the room's context and the
-delivery window, as 1.x holds them.
+delivery window, as 1.x holds them; and the launch's version read, through the adapter's
+gate before the claim, in a bounded probe whose output is never shown, refusing below the
+minimum or when no version can be read
+([design-api.md](../v2/design-api.md#minimum-versions)), in `internal/host/launch` since
+S10.
 
 Tests:
 - `internal/wrap/ownership_test.go` `TestCleanupLeavesTheNextOwnerAlone`
@@ -34,6 +38,7 @@ Tests:
 - `internal/wrap/wrap_test.go` `TestMailboxIsServedWhileTheHarnessRuns`
 - `internal/wrap/wrap_test.go` `TestMailOfAPreviousSessionIsRefused`
 - `internal/wrap/wrap_test.go` `TestSessionEnvironmentReachesTheHarness`
+- `internal/wrap/wrap_test.go` `TestWhatTheAdapterSaysNotToInheritStaysOut`
 - `internal/wrap/wrap_test.go` `TestTakenNameIsRefusedOnlyWhenExplicit`
 - `internal/wrap/wrap_test.go` `TestTheRoleIsRecorded`
 - `internal/wrap/control_test.go` `TestTheControlDirectoryLivesAsLongAsTheSession`
@@ -85,6 +90,12 @@ Tests:
 - `internal/wrap/window_test.go` `TestWrapperGathersNotesApartIntoOneNotice`
 - `internal/wrap/thread_test.go` `TestTheWrapperPinsDeliveryToTheHarnessThread` — recast on the adapter API's interfaces in S10
 - `internal/wrap/thread_test.go` `TestTheWrapperPinsDeliveryToTheObservedThread` — recast on the adapter API's interfaces in S10
+- `internal/host/launch/version_test.go` `TestAVersionBelowTheMinimumIsRefused`
+- `internal/host/launch/version_test.go` `TestAnUnreadableVersionIsRefused`
+- `internal/host/launch/version_test.go` `TestAGateWithoutAMinimumReadsNothing`
+- `internal/host/launch/probe_test.go` `TestAProbePastItsBoundIsEnded`
+- `internal/host/launch/probe_test.go` `TestWhatAProbeLeftInASessionOfItsOwnIsEnded`
+- `internal/host/launch/probe_test.go` `TestAProbeLeavesOtherChildrenAlone`
 
 ## Grants
 

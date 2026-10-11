@@ -114,7 +114,7 @@ func (fixtureHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan,
 		server = append(server, "--control", request.ControlDir)
 	}
 	terminal := append(append(append([]string{}, description...), "--"), request.Args...)
-	env := adapter.SessionEnv(request, nil)
+	env := request.Env
 	cwd, _ := os.Getwd()
 	return adapter.LaunchPlan{
 		Backend:    newBackend(request.Program(ID), server, env, cwd, socket, request.Epoch),
@@ -172,15 +172,14 @@ func (fixtureHarness) Deliver(context.Context, registry.Session, inbox.Message) 
 	return inbox.Result{State: inbox.Failed, Detail: "this session needs the fixture's backend; restart it through rewake"}
 }
 
-// ReadLaunchVersion reads the program's version before the claim and refuses
-// a launch below the minimum or without a version.
-func (fixtureHarness) ReadLaunchVersion(program string, env []string, dir string) (adapter.Version, error) {
-	version, err := adapter.ReadVersion(program, env, dir)
-	if err != nil {
-		return version, err
-	}
-	return version, adapter.RequireVersion("the fixture", version, MinimumVersion)
+// Version: the program answers --version with its name and its version,
+// "fixture 1.0.0".
+func (fixtureHarness) Version() adapter.VersionGate {
+	return adapter.VersionGate{Minimum: MinimumVersion, Args: []string{"--version"}}
 }
+
+// EnvNotInherited: the program exports nothing to its children.
+func (fixtureHarness) EnvNotInherited() []string { return nil }
 
 // settings is what the adapter reads of the program's configuration.
 type settings struct {

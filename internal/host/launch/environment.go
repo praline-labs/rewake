@@ -1,16 +1,19 @@
-package adapter
+package launch
 
 import (
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/state"
 )
 
 // SessionEnv returns the environment for a harness: the current one, with the
-// markers of a parent agent session removed and the rewake variables added.
-func SessionEnv(request LaunchRequest, strip []string) []string {
+// variables the adapter says its runs must not inherit removed — the markers a
+// parent agent session exports to its children — and the rewake variables
+// added. The host builds it; the adapter starts its run with it.
+func SessionEnv(request adapter.LaunchRequest, strip []string) []string {
 	drop := map[string]bool{
 		state.SessionEnv: true,
 		state.EpochEnv:   true,

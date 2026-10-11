@@ -19,6 +19,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/control"
+	"github.com/praline-labs/rewake/internal/host/launch"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/proc"
 	"github.com/praline-labs/rewake/internal/registry"
@@ -135,7 +136,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	tool := startMailTool(request, name, epoch)
 	defer tool.close()
 
-	plan, err := request.Harness.Launch(adapter.LaunchRequest{
+	launchRequest := adapter.LaunchRequest{
 		Name:       name,
 		Dir:        state.RootForRoom(request.Dir),
 		RoomDir:    request.Dir,
@@ -151,7 +152,9 @@ func Run(ctx context.Context, request Request) (int, error) {
 		ControlDir: controlDir,
 		GrantDirs:  restored.dirs(),
 		Version:    version,
-	})
+	}
+	launchRequest.Env = launch.SessionEnv(launchRequest, request.Harness.EnvNotInherited())
+	plan, err := request.Harness.Launch(launchRequest)
 	if err != nil {
 		return 0, err
 	}

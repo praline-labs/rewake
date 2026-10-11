@@ -29,11 +29,12 @@ internal/role/                   the role catalogue: flag, briefing line, report
 internal/brief/                  text injected into an agent, independent of transport
 internal/alias/                  launch aliases: a short name turned into launch arguments
 internal/sessionstate/           optional, epoch-scoped observations of a harness (telemetry)
-internal/adapter/                the Harness interface, launch plans, notices, hooks, defaults, the bounded version read
+internal/adapter/                the adapter API: the Harness interface, launch plans, version gates, flags, defaults, settings
 internal/adapter/catalog/        the one list of harnesses that exist
 internal/adapter/claude/         launch arguments, environment, socket delivery
 internal/adapter/fixture/        the test harness behind rewakefixture: a scripted program over a socket, every contract interface
 internal/wrap/                   wrapper: launch, signals, lifecycle
+internal/host/launch/            a launch's host side: the run's environment, the version read before the claim, the bounded probe
 internal/worktree/               checkouts rewake makes for a launch: git worktree add, records, land, removal
 scripts/                         packaging scripts and the tests of the npm shim
 docs/                            the documentation, and the tests that keep it true to the tree

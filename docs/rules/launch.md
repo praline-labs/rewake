@@ -19,6 +19,7 @@ What rewake adds to a harness's launch, in the full wording of
   is printed. (Rule 7.)
   Tests:
   - `internal/adapter/fixture/launch_test.go` `TestALaunchsDiagnosticsNeverCarryWhatTheyPointAt`
+  - `internal/host/launch/version_test.go` `TestAVersionRefusalNeverCarriesWhatTheProgramPrinted`
 
 - **L3. Nothing persists past the run**: what a launch writes lives in the run's
   directory and goes with it. (Rule 8.)

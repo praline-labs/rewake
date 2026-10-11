@@ -48,9 +48,24 @@ type LaunchRequest struct {
 	// launch is started with them.
 	GrantDirs []string
 	// Version is what the launch read of the harness's version before the
-	// claim, for a harness that reads it on every launch
-	// (LaunchVersionReader); its start runs nothing more to learn it.
-	Version Version
+	// claim (VersionGate); its start runs nothing more to learn it. Empty
+	// for an adapter whose gate has no minimum.
+	Version string
+	// Env is the run's whole environment, built by the host: the current
+	// one less what the adapter's runs must not inherit (EnvNotInherited),
+	// plus the rewake variables that name the run. The adapter starts the
+	// harness with it, adding only its own.
+	Env []string
+}
+
+// VersionGate is how a launch learns whether the installed harness is one the
+// adapter starts: the oldest version it starts, and the arguments that ask the
+// installed program for its version (docs/v2/design-api.md#minimum-versions).
+// The host reads it before the claim and refuses below the minimum or when no
+// version can be read; a gate without a minimum reads nothing.
+type VersionGate struct {
+	Minimum string
+	Args    []string
 }
 
 // LaunchPlan is how the wrapper starts the harness.
@@ -124,6 +139,13 @@ type Harness interface {
 	// could write there could change its own permissions, or another
 	// session's.
 	ProtectedDirs() []string
+	// Version is the gate a launch reads before the claim.
+	Version() VersionGate
+	// EnvNotInherited names the variables a run must not inherit from the
+	// environment rewake was started in: what a session of the harness
+	// exports to its children, which would point a new session at its
+	// parent's. The host leaves them out of LaunchRequest.Env.
+	EnvNotInherited() []string
 	// Launch turns a request into the command to run.
 	Launch(request LaunchRequest) (LaunchPlan, error)
 	// Deliver hands one message to a running session and says what happened.

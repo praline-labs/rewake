@@ -178,9 +178,6 @@ var registryExceptions = map[registryException]excuse{
 	{"internal/adapter/catalog/fixture.go", "func init in a package under adapter"}: {
 		"the fixture joins the catalog from a tagged init, beside the others, until S10 makes the catalog a constructor", "S10", 1, "45e8b1dc7cf2",
 	},
-	{"internal/adapter/probe_holder.go", "func init in a package under adapter"}: {
-		"the probe's holder enters from init when the binary is re-executed as it; S10 moves the probe to the host, which cmd/rewake enters", "S10", 1, "38b34aaf1399",
-	},
 }
 
 // unmatchedImports names every file of an exception no forbidden edge comes

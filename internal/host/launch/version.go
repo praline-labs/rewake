@@ -1,4 +1,4 @@
-package adapter
+package launch
 
 import (
 	"errors"
@@ -8,28 +8,41 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/adapter"
 )
 
-// Every adapter has a minimum version of its harness, and a launch reads the
-// installed one before the run is claimed: a version below the minimum, or
-// one that cannot be read, refuses the launch, so a refusal leaves nothing
-// behind (docs/v2/design-api.md#minimum-versions). The read runs the program
-// the launch will, as a probe: bounded, its output never shown.
+// Every adapter declares the oldest version of its harness it starts and how
+// to ask the installed program for its version (adapter.VersionGate), and a
+// launch reads the installed one before the run is claimed: a version below
+// the minimum, or one that cannot be read, refuses the launch, so a refusal
+// leaves nothing behind (docs/v2/design-api.md#minimum-versions). The read runs
+// the program the launch will, as a probe: bounded, its output never shown.
 
-// LaunchVersionReader is a harness whose launch reads its version before the
-// claim, and refuses below its minimum.
-type LaunchVersionReader interface {
-	ReadLaunchVersion(program string, env []string, dir string) (Version, error)
-}
-
-// versionBound bounds one --version: a cold start of a packaged harness
+// versionBound bounds one read of a version: a cold start of a packaged harness
 // answers well within it; a variable so a test of a hanging one need not
 // wait the whole of it.
 var versionBound = 5 * time.Second
 
-// versionToken is a version in whatever a harness prints for --version:
-// Claude Code answers "2.1.287 (Claude Code)", the fixture "fixture 1.0.0".
+// versionToken is a version in whatever a harness prints when asked: a
+// version number, with or without the harness's name around it.
 var versionToken = regexp.MustCompile(`[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?`)
+
+// Gate reads the installed version of a harness before the claim, asking the
+// program the launch will start, and refuses a launch below the gate's minimum
+// or without a version it could read. It answers the version read; a gate
+// without a minimum reads nothing.
+func Gate(h adapter.Harness, program string, env []string, dir string) (string, error) {
+	gate := h.Version()
+	if gate.Minimum == "" {
+		return "", nil
+	}
+	version, err := ReadVersion(program, gate.Args, env, dir)
+	if err != nil {
+		return "", err
+	}
+	return version.Value, RequireVersion(h.Title(), version, gate.Minimum)
+}
 
 // Version is what a launch read of its harness's version: the version, or
 // how the read went when there is none.
@@ -40,28 +53,16 @@ type Version struct {
 	Unknown string
 }
 
-// Note is the launch note's words for an unknown version, "" for a known one.
-func (v Version) Note() string {
-	if v.Value != "" {
-		return ""
-	}
-	cause := v.Unknown
-	if cause == "" {
-		cause = "not read"
-	}
-	return "harness version unknown (" + cause + ")"
-}
-
-// ReadVersion runs a program's --version as a probe, bounded and reaped. It
+// ReadVersion asks a program its version as a probe, bounded and reaped. It
 // answers the version it printed, or an unknown version saying what came
 // of the read — no start, no answer within the bound, an exit other than 0,
 // no version in the output — once the holder has shown that everything the
 // probe began has ended. When that cannot be shown it answers an error,
 // which refuses the launch: it would otherwise run beside what is left.
-func ReadVersion(program string, env []string, dir string) (Version, error) {
-	asked := filepath.Base(program) + " --version"
+func ReadVersion(program string, args, env []string, dir string) (Version, error) {
+	asked := strings.Join(append([]string{filepath.Base(program)}, args...), " ")
 	notEnded := fmt.Errorf("%s %s: what it started could not be shown to have ended", asked, OutcomeNotEnded)
-	probe, err := StartProbe(ProbeSpec{Label: "--version", Program: program, Args: []string{"--version"}, Env: env, Dir: dir, Bound: versionBound, Capture: true})
+	probe, err := StartProbe(ProbeSpec{Label: strings.Join(args, " "), Program: program, Args: args, Env: env, Dir: dir, Bound: versionBound, Capture: true})
 	switch {
 	case errors.Is(err, ErrProbeNotEnded):
 		return Version{}, notEnded

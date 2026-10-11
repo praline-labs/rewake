@@ -26,6 +26,8 @@ type fakeHarness struct {
 	// socket makes the launch claim the socket path it is given, as Claude
 	// Code's does.
 	socket bool
+	// notInherited is what the fake says its runs must not inherit.
+	notInherited []string
 
 	mu        sync.Mutex
 	delivered []inbox.Message
@@ -41,13 +43,15 @@ func (f *fakeHarness) Notes() []string    { return nil }
 // A double takes every flag once: nothing here launches a real harness.
 func (f *fakeHarness) SingleUseFlags() []adapter.Flag { return nil }
 func (f *fakeHarness) ProtectedDirs() []string        { return nil }
+func (f *fakeHarness) Version() adapter.VersionGate   { return adapter.VersionGate{} }
+func (f *fakeHarness) EnvNotInherited() []string      { return f.notInherited }
 
 func (f *fakeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error) {
 	time.Sleep(f.launchDelay)
 	plan := adapter.LaunchPlan{
 		Command: "/bin/sh",
 		Args:    []string{"-c", f.script},
-		Env:     adapter.SessionEnv(request, nil),
+		Env:     request.Env,
 	}
 	if f.socket {
 		plan.Socket, plan.OwnsSocket = request.Socket, true
@@ -229,6 +233,28 @@ func TestSessionEnvironmentReachesTheHarness(t *testing.T) {
 	want := fmt.Sprintf("api-fake %s %s", state.RootForRoom(dir), registry.RunEpoch(os.Getpid(), selfStart(t), thisBoot(t)))
 	if got := string(content); got != want {
 		t.Errorf("environment = %q, want %q", got, want)
+	}
+}
+
+// The host builds the run's environment and leaves out what the adapter says
+// its runs must not inherit: a parent session's markers would point the new
+// one at the parent.
+func TestWhatTheAdapterSaysNotToInheritStaysOut(t *testing.T) {
+	dir := stateDir(t)
+	out := filepath.Join(t.TempDir(), "env.txt")
+	fake := &fakeHarness{script: "printf '%s %s' \"${PARENT_MARKER-unset}\" \"${KEPT_VALUE-unset}\" > " + out, notInherited: []string{"PARENT_MARKER"}}
+	t.Setenv("PARENT_MARKER", "parent")
+	t.Setenv("KEPT_VALUE", "kept")
+
+	if _, err := Run(context.Background(), Request{Harness: fake, Dir: dir, Name: "api"}); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	content, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	if got := string(content); got != "unset kept" {
+		t.Errorf("environment = %q, want the marker left out and the rest kept", got)
 	}
 }
 

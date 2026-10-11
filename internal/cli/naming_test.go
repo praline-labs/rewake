@@ -79,11 +79,7 @@ func TestExplicitPrefixConflictNamesFinalAddress(t *testing.T) {
 func launchPath(t *testing.T, h adapter.Harness) string {
 	t.Helper()
 	path := t.TempDir()
-	reader, ok := h.(adapter.LaunchVersionReader)
-	if !ok {
-		return path
-	}
-	if _, err := reader.ReadLaunchVersion(filepath.Join(path, h.ID()), nil, path); err == nil {
+	if h.Version().Minimum == "" {
 		return path
 	}
 	calls := filepath.Join(t.TempDir(), "calls")

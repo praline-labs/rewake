@@ -82,9 +82,9 @@ rewake --main --name lead --command my-claude claude
   belongs to the harness. It is single-use: named twice there, the launch is refused
   rather than the last one winning. An alias's copy is replaced by one typed on the line.
 - **What it replaces:** the program, and nothing else. Every argument, variable, socket
-  the adapter adds is the same. For Codex both halves run through it — the version read before
-  the claim, the owned app-server and the terminal — because a server started beside the wrapper would
-  run in a different environment from the terminal.
+  the adapter adds is the same. Every process of the launch runs through it — the version
+  read before the claim and the harness itself — because a version read beside the wrapper
+  would answer for a different program than the one the launch starts.
 - **The Codex home rewake reads** is still taken from its own environment at launch. A
   wrapper that sets `CODEX_HOME` runs both halves there, but rewake decides from its own
   view whether to pass the briefing — so with `developer_instructions` in the wrapper's
@@ -101,12 +101,10 @@ rewake --main --name lead --command my-claude claude
   refused naming the value and the next action. The absolute path matters for Codex,
   whose server starts in the `-C` directory: a relative one would resolve there. rewake
   does not run the program to check it, and does not guess the harness from its name:
-  wrappers are named anything. For Codex, `<wrapper> --version` does run once before the
-  claim, as the version read always does ([the harness version](archive-1.x/mail-bridge-version.md)),
-  through the wrapper like the other two processes; a wrapper that does not answer it
-  produces the version note and an unknown version, which leaves the mail tool out. On
-  Claude Code the version is read from the path of the `claude` on `PATH`, and the
-  wrapper is not run for it.
+  wrappers are named anything. The version read before the claim does run it once, with
+  the arguments the adapter's version gate names (`<wrapper> --version` on both adapters,
+  [design-api.md](v2/design-api.md#minimum-versions)); a wrapper that does not answer it
+  with a version refuses the launch, as an unreadable version always does.
 - **In an alias** it is the field `command = "<program>"`, which becomes `--command`
   before the harness word — in the user alias file only
   ([launch-defaults.md](launch-defaults.md#naming-a-whole-launch)). With it, a launch

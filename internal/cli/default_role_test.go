@@ -22,7 +22,7 @@ type roleLaunchProbe struct {
 
 func (p *roleLaunchProbe) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error) {
 	p.request = request
-	return adapter.LaunchPlan{Command: "/bin/true", Env: adapter.SessionEnv(request, nil)}, nil
+	return adapter.LaunchPlan{Command: "/bin/true", Env: request.Env}, nil
 }
 
 func (*roleLaunchProbe) Deliver(context.Context, registry.Session, inbox.Message) inbox.Result {

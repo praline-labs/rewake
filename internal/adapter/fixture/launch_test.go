@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -16,40 +17,13 @@ import (
 	"github.com/praline-labs/rewake/internal/role"
 )
 
-func TestAVersionBelowTheMinimumIsRefused(t *testing.T) {
-	for version, refused := range map[string]bool{"0.9.9": true, "0.10.0": true, "1.0.0": false, "1.0.1": false, "1.10.0": false, "2.0.0": false} {
-		program := versionScript(t, "#!/bin/sh\necho fixture "+version+"\n")
-		_, err := New().(adapter.LaunchVersionReader).ReadLaunchVersion(program, os.Environ(), t.TempDir())
-		if (err != nil) != refused {
-			t.Errorf("%s: refused %v: %v", version, err != nil, err)
-		}
+// The adapter's gate names the oldest program it starts and asks the installed
+// one with --version; the host reads it before the claim.
+func TestTheGateNamesTheMinimumAndHowToAsk(t *testing.T) {
+	gate := New().Version()
+	if gate.Minimum != MinimumVersion || !slices.Equal(gate.Args, []string{"--version"}) {
+		t.Errorf("gate = %+v", gate)
 	}
-}
-
-func TestAnUnreadableVersionIsRefused(t *testing.T) {
-	for name, script := range map[string]string{
-		"no version": "#!/bin/sh\necho fixture\n",
-		"failing":    "#!/bin/sh\necho fixture 1.0.0\nexit 3\n",
-		"missing":    "",
-	} {
-		program := filepath.Join(t.TempDir(), "absent")
-		if script != "" {
-			program = versionScript(t, script)
-		}
-		_, err := New().(adapter.LaunchVersionReader).ReadLaunchVersion(program, os.Environ(), t.TempDir())
-		if err == nil || !strings.Contains(err.Error(), "could not be read") {
-			t.Errorf("%s: %v", name, err)
-		}
-	}
-}
-
-func versionScript(t *testing.T, body string) string {
-	t.Helper()
-	path := filepath.Join(t.TempDir(), "fixture")
-	if err := os.WriteFile(path, []byte(body), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	return path
 }
 
 // marker stands for what a person's configuration or arguments hold: a
@@ -134,11 +108,8 @@ func TestALaunchsDiagnosticsNeverCarryWhatTheyPointAt(t *testing.T) {
 			t.Fatalf("config %q: no launch said anything, so nothing was checked", config)
 		}
 	}
-	// The version's refusal is a diagnostic of the launch too.
-	program := versionScript(t, "#!/bin/sh\necho fixture "+marker+"\n")
-	if _, err := New().(adapter.LaunchVersionReader).ReadLaunchVersion(program, os.Environ(), t.TempDir()); err == nil || strings.Contains(err.Error(), marker) {
-		t.Errorf("the version's refusal: %v", err)
-	}
+	// The version's refusal, a diagnostic of the launch too, is the host's
+	// (internal/host/launch, TestAVersionRefusalNeverCarriesWhatTheProgramPrinted).
 }
 
 func TestACallerCannotPassTheFixturesOwnFlags(t *testing.T) {

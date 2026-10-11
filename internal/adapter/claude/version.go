@@ -6,15 +6,12 @@ import "github.com/praline-labs/rewake/internal/adapter"
 // (docs/v2/design-api.md#minimum-versions).
 const MinimumVersion = "2.1.287"
 
-var _ adapter.LaunchVersionReader = claudeHarness{}
-
-// ReadLaunchVersion reads the installed version before the claim by asking
-// the program the launch will start, and refuses a launch below the minimum
-// or without a version it could read.
-func (h claudeHarness) ReadLaunchVersion(program string, env []string, dir string) (adapter.Version, error) {
-	version, err := adapter.ReadVersion(program, env, dir)
-	if err != nil {
-		return version, err
-	}
-	return version, adapter.RequireVersion(h.Title(), version, MinimumVersion)
+// Version: Claude Code answers --version with its version and its name,
+// "2.1.287 (Claude Code)".
+func (claudeHarness) Version() adapter.VersionGate {
+	return adapter.VersionGate{Minimum: MinimumVersion, Args: []string{"--version"}}
 }
+
+// EnvNotInherited are the markers a Claude Code session exports to its
+// children.
+func (claudeHarness) EnvNotInherited() []string { return childMarkers }

@@ -11,6 +11,7 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
+	"github.com/praline-labs/rewake/internal/host/launch"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/state"
 )
@@ -157,13 +158,10 @@ func (t *mailTool) close() {
 	}
 }
 
-// readVersion is the launch's read of its harness's version, for a harness
-// that reads it on every launch; its error refuses the launch before the
-// claim. The program read is the one the launch will start.
-func readVersion(request Request, cwd string) (adapter.Version, error) {
-	reader, ok := request.Harness.(adapter.LaunchVersionReader)
-	if !ok {
-		return adapter.Version{}, nil
-	}
-	return reader.ReadLaunchVersion(adapter.LaunchRequest{Command: request.Command}.Program(request.Harness.ID()), adapter.ProbeEnv(), cwd)
+// readVersion is the launch's read of its harness's version, through the
+// adapter's gate; its error refuses the launch before the claim. The program
+// read is the one the launch will start.
+func readVersion(request Request, cwd string) (string, error) {
+	program := adapter.LaunchRequest{Command: request.Command}.Program(request.Harness.ID())
+	return launch.Gate(request.Harness, program, launch.ProbeEnv(), cwd)
 }
