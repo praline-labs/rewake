@@ -38,13 +38,13 @@ the prefix; file names drop `.go` and their tests go with them unless
 
 | Files or declarations | 2.0 place | Step | Note |
 |---|---|---|---|
-| the mail model: `inbox`, `addenda`, `adopt`, `answer*`, `awaited`, `claims`, `grants`, `interim`, `kept`, `local`, `marks`, `notices`, `once`, `owed`, `read_boundary`, `recall`, `reservation`, `sent`, `state_notice`, `status`, `unread`, `waiters`, `withdraw` | `core/mail` | S13 | |
-| the journals and seam: `journal`, `journal_ends`, `journal_held` (publish or moot), `records`, `access`, `reconcile`, `stop`, `sweep` | `core/mail` | S13 | their migration branches go in S2; `stop` changes in S3, the decision joins in S18 |
+| the mail model: `inbox`, `addenda`, `adopt`, `answer*`, `awaited`, `claims`, `grants`, `interim`, `kept`, `local`, `marks`, `notice`, `once`, `owed`, `preview`, `read_boundary`, `recall`, `reservation`, `sent`, `state_notice`, `status`, `turn_inputs`, `turn_start`, `unread`, `waiters`, `withdraw` | `core/mail` | S13 | as S13's inventory found them (October 11, 2026): `notices` is gone, `notice` and `preview` came from `harness` in S10, `turn_inputs` and `turn_start` were added since `b6ed4ed` |
+| the journals and seam: `journal`, `journal_ends`, `journal_held` (publish or moot), `records`, `access`, `reconcile`, `stop`, `stop_keep`, `stop_look`, `sweep` | `core/mail` | S13 | their migration branches go in S2; `stop` changes in S3, the decision joins in S18; `stop_keep` and `stop_look` were split from `stop` since `b6ed4ed` |
 | `turn_records`: `sweepTurnRecords`, `recordEpoch` | `core/mail` (`journal_retention`) | S2 rename, S13 move | the retention of completed journals of ended runs |
 | `turn_records`: `TurnsPath`; `conversion`, `conversion_decide`, `held_take`; `Settle` | removed | S2 | the migration |
-| the `(*Server)` methods in mail files: `followEarlierRun` (`adopt:121`), `checkGrants`, `failGranted` (`grants:43,80`), `prepareDelivery` (`reservation:23`), `sweepFinished`, `sweepFinishedLocked` (`sweep:16,25`) | `host/delivery` | S15 | moved to delivery files by S15's preparatory commit |
+| the `(*Server)` methods in mail files: `followEarlierRun` (`adopt:121`), `checkGrants`, `failGranted` (`grants:43,80`), `prepareDelivery` (`reservation:23`), `sweepFinished`, `sweepFinishedLocked` (`sweep:16,25`), and `liveRun` (`sweep`, newer than `b6ed4ed`) | `host/delivery` | S15 | moved to delivery files by S15's preparatory commit |
 | delivery-declared, used by mail: `Availability`, `UndeliveredNotice`, `removeWaiting`, `answerLifetime`, `keepFinished`, `deliveryThread`, `ErrThreadUnavailable`, `ErrNotYet` | `core/mail` | S15 | moved to mail files by the same commit ([stage3-moves.md](stage3-moves.md#s15-the-delivery-server-to-hostdelivery-codex)) |
-| the delivery server: `serve`, `batch`, `window`, `watch_linux`, `retention`, `announcement`, `availability` (less the type), `thread`, `outcome`, `held` | `core/mail` in transit, then `host/delivery` | S13, S15 | `held` follows the Claude Code messaging line it reads; its fate is P1's in stage 4 |
+| the delivery server: `serve`, `batch`, `window`, `watch_linux`, `retention`, `announcement`, `availability` (less the type), `thread`, `outcome`, `held`, `settle_recorded` | `core/mail` in transit, then `host/delivery` | S13, S15 | `held` follows the Claude Code messaging line it reads; its fate is P1's in stage 4; `settle_recorded` is newer than `b6ed4ed` |
 | the review files | renamed by subject | S16 | answer 9 |
 
 ## Tool and host

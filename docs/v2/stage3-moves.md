@@ -65,16 +65,18 @@ no build value names them. **Consumers to rewrite**: import paths everywhere,
 ## S13. `core` moves
 
 `receipt`; `registry` with `registrytest`; `sessionstate` as `core/session`; `control`;
-`grant`; `grantauth` as `core/grant/authority` and `grantauthtest` beside it (a
-subpackage, so the move stays a rename — merging the two would not be); `role`;
+`grant`; `grantauth` as `core/grant/authority` and `grantauthtest` beside it as
+`core/grant/authority/authoritytest` (a subpackage, so the move stays a rename — merging
+the two would not be); `role`;
 `brief`; `channel`; and **the whole of `inbox` as `core/mail`**, the delivery server
 inside it for now. **Inventory** (`go/types`, and `go list -test` for the tests): `inbox` imports only the
 standard library, `boottime`, `buildtime`, `receipt`, `registry`, `role`, `sessionstate`
 and `state` — all `core` or `infra` — and its tests add `registrytest` and `proc`, so it
 may move whole with them; none of these packages imports `harness`, `bridge`,
 `wrap` or `cli`, the import rule's exceptions having gone in S8–S10. **String
-consumers**: the mutations in `inbox` (12), `control`, `grant`, `grantauth`; the build
-values `inbox.builtQuiet` and `inbox.builtCap`.
+consumers**: the mutations in `inbox` (13) and `grantauth` (3) — `control` and `grant`
+had one each at `b6ed4ed` and have none since the columns of S8 and S9 left with theirs
+(recounted October 11, 2026); the build values `inbox.builtQuiet` and `inbox.builtCap`.
 
 `control` moves with `Serve`, which S11 connects to the fixture's live Control; until S11
 only its tests reach it (S8's review, October 8, 2026).
@@ -146,13 +148,14 @@ removes): 453 declarations in 47 files, 61 white-box test files. Twelve methods 
 the far side of their receiver; six remain after S2, all `(*Server)` methods in mail
 files — `followEarlierRun` (`adopt.go:121`), `checkGrants` (`grants.go:43`),
 `failGranted` (`:80`), `prepareDelivery` (`reservation.go:23`), `sweepFinished`
-(`sweep.go:16`), `sweepFinishedLocked` (`:25`). Mail identifiers used by delivery: 71;
+(`sweep.go:16`), `sweepFinishedLocked` (`:25`) — and S13's inventory adds a seventh,
+`liveRun` in `sweep.go`, newer than `b6ed4ed`. Mail identifiers used by delivery: 71;
 delivery identifiers used by mail: 31, all but nine of them the `Server`'s fields and
 methods read inside those six methods.
 
 **The preparatory commit**, in place in `core/mail`:
 
-1. The six `Server` methods move to delivery files, taking every use of `Server`'s
+1. The seven `Server` methods move to delivery files, taking every use of `Server`'s
    fields and lock with them.
 2. A delivery-declared identifier that mail still uses after that moves to a mail file:
    the types `Availability` and `UndeliveredNotice` (fields of `Message`,
@@ -177,9 +180,10 @@ After it, `go/types` finds no reference from a mail file into a delivery file, w
 the review checks by rerunning the inventory.
 
 **The move**: the delivery files to `host/delivery` (`package delivery`), importing
-`core/mail`; the transition table's file-group entry goes. **String consumers**: the
-mutations of `held`, `outcome`, `serve` (2), `thread`; `wrap`'s construction of the
-server. **[codex]**: the delivery server is process behaviour, and the split decides
+`core/mail`; the layout test's file-group entry goes. **String consumers**: the
+mutations of `serve`, `outcome` and `thread`, one each, and none of `held` (S13's count,
+October 11, 2026; `b6ed4ed` had `held`, `outcome`, `serve` (2), `thread`); `wrap`'s
+construction of the server. **[codex]**: the delivery server is process behaviour, and the split decides
 which lock and which sweep belong to whom.
 
 ## S16. `tool` and `host` move
