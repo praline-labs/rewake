@@ -1,7 +1,8 @@
 // Package internal holds the test of the layout of rewake 2.0: the three rules of
 // docs/v2/design.md#the-test-that-holds-it, held from stage 3's first step on
 // the 1.x tree through a transition table and an exception table
-// (docs/v2/stage3-steps.md#s1-the-tests-first). It judges the packages under
+// (docs/v2/stage3-steps.md#s1-the-tests-first), and records the file groups in
+// transit inside a package (docs/v2/stage3-moves.md#s13-core-moves). It judges the packages under
 // internal/ and cmd/; test/ and tools/ are drivers outside the layers, and so is
 // this package, which imports the catalog only to learn the harness names.
 package internal
@@ -63,12 +64,22 @@ func TestNoAdapterIsRegistered(t *testing.T) {
 }
 
 // TestTheTablesShrinkWithTheMoves fails on a transition entry whose package is
-// at its 2.0 path or gone, and on an exception without a reason or a step of
-// the build order, so both tables empty as stage 3 goes rather than outliving
-// what they excuse.
+// at its 2.0 path or gone, on a file group with a file gone, and on an
+// exception without a reason or a step of the build order, so the tables empty
+// as stage 3 goes rather than outliving what they excuse.
 func TestTheTablesShrinkWithTheMoves(t *testing.T) {
 	steps := buildSteps(t)
-	for _, problem := range staleTransitions(transition, packageDirs(t, nil), steps) {
+	dirs := packageDirs(t, nil)
+	for _, problem := range staleTransitions(transition, dirs, steps) {
+		t.Error(problem)
+	}
+	var files []string
+	for _, group := range fileGroups {
+		if slices.Contains(dirs, group.dir) {
+			files = append(files, goFiles(t, group.dir)...)
+		}
+	}
+	for _, problem := range staleGroups(fileGroups, files, steps) {
 		t.Error(problem)
 	}
 	for _, problem := range unexplained(steps) {

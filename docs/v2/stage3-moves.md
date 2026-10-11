@@ -45,7 +45,8 @@ the two. An inventory lists:
     variable;
   - `tools/release/gate.go:178` names `internal/cli/registry.go`; `docs/code.md`'s tree
     (held by `docs/layout_test.go`); the test paths of `docs/rules/` (held by
-    `docs/rules_test.go`); the transition and exception tables of the layout test.
+    `docs/rules_test.go`); the transition, file-group and exception tables of the layout
+    test.
 
 A row that needs more than an import path changed is resolved by a preparatory commit
 in place, before the move, behaviour unchanged. The move then changes import paths,
@@ -78,11 +79,14 @@ values `inbox.builtQuiet` and `inbox.builtCap`.
 `control` moves with `Serve`, which S11 connects to the fixture's live Control; until S11
 only its tests reach it (S8's review, October 8, 2026).
 
-The delivery server's files stay together in `core/mail` until S15, which the transition
-table records as a file-group entry — `core/mail`: `serve`, `batch`, `window`,
+The delivery server's files stay together in `core/mail` until S15, which the layout
+test's table of file groups records — `core/mail`: `serve`, `batch`, `window`,
 `watch_linux`, `held`, `retention`, `announcement`, `availability`, `thread`, `outcome`
-are `host` until S15 — so the layout test knows the group is in transit and fails once
-it is gone. Splitting the package in the same commit as the move would make the move a
+and `settle_recorded` (newer than the inventory at `b6ed4ed`), bound for `host/delivery`
+in S15. The entry records the group and nothing more: its files are judged by `core`'s
+import rule like the rest of `core/mail`, as strictly as before the move, and it fails
+once a file it names is gone or it names none, so S15 removes it (decided October 11,
+2026). Splitting the package in the same commit as the move would make the move a
 rewrite; doing it here, before the turn-end code joins it, would split it twice.
 
 ## S14. The turn-end and read code to core/mail

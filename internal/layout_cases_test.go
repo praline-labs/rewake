@@ -233,3 +233,25 @@ func TestATransitionEntryAtItsPlaceOrGoneFails(t *testing.T) {
 		t.Fatalf("got %q, want %q", got, want)
 	}
 }
+
+// TestAFileGroupWithAFileGoneFails takes its steps from the real build order,
+// as the transition entries' case does.
+func TestAFileGroupWithAFileGoneFails(t *testing.T) {
+	groups := []fileGroup{
+		{dir: "internal/core/mail", files: []string{"serve.go", "held.go"}, to: "internal/host/delivery", step: "S15"},
+		{dir: "internal/core/mail", to: "internal/delivery", step: "S40"},
+	}
+	got := staleGroups(groups, []string{"internal/core/mail/serve.go", "internal/core/mail/mail.go"}, buildSteps(t))
+	want := []string{
+		`the file group of internal/core/mail goes to internal/delivery, which is no 2.0 path`,
+		`the file group of internal/core/mail names held.go, which is gone: remove it, or the entry once the group has moved`,
+		`the file group of internal/core/mail names no file: remove the entry`,
+		`the file group of internal/core/mail names the step "S40", which is no step of docs/v2/stage3.md#the-build-order`,
+	}
+	if !slices.Equal(got, want) {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+	if got := staleGroups(groups[:1], []string{"internal/core/mail/serve.go", "internal/core/mail/held.go"}, buildSteps(t)); len(got) != 0 {
+		t.Fatalf("a group whose files are all there: %q", got)
+	}
+}

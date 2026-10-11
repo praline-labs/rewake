@@ -34,6 +34,56 @@ var transition = map[string]transit{
 	"internal/worktree":        {layer: host, step: "S16"},
 }
 
+// fileGroup is a group of files in transit inside one package: the files, by
+// name in the package's directory, the 2.0 package they go to and the step that
+// takes them there. It records the group and nothing more — its files are judged
+// like the rest of their package — so it changes no rule; it fails when a file
+// it names is gone or it names none, and the step that moves the files removes
+// it.
+type fileGroup struct {
+	dir   string
+	files []string
+	to    string
+	step  string
+}
+
+// fileGroups are the groups in transit (docs/v2/stage3-moves.md#s13-core-moves).
+var fileGroups = []fileGroup{{
+	dir: "internal/inbox",
+	files: []string{
+		"serve.go", "batch.go", "window.go", "watch_linux.go", "held.go", "retention.go",
+		"announcement.go", "availability.go", "thread.go", "outcome.go", "settle_recorded.go",
+	},
+	to:   "internal/host/delivery",
+	step: "S15",
+}}
+
+// staleGroups names every file group that names no file, every file it names
+// that is not among files, by path relative to the module, every destination
+// that is not a 2.0 path and every step that is not one of the build order's.
+func staleGroups(groups []fileGroup, files, steps []string) []string {
+	var problems []string
+	for _, group := range groups {
+		what := "the file group of " + group.dir
+		if len(group.files) == 0 {
+			problems = append(problems, what+" names no file: remove the entry")
+		}
+		for _, file := range group.files {
+			if !slices.Contains(files, group.dir+"/"+file) {
+				problems = append(problems, fmt.Sprintf("%s names %s, which is gone: remove it, or the entry once the group has moved", what, file))
+			}
+		}
+		if _, ok := layerOfPath(group.to); !ok {
+			problems = append(problems, fmt.Sprintf("%s goes to %s, which is no 2.0 path", what, group.to))
+		}
+		if !validStep(group.step, steps) {
+			problems = append(problems, stepProblem(what, group.step))
+		}
+	}
+	slices.Sort(problems)
+	return problems
+}
+
 // importException is a known forbidden import: the files that make it, why, and
 // the step that removes it.
 type importException struct {
