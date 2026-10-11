@@ -135,7 +135,7 @@ var mutantEditUnlinked = mutation{
 // linked, and its notice no longer says what it replaces.
 var mutantReplacementUnmarked = mutation{
 	name:  "replacement-unmarked",
-	file:  "internal/harness/notice.go",
+	file:  "internal/inbox/notice.go",
 	edits: []edit{{"\tif message.Replaces == \"\" {\n", "\tif true {\n"}},
 }
 

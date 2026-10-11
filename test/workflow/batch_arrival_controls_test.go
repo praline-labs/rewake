@@ -46,7 +46,7 @@ var mutantUnwindowed = mutation{
 // the notice previews the earliest.
 var mutantPreview = mutation{
 	name: "preview",
-	file: "internal/harness/notice.go",
+	file: "internal/inbox/notice.go",
 	edits: []edit{{
 		"member.CreatedAt.After(latest.CreatedAt) || member.CreatedAt.Equal(latest.CreatedAt) && member.ID > latest.ID",
 		"member.CreatedAt.Before(latest.CreatedAt) || member.CreatedAt.Equal(latest.CreatedAt) && member.ID < latest.ID",
