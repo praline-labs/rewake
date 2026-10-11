@@ -1,5 +1,5 @@
 /*
-Package inbox carries messages between sessions as files.
+Package mail carries messages between sessions as files.
 
 A sender writes a file into the receiver's mailbox; the process that serves that
 mailbox — the wrapper holding the harness — delivers it and writes back a status
