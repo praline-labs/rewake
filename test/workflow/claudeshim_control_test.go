@@ -30,10 +30,6 @@ import (
 // it or holdLimit passes and it ends as an ordinary turn.
 const shimHoldFirstTurn = "RW_SHIM_HOLD_FIRST_TURN"
 
-// shimCompactTakes, a duration, is how long a compaction takes after its
-// PreCompact, so a case can see what happens between its start and its end.
-const shimCompactTakes = "RW_SHIM_COMPACT_TAKES"
-
 // holdLimit is long enough for a case to compact and interrupt the held turn,
 // and short enough to leave the session's own ceiling room to end.
 const holdLimit = 12 * time.Second

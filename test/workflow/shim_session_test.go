@@ -72,6 +72,11 @@ func appendLine(target, line string) {
 func (s *shimSession) holdOpen(id string) string {
 	s.turn.mu.Lock()
 	holding, steered, abort := s.turn.open == id, s.turn.steered, s.turn.abort
+	window := holdWindow
+	if s.turn.untilAbort {
+		// Held for an interrupt: what is steered in does not end it.
+		window, steered = interruptWindow, nil
+	}
 	s.turn.mu.Unlock()
 	if !holding {
 		return ""
@@ -84,11 +89,11 @@ func (s *shimSession) holdOpen(id string) string {
 	case <-abort:
 		// Interrupted: the turn ends here, with nothing more read.
 		s.turn.mu.Lock()
-		s.turn.open, s.turn.steered = "", nil
+		s.turn.open, s.turn.steered, s.turn.untilAbort = "", nil, false
 		s.turn.mu.Unlock()
 		s.recordTurnEvent("operation-aborted", id, "")
 		return ""
-	case <-time.After(holdWindow):
+	case <-time.After(window):
 	}
 	// Whatever arrived mid-turn is read inside this same turn, the way an
 	// agent reads the mail a steer brought it before answering. A read that
@@ -99,7 +104,7 @@ func (s *shimSession) holdOpen(id string) string {
 		second = "second read failed: " + err.Error()
 	}
 	s.turn.mu.Lock()
-	s.turn.open, s.turn.steered, s.turn.abort = "", nil, nil
+	s.turn.open, s.turn.steered, s.turn.abort, s.turn.untilAbort = "", nil, nil, false
 	s.turn.mu.Unlock()
 	s.recordTurnEvent("operation-closed", id, fmt.Sprintf("steered=%v", arrived))
 	return second
@@ -189,6 +194,13 @@ type turnState struct {
 	// replaces it, and aborted says so to the work that held it.
 	abort   chan struct{}
 	aborted bool
+	// untilAbort holds the open turn for an interrupt (shimHoldForInterrupt),
+	// held says that one turn has been held, and interrupter names who
+	// interrupted it; compacting says a compaction runs.
+	untilAbort  bool
+	held        bool
+	interrupter string
+	compacting  bool
 }
 
 // interruptNow reports whether this turn is the first one, to be interrupted

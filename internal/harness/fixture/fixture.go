@@ -62,6 +62,7 @@ func (fixtureHarness) SingleUseFlags() []harness.Flag {
 		{Spellings: []string{"--role"}, TakesValue: true},
 		{Spellings: []string{"--brief"}, TakesValue: true},
 		{Spellings: []string{"--connect"}, TakesValue: true},
+		{Spellings: []string{"--control"}, TakesValue: true},
 		// rewake's own (worktree.go), read only with =<name>, so a switch
 		// here: a typed one replaces an alias's.
 		{Spellings: []string{worktreeFlag}},
@@ -78,7 +79,7 @@ func (fixtureHarness) ProtectedDirs() []string {
 
 // ownFlags are the program's flags a caller may not pass: the adapter passes
 // each one itself.
-var ownFlags = []string{"--session", "--room", "--role", "--brief", "--connect"}
+var ownFlags = []string{"--session", "--room", "--role", "--brief", "--connect", "--control"}
 
 func (fixtureHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, error) {
 	for index, arg := range request.Args {
@@ -109,6 +110,9 @@ func (fixtureHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan,
 		socket = filepath.Join(request.Dir, "fixture.sock")
 	}
 	server = append(server, "--connect", socket)
+	if request.ControlDir != "" {
+		server = append(server, "--control", request.ControlDir)
+	}
 	terminal := append(append(append([]string{}, description...), "--"), request.Args...)
 	env := harness.SessionEnv(request, nil)
 	cwd, _ := os.Getwd()
@@ -134,6 +138,23 @@ func (fixtureHarness) SupportsDirGrant() bool { return true }
 // ReachesWrapper: the program runs its commands without a sandbox of its own,
 // so a fixture main's send reaches its wrapper and can grant.
 func (fixtureHarness) ReachesWrapper() bool { return true }
+
+// The fixture is Steerable while no product adapter is: Claude Code's served
+// side left with its plugin module in S9, and stage 4 gives a real adapter
+// Control again (docs/v2/design-api.md#control). Until then the program serves
+// the run's control directory itself, as the module did, so rewake compact and
+// rewake interrupt keep their workflow cases on the gate column; S11 moves the
+// served side behind the fixture's live Control (control.Serve).
+var _ harness.Steerable = fixtureHarness{}
+
+// CompactFocus: the program takes a focus with a compaction.
+func (fixtureHarness) CompactFocus() bool { return true }
+
+// InterruptTrace: the program ends the turn with the interrupter's name as its
+// text, which is what the stopped report carries.
+func (fixtureHarness) InterruptTrace() string {
+	return "the fixture ends the turn saying who interrupted it"
+}
 
 func room(request harness.LaunchRequest) string {
 	if request.Room == "" {

@@ -7,23 +7,23 @@ import (
 	"time"
 )
 
-// TestClaudeThreadChange is conversation tracking on the Claude Code column
+// TestFixtureThreadChange is conversation tracking on the gate column
 // (HF-10): a report from a conversation other than the one its task was
 // delivered to carries threadChanged, so the sender knows the answer may not
-// be about its task. Two workers, each with a sender of its own: one plays
-// /clear after its task arrives and works it in the new conversation, the
-// other works its task where it landed.
+// be about its task. Two workers, each with a sender of its own: one starts a
+// new conversation after its task arrives, as a person's /clear does, tells
+// its adapter, and works the task there; the other works its task where it
+// landed.
 //
-// Only this column: the fixture's conversation does not change.
-//
-// What it does not prove: that the real harness names its conversation in
-// the hooks as the fixture does. The session_id and its change on /clear are
-// recorded in docs/research.md; the fixture plays that.
-func TestClaudeThreadChange(t *testing.T) {
+// The fixture is the only harness reporting a change of conversation from S9
+// until stage 4's Claude Code adapter does again. What it does not prove: that
+// a real harness names its new conversation as the program does; Claude
+// Code's session_id and its change on /clear are recorded in docs/research.md.
+func TestFixtureThreadChange(t *testing.T) {
 	binary := enterScenario(t, "thread-changed")
 	c := Start(t, Spec{
 		Name:         "thread-changed",
-		Harness:      claudeColumn.harness,
+		Harness:      fixtureColumn.harness,
 		Observations: threadObservations,
 		Deadline:     90 * time.Second,
 	})
@@ -37,9 +37,9 @@ func TestClaudeThreadChange(t *testing.T) {
 }
 
 const (
-	obsThreadMarked   = "a report from the conversation /clear started carries threadChanged"
+	obsThreadMarked   = "a report from the conversation the worker started after its task arrived carries threadChanged"
 	obsThreadUnmarked = "a report from the conversation the task was delivered to carries no threadChanged"
-	obsClearedSettles = "the report after /clear still arrives once and settles the task"
+	obsClearedSettles = "the report from the new conversation still arrives once and settles the task"
 	threadClearedText = "thread-cleared-probe"
 	threadKeptText    = "thread-kept-probe"
 )
@@ -51,11 +51,11 @@ type threadPair struct{ worker, sender *scenarioSession }
 
 func startThreadPair(t *testing.T, c *Case, iso *Isolation, label, text string, controls ...string) threadPair {
 	t.Helper()
-	worker := startHarnessSession(t, c, iso, claudeColumn.harness, label, "--general", append([]string{shimInboxJSON + "=1"}, controls...)...)
+	worker := startHarnessSession(t, c, iso, fixtureColumn.harness, label, "--general", append([]string{shimInboxJSON + "=1"}, controls...)...)
 	// The sender waits for the session to be up, so its conversation has
 	// been named before the task is delivered into it.
-	sender := startHarnessSession(t, c, iso, claudeColumn.harness, "to-"+label, "--general",
-		shimSendTo+"="+worker.name, shimSendText+"="+text, shimInboxJSON+"=1", shimWaitForFile+"="+worker.ready+".mounted")
+	sender := startHarnessSession(t, c, iso, fixtureColumn.harness, "to-"+label, "--general",
+		shimSendTo+"="+worker.name, shimSendText+"="+text, shimInboxJSON+"=1", readinessSwitch(worker))
 	return threadPair{worker: worker, sender: sender}
 }
 
@@ -72,7 +72,7 @@ func (p threadPair) reports(task string) []reportView {
 
 func playThreadChange(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 	t.Helper()
-	cleared := startThreadPair(t, c, iso, "cleared", threadClearedText, shimClearBeforeTurn+"=1")
+	cleared := startThreadPair(t, c, iso, "cleared", threadClearedText, shimNewThread+"=fixture-thread-0002")
 	kept := startThreadPair(t, c, iso, "kept", threadKeptText)
 	for _, pair := range []threadPair{cleared, kept} {
 		defer stopSession(t, c, pair.worker)
@@ -125,18 +125,18 @@ func playThreadChange(t *testing.T, c *Case, iso *Isolation) []telemetryFinding 
 // and one for a comparison that marks everything. Each names what it must
 // break and requires the rest to hold.
 
-// The delivery is never pinned: the wrapper does not ask the collector.
+// The delivery is never pinned: the reservation records no conversation.
 var mutantDeliveryUnpinned = mutation{
 	name:  "delivery-unpinned",
-	file:  "internal/wrap/wrap.go",
-	edits: []edit{{"\t\t\tthread = source.Thread\n", "\t\t\t_ = source\n"}},
+	file:  "internal/inbox/reservation.go",
+	edits: []edit{{"if thread != \"\" && Owed(*message) {", "if false && thread != \"\" && Owed(*message) {"}},
 }
 
-// The turn end does not read the conversation from the Stop hook's payload.
-var mutantStopThreadIgnored = mutation{
-	name:  "stop-thread-ignored",
-	file:  "internal/cli/turn_payload.go",
-	edits: []edit{{"result := hookTurnEnd{Thread: text(\"session_id\")}", "result := hookTurnEnd{}"}},
+// The turn end does not carry the conversation it ended in.
+var mutantEndThreadIgnored = mutation{
+	name:  "end-thread-ignored",
+	file:  "internal/cli/completion.go",
+	edits: []edit{{"return endTurnContext(ctx, dir, self, turnEndOf(result), true, result.Thread)", "return endTurnContext(ctx, dir, self, turnEndOf(result), true, \"\")"}},
 }
 
 // Any known delivery conversation counts as changed.
@@ -147,13 +147,18 @@ var mutantThreadAlwaysChanged = mutation{
 }
 
 func TestAnUnpinnedDeliveryFails(t *testing.T) {
-	runFindingsControl(t, "thread-changed", playThreadChange, mutantDeliveryUnpinned, obsThreadMarked)
+	runThreadControl(t, mutantDeliveryUnpinned, obsThreadMarked)
 }
 
-func TestAnIgnoredStopConversationFails(t *testing.T) {
-	runFindingsControl(t, "thread-changed", playThreadChange, mutantStopThreadIgnored, obsThreadMarked)
+func TestAnIgnoredEndConversationFails(t *testing.T) {
+	runThreadControl(t, mutantEndThreadIgnored, obsThreadMarked)
 }
 
 func TestAConversationAlwaysChangedFails(t *testing.T) {
-	runFindingsControl(t, "thread-changed", playThreadChange, mutantThreadAlwaysChanged, obsThreadUnmarked)
+	runThreadControl(t, mutantThreadAlwaysChanged, obsThreadUnmarked)
+}
+
+func runThreadControl(t *testing.T, mutant mutation, breaks ...string) {
+	t.Helper()
+	runFindingsControlOn(t, fixtureColumn.harness, "thread-changed", playThreadChange, mutant, breaks...)
 }

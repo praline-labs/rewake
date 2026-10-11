@@ -69,6 +69,7 @@ type backend struct {
 	turns   map[string]turnRecord
 	ends    map[string]harness.Completion
 	tools   toolOffer
+	compact compactions
 
 	// closing stops new connections and new calls into the wrapper's
 	// handler; Close then waits for the goroutines reading the program
@@ -353,6 +354,24 @@ func (b *backend) Thread() (string, error) {
 		return "", inbox.ErrThreadUnavailable
 	}
 	return b.thread, nil
+}
+
+// threadChanged takes the program's new conversation while Wake is live on
+// the connection it came on, as a harness whose person started a new one
+// (Claude Code's /clear) reports it: what is delivered from now on goes to
+// it, and a turn ending in it is told apart from the one its task was
+// delivered to. No product adapter reports a change of conversation after S9;
+// stage 4's Claude Code adapter does again.
+func (b *backend) threadChanged(l *link, frame Frame) {
+	if frame.Thread == "" {
+		return
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if l == nil || b.link != l || !b.live[Wake] {
+		return
+	}
+	b.thread = frame.Thread
 }
 
 func (b *backend) Done() <-chan struct{} { return b.exited }

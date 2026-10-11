@@ -52,6 +52,10 @@ func (b *backend) handle(l *link, frame Frame) {
 		b.dispatch(frame, func() { _ = l.answer(frame, b.decide(l, completion, frame.Hold, err)) })
 	case opActivity:
 		b.activity(l, frame)
+	case opCompacted:
+		b.compacted(l, frame)
+	case opThread:
+		b.threadChanged(l, frame)
 	case opToolCall:
 		reply := b.toolCall(l, frame)
 		b.dispatch(frame, func() { _ = l.answer(frame, reply) })
@@ -252,5 +256,6 @@ func (b *backend) SessionState() sessionstate.Snapshot {
 		activity, at := b.telem.activity, b.telem.at
 		snapshot.Activity, snapshot.ActivityAt, snapshot.ActivityFresh = &activity, &at, true
 	}
+	b.publishCompactions(&snapshot)
 	return snapshot
 }

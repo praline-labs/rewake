@@ -109,12 +109,17 @@ type fixtureFrame struct {
 	Arguments json.RawMessage         `json:"arguments,omitempty"`
 	Texts     []string                `json:"texts,omitempty"`
 	IsError   bool                    `json:"isError,omitempty"`
+	// A compaction's end (fixtureshim_control_test.go).
+	Request      string `json:"request,omitempty"`
+	From         string `json:"from,omitempty"`
+	TokensBefore *int64 `json:"tokensBefore,omitempty"`
+	TokensAfter  *int64 `json:"tokensAfter,omitempty"`
 }
 
 // fixtureLaunch is what the program was started with.
 type fixtureLaunch struct {
-	session, room, role, brief, connect string
-	rest                                []string
+	session, room, role, brief, connect, control string
+	rest                                         []string
 }
 
 // runFixture is the entry point when this binary is re-executed as `fixture`.
@@ -162,7 +167,7 @@ func parseFixtureLaunch(args []string) (fixtureLaunch, error) {
 	var launch fixtureLaunch
 	values := map[string]*string{
 		"--session": &launch.session, "--room": &launch.room, "--role": &launch.role,
-		"--brief": &launch.brief, "--connect": &launch.connect,
+		"--brief": &launch.brief, "--connect": &launch.connect, "--control": &launch.control,
 	}
 	seen := map[string]bool{}
 	for i := 0; i < len(args); i++ {
@@ -188,8 +193,8 @@ func parseFixtureLaunch(args []string) (fixtureLaunch, error) {
 	if launch.session == "" || launch.room == "" || launch.role == "" {
 		return launch, errors.New("the launch must name --session, --room and --role")
 	}
-	if launch.connect == "" && launch.brief != "" {
-		return launch, errors.New("--brief goes to the session half, never to the terminal")
+	if launch.connect == "" && (launch.brief != "" || launch.control != "") {
+		return launch, errors.New("--brief and --control go to the session half, never to the terminal")
 	}
 	if launch.connect != "" && launch.rest != nil {
 		return launch, errors.New("the session half takes no arguments of the caller's")
@@ -279,6 +284,9 @@ func fixtureSessionMain(launch fixtureLaunch) int {
 		time.Sleep(requestLifetime)
 		return 0
 	}
+	if launch.control != "" && os.Getenv(shimNoControl) == "" {
+		go s.serveControl(launch.control)
+	}
 	s.read()
 	// The connection is gone: the session stays until the run ends it, so a
 	// dropped socket is a withdrawal and not a departure.
@@ -355,7 +363,7 @@ func (s *fixtureSession) serve(frame fixtureFrame) {
 				break
 			}
 		}
-		reply.OK, reply.Thread = true, s.thread
+		reply.OK, reply.Thread = true, s.currentThread()
 	case "deliver":
 		reply = s.delivered(frame, reply)
 	case "release":

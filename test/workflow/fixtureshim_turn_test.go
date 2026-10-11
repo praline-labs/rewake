@@ -25,7 +25,7 @@ const fixtureAskBound = 40 * time.Second
 // delivered takes one notice: steered into the open turn when one is held,
 // a turn of its own otherwise.
 func (s *fixtureSession) delivered(frame, reply fixtureFrame) fixtureFrame {
-	if frame.Thread != s.thread {
+	if frame.Thread != s.currentThread() {
 		reply.Error = fmt.Sprintf("no such conversation %q", frame.Thread)
 		return reply
 	}
@@ -57,10 +57,12 @@ func (s *fixtureSession) delivered(frame, reply fixtureFrame) fixtureFrame {
 	s.turn.counter++
 	id := fmt.Sprintf("turn-%d", s.turn.counter)
 	s.turn.lastNotice = notice
-	if os.Getenv(shimHoldTurn) != "" {
+	forInterrupt := os.Getenv(shimHoldForInterrupt) != "" && !s.turn.held
+	if os.Getenv(shimHoldTurn) != "" || forInterrupt {
 		s.turn.open = id
 		s.turn.steered = make(chan struct{})
 		s.turn.abort = make(chan struct{})
+		s.turn.untilAbort, s.turn.held = forInterrupt, s.turn.held || forInterrupt
 	}
 	s.turn.mu.Unlock()
 	s.recordGroup(id, notice)
@@ -73,6 +75,7 @@ func (s *fixtureSession) delivered(frame, reply fixtureFrame) fixtureFrame {
 // work is what the session does with a turn: say it started, read the mail,
 // and end it through the adapter.
 func (s *fixtureSession) work(id string, notice mailboxNotice) {
+	s.changeThread()
 	// The program times its own start, before the turn does anything, as a
 	// harness that knows when its turn began does.
 	if answer, err := s.ask(fixtureFrame{Op: "turn-started", Turn: id, At: boottime.Now()}, fixtureAskBound); err != nil || !answer.OK {
@@ -109,6 +112,9 @@ func (s *fixtureSession) work(id string, notice mailboxNotice) {
 	outcome := turnOutcome()
 	if s.takeAborted() || s.interruptNow() {
 		outcome = "interrupted"
+	}
+	if by := s.takeInterrupter(); by != "" {
+		text = by + " interrupted this turn with rewake interrupt"
 	}
 	if reason := os.Getenv(shimEndReason); reason != "" && outcome != "completed" {
 		text = reason

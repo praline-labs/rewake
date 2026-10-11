@@ -1,14 +1,10 @@
 package workflow
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"slices"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 )
@@ -43,16 +39,16 @@ func TestClaudeSteered(t *testing.T) {
 	c := Start(t, Spec{
 		Name:         "claude-steered",
 		Harness:      claudeColumn.harness,
-		Observations: steeredObservations,
+		Observations: claudeSteeredObservations,
 		Deadline:     120 * time.Second,
 	})
 	if _, err := exec.LookPath("node"); err != nil {
-		for _, observation := range steeredObservations {
+		for _, observation := range claudeSteeredObservations {
 			c.UnsupportedCapability(observation, "node", "no node on PATH to run the plugin's module")
 		}
 		return
 	}
-	for _, finding := range playSteered(t, c, Isolate(t, c, binary)) {
+	for _, finding := range playClaudeSteered(t, c, Isolate(t, c, binary)) {
 		if finding.held {
 			c.Observed(finding.observation, finding.detail)
 		} else {
@@ -62,34 +58,24 @@ func TestClaudeSteered(t *testing.T) {
 }
 
 const (
-	obsCompactStarted  = "main compacts an idle worker: the command answers started before the compaction ends, which the telemetry has not counted yet"
-	obsCompactLetter   = "the compaction's end reaches main as a notify from the worker, with the token counts and the compaction's number"
-	obsCompactBusy     = "main compacts a worker in a turn: refused as in a turn, and the turn goes on unreported"
-	obsInterruptBusy   = "main interrupts a worker in a turn: done, and main reads stopped saying main interrupted it, as its awaited list does"
-	obsCompactQuiet    = "main's own compaction: the telemetry counts it, and main gets no compaction notice of it"
+	claudeSteeredTask  = "claude-steered: work the long task"
 	obsInterruptLine   = "the interrupted worker's next notice says main interrupted it, and the one after does not"
-	obsInterruptIdle   = "main interrupts an idle worker: refused as no turn running"
-	obsCompactOrphan   = "a worker killed in the middle of a compaction main asked for: main still gets one letter of it"
-	obsNotAnswering    = "a request to a worker without the module is refused as not answering"
-	obsNotMain         = "a worker that is not main asking for a compaction is a wrong call"
-	steeredTask        = "claude-steered: work the long task"
 	steeredNote        = "claude-steered-note: go on"
-	steeredFocus       = "keep the plan"
 	steeredStoppedText = "lead-claude interrupted this turn with rewake interrupt"
 	steeredNoticeLine  = "lead-claude interrupted your previous turn with rewake interrupt."
 )
 
-var steeredObservations = []string{
+var claudeSteeredObservations = []string{
 	obsCompactStarted, obsCompactLetter, obsCompactQuiet, obsCompactBusy, obsInterruptBusy, obsInterruptLine, obsInterruptIdle, obsCompactOrphan,
 	obsNotAnswering, obsNotMain,
 }
 
-func playSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
+func playClaudeSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 	t.Helper()
 	node, err := exec.LookPath("node")
 	if err != nil {
 		var out []telemetryFinding
-		for _, observation := range steeredObservations {
+		for _, observation := range claudeSteeredObservations {
 			out = append(out, telemetryFinding{observation: observation, detail: "no node to run the plugin's module"})
 		}
 		return out
@@ -116,7 +102,7 @@ func playSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 
 	var sends []string
 	for _, worker := range []*scenarioSession{calm, busy} {
-		code, out, _ := asks.ask(c, "send", worker.name, steeredTask)
+		code, out, _ := asks.ask(c, "send", worker.name, claudeSteeredTask)
 		sends = append(sends, fmt.Sprintf("to %s: exit %d, %s", worker.name, code, firstLine(out)))
 	}
 	var out []telemetryFinding
@@ -137,7 +123,7 @@ func playSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 		}
 		return slices.Contains(kinds(about(calm, tasks[calm])), "finished")
 	}) {
-		for _, observation := range steeredObservations[:len(steeredObservations)-2] {
+		for _, observation := range claudeSteeredObservations[:len(claudeSteeredObservations)-2] {
 			out = append(out, telemetryFinding{observation: observation, detail: fmt.Sprintf("the workers did not take their tasks: sends %v; calm's reports %v", sends, kinds(about(calm, tasks[calm])))})
 		}
 		code, refused, _ := calmAsks.ask(c, "compact", bare.name)
@@ -225,23 +211,4 @@ func playSteered(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 		code == 0 && view.Outcome == "started" && len(letters) == 1 && strings.HasPrefix(letters[0], "notify "),
 		"%s; then main read %q", said, letters))
 	return out
-}
-
-// killHarness kills a session's harness outright, as a crash does, and waits
-// for its wrapper to end the session: nothing of the harness writes anything
-// afterwards, while the wrapper still cleans up after it.
-func killHarness(c *Case, iso *Isolation, session *scenarioSession) {
-	var record struct {
-		HarnessPID int `json:"harnessPid"`
-	}
-	raw, err := os.ReadFile(filepath.Join(iso.StateDir, "rooms", "default", "sessions", session.name+".json"))
-	if err != nil || json.Unmarshal(raw, &record) != nil || record.HarnessPID <= 0 {
-		c.Note("no harness to kill for " + session.name)
-		return
-	}
-	c.mu.Lock()
-	session.process.endedByCase = true
-	c.mu.Unlock()
-	_ = syscall.Kill(record.HarnessPID, syscall.SIGKILL)
-	waitFor(c, 10*time.Second, func() bool { return session.process.finished() && !session.process.groupAlive() })
 }

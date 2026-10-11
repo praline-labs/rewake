@@ -55,34 +55,6 @@ var mutantIdleInterruptDone = mutation{
 	edits: []edit{{`if (turn === undefined) return { answer: { outcome: "refused", reason: "no turn running" } }`, `if (turn === undefined) return { answer: { outcome: "done" } }`}},
 }
 
-// A request nobody took is reported as a failure, not as not answering.
-var mutantSilentNotAnswering = mutation{
-	name:  "silent-not-answering",
-	file:  "internal/control/control.go",
-	edits: []edit{{"Outcome: Refused, Reason: NotAnswering, Detail: detail}", "Outcome: Failed, Detail: detail}"}},
-}
-
-// Any session may steer another.
-var mutantAnyRoleSteers = mutation{
-	name:  "any-role-steers",
-	file:  "internal/cli/steer.go",
-	edits: []edit{{"if self.Role != role.Main.ID {", "if false && self.Role != role.Main.ID {"}},
-}
-
-// main's wrapper announces a compaction main asked for itself.
-var mutantOwnCompactionAnnounced = mutation{
-	name:  "own-compaction-announced",
-	file:  "internal/wrap/session_notices.go",
-	edits: []edit{{"if event.RequestedBy == self.Name {", "if false && event.RequestedBy == self.Name {"}},
-}
-
-// main's letter leaves out the session's count of compactions.
-var mutantLetterUncounted = mutation{
-	name:  "letter-uncounted",
-	file:  "internal/wrap/compaction_letters.go",
-	edits: []edit{{`text += fmt.Sprintf(" (compaction %d).", found.event.Sequence)`, `text += "."`}},
-}
-
 // The module answers only once the compaction has ended, as the command did
 // before it stopped waiting for the end.
 var mutantWaitsForTheEnd = mutation{
@@ -107,81 +79,41 @@ var mutantAskerUntold = mutation{
 	edits: []edit{{`if (announced) await told($, { plugin_event: "compact.asked"`, `if (false) await told($, { plugin_event: "compact.asked"`}},
 }
 
-// main's wrapper waits for the worker's word however the worker went: a
-// worker killed mid-compaction leaves main without a letter until the bound,
-// long past the case.
-var mutantOrphanUnlettered = mutation{
-	name:  "orphan-unlettered",
-	file:  "internal/wrap/compaction_letters.go",
-	edits: []edit{{"\t\tcase gone:\n", "\t\tcase false && gone:\n"}},
-}
-
-// main's list of what it is owed puts every stop down to a person.
-var mutantStopByAPerson = mutation{
-	name:  "stop-by-a-person",
-	file:  "internal/cli/inbox_awaited.go",
-	edits: []edit{{`return detail("stopped")`, `return "stopped by a person"`}},
-}
-
 func TestACompactionNeverAskedOfTheHostFails(t *testing.T) {
-	runSteeredControl(t, mutantCompactNotRun, obsCompactLetter, obsCompactQuiet, obsCompactBusy)
-}
-
-func TestMainNoticedOfItsOwnCompactionFails(t *testing.T) {
-	runSteeredControl(t, mutantOwnCompactionAnnounced, obsCompactQuiet)
-}
-
-func TestALetterWithoutTheCountFails(t *testing.T) {
-	runSteeredControl(t, mutantLetterUncounted, obsCompactLetter)
+	runClaudeSteeredControl(t, mutantCompactNotRun, obsCompactLetter, obsCompactQuiet, obsCompactBusy)
 }
 
 func TestACompactionAnsweredAtItsEndFails(t *testing.T) {
-	runSteeredControl(t, mutantWaitsForTheEnd, obsCompactStarted)
+	runClaudeSteeredControl(t, mutantWaitsForTheEnd, obsCompactStarted)
 }
 
 func TestALetterWithoutTheTokensFails(t *testing.T) {
-	runSteeredControl(t, mutantEndedUncounted, obsCompactLetter)
+	runClaudeSteeredControl(t, mutantEndedUncounted, obsCompactLetter)
 }
 
 func TestACompactionNotTiedToItsAskerFails(t *testing.T) {
-	runSteeredControl(t, mutantAskerUntold, obsCompactStarted, obsCompactLetter, obsCompactQuiet, obsCompactOrphan)
-}
-
-func TestALetterLostWithItsWorkerFails(t *testing.T) {
-	runSteeredControl(t, mutantOrphanUnlettered, obsCompactOrphan)
-}
-
-func TestAnInterruptListedAsAPersonsStopFails(t *testing.T) {
-	runSteeredControl(t, mutantStopByAPerson, obsInterruptBusy)
+	runClaudeSteeredControl(t, mutantAskerUntold, obsCompactStarted, obsCompactLetter, obsCompactQuiet, obsCompactOrphan)
 }
 
 func TestAnUnmappedMidTurnRefusalFails(t *testing.T) {
-	runSteeredControl(t, mutantInTurnUnmapped, obsCompactBusy)
+	runClaudeSteeredControl(t, mutantInTurnUnmapped, obsCompactBusy)
 }
 
 func TestAnInterruptThatDoesNotNameMainFails(t *testing.T) {
-	runSteeredControl(t, mutantInterrupterUnnamed, obsInterruptBusy, obsInterruptLine)
+	runClaudeSteeredControl(t, mutantInterrupterUnnamed, obsInterruptBusy, obsInterruptLine)
 }
 
 func TestAnInterruptLineRepeatedFails(t *testing.T) {
-	runSteeredControl(t, mutantLineRepeated, obsInterruptLine)
+	runClaudeSteeredControl(t, mutantLineRepeated, obsInterruptLine)
 }
 
 func TestAnIdleInterruptAnsweredDoneFails(t *testing.T) {
-	runSteeredControl(t, mutantIdleInterruptDone, obsInterruptIdle)
-}
-
-func TestANotAnsweringReportedAsFailedFails(t *testing.T) {
-	runSteeredControl(t, mutantSilentNotAnswering, obsNotAnswering)
-}
-
-func TestAWorkerThatSteersFails(t *testing.T) {
-	runSteeredControl(t, mutantAnyRoleSteers, obsNotMain)
+	runClaudeSteeredControl(t, mutantIdleInterruptDone, obsInterruptIdle)
 }
 
 // runSteeredControl is runFindingsControl, unsupported without node like the
 // interrupted turn's.
-func runSteeredControl(t *testing.T, mutant mutation, breaks ...string) {
+func runClaudeSteeredControl(t *testing.T, mutant mutation, breaks ...string) {
 	t.Helper()
 	if _, err := exec.LookPath("node"); err != nil {
 		name := "claude-steered-control-" + mutant.name
@@ -191,5 +123,5 @@ func runSteeredControl(t *testing.T, mutant mutation, breaks ...string) {
 		c.UnsupportedCapability(want, "node", "no node on PATH to run the plugin's module")
 		return
 	}
-	runFindingsControl(t, "claude-steered", playSteered, mutant, breaks...)
+	runFindingsControl(t, "claude-steered", playClaudeSteered, mutant, breaks...)
 }

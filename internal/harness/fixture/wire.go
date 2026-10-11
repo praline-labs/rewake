@@ -20,8 +20,9 @@ import (
 // own requests, so an answer always belongs to the side that receives it.
 
 // Operations. The program says hello, answers, and reports its turns, its
-// activity and its tool calls and their results; the adapter probes,
-// reserves, delivers and releases.
+// activity, its tool calls and their results, the ends of its compactions
+// and a change of its conversation; the adapter probes, reserves, delivers
+// and releases.
 const (
 	opHello       = "hello"
 	opAnswer      = "answer"
@@ -34,6 +35,8 @@ const (
 	opRelease     = "release"
 	opToolCall    = "tool-call"
 	opToolResult  = "tool-result"
+	opCompacted   = "compacted"
+	opThread      = "thread"
 )
 
 // The capabilities a program may serve, as its hello names them.
@@ -115,6 +118,15 @@ type Frame struct {
 	Texts     []string        `json:"texts,omitempty"`
 	IsError   bool            `json:"isError,omitempty"`
 	Shortened bool            `json:"shortened,omitempty"`
+
+	// A compaction's end: the request and the main that asked for it, empty
+	// for one nobody asked for, how it ended and the token counts around it.
+	// Outcome and Reason are those of a control answer here.
+	Request      string `json:"request,omitempty"`
+	From         string `json:"from,omitempty"`
+	Detail       string `json:"detail,omitempty"`
+	TokensBefore *int64 `json:"tokensBefore,omitempty"`
+	TokensAfter  *int64 `json:"tokensAfter,omitempty"`
 }
 
 // Member is one letter a delivery carries, by its identities.
