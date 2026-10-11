@@ -209,11 +209,11 @@ The wrapper sends them itself as notes from the run's name, through
 **The first line is fixed per category and class** and carries no name: the notice
 already shows the sender, the run. It is at most 55 cells, because a grouped notice
 puts `<sender> notify: ` before it — 41 cells with a name of the longest allowed, 32
-characters — inside the 96-cell preview (`internal/harness/notice.go`, `preview.go`). So
+characters — inside the 96-cell preview (`internal/inbox/notice.go`, `preview.go`). So
 it reaches the reader whole, alone or grouped, and a reader need not open the mail —
 which may be the operation that fails. The action comes first; the second line carries
 the class, the times and the reason in the allowed words. A test renders every first
-line through `harness.Notice` with a 32-character sender, alone and grouped, and
+line through `inbox.Notice` with a 32-character sender, alone and grouped, and
 requires it uncut.
 
 | Category entered | To | First line |

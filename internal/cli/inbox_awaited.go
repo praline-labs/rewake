@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
@@ -192,7 +191,7 @@ func awaitedLines(recipients []awaitedRecipient) []string {
 			}
 			lines = append(lines,
 				fmt.Sprintf("%s%s · %s · %s · %s", indent, message.ID, kind, message.CreatedAt.Local().Format("15:04:05"), awaitedState(recipient.Name, message)),
-				strings.Repeat(" ", len(indent))+harness.Preview(message.Text),
+				strings.Repeat(" ", len(indent))+inbox.Preview(message.Text),
 			)
 		}
 	}
@@ -212,7 +211,7 @@ func awaitedState(recipient string, message awaitedView) string {
 		return "no report coming: " + recipient + " was replaced by a new run"
 	}
 	detail := func(prefix string) string {
-		if line := harness.Preview(message.Detail); line != "" {
+		if line := inbox.Preview(message.Detail); line != "" {
 			return prefix + ": " + line
 		}
 		return prefix

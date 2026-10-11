@@ -70,7 +70,7 @@ type Harness interface {
 flag for the same parameter replace rather than repeat each other. `ProtectedDirs` names
 the harness's own configuration, which no task may grant a session to write
 ([grants.md](grants.md)). `Deliver` sends the
-notice for `message`, built by `harness.Notice`; it never sends `message.Text`.
+notice for `message`, built by `inbox.Notice`; it never sends `message.Text`.
 
 A harness whose sessions take `rewake compact` and `rewake interrupt` also implements
 `Steerable` — `CompactFocus() bool`, whether a compaction may carry a focus. One that

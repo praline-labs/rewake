@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/inbox"
 )
 
@@ -17,21 +16,21 @@ import (
 // person watching the session should see exactly what the agent is told.
 func notification(message inbox.Message) string {
 	status := "completed"
-	if harness.NoticeKind(message) == inbox.Stopped {
+	if inbox.NoticeKind(message) == inbox.Stopped {
 		status = "killed"
 	}
-	if harness.NoticeKind(message) == inbox.Error {
+	if inbox.NoticeKind(message) == inbox.Error {
 		status = "failed"
 	}
-	if harness.NoticeKind(message) == inbox.Interim {
+	if inbox.NoticeKind(message) == inbox.Interim {
 		// Neither completed nor failed: the interface draws a status it has no
 		// color for as a plain line, which is what "still going" should look like.
 		status = "running"
 	}
-	summary := harness.Notice(message)
+	summary := inbox.Notice(message)
 	return strings.Join([]string{
 		"<task-notification>",
-		fmt.Sprintf("<task-id>%s</task-id>", harness.NoticeID(message)),
+		fmt.Sprintf("<task-id>%s</task-id>", noticeID(message)),
 		"<status>" + status + "</status>",
 		fmt.Sprintf("<summary>%s</summary>", escape(summary)),
 		"</task-notification>",
@@ -42,4 +41,18 @@ func notification(message inbox.Message) string {
 // restricted to a safe alphabet; this is for the day that changes.
 func escape(text string) string {
 	return strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;").Replace(text)
+}
+
+// noticeID is the part of the message id a notice carries. Claude Code drops
+// identical text from the same sender within thirty seconds, and two notices of
+// the same kind from the same session would otherwise be the same text. Eight
+// hex characters of the random tail, not four: the id only has to make
+// otherwise identical messages different, and a four-character tail repeats
+// often enough to matter.
+func noticeID(message inbox.Message) string {
+	id := message.ID
+	if len(id) > 8 {
+		id = id[len(id)-8:]
+	}
+	return "rewake-" + id
 }

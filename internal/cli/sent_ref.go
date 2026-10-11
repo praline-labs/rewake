@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 )
@@ -45,7 +44,7 @@ func sentBySelf(call Call, dir, reference, retry string) (registry.Session, stri
 			// message it was.
 			line = fmt.Sprintf("  %s · %s (withdrawn) to %s · %s", message.ID, message.Withdrawn.Kind, message.To, message.CreatedAt.Local().Format("15:04:05"))
 		} else {
-			line += " · " + harness.Preview(message.Text)
+			line += " · " + inbox.Preview(message.Text)
 		}
 		lines = append(lines, line)
 	}

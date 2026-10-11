@@ -57,17 +57,17 @@ one adapter needs beyond the neutral events lives in the adapter.
   - `internal/channel/notices_test.go` `TestANewMainGetsTheCurrentCategory`
   - `internal/channel/notices_test.go` `TestAPublicationKeepsItsIdentityAndADropStays`
   - `internal/channel/windows_test.go` `TestTheWindowsOverEveryLandingHistory`
-  - `internal/harness/notice_test.go` `TestNoticesPreviewOnlyTheAuthorsFirstLine`
-  - `internal/harness/notice_test.go` `TestPreviewsAreBoundedAndCannotAddTerminalLines`
-  - `internal/harness/notice_test.go` `TestWidePreviewFitsOneHundredColumns`
-  - `internal/harness/notice_test.go` `TestGroupedNoticeKeepsCompactPreviewWithoutInstructions`
-  - `internal/harness/notice_recall_test.go` `TestARecallIsShownBesideANewerLetter`
-  - `internal/harness/notice_recall_test.go` `TestTwoRecallsAreBothShown`
-  - `internal/harness/notice_recall_test.go` `TestALongRecallKeepsItsInstruction`
-  - `internal/harness/notice_recall_test.go` `TestAReplacementNamesTheMessageItReplaces`
-  - `internal/harness/notice_recall_test.go` `TestAReplacementIsShownBesideANewerLetter`
-  - `internal/harness/notice_recall_test.go` `TestCorrectionsAreAllShownOldestFirst`
-  - `internal/harness/notice_recall_test.go` `TestASingleCorrectionIsShownBesideTheNewestUnread`
+  - `internal/inbox/notice_test.go` `TestNoticesPreviewOnlyTheAuthorsFirstLine`
+  - `internal/inbox/notice_test.go` `TestPreviewsAreBoundedAndCannotAddTerminalLines`
+  - `internal/inbox/notice_test.go` `TestWidePreviewFitsOneHundredColumns`
+  - `internal/inbox/notice_test.go` `TestGroupedNoticeKeepsCompactPreviewWithoutInstructions`
+  - `internal/inbox/notice_recall_test.go` `TestARecallIsShownBesideANewerLetter`
+  - `internal/inbox/notice_recall_test.go` `TestTwoRecallsAreBothShown`
+  - `internal/inbox/notice_recall_test.go` `TestALongRecallKeepsItsInstruction`
+  - `internal/inbox/notice_recall_test.go` `TestAReplacementNamesTheMessageItReplaces`
+  - `internal/inbox/notice_recall_test.go` `TestAReplacementIsShownBesideANewerLetter`
+  - `internal/inbox/notice_recall_test.go` `TestCorrectionsAreAllShownOldestFirst`
+  - `internal/inbox/notice_recall_test.go` `TestASingleCorrectionIsShownBesideTheNewestUnread`
   - `internal/wrap/channel_test.go` `TestANoticeLandsOnceAcrossHeartbeats`
   - `internal/wrap/channel_test.go` `TestMainIsToldUnlessItIsTheRun`
   - `internal/wrap/channel_order_test.go` `TestNoticesWaitForTheOneInFlight`

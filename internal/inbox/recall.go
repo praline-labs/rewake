@@ -11,7 +11,7 @@ import (
 // the one that does not: a preview can itself be an instruction, and an agent
 // seen on September 26, 2026 carried one out from the notice alone and never
 // read the tombstone. So the note is announced like work, at once, and every
-// notice shows it on a line of its own (harness.Notice). It stops work that
+// notice shows it on a line of its own (Notice). It stops work that
 // has not happened yet; a step already taken from the preview stays taken.
 //
 // rewake edit sends none: its replacement's own preview names the message it

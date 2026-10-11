@@ -67,12 +67,6 @@ var importExceptions = []importException{
 		step:   "S10",
 	},
 	{
-		from: "internal/channel", to: "internal/harness",
-		files:  []string{"internal/channel/preview_test.go"},
-		reason: "the notice text is the harness package's until it moves to the core",
-		step:   "S10",
-	},
-	{
 		from: "internal/alias", to: "internal/harness/catalog",
 		files:  []string{"internal/alias/harness_flags_test.go"},
 		reason: "the tests take a real adapter",

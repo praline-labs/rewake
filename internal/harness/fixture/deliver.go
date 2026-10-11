@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/inbox"
 )
 
@@ -82,7 +81,7 @@ func (r *reservation) Deliver(_ context.Context, message inbox.Message) inbox.Re
 	if l, live := r.backend.isLive(Wake); !live || l != r.link {
 		return inbox.Result{State: inbox.Failed, Detail: "the fixture's wake was withdrawn"}
 	}
-	answer, err := r.link.ask(Frame{Op: opDeliver, Thread: r.thread, Letter: message.ID, Notice: harness.Notice(message), Members: members(message)}, deliverBound)
+	answer, err := r.link.ask(Frame{Op: opDeliver, Thread: r.thread, Letter: message.ID, Notice: inbox.Notice(message), Members: members(message)}, deliverBound)
 	if errors.Is(err, errClosed) {
 		return inbox.Result{State: inbox.Pending, Detail: err.Error()}
 	}

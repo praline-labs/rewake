@@ -6,7 +6,6 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/sessionstate"
 )
@@ -83,7 +82,7 @@ func writeInboxPeek(ctx *Context, name string, messages []messageView) error {
 	model := inboxPeekModel{Session: name, Messages: make([]messagePreview, 0, len(messages))}
 	for _, message := range messages {
 		model.Messages = append(model.Messages, messagePreview{
-			ID: message.ID, From: message.From, Kind: inbox.KindOf(message.Message), CreatedAt: message.CreatedAt, Preview: harness.Preview(message.Text), Telemetry: message.Telemetry,
+			ID: message.ID, From: message.From, Kind: inbox.KindOf(message.Message), CreatedAt: message.CreatedAt, Preview: inbox.Preview(message.Text), Telemetry: message.Telemetry,
 			AddendumTo: message.AddendumTo, Replaces: message.Replaces, relation: relation(message.Message),
 		})
 	}

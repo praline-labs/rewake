@@ -63,7 +63,7 @@ decides the outcome:
   finished`), behind a second recall, or cut by the 96-cell bound before its point, as
   the first wording, which led with `Rewake: <sender> withdrew…`, was. Main decided the
   same day: every recall in a notice gets a line of its own, placed first, oldest first,
-  on both harnesses (`harness.Notice`); the newest other letter keeps its line after
+  on both harnesses (`inbox.Notice`); the newest other letter keeps its line after
   them; and the text leads with the instruction, so the bound cuts the sender and the
   time, never which message not to act on. On Codex each member entry of a recall carries
   `recalls: <id>`, the withdrawn message's id, beside the recall's own. An edit's
@@ -164,7 +164,7 @@ September 26, 2026 the recall and the replacement went out in one group whose pr
 showed the recall: the agent read "withdrawn", ended its turn and never read the
 replacement, while the edit had exited 0. Main decided the same day that the
 replacement's own preview carries it instead: it begins `Replaces <short id>
-(withdrawn): ` and goes on with the replacement's first line (`harness.Notice`), so one
+(withdrawn): ` and goes on with the replacement's first line (`inbox.Notice`), so one
 line both sets the old work aside and shows the new. review-codex then found that line
 lost the way the recall's had been: a replacement followed by a newer notify in one group
 previewed only the notify. Main decided the same day that every correcting letter, a
@@ -253,7 +253,7 @@ The finality races are unit tests beside the held ones, in
 `internal/inbox/withdraw_failure_test.go`, with the archive holding the tombstone after a
 halfway read and a waiting copy that will not go; the recall's place outside the window in
 `internal/inbox/recall_test.go`; the recall's lines and the replacement's in a notice in
-`internal/harness/notice_recall_test.go`, and the member entries of a recall and of a
+`internal/inbox/notice_recall_test.go`, and the member entries of a recall and of a
 replacement in `internal/harness/codex/mailbox_test.go`; the references, refusals, the recall and the
 edit that sends none in `internal/cli/withdraw_test.go`; a task withdrawn with its
 addenda, a read addendum that stays, an edit's replacement keeping them and the second

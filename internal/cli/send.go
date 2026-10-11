@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
@@ -170,7 +169,7 @@ func handleSend(ctx *Context, call Call) error {
 		GrantDirs:  grantDirs.dirs,
 		GrantBroad: grantDirs.broad,
 		ID:         inbox.NewID(),
-		From:       harness.ShellSender,
+		From:       inbox.ShellSender,
 		To:         session.Name,
 		ToEpoch:    session.Epoch(),
 		Kind:       kind.kind,
