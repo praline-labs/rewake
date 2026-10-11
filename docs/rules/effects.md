@@ -240,7 +240,8 @@ nothing lifts a stop without returning evidence.
   - `internal/adapter/fixture/turns_test.go` `TestAnEndSentAgainIsTheSameCompletion`
   - `internal/inbox/kept_clock_test.go` `TestAHoldReservesItsPositionBeforeItCommits`
   - `internal/inbox/kept_clock_test.go` `TestAFailedHoldLeavesAGapAndNoPositionIsIssuedTwice`
-  - Gap: every TurnBoundary names its event — closed in S10 with the adapter API.
+  - `internal/cli/turn_end_api_test.go` `TestATurnEndWithoutItsEventOrAKnownReasonIsRefused`
+  - `internal/wrap/turn_boundary_test.go` `TestTheWrapperPassesEachEndOnWithItsEventAndReason`
 
 - **E8. Each effect is proven done, proven not done, or unknown; an unknown stops every
   change to its mailbox until evidence settles it.** (M1 rule 8, clauses evidence,

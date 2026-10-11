@@ -88,8 +88,8 @@ Tests:
 - `internal/wrap/room_context_test.go` `TestADeadMainDoesNotSelectAnImplicitMain`
 - `internal/wrap/room_context_test.go` `TestEachRoomHasItsOwnMain`
 - `internal/wrap/window_test.go` `TestWrapperGathersNotesApartIntoOneNotice`
-- `internal/wrap/thread_test.go` `TestTheWrapperPinsDeliveryToTheHarnessThread` — recast on the adapter API's interfaces in S10
-- `internal/wrap/thread_test.go` `TestTheWrapperPinsDeliveryToTheObservedThread` — recast on the adapter API's interfaces in S10
+- `internal/wrap/thread_test.go` `TestTheWrapperPinsDeliveryToTheHarnessThread`
+- `internal/wrap/thread_test.go` `TestTheWrapperPinsDeliveryToTheObservedThread`
 - `internal/host/launch/version_test.go` `TestAVersionBelowTheMinimumIsRefused`
 - `internal/host/launch/version_test.go` `TestAnUnreadableVersionIsRefused`
 - `internal/host/launch/version_test.go` `TestAGateWithoutAMinimumReadsNothing`

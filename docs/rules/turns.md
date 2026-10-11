@@ -83,4 +83,7 @@ that they are checked like the rest ([stage3-tests.md](../v2/stage3-tests.md#how
   - `internal/cli/neutral_end_test.go` `TestNeutralAnEmptyEndAfterWorkReportsAnError`
   - `test/workflow/turn_reasons_test.go` `TestTurnReasons` — the fixture's end frame to the report
   - `test/workflow/turn_reasons_test.go` `TestTurnReasonControls`
-  - Gap: the reason through a TurnBoundary interface, beyond the fixture's end frame — closed in S10.
+  - `internal/cli/turn_end_api_test.go` `TestEachEndReasonReportsItsOutcome`
+  - `internal/cli/turn_end_api_test.go` `TestATurnEndWithoutItsEventOrAKnownReasonIsRefused`
+  - `internal/wrap/turn_boundary_test.go` `TestTheWrapperPassesEachEndOnWithItsEventAndReason`
+  - `internal/adapter/fixture/turns_test.go` `TestAnEndIsConfirmedWhenItCanBeHeld` — the fixture's end frame to a `TurnEnd` and its reason
