@@ -91,7 +91,7 @@ One line per step; S1–S6 are detailed in [stage3-steps.md](stage3-steps.md), S
 | S12 | `infra` moves | — | review |
 | S13 | `core` moves, the whole of `inbox` to `core/mail` with the delivery server inside it for now | yes | review |
 | S14 | the turn-end and read code moves from `cli` to `core/mail` | yes | review |
-| S15 | the delivery server leaves `core/mail` for `host/delivery`: one preparatory commit, one move | yes | review [codex] |
+| S15 | the delivery server leaves `core/mail` for `host/delivery`: preparatory commits by subject, one move | yes | review [codex] |
 | S16 | `tool` and `host` move | yes | review |
 | S17 | the build id and the room's lease with its bootstrap, then the state root `v2/`, read-only views, the write seam, clearing 1.x | yes | review [codex] |
 | S18 | the operator decision (part B) | yes | review [codex] |

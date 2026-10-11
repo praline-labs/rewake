@@ -36,6 +36,15 @@ tests take their cases from the logged steps of clean runs rather than from a li
 by hand ([mail-bridge-checks.md](mail-bridge-checks.md#how-the-checks-are-built)). A
 release build never reads the variable.
 
+The tag also admits one narrow kind of test code into a production package. When a fault
+schedule must cross a package boundary and neither an exported operation, a file
+fixture nor `state.Fault` can build it, the package that owns the step may carry exported
+test operations in a file built only under `rewakefault`, and the tests in the other
+package that use them carry the same tag. They run in the `rewakefault,rewakefixture`
+race run; an untagged build has no such operation. The only such file is decided by S15
+for `core/mail` and named there ([stage3-moves.md](v2/stage3-moves.md#s15-the-delivery-server-to-hostdelivery-codex)):
+a waiting copy's removal that fails, and the listing of a mailbox's stops observed.
+
 ### Three columns, three meanings
 
 Since S8, October 8, 2026, there were two: the Codex column left with its adapter. Since

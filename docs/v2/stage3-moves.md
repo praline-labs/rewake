@@ -174,10 +174,14 @@ files — `followEarlierRun` (`adopt.go:121`), `checkGrants` (`grants.go:43`),
 delivery identifiers used by mail: 31, all but nine of them the `Server`'s fields and
 methods read inside those six methods.
 
-**The preparatory commit**, in place in `core/mail`:
+**The preparation**, in place in `core/mail`: several commits by subject, each one
+behaviour-unchanged and each followed by the four-variant inventory, rather than the one
+commit first planned (decided October 11, 2026, on the retaken inventory):
 
 1. The seven `Server` methods move to delivery files, taking every use of `Server`'s
-   fields and lock with them.
+   fields and lock with them. Where a method's body is mail's, the body stays in mail as
+   an exported function named for its precondition, and the method keeps what is the
+   server's (ownership below).
 2. A delivery-declared identifier that mail still uses after that moves to a mail file:
    the types `Availability` and `UndeliveredNotice` (fields of `Message`,
    `inbox.go:38-39`), `removeWaiting` (`withdraw.go:187`), `answerLifetime`
@@ -197,7 +201,46 @@ methods read inside those six methods.
    files; one that uses only mail stays. A delivery test that builds mail state does it
    through mail's exported API or through `core/mail/mailtest`, exported helpers for
    tests; a production identifier is never exported only for a test. 39 of the test
-   files touch both sides at `b6ed4ed`.
+   files touch both sides at `b6ed4ed`. A test whose subject is a mail body the server
+   only arranged — a sweep of finished mail, a delivery-thread record — stays in mail
+   and arranges it itself, under the real mailbox lock. `mailtest` holds fixtures of
+   paths and bytes, each checked by a mail test against mail's own reader or writer, and
+   never a second settlement. A write that must fail fails through `state.Fault`, which
+   fails one exact path before `WriteAtomic` writes.
+
+**Ownership** (decided October 11, 2026). Mail keeps the body of the sweep of finished
+mail with everything it runs — the retirement of letters, claims, marks, turn records,
+retained receipts and thread records — settlement with its look at copies and at the
+mailbox's stop, the stop's retention, the sweep of an earlier run's waits, and the
+synthetic `withdrawn` outcome, which is no status on disk. They are exported as
+`SweepFinishedLocked`, `SettleLocked` and `SweepAwaitingLocked`: the caller holds the
+mailbox lock, and none takes it, since the lock is not reentrant. Delivery keeps
+`Server.sweepFinished` — its context, the acquisition of the mailbox lock and the
+live-run read `liveRun` — and calls mail's function inside its existing locked callback;
+settlement is called from `settleOutcome` and `settleUnreadOnly`, inside their sections,
+and the awaiting sweep from `followEarlierRun`, in its present order and without a
+live-run read. No lock is released and taken again at the package boundary, and
+settlement gains no live-run check.
+
+**The caller restriction.** A structural test in `internal` restricts the production
+references to those three functions — calls and function values, in every build
+variant: `SweepFinishedLocked` only from `(*Server).sweepFinished`, `SettleLocked` only
+from `settleOutcome` and `settleUnreadOnly`, `SweepAwaitingLocked` only from
+`followEarlierRun`. It fails on a new caller and on an expected caller that no longer
+calls. This is a discipline of the repository, not a capability of the lock: nothing at
+run time proves the caller holds it.
+
+**The fault exception (c)** (decided October 11, 2026). Two schedules cross the package boundary and cannot be
+built on exported operations, files or `state.Fault`: a waiting copy whose removal fails
+while the server settles (the failing removal is mail's `removeWaiting`, not a state
+operation), and the witness that settlement lists the mailbox's stops only while
+holding the lock. For them, and only them, package mail carries test operations in a
+file built under `rewakefault` — an exact-path failure of a waiting copy's removal that
+counts its attempts, and an observer scoped to one mailbox's listing of its stops — and
+the delivery tests that use them are built under the same tag, so they run in the
+`rewakefault,rewakefixture` race run of the five checks. The operations are exported
+functions only: no private type, global or alias of the stop machinery crosses, and no
+production hook exists in an untagged build.
 
 After it, `go/types` finds no reference from a mail file into a delivery file, which
 the review checks by rerunning the inventory.
