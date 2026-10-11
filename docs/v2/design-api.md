@@ -96,9 +96,9 @@ starting set is the owner's (answer 2 of [design.md](design.md#the-owners-answer
 `inbox`, `send`, `pending`, `whoami`, `retry`, `list`.
 
 Each tool's schema declares only the command's flags and positionals, in plain words;
-none declares a property a harness reserves for itself (on Claude Code `tool`,
-`tool_use_id`, `agentId`, `consent` — types `ToolCallReserved`, `ToolCallInput`
-**[types]**). The model sees `mcp__rewake__<name>` (decision 9).
+none declares a property a harness reserves for itself (on Claude Code the reserved part
+of a tool call's input, `tool`, `tool_use_id` and `consent`, and its caller's `agentId`;
+the `mods` skill has the current list). The model sees `mcp__rewake__<name>` (decision 9).
 
 The adapter carries a call to the host's endpoint with its **binding** — the
 conversation, turn and call ids the harness itself supplied — and returns the answer.

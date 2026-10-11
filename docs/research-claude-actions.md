@@ -1,6 +1,7 @@
 # Research: acting on a Claude Code session from its plugin and its hooks
 
-This is a record of 2.1.280. The current mod API is in the `mods` skill, which this record does not follow.
+Its facts are records of the versions its sections name. The current mod API is in the `mods`
+skill; read it there before relying on anything here.
 
 Split from [research-claude-control.md](research-claude-control.md) by subject on
 September 24, 2026: that document is about what reaches a running session from outside

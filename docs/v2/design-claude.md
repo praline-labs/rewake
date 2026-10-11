@@ -270,7 +270,7 @@ a new `session.start`; resume gives its own end reason (the skill; whether a bra
 named is P9). The mod tells the host each change of session id, and the run's
 conversation binding moves with it, so a call bound to the old conversation cannot
 commit into the new one (T2, T7). The skill names `classic.SessionStart`, which fires
-after a clear, a resume and a branch with its source, as the natural carrier of that
+after a clear, a resume and a fork (the branch) with its source, as the natural carrier of that
 telling; the choice between it and the end event is for stage 4.
 
 ## What the mod never does
