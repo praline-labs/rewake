@@ -40,9 +40,8 @@ type mailTool struct {
 	// keeper keeps the run's channel record, for a harness that offers a
 	// tool transport (docs/mail-bridge-channel.md): the endpoint's events,
 	// whose hello and close are the transport's lifecycle, the offered
-	// transport at its start, the run's live set once its readiness exchange
-	// has run, and the shell's evidence at its heartbeat. Nil for any other
-	// harness, whose every use of it is a no-op.
+	// transport at its start, and the shell's evidence at its heartbeat. Nil
+	// for any other harness, whose every use of it is a no-op.
 	keeper *channelKeeper
 	// offered says the run was offered the tool at its start: an endpoint,
 	// tools, and a transport in the plan to register them.
@@ -130,18 +129,18 @@ func (t *mailTool) attach(plan adapter.LaunchPlan) {
 }
 
 // exchanged takes the run's first live set, its readiness exchange's result:
-// a tool offered that the exchange did not make live is no tool for the
-// whole run, its record begun again with why, and the person told — the
-// start the hello timer waits for has come and gone. A later connection that
-// makes it live serves calls, and the record keeps no tool, as for any run
-// that started without one.
+// a tool offered that the exchange did not make live is told to the person,
+// and its record stays the offered tool's. It is unproven, not absent: a
+// later exchange may make it live, and its hello, its calls and a denial of
+// it for permission then enter the record as for any offered tool — a record
+// begun again as no tool would drop them, the denial's block with them (C7).
+// Until then the hello timer judges it as it judges any tool that never
+// connects.
 func (t *mailTool) exchanged(live []adapter.Capability) {
 	if !t.offered || slices.Contains(live, adapter.ToolTransportCapability) {
 		return
 	}
-	reason := "the harness did not make the mail tool live"
-	t.keeper.begin(false, reason)
-	_, _ = fmt.Fprintln(os.Stderr, "rewake: started without the rewake tool: "+reason+"; mail goes through the shell")
+	_, _ = fmt.Fprintln(os.Stderr, "rewake: the harness did not make the rewake tool live at its start; mail goes through the shell until it does")
 }
 
 // handler is a turn handler whose starts are recorded whatever the run

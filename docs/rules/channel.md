@@ -16,7 +16,7 @@ one adapter needs beyond the neutral events lives in the adapter.
   - `internal/wrap/channel_test.go` `TestTheShellObservationsAreFoldedAndTaken`
   - `internal/channel/space_test.go` `TestEveryEventSequenceKeepsTheRules`
   - `internal/channel/table_test.go` `TestEachFailurePointShowsAndTellsWhatTheTextSays`
-  - `test/workflow/fixture_live_test.go` `TestFixtureLive` — on the fixture column since S11: a channel live, absent, lost, denied, the shell's evidence and the record frozen at the exit
+  - `test/workflow/fixture_live_test.go` `TestFixtureLive` — on the fixture column since S11: a channel live, unproven, lost, denied, the shell's evidence and the record frozen at the exit
 
 - **C2. Connected is not working.** A transport's hello proves it reached the host; only
   a call that met its binding proves the tool carried one.
@@ -81,6 +81,7 @@ one adapter needs beyond the neutral events lives in the adapter.
   - `internal/wrap/channel_test.go` `TestAdviceFixedBeforeTheBlockIsDropped`
   - `internal/wrap/channel_order_test.go` `TestADenialToldWhileACloseWaitsStopsAdviceAtOnce`
   - `internal/adapter/fixture/live_test.go` `TestADenialReachesTheNeutralInput`
+  - `internal/wrap/channel_live_test.go` `TestAToolLiveAfterAnUnprovenExchangeKeepsItsLifecycle`
   - `internal/channel/space_test.go` `TestEveryEventSequenceKeepsTheRules`
 
 - **C8.** Nothing is relaunched, granted or approved by the channel.

@@ -50,11 +50,12 @@ var mutantLostKept = mutation{
 	edits: []edit{{"\tb.changed()", "\tb.toolsLive()"}},
 }
 
-// A tool the exchange did not make live leaves the record waiting for it.
-var mutantNoToolUnrecorded = mutation{
-	name:  "no-tool-unrecorded",
+// A tool the exchange did not make live is taken for no tool, and the record
+// begun again drops whatever it later brings.
+var mutantUnprovenTakenForNone = mutation{
+	name:  "unproven-taken-for-none",
 	file:  "internal/wrap/tools.go",
-	edits: []edit{{"\tt.keeper.begin(false, reason)\n", "\n"}},
+	edits: []edit{{"\t_, _ = fmt.Fprintln(os.Stderr, \"rewake: the harness did not make the rewake tool live", "\tt.keeper.begin(false, \"unproven\")\n\t_, _ = fmt.Fprintln(os.Stderr, \"rewake: the harness did not make the rewake tool live"}},
 }
 
 // The harness's denial reaches nothing.
@@ -109,8 +110,8 @@ func TestALostConnectionKeptLiveFails(t *testing.T) {
 	runLiveControl(t, mutantLostKept, obsLiveDropped)
 }
 
-func TestANoToolLeftUnrecordedFails(t *testing.T) {
-	runLiveControl(t, mutantNoToolUnrecorded, obsChannelNone)
+func TestAnUnprovenToolTakenForNoneFails(t *testing.T) {
+	runLiveControl(t, mutantUnprovenTakenForNone, obsChannelNone)
 }
 
 func TestADenialDroppedFails(t *testing.T) {

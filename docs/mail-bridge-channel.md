@@ -27,10 +27,12 @@ shell's observations taken at each heartbeat, and a call the harness denied for
 permission (`ToolInput.CallDenied`, the fixture's `tool-denied`); the harness's exit
 freezes it, and the run's session state publishes it once more as it stops, so the
 frozen record is the one that stays. A tool the readiness exchange did not make live
-turns the record to no tool, with "the harness did not make the mail tool live", and the
-launch says so on its standard error; that holds for the whole run, as for a run started
-without a tool — a later reconnect that makes the tool live serves its calls, but the
-record keeps no tool. A run whose adapter offers no transport keeps no record and shows
+is unproven, not absent: the launch says so on its standard error, and the record stays
+the offered tool's — starting, then failing with "no hello observed" once the hello timer
+passes, as any offered tool that never connects. A later exchange that makes it live
+brings its hello, its calls and a denial of it for permission into the record as for any
+offered tool, so the denial's block holds (C7). No tool is only a launch whose plan
+carries none. A run whose adapter offers no transport keeps no record and shows
 `mail: unknown`.
 
 **The hello and the close are the tool transport's lifecycle since S10, October 11,
@@ -44,9 +46,9 @@ A refused hello is a transport's call from a process the run did not name — a 
 the model runs, posing as the harness's own process — with whether it came from the
 harness's tree. Where the text below says a server, read the transport that carries the
 calls; a restarted transport is a close and a new hello, as a restarted server was.
-The keeper's inputs are these events (`channel.Event`), the offered transport
-(`Offer.ToolTransport`) at its start, and from S11 the run's live set after its readiness
-exchange: an offered tool the exchange did not prove is no tool.
+The keeper's inputs are these events (`channel.Event`) and the offered transport
+(`Offer.ToolTransport`) at its start; the run's live set does not change the record, and
+a tool goes live or is lost only through the hello and close its transport makes.
 
 ## The rules
 

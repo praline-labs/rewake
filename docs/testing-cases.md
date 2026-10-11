@@ -305,9 +305,10 @@ transport sentence, and once stopped its last snapshot keeps the channel record 
 the exit. wakeless (`RW_SHIM_NO_WAKE`) has no Wake live: a note and a task to it are
 each accepted at once, exit 3, by send's own answer that no notice can reach it, and once
 its server has tried them each waits readable in its inbox with its stored status
-pending. toolless (`RW_SHIM_NO_TOOL`) shows no tool
-with its reason, says so on its standard error at launch, carries the shell's clause
-alone in its briefing, and its shell read lands in its record. dropper
+pending. toolless (`RW_SHIM_NO_TOOL`) says so on its standard error at launch, carries
+the shell's clause alone in its briefing, keeps the tool offered and unproven in its
+record — starting, or failing with no hello once the timer passes — never no tool, and
+its shell read lands in its record. dropper
 (`RW_SHIM_DROP_AFTER=1`) closes its connection after its first turn: its whole live set
 is withdrawn at once, its channel shows the tool failing with the server gone, and a
 second task to it fails, exit 1, with nothing written. denied makes one call its harness
@@ -315,11 +316,12 @@ refuses for permission (a call marked `denied` in `RW_SHIM_TOOL_CALLS`, the prog
 `tool-denied` frame): its channel shows the tool denied by policy. stuck
 (`RW_SHIM_NO_BOUNDARY`) is a worker whose run proves no turn boundary: its launch is
 refused, exit 1, and leaves no session. The steering refusal without a live Control is
-`fixture-steered`'s bare. Its nine mutants each break one decision by the live set or
+`fixture-steered`'s bare. Its eleven mutants each break one decision by the live set or
 one transition of the channel keeper: a letter waiting for a delivery nothing makes
-(`send-unwoken`), a task sent whatever the boundary's mark says (`task-unbounded`), a
+(`send-unwoken`), a reservation or a conversation asked of a Wake that is not live, which
+fails the letter (`reserve-unguarded`, `thread-unguarded`), a task sent whatever the boundary's mark says (`task-unbounded`), a
 worker's launch that does not wait (`launch-unawaited`), a lost connection kept in the
-record (`lost-kept`), an unproven tool left waiting in the record (`no-tool-unrecorded`),
+record (`lost-kept`), an unproven tool taken for no tool (`unproven-taken-for-none`),
 a denial reaching nothing (`denial-dropped`), the shell's observations never folded
 (`shell-unread`), the record not frozen at the exit (`exit-unfrozen`), and a briefing
 built as if no tool were live (`brief-toolless`). What it does not prove: that a real
@@ -363,4 +365,4 @@ switches have no single form in the code to find them by, and the row is kept by
 | fixture-worktree | `worktree-not-entered`, `worktree-running-ignored`, `worktree-visitor-ignored`, `worktree-git-kept`, `worktree-ignored-unseen`, `worktree-branch-trusted`, `worktree-moved-unrefused`, `worktree-detached`, `worktree-land-merges`, `worktree-finish-unchecked`, `worktree-finish-branch-kept` | — |
 | fixture-grant-dir | `grant-not-rechecked`, `grant-refusal-untold`, `grant-unregistered`, `grant-held-after-report` | `RW_SHIM_HOLD_RESERVE` |
 | fixture-grant-forgery | `grant-from-anywhere`, `grant-unconfirmed`, `grant-any-listener` | — |
-| fixture-live | `send-unwoken`, `reserve-unguarded`, `thread-unguarded`, `task-unbounded`, `launch-unawaited`, `lost-kept`, `no-tool-unrecorded`, `denial-dropped`, `shell-unread`, `exit-unfrozen`, `brief-toolless` | `RW_SHIM_NO_WAKE`, `RW_SHIM_NO_TOOL`, `RW_SHIM_DROP_AFTER`, `RW_SHIM_NO_BOUNDARY` |
+| fixture-live | `send-unwoken`, `reserve-unguarded`, `thread-unguarded`, `task-unbounded`, `launch-unawaited`, `lost-kept`, `unproven-taken-for-none`, `denial-dropped`, `shell-unread`, `exit-unfrozen`, `brief-toolless` | `RW_SHIM_NO_WAKE`, `RW_SHIM_NO_TOOL`, `RW_SHIM_DROP_AFTER`, `RW_SHIM_NO_BOUNDARY` |

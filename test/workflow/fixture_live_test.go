@@ -24,9 +24,11 @@ import (
 //
 //   - full proves everything: the tool connected, the briefing with the whole
 //     transport sentence; stopped, its channel record stays frozen at the exit.
-//   - wakeless withholds Wake: a letter to it is accepted at once, exit 3.
-//   - toolless withholds the tool: no tool, said at launch, the shell's clause
-//     alone in its briefing, and its shell read seen in the record.
+//   - wakeless withholds Wake: a note and a task to it are accepted at once,
+//     exit 3, and wait readable in its inbox.
+//   - toolless withholds the tool: said at launch, the shell's clause alone in
+//     its briefing, the tool offered and unproven in its record, never no
+//     tool, and its shell read seen there.
 //   - dropper closes its connection after its first turn: the whole set is
 //     withdrawn at once, its channel fails, and a task to it fails, exit 1.
 //   - denied makes one call the harness refuses for permission: the block.
@@ -40,7 +42,7 @@ const (
 	obsLiveDropped   = "a connection lost after a turn withdraws the run's whole live set at once, and a task to it then fails, exit 1, with nothing sent"
 	obsLiveLaunch    = "a worker whose run proves no turn boundary is refused at launch, exit 1, saying so, and leaves no session"
 	obsChannelLive   = "a run with the tool live shows it connected, and its briefing carries the whole transport sentence"
-	obsChannelNone   = "a run whose harness does not make the tool live shows no tool, says so at launch, and its briefing carries the shell's clause alone"
+	obsChannelNone   = "a run whose harness does not make the tool live at its start says so at launch, its briefing carries the shell's clause alone, and its record keeps the tool offered and unproven, never no tool"
 	obsChannelShell  = "a run without the tool that reads its mail in the shell has the shell's evidence in its record"
 	obsChannelLost   = "a run whose connection is lost shows its mail tool failing, the server gone"
 	obsChannelDenied = "a run whose harness denies the tool for permission shows the tool denied by policy"
@@ -198,10 +200,13 @@ func playLive(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 	none := rows[toolless.name].channel()
 	stderr, _ := os.ReadFile(filepath.Join(iso.Home, "toolless.stderr"))
 	toollessBrief := w.brief("toolless")
-	finding(obsChannelNone, none != nil && none.Tool == channel.ToolNone && strings.Contains(none.Reason, "did not make the mail tool live") &&
-		strings.Contains(string(stderr), "started without the rewake tool") &&
+	// Starting until the hello timer passes, failing with no hello after:
+	// what the record shows of any offered tool that never connects.
+	unproven := none != nil && none.Reason == "" && (none.Tool == channel.ToolStarting || none.Tool == channel.ToolFailing && none.Class == channel.ClassNoHello)
+	told := strings.Contains(string(stderr), "did not make the rewake tool live at its start")
+	finding(obsChannelNone, unproven && told &&
 		strings.Contains(toollessBrief, transportClause) && !strings.Contains(toollessBrief, transportRest),
-		"channel %s; said at launch %t; briefing %q", showChannel(none), strings.Contains(string(stderr), "started without the rewake tool"), firstLine(toollessBrief))
+		"channel %s; said at launch %t; briefing %q", showChannel(none), told, firstLine(toollessBrief))
 
 	asks.ask(c, "send", toolless.name, liveNote, "--notify")
 	// The evidence alone, not the category it makes: whether the shell shows
