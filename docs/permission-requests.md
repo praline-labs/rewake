@@ -237,13 +237,12 @@ reads as a task, so each of these decides it:
   the wait runs up to ten minutes, past the limit, so a main blocked on a question to this
   worker is told of the request: the wait ends with exit 3, printing the request and its
   command; the answer to the question still arrives as a report;
-- `internal/core/mail/turn_reports.go`, `internal/cli/completion.go`,
-  `internal/harness/claude/telemetry/collector_turns.go` — a turn's outcome is never this
-  kind; nothing to add;
-- `internal/harness/notice.go`, `claude/notice.go`, `codex/notice.go` — the notice line
+- `internal/core/mail/turn_reports.go`, `internal/cli/completion.go` — a turn's outcome is
+  never this kind; nothing to add;
+- `internal/core/mail/notice.go`, `internal/adapter/claude/notice.go` — the notice line
   names a permission request, not a task;
-- `internal/harness/codex/server_delivery.go` — not work: steered into a running turn as a
-  heads-up is;
+- an adapter whose Wake steers a letter into a running turn (none today; Codex's returns in
+  stage 5) — not work: steered in as a heads-up is;
 - `internal/core/mail/awaited.go`, `held.go`, `sent.go`, `recall.go` and
   `internal/cli/inbox*.go`, `sent_ref.go`, `sent_current.go` — rendered with its live
   state; never listed as awaited or owed; not delayed while main is in a turn.
