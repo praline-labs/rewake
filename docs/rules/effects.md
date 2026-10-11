@@ -61,7 +61,7 @@ nothing lifts a stop without returning evidence.
   - `internal/core/mail/claims_test.go` `TestPublicationOfReadsTheMailbox`
   - `internal/core/mail/claims_test.go` `TestPublishOnceWritesNothingWhenItsCheckFails`
   - `internal/core/mail/batch_edges_test.go` `TestGroupedPreparationRechecksAnswerLeasesExpiryAndEpoch`
-  - `internal/core/mail/withdraw_test.go` `TestTheLastCheckBeforeANoticeSeesAWithdrawal`
+  - `internal/core/mail/withdraw_delivery_test.go` `TestTheLastCheckBeforeANoticeSeesAWithdrawal`
   - `internal/core/mail/window_test.go` `TestARetryDoesNotRestartTheWindow`
   - `internal/adapter/fixture/turns_test.go` `TestATurnEndIsRetriedWithItsOwnDeadline`
   - `internal/adapter/fixture/turns_test.go` `TestATurnEndThatNeverTakesIsRefusedAfterItsAttempts`
@@ -96,7 +96,7 @@ nothing lifts a stop without returning evidence.
   - `internal/core/mail/claims_test.go` `TestALetterBeingReadInPartsCannotBeTakenBack`
   - `internal/core/mail/claims_test.go` `TestTheSweepKeepsALetterBeingRead`
   - `internal/core/mail/claims_test.go` `TestALetterIsPublishedOnceAcrossReadAndSweep`
-  - `internal/core/mail/claims_test.go` `TestTheServerKeepsALetterBeingRead`
+  - `internal/core/mail/claims_delivery_test.go` `TestTheServerKeepsALetterBeingRead`
   - `internal/cli/bridge_read_test.go` `TestAToolReadIsReadOnlyWhenEveryPartArrived`
   - `internal/cli/bridge_read_test.go` `TestARepeatedToolReadInOneTurnIsTheSameRead`
   - `internal/cli/bridge_read_test.go` `TestTheShellFinishesALostToolRead`
@@ -105,8 +105,8 @@ nothing lifts a stop without returning evidence.
   - `internal/cli/bridge_lookups_test.go` `TestAnAcknowledgmentDoesNotWriteOverAWaiterItCannotRead`
   - `internal/cli/bridge_lookups_test.go` `TestARetriedAcknowledgmentStopsOnAStatusItCannotRead`
   - `internal/core/mail/unread_test.go` `TestReadingHandsEachMessageOnce`
-  - `internal/core/mail/unread_test.go` `TestAReadDuringAPendingNoticeStands`
-  - `internal/core/mail/unread_test.go` `TestAReadIsNotUndoneByTheNoticeResult`
+  - `internal/core/mail/unread_delivery_test.go` `TestAReadDuringAPendingNoticeStands`
+  - `internal/core/mail/unread_delivery_test.go` `TestAReadIsNotUndoneByTheNoticeResult`
   - `internal/cli/read_test.go` `TestSendCountsAReadMessageAsDelivered`
   - `internal/cli/read_test.go` `TestTwoReadersAtOnceShowATaskOnce`
   - `internal/cli/stop_gate_test.go` `TestAReadInPartsStopsWithTheMailbox`
