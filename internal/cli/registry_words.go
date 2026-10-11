@@ -12,9 +12,10 @@ import (
 // harness of its own (docs/v2/design.md#the-test-that-holds-it, rule 2).
 
 // declining names the harnesses whose offer lacks what has asks for, as a
-// clause ending a sentence about that capability, or nothing when every
-// harness of the catalog offers it.
-func declining(catalog adapter.Catalog, has func(adapter.Offer) bool, verb string) string {
+// clause ending a sentence about that capability — one's phrase after a single
+// harness, many's after several — or nothing when every harness of the
+// catalog offers it.
+func declining(catalog adapter.Catalog, has func(adapter.Offer) bool, one, many string) string {
 	var titles []string
 	for _, h := range catalog.All() {
 		if !has(h.Offers()) {
@@ -24,10 +25,11 @@ func declining(catalog adapter.Catalog, has func(adapter.Offer) bool, verb strin
 	if len(titles) == 0 {
 		return ""
 	}
+	phrase := one
 	if len(titles) > 1 {
-		verb = strings.TrimSuffix(verb, "s")
+		phrase = many
 	}
-	return " " + inWords(titles, "and") + " " + verb + "."
+	return " " + inWords(titles, "and") + " " + phrase + "."
 }
 
 // metadataNames lists the directory names a grant refuses anywhere in a path:
