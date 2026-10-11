@@ -31,6 +31,9 @@ import (
 type Request struct {
 	// Harness is what to run.
 	Harness adapter.Harness
+	// Protected is what no task may grant the session to write: the
+	// catalogue's set, every adapter's and the foreign ones it declares.
+	Protected adapter.Protected
 	// Dir is the room-scoped state directory.
 	Dir string
 	// Name is the requested prefix; empty uses the role and picks a free address.
@@ -131,7 +134,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	}
 
 	// Before the harness: a resumed conversation's grants are given at launch.
-	restored := resumeGrants(request.Dir, name, epoch, request.Harness, request.Args)
+	restored := resumeGrants(request.Dir, name, epoch, request.Harness, request.Args, request.Protected)
 
 	tool := startMailTool(request, name, epoch)
 	defer tool.close()
@@ -264,7 +267,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 			Owns: func() bool { return registry.OwnsName(request.Dir, name, epoch) },
 			// A burst of letters that ask for nothing wakes the session once.
 			Window:     inbox.Coalescing,
-			CheckGrant: checkGrant(request.Dir, name, epoch),
+			CheckGrant: checkGrant(request.Dir, name, epoch, request.Protected),
 			PinGrant:   pinGrant(request.Dir, name, epoch),
 			Deliver: func(ctx context.Context, message inbox.Message) inbox.Result {
 				if plan.Backend != nil {

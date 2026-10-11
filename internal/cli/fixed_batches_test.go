@@ -71,7 +71,7 @@ func TestFixedTwoThenFourThroughPeekAndSelectedReads(t *testing.T) {
 			}
 			wait(first, inbox.Delivered)
 			signal(first)
-			if code := Run([]string{"inbox", "--peek"}, brokenWriter{}, brokenWriter{}); code == ExitOK {
+			if code := Run(testCatalog(), []string{"inbox", "--peek"}, brokenWriter{}, brokenWriter{}); code == ExitOK {
 				t.Fatal("failed peek reported success")
 			}
 			args := []string{"inbox", "--peek", "--json"}

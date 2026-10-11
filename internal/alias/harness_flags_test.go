@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	_ "github.com/praline-labs/rewake/internal/adapter/catalog"
+	"github.com/praline-labs/rewake/internal/adapter/catalog"
 )
 
 // The alias help promises that a typed flag replaces the alias's copy, and
@@ -14,7 +14,8 @@ import (
 // Checked against what each harness that takes a worktree publishes, not a
 // stand-in.
 func TestATypedWorktreeReplacesTheAliasOnEveryHarness(t *testing.T) {
-	for _, h := range adapter.All() {
+	adapters := catalog.New()
+	for _, h := range adapters.All() {
 		if _, ok := h.(adapter.WorktreeHarness); !ok {
 			continue
 		}
@@ -26,10 +27,10 @@ harness = "`+id+`"
 args = ["--worktree=from-alias"]
 `)
 			flags := func(name string) []adapter.Flag {
-				found, _ := adapter.Find(name)
+				found, _ := adapters.Find(name)
 				return found.SingleUseFlags()
 			}
-			got, err := s.Expand([]string{"w", "--worktree=typed"}, adapter.IDs(), valued, nil, flags)
+			got, err := s.Expand([]string{"w", "--worktree=typed"}, adapters.IDs(), valued, nil, flags)
 			if err != nil {
 				t.Fatal(err)
 			}

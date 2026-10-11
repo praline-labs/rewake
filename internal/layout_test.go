@@ -13,8 +13,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/adapter"
-	_ "github.com/praline-labs/rewake/internal/adapter/catalog"
+	adapters "github.com/praline-labs/rewake/internal/adapter/catalog"
 )
 
 const (
@@ -47,11 +46,11 @@ func TestImportsFollowTheLayers(t *testing.T) {
 }
 
 func TestNoHarnessIsNamedOutsideTheAdapters(t *testing.T) {
-	var catalog [][2]string
-	for _, h := range adapter.All() {
-		catalog = append(catalog, [2]string{h.ID(), h.Title()})
+	var names [][2]string
+	for _, h := range adapters.New().All() {
+		names = append(names, [2]string{h.ID(), h.Title()})
 	}
-	words, literals := nameWords(catalog, testOnlyHarnesses)
+	words, literals := nameWords(names, testOnlyHarnesses)
 	for _, problem := range nameProblems(t, words, nameExceptions, literals...) {
 		t.Error(problem)
 	}

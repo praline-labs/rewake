@@ -118,7 +118,7 @@ func TestInboxKeepsMailItCouldNotShow(t *testing.T) {
 	t.Setenv(epochEnv, current.Epoch())
 	id := rawUnread(t, dir, "api", map[string]any{"from": "web", "toEpoch": current.Epoch(), "text": "keep me"})
 
-	code := Run([]string{"inbox"}, brokenWriter{}, brokenWriter{})
+	code := Run(testCatalog(), []string{"inbox"}, brokenWriter{}, brokenWriter{})
 	if code == ExitOK {
 		t.Error("inbox reported success with nowhere to write")
 	}
@@ -221,9 +221,9 @@ func TestTwoReadersAtOnceShowATaskOnce(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go func() { defer wg.Done(); Run([]string{"inbox"}, first, io.Discard) }()
+	go func() { defer wg.Done(); Run(testCatalog(), []string{"inbox"}, first, io.Discard) }()
 	<-first.entered
-	go func() { defer wg.Done(); Run([]string{"inbox"}, second, io.Discard) }()
+	go func() { defer wg.Done(); Run(testCatalog(), []string{"inbox"}, second, io.Discard) }()
 	// The second reader gets as far as it can while the first is mid-print.
 	time.Sleep(300 * time.Millisecond)
 	close(first.release)

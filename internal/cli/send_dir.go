@@ -32,7 +32,7 @@ type dirGrants struct {
 // requestedDirGrants checks the directories a task grants (docs/grants.md).
 // A call to change is refused with exit 2; a directory that is not there, or
 // a recipient whose harness cannot take one, with exit 1.
-func requestedDirGrants(call Call, sender, target registry.Session, senderErr error, dir string) (dirGrants, error) {
+func requestedDirGrants(catalog adapter.Catalog, call Call, sender, target registry.Session, senderErr error, dir string) (dirGrants, error) {
 	var result dirGrants
 	plain, broad := call.Lists["grant-dir"], call.Lists["grant-dir-broad"]
 	if len(plain)+len(broad) == 0 {
@@ -57,7 +57,7 @@ func requestedDirGrants(call Call, sender, target registry.Session, senderErr er
 	if kind.kind != inbox.Task && kind.kind != inbox.Question {
 		return refuse("only a task or a question carries a grant; a heads-up asks for no work to write.")
 	}
-	own, _ := findHarness(target.Harness)
+	own, _ := catalog.Find(target.Harness)
 	if capable, ok := own.(adapter.DirGrantHarness); !ok || !capable.SupportsDirGrant() {
 		return dirGrants{}, &FailedError{Message: fmt.Sprintf("--grant-dir: %s runs %s, which cannot take a directory into a running session yet. Do that part of the work yourself, or ask the owner to add the directory to that session in its own terminal.", target.Name, target.Harness)}
 	}
@@ -66,7 +66,8 @@ func requestedDirGrants(call Call, sender, target registry.Session, senderErr er
 	if err != nil {
 		return dirGrants{}, failf("--grant-dir: cannot read the current directory to resolve a relative path: %v", err)
 	}
-	rules := grant.CurrentEnv(state.RootForRoom(dir), adapter.AllProtectedDirs()).Rules()
+	protected := catalog.Protected()
+	rules := grant.CurrentEnv(state.RootForRoom(dir), protected.Dirs, protected.Names).Rules()
 	workspace, _ := filepath.EvalSymlinks(target.CWD)
 	var resolved, confirmed []string
 	check := func(flag, given string, confirm bool) error {

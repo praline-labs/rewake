@@ -36,7 +36,7 @@ func grantingMain(t *testing.T, dir string, self registry.Session, wrapper int) 
 func TestADirGrantIsRegisteredWithMainsWrapper(t *testing.T) {
 	w := newGrantWorld(t, "main", "")
 	lib := filepath.Join(w.home, "work", "lib")
-	if code, out, stderr := run("send", w.peer.Name, "Write in lib", "--wait=0", "--grant-dir", lib); code != ExitPending {
+	if code, out, stderr := w.run("send", w.peer.Name, "Write in lib", "--wait=0", "--grant-dir", lib); code != ExitPending {
 		t.Fatalf("send: %d %s %s", code, out, stderr)
 	}
 	messages := w.sent(t)
@@ -65,11 +65,11 @@ func TestAGrantSentFromOutsideMainsWrapperIsRefused(t *testing.T) {
 	t.Cleanup(func() { _ = stranger.Process.Kill(); _ = stranger.Wait() })
 	grantingMain(t, dir, self, stranger.Process.Pid)
 	peer.Role = "write"
-	stubGrants(t, peer.Harness, true, true)
+	granting := grantCatalog(testCatalog(), peer.Harness, true, true)
 	if err := registry.Update(dir, peer); err != nil {
 		t.Fatal(err)
 	}
-	code, out, stderr := run("send", peer.Name, "Commit it", "--wait=0", "--grant-git")
+	code, out, stderr := runOn(granting, "send", peer.Name, "Commit it", "--wait=0", "--grant-git")
 	if code != ExitFailed || !strings.Contains(stderr, "only a command this session runs") {
 		t.Fatalf("got %d %s %s", code, out, stderr)
 	}
@@ -86,10 +86,10 @@ func TestAMainThatCannotReachItsWrapperCannotGrant(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	stubGrants(t, self.Harness, true, false)
+	w.catalog = grantCatalog(w.catalog, self.Harness, true, false)
 	for _, grant := range [][]string{{"--grant-dir", filepath.Join(w.home, "work", "lib")}, {"--grant-git"}} {
 		args := append([]string{"send", w.peer.Name, "Write there", "--wait=0"}, grant...)
-		code, out, stderr := run(args...)
+		code, out, stderr := w.run(args...)
 		if code != ExitFailed || !strings.Contains(stderr, "cannot reach its wrapper") {
 			t.Fatalf("%v: got %d %s %s", grant, code, out, stderr)
 		}
@@ -138,14 +138,14 @@ func (w grantWorld) replacementOf(t *testing.T, id string) (inbox.Message, bool)
 func TestAnEditCarriesTheGrantMainsWrapperHolds(t *testing.T) {
 	w := newGrantWorld(t, "main", "")
 	lib, wide := filepath.Join(w.home, "work", "lib"), filepath.Join(w.home, "wide")
-	if code, out, stderr := run("send", w.peer.Name, "Write in lib", "--wait=0", "--grant-dir", lib); code != ExitPending {
+	if code, out, stderr := w.run("send", w.peer.Name, "Write in lib", "--wait=0", "--grant-dir", lib); code != ExitPending {
 		t.Fatalf("send: %d %s %s", code, out, stderr)
 	}
 	original := w.sent(t)[0]
 	w.forgeLetter(t, original.ID, func(message *inbox.Message) {
 		message.GrantDirs, message.GrantBroad, message.GrantGit = []string{lib, wide}, []string{wide}, true
 	})
-	if code, out, stderr := run("edit", original.ID, "Write in lib, and test it", "--wait=0"); code != ExitPending {
+	if code, out, stderr := w.run("edit", original.ID, "Write in lib, and test it", "--wait=0"); code != ExitPending {
 		t.Fatalf("edit: %d %s %s", code, out, stderr)
 	}
 	replacement, ok := w.replacementOf(t, original.ID)
@@ -171,14 +171,14 @@ func TestAnEditCarriesTheGrantMainsWrapperHolds(t *testing.T) {
 func TestAnEditOfALetterGivenAForgedGrantIsRefused(t *testing.T) {
 	w := newGrantWorld(t, "main", "")
 	wide := filepath.Join(w.home, "wide")
-	if code, out, stderr := run("send", w.peer.Name, "Look at the logs", "--wait=0"); code != ExitPending && code != ExitOK {
+	if code, out, stderr := w.run("send", w.peer.Name, "Look at the logs", "--wait=0"); code != ExitPending && code != ExitOK {
 		t.Fatalf("send: %d %s %s", code, out, stderr)
 	}
 	original := w.sent(t)[0]
 	w.forgeLetter(t, original.ID, func(message *inbox.Message) {
 		message.GrantDirs, message.GrantBroad, message.GrantGit = []string{wide}, []string{wide}, true
 	})
-	code, out, stderr := run("edit", original.ID, "Look at the logs of yesterday", "--wait=0")
+	code, out, stderr := w.run("edit", original.ID, "Look at the logs of yesterday", "--wait=0")
 	if code != ExitFailed || !strings.Contains(stderr, "does not hold") {
 		t.Fatalf("edit: %d %s %s", code, out, stderr)
 	}

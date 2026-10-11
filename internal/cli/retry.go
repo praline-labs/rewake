@@ -59,7 +59,7 @@ func handleRetry(ctx *Context, call Call) error {
 	// call: the words a shell call journaled — a text from stdin, say — are
 	// the shell's to finish.
 	if ctx.scope != nil {
-		if _, err := ToolWords(record.Words); err != nil {
+		if _, err := ctx.table.toolWords(record.Words); err != nil {
 			return failf("the receipt %s holds words the rewake tool does not run (%v); finish it in the shell: rewake retry %s", token, err, token)
 		}
 	}
@@ -79,7 +79,7 @@ func handleRetry(ctx *Context, call Call) error {
 		_, err := fmt.Fprint(ctx.Stdout, renderOutputPart(record, 0, len(record.Output.Parts)))
 		return err
 	}
-	original, err := parse(record.Words)
+	original, err := ctx.table.parse(record.Words)
 	if err != nil || original.Call.Command == nil {
 		return failf("the receipt %s holds words this rewake cannot run again", token)
 	}

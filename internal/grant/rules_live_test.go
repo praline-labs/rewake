@@ -70,13 +70,13 @@ func TestAShieldedDirectoryIsGrantedOnlyByName(t *testing.T) {
 		t.Fatal(err)
 	}
 	checkout := filepath.Join(root, "work", "checkout")
-	for _, sub := range []string{".git/hooks", ".Claude/commands", ".codex", ".agents", "src"} {
+	for _, sub := range []string{".git/hooks", ".ToolCfg/commands", ".skills", ".toolcfg2", "src"} {
 		if err := os.MkdirAll(filepath.Join(checkout, sub), 0o755); err != nil {
 			t.Fatal(err)
 		}
 	}
-	rules := Env{}.Rules()
-	for _, sub := range []string{".git", ".git/hooks", ".Claude", ".Claude/commands", ".codex", ".agents"} {
+	rules := Env{Shielded: []string{".toolcfg", ".skills", ".toolcfg2"}}.Rules()
+	for _, sub := range []string{".git", ".git/hooks", ".ToolCfg", ".ToolCfg/commands", ".skills", ".toolcfg2"} {
 		path := filepath.Join(checkout, sub)
 		if err := rules.Check(path, path, false); err == nil || !strings.Contains(err.Error(), "--grant-dir-broad") {
 			t.Errorf("%s granted without its name: %v", sub, err)

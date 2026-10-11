@@ -11,7 +11,6 @@ package cli
 
 import (
 	"io"
-	"strings"
 
 	"github.com/praline-labs/rewake/internal/adapter"
 )
@@ -125,6 +124,9 @@ type Context struct {
 	// the command already went through the journal or was found to need none.
 	op         *operation
 	journaling bool
+	// table is the command table of this invocation, built from the catalogue
+	// the binary handed to Run.
+	table *table
 }
 
 // Call is one parsed invocation.
@@ -152,118 +154,6 @@ func (c Call) Flag(name, fallback string) string {
 func (c Call) Switch(name string) bool {
 	value, ok := c.Flags[name]
 	return ok && value != "false"
-}
-
-// lookupOption finds a flag among the global options and those of a command.
-// With no command it searches every command instead: flags written before the
-// command word are read first and checked against the command afterwards, which
-// is what makes "rewake --name api claude" possible at all.
-func lookupOption(command *Command, name string) (Option, bool) {
-	flag := "--" + name
-	for _, option := range globalOptions {
-		if option.Flag == flag {
-			return option, true
-		}
-	}
-	if command != nil {
-		for _, option := range command.Options {
-			if option.Flag == flag {
-				return option, true
-			}
-		}
-		return Option{}, false
-	}
-	for _, group := range Groups() {
-		for _, candidate := range group.Commands {
-			for _, option := range candidate.Options {
-				if option.Flag == flag {
-					return option, true
-				}
-			}
-		}
-	}
-	return Option{}, false
-}
-
-// takesValue reports whether a flag carries a value.
-func repeatable(command *Command, name string) bool {
-	option, ok := lookupOption(command, name)
-	return ok && option.Repeatable
-}
-
-func takesValue(command *Command, name string) bool {
-	option, ok := lookupOption(command, name)
-	return ok && option.Value != ""
-}
-
-// launchFlagTakesValue answers, for a flag standing before the command word,
-// whether the next argument is its value. Only launch commands and the global
-// options may appear there, so those are what it looks through — and it
-// answers for the whole set rather than one command, because the command is
-// exactly what is not known yet at that point.
-func launchFlagTakesValue(name string) bool {
-	for _, option := range globalOptions {
-		if strings.TrimPrefix(option.Flag, "--") == name {
-			return option.Value != ""
-		}
-	}
-	for _, group := range Groups() {
-		for _, command := range group.Commands {
-			if !command.Raw {
-				continue
-			}
-			if option, ok := lookupOption(command, name); ok {
-				return option.Value != ""
-			}
-		}
-	}
-	return false
-}
-
-// knownFlag reports whether a flag exists at all in this position.
-func knownFlag(command *Command, name string) bool {
-	_, ok := lookupOption(command, name)
-	return ok
-}
-
-// findCommand returns the command with this name.
-func findCommand(name string) *Command {
-	for _, group := range Groups() {
-		for _, command := range group.Commands {
-			if command.Name == name {
-				return command
-			}
-		}
-	}
-	return nil
-}
-
-// commandNames lists every command name, in guide order.
-func commandNames() []string {
-	var names []string
-	for _, group := range Groups() {
-		for _, command := range group.Commands {
-			if !command.Hidden {
-				names = append(names, command.Name)
-			}
-		}
-	}
-	return names
-}
-
-// nearestCommand returns the closest command name to a mistyped one, if any is
-// close enough to be worth suggesting.
-func nearestCommand(name string) string {
-	best, bestDistance := "", 3
-	for _, candidate := range commandNames() {
-		if strings.HasPrefix(candidate, name) && len(name) >= 2 {
-			return candidate
-		}
-		if distance := editDistance(name, candidate); distance < bestDistance {
-			best, bestDistance = candidate, distance
-		}
-	}
-	return best
 }
 
 // editDistance is the Levenshtein distance between two short words.

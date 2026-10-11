@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/grantauth"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/proc"
@@ -120,7 +121,7 @@ func TestMainHoldsTheConversationTheLetterWasPinnedTo(t *testing.T) {
 		t.Fatal(err)
 	}
 	message := inbox.Message{ID: "m1", From: "lead", FromEpoch: run, To: "worker", ToEpoch: run, Kind: inbox.Task, GrantDirs: []string{lib}}
-	check := checkGrant(dir, "worker", run)
+	check := checkGrant(dir, "worker", run, adapter.Protected{})
 	if err := check(message); err != nil {
 		t.Fatal(err)
 	}

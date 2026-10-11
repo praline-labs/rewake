@@ -168,17 +168,7 @@ func changedMessage[F finding](x fmt.Stringer, why excuse, group []F, count int,
 		x, why.count, why.sum, count, sum, strings.Join(lines, "\n"), count, sum)
 }
 
-var registryExceptions = map[registryException]excuse{
-	{"internal/adapter/harness.go", "package-level variable registered holds adapters ([]github.com/praline-labs/rewake/internal/adapter.Harness)"}: {
-		"the 1.x registry Register fills", "S10", 1, "c5f2a2279bb3",
-	},
-	{"internal/adapter/catalog/catalog.go", "func init in a package under adapter"}: {
-		"the catalog registers every adapter from init; S10 makes it a constructor", "S10", 1, "7a616d8763b7",
-	},
-	{"internal/adapter/catalog/fixture.go", "func init in a package under adapter"}: {
-		"the fixture joins the catalog from a tagged init, beside the others, until S10 makes the catalog a constructor", "S10", 1, "45e8b1dc7cf2",
-	},
-}
+var registryExceptions = map[registryException]excuse{}
 
 // unmatchedImports names every file of an exception no forbidden edge comes
 // from any more.

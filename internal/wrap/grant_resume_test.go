@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/grant"
 	"github.com/praline-labs/rewake/internal/grantauth"
 	"github.com/praline-labs/rewake/internal/grantauth/grantauthtest"
@@ -77,11 +78,11 @@ func TestAResumedRunKeepsOnlyWhatMainConfirmsAgain(t *testing.T) {
 	if err := grant.Save(dir, "worker", endedEpoch(t), own); err != nil {
 		t.Fatal(err)
 	}
-	if elsewhere := resumeGrants(dir, "worker", main, &resumingHarness{}, []string{"--resume", "c0"}); len(elsewhere.dirs()) != 0 {
+	if elsewhere := resumeGrants(dir, "worker", main, &resumingHarness{}, []string{"--resume", "c0"}, adapter.Protected{}); len(elsewhere.dirs()) != 0 {
 		t.Fatalf("a resume of another conversation got %v", elsewhere.dirs())
 	}
 
-	restored := resumeGrants(dir, "worker", main, &resumingHarness{}, []string{"--resume", "s1"})
+	restored := resumeGrants(dir, "worker", main, &resumingHarness{}, []string{"--resume", "s1"}, adapter.Protected{})
 	if restored.thread != "s1" || !slices.Equal(restored.dirs(), []string{lib}) {
 		t.Fatalf("restored %v for %q", restored.dirs(), restored.thread)
 	}
@@ -94,7 +95,7 @@ func TestAResumedRunKeepsOnlyWhatMainConfirmsAgain(t *testing.T) {
 
 	// A launch that resumes nothing, or a fork, restores nothing.
 	for _, args := range [][]string{nil, {"--resume", "s1", "--fork-session"}} {
-		if got := resumeGrants(dir, "worker", main, &resumingHarness{}, args); len(got.grants) != 0 {
+		if got := resumeGrants(dir, "worker", main, &resumingHarness{}, args, adapter.Protected{}); len(got.grants) != 0 {
 			t.Errorf("%v restored %+v", args, got.grants)
 		}
 	}

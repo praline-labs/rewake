@@ -133,12 +133,11 @@ type Harness interface {
 	// may be repeated, and for a harness that refuses repeats it turns an
 	// alias plus a typed flag into a launch that will not parse.
 	SingleUseFlags() []Flag
-	// ProtectedDirs are where the harness keeps its own configuration,
-	// credentials and sessions. rewake never grants a worker write access to
-	// them, whichever harness the worker runs (docs/grants.md): a worker that
-	// could write there could change its own permissions, or another
-	// session's.
-	ProtectedDirs() []string
+	// ProtectedDirs are where the harness keeps its own metadata: its
+	// configuration, credentials and sessions, and what it keeps inside a
+	// project. rewake never grants a worker write access to them, whichever
+	// harness the worker runs (docs/grants.md).
+	ProtectedDirs() Protected
 	// Version is the gate a launch reads before the claim.
 	Version() VersionGate
 	// EnvNotInherited names the variables a run must not inherit from the

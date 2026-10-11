@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/brief"
 	"github.com/praline-labs/rewake/internal/role"
 )
@@ -25,7 +24,7 @@ func TestBothRenderingsCarryTheWholePlaybook(t *testing.T) {
 		t.Run(part.ID, func(t *testing.T) {
 			play := role.Of(part.ID).Play
 			briefing := brief.Intro(brief.Context{Name: "api", Room: "work", Role: part, Reason: "selected explicitly"})
-			guide := formatGuide(&play)
+			guide := testTable().formatGuide(&play)
 			for where, text := range map[string]string{"the briefing": briefing, "the guide": guide} {
 				if !strings.Contains(text, play.Heading) {
 					t.Errorf("%s does not say what this role is for", where)
@@ -80,7 +79,7 @@ func TestEveryStepNamesARealCommand(t *testing.T) {
 		for _, step := range part.Play.Steps {
 			var named []*Command
 			for _, match := range invocation.FindAllStringSubmatch(step.Do, -1) {
-				command := findCommand(match[1])
+				command := testTable().findCommand(match[1])
 				if command == nil {
 					t.Errorf("%s: the step %q names rewake %s, which the table does not have", part.ID, step.Do, match[1])
 					continue
@@ -93,7 +92,7 @@ func TestEveryStepNamesARealCommand(t *testing.T) {
 					}
 				}
 				for _, flag := range flagWord.FindAllString(match[2], -1) {
-					if !knownFlag(command, strings.TrimPrefix(flag, "--")) {
+					if !testTable().knownFlag(command, strings.TrimPrefix(flag, "--")) {
 						t.Errorf("%s: the step %q names %s, which rewake %s does not take", part.ID, step.Do, flag, command.Name)
 					}
 				}
@@ -102,7 +101,7 @@ func TestEveryStepNamesARealCommand(t *testing.T) {
 				if whyExceptions[flag] {
 					continue
 				}
-				if len(named) != 1 || !knownFlag(named[0], strings.TrimPrefix(flag, "--")) {
+				if len(named) != 1 || !testTable().knownFlag(named[0], strings.TrimPrefix(flag, "--")) {
 					t.Errorf("%s: the step %q explains %s, which its own command does not take", part.ID, step.Do, flag)
 				}
 			}
@@ -112,7 +111,7 @@ func TestEveryStepNamesARealCommand(t *testing.T) {
 
 // launchFlag reports whether a harness takes this flag at launch as rewake's own.
 func launchFlag(flag string) bool {
-	for _, h := range adapter.All() {
+	for _, h := range testCatalog().All() {
 		for _, single := range h.SingleUseFlags() {
 			if slices.Contains(single.Spellings, flag) {
 				return true

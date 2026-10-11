@@ -167,6 +167,17 @@ var byName = map[string]*one{}
 var _ Adapter = one{}
 
 var count int
+
+type catalogue struct {
+	name     string
+	adapters []Adapter
+}
+
+var kept = catalogue{}
+
+type node struct{ next *node }
+
+var list node
 `
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, "fake.go", src, 0)
@@ -183,8 +194,9 @@ var count int
 	for _, r := range findAdapterVars(fset, []*ast.File{file}, info, []*types.Interface{iface}) {
 		got = append(got, r.String())
 	}
-	if len(got) != 2 || !strings.HasPrefix(got[0], "fake.go:9: package-level variable all holds adapters") ||
-		!strings.HasPrefix(got[1], "fake.go:11: package-level variable byName holds adapters") {
+	if len(got) != 3 || !strings.HasPrefix(got[0], "fake.go:9: package-level variable all holds adapters") ||
+		!strings.HasPrefix(got[1], "fake.go:11: package-level variable byName holds adapters") ||
+		!strings.HasPrefix(got[2], "fake.go:22: package-level variable kept holds adapters") {
 		t.Fatalf("got %q", got)
 	}
 }

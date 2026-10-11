@@ -81,7 +81,7 @@ func wrapText(text, indent string) []string {
 // formatGuide renders the overview printed when rewake is called with nothing.
 // An agent's first call in a session should teach how the tool behaves, which a
 // refusal cannot do.
-func formatGuide(play *role.Playbook) string {
+func (t *table) formatGuide(play *role.Playbook) string {
 	// The build first: a session that reads the guide learns which binary
 	// answers it, which the version alone cannot tell between two releases.
 	lines := []string{thisBuild().Line(), ""}
@@ -107,7 +107,7 @@ func formatGuide(play *role.Playbook) string {
 		}
 	}
 
-	for _, group := range Groups() {
+	for _, group := range t.groups {
 		shown := visibleCommands(group)
 		if len(shown) == 0 {
 			continue
@@ -127,7 +127,7 @@ func formatGuide(play *role.Playbook) string {
 
 	lines = append(lines, "FLOW")
 	steps := make([]column, 0)
-	for _, step := range flow() {
+	for _, step := range flow(t.catalog) {
 		steps = append(steps, column{Name: step.Command, Text: step.Summary})
 	}
 	lines = append(lines, printColumns(steps, "  ")...)

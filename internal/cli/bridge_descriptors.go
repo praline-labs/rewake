@@ -25,16 +25,18 @@ var toolPositionals = map[string][]string{
 }
 
 // ToolDescriptors are the tools of the surface, in the order they are offered.
-func ToolDescriptors() []bridge.ToolDescriptor {
+func ToolDescriptors() []bridge.ToolDescriptor { return surfaceTable().toolDescriptors() }
+
+func (t *table) toolDescriptors() []bridge.ToolDescriptor {
 	tools := make([]bridge.ToolDescriptor, 0, len(toolOrder))
 	for _, name := range toolOrder {
-		command := findCommand(name)
+		command := t.findCommand(name)
 		if command == nil {
 			continue
 		}
 		tool := bridge.ToolDescriptor{Name: name, Summary: command.Summary}
 		for _, flag := range toolFlags[name] {
-			option, ok := lookupOption(command, flag)
+			option, ok := t.lookupOption(command, flag)
 			if !ok {
 				continue
 			}

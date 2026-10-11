@@ -14,7 +14,7 @@ import (
 )
 
 func TestMainIsALaunchFlag(t *testing.T) {
-	result, err := parse([]string{"--main", "--name", "lead", "claude", "--main"})
+	result, err := testTable().parse([]string{"--main", "--name", "lead", "claude", "--main"})
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -29,7 +29,7 @@ func TestMainIsALaunchFlag(t *testing.T) {
 }
 
 func TestOmittedRoleStaysUnsetUntilDefaultResolution(t *testing.T) {
-	result, err := parse([]string{"claude"})
+	result, err := testTable().parse([]string{"claude"})
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -95,7 +95,7 @@ func TestTheMainSessionReportsNothing(t *testing.T) {
 }
 
 func TestWriteIsALaunchRole(t *testing.T) {
-	result, err := parse([]string{"--write", aHarness(t)})
+	result, err := testTable().parse([]string{"--write", aHarness(t)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +116,7 @@ func TestWriteIsALaunchRole(t *testing.T) {
 }
 
 func TestAWriterCannotAlsoBeMain(t *testing.T) {
-	result, err := parse([]string{"--write", "--main", aHarness(t)})
+	result, err := testTable().parse([]string{"--write", "--main", aHarness(t)})
 	if err != nil {
 		t.Fatal(err)
 	}

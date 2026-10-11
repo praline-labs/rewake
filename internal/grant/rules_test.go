@@ -39,7 +39,7 @@ func newMachine(t *testing.T) machine {
 		PATH:       filepath.Join(root, "pathbin") + string(os.PathListSeparator) + "relative/bin",
 		StateRoot:  filepath.Join(root, "state"),
 		Executable: filepath.Join(root, "bin", "rewake"),
-		Harness:    []string{filepath.Join(home, ".agentcfg"), filepath.Join(home, ".claude")},
+		Harness:    []string{filepath.Join(home, ".agentcfg"), filepath.Join(home, ".othercfg")},
 		Mounts:     []string{"/mnt/c", "/media/usb", "/boot/efi", "/srv/data"},
 	}
 	return machine{root: root, home: home, rules: env.Rules()}

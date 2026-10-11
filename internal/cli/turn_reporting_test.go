@@ -25,7 +25,7 @@ func realReporting(t *testing.T) {
 // end; the test has nothing to show where every one reports.
 func unreported(t *testing.T) adapter.Harness {
 	t.Helper()
-	for _, h := range adapter.All() {
+	for _, h := range testCatalog().All() {
 		if !harnessReportsTurns(h) {
 			return h
 		}

@@ -30,7 +30,7 @@ func (*roleLaunchProbe) Deliver(context.Context, registry.Session, inbox.Message
 }
 
 func TestCLIResolvesDefaultGeneralAndPreservesExplicitCapabilities(t *testing.T) {
-	for _, h := range adapter.All() {
+	for _, h := range testCatalog().All() {
 		for _, scenario := range []struct {
 			name   string
 			flags  []string
@@ -50,12 +50,15 @@ func TestCLIResolvesDefaultGeneralAndPreservesExplicitCapabilities(t *testing.T)
 				}
 				t.Setenv(state.DirEnv, dir)
 				t.Setenv(state.RoomEnv, "isolated")
-				parsed, err := parse(append(scenario.flags, h.ID()))
+				// The version is asked of a stand-in, never of whatever
+				// program of that name this machine has.
+				t.Setenv("PATH", launchPath(t, h))
+				parsed, err := testTable().parse(append(scenario.flags, h.ID()))
 				if err != nil {
 					t.Fatal(err)
 				}
 				probe := &roleLaunchProbe{Harness: h}
-				if err := handleLaunch(probe)(&Context{Stdout: io.Discard, Stderr: io.Discard}, parsed.Call); err != nil {
+				if err := handleLaunch(probe)(&Context{Stdout: io.Discard, Stderr: io.Discard, table: testTable()}, parsed.Call); err != nil {
 					t.Fatal(err)
 				}
 				got := probe.request

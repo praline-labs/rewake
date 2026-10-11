@@ -94,19 +94,43 @@ func findAdapterVars(fset *token.FileSet, files []*ast.File, info *types.Info, a
 	return found
 }
 
+// holdsAdapter looks through pointers, containers and struct fields: a
+// catalogue value kept at package level is a registry as much as a slice is.
 func holdsAdapter(typ types.Type, adapters []*types.Interface) bool {
+	return holds(typ, adapters, map[types.Type]bool{})
+}
+
+func holds(typ types.Type, adapters []*types.Interface, seen map[types.Type]bool) bool {
+	if seen[typ] {
+		return false
+	}
+	seen[typ] = true
 	switch t := typ.Underlying().(type) {
 	case *types.Pointer:
-		return holdsAdapter(t.Elem(), adapters)
+		return holds(t.Elem(), adapters, seen)
 	case *types.Slice:
-		return holdsAdapter(t.Elem(), adapters)
+		return holds(t.Elem(), adapters, seen)
 	case *types.Array:
-		return holdsAdapter(t.Elem(), adapters)
+		return holds(t.Elem(), adapters, seen)
 	case *types.Chan:
-		return holdsAdapter(t.Elem(), adapters)
+		return holds(t.Elem(), adapters, seen)
 	case *types.Map:
-		return holdsAdapter(t.Key(), adapters) || holdsAdapter(t.Elem(), adapters)
+		return holds(t.Key(), adapters, seen) || holds(t.Elem(), adapters, seen)
+	case *types.Struct:
+		if implementsAny(typ, adapters) {
+			return true
+		}
+		for i := range t.NumFields() {
+			if holds(t.Field(i).Type(), adapters, seen) {
+				return true
+			}
+		}
+		return false
 	}
+	return implementsAny(typ, adapters)
+}
+
+func implementsAny(typ types.Type, adapters []*types.Interface) bool {
 	for _, iface := range adapters {
 		if iface.NumMethods() > 0 && (types.Implements(typ, iface) || types.Implements(types.NewPointer(typ), iface)) {
 			return true

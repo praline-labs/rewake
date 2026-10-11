@@ -162,7 +162,7 @@ func TestDirectQuestionAnswerUsesSameVisibilityAndEpoch(t *testing.T) {
 				dir, self, peer := stateCaller(t, role)
 				rawUnread(t, dir, self.Name, map[string]any{"from": peer.Name, "fromEpoch": peer.Epoch(), "toEpoch": self.Epoch(), "kind": "finished", "inReplyTo": []string{"question"}, "text": "Original answer"})
 				var out bytes.Buffer
-				ctx := &Context{Stdout: &out, JSON: asJSON}
+				ctx := &Context{Stdout: &out, JSON: asJSON, table: testTable()}
 				err := answerQuestion(ctx, sent{dir: dir, self: self, epoch: self.Epoch(), target: peer, model: sendModel{ID: "question"}, deadline: time.Now().Add(time.Second)})
 				if err != nil {
 					t.Fatal(err)

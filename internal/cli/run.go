@@ -13,13 +13,15 @@ import (
 	"github.com/praline-labs/rewake/internal/state"
 )
 
-// Run executes one invocation and returns the process exit code.
-func Run(argv []string, stdout, stderr io.Writer) int {
+// Run executes one invocation against the catalogue the binary built and
+// returns the process exit code.
+func Run(catalog adapter.Catalog, argv []string, stdout, stderr io.Writer) int {
+	t := newTable(catalog)
 	if bridge.Active() {
 		// A tool call: its own surface, parser path and bounded answer.
-		return runBridge(argv, stdout, stderr)
+		return runBridge(t, argv, stdout, stderr)
 	}
-	ctx := &Context{Stdout: stdout, Stderr: stderr}
+	ctx := &Context{Stdout: stdout, Stderr: stderr, table: t}
 	// What this invocation meets reaching the state is its own evidence.
 	state.ResetReach()
 
@@ -29,15 +31,15 @@ func Run(argv []string, stdout, stderr io.Writer) int {
 	for _, note := range aliases.Notes {
 		_, _ = fmt.Fprintln(stderr, "rewake: "+note)
 	}
-	expanded, err := aliases.Expand(argv, adapter.IDs(), launchFlagTakesValue, projectForbidden(), singleUseFlags)
+	expanded, err := aliases.Expand(argv, catalog.IDs(), t.launchFlagTakesValue, projectForbidden(), t.singleUseFlags)
 	if err != nil {
 		return report(ctx, &UsageError{Message: err.Error()})
 	}
 
-	if err := singleProgram(expanded); err != nil {
+	if err := t.singleProgram(expanded); err != nil {
 		return report(ctx, err)
 	}
-	result, err := parseKnowing(expanded, aliases.Names())
+	result, err := t.parseKnowing(expanded, aliases.Names())
 	if err != nil {
 		return report(ctx, err)
 	}
@@ -57,12 +59,12 @@ func Run(argv []string, stdout, stderr io.Writer) int {
 		// The guide has a machine form too: an agent's first call may well be
 		// "rewake --json", and it must not get prose back.
 		if ctx.JSON {
-			if err := printValue(ctx, guideModel(callerPlaybook()), func() []string { return nil }); err != nil {
+			if err := printValue(ctx, ctx.table.guideModel(callerPlaybook()), func() []string { return nil }); err != nil {
 				return report(ctx, err)
 			}
 			return ExitOK
 		}
-		printText(ctx, formatGuide(callerPlaybook()))
+		printText(ctx, ctx.table.formatGuide(callerPlaybook()))
 		return ExitOK
 	}
 
@@ -102,14 +104,14 @@ func report(ctx *Context, err error) int {
 
 func handleGuide(ctx *Context, _ Call) error {
 	if ctx.JSON {
-		return printValue(ctx, guideModel(callerPlaybook()), func() []string { return nil })
+		return printValue(ctx, ctx.table.guideModel(callerPlaybook()), func() []string { return nil })
 	}
-	printText(ctx, formatGuide(callerPlaybook()))
+	printText(ctx, ctx.table.formatGuide(callerPlaybook()))
 	return nil
 }
 
 // guideModel is the machine form of the guide: the same table, all fields.
-func guideModel(play *role.Playbook) map[string]any {
+func (t *table) guideModel(play *role.Playbook) map[string]any {
 	type optionModel struct {
 		Flag     string `json:"flag"`
 		Value    string `json:"value,omitempty"`
@@ -141,8 +143,8 @@ func guideModel(play *role.Playbook) map[string]any {
 		return out
 	}
 
-	groupModels := make([]groupModel, 0, len(Groups()))
-	for _, group := range Groups() {
+	groupModels := make([]groupModel, 0, len(t.groups))
+	for _, group := range t.groups {
 		shown := visibleCommands(group)
 		if len(shown) == 0 {
 			continue
@@ -166,10 +168,10 @@ func guideModel(play *role.Playbook) map[string]any {
 		"version":       Version,
 		"build":         thisBuild(),
 		"groups":        groupModels,
-		"flow":          flow(),
+		"flow":          flow(t.catalog),
 		"notes":         notes(),
 		"globalOptions": renderOptions(globalOptions),
-		"harnesses":     adapter.IDs(),
+		"harnesses":     t.catalog.IDs(),
 	}
 	if play != nil {
 		// The same answer the printed form gives, in the same words: an agent
@@ -192,7 +194,7 @@ func guideModel(play *role.Playbook) map[string]any {
 // harness word. A launch starts one program, and letting the last one win
 // would start something other than one of the two the person wrote. An
 // alias's copy is not counted: a typed --command replaces it during expansion.
-func singleProgram(argv []string) error {
+func (t *table) singleProgram(argv []string) error {
 	count := 0
 	var command *Command
 	for index := 0; index < len(argv); index++ {
@@ -202,14 +204,14 @@ func singleProgram(argv []string) error {
 		}
 		if !strings.HasPrefix(token, "-") {
 			// The launch word, so the refusal can print its syntax and help.
-			command = findCommand(token)
+			command = t.findCommand(token)
 			break
 		}
 		name, _, inline := strings.Cut(strings.TrimPrefix(token, "--"), "=")
 		if name == alias.CommandFlag {
 			count++
 		}
-		if !inline && launchFlagTakesValue(name) {
+		if !inline && t.launchFlagTakesValue(name) {
 			index++
 		}
 	}

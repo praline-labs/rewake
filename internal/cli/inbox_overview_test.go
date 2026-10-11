@@ -19,7 +19,7 @@ func TestPeekHasNoConsumptionOrDispatchAcknowledgement(t *testing.T) {
 	defer clock.Close()
 	leaveUnread(t, dir, inbox.Message{From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: inbox.Task, Text: "work"})
 	for _, args := range [][]string{{"inbox", "--peek"}, {"inbox", "--json"}} {
-		if Run(args, brokenWriter{}, brokenWriter{}) == ExitOK {
+		if Run(testCatalog(), args, brokenWriter{}, brokenWriter{}) == ExitOK {
 			t.Fatal("failed output reported success")
 		}
 	}

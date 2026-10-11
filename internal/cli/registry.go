@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/praline-labs/rewake/internal/alias"
 
@@ -47,25 +46,15 @@ var roomOption = Option{
 	Summary: "The room to join; default otherwise. Names are unique within a room.",
 }
 
-var (
-	groupsOnce sync.Once
-	groups     []Group
-)
-
-// Groups returns the command table in guide order. Launch commands are derived
-// from the harness catalog, so a registered harness is always runnable and
-// always documented.
-func Groups() []Group {
-	groupsOnce.Do(buildGroups)
-	return groups
-}
-
-func buildGroups() {
+// buildGroups builds the command table in guide order. Launch commands are
+// derived from the catalogue, so an adapter in it is always runnable and always
+// documented.
+func buildGroups(catalog adapter.Catalog) []Group {
 	run := Group{
 		Title:   "RUN A SESSION",
 		Summary: "A coding agent started through rewake runs in this terminal as usual; rewake registers it and carries its messages.",
 	}
-	for _, h := range adapter.All() {
+	for _, h := range catalog.All() {
 		run.Commands = append(run.Commands, launchCommand(h))
 	}
 	run.Commands = append(run.Commands, worktreeCommand())
@@ -84,7 +73,7 @@ func buildGroups() {
 				Notes:          []string{sessionStateHelp, "Main is told once per launch when a session becomes available, and when one compacts or leaves; a main started later learns which are already available. Idleness alone resends nothing."},
 				Handler:        handleList,
 			},
-			sendCommand(),
+			sendCommand(catalog),
 			{
 				Name:           "withdraw",
 				Args:           "<id>",
@@ -225,7 +214,7 @@ func buildGroups() {
 		},
 	}
 
-	groups = []Group{run, talk, steer, help}
+	return []Group{run, talk, steer, help}
 }
 
 // nestedLaunchHelp is refuseNestedLaunch's rule, on every launch page: a
@@ -265,10 +254,10 @@ func roomExample(h adapter.Harness) string {
 // flow is the worked order printed in the guide: real invocations, not shapes.
 // A harness that reports no turn's end starts only a main session and takes no
 // task, so it shows that start and none of the task's steps.
-func flow() []FlowStep {
+func flow(catalog adapter.Catalog) []FlowStep {
 	steps := []FlowStep{}
 	last := ""
-	for _, h := range adapter.All() {
+	for _, h := range catalog.All() {
 		if !reportsTurns(h) {
 			steps = append(steps, FlowStep{
 				Command: fmt.Sprintf("rewake --%s --name lead %s", role.Main.ID, h.ID()),

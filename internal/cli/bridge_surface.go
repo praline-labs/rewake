@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/praline-labs/rewake/internal/adapter"
+
 	"github.com/praline-labs/rewake/internal/bridge"
 )
 
@@ -36,17 +38,25 @@ const maxToolWait = 5
 // them normalized: the form the receipt digest is taken over. The server
 // calls it before starting the CLI, and the CLI calls it again once it is
 // running in bridge mode; neither trusts the other to have done it.
-func ToolWords(words []string) ([]string, error) {
-	call, err := toolCall(words)
+func ToolWords(words []string) ([]string, error) { return surfaceTable().toolWords(words) }
+
+// surfaceTable is the table the exported surface checks words against when no
+// catalogue is at hand: a tool never starts a harness, so the surface is the
+// same with or without adapters, except that a launch word is refused as an
+// unknown command instead of as a command outside the tool.
+func surfaceTable() *table { return newTable(adapter.Catalog{}) }
+
+func (t *table) toolWords(words []string) ([]string, error) {
+	call, err := t.toolCall(words)
 	if err != nil {
 		return nil, err
 	}
-	return normalized(call), nil
+	return t.normalized(call), nil
 }
 
 // toolCall parses tool words with the real parser — without aliases, which
 // could turn a word into a launch — and refuses everything outside the surface.
-func toolCall(words []string) (parsed, error) {
+func (t *table) toolCall(words []string) (parsed, error) {
 	if len(words) == 0 {
 		return parsed{}, &UsageError{Message: "the rewake tool needs the words of a rewake command, such as [\"inbox\"]; the program name is not one of them."}
 	}
@@ -57,7 +67,7 @@ func toolCall(words []string) (parsed, error) {
 	if len(words) > bridge.MaxWords || size > bridge.MaxWordsBytes {
 		return parsed{}, &UsageError{Message: fmt.Sprintf("the rewake tool takes at most %d words of %d bytes in all; a long letter goes in parts, not in one call.", bridge.MaxWords, bridge.MaxWordsBytes)}
 	}
-	result, err := parse(words)
+	result, err := t.parse(words)
 	if err != nil {
 		return parsed{}, err
 	}
@@ -76,7 +86,7 @@ func toolCall(words []string) (parsed, error) {
 		if !contains(allowed, name) {
 			return parsed{}, toolRefusal(command, fmt.Sprintf("%s --%s does not run through the rewake tool", command.Name, name))
 		}
-		if !takesValue(command, name) && value != "true" {
+		if !t.takesValue(command, name) && value != "true" {
 			return parsed{}, &UsageError{Command: command, Message: fmt.Sprintf("--%s is a switch and takes no value.", name)}
 		}
 	}
@@ -126,7 +136,7 @@ func toolRefusal(command *Command, reason string) error {
 // normalized is the canonical form of a call: the command, its flags sorted
 // with their values inline, then its positionals after --. Two spellings of
 // one call normalize alike; texts stay exactly as given.
-func normalized(result parsed) []string {
+func (t *table) normalized(result parsed) []string {
 	call := result.Call
 	words := []string{call.Command.Name}
 	names := make([]string, 0, len(call.Flags))
@@ -135,7 +145,7 @@ func normalized(result parsed) []string {
 	}
 	sort.Strings(names)
 	for _, name := range names {
-		if takesValue(call.Command, name) {
+		if t.takesValue(call.Command, name) {
 			words = append(words, "--"+name+"="+call.Flags[name])
 		} else {
 			words = append(words, "--"+name)
@@ -159,12 +169,14 @@ func contains(list []string, value string) bool {
 // ToolCheck is every transport's check of a call's words: the normalized
 // words, or the CLI's own refusal as a shell would print it, cut to a tool
 // result.
-func ToolCheck(words []string) ([]string, string) {
-	normalized, err := ToolWords(words)
+func ToolCheck(words []string) ([]string, string) { return surfaceTable().toolCheck(words) }
+
+func (t *table) toolCheck(words []string) ([]string, string) {
+	normalized, err := t.toolWords(words)
 	if err == nil {
 		return normalized, ""
 	}
 	var out, errOut bytes.Buffer
-	report(&Context{Stdout: &out, Stderr: &errOut}, err)
+	report(&Context{Stdout: &out, Stderr: &errOut, table: t}, err)
 	return nil, cutDiagnostic(out.String() + errOut.String())
 }

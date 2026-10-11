@@ -76,15 +76,18 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 				return ConfirmCompletion(ctx, dir, self, result)
 			},
 			Harness: h,
-			Dir:     dir,
-			Name:    call.Flag("name", ""),
-			Args:    args,
-			Intro:   !call.Switch("no-intro"),
-			Role:    part,
-			Command: program,
+			// What no task may grant a session to write, as the catalogue
+			// declares it (docs/grants.md).
+			Protected: ctx.table.catalog.Protected(),
+			Dir:       dir,
+			Name:      call.Flag("name", ""),
+			Args:      args,
+			Intro:     !call.Switch("no-intro"),
+			Role:      part,
+			Command:   program,
 			// The mail tool's endpoint runs the CLI's own checks
 			// (docs/mail-bridge.md).
-			MailTool: &wrap.MailTool{Words: ToolWords, Acknowledge: AcknowledgeRead, Check: ToolCheck, Tools: ToolDescriptors()},
+			MailTool: &wrap.MailTool{Words: ctx.table.toolWords, Acknowledge: AcknowledgeRead, Check: ctx.table.toolCheck, Tools: ctx.table.toolDescriptors()},
 
 			OnClaimed: onClaimed,
 		})
@@ -223,8 +226,8 @@ func projectForbidden() []string {
 // singleUseFlags asks a harness which of its flags it takes at most once. The
 // answer belongs to the harness — one may refuse a repeated --model while
 // accepting another flag repeated — so this only looks it up.
-func singleUseFlags(id string) []adapter.Flag {
-	for _, candidate := range adapter.All() {
+func (t *table) singleUseFlags(id string) []adapter.Flag {
+	for _, candidate := range t.catalog.All() {
 		if candidate.ID() == id {
 			return candidate.SingleUseFlags()
 		}

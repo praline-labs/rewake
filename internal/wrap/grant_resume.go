@@ -45,7 +45,7 @@ func (r resumed) dirs() []string {
 
 // resumeGrants confirms again the grants of the conversation the launch
 // arguments name, for a harness that takes directory grants.
-func resumeGrants(dir, name, epoch string, h adapter.Harness, args []string) resumed {
+func resumeGrants(dir, name, epoch string, h adapter.Harness, args []string, protected adapter.Protected) resumed {
 	resumer, ok := h.(adapter.Resumer)
 	granter, grants := h.(adapter.DirGrantHarness)
 	if !ok || !grants || !granter.SupportsDirGrant() {
@@ -56,15 +56,15 @@ func resumeGrants(dir, name, epoch string, h adapter.Harness, args []string) res
 		return resumed{}
 	}
 	out := resumed{thread: thread}
-	out.grants, out.notes = confirmedAgain(dir, name, epoch, thread)
+	out.grants, out.notes = confirmedAgain(dir, name, epoch, thread, protected)
 	return out
 }
 
 // confirmedAgain asks for the grants the copies name for a conversation, and
 // keeps those confirmed whose directories pass this session's rules again. It
 // says in a note what it restored and what it did not.
-func confirmedAgain(dir, name, epoch, thread string) (confirmed []grantauth.Restored, notes []string) {
-	rules := grant.CurrentEnv(state.RootForRoom(dir), adapter.AllProtectedDirs()).Rules()
+func confirmedAgain(dir, name, epoch, thread string, protected adapter.Protected) (confirmed []grantauth.Restored, notes []string) {
+	rules := grant.CurrentEnv(state.RootForRoom(dir), protected.Dirs, protected.Names).Rules()
 	for _, restored := range grantauth.Restore(dir, name, epoch, thread) {
 		err := restored.Err
 		if err == nil {

@@ -20,7 +20,7 @@ func TestAnUnreadableGrantJournalDoesNotEndTheGrant(t *testing.T) {
 	w := newGrantWorld(t, "main", dirGrantHarness(t))
 	lib := filepath.Join(w.home, "work/lib")
 	t.Chdir(filepath.Join(w.home, "work"))
-	if code, out, stderr := run("send", w.peer.Name, "Bump the client", "--wait=0", "--grant-dir", lib); code != ExitPending {
+	if code, out, stderr := w.run("send", w.peer.Name, "Bump the client", "--wait=0", "--grant-dir", lib); code != ExitPending {
 		t.Fatalf("send: %d %s %s", code, out, stderr)
 	}
 	message := w.sent(t)[0]
@@ -33,7 +33,7 @@ func TestAnUnreadableGrantJournalDoesNotEndTheGrant(t *testing.T) {
 	}
 	t.Setenv(state.SessionEnv, w.peer.Name)
 	t.Setenv(state.EpochEnv, w.peer.Epoch())
-	if code, out, stderr := run("inbox"); code != ExitOK {
+	if code, out, stderr := w.run("inbox"); code != ExitOK {
 		t.Fatalf("inbox: %d %s %s", code, out, stderr)
 	}
 	if err := grant.Save(w.dir, w.peer.Name, w.peer.Epoch(), []grant.Entry{{Path: lib, Message: message.ID, Outcome: grant.Dropped}}); err != nil {
@@ -47,11 +47,11 @@ func TestAnUnreadableGrantJournalDoesNotEndTheGrant(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.Chmod(journals[0], 0o600) })
-	code, out, _ := run("inbox", "--owed")
+	code, out, _ := w.run("inbox", "--owed")
 	if code != ExitOK || !strings.Contains(out, "grant: write "+lib+" — unless a turn typed") || strings.Contains(out, "no longer writable") {
 		t.Fatalf("inbox --owed past an unreadable grant journal: %d %s", code, out)
 	}
-	code, out, _ = run("inbox", "--owed", "--json")
+	code, out, _ = w.run("inbox", "--owed", "--json")
 	var model struct {
 		Messages []struct {
 			ID         string            `json:"id"`
@@ -64,7 +64,7 @@ func TestAnUnreadableGrantJournalDoesNotEndTheGrant(t *testing.T) {
 	if err := os.Chmod(journals[0], 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, out, _ := run("inbox", "--owed"); !strings.Contains(out, "grant: dropped "+lib+" — no longer writable") {
+	if _, out, _ := w.run("inbox", "--owed"); !strings.Contains(out, "grant: dropped "+lib+" — no longer writable") {
 		t.Fatalf("inbox --owed once the journal reads: %s", out)
 	}
 }
@@ -73,7 +73,7 @@ func TestAnUnreadableGrantJournalDoesNotEndTheGrant(t *testing.T) {
 // session, found by the capability rather than by name.
 func dirGrantHarness(t *testing.T) string {
 	t.Helper()
-	for _, h := range adapter.All() {
+	for _, h := range testCatalog().All() {
 		if capable, ok := h.(adapter.DirGrantHarness); ok && capable.SupportsDirGrant() {
 			return h.ID()
 		}

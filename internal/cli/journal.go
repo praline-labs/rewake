@@ -58,7 +58,7 @@ func journaled(ctx *Context, call Call, handler func(*Context, Call) error) erro
 		return handler(ctx, call)
 	}
 	site := readSite{dir: dir, self: self, epoch: epoch}
-	words := normalized(parsed{Call: call})
+	words := ctx.table.normalized(parsed{Call: call})
 	digest := bridge.Digest(words)
 	key := receipt.Key{Epoch: epoch, Digest: digest}
 	fresh := receipt.Record{Words: words, Transport: receipt.Shell}
@@ -140,7 +140,7 @@ func runOperation(ctx *Context, call Call, handler func(*Context, Call) error, s
 		return replay(ctx, op)
 	}
 	var out, errOut bytes.Buffer
-	inner := &Context{Stdout: &out, Stderr: &errOut, JSON: ctx.JSON, scope: ctx.scope, op: op, journaling: true}
+	inner := &Context{Stdout: &out, Stderr: &errOut, JSON: ctx.JSON, scope: ctx.scope, op: op, journaling: true, table: ctx.table}
 	failure := handler(inner, call)
 	code := ExitOK
 	if failure != nil {

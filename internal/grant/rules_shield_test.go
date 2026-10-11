@@ -14,21 +14,22 @@ import (
 // .git, and a nested checkout's .git is as much a checkout's as the top one.
 func TestAGrantCoversNothingShieldedAtAnyDepthOrCase(t *testing.T) {
 	root := "/work/proj"
+	rules := Env{Shielded: []string{".toolcfg", ".skills"}}.Rules()
 	for path, covered := range map[string]bool{
-		"/work/proj":                         true,
-		"/work/proj/src/main.go":             true,
-		"/work/proj/gitignore":               true,
-		"/work/proj/src/.gitkeep":            true,
-		"/work/proj/.git/config":             false,
-		"/work/proj/.GIT/hooks/pre-commit":   false,
-		"/work/proj/vendor/lib/.git/config":  false,
-		"/work/proj/.Claude/settings.json":   false,
-		"/work/proj/deep/er/.codex/cfg.toml": false,
-		"/work/proj/pkg/.agents/skill.md":    false,
-		"/work/other/src":                    false,
-		"/work/project/src":                  false,
+		"/work/proj":                        true,
+		"/work/proj/src/main.go":            true,
+		"/work/proj/gitignore":              true,
+		"/work/proj/src/.gitkeep":           true,
+		"/work/proj/.git/config":            false,
+		"/work/proj/.GIT/hooks/pre-commit":  false,
+		"/work/proj/vendor/lib/.git/config": false,
+		"/work/proj/.ToolCfg/settings.json": false,
+		"/work/proj/deep/er/.skills/x.toml": false,
+		"/work/proj/pkg/.toolcfg/skill.md":  false,
+		"/work/other/src":                   false,
+		"/work/project/src":                 false,
 	} {
-		if got := Covers(root, path); got != covered {
+		if got := rules.Covers(root, path); got != covered {
 			t.Errorf("Covers(%s, %s) = %v, want %v", root, path, got, covered)
 		}
 	}
@@ -63,7 +64,7 @@ func TestTheCurrentRulesKnowTheTemporaryDirectory(t *testing.T) {
 		t.Fatal(err)
 	}
 	var refusal *Refusal
-	if err := CurrentEnv("", nil).Rules().Check(path, path, false); !errors.As(err, &refusal) || !strings.Contains(refusal.Message, "temporary directory") {
+	if err := CurrentEnv("", nil, nil).Rules().Check(path, path, false); !errors.As(err, &refusal) || !strings.Contains(refusal.Message, "temporary directory") {
 		t.Fatalf("%s: %v", path, err)
 	}
 }

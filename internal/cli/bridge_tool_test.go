@@ -295,7 +295,7 @@ func TestALongAnswerComesInParts(t *testing.T) {
 
 func lookupCommand(t *testing.T, name string) *Command {
 	t.Helper()
-	for _, group := range Groups() {
+	for _, group := range testTable().groups {
 		for _, command := range group.Commands {
 			if command.Name == name {
 				return command

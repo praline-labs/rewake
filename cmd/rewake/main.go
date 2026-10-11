@@ -4,11 +4,12 @@ package main
 import (
 	"os"
 
+	"github.com/praline-labs/rewake/internal/adapter/catalog"
 	"github.com/praline-labs/rewake/internal/cli"
-	// The catalog registers every harness rewake can run.
-	_ "github.com/praline-labs/rewake/internal/adapter/catalog"
 )
 
+// The binary is the one place that knows which adapters exist: it builds the
+// catalogue and hands it to the CLI as a value.
 func main() {
-	os.Exit(cli.Run(os.Args[1:], os.Stdout, os.Stderr))
+	os.Exit(cli.Run(catalog.New(), os.Args[1:], os.Stdout, os.Stderr))
 }

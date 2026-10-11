@@ -102,8 +102,13 @@ Tests:
 The three steps of the unforgeable grant carry over unchanged (`docs/grants-authority.md`,
 "The scheme": at send, at delivery, when main does not answer), in `core/grant`
 with the wrapper's side in `host`. Applying a grant is the Permissions capability.
+What no grant reaches comes from the catalogue: every adapter's own configuration, and
+what the catalogue declares for a harness the build has no adapter for — `~/.codex`,
+`.codex` and `.agents` until stage 5 (decided 2026-10-11) — so the core names none.
 
 Tests:
+- `internal/adapter/catalog/catalog_test.go` `TestTheCatalogueProtectsTheHarnessesItHasNoAdapterFor`
+- `internal/cli/send_dir_test.go` `TestAGrantRefusesWhatTheCatalogueProtects` — a grant into a checkout still refuses those names there, and those directories under the home
 - `internal/grantauth/grantauth_test.go` `TestAGrantRegisteredFromBelowIsConfirmed`
 - `internal/grantauth/grantauth_test.go` `TestARegistrationFromOutsideTheWrapperIsRefused`
 - `internal/grantauth/grantauth_test.go` `TestAConfirmationSettlesOnlyForItsRun`

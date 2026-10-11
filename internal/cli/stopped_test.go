@@ -87,7 +87,7 @@ func TestStoppedWithNobodyWaitingSendsNothing(t *testing.T) {
 	if reportObject(t, dir, "leader")["kind"] != "error" {
 		t.Fatal("main did not receive the failure")
 	}
-	if _, err := parse([]string{"send", "api", "manual", "--stopped"}); err == nil {
+	if _, err := testTable().parse([]string{"send", "api", "manual", "--stopped"}); err == nil {
 		t.Fatal("manual stopped reports must be refused")
 	}
 }

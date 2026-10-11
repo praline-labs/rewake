@@ -149,7 +149,7 @@ func TestPeekTelemetryIsMainOnlyAndBodyFree(t *testing.T) {
 func TestSelectedReadPrintsBeforeMarkingAndKeepsNormalJSON(t *testing.T) {
 	dir, self, peer := stateCaller(t, "main")
 	id := rawUnread(t, dir, self.Name, map[string]any{"from": peer.Name, "fromEpoch": peer.Epoch(), "toEpoch": self.Epoch(), "kind": "task", "text": "selected body"})
-	if code := Run([]string{"inbox", "--message", id}, brokenWriter{}, brokenWriter{}); code == ExitOK {
+	if code := Run(testCatalog(), []string{"inbox", "--message", id}, brokenWriter{}, brokenWriter{}); code == ExitOK {
 		t.Fatal("selected read ignored output failure")
 	}
 	if status, ok, _ := inbox.ReadStatus(dir, self.Name, id); ok && status.State == inbox.Read {

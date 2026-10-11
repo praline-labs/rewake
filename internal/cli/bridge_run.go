@@ -39,9 +39,9 @@ func (s *callScope) remaining() time.Duration {
 }
 
 // runBridge runs one tool call and prints its bounded answer.
-func runBridge(argv []string, stdout, stderr io.Writer) int {
+func runBridge(t *table, argv []string, stdout, stderr io.Writer) int {
 	var out, errOut bytes.Buffer
-	ctx := &Context{Stdout: &out, Stderr: &errOut}
+	ctx := &Context{Stdout: &out, Stderr: &errOut, table: t}
 	code := bridgeCall(ctx, argv)
 	text, diagnostic := boundedAnswer(ctx, out.String(), errOut.String())
 	_, _ = io.WriteString(stdout, text)
@@ -50,11 +50,11 @@ func runBridge(argv []string, stdout, stderr io.Writer) int {
 }
 
 func bridgeCall(ctx *Context, argv []string) int {
-	result, err := toolCall(argv)
+	result, err := ctx.table.toolCall(argv)
 	if err != nil {
 		return report(ctx, err)
 	}
-	scope, err := authorize(result)
+	scope, err := authorize(ctx.table, result)
 	if err != nil {
 		return report(ctx, err)
 	}
@@ -74,12 +74,12 @@ func bridgeCall(ctx *Context, argv []string) int {
 // the model supplied — words, ids, times — is authority on its own: the
 // ticket must have been issued for exactly these words, by this run's wrapper,
 // and its deadline must not have passed.
-func authorize(result parsed) (*callScope, error) {
+func authorize(t *table, result parsed) (*callScope, error) {
 	ticket, err := bridge.ReadTicket()
 	if err != nil {
 		return nil, failf("Rewake: this tool call carries no usable ticket (%v), so nothing ran; run the same words in the shell: rewake <words>", err)
 	}
-	words := normalized(result)
+	words := t.normalized(result)
 	digest := bridge.Digest(words)
 	if ticket.WordsDigest != digest {
 		return nil, failf("Rewake: the ticket of this tool call was issued for other words, so nothing ran.")

@@ -29,8 +29,8 @@ internal/role/                   the role catalogue: flag, briefing line, report
 internal/brief/                  text injected into an agent, independent of transport
 internal/alias/                  launch aliases: a short name turned into launch arguments
 internal/sessionstate/           optional, epoch-scoped observations of a harness (telemetry)
-internal/adapter/                the adapter API: the Harness interface, launch plans, version gates, flags, defaults, settings
-internal/adapter/catalog/        the one list of harnesses that exist
+internal/adapter/                the adapter API: the Harness interface, the catalogue value, launch plans, version gates, flags, defaults, settings
+internal/adapter/catalog/        the one constructor of the catalogue, which cmd/rewake builds and hands to the CLI
 internal/adapter/claude/         launch arguments, environment, socket delivery
 internal/adapter/fixture/        the test harness behind rewakefixture: a scripted program over a socket, every contract interface
 internal/wrap/                   wrapper: launch, signals, lifecycle
@@ -61,7 +61,7 @@ type Harness interface {
     Examples() []string
     Notes() []string
     SingleUseFlags() []Flag
-    ProtectedDirs() []string
+    ProtectedDirs() Protected
     Launch(request LaunchRequest) (LaunchPlan, error)
     Deliver(ctx context.Context, session registry.Session, message inbox.Message) inbox.Result
 }
@@ -70,7 +70,17 @@ type Harness interface {
 `SingleUseFlags` names the flags a harness takes at most once, so an alias and a typed
 flag for the same parameter replace rather than repeat each other. `ProtectedDirs` names
 the harness's own configuration, which no task may grant a session to write
-([grants.md](grants.md)). `Deliver` sends the
+([grants.md](grants.md)): `Dirs`, absolute directories outside any project, and `Names`,
+the directories it keeps inside one.
+
+The adapters reach the CLI as one value. `catalog.New()` returns an `adapter.Catalog` in
+guide order; `cmd/rewake` builds it and passes it to `cli.Run`, which derives the command
+table from it for that invocation. No package holds adapters at package level and none
+registers one from `init` (rule 3 of [design.md](v2/design.md#the-test-that-holds-it)),
+so a test builds a catalogue of its own. `Catalog.Protected()` is the set the grant rules
+receive: every adapter's `ProtectedDirs`, and what the catalogue declares for harnesses
+this build has no adapter for — `~/.codex`, `.codex` and `.agents` until stage 5's
+adapter declares them itself. `Deliver` sends the
 notice for `message`, built by `inbox.Notice`; it never sends `message.Text`.
 
 A harness whose sessions take `rewake compact` and `rewake interrupt` also implements

@@ -16,7 +16,7 @@ func TestLaunchRefusesInvalidNamePrefixesWithoutStartingHarness(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv(state.DirEnv, dir)
-	for _, h := range adapter.All() {
+	for _, h := range testCatalog().All() {
 		t.Setenv("PATH", launchPath(t, h))
 		for _, prefix := range []string{"", "Upper", "../escape", strings.Repeat("x", 32)} {
 			code, _, errOut := run("--write", "--name", prefix, h.ID())
@@ -32,10 +32,10 @@ func TestLaunchRefusesInvalidNamePrefixesWithoutStartingHarness(t *testing.T) {
 }
 
 func TestLaunchFlowUsesTheAssembledAddress(t *testing.T) {
-	steps := flow()
+	steps := flow(testCatalog())
 	for i, step := range steps {
 		fields := splitExample(step.Command)
-		parsed, err := parse(fields[1:])
+		parsed, err := testTable().parse(fields[1:])
 		if err != nil {
 			continue
 		} // Help placeholders are not a launch example.
@@ -47,7 +47,7 @@ func TestLaunchFlowUsesTheAssembledAddress(t *testing.T) {
 		if i+1 >= len(steps) {
 			t.Fatal("launch lacks its matching send")
 		}
-		next, err := parse(splitExample(steps[i+1].Command)[1:])
+		next, err := testTable().parse(splitExample(steps[i+1].Command)[1:])
 		if err != nil || next.Call.Command.Name != "send" || len(next.Call.Positionals) == 0 || next.Call.Positionals[0] != address {
 			t.Fatalf("launch %q does not match %q", step.Command, steps[i+1].Command)
 		}
@@ -55,7 +55,7 @@ func TestLaunchFlowUsesTheAssembledAddress(t *testing.T) {
 }
 
 func TestExplicitPrefixConflictNamesFinalAddress(t *testing.T) {
-	for _, h := range adapter.All() {
+	for _, h := range testCatalog().All() {
 		t.Run(h.ID(), func(t *testing.T) {
 			address := "taken-" + h.ID()
 			liveSession(t, address)

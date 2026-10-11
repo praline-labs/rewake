@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/state"
 )
 
@@ -29,7 +28,7 @@ func outsideAnySession(t *testing.T) {
 // marker is enough, set even to nothing, and neither needs a live record
 // behind it.
 func TestALaunchFromInsideASessionIsRefused(t *testing.T) {
-	for _, h := range adapter.All() {
+	for _, h := range testCatalog().All() {
 		for _, marker := range []string{state.SessionEnv, state.EpochEnv} {
 			for _, value := range []string{"worker-claude", ""} {
 				t.Run(h.ID()+"/"+marker+"="+value, func(t *testing.T) {
@@ -41,12 +40,12 @@ func TestALaunchFromInsideASessionIsRefused(t *testing.T) {
 					t.Setenv(state.RoomEnv, "isolated")
 					outsideAnySession(t)
 					t.Setenv(marker, value)
-					parsed, err := parse([]string{h.ID(), "-p", "x"})
+					parsed, err := testTable().parse([]string{h.ID(), "-p", "x"})
 					if err != nil {
 						t.Fatal(err)
 					}
 					probe := &roleLaunchProbe{Harness: h}
-					err = handleLaunch(probe)(&Context{Stdout: io.Discard, Stderr: io.Discard}, parsed.Call)
+					err = handleLaunch(probe)(&Context{Stdout: io.Discard, Stderr: io.Discard, table: testTable()}, parsed.Call)
 					var usage *UsageError
 					if !errors.As(err, &usage) || !strings.Contains(usage.Message, "does not start other sessions") {
 						t.Fatalf("launched from inside a session: %v", err)

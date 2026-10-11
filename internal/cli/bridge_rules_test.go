@@ -334,7 +334,7 @@ func TestAnEscapedDiagnosticFits(t *testing.T) {
 // Rule 5. An answer that could not be kept for continuing still leaves inside
 // the bound, naming the shell.
 func TestAnAnswerThatCannotBeKeptStillFits(t *testing.T) {
-	out, errOut := boundedAnswer(&Context{}, strings.Repeat("a", 7000), strings.Repeat("\x00", 900))
+	out, errOut := boundedAnswer(&Context{table: testTable()}, strings.Repeat("a", 7000), strings.Repeat("\x00", 900))
 	if !bridge.Fits(out, errOut) || !strings.Contains(errOut, "shell") {
 		t.Fatalf("encoded size %d: %q", bridge.EncodedSize(out, errOut), errOut)
 	}

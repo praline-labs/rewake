@@ -99,9 +99,10 @@ A directory that is, lies inside or contains one of these is refused with exit 2
 whatever flag names it:
 
 - rewake's state directory, `~/.config/rewake` and the directory of the rewake binary;
-- each harness's own configuration, named by the harness through `ProtectedDirs()`:
-  `$CODEX_HOME` or `~/.codex` for Codex; `$CLAUDE_CONFIG_DIR`, `~/.claude*` and
-  `~/.local/share/claude` for Claude Code;
+- each harness's own configuration, named by its adapter through `ProtectedDirs()`:
+  `$CLAUDE_CONFIG_DIR`, `~/.claude*` and `~/.local/share/claude` for Claude Code; and
+  `~/.codex`, which the catalogue declares for Codex, a harness this build has no adapter
+  for (decided 2026-10-11; stage 5's adapter declares it itself);
 - `~/.ssh`, `~/.gnupg`, `~/.aws`, `~/.kube`, `~/.docker`, `~/.password-store`,
   `~/.config/gh`;
 - every directory on the sender's `PATH`, and for one named `bin` the toolchain it
@@ -137,7 +138,9 @@ Matched exactly, and granted only with `--grant-dir-broad <the same path>`:
 - each mount point under `/mnt` and `/media`, read from `/proc/self/mountinfo`;
 - each directory directly in `$HOME`;
 - a directory with `.git`, `.claude`, `.codex` or `.agents` anywhere in its path, in
-  any case. A checkout keeps its metadata there and a harness its configuration, and
+  any case — `.git` always, the others as the catalogue hands them to the rules: an
+  adapter names what its harness keeps inside a project, and the catalogue adds `.codex`
+  and `.agents` for Codex. A checkout keeps its metadata there and a harness its configuration, and
   what reads them next runs what was written. Inside a grant Claude Code's hook kept them
   with the person in 1.x ([grants-claude.md](archive-1.x/grants-claude.md)); granted as the
   root, or below one, nothing inside would, so the grant names them. The metadata `--grant-git` adds beside

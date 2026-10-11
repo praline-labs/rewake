@@ -180,7 +180,7 @@ func TestAnUnreadableResultIsNotFailedWhenTheNameMovesOn(t *testing.T) {
 			closed(t, status)
 			otherRun(t, dir, "web")
 			var out, errOut bytes.Buffer
-			ctx := &Context{Stdout: &out, Stderr: &errOut, JSON: true}
+			ctx := &Context{Stdout: &out, Stderr: &errOut, JSON: true, table: testTable()}
 			failure := reportSent(ctx, sent{dir: dir, self: self, epoch: self.Epoch(), target: web}, message, noteKind, 0)
 			var model sendModel
 			if err := json.Unmarshal(out.Bytes(), &model); err != nil {

@@ -3,11 +3,12 @@ package cli
 import (
 	"fmt"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/inbox"
 )
 
 // sendCommand is send's entry in the command table.
-func sendCommand() *Command {
+func sendCommand(catalog adapter.Catalog) *Command {
 	return &Command{
 		Name:           "send",
 		Args:           "<name> <text>",
@@ -21,7 +22,7 @@ func sendCommand() *Command {
 			Option{Flag: "--to", Value: "<id>", Summary: "Add to an unreported task or question this run sent: a task of its own, announced at once, shown with it by rewake inbox --owed and settled by the same report. Takes a unique prefix of the id; an id rewake edit replaced adds to the replacement."},
 			jsonOption,
 		),
-		Examples: append(sendExamples(),
+		Examples: append(sendExamples(catalog),
 			"rewake send writer --grant-git \"Commit the reviewed change\"",
 			"rewake send writer --grant-dir ../shared-lib \"Bump the client in shared-lib as well\"",
 			"rewake send writer --grant-dir-broad /mnt/d \"Sort the exports on the D: drive\"",

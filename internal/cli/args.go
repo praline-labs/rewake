@@ -26,13 +26,13 @@ type parsed struct {
 }
 
 // parse reads argv into a call against the command table.
-func parse(argv []string) (parsed, error) { return parseKnowing(argv, nil) }
+func (t *table) parse(argv []string) (parsed, error) { return t.parseKnowing(argv, nil) }
 
 // parseKnowing is parse with the aliases this process can expand, so that a
 // word which is neither a command nor an alias is refused with both lists. A
 // person who mistypes an alias is told what exists, not only that this is not
 // a command.
-func parseKnowing(argv []string, aliases []string) (parsed, error) {
+func (t *table) parseKnowing(argv []string, aliases []string) (parsed, error) {
 	var result parsed
 	result.Call.Flags = map[string]string{}
 	result.Call.Lists = map[string][]string{}
@@ -49,7 +49,7 @@ func parseKnowing(argv []string, aliases []string) (parsed, error) {
 			index++
 			continue
 		}
-		consumed, err := readFlag(argv, index, nil, &result.Call)
+		consumed, err := t.readFlag(argv, index, nil, &result.Call)
 		if err != nil {
 			return result, err
 		}
@@ -70,10 +70,10 @@ func parseKnowing(argv []string, aliases []string) (parsed, error) {
 		return result, &UsageError{Message: fmt.Sprintf("%s is not a command. rewake's own flags are long ones, such as --help; run rewake for the map.", word)}
 	}
 
-	command := findCommand(word)
+	command := t.findCommand(word)
 	if command == nil {
 		message := fmt.Sprintf("No command %q.", word)
-		if near := nearestCommand(word); near != "" {
+		if near := t.nearestCommand(word); near != "" {
 			message += fmt.Sprintf(" Did you mean %q?", near)
 		}
 		if len(aliases) > 0 {
@@ -88,7 +88,7 @@ func parseKnowing(argv []string, aliases []string) (parsed, error) {
 	// Flags read before the command word are checked against it now: --name
 	// belongs to a launch command and nowhere else.
 	for name := range result.Call.Flags {
-		if !knownFlag(command, name) {
+		if !t.knownFlag(command, name) {
 			return result, unknownFlagError(command, name)
 		}
 	}
@@ -115,7 +115,7 @@ func parseKnowing(argv []string, aliases []string) (parsed, error) {
 			endOfFlags = true
 			index++
 		case !endOfFlags && strings.HasPrefix(token, "--"):
-			consumed, err := readFlag(argv, index, command, &result.Call)
+			consumed, err := t.readFlag(argv, index, command, &result.Call)
 			if err != nil {
 				return result, err
 			}
@@ -170,20 +170,20 @@ func shortFlag(token string) bool {
 
 // readFlag reads one flag at argv[index] into the call and returns the next
 // index.
-func readFlag(argv []string, index int, command *Command, call *Call) (int, error) {
+func (t *table) readFlag(argv []string, index int, command *Command, call *Call) (int, error) {
 	body := strings.TrimPrefix(argv[index], "--")
 	if body == "" {
 		return index, &UsageError{Command: command, Message: "Bare -- is not a flag."}
 	}
 
 	name, value, inline := strings.Cut(body, "=")
-	if !knownFlag(command, name) {
+	if !t.knownFlag(command, name) {
 		return index, unknownFlagError(command, name)
 	}
 	next := index + 1
 	switch {
 	case inline:
-	case takesValue(command, name):
+	case t.takesValue(command, name):
 		if index+1 >= len(argv) || strings.HasPrefix(argv[index+1], "--") {
 			return index, &UsageError{
 				Command: command,
@@ -195,7 +195,7 @@ func readFlag(argv []string, index int, command *Command, call *Call) (int, erro
 		value = "true"
 	}
 
-	if repeatable(command, name) {
+	if t.repeatable(command, name) {
 		call.Lists[name] = append(call.Lists[name], value)
 	} else if _, given := call.Flags[name]; given {
 		return index, &UsageError{

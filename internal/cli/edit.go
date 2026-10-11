@@ -98,7 +98,7 @@ func handleEdit(ctx *Context, call Call) error {
 	// disk may have been rewritten. Its directories are checked again when
 	// the replacement is delivered, as the original's would have been.
 	if self.Role == role.Main.ID {
-		if err := carryGrant(dir, self, epoch, old, &replacement); err != nil {
+		if err := carryGrant(ctx.table.catalog, dir, self, epoch, old, &replacement); err != nil {
 			return err
 		}
 	}

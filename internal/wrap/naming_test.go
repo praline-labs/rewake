@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	_ "github.com/praline-labs/rewake/internal/adapter/catalog"
+	"github.com/praline-labs/rewake/internal/adapter/catalog"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
 	"github.com/praline-labs/rewake/internal/state"
@@ -22,7 +22,7 @@ type namedHarness struct {
 func (h *namedHarness) ID() string { return h.id }
 
 func TestLaunchNamesFollowSelectedRoleAndHarness(t *testing.T) {
-	for _, h := range adapter.All() {
+	for _, h := range adapters() {
 		for _, part := range role.All() {
 			t.Run(h.ID()+"/"+part.ID, func(t *testing.T) {
 				dir := stateDir(t)
@@ -165,3 +165,6 @@ func TestHarnessLengthLeavesRoomForAPrefix(t *testing.T) {
 		}
 	}
 }
+
+// adapters are the ones the tests here run each case on.
+func adapters() []adapter.Harness { return catalog.New().All() }

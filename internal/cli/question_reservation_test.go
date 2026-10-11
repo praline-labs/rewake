@@ -37,7 +37,7 @@ func TestAnAnswerSurvivesFailedOutput(t *testing.T) {
 				args = append(args, "--json")
 			}
 			var stderr bytes.Buffer
-			code := Run(args, brokenWriter{}, &stderr)
+			code := Run(testCatalog(), args, brokenWriter{}, &stderr)
 			if code != ExitFailed {
 				t.Errorf("exit=%d, want failed output; stderr=%s", code, stderr.String())
 			}

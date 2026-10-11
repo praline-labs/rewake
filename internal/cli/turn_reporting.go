@@ -45,11 +45,11 @@ func refuseReportingRole(h adapter.Harness, part role.Role) error {
 
 // refuseUnreported refuses a task or a question to a session on a harness
 // that reports no turn's end.
-func refuseUnreported(session registry.Session, kind inbox.Kind) error {
+func refuseUnreported(catalog adapter.Catalog, session registry.Session, kind inbox.Kind) error {
 	if kind != inbox.Task && kind != inbox.Question {
 		return nil
 	}
-	found, _ := findHarness(session.Harness)
+	found, _ := catalog.Find(session.Harness)
 	if reportsTurns(found) {
 		return nil
 	}

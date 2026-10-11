@@ -2,10 +2,9 @@ package catalog
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
-
-	"github.com/praline-labs/rewake/internal/adapter"
 )
 
 // A registered harness has to say which of its flags it takes at most once.
@@ -17,7 +16,7 @@ import (
 // exactly the defect this list exists to prevent. So the list being non-empty
 // is checked here rather than left to whoever adds the next harness.
 func TestEveryHarnessNamesItsSingleUseFlags(t *testing.T) {
-	for _, h := range adapter.All() {
+	for _, h := range New().All() {
 		t.Run(h.ID(), func(t *testing.T) {
 			flags := h.SingleUseFlags()
 			if len(flags) == 0 {
@@ -46,9 +45,9 @@ func TestEveryHarnessNamesItsSingleUseFlags(t *testing.T) {
 // empty list is the cheapest way to satisfy the method, and it would let main
 // grant a worker the directory that decides what that harness runs.
 func TestEveryHarnessNamesItsProtectedDirs(t *testing.T) {
-	for _, h := range adapter.All() {
+	for _, h := range New().All() {
 		t.Run(h.ID(), func(t *testing.T) {
-			dirs := h.ProtectedDirs()
+			dirs := h.ProtectedDirs().Dirs
 			if len(dirs) == 0 {
 				t.Fatal("no protected directories: a grant could reach this harness's own configuration")
 			}
@@ -58,5 +57,23 @@ func TestEveryHarnessNamesItsProtectedDirs(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// The metadata directories of harnesses this build has no adapter for are
+// the catalogue's to declare, so the core is handed them and names none: a
+// grant into a checkout still refuses another harness's own directories
+// (docs/grants.md). Stage 5's Codex adapter takes them over.
+func TestTheCatalogueProtectsTheHarnessesItHasNoAdapterFor(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	protected := New().Protected()
+	for _, name := range []string{".codex", ".agents"} {
+		if !slices.Contains(protected.Names, name) {
+			t.Errorf("%s is not among the protected names %v", name, protected.Names)
+		}
+	}
+	if want := filepath.Join(home, ".codex"); !slices.Contains(protected.Dirs, want) {
+		t.Errorf("%s is not among the protected directories %v", want, protected.Dirs)
 	}
 }

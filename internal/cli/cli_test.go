@@ -7,18 +7,37 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/adapter/catalog"
 	"github.com/praline-labs/rewake/internal/role"
-
-	// The command table is derived from the harness catalog, so every test
-	// here needs it registered.
-	_ "github.com/praline-labs/rewake/internal/adapter/catalog"
 )
 
+// testCatalog is the catalogue the tests run against.
+func testCatalog() adapter.Catalog { return catalog.New() }
+
+// testTable is the command table built from it, for the tests that read the
+// table rather than run a command.
+func testTable() *table { return newTable(testCatalog()) }
+
 // run executes one invocation and returns code, stdout and stderr.
-func run(argv ...string) (int, string, string) {
+func run(argv ...string) (int, string, string) { return runOn(testCatalog(), argv...) }
+
+// runOn executes one invocation against a catalogue of the test's own.
+func runOn(c adapter.Catalog, argv ...string) (int, string, string) {
 	var out, errOut bytes.Buffer
-	code := Run(argv, &out, &errOut)
+	code := Run(c, argv, &out, &errOut)
 	return code, out.String(), errOut.String()
+}
+
+// remap is a catalogue with each adapter replaced as replace says: a stub
+// that offers or withholds what no adapter of it does. It protects what base
+// does.
+func remap(base adapter.Catalog, replace func(adapter.Harness) adapter.Harness) adapter.Catalog {
+	var adapters []adapter.Harness
+	for _, h := range base.All() {
+		adapters = append(adapters, replace(h))
+	}
+	return adapter.NewCatalog(base.Protected(), adapters...)
 }
 
 func TestNoArgumentsPrintsGuide(t *testing.T) {
@@ -71,7 +90,7 @@ func TestFlagNeedingValueIsRefused(t *testing.T) {
 // text.
 func TestShortFlagsAreHelpOrRefused(t *testing.T) {
 	for _, argv := range [][]string{{"-h"}, {"send", "api", "-h"}, {"inbox", "-h"}} {
-		result, err := parse(argv)
+		result, err := testTable().parse(argv)
 		if err != nil || !result.Help {
 			t.Errorf("%v is not help: %+v %v", argv, result, err)
 		}
@@ -85,7 +104,7 @@ func TestShortFlagsAreHelpOrRefused(t *testing.T) {
 		t.Errorf("-v names no way on: %d %s", code, errOut)
 	}
 	for _, argv := range [][]string{{"send", "api", "- fix the login"}, {"send", "api", "-"}, {"send", "api", "--", "-x"}} {
-		result, err := parse(argv)
+		result, err := testTable().parse(argv)
 		if err != nil || len(result.Call.Positionals) != 2 {
 			t.Errorf("%v lost its text: %+v %v", argv, result.Call.Positionals, err)
 		}
@@ -122,7 +141,7 @@ func TestLoosePositionalsAreRefused(t *testing.T) {
 }
 
 func TestHarnessArgumentsStayRaw(t *testing.T) {
-	result, err := parse([]string{"--name", "api", "claude", "--model", "chosen-model", "--", "write the notes", "", "--json"})
+	result, err := testTable().parse([]string{"--name", "api", "claude", "--model", "chosen-model", "--", "write the notes", "", "--json"})
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -160,7 +179,7 @@ func TestLaunchFlagRejectedOnOtherCommands(t *testing.T) {
 }
 
 func TestHelpForEveryCommand(t *testing.T) {
-	for _, group := range Groups() {
+	for _, group := range testTable().groups {
 		for _, command := range group.Commands {
 			// A launch command passes everything after its name to the harness;
 			// --help as the first token is the documented exception.
@@ -180,7 +199,7 @@ func TestHelpForEveryCommand(t *testing.T) {
 
 func TestTableIsComplete(t *testing.T) {
 	seen := map[string]bool{}
-	for _, group := range Groups() {
+	for _, group := range testTable().groups {
 		for _, command := range group.Commands {
 			if seen[command.Name] {
 				t.Errorf("command %q is listed twice", command.Name)
@@ -207,7 +226,7 @@ func TestTableIsComplete(t *testing.T) {
 	// Launch commands are the exception: they share one closure and differ by
 	// the harness they carry, which is checked instead.
 	handlers := map[uintptr]string{}
-	for _, group := range Groups() {
+	for _, group := range testTable().groups {
 		for _, command := range group.Commands {
 			if command.Harness != nil {
 				if command.Harness.ID() != command.Name {
@@ -227,7 +246,7 @@ func TestTableIsComplete(t *testing.T) {
 // Examples are copied verbatim by whoever reads them, so every example must be
 // a call this parser accepts, against the command that advertises it.
 func TestExamplesParse(t *testing.T) {
-	for _, group := range Groups() {
+	for _, group := range testTable().groups {
 		for _, command := range group.Commands {
 			for _, example := range command.Examples {
 				fields := splitExample(example)
@@ -235,7 +254,7 @@ func TestExamplesParse(t *testing.T) {
 					t.Errorf("%s: example %q does not start with rewake", command.Name, example)
 					continue
 				}
-				result, err := parse(fields[1:])
+				result, err := testTable().parse(fields[1:])
 				if err != nil {
 					t.Errorf("%s: example %q does not parse: %v", command.Name, example, err)
 					continue
@@ -340,7 +359,7 @@ func TestGuideJSONCarriesTheTable(t *testing.T) {
 // a shell that is not a session sees the general map unchanged.
 func TestGuideShowsTheCallersRole(t *testing.T) {
 	play := role.Write.Play
-	text := formatGuide(&play)
+	text := testTable().formatGuide(&play)
 	if !strings.Contains(text, "YOUR ROLE") || !strings.Contains(text, play.Heading) {
 		t.Fatal("a session's guide does not open with its role")
 	}
@@ -350,17 +369,17 @@ func TestGuideShowsTheCallersRole(t *testing.T) {
 		}
 	}
 	// The same words in the machine form, for an agent that reads --json.
-	model := guideModel(&play)
+	model := testTable().guideModel(&play)
 	section, ok := model["role"].(map[string]any)
 	if !ok || section["heading"] != play.Heading {
 		t.Fatalf("the machine form has no role section: %#v", model["role"])
 	}
 
-	plain := formatGuide(nil)
+	plain := testTable().formatGuide(nil)
 	if strings.Contains(plain, "YOUR ROLE") {
 		t.Fatal("a caller with no session was given a role")
 	}
-	if _, present := guideModel(nil)["role"]; present {
+	if _, present := testTable().guideModel(nil)["role"]; present {
 		t.Fatal("the machine form carries a role for a caller that has none")
 	}
 }

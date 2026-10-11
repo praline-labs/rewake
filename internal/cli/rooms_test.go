@@ -83,12 +83,12 @@ func TestRoomAndRoleAreVisibleInIdentity(t *testing.T) {
 
 func TestRoomsAndWorkerAreLaunchFlagsOnly(t *testing.T) {
 	for _, args := range [][]string{{"--room", "red", "--general", aHarness(t)}, {"--room=blue", "--main", "claude"}} {
-		if _, err := parse(args); err != nil {
+		if _, err := testTable().parse(args); err != nil {
 			t.Errorf("launch %q: %v", args, err)
 		}
 	}
 	for _, command := range []string{"list", "send", "inbox", "whoami"} {
-		if _, err := parse([]string{"--room", "red", command}); err == nil {
+		if _, err := testTable().parse([]string{"--room", "red", command}); err == nil {
 			t.Errorf("room override accepted by %s", command)
 		}
 	}

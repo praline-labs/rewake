@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/grant"
 	"github.com/praline-labs/rewake/internal/grantauth"
 	"github.com/praline-labs/rewake/internal/grantauth/grantauthtest"
@@ -30,7 +31,7 @@ func TestAGrantWhoseDirectoryBecameALinkIsRefusedBeforeMainIsAsked(t *testing.T)
 	}
 	// Nobody listens for main, and main runs: asked, it would say "not yet".
 	message := inbox.Message{ID: "m1", From: "lead", FromEpoch: ownEpoch(t), To: "worker", ToEpoch: "9.9", Kind: inbox.Task, GrantDirs: []string{swapped}}
-	err := checkGrant(dir, "worker", "9.9")(message)
+	err := checkGrant(dir, "worker", "9.9", adapter.Protected{})(message)
 	if err == nil || errors.Is(err, inbox.ErrNotYet) || !strings.Contains(err.Error(), "now leads to") {
 		t.Fatalf("a swapped directory: %v", err)
 	}
@@ -118,7 +119,7 @@ func TestAGrantWhoseMainHasEndedFailsNamingThatMain(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "rooms", "default")
 	lib := realDir(t)
 	message := inbox.Message{ID: "m1", From: "lead", FromEpoch: ownEpoch(t), To: "worker", ToEpoch: "9.9", Kind: inbox.Task, GrantDirs: []string{lib}}
-	check := checkGrant(dir, "worker", "9.9")
+	check := checkGrant(dir, "worker", "9.9", adapter.Protected{})
 
 	if err := check(message); !errors.Is(err, inbox.ErrNotYet) || !strings.Contains(err.Error(), "lead") {
 		t.Fatalf("a quiet main that runs: %v, want the task to wait for it", err)

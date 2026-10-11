@@ -131,18 +131,18 @@ func (lab worktreeLab) launch(t *testing.T, probe *worktreeProbe, dir string, ra
 func (worktreeLab) launchTold(t *testing.T, probe *worktreeProbe, dir string, raw ...string) (string, error) {
 	t.Helper()
 	t.Chdir(dir)
-	parsed, err := parse(append([]string{"--room", "trees", "--name", "tree", probe.ID()}, raw...))
+	parsed, err := testTable().parse(append([]string{"--room", "trees", "--name", "tree", probe.ID()}, raw...))
 	if err != nil {
 		t.Fatal(err)
 	}
 	var stderr strings.Builder
-	err = handleLaunch(probe)(&Context{Stdout: io.Discard, Stderr: &stderr}, parsed.Call)
+	err = handleLaunch(probe)(&Context{Stdout: io.Discard, Stderr: &stderr, table: testTable()}, parsed.Call)
 	return stderr.String(), err
 }
 
 func harnessProbe(t *testing.T, id string) *worktreeProbe {
 	t.Helper()
-	found, ok := adapter.Find(id)
+	found, ok := testCatalog().Find(id)
 	if !ok {
 		t.Fatalf("%s is not in the catalog", id)
 	}
@@ -260,7 +260,7 @@ func TestAFailedLaunchKeepsATouchedCheckoutAndSaysSo(t *testing.T) {
 // Here, every harness that takes a worktree flag spells it --worktree; a
 // harness may take none.
 func TestClaudeHandsItsLongWorktreeFlagToRewake(t *testing.T) {
-	for _, h := range adapter.All() {
+	for _, h := range testCatalog().All() {
 		if taker, ok := h.(adapter.WorktreeHarness); ok && taker.WorktreeFlag() != "--worktree" {
 			t.Errorf("%s takes %s, not --worktree", h.ID(), taker.WorktreeFlag())
 		}

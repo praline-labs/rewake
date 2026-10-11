@@ -29,7 +29,7 @@ func TestTheToolsAreTheAllowlist(t *testing.T) {
 		t.Fatalf("%d tools for %d commands", len(tools), len(toolOrder))
 	}
 	for _, tool := range tools {
-		command := findCommand(tool.Name)
+		command := testTable().findCommand(tool.Name)
 		if names := positionalNames(command); len(names) != len(toolPositionals[tool.Name]) {
 			t.Errorf("%s has positionals %q and %d descriptions", tool.Name, names, len(toolPositionals[tool.Name]))
 		}
@@ -74,7 +74,7 @@ func TestEachDescriptorParsesBackToItsCommand(t *testing.T) {
 			if err != nil {
 				t.Fatalf("%s with %s: %v", tool.Name, param.Name, err)
 			}
-			result, err := parse(words)
+			result, err := testTable().parse(words)
 			if err != nil {
 				t.Fatalf("%s with %s: %q does not parse: %v", tool.Name, param.Name, words, err)
 			}

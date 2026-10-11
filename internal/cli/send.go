@@ -99,7 +99,7 @@ func handleSend(ctx *Context, call Call) error {
 
 	session, err := registry.Lookup(dir, target)
 	if errors.Is(err, registry.ErrNotFound) {
-		return unknownSessionError(dir, target)
+		return unknownSessionFor(ctx.table.findCommand("send"), dir, target)
 	}
 	if err != nil {
 		return &FailedError{Message: err.Error()}
@@ -118,7 +118,7 @@ func handleSend(ctx *Context, call Call) error {
 
 	// The harness first: on one with no turn boundary no role can answer, and
 	// the role's advice to send a plain task would only be refused next.
-	if err := refuseUnreported(session, kind.kind); err != nil {
+	if err := refuseUnreported(ctx.table.catalog, session, kind.kind); err != nil {
 		return err
 	}
 	if kind.kind == inbox.Question && role.Of(session.Role).Silent {
@@ -136,11 +136,11 @@ func handleSend(ctx *Context, call Call) error {
 		// only its own blocked turn could give.
 		return &UsageError{Command: command, Message: fmt.Sprintf("a session cannot send to itself, and %s is this session: do the work in this turn, or send it to another session from rewake list.", session.Name)}
 	}
-	grantGit, grantErr := requestedGitGrant(call, self, session, selfErr)
+	grantGit, grantErr := requestedGitGrant(ctx.table.catalog, call, self, session, selfErr)
 	if grantErr != nil {
 		return grantErr
 	}
-	grantDirs, grantErr := requestedDirGrants(call, self, session, selfErr, dir)
+	grantDirs, grantErr := requestedDirGrants(ctx.table.catalog, call, self, session, selfErr, dir)
 	if grantErr != nil {
 		return grantErr
 	}
@@ -155,7 +155,7 @@ func handleSend(ctx *Context, call Call) error {
 	// epoch pins the message to this run of the name, so a later session that
 	// takes the same name does not receive somebody else's mail.
 	if _, err := registry.Lookup(dir, session.Name); errors.Is(err, registry.ErrNotFound) {
-		return unknownSessionError(dir, target)
+		return unknownSessionFor(ctx.table.findCommand("send"), dir, target)
 	}
 
 	addendumTo, err := addendumRoot(call, dir, kind, session)
@@ -196,7 +196,7 @@ func handleSend(ctx *Context, call Call) error {
 		}
 		defer release()
 	}
-	if err := registerGrant(dir, self, epoch, message); err != nil {
+	if err := registerGrant(ctx.table.catalog, dir, self, epoch, message); err != nil {
 		return err
 	}
 	if journaledSend {

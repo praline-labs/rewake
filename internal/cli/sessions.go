@@ -157,11 +157,6 @@ func age(d time.Duration) string {
 	}
 }
 
-// unknownSessionError refuses a name nobody answers to, and says who does.
-func unknownSessionError(dir, name string) error {
-	return unknownSessionFor(findCommand("send"), dir, name)
-}
-
 // unknownSessionFor refuses a name no running session answers to, with the
 // syntax of the command that was called.
 func unknownSessionFor(command *Command, dir, name string) error {

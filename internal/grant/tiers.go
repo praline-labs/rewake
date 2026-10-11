@@ -14,8 +14,12 @@ type Env struct {
 	PATH       string
 	StateRoot  string
 	Executable string
-	// Harness names each harness's own configuration.
+	// Harness names each harness's own configuration, as absolute
+	// directories.
 	Harness []string
+	// Shielded names the directories harnesses keep inside a project, which
+	// a grant does not reach at any depth; .git is always one.
+	Shielded []string
 	// Mounts are the mount points, of which those under /mnt and /media are
 	// broad.
 	Mounts []string
@@ -38,8 +42,8 @@ var TempRoots = func() []string { return []string{"/tmp", os.TempDir()} }
 
 // CurrentEnv reads the environment of this process. harnessDirs come from
 // the harness catalog, which this package does not import.
-func CurrentEnv(stateRoot string, harnessDirs []string) Env {
-	env := Env{PATH: os.Getenv("PATH"), StateRoot: stateRoot, Harness: harnessDirs}
+func CurrentEnv(stateRoot string, harnessDirs, shielded []string) Env {
+	env := Env{PATH: os.Getenv("PATH"), StateRoot: stateRoot, Harness: harnessDirs, Shielded: shielded}
 	env.Home, _ = os.UserHomeDir()
 	if executable, err := os.Executable(); err == nil {
 		env.Executable = executable
@@ -62,7 +66,7 @@ var systemDirs = []string{"/etc", "/usr", "/bin", "/sbin", "/boot", "/dev", "/pr
 
 // Rules builds the two tiers.
 func (env Env) Rules() Rules {
-	var rules Rules
+	rules := Rules{shielded: append([]string{".git"}, env.Shielded...)}
 	hard := func(path, what string) {
 		if path != "" && filepath.IsAbs(path) {
 			rules.Hard = append(rules.Hard, Rule{Path: resolve(path), What: what})

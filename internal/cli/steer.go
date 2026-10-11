@@ -59,10 +59,6 @@ var builtPickup string
 // remember leaves a compaction for main's wrapper; replaceable in tests.
 var remember = control.Remember
 
-// findHarness looks a harness up; replaceable in tests, where a stub adapter
-// offers or withholds what no registered harness does.
-var findHarness = adapter.Find
-
 func handleCompact(ctx *Context, call Call) error   { return steer(ctx, call, control.Compact) }
 func handleInterrupt(ctx *Context, call Call) error { return steer(ctx, call, control.Interrupt) }
 
@@ -109,7 +105,7 @@ func steer(ctx *Context, call Call, action string) error {
 	if session.Name == self.Name {
 		return usage("a session cannot %s itself: its own turn is running this command.", action)
 	}
-	found, _ := findHarness(session.Harness)
+	found, _ := ctx.table.catalog.Find(session.Harness)
 	steerable, ok := found.(adapter.Steerable)
 	if !ok {
 		return usage("%s is a %s session, which does not take rewake %s yet.", session.Name, harnessTitle(found, session.Harness), action)

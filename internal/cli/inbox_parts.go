@@ -116,7 +116,7 @@ func bridgeRead(ctx *Context, mode inboxMode, site readSite) error {
 // get again, and prints it.
 func keepRefusal(ctx *Context, site readSite, record *receipt.Record, refusal error) error {
 	var out, errOut bytes.Buffer
-	code := report(&Context{Stdout: &out, Stderr: &errOut, JSON: ctx.JSON}, refusal)
+	code := report(&Context{Stdout: &out, Stderr: &errOut, JSON: ctx.JSON, table: ctx.table}, refusal)
 	record.Phase = receipt.Done
 	record.Outcome = &receipt.Outcome{Exit: code, Stdout: out.String(), Stderr: errOut.String()}
 	if err := receipt.Save(site.dir, site.self.Name, *record); err != nil {

@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"testing"
-
 	"github.com/praline-labs/rewake/internal/adapter"
 )
 
@@ -23,16 +21,12 @@ func (s grantStub) SupportsDirGrant() bool {
 	return s.dirs || ok && taker.SupportsDirGrant()
 }
 
-// stubGrants makes the harness id answer as a grantStub until the test ends.
-func stubGrants(t *testing.T, id string, git, reaches bool) {
-	t.Helper()
-	saved := findHarness
-	findHarness = func(asked string) (adapter.Harness, bool) {
-		found, ok := saved(asked)
-		if ok && asked == id {
-			return grantStub{Harness: found, git: git, reaches: reaches}, true
+// grantCatalog is base with the harness id answering as a grantStub.
+func grantCatalog(base adapter.Catalog, id string, git, reaches bool) adapter.Catalog {
+	return remap(base, func(found adapter.Harness) adapter.Harness {
+		if found.ID() == id {
+			return grantStub{Harness: found, git: git, reaches: reaches}
 		}
-		return found, ok
-	}
-	t.Cleanup(func() { findHarness = saved })
+		return found
+	})
 }

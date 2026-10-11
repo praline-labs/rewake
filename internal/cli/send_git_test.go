@@ -28,8 +28,9 @@ func TestExplicitGitGrantRequiresMainAndEligibleTask(t *testing.T) {
 			if scenario == "ineligible" {
 				peer.Role = "general"
 			}
+			catalog := testCatalog()
 			if scenario != "unsupported" {
-				stubGrants(t, peer.Harness, true, true)
+				catalog = grantCatalog(catalog, peer.Harness, true, true)
 			}
 			if err := registry.Update(dir, peer); err != nil {
 				t.Fatal(err)
@@ -54,7 +55,7 @@ func TestExplicitGitGrantRequiresMainAndEligibleTask(t *testing.T) {
 			if scenario == "notify" {
 				args = append(args, "--notify")
 			}
-			code, out, stderr := run(args...)
+			code, out, stderr := runOn(catalog, args...)
 			allowed := scenario == "task" || scenario == "question" || !requested
 			files, _ := filepath.Glob(filepath.Join(state.InboxPath(dir, peer.Name), "*.json"))
 			if !allowed {

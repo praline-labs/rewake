@@ -14,7 +14,7 @@ import (
 // the caller could have seen it in rewake list. A recipient whose harness
 // cannot take the grant is refused with exit 1, as --grant-dir refuses one: the
 // call was right, the target cannot carry it out.
-func requestedGitGrant(call Call, sender, target registry.Session, senderErr error) (bool, error) {
+func requestedGitGrant(catalog adapter.Catalog, call Call, sender, target registry.Session, senderErr error) (bool, error) {
 	value, requested := call.Flags["grant-git"]
 	if !requested {
 		return false, nil
@@ -38,7 +38,7 @@ func requestedGitGrant(call Call, sender, target registry.Session, senderErr err
 	if !role.Of(target.Role).GitWrite {
 		return refuse(fmt.Sprintf("%s is a %s session, and only a write session takes repository Git metadata grants. Send the task to a --write session whose harness takes a Git grant, or do the Git part yourself.", target.Name, role.Of(target.Role).ID))
 	}
-	own, _ := findHarness(target.Harness)
+	own, _ := catalog.Find(target.Harness)
 	capability, supported := own.(adapter.GitGrantHarness)
 	if !supported || !capability.SupportsGitGrant() {
 		return false, &FailedError{Message: fmt.Sprintf("--grant-git: %s runs %s, which takes no per-message Git grant. Do the Git part yourself, or send the task to a --write session whose harness takes one.", target.Name, target.Harness)}

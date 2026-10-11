@@ -47,6 +47,12 @@ type Rules struct {
 	// metadata judges the Git metadata --grant-git names: a shielded
 	// directory is what that grant is for.
 	metadata bool
+	// shielded are the directories inside a grant a checkout keeps its
+	// metadata in, .git, or a harness its configuration (Env.Shielded). A
+	// grant does not reach them, at any depth: a task that needs one gets it
+	// by name — a directory with one of them in its path is broad — or from
+	// the owner.
+	shielded []string
 }
 
 // Refusal is a directory that cannot be granted, with the exit code the
@@ -208,7 +214,7 @@ func (rules Rules) broad(resolved string) (string, bool) {
 			return rule.What, true
 		}
 	}
-	if name, ok := shieldedElement(resolved); ok && !rules.metadata {
+	if name, ok := rules.shieldedElement(resolved); ok && !rules.metadata {
 		// Inside a grant these stay with the person (Covers); granted as the
 		// root, or below one, nothing inside would shield them, so the grant
 		// has to name them.
@@ -216,8 +222,9 @@ func (rules Rules) broad(resolved string) (string, bool) {
 	}
 	for _, session := range rules.Sessions {
 		if within(session, resolved) {
-			// Its .claude, .mcp.json and .rewake.toml tell a harness what to
-			// run: a grant here reaches past the task, into that session.
+			// Its harness's configuration and its .rewake.toml tell a harness
+			// what to run: a grant here reaches past the task, into that
+			// session.
 			return "where a live rewake session works, or holds it, with that session's own configuration", true
 		}
 	}
@@ -310,28 +317,22 @@ func isLetter(c byte) bool { return 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z'
 // given: a file a tool is about to create is judged where it will land.
 func ResolveExisting(path string) string { return resolve(path) }
 
-// shielded are the directories inside a grant a harness keeps its own
-// configuration or a checkout its metadata in. A grant does not reach them,
-// at any depth: a task that needs one gets it by name — a directory with one
-// of them in its path is broad — or from the owner.
-var shielded = []string{".git", ".claude", ".codex", ".agents"}
-
 // Covers says whether a grant of root lets a session write path: path lies
 // within root and in none of the directories shielded inside it.
-func Covers(root, path string) bool {
+func (rules Rules) Covers(root, path string) bool {
 	if !within(path, root) {
 		return false
 	}
 	rel, _ := filepath.Rel(fold(root), fold(path))
-	_, inside := shieldedElement(rel)
+	_, inside := rules.shieldedElement(rel)
 	return !inside
 }
 
 // shieldedElement names the first element of a path that is a shielded
 // directory, in any case.
-func shieldedElement(path string) (string, bool) {
+func (rules Rules) shieldedElement(path string) (string, bool) {
 	for _, element := range strings.Split(path, string(filepath.Separator)) {
-		for _, name := range shielded {
+		for _, name := range rules.shielded {
 			if strings.EqualFold(element, name) {
 				return element, true
 			}

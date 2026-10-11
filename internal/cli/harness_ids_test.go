@@ -10,7 +10,7 @@ import (
 // to launch or parse and does not care which: the core's tests name none.
 func aHarness(t testing.TB) string {
 	t.Helper()
-	all := adapter.All()
+	all := testCatalog().All()
 	if len(all) == 0 {
 		t.Fatal("the catalog holds no harness")
 	}
@@ -21,7 +21,7 @@ func aHarness(t testing.TB) string {
 // rewake's worktree flag.
 func aWorktreeProbe(t *testing.T) *worktreeProbe {
 	t.Helper()
-	for _, candidate := range adapter.All() {
+	for _, candidate := range testCatalog().All() {
 		if _, ok := candidate.(adapter.WorktreeHarness); ok {
 			return harnessProbe(t, candidate.ID())
 		}

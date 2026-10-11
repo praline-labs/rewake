@@ -69,12 +69,14 @@ func (fixtureHarness) SingleUseFlags() []adapter.Flag {
 	}
 }
 
-func (fixtureHarness) ProtectedDirs() []string {
+// ProtectedDirs: the program keeps its configuration under the home and
+// nothing inside a project.
+func (fixtureHarness) ProtectedDirs() adapter.Protected {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return nil
+		return adapter.Protected{}
 	}
-	return []string{filepath.Join(home, configDir)}
+	return adapter.Protected{Dirs: []string{filepath.Join(home, configDir)}}
 }
 
 // ownFlags are the program's flags a caller may not pass: the adapter passes

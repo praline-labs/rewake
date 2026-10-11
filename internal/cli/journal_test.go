@@ -63,17 +63,17 @@ func TestAHeadsUpRepeatedInOneTurnIsPublishedOnce(t *testing.T) {
 // heads-up was published: what a harness timeout leaves behind.
 func expiredCall(t *testing.T, words ...string) (Call, *Context, *bytes.Buffer, *bytes.Buffer) {
 	t.Helper()
-	result, err := toolCall(words)
+	result, err := testTable().toolCall(words)
 	if err != nil {
 		t.Fatal(err)
 	}
-	normal := normalized(result)
+	normal := testTable().normalized(result)
 	now := boottime.Now()
 	var out, errOut bytes.Buffer
 	ctx := &Context{Stdout: &out, Stderr: &errOut, scope: &callScope{
 		ticket: bridge.Ticket{Conversation: "conversation-1", Turn: "turn-1", CallID: "late-" + inbox.NewID(), CalledBoot: now - 2, DeadlineBoot: now - 1, Transport: testTransport, TurnsNeverReused: true, Nonce: "nonce-late", WordsDigest: bridge.Digest(normal)},
 		words:  normal, digest: bridge.Digest(normal),
-	}}
+	}, table: testTable()}
 	return result.Call, ctx, &out, &errOut
 }
 

@@ -38,9 +38,6 @@ func steerWorld(t *testing.T, workerHarness string) (string, registry.Session, s
 	fast := control.Limits{Pickup: 300 * time.Millisecond, Outcome: 300 * time.Millisecond, Poll: 5 * time.Millisecond}
 	steerLimits = map[string]control.Limits{control.Compact: fast, control.Interrupt: fast}
 	t.Cleanup(func() { steerLimits = saved })
-	stubSteering(t, func(found adapter.Harness) adapter.Harness {
-		return steerStub{Harness: found, focus: true, trace: "the stub records it in its model's history"}
-	})
 	return dir, worker, controlDir
 }
 
@@ -74,7 +71,7 @@ func answerOnce(t *testing.T, controlDir string, answer func(control.Request) st
 func TestCompactStartedEndsTheCommand(t *testing.T) {
 	dir, worker, controlDir := steerWorld(t, "")
 	seen := answerOnce(t, controlDir, func(r control.Request) string { return `{"id":"` + r.ID + `","outcome":"started"}` })
-	code, out, errOut := run("compact", "worker", "keep the plan")
+	code, out, errOut := steerRun("compact", "worker", "keep the plan")
 	if code != ExitOK || out != "Rewake: the compaction of worker started; its result comes to you as a letter, with the token counts and its number.\n" {
 		t.Fatalf("exit %d, %q, %q", code, out, errOut)
 	}
@@ -121,7 +118,7 @@ func TestACompactionTakenAndUnansweredKeepsItsRecord(t *testing.T) {
 		}
 		close(taken)
 	}()
-	code, _, errOut := run("compact", worker.Name)
+	code, _, errOut := steerRun("compact", worker.Name)
 	id := <-taken
 	if code != ExitFailed || !strings.Contains(errOut, "it may still be carried out); its result comes to you as a letter, whether it compacts or not.") {
 		t.Fatalf("exit %d, %q", code, errOut)
@@ -149,7 +146,7 @@ func TestAFinalFailureClosesTheRecord(t *testing.T) {
 	} {
 		dir, _, controlDir := steerWorld(t, "")
 		answerOnce(t, controlDir, func(r control.Request) string { return `{"id":"` + r.ID + `",` + tc.answer + `}` })
-		code, _, errOut := run("compact", "worker")
+		code, _, errOut := steerRun("compact", "worker")
 		if code != ExitFailed || errOut != tc.line {
 			t.Fatalf("%s: exit %d, %q", tc.answer, code, errOut)
 		}
@@ -167,7 +164,7 @@ func TestCompactWithNoRecordPromisesNoLetter(t *testing.T) {
 	remember = func(string, string, control.Pending) (func(), error) { return nil, os.ErrPermission }
 	t.Cleanup(func() { remember = saved })
 	answerOnce(t, controlDir, func(r control.Request) string { return `{"id":"` + r.ID + `","outcome":"started"}` })
-	code, out, errOut := run("compact", "worker")
+	code, out, errOut := steerRun("compact", "worker")
 	if code != ExitOK || out != "Rewake: the compaction of worker is started; rewake could not note it for its letter (permission denied), so none comes: rewake list shows whether it compacted.\n" {
 		t.Fatalf("exit %d, %q, %q", code, out, errOut)
 	}
@@ -180,7 +177,7 @@ func TestCompactRequestedSaysSo(t *testing.T) {
 	answerOnce(t, controlDir, func(r control.Request) string {
 		return `{"id":"` + r.ID + `","outcome":"requested","detail":"the server has not answered the request within 3s"}`
 	})
-	code, out, errOut := run("compact", "worker", "--json")
+	code, out, errOut := steerRun("compact", "worker", "--json")
 	var model steerModel
 	if code != ExitOK || json.Unmarshal([]byte(out), &model) != nil || model.Outcome != control.Requested || model.TokensBefore != nil {
 		t.Fatalf("exit %d, %q, %q", code, out, errOut)
@@ -193,7 +190,7 @@ func TestCompactRequestedSaysSo(t *testing.T) {
 func TestInterruptDoneAsJSON(t *testing.T) {
 	_, _, controlDir := steerWorld(t, "")
 	answerOnce(t, controlDir, func(r control.Request) string { return `{"id":"` + r.ID + `","outcome":"done"}` })
-	code, out, errOut := run("interrupt", "worker", "--json")
+	code, out, errOut := steerRun("interrupt", "worker", "--json")
 	var model steerModel
 	if code != ExitOK || json.Unmarshal([]byte(out), &model) != nil || model.Outcome != control.Done || model.Action != control.Interrupt || model.Session != "worker" {
 		t.Fatalf("exit %d, %q, %q", code, out, errOut)
@@ -206,7 +203,7 @@ func TestTheInterruptAnswerSaysWhatTheModelIsShown(t *testing.T) {
 	_, _, controlDir := steerWorld(t, "")
 	answerOnce(t, controlDir, func(r control.Request) string { return `{"id":"` + r.ID + `","outcome":"done"}` })
 	want := "reads stopped, and the stub records it in its model's history.\n"
-	if code, out, errOut := run("interrupt", "worker"); code != ExitOK || !strings.HasSuffix(out, want) {
+	if code, out, errOut := steerRun("interrupt", "worker"); code != ExitOK || !strings.HasSuffix(out, want) {
 		t.Fatalf("exit %d, %q, %q", code, out, errOut)
 	}
 }
@@ -216,14 +213,14 @@ func TestARefusalExitsOneAndNamesTheNextAction(t *testing.T) {
 	answerOnce(t, controlDir, func(r control.Request) string {
 		return `{"id":"` + r.ID + `","outcome":"refused","reason":"in a turn","detail":"$.session.compact: a turn is running (t1)"}`
 	})
-	code, _, errOut := run("compact", "worker")
+	code, _, errOut := steerRun("compact", "worker")
 	if code != ExitFailed || !strings.Contains(errOut, "worker refused the compaction: in a turn ($.session.compact: a turn is running (t1)). A compaction never waits") {
 		t.Fatalf("exit %d, %q", code, errOut)
 	}
 	answerOnce(t, controlDir, func(r control.Request) string {
 		return `{"id":"` + r.ID + `","outcome":"refused","reason":"no turn running"}`
 	})
-	code, out, _ := run("interrupt", "worker", "--json")
+	code, out, _ := steerRun("interrupt", "worker", "--json")
 	var model steerModel
 	if code != ExitFailed || json.Unmarshal([]byte(out), &model) != nil || model.Reason != control.NoTurn {
 		t.Fatalf("exit %d, %q", code, out)
@@ -235,7 +232,7 @@ func TestARefusalExitsOneAndNamesTheNextAction(t *testing.T) {
 
 func TestAWorkerThatTakesNothingIsNotAnswering(t *testing.T) {
 	_, _, controlDir := steerWorld(t, "")
-	code, _, errOut := run("interrupt", "worker")
+	code, _, errOut := steerRun("interrupt", "worker")
 	if code != ExitFailed || !strings.Contains(errOut, "refused the interrupt: not answering") || !strings.Contains(errOut, "Nothing in that session serves") {
 		t.Fatalf("exit %d, %q", code, errOut)
 	}
@@ -247,7 +244,7 @@ func TestAWorkerThatTakesNothingIsNotAnswering(t *testing.T) {
 	}
 	// A session with no directory serves requests, only an older one: the
 	// next step is a restart, not a question about --bare.
-	if code, _, errOut := run("compact", "worker"); code != ExitFailed || !strings.Contains(errOut, "refused the compaction: no control directory") ||
+	if code, _, errOut := steerRun("compact", "worker"); code != ExitFailed || !strings.Contains(errOut, "refused the compaction: no control directory") ||
 		!strings.Contains(errOut, "restart that session with the current rewake") || strings.Contains(errOut, "--bare") {
 		t.Fatalf("without a control directory: exit %d, %q", code, errOut)
 	}
@@ -270,7 +267,7 @@ func TestASIGTERMDuringPickupWithdrawsTheRequest(t *testing.T) {
 		}
 	}()
 	started := time.Now()
-	code, _, errOut := run("compact", "worker")
+	code, _, errOut := steerRun("compact", "worker")
 	if code != ExitFailed || !strings.Contains(errOut, "refused the compaction: cut short") || !strings.Contains(errOut, "ask again") ||
 		strings.Contains(errOut, "--bare") || time.Since(started) > 2*time.Second {
 		t.Fatalf("exit %d after %s, %q", code, time.Since(started), errOut)
@@ -307,7 +304,7 @@ func TestWrongCallsAreRefusedBeforeAnythingIsSent(t *testing.T) {
 				worker, _ := registry.Lookup(dir, "worker")
 				t.Setenv(state.EpochEnv, worker.Epoch())
 			}
-			code, _, errOut := run(tc.args...)
+			code, _, errOut := steerRun(tc.args...)
 			if code != ExitUsage || !strings.Contains(errOut, tc.want) {
 				t.Fatalf("exit %d, %q; want 2 and %q", code, errOut, tc.want)
 			}
@@ -339,27 +336,23 @@ func (steerStub) Title() string            { return "Stub harness" }
 func (s steerStub) CompactFocus() bool     { return s.focus }
 func (s steerStub) InterruptTrace() string { return s.trace }
 
-// stubSteering makes every harness answer as the one replace returns until the
-// test ends.
-func stubSteering(t *testing.T, replace func(adapter.Harness) adapter.Harness) {
-	t.Helper()
-	saved := findHarness
-	findHarness = func(id string) (adapter.Harness, bool) {
-		found, ok := saved(id)
-		return replace(found), ok
-	}
-	t.Cleanup(func() { findHarness = saved })
+// steerRun runs one invocation with every harness answering as a steerStub
+// that takes a focus.
+func steerRun(argv ...string) (int, string, string) {
+	return runOn(remap(testCatalog(), func(found adapter.Harness) adapter.Harness {
+		return steerStub{Harness: found, focus: true, trace: "the stub records it in its model's history"}
+	}), argv...)
 }
 
 func TestAHarnessThatCannotTakeItIsAWrongCall(t *testing.T) {
 	_, _, controlDir := steerWorld(t, "")
-	stubSteering(t, func(found adapter.Harness) adapter.Harness { return unsteerable{found} })
-	code, _, errOut := run("compact", "worker")
+	refusing := remap(testCatalog(), func(found adapter.Harness) adapter.Harness { return unsteerable{found} })
+	code, _, errOut := runOn(refusing, "compact", "worker")
 	if code != ExitUsage || !strings.Contains(errOut, "worker is a Stub harness session, which does not take rewake compact yet") {
 		t.Fatalf("exit %d, %q", code, errOut)
 	}
-	stubSteering(t, func(found adapter.Harness) adapter.Harness { return steerStub{Harness: found} })
-	code, _, errOut = run("compact", "worker", "keep the plan")
+	unfocused := remap(testCatalog(), func(found adapter.Harness) adapter.Harness { return steerStub{Harness: found} })
+	code, _, errOut = runOn(unfocused, "compact", "worker", "keep the plan")
 	if code != ExitUsage || !strings.Contains(errOut, "focus not supported by Stub harness") {
 		t.Fatalf("exit %d, %q", code, errOut)
 	}
@@ -367,7 +360,7 @@ func TestAHarnessThatCannotTakeItIsAWrongCall(t *testing.T) {
 		t.Fatalf("a wrong call wrote %v", entries)
 	}
 	answerOnce(t, controlDir, func(r control.Request) string { return `{"id":"` + r.ID + `","outcome":"started"}` })
-	if code, out, errOut := run("compact", "worker"); code != ExitOK || !strings.HasPrefix(out, "Rewake: the compaction of worker started;") {
+	if code, out, errOut := runOn(unfocused, "compact", "worker"); code != ExitOK || !strings.HasPrefix(out, "Rewake: the compaction of worker started;") {
 		t.Fatalf("without a focus: exit %d, %q, %q", code, out, errOut)
 	}
 }

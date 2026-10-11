@@ -232,7 +232,7 @@ subscription quota: cheap model, short messages, warn the owner first.
 Meant to be one move:
 
 1. A new package `internal/adapter/<name>` with a type implementing
-   `harness.Harness`: `ID`, `Title`, `Summary`, `Examples`, `Notes`,
+   `adapter.Harness`: `ID`, `Title`, `Summary`, `Examples`, `Notes`,
    `SingleUseFlags`, and from milestone 3 on, launch and delivery.
    `SingleUseFlags` names the flags that harness takes at most once, each with
    all its spellings and whether it carries a value. Returning nothing is not a
@@ -240,9 +240,10 @@ Meant to be one move:
    a typed flag then reach a harness that may refuse to parse them. A test over
    the catalogue requires the list to be non-empty.
    `ProtectedDirs` names the harness's own configuration directories, which no
-   task may grant a session to write (`docs/grants.md`); a harness that keeps
-   none returns nothing, and one that forgets them leaves them grantable.
-2. One line in `internal/adapter/catalog/catalog.go`.
+   task may grant a session to write (`docs/grants.md`) — those outside a project
+   and the names it keeps inside one; a harness that keeps none returns nothing,
+   and one that forgets them leaves them grantable.
+2. One entry in `New` of `internal/adapter/catalog/catalog.go`.
 
 Everything else follows: the launch command, the guide entry, its own `--help`
 page, the step in FLOW, the `harnesses` field of the machine form. A harness

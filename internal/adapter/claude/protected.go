@@ -3,13 +3,19 @@ package claude
 import (
 	"os"
 	"path/filepath"
+
+	"github.com/praline-labs/rewake/internal/adapter"
 )
 
 // ProtectedDirs: Claude Code keeps its configuration in CLAUDE_CONFIG_DIR when
 // set, and otherwise in ~/.claude and ~/.claude.json, beside which other
 // launchers keep their own ~/.claude-<name>; its installed versions are in
-// ~/.local/share/claude.
-func (claudeHarness) ProtectedDirs() []string {
+// ~/.local/share/claude. Inside a project it keeps .claude.
+func (claudeHarness) ProtectedDirs() adapter.Protected {
+	return adapter.Protected{Dirs: configDirs(), Names: []string{".claude"}}
+}
+
+func configDirs() []string {
 	var dirs []string
 	if dir := os.Getenv("CLAUDE_CONFIG_DIR"); dir != "" {
 		dirs = append(dirs, dir)

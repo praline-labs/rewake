@@ -15,11 +15,11 @@ import (
 // confirm it and refuses a grant it does not hold, so a letter nobody
 // registered — one a worker wrote into its own mailbox, or sent with main's
 // variables — carries none (docs/grants.md#who-can-grant).
-func registerGrant(dir string, self registry.Session, epoch string, message inbox.Message) error {
+func registerGrant(catalog adapter.Catalog, dir string, self registry.Session, epoch string, message inbox.Message) error {
 	if !inbox.CarriesGrant(message) {
 		return nil
 	}
-	own, _ := findHarness(self.Harness)
+	own, _ := catalog.Find(self.Harness)
 	if issuer, ok := own.(adapter.GrantIssuer); !ok || !issuer.ReachesWrapper() {
 		return &FailedError{Message: fmt.Sprintf("a grant: %s runs %s, whose commands cannot reach its wrapper to register one — its sandbox refuses unix sockets — and a grant nobody registered is refused on delivery. Send the task without it, or ask the owner to grant the access from a main on a harness that can.", self.Name, self.Harness)}
 	}
@@ -41,8 +41,8 @@ func registerGrant(dir string, self registry.Session, epoch string, message inbo
 // a letter that names a grant the wrapper does not hold was rewritten, and
 // the edit is refused rather than sent without the grant main may think it
 // carries.
-func carryGrant(dir string, self registry.Session, epoch string, old inbox.Message, replacement *inbox.Message) error {
-	own, _ := findHarness(self.Harness)
+func carryGrant(catalog adapter.Catalog, dir string, self registry.Session, epoch string, old inbox.Message, replacement *inbox.Message) error {
+	own, _ := catalog.Find(self.Harness)
 	if issuer, ok := own.(adapter.GrantIssuer); !ok || !issuer.ReachesWrapper() {
 		// Such a main registers nothing, so nothing here can be carried.
 		if inbox.CarriesGrant(old) {

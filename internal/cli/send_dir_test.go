@@ -24,7 +24,12 @@ import (
 type grantWorld struct {
 	dir, home, workspace string
 	peer                 registry.Session
+	// catalog is what the world's commands run against.
+	catalog adapter.Catalog
 }
+
+// run executes one invocation in the world.
+func (w grantWorld) run(argv ...string) (int, string, string) { return runOn(w.catalog, argv...) }
 
 func newGrantWorld(t *testing.T, senderRole, harnessID string) grantWorld {
 	t.Helper()
@@ -43,15 +48,13 @@ func newGrantWorld(t *testing.T, senderRole, harnessID string) grantWorld {
 	t.Setenv("HOME", world.home)
 	t.Setenv("PATH", "/usr/bin:/bin")
 	peer.Role, peer.CWD = "write", world.workspace
+	world.catalog = testCatalog()
 	if harnessID != "" {
 		peer.Harness = harnessID
 	} else {
-		saved := findHarness
-		findHarness = func(id string) (adapter.Harness, bool) {
-			found, ok := saved(id)
-			return grantStub{Harness: found, dirs: true, reaches: true}, ok
-		}
-		t.Cleanup(func() { findHarness = saved })
+		world.catalog = remap(world.catalog, func(found adapter.Harness) adapter.Harness {
+			return grantStub{Harness: found, dirs: true, reaches: true}
+		})
 	}
 	if err := registry.Update(dir, peer); err != nil {
 		t.Fatal(err)
@@ -82,7 +85,7 @@ func TestDirGrantIsCarriedResolvedAndCollapsed(t *testing.T) {
 	w := newGrantWorld(t, "main", "")
 	lib, pkg, wide := filepath.Join(w.home, "work/lib"), filepath.Join(w.home, "work/lib/pkg"), filepath.Join(w.home, "wide")
 	t.Chdir(filepath.Join(w.home, "work"))
-	code, out, stderr := run("send", w.peer.Name, "Bump the client", "--wait=0", "--json",
+	code, out, stderr := w.run("send", w.peer.Name, "Bump the client", "--wait=0", "--json",
 		"--grant-dir", pkg, "--grant-dir=lib", "--grant-dir", "worker/src", "--grant-dir-broad", wide)
 	if code != ExitPending {
 		t.Fatalf("send: %d %s %s", code, out, stderr)
@@ -114,11 +117,11 @@ func TestDirGrantIsCarriedResolvedAndCollapsed(t *testing.T) {
 	}
 	t.Setenv(state.SessionEnv, w.peer.Name)
 	t.Setenv(state.EpochEnv, w.peer.Epoch())
-	code, out, stderr = run("inbox")
+	code, out, stderr = w.run("inbox")
 	if code != ExitOK || !strings.Contains(out, "grant: write "+lib+"\ngrant: write "+wide+"\nBump the client") {
 		t.Fatalf("inbox: %d %s %s", code, out, stderr)
 	}
-	code, out, _ = run("inbox", "--owed")
+	code, out, _ = w.run("inbox", "--owed")
 	if code != ExitOK || !strings.Contains(out, "grant: write "+lib+" — unless a turn typed") {
 		t.Fatalf("inbox --owed lost the grant line: %s", out)
 	}
@@ -126,7 +129,7 @@ func TestDirGrantIsCarriedResolvedAndCollapsed(t *testing.T) {
 	if err := grant.Save(w.dir, w.peer.Name, w.peer.Epoch(), []grant.Entry{{Path: lib, Message: message.ID, Outcome: grant.Dropped}}); err != nil {
 		t.Fatal(err)
 	}
-	code, out, _ = run("inbox", "--owed")
+	code, out, _ = w.run("inbox", "--owed")
 	if code != ExitOK || !strings.Contains(out, "grant: dropped "+lib+" — no longer writable") || !strings.Contains(out, "grant: write "+wide) {
 		t.Fatalf("inbox --owed after the grant was dropped: %s", out)
 	}
@@ -136,7 +139,7 @@ func TestDirGrantIsCarriedResolvedAndCollapsed(t *testing.T) {
 // no grant: the task fails before it goes out, and says what to do instead.
 func TestASessionThatTakesNoDirectoryIsSentNoGrant(t *testing.T) {
 	takesNone := ""
-	for _, h := range adapter.All() {
+	for _, h := range testCatalog().All() {
 		if taker, ok := h.(adapter.DirGrantHarness); !ok || !taker.SupportsDirGrant() {
 			takesNone = h.ID()
 			break
@@ -147,7 +150,7 @@ func TestASessionThatTakesNoDirectoryIsSentNoGrant(t *testing.T) {
 	}
 	w := newGrantWorld(t, "main", takesNone)
 	lib := filepath.Join(w.home, "work/lib")
-	code, out, stderr := run("send", w.peer.Name, "Bump the client", "--wait=0", "--grant-dir", lib)
+	code, out, stderr := w.run("send", w.peer.Name, "Bump the client", "--wait=0", "--grant-dir", lib)
 	if code != ExitFailed || !strings.Contains(stderr, "cannot take a directory into a running session yet") {
 		t.Fatalf("send: %d %s %s", code, out, stderr)
 	}
@@ -158,7 +161,7 @@ func TestASessionThatTakesNoDirectoryIsSentNoGrant(t *testing.T) {
 
 func TestDirGrantInWorkspaceIsNotCarried(t *testing.T) {
 	w := newGrantWorld(t, "main", "")
-	code, out, stderr := run("send", w.peer.Name, "Tidy src", "--wait=0", "--grant-dir", filepath.Join(w.workspace, "src"))
+	code, out, stderr := w.run("send", w.peer.Name, "Tidy src", "--wait=0", "--grant-dir", filepath.Join(w.workspace, "src"))
 	if code != ExitPending || !strings.Contains(out, "already writable by "+w.peer.Name) {
 		t.Fatalf("send: %d %s %s", code, out, stderr)
 	}
@@ -203,7 +206,7 @@ func TestDirGrantRefusals(t *testing.T) {
 			}
 			w := newGrantWorld(t, sender, peer)
 			args := append([]string{"send", w.peer.Name, "Write there", "--wait=0"}, c.args(w)...)
-			code, out, stderr := run(args...)
+			code, out, stderr := w.run(args...)
 			says := strings.ReplaceAll(c.says, "{home}", w.home)
 			if code != c.code || !strings.Contains(stderr, says) || strings.Contains(stderr, "--grant-dir-broad --grant-dir-broad") {
 				t.Fatalf("got %d %s %s, want %d saying %q", code, out, stderr, c.code, says)
@@ -216,7 +219,7 @@ func TestDirGrantRefusals(t *testing.T) {
 }
 
 func TestRepeatableFlagsCollectAndOthersRefuseRepeats(t *testing.T) {
-	result, err := parse([]string{"send", "x", "text", "--grant-dir", "a", "--grant-dir=b", "--grant-dir-broad", "c"})
+	result, err := testTable().parse([]string{"send", "x", "text", "--grant-dir", "a", "--grant-dir=b", "--grant-dir-broad", "c"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -229,12 +232,12 @@ func TestRepeatableFlagsCollectAndOthersRefuseRepeats(t *testing.T) {
 		{"send", "x", "text", "--json", "--json"},
 		{"inbox", "--message", "a", "--message", "b"},
 	} {
-		if _, err := parse(argv); err == nil || !strings.Contains(err.Error(), "given twice") {
+		if _, err := testTable().parse(argv); err == nil || !strings.Contains(err.Error(), "given twice") {
 			t.Errorf("%v: got %v, want a refusal of the repeat", argv, err)
 		}
 	}
 	// Every option the guide shows as repeatable really collects.
-	for _, group := range Groups() {
+	for _, group := range testTable().groups {
 		for _, command := range group.Commands {
 			for _, option := range command.Options {
 				if option.Repeatable && option.Value == "" {
@@ -250,12 +253,12 @@ func TestRepeatableFlagsCollectAndOthersRefuseRepeats(t *testing.T) {
 // rewake edit, which changes the task itself.
 func TestAnAddendumToAWaitingGrantIsRefused(t *testing.T) {
 	w := newGrantWorld(t, "main", "")
-	code, out, stderr := run("send", w.peer.Name, "Write there", "--wait=0", "--grant-dir", w.home+"/work/lib")
+	code, out, stderr := w.run("send", w.peer.Name, "Write there", "--wait=0", "--grant-dir", w.home+"/work/lib")
 	if code != ExitPending {
 		t.Fatalf("send: %d %s %s", code, out, stderr)
 	}
 	task := w.sent(t)[0]
-	code, out, stderr = run("send", w.peer.Name, "and this too", "--wait=0", "--to", task.ID)
+	code, out, stderr = w.run("send", w.peer.Name, "and this too", "--wait=0", "--to", task.ID)
 	if code != ExitFailed || !strings.Contains(stderr, "carries a grant") || !strings.Contains(stderr, "rewake edit") {
 		t.Fatalf("addendum: %d %s %s", code, out, stderr)
 	}
@@ -273,8 +276,52 @@ func TestASendNamesTheDirectoriesItGrants(t *testing.T) {
 	if err := os.Symlink(lib, link); err != nil {
 		t.Fatal(err)
 	}
-	code, out, stderr := run("send", w.peer.Name, "Write the output", "--wait=0", "--grant-dir", link)
+	code, out, stderr := w.run("send", w.peer.Name, "Write the output", "--wait=0", "--grant-dir", link)
 	if code != ExitPending || !strings.Contains(out+stderr, "Rewake: grants "+w.peer.Name+" write access to: "+lib+"\n") {
 		t.Fatalf("send: %d %q %q", code, out, stderr)
+	}
+}
+
+// What the catalogue protects reaches the grant check whole: each directory
+// name it hands the rules is refused inside a checkout, at any depth, unless
+// named as broad, and each of its directories under the home is refused
+// outright. The catalogue declares the names of harnesses this build has no
+// adapter for as well as its adapters' (TestTheCatalogueProtectsTheHarnessesItHasNoAdapterFor).
+func TestAGrantRefusesWhatTheCatalogueProtects(t *testing.T) {
+	w := newGrantWorld(t, "main", "")
+	protected := w.catalog.Protected()
+	if len(protected.Names) == 0 {
+		t.Fatal("the catalogue protects no directory names")
+	}
+	for _, name := range protected.Names {
+		for _, inside := range []string{filepath.Join(w.home, "work", "lib", name), filepath.Join(w.home, "work", "lib", "pkg", name)} {
+			if err := os.MkdirAll(inside, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			code, out, stderr := w.run("send", w.peer.Name, "Write there", "--wait=0", "--grant-dir", inside)
+			if code != ExitUsage || !strings.Contains(stderr, "--grant-dir-broad "+inside) {
+				t.Fatalf("%s: got %d %s %s", inside, code, out, stderr)
+			}
+		}
+	}
+	under := 0
+	for _, dir := range protected.Dirs {
+		if !grant.Within(dir, w.home) || dir == w.home {
+			continue
+		}
+		under++
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		code, out, stderr := w.run("send", w.peer.Name, "Write there", "--wait=0", "--grant-dir-broad", dir)
+		if code != ExitUsage || !strings.Contains(stderr, "a harness's own configuration") {
+			t.Fatalf("%s: got %d %s %s", dir, code, out, stderr)
+		}
+	}
+	if under == 0 {
+		t.Fatalf("no protected directory lies under the home: %v", protected.Dirs)
+	}
+	if messages := w.sent(t); len(messages) != 0 {
+		t.Fatalf("a refused grant sent %d messages", len(messages))
 	}
 }
