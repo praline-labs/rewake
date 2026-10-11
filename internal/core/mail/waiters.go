@@ -319,7 +319,8 @@ func (w world) clearAwaiting(name, epoch string, peer Waiter) error {
 // for. The delivery server's followEarlierRun calls it inside the mailbox
 // section in which AdoptWaits took over what those runs owe, and only once that
 // succeeded; it takes no lock of its own, since the mailbox lock is not
-// reentrant. An open stop keeps the waits it names.
+// reentrant; its callers are held by internal/layout_callers_test.go. An open
+// stop keeps the waits it names.
 func SweepAwaitingLocked(dir, name, epoch string) {
 	entries, err := os.ReadDir(state.AwaitingPath(dir, name))
 	if err != nil {

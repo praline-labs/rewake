@@ -18,7 +18,8 @@ var removeWaiting = os.Remove
 // The caller holds the mailbox lock: a server whose lock cannot be taken
 // settles nothing (the delivery server's lockOrAlone). The delivery server's
 // settleOutcome and settleUnreadOnly call it inside their mailbox section; it
-// takes no lock of its own, since the mailbox lock is not reentrant.
+// takes no lock of its own, since the mailbox lock is not reentrant. Its
+// callers are held by internal/layout_callers_test.go.
 //
 // Settling never removes a letter's last copy. The letter is the proof that a
 // publication landed while its mark may still say only intent, and retiring

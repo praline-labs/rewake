@@ -222,7 +222,8 @@ and the awaiting sweep from `followEarlierRun`, in its present order and without
 live-run read. No lock is released and taken again at the package boundary, and
 settlement gains no live-run check.
 
-**The caller restriction.** A structural test in `internal` restricts the production
+**The caller restriction.** A structural test in `internal`
+(`internal/layout_callers_test.go`) restricts the production
 references to those three functions — calls and function values, in every build
 variant: `SweepFinishedLocked` only from `(*Server).sweepFinished`, `SettleLocked` only
 from `settleOutcome` and `settleUnreadOnly`, `SweepAwaitingLocked` only from
