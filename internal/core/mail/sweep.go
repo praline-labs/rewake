@@ -94,3 +94,35 @@ func SweepFinishedLocked(dir, name, epoch string) {
 		receipt.Sweep(dir, name, epoch, cutoff, func(id string) bool { return stillUnread(dir, name, id) })
 	}
 }
+
+// keepFinished is how long a delivered or refused message and its status are
+// kept. Long enough for a sender that came back late to read the answer,
+// short enough that a machine running for weeks does not collect a mailbox
+// full of last month's conversations.
+const keepFinished = 24 * time.Hour
+
+type answerLifetime struct {
+	ReleasedAt time.Time `json:"releasedAt"`
+}
+
+func retentionPath(dir, name string) string {
+	return filepath.Join(state.InboxPath(dir, name), "retention")
+}
+
+// retainedReceipts names the questions whose answer receipts a kept report
+// still needs. An error says a report could not be read, and may need any.
+func retainedReceipts(dir, name string) (map[string]bool, error) {
+	keep := map[string]bool{}
+	for _, directory := range []string{state.InboxPath(dir, name), state.UnreadPath(dir, name), state.DonePath(dir, name)} {
+		messages, err := listIn(directory)
+		if err != nil {
+			return nil, err
+		}
+		for _, message := range messages {
+			for _, id := range message.InReplyTo {
+				keep[id] = true
+			}
+		}
+	}
+	return keep, nil
+}

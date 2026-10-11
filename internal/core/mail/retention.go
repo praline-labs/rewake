@@ -11,14 +11,6 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-type answerLifetime struct {
-	ReleasedAt time.Time `json:"releasedAt"`
-}
-
-func retentionPath(dir, name string) string {
-	return filepath.Join(state.InboxPath(dir, name), "retention")
-}
-
 // Only a real reservation earns a new delivery window. Its release is durable
 // and recorded once, so retries and server restarts cannot renew it forever.
 func (s *Server) answerExpired(message Message, reserved bool) (bool, error) {
@@ -57,24 +49,6 @@ func (s *Server) answerExpired(message Message, reserved bool) (bool, error) {
 		_ = os.Chtimes(unread, lifetime.ReleasedAt, lifetime.ReleasedAt)
 	}
 	return s.expired(Message{CreatedAt: lifetime.ReleasedAt}), nil
-}
-
-// retainedReceipts names the questions whose answer receipts a kept report
-// still needs. An error says a report could not be read, and may need any.
-func retainedReceipts(dir, name string) (map[string]bool, error) {
-	keep := map[string]bool{}
-	for _, directory := range []string{state.InboxPath(dir, name), state.UnreadPath(dir, name), state.DonePath(dir, name)} {
-		messages, err := listIn(directory)
-		if err != nil {
-			return nil, err
-		}
-		for _, message := range messages {
-			for _, id := range message.InReplyTo {
-				keep[id] = true
-			}
-		}
-	}
-	return keep, nil
 }
 
 // sweepFinished removes the messages and statuses that have been answered long

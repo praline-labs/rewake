@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // prepareDelivery checks leases before reserving a destination, then rechecks under
@@ -113,4 +116,13 @@ func (s *Server) prepareDelivery(ctx context.Context, message *Message) (read, a
 		err = refuse(err)
 	}
 	return
+}
+
+// recordDeliveryThread runs under the mailbox lock before the message becomes
+// readable. Recording only after delivery would lose a fast read and report.
+func recordDeliveryThread(dir, name, id, thread string) error {
+	if err := state.EnsureSubdir(threadPath(dir, name)); err != nil {
+		return err
+	}
+	return state.WriteAtomic(filepath.Join(threadPath(dir, name), id), []byte(thread))
 }

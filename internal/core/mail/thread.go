@@ -21,15 +21,6 @@ const ThreadChangedWarning = "Rewake: the reader's thread changed after delivery
 
 func threadPath(dir, name string) string { return filepath.Join(state.InboxPath(dir, name), "threads") }
 
-// recordDeliveryThread runs under the mailbox lock before the message becomes
-// readable. Recording only after delivery would lose a fast read and report.
-func recordDeliveryThread(dir, name, id, thread string) error {
-	if err := state.EnsureSubdir(threadPath(dir, name)); err != nil {
-		return err
-	}
-	return state.WriteAtomic(filepath.Join(threadPath(dir, name), id), []byte(thread))
-}
-
 // deliveryThread is the conversation a message was delivered into, "" when
 // none was pinned. An error says a record is there and could not be read.
 func deliveryThread(dir, name, id string) (string, error) {

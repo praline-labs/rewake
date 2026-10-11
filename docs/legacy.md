@@ -65,7 +65,7 @@ in it lives:
 - a session record, as long as its session runs; it is removed when the session ends
   and pruned when found dead;
 - finished mail and statuses, a day after they were last written (`keepFinished` in
-  `internal/core/mail/serve.go`);
+  `internal/core/mail/sweep.go`);
 - a task still owed, for as long as it is owed — which ends at its reader's next report,
   or with the reader's run.
 

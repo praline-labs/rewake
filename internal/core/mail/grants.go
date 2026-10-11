@@ -10,30 +10,6 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-// grantAlone narrows a pass to what may share one notice: a message carrying
-// a grant goes on its own, so its wait for an idle reader holds back no other
-// mail, and its roots and a refusal of its grant, which fails the notice, are
-// its own. The pass stops before it; mail after it may still join the group
-// while it is reserved, and so reach the reader before the grant does.
-func grantAlone(pending []Message) []Message {
-	for index, message := range pending {
-		if CarriesGrant(message) {
-			if index == 0 {
-				return pending[:1]
-			}
-			return pending[:index]
-		}
-	}
-	return pending
-}
-
-// joins says whether a message found once a group is reserved may join it:
-// not one carrying a grant, whose wait for an idle reader was not asked, and
-// nothing beside one.
-func joins(group []Message, message Message) bool {
-	return !CarriesGrant(message) && (len(group) == 0 || !CarriesGrant(group[0]))
-}
-
 // Settled says whether a task no longer needs what was granted with it: its
 // reader has read it and reported on it, or its sender took it back, or it
 // failed to arrive. A task delivered and not read yet, or read and not

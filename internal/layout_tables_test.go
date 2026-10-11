@@ -39,8 +39,7 @@ var fileGroups = []fileGroup{{
 	dir: "internal/core/mail",
 	files: []string{
 		"serve.go", "batch.go", "window.go", "watch_linux.go", "held.go", "retention.go",
-		"announcement.go", "availability.go", "thread.go", "outcome.go", "settle_recorded.go",
-		"follow.go", "prepare.go",
+		"announcement.go", "outcome.go", "settle_recorded.go", "follow.go", "prepare.go",
 	},
 	to:   "internal/host/delivery",
 	step: "S15",

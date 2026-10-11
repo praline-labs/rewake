@@ -22,11 +22,6 @@ const (
 	// DefaultTTL is how long a message may stay undelivered before it is called
 	// failed. A message older than this describes a situation that has passed.
 	DefaultTTL = 30 * time.Minute
-	// keepFinished is how long a delivered or refused message and its status are
-	// kept. Long enough for a sender that came back late to read the answer,
-	// short enough that a machine running for weeks does not collect a mailbox
-	// full of last month's conversations.
-	keepFinished = 24 * time.Hour
 	// sweepInterval is how often the finished ones are looked over.
 	sweepInterval = 10 * time.Minute
 )
