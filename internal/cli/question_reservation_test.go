@@ -108,6 +108,8 @@ func TestEveryQuestionReceivesASharedAnswer(t *testing.T) {
 	}
 }
 
+// On a harness that reports turns — every harness of these tests, by the
+// stub of TestMain — a question to a main meets main's own refusal.
 func TestAQuestionToASilentSessionIsRefused(t *testing.T) {
 	dir, _ := questionSender(t)
 	target, err := registry.Lookup(dir, "api")

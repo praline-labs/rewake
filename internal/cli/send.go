@@ -117,11 +117,13 @@ func handleSend(ctx *Context, call Call) error {
 		return &UsageError{Command: command, Message: "The message is empty."}
 	}
 
-	if kind.kind == inbox.Question && role.Of(session.Role).Silent {
-		return &UsageError{Command: command, Message: fmt.Sprintf("Session %s does not report its turns, so it cannot answer --question; use plain send or --notify instead.", session.Name)}
-	}
+	// The harness first: on one with no turn boundary no role can answer, and
+	// the role's advice to send a plain task would only be refused next.
 	if err := refuseUnreported(session, kind.kind); err != nil {
 		return err
+	}
+	if kind.kind == inbox.Question && role.Of(session.Role).Silent {
+		return &UsageError{Command: command, Message: fmt.Sprintf("Session %s does not report its turns, so it cannot answer --question; use plain send or --notify instead.", session.Name)}
 	}
 	started := time.Now()
 

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
 	"github.com/praline-labs/rewake/internal/state"
 )
@@ -67,13 +68,21 @@ func TestAReportingRoleDoesNotLaunchOnAHarnessThatReportsNoTurns(t *testing.T) {
 }
 
 // A task or a question to a session on such a harness fails, and nothing is
-// sent; a note still goes. The sessions of these tests are recorded under an
-// adapter that reports no turns in an untagged build.
+// sent; a note still goes. The recipient is a main, the one role that launches
+// there, so the question meets the harness's refusal before main's own: the
+// role's advice to send a plain task would only be refused next. The sessions
+// of these tests are recorded under an adapter that reports no turns in an
+// untagged build; TestAQuestionToASilentSessionIsRefused keeps main's refusal
+// on a harness that reports.
 func TestATaskToASessionThatReportsNoTurnsFails(t *testing.T) {
 	realReporting(t)
 	unreported(t)
 	dir := liveSession(t, "api")
-	otherRun(t, dir, "web")
+	web := otherRun(t, dir, "web")
+	web.Role = role.Main.ID
+	if err := registry.Update(dir, web); err != nil {
+		t.Fatal(err)
+	}
 	t.Setenv(state.SessionEnv, "api")
 	for kind, args := range map[string][]string{
 		"task":     {"send", "web", "run the suite", "--wait", "0"},
