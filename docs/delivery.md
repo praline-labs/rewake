@@ -116,10 +116,12 @@ asked is the same case, so the promise `send` made is never broken by a failed l
 The live set reaches the record through a write that can fail like any other. A failed
 write is not taken for recorded: the wrapper tries once more at once, then again with a
 growing wait up to a second, until the record carries the set reported last or the run
-ends, and says on stderr that it is trying. Meanwhile the run's own view already follows
-the new set, so a letter it handles waits readable as above, and another session acts on
-the set before — a task sent to a boundary already lost is admitted and waits readable in
-the inbox, the window the retries keep to a second or two. A record that has become a later run's is never written; the retries stop there.
+ends, and says on stderr that it is trying. Once the report has been processed, the run's
+own view follows the new set. Other sessions still read the previous set until a write
+succeeds, so they can admit a task after its boundary has been lost. There is no bound on
+this window while session-record writes keep failing; the one-second bound is the retry
+interval, not a publication deadline. If Wake is absent, the recipient keeps the letter
+readable and pending, which does not prove that its turn can be reported. A record that has become a later run's is never written; the retries stop there.
 
 Before publishing a question, `send` creates `answering/<question id>` in its
 own mailbox. A separate heartbeat writes the boot clock's reading into the mark every

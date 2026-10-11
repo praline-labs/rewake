@@ -68,9 +68,8 @@ const (
 // so its own decisions — a notice through a Wake it lost — follow it. A
 // record that cannot be written is owed the set and written again until it
 // lands, a later report taking its place; until then a reader acts on the
-// set before, and what it sends meanwhile waits readable in the inbox, as a
-// letter to a run without a live Wake does. A record no longer this run's is
-// never written: a later run under the name keeps its own.
+// set before, for as long as the writes keep failing. A record no longer
+// this run's is never written: a later run under the name keeps its own.
 func (l *liveSet) report(set []adapter.Capability) {
 	l.writing.Lock()
 	defer l.writing.Unlock()
@@ -79,8 +78,8 @@ func (l *liveSet) report(set []adapter.Capability) {
 		names = append(names, string(capability))
 	}
 	l.names, l.owed = names, true
-	// Once more at once before the retries: a write that failed once and
-	// would land now leaves no moment in which a reader acts on the old set.
+	// Retry a single transient failure before report returns. Readers may
+	// still see the previous set until a write succeeds.
 	for attempt := 0; attempt < 2 && l.owed; attempt++ {
 		l.publish(attempt == 1)
 	}
