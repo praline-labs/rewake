@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/channel"
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/channel"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/receipt"
+	"github.com/praline-labs/rewake/internal/core/session"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/receipt"
-	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // The shell observation (docs/mail-bridge-channel.md#the-shell-observation):

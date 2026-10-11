@@ -11,9 +11,9 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/bridge"
-	mail "github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/role"
 )
 
 // noWake is what a letter to a run without a live Wake waits with: written,

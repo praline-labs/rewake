@@ -3,7 +3,7 @@ package endpoint
 import (
 	"sync"
 
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 )
 

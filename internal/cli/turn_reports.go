@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	mail "github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/role"
 )
 
 // turnOp names a turn end's operation from its run and its event

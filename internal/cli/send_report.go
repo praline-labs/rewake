@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	mail "github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/registry"
 )
 
 // reportSent waits for the delivery result of a message just written and

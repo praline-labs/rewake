@@ -7,9 +7,9 @@ import (
 	"slices"
 	"testing"
 
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/registry"
 )
 
 // closeMailbox leaves name's mailbox readable and closed to writes: a report

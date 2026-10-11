@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/core/role"
 )
 
 // testCatalog is the catalog the tests run against: the test agent, and

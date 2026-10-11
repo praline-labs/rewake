@@ -3,8 +3,8 @@ package endpoint
 import (
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/channel"
-	"github.com/praline-labs/rewake/internal/receipt"
+	"github.com/praline-labs/rewake/internal/core/channel"
+	"github.com/praline-labs/rewake/internal/core/receipt"
 )
 
 // The neutral input (docs/v2/stage3-steps-adapters.md, S7):

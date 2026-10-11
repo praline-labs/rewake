@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	mail "github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/registry"
 )
 
 // A stopped end and an error end of the same turn, each published twice and

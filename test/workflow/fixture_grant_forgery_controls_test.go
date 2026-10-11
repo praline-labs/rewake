@@ -11,7 +11,7 @@ import "testing"
 // forged sends stay refused.
 var mutantGrantFromAnywhere = mutation{
 	name:  "grant-from-anywhere",
-	file:  "internal/grantauth/server.go",
+	file:  "internal/core/grant/authority/server.go",
 	edits: []edit{{"if err := proc.Default.Descends(int(peer.Pid), a.Self); err != nil {", "if err := proc.Default.Descends(int(peer.Pid), a.Self); false && err != nil {"}},
 }
 
@@ -27,7 +27,7 @@ var mutantGrantUnconfirmed = mutation{
 // listener in main's place is believed.
 var mutantGrantAnyListener = mutation{
 	name:  "grant-any-listener",
-	file:  "internal/grantauth/grantauth.go",
+	file:  "internal/core/grant/authority/grantauth.go",
 	edits: []edit{{"if int(peer.Pid) != e.PID || e.PID <= 0 {", "if false && (int(peer.Pid) != e.PID || e.PID <= 0) {"}},
 }
 

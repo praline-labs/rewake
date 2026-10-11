@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	mail "github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/registry"
-	session "github.com/praline-labs/rewake/internal/sessionstate"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/session"
 )
 
 // heldDeliveries tells main once when a worker starts holding its deliveries,

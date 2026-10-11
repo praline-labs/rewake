@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
 )
 
 // paired is a backend whose program is the test itself, on the other end of

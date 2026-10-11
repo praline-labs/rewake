@@ -6,7 +6,7 @@ import (
 	"github.com/praline-labs/rewake/internal/alias"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/core/role"
 )
 
 // Version is the released version of the tool. A release build sets it from the

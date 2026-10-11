@@ -8,12 +8,12 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
-	"github.com/praline-labs/rewake/internal/channel"
-	mail "github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/receipt"
-	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/role"
-	session "github.com/praline-labs/rewake/internal/sessionstate"
+	"github.com/praline-labs/rewake/internal/core/channel"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/receipt"
+	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/core/session"
 )
 
 // The run's channel keeper (docs/mail-bridge-channel.md): it folds what the

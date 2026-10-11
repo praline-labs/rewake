@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/control"
-	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/core/control"
+	"github.com/praline-labs/rewake/internal/core/registry"
 )
 
 // A worker that leaves while its command still asks — during the pickup,

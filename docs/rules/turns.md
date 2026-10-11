@@ -20,12 +20,12 @@ that they are checked like the rest ([stage3-tests.md](../v2/stage3-tests.md#how
   or kept again, and once its continuation took the kept answer it is answered as
   published, never published as its own continuation.
   Tests:
-  - `internal/inbox/confirm_test.go` `TestTheInterimRecordKeepsTheLastWord`
-  - `internal/inbox/confirm_test.go` `TestAnInterimTieDoesNotDependOnOrder`
-  - `internal/inbox/confirm_test.go` `TestTheInterimRecordOfAnotherRun`
-  - `internal/inbox/pending_test.go` `TestAnInterimReportSettlesNothing`
-  - `internal/inbox/pending_test.go` `TestAnInterimReportIsNotTakenByAWaitingQuestion`
-  - `internal/inbox/journal_unknown_test.go` `TestAnInterimEndReplacesAnEndedRunsRecord`
+  - `internal/core/mail/confirm_test.go` `TestTheInterimRecordKeepsTheLastWord`
+  - `internal/core/mail/confirm_test.go` `TestAnInterimTieDoesNotDependOnOrder`
+  - `internal/core/mail/confirm_test.go` `TestTheInterimRecordOfAnotherRun`
+  - `internal/core/mail/pending_test.go` `TestAnInterimReportSettlesNothing`
+  - `internal/core/mail/pending_test.go` `TestAnInterimReportIsNotTakenByAWaitingQuestion`
+  - `internal/core/mail/journal_unknown_test.go` `TestAnInterimEndReplacesAnEndedRunsRecord`
   - `internal/cli/inbox_awaited_test.go` `TestAwaitedTakesTheLatestInterimOrStop`
   - `test/workflow/awaited_view_test.go` `TestAwaitedView`
   - `test/workflow/pending_report_test.go` `TestPendingReport`
@@ -56,9 +56,9 @@ that they are checked like the rest ([stage3-tests.md](../v2/stage3-tests.md#how
   - `internal/cli/turn_confirm_repeat_test.go` `TestTwoEqualConfirmationsAtOnceHoldOnce`
   - `internal/cli/turn_confirm_repeat_test.go` `TestAHoldCutByACrashIsHeldOnceWhenConfirmedAgain`
   - `internal/cli/turn_confirm_repeat_test.go` `TestAHeldEndConfirmedAfterItsContinuationIsPublished`
-  - `internal/inbox/held_end_test.go` `TestAJournalThatTookAHeldEndNamesItInEveryForm`
-  - `internal/inbox/held_end_test.go` `TestAnUnreadableJournalIsNotTakenForNone`
-  - `internal/inbox/held_end_test.go` `TestAHeldEndRaisesTheClockToItsPosition`
+  - `internal/core/mail/held_end_test.go` `TestAJournalThatTookAHeldEndNamesItInEveryForm`
+  - `internal/core/mail/held_end_test.go` `TestAnUnreadableJournalIsNotTakenForNone`
+  - `internal/core/mail/held_end_test.go` `TestAHeldEndRaisesTheClockToItsPosition`
 
 - **O2. Failed and interrupted turns** report as in 1.x (`docs/turn-outcomes.md`, "Failed
   turns", "Interim turn ends"), with the reason taken from the adapter's end event.

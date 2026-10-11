@@ -65,7 +65,7 @@ in it lives:
 - a session record, as long as its session runs; it is removed when the session ends
   and pruned when found dead;
 - finished mail and statuses, a day after they were last written (`keepFinished` in
-  `internal/inbox/serve.go`);
+  `internal/core/mail/serve.go`);
 - a task still owed, for as long as it is owed — which ends at its reader's next report,
   or with the reader's run.
 
@@ -100,10 +100,10 @@ None open: the marks of `codex <0.157.1` left with the Codex adapter in S8, Octo
 
 | File | Mark | Count |
 |---|---|---|
-| `internal/inbox/answer_mark.go` | `rewake <2026-09-26` | 1 |
-| `internal/inbox/waiters.go` | `rewake <2026-09-28` | 1 |
-| `internal/inbox/window.go` | `rewake <2026-09-26` | 1 |
-| `internal/registry/liveness.go` | `rewake <2026-09-16` | 1 |
+| `internal/core/mail/answer_mark.go` | `rewake <2026-09-26` | 1 |
+| `internal/core/mail/waiters.go` | `rewake <2026-09-28` | 1 |
+| `internal/core/mail/window.go` | `rewake <2026-09-26` | 1 |
+| `internal/core/registry/liveness.go` | `rewake <2026-09-16` | 1 |
 | `internal/worktree/land.go` | `rewake <2026-09-27` | 1 |
-| `internal/role/role.go` | `rewake <2026-09-17` | 1 |
-| `internal/sessionstate/store.go` | `rewake <2026-09-26` | 1 |
+| `internal/core/role/role.go` | `rewake <2026-09-17` | 1 |
+| `internal/core/session/store.go` | `rewake <2026-09-26` | 1 |

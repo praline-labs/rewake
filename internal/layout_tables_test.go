@@ -14,19 +14,6 @@ import (
 // docs/v2/stage3-packages.md). An entry fails once its package is at its 2.0
 // path or gone, so the table empties with the moves.
 var transition = map[string]transit{
-	"internal/receipt":                 {layer: core, step: "S13"},
-	"internal/registry":                {layer: core, step: "S13"},
-	"internal/registry/registrytest":   {layer: core, step: "S13"},
-	"internal/sessionstate":            {layer: core, step: "S13"},
-	"internal/control":                 {layer: core, step: "S13"},
-	"internal/grant":                   {layer: core, step: "S13"},
-	"internal/grantauth":               {layer: core, step: "S13"},
-	"internal/grantauth/grantauthtest": {layer: core, step: "S13"},
-	"internal/role":                    {layer: core, step: "S13"},
-	"internal/brief":                   {layer: core, step: "S13"},
-	"internal/channel":                 {layer: core, step: "S13"},
-	"internal/inbox":                   {layer: core, step: "S13"},
-
 	"internal/bridge":          {layer: tool, step: "S16"},
 	"internal/bridge/endpoint": {layer: host, step: "S16"},
 	"internal/wrap":            {layer: host, step: "S16"},
@@ -49,7 +36,7 @@ type fileGroup struct {
 
 // fileGroups are the groups in transit (docs/v2/stage3-moves.md#s13-core-moves).
 var fileGroups = []fileGroup{{
-	dir: "internal/inbox",
+	dir: "internal/core/mail",
 	files: []string{
 		"serve.go", "batch.go", "window.go", "watch_linux.go", "held.go", "retention.go",
 		"announcement.go", "availability.go", "thread.go", "outcome.go", "settle_recorded.go",

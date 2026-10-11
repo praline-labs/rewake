@@ -3,7 +3,7 @@
 Rules 7 and 8 of [mail-bridge-cli.md](mail-bridge-cli.md) say what recovery may do; this
 document says how, for every record the code reads. It was written on September 30,
 2026, before the code that follows it, which landed the same day
-(`internal/inbox/journal.go`, `reconcile.go`, `interim.go`, `kept.go`,
+(`internal/core/mail/journal.go`, `reconcile.go`, `interim.go`, `kept.go`,
 `read_boundary.go`, `internal/cli/turn_reports.go`);
 [delivery-turn-end.md](delivery-turn-end.md) walks the same path through the code. Rule
 clauses are cited as 7-identity, 7-scope, 7-clock, 7-journal, 8-evidence, 8-stop,

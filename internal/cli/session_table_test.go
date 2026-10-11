@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/core/registry"
 )
 
 func TestSessionTableOneRowAndSharedIdentityHeaders(t *testing.T) {

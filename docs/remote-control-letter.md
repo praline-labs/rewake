@@ -22,7 +22,7 @@ the worker, of kind `notify`:
 
 **Why `notify` is safe.** The letter reuses the note kind the compaction notice has
 always had, with the notice's `compaction` metadata when the count is known; no new
-kind is added. A note owes nothing (`inbox.Owed` is false for it); a blocking
+kind is added. A note owes nothing (`mail.Owed` is false for it); a blocking
 `--question` takes only a message in reply to it, and the letter replies to nothing;
 the announcement and the rendering already know the kind. Nothing that tracks reports
 treats it as one.

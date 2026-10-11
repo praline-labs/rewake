@@ -2,14 +2,14 @@
 
 Split out of [design.md](design.md) by subject on September 24, 2026: which role a
 session has and what follows from it, and how its name is chosen. The catalogue is
-`internal/role`; the choice under the room lock is `internal/wrap`.
+`internal/core/role`; the choice under the room lock is `internal/wrap`.
 
 ## Roles
 
-A session has a role, from the catalogue in `internal/role`: one value per role
+A session has a role, from the catalogue in `internal/core/role`: one value per role
 and a line in its list, the way a harness is added. The launch flag `--<id>`,
 the help line and whether its turns are reported come from that value.
-System text lives in `internal/brief`, with a reviewed snapshot
+System text lives in `internal/core/brief`, with a reviewed snapshot
 for each role; harness adapters only pass the rendered strings. The record keeps the role's id.
 
 | role | flag | turns reported | takes a `--grant-git` task or question | its playbook says |
@@ -60,7 +60,7 @@ was applied or skipped.
 ## What a session is told
 
 A role's `Play` carries its heading, its steps and its sections — titled groups of
-one-line rules; `internal/brief` renders them into the launch briefing and `rewake guide`
+one-line rules; `internal/core/brief` renders them into the launch briefing and `rewake guide`
 prints them again under YOUR ROLE, wrapped, with `--json` carrying them as `sections` of
 `title` and `lines`, so the two cannot differ. The briefing is the heading, the steps as
 `<command> — <what for>`, each section as its title and `- ` lines, and the line pointing
@@ -68,9 +68,9 @@ to `rewake guide`. The last section, MAIL (`role.Mail`), is the same for every r
 one rule every role shares — each message and final reply starts with a line stating its
 point — and what a session sees happen to its mail. Main's sections are HANDING OUT WORK,
 READING WHAT COMES BACK, GRANTS AND LIMITS and OWNER DECISIONS
-(`internal/role/playbook_main.go`); write and general share their steps and the sections
+(`internal/core/role/playbook_main.go`); write and general share their steps and the sections
 WORKING, REPORTING and MAIN AND PERMISSIONS, all but the line about Git
-(`executorSections` in `internal/role/playbook.go`). A test checks that every command a
+(`executorSections` in `internal/core/role/playbook.go`). A test checks that every command a
 step names is in the command table, with each verb it spells — `worktree ls`, `land`,
 `finish` — in that command's arguments and each flag, in the command or in what the step
 says it is for, one that command takes: a session copies them. The one exception is the

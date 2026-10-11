@@ -11,7 +11,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/cli"
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 )
 

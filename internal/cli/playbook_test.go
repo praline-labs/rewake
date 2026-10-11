@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/brief"
-	"github.com/praline-labs/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/core/brief"
+	"github.com/praline-labs/rewake/internal/core/role"
 )
 
 // Every step and every rule of every role has to appear in both places a

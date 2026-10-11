@@ -126,7 +126,7 @@ everything else.
   display, the notices with their suppression and publication identity, and the
   briefing's sentence, and how the code reads it; cut to the neutral alphabet in S8, with
   no launch keeping the record until a harness offers a tool transport again. Open it
-  before changing the channel record (`internal/channel`) or its notices.
+  before changing the channel record (`internal/core/channel`) or its notices.
 - [mail-bridge-channel-failures.md](mail-bridge-channel-failures.md) — the channel's
   failure points, one row each, with what is proven, what is unknown and what rewake
   does, on the neutral alphabet since S8. Open it when

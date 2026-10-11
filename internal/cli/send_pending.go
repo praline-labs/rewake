@@ -1,6 +1,6 @@
 package cli
 
-import mail "github.com/praline-labs/rewake/internal/inbox"
+import "github.com/praline-labs/rewake/internal/core/mail"
 
 // interimKind is written only by the end of a turn marked with rewake pending.
 // With no public flag, a sender cannot fake one through send.

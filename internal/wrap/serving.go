@@ -6,9 +6,9 @@ import (
 	"os"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	mail "github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/registry"
-	session "github.com/praline-labs/rewake/internal/sessionstate"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/session"
 )
 
 // startServing starts what serves the session beside the harness — the run's

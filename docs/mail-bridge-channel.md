@@ -232,16 +232,16 @@ The record lives in session state beside `DeliveryHold`, written by the wrapper 
 ## Notices
 
 The wrapper sends them itself as notes from the run's name, through
-`inbox.PublishOnce`, as it sends hold notices.
+`mail.PublishOnce`, as it sends hold notices.
 
 **The first line is fixed per category and class** and carries no name: the notice
 already shows the sender, the run. It is at most 55 cells, because a grouped notice
 puts `<sender> notify: ` before it — 41 cells with a name of the longest allowed, 32
-characters — inside the 96-cell preview (`internal/inbox/notice.go`, `preview.go`). So
+characters — inside the 96-cell preview (`internal/core/mail/notice.go`, `preview.go`). So
 it reaches the reader whole, alone or grouped, and a reader need not open the mail —
 which may be the operation that fails. The action comes first; the second line carries
 the class, the times and the reason in the allowed words. A test renders every first
-line through `inbox.Notice` with a 32-character sender, alone and grouped, and
+line through `mail.Notice` with a 32-character sender, alone and grouped, and
 requires it uncut.
 
 | Category entered | To | First line |
@@ -318,9 +318,9 @@ is a table of its own, with the sequences the generated tests assert:
 
 ## As built
 
-The record, its events and notices are `internal/channel` (`record.go`, `events.go`, `history.go`,
+The record, its events and notices are `internal/core/channel` (`record.go`, `events.go`, `history.go`,
 `display.go`, `notices.go`); the wrapper's keeper is `internal/wrap/channel.go`, the
-shell's side `internal/cli/shell_channel.go`, `internal/receipt/shell.go` and
+shell's side `internal/cli/shell_channel.go`, `internal/core/receipt/shell.go` and
 `internal/infra/state/reach.go`. Where the text above left a choice, the code reads it so:
 
 - **A close waits a full heartbeat** (1 s) after it happened before it is folded, with
@@ -329,12 +329,12 @@ shell's side `internal/cli/shell_channel.go`, `internal/receipt/shell.go` and
   a denial among them, folds when told, so the check under the mailbox lock sees a
   block at once, and the close, folded late, lands where it happened by event time.
 - **The record keeps the transport's history** in the wrapper's memory, never in the
-  session state (`internal/channel/history.go`): every connection's hello and close by
+  session state (`internal/core/channel/history.go`): every connection's hello and close by
   generation, for the run, and the refused hellos since the last ticket, which ends
   everything before it. It grows by one entry per transport named and one per refused
   hello since the last ticket. The policy block, the shell observation and the ticket's
   own times are kept as the latest by event time and need no history. No order of
-  arrival changes the record: `internal/channel/order_test.go` folds every four events
+  arrival changes the record: `internal/core/channel/order_test.go` folds every four events
   of the alphabet, two connections' hellos and closes among them, in all their orders;
   the generated space (`space_test.go`) walks every sequence of its letters to depth 4
   from both starts, with the tool and without, and folds each path again by event time

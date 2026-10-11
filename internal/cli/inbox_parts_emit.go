@@ -9,9 +9,9 @@ import (
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/bridge"
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/receipt"
 )
 
 // emitReadLocked prints a response of a frozen read starting at one part, and

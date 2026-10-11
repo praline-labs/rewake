@@ -3,8 +3,8 @@ package cli
 import (
 	"fmt"
 
-	mail "github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/registry"
 )
 
 // currentSent leads a letter rewake edit replaced to what replaces it now,

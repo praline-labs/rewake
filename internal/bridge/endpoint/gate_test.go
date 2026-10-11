@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
 )
 
 // counterGate is a gate over a read clock the test moves by hand.

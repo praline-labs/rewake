@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
 )
 
 func TestFailureNoticesUseFailedStatus(t *testing.T) {

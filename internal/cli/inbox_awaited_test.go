@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/registry"
 )
 
 // awaitedRoom is a main session, lead, and what it can find in its workers'

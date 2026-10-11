@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	mail "github.com/praline-labs/rewake/internal/inbox"
-	session "github.com/praline-labs/rewake/internal/sessionstate"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/session"
 )
 
 // The capabilities of one run, as the plan of a launch carries them

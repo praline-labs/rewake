@@ -36,7 +36,7 @@ import (
 // The fixture is the only harness offering Control from S9 until stage 4 gives a
 // real adapter Control again; Claude Code's served side left with its plugin
 // module. What it does not prove: that any real harness carries these calls
-// out as the program does; the refusals are the words of internal/control.
+// out as the program does; the refusals are the words of internal/core/control.
 func TestFixtureSteered(t *testing.T) {
 	binary := enterScenario(t, "fixture-steered")
 	c := Start(t, Spec{

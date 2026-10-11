@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/role"
-	session "github.com/praline-labs/rewake/internal/sessionstate"
+	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/core/session"
 )
 
 type observedFixture struct{ *backendFixture }

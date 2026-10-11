@@ -12,40 +12,40 @@ one adapter needs beyond the neutral events lives in the adapter.
 - **C1.** Per channel — tool, shell — one observation with its own evidence and time,
   plus a policy block; the state shown is derived, never stored apart.
   Tests:
-  - `internal/channel/space_oracle_test.go` `TestEqualComparesEveryField`
+  - `internal/core/channel/space_oracle_test.go` `TestEqualComparesEveryField`
   - `internal/wrap/channel_test.go` `TestTheShellObservationsAreFoldedAndTaken`
-  - `internal/channel/space_test.go` `TestEveryEventSequenceKeepsTheRules`
-  - `internal/channel/table_test.go` `TestEachFailurePointShowsAndTellsWhatTheTextSays`
+  - `internal/core/channel/space_test.go` `TestEveryEventSequenceKeepsTheRules`
+  - `internal/core/channel/table_test.go` `TestEachFailurePointShowsAndTellsWhatTheTextSays`
   - `test/workflow/fixture_live_test.go` `TestFixtureLive` — on the fixture column since S11: a channel live, unproven, lost, denied, the shell's evidence and the record frozen at the exit
 
 - **C2. Connected is not working.** A transport's hello proves it reached the host; only
   a call that met its binding proves the tool carried one.
   Tests:
-  - `internal/channel/connections_test.go` `TestTwoConnectionsAcrossATicketInEveryOrder`
-  - `internal/channel/connections_test.go` `TestAHelloAtTheTimersEndIsInTime`
-  - `internal/channel/connections_test.go` `TestATicketStopsTheTimer`
+  - `internal/core/channel/connections_test.go` `TestTwoConnectionsAcrossATicketInEveryOrder`
+  - `internal/core/channel/connections_test.go` `TestAHelloAtTheTimersEndIsInTime`
+  - `internal/core/channel/connections_test.go` `TestATicketStopsTheTimer`
   - `internal/bridge/endpoint/channel_test.go` `TestEachTransportNamedIsAGenerationAndItsEndNamed` — the hello and close are the tool transport's lifecycle since S10
   - `internal/bridge/endpoint/channel_test.go` `TestARefusedTransportHelloIsToldWithItsAncestry`
-  - `internal/channel/connections_test.go` `TestALateHelloUndoesFailuresUntilTheLastClose`
+  - `internal/core/channel/connections_test.go` `TestALateHelloUndoesFailuresUntilTheLastClose`
   - `internal/wrap/channel_test.go` `TestAClosedServerFailsOnlyWhileItsHarnessLives`
 
 - **C3. Silence proves nothing.** No hello, no call, no shell command are not failures;
   a wait names what was not observed, never what did not happen.
   Tests:
-  - `internal/channel/silence_test.go` `TestSilenceProvesNothing`
-  - `internal/channel/table_test.go` `TestEachFailurePointShowsAndTellsWhatTheTextSays`
+  - `internal/core/channel/silence_test.go` `TestSilenceProvesNothing`
+  - `internal/core/channel/table_test.go` `TestEachFailurePointShowsAndTellsWhatTheTextSays`
 
 - **C4.** Each channel has one kind of evidence: the tool's, a call bound (T2); the
   shell's, a mail operation that wrote under a lock or failed to reach it.
   Tests:
   - `internal/wrap/channel_test.go` `TestTheShellObservationsAreFoldedAndTaken`
-  - `internal/channel/space_test.go` `TestEveryEventSequenceKeepsTheRules`
+  - `internal/core/channel/space_test.go` `TestEveryEventSequenceKeepsTheRules`
 
 - **C5.** Events fold by when they happened, not by when they arrived.
   Tests:
-  - `internal/channel/order_test.go` `TestEveryArrivalOrderFoldsAsEventTime`
-  - `internal/channel/late_test.go` `TestALateTicketKeepsTheFirstFailureAfterIt`
-  - `internal/channel/late_test.go` `TestALateTicketDoesNotUndoALaterClose`
+  - `internal/core/channel/order_test.go` `TestEveryArrivalOrderFoldsAsEventTime`
+  - `internal/core/channel/late_test.go` `TestALateTicketKeepsTheFirstFailureAfterIt`
+  - `internal/core/channel/late_test.go` `TestALateTicketDoesNotUndoALaterClose`
   - `internal/wrap/channel_order_test.go` `TestACloseFoldedAfterLaterFailuresLandsWhereItHappened`
   - `internal/wrap/channel_order_test.go` `TestATicketToldAfterLaterFailuresFoldsInItsPlace`
   - `internal/wrap/channel_order_test.go` `TestACloseYoungerThanAHeartbeatWaits`
@@ -54,23 +54,23 @@ one adapter needs beyond the neutral events lives in the adapter.
 
 - **C6.** A notice states an action first and fits the preview.
   Tests:
-  - `internal/channel/preview_test.go` `TestEveryFirstLineFitsThePreview`
-  - `internal/channel/notices_test.go` `TestTheKeyWindowHoldsARepeatUntilItEnds`
-  - `internal/channel/notices_test.go` `TestNoMoreThanSixAnHourToOneRecipient`
-  - `internal/channel/notices_test.go` `TestANewMainGetsTheCurrentCategory`
-  - `internal/channel/notices_test.go` `TestAPublicationKeepsItsIdentityAndADropStays`
-  - `internal/channel/windows_test.go` `TestTheWindowsOverEveryLandingHistory`
-  - `internal/inbox/notice_test.go` `TestNoticesPreviewOnlyTheAuthorsFirstLine`
-  - `internal/inbox/notice_test.go` `TestPreviewsAreBoundedAndCannotAddTerminalLines`
-  - `internal/inbox/notice_test.go` `TestWidePreviewFitsOneHundredColumns`
-  - `internal/inbox/notice_test.go` `TestGroupedNoticeKeepsCompactPreviewWithoutInstructions`
-  - `internal/inbox/notice_recall_test.go` `TestARecallIsShownBesideANewerLetter`
-  - `internal/inbox/notice_recall_test.go` `TestTwoRecallsAreBothShown`
-  - `internal/inbox/notice_recall_test.go` `TestALongRecallKeepsItsInstruction`
-  - `internal/inbox/notice_recall_test.go` `TestAReplacementNamesTheMessageItReplaces`
-  - `internal/inbox/notice_recall_test.go` `TestAReplacementIsShownBesideANewerLetter`
-  - `internal/inbox/notice_recall_test.go` `TestCorrectionsAreAllShownOldestFirst`
-  - `internal/inbox/notice_recall_test.go` `TestASingleCorrectionIsShownBesideTheNewestUnread`
+  - `internal/core/channel/preview_test.go` `TestEveryFirstLineFitsThePreview`
+  - `internal/core/channel/notices_test.go` `TestTheKeyWindowHoldsARepeatUntilItEnds`
+  - `internal/core/channel/notices_test.go` `TestNoMoreThanSixAnHourToOneRecipient`
+  - `internal/core/channel/notices_test.go` `TestANewMainGetsTheCurrentCategory`
+  - `internal/core/channel/notices_test.go` `TestAPublicationKeepsItsIdentityAndADropStays`
+  - `internal/core/channel/windows_test.go` `TestTheWindowsOverEveryLandingHistory`
+  - `internal/core/mail/notice_test.go` `TestNoticesPreviewOnlyTheAuthorsFirstLine`
+  - `internal/core/mail/notice_test.go` `TestPreviewsAreBoundedAndCannotAddTerminalLines`
+  - `internal/core/mail/notice_test.go` `TestWidePreviewFitsOneHundredColumns`
+  - `internal/core/mail/notice_test.go` `TestGroupedNoticeKeepsCompactPreviewWithoutInstructions`
+  - `internal/core/mail/notice_recall_test.go` `TestARecallIsShownBesideANewerLetter`
+  - `internal/core/mail/notice_recall_test.go` `TestTwoRecallsAreBothShown`
+  - `internal/core/mail/notice_recall_test.go` `TestALongRecallKeepsItsInstruction`
+  - `internal/core/mail/notice_recall_test.go` `TestAReplacementNamesTheMessageItReplaces`
+  - `internal/core/mail/notice_recall_test.go` `TestAReplacementIsShownBesideANewerLetter`
+  - `internal/core/mail/notice_recall_test.go` `TestCorrectionsAreAllShownOldestFirst`
+  - `internal/core/mail/notice_recall_test.go` `TestASingleCorrectionIsShownBesideTheNewestUnread`
   - `internal/wrap/channel_test.go` `TestANoticeLandsOnceAcrossHeartbeats`
   - `internal/wrap/channel_test.go` `TestMainIsToldUnlessItIsTheRun`
   - `internal/wrap/channel_order_test.go` `TestNoticesWaitForTheOneInFlight`
@@ -82,7 +82,7 @@ one adapter needs beyond the neutral events lives in the adapter.
   - `internal/wrap/channel_order_test.go` `TestADenialToldWhileACloseWaitsStopsAdviceAtOnce`
   - `internal/adapter/fixture/live_test.go` `TestADenialReachesTheNeutralInput`
   - `internal/wrap/channel_live_test.go` `TestAToolLiveAfterAnUnprovenExchangeKeepsItsLifecycle`
-  - `internal/channel/space_test.go` `TestEveryEventSequenceKeepsTheRules`
+  - `internal/core/channel/space_test.go` `TestEveryEventSequenceKeepsTheRules`
 
 - **C8.** Nothing is relaunched, granted or approved by the channel.
   Tests:
@@ -91,5 +91,5 @@ one adapter needs beyond the neutral events lives in the adapter.
   - `internal/wrap/channel_order_test.go` `TestANoticeFixedBeforeTheExitIsNotWrittenAfterIt`
   - `internal/wrap/channel_order_test.go` `TestALostBackendFreezesTheRecordBeforeTheHarnessEnds`
   - `internal/wrap/channel_order_test.go` `TestAnAcceptedSignalFreezesTheRecord`
-  - `internal/channel/space_test.go` `TestEveryEventSequenceKeepsTheRules`
+  - `internal/core/channel/space_test.go` `TestEveryEventSequenceKeepsTheRules`
   - `internal/wrap/channel_effects_test.go` `TestTheChannelGrantsAndApprovesNothing`

@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/registry"
 )
 
 // leaveUnread puts a message where a serving process puts one it has announced.

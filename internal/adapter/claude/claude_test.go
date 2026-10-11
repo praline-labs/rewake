@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
 )
 
 func launch(t *testing.T, args []string, socket string) adapter.LaunchPlan {

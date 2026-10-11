@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	mail "github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/registry"
 )
 
 // shortWindow serves the wrappers a test starts with a window a fraction of

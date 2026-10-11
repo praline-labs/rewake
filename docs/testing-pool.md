@@ -80,8 +80,8 @@ only these numbers differ, so the suite does not run these values at their real 
 
 | Value | Release | Suite | Where |
 | --- | --- | --- | --- |
-| coalescing quiet | 3 s | 2 s | `internal/inbox`, `builtQuiet` |
-| coalescing cap | 4 s | 3 s | `internal/inbox`, `builtCap` |
+| coalescing quiet | 3 s | 2 s | `internal/core/mail`, `builtQuiet` |
+| coalescing cap | 4 s | 3 s | `internal/core/mail`, `builtCap` |
 | pickup of a compact or interrupt request | 5 s | 1.5 s | `internal/cli`, `builtPickup` |
 | a compaction letter's wait for its other half | 3 s | 1.5 s | `internal/wrap`, `builtLetterWait` |
 | main's scan for other sessions' notices | 1 s | 250 ms | `internal/wrap`, `builtNoticeScan` |

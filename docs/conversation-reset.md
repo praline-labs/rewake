@@ -147,13 +147,13 @@ The same on both harnesses unless said.
 
 - **Owed tasks stay owed.** They belong to the run, not the conversation. The next report
   settles them, marked `threadChanged` with the line "the reader's thread changed after
-  delivery" (`internal/inbox/thread.go`, `internal/cli/turn_reports.go`). On Codex seen live
+  delivery" (`internal/core/mail/thread.go`, `internal/cli/turn_reports.go`). On Codex seen live
   on 0.155.1 ([record](roadmap/2026-09-26-live-checks.md)); on Claude Code it passes the
   fixture case only (HF-10 in [harness-features.md](harness-features.md)). The model in
   the new conversation does not know the task, so that report answers other work.
 - **Grants.** A grant records the conversation it went into
-  (`internal/grantauth/grantauth.go`), and a resume restores it only into that one
-  (`internal/grantauth/resume.go`). A grant made before a clear still works in the same
+  (`internal/core/grant/authority/grantauth.go`), and a resume restores it only into that one
+  (`internal/core/grant/authority/resume.go`). A grant made before a clear still works in the same
   run on Claude Code, since the hook asks the keeper by run. A cold resume of the
   conversation after the clear would not restore it. On Codex a grant's roots belong to
   the thread (`internal/adapter/codex/server_dirgrant.go`).

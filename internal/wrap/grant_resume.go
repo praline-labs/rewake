@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/grant"
-	authority "github.com/praline-labs/rewake/internal/grantauth"
+	"github.com/praline-labs/rewake/internal/core/grant"
+	"github.com/praline-labs/rewake/internal/core/grant/authority"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 

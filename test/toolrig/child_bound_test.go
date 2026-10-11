@@ -10,7 +10,7 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter/fixture"
 	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
-	"github.com/praline-labs/rewake/internal/receipt"
+	"github.com/praline-labs/rewake/internal/core/receipt"
 )
 
 // A child past its deadline (docs/mail-bridge-transport.md), rebuilt from

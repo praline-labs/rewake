@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/bridge"
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/receipt"
+	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/receipt"
-	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/role"
 )
 
 // The read boundary. A part counts as shown only on evidence that the model

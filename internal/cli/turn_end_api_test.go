@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	mail "github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/registry"
 )
 
 // The turn end as the adapter API carries it (adapter.TurnEnd), on both paths a

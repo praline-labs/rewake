@@ -9,8 +9,8 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/alias"
 	"github.com/praline-labs/rewake/internal/bridge"
+	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/role"
 )
 
 // Run executes one invocation against the catalog the binary built and

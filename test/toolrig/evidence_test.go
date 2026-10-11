@@ -11,7 +11,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter/fixture"
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/receipt"
+	"github.com/praline-labs/rewake/internal/core/receipt"
 )
 
 // The evidence test, rebuilt from bridge/server/evidence_test.go on the

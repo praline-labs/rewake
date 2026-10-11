@@ -18,34 +18,34 @@ nothing lifts a stop without returning evidence.
   - `internal/cli/bridge_rules_test.go` `TestAnUncertainPublicationIsNotDiscarded`
   - `internal/cli/bridge_rules_test.go` `TestAHeadsUpToAnEndedRunWithNothingLeftStaysUnknown`
   - `internal/cli/bridge_rules_test.go` `TestAnOpenOperationIsNotBypassedByAge`
-  - `internal/inbox/settle_copy_test.go` `TestAFailedArchiveKeepsTheLastCopy`
-  - `internal/inbox/settle_copy_test.go` `TestSettlingADeliveredLetterKeepsItsOnlyCopy`
-  - `internal/inbox/settle_copy_test.go` `TestAnIntentWhoseLetterIsRefusedKeepsItsProof`
-  - `internal/inbox/settle_copy_test.go` `TestADirectoryAtTheArchiveIsNoCopy`
-  - `internal/inbox/settle_copy_test.go` `TestASymbolicLinkIsNoLandingProof`
-  - `internal/inbox/journal_unknown_test.go` `TestAReportFoundWithoutItsMarkIsMarkedPublished`
-  - `internal/inbox/journal_unknown_test.go` `TestAnUnknownPublicationMarkIsNeverPermission`
-  - `internal/inbox/claims_test.go` `TestAnIntentWithoutItsLetterIsWrittenAgain`
-  - `internal/inbox/claims_test.go` `TestTheSweepKeepsALetterWhoseIntentItCouldNotSettle`
-  - `internal/inbox/claims_test.go` `TestAMailboxThatCannotBeSearchedProvesNothing`
-  - `internal/inbox/journal_test.go` `TestAJournalDoesNotRepublishASweptReport`
-  - `internal/inbox/journal_test.go` `TestAReportWhoseEntryFailedIsNotRepublishedAfterTheSweep`
+  - `internal/core/mail/settle_copy_test.go` `TestAFailedArchiveKeepsTheLastCopy`
+  - `internal/core/mail/settle_copy_test.go` `TestSettlingADeliveredLetterKeepsItsOnlyCopy`
+  - `internal/core/mail/settle_copy_test.go` `TestAnIntentWhoseLetterIsRefusedKeepsItsProof`
+  - `internal/core/mail/settle_copy_test.go` `TestADirectoryAtTheArchiveIsNoCopy`
+  - `internal/core/mail/settle_copy_test.go` `TestASymbolicLinkIsNoLandingProof`
+  - `internal/core/mail/journal_unknown_test.go` `TestAReportFoundWithoutItsMarkIsMarkedPublished`
+  - `internal/core/mail/journal_unknown_test.go` `TestAnUnknownPublicationMarkIsNeverPermission`
+  - `internal/core/mail/claims_test.go` `TestAnIntentWithoutItsLetterIsWrittenAgain`
+  - `internal/core/mail/claims_test.go` `TestTheSweepKeepsALetterWhoseIntentItCouldNotSettle`
+  - `internal/core/mail/claims_test.go` `TestAMailboxThatCannotBeSearchedProvesNothing`
+  - `internal/core/mail/journal_test.go` `TestAJournalDoesNotRepublishASweptReport`
+  - `internal/core/mail/journal_test.go` `TestAReportWhoseEntryFailedIsNotRepublishedAfterTheSweep`
   - `internal/cli/journal_test.go` `TestAHeadsUpPastItsDeadlineIsFinishedByRetry`
   - `internal/cli/journal_test.go` `TestTheShellRefersAnOpenOperationToItsReceipt`
-  - `internal/receipt/receipt_test.go` `TestUnresolvedFindsOpenOperations`
-  - `internal/receipt/receipt_test.go` `TestSweepKeepsWhatARecoveryReads`
+  - `internal/core/receipt/receipt_test.go` `TestUnresolvedFindsOpenOperations`
+  - `internal/core/receipt/receipt_test.go` `TestSweepKeepsWhatARecoveryReads`
 
 - **E2. A lock is removed only by whoever holds it**, and a call that took a lock checks
   the file at the path is still its own. (M1 rule 2.)
   Tests:
-  - `internal/receipt/receipt_test.go` `TestTheLockHoldsOneCallAtATime`
-  - `internal/receipt/receipt_test.go` `TestTheSweepRespectsAHeldLock`
+  - `internal/core/receipt/receipt_test.go` `TestTheLockHoldsOneCallAtATime`
+  - `internal/core/receipt/receipt_test.go` `TestTheSweepRespectsAHeldLock`
   - `internal/infra/state/held_test.go` `TestTryHoldWaitsForTheWriter`
   - `internal/infra/state/held_test.go` `TestTryHoldRefusesAFileRemovedBeforeItsLock`
   - `internal/infra/state/held_test.go` `TestTryHoldRefusesAFileReplacedBeforeItsLock`
   - `internal/infra/state/lock_test.go` `TestNameLockHoldsBetweenProcesses`
   - `internal/infra/state/state_test.go` `TestNameLockSerialisesClaims`
-  - `internal/inbox/publication_bounds_test.go` `TestASweepWithoutTheLockRetiresNothing`
+  - `internal/core/mail/publication_bounds_test.go` `TestASweepWithoutTheLockRetiresNothing`
 
 - **E3. Every check that decides an effect runs inside the critical section, right
   before the effect, and again on a retry**, which is a new call with its own deadline
@@ -58,34 +58,34 @@ nothing lifts a stop without returning evidence.
   - `internal/cli/bridge_rules_test.go` `TestAShellRetryDoesNotReadStdinAgain`
   - `internal/cli/addendum_test.go` `TestAnAddendumIsAskedAgainUnderTheLock`
   - `internal/cli/addendum_test.go` `TestAnAddendumsEditIsAskedAgainUnderTheLock`
-  - `internal/inbox/claims_test.go` `TestPublicationOfReadsTheMailbox`
-  - `internal/inbox/claims_test.go` `TestPublishOnceWritesNothingWhenItsCheckFails`
-  - `internal/inbox/batch_edges_test.go` `TestGroupedPreparationRechecksAnswerLeasesExpiryAndEpoch`
-  - `internal/inbox/withdraw_test.go` `TestTheLastCheckBeforeANoticeSeesAWithdrawal`
-  - `internal/inbox/window_test.go` `TestARetryDoesNotRestartTheWindow`
+  - `internal/core/mail/claims_test.go` `TestPublicationOfReadsTheMailbox`
+  - `internal/core/mail/claims_test.go` `TestPublishOnceWritesNothingWhenItsCheckFails`
+  - `internal/core/mail/batch_edges_test.go` `TestGroupedPreparationRechecksAnswerLeasesExpiryAndEpoch`
+  - `internal/core/mail/withdraw_test.go` `TestTheLastCheckBeforeANoticeSeesAWithdrawal`
+  - `internal/core/mail/window_test.go` `TestARetryDoesNotRestartTheWindow`
   - `internal/adapter/fixture/turns_test.go` `TestATurnEndIsRetriedWithItsOwnDeadline`
   - `internal/adapter/fixture/turns_test.go` `TestATurnEndThatNeverTakesIsRefusedAfterItsAttempts`
   - `internal/adapter/fixture/order_test.go` `TestAWithdrawalStopsAnEndsAttempts`
   - `internal/adapter/fixture/order_test.go` `TestAClosedConnectionTakesNoTurn`
-  - `internal/inbox/publication_race_test.go` `TestTheSweepWaitsForAnAttemptsEvidence`
-  - `internal/inbox/publication_race_test.go` `TestAdmissionIsInsideTheSection`
+  - `internal/core/mail/publication_race_test.go` `TestTheSweepWaitsForAnAttemptsEvidence`
+  - `internal/core/mail/publication_race_test.go` `TestAdmissionIsInsideTheSection`
   - `internal/cli/publication_race_test.go` `TestTheSweepWaitsForAHeadsUpsEvidence`
   - `internal/cli/publication_race_test.go` `TestAHeadsUpsAdmissionIsInsideTheSection`
   - `internal/wrap/channel_publication_test.go` `TestANoticeForAMainThatEndsAtItsLockIsDropped`
-  - `internal/inbox/publication_bounds_test.go` `TestAFirstLandingAcrossRunEndIsWrittenOnce`
-  - `internal/inbox/publication_bounds_test.go` `TestABusyRecipientFailsTheTurnWithoutAStop`
-  - `internal/inbox/publication_bounds_test.go` `TestTwoMailboxesPublishingToEachOtherDoNotDeadlock`
-  - `internal/inbox/publication_bounds_test.go` `TestAReportToItselfIsPublishedInsideItsOwnLock`
-  - `internal/inbox/publication_bounds_test.go` `TestAPublicationReadsTheRunWithoutCleaningUp`
-  - `internal/inbox/settle_lock_test.go` `TestSettlingWaitsForALockTheServerHolds`
-  - `internal/inbox/settle_lock_test.go` `TestADeferredSettlementGetsAnotherPass`
-  - `internal/inbox/settle_recorded_test.go` `TestARestartSettlesALateRefusalLeftUnread`
-  - `internal/inbox/settle_recorded_test.go` `TestASettlingCutShortIsSettledOnceItCan`
-  - `internal/inbox/settle_recorded_test.go` `TestALateRefusalItsStatusMissedIsRecordedThenSettled`
-  - `internal/inbox/settle_recorded_test.go` `TestALetterReadableOnPurposeStaysUnread`
-  - `internal/inbox/settle_recheck_test.go` `TestAForeignLetterSettlesByItsStatusUnderTheLock`
-  - `internal/inbox/settle_recheck_test.go` `TestARecordedRefusalIsRecheckedUnderTheLock`
-  - `internal/inbox/settle_recheck_test.go` `TestARefusalOnRecordAStopKeepsWaitsTheRetryInterval`
+  - `internal/core/mail/publication_bounds_test.go` `TestAFirstLandingAcrossRunEndIsWrittenOnce`
+  - `internal/core/mail/publication_bounds_test.go` `TestABusyRecipientFailsTheTurnWithoutAStop`
+  - `internal/core/mail/publication_bounds_test.go` `TestTwoMailboxesPublishingToEachOtherDoNotDeadlock`
+  - `internal/core/mail/publication_bounds_test.go` `TestAReportToItselfIsPublishedInsideItsOwnLock`
+  - `internal/core/mail/publication_bounds_test.go` `TestAPublicationReadsTheRunWithoutCleaningUp`
+  - `internal/core/mail/settle_lock_test.go` `TestSettlingWaitsForALockTheServerHolds`
+  - `internal/core/mail/settle_lock_test.go` `TestADeferredSettlementGetsAnotherPass`
+  - `internal/core/mail/settle_recorded_test.go` `TestARestartSettlesALateRefusalLeftUnread`
+  - `internal/core/mail/settle_recorded_test.go` `TestASettlingCutShortIsSettledOnceItCan`
+  - `internal/core/mail/settle_recorded_test.go` `TestALateRefusalItsStatusMissedIsRecordedThenSettled`
+  - `internal/core/mail/settle_recorded_test.go` `TestALetterReadableOnPurposeStaysUnread`
+  - `internal/core/mail/settle_recheck_test.go` `TestAForeignLetterSettlesByItsStatusUnderTheLock`
+  - `internal/core/mail/settle_recheck_test.go` `TestARecordedRefusalIsRecheckedUnderTheLock`
+  - `internal/core/mail/settle_recheck_test.go` `TestARefusalOnRecordAStopKeepsWaitsTheRetryInterval`
 
 - **E4. A read's completion is one durable fact every channel shares.** A letter leaves
   `unread/` only by being read once a part of it was shown, and never comes back; a late
@@ -93,10 +93,10 @@ nothing lifts a stop without returning evidence.
   Tests:
   - `internal/cli/bridge_rules_test.go` `TestALateAcknowledgmentOwesNothingTwice`
   - `internal/cli/bridge_rules_test.go` `TestALetterReadElsewhereShowsAsGone`
-  - `internal/inbox/claims_test.go` `TestALetterBeingReadInPartsCannotBeTakenBack`
-  - `internal/inbox/claims_test.go` `TestTheSweepKeepsALetterBeingRead`
-  - `internal/inbox/claims_test.go` `TestALetterIsPublishedOnceAcrossReadAndSweep`
-  - `internal/inbox/claims_test.go` `TestTheServerKeepsALetterBeingRead`
+  - `internal/core/mail/claims_test.go` `TestALetterBeingReadInPartsCannotBeTakenBack`
+  - `internal/core/mail/claims_test.go` `TestTheSweepKeepsALetterBeingRead`
+  - `internal/core/mail/claims_test.go` `TestALetterIsPublishedOnceAcrossReadAndSweep`
+  - `internal/core/mail/claims_test.go` `TestTheServerKeepsALetterBeingRead`
   - `internal/cli/bridge_read_test.go` `TestAToolReadIsReadOnlyWhenEveryPartArrived`
   - `internal/cli/bridge_read_test.go` `TestARepeatedToolReadInOneTurnIsTheSameRead`
   - `internal/cli/bridge_read_test.go` `TestTheShellFinishesALostToolRead`
@@ -104,9 +104,9 @@ nothing lifts a stop without returning evidence.
   - `internal/cli/bridge_lookups_test.go` `TestAClaimedLetterThatCannotBeReadLeavesTheMarkOpen`
   - `internal/cli/bridge_lookups_test.go` `TestAnAcknowledgmentDoesNotWriteOverAWaiterItCannotRead`
   - `internal/cli/bridge_lookups_test.go` `TestARetriedAcknowledgmentStopsOnAStatusItCannotRead`
-  - `internal/inbox/unread_test.go` `TestReadingHandsEachMessageOnce`
-  - `internal/inbox/unread_test.go` `TestAReadDuringAPendingNoticeStands`
-  - `internal/inbox/unread_test.go` `TestAReadIsNotUndoneByTheNoticeResult`
+  - `internal/core/mail/unread_test.go` `TestReadingHandsEachMessageOnce`
+  - `internal/core/mail/unread_test.go` `TestAReadDuringAPendingNoticeStands`
+  - `internal/core/mail/unread_test.go` `TestAReadIsNotUndoneByTheNoticeResult`
   - `internal/cli/read_test.go` `TestSendCountsAReadMessageAsDelivered`
   - `internal/cli/read_test.go` `TestTwoReadersAtOnceShowATaskOnce`
   - `internal/cli/stop_gate_test.go` `TestAReadInPartsStopsWithTheMailbox`
@@ -136,24 +136,24 @@ nothing lifts a stop without returning evidence.
   operation where a retry takes it up. Readers that only inform fold an unknown into
   their most cautious answer. (M1 rule 6.)
   Tests:
-  - `internal/inbox/lookups_test.go` `TestALetterThatCannotBeReadIsNotLeftOut`
-  - `internal/inbox/lookups_test.go` `TestAStatusIsFoundAbsentOrUnknown`
-  - `internal/inbox/lookups_test.go` `TestAnsweredNeedsAMailboxItCanSearch`
-  - `internal/inbox/lookups_test.go` `TestAWaiterThatCannotBeReadIsNotWrittenOver`
-  - `internal/inbox/lookups_test.go` `TestAReadStopsOnAStatusItCannotRead`
-  - `internal/inbox/lookups_test.go` `TestAWithdrawalThatCannotLookStopsBeforeWriting`
-  - `internal/inbox/lookups_test.go` `TestAClaimedLetterThatCannotBeReadIsNotOwedByNobody`
-  - `internal/inbox/lookups_test.go` `TestATurnRecordThatCannotBeReadIsNotNone`
-  - `internal/inbox/lookups_test.go` `TestTheSweepKeepsWhatAnUnreadableWaiterMayOwe`
-  - `internal/inbox/lookups_test.go` `TestNothingButTestsCallsTheLossyWaiters`
-  - `internal/inbox/lookups_test.go` `TestADamagedWaitRecordIsNotReadAsZeros`
-  - `internal/inbox/unknown_test.go` `TestAClaimThatCannotBeReadHoldsTheLetter`
-  - `internal/inbox/unknown_test.go` `TestAStatusThatCannotBeReadStopsTheLookup`
-  - `internal/inbox/unknown_test.go` `TestAMarkOrAWaiterThatCannotBeReadIsNotNone`
-  - `internal/inbox/records_test.go` `TestAFileOfNoKnownKindStopsTheMailbox`
-  - `internal/inbox/records_test.go` `TestANonRegularEntryAtEveryRecordPathStops`
-  - `internal/inbox/records_test.go` `TestUnlistedRecordsNamesAStrayDirectory`
-  - `internal/inbox/journal_unknown_test.go` `TestAnUnreadableInterimStopsTheJournal`
+  - `internal/core/mail/lookups_test.go` `TestALetterThatCannotBeReadIsNotLeftOut`
+  - `internal/core/mail/lookups_test.go` `TestAStatusIsFoundAbsentOrUnknown`
+  - `internal/core/mail/lookups_test.go` `TestAnsweredNeedsAMailboxItCanSearch`
+  - `internal/core/mail/lookups_test.go` `TestAWaiterThatCannotBeReadIsNotWrittenOver`
+  - `internal/core/mail/lookups_test.go` `TestAReadStopsOnAStatusItCannotRead`
+  - `internal/core/mail/lookups_test.go` `TestAWithdrawalThatCannotLookStopsBeforeWriting`
+  - `internal/core/mail/lookups_test.go` `TestAClaimedLetterThatCannotBeReadIsNotOwedByNobody`
+  - `internal/core/mail/lookups_test.go` `TestATurnRecordThatCannotBeReadIsNotNone`
+  - `internal/core/mail/lookups_test.go` `TestTheSweepKeepsWhatAnUnreadableWaiterMayOwe`
+  - `internal/core/mail/lookups_test.go` `TestNothingButTestsCallsTheLossyWaiters`
+  - `internal/core/mail/lookups_test.go` `TestADamagedWaitRecordIsNotReadAsZeros`
+  - `internal/core/mail/unknown_test.go` `TestAClaimThatCannotBeReadHoldsTheLetter`
+  - `internal/core/mail/unknown_test.go` `TestAStatusThatCannotBeReadStopsTheLookup`
+  - `internal/core/mail/unknown_test.go` `TestAMarkOrAWaiterThatCannotBeReadIsNotNone`
+  - `internal/core/mail/records_test.go` `TestAFileOfNoKnownKindStopsTheMailbox`
+  - `internal/core/mail/records_test.go` `TestANonRegularEntryAtEveryRecordPathStops`
+  - `internal/core/mail/records_test.go` `TestUnlistedRecordsNamesAStrayDirectory`
+  - `internal/core/mail/journal_unknown_test.go` `TestAnUnreadableInterimStopsTheJournal`
   - `internal/cli/bridge_unknown_test.go` `TestARefusedReadIsReplayedInItsTurn`
   - `internal/cli/bridge_unknown_test.go` `TestALetterThatCannotBeLookedUpIsNotShown`
   - `internal/cli/bridge_unknown_test.go` `TestAWaiterThatCannotBeReadLeavesTheMarkOpen`
@@ -162,12 +162,12 @@ nothing lifts a stop without returning evidence.
   - `internal/cli/bridge_lookups_test.go` `TestAKeptAnswerThatCannotBeReadIsNotDropped`
   - `internal/cli/bridge_lookups_test.go` `TestAnUnreadableResultIsNotFailedWhenTheNameMovesOn`
   - `internal/cli/bridge_lookups_test.go` `TestAClearingThatFailedIsFinishedBeforeTheNextReport`
-  - `internal/inbox/confirm_test.go` `TestAnUnreadableKeptAnswerIsNotWrittenOver`
-  - `internal/inbox/settle_copy_test.go` `TestAPublishedMarkDoesNotOutweighAStageThatCannotBeSearched`
+  - `internal/core/mail/confirm_test.go` `TestAnUnreadableKeptAnswerIsNotWrittenOver`
+  - `internal/core/mail/settle_copy_test.go` `TestAPublishedMarkDoesNotOutweighAStageThatCannotBeSearched`
   - `internal/cli/awaited_unknown_test.go` `TestAwaitedTakesAnUnreadableRecipientForLive`
   - `internal/cli/owed_grant_unknown_test.go` `TestAnUnreadableGrantJournalDoesNotEndTheGrant`
   - `internal/cli/list_unknown_test.go` `TestListShowsAnUnreadableSessionAsUnknown`
-  - `internal/inbox/stop_unknown_test.go` `TestANotADirectoryOnTheWayRecordsThePathAbsent`
+  - `internal/core/mail/stop_unknown_test.go` `TestANotADirectoryOnTheWayRecordsThePathAbsent`
 
 - **E7. Every effect has an immutable identity and a proven scope, and recovery advances
   it only from durable evidence tied to that identity.** (M1 rule 7, clauses identity,
@@ -202,21 +202,21 @@ nothing lifts a stop without returning evidence.
   - `internal/cli/turn_scope_test.go` `TestAnEndWithNothingOwedKeepsItsScopeOnRetry`
   - `internal/cli/turn_journal_test.go` `TestARecoveredEndTakesTheAnswerItPublished`
   - `internal/cli/turn_journal_test.go` `TestALateRetryKeepsALaterAnswer`
-  - `internal/inbox/journal_test.go` `TestAJournalTakesOnlyTheAnswerItCarried`
-  - `internal/inbox/read_boundary_test.go` `TestReadBoundaryExcludesLaterReadsAndIncludesSameTurnSteering`
-  - `internal/inbox/read_boundary_test.go` `TestReadBoundaryCaptureNeverWaitsForMailbox`
-  - `internal/inbox/read_boundary_test.go` `TestReadBoundaryHighWatermarkPreventsReuseAfterCounterLoss`
-  - `internal/inbox/read_boundary_test.go` `TestReadClockProcessWriter`
-  - `internal/inbox/read_boundary_test.go` `TestReadBoundaryIsSharedWithAnotherReaderProcess`
-  - `internal/inbox/confirm_test.go` `TestAKeptAnswerBelongsToItsRun`
-  - `internal/inbox/confirm_test.go` `TestAKeptAnswerIsTakenOnlyAtOrBelowTheBoundary`
-  - `internal/inbox/pending_test.go` `TestAMarkIsNeverTakenAway`
-  - `internal/inbox/pending_test.go` `TestTheWindowOpensAfterItsStartAndClosesAtItsEnd`
-  - `internal/inbox/pending_test.go` `TestAMarkOfAnotherRunIsIgnoredAndSwept`
-  - `internal/inbox/pending_test.go` `TestTheLatestMarkInATurnWins`
-  - `internal/inbox/pending_test.go` `TestAMarkIsWrittenOncePerCall`
-  - `internal/inbox/pending_test.go` `TestAnUnreadableMarkInTheWindowIsAnError`
-  - `internal/inbox/pending_test.go` `TestTheWindowOpensAfterTheRunsLatestEarlierEnd`
+  - `internal/core/mail/journal_test.go` `TestAJournalTakesOnlyTheAnswerItCarried`
+  - `internal/core/mail/read_boundary_test.go` `TestReadBoundaryExcludesLaterReadsAndIncludesSameTurnSteering`
+  - `internal/core/mail/read_boundary_test.go` `TestReadBoundaryCaptureNeverWaitsForMailbox`
+  - `internal/core/mail/read_boundary_test.go` `TestReadBoundaryHighWatermarkPreventsReuseAfterCounterLoss`
+  - `internal/core/mail/read_boundary_test.go` `TestReadClockProcessWriter`
+  - `internal/core/mail/read_boundary_test.go` `TestReadBoundaryIsSharedWithAnotherReaderProcess`
+  - `internal/core/mail/confirm_test.go` `TestAKeptAnswerBelongsToItsRun`
+  - `internal/core/mail/confirm_test.go` `TestAKeptAnswerIsTakenOnlyAtOrBelowTheBoundary`
+  - `internal/core/mail/pending_test.go` `TestAMarkIsNeverTakenAway`
+  - `internal/core/mail/pending_test.go` `TestTheWindowOpensAfterItsStartAndClosesAtItsEnd`
+  - `internal/core/mail/pending_test.go` `TestAMarkOfAnotherRunIsIgnoredAndSwept`
+  - `internal/core/mail/pending_test.go` `TestTheLatestMarkInATurnWins`
+  - `internal/core/mail/pending_test.go` `TestAMarkIsWrittenOncePerCall`
+  - `internal/core/mail/pending_test.go` `TestAnUnreadableMarkInTheWindowIsAnError`
+  - `internal/core/mail/pending_test.go` `TestTheWindowOpensAfterTheRunsLatestEarlierEnd`
   - `internal/cli/pending_test.go` `TestAPendingTurnEndKeepsTheTaskOwed`
   - `internal/cli/pending_test.go` `TestAMarkDoesNotSurviveAnInterruptedTurn`
   - `internal/cli/pending_test.go` `TestAPendingTurnEndWithoutTextIsItsMark`
@@ -229,8 +229,8 @@ nothing lifts a stop without returning evidence.
   - `internal/cli/turn_journal_test.go` `TestAnAdoptedWaitWhoseReportIsOutIsNotAnsweredAgain`
   - `internal/cli/turn_journal_test.go` `TestAnEndWhoseJournalFailedIsPreparedAgainOnRetry`
   - `internal/cli/turn_journal_test.go` `TestAnEndRecordedBeforeItsEffectsIsNotPreparedAgain`
-  - `internal/inbox/journal_test.go` `TestAnAbandonedJournalWriteIsNotAJournal`
-  - `internal/inbox/held_end_test.go` `TestAHeldEndRaisesTheClockToItsPosition`
+  - `internal/core/mail/journal_test.go` `TestAnAbandonedJournalWriteIsNotAJournal`
+  - `internal/core/mail/held_end_test.go` `TestAHeldEndRaisesTheClockToItsPosition`
   - `internal/cli/turn_confirm_repeat_test.go` `TestAHoldCutByACrashIsHeldOnceWhenConfirmedAgain`
   - `internal/cli/turn_test.go` `TestTwoTurnEndsAtOnceReportOnce` — a boundary end handed to the core since S9
   - `internal/cli/neutral_end_test.go` `TestNeutralEndsWithDistinctIDsReportTwice`
@@ -238,8 +238,8 @@ nothing lifts a stop without returning evidence.
   - `internal/cli/neutral_end_test.go` `TestNeutralTwoEndsAtOnceReportOnce`
   - `internal/cli/neutral_end_test.go` `TestNeutralEndsWithoutTheirScopeReportNothing`
   - `internal/adapter/fixture/turns_test.go` `TestAnEndSentAgainIsTheSameCompletion`
-  - `internal/inbox/kept_clock_test.go` `TestAHoldReservesItsPositionBeforeItCommits`
-  - `internal/inbox/kept_clock_test.go` `TestAFailedHoldLeavesAGapAndNoPositionIsIssuedTwice`
+  - `internal/core/mail/kept_clock_test.go` `TestAHoldReservesItsPositionBeforeItCommits`
+  - `internal/core/mail/kept_clock_test.go` `TestAFailedHoldLeavesAGapAndNoPositionIsIssuedTwice`
   - `internal/cli/turn_end_api_test.go` `TestATurnEndWithoutItsEventOrAKnownReasonIsRefused`
   - `internal/wrap/turn_boundary_test.go` `TestTheWrapperPassesEachEndOnWithItsEventAndReason`
 
@@ -279,51 +279,51 @@ nothing lifts a stop without returning evidence.
     its directory, the disk). No command goes around the barrier; the operator decision
     below neither removes a record nor counts as evidence.
   Tests:
-  - `internal/inbox/journal_unknown_test.go` `TestAReportFoundWithoutItsMarkIsMarkedPublished`
-  - `internal/inbox/journal_unknown_test.go` `TestAnUnknownPublicationMarkIsNeverPermission`
-  - `internal/inbox/claims_test.go` `TestALetterIsPublishedOnceAcrossReadAndSweep`
-  - `internal/inbox/claims_test.go` `TestAnIntentWithoutItsLetterIsWrittenAgain`
-  - `internal/inbox/journal_test.go` `TestAJournalDoesNotRepublishASweptReport`
-  - `internal/inbox/journal_test.go` `TestAReportWhoseEntryFailedIsNotRepublishedAfterTheSweep`
-  - `internal/inbox/stop_writes_test.go` `TestAGateWhoseStopCannotBeWrittenStillStops`
-  - `internal/inbox/stop_writes_test.go` `TestAFailedResolutionReachesTheCaller`
-  - `internal/inbox/answer_stop_test.go` `TestAStoppedMailboxDoesNotTakeAnAnswer`
+  - `internal/core/mail/journal_unknown_test.go` `TestAReportFoundWithoutItsMarkIsMarkedPublished`
+  - `internal/core/mail/journal_unknown_test.go` `TestAnUnknownPublicationMarkIsNeverPermission`
+  - `internal/core/mail/claims_test.go` `TestALetterIsPublishedOnceAcrossReadAndSweep`
+  - `internal/core/mail/claims_test.go` `TestAnIntentWithoutItsLetterIsWrittenAgain`
+  - `internal/core/mail/journal_test.go` `TestAJournalDoesNotRepublishASweptReport`
+  - `internal/core/mail/journal_test.go` `TestAReportWhoseEntryFailedIsNotRepublishedAfterTheSweep`
+  - `internal/core/mail/stop_writes_test.go` `TestAGateWhoseStopCannotBeWrittenStillStops`
+  - `internal/core/mail/stop_writes_test.go` `TestAFailedResolutionReachesTheCaller`
+  - `internal/core/mail/answer_stop_test.go` `TestAStoppedMailboxDoesNotTakeAnAnswer`
   - `internal/cli/stop_gate_test.go` `TestAnUnreadableJournalStopsEveryCall`
   - `internal/cli/stop_gate_test.go` `TestAReadInPartsStopsWithTheMailbox`
   - `internal/cli/stop_gate_test.go` `TestUnknownEvidenceStopsTheCallsAfterTheEnd`
-  - `internal/inbox/plan_faults_test.go` `TestEveryReadOfThePlanStopsBeforeTheFirstEffect`
-  - `internal/inbox/journal_test.go` `TestADoneJournalIsKeptWhileItsRunLives`
+  - `internal/core/mail/plan_faults_test.go` `TestEveryReadOfThePlanStopsBeforeTheFirstEffect`
+  - `internal/core/mail/journal_test.go` `TestADoneJournalIsKeptWhileItsRunLives`
   - `internal/cli/turn_journal_retry_test.go` `TestALateRetryAfterTheSweepPublishesNothing`
-  - `internal/receipt/receipt_test.go` `TestSweepKeepsWhatARecoveryReads`
-  - `internal/inbox/sweep_test.go` `TestAnOwedMessageOutlivesTheSweep`
-  - `internal/inbox/sweep_test.go` `TestAnOwedMessageLeftUnreadOutlivesTheSweep`
-  - `internal/inbox/evidence_test.go` `TestTheEvidenceOfEveryEffectIsReadBeforeTheFirst` — rebuilt in S2 on journal records only
-  - `internal/inbox/effect_stop_test.go` `TestAnUnknownOnlyAnEffectMetStopsUntilTheBarrier` — rebuilt in S2 on journal records only
-  - `internal/inbox/effect_stop_test.go` `TestAStopThatCouldNotBeRecordedNamesEveryFailedWrite` — rebuilt in S2 on journal records only
-  - `internal/inbox/late_unknown_test.go` `TestEveryDurableStopOutlivesAFailedRetry` — rebuilt in S2 on journal records only
-  - `internal/inbox/late_unknown_test.go` `TestEveryEvidencePathIsReadBeforeTheFirstEffect` — rebuilt in S2 on journal records only
-  - `internal/inbox/journal_moot_test.go` `TestAReportForAnEndedRunIsMoot` — rebuilt in S2 on journal records only
-  - `internal/inbox/journal_moot_test.go` `TestAMootReportClearsWhatItAnswered` — rebuilt in S2 on journal records only
-  - `internal/inbox/reconcile_stop_test.go` `TestAnUnreadableJournalStopsEveryEffect`
-  - `internal/inbox/reconcile_stop_test.go` `TestAnUnreadableRecordStopsTheMailbox`
-  - `internal/inbox/stop_occurrence_test.go` `TestTwoCausesOneResolvedTheStopHolds`
-  - `internal/inbox/stop_occurrence_test.go` `TestARecipientsEndLeavesAHeldReportUnsettled`
-  - `internal/inbox/stop_occurrence_test.go` `TestMainIsToldOnceAcrossBarriersAndCalls`
-  - `internal/inbox/stop_occurrence_test.go` `TestLettersArriveIntoAStoppedMailbox`
-  - `internal/inbox/stop_sweep_test.go` `TestASweepBesideAStopRemovesNoNamedPath`
-  - `internal/inbox/sweep_norun_test.go` `TestNothingThatNamesNoRunIsSweptByAge`
-  - `internal/inbox/publication_race_test.go` `TestASavedPublishedStays`
-  - `internal/inbox/publication_race_test.go` `TestACrashBeforeTheSaveLeavesTheReportMoot`
-  - `internal/inbox/publication_bounds_test.go` `TestAStaleSweeperRetiresNothing`
-  - `internal/inbox/publication_crash_test.go` `TestAKillAtAnyWriteLandsTheReportAtMostOnce`
-  - `internal/inbox/stop_occurrence_test.go` `TestARecurringCauseOfARecordIsANewOccurrence`
-  - `internal/inbox/stop_occurrence_test.go` `TestARecurringCauseAboutAnOperationIsANewOccurrence`
-  - `internal/inbox/stop_unknown_test.go` `TestAResolutionIsReadBeforeItLiftsTheStop`
-  - `internal/inbox/stop_unknown_test.go` `TestAnOccurrenceRecordsAPathsPresenceUnknownApartFromAbsent`
-  - `internal/inbox/stop_unknown_test.go` `TestAProofWhosePresenceWasUnknownResolvesNothingOnceGone`
-  - `internal/inbox/stop_unknown_test.go` `TestReleasingAnAnswerKeepsAMarkTheStopNames`
-  - `internal/inbox/stop_unknown_test.go` `TestSettlingKeepsALetterTheStopNames`
-  - `internal/inbox/stop_unknown_test.go` `TestAnEffectsOccurrenceWhoseResolutionDoesNotReadHoldsTheEffects`
+  - `internal/core/receipt/receipt_test.go` `TestSweepKeepsWhatARecoveryReads`
+  - `internal/core/mail/sweep_test.go` `TestAnOwedMessageOutlivesTheSweep`
+  - `internal/core/mail/sweep_test.go` `TestAnOwedMessageLeftUnreadOutlivesTheSweep`
+  - `internal/core/mail/evidence_test.go` `TestTheEvidenceOfEveryEffectIsReadBeforeTheFirst` — rebuilt in S2 on journal records only
+  - `internal/core/mail/effect_stop_test.go` `TestAnUnknownOnlyAnEffectMetStopsUntilTheBarrier` — rebuilt in S2 on journal records only
+  - `internal/core/mail/effect_stop_test.go` `TestAStopThatCouldNotBeRecordedNamesEveryFailedWrite` — rebuilt in S2 on journal records only
+  - `internal/core/mail/late_unknown_test.go` `TestEveryDurableStopOutlivesAFailedRetry` — rebuilt in S2 on journal records only
+  - `internal/core/mail/late_unknown_test.go` `TestEveryEvidencePathIsReadBeforeTheFirstEffect` — rebuilt in S2 on journal records only
+  - `internal/core/mail/journal_moot_test.go` `TestAReportForAnEndedRunIsMoot` — rebuilt in S2 on journal records only
+  - `internal/core/mail/journal_moot_test.go` `TestAMootReportClearsWhatItAnswered` — rebuilt in S2 on journal records only
+  - `internal/core/mail/reconcile_stop_test.go` `TestAnUnreadableJournalStopsEveryEffect`
+  - `internal/core/mail/reconcile_stop_test.go` `TestAnUnreadableRecordStopsTheMailbox`
+  - `internal/core/mail/stop_occurrence_test.go` `TestTwoCausesOneResolvedTheStopHolds`
+  - `internal/core/mail/stop_occurrence_test.go` `TestARecipientsEndLeavesAHeldReportUnsettled`
+  - `internal/core/mail/stop_occurrence_test.go` `TestMainIsToldOnceAcrossBarriersAndCalls`
+  - `internal/core/mail/stop_occurrence_test.go` `TestLettersArriveIntoAStoppedMailbox`
+  - `internal/core/mail/stop_sweep_test.go` `TestASweepBesideAStopRemovesNoNamedPath`
+  - `internal/core/mail/sweep_norun_test.go` `TestNothingThatNamesNoRunIsSweptByAge`
+  - `internal/core/mail/publication_race_test.go` `TestASavedPublishedStays`
+  - `internal/core/mail/publication_race_test.go` `TestACrashBeforeTheSaveLeavesTheReportMoot`
+  - `internal/core/mail/publication_bounds_test.go` `TestAStaleSweeperRetiresNothing`
+  - `internal/core/mail/publication_crash_test.go` `TestAKillAtAnyWriteLandsTheReportAtMostOnce`
+  - `internal/core/mail/stop_occurrence_test.go` `TestARecurringCauseOfARecordIsANewOccurrence`
+  - `internal/core/mail/stop_occurrence_test.go` `TestARecurringCauseAboutAnOperationIsANewOccurrence`
+  - `internal/core/mail/stop_unknown_test.go` `TestAResolutionIsReadBeforeItLiftsTheStop`
+  - `internal/core/mail/stop_unknown_test.go` `TestAnOccurrenceRecordsAPathsPresenceUnknownApartFromAbsent`
+  - `internal/core/mail/stop_unknown_test.go` `TestAProofWhosePresenceWasUnknownResolvesNothingOnceGone`
+  - `internal/core/mail/stop_unknown_test.go` `TestReleasingAnAnswerKeepsAMarkTheStopNames`
+  - `internal/core/mail/stop_unknown_test.go` `TestSettlingKeepsALetterTheStopNames`
+  - `internal/core/mail/stop_unknown_test.go` `TestAnEffectsOccurrenceWhoseResolutionDoesNotReadHoldsTheEffects`
   - Gap: the operator decision — closed in S18 (part B).
 
 ## How E8 lifts a stop

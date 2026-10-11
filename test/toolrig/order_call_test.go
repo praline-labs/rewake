@@ -13,9 +13,9 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter/fixture"
 	"github.com/praline-labs/rewake/internal/bridge"
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
-	"github.com/praline-labs/rewake/internal/receipt"
 )
 
 // The order test's second generated part, rebuilt from

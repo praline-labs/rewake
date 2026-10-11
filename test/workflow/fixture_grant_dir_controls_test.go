@@ -20,7 +20,7 @@ var mutantGrantNotRechecked = mutation{
 // works on it.
 var mutantGrantRefusalUntold = mutation{
 	name:  "grant-refusal-untold",
-	file:  "internal/inbox/grants.go",
+	file:  "internal/core/mail/grants.go",
 	edits: []edit{{"if result.State == Failed && !result.Withdrawn && CarriesGrant(message) {", "if false && result.State == Failed && !result.Withdrawn && CarriesGrant(message) {"}},
 }
 
@@ -37,7 +37,7 @@ var mutantGrantUnregistered = mutation{
 // runs out.
 var mutantGrantHeldAfterReport = mutation{
 	name:  "grant-held-after-report",
-	file:  "internal/grantauth/server.go",
+	file:  "internal/core/grant/authority/server.go",
 	edits: []edit{{"\t\t\t\tif !open {\n", "\t\t\t\tif false && !open {\n"}},
 }
 

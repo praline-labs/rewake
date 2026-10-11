@@ -123,7 +123,7 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
    ending with MAIL: the shared rule of a first line stating the point, how a waiting
    message is announced with `Rewake:`, and that `rewake guide` has the complete rules
    ([roles.md](roles.md#what-a-session-is-told)).
-   The golden copies are in `internal/brief/testdata/`.
+   The golden copies are in `internal/core/brief/testdata/`.
 9. **Serving.** The wrapper watches `inbox/<name>/` with inotify, polls every
    second as the safety net, sweeps old mail every ten minutes, and waits for
    the harness to exit.
@@ -318,7 +318,7 @@ ignored without changing the parent session's waits.
 1. **Who is owed.** Under the lock, the turn end reads
    `awaiting/<own epoch>/`. A silent role emits no successful reports;
    failure callbacks still route errors. First the barrier completes what an
-   earlier end left unfinished (`inbox.Reconcile`); an unknown it cannot decide stops the
+   earlier end left unfinished (`mail.Reconcile`); an unknown it cannot decide stops the
    mailbox until a later look finds its cause gone. An identified turn carries its read boundary, and its
    journal records the full report batch and what it clears before any report goes out
    ([delivery-turn-end.md](delivery-turn-end.md#the-end-of-a-turn)).

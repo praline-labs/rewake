@@ -128,7 +128,7 @@ func playThreadChange(t *testing.T, c *Case, iso *Isolation) []telemetryFinding 
 // The delivery is never pinned: the reservation records no conversation.
 var mutantDeliveryUnpinned = mutation{
 	name:  "delivery-unpinned",
-	file:  "internal/inbox/reservation.go",
+	file:  "internal/core/mail/reservation.go",
 	edits: []edit{{"if thread != \"\" && Owed(*message) {", "if false && thread != \"\" && Owed(*message) {"}},
 }
 
@@ -145,7 +145,7 @@ var mutantEndThreadIgnored = mutation{
 // Any known delivery conversation counts as changed.
 var mutantThreadAlwaysChanged = mutation{
 	name:  "thread-always-changed",
-	file:  "internal/inbox/thread.go",
+	file:  "internal/core/mail/thread.go",
 	edits: []edit{{"before != \"\" && before != current {", "before != \"\" {"}},
 }
 

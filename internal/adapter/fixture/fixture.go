@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/brief"
+	"github.com/praline-labs/rewake/internal/core/brief"
 )
 
 // ID is the launch command, the program's name and the session record's

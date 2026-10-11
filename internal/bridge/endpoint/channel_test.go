@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/channel"
+	"github.com/praline-labs/rewake/internal/core/channel"
 )
 
 // told collects the channel events an endpoint tells.

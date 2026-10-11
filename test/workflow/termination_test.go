@@ -19,7 +19,7 @@ import (
 // from the code, rounded up to 12 s for a loaded machine. Two remain:
 //
 //   - 2 s for the last mailbox writes to get the lock
-//     (internal/inbox/outcome.go, shutdownLockWait);
+//     (internal/core/mail/outcome.go, shutdownLockWait);
 //   - 300 ms of signal-forwarding grace (internal/wrap/wrap.go).
 //
 // The other 7 s belonged to an adapter that left in S8. The budget is

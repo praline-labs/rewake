@@ -208,7 +208,7 @@ operation's turn ended. Its absence proves nothing.
 
 The recorded start is the later of two records. The host keeps one in the core: when the
 run's TurnBoundary reports a turn start with the harness's own time for it, the wrapper
-writes that time into the mailbox (`inbox.RecordTurnStart`, `awaiting/<run>/.turn-starts/`,
+writes that time into the mailbox (`mail.RecordTurnStart`, `awaiting/<run>/.turn-starts/`,
 beside the read clock), whether or not the run has a mail tool, and a heard end moves it
 up to the end. The time must be the
 harness's, taken at or before anything the turn ran — never the moment the report

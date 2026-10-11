@@ -114,7 +114,7 @@ once and then with retries, until it lands or the run ends — never once the re
 become a later run's. Since S11.
 
 Tests:
-- `internal/registry/live_test.go` `TestModifyChangesTheRecordAsItStands`
+- `internal/core/registry/live_test.go` `TestModifyChangesTheRecordAsItStands`
 - `internal/wrap/live_test.go` `TestTheLiveSetIsRecordedAndADropLeavesTheRun`
 - `internal/wrap/live_test.go` `TestTheLiveSetDoesNotWriteAnotherRunsRecord`
 - `internal/wrap/live_test.go` `TestAWithdrawalThatFailsToLandIsWrittenAgain`
@@ -123,7 +123,7 @@ Tests:
 - `internal/wrap/live_test.go` `TestARunThatReportsNoneHasItsPlanLive`
 - `internal/wrap/live_test.go` `TestADeliveryWithoutALiveWakeWaits`
 - `internal/wrap/live_test.go` `TestWithoutALiveWakeNothingIsReservedOrPinned`
-- `internal/inbox/reservation_test.go` `TestNoReservationTakesThePlainPath`
+- `internal/core/mail/reservation_test.go` `TestNoReservationTakesThePlainPath`
 - `internal/cli/live_set_test.go` `TestASendToARunWithoutALiveWakeIsAcceptedUnwoken`
 - `internal/cli/live_set_test.go` `TestATaskToARunWithoutALiveBoundaryFails`
 - `internal/cli/live_set_test.go` `TestTheLiveBoundaryDecidesNotTheOffer`
@@ -147,26 +147,26 @@ what the catalogue declares for a harness the build has no adapter for — `~/.c
 Tests:
 - `internal/adapter/catalog/catalog_test.go` `TestTheCatalogueProtectsTheHarnessesItHasNoAdapterFor`
 - `internal/cli/send_dir_test.go` `TestAGrantRefusesWhatTheCatalogueProtects` — a grant into a checkout still refuses those names there, and those directories under the home
-- `internal/grantauth/grantauth_test.go` `TestAGrantRegisteredFromBelowIsConfirmed`
-- `internal/grantauth/grantauth_test.go` `TestARegistrationFromOutsideTheWrapperIsRefused`
-- `internal/grantauth/grantauth_test.go` `TestAConfirmationSettlesOnlyForItsRun`
-- `internal/grantauth/grantauth_test.go` `TestAConfirmationFromAnotherProcessIsRefused`
-- `internal/grantauth/grantauth_test.go` `TestAWrapperNotThereIsUnreachable`
-- `internal/grantauth/grantauth_test.go` `TestAFullAuthorityRefusesAndKeepsWhatItHolds`
-- `internal/grantauth/grantauth_test.go` `TestAGrantOutlivingItsWaitIsForgotten`
-- `internal/grantauth/grantauth_test.go` `TestClosingFreesTheAddress`
-- `internal/grantauth/grantauth_test.go` `TestABoundAddressIsNotTakenOver`
-- `internal/grantauth/grantauth_test.go` `TestAConfirmationFromOtherNamespacesIsRefused`
-- `internal/grantauth/checks_test.go` `TestAnAnswerFromAnotherLiveProcessIsRefused`
-- `internal/grantauth/checks_test.go` `TestGrantsDifferingOnlyInBreadthOrGitAreNotTheSame`
-- `internal/grantauth/checks_test.go` `TestARunInASandboxOfItsOwnIsNotItsWrapper`
-- `internal/grantauth/checks_test.go` `TestAnAnswerNamingAnotherGrantIsNotTaken`
-- `internal/grantauth/helper_test.go` `TestARegistrationFromOtherNamespacesIsRefused`
-- `internal/grantauth/helper_test.go` `TestARegistrationGoesOnlyToTheCallersWrapper`
-- `internal/grantauth/resume_test.go` `TestAGrantIsHeldWhileItsTaskIsOpen`
-- `internal/grantauth/resume_test.go` `TestAGrantGoesOnlyIntoTheConversationItWasDeliveredTo`
-- `internal/grantauth/resume_test.go` `TestAConfirmByAnotherProcessDeliversNothing`
-- `internal/grantauth/resume_test.go` `TestAGrantConfirmedWithNoConversationIsNotHandedOver`
+- `internal/core/grant/authority/grantauth_test.go` `TestAGrantRegisteredFromBelowIsConfirmed`
+- `internal/core/grant/authority/grantauth_test.go` `TestARegistrationFromOutsideTheWrapperIsRefused`
+- `internal/core/grant/authority/grantauth_test.go` `TestAConfirmationSettlesOnlyForItsRun`
+- `internal/core/grant/authority/grantauth_test.go` `TestAConfirmationFromAnotherProcessIsRefused`
+- `internal/core/grant/authority/grantauth_test.go` `TestAWrapperNotThereIsUnreachable`
+- `internal/core/grant/authority/grantauth_test.go` `TestAFullAuthorityRefusesAndKeepsWhatItHolds`
+- `internal/core/grant/authority/grantauth_test.go` `TestAGrantOutlivingItsWaitIsForgotten`
+- `internal/core/grant/authority/grantauth_test.go` `TestClosingFreesTheAddress`
+- `internal/core/grant/authority/grantauth_test.go` `TestABoundAddressIsNotTakenOver`
+- `internal/core/grant/authority/grantauth_test.go` `TestAConfirmationFromOtherNamespacesIsRefused`
+- `internal/core/grant/authority/checks_test.go` `TestAnAnswerFromAnotherLiveProcessIsRefused`
+- `internal/core/grant/authority/checks_test.go` `TestGrantsDifferingOnlyInBreadthOrGitAreNotTheSame`
+- `internal/core/grant/authority/checks_test.go` `TestARunInASandboxOfItsOwnIsNotItsWrapper`
+- `internal/core/grant/authority/checks_test.go` `TestAnAnswerNamingAnotherGrantIsNotTaken`
+- `internal/core/grant/authority/helper_test.go` `TestARegistrationFromOtherNamespacesIsRefused`
+- `internal/core/grant/authority/helper_test.go` `TestARegistrationGoesOnlyToTheCallersWrapper`
+- `internal/core/grant/authority/resume_test.go` `TestAGrantIsHeldWhileItsTaskIsOpen`
+- `internal/core/grant/authority/resume_test.go` `TestAGrantGoesOnlyIntoTheConversationItWasDeliveredTo`
+- `internal/core/grant/authority/resume_test.go` `TestAConfirmByAnotherProcessDeliversNothing`
+- `internal/core/grant/authority/resume_test.go` `TestAGrantConfirmedWithNoConversationIsNotHandedOver`
 - `internal/wrap/grants_test.go` `TestAGrantIsConfirmedWithTheMainThatSentIt`
 - `internal/wrap/grants_test.go` `TestMainHoldsTheConversationTheLetterWasPinnedTo`
 - `internal/wrap/grant_checks_test.go` `TestAGrantWhoseDirectoryBecameALinkIsRefusedBeforeMainIsAsked`

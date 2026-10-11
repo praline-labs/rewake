@@ -3,7 +3,7 @@ package cli
 import (
 	"testing"
 
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
 )
 
 // A session that is not main gives no grant, so an edit of its letter carries

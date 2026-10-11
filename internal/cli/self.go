@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/praline-labs/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/core/role"
 
+	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/registry"
 )
 
 // errNotASession means this process was not started by a rewake wrapper.

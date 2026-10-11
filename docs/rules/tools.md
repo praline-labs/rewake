@@ -61,12 +61,12 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   never repeats, finishes or undoes one, and starts no second operation for a call
   whose first still runs.
   Tests:
-  - `internal/receipt/receipt_test.go` `TestRacingCallsWithOneKeyJoinOneRecord`
-  - `internal/receipt/receipt_test.go` `TestAnUnscopedKeyNeverJoins`
-  - `internal/receipt/receipt_test.go` `TestTheKeyScopesByRunConversationAndTurn`
-  - `internal/receipt/receipt_test.go` `TestATokenBelongsToItsRun`
-  - `internal/receipt/receipt_test.go` `TestTheLockHoldsOneCallAtATime`
-  - `internal/receipt/receipt_test.go` `TestUnresolvedFindsOpenOperations`
+  - `internal/core/receipt/receipt_test.go` `TestRacingCallsWithOneKeyJoinOneRecord`
+  - `internal/core/receipt/receipt_test.go` `TestAnUnscopedKeyNeverJoins`
+  - `internal/core/receipt/receipt_test.go` `TestTheKeyScopesByRunConversationAndTurn`
+  - `internal/core/receipt/receipt_test.go` `TestATokenBelongsToItsRun`
+  - `internal/core/receipt/receipt_test.go` `TestTheLockHoldsOneCallAtATime`
+  - `internal/core/receipt/receipt_test.go` `TestUnresolvedFindsOpenOperations`
   - `internal/cli/journal_test.go` `TestAHeadsUpRepeatedInOneTurnIsPublishedOnce`
   - `internal/cli/journal_test.go` `TestAHeadsUpPastItsDeadlineIsFinishedByRetry`
   - `internal/cli/journal_test.go` `TestTheShellRefersAnOpenOperationToItsReceipt`
@@ -198,8 +198,8 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/wrap/turn_start_test.go` `TestABoundaryWithAToolRecordsItsStartOnceAndOpensItsTurn`
   - `internal/cli/turn_declared_test.go` `TestALostEndWithALaterStartOnRecordMarksNothing`
   - `test/workflow/fixture_turn_start_test.go` `TestFixtureTurnStart`
-  - `internal/inbox/turn_start_test.go` `TestTheLatestTurnStartIsTheLargestReading`
-  - `internal/inbox/turn_start_test.go` `TestAnUnreadableTurnStartIsAnError`
+  - `internal/core/mail/turn_start_test.go` `TestTheLatestTurnStartIsTheLargestReading`
+  - `internal/core/mail/turn_start_test.go` `TestAnUnreadableTurnStartIsAnError`
 
 - **T8. An end's boundary is a cut between commits**, taken at the end's own event —
   the clock when no acknowledgment is between its check and its close, or the snapshot
@@ -241,8 +241,8 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/bridge/endpoint/tickets_test.go` `TestTheObservationWaitIsTwoSeconds`
   - `internal/bridge/endpoint/gate_test.go` `TestOnlyOneAcknowledgmentWrites`
   - `internal/bridge/endpoint/tickets_end_test.go` `TestNoTicketWhileACaptureWaitsForAWriter`
-  - `internal/receipt/receipt_test.go` `TestTheLockHoldsOneCallAtATime`
-  - `internal/receipt/receipt_test.go` `TestTheSweepRespectsAHeldLock`
+  - `internal/core/receipt/receipt_test.go` `TestTheLockHoldsOneCallAtATime`
+  - `internal/core/receipt/receipt_test.go` `TestTheSweepRespectsAHeldLock`
   - `internal/cli/bridge_rules_test.go` `TestAnExpiredReadShowsAndClaimsNothing`
   - `internal/cli/bridge_rules_test.go` `TestAPendingMarkIsNotMadeAfterItsDeadline`
   - `internal/bridge/bridge_test.go` `TestAnOpenTicketDescriptorDoesNotHang`
@@ -274,10 +274,10 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/cli/bridge_rules_test.go` `TestAShellRetryDoesNotReadStdinAgain`
   - `internal/cli/shell_channel_test.go` `TestEveryShellCommandLeavesItsEvidence`
   - `internal/cli/shell_channel_test.go` `TestTheShellEvidenceKeepsTheTimeOfItsWrite`
-  - `internal/receipt/shell_test.go` `TestTakeShellOverEveryEntry`
-  - `internal/receipt/shell_test.go` `TestTheBoundKeepsTheNewest`
-  - `internal/receipt/shell_test.go` `TestEveryErrorHasItsClass`
-  - `internal/receipt/shell_test.go` `TestAnUnwritableStateLosesTheObservation`
+  - `internal/core/receipt/shell_test.go` `TestTakeShellOverEveryEntry`
+  - `internal/core/receipt/shell_test.go` `TestTheBoundKeepsTheNewest`
+  - `internal/core/receipt/shell_test.go` `TestEveryErrorHasItsClass`
+  - `internal/core/receipt/shell_test.go` `TestAnUnwritableStateLosesTheObservation`
   - `internal/cli/journal_test.go` `TestTheShellRefersAnOpenOperationToItsReceipt`
   - `internal/bridge/bridge_test.go` `TestNoEndpointRefusesEveryTicket`
   - `test/toolrig/fault_test.go` `TestEveryStepOfACallSurvivesAFault`

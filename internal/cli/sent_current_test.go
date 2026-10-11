@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
 )
 
 // editOK replaces a message and answers the replacement's id.

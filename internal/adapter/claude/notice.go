@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
 )
 
 // notification wraps the notice in the tag Claude Code uses for its own

@@ -5,7 +5,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
-	"github.com/praline-labs/rewake/internal/channel"
+	"github.com/praline-labs/rewake/internal/core/channel"
 )
 
 // A tool the first exchange did not make live keeps its offered record:

@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/brief"
-	"github.com/praline-labs/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/core/brief"
+	"github.com/praline-labs/rewake/internal/core/role"
 )
 
 // ID is the launch command and the harness field of a session record.

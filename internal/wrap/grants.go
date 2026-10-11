@@ -8,12 +8,12 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/grant"
-	authority "github.com/praline-labs/rewake/internal/grantauth"
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/grant"
+	"github.com/praline-labs/rewake/internal/core/grant/authority"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/registry"
 )
 
 // grantLifetime is how long main's wrapper keeps a grant whose letter it

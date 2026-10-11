@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/registry"
 )
 
 func TestCommandsCannotSeeAnotherRoom(t *testing.T) {

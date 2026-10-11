@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/bridge"
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/receipt"
 )
 
 // headsUps are the letters with this text waiting in web's mailbox.

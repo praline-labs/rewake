@@ -1,0 +1,114 @@
+package mail
+
+import (
+	"context"
+	"os"
+	"path/filepath"
+	"time"
+
+	"github.com/praline-labs/rewake/internal/infra/boottime"
+	"github.com/praline-labs/rewake/internal/infra/state"
+)
+
+// ReserveAnswer starts the lease before a question can produce a reply. The
+// heartbeat runs during delivery and printing too; a stopped process loses
+// its lease, while a live one waiting for stdout keeps its reservation.
+func ReserveAnswer(dir, name, question string) (func(), error) {
+	marks := state.AnsweringPath(dir, name)
+	if err := state.EnsureSubdir(marks); err != nil {
+		return nil, err
+	}
+	mark := filepath.Join(marks, question)
+	if err := os.WriteFile(mark, markContent(boottime.Now()), 0o600); err != nil {
+		return nil, err
+	}
+	stop, done := make(chan struct{}), make(chan struct{})
+	go func() {
+		defer close(done)
+		ticker := time.NewTicker(answerPoll)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-stop:
+				return
+			case <-ticker.C:
+				touchMark(mark)
+			}
+		}
+	}()
+	return func() {
+		close(stop)
+		<-done
+		releaseMark(dir, name, mark)
+	}, nil
+}
+
+// releaseMark takes a reservation's mark away once its command ends, under
+// the mailbox lock, unless an open occurrence of the mailbox's stop names it
+// (stop.go): the mark is then evidence the occurrence waits to read again.
+// A mark left behind is no longer refreshed, so its lease runs out as a
+// stopped process's would, and the sweep retires it once nothing names it. A
+// lock that cannot be taken leaves the mark to the sweep the same way.
+func releaseMark(dir, name, mark string) {
+	ctx, cancel := context.WithTimeout(context.Background(), recipientLockWait)
+	defer cancel()
+	_ = state.WithMailboxLock(ctx, dir, name, func() error {
+		if !keptByStopOf(dir, name).keeps(mark) {
+			removeMark(dir, name, mark)
+		}
+		return nil
+	})
+}
+
+// AvailableUnread excludes reports owned by waiting sends. The caller holds
+// the mailbox lock through printing and marking, just like a waiting send.
+func AvailableUnread(dir, name, epoch string) ([]Message, error) {
+	messages, err := PeekUnread(dir, name, epoch)
+	if err != nil {
+		return nil, err
+	}
+	available := make([]Message, 0, len(messages))
+	for _, message := range messages {
+		awaited, err := awaitedHere(dir, name, message)
+		if err != nil {
+			return nil, err
+		}
+		if !awaited {
+			available = append(available, message)
+		}
+	}
+	return available, nil
+}
+
+func answerReceiptsPath(dir, name string) string {
+	return filepath.Join(state.InboxPath(dir, name), "received")
+}
+
+// A missing lease can mean either successful output or an abandoned command.
+// Receipts distinguish the two so one consumer cannot archive a shared report
+// before all its questions have received that specific report. A stopped
+// receipt cannot confirm the later finished outcome for the same question.
+// Unclaimed ids leave the report
+// available to ordinary inbox delivery when no active lease remains.
+func receiveAnswer(dir, name, epoch, question string, message Message) error {
+	receipts := answerReceiptsPath(dir, name)
+	if err := state.EnsureSubdir(receipts); err != nil {
+		return err
+	}
+	if err := state.WriteAtomic(filepath.Join(receipts, question), []byte(message.ID)); err != nil {
+		return err
+	}
+	removeMark(dir, name, filepath.Join(state.AnsweringPath(dir, name), question))
+	// Only a report every question has received is archived: one still
+	// awaited, or whose mark cannot be read, stays for its other reader.
+	if awaited, err := awaitedHere(dir, name, message); err != nil || awaited {
+		return nil
+	}
+	for _, id := range message.InReplyTo {
+		received, err := state.ReadFile(filepath.Join(receipts, id))
+		if err != nil || string(received) != message.ID {
+			return nil
+		}
+	}
+	return MarkRead(dir, name, epoch, message, false)
+}

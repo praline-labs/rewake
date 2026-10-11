@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/core/role"
 )
 
 // The conversation a launch resumes is the one --resume names; a fork, a bare

@@ -30,12 +30,12 @@ Claude Code runs, by unit tests, each killing the column's mutant of it:
 
 | Retired mutant | Kept code | The unit test that kills it |
 |---|---|---|
-| `ungated` | `internal/inbox/serve.go` | `internal/inbox` `TestTheFirstNoticeWaitsForTheOpening` |
-| `expiry-unannounced` | `internal/inbox/held.go` | `internal/inbox` `TestAnExpiredTaskIsFailedAndItsSenderTold` |
+| `ungated` | `internal/core/mail/serve.go` | `internal/core/mail` `TestTheFirstNoticeWaitsForTheOpening` |
+| `expiry-unannounced` | `internal/core/mail/held.go` | `internal/core/mail` `TestAnExpiredTaskIsFailedAndItsSenderTold` |
 | `held-as-delivered` | `internal/adapter/claude/receipt.go` | `internal/adapter/claude` `TestLaneHeldThenReleased`, `TestParseReceipt` |
 | `refusal-as-delivered` | `internal/adapter/claude/receipt.go` | `internal/adapter/claude` `TestLaneRefusalFails`, `TestParseReceipt` |
 | `late-word-dropped` | `internal/adapter/claude/lane.go` | `internal/adapter/claude` `TestLaneLateWordReachesTheServer` |
-| `claude-grant-unshielded` | `internal/grant/rules.go` | `internal/grant` `TestAShieldedDirectoryIsGrantedOnlyByName` |
+| `claude-grant-unshielded` | `internal/core/grant/rules.go` | `internal/core/grant` `TestAShieldedDirectoryIsGrantedOnlyByName` |
 | `claude-resume-not-given` | `internal/wrap/wrap.go` | `internal/wrap` `TestAResumedLaunchStartsTheHarnessWithTheGrantsConfirmedAgain` |
 | `claude-resume-closed-held` | `internal/wrap/grants.go` | `internal/wrap` `TestMainsAuthorityAsksTheMailboxWhetherATaskIsOpen` |
 | `claude-worktree-parent` | `internal/adapter/claude/worktree.go` | `internal/adapter/claude` `TestALaunchWorksInTheDirectoryItWasStartedIn` |
@@ -44,7 +44,7 @@ Claude Code runs, by unit tests, each killing the column's mutant of it:
 `delivery-unpinned` of `thread-changed` mutated, on the Claude Code column, the
 wrapper's branch that pins a delivery to the conversation an observer reports — code
 only tests reach since S9, as no adapter sets an observer; the fixture's mutant of that
-name edits `internal/inbox/reservation.go` instead, and both are kept. The other mutants of the column broke code that left with it: the plugin's module, the
+name edits `internal/core/mail/reservation.go` instead, and both are kept. The other mutants of the column broke code that left with it: the plugin's module, the
 telemetry collector and tap, the permission hook and the grant keeper. The gap until
 stage 4: no workflow case runs Claude Code's inbound lane — its gate, its receipts, its
 late word — end to end against a session; the unit tests above hold each link, and the
@@ -211,7 +211,7 @@ directory — the first because main never registered it, the second because the
 came from a process other than the run the letter names. What it does not prove is the
 namespace check: every process in the suite shares the wrappers' namespaces, as a worker
 outside a sandbox does, so those checks have their own unit tests in
-`internal/grantauth`. Its mutants take registrations from any process
+`internal/core/grant/authority`. Its mutants take registrations from any process
 (`grant-from-anywhere`, which breaks the direct registration alone — `rewake send` still
 registers only with a listener above it), deliver a grant without asking main's wrapper
 (`grant-unconfirmed`, which breaks the three letters), and take an answer from any

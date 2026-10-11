@@ -10,9 +10,9 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/proc"
-	"github.com/praline-labs/rewake/internal/registry"
 )
 
 // startBoundary is a run's TurnBoundary that keeps the handler it was given.

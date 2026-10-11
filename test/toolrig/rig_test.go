@@ -28,13 +28,13 @@ import (
 	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
 	"github.com/praline-labs/rewake/internal/cli"
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/registry/registrytest"
+	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/registry/registrytest"
-	"github.com/praline-labs/rewake/internal/role"
 )
 
 // binary is cmd/rewake built with the fault seam: every call's child, and the

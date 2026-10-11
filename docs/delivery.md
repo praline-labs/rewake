@@ -245,11 +245,11 @@ the bound is the only gate.
 
 **A reservation that cannot be taken in three seconds fails the message, it does not
 hold it.** September 22, 2026: the reservation is bounded at three seconds twice, by
-the delivery context in `internal/inbox/reservation.go` and again by `Reserve` in
+the delivery context in `internal/core/mail/reservation.go` and again by `Reserve` in
 `internal/adapter/codex/server_delivery.go`. On a timeout, `Reserve` in
 `internal/adapter/codex/gateway/reservation.go` returns a plain context error; `refuse`
-in `internal/inbox/reservation.go` wraps it into `ErrThreadUnavailable`, declared in
-`internal/inbox/thread.go`; and `internal/inbox/batch.go` turns that into `failed`
+in `internal/core/mail/reservation.go` wraps it into `ErrThreadUnavailable`, declared in
+`internal/core/mail/thread.go`; and `internal/core/mail/batch.go` turns that into `failed`
 rather than `pending`. So a wrapper
 that waited for the thread to go idle before delivering would not deliver late — it
 would not deliver at all, and the sender would be told the delivery failed. That is
@@ -259,7 +259,7 @@ start-or-steer call rather than taken from a status snapshot.
 The one exception is a compaction (September 24, 2026): a Codex conversation being
 compacted, by main's `rewake compact` or the terminal's `/compact`, takes no work, and
 the gateway's `Reserve` then returns `gateway.ErrCompacting`, which `Reserve` in
-`internal/adapter/codex/server_delivery.go` passes on as `inbox.ErrNotYet`. `refuse`
+`internal/adapter/codex/server_delivery.go` passes on as `mail.ErrNotYet`. `refuse`
 lets that one through unwrapped, so the message stays `pending` and goes on a later
 pass, once the compaction has ended, the wrapper's wait for its end has, or its mark's bound
 has passed — 80 seconds for a compaction whose turn is not seen, 10 minutes for one
@@ -320,7 +320,7 @@ harness taking the notice, inside a sender's default five-second wait for its st
 so a lone `--notify` from an agent still returns delivered rather than pending. Whatever
 arrives meanwhile goes in the same notice.
 
-What may wait is decided by kind, in `canWait` (`internal/inbox/window.go`), from
+What may wait is decided by kind, in `canWait` (`internal/core/mail/window.go`), from
 `AsksForWork`: `notify` and the four reports (`finished`, `error`, `stopped`,
 `pending`) wait. A `task`, a `question` and a kind this build does not know are work —
 the same reading `Owed` gives an unknown kind — and go at once, taking any waiting mail
@@ -342,7 +342,7 @@ up to 4s to be announced together with other mail that arrives meanwhile`, so a 
 whose own wait ends first prints why. A wrapper that exits in the window changes nothing
 about the mail: reports stay readable for their epoch and the rest is refused as for any
 undelivered message on shutdown. The mailbox server a test builds has no window unless
-it sets `Window`; the wrapper sets `inbox.Coalescing`. A build may shorten that window
+it sets `Window`; the wrapper sets `mail.Coalescing`. A build may shorten that window
 through `-ldflags -X` on `builtQuiet` and `builtCap`, and the workflow suite's does
 ([testing-pool.md](testing-pool.md#waits-the-suite-shortens)); a release build sets neither.
 A multi-message signal says `Rewake: <n> new messages`, followed by one indented

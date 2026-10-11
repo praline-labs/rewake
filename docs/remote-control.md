@@ -136,7 +136,7 @@ characters, and the served side refuses any other: it builds file names from it.
 
 The served side — in 1.x rewake's module in a Claude Code session, and in this build the
 fixture's run through `control.Serve` — can write files but not remove them, so the asker owns every removal
-(`internal/control`):
+(`internal/core/control`):
 
 1. Take the lock, and remove everything a dead asker or an expired request left.
 2. Write the request.

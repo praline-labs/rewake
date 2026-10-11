@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/grant"
-	authority "github.com/praline-labs/rewake/internal/grantauth"
-	authoritytest "github.com/praline-labs/rewake/internal/grantauth/grantauthtest"
+	"github.com/praline-labs/rewake/internal/core/grant"
+	"github.com/praline-labs/rewake/internal/core/grant/authority"
+	"github.com/praline-labs/rewake/internal/core/grant/authority/authoritytest"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )

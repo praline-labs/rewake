@@ -7,42 +7,42 @@ this file is what to open when looking for where something is in the tree. `go l
 `docs/layout_test.go` fails until it is.
 
 ```
-cmd/rewake/                      entry point, top-level parsing
-internal/                        the layout test of 2.0: the import rule, harness names outside the adapters, no registry
-internal/cli/                    command table, parsing, overview, help, failures, printing
-internal/infra/state/            directory: checks, paths, atomic writes
-internal/infra/buildtime/        durations a build may shorten through -ldflags, for the suite
-internal/registry/               session record, name publishing, liveness and listing
-internal/registry/registrytest/  for tests: the boot a session of this build carries
-internal/infra/proc/             /proc: identity, liveness, job-control state, lineage and namespaces
-internal/infra/boottime/         the boot clock, comparable across processes and never set back
-internal/inbox/                  message, status, sender-side write, servicing loop
-internal/receipt/                the journal of mail operations run through the tool's words: keys, records, frozen reads
-internal/bridge/                 what the CLI and the context endpoint share: the ticket, result bounds, cutting parts
-internal/bridge/endpoint/        the wrapper's context endpoint: hellos, tickets, completions, the gate against a turn's end, a transport's calls
-internal/channel/                the run's mail channel: tool and shell observations, the block, display and notices
-internal/grant/                  which directories a task may grant, and the journal of what was granted
-internal/grantauth/              main's wrapper holding the grants its commands registered, and confirming them
-internal/grantauth/grantauthtest/ for tests: a helper process that is a recipient's run, confirms its grants at delivery and ends
-internal/control/                a main's control request to a run and its answer, as files
-internal/role/                   the role catalogue: flag, briefing line, reporting duty
-internal/brief/                  text injected into an agent, independent of transport
-internal/alias/                  launch aliases: a short name turned into launch arguments
-internal/sessionstate/           optional, epoch-scoped observations of a harness (telemetry)
-internal/adapter/                the adapter API: the Harness interface, the catalogue value, launch plans, version gates, flags, defaults, settings
-internal/adapter/catalog/        the one constructor of the catalogue, which cmd/rewake builds and hands to the CLI
-internal/adapter/claude/         launch arguments, environment, socket delivery
-internal/adapter/fixture/        the test harness behind rewakefixture: a scripted program over a socket, every contract interface
-internal/wrap/                   wrapper: launch, signals, lifecycle
-internal/host/launch/            a launch's host side: the run's environment, the version read before the claim, the bounded probe
-internal/worktree/               checkouts rewake makes for a launch: git worktree add, records, land, removal
-scripts/                         packaging scripts and the tests of the npm shim
-docs/                            the documentation, and the tests that keep it true to the tree
-test/workflow/                   the workflow suite: end-to-end scenarios against fixtures
-test/workflow/record/            the record format a suite run prints and the summarizer reads
-test/toolrig/                    the neutral rig: the tool path's oracles on the fixture's program and the host endpoint
-tools/checksummary/              summarizes a suite run into a few lines and summary.json
-tools/release/                   the release gate: checks, builds with pack.sh, publishes only when told
+cmd/rewake/                                   entry point, top-level parsing
+internal/                                     the layout test of 2.0: the import rule, harness names outside the adapters, no registry
+internal/cli/                                 command table, parsing, overview, help, failures, printing
+internal/infra/state/                         directory: checks, paths, atomic writes
+internal/infra/buildtime/                     durations a build may shorten through -ldflags, for the suite
+internal/core/registry/                       session record, name publishing, liveness and listing
+internal/core/registry/registrytest/          for tests: the boot a session of this build carries
+internal/infra/proc/                          /proc: identity, liveness, job-control state, lineage and namespaces
+internal/infra/boottime/                      the boot clock, comparable across processes and never set back
+internal/core/mail/                           message, status, sender-side write, servicing loop
+internal/core/receipt/                        the journal of mail operations run through the tool's words: keys, records, frozen reads
+internal/bridge/                              what the CLI and the context endpoint share: the ticket, result bounds, cutting parts
+internal/bridge/endpoint/                     the wrapper's context endpoint: hellos, tickets, completions, the gate against a turn's end, a transport's calls
+internal/core/channel/                        the run's mail channel: tool and shell observations, the block, display and notices
+internal/core/grant/                          which directories a task may grant, and the journal of what was granted
+internal/core/grant/authority/                main's wrapper holding the grants its commands registered, and confirming them
+internal/core/grant/authority/authoritytest/  for tests: a helper process that is a recipient's run, confirms its grants at delivery and ends
+internal/core/control/                        a main's control request to a run and its answer, as files
+internal/core/role/                           the role catalogue: flag, briefing line, reporting duty
+internal/core/brief/                          text injected into an agent, independent of transport
+internal/alias/                               launch aliases: a short name turned into launch arguments
+internal/core/session/                        optional, epoch-scoped observations of a harness (telemetry)
+internal/adapter/                             the adapter API: the Harness interface, the catalogue value, launch plans, version gates, flags, defaults, settings
+internal/adapter/catalog/                     the one constructor of the catalogue, which cmd/rewake builds and hands to the CLI
+internal/adapter/claude/                      launch arguments, environment, socket delivery
+internal/adapter/fixture/                     the test harness behind rewakefixture: a scripted program over a socket, every contract interface
+internal/wrap/                                wrapper: launch, signals, lifecycle
+internal/host/launch/                         a launch's host side: the run's environment, the version read before the claim, the bounded probe
+internal/worktree/                            checkouts rewake makes for a launch: git worktree add, records, land, removal
+scripts/                                      packaging scripts and the tests of the npm shim
+docs/                                         the documentation, and the tests that keep it true to the tree
+test/workflow/                                the workflow suite: end-to-end scenarios against fixtures
+test/workflow/record/                         the record format a suite run prints and the summarizer reads
+test/toolrig/                                 the neutral rig: the tool path's oracles on the fixture's program and the host endpoint
+tools/checksummary/                           summarizes a suite run into a few lines and summary.json
+tools/release/                                the release gate: checks, builds with pack.sh, publishes only when told
 ```
 
 `cmd/` holds only what the project ships; `tools/` holds development programs that ship
@@ -105,7 +105,7 @@ what its plan carries, from its start.
 The plan carries one run's capabilities as interfaces the wrapper calls and never
 asserts on the adapter: `Service`, started before the harness and closed with it, a
 `ProcessService` when it owns a process; `Wake`, which delivers the notice built by
-`inbox.Notice` and never `message.Text`, a `Reserver` and a `Receiver` where the run
+`mail.Notice` and never `message.Text`, a `Reserver` and a `Receiver` where the run
 answers before the letter; `TurnBoundary`, handed a `TurnHandler` before the service
 starts; `Telemetry`; and `Thread`, the run's conversation. A run without a `Wake`
 answers each delivery that no notice can reach the session. A tool transport is the
@@ -122,7 +122,7 @@ report from the reason: answered reports finished, aborted stopped, failed and r
 an error ([turn-outcomes.md](turn-outcomes.md)). An adapter that can hold an end
 confirms it through `TurnHandler.Confirm` rather than publishing it, so the core can
 continue the turn instead of closing it. A turn's start goes to `TurnHandler.Started`,
-tool or none: the wrapper records a timed start (`inbox.RecordTurnStart`) and, where the
+tool or none: the wrapper records a timed start (`mail.RecordTurnStart`) and, where the
 run has a mail tool, opens the turn in the endpoint's table from the same call, so the
 tool's input (`ToolInput`) carries a turn's end, the calls and their results, and no
 start.

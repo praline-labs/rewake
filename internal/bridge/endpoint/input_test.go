@@ -5,7 +5,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/receipt"
+	"github.com/praline-labs/rewake/internal/core/receipt"
 )
 
 // Only a call whose ticket a child used, and whose binding names a record,

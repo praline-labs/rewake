@@ -258,7 +258,7 @@ it does not exist.
 
 ## Adding a role or a message kind
 
-**A role** is a value in `internal/role/role.go` plus its line in the list. Its
+**A role** is a value in `internal/core/role/role.go` plus its line in the list. Its
 `Play` field carries what a session of that role is told — the heading, the
 ordered steps, the limits — and that one text feeds both the briefing at launch
 and the guide's own section, so there is nowhere else to write it. Leave it out
@@ -268,19 +268,19 @@ is the failure nothing else would notice. The launch flag, the help and the
 briefing follow from the value.
 
 **A message kind** is three places, not two. The kind itself is a constant in
-`internal/inbox/inbox.go`; what `send` does with it is a `messageKind` in
+`internal/core/mail/inbox.go`; what `send` does with it is a `messageKind` in
 `internal/cli/send_<kind>.go` plus its line in `sendKinds`, from which the flag,
 the refusal and the help are derived.
 
 Beyond those, several places ask what kind a message is, and **a kind they do
-not know is treated as a task**. That is not a neutral default: `inbox.Owed`
+not know is treated as a task**. That is not a neutral default: `mail.Owed`
 answers false only for the kinds it lists and true for everything else, and an
 empty kind reads as a task outright — so a new kind obliges its recipient to
 report. A blocking `--question` recognizes the terminal kinds by name and takes
 anything else for an ordinary answer; the outcome of a finished turn is derived
 from the kind as well; and the announcement and the rendering each have their
 own list. Before adding a kind that is meant to behave differently — a report
-that owes nothing, say — grep for `inbox.Task`, `inbox.Note` and their
+that owes nothing, say — grep for `mail.Task`, `mail.Note` and their
 neighbours and decide each of those places, or the kind will arrive owing a
 report and going unrecognized by whoever is waiting.
 

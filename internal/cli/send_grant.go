@@ -4,10 +4,10 @@ import (
 	"fmt"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	authority "github.com/praline-labs/rewake/internal/grantauth"
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/grant/authority"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/registry"
 )
 
 // registerGrant hands the grant a message carries to this session's wrapper

@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	authority "github.com/praline-labs/rewake/internal/grantauth"
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/grant/authority"
+	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )

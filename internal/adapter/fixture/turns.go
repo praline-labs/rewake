@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/session"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
-	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // endAttempts bounds how often an end is handed to the core before the

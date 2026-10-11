@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
 )
 
 // questionKind is a task its sender waits for: send blocks until the session

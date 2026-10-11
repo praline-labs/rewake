@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/praline-labs/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/core/role"
 )
 
 // wrapWidth keeps prose readable in a narrow terminal without reflowing to it:

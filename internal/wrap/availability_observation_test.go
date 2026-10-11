@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/role"
 )
 
 func TestAvailabilityScanDoesNotCleanDeadPeerUnderNameLock(t *testing.T) {

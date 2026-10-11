@@ -19,7 +19,7 @@ delegate too. The environment is the same trust boundary as `from` on a send.
 
 A reference is the full id, a prefix of it, or a prefix of its random tail — the part
 after the dash, which is what `--awaited` prints for an addendum and what a person copies,
-as with git's short hashes. It takes at least four characters (`inbox.MinReference`),
+as with git's short hashes. It takes at least four characters (`mail.MinReference`),
 and an exact id always wins. Only this run's tasks, questions and notes are searched,
 tombstones included, in every mailbox of the room and every stage (`inbox/`, `unread/`,
 `done/`); reports and rewake's own notices, the recall below among them, are not a
@@ -63,7 +63,7 @@ decides the outcome:
   finished`), behind a second recall, or cut by the 96-cell bound before its point, as
   the first wording, which led with `Rewake: <sender> withdrew…`, was. Main decided the
   same day: every recall in a notice gets a line of its own, placed first, oldest first,
-  on both harnesses (`inbox.Notice`); the newest other letter keeps its line after
+  on both harnesses (`mail.Notice`); the newest other letter keeps its line after
   them; and the text leads with the instruction, so the bound cuts the sender and the
   time, never which message not to act on. On Codex each member entry of a recall carries
   `recalls: <id>`, the withdrawn message's id, beside the recall's own. An edit's
@@ -91,7 +91,7 @@ decides the outcome:
 the one it adds to; left standing after it, it would be read on its own and owe a report
 on work its sender took back. So under the same lock, once the task is withdrawn — or
 found withdrawn already, which lets a retry finish the rest — each of its addenda from
-the same run is withdrawn the same way (`inbox.AddendaOf`, which follows edits, below),
+the same run is withdrawn the same way (`mail.AddendaOf`, which follows edits, below),
 and the answer adds a line for each: `withdrew its addendum <id> too`, with the recall
 its own notice calls for. A read addendum is final like any read message: it stays owed,
 the answer says so, and the task is recalled for it even when the task's own notice never
@@ -164,7 +164,7 @@ September 26, 2026 the recall and the replacement went out in one group whose pr
 showed the recall: the agent read "withdrawn", ended its turn and never read the
 replacement, while the edit had exited 0. Main decided the same day that the
 replacement's own preview carries it instead: it begins `Replaces <short id>
-(withdrawn): ` and goes on with the replacement's first line (`inbox.Notice`), so one
+(withdrawn): ` and goes on with the replacement's first line (`mail.Notice`), so one
 line both sets the old work aside and shows the new. review-codex then found that line
 lost the way the recall's had been: a replacement followed by a newer notify in one group
 previewed only the notify. Main decided the same day that every correcting letter, a
@@ -182,7 +182,7 @@ addendum (below): the task may have been reported on since.
 **An edited task keeps its addenda.** They are not rewritten — a letter's content never
 changes once written — and go on naming the old id; the old id's tombstone names the
 replacement (`withdrawn.replacedBy`), and every place that asks what an addendum adds to
-follows that link, through as many edits as there were (`inbox.CurrentTask`): `--owed`,
+follows that link, through as many edits as there were (`mail.CurrentTask`): `--owed`,
 `--awaited`, a plain read and `--peek` show the addendum under, or as adding to, the
 replacement, and `--to` given either id adds to the replacement. The answer
 names them — `your addendum <id> now adds to <new id>`, with the withdraw that takes it
@@ -249,18 +249,18 @@ heading (and an edit's replacement `· replaces <id>`); `--owed` places it under
 ## Tests
 
 The finality races are unit tests beside the held ones, in
-`internal/inbox/withdraw_test.go`; the halfway failures of a withdrawal and an edit in
-`internal/inbox/withdraw_failure_test.go`, with the archive holding the tombstone after a
+`internal/core/mail/withdraw_test.go`; the halfway failures of a withdrawal and an edit in
+`internal/core/mail/withdraw_failure_test.go`, with the archive holding the tombstone after a
 halfway read and a waiting copy that will not go; the recall's place outside the window in
-`internal/inbox/recall_test.go`; the recall's lines and the replacement's in a notice in
-`internal/inbox/notice_recall_test.go`, and the member entries of a recall and of a
+`internal/core/mail/recall_test.go`; the recall's lines and the replacement's in a notice in
+`internal/core/mail/notice_recall_test.go`, and the member entries of a recall and of a
 replacement in `internal/adapter/codex/mailbox_test.go`; the references, refusals, the recall and the
 edit that sends none in `internal/cli/withdraw_test.go`; a task withdrawn with its
 addenda, a read addendum that stays, an edit's replacement keeping them and the second
 look under the lock in `internal/cli/addendum_test.go`; withdraw and edit by an id an edit
 replaced, and a second withdrawal that sends no second recall, in
 `internal/cli/sent_current_test.go`; an edited notify announced at once
-beside the recall in `internal/inbox/recall_test.go`. End to end,
+beside the recall in `internal/core/mail/recall_test.go`. End to end,
 `withdraw-after-notice`, `edit-after-notice` and `addendum-owed` run in every column and
 check the notice the worker was shown, and `withdraw-mid-turn` holds a Codex worker's
 turn open and sees the recall steered into it ([testing-cases.md](testing-cases.md#actions-on-a-sent-message)).

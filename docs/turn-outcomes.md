@@ -52,7 +52,7 @@ would have left the obligation open for ever when forgotten, which is why it was
 chosen.
 
 - **The marks** are `inbox/<name>/pending/marks/<epoch>/<time>-<id>`
-  (`internal/inbox/marks.go`), one file per `rewake pending` call, written only under
+  (`internal/core/mail/marks.go`), one file per `rewake pending` call, written only under
   the mailbox lock. A mark belongs to the turn it was made in and to no other, and the
   tie is time on the machine's boot clock (`CLOCK_BOOTTIME`, `internal/infra/boottime`), one
   clock for every process that a wall-clock jump after a WSL suspend does not move back.
@@ -72,7 +72,7 @@ chosen.
 - **The turn's start and end.** The adapter times both as its harness reports them and
   carries them with the completion, so a turn published late — queued, or retried when
   the mailbox was busy — cannot take a mark made in the turn after it. The start is
-  also recorded for the host as the harness reports it (`inbox.RecordTurnStart`, from
+  also recorded for the host as the harness reports it (`mail.RecordTurnStart`, from
   the boundary's `TurnHandler.Started`, whether or not the run has a mail tool): each reading a file of its own under the run's
   `awaiting/<epoch>/.turn-starts/`, named by the reading and never overwritten, the
   latest being the largest name, so two writers at once cannot leave the older reading
@@ -96,7 +96,7 @@ chosen.
 - **The message** has its own report id (the wait's id plus `-pending-<turn>`), like
   `stopped`, so the report that follows is not taken for a copy. A blocked `--question`
   does not take it for its answer: it is a turn outcome for being kept readable when
-  its notice fails (`inbox.IsReport`), but not one that settles (`inbox.Settles`), and
+  its notice fails (`mail.IsReport`), but not one that settles (`mail.Settles`), and
   a question waiting in the sender's session leaves it to be announced. The notice reads
   `Rewake: <session> pending, …` with the mark's text as its preview; Claude Code draws it as
   status `running`, which it has no color for, and Codex marked it with ⏳.

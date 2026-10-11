@@ -23,7 +23,7 @@ import (
 // leaves only after them.
 var mutantWindow = mutation{
 	name: "window",
-	file: "internal/inbox/serve.go",
+	file: "internal/core/mail/serve.go",
 	edits: []edit{{
 		"collectionInterval = 150 * time.Millisecond",
 		"collectionInterval = 10 * time.Second",
@@ -46,7 +46,7 @@ var mutantUnwindowed = mutation{
 // the notice previews the earliest.
 var mutantPreview = mutation{
 	name: "preview",
-	file: "internal/inbox/notice.go",
+	file: "internal/core/mail/notice.go",
 	edits: []edit{{
 		"member.CreatedAt.After(latest.CreatedAt) || member.CreatedAt.Equal(latest.CreatedAt) && member.ID > latest.ID",
 		"member.CreatedAt.Before(latest.CreatedAt) || member.CreatedAt.Equal(latest.CreatedAt) && member.ID < latest.ID",
@@ -76,7 +76,7 @@ var mutantPeekConsumes = mutation{
 // exactly the replay the contract forbids, gated by the retry interval.
 var mutantReplay = mutation{
 	name: "replay",
-	file: "internal/inbox/outcome.go",
+	file: "internal/core/mail/outcome.go",
 	edits: []edit{
 		{
 			"\tcase Delivered, Read, withdrawn:\n",

@@ -1,8 +1,8 @@
 package adapter
 
 import (
-	"github.com/praline-labs/rewake/internal/brief"
-	"github.com/praline-labs/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/core/brief"
+	"github.com/praline-labs/rewake/internal/core/role"
 )
 
 // LaunchRequest is what the wrapper knows before starting a harness.

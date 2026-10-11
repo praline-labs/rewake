@@ -241,7 +241,7 @@ permissions. [Evidence](native-mailbox-acceptance.md) and the
 ### The intro
 
 The system layer uses an independent six-line briefing for general, write or
-main from `internal/brief/roles.go`. Each names its identity and selection reason,
+main from `internal/core/brief/roles.go`. Each names its identity and selection reason,
 explains the commands that role needs, and points to guide for the full contract.
 General receives no Git metadata grant; write may commit; main delegates and
 reads results. All ask for the point of a message in its first line. Per-role

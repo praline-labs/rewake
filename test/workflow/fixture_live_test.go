@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/channel"
-	mail "github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/registry"
-	session "github.com/praline-labs/rewake/internal/sessionstate"
+	"github.com/praline-labs/rewake/internal/core/channel"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/session"
 )
 
 // The live set and the channel record on the fixture column (S11,
@@ -51,7 +51,7 @@ const (
 	liveTask   = "fixture-live: do the work and report"
 	liveNote   = "fixture-live: a heads-up"
 	liveSecond = "fixture-live: a second task"
-	// The briefing's transport sentence (internal/brief): its first clause
+	// The briefing's transport sentence (internal/core/brief): its first clause
 	// is every run's, the rest only a run whose tool is live.
 	transportClause = "Run `rewake <words>` through the `rewake` tool when you have it, otherwise in the shell."
 	transportRest   = "A call the tool answered \"nothing ran\" may be made again in the shell."

@@ -29,7 +29,7 @@ section is the path through the code.
 A turn end is one operation, named by its cause: a hash of the run, the event's id, its
 kind and its start and end on the boot clock (`turnOp` in `internal/cli/turn_reports.go`).
 Its scope is fixed by what the event carries. An end that names an event carries a read
-boundary, a position on the run's read clock (`internal/inbox/read_boundary.go`): what
+boundary, a position on the run's read clock (`internal/core/mail/read_boundary.go`): what
 was read or kept at or below it is this end's, and a task read or an answer kept above
 it belongs to a later end, however late a retry comes. An end that names an event and
 carries no boundary reports nothing, on any attempt, and its waits stay owed. An end
@@ -39,7 +39,7 @@ window: from the later of the turn's start and the latest earlier end of the run
 journal records (`TurnWindowStart`), to its end. No end removes a mark: marks stay for
 the run's life ([turn-outcomes.md](turn-outcomes.md)).
 
-The journal, `journal/<op>` (`internal/inbox/journal.go`), is written before the first
+The journal, `journal/<op>` (`internal/core/mail/journal.go`), is written before the first
 effect and is the one source of what the end does, and nothing but a journal publishes:
 the complete report batch — recipient epochs, ids, kind, text, timestamps and
 thread-change annotations — then the version of the kept answer the reports carry with
@@ -48,7 +48,7 @@ line, or that the end settled the work. Completing publishes each report not yet
 published and records its id, drops the kept answer only when it is still the version
 published, clears only the recorded message ids — later messages remain owed to the next
 result — and records the interim end, never over a record of the same run that ended
-later, nor over the record of another run that holds the name (`internal/inbox/interim.go`). It then empties the journal to its
+later, nor over the record of another run that holds the name (`internal/core/mail/interim.go`). It then empties the journal to its
 operation, its end time and the held end it took, marks it done and renames it `<op>.done`, so the barrier
 does not read it again while a retry of the same end still finds it completed. A done
 journal is kept while its run lives: a retry comes only from that run, and the next
@@ -58,7 +58,7 @@ that never finished (a dot name) is skipped and swept.
 
 A turn end that fails or dies anywhere in the sequence leaves its journal unfinished,
 and the barrier completes it under the mailbox lock before a wait is read again
-(`inbox.Reconcile`, `internal/inbox/reconcile.go`): every turn end runs it first, and so
+(`mail.Reconcile`, `internal/core/mail/reconcile.go`): every turn end runs it first, and so
 does adoption, which the server runs at its start. One it cannot complete stops that
 turn end, or that adoption, too. The turn end completes its own journal the same way,
 through the barrier, once it is written. Before any effect the barrier reads every file
@@ -66,7 +66,7 @@ of the mailbox against the list of record kinds, then runs its remaining effects
 plan that writes nothing, so whatever they decide by is read first
 ([mailbox-records.md](mailbox-records.md#the-plan-and-the-seam)), and changes nothing
 while one of them cannot be told, so a journal never publishes beside an unknown found
-late. The same plan is the stop every other call asks first (`inbox.MailboxStopped`): `rewake inbox` and each
+late. The same plan is the stop every other call asks first (`mail.MailboxStopped`): `rewake inbox` and each
 part of a read in parts, `rewake pending`, the acknowledgment of a read, and a question
 taking its answer all refuse while a record cannot be told. The stop is kept on record
 in the mailbox, and goes once a look finds its cause gone, or, for one only an effect

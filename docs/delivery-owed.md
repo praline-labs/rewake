@@ -21,7 +21,7 @@ placed right under its task, headed `+ addendum from <sender> · HH:MM:SS`, so t
 corrections are re-read with the brief they correct; one whose task is not owed any
 more stands alone, its heading naming the task (`· addendum to <id>`). The task is
 the one as it is now: an addendum to a task `rewake edit` replaced goes under the
-replacement, and `addendumTo` names it (`inbox.CurrentTask`, [delivery-sent.md](delivery-sent.md#edit-rewake-edit-id-text)).
+replacement, and `addendumTo` names it (`mail.CurrentTask`, [delivery-sent.md](delivery-sent.md#edit-rewake-edit-id-text)).
 Only the rendering nests: `--json` keeps the flat list, each addendum with its `addendumTo`.
 It is the task a session is working on, from the mailbox rather than from memory,
 which is what a session needs after a context compaction: a summary retells the brief
@@ -38,7 +38,7 @@ owed: a task sent from a plain shell has no run to report to, records no wait, a
 is not listed and cannot be shown again this way — `--help` says so, the one-line
 answer does not. Mail not yet read — unread, pending or held — is not owed and does
 not appear. What of it asks for work — tasks and questions, and a kind this build does
-not know, by kind alone (`inbox.AsksForWork`), so a task from a plain shell counts too —
+not know, by kind alone (`mail.AsksForWork`), so a task from a plain shell counts too —
 is counted after the list, `Rewake: <n> unread task(s) or question(s) — run rewake
 inbox.`, and nothing is said when there is none; `--json` carries the count as
 `unread`, 0 included. The count says work is waiting, not that a report is. Unread mail

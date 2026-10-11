@@ -7,7 +7,7 @@ observation, the categories shown — are that document's. Since S8 (October 8, 
 rows are the neutral alphabet's: the points of Codex's conversations, of a server's own
 report and of a call no hook observed left with the 1.x adapter
 ([archive/1.x/codex](../archive/1.x/codex/README.md)). Every row is held by a test named
-after its Point: `internal/channel/table_test.go`, with the few that need the wrapper
+after its Point: `internal/core/channel/table_test.go`, with the few that need the wrapper
 mapped there to theirs; `TestEveryFailurePointOfTheTableIsHeld` reads this table and
 fails on a row no test names.
 

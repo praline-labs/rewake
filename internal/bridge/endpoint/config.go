@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/channel"
+	"github.com/praline-labs/rewake/internal/core/channel"
 )
 
 // Config is what the wrapper of one run gives its endpoint.

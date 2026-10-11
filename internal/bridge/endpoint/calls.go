@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/channel"
+	"github.com/praline-labs/rewake/internal/core/channel"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 )

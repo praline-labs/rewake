@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/control"
+	"github.com/praline-labs/rewake/internal/core/control"
 )
 
 // heardLive records each live set the run reported, in order.

@@ -11,7 +11,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/receipt"
+	"github.com/praline-labs/rewake/internal/core/receipt"
 )
 
 // testEndpoint serves a run in a temporary state directory, as the wrapper

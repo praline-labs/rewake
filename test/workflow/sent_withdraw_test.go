@@ -334,7 +334,7 @@ func steeredRecall(c *Case, worker *scenarioSession, task string) telemetryFindi
 // and the recall still goes; the worker reads the task and reports on it.
 var mutantWithdrawLeavesTask = mutation{
 	name: "withdraw-leaves-task",
-	file: "internal/inbox/withdraw.go",
+	file: "internal/core/mail/withdraw.go",
 	edits: []edit{
 		{"\t\tresult, where = WithdrawnAnnounced, state.UnreadPath(dir, to)\n", "\t\tresult = WithdrawnAnnounced\n"},
 		{"\tif err := writeStatus(dir, to, id, Result{State: Failed, Detail: detail, Withdrawn: true}); err != nil {\n", "\tif err := error(nil); err != nil {\n"},
@@ -357,7 +357,7 @@ func playWithdrawOnGate(t *testing.T, c *Case, iso *Isolation) []telemetryFindin
 // goes, and the notice line no longer begins with what not to act on.
 var mutantRecallSenderFirst = mutation{
 	name:  "recall-sender-first",
-	file:  "internal/inbox/recall.go",
+	file:  "internal/core/mail/recall.go",
 	edits: []edit{{`"Do not act on %s %s from %s (%s): withdrawn unread.", kind, ShortID(message.ID), message.From, at`, `"Rewake: %[3]s withdrew its %[1]s of %[4]s (%[2]s) before you read it — do not act on it.", kind, ShortID(message.ID), message.From, at`}},
 }
 

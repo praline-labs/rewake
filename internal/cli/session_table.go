@@ -7,8 +7,8 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/praline-labs/rewake/internal/channel"
-	session "github.com/praline-labs/rewake/internal/sessionstate"
+	"github.com/praline-labs/rewake/internal/core/channel"
+	"github.com/praline-labs/rewake/internal/core/session"
 )
 
 func sessionTable(room string, sessions []sessionView, visible bool) []string {

@@ -11,7 +11,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter/fixture"
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/receipt"
+	"github.com/praline-labs/rewake/internal/core/receipt"
 )
 
 // The gaps S7 closes on the neutral rig (docs/v2/stage3-tests-tcl.md): what

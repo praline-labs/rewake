@@ -167,7 +167,7 @@ func playAwaitedView(t *testing.T, c *Case, iso *Isolation, col column) []teleme
 // A view blind to interim reports shows the slow task as plainly owed.
 var mutantAwaitedInterimIgnored = mutation{
 	name:  "awaited-interim-ignored",
-	file:  "internal/inbox/awaited.go",
+	file:  "internal/core/mail/awaited.go",
 	edits: []edit{{"\t\tcase Interim, Stopped:\n", "\t\tcase \"\":\n"}},
 }
 
@@ -175,7 +175,7 @@ var mutantAwaitedInterimIgnored = mutation{
 // settles it.
 var mutantAwaitedNeverSettled = mutation{
 	name: "awaited-never-settled",
-	file: "internal/inbox/awaited.go",
+	file: "internal/core/mail/awaited.go",
 	edits: []edit{
 		{"\tif err != nil || settled {\n", "\tif err != nil || settled && false {\n"},
 		{"\tif item.read() && !slices.Contains(", "\tif false && item.read() && !slices.Contains("},

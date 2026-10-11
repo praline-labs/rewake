@@ -10,8 +10,8 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter/fixture"
 	"github.com/praline-labs/rewake/internal/bridge"
-	mail "github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/receipt"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/receipt"
 )
 
 // One call's steps as the program takes them, and what the rig reads of them.

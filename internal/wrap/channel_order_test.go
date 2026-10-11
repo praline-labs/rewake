@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/channel"
+	"github.com/praline-labs/rewake/internal/core/channel"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 )
 

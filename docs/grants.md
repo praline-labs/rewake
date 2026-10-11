@@ -189,7 +189,7 @@ anything.
 
 A message carrying a grant — a directory or `--grant-git` — goes on a notice of its own.
 The Codex adapter reads the thread before the task becomes readable, and while the thread
-is active the task stays pending (`inbox.ErrNotYet`), retried every two seconds for up to
+is active the task stays pending (`mail.ErrNotYet`), retried every two seconds for up to
 its time to live. Mail after it goes on without it and may reach the reader first. A
 read that fails keeps a directory grant pending the same way; a thread with no single
 local environment fails it. For `--grant-git` alone either delivers with a diagnostic,

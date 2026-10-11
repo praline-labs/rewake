@@ -38,7 +38,7 @@ code is built and accepted.
 - **The ticket.** `bridge.Ticket` gains its nonce.
 - **Writes through one place.** Receipts, bindings and their removals go through the
   state package's write functions, which get one test hook (below); a test fails when
-  `internal/receipt` writes or removes a file by any other way.
+  `internal/core/receipt` writes or removes a file by any other way.
 
 ## Testing without a live harness
 

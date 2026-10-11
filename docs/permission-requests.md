@@ -122,7 +122,7 @@ payload carries `agent_id` and `agent_type`, so the wrapper can tell such a requ
    for main's decision ([security](#security)) while the hook's connection stays open.
    That is a new operation, not the keeper's `decide`: `decide` runs under the keeper's
    lock and within the two-second `exchangeLimit`, and a held call must hold neither
-   (`internal/grantauth/keeper.go`). `DecideGrant` is silent for a session with no grant,
+   (`internal/core/grant/authority/keeper.go`). `DecideGrant` is silent for a session with no grant,
    so holding starts after it, not inside it.
 3. Main's `allow` answers `{"behavior":"allow"}` with no `updatedPermissions`; `deny`
    answers deny with `rewake: main refused <what>: <reason>`; `owner` closes the hook
@@ -144,7 +144,7 @@ While the hook holds the call the turn is working; six seconds into the dialog t
 harness's `permission_prompt` notification sets `waiting: approval` in the telemetry
 already ([session-state.md](session-state.md)), unless
 `CLAUDE_CODE_DISABLE_PERMISSION_PROMPT_NOTIFY_HOOKS` is set. A task carrying a grant is not
-delivered while a turn runs (`inbox.CarriesGrant`) — so main answers the held request
+delivered while a turn runs (`mail.CarriesGrant`) — so main answers the held request
 itself, not with a grant task. That a notice arriving meanwhile is not read before the
 call resolves is inferred, not seen.
 
@@ -213,27 +213,27 @@ and `rewake inbox --awaited` shows the task's state as held on that request.
 
 ### The kind, and every place it touches
 
-`permission` is a new `inbox.Kind`. It asks for no work and owes no report, and it is
+`permission` is a new `mail.Kind`. It asks for no work and owes no report, and it is
 never sent with `rewake send`: only a worker's wrapper writes it. Following
 [AGENTS.md](../AGENTS.md#adding-a-role-or-a-message-kind), a kind a place does not know
 reads as a task, so each of these decides it:
 
-- `internal/inbox/inbox.go` — the constant, and `AsksForWork`, which must list it, or
+- `internal/core/mail/inbox.go` — the constant, and `AsksForWork`, which must list it, or
   `Owed` would make main owe the worker a report; `IsReport` and `Settles` leave it out:
   it is no turn's outcome and answers no question;
-- `internal/inbox/window.go` — `canWait` lets whatever asks for no work wait up to four
+- `internal/core/mail/window.go` — `canWait` lets whatever asks for no work wait up to four
   seconds for company; this kind is announced at once, since its limit is running;
-- `internal/inbox/serve.go`, `batch.go`, `reservation.go` — through `IsReport`: a letter
+- `internal/core/mail/serve.go`, `batch.go`, `reservation.go` — through `IsReport`: a letter
   that cannot be delivered is not kept readable as a report is; it fails, and the
   worker's wrapper falls back at once;
 - `internal/cli/send_kinds.go`, `send.go` — no `messageKind` and no line in `sendKinds`:
   `send` cannot write it;
 - `internal/cli/send_to.go` refuses an addendum to it already, as to any kind that asks for
   no work (exit 1); `edit.go` and `withdraw.go` refuse it too, with exit 1 — the worker is
-  its sender on paper, but its wrapper wrote it; `internal/inbox/withdraw.go` records a
+  its sender on paper, but its wrapper wrote it; `internal/core/mail/withdraw.go` records a
   withdrawn message's kind and needs nothing;
 - `internal/cli/send_question.go` — a blocked `--question` takes only a report that
-  settles it (`inbox.AwaitAnswer`), so the letter is never mistaken for the answer; but
+  settles it (`mail.AwaitAnswer`), so the letter is never mistaken for the answer; but
   the wait runs up to ten minutes, past the limit, so a main blocked on a question to this
   worker is told of the request: the wait ends with exit 3, printing the request and its
   command; the answer to the question still arrives as a report;
@@ -244,7 +244,7 @@ reads as a task, so each of these decides it:
   names a permission request, not a task;
 - `internal/harness/codex/server_delivery.go` — not work: steered into a running turn as a
   heads-up is;
-- `internal/inbox/awaited.go`, `held.go`, `sent.go`, `recall.go` and
+- `internal/core/mail/awaited.go`, `held.go`, `sent.go`, `recall.go` and
   `internal/cli/inbox*.go`, `sent_ref.go`, `sent_current.go` — rendered with its live
   state; never listed as awaited or owed; not delayed while main is in a turn.
 

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	mail "github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/registry"
 )
 
 // sentBySelf finds the message a reference names among what this run sent.

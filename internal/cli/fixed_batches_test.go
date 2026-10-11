@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
 )
 
 func TestFixedTwoThenFourThroughPeekAndSelectedReads(t *testing.T) {

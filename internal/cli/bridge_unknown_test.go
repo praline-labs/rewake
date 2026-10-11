@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/receipt"
 )
 
 // Rule 6 (docs/mail-bridge-cli.md#the-rules-the-code-holds): a check that

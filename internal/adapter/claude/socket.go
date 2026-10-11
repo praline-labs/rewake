@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
 )
 
 // The socket path of delivery: the notice written to the session's messaging

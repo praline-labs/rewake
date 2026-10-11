@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
 )
 
 // EndReason is why a turn ended, as the adapter's end event says

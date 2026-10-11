@@ -38,7 +38,7 @@ or its block cannot disappear unnoticed.
 - **E4. A read's completion is one durable fact every channel shares.** ...
   Tests:
   - `internal/cli/bridge_rules_test.go` `TestALateAcknowledgmentOwesNothingTwice`
-  - `internal/inbox/claims_test.go` `TestALetterBeingReadInPartsCannotBeTakenBack`
+  - `internal/core/mail/claims_test.go` `TestALetterBeingReadInPartsCannotBeTakenBack`
   - Gap: one fact across every channel — today tool and shell only — closed in S7.
 ```
 

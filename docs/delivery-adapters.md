@@ -58,7 +58,7 @@ A later receipt about a held line goes to the inbox server, which settles the me
 as above. A delivery counted from silence is counted only for now: nothing bounds how
 soon a loaded receiver speaks, and a hold must never stay counted as delivered. So the
 adapter keeps each such line, and the inbox server the members of its notice, for a
-minute or the last 128 notices (`inbox.LateWordWindow`, `inbox.LateWordKeep`), and a
+minute or the last 128 notices (`mail.LateWordWindow`, `mail.LateWordKeep`), and a
 late word takes the delivery back:
 
 | late word | result |

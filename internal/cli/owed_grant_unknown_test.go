@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/grant"
+	"github.com/praline-labs/rewake/internal/core/grant"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 

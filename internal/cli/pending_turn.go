@@ -1,8 +1,8 @@
 package cli
 
 import (
-	mail "github.com/praline-labs/rewake/internal/inbox"
-	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/registry"
 )
 
 // Who may mark (docs/mail-bridge-turns.md#a-pending-mark-at-its-turns-end).

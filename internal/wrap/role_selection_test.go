@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/role"
 )
 
 func claimRole(t *testing.T, dir, name string, part role.Role) (registry.Session, error) {

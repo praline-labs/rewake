@@ -130,7 +130,7 @@ func playEditOnGate(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 // reader cannot tell from the old id where the task went.
 var mutantEditUnlinked = mutation{
 	name:  "edit-unlinked",
-	file:  "internal/inbox/withdraw.go",
+	file:  "internal/core/mail/withdraw.go",
 	edits: []edit{{"\tnotice.ReplacedBy = replacedBy\n", ""}},
 }
 
@@ -138,7 +138,7 @@ var mutantEditUnlinked = mutation{
 // linked, and its notice no longer says what it replaces.
 var mutantReplacementUnmarked = mutation{
 	name:  "replacement-unmarked",
-	file:  "internal/inbox/notice.go",
+	file:  "internal/core/mail/notice.go",
 	edits: []edit{{"\tif message.Replaces == \"\" {\n", "\tif true {\n"}},
 }
 

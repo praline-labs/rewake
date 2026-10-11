@@ -1,7 +1,7 @@
 package cli
 
 import (
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
 )
 
 // What a send does by the recipient's live set, the capabilities its run has

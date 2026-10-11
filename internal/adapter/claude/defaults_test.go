@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/role"
+	"github.com/praline-labs/rewake/internal/core/role"
 )
 
 // Claude Code takes both settings as ordinary flags, so the adapter passes

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/channel"
+	"github.com/praline-labs/rewake/internal/core/channel"
 )
 
 // The endpoint tells each connection's events from that connection's own

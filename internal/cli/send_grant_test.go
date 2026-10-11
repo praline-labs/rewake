@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	authority "github.com/praline-labs/rewake/internal/grantauth"
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/grant/authority"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/registry"
 )
 
 // grantingMain serves the grant authority of the caller's wrapper, which the

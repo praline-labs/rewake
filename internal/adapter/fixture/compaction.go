@@ -5,7 +5,7 @@ package fixture
 import (
 	"time"
 
-	session "github.com/praline-labs/rewake/internal/sessionstate"
+	"github.com/praline-labs/rewake/internal/core/session"
 )
 
 // compactions is what the adapter keeps of the program's compactions: how many

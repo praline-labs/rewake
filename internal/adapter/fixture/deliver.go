@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
 )
 
 // deliverBound is how long the program has to take a notice or a

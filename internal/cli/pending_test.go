@@ -8,9 +8,9 @@ import (
 
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/registry"
 )
 
 func reportsTo(t *testing.T, dir, name string) []mail.Message {

@@ -12,17 +12,17 @@ import (
 	"testing"
 	"time"
 
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/receipt"
+	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/registry/registrytest"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/receipt"
-	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/registry/registrytest"
 )
 
 // The two lock-race schedules of docs/v2/stage3-publication.md#tests for a
 // heads-up, through rewake retry of its receipt: the same race as a turn-end
-// report's (internal/inbox/publication_race_test.go), on the other path to
+// report's (internal/core/mail/publication_race_test.go), on the other path to
 // the same section.
 
 // headsUpLab: api's heads-up H to web's run r has landed, the receipt's save

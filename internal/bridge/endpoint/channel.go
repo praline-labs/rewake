@@ -4,7 +4,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/channel"
+	"github.com/praline-labs/rewake/internal/core/channel"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 )
 

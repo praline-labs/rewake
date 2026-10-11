@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	authority "github.com/praline-labs/rewake/internal/grantauth"
+	"github.com/praline-labs/rewake/internal/core/grant/authority"
+	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/registry"
 )
 
 // TestFixtureGrantDir is the core's part of a directory granted with a task,

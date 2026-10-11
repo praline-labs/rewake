@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/channel"
-	"github.com/praline-labs/rewake/internal/grant"
+	"github.com/praline-labs/rewake/internal/core/channel"
+	"github.com/praline-labs/rewake/internal/core/grant"
+	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/core/session"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/registry"
-	"github.com/praline-labs/rewake/internal/role"
-	session "github.com/praline-labs/rewake/internal/sessionstate"
 )
 
 // listModel is the machine form of the session list.

@@ -6,8 +6,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/control"
-	session "github.com/praline-labs/rewake/internal/sessionstate"
+	"github.com/praline-labs/rewake/internal/core/control"
+	"github.com/praline-labs/rewake/internal/core/session"
 )
 
 // The served side of rewake compact and rewake interrupt

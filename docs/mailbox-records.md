@@ -14,7 +14,7 @@ by watching it ([below](#the-plan-and-the-seam)).
 
 ## The list
 
-`recordKinds` in `internal/inbox/records.go` names each kind by its path under
+`recordKinds` in `internal/core/mail/records.go` names each kind by its path under
 `inbox/<name>/`, how a file of it is read, and what one that does not read leaves
 unknown. The first pattern that matches a path is its kind.
 
@@ -44,7 +44,7 @@ A file named `.tmp-*`, in any directory, is a write that never finished
 
 The barrier, and every call that would change the mailbox by an effect — pending, a read
 and its parts, an acknowledgment, the answer a question takes — first plans (`plan` in
-`internal/inbox/reconcile.go`). The plan walks the whole tree: a file
+`internal/core/mail/reconcile.go`). The plan walks the whole tree: a file
 that matches no kind, one that is not a regular file, one that does not read as its kind
 says, a directory where a record belongs or where no kind's files lie, and a directory
 that cannot be listed each stop the mailbox, named with what they leave unknown; a
@@ -66,7 +66,7 @@ ended in between — is taken on the effects' own reads, and an unknown met only
 there is the stop of an effect, below.
 
 Every file operation of the barrier and the gates goes through one seam, `fileAccess`
-(`internal/inbox/access.go`), in both passes. A read that fails for any reason but a
+(`internal/core/mail/access.go`), in both passes. A read that fails for any reason but a
 missing file leaves what the file says unknown (rule 6: only a missing file is an
 absence), whichever pass met it; so a path that cannot be followed, through a file where
 its directory belongs or a directory closed to reading, is unknown, and so is anything
@@ -137,7 +137,7 @@ lock, whatever changed while it was waited for (`settle_recheck_test.go`).
 
 ## The stop on record
 
-A stop is records under `inbox/<name>/stops/` (`internal/inbox/stop.go`). Each cause
+A stop is records under `inbox/<name>/stops/` (`internal/core/mail/stop.go`). Each cause
 has a key: a fixed-length hash of its kind — a record that does not read, a path of no
 kind, an unknown an effect met, a plan that failed on nothing a path names — the paths
 it rests on, relative to the state directory, and the operation it is about, a journal

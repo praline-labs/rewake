@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/control"
-	session "github.com/praline-labs/rewake/internal/sessionstate"
+	"github.com/praline-labs/rewake/internal/core/control"
+	"github.com/praline-labs/rewake/internal/core/session"
 )
 
 // runningDetail is what a worker's wrapper may say when its wait for the end

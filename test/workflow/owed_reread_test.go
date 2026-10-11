@@ -116,7 +116,7 @@ func playOwedReread(t *testing.T, c *Case, iso *Isolation, col column) []telemet
 // would take for "no task".
 var mutantOwedEmpty = mutation{
 	name:  "owed-empty",
-	file:  "internal/inbox/owed.go",
+	file:  "internal/core/mail/owed.go",
 	edits: []edit{{"\tvar readings []reading\n", "\tvar readings []reading\n\tif name != \"\" {\n\t\treturn nil, nil\n\t}\n"}},
 }
 

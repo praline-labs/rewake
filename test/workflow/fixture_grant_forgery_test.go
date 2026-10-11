@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	authority "github.com/praline-labs/rewake/internal/grantauth"
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/grant/authority"
+	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/registry"
 )
 
 // TestFixtureGrantForgery is a worker that tries to grant itself a directory
@@ -45,7 +45,7 @@ import (
 // wrappers' namespaces, as a worker outside a sandbox does, so a listener
 // the worker starts for a run it names itself would be answered for; that is
 // the boundary grants.md states, and the namespace check has its own test in
-// internal/grantauth.
+// internal/core/grant/authority.
 func TestFixtureGrantForgery(t *testing.T) {
 	binary := enterScenario(t, "fixture-grant-forgery")
 	c := Start(t, Spec{

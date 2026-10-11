@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/registry"
+	"github.com/praline-labs/rewake/internal/core/registry"
 )
 
 // reasonsBoundary is a run whose TurnBoundary reports one end of each reason,

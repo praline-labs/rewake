@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/bridge"
+	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/receipt"
 )
 
 // Running a transport's call (docs/archive-1.x/mail-bridge-server.md#running-the-child,

@@ -111,9 +111,9 @@ same day: [turn-end-recovery.md](turn-end-recovery.md) says how, record by recor
    record of the stop. What a
    stop is decided by is read before any effect, by the code that decides it: the
    barrier, and every call that would change the mailbox, first walks the whole mailbox
-   against one list of the record kinds it holds (`internal/inbox/records.go`), then runs
+   against one list of the record kinds it holds (`internal/core/mail/records.go`), then runs
    the barrier's own effects as a plan that writes nothing, through the one file seam
-   both passes use (`internal/inbox/access.go`); only a plan that meets no unknown lets
+   both passes use (`internal/core/mail/access.go`); only a plan that meets no unknown lets
    the same code run again for real. A test fails every read the plan makes, in turn,
    and finds what it reads by watching the seam rather than from a list
    ([mailbox-records.md](mailbox-records.md#the-plan-and-the-seam)). The stop is itself
@@ -149,7 +149,7 @@ same day: [turn-end-recovery.md](turn-end-recovery.md) says how, record by recor
 The third acceptance (September 30, 2026) found five more, and found that they could not
 be closed one call site at a time: the mail tool decides by the same lookups the older
 delivery paths do, so the line between the two cannot be drawn by the age of the code.
-Rule 6 is therefore kept by the shared lookups in `internal/inbox`, not by their
+Rule 6 is therefore kept by the shared lookups in `internal/core/mail`, not by their
 callers. Each answers found, proven absent, or a Go error for unknown, and only "no such
 file" is absence; a record that exists and cannot be read or does not parse is an
 error, and so is a wait record whose times or sequences do not parse; the record that
@@ -186,7 +186,7 @@ past a status it cannot read, and `send` then reads the status once more, so a r
 that cannot be read stays unknown whoever holds the name by then. A wait record that
 could not be cleared after a report stays in the turn end's journal, completed before
 a wait is read again (rule 7, [delivery-turn-end.md](delivery-turn-end.md)). A note that a delivery failed is withheld while the status cannot be
-read; the sender still finds the failure with `rewake inbox --awaited`. `inbox.Waiters`
+read; the sender still finds the failure with `rewake inbox --awaited`. `mail.Waiters`
 drops the error of `ReadWaiters` and exists for tests only; a test fails when code
 outside tests calls it.
 
@@ -277,7 +277,7 @@ and status — unless it is no longer in `unread/`, which means it was read (rul
 then nothing is marked or owed again.
 
 The first part shown of an unread letter writes a claim, `inbox/<name>/claims/<id>`.
-While it stands, `withdraw` and `edit` refuse (`inbox.ErrReadInProgress`, a kind of
+While it stands, `withdraw` and `edit` refuse (`mail.ErrReadInProgress`, a kind of
 already-read), the sweep keeps the letter however old, and the server's own outcome for
 it — a delivery that failed late, say — is recorded as delivered, since part of the text
 is in front of the agent; nothing but a read takes it out of `unread/`. `MarkRead`
@@ -302,7 +302,7 @@ finished with `rewake retry <receipt>` and `--next` to the end.
 ## Receipts
 
 A heads-up (`send --notify`) and a pending mark run under a receipt, from the tool and
-from the shell alike (`internal/receipt`). The journal is `inbox/<name>/receipts/<epoch>/`:
+from the shell alike (`internal/core/receipt`). The journal is `inbox/<name>/receipts/<epoch>/`:
 one record per operation, `<token>.json` with a 24-hex token, held by a lock file of its
 own; an index file per scoped key points at its record. The key is the run, the native
 conversation and turn, and the digest of the normalized words. The record is written
@@ -337,7 +337,7 @@ replays a finished one; it cannot reach another run's journal.
 - **A pending mark** records its text and its time before marking: the ticket's call
   time under the tool, the process start in a shell. The deadline is checked under the
   mailbox lock, just before the mark. A retry marks with the recorded time, and never
-  over a newer mark of the same run (`inbox.MarkPendingUnlessNewer`), so it cannot
+  over a newer mark of the same run (`mail.MarkPendingUnlessNewer`), so it cannot
   stretch into a later turn. Letters owing a report that a read is showing in parts
   count among the waits: their acknowledgment comes before the turn ends. "Nothing is
   owed" is an answer only when every wait record and claim was read; one that could not

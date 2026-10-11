@@ -9,7 +9,7 @@ interrupter mark, the compaction marks — left with the plugin in S9, October 1
 they are in the history at `98acc3b`, and how the retired `claude-steered` case was
 built is in [testing-plugin.md](archive-1.x/testing-plugin.md#steering-a-session).
 
-- `internal/control/control_test.go` — the protocol: a done answer and the cleanup, the
+- `internal/core/control/control_test.go` — the protocol: a done answer and the cleanup, the
   modes, `not answering` with the request removed, a taken request without an outcome
   answered as an open failure and its late result cleared, a partial or foreign answer ignored, a second asker
   refused without writing, no directory, a request taken as the asker gives up, in
@@ -41,7 +41,7 @@ built is in [testing-plugin.md](archive-1.x/testing-plugin.md#steering-a-session
   its command holds left alone while its worker leaves, and a command killed with
   SIGKILL letting go of its record, which is then closed. `internal/infra/state/held_test.go`
   — the hold taken only once the writer lets go, and refused on a file removed or
-  replaced between the open and the lock; `internal/control/pending_test.go` — the
+  replaced between the open and the lock; `internal/core/control/pending_test.go` — the
   record read again under the hold, and a closed one not held.
 - The workflow case `fixture-steered` — both commands end to end from a main against
   fixture workers whose program serves the control directory as the module did: an idle
@@ -53,7 +53,7 @@ built is in [testing-plugin.md](archive-1.x/testing-plugin.md#steering-a-session
   refused; a worker serving no control not answering; and a worker's call refused as a
   wrong call; six product mutants, one per link of the core's path
   ([testing-cases.md](testing-cases.md#a-stop-and-steering-a-session)).
-- `internal/control/serve_test.go` — the served side the Codex wrapper runs: an answer
+- `internal/core/control/serve_test.go` — the served side the Codex wrapper runs: an answer
   written once with the request's id, a request carried out once across a second look
   and a fresh server, one withdrawn or replaced as it is marked left undone and handed
   to the served side once its answer is written, and a foreign id not taken.
@@ -83,7 +83,7 @@ built is in [testing-plugin.md](archive-1.x/testing-plugin.md#steering-a-session
   the run's directory, answers what it cannot carry out, records a compaction
   withdrawn before it was taken as its outcome, and passes a reservation
   refused for a compaction to the inbox as one to try again;
-  `internal/inbox/reservation_test.go` keeps such a message pending and delivers it
+  `internal/core/mail/reservation_test.go` keeps such a message pending and delivers it
   on the next pass. `activity_test.go` holds the record of what a conversation does
   to the frames that set and clear it: a compaction refused while an inline review is
   acknowledged and sent past a detached one; an interrupt naming the turn a

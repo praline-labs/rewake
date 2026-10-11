@@ -4,13 +4,13 @@ import (
 	"os"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/grant"
-	authoritytest "github.com/praline-labs/rewake/internal/grantauth/grantauthtest"
-	mail "github.com/praline-labs/rewake/internal/inbox"
+	"github.com/praline-labs/rewake/internal/core/grant"
+	"github.com/praline-labs/rewake/internal/core/grant/authority/authoritytest"
+	"github.com/praline-labs/rewake/internal/core/mail"
 )
 
 // Every directory these tests grant lies in a temporary directory, which the
-// hard tier refuses; that refusal has its own test in internal/grant.
+// hard tier refuses; that refusal has its own test in internal/core/grant.
 //
 // A test binary started again as a recipient's run confirms its grants at
 // delivery, as its wrapper does, before anything is tested.
