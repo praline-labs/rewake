@@ -109,12 +109,20 @@ What makes that binding trusted, and when a read counts, is the tool rules
 ### TurnBoundary
 
 Reports, for the session's own conversation (never a subagent's): a turn started (its
-id); a turn ended (its id, the reason — answered, aborted, refused, failed — and the
+id, and when on the harness's own clock where the harness says); a turn ended (its id, the reason — answered, aborted, refused, failed — and the
 final answer); and asks, before an end closes, whether it may: the core answers "go on"
 when the end would close a task early ([design-rules.md](design-rules.md#turn-outcomes)).
 An adapter that cannot hold an end open says so in what it offers; the core then
 cannot keep a task open across an unmarked interim end, and that limit is written in
 the adapter's document rather than discovered.
+
+The boundary's reports reach the host on their own, whatever else the run serves: a run
+with no tool transport, or one whose mail tool could not start, still has its starts
+recorded. A timed start is the evidence a pending mark of an earlier turn is judged by
+when that turn's end was lost
+([mail-bridge-turns.md](../mail-bridge-turns.md#a-pending-mark-at-its-turns-end)); the
+host records it once and, where the run has a mail tool, opens the turn in the tool's
+call table from the same report.
 
 Without a live TurnBoundary a session's turn ends report nothing, and a worker's
 contract — "end your turn; your final reply goes to the sender" — does not hold. The

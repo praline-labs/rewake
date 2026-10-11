@@ -116,7 +116,11 @@ The core refuses an end that names no event or no reason it knows, and derives t
 report from the reason: answered reports finished, aborted stopped, failed and refused
 an error ([turn-outcomes.md](turn-outcomes.md)). An adapter that can hold an end
 confirms it through `TurnHandler.Confirm` rather than publishing it, so the core can
-continue the turn instead of closing it.
+continue the turn instead of closing it. A turn's start goes to `TurnHandler.Started`,
+tool or none: the wrapper records a timed start (`inbox.RecordTurnStart`) and, where the
+run has a mail tool, opens the turn in the endpoint's table from the same call, so the
+tool's input (`ToolInput`) carries a turn's end, the calls and their results, and no
+start.
 
 The adapters reach the CLI as one value. `catalog.New()` returns an `adapter.Catalog` in
 guide order; `cmd/rewake` builds it and passes it to `cli.Run`, which derives the command

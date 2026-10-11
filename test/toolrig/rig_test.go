@@ -249,7 +249,16 @@ func (r *rig) start() {
 		r.t.Fatal("the fixture's run carries no tools or reports no turns")
 	}
 	offer.OfferTools(cli.ToolDescriptors(), state.ContextPath(r.dir, "api", r.self.Epoch()), r.endpoint.SetTransport)
+	epoch := r.self.Epoch()
 	plan.TurnBoundary.ReportTurns(adapter.TurnHandler{
+		// As the wrapper's handler does (internal/wrap/tools.go): a timed
+		// start recorded once, then opened in the endpoint's table.
+		Started: func(conversation, turn string, at int64) {
+			if at > 0 {
+				_ = inbox.RecordTurnStart(r.dir, "api", epoch, at)
+			}
+			r.endpoint.TurnStarted(conversation, turn)
+		},
 		Tool: r.endpoint, EndCapture: r.endCapture,
 		Publish: func(context.Context, adapter.TurnEnd) error { return nil },
 	})

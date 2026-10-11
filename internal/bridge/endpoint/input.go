@@ -3,7 +3,6 @@ package endpoint
 import (
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/receipt"
 )
 
@@ -14,16 +13,11 @@ import (
 var _ adapter.ToolInput = (*Endpoint)(nil)
 
 // TurnStarted opens a turn a call may be bound to. The table keys a turn by
-// its id alone: a run holds one conversation. A start the harness timed is
-// recorded in the mailbox first, so a pending mark of an earlier turn whose
-// end was lost finds its turn over
+// its id alone: a run holds one conversation. The host calls it with the
+// start the run's TurnBoundary reported, after recording that start itself:
+// the record is the boundary's, tool or none
 // (docs/mail-bridge-turns.md#a-pending-mark-at-its-turns-end).
-func (e *Endpoint) TurnStarted(_, turn string, at int64) {
-	if at > 0 {
-		_ = inbox.RecordTurnStart(e.cfg.Dir, e.cfg.Name, e.cfg.Epoch, at)
-	}
-	e.turnStarted(turn)
-}
+func (e *Endpoint) TurnStarted(_, turn string) { e.turnStarted(turn) }
 
 // TurnEnded closes it: no call is bound to it after.
 func (e *Endpoint) TurnEnded(_, turn string) { e.turnEnded(turn) }

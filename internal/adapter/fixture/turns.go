@@ -93,9 +93,9 @@ func (b *backend) turnStarted(l *link, frame Frame) Frame {
 	}
 	thread := b.thread
 	b.mu.Unlock()
-	if b.handler.Tool != nil {
+	if b.handler.Started != nil {
 		// The program's own time of the start, not this frame's arrival.
-		b.handler.Tool.TurnStarted(thread, frame.Turn, frame.At)
+		b.handler.Started(thread, frame.Turn, frame.At)
 	}
 	return Frame{OK: true}
 }

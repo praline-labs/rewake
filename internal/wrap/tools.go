@@ -118,10 +118,20 @@ func (t *mailTool) attach(plan adapter.LaunchPlan) {
 	}
 }
 
-// handler is a completion handler whose ends are captured through the
-// tool's gate, when the run has one.
-func (t *mailTool) handler(capture func() *inbox.ReadBoundary, publish func(context.Context, adapter.TurnEnd) error) adapter.TurnHandler {
+// handler is a turn handler whose starts are recorded whatever the run
+// serves and whose ends are captured through the tool's gate, when the run
+// has one. A start goes to the endpoint's table only after record: one record
+// per start, and the endpoint records none of its own.
+func (t *mailTool) handler(record func(at int64), capture func() *inbox.ReadBoundary, publish func(context.Context, adapter.TurnEnd) error) adapter.TurnHandler {
 	handler := adapter.TurnHandler{Capture: capture, Publish: publish}
+	handler.Started = func(conversation, turn string, at int64) {
+		if at > 0 {
+			record(at)
+		}
+		if t.endpoint != nil {
+			t.endpoint.TurnStarted(conversation, turn)
+		}
+	}
 	if t.endpoint != nil {
 		handler.EndCapture = t.endpoint.Gate().Capture
 		handler.Tool = t.endpoint

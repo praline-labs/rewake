@@ -31,7 +31,13 @@ func startServing(ctx context.Context, request Request, session registry.Session
 			return stop, err
 		}
 		stops = append(stops, clock.Close)
-		handler := tool.handler(clock.Snapshot, func(ctx context.Context, end adapter.TurnEnd) error {
+		// A timed start is the evidence a pending mark of an earlier turn
+		// is judged by when that turn's end was lost
+		// (docs/mail-bridge-turns.md#a-pending-mark-at-its-turns-end); a
+		// start that cannot be recorded leaves the mark unproven, which
+		// fails to the side of a report.
+		record := func(at int64) { _ = inbox.RecordTurnStart(request.Dir, name, epoch, at) }
+		handler := tool.handler(record, clock.Snapshot, func(ctx context.Context, end adapter.TurnEnd) error {
 			if request.OnTurn != nil {
 				return request.OnTurn(ctx, reportSession, end)
 			}

@@ -73,7 +73,7 @@ chosen.
   carries them with the completion, so a turn published late — queued, or retried when
   the mailbox was busy — cannot take a mark made in the turn after it. The start is
   also recorded for the host as the harness reports it (`inbox.RecordTurnStart`, from
-  the endpoint's `TurnStarted`): each reading a file of its own under the run's
+  the boundary's `TurnHandler.Started`, whether or not the run has a mail tool): each reading a file of its own under the run's
   `awaiting/<epoch>/.turn-starts/`, named by the reading and never overwritten, the
   latest being the largest name, so two writers at once cannot leave the older reading
   on top; a start recorded after a mark's time proves the mark's turn over when its end

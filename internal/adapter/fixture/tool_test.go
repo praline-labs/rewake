@@ -67,7 +67,9 @@ func (r *toolInput) events() []string {
 	return slices.Clone(r.seen)
 }
 
-func (r *toolInput) TurnStarted(conversation, turn string, at int64) {
+// started stands for the host's Started, so the start is heard in its order
+// among the tool's reports.
+func (r *toolInput) started(conversation, turn string, at int64) {
 	r.add("started %s %s %d", conversation, turn, at)
 }
 
@@ -121,7 +123,7 @@ func TestOtherToolsRegisteredLeaveTheTransportOff(t *testing.T) {
 func TestTheProgramsReportsBecomeTheNeutralInput(t *testing.T) {
 	heard := &toolInput{}
 	publish := func(context.Context, adapter.TurnEnd) error { return nil }
-	b, p := paired(t, adapter.TurnHandler{Tool: heard, Publish: publish}, Served...)
+	b, p := paired(t, adapter.TurnHandler{Started: heard.started, Tool: heard, Publish: publish}, Served...)
 	b.tools.tools = programTools
 	if answer := p.ask(t, Frame{Op: opTurnStarted, Turn: "t1", At: 4242}); !answer.OK {
 		t.Fatalf("the turn's start: %+v", answer)

@@ -40,7 +40,7 @@ the acknowledgment leaves the letter unread (T7, T8) — that order is the rule'
 `fixture-turn-start` runs two tasks through one fixture worker and requires the program's
 own time of each turn's start in the mailbox, later for the later turn: the program times
 its start before the turn does anything and sends it with the start, as a harness that
-knows when its turn began does, and the endpoint records it where a pending mark of an
+knows when its turn began does, and the host records it where a pending mark of an
 earlier turn whose end was lost finds its turn over.
 
 ## Controls

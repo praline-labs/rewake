@@ -73,9 +73,19 @@ func (e TurnEnd) Check() error {
 	return nil
 }
 
-// TurnHandler is what the host gives a TurnBoundary before the run starts: how
-// to capture an end's scope without blocking, and where the end goes.
+// TurnHandler is what the host gives a TurnBoundary before the run starts:
+// where a turn's start goes, how to capture an end's scope without blocking,
+// and where the end goes.
 type TurnHandler struct {
+	// Started takes a turn's start, whatever else the run serves: the
+	// conversation and turn it opens, and at, when the turn started on the
+	// boot clock — a time the harness took, at or before anything the turn
+	// ran, never the time its report arrived; 0 where the harness gives
+	// none. The host records a timed start, the evidence a pending mark of
+	// an earlier turn whose end was lost is judged by, and opens the turn
+	// for the mail tool's calls where the run has a tool. Call it before the
+	// start is answered, so whatever the turn does next is after it.
+	Started func(conversation, turn string, at int64)
 	Capture func() *inbox.ReadBoundary
 	Publish func(context.Context, TurnEnd) error
 	// Confirm runs an end that the adapter can hold open, in place of
@@ -92,14 +102,16 @@ type TurnHandler struct {
 	// gate; Capture is then the end's boundary.
 	EndCapture func() (*inbox.ReadBoundary, int64)
 	// Tool takes what the harness reports of the mail tool's calls in no
-	// harness's terms: turns, calls seen, their results.
+	// harness's terms: a turn's end, calls seen, their results. Starts are
+	// not among them: they go to Started, tool or none.
 	// It never waits. Nil where the run has no tool.
 	Tool ToolInput
 }
 
 // TurnBoundary is a run's report of its turns: their starts reach the host
-// through the handler's Tool, their ends through Publish or Confirm. The host
-// hands it the handler before the run's service starts.
+// through the handler's Started, their ends through Publish or Confirm,
+// whether or not the run has a tool. The host hands it the handler before the
+// run's service starts.
 type TurnBoundary interface {
 	ReportTurns(TurnHandler)
 }

@@ -194,7 +194,9 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/cli/bridge_unknown_test.go` `TestAWaiterThatCannotBeReadLeavesTheMarkOpen`
   - `internal/cli/journal_test.go` `TestAPendingMarkRepeatedInOneTurnIsOneMark`
   - `internal/bridge/endpoint/input_test.go` `TestATicketCarriesItsTransportsDeclaration`
-  - `internal/bridge/endpoint/input_test.go` `TestATimedTurnStartIsRecordedInTheMailbox`
+  - `internal/wrap/turn_start_test.go` `TestABoundaryWithoutAToolRecordsItsStart`
+  - `internal/wrap/turn_start_test.go` `TestABoundaryWithAToolRecordsItsStartOnceAndOpensItsTurn`
+  - `internal/cli/turn_declared_test.go` `TestALostEndWithALaterStartOnRecordMarksNothing`
   - `test/workflow/fixture_turn_start_test.go` `TestFixtureTurnStart`
   - `internal/inbox/turn_start_test.go` `TestTheLatestTurnStartIsTheLargestReading`
   - `internal/inbox/turn_start_test.go` `TestAnUnreadableTurnStartIsAnError`

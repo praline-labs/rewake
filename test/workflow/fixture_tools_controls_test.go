@@ -53,11 +53,11 @@ var (
 		file:  "internal/bridge/endpoint/input.go",
 		edits: []edit{{"\tif !used || e.cfg.Acknowledge == nil {\n", "\tif used || !used {\n"}},
 	}
-	// The adapter passes the endpoint no time for the program's start.
+	// The adapter passes the host no time for the program's start.
 	mutantTurnStartUntimed = mutation{
 		name:  "turn-start-untimed",
 		file:  "internal/adapter/fixture/turns.go",
-		edits: []edit{{"b.handler.Tool.TurnStarted(thread, frame.Turn, frame.At)", "b.handler.Tool.TurnStarted(thread, frame.Turn, 0)"}},
+		edits: []edit{{"b.handler.Started(thread, frame.Turn, frame.At)", "b.handler.Started(thread, frame.Turn, 0)"}},
 	}
 )
 

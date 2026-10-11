@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/praline-labs/rewake/internal/boottime"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/state"
 )
@@ -133,6 +134,44 @@ func TestADeclarationOnOneEndOnlyProvesNoTurn(t *testing.T) {
 			}
 			if again := tool.run("retry", token); again.code != ExitFailed || !strings.Contains(again.errOut, unproven) {
 				t.Fatalf("the finished receipt's answer: %+v", again)
+			}
+		})
+	}
+}
+
+// A pending call in turn A expires and A's end is lost; the next turn's start
+// is on record, as the host records what a TurnBoundary reports, tool or none
+// (internal/wrap/turn_start_test.go). A retry from A's own turn, which would
+// mark without that start, is answered that the turn ended first and marks
+// nothing: the start alone is the evidence where no end is.
+func TestALostEndWithALaterStartOnRecordMarksNothing(t *testing.T) {
+	for _, later := range []bool{false, true} {
+		t.Run(map[bool]string{false: "no later start", true: "a later start"}[later], func(t *testing.T) {
+			dir, self, web := toolSession(t)
+			readFrom(t, dir, web)
+			turnStarted(t, dir, self, markAt-1)
+			call, ctx, _, errOut := expiredCall(t, "pending", "still waiting")
+			if err := handlePending(ctx, call); err == nil {
+				t.Fatal("an expired mark succeeded")
+			}
+			called := ctx.scope.ticket.CalledBoot
+			records := unresolved(t, dir, self.Epoch(), ctx.scope.digest)
+			if len(records) != 1 || !strings.Contains(errOut.String(), "rewake retry "+records[0].Token) {
+				t.Fatalf("records %+v, said %s", records, errOut)
+			}
+			if later {
+				turnStarted(t, dir, self, boottime.Now())
+			}
+			retried := newToolCaller(t).run("retry", records[0].Token)
+			_, held, err := markWithin(dir, "api", self.Epoch(), called-1, called+1)
+			if err != nil {
+				t.Fatal(err)
+			}
+			switch {
+			case !later && (retried.code != ExitOK || !held):
+				t.Fatalf("a retry in its own turn with no later start: %+v, marked %t", retried, held)
+			case later && (retried.code != ExitFailed || !strings.Contains(retried.errOut, "the turn ended first") || held):
+				t.Fatalf("a retry after a later start: %+v, marked %t", retried, held)
 			}
 		})
 	}

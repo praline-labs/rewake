@@ -8,12 +8,10 @@ package adapter
 // input, a frame of its program — and calls these; none of them waits, so the
 // adapter's reader goes on at once.
 type ToolInput interface {
-	// TurnStarted and TurnEnded follow the turns of the run's conversation:
-	// a call is bound to a turn the harness was seen to start and not yet
-	// seen to end. at is when the turn started on the boot clock, at or
-	// before anything it ran — a time the harness took, never the time its
-	// report arrived; 0 where the harness gives none.
-	TurnStarted(conversation, turn string, at int64)
+	// TurnEnded closes a turn of the run's conversation: a call is bound to
+	// a turn the boundary reported started (TurnHandler.Started, which the
+	// host forwards here) and not yet seen to end. Called after the end's
+	// capture, so a call heard from then on is outside it.
 	TurnEnded(conversation, turn string)
 	// CallSeen is the harness's own record that the model made a call: what
 	// a request for the call's binding is matched against.

@@ -66,9 +66,11 @@ refuses before its first effect (T6).
 6. The program reports the result it handed the model (`CallResult`), which acknowledges a
    read when it proves the whole answer arrived.
 
-The program's turn starts and ends reach the same input (`TurnStarted` with the
-program's own time of the start, `TurnEnded` after the end's capture), so a call is bound
-only inside a turn the program was seen to start and not yet seen to end.
+The program's turn starts reach the host through the boundary (`TurnHandler.Started`,
+with the program's own time of the start), which records the start and opens the turn in
+the endpoint's table; its ends reach the same input as the calls (`TurnEnded`, after the
+end's capture). So a call is bound only inside a turn the program was seen to start and
+not yet seen to end.
 
 ## Closing
 
