@@ -6,14 +6,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/proc"
 )
 
 // stopWithBackend ends the harness when its backend is gone. ending is told
 // first: the wrapper's own teardown has begun, and the mail tool, which the
 // backend hosted, goes with it rather than failing.
-func stopWithBackend(ctx context.Context, backend harness.Backend, child *os.Process, start uint64, ending func()) {
+func stopWithBackend(ctx context.Context, backend adapter.Backend, child *os.Process, start uint64, ending func()) {
 	select {
 	case <-ctx.Done():
 		return

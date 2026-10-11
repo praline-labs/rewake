@@ -8,8 +8,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/grant"
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
@@ -57,8 +57,8 @@ func requestedDirGrants(call Call, sender, target registry.Session, senderErr er
 	if kind.kind != inbox.Task && kind.kind != inbox.Question {
 		return refuse("only a task or a question carries a grant; a heads-up asks for no work to write.")
 	}
-	adapter, _ := findHarness(target.Harness)
-	if capable, ok := adapter.(harness.DirGrantHarness); !ok || !capable.SupportsDirGrant() {
+	own, _ := findHarness(target.Harness)
+	if capable, ok := own.(adapter.DirGrantHarness); !ok || !capable.SupportsDirGrant() {
 		return dirGrants{}, &FailedError{Message: fmt.Sprintf("--grant-dir: %s runs %s, which cannot take a directory into a running session yet. Do that part of the work yourself, or ask the owner to add the directory to that session in its own terminal.", target.Name, target.Harness)}
 	}
 
@@ -66,7 +66,7 @@ func requestedDirGrants(call Call, sender, target registry.Session, senderErr er
 	if err != nil {
 		return dirGrants{}, failf("--grant-dir: cannot read the current directory to resolve a relative path: %v", err)
 	}
-	rules := grant.CurrentEnv(state.RootForRoom(dir), harness.AllProtectedDirs()).Rules()
+	rules := grant.CurrentEnv(state.RootForRoom(dir), adapter.AllProtectedDirs()).Rules()
 	workspace, _ := filepath.EvalSymlinks(target.CWD)
 	var resolved, confirmed []string
 	check := func(flag, given string, confirm bool) error {

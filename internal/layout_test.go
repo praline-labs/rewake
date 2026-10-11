@@ -13,8 +13,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/harness"
-	_ "github.com/praline-labs/rewake/internal/harness/catalog"
+	"github.com/praline-labs/rewake/internal/adapter"
+	_ "github.com/praline-labs/rewake/internal/adapter/catalog"
 )
 
 const (
@@ -38,7 +38,7 @@ var ownWords = []string{"mcp__", "CLAUDE_", "app-server", ".claude", ".codex", "
 
 // adapterInterfaces are the contract an adapter implements; rule 3 looks for
 // variables holding values of it.
-var adapterInterfaces = []string{"internal/harness.Harness"}
+var adapterInterfaces = []string{"internal/adapter.Harness"}
 
 func TestImportsFollowTheLayers(t *testing.T) {
 	for _, problem := range importProblems(t, transition, importExceptions) {
@@ -48,7 +48,7 @@ func TestImportsFollowTheLayers(t *testing.T) {
 
 func TestNoHarnessIsNamedOutsideTheAdapters(t *testing.T) {
 	var catalog [][2]string
-	for _, h := range harness.All() {
+	for _, h := range adapter.All() {
 		catalog = append(catalog, [2]string{h.ID(), h.Title()})
 	}
 	words, literals := nameWords(catalog, testOnlyHarnesses)

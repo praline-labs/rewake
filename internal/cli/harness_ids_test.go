@@ -3,14 +3,14 @@ package cli
 import (
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/adapter"
 )
 
 // aHarness is the id of a harness in the catalog, for a test that needs one
 // to launch or parse and does not care which: the core's tests name none.
 func aHarness(t testing.TB) string {
 	t.Helper()
-	all := harness.All()
+	all := adapter.All()
 	if len(all) == 0 {
 		t.Fatal("the catalog holds no harness")
 	}
@@ -21,8 +21,8 @@ func aHarness(t testing.TB) string {
 // rewake's worktree flag.
 func aWorktreeProbe(t *testing.T) *worktreeProbe {
 	t.Helper()
-	for _, candidate := range harness.All() {
-		if _, ok := candidate.(harness.WorktreeHarness); ok {
+	for _, candidate := range adapter.All() {
+		if _, ok := candidate.(adapter.WorktreeHarness); ok {
 			return harnessProbe(t, candidate.ID())
 		}
 	}

@@ -7,9 +7,9 @@ import (
 	"slices"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/grant"
 	"github.com/praline-labs/rewake/internal/grantauth"
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/proc"
 	"github.com/praline-labs/rewake/internal/registry"
@@ -37,7 +37,7 @@ const grantLifetime = inbox.DefaultTTL + 5*time.Minute
 func checkGrant(dir, name, epoch string) func(inbox.Message) error {
 	root := state.RootForRoom(dir)
 	return func(message inbox.Message) error {
-		rules := grant.CurrentEnv(root, harness.AllProtectedDirs()).Rules()
+		rules := grant.CurrentEnv(root, adapter.AllProtectedDirs()).Rules()
 		for _, directory := range message.GrantDirs {
 			if err := rules.Recheck(directory, slices.Contains(message.GrantBroad, directory)); err != nil {
 				return err

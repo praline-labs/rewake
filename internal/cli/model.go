@@ -13,7 +13,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/adapter"
 )
 
 // Option is a flag of a command, or a global flag.
@@ -67,7 +67,7 @@ type Command struct {
 	// Harness is what this command starts, for the commands that start one. It
 	// is here so the table can be checked against the catalog: a launch
 	// command that starts the wrong harness is otherwise indistinguishable.
-	Harness harness.Harness
+	Harness adapter.Harness
 	// Handler runs the command.
 	Handler func(*Context, Call) error
 }

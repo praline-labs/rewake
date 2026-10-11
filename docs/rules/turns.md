@@ -41,7 +41,7 @@ that they are checked like the rest ([stage3-tests.md](../v2/stage3-tests.md#how
   - `test/workflow/pending_confirm_test.go` `TestPendingConfirm` — on the fixture column since S5, the only one since S9
   - `test/workflow/pending_confirm_test.go` `TestAnUnconfirmedPendingFails` — on the fixture column since S5, the only one since S9
   - `test/workflow/pending_confirm_test.go` `TestAConfirmationThatDropsTheAnswerFails` — on the fixture column since S5, the only one since S9
-  - `internal/harness/fixture/turns_test.go` `TestAnEndIsConfirmedWhenItCanBeHeld`
+  - `internal/adapter/fixture/turns_test.go` `TestAnEndIsConfirmedWhenItCanBeHeld`
   - `internal/cli/turn_confirm_test.go` `TestAConfirmedEndAfterAnInterimOneIsHeldOnce`
   - `internal/cli/turn_confirm_test.go` `TestAConfirmedContinuationThatMarksPendingKeepsTheTaskOwed`
   - `internal/cli/turn_confirm_test.go` `TestAFailedOrStoppedContinuationCarriesTheHeldAnswer`

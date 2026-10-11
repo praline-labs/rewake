@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 
-	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
@@ -22,14 +22,14 @@ import (
 // that reports; the tests of the refusals put it back.
 var reportsTurns = harnessReportsTurns
 
-func harnessReportsTurns(h harness.Harness) bool {
-	reporting, ok := h.(harness.TurnReportingHarness)
+func harnessReportsTurns(h adapter.Harness) bool {
+	reporting, ok := h.(adapter.TurnReportingHarness)
 	return ok && reporting.ReportsTurns()
 }
 
 // refuseReportingRole refuses a launch of a role that owes reports on a
 // harness that reports no turn's end.
-func refuseReportingRole(h harness.Harness, part role.Role) error {
+func refuseReportingRole(h adapter.Harness, part role.Role) error {
 	if part.Silent || reportsTurns(h) {
 		return nil
 	}

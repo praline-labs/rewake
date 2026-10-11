@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/grant"
-	"github.com/praline-labs/rewake/internal/harness"
 )
 
 // Every directory these tests grant lies in a temporary directory, which the
@@ -17,6 +17,6 @@ import (
 // (turn_reporting_test.go).
 func TestMain(m *testing.M) {
 	grant.TempRoots = func() []string { return nil }
-	reportsTurns = func(harness.Harness) bool { return true }
+	reportsTurns = func(adapter.Harness) bool { return true }
 	os.Exit(m.Run())
 }

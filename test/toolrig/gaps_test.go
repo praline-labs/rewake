@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/praline-labs/rewake/internal/adapter/fixture"
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/harness/fixture"
 	"github.com/praline-labs/rewake/internal/receipt"
 )
 

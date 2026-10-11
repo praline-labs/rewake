@@ -63,10 +63,10 @@ nothing lifts a stop without returning evidence.
   - `internal/inbox/batch_edges_test.go` `TestGroupedPreparationRechecksAnswerLeasesExpiryAndEpoch`
   - `internal/inbox/withdraw_test.go` `TestTheLastCheckBeforeANoticeSeesAWithdrawal`
   - `internal/inbox/window_test.go` `TestARetryDoesNotRestartTheWindow`
-  - `internal/harness/fixture/turns_test.go` `TestATurnEndIsRetriedWithItsOwnDeadline`
-  - `internal/harness/fixture/turns_test.go` `TestATurnEndThatNeverTakesIsRefusedAfterItsAttempts`
-  - `internal/harness/fixture/order_test.go` `TestAWithdrawalStopsAnEndsAttempts`
-  - `internal/harness/fixture/order_test.go` `TestAClosedConnectionTakesNoTurn`
+  - `internal/adapter/fixture/turns_test.go` `TestATurnEndIsRetriedWithItsOwnDeadline`
+  - `internal/adapter/fixture/turns_test.go` `TestATurnEndThatNeverTakesIsRefusedAfterItsAttempts`
+  - `internal/adapter/fixture/order_test.go` `TestAWithdrawalStopsAnEndsAttempts`
+  - `internal/adapter/fixture/order_test.go` `TestAClosedConnectionTakesNoTurn`
   - `internal/inbox/publication_race_test.go` `TestTheSweepWaitsForAnAttemptsEvidence`
   - `internal/inbox/publication_race_test.go` `TestAdmissionIsInsideTheSection`
   - `internal/cli/publication_race_test.go` `TestTheSweepWaitsForAHeadsUpsEvidence`
@@ -237,7 +237,7 @@ nothing lifts a stop without returning evidence.
   - `internal/cli/neutral_end_test.go` `TestNeutralStoppedThenFinishedEndsOfOneTurnReportTwice`
   - `internal/cli/neutral_end_test.go` `TestNeutralTwoEndsAtOnceReportOnce`
   - `internal/cli/neutral_end_test.go` `TestNeutralEndsWithoutTheirScopeReportNothing`
-  - `internal/harness/fixture/turns_test.go` `TestAnEndSentAgainIsTheSameCompletion`
+  - `internal/adapter/fixture/turns_test.go` `TestAnEndSentAgainIsTheSameCompletion`
   - `internal/inbox/kept_clock_test.go` `TestAHoldReservesItsPositionBeforeItCommits`
   - `internal/inbox/kept_clock_test.go` `TestAFailedHoldLeavesAGapAndNoPositionIsIssuedTwice`
   - Gap: every TurnBoundary names its event — closed in S10 with the adapter API.

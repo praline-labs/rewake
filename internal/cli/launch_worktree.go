@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/worktree"
 )
@@ -26,8 +26,8 @@ type launchCheckout struct {
 // session's record, the harness and whatever it starts all work there. A
 // launch without the flag, or of a harness that makes its own, comes back
 // unchanged with no checkout.
-func takeWorktree(h harness.Harness, call Call, stderr io.Writer) ([]string, *launchCheckout, error) {
-	taker, ok := h.(harness.WorktreeHarness)
+func takeWorktree(h adapter.Harness, call Call, stderr io.Writer) ([]string, *launchCheckout, error) {
+	taker, ok := h.(adapter.WorktreeHarness)
 	if !ok {
 		return call.Raw, nil, nil
 	}
@@ -82,10 +82,10 @@ func takeWorktree(h harness.Harness, call Call, stderr io.Writer) ([]string, *la
 // the harness's own flag takes a spaced name, such a word is refused instead:
 // the person meant it as the name.
 func worktreeRequest(call Call, flag string, spaced bool) (name string, given bool, rest []string, err error) {
-	visible := harness.BeforeTerminator(call.Raw)
+	visible := adapter.BeforeTerminator(call.Raw)
 	rest = make([]string, 0, len(call.Raw))
 	for index, arg := range visible {
-		value, separate, ok := harness.MatchFlag(arg, flag)
+		value, separate, ok := adapter.MatchFlag(arg, flag)
 		if !ok {
 			rest = append(rest, arg)
 			continue

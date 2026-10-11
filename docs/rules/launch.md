@@ -10,15 +10,15 @@ What rewake adds to a harness's launch, in the full wording of
   never edited; what a run needs is passed for that one launch. (`mail-bridge-launch.md`
   rule 1; until S9, on Claude Code, one `--plugin-dir`.)
   Tests:
-  - `internal/harness/claude/claude_test.go` `TestAddedFlagsStayBeforeTheTerminator`
-  - `internal/harness/defaults_test.go` `TestAnExplicitFlagIsNotReplaced`
-  - `internal/harness/fixture/launch_test.go` `TestALaunchLeavesThePersonsFilesAsTheyWere`
-  - `internal/harness/fixture/launch_test.go` `TestACallerCannotPassTheFixturesOwnFlags`
+  - `internal/adapter/claude/claude_test.go` `TestAddedFlagsStayBeforeTheTerminator`
+  - `internal/adapter/defaults_test.go` `TestAnExplicitFlagIsNotReplaced`
+  - `internal/adapter/fixture/launch_test.go` `TestALaunchLeavesThePersonsFilesAsTheyWere`
+  - `internal/adapter/fixture/launch_test.go` `TestACallerCannotPassTheFixturesOwnFlags`
 
 - **L2. Diagnostics say where, never what**: no configuration content or argument value
   is printed. (Rule 7.)
   Tests:
-  - `internal/harness/fixture/launch_test.go` `TestALaunchsDiagnosticsNeverCarryWhatTheyPointAt`
+  - `internal/adapter/fixture/launch_test.go` `TestALaunchsDiagnosticsNeverCarryWhatTheyPointAt`
 
 - **L3. Nothing persists past the run**: what a launch writes lives in the run's
   directory and goes with it. (Rule 8.)
@@ -28,8 +28,8 @@ What rewake adds to a harness's launch, in the full wording of
   - `internal/wrap/wrap_test.go` `TestSessionIsPublishedWhileRunningAndRemovedAfter`
   - `internal/wrap/ownership_test.go` `TestCleanupLeavesTheNextOwnerAlone`
   - `internal/wrap/ownership_test.go` `TestEachRunCleansOnlyItsOwnSocket`
-  - `internal/harness/claude/claude_test.go` `TestLiveSocketIsNeverRemoved`
-  - `internal/harness/claude/claude_test.go` `TestStaleSocketIsReplaced`
+  - `internal/adapter/claude/claude_test.go` `TestLiveSocketIsNeverRemoved`
+  - `internal/adapter/claude/claude_test.go` `TestStaleSocketIsReplaced`
   - Gap: the run directory `run/<name>.<epoch>/` removed with the run — closed in S17.
 
 ## What returns with the Codex adapter

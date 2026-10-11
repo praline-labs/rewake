@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/state"
 )
 
@@ -16,7 +16,7 @@ func TestLaunchRefusesInvalidNamePrefixesWithoutStartingHarness(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv(state.DirEnv, dir)
-	for _, h := range harness.All() {
+	for _, h := range adapter.All() {
 		t.Setenv("PATH", launchPath(t, h))
 		for _, prefix := range []string{"", "Upper", "../escape", strings.Repeat("x", 32)} {
 			code, _, errOut := run("--write", "--name", prefix, h.ID())
@@ -55,7 +55,7 @@ func TestLaunchFlowUsesTheAssembledAddress(t *testing.T) {
 }
 
 func TestExplicitPrefixConflictNamesFinalAddress(t *testing.T) {
-	for _, h := range harness.All() {
+	for _, h := range adapter.All() {
 		t.Run(h.ID(), func(t *testing.T) {
 			address := "taken-" + h.ID()
 			liveSession(t, address)
@@ -76,10 +76,10 @@ func TestExplicitPrefixConflictNamesFinalAddress(t *testing.T) {
 // finds a program answering only --version there, so its refusal is the name's
 // and not the version's; the program fails the test if it is run for anything
 // else.
-func launchPath(t *testing.T, h harness.Harness) string {
+func launchPath(t *testing.T, h adapter.Harness) string {
 	t.Helper()
 	path := t.TempDir()
-	reader, ok := h.(harness.LaunchVersionReader)
+	reader, ok := h.(adapter.LaunchVersionReader)
 	if !ok {
 		return path
 	}

@@ -29,10 +29,10 @@ internal/role/                   the role catalogue: flag, briefing line, report
 internal/brief/                  text injected into an agent, independent of transport
 internal/alias/                  launch aliases: a short name turned into launch arguments
 internal/sessionstate/           optional, epoch-scoped observations of a harness (telemetry)
-internal/harness/                the Harness interface, launch plans, notices, hooks, defaults, the bounded version read
-internal/harness/catalog/        the one list of harnesses that exist
-internal/harness/claude/         launch arguments, environment, socket delivery
-internal/harness/fixture/        the test harness behind rewakefixture: a scripted program over a socket, every contract interface
+internal/adapter/                the Harness interface, launch plans, notices, hooks, defaults, the bounded version read
+internal/adapter/catalog/        the one list of harnesses that exist
+internal/adapter/claude/         launch arguments, environment, socket delivery
+internal/adapter/fixture/        the test harness behind rewakefixture: a scripted program over a socket, every contract interface
 internal/wrap/                   wrapper: launch, signals, lifecycle
 internal/worktree/               checkouts rewake makes for a launch: git worktree add, records, land, removal
 scripts/                         packaging scripts and the tests of the npm shim
@@ -49,7 +49,7 @@ with nobody, and `test/` and `docs/` hold packages that exist only for their tes
 
 ## The harness interface
 
-A harness adapter implements one interface, `internal/harness/plan.go`, shown here
+A harness adapter implements one interface, `internal/adapter/plan.go`, shown here
 without its comments:
 
 ```go

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/brief"
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
@@ -16,13 +16,13 @@ import (
 )
 
 type roleLaunchProbe struct {
-	harness.Harness
-	request harness.LaunchRequest
+	adapter.Harness
+	request adapter.LaunchRequest
 }
 
-func (p *roleLaunchProbe) Launch(request harness.LaunchRequest) (harness.LaunchPlan, error) {
+func (p *roleLaunchProbe) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error) {
 	p.request = request
-	return harness.LaunchPlan{Command: "/bin/true", Env: harness.SessionEnv(request, nil)}, nil
+	return adapter.LaunchPlan{Command: "/bin/true", Env: adapter.SessionEnv(request, nil)}, nil
 }
 
 func (*roleLaunchProbe) Deliver(context.Context, registry.Session, inbox.Message) inbox.Result {
@@ -30,7 +30,7 @@ func (*roleLaunchProbe) Deliver(context.Context, registry.Session, inbox.Message
 }
 
 func TestCLIResolvesDefaultGeneralAndPreservesExplicitCapabilities(t *testing.T) {
-	for _, h := range harness.All() {
+	for _, h := range adapter.All() {
 		for _, scenario := range []struct {
 			name   string
 			flags  []string

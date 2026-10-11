@@ -190,9 +190,9 @@ var count int
 }
 
 func TestAnExceptionNothingMatchesFails(t *testing.T) {
-	x := importException{from: "internal/cli", to: "internal/harness/claude", files: []string{"internal/cli/a.go", "internal/cli/b.go"}}
-	found := []edge{{file: "internal/cli/a.go", from: "internal/cli", to: "internal/harness/claude"}}
-	oneMessage(t, unmatchedImports([]importException{x}, found), "the import exception internal/cli -> internal/harness/claude for internal/cli/b.go matches nothing any more")
+	x := importException{from: "internal/cli", to: "internal/adapter/claude", files: []string{"internal/cli/a.go", "internal/cli/b.go"}}
+	found := []edge{{file: "internal/cli/a.go", from: "internal/cli", to: "internal/adapter/claude"}}
+	oneMessage(t, unmatchedImports([]importException{x}, found), "the import exception internal/cli -> internal/adapter/claude for internal/cli/b.go matches nothing any more")
 
 	names := map[nameException]excuse{{file: "internal/cli/a.go", word: "relay"}: {"why", "S8", 1, "000000000000"}}
 	oneMessage(t, excused([]mention{}, nameKey, names), `the name exception for "relay" in internal/cli/a.go matches nothing any more`)

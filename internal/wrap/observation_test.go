@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/role"
 	"github.com/praline-labs/rewake/internal/sessionstate"
 )
@@ -24,7 +24,7 @@ type observedHarness struct {
 	backend *observedFixture
 }
 
-func (h *observedHarness) Launch(r harness.LaunchRequest) (harness.LaunchPlan, error) {
+func (h *observedHarness) Launch(r adapter.LaunchRequest) (adapter.LaunchPlan, error) {
 	plan, err := h.fakeHarness.Launch(r)
 	plan.Backend = h.backend
 	return plan, err

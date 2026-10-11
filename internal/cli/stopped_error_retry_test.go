@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 )
@@ -22,13 +22,13 @@ func TestStoppedAndErrorRetriesSettleOriginalScopeOnce(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer clock.Close()
-	stopped := harness.Completion{ID: "A/T", Thread: "A", Kind: inbox.Stopped, Text: "stopped", Boundary: clock.Snapshot()}
+	stopped := adapter.Completion{ID: "A/T", Thread: "A", Kind: inbox.Stopped, Text: "stopped", Boundary: clock.Snapshot()}
 	final := stopped
 	final.Kind = inbox.Error
 	final.Text = "final error"
 	// Both events were observed before the second message, but publication is delayed.
 	second := readFrom(t, dir, peer)
-	for _, event := range []harness.Completion{stopped, stopped, final, final} {
+	for _, event := range []adapter.Completion{stopped, stopped, final, final} {
 		if err := ReportCompletion(context.Background(), dir, self, event); err != nil {
 			t.Fatal(err)
 		}

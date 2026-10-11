@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/boottime"
-	"github.com/praline-labs/rewake/internal/harness"
 )
 
 var words = []string{"inbox"}
@@ -93,7 +93,7 @@ func TestConflictingCorrelationIsRefused(t *testing.T) {
 			return asked
 		}},
 		{"arguments that are not words", func(c string) {
-			served.CallSeen(harness.ObservedCall{ID: c, Conversation: "th", Turn: "t1"})
+			served.CallSeen(adapter.ObservedCall{ID: c, Conversation: "th", Turn: "t1"})
 		}, func(c string) TicketRequest { return neutralRequest("th", "t1", c, words) }},
 	}
 	for i, test := range cases {

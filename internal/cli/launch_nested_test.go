@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/state"
 )
 
@@ -29,7 +29,7 @@ func outsideAnySession(t *testing.T) {
 // marker is enough, set even to nothing, and neither needs a live record
 // behind it.
 func TestALaunchFromInsideASessionIsRefused(t *testing.T) {
-	for _, h := range harness.All() {
+	for _, h := range adapter.All() {
 		for _, marker := range []string{state.SessionEnv, state.EpochEnv} {
 			for _, value := range []string{"worker-claude", ""} {
 				t.Run(h.ID()+"/"+marker+"="+value, func(t *testing.T) {

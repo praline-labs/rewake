@@ -1,12 +1,12 @@
 package cli
 
-import "github.com/praline-labs/rewake/internal/harness"
+import "github.com/praline-labs/rewake/internal/adapter"
 
 // Match the guide's general-role launch instead of implying that --name is
 // already a complete address. Direct sends still accept existing names as-is.
 func sendExamples() []string {
 	address := "helper"
-	if available := harness.All(); len(available) > 0 {
+	if available := adapter.All(); len(available) > 0 {
 		address += "-" + available[0].ID()
 	}
 	return []string{

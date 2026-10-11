@@ -187,17 +187,17 @@ func mailboxFrom(iso *Isolation, reader, sender string) []string {
 var (
 	mutantReasonDropped = mutation{
 		name:  "reason-dropped",
-		file:  "internal/harness/fixture/turns.go",
+		file:  "internal/adapter/fixture/turns.go",
 		edits: []edit{{"Kind: kind, Text: frame.Text,", "Kind: kind, Text: \"\","}},
 	}
 	mutantFailureCompleted = mutation{
 		name:  "failure-completed",
-		file:  "internal/harness/fixture/turns.go",
+		file:  "internal/adapter/fixture/turns.go",
 		edits: []edit{{"\tcase OutcomeFailed:\n\t\treturn inbox.Error, nil\n", "\tcase OutcomeFailed:\n\t\treturn inbox.Finished, nil\n"}},
 	}
 	mutantStopCompleted = mutation{
 		name:  "stop-completed",
-		file:  "internal/harness/fixture/turns.go",
+		file:  "internal/adapter/fixture/turns.go",
 		edits: []edit{{"\tcase OutcomeInterrupted:\n\t\treturn inbox.Stopped, nil\n", "\tcase OutcomeInterrupted:\n\t\treturn inbox.Finished, nil\n"}},
 	}
 )

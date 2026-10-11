@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/brief"
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
 	"github.com/praline-labs/rewake/internal/state"
@@ -16,10 +16,10 @@ import (
 
 type contextHarness struct {
 	fakeHarness
-	launch harness.LaunchRequest
+	launch adapter.LaunchRequest
 }
 
-func (h *contextHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, error) {
+func (h *contextHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error) {
 	h.launch = request
 	return h.fakeHarness.Launch(request)
 }

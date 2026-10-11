@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/channel"
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/proc"
 )
 
@@ -161,7 +161,7 @@ func TestALostBackendFreezesTheRecordBeforeTheHarnessEnds(t *testing.T) {
 }
 
 // goneBackend is a backend that is already gone.
-type goneBackend struct{ harness.Backend }
+type goneBackend struct{ adapter.Backend }
 
 func (goneBackend) Done() <-chan struct{} {
 	done := make(chan struct{})

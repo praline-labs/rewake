@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/adapter"
 )
 
 // A set built in memory, so a test says what it is about rather than where the
@@ -33,8 +33,8 @@ func valued(name string) bool { return name == "name" || name == "room" }
 // agentLike stands in for what a harness publishes about its own flags: the
 // ones it takes at most once, each with all its spellings. Anything absent is
 // appended rather than replaced.
-func agentLike(string) []harness.Flag {
-	return []harness.Flag{
+func agentLike(string) []adapter.Flag {
+	return []adapter.Flag{
 		{Spellings: []string{"--model", "-m"}, TakesValue: true},
 		{Spellings: []string{"--sandbox", "-s"}, TakesValue: true},
 		{Spellings: []string{"--search"}},

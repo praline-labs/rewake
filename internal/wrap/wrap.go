@@ -17,8 +17,8 @@ import (
 	"os/exec"
 	"syscall"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/control"
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/proc"
 	"github.com/praline-labs/rewake/internal/registry"
@@ -29,7 +29,7 @@ import (
 // Request is one launch.
 type Request struct {
 	// Harness is what to run.
-	Harness harness.Harness
+	Harness adapter.Harness
 	// Dir is the room-scoped state directory.
 	Dir string
 	// Name is the requested prefix; empty uses the role and picks a free address.
@@ -43,10 +43,10 @@ type Request struct {
 
 	// Role is explicit when its ID is set; empty always uses general.
 	Role   role.Role
-	OnTurn func(context.Context, registry.Session, harness.Completion) error
+	OnTurn func(context.Context, registry.Session, adapter.Completion) error
 	// OnConfirm runs an end the adapter may hold open, beside OnTurn
-	// (harness.CompletionHandler.Confirm).
-	OnConfirm func(context.Context, registry.Session, harness.Completion) (string, error)
+	// (adapter.CompletionHandler.Confirm).
+	OnConfirm func(context.Context, registry.Session, adapter.Completion) (string, error)
 	// MailTool serves the mail tool's endpoint; nil serves none.
 	MailTool *MailTool
 	// OnClaimed hears the session once its name is claimed, before the
@@ -121,7 +121,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	// harness that serves it: a directory nobody serves would answer "not
 	// answering" where "no control directory" names the real next step.
 	controlDir := ""
-	if _, steerable := request.Harness.(harness.Steerable); steerable {
+	if _, steerable := request.Harness.(adapter.Steerable); steerable {
 		made := registry.ControlFor(request.Dir, name, epoch)
 		if control.Prepare(made) == nil {
 			controlDir = made
@@ -135,7 +135,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	tool := startMailTool(request, name, epoch)
 	defer tool.close()
 
-	plan, err := request.Harness.Launch(harness.LaunchRequest{
+	plan, err := request.Harness.Launch(adapter.LaunchRequest{
 		Name:       name,
 		Dir:        state.RootForRoom(request.Dir),
 		RoomDir:    request.Dir,
@@ -238,12 +238,12 @@ func Run(ctx context.Context, request Request) (int, error) {
 	go func() {
 		defer close(served)
 		var thread func() (string, error)
-		if tracker, ok := request.Harness.(harness.ThreadTracker); ok {
+		if tracker, ok := request.Harness.(adapter.ThreadTracker); ok {
 			thread = func() (string, error) { return tracker.Thread(current(request.Dir, name, session)) }
 		}
 		// No adapter sets an Observer since S9; S10 keeps this on the adapter
 		// API, reached until then by wrap/thread_test.go.
-		if source, ok := plan.Observer.(harness.ThreadSource); ok && plan.Backend == nil {
+		if source, ok := plan.Observer.(adapter.ThreadSource); ok && plan.Backend == nil {
 			thread = source.Thread
 		}
 		if plan.Backend != nil {
@@ -273,7 +273,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 				return request.Harness.Deliver(ctx, current(request.Dir, name, session), message)
 			},
 		}
-		if backend, ok := plan.Backend.(harness.ReservingBackend); ok {
+		if backend, ok := plan.Backend.(adapter.ReservingBackend); ok {
 			server.Reserve = backend.Reserve
 		}
 		if plan.Backend == nil && plan.Lane != nil {

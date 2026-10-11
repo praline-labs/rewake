@@ -6,7 +6,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/cli"
 	// The catalog registers every harness rewake can run.
-	_ "github.com/praline-labs/rewake/internal/harness/catalog"
+	_ "github.com/praline-labs/rewake/internal/adapter/catalog"
 )
 
 func main() {

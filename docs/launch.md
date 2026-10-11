@@ -205,7 +205,7 @@ The launch's one `codex --version` read, taken before the claim, is compared at 
 with the version the transport was last observed working on — 0.155.1 since September
 21, 2026 — and a different or unreadable one warns, without refusing. Moving the pin
 takes two edits that have to agree: the constant `lastObservedServerVersion` in
-`internal/harness/codex/server_version.go`, and the literal the matching test names. The duplication is deliberate: a fixture echoing the constant back
+`internal/adapter/codex/server_version.go`, and the literal the matching test names. The duplication is deliberate: a fixture echoing the constant back
 would make the matching test tautological and let a typo in the pin through. A fake
 executable and socket server cover the process and protocol contract. Real-model
 acceptance remains a separate owner-run check.

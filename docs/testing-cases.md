@@ -32,13 +32,13 @@ Claude Code runs, by unit tests, each killing the column's mutant of it:
 |---|---|---|
 | `ungated` | `internal/inbox/serve.go` | `internal/inbox` `TestTheFirstNoticeWaitsForTheOpening` |
 | `expiry-unannounced` | `internal/inbox/held.go` | `internal/inbox` `TestAnExpiredTaskIsFailedAndItsSenderTold` |
-| `held-as-delivered` | `internal/harness/claude/receipt.go` | `internal/harness/claude` `TestLaneHeldThenReleased`, `TestParseReceipt` |
-| `refusal-as-delivered` | `internal/harness/claude/receipt.go` | `internal/harness/claude` `TestLaneRefusalFails`, `TestParseReceipt` |
-| `late-word-dropped` | `internal/harness/claude/lane.go` | `internal/harness/claude` `TestLaneLateWordReachesTheServer` |
+| `held-as-delivered` | `internal/adapter/claude/receipt.go` | `internal/adapter/claude` `TestLaneHeldThenReleased`, `TestParseReceipt` |
+| `refusal-as-delivered` | `internal/adapter/claude/receipt.go` | `internal/adapter/claude` `TestLaneRefusalFails`, `TestParseReceipt` |
+| `late-word-dropped` | `internal/adapter/claude/lane.go` | `internal/adapter/claude` `TestLaneLateWordReachesTheServer` |
 | `claude-grant-unshielded` | `internal/grant/rules.go` | `internal/grant` `TestAShieldedDirectoryIsGrantedOnlyByName` |
 | `claude-resume-not-given` | `internal/wrap/wrap.go` | `internal/wrap` `TestAResumedLaunchStartsTheHarnessWithTheGrantsConfirmedAgain` |
 | `claude-resume-closed-held` | `internal/wrap/grants.go` | `internal/wrap` `TestMainsAuthorityAsksTheMailboxWhetherATaskIsOpen` |
-| `claude-worktree-parent` | `internal/harness/claude/worktree.go` | `internal/harness/claude` `TestALaunchWorksInTheDirectoryItWasStartedIn` |
+| `claude-worktree-parent` | `internal/adapter/claude/worktree.go` | `internal/adapter/claude` `TestALaunchWorksInTheDirectoryItWasStartedIn` |
 | `delivery-unpinned`, the column's target | `internal/wrap/wrap.go` (`thread = source.Thread`) | `internal/wrap` `TestTheWrapperPinsDeliveryToTheObservedThread` |
 
 `delivery-unpinned` of `thread-changed` mutated, on the Claude Code column, the
@@ -168,7 +168,7 @@ other, where `git worktree prune` would take every missing checkout's, is held b
 
 `claude-worktree` retired with the Claude Code column in S9, October 11, 2026. It held
 the adapter's part, where its launch works, and its mutant `claude-worktree-parent` is
-killed now by `TestALaunchWorksInTheDirectoryItWasStartedIn` in `internal/harness/claude`;
+killed now by `TestALaunchWorksInTheDirectoryItWasStartedIn` in `internal/adapter/claude`;
 the refusals of `-w`, `--tmux` and the continuations are unit tests there and in
 `internal/cli`. `fixture-worktree` above holds the core's part.
 

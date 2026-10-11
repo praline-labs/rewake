@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/receipt"
 )
 
@@ -70,7 +70,7 @@ func openTurn(served *Endpoint, thread, turn string) { served.TurnStarted(thread
 
 // seenCall reports a call through the neutral input, as an adapter does.
 func seenCall(served *Endpoint, thread, turn, call string, words []string) {
-	served.CallSeen(harness.ObservedCall{ID: call, Conversation: thread, Turn: turn, Words: words})
+	served.CallSeen(adapter.ObservedCall{ID: call, Conversation: thread, Turn: turn, Words: words})
 }
 
 func mustTicket(t *testing.T, path string, asked TicketRequest) bridge.Ticket {

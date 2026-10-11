@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/sessionstate"
@@ -14,7 +14,7 @@ import (
 // startServing starts what serves the session beside the harness — a
 // backend, or an observer and a lane — before the harness itself, and returns
 // what stops them, in the reverse order.
-func startServing(ctx context.Context, request Request, session registry.Session, name, epoch string, plan harness.LaunchPlan, tool *mailTool) (func(), error) {
+func startServing(ctx context.Context, request Request, session registry.Session, name, epoch string, plan adapter.LaunchPlan, tool *mailTool) (func(), error) {
 	var stops []func()
 	stated := false
 	stop := func() {
@@ -29,14 +29,14 @@ func startServing(ctx context.Context, request Request, session registry.Session
 			return stop, err
 		}
 		stops = append(stops, clock.Close)
-		handler := tool.handler(clock.Snapshot, func(ctx context.Context, result harness.Completion) error {
+		handler := tool.handler(clock.Snapshot, func(ctx context.Context, result adapter.Completion) error {
 			if request.OnTurn != nil {
 				return request.OnTurn(ctx, reportSession, result)
 			}
 			return nil
 		})
 		if request.OnConfirm != nil {
-			handler.Confirm = func(ctx context.Context, result harness.Completion) (string, error) {
+			handler.Confirm = func(ctx context.Context, result adapter.Completion) (string, error) {
 				return request.OnConfirm(ctx, reportSession, result)
 			}
 		}
@@ -45,14 +45,14 @@ func startServing(ctx context.Context, request Request, session registry.Session
 			return func() {}, err
 		}
 		stops = append(stops, plan.Backend.Close)
-		if observer, ok := plan.Backend.(harness.ObservedBackend); ok {
+		if observer, ok := plan.Backend.(adapter.ObservedBackend); ok {
 			stops = append(stops, sessionstate.Start(ctx, request.Dir, name, epoch, tool.keeper.source(epoch, observer.SessionState)))
 			stated = true
 		}
 	}
 
 	if plan.Backend == nil && plan.Observer != nil {
-		if reporter, ok := plan.Observer.(harness.TurnReporter); ok && request.OnTurn != nil {
+		if reporter, ok := plan.Observer.(adapter.TurnReporter); ok && request.OnTurn != nil {
 			// The outcomes the observer hears are published the way a
 			// backend's are, bounded by what was read when each was heard.
 			// Without the clock they are not published at all, and the
@@ -62,7 +62,7 @@ func startServing(ctx context.Context, request Request, session registry.Session
 				_, _ = fmt.Fprintln(os.Stderr, "rewake: not reporting interrupted turns: "+err.Error())
 			} else {
 				stops = append(stops, clock.Close)
-				reporter.ReportTurns(tool.handler(clock.Snapshot, func(ctx context.Context, result harness.Completion) error {
+				reporter.ReportTurns(tool.handler(clock.Snapshot, func(ctx context.Context, result adapter.Completion) error {
 					return request.OnTurn(ctx, reportSession, result)
 				}))
 			}

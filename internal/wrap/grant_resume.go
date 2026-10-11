@@ -6,9 +6,9 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/grant"
 	"github.com/praline-labs/rewake/internal/grantauth"
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/state"
 )
 
@@ -45,9 +45,9 @@ func (r resumed) dirs() []string {
 
 // resumeGrants confirms again the grants of the conversation the launch
 // arguments name, for a harness that takes directory grants.
-func resumeGrants(dir, name, epoch string, adapter harness.Harness, args []string) resumed {
-	resumer, ok := adapter.(harness.Resumer)
-	granter, grants := adapter.(harness.DirGrantHarness)
+func resumeGrants(dir, name, epoch string, h adapter.Harness, args []string) resumed {
+	resumer, ok := h.(adapter.Resumer)
+	granter, grants := h.(adapter.DirGrantHarness)
 	if !ok || !grants || !granter.SupportsDirGrant() {
 		return resumed{}
 	}
@@ -64,7 +64,7 @@ func resumeGrants(dir, name, epoch string, adapter harness.Harness, args []strin
 // keeps those confirmed whose directories pass this session's rules again. It
 // says in a note what it restored and what it did not.
 func confirmedAgain(dir, name, epoch, thread string) (confirmed []grantauth.Restored, notes []string) {
-	rules := grant.CurrentEnv(state.RootForRoom(dir), harness.AllProtectedDirs()).Rules()
+	rules := grant.CurrentEnv(state.RootForRoom(dir), adapter.AllProtectedDirs()).Rules()
 	for _, restored := range grantauth.Restore(dir, name, epoch, thread) {
 		err := restored.Err
 		if err == nil {

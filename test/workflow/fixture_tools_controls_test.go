@@ -56,7 +56,7 @@ var (
 	// The adapter passes the endpoint no time for the program's start.
 	mutantTurnStartUntimed = mutation{
 		name:  "turn-start-untimed",
-		file:  "internal/harness/fixture/turns.go",
+		file:  "internal/adapter/fixture/turns.go",
 		edits: []edit{{"b.handler.Tool.TurnStarted(thread, frame.Turn, frame.At)", "b.handler.Tool.TurnStarted(thread, frame.Turn, 0)"}},
 	}
 )

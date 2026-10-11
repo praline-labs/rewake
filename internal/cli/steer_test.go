@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/control"
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/state"
 )
@@ -38,7 +38,7 @@ func steerWorld(t *testing.T, workerHarness string) (string, registry.Session, s
 	fast := control.Limits{Pickup: 300 * time.Millisecond, Outcome: 300 * time.Millisecond, Poll: 5 * time.Millisecond}
 	steerLimits = map[string]control.Limits{control.Compact: fast, control.Interrupt: fast}
 	t.Cleanup(func() { steerLimits = saved })
-	stubSteering(t, func(found harness.Harness) harness.Harness {
+	stubSteering(t, func(found adapter.Harness) adapter.Harness {
 		return steerStub{Harness: found, focus: true, trace: "the stub records it in its model's history"}
 	})
 	return dir, worker, controlDir
@@ -322,7 +322,7 @@ func TestWrongCallsAreRefusedBeforeAnythingIsSent(t *testing.T) {
 }
 
 // unsteerable is a harness that takes no control requests.
-type unsteerable struct{ harness.Harness }
+type unsteerable struct{ adapter.Harness }
 
 func (unsteerable) Title() string { return "Stub harness" }
 
@@ -330,7 +330,7 @@ func (unsteerable) Title() string { return "Stub harness" }
 // by the test: no harness in the catalog refuses a focus or shows its model a
 // trace of its own.
 type steerStub struct {
-	harness.Harness
+	adapter.Harness
 	focus bool
 	trace string
 }
@@ -341,10 +341,10 @@ func (s steerStub) InterruptTrace() string { return s.trace }
 
 // stubSteering makes every harness answer as the one replace returns until the
 // test ends.
-func stubSteering(t *testing.T, replace func(harness.Harness) harness.Harness) {
+func stubSteering(t *testing.T, replace func(adapter.Harness) adapter.Harness) {
 	t.Helper()
 	saved := findHarness
-	findHarness = func(id string) (harness.Harness, bool) {
+	findHarness = func(id string) (adapter.Harness, bool) {
 		found, ok := saved(id)
 		return replace(found), ok
 	}
@@ -353,12 +353,12 @@ func stubSteering(t *testing.T, replace func(harness.Harness) harness.Harness) {
 
 func TestAHarnessThatCannotTakeItIsAWrongCall(t *testing.T) {
 	_, _, controlDir := steerWorld(t, "")
-	stubSteering(t, func(found harness.Harness) harness.Harness { return unsteerable{found} })
+	stubSteering(t, func(found adapter.Harness) adapter.Harness { return unsteerable{found} })
 	code, _, errOut := run("compact", "worker")
 	if code != ExitUsage || !strings.Contains(errOut, "worker is a Stub harness session, which does not take rewake compact yet") {
 		t.Fatalf("exit %d, %q", code, errOut)
 	}
-	stubSteering(t, func(found harness.Harness) harness.Harness { return steerStub{Harness: found} })
+	stubSteering(t, func(found adapter.Harness) adapter.Harness { return steerStub{Harness: found} })
 	code, _, errOut = run("compact", "worker", "keep the plan")
 	if code != ExitUsage || !strings.Contains(errOut, "focus not supported by Stub harness") {
 		t.Fatalf("exit %d, %q", code, errOut)

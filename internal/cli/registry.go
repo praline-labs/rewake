@@ -6,7 +6,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/alias"
 
-	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/role"
 )
 
@@ -65,7 +65,7 @@ func buildGroups() {
 		Title:   "RUN A SESSION",
 		Summary: "A coding agent started through rewake runs in this terminal as usual; rewake registers it and carries its messages.",
 	}
-	for _, h := range harness.All() {
+	for _, h := range adapter.All() {
 		run.Commands = append(run.Commands, launchCommand(h))
 	}
 	run.Commands = append(run.Commands, worktreeCommand())
@@ -233,9 +233,9 @@ func buildGroups() {
 const nestedLaunchHelp = "Refused with exit 2 from a shell inside a rewake session: the owner starts sessions, from a terminal outside any."
 
 // launchCommand builds the command that starts one harness.
-func launchCommand(h harness.Harness) *Command {
+func launchCommand(h adapter.Harness) *Command {
 	notes := append([]string{}, h.Notes()...)
-	notes = append(notes, nestedLaunchHelp, harness.SettingsHelp, alias.Help)
+	notes = append(notes, nestedLaunchHelp, adapter.SettingsHelp, alias.Help)
 	return &Command{
 		Name:           h.ID(),
 		Args:           "[" + h.ID() + " args...]",
@@ -255,7 +255,7 @@ func launchCommand(h harness.Harness) *Command {
 
 // roomExample starts a session in another room, with the role the harness can
 // run: a worker where it reports its turns, main where it does not.
-func roomExample(h harness.Harness) string {
+func roomExample(h adapter.Harness) string {
 	if !reportsTurns(h) {
 		return "rewake --room work --" + role.Main.ID + " --name lead " + h.ID()
 	}
@@ -268,7 +268,7 @@ func roomExample(h harness.Harness) string {
 func flow() []FlowStep {
 	steps := []FlowStep{}
 	last := ""
-	for _, h := range harness.All() {
+	for _, h := range adapter.All() {
 		if !reportsTurns(h) {
 			steps = append(steps, FlowStep{
 				Command: fmt.Sprintf("rewake --%s --name lead %s", role.Main.ID, h.ID()),

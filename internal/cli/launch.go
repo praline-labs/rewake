@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/alias"
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
 	"github.com/praline-labs/rewake/internal/state"
@@ -20,7 +20,7 @@ import (
 // handleLaunch starts one harness as a rewake session. It returns only when the
 // harness exits, and with its exit code: rewake sits in the middle and should
 // not hide what the program said.
-func handleLaunch(h harness.Harness) func(*Context, Call) error {
+func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 	return func(ctx *Context, call Call) error {
 		if err := refuseNestedLaunch(call); err != nil {
 			return err
@@ -28,7 +28,7 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 		if prefix, present := call.Flags["name"]; present && prefix == "" {
 			return &UsageError{Command: call.Command, Message: "--name needs a nonempty prefix; omit --name to use the selected role."}
 		}
-		if refuser, ok := h.(harness.LaunchRefuser); ok {
+		if refuser, ok := h.(adapter.LaunchRefuser); ok {
 			if err := refuser.RefuseLaunch(call.Raw); err != nil {
 				return &UsageError{Command: call.Command, Message: err.Error() + "."}
 			}
@@ -69,10 +69,10 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 		}
 
 		code, err := wrap.Run(context.Background(), wrap.Request{
-			OnTurn: func(ctx context.Context, self registry.Session, result harness.Completion) error {
+			OnTurn: func(ctx context.Context, self registry.Session, result adapter.Completion) error {
 				return ReportCompletion(ctx, dir, self, result)
 			},
-			OnConfirm: func(ctx context.Context, self registry.Session, result harness.Completion) (string, error) {
+			OnConfirm: func(ctx context.Context, self registry.Session, result adapter.Completion) (string, error) {
 				return ConfirmCompletion(ctx, dir, self, result)
 			},
 			Harness: h,
@@ -223,8 +223,8 @@ func projectForbidden() []string {
 // singleUseFlags asks a harness which of its flags it takes at most once. The
 // answer belongs to the harness — one may refuse a repeated --model while
 // accepting another flag repeated — so this only looks it up.
-func singleUseFlags(id string) []harness.Flag {
-	for _, candidate := range harness.All() {
+func singleUseFlags(id string) []adapter.Flag {
+	for _, candidate := range adapter.All() {
 		if candidate.ID() == id {
 			return candidate.SingleUseFlags()
 		}

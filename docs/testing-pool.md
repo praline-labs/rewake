@@ -85,8 +85,8 @@ only these numbers differ, so the suite does not run these values at their real 
 | pickup of a compact or interrupt request | 5 s | 1.5 s | `internal/cli`, `builtPickup` |
 | a compaction letter's wait for its other half | 3 s | 1.5 s | `internal/wrap`, `builtLetterWait` |
 | main's scan for other sessions' notices | 1 s | 250 ms | `internal/wrap`, `builtNoticeScan` |
-| a Codex compaction's hold until its turn is seen | 80 s | 2 s | `internal/harness/codex/gateway`, `builtCompactionStart` |
-| a Codex compaction's hold once its turn runs | 10 min | 6 s | `internal/harness/codex/gateway`, `builtCompactionRun` |
+| a Codex compaction's hold until its turn is seen | 80 s | 2 s | `internal/adapter/codex/gateway`, `builtCompactionStart` |
+| a Codex compaction's hold once its turn runs | 10 min | 6 s | `internal/adapter/codex/gateway`, `builtCompactionRun` |
 
 Each is waited out in dozens of cases, and at the real length they added minutes to a
 run while proving nothing the shorter ones do not. The real values are held by the unit

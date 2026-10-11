@@ -6,9 +6,9 @@ import (
 	"io"
 	"strings"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/alias"
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/role"
 	"github.com/praline-labs/rewake/internal/state"
 )
@@ -29,7 +29,7 @@ func Run(argv []string, stdout, stderr io.Writer) int {
 	for _, note := range aliases.Notes {
 		_, _ = fmt.Fprintln(stderr, "rewake: "+note)
 	}
-	expanded, err := aliases.Expand(argv, harness.IDs(), launchFlagTakesValue, projectForbidden(), singleUseFlags)
+	expanded, err := aliases.Expand(argv, adapter.IDs(), launchFlagTakesValue, projectForbidden(), singleUseFlags)
 	if err != nil {
 		return report(ctx, &UsageError{Message: err.Error()})
 	}
@@ -169,7 +169,7 @@ func guideModel(play *role.Playbook) map[string]any {
 		"flow":          flow(),
 		"notes":         notes(),
 		"globalOptions": renderOptions(globalOptions),
-		"harnesses":     harness.IDs(),
+		"harnesses":     adapter.IDs(),
 	}
 	if play != nil {
 		// The same answer the printed form gives, in the same words: an agent

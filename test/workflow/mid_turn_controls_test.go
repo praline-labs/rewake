@@ -32,7 +32,7 @@ import (
 // exactly "rewake waited for the turn to end".
 var mutantWaitForIdle = mutation{
 	name: "wait-for-idle",
-	file: "internal/harness/fixture/deliver.go",
+	file: "internal/adapter/fixture/deliver.go",
 	edits: []edit{{
 		"\t\treturn nil, fmt.Errorf(\"%w: the fixture has no live wake\", inbox.ErrThreadUnavailable)\n\t}\n",
 		"\t\treturn nil, fmt.Errorf(\"%w: the fixture has no live wake\", inbox.ErrThreadUnavailable)\n\t}\n" +

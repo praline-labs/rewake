@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 
-	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
@@ -38,8 +38,8 @@ func requestedGitGrant(call Call, sender, target registry.Session, senderErr err
 	if !role.Of(target.Role).GitWrite {
 		return refuse(fmt.Sprintf("%s is a %s session, and only a write session takes repository Git metadata grants. Send the task to a --write session whose harness takes a Git grant, or do the Git part yourself.", target.Name, role.Of(target.Role).ID))
 	}
-	adapter, _ := findHarness(target.Harness)
-	capability, supported := adapter.(harness.GitGrantHarness)
+	own, _ := findHarness(target.Harness)
+	capability, supported := own.(adapter.GitGrantHarness)
 	if !supported || !capability.SupportsGitGrant() {
 		return false, &FailedError{Message: fmt.Sprintf("--grant-git: %s runs %s, which takes no per-message Git grant. Do the Git part yourself, or send the task to a --write session whose harness takes one.", target.Name, target.Harness)}
 	}

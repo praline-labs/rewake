@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/boottime"
 	"github.com/praline-labs/rewake/internal/cli"
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/inbox"
 )
 
@@ -97,7 +97,7 @@ func TestAnEndOnRecordTheGateNeverHeardRefusesTheAcknowledgment(t *testing.T) {
 	if c.ended || c.result.IsError {
 		t.Fatalf("the read: %+v", c)
 	}
-	if err := cli.ReportCompletion(context.Background(), r.dir, r.self, harness.Completion{
+	if err := cli.ReportCompletion(context.Background(), r.dir, r.self, adapter.Completion{
 		ID: "an-end-elsewhere", Thread: thread, Kind: inbox.Finished,
 		Text: "finished elsewhere", Started: started, Ended: boottime.Now(), Boundary: r.clock.Snapshot(),
 	}); err != nil {

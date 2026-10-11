@@ -3,8 +3,8 @@ package endpoint
 import (
 	"testing"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/receipt"
 )
@@ -16,9 +16,9 @@ func TestOnlyAUsedTicketWithItsBindingIsAcknowledged(t *testing.T) {
 	var got acknowledged
 	served, path := testEndpoint(t, testTransport, func(c *Config) { c.Acknowledge = got.record })
 	openTurn(served, "th", "t1")
-	result := harness.ToolResult{Succeeded: true, Direct: true, Texts: []string{"a letter"}}
+	result := adapter.ToolResult{Succeeded: true, Direct: true, Texts: []string{"a letter"}}
 	seen := func(call string) {
-		served.CallSeen(harness.ObservedCall{ID: call, Conversation: "th", Turn: "t1", Words: words})
+		served.CallSeen(adapter.ObservedCall{ID: call, Conversation: "th", Turn: "t1", Words: words})
 	}
 	seen("never-asked")
 	served.CallResult("never-asked", result)
@@ -47,14 +47,14 @@ func TestOnlyAUsedTicketWithItsBindingIsAcknowledged(t *testing.T) {
 // result shortened or without text proves no answer.
 func TestTheWholeResultAndItsSize(t *testing.T) {
 	cases := []struct {
-		result harness.ToolResult
+		result adapter.ToolResult
 		answer string
 		size   int
 	}{
-		{harness.ToolResult{Texts: []string{"first", "second"}}, "first", bridge.EncodedSize("first", "second")},
-		{harness.ToolResult{Texts: []string{"only"}}, "only", bridge.EncodedSize("only", "")},
-		{harness.ToolResult{Texts: []string{"first", "second"}, Shortened: true}, "", 0},
-		{harness.ToolResult{}, "", 0},
+		{adapter.ToolResult{Texts: []string{"first", "second"}}, "first", bridge.EncodedSize("first", "second")},
+		{adapter.ToolResult{Texts: []string{"only"}}, "only", bridge.EncodedSize("only", "")},
+		{adapter.ToolResult{Texts: []string{"first", "second"}, Shortened: true}, "", 0},
+		{adapter.ToolResult{}, "", 0},
 	}
 	for _, test := range cases {
 		test.result.Succeeded, test.result.Direct = true, true

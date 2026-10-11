@@ -7,13 +7,13 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
 )
 
 func TestDefaultRoleStaysGeneralAcrossRoomLifecycle(t *testing.T) {
-	for _, h := range harness.All() {
+	for _, h := range adapter.All() {
 		t.Run(h.ID(), func(t *testing.T) {
 			dir := stateDir(t)
 			claim := func(prefix string, part role.Role) registry.Session {

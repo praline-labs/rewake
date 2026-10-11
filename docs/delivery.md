@@ -220,8 +220,8 @@ the bound is the only gate.
 **A reservation that cannot be taken in three seconds fails the message, it does not
 hold it.** September 22, 2026: the reservation is bounded at three seconds twice, by
 the delivery context in `internal/inbox/reservation.go` and again by `Reserve` in
-`internal/harness/codex/server_delivery.go`. On a timeout, `Reserve` in
-`internal/harness/codex/gateway/reservation.go` returns a plain context error; `refuse`
+`internal/adapter/codex/server_delivery.go`. On a timeout, `Reserve` in
+`internal/adapter/codex/gateway/reservation.go` returns a plain context error; `refuse`
 in `internal/inbox/reservation.go` wraps it into `ErrThreadUnavailable`, declared in
 `internal/inbox/thread.go`; and `internal/inbox/batch.go` turns that into `failed`
 rather than `pending`. So a wrapper
@@ -233,7 +233,7 @@ start-or-steer call rather than taken from a status snapshot.
 The one exception is a compaction (September 24, 2026): a Codex conversation being
 compacted, by main's `rewake compact` or the terminal's `/compact`, takes no work, and
 the gateway's `Reserve` then returns `gateway.ErrCompacting`, which `Reserve` in
-`internal/harness/codex/server_delivery.go` passes on as `inbox.ErrNotYet`. `refuse`
+`internal/adapter/codex/server_delivery.go` passes on as `inbox.ErrNotYet`. `refuse`
 lets that one through unwrapped, so the message stays `pending` and goes on a later
 pass, once the compaction has ended, the wrapper's wait for its end has, or its mark's bound
 has passed — 80 seconds for a compaction whose turn is not seen, 10 minutes for one

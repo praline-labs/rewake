@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/sessionstate"
@@ -54,7 +54,7 @@ func (threadObserver) Thread() (string, error)             { return "observed-th
 
 type threadObservedHarness struct{ fakeHarness }
 
-func (h *threadObservedHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, error) {
+func (h *threadObservedHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error) {
 	plan, err := h.fakeHarness.Launch(request)
 	plan.Observer = threadObserver{}
 	return plan, err

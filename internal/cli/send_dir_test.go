@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/grant"
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/state"
@@ -47,7 +47,7 @@ func newGrantWorld(t *testing.T, senderRole, harnessID string) grantWorld {
 		peer.Harness = harnessID
 	} else {
 		saved := findHarness
-		findHarness = func(id string) (harness.Harness, bool) {
+		findHarness = func(id string) (adapter.Harness, bool) {
 			found, ok := saved(id)
 			return grantStub{Harness: found, dirs: true, reaches: true}, ok
 		}
@@ -136,8 +136,8 @@ func TestDirGrantIsCarriedResolvedAndCollapsed(t *testing.T) {
 // no grant: the task fails before it goes out, and says what to do instead.
 func TestASessionThatTakesNoDirectoryIsSentNoGrant(t *testing.T) {
 	takesNone := ""
-	for _, h := range harness.All() {
-		if taker, ok := h.(harness.DirGrantHarness); !ok || !taker.SupportsDirGrant() {
+	for _, h := range adapter.All() {
+		if taker, ok := h.(adapter.DirGrantHarness); !ok || !taker.SupportsDirGrant() {
 			takesNone = h.ID()
 			break
 		}

@@ -32,11 +32,6 @@ var transition = map[string]transit{
 	"internal/channel":                 {layer: core, step: "S13"},
 	"internal/inbox":                   {layer: core, step: "S13"},
 
-	"internal/harness":         {layer: api, step: "S10"},
-	"internal/harness/claude":  {layer: api + "/claude", step: "S10"},
-	"internal/harness/fixture": {layer: api + "/fixture", step: "S10"},
-	"internal/harness/catalog": {layer: catalog, step: "S10"},
-
 	"internal/bridge":          {layer: tool, step: "S16"},
 	"internal/bridge/endpoint": {layer: host, step: "S16"},
 	"internal/wrap":            {layer: host, step: "S16"},
@@ -61,19 +56,19 @@ func (x importException) excuses(e edge) bool {
 // run of the test (docs/v2/stage3-steps.md#s1-the-tests-first).
 var importExceptions = []importException{
 	{
-		from: "internal/cli", to: "internal/harness/catalog",
+		from: "internal/cli", to: "internal/adapter/catalog",
 		files:  []string{"internal/cli/cli_test.go"},
 		reason: "the parser's tests read the registry the catalog fills; from S10 cmd/rewake passes the catalog value",
 		step:   "S10",
 	},
 	{
-		from: "internal/alias", to: "internal/harness/catalog",
+		from: "internal/alias", to: "internal/adapter/catalog",
 		files:  []string{"internal/alias/harness_flags_test.go"},
 		reason: "the tests take a real adapter",
 		step:   "S10",
 	},
 	{
-		from: "internal/wrap", to: "internal/harness/catalog",
+		from: "internal/wrap", to: "internal/adapter/catalog",
 		files:  []string{"internal/wrap/naming_test.go"},
 		reason: "the tests take a real adapter",
 		step:   "S10",
@@ -174,16 +169,16 @@ func changedMessage[F finding](x fmt.Stringer, why excuse, group []F, count int,
 }
 
 var registryExceptions = map[registryException]excuse{
-	{"internal/harness/harness.go", "package-level variable registered holds adapters ([]github.com/praline-labs/rewake/internal/harness.Harness)"}: {
-		"the 1.x registry Register fills", "S10", 1, "26c51dca7432",
+	{"internal/adapter/harness.go", "package-level variable registered holds adapters ([]github.com/praline-labs/rewake/internal/adapter.Harness)"}: {
+		"the 1.x registry Register fills", "S10", 1, "c5f2a2279bb3",
 	},
-	{"internal/harness/catalog/catalog.go", "func init in a package under adapter"}: {
-		"the catalog registers every adapter from init; S10 makes it a constructor", "S10", 1, "64f06d049785",
+	{"internal/adapter/catalog/catalog.go", "func init in a package under adapter"}: {
+		"the catalog registers every adapter from init; S10 makes it a constructor", "S10", 1, "7a616d8763b7",
 	},
-	{"internal/harness/catalog/fixture.go", "func init in a package under adapter"}: {
-		"the fixture joins the catalog from a tagged init, beside the others, until S10 makes the catalog a constructor", "S10", 1, "08005cc75894",
+	{"internal/adapter/catalog/fixture.go", "func init in a package under adapter"}: {
+		"the fixture joins the catalog from a tagged init, beside the others, until S10 makes the catalog a constructor", "S10", 1, "45e8b1dc7cf2",
 	},
-	{"internal/harness/probe_holder.go", "func init in a package under adapter"}: {
+	{"internal/adapter/probe_holder.go", "func init in a package under adapter"}: {
 		"the probe's holder enters from init when the binary is re-executed as it; S10 moves the probe to the host, which cmd/rewake enters", "S10", 1, "38b34aaf1399",
 	},
 }

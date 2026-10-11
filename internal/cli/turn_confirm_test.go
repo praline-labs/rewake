@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/state"
 )
@@ -19,12 +19,12 @@ import (
 
 // end is a turn end of the interim lab's session, as an adapter reports it:
 // its event and its moment on the boot clock, after the lab's turn start.
-func (lab interimLab) end(id string, at int64, kind inbox.Kind, text string) harness.Completion {
-	return harness.Completion{ID: id, Kind: kind, Text: text, Started: lab.start, Ended: markAt + at}
+func (lab interimLab) end(id string, at int64, kind inbox.Kind, text string) adapter.Completion {
+	return adapter.Completion{ID: id, Kind: kind, Text: text, Started: lab.start, Ended: markAt + at}
 }
 
 // confirm confirms an end with the boundary the run's clock gives now.
-func (lab interimLab) confirm(t *testing.T, end harness.Completion) string {
+func (lab interimLab) confirm(t *testing.T, end adapter.Completion) string {
 	t.Helper()
 	end.Boundary = boundaryNow(t, lab.dir, lab.self)
 	reason, err := ConfirmCompletion(context.Background(), lab.dir, lab.self, end)
@@ -231,7 +231,7 @@ func TestEveryFailureOfTheConfirmationCheckFallsToPublishing(t *testing.T) {
 // confirmed again could not be known. Its waits stay owed.
 func TestAConfirmedEndWithoutItsEventIsRefused(t *testing.T) {
 	lab := newInterimLab(t)
-	for _, end := range []harness.Completion{
+	for _, end := range []adapter.Completion{
 		{Kind: inbox.Finished, Text: "done", Boundary: boundaryNow(t, lab.dir, lab.self), Started: lab.start, Ended: markAt + 1},
 		lab.end("turn-2", 1, inbox.Finished, "done"),
 	} {

@@ -11,7 +11,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/adapter"
 )
 
 // Where aliases are read from, weakest first. The project file wins because it
@@ -106,7 +106,7 @@ func (s *Set) Lookup(name string) (Alias, string, bool) {
 // structured, so dropping the earlier one can remove part of a setting the
 // later one does not restate. Replacing either would take away something
 // nobody asked to remove.
-func (s *Set) Expand(argv []string, knownHarnesses []string, takesValue func(string) bool, projectMayNotSet []string, singleUse func(harness string) []harness.Flag) ([]string, error) {
+func (s *Set) Expand(argv []string, knownHarnesses []string, takesValue func(string) bool, projectMayNotSet []string, singleUse func(harness string) []adapter.Flag) ([]string, error) {
 	position := commandWord(argv, takesValue)
 	if position < 0 {
 		return argv, nil
@@ -145,7 +145,7 @@ func (s *Set) Expand(argv []string, knownHarnesses []string, takesValue func(str
 		}
 	}
 
-	var flags []harness.Flag
+	var flags []adapter.Flag
 	if singleUse != nil {
 		flags = singleUse(value.Harness)
 	}
@@ -165,8 +165,8 @@ func (s *Set) Expand(argv []string, knownHarnesses []string, takesValue func(str
 // rewakeFlags describes rewake's own flags the way a harness describes its
 // own: every flag it takes is single-use, and whether one carries a value is
 // something rewake knows from its command table.
-func rewakeFlags(takesValue func(string) bool, lists ...[]string) []harness.Flag {
-	var flags []harness.Flag
+func rewakeFlags(takesValue func(string) bool, lists ...[]string) []adapter.Flag {
+	var flags []adapter.Flag
 	named := map[string]bool{}
 	for _, argument := range concat(lists...) {
 		if !strings.HasPrefix(argument, "--") || argument == "--" {
@@ -177,7 +177,7 @@ func rewakeFlags(takesValue func(string) bool, lists ...[]string) []harness.Flag
 			continue
 		}
 		named[name] = true
-		flags = append(flags, harness.Flag{
+		flags = append(flags, adapter.Flag{
 			Spellings:  []string{name},
 			TakesValue: takesValue != nil && takesValue(strings.TrimPrefix(name, "--")),
 		})
@@ -225,8 +225,8 @@ func commandWord(argv []string, takesValue func(string) bool) int {
 // both its own tail and everything the line appends behind it. Either way a
 // word of a prompt must never replace a setting — which is what happened when
 // each half was checked separately.
-func replaced(arguments, typed []string, flags []harness.Flag) []string {
-	visible := harness.BeforeTerminator(arguments)
+func replaced(arguments, typed []string, flags []adapter.Flag) []string {
+	visible := adapter.BeforeTerminator(arguments)
 	if len(visible) != len(arguments) {
 		// The alias itself ends the flags. Everything the line adds lands
 		// behind that terminator in the command being built, so all of it is
@@ -235,7 +235,7 @@ func replaced(arguments, typed []string, flags []harness.Flag) []string {
 		return arguments
 	}
 	named := map[string]bool{}
-	for _, name := range parameters(harness.BeforeTerminator(typed), flags) {
+	for _, name := range parameters(adapter.BeforeTerminator(typed), flags) {
 		named[name] = true
 	}
 	kept := make([]string, 0, len(arguments))
@@ -252,7 +252,7 @@ func replaced(arguments, typed []string, flags []harness.Flag) []string {
 }
 
 // parameters names every parameter these arguments set.
-func parameters(arguments []string, flags []harness.Flag) []string {
+func parameters(arguments []string, flags []adapter.Flag) []string {
 	var names []string
 	for i := 0; i < len(arguments); i++ {
 		name, width := parameterAt(arguments, i, flags)
@@ -268,17 +268,17 @@ func parameters(arguments []string, flags []harness.Flag) []string {
 // arguments it occupies. A flag that is not in the list answers "" — it may be
 // repeated for all we know, so it is left alone.
 //
-// The shapes of a flag are read by harness.MatchFlag, the one place that knows
+// The shapes of a flag are read by adapter.MatchFlag, the one place that knows
 // them: --flag value, --flag=value, -f value, -f=value and -fvalue. Each of
 // those has cost us a defect somewhere else already.
-func parameterAt(arguments []string, index int, flags []harness.Flag) (string, int) {
+func parameterAt(arguments []string, index int, flags []adapter.Flag) (string, int) {
 	arg := arguments[index]
 	if !strings.HasPrefix(arg, "-") || arg == "-" || arg == "--" {
 		return "", 1
 	}
 	for _, flag := range flags {
 		for _, spelling := range flag.Spellings {
-			_, separate, ok := harness.MatchFlag(arg, spelling)
+			_, separate, ok := adapter.MatchFlag(arg, spelling)
 			if !ok {
 				continue
 			}

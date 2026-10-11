@@ -53,7 +53,7 @@ None of this is in the older tree: the plugin host is newer than it.
 1. SessionEnd hooks with reason `clear`. Their budget: the older tree 1.5 s by default;
    2.1.280 takes the longest SessionEnd hook's own timeout, at least 1.5 s and at most
    60 s (`Hle`), unless `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS` is set. rewake registers
-   its SessionEnd hook with a timeout of 5 s (`internal/harness/claude/settings.go`), so
+   its SessionEnd hook with a timeout of 5 s (`internal/adapter/claude/settings.go`), so
    under rewake the budget is 5 s. The plugin's `session.end` fires too, with the reason.
 2. The queue loses the harness's own passive notices and task notifications. rewake's
    notices are not among them: the socket queues a line with priority `next`,
@@ -87,7 +87,7 @@ a new conversation from a cleared, resumed or forked one; `compact` keeps the co
 **What rewake does with it today.**
 
 - The collector's conversation is the last `session_id` any event carried
-  (`internal/harness/claude/telemetry/state.go`), published as `primaryThread`.
+  (`internal/adapter/claude/telemetry/state.go`), published as `primaryThread`.
 - It decodes `source` only to leave the activity alone on `compact`, and does not decode
   SessionEnd's `reason` at all (`decode.go`).
 - The count of compactions is the run's, not the conversation's.
@@ -125,7 +125,7 @@ showing a conversation the model no longer has.
 
 **What a conversation's start tells rewake.** The gateway sits between the terminal and
 the server and sees the terminal's own requests
-(`internal/harness/codex/gateway/state.go`). It binds a conversation only on a successful
+(`internal/adapter/codex/gateway/state.go`). It binds a conversation only on a successful
 reply to a request it recognized as the terminal's selection, and a generation counter
 keeps an old reply from binding after a newer selection. From the request it can tell:
 
@@ -156,9 +156,9 @@ The same on both harnesses unless said.
   (`internal/grantauth/resume.go`). A grant made before a clear still works in the same
   run on Claude Code, since the hook asks the keeper by run. A cold resume of the
   conversation after the clear would not restore it. On Codex a grant's roots belong to
-  the thread (`internal/harness/codex/server_dirgrant.go`).
+  the thread (`internal/adapter/codex/server_dirgrant.go`).
 - **A compaction's hold** on Codex belongs to the thread it was tied to
-  (`internal/harness/codex/gateway/mark.go`).
+  (`internal/adapter/codex/gateway/mark.go`).
 - **`inbox --awaited`** shows neither the conversation a task went into nor the current
   one (`internal/cli/inbox_awaited.go`).
 

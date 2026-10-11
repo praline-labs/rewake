@@ -1,8 +1,8 @@
 package endpoint
 
 import (
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/receipt"
 )
@@ -11,7 +11,7 @@ import (
 // the five things the endpoint's state takes from a harness, whichever harness
 // reported them. What a harness's own records say is decoded in its adapter.
 
-var _ harness.ToolInput = (*Endpoint)(nil)
+var _ adapter.ToolInput = (*Endpoint)(nil)
 
 // TurnStarted opens a turn a call may be bound to. The table keys a turn by
 // its id alone: a run holds one conversation. A start the harness timed is
@@ -29,7 +29,7 @@ func (e *Endpoint) TurnStarted(_, turn string, at int64) {
 func (e *Endpoint) TurnEnded(_, turn string) { e.turnEnded(turn) }
 
 // CallSeen records the harness's own record of a call.
-func (e *Endpoint) CallSeen(call harness.ObservedCall) {
+func (e *Endpoint) CallSeen(call adapter.ObservedCall) {
 	digest, refusal := e.observedWords(call.Words, call.Words != nil)
 	if call.Nested {
 		refusal = "a nested agent's call does not run through the tool"
@@ -38,14 +38,14 @@ func (e *Endpoint) CallSeen(call harness.ObservedCall) {
 }
 
 // CallResult hands a call's result to the acknowledgment.
-func (e *Endpoint) CallResult(callID string, result harness.ToolResult) {
+func (e *Endpoint) CallResult(callID string, result adapter.ToolResult) {
 	e.complete(callID, exposure(callID, result))
 }
 
 // exposure is what a result proves of one call's answer reaching the model:
 // its first text is the answer, and its size is the result's as the encoder
 // frames it. A result with no text, or shortened, proves no answer.
-func exposure(callID string, r harness.ToolResult) bridge.Exposure {
+func exposure(callID string, r adapter.ToolResult) bridge.Exposure {
 	evidence := bridge.Exposure{CallID: callID, Direct: r.Direct, Succeeded: r.Succeeded}
 	if r.Shortened || len(r.Texts) == 0 {
 		evidence.Shortened = true

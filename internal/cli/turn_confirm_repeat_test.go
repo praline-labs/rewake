@@ -10,7 +10,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/state"
 )
@@ -22,7 +22,7 @@ import (
 
 // heldEnd is the end the repeated cases hold, with the boundary it was
 // captured with, which a retry carries unchanged.
-func (lab interimLab) heldEnd(t *testing.T) harness.Completion {
+func (lab interimLab) heldEnd(t *testing.T) adapter.Completion {
 	t.Helper()
 	end := lab.end("turn-2", 1, inbox.Finished, "the held answer")
 	end.Boundary = boundaryNow(t, lab.dir, lab.self)
@@ -30,7 +30,7 @@ func (lab interimLab) heldEnd(t *testing.T) harness.Completion {
 }
 
 // again confirms an end as it is, its boundary included.
-func (lab interimLab) again(t *testing.T, end harness.Completion) string {
+func (lab interimLab) again(t *testing.T, end adapter.Completion) string {
 	t.Helper()
 	reason, err := ConfirmCompletion(context.Background(), lab.dir, lab.self, end)
 	if err != nil {

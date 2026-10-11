@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/grant"
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/state"
 )
 
@@ -73,8 +73,8 @@ func TestAnUnreadableGrantJournalDoesNotEndTheGrant(t *testing.T) {
 // session, found by the capability rather than by name.
 func dirGrantHarness(t *testing.T) string {
 	t.Helper()
-	for _, h := range harness.All() {
-		if capable, ok := h.(harness.DirGrantHarness); ok && capable.SupportsDirGrant() {
+	for _, h := range adapter.All() {
+		if capable, ok := h.(adapter.DirGrantHarness); ok && capable.SupportsDirGrant() {
 			return h.ID()
 		}
 	}

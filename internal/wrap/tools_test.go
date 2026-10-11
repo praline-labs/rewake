@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/proc"
 	"github.com/praline-labs/rewake/internal/state"
@@ -35,7 +35,7 @@ func (b *offeringBackend) OfferTools(tools []bridge.ToolDescriptor, path string,
 	b.tools, b.endpoint, b.serve = tools, path, serve
 }
 
-func (*offeringBackend) Start(context.Context, harness.CompletionHandler, func(string)) error {
+func (*offeringBackend) Start(context.Context, adapter.CompletionHandler, func(string)) error {
 	return nil
 }
 
@@ -70,7 +70,7 @@ func TestAHarnessThatCarriesItsCallsIsOfferedTheTools(t *testing.T) {
 		t.Fatal("a channel record kept for a transport with no server")
 	}
 	backend := &offeringBackend{}
-	tool.attach(harness.LaunchPlan{Backend: backend, Env: []string{state.DirEnv + "=" + tool.path, "UNRELATED=1"}})
+	tool.attach(adapter.LaunchPlan{Backend: backend, Env: []string{state.DirEnv + "=" + tool.path, "UNRELATED=1"}})
 	if len(backend.tools) != 1 || backend.tools[0].Name != "whoami" || backend.endpoint != tool.path || backend.serve == nil {
 		t.Fatalf("the offer: %+v", backend)
 	}

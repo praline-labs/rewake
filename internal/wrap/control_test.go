@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/adapter"
 )
 
 // steeredHarness serves control requests, and notes what its launch was
@@ -20,7 +20,7 @@ type steeredHarness struct {
 func (s *steeredHarness) CompactFocus() bool     { return true }
 func (s *steeredHarness) InterruptTrace() string { return "" }
 
-func (s *steeredHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, error) {
+func (s *steeredHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error) {
 	s.controlDir = request.ControlDir
 	if info, err := os.Stat(request.ControlDir); err == nil {
 		s.mode = info.Mode().Perm()
@@ -66,7 +66,7 @@ type launchSpy struct {
 	given *string
 }
 
-func (l *launchSpy) Launch(request harness.LaunchRequest) (harness.LaunchPlan, error) {
+func (l *launchSpy) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error) {
 	*l.given = request.ControlDir
 	return l.fakeHarness.Launch(request)
 }

@@ -2,7 +2,7 @@
 
 package internal
 
-import "github.com/praline-labs/rewake/internal/harness/fixture"
+import "github.com/praline-labs/rewake/internal/adapter/fixture"
 
 // The fixture is in the catalog only under its tag, and only for the workflow
 // suite: rule 2 looks for it as nameWords says of a test-only harness.

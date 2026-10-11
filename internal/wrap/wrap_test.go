@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/proc"
 	"github.com/praline-labs/rewake/internal/registry"
@@ -39,15 +39,15 @@ func (f *fakeHarness) Examples() []string { return []string{"rewake fake"} }
 func (f *fakeHarness) Notes() []string    { return nil }
 
 // A double takes every flag once: nothing here launches a real harness.
-func (f *fakeHarness) SingleUseFlags() []harness.Flag { return nil }
+func (f *fakeHarness) SingleUseFlags() []adapter.Flag { return nil }
 func (f *fakeHarness) ProtectedDirs() []string        { return nil }
 
-func (f *fakeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, error) {
+func (f *fakeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error) {
 	time.Sleep(f.launchDelay)
-	plan := harness.LaunchPlan{
+	plan := adapter.LaunchPlan{
 		Command: "/bin/sh",
 		Args:    []string{"-c", f.script},
-		Env:     harness.SessionEnv(request, nil),
+		Env:     adapter.SessionEnv(request, nil),
 	}
 	if f.socket {
 		plan.Socket, plan.OwnsSocket = request.Socket, true

@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/cli"
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/state"
 )
@@ -29,7 +29,7 @@ func (r *rig) shell(words ...string) (string, error) {
 
 // journal publishes the end the gate noted the way the wrapper does.
 func (r *rig) journal(boundary *inbox.ReadBoundary, started int64) error {
-	return cli.ReportCompletion(context.Background(), r.dir, r.self, harness.Completion{
+	return cli.ReportCompletion(context.Background(), r.dir, r.self, adapter.Completion{
 		Boundary: boundary, ID: thread + "/" + r.turnID(), Thread: thread,
 		Kind: inbox.Finished, Text: "the turn's last words", Started: started, Ended: r.endpoint.Gate().Noted(),
 	})

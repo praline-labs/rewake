@@ -57,7 +57,7 @@ built is in [testing-plugin.md](archive-1.x/testing-plugin.md#steering-a-session
   written once with the request's id, a request carried out once across a second look
   and a fresh server, one withdrawn or replaced as it is marked left undone and handed
   to the served side once its answer is written, and a foreign id not taken.
-- `internal/harness/codex/gateway/compact_start_test.go` — a compaction answered
+- `internal/adapter/codex/gateway/compact_start_test.go` — a compaction answered
   started when its item ties the mark, before its turn ends, its end with the tokens
   waited for apart and kept in the snapshot; one whose start is not seen answered
   requested, saying whether the server had taken the request, and so is one the gateway
@@ -65,7 +65,7 @@ built is in [testing-plugin.md](archive-1.x/testing-plugin.md#steering-a-session
   answered at once with nothing left to wait for, a final failure recorded as the
   outcome, and a connection
   ending after the request went out answered as an open one.
-- `internal/harness/codex/gateway/steer_test.go` and `steer_guard_test.go` — a
+- `internal/adapter/codex/gateway/steer_test.go` and `steer_guard_test.go` — a
   compaction on request marked manual, never published as work, with its tokens and
   counted as the asker's; refused without a word to the server while a turn, a
   `turn/start` or `review/start` in flight, the terminal's `/compact` or a working
@@ -79,7 +79,7 @@ built is in [testing-plugin.md](archive-1.x/testing-plugin.md#steering-a-session
   runs; a delivery waiting out main's compaction and going after it; an interrupt
   naming main in the stopped outcome, of a turn the terminal started and of one a
   delivery started, and refused idle, during a compaction and when the server says no
-  turn is active. `internal/harness/codex/server_steer_test.go` — the wrapper serves
+  turn is active. `internal/adapter/codex/server_steer_test.go` — the wrapper serves
   the run's directory, answers what it cannot carry out, records a compaction
   withdrawn before it was taken as its outcome, and passes a reservation
   refused for a compaction to the inbox as one to try again;
@@ -143,6 +143,6 @@ built is in [testing-plugin.md](archive-1.x/testing-plugin.md#steering-a-session
   the server is never asked; past its running bound the task is refused, waits and goes
   after the end, and main's letter comes from the late end with its tokens; four product
   mutants ([archive/1.x/codex](../archive/1.x/codex/README.md)).
-  `internal/harness/codex/gateway/compact_hold_test.go` holds the same at the gateway,
+  `internal/adapter/codex/gateway/compact_hold_test.go` holds the same at the gateway,
   and `internal/wrap/compaction_letters_running_test.go` the letter waiting past an
   outcome of `started`.

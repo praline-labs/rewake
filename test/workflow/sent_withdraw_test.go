@@ -363,7 +363,7 @@ var mutantRecallSenderFirst = mutation{
 // mute.
 var mutantRecallUnnamed = mutation{
 	name:  "recall-unnamed",
-	file:  "internal/harness/fixture/deliver.go",
+	file:  "internal/adapter/fixture/deliver.go",
 	edits: []edit{{"\t\t\tmember.Recalls = letter.Recall.ID\n", ""}},
 }
 

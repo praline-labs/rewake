@@ -8,9 +8,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/state"
 )
@@ -105,7 +105,7 @@ func startMailTool(request Request, name, epoch string) *mailTool {
 
 // attach hands the endpoint what only the plan knows: the backend's word on
 // whether the tool may read.
-func (t *mailTool) attach(plan harness.LaunchPlan) {
+func (t *mailTool) attach(plan adapter.LaunchPlan) {
 	if t.endpoint == nil {
 		return
 	}
@@ -128,8 +128,8 @@ func (t *mailTool) attach(plan harness.LaunchPlan) {
 
 // handler is a completion handler whose ends are captured through the
 // tool's gate, when the run has one.
-func (t *mailTool) handler(capture func() *inbox.ReadBoundary, publish func(context.Context, harness.Completion) error) harness.CompletionHandler {
-	handler := harness.CompletionHandler{Capture: capture, Publish: publish}
+func (t *mailTool) handler(capture func() *inbox.ReadBoundary, publish func(context.Context, adapter.Completion) error) adapter.CompletionHandler {
+	handler := adapter.CompletionHandler{Capture: capture, Publish: publish}
 	if t.endpoint != nil {
 		handler.EndCapture = t.endpoint.Gate().Capture
 		handler.Tool = t.endpoint
@@ -139,12 +139,12 @@ func (t *mailTool) handler(capture func() *inbox.ReadBoundary, publish func(cont
 
 // started names the processes the tool's calls may come from below: the
 // harness, and a backend's own process.
-func (t *mailTool) started(harnessPID int, backend harness.Backend) {
+func (t *mailTool) started(harnessPID int, backend adapter.Backend) {
 	if t.endpoint == nil {
 		return
 	}
 	roots := []int{harnessPID}
-	if owner, ok := backend.(harness.ProcessBackend); ok && owner.ProcessID() > 0 {
+	if owner, ok := backend.(adapter.ProcessBackend); ok && owner.ProcessID() > 0 {
 		roots = append(roots, owner.ProcessID())
 	}
 	t.endpoint.SetRoots(roots...)
@@ -160,10 +160,10 @@ func (t *mailTool) close() {
 // readVersion is the launch's read of its harness's version, for a harness
 // that reads it on every launch; its error refuses the launch before the
 // claim. The program read is the one the launch will start.
-func readVersion(request Request, cwd string) (harness.Version, error) {
-	reader, ok := request.Harness.(harness.LaunchVersionReader)
+func readVersion(request Request, cwd string) (adapter.Version, error) {
+	reader, ok := request.Harness.(adapter.LaunchVersionReader)
 	if !ok {
-		return harness.Version{}, nil
+		return adapter.Version{}, nil
 	}
-	return reader.ReadLaunchVersion(harness.LaunchRequest{Command: request.Command}.Program(request.Harness.ID()), harness.ProbeEnv(), cwd)
+	return reader.ReadLaunchVersion(adapter.LaunchRequest{Command: request.Command}.Program(request.Harness.ID()), adapter.ProbeEnv(), cwd)
 }

@@ -11,7 +11,7 @@ import (
 
 	// The command table is derived from the harness catalog, so every test
 	// here needs it registered.
-	_ "github.com/praline-labs/rewake/internal/harness/catalog"
+	_ "github.com/praline-labs/rewake/internal/adapter/catalog"
 )
 
 // run executes one invocation and returns code, stdout and stderr.

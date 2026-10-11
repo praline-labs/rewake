@@ -175,7 +175,7 @@ idle machine, `4` on a busy one; `docs/testing.md`), and takes about three minut
 The `-timeout 10m` is about three times that; a run past it dies with
 `panic: test timed out` and no case to say why.
 
-A change to the fixture harness — its adapter in `internal/harness/fixture` or its
+A change to the fixture harness — its adapter in `internal/adapter/fixture` or its
 program in `test/workflow/fixtureshim*` — also runs the workflow suite before the
 commit. The five checks drive the adapter only through `test/toolrig`'s own program
 and never start the suite's, and the fixture is the suite's only column until stage 4:
@@ -231,7 +231,7 @@ subscription quota: cheap model, short messages, warn the owner first.
 
 Meant to be one move:
 
-1. A new package `internal/harness/<name>` with a type implementing
+1. A new package `internal/adapter/<name>` with a type implementing
    `harness.Harness`: `ID`, `Title`, `Summary`, `Examples`, `Notes`,
    `SingleUseFlags`, and from milestone 3 on, launch and delivery.
    `SingleUseFlags` names the flags that harness takes at most once, each with
@@ -242,7 +242,7 @@ Meant to be one move:
    `ProtectedDirs` names the harness's own configuration directories, which no
    task may grant a session to write (`docs/grants.md`); a harness that keeps
    none returns nothing, and one that forgets them leaves them grantable.
-2. One line in `internal/harness/catalog/catalog.go`.
+2. One line in `internal/adapter/catalog/catalog.go`.
 
 Everything else follows: the launch command, the guide entry, its own `--help`
 page, the step in FLOW, the `harnesses` field of the machine form. A harness

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/state"
 	"github.com/praline-labs/rewake/internal/worktree"
 )
@@ -27,10 +27,10 @@ type worktreeProbe struct {
 	command string
 }
 
-func (p *worktreeProbe) Launch(request harness.LaunchRequest) (harness.LaunchPlan, error) {
+func (p *worktreeProbe) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error) {
 	p.cwd, _ = os.Getwd()
 	if p.fail {
-		return harness.LaunchPlan{}, errors.New("the harness would not start")
+		return adapter.LaunchPlan{}, errors.New("the harness would not start")
 	}
 	plan, err := p.roleLaunchProbe.Launch(request)
 	if p.command != "" {
@@ -51,8 +51,8 @@ func (p *worktreeProbe) LaunchDirectory(args []string) (string, []string, error)
 	return p.taker().LaunchDirectory(args)
 }
 
-func (p *worktreeProbe) taker() harness.WorktreeHarness {
-	return p.Harness.(harness.WorktreeHarness)
+func (p *worktreeProbe) taker() adapter.WorktreeHarness {
+	return p.Harness.(adapter.WorktreeHarness)
 }
 
 // worktreeLab is a repository with src/nested/file at one commit, a state
@@ -142,7 +142,7 @@ func (worktreeLab) launchTold(t *testing.T, probe *worktreeProbe, dir string, ra
 
 func harnessProbe(t *testing.T, id string) *worktreeProbe {
 	t.Helper()
-	found, ok := harness.Find(id)
+	found, ok := adapter.Find(id)
 	if !ok {
 		t.Fatalf("%s is not in the catalog", id)
 	}
@@ -260,8 +260,8 @@ func TestAFailedLaunchKeepsATouchedCheckoutAndSaysSo(t *testing.T) {
 // Here, every harness that takes a worktree flag spells it --worktree; a
 // harness may take none.
 func TestClaudeHandsItsLongWorktreeFlagToRewake(t *testing.T) {
-	for _, h := range harness.All() {
-		if taker, ok := h.(harness.WorktreeHarness); ok && taker.WorktreeFlag() != "--worktree" {
+	for _, h := range adapter.All() {
+		if taker, ok := h.(adapter.WorktreeHarness); ok && taker.WorktreeFlag() != "--worktree" {
 			t.Errorf("%s takes %s, not --worktree", h.ID(), taker.WorktreeFlag())
 		}
 	}

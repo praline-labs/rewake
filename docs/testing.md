@@ -201,7 +201,7 @@ reject.
 **A harness column** is a `column` value with its capabilities and a fixture; the
 scenarios do not change. The fixture harness's program is `test/workflow/fixtureshim_test.go`
 and `fixtureshim_turn_test.go`; its adapter, with its own tests of the readiness
-exchange, each switch, the versions, L1, L2 and E3, is `internal/harness/fixture`. What building the second one taught is in
+exchange, each switch, the versions, L1, L2 and E3, is `internal/adapter/fixture`. What building the second one taught is in
 [2026-09-22-fixture-claude-code.md](roadmap/2026-09-22-fixture-claude-code.md).
 
 ### The cases

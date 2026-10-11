@@ -35,7 +35,7 @@ func syntheticModuleIn(t *testing.T, root string, files map[string]string) func(
 		}
 	}
 	write("go.mod", "module "+module+"\n\ngo 1.25\n")
-	write("internal/harness/harness.go", "package harness\n\ntype Harness interface{ ID() string }\n")
+	write("internal/adapter/harness.go", "package adapter\n\ntype Harness interface{ ID() string }\n")
 	write("cmd/rewake/main.go", "package main\n\nfunc main() {}\n")
 	for name, src := range files {
 		write(name, src)
@@ -128,7 +128,7 @@ func TestEveryFileIsReadWhateverItsConstraint(t *testing.T) {
 	write := syntheticModule(t, map[string]string{
 		"internal/core/tagonly/name.go":  "//go:build rewakefault\n\npackage tagonly\n\nvar mode = \"relay\"\n",
 		"internal/core/never/name.go":    "//go:build ignore\n\npackage never\n\nvar mode = \"relay\"\n",
-		"internal/adapter/fake/fault.go": "//go:build rewakefault\n\npackage fake\n\nimport \"" + module + "/internal/harness\"\n\nvar all []harness.Harness\n",
+		"internal/adapter/fake/fault.go": "//go:build rewakefault\n\npackage fake\n\nimport \"" + module + "/internal/adapter\"\n\nvar all []adapter.Harness\n",
 		"internal/adapter/fake/never.go": "//go:build ignore\n\npackage fake\n\nfunc init() {}\n",
 		"internal/adapter/fake/plain.go": "package fake\n",
 	})
@@ -153,14 +153,14 @@ func TestEveryFileIsReadWhateverItsConstraint(t *testing.T) {
 
 func TestARegistryInATestFileFails(t *testing.T) {
 	syntheticModule(t, map[string]string{
-		"internal/harness/registry_test.go": "package harness\n\nvar hidden []Harness\n",
+		"internal/adapter/registry_test.go": "package adapter\n\nvar hidden []Harness\n",
 		"internal/adapter/fake/fake.go":     "package fake\n",
-		"internal/adapter/fake/x_test.go":   "package fake_test\n\nimport \"" + module + "/internal/harness\"\n\nvar byName map[string]harness.Harness\n",
+		"internal/adapter/fake/x_test.go":   "package fake_test\n\nimport \"" + module + "/internal/adapter\"\n\nvar byName map[string]adapter.Harness\n",
 	})
 	got := registryProblems(t, nil)
 	slices.Sort(got)
 	if len(got) != 2 || !strings.HasPrefix(got[0], "internal/adapter/fake/x_test.go:5: package-level variable byName holds adapters") ||
-		!strings.HasPrefix(got[1], "internal/harness/registry_test.go:3: package-level variable hidden holds adapters") {
+		!strings.HasPrefix(got[1], "internal/adapter/registry_test.go:3: package-level variable hidden holds adapters") {
 		t.Fatalf("got %q, want the internal and the external test file's registries", got)
 	}
 }
@@ -195,19 +195,19 @@ func TestEveryImportReachesTheRule(t *testing.T) {
 // offset, so a second name in an excepted var spec, or a second init on its
 // line, is a finding of its own.
 func TestTwoDeclarationsOnOneLineAreTwo(t *testing.T) {
-	const registry = "internal/harness/registry.go"
+	const registry = "internal/adapter/registry.go"
 	const adapter = "internal/adapter/fake/fake.go"
 	write := syntheticModule(t, map[string]string{
-		registry: "package harness\n\nvar registered []Harness\n",
+		registry: "package adapter\n\nvar registered []Harness\n",
 		adapter:  "package fake\n\nfunc init() {}\n",
 	})
 	table := snapshot(registrations(t), registryKey)
 	if got := registryProblems(t, table); len(got) > 0 {
 		t.Fatalf("the recorded files fail: %q", got)
 	}
-	write(registry, "package harness\n\nvar registered, additional []Harness\n")
-	oneContaining(t, registryProblems(t, table), "internal/harness/registry.go:3: package-level variable additional holds adapters")
-	write(registry, "package harness\n\nvar registered []Harness\n")
+	write(registry, "package adapter\n\nvar registered, additional []Harness\n")
+	oneContaining(t, registryProblems(t, table), "internal/adapter/registry.go:3: package-level variable additional holds adapters")
+	write(registry, "package adapter\n\nvar registered []Harness\n")
 	write(adapter, "package fake\n\nfunc init() {}; func init() {}\n")
 	oneContaining(t, registryProblems(t, table), `the registry exception "func init in a package under adapter" in internal/adapter/fake/fake.go records 1`, "and the file now has 2")
 	write(adapter, "package fake\n\n//line elsewhere.go:40\nfunc init() {}\n\n//line elsewhere.go:40\nfunc init() {}\n")
@@ -221,15 +221,15 @@ func TestARaceOnlyFileIsJudged(t *testing.T) {
 		"internal/core/mail/mail.go":   "package mail\n",
 		"internal/infra/state/a.go":    "package state\n",
 		"internal/infra/state/race.go": "//go:build race\n\npackage state\n\nimport _ \"" + module + "/internal/core/mail\"\n",
-		"internal/harness/race.go":     "//go:build race\n\npackage harness\n\nvar raced []Harness\n",
-		"internal/harness/norace.go":   "//go:build !race\n\npackage harness\n\nvar plain []Harness\n",
+		"internal/adapter/race.go":     "//go:build race\n\npackage adapter\n\nvar raced []Harness\n",
+		"internal/adapter/norace.go":   "//go:build !race\n\npackage adapter\n\nvar plain []Harness\n",
 	})
 	oneContaining(t, importProblems(t, transition, nil),
 		"internal/infra/state/race.go: internal/infra/state (infra) imports internal/core/mail (core)", "(only under -race; -race -tags rewakefault; -race -tags rewakefixture; -race -tags rewakefault,rewakefixture)")
 	got := registryProblems(t, nil)
 	slices.Sort(got)
-	if len(got) != 2 || !strings.HasPrefix(got[0], "internal/harness/norace.go:5: package-level variable plain") ||
-		!strings.HasPrefix(got[1], "internal/harness/race.go:5: package-level variable raced") {
+	if len(got) != 2 || !strings.HasPrefix(got[0], "internal/adapter/norace.go:5: package-level variable plain") ||
+		!strings.HasPrefix(got[1], "internal/adapter/race.go:5: package-level variable raced") {
 		t.Fatalf("got %q, want the registries of the plain and the race build", got)
 	}
 }

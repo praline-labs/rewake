@@ -10,9 +10,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/buildtime"
 	"github.com/praline-labs/rewake/internal/control"
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
 	"github.com/praline-labs/rewake/internal/state"
@@ -61,7 +61,7 @@ var remember = control.Remember
 
 // findHarness looks a harness up; replaceable in tests, where a stub adapter
 // offers or withholds what no registered harness does.
-var findHarness = harness.Find
+var findHarness = adapter.Find
 
 func handleCompact(ctx *Context, call Call) error   { return steer(ctx, call, control.Compact) }
 func handleInterrupt(ctx *Context, call Call) error { return steer(ctx, call, control.Interrupt) }
@@ -110,7 +110,7 @@ func steer(ctx *Context, call Call, action string) error {
 		return usage("a session cannot %s itself: its own turn is running this command.", action)
 	}
 	found, _ := findHarness(session.Harness)
-	steerable, ok := found.(harness.Steerable)
+	steerable, ok := found.(adapter.Steerable)
 	if !ok {
 		return usage("%s is a %s session, which does not take rewake %s yet.", session.Name, harnessTitle(found, session.Harness), action)
 	}
@@ -226,7 +226,7 @@ var steerNext = map[string]string{
 	control.Busy:               "Wait for that request to end, then ask again.",
 }
 
-func harnessTitle(found harness.Harness, id string) string {
+func harnessTitle(found adapter.Harness, id string) string {
 	if found == nil {
 		return id
 	}

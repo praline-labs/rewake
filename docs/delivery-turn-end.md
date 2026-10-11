@@ -124,7 +124,7 @@ sent mid-turn.
 A harness can change conversations inside one wrapper run, as a person's `/new` or
 `/clear` does. Before an owed message is made readable, the wrapper records the selected
 thread in `inbox/<name>/threads/<message id>` under the mailbox lock, as its adapter
-names it (a `ThreadSource`, `internal/harness/thread.go`); an adapter that names none
+names it (a `ThreadSource`, `internal/adapter/thread.go`); an adapter that names none
 records nothing. Claude Code named its conversation through its hooks until S9,
 October 11, 2026, and names none in this build
 ([delivery-adapters.md](delivery-adapters.md#claude-code-adapter)). The context survives reads and status rewrites, and is retained

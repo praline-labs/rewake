@@ -53,8 +53,8 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/bridge/endpoint/close_test.go` `TestARequestAfterTheTransportIsWithdrawnRunsNothing`
   - `internal/bridge/endpoint/transport_test.go` `TestAnAnswerGoesOnlyToTheTransportThatAsked`
   - `internal/bridge/endpoint/transport_test.go` `TestACallTheToolsDoNotOfferRunsNothing`
-  - `internal/harness/fixture/tool_test.go` `TestALiveToolTransportNamesTheProgramToTheEndpoint`
-  - `internal/harness/fixture/tool_test.go` `TestTheProgramsReportsBecomeTheNeutralInput`
+  - `internal/adapter/fixture/tool_test.go` `TestALiveToolTransportNamesTheProgramToTheEndpoint`
+  - `internal/adapter/fixture/tool_test.go` `TestTheProgramsReportsBecomeTheNeutralInput`
   - `internal/wrap/tools_test.go` `TestAHarnessThatCarriesItsCallsIsOfferedTheTools`
 
 - **T3. Every effect happens in the core operation, under its receipt**; a transport
@@ -224,8 +224,8 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/cli/turn_journal_retry_test.go` `TestARetryAnswersOnlyWhatItsFirstAttemptSaw`
   - `internal/cli/turn_retry_test.go` `TestRetriedTurnDoesNotConsumeLaterWork`
   - `internal/cli/turn_retry_test.go` `TestPartialTurnRetryKeepsOriginalOutcome`
-  - `internal/harness/fixture/order_test.go` `TestAnEndCapturesItsBoundaryWhenItsFrameArrives`
-  - `internal/harness/fixture/order_test.go` `TestATurnStartCapturesItsBoundaryWhenItsFrameArrives`
+  - `internal/adapter/fixture/order_test.go` `TestAnEndCapturesItsBoundaryWhenItsFrameArrives`
+  - `internal/adapter/fixture/order_test.go` `TestATurnStartCapturesItsBoundaryWhenItsFrameArrives`
   - `test/toolrig/order_test.go` `TestAnEndCapturedDuringAnAcknowledgmentIncludesIt`
   - `test/toolrig/order_cut_test.go` `TestAnAcknowledgmentCutMidway`
   - `test/toolrig/order_cut_test.go` `TestAnEscNobodyHeard`
@@ -244,11 +244,11 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/cli/bridge_rules_test.go` `TestAnExpiredReadShowsAndClaimsNothing`
   - `internal/cli/bridge_rules_test.go` `TestAPendingMarkIsNotMadeAfterItsDeadline`
   - `internal/bridge/bridge_test.go` `TestAnOpenTicketDescriptorDoesNotHang`
-  - `internal/harness/fixture/order_test.go` `TestASilentProbeCostsOnlyItsCapability`
-  - `internal/harness/fixture/order_test.go` `TestCloseWaitsForACallIntoTheHandler`
-  - `internal/harness/fixture/order_test.go` `TestNothingReachesTheHandlerOnceClosed`
-  - `internal/harness/fixture/order_test.go` `TestCloseWaitsForAFrameBeingHandled`
-  - `internal/harness/fixture/order_test.go` `TestNothingReachesTheHandlerWhileClosing`
+  - `internal/adapter/fixture/order_test.go` `TestASilentProbeCostsOnlyItsCapability`
+  - `internal/adapter/fixture/order_test.go` `TestCloseWaitsForACallIntoTheHandler`
+  - `internal/adapter/fixture/order_test.go` `TestNothingReachesTheHandlerOnceClosed`
+  - `internal/adapter/fixture/order_test.go` `TestCloseWaitsForAFrameBeingHandled`
+  - `internal/adapter/fixture/order_test.go` `TestNothingReachesTheHandlerWhileClosing`
   - `test/toolrig/child_bound_test.go` `TestAChildPastItsDeadline`
   - `test/toolrig/answer_bound_test.go` `TestATransportThatStopsReading`
   - `test/toolrig/transport_test.go` `TestTheEndpointFinishesItsCallsAsItCloses`

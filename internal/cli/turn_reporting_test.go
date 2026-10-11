@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
 	"github.com/praline-labs/rewake/internal/state"
@@ -23,9 +23,9 @@ func realReporting(t *testing.T) {
 
 // unreported is a harness of the catalog whose contract reports no turn's
 // end; the test has nothing to show where every one reports.
-func unreported(t *testing.T) harness.Harness {
+func unreported(t *testing.T) adapter.Harness {
 	t.Helper()
-	for _, h := range harness.All() {
+	for _, h := range adapter.All() {
 		if !harnessReportsTurns(h) {
 			return h
 		}

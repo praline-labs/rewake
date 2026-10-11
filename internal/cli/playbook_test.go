@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/brief"
-	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/role"
 )
 
@@ -112,7 +112,7 @@ func TestEveryStepNamesARealCommand(t *testing.T) {
 
 // launchFlag reports whether a harness takes this flag at launch as rewake's own.
 func launchFlag(flag string) bool {
-	for _, h := range harness.All() {
+	for _, h := range adapter.All() {
 		for _, single := range h.SingleUseFlags() {
 			if slices.Contains(single.Spellings, flag) {
 				return true

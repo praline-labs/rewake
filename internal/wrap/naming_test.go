@@ -7,8 +7,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/harness"
-	_ "github.com/praline-labs/rewake/internal/harness/catalog"
+	"github.com/praline-labs/rewake/internal/adapter"
+	_ "github.com/praline-labs/rewake/internal/adapter/catalog"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
 	"github.com/praline-labs/rewake/internal/state"
@@ -22,7 +22,7 @@ type namedHarness struct {
 func (h *namedHarness) ID() string { return h.id }
 
 func TestLaunchNamesFollowSelectedRoleAndHarness(t *testing.T) {
-	for _, h := range harness.All() {
+	for _, h := range adapter.All() {
 		for _, part := range role.All() {
 			t.Run(h.ID()+"/"+part.ID, func(t *testing.T) {
 				dir := stateDir(t)

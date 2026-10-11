@@ -3,7 +3,7 @@ package cli
 import (
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/adapter"
 )
 
 // grantStub is a registered harness whose grant capabilities the test sets:
@@ -11,7 +11,7 @@ import (
 // a directory, and every one that issues grants reaches its wrapper, so the
 // other half of each of those branches is reached only through a stub.
 type grantStub struct {
-	harness.Harness
+	adapter.Harness
 	git, reaches, dirs bool
 }
 
@@ -19,7 +19,7 @@ func (s grantStub) SupportsGitGrant() bool { return s.git }
 func (s grantStub) ReachesWrapper() bool   { return s.reaches }
 
 func (s grantStub) SupportsDirGrant() bool {
-	taker, ok := s.Harness.(harness.DirGrantHarness)
+	taker, ok := s.Harness.(adapter.DirGrantHarness)
 	return s.dirs || ok && taker.SupportsDirGrant()
 }
 
@@ -27,7 +27,7 @@ func (s grantStub) SupportsDirGrant() bool {
 func stubGrants(t *testing.T, id string, git, reaches bool) {
 	t.Helper()
 	saved := findHarness
-	findHarness = func(asked string) (harness.Harness, bool) {
+	findHarness = func(asked string) (adapter.Harness, bool) {
 		found, ok := saved(asked)
 		if ok && asked == id {
 			return grantStub{Harness: found, git: git, reaches: reaches}, true

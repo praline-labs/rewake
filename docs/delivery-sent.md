@@ -254,7 +254,7 @@ The finality races are unit tests beside the held ones, in
 halfway read and a waiting copy that will not go; the recall's place outside the window in
 `internal/inbox/recall_test.go`; the recall's lines and the replacement's in a notice in
 `internal/inbox/notice_recall_test.go`, and the member entries of a recall and of a
-replacement in `internal/harness/codex/mailbox_test.go`; the references, refusals, the recall and the
+replacement in `internal/adapter/codex/mailbox_test.go`; the references, refusals, the recall and the
 edit that sends none in `internal/cli/withdraw_test.go`; a task withdrawn with its
 addenda, a read addendum that stays, an edit's replacement keeping them and the second
 look under the lock in `internal/cli/addendum_test.go`; withdraw and edit by an id an edit

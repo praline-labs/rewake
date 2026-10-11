@@ -23,12 +23,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/adapter/fixture"
 	"github.com/praline-labs/rewake/internal/boottime"
 	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
 	"github.com/praline-labs/rewake/internal/cli"
-	"github.com/praline-labs/rewake/internal/harness"
-	"github.com/praline-labs/rewake/internal/harness/fixture"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/proc"
 	"github.com/praline-labs/rewake/internal/registry"
@@ -90,7 +90,7 @@ type rig struct {
 	completed map[string]bool
 
 	mu      sync.Mutex
-	backend harness.Backend
+	backend adapter.Backend
 	control string
 	starts  int
 	// boundary is the end the current turn captured, once it did.
@@ -199,7 +199,7 @@ func (r *rig) env() []string {
 	return env
 }
 
-func (r *rig) current() harness.Backend {
+func (r *rig) current() adapter.Backend {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.backend
@@ -237,7 +237,7 @@ func (r *rig) start() {
 	if err := os.WriteFile(filepath.Join(r.root, "child.fault"), []byte(r.fault), 0o600); err != nil {
 		r.t.Fatal(err)
 	}
-	plan, err := fixture.New().Launch(harness.LaunchRequest{
+	plan, err := fixture.New().Launch(adapter.LaunchRequest{
 		Name: "api", Dir: r.dir, Room: "default", Role: role.Write, Epoch: r.self.Epoch(),
 		Socket: filepath.Join(r.root, "f"+n+".sock"), Command: launcher,
 	})
@@ -251,9 +251,9 @@ func (r *rig) start() {
 		r.t.Fatal("the fixture's backend takes no tools")
 	}
 	offer.OfferTools(cli.ToolDescriptors(), state.ContextPath(r.dir, "api", r.self.Epoch()), r.endpoint.SetTransport)
-	handler := harness.CompletionHandler{
+	handler := adapter.CompletionHandler{
 		Tool: r.endpoint, EndCapture: r.endCapture,
-		Publish: func(context.Context, harness.Completion) error { return nil },
+		Publish: func(context.Context, adapter.Completion) error { return nil },
 	}
 	if err := plan.Backend.Start(context.Background(), handler, nil); err != nil {
 		r.t.Fatalf("the program: %v", err)
