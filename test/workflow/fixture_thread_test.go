@@ -134,9 +134,12 @@ var mutantDeliveryUnpinned = mutation{
 
 // The turn end does not carry the conversation it ended in.
 var mutantEndThreadIgnored = mutation{
-	name:  "end-thread-ignored",
-	file:  "internal/cli/completion.go",
-	edits: []edit{{"return endTurnContext(ctx, dir, self, turnEndOf(result), true, result.Thread)", "return endTurnContext(ctx, dir, self, turnEndOf(result), true, \"\")"}},
+	name: "end-thread-ignored",
+	file: "internal/cli/completion.go",
+	edits: []edit{
+		{"return completeTurnContext(ctx, dir, self, turnEndOf(end), end.Thread)", "return completeTurnContext(ctx, dir, self, turnEndOf(end), \"\")"},
+		{"return endTurnContext(ctx, dir, self, turnEndOf(end), true, end.Thread)", "return endTurnContext(ctx, dir, self, turnEndOf(end), true, \"\")"},
+	},
 }
 
 // Any known delivery conversation counts as changed.

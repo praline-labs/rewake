@@ -188,17 +188,17 @@ var (
 	mutantReasonDropped = mutation{
 		name:  "reason-dropped",
 		file:  "internal/adapter/fixture/turns.go",
-		edits: []edit{{"Kind: kind, Text: frame.Text,", "Kind: kind, Text: \"\","}},
+		edits: []edit{{"Reason: reason, Answer: frame.Text,", "Reason: reason, Answer: \"\","}},
 	}
 	mutantFailureCompleted = mutation{
 		name:  "failure-completed",
 		file:  "internal/adapter/fixture/turns.go",
-		edits: []edit{{"\tcase OutcomeFailed:\n\t\treturn inbox.Error, nil\n", "\tcase OutcomeFailed:\n\t\treturn inbox.Finished, nil\n"}},
+		edits: []edit{{"\tcase OutcomeFailed:\n\t\treturn adapter.Failed, nil\n", "\tcase OutcomeFailed:\n\t\treturn adapter.Answered, nil\n"}},
 	}
 	mutantStopCompleted = mutation{
 		name:  "stop-completed",
 		file:  "internal/adapter/fixture/turns.go",
-		edits: []edit{{"\tcase OutcomeInterrupted:\n\t\treturn inbox.Stopped, nil\n", "\tcase OutcomeInterrupted:\n\t\treturn inbox.Finished, nil\n"}},
+		edits: []edit{{"\tcase OutcomeInterrupted:\n\t\treturn adapter.Aborted, nil\n", "\tcase OutcomeInterrupted:\n\t\treturn adapter.Answered, nil\n"}},
 	}
 )
 
