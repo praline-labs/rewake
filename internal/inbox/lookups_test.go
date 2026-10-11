@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -217,10 +218,23 @@ func TestTheSweepKeepsWhatAnUnreadableWaiterMayOwe(t *testing.T) {
 }
 
 // Waiters drops the error a waiter that cannot be read gives: no code outside
-// tests may decide by it.
+// tests may decide by it. The package is told by its directory and its import
+// path, not by its name, so the test holds wherever the package lives and under
+// whatever name a file imports it; and it fails when it has read none of the
+// package's files or none of its importers, rather than pass on nothing.
 func TestNothingButTestsCallsTheLossyWaiters(t *testing.T) {
-	root := filepath.Join("..", "..")
-	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+	root, module := moduleRoot(t)
+	own, err := filepath.Abs(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rel, err := filepath.Rel(root, own)
+	if err != nil {
+		t.Fatal(err)
+	}
+	importPath := module + "/" + filepath.ToSlash(rel)
+	ownFiles, importers := 0, 0
+	err = filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -237,6 +251,14 @@ func TestNothingButTestsCallsTheLossyWaiters(t *testing.T) {
 		if err != nil {
 			return err
 		}
+		inOwn := filepath.Dir(path) == own
+		if inOwn {
+			ownFiles++
+		}
+		name := importedAs(file, importPath)
+		if name != "" {
+			importers++
+		}
 		ast.Inspect(file, func(node ast.Node) bool {
 			call, ok := node.(*ast.CallExpr)
 			if !ok {
@@ -244,12 +266,12 @@ func TestNothingButTestsCallsTheLossyWaiters(t *testing.T) {
 			}
 			switch fun := call.Fun.(type) {
 			case *ast.Ident:
-				if fun.Name == "Waiters" && file.Name.Name == "inbox" {
+				if fun.Name == "Waiters" && inOwn {
 					t.Errorf("%s calls Waiters; ReadWaiters answers its error", path)
 				}
 			case *ast.SelectorExpr:
-				if x, ok := fun.X.(*ast.Ident); ok && x.Name == "inbox" && fun.Sel.Name == "Waiters" {
-					t.Errorf("%s calls inbox.Waiters; ReadWaiters answers its error", path)
+				if x, ok := fun.X.(*ast.Ident); ok && name != "" && x.Name == name && fun.Sel.Name == "Waiters" {
+					t.Errorf("%s calls %s.Waiters; ReadWaiters answers its error", path, name)
 				}
 			}
 			return true
@@ -259,6 +281,53 @@ func TestNothingButTestsCallsTheLossyWaiters(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if ownFiles == 0 || importers == 0 {
+		t.Fatalf("read %d files of %s and %d files importing it", ownFiles, importPath, importers)
+	}
+}
+
+// moduleRoot walks up from the package's directory to the go.mod above it and
+// answers that directory and the module's path.
+func moduleRoot(t *testing.T) (string, string) {
+	t.Helper()
+	dir, err := filepath.Abs(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for {
+		raw, err := os.ReadFile(filepath.Join(dir, "go.mod"))
+		if err == nil {
+			for _, line := range strings.Split(string(raw), "\n") {
+				if module, ok := strings.CutPrefix(strings.TrimSpace(line), "module "); ok {
+					return dir, strings.TrimSpace(module)
+				}
+			}
+			t.Fatalf("%s names no module", filepath.Join(dir, "go.mod"))
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			t.Fatal("no go.mod above the package")
+		}
+		dir = parent
+	}
+}
+
+// importedAs is the name file imports importPath under, or "" when it does
+// not import it by a name a call could qualify.
+func importedAs(file *ast.File, importPath string) string {
+	for _, spec := range file.Imports {
+		if path, err := strconv.Unquote(spec.Path.Value); err != nil || path != importPath {
+			continue
+		}
+		if spec.Name == nil {
+			return importPath[strings.LastIndex(importPath, "/")+1:]
+		}
+		if spec.Name.Name == "_" || spec.Name.Name == "." {
+			return ""
+		}
+		return spec.Name.Name
+	}
+	return ""
 }
 
 // A wait record whose numbers do not parse is no record of zeros: read so, it
