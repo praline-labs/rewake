@@ -44,7 +44,8 @@ refusal on September 17, 2026 cleared after recipient restart.
   [S3 built](2026-10-06-stage3-s3.md) on October 6, [S4](2026-10-06-stage3-s4.md) the
   same day, [S5](2026-10-07-stage3-s5.md) on October 7, [S6](2026-10-08-stage3-s6.md) on
   October 8, [S7](2026-10-08-stage3-s7.md) the same day, [S8](2026-10-08-stage3-s8.md)
-  the same day, [S9 built](2026-10-11-stage3-s9.md) on October 11, S10–S19 to come.
+  the same day, [S9 built](2026-10-11-stage3-s9.md) on October 11,
+  [S10 built](2026-10-11-stage3-s10.md) the same day, S11–S19 to come.
 - [The workflow suite](2026-09-21-workflow-suite.md) — in progress since
   September 21, 2026; what exists and what remains are listed there and in
   [work-queue.md](../work-queue.md).
@@ -143,6 +144,7 @@ without a date. Local installation without publishing is in
 | October 8, 2026 | [Stage 3 of 2.0: S7 built and accepted](2026-10-08-stage3-s7.md) | the tool path on the fixture, in six commits: one neutral input for the endpoint, the turn-id contract, the turn start in the core, the fixture's tool transport, the neutral rig, a workflow scenario per tool; two review rounds and six fix commits — the transport rechecked per request, Close draining its calls, M3 and the complementary acknowledgment order held, the retry scenario's false pass, timed fixture starts, an explicit read schedule; the owner's rule that the five checks run once, on a step's last commit |
 | October 8, 2026 | [Stage 3 of 2.0: S8 built and accepted](2026-10-08-stage3-s8.md) | Codex, the MCP injection and the bridge server out of the product into `archive/1.x/codex`, in six commits; two review rounds and twelve fix commits: the neutral worktree and grant scenarios back on the fixture column with their controls, the stand-in archived, each piece of code only tests reach given its closing step, two flaky tests fixed; where Codex is still named, and why; the owner's decision on the boundary for sessions hosted in a tab |
 | October 11, 2026 | [Stage 3 of 2.0: S9 built](2026-10-11-stage3-s9.md) | Claude Code's hooks, plugin, telemetry and grant keeper out of the product, in four commits; a reporting role, and a task or question, refused on a harness that reports no turns until stage 4; the Claude Code column of the suite retired, its mutants on kept code each killed by a unit test, the grants step 3 gap closed; a live check of a Claude Code main woken idle and mid-turn without the hooks; one review round and four fix commits: the harness's refusal of a question before main's, no grant promised after a cold resume, the documentation's remaining current-tense text for removed behaviour |
+| October 11, 2026 | [Stage 3 of 2.0: S10 built](2026-10-11-stage3-s10.md) | The adapter API and the catalogue as a value, in eleven commits: what an adapter offers and what one run serves as capabilities, each turn end with its event and reason (E7 and O2 closed), the 1.x optional interfaces out; the catalogue built by `cmd/rewake`, rule 3's exception retired; the launch helpers placed by the import rule; the harness words of the help and role texts from the catalogue and the adapters; the endpoint's server hello out, the channel's hello and close from the tool transport's lifecycle; waiting for review |
 
 ## Remaining work — owner decisions, September 19–21, 2026
 
