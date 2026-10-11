@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -96,6 +97,47 @@ func TestSteeringARunWithoutALiveControlFails(t *testing.T) {
 			}
 			if request, ok := <-seen; ok {
 				t.Fatalf("a request reached the worker: %+v", request)
+			}
+		})
+	}
+}
+
+// A boundary withdrawn while send reads its message from stdin is known
+// before the letter is written: the task or question is refused, nothing sent.
+func TestABoundaryWithdrawnWhileStdinIsReadRefusesTheTask(t *testing.T) {
+	for _, flags := range [][]string{nil, {"--question"}} {
+		t.Run(strings.Join(append([]string{"task"}, flags...), " "), func(t *testing.T) {
+			dir := liveSession(t, "api")
+			web := otherRun(t, dir, "web")
+			withLive(t, dir, web, allLive())
+			t.Setenv(state.SessionEnv, "api")
+			reader, writer, err := os.Pipe()
+			if err != nil {
+				t.Fatal(err)
+			}
+			previous := os.Stdin
+			os.Stdin = reader
+			t.Cleanup(func() { os.Stdin = previous; _ = reader.Close(); _ = writer.Close() })
+			done := make(chan error, 1)
+			go func() {
+				// More than a pipe holds: the write returns only once send is
+				// reading, past its first lookup; the end of input waits for
+				// the withdrawal.
+				_, err := writer.Write([]byte(strings.Repeat("work ", 262144)))
+				if err == nil {
+					err = registry.Modify(dir, web.Name, web.Epoch(), func(s *registry.Session) {
+						s.Live = withoutLive(allLive(), adapter.TurnBoundaryCapability)
+					})
+				}
+				_ = writer.Close()
+				done <- err
+			}()
+			code, out, errOut := run(append([]string{"send", "web", "-", "--wait", "0"}, flags...)...)
+			if err := <-done; err != nil {
+				t.Fatal(err)
+			}
+			if sent := finishedFor(t, dir, "web"); code != ExitFailed || len(sent) != 0 || !strings.Contains(errOut, "turn boundary is not live") {
+				t.Fatalf("exit %d, letters %d; out %q, err %q", code, len(sent), out, errOut)
 			}
 		})
 	}

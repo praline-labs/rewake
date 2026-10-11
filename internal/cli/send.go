@@ -159,9 +159,19 @@ func handleSend(ctx *Context, call Call) error {
 	if errors.Is(err, registry.ErrNotFound) {
 		return unknownSessionFor(ctx.table.findCommand("send"), dir, target)
 	}
-	if err == nil && latest.Epoch() == session.Epoch() {
-		// The live set as it stands now, for the notice below.
+	if err != nil {
+		// The set read before stdin is no evidence of what is live now.
+		return failf("could not read %s's record again: %v; nothing was sent.", session.Name, err)
+	}
+	session.Live = nil
+	if latest.Epoch() == session.Epoch() {
 		session.Live = latest.Live
+	}
+	// Admission again on the live set as it stands now, which a run that ended
+	// has none of: stdin stays open as long as its writer likes, and a
+	// boundary withdrawn meanwhile is known before anything is written.
+	if err := refuseUnreported(ctx.table.catalog, session, kind.kind); err != nil {
+		return err
 	}
 
 	addendumTo, err := addendumRoot(call, dir, kind, session)

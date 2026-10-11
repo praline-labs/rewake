@@ -97,7 +97,10 @@ TurnBoundary is not live refuses a task and a question alike, exit 1, with nothi
 a note still goes. Since S11, October 11, 2026, this reads the live set, never the offer:
 a run that has not yet proven its boundary, or has lost it, refuses as one on a harness
 with none does — Claude Code in this build, since S9 — and the offer only picks the
-words of the refusal. Then a silent recipient refuses `--question` before publication,
+words of the refusal. The set is read again once the message is in hand — reading it
+from stdin lasts as long as the writer keeps the pipe open — and a boundary withdrawn
+meanwhile refuses the same way; a record that cannot be read again fails the send, and
+a run that ended meanwhile has nothing live. Then a silent recipient refuses `--question` before publication,
 with exit 2 and a hint to use plain `send` or `--notify`.
 
 A letter to a run whose Wake is not live is still written: `send` reports it accepted,

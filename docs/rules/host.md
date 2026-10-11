@@ -123,6 +123,7 @@ Tests:
 - `internal/cli/live_set_test.go` `TestASendToARunWithoutALiveWakeIsAcceptedUnwoken`
 - `internal/cli/live_set_test.go` `TestATaskToARunWithoutALiveBoundaryFails`
 - `internal/cli/live_set_test.go` `TestTheLiveBoundaryDecidesNotTheOffer`
+- `internal/cli/live_set_test.go` `TestABoundaryWithdrawnWhileStdinIsReadRefusesTheTask`
 - `internal/cli/live_set_test.go` `TestSteeringARunWithoutALiveControlFails`
 - `internal/adapter/fixture/live_test.go` `TestTheRunReportsItsLiveSetAsItChanges`
 - `internal/adapter/fixture/live_test.go` `TestTheFirstReportLeavesOutWhatTheExchangeDidNotProve`
