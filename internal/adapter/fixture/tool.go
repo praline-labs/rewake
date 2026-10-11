@@ -157,3 +157,23 @@ func (b *backend) toolResult(l *link, frame Frame) Frame {
 	})
 	return Frame{OK: true}
 }
+
+// toolDenied reports the program's denial of a call of the tool for
+// permission, the harness's own signal of a policy refusal.
+func (b *backend) toolDenied(l *link, frame Frame) Frame {
+	if !b.liveOn(l, ToolTransport) {
+		return Frame{Error: "no live tool transport"}
+	}
+	if frame.Call == "" {
+		return Frame{Error: "a denial names its call"}
+	}
+	if !b.enter() {
+		return Frame{Error: errClosing.Error()}
+	}
+	defer b.leave()
+	if b.handler.Tool == nil {
+		return Frame{Error: "the wrapper takes no tool calls"}
+	}
+	b.handler.Tool.CallDenied(frame.Call)
+	return Frame{OK: true}
+}

@@ -1,23 +1,15 @@
 package workflow
 
-// The fixture program's served side of rewake compact and rewake interrupt:
-// it polls the run's control directory, as Claude Code's module did before S9,
-// and carries each request out in its own session. A compaction is answered
-// started at once and ends compactTakes later, reported to the adapter with
-// its counts; an interrupt ends the held turn with the interrupter's name as
-// its text. The protocol is the files of docs/remote-control.md, spelled out
-// here rather than imported, like the rest of the exchange.
-//
-// S11 moves the served side behind the fixture's live Control; until then
-// the program serves the directory itself, and RW_SHIM_NO_CONTROL leaves it
-// unserved.
+// The fixture program's side of rewake compact and rewake interrupt: the
+// adapter serves the run's control directory and carries each request to the
+// program while Control is live on the connection; the program carries it out
+// in its own session and answers. A compaction is answered started at once and
+// ends compactTakes later, reported to the adapter with its counts; an
+// interrupt ends the held turn with the interrupter's name as its text.
+// RW_SHIM_NO_CONTROL leaves Control out of the hello, so nothing is carried.
 
 import (
-	"bytes"
-	"encoding/json"
 	"os"
-	"path/filepath"
-	"regexp"
 	"time"
 )
 
@@ -45,56 +37,26 @@ const (
 	fixtureTokensAfter  = 9000
 )
 
-// controlPoll is how often the program looks at the directory.
-const controlPoll = 50 * time.Millisecond
-
-var controlID = regexp.MustCompile(`^[0-9a-f]{32}$`)
-
-// controlRequest and controlAnswer are a request's and an answer's files.
+// controlRequest and controlAnswer are a request as the adapter carries it
+// and the program's answer.
 type controlRequest struct {
-	ID     string `json:"id"`
-	Action string `json:"action"`
-	Focus  string `json:"focus,omitempty"`
-	From   string `json:"from"`
+	ID     string
+	Action string
+	Focus  string
+	From   string
 }
 
 type controlAnswer struct {
-	ID      string `json:"id"`
-	Outcome string `json:"outcome"`
-	Reason  string `json:"reason,omitempty"`
+	Outcome string
+	Reason  string
 }
 
-// serveControl takes one request at a time until the process ends: mark it
-// taken, check it is still in place, act, answer once.
-func (s *fixtureSession) serveControl(dir string) {
-	last := ""
-	for {
-		time.Sleep(controlPoll)
-		path := filepath.Join(dir, "request.json")
-		raw, err := os.ReadFile(path)
-		if err != nil {
-			continue
-		}
-		var asked controlRequest
-		if json.Unmarshal(raw, &asked) != nil || !controlID.MatchString(asked.ID) || asked.ID == last {
-			continue
-		}
-		last = asked.ID
-		taken := filepath.Join(dir, asked.ID+".taken")
-		if _, err := os.Stat(taken); err == nil {
-			continue
-		}
-		if os.WriteFile(taken, nil, 0o600) != nil {
-			continue
-		}
-		if again, err := os.ReadFile(path); err != nil || !bytes.Equal(again, raw) {
-			writeControlAnswer(dir, controlAnswer{ID: asked.ID, Outcome: "refused", Reason: "withdrawn before it was taken"})
-			continue
-		}
-		answer := s.act(asked)
-		answer.ID = asked.ID
-		writeControlAnswer(dir, answer)
-	}
+// control answers one request the adapter carried from the run's control
+// directory.
+func (s *fixtureSession) control(frame, reply fixtureFrame) fixtureFrame {
+	answer := s.act(controlRequest{ID: frame.Request, Action: frame.Action, Focus: frame.Focus, From: frame.From})
+	reply.OK, reply.Outcome, reply.Reason = true, answer.Outcome, answer.Reason
+	return reply
 }
 
 // act carries one request out, with the refusals the harness gives.
@@ -143,21 +105,6 @@ func (s *fixtureSession) compact(asked controlRequest) {
 	s.turn.mu.Lock()
 	s.turn.compacting = false
 	s.turn.mu.Unlock()
-}
-
-// writeControlAnswer puts the answer in place whole.
-func writeControlAnswer(dir string, answer controlAnswer) {
-	encoded, err := json.Marshal(answer)
-	if err != nil {
-		return
-	}
-	temporary := filepath.Join(dir, "."+answer.ID+".result.tmp")
-	if os.WriteFile(temporary, encoded, 0o600) != nil {
-		return
-	}
-	if os.Rename(temporary, filepath.Join(dir, answer.ID+".result")) != nil {
-		_ = os.Remove(temporary)
-	}
 }
 
 // changeThread starts the conversation shimNewThread names, once, and tells

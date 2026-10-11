@@ -60,6 +60,12 @@ type Session struct {
 	PIDNamespace string `json:"pidNamespace,omitempty"`
 	// Boot says which boot of the machine the run belongs to (run.go).
 	Boot string `json:"boot,omitempty"`
+	// Live are the capabilities this run has proven, by the names the
+	// adapter API gives them: set by the run's readiness exchange and
+	// withdrawn at once when lost (live.go). Empty until the run proves
+	// anything, so a session up but not yet live is asked nothing it cannot
+	// carry.
+	Live []string `json:"live,omitempty"`
 }
 
 // ErrNotFound is returned when no session answers to a name.

@@ -73,20 +73,18 @@ func startAvailability(parent context.Context, dir string, self registry.Session
 	}
 }
 
+// markMessagingReady sets the mark on the record as it stands under the name's
+// lock, so a live set written meanwhile is kept.
 func markMessagingReady(dir string, self registry.Session) error {
-	current, err := registry.LookupReadOnly(dir, self.Name)
-	if err != nil {
+	if _, err := registry.LookupReadOnly(dir, self.Name); err != nil {
 		return err
 	}
-	if current.Epoch() != self.Epoch() {
-		return registry.ErrNotFound
-	}
-	if current.MessagingReadyAt != nil {
-		return nil
-	}
-	now := time.Now()
-	current.MessagingReadyAt = &now
-	return registry.Update(dir, current)
+	return registry.Modify(dir, self.Name, self.Epoch(), func(current *registry.Session) {
+		if current.MessagingReadyAt == nil {
+			now := time.Now()
+			current.MessagingReadyAt = &now
+		}
+	})
 }
 
 func availabilityMessage(self, peer registry.Session) inbox.Message {

@@ -10,6 +10,7 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
+	"github.com/praline-labs/rewake/internal/channel"
 	"github.com/praline-labs/rewake/internal/proc"
 	"github.com/praline-labs/rewake/internal/state"
 )
@@ -66,11 +67,14 @@ func TestAHarnessThatCarriesItsCallsIsOfferedTheTools(t *testing.T) {
 	if tool.endpoint == nil {
 		t.Fatal("no endpoint for a harness that carries its calls")
 	}
-	if tool.keeper != nil {
-		t.Fatal("a channel record kept for a transport with no server")
+	if tool.keeper == nil || tool.keeper.snapshot() != nil {
+		t.Fatal("no channel record kept for a harness that offers a tool transport, or one begun before the plan")
 	}
 	backend := &offeringBackend{}
 	tool.attach(adapter.LaunchPlan{Service: backend, Env: []string{state.DirEnv + "=" + tool.path, "UNRELATED=1"}})
+	if record := tool.keeper.snapshot(); record == nil || record.Tool != channel.ToolStarting {
+		t.Fatalf("the record once the tool is offered: %+v", record)
+	}
 	if len(backend.tools) != 1 || backend.tools[0].Name != "whoami" || backend.endpoint != tool.path || backend.serve == nil {
 		t.Fatalf("the offer: %+v", backend)
 	}
@@ -84,6 +88,10 @@ func TestAHarnessThatCarriesItsCallsIsOfferedTheTools(t *testing.T) {
 		t.Fatal(err)
 	}
 	backend.serve(os.Getpid(), start)
+	// The naming is the transport's hello in the record.
+	if record := tool.keeper.snapshot(); record.Tool != channel.ToolConnected {
+		t.Fatalf("the record once the run named its transport: %+v", record)
+	}
 	answer, err := endpoint.CallTool(tool.path, endpoint.ToolCall{Tool: "edit", CallID: "c1"}, 5*time.Second)
 	if err != nil || !answer.IsError || !strings.Contains(answer.Texts[0], "no tool named") {
 		t.Fatalf("a call from the named process: %+v %v", answer, err)

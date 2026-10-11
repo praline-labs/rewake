@@ -57,9 +57,7 @@ func (fixtureHarness) SingleUseFlags() []adapter.Flag {
 		{Spellings: []string{"--session"}, TakesValue: true},
 		{Spellings: []string{"--room"}, TakesValue: true},
 		{Spellings: []string{"--role"}, TakesValue: true},
-		{Spellings: []string{"--brief"}, TakesValue: true},
 		{Spellings: []string{"--connect"}, TakesValue: true},
-		{Spellings: []string{"--control"}, TakesValue: true},
 		// rewake's own (worktree.go), read only with =<name>, so a switch
 		// here: a typed one replaces an alias's.
 		{Spellings: []string{worktreeFlag}},
@@ -78,7 +76,7 @@ func (fixtureHarness) ProtectedDirs() adapter.Protected {
 
 // ownFlags are the program's flags a caller may not pass: the adapter passes
 // each one itself.
-var ownFlags = []string{"--session", "--room", "--role", "--brief", "--connect", "--control"}
+var ownFlags = []string{"--session", "--room", "--role", "--connect"}
 
 func (fixtureHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error) {
 	for index, arg := range request.Args {
@@ -97,27 +95,33 @@ func (fixtureHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan,
 	settings, notes := readConfig()
 	description := []string{"--session", request.Name, "--room", room(request), "--role", request.Role.ID}
 	server := append([]string{}, description...)
-	if request.Intro {
-		if settings.brief {
-			notes = append(notes, "not adding the rewake briefing: the fixture's configuration in "+settings.path+" sets one")
-		} else {
-			server = append(server, "--brief", brief.Intro(request.BriefContext()))
-		}
-	}
 	socket := request.Socket
 	if socket == "" {
 		socket = filepath.Join(request.Dir, "fixture.sock")
 	}
 	server = append(server, "--connect", socket)
-	if request.ControlDir != "" {
-		server = append(server, "--control", request.ControlDir)
-	}
 	terminal := append(append(append([]string{}, description...), "--"), request.Args...)
 	env := request.Env
 	cwd, _ := os.Getwd()
 	run := newBackend(request.Program(ID), server, env, cwd, socket, request.Epoch)
+	if request.Intro {
+		if settings.brief {
+			notes = append(notes, "not adding the rewake briefing: the fixture's configuration in "+settings.path+" sets one")
+		} else {
+			// Built once the exchange shows whether the tool is live, which
+			// decides the transport sentence.
+			context := request.BriefContext()
+			run.brief = func(tool bool) string {
+				context.Tool = tool
+				return brief.Intro(context)
+			}
+		}
+	}
+	// The run serves its control directory itself, carrying each request to
+	// the program while Control is live (control.go).
+	run.controlDir = request.ControlDir
 	return adapter.LaunchPlan{
-		Service: run, Wake: run, TurnBoundary: run, Telemetry: run, Thread: run,
+		Service: run, Wake: run, TurnBoundary: run, Telemetry: run, Thread: run, Live: run,
 		Socket:     socket,
 		OwnsSocket: true,
 		Command:    request.Program(ID),
@@ -141,13 +145,12 @@ func (fixtureHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan,
 //
 // Control: the fixture offers it while no product adapter does: Claude Code's
 // served side left with its plugin module in S9, and stage 4 gives a real
-// adapter Control again (docs/v2/design-api.md#control). Until then the
-// program serves the run's control directory itself, as the module did, so
-// rewake compact and rewake interrupt keep their workflow cases on the gate
-// column; S11 moves the served side behind the fixture's live Control
-// (control.Serve). It takes a focus with a compaction, and ends an
-// interrupted turn with the interrupter's name as its text, which is what the
-// stopped report carries.
+// adapter Control again (docs/v2/design-api.md#control). The run serves its
+// control directory itself (control.Serve) and carries each request to the
+// program while Control is live on the connection, so rewake compact and
+// rewake interrupt keep their workflow cases on the gate column. The program
+// takes a focus with a compaction, and ends an interrupted turn with the
+// interrupter's name as its text, which is what the stopped report carries.
 func (fixtureHarness) Offers() adapter.Offer {
 	return adapter.Offer{
 		Wake:          true,

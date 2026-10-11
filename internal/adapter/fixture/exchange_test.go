@@ -46,8 +46,11 @@ func startProgram(t *testing.T, switches ...string) (*backend, error) {
 
 // live is the run's live set by the names the exchange gives them.
 func live(b *backend) []string {
+	b.mu.Lock()
+	current := b.current()
+	b.mu.Unlock()
 	var names []string
-	for _, capability := range b.Live() {
+	for _, capability := range current {
 		names = append(names, string(capability))
 	}
 	return names

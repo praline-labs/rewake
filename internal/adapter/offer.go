@@ -2,7 +2,7 @@ package adapter
 
 // Capability names one of the things an adapter may offer
 // (docs/v2/design-api.md#the-capabilities). The names are what a run reports
-// live and what the session record will keep (S11).
+// live and what the session record keeps.
 type Capability string
 
 // The capabilities. Launch is required; every other one is optional.

@@ -26,7 +26,7 @@ func (b *backend) withdraw(l *link) {
 		b.telem = telemetry{}
 	}
 	b.mu.Unlock()
-	b.toolsLive()
+	b.changed()
 	if l == nil && current != nil {
 		current.close()
 	}

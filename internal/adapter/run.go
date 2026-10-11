@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"context"
+	"time"
 
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/sessionstate"
@@ -78,11 +79,23 @@ type ToolTransport[D any] interface {
 }
 
 // LiveReporter is a run that says which of its adapter's capabilities it has
-// proven: the live set, which the host records for the session and every other
-// session decides by (S11).
+// proven: the live set, which the host records in the session record and every
+// other session decides by (docs/v2/design-api.md#two-levels-offered-and-live).
+// A run without one has live what its plan carries, from its start.
 type LiveReporter interface {
-	Live() []Capability
+	// ReportLive takes where the live set goes, before the service starts.
+	// The run calls it once its readiness exchange has run, with what the
+	// exchange proved — nothing, if nothing — and again with the whole set
+	// each time it changes: a capability lost is withdrawn at once. The calls
+	// come one at a time, in the order of the changes, and never under a
+	// lock a call into the run takes.
+	ReportLive(live func([]Capability))
 }
+
+// ReadinessBound is how long a run's readiness exchange may take before what
+// it has not proven counts as absent: a launch that waits for a capability to
+// become live waits this long at most.
+const ReadinessBound = 8 * time.Second
 
 // Resumer is a harness whose launch arguments can name the conversation a
 // launch resumes, so that the grants it had can be confirmed again and given

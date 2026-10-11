@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/adapter"
@@ -36,13 +37,16 @@ type mailTool struct {
 	endpoint   *endpoint.Endpoint
 	clock      *inbox.ReadClock
 	capability string
-	// keeper keeps the run's channel record. Its inputs are neutral since
-	// S10: the endpoint's events, whose hello and close are the tool
-	// transport's lifecycle, the offered transport at its start, and the
-	// run's live set (adapter.LiveReporter). Nothing makes one yet: S11
-	// wires it to the live set and the shell's evidence; until then every
-	// use of it is a no-op and the session shows its mail channel as unknown.
+	// keeper keeps the run's channel record, for a harness that offers a
+	// tool transport (docs/mail-bridge-channel.md): the endpoint's events,
+	// whose hello and close are the transport's lifecycle, the offered
+	// transport at its start, the run's live set once its readiness exchange
+	// has run, and the shell's evidence at its heartbeat. Nil for any other
+	// harness, whose every use of it is a no-op.
 	keeper *channelKeeper
+	// offered says the run was offered the tool at its start: an endpoint,
+	// tools, and a transport in the plan to register them.
+	offered bool
 	// tools and path are what a backend that carries the calls itself is
 	// offered: the tools to register, and the endpoint to ask.
 	tools []bridge.ToolDescriptor
@@ -69,6 +73,9 @@ func (t *mailTool) config(request Request, name, epoch, transport string, clock 
 func startMailTool(request Request, name, epoch string) *mailTool {
 	tool := &mailTool{}
 	transport := request.Harness.Offers().ToolTransport
+	if transport != "" {
+		tool.keeper = newChannelKeeper(request.Dir, name, epoch)
+	}
 	if request.MailTool == nil || transport == "" {
 		return tool
 	}
@@ -94,28 +101,47 @@ func startMailTool(request Request, name, epoch string) *mailTool {
 }
 
 // attach hands the endpoint what only the plan knows: the run's word on
-// whether the tool may read, and the tools for the run to register.
+// whether the tool may read, and the tools for the run to register. The
+// channel record begins here, before anything can connect: the tool offered,
+// with its hello timer running from now, or no tool and why.
 func (t *mailTool) attach(plan adapter.LaunchPlan) {
-	if t.endpoint == nil {
-		return
-	}
 	transport, ok := plan.Service.(adapter.ToolTransport[bridge.ToolDescriptor])
-	if !ok {
+	switch {
+	case t.endpoint == nil:
+		t.keeper.begin(false, "the mail tool could not be served")
+		return
+	case !ok || len(t.tools) == 0:
+		t.keeper.begin(false, "this run carries no tool")
 		return
 	}
+	t.offered = true
+	t.keeper.begin(true, "")
 	t.endpoint.SetReadsOff(transport.ToolReadsOff)
-	if len(t.tools) > 0 {
-		// A call's child gets the harness's launch values; the run names
-		// the process that asks for it.
-		env := map[string]string{}
-		for _, entry := range plan.Env {
-			if key, value, ok := strings.Cut(entry, "="); ok {
-				env[key] = value
-			}
+	// A call's child gets the harness's launch values; the run names the
+	// process that asks for it.
+	env := map[string]string{}
+	for _, entry := range plan.Env {
+		if key, value, ok := strings.Cut(entry, "="); ok {
+			env[key] = value
 		}
-		t.endpoint.SetChildEnv(func(key string) string { return env[key] })
-		transport.OfferTools(t.tools, t.path, t.endpoint.SetTransport)
 	}
+	t.endpoint.SetChildEnv(func(key string) string { return env[key] })
+	transport.OfferTools(t.tools, t.path, t.endpoint.SetTransport)
+}
+
+// exchanged takes the run's first live set, its readiness exchange's result:
+// a tool offered that the exchange did not make live is no tool for the
+// whole run, its record begun again with why, and the person told — the
+// start the hello timer waits for has come and gone. A later connection that
+// makes it live serves calls, and the record keeps no tool, as for any run
+// that started without one.
+func (t *mailTool) exchanged(live []adapter.Capability) {
+	if !t.offered || slices.Contains(live, adapter.ToolTransportCapability) {
+		return
+	}
+	reason := "the harness did not make the mail tool live"
+	t.keeper.begin(false, reason)
+	_, _ = fmt.Fprintln(os.Stderr, "rewake: started without the rewake tool: "+reason+"; mail goes through the shell")
 }
 
 // handler is a turn handler whose starts are recorded whatever the run

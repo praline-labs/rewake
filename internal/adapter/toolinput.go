@@ -19,6 +19,11 @@ type ToolInput interface {
 	// CallResult is the result the harness handed the model for a call,
 	// which acknowledges a read when it proves the whole answer arrived.
 	CallResult(callID string, result ToolResult)
+	// CallDenied is the harness's own signal that it denied a call of the
+	// tool for permission: the channel's policy block, set at the time it is
+	// told (docs/mail-bridge-channel.md#the-policy-block). A denial of one
+	// call by the person's own hook is not this, and is not reported.
+	CallDenied(callID string)
 }
 
 // ObservedCall is one call as the harness recorded it.

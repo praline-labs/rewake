@@ -98,6 +98,9 @@ type LaunchPlan struct {
 	// Thread follows the run's conversation; without it a ThreadTracker
 	// harness is asked, or the conversation is unknown.
 	Thread ThreadSource
+	// Live reports what the run proves of the capabilities above; without
+	// it the run's live set is what the plan carries, from its start.
+	Live LiveReporter
 }
 
 // Program is the executable a launch starts: the one named with --command, or

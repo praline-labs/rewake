@@ -14,7 +14,7 @@ import (
 // startServing starts what serves the session beside the harness — the run's
 // turn boundary, its service and its telemetry — before the harness itself,
 // and returns what stops them, in the reverse order.
-func startServing(ctx context.Context, request Request, session registry.Session, name, epoch string, plan adapter.LaunchPlan, tool *mailTool) (func(), error) {
+func startServing(ctx context.Context, request Request, session registry.Session, name, epoch string, plan adapter.LaunchPlan, tool *mailTool, live *liveSet) (func(), error) {
 	var stops []func()
 	stop := func() {
 		for i := len(stops) - 1; i >= 0; i-- {
@@ -51,6 +51,12 @@ func startServing(ctx context.Context, request Request, session registry.Session
 		plan.TurnBoundary.ReportTurns(handler)
 	}
 
+	// What the run proves reaches the record from its first report; a run
+	// that reports nothing has live what its plan carries once its service
+	// is up.
+	if plan.Live != nil {
+		plan.Live.ReportLive(live.report)
+	}
 	if plan.Service != nil {
 		// Before the harness: its first word goes to an address that has to
 		// exist by then. Closed either way: what the launch prepared for it
@@ -61,6 +67,9 @@ func startServing(ctx context.Context, request Request, session registry.Session
 			stop()
 			return func() {}, err
 		}
+	}
+	if plan.Live == nil {
+		live.report(live.planned)
 	}
 
 	// The channel record is shown whether or not anything else of the

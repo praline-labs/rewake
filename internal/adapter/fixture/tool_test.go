@@ -83,6 +83,8 @@ func (r *toolInput) CallResult(id string, result adapter.ToolResult) {
 	r.add("result %s %+v", id, result)
 }
 
+func (r *toolInput) CallDenied(id string) { r.add("denied %s", id) }
+
 // The endpoint serves the program's own process once the probe proved the
 // tools registered, and reads count only where the program can show results.
 func TestALiveToolTransportNamesTheProgramToTheEndpoint(t *testing.T) {

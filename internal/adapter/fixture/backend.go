@@ -71,6 +71,20 @@ type backend struct {
 	tools   toolOffer
 	compact compactions
 
+	// report is where the live set goes (ReportLive), told once the first
+	// exchange has run (exchanged) and at every change after; changes orders
+	// the calls, so the last one says what is live now.
+	report    func([]adapter.Capability)
+	exchanged bool
+	changes   sync.Mutex
+	// brief is the briefing for whether the tool is live, sent once, after
+	// the first exchange's probes; nil sends none.
+	brief     func(tool bool) string
+	briefOnce sync.Once
+	// controlDir is the run's control directory, served by the run itself;
+	// empty serves none.
+	controlDir string
+
 	// closing stops new connections and new calls into the wrapper's
 	// handler; Close then waits for the goroutines reading the program
 	// (routines) and for every call into the handler under way (users),
@@ -139,6 +153,7 @@ func (b *backend) Start(ctx context.Context, note func(string)) error {
 	// The probes are bounded each, so this wait is too.
 	select {
 	case <-b.hello:
+		b.serveControl()
 		return nil
 	case <-b.exited:
 		b.Close()
@@ -246,8 +261,10 @@ func (b *backend) admit(conn net.Conn) {
 	if b.link == l {
 		b.live = live
 	}
+	b.exchanged = true
 	b.mu.Unlock()
-	b.toolsLive()
+	b.changed()
+	b.briefOnce.Do(func() { b.sendBrief(l, live[ToolTransport]) })
 	b.helloOnce.Do(func() { close(b.hello) })
 	<-l.closed
 	b.withdraw(l)
@@ -328,12 +345,10 @@ func probeAnswered(capability string, answer Frame) bool {
 	return true
 }
 
-// Live answers the capabilities live now: those whose probes the program
-// answered on the connection held now, and nothing else. The host records
-// them as the run's live set from S11.
-func (b *backend) Live() []adapter.Capability {
-	b.mu.Lock()
-	defer b.mu.Unlock()
+// current is the live set now: the capabilities whose probes the program
+// answered on the connection held now, and nothing else. The caller holds
+// b.mu.
+func (b *backend) current() []adapter.Capability {
 	var out []adapter.Capability
 	for _, capability := range Served {
 		if b.live[capability] {

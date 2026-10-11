@@ -3,11 +3,12 @@ package endpoint
 import (
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/bridge"
+	"github.com/praline-labs/rewake/internal/channel"
 	"github.com/praline-labs/rewake/internal/receipt"
 )
 
 // The neutral input (docs/v2/stage3-steps-adapters.md, S7):
-// the five things the endpoint's state takes from a harness, whichever harness
+// the things the endpoint's state takes from a harness, whichever harness
 // reported them. What a harness's own records say is decoded in its adapter.
 
 var _ adapter.ToolInput = (*Endpoint)(nil)
@@ -35,6 +36,11 @@ func (e *Endpoint) CallSeen(call adapter.ObservedCall) {
 func (e *Endpoint) CallResult(callID string, result adapter.ToolResult) {
 	e.complete(callID, exposure(callID, result))
 }
+
+// CallDenied tells the channel record the harness denied our tool for
+// permission. The block is the record's; the call's own answer is the
+// harness's to the model.
+func (e *Endpoint) CallDenied(string) { e.tell(channel.Event{Kind: channel.Denied}) }
 
 // exposure is what a result proves of one call's answer reaching the model:
 // its first text is the answer, and its size is the result's as the encoder

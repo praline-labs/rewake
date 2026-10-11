@@ -62,6 +62,9 @@ func (b *backend) handle(l *link, frame Frame) {
 	case opToolResult:
 		reply := b.toolResult(l, frame)
 		b.dispatch(frame, func() { _ = l.answer(frame, reply) })
+	case opToolDenied:
+		reply := b.toolDenied(l, frame)
+		b.dispatch(frame, func() { _ = l.answer(frame, reply) })
 	default:
 		if frame.ID != 0 {
 			b.dispatch(frame, func() { _ = l.answer(frame, Frame{Error: "the adapter does not take " + frame.Op}) })

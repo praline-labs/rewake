@@ -48,6 +48,9 @@ const (
 	shimHelperRequests = "RW_SHIM_HELPER_REQUESTS"
 	// shimNoHold reports ends that cannot be held: the adapter publishes them.
 	shimNoHold = "RW_SHIM_NO_HOLD"
+	// shimBriefFile is where the program keeps the briefing the adapter
+	// sends it.
+	shimBriefFile = "RW_SHIM_BRIEF_FILE"
 	// shimDropAnswer loses the core's answer to the first end once and sends
 	// the same end again, as a harness whose answer was lost would.
 	shimDropAnswer = "RW_SHIM_DROP_ANSWER"
@@ -109,7 +112,11 @@ type fixtureFrame struct {
 	Arguments json.RawMessage         `json:"arguments,omitempty"`
 	Texts     []string                `json:"texts,omitempty"`
 	IsError   bool                    `json:"isError,omitempty"`
-	// A compaction's end (fixtureshim_control_test.go).
+	// A control request and its answer, and a compaction's end
+	// (fixtureshim_control_test.go).
+	Action       string `json:"action,omitempty"`
+	Focus        string `json:"focus,omitempty"`
+	Detail       string `json:"detail,omitempty"`
 	Request      string `json:"request,omitempty"`
 	From         string `json:"from,omitempty"`
 	TokensBefore *int64 `json:"tokensBefore,omitempty"`
@@ -118,8 +125,8 @@ type fixtureFrame struct {
 
 // fixtureLaunch is what the program was started with.
 type fixtureLaunch struct {
-	session, room, role, brief, connect, control string
-	rest                                         []string
+	session, room, role, connect string
+	rest                         []string
 }
 
 // runFixture is the entry point when this binary is re-executed as `fixture`.
@@ -167,7 +174,7 @@ func parseFixtureLaunch(args []string) (fixtureLaunch, error) {
 	var launch fixtureLaunch
 	values := map[string]*string{
 		"--session": &launch.session, "--room": &launch.room, "--role": &launch.role,
-		"--brief": &launch.brief, "--connect": &launch.connect, "--control": &launch.control,
+		"--connect": &launch.connect,
 	}
 	seen := map[string]bool{}
 	for i := 0; i < len(args); i++ {
@@ -192,9 +199,6 @@ func parseFixtureLaunch(args []string) (fixtureLaunch, error) {
 	}
 	if launch.session == "" || launch.room == "" || launch.role == "" {
 		return launch, errors.New("the launch must name --session, --room and --role")
-	}
-	if launch.connect == "" && (launch.brief != "" || launch.control != "") {
-		return launch, errors.New("--brief and --control go to the session half, never to the terminal")
 	}
 	if launch.connect != "" && launch.rest != nil {
 		return launch, errors.New("the session half takes no arguments of the caller's")
@@ -284,9 +288,6 @@ func fixtureSessionMain(launch fixtureLaunch) int {
 		time.Sleep(requestLifetime)
 		return 0
 	}
-	if launch.control != "" && os.Getenv(shimNoControl) == "" {
-		go s.serveControl(launch.control)
-	}
 	s.read()
 	// The connection is gone: the session stays until the run ends it, so a
 	// dropped socket is a withdrawal and not a departure.
@@ -368,6 +369,15 @@ func (s *fixtureSession) serve(frame fixtureFrame) {
 		reply = s.delivered(frame, reply)
 	case "release":
 		return
+	case "brief":
+		// The briefing comes once the exchange showed whether the tool is
+		// live; a case that asks keeps it to read.
+		if path := os.Getenv(shimBriefFile); path != "" {
+			_ = os.WriteFile(path, []byte(frame.Text), 0o600)
+		}
+		reply.OK = true
+	case "control":
+		reply = s.control(frame, reply)
 	default:
 		reply.Error = "the fixture does not take " + frame.Op
 	}

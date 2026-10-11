@@ -139,6 +139,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 
 	tool := startMailTool(request, name, epoch)
 	defer tool.close()
+	live := newLiveSet(request.Dir, name, epoch)
 
 	launchRequest := adapter.LaunchRequest{
 		Name:       name,
@@ -164,6 +165,8 @@ func Run(ctx context.Context, request Request) (int, error) {
 	}
 	plan.Notes = append(plan.Notes, restored.notes...)
 	tool.attach(plan)
+	live.planned = plannedLive(request.Harness.Offers(), plan, controlDir)
+	live.exchanged = tool.exchanged
 	_, _ = fmt.Fprintf(os.Stderr, "rewake: room %s, role %s: %s\n", session.Room, session.Role, session.RoleReason)
 	for _, note := range plan.Notes {
 		// Said once, on stderr, before the harness takes over the screen: these
@@ -184,11 +187,14 @@ func Run(ctx context.Context, request Request) (int, error) {
 	signals, restore := catchSignals()
 	defer restore()
 
-	stopServing, err := startServing(ctx, request, session, name, epoch, plan, tool)
+	stopServing, err := startServing(ctx, request, session, name, epoch, plan, tool, live)
 	if err != nil {
 		return 0, err
 	}
 	defer stopServing()
+	if err := awaitBoundary(ctx, session, request.Harness, live); err != nil {
+		return 0, err
+	}
 
 	command := exec.Command(plan.Command, plan.Args...)
 	command.Env = plan.Env
@@ -211,7 +217,11 @@ func Run(ctx context.Context, request Request) (int, error) {
 	if start, err := proc.StartTime(command.Process.Pid); err == nil {
 		session.HarnessPID = command.Process.Pid
 		session.HarnessStart = start
-		_ = registry.Update(request.Dir, session)
+		// The record as it stands: the live set may have moved since the
+		// copy here was read.
+		_ = registry.Modify(request.Dir, name, epoch, func(record *registry.Session) {
+			record.HarnessPID, record.HarnessStart = session.HarnessPID, session.HarnessStart
+		})
 	}
 	if process != nil {
 		watchCtx, stopWatching := context.WithCancel(ctx)
@@ -274,8 +284,11 @@ func Run(ctx context.Context, request Request) (int, error) {
 			CheckGrant: checkGrant(request.Dir, name, epoch, request.Protected),
 			PinGrant:   pinGrant(request.Dir, name, epoch),
 			Deliver: func(ctx context.Context, message inbox.Message) inbox.Result {
-				if plan.Wake == nil {
-					return inbox.Result{State: inbox.Failed, Detail: "no notice can reach this session; it reads its mail when it runs rewake inbox"}
+				if plan.Wake == nil || !live.has(adapter.WakeCapability) {
+					// The letter stays readable and waits for a Wake that
+					// becomes live; the sender was told already
+					// (docs/v2/design-api.md#the-capabilities).
+					return inbox.Result{State: inbox.Pending, Detail: noWake}
 				}
 				return plan.Wake.Deliver(ctx, message)
 			},
