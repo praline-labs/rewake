@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/core/mail/mailtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -67,7 +68,7 @@ func TestAHalfDoneWithdrawalIsNeverReadAsTheTask(t *testing.T) {
 	}
 	// What is kept is what was read: an archive holding the original would
 	// show the task to whatever reads done/ later as if it had been read.
-	if !must(tombstoneIn(state.DonePath(f.dir, "api"), f.task.ID)) || must(IsIn(state.UnreadPath(f.dir, "api"), f.task.ID)) {
+	if !must(mailtest.IsTombstone(state.DonePath(f.dir, "api"), f.task.ID)) || must(IsIn(state.UnreadPath(f.dir, "api"), f.task.ID)) {
 		t.Fatal("done/ keeps the original, not the tombstone that was read")
 	}
 }
@@ -94,11 +95,21 @@ func TestAWithdrawalRetriedFinishesTheSteps(t *testing.T) {
 // An edit whose replacement cannot be written changes nothing: the old
 // message is not withdrawn without something in its place.
 func TestAnEditThatCannotWriteItsReplacementChangesNothing(t *testing.T) {
+	// Set before the server starts, which asks it too; aimed at the
+	// replacement's write once its path is known.
+	var failing atomic.Pointer[string]
+	state.Fault = func(op, path string) error {
+		if target := failing.Load(); op == state.OpWrite && target != nil && path == *target {
+			return errors.New("disk full")
+		}
+		return nil
+	}
+	t.Cleanup(func() { state.Fault = nil })
 	f := announcedTask(t)
-	putMessage = func(string, Message) error { return errors.New("disk full") }
-	t.Cleanup(func() { putMessage = Put })
 	replacement := message("rerun the smoke on staging")
 	replacement.Kind, replacement.FromEpoch, replacement.ToEpoch, replacement.Replaces = Task, "web-epoch", "api-epoch", f.task.ID
+	target := filepath.Join(state.InboxPath(f.dir, "api"), replacement.ID+".json")
+	failing.Store(&target)
 	if _, err := withdrawNow(t, f.dir, f.task, &replacement); err == nil {
 		t.Fatal("the replacement was not written, and edit said nothing")
 	}

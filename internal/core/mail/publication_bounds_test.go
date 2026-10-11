@@ -46,63 +46,6 @@ func TestAFirstLandingAcrossRunEndIsWrittenOnce(t *testing.T) {
 	}
 }
 
-// A stale sweeper: the server of r, which has ended, sweeps after the next
-// run is live. It retires nothing at all, and the live run's marks and
-// letters stay.
-func TestAStaleSweeperRetiresNothing(t *testing.T) {
-	lab := newRaceLab(t)
-	lab.lead.end()
-	next := startRun(t, lab.dir, "lead")
-	second := Message{ID: NewID(), From: "api", FromEpoch: lab.run, To: "lead", ToEpoch: next.epoch(), Kind: Finished, Text: "R2", CreatedAt: time.Now()}
-	lab.landRead(t, second)
-	(&Server{Dir: lab.dir, Name: "lead", Epoch: lab.lead.epoch()}).sweepFinished()
-	for _, path := range []string{
-		filepath.Join(state.DonePath(lab.dir, "lead"), second.ID+".json"),
-		filepath.Join(state.InboxPath(lab.dir, "lead"), "once", next.epoch()),
-		filepath.Join(state.DonePath(lab.dir, "lead"), lab.report.ID+".json"),
-		filepath.Join(state.InboxPath(lab.dir, "lead"), "once", lab.lead.epoch()),
-	} {
-		if _, err := os.Stat(path); err != nil {
-			t.Errorf("the stale sweeper retired %s: %v", path, err)
-		}
-	}
-}
-
-// An unusable lock: a sweep that cannot take the mailbox lock retires no
-// letter and no mark. Once the lock is usable again, the same sweep does.
-func TestASweepWithoutTheLockRetiresNothing(t *testing.T) {
-	lab := newRaceLab(t)
-	lab.lead.end()
-	next := startRun(t, lab.dir, "lead")
-	lock := filepath.Join(state.InboxPath(lab.dir, "lead"), ".lock")
-	if err := os.Remove(lock); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Mkdir(lock, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	sweeper := &Server{Dir: lab.dir, Name: "lead", Epoch: next.epoch()}
-	sweeper.sweepFinished()
-	if lab.proofGone(t) {
-		t.Fatal("the sweep retired the proof without the lock")
-	}
-	for _, path := range []string{
-		filepath.Join(state.DonePath(lab.dir, "lead"), lab.report.ID+".json"),
-		filepath.Join(state.InboxPath(lab.dir, "lead"), "once", lab.lead.epoch()),
-	} {
-		if _, err := os.Stat(path); err != nil {
-			t.Errorf("the sweep without the lock retired %s: %v", path, err)
-		}
-	}
-	if err := os.Remove(lock); err != nil {
-		t.Fatal(err)
-	}
-	sweeper.sweepFinished()
-	if !lab.proofGone(t) {
-		t.Fatal("with the lock usable the sweep retired nothing: the case proves nothing")
-	}
-}
-
 // shortWait bounds the wait for a recipient's lock for the test.
 func shortWait(t *testing.T, wait time.Duration) {
 	t.Helper()

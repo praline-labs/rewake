@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/core/mail/mailtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -21,7 +22,7 @@ func TestDeliveryThreadIsRecordedBeforeAFastRead(t *testing.T) {
 	}
 	server := &Server{Dir: dir, Name: "api", Epoch: "1.1", attempts: map[string]time.Time{}, outcomes: map[string]Result{}, Thread: func() (string, error) { return "original", nil }}
 	server.Deliver = func(_ context.Context, delivered Message) Result {
-		if delivered.DeliveryThread != "original" || must(deliveryThread(dir, "api", task.ID)) != "original" {
+		if delivered.DeliveryThread != "original" || must(mailtest.DeliveryThread(dir, "api", task.ID)) != "original" {
 			t.Error("delivery context was not durable before announcement")
 		}
 		err := state.WithMailboxLock(context.Background(), dir, "api", func() error {
@@ -47,7 +48,7 @@ func TestDeliveryThreadIsRecordedBeforeAFastRead(t *testing.T) {
 	}
 	server.drain(context.Background())
 	status, _, _ := ReadStatus(dir, "api", task.ID)
-	if status.State != Read || must(deliveryThread(dir, "api", task.ID)) != "original" {
+	if status.State != Read || must(mailtest.DeliveryThread(dir, "api", task.ID)) != "original" {
 		t.Fatalf("read discarded delivery context: %+v", status)
 	}
 }
@@ -74,7 +75,7 @@ func TestAWaitingReportKeepsItsDeliveryThread(t *testing.T) {
 	task.FromEpoch = "2.2"
 	task.ToEpoch = run
 	unread(t, dir, task)
-	if err := recordDeliveryThread(dir, "api", task.ID, "old"); err != nil {
+	if err := mailtest.WriteDeliveryThread(dir, "api", task.ID, "old"); err != nil {
 		t.Fatal(err)
 	}
 	if err := MarkRead(dir, "api", run, task, true); err != nil {
@@ -85,8 +86,7 @@ func TestAWaitingReportKeepsItsDeliveryThread(t *testing.T) {
 	if err := os.Chtimes(path, old, old); err != nil {
 		t.Fatal(err)
 	}
-	server := &Server{Dir: dir, Name: "api", Epoch: run}
-	server.sweepFinished()
+	sweepAsLiveRun(t, dir, "api", run)
 	if !ReportThreadChanged(dir, "api", []string{task.ID}, "new") {
 		t.Fatal("sweep discarded an unsettled wait's thread")
 	}
@@ -95,7 +95,7 @@ func TestAWaitingReportKeepsItsDeliveryThread(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	server.sweepFinished()
+	sweepAsLiveRun(t, dir, "api", run)
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		t.Fatalf("settled thread record was not swept: %v", err)
 	}

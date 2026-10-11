@@ -75,7 +75,7 @@ func TestTheSweepKeepsALetterBeingRead(t *testing.T) {
 	path := filepath.Join(state.UnreadPath(dir, "api"), letter.ID+".json")
 	_ = os.Chtimes(path, old, old)
 	_ = os.Chtimes(filepath.Join(claimsPath(dir, "api"), letter.ID), old, old)
-	(&Server{Dir: dir, Name: "api", Epoch: run}).sweepFinished()
+	sweepAsLiveRun(t, dir, "api", run)
 	if _, err := os.Stat(path); err != nil {
 		t.Fatalf("the letter in progress was swept: %v", err)
 	}
@@ -185,14 +185,14 @@ func TestTheServerKeepsALetterBeingRead(t *testing.T) {
 		t.Fatal(err)
 	}
 	server.settleOutcome(letter.ID, outcome, false)
-	if !stillUnread(dir, "api", letter.ID) {
+	if !StillUnread(dir, "api", letter.ID) {
 		t.Fatal("the server took a letter being read out of unread/")
 	}
 	if status, _, _ := ReadStatus(dir, "api", letter.ID); status.State != Delivered {
 		t.Fatalf("its sender reads %s", status.State)
 	}
 	SettleLocked(dir, "api", letter.ID, Failed)
-	if !stillUnread(dir, "api", letter.ID) {
+	if !StillUnread(dir, "api", letter.ID) {
 		t.Fatal("an old failed status took a letter being read out of unread/")
 	}
 }
@@ -216,7 +216,7 @@ func TestTheSweepKeepsALetterWhoseIntentItCouldNotSettle(t *testing.T) {
 	t.Cleanup(func() { _ = os.Chmod(filepath.Dir(path), 0o700) })
 	old := time.Now().Add(-keepFinished - time.Hour)
 	_ = os.Chtimes(filepath.Join(state.UnreadPath(dir, "api"), letter.ID+".json"), old, old)
-	(&Server{Dir: dir, Name: "api", Epoch: run}).sweepFinished()
+	sweepAsLiveRun(t, dir, "api", run)
 	_ = os.Chmod(filepath.Dir(path), 0o700)
 	wrote, err := PublishOnce(context.Background(), dir, letter, nil)
 	if err != nil {

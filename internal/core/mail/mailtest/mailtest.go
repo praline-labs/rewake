@@ -51,6 +51,16 @@ func DeliveryThread(dir, name, id string) (string, error) {
 	return string(raw), err
 }
 
+// WriteDeliveryThread records the conversation a message was delivered into,
+// as the delivery server does when it pins one.
+func WriteDeliveryThread(dir, name, id, thread string) error {
+	threads := filepath.Join(state.InboxPath(dir, name), "threads")
+	if err := os.MkdirAll(threads, 0o700); err != nil {
+		return err
+	}
+	return state.WriteAtomic(filepath.Join(threads, id), []byte(thread))
+}
+
 // IsTombstone says the copy of a message in a directory is a tombstone, false
 // when there is no copy.
 func IsTombstone(directory, id string) (bool, error) {

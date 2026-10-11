@@ -5,9 +5,11 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/core/mail/mailtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -138,13 +140,8 @@ func TestASettlingCutShortIsSettledOnceItCan(t *testing.T) {
 			var release func() error
 			if blocker == "an open stop names the letter" {
 				if err := withLock(lab.dir, letter.To, func() error {
-					stop, err := live(lab.dir).recordOccurrence(letter.To, stopCause{Kind: causeUnreadable, Paths: []string{relative(lab.dir, unreadCopy(lab, letter))}, Cause: "the letter does not read"})
-					release = func() error {
-						return withLock(lab.dir, letter.To, func() error {
-							return live(lab.dir).resolveStop(letter.To, stop, []string{"the letter reads again"})
-						})
-					}
-					return err
+					release = stopNaming(t, lab.dir, letter.To, unreadCopy(lab, letter))
+					return nil
 				}); err != nil {
 					t.Fatal(err)
 				}
@@ -153,7 +150,7 @@ func TestASettlingCutShortIsSettledOnceItCan(t *testing.T) {
 				writeRaw(t, done, "not a directory")
 				release = func() error { return os.Remove(done) }
 			}
-			status, err := os.ReadFile(statusPath(lab.dir, letter.To, letter.ID))
+			status, err := os.ReadFile(mailtest.StatusPath(lab.dir, letter.To, letter.ID))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -164,7 +161,7 @@ func TestASettlingCutShortIsSettledOnceItCan(t *testing.T) {
 			if _, tried := server.attempts[letter.ID]; !tried {
 				t.Fatal("a settling cut short was taken for done")
 			}
-			if again, err := os.ReadFile(statusPath(lab.dir, letter.To, letter.ID)); err != nil || string(again) != string(status) {
+			if again, err := os.ReadFile(mailtest.StatusPath(lab.dir, letter.To, letter.ID)); err != nil || string(again) != string(status) {
 				t.Fatalf("the status was written again while the letter waited: %s, %v", again, err)
 			}
 			if err := release(); err != nil {
@@ -199,11 +196,17 @@ func TestALateRefusalItsStatusMissedIsRecordedThenSettled(t *testing.T) {
 	}
 	server.finish(letter, Result{State: Delivered})
 	server.recent[letter.ID] = recentAnnouncement{members: []Message{letter}, at: time.Now()}
-	previous := writeStatusFile
-	writeStatusFile = func(string, []byte) error { return errors.New("no space left on device") }
-	t.Cleanup(func() { writeStatusFile = previous })
+	// Every status write fails, where it asks state.Fault.
+	previous := state.Fault
+	state.Fault = func(op, path string) error {
+		if op == state.OpWrite && strings.HasSuffix(path, ".status") {
+			return errors.New("no space left on device")
+		}
+		return nil
+	}
+	t.Cleanup(func() { state.Fault = previous })
 	server.receive(Receipt{ID: letter.ID, Result: Result{State: Failed, Detail: "late refusal"}})
-	writeStatusFile = previous
+	state.Fault = previous
 	if status, _, err := ReadStatus(lab.dir, letter.To, letter.ID); err != nil || status.State != Delivered {
 		t.Fatalf("the refusal reached the status: %+v, %v", status, err)
 	}
@@ -230,7 +233,7 @@ func TestALetterReadableOnPurposeStaysUnread(t *testing.T) {
 		"withdrawn": recorded(Result{State: Failed, Withdrawn: true, Detail: "withdrawn by api"}),
 		"in parts":  claimedFailure,
 		"unreadable": func(t *testing.T, lab twoSessionLab, letter Message) {
-			writeRaw(t, statusPath(lab.dir, letter.To, letter.ID), "{")
+			writeRaw(t, mailtest.StatusPath(lab.dir, letter.To, letter.ID), "{")
 		},
 	}
 	for scene, record := range scenes {
@@ -247,7 +250,7 @@ func TestALetterReadableOnPurposeStaysUnread(t *testing.T) {
 				t.Fatal(err)
 			}
 			record(t, lab, letter)
-			status, err := os.ReadFile(statusPath(lab.dir, letter.To, letter.ID))
+			status, err := os.ReadFile(mailtest.StatusPath(lab.dir, letter.To, letter.ID))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -262,7 +265,7 @@ func TestALetterReadableOnPurposeStaysUnread(t *testing.T) {
 			if _, err := os.Stat(filepath.Join(state.DonePath(lab.dir, letter.To), letter.ID+".json")); !os.IsNotExist(err) {
 				t.Fatalf("the letter was archived: %v", err)
 			}
-			if again, err := os.ReadFile(statusPath(lab.dir, letter.To, letter.ID)); err != nil || string(again) != string(status) {
+			if again, err := os.ReadFile(mailtest.StatusPath(lab.dir, letter.To, letter.ID)); err != nil || string(again) != string(status) {
 				t.Fatalf("the status was written again: %s, %v", again, err)
 			}
 		})
@@ -281,5 +284,5 @@ func recorded(result Result) func(t *testing.T, lab twoSessionLab, letter Messag
 func claimedFailure(t *testing.T, lab twoSessionLab, letter Message) {
 	t.Helper()
 	recorded(Result{State: Failed, Detail: "refused while it was being read"})(t, lab, letter)
-	writeRaw(t, filepath.Join(claimsPath(lab.dir, letter.To), letter.ID), "a read")
+	writeRaw(t, filepath.Join(mailtest.ClaimsPath(lab.dir, letter.To), letter.ID), "a read")
 }

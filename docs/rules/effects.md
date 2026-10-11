@@ -45,7 +45,7 @@ nothing lifts a stop without returning evidence.
   - `internal/infra/state/held_test.go` `TestTryHoldRefusesAFileReplacedBeforeItsLock`
   - `internal/infra/state/lock_test.go` `TestNameLockHoldsBetweenProcesses`
   - `internal/infra/state/state_test.go` `TestNameLockSerialisesClaims`
-  - `internal/core/mail/publication_bounds_test.go` `TestASweepWithoutTheLockRetiresNothing`
+  - `internal/core/mail/sweep_gate_test.go` `TestASweepWithoutTheLockRetiresNothing`
 
 - **E3. Every check that decides an effect runs inside the critical section, right
   before the effect, and again on a retry**, which is a new call with its own deadline
@@ -314,7 +314,7 @@ nothing lifts a stop without returning evidence.
   - `internal/core/mail/sweep_norun_test.go` `TestNothingThatNamesNoRunIsSweptByAge`
   - `internal/core/mail/publication_race_test.go` `TestASavedPublishedStays`
   - `internal/core/mail/publication_race_test.go` `TestACrashBeforeTheSaveLeavesTheReportMoot`
-  - `internal/core/mail/publication_bounds_test.go` `TestAStaleSweeperRetiresNothing`
+  - `internal/core/mail/sweep_gate_test.go` `TestAStaleSweeperRetiresNothing`
   - `internal/core/mail/publication_crash_test.go` `TestAKillAtAnyWriteLandsTheReportAtMostOnce`
   - `internal/core/mail/stop_occurrence_test.go` `TestARecurringCauseOfARecordIsANewOccurrence`
   - `internal/core/mail/stop_occurrence_test.go` `TestARecurringCauseAboutAnOperationIsANewOccurrence`

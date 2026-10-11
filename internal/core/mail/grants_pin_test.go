@@ -6,6 +6,8 @@ import (
 	"slices"
 	"testing"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/core/mail/mailtest"
 )
 
 // The conversation main is told a grant went into is the one its letter is
@@ -39,7 +41,7 @@ func TestAGrantIsNamedTheConversationItsLetterIsPinnedTo(t *testing.T) {
 	if want := []pin{{members[1].ID, "after-clear"}}; !slices.Equal(pins, want) {
 		t.Fatalf("named %v, want %v", pins, want)
 	}
-	if got := must(deliveryThread(dir, "api", members[1].ID)); got != "after-clear" {
+	if got := must(mailtest.DeliveryThread(dir, "api", members[1].ID)); got != "after-clear" {
 		t.Fatalf("pinned to %q", got)
 	}
 }
@@ -67,7 +69,7 @@ func TestAGrantIsNamedAgainWhenItsDeliveryIsPinnedAgain(t *testing.T) {
 	if want := []string{"before-compaction", "after-compaction"}; !slices.Equal(pins, want) {
 		t.Fatalf("named %v, want %v", pins, want)
 	}
-	if got := must(deliveryThread(dir, "api", members[0].ID)); got != "after-compaction" {
+	if got := must(mailtest.DeliveryThread(dir, "api", members[0].ID)); got != "after-compaction" {
 		t.Fatalf("pinned to %q", got)
 	}
 }

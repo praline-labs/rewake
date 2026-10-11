@@ -44,7 +44,7 @@ func TestAReportFoundWithoutItsMarkIsMarkedPublished(t *testing.T) {
 	if err := os.Chtimes(done, old, old); err != nil {
 		t.Fatal(err)
 	}
-	(&Server{Dir: dir, Name: "web", Epoch: report.ToEpoch}).sweepFinished()
+	sweepAsLiveRun(t, dir, "web", report.ToEpoch)
 	if _, err := os.Stat(done); !os.IsNotExist(err) {
 		t.Fatalf("the sweep kept the report: %v", err)
 	}
@@ -105,7 +105,7 @@ func TestAnUnknownPublicationMarkIsNeverPermission(t *testing.T) {
 		if err := os.Chtimes(done, old, old); err != nil {
 			t.Fatal(err)
 		}
-		(&Server{Dir: dir, Name: "web", Epoch: report.ToEpoch}).sweepFinished()
+		sweepAsLiveRun(t, dir, "web", report.ToEpoch)
 		if _, err := os.Stat(done); err != nil {
 			t.Fatalf("the sweep removed the letter: %v", err)
 		}

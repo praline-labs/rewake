@@ -127,7 +127,7 @@ func (l raceLab) nextRunSweeps(t *testing.T) <-chan struct{} {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		(&Server{Dir: l.dir, Name: "lead", Epoch: next.epoch()}).sweepFinished()
+		sweepAsLiveRun(t, l.dir, "lead", next.epoch())
 	}()
 	return done
 }

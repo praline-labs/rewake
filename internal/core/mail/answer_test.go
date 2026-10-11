@@ -7,13 +7,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/core/mail/mailtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // While a send waits for its answer, the answer goes to that send and the agent
 // is not told a second time.
 func TestAnAnswerAwaitedBySendIsNotAnnounced(t *testing.T) {
-	for name, age := range map[string]time.Duration{"fresh mark": 0, "stale mark": 2 * answeringFresh} {
+	for name, age := range map[string]time.Duration{"fresh mark": 0, "stale mark": mailtest.StaleAnswering} {
 		t.Run(name, func(t *testing.T) {
 			dir := stateDir(t)
 			marks := state.AnsweringPath(dir, "api")

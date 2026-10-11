@@ -4,9 +4,11 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/core/mail/mailtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -70,7 +72,7 @@ func changesWhileAwaited(lab twoSessionLab, letter Message) map[string]func() er
 			return ClaimRead(lab.dir, letter.To, letter.ID, "reader")
 		},
 		"unreadable": func() error {
-			return os.WriteFile(statusPath(lab.dir, letter.To, letter.ID), []byte("{"), 0o600)
+			return os.WriteFile(mailtest.StatusPath(lab.dir, letter.To, letter.ID), []byte("{"), 0o600)
 		},
 	}
 }
@@ -146,8 +148,9 @@ func TestARecordedRefusalIsRecheckedUnderTheLock(t *testing.T) {
 			}
 			changes := changesWhileAwaited(lab, letter)
 			changes["stop"] = func() error {
-				_, err := live(lab.dir).recordOccurrence(letter.To, stopCause{Kind: causeUnreadable, Paths: []string{relative(lab.dir, unreadCopy(lab, letter))}, Cause: "the holder found the letter unreadable"})
-				return err
+				// The holder finds the letter unreadable.
+				stopNaming(t, lab.dir, letter.To, unreadCopy(lab, letter))
+				return nil
 			}
 			server := servingRun(lab, letter.ToEpoch)
 			whileAwaitingTheLock(t, lab, server, server.settleRecorded, changes[change])
@@ -171,11 +174,10 @@ func TestARefusalOnRecordAStopKeepsWaitsTheRetryInterval(t *testing.T) {
 		t.Fatal(err)
 	}
 	waiting := filepath.Join(state.InboxPath(lab.dir, letter.To), letter.ID+".json")
-	var stop openStop
+	var resolve func() error
 	if err := withLock(lab.dir, letter.To, func() error {
-		var err error
-		stop, err = live(lab.dir).recordOccurrence(letter.To, stopCause{Kind: causeUnreadable, Paths: []string{relative(lab.dir, waiting)}, Cause: "the letter does not read"})
-		return err
+		resolve = stopNaming(t, lab.dir, letter.To, waiting)
+		return nil
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -184,17 +186,15 @@ func TestARefusalOnRecordAStopKeepsWaitsTheRetryInterval(t *testing.T) {
 	if _, err := os.Stat(waiting); err != nil {
 		t.Fatalf("the letter moved despite the stop: %v", err)
 	}
-	status, err := os.ReadFile(statusPath(lab.dir, letter.To, letter.ID))
+	status, err := os.ReadFile(mailtest.StatusPath(lab.dir, letter.To, letter.ID))
 	if err != nil {
 		t.Fatal(err)
 	}
 	server.pendingMessages(context.Background())
-	if again, err := os.ReadFile(statusPath(lab.dir, letter.To, letter.ID)); err != nil || string(again) != string(status) {
+	if again, err := os.ReadFile(mailtest.StatusPath(lab.dir, letter.To, letter.ID)); err != nil || string(again) != string(status) {
 		t.Fatalf("the letter was taken up again inside the retry interval: %s, %v", again, err)
 	}
-	if err := withLock(lab.dir, letter.To, func() error {
-		return live(lab.dir).resolveStop(letter.To, stop, []string{"the letter reads again"})
-	}); err != nil {
+	if err := resolve(); err != nil {
 		t.Fatal(err)
 	}
 	server.attempts = map[string]time.Time{}
@@ -205,4 +205,39 @@ func TestARefusalOnRecordAStopKeepsWaitsTheRetryInterval(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(state.DonePath(lab.dir, letter.To), letter.ID+".json")); err != nil {
 		t.Fatalf("the refused letter was not archived: %v", err)
 	}
+}
+
+// stopNaming opens an occurrence of the mailbox's stop that names path, the
+// way a mailbox comes to one: a reconcile under the lock finds the copy
+// unreadable. The copy reads again at once, so the stop alone holds it. The
+// caller holds the mailbox lock. resolve reconciles again under the lock,
+// which finds the copy readable and resolves the occurrence on that evidence.
+func stopNaming(t *testing.T, dir, name, path string) (resolve func() error) {
+	t.Helper()
+	if err := os.Chmod(path, 0); err != nil {
+		t.Fatal(err)
+	}
+	stopped := Reconcile(context.Background(), dir, name)
+	if err := os.Chmod(path, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if stopped == nil || !strings.Contains(stopped.Error(), relativeTo(dir, path)) {
+		t.Fatalf("the reconcile over an unreadable %s opened no stop naming it: %v", path, stopped)
+	}
+	return func() error {
+		return withLock(dir, name, func() error {
+			if err := Reconcile(context.Background(), dir, name); err != nil {
+				return err
+			}
+			return MailboxStopped(dir, name)
+		})
+	}
+}
+
+func relativeTo(dir, path string) string {
+	rel, err := filepath.Rel(dir, path)
+	if err != nil {
+		return path
+	}
+	return rel
 }

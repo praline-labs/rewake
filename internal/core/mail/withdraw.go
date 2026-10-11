@@ -124,7 +124,7 @@ func Withdraw(dir string, message Message, replacement *Message) (Withdrawal, er
 
 	replacedBy := ""
 	if replacement != nil {
-		if err := putMessage(dir, *replacement); err != nil {
+		if err := Put(dir, *replacement); err != nil {
 			return 0, err
 		}
 		replacedBy = replacement.ID
@@ -240,6 +240,3 @@ func lookUp(id string, directories ...string) ([]bool, error) {
 	}
 	return found, nil
 }
-
-// putMessage writes a replacement; a test makes it fail.
-var putMessage = Put

@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/core/mail/mailtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -44,7 +45,7 @@ func TestReservationPrecedesReadabilityAndSurvivesFastRead(t *testing.T) {
 	}
 	r.prepare = func(fn func(string) error) error { return fn("A") }
 	r.deliver = func(_ context.Context, m Message) Result {
-		if r.closed || m.DeliveryThread != "A" || must(deliveryThread(dir, "api", m.ID)) != "A" {
+		if r.closed || m.DeliveryThread != "A" || must(mailtest.DeliveryThread(dir, "api", m.ID)) != "A" {
 			t.Fatal("reservation/context lost before ACK")
 		}
 		if err := state.WithMailboxLock(context.Background(), dir, "api", func() error { return MarkRead(dir, "api", "1.1", m, true) }); err != nil {

@@ -211,7 +211,7 @@ func TestTheSweepKeepsWhatAnUnreadableWaiterMayOwe(t *testing.T) {
 	}
 	path, _ := awaitingPath(dir, "api", run)
 	unreadable(t, filepath.Join(path, "web"), []byte(`{"name":"web","epoch":"w1","messages":["`+letter.ID+`"]}`))
-	(&Server{Dir: dir, Name: "api", Epoch: run, attempts: map[string]time.Time{}, outcomes: map[string]Result{}}).sweepFinished()
+	sweepAsLiveRun(t, dir, "api", run)
 	if _, err := os.Stat(done); err != nil {
 		t.Fatalf("the sweep removed a letter an unreadable waiter may owe: %v", err)
 	}

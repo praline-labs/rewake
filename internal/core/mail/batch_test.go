@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/core/mail/mailtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -60,7 +61,7 @@ func TestMixedGroupUsesOneReservationAndIndependentReceipts(t *testing.T) {
 			if member.ID != members[i].ID || member.Kind != members[i].Kind || member.Text != members[i].Text {
 				t.Fatal("merged message identities or bodies")
 			}
-			if Owed(member) && must(deliveryThread(dir, "api", member.ID)) != "root-A" {
+			if Owed(member) && must(mailtest.DeliveryThread(dir, "api", member.ID)) != "root-A" {
 				t.Fatal("missing per-member target association")
 			}
 		}

@@ -142,7 +142,7 @@ func publishedWithoutItsEntry(t *testing.T, mark string) (string, Message) {
 	if err := os.Chtimes(done, old, old); err != nil {
 		t.Fatal(err)
 	}
-	(&Server{Dir: dir, Name: "web", Epoch: report.ToEpoch}).sweepFinished()
+	sweepAsLiveRun(t, dir, "web", report.ToEpoch)
 	if _, err := os.Stat(done); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("the sweep kept the read report: %v", err)
 	}

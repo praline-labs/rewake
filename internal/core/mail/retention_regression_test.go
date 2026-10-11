@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/core/mail/mailtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -29,8 +30,8 @@ func TestReceiptsOutliveTheirSharedAnswer(t *testing.T) {
 	if _, found, err := AwaitAnswer(context.Background(), dir, "api", run, "q1", func(Message) error { return nil }); err != nil || !found {
 		t.Fatalf("first: %v %v", found, err)
 	}
-	receipt := filepath.Join(answerReceiptsPath(dir, "api"), "q1")
-	old := time.Now().Add(-2 * keepFinished)
+	receipt := filepath.Join(mailtest.AnswerReceiptsPath(dir, "api"), "q1")
+	old := time.Now().Add(-mailtest.PastRetention)
 	if err := os.Chtimes(receipt, old, old); err != nil {
 		t.Fatal(err)
 	}
@@ -58,7 +59,7 @@ func TestUnreservedReportsKeepTheirExpiry(t *testing.T) {
 	server := &Server{Dir: dir, Name: "api", Epoch: run, attempts: map[string]time.Time{}, outcomes: map[string]Result{}, Deliver: func(context.Context, Message) Result { attempts++; return Result{State: Pending} }}
 	server.drain(context.Background())
 	path := filepath.Join(state.InboxPath(dir, "api"), report.ID+".json")
-	old := time.Now().Add(-2 * keepFinished)
+	old := time.Now().Add(-mailtest.PastRetention)
 	// Age both the hard-linked queue and readable copy without waiting two days.
 	report.CreatedAt = old
 	raw, err := json.Marshal(report)

@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/core/mail/mailtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -183,13 +184,13 @@ func TestADeferredSettlementGetsAnotherPass(t *testing.T) {
 			if _, err := os.Stat(filepath.Join(state.DonePath(lab.dir, letter.To), letter.ID+".json")); err != nil {
 				t.Fatalf("the refused letter was not archived: %v", err)
 			}
-			status, err := os.ReadFile(statusPath(lab.dir, letter.To, letter.ID))
+			status, err := os.ReadFile(mailtest.StatusPath(lab.dir, letter.To, letter.ID))
 			if err != nil {
 				t.Fatal(err)
 			}
 			server.attempts = map[string]time.Time{}
 			server.drain(context.Background())
-			if again, err := os.ReadFile(statusPath(lab.dir, letter.To, letter.ID)); err != nil || string(again) != string(status) {
+			if again, err := os.ReadFile(mailtest.StatusPath(lab.dir, letter.To, letter.ID)); err != nil || string(again) != string(status) {
 				t.Fatalf("a settled outcome was taken up again: %s, %v", again, err)
 			}
 			if _, known, err := ReadStatus(lab.dir, later.To, later.ID); err != nil || known {

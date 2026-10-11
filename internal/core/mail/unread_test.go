@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/core/mail/mailtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -159,8 +160,8 @@ func TestReadingRecordsWhoWaits(t *testing.T) {
 // A new run of the name forgets what the previous run was waited on for.
 func TestANewRunForgetsTheOldWaits(t *testing.T) {
 	dir := stateDir(t)
-	if err := markAwaiting(dir, "api", "5.5", "web", "40.4", "m0"); err != nil {
-		t.Fatalf("markAwaiting: %v", err)
+	if err := mailtest.Owe(dir, "api", "5.5", "web", "40.4", "m0"); err != nil {
+		t.Fatalf("Owe: %v", err)
 	}
 	server := &Server{Dir: dir, Name: "api", Epoch: "6.6", Deliver: func(context.Context, Message) Result {
 		return Result{State: Delivered}

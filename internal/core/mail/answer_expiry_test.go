@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/core/mail/mailtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -41,7 +42,7 @@ func TestAcceptedAnswersSurviveRetentionAndServerRestart(t *testing.T) {
 	report := message("old accepted result")
 	report.Kind, report.ToEpoch = Finished, run
 	report.InReplyTo = []string{"q1"}
-	report.CreatedAt = time.Now().Add(-2 * keepFinished)
+	report.CreatedAt = time.Now().Add(-mailtest.PastRetention)
 	if err := Put(dir, report); err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +53,7 @@ func TestAcceptedAnswersSurviveRetentionAndServerRestart(t *testing.T) {
 	server := newServer()
 	server.drain(context.Background())
 	path := filepath.Join(state.UnreadPath(dir, "api"), report.ID+".json")
-	old := time.Now().Add(-2 * keepFinished)
+	old := time.Now().Add(-mailtest.PastRetention)
 	if err := os.Chtimes(path, old, old); err != nil {
 		t.Fatal(err)
 	}

@@ -35,10 +35,12 @@ func TestTheMailtestFixturesAreMailsRecords(t *testing.T) {
 	for _, id := range []string{"absent", "pinned", "empty"} {
 		if id != "absent" {
 			thread := map[string]string{"pinned": "root-A", "empty": ""}[id]
-			if err := state.EnsureSubdir(ThreadPath(dir, "api")); err != nil {
+			if err := mailtest.WriteDeliveryThread(dir, "api", id, thread); err != nil {
 				t.Fatal(err)
 			}
-			writeRaw(t, filepath.Join(ThreadPath(dir, "api"), id), thread)
+			if raw, err := os.ReadFile(filepath.Join(ThreadPath(dir, "api"), id)); err != nil || string(raw) != thread {
+				t.Errorf("WriteDeliveryThread(%s) left %q, %v at ThreadPath", id, raw, err)
+			}
 		}
 		got, err := mailtest.DeliveryThread(dir, "api", id)
 		want, wantErr := deliveryThread(dir, "api", id)

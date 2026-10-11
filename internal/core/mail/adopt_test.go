@@ -5,6 +5,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/praline-labs/rewake/internal/core/mail/mailtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -12,7 +13,7 @@ import (
 func readIn(t *testing.T, dir, run, thread string, m Message) {
 	t.Helper()
 	if err := state.WithMailboxLock(context.Background(), dir, "api", func() error {
-		if err := recordDeliveryThread(dir, "api", m.ID, thread); err != nil {
+		if err := mailtest.WriteDeliveryThread(dir, "api", m.ID, thread); err != nil {
 			return err
 		}
 		if err := LinkUnread(dir, "api", m.ID); err != nil {

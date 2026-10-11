@@ -32,7 +32,7 @@ func TestNothingThatNamesNoRunIsSweptByAge(t *testing.T) {
 		}
 	}
 	closeToReading(t, paths["unreadable"])
-	(&Server{Dir: dir, Name: "api", Epoch: run}).sweepFinished()
+	sweepAsLiveRun(t, dir, "api", run)
 	for what, path := range paths {
 		_, err := os.Stat(path)
 		if gone := os.IsNotExist(err); gone != (what == "an ended run") {

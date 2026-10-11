@@ -118,12 +118,8 @@ func WriteStatus(dir, to, id string, result Result) error {
 	if err != nil {
 		return err
 	}
-	return writeStatusFile(statusPath(dir, to, id), append(encoded, '\n'))
+	return state.WriteAtomic(statusPath(dir, to, id), append(encoded, '\n'))
 }
-
-// writeStatusFile writes a status; a test makes it fail while the status on
-// disk stays readable.
-var writeStatusFile = state.WriteAtomic
 
 func statusPath(dir, to, id string) string {
 	return filepath.Join(state.InboxPath(dir, to), id+".status")

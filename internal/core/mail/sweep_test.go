@@ -60,7 +60,6 @@ func TestANewMessageIsNoticedWithoutWaitingForThePoll(t *testing.T) {
 func TestFinishedMessagesAreSweptByAge(t *testing.T) {
 	dir := stateDir(t)
 	run := liveRunOf(t, dir, "api")
-	server := &Server{Dir: dir, Name: "api", Epoch: run}
 
 	done := state.DonePath(dir, "api")
 	if err := state.EnsureSubdir(done); err != nil {
@@ -100,7 +99,7 @@ func TestFinishedMessagesAreSweptByAge(t *testing.T) {
 		t.Fatalf("chtimes: %v", err)
 	}
 
-	server.sweepFinished()
+	sweepAsLiveRun(t, dir, "api", run)
 
 	for path, when := range files {
 		_, err := os.Stat(path)
@@ -149,7 +148,7 @@ func TestAnOwedMessageOutlivesTheSweep(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	(&Server{Dir: dir, Name: "api", Epoch: run}).sweepFinished()
+	sweepAsLiveRun(t, dir, "api", run)
 	if _, err := os.Stat(filepath.Join(state.DonePath(dir, "api"), owedTask.ID+".json")); err != nil {
 		t.Fatalf("an owed task was swept: %v", err)
 	}
@@ -185,7 +184,7 @@ func TestAnOwedMessageLeftUnreadOutlivesTheSweep(t *testing.T) {
 	if err := os.Chtimes(unread, old, old); err != nil {
 		t.Fatal(err)
 	}
-	(&Server{Dir: dir, Name: "api", Epoch: run}).sweepFinished()
+	sweepAsLiveRun(t, dir, "api", run)
 	if _, err := os.Stat(unread); err != nil {
 		t.Fatalf("an owed task left in unread/ was swept: %v", err)
 	}

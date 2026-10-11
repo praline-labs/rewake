@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/core/mail/mailtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -39,7 +40,7 @@ func TestAnAbandonedAnswerIsAnnounced(t *testing.T) {
 					t.Fatal(err)
 				}
 			} else {
-				old := time.Now().Add(-2 * answeringFresh)
+				old := time.Now().Add(-mailtest.StaleAnswering)
 				if err := os.Chtimes(mark, old, old); err != nil {
 					t.Fatal(err)
 				}

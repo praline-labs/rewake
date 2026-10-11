@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/core/mail/mailtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -172,10 +173,10 @@ func TestFailedReportReservationAndRetention(t *testing.T) {
 		t.Fatal("reserved report escaped")
 	}
 	// A stopped receipt must not consume the later finished result.
-	if err := state.EnsureSubdir(answerReceiptsPath(s.Dir, s.Name)); err != nil {
+	if err := state.EnsureSubdir(mailtest.AnswerReceiptsPath(s.Dir, s.Name)); err != nil {
 		t.Fatal(err)
 	}
-	if err := state.WriteAtomic(filepath.Join(answerReceiptsPath(s.Dir, s.Name), "q2"), []byte("earlier-stopped-report")); err != nil {
+	if err := state.WriteAtomic(filepath.Join(mailtest.AnswerReceiptsPath(s.Dir, s.Name), "q2"), []byte("earlier-stopped-report")); err != nil {
 		t.Fatal(err)
 	}
 	release()
@@ -186,13 +187,14 @@ func TestFailedReportReservationAndRetention(t *testing.T) {
 	if *calls != 1 {
 		t.Fatalf("notice calls=%d", *calls)
 	}
-	if err := receiveAnswer(s.Dir, s.Name, s.Epoch, "q1", m); err != nil {
-		t.Fatal(err)
+	// The asker of q1 takes its answer, which records its receipt.
+	if answer, found, err := AwaitAnswer(context.Background(), s.Dir, s.Name, s.Epoch, "q1", func(Message) error { return nil }); err != nil || !found || answer.ID != m.ID {
+		t.Fatalf("q1's answer was not taken: %+v %v %v", answer, found, err)
 	}
 	requireReportState(t, s, m, Failed, true)
 	s.sweepFinished()
 	requireReportState(t, s, m, Failed, true)
-	old := time.Now().Add(-2 * keepFinished)
+	old := time.Now().Add(-mailtest.PastRetention)
 	if err := os.Chtimes(filepath.Join(state.UnreadPath(s.Dir, s.Name), m.ID+".json"), old, old); err != nil {
 		t.Fatal(err)
 	}
