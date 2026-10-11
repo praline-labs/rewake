@@ -44,3 +44,7 @@ func turnEndOf(end adapter.TurnEnd) mail.TurnEnd {
 		Boundary: end.Boundary, Started: end.Started, Ended: end.Ended,
 	}
 }
+
+// beforeReports is the BeforeReports every turn end of cli passes. It does
+// nothing; a test widens that window through it.
+var beforeReports = func() {}

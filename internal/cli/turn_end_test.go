@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -21,6 +22,12 @@ type boundaryEnd struct {
 
 // smokeEnd is the plain end most tests take: a turn that finished.
 var smokeEnd = boundaryEnd{text: "the smoke is green"}
+
+// completeTurn ends a turn that may not be held, as an adapter's boundary
+// that cannot hold one reports it.
+func completeTurn(dir string, self registry.Session, event mail.TurnEnd, currentThread string) error {
+	return completeTurnContext(context.Background(), dir, self, event, currentThread, TurnEndOptions{BeforeReports: beforeReports})
+}
 
 // endTurn ends the turn of the session this test's environment names, as
 // the wrapper does with the end its adapter's boundary reports: it ends now,

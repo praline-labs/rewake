@@ -76,7 +76,7 @@ var beforeAddendumLock = func() {}
 // recipient's mailbox lock, once the task it adds to has been asked again
 // whether a report on it can still come. The first look, taken without the
 // lock, gives a quick refusal; this one is the answer. The turn end that
-// writes a report holds the same lock (turnended.go), so a report lands either
+// writes a report holds the same lock (turn_end.go), so a report lands either
 // before this look, which then refuses, or after the addendum is in the
 // mailbox — read with the task and settled by that report, or read after it
 // and owed on its own.

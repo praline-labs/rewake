@@ -15,10 +15,6 @@ import (
 // it through the hidden turn-ended command until S9; S14 moves these to the
 // core.
 
-func completeTurn(dir string, self registry.Session, event mail.TurnEnd, currentThread string) error {
-	return completeTurnContext(context.Background(), dir, self, event, currentThread, TurnEndOptions{BeforeReports: beforeReports})
-}
-
 func completeTurnContext(parent context.Context, dir string, self registry.Session, event mail.TurnEnd, currentThread string, options TurnEndOptions) error {
 	_, err := endTurnContext(parent, dir, self, event, false, currentThread, options)
 	return err
@@ -122,7 +118,3 @@ func turnMark(dir string, self registry.Session, event mail.TurnEnd) (*mail.Mark
 // turnEndLockWait is how long the end of a turn waits for the mailbox. What it
 // could not report stays owed until the next turn ends.
 const turnEndLockWait = 5 * time.Second
-
-// beforeReports is the BeforeReports every turn end of cli passes. It does
-// nothing; a test widens that window through it.
-var beforeReports = func() {}

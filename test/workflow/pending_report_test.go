@@ -162,7 +162,7 @@ func lineWith(text, part string) string {
 // The turn end ignores the mark: the first turn end is the report again.
 var mutantPendingIgnored = mutation{
 	name:  "pending-ignored",
-	file:  "internal/cli/turnended.go",
+	file:  "internal/cli/turn_end.go",
 	edits: []edit{{"\tif event.Failed || event.Stopped || event.Ended == 0 {\n", "\tif true || event.Failed || event.Stopped || event.Ended == 0 {\n"}},
 }
 
