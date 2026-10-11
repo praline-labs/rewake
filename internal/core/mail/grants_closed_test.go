@@ -50,10 +50,10 @@ func TestAnUnreadTaskOfAnEndedRunIsClosed(t *testing.T) {
 				t.Fatal(err)
 			}
 			if delivered {
-				if err := linkUnread(dir, "api", m.ID); err != nil {
+				if err := LinkUnread(dir, "api", m.ID); err != nil {
 					t.Fatal(err)
 				}
-				if err := writeStatus(dir, "api", m.ID, Result{State: Delivered}); err != nil {
+				if err := WriteStatus(dir, "api", m.ID, Result{State: Delivered}); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -73,7 +73,7 @@ func TestATaskTakenBackOrFailedIsClosedWhateverTheWaitsSay(t *testing.T) {
 	for index, result := range []Result{{State: Failed, Detail: "taken back", Withdrawn: true}, {State: Failed, Detail: "the notice was refused"}} {
 		task := tasks[index]
 		readIn(t, dir, "receiver-epoch", "thread-a", task)
-		if err := writeStatus(dir, "api", task.ID, result); err != nil {
+		if err := WriteStatus(dir, "api", task.ID, result); err != nil {
 			t.Fatal(err)
 		}
 		if open, found := TaskOpen(dir, "api", task.ID); open || !found {
@@ -91,13 +91,13 @@ func TestATaskTakenBackOrFailedIsClosedWhateverTheWaitsSay(t *testing.T) {
 func TestAFailedDeliveryIsSettled(t *testing.T) {
 	dir := stateDir(t)
 	task := grantPending(t, dir, true)[0]
-	if err := linkUnread(dir, "api", task.ID); err != nil {
+	if err := LinkUnread(dir, "api", task.ID); err != nil {
 		t.Fatal(err)
 	}
 	if Settled(dir, "api", task.ID) {
 		t.Fatal("a task on its way is settled")
 	}
-	if err := writeStatus(dir, "api", task.ID, Result{State: Failed, Detail: "the notice was refused"}); err != nil {
+	if err := WriteStatus(dir, "api", task.ID, Result{State: Failed, Detail: "the notice was refused"}); err != nil {
 		t.Fatal(err)
 	}
 	if !Settled(dir, "api", task.ID) {

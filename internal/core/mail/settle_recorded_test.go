@@ -28,7 +28,7 @@ func lateRefusal(t *testing.T, lab twoSessionLab) (*Server, Message, string) {
 	if err := Put(lab.dir, letter); err != nil {
 		t.Fatal(err)
 	}
-	if err := linkUnread(lab.dir, letter.To, letter.ID); err != nil {
+	if err := LinkUnread(lab.dir, letter.To, letter.ID); err != nil {
 		t.Fatal(err)
 	}
 	server.finish(letter, Result{State: Delivered})
@@ -65,7 +65,7 @@ func settledOnce(t *testing.T, lab twoSessionLab, letter Message) {
 	if _, err := os.Stat(filepath.Join(state.DonePath(lab.dir, letter.To), letter.ID+".json")); err != nil {
 		t.Errorf("the refused letter was not archived: %v", err)
 	}
-	notes, err := list(lab.dir, letter.From)
+	notes, err := List(lab.dir, letter.From)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,7 +194,7 @@ func TestALateRefusalItsStatusMissedIsRecordedThenSettled(t *testing.T) {
 	if err := Put(lab.dir, letter); err != nil {
 		t.Fatal(err)
 	}
-	if err := linkUnread(lab.dir, letter.To, letter.ID); err != nil {
+	if err := LinkUnread(lab.dir, letter.To, letter.ID); err != nil {
 		t.Fatal(err)
 	}
 	server.finish(letter, Result{State: Delivered})
@@ -240,7 +240,7 @@ func TestALetterReadableOnPurposeStaysUnread(t *testing.T) {
 			if err := Put(lab.dir, letter); err != nil {
 				t.Fatal(err)
 			}
-			if err := linkUnread(lab.dir, letter.To, letter.ID); err != nil {
+			if err := LinkUnread(lab.dir, letter.To, letter.ID); err != nil {
 				t.Fatal(err)
 			}
 			if err := os.Remove(filepath.Join(state.InboxPath(lab.dir, letter.To), letter.ID+".json")); err != nil {
@@ -272,7 +272,7 @@ func TestALetterReadableOnPurposeStaysUnread(t *testing.T) {
 func recorded(result Result) func(t *testing.T, lab twoSessionLab, letter Message) {
 	return func(t *testing.T, lab twoSessionLab, letter Message) {
 		t.Helper()
-		if err := writeStatus(lab.dir, letter.To, letter.ID, result); err != nil {
+		if err := WriteStatus(lab.dir, letter.To, letter.ID, result); err != nil {
 			t.Fatal(err)
 		}
 	}

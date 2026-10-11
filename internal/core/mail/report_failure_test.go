@@ -70,7 +70,7 @@ func TestReportFailureAdmissionAndShutdown(t *testing.T) {
 				t.Fatal(err)
 			}
 			if mode == "expired after pending" {
-				if err := linkUnread(s.Dir, s.Name, m.ID); err != nil {
+				if err := LinkUnread(s.Dir, s.Name, m.ID); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -136,7 +136,7 @@ func TestReportFailureRecovery(t *testing.T) {
 			if *calls != 1 {
 				t.Fatalf("failure retried %d times", *calls)
 			}
-			if queued, _ := list(s.Dir, s.Name); len(queued) != 0 {
+			if queued, _ := List(s.Dir, s.Name); len(queued) != 0 {
 				t.Fatal("report still queued")
 			}
 			if fault == "archive" {

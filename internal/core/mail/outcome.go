@@ -128,15 +128,15 @@ func (s *Server) recordLocked(id string, result Result) (State, error) {
 	if err != nil {
 		return "", err
 	}
-	if known && current.final() {
-		s.outcomes[id] = current.result()
-		return current.outcome(), nil
+	if known && current.Final() {
+		s.outcomes[id] = current.Result()
+		return current.Outcome(), nil
 	}
-	if result.State != Delivered && result.State != Read && claimed(s.Dir, s.Name, id) {
+	if result.State != Delivered && result.State != Read && Claimed(s.Dir, s.Name, id) {
 		result = Result{State: Delivered, Via: result.Via, Detail: "being read in parts", GrantApplied: result.GrantApplied}
 		s.outcomes[id] = result
 	}
-	if err := writeStatus(s.Dir, s.Name, id, result); err != nil {
+	if err := WriteStatus(s.Dir, s.Name, id, result); err != nil {
 		return "", err
 	}
 	return result.State, nil
@@ -199,8 +199,8 @@ func (s *Server) settleOnRecord(id string) {
 	if err != nil || !ok || status.State == Pending || status.State == Held {
 		return
 	}
-	s.outcomes[id] = status.result()
-	if s.settleOutcome(id, status.outcome(), status.ReportAvailable) {
+	s.outcomes[id] = status.Result()
+	if s.settleOutcome(id, status.Outcome(), status.ReportAvailable) {
 		delete(s.attempts, id)
 	}
 }

@@ -212,7 +212,7 @@ func (s *Server) drain(ctx context.Context) time.Duration {
 }
 
 func (s *Server) pendingMessages(ctx context.Context) []Message {
-	messages, err := list(s.Dir, s.Name)
+	messages, err := List(s.Dir, s.Name)
 	if err != nil {
 		return nil
 	}
@@ -259,7 +259,7 @@ func (s *Server) refuseWaiting(reason string) {
 	// Walked from what this run holds, not from the mailbox: a notice held
 	// only after it was reported delivered has no waiting copy any more.
 	s.failAllHeld("the session ended while its harness still held the notice")
-	messages, err := list(s.Dir, s.Name)
+	messages, err := List(s.Dir, s.Name)
 	if err != nil {
 		return
 	}
@@ -280,17 +280,17 @@ func (s *Server) refuseWaiting(reason string) {
 				if err != nil {
 					return err
 				}
-				if known && status.final() {
+				if known && status.Final() {
 					return nil
 				}
-				if reserved, err = awaitedHere(s.Dir, s.Name, message); err != nil {
+				if reserved, err = AwaitedHere(s.Dir, s.Name, message); err != nil {
 					return err
 				}
 				expired, err := s.answerExpired(message, reserved)
 				if err != nil || expired {
 					return err
 				}
-				if err := linkUnread(s.Dir, s.Name, message.ID); err != nil {
+				if err := LinkUnread(s.Dir, s.Name, message.ID); err != nil {
 					return err
 				}
 				result.ReportAvailable = true
@@ -319,7 +319,7 @@ func (s *Server) sweepForeign() {
 		return
 	}
 	s.followEarlierRun(s.lockContext)
-	messages, err := list(s.Dir, s.Name)
+	messages, err := List(s.Dir, s.Name)
 	if err != nil {
 		return
 	}

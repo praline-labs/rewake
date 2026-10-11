@@ -168,7 +168,7 @@ func TestSettledMessageIsNotDeliveredTwice(t *testing.T) {
 	if attempts.Load() == 0 {
 		t.Fatal("settling was never attempted, so the test proved nothing")
 	}
-	if waiting, _ := list(dir, "api"); len(waiting) != 1 {
+	if waiting, _ := List(dir, "api"); len(waiting) != 1 {
 		t.Fatalf("mailbox holds %v; the message left it, so no later pass could see it again", waiting)
 	}
 }
@@ -228,7 +228,7 @@ func TestMailForTheNextOwnerIsLeftAlone(t *testing.T) {
 	if status, ok, _ := ReadStatus(dir, "api", theirs.ID); ok {
 		t.Fatalf("somebody else's message was refused on the way out: %+v", status)
 	}
-	waiting, err := list(dir, "api")
+	waiting, err := List(dir, "api")
 	if err != nil || len(waiting) != 1 || waiting[0].ID != theirs.ID {
 		t.Fatalf("mailbox holds %v (%v), want the other session's message still waiting", waiting, err)
 	}

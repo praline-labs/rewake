@@ -214,7 +214,7 @@ func TestWaitingMessagesFailWhenTheSessionEnds(t *testing.T) {
 	}
 	// It also has to leave the mailbox: a refused message left waiting is
 	// delivered by the next session that takes this name.
-	waiting, err := list(dir, "api")
+	waiting, err := List(dir, "api")
 	if err != nil || len(waiting) != 0 {
 		t.Fatalf("mailbox holds %v (%v), want it cleared", waiting, err)
 	}
@@ -229,12 +229,12 @@ func TestAwaitReturnsTheFinalStatus(t *testing.T) {
 
 	// A pending status is written first: Await must keep waiting for the final
 	// one rather than return the first thing it sees.
-	if err := writeStatus(dir, "api", sent.ID, Result{State: Pending, Detail: "not listening yet"}); err != nil {
+	if err := WriteStatus(dir, "api", sent.ID, Result{State: Pending, Detail: "not listening yet"}); err != nil {
 		t.Fatalf("status: %v", err)
 	}
 	go func() {
 		time.Sleep(200 * time.Millisecond)
-		_ = writeStatus(dir, "api", sent.ID, Result{State: Delivered, Via: "socket"})
+		_ = WriteStatus(dir, "api", sent.ID, Result{State: Delivered, Via: "socket"})
 	}()
 
 	status, ok := Await(dir, "api", sent.ID, 3*time.Second, nil)

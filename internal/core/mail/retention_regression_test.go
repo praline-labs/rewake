@@ -98,7 +98,7 @@ func TestReleasedAnswerRetriesCannotRenewTheirDeadline(t *testing.T) {
 	server.drain(context.Background())
 	release()
 	server.drain(context.Background())
-	path := filepath.Join(retentionPath(dir, "api"), answer.ID)
+	path := filepath.Join(RetentionPath(dir, "api"), answer.ID)
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
@@ -109,7 +109,7 @@ func TestReleasedAnswerRetriesCannotRenewTheirDeadline(t *testing.T) {
 	if err != nil || string(raw) != string(again) {
 		t.Fatalf("retry renewed deadline: %s %s %v", raw, again, err)
 	}
-	expired, _ := json.Marshal(answerLifetime{ReleasedAt: time.Now().Add(-2 * DefaultTTL)})
+	expired, _ := json.Marshal(AnswerLifetime{ReleasedAt: time.Now().Add(-2 * DefaultTTL)})
 	if err := os.WriteFile(path, expired, 0o600); err != nil {
 		t.Fatal(err)
 	}

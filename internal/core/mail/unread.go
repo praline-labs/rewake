@@ -19,9 +19,11 @@ import (
 // the waiting set once its notice is out. Reading moves it on to done/, records
 // the read, and notes who waits for the end of the reader's turn.
 
-// linkUnread makes a waiting message readable. The link is the same file, so
+// LinkUnread makes a waiting message readable. The link is the same file, so
 // nothing can be read that was not written, and linking twice is harmless.
-func linkUnread(dir, to, id string) error {
+// The delivery server calls it under the mailbox lock before the notice goes
+// out.
+func LinkUnread(dir, to, id string) error {
 	unread := state.UnreadPath(dir, to)
 	if err := state.EnsureSubdir(unread); err != nil {
 		return err
@@ -64,7 +66,7 @@ func noticeContext(dir, name, epoch string, message Message) Message {
 // a letter, or its status, could not be read, and so what is unread is not
 // known.
 func PeekUnread(dir, name, epoch string) ([]Message, error) {
-	messages, err := listIn(state.UnreadPath(dir, name))
+	messages, err := ListIn(state.UnreadPath(dir, name))
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +166,7 @@ func MarkRead(dir, name, epoch string, message Message, reports bool) error {
 		}
 	}
 	if !withdrawn {
-		if err := writeStatus(dir, name, message.ID, Result{State: Read}); err != nil {
+		if err := WriteStatus(dir, name, message.ID, Result{State: Read}); err != nil {
 			return err
 		}
 	}
@@ -230,11 +232,12 @@ func move(id, from, into string) error {
 	return nil
 }
 
-// listIn returns the messages in one directory, oldest first. A file that
+// ListIn returns the messages in one directory, oldest first. A file that
 // left the directory after it was listed moved on, and is not listed; one that
 // is there and cannot be read, or does not parse, may be any letter at all, so
 // the listing is an error naming it rather than a list without it.
-func listIn(directory string) ([]Message, error) {
+// The delivery server lists unread/ with it for what an earlier run took back.
+func ListIn(directory string) ([]Message, error) {
 	entries, err := os.ReadDir(directory)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {

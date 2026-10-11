@@ -44,7 +44,7 @@ func settledTask(dir, name, id string) (bool, error) {
 		return false, err
 	}
 	if known {
-		return status.final(), nil
+		return status.Final(), nil
 	}
 	// The status is swept a day after its outcome; a copy still waiting or
 	// readable is still ahead of its reader.
@@ -120,7 +120,7 @@ func taskOpen(dir, name, id string) (open, found bool, err error) {
 	if known {
 		return true, true, nil
 	}
-	archived, err := isIn(state.DonePath(dir, name), id)
+	archived, err := IsIn(state.DonePath(dir, name), id)
 	if err != nil {
 		return false, false, err
 	}

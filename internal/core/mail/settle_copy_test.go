@@ -90,7 +90,7 @@ func TestSettlingADeliveredLetterKeepsItsOnlyCopy(t *testing.T) {
 	if _, err := os.Stat(waiting); err != nil {
 		t.Fatalf("the only copy of a delivered letter went: %v", err)
 	}
-	if err := linkUnread(lab.dir, report.To, report.ID); err != nil {
+	if err := LinkUnread(lab.dir, report.To, report.ID); err != nil {
 		t.Fatal(err)
 	}
 	SettleLocked(lab.dir, report.To, report.ID, Delivered)

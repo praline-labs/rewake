@@ -65,8 +65,8 @@ func (s *Server) stillHeld(message Message, held Result) {
 	case err != nil:
 		// Still held for this pass: the status may be final, and a later
 		// pass reads it again.
-	case ok && status.final():
-		s.finish(message, status.result())
+	case ok && status.Final():
+		s.finish(message, status.Result())
 	case !ok || status.State != Held:
 		s.publish(message.ID, held)
 	}
@@ -157,7 +157,7 @@ func (s *Server) takeBack(receipt Receipt, members []Message) {
 		if s.outcomes[member.ID].State != Delivered {
 			continue
 		}
-		if isFinal(s.record(member.ID, receipt.Result)) {
+		if IsFinal(s.record(member.ID, receipt.Result)) {
 			continue
 		}
 		s.outcomes[member.ID] = receipt.Result
@@ -212,7 +212,7 @@ func (s *Server) failForeignHeld(message Message) bool {
 // sweepForeignHeld does the same for what an earlier run took back after
 // reporting it delivered: only its readable copy is left.
 func (s *Server) sweepForeignHeld() {
-	messages, err := listIn(state.UnreadPath(s.Dir, s.Name))
+	messages, err := ListIn(state.UnreadPath(s.Dir, s.Name))
 	if err != nil {
 		return
 	}

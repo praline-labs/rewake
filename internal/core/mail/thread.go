@@ -19,7 +19,10 @@ var ErrNotYet = errors.New("the conversation cannot take a message yet")
 // ThreadChangedWarning lets the caller decide whether an old task needs resending.
 const ThreadChangedWarning = "Rewake: the reader's thread changed after delivery; this may not answer it, resend the message"
 
-func threadPath(dir, name string) string { return filepath.Join(state.InboxPath(dir, name), "threads") }
+// ThreadPath is the directory in which the delivery server records the
+// conversation an owed letter goes into, before the letter becomes readable;
+// mail reads it back (deliveryThread) and sweeps it.
+func ThreadPath(dir, name string) string { return filepath.Join(state.InboxPath(dir, name), "threads") }
 
 // deliveryThread is the conversation a message was delivered into, "" when
 // none was pinned. An error says a record is there and could not be read.
@@ -27,7 +30,7 @@ func deliveryThread(dir, name, id string) (string, error) {
 	if !state.ValidName(id) {
 		return "", nil
 	}
-	raw, err := state.ReadFile(filepath.Join(threadPath(dir, name), id))
+	raw, err := state.ReadFile(filepath.Join(ThreadPath(dir, name), id))
 	if errors.Is(err, os.ErrNotExist) {
 		return "", nil
 	}

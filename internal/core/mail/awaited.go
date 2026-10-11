@@ -244,7 +244,7 @@ func stageOf(dir string, message Message, reports []Message) (AwaitedMessage, bo
 		// The status is swept earlier than the message; one in done/ was
 		// read or refused, and a refusal without its status is a read as far
 		// as anyone can tell now.
-		archived, err := isIn(state.DonePath(dir, message.To), message.ID)
+		archived, err := IsIn(state.DonePath(dir, message.To), message.ID)
 		if err != nil {
 			return item, false, err
 		}
@@ -336,7 +336,7 @@ func everywhere(dir, name string) ([]Message, error) {
 	var order []string
 	found := map[string]Message{}
 	for _, directory := range []string{state.InboxPath(dir, name), state.UnreadPath(dir, name), state.DonePath(dir, name)} {
-		messages, err := listIn(directory)
+		messages, err := ListIn(directory)
 		if err != nil {
 			return nil, err
 		}

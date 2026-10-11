@@ -337,7 +337,7 @@ var mutantWithdrawLeavesTask = mutation{
 	file: "internal/core/mail/withdraw.go",
 	edits: []edit{
 		{"\t\tresult, where = WithdrawnAnnounced, state.UnreadPath(dir, to)\n", "\t\tresult = WithdrawnAnnounced\n"},
-		{"\tif err := writeStatus(dir, to, id, Result{State: Failed, Detail: detail, Withdrawn: true}); err != nil {\n", "\tif err := error(nil); err != nil {\n"},
+		{"\tif err := WriteStatus(dir, to, id, Result{State: Failed, Detail: detail, Withdrawn: true}); err != nil {\n", "\tif err := error(nil); err != nil {\n"},
 	},
 }
 

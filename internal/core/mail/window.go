@@ -86,7 +86,7 @@ func (s *Server) canWait(message Message) bool {
 	if AsksForWork(message) || message.Recall != nil || message.Replaces != "" {
 		return false
 	}
-	awaited, err := awaitedHere(s.Dir, s.Name, message)
+	awaited, err := AwaitedHere(s.Dir, s.Name, message)
 	return err == nil && !awaited
 }
 

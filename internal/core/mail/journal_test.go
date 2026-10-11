@@ -76,7 +76,7 @@ func TestAJournalDoesNotRepublishASweptReport(t *testing.T) {
 	if err := finishAll(t, dir); err != nil {
 		t.Fatal(err)
 	}
-	if waiting, err := list(dir, "web"); err != nil || len(waiting) != 0 {
+	if waiting, err := List(dir, "web"); err != nil || len(waiting) != 0 {
 		t.Fatalf("published again after the sweep: %d %v", len(waiting), err)
 	}
 }
@@ -125,7 +125,7 @@ func publishedWithoutItsEntry(t *testing.T, mark string) (string, Message) {
 	if err := os.Chmod(journals, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if waiting, err := list(dir, "web"); err != nil || len(waiting) != 1 {
+	if waiting, err := List(dir, "web"); err != nil || len(waiting) != 1 {
 		t.Fatalf("the report did not go out: %d %v", len(waiting), err)
 	}
 	if mark != "" {
@@ -159,7 +159,7 @@ func TestAReportWhoseEntryFailedIsNotRepublishedAfterTheSweep(t *testing.T) {
 			if err := finishAll(t, dir); err != nil {
 				t.Fatal(err)
 			}
-			if waiting, err := list(dir, "web"); err != nil || len(waiting) != 0 {
+			if waiting, err := List(dir, "web"); err != nil || len(waiting) != 0 {
 				t.Fatalf("published again after the sweep: %d %v", len(waiting), err)
 			}
 		})

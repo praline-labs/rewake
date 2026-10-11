@@ -64,7 +64,7 @@ func changesWhileAwaited(lab twoSessionLab, letter Message) map[string]func() er
 			return err
 		},
 		"read": func() error {
-			return writeStatus(lab.dir, letter.To, letter.ID, Result{State: Read})
+			return WriteStatus(lab.dir, letter.To, letter.ID, Result{State: Read})
 		},
 		"claimed": func() error {
 			return ClaimRead(lab.dir, letter.To, letter.ID, "reader")
@@ -98,10 +98,10 @@ func TestAForeignLetterSettlesByItsStatusUnderTheLock(t *testing.T) {
 			if err := Put(lab.dir, letter); err != nil {
 				t.Fatal(err)
 			}
-			if err := linkUnread(lab.dir, letter.To, letter.ID); err != nil {
+			if err := LinkUnread(lab.dir, letter.To, letter.ID); err != nil {
 				t.Fatal(err)
 			}
-			if err := writeStatus(lab.dir, letter.To, letter.ID, Result{State: Failed}); err != nil {
+			if err := WriteStatus(lab.dir, letter.To, letter.ID, Result{State: Failed}); err != nil {
 				t.Fatal(err)
 			}
 			server := servingRun(lab, lab.web.Epoch())
@@ -135,13 +135,13 @@ func TestARecordedRefusalIsRecheckedUnderTheLock(t *testing.T) {
 			if err := Put(lab.dir, letter); err != nil {
 				t.Fatal(err)
 			}
-			if err := linkUnread(lab.dir, letter.To, letter.ID); err != nil {
+			if err := LinkUnread(lab.dir, letter.To, letter.ID); err != nil {
 				t.Fatal(err)
 			}
 			if err := os.Remove(filepath.Join(state.InboxPath(lab.dir, letter.To), letter.ID+".json")); err != nil {
 				t.Fatal(err)
 			}
-			if err := writeStatus(lab.dir, letter.To, letter.ID, Result{State: Failed}); err != nil {
+			if err := WriteStatus(lab.dir, letter.To, letter.ID, Result{State: Failed}); err != nil {
 				t.Fatal(err)
 			}
 			changes := changesWhileAwaited(lab, letter)
@@ -167,7 +167,7 @@ func TestARefusalOnRecordAStopKeepsWaitsTheRetryInterval(t *testing.T) {
 	if err := Put(lab.dir, letter); err != nil {
 		t.Fatal(err)
 	}
-	if err := writeStatus(lab.dir, letter.To, letter.ID, Result{State: Failed, Detail: "refused by the earlier session"}); err != nil {
+	if err := WriteStatus(lab.dir, letter.To, letter.ID, Result{State: Failed, Detail: "refused by the earlier session"}); err != nil {
 		t.Fatal(err)
 	}
 	waiting := filepath.Join(state.InboxPath(lab.dir, letter.To), letter.ID+".json")

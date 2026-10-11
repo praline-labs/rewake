@@ -252,7 +252,7 @@ func TestSettlingKeepsALetterTheStopNames(t *testing.T) {
 					if err := Put(dir, letter); err != nil {
 						t.Fatal(err)
 					}
-					if err := linkUnread(dir, "api", letter.ID); err != nil {
+					if err := LinkUnread(dir, "api", letter.ID); err != nil {
 						t.Fatal(err)
 					}
 				}

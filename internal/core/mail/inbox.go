@@ -206,24 +206,27 @@ type Status struct {
 // copy, and the tombstone there has to stay until it is read.
 const withdrawn State = "withdrawn"
 
-// final says nothing said about the notice afterwards can change this status:
-// the agent has the text, or its sender took it back.
-func (s Status) final() bool { return s.State == Read || s.Withdrawn }
+// Final says nothing said about the notice afterwards can change this status:
+// the agent has the text, or its sender took it back. The delivery server asks
+// it before it records what the harness said, or makes the letter readable.
+func (s Status) Final() bool { return s.State == Read || s.Withdrawn }
 
-// outcome is the state the server settles a status by.
-func (s Status) outcome() State {
+// Outcome is the state the delivery server settles a status by (SettleLocked).
+func (s Status) Outcome() State {
 	if s.Withdrawn {
 		return withdrawn
 	}
 	return s.State
 }
 
-func (s Status) result() Result {
+// Result is the outcome a status records, as the delivery server remembers it.
+func (s Status) Result() Result {
 	return Result{State: s.State, Via: s.Via, Detail: s.Detail, ReportAvailable: s.ReportAvailable, Withdrawn: s.Withdrawn, GrantApplied: s.GrantApplied}
 }
 
-// isFinal is final for an outcome the server already holds.
-func isFinal(outcome State) bool { return outcome == Read || outcome == withdrawn }
+// IsFinal is Final for an outcome the delivery server already holds, which may
+// be withdrawn: mail's own outcome for a withdrawn status, never written.
+func IsFinal(outcome State) bool { return outcome == Read || outcome == withdrawn }
 
 // NewID returns an identifier that sorts by time and never repeats. The time
 // prefix gives mailbox order; the random tail keeps two senders in the same
@@ -275,9 +278,10 @@ func (w world) putOnce(message Message) error {
 	return w.put(message)
 }
 
-// list returns the waiting messages of a mailbox, oldest first.
-func list(dir, to string) ([]Message, error) {
-	return listIn(state.InboxPath(dir, to))
+// List returns the waiting messages of a mailbox, oldest first: what the
+// delivery server serves.
+func List(dir, to string) ([]Message, error) {
+	return ListIn(state.InboxPath(dir, to))
 }
 
 // archive moves a finished message out of the waiting set, keeping it for

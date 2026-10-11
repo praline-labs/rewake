@@ -48,7 +48,7 @@ func TestAMarkIsJudgedByItsBootReading(t *testing.T) {
 		question := NewID()
 		writeMark(t, dir, question, c.content, time.Now().Add(c.touched))
 		report := Message{ID: NewID(), From: "api", To: "web", Kind: Finished, InReplyTo: []string{question}}
-		if got := must(awaitedHere(dir, "web", report)); got != c.want {
+		if got := must(AwaitedHere(dir, "web", report)); got != c.want {
 			t.Errorf("%s: awaited %v, want %v", c.name, got, c.want)
 		}
 	}

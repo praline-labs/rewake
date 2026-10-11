@@ -30,7 +30,7 @@ func SweepFinishedLocked(dir, name, epoch string) {
 	// Unread mail goes by age too: a notice nobody acted on for a day describes
 	// a conversation that has moved on, and the mailbox of a name reused for
 	// weeks would otherwise keep every one of them.
-	finished := []string{state.DonePath(dir, name), state.UnreadPath(dir, name), answerReceiptsPath(dir, name), state.AnsweringPath(dir, name), threadPath(dir, name), retentionPath(dir, name)}
+	finished := []string{state.DonePath(dir, name), state.UnreadPath(dir, name), answerReceiptsPath(dir, name), state.AnsweringPath(dir, name), ThreadPath(dir, name), RetentionPath(dir, name)}
 	for _, directory := range append(finished, state.InboxPath(dir, name)) {
 		entries, err := os.ReadDir(directory)
 		if err != nil {
@@ -56,7 +56,7 @@ func SweepFinishedLocked(dir, name, epoch string) {
 					continue
 				}
 			}
-			if directory == threadPath(dir, name) && keepThreadRecord(dir, name, entry.Name()) {
+			if directory == ThreadPath(dir, name) && keepThreadRecord(dir, name, entry.Name()) {
 				continue
 			}
 			// A read whose last step did not finish left the text in unread/.
@@ -66,7 +66,7 @@ func SweepFinishedLocked(dir, name, epoch string) {
 			if directory == answerReceiptsPath(dir, name) && (receiptsErr != nil || receipts[entry.Name()]) {
 				continue
 			}
-			if directory == state.UnreadPath(dir, name) && claimed(dir, name, strings.TrimSuffix(entry.Name(), ".json")) {
+			if directory == state.UnreadPath(dir, name) && Claimed(dir, name, strings.TrimSuffix(entry.Name(), ".json")) {
 				// Being read in parts: what the agent saw of it is uncertain.
 				continue
 			}
@@ -76,7 +76,7 @@ func SweepFinishedLocked(dir, name, epoch string) {
 				// retry finding neither would write it again.
 				continue
 			}
-			if directory == retentionPath(dir, name) {
+			if directory == RetentionPath(dir, name) {
 				if _, err := os.Stat(filepath.Join(state.InboxPath(dir, name), entry.Name()+".json")); !errors.Is(err, os.ErrNotExist) {
 					continue
 				}
@@ -101,11 +101,16 @@ func SweepFinishedLocked(dir, name, epoch string) {
 // full of last month's conversations.
 const keepFinished = 24 * time.Hour
 
-type answerLifetime struct {
+// AnswerLifetime records a report's answer reservation: written when one is
+// first seen, stamped when it is released, and from then the report's delivery
+// window is counted once more. The delivery server keeps it; the sweep removes
+// it once its report waits no more.
+type AnswerLifetime struct {
 	ReleasedAt time.Time `json:"releasedAt"`
 }
 
-func retentionPath(dir, name string) string {
+// RetentionPath is the directory of a mailbox's AnswerLifetime records.
+func RetentionPath(dir, name string) string {
 	return filepath.Join(state.InboxPath(dir, name), "retention")
 }
 
@@ -114,7 +119,7 @@ func retentionPath(dir, name string) string {
 func retainedReceipts(dir, name string) (map[string]bool, error) {
 	keep := map[string]bool{}
 	for _, directory := range []string{state.InboxPath(dir, name), state.UnreadPath(dir, name), state.DonePath(dir, name)} {
-		messages, err := listIn(directory)
+		messages, err := ListIn(directory)
 		if err != nil {
 			return nil, err
 		}

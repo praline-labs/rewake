@@ -49,8 +49,8 @@ func unread(t *testing.T, dir string, messages ...Message) {
 		if err := Put(dir, sent); err != nil {
 			t.Fatalf("Put: %v", err)
 		}
-		if err := linkUnread(dir, sent.To, sent.ID); err != nil {
-			t.Fatalf("linkUnread: %v", err)
+		if err := LinkUnread(dir, sent.To, sent.ID); err != nil {
+			t.Fatalf("LinkUnread: %v", err)
 		}
 		SettleLocked(dir, sent.To, sent.ID, Delivered)
 	}

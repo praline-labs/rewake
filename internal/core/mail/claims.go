@@ -55,8 +55,10 @@ func ReadClaimed(dir, name, id string) (string, bool) {
 	return strings.TrimSpace(string(raw)), true
 }
 
-// claimed says a tool read has started showing a letter in parts, or may have.
-func claimed(dir, name, id string) bool {
+// Claimed says a tool read has started showing a letter in parts, or may have.
+// The delivery server records such a letter delivered, whatever the harness
+// said, and leaves taking it out of unread/ to the read.
+func Claimed(dir, name, id string) bool {
 	_, ok := ReadClaimed(dir, name, id)
 	return ok
 }

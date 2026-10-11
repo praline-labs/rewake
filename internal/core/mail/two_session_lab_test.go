@@ -69,7 +69,7 @@ func (l twoSessionLab) reconcile(t *testing.T) error {
 // copies counts web's letters with id.
 func (l twoSessionLab) copies(t *testing.T, id string) int {
 	t.Helper()
-	letters, err := list(l.dir, "web")
+	letters, err := List(l.dir, "web")
 	if err != nil {
 		t.Fatal(err)
 	}

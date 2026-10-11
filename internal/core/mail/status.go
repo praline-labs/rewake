@@ -17,8 +17,9 @@ import (
 // absence: a file that cannot be read or does not parse may hold exactly what
 // the caller was looking for, and each caller decides what an unknown stops.
 
-// isIn says whether a directory holds a message's file.
-func isIn(directory, id string) (bool, error) {
+// IsIn says whether a directory holds a message's file. The delivery server asks
+// it whether a report it cannot deliver is readable still.
+func IsIn(directory, id string) (bool, error) {
 	_, err := os.Stat(filepath.Join(directory, id+".json"))
 	switch {
 	case err == nil:
@@ -34,12 +35,12 @@ func isIn(directory, id string) (bool, error) {
 // while, and a sender that came back later would otherwise be told its message
 // is still on its way. An error says the mailbox could not tell.
 func Answered(dir, to, id string) (bool, error) {
-	waiting, err := isIn(state.InboxPath(dir, to), id)
+	waiting, err := IsIn(state.InboxPath(dir, to), id)
 	if err != nil || waiting {
 		return false, err
 	}
 	// Gone from done/ as well is answered long ago and swept since.
-	if _, err := isIn(state.DonePath(dir, to), id); err != nil {
+	if _, err := IsIn(state.DonePath(dir, to), id); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -109,8 +110,9 @@ func Await(dir, to, id string, timeout time.Duration, running func() bool) (Stat
 	}
 }
 
-// writeStatus records what happened to a message.
-func writeStatus(dir, to, id string, result Result) error {
+// WriteStatus records what happened to a message. The delivery server records
+// each outcome with it, under the mailbox lock or in its status-only fallback.
+func WriteStatus(dir, to, id string, result Result) error {
 	status := Status{State: result.State, Via: result.Via, Detail: result.Detail, ReportAvailable: result.ReportAvailable, Withdrawn: result.Withdrawn, GrantApplied: result.GrantApplied, At: time.Now()}
 	encoded, err := json.MarshalIndent(status, "", "  ")
 	if err != nil {

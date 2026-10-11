@@ -108,7 +108,7 @@ func TestGrantThatDoesNotPassIsNotDelivered(t *testing.T) {
 			if !ok || status.State != Failed || !strings.Contains(status.Detail, "does not pass") {
 				t.Fatalf("status = %+v", status)
 			}
-			told, err := list(dir, "web")
+			told, err := List(dir, "web")
 			if err != nil || len(told) != 1 || told[0].Undelivered == nil || told[0].Undelivered.ID != members[0].ID {
 				t.Fatalf("sender was not told: %+v %v", told, err)
 			}
@@ -169,7 +169,7 @@ func TestSettledFollowsTheTaskToItsReport(t *testing.T) {
 		t.Fatal("a task waiting in the inbox is settled")
 	}
 	if err := state.WithMailboxLock(context.Background(), dir, "api", func() error {
-		if err := linkUnread(dir, "api", m.ID); err != nil {
+		if err := LinkUnread(dir, "api", m.ID); err != nil {
 			return err
 		}
 		return MarkRead(dir, "api", "receiver-epoch", m, true)

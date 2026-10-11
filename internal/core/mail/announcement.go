@@ -17,7 +17,7 @@ func (s *Server) validAnnouncement(ctx context.Context, members []Message) bool 
 			if err != nil {
 				return err
 			}
-			reserved, err := awaitedHere(s.Dir, s.Name, message)
+			reserved, err := AwaitedHere(s.Dir, s.Name, message)
 			if err != nil {
 				return err
 			}
@@ -25,7 +25,7 @@ func (s *Server) validAnnouncement(ctx context.Context, members []Message) bool 
 			if err != nil {
 				return err
 			}
-			if known && status.final() || reserved || expired {
+			if known && status.Final() || reserved || expired {
 				valid = false
 				return nil
 			}

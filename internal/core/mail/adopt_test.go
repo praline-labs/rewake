@@ -15,7 +15,7 @@ func readIn(t *testing.T, dir, run, thread string, m Message) {
 		if err := recordDeliveryThread(dir, "api", m.ID, thread); err != nil {
 			return err
 		}
-		if err := linkUnread(dir, "api", m.ID); err != nil {
+		if err := LinkUnread(dir, "api", m.ID); err != nil {
 			return err
 		}
 		return MarkRead(dir, "api", run, m, true)
@@ -134,13 +134,13 @@ func TestTaskOpenFollowsTheTask(t *testing.T) {
 	if open, found := TaskOpen(dir, "api", tasks[0].ID); !open || !found {
 		t.Error("a task on its way is not open")
 	}
-	if err := writeStatus(dir, "api", tasks[1].ID, Result{State: Failed}); err != nil {
+	if err := WriteStatus(dir, "api", tasks[1].ID, Result{State: Failed}); err != nil {
 		t.Fatal(err)
 	}
 	if open, found := TaskOpen(dir, "api", tasks[1].ID); open || !found {
 		t.Error("a failed task is open")
 	}
-	if err := writeStatus(dir, "api", tasks[2].ID, Result{State: Delivered, Withdrawn: true}); err != nil {
+	if err := WriteStatus(dir, "api", tasks[2].ID, Result{State: Delivered, Withdrawn: true}); err != nil {
 		t.Fatal(err)
 	}
 	if open, found := TaskOpen(dir, "api", tasks[2].ID); open || !found {

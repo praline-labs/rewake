@@ -14,9 +14,9 @@ import (
 // Only a real reservation earns a new delivery window. Its release is durable
 // and recorded once, so retries and server restarts cannot renew it forever.
 func (s *Server) answerExpired(message Message, reserved bool) (bool, error) {
-	path := filepath.Join(retentionPath(s.Dir, s.Name), message.ID)
+	path := filepath.Join(RetentionPath(s.Dir, s.Name), message.ID)
 	raw, err := state.ReadFile(path)
-	var lifetime answerLifetime
+	var lifetime AnswerLifetime
 	if err == nil {
 		if err := json.Unmarshal(raw, &lifetime); err != nil {
 			return false, err
@@ -25,7 +25,7 @@ func (s *Server) answerExpired(message Message, reserved bool) (bool, error) {
 		return false, err
 	}
 	if reserved && os.IsNotExist(err) {
-		if err := state.EnsureSubdir(retentionPath(s.Dir, s.Name)); err != nil {
+		if err := state.EnsureSubdir(RetentionPath(s.Dir, s.Name)); err != nil {
 			return false, err
 		}
 		return false, state.WriteAtomic(path, []byte(`{"releasedAt":"0001-01-01T00:00:00Z"}`))

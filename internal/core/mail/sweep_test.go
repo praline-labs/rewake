@@ -127,7 +127,7 @@ func TestAnOwedMessageOutlivesTheSweep(t *testing.T) {
 		if err := Put(dir, *m); err != nil {
 			t.Fatal(err)
 		}
-		if err := linkUnread(dir, "api", m.ID); err != nil {
+		if err := LinkUnread(dir, "api", m.ID); err != nil {
 			t.Fatal(err)
 		}
 		if err := os.Remove(filepath.Join(state.InboxPath(dir, "api"), m.ID+".json")); err != nil {
@@ -171,7 +171,7 @@ func TestAnOwedMessageLeftUnreadOutlivesTheSweep(t *testing.T) {
 	if err := Put(dir, task); err != nil {
 		t.Fatal(err)
 	}
-	if err := linkUnread(dir, "api", task.ID); err != nil {
+	if err := LinkUnread(dir, "api", task.ID); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Remove(filepath.Join(state.InboxPath(dir, "api"), task.ID+".json")); err != nil {

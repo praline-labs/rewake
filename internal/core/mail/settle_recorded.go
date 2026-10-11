@@ -41,7 +41,7 @@ func (s *Server) settleRecorded() {
 		if last, tried := s.attempts[id]; tried && time.Since(last) < retryInterval && !s.stopping {
 			continue
 		}
-		if !gone(filepath.Join(state.InboxPath(s.Dir, s.Name), id+".json")) {
+		if !Gone(filepath.Join(state.InboxPath(s.Dir, s.Name), id+".json")) {
 			continue
 		}
 		s.settleUnreadOnly(id)
@@ -59,7 +59,7 @@ func (s *Server) settleUnreadOnly(id string) {
 		s.attempts[id] = time.Now()
 		return
 	}
-	if known && status.final() {
+	if known && status.Final() {
 		return
 	}
 	if result, remembered := s.outcomes[id]; remembered && result.State != Held && result.State != Pending && (!known || status.State != result.State) {
@@ -68,7 +68,7 @@ func (s *Server) settleUnreadOnly(id string) {
 		}
 		return
 	}
-	if !known || !owesArchive(status) || claimed(s.Dir, s.Name, id) {
+	if !known || !owesArchive(status) || Claimed(s.Dir, s.Name, id) {
 		return
 	}
 	s.attempts[id] = time.Now()

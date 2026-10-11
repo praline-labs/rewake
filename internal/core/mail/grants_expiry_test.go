@@ -33,7 +33,7 @@ func TestAnExpiredGrantIsRefusedWithoutAskingMain(t *testing.T) {
 	if !ok || status.State != Failed || !strings.Contains(status.Detail, "expired") {
 		t.Fatalf("status = %+v", status)
 	}
-	told, err := list(dir, "web")
+	told, err := List(dir, "web")
 	if err != nil || len(told) != 1 || told[0].Undelivered == nil || told[0].Undelivered.ID != task.ID {
 		t.Fatalf("sender was not told: %+v %v", told, err)
 	}

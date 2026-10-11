@@ -46,7 +46,7 @@ func TestSettlingWaitsForALockTheServerHolds(t *testing.T) {
 			if err := live(lab.dir).put(report); err != nil {
 				t.Fatal(err)
 			}
-			if err := linkUnread(lab.dir, report.To, report.ID); err != nil {
+			if err := LinkUnread(lab.dir, report.To, report.ID); err != nil {
 				t.Fatal(err)
 			}
 			waiting := filepath.Join(state.InboxPath(lab.dir, report.To), report.ID+".json")
@@ -72,7 +72,7 @@ func TestSettlingWaitsForALockTheServerHolds(t *testing.T) {
 				if via == "publish" {
 					server.publish(report.ID, delivered)
 				} else {
-					if err := writeStatus(lab.dir, report.To, report.ID, delivered); err != nil {
+					if err := WriteStatus(lab.dir, report.To, report.ID, delivered); err != nil {
 						return err
 					}
 					server.alreadySettled(report)
@@ -131,14 +131,14 @@ func TestADeferredSettlementGetsAnotherPass(t *testing.T) {
 				t.Fatal(err)
 			}
 			if scene == "foreign refused on record" {
-				if err := writeStatus(lab.dir, letter.To, letter.ID, Result{State: Failed, Detail: "refused by the earlier session"}); err != nil {
+				if err := WriteStatus(lab.dir, letter.To, letter.ID, Result{State: Failed, Detail: "refused by the earlier session"}); err != nil {
 					t.Fatal(err)
 				}
 			}
 			waiting := filepath.Join(state.InboxPath(lab.dir, letter.To), letter.ID+".json")
 			left := waiting
 			if scene == "late refusal unread only" {
-				if err := linkUnread(lab.dir, letter.To, letter.ID); err != nil {
+				if err := LinkUnread(lab.dir, letter.To, letter.ID); err != nil {
 					t.Fatal(err)
 				}
 				server.finish(letter, Result{State: Delivered})
@@ -199,7 +199,7 @@ func TestADeferredSettlementGetsAnotherPass(t *testing.T) {
 				t.Fatalf("mail for another session that came later left: %v", err)
 			}
 			if scene == "late refusal unread only" {
-				notes, err := list(lab.dir, letter.From)
+				notes, err := List(lab.dir, letter.From)
 				if err != nil {
 					t.Fatal(err)
 				}

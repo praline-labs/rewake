@@ -23,11 +23,12 @@ const answeringFresh = 3 * time.Second
 // mark. A report takes a turn to arrive; a second is fine.
 const answerPoll = time.Second
 
-// awaitedHere reports whether a send in this session waits for this report now.
+// AwaitedHere reports whether a send in this session waits for this report now.
 // The caller holds the mailbox lock. An error says a mark could not be read:
 // the report may belong to a waiting send, and showing it to the agent as well
 // would hand it over twice.
-func awaitedHere(dir, name string, message Message) (bool, error) {
+// The delivery server asks it before it makes a report readable or announces it.
+func AwaitedHere(dir, name string, message Message) (bool, error) {
 	if !Settles(message) {
 		return false, nil
 	}

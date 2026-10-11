@@ -134,7 +134,7 @@ is not made readable again and a group notice whose member was withdrawn is rebu
 sends its sender no "not delivered" note (`settleHeld`, `tellUndelivered`, which reads the
 status from disk). Reading the tombstone moves it to `done/` and writes no `read` status
 over the withdrawn one. Internally the server carries the outcome as the unwritten state
-`withdrawn` (`Status.final`, `isFinal`), so every place that already stopped at `read`
+`withdrawn` (`Status.Final`, `IsFinal`), so every place that already stopped at `read`
 stops here too.
 
 What cannot be closed: between the last check before a notice and the write into the

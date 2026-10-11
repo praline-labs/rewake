@@ -23,18 +23,18 @@ func (s *Server) prepareDelivery(ctx context.Context, message *Message) (read, a
 		if err != nil {
 			return err
 		}
-		if known && status.final() {
+		if known && status.Final() {
 			// Withdrawn goes the way of read: nothing is made readable, and
 			// recording the read keeps the withdrawal as it is.
 			read = true
 			return nil
 		}
-		if answered, err = awaitedHere(s.Dir, s.Name, *message); err != nil {
+		if answered, err = AwaitedHere(s.Dir, s.Name, *message); err != nil {
 			return err
 		}
 		expired, err = s.answerExpired(*message, answered)
 		if err == nil && answered && !expired {
-			err = linkUnread(s.Dir, s.Name, message.ID)
+			err = LinkUnread(s.Dir, s.Name, message.ID)
 		}
 		return err
 	}
@@ -47,7 +47,7 @@ func (s *Server) prepareDelivery(ctx context.Context, message *Message) (read, a
 				if err := check(); err != nil || read || answered || expired {
 					return err
 				}
-				return linkUnread(s.Dir, s.Name, message.ID)
+				return LinkUnread(s.Dir, s.Name, message.ID)
 			}); err != nil {
 				return err
 			}
@@ -84,7 +84,7 @@ func (s *Server) prepareDelivery(ctx context.Context, message *Message) (read, a
 				s.PinGrant(*message, thread)
 			}
 		}
-		return linkUnread(s.Dir, s.Name, message.ID)
+		return LinkUnread(s.Dir, s.Name, message.ID)
 	}
 	lockCtx := s.lockCtx()
 	if reservation != nil {
@@ -121,8 +121,8 @@ func (s *Server) prepareDelivery(ctx context.Context, message *Message) (read, a
 // recordDeliveryThread runs under the mailbox lock before the message becomes
 // readable. Recording only after delivery would lose a fast read and report.
 func recordDeliveryThread(dir, name, id, thread string) error {
-	if err := state.EnsureSubdir(threadPath(dir, name)); err != nil {
+	if err := state.EnsureSubdir(ThreadPath(dir, name)); err != nil {
 		return err
 	}
-	return state.WriteAtomic(filepath.Join(threadPath(dir, name), id), []byte(thread))
+	return state.WriteAtomic(filepath.Join(ThreadPath(dir, name), id), []byte(thread))
 }

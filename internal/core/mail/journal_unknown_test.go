@@ -51,7 +51,7 @@ func TestAReportFoundWithoutItsMarkIsMarkedPublished(t *testing.T) {
 	if err := finishAll(t, dir); err != nil {
 		t.Fatal(err)
 	}
-	if waiting, err := list(dir, "web"); err != nil || len(waiting) != 0 {
+	if waiting, err := List(dir, "web"); err != nil || len(waiting) != 0 {
 		t.Fatalf("republished %d (%v)", len(waiting), err)
 	}
 }
@@ -77,7 +77,7 @@ func TestAnUnknownPublicationMarkIsNeverPermission(t *testing.T) {
 		if err := finishAll(t, dir); err == nil {
 			t.Fatal("the journal went on")
 		}
-		if waiting, err := list(dir, "web"); err != nil || len(waiting) != 0 {
+		if waiting, err := List(dir, "web"); err != nil || len(waiting) != 0 {
 			t.Fatalf("published %d (%v)", len(waiting), err)
 		}
 	})

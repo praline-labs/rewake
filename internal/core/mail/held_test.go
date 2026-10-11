@@ -100,7 +100,7 @@ func (f *heldFixture) told(t *testing.T) *Message {
 // undelivered is the note the sender was sent about the task, if any.
 func (f *heldFixture) undelivered(t *testing.T) *Message {
 	t.Helper()
-	messages, err := list(f.dir, "web")
+	messages, err := List(f.dir, "web")
 	if err != nil {
 		return nil
 	}

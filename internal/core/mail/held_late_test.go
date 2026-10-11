@@ -114,10 +114,10 @@ func TestAHoldLeftByAKilledRunFailsWithTheNextOne(t *testing.T) {
 		if err := Put(dir, held); err != nil {
 			t.Fatal(err)
 		}
-		if err := linkUnread(dir, "api", held.ID); err != nil {
+		if err := LinkUnread(dir, "api", held.ID); err != nil {
 			t.Fatal(err)
 		}
-		if err := writeStatus(dir, "api", held.ID, Result{State: Held, Via: "socket", Detail: "held"}); err != nil {
+		if err := WriteStatus(dir, "api", held.ID, Result{State: Held, Via: "socket", Detail: "held"}); err != nil {
 			t.Fatal(err)
 		}
 		if taken {

@@ -80,7 +80,7 @@ func TestAWaitingReportKeepsItsDeliveryThread(t *testing.T) {
 	if err := MarkRead(dir, "api", run, task, true); err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(threadPath(dir, "api"), task.ID)
+	path := filepath.Join(ThreadPath(dir, "api"), task.ID)
 	old := time.Now().Add(-2 * keepFinished)
 	if err := os.Chtimes(path, old, old); err != nil {
 		t.Fatal(err)

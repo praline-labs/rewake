@@ -108,7 +108,7 @@ func Withdraw(dir string, message Message, replacement *Message) (Withdrawal, er
 		// read by hard link or served from its waiting copy.
 	case known && status.State == Read:
 		return 0, ErrAlreadyRead
-	case readable && claimed(dir, to, id):
+	case readable && Claimed(dir, to, id):
 		return 0, ErrReadInProgress
 	case readable:
 	case waiting && (!known || status.State != Failed):
@@ -155,7 +155,7 @@ func withdrawSteps(dir string, message Message, replacedBy string, readable, wai
 	// The status first: from here on nothing the serving process learns about
 	// the notice can undo the withdrawal (outcome.go), and a reader that finds
 	// the original still in unread/ reads it as withdrawn (PeekUnread).
-	if err := writeStatus(dir, to, id, Result{State: Failed, Detail: detail, Withdrawn: true}); err != nil {
+	if err := WriteStatus(dir, to, id, Result{State: Failed, Detail: detail, Withdrawn: true}); err != nil {
 		return 0, err
 	}
 	result, where := WithdrawnUnseen, state.DonePath(dir, to)
@@ -232,7 +232,7 @@ func tombstoneIn(directory, id string) (bool, error) {
 func lookUp(id string, directories ...string) ([]bool, error) {
 	found := make([]bool, len(directories))
 	for index, directory := range directories {
-		in, err := isIn(directory, id)
+		in, err := IsIn(directory, id)
 		if err != nil {
 			return nil, err
 		}

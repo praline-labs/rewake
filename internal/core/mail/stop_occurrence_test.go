@@ -28,7 +28,7 @@ func validInterim(t *testing.T, lab twoSessionLab) string {
 // notesTo counts the letters with id in name's mailbox.
 func notesTo(t *testing.T, dir, name, id string) int {
 	t.Helper()
-	letters, err := list(dir, name)
+	letters, err := List(dir, name)
 	if err != nil {
 		t.Fatal(err)
 	}

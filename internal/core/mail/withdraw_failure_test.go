@@ -67,7 +67,7 @@ func TestAHalfDoneWithdrawalIsNeverReadAsTheTask(t *testing.T) {
 	}
 	// What is kept is what was read: an archive holding the original would
 	// show the task to whatever reads done/ later as if it had been read.
-	if !must(tombstoneIn(state.DonePath(f.dir, "api"), f.task.ID)) || must(isIn(state.UnreadPath(f.dir, "api"), f.task.ID)) {
+	if !must(tombstoneIn(state.DonePath(f.dir, "api"), f.task.ID)) || must(IsIn(state.UnreadPath(f.dir, "api"), f.task.ID)) {
 		t.Fatal("done/ keeps the original, not the tombstone that was read")
 	}
 }
@@ -168,7 +168,7 @@ func TestAWaitingCopyThatWillNotGoLeavesTheWithdrawalFinished(t *testing.T) {
 	if _, err := withdrawNow(t, f.dir, f.task, &replacement); !errors.Is(err, ErrAlreadyWithdrawn) {
 		t.Fatalf("an edit after it: %v", err)
 	}
-	if must(isIn(state.InboxPath(f.dir, "api"), replacement.ID)) {
+	if must(IsIn(state.InboxPath(f.dir, "api"), replacement.ID)) {
 		t.Fatal("a refused edit left its replacement to be announced")
 	}
 	stuck.Store(false)

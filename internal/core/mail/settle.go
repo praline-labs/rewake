@@ -51,15 +51,15 @@ func SettleLocked(dir, name, id string, outcome State) bool {
 		// A withdrawal takes the waiting copy itself; one left behind goes
 		// here, and the tombstone stays where its reader will look.
 		if kept.keeps(waiting) || !standsIn(id, state.UnreadPath(dir, name), state.DonePath(dir, name)) {
-			return gone(waiting)
+			return Gone(waiting)
 		}
 		if err := removeWaiting(waiting); err == nil {
 			_ = state.SyncDir(state.InboxPath(dir, name))
 		}
-		return gone(waiting)
+		return Gone(waiting)
 	default:
 		unread := filepath.Join(state.UnreadPath(dir, name), id+".json")
-		if claimed(dir, name, id) {
+		if Claimed(dir, name, id) {
 			// Only a read takes a letter being read out of unread/; a failed
 			// status an earlier run left behind does not. The read settles it.
 			return true
@@ -75,13 +75,14 @@ func SettleLocked(dir, name, id string, outcome State) bool {
 		if standsIn(id, state.InboxPath(dir, name), state.DonePath(dir, name)) {
 			dropUnread(dir, name, id)
 		}
-		return gone(waiting) && gone(unread)
+		return Gone(waiting) && Gone(unread)
 	}
 }
 
-// gone says whether nothing stands at the path. One that cannot be looked at
-// may still be there.
-func gone(path string) bool {
+// Gone says whether nothing stands at the path. One that cannot be looked at
+// may still be there. The delivery server asks it whether a letter left in
+// unread/ still has its waiting copy.
+func Gone(path string) bool {
 	_, err := os.Lstat(path)
 	return errors.Is(err, os.ErrNotExist)
 }

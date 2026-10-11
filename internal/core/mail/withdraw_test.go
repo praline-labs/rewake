@@ -28,7 +28,7 @@ func withdrawNow(t *testing.T, dir string, message Message, replacement *Message
 // tombstone is the copy the reader finds in unread/, if any.
 func tombstone(t *testing.T, dir string, id string) *Message {
 	t.Helper()
-	messages, err := listIn(state.UnreadPath(dir, "api"))
+	messages, err := ListIn(state.UnreadPath(dir, "api"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func (f *heldFixture) stillWithdrawn(t *testing.T) {
 	if f.undelivered(t) != nil {
 		t.Fatal("the sender of a withdrawn task was told it was not delivered")
 	}
-	if must(isIn(state.InboxPath(f.dir, "api"), f.task.ID)) {
+	if must(IsIn(state.InboxPath(f.dir, "api"), f.task.ID)) {
 		t.Fatal("the waiting copy of a withdrawn task stayed to be delivered again")
 	}
 }
@@ -155,7 +155,7 @@ func TestAWithdrawalBeforeTheNoticeLeavesNothingToRead(t *testing.T) {
 	if status, _, _ := ReadStatus(f.dir, "api", f.task.ID); !status.Withdrawn || status.State != Failed {
 		t.Fatalf("status %+v", status)
 	}
-	if !must(isIn(state.DonePath(f.dir, "api"), f.task.ID)) {
+	if !must(IsIn(state.DonePath(f.dir, "api"), f.task.ID)) {
 		t.Fatal("the withdrawn message was not kept for diagnosis")
 	}
 }
@@ -198,7 +198,7 @@ func TestWithdrawRefusesWhatIsFinal(t *testing.T) {
 	if err := Put(dir, failed); err != nil {
 		t.Fatal(err)
 	}
-	if err := writeStatus(dir, "api", failed.ID, Result{State: Failed, Detail: "the session ended"}); err != nil {
+	if err := WriteStatus(dir, "api", failed.ID, Result{State: Failed, Detail: "the session ended"}); err != nil {
 		t.Fatal(err)
 	}
 	SettleLocked(dir, "api", failed.ID, Failed)
