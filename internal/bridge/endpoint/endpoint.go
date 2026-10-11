@@ -239,7 +239,6 @@ func (e *Endpoint) admit(conn *net.UnixConn, greeting hello) (func(), error) {
 		if subtle.ConstantTimeCompare([]byte(greeting.Capability), []byte(e.cfg.Capability)) != 1 || e.cfg.Capability == "" {
 			return nil, errors.New("the capability is not this launch's")
 		}
-	case roleHook:
 	case roleTransport:
 		// The harness's own process, exactly: not a build of rewake, and
 		// never something running below it.
@@ -319,8 +318,6 @@ func (e *Endpoint) answer(conn *net.UnixConn, role string, asked request, genera
 		reply.Ticket = &ticket
 	case role == roleChild && asked.Op == opConfirm && asked.Ticket != nil:
 		err = e.confirm(conn, *asked.Ticket)
-	case role == roleHook && asked.Op == opObserve:
-		e.hookWith(asked.Payload, asked.Limits)
 	default:
 		err = fmt.Errorf("a %s may not ask %q", role, asked.Op)
 	}

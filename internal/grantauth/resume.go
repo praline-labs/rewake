@@ -19,6 +19,12 @@ import (
 // for a grant it still holds, whose task is open, to the wrapper of the run
 // that now holds the name. The grant then belongs to that run: the run before
 // it can no longer be answered for, and a later resume asks the same way.
+//
+// Code only tests reach from S9: the copies were written by the keeper of a
+// harness's permission hook, which left with the hooks, and the wrapper asks
+// only for a harness no adapter is (wrap/grant_resume.go). Stage 6's
+// Permissions capability (docs/v2/design-api.md#permissions) decides how a
+// resumed run takes its grants again.
 
 // Reconfirm asks the wrapper of the main that sent a message to hand its grant
 // over to this run of the recipient, and returns it. The caller is the new

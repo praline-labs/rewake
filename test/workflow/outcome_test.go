@@ -54,10 +54,10 @@
 //     what it reports about itself.
 //   - shim_env_test.go: how a case tells a program what to be;
 //     shim_session_test.go, shim_read_test.go, shim_send_test.go and
-//     shim_state_test.go: what every program of the suite does as a session;
-//     shim_served_test.go: the closed shapes a program accepts.
-//   - fixtureshim_test.go: the fixture harness's program, the gate's;
-//     claudeshim_test.go: the Claude Code column's.
+//     shim_state_test.go: what every program of the suite does as a session.
+//   - fixtureshim_test.go: the fixture harness's program, the gate's, the one
+//     column since the Claude Code column retired in S9.
+//   - findings_test.go: what the scenarios that answer by findings share.
 //   - classification_test.go, regression_test.go, regression_processes_test.go
 //     and publication_test.go: the suite's tests of itself.
 //

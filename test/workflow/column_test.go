@@ -11,10 +11,11 @@ package workflow
 //
 // They are not equal in what a red result means, either. The fixture is the
 // regression gate: the harness the core is proven on, where every observation
-// has to be made (docs/v2/stage3-fixture.md#the-gate-across-the-steps). Claude
-// Code searches beside it until its column goes. Which column is the
-// gate is a field of the column, set on exactly one, and the summary names the
-// column of every red; nothing here promotes one on its own.
+// has to be made (docs/v2/stage3-fixture.md#the-gate-across-the-steps). The
+// Claude Code column searched beside it until S9, when Claude Code's hooks
+// left; it returns with stage 4. Which column is the gate is a field of the
+// column, set on exactly one, and the summary names the column of every red;
+// nothing here promotes one on its own.
 
 import (
 	"errors"
@@ -82,7 +83,6 @@ func gateColumn() column {
 // The columns the suite runs. mid-turn's capability is declared here too, so
 // one table answers every question about what a column can show.
 var (
-	claudeColumn = column{harness: "claude", caps: map[string]bool{}}
 	// fixtureColumn is the harness the core is proven on without a real one
 	// (docs/v2/stage3-fixture.md), and the gate: it names its members and
 	// steers into a running turn.
@@ -91,14 +91,8 @@ var (
 		capabilityMidTurn:      true,
 	}}
 	// columns is every column, in the order a scenario runs them.
-	columns = []column{claudeColumn, fixtureColumn}
+	columns = []column{fixtureColumn}
 )
-
-// runsPluginModule reports whether this column's harness runs rewake's plugin
-// module under node, so a scenario needs node on PATH there. By name: it is
-// the Claude Code column's harness that loads the module, not any column that
-// happens to lack some capability.
-func (col column) runsPluginModule() bool { return col.harness == claudeColumn.harness }
 
 // unsupported records an observation this column cannot make, by name and with
 // the capability it needs. Saying so is the point: a missing mechanism that

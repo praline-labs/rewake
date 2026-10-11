@@ -261,12 +261,9 @@ func lockOperation(ctx *Context, site readSite, token string) (func(), error) {
 	return release, nil
 }
 
-// toolReadRefused refuses a read through the tool where a read cannot yet be
-// tied to the model that saw it: on Claude Code, a nested agent's call is not
-// yet shown to always name its agent, and only a read claims that a model saw
-// something (docs/mail-bridge-turns.md#the-turn-a-call-belongs-to). And on
-// any harness where the launch's checks found that a read would not reach the
-// conversation direct and whole: the ticket then says why.
+// toolReadRefused refuses a read through the tool on any harness where the
+// launch's checks found that a read would not reach the conversation direct
+// and whole: the ticket then says why.
 func toolReadRefused(ctx *Context) error {
 	if ctx.scope == nil {
 		return nil
@@ -274,10 +271,7 @@ func toolReadRefused(ctx *Context) error {
 	if reason := ctx.scope.ticket.ReadsOff; reason != "" {
 		return failf("letters are read in the shell in this session: %s; so nothing was shown; run: rewake inbox (or the same words) in the shell", reason)
 	}
-	if ctx.scope.ticket.Transport != bridge.ClaudeTransport {
-		return nil
-	}
-	return failf("letters are read in the shell in this session for now, so nothing was shown; run: rewake inbox (or the same words) in the shell")
+	return nil
 }
 
 // emitRead prints the part a continuation names, or the answer a read that

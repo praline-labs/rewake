@@ -12,9 +12,9 @@ import (
 	"github.com/praline-labs/rewake/internal/bridge"
 )
 
-// A ticket is issued only while no end was noted since its call was heard,
-// or, where the binding names the turn, since its turn started: the capture
-// closes the turn for new tickets before the turn's end reaches the table.
+// A ticket is issued only while no end was noted since its turn started: the
+// capture closes the turn for new tickets before the turn's end reaches the
+// table.
 
 // A turn whose end was captured, with the harness's report of its end not yet
 // heard, gives a call of it reported afterwards no ticket.
@@ -31,23 +31,6 @@ func TestACapturedTurnIssuesNoMoreTickets(t *testing.T) {
 	openTurn(served, "th", "t2")
 	seenCall(served, "th", "t2", "next", words)
 	mustTicket(t, path, neutralRequest("th", "t2", "next", words))
-}
-
-// On Claude Code an interruption is the captured end: a call heard before it
-// gets no ticket after it, and a call heard after it — a prompt that goes on
-// past an end another hook blocked — does.
-func TestAClaudeCallHeardBeforeACaptureGetsNoTicketAfterIt(t *testing.T) {
-	served, path := testEndpoint(t, bridge.ClaudeTransport, func(c *Config) { c.Conversation = func() string { return "conv" } })
-	pre := func(call string) TicketRequest {
-		served.hook([]byte(`{"session_id":"conv","prompt_id":"p1","hook_event_name":"PreToolUse","tool_name":"mcp__rewake__rewake","tool_input":{"words":["inbox"]},"tool_use_id":"` + call + `","mcp_server":{"name":"rewake"}}`))
-		return TicketRequest{Transport: bridge.ClaudeTransport, CallID: call, Words: words, Digest: bridge.Digest(words)}
-	}
-	early := pre("early")
-	served.Gate().Capture()
-	if _, err := ticketFor(t, path, early); err == nil || !strings.Contains(err.Error(), "ended before its ticket") {
-		t.Fatalf("a call heard before the capture: %v", err)
-	}
-	mustTicket(t, path, pre("after"))
 }
 
 // A run remembers every call it gave a ticket, up to maxSpent; past that it

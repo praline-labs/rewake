@@ -12,10 +12,6 @@
 // from the process the sender's record names, in its own namespaces: a
 // listener put in the socket's place by a sandboxed process lives in the
 // sandbox's namespaces and cannot leave them.
-//
-// The receiving side keeps what it was granted the same way when its harness
-// applies a grant through a hook of its own (keeper.go): in the wrapper's
-// memory, answered only to a process below the wrapper.
 package grantauth
 
 import (
@@ -67,8 +63,6 @@ const (
 	// opCarry registers, for an edit's replacement, the grant held for the
 	// message it replaces.
 	opCarry = "carry"
-	// opDecide is a hook call to the keeper of a worker's grants.
-	opDecide = "decide"
 )
 
 type request struct {
@@ -78,14 +72,12 @@ type request struct {
 	// resumed run continues (resume.go).
 	Thread string `json:"thread,omitempty"`
 	// Replaces is the message whose grant a carry takes.
-	Replaces string          `json:"replaces,omitempty"`
-	Call     json.RawMessage `json:"call,omitempty"`
+	Replaces string `json:"replaces,omitempty"`
 }
 
 type response struct {
-	Grant  *Grant          `json:"grant,omitempty"`
-	Output json.RawMessage `json:"output,omitempty"`
-	Error  string          `json:"error,omitempty"`
+	Grant *Grant `json:"grant,omitempty"`
+	Error string `json:"error,omitempty"`
 }
 
 // Errors a caller tells apart.

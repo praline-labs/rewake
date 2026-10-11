@@ -85,11 +85,6 @@ type Ticket struct {
 	ReadsOff string `json:"readsOff,omitempty"`
 }
 
-// The transports of the mail tool, as tickets and receipts name them.
-const (
-	ClaudeTransport = "claude-mcp"
-)
-
 // CallKey names one native call within its run: the hex SHA-256 of the
 // transport, the conversation and the call id. It is the name of the call's
 // binding (docs/archive-1.x/mail-bridge-server.md#running-the-child), which the server

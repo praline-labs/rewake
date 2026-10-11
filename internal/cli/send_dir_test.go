@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/grant"
+	"github.com/praline-labs/rewake/internal/harness"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/state"
@@ -16,6 +17,10 @@ import (
 
 // grantWorld is a main caller, a worker in a workspace of its own, and a home
 // with directories to grant.
+//
+// With no harness named, the worker's harness takes a directory into a
+// running session: no product adapter of an untagged build does from S9, and
+// stage 6 designs the Permissions capability that applies one.
 type grantWorld struct {
 	dir, home, workspace string
 	peer                 registry.Session
@@ -40,6 +45,13 @@ func newGrantWorld(t *testing.T, senderRole, harnessID string) grantWorld {
 	peer.Role, peer.CWD = "write", world.workspace
 	if harnessID != "" {
 		peer.Harness = harnessID
+	} else {
+		saved := findHarness
+		findHarness = func(id string) (harness.Harness, bool) {
+			found, ok := saved(id)
+			return grantStub{Harness: found, dirs: true, reaches: true}, ok
+		}
+		t.Cleanup(func() { findHarness = saved })
 	}
 	if err := registry.Update(dir, peer); err != nil {
 		t.Fatal(err)
@@ -120,16 +132,26 @@ func TestDirGrantIsCarriedResolvedAndCollapsed(t *testing.T) {
 	}
 }
 
-// A Claude Code session takes a grant through its permission hook, which
-// asks its wrapper (docs/grants.md#claude-code): the task goes out carrying it.
-func TestAClaudeCodeSessionIsSentADirectoryGrant(t *testing.T) {
-	w := newGrantWorld(t, "main", "claude")
+// A session whose harness takes no directory into a running session is sent
+// no grant: the task fails before it goes out, and says what to do instead.
+func TestASessionThatTakesNoDirectoryIsSentNoGrant(t *testing.T) {
+	takesNone := ""
+	for _, h := range harness.All() {
+		if taker, ok := h.(harness.DirGrantHarness); !ok || !taker.SupportsDirGrant() {
+			takesNone = h.ID()
+			break
+		}
+	}
+	if takesNone == "" {
+		t.Skip("every harness of this build takes a directory")
+	}
+	w := newGrantWorld(t, "main", takesNone)
 	lib := filepath.Join(w.home, "work/lib")
 	code, out, stderr := run("send", w.peer.Name, "Bump the client", "--wait=0", "--grant-dir", lib)
-	if code != ExitPending {
+	if code != ExitFailed || !strings.Contains(stderr, "cannot take a directory into a running session yet") {
 		t.Fatalf("send: %d %s %s", code, out, stderr)
 	}
-	if messages := w.sent(t); len(messages) != 1 || !slices.Equal(messages[0].GrantDirs, []string{lib}) {
+	if messages := w.sent(t); len(messages) != 0 {
 		t.Fatalf("sent %+v", messages)
 	}
 }

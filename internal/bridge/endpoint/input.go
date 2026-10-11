@@ -9,8 +9,7 @@ import (
 
 // The neutral input (docs/v2/stage3-steps-adapters.md, S7):
 // the five things the endpoint's state takes from a harness, whichever harness
-// reported them. The two parsers of events.go are callers of these, and leave
-// with their adapters; what they decode stays theirs.
+// reported them. What a harness's own records say is decoded in its adapter.
 
 var _ harness.ToolInput = (*Endpoint)(nil)
 
@@ -30,16 +29,12 @@ func (e *Endpoint) TurnStarted(_, turn string, at int64) {
 func (e *Endpoint) TurnEnded(_, turn string) { e.turnEnded(turn) }
 
 // CallSeen records the harness's own record of a call.
-func (e *Endpoint) CallSeen(call harness.ObservedCall) { e.callSeen(call, "", nil) }
-
-// callSeen is CallSeen with what only the hook path carries: the prompt a
-// call's turn is named from, and the limits the hook saw.
-func (e *Endpoint) callSeen(call harness.ObservedCall, prompt string, limits *HookLimits) {
+func (e *Endpoint) CallSeen(call harness.ObservedCall) {
 	digest, refusal := e.observedWords(call.Words, call.Words != nil)
 	if call.Nested {
 		refusal = "a nested agent's call does not run through the tool"
 	}
-	e.observe(call.ID, observation{conversation: call.Conversation, turn: call.Turn, prompt: prompt, digest: digest, refusal: refusal, limits: limits})
+	e.observe(call.ID, observation{conversation: call.Conversation, turn: call.Turn, digest: digest, refusal: refusal})
 }
 
 // CallResult hands a call's result to the acknowledgment.

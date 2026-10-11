@@ -79,8 +79,6 @@ func TestInboxOutsideASessionIsRefused(t *testing.T) {
 	}
 }
 
-const turnPayload = `{"hook_event_name":"Stop","session_id":"t","last_assistant_message":"the smoke is green"}`
-
 // The end of a turn is reported to whoever wrote during it, with the last reply,
 // and only once.
 func TestTurnEndTellsTheSessionsThatWrote(t *testing.T) {
@@ -92,8 +90,8 @@ func TestTurnEndTellsTheSessionsThatWrote(t *testing.T) {
 		t.Fatalf("inbox exit = %d (%s)", code, errOut)
 	}
 
-	if code, out, errOut := run("turn-ended", turnPayload); code != ExitOK || out != "" || errOut != "" {
-		t.Fatalf("turn-ended = %d %q %q, want a silent success", code, out, errOut)
+	if reason, err := endTurn(t, smokeEnd); reason != "" || err != nil {
+		t.Fatalf("turn end = %q %v, want it published", reason, err)
 	}
 	waiting, _ := filepath.Glob(filepath.Join(state.InboxPath(dir, "web"), "*.json"))
 	if len(waiting) != 1 {
@@ -108,7 +106,7 @@ func TestTurnEndTellsTheSessionsThatWrote(t *testing.T) {
 		t.Errorf("notice = %+v, want a finished message from api with the last reply, for this run of web", notice)
 	}
 
-	run("turn-ended", turnPayload)
+	mustEndTurn(t, smokeEnd)
 	again, _ := filepath.Glob(filepath.Join(state.InboxPath(dir, "web"), "*.json"))
 	if len(again) != 1 {
 		t.Errorf("web holds %d messages after a second turn, want the one notice", len(again))
@@ -125,29 +123,10 @@ func TestTurnEndReportsEvenAfterADirectMessage(t *testing.T) {
 	run("inbox")
 	run("send", "web", "started", "--wait", "0")
 
-	run("turn-ended", turnPayload)
+	mustEndTurn(t, smokeEnd)
 	waiting, _ := filepath.Glob(filepath.Join(state.InboxPath(dir, "web"), "*.json"))
 	if len(waiting) != 2 {
 		t.Errorf("web holds %d messages, want the note and the report", len(waiting))
-	}
-}
-
-// The hook command is called for other events too; only the end of a turn is
-// one.
-func TestTurnEndIgnoresOtherEvents(t *testing.T) {
-	dir := liveSession(t, "api")
-	web := otherRun(t, dir, "web")
-	t.Setenv(state.SessionEnv, "api")
-	leaveUnread(t, dir, inbox.Message{From: "web", FromEpoch: web.Epoch(), To: "api", ToEpoch: epochOf(t, dir, "api"), Text: "rerun"})
-	run("inbox")
-	if waiting := inbox.Waiters(dir, "api", epochOf(t, dir, "api")); len(waiting) != 1 {
-		t.Fatalf("waiting = %v; without a waiter this test proves nothing", waiting)
-	}
-
-	run("turn-ended", `{"hook_event_name":"PreToolUse","session_id":"t"}`)
-	waiting, _ := filepath.Glob(filepath.Join(state.InboxPath(dir, "web"), "*.json"))
-	if len(waiting) != 0 {
-		t.Errorf("web holds %d messages after an event that is not the end of a turn", len(waiting))
 	}
 }
 
@@ -185,15 +164,5 @@ func TestSendWritesTheKind(t *testing.T) {
 		if !strings.Contains(string(raw), `"kind": "`+want+`"`) {
 			t.Errorf("%s: message = %s, want kind %s", flag, raw, want)
 		}
-	}
-}
-
-func TestInternalCommandsStayOutOfTheGuide(t *testing.T) {
-	_, out, _ := run()
-	if strings.Contains(out, "turn-ended") {
-		t.Error("the guide lists turn-ended, which agents have no reason to run")
-	}
-	if !strings.Contains(out, "rewake inbox") {
-		t.Error("the guide does not say how to read a message")
 	}
 }

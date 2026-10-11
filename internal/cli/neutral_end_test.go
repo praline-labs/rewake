@@ -13,8 +13,8 @@ import (
 
 // The end-identity and failure oracles on neutral completions: an adapter's
 // end as the contract carries it, confirmed through ConfirmCompletion. They
-// stand beside the same oracles on the hook and gateway paths, which leave
-// with those paths (docs/v2/stage3-steps.md#s5).
+// took over the same oracles from the hook and gateway paths, which left in
+// S8 and S9 (docs/v2/stage3-steps.md#s5).
 
 // confirm hands one end to the core as an adapter that can hold it does.
 func confirm(t *testing.T, dir string, self registry.Session, completion harness.Completion) {

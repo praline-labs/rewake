@@ -142,7 +142,7 @@ func TestAKeptAnswerThatCannotBeReadIsNotDropped(t *testing.T) {
 	lab.held(t, "the suite is green: 40 pass")
 	kept := filepath.Join(state.InboxPath(lab.dir, "api"), "pending", "kept.json")
 	closed(t, kept)
-	run("turn-ended", stopPayload(t, "Stop", "nothing more to add", true))
+	_, _ = endTurn(t, stopEnd("nothing more to add", true))
 	for _, report := range reportsTo(t, lab.dir, "web") {
 		if inbox.KindOf(report) == inbox.Finished {
 			t.Fatalf("published without the held answer: %q", report.Text)

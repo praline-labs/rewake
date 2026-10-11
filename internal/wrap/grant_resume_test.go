@@ -13,7 +13,6 @@ import (
 	"github.com/praline-labs/rewake/internal/grant"
 	"github.com/praline-labs/rewake/internal/grantauth"
 	"github.com/praline-labs/rewake/internal/grantauth/grantauthtest"
-	"github.com/praline-labs/rewake/internal/harness/claude"
 	"github.com/praline-labs/rewake/internal/proc"
 	"github.com/praline-labs/rewake/internal/state"
 )
@@ -78,11 +77,11 @@ func TestAResumedRunKeepsOnlyWhatMainConfirmsAgain(t *testing.T) {
 	if err := grant.Save(dir, "worker", endedEpoch(t), own); err != nil {
 		t.Fatal(err)
 	}
-	if elsewhere := resumeGrants(dir, "worker", main, claude.New(), []string{"--resume", "c0"}); len(elsewhere.dirs()) != 0 {
+	if elsewhere := resumeGrants(dir, "worker", main, &resumingHarness{}, []string{"--resume", "c0"}); len(elsewhere.dirs()) != 0 {
 		t.Fatalf("a resume of another conversation got %v", elsewhere.dirs())
 	}
 
-	restored := resumeGrants(dir, "worker", main, claude.New(), []string{"--resume", "s1"})
+	restored := resumeGrants(dir, "worker", main, &resumingHarness{}, []string{"--resume", "s1"})
 	if restored.thread != "s1" || !slices.Equal(restored.dirs(), []string{lib}) {
 		t.Fatalf("restored %v for %q", restored.dirs(), restored.thread)
 	}
@@ -93,38 +92,10 @@ func TestAResumedRunKeepsOnlyWhatMainConfirmsAgain(t *testing.T) {
 		}
 	}
 
-	keeper, err := grantauth.Keep(state.KeeperAddress(dir, "worker", main), os.Getpid())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer keeper.Close()
-	if again := keepResumed(keeper, restored.thread, restored.grants, true); again {
-		t.Error("nothing is left to ask, and the conversation is asked again")
-	}
-	entries := keeper.Entries()
-	if len(entries) != 1 || entries[0].Path != lib || entries[0].Thread != "s1" || entries[0].FromEpoch != main || !entries[0].Live() {
-		t.Fatalf("kept %+v", entries)
-	}
-
 	// A launch that resumes nothing, or a fork, restores nothing.
 	for _, args := range [][]string{nil, {"--resume", "s1", "--fork-session"}} {
-		if got := resumeGrants(dir, "worker", main, claude.New(), args); len(got.grants) != 0 {
+		if got := resumeGrants(dir, "worker", main, &resumingHarness{}, args); len(got.grants) != 0 {
 			t.Errorf("%v restored %+v", args, got.grants)
 		}
-	}
-}
-
-// A main that runs and does not answer is asked again later: the conversation
-// is not done with while its grant may still be confirmed.
-func TestAQuietMainIsAskedAgain(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "rooms", "default")
-	keeper, err := grantauth.Keep(state.KeeperAddress(dir, "worker", ownEpoch(t)), os.Getpid())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer keeper.Close()
-	quiet := []grantauth.Restored{{Hint: grant.Hint{Message: "m1"}, Err: grantauth.ErrUnreachable}}
-	if !keepResumed(keeper, "c1", quiet, true) || len(keeper.Entries()) != 0 {
-		t.Fatalf("a grant not confirmed yet: kept %+v", keeper.Entries())
 	}
 }

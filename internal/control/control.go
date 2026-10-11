@@ -3,10 +3,10 @@
 // files in the target run's control directory (docs/remote-control.md).
 //
 // The asking side is `rewake compact` and `rewake interrupt`; the answering
-// side is whatever serves the target: rewake's function-hooks module in a
-// Claude Code session, which can read and write files but not delete them, or
-// a wrapper. So the protocol is files only, the asker owns every
-// removal, and an answer is written once and never rewritten.
+// side is whatever serves the target: a harness's own extension, which may be
+// able to read and write files but not delete them, or a wrapper. So the
+// protocol is files only, the asker owns every removal, and an answer is
+// written once and never rewritten.
 package control
 
 import (
@@ -95,7 +95,6 @@ const (
 	lockFile    = "lock"
 	takenSuffix = ".taken"
 	answerSuff  = ".result"
-	startSuffix = ".started"
 )
 
 // RequestPath is the file the served side polls.
@@ -106,11 +105,6 @@ func TakenPath(dir, id string) string { return filepath.Join(dir, id+takenSuffix
 
 // AnswerPath is written by the served side once the request is carried out.
 func AnswerPath(dir, id string) string { return filepath.Join(dir, id+answerSuff) }
-
-// StartedPath is written by the Claude Code wrapper's collector when the
-// PreCompact hook of a compaction a main asked for reaches it: the module,
-// which never sees the hooks of its own compaction, reads it as the start.
-func StartedPath(dir, id string) string { return filepath.Join(dir, id+startSuffix) }
 
 // ValidID is the shape of a request id; the served side builds paths from it
 // and refuses any other.
@@ -170,7 +164,6 @@ func Ask(ctx context.Context, dir string, request Request, limits Limits) (Answe
 	defer func() {
 		_ = os.Remove(RequestPath(dir))
 		_ = os.Remove(TakenPath(dir, request.ID))
-		_ = os.Remove(StartedPath(dir, request.ID))
 	}()
 
 	if !waitFile(ctx, limits.Pickup, limits.Poll, TakenPath(dir, request.ID), AnswerPath(dir, request.ID)) {

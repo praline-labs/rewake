@@ -16,7 +16,7 @@ import (
 )
 
 // The clients of the endpoint: the server's connection, which lives as long
-// as the server; the child's one confirmation; the hook's one observation.
+// as the server, and the child's one confirmation.
 // Each checks that the listener is its own run's wrapper — this user, and a
 // process it runs below — before it says anything.
 
@@ -24,11 +24,9 @@ import (
 // is gone, or a listener that is not this run's wrapper.
 var ErrUnreachable = errors.New("the wrapper's context endpoint does not answer")
 
-// The bounds of the short exchanges (docs/mail-bridge-turns.md#waits-and-their-bounds).
-const (
-	ConfirmWait = time.Second
-	HookWait    = 2 * time.Second
-)
+// ConfirmWait bounds Confirm, a ticket's short exchange with the wrapper
+// (docs/mail-bridge-turns.md#waits-and-their-bounds).
+const ConfirmWait = time.Second
 
 // Client is a server's connection to its run's wrapper. No adapter starts a
 // server since the bridge server left in S8; the hello and its secret-based
@@ -175,20 +173,6 @@ func CallTool(path string, call ToolCall, limit time.Duration) (ToolAnswer, erro
 		return ToolAnswer{}, errors.New("the wrapper answered with no result")
 	}
 	return *answer.Answer, nil
-}
-
-// Observe hands a hook's input to the run's wrapper and returns once it
-// recorded it, or the bound ran out.
-func Observe(path string, payload []byte, limits HookLimits, limit time.Duration) error {
-	if !json.Valid(payload) {
-		return errors.New("the hook input is not JSON")
-	}
-	conn, err := greet(path, hello{Role: roleHook}, limit)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = conn.Close() }()
-	return ask(conn, request{ID: 1, Op: opObserve, Payload: payload, Limits: &limits})
 }
 
 // greet dials, checks the listener, and says hello; the deadline set here

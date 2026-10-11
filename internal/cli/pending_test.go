@@ -50,7 +50,7 @@ func turnStarted(t *testing.T, dir string, self registry.Session, at int64) {
 // recordedStart is the latest turn start the run has on record.
 func recordedStart(t *testing.T, dir string, self registry.Session) int64 {
 	t.Helper()
-	started, err := latestTurnStart(dir, self, self.Epoch())
+	started, err := inbox.LatestTurnStart(dir, self.Name, self.Epoch())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -229,16 +229,12 @@ func TestAFailedOrStoppedTurnIgnoresTheMark(t *testing.T) {
 	}
 }
 
-// Refused outside a session, for main, with nothing owed, without text, and
-// on Claude Code when no turn start has been recorded.
+// Refused outside a session, for main, with nothing owed, and without text.
 func TestPendingIsRefusedWhereItMeansNothing(t *testing.T) {
 	dir := liveSession(t, "api")
 	self, _ := registry.Lookup(dir, "api")
 	t.Setenv(state.SessionEnv, "api")
 	t.Setenv(epochEnv, self.Epoch())
-	if code, _, errOut := run("pending", "x"); code != ExitUsage || !strings.Contains(errOut, "records no turn starts") {
-		t.Errorf("no turn start: %d %s", code, errOut)
-	}
 	turnStarted(t, dir, self, markAt-1)
 	if code, _, errOut := run("pending", "x"); code != ExitUsage || !strings.HasPrefix(errOut, "nothing is owed a report, so there is nothing to keep open; end the turn as usual.\n") {
 		t.Errorf("nothing owed: %d %s", code, errOut)
@@ -253,39 +249,6 @@ func TestPendingIsRefusedWhereItMeansNothing(t *testing.T) {
 	t.Setenv(state.SessionEnv, "")
 	if code, _, errOut := run("pending", "x"); code != ExitUsage || !strings.Contains(errOut, "this is not one") {
 		t.Errorf("outside a session: %d %s", code, errOut)
-	}
-}
-
-// A mark set in K whose end was lost; K+1's end is heard, and raises the
-// recorded start to it; K+2 starts without a UserPromptSubmit and ends with
-// its final answer, which is a report.
-func TestAHeardTurnEndCorrectsALostOne(t *testing.T) {
-	dir := liveSession(t, "api")
-	peer := otherRun(t, dir, "web")
-	readFrom(t, dir, peer)
-	self, _ := registry.Lookup(dir, "api")
-	turnStarted(t, dir, self, markAt-100)
-	if err := markPending(dir, "api", self.Epoch(), "waiting in K", markAt-50); err != nil {
-		t.Fatal(err)
-	}
-	// K's end is lost. K+1 ends and is heard: this process's start is its end.
-	if code, _, errOut := run("turn-ended", `{"hook_event_name":"Stop","last_assistant_message":"K+1 said something"}`); code != ExitOK {
-		t.Fatalf("turn-ended: %s", errOut)
-	}
-	if got := recordedStart(t, dir, self); got != markAt {
-		t.Fatalf("the recorded start is %d after a heard end at %d", got, markAt)
-	}
-	// K+2 starts by itself, with no UserPromptSubmit, and ends with the answer.
-	readFrom(t, dir, peer)
-	if err := completeTurn(dir, self, inbox.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "t/K+2", Text: "the final answer", Started: recordedStart(t, dir, self), Ended: boottime.Now()}, "t"); err != nil {
-		t.Fatal(err)
-	}
-	var final bool
-	for _, message := range reportsTo(t, dir, "web") {
-		final = final || inbox.KindOf(message) == inbox.Finished && message.Text == "the final answer"
-	}
-	if !final {
-		t.Fatalf("K+2's answer did not leave as a report: %v", kinds(reportsTo(t, dir, "web")))
 	}
 }
 

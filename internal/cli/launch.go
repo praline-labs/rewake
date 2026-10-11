@@ -54,6 +54,9 @@ func handleLaunch(h harness.Harness) func(*Context, Call) error {
 		if err != nil {
 			return err
 		}
+		if err := refuseReportingRole(h, part); err != nil {
+			return err
+		}
 		// Last of the preparations: every refusal above leaves no checkout
 		// behind.
 		args, checkout, err := takeWorktree(h, call, ctx.Stderr)

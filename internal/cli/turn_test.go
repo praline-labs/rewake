@@ -39,7 +39,7 @@ func TestTurnEndSkipsANameThatChangedHands(t *testing.T) {
 	readFrom(t, dir, first)
 	otherRun(t, dir, "web")
 
-	run("turn-ended", turnPayload)
+	mustEndTurn(t, smokeEnd)
 	if found := finishedFor(t, dir, "web"); len(found) != 0 {
 		t.Errorf("web holds %v; the report went to a run that never wrote", found)
 	}
@@ -52,7 +52,7 @@ func TestTurnEndIgnoresAnEarlierRunsReading(t *testing.T) {
 	readFrom(t, dir, web)
 
 	t.Setenv(epochEnv, "7.7")
-	run("turn-ended", turnPayload)
+	mustEndTurn(t, smokeEnd)
 	if found := finishedFor(t, dir, "web"); len(found) != 0 {
 		t.Errorf("web holds %v; a later run reported a turn it did not have", found)
 	}
@@ -68,41 +68,18 @@ func TestTurnEndKeepsTheWaitWhenTheReportFails(t *testing.T) {
 	// leaves the letter's presence unknown, which no later absence resolves.
 	mailbox := state.InboxPath(dir, "web")
 	block(t, mailbox)
-	run("turn-ended", turnPayload)
+	if _, err := endTurn(t, smokeEnd); err == nil {
+		t.Error("an end whose report could not be written answered no error")
+	}
 	unblock(t, mailbox)
 
-	run("turn-ended", turnPayload)
+	mustEndTurn(t, smokeEnd)
 	if found := finishedFor(t, dir, "web"); len(found) != 1 {
 		t.Errorf("web holds %v after the mailbox came back, want the owed report", found)
 	}
 }
 
-// A hook that gets no payload must not wait for one forever.
-func TestTurnEndDoesNotWaitOnAnOpenPipe(t *testing.T) {
-	liveSession(t, "api")
-	t.Setenv(state.SessionEnv, "api")
-	reader, writer, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("pipe: %v", err)
-	}
-	defer func() { _ = writer.Close() }()
-	previous := os.Stdin
-	os.Stdin = reader
-	defer func() { os.Stdin = previous }()
-
-	done := make(chan struct{})
-	go func() {
-		run("turn-ended")
-		close(done)
-	}()
-	select {
-	case <-done:
-	case <-time.After(8 * time.Second):
-		t.Fatal("turn-ended is still waiting on a pipe that never closes")
-	}
-}
-
-// Two ends of a turn reported at once — a hook run twice — tell each waiter once.
+// Two ends of a turn reported at once tell each waiter once.
 func TestTwoTurnEndsAtOnceReportOnce(t *testing.T) {
 	dir := liveSession(t, "api")
 	web := otherRun(t, dir, "web")
@@ -117,7 +94,7 @@ func TestTwoTurnEndsAtOnceReportOnce(t *testing.T) {
 		}
 		first = false
 		go func() {
-			run("turn-ended", turnPayload)
+			mustEndTurn(t, smokeEnd)
 			close(second)
 		}()
 		// Give the second call every chance to get through first.
@@ -128,7 +105,7 @@ func TestTwoTurnEndsAtOnceReportOnce(t *testing.T) {
 	}
 	t.Cleanup(func() { beforeReports = previous })
 
-	run("turn-ended", turnPayload)
+	mustEndTurn(t, smokeEnd)
 	<-second
 	if found := finishedFor(t, dir, "web"); len(found) != 1 {
 		t.Errorf("web holds %d reports, want one", len(found))
@@ -145,10 +122,10 @@ func TestARetriedReadReportsOnce(t *testing.T) {
 	blocked := state.DonePath(dir, "api")
 	block(t, blocked)
 	run("inbox")
-	run("turn-ended", turnPayload)
+	mustEndTurn(t, smokeEnd)
 	unblock(t, blocked)
 	run("inbox")
-	run("turn-ended", turnPayload)
+	mustEndTurn(t, smokeEnd)
 
 	if found := finishedFor(t, dir, "web"); len(found) != 1 {
 		t.Errorf("one message produced %d reports", len(found))
@@ -167,7 +144,10 @@ func TestAStuckWaiterIsReportedOnce(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.Chmod(waits, 0o700) })
 
-	run("turn-ended", turnPayload)
+	// The report goes out; only clearing the wait fails, and says so.
+	if _, err := endTurn(t, smokeEnd); err == nil {
+		t.Error("an end whose wait could not be cleared answered no error")
+	}
 	// The report is delivered and read before the next turn ends, as it would
 	// be: it has left the waiting set by then.
 	reports := finishedFor(t, dir, "web")
@@ -182,7 +162,9 @@ func TestAStuckWaiterIsReportedOnce(t *testing.T) {
 		t.Fatalf("move: %v", err)
 	}
 
-	run("turn-ended", turnPayload)
+	// The wait still cannot be cleared, so this end fails again; what it
+	// must not do is report a second time.
+	_, _ = endTurn(t, smokeEnd)
 	everywhere := 0
 	for _, directory := range []string{state.InboxPath(dir, "web"), state.UnreadPath(dir, "web"), done} {
 		found, _ := filepath.Glob(filepath.Join(directory, "*.json"))
@@ -194,7 +176,7 @@ func TestAStuckWaiterIsReportedOnce(t *testing.T) {
 }
 
 // A session can write to itself; its report goes into its own mailbox, which
-// the hook already holds. Nothing may take that lock a second time.
+// the turn's end already holds. Nothing may take that lock a second time.
 func TestAReportToOneselfDoesNotDeadlock(t *testing.T) {
 	dir := liveSession(t, "api")
 	t.Setenv(state.SessionEnv, "api")
@@ -203,8 +185,8 @@ func TestAReportToOneselfDoesNotDeadlock(t *testing.T) {
 	if code, _, errOut := run("inbox"); code != ExitOK {
 		t.Fatalf("inbox: %s", errOut)
 	}
-	if code, _, errOut := run("turn-ended", turnPayload); code != ExitOK {
-		t.Fatalf("turn-ended: %s", errOut)
+	if _, err := endTurn(t, smokeEnd); err != nil {
+		t.Fatalf("turn end: %v", err)
 	}
 	if found := finishedFor(t, dir, "api"); len(found) != 1 {
 		t.Errorf("the report to oneself was written %d times", len(found))
@@ -216,7 +198,7 @@ func TestAReportNamesWhatItAnswers(t *testing.T) {
 	dir := liveSession(t, "api")
 	web := otherRun(t, dir, "web")
 	questionID := readFrom(t, dir, web)
-	run("turn-ended", turnPayload)
+	mustEndTurn(t, smokeEnd)
 
 	found := finishedFor(t, dir, "web")
 	if len(found) != 1 {
@@ -236,7 +218,7 @@ func TestANotifyOwesNoReport(t *testing.T) {
 	t.Setenv(state.SessionEnv, "api")
 	rawUnread(t, dir, "api", map[string]any{"from": "web", "fromEpoch": web.Epoch(), "toEpoch": epochOf(t, dir, "api"), "kind": "notify", "text": "merged"})
 	run("inbox")
-	run("turn-ended", turnPayload)
+	mustEndTurn(t, smokeEnd)
 	if found := finishedFor(t, dir, "web"); len(found) != 0 {
 		t.Errorf("web holds %v after a notify, want no report", found)
 	}

@@ -13,12 +13,10 @@ import (
 //
 // Four break the fixture: a session that records the wrong message id, one
 // whose read fails, one whose turn fails after its answer, one that leaves.
-// Three break the product, where the product is reachable: the Stop hook left
-// out of the launch settings, `rewake turn-ended` not taking a Stop as the end
-// of a turn, and a report that settles nothing. Two of those three exist only
-// on the Claude Code column — the other columns' reports do not travel through
-// a hook or through turn-ended — and a control that cannot break anything on a
-// column would pass there for the wrong reason, so it is not run there.
+// One breaks the product: a report that settles nothing. Two more broke the
+// Claude Code column's hook path — the Stop hook left out of the launch
+// settings, `rewake turn-ended` not taking a Stop as the end of a turn — and
+// left with it in S9.
 
 // The observations the controls name. Four are the scenario's own; the fifth,
 // that the report is a finished answer, is how the scenario's "the report
@@ -43,35 +41,15 @@ const (
 	reportsFinished reportKind = "finished"
 )
 
-var (
-	// The Stop hook is what reports a turn that answered, and only a silent
-	// role goes without one. Left out for every role, a general session's
-	// answer reaches nobody.
-	mutantNoStopHook = mutation{
-		name:  "no-stop-hook",
-		file:  "internal/harness/claude/settings.go",
-		edits: []edit{{"if !silent {", "if false {"}},
-	}
-	// turn-ended takes a Stop as the end of a turn. Made to accept only a
-	// failure, a turn that answered ends without anyone being told.
-	mutantTurnEndedIgnoresStop = mutation{
-		name: "turn-ended-ignores-stop",
-		file: "internal/cli/turn_payload.go",
-		edits: []edit{{
-			`if hook != "Stop" && hook != "StopFailure" {`,
-			`if hook != "StopFailure" {`,
-		}},
-	}
-	// A report names the messages it settles. Emptied, it arrives and settles
-	// nothing — which is the report the correlation observation exists to
-	// catch, and one a check that only asked whether a report came back would
-	// call a pass.
-	mutantSettlesNothing = mutation{
-		name:  "settles-nothing",
-		file:  "internal/cli/turn_reports.go",
-		edits: []edit{{"InReplyTo: waiter.Messages,", "InReplyTo: nil,"}},
-	}
-)
+// A report names the messages it settles. Emptied, it arrives and settles
+// nothing — which is the report the correlation observation exists to
+// catch, and one a check that only asked whether a report came back would
+// call a pass.
+var mutantSettlesNothing = mutation{
+	name:  "settles-nothing",
+	file:  "internal/cli/turn_reports.go",
+	edits: []edit{{"InReplyTo: waiter.Messages,", "InReplyTo: nil,"}},
+}
 
 // taskReportControl is one control: how its world differs, what that world
 // sends back, and which observation it must take down.
@@ -86,9 +64,9 @@ type taskReportControl struct {
 	// leaving yet and the control passed on timing.
 	leaves   bool
 	expected string
-	// columns it runs in. A product mutant of the Claude Code column's hook
-	// path cannot break anything on the others, and would pass there for the
-	// wrong reason.
+	// columns it runs in. A product mutant of one column's own path cannot
+	// break anything on the others, and would pass there for the wrong
+	// reason.
 	columns []column
 }
 
@@ -97,8 +75,6 @@ var taskReportControls = []taskReportControl{
 	{name: "read-fails", shim: []string{shimReadFails + "=1"}, reports: reportsNothing, expected: obsTRRead, columns: columns},
 	{name: "failure-before-report", shim: []string{shimLateFailure + "=1"}, reports: reportsError, expected: obsTRFinished, columns: columns},
 	{name: "early-exit", shim: []string{shimExitAfterTurn + "=1"}, reports: reportsFinished, leaves: true, expected: obsTRAlive, columns: columns},
-	{name: "no-stop-hook", mutant: &mutantNoStopHook, reports: reportsNothing, expected: obsTRReaches, columns: []column{claudeColumn}},
-	{name: "turn-ended-ignores-stop", mutant: &mutantTurnEndedIgnoresStop, reports: reportsNothing, expected: obsTRReaches, columns: []column{claudeColumn}},
 	{name: "settles-nothing", mutant: &mutantSettlesNothing, reports: reportsFinished, expected: obsTRCorrelates, columns: columns},
 }
 
@@ -112,8 +88,6 @@ func TestAFailureBeforeTheReportIsPublished(t *testing.T) {
 	failedTaskReport(t, "failure-before-report")
 }
 func TestASessionThatLeavesEarlyFails(t *testing.T) { failedTaskReport(t, "early-exit") }
-func TestALaunchWithoutAStopHookFails(t *testing.T) { failedTaskReport(t, "no-stop-hook") }
-func TestATurnEndThatIgnoresStopFails(t *testing.T) { failedTaskReport(t, "turn-ended-ignores-stop") }
 func TestAReportSettlingNothingFails(t *testing.T)  { failedTaskReport(t, "settles-nothing") }
 
 // runsIn reports whether this control applies to a column. By harness name:

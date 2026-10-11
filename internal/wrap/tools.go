@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"sync/atomic"
 
 	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
@@ -46,9 +45,6 @@ type mailTool struct {
 	endpoint   *endpoint.Endpoint
 	clock      *inbox.ReadClock
 	capability string
-	// observer is the plan's observer, set once the plan is made: the
-	// endpoint asks it for the conversation a call belongs to.
-	observer atomic.Pointer[harness.Observer]
 	// keeper keeps the run's channel record. Nothing makes one yet: S10
 	// defines the neutral channel inputs and S11 wires the keeper to the
 	// live set and the shell's evidence; until then every use of it is a
@@ -68,9 +64,8 @@ func (t *mailTool) config(request Request, name, epoch, transport string, clock 
 		Capability: t.capability, Span: span, Refusal: refusal,
 		Words: request.MailTool.Words, Acknowledge: request.MailTool.Acknowledge,
 		Check: request.MailTool.Check, Tools: request.MailTool.Tools,
-		Gate:         endpoint.NewGate(clock.Snapshot),
-		Conversation: t.conversation,
-		Channel:      t.keeper.tell,
+		Gate:    endpoint.NewGate(clock.Snapshot),
+		Channel: t.keeper.tell,
 	}
 }
 
@@ -108,30 +103,11 @@ func startMailTool(request Request, name, epoch string) *mailTool {
 	return tool
 }
 
-// conversation is the plan observer's thread, "" before the plan or for an
-// observer that tracks none.
-func (t *mailTool) conversation() string {
-	observer := t.observer.Load()
-	if observer == nil {
-		return ""
-	}
-	if threads, ok := (*observer).(interface{ Thread() (string, error) }); ok {
-		thread, _ := threads.Thread()
-		return thread
-	}
-	return ""
-}
-
-// attach hands the endpoint what only the plan knows: the observer that
-// names a call's conversation, and the backend's word on whether the tool
-// may read.
+// attach hands the endpoint what only the plan knows: the backend's word on
+// whether the tool may read.
 func (t *mailTool) attach(plan harness.LaunchPlan) {
 	if t.endpoint == nil {
 		return
-	}
-	if plan.Observer != nil {
-		observer := plan.Observer
-		t.observer.Store(&observer)
 	}
 	if reads, ok := plan.Backend.(interface{ ToolReadsOff() string }); ok {
 		t.endpoint.SetReadsOff(reads.ToolReadsOff)

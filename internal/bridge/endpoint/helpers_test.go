@@ -4,11 +4,14 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/harness"
+	"github.com/praline-labs/rewake/internal/receipt"
 )
 
 // testEndpoint serves a run in a temporary state directory, as the wrapper
@@ -41,8 +44,7 @@ func testEndpoint(t *testing.T, transport string, change ...func(*Config)) (*End
 	return served, path
 }
 
-// testTransport is a transport of no harness: the endpoint's turn path for
-// every transport but the hook path, whose hooks name a call's turn.
+// testTransport is a transport of no harness, on the endpoint's one turn path.
 const testTransport = "test-transport"
 
 // neutralRequest is a transport's ask for the ticket of a call it binds to
@@ -89,3 +91,40 @@ func refusedWith(t *testing.T, err error, what string) {
 		t.Fatalf("%s: unreachable rather than refused: %v", what, err)
 	}
 }
+
+// acknowledged collects what the endpoint handed the acknowledgment.
+type acknowledged struct {
+	mu     sync.Mutex
+	tokens []string
+	seen   []bridge.Exposure
+}
+
+func (a *acknowledged) record(_, _, _, token string, evidence bridge.Exposure, gate bridge.EndGate) error {
+	if gate == nil {
+		return errors.New("no gate")
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.tokens = append(a.tokens, token)
+	a.seen = append(a.seen, evidence)
+	return nil
+}
+
+// used issues and confirms the ticket of a call, and binds it to a record as
+// the child's CLI does.
+func used(t *testing.T, served *Endpoint, path string, asked TicketRequest, token string) {
+	t.Helper()
+	ticket := mustTicket(t, path, asked)
+	if err := Confirm(path, ticket); err != nil {
+		t.Fatal(err)
+	}
+	if token == "" {
+		return
+	}
+	cfg := served.cfg
+	if err := receipt.Bind(cfg.Dir, cfg.Name, cfg.Epoch, bridge.CallKey(ticket.Transport, ticket.Conversation, ticket.CallID), token); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func token(n int) string { return strings.Repeat("0", 23) + string(rune('a'+n)) }

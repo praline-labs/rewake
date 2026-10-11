@@ -2,10 +2,7 @@ package harness
 
 import (
 	"context"
-	"encoding/json"
 
-	"github.com/praline-labs/rewake/internal/grant"
-	"github.com/praline-labs/rewake/internal/grantauth"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/sessionstate"
@@ -23,23 +20,25 @@ type DirGrantHarness interface {
 	SupportsDirGrant() bool
 }
 
-// HookGranter takes a directory grant through a hook the harness runs in
-// front of a tool call, not through anything the wrapper can do to it: the
-// wrapper keeps the journal (grantauth.Keeper), and the hook, a process below
-// it, asks the wrapper what to answer (docs/grants.md#claude-code). What the
-// hook sends is the harness package's own business: the hook knows which
-// harness runs it.
-type HookGranter interface {
-	// DecideGrant answers one call from the journal.
-	DecideGrant(call json.RawMessage, entries []grant.Entry) grantauth.Decision
-}
-
 // Resumer is a harness whose launch arguments can name the conversation a
 // launch resumes, so that the grants it had can be confirmed again and given
-// at launch (docs/grants.md#after-a-cold-resume). Empty when they name none —
+// at launch (docs/grants.md#after-a-cold-resume): for one that is also a
+// DirGrantHarness, which no adapter is from S9 until stage 6 designs
+// Permissions. Empty when they name none —
 // a new conversation, a picker, a fork.
 type Resumer interface {
 	ResumedConversation(args []string) string
+}
+
+// TurnReportingHarness is a harness whose launch plan reports every turn's
+// end: a Backend, or an Observer that is a TurnReporter. Only on one can a
+// session owe a report at its turn's end, so a reporting role refuses to
+// launch on any other, and a task or a question to a session of another fails
+// (docs/v2/stage3-steps-adapters.md, S9). A harness that is not one reports
+// no turns. S10 turns this into a query of the TurnBoundary capability, and
+// S11 decides by whether that capability is live.
+type TurnReportingHarness interface {
+	ReportsTurns() bool
 }
 
 // GrantIssuer is a harness whose session, as main, can register a grant with
@@ -137,15 +136,19 @@ type ObservedBackend interface {
 	SessionState() sessionstate.Snapshot
 }
 
-// TurnReporter is an Observer that also hears a turn outcome no end-of-turn
-// hook reports: Claude Code runs none for a turn a person interrupted. The
-// wrapper hands it, before Start, the handler a Backend gets.
+// TurnReporter is an Observer that also hears a turn's outcome, for a harness
+// whose turns end where no backend sees them. The wrapper hands it, before
+// Start, the handler a Backend gets.
 type TurnReporter interface {
 	ReportTurns(CompletionHandler)
 }
 
 // Observer is telemetry without a transport: something the harness reports to
 // on its own, which the wrapper listens to and publishes like a backend's.
+//
+// No adapter sets one since Claude Code's telemetry hooks left in S9: the
+// wrapper's use of it is reached only by its tests until S10 recasts it on
+// the adapter API and stage 4 gives Claude Code a turn boundary again.
 type Observer interface {
 	ObservedBackend
 	Start(context.Context) error

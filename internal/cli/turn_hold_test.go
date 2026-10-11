@@ -1,31 +1,25 @@
 package cli
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/harness/claude/telemetry"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/state"
 )
 
-// stopPayload is a Claude Code Stop hook's stdin: the first call of a turn
-// end, or with active the call after a hold.
-func stopPayload(t *testing.T, event, text string, active bool) string {
-	t.Helper()
-	raw, err := json.Marshal(map[string]any{
-		"hook_event_name": event, "session_id": "t", "last_assistant_message": text, "stop_hook_active": active,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	return string(raw)
+// stopEnd is a turn end from a harness that lets an end be held once: the
+// first end of a turn, or with again the end after a hold, which is not held.
+func stopEnd(text string, again bool) boundaryEnd {
+	return boundaryEnd{text: text, holdable: !again, thread: "t"}
 }
+
+// stoppedText is what a harness's end says of a turn a person stopped.
+const stoppedText = "the person at the keyboard stopped this turn"
 
 // interimLab is api after a turn that ended pending: web's task is read and
 // owed, web has the interim message, and the next turn has started at start.
@@ -35,8 +29,8 @@ type interimLab struct {
 	start int64
 }
 
-// interimLab's times are on the boot clock below this test's own start, which
-// is when a hook run in-process ends its turn.
+// interimLab's times are on the boot clock below this test's own start; a
+// turn the test ends afterwards ends now.
 func newInterimLab(t *testing.T) interimLab {
 	t.Helper()
 	dir := liveSession(t, "api")
@@ -52,7 +46,7 @@ func newInterimLab(t *testing.T) interimLab {
 	if got := kinds(reportsTo(t, dir, "web")); len(got) != 1 || got[0] != string(inbox.Interim) {
 		t.Fatalf("the first turn end gave web %v, want one interim message", got)
 	}
-	// What turn-ended records at the end of the interim turn.
+	// The next turn starts as the interim one ends.
 	turnStarted(t, dir, self, markAt-5)
 	return interimLab{dir: dir, self: self, start: markAt - 5}
 }
@@ -61,15 +55,14 @@ func (lab interimLab) owed() int { return len(inbox.Waiters(lab.dir, "api", lab.
 
 func (lab interimLab) turnStart(t *testing.T) int64 { return recordedStart(t, lab.dir, lab.self) }
 
-// held runs a first Stop that must be held, and answers the reason.
+// held runs a first end that must be held, and answers the reason.
 func (lab interimLab) held(t *testing.T, text string) string {
 	t.Helper()
-	code, out, errOut := run("turn-ended", stopPayload(t, "Stop", text, false))
-	var decision struct{ Decision, Reason string }
-	if code != ExitOK || json.Unmarshal([]byte(out), &decision) != nil || decision.Decision != "block" {
-		t.Fatalf("the unmarked turn end after an interim one was not held: %d %q %s", code, out, errOut)
+	reason, err := endTurn(t, stopEnd(text, false))
+	if err != nil || reason == "" {
+		t.Fatalf("the unmarked turn end after an interim one was not held: %q %v", reason, err)
 	}
-	return decision.Reason
+	return reason
 }
 
 // The unmarked turn end after an interim one is held once and publishes
@@ -92,9 +85,8 @@ func TestAnUnmarkedEndAfterAnInterimOneIsHeldOnce(t *testing.T) {
 		t.Errorf("the hold moved the turn's start from %d to %d", lab.start, got)
 	}
 
-	code, out, _ := run("turn-ended", stopPayload(t, "Stop", "nothing more to add", true))
-	if code != ExitOK || out != "" {
-		t.Fatalf("the call after the hold printed %q", out)
+	if reason, err := endTurn(t, stopEnd("nothing more to add", true)); err != nil || reason != "" {
+		t.Fatalf("the end after the hold: %q %v", reason, err)
 	}
 	reports := reportsTo(t, lab.dir, "web")
 	var report *inbox.Message
@@ -123,7 +115,9 @@ func TestAContinuationThatMarksPendingKeepsTheTaskOwed(t *testing.T) {
 	if code, _, errOut := run("pending", "the second half is running"); code != ExitOK {
 		t.Fatalf("pending: %s", errOut)
 	}
-	run("turn-ended", stopPayload(t, "Stop", "marked", true))
+	if _, err := endTurn(t, stopEnd("marked", true)); err != nil {
+		t.Fatal(err)
+	}
 	reports := reportsTo(t, lab.dir, "web")
 	var texts []string
 	for _, report := range reports {
@@ -142,12 +136,12 @@ func TestAContinuationThatMarksPendingKeepsTheTaskOwed(t *testing.T) {
 	}
 }
 
-// An Esc during the continuation ends it with no Stop: the plugin's stop takes
-// the held answer, after its own line, and keeps the task owed.
+// A person who stops the continuation ends it stopped: the stop takes the held
+// answer, after its own line, and keeps the task owed.
 func TestAStopAfterAHoldCarriesTheHeldAnswer(t *testing.T) {
 	lab := newInterimLab(t)
 	lab.held(t, "the report")
-	if err := completeTurn(lab.dir, lab.self, inbox.TurnEnd{Boundary: boundaryNow(t, lab.dir, lab.self), ID: "claude/turn-2", Stopped: true, Text: telemetry.StoppedText, Started: lab.start, Ended: markAt + 1}, "t"); err != nil {
+	if err := completeTurn(lab.dir, lab.self, inbox.TurnEnd{Boundary: boundaryNow(t, lab.dir, lab.self), ID: "turn-2", Stopped: true, Text: stoppedText, Started: lab.start, Ended: markAt + 1}, "t"); err != nil {
 		t.Fatal(err)
 	}
 	var stopped []string
@@ -156,7 +150,7 @@ func TestAStopAfterAHoldCarriesTheHeldAnswer(t *testing.T) {
 			stopped = append(stopped, report.Text)
 		}
 	}
-	if len(stopped) != 1 || stopped[0] != telemetry.StoppedText+"\n\nthe report" || lab.owed() != 1 {
+	if len(stopped) != 1 || stopped[0] != stoppedText+"\n\nthe report" || lab.owed() != 1 {
 		t.Fatalf("the stop after a hold sent %q, %d owed", stopped, lab.owed())
 	}
 	if _, kept, _ := inbox.KeptAnswer(lab.dir, "api", lab.self.Epoch()); kept {
@@ -172,7 +166,9 @@ func TestAStopAfterAHoldCarriesTheHeldAnswer(t *testing.T) {
 func TestAFailureAfterAHoldCarriesTheHeldAnswer(t *testing.T) {
 	lab := newInterimLab(t)
 	lab.held(t, "the report")
-	run("turn-ended", stopPayload(t, "StopFailure", "rate limited", true))
+	if _, err := endTurn(t, boundaryEnd{text: "rate limited", failed: true, thread: "t"}); err != nil {
+		t.Fatal(err)
+	}
 	var failures []string
 	for _, report := range reportsTo(t, lab.dir, "web") {
 		if inbox.KindOf(report) == inbox.Error {
@@ -189,9 +185,8 @@ func TestAFailureAfterAHoldCarriesTheHeldAnswer(t *testing.T) {
 func TestAnAnswerHeldAndNeverContinuedGoesWithTheNextEnd(t *testing.T) {
 	lab := newInterimLab(t)
 	lab.held(t, "the lost report")
-	code, out, _ := run("turn-ended", stopPayload(t, "Stop", "the next answer", false))
-	if code != ExitOK || out != "" {
-		t.Fatalf("a second hold with an answer kept: %q", out)
+	if reason, err := endTurn(t, stopEnd("the next answer", false)); err != nil || reason != "" {
+		t.Fatalf("a second hold with an answer kept: %q %v", reason, err)
 	}
 	for _, report := range reportsTo(t, lab.dir, "web") {
 		if inbox.KindOf(report) == inbox.Finished && report.Text == "the lost report\n\nthe next answer" {
@@ -208,29 +203,29 @@ func TestATurnEndIsHeldOnlyAfterAnInterimOne(t *testing.T) {
 	for _, c := range []struct {
 		name    string
 		prepare func(t *testing.T, lab interimLab)
-		payload string
+		end     boundaryEnd
 	}{
 		{"after a report", func(t *testing.T, lab interimLab) {
 			if err := os.Remove(filepath.Join(state.InboxPath(lab.dir, "api"), "pending", "interim.json")); err != nil {
 				t.Fatal(err)
 			}
-		}, `{"hook_event_name":"Stop","session_id":"t","last_assistant_message":"done","stop_hook_active":false}`},
+		}, stopEnd("done", false)},
 		{"marked in this turn", func(t *testing.T, lab interimLab) {
 			if err := markPending(lab.dir, "api", lab.self.Epoch(), "still going", markAt-1); err != nil {
 				t.Fatal(err)
 			}
-		}, `{"hook_event_name":"Stop","session_id":"t","last_assistant_message":"done","stop_hook_active":false}`},
-		{"a failure", nil, `{"hook_event_name":"StopFailure","session_id":"t","last_assistant_message":"broke","error":"api_error"}`},
-		{"after another hook's hold", nil, `{"hook_event_name":"Stop","session_id":"t","last_assistant_message":"done","stop_hook_active":true}`},
-		{"without stop_hook_active", nil, `{"hook_event_name":"Stop","session_id":"t","last_assistant_message":"done"}`},
+		}, stopEnd("done", false)},
+		{"a failure", nil, boundaryEnd{text: "broke", failed: true, holdable: true, thread: "t"}},
+		{"after a hold", nil, stopEnd("done", true)},
+		{"from a harness that cannot hold", nil, boundaryEnd{text: "done", thread: "t"}},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			lab := newInterimLab(t)
 			if c.prepare != nil {
 				c.prepare(t, lab)
 			}
-			if code, out, _ := run("turn-ended", c.payload); code != ExitOK || out != "" {
-				t.Fatalf("held: %q", out)
+			if reason, err := endTurn(t, c.end); err != nil || reason != "" {
+				t.Fatalf("held: %q %v", reason, err)
 			}
 			if got := kinds(reportsTo(t, lab.dir, "web")); len(got) != 2 {
 				t.Errorf("web holds %v, want the interim message and this end's", got)
@@ -244,8 +239,8 @@ func TestATurnEndIsHeldOnlyAfterAnInterimOne(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		if _, out, _ := run("turn-ended", stopPayload(t, "Stop", "done", false)); out != "" {
-			t.Fatalf("held with nobody waiting: %q", out)
+		if reason, _ := endTurn(t, stopEnd("done", false)); reason != "" {
+			t.Fatalf("held with nobody waiting: %q", reason)
 		}
 	})
 }

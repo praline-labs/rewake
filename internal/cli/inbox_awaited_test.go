@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/boottime"
-	"github.com/praline-labs/rewake/internal/harness/claude/telemetry"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/state"
@@ -150,11 +149,11 @@ func TestAwaitedShowsWhereEachTaskStands(t *testing.T) {
 	room.turnEnds(paused, inbox.TurnEnd{Boundary: boundaryNow(t, room.dir, paused), ID: "p/1", Text: "started the suite", Started: markAt - 1, Ended: boottime.Now()})
 
 	halted := room.sentAndRead(stopped, "refactor")
-	room.turnEnds(stopped, inbox.TurnEnd{Boundary: boundaryNow(t, room.dir, stopped), ID: "s/1", Text: telemetry.StoppedText, Stopped: true})
+	room.turnEnds(stopped, inbox.TurnEnd{Boundary: boundaryNow(t, room.dir, stopped), ID: "s/1", Text: "the person at the keyboard stopped this turn", Stopped: true})
 	// A main's rewake interrupt is not a person's Esc, and the listing says
 	// which it was.
 	interrupted := room.sentAndRead(aborted, "rename")
-	room.turnEnds(aborted, inbox.TurnEnd{Boundary: boundaryNow(t, room.dir, aborted), ID: "a/1", Text: telemetry.InterruptedText("lead"), Stopped: true})
+	room.turnEnds(aborted, inbox.TurnEnd{Boundary: boundaryNow(t, room.dir, aborted), ID: "a/1", Text: "lead interrupted this turn with rewake interrupt", Stopped: true})
 
 	settled := room.sentAndRead(done, "small fix")
 	room.turnEnds(done, inbox.TurnEnd{Boundary: boundaryNow(t, room.dir, done), ID: "d/1", Text: "fixed"})

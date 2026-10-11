@@ -129,16 +129,8 @@ func Run(ctx context.Context, request Request) (int, error) {
 		}
 	}
 
-	// Before the harness: its hook asks from the first tool call, and a
-	// resumed conversation's grants are kept here from the start.
-	keeper := keepGrants(ctx, request.Dir, name, epoch, self, request.Harness)
-	if keeper != nil {
-		defer keeper.Close()
-	}
-	var restored resumed
-	if keeper != nil {
-		restored = resumeGrants(request.Dir, name, epoch, request.Harness, request.Args)
-	}
+	// Before the harness: a resumed conversation's grants are given at launch.
+	restored := resumeGrants(request.Dir, name, epoch, request.Harness, request.Args)
 
 	tool := startMailTool(request, name, epoch)
 	defer tool.close()
@@ -156,19 +148,15 @@ func Run(ctx context.Context, request Request) (int, error) {
 		Epoch:      epoch,
 		Role:       role.Of(session.Role),
 
-		ObservationSocket: registry.ObservationFor(request.Dir, name, epoch),
-		ControlDir:        controlDir,
-		GrantDirs:         restored.dirs(),
-		Version:           version,
+		ControlDir: controlDir,
+		GrantDirs:  restored.dirs(),
+		Version:    version,
 	})
 	if err != nil {
 		return 0, err
 	}
 	plan.Notes = append(plan.Notes, restored.notes...)
 	tool.attach(plan)
-	if keeper != nil {
-		followResumed(ctx, request.Dir, name, epoch, keeper, restored, plan.Observer)
-	}
 	_, _ = fmt.Fprintf(os.Stderr, "rewake: room %s, role %s: %s\n", session.Room, session.Role, session.RoleReason)
 	for _, note := range plan.Notes {
 		// Said once, on stderr, before the harness takes over the screen: these
@@ -253,6 +241,8 @@ func Run(ctx context.Context, request Request) (int, error) {
 		if tracker, ok := request.Harness.(harness.ThreadTracker); ok {
 			thread = func() (string, error) { return tracker.Thread(current(request.Dir, name, session)) }
 		}
+		// No adapter sets an Observer since S9; S10 keeps this on the adapter
+		// API, reached until then by wrap/thread_test.go.
 		if source, ok := plan.Observer.(harness.ThreadSource); ok && plan.Backend == nil {
 			thread = source.Thread
 		}
@@ -271,7 +261,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 			Owns: func() bool { return registry.OwnsName(request.Dir, name, epoch) },
 			// A burst of letters that ask for nothing wakes the session once.
 			Window:     inbox.Coalescing,
-			CheckGrant: checkGrant(request.Dir, name, epoch, keeper, working(plan.Observer), thread),
+			CheckGrant: checkGrant(request.Dir, name, epoch),
 			PinGrant:   pinGrant(request.Dir, name, epoch),
 			Deliver: func(ctx context.Context, message inbox.Message) inbox.Result {
 				if plan.Backend != nil {

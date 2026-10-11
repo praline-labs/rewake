@@ -2,7 +2,6 @@ package workflow
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -10,35 +9,6 @@ import (
 
 // What the grant scenarios share: a directory a grant may name, and main's own
 // account of a grant and of a report.
-
-// journaledOutcome is what main's listing says became of a granted directory
-// on the worker.
-func journaledOutcome(sg steering, worker *scenarioSession, directory string) string {
-	code, machine, ok := sg.asks.ask(sg.c, "list", "--json")
-	var listed struct {
-		Sessions []struct {
-			Name   string `json:"name"`
-			Grants []struct {
-				Path    string `json:"path"`
-				Outcome string `json:"outcome"`
-			} `json:"grants"`
-		} `json:"sessions"`
-	}
-	if !ok || code != 0 || json.Unmarshal([]byte(machine), &listed) != nil {
-		return fmt.Sprintf("the listing did not come back: exit %d, %q", code, firstLine(machine))
-	}
-	for _, entry := range listed.Sessions {
-		if entry.Name != worker.name {
-			continue
-		}
-		for _, granted := range entry.Grants {
-			if granted.Path == directory {
-				return granted.Outcome
-			}
-		}
-	}
-	return "not journaled"
-}
 
 // grantableDir makes a directory a grant may name: outside the worker's
 // workspace, not directly in HOME, and not in a temporary directory, which
@@ -70,8 +40,7 @@ func grantableDir(t *testing.T) (string, error) {
 }
 
 // reportedOn says whether main no longer waits on a task: its report came.
-// Asked of main's own listing, since a Claude Code main keeps no record of
-// what it read that the case could look at.
+// Asked of main's own listing, the same on every column.
 func reportedOn(c *Case, asks *requests, id string) bool {
 	code, machine, ok := asks.ask(c, "inbox", "--awaited", "--json")
 	var awaited struct {

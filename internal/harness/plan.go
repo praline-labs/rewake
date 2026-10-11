@@ -39,9 +39,6 @@ type LaunchRequest struct {
 	// replaces the program and nothing else: every argument, variable, socket
 	// and setting the adapter adds is the same.
 	Command string
-	// ObservationSocket is where a harness without a backend of its own may
-	// have its session's telemetry sent: a path of this run, like Socket.
-	ObservationSocket string
 	// ControlDir is where this run takes control requests, made by the
 	// wrapper before the launch and removed after it; empty when it could not
 	// be made (docs/remote-control.md).

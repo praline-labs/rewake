@@ -42,9 +42,6 @@ var transition = map[string]transit{
 	"internal/wrap":            {layer: host, step: "S16"},
 	"internal/alias":           {layer: host, step: "S16"},
 	"internal/worktree":        {layer: host, step: "S16"},
-
-	// What goes is judged in the layer it holds today until its step removes it.
-	"internal/harness/claude/telemetry": {layer: api + "/claude", step: "S9", goes: true},
 }
 
 // importException is a known forbidden import: the files that make it, why, and
@@ -63,21 +60,6 @@ func (x importException) excuses(e edge) bool {
 // importExceptions are the forbidden edges of the 1.x tree, from the first
 // run of the test (docs/v2/stage3-steps.md#s1-the-tests-first).
 var importExceptions = []importException{
-	{
-		from: "internal/cli", to: "internal/harness/claude",
-		files:  []string{"internal/cli/granthook.go", "internal/cli/granthook_test.go"},
-		reason: "the grant hook command answers Claude Code's permission hook",
-		step:   "S9",
-	},
-	{
-		from: "internal/cli", to: "internal/harness/claude/telemetry",
-		files: []string{
-			"internal/cli/pending.go", "internal/cli/telemetry.go",
-			"internal/cli/inbox_awaited_test.go", "internal/cli/turn_hold_test.go",
-		},
-		reason: "the telemetry receiver, the turn-start file and the stop texts",
-		step:   "S9",
-	},
 	{
 		from: "internal/cli", to: "internal/harness/catalog",
 		files:  []string{"internal/cli/cli_test.go"},
@@ -101,22 +83,6 @@ var importExceptions = []importException{
 		files:  []string{"internal/wrap/naming_test.go"},
 		reason: "the tests take a real adapter",
 		step:   "S10",
-	},
-	{
-		from: "internal/wrap", to: "internal/harness/claude",
-		files:  []string{"internal/wrap/grant_resume_test.go"},
-		reason: "the tests take a real adapter",
-		step:   "S10",
-	},
-	{
-		from: "internal/harness/claude", to: "internal/harness/claude/telemetry",
-		files: []string{
-			"internal/harness/claude/claude.go", "internal/harness/claude/notice.go", "internal/harness/claude/plugin.go",
-			"internal/harness/claude/settings.go", "internal/harness/claude/statusline.go",
-			"internal/harness/claude/plugin_test.go", "internal/harness/claude/plugin_window_test.go",
-		},
-		reason: "the hook machinery and the status line feed the telemetry that leaves with them",
-		step:   "S9",
 	},
 }
 

@@ -15,8 +15,8 @@ import (
 // in: the attempt that created the record, or a later tool call whose ticket
 // names the same conversation and turn on the same transport, where both the
 // ticket and the record carry the transport's declaration that its turn ids
-// are never reused. Without it only the first attempt counts: a prompt's id
-// on the hook path, for one, is not shown never to be reused, Esc included.
+// are never reused. Without it only the first attempt counts: a turn id no
+// transport declares unique may come back, after an Esc for one.
 func inOwnTurn(ctx *Context, op *operation) bool {
 	scope := attemptScope(ctx, op)
 	return scope.First || scope.InOwnTurn

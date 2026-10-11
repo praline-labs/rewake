@@ -42,10 +42,7 @@ func TestMain(m *testing.M) {
 	// otherwise build a binary and run a suite inside the shim.
 	if os.Getenv(shimEnv) != "" {
 		recordShimCall(os.Args)
-		switch os.Getenv(shimHarness) {
-		case "claude":
-			os.Exit(runClaudeShim(os.Args))
-		case "fixture":
+		if os.Getenv(shimHarness) == "fixture" {
 			os.Exit(runFixture(os.Args))
 		}
 		fmt.Fprintf(os.Stderr, "workflow: %s=%q names no harness this suite plays\n", shimHarness, os.Getenv(shimHarness))

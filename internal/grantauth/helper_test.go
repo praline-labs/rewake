@@ -14,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/grant"
 	"github.com/praline-labs/rewake/internal/grantauth/grantauthtest"
 )
 
@@ -33,14 +32,12 @@ func TestMain(m *testing.M) {
 const (
 	helperRegister = "REWAKE_GRANTAUTH_REGISTER"
 	helperListen   = "REWAKE_GRANTAUTH_LISTEN"
-	helperAsk      = "REWAKE_GRANTAUTH_ASK"
 )
 
 // TestHelperProcess is not a test: it is what a helper runs.
 func TestHelperProcess(t *testing.T) {
 	for env, asked := range map[string]request{
 		helperRegister: {Op: opRegister, Grant: lib},
-		helperAsk:      {Op: opDecide, Call: json.RawMessage(`"add"`)},
 	} {
 		address := os.Getenv(env)
 		if address == "" {
@@ -122,27 +119,5 @@ func TestARegistrationGoesOnlyToTheCallersWrapper(t *testing.T) {
 	err = Register(path, lib)
 	if !errors.Is(err, ErrNotConfirmed) || !strings.Contains(err.Error(), "not this session's wrapper") {
 		t.Fatalf("registered with a listener beside the caller: %v", err)
-	}
-}
-
-// A command the harness started in a sandbox of its own runs below the
-// wrapper, and is still not the harness's hook: the keeper tells it nothing.
-func TestAKeeperAnswersNoCallFromOtherNamespaces(t *testing.T) {
-	if err := exec.Command("unshare", "-Ur", "--pid", "--fork", "true").Run(); err != nil {
-		t.Skipf("no user namespaces here: %v", err)
-	}
-	_, path, _ := keep(t, os.Getpid(), nil, func(json.RawMessage, []grant.Entry) Decision {
-		return Decision{Output: []byte(`{"allow":true}`)}
-	})
-	out, err := helper(t, []string{"unshare", "-Ur", "--pid", "--fork", "--mount", "--mount-proc"}, helperAsk+"="+path).CombinedOutput()
-	if err != nil {
-		t.Fatalf("helper: %v: %s", err, out)
-	}
-	if !strings.Contains(string(out), "sandbox of its own") || strings.Contains(string(out), "allow") {
-		t.Fatalf("answered other namespaces: %s", out)
-	}
-	out, err = helper(t, nil, helperAsk+"="+path).CombinedOutput()
-	if err != nil || !strings.Contains(string(out), "allow") {
-		t.Fatalf("a helper beside this process: %v: %s", err, out)
 	}
 }

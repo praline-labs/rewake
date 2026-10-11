@@ -7,10 +7,8 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/boottime"
-	"github.com/praline-labs/rewake/internal/harness/claude/telemetry"
 	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/receipt"
-	"github.com/praline-labs/rewake/internal/registry"
 	"github.com/praline-labs/rewake/internal/role"
 	"github.com/praline-labs/rewake/internal/state"
 )
@@ -23,10 +21,6 @@ type pendingModel struct {
 	// Receipt names the journal record of the mark, for rewake retry.
 	Receipt string `json:"receipt,omitempty"`
 }
-
-// claudeHarnessID is the Claude Code harness's id, spelled here rather than
-// imported from its adapter, which the command layer does not depend on.
-const claudeHarnessID = "claude"
 
 // pendingLockWait bounds the wait for the mailbox, as reading does.
 const pendingLockWait = 5 * time.Second
@@ -58,15 +52,8 @@ func handlePending(ctx *Context, call Call) error {
 	if role.Of(self.Role).Silent {
 		return &UsageError{Command: call.Command, Message: "the " + self.Role + " session's turns are reported to nobody, so there is nothing to keep open; end the turn as usual."}
 	}
-	started, err := latestTurnStart(dir, self, epoch)
-	if err != nil {
+	if _, err := inbox.LatestTurnStart(dir, self.Name, epoch); err != nil {
 		return failf("the latest start of this turn cannot be read, so a mark could not be tied to this turn; nothing was marked: %v", err)
-	}
-	if self.Harness == claudeHarnessID && started == 0 {
-		// Claude Code tells rewake a turn started only through the telemetry
-		// hook. Without its record the mark could not be tied to this turn,
-		// and a mark that might belong to another is worse than none.
-		return &UsageError{Command: call.Command, Message: "this session records no turn starts (its telemetry hooks are not running), so a mark could not be tied to this turn; end the turn with the result, or wait inside it."}
 	}
 	at, file, err := pendingTime(ctx, text)
 	if err != nil {
@@ -124,7 +111,7 @@ func handlePending(ctx *Context, call Call) error {
 				waiting = append(waiting, name)
 			}
 		}
-		started, err := latestTurnStart(dir, self, epoch)
+		started, err := inbox.LatestTurnStart(dir, self.Name, epoch)
 		if err != nil {
 			return fmt.Errorf("the latest start of this turn cannot be read, so the mark cannot be tied to its turn: %w", err)
 		}
@@ -180,16 +167,4 @@ func pendingTime(ctx *Context, text string) (int64, string, error) {
 	}
 	ctx.op.record.Pending = &receipt.PendingStep{Text: text, At: at, Mark: inbox.MarkName(at, inbox.NewID())}
 	return at, ctx.op.record.Pending.Mark, ctx.op.save()
-}
-
-// latestTurnStart is the latest start of the run's turn on record: the later
-// of the core's record, which the host keeps from the neutral input, and the
-// telemetry file a hook writes until S9 removes it
-// (docs/v2/stage3-steps-adapters.md, S7).
-func latestTurnStart(dir string, self registry.Session, epoch string) (int64, error) {
-	recorded, err := inbox.LatestTurnStart(dir, self.Name, epoch)
-	if err != nil {
-		return 0, err
-	}
-	return max(recorded, telemetry.ReadTurnStart(telemetry.TurnStartPath(registry.ObservationFor(dir, self.Name, epoch)))), nil
 }

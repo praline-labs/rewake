@@ -6,14 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"strconv"
 	"sync"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/boottime"
 	"github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/channel"
-	"github.com/praline-labs/rewake/internal/inbox"
 	"github.com/praline-labs/rewake/internal/proc"
 )
 
@@ -26,18 +24,12 @@ import (
 // observation is what the harness recorded of one call.
 type observation struct {
 	conversation, turn, digest string
-	// prompt is a Claude Code call's prompt_id, from which its turn is
-	// named when the ticket is issued.
-	prompt string
 	// refusal says why the call cannot be matched: a second observation
 	// of the same call, a nested agent, words off the surface.
 	refusal string
 	// at is when the observation was heard, on the boot clock: a ticket is
 	// issued only while no end was noted since.
 	at int64
-	// limits are what a Claude Code hook saw of the call's limits; nil
-	// from a harness, or a hook, that sends none (limits.go).
-	limits *HookLimits
 }
 
 // call is one native call, from the first thing heard of it until it ages
@@ -72,11 +64,8 @@ type calls struct {
 	order   []string
 	byNonce map[string]*issued
 	// open are the turns seen started through the neutral input and not
-	// completed, with when each started; firstSeen when each Claude Code
-	// prompt was first heard.
-	open      map[string]int64
-	firstSeen map[string]int64
-	prompts   []string
+	// completed, with when each started.
+	open map[string]int64
 	// spent are the native calls given a ticket in this run. The table
 	// forgets a call under pressure or with age; this set does not, so a
 	// call heard again after that is never taken for a new one.
@@ -90,17 +79,16 @@ type calls struct {
 // A run issues at most maxSpent tickets, the calls it can remember having
 // served; past them, a call is refused rather than possibly served twice.
 const (
-	maxCalls   = 512
-	callLife   = 2 * time.Minute
-	maxTurns   = 64
-	maxPrompts = 256
-	maxSpent   = 1 << 16
+	maxCalls = 512
+	callLife = 2 * time.Minute
+	maxTurns = 64
+	maxSpent = 1 << 16
 )
 
 func newCalls() *calls {
 	return &calls{
 		byCall: map[string]*call{}, byNonce: map[string]*issued{}, open: map[string]int64{},
-		firstSeen: map[string]int64{}, spent: map[string]bool{}, now: time.Now,
+		spent: map[string]bool{}, now: time.Now,
 	}
 }
 
@@ -168,14 +156,11 @@ func (e *Endpoint) observedWords(words []string, ok bool) (string, string) {
 }
 
 // issue matches a server's request with the harness's observation of the same
-// call, and issues its one ticket. Off the hook path the request binds its
-// connection to the thread it names first.
+// call, and issues its one ticket. The request binds its connection to the
+// thread it names first.
 func (e *Endpoint) issue(asked TicketRequest, generation uint64) (bridge.Ticket, error) {
-	thread := ""
-	if !e.hookPath() {
-		thread = asked.Conversation
-	}
-	if e.cfg.Refusal != "" && !e.hookPath() {
+	thread := asked.Conversation
+	if e.cfg.Refusal != "" {
 		return bridge.Ticket{}, errors.New(e.cfg.Refusal)
 	}
 	if asked.Transport != e.cfg.Transport || asked.CallID == "" {
@@ -200,13 +185,8 @@ func (e *Endpoint) issue(asked TicketRequest, generation uint64) (bridge.Ticket,
 	}
 	c.mu.Lock()
 	seen := *entry.observed
-	first := c.firstSeen[seen.prompt]
 	c.mu.Unlock()
-	deadline, refusal := e.deadline(seen)
-	if refusal != "" {
-		return bridge.Ticket{}, errors.New(refusal)
-	}
-	turn, err := e.turnOf(asked, seen, first)
+	turn, err := e.turnOf(asked, seen)
 	if err != nil {
 		return bridge.Ticket{}, err
 	}
@@ -227,25 +207,21 @@ func (e *Endpoint) issue(asked TicketRequest, generation uint64) (bridge.Ticket,
 		return bridge.Ticket{}, errors.New("this run has issued all the tickets it can remember")
 	case seen.digest != asked.Digest:
 		return bridge.Ticket{}, errors.New("the harness recorded other words for this call")
-	case !e.hookPath() && !open:
+	case !open:
 		return bridge.Ticket{}, errors.New("the call's turn is completed or was never seen to start")
 	}
 	// The ticket's time says the call belongs to a turn still open: so it
-	// is taken under the gate, and only while no end was noted since the
-	// call was heard — or, off the hook path, since its turn started. An end
-	// captured before turn/completed reaches the table closes the turn
-	// already (docs/mail-bridge-turns.md#a-turns-end-meets-its-calls).
-	since := seen.at
-	if !e.hookPath() {
-		since = min(since, started)
-	}
-	now, ok := e.cfg.Gate.Stamp(since)
+	// is taken under the gate, and only while no end was noted since its
+	// turn started. An end captured before turn/completed reaches the table
+	// closes the turn already
+	// (docs/mail-bridge-turns.md#a-turns-end-meets-its-calls).
+	now, ok := e.cfg.Gate.Stamp(min(seen.at, started))
 	if !ok {
 		return bridge.Ticket{}, errors.New("the call's turn ended before its ticket was issued")
 	}
 	ticket := bridge.Ticket{
 		Capability: e.cfg.Capability, Conversation: seen.conversation, Turn: turn, CallID: asked.CallID,
-		CalledBoot: now, DeadlineBoot: now + int64(deadline), WordsDigest: seen.digest,
+		CalledBoot: now, DeadlineBoot: now + int64(e.cfg.Span), WordsDigest: seen.digest,
 		Transport: e.cfg.Transport, TurnsNeverReused: asked.TurnsNeverReused, Nonce: hex.EncodeToString(nonce), ReadsOff: readsOff,
 	}
 	entry.issued = &issued{ticket: ticket, generation: generation, thread: thread}
@@ -256,38 +232,14 @@ func (e *Endpoint) issue(asked TicketRequest, generation uint64) (bridge.Ticket,
 
 // turnOf names the call's turn as the ticket carries it
 // (docs/mail-bridge-turns.md#the-turn-a-call-belongs-to).
-func (e *Endpoint) turnOf(asked TicketRequest, seen observation, first int64) (string, error) {
+func (e *Endpoint) turnOf(asked TicketRequest, seen observation) (string, error) {
 	if seen.refusal != "" {
 		return "", errors.New(seen.refusal)
 	}
-	if !e.hookPath() {
-		if asked.Conversation != seen.conversation || asked.Turn != seen.turn || seen.turn == "" {
-			return "", errors.New("the call's thread or turn is not the one the harness reported")
-		}
-		return seen.turn, nil
+	if asked.Conversation != seen.conversation || asked.Turn != seen.turn || seen.turn == "" {
+		return "", errors.New("the call's thread or turn is not the one the harness reported")
 	}
-	conversation := ""
-	if e.cfg.Conversation != nil {
-		conversation = e.cfg.Conversation()
-	}
-	if conversation == "" || seen.conversation != conversation {
-		return "", errors.New("the call is not in the conversation this run holds")
-	}
-	if seen.prompt == "" || first == 0 {
-		return "", errors.New("the call names no prompt")
-	}
-	// A prompt's identity outlives an end another hook blocked after ours
-	// published: the turn goes on, under a name that says which end it
-	// follows. An end before the prompt was first seen is an earlier
-	// prompt's, however late its journal.
-	ended, err := inbox.LatestEnd(e.cfg.Dir, e.cfg.Name, e.cfg.Epoch)
-	if err != nil {
-		return "", fmt.Errorf("the turn journals cannot be read (%v), so the call's turn is unknown", err)
-	}
-	if ended >= first {
-		return seen.prompt + "@" + strconv.FormatInt(ended, 10), nil
-	}
-	return seen.prompt, nil
+	return seen.turn, nil
 }
 
 // confirm validates a ticket for the child presenting it, once.
@@ -336,20 +288,4 @@ func (e *Endpoint) turnEnded(turn string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	delete(c.open, turn)
-}
-
-// promptSeen keeps when a Claude Code prompt was first heard.
-func (e *Endpoint) promptSeen(prompt string) {
-	c := e.calls
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if prompt == "" || c.firstSeen[prompt] != 0 {
-		return
-	}
-	if len(c.prompts) >= maxPrompts {
-		delete(c.firstSeen, c.prompts[0])
-		c.prompts = c.prompts[1:]
-	}
-	c.firstSeen[prompt] = boottime.Now()
-	c.prompts = append(c.prompts, prompt)
 }

@@ -15,7 +15,9 @@ import (
 )
 
 // steerWorld is a main session "lead" and a running worker whose control
-// directory exists, with limits short enough for a test.
+// directory exists, with limits short enough for a test. The worker's harness
+// takes both requests and a focus: no product harness of an untagged build is
+// Steerable from S9 until stage 4.
 func steerWorld(t *testing.T, workerHarness string) (string, registry.Session, string) {
 	t.Helper()
 	dir := liveSession(t, "lead")
@@ -36,10 +38,13 @@ func steerWorld(t *testing.T, workerHarness string) (string, registry.Session, s
 	fast := control.Limits{Pickup: 300 * time.Millisecond, Outcome: 300 * time.Millisecond, Poll: 5 * time.Millisecond}
 	steerLimits = map[string]control.Limits{control.Compact: fast, control.Interrupt: fast}
 	t.Cleanup(func() { steerLimits = saved })
+	stubSteering(t, func(found harness.Harness) harness.Harness {
+		return steerStub{Harness: found, focus: true, trace: "the stub records it in its model's history"}
+	})
 	return dir, worker, controlDir
 }
 
-// answerOnce plays the worker's plugin for one request.
+// answerOnce plays the worker's served side for one request.
 func answerOnce(t *testing.T, controlDir string, answer func(control.Request) string) <-chan control.Request {
 	t.Helper()
 	seen := make(chan control.Request, 1)
@@ -196,25 +201,13 @@ func TestInterruptDoneAsJSON(t *testing.T) {
 }
 
 // The answer says what the interrupted session's model is shown, which
-// differs by harness: a line in its next notice on Claude Code, and whatever
-// another harness says it shows.
+// differs by harness: whatever the harness says it shows.
 func TestTheInterruptAnswerSaysWhatTheModelIsShown(t *testing.T) {
-	for name, want := range map[string]string{
-		"claude": "reads stopped, and its next notice says you interrupted it.\n",
-		"stub":   "reads stopped, and the stub records it in its model's history.\n",
-	} {
-		t.Run(name, func(t *testing.T) {
-			_, _, controlDir := steerWorld(t, "")
-			if name == "stub" {
-				stubSteering(t, func(found harness.Harness) harness.Harness {
-					return steerStub{Harness: found, trace: "the stub records it in its model's history"}
-				})
-			}
-			answerOnce(t, controlDir, func(r control.Request) string { return `{"id":"` + r.ID + `","outcome":"done"}` })
-			if code, out, errOut := run("interrupt", "worker"); code != ExitOK || !strings.HasSuffix(out, want) {
-				t.Fatalf("exit %d, %q, %q", code, out, errOut)
-			}
-		})
+	_, _, controlDir := steerWorld(t, "")
+	answerOnce(t, controlDir, func(r control.Request) string { return `{"id":"` + r.ID + `","outcome":"done"}` })
+	want := "reads stopped, and the stub records it in its model's history.\n"
+	if code, out, errOut := run("interrupt", "worker"); code != ExitOK || !strings.HasSuffix(out, want) {
+		t.Fatalf("exit %d, %q, %q", code, out, errOut)
 	}
 }
 
@@ -243,7 +236,7 @@ func TestARefusalExitsOneAndNamesTheNextAction(t *testing.T) {
 func TestAWorkerThatTakesNothingIsNotAnswering(t *testing.T) {
 	_, _, controlDir := steerWorld(t, "")
 	code, _, errOut := run("interrupt", "worker")
-	if code != ExitFailed || !strings.Contains(errOut, "refused the interrupt: not answering") || !strings.Contains(errOut, "plugin is not loaded") {
+	if code != ExitFailed || !strings.Contains(errOut, "refused the interrupt: not answering") || !strings.Contains(errOut, "Nothing in that session serves") {
 		t.Fatalf("exit %d, %q", code, errOut)
 	}
 	if _, err := os.Stat(control.RequestPath(controlDir)); err == nil {
@@ -252,8 +245,8 @@ func TestAWorkerThatTakesNothingIsNotAnswering(t *testing.T) {
 	if err := os.RemoveAll(controlDir); err != nil {
 		t.Fatal(err)
 	}
-	// A session with no directory has the plugin, only an older one: the next
-	// step is a restart, not a question about --bare.
+	// A session with no directory serves requests, only an older one: the
+	// next step is a restart, not a question about --bare.
 	if code, _, errOut := run("compact", "worker"); code != ExitFailed || !strings.Contains(errOut, "refused the compaction: no control directory") ||
 		!strings.Contains(errOut, "restart that session with the current rewake") || strings.Contains(errOut, "--bare") {
 		t.Fatalf("without a control directory: exit %d, %q", code, errOut)

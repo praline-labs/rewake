@@ -45,7 +45,6 @@ func TestAHelloIsChecked(t *testing.T) {
 	}{
 		{hello{Role: roleServer, Capability: "secret"}, ""},
 		{hello{Role: roleChild, Capability: "secret"}, ""},
-		{hello{Role: roleHook}, ""},
 		{hello{Role: roleServer, Capability: "guess"}, "capability"},
 		{hello{Role: roleChild}, "capability"},
 		{hello{Role: "admin", Capability: "secret"}, "role"},
@@ -59,7 +58,7 @@ func TestAHelloIsChecked(t *testing.T) {
 
 	unrooted, unrootedPath := testEndpoint(t, testTransport)
 	unrooted.SetRoots()
-	if _, refusal := hold(t, unrootedPath, hello{Role: roleHook}); !strings.Contains(refusal, "not started") {
+	if _, refusal := hold(t, unrootedPath, hello{Role: roleChild, Capability: "secret"}); !strings.Contains(refusal, "not started") {
 		t.Fatalf("before the harness started: %q", refusal)
 	}
 	_, outsidePath := testEndpoint(t, testTransport, func(c *Config) {
@@ -71,7 +70,7 @@ func TestAHelloIsChecked(t *testing.T) {
 	_, otherPath := testEndpoint(t, testTransport, func(c *Config) {
 		c.SameBuild = func(int) error { return errors.New("another image") }
 	})
-	if _, refusal := hold(t, otherPath, hello{Role: roleHook}); !strings.Contains(refusal, "another build") {
+	if _, refusal := hold(t, otherPath, hello{Role: roleChild, Capability: "secret"}); !strings.Contains(refusal, "another build") {
 		t.Fatalf("another build: %q", refusal)
 	}
 }
@@ -79,7 +78,7 @@ func TestAHelloIsChecked(t *testing.T) {
 // Each role asks only its own question.
 func TestARoleAsksOnlyItsOwnQuestion(t *testing.T) {
 	_, path := testEndpoint(t, testTransport)
-	conn, refusal := hold(t, path, hello{Role: roleHook})
+	conn, refusal := hold(t, path, hello{Role: roleChild, Capability: "secret"})
 	if refusal != "" {
 		t.Fatal(refusal)
 	}
@@ -93,7 +92,7 @@ func TestARoleAsksOnlyItsOwnQuestion(t *testing.T) {
 	var answer response
 	_ = json.Unmarshal(line, &answer)
 	if answer.ID != 7 || !strings.Contains(answer.Error, "may not ask") || answer.Ticket != nil {
-		t.Fatalf("a hook asked for a ticket: %+v", answer)
+		t.Fatalf("a child asked for a ticket: %+v", answer)
 	}
 }
 
@@ -101,11 +100,11 @@ func TestARoleAsksOnlyItsOwnQuestion(t *testing.T) {
 func TestTheConnectionsAreBounded(t *testing.T) {
 	_, path := testEndpoint(t, testTransport)
 	for range maxOthers {
-		if _, refusal := hold(t, path, hello{Role: roleHook}); refusal != "" {
+		if _, refusal := hold(t, path, hello{Role: roleChild, Capability: "secret"}); refusal != "" {
 			t.Fatal(refusal)
 		}
 	}
-	if _, refusal := hold(t, path, hello{Role: roleHook}); !strings.Contains(refusal, "too many") {
+	if _, refusal := hold(t, path, hello{Role: roleChild, Capability: "secret"}); !strings.Contains(refusal, "too many") {
 		t.Fatalf("a seventeenth connection: %q", refusal)
 	}
 	for range maxServers {
@@ -118,21 +117,15 @@ func TestTheConnectionsAreBounded(t *testing.T) {
 	}
 }
 
-// A hook and a child that cannot reach the endpoint fail as unreachable,
+// A server and a child that cannot reach the endpoint fail as unreachable,
 // which their callers tell from a refusal.
 func TestAMissingEndpointIsUnreachable(t *testing.T) {
 	path := t.TempDir() + "/none.ctx"
-	if err := Observe(path, []byte(`{}`), HookLimits{}, time.Second); !errors.Is(err, ErrUnreachable) {
-		t.Fatalf("observe: %v", err)
-	}
 	if err := Confirm(path, bridge.Ticket{}); !errors.Is(err, ErrUnreachable) {
 		t.Fatalf("confirm: %v", err)
 	}
 	if _, err := Dial(path, "secret"); !errors.Is(err, ErrUnreachable) {
 		t.Fatalf("dial: %v", err)
-	}
-	if err := Observe(path, []byte(`not json`), HookLimits{}, time.Second); err == nil || errors.Is(err, ErrUnreachable) {
-		t.Fatalf("observe of a broken input: %v", err)
 	}
 }
 

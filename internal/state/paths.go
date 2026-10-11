@@ -56,20 +56,9 @@ func AwaitingPath(dir, name string) string {
 	return filepath.Join(dir, inboxDir, name, awaitingDir)
 }
 
-// ObservationPath is where a session's telemetry senders write: beside its
-// inbox socket, one per run for the same reason, and short enough to bind.
-func ObservationPath(dir, name, run string) string {
-	path := filepath.Join(dir, socketsDir, name+"."+run+".obs")
-	if len(path) > 103 {
-		sum := sha256.Sum256([]byte(name + "\x00" + run))
-		path = filepath.Join(dir, socketsDir, fmt.Sprintf("%x.obs", sum[:12]))
-	}
-	return path
-}
-
-// ContextPath is where a run's wrapper answers the mail tool's server, its
-// children and its hooks (docs/archive-1.x/mail-bridge-server.md#who-calls): beside the
-// observation socket, one per run, and short enough to bind.
+// ContextPath is where a run's wrapper answers the mail tool's children
+// (docs/archive-1.x/mail-bridge-server.md#who-calls): beside the inbox
+// socket, one per run, and short enough to bind.
 func ContextPath(dir, name, run string) string {
 	path := filepath.Join(dir, socketsDir, name+"."+run+".ctx")
 	if len(path) > 103 {
@@ -89,15 +78,6 @@ func ContextPath(dir, name, run string) string {
 func AuthorityAddress(dir, run string) string {
 	sum := sha256.Sum256([]byte(filepath.Clean(dir) + "\x00" + run))
 	return fmt.Sprintf("@rewake/grant/%x", sum[:16])
-}
-
-// KeeperAddress is where a run's wrapper keeps the grants given to it, for a
-// harness that applies them through a hook the harness runs (a Claude Code
-// permission hook, docs/grants.md#claude-code): abstract, like
-// AuthorityAddress, and checked through its peer the same way.
-func KeeperAddress(dir, name, run string) string {
-	sum := sha256.Sum256([]byte(filepath.Clean(dir) + "\x00" + name + "\x00" + run))
-	return fmt.Sprintf("@rewake/keep/%x", sum[:16])
 }
 
 // ControlPath is where a run takes control requests — compact, interrupt — and

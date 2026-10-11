@@ -25,13 +25,13 @@ const maxSocketPath = 103
 // (lane.go) is the path a running wrapper uses; this one is what is left when
 // it cannot listen.
 func (claudeHarness) Deliver(ctx context.Context, session registry.Session, message inbox.Message) inbox.Result {
-	return writeNotice(ctx, session, newEnvelope(message, ""))
+	return writeNotice(ctx, session, newEnvelope(message))
 }
 
-func newEnvelope(message inbox.Message, interrupter string) envelope {
+func newEnvelope(message inbox.Message) envelope {
 	return envelope{
 		Type:     "user",
-		Message:  payload{Role: "user", Content: notification(message, interrupter)},
+		Message:  payload{Role: "user", Content: notification(message)},
 		Priority: "next",
 	}
 }

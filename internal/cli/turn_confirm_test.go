@@ -15,7 +15,7 @@ import (
 
 // The oracles of turn_hold_test.go, written again against the neutral
 // confirmation an adapter that can hold an end calls (ConfirmCompletion):
-// the same rules, reached without a Stop hook.
+// the same rules, reached the one way a turn ends since the Stop hook left.
 
 // end is a turn end of the interim lab's session, as an adapter reports it:
 // its event and its moment on the boot clock, after the lab's turn start.

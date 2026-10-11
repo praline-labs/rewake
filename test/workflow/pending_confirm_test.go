@@ -8,9 +8,10 @@ import (
 	"time"
 )
 
-// TestPendingConfirm is the confirmation of a turn end on the columns that can
-// hold one: the Claude Code column's Stop hook, and the fixture's end, which
-// asks the core through the contract (docs/v2/stage3-fixture.md). A worker
+// TestPendingConfirm is the confirmation of a turn end on the column that can
+// hold one: the fixture's end, which asks the core through the contract
+// (docs/v2/stage3-fixture.md); the Claude Code column's Stop hook held one too
+// until S9. A worker
 // reads a task and ends its first turn pending. Woken by another session's
 // mail, its next turn ends with no mark — the turn a finished subagent starts,
 // where the mark is easily forgotten — and rewake holds it once, quoting the
@@ -47,7 +48,7 @@ func TestPendingConfirm(t *testing.T) {
 }
 
 // confirmColumns are the columns whose turn end can be held.
-var confirmColumns = []column{claudeColumn, fixtureColumn}
+var confirmColumns = []column{fixtureColumn}
 
 const (
 	obsConfirmAsked   = "the unmarked turn end after an interim one is held exactly once, and the hold quotes the pending line"

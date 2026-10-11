@@ -191,7 +191,7 @@ func replaceScript(path, content string) error {
 }
 
 // installShim writes the programs the session needs on its PATH: one per
-// harness — `claude` and `fixture` — each of which re-executes this
+// harness — `fixture`, the one column since S9 — each of which re-executes this
 // test binary as that harness, and `rewake`, which is the binary built for this
 // run. The isolation deliberately keeps an
 // installed rewake off PATH; this puts *ours* there, which is the one the
@@ -201,7 +201,7 @@ func installShim(t *testing.T, c *Case, iso *Isolation) {
 	// One script per harness, each naming which fixture to be. The wrapper
 	// runs the harness by name, so the name of the file is what decides which
 	// column a session belongs to.
-	for _, harness := range []string{"claude", "fixture"} {
+	for _, harness := range []string{"fixture"} {
 		script := "#!/bin/sh\nexec env " + shimHarness + "=" + harness +
 			" \"$RW_SHIM_TEST_EXE\" -test.run=TestShimHelper -- \"$@\"\n"
 		if err := replaceScript(filepath.Join(iso.ShimDir, harness), script); err != nil {

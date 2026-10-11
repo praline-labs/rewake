@@ -30,8 +30,8 @@ import (
 // Every part of it is the core's: the fixture only takes the flag
 // (internal/harness/fixture/worktree.go) and says where each half started.
 // What a harness does in a checkout of its own making — Claude Code's -w — is
-// not started here; claude-worktree holds the Claude Code adapter's answer of
-// where its launch works.
+// not started here; the Claude Code adapter's answer of where its launch works
+// is held by its unit tests while its column is retired, until stage 4.
 func TestFixtureWorktree(t *testing.T) {
 	binary := enterScenario(t, "fixture-worktree")
 	c := Start(t, Spec{

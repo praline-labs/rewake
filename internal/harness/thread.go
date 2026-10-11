@@ -17,17 +17,3 @@ type ThreadTracker interface {
 type ThreadSource interface {
 	Thread() (string, error)
 }
-
-// SessionThread returns a known conversation identity without requiring every
-// harness to implement thread tracking.
-func SessionThread(session registry.Session) (string, error) {
-	for _, candidate := range All() {
-		if candidate.ID() == session.Harness {
-			if tracker, ok := candidate.(ThreadTracker); ok {
-				return tracker.Thread(session)
-			}
-			break
-		}
-	}
-	return "", nil
-}

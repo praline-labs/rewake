@@ -147,7 +147,7 @@ func TestAFailedReadRecordIsRetried(t *testing.T) {
 		t.Errorf("second read = %q, want the message shown again", out)
 	}
 
-	run("turn-ended", turnPayload)
+	mustEndTurn(t, smokeEnd)
 	if found := finishedFor(t, dir, "web"); len(found) != 1 {
 		t.Errorf("web holds %v, want the report it was owed", found)
 	}

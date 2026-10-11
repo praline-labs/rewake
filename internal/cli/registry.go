@@ -156,8 +156,8 @@ func buildGroups() {
 				Notes: []string{
 					"Without it, the turn's end is the report and the sender stops waiting. Waiting on background work inside the turn beats both.",
 					"It marks only the turn it runs in, and only its normal end: a failed or stopped turn reports as usual.",
-					"On Claude Code, an unmarked turn end after a pending one is held once to ask whether the work is done: still waiting — run rewake pending and end the turn; done — end the turn, and the answer already given goes into the report with what follows.",
-					"Refused outside a session; for main, whose turns go to nobody; with no read task or question awaiting a report; and on a Claude Code session whose telemetry hooks record no turn start to tie the mark to.",
+					"Where the harness can continue a turn, an unmarked turn end after a pending one is held once to ask whether the work is done: still waiting — run rewake pending and end the turn; done — end the turn, and the answer already given goes into the report with what follows.",
+					"Refused outside a session; for main, whose turns go to nobody; and with no read task or question awaiting a report.",
 				},
 				Handler: handlePending,
 			},
@@ -188,7 +188,7 @@ func buildGroups() {
 				Notes: []string{
 					"Refused at once while the session is in a turn; nothing waits for the turn to end. Interrupt it first, or ask again once rewake list shows it idle.",
 					"A focus is refused before anything is sent where the harness has no way to pass one.",
-					"Waits up to 5 seconds for the session to take the request — its rewake plugin on Claude Code — then up to 10 for its answer, and returns once the compaction has started. \"requested\" means the start was not seen in time and may still come. The result then arrives as a notify from the session, in place of the \"context compacted\" notice: token counts before and after where the harness gives them and its count of compactions, or why it was refused or failed; never the summary.",
+					"Waits up to 5 seconds for the session to take the request, then up to 10 for its answer, and returns once the compaction has started. \"requested\" means the start was not seen in time and may still come. The result then arrives as a notify from the session, in place of the \"context compacted\" notice: token counts before and after where the harness gives them and its count of compactions, or why it was refused or failed; never the summary.",
 					"Exit 0 started or requested; 1 refused (in a turn, compaction switched off, nothing to compact, remote conversation, not answering, cut short, no control directory, withdrawn before it was taken, another request in flight) or failed; 2 a wrong call — not a main, no such session, a harness that does not take it or cannot take a focus.",
 				},
 				Handler: handleCompact,
@@ -202,7 +202,7 @@ func buildGroups() {
 				Examples:       []string{"rewake interrupt worker-claude", "rewake interrupt worker-claude --json"},
 				Next:           []string{"rewake inbox --awaited"},
 				Notes: []string{
-					"A session waiting on that turn reads stopped, naming who interrupted it. On Claude Code the session's next notice tells it once that you interrupted its turn; the answer to this command says what the session's model is shown.",
+					"A session waiting on that turn reads stopped, naming who interrupted it. The answer to this command says what the session's model is shown.",
 					"Refused when no turn runs. Waits as rewake compact does: 5 seconds for the session to take the request, then 10 for its answer.",
 					"Exit 0 done; 1 refused (no turn running, not answering, cut short, no control directory, withdrawn before it was taken, another request in flight) or failed; 2 a wrong call — not a main, no such session, a harness that does not take it.",
 				},
@@ -225,7 +225,7 @@ func buildGroups() {
 		},
 	}
 
-	groups = []Group{run, talk, steer, help, internalGroup()}
+	groups = []Group{run, talk, steer, help}
 }
 
 // nestedLaunchHelp is refuseNestedLaunch's rule, on every launch page: a
@@ -244,7 +244,7 @@ func launchCommand(h harness.Harness) *Command {
 		Options: append(append([]Option{nameOption, roomOption, commandOption}, roleOptions()...),
 			Option{Flag: "--no-intro", Summary: "Do not add the system-layer briefing."},
 		),
-		Examples: append(h.Examples(), "rewake --room work --general --name helper "+h.ID()),
+		Examples: append(h.Examples(), roomExample(h)),
 		Next:     []string{"rewake list", "rewake send <name> \"text\""},
 		Notes:    notes,
 		Raw:      true,
@@ -253,10 +253,29 @@ func launchCommand(h harness.Harness) *Command {
 	}
 }
 
+// roomExample starts a session in another room, with the role the harness can
+// run: a worker where it reports its turns, main where it does not.
+func roomExample(h harness.Harness) string {
+	if !reportsTurns(h) {
+		return "rewake --room work --" + role.Main.ID + " --name lead " + h.ID()
+	}
+	return "rewake --room work --" + role.General.ID + " --name helper " + h.ID()
+}
+
 // flow is the worked order printed in the guide: real invocations, not shapes.
+// A harness that reports no turn's end starts only a main session and takes no
+// task, so it shows that start and none of the task's steps.
 func flow() []FlowStep {
 	steps := []FlowStep{}
+	last := ""
 	for _, h := range harness.All() {
+		if !reportsTurns(h) {
+			steps = append(steps, FlowStep{
+				Command: fmt.Sprintf("rewake --%s --name lead %s", role.Main.ID, h.ID()),
+				Summary: fmt.Sprintf("Start %s as lead-%s, the main session: this rewake is not told when its turns end, so it takes notes but no task or question until stage 4.", h.Title(), h.ID()),
+			})
+			continue
+		}
 		steps = append(steps, FlowStep{
 			Command: fmt.Sprintf("rewake --%s --name helper %s", role.General.ID, h.ID()),
 			Summary: fmt.Sprintf("Start %s as helper-%s with role %s; --name sets only the prefix.", h.Title(), h.ID(), role.General.ID),
@@ -264,14 +283,16 @@ func flow() []FlowStep {
 			Command: fmt.Sprintf("rewake send helper-%s \"pull and rerun the smoke\"", h.ID()),
 			Summary: "Give that exact address a task; its report comes back when the turn ends.",
 		})
+		last = h.ID()
 	}
 	// The id a send prints, or its tail, names the message afterwards.
-	last := harness.All()[len(harness.All())-1].ID()
-	return append(steps,
-		FlowStep{
+	if last != "" {
+		steps = append(steps, FlowStep{
 			Command: fmt.Sprintf("rewake send helper-%s \"also rerun the lint\" --to 8d4ddd85", last),
 			Summary: "Add to an unreported task by the id its send printed, or a unique prefix; one report settles both.",
-		},
+		})
+	}
+	return append(steps,
 		FlowStep{
 			Command: "rewake edit 8d4ddd85 \"pull and rerun the full suite\"",
 			Summary: "Replace an unread message of yours; rewake withdraw 8d4ddd85 takes it back instead.",

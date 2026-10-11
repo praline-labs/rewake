@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/harness"
-	"github.com/praline-labs/rewake/internal/harness/claude/telemetry"
 	"github.com/praline-labs/rewake/internal/inbox"
 )
 
@@ -15,10 +14,8 @@ import (
 // finished background task gets — instead of a block of pasted text.
 //
 // Only the summary and the status are shown, and nothing else goes in: the
-// person watching the session should see exactly what the agent is told. That
-// includes the line saying a main interrupted the previous turn, when there is
-// one: interrupter names that main.
-func notification(message inbox.Message, interrupter string) string {
+// person watching the session should see exactly what the agent is told.
+func notification(message inbox.Message) string {
 	status := "completed"
 	if harness.NoticeKind(message) == inbox.Stopped {
 		status = "killed"
@@ -32,9 +29,6 @@ func notification(message inbox.Message, interrupter string) string {
 		status = "running"
 	}
 	summary := harness.Notice(message)
-	if interrupter != "" {
-		summary += "\n" + telemetry.InterruptedLine(interrupter)
-	}
 	return strings.Join([]string{
 		"<task-notification>",
 		fmt.Sprintf("<task-id>%s</task-id>", harness.NoticeID(message)),

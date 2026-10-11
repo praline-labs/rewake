@@ -38,7 +38,7 @@ type steerModel struct {
 	letter bool
 }
 
-// steerLimits bounds a request. The plugin polls four times a second, so a
+// steerLimits bounds a request. The served side polls four times a second, so a
 // request nobody took within the pickup limit has nobody to take it. A
 // compaction is answered once it has started, not at its end — the served
 // side gives its start three seconds after the second it may wait out behind
@@ -219,7 +219,7 @@ var steerNext = map[string]string{
 	control.CompactionOff:      "The session runs with compaction switched off; rewake cannot change that.",
 	control.NothingToCompact:   "The conversation is too short to compact; nothing was done.",
 	control.RemoteConversation: "The session is a thin client whose conversation lives on a remote session: compact that one.",
-	control.NotAnswering:       "Its rewake plugin is not loaded or not answering — --bare, function hooks switched off, another harness version; such a session shows interruptions unobserved in rewake list.",
+	control.NotAnswering:       "Nothing in that session serves rewake's requests: what serves them did not load, was switched off or has stopped, or the session itself is stalled.",
 	control.CutShort:           "This call was interrupted before the session took the request, which is withdrawn; nothing was done: ask again.",
 	control.NoControl:          "It was started by an earlier rewake, which takes no requests, or its wrapper could not make the directory: restart that session with the current rewake.",
 	control.Withdrawn:          "The session took it in the instant this command gave up waiting, and did nothing: ask again.",

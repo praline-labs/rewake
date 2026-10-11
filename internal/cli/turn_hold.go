@@ -1,9 +1,7 @@
 package cli
 
 import (
-	"encoding/json"
 	"errors"
-	"io"
 	"slices"
 	"strings"
 
@@ -14,8 +12,8 @@ import (
 
 // holdTurn decides, under the mailbox lock, whether this turn end is held for
 // the session to confirm, and keeps its answer when it is. It answers the
-// reason the hook hands the model, or "" when the turn end is published as
-// usual.
+// reason the adapter continues the turn with, or "" when the turn end is
+// published as usual.
 //
 // The case it catches: a turn ended pending, and a later one — woken by a
 // subagent or a background task that finished — ends with no mark while the
@@ -36,8 +34,8 @@ func holdTurn(dir string, self registry.Session, event inbox.TurnEnd, op string,
 		return ""
 	}
 	if _, held, err := inbox.KeptAnswer(dir, self.Name, self.Epoch()); err != nil || held {
-		// A turn end held before whose continuation was never heard of — an
-		// Esc where the plugin did not load. This end publishes that answer
+		// A turn end held before whose continuation was never heard of — a
+		// stop the harness did not report. This end publishes that answer
 		// with its own, and asks nothing again.
 		return ""
 	}
@@ -78,26 +76,14 @@ func liveSenders(dir string, waiters []inbox.Waiter) ([]string, error) {
 	return names, nil
 }
 
-// holdReason is what the model reads after its turn was held. Claude Code
-// shows it as a hook's blocking error, and it is the only thing the model sees
-// of rewake there, so it names both ways on and what each sends.
+// holdReason is what the model reads after its turn was held: the reason the
+// adapter continues the turn with, and the only thing the model sees of rewake
+// there, so it names both ways on and what each sends.
 func holdReason(line string, senders []string) string {
 	line, _, _ = strings.Cut(line, "\n")
 	return "Rewake: your previous turn ended pending (\"" + line + "\"), and " + strings.Join(senders, ", ") +
 		" still wait for your report. If the work still waits on something, run rewake pending \"<what it waits for>\" and end the turn. " +
 		"If it is done, end the turn: the answer you just gave goes to them as the report, followed by whatever you say now, so do not repeat it."
-}
-
-// printHold tells the harness to hold the turn: Claude Code's Stop hook
-// decision, read from the hook's stdout.
-func printHold(out io.Writer, reason string) {
-	raw, err := json.Marshal(struct {
-		Decision string `json:"decision"`
-		Reason   string `json:"reason"`
-	}{"block", reason})
-	if err == nil {
-		_, _ = out.Write(append(raw, '\n'))
-	}
 }
 
 // joinTurnText puts two parts of one outcome's text together, either of which

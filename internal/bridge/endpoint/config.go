@@ -34,19 +34,8 @@ type Config struct {
 	// Acknowledge acknowledges a read's parts on the evidence of a result;
 	// the CLI's AcknowledgeRead.
 	Acknowledge func(dir, name, epoch, token string, evidence bridge.Exposure, gate bridge.EndGate) error
-	// Conversation is the conversation the run's collector holds, on Claude
-	// Code; "" while it has seen none.
-	Conversation func() string
 	// Gate orders acknowledgments against this run's captured ends.
 	Gate *Gate
-	// LimitsProven says gate G8 closed: the limits a Claude Code hook sees
-	// at PreToolUse are the ones the harness applies to that call's result.
-	// Until then no Claude Code call acknowledges a read.
-	LimitsProven bool
-	// OutputBound is the smallest MAX_MCP_OUTPUT_TOKENS L5 calibrated for
-	// the launch's version, zero for none: a call whose limit is set
-	// acknowledges a read only when it is a whole number at or above it.
-	OutputBound int64
 	// Channel takes the channel events the endpoint observes; nil drops
 	// them.
 	Channel func(channel.Event)

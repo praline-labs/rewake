@@ -16,7 +16,8 @@ import (
 
 // turnOp names a turn end's operation from its run and its event
 // (docs/turn-end-recovery.md#the-operation), so a retry of the same event
-// finds its own journal. A hook heard once has no event to name it by and is
+// finds its own journal. An end that names no event — none a harness's turn
+// boundary hands over since the Stop hook left in S9, only the tests' — is
 // never retried: its name is drawn. The kind is part of the event: a stop
 // after an Esc and the finish of the same turn are two ends.
 func turnOp(self registry.Session, event inbox.TurnEnd) string {
@@ -183,7 +184,7 @@ func prepareTurnReports(dir string, self registry.Session, event inbox.TurnEnd, 
 // the time in front keeps the recipient's mailbox in the order mail came in.
 func reportOfOp(op string) string {
 	if strings.Contains(op, "-") {
-		// Drawn already in that form, for a hook heard once.
+		// Drawn already in that form, for an end that named no event.
 		return op
 	}
 	return fmt.Sprintf("%019d-%s", time.Now().UnixNano(), op[:12])

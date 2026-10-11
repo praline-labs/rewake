@@ -135,6 +135,9 @@ func (fixtureHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan,
 // fixture holds the core's part of a grant on the gate column.
 func (fixtureHarness) SupportsDirGrant() bool { return true }
 
+// ReportsTurns: the plan's Backend reports every turn's end.
+func (fixtureHarness) ReportsTurns() bool { return true }
+
 // ReachesWrapper: the program runs its commands without a sandbox of its own,
 // so a fixture main's send reaches its wrapper and can grant.
 func (fixtureHarness) ReachesWrapper() bool { return true }

@@ -40,11 +40,10 @@ import (
 // late word goes to the inbox server, which takes the delivery back.
 const receiptWindow = 300 * time.Millisecond
 
-// openingLimit is how long the first notice waits for the session to draw its
-// status line, which is when it stops holding what arrives (telemetry.Drawn).
-// The status line never comes when the tap is not installed — the settings
-// could not be merged, or a managed policy owns the status line — and then
-// mail goes out after this.
+// openingLimit is how long the first notice waits after the lane starts: the
+// session holds what arrives until it has drawn its interface. Until S9 the
+// status line rewake installed said when that was, and this was the bound
+// for a session without it; with the status line gone it is the only gate.
 const openingLimit = 3 * time.Second
 
 // lane delivers notices with a reply address and routes what comes back.
@@ -54,9 +53,6 @@ type lane struct {
 	// the session has not made it yet; beside a socket the caller named it is
 	// left as it is.
 	ownDir bool
-	drawn  <-chan struct{}
-	// marks, when set, says who interrupted the last turn.
-	marks  interruptMarks
 	window time.Duration
 	limit  time.Duration
 
@@ -96,14 +92,11 @@ type sentNotice struct {
 	at time.Time
 }
 
-// newLane listens at reply once started; drawn, when not nil, opens the gate on
-// the first notice.
-func newLane(reply string, ownDir bool, drawn <-chan struct{}, marks interruptMarks) *lane {
+// newLane listens at reply once started.
+func newLane(reply string, ownDir bool) *lane {
 	return &lane{
 		reply:    reply,
 		ownDir:   ownDir,
-		drawn:    drawn,
-		marks:    marks,
 		window:   receiptWindow,
 		limit:    openingLimit,
 		sent:     map[string]*sentNotice{},
@@ -161,7 +154,6 @@ func (l *lane) open(ctx context.Context) {
 	timer := time.NewTimer(l.limit)
 	defer timer.Stop()
 	select {
-	case <-l.drawn:
 	case <-timer.C:
 	case <-ctx.Done():
 	case <-l.done:
@@ -189,10 +181,9 @@ func (l *lane) Deliver(ctx context.Context, session registry.Session, message in
 	l.mu.Lock()
 	listening := l.listener != nil
 	l.mu.Unlock()
-	interrupter, told := l.interruption()
-	notice := newEnvelope(message, interrupter)
+	notice := newEnvelope(message)
 	if !listening {
-		return told(writeNotice(ctx, session, notice))
+		return writeNotice(ctx, session, notice)
 	}
 	notice.From, notice.MsgID = "uds:"+l.reply, newMsgID()
 	waiting := &sentNotice{id: message.ID, msgID: notice.MsgID, first: make(chan inbox.Result, 1)}
@@ -200,7 +191,7 @@ func (l *lane) Deliver(ctx context.Context, session registry.Session, message in
 	l.sent[notice.MsgID] = waiting
 	l.mu.Unlock()
 
-	result := told(writeNotice(ctx, session, notice))
+	result := writeNotice(ctx, session, notice)
 	if result.State != inbox.Delivered {
 		l.forget(notice.MsgID)
 		return result

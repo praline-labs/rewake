@@ -1,12 +1,10 @@
 package wrap
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/praline-labs/rewake/internal/grant"
 	"github.com/praline-labs/rewake/internal/grantauth"
@@ -16,14 +14,17 @@ import (
 
 // A cold resume of a conversation that held a grant starts a new run, whose
 // wrapper holds nothing of it (docs/grants.md#after-a-cold-resume). For a
-// harness that takes grants through its own hook, the wrapper finds what the
-// conversation had in the copies of the journals, asks the main that sent
-// each grant to confirm it again, and keeps what is confirmed as it keeps a
-// grant delivered to this run. When the launch arguments name the
-// conversation, that happens before the harness starts, and the directories
-// are given to it at launch; otherwise once the session's telemetry names the
-// conversation, and the hook adds a directory at its first write, as it does
-// for any grant.
+// harness that takes directory grants and names the conversation a launch
+// resumes, the wrapper finds what the conversation had in the copies of the
+// journals, asks the main that sent each grant to confirm it again, and gives
+// the harness what is confirmed at launch.
+//
+// Code only tests reach from S9: the permission hook that applied and took
+// back these grants, and the keeper that fed it, left with the hooks,
+// and no adapter is both a Resumer and a DirGrantHarness. Stage 6 designs the
+// Permissions capability (docs/v2/design-api.md#permissions), which applies a
+// grant to a run and withdraws it, and decides there how a resumed run's
+// grants are kept.
 
 // resumed is the grants confirmed again for the conversation a launch
 // resumes, before the harness starts.
@@ -43,10 +44,11 @@ func (r resumed) dirs() []string {
 }
 
 // resumeGrants confirms again the grants of the conversation the launch
-// arguments name, for a harness that takes grants through its hook.
+// arguments name, for a harness that takes directory grants.
 func resumeGrants(dir, name, epoch string, adapter harness.Harness, args []string) resumed {
 	resumer, ok := adapter.(harness.Resumer)
-	if _, hooked := adapter.(harness.HookGranter); !ok || !hooked {
+	granter, grants := adapter.(harness.DirGrantHarness)
+	if !ok || !grants || !granter.SupportsDirGrant() {
 		return resumed{}
 	}
 	thread := resumer.ResumedConversation(args)
@@ -86,78 +88,4 @@ func confirmedAgain(dir, name, epoch, thread string) (confirmed []grantauth.Rest
 		confirmed = append(confirmed, restored)
 	}
 	return confirmed, notes
-}
-
-// keepResumed puts what was confirmed again into the keeper, as delivered to
-// this run in that conversation. added says the harness was started with the
-// directories. It answers whether a grant is left to ask about again: its
-// main did not answer yet.
-func keepResumed(keeper *grantauth.Keeper, thread string, grants []grantauth.Restored, added bool) (again bool) {
-	for _, restored := range grants {
-		if restored.Err != nil {
-			again = true
-			continue
-		}
-		origin := grant.Entry{Message: restored.Grant.ID, At: time.Now(), Thread: thread, From: restored.Hint.From, FromEpoch: restored.Hint.FromEpoch}
-		_ = keeper.GrantFrom(origin, restored.Grant.Dirs, added)
-	}
-	return again
-}
-
-// followInterval is how often the wrapper looks whether the session's
-// conversation changed, and asks again a main that did not answer.
-const followInterval = 2 * time.Second
-
-// followConversation restores, for each conversation the session's telemetry
-// names, the grants the copies say it had: a --continue, a picker, a resume
-// inside the session. Each conversation is looked at once, unless a main did
-// not answer; the keeper takes a message only once.
-func followConversation(ctx context.Context, dir, name, epoch string, keeper *grantauth.Keeper, conversation func() string, done string) {
-	seen := map[string]bool{}
-	if done != "" {
-		seen[done] = true
-	}
-	ticker := time.NewTicker(followInterval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-		}
-		thread := conversation()
-		if thread == "" || seen[thread] {
-			continue
-		}
-		grants, _ := confirmedAgain(dir, name, epoch, thread)
-		seen[thread] = !keepResumed(keeper, thread, grants, false)
-	}
-}
-
-// followResumed keeps what was confirmed again before the launch, and follows
-// the session's conversation from then on.
-func followResumed(ctx context.Context, dir, name, epoch string, keeper *grantauth.Keeper, restored resumed, observer harness.Observer) {
-	done := ""
-	if restored.thread != "" && !keepResumed(keeper, restored.thread, restored.grants, true) {
-		done = restored.thread
-	}
-	if conversation := conversationOf(observer); conversation != nil {
-		go followConversation(ctx, dir, name, epoch, keeper, conversation, done)
-	}
-}
-
-// conversationOf is the conversation an observer last heard named, nil for
-// one that does not follow it.
-func conversationOf(observer harness.Observer) func() string {
-	source, ok := observer.(harness.ThreadSource)
-	if !ok {
-		return nil
-	}
-	return func() string {
-		thread, err := source.Thread()
-		if err != nil {
-			return ""
-		}
-		return thread
-	}
 }

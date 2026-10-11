@@ -9,9 +9,7 @@ import (
 // The ends of a run on record, as the mail tool's commits meet them
 // (docs/mail-bridge-turns.md#a-turns-end-meets-its-calls): a pending mark
 // and a read's acknowledgment look, under the mailbox lock, for an end of the
-// run whose journal records it ended at or after their own time, and a Claude
-// Code ticket names its turn by the latest end on record after the prompt was
-// first seen. A journal is kept while its run lives, and one that cannot be
+// run whose journal records it ended at or after their own time. A journal is kept while its run lives, and one that cannot be
 // read may be this run's: it is an error, never an absence.
 
 // EndedSince says whether a journal of run epoch records an end at or after

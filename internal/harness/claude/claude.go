@@ -4,27 +4,14 @@ package claude
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/brief"
 	"github.com/praline-labs/rewake/internal/harness"
-	"github.com/praline-labs/rewake/internal/harness/claude/telemetry"
 )
 
 // ID is the launch command and the harness field of a session record.
 const ID = "claude"
-
-// The collector is where a delivery learns its conversation; a change that
-// made it stop answering would leave every report without threadChanged and
-// nothing failing.
-var (
-	_ harness.ThreadSource = (*telemetry.Collector)(nil)
-)
-
-// Its plugin serves control requests; a change that dropped the method would
-// refuse every compact and interrupt as unsupported.
-var _ harness.Steerable = claudeHarness{}
 
 // socketFlag asks Claude Code to put its inbox socket where we can name it. The
 // flag is undocumented but stable since 2.1.224; without it the socket lands
@@ -34,11 +21,6 @@ const socketFlag = "--messaging-socket-path"
 // introFlag adds to the system prompt for one launch. It appends, so the user's
 // own configuration is untouched.
 const introFlag = "--append-system-prompt"
-
-// settingsFlag layers a settings object over the user's for one launch. Claude
-// Code merges the layers, so the hooks it carries run next to the user's own
-// rather than instead of them; it reads only one, which settings.go handles.
-const settingsFlag = "--settings"
 
 // modelFlag and effortFlag are how Claude Code takes these for one session.
 const modelFlag = "--model"
@@ -54,10 +36,6 @@ const toolFlag = "--allowedTools"
 // "--allowedTools, --allowed-tools <tools...>" (docs/research-launch.md). A
 // person's own rule under it is theirs just the same.
 const toolFlagKebab = "--allowed-tools"
-
-// autocompactFlag sets the auto-compact window, which the harness then treats
-// as the context window; the collector needs it to show that window.
-const autocompactFlag = "--autocompact"
 
 // childMarkers are the variables a Claude Code session exports to its children.
 // Inherited by a new session they point it at the parent's socket and switch its
@@ -89,23 +67,15 @@ func New() harness.Harness { return claudeHarness{} }
 func (claudeHarness) ID() string    { return ID }
 func (claudeHarness) Title() string { return "Claude Code" }
 
-// CompactFocus: the plugin passes a focus as the compaction's instructions,
-// which reach the summary request (docs/research-claude-actions.md).
-func (claudeHarness) CompactFocus() bool { return true }
-
-// InterruptTrace: a plugin abort leaves the model no trace, so rewake adds a
-// line to the session's next notice (docs/remote-control.md).
-func (claudeHarness) InterruptTrace() string { return "its next notice says you interrupted it" }
-
 func (claudeHarness) Summary() string {
 	return "Start Claude Code as a rewake session."
 }
 
 func (claudeHarness) Examples() []string {
 	return []string{
-		"rewake claude",
-		"rewake --name api claude --continue",
-		"rewake claude --worktree=fix-login",
+		"rewake --main claude",
+		"rewake --main --name api claude --continue",
+		"rewake --main claude --worktree=fix-login",
 	}
 }
 
@@ -149,6 +119,7 @@ func claudeDefaults() []harness.Default {
 func (claudeHarness) Notes() []string {
 	return []string{
 		"Messages arrive through the session's inbox socket within seconds and wake an idle session.",
+		"This rewake is not told when a Claude Code turn ends, so Claude Code runs a main session only: a role that owes reports refuses to start on it, and a task or question to it fails, until stage 4 gives it a turn boundary.",
 		"Arguments after claude reach it as written, beside the flags rewake adds for delivery, except: a --help first asks rewake for this page; --worktree is rewake's, below; and a typed flag replaces an alias's copy of it.",
 		"--worktree starts the session in a new checkout of HEAD on a new branch under rewake's worktree directory, at the same place within the repository; --worktree=<name> names both, and a name after a space is refused, since it would reach claude as the prompt. rewake worktree --help says how to land and remove it. It starts a new conversation only: --continue or -c, --resume or -r, --from-pr, --teleport, --fork-session, the attach and respawn commands, Claude Code's own -w and --tmux, --cloud and --environment are refused beside it. -w alone stays Claude Code's own worktree, inside the repository.",
 	}
@@ -184,10 +155,6 @@ func (claudeHarness) SingleUseFlags() []harness.Flag {
 // so `rewake send` reaches the wrapper's socket to register a grant.
 func (claudeHarness) ReachesWrapper() bool { return true }
 
-// SupportsDirGrant: a grant reaches a running session through the permission
-// hooks rewake installs (permission.go).
-func (claudeHarness) SupportsDirGrant() bool { return true }
-
 func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, error) {
 	args := append([]string{}, request.Args...)
 	if harness.HasFlag(args, worktreeFlag) {
@@ -217,47 +184,17 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 		args = harness.AddFlags(args, socketFlag, socket)
 	}
 
-	// Whether the briefing names the tool is known only once the settings
-	// layer carrying its hooks applied, so the briefing is added after it.
-	briefed := request.Intro && !harness.HasFlag(args, introFlag)
 	args, notes := harness.ApplyDefaults(args, claudeDefaults())
 	env := harness.SessionEnv(request, childMarkers)
-	var observer harness.Observer
-	var drawn <-chan struct{}
-	var marks interruptMarks
-	observation := request.ObservationSocket
-	if len(observation) > maxSocketPath {
-		notes = append(notes, "not collecting telemetry: the socket path "+observation+" is longer than a unix socket allows")
-		observation = ""
-	}
-	if observation != "" {
-		collector := telemetry.NewCollector(observation)
-		collector.Controls(request.ControlDir)
-		if values := harness.FlagValues(args, autocompactFlag); len(values) > 0 {
-			// The harness takes the last one, as it does for any option.
-			collector.LaunchedWith(values[len(values)-1])
-		}
-		observer, drawn, marks = collector, collector.Drawn(), collector
-	}
 	reply := replyPath(request, socket, owns)
 	if len(reply) > maxSocketPath {
 		notes = append(notes, "not hearing back about held messages: the socket path "+reply+" is longer than a unix socket allows")
 		reply = ""
 	}
-	cwd, err := os.Getwd()
-	if err != nil {
-		return harness.LaunchPlan{}, err
-	}
-	// Decided once, since the grant hook is told whether the rule is ours.
-	rewakeRule := len(harness.FlagValues(args, toolFlag, toolFlagKebab)) == 0
-	args, settingsNotes, _ := applySettings(args, cwd, request.Role.Silent, rewakeRule, observation)
-	notes = append(notes, settingsNotes...)
-	if briefed {
+	if request.Intro && !harness.HasFlag(args, introFlag) {
 		args = harness.AddFlags(args, introFlag, brief.Intro(request.BriefContext()))
 	}
-	args, env, pluginNotes := applyPlugin(args, env, observation, request.ControlDir)
-	notes = append(notes, pluginNotes...)
-	if rewakeRule {
+	if len(harness.FlagValues(args, toolFlag, toolFlagKebab)) == 0 {
 		args = harness.AddFlags(args, toolFlag, "Bash(rewake:*)")
 	}
 	args = grantDirs(args, request.GrantDirs)
@@ -269,8 +206,7 @@ func (claudeHarness) Launch(request harness.LaunchRequest) (harness.LaunchPlan, 
 		Socket:     socket,
 		OwnsSocket: owns,
 		Notes:      notes,
-		Observer:   observer,
-		Lane:       newLane(reply, owns, drawn, marks),
+		Lane:       newLane(reply, owns),
 	}, nil
 }
 

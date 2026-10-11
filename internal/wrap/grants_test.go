@@ -97,56 +97,6 @@ func TestAGrantIsConfirmedWithTheMainThatSentIt(t *testing.T) {
 	}
 }
 
-// For a harness that takes a grant through its own hook, a confirmed grant
-// waits while the session works, then goes into the keeper its hook asks.
-func TestAGrantForAHookWaitsForIdleAndIsKept(t *testing.T) {
-	// A room below a state directory of its own: the grant lies beside it.
-	dir := filepath.Join(t.TempDir(), "rooms", "default")
-	epoch := ownEpoch(t)
-	lib, err := filepath.EvalSymlinks(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
-	authority, err := grantauth.Listen(state.AuthorityAddress(dir, epoch), os.Getpid(), time.Minute)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go authority.Serve(ctx)
-	defer authority.Close()
-	if err := grantauth.Register(state.AuthorityAddress(dir, epoch), grantauth.Grant{ID: "m1", To: "worker", ToEpoch: "9.9", Dirs: []string{lib}}); err != nil {
-		t.Fatal(err)
-	}
-	keeper, err := grantauth.Keep(state.KeeperAddress(dir, "worker", "9.9"), os.Getpid())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer keeper.Close()
-	message := inbox.Message{ID: "m1", From: "lead", FromEpoch: epoch, To: "worker", ToEpoch: "9.9", Kind: inbox.Task, GrantDirs: []string{lib}}
-
-	busy := true
-	conversation := func() (string, error) { return "s9", nil }
-	check := checkGrant(dir, "worker", "9.9", keeper, func() bool { return busy }, conversation)
-	if err := check(message); !errors.Is(err, inbox.ErrNotYet) || len(keeper.Entries()) != 0 {
-		t.Fatalf("while the session works: %v, kept %v", err, keeper.Entries())
-	}
-	busy = false
-	if err := check(message); err != nil {
-		t.Fatal(err)
-	}
-	// Kept with the conversation it went into, for a resume to ask by.
-	if entries := keeper.Entries(); len(entries) != 1 || entries[0].Path != lib || !entries[0].Live() || entries[0].Thread != "s9" {
-		t.Fatalf("kept %+v", entries)
-	}
-	// A grant main never registered is not kept.
-	unregistered := message
-	unregistered.ID = "m2"
-	if err := check(unregistered); err == nil || len(keeper.Entries()) != 1 {
-		t.Fatalf("an unconfirmed grant: %v, kept %v", err, keeper.Entries())
-	}
-}
-
 // Main holds the conversation a grant's letter was pinned to, not the one its
 // recipient had when it first checked the grant: only that one may take the
 // grant again after a resume. This process stands for both wrappers.
@@ -170,7 +120,7 @@ func TestMainHoldsTheConversationTheLetterWasPinnedTo(t *testing.T) {
 		t.Fatal(err)
 	}
 	message := inbox.Message{ID: "m1", From: "lead", FromEpoch: run, To: "worker", ToEpoch: run, Kind: inbox.Task, GrantDirs: []string{lib}}
-	check := checkGrant(dir, "worker", run, nil, nil, func() (string, error) { return "before-clear", nil })
+	check := checkGrant(dir, "worker", run)
 	if err := check(message); err != nil {
 		t.Fatal(err)
 	}
@@ -184,5 +134,34 @@ func TestMainHoldsTheConversationTheLetterWasPinnedTo(t *testing.T) {
 	}
 	if _, err := grantauth.Reconfirm(address, expect, "m1", "worker", run, "after-clear"); err != nil {
 		t.Fatalf("not taken into the conversation it was pinned to: %v", err)
+	}
+}
+
+// Main's wrapper asks the mailbox whether a grant's task is open: one waiting
+// for its reader is, one done is not, and its grant goes rather than being
+// confirmed again after the report.
+func TestMainsAuthorityAsksTheMailboxWhetherATaskIsOpen(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "rooms", "default")
+	authority := listenAuthority(dir, ownEpoch(t), os.Getpid())
+	if authority == nil {
+		t.Fatal("main's wrapper did not bind its address")
+	}
+	defer authority.Close()
+	task := inbox.Message{ID: "m1", From: "lead", To: "worker", Kind: inbox.Task, Text: "go"}
+	if err := inbox.Put(dir, task); err != nil {
+		t.Fatal(err)
+	}
+	held := grantauth.Grant{ID: task.ID, To: "worker", ToEpoch: endedEpoch(t)}
+	if open, found := authority.Open(held); !open || !found {
+		t.Fatalf("a waiting task: open %v, found %v", open, found)
+	}
+	if err := state.EnsureSubdir(state.DonePath(dir, "worker")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(filepath.Join(state.InboxPath(dir, "worker"), task.ID+".json"), filepath.Join(state.DonePath(dir, "worker"), task.ID+".json")); err != nil {
+		t.Fatal(err)
+	}
+	if open, found := authority.Open(held); open || !found {
+		t.Fatalf("a done task: open %v, found %v", open, found)
 	}
 }

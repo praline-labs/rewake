@@ -88,7 +88,7 @@ func TestTheMainSessionReportsNothing(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(waits, "web"), []byte(web.Epoch()+" 1 m1"), 0o600); err != nil {
 		t.Fatalf("write: %v", err)
 	}
-	run("turn-ended", turnPayload)
+	mustEndTurn(t, smokeEnd)
 	if found := finishedFor(t, dir, "web"); len(found) != 0 {
 		t.Errorf("web holds %v, want no report from the main session", found)
 	}

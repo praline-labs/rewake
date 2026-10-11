@@ -10,16 +10,16 @@ import (
 	"github.com/praline-labs/rewake/internal/state"
 )
 
-// After an interim turn end, rewake's Stop hook on Claude Code holds the next
-// turn end that carries no mark, once, and asks the session whether the work
-// is done (docs/turn-outcomes.md#the-confirmation-on-claude-code). Two records
+// After an interim turn end, rewake holds the next turn end that carries no
+// mark, once, where the harness can continue a turn, and asks the session
+// whether the work is done (docs/turn-outcomes.md#the-confirmation-on-claude-code). Two records
 // serve it, beside the pending marks and like them changed only under the
 // mailbox lock: interim.json (interim.go), which makes an unmarked end worth
 // asking about, and kept.json, which keeps the answer of the turn end that was
 // held until the next turn end heard takes it into its own outcome: the
-// continuation's Stop, a StopFailure, or the plugin's stop after an Esc.
-// Without it the report would be the continuation alone, since the harness's
-// second Stop carries only what the model said after the hold.
+// continuation's end, a failure, or a stop after an Esc. Without it the report
+// would be the continuation alone, since the harness's second end carries only
+// what the model said after the hold.
 
 // keptRecord is a held answer. A hold takes its place on the run's read clock
 // as a read does (docs/turn-end-recovery.md#the-read-clock): Seq is that

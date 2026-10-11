@@ -120,6 +120,9 @@ func handleSend(ctx *Context, call Call) error {
 	if kind.kind == inbox.Question && role.Of(session.Role).Silent {
 		return &UsageError{Command: command, Message: fmt.Sprintf("Session %s does not report its turns, so it cannot answer --question; use plain send or --notify instead.", session.Name)}
 	}
+	if err := refuseUnreported(session, kind.kind); err != nil {
+		return err
+	}
 	started := time.Now()
 
 	// Signed with this session's name and run only when both are known to be

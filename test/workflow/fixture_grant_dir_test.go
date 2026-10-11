@@ -33,8 +33,8 @@ import (
 // What it does not prove: anything an adapter does with a grant. Waiting for
 // an idle session, adding the directory to what the harness may write and
 // taking it out after the report are the Permissions capability's
-// (docs/v2/design-api.md#permissions); on Claude Code its hooks and the keeper
-// hold them in claude-grant-dir. The fixture only records what it was offered.
+// (docs/v2/design-api.md#permissions), which no adapter offers from S9 until
+// stage 6. The fixture only records what it was offered.
 func TestFixtureGrantDir(t *testing.T) {
 	binary := enterScenario(t, "fixture-grant-dir")
 	c := Start(t, Spec{

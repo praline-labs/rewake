@@ -2,7 +2,6 @@ package grantauth
 
 import (
 	"bufio"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -39,15 +38,6 @@ func TestAnAnswerFromAnotherLiveProcessIsRefused(t *testing.T) {
 	}
 	if _, err := Confirm(path, realStranger(t), lib.ID, lib.To, lib.ToEpoch, "c1"); !errors.Is(err, ErrNotConfirmed) || !strings.Contains(err.Error(), "not the sending session's wrapper") {
 		t.Fatalf("confirmed by another process: %v", err)
-	}
-}
-
-// The hook believes only its own wrapper, even when the run it names is a
-// live process: the keeper answering is not that process.
-func TestAHookRefusesAnAnswerFromAnotherLiveProcess(t *testing.T) {
-	_, path, _ := keep(t, os.Getpid(), nil, nil)
-	if output, err := Ask(path, realStranger(t), json.RawMessage(`"add"`)); !errors.Is(err, ErrNotConfirmed) || output != nil {
-		t.Fatalf("asked another process: %s %v", output, err)
 	}
 }
 

@@ -78,9 +78,9 @@ func answer(t *testing.T, reply, id, status string) {
 	_ = connection.Close()
 }
 
-func startLane(t *testing.T, dir string, drawn <-chan struct{}) *lane {
+func startLane(t *testing.T, dir string) *lane {
 	t.Helper()
-	l := newLane(filepath.Join(dir, "session.reply.sock"), false, drawn, nil)
+	l := newLane(filepath.Join(dir, "session.reply.sock"), false)
 	l.window, l.limit = 200*time.Millisecond, 100*time.Millisecond
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(func() { cancel(); l.Close() })
@@ -108,7 +108,7 @@ func nextReceipt(t *testing.T, l *lane) inbox.Receipt {
 func TestLaneSilenceIsDelivered(t *testing.T) {
 	dir := t.TempDir()
 	r := startReceiver(t, dir)
-	l := startLane(t, dir, nil)
+	l := startLane(t, dir)
 	result := deliver(l, r, "m1")
 	if result.State != inbox.Delivered {
 		t.Fatalf("an accepted line is delivered, got %+v", result)
@@ -122,7 +122,7 @@ func TestLaneSilenceIsDelivered(t *testing.T) {
 func TestLaneHeldThenReleased(t *testing.T) {
 	dir := t.TempDir()
 	r := startReceiver(t, dir, "held")
-	l := startLane(t, dir, nil)
+	l := startLane(t, dir)
 	result := deliver(l, r, "m1")
 	if result.State != inbox.Held || !strings.Contains(result.Detail, "held for approval") {
 		t.Fatalf("a held line is held, with the harness's reason, got %+v", result)
@@ -140,7 +140,7 @@ func TestLaneHeldThenReleased(t *testing.T) {
 func TestLaneCloseWordsEndWithTheFinalOne(t *testing.T) {
 	dir := t.TempDir()
 	r := startReceiver(t, dir, "held", "expired")
-	l := startLane(t, dir, nil)
+	l := startLane(t, dir)
 	switch result := deliver(l, r, "m1"); result.State {
 	case inbox.Failed:
 	case inbox.Held:
@@ -155,7 +155,7 @@ func TestLaneCloseWordsEndWithTheFinalOne(t *testing.T) {
 func TestLaneRefusalFails(t *testing.T) {
 	dir := t.TempDir()
 	r := startReceiver(t, dir, "refused")
-	l := startLane(t, dir, nil)
+	l := startLane(t, dir)
 	result := deliver(l, r, "m1")
 	if result.State != inbox.Failed || !strings.Contains(result.Detail, "refuses messages from other sessions") {
 		t.Fatalf("a refused line fails, got %+v", result)
@@ -170,7 +170,7 @@ func TestLaneRefusalFails(t *testing.T) {
 func TestLaneLateWordReachesTheServer(t *testing.T) {
 	dir := t.TempDir()
 	r := startReceiver(t, dir)
-	l := startLane(t, dir, nil)
+	l := startLane(t, dir)
 	if result := deliver(l, r, "m1"); result.State != inbox.Delivered {
 		t.Fatalf("got %+v", result)
 	}
@@ -195,7 +195,7 @@ func TestLaneLateWordReachesTheServer(t *testing.T) {
 func TestLaneForgetsSilentLines(t *testing.T) {
 	dir := t.TempDir()
 	r := startReceiver(t, dir)
-	l := startLane(t, dir, nil)
+	l := startLane(t, dir)
 	if result := deliver(l, r, "m1"); result.State != inbox.Delivered {
 		t.Fatalf("got %+v", result)
 	}
@@ -278,7 +278,7 @@ func TestLaneSweepsDeadReplySockets(t *testing.T) {
 func TestLaneWithoutReplySocketWritesPlainly(t *testing.T) {
 	dir := t.TempDir()
 	r := startReceiver(t, dir)
-	l := newLane("", false, nil, nil)
+	l := newLane("", false)
 	if err := l.Start(context.Background()); err == nil {
 		t.Fatal("a lane with no reply socket has to say it hears nothing back")
 	}
@@ -300,19 +300,8 @@ func TestLaneOpens(t *testing.T) {
 			return false
 		}
 	}
-	t.Run("on the status line", func(t *testing.T) {
-		drawn := make(chan struct{})
-		l := newLane("", false, drawn, nil)
-		l.limit = time.Hour
-		_ = l.Start(context.Background())
-		defer l.Close()
-		close(drawn)
-		if !opened(l) {
-			t.Fatal("the gate stays shut after the status line")
-		}
-	})
 	t.Run("after the limit", func(t *testing.T) {
-		l := newLane("", false, make(chan struct{}), nil)
+		l := newLane("", false)
 		l.limit = 10 * time.Millisecond
 		_ = l.Start(context.Background())
 		defer l.Close()
@@ -320,11 +309,22 @@ func TestLaneOpens(t *testing.T) {
 			t.Fatal("the gate stays shut past its limit")
 		}
 	})
+	t.Run("not before it", func(t *testing.T) {
+		l := newLane("", false)
+		l.limit = time.Hour
+		_ = l.Start(context.Background())
+		defer l.Close()
+		select {
+		case <-l.Opened():
+			t.Fatal("the gate opened before its limit")
+		case <-time.After(50 * time.Millisecond):
+		}
+	})
 }
 
 func TestLaneMakesItsOwnDirectory(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "sock")
-	l := newLane(filepath.Join(dir, "a.reply.sock"), true, nil, nil)
+	l := newLane(filepath.Join(dir, "a.reply.sock"), true)
 	defer l.Close()
 	if err := l.Start(context.Background()); err != nil {
 		t.Fatal(err)

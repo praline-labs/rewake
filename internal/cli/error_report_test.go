@@ -53,10 +53,10 @@ func TestFailedTurnsReachEveryWaitingSender(t *testing.T) {
 			}
 		}
 	}
-	t.Run("hook", func(t *testing.T) {
+	t.Run("unscoped", func(t *testing.T) {
 		dir := failedWaiters(t)
-		if code, _, errOut := run("turn-ended", `{"hook_event_name":"StopFailure","error":"unknown","last_assistant_message":"verbatim failure"}`); code != 0 {
-			t.Fatal(errOut)
+		if _, err := endTurn(t, boundaryEnd{failed: true, text: "verbatim failure"}); err != nil {
+			t.Fatal(err)
 		}
 		check(t, dir)
 	})
@@ -81,7 +81,9 @@ func TestUnclaimedFailuresReachMainAndMainKeepsItsOwn(t *testing.T) {
 				otherRun(t, dir, "leader")
 				markMain(t, dir, "leader")
 			}
-			run("turn-ended", `{"hook_event_name":"StopFailure","error":"unknown","last_assistant_message":"failure"}`)
+			if _, err := endTurn(t, boundaryEnd{failed: true, text: "failure"}); err != nil {
+				t.Fatal(err)
+			}
 			if self {
 				messages, err := inbox.PeekUnread(dir, "api", epochOf(t, dir, "api"))
 				if err != nil || len(messages) != 1 || string(messages[0].Kind) != "error" {
@@ -126,7 +128,7 @@ func TestIdentifiedFailuresAreNotRoutedAgainAfterTheirWaitsClear(t *testing.T) {
 		}
 	}
 	if len(finishedFor(t, dir, "web")) != 1 || len(finishedFor(t, dir, "leader")) != 0 {
-		t.Fatal("duplicate hook rerouted an already reported failure")
+		t.Fatal("a repeated end rerouted an already reported failure")
 	}
 }
 

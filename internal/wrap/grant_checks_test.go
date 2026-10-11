@@ -2,7 +2,6 @@ package wrap
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -31,7 +30,7 @@ func TestAGrantWhoseDirectoryBecameALinkIsRefusedBeforeMainIsAsked(t *testing.T)
 	}
 	// Nobody listens for main, and main runs: asked, it would say "not yet".
 	message := inbox.Message{ID: "m1", From: "lead", FromEpoch: ownEpoch(t), To: "worker", ToEpoch: "9.9", Kind: inbox.Task, GrantDirs: []string{swapped}}
-	err := checkGrant(dir, "worker", "9.9", nil, nil, nil)(message)
+	err := checkGrant(dir, "worker", "9.9")(message)
 	if err == nil || errors.Is(err, inbox.ErrNotYet) || !strings.Contains(err.Error(), "now leads to") {
 		t.Fatalf("a swapped directory: %v", err)
 	}
@@ -51,48 +50,14 @@ func TestAGrantFromAnInvalidSenderNameIsRefused(t *testing.T) {
 	}
 }
 
-// A grant restored before the launch was given to the harness at launch, so
-// taking it back once its task settles needs the hook, as a directory the
-// hook added does; one restored after the launch was never written in and
-// ends at once.
-func TestAGrantRestoredAtLaunchIsTakenBackThroughTheHook(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "rooms", "default")
-	lib := realDir(t)
-	restored := []grantauth.Restored{{Hint: grant.Hint{Message: "m1", From: "lead", FromEpoch: "1.1"}, Grant: grantauth.Grant{ID: "m1", To: "worker", Dirs: []string{lib}}}}
-	own := grantauth.Expect{PID: os.Getpid()}
-	own.Start, _ = proc.StartTime(os.Getpid())
-	for added, want := range map[bool]string{true: grant.Revoking, false: grant.Revoked} {
-		address := state.KeeperAddress(dir, "worker", ownEpoch(t)) + map[bool]string{true: "/added", false: "/later"}[added]
-		keeper, err := grantauth.Keep(address, os.Getpid())
-		if err != nil {
-			t.Fatal(err)
-		}
-		keeper.Settled = func(string) bool { return true }
-		ctx, cancel := context.WithCancel(context.Background())
-		go keeper.Serve(ctx)
-		if again := keepResumed(keeper, "s1", restored, added); again {
-			t.Fatalf("added %v: asked again", added)
-		}
-		if _, err := grantauth.Ask(address, own, json.RawMessage(`{}`)); err != nil {
-			t.Fatal(err)
-		}
-		if entries := keeper.Entries(); len(entries) != 1 || entries[0].Outcome != want || entries[0].Thread != "s1" {
-			t.Errorf("added %v: kept %+v, want %s", added, entries, want)
-		}
-		cancel()
-		keeper.Close()
-	}
-}
-
-// resumingHarness takes grants through a hook and names the conversation its
-// launch arguments resume: what a launch that restores grants needs.
+// resumingHarness takes directory grants and names the conversation its
+// launch arguments resume: what a launch that restores grants needs. No
+// product adapter is both from S9 until stage 6 (grant_resume.go).
 type resumingHarness struct {
 	contextHarness
 }
 
-func (h *resumingHarness) DecideGrant(json.RawMessage, []grant.Entry) grantauth.Decision {
-	return grantauth.Decision{}
-}
+func (h *resumingHarness) SupportsDirGrant() bool { return true }
 
 func (h *resumingHarness) ResumedConversation(args []string) string {
 	if len(args) == 2 && args[0] == "--resume" {
@@ -140,6 +105,32 @@ func TestAResumedLaunchStartsTheHarnessWithTheGrantsConfirmedAgain(t *testing.T)
 		}
 		if !slices.Equal(fake.launch.GrantDirs, want) {
 			t.Errorf("%s: started with %v, want %v", args, fake.launch.GrantDirs, want)
+		}
+	}
+}
+
+// Step 3 of the grant scheme, through the whole check a delivery makes: while
+// the main that sent a granted task runs and does not answer, the task waits
+// to be asked again; once that main has ended, nobody can confirm the grant,
+// and the task fails naming that main, to be sent again from the current one
+// (docs/grants-authority.md#the-scheme).
+func TestAGrantWhoseMainHasEndedFailsNamingThatMain(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "rooms", "default")
+	lib := realDir(t)
+	message := inbox.Message{ID: "m1", From: "lead", FromEpoch: ownEpoch(t), To: "worker", ToEpoch: "9.9", Kind: inbox.Task, GrantDirs: []string{lib}}
+	check := checkGrant(dir, "worker", "9.9")
+
+	if err := check(message); !errors.Is(err, inbox.ErrNotYet) || !strings.Contains(err.Error(), "lead") {
+		t.Fatalf("a quiet main that runs: %v, want the task to wait for it", err)
+	}
+	message.FromEpoch = endedEpoch(t)
+	err := check(message)
+	if err == nil || errors.Is(err, inbox.ErrNotYet) {
+		t.Fatalf("a main that has ended: %v, want the task to fail", err)
+	}
+	for _, said := range []string{"lead, which sent it, has ended", "send the task again from the current main"} {
+		if !strings.Contains(err.Error(), said) {
+			t.Errorf("the failure %q does not say %q", err, said)
 		}
 	}
 }

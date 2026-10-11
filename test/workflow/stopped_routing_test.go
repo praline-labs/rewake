@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"testing"
@@ -21,9 +20,6 @@ import (
 //   - The worker woken by the notify owes no one: its interruption sends
 //     nothing, to main or anyone, and it simply reads idle.
 //   - Main's own interrupted turn puts nothing into its own inbox.
-//
-// On the Claude Code column an interruption is heard through rewake's plugin,
-// so without node to run it the case is unsupported there.
 func TestStoppedRouting(t *testing.T) {
 	runInColumns(t, "stopped-routing", func(t *testing.T, col column) {
 		binary := enterScenario(t, "stopped-routing")
@@ -33,14 +29,6 @@ func TestStoppedRouting(t *testing.T) {
 			Observations: stoppedRoutingObservations,
 			Deadline:     90 * time.Second,
 		})
-		if col.runsPluginModule() {
-			if _, err := exec.LookPath("node"); err != nil {
-				for _, observation := range stoppedRoutingObservations {
-					c.UnsupportedCapability(observation, "node", "no node on PATH to run the plugin's module")
-				}
-				return
-			}
-		}
 		for _, finding := range playStoppedRouting(t, c, Isolate(t, c, binary), col) {
 			if finding.held {
 				c.Observed(finding.observation, finding.detail)
@@ -64,17 +52,6 @@ var stoppedRoutingObservations = []string{obsStoppedToWaiter, obsStoppedToNobody
 func playStoppedRouting(t *testing.T, c *Case, iso *Isolation, col column) []telemetryFinding {
 	t.Helper()
 	controls := []string{shimInboxJSON + "=1", shimInterruptFirst + "=1"}
-	if col.runsPluginModule() {
-		node, err := exec.LookPath("node")
-		if err != nil {
-			var out []telemetryFinding
-			for _, observation := range stoppedRoutingObservations {
-				out = append(out, telemetryFinding{observation: observation, detail: "no node to run the plugin's module"})
-			}
-			return out
-		}
-		controls = append(controls, shimNode+"="+node)
-	}
 	owed := startHarnessSession(t, c, iso, col.harness, "owed", "--general", controls...)
 	defer stopSession(t, c, owed)
 	free := startHarnessSession(t, c, iso, col.harness, "free", "--general", controls...)
@@ -212,16 +189,6 @@ func TestAStoppedSentToMainFails(t *testing.T) {
 	runInColumns(t, "stopped-routing-control-"+mutantStoppedToMain.name, func(t *testing.T, col column) {
 		play := func(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 			return playStoppedRouting(t, c, iso, col)
-		}
-		if col.runsPluginModule() {
-			if _, err := exec.LookPath("node"); err != nil {
-				name := "stopped-routing-control-" + mutantStoppedToMain.name
-				enterScenario(t, name)
-				want := "the " + mutantStoppedToMain.name + " mutant breaks " + obsStoppedToNobody + "; " + obsMainOwnEsc + ", and nothing else"
-				c := Start(t, Spec{Name: name, Harness: col.harness, Observations: []string{want}, Deadline: time.Minute})
-				c.UnsupportedCapability(want, "node", "no node on PATH to run the plugin's module")
-				return
-			}
 		}
 		runFindingsControlOn(t, col.harness, "stopped-routing", play, mutantStoppedToMain, obsStoppedToNobody, obsMainOwnEsc)
 	})

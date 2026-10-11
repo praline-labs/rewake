@@ -46,18 +46,6 @@ func shimReportState() int {
 	return 0
 }
 
-// workedATurn reports whether this session has recorded a turn yet. The two
-// halves of the shim are separate processes, so the file is how the client
-// learns what the server did.
-func workedATurn() bool {
-	turns := os.Getenv(shimTurnsFile)
-	if turns == "" {
-		return false
-	}
-	info, err := os.Stat(turns)
-	return err == nil && info.Size() > 0
-}
-
 // endedATurn reports whether the fixture's program has ended a turn. Its turn
 // records what it read before it ends, so a record alone may still have the
 // end, and the report it carries, to come; the completed event is written

@@ -15,8 +15,8 @@ import (
 // The fixture program's turns: a notice starts one, or is steered into the one
 // held open; the turn reads the mail as the other fixtures do; its end goes to
 // the adapter, which asks the core, and an end the core holds is continued
-// with the core's reason, as the Claude Code shim continues a held Stop — but
-// the decision to go on is the product's, asked through the contract.
+// with the core's reason, as the Claude Code shim continued a held Stop until
+// S9 — but the decision to go on is the product's, asked through the contract.
 
 // fixtureAskBound is how long the program waits for the adapter's answer to a
 // turn's start or end; an end waits for the core's decision.
@@ -129,8 +129,8 @@ func (s *fixtureSession) work(id string, notice mailboxNotice) {
 }
 
 // end hands the turn's end to the adapter, and continues a held end with the
-// core's reason until an end is published or the bound is reached — the
-// bound the Claude Code shim's harness keeps (maxStopHolds).
+// core's reason until an end is published or the bound is reached
+// (maxStopHolds).
 func (s *fixtureSession) end(id, text, outcome string) {
 	holdable := os.Getenv(shimNoHold) == ""
 	for n := 1; ; n++ {
@@ -157,7 +157,7 @@ func (s *fixtureSession) end(id, text, outcome string) {
 		}
 		// The next end is the continuation's: one more turn of the model's,
 		// with the reason as its input.
-		text, outcome = (&claudeSession{}).continueHeld(), "completed"
+		text, outcome = continueHeld(), "completed"
 	}
 }
 

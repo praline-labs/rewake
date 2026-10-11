@@ -18,9 +18,12 @@ import (
 // found it gone already — a person's own turn in the terminal replaces the
 // roots with the launch's.
 //
-// One more belongs to Claude Code, whose grant only its permission hook can
-// take back: revoking is a grant whose task is settled, waiting for the hook
-// to remove the directory at the session's next tool call.
+// One more was for a harness whose grant only its permission hook could take
+// back: revoking is a grant whose task is settled, waiting for the harness to
+// remove the directory at the session's next tool call. Nothing writes it since
+// the hook left in S9; an entry an earlier run wrote is still read as before,
+// and stage 6 (Permissions) decides whether a harness takes a grant back this
+// way again.
 const (
 	Granted  = "granted"
 	Revoked  = "revoked"

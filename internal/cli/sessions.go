@@ -73,7 +73,7 @@ func handleList(ctx *Context, _ Call) error {
 		default:
 			return []string{
 				fmt.Sprintf("No sessions are running in room %s.", room),
-				"Start one: rewake --name api claude",
+				"Start one: rewake --main --name api claude",
 			}
 		}
 		for _, session := range unknown {
