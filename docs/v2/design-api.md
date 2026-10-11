@@ -39,7 +39,7 @@ rules 1–4), now applied to every capability.
 | ToolTransport | offers the mail tools to the model and carries their calls under the tool rules | briefs the session on the shell commands; the guide is its interface |
 | TurnBoundary | reports a turn's start and end, with the end's answer, and confirms an end before it closes | publishes no report on its own; see [below](#turnboundary) |
 | Telemetry | reports context, limits and cost | `list` and main see the state as unknown |
-| Control | compacts, interrupts, clears | `rewake compact`, `interrupt`, `clear` to that session exit 1 naming the missing verb |
+| Control | compacts, interrupts, clears | `rewake compact`, `interrupt`, `clear` to that session exit 1 naming the missing verb; `clear` is designed, not built ([conversation-reset.md](../conversation-reset.md)) |
 | Permissions | applies a grant to the run | `send --grant-*` to that session exits 1, as `--grant-git` to Claude Code does in 1.x |
 | PersonUI | shows the person the session's mail state | nothing beyond the notices; stage 6 |
 

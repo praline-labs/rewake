@@ -174,6 +174,12 @@ launch waits for its TurnBoundary to become live up to the readiness bound, then
 rule. Liveness never changes the run: a capability withdrawn and made live again
 leaves the session's epoch, its name and its authority as they were.
 
+`clear` is in that list as the design names the Control verbs; the command itself is
+designed in [conversation-reset.md](../conversation-reset.md) and not built, so S11
+holds the refusal for `compact` and `interrupt` only, and closes without claiming a
+`clear` (its review, October 11, 2026). The command, when it lands, refuses a run
+without a live Control the same way, and its own step carries the test.
+
 **Tests.** Each absence on the fixture column through its switch; a boundary lost
 mid-run withdrawn at once; the offered set never read where the live one is meant; a
 capability dropped and reconnected leaves the run and its grants' authority unchanged.
