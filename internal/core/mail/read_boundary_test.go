@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -99,7 +98,7 @@ func TestReadBoundaryHighWatermarkPreventsReuseAfterCounterLoss(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	atomic.StoreUint64(clock.word(), 0)
+	mustStore(t, clock, 0)
 	if err := markScopedAwaiting(dir, "api", "1.1", Message{ID: "later", From: "peer", FromEpoch: "2.2"}, 0); err != nil {
 		t.Fatal(err)
 	}
@@ -151,5 +150,14 @@ func TestReadBoundaryIsSharedWithAnotherReaderProcess(t *testing.T) {
 	selected, err := ScopedWaiters(dir, "api", "1.1", after)
 	if err != nil || len(selected) != 1 || !slices.Equal(selected[0].Messages, []string{"from-process"}) {
 		t.Fatalf("reader scope: %v %v", selected, err)
+	}
+}
+
+// mustStore sets a clock's word as a crash between a reservation and its
+// commit would have left it.
+func mustStore(t *testing.T, clock *ReadClock, v uint64) {
+	t.Helper()
+	if err := clock.counter.Store(v); err != nil {
+		t.Fatal(err)
 	}
 }

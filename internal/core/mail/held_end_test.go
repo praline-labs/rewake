@@ -66,7 +66,7 @@ func TestAHeldEndRaisesTheClockToItsPosition(t *testing.T) {
 		t.Fatal(err)
 	}
 	record, _, _ := readKept(dir, "api", epoch)
-	*clock.word() = before
+	mustStore(t, clock, before)
 	if reason, ok, err := HeldEnd(dir, "api", epoch, "another-op"); err != nil || ok || reason != "" {
 		t.Fatalf("another end was answered as the held one: %q %v %v", reason, ok, err)
 	}
@@ -79,12 +79,12 @@ func TestAHeldEndRaisesTheClockToItsPosition(t *testing.T) {
 	if got := clock.Snapshot().Through; got != record.Seq {
 		t.Fatalf("the clock is at %d, want the hold's position %d", got, record.Seq)
 	}
-	high, err := readHigh(filepath.Join(filepath.Dir(clock.file.Name()), ".read-high"))
+	high, err := readHigh(filepath.Join(filepath.Dir(clock.counter.Path()), ".read-high"))
 	if err != nil || string(high) != strconv.FormatUint(record.Seq, 10) {
 		t.Fatalf("the reservation is %q, want the hold's %d alone: %v", high, record.Seq, err)
 	}
 	// A word above the position stays: no boundary is narrowed.
-	*clock.word() = record.Seq + 5
+	mustStore(t, clock, record.Seq+5)
 	if _, _, err := HeldEnd(dir, "api", epoch, "held-op"); err != nil || clock.Snapshot().Through != record.Seq+5 {
 		t.Fatalf("a committed word was moved: %d %v", clock.Snapshot().Through, err)
 	}

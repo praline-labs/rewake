@@ -29,6 +29,14 @@ func TestEveryWritePrimitiveRefusesInViewMode(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = locked.Close() }()
+	counter, err := OpenCounter(filepath.Join(dir, "counter"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = counter.Close() }()
+	if err := counter.Store(3); err != nil {
+		t.Fatal(err)
+	}
 	writes := map[string]func() error{
 		"WriteAtomic":      func() error { return WriteAtomic(file, []byte("view")) },
 		"PublishExclusive": func() error { return PublishExclusive(filepath.Join(dir, "new"), nil) },
@@ -62,14 +70,23 @@ func TestEveryWritePrimitiveRefusesInViewMode(t *testing.T) {
 			}
 			return err
 		},
-		"WriteFile":     func() error { return WriteFile(filepath.Join(dir, "plain"), nil, 0o600) },
-		"Link":          func() error { return Link(file, filepath.Join(dir, "linked")) },
-		"Move":          func() error { return Move(file, filepath.Join(dir, "moved")) },
-		"Chmod":         func() error { return Chmod(file, 0o644) },
-		"Touch":         func() error { return Touch(file, time.Unix(0, 0)) },
-		"Discard":       func() error { return Discard(file) },
-		"RemoveAll":     func() error { return RemoveAll(filepath.Join(dir, "sessions")) },
-		"Flock":         func() error { return Flock(locked, syscall.LOCK_EX|syscall.LOCK_NB) },
+		"WriteFile": func() error { return WriteFile(filepath.Join(dir, "plain"), nil, 0o600) },
+		"Link":      func() error { return Link(file, filepath.Join(dir, "linked")) },
+		"Move":      func() error { return Move(file, filepath.Join(dir, "moved")) },
+		"Chmod":     func() error { return Chmod(file, 0o644) },
+		"Touch":     func() error { return Touch(file, time.Unix(0, 0)) },
+		"Discard":   func() error { return Discard(file) },
+		"RemoveAll": func() error { return RemoveAll(filepath.Join(dir, "sessions")) },
+		"Flock":     func() error { return Flock(locked, syscall.LOCK_EX|syscall.LOCK_NB) },
+		"OpenCounter": func() error {
+			opened, err := OpenCounter(filepath.Join(dir, "another counter"))
+			if opened != nil {
+				_ = opened.Close()
+			}
+			return err
+		},
+		"Counter.Store": func() error { return counter.Store(7) },
+		"Counter.Sync":  func() error { return counter.Sync() },
 		"Bootstrap":     func() error { _, err := Bootstrap(base, "blue"); return err },
 		"OpenLeaseLock": func() error { _, err := OpenLeaseLock(dir); return err },
 		"CreateLeaseLock": func() error {
@@ -101,8 +118,12 @@ func TestEveryWritePrimitiveRefusesInViewMode(t *testing.T) {
 	if err := Flock(locked, syscall.LOCK_UN); err != nil {
 		t.Errorf("an unlock in view mode: %v", err)
 	}
+	// A refused store left the word as it was, and a load reads it.
+	if got := counter.Load(); got != 3 {
+		t.Errorf("a counter loaded in view mode: %d", got)
+	}
 	if err := leave(); err != nil {
-		t.Errorf("a read-only open or an unlock counted as a write: %v", err)
+		t.Errorf("a read-only open, an unlock or a load counted as a write: %v", err)
 	}
 	if data, err := ReadFile(file); err != nil || string(data) != "before" {
 		t.Fatalf("the file: %q, %v", data, err)

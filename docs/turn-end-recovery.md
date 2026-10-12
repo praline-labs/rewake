@@ -82,6 +82,11 @@ its kept answer records, when the word is below it: no position is allocated, th
 is not rewritten, and a word already at or above it stays, so no boundary captured for
 another end is widened.
 
+The word is a counter of the state (`state.Counter`): a file of one word mapped shared,
+whose stores and flush are writes of the room behind the write seam's guard, and whose
+load touches neither the filesystem nor a lock. A store the guard refuses leaves the word
+where it was, the same as a crash before the commit.
+
 An end with a boundary takes the kept answer only when its position is at or below
 `Through`, and only by the version it names in the journal. A hook heard once takes
 this run's kept answer as it finds it: nothing can be kept between its reading and its

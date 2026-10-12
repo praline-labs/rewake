@@ -9,10 +9,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"syscall"
 	"time"
-	"unsafe"
 
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -24,13 +22,13 @@ type ReadBoundary struct {
 	Through uint64
 }
 
-// ReadClock exposes a single shared committed-read word. Snapshot performs no
-// filesystem operations or locks on the protocol reader. Close follows producer shutdown.
+// ReadClock exposes a single shared committed-read word, a counter of the
+// state (state.Counter). Snapshot performs no filesystem operations or locks
+// on the protocol reader. Close follows producer shutdown.
 type ReadClock struct {
 	mailbox string
 	epoch   string
-	file    *os.File
-	data    []byte
+	counter *state.Counter
 }
 
 func openReadClock(dir, name, epoch string) (*ReadClock, error) {
@@ -44,34 +42,11 @@ func openReadClock(dir, name, epoch string) (*ReadClock, error) {
 	if err := state.EnsureSubdir(path); err != nil {
 		return nil, err
 	}
-	file, err := os.OpenFile(filepath.Join(path, ".read-clock"), os.O_CREATE|os.O_RDWR|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0o600)
+	counter, err := state.OpenCounter(filepath.Join(path, ".read-clock"))
 	if err != nil {
 		return nil, err
 	}
-	info, err := file.Stat()
-	if err != nil {
-		_ = file.Close()
-		return nil, err
-	}
-	if !info.Mode().IsRegular() {
-		_ = file.Close()
-		return nil, errors.New("read counter is not a regular file")
-	}
-	if info.Size() == 0 {
-		err = file.Truncate(8)
-	} else if info.Size() != 8 {
-		err = errors.New("invalid read-boundary counter")
-	}
-	if err != nil {
-		_ = file.Close()
-		return nil, err
-	}
-	data, err := syscall.Mmap(int(file.Fd()), 0, 8, syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
-	if err != nil {
-		_ = file.Close()
-		return nil, err
-	}
-	return &ReadClock{mailbox: filepath.Join(dir, name), epoch: epoch, file: file, data: data}, nil
+	return &ReadClock{mailbox: filepath.Join(dir, name), epoch: epoch, counter: counter}, nil
 }
 
 // OpenReadClock initializes the mapping before native event production starts.
@@ -98,20 +73,23 @@ func OpenReadClock(ctx context.Context, dir, name, epoch string) (clock *ReadClo
 				through = max(through, seq)
 			}
 		}
-		atomic.StoreUint64(clock.word(), through)
+		if err := clock.counter.Store(through); err != nil {
+			clock.Close()
+			clock = nil
+			return err
+		}
 		return nil
 	})
 	return
 }
-func (c *ReadClock) word() *uint64 { return (*uint64)(unsafe.Pointer(&c.data[0])) }
 
 // Snapshot captures only the committed word; producers never acquire the mailbox lock.
 func (c *ReadClock) Snapshot() *ReadBoundary {
-	return &ReadBoundary{Mailbox: c.mailbox, Epoch: c.epoch, Through: atomic.LoadUint64(c.word())}
+	return &ReadBoundary{Mailbox: c.mailbox, Epoch: c.epoch, Through: c.counter.Load()}
 }
 
 // Close releases this mapping after all completion producers have stopped.
-func (c *ReadClock) Close() { _ = syscall.Munmap(c.data); _ = c.file.Close() }
+func (c *ReadClock) Close() { _ = c.counter.Close() }
 
 // The mailbox lock serializes writers. Persist waiter sequences before publishing
 // the shared word; an earlier captured boundary cannot absorb a later read.
@@ -168,8 +146,10 @@ func onReadClock(dir, name, epoch string, write func(uint64) error) error {
 	if err := write(next + 1); err != nil {
 		return err
 	}
-	atomic.StoreUint64(c.word(), next+1)
-	return c.file.Sync()
+	if err := c.counter.Store(next + 1); err != nil {
+		return err
+	}
+	return c.counter.Sync()
 }
 
 // raiseReadClock commits a position a hold reserved and recorded, when a crash
@@ -185,8 +165,10 @@ func raiseReadClock(dir, name, epoch string, seq uint64) error {
 	if c.Snapshot().Through >= seq {
 		return nil
 	}
-	atomic.StoreUint64(c.word(), seq)
-	return c.file.Sync()
+	if err := c.counter.Store(seq); err != nil {
+		return err
+	}
+	return c.counter.Sync()
 }
 
 // ScopedWaiters resolves only still-owed messages committed before the captured

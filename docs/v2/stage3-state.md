@@ -175,8 +175,8 @@ guarded resources:
   `settle.go`'s function value with its `rewakefault` override; `receipt.go`'s lock, its
   identity recheck kept; `grant/journal.go`; `host/delivery`'s retention touch;
 - commit 6: the read clock, `core/mail/read_boundary.go` — a shared writable mapping, a
-  truncate, a store through an atomic word and a sync of an open descriptor — through a
-  guarded resource of `infra/state`, the order reserve the high-water mark, persist the
+  truncate, a store through an atomic word and a sync of an open descriptor — through
+  `state.Counter`, a guarded resource, the order reserve the high-water mark, persist the
   waiter, publish the word kept, and `Snapshot` free of filesystem access and blocking locks;
 - commit 6: the sockets — the endpoint's (creation, removal, mode), the wrapper's
   (`host/claim.go`), the fixture's `backend.go` and `lifecycle.go` and the adapters';
