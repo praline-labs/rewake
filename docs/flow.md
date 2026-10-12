@@ -60,7 +60,9 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
    executable whose sessions write there, a launch of another build switches it only
    while nothing holds the room, and every change form of a shell or a tool call holds the
    lease too, refused in a room of another build
-   ([stage3-state.md](v2/stage3-state.md#one-build-per-room)). A launch with `--worktree`
+   ([stage3-state.md](v2/stage3-state.md#one-build-per-room)). A view form takes no
+   lease, writes nothing and fails if it tries; in a room of another build it says so
+   once on stderr. A launch with `--worktree`
    then gets a checkout of the launch
    directory's HEAD on a new branch under rewake's worktree directory, and the wrapper
    moves into it, at the same place in the repository, before anything else

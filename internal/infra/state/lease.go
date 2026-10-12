@@ -52,6 +52,9 @@ type LeaseLock struct {
 // missing. The descriptor is close-on-exec, as every file Go opens: a child
 // takes its own lease, never its parent's. Nothing is locked yet.
 func OpenLeaseLock(room string) (*LeaseLock, error) {
+	if err := viewWrite(opLock, filepath.Join(room, leaseLockName)); err != nil {
+		return nil, err
+	}
 	file, err := openLeaseFile(room)
 	if err != nil {
 		return nil, err

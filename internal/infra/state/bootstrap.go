@@ -26,6 +26,9 @@ func Bootstrap(base, room string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if err := viewWrite(OpWrite, dir); err != nil {
+		return "", err
+	}
 	rooms := filepath.Dir(dir)
 	levels := []string{base, filepath.Dir(rooms), rooms, dir}
 	for _, sub := range []string{sessionsDir, inboxDir, socketsDir} {

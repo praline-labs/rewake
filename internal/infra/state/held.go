@@ -11,6 +11,9 @@ import (
 // lives. The lock stays until the returned file is closed, and the kernel
 // drops it when the writer dies, however it dies.
 func WriteAtomicHeld(path string, data []byte) (*os.File, error) {
+	if err := viewWrite(OpWrite, path); err != nil {
+		return nil, err
+	}
 	name, err := writeTemp(filepath.Dir(path), data)
 	if err != nil {
 		return nil, err

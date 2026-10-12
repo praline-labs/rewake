@@ -2,6 +2,7 @@ package cli
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/build"
@@ -95,6 +96,9 @@ func worktreeAccess(call Call) access {
 // its route answers.
 func (ctx *Context) within(class access, call Call, run func() int, refused func(error) int) int {
 	ctx.access = class
+	if class == accessView {
+		return ctx.asView(run)
+	}
 	if class != accessChange || (call.Command != nil && call.Command.Harness != nil) {
 		return run()
 	}
@@ -104,6 +108,28 @@ func (ctx *Context) within(class access, call Call, run func() int, refused func
 	}
 	defer lease.Release()
 	return run()
+}
+
+// asView runs a view's scope in view mode: every write of the state refuses
+// there, and an attempt fails the invocation even when the code that met the
+// refusal swallowed it. A view takes no lease and waits for none; a room of
+// another build is said to be another's, once, on stderr, whatever the form
+// prints on stdout.
+func (ctx *Context) asView(run func() int) int {
+	leave := state.EnterView()
+	if dir, err := state.Dir(); err == nil {
+		if line := build.Foreign(dir); line != "" {
+			_, _ = fmt.Fprintln(ctx.Stderr, line)
+		}
+	}
+	code := run()
+	if err := leave(); err != nil {
+		_, _ = fmt.Fprintln(ctx.Stderr, "rewake: internal error: "+err.Error())
+		if code == ExitOK {
+			code = ExitFailed
+		}
+	}
+	return code
 }
 
 // acquireCurrent takes the build lease of the room this invocation's
