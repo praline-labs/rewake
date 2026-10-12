@@ -90,6 +90,8 @@ import rule like the rest of `core/mail`, as strictly as before the move, and it
 once a file it names is gone or it names none, so S15 removes it (decided October 11,
 2026). Splitting the package in the same commit as the move would make the move a
 rewrite; doing it here, before the turn-end code joins it, would split it twice.
+S15's preparation took `availability` and `thread` out of the group, since both stay in
+`core/mail` under the decided cut, and the move removed the entry with the rest.
 
 ## S14. The turn-end and read code to core/mail
 
