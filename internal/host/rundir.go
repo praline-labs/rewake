@@ -11,7 +11,7 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-// The run directory (docs/v2/stage3-state.md#the-run-directory): what an
+// The run directory (docs/v2/stage3-rundir.md): what an
 // adapter writes for one run goes with the run. The run removes its own on
 // every path out; a run killed outright removes nothing, so a later launch in
 // the room removes what it left once that run is proven dead.

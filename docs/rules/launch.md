@@ -23,7 +23,7 @@ What rewake adds to a harness's launch, in the full wording of
 
 - **L3. Nothing persists past the run**: what a launch writes lives in the run's
   directory and goes with it; after a kill, a later launch removes it once the run is
-  proven dead ([the qualified guarantee](../v2/stage3-state.md#the-run-directory)).
+  proven dead ([the qualified guarantee](../v2/stage3-rundir.md#the-qualified-guarantee)).
   (Rule 8.)
   Tests:
   - `internal/host/control_test.go` `TestTheControlDirectoryLivesAsLongAsTheSession`

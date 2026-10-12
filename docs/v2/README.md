@@ -90,8 +90,10 @@ accepted in review round 7:
   readiness exchange, what each step can prove on it, its program, its column, and the
   gate across the steps.
 - [stage3-state.md](stage3-state.md) — the state root `v2/` and its inverse, what is a
-  writer, the build id and the room's lease with its bootstrap writes, the run directory,
-  the cost of the hash.
+  writer, the build id and the room's lease with its bootstrap writes, the cost of the
+  hash.
+- [stage3-rundir.md](stage3-rundir.md) — the directory of one run: where it is, when it is
+  made and removed, and the qualified guarantee for a killed wrapper.
 - [stage3-state-tests.md](stage3-state-tests.md) — the tests of S17's state and build
   decisions by area and commit, the concurrent ones among them, and the oracles kept.
 - [stage3-upgrade.md](stage3-upgrade.md) — clearing the state of 1.x: what 1.x does,

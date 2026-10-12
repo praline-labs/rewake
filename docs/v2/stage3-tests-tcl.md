@@ -180,7 +180,7 @@ machinery in S9 and return on the mod in stage 4. What stays in stage 3:
   `harness/claude/claude_test.go:101,118` (the messaging socket, kept with Wake). Gap:
   the run directory `run/<name>.<epoch>/` removed with the run, and after a run killed
   outright by a later launch once that run is proven dead — closed in S17
-  ([stage3-state.md](stage3-state.md#the-run-directory)).
+  ([stage3-rundir.md](stage3-rundir.md)).
 
 ## The host
 

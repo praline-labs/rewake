@@ -221,7 +221,7 @@ one adapter needs beyond the neutral events lives in the adapter.
   is printed. (Rule 7.)
 - **L3. Nothing persists past the run**: what a launch writes lives in the run's
   directory and goes with it; after a kill, a later launch removes it once the run is
-  proven dead ([the qualified guarantee](stage3-state.md#the-run-directory)).
+  proven dead ([the qualified guarantee](stage3-rundir.md#the-qualified-guarantee)).
   (Rule 8.)
 
 `mail-bridge-launch.md` rules 2, 4, 5 and 6 are about injecting an MCP server and checking

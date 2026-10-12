@@ -92,7 +92,7 @@ func ControlPath(dir, name, run string) string {
 // ControlsPath is the directory holding every run's control directory.
 func ControlsPath(dir string) string { return filepath.Join(dir, controlDir) }
 
-// RunPath is the directory of one run (docs/v2/stage3-state.md#the-run-directory):
+// RunPath is the directory of one run (docs/v2/stage3-rundir.md):
 // what an adapter writes for that run alone, handed to it at launch and
 // removed with the run. It is no socket, so its length does not matter.
 func RunPath(dir, name, run string) string {

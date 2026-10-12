@@ -26,7 +26,7 @@ migration and the Claude Code MCP injection needed:
   `run/<name>.<epoch>/`, holding what an adapter writes for one run — the mod; its
   socket keeps the short form in `sock/` — removed with the run, or, after a run killed
   outright, by a later launch once that run is proven dead (L3,
-  [stage3-state.md](stage3-state.md#the-run-directory));
+  [stage3-rundir.md](stage3-rundir.md));
 - unchanged: sessions, mailboxes with their journals, receipts, marks, claims and once
   records, control requests, letters, threads where an adapter uses them.
 
