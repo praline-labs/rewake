@@ -67,6 +67,18 @@ cannot authorize: the seam refuses those paths to a room-scoped authorization. T
 takes a separate capability scoped to the base, from `infra/build` while it holds its
 room's lease, for exactly these names, and releases it before its claim (D4, D6).
 
+That capability is `state.Cleanup`, given by `state.AuthorizeCleanup` for the lock of a
+room's lease that is held and authorized, and to `infra/build` alone, as the bootstrap's
+primitives are. It covers the base of that room and, in it, only `rooms/`, the trees named
+above, `v2/.clear.lock` and the counts recorded under `v2/` as `.cleared-1x-<id>.json`,
+each spelled clean; every act checks view mode first, then that the lease it was taken under
+is still authorized and the capability not closed, then the name. Its acts are the clear
+lock and a 1.x room's `.launch.lock` taken within a bound, a probe of a name or mailbox lock
+that exists, the three renames — `rooms/` to a candidate, a candidate to validated, a
+candidate back to `rooms/` — each by `renameat2` with `RENAME_NOREPLACE` and followed by a
+flush of the base, which a fault plan may fail (`state.OpSync`), the deletion of a validated
+tree room by room, and the counts written by rename and sync, read and discarded.
+
 ## The protocol
 
 At every launch, after the lease's bootstrap has made the root
