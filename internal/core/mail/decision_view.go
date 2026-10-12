@@ -106,18 +106,14 @@ func decisionView(dir, name, report string) DecisionView {
 		view.Resend = resendView(dir, name, d.ID)
 	}
 	for _, note := range d.Notes {
-		raw, err := os.ReadFile(toldPath(dir, name, report, note.Told))
+		told, err := readTold(osAccess{}, toldPath(dir, name, report, note.Told), note)
 		switch {
 		case errors.Is(err, os.ErrNotExist):
 			view.Told[note.Told] = ToldView{}
 		case err != nil:
 			view.Told[note.Told] = ToldView{Err: err}
 		default:
-			told, err := parseTold(toldPath(dir, name, report, note.Told), raw)
-			view.Told[note.Told] = ToldView{Record: &told, Err: err}
-			if err == nil && told.Note != note.Note.ID {
-				view.Told[note.Told] = ToldView{Err: fmt.Errorf("the record of the note told names note %s, not %s", told.Note, note.Note.ID)}
-			}
+			view.Told[note.Told] = ToldView{Record: &told}
 		}
 	}
 	closure, err := readClosure(osAccess{}, path+closedSuffix, d)

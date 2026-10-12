@@ -96,26 +96,23 @@ func (w world) installResend(name string, d Decision) error {
 // told record is there. Only an answer that tells — written now, written
 // before, the run proven ended — is recorded; any other leaves the note owed
 // to a later barrier, and so does a told record that could not be written.
-// A told record that does not read is an unknown, never taken for told nor
-// written over.
+// A told record that does not read, or tells another note, name or run, is
+// an unknown, never taken for told nor written over.
 func (w world) tellNote(ctx context.Context, name string, d Decision, entry DecisionNote) error {
 	path := toldPath(w.dir, name, d.Subject.Report, entry.Told)
-	raw, err := w.readFile(path)
+	_, err := readTold(w.files, path, entry)
 	if err == nil {
-		if _, err := parseTold(path, raw); err != nil {
-			return unknownRecord(path, err)
-		}
 		return nil
 	}
 	if !errors.Is(err, os.ErrNotExist) {
-		return err
+		return unknownRead(path, err)
 	}
 	answer, err := w.publishNote(ctx, name, entry.Note)
 	if err != nil {
 		return nil
 	}
 	note := entry.Note
-	raw, err = json.Marshal(ToldRecord{Name: note.To, Run: note.ToEpoch, Note: note.ID, Answer: answer, At: time.Now()})
+	raw, err := json.Marshal(ToldRecord{Name: note.To, Run: note.ToEpoch, Note: note.ID, Answer: answer, At: time.Now()})
 	if err != nil {
 		return nil
 	}
@@ -172,12 +169,7 @@ func (w world) installed(name string) bool {
 			done = false
 		}
 		for _, note := range d.Notes {
-			path := toldPath(w.dir, name, d.Subject.Report, note.Told)
-			raw, err := w.readFile(path)
-			if err == nil {
-				_, err = parseTold(path, raw)
-			}
-			if err != nil && !errors.Is(err, os.ErrNotExist) {
+			if _, err := readTold(w.files, toldPath(w.dir, name, d.Subject.Report, note.Told), note); err != nil && !errors.Is(err, os.ErrNotExist) {
 				done = false
 			}
 		}

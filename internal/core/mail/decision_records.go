@@ -123,6 +123,26 @@ func parseTold(path string, raw []byte) (ToldRecord, error) {
 	return told, nil
 }
 
+// readTold reads the told record of a decision's note and holds it to that
+// note: one that names another note, name or run says nothing of this one,
+// and is an error — neither told nor owed. The installation, its evidence and
+// the views read it so alike.
+func readTold(files fileAccess, path string, entry DecisionNote) (ToldRecord, error) {
+	raw, err := files.ReadFile(path)
+	if err != nil {
+		return ToldRecord{}, err
+	}
+	told, err := parseTold(path, raw)
+	if err != nil {
+		return ToldRecord{}, err
+	}
+	note := entry.Note
+	if told.Name != note.To || told.Run != note.ToEpoch || told.Note != note.ID {
+		return ToldRecord{}, fmt.Errorf("the record %s tells note %s to %s's run %s, not note %s to %s's run %s", path, told.Note, told.Name, told.Run, note.ID, note.To, note.ToEpoch)
+	}
+	return told, nil
+}
+
 // toldPath is where a decision's note to whom is recorded told.
 func toldPath(dir, name, report, whom string) string {
 	suffix := toldRecipientSuffix
