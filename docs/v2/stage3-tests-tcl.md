@@ -178,7 +178,9 @@ machinery in S9 and return on the mod in stage 4. What stays in stage 3:
 - **L3 — nothing persists past the run.** Carry: `wrap/control_test.go:33,49`,
   `wrap/wrap_test.go:120`, `wrap/ownership_test.go:24,303`,
   `harness/claude/claude_test.go:101,118` (the messaging socket, kept with Wake). Gap:
-  the run directory `run/<name>.<epoch>/` removed with the run — closed in S17.
+  the run directory `run/<name>.<epoch>/` removed with the run, and after a run killed
+  outright by a later launch once that run is proven dead — closed in S17
+  ([stage3-state.md](stage3-state.md#the-run-directory)).
 
 ## The host
 

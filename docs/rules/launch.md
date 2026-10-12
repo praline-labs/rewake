@@ -31,7 +31,7 @@ What rewake adds to a harness's launch, in the full wording of
   - `internal/host/ownership_test.go` `TestEachRunCleansOnlyItsOwnSocket`
   - `internal/adapter/claude/claude_test.go` `TestLiveSocketIsNeverRemoved`
   - `internal/adapter/claude/claude_test.go` `TestStaleSocketIsReplaced`
-  - Gap: the run directory `run/<name>.<epoch>/` removed with the run — closed in S17.
+  - Gap: the run directory `run/<name>.<epoch>/` removed with the run, after a kill by a later launch once the run is proven dead ([the qualified guarantee](../v2/stage3-state.md#the-run-directory)) — closed in S17.
 
 ## What returns with the Codex adapter
 

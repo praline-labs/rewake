@@ -93,7 +93,7 @@ One line per step; S1–S6 are detailed in [stage3-steps.md](stage3-steps.md), S
 | S14 | the turn-end and read code moves from `cli` to `core/mail` | yes | review |
 | S15 | the delivery server leaves `core/mail` for `host/delivery`: preparatory commits by subject, one move | yes | review [codex] |
 | S16 | `tool` and `host` move | yes | review |
-| S17 | the build id and the room's lease with its bootstrap, then the state root `v2/`, read-only views, the write seam, clearing 1.x | yes | review [codex] |
+| S17 | the forms classified, the build id and the room's lease with its bootstrap, then the state root `v2/`, read-only views, the run directory, the write seam, clearing 1.x ([seven commits](stage3-state.md#the-sequence)) | yes | review [codex] |
 | S18 | the operator decision (part B) | yes | review [codex] |
 | S19 | closing: every gap closed, the tables empty, `AGENTS.md` and the documents, the stage acceptance | yes, with the crosswise check | review, then the stage [codex] |
 
@@ -168,9 +168,9 @@ checks its rows.
 | the transport's declaration that its turn ids are never reused | S7 | S7 (`inOwnTurn`) | `CodexTransport`, S8 |
 | the turn's latest start as a core record | S7 | S7 (`judgeMark`) | the telemetry file, S9 |
 | the adapter API and the catalogue value | S10 | S11 | the 1.x contract and `init` registry, S10 (re-expressed in one commit, the suite before and after) |
-| the bootstrap of the room's directories (`build.Acquire`) | S17, commit 1 | S17, commit 2 (resolvers create nothing) | the resolvers' creation, S17 commit 2 |
-| the lease | S17, commit 1 | S17, commit 4 (`ErrNoLease`) | — |
-| the 1.x admission, apart from deletion | S17, commit 5 | the same commit | — |
+| the bootstrap of the room's directories (`build.Acquire`) | S17, commit 2 | S17, commit 3 (resolvers create nothing) | the resolvers' creation, S17 commit 3 |
+| the lease | S17, commit 2 | S17, commit 6 (`ErrNoLease`) | — |
+| the 1.x admission, apart from deletion | S17, commit 7 | the same commit | — |
 
 The tests follow the same rule: a test whose closure — the helpers and drivers it
 reaches, not only its own file — depends on something a step removes is rebuilt in that
@@ -221,7 +221,7 @@ of [S1](stage3-steps.md#s1-the-tests-first).
   packages: every step that moves or removes a package rewrites it),
   `docs/controls_test.go` (the controls table equal to the suite's mutants: S2, S8 and S9
   update it), `docs/legacy_test.go` (S2 removes the migration's marks, S8 Codex's, S17
-  adds the one `rewake` mark), `docs/rules_test.go` ([stage3-tests.md](stage3-tests.md#docsrules_testgo)).
+  adds a `rewake` mark), `docs/rules_test.go` ([stage3-tests.md](stage3-tests.md#docsrules_testgo)).
 
 ## Corrections to the accepted design
 

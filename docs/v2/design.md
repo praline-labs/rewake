@@ -150,9 +150,9 @@ the release.
 The owner answered the design's questions on October 5, 2026.
 
 1. **1.x state is deleted on upgrade**, not set aside, after the check that no 1.x
-   wrapper is alive, with one line saying what was dropped. That check reads two fields
-   of a 1.x record, so 2.0 starts with one legacy mark (`rewake`, dated) beside the
-   otherwise empty table of answer 11 ([design-state.md](design-state.md#clearing-the-state-of-1x)).
+   wrapper is alive, with one line saying what was dropped. That check reads the
+   liveness fields of a 1.x record, so 2.0 adds a legacy mark (`rewake`, dated) to its
+   table ([design-state.md](design-state.md#clearing-the-state-of-1x)).
 2. **The first tool set is `inbox`, `send`, `pending`, `whoami`, `retry`, `list`**
    (`cli/bridge_surface.go:21-27` plus the read-only `list`). `withdraw`, `edit`,
    `compact`, `interrupt`, `accept` and `worktree` stay shell-only until a review puts

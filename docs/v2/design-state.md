@@ -6,10 +6,11 @@ rule that replaces the protocol cutover. The overview is in [design.md](design.m
 
 ## The state root of 2.0
 
-The root stays `$REWAKE_DIR`, by default `/tmp/rewake-<uid>`, with the same checks
+The base stays `$REWAKE_DIR`, by default `/tmp/rewake-<uid>`, with the same checks
 (a directory, not a symlink, owned by the user, mode 0700) and for the same reason: a
 Codex sandbox writes `/tmp` by default (`docs/design.md`, "State directory"). Inside it
-2.0 keeps everything under **`v2/`**: `v2/rooms/<room>/...`. 1.x never reads there, and
+2.0 keeps everything under its root **`v2/`**: `v2/rooms/<room>/...`
+([stage3-state.md](stage3-state.md#the-roots) names the three levels). 1.x never reads there, and
 2.0 never reads the 1.x tree except to clear it, so neither build can take the other's
 records for its own — the property the cutover had to prove with run records, successor
 bindings and a scan of processes (`docs/protocol-cutover.md`), now held by a path.
@@ -21,38 +22,48 @@ migration and the Claude Code MCP injection needed:
   receipts), the conversion journal, `sock/*.mcp.json`, `sock/*.obs` and `obs.turn/`
   (the mod reports through the endpoint), `sock/*.obs.plugin/` (the mod lives in the run
   directory);
-- new: `build` (below), and a run directory per run, `run/<name>.<epoch>/`, holding what
-  an adapter writes for one run — the mod and its socket — removed with the run (L3);
+- new: `build` and `build.lock` (below), and a run directory per run,
+  `run/<name>.<epoch>/`, holding what an adapter writes for one run — the mod and its
+  socket — removed with the run, or, after a run killed outright, by a later launch once
+  that run is proven dead (L3, [stage3-state.md](stage3-state.md#the-run-directory));
 - unchanged: sessions, mailboxes with their journals, receipts, marks, claims and once
   records, control requests, letters, threads where an adapter uses them.
 
 The worktrees and their records stay where they are, in the user's data directory
-(`~/.local/share/rewake/worktrees`, `docs/worktree.md`), outside the state root. They
+(`~/.local/share/rewake/worktrees`, `docs/worktree.md`), outside the base. They
 hold work, so the upgrade never touches them, and 2.0 reads their records as 1.x wrote
 them: `worktree` carries over unchanged (revision).
 
 ## Clearing the state of 1.x
 
 **When.** At the first launch of a 2.0 session (`rewake claude ...`) that finds a 1.x
-tree — `rooms/` directly under the root. Other commands do not clear: a `send` or an
+tree — `rooms/` directly under the base, or a tree a clearer set aside there. Other commands do not clear: a `send` or an
 `inbox` must stay quick and must not surprise; they see only `v2/`.
 
-**What is checked first.** Whether any 1.x wrapper still runs. The launch reads only
-the liveness fields of the 1.x session records — `pid` and the process start time
-(`docs/session-record.md`) — and compares them with `/proc`. This one read of a 1.x
-format carries the legacy mark (`legacy(rewake <date>)`, dated the day the 2.0 state
-root lands, `docs/legacy.md`) and goes with it — the one mark 2.0 starts with, against
-the empty table of answer 11 (recorded with answer 1).
+**What is checked first.** Whether any 1.x wrapper still runs, or any 1.x command holds
+a lock. The launch reads only the liveness fields of the 1.x session records —
+`servicePid`, `serviceStart` and `pidNamespace` (`docs/session-record.md`) — and compares
+them with `/proc`, in the pid namespace the 1.x wrappers ran in, which is a precondition
+of the supported upgrade. This read of a 1.x format, and the count of dropped mail,
+carry a legacy mark (`legacy(rewake <date>)`, dated the day the 2.0 state root lands,
+`docs/legacy.md`) and go with it, beside the marks the table already holds.
 
 - **A 1.x session alive**: the launch refuses, exit 1, naming each live session with its
   room, and saying that rewake 2.0 does not read 1.x mail, so those sessions have to be
   ended (and their conversations resumed under 2.0, where a harness can resume). Nothing
   is stopped or restarted automatically (`AGENTS.md`, "Delegation and review").
-- **A record that cannot be read**: the launch does not clear, says once which file it
-  could not read, and goes on — the 1.x tree is not in its way, since 2.0 lives in `v2/`.
-- **None alive**: the launch removes the 1.x tree — `rooms/` and nothing else under the
-  root — and prints one line on stderr: what was removed, with the counts of unread and
-  undelivered letters dropped, so the person knows whether mail was lost.
+- **A check that cannot be made** — a record, a directory or `/proc` data that cannot be
+  read, a lock held, a record of another pid namespace: the launch refuses, exit 1,
+  naming the path; an unknown is never taken for absence.
+- **None alive, every check read**: the launch sets `rooms/` aside, validates the set-aside
+  tree again from its contents, and deletes it only then — the 1.x trees and nothing
+  else under the base — and prints one line on stderr: what was removed, with the counts
+  of unread and undelivered letters dropped, "unknown" where a count cannot be
+  established, so the person knows whether mail was lost. A deletion that fails after
+  the validation is finished by the next launch.
+
+The protocol — the trees and their names, the locks, every crash and every failed read —
+is [stage3-upgrade.md](stage3-upgrade.md).
 
 The owner decided on October 5, 2026 that 1.x state is deleted, not set aside (answer 1
 of [design.md](design.md#the-owners-answers)).
@@ -76,9 +87,10 @@ which opens the image the process runs even after the file at the install path i
 replaced or removed. `rewake --version` stays the human line and is not an identity: it
 keeps only a `Modified` flag, its build time is optional, and it prints a short revision
 and the time to the minute (`cli/version.go:21-30, 81`), so two builds of one dirty tree
-print the same line. A copy of the same artifact has the same id and is admitted; any
-other bytes are another build. An image that cannot be read gives no id, and the
-process refuses before its first effect, exit 1, naming why. The cost of hashing the
+print the same line. A copy of the same artifact has the same id and is admitted — by
+the lease and by the endpoint's check of a peer alike; any other bytes are another build.
+An image that cannot be read gives no id, and the process refuses before its first
+effect, exit 1, naming why. The cost of hashing the
 image once per command is measured in stage 3.
 
 **The boundary is a lease every writer holds.** The room keeps `build`, the id of its
@@ -86,17 +98,17 @@ writers, and `build.lock`, a file locked with `flock`:
 
 - **Every writer holds the lock shared, then checks.** A wrapper holds it for its whole
   life; a CLI command that may change the room's state, from before its build check to
-  its exit; a child a wrapper starts — the CLI child of a tool call, the mod's stream
-  child — takes its own shared lock before its first effect, so it keeps the boundary
-  even after its wrapper is gone (`mail-bridge-server.md`, "Running the child"). With
+  its exit; a child a wrapper starts that writes — the CLI child of a tool call — takes
+  its own shared lock before its first effect, so it keeps the boundary even after its
+  wrapper is gone (`mail-bridge-server.md`, "Running the child"). With
   the lock held, the writer reads `build`: its own id goes on; another id, or a file it
   cannot read, refuses before the first effect, exit 1, naming the room's build.
 - **Changing the build takes the lock exclusive**, without waiting. A launch whose id
   differs from `build`, or that finds no file or an unreadable one, asks for it; any
   holder — a live session, a running command, an orphaned child — makes the request
-  fail, and the launch refuses, exit 1, naming the holders `/proc/locks` shows: end
-  them, or launch into another room (`--room`). Held, the launch writes its id to
-  `build` by rename, then turns its lock to shared and reads `build` again like any
+  fail, and the launch refuses, exit 1, naming the holders `/proc/locks` shows, by pid
+  and a safe label, never a command line: end them, or launch into another room
+  (`--room`). Held, the launch writes its id to `build` by rename, then turns its lock to shared and reads `build` again like any
   writer: `flock` does not promise the conversion is atomic.
 - **No guess about liveness.** The kernel drops a `flock` with its last descriptor, so a
   crashed writer holds nothing and a live one cannot be missed. A reader of the old
