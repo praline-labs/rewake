@@ -178,6 +178,77 @@ func TestASocketClaimNeverWritesAnotherBase(t *testing.T) {
 	}
 }
 
+// A link in a state is guarded at both ends, as written and where it leads,
+// and no link changes during these acts: a link in the leased room into a
+// room of another base lends that room nothing, neither the bind, the
+// clearing of a dead socket nor the close-time unlink, which is refused once
+// that room's lease is let go; a link in that room into the leased one is that
+// room's write as written and is refused too.
+func TestALinkInTheLeasedRoomLendsNothingToWhereItLeads(t *testing.T) {
+	linked := func(t *testing.T, from, to string) string {
+		t.Helper()
+		link := filepath.Join(from, "link")
+		if err := os.Symlink(filepath.Join(to, socketsDir), link); err != nil {
+			t.Fatal(err)
+		}
+		return filepath.Join(link, "reply.sock")
+	}
+	for _, act := range []string{"bind", "discard", "close", "from the other room"} {
+		t.Run(act, func(t *testing.T) {
+			_, own := bootstrapped(t)
+			heldLease(t, own)
+			_, foreign := bootstrapped(t)
+			path := linked(t, own, foreign)
+			if act == "from the other room" {
+				path = linked(t, foreign, own)
+			}
+			claim, err := ClaimSocket(own, path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			before := NoLeaseRefusals()
+			switch act {
+			case "bind", "from the other room":
+				listener, err := claim.Listen(path)
+				if listener != nil {
+					_ = listener.Close()
+				}
+				if !errors.Is(err, ErrNoLease) {
+					t.Fatalf("the own room's lease bound through a link: %v", err)
+				}
+				if _, err := os.Lstat(path); !os.IsNotExist(err) {
+					t.Fatalf("a refused bind left a file: %v", err)
+				}
+			case "discard":
+				deadSocket(t, path)
+				if err := claim.Discard(path); !errors.Is(err, ErrNoLease) {
+					t.Fatalf("the own room's lease cleared a socket through a link: %v", err)
+				}
+				if _, err := os.Lstat(path); err != nil {
+					t.Fatalf("a refused clearing removed the socket: %v", err)
+				}
+			case "close":
+				theirs := heldLease(t, foreign)
+				listener, err := claim.Listen(path)
+				if err != nil {
+					t.Fatalf("binding through a link with both rooms leased: %v", err)
+				}
+				theirs.Close()
+				before = NoLeaseRefusals()
+				if err := listener.Close(); !errors.Is(err, ErrNoLease) {
+					t.Fatalf("the own room's lease unlinked a socket through a link: %v", err)
+				}
+				if _, err := os.Lstat(path); err != nil {
+					t.Fatalf("a refused unlink removed the socket: %v", err)
+				}
+			}
+			if NoLeaseRefusals()-before != 1 {
+				t.Fatalf("%d refusals counted, want 1", NoLeaseRefusals()-before)
+			}
+		})
+	}
+}
+
 // deadSocket leaves a socket at path, as a run that died bound would.
 func deadSocket(t *testing.T, path string) {
 	t.Helper()

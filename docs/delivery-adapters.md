@@ -43,7 +43,8 @@ the room, where no lease of the state reaches, so the lane binds there under a
 socket, binding, the close-time unlink — while this process holds the room's lease
 ([stage3-state.md](v2/stage3-state.md#what-is-a-writer)). A directory in a state, of
 this base or another, a room of 1.x among them, is no such place: there the room the
-path lies in decides, and the lane's own lease binds nothing.
+path lies in decides, as written and where its directory's links lead, and the lane's own
+lease binds nothing.
 
 Each receipt is one line on a new connection, quoting the line's id in
 `orig_msg_id`. After a write the adapter waits 300 ms for the first one — a held line

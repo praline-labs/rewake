@@ -14,7 +14,7 @@ import (
 // process holds the room's lease, behind view mode as every write is. It
 // widens nothing of any state: a path in a state directory, the room's own
 // base or another, is guarded as any other write there, by the lease of the
-// room it lies in.
+// room it lies in, as written and where its links lead.
 type SocketClaim struct {
 	room, path string
 }
@@ -38,8 +38,8 @@ func (c *SocketClaim) check(op, path string) error {
 	if filepath.Clean(path) != c.path {
 		return fmt.Errorf("%s is not the socket %s claimed", path, c.path)
 	}
-	if c.inState() {
-		return guard(op, path)
+	if seen := c.seen(); inState(seen) {
+		return guard(op, seen...)
 	}
 	if err := viewWrite(op, path); err != nil {
 		return err
@@ -50,18 +50,27 @@ func (c *SocketClaim) check(op, path string) error {
 	return nil
 }
 
-// inState says whether the claimed path lies in a state directory, as
-// written or where its directory's links lead, which is where a bind lands.
-// Outside its own base is no proof: another base is a state too, and so is a
-// room of 1.x. What is decided is by what is on disk at the act; a link
+// seen is the claimed path as written and where its directory's links lead,
+// which is where a bind lands. Both are guarded once either lies in a state:
+// the written one keeps a link in another room that room's write, the
+// resolved one keeps a link in the leased room from lending its lease to
+// where it leads. What is decided is by what is on disk at the act; a link
 // swapped between the check and the act is not seen, as for every guarded
 // write.
-func (c *SocketClaim) inState() bool {
+func (c *SocketClaim) seen() []string {
 	seen := []string{c.path}
 	if dir, err := filepath.EvalSymlinks(filepath.Dir(c.path)); err == nil {
-		seen = append(seen, filepath.Join(dir, filepath.Base(c.path)))
+		if resolved := filepath.Join(dir, filepath.Base(c.path)); resolved != c.path {
+			seen = append(seen, resolved)
+		}
 	}
-	for _, path := range seen {
+	return seen
+}
+
+// inState says whether any of paths lies in a state directory. Outside its
+// own base is no proof: another base is a state too, and so is a room of 1.x.
+func inState(paths []string) bool {
+	for _, path := range paths {
 		for dir := path; ; dir = filepath.Dir(dir) {
 			if stateDir(dir) {
 				return true

@@ -176,7 +176,9 @@ a dead socket there, binding, the close-time unlink — checked at each act agai
 and the room's lease. It widens nothing of any state: a path in a state directory, as written
 or where its directory's links lead — below a base, which holds a root with rooms, or in a
 room of either layout by what it holds — is guarded by the lease of the room it lies in, which the claiming
-room's lease is not. Then the guarded resources:
+room's lease is not. Both ends of such a link are guarded, so a link in the leased room lends that
+lease nothing where it leads, and a link in another room is that room's write as written. Then the
+guarded resources:
 
 - commit 5: the registry's removals; `core/control`'s lock, request, mark and answer files
   and `serve.go`; in `core/mail` a direct write, a truncate without create, a hard link,
