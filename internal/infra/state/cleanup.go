@@ -215,7 +215,7 @@ func (c *Cleanup) lockFile(path string, wait time.Duration, busy error) (*TreeLo
 	}
 	deadline := time.Now().Add(wait)
 	for attempt := 0; attempt < leaseLockAttempts; attempt++ {
-		file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|syscall.O_CLOEXEC|syscall.O_NOFOLLOW, 0o600)
+		file, err := openRegular(path, os.O_RDWR|os.O_CREATE)
 		if err != nil {
 			return nil, fmt.Errorf("could not open %s: %w", path, err)
 		}
@@ -265,7 +265,7 @@ func (c *Cleanup) TryLock(path string) (bool, error) {
 	if err := c.check(opLock, path); err != nil {
 		return false, err
 	}
-	file, err := os.OpenFile(path, os.O_RDONLY|syscall.O_CLOEXEC|syscall.O_NOFOLLOW, 0)
+	file, err := openRegular(path, os.O_RDONLY)
 	if errors.Is(err, os.ErrNotExist) {
 		return true, nil
 	}
@@ -281,6 +281,29 @@ func (c *Cleanup) TryLock(path string) (bool, error) {
 		return false, fmt.Errorf("could not lock %s: %w", path, err)
 	}
 	return true, nil
+}
+
+// openRegular opens a lock file of the cleanup, created when flags say so,
+// and refuses anything but a regular file: never following a link, and never
+// waiting in open on a FIFO, which would hold the clear lock and every room
+// lock taken until some writer came. A special file is refused before it is
+// opened, and the descriptor checked again after, against a swap between.
+func openRegular(path string, flags int) (*os.File, error) {
+	if info, err := os.Lstat(path); err == nil && !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("%s is not a regular file", path)
+	}
+	file, err := os.OpenFile(path, flags|syscall.O_CLOEXEC|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0o600)
+	if err != nil {
+		return nil, err
+	}
+	if info, err := file.Stat(); err != nil || !info.Mode().IsRegular() {
+		_ = file.Close()
+		if err == nil {
+			err = fmt.Errorf("%s is not a regular file", path)
+		}
+		return nil, err
+	}
+	return file, nil
 }
 
 // plainDir refuses a path that is not a directory of its own: a symlink is

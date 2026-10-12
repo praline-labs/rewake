@@ -47,16 +47,30 @@ func readWrapper(path string) (wrapper, error) {
 	return wrapper{pid: record.ServicePid, start: record.ServiceStart, namespace: record.PidNamespace}, nil
 }
 
-// readFile reads a file of the 1.x tree without following a link out of it.
+// readFile reads a regular file of the 1.x tree without following a link out
+// of it and without waiting on a special file: a FIFO at a record's name
+// would hold the open, and with it the clear lock and the room locks, until
+// a writer came. It is refused before the open, and the descriptor checked
+// after it.
 func readFile(path string) ([]byte, error) {
 	if err := state.AskRead(path); err != nil {
 		return nil, err
 	}
-	file, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_CLOEXEC, 0)
+	if info, err := os.Lstat(path); err != nil {
+		return nil, err
+	} else if !info.Mode().IsRegular() {
+		return nil, errors.New("it is not a regular file")
+	}
+	file, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_CLOEXEC|syscall.O_NONBLOCK, 0)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = file.Close() }()
+	if info, err := file.Stat(); err != nil {
+		return nil, err
+	} else if !info.Mode().IsRegular() {
+		return nil, errors.New("it is not a regular file")
+	}
 	data, err := io.ReadAll(io.LimitReader(file, maxRecord+1))
 	if err != nil {
 		return nil, err

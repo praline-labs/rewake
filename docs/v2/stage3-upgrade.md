@@ -211,6 +211,10 @@ on October 12, 2026 ([stage3-s17-evidence.md](stage3-s17-evidence.md#the-live-ga
   that count unknown.
 - A refusal's message names each finding on a line of its own; a failure to rename, flush
   or record says that nothing was removed.
+- Every file the clearing opens — a record, a letter, a 1.x lock, the clear lock — must be
+  a regular file: a special file is refused by `lstat` before the open, the open does not
+  wait (`O_NONBLOCK`) and the descriptor is checked again, so a FIFO cannot hold the
+  clearing, and the locks it holds, until a writer comes.
 - The steps a fault plan pauses or ends the clearing at, besides its durable steps, are
   `legacy admitted`, `legacy set aside` and `legacy validated`, and `launch cleared` once
   the launch may go on. The bounds are built in (`builtClearWait`, `builtRoomWait`), which a
