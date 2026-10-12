@@ -35,8 +35,8 @@ What rewake adds to a harness's launch, in the full wording of
   - `internal/adapter/claude/claude_test.go` `TestStaleSocketIsReplaced`
   - `internal/host/rundir_test.go` `TestRunDirectoryDiesWithRun`
   - `internal/host/rundir_test.go` `TestFailedLaunchRemovesOnlyItsRunDirectory`
-  - `internal/host/rundir_test.go` `TestOldRunCleanupPreservesNewOwner`
-  - `internal/host/rundir_test.go` `TestCrashedRunIsReclaimedOnlyAfterProvenDeath`
+  - `internal/host/rundir_reclaim_test.go` `TestOldRunCleanupPreservesNewOwner`
+  - `internal/host/rundir_reclaim_test.go` `TestCrashedRunIsReclaimedOnlyAfterProvenDeath`
   - `internal/host/rundir_test.go` `TestRunSocketsFitAtMaximumNames`
 
 ## What returns with the Codex adapter
