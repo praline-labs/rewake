@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/host/delivery"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -29,7 +30,7 @@ func TestAFastAnswerIsNotAnnouncedTwice(t *testing.T) {
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		done := make(chan struct{})
-		server := mail.Server{Dir: dir, Name: "web", Epoch: web.Epoch(), Deliver: func(context.Context, mail.Message) mail.Result {
+		server := delivery.Server{Dir: dir, Name: "web", Epoch: web.Epoch(), Deliver: func(context.Context, mail.Message) mail.Result {
 			notices.Add(1)
 			return mail.Result{State: mail.Delivered}
 		}}

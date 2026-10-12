@@ -13,6 +13,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/host/delivery"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -61,7 +62,7 @@ func sweepAsServer(t *testing.T, dir string, session registry.Session) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	stopped := make(chan struct{})
-	server := mail.Server{Dir: dir, Name: session.Name, Epoch: session.Epoch(), Ready: cancel}
+	server := delivery.Server{Dir: dir, Name: session.Name, Epoch: session.Epoch(), Ready: cancel}
 	go func() { server.Serve(ctx); close(stopped) }()
 	select {
 	case <-stopped:

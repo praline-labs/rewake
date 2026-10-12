@@ -30,8 +30,8 @@ Claude Code runs, by unit tests, each killing the column's mutant of it:
 
 | Retired mutant | Kept code | The unit test that kills it |
 |---|---|---|
-| `ungated` | `internal/core/mail/serve.go` | `internal/core/mail` `TestTheFirstNoticeWaitsForTheOpening` |
-| `expiry-unannounced` | `internal/core/mail/held.go` | `internal/core/mail` `TestAnExpiredTaskIsFailedAndItsSenderTold` |
+| `ungated` | `internal/host/delivery/serve.go` | `internal/host/delivery` `TestTheFirstNoticeWaitsForTheOpening` |
+| `expiry-unannounced` | `internal/host/delivery/held.go` | `internal/host/delivery` `TestAnExpiredTaskIsFailedAndItsSenderTold` |
 | `held-as-delivered` | `internal/adapter/claude/receipt.go` | `internal/adapter/claude` `TestLaneHeldThenReleased`, `TestParseReceipt` |
 | `refusal-as-delivered` | `internal/adapter/claude/receipt.go` | `internal/adapter/claude` `TestLaneRefusalFails`, `TestParseReceipt` |
 | `late-word-dropped` | `internal/adapter/claude/lane.go` | `internal/adapter/claude` `TestLaneLateWordReachesTheServer` |
@@ -44,7 +44,7 @@ Claude Code runs, by unit tests, each killing the column's mutant of it:
 `delivery-unpinned` of `thread-changed` mutated, on the Claude Code column, the
 wrapper's branch that pins a delivery to the conversation an observer reports — code
 only tests reach since S9, as no adapter sets an observer; the fixture's mutant of that
-name edits `internal/core/mail/prepare.go` instead, and both are kept. The other mutants of the column broke code that left with it: the plugin's module, the
+name edits `internal/host/delivery/prepare.go` instead, and both are kept. The other mutants of the column broke code that left with it: the plugin's module, the
 telemetry collector and tap, the permission hook and the grant keeper. The gap until
 stage 4: no workflow case runs Claude Code's inbound lane — its gate, its receipts, its
 late word — end to end against a session; the unit tests above hold each link, and the

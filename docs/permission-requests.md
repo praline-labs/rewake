@@ -221,9 +221,9 @@ reads as a task, so each of these decides it:
 - `internal/core/mail/inbox.go` — the constant, and `AsksForWork`, which must list it, or
   `Owed` would make main owe the worker a report; `IsReport` and `Settles` leave it out:
   it is no turn's outcome and answers no question;
-- `internal/core/mail/window.go` — `canWait` lets whatever asks for no work wait up to four
+- `internal/host/delivery/window.go` — `canWait` lets whatever asks for no work wait up to four
   seconds for company; this kind is announced at once, since its limit is running;
-- `internal/core/mail/serve.go`, `batch.go`, `prepare.go` — through `IsReport`: a letter
+- `internal/host/delivery/serve.go`, `batch.go`, `prepare.go` — through `IsReport`: a letter
   that cannot be delivered is not kept readable as a report is; it fails, and the
   worker's wrapper falls back at once;
 - `internal/cli/send_kinds.go`, `send.go` — no `messageKind` and no line in `sendKinds`:
@@ -243,7 +243,7 @@ reads as a task, so each of these decides it:
   names a permission request, not a task;
 - an adapter whose Wake steers a letter into a running turn (none today; Codex's returns in
   stage 5) — not work: steered in as a heads-up is;
-- `internal/core/mail/awaited.go`, `held.go`, `sent.go`, `recall.go` and
+- `internal/core/mail/awaited.go`, `sent.go`, `recall.go`, `internal/host/delivery/held.go` and
   `internal/cli/inbox*.go`, `sent_ref.go`, `sent_current.go` — rendered with its live
   state; never listed as awaited or owed; not delayed while main is in a turn.
 

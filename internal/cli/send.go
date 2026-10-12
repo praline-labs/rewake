@@ -20,7 +20,7 @@ import (
 // defaultWait is how long send waits for a result before reporting what it
 // knows. It is short because the answer for a healthy delivery arrives in well
 // under a second — a heads-up in a few, once it has waited for company
-// (mail.Coalescing, whose cap is set to fit inside this) — and a caller that
+// (delivery.Coalescing, whose cap is set to fit inside this) — and a caller that
 // has to wait longer wants to hear why.
 const defaultWait = 5 * time.Second
 

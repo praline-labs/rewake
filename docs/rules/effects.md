@@ -45,7 +45,7 @@ nothing lifts a stop without returning evidence.
   - `internal/infra/state/held_test.go` `TestTryHoldRefusesAFileReplacedBeforeItsLock`
   - `internal/infra/state/lock_test.go` `TestNameLockHoldsBetweenProcesses`
   - `internal/infra/state/state_test.go` `TestNameLockSerialisesClaims`
-  - `internal/core/mail/sweep_gate_test.go` `TestASweepWithoutTheLockRetiresNothing`
+  - `internal/host/delivery/sweep_gate_test.go` `TestASweepWithoutTheLockRetiresNothing`
 
 - **E3. Every check that decides an effect runs inside the critical section, right
   before the effect, and again on a retry**, which is a new call with its own deadline
@@ -60,9 +60,9 @@ nothing lifts a stop without returning evidence.
   - `internal/cli/addendum_test.go` `TestAnAddendumsEditIsAskedAgainUnderTheLock`
   - `internal/core/mail/claims_test.go` `TestPublicationOfReadsTheMailbox`
   - `internal/core/mail/claims_test.go` `TestPublishOnceWritesNothingWhenItsCheckFails`
-  - `internal/core/mail/batch_edges_test.go` `TestGroupedPreparationRechecksAnswerLeasesExpiryAndEpoch`
-  - `internal/core/mail/withdraw_delivery_test.go` `TestTheLastCheckBeforeANoticeSeesAWithdrawal`
-  - `internal/core/mail/window_test.go` `TestARetryDoesNotRestartTheWindow`
+  - `internal/host/delivery/batch_edges_test.go` `TestGroupedPreparationRechecksAnswerLeasesExpiryAndEpoch`
+  - `internal/host/delivery/withdraw_test.go` `TestTheLastCheckBeforeANoticeSeesAWithdrawal`
+  - `internal/host/delivery/window_test.go` `TestARetryDoesNotRestartTheWindow`
   - `internal/adapter/fixture/turns_test.go` `TestATurnEndIsRetriedWithItsOwnDeadline`
   - `internal/adapter/fixture/turns_test.go` `TestATurnEndThatNeverTakesIsRefusedAfterItsAttempts`
   - `internal/adapter/fixture/order_test.go` `TestAWithdrawalStopsAnEndsAttempts`
@@ -77,15 +77,15 @@ nothing lifts a stop without returning evidence.
   - `internal/core/mail/publication_bounds_test.go` `TestTwoMailboxesPublishingToEachOtherDoNotDeadlock`
   - `internal/core/mail/publication_bounds_test.go` `TestAReportToItselfIsPublishedInsideItsOwnLock`
   - `internal/core/mail/publication_bounds_test.go` `TestAPublicationReadsTheRunWithoutCleaningUp`
-  - `internal/core/mail/settle_listing_test.go` `TestSettlingWaitsForALockTheServerHolds`
-  - `internal/core/mail/settle_lock_test.go` `TestADeferredSettlementGetsAnotherPass`
-  - `internal/core/mail/settle_recorded_test.go` `TestARestartSettlesALateRefusalLeftUnread`
-  - `internal/core/mail/settle_recorded_test.go` `TestASettlingCutShortIsSettledOnceItCan`
-  - `internal/core/mail/settle_recorded_test.go` `TestALateRefusalItsStatusMissedIsRecordedThenSettled`
-  - `internal/core/mail/settle_recorded_test.go` `TestALetterReadableOnPurposeStaysUnread`
-  - `internal/core/mail/settle_recheck_test.go` `TestAForeignLetterSettlesByItsStatusUnderTheLock`
-  - `internal/core/mail/settle_recheck_test.go` `TestARecordedRefusalIsRecheckedUnderTheLock`
-  - `internal/core/mail/settle_recheck_test.go` `TestARefusalOnRecordAStopKeepsWaitsTheRetryInterval`
+  - `internal/host/delivery/settle_listing_test.go` `TestSettlingWaitsForALockTheServerHolds`
+  - `internal/host/delivery/settle_lock_test.go` `TestADeferredSettlementGetsAnotherPass`
+  - `internal/host/delivery/settle_recorded_test.go` `TestARestartSettlesALateRefusalLeftUnread`
+  - `internal/host/delivery/settle_recorded_test.go` `TestASettlingCutShortIsSettledOnceItCan`
+  - `internal/host/delivery/settle_recorded_test.go` `TestALateRefusalItsStatusMissedIsRecordedThenSettled`
+  - `internal/host/delivery/settle_recorded_test.go` `TestALetterReadableOnPurposeStaysUnread`
+  - `internal/host/delivery/settle_recheck_test.go` `TestAForeignLetterSettlesByItsStatusUnderTheLock`
+  - `internal/host/delivery/settle_recheck_test.go` `TestARecordedRefusalIsRecheckedUnderTheLock`
+  - `internal/host/delivery/settle_recheck_test.go` `TestARefusalOnRecordAStopKeepsWaitsTheRetryInterval`
 
 - **E4. A read's completion is one durable fact every channel shares.** A letter leaves
   `unread/` only by being read once a part of it was shown, and never comes back; a late
@@ -96,7 +96,7 @@ nothing lifts a stop without returning evidence.
   - `internal/core/mail/claims_test.go` `TestALetterBeingReadInPartsCannotBeTakenBack`
   - `internal/core/mail/claims_test.go` `TestTheSweepKeepsALetterBeingRead`
   - `internal/core/mail/claims_test.go` `TestALetterIsPublishedOnceAcrossReadAndSweep`
-  - `internal/core/mail/claims_delivery_test.go` `TestTheServerKeepsALetterBeingRead`
+  - `internal/host/delivery/claims_test.go` `TestTheServerKeepsALetterBeingRead`
   - `internal/cli/bridge_read_test.go` `TestAToolReadIsReadOnlyWhenEveryPartArrived`
   - `internal/cli/bridge_read_test.go` `TestARepeatedToolReadInOneTurnIsTheSameRead`
   - `internal/cli/bridge_read_test.go` `TestTheShellFinishesALostToolRead`
@@ -105,8 +105,8 @@ nothing lifts a stop without returning evidence.
   - `internal/cli/bridge_lookups_test.go` `TestAnAcknowledgmentDoesNotWriteOverAWaiterItCannotRead`
   - `internal/cli/bridge_lookups_test.go` `TestARetriedAcknowledgmentStopsOnAStatusItCannotRead`
   - `internal/core/mail/unread_test.go` `TestReadingHandsEachMessageOnce`
-  - `internal/core/mail/unread_delivery_test.go` `TestAReadDuringAPendingNoticeStands`
-  - `internal/core/mail/unread_delivery_test.go` `TestAReadIsNotUndoneByTheNoticeResult`
+  - `internal/host/delivery/unread_test.go` `TestAReadDuringAPendingNoticeStands`
+  - `internal/host/delivery/unread_test.go` `TestAReadIsNotUndoneByTheNoticeResult`
   - `internal/cli/read_test.go` `TestSendCountsAReadMessageAsDelivered`
   - `internal/cli/read_test.go` `TestTwoReadersAtOnceShowATaskOnce`
   - `internal/cli/stop_gate_test.go` `TestAReadInPartsStopsWithTheMailbox`
@@ -314,7 +314,7 @@ nothing lifts a stop without returning evidence.
   - `internal/core/mail/sweep_norun_test.go` `TestNothingThatNamesNoRunIsSweptByAge`
   - `internal/core/mail/publication_race_test.go` `TestASavedPublishedStays`
   - `internal/core/mail/publication_race_test.go` `TestACrashBeforeTheSaveLeavesTheReportMoot`
-  - `internal/core/mail/sweep_gate_test.go` `TestAStaleSweeperRetiresNothing`
+  - `internal/host/delivery/sweep_gate_test.go` `TestAStaleSweeperRetiresNothing`
   - `internal/core/mail/publication_crash_test.go` `TestAKillAtAnyWriteLandsTheReportAtMostOnce`
   - `internal/core/mail/stop_occurrence_test.go` `TestARecurringCauseOfARecordIsANewOccurrence`
   - `internal/core/mail/stop_occurrence_test.go` `TestARecurringCauseAboutAnOperationIsANewOccurrence`

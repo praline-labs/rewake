@@ -8,6 +8,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/host/delivery"
 )
 
 func TestLateMainDiscoveryPassGetsOneGroupedWake(t *testing.T) {
@@ -22,7 +23,7 @@ func TestLateMainDiscoveryPassGetsOneGroupedWake(t *testing.T) {
 	}
 	delivered := make(chan mail.Message, 4)
 	ready, done := make(chan struct{}), make(chan struct{})
-	server := &mail.Server{Dir: dir, Name: main.Name, Epoch: main.Epoch(), Ready: func() { close(ready) }, Deliver: func(_ context.Context, m mail.Message) mail.Result {
+	server := &delivery.Server{Dir: dir, Name: main.Name, Epoch: main.Epoch(), Ready: func() { close(ready) }, Deliver: func(_ context.Context, m mail.Message) mail.Result {
 		delivered <- m
 		return mail.Result{State: mail.Delivered}
 	}}

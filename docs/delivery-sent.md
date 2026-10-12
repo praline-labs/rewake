@@ -249,10 +249,11 @@ heading (and an edit's replacement `· replaces <id>`); `--owed` places it under
 ## Tests
 
 The finality races are unit tests beside the held ones, in
-`internal/core/mail/withdraw_test.go`; the halfway failures of a withdrawal and an edit in
-`internal/core/mail/withdraw_failure_test.go`, with the archive holding the tombstone after a
-halfway read and a waiting copy that will not go; the recall's place outside the window in
-`internal/core/mail/recall_test.go`; the recall's lines and the replacement's in a notice in
+`internal/host/delivery/withdraw_test.go`; the halfway failures of a withdrawal and an edit in
+`internal/host/delivery/withdraw_failure_test.go`, with the archive holding the tombstone after a
+halfway read, and a waiting copy that will not go in `withdraw_removal_test.go` beside it, built
+with the `rewakefault` tag; the recall's place outside the window in
+`internal/host/delivery/recall_test.go`; the recall's lines and the replacement's in a notice in
 `internal/core/mail/notice_recall_test.go`, and the member entries of a recall and of a
 replacement in `internal/adapter/codex/mailbox_test.go`; the references, refusals, the recall and the
 edit that sends none in `internal/cli/withdraw_test.go`; a task withdrawn with its
@@ -260,7 +261,7 @@ addenda, a read addendum that stays, an edit's replacement keeping them and the 
 look under the lock in `internal/cli/addendum_test.go`; withdraw and edit by an id an edit
 replaced, and a second withdrawal that sends no second recall, in
 `internal/cli/sent_current_test.go`; an edited notify announced at once
-beside the recall in `internal/core/mail/recall_test.go`. End to end,
+beside the recall in `internal/host/delivery/recall_test.go`. End to end,
 `withdraw-after-notice`, `edit-after-notice` and `addendum-owed` run in every column and
 check the notice the worker was shown, and `withdraw-mid-turn` holds a Codex worker's
 turn open and sees the recall steered into it ([testing-cases.md](testing-cases.md#actions-on-a-sent-message)).

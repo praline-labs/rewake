@@ -14,10 +14,10 @@ const (
 var nameExceptions = map[nameException]excuse{
 	{"internal/cli/steer.go", "claude"}:               {explainsByOneHarness, "S19", 1, "88a93d4a5671"},
 	{"internal/core/control/serve.go", "claude"}:      {explainsByOneHarness, "S19", 1, "35666bd41899"},
-	{"internal/core/mail/held.go", "claude"}:          {explainsByOneHarness, "S19", 1, "6a12b71af3f5"},
 	{"internal/core/mail/inbox.go", "claude"}:         {explainsByOneHarness, "S19", 1, "9d1f40e53eba"},
 	{"internal/core/mail/kept.go", "claude"}:          {explainsByOneHarness, "S19", 1, "cdac375051ed"},
-	{"internal/core/mail/window.go", "claude"}:        {explainsByOneHarness, "S19", 1, "faa4320befd2"},
+	{"internal/host/delivery/held.go", "claude"}:      {explainsByOneHarness, "S19", 1, "6a12b71af3f5"},
+	{"internal/host/delivery/window.go", "claude"}:    {explainsByOneHarness, "S19", 1, "faa4320befd2"},
 	{"internal/worktree/include.go", "claude"}:        {explainsByOneHarness, "S19", 3, "a005ba09a070"},
 	{"internal/worktree/include_rules.go", "claude"}:  {explainsByOneHarness, "S19", 1, "e5bfbb825bd0"},
 	{"internal/worktree/name.go", "claude"}:           {explainsByOneHarness, "S19", 2, "3a201afd2d72"},

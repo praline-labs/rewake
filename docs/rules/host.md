@@ -123,7 +123,7 @@ Tests:
 - `internal/wrap/live_test.go` `TestARunThatReportsNoneHasItsPlanLive`
 - `internal/wrap/live_test.go` `TestADeliveryWithoutALiveWakeWaits`
 - `internal/wrap/live_test.go` `TestWithoutALiveWakeNothingIsReservedOrPinned`
-- `internal/core/mail/reservation_test.go` `TestNoReservationTakesThePlainPath`
+- `internal/host/delivery/reservation_test.go` `TestNoReservationTakesThePlainPath`
 - `internal/cli/live_set_test.go` `TestASendToARunWithoutALiveWakeIsAcceptedUnwoken`
 - `internal/cli/live_set_test.go` `TestATaskToARunWithoutALiveBoundaryFails`
 - `internal/cli/live_set_test.go` `TestTheLiveBoundaryDecidesNotTheOffer`

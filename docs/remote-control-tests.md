@@ -83,7 +83,7 @@ built is in [testing-plugin.md](archive-1.x/testing-plugin.md#steering-a-session
   the run's directory, answers what it cannot carry out, records a compaction
   withdrawn before it was taken as its outcome, and passes a reservation
   refused for a compaction to the inbox as one to try again;
-  `internal/core/mail/reservation_test.go` keeps such a message pending and delivers it
+  `internal/host/delivery/reservation_test.go` keeps such a message pending and delivers it
   on the next pass. `activity_test.go` holds the record of what a conversation does
   to the frames that set and clear it: a compaction refused while an inline review is
   acknowledged and sent past a detached one; an interrupt naming the turn a

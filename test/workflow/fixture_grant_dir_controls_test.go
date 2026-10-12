@@ -20,8 +20,8 @@ var mutantGrantNotRechecked = mutation{
 // works on it.
 var mutantGrantRefusalUntold = mutation{
 	name:  "grant-refusal-untold",
-	file:  "internal/core/mail/batch.go",
-	edits: []edit{{"if result.State == Failed && !result.Withdrawn && CarriesGrant(message) {", "if false && result.State == Failed && !result.Withdrawn && CarriesGrant(message) {"}},
+	file:  "internal/host/delivery/batch.go",
+	edits: []edit{{"if result.State == mail.Failed && !result.Withdrawn && mail.CarriesGrant(message) {", "if false && result.State == mail.Failed && !result.Withdrawn && mail.CarriesGrant(message) {"}},
 }
 
 // send writes the letter without registering its grant: no wrapper confirms

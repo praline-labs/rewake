@@ -24,7 +24,7 @@ that they are checked like the rest ([stage3-tests.md](../v2/stage3-tests.md#how
   - `internal/core/mail/confirm_test.go` `TestAnInterimTieDoesNotDependOnOrder`
   - `internal/core/mail/confirm_test.go` `TestTheInterimRecordOfAnotherRun`
   - `internal/core/mail/pending_test.go` `TestAnInterimReportSettlesNothing`
-  - `internal/core/mail/pending_delivery_test.go` `TestAnInterimReportIsNotTakenByAWaitingQuestion`
+  - `internal/host/delivery/pending_test.go` `TestAnInterimReportIsNotTakenByAWaitingQuestion`
   - `internal/core/mail/journal_unknown_test.go` `TestAnInterimEndReplacesAnEndedRunsRecord`
   - `internal/cli/inbox_awaited_test.go` `TestAwaitedTakesTheLatestInterimOrStop`
   - `test/workflow/awaited_view_test.go` `TestAwaitedView`

@@ -7,6 +7,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/host/delivery"
 )
 
 // shortWindow serves the wrappers a test starts with a window a fraction of
@@ -14,9 +15,9 @@ import (
 // the real three seconds would only add to every run.
 func shortWindow(t *testing.T) {
 	t.Helper()
-	previous := mail.Coalescing
-	mail.Coalescing = mail.Window{Quiet: time.Second, Cap: 1500 * time.Millisecond}
-	t.Cleanup(func() { mail.Coalescing = previous })
+	previous := delivery.Coalescing
+	delivery.Coalescing = delivery.Window{Quiet: time.Second, Cap: 1500 * time.Millisecond}
+	t.Cleanup(func() { delivery.Coalescing = previous })
 }
 
 // The wrapper serves its mailbox with the collection window: notes that

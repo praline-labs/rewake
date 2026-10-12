@@ -19,9 +19,9 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/control"
-	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/host/delivery"
 	"github.com/praline-labs/rewake/internal/host/launch"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
@@ -270,7 +270,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 		if plan.Thread != nil {
 			thread = plan.Thread.Thread
 		}
-		server := &mail.Server{
+		server := &delivery.Server{
 			Ready:  func() { close(serviceReady) },
 			Dir:    request.Dir,
 			Thread: threadIfLive(thread, live),
@@ -281,7 +281,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 			// changed hands, has no business in there.
 			Owns: func() bool { return registry.OwnsName(request.Dir, name, epoch) },
 			// A burst of letters that ask for nothing wakes the session once.
-			Window:     mail.Coalescing,
+			Window:     delivery.Coalescing,
 			CheckGrant: checkGrant(request.Dir, name, epoch, request.Protected),
 			PinGrant:   pinGrant(request.Dir, name, epoch),
 			Deliver:    wakeIfLive(plan.Wake, live),

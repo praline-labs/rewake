@@ -16,6 +16,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/registry/registrytest"
+	"github.com/praline-labs/rewake/internal/host/delivery"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -124,7 +125,7 @@ func (l *headsUpLab) nextRunSweeps(t *testing.T) <-chan struct{} {
 	next, _ := webRun(t, l.dir)
 	ctx, cancel := context.WithCancel(context.Background())
 	swept, served := make(chan struct{}), make(chan struct{})
-	server := &mail.Server{Dir: l.dir, Name: "web", Epoch: next.Epoch(), Ready: func() { close(swept) }}
+	server := &delivery.Server{Dir: l.dir, Name: "web", Epoch: next.Epoch(), Ready: func() { close(swept) }}
 	go func() {
 		defer close(served)
 		server.Serve(ctx)

@@ -19,6 +19,7 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter/fixture"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/host/delivery"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -166,7 +167,7 @@ func TestNoNoticePrecedesAReservedLettersReadability(t *testing.T) {
 	if !ok || plan.Thread == nil {
 		t.Fatal("the fixture's run reserves nothing or follows no thread")
 	}
-	server := &mail.Server{Dir: dir, Name: "api", Epoch: "1.1", Thread: plan.Thread.Thread, Deliver: plan.Wake.Deliver, Reserve: reserving.Reserve}
+	server := &delivery.Server{Dir: dir, Name: "api", Epoch: "1.1", Thread: plan.Thread.Thread, Deliver: plan.Wake.Deliver, Reserve: reserving.Reserve}
 	ctx, cancel := context.WithCancel(context.Background())
 	served := make(chan struct{})
 	go func() { defer close(served); server.Serve(ctx) }()

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/host/delivery"
 )
 
 // sendCommand is send's entry in the command table.
@@ -32,7 +32,7 @@ func sendCommand(catalog adapter.Catalog) *Command {
 		Notes: []string{
 			"A task is the default: the session works and ends its turn, and its final message comes back to you as a \"Rewake: <session> finished\" line.",
 			"A question blocks until that final message and prints it; run a long one in the background.",
-			fmt.Sprintf("A notify waits up to %s to share one notice with other mail, and send waits with it; a task or a question is announced at once.", mail.Coalescing.Cap),
+			fmt.Sprintf("A notify waits up to %s to share one notice with other mail, and send waits with it; a task or a question is announced at once.", delivery.Coalescing.Cap),
 			"A verified main sees the answering session's state line above a question's answer; rewake list --help says what it holds.",
 			"Quote the text as one argument: loose words are refused, not joined.",
 			"A granted directory is resolved to its real path, checked again at delivery and handed over only while the session is idle, so it holds from the task's first turn. It lasts while the task is open, through a stopped or pending turn. The report, an error that ends the turn, or rewake withdraw settles the task, and the grant is taken back after that, when depending on the harness. A grant is for writing; what a session may read is its harness's business.",

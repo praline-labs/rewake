@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/host/delivery"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -29,7 +30,7 @@ func TestMixedGroupPeekThenSelectedReadAndReadAll(t *testing.T) {
 		messages = append(messages, m)
 	}
 	delivered := make(chan mail.Message, 4)
-	server := &mail.Server{Dir: dir, Name: self.Name, Epoch: self.Epoch(), Thread: func() (string, error) { return "selected-thread", nil }, Deliver: func(_ context.Context, m mail.Message) mail.Result {
+	server := &delivery.Server{Dir: dir, Name: self.Name, Epoch: self.Epoch(), Thread: func() (string, error) { return "selected-thread", nil }, Deliver: func(_ context.Context, m mail.Message) mail.Result {
 		delivered <- m
 		return mail.Result{State: mail.Delivered}
 	}}

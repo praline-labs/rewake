@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/host/delivery"
 )
 
 func TestFixedTwoThenFourThroughPeekAndSelectedReads(t *testing.T) {
@@ -23,7 +24,7 @@ func TestFixedTwoThenFourThroughPeekAndSelectedReads(t *testing.T) {
 			}
 			first := []mail.Message{put(mail.Note), put(mail.Note)}
 			signals := make(chan mail.Message, 4)
-			s := &mail.Server{Dir: dir, Name: self.Name, Epoch: self.Epoch(), Deliver: func(_ context.Context, m mail.Message) mail.Result {
+			s := &delivery.Server{Dir: dir, Name: self.Name, Epoch: self.Epoch(), Deliver: func(_ context.Context, m mail.Message) mail.Result {
 				signals <- m
 				return mail.Result{State: mail.Delivered}
 			}}

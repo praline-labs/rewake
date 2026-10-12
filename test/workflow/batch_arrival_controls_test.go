@@ -23,7 +23,7 @@ import (
 // leaves only after them.
 var mutantWindow = mutation{
 	name: "window",
-	file: "internal/core/mail/serve.go",
+	file: "internal/host/delivery/serve.go",
 	edits: []edit{{
 		"collectionInterval = 150 * time.Millisecond",
 		"collectionInterval = 10 * time.Second",
@@ -37,7 +37,7 @@ var mutantUnwindowed = mutation{
 	name: "unwindowed",
 	file: "internal/wrap/wrap.go",
 	edits: []edit{{
-		"\t\t\tWindow:     mail.Coalescing,\n",
+		"\t\t\tWindow:     delivery.Coalescing,\n",
 		"",
 	}},
 }
@@ -76,19 +76,19 @@ var mutantPeekConsumes = mutation{
 // exactly the replay the contract forbids, gated by the retry interval.
 var mutantReplay = mutation{
 	name: "replay",
-	file: "internal/core/mail/outcome.go",
+	file: "internal/host/delivery/outcome.go",
 	edits: []edit{
 		{
 			"if result, known := s.outcomes[message.ID]; known {\n" + heldBranch +
 				"\t\ts.publish(message.ID, result)\n\t\treturn true\n\t}\n" +
-				"\tstatus, ok, err := ReadStatus(s.Dir, s.Name, message.ID)\n" +
+				"\tstatus, ok, err := mail.ReadStatus(s.Dir, s.Name, message.ID)\n" +
 				"\tif err != nil {\n\t\ts.attempts[message.ID] = time.Now()\n\t\treturn true\n\t}\n" +
-				"\tif !ok || status.State == Pending || status.State == Held {",
-			"if result, known := s.outcomes[message.ID]; known && result.State != Delivered {\n" + heldBranch +
+				"\tif !ok || status.State == mail.Pending || status.State == mail.Held {",
+			"if result, known := s.outcomes[message.ID]; known && result.State != mail.Delivered {\n" + heldBranch +
 				"\t\ts.publish(message.ID, result)\n\t\treturn true\n\t}\n" +
-				"\tstatus, ok, err := ReadStatus(s.Dir, s.Name, message.ID)\n" +
+				"\tstatus, ok, err := mail.ReadStatus(s.Dir, s.Name, message.ID)\n" +
 				"\tif err != nil {\n\t\ts.attempts[message.ID] = time.Now()\n\t\treturn true\n\t}\n" +
-				"\tif !ok || status.State == Pending || status.State == Held || status.State == Delivered {",
+				"\tif !ok || status.State == mail.Pending || status.State == mail.Held || status.State == mail.Delivered {",
 		},
 	},
 	// The settling of a delivered letter is mail's, the replay the server's.
@@ -103,7 +103,7 @@ var mutantReplay = mutation{
 
 // heldBranch is the held message's way out of alreadySettled, which the replay
 // mutant leaves as it is.
-const heldBranch = "\t\tif result.State == Held {\n\t\t\ts.stillHeld(message, result)\n\t\t\treturn true\n\t\t}\n"
+const heldBranch = "\t\tif result.State == mail.Held {\n\t\t\ts.stillHeld(message, result)\n\t\t\treturn true\n\t\t}\n"
 
 // batchControl pairs a mutation with the observation it must take down.
 type batchControl struct {

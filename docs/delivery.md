@@ -245,11 +245,11 @@ the bound is the only gate.
 
 **A reservation that cannot be taken in three seconds fails the message, it does not
 hold it.** September 22, 2026: the reservation is bounded at three seconds twice, by
-the delivery context in `internal/core/mail/prepare.go` and again by `Reserve` in
+the delivery context in `internal/host/delivery/prepare.go` and again by `Reserve` in
 `internal/adapter/codex/server_delivery.go`. On a timeout, `Reserve` in
 `internal/adapter/codex/gateway/reservation.go` returns a plain context error; `refuse`
-in `internal/core/mail/prepare.go` wraps it into `ErrThreadUnavailable`, declared in
-`internal/core/mail/thread.go`; and `internal/core/mail/batch.go` turns that into `failed`
+in `internal/host/delivery/prepare.go` wraps it into `ErrThreadUnavailable`, declared in
+`internal/core/mail/thread.go`; and `internal/host/delivery/batch.go` turns that into `failed`
 rather than `pending`. So a wrapper
 that waited for the thread to go idle before delivering would not deliver late — it
 would not deliver at all, and the sender would be told the delivery failed. That is
@@ -320,7 +320,7 @@ harness taking the notice, inside a sender's default five-second wait for its st
 so a lone `--notify` from an agent still returns delivered rather than pending. Whatever
 arrives meanwhile goes in the same notice.
 
-What may wait is decided by kind, in `canWait` (`internal/core/mail/window.go`), from
+What may wait is decided by kind, in `canWait` (`internal/host/delivery/window.go`), from
 `AsksForWork`: `notify` and the four reports (`finished`, `error`, `stopped`,
 `pending`) wait. A `task`, a `question` and a kind this build does not know are work —
 the same reading `Owed` gives an unknown kind — and go at once, taking any waiting mail
@@ -342,7 +342,7 @@ up to 4s to be announced together with other mail that arrives meanwhile`, so a 
 whose own wait ends first prints why. A wrapper that exits in the window changes nothing
 about the mail: reports stay readable for their epoch and the rest is refused as for any
 undelivered message on shutdown. The mailbox server a test builds has no window unless
-it sets `Window`; the wrapper sets `mail.Coalescing`. A build may shorten that window
+it sets `Window`; the wrapper sets `delivery.Coalescing`. A build may shorten that window
 through `-ldflags -X` on `builtQuiet` and `builtCap`, and the workflow suite's does
 ([testing-pool.md](testing-pool.md#waits-the-suite-shortens)); a release build sets neither.
 A multi-message signal says `Rewake: <n> new messages`, followed by one indented

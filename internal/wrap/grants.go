@@ -12,6 +12,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/grant/authority"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/host/delivery"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -20,7 +21,7 @@ import (
 // cannot find: the wait of the task that carries it, and some to spare for the
 // pass that delivers it. One whose task it finds it keeps until that task is
 // closed (authority.Authority).
-const grantLifetime = mail.DefaultTTL + 5*time.Minute
+const grantLifetime = delivery.DefaultTTL + 5*time.Minute
 
 // checkGrant checks a message's grant again at delivery, with this session's
 // own view of the machine — its home, its PATH, where each harness keeps its

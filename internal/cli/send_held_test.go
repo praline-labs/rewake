@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/host/delivery"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -92,7 +93,7 @@ func TestAQuestionStopsWaitingWhenItsHoldFails(t *testing.T) {
 // later. A second covers the first collection and the harness taking the
 // notice, with room to spare.
 func TestTheWindowFitsSendsWait(t *testing.T) {
-	if mail.Coalescing.Cap+time.Second > defaultWait {
-		t.Fatalf("the window's cap %s leaves send's %s wait no second to see the notice go", mail.Coalescing.Cap, defaultWait)
+	if delivery.Coalescing.Cap+time.Second > defaultWait {
+		t.Fatalf("the window's cap %s leaves send's %s wait no second to see the notice go", delivery.Coalescing.Cap, defaultWait)
 	}
 }

@@ -17,7 +17,7 @@ import (
 // machine: the cases run side by side (pool_test.go), and a wait cut to the
 // bone on an idle machine is a flaky case on a busy one.
 const (
-	// suiteQuiet and suiteCap are the coalescing window's (internal/core/mail,
+	// suiteQuiet and suiteCap are the coalescing window's (internal/host/delivery,
 	// three and four seconds). The scenario that observes the window,
 	// batch-arrival, spaces its heads-ups 600 ms apart and needs them inside
 	// this quiet and cap. At 1.5 and 2 seconds, one crosswise run in four lost
@@ -48,8 +48,8 @@ const suiteTags = "rewakefixture"
 // test and every mutant alike: a mutant built at the real lengths would be
 // judged against windows its cases no longer wait for.
 var suiteFlags = []string{"-ldflags", strings.Join([]string{
-	buildValue("core/mail", "builtQuiet", suiteQuiet),
-	buildValue("core/mail", "builtCap", suiteCap),
+	buildValue("host/delivery", "builtQuiet", suiteQuiet),
+	buildValue("host/delivery", "builtCap", suiteCap),
 	buildValue("cli", "builtPickup", suitePickup),
 	buildValue("wrap", "builtLetterWait", suiteLetterWait),
 	buildValue("wrap", "builtNoticeScan", suiteNoticeScan),

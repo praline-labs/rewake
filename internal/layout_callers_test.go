@@ -24,9 +24,9 @@ import (
 // say so. The table is a discipline of the repository, not a capability of the
 // lock: a new caller is reviewed here before it lands.
 var lockedCallers = map[string][]string{
-	"internal/core/mail.SweepFinishedLocked": {"internal/core/mail.(*Server).sweepFinished"},
-	"internal/core/mail.SettleLocked":        {"internal/core/mail.(*Server).settleOutcome", "internal/core/mail.(*Server).settleUnreadOnly"},
-	"internal/core/mail.SweepAwaitingLocked": {"internal/core/mail.(*Server).followEarlierRun"},
+	"internal/core/mail.SweepFinishedLocked": {"internal/host/delivery.(*Server).sweepFinished"},
+	"internal/core/mail.SettleLocked":        {"internal/host/delivery.(*Server).settleOutcome", "internal/host/delivery.(*Server).settleUnreadOnly"},
+	"internal/core/mail.SweepAwaitingLocked": {"internal/host/delivery.(*Server).followEarlierRun"},
 }
 
 // TestTheLockedEntryPointsKeepTheirCallers holds lockedCallers over the

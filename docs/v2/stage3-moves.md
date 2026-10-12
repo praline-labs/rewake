@@ -248,9 +248,13 @@ the review checks by rerunning the inventory.
 
 **The move**: the delivery files to `host/delivery` (`package delivery`), importing
 `core/mail`; the layout test's file-group entry goes. **String consumers**: the
-mutations of `serve`, `outcome` and `thread`, one each, and none of `held` (S13's count,
-October 11, 2026; `b6ed4ed` had `held`, `outcome`, `serve` (2), `thread`); `wrap`'s
-construction of the server. **[codex]**: the delivery server is process behaviour, and the split decides
+mutations of `serve`, `outcome` (the control on `settle.go` stays in mail), `batch` and
+`prepare`, one each, whose text gains the `mail.` qualifiers, and `wrap`'s `unwindowed`,
+which names `delivery.Coalescing`; `thread`'s stays on mail's `thread.go` and none is of
+`held` (S13's count, October 11, 2026, named `serve`, `outcome` and `thread`; `b6ed4ed`
+had `held`, `outcome`, `serve` (2), `thread`); the suite's `-X` of `builtQuiet` and
+`builtCap`; the layout tables' paths (the name exceptions of `held.go` and `window.go`,
+the callers of the locked entry points); `wrap`'s construction of the server. **[codex]**: the delivery server is process behaviour, and the split decides
 which lock and which sweep belong to whom.
 
 ## S16. `tool` and `host` move
