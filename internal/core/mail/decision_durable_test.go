@@ -16,20 +16,30 @@ import (
 // directory and the mailbox's flushed. Whichever of those flushes keeps
 // failing — the decisions directory's among them, after which the decision's
 // link is visible and its publication answered an error — the barrier stops
-// every time on that decision: no resend is linked, no note is told, the
-// occurrence it disposes stays open, no marker says it durable, and the
-// original journal's tail does not run. Once the flush succeeds the barrier
-// makes it durable and installs it once, and the occurrence is disposed.
+// every time on that decision, whichever its choice: no resend is linked, no
+// note is told, the occurrence it disposes stays open, no marker says it
+// durable, the evidence of the installation does not take it for installed,
+// and the original journal's tail does not run. Once the flush succeeds the
+// barrier makes it durable and installs it once, and the occurrence is
+// disposed.
 func TestDecisionEffectsWaitForTheDecisionToBeDurable(t *testing.T) {
-	for _, flushed := range []string{"the decision", "the decisions directory", "the mailbox"} {
-		t.Run(flushed, func(t *testing.T) {
+	for _, run := range []struct{ flushed, choice string }{
+		{"the decision", ChoiceNotArrived},
+		{"the decisions directory", ChoiceNotArrived},
+		{"the mailbox", ChoiceNotArrived},
+		{"the decision", ChoiceArrived},
+		{"the decisions directory", ChoiceArrived},
+		{"the mailbox", ChoiceArrived},
+	} {
+		flushed := run.flushed
+		t.Run(flushed+", "+run.choice, func(t *testing.T) {
 			lab := newDecisionLab(t)
 			op := "end/" + lab.report.ID
 			stop, err := live(lab.dir).recordOccurrence("api", stopCause{Kind: causeEffect, Op: op, Paths: []string{"inbox/web/a"}, Cause: "the report's outcome"})
 			if err != nil {
 				t.Fatal(err)
 			}
-			d := lab.decision(t, ChoiceNotArrived)
+			d := lab.decision(t, run.choice)
 			d.Disposes = []Disposal{{Key: stop.key, Occurrence: stop.id}}
 			path := DecisionPath(lab.dir, "api", lab.report.ID)
 			if err := state.EnsureSubdir(filepath.Dir(path)); err != nil {
@@ -92,7 +102,7 @@ func TestDecisionEffectsWaitForTheDecisionToBeDurable(t *testing.T) {
 				t.Fatalf("no marker: %v", err)
 			}
 			letters := lettersOf(t, lab.dir, "web")
-			if letters[resent.Reports[0].ID] != 1 || letters[d.Notes[0].Note.ID] != 1 || letters[lab.report.ID] != 0 {
+			if run.choice == ChoiceNotArrived && letters[resent.Reports[0].ID] != 1 || letters[d.Notes[0].Note.ID] != 1 || letters[lab.report.ID] != 0 {
 				t.Fatalf("web holds %v", letters)
 			}
 			if slices.ContainsFunc(stopsOnRecord(t, lab.dir, "api"), func(o openStop) bool { return o.id == stop.id }) {

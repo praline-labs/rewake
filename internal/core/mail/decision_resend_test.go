@@ -22,11 +22,11 @@ func doneResendRaw(t *testing.T, d Decision, summary string) string {
 }
 
 // Bytes under a resend's name are the resend only when they are its envelope,
-// open or done, and the resend its decision holds. A record of another kind, a
-// journal of another run or report, an open one that keeps a summary or one
-// renamed done that does not say so is an unknown: the view names it, the
-// barrier stops on it every time, nothing is published on it, the original
-// journal's tail does not run, and the bytes stay as they are.
+// open or done, and the resend its decision holds. A record of another kind,
+// a journal of another run, operation or report, an open one that keeps a
+// summary or one renamed done that does not say so is an unknown: the view
+// names it, the barrier stops on it every time, nothing is published on it,
+// the original journal's tail does not run, and the bytes stay as they are.
 func TestDecisionResendOfAnotherKindStaysUnknown(t *testing.T) {
 	cases := map[string]struct {
 		done bool
@@ -43,6 +43,17 @@ func TestDecisionResendOfAnotherKindStaysUnknown(t *testing.T) {
 		"another run": {true, func(t *testing.T, d Decision) string {
 			held, _ := d.resendJournal()
 			raw, _ := json.Marshal(TurnJournal{Epoch: "another-run", Op: held.Op, Done: true})
+			return string(raw)
+		}},
+		"another operation": {false, func(t *testing.T, d Decision) string {
+			held, _ := d.resendJournal()
+			held.Op = NewID()
+			raw, _ := json.Marshal(held)
+			return string(raw)
+		}},
+		"another operation, done": {true, func(t *testing.T, d Decision) string {
+			held, _ := d.resendJournal()
+			raw, _ := json.Marshal(TurnJournal{Epoch: held.Epoch, Op: NewID(), Done: true})
 			return string(raw)
 		}},
 		"a summary while open": {false, func(t *testing.T, d Decision) string {
