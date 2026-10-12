@@ -23,8 +23,9 @@ const (
 	SameWords       = "same-words"
 	OppositeWords   = "opposite-words"
 	ByRecipient     = "recipient-verified"
-	ByPersonRLive   = "person-r-alive"
-	ByPersonREnded  = "person-r-ended"
+	ByPerson        = "person"
+	RLivesOn        = "r-lives-on"
+	REndsAfterD     = "r-ends-after-decision"
 	RReads          = "r-reads"
 	SweepPromotes   = "sweep-promotes"
 	NewRunDropsMark = "new-run-drops-marks"
@@ -87,7 +88,11 @@ func Partitions() []Partition {
 }
 
 // decision is one decision on R: its truth and evidence, the choice and a
-// second command, who decides, r's activity and the sender's life.
+// second command, who decides, r's life at the decision and after it, the
+// activity in r's mailbox and the sender's life. Life and authority at D are
+// apart from what happens later: a decision verified by r while it lived may
+// be followed by r's end and a new run of its name, and a mark that does not
+// read at D may be repaired before the sweep promotes it.
 func decision() Partition {
 	return Partition{
 		Name: "decision",
@@ -97,31 +102,43 @@ func decision() Partition {
 			{"later", values(StaysUnknown, ReturnsWritten, ReturnsAbsent, ReturnsBeforeD, RetiredProof)},
 			{"choice", values(Arrived, NotArrived)},
 			{"second", values(None, SameWords, OppositeWords)},
-			{"decider", values(ByRecipient, ByPersonRLive, ByPersonREnded)},
+			{"decider", values(ByRecipient, ByPerson)},
+			{"r-at-decision", values(RAlive, REndsBeforeD)},
+			{"r-after-decision", values(None, RLivesOn, REndsAfterD)},
 			{"activity", values(None, RReads, SweepPromotes, NewRunDropsMark)},
 			{"sender", values(SenderAlive, SenderEndsFirst, SenderEndsAfter)},
 		},
 		Feasible: func(w World) bool {
 			truth, later, activity := w.Value("truth"), w.Value("later"), w.Value("activity")
-			rEnded := w.Value("decider") == ByPersonREnded
+			endedAtD := w.Value("r-at-decision") == REndsBeforeD
+			after := w.Value("r-after-decision")
+			rEnded := endedAtD || after == REndsAfterD
 			written := later != ReturnsBeforeD
 			switch {
+			// What r does after D applies only to an r alive at D.
+			case endedAtD != (after == None):
+				return false
+			// r's authority ends with it: a verified decision is r's while it lives.
+			case w.Value("decider") == ByRecipient && endedAtD:
+				return false
 			// Evidence agrees with the truth (the excluded combinations).
 			case later == ReturnsWritten && truth != Landed, later == ReturnsAbsent && truth != NotLanded:
 				return false
-			// A proof is retired only once r ended and the next run dropped its marks.
+			// A proof is retired only once r ended, at D or after, and the next
+			// run dropped its marks.
 			case later == RetiredProof && (!rEnded || activity != NewRunDropsMark):
 				return false
 			// Evidence before D's write leaves no decision: nothing to repeat, no effect.
 			case !written && (w.Value("second") != None || w.Value("sender") != SenderAlive):
 				return false
-			// Only a landed letter is read or swept; a mark that does not read
-			// keeps the sweep from promoting it.
+			// Only a landed letter is read or swept.
 			case (activity == RReads || activity == SweepPromotes) && truth != Landed:
 				return false
-			case activity == SweepPromotes && w.Value("at-decision") == MarkUnreadable:
+			// A mark that does not read is promoted only once a repair lets it
+			// read, which is its evidence returning.
+			case activity == SweepPromotes && w.Value("at-decision") == MarkUnreadable && later != ReturnsWritten && later != ReturnsBeforeD:
 				return false
-			// A new run of the name means r ended.
+			// A new run of the name means r ended, at D or after.
 			case activity == NewRunDropsMark && !rEnded:
 				return false
 			}
@@ -131,8 +148,9 @@ func decision() Partition {
 }
 
 // resend is R decided "did not arrive" and J' running: the truth and evidence
-// of R', a decision on it when unknown, r's end at each point of J”s path and
-// the sender's life.
+// of R', a decision on it when unknown, who decided R, r's end at each point
+// of J”s path and the sender's life. r ended before D leaves the decision to
+// the person.
 func resend() Partition {
 	return Partition{
 		Name: "resend",
@@ -140,6 +158,7 @@ func resend() Partition {
 			{"r-prime", values(NoneThenPublished, AbsentThenPublished, UnknownIntentLanded, UnknownIntentNot,
 				UnknownLetterLanded, UnknownLetterNot, UnknownMarkLanded, UnknownMarkNot, MootNoWrite)},
 			{"second-choice", values(None, Arrived, NotArrived)},
+			{"decider", values(ByRecipient, ByPerson)},
 			{"r-life", values(RAlive, REndsBeforeD, REndsBeforeLive, REndsInSection, REndsToIntent,
 				REndsToMark, REndsToSave, REndsToTail, REndsUnknown)},
 			{"sender", values(SenderAlive, SenderEndsFirst, SenderEndsAfter)},
@@ -148,6 +167,9 @@ func resend() Partition {
 			prime, life := w.Value("r-prime"), w.Value("r-life")
 			unknown := isUnknown(prime)
 			if (w.Value("second-choice") != None) != unknown {
+				return false
+			}
+			if life == REndsBeforeD && w.Value("decider") == ByRecipient {
 				return false
 			}
 			switch life {
