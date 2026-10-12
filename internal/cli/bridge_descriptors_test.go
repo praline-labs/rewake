@@ -51,14 +51,14 @@ func TestTheToolsAreTheAllowlist(t *testing.T) {
 // beside the positionals the command needs, gives words the table parses as
 // that command with that flag or positional.
 func TestEachDescriptorParsesBackToItsCommand(t *testing.T) {
-	for _, tool := range ToolDescriptors() {
+	for _, descriptor := range ToolDescriptors() {
 		base := map[string]any{}
-		for _, param := range tool.Params {
+		for _, param := range descriptor.Params {
 			if param.Kind == bridge.ParamWord {
 				base[param.Name] = "a " + param.Name
 			}
 		}
-		for _, param := range tool.Params {
+		for _, param := range descriptor.Params {
 			arguments := map[string]any{}
 			for name, value := range base {
 				arguments[name] = value
@@ -70,15 +70,15 @@ func TestEachDescriptorParsesBackToItsCommand(t *testing.T) {
 				arguments[param.Name] = "1"
 			}
 			raw, _ := json.Marshal(arguments)
-			words, err := tool.Words(raw)
+			words, err := descriptor.Words(raw)
 			if err != nil {
-				t.Fatalf("%s with %s: %v", tool.Name, param.Name, err)
+				t.Fatalf("%s with %s: %v", descriptor.Name, param.Name, err)
 			}
 			result, err := testTable().parse(words)
 			if err != nil {
-				t.Fatalf("%s with %s: %q does not parse: %v", tool.Name, param.Name, words, err)
+				t.Fatalf("%s with %s: %q does not parse: %v", descriptor.Name, param.Name, words, err)
 			}
-			if result.Call.Command == nil || result.Call.Command.Name != tool.Name {
+			if result.Call.Command == nil || result.Call.Command.Name != descriptor.Name {
 				t.Fatalf("%q parses as another command", words)
 			}
 			if param.Kind != bridge.ParamWord {

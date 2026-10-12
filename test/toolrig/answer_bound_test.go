@@ -36,8 +36,8 @@ func TestATransportThatStopsReading(t *testing.T) {
 			turn := r.nextTurn()
 			c := toolCall{id: "unread-answer", turn: turn, words: []string{"inbox"}}
 			r.observe(turn, c.id, c.words)
-			tool, arguments := toolOf(c.words)
-			asked := command{Op: "request", Turn: turn, Call: c.id, Tool: tool, Arguments: arguments}
+			name, arguments := toolOf(c.words)
+			asked := command{Op: "request", Turn: turn, Call: c.id, Tool: name, Arguments: arguments}
 			if leg == "it reads late" {
 				asked.ReadAfter = exchange + time.Second
 				answer, ended := r.requestWith(asked)

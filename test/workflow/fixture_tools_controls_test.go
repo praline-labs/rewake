@@ -24,7 +24,7 @@ const toolRefusedFile = "internal/bridge/endpoint/transport.go"
 // toolRefused is the edit that refuses every call of one tool and runs
 // nothing, as a tool that does nothing would answer.
 func toolRefused(tool string) []edit {
-	first := "\ttool, ok := bridge.FindTool(e.cfg.Tools, call.Tool)\n"
+	first := "\tdescriptor, ok := bridge.FindTool(e.cfg.Tools, call.Tool)\n"
 	return []edit{{first, "\tif call.Tool == \"" + tool + "\" {\n\t\treturn substitute(\"Rewake: the control refuses this tool, so nothing ran.\\n\").encoded()\n\t}\n" + first}}
 }
 

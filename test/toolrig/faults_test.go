@@ -221,7 +221,7 @@ func toolOf(words []string) (string, json.RawMessage) {
 	if len(words) == 0 {
 		return "", nil
 	}
-	tool, ok := bridge.FindTool(cli.ToolDescriptors(), words[0])
+	descriptor, ok := bridge.FindTool(cli.ToolDescriptors(), words[0])
 	if !ok {
 		return words[0], nil
 	}
@@ -240,7 +240,7 @@ func toolOf(words []string) (string, json.RawMessage) {
 		}
 		name, value, inline := strings.Cut(strings.TrimPrefix(word, "--"), "=")
 		kind := ""
-		for _, param := range tool.Params {
+		for _, param := range descriptor.Params {
 			if param.Name == name {
 				kind = param.Kind
 			}
@@ -255,7 +255,7 @@ func toolOf(words []string) (string, json.RawMessage) {
 			i++
 		}
 	}
-	for _, param := range tool.Params {
+	for _, param := range descriptor.Params {
 		if param.Kind == bridge.ParamWord && len(positionals) > 0 {
 			arguments[param.Name], positionals = positionals[0], positionals[1:]
 		}
@@ -264,5 +264,5 @@ func toolOf(words []string) (string, json.RawMessage) {
 		arguments["more words"] = strings.Join(positionals, " ")
 	}
 	encoded, _ := json.Marshal(arguments)
-	return tool.Name, encoded
+	return descriptor.Name, encoded
 }

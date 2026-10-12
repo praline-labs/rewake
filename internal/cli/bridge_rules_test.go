@@ -324,8 +324,8 @@ func TestAnEscapedDiagnosticFits(t *testing.T) {
 	if !bridge.Fits(out, errOut) || out == "" || !strings.Contains(errOut, "cut here") {
 		t.Fatalf("encoded size %d: %.80q", bridge.EncodedSize(out, errOut), errOut)
 	}
-	tool := newToolCaller(t)
-	got := tool.run("inbox", "--"+strings.Repeat("<", 1000))
+	caller := newToolCaller(t)
+	got := caller.run("inbox", "--"+strings.Repeat("<", 1000))
 	if got.code != ExitUsage || !bridge.Fits(got.out, got.errOut) || !strings.Contains(got.errOut, "cut here") {
 		t.Fatalf("a parser refusal: %d, encoded %d: %.80q", got.code, bridge.EncodedSize(got.out, got.errOut), got.errOut)
 	}

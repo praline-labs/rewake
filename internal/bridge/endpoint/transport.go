@@ -119,11 +119,11 @@ func (e *Endpoint) serveCall(conn *net.UnixConn, reader *bufio.Reader, writer *l
 
 // runCall takes one call from its arguments to its answer.
 func (e *Endpoint) runCall(call ToolCall, arrived int64) ToolAnswer {
-	tool, ok := bridge.FindTool(e.cfg.Tools, call.Tool)
+	descriptor, ok := bridge.FindTool(e.cfg.Tools, call.Tool)
 	if !ok {
 		return substitute("Rewake: this run offers no tool named " + quoted(call.Tool) + ", so nothing ran.\n").encoded()
 	}
-	words, err := tool.Words(call.Arguments)
+	words, err := descriptor.Words(call.Arguments)
 	if err != nil {
 		return childAnswer{stderr: "Rewake: " + err.Error() + "; nothing ran.\n", code: 2}.encoded()
 	}

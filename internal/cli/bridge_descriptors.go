@@ -34,7 +34,7 @@ func (t *table) toolDescriptors() []bridge.ToolDescriptor {
 		if command == nil {
 			continue
 		}
-		tool := bridge.ToolDescriptor{Name: name, Summary: command.Summary}
+		descriptor := bridge.ToolDescriptor{Name: name, Summary: command.Summary}
 		for _, flag := range toolFlags[name] {
 			option, ok := t.lookupOption(command, flag)
 			if !ok {
@@ -44,16 +44,16 @@ func (t *table) toolDescriptors() []bridge.ToolDescriptor {
 			if option.Value != "" {
 				kind = bridge.ParamValue
 			}
-			tool.Params = append(tool.Params, bridge.ToolParam{Name: flag, Kind: kind, Description: option.Summary})
+			descriptor.Params = append(descriptor.Params, bridge.ToolParam{Name: flag, Kind: kind, Description: option.Summary})
 		}
 		for index, placeholder := range positionalNames(command) {
 			description := ""
 			if index < len(toolPositionals[name]) {
 				description = toolPositionals[name][index]
 			}
-			tool.Params = append(tool.Params, bridge.ToolParam{Name: placeholder, Kind: bridge.ParamWord, Description: description, Required: true})
+			descriptor.Params = append(descriptor.Params, bridge.ToolParam{Name: placeholder, Kind: bridge.ParamWord, Description: description, Required: true})
 		}
-		tools = append(tools, tool)
+		tools = append(tools, descriptor)
 	}
 	return tools
 }

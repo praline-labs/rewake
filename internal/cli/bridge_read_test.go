@@ -22,14 +22,14 @@ var longText = strings.Repeat("данные и \"кавычки\" — ещё с�
 var receiptLine = regexp.MustCompile(`receipt ([0-9a-f]{24})`)
 
 // readAll follows a read under the tool from its first words to its end.
-func readAll(t *testing.T, tool *toolCaller, words ...string) []toolRun {
+func readAll(t *testing.T, caller *toolCaller, words ...string) []toolRun {
 	t.Helper()
 	var answers []toolRun
 	for step := 0; words != nil; step++ {
 		if step > 40 {
 			t.Fatal("the read does not end")
 		}
-		answer := tool.run(words...)
+		answer := caller.run(words...)
 		if answer.code != ExitOK || !bridge.Fits(answer.out, answer.errOut) {
 			t.Fatalf("step %d: %d, %d bytes: %s", step, answer.code, bridge.EncodedSize(answer.out, answer.errOut), answer.errOut)
 		}
@@ -52,8 +52,8 @@ func whole(answer toolRun) bridge.Exposure {
 func TestAToolReadIsReadOnlyWhenEveryPartArrived(t *testing.T) {
 	dir, self, web := toolSession(t)
 	id := rawUnread(t, dir, "api", map[string]any{"from": "web", "fromEpoch": web.Epoch(), "toEpoch": self.Epoch(), "kind": "task", "text": longText})
-	tool := newToolCaller(t)
-	answers := readAll(t, tool, "inbox", "--json")
+	caller := newToolCaller(t)
+	answers := readAll(t, caller, "inbox", "--json")
 
 	var text strings.Builder
 	var token string

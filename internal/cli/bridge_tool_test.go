@@ -204,23 +204,23 @@ func TestTheToolSurface(t *testing.T) {
 func TestAToolCallWithoutAValidTicketRunsNothing(t *testing.T) {
 	dir, self, web := toolSession(t)
 	id := rawUnread(t, dir, "api", map[string]any{"from": "web", "fromEpoch": web.Epoch(), "toEpoch": self.Epoch(), "text": "rerun"})
-	tool := newToolCaller(t)
+	caller := newToolCaller(t)
 
 	validateTicket = bridge.NoEndpoint
-	if answer := tool.run("inbox"); answer.code != ExitFailed || answer.out != "" || !strings.Contains(answer.errOut, "did not confirm") {
+	if answer := caller.run("inbox"); answer.code != ExitFailed || answer.out != "" || !strings.Contains(answer.errOut, "did not confirm") {
 		t.Fatalf("with no endpoint: %+v", answer)
 	}
 	validateTicket = func(string, string, string, bridge.Ticket) error { return nil }
-	tool.forge = []string{"inbox", "--peek"}
-	if answer := tool.run("inbox"); answer.code != ExitFailed || !strings.Contains(answer.errOut, "other words") {
+	caller.forge = []string{"inbox", "--peek"}
+	if answer := caller.run("inbox"); answer.code != ExitFailed || !strings.Contains(answer.errOut, "other words") {
 		t.Fatalf("for other words: %+v", answer)
 	}
-	tool.forge, tool.late = nil, true
-	if answer := tool.run("inbox"); answer.code != ExitFailed || !strings.Contains(answer.errOut, "deadline") {
+	caller.forge, caller.late = nil, true
+	if answer := caller.run("inbox"); answer.code != ExitFailed || !strings.Contains(answer.errOut, "deadline") {
 		t.Fatalf("past its deadline: %+v", answer)
 	}
-	tool.late = false
-	if answer := tool.run("withdraw", "x"); answer.code != ExitUsage || !strings.Contains(answer.errOut, "does not run through the rewake tool") {
+	caller.late = false
+	if answer := caller.run("withdraw", "x"); answer.code != ExitUsage || !strings.Contains(answer.errOut, "does not run through the rewake tool") {
 		t.Fatalf("withdraw through the tool: %+v", answer)
 	}
 	if !unreadIDs(t, dir, self)[id] {
@@ -259,9 +259,9 @@ func TestWhoamiNamesTheMailChannel(t *testing.T) {
 // well as the tool; put together they are the answer.
 func TestALongAnswerComesInParts(t *testing.T) {
 	toolSession(t)
-	tool := newToolCaller(t)
+	caller := newToolCaller(t)
 	full := formatCommandHelp(lookupCommand(t, "send"), true)
-	answer := tool.run("send", "--help", "--json")
+	answer := caller.run("send", "--help", "--json")
 	var text strings.Builder
 	parts := 0
 	for ; ; parts++ {
@@ -282,13 +282,13 @@ func TestALongAnswerComesInParts(t *testing.T) {
 			answer = toolRun{code: code, out: out, errOut: errOut}
 			continue
 		}
-		answer = tool.run(part.NextWords...)
+		answer = caller.run(part.NextWords...)
 	}
 	if parts < 2 || strings.TrimRight(text.String(), "\n") != strings.TrimRight(full, "\n") {
 		t.Fatalf("%d-byte help came in %d parts as %d bytes", len(full), parts+1, text.Len())
 	}
 	// The human form names its continuation too.
-	if answer := tool.run("send", "--help"); nextFrom(answer.out) == nil {
+	if answer := caller.run("send", "--help"); nextFrom(answer.out) == nil {
 		t.Fatalf("the text form names no next part: %s", answer.out)
 	}
 }
