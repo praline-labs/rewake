@@ -30,7 +30,7 @@ func TestABoundaryWithoutAToolRecordsItsStart(t *testing.T) {
 	dir := stateDir(t)
 	boundary := &startBoundary{}
 	stop, err := startServing(context.Background(), Request{Dir: dir}, registry.Session{}, "api", "1.1",
-		adapter.LaunchPlan{TurnBoundary: boundary}, &mailTool{}, newLiveSet(dir, "api", "1.1"))
+		adapter.LaunchPlan{TurnBoundary: boundary}, &mailTool{}, newLiveSet(dir, "api", "1.1"), func() {})
 	if err != nil {
 		t.Fatal(err)
 	}

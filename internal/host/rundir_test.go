@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -28,6 +29,10 @@ type runDirHarness struct {
 	command    string
 	closeSaw   []string
 	closeWrote error
+	// planned says Launch returned a plan; closes counts its service's Close.
+	planned  bool
+	closes   int
+	boundary bool
 }
 
 func (r *runDirHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error) {
@@ -53,6 +58,10 @@ func (r *runDirHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPla
 		plan.Command = r.command
 	}
 	plan.Service = &runDirService{harness: r, dir: request.RunDir}
+	if r.boundary {
+		plan.TurnBoundary = &startBoundary{}
+	}
+	r.planned = err == nil
 	return plan, err
 }
 
@@ -66,6 +75,7 @@ type runDirService struct {
 func (s *runDirService) Start(context.Context, func(string)) error { return nil }
 
 func (s *runDirService) Close() {
+	s.harness.closes++
 	if !filepath.IsAbs(s.dir) {
 		return
 	}
@@ -105,15 +115,37 @@ func TestRunDirectoryDiesWithRun(t *testing.T) {
 }
 
 // A launch that fails after its directory was made removes that directory and
-// nothing else: another live run's, and an entry that names no run, stay.
+// nothing else: another live run's, and an entry that names no run, stay. A
+// plan the adapter returned is closed once, wherever the launch fails after
+// it — the record's update, the read clock, the program — and before the
+// directory goes.
 func TestFailedLaunchRemovesOnlyItsRunDirectory(t *testing.T) {
-	failures := map[string]func(*runDirHarness, *Request){
-		"the adapter refuses": func(h *runDirHarness, _ *Request) { h.launchErr = errors.New("refused") },
-		"the program is missing": func(h *runDirHarness, _ *Request) {
+	failures := map[string]func(*testing.T, string, *runDirHarness, *Request){
+		"the adapter refuses": func(_ *testing.T, _ string, h *runDirHarness, _ *Request) { h.launchErr = errors.New("refused") },
+		"the program is missing": func(t *testing.T, _ string, h *runDirHarness, _ *Request) {
 			h.command = filepath.Join(t.TempDir(), "no-such-program")
 		},
-		"the claim's listener refuses": func(_ *runDirHarness, r *Request) {
+		"the claim's listener refuses": func(_ *testing.T, _ string, _ *runDirHarness, r *Request) {
 			r.OnClaimed = func(registry.Session) error { return errors.New("refused") }
+		},
+		"the record cannot take the plan": func(t *testing.T, dir string, _ *runDirHarness, _ *Request) {
+			previous := state.Fault
+			t.Cleanup(func() { state.Fault = previous })
+			state.Fault = func(op, path string) error {
+				if op == state.OpWrite && path == state.SessionPath(dir, "api-fake") {
+					return errors.New("the record cannot be written")
+				}
+				return nil
+			}
+		},
+		"the read clock cannot open": func(_ *testing.T, dir string, h *runDirHarness, r *Request) {
+			h.boundary = true
+			r.OnClaimed = func(session registry.Session) error {
+				if err := os.MkdirAll(state.InboxPath(dir, session.Name), 0o700); err != nil {
+					return err
+				}
+				return os.WriteFile(state.AwaitingPath(dir, session.Name), nil, 0o600)
+			}
 		},
 	}
 	for name, fail := range failures {
@@ -128,7 +160,7 @@ func TestFailedLaunchRemovesOnlyItsRunDirectory(t *testing.T) {
 			}
 			harness := &runDirHarness{fakeHarness: &fakeHarness{script: "exit 0"}}
 			request := Request{Harness: harness, Dir: dir, Name: "api"}
-			fail(harness, &request)
+			fail(t, dir, harness, &request)
 			var made string
 			claimed := request.OnClaimed
 			request.OnClaimed = func(session registry.Session) error {
@@ -149,6 +181,12 @@ func TestFailedLaunchRemovesOnlyItsRunDirectory(t *testing.T) {
 			}
 			if _, err := os.Lstat(made); !errors.Is(err, os.ErrNotExist) {
 				t.Fatalf("the failed launch left its run directory: %v", err)
+			}
+			if want := map[bool]int{true: 1}[harness.planned]; harness.closes != want {
+				t.Fatalf("a plan returned %v was closed %d times, want %d", harness.planned, harness.closes, want)
+			}
+			if harness.planned && !slices.Contains(harness.closeSaw, "plugin") {
+				t.Fatalf("the service closed after its directory went: it saw %v", harness.closeSaw)
 			}
 			for _, keep := range []string{other, stray} {
 				if _, err := os.Stat(keep); err != nil {

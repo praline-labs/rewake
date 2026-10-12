@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/mail"
@@ -13,8 +14,10 @@ import (
 
 // startServing starts what serves the session beside the harness — the run's
 // turn boundary, its service and its telemetry — before the harness itself,
-// and returns what stops them, in the reverse order.
-func startServing(ctx context.Context, request Request, self registry.Session, name, epoch string, plan adapter.LaunchPlan, tool *mailTool, live *liveSet) (func(), error) {
+// and returns what stops them, in the reverse order. closeService closes the
+// plan's service once: Run owns it from the moment the plan is returned, and
+// a stop here only brings that close before the read clock's.
+func startServing(ctx context.Context, request Request, self registry.Session, name, epoch string, plan adapter.LaunchPlan, tool *mailTool, live *liveSet, closeService func()) (func(), error) {
 	var stops []func()
 	stop := func() {
 		for i := len(stops) - 1; i >= 0; i-- {
@@ -62,7 +65,7 @@ func startServing(ctx context.Context, request Request, self registry.Session, n
 		// exist by then. Closed either way: what the launch prepared for it
 		// goes.
 		err := plan.Service.Start(ctx, func(note string) { _, _ = fmt.Fprintln(os.Stderr, "rewake: "+note) })
-		stops = append(stops, plan.Service.Close)
+		stops = append(stops, closeService)
 		if err != nil {
 			stop()
 			return func() {}, err
@@ -82,4 +85,14 @@ func startServing(ctx context.Context, request Request, self registry.Session, n
 		stops = append(stops, session.Start(ctx, request.Dir, name, epoch, tool.keeper.source(epoch, observed), live.workers))
 	}
 	return stop, nil
+}
+
+// closeOnce closes service the first time it is called and never again: Run
+// and its stops both reach it, and an adapter's Close need not be idempotent.
+func closeOnce(service adapter.Service) func() {
+	return sync.OnceFunc(func() {
+		if service != nil {
+			service.Close()
+		}
+	})
 }

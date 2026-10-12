@@ -203,6 +203,10 @@ func Run(ctx context.Context, request Request) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	// The plan is the run's from here: whatever fails next, its service is
+	// closed once, before the run's directory goes.
+	closeService := closeOnce(plan.Service)
+	defer closeService()
 	plan.Notes = append(plan.Notes, restored.notes...)
 	tool.attach(plan)
 	live.planned = plannedLive(request.Harness.Offers(), plan, controlDir)
@@ -227,7 +231,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	signals, restore := catchSignals()
 	defer restore()
 
-	stopServing, err := startServing(ctx, request, session, name, epoch, plan, tool, live)
+	stopServing, err := startServing(ctx, request, session, name, epoch, plan, tool, live, closeService)
 	if err != nil {
 		return 0, err
 	}

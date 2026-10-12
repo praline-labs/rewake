@@ -11,7 +11,10 @@ adapter prepares the launch, and handed to the adapter as `LaunchRequest.RunDir`
 of its own rather than a path it derives; a launch that cannot make it does not start.
 It is removed — that epoch's directory only, everything in it — after the services,
 children, sockets and mappings stop, on every path out, a failed launch included: the
-removal is deferred right after the claim, so every stop registered later runs first.
+removal is deferred right after the claim, so every stop registered later runs first. A plan the adapter returned is the run's from that moment:
+its service is closed once on every later path out — a failed update of the record, a read
+clock that cannot open, a service that fails to start, a missing program — before the
+directory goes (`TestFailedLaunchRemovesOnlyItsRunDirectory`).
 Durable mail, grants, receipts and recovery journals stay outside it. Socket paths keep
 today's short form (`state.SocketPath`, `ContextPath`: a hash when the name would pass the
 Unix limit) in `sock/`, so a long room or name cannot overflow `sun_path`; a socket inside
@@ -20,8 +23,8 @@ the run directory could.
 ## The qualified guarantee
 
 A run that ends — by its harness exiting, a signal it
-handles, or a failed launch — removes its directory before the wrapper exits. A wrapper
-killed by `SIGKILL` runs no deferred cleanup; its directory stays until a later launch in
+handles, or a failed launch — removes its directory before the wrapper exits. A wrapper killed by `SIGKILL`
+runs no deferred cleanup; its directory stays until a later launch in
 the room reclaims it, and only after that run is proven dead. The proof is the run's
 epoch, read from the end of the directory's name: the wrapper it names is gone, another
 process holds its pid, it is a zombie, or it ran in another boot — the judgment that
