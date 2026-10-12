@@ -2,11 +2,13 @@ package mail
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -269,7 +271,7 @@ func differ(want, got map[string]string, letters bool) []string {
 			changed = append(changed, "gone "+rel)
 			continue
 		}
-		if content != want[rel] && (!letters || !isLetter(rel)) {
+		if content != want[rel] && (!letters || !isLetter(rel) && !sameStamped(rel, content, want[rel])) {
 			changed = append(changed, "changed "+rel)
 		}
 	}
@@ -279,6 +281,27 @@ func differ(want, got map[string]string, letters bool) []string {
 		}
 	}
 	return changed
+}
+
+// sameStamped says two versions of a decision's closure or told record are
+// the same but for when they were written, which every run writes anew, and
+// for which attempt put a note told: written now and written before both say
+// it is in the run's mailbox.
+func sameStamped(rel, a, b string) bool {
+	if !strings.HasSuffix(rel, closedSuffix) && !strings.Contains(filepath.Base(rel), toldSuffix) {
+		return false
+	}
+	var x, y map[string]any
+	if json.Unmarshal([]byte(a), &x) != nil || json.Unmarshal([]byte(b), &y) != nil {
+		return false
+	}
+	for _, record := range []map[string]any{x, y} {
+		delete(record, "at")
+		if record["answer"] == ToldBefore {
+			record["answer"] = ToldWritten
+		}
+	}
+	return reflect.DeepEqual(x, y)
 }
 
 func isLetter(rel string) bool {

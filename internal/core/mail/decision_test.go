@@ -37,8 +37,18 @@ func (l decisionLab) subject() Subject {
 // observations what a capture read of the journal.
 func (l decisionLab) decision(t *testing.T, choice string) Decision {
 	t.Helper()
-	files := newCapture(osAccess{}, l.dir)
-	if _, err := files.ReadFile(filepath.Join(JournalPath(l.dir, "api"), "end")); err != nil {
+	d := newDecision(t, l.dir, "end", l.epoch, l.report, choice)
+	d.Disposes = []Disposal{l.stop}
+	return d
+}
+
+// newDecision is a decision by the person on report, a step of journal id of
+// the sender's run epoch, that tells the recipient run and disposes an
+// occurrence nothing records; for "did not arrive" it holds the resend.
+func newDecision(t *testing.T, dir, id, epoch string, report Message, choice string) Decision {
+	t.Helper()
+	files := newCapture(osAccess{}, dir)
+	if _, err := files.ReadFile(filepath.Join(JournalPath(dir, report.From), id)); err != nil {
 		t.Fatal(err)
 	}
 	observations, err := files.Observations()
@@ -47,13 +57,17 @@ func (l decisionLab) decision(t *testing.T, choice string) Decision {
 	}
 	d := Decision{
 		ID: NewID(), Choice: choice, By: DecidedBy{Kind: ByPerson}, At: time.Now(), Delivery: deliveryUnproven,
-		Subject: l.subject(), Disposes: []Disposal{l.stop}, Observations: observations,
+		Subject: Subject{
+			Sender: report.From, SenderRun: epoch, Journal: id, Report: report.ID, Kind: report.Kind,
+			Recipient: report.To, RecipientRun: report.ToEpoch,
+		},
+		Disposes: []Disposal{{Key: strings.Repeat("ef", 16), Occurrence: NewID()}}, Observations: observations,
 		Notes: []DecisionNote{{Told: ToldRecipient, Note: Message{
-			ID: NewID(), Kind: Note, From: "api", To: l.report.To, ToEpoch: l.report.ToEpoch, Text: "decided", CreatedAt: time.Now(),
+			ID: NewID(), Kind: Note, From: report.From, To: report.To, ToEpoch: report.ToEpoch, Text: "decided", CreatedAt: time.Now(),
 		}}},
 	}
 	if choice == ChoiceNotArrived {
-		d.Resend = l.resend(t, d.ID, func(*TurnJournal) {})
+		d.Resend = resendOf(t, d.ID, epoch, report, func(*TurnJournal) {})
 	}
 	return d
 }
@@ -61,9 +75,14 @@ func (l decisionLab) decision(t *testing.T, choice string) Decision {
 // resend is the journal a decision installs, as edit leaves it.
 func (l decisionLab) resend(t *testing.T, decision string, edit func(*TurnJournal)) json.RawMessage {
 	t.Helper()
-	copied := l.report
-	copied.ID, copied.Resends, copied.Decision = NewID(), l.report.ID, decision
-	journal := TurnJournal{Epoch: l.epoch, Op: ResendJournal(decision), Reports: []Message{copied}}
+	return resendOf(t, decision, l.epoch, l.report, edit)
+}
+
+func resendOf(t *testing.T, decision, epoch string, report Message, edit func(*TurnJournal)) json.RawMessage {
+	t.Helper()
+	copied := report
+	copied.ID, copied.Resends, copied.Decision = NewID(), report.ID, decision
+	journal := TurnJournal{Epoch: epoch, Op: ResendJournal(decision), Reports: []Message{copied}}
 	edit(&journal)
 	raw, err := json.Marshal(journal)
 	if err != nil {

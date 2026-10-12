@@ -139,8 +139,8 @@ func ranThrough(dir, name string, look stopLook) error {
 // effects have since removed.
 func (w world) completedOf(name string, stop openStop) string {
 	journal, _, _ := strings.Cut(stop.record.Op, "/")
-	// The installation runs in the barrier's own pass, never in a plan, so its
-	// evidence is read as it reads.
+	// The installation the occurrence is about ran in the barrier's own pass,
+	// before any plan, so its evidence is read as that pass reads.
 	if journal == installOp && live(w.dir).installed(name) {
 		return "every effect the decisions of the mailbox fixed is installed"
 	}
@@ -239,13 +239,13 @@ func (w world) inspectMailbox(name string) (mailboxRecords, error) {
 	if err := w.readMailbox(name); err != nil {
 		return records, err
 	}
-	// What the installation and the stop read of the decisions, the plan
-	// reads too: a listing that fails is a cause, and what else does not read
-	// there the reading above has named.
-	if _, err := w.disposals(name); err != nil {
+	// The plan runs the installation too, writing nothing, so whatever the
+	// installation and the stop read of the decisions is read before the
+	// first effect; in the barrier the installation itself ran before.
+	if err := w.installDecisions(context.Background(), name); err != nil {
 		return records, err
 	}
-	w.installed(name)
+	w.decide(installOp)
 	entries, err := w.readDir(JournalPath(dir, name))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return records, fmt.Errorf("the turn journals %s cannot be listed: %w", JournalPath(dir, name), err)

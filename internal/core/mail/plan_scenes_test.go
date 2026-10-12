@@ -1,6 +1,7 @@
 package mail
 
 import (
+	"context"
 	"encoding/json"
 	"path/filepath"
 	"testing"
@@ -74,6 +75,26 @@ var planScenes = []planScene{
 			if err := WriteJournal(lab.dir, "api", id, journal); err != nil {
 				t.Fatal(err)
 			}
+		}
+		return "api"
+	}},
+	// The installation is the barrier's before the plan, stopped or not, and
+	// a note that cannot be told stops nothing, so a fault there is no stop:
+	// TestDecisionInstallationSurvivesEveryBrokenWrite holds it. Here what
+	// the plan sees of the installation is read again, and the journals run.
+	{"a decision installed", func(t *testing.T, lab twoSessionLab) string {
+		lab.owe(t, "t1")
+		waiters, err := ReadWaiters(lab.dir, "api", lab.run)
+		if err != nil {
+			t.Fatal(err)
+		}
+		report := lab.report(Finished, "t1")
+		if err := WriteJournal(lab.dir, "api", "end", TurnJournal{Epoch: lab.run, Op: "end", Ended: 200, Reports: []Message{report}, Clear: waiters}); err != nil {
+			t.Fatal(err)
+		}
+		writeDecision(t, lab.dir, newDecision(t, lab.dir, "end", lab.run, report, ChoiceNotArrived))
+		if err := withLock(lab.dir, "api", func() error { return live(lab.dir).installDecisions(context.Background(), "api") }); err != nil {
+			t.Fatal(err)
 		}
 		return "api"
 	}},
