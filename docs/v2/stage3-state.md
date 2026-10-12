@@ -309,7 +309,7 @@ writes are primitives of `infra/state`, the only ones that work without a lease 
 view mode they refuse like every other — and `build.Acquire` is their one caller. A test
 over the module fails on any other reference to them, not only a call written where they
 are named: a function value, an argument, a dot import, a second import name, a variable
-inside `infra/state`. They take a narrow authority, not a public exemption for arbitrary
+inside `infra/state`, a reference nested in the receiver of a selector. They take a narrow authority, not a public exemption for arbitrary
 paths:
 
 1. `state.Bootstrap(base, room)`: the base, the root, the room and its `sessions`,

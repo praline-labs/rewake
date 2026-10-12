@@ -64,13 +64,17 @@ func TestOnlyAcquireCallsBootstrapPrimitives(t *testing.T) {
 // the place it is named: a primitive kept in a function value and called
 // elsewhere, passed as an argument, reached through a dot import or a second
 // import name, or bound to a variable inside the state package is as much a
-// write without a lease as a call.
+// write without a lease as a call — and so is one nested in the receiver of a
+// selector.
 func TestBootstrapCallerCheckSeesEveryReference(t *testing.T) {
 	sources := map[string]string{
-		"a function value": "package outside\nimport s \"" + statePath + "\"\nfunc bad() { boot := s.Bootstrap; _, _ = boot(\"/tmp/other\", \"default\") }\n",
-		"an argument":      "package outside\nimport \"" + statePath + "\"\nfunc bad() { run(state.WriteBuildRecord) }\n",
-		"a dot import":     "package outside\nimport . \"" + statePath + "\"\nfunc bad() { _, _ = OpenLeaseLock(\"/tmp/other\") }\n",
-		"a second name":    "package outside\nimport (\n\t\"" + statePath + "\"\n\tother \"" + statePath + "\"\n)\nvar _ = state.Dir\nvar boot = other.Bootstrap\n",
+		"a function value":         "package outside\nimport s \"" + statePath + "\"\nfunc bad() { boot := s.Bootstrap; _, _ = boot(\"/tmp/other\", \"default\") }\n",
+		"an argument":              "package outside\nimport \"" + statePath + "\"\nfunc bad() { run(state.WriteBuildRecord) }\n",
+		"a dot import":             "package outside\nimport . \"" + statePath + "\"\nfunc bad() { _, _ = OpenLeaseLock(\"/tmp/other\") }\n",
+		"a second name":            "package outside\nimport (\n\t\"" + statePath + "\"\n\tother \"" + statePath + "\"\n)\nvar _ = state.Dir\nvar boot = other.Bootstrap\n",
+		"a selector's receiver":    "package outside\nimport s \"" + statePath + "\"\nvar boot = (struct{ F func(string, string) (string, error) }{s.Bootstrap}).F\n",
+		"a call's selected result": "package outside\nimport s \"" + statePath + "\"\nvar lock = wrap(s.OpenLeaseLock).Open\n",
+		"a dot import's receiver":  "package outside\nimport . \"" + statePath + "\"\nvar boot = (struct{ F any }{Bootstrap}).F\n",
 	}
 	for name, source := range sources {
 		file := filepath.Join(t.TempDir(), "outside.go")
@@ -126,20 +130,17 @@ func primitiveRefs(t *testing.T, path string) []string {
 		}
 	}
 	var found []string
-	ast.Inspect(file, func(node ast.Node) bool {
+	var visit func(ast.Node) bool
+	visit = func(node ast.Node) bool {
 		switch node := node.(type) {
 		case *ast.SelectorExpr:
 			if x, ok := node.X.(*ast.Ident); ok && aliases[x.Name] && primitives[node.Sel.Name] {
 				found = append(found, node.Sel.Name)
 			}
 			// The selected name is a field or method of whatever X is, never
-			// the package-level primitive; only X can still refer to one.
-			ast.Inspect(node.X, func(inner ast.Node) bool {
-				if id, ok := inner.(*ast.Ident); ok && bare && primitives[id.Name] {
-					found = append(found, id.Name)
-				}
-				return true
-			})
+			// the package-level primitive; X is looked through like any other
+			// expression, since a reference may sit anywhere inside it.
+			ast.Inspect(node.X, visit)
 			return false
 		case *ast.Ident:
 			if bare && primitives[node.Name] && !declared[node] {
@@ -147,7 +148,8 @@ func primitiveRefs(t *testing.T, path string) []string {
 			}
 		}
 		return true
-	})
+	}
+	ast.Inspect(file, visit)
 	return found
 }
 
