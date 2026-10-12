@@ -111,7 +111,7 @@ every candidate tree:
    [legacy.md](../legacy.md): `// legacy(rewake <YYYY-MM-DD>): a 1.x session record is
    read for its wrapper's pid, start time and pid namespace only, to see whether a 1.x
    session still runs; remove when no session started by an earlier build is
-   registered`, dated the day S17 lands. A live wrapper: **refuse**, exit 1, naming each
+   registered`, dated October 12, 2026, the day S17 lands. A live wrapper: **refuse**, exit 1, naming each
    live session and its room, saying that 2.0 does not read 1.x mail and those sessions
    have to be ended.
 3. A directory that cannot be listed, a record or a `stat` that cannot be read, a record
@@ -173,6 +173,40 @@ by path into a recreated `rooms/` — a 1.x session this launch's validation or 
 launch's admission finds alive. These checks do not fence a 1.x process between two
 locks: the external quiescence remains the requirement. Nothing shuts a session down,
 takes a name over, imports old mail or claims a fence.
+
+## Where it lives
+
+The clearing is `internal/infra/legacy`, run by `build.Launch` — the acquisition both
+launch routes take, the CLI's and the host's direct entry — right after the lease is
+granted: it takes the cleanup capability, runs `legacy.Clear`, closes the capability, and
+on a refusal releases the lease and returns the refusal, which the CLI reports with exit 1.
+A writer's acquisition and the tests' rooms (`build.AcquireLaunch`, `buildtest`) do not
+clear. The first read is `Cleanup.Trees`, which refuses a tree's name that is no directory
+of its own; with nothing there the launch pays one read of the base.
+
+- Admission takes the launch locks of `rooms/` and keeps them; those of a candidate are
+  let go after its checks. Validation checks the held ones with `TreeLock.At` at the
+  renamed path, takes a fresh lock without waiting for a room that appeared in the tree,
+  and refuses a room that went. Every candidate is validated on its own: one that passes
+  is recorded, validated and deleted even when another fails and the launch refuses.
+- The counts are recorded as `v2/.cleared-1x-<id>.json` before the rename to validated,
+  and removed once the tree is gone; a crash between the two leaves that small file, which
+  nothing reads again.
+- The counter (`count.go`, the second mark of this commit) counts as rooms the
+  directories of the tree; as unread letters the ids in a mailbox and its `unread/` —
+  a delivered letter is a link of its waiting copy, so an id counts once — less
+  tombstones and letters whose status says read, failed or withdrawn; as undelivered
+  reports those a turn journal not done lists in neither `Published` nor `Moot`, whose
+  publication mark does not say published and whose letter is in none of its recipient's
+  directories. A mark that says neither intent nor published, a conversion record with
+  unknown reports, a turn record of the build before, or anything it cannot read makes
+  that count unknown.
+- A refusal's message names each finding on a line of its own; a failure to rename, flush
+  or record says that nothing was removed.
+- The steps a fault plan pauses or ends the clearing at, besides its durable steps, are
+  `legacy admitted`, `legacy set aside` and `legacy validated`, and `launch cleared` once
+  the launch may go on. The bounds are built in (`builtClearWait`, `builtRoomWait`), which a
+  test build may shorten (package `buildtime`).
 
 ## Every crash and every failed read
 

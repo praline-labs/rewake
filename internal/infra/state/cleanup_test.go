@@ -170,7 +170,7 @@ func TestATreeTransitionNeverReplaces(t *testing.T) {
 	}
 
 	defer func() { Fault = nil }()
-	Fault = func(op, path string) error {
+	Fault = func(op, _ string) error {
 		if op == OpSync {
 			return syscall.EIO
 		}

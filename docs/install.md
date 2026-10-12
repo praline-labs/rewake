@@ -61,6 +61,20 @@ rewake rather than to a process in between. It follows the symlink npm installs
 first — resolving the link is the difference between finding the binary and
 reporting it missing.
 
+## Upgrading from 1.x
+
+rewake 2.0 does not read the state of 1.x and carries none of its mail over. Before the
+update, end every rewake 1.x session and run no 1.x command; then install 2.0 and launch.
+The first launch that finds the 1.x tree beside the 2.0 root clears it
+([stage3-upgrade.md](v2/stage3-upgrade.md)): while a 1.x session runs, a 1.x command
+holds a lock, or a check of the tree cannot be made, it refuses with exit 1 and names
+what it found — end those sessions, or remove the path it names once no 1.x session runs,
+and launch again. Otherwise it removes the tree and says on stderr how many rooms,
+unread letters and undelivered reports went, "unknown" where a count cannot be
+established. The launch has to see the pid namespace the 1.x sessions ran in — the same
+machine, outside a sandbox that hides other processes — or it refuses rather than guess.
+Nothing is stopped automatically, and nothing outside the base is touched: worktrees stay.
+
 ## Releasing to npm
 
 Owner decision, September 28, 2026: rewake is released on the public npm registry as

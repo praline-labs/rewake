@@ -54,7 +54,7 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
 1. **The directory.** The wrapper resolves the `REWAKE_DIR` base, its root `v2/` and
    the room selected by `--room`, or `default` when omitted, creating nothing. Each
    that exists is 0700; a symlink, foreign owner or loose permissions is refused.
-   1.x's rooms beside the root are not read. Before anything of the room is made or
+   Before anything of the room is made or
    locked, it takes the room's build lease for its whole life — the lease's bootstrap
    makes whatever level is missing, and nothing else makes any — the room's `build` names the content of the rewake
    executable whose sessions write there, a launch of another build switches it only
@@ -62,7 +62,12 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
    lease too, refused in a room of another build
    ([stage3-state.md](v2/stage3-state.md#one-build-per-room)). A view form takes no
    lease, writes nothing and fails if it tries; in a room of another build it says so
-   once on stderr. A launch with `--worktree`
+   once on stderr. With the lease held, and only at a launch, the state rewake 1.x left
+   beside the root is cleared: refused, exit 1, while a 1.x session runs, a 1.x lock is
+   held or a check of it cannot be made, and otherwise deleted after a validation of the
+   set-aside tree, with one line on stderr counting what went
+   ([stage3-upgrade.md](v2/stage3-upgrade.md#the-protocol)); no other command reads it.
+   A launch with `--worktree`
    then gets a checkout of the launch
    directory's HEAD on a new branch under rewake's worktree directory, and the wrapper
    moves into it, at the same place in the repository, before anything else

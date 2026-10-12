@@ -107,3 +107,5 @@ None open: the marks of `codex <0.157.1` left with the Codex adapter in S8, Octo
 | `internal/host/worktree/land.go` | `rewake <2026-09-27` | 1 |
 | `internal/core/role/role.go` | `rewake <2026-09-17` | 1 |
 | `internal/core/session/store.go` | `rewake <2026-09-26` | 1 |
+| `internal/infra/legacy/record.go` | `rewake <2026-10-12` | 1 |
+| `internal/infra/legacy/count.go` | `rewake <2026-10-12` | 1 |

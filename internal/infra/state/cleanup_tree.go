@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"unsafe"
 )
@@ -180,4 +181,49 @@ func (c *Cleanup) DiscardSummary(id string) error {
 		return nil
 	}
 	return err
+}
+
+// Trees is what a clearing finds in its base: whether rooms/ is there, and
+// the ids of the trees set aside, each kind in order.
+type Trees struct {
+	Rooms      bool
+	Candidates []string
+	Validated  []string
+}
+
+// Empty says whether the base holds no tree of 1.x: the fast path.
+func (t Trees) Empty() bool { return !t.Rooms && len(t.Candidates) == 0 && len(t.Validated) == 0 }
+
+// Trees reads the base for the trees of 1.x. A name of theirs that is not a
+// directory of its own — a link above all — is an error, never followed; a
+// dotted name with no clearer's id is no tree and is left alone.
+func (c *Cleanup) Trees() (Trees, error) {
+	var trees Trees
+	entries, err := os.ReadDir(c.base)
+	if err != nil {
+		return trees, fmt.Errorf("could not read %s: %w", c.base, err)
+	}
+	for _, entry := range entries {
+		name := entry.Name()
+		var list *[]string
+		id := ""
+		switch {
+		case name == legacyRooms:
+		case strings.HasPrefix(name, candidatePrefix) && ValidTreeID(strings.TrimPrefix(name, candidatePrefix)):
+			list, id = &trees.Candidates, strings.TrimPrefix(name, candidatePrefix)
+		case strings.HasPrefix(name, validatedPrefix) && ValidTreeID(strings.TrimPrefix(name, validatedPrefix)):
+			list, id = &trees.Validated, strings.TrimPrefix(name, validatedPrefix)
+		default:
+			continue
+		}
+		if err := plainDir(filepath.Join(c.base, name)); err != nil {
+			return trees, err
+		}
+		if list == nil {
+			trees.Rooms = true
+		} else {
+			*list = append(*list, id)
+		}
+	}
+	return trees, nil
 }

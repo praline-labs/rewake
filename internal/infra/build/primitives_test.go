@@ -13,8 +13,10 @@ import (
 )
 
 // primitives are the writes of infra/state that work without a lease
-// (docs/v2/stage3-state.md#the-bootstrap).
-var primitives = map[string]bool{"Bootstrap": true, "OpenLeaseLock": true, "CreateLeaseLock": true, "WriteBuildRecord": true}
+// (docs/v2/stage3-state.md#the-bootstrap), and the capability over the trees
+// of 1.x beside the root, which no room's lease covers
+// (docs/v2/stage3-upgrade.md#the-cleanup-authority).
+var primitives = map[string]bool{"AuthorizeCleanup": true, "Bootstrap": true, "OpenLeaseLock": true, "CreateLeaseLock": true, "WriteBuildRecord": true}
 
 // acquirer is the one file allowed to refer to them.
 const acquirer = "internal/infra/build/lease.go"

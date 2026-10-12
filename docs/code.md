@@ -14,6 +14,7 @@ internal/infra/state/                         directory: checks, paths, atomic w
 internal/infra/build/                         the build id (SHA-256 of the image) and the room's build lease
 internal/infra/build/buildtest/               for tests: a room made and its build recorded the way a launch of the test binary does
 internal/infra/buildtime/                     durations a build may shorten through -ldflags, for the suite
+internal/infra/legacy/                        clearing the state of 1.x at a launch: admission, set aside, validation, deletion and its counts
 internal/core/registry/                       session record, name publishing, liveness and listing
 internal/core/registry/registrytest/          for tests: the boot a session of this build carries
 internal/infra/proc/                          /proc: identity, liveness, job-control state, lineage and namespaces

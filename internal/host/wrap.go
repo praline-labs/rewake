@@ -82,7 +82,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	}
 	lease := request.Lease
 	if lease == nil {
-		acquired, err := build.AcquireLaunch(base, filepath.Base(request.Dir))
+		acquired, err := build.Launch(base, filepath.Base(request.Dir), os.Stderr)
 		if err != nil {
 			return 0, err
 		}

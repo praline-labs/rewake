@@ -42,6 +42,10 @@ in is described [there](design.md#state-directory).
 - `codexHome` — the `CODEX_HOME` a Codex session runs with; absent for other harnesses.
 - `pidNamespace` — the pid namespace the two pids belong to: a reader in another one
   cannot judge whether they are alive, and does not try.
+- A record rewake 1.x wrote is read by 2.0 for `servicePid`, `serviceStart` and
+  `pidNamespace` only, when a launch clears the state of 1.x: one of them zero or missing
+  makes the record unreadable, which refuses the launch, as a record of another pid
+  namespace does ([stage3-upgrade.md](v2/stage3-upgrade.md#the-protocol)).
 - A session is alive as long as both the servicing process and the harness are
   alive. A listing or a lookup deletes a dead record it reads, but only when the
   record's name lock is free at that moment (`LOCK_NB`): both are reads and never wait

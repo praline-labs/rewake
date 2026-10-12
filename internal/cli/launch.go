@@ -51,7 +51,7 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 		// before the worktree; held until the wrapper and its cleanup are done
 		// (docs/v2/stage3-state.md#one-build-per-room).
 		room := call.Flag("room", state.DefaultRoom)
-		lease, err := leaseError(call.Command, func() (*build.Lease, error) { return build.AcquireLaunch(base, room) })
+		lease, err := leaseError(call.Command, func() (*build.Lease, error) { return build.Launch(base, room, ctx.Stderr) })
 		if err != nil {
 			return err
 		}

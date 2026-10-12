@@ -3,6 +3,7 @@ package build
 import (
 	"errors"
 	"fmt"
+	"io"
 	"math/rand/v2"
 	"os"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/infra/legacy"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -147,6 +149,29 @@ func Acquire(base, room string) (*Lease, error) {
 // is atomic.
 func AcquireLaunch(base, room string) (*Lease, error) {
 	return acquire(base, room, true)
+}
+
+// Launch is AcquireLaunch for a launch that goes on to claim: with the lease
+// held, it clears the state of rewake 1.x beside the root under a capability
+// scoped to the base, let go before it returns (docs/v2/stage3-upgrade.md). A
+// refusal there releases the lease and is the launch's; say gets the clearing's
+// lines. Both launch routes, the CLI's and the host's, take the lease here.
+func Launch(base, room string, say io.Writer) (*Lease, error) {
+	lease, err := AcquireLaunch(base, room)
+	if err != nil {
+		return nil, err
+	}
+	cleanup, err := state.AuthorizeCleanup(lease.lock)
+	if err == nil {
+		err = legacy.Clear(cleanup, say)
+		cleanup.Close()
+	}
+	if err != nil {
+		lease.Release()
+		return nil, err
+	}
+	state.Step("launch cleared")
+	return lease, nil
 }
 
 func acquire(base, roomName string, launch bool) (*Lease, error) {
