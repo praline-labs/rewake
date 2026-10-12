@@ -20,22 +20,28 @@ type SocketClaim struct {
 }
 
 // ClaimSocket claims path for the run of room. The room has to be a room of
-// a state directory and the path absolute; whether the lease is held, and
+// a state directory and the path absolute and clean; whether the lease is held, and
 // where the path leads, is asked at each act, not here, so a claim kept past
 // the lease writes nothing.
 func ClaimSocket(room, path string) (*SocketClaim, error) {
 	if _, err := RootForRoom(room); err != nil {
 		return nil, err
 	}
-	clean := filepath.Clean(path)
-	if !filepath.IsAbs(clean) {
+	if !filepath.IsAbs(path) {
 		return nil, fmt.Errorf("the socket path %s is not absolute", path)
 	}
-	return &SocketClaim{room: room, path: clean}, nil
+	if path != filepath.Clean(path) {
+		return nil, fmt.Errorf("the socket path %s is not clean", path)
+	}
+	return &SocketClaim{room: room, path: path}, nil
 }
 
+// check takes the claimed path spelled exactly as claimed, never one that
+// only cleans to it: the kernel follows a link before a "..", so the spelling
+// an act passes on is the one checked, and a clean one is the only spelling
+// whose lexical guard and kernel walk agree.
 func (c *SocketClaim) check(op, path string) error {
-	if filepath.Clean(path) != c.path {
+	if path != c.path {
 		return fmt.Errorf("%s is not the socket %s claimed", path, c.path)
 	}
 	if seen := c.seen(); inState(seen) {

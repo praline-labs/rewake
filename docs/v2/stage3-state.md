@@ -171,13 +171,16 @@ lock is a write, letting it go is not), each the os call it names behind the sam
 none asking the fault plan, so a call's fault schedule counts the steps it counted before
 (`Discard` and `Move` are cleanup; `Remove` and `Rename` stay the counted ones). One write
 lies outside every room by the harness's protocol: a reply socket beside a socket the caller
-named. `state.ClaimSocket` gives the run authority over that one path, no directory — clearing
+named. `state.ClaimSocket` gives the run authority over that one path, absolute and clean and
+taken at each act only in that spelling, no directory — clearing
 a dead socket there, binding, the close-time unlink — checked at each act against view mode
 and the room's lease. It widens nothing of any state: a path in a state directory, as written
 or where its directory's links lead — below a base, which holds a root with rooms, or in a
 room of either layout by what it holds — is guarded by the lease of the room it lies in, which the claiming
 room's lease is not. Both ends of such a link are guarded, so a link in the leased room lends that
-lease nothing where it leads, and a link in another room is that room's write as written. Then the
+lease nothing where it leads, and a link in another room is that room's write as written. A spelling
+that only cleans to the claimed path is refused, at the claim and at each act: the kernel follows a
+link before a `..`, so `link/../x` checked as its clean form would land where the link leads. Then the
 guarded resources:
 
 - commit 5: the registry's removals; `core/control`'s lock, request, mark and answer files

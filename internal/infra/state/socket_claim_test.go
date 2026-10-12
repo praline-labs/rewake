@@ -249,6 +249,74 @@ func TestALinkInTheLeasedRoomLendsNothingToWhereItLeads(t *testing.T) {
 	}
 }
 
+// A claim acts on the very spelling it checked, so a path that is not clean
+// is refused, at the claim and at each act: own/link/../reply.sock cleans to
+// a path in the leased room while the kernel, following the link before the
+// "..", reaches the room it leads to. Given to the claim, it is no claim;
+// given to the bind or the clearing of a claim made with the clean path, it
+// is refused before any lease is asked, with both rooms leased too, and
+// nothing is bound there, so no close-time unlink can follow it.
+func TestASocketClaimActsOnlyOnTheCleanPathItChecked(t *testing.T) {
+	for _, act := range []string{"claim", "bind", "discard", "close"} {
+		t.Run(act, func(t *testing.T) {
+			_, own := bootstrapped(t)
+			heldLease(t, own)
+			_, foreign := bootstrapped(t)
+			link := filepath.Join(own, "link")
+			if err := os.Symlink(filepath.Join(foreign, socketsDir), link); err != nil {
+				t.Fatal(err)
+			}
+			raw := link + "/../reply.sock"
+			landing := filepath.Join(foreign, "reply.sock")
+			if act == "claim" {
+				if claim, err := ClaimSocket(own, raw); err == nil {
+					t.Fatalf("a path that is not clean was claimed as %s", claim.path)
+				}
+				return
+			}
+			claim, err := ClaimSocket(own, filepath.Clean(raw))
+			if err != nil {
+				t.Fatal(err)
+			}
+			before := NoLeaseRefusals()
+			switch act {
+			case "bind", "close":
+				var theirs *LeaseLock
+				if act == "close" {
+					theirs = heldLease(t, foreign)
+				}
+				listener, err := claim.Listen(raw)
+				if listener != nil {
+					if theirs != nil {
+						theirs.Close()
+						if err := listener.Close(); err == nil {
+							t.Fatal("the own room's lease unlinked where the link leads at close")
+						}
+					}
+					_ = listener.Close()
+				}
+				if err == nil {
+					t.Fatal("a claim bound a spelling that is not clean")
+				}
+				if _, err := os.Lstat(landing); !os.IsNotExist(err) {
+					t.Fatalf("a refused bind left a file where the link leads: %v", err)
+				}
+			case "discard":
+				deadSocket(t, landing)
+				if err := claim.Discard(raw); err == nil {
+					t.Fatal("a claim cleared a spelling that is not clean")
+				}
+				if _, err := os.Lstat(landing); err != nil {
+					t.Fatalf("a refused clearing removed the socket where the link leads: %v", err)
+				}
+			}
+			if NoLeaseRefusals() != before {
+				t.Fatal("a spelling's refusal was counted as a want of the lease")
+			}
+		})
+	}
+}
+
 // deadSocket leaves a socket at path, as a run that died bound would.
 func deadSocket(t *testing.T, path string) {
 	t.Helper()
