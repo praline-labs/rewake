@@ -75,4 +75,12 @@ func TestNamespacesReadsThreeLinks(t *testing.T) {
 	if second, _ := Default.Namespaces(self); first != second {
 		t.Fatalf("%q then %q", first, second)
 	}
+	// The kernel answers another user's link with an empty name and no
+	// error; that is a namespace not read, as PID 1's is wherever it is
+	// another user's.
+	if owner, _, err := Default.Owner(1); err == nil && owner != os.Getuid() && os.Getuid() != 0 {
+		if got, err := Default.Namespaces("1"); err == nil {
+			t.Fatalf("PID 1's namespaces read as %q", got)
+		}
+	}
 }

@@ -192,11 +192,17 @@ func (s *session) do(half string, c command) result {
 // await waits for a result file.
 func (w *world) await(out string) result {
 	w.t.Helper()
-	var r result
-	if !waitFor(90*time.Second, func() bool { return readJSON(out, &r) == nil }) {
+	r, answered := w.awaitWithin(out, 90*time.Second)
+	if !answered {
 		w.t.Fatalf("no result at %s", out)
 	}
 	return r
+}
+
+// awaitWithin waits for a result file at most d.
+func (w *world) awaitWithin(out string, d time.Duration) (result, bool) {
+	var r result
+	return r, waitFor(d, func() bool { return readJSON(out, &r) == nil })
 }
 
 // stop ends the session through its harness and waits for the wrapper.

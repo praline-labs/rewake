@@ -26,6 +26,12 @@ func TestInitialEnvReadsTheEnvironmentAsStarted(t *testing.T) {
 	if _, err := r.InitialEnv(8, "A"); err == nil {
 		t.Fatal("a missing environment read")
 	}
+	if err := os.WriteFile(filepath.Join(dir, "environ"), make([]byte, maxEnvironBytes+1), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.InitialEnv(7, "A"); err == nil {
+		t.Fatal("an environment past the bound read")
+	}
 	if found, err := Default.InitialEnv(os.Getpid(), "PATH"); err != nil || found != (os.Getenv("PATH") != "") {
 		t.Fatalf("this process's PATH: %v, %v", found, err)
 	}

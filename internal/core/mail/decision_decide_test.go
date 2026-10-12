@@ -177,6 +177,14 @@ func TestDecideRefusesWithNothingWritten(t *testing.T) {
 			by.Run = "1.2"
 			return lab.ask(t, ChoiceArrived, by)
 		}},
+		"the recipient's run asked of another process": {DecisionUnauthorized, func(t *testing.T, lab unknownLab) DecideRequest {
+			// Right in every field, and asked of a process that is not the
+			// run it names: only that run's wrapper writes as it.
+			previous := selfRun
+			selfRun = func() (string, error) { return "1.2", nil }
+			t.Cleanup(func() { selfRun = previous })
+			return lab.ask(t, ChoiceArrived, lab.web())
+		}},
 		"an unverified recipient": {DecisionUnauthorized, func(t *testing.T, lab unknownLab) DecideRequest {
 			by := lab.web()
 			by.Verified = false

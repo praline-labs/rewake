@@ -128,9 +128,11 @@ func TestTheRunEndsAfterTheDecisionItAdmitted(t *testing.T) {
 		t.Fatal("the harness did not end")
 	}
 	time.Sleep(300 * time.Millisecond)
-	late := web.do(serverHalf, command{Op: opAsk, Job: w.decide(second)})
-	if late.Kind != string(mail.DecisionBusy) {
-		t.Errorf("a question after the harness ended: %+v", late)
+	// Refused at the door, it is answered while the admitted one is still
+	// held; taken in, it would wait behind that one's step.
+	late, answered := w.awaitWithin(web.command(serverHalf, command{Op: opAsk, Job: w.decide(second)}), 15*time.Second)
+	if !answered || late.Kind != string(mail.DecisionBusy) {
+		t.Errorf("a question after the harness ended: answered %v, %+v", answered, late)
 	}
 	if exclusive(t, w.room()) {
 		t.Error("the run let go of the room's lease with a decision admitted")

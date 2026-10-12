@@ -27,11 +27,17 @@ func observing(t *testing.T, runs map[int]proc.IdentityEvidence) {
 
 // The strict read takes every record and keeps what it cannot tell apart
 // from what it can: a run not known to be running or ended is unknown, never
-// one of them.
+// one of them — and so is a run of a namespace this reader is not in, whose
+// pid names some other process here.
 func TestInventoryKeepsUnknownApartFromEnded(t *testing.T) {
 	dir := stateDir(t, map[int]uint64{10: 100, 11: 100, 12: 100})
 	observing(t, map[int]proc.IdentityEvidence{10: proc.IdentityAlive, 11: proc.IdentityEnded})
-	for _, s := range []Session{session("lead", 10, 100), session("api", 11, 100), session("web", 12, 100)} {
+	previous := namespace
+	namespace = func() string { return "pid:[4026531836]" }
+	t.Cleanup(func() { namespace = previous })
+	elsewhere := session("ops", 10, 100)
+	elsewhere.PIDNamespace = "pid:[4026533194]"
+	for _, s := range []Session{session("lead", 10, 100), session("api", 11, 100), session("web", 12, 100), elsewhere} {
 		if err := Publish(dir, s); err != nil {
 			t.Fatal(err)
 		}
@@ -44,7 +50,9 @@ func TestInventoryKeepsUnknownApartFromEnded(t *testing.T) {
 	for _, record := range found {
 		got[record.Session.Name] = record.Run
 	}
-	want := map[string]proc.IdentityEvidence{"lead": proc.IdentityAlive, "api": proc.IdentityEnded, "web": proc.IdentityUnknown}
+	want := map[string]proc.IdentityEvidence{
+		"lead": proc.IdentityAlive, "api": proc.IdentityEnded, "web": proc.IdentityUnknown, "ops": proc.IdentityUnknown,
+	}
 	if len(got) != len(want) {
 		t.Fatalf("read %v, want %v", got, want)
 	}
