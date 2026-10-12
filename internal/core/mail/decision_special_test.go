@@ -35,7 +35,7 @@ func withinBound(t *testing.T, fn func() error, release func()) error {
 
 // releaseFIFO opens the FIFO at path for writing, which frees a reader
 // waiting on it, and replaces it with bytes that do not read.
-func releaseFIFO(t *testing.T, path string) func() {
+func releaseFIFO(path string) func() {
 	return func() {
 		fd, err := syscall.Open(path, syscall.O_WRONLY|syscall.O_NONBLOCK, 0)
 		if err == nil {
@@ -90,7 +90,7 @@ func TestDecisionSpecialFilesAuthorizeNothing(t *testing.T) {
 				if err := syscall.Mkfifo(path, 0o600); err != nil {
 					t.Fatal(err)
 				}
-				release = releaseFIFO(t, path)
+				release = releaseFIFO(path)
 			case "a directory":
 				if err := os.Mkdir(path, 0o700); err != nil {
 					t.Fatal(err)
@@ -175,7 +175,7 @@ func TestDecisionRecordsBesideItAreReadAsRegularFiles(t *testing.T) {
 					if err := syscall.Mkfifo(path, 0o600); err != nil {
 						t.Fatal(err)
 					}
-					release = releaseFIFO(t, path)
+					release = releaseFIFO(path)
 				case "a link":
 					if err := os.Symlink(filepath.Join(lab.dir, "nowhere"), path); err != nil {
 						t.Fatal(err)
@@ -227,7 +227,7 @@ func TestDecisionSwappedAfterItsListingIsReadAsItIsNow(t *testing.T) {
 	swap := &swapAfterListing{fileAccess: osAccess{}, root: filepath.Dir(path), path: path}
 	testAccess.Store(lab.dir, passAccess{live: swap, plan: osAccess{}})
 	t.Cleanup(func() { testAccess.Delete(lab.dir); _ = os.Remove(path) })
-	if err := withinBound(t, func() error { return finishAll(t, lab.dir) }, releaseFIFO(t, path)); err == nil {
+	if err := withinBound(t, func() error { return finishAll(t, lab.dir) }, releaseFIFO(path)); err == nil {
 		t.Error("the barrier went past a decision swapped for a FIFO")
 	}
 	if !swap.swapped || live(lab.dir).resendNamed("api", d.ID) || lettersOf(t, lab.dir, "web")[d.Notes[0].Note.ID] != 0 {

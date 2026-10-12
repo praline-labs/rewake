@@ -34,35 +34,35 @@ func TestDecisionResendOfAnotherKindStaysUnknown(t *testing.T) {
 	}{
 		"a record of another kind":       {false, func(*testing.T, Decision) string { return `{"answer":"a different record"}` }},
 		"a record of another kind, done": {true, func(*testing.T, Decision) string { return `{"answer":"a different record"}` }},
-		"another report": {false, func(t *testing.T, d Decision) string {
+		"another report": {false, func(_ *testing.T, d Decision) string {
 			held, _ := d.resendJournal()
 			held.Reports[0].Text = "another text"
 			raw, _ := json.Marshal(held)
 			return string(raw)
 		}},
-		"another run": {true, func(t *testing.T, d Decision) string {
+		"another run": {true, func(_ *testing.T, d Decision) string {
 			held, _ := d.resendJournal()
 			raw, _ := json.Marshal(TurnJournal{Epoch: "another-run", Op: held.Op, Done: true})
 			return string(raw)
 		}},
-		"another operation": {false, func(t *testing.T, d Decision) string {
+		"another operation": {false, func(_ *testing.T, d Decision) string {
 			held, _ := d.resendJournal()
 			held.Op = NewID()
 			raw, _ := json.Marshal(held)
 			return string(raw)
 		}},
-		"another operation, done": {true, func(t *testing.T, d Decision) string {
+		"another operation, done": {true, func(_ *testing.T, d Decision) string {
 			held, _ := d.resendJournal()
 			raw, _ := json.Marshal(TurnJournal{Epoch: held.Epoch, Op: NewID(), Done: true})
 			return string(raw)
 		}},
-		"a summary while open": {false, func(t *testing.T, d Decision) string {
+		"a summary while open": {false, func(_ *testing.T, d Decision) string {
 			held, _ := d.resendJournal()
 			held.Summary = &ResendSummary{Report: held.Reports[0].ID, Disposition: DispositionMoot, Decision: d.ID}
 			raw, _ := json.Marshal(held)
 			return string(raw)
 		}},
-		"renamed done and open": {true, func(t *testing.T, d Decision) string {
+		"renamed done and open": {true, func(_ *testing.T, d Decision) string {
 			held, _ := d.resendJournal()
 			raw, _ := json.Marshal(held)
 			return string(raw)
