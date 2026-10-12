@@ -185,6 +185,11 @@ func writeTemp(dir string, data []byte) (string, error) {
 		_ = os.Remove(name)
 		return "", err
 	}
+	if err := flushFault(name); err != nil {
+		_ = temp.Close()
+		_ = os.Remove(name)
+		return "", err
+	}
 	if err := temp.Sync(); err != nil {
 		_ = temp.Close()
 		_ = os.Remove(name)
@@ -211,6 +216,9 @@ func syncDir(path string) error {
 		return err
 	}
 	defer func() { _ = dir.Close() }()
+	if err := flushFault(path); err != nil {
+		return err
+	}
 	return dir.Sync()
 }
 
