@@ -47,14 +47,18 @@ in is described [there](design.md#state-directory).
   makes the record unreadable, which refuses the launch, as a record of another pid
   namespace does ([stage3-upgrade.md](v2/stage3-upgrade.md#the-protocol)).
 - A session is alive as long as both the servicing process and the harness are
-  alive. A listing or a lookup deletes a dead record it reads, but only when the
-  record's name lock is free at that moment (`LOCK_NB`): both are reads and never wait
-  on a lock — a lookup runs inside a turn's end, where a wait would stall it (until S9,
-  October 11, 2026, inside `turn-ended`, Claude Code's foreground Stop hook). Whoever holds the lock is the run leaving or another
-  reader cleaning up, so a record left now goes with the next read, and a dead record
-  is reported as no session either way. Publishing still takes the lock and waits,
-  replacing a dead record under it. Decided September 23, 2026 over a bounded wait,
-  which would still make a read wait on something it cannot see.
+  alive. A view never deletes a record: `list` and the lookup of a view read with
+  `ListReadOnly` and `LookupReadOnly`, report a dead record as no session and leave it
+  ([stage3-state.md](v2/stage3-state.md#what-is-a-writer), S17). A dead record is pruned
+  only in a change form, under its room's lease: a lookup or a listing there deletes one it
+  reads when the record's name lock is free at that moment (`LOCK_NB`), and never waits on
+  the lock —
+  a lookup runs inside a turn's end, where a wait would stall it (until S9, October 11,
+  2026, inside `turn-ended`, Claude Code's foreground Stop hook). Whoever holds the lock
+  is the run leaving or another change form cleaning up, so a record left now goes with
+  the next one, and a dead record is reported as no session either way. Publishing still
+  takes the lock and waits, replacing a dead record under it. Decided September 23, 2026
+  over a bounded wait, which would still make a lookup wait on something it cannot see.
 - Publishing a record is atomic and exclusive: write a temp file, then `link()`
   it to the final name — `link` fails if the name is taken. If the existing
   record belongs to a dead session, it's removed and the attempt retried; for a
