@@ -39,6 +39,10 @@ func holds(refused *RefusedError, pids ...int) bool {
 // the record as it was; once nothing holds the room, the launch writes its
 // own build and holds the lease shared.
 func TestLaunchReplacesMissingOrInvalidBuildOnlyExclusively(t *testing.T) {
+	// The holder stays: the launch beside it is refused once its retries end.
+	before := switchWait
+	switchWait = 100 * time.Millisecond
+	t.Cleanup(func() { switchWait = before })
 	foreign := strings.Repeat("ab", 32)
 	own, err := ID()
 	if err != nil {

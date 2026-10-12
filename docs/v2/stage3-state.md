@@ -223,8 +223,10 @@ stays. The probe holder writes no room state.
   leaves the base as it found it.
 - **Changing the build.** A launch whose id differs from `build`, or that finds it
   missing, unreadable or malformed, asks for the lock exclusive without waiting, without
-  keeping a shared descriptor of its own beside the request. Refused: exit 1, naming the
-  holders. Taken: it writes `build`, converts to shared, and reads `build` again like any
+  keeping a shared descriptor of its own beside the request. Refused, it reads `build`
+  again under the shared lock and is granted on its own id, or asks again until two
+  seconds have passed (D4a, under the lock order below); then exit 1, naming the holders.
+  Taken: it writes `build`, converts to shared, and reads `build` again like any
   writer, since `flock` does not promise the conversion is atomic; it reads again after
   every reacquisition.
 - **Holders** are found in `/proc/locks` by the device and inode of `build.lock` (an inode
@@ -235,7 +237,8 @@ stays. The probe holder writes no room state.
 - **Views** take no lock; when `build` differs from their own id they add one line, and
   say "unknown" when it cannot be read.
 - **Named steps** of the fault seam order a process against another at the lease:
-  `bootstrap <level>` before each level is made, `lease exclusive` once a launch holds it
+  `bootstrap <level>` before each level is made, `lease switch` once a launch holding the
+  lease shared has read a record not its own, `lease exclusive` once a launch holds it
   exclusive, `lease downgrade` before it turns shared, `leased` once the lease is held
   and authorized; and a note, which a fault plan logs and never counts, `lease release`
   before it goes — after an invocation's last effect, where ending the process is no new
@@ -265,7 +268,17 @@ room — launch, name, mailbox, receipt, control — and before a worktree is cr
 path takes it while holding any of them, and there is no upgrade under a mailbox lock. A
 launch's clearing takes the global clear lock while holding the lease and releases it
 before the claim. A shared acquisition is bounded when an exclusive switch stalls;
-the exclusive request does not block. The mailbox and name discipline is unchanged: no
+the exclusive request does not block.
+
+A refused exclusive request is not yet a refusal (D4a, decided October 11, 2026, after the
+workflow suite found two launches of one build into a fresh room refusing each other). Two
+launches that both read the record missing, or another build's with nothing holding the
+room, both ask for the lock exclusive, and flock's conversion lets one through. The other
+takes the lock shared again within the writers' bound and reads the record: its own build
+means the winner switched the room, and the lease is granted. Otherwise it lets go, waits a
+short random pause, and asks again, for at most two seconds in all; past them it is refused
+naming the holders, so a room held by another build's sessions answers after about two
+seconds rather than at once. The mailbox and name discipline is unchanged: no
 pruning and no name lock inside a mailbox section, and the bounded cross-mailbox
 publication of S3 stays.
 
@@ -321,7 +334,7 @@ goroutines sharing one process's lease.
 |---|---|
 | identity (commit 2) | `TestBuildIDIsExecutableContent` (a copy equal, a changed byte different, the installed path replaced or removed still hashes the running image); `TestUnreadableImageHasNoEffects`; `TestVersionJSONCarriesBuildID`, the human line unchanged |
 | lease (commit 2) | `TestSharedWritersExcludeBuildSwitch`, `TestLaunchReplacesMissingOrInvalidBuildOnlyExclusively`, `TestDowngradeRechecksBuild`, `TestReplacedLeaseLockIsReopened`, `TestHolderDiagnosticsUseDeviceAndInode`, `TestLeaseDescriptorsAreNotInherited`; every contention bounded, a writer beside a stalled switch refused after its bound (`TestAStalledSwitchBoundsItsWriters`) |
-| process races (commit 2, `test/leaserig`) | `TestDifferentImagesWithSameVersionCannotShareRoom` (one tree built twice, the second with a build time passed in by `-ldflags`: the same version, different ids, the second refused while a session of the first runs), `TestArtifactCopyCanJoinRoomAndUseTools` (the tool's peer takes a copy too: `TestPeerCheckIsTheBuildsContent`), `TestOldCommandBlocksNewBuildUntilExitOrKill`, `TestOrphanChildRefusesAfterBuildSwitch`; `TestHostLeaseOutlivesCleanup` in `host`, the lease taken before the claim and released after the record and the socket are gone |
+| process races (commit 2, `test/leaserig`) | `TestDifferentImagesWithSameVersionCannotShareRoom` (one tree built twice, the second with a build time passed in by `-ldflags`: the same version, different ids, the second refused while a session of the first runs), `TestArtifactCopyCanJoinRoomAndUseTools` (the tool's peer takes a copy too: `TestPeerCheckIsTheBuildsContent`), `TestOldCommandBlocksNewBuildUntilExitOrKill`, `TestOrphanChildRefusesAfterBuildSwitch`, `TestConcurrentLaunchesOfOneBuildAllTakeTheRoom` (D4a: launches of one build held together after reading a missing record, or another build's with nothing holding it, then let go at once, all take the room, repeated); `TestHostLeaseOutlivesCleanup` in `host`, the lease taken before the claim and released after the record and the socket are gone |
 | both routes (commit 2) | `TestBothRoutesRefuseAnotherBuildsRoom` (the shell and the tool refused in a room of another build, the tool before its ticket is confirmed), `TestChangeFormsOnAnEmptyBaseCreateNothing` |
 | bootstrap (commit 2) | `TestBootstrapRecoversAfterEveryStep`, `TestBootstrapRefusesUnsafeExistingComponents`, `TestBootstrapSyncFailureStopsBeforeClaim`, `TestOnlyAcquireCallsBootstrapPrimitives`: a kill or a failure at each create, lock and record step, and no session record after one |
 | roots (commit 3) | `TestTwoRoomsUseOnlyV2`, `TestChildBaseRoundTripAndGrantAuthority` (a shell of the session and a tool call's child read the exported base; their `Dir()` is the wrapper's room byte for byte, one `v2` in it; the grant authority's address, which hashes the room, is the wrapper's), `TestRootInverseRejectsLegacyOrMalformedRoom` and, for a worktree owner of another base or of 1.x, `TestWorktreeOwnerRootIsChecked`, `TestResolversNeverCreate`, `TestOrdinaryCommandsNeverTouchLegacyTree` |

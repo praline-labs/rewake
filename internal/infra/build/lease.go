@@ -3,6 +3,7 @@ package build
 import (
 	"errors"
 	"fmt"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"strings"
@@ -167,22 +168,61 @@ func hold(lock *state.LeaseLock, room, own string, launch bool) (*Lease, error) 
 	case err == nil && theirs == own:
 		return grant(lock, room)
 	case launch:
-		return switchBuild(lock, room, own, theirs, err)
+		return switchBuild(lock, room, own)
 	}
 	return nil, &RefusedError{Room: room, Own: own, Theirs: theirs, Record: err}
 }
 
+// switchWait bounds a launch's attempts to switch the room's build (D4a): a
+// holder that is another launch of this build switching the same room lets go
+// within it, and a holder still there after it — a session of another build —
+// is refused.
+var switchWait = 2 * time.Second
+
 // switchBuild makes this launch's id the room's build, under the exclusive
-// lock, and holds the lease shared afterwards.
-func switchBuild(lock *state.LeaseLock, room, own, theirs string, record error) (*Lease, error) {
-	taken, err := lock.TryExclusive()
-	if err != nil {
-		return nil, err
+// lock, and holds the lease shared afterwards. The exclusive request never
+// waits for a holder, but a refused request is not yet a refusal: two launches
+// of one build into a room without its record both read it missing, and
+// flock's conversion lets only one of them through. The other takes the lock
+// shared again, within the writers' bound, and reads the record: its own build
+// means the winner switched it, and the room is granted. Anything else is
+// tried again from an unlocked lock after a short random pause, until
+// switchWait, and refused then, naming the holders.
+func switchBuild(lock *state.LeaseLock, room, own string) (*Lease, error) {
+	state.Step("lease switch")
+	deadline := time.Now().Add(switchWait)
+	for {
+		taken, err := lock.TryExclusive()
+		if err != nil {
+			return nil, err
+		}
+		if taken {
+			return switched(lock, room, own)
+		}
+		if err := share(lock, room, own); err != nil {
+			return nil, err
+		}
+		theirs, record := state.ReadBuildRecord(room)
+		if record == nil && theirs == own {
+			return grant(lock, room)
+		}
+		if !time.Now().Before(deadline) {
+			return nil, &RefusedError{Room: room, Own: own, Theirs: theirs, Record: record, Holders: holdersOf(lock)}
+		}
+		if err := lock.Unlock(); err != nil {
+			return nil, err
+		}
+		time.Sleep(switchPause + rand.N(switchPause))
 	}
-	if !taken {
-		holders := holdersOf(lock)
-		return nil, &RefusedError{Room: room, Own: own, Theirs: theirs, Record: record, Holders: holders}
-	}
+}
+
+// switchPause is the least pause between a launch's attempts to switch; each
+// adds a random part as long, so two launches retrying together drift apart.
+const switchPause = 10 * time.Millisecond
+
+// switched writes this launch's id under the exclusive lock it took and turns
+// the lock shared.
+func switched(lock *state.LeaseLock, room, own string) (*Lease, error) {
 	state.Step("lease exclusive")
 	// Read again under the exclusive lock: a launch of this same build may
 	// have written it meanwhile.

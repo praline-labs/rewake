@@ -172,6 +172,17 @@ func (l *LeaseLock) atPath() (bool, error) {
 	return open.Dev == named.Dev && open.Ino == named.Ino, nil
 }
 
+// Unlock lets go of whatever this descriptor holds, keeping it open to take
+// the lock again: a launch that lost the race to switch the build waits
+// unlocked, so the winner can take the lock exclusive.
+func (l *LeaseLock) Unlock() error {
+	if err := syscall.Flock(int(l.file.Fd()), syscall.LOCK_UN); err != nil {
+		return noteReach(fmt.Errorf("could not unlock the build lease of %s: %w", l.room, err), false)
+	}
+	l.held, l.exclusive = false, false
+	return nil
+}
+
 // Close releases the lock and its authorization. The file stays: removing it
 // would let the next writer lock a new inode while an old holder keeps the
 // old one.

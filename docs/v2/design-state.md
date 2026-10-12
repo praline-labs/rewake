@@ -106,7 +106,11 @@ writers, and `build.lock`, a file locked with `flock`:
 - **Changing the build takes the lock exclusive**, without waiting. A launch whose id
   differs from `build`, or that finds no file or an unreadable one, asks for it; any
   holder — a live session, a running command, an orphaned child — makes the request
-  fail, and the launch refuses, exit 1, naming the holders `/proc/locks` shows, by pid
+  fail. A failed request reads `build` again under the shared lock and is granted when it
+  now holds the launch's own id, which another launch of the same build wrote; otherwise it
+  asks again after a short random pause, for at most two seconds (D4a in
+  [stage3-state.md](stage3-state.md#one-build-per-room)). Then the launch refuses, exit 1,
+  naming the holders `/proc/locks` shows, by pid
   and a safe label, never a command line: end them, or launch into another room
   (`--room`). Held, the launch writes its id to `build` by rename, then turns its lock to shared and reads `build` again like any
   writer: `flock` does not promise the conversion is atomic.
