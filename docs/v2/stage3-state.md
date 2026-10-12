@@ -162,25 +162,25 @@ precedence over a missing lease.
 `EnsureSubdir`, the locks (`WithRoomLock`, `WithNameLock`, `TryWithNameLock`,
 `WithMailboxLock`, `WithMailboxLockAt`, `TryHold`) — refuse with `ErrNoLease` when the process holds
 no lease for that room. The writes under the room that bypass them are each routed
-through a primitive, a new one where none fits (`Link`, `RemoveAll`, guarded resources):
+through a primitive, a new one where none fits: `OpenFile` (a write only with a write flag),
+`WriteFile`, `Link`, `Move`, `Chmod`, `Touch`, `Discard`, `RemoveAll`, `Flock` (taking a
+lock is a write, letting it go is not), each the os call it names behind the same guard and
+none asking the fault plan, so a call's fault schedule counts the steps it counted before
+(`Discard` and `Move` are cleanup; `Remove` and `Rename` stay the counted ones); then the
+guarded resources:
 
-- `core/registry/registry.go:108,171,227` (`os.Remove`);
-- `core/control` (its request files and `pending.go:118`), `core/control/serve.go`;
-- `core/mail`: `answer_reservation.go:22` (a direct `WriteFile`), `answer_mark.go:35` (a
-  truncate without create), `unread.go:31` (a hard link), `once.go:256`,
-  `marks.go:152`, `waiters.go:332` (`os.RemoveAll`), `turn_start.go:45,57` (an exclusive
-  create and its removal), `settle.go:13` (a function value bound to `os.Remove`) and its
-  `rewakefault` override in `faultops.go:30`;
-- the read clock, `core/mail/read_boundary.go`: a shared writable mapping, a truncate, a
-  store through an atomic word and a sync of an open descriptor, routed through a guarded
-  resource of `infra/state` with the order reserve the high-water mark, persist the
-  waiter, publish the word kept, and `Snapshot` free of filesystem access and blocking
-  locks;
-- `core/receipt/receipt.go:261` (its lock, with its identity recheck kept);
-- `host/wrap.go:133,363`; the endpoint's socket (`host/endpoint/endpoint.go`: creation,
-  removal, mode), the fixture's `backend.go` and `lifecycle.go`, and the adapter
-  sockets; closing a `UnixListener` may unlink its path, so the guard covers the close;
-- `core/grant/journal.go:160`;
+- commit 5: the registry's removals; `core/control`'s lock, request, mark and answer files
+  and `serve.go`; in `core/mail` a direct write, a truncate without create, a hard link,
+  the `RemoveAll`s, an exclusive create and its removal, the touches of retention, and
+  `settle.go`'s function value with its `rewakefault` override; `receipt.go`'s lock, its
+  identity recheck kept; `grant/journal.go`; `host/delivery`'s retention touch;
+- commit 6: the read clock, `core/mail/read_boundary.go` — a shared writable mapping, a
+  truncate, a store through an atomic word and a sync of an open descriptor — through a
+  guarded resource of `infra/state`, the order reserve the high-water mark, persist the
+  waiter, publish the word kept, and `Snapshot` free of filesystem access and blocking locks;
+- commit 6: the sockets — the endpoint's (creation, removal, mode), the wrapper's
+  (`host/claim.go`), the fixture's `backend.go` and `lifecycle.go` and the adapters';
+  closing a `UnixListener` may unlink its path, so the guard covers the close;
 - the lock files themselves (`state.go`), opened inside the primitives.
 
 Both ends of a link or a rename, mapped and open handles, listener creation and the

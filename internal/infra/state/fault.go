@@ -53,17 +53,6 @@ func Remove(path string) error {
 	return noteReach(os.Remove(path), true)
 }
 
-// RemoveAll removes a directory of the state directory and everything in it:
-// a run's own, as its run ends or once a later launch has proven it dead. It
-// asks no fault: a teardown is where ending the process is the crash the
-// later launch's reclaim covers, no new case.
-func RemoveAll(path string) error {
-	if err := viewWrite(OpRemove, path); err != nil {
-		return err
-	}
-	return noteReach(os.RemoveAll(path), true)
-}
-
 // Rename moves a file of the state directory to another name in it.
 func Rename(from, to string) error {
 	if err := viewWrite(OpRename, to); err != nil {

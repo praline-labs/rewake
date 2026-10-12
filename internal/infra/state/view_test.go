@@ -3,8 +3,11 @@ package state
 import (
 	"context"
 	"errors"
+	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
+	"time"
 )
 
 // In view mode every write primitive refuses and changes nothing, and
@@ -21,6 +24,11 @@ func TestEveryWritePrimitiveRefusesInViewMode(t *testing.T) {
 		t.Fatal(err)
 	}
 	nothing := func() error { return nil }
+	locked, err := OpenFile(file, os.O_RDONLY, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = locked.Close() }()
 	writes := map[string]func() error{
 		"WriteAtomic":      func() error { return WriteAtomic(file, []byte("view")) },
 		"PublishExclusive": func() error { return PublishExclusive(filepath.Join(dir, "new"), nil) },
@@ -40,6 +48,28 @@ func TestEveryWritePrimitiveRefusesInViewMode(t *testing.T) {
 		"WithMailboxLock": func() error {
 			return WithMailboxLock(context.Background(), dir, "api", nothing)
 		},
+		"OpenFile": func() error {
+			opened, err := OpenFile(filepath.Join(dir, "opened"), os.O_CREATE|os.O_WRONLY, 0o600)
+			if opened != nil {
+				_ = opened.Close()
+			}
+			return err
+		},
+		"OpenFile create": func() error {
+			opened, err := OpenFile(filepath.Join(dir, "created"), os.O_CREATE|os.O_RDONLY, 0o600)
+			if opened != nil {
+				_ = opened.Close()
+			}
+			return err
+		},
+		"WriteFile":     func() error { return WriteFile(filepath.Join(dir, "plain"), nil, 0o600) },
+		"Link":          func() error { return Link(file, filepath.Join(dir, "linked")) },
+		"Move":          func() error { return Move(file, filepath.Join(dir, "moved")) },
+		"Chmod":         func() error { return Chmod(file, 0o644) },
+		"Touch":         func() error { return Touch(file, time.Unix(0, 0)) },
+		"Discard":       func() error { return Discard(file) },
+		"RemoveAll":     func() error { return RemoveAll(filepath.Join(dir, "sessions")) },
+		"Flock":         func() error { return Flock(locked, syscall.LOCK_EX|syscall.LOCK_NB) },
 		"Bootstrap":     func() error { _, err := Bootstrap(base, "blue"); return err },
 		"OpenLeaseLock": func() error { _, err := OpenLeaseLock(dir); return err },
 		"CreateLeaseLock": func() error {
@@ -59,6 +89,20 @@ func TestEveryWritePrimitiveRefusesInViewMode(t *testing.T) {
 	}
 	if after := tree(t, base); after != before {
 		t.Fatalf("a view wrote:\nbefore %s\nafter  %s", before, after)
+	}
+	// Reading is no write, nor is letting a lock go: a read-only open and an
+	// unlock pass in view mode.
+	leave := EnterView()
+	if opened, err := OpenFile(file, os.O_RDONLY, 0); err != nil {
+		t.Errorf("a read-only open in view mode: %v", err)
+	} else {
+		_ = opened.Close()
+	}
+	if err := Flock(locked, syscall.LOCK_UN); err != nil {
+		t.Errorf("an unlock in view mode: %v", err)
+	}
+	if err := leave(); err != nil {
+		t.Errorf("a read-only open or an unlock counted as a write: %v", err)
 	}
 	if data, err := ReadFile(file); err != nil || string(data) != "before" {
 		t.Fatalf("the file: %q, %v", data, err)
