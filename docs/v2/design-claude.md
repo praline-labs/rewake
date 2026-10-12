@@ -280,6 +280,24 @@ forwards the end's `answer`, which is the report, as 1.x forwards the Stop hook'
 message. It replaces no status line, sends no settings, and does no heavy work in a
 hook: the hooks worker is shared and a mod that stalls it is unloaded.
 
+## Before the probe: what Claude Code already does
+
+Stage 4 starts with an audit, before the probe and before any adapter code (owner's
+decision, October 12, 2026). Much of the 1.x Claude Code side — the settings hooks, the
+telemetry collector, the wake line, the worktree launch — was written before mods existed
+and copies what Claude Code or a mod may now give natively. Each such feature is weighed
+against the installed Claude Code and the `mods` skill: kept as rewake's, handed to a
+native feature, or built on a mod event instead. Only what survives the audit is carried
+into the adapter or the probe.
+
+The worktree is the first example found. Claude Code creates a git worktree for a session
+itself (`claude --worktree [name]`, with `claude rm` removing a background session's
+worktree when safe; read in the 2.1.296 help), and a mod sees the creation and removal
+(`classic.WorktreeCreate`, `classic.WorktreeRemove`). rewake's own `--worktree` adds a
+place outside the repository with its record, the land and finish commands, the include
+rules, and the same behaviour on Codex; the audit decides which of these stay rewake's on
+Claude Code. Until then `host/worktree` moves in stage 3 unchanged.
+
 ## The stage 4 probe
 
 Main runs it live on the installed Claude Code, before the adapter is built; each answer
