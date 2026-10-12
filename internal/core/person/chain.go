@@ -77,12 +77,12 @@ func (s Scan) read(pid int) (link, error) {
 	if err != nil {
 		return link{}, &UnreadableError{What: "the stat of " + what, Err: err}
 	}
-	real, effective, err := s.Proc.Owner(pid)
+	realUID, effectiveUID, err := s.Proc.Owner(pid)
 	if err != nil {
 		return link{}, &UnreadableError{What: "the user of " + what, Err: err}
 	}
 	l := link{pid: pid, parent: parent, start: start}
-	if real != s.UID && effective != s.UID {
+	if realUID != s.UID && effectiveUID != s.UID {
 		return l, nil
 	}
 	if l.namespaces, err = s.Proc.Namespaces(strconv.Itoa(pid)); err != nil {

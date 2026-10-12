@@ -11,34 +11,34 @@ import "fmt"
 type DecisionOutcome string
 
 const (
-	// DecisionNoSubject: the report is no subject — no open occurrence about
+	// DecisionNoSubject means the report is no subject — no open occurrence about
 	// it, its journal gone or unreadable, its step settled, two journals
 	// naming it. A wrong call.
 	DecisionNoSubject DecisionOutcome = "no-subject"
-	// DecisionUnauthorized: the caller was found positively unable to decide
+	// DecisionUnauthorized means the caller was found positively unable to decide
 	// this subject. A wrong call.
 	DecisionUnauthorized DecisionOutcome = "unauthorized"
-	// DecisionChanged: the subject under the lock is not the one the caller
+	// DecisionChanged means the subject under the lock is not the one the caller
 	// found before it asked. Nothing written.
 	DecisionChanged DecisionOutcome = "changed"
-	// DecisionBusy: a mailbox lock was not had within its wait. Nothing
+	// DecisionBusy means a mailbox lock was not had within its wait. Nothing
 	// written; it is never a reason to decide.
 	DecisionBusy DecisionOutcome = "busy"
-	// DecisionOpposite: a decision with the other choice exists; it is never
+	// DecisionOpposite means a decision with the other choice exists; it is never
 	// replaced.
 	DecisionOpposite DecisionOutcome = "opposite"
-	// DecisionProven: the outcome was proven since the stop; the barrier
+	// DecisionProven means the outcome was proven since the stop; the barrier
 	// settles it by evidence.
 	DecisionProven DecisionOutcome = "proven"
-	// DecisionUnreadable: something the decision stands on could not be
+	// DecisionUnreadable means something the decision stands on could not be
 	// read — a decision already there, the room's registry, the subject's
 	// records — or its reads pass what a decision may keep. Nothing written.
 	DecisionUnreadable DecisionOutcome = "unreadable"
-	// DecisionUncertain: the record may exist, or exists and is not yet
+	// DecisionUncertain means the record may exist, or exists and is not yet
 	// durable; nothing it fixes is installed until a later writer makes it
 	// durable. It is never removed or replaced.
 	DecisionUncertain DecisionOutcome = "uncertain"
-	// DecisionEffectFailed: the record is durable and an effect it fixes
+	// DecisionEffectFailed means the record is durable and an effect it fixes
 	// could not be installed; the next barrier installs it.
 	DecisionEffectFailed DecisionOutcome = "effect-failed"
 )

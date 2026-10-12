@@ -25,7 +25,7 @@ func (r Reader) InitialEnv(pid int, key string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	raw, err := io.ReadAll(io.LimitReader(file, maxEnvironBytes+1))
 	if err != nil {
 		return false, err
@@ -43,7 +43,7 @@ func (r Reader) InitialEnv(pid int, key string) (bool, error) {
 }
 
 // Owner returns the real and effective user of a process, from its status.
-func (r Reader) Owner(pid int) (real, effective int, err error) {
+func (r Reader) Owner(pid int) (realUID, effectiveUID int, err error) {
 	raw, err := os.ReadFile(filepath.Join(r.Root, strconv.Itoa(pid), "status"))
 	if err != nil {
 		return 0, 0, err
@@ -57,12 +57,12 @@ func (r Reader) Owner(pid int) (real, effective int, err error) {
 		if len(fields) < 2 {
 			break
 		}
-		real, realErr := strconv.Atoi(fields[0])
-		effective, effectiveErr := strconv.Atoi(fields[1])
+		realUID, realErr := strconv.Atoi(fields[0])
+		effectiveUID, effectiveErr := strconv.Atoi(fields[1])
 		if realErr != nil || effectiveErr != nil {
 			break
 		}
-		return real, effective, nil
+		return realUID, effectiveUID, nil
 	}
 	return 0, 0, errors.New("the status of pid " + strconv.Itoa(pid) + " names no user")
 }

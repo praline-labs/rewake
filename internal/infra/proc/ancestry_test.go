@@ -33,9 +33,9 @@ func TestInitialEnvReadsTheEnvironmentAsStarted(t *testing.T) {
 
 // The user of a process is its real and effective one, from its status.
 func TestOwnerReadsTheUsersOfAProcess(t *testing.T) {
-	real, effective, err := Default.Owner(os.Getpid())
-	if err != nil || real != os.Getuid() || effective != os.Geteuid() {
-		t.Fatalf("this process is %d/%d, %v", real, effective, err)
+	realUID, effectiveUID, err := Default.Owner(os.Getpid())
+	if err != nil || realUID != os.Getuid() || effectiveUID != os.Geteuid() {
+		t.Fatalf("this process is %d/%d, %v", realUID, effectiveUID, err)
 	}
 	root := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(root, "7"), 0o700); err != nil {
