@@ -10,8 +10,8 @@ import (
 // The bootstrap of a room (docs/v2/stage3-state.md#the-bootstrap): the room's
 // lease lives in the room, so making the room is a write no lease can cover.
 // Bootstrap, OpenLeaseLock and WriteBuildRecord are the only writes that work
-// without one, and build.Acquire is their one caller, which a test over the
-// module holds. None of them notes a completed write for the shell's
+// without one, and build.Acquire is their one caller: a test over the
+// module fails on any other reference to them, a function value included. None of them notes a completed write for the shell's
 // observation: making a room or taking its lease is no mail operation, and a
 // refused call must not leave evidence that the state was written.
 
