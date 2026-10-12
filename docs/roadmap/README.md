@@ -48,7 +48,8 @@ refusal on September 17, 2026 cleared after recipient restart.
   [S10 built](2026-10-11-stage3-s10.md) the same day, [S11 built](2026-10-11-stage3-s11.md)
   the same day, [S12 built and accepted](2026-10-11-stage3-s12.md) the same day,
   [S13 built and accepted](2026-10-11-stage3-s13.md) the same day,
-  [S14 built and accepted](2026-10-11-stage3-s14.md) the same day, S15–S19 to come.
+  [S14 built and accepted](2026-10-11-stage3-s14.md) the same day,
+  [S15 built](2026-10-11-stage3-s15.md) the same day, S16–S19 to come.
 - [The workflow suite](2026-09-21-workflow-suite.md) — in progress since
   September 21, 2026; what exists and what remains are listed there and in
   [work-queue.md](../work-queue.md).
@@ -152,6 +153,7 @@ without a date. Local installation without publishing is in
 | October 11, 2026 | [Stage 3 of 2.0: S12 accepted](2026-10-11-stage3-s12.md) | The `infra` moves in one commit: `state` with its fault seam, `proc`, `boottime` and `buildtime` under `internal/infra`, each file a rename, only import paths, the layout test's four transition entries and the paths in the documents changed; the inventory by `go/types` over the four build variants; accepted in one review round without findings |
 | October 11, 2026 | [Stage 3 of 2.0: S13 accepted](2026-10-11-stage3-s13.md) | The `core` moves: four preparatory commits in place — two tests that found the module by relative paths and would have passed on nothing after the move, the 2.0 package names imported in every consumer with `cmd/rewake` byte for byte unchanged, the delivery server's files recorded as a group in transit without changing their rule — then ten packages and their two test helpers under `internal/core` in one move, 210 renames at 89–100% similarity; the plans of S13 and S15 corrected to the inventory; accepted in one review round without a code defect |
 | October 11, 2026 | [Stage 3 of 2.0: S14 accepted](2026-10-11-stage3-s14.md) | The turn-end and read code to `core/mail`: three preparatory commits in place, each shown not to change behaviour — the test window passed as an option instead of a variable read inside the end, the three mixed files split so each moving file moves whole, the names the staying code calls exported, the last two with every function's compiled code unchanged — then five files moved as renames at 78–90% similarity; the plans of S14 and S15 corrected to the inventory, `ReportThreadChanged` noted for S15; accepted in one review round on a token comparison of the source, a stale list in permission-requests.md corrected |
+| October 11, 2026 | [Stage 3 of 2.0: S15 built](2026-10-11-stage3-s15.md) | The delivery server to `host/delivery`: the decided cut recorded first — the finished sweep, the settlement and the awaiting sweep stay in `core/mail` as locked entry points the server calls under its lock, a layout test holding their callers, two test operations of `core/mail` built only under `rewakefault` — then ten preparatory commits in place, each shown by a per-function source comparison not to change behaviour, and fifty-six files moved with only the package clause, imports and the `mail.` qualifier changed; `core` imports no `host` package in any variant; waiting for review and acceptance |
 
 ## Remaining work — owner decisions, September 19–21, 2026
 
