@@ -319,7 +319,7 @@ is a table of its own, with the sequences the generated tests assert:
 ## As built
 
 The record, its events and notices are `internal/core/channel` (`record.go`, `events.go`, `history.go`,
-`display.go`, `notices.go`); the wrapper's keeper is `internal/wrap/channel.go`, the
+`display.go`, `notices.go`); the wrapper's keeper is `internal/host/channel.go`, the
 shell's side `internal/cli/shell_channel.go`, `internal/core/receipt/shell.go` and
 `internal/infra/state/reach.go`. Where the text above left a choice, the code reads it so:
 
@@ -341,12 +341,12 @@ shell's side `internal/cli/shell_channel.go`, `internal/core/receipt/shell.go` a
   and in reverse; `silence_test.go` holds that a run with nothing observed shows no
   failure; `connections_test.go` folds two connections across a ticket, the timer's end
   and a late hello in every order against states written out by hand; and
-  `internal/bridge/endpoint/channel_order_test.go` holds one transport's hello, or a
+  `internal/host/endpoint/channel_order_test.go` holds one transport's hello, or a
   refused hello, behind the next transport's events on a real endpoint.
 - **Only the exit is taken in arrival order**: an event told after the record froze is
   not of the run (rule 8), and the keeper folds its held closes before it freezes.
 - **The channel writes no grant and decides no permission**:
-  `internal/wrap/channel_effects_test.go` tells the keeper every kind of the alphabet
+  `internal/host/channel_effects_test.go` tells the keeper every kind of the alphabet
   and finds only the notices' letters written under the state directory.
 - **Main is told only of another run's channel.** A main's own notices go to it as the
   worker of its run; the main copy would be the same news twice.

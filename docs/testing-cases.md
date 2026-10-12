@@ -36,10 +36,10 @@ Claude Code runs, by unit tests, each killing the column's mutant of it:
 | `refusal-as-delivered` | `internal/adapter/claude/receipt.go` | `internal/adapter/claude` `TestLaneRefusalFails`, `TestParseReceipt` |
 | `late-word-dropped` | `internal/adapter/claude/lane.go` | `internal/adapter/claude` `TestLaneLateWordReachesTheServer` |
 | `claude-grant-unshielded` | `internal/core/grant/rules.go` | `internal/core/grant` `TestAShieldedDirectoryIsGrantedOnlyByName` |
-| `claude-resume-not-given` | `internal/wrap/wrap.go` | `internal/wrap` `TestAResumedLaunchStartsTheHarnessWithTheGrantsConfirmedAgain` |
-| `claude-resume-closed-held` | `internal/wrap/grants.go` | `internal/wrap` `TestMainsAuthorityAsksTheMailboxWhetherATaskIsOpen` |
+| `claude-resume-not-given` | `internal/host/wrap.go` | `internal/host` `TestAResumedLaunchStartsTheHarnessWithTheGrantsConfirmedAgain` |
+| `claude-resume-closed-held` | `internal/host/grants.go` | `internal/host` `TestMainsAuthorityAsksTheMailboxWhetherATaskIsOpen` |
 | `claude-worktree-parent` | `internal/adapter/claude/worktree.go` | `internal/adapter/claude` `TestALaunchWorksInTheDirectoryItWasStartedIn` |
-| `delivery-unpinned`, the column's target | `internal/wrap/wrap.go` (`thread = source.Thread`) | `internal/wrap` `TestTheWrapperPinsDeliveryToTheObservedThread` |
+| `delivery-unpinned`, the column's target | `internal/host/wrap.go` (`thread = source.Thread`) | `internal/host` `TestTheWrapperPinsDeliveryToTheObservedThread` |
 
 `delivery-unpinned` of `thread-changed` mutated, on the Claude Code column, the
 wrapper's branch that pins a delivery to the conversation an observer reports — code
@@ -162,7 +162,7 @@ a commit is held only after the HEAD moved; one that removes a moved checkout wi
 land that makes a merge commit; a finish that asks nothing first; and one that leaves the
 branch behind. That the removal of a missing checkout takes out its own entry and no
 other, where `git worktree prune` would take every missing checkout's, is held by
-`internal/worktree` (`TestAMissingCheckoutIsRemovedAlone`).
+`internal/host/worktree` (`TestAMissingCheckoutIsRemovedAlone`).
 
 ## A worktree for a Claude Code launch
 

@@ -13,7 +13,7 @@ one adapter needs beyond the neutral events lives in the adapter.
   plus a policy block; the state shown is derived, never stored apart.
   Tests:
   - `internal/core/channel/space_oracle_test.go` `TestEqualComparesEveryField`
-  - `internal/wrap/channel_test.go` `TestTheShellObservationsAreFoldedAndTaken`
+  - `internal/host/channel_test.go` `TestTheShellObservationsAreFoldedAndTaken`
   - `internal/core/channel/space_test.go` `TestEveryEventSequenceKeepsTheRules`
   - `internal/core/channel/table_test.go` `TestEachFailurePointShowsAndTellsWhatTheTextSays`
   - `test/workflow/fixture_live_test.go` `TestFixtureLive` — on the fixture column since S11: a channel live, unproven, lost, denied, the shell's evidence and the record frozen at the exit
@@ -24,10 +24,10 @@ one adapter needs beyond the neutral events lives in the adapter.
   - `internal/core/channel/connections_test.go` `TestTwoConnectionsAcrossATicketInEveryOrder`
   - `internal/core/channel/connections_test.go` `TestAHelloAtTheTimersEndIsInTime`
   - `internal/core/channel/connections_test.go` `TestATicketStopsTheTimer`
-  - `internal/bridge/endpoint/channel_test.go` `TestEachTransportNamedIsAGenerationAndItsEndNamed` — the hello and close are the tool transport's lifecycle since S10
-  - `internal/bridge/endpoint/channel_test.go` `TestARefusedTransportHelloIsToldWithItsAncestry`
+  - `internal/host/endpoint/channel_test.go` `TestEachTransportNamedIsAGenerationAndItsEndNamed` — the hello and close are the tool transport's lifecycle since S10
+  - `internal/host/endpoint/channel_test.go` `TestARefusedTransportHelloIsToldWithItsAncestry`
   - `internal/core/channel/connections_test.go` `TestALateHelloUndoesFailuresUntilTheLastClose`
-  - `internal/wrap/channel_test.go` `TestAClosedServerFailsOnlyWhileItsHarnessLives`
+  - `internal/host/channel_test.go` `TestAClosedServerFailsOnlyWhileItsHarnessLives`
 
 - **C3. Silence proves nothing.** No hello, no call, no shell command are not failures;
   a wait names what was not observed, never what did not happen.
@@ -38,7 +38,7 @@ one adapter needs beyond the neutral events lives in the adapter.
 - **C4.** Each channel has one kind of evidence: the tool's, a call bound (T2); the
   shell's, a mail operation that wrote under a lock or failed to reach it.
   Tests:
-  - `internal/wrap/channel_test.go` `TestTheShellObservationsAreFoldedAndTaken`
+  - `internal/host/channel_test.go` `TestTheShellObservationsAreFoldedAndTaken`
   - `internal/core/channel/space_test.go` `TestEveryEventSequenceKeepsTheRules`
 
 - **C5.** Events fold by when they happened, not by when they arrived.
@@ -46,11 +46,11 @@ one adapter needs beyond the neutral events lives in the adapter.
   - `internal/core/channel/order_test.go` `TestEveryArrivalOrderFoldsAsEventTime`
   - `internal/core/channel/late_test.go` `TestALateTicketKeepsTheFirstFailureAfterIt`
   - `internal/core/channel/late_test.go` `TestALateTicketDoesNotUndoALaterClose`
-  - `internal/wrap/channel_order_test.go` `TestACloseFoldedAfterLaterFailuresLandsWhereItHappened`
-  - `internal/wrap/channel_order_test.go` `TestATicketToldAfterLaterFailuresFoldsInItsPlace`
-  - `internal/wrap/channel_order_test.go` `TestACloseYoungerThanAHeartbeatWaits`
-  - `internal/bridge/endpoint/channel_order_test.go` `TestAHelloDeliveredLateKeepsItsConnectionLive`
-  - `internal/bridge/endpoint/channel_order_test.go` `TestARefusedHelloDeliveredAfterAHelloKeepsItsFailure`
+  - `internal/host/channel_order_test.go` `TestACloseFoldedAfterLaterFailuresLandsWhereItHappened`
+  - `internal/host/channel_order_test.go` `TestATicketToldAfterLaterFailuresFoldsInItsPlace`
+  - `internal/host/channel_order_test.go` `TestACloseYoungerThanAHeartbeatWaits`
+  - `internal/host/endpoint/channel_order_test.go` `TestAHelloDeliveredLateKeepsItsConnectionLive`
+  - `internal/host/endpoint/channel_order_test.go` `TestARefusedHelloDeliveredAfterAHelloKeepsItsFailure`
 
 - **C6.** A notice states an action first and fits the preview.
   Tests:
@@ -71,25 +71,25 @@ one adapter needs beyond the neutral events lives in the adapter.
   - `internal/core/mail/notice_recall_test.go` `TestAReplacementIsShownBesideANewerLetter`
   - `internal/core/mail/notice_recall_test.go` `TestCorrectionsAreAllShownOldestFirst`
   - `internal/core/mail/notice_recall_test.go` `TestASingleCorrectionIsShownBesideTheNewestUnread`
-  - `internal/wrap/channel_test.go` `TestANoticeLandsOnceAcrossHeartbeats`
-  - `internal/wrap/channel_test.go` `TestMainIsToldUnlessItIsTheRun`
-  - `internal/wrap/channel_order_test.go` `TestNoticesWaitForTheOneInFlight`
+  - `internal/host/channel_test.go` `TestANoticeLandsOnceAcrossHeartbeats`
+  - `internal/host/channel_test.go` `TestMainIsToldUnlessItIsTheRun`
+  - `internal/host/channel_order_test.go` `TestNoticesWaitForTheOneInFlight`
 
 - **C7. A policy refusal is not routed around** (the owner, October 4, 2026) — a managed
   policy that keeps mods off included.
   Tests:
-  - `internal/wrap/channel_test.go` `TestAdviceFixedBeforeTheBlockIsDropped`
-  - `internal/wrap/channel_order_test.go` `TestADenialToldWhileACloseWaitsStopsAdviceAtOnce`
+  - `internal/host/channel_test.go` `TestAdviceFixedBeforeTheBlockIsDropped`
+  - `internal/host/channel_order_test.go` `TestADenialToldWhileACloseWaitsStopsAdviceAtOnce`
   - `internal/adapter/fixture/live_test.go` `TestADenialReachesTheNeutralInput`
-  - `internal/wrap/channel_live_test.go` `TestAToolLiveAfterAnUnprovenExchangeKeepsItsLifecycle`
+  - `internal/host/channel_live_test.go` `TestAToolLiveAfterAnUnprovenExchangeKeepsItsLifecycle`
   - `internal/core/channel/space_test.go` `TestEveryEventSequenceKeepsTheRules`
 
 - **C8.** Nothing is relaunched, granted or approved by the channel.
   Tests:
-  - `internal/wrap/channel_test.go` `TestANoticeForAMainThatLeftIsDropped`
-  - `internal/wrap/channel_test.go` `TestNothingIsToldAfterTheHarnessExits`
-  - `internal/wrap/channel_order_test.go` `TestANoticeFixedBeforeTheExitIsNotWrittenAfterIt`
-  - `internal/wrap/channel_order_test.go` `TestALostBackendFreezesTheRecordBeforeTheHarnessEnds`
-  - `internal/wrap/channel_order_test.go` `TestAnAcceptedSignalFreezesTheRecord`
+  - `internal/host/channel_test.go` `TestANoticeForAMainThatLeftIsDropped`
+  - `internal/host/channel_test.go` `TestNothingIsToldAfterTheHarnessExits`
+  - `internal/host/channel_order_test.go` `TestANoticeFixedBeforeTheExitIsNotWrittenAfterIt`
+  - `internal/host/channel_order_test.go` `TestALostBackendFreezesTheRecordBeforeTheHarnessEnds`
+  - `internal/host/channel_order_test.go` `TestAnAcceptedSignalFreezesTheRecord`
   - `internal/core/channel/space_test.go` `TestEveryEventSequenceKeepsTheRules`
-  - `internal/wrap/channel_effects_test.go` `TestTheChannelGrantsAndApprovesNothing`
+  - `internal/host/channel_effects_test.go` `TestTheChannelGrantsAndApprovesNothing`

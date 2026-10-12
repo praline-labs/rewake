@@ -15,7 +15,7 @@ built is in [testing-plugin.md](archive-1.x/testing-plugin.md#steering-a-session
   refused without writing, no directory, a request taken as the asker gives up, in
   each of the three orders above, a taken request left in place while it is served, and
   an asker cut short withdrawing its request as `cut short`.
-- `internal/wrap/control_test.go` — the wrapper makes the directory, private, for a
+- `internal/host/control_test.go` — the wrapper makes the directory, private, for a
   harness that serves it, removes it with the session, and makes none for one that
   does not.
 - `internal/cli/steer_test.go` — the commands against a fake served side: the outputs,
@@ -28,7 +28,7 @@ built is in [testing-plugin.md](archive-1.x/testing-plugin.md#steering-a-session
   with exit 2 and nothing written; a harness that is not steerable, and one without a
   focus; and a SIGTERM during the pickup, which ends the call as `cut short` with the
   request withdrawn instead of ending the process.
-- `internal/wrap/session_notices_test.go` — no notice of a compaction this main asked
+- `internal/host/session_notices_test.go` — no notice of a compaction this main asked
   for, and one each for a compaction another main asked for and one nobody asked for;
   `compaction_letters_test.go` — one letter, a note from the worker owing nothing, with
   the tokens and the count; a refusal and a failure as letters at once, another main's
@@ -144,5 +144,5 @@ built is in [testing-plugin.md](archive-1.x/testing-plugin.md#steering-a-session
   after the end, and main's letter comes from the late end with its tokens; four product
   mutants ([archive/1.x/codex](../archive/1.x/codex/README.md)).
   `internal/adapter/codex/gateway/compact_hold_test.go` holds the same at the gateway,
-  and `internal/wrap/compaction_letters_running_test.go` the letter waiting past an
+  and `internal/host/compaction_letters_running_test.go` the letter waiting past an
   outcome of `started`.

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/praline-labs/rewake/internal/host/worktree"
 	"github.com/praline-labs/rewake/internal/infra/proc"
-	"github.com/praline-labs/rewake/internal/worktree"
 )
 
 // launchedElsewhere rewrites a checkout's record as if a rewake launch still

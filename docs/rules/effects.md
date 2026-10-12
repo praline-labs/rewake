@@ -71,7 +71,7 @@ nothing lifts a stop without returning evidence.
   - `internal/core/mail/publication_race_test.go` `TestAdmissionIsInsideTheSection`
   - `internal/cli/publication_race_test.go` `TestTheSweepWaitsForAHeadsUpsEvidence`
   - `internal/cli/publication_race_test.go` `TestAHeadsUpsAdmissionIsInsideTheSection`
-  - `internal/wrap/channel_publication_test.go` `TestANoticeForAMainThatEndsAtItsLockIsDropped`
+  - `internal/host/channel_publication_test.go` `TestANoticeForAMainThatEndsAtItsLockIsDropped`
   - `internal/core/mail/publication_bounds_test.go` `TestAFirstLandingAcrossRunEndIsWrittenOnce`
   - `internal/core/mail/publication_bounds_test.go` `TestABusyRecipientFailsTheTurnWithoutAStop`
   - `internal/core/mail/publication_bounds_test.go` `TestTwoMailboxesPublishingToEachOtherDoNotDeadlock`
@@ -115,17 +115,17 @@ nothing lifts a stop without returning evidence.
 - **E5. The size bound holds on the final encoded bytes of every answer, in one place**;
   every text part names its letter, part, count and byte range. (M1 rule 5.)
   Tests:
-  - `internal/bridge/ticket_test.go` `TestOnlyAWholeResultIsEvidence`
-  - `internal/bridge/ticket_test.go` `TestCutKeepsCharactersAndBounds`
+  - `internal/tool/ticket_test.go` `TestOnlyAWholeResultIsEvidence`
+  - `internal/tool/ticket_test.go` `TestCutKeepsCharactersAndBounds`
   - `internal/cli/bridge_rules_test.go` `TestAnEscapedDiagnosticFits`
   - `internal/cli/bridge_rules_test.go` `TestAnAnswerThatCannotBeKeptStillFits`
   - `internal/cli/bridge_rules_test.go` `TestEveryTextPartNamesItself`
   - `internal/cli/bridge_tool_test.go` `TestALongAnswerComesInParts`
-  - `internal/bridge/endpoint/answer_test.go` `TestTheEncoderReplacesAnAnswerThatDoesNotFit`
-  - `internal/bridge/endpoint/answer_test.go` `TestAChildsOutputIsCapped`
-  - `internal/bridge/endpoint/answer_test.go` `TestOnlyTheEncoderAnswers`
-  - `internal/bridge/endpoint/answer_test.go` `FuzzEveryAnswerFits`
-  - `internal/bridge/endpoint/answer_test.go` `FuzzRequestsAreBounded`
+  - `internal/host/endpoint/answer_test.go` `TestTheEncoderReplacesAnAnswerThatDoesNotFit`
+  - `internal/host/endpoint/answer_test.go` `TestAChildsOutputIsCapped`
+  - `internal/host/endpoint/answer_test.go` `TestOnlyTheEncoderAnswers`
+  - `internal/host/endpoint/answer_test.go` `FuzzEveryAnswerFits`
+  - `internal/host/endpoint/answer_test.go` `FuzzRequestsAreBounded`
 
 - **E6. A check has three outcomes: found, proven absent, unknown.** "No such file"
   proves absence. When recording a stop's original observation, Lstat finding a
@@ -241,7 +241,7 @@ nothing lifts a stop without returning evidence.
   - `internal/core/mail/kept_clock_test.go` `TestAHoldReservesItsPositionBeforeItCommits`
   - `internal/core/mail/kept_clock_test.go` `TestAFailedHoldLeavesAGapAndNoPositionIsIssuedTwice`
   - `internal/cli/turn_end_api_test.go` `TestATurnEndWithoutItsEventOrAKnownReasonIsRefused`
-  - `internal/wrap/turn_boundary_test.go` `TestTheWrapperPassesEachEndOnWithItsEventAndReason`
+  - `internal/host/turn_boundary_test.go` `TestTheWrapperPassesEachEndOnWithItsEventAndReason`
 
 - **E8. Each effect is proven done, proven not done, or unknown; an unknown stops every
   change to its mailbox until evidence settles it.** (M1 rule 8, clauses evidence,

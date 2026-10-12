@@ -11,11 +11,11 @@ import (
 	"strings"
 	"time"
 
-	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/state"
+	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // A read through the tool (docs/mail-bridge.md#bounded-output-and-the-read-boundary).

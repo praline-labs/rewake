@@ -190,7 +190,7 @@ and `/new` is always `cleared`, since it is the same command.
 wrapper's age.
 
 **Main's notices.** The observer that announces compactions and departures
-(`internal/wrap/session_notices.go`) announces a change after main's start. The snapshot
+(`internal/host/session_notices.go`) announces a change after main's start. The snapshot
 keeps `conversationEvents` beside `compactionEvents`:
 
 - `Rewake: review-claude started a new conversation (cleared at its keyboard).`
@@ -261,7 +261,7 @@ context after the clear, until that return takes it.
 
 **Deliveries.** From `clear.asked` until the answer, the worker's wrapper holds new
 notices as not yet deliverable, the way a grant waits for an idle session
-(`internal/wrap/grants.go`). The hold is bounded by the command's own limit, so a lost
+(`internal/host/grants.go`). The hold is bounded by the command's own limit, so a lost
 answer holds nothing for long. A notice queued in the harness before that goes first:
 its priority `next` runs ahead of the clear's `later`.
 

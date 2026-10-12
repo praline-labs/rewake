@@ -19,8 +19,8 @@ internal/infra/boottime/                      the boot clock, comparable across 
 internal/core/mail/                           message, status, sender-side write, the locked sweep and settlement, turn ends and the read's acknowledgment
 internal/core/mail/mailtest/                  for tests outside mail: the paths and bytes of its records, each checked against mail
 internal/core/receipt/                        the journal of mail operations run through the tool's words: keys, records, frozen reads
-internal/bridge/                              what the CLI and the context endpoint share: the ticket, result bounds, cutting parts, the gate against a turn's end
-internal/bridge/endpoint/                     the wrapper's context endpoint: hellos, tickets, completions, a transport's calls
+internal/tool/                                what the CLI and the context endpoint share: the ticket, result bounds, cutting parts, the gate against a turn's end
+internal/host/endpoint/                       the wrapper's context endpoint: hellos, tickets, completions, a transport's calls
 internal/core/channel/                        the run's mail channel: tool and shell observations, the block, display and notices
 internal/core/grant/                          which directories a task may grant, and the journal of what was granted
 internal/core/grant/authority/                main's wrapper holding the grants its commands registered, and confirming them
@@ -28,16 +28,15 @@ internal/core/grant/authority/authoritytest/  for tests: a helper process that i
 internal/core/control/                        a main's control request to a run and its answer, as files
 internal/core/role/                           the role catalogue: flag, briefing line, reporting duty
 internal/core/brief/                          text injected into an agent, independent of transport
-internal/alias/                               launch aliases: a short name turned into launch arguments
 internal/core/session/                        optional, epoch-scoped observations of a harness (telemetry)
 internal/adapter/                             the adapter API: the Harness interface, the catalogue value, launch plans, version gates, flags, defaults, settings
 internal/adapter/catalog/                     the one constructor of the catalogue, which cmd/rewake builds and hands to the CLI
 internal/adapter/claude/                      launch arguments, environment, socket delivery
 internal/adapter/fixture/                     the test harness behind rewakefixture: a scripted program over a socket, every contract interface
-internal/wrap/                                wrapper: launch, signals, lifecycle
-internal/host/launch/                         a launch's host side: the run's environment, the version read before the claim, the bounded probe
+internal/host/                                wrapper: launch, signals, lifecycle
+internal/host/launch/                         a launch's host side: the run's environment, the version read before the claim, the bounded probe, the aliases a short name expands to
 internal/host/delivery/                       the delivery server: the serving loop, notices and their batches, the coalescing window, outcomes and the sweep's lock
-internal/worktree/                            checkouts rewake makes for a launch: git worktree add, records, land, removal
+internal/host/worktree/                       checkouts rewake makes for a launch: git worktree add, records, land, removal
 scripts/                                      packaging scripts and the tests of the npm shim
 docs/                                         the documentation, and the tests that keep it true to the tree
 test/workflow/                                the workflow suite: end-to-end scenarios against fixtures
@@ -150,5 +149,5 @@ before anything is made (a continued conversation, which stays in the directory 
 started in; for Claude Code its own `-w` and `--tmux` beside rewake's); and
 `LaunchDirectory(args)`, the directory the launch would work in and the arguments
 without what chose it. The launch command then
-makes the checkout in `internal/worktree` and starts the session inside it
+makes the checkout in `internal/host/worktree` and starts the session inside it
 ([worktree.md](worktree.md)). Claude Code implements it, keeping `-w` for its own.

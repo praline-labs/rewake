@@ -13,7 +13,7 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
 - **T1. A transport decides no mail.** It carries a call to the core and the answer
   back, and keeps nothing a later call needs; what a call did lives in the receipts.
   Tests:
-  - `internal/bridge/endpoint/tickets_test.go` `TestOneCallGetsOneTicket`
+  - `internal/host/endpoint/tickets_test.go` `TestOneCallGetsOneTicket`
   - `internal/cli/bridge_tool_test.go` `TestTheToolSurface`
   - `internal/cli/bridge_tool_test.go` `TestWhoamiNamesTheMailChannel`
   - `internal/cli/bridge_rules_test.go` `TestAToolRetryKeepsToTheToolSurface`
@@ -31,31 +31,31 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   issued by the wrapper after it saw the call natively is how 1.x held this on Codex;
   [design-claude.md](../v2/design-claude.md#how-a-tool-call-runs) says how the mod holds it.
   Tests:
-  - `internal/bridge/endpoint/tickets_test.go` `TestATicketNeedsTheHarnessesOwnObservation`
-  - `internal/bridge/endpoint/tickets_test.go` `TestTheObservationMayComeEitherSideOfTheRequest`
-  - `internal/bridge/endpoint/tickets_test.go` `TestOneCallGetsOneTicket`
-  - `internal/bridge/endpoint/tickets_test.go` `TestConflictingCorrelationIsRefused`
-  - `internal/bridge/endpoint/tickets_test.go` `TestAConfirmationIsOneTime`
-  - `internal/bridge/endpoint/tickets_test.go` `TestTheDeadlineFollowsTheTransportsTimeout`
-  - `internal/bridge/endpoint/tickets_test.go` `TestTheObservationWaitIsTwoSeconds`
-  - `internal/bridge/endpoint/hello_test.go` `TestAHelloIsChecked`
-  - `internal/bridge/endpoint/hello_test.go` `TestARoleAsksOnlyItsOwnQuestion`
-  - `internal/bridge/endpoint/order_table_test.go` `TestEveryOrderOfTheTableIssuesOneTicketPerCall`
-  - `internal/bridge/ticket_test.go` `TestATicketMissingItsScopeIsRefused`
-  - `internal/bridge/ticket_test.go` `TestTheTicketIsReadFromItsDescriptor`
-  - `internal/bridge/ticket_test.go` `TestAnOpenTicketDescriptorDoesNotHang`
-  - `internal/bridge/ticket_test.go` `TestNoEndpointRefusesEveryTicket`
-  - `internal/bridge/ticket_test.go` `TestTheDigestSeparatesWords`
+  - `internal/host/endpoint/tickets_test.go` `TestATicketNeedsTheHarnessesOwnObservation`
+  - `internal/host/endpoint/tickets_test.go` `TestTheObservationMayComeEitherSideOfTheRequest`
+  - `internal/host/endpoint/tickets_test.go` `TestOneCallGetsOneTicket`
+  - `internal/host/endpoint/tickets_test.go` `TestConflictingCorrelationIsRefused`
+  - `internal/host/endpoint/tickets_test.go` `TestAConfirmationIsOneTime`
+  - `internal/host/endpoint/tickets_test.go` `TestTheDeadlineFollowsTheTransportsTimeout`
+  - `internal/host/endpoint/tickets_test.go` `TestTheObservationWaitIsTwoSeconds`
+  - `internal/host/endpoint/hello_test.go` `TestAHelloIsChecked`
+  - `internal/host/endpoint/hello_test.go` `TestARoleAsksOnlyItsOwnQuestion`
+  - `internal/host/endpoint/order_table_test.go` `TestEveryOrderOfTheTableIssuesOneTicketPerCall`
+  - `internal/tool/ticket_test.go` `TestATicketMissingItsScopeIsRefused`
+  - `internal/tool/ticket_test.go` `TestTheTicketIsReadFromItsDescriptor`
+  - `internal/tool/ticket_test.go` `TestAnOpenTicketDescriptorDoesNotHang`
+  - `internal/tool/ticket_test.go` `TestNoEndpointRefusesEveryTicket`
+  - `internal/tool/ticket_test.go` `TestTheDigestSeparatesWords`
   - `internal/cli/bridge_tool_test.go` `TestAToolCallWithoutAValidTicketRunsNothing`
-  - `internal/bridge/endpoint/transport_test.go` `TestATransportsCallRunsInAChildOfTheWrapper`
-  - `internal/bridge/endpoint/transport_test.go` `TestOnlyTheTransportsOwnProcessIsServed`
+  - `internal/host/endpoint/transport_test.go` `TestATransportsCallRunsInAChildOfTheWrapper`
+  - `internal/host/endpoint/transport_test.go` `TestOnlyTheTransportsOwnProcessIsServed`
   - `test/toolrig/transport_test.go` `TestOnlyTheHarnesssOwnProcessIsServed`
-  - `internal/bridge/endpoint/close_test.go` `TestARequestAfterTheTransportIsWithdrawnRunsNothing`
-  - `internal/bridge/endpoint/transport_test.go` `TestAnAnswerGoesOnlyToTheTransportThatAsked`
-  - `internal/bridge/endpoint/transport_test.go` `TestACallTheToolsDoNotOfferRunsNothing`
+  - `internal/host/endpoint/close_test.go` `TestARequestAfterTheTransportIsWithdrawnRunsNothing`
+  - `internal/host/endpoint/transport_test.go` `TestAnAnswerGoesOnlyToTheTransportThatAsked`
+  - `internal/host/endpoint/transport_test.go` `TestACallTheToolsDoNotOfferRunsNothing`
   - `internal/adapter/fixture/tool_test.go` `TestALiveToolTransportNamesTheProgramToTheEndpoint`
   - `internal/adapter/fixture/tool_test.go` `TestTheProgramsReportsBecomeTheNeutralInput`
-  - `internal/wrap/tools_test.go` `TestAHarnessThatCarriesItsCallsIsOfferedTheTools`
+  - `internal/host/tools_test.go` `TestAHarnessThatCarriesItsCallsIsOfferedTheTools`
 
 - **T3. Every effect happens in the core operation, under its receipt**; a transport
   never repeats, finishes or undoes one, and starts no second operation for a call
@@ -97,24 +97,24 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   bounded before it is parsed; every answer passes one encoder and one bound on its
   final bytes; an answer that does not fit is replaced whole, never clipped.
   Tests:
-  - `internal/bridge/ticket_test.go` `TestOnlyAWholeResultIsEvidence`
-  - `internal/bridge/ticket_test.go` `TestCutKeepsCharactersAndBounds`
+  - `internal/tool/ticket_test.go` `TestOnlyAWholeResultIsEvidence`
+  - `internal/tool/ticket_test.go` `TestCutKeepsCharactersAndBounds`
   - `internal/cli/bridge_tool_test.go` `TestALongAnswerComesInParts`
   - `internal/cli/bridge_rules_test.go` `TestAContinuationRefreshesALetterBeforeAnyPart`
   - `internal/cli/bridge_rules_test.go` `TestAnEscapedDiagnosticFits`
   - `internal/cli/bridge_rules_test.go` `TestAnAnswerThatCannotBeKeptStillFits`
   - `internal/cli/bridge_rules_test.go` `TestEveryTextPartNamesItself`
-  - `internal/bridge/endpoint/hello_test.go` `TestTheConnectionsAreBounded`
-  - `internal/bridge/endpoint/answer_test.go` `TestTheEncoderReplacesAnAnswerThatDoesNotFit`
-  - `internal/bridge/endpoint/answer_test.go` `TestAChildsOutputIsCapped`
-  - `internal/bridge/endpoint/answer_test.go` `TestOnlyTheEncoderAnswers`
-  - `internal/bridge/endpoint/answer_test.go` `FuzzEveryAnswerFits`
-  - `internal/bridge/endpoint/answer_test.go` `FuzzRequestsAreBounded`
+  - `internal/host/endpoint/hello_test.go` `TestTheConnectionsAreBounded`
+  - `internal/host/endpoint/answer_test.go` `TestTheEncoderReplacesAnAnswerThatDoesNotFit`
+  - `internal/host/endpoint/answer_test.go` `TestAChildsOutputIsCapped`
+  - `internal/host/endpoint/answer_test.go` `TestOnlyTheEncoderAnswers`
+  - `internal/host/endpoint/answer_test.go` `FuzzEveryAnswerFits`
+  - `internal/host/endpoint/answer_test.go` `FuzzRequestsAreBounded`
   - `test/toolrig/answer_bound_test.go` `TestATransportThatStopsReading`
-  - `internal/bridge/endpoint/transport_test.go` `TestATransportsRequestIsBoundedBeforeItIsParsed`
+  - `internal/host/endpoint/transport_test.go` `TestATransportsRequestIsBoundedBeforeItIsParsed`
   - `test/toolrig/transport_test.go` `TestTheEndpointBoundsWhatComesIn`
-  - `internal/bridge/endpoint/transport_test.go` `TestAnAnswerPastItsBoundIsReplacedWhole`
-  - `internal/bridge/descriptor_test.go` `TestACallsArgumentsBecomeTheCommandsWords`
+  - `internal/host/endpoint/transport_test.go` `TestAnAnswerPastItsBoundIsReplacedWhole`
+  - `internal/tool/descriptor_test.go` `TestACallsArgumentsBecomeTheCommandsWords`
 
 - **T6. A letter is read only on proof that the call's own whole result reached the
   model.** The proof is the harness's record of the result for that native call, equal
@@ -127,7 +127,7 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   shown to the model (`cli/inbox.go:114-119`; persisted output seen on 2.1.289,
   `.scratch/v2-recon/claude-mods.md:52`).
   Tests:
-  - `internal/bridge/ticket_test.go` `TestOnlyAWholeResultIsEvidence`
+  - `internal/tool/ticket_test.go` `TestOnlyAWholeResultIsEvidence`
   - `internal/cli/bridge_read_test.go` `TestAToolReadIsReadOnlyWhenEveryPartArrived`
   - `internal/cli/bridge_read_test.go` `TestAWithdrawalMeetsAToolRead`
   - `internal/cli/bridge_lookups_test.go` `TestAReadThatCouldNotSeeTheLetterFreezesNothing`
@@ -140,8 +140,8 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/cli/bridge_unknown_test.go` `TestAWaiterThatCannotBeReadLeavesTheMarkOpen`
   - `internal/cli/bridge_rules_test.go` `TestAnExpiredReadShowsAndClaimsNothing`
   - `internal/cli/bridge_rules_test.go` `TestALetterReadElsewhereShowsAsGone`
-  - `internal/bridge/endpoint/input_test.go` `TestOnlyAUsedTicketWithItsBindingIsAcknowledged`
-  - `internal/bridge/endpoint/input_test.go` `TestTheWholeResultAndItsSize`
+  - `internal/host/endpoint/input_test.go` `TestOnlyAUsedTicketWithItsBindingIsAcknowledged`
+  - `internal/host/endpoint/input_test.go` `TestTheWholeResultAndItsSize`
   - `test/toolrig/flow_test.go` `TestAToolReadIsReadOnceItsAnswerArrived`
   - `test/toolrig/flow_test.go` `TestALongReadGoesOnThroughItsNextWords`
   - `test/toolrig/flow_test.go` `TestAFailedResultReadsNothing`
@@ -171,11 +171,11 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
     counts it for `prompt_id`.
   The carried test includes a lost end with a `retry` from another turn.
   Tests:
-  - `internal/bridge/gate_test.go` `TestAnAcknowledgmentAfterANotedEndWritesNothing`
-  - `internal/bridge/endpoint/tickets_end_test.go` `TestACapturedTurnIssuesNoMoreTickets`
-  - `internal/bridge/endpoint/tickets_end_test.go` `TestARunPastTheTicketsItRemembersRefuses`
-  - `internal/bridge/endpoint/tickets_end_test.go` `TestTheLastTicketARunRemembersIsIssuedOnce`
-  - `internal/bridge/endpoint/tickets_end_test.go` `TestNoTicketWhileACaptureWaitsForAWriter`
+  - `internal/tool/gate_test.go` `TestAnAcknowledgmentAfterANotedEndWritesNothing`
+  - `internal/host/endpoint/tickets_end_test.go` `TestACapturedTurnIssuesNoMoreTickets`
+  - `internal/host/endpoint/tickets_end_test.go` `TestARunPastTheTicketsItRemembersRefuses`
+  - `internal/host/endpoint/tickets_end_test.go` `TestTheLastTicketARunRemembersIsIssuedOnce`
+  - `internal/host/endpoint/tickets_end_test.go` `TestNoTicketWhileACaptureWaitsForAWriter`
   - `internal/cli/pending_test.go` `TestAPendingTurnEndKeepsTheTaskOwed`
   - `internal/cli/pending_test.go` `TestAMarkDoesNotSurviveAnInterruptedTurn`
   - `internal/cli/pending_test.go` `TestALatePublishedTurnIsAReportWithItsOwnText`
@@ -194,9 +194,9 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/cli/turn_declared_test.go` `TestADeclarationOnOneEndOnlyProvesNoTurn`
   - `internal/cli/bridge_unknown_test.go` `TestAWaiterThatCannotBeReadLeavesTheMarkOpen`
   - `internal/cli/journal_test.go` `TestAPendingMarkRepeatedInOneTurnIsOneMark`
-  - `internal/bridge/endpoint/input_test.go` `TestATicketCarriesItsTransportsDeclaration`
-  - `internal/wrap/turn_start_test.go` `TestABoundaryWithoutAToolRecordsItsStart`
-  - `internal/wrap/turn_start_test.go` `TestABoundaryWithAToolRecordsItsStartOnceAndOpensItsTurn`
+  - `internal/host/endpoint/input_test.go` `TestATicketCarriesItsTransportsDeclaration`
+  - `internal/host/turn_start_test.go` `TestABoundaryWithoutAToolRecordsItsStart`
+  - `internal/host/turn_start_test.go` `TestABoundaryWithAToolRecordsItsStartOnceAndOpensItsTurn`
   - `internal/cli/turn_declared_test.go` `TestALostEndWithALaterStartOnRecordMarksNothing`
   - `test/workflow/fixture_turn_start_test.go` `TestFixtureTurnStart`
   - `internal/core/mail/turn_start_test.go` `TestTheLatestTurnStartIsTheLargestReading`
@@ -207,10 +207,10 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   the acknowledgment takes after its last write under the lock. Each acknowledgment is
   applied once.
   Tests:
-  - `internal/bridge/gate_test.go` `TestACaptureTakesTheClosingSnapshotOfTheWritingAcknowledgment`
-  - `internal/bridge/gate_test.go` `TestACaptureThatWaitedDoesNotSampleAgain`
-  - `internal/bridge/gate_test.go` `TestACaptureWithNothingWritingSamplesUnderTheMutex`
-  - `internal/bridge/gate_test.go` `TestOnlyOneAcknowledgmentWrites`
+  - `internal/tool/gate_test.go` `TestACaptureTakesTheClosingSnapshotOfTheWritingAcknowledgment`
+  - `internal/tool/gate_test.go` `TestACaptureThatWaitedDoesNotSampleAgain`
+  - `internal/tool/gate_test.go` `TestACaptureWithNothingWritingSamplesUnderTheMutex`
+  - `internal/tool/gate_test.go` `TestOnlyOneAcknowledgmentWrites`
   - `internal/cli/turn_scope_test.go` `TestARetryWhoseFirstAttemptRecordedNothingKeepsItsScope`
   - `internal/cli/turn_scope_test.go` `TestARetryTakesOnlyTheAnswerItsFirstAttemptSaw`
   - `internal/cli/turn_scope_test.go` `TestAnEndWithNothingOwedKeepsItsScopeOnRetry`
@@ -238,15 +238,15 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
 - **T9. Every wait has a bound, and nothing waits holding what it waits for**; a wait
   that runs out leaves a defined outcome. A write begun under a held lock is not timed.
   Tests:
-  - `internal/bridge/endpoint/tickets_test.go` `TestTheDeadlineFollowsTheTransportsTimeout`
-  - `internal/bridge/endpoint/tickets_test.go` `TestTheObservationWaitIsTwoSeconds`
-  - `internal/bridge/gate_test.go` `TestOnlyOneAcknowledgmentWrites`
-  - `internal/bridge/endpoint/tickets_end_test.go` `TestNoTicketWhileACaptureWaitsForAWriter`
+  - `internal/host/endpoint/tickets_test.go` `TestTheDeadlineFollowsTheTransportsTimeout`
+  - `internal/host/endpoint/tickets_test.go` `TestTheObservationWaitIsTwoSeconds`
+  - `internal/tool/gate_test.go` `TestOnlyOneAcknowledgmentWrites`
+  - `internal/host/endpoint/tickets_end_test.go` `TestNoTicketWhileACaptureWaitsForAWriter`
   - `internal/core/receipt/receipt_test.go` `TestTheLockHoldsOneCallAtATime`
   - `internal/core/receipt/receipt_test.go` `TestTheSweepRespectsAHeldLock`
   - `internal/cli/bridge_rules_test.go` `TestAnExpiredReadShowsAndClaimsNothing`
   - `internal/cli/bridge_rules_test.go` `TestAPendingMarkIsNotMadeAfterItsDeadline`
-  - `internal/bridge/ticket_test.go` `TestAnOpenTicketDescriptorDoesNotHang`
+  - `internal/tool/ticket_test.go` `TestAnOpenTicketDescriptorDoesNotHang`
   - `internal/adapter/fixture/order_test.go` `TestASilentProbeCostsOnlyItsCapability`
   - `internal/adapter/fixture/order_test.go` `TestCloseWaitsForACallIntoTheHandler`
   - `internal/adapter/fixture/order_test.go` `TestNothingReachesTheHandlerOnceClosed`
@@ -255,7 +255,7 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `test/toolrig/child_bound_test.go` `TestAChildPastItsDeadline`
   - `test/toolrig/answer_bound_test.go` `TestATransportThatStopsReading`
   - `test/toolrig/transport_test.go` `TestTheEndpointFinishesItsCallsAsItCloses`
-  - `internal/bridge/endpoint/close_test.go` `TestCloseLetsTheCallsItTookConfirmTheirChildren`
+  - `internal/host/endpoint/close_test.go` `TestCloseLetsTheCallsItTookConfirmTheirChildren`
   - `test/toolrig/transport_test.go` `TestAFifthCallIsBusy`
   - `test/toolrig/transport_test.go` `TestACallNobodyWaitsForIsNotAnswered`
 
@@ -265,7 +265,7 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   acts, and anything of another build is refused before it acts
   ([design-state.md](../v2/design-state.md#one-build-per-room)).
   Tests:
-  - `internal/bridge/endpoint/hello_test.go` `TestAHelloIsChecked`
+  - `internal/host/endpoint/hello_test.go` `TestAHelloIsChecked`
   - Gap: the build id and the room's lease — closed in S17.
 
 - **T11. A failing tool never weakens the mail.** The shell takes the same words under
@@ -280,14 +280,14 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/core/receipt/shell_test.go` `TestEveryErrorHasItsClass`
   - `internal/core/receipt/shell_test.go` `TestAnUnwritableStateLosesTheObservation`
   - `internal/cli/journal_test.go` `TestTheShellRefersAnOpenOperationToItsReceipt`
-  - `internal/bridge/ticket_test.go` `TestNoEndpointRefusesEveryTicket`
+  - `internal/tool/ticket_test.go` `TestNoEndpointRefusesEveryTicket`
   - `test/toolrig/fault_test.go` `TestEveryStepOfACallSurvivesAFault`
   - `test/toolrig/gaps_test.go` `TestOneSetOfWordsThroughTheToolAndTheShellIsOneOperation`
 
 ## The carried order and fault tests
 
 The carried fault and order tests (`bridge/server/fault_test.go`, `order_cut_test.go`,
-`order_gen_test.go`, `bridge/endpoint/order_table_test.go`) hold T2–T8; their oracles
+`order_gen_test.go`, `host/endpoint/order_table_test.go`) hold T2–T8; their oracles
 are transport-neutral and run against every transport
 ([design-docs-tests.md](../v2/design-docs-tests.md#tests)). S7 rebuilt them on the neutral
 rig ([stage3-tests-tcl.md](../v2/stage3-tests-tcl.md#the-neutral-rig)) in `test/toolrig`:

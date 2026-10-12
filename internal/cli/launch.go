@@ -10,11 +10,11 @@ import (
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	launch "github.com/praline-labs/rewake/internal/alias"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/host"
+	"github.com/praline-labs/rewake/internal/host/launch"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	host "github.com/praline-labs/rewake/internal/wrap"
 )
 
 // handleLaunch starts one harness as a rewake session. It returns only when the

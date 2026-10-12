@@ -35,7 +35,7 @@ var mutantWindow = mutation{
 // recipient by itself.
 var mutantUnwindowed = mutation{
 	name: "unwindowed",
-	file: "internal/wrap/wrap.go",
+	file: "internal/host/wrap.go",
 	edits: []edit{{
 		"\t\t\tWindow:     delivery.Coalescing,\n",
 		"",

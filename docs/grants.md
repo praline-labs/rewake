@@ -315,7 +315,7 @@ A resumed run asks main's wrapper to confirm again each grant the journal copies
 for its conversation; main hands one over while its task is open, and the harness is
 started with the directory. Code only tests reach since S9, October 11, 2026: no adapter
 of this build both resumes a conversation and takes directory grants, and stage 6 decides
-how a resumed run's grants are kept (`internal/wrap/grant_resume.go`). In 1.x Claude Code
+how a resumed run's grants are kept (`internal/host/grant_resume.go`). In 1.x Claude Code
 was started with the directory and Codex had the roots journaled again, one nobody
 confirms taken out. A main that has ended restores nothing ([grants-resume.md](grants-resume.md)).
 

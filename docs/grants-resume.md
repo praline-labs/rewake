@@ -11,7 +11,7 @@ never took it back.
 resumes a conversation and takes directory grants: Claude Code takes no task, and with it
 no grant, and the fixture names no conversation a launch resumes. The confirmation below
 — main's wrapper asked again, the directories checked again — stays in
-`internal/wrap/grant_resume.go` and `internal/core/grant/authority`, held by their unit tests, and
+`internal/host/grant_resume.go` and `internal/core/grant/authority`, held by their unit tests, and
 stage 6 decides how a resumed run's grants are kept. What follows describes it as 1.x ran
 it. This page is how the new run gets the grant again, and what it takes to do
 it without trusting a file a worker could write.

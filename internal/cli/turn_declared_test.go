@@ -141,7 +141,7 @@ func TestADeclarationOnOneEndOnlyProvesNoTurn(t *testing.T) {
 
 // A pending call in turn A expires and A's end is lost; the next turn's start
 // is on record, as the host records what a TurnBoundary reports, tool or none
-// (internal/wrap/turn_start_test.go). A retry from A's own turn, which would
+// (internal/host/turn_start_test.go). A retry from A's own turn, which would
 // mark without that start, is answered that the turn ended first and marks
 // nothing: the start alone is the evidence where no end is.
 func TestALostEndWithALaterStartOnRecordMarksNothing(t *testing.T) {

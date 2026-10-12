@@ -68,7 +68,7 @@ type Telemetry interface {
 // names the process that asks the host's endpoint to run their calls
 // (docs/v2/design-api.md#tooltransport). D is the tool layer's descriptor,
 // which this package names as a parameter because it imports no tool layer:
-// the host asks for ToolTransport[bridge.ToolDescriptor].
+// the host asks for ToolTransport[tool.ToolDescriptor].
 type ToolTransport[D any] interface {
 	// OfferTools hands the run the tools and the endpoint, before its
 	// service starts; serve tells the endpoint which process asks.

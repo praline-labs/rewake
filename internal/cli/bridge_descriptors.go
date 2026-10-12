@@ -3,7 +3,7 @@ package cli
 import (
 	"strings"
 
-	tool "github.com/praline-labs/rewake/internal/bridge"
+	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // The tools a harness offers its model, built from the command table and the

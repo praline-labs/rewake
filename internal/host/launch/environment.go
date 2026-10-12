@@ -1,6 +1,7 @@
 // Package launch is the host's part of starting a harness that is not the
 // adapter's to decide: the run's environment, the version read behind the gate
-// each adapter declares, and the bounded probe that reads it.
+// each adapter declares, the bounded probe that reads it, and the aliases a
+// short name expands to.
 package launch
 
 import (

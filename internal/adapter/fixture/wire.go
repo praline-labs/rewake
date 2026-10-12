@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	tool "github.com/praline-labs/rewake/internal/bridge"
+	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // The exchange between the adapter and its program: one JSON object per line

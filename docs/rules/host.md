@@ -6,8 +6,8 @@ the launch aliases and the endpoint the adapters reach
 ([design.md](../v2/design.md#the-layout)). Its rules have no numbers of their own: they
 are the 1.x rules of [launch.md](../launch.md) and [delivery.md](../delivery.md) the
 wrapper carries, and each block below names the tests that hold them
-([stage3-tests-tcl.md](../v2/stage3-tests-tcl.md#the-host)). The tests move from
-`internal/wrap` to `host` in S16.
+([stage3-tests-tcl.md](../v2/stage3-tests-tcl.md#the-host)). The tests are in
+`internal/host` since S16 moved them there from `internal/wrap`.
 
 ## The wrapper
 
@@ -20,76 +20,76 @@ minimum or when no version can be read
 S10.
 
 Tests:
-- `internal/wrap/ownership_test.go` `TestCleanupLeavesTheNextOwnerAlone`
-- `internal/wrap/ownership_test.go` `TestShutdownOnlyRefusesItsOwnMail`
-- `internal/wrap/ownership_test.go` `TestHarnessSharesTheTerminalGroup`
-- `internal/wrap/ownership_test.go` `TestSignalIsNotRepeatedToAHarnessThatGotIt`
-- `internal/wrap/ownership_test.go` `TestSignalAimedAtTheWrapperIsPassedOn`
-- `internal/wrap/ownership_test.go` `TestInterruptDoesNotEndTheSession`
-- `internal/wrap/ownership_test.go` `TestWrapperStopsWithTheHarness`
-- `internal/wrap/ownership_test.go` `TestEachRunCleansOnlyItsOwnSocket`
-- `internal/wrap/stop_follow_test.go` `TestAStoppedHarnessStaysStoppedWithItsWrapper`
-- `internal/wrap/signals_test.go` `TestKeyboardSignalsAreNotIgnoredInTheHarness`
-- `internal/wrap/signals_test.go` `TestAStopAlreadyOverIsNotFollowed`
-- `internal/wrap/signals_test.go` `TestAStopInProgressIsFollowed`
-- `internal/wrap/wrap_test.go` `TestExitCodeOfTheHarnessIsReturned`
-- `internal/wrap/wrap_test.go` `TestSignalledHarnessReportsShellStyleCode`
-- `internal/wrap/wrap_test.go` `TestSessionIsPublishedWhileRunningAndRemovedAfter`
-- `internal/wrap/wrap_test.go` `TestMailboxIsServedWhileTheHarnessRuns`
-- `internal/wrap/wrap_test.go` `TestMailOfAPreviousSessionIsRefused`
-- `internal/wrap/wrap_test.go` `TestSessionEnvironmentReachesTheHarness`
-- `internal/wrap/wrap_test.go` `TestWhatTheAdapterSaysNotToInheritStaysOut`
-- `internal/wrap/wrap_test.go` `TestTakenNameIsRefusedOnlyWhenExplicit`
-- `internal/wrap/wrap_test.go` `TestTheRoleIsRecorded`
-- `internal/wrap/control_test.go` `TestTheControlDirectoryLivesAsLongAsTheSession`
-- `internal/wrap/control_test.go` `TestAHarnessThatServesNoRequestsGetsNoDirectory`
-- `internal/wrap/availability_test.go` `TestAvailabilityMainOnlyReadinessEpochAndRetryDedup`
-- `internal/wrap/availability_test.go` `TestLateMainDiscoversExistingWorkersInItsRoomOnly`
-- `internal/wrap/availability_test.go` `TestAvailabilityWaitsForServiceAndTransportAndToleratesStorageFailure`
-- `internal/wrap/availability_test.go` `TestAvailabilityUsesNormalWrapperNotifyDelivery`
-- `internal/wrap/availability_batch_test.go` `TestLateMainDiscoveryPassGetsOneGroupedWake`
-- `internal/wrap/availability_observation_test.go` `TestAvailabilityScanDoesNotCleanDeadPeerUnderNameLock`
-- `internal/wrap/compaction_letters_test.go` `TestACompactionMainAskedForEndsInOneLetter`
-- `internal/wrap/compaction_letters_test.go` `TestARefusedOrFailedCompactionIsALetterToo`
-- `internal/wrap/compaction_letters_test.go` `TestALetterWaitsForItsOtherHalfOnlyAMoment`
-- `internal/wrap/compaction_letters_test.go` `TestALetterComesWhenTheWorkerLeavesWithoutAWord`
-- `internal/wrap/compaction_letters_test.go` `TestALetterComesAtTheBoundWithoutAWord`
-- `internal/wrap/compaction_letters_test.go` `TestAnEarlierRunsRequestIsClosedByTheNext`
-- `internal/wrap/compaction_letters_hold_test.go` `TestARecordItsCommandHoldsIsLeftAlone`
-- `internal/wrap/compaction_letters_hold_test.go` `TestAKilledCommandsRecordIsClosed`
-- `internal/wrap/compaction_letters_hold_test.go` `TestHelperHoldsARecord`
-- `internal/wrap/compaction_letters_running_test.go` `TestACompactionStillRunningIsReportedByItsEnd`
-- `internal/wrap/compaction_letters_running_test.go` `TestACompactionStillRunningAtTheBoundSaysSo`
-- `internal/wrap/compaction_letters_running_test.go` `TestAStartedRecordedAfterTheEndDoesNotHideIt`
-- `internal/wrap/departure_evidence_test.go` `TestDepartureUnknownRetainsWorkerUntilConfirmedDeath`
-- `internal/wrap/departure_evidence_test.go` `TestDepartureConfirmedProcessEvidence`
-- `internal/wrap/departure_evidence_test.go` `TestDepartureRevalidationAndUncertainRetry`
-- `internal/wrap/departure_evidence_test.go` `TestDepartureRevalidationRejectsAliveAndForeignNamespace`
-- `internal/wrap/session_notices_test.go` `TestCompactionNoticesDedupAndLateMain`
-- `internal/wrap/session_notices_test.go` `TestACompactionMainAskedForGetsNoNotice`
-- `internal/wrap/session_notices_test.go` `TestKnownDepartureRetainsOldStateAndDeduplicates`
-- `internal/wrap/session_notices_test.go` `TestDepartureIgnoresUnknownLivenessStaleStateAndOldAbsence`
-- `internal/wrap/session_notices_test.go` `TestDeparturePublicationRetriesWithoutDuplicate`
-- `internal/wrap/session_notices_test.go` `TestObservedCompactionSurvivesDepartureBeforeNextScan`
-- `internal/wrap/session_notices_test.go` `TestStateNoticeObserverStaysInRoomAndDoesNotNotifyItself`
-- `internal/wrap/hold_notices_test.go` `TestMainIsToldOncePerHold`
-- `internal/wrap/hold_notices_test.go` `TestAChangedCauseIsToldAgain`
-- `internal/wrap/naming_test.go` `TestLaunchNamesFollowSelectedRoleAndHarness`
-- `internal/wrap/naming_test.go` `TestExplicitPrefixControlsNameButNotRole`
-- `internal/wrap/naming_test.go` `TestNamePrefixAndAssembledBoundaries`
-- `internal/wrap/naming_test.go` `TestGenericHarnessAndAutomaticSuffixLength`
-- `internal/wrap/naming_test.go` `TestConcurrentAutomaticNamesUseDefaultGeneral`
-- `internal/wrap/naming_test.go` `TestHarnessLengthLeavesRoomForAPrefix`
-- `internal/wrap/role_selection_test.go` `TestARoomReservesExplicitMainAndHonorsOtherRoles`
-- `internal/wrap/role_selection_test.go` `TestAnExplicitWorkerCanStartBeforeMain`
-- `internal/wrap/role_selection_test.go` `TestConcurrentDefaultLaunchesStayGeneral`
-- `internal/wrap/role_selection_test.go` `TestRolePublicationWaitsForTheRoomLock`
-- `internal/wrap/room_context_test.go` `TestTheHarnessReceivesItsRoomAndDefaultGeneral`
-- `internal/wrap/room_context_test.go` `TestADeadMainDoesNotSelectAnImplicitMain`
-- `internal/wrap/room_context_test.go` `TestEachRoomHasItsOwnMain`
-- `internal/wrap/window_test.go` `TestWrapperGathersNotesApartIntoOneNotice`
-- `internal/wrap/thread_test.go` `TestTheWrapperPinsDeliveryToTheHarnessThread`
-- `internal/wrap/thread_test.go` `TestTheWrapperPinsDeliveryToTheObservedThread`
+- `internal/host/ownership_test.go` `TestCleanupLeavesTheNextOwnerAlone`
+- `internal/host/ownership_test.go` `TestShutdownOnlyRefusesItsOwnMail`
+- `internal/host/ownership_test.go` `TestHarnessSharesTheTerminalGroup`
+- `internal/host/ownership_test.go` `TestSignalIsNotRepeatedToAHarnessThatGotIt`
+- `internal/host/ownership_test.go` `TestSignalAimedAtTheWrapperIsPassedOn`
+- `internal/host/ownership_test.go` `TestInterruptDoesNotEndTheSession`
+- `internal/host/ownership_test.go` `TestWrapperStopsWithTheHarness`
+- `internal/host/ownership_test.go` `TestEachRunCleansOnlyItsOwnSocket`
+- `internal/host/stop_follow_test.go` `TestAStoppedHarnessStaysStoppedWithItsWrapper`
+- `internal/host/signals_test.go` `TestKeyboardSignalsAreNotIgnoredInTheHarness`
+- `internal/host/signals_test.go` `TestAStopAlreadyOverIsNotFollowed`
+- `internal/host/signals_test.go` `TestAStopInProgressIsFollowed`
+- `internal/host/wrap_test.go` `TestExitCodeOfTheHarnessIsReturned`
+- `internal/host/wrap_test.go` `TestSignalledHarnessReportsShellStyleCode`
+- `internal/host/wrap_test.go` `TestSessionIsPublishedWhileRunningAndRemovedAfter`
+- `internal/host/wrap_test.go` `TestMailboxIsServedWhileTheHarnessRuns`
+- `internal/host/wrap_test.go` `TestMailOfAPreviousSessionIsRefused`
+- `internal/host/wrap_test.go` `TestSessionEnvironmentReachesTheHarness`
+- `internal/host/wrap_test.go` `TestWhatTheAdapterSaysNotToInheritStaysOut`
+- `internal/host/wrap_test.go` `TestTakenNameIsRefusedOnlyWhenExplicit`
+- `internal/host/wrap_test.go` `TestTheRoleIsRecorded`
+- `internal/host/control_test.go` `TestTheControlDirectoryLivesAsLongAsTheSession`
+- `internal/host/control_test.go` `TestAHarnessThatServesNoRequestsGetsNoDirectory`
+- `internal/host/availability_test.go` `TestAvailabilityMainOnlyReadinessEpochAndRetryDedup`
+- `internal/host/availability_test.go` `TestLateMainDiscoversExistingWorkersInItsRoomOnly`
+- `internal/host/availability_test.go` `TestAvailabilityWaitsForServiceAndTransportAndToleratesStorageFailure`
+- `internal/host/availability_test.go` `TestAvailabilityUsesNormalWrapperNotifyDelivery`
+- `internal/host/availability_batch_test.go` `TestLateMainDiscoveryPassGetsOneGroupedWake`
+- `internal/host/availability_observation_test.go` `TestAvailabilityScanDoesNotCleanDeadPeerUnderNameLock`
+- `internal/host/compaction_letters_test.go` `TestACompactionMainAskedForEndsInOneLetter`
+- `internal/host/compaction_letters_test.go` `TestARefusedOrFailedCompactionIsALetterToo`
+- `internal/host/compaction_letters_test.go` `TestALetterWaitsForItsOtherHalfOnlyAMoment`
+- `internal/host/compaction_letters_test.go` `TestALetterComesWhenTheWorkerLeavesWithoutAWord`
+- `internal/host/compaction_letters_test.go` `TestALetterComesAtTheBoundWithoutAWord`
+- `internal/host/compaction_letters_test.go` `TestAnEarlierRunsRequestIsClosedByTheNext`
+- `internal/host/compaction_letters_hold_test.go` `TestARecordItsCommandHoldsIsLeftAlone`
+- `internal/host/compaction_letters_hold_test.go` `TestAKilledCommandsRecordIsClosed`
+- `internal/host/compaction_letters_hold_test.go` `TestHelperHoldsARecord`
+- `internal/host/compaction_letters_running_test.go` `TestACompactionStillRunningIsReportedByItsEnd`
+- `internal/host/compaction_letters_running_test.go` `TestACompactionStillRunningAtTheBoundSaysSo`
+- `internal/host/compaction_letters_running_test.go` `TestAStartedRecordedAfterTheEndDoesNotHideIt`
+- `internal/host/departure_evidence_test.go` `TestDepartureUnknownRetainsWorkerUntilConfirmedDeath`
+- `internal/host/departure_evidence_test.go` `TestDepartureConfirmedProcessEvidence`
+- `internal/host/departure_evidence_test.go` `TestDepartureRevalidationAndUncertainRetry`
+- `internal/host/departure_evidence_test.go` `TestDepartureRevalidationRejectsAliveAndForeignNamespace`
+- `internal/host/session_notices_test.go` `TestCompactionNoticesDedupAndLateMain`
+- `internal/host/session_notices_test.go` `TestACompactionMainAskedForGetsNoNotice`
+- `internal/host/session_notices_test.go` `TestKnownDepartureRetainsOldStateAndDeduplicates`
+- `internal/host/session_notices_test.go` `TestDepartureIgnoresUnknownLivenessStaleStateAndOldAbsence`
+- `internal/host/session_notices_test.go` `TestDeparturePublicationRetriesWithoutDuplicate`
+- `internal/host/session_notices_test.go` `TestObservedCompactionSurvivesDepartureBeforeNextScan`
+- `internal/host/session_notices_test.go` `TestStateNoticeObserverStaysInRoomAndDoesNotNotifyItself`
+- `internal/host/hold_notices_test.go` `TestMainIsToldOncePerHold`
+- `internal/host/hold_notices_test.go` `TestAChangedCauseIsToldAgain`
+- `internal/host/naming_test.go` `TestLaunchNamesFollowSelectedRoleAndHarness`
+- `internal/host/naming_test.go` `TestExplicitPrefixControlsNameButNotRole`
+- `internal/host/naming_test.go` `TestNamePrefixAndAssembledBoundaries`
+- `internal/host/naming_test.go` `TestGenericHarnessAndAutomaticSuffixLength`
+- `internal/host/naming_test.go` `TestConcurrentAutomaticNamesUseDefaultGeneral`
+- `internal/host/naming_test.go` `TestHarnessLengthLeavesRoomForAPrefix`
+- `internal/host/role_selection_test.go` `TestARoomReservesExplicitMainAndHonorsOtherRoles`
+- `internal/host/role_selection_test.go` `TestAnExplicitWorkerCanStartBeforeMain`
+- `internal/host/role_selection_test.go` `TestConcurrentDefaultLaunchesStayGeneral`
+- `internal/host/role_selection_test.go` `TestRolePublicationWaitsForTheRoomLock`
+- `internal/host/room_context_test.go` `TestTheHarnessReceivesItsRoomAndDefaultGeneral`
+- `internal/host/room_context_test.go` `TestADeadMainDoesNotSelectAnImplicitMain`
+- `internal/host/room_context_test.go` `TestEachRoomHasItsOwnMain`
+- `internal/host/window_test.go` `TestWrapperGathersNotesApartIntoOneNotice`
+- `internal/host/thread_test.go` `TestTheWrapperPinsDeliveryToTheHarnessThread`
+- `internal/host/thread_test.go` `TestTheWrapperPinsDeliveryToTheObservedThread`
 - `internal/host/launch/version_test.go` `TestAVersionBelowTheMinimumIsRefused`
 - `internal/host/launch/version_test.go` `TestAnUnreadableVersionIsRefused`
 - `internal/host/launch/version_test.go` `TestAGateWithoutAMinimumReadsNothing`
@@ -115,14 +115,14 @@ become a later run's. Since S11.
 
 Tests:
 - `internal/core/registry/live_test.go` `TestModifyChangesTheRecordAsItStands`
-- `internal/wrap/live_test.go` `TestTheLiveSetIsRecordedAndADropLeavesTheRun`
-- `internal/wrap/live_test.go` `TestTheLiveSetDoesNotWriteAnotherRunsRecord`
-- `internal/wrap/live_test.go` `TestAWithdrawalThatFailsToLandIsWrittenAgain`
-- `internal/wrap/live_test.go` `TestAReportingRoleWaitsForItsBoundary`
-- `internal/wrap/live_test.go` `TestABoundaryNeverReportedIsRefusedAtTheBound`
-- `internal/wrap/live_test.go` `TestARunThatReportsNoneHasItsPlanLive`
-- `internal/wrap/live_test.go` `TestADeliveryWithoutALiveWakeWaits`
-- `internal/wrap/live_test.go` `TestWithoutALiveWakeNothingIsReservedOrPinned`
+- `internal/host/live_test.go` `TestTheLiveSetIsRecordedAndADropLeavesTheRun`
+- `internal/host/live_test.go` `TestTheLiveSetDoesNotWriteAnotherRunsRecord`
+- `internal/host/live_test.go` `TestAWithdrawalThatFailsToLandIsWrittenAgain`
+- `internal/host/live_test.go` `TestAReportingRoleWaitsForItsBoundary`
+- `internal/host/live_test.go` `TestABoundaryNeverReportedIsRefusedAtTheBound`
+- `internal/host/live_test.go` `TestARunThatReportsNoneHasItsPlanLive`
+- `internal/host/live_test.go` `TestADeliveryWithoutALiveWakeWaits`
+- `internal/host/live_test.go` `TestWithoutALiveWakeNothingIsReservedOrPinned`
 - `internal/host/delivery/reservation_test.go` `TestNoReservationTakesThePlainPath`
 - `internal/cli/live_set_test.go` `TestASendToARunWithoutALiveWakeIsAcceptedUnwoken`
 - `internal/cli/live_set_test.go` `TestATaskToARunWithoutALiveBoundaryFails`
@@ -167,9 +167,9 @@ Tests:
 - `internal/core/grant/authority/resume_test.go` `TestAGrantGoesOnlyIntoTheConversationItWasDeliveredTo`
 - `internal/core/grant/authority/resume_test.go` `TestAConfirmByAnotherProcessDeliversNothing`
 - `internal/core/grant/authority/resume_test.go` `TestAGrantConfirmedWithNoConversationIsNotHandedOver`
-- `internal/wrap/grants_test.go` `TestAGrantIsConfirmedWithTheMainThatSentIt`
-- `internal/wrap/grants_test.go` `TestMainHoldsTheConversationTheLetterWasPinnedTo`
-- `internal/wrap/grant_checks_test.go` `TestAGrantWhoseDirectoryBecameALinkIsRefusedBeforeMainIsAsked`
-- `internal/wrap/grant_checks_test.go` `TestAGrantFromAnInvalidSenderNameIsRefused`
-- `internal/wrap/grant_checks_test.go` `TestAGrantWhoseMainHasEndedFailsNamingThatMain`
+- `internal/host/grants_test.go` `TestAGrantIsConfirmedWithTheMainThatSentIt`
+- `internal/host/grants_test.go` `TestMainHoldsTheConversationTheLetterWasPinnedTo`
+- `internal/host/grant_checks_test.go` `TestAGrantWhoseDirectoryBecameALinkIsRefusedBeforeMainIsAsked`
+- `internal/host/grant_checks_test.go` `TestAGrantFromAnInvalidSenderNameIsRefused`
+- `internal/host/grant_checks_test.go` `TestAGrantWhoseMainHasEndedFailsNamingThatMain`
 - Gap: step 3's "the task fails, naming the main that sent it" — closed in S9.

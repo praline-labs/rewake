@@ -25,16 +25,16 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/adapter/fixture"
-	tool "github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/bridge/endpoint"
 	"github.com/praline-labs/rewake/internal/cli"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/registry/registrytest"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/host/endpoint"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
+	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // binary is cmd/rewake built with the fault seam: every call's child, and the
@@ -254,7 +254,7 @@ func (r *rig) start() {
 	offer.OfferTools(cli.ToolDescriptors(), state.ContextPath(r.dir, "api", r.self.Epoch()), r.endpoint.SetTransport)
 	epoch := r.self.Epoch()
 	plan.TurnBoundary.ReportTurns(adapter.TurnHandler{
-		// As the wrapper's handler does (internal/wrap/tools.go): a timed
+		// As the wrapper's handler does (internal/host/tools.go): a timed
 		// start recorded once, then opened in the endpoint's table.
 		Started: func(conversation, turn string, at int64) {
 			if at > 0 {

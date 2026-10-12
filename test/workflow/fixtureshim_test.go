@@ -28,7 +28,7 @@ import (
 	"sync"
 	"time"
 
-	tool "github.com/praline-labs/rewake/internal/bridge"
+	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // The program's switches. Each withholds one capability from the hello, or

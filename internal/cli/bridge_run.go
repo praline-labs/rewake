@@ -5,10 +5,10 @@ import (
 	"io"
 	"time"
 
-	tool "github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/bridge/endpoint"
+	"github.com/praline-labs/rewake/internal/host/endpoint"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/state"
+	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // Bridge mode: the CLI running one tool call (docs/mail-bridge.md). The words

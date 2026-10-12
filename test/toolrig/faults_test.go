@@ -14,10 +14,10 @@ import (
 	"testing"
 	"time"
 
-	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/cli"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
+	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // wrapperFaults is the fault seam of the test's own process, which plays every

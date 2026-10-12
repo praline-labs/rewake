@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	tool "github.com/praline-labs/rewake/internal/bridge"
+	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // The package's tests run the adapter against this test binary, started again

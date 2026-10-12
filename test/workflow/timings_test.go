@@ -31,11 +31,11 @@ const (
 	// nobody takes it wait out all of it.
 	suitePickup = 1500 * time.Millisecond
 	// suiteLetterWait is how long a compaction letter waits for its other half
-	// (internal/wrap, three seconds). Both halves come within moments of each
+	// (internal/host, three seconds). Both halves come within moments of each
 	// other; the cases where one never comes wait out all of it.
 	suiteLetterWait = 1500 * time.Millisecond
 	// suiteNoticeScan is how often main's wrapper looks for other sessions'
-	// comings, goings and compactions (internal/wrap, one second). The cases
+	// comings, goings and compactions (internal/host, one second). The cases
 	// that prove no notice was sent wait out a scan and the coalescing cap.
 	suiteNoticeScan = 250 * time.Millisecond
 )
@@ -51,8 +51,8 @@ var suiteFlags = []string{"-ldflags", strings.Join([]string{
 	buildValue("host/delivery", "builtQuiet", suiteQuiet),
 	buildValue("host/delivery", "builtCap", suiteCap),
 	buildValue("cli", "builtPickup", suitePickup),
-	buildValue("wrap", "builtLetterWait", suiteLetterWait),
-	buildValue("wrap", "builtNoticeScan", suiteNoticeScan),
+	buildValue("host", "builtLetterWait", suiteLetterWait),
+	buildValue("host", "builtNoticeScan", suiteNoticeScan),
 }, " "), "-tags", suiteTags}
 
 func buildValue(pkg, name string, value time.Duration) string {

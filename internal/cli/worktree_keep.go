@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/host/worktree"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/worktree"
 )
 
 // fateOfBranch deletes a removed checkout's branch when nothing goes with it,

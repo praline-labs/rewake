@@ -13,13 +13,7 @@ import (
 // (docs/v2/stage3-steps.md#s1-the-tests-first, the places from
 // docs/v2/stage3-packages.md). An entry fails once its package is at its 2.0
 // path or gone, so the table empties with the moves.
-var transition = map[string]transit{
-	"internal/bridge":          {layer: tool, step: "S16"},
-	"internal/bridge/endpoint": {layer: host, step: "S16"},
-	"internal/wrap":            {layer: host, step: "S16"},
-	"internal/alias":           {layer: host, step: "S16"},
-	"internal/worktree":        {layer: host, step: "S16"},
-}
+var transition = map[string]transit{}
 
 // fileGroup is a group of files in transit inside one package: the files, by
 // name in the package's directory, the 2.0 package they go to and the step that

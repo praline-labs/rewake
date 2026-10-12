@@ -9,7 +9,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 
-	tool "github.com/praline-labs/rewake/internal/bridge"
+	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // The words a tool call may run (docs/mail-bridge.md#one-implementation-and-a-narrow-surface).

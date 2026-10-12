@@ -17,14 +17,14 @@ var mutantSendUnwoken = mutation{
 // adapter's refusal fails the letter the sender was told it could read.
 var mutantReserveUnguarded = mutation{
 	name:  "reserve-unguarded",
-	file:  "internal/wrap/wrap.go",
+	file:  "internal/host/wrap.go",
 	edits: []edit{{"server.Reserve = reserveIfLive(reserver, live)", "server.Reserve = reserver.Reserve"}},
 }
 
 // A letter owed a report asks the conversation of a run whose Wake is gone.
 var mutantThreadUnguarded = mutation{
 	name:  "thread-unguarded",
-	file:  "internal/wrap/wrap.go",
+	file:  "internal/host/wrap.go",
 	edits: []edit{{"Thread: threadIfLive(thread, live),", "Thread: thread,"}},
 }
 
@@ -38,7 +38,7 @@ var mutantTaskUnbounded = mutation{
 // A worker's launch starts without waiting for its boundary.
 var mutantLaunchUnawaited = mutation{
 	name:  "launch-unawaited",
-	file:  "internal/wrap/live.go",
+	file:  "internal/host/live.go",
 	edits: []edit{{"|| live.await(ctx, adapter.TurnBoundaryCapability, adapter.ReadinessBound) {", "|| true {"}},
 }
 
@@ -54,28 +54,28 @@ var mutantLostKept = mutation{
 // begun again drops whatever it later brings.
 var mutantUnprovenTakenForNone = mutation{
 	name:  "unproven-taken-for-none",
-	file:  "internal/wrap/tools.go",
+	file:  "internal/host/tools.go",
 	edits: []edit{{"\t_, _ = fmt.Fprintln(os.Stderr, \"rewake: the harness did not make the rewake tool live", "\tt.keeper.begin(false, \"unproven\")\n\t_, _ = fmt.Fprintln(os.Stderr, \"rewake: the harness did not make the rewake tool live"}},
 }
 
 // The harness's denial reaches nothing.
 var mutantDenialDropped = mutation{
 	name:  "denial-dropped",
-	file:  "internal/bridge/endpoint/input.go",
+	file:  "internal/host/endpoint/input.go",
 	edits: []edit{{"{ e.tell(channel.Event{Kind: channel.Denied}) }", "{ _ = channel.Denied }"}},
 }
 
 // The shell's observations are taken and never folded.
 var mutantShellUnread = mutation{
 	name:  "shell-unread",
-	file:  "internal/wrap/channel.go",
+	file:  "internal/host/channel.go",
 	edits: []edit{{"notes := receipt.TakeShell(k.dir, k.name, k.epoch)", "notes := receipt.TakeShell(k.dir, k.name, k.epoch)[:0]"}},
 }
 
 // The run's end does not freeze the record.
 var mutantExitUnfrozen = mutation{
 	name:  "exit-unfrozen",
-	file:  "internal/wrap/channel.go",
+	file:  "internal/host/channel.go",
 	edits: []edit{{"\tk.tell(channel.Event{Kind: channel.Exited})", "\t_ = channel.Exited"}},
 }
 

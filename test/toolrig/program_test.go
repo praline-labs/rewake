@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	tool "github.com/praline-labs/rewake/internal/bridge"
+	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // The launcher's variables: the control socket the program serves the rig on,

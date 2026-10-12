@@ -85,5 +85,5 @@ that they are checked like the rest ([stage3-tests.md](../v2/stage3-tests.md#how
   - `test/workflow/turn_reasons_test.go` `TestTurnReasonControls`
   - `internal/cli/turn_end_api_test.go` `TestEachEndReasonReportsItsOutcome`
   - `internal/cli/turn_end_api_test.go` `TestATurnEndWithoutItsEventOrAKnownReasonIsRefused`
-  - `internal/wrap/turn_boundary_test.go` `TestTheWrapperPassesEachEndOnWithItsEventAndReason`
+  - `internal/host/turn_boundary_test.go` `TestTheWrapperPassesEachEndOnWithItsEventAndReason`
   - `internal/adapter/fixture/turns_test.go` `TestAnEndIsConfirmedWhenItCanBeHeld` — the fixture's end frame to a `TurnEnd` and its reason

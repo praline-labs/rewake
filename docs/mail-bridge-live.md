@@ -255,7 +255,8 @@ each in the way its finding was found:
   October 4, 2026, with no live run:* the unit fixture app-server answers any
   `userAgent` (`codex/server_version_test.go`, every row of the table), a holder killed
   mid-read refuses (`harness/gates_version_test.go`), and the wrapper's record of a
-  withdrawal re-begins "no tool" (`wrap/mailtool_version_test.go`). The workflow shim
+  withdrawal re-begins "no tool" (`wrap/mailtool_version_test.go`); the three left with the
+  Codex code in S8 and are kept in `archive/1.x/codex/`. The workflow shim
   answers one version to both, so no scenario withdraws.
 - **L5 in the code**: a Codex launch with `tool_output_token_limit=861` keeps tool reads
   on, one with 860 turns them off.

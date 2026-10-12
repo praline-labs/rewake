@@ -3,11 +3,11 @@ package cli
 import (
 	"context"
 
-	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/infra/state"
+	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // A read settled from cli's side: the wrapper's evidence turned into the

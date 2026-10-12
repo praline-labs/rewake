@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/host/worktree"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/worktree"
 )
 
 // worktreeProbe is a registered harness that takes its worktree flag, and

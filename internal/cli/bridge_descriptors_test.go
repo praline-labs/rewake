@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	tool "github.com/praline-labs/rewake/internal/bridge"
+	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // The tools are the allowlist, one per allowed command, and nothing else:

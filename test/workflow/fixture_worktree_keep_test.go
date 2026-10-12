@@ -171,7 +171,7 @@ var mutantWorktreeVisitorIgnored = mutation{
 // Ignored files taken for nothing: a .env is deleted with the checkout.
 var mutantWorktreeIgnoredUnseen = mutation{
 	name:  "worktree-ignored-unseen",
-	file:  "internal/worktree/git.go",
+	file:  "internal/host/worktree/git.go",
 	edits: []edit{{"\t\t\tcheck.Ignored = true\n", "\t\t\tcheck.Ignored = false\n"}},
 }
 
@@ -179,7 +179,7 @@ var mutantWorktreeIgnoredUnseen = mutation{
 // at is taken as safe after its branch is gone.
 var mutantWorktreeBranchTrusted = mutation{
 	name: "worktree-branch-trusted",
-	file: "internal/worktree/git.go",
+	file: "internal/host/worktree/git.go",
 	edits: []edit{{
 		"\tif check.Unreachable, err = unreachable(record.CommonDir, head); err != nil {\n\t\treturn Check{}, err\n\t}\n\tentry, _, err := listed(record)",
 		"\tif check.Unreachable, err = unreachable(record.CommonDir, head); err != nil {\n\t\treturn Check{}, err\n\t}\n\tcheck.Unreachable = check.Unreachable && head != record.Commit\n\tentry, _, err := listed(record)",

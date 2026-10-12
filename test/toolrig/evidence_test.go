@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter/fixture"
-	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/receipt"
+	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // The evidence test, rebuilt from bridge/server/evidence_test.go on the

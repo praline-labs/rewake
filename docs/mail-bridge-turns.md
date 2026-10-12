@@ -81,7 +81,7 @@ only when all of these hold:
    re-encoded or trimmed — hash to the `Answer` this call's entries record.
 
 Only the parts this call's entries name are acknowledged, through `cli.AcknowledgeRead`
-with the result in the evidence (`bridge.Exposure` gains it). A short body equal to a
+with the result in the evidence (`tool.Exposure` gains it). A short body equal to a
 line the server writes, two letters with the same body, a replacement that kept the
 body, or a `--json` answer seen in another escaping: none hashes to the recorded answer.
 Equality alone does not prove the model saw it: probe 2 found the full output in both

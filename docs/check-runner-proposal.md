@@ -13,7 +13,7 @@ September 21, 2026: Codex was developed further and checked more; Claude Code wa
 made first and came easier, while Codex took far more effort to find a solution; so
 something may not work right in Claude Code, but Codex must not be broken. Most of
 the mailbox is shared
-(`internal/core/mail`, `internal/cli`, `internal/wrap`), so a change made for one harness
+(`internal/core/mail`, `internal/cli`, `internal/host`), so a change made for one harness
 lands under both. Hence the asymmetry: the Codex column is a regression gate, the
 Claude Code column is where defects are expected. An **impl?** cell there means
 *unverified*, never *works* — odd behaviour gets investigated, not attributed to the
@@ -42,7 +42,7 @@ under the project's line limit.
 | Unit and domain tests | 521 tests, 19 070 lines, across 14 packages; heaviest in `internal/harness/codex/gateway`, `internal/cli`, `internal/core/mail` | Deterministic domain invariants, refusal reasons, receipt accounting, queue bounds | In-process doubles only |
 | In-process integration | `internal/cli/gateway_integration_test.go` wires a real reservation to a real mailbox inside one process | Correlation across components | No process boundary, no harness binary |
 | Cross-process helper | `internal/infra/state/lock_test.go` re-execs the test binary through `TestMain` to prove a file lock holds between processes | That the pattern we need already works here, with no dependency | Used for exactly one invariant |
-| Process fixtures | `internal/wrap/process_fixture_test.go`, `ownership_test.go`, `scripts/shim_test.go` | Wrapper lifecycle against spawned children | Children are shims, not harnesses |
+| Process fixtures | `internal/host/process_fixture_test.go`, `ownership_test.go`, `scripts/shim_test.go` | Wrapper lifecycle against spawned children | Children are shims, not harnesses |
 | Hand-written acceptance | [inbox-acceptance.md](inbox-acceptance.md), [native-mailbox-acceptance.md](native-mailbox-acceptance.md), [claude-parity-2026-09-21.md](claude-parity-2026-09-21.md) | The live behaviour the marks in [harness-features.md](harness-features.md) rest on | Manual, unrepeatable, one run each |
 
 Reusable from earlier packages: the re-exec helper shape, the sequenced local endpoint

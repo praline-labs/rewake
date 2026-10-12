@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/praline-labs/rewake/internal/host/worktree"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/worktree"
 )
 
 // made is one checkout of the lab's repository, owned by nobody yet.

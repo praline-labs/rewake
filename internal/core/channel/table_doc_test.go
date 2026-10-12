@@ -54,13 +54,13 @@ func TestEveryFailurePointOfTheTableIsHeld(t *testing.T) {
 }
 
 // testSources are the test files of the packages the table's rows are
-// held in: this one and internal/wrap, named from the module's root so the
+// held in: this one and internal/host, named from the module's root so the
 // list holds wherever either package lives. A directory with no test files
 // fails, rather than drop its tests from the sources unseen.
 func testSources(t *testing.T) string {
 	t.Helper()
 	var all strings.Builder
-	for _, dir := range []string{".", filepath.Join(moduleRoot(t), "internal", "wrap")} {
+	for _, dir := range []string{".", filepath.Join(moduleRoot(t), "internal", "host")} {
 		files, err := filepath.Glob(filepath.Join(dir, "*_test.go"))
 		if err != nil {
 			t.Fatal(err)

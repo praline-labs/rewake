@@ -19,7 +19,7 @@ import (
 
 // toolRefusedFile is where a refusal mutant refuses: the endpoint, before the
 // call's words are made.
-const toolRefusedFile = "internal/bridge/endpoint/transport.go"
+const toolRefusedFile = "internal/host/endpoint/transport.go"
 
 // toolRefused is the edit that refuses every call of one tool and runs
 // nothing, as a tool that does nothing would answer.
@@ -50,7 +50,7 @@ var (
 	// The result of a call reaches the endpoint, and no read is acknowledged.
 	mutantToolReadUnacknowledged = mutation{
 		name:  "tool-read-unacknowledged",
-		file:  "internal/bridge/endpoint/input.go",
+		file:  "internal/host/endpoint/input.go",
 		edits: []edit{{"\tif !used || e.cfg.Acknowledge == nil {\n", "\tif used || !used {\n"}},
 	}
 	// The adapter passes the host no time for the program's start.

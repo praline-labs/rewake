@@ -7,10 +7,10 @@ import (
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	launch "github.com/praline-labs/rewake/internal/alias"
-	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/host/launch"
 	"github.com/praline-labs/rewake/internal/infra/state"
+	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // Run executes one invocation against the catalog the binary built and

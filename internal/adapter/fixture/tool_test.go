@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	tool "github.com/praline-labs/rewake/internal/bridge"
+	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // The tool transport's side in the adapter (tool.go): what the probe proves,

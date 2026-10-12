@@ -130,7 +130,7 @@ gateway ([launch.md](launch.md#codex)).
   answers the main checkout's root, the key its trust setting is kept under. So a
   linked worktree made by plain `git worktree add` takes the trust of its repository.
   rewake's own checkouts ([worktree.md](worktree.md)) have this layout;
-  `internal/worktree` has a test that holds them to it. **[live, Codex 0.155.1 and
+  `internal/host/worktree` has a test that holds them to it. **[live, Codex 0.155.1 and
   0.157.1, synthetic history, no model call; September 26–27, 2026]** Seen in a rewake
   checkout on its branch: the terminal asked for no new trust, and `AGENTS.md` was found
   as in the main checkout.

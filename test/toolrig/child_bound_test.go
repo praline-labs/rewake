@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter/fixture"
-	tool "github.com/praline-labs/rewake/internal/bridge"
-	"github.com/praline-labs/rewake/internal/bridge/endpoint"
 	"github.com/praline-labs/rewake/internal/core/receipt"
+	"github.com/praline-labs/rewake/internal/host/endpoint"
+	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // A child past its deadline (docs/mail-bridge-transport.md), rebuilt from

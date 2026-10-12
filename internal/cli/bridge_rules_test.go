@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/state"
+	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // The rules of docs/mail-bridge-cli.md#the-rules-the-code-holds, each against

@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	tool "github.com/praline-labs/rewake/internal/bridge"
+	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // The program's side of the mail tool (docs/v2/stage3-fixture.md#the-tool-transport).

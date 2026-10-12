@@ -248,7 +248,7 @@ reads as a task, so each of these decides it:
   state; never listed as awaited or owed; not delayed while main is in a turn.
 
 Letters a wrapper already writes by itself — a departure, a compaction, availability
-(`internal/wrap`) — are notes with a field of their own, not kinds. The request could be
+(`internal/host`) — are notes with a field of their own, not kinds. The request could be
 one too: a note owes nothing and is no report without touching the places above, but it
 would wait in the coalescing window and read as a note in every list that does not look
 at the field. A kind was chosen for the notice line and the rendering; either works.

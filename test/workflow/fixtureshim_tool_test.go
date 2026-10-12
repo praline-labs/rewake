@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	tool "github.com/praline-labs/rewake/internal/bridge"
+	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // The fixture program's side of the mail tool (docs/v2/stage3-fixture.md#the-tool-transport):

@@ -2,7 +2,7 @@
 
 Split out of [design.md](design.md) by subject on September 24, 2026: which role a
 session has and what follows from it, and how its name is chosen. The catalogue is
-`internal/core/role`; the choice under the room lock is `internal/wrap`.
+`internal/core/role`; the choice under the room lock is `internal/host`.
 
 ## Roles
 

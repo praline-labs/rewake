@@ -69,7 +69,7 @@ everything else.
   launch: its branch, where it lives, where the launch starts, the continuations and
   names refused, how git runs, what `.worktreeinclude` copies, and what `rewake worktree
   land`, `finish`, `ls` and `rm` do and ask first. Open it when touching
-  `internal/worktree`, the worktree command or a harness's worktree flag.
+  `internal/host/worktree`, the worktree command or a harness's worktree flag.
 - [launch-defaults.md](launch-defaults.md) — what a launch gets that nobody typed:
   model and effort defaults from flags, environment and settings files, and launch
   aliases with the rules for which of their flags a typed one replaces. Open it when a

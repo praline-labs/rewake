@@ -20,12 +20,12 @@ import (
 //
 //   - 2 s for the last mailbox writes to get the lock
 //     (internal/host/delivery/outcome.go, shutdownLockWait);
-//   - 300 ms of signal-forwarding grace (internal/wrap/wrap.go).
+//   - 300 ms of signal-forwarding grace (internal/host/wrap.go).
 //
 // The other 7 s belonged to an adapter that left in S8. The budget is
 // kept: a tighter one is a decision about the shutdown of the adapters that
 // come next, not one to take while removing one. The wrapper's own 2 s child
-// stop (internal/wrap/backend.go)
+// stop (internal/host/backend.go)
 // is deliberately not in the sum: it is the refusal branch, not a stage every
 // ordinary shutdown passes through. Killing earlier would cut off exactly the
 // teardown this suite exists to observe.

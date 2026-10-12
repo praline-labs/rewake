@@ -8,7 +8,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/worktree"
+	"github.com/praline-labs/rewake/internal/host/worktree"
 )
 
 // worktreeCommand lists the checkouts rewake made for launches, lands their

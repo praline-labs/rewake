@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter/fixture"
-	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/receipt"
+	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // One call's steps as the program takes them, and what the rig reads of them.

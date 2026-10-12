@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/infra/state"
+	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // A command that changes something through the tool's words — a heads-up, a

@@ -12,10 +12,10 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter/fixture"
-	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
+	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // The order test's second generated part, rebuilt from

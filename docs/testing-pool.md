@@ -83,8 +83,8 @@ only these numbers differ, so the suite does not run these values at their real 
 | coalescing quiet | 3 s | 2 s | `internal/host/delivery`, `builtQuiet` |
 | coalescing cap | 4 s | 3 s | `internal/host/delivery`, `builtCap` |
 | pickup of a compact or interrupt request | 5 s | 1.5 s | `internal/cli`, `builtPickup` |
-| a compaction letter's wait for its other half | 3 s | 1.5 s | `internal/wrap`, `builtLetterWait` |
-| main's scan for other sessions' notices | 1 s | 250 ms | `internal/wrap`, `builtNoticeScan` |
+| a compaction letter's wait for its other half | 3 s | 1.5 s | `internal/host`, `builtLetterWait` |
+| main's scan for other sessions' notices | 1 s | 250 ms | `internal/host`, `builtNoticeScan` |
 | a Codex compaction's hold until its turn is seen | 80 s | 2 s | `internal/adapter/codex/gateway`, `builtCompactionStart` |
 | a Codex compaction's hold once its turn runs | 10 min | 6 s | `internal/adapter/codex/gateway`, `builtCompactionRun` |
 

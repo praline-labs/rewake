@@ -8,14 +8,14 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter/fixture"
-	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/receipt"
+	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // A transport that stops reading, rebuilt from
 // bridge/server/stdout_bound_test.go. The old rig's server wrote every answer
 // into one stdout a client could stop draining; here each call's answer goes
-// to its own connection, and an answer is at most bridge.ResultCap, which a
+// to its own connection, and an answer is at most tool.ResultCap, which a
 // socket's buffer holds whole: the endpoint's write never waits on the
 // reader. What the old test guarded stays: an answer read late lands whole,
 // an answer nobody reads is no read and keeps nothing waiting, and the

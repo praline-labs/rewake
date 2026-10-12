@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/infra/state"
+	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // An answer longer than one tool result — a help page, a long --owed — is

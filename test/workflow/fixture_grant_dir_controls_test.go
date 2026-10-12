@@ -12,7 +12,7 @@ import "testing"
 // one removed meanwhile is offered all the same.
 var mutantGrantNotRechecked = mutation{
 	name:  "grant-not-rechecked",
-	file:  "internal/wrap/grants.go",
+	file:  "internal/host/grants.go",
 	edits: []edit{{"if err := rules.Recheck(directory, slices.Contains(message.GrantBroad, directory)); err != nil {", "if err := rules.Recheck(directory, slices.Contains(message.GrantBroad, directory)); false && err != nil {"}},
 }
 

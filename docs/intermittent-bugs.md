@@ -122,7 +122,7 @@ working tree of stage 2 part A, in a private HOME with a stand-in API; evidence 
 `/tmp/stage2A1-probe-OM8dqF` while it lasts.
 
 **What happened.** A `SIGSTOP` sent to the Claude Code process, not to its job, stopped
-the wrapper as designed: `followStop` (`internal/wrap/signals.go`) sees the harness in
+the wrapper as designed: `followStop` (`internal/host/signals.go`) sees the harness in
 `T` and stops the wrapper with it, to continue the harness once the wrapper is
 continued. But the harness was running again within 0.15 s, while the wrapper stayed
 stopped — the wrapper in `T`, the harness in `S`. That no mail would reach the session
@@ -142,10 +142,10 @@ showed it: the follower on the main thread left both stopped in 10 runs of 10, o
 another thread left the harness running in 7 of 10 and 6 of 10, and on another thread
 with the stop aimed at that thread left both stopped in 10 of 10.
 
-**Fix.** `stopSelf` (`internal/wrap/signals.go`) sends the stop to its own thread with
+**Fix.** `stopSelf` (`internal/host/signals.go`) sends the stop to its own thread with
 `tgkill`, with the goroutine locked to the thread for the call, so the stop is taken
 before the next line runs and the harness is continued only once the wrapper is.
-`TestAStoppedHarnessStaysStoppedWithItsWrapper` (`internal/wrap/stop_follow_test.go`)
+`TestAStoppedHarnessStaysStoppedWithItsWrapper` (`internal/host/stop_follow_test.go`)
 runs the follower on a non-main thread in a process of its own, ten rounds a run: on
 the old code it failed in the first round in 20 runs of 20, with and without `-race`;
 on the fix it passed 20 runs of 20 under `-race -shuffle=on`, and 20 without.

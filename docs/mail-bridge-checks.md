@@ -30,12 +30,12 @@ code is built and accepted.
   mailbox lock, refuses once an end at or after the call's `CalledBoot` is on record or
   noted, before it changes anything, the receipt included. Past its check it registers,
   and before it releases the mailbox lock it closes: a snapshot of the read clock into
-  its own slot, on a failed write too. `bridge.Exposure` gains the result.
+  its own slot, on a failed write too. `tool.Exposure` gains the result.
 - **The end's capture.** The Codex gateway and the collector's stop after an Esc note
   the end under the observer's mutex; with an acknowledgment registered, the boundary is
   that one's closing snapshot, and without one the clock sampled inside the mutex.
   The pending mark reads no note: the journal is its cut.
-- **The ticket.** `bridge.Ticket` gains its nonce.
+- **The ticket.** `tool.Ticket` gains its nonce.
 - **Writes through one place.** Receipts, bindings and their removals go through the
   state package's write functions, which get one test hook (below); a test fails when
   `internal/core/receipt` writes or removes a file by any other way.
@@ -122,8 +122,9 @@ code is built and accepted.
 
 ## How the checks are built
 
-The server's tests are in `internal/bridge/server`, the endpoint's in
-`internal/bridge/endpoint`, and the adapters' beside each adapter. The test binary builds
+The server's tests were in `internal/bridge/server` until S8 removed the server, its
+oracles carried to `test/toolrig`; the endpoint's are in `internal/host/endpoint`, and the
+adapters' beside each adapter. The test binary builds
 rewake with the `rewakefault` tag, whose `REWAKE_FAULT` (`internal/infra/state/fault_build.go`)
 logs, ends, fails or holds a server, child or shell process at a durable step; the test's
 own process plays the wrapper, and its writes go through the same seam in-process
@@ -163,7 +164,7 @@ own process plays the wrapper, and its writes go through the same seam in-proces
   acknowledgment, one call across two servers, an acknowledgment cut midway (its writes
   landing or failing) and an Esc nobody heard; `order_marks_test.go` holds a child and a
   shell pending mark before and inside the mailbox lock while the end is captured and
-  journaled. `bridge/gate_test.go` proves the capture never samples again after it
+  journaled. `tool/gate_test.go` proves the capture never samples again after it
   waited; `endpoint/tickets_end_test.go` covers a capture on Codex before the turn's
   completion and an interruption on Claude Code against tickets, a capture still waiting
   for a writer, and the run's limit on the calls it remembers, whose last ticket two

@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 
-	launch "github.com/praline-labs/rewake/internal/alias"
+	"github.com/praline-labs/rewake/internal/host/launch"
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/role"

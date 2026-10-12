@@ -72,7 +72,7 @@ type Shown struct {
 	Transport  string `json:"transport"`
 	CalledBoot int64  `json:"calledBoot,omitempty"`
 	// Answer is the digest of the whole text the call printed
-	// (bridge.AnswerDigest), recorded before it was printed: the evidence
+	// (tool.AnswerDigest), recorded before it was printed: the evidence
 	// of the part is a result with exactly that text.
 	Answer string `json:"answer,omitempty"`
 }

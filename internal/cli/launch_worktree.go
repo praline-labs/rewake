@@ -9,7 +9,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/registry"
-	"github.com/praline-labs/rewake/internal/worktree"
+	"github.com/praline-labs/rewake/internal/host/worktree"
 )
 
 // launchCheckout is the worktree a launch asked for, once made.

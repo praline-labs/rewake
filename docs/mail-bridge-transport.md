@@ -15,7 +15,7 @@ The CLI builds one descriptor per command its allowlist lets through — `inbox`
 `cli/bridge_surface.go` and the command table). A descriptor names the command, its
 summary, and its parameters: a flag that takes no value (a switch), a flag with a value,
 or a positional word. What follows from a descriptor alone lives in
-`internal/bridge/descriptor.go`, so no transport imports the CLI: the JSON Schema a harness
+`internal/tool/descriptor.go`, so no transport imports the CLI: the JSON Schema a harness
 registers (one property per parameter, nothing else), the command's words for a call's
 arguments, and the digest of the whole set. The words are the CLI's normalized order —
 flags sorted by name, then `--` and the positionals — so a descriptor's words parse back to
@@ -24,7 +24,7 @@ the same command the shell would run.
 ## The launch
 
 The CLI lends the wrapper its descriptors and its check of a call's words beside the two
-functions every transport uses (`wrap.MailTool`). A harness that carries its own calls
+functions every transport uses (`host.MailTool`). A harness that carries its own calls
 names the transport its calls are bound under (`Offer.ToolTransport`); the wrapper starts the
 endpoint under it, keeps no channel record (that record is the tool servers'), and offers
 the run's service, through its `ToolTransport` capability, the tools, the endpoint's path, and a function that names the process the
@@ -81,7 +81,7 @@ does `Close` return, as the old server finished its calls at the end of its inpu
 socket stays open meanwhile, to the endpoint's own children alone, so a call taken before
 its child started, greeted the endpoint or asked for its confirmation still confirms; it
 closes once the last such call ends. An answer goes to its connection with a write
-deadline; at most `bridge.ResultCap` bytes, it fits a socket's buffer, so a transport that
+deadline; at most `tool.ResultCap` bytes, it fits a socket's buffer, so a transport that
 stopped reading never holds the endpoint. An acknowledgment in flight is waited for the same way.
 
 ## Faults and the rig
@@ -94,7 +94,7 @@ test plays the wrapper, and the faults reach the program, the child and these st
 holds the oracles `bridge/server`'s rig held, transport-neutral
 ([rules/tools.md](rules/tools.md#the-carried-order-and-fault-tests)).
 
-## Until S8
+## Since S8
 
-The child's steps in `endpoint/run.go` repeat `bridge/server/child.go`: the server and its
-rig stay beside the endpoint's path until S8 removes them with the Codex injection.
+The child's steps in `endpoint/run.go` repeated `bridge/server/child.go` until S8 removed the
+server and its rig with the Codex injection; they are kept in `archive/1.x/codex/`.

@@ -27,7 +27,7 @@ var mutantWorktreeRunningIgnored = mutation{
 // entry for a checkout that is gone, the moved one's included.
 var mutantWorktreeGitKept = mutation{
 	name:  "worktree-git-kept",
-	file:  "internal/worktree/remove.go",
+	file:  "internal/host/worktree/remove.go",
 	edits: []edit{{"\t\tif err := gitDir(record.CommonDir, append(args, record.Path)...); err != nil {", "\t\tif err := os.RemoveAll(record.Path); err != nil {"}},
 }
 
@@ -48,7 +48,7 @@ func TestARemovalBehindGitsBackFails(t *testing.T) {
 // can take.
 var mutantWorktreeDetached = mutation{
 	name:  "worktree-detached",
-	file:  "internal/worktree/serial.go",
+	file:  "internal/host/worktree/serial.go",
 	edits: []edit{{`git(source.Source, "worktree", "add", record.Path, record.Branch)`, `git(source.Source, "worktree", "add", "--detach", record.Path, record.Commit)`}},
 }
 
@@ -56,7 +56,7 @@ var mutantWorktreeDetached = mutation{
 // the worker's, and the branch can no longer be finished.
 var mutantWorktreeLandMerges = mutation{
 	name:  "worktree-land-merges",
-	file:  "internal/worktree/land.go",
+	file:  "internal/host/worktree/land.go",
 	edits: []edit{{`"merge", "--ff-only", "--quiet", tip`, `"-c", "user.name=Mutant", "-c", "user.email=mutant@example.invalid", "merge", "--no-ff", "--quiet", "-m", "Land", tip`}},
 }
 

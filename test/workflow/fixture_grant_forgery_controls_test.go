@@ -19,7 +19,7 @@ var mutantGrantFromAnywhere = mutation{
 // both letters written by hand reach the roots.
 var mutantGrantUnconfirmed = mutation{
 	name:  "grant-unconfirmed",
-	file:  "internal/wrap/grants.go",
+	file:  "internal/host/grants.go",
 	edits: []edit{{"return confirmGrant(dir, name, epoch, \"\", message)", "return nil"}},
 }
 

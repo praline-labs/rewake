@@ -24,14 +24,14 @@ var mutantAnyRoleSteers = mutation{
 // main's wrapper announces a compaction main asked for itself.
 var mutantOwnCompactionAnnounced = mutation{
 	name:  "own-compaction-announced",
-	file:  "internal/wrap/session_notices.go",
+	file:  "internal/host/session_notices.go",
 	edits: []edit{{"if event.RequestedBy == self.Name {", "if false && event.RequestedBy == self.Name {"}},
 }
 
 // main's letter leaves out the session's count of compactions.
 var mutantLetterUncounted = mutation{
 	name:  "letter-uncounted",
-	file:  "internal/wrap/compaction_letters.go",
+	file:  "internal/host/compaction_letters.go",
 	edits: []edit{{`text += fmt.Sprintf(" (compaction %d).", found.event.Sequence)`, `text += "."`}},
 }
 
@@ -40,7 +40,7 @@ var mutantLetterUncounted = mutation{
 // long past the case.
 var mutantOrphanUnlettered = mutation{
 	name:  "orphan-unlettered",
-	file:  "internal/wrap/compaction_letters.go",
+	file:  "internal/host/compaction_letters.go",
 	edits: []edit{{"\t\tcase gone:\n", "\t\tcase false && gone:\n"}},
 }
 

@@ -22,7 +22,7 @@ import (
 //
 // Code only tests reach from S9: the copies were written by the keeper of a
 // harness's permission hook, which left with the hooks, and the wrapper asks
-// only for a harness no adapter is (wrap/grant_resume.go). Stage 6's
+// only for a harness no adapter is (host/grant_resume.go). Stage 6's
 // Permissions capability (docs/v2/design-api.md#permissions) decides how a
 // resumed run takes its grants again.
 

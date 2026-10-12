@@ -193,7 +193,7 @@ outside tests calls it.
 ## Bridge mode
 
 A CLI process runs a tool call when `REWAKE_BRIDGE_TICKET_FD` is set
-(`internal/bridge`). The variable names an inherited descriptor carrying the call's
+(`internal/tool`). The variable names an inherited descriptor carrying the call's
 ticket as JSON: the per-launch capability, the native conversation, turn and call id,
 the call time and deadline on the boot clock, the digest of the normalized words and
 the transport. The descriptor is read once, within a second, at most 4 KiB; a ticket
@@ -203,8 +203,8 @@ refused. The process then:
 1. checks the words against the surface again, with the real parser and without
    aliases, which could turn a word into a launch;
 2. refuses a ticket issued for other words, then asks the wrapper whether it issued it
-   (`bridge.Validator`, the interface the server's endpoint will fill). The default,
-   `bridge.NoEndpoint`, refuses every ticket, so an invented one authorizes nothing;
+   (`tool.Validator`, the interface the server's endpoint will fill). The default,
+   `tool.NoEndpoint`, refuses every ticket, so an invented one authorizes nothing;
 3. refuses a call whose deadline has passed;
 4. runs the command and bounds its answer (below).
 
@@ -228,7 +228,7 @@ say — is finished from the shell, and the tool refuses it.
 
 The encoded size of an answer is taken as the server will encode it: stdout and stderr
 each as a JSON string, escapes included, plus 256 bytes for the server's framing
-(`bridge.EncodedSize`). Every answer under the tool leaves through `boundedAnswer`,
+(`tool.EncodedSize`). Every answer under the tool leaves through `boundedAnswer`,
 which holds it to 4 KiB that way (rule 5):
 
 - a diagnostic whose encoded size passes 1 KiB is cut to it, on a UTF-8 boundary, with
@@ -269,7 +269,7 @@ A claim that cannot be read counts as standing.
 
 Nothing becomes read by being printed. A part counts once the wrapper saw the result
 carrying it reach the model whole, and says so through `cli.AcknowledgeRead(dir, name,
-epoch, receipt, bridge.Exposure)`. It is a Go function the observer calls, not a command:
+epoch, receipt, tool.Exposure)`. It is a Go function the observer calls, not a command:
 there is no word an agent could run to the same effect. The evidence must name the call,
 be direct, successful, not shortened and inside 4 KiB. Once every part of a letter's
 version is acknowledged, the letter goes through the ordinary `MarkRead`, with its waiter
