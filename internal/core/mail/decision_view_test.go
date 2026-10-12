@@ -5,6 +5,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -188,19 +189,17 @@ func TestDecisionDisposesOnlyTheOccurrencesItNames(t *testing.T) {
 	}
 	path := writeDecision(t, lab.dir, d)
 
+	// The disposed are what stopState, the one reader of a stop, no longer
+	// answers open.
 	disposedIDs := func() map[string]bool {
 		t.Helper()
 		open, err := w.stopState("api")
 		if err != nil {
 			t.Fatal(err)
 		}
-		disposed, err := w.disposals("api")
-		if err != nil {
-			t.Fatal(err)
-		}
 		ids := map[string]bool{}
-		for _, stop := range open {
-			if stop.disposedBy(disposed) {
+		for _, stop := range []openStop{named, unnamed, journal, other, broken, unresolved} {
+			if !slices.ContainsFunc(open, func(o openStop) bool { return o.id == stop.id }) {
 				ids[stop.id] = true
 			}
 		}

@@ -225,6 +225,13 @@ func (w world) stopState(name string) ([]openStop, error) {
 			open = append(open, stop)
 		}
 	}
+	// An occurrence a valid decision disposes is settled by the decision,
+	// which made no resolution for it (decision_view.go).
+	disposed, err := w.disposals(name)
+	if err != nil {
+		return nil, err
+	}
+	open = slices.DeleteFunc(open, func(stop openStop) bool { return stop.disposedBy(disposed) })
 	sort.Slice(open, func(i, j int) bool { return open[i].id < open[j].id })
 	return open, nil
 }

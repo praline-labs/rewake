@@ -21,7 +21,23 @@ import (
 // before the run's end can make it moot, and stays where it is, its
 // occurrence open and nothing recorded, until evidence returns (stop.go).
 // Its run still live, the publication reads that evidence in the section.
-func (w world) deliverReport(ctx context.Context, name string, save func() error, journal *TurnJournal, report Message) error {
+//
+// A decision on the report comes before all of that (decision_journal.go): a
+// report decided is closed by the decision, never published, whatever its
+// evidence says by now.
+func (w world) deliverReport(ctx context.Context, name, id string, save func() error, journal *TurnJournal, report Message) error {
+	decision, err := w.decisionOn(name, id, *journal, report)
+	if err != nil {
+		return inOp(report.ID, err)
+	}
+	if decision != "" {
+		journal.Decided = append(journal.Decided, DecidedStep{Report: report.ID, Decision: decision})
+		if err := save(); err != nil {
+			return inOp(report.ID, err)
+		}
+		w.decide(report.ID)
+		return nil
+	}
 	held, isHeld := w.held[report.ID]
 	published, err := w.publishReport(ctx, name, report)
 	if err != nil {
@@ -68,6 +84,11 @@ func (w world) publishReport(ctx context.Context, name string, report Message) (
 		// A failed main must not wake itself into another failing turn.
 		put = world.putLocal
 	}
+	return w.publishWith(ctx, name, report, put)
+}
+
+// publishWith is publishReport's section with the letter put by put.
+func (w world) publishWith(ctx context.Context, name string, report Message, put func(world, Message) error) (bool, error) {
 	if report.To == name {
 		return w.publishAdmitted(report, put)
 	}

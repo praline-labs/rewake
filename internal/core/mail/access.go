@@ -112,6 +112,11 @@ func (w world) stat(path string) (fs.FileInfo, error) {
 	return info, unknownRead(path, err)
 }
 
+func (w world) lstat(path string) (fs.FileInfo, error) {
+	info, err := w.files.Lstat(path)
+	return info, unknownRead(path, err)
+}
+
 func unknownRead(path string, err error) error {
 	var unknown *UnknownRecordError
 	if err == nil || errors.Is(err, os.ErrNotExist) || errors.As(err, &unknown) {

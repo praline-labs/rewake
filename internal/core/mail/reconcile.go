@@ -25,7 +25,14 @@ import (
 // unfinished journal, whichever run wrote it: an ended run's reports are out,
 // and its waits may be taken over by the next run, which must not report on
 // them again. An error stops whatever the caller was about to change.
+//
+// What the mailbox's decisions fixed is installed before all of that, stopped
+// or not (installDecisions): a resend that could not be installed is the
+// effect's failure, and no journal runs in that pass.
 func Reconcile(ctx context.Context, dir, name string) error {
+	if err := live(dir).installDecisions(ctx, name); err != nil {
+		return failedEffect(dir, name, err)
+	}
 	open, err := stopState(dir, name)
 	if err != nil {
 		return err
@@ -73,7 +80,14 @@ func failedEffect(dir, name string, err error) error {
 	afterEffect()
 	open, stateErr := w.stopState(name)
 	if stateErr != nil {
-		return errors.Join(err, stateErr)
+		// The stop cannot be read, so no plan follows; what the effect met is
+		// still recorded once more.
+		for _, cause := range unwritten {
+			if _, final := w.recordOccurrence(name, cause); final != nil {
+				failed = append(failed, final)
+			}
+		}
+		return errors.Join(err, stateErr, errors.Join(failed...))
 	}
 	after := lookAtStop(dir, name, open)
 	if after.found == nil && !met {
@@ -125,7 +139,12 @@ func ranThrough(dir, name string, look stopLook) error {
 // effects have since removed.
 func (w world) completedOf(name string, stop openStop) string {
 	journal, _, _ := strings.Cut(stop.record.Op, "/")
-	if journal == "" {
+	// The installation runs in the barrier's own pass, never in a plan, so its
+	// evidence is read as it reads.
+	if journal == installOp && live(w.dir).installed(name) {
+		return "every effect the decisions of the mailbox fixed is installed"
+	}
+	if journal == "" || journal == installOp {
 		return ""
 	}
 	done := filepath.Join(JournalPath(w.dir, name), journal+doneSuffix)
@@ -220,6 +239,13 @@ func (w world) inspectMailbox(name string) (mailboxRecords, error) {
 	if err := w.readMailbox(name); err != nil {
 		return records, err
 	}
+	// What the installation and the stop read of the decisions, the plan
+	// reads too: a listing that fails is a cause, and what else does not read
+	// there the reading above has named.
+	if _, err := w.disposals(name); err != nil {
+		return records, err
+	}
+	w.installed(name)
 	entries, err := w.readDir(JournalPath(dir, name))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return records, fmt.Errorf("the turn journals %s cannot be listed: %w", JournalPath(dir, name), err)

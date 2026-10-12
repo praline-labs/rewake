@@ -204,32 +204,37 @@ func (w world) finishJournal(ctx context.Context, name, id string) error {
 		return w.retireJournal(path)
 	}
 	save := func() error { return w.writeJournalFile(path, journal) }
-	if err := w.completeJournal(ctx, name, &journal, save); err != nil {
+	if err := w.completeJournal(ctx, name, id, &journal, save); err != nil {
 		return err
 	}
 	// Done in place first: an end that dies before the rename leaves a journal
 	// that reads as done, not one whose operation would be run again.
-	if err := w.writeJournalFile(path, TurnJournal{Epoch: journal.Epoch, Op: journal.Op, Ended: journal.Ended, Held: journal.Held, Done: true}); err != nil {
+	done := TurnJournal{Epoch: journal.Epoch, Op: journal.Op, Ended: journal.Ended, Held: journal.Held, Done: true, Summary: resendSummary(id, journal)}
+	if err := w.writeJournalFile(path, done); err != nil {
 		return err
 	}
 	return w.retireJournal(path)
 }
 
 // completeJournal runs every step of a journal not done yet, saving its
-// progress after each report.
-func (w world) completeJournal(ctx context.Context, name string, journal *TurnJournal, save func() error) error {
+// progress after each report. A decided report's closure is written after the tail and before the done
+// rewrite, so it records only a tail that ran.
+func (w world) completeJournal(ctx context.Context, name, id string, journal *TurnJournal, save func() error) error {
 	for _, report := range journal.Reports {
-		if slices.Contains(journal.Published, report.ID) || slices.Contains(journal.Moot, report.ID) {
+		if slices.Contains(journal.Published, report.ID) || slices.Contains(journal.Moot, report.ID) || journal.decided(report.ID) {
 			continue
 		}
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		if err := w.deliverReport(ctx, name, save, journal, report); err != nil {
+		if err := w.deliverReport(ctx, name, id, save, journal, report); err != nil {
 			return err
 		}
 	}
-	return w.finishSteps(ctx, name, *journal)
+	if err := w.finishSteps(ctx, name, *journal); err != nil {
+		return err
+	}
+	return w.closeDecided(name, id, *journal)
 }
 
 // finishSteps takes the kept answer, clears the waits and records the
