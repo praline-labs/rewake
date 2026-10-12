@@ -65,7 +65,20 @@ type TurnJournal struct {
 	Published []string `json:",omitempty"`
 	// Moot lists the reports that can reach nobody: their run ended.
 	Moot []string `json:",omitempty"`
-	Done bool     `json:",omitempty"`
+	// Decided lists the reports whose step a decision closed: an operator's
+	// choice on an unknown outcome, never evidence that the report arrived
+	// (decision.go).
+	Decided []DecidedStep `json:",omitempty"`
+	Done    bool          `json:",omitempty"`
+	// Summary is what came of a resend's report, kept in the done form of a
+	// journal a decision installed (ResendJournal); nil in every other.
+	Summary *ResendSummary `json:",omitempty"`
+}
+
+// DecidedStep is a report's step closed by the decision named.
+type DecidedStep struct {
+	Report   string
+	Decision string
 }
 
 // JournalPath holds the turn journals of a mailbox, one per turn end.

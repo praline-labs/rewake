@@ -48,6 +48,11 @@ type Message struct {
 	// AddendumTo names the task this one adds to: an addendum is a task of
 	// its own, read into the same wait, so one report settles both.
 	AddendumTo string `json:"addendumTo,omitempty"`
+	// Resends names the report this one sends again, and Decision the
+	// decision that did: a reader holding both can tell a duplicate. Neither
+	// says the first did not arrive; a decision proves nothing.
+	Resends  string `json:"resends,omitempty"`
+	Decision string `json:"decision,omitempty"`
 	// ID sorts by creation time, so a mailbox is served in order.
 	ID string `json:"id"`
 	// From is the sender's session name, or "shell" when it has none.

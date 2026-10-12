@@ -132,4 +132,7 @@ func everyKind(t *testing.T, lab twoSessionLab) {
 	} {
 		writeRaw(t, filepath.Join(box, path), content)
 	}
+	for path, content := range decidedRecords(t, "api", lab.run, "web", lab.web.Epoch()) {
+		writeRaw(t, filepath.Join(box, path), content)
+	}
 }

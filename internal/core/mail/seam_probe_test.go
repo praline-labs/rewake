@@ -162,6 +162,13 @@ func (p *seamProbe) Stat(path string) (fs.FileInfo, error) {
 	return p.base.Stat(path)
 }
 
+func (p *seamProbe) Lstat(path string) (fs.FileInfo, error) {
+	if fault := p.met("lstat", path); fault != nil {
+		return nil, p.failure("lstat", path, fault)
+	}
+	return p.base.Lstat(path)
+}
+
 func (p *seamProbe) WriteFile(path string, raw []byte) error {
 	if err := p.wrote("write", path); err != nil {
 		return err
@@ -249,6 +256,8 @@ func (r remapped) ReadFile(path string) ([]byte, error) { return osAccess{}.Read
 
 func (r remapped) ReadDir(path string) ([]fs.DirEntry, error) { return osAccess{}.ReadDir(r.at(path)) }
 func (r remapped) Stat(path string) (fs.FileInfo, error)      { return osAccess{}.Stat(r.at(path)) }
+func (r remapped) Lstat(path string) (fs.FileInfo, error)     { return osAccess{}.Lstat(r.at(path)) }
+
 func (r remapped) WriteFile(path string, raw []byte) error {
 	return osAccess{}.WriteFile(r.at(path), raw)
 }

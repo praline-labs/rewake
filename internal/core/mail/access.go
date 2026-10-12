@@ -25,6 +25,9 @@ type fileAccess interface {
 	ReadFile(path string) ([]byte, error)
 	ReadDir(path string) ([]fs.DirEntry, error)
 	Stat(path string) (fs.FileInfo, error)
+	// Lstat is what a decision records of a path a read failed on (Q12 of
+	// docs/v2/stage3-decision-build.md): stat follows a link, lstat does not.
+	Lstat(path string) (fs.FileInfo, error)
 	// WriteFile replaces a file in one step (state.WriteAtomic).
 	WriteFile(path string, raw []byte) error
 	// Publish writes a file once (state.PublishExclusive): one that exists
@@ -44,6 +47,7 @@ type osAccess struct{}
 func (osAccess) ReadFile(path string) ([]byte, error)       { return state.ReadFile(path) }
 func (osAccess) ReadDir(path string) ([]fs.DirEntry, error) { return os.ReadDir(path) }
 func (osAccess) Stat(path string) (fs.FileInfo, error)      { return os.Stat(path) }
+func (osAccess) Lstat(path string) (fs.FileInfo, error)     { return os.Lstat(path) }
 func (osAccess) WriteFile(path string, raw []byte) error    { return state.WriteAtomic(path, raw) }
 func (osAccess) Publish(path string, raw []byte) error      { return state.PublishExclusive(path, raw) }
 func (osAccess) EnsureDir(path string) error                { return state.EnsureSubdir(path) }
