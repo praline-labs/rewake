@@ -219,3 +219,23 @@ input open.
 
 **Status.** The owner prefers full sessions. This stays only as a fallback, should full
 sessions prove unworkable for some use. No stage holds it.
+
+## 5. A worktree made on the Claude Code side, a Codex worker seated in it
+
+**What.** A main on Claude Code makes a worktree with Claude Code's own means — its
+`--worktree`, or from the mod — and rewake seats a worker of any harness, Codex
+included, in it. The mod sees the creation (`classic.WorktreeCreate`) and tells the host
+the path and the name; the host records it as a resource of the room; a later
+`rewake codex` launches in that directory. Landing and finishing stay rewake's (`rewake
+worktree land`, `finish`).
+
+**To settle.** The worktree's Git metadata lives in the main repository's
+`.git/worktrees/<name>`, so a Codex worker that commits there needs the Git grant
+(`--grant-git`). Claude Code's removal (`claude rm`, when safe) must not take a worktree a
+rewake session still works in: rewake holds it while one of its sessions does. Claude
+Code's own worktree lies inside the repository and rewake's outside it; the creation hook
+can move it if the place matters.
+
+**Stage.** 4 for the Claude Code side (the audit of
+[design-claude.md](design-claude.md#before-the-probe-what-claude-code-already-does) decides
+how the worktree is made), 5 for seating a Codex worker. Owner's idea, October 12, 2026.
