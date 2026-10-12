@@ -38,22 +38,28 @@ func (s *callScope) remaining() time.Duration {
 	return time.Duration(s.ticket.DeadlineBoot - boottime.Now())
 }
 
-// runBridge runs one tool call and prints its bounded answer.
+// runBridge runs one tool call and prints its bounded answer. Words that do
+// not parse are refused before the state is reached; words that do are a
+// change (toolAccess), classified before authorization can prune, and the
+// scope lasts through the bounded answer, which may keep the output for
+// continuing after the handler returned.
 func runBridge(t *table, argv []string, stdout, stderr io.Writer) int {
 	var out, errOut bytes.Buffer
 	ctx := &Context{Stdout: &out, Stderr: &errOut, table: t}
-	code := bridgeCall(ctx, argv)
-	text, diagnostic := boundedAnswer(ctx, out.String(), errOut.String())
-	_, _ = io.WriteString(stdout, text)
-	_, _ = io.WriteString(stderr, diagnostic)
-	return code
+	answer := func(code int) int {
+		text, diagnostic := boundedAnswer(ctx, out.String(), errOut.String())
+		_, _ = io.WriteString(stdout, text)
+		_, _ = io.WriteString(stderr, diagnostic)
+		return code
+	}
+	result, err := t.toolCall(argv)
+	if err != nil {
+		return answer(report(ctx, err))
+	}
+	return ctx.within(toolAccess, func() int { return answer(bridgeCall(ctx, result)) })
 }
 
-func bridgeCall(ctx *Context, argv []string) int {
-	result, err := ctx.table.toolCall(argv)
-	if err != nil {
-		return report(ctx, err)
-	}
+func bridgeCall(ctx *Context, result parsed) int {
 	scope, err := authorize(ctx.table, result)
 	if err != nil {
 		return report(ctx, err)

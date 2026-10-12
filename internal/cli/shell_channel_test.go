@@ -107,7 +107,7 @@ func TestTheShellEvidenceKeepsTheTimeOfItsWrite(t *testing.T) {
 	}
 	written := boottime.Now()
 	time.Sleep(5 * time.Millisecond)
-	observeShell(Call{Command: &Command{Name: "send"}}, nil)
+	observeShell(accessChange, Call{Command: &Command{Name: "send"}}, nil)
 	notes := receipt.TakeShell(dir, "api", epoch)
 	if len(notes) != 1 || !notes[0].OK || notes[0].Boot > written {
 		t.Fatalf("a write done by %d left %+v", written, notes)

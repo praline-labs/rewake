@@ -46,6 +46,7 @@ func sendCommand(catalog adapter.Catalog) *Command {
 			"A directory already in the recipient's workspace is named as already writable and not granted; one inside another granted directory goes with it.",
 			"The output ends with the message's id, which withdraw, edit and --to take whole or as a unique prefix of it or of its part after the dash.",
 		},
+		Access:  changeForm,
 		Handler: handleSend,
 	}
 }

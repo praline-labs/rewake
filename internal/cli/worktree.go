@@ -45,6 +45,7 @@ func worktreeCommand(catalog adapter.Catalog) *Command {
 			"rm refuses, saying why, a worktree with changes; with files git ignores (a .env, a local build) other than unchanged copies .worktreeinclude made; whose HEAD is on no branch, tag or remote-tracking ref; whose directory is gone while the repository lists it; locked with git worktree lock; holding a submodule checked out; whose launch is still starting its session; or where a rewake session runs, the one it was made for or any started there since. --force removes it anyway, a locked one too. A process rewake did not start is not seen.",
 			"Exit 1 for a refusal over the state of the worktree or its repository — a running session, changes, a branch or repository gone, a source on the worktree's own branch, a target that moved on or that another checkout holds, git refusing the merge, a hook still running after a minute. Exit 2 for a wrong call: a name that names no worktree, a branch name git refuses, --into the worktree's own branch or empty.",
 		},
+		Access:  worktreeAccess,
 		Handler: handleWorktree,
 	}
 }

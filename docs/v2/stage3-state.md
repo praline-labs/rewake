@@ -73,7 +73,7 @@ creates state. From commit 3 only the lease's bootstrap creates them
 | Caller at `ab8d752` | Means | 2.0 |
 |---|---|---|
 | `cli/launch.go:35,43` | the base, then the room | `Base`, `Root`, `RoomDir`; created by `build.Acquire` |
-| `cli/self.go:63,67` (`callerPlaybook`, for `guide` and help) | the current room | the current-room resolver, as every other command (it passes the raw `REWAKE_ROOM` today); a room that does not exist gives no playbook |
+| `cli/self.go:63,67` (`callerPlaybook`, for `guide` and help) | the current room | the current-room resolver, as every other command, from commit 1 (it passed the raw `REWAKE_ROOM`, so a session without one got no playbook); a room that does not exist gives no playbook |
 | `cli/sessions.go:66,110` (`Directory` of `list`, `whoami`) | what `REWAKE_DIR` should be set to | `BaseForRoom` |
 | `host/wrap.go:147` into `host/launch/environment.go` | the child's `REWAKE_DIR` | `BaseForRoom`: the child resolves the root once |
 | `cli/send_dir.go:69`, `host/grants.go:39`, `host/grant_resume.go:66` into `grant.CurrentEnv` (`core/grant/tiers.go:45`) | two things: the state tree no grant may reach, and the rooms whose sessions' working directories `registry.WorkDirs` lists | `CurrentEnv` takes the base for the protected tree — the whole base, 1.x's `rooms/` and its candidate and validated trees included — and the root for `WorkDirs` |

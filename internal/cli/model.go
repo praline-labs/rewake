@@ -67,6 +67,10 @@ type Command struct {
 	// is here so the table can be checked against the catalog: a launch
 	// command that starts the wrong harness is otherwise indistinguishable.
 	Harness adapter.Harness
+	// Access classifies a parsed call of this command as a view or a change
+	// (access.go). It is required: a form without a class is one nobody
+	// decided, and the table test refuses it.
+	Access func(Call) access
 	// Handler runs the command.
 	Handler func(*Context, Call) error
 }
@@ -120,6 +124,8 @@ type Context struct {
 	JSON bool
 	// scope is the tool call a command runs for, nil in a shell.
 	scope *callScope
+	// access is the class of the form this invocation runs (access.go).
+	access access
 	// op is the receipt a journaled command runs under, and journaling says
 	// the command already went through the journal or was found to need none.
 	op         *operation

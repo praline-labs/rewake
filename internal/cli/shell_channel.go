@@ -16,18 +16,21 @@ import (
 // here: its evidence is its ticket.
 
 // shellOperations are the commands whose outcome is the shell's evidence;
-// the switches name the forms of them that change nothing.
+// the switches name the forms of them that write nothing to observe. A view
+// is never observed (observeShell), so --owed and --awaited need no entry:
+// --peek is a change, for its lock, and writes nothing.
 var shellOperations = map[string][]string{
-	"inbox":   {"peek", "owed", "awaited"},
+	"inbox":   {"peek"},
 	"pending": nil,
 	"send":    nil,
 	"retry":   nil,
 }
 
 // observeShell writes what a shell call met, while the run's channel is not
-// working through the tool.
-func observeShell(call Call, err error) {
-	if call.Command == nil {
+// working through the tool. Only a change form is observed: a view writes
+// nothing, its observation included.
+func observeShell(class access, call Call, err error) {
+	if call.Command == nil || class == accessView {
 		return
 	}
 	readOnly, operation := shellOperations[call.Command.Name]

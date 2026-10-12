@@ -44,7 +44,11 @@ func Run(catalog adapter.Catalog, argv []string, stdout, stderr io.Writer) int {
 		return report(ctx, err)
 	}
 	ctx.JSON = result.Call.Switch("json")
+	return ctx.within(formAccess(result), func() int { return runParsed(ctx, result) })
+}
 
+// runParsed answers one parsed shell invocation, inside its scope.
+func runParsed(ctx *Context, result parsed) int {
 	switch {
 	case result.Version:
 		build := thisBuild()
@@ -68,8 +72,8 @@ func Run(catalog adapter.Catalog, argv []string, stdout, stderr io.Writer) int {
 		return ExitOK
 	}
 
-	err = result.Call.Command.Handler(ctx, result.Call)
-	observeShell(result.Call, err)
+	err := result.Call.Command.Handler(ctx, result.Call)
+	observeShell(ctx.access, result.Call, err)
 	if err != nil {
 		return report(ctx, err)
 	}

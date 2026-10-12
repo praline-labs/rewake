@@ -37,7 +37,8 @@ func handleList(ctx *Context, _ Call) error {
 	if err != nil {
 		return &UsageError{Message: err.Error()}
 	}
-	sessions, err := registry.List(dir)
+	// A view: a dead record is left for a change form to prune.
+	sessions, err := registry.ListReadOnly(dir)
 	if err != nil {
 		return failf("could not read the sessions in %s: %v", dir, err)
 	}
@@ -109,7 +110,7 @@ func handleWhoami(ctx *Context, _ Call) error {
 	name := os.Getenv(state.SessionEnv)
 	model := whoamiModel{Name: name, Room: filepath.Base(dir), Directory: state.RootForRoom(dir), Managed: name != ""}
 	if name != "" {
-		own, _, err := ownRun(dir)
+		own, _, err := ownRunIn(ctx.access, dir)
 		if err != nil {
 			return failf("cannot identify this session in room %s: %v", model.Room, err)
 		}

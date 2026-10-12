@@ -27,6 +27,7 @@ func retryCommand() *Command {
 			"A read shows again from its first part, the letters as the read froze them; they become read as its parts reach you. Letters that came since: rewake inbox --peek.",
 			"Through the rewake tool it finishes only what the tool's own words may do; a receipt of a shell call, such as a heads-up whose text came from stdin, is finished in the shell.",
 		},
+		Access:  changeForm,
 		Handler: handleRetry,
 	}
 }

@@ -71,6 +71,7 @@ func buildGroups(catalog adapter.Catalog) []Group {
 				Examples:       []string{"rewake list", "rewake list --json"},
 				Next:           []string{"rewake send <name> \"text\""},
 				Notes:          []string{sessionStateHelp, "Main is told once per launch when a session becomes available, and when one compacts or leaves; a main started later learns which are already available. Idleness alone resends nothing."},
+				Access:         viewForm,
 				Handler:        handleList,
 			},
 			sendCommand(catalog),
@@ -89,6 +90,7 @@ func buildGroups(catalog adapter.Catalog) []Group {
 					"An id rewake edit replaced stands for its replacement; the output says so first.",
 					"A withdrawal cut short says how far it got and the command that finishes it. Exit 0 withdrawn, now or before; 1 read, not delivered, no longer kept, no such message, or not finished; 2 a wrong call — not a session, an id too short.",
 				},
+				Access:  changeForm,
 				Handler: handleWithdraw,
 			},
 			{
@@ -109,6 +111,7 @@ func buildGroups(catalog adapter.Catalog) []Group {
 					"An id an earlier edit replaced stands for its replacement; the output says so first.",
 					"Who may, and when, as for rewake withdraw; exit codes as for send.",
 				},
+				Access:  changeForm,
 				Handler: handleEdit,
 			},
 			{
@@ -133,6 +136,7 @@ func buildGroups(catalog adapter.Catalog) []Group {
 					"A verified main sees the sender's state line above each of its messages; rewake list --help says what it holds.",
 					"--next goes alone and works from the shell as from the rewake tool: a part printed in a shell is read by being printed.",
 				},
+				Access:  inboxAccess,
 				Handler: handleInbox,
 			},
 			{
@@ -148,6 +152,7 @@ func buildGroups(catalog adapter.Catalog) []Group {
 					"Where the harness can continue a turn, an unmarked turn end after a pending one is held once to ask whether the work is done: still waiting — run rewake pending and end the turn; done — end the turn, and the answer already given goes into the report with what follows.",
 					"Refused outside a session; for main, whose turns go to nobody; and with no read task or question awaiting a report.",
 				},
+				Access:  changeForm,
 				Handler: handlePending,
 			},
 			{
@@ -156,6 +161,7 @@ func buildGroups(catalog adapter.Catalog) []Group {
 				Summary:        "The name, room and role of this session, when it runs under rewake.",
 				Options:        []Option{jsonOption},
 				Examples:       []string{"rewake whoami"},
+				Access:         viewForm,
 				Handler:        handleWhoami,
 			},
 			retryCommand(),
@@ -180,6 +186,7 @@ func buildGroups(catalog adapter.Catalog) []Group {
 					"Waits up to 5 seconds for the session to take the request, then up to 10 for its answer, and returns once the compaction has started. \"requested\" means the start was not seen in time and may still come. The result then arrives as a notify from the session, in place of the \"context compacted\" notice: token counts before and after where the harness gives them and its count of compactions, or why it was refused or failed; never the summary.",
 					"Exit 0 started or requested; 1 refused (in a turn, compaction switched off, nothing to compact, remote conversation, not answering, cut short, no control directory, withdrawn before it was taken, another request in flight) or failed; 2 a wrong call — not a main, no such session, a harness that does not take it or cannot take a focus.",
 				},
+				Access:  changeForm,
 				Handler: handleCompact,
 			},
 			{
@@ -195,6 +202,7 @@ func buildGroups(catalog adapter.Catalog) []Group {
 					"Refused when no turn runs. Waits as rewake compact does: 5 seconds for the session to take the request, then 10 for its answer.",
 					"Exit 0 done; 1 refused (no turn running, not answering, cut short, no control directory, withdrawn before it was taken, another request in flight) or failed; 2 a wrong call — not a main, no such session, a harness that does not take it.",
 				},
+				Access:  changeForm,
 				Handler: handleInterrupt,
 			},
 		},
@@ -209,6 +217,7 @@ func buildGroups(catalog adapter.Catalog) []Group {
 				Summary:        "This overview. Printed by rewake with no arguments.",
 				Options:        []Option{jsonOption},
 				Examples:       []string{"rewake guide"},
+				Access:         viewForm,
 				Handler:        handleGuide,
 			},
 		},
@@ -238,6 +247,7 @@ func launchCommand(h adapter.Harness) *Command {
 		Notes:    notes,
 		Raw:      true,
 		Harness:  h,
+		Access:   changeForm,
 		Handler:  handleLaunch(h),
 	}
 }

@@ -28,12 +28,24 @@ var errEarlierRun = errors.New("this shell belongs to a session that has ended; 
 // shell — would otherwise read and answer for the next. A process without a run
 // is refused rather than given the current one: by its name alone, a leftover
 // from an ended session cannot be told from the session that holds it now.
-func ownRun(dir string) (registry.Session, string, error) {
+func ownRun(dir string) (registry.Session, string, error) { return ownRunBy(dir, registry.Lookup) }
+
+// ownRunIn is ownRun for a form of this class: a view looks the caller up
+// without pruning a dead record, which is a write
+// (docs/v2/stage3-state.md#what-is-a-writer).
+func ownRunIn(class access, dir string) (registry.Session, string, error) {
+	if class == accessView {
+		return ownRunBy(dir, registry.LookupReadOnly)
+	}
+	return ownRun(dir)
+}
+
+func ownRunBy(dir string, lookup func(dir, name string) (registry.Session, error)) (registry.Session, string, error) {
 	name := os.Getenv(state.SessionEnv)
 	if name == "" {
 		return registry.Session{}, "", errNotASession
 	}
-	session, err := registry.Lookup(dir, name)
+	session, err := lookup(dir, name)
 	if errors.Is(err, registry.ErrNotFound) {
 		return registry.Session{}, "", fmt.Errorf("the session %s is not registered any more", name)
 	}
@@ -51,7 +63,8 @@ func ownRun(dir string) (registry.Session, string, error) {
 }
 
 // callerPlaybook is the role guidance for the session running this command, or
-// nil when the command was not run by one.
+// nil when the command was not run by one. Only views ask for it — the guide
+// and help pages — so it looks the caller up without pruning.
 //
 // A guide asked for outside a session stays the general map: there is no role
 // to answer for, and inventing one would teach the wrong moves to whoever is
@@ -60,15 +73,13 @@ func ownRun(dir string) (registry.Session, string, error) {
 // that has moved on — because in each of those the role is not known, which is
 // the only question being asked here.
 func callerPlaybook() *role.Playbook {
-	root, err := state.Root()
+	// The room every other command resolves: REWAKE_ROOM, the default room
+	// without it.
+	dir, err := state.Dir()
 	if err != nil {
 		return nil
 	}
-	dir, err := state.RoomDir(root, os.Getenv(state.RoomEnv))
-	if err != nil {
-		return nil
-	}
-	session, _, err := ownRun(dir)
+	session, _, err := ownRunIn(accessView, dir)
 	if err != nil {
 		return nil
 	}

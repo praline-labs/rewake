@@ -41,7 +41,7 @@ func handleInbox(ctx *Context, call Call) error {
 	if err != nil {
 		return &UsageError{Command: call.Command, Message: err.Error()}
 	}
-	session, epoch, err := ownRun(dir)
+	session, epoch, err := ownRunIn(ctx.access, dir)
 	switch {
 	case errors.Is(err, errNotASession):
 		return &UsageError{

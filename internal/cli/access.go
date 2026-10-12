@@ -1,0 +1,86 @@
+package cli
+
+// What a parsed form does to the room's state
+// (docs/v2/stage3-state.md#what-is-a-writer). Forms, not commands, are
+// classified: inbox and inbox --owed are two forms, and only one of them
+// writes. The class is read from the parsed call before the handler and
+// before anything that can prune, so a view never reaches a write by a path
+// its handler shares with a change.
+
+// access is the class of one parsed form.
+type access int
+
+const (
+	// The zero access is a form nobody classified. The table test refuses a
+	// command whose Access is missing; a handler run directly, outside Run,
+	// sees it and keeps the paths of a change.
+	_ access = iota
+	// accessView answers from what is there and writes nothing.
+	accessView
+	// accessChange may write the room.
+	accessChange
+)
+
+func (a access) String() string {
+	switch a {
+	case accessView:
+		return "view"
+	case accessChange:
+		return "change"
+	}
+	return "unset"
+}
+
+// viewForm and changeForm classify a command whose every form is one class.
+func viewForm(Call) access   { return accessView }
+func changeForm(Call) access { return accessChange }
+
+// formAccess is the class of a parsed shell invocation. The parser's own
+// answers — the version, a help page, the guide — print from the table and
+// the binary; everything else is its command's form.
+func formAccess(result parsed) access {
+	if result.Version || result.Help || result.Guide {
+		return accessView
+	}
+	return result.Call.Command.Access(result.Call)
+}
+
+// toolAccess is the class of every authorized tool call, whatever its words:
+// its bounded answer may be kept for continuing (freezeOutput), so it writes
+// the room even when its command alone would not.
+const toolAccess = accessChange
+
+// inboxAccess classifies inbox by the mode its handler will take. A call its
+// selection refuses writes nothing; --owed and --awaited show what is there;
+// every other mode reads, marks or continues, and --peek takes the mailbox
+// lock, which orders it against a read in progress.
+func inboxAccess(call Call) access {
+	mode, err := inboxSelection(call)
+	switch {
+	case err != nil, mode.owed, mode.awaited:
+		return accessView
+	}
+	return accessChange
+}
+
+// worktreeAccess classifies worktree by its verb: rm, land and finish change
+// a checkout and look the room's sessions up; ls, and a verb the handler
+// refuses before any effect, only answer.
+func worktreeAccess(call Call) access {
+	if len(call.Positionals) > 0 {
+		switch call.Positionals[0] {
+		case "rm", "land", "finish":
+			return accessChange
+		}
+	}
+	return accessView
+}
+
+// within runs one invocation's scope for its class: from the class through
+// the handler, the shell's observation and the printing of the answer, or
+// through a tool call's bounded output. Nothing of the invocation that can
+// write runs outside it.
+func (ctx *Context) within(class access, run func() int) int {
+	ctx.access = class
+	return run()
+}
