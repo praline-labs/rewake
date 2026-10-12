@@ -257,8 +257,8 @@ func WithNameLock(dir, name string, fn func() error) error {
 
 // TryWithNameLock runs fn only when the name lock is free right now, and says
 // whether it ran. It is for work that can be left to the next caller — a
-// read-only command tidying a dead record — which must not wait on a holder
-// it cannot see.
+// change form pruning a dead record it came across — which must not wait on a
+// holder it cannot see. A view prunes nothing and takes no lock.
 func TryWithNameLock(dir, name string, fn func() error) (bool, error) {
 	return tryLock(filepath.Join(SessionsPath(dir), "."+name+".lock"), "the name "+name, fn)
 }

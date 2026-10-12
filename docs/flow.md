@@ -138,9 +138,11 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
    the harness to exit.
 
 `rewake list` shows only this room: name, harness, age, cwd, room and role
-for every session. It reads the records, checks that both pids are alive with
-matching start times, and deletes any record whose session is dead. A record it
-cannot read is shown as a session whose state is unknown and left in place.
+for every session. It reads the records and checks that both pids are alive with
+matching start times; a view, it writes nothing, so a dead session's record is left
+for a change form or a later launch to prune
+([stage3-state.md](v2/stage3-state.md#what-is-a-writer)). A record it cannot read is
+shown as a session whose state is unknown.
 
 ## Act 2. A task is sent
 
