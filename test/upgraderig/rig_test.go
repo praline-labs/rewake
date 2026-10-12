@@ -88,6 +88,9 @@ type world struct {
 	t    *testing.T
 	base string
 	home string
+	// procRoot is the /proc-shaped tree the world's launches judge wrappers
+	// by instead of /proc, when the world sets one.
+	procRoot string
 }
 
 func newWorld(t *testing.T) *world {
@@ -166,6 +169,9 @@ func (w *world) launch(room, fault string) *process {
 	p.cmd.Env = []string{
 		"REWAKE_DIR=" + w.base, "HOME=" + w.home, "PATH=" + os.Getenv("PATH"), "LANG=C.UTF-8",
 		"REWAKE_FAULT=" + strings.ReplaceAll(fault, "@PAUSE", "@"+p.pause),
+	}
+	if w.procRoot != "" {
+		p.cmd.Env = append(p.cmd.Env, "REWAKE_FAULT_PROC="+w.procRoot)
 	}
 	p.cmd.Stdout = io.Discard
 	p.cmd.Stderr = &p.stderr

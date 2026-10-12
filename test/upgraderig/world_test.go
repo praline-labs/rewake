@@ -1,8 +1,11 @@
 package upgraderig
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -13,7 +16,7 @@ import (
 var (
 	olds = []string{
 		"quiet", "live wrapper", "launch lock held", "name lock held", "mailbox lock held",
-		"unreadable record", "other namespace",
+		"unreadable record", "other namespace", "unreadable process data", "malformed process data",
 		"late bare room", "late live room", "late unreadable record", "late lock", "late replaced lock",
 		"recreated bare", "recreated live", "rename fails", "sync fails", "delete fails", "partial validated",
 	}
@@ -122,6 +125,64 @@ func (w *world) set(s scenario) {
 		write(w.t, filepath.Join(tree, "old", "sessions", "web.json"), "{")
 	case "other namespace":
 		write(w.t, filepath.Join(tree, "old", "sessions", "web.json"), `{"servicePid":1,"serviceStart":1,"pidNamespace":"pid:[1]"}`)
+	case "unreadable process data", "malformed process data":
+		w.unknownWrapper(filepath.Join(tree, "old"), s.old)
+	}
+}
+
+// unknownWrapper registers in room a session whose wrapper has ended, and
+// gives the world's launches a /proc whose data for that wrapper cannot be
+// read — its stat a directory — or does not parse: an identity no launch may
+// take for an end. The machine's /proc says the wrapper is gone, so once
+// lifted the next launch clears.
+func (w *world) unknownWrapper(room, condition string) {
+	w.t.Helper()
+	child := exec.Command("/bin/true")
+	if err := child.Start(); err != nil {
+		w.t.Fatal(err)
+	}
+	pid := child.Process.Pid
+	// Unreaped, the child's stat stays readable after it exits.
+	stat, err := os.ReadFile(filepath.Join("/proc", strconv.Itoa(pid), "stat"))
+	_ = child.Wait()
+	if err != nil {
+		w.t.Fatal(err)
+	}
+	fields := strings.Fields(string(stat)[strings.LastIndex(string(stat), ")")+1:])
+	namespace, err := os.Readlink("/proc/self/ns/pid")
+	if err != nil {
+		w.t.Fatal(err)
+	}
+	write(w.t, filepath.Join(room, "sessions", "web.json"),
+		fmt.Sprintf(`{"name":"web","servicePid":%d,"serviceStart":%s,"pidNamespace":%q}`, pid, fields[19], namespace))
+	root := w.t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "self", "ns"), 0o700); err != nil {
+		w.t.Fatal(err)
+	}
+	if err := os.Symlink(namespace, filepath.Join(root, "self", "ns", "pid")); err != nil {
+		w.t.Fatal(err)
+	}
+	statPath := filepath.Join(root, strconv.Itoa(pid), "stat")
+	if condition == "unreadable process data" {
+		if err := os.MkdirAll(statPath, 0o700); err != nil {
+			w.t.Fatal(err)
+		}
+	} else {
+		write(w.t, statPath, fmt.Sprintf("%d (rewake) S", pid))
+	}
+	w.procRoot = root
+}
+
+// lift takes a world's unknown process data away once a launch refused on
+// it, and requires the launch after, judging by the machine's /proc, to clear.
+func (w *world) lift() {
+	w.t.Helper()
+	if w.procRoot == "" {
+		return
+	}
+	w.procRoot = ""
+	if end, said := w.launch("r4", "other:holdat=launch cleared@PAUSE").end(); end != went || len(w.trees()) != 0 {
+		w.t.Fatalf("the launch once the process data could be read: %s %s, trees %v", end, said, w.trees())
 	}
 }
 

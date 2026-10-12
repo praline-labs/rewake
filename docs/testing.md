@@ -51,7 +51,11 @@ test kills it, so no harness starts. The crash matrix kills the clearing before 
 durable step a clean run of the same world logged; the concurrency matrix pauses it at a
 named step while a second launch runs. The five checks run the worlds that cover every
 pair of values; `REWAKE_UPGRADE_MATRIX=full` runs every feasible world, and the log names
-how many of how many ran and how many pairs they cover.
+how many of how many ran and how many pairs they cover. A world of process data that
+cannot be read or does not parse gives its launches a `/proc`-shaped tree of its own
+through `REWAKE_FAULT_PROC`, which only a build with the tag reads
+(`internal/infra/legacy/proc_fault.go`): the machine's `/proc` cannot be made to show
+those cases without privilege, and nothing of it changes.
 
 The tag also admits one narrow kind of test code into a production package. When a fault
 schedule must cross a package boundary and neither an exported operation, a file

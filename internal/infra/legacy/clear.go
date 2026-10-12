@@ -56,6 +56,7 @@ func (r run) clear() error {
 	if trees.Empty() {
 		return nil
 	}
+	state.Step("legacy found")
 	clearLock, err := r.cleanup.LockClear(clearWait)
 	if errors.Is(err, state.ErrClearBusy) {
 		return &Refusal{failure: errors.New("another launch is checking the state of rewake 1.x; launch again")}

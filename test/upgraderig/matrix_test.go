@@ -193,6 +193,7 @@ func (w *world) recover(s scenario, happened bool) {
 		w.t.Fatalf("the launch after went on beside live state: %s %s", end, said)
 	case stays:
 		w.lettersKept()
+		w.lift()
 	case end != went:
 		w.t.Fatalf("the launch after a quiet world: %s %s", end, said)
 	case len(w.trees()) != 0:
@@ -241,6 +242,9 @@ func TestLegacyClearConcurrentMatrix(t *testing.T) {
 				t.Fatalf("trees %v, want %v; it said:\n%s", got, want.trees, said)
 			}
 			w.lettersKept()
+			if w.procRoot != "" {
+				w.recover(s, happened)
+			}
 		})
 	}
 }

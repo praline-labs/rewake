@@ -223,6 +223,7 @@ on October 12, 2026 ([stage3-s17-evidence.md](stage3-s17-evidence.md#the-live-ga
   wait (`O_NONBLOCK`) and the descriptor is checked again, so a FIFO cannot hold the
   clearing, and the locks it holds, until a writer comes.
 - The steps a fault plan pauses or ends the clearing at, besides its durable steps, are
+  `legacy found` — after the first read of the base, before the clear lock is asked for —
   `legacy admitted`, `legacy set aside` and `legacy validated`, and `launch cleared` once
   the launch may go on. The bounds are built in (`builtClearWait`, `builtRoomWait`), which a
   test build may shorten (package `buildtime`).
@@ -230,7 +231,10 @@ on October 12, 2026 ([stage3-s17-evidence.md](stage3-s17-evidence.md#the-live-ga
   message and the trees it leaves are read from this document in `oracle_test.go`, not
   from the clearing; the fault plan holds a launch at a list of named steps in order
   (`holdat`) and fails the first step of an operation on a path (`failat`), which is how
-  a rename, a flush or a deletion is made to fail.
+  a rename, a flush or a deletion is made to fail. A fault build judges wrappers by the
+  `/proc`-shaped tree `REWAKE_FAULT_PROC` names, when set (`legacy/proc_fault.go`): the rig's
+  worlds of process data that cannot be read or does not parse, which the machine's
+  `/proc` cannot be made to show without privilege.
 
 ## Every crash and every failed read
 

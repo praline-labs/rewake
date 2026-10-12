@@ -22,6 +22,10 @@ var atAdmission = map[string]string{
 	"mailbox lock held": "inbox/web/.lock",
 	"unreadable record": "web.json cannot be checked",
 	"other namespace":   "pid namespace pid:[1]",
+	// The wrapper's /proc data, from the tree the world's launches read
+	// instead of /proc.
+	"unreadable process data": "/stat cannot be read",
+	"malformed process data":  "/stat cannot be read",
 }
 
 // atValidation are the conditions validation finds in the tree they arrived in.
