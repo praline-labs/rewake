@@ -94,7 +94,7 @@ func (w world) decisionsOf(name string) (string, []fs.DirEntry, error) {
 // record beside one or a write that never finished.
 func isDecisionRecord(name string) bool {
 	return !strings.HasPrefix(name, ".") && !strings.HasSuffix(name, toldRecipientSuffix) &&
-		!strings.HasSuffix(name, toldMainSuffix) && !strings.HasSuffix(name, closedSuffix)
+		!strings.HasSuffix(name, toldMainSuffix) && !strings.HasSuffix(name, closedSuffix) && !strings.HasSuffix(name, durableSuffix)
 }
 
 func decisionView(dir, name, report string) DecisionView {
@@ -180,7 +180,8 @@ func readClosure(files fileAccess, path string, d Decision) (Closure, error) {
 // each with the operation it must be about: a decision disposes only the
 // occurrences about its own report, named exactly, never a key, a journal or
 // every occurrence a gate holds. A decision that does not read disposes
-// nothing; the reading stops the mailbox on it on its own.
+// nothing; the reading stops the mailbox on it on its own. Nor does one not
+// made durable yet (makeDurable): its authority may still be lost.
 func (w world) disposals(name string) (map[Disposal]string, error) {
 	root, entries, err := w.decisionsOf(name)
 	if err != nil {
@@ -191,8 +192,9 @@ func (w world) disposals(name string) (map[Disposal]string, error) {
 		if !isDecisionRecord(entry.Name()) {
 			continue
 		}
-		d, err := readDecision(w.files, filepath.Join(root, entry.Name()))
-		if err != nil {
+		path := filepath.Join(root, entry.Name())
+		d, err := readDecision(w.files, path)
+		if err != nil || !w.durable(path, d) {
 			continue
 		}
 		for _, disposal := range d.Disposes {

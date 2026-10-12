@@ -53,6 +53,10 @@ func (w world) installDecisions(ctx context.Context, name string) error {
 			failed = append(failed, inOp(installOp, unknownRead(path, err)))
 			continue
 		}
+		if err := w.makeDurable(name, path, d); err != nil {
+			failed = append(failed, inOp(installOp, err))
+			continue
+		}
 		if d.Choice == ChoiceNotArrived {
 			if err := w.installResend(name, d); err != nil {
 				failed = append(failed, inOp(installOp, err))
@@ -166,7 +170,7 @@ func noteRun(dir string, note Message) proc.IdentityEvidence {
 }
 
 // installed says the installation has nothing left that it could fail on:
-// every decision reads, every resend is there in either form as it holds, and
+// every decision reads and was made durable, every resend is there in either form as it holds, and
 // every told record reads or is not there yet — a note owed is no failure.
 // It is the evidence that resolves an occurrence about the installation, and
 // the plan reads through it what the installation reads.
@@ -180,8 +184,9 @@ func (w world) installed(name string) bool {
 		if !isDecisionRecord(entry.Name()) {
 			continue
 		}
-		d, err := readDecision(w.files, filepath.Join(root, entry.Name()))
-		if err != nil {
+		path := filepath.Join(root, entry.Name())
+		d, err := readDecision(w.files, path)
+		if err != nil || !w.durable(path, d) {
 			done = false
 			continue
 		}

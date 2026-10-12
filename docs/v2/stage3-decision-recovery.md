@@ -90,6 +90,26 @@ on no other decision. Then the plan reads everything, the new journal included, 
 plan that meets no unknown runs the journals. A decision that does not read installs
 nothing; the plan meets it as an undecidable cause.
 
+**Durability before the first effect (Q4).** A visible D is not yet a durable one: an
+exclusive link survives a failed flush of its directory, and its publication answers that
+error with the name taken. So before any effect of a valid D the installation flushes D's
+file (`state.SyncFile`, which follows no link), `decisions/` and the mailbox directory,
+under the mailbox lock, and only then writes a write-once marker beside D,
+`decisions/<R-id>.durable`, naming D (`makeDurable`, `core/mail/decision_durable.go`). A
+flush that fails is an unknown about D: none of D's effects is made in that pass, and the
+barrier stops on it as on any installation failure; the next barrier flushes again. The
+readers that write nothing go by the marker: `disposals` counts no occurrence a D without
+its marker names, `installed` is not satisfied while one is missing, and the plan, which
+flushes nothing, takes a D with no marker for one the installation before it makes
+durable. A marker that does not read or names another decision is an unknown, never
+written over. The marker's own flush is no condition: it is written only after D's
+flushes succeeded, and one lost in a crash only has them made again. Ancestors above the
+mailbox were made durable when they were created and are not flushed again. The flushes
+are cut in tests through `state.FlushFault` (`infra/state/flush.go`), asked before every
+flush the state package makes, apart from `state.Fault`, whose steps a fault plan counts
+(`TestDecisionEffectsWaitForTheDecisionToBeDurable`,
+`TestPublishExclusiveAnswersEveryFlushItCouldNotMake`).
+
 **The installation's own stop** (S18, `installDecisions`, `core/mail/decision_install.go`).
 What the installation cannot read — the decisions' directory, a decision, a `told` record,
 a resend's name — and a resend it could not link are the effect's failure, all of them
@@ -97,7 +117,8 @@ named, each decision tried on its own: the barrier records the unknowns as occur
 of operation `.install` (`failedEffect`, `core/mail/reconcile.go`) and runs no journal
 in that pass. No journal is named so: a name with a dot first is a write that never
 finished. Such an occurrence is resolved once the installation has nothing left it could
-fail on — every decision reads, every resend's name is there in either form, every `told`
+fail on — every decision reads and has its marker, every resend is there in either form
+as D holds it, every `told`
 record reads or is not there yet (`installed`) — read as the barrier's own pass reads,
 since the installation ran there. The plan runs the installation again, writing nothing,
 so the gate predicts what the barrier would install and whatever the installation reads

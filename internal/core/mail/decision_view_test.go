@@ -188,6 +188,9 @@ func TestDecisionDisposesOnlyTheOccurrencesItNames(t *testing.T) {
 		d.Disposes = append(d.Disposes, Disposal{Key: stop.key, Occurrence: stop.id})
 	}
 	path := writeDecision(t, lab.dir, d)
+	if err := w.makeDurable("api", path, d); err != nil {
+		t.Fatal(err)
+	}
 
 	// The disposed are what stopState, the one reader of a stop, no longer
 	// answers open.

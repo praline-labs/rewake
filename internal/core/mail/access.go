@@ -37,6 +37,8 @@ type fileAccess interface {
 	Remove(path string) error
 	Rename(from, to string) error
 	SyncDir(path string) error
+	// SyncFile flushes a record's contents (state.SyncFile).
+	SyncFile(path string) error
 	// Lock runs fn under the lock of the mailbox at path
 	// (state.WithMailboxLockAt): the lock file is a file of that mailbox.
 	Lock(ctx context.Context, mailbox string, fn func() error) error
@@ -62,6 +64,7 @@ func (osAccess) EnsureDir(path string) error                { return state.Ensur
 func (osAccess) Remove(path string) error                   { return state.Remove(path) }
 func (osAccess) Rename(from, to string) error               { return state.Rename(from, to) }
 func (osAccess) SyncDir(path string) error                  { return state.SyncDir(path) }
+func (osAccess) SyncFile(path string) error                 { return state.SyncFile(path) }
 func (osAccess) Lock(ctx context.Context, mailbox string, fn func() error) error {
 	return state.WithMailboxLockAt(ctx, mailbox, fn)
 }
@@ -189,4 +192,11 @@ func (w world) syncDir(path string) error {
 		return nil
 	}
 	return w.files.SyncDir(path)
+}
+
+func (w world) syncFile(path string) error {
+	if w.plan {
+		return nil
+	}
+	return w.files.SyncFile(path)
 }

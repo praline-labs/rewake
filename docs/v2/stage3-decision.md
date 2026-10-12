@@ -232,6 +232,7 @@ nothing.
 | its resolution | `stops/<key>/<occurrence>.resolved` | the plan decides its effect from evidence (S3) | the evidence |
 | a decision | `decisions/<report-id>` | at its linearization point, before any effect | id, choice, by, at, `delivery: "unproven"`, the subject, the parent decision if any, the exact occurrences it disposes as (key, occurrence) pairs, the notes to tell whole, the observations, and for "did not arrive" the resend journal whole |
 | a note told | `decisions/<report-id>.told-recipient`, `.told-main` | after the note's publication answered written, written before, or the run proven ended | the run told and the answer |
+| a decision made durable | `decisions/<report-id>.durable` | by the installation, after D's file, `decisions/` and the mailbox flushed, before D's first effect | the decision and when: the evidence that D may authorize its effects, which the disposal, the installation's evidence and the plan go by |
 | a closure | `decisions/<report-id>.closed` | by J, after its tail's effects and before its done rewrite | the decision, J's name and operation, the report, and the waits J's tail cleared that the report answers: closure, never delivery |
 | the resend | `journal/decided-<decision-id>`, later `.done` | the decision's first effect; saved by its own steps afterwards | an ordinary journal (one report, `resends`, `decision`, no tail of its own); its done form keeps the completion summary — the id of R', its disposition, D, a child decision's id — and is kept while the mailbox lives |
 

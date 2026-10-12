@@ -231,6 +231,7 @@ func (c *capture) EnsureDir(string) error         { return errCaptureWrites }
 func (c *capture) Remove(string) error            { return errCaptureWrites }
 func (c *capture) Rename(string, string) error    { return errCaptureWrites }
 func (c *capture) SyncDir(string) error           { return errCaptureWrites }
+func (c *capture) SyncFile(string) error          { return errCaptureWrites }
 
 // Lock is the caller's: a final plan reads inside the locks its caller took,
 // and a capture takes none of its own.

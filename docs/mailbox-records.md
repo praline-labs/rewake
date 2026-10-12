@@ -23,6 +23,7 @@ unknown. The first pattern that matches a path is its kind.
 | `.lock` | the mailbox lock | nothing: it says nothing |
 | `stops/<key>/<occurrence>`, `.resolved`, `.told` | an occurrence of a stop's cause; its resolution; that main was told | by the stop itself, below |
 | `decisions/<report>.told-recipient`, `.told-main` | that a decision's note was told to the recipient run, to main's | a told record that names an answer which tells a note |
+| `decisions/<report>.durable` | that a decision was flushed whole before any effect it fixed ([stage3-decision-recovery.md](v2/stage3-decision-recovery.md#installing-the-effects)) | a marker that names the decision beside it |
 | `decisions/<report>.closed` | that a decided report's obligation was closed by its journal's tail ([stage3-decision.md](v2/stage3-decision.md)) | a closure for the report its name says |
 | `decisions/<report>` | an operator decision on a report whose outcome is unknown | a decision that holds together and names the report and mailbox its place says |
 | `<id>.json`, `unread/<id>.json`, `done/<id>.json` | a letter | a message |

@@ -61,6 +61,7 @@ var recordKinds = []recordKind{
 	{decisionsDir + "/*" + toldRecipientSuffix, "a decision's note told to the recipient", parseToldFile, true, "whether the recipient was told of the decision"},
 	{decisionsDir + "/*" + toldMainSuffix, "a decision's note told to main", parseToldFile, true, "whether main was told of the decision"},
 	{decisionsDir + "/*" + closedSuffix, "a decided report's obligation closed", parseClosureFile, true, "whether the decided report's waits were closed"},
+	{decisionsDir + "/*" + durableSuffix, "a decision made durable", parseDurableFile, true, "whether the decision may authorize its effects"},
 	{decisionsDir + "/*", "an operator decision on a report", parseDecisionFile, true, "what was decided on the report, and what it disposes"},
 	{"*.json", "a letter not announced yet", parseJSON[Message], true, "which letter it is, and whether it is owed a report"},
 	{"*.status", "a letter's delivery status", parseJSON[Status], true, "whether the letter arrived"},

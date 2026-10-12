@@ -283,12 +283,12 @@ func differ(want, got map[string]string, letters bool) []string {
 	return changed
 }
 
-// sameStamped says two versions of a decision's closure or told record are
-// the same but for when they were written, which every run writes anew, and
-// for which attempt put a note told: written now and written before both say
-// it is in the run's mailbox.
+// sameStamped says two versions of a decision's closure, durable marker or
+// told record are the same but for when they were written, which every run
+// writes anew, and for which attempt put a note told: written now and written
+// before both say it is in the run's mailbox.
 func sameStamped(rel, a, b string) bool {
-	if !strings.HasSuffix(rel, closedSuffix) && !strings.Contains(filepath.Base(rel), toldSuffix) {
+	if !strings.HasSuffix(rel, closedSuffix) && !strings.HasSuffix(rel, durableSuffix) && !strings.Contains(filepath.Base(rel), toldSuffix) {
 		return false
 	}
 	var x, y map[string]any

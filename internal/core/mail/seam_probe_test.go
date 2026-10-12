@@ -212,6 +212,14 @@ func (p *seamProbe) SyncDir(path string) error {
 	return p.wrote("sync", path)
 }
 
+// SyncFile fails after the flush, as SyncDir does.
+func (p *seamProbe) SyncFile(path string) error {
+	if err := p.base.SyncFile(path); err != nil {
+		return err
+	}
+	return p.wrote("sync", path)
+}
+
 func (p *seamProbe) Lock(ctx context.Context, mailbox string, fn func() error) error {
 	return p.base.Lock(ctx, mailbox, fn)
 }
@@ -273,6 +281,8 @@ func (r remapped) Remove(path string) error { return osAccess{}.Remove(r.at(path
 func (r remapped) Rename(from, to string) error { return osAccess{}.Rename(r.at(from), r.at(to)) }
 
 func (r remapped) SyncDir(path string) error { return osAccess{}.SyncDir(r.at(path)) }
+
+func (r remapped) SyncFile(path string) error { return osAccess{}.SyncFile(r.at(path)) }
 
 func (r remapped) Lock(ctx context.Context, mailbox string, fn func() error) error {
 	return osAccess{}.Lock(ctx, r.at(mailbox), fn)
