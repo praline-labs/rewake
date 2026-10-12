@@ -15,7 +15,7 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-func TestReviewUnreadableProcessIdentityDoesNotAnnounceDeparture(t *testing.T) {
+func TestUnreadableProcessIdentityDoesNotAnnounceDeparture(t *testing.T) {
 	if runProcessFixture(t) {
 		return
 	}
@@ -80,7 +80,7 @@ func TestReviewUnreadableProcessIdentityDoesNotAnnounceDeparture(t *testing.T) {
 	}
 }
 
-func TestReviewCompactionRetryTailGapAndDeparture(t *testing.T) {
+func TestCompactionRetryTailGapAndDeparture(t *testing.T) {
 	dir := stateDir(t)
 	main := availabilityPeer(t, dir, "main-fixture", role.Main.ID, 1, true)
 	peer := availabilityPeer(t, dir, "worker-fixture", role.General.ID, 2, true)

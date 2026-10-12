@@ -41,11 +41,11 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/bridge/endpoint/hello_test.go` `TestAHelloIsChecked`
   - `internal/bridge/endpoint/hello_test.go` `TestARoleAsksOnlyItsOwnQuestion`
   - `internal/bridge/endpoint/order_table_test.go` `TestEveryOrderOfTheTableIssuesOneTicketPerCall`
-  - `internal/bridge/bridge_test.go` `TestATicketMissingItsScopeIsRefused`
-  - `internal/bridge/bridge_test.go` `TestTheTicketIsReadFromItsDescriptor`
-  - `internal/bridge/bridge_test.go` `TestAnOpenTicketDescriptorDoesNotHang`
-  - `internal/bridge/bridge_test.go` `TestNoEndpointRefusesEveryTicket`
-  - `internal/bridge/bridge_test.go` `TestTheDigestSeparatesWords`
+  - `internal/bridge/ticket_test.go` `TestATicketMissingItsScopeIsRefused`
+  - `internal/bridge/ticket_test.go` `TestTheTicketIsReadFromItsDescriptor`
+  - `internal/bridge/ticket_test.go` `TestAnOpenTicketDescriptorDoesNotHang`
+  - `internal/bridge/ticket_test.go` `TestNoEndpointRefusesEveryTicket`
+  - `internal/bridge/ticket_test.go` `TestTheDigestSeparatesWords`
   - `internal/cli/bridge_tool_test.go` `TestAToolCallWithoutAValidTicketRunsNothing`
   - `internal/bridge/endpoint/transport_test.go` `TestATransportsCallRunsInAChildOfTheWrapper`
   - `internal/bridge/endpoint/transport_test.go` `TestOnlyTheTransportsOwnProcessIsServed`
@@ -97,8 +97,8 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   bounded before it is parsed; every answer passes one encoder and one bound on its
   final bytes; an answer that does not fit is replaced whole, never clipped.
   Tests:
-  - `internal/bridge/bridge_test.go` `TestOnlyAWholeResultIsEvidence`
-  - `internal/bridge/bridge_test.go` `TestCutKeepsCharactersAndBounds`
+  - `internal/bridge/ticket_test.go` `TestOnlyAWholeResultIsEvidence`
+  - `internal/bridge/ticket_test.go` `TestCutKeepsCharactersAndBounds`
   - `internal/cli/bridge_tool_test.go` `TestALongAnswerComesInParts`
   - `internal/cli/bridge_rules_test.go` `TestAContinuationRefreshesALetterBeforeAnyPart`
   - `internal/cli/bridge_rules_test.go` `TestAnEscapedDiagnosticFits`
@@ -127,7 +127,7 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   shown to the model (`cli/inbox.go:114-119`; persisted output seen on 2.1.289,
   `.scratch/v2-recon/claude-mods.md:52`).
   Tests:
-  - `internal/bridge/bridge_test.go` `TestOnlyAWholeResultIsEvidence`
+  - `internal/bridge/ticket_test.go` `TestOnlyAWholeResultIsEvidence`
   - `internal/cli/bridge_read_test.go` `TestAToolReadIsReadOnlyWhenEveryPartArrived`
   - `internal/cli/bridge_read_test.go` `TestAWithdrawalMeetsAToolRead`
   - `internal/cli/bridge_lookups_test.go` `TestAReadThatCouldNotSeeTheLetterFreezesNothing`
@@ -246,7 +246,7 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/core/receipt/receipt_test.go` `TestTheSweepRespectsAHeldLock`
   - `internal/cli/bridge_rules_test.go` `TestAnExpiredReadShowsAndClaimsNothing`
   - `internal/cli/bridge_rules_test.go` `TestAPendingMarkIsNotMadeAfterItsDeadline`
-  - `internal/bridge/bridge_test.go` `TestAnOpenTicketDescriptorDoesNotHang`
+  - `internal/bridge/ticket_test.go` `TestAnOpenTicketDescriptorDoesNotHang`
   - `internal/adapter/fixture/order_test.go` `TestASilentProbeCostsOnlyItsCapability`
   - `internal/adapter/fixture/order_test.go` `TestCloseWaitsForACallIntoTheHandler`
   - `internal/adapter/fixture/order_test.go` `TestNothingReachesTheHandlerOnceClosed`
@@ -280,7 +280,7 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   - `internal/core/receipt/shell_test.go` `TestEveryErrorHasItsClass`
   - `internal/core/receipt/shell_test.go` `TestAnUnwritableStateLosesTheObservation`
   - `internal/cli/journal_test.go` `TestTheShellRefersAnOpenOperationToItsReceipt`
-  - `internal/bridge/bridge_test.go` `TestNoEndpointRefusesEveryTicket`
+  - `internal/bridge/ticket_test.go` `TestNoEndpointRefusesEveryTicket`
   - `test/toolrig/fault_test.go` `TestEveryStepOfACallSurvivesAFault`
   - `test/toolrig/gaps_test.go` `TestOneSetOfWordsThroughTheToolAndTheShellIsOneOperation`
 

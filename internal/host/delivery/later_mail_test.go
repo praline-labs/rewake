@@ -7,7 +7,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/mail"
 )
 
-func TestReviewSocketNeverSuppressesLaterMail(t *testing.T) {
+func TestSocketNeverSuppressesLaterMail(t *testing.T) {
 	dir := stateDir(t)
 	s := batchServer(dir)
 	calls := 0

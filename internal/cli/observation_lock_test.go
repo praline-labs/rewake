@@ -11,7 +11,7 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-func TestReviewSenderObservationCannotBlockReceiverMailbox(t *testing.T) {
+func TestSenderObservationCannotBlockReceiverMailbox(t *testing.T) {
 	dir, self, peer := stateCaller(t, "main")
 	peer.HarnessPID, peer.HarnessStart = 2147483647, 1
 	if err := registry.Update(dir, peer); err != nil {

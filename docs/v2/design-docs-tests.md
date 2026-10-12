@@ -98,16 +98,18 @@ Answer 9: the test files named after a review round are renamed by subject, with
 `TestReview…` functions. The revision counted eleven (632 lines); there are fifteen,
 1 059 lines: the six of `gateway`, three of `cli`, two of `inbox`, and also three in
 `harness/codex` (`review_batch_liveness`, `review_consumed_grant`, `review_drain`) and
-one in `wrap` (`review_notice_edges`). The nine Codex ones leave with the Codex code; the
-other six move in stage 3:
+one in `wrap` (`review_notice_edges`). The nine Codex ones leave with the Codex code, and
+so did `cli/review_receipt_identity_test.go`, kept with it in `archive/1.x/codex/`; the
+other five are renamed in stage 3's S16, the two of `inbox` after S15 moved them to
+`host/delivery`:
 
 | Today | 2.0 |
 |---|---|
 | `cli/review_observation_lock_test.go` | `cli/observation_lock_test.go` |
-| `cli/review_receipt_identity_test.go` | `cli/receipt_scope_test.go` |
+| `cli/review_receipt_identity_test.go` | archived with the Codex code |
 | `cli/review_shell_json_test.go` | `cli/list_json_test.go` |
-| `inbox/review_socket_fallback_test.go` | `host/delivery_later_mail_test.go` |
-| `inbox/review_waiting_inbox_test.go` | `host/delivery_arrivals_test.go` |
+| `inbox/review_socket_fallback_test.go` | `host/delivery/later_mail_test.go` |
+| `inbox/review_waiting_inbox_test.go` | `host/delivery/arrivals_test.go` |
 | `wrap/review_notice_edges_test.go` | `host/departure_notice_test.go` |
 
 "Tidy the tests generally" (answer 9) means, beyond the names: a test lives in the

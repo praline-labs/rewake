@@ -115,8 +115,8 @@ nothing lifts a stop without returning evidence.
 - **E5. The size bound holds on the final encoded bytes of every answer, in one place**;
   every text part names its letter, part, count and byte range. (M1 rule 5.)
   Tests:
-  - `internal/bridge/bridge_test.go` `TestOnlyAWholeResultIsEvidence`
-  - `internal/bridge/bridge_test.go` `TestCutKeepsCharactersAndBounds`
+  - `internal/bridge/ticket_test.go` `TestOnlyAWholeResultIsEvidence`
+  - `internal/bridge/ticket_test.go` `TestCutKeepsCharactersAndBounds`
   - `internal/cli/bridge_rules_test.go` `TestAnEscapedDiagnosticFits`
   - `internal/cli/bridge_rules_test.go` `TestAnAnswerThatCannotBeKeptStillFits`
   - `internal/cli/bridge_rules_test.go` `TestEveryTextPartNamesItself`

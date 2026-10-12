@@ -8,7 +8,7 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-func TestReviewEmptyShellListRetainsBaselineJSON(t *testing.T) {
+func TestEmptyShellListRetainsBaselineJSON(t *testing.T) {
 	dir := liveSession(t, "temporary")
 	if err := registry.Remove(dir, "temporary"); err != nil {
 		t.Fatal(err)
