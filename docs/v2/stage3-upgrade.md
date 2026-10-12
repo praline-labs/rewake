@@ -126,7 +126,9 @@ descriptors of `rooms/` stay open and locked for the clearing; the rest are rele
 4. **Finish validated trees.** The base is flushed first: a validated name proves no
    flush, since the clearer that renamed it may have failed its flush and refused, and a
    launch that bootstrapped — flushing the base — before that rename cannot vouch for it.
-   A flush that fails refuses the launch and deletes nothing. Then each
+   A flush that fails refuses the launch and deletes nothing; one that succeeds after
+   another clearer's failed is taken on the kernel's word that it wrote what the directory
+   holds now. Then each
    `.rooms-1x-validated-*` is deleted. A deletion that fails part way is finished by the
    next launch; only a validated tree is ever deleted in part.
 5. **Set `rooms/` aside**, if present: rename it to `.rooms-1x-candidate-<id>` while its
