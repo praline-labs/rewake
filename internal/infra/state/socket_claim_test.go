@@ -109,7 +109,7 @@ func TestASocketClaimNeverWritesAnotherBase(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(outside) })
 	link := filepath.Join(outside, "link")
-	if err := os.Symlink(foreign, link); err != nil {
+	if err := os.Symlink(filepath.Join(foreign, socketsDir), link); err != nil {
 		t.Fatal(err)
 	}
 	legacy := filepath.Join(outside, "old", "rooms", DefaultRoom)

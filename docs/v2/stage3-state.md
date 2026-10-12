@@ -174,8 +174,8 @@ lies outside every room by the harness's protocol: a reply socket beside a socke
 named. `state.ClaimSocket` gives the run authority over that one path, no directory — clearing
 a dead socket there, binding, the close-time unlink — checked at each act against view mode
 and the room's lease. It widens nothing of any state: a path in a state directory, as written
-or where its directory's links lead — a base of any root, a root with rooms, a room of either
-layout by what it holds — is guarded by the lease of the room it lies in, which the claiming
+or where its directory's links lead — below a base, which holds a root with rooms, or in a
+room of either layout by what it holds — is guarded by the lease of the room it lies in, which the claiming
 room's lease is not. Then the guarded resources:
 
 - commit 5: the registry's removals; `core/control`'s lock, request, mark and answer files

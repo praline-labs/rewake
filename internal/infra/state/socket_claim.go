@@ -74,13 +74,12 @@ func (c *SocketClaim) inState() bool {
 	return false
 }
 
-// stateDir says whether dir is a level of a state directory that holds
-// rooms, of any base: a base, which holds a root with rooms; a root; or a
-// room by what it holds, of either layout. A directory that only looks like
-// one is taken for one too, the safe side.
+// stateDir says whether dir is a base, which holds a root with rooms, so
+// whatever lies below it is a state's, or a room by what it holds, of either
+// layout, which finds a room of 1.x where no root is. A directory that only
+// looks like one is taken for one too, the safe side.
 func stateDir(dir string) bool {
 	return isDir(dir, rootName, "rooms") ||
-		filepath.Base(dir) == rootName && isDir(dir, "rooms") ||
 		isDir(dir, sessionsDir) && isDir(dir, inboxDir) && isDir(dir, socketsDir)
 }
 
