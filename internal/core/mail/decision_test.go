@@ -344,8 +344,8 @@ func TestDecisionRecordsBesideItReadStrictly(t *testing.T) {
 }
 
 // decidedRecords are the records a decision on a report of the journal old
-// leaves once its effects are done — the decision of arrived, its note told,
-// its closure — by their paths under the sender's mailbox.
+// leaves once its effects are done — the decision of arrived, made durable,
+// its note told, its closure — by their paths under the sender's mailbox.
 func decidedRecords(t *testing.T, sender, run, recipient, recipientRun string) map[string]string {
 	t.Helper()
 	report := NewID()
@@ -365,6 +365,7 @@ func decidedRecords(t *testing.T, sender, run, recipient, recipientRun string) m
 		report + toldRecipientSuffix: ToldRecord{Name: recipient, Run: recipientRun, Note: note.ID, Answer: ToldWritten, At: time.Now()},
 		report + toldMainSuffix:      ToldRecord{Name: "lead", Run: "lead-run", Note: NewID(), Answer: ToldEnded, At: time.Now()},
 		report + closedSuffix:        Closure{Decision: d.ID, Journal: "old", Report: report, Waits: []Waiter{}, At: time.Now()},
+		report + durableSuffix:       DurableRecord{Decision: d.ID, At: time.Now()},
 	}
 	files := map[string]string{}
 	for name, record := range records {
