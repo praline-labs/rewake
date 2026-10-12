@@ -194,7 +194,7 @@ then reads the proof and publishes, and a seam helper takes no name lock and doe
 take the same mailbox again there.
 
 A static test over `internal/`, in all four build variants, fails on a write outside
-`infra/state` — a direct call, an alias or a function value — except in its own table of
+`infra/state` — a direct call, an alias, a function value, a descriptor's mode or owner, a listen not proven abstract — except in its own table of
 file, effect and reason, which fails on a stale entry; what it reads and excuses is in
 [stage3-state-tests.md](stage3-state-tests.md#stage-3-the-tests-of-state-and-builds), with the
 worktree's writes beside a checkout the main class. A refusal for want of a lease is

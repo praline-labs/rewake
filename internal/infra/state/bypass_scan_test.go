@@ -17,13 +17,23 @@ import (
 var bypassEffects = map[string]map[string]bool{
 	"os": set("WriteFile", "Create", "CreateTemp", "OpenFile", "Remove", "RemoveAll", "Rename",
 		"Link", "Symlink", "Mkdir", "MkdirAll", "MkdirTemp", "Chmod", "Chown", "Lchown", "Chtimes",
-		"Truncate"),
+		"Truncate", "CopyFS", "OpenRoot", "OpenInRoot"),
 	"io/ioutil": set("WriteFile", "TempFile", "TempDir"),
 	"syscall": set("Flock", "Mmap", "Unlink", "Unlinkat", "Rename", "Renameat", "Link", "Linkat",
 		"Symlink", "Mkdir", "Mkdirat", "Rmdir", "Chmod", "Fchmod", "Fchmodat", "Truncate",
-		"Ftruncate", "Open", "Openat", "Creat", "Mknod", "Utimes", "UtimesNano"),
+		"Ftruncate", "Open", "Openat", "Creat", "Mknod", "Mknodat", "Mkfifo", "Utimes", "UtimesNano",
+		"Utime", "Futimes", "Futimesat", "Chown", "Fchown", "Fchownat", "Lchown", "Setxattr",
+		"Removexattr", "Fallocate", "Pwrite"),
 	"net": set("Listen", "ListenUnix", "ListenUnixgram", "ListenPacket"),
 }
+
+// descriptorEffects are the methods by which a descriptor changes its file
+// whatever it was opened for: fchmod and fchown work on a read-only one. A
+// content write needs a writable descriptor, which only an open counted here
+// or a guarded one gives. Without type information every method of these
+// names counts, whatever its receiver — a package's function aside — the safe
+// side again.
+var descriptorEffects = set("Chmod", "Chown")
 
 // readFlags are the open flags, in os's spelling and syscall's, a read is
 // spelled from: an open whose flag argument names only these writes nothing.
@@ -59,8 +69,14 @@ func bypassRefs(t *testing.T, path string) []bypassRef {
 	}
 	aliases := map[string]string{}
 	dotted := map[string]bool{}
+	imported := map[string]bool{}
 	for _, spec := range file.Imports {
 		value, _ := strconv.Unquote(spec.Path.Value)
+		if spec.Name != nil {
+			imported[spec.Name.Name] = true
+		} else {
+			imported[value[strings.LastIndex(value, "/")+1:]] = true
+		}
 		if bypassEffects[value] == nil {
 			continue
 		}
@@ -102,6 +118,8 @@ func bypassRefs(t *testing.T, path string) []bypassRef {
 		case *ast.SelectorExpr:
 			if name := effect(node); name != "" && !reads[node] {
 				found = append(found, bypassRef{name, fset.Position(node.Pos()).Line})
+			} else if x, ok := node.X.(*ast.Ident); descriptorEffects[node.Sel.Name] && (!ok || !imported[x.Name]) {
+				found = append(found, bypassRef{"descriptor." + node.Sel.Name, fset.Position(node.Pos()).Line})
 			}
 			// What is selected from anything but a package is a field or a
 			// method; the expression it is selected from is looked through.
@@ -164,17 +182,32 @@ func unixNetwork(arg ast.Expr) bool {
 	return strings.HasPrefix(network, "unix")
 }
 
-// abstractAddress answers whether the address of a listen call is spelled,
-// where the call is written, as an abstract one: a string beginning with "@",
-// or a UnixAddr whose Name is one.
+// abstractAddress answers whether the address of a listen call is proven, by
+// how it is spelled where the call is written, to begin with "@": a string
+// literal that does, a concatenation whose first operand does, a UnixAddr
+// whose Name does. Anything else — a variable, a call, whatever literal it
+// holds inside — may be a path.
 func abstractAddress(address ast.Expr) bool {
-	abstract := false
-	ast.Inspect(address, func(node ast.Node) bool {
-		if lit, ok := node.(*ast.BasicLit); ok && lit.Kind == token.STRING {
-			value, _ := strconv.Unquote(lit.Value)
-			abstract = abstract || strings.HasPrefix(value, "@")
+	switch address := address.(type) {
+	case *ast.BasicLit:
+		value, err := strconv.Unquote(address.Value)
+		return address.Kind == token.STRING && err == nil && strings.HasPrefix(value, "@")
+	case *ast.ParenExpr:
+		return abstractAddress(address.X)
+	case *ast.BinaryExpr:
+		return address.Op == token.ADD && abstractAddress(address.X)
+	case *ast.UnaryExpr:
+		return address.Op == token.AND && abstractAddress(address.X)
+	case *ast.CompositeLit:
+		for index, element := range address.Elts {
+			if field, ok := element.(*ast.KeyValueExpr); ok {
+				if key, ok := field.Key.(*ast.Ident); ok && key.Name == "Name" {
+					return abstractAddress(field.Value)
+				}
+			} else if index == 0 {
+				return abstractAddress(element)
+			}
 		}
-		return true
-	})
-	return abstract
+	}
+	return false
 }

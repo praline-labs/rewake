@@ -117,16 +117,74 @@ func TestTheBypassCheckSeesEveryWrite(t *testing.T) {
 		}
 	}
 	reads := map[string]string{
-		"a read-only open":     "import (\n\"os\"\n\"syscall\"\n)\nfunc f() { _, _ = os.OpenFile(\"p\", os.O_RDONLY|syscall.O_NOFOLLOW, 0) }",
-		"a raw read":           "import \"syscall\"\nfunc f() { _, _ = syscall.Open(\"p\", syscall.O_RDONLY|syscall.O_CLOEXEC, 0) }",
-		"a read-only mapping":  "import \"syscall\"\nfunc f() { _, _ = syscall.Mmap(0, 0, 8, syscall.PROT_READ, syscall.MAP_SHARED) }",
-		"a network socket":     "import \"net\"\nfunc f() { _, _ = net.Listen(\"tcp\", \"127.0.0.1:0\") }",
-		"an abstract socket":   "import \"net\"\nfunc f() { _, _ = net.ListenUnix(\"unix\", &net.UnixAddr{Name: \"@a\", Net: \"unix\"}) }",
-		"a method of the same": "import \"os\"\nfunc f(file *os.File) { _ = file.Chmod(0) }",
+		"a read-only open":    "import (\n\"os\"\n\"syscall\"\n)\nfunc f() { _, _ = os.OpenFile(\"p\", os.O_RDONLY|syscall.O_NOFOLLOW, 0) }",
+		"a raw read":          "import \"syscall\"\nfunc f() { _, _ = syscall.Open(\"p\", syscall.O_RDONLY|syscall.O_CLOEXEC, 0) }",
+		"a read-only mapping": "import \"syscall\"\nfunc f() { _, _ = syscall.Mmap(0, 0, 8, syscall.PROT_READ, syscall.MAP_SHARED) }",
+		"a network socket":    "import \"net\"\nfunc f() { _, _ = net.Listen(\"tcp\", \"127.0.0.1:0\") }",
+		"an abstract socket":  "import \"net\"\nfunc f() { _, _ = net.ListenUnix(\"unix\", &net.UnixAddr{Name: \"@a\", Net: \"unix\"}) }",
 	}
 	for name, body := range reads {
 		if found := bypassRefs(t, writeSource(t, body)); len(found) != 0 {
 			t.Errorf("the check took %s for a write: %v", name, found)
+		}
+	}
+}
+
+// A descriptor changes its file's mode or owner whatever it was opened for: a
+// read-only open gives one that can chmod. Its Chmod and Chown count wherever
+// they are reached, called, kept or named by method expression; a function of
+// the same name in another package is that package's, and a content write
+// needs a writable descriptor, which only a counted or guarded open gives.
+func TestTheBypassCheckSeesADescriptorsMetadataChange(t *testing.T) {
+	writes := map[string]string{
+		"a read-opened chmod": "import \"os\"\nfunc f(path string) error { file, err := os.Open(path); if err != nil { return err }; defer file.Close(); return file.Chmod(0o600) }",
+		"a chown":             "import \"os\"\nfunc f(file *os.File) { _ = file.Chown(0, 0) }",
+		"a method value":      "import \"os\"\nfunc f(file *os.File) func(os.FileMode) error { return file.Chmod }",
+		"a method expression": "import \"os\"\nvar chmod = (*os.File).Chmod",
+		"a nested receiver":   "import \"os\"\nfunc f(s struct{ F *os.File }) { _ = s.F.Chmod(0) }",
+	}
+	for name, body := range writes {
+		if found := bypassRefs(t, writeSource(t, body)); len(found) == 0 {
+			t.Errorf("the check missed %s", name)
+		}
+	}
+	others := map[string]string{
+		"another package's function": "import \"example.com/state\"\nfunc f() { _ = state.Chmod(\"p\", 0) }",
+		"a content write":            "import \"os\"\nfunc f(file *os.File) { _, _ = file.Write(nil) }",
+	}
+	for name, body := range others {
+		if found := bypassRefs(t, writeSource(t, body)); len(found) != 0 {
+			t.Errorf("the check took %s for a write: %v", name, found)
+		}
+	}
+}
+
+// Only an address whose value is proven abstract, "@" first, makes no file: a
+// literal, a concatenation that begins with one, a UnixAddr naming one. Any
+// other expression may name a path, a call or a variable among them, whatever
+// literal it holds inside.
+func TestTheBypassCheckExcusesOnlyAProvenAbstractAddress(t *testing.T) {
+	paths := map[string]string{
+		"a computed address":     "import (\"net\"; \"strings\")\nfunc f(path string) { _, _ = net.Listen(\"unix\", strings.TrimPrefix(\"@\" + path, \"@\")) }",
+		"an address in a var":    "import \"net\"\nfunc f() { a := \"@x\"; _, _ = net.Listen(\"unix\", a) }",
+		"a concatenation after":  "import \"net\"\nfunc f(p string) { _, _ = net.Listen(\"unix\", p + \"@\") }",
+		"a UnixAddr of a call":   "import (\"net\"; \"strings\")\nfunc f(p string) { _, _ = net.ListenUnix(\"unix\", &net.UnixAddr{Name: strings.TrimPrefix(\"@\" + p, \"@\"), Net: \"unix\"}) }",
+		"a UnixAddr's other key": "import \"net\"\nfunc f(p string) { _, _ = net.ListenUnix(\"unix\", &net.UnixAddr{Name: p, Net: \"@\"}) }",
+	}
+	for name, body := range paths {
+		if found := bypassRefs(t, writeSource(t, body)); len(found) == 0 {
+			t.Errorf("the check excused %s as abstract", name)
+		}
+	}
+	abstract := map[string]string{
+		"a literal":          "import \"net\"\nfunc f() { _, _ = net.Listen(\"unix\", \"@a\") }",
+		"a concatenation":    "import \"net\"\nfunc f(p string) { _, _ = net.Listen(\"unix\", \"@\" + p) }",
+		"a UnixAddr":         "import \"net\"\nfunc f(p string) { _, _ = net.ListenUnix(\"unix\", &net.UnixAddr{Name: \"@\" + p, Net: \"unix\"}) }",
+		"a positional field": "import \"net\"\nfunc f() { _, _ = net.ListenUnix(\"unix\", &net.UnixAddr{\"@a\", \"unix\"}) }",
+	}
+	for name, body := range abstract {
+		if found := bypassRefs(t, writeSource(t, body)); len(found) != 0 {
+			t.Errorf("the check took %s for a file: %v", name, found)
 		}
 	}
 }
