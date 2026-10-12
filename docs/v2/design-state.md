@@ -97,8 +97,9 @@ image once per command is measured in stage 3.
 writers, and `build.lock`, a file locked with `flock`:
 
 - **Every writer holds the lock shared, then checks.** A wrapper holds it for its whole
-  life; a CLI command that may change the room's state, from before its build check to
-  its exit; a child a wrapper starts that writes — the CLI child of a tool call — takes
+  life, through the last write of every goroutine it started, even one that ends after
+  the wrapper's own stop gave up waiting for it; a CLI command that may change the room's
+  state, from before its build check to its exit; a child a wrapper starts that writes — the CLI child of a tool call — takes
   its own shared lock before its first effect, so it keeps the boundary even after its
   wrapper is gone (`mail-bridge-server.md`, "Running the child"). With
   the lock held, the writer reads `build`: its own id goes on; another id, or a file it

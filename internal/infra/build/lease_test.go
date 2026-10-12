@@ -278,3 +278,29 @@ func TestRemovedLeaseLockIsNotRecreatedByAWriter(t *testing.T) {
 		t.Fatalf("the writer made the lock again: %v", err)
 	}
 }
+
+// A hold Keep adds outlasts the owner's Release: the room stays authorized
+// and the lock held until the last hold goes, and each release counts once.
+func TestAKeptLeaseOutlastsItsOwnersRelease(t *testing.T) {
+	base := newBase(t)
+	room := established(t, base, "default")
+	lease, err := Acquire(base, "default")
+	if err != nil {
+		t.Fatal(err)
+	}
+	keep := lease.Keep()
+	lease.Release()
+	lease.Release()
+	if !state.Leased(room) {
+		t.Fatal("the owner's release ended a lease another hold keeps")
+	}
+	keep()
+	keep()
+	if state.Leased(room) {
+		t.Fatal("the lease outlived its last hold")
+	}
+	if release := lease.Keep(); state.Leased(room) {
+		release()
+		t.Fatal("a released lease was kept again")
+	}
+}

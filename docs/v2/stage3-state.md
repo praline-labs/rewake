@@ -262,7 +262,17 @@ the lease closes: the live-set loop of S11 (`registry.Modify` keeps reading the 
 it stands), the channel and availability writers, the turn callbacks
 (`core/mail/turn_end.go`, `turn_reports.go`, `turn_hold.go`, `pending_mark.go`,
 `read_ack.go`), delivery (`host/delivery`, whose locked entry points keep their four
-callers), the endpoint's acknowledgments and every cleanup. A worktree change form takes
+callers), the endpoint's acknowledgments and every cleanup. A stop that returns before
+its work has stopped proves nothing, so the run counts what may still write: the
+availability publisher, the session-state worker and every write of the live set, a
+retry among them, are workers of the run, and the run keeps its own hold on the lease
+(`build.Lease.Keep`, beside the caller's) until the last of them has returned. Their
+stops wait only so long, so a write stalled in the filesystem does not hold the
+wrapper's exit: `Run` may return first, and the lease then goes when that worker ends,
+or with the process (`TestRunKeepsTheLeaseUntilItsWorkersStop`,
+`TestALiveSetWritesNothingAfterItsStop`, `TestAStoppedWorkerCountsUntilItsLastWrite`). A
+stopped live set starts no write; the channel keeper's heartbeat, the endpoint, delivery
+and the fixture's backend are joined by their stops. A worktree change form takes
 the selected room's lease; its Git locks still protect the checkout. Looking at sessions
 of another root takes no lease there. Tests in one process restore the mode and the lease
 between invocations; no test escapes the lease by a global switch — a helper acquires a
@@ -346,8 +356,8 @@ goroutines sharing one process's lease.
 | Area | Tests |
 |---|---|
 | identity (commit 2) | `TestBuildIDIsExecutableContent` (a copy equal, a changed byte different, the installed path replaced or removed still hashes the running image); `TestUnreadableImageHasNoEffects`; `TestVersionJSONCarriesBuildID`, the human line unchanged |
-| lease (commit 2) | `TestSharedWritersExcludeBuildSwitch`, `TestLaunchReplacesMissingOrInvalidBuildOnlyExclusively`, `TestDowngradeRechecksBuild`, `TestReplacedLeaseLockIsReopened`, `TestRemovedLeaseLockIsNotRecreatedByAWriter`, `TestIncompleteRoomWriterCreatesNothing`, `TestHolderDiagnosticsUseDeviceAndInode`, `TestLeaseDescriptorsAreNotInherited`; every contention bounded, a writer beside a stalled switch refused after its bound (`TestAStalledSwitchBoundsItsWriters`) |
-| process races (commit 2, `test/leaserig`) | `TestDifferentImagesWithSameVersionCannotShareRoom` (one tree built twice, the second with a build time passed in by `-ldflags`: the same version, different ids, the second refused while a session of the first runs), `TestArtifactCopyCanJoinRoomAndUseTools` (the tool's peer takes a copy too: `TestPeerCheckIsTheBuildsContent`), `TestOldCommandBlocksNewBuildUntilExitOrKill`, `TestOrphanChildRefusesAfterBuildSwitch`, `TestConcurrentLaunchesOfOneBuildAllTakeTheRoom` (D4a: launches of one build held together after reading a missing record, or another build's with nothing holding it, then let go at once, all take the room, repeated); `TestHostLeaseOutlivesCleanup` in `host`, the lease taken before the claim and released after the record and the socket are gone |
+| lease (commit 2) | `TestSharedWritersExcludeBuildSwitch`, `TestLaunchReplacesMissingOrInvalidBuildOnlyExclusively`, `TestDowngradeRechecksBuild`, `TestReplacedLeaseLockIsReopened`, `TestRemovedLeaseLockIsNotRecreatedByAWriter`, `TestIncompleteRoomWriterCreatesNothing`, `TestHolderDiagnosticsUseDeviceAndInode`, `TestLeaseDescriptorsAreNotInherited`, `TestAKeptLeaseOutlastsItsOwnersRelease`; every contention bounded, a writer beside a stalled switch refused after its bound (`TestAStalledSwitchBoundsItsWriters`) |
+| process races (commit 2, `test/leaserig`) | `TestDifferentImagesWithSameVersionCannotShareRoom` (one tree built twice, the second with a build time passed in by `-ldflags`: the same version, different ids, the second refused while a session of the first runs), `TestArtifactCopyCanJoinRoomAndUseTools` (the tool's peer takes a copy too: `TestPeerCheckIsTheBuildsContent`), `TestOldCommandBlocksNewBuildUntilExitOrKill`, `TestOrphanChildRefusesAfterBuildSwitch`, `TestConcurrentLaunchesOfOneBuildAllTakeTheRoom` (D4a: launches of one build held together after reading a missing record, or another build's with nothing holding it, then let go at once, all take the room, repeated); `TestHostLeaseOutlivesCleanup` in `host`, the lease taken before the claim and released after the record and the socket are gone, and `TestRunKeepsTheLeaseUntilItsWorkersStop`, after a worker paused in a write past every bounded stop |
 | both routes (commit 2) | `TestBothRoutesRefuseAnotherBuildsRoom` (the shell and the tool refused in a room of another build, the tool before its ticket is confirmed), `TestChangeFormsOnAnEmptyBaseCreateNothing` |
 | bootstrap (commit 2) | `TestBootstrapRecoversAfterEveryStep`, `TestBootstrapRefusesUnsafeExistingComponents`, `TestBootstrapSyncFailureStopsBeforeClaim`, `TestBootstrapRetryReestablishesAFailedSync`, `TestBootstrapFlushesALevelAnotherLaunchMade`, `TestOnlyAcquireCallsBootstrapPrimitives` with `TestBootstrapCallerCheckSeesEveryReference`: a kill or a failure at each create, lock and record step, and no session record after one |
 | roots (commit 3) | `TestTwoRoomsUseOnlyV2`, `TestChildBaseRoundTripAndGrantAuthority` (a shell of the session and a tool call's child read the exported base; their `Dir()` is the wrapper's room byte for byte, one `v2` in it; the grant authority's address, which hashes the room, is the wrapper's), `TestRootInverseRejectsLegacyOrMalformedRoom` and, for a worktree owner of another base or of 1.x, `TestWorktreeOwnerRootIsChecked`, `TestResolversNeverCreate`, `TestOrdinaryCommandsNeverTouchLegacyTree` |

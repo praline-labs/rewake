@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -63,7 +64,7 @@ func TestTelemetryStorageFailureDoesNotStopCollection(t *testing.T) {
 		t.Fatal(err)
 	}
 	var calls atomic.Int64
-	stop := Start(context.Background(), dir, "worker", "epoch", func() Snapshot { calls.Add(1); return Unknown("epoch") })
+	stop := Start(context.Background(), dir, "worker", "epoch", func() Snapshot { calls.Add(1); return Unknown("epoch") }, nil)
 	defer stop()
 	deadline := time.Now().Add(time.Second)
 	for calls.Load() < 2 && time.Now().Before(deadline) {
@@ -88,7 +89,7 @@ func TestTheStopPublishesTheLastWord(t *testing.T) {
 		count := compactions.Load()
 		snapshot.Compactions = &count
 		return snapshot
-	})
+	}, nil)
 	deadline := time.Now().Add(time.Second)
 	for Load(dir, "worker", "epoch").Compactions == nil && time.Now().Before(deadline) {
 		time.Sleep(10 * time.Millisecond)
@@ -97,5 +98,51 @@ func TestTheStopPublishesTheLastWord(t *testing.T) {
 	stop()
 	if got := Load(dir, "worker", "epoch").Compactions; got == nil || *got != 7 {
 		t.Fatalf("the snapshot that stayed counts %v, want the source's 7 at the stop", got)
+	}
+}
+
+// The stop waits for its worker only so long, but the worker stays counted
+// until its last publication ends: a run that keeps the room's lease while
+// workers count keeps it through a publication a stalled write delayed past
+// the stop.
+func TestAStoppedWorkerCountsUntilItsLastWrite(t *testing.T) {
+	dir := privateDir(t)
+	entered, resume := make(chan struct{}), make(chan struct{})
+	var once sync.Once
+	var stopping atomic.Bool
+	var workers sync.WaitGroup
+	stop := Start(context.Background(), dir, "worker", "epoch", func() Snapshot {
+		if stopping.Load() {
+			once.Do(func() { close(entered); <-resume })
+		}
+		return Unknown("epoch")
+	}, &workers)
+	stopping.Store(true)
+	stopped := make(chan struct{})
+	go func() { stop(); close(stopped) }()
+	select {
+	case <-entered:
+	case <-time.After(2 * time.Second):
+		t.Fatal("the worker never published again")
+	}
+	select {
+	case <-stopped:
+	case <-time.After(2 * time.Second):
+		close(resume)
+		t.Fatal("the stop waited on a stalled publication")
+	}
+	done := make(chan struct{})
+	go func() { workers.Wait(); close(done) }()
+	select {
+	case <-done:
+		close(resume)
+		t.Fatal("the worker stopped counting while it was still publishing")
+	case <-time.After(100 * time.Millisecond):
+	}
+	close(resume)
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("the worker never stopped counting")
 	}
 }

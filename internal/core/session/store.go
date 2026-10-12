@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"time"
 
@@ -91,11 +92,13 @@ func published(snapshot Snapshot, now time.Time, boot int64) bool {
 }
 
 // Start keeps one worker and no update backlog. Storage failures lose telemetry,
-// never delivery. Shutdown does not wait indefinitely on a stalled filesystem.
+// never delivery. Shutdown does not wait indefinitely on a stalled filesystem,
+// but the worker counts among workers until its last write ends: whoever keeps
+// the room's lease while they count keeps it through that write.
 // The stop publishes once more: what the run's end left in the source — its
 // channel record frozen at the exit among it — is the snapshot that stays,
 // not whichever tick came last before it.
-func Start(parent context.Context, dir, name, epoch string, source func() Snapshot) func() {
+func Start(parent context.Context, dir, name, epoch string, source func() Snapshot, workers *sync.WaitGroup) func() {
 	ctx, cancel := context.WithCancel(parent)
 	done := make(chan struct{})
 	publish := func() {
@@ -104,7 +107,13 @@ func Start(parent context.Context, dir, name, epoch string, source func() Snapsh
 		snapshot.PublishedAt, snapshot.PublishedBoot = &now, boottime.Now()
 		_ = Save(dir, name, epoch, snapshot)
 	}
+	if workers != nil {
+		workers.Add(1)
+	}
 	go func() {
+		if workers != nil {
+			defer workers.Done()
+		}
 		defer close(done)
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
@@ -26,10 +27,11 @@ var builtNoticeScan string
 
 // One readiness worker per launch, and one discovery loop only for room main.
 // Notification/storage errors never enter the child or mailbox lifecycle paths.
-func startAvailability(parent context.Context, dir string, self registry.Session, ready <-chan struct{}, usable func() bool) func() {
+// The worker counts among workers until it returns.
+func startAvailability(parent context.Context, dir string, self registry.Session, ready <-chan struct{}, usable func() bool, workers *sync.WaitGroup) func() {
 	ctx, cancel := context.WithCancel(parent)
 	done := make(chan struct{})
-	go func() {
+	spawn(workers, func() {
 		defer close(done)
 		select {
 		case <-ctx.Done():
@@ -63,7 +65,9 @@ func startAvailability(parent context.Context, dir string, self registry.Session
 			case <-ticker.C:
 			}
 		}
-	}()
+	})
+	// The wait is bounded: a publication it outlasts still counts among the
+	// run's workers, which keep the room's lease until it ends.
 	return func() {
 		cancel()
 		select {

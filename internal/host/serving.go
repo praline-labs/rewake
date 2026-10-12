@@ -79,7 +79,7 @@ func startServing(ctx context.Context, request Request, self registry.Session, n
 		observed = plan.Telemetry.SessionState
 	}
 	if observed != nil || tool.keeper != nil {
-		stops = append(stops, session.Start(ctx, request.Dir, name, epoch, tool.keeper.source(epoch, observed)))
+		stops = append(stops, session.Start(ctx, request.Dir, name, epoch, tool.keeper.source(epoch, observed), live.workers))
 	}
 	return stop, nil
 }

@@ -45,11 +45,16 @@ type liveSet struct {
 	// done ends the retries with the run.
 	done     chan struct{}
 	stopOnce sync.Once
+	// workers counts the run's goroutines that may still write, a retry
+	// among them; nil counts nothing.
+	workers *sync.WaitGroup
 
 	mu      sync.Mutex
 	set     []adapter.Capability
 	ready   bool
 	changed chan struct{}
+	// stopped is set by stop, under mu: no write starts after it.
+	stopped bool
 }
 
 func newLiveSet(dir, name, epoch string) *liveSet {
@@ -99,6 +104,12 @@ func (l *liveSet) report(set []adapter.Capability) {
 // write fails for any reason but the record no longer being this run's; with
 // retry, the retries run until it lands.
 func (l *liveSet) publish(retry bool) {
+	// Each write counts among the run's workers, and none starts once the
+	// live set is stopped: the run's lease outlasts every write of its set.
+	if !l.working(func() {}) {
+		return
+	}
+	defer l.idle()
 	names := l.names
 	err := registry.Modify(l.dir, l.name, l.epoch, func(session *registry.Session) { session.Live = names })
 	if err == nil || errors.Is(err, registry.ErrNotFound) {
@@ -106,9 +117,36 @@ func (l *liveSet) publish(retry bool) {
 		return
 	}
 	if retry && !l.retrying {
-		l.retrying = true
-		_, _ = fmt.Fprintf(os.Stderr, "rewake: could not record what this run has live (%v); trying again\n", err)
-		go l.retry()
+		l.retrying = l.working(func() {
+			_, _ = fmt.Fprintf(os.Stderr, "rewake: could not record what this run has live (%v); trying again\n", err)
+			go func() {
+				defer l.idle()
+				l.retry()
+			}()
+		})
+	}
+}
+
+// working counts one more worker and runs start, unless the live set is
+// stopped; it says whether it did. The count and the check are under mu, so
+// no worker is added once stop has returned.
+func (l *liveSet) working(start func()) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.stopped {
+		return false
+	}
+	if l.workers != nil {
+		l.workers.Add(1)
+	}
+	start()
+	return true
+}
+
+// idle ends what working counted.
+func (l *liveSet) idle() {
+	if l.workers != nil {
+		l.workers.Done()
 	}
 }
 
@@ -143,8 +181,17 @@ func (l *liveSet) published() bool {
 	return !l.owed
 }
 
-// stop ends the retries: the run is over, and its record goes with it.
-func (l *liveSet) stop() { l.stopOnce.Do(func() { close(l.done) }) }
+// stop ends the retries and every write of the set: the run is over, and its
+// record goes with it. A write under way when it is called finishes, counted
+// among the run's workers; none starts after it. It never waits on a write.
+func (l *liveSet) stop() {
+	l.stopOnce.Do(func() {
+		l.mu.Lock()
+		l.stopped = true
+		l.mu.Unlock()
+		close(l.done)
+	})
+}
 
 // has says whether a capability is live now.
 func (l *liveSet) has(capability adapter.Capability) bool {

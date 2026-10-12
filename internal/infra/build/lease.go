@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/infra/state"
@@ -21,21 +22,55 @@ var shareWait = 10 * time.Second
 // Release ends it; until then the room is authorized for this process's
 // writes.
 type Lease struct {
-	lock *state.LeaseLock
 	room string
+
+	mu   sync.Mutex
+	lock *state.LeaseLock
+	// holds counts the owner's hold and those Keep added; the lock goes with
+	// the last.
+	holds int
+	owner sync.Once
 }
 
 // Room is the room the lease holds.
 func (l *Lease) Room() string { return l.room }
 
-// Release ends the lease and the room's authorization for this process. A
-// nil lease releases nothing.
+// Release ends the owner's hold: the lease and the room's authorization for
+// this process end with it, or with the last hold Keep added, whichever comes
+// later. A nil lease releases nothing; a second Release does nothing.
 func (l *Lease) Release() {
-	if l == nil || l.lock == nil {
+	if l == nil {
 		return
 	}
-	l.lock.Close()
-	l.lock = nil
+	l.owner.Do(l.drop)
+}
+
+// Keep adds a hold on the lease for a part of the process whose effects may
+// outlast its owner's use — a run's workers past its stop — and returns what
+// ends that hold, once however often it is called. A lease already released
+// keeps nothing.
+func (l *Lease) Keep() (release func()) {
+	if l == nil {
+		return func() {}
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.lock == nil {
+		return func() {}
+	}
+	l.holds++
+	var once sync.Once
+	return func() { once.Do(l.drop) }
+}
+
+func (l *Lease) drop() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.holds--
+	if l.holds == 0 && l.lock != nil {
+		l.lock.Close()
+		l.lock = nil
+	}
 }
 
 // UnusableError is a state directory the lease cannot be taken in: a base
@@ -270,5 +305,5 @@ func grant(lock *state.LeaseLock, room string) (*Lease, error) {
 		return nil, err
 	}
 	state.Step("leased")
-	return &Lease{lock: lock, room: room}, nil
+	return &Lease{lock: lock, room: room, holds: 1}, nil
 }

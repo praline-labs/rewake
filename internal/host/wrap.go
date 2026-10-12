@@ -61,7 +61,8 @@ type Request struct {
 	// it is. An error ends the launch.
 	OnClaimed func(registry.Session) error
 	// Lease is the room's build lease the caller took for this launch and
-	// keeps until Run returns; nil has Run take its own.
+	// keeps until Run returns; nil has Run take its own. Run adds a hold of
+	// its own either way, which lasts until the run's workers have stopped.
 	Lease *build.Lease
 }
 
@@ -69,8 +70,8 @@ type Request struct {
 // exit code of the harness itself: rewake is in the middle, and a caller
 // scripting around it should see what the program said.
 func Run(ctx context.Context, request Request) (int, error) {
-	// The build lease comes first and goes last: every lock, callback and
-	// cleanup of the run is inside it. A caller hands over the one it took
+	// The build lease comes first and goes last: every lock, callback,
+	// worker and cleanup of the run is inside it. A caller hands over the one it took
 	// rather than holding it shared while this asks for it exclusive.
 	// The base the room belongs to, checked: it is what the children are
 	// told, and a directory that is no room of a base is refused rather than
@@ -79,13 +80,19 @@ func Run(ctx context.Context, request Request) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	if request.Lease == nil {
-		lease, err := build.AcquireLaunch(base, filepath.Base(request.Dir))
+	lease := request.Lease
+	if lease == nil {
+		acquired, err := build.AcquireLaunch(base, filepath.Base(request.Dir))
 		if err != nil {
 			return 0, err
 		}
-		defer lease.Release()
+		defer acquired.Release()
+		lease = acquired
 	}
+	// The run's own hold outlasts the caller's: it goes once every worker
+	// the run started has stopped, whenever that is.
+	life := &lifetime{keep: lease.Keep()}
+	defer life.end()
 	self := os.Getpid()
 	selfStart, err := proc.StartTime(self)
 	if err != nil {
@@ -162,6 +169,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	tool := startMailTool(request, name, epoch)
 	defer tool.close()
 	live := newLiveSet(request.Dir, name, epoch)
+	live.workers = &life.workers
 	defer live.stop()
 
 	launchRequest := adapter.LaunchRequest{
@@ -276,7 +284,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 			return err == nil && info.Mode()&os.ModeSocket != 0
 		}
 		return true
-	})
+	}, &life.workers)
 	defer stopAvailability()
 	go func() {
 		defer close(served)
