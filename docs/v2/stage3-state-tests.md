@@ -16,7 +16,7 @@ goroutines sharing one process's lease.
 | bootstrap (commit 2) | `TestBootstrapRecoversAfterEveryStep`, `TestBootstrapRefusesUnsafeExistingComponents`, `TestBootstrapSyncFailureStopsBeforeClaim`, `TestBootstrapRetryReestablishesAFailedSync`, `TestBootstrapFlushesALevelAnotherLaunchMade`, `TestOnlyAcquireCallsBootstrapPrimitives` with `TestBootstrapCallerCheckSeesEveryReference`: a kill or a failure at each create, lock and record step, and no session record after one |
 | roots (commit 3) | `TestTwoRoomsUseOnlyV2`, `TestChildBaseRoundTripAndGrantAuthority` (a shell of the session and a tool call's child read the exported base; their `Dir()` is the wrapper's room byte for byte, one `v2` in it; the grant authority's address, which hashes the room, is the wrapper's), `TestRootInverseRejectsLegacyOrMalformedRoom` and, for a worktree owner of another base or of 1.x, `TestWorktreeOwnerRootIsChecked`, `TestResolversNeverCreate`, `TestOrdinaryCommandsNeverTouchLegacyTree` |
 | views and forms (commits 1 and 3) | `TestEveryParsedFormHasAccessClass`, `TestEveryViewLeavesMissingAndExistingStateUnchanged`, `TestForeignBuildViewsWarnOnce`, `TestViewWriteAttemptFailsEvenIfIgnored` (and in `infra/state`, `TestEveryWritePrimitiveRefusesInViewMode`, `TestTryHoldRefusesInViewMode`), `TestToolOutputContinuationHoldsLease`: guide, help and version, `--json`, every command's help page, unknown commands and flags and stray words, dead and unknown records, a missing base, long output, a stalled exclusive holder |
-| seam (commits 5 and 6) | `TestEveryMutationRequiresItsRoomLease`, `TestViewWritePrecedesNoLease`, `TestCrossRoomAndReleasedLeaseCannotWrite`, `TestStateWritesHaveNoBypass` (the static test fails on an alias, a function value and a stale exception), `TestEveryChangeFormHoldsLeaseThroughItsLastEffect`: raw descriptors, mapped writes, both ends of a rename, the close-time unlink, the fixture's and the fault seam's callbacks |
+| seam (commits 5 and 6) | in `infra/state`, over one list of every write primitive (`primitives_scene_test.go`) the view test runs too: `TestEveryMutationRequiresItsRoomLease` (each primitive writes under the lease and, the lease let go, refuses with `ErrNoLease`, changes nothing and is counted; the bootstrap's alone need none), `TestViewWritePrecedesNoLease`, `TestCrossRoomAndReleasedLeaseCannotWrite` (another room, a room whose name begins the same, each end of a link, a move and a rename, the last of two locks closed); the mapped counter's open, store and flush and the listener's bind and close-time unlink are primitives of that list. `TestStateWritesHaveNoBypass` with `TestTheBypassCheckSeesEveryWrite` and `TestTheBypassTableFailsOnAStaleEntry`: the static test below. In `cli`, `TestEveryChangeFormHoldsLeaseThroughItsLastEffect` (every documented change form but a launch, the test holding no lease, refused no write, a swallowed one included, through `state.NoLeaseRefusals`) and `TestAFailedLeaseLeavesNoShellObservation` (R2, with the test's lease held and let go). The adapters' writes end inside their `Close`: `TestNothingOfTheBackendWritesAfterClose` (fixture), `TestNothingOfTheLaneWritesAfterClose` |
 | L3 (commit 4) | `TestRunDirectoryDiesWithRun`, `TestFailedLaunchRemovesOnlyItsRunDirectory`, `TestOldRunCleanupPreservesNewOwner`, `TestCrashedRunIsReclaimedOnlyAfterProvenDeath`, `TestRunSocketsFitAtMaximumNames` |
 
 These keep their oracles: `TestAdmissionIsInsideTheSection`,
@@ -35,3 +35,23 @@ never manufacture a shell observation for a refused call, a failure no more than
 success (`TestAFailedLeaseLeavesNoShellObservation`). The workflow suite and the tool rig
 pass on the new roots with their controls still failing their mutants; the crosswise
 check runs when a control changes.
+
+**The static test** (`internal/infra/state/bypass_test.go`) parses every production file under
+`internal/` outside `infra/state`, whatever build tags it carries, so the four build variants
+are read at once, the tagged fixture and fault seam among them. It fails on a reference —
+a call, a value kept and called later, an argument, through any import name or a dot import
+— to a write the seam stands for: `os.WriteFile`, `os.Create`, `os.CreateTemp`, `os.OpenFile`
+unless its flag is spelled from read flags alone, `os.Remove`, `os.RemoveAll`, `os.Rename`,
+`os.Link`, `os.Symlink`, `os.Mkdir*`, `os.Chmod`, `os.Chown`, `os.Chtimes`, `os.Truncate`, the
+`syscall` forms of the same with `syscall.Open` read by its flag and `syscall.Mmap` by its
+protection, `syscall.Flock`, and a listener whose address may be a path. Its table
+(`bypass_table_test.go`) holds each exception by file, effect, count and reason, and fails on
+an effect found more or fewer times than its entry counts, an entry nothing matches and an
+entry without a reason. The exceptions, classified by effect and scope, never a whole
+adapter: `host/worktree`, which writes beside a checkout and in the user's data directory,
+outside the state (its records, serial locks, copies, temporary hook files and removal); the
+grant authority's abstract socket; the test helpers that are not `_test.go` files
+(`mailtest`, `registrytest`, `buildtest`). Without type information it cannot see a method
+of a file — a write, a truncate, a mode — and needs not: a file of the state is opened
+through `state.OpenFile`, which the guard already covered. Its own mutants edit a copy of
+the tree rather than pass `-overlay`, since the scanner reads sources from disk.

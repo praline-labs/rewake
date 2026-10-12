@@ -184,24 +184,24 @@ guarded resources:
   close removes the path once, behind the guard, in place of Go's own unlink;
 - the lock files themselves (`state.go`), opened inside the primitives.
 
-Both ends of a link or a rename, mapped and open handles, listener creation and the
-automatic unlink are guarded. Publication and heartbeat keep their semantics rather than
-becoming atomic renames: a heartbeat never recreates a removed mark. The grant authority
-uses an abstract socket and creates no file. `mail.PublishOnce` keeps S3's section: it
+Publication and heartbeat keep their semantics rather than becoming atomic renames: a
+heartbeat never recreates a removed mark. The grant authority uses an abstract socket and
+creates no file. `mail.PublishOnce` keeps S3's section: it
 takes the recipient's mailbox, checks the live epoch through `LookupReadOnly` inside it,
 then reads the proof and publishes, and a seam helper takes no name lock and does not
 take the same mailbox again there.
 
-A static test over `internal/`, in all four build variants, fails on a direct call that
-writes — `os.WriteFile`, `os.Create`, `os.OpenFile` with a write flag, `os.Remove`,
-`os.RemoveAll`, `os.Rename`, `os.Link`, `os.Mkdir*`, `os.Chmod`, `os.Truncate`,
-`syscall.Flock`, `syscall.Mmap` with write access, a listener on a filesystem path — and
-on an alias or a function value of one, outside `infra/state`, except in its own table of
-file, effect and reason, which fails on a stale entry. Exceptions are classified by effect
-and scope, never a whole adapter: `host/worktree` writes beside a checkout, outside the
-state (its records, serial locks, copies, temporary hook files, Git subprocesses and
-removal); `core/mail/mailtest` and other test helpers that are not `_test.go`; test files.
-The same lease rule covers `tools/` and `test/`, which call the CLI, not the primitives.
+A static test over `internal/`, in all four build variants, fails on a write outside
+`infra/state` — a direct call, an alias or a function value — except in its own table of
+file, effect and reason, which fails on a stale entry; what it reads and excuses is in
+[stage3-state-tests.md](stage3-state-tests.md#stage-3-the-tests-of-state-and-builds), with the
+worktree's writes beside a checkout the main class. A refusal for want of a lease is
+counted (`state.NoLeaseRefusals`), so a swallowed one still shows in the tests. The same
+lease rule covers `tools/` and `test/`, which call the CLI; where a driver there writes a room
+itself — the tool rig, the forged letters of a workflow case — it holds the room's lease as a
+session does. An adapter's writes end inside its `Close`: the fixture's backend joins its
+routines, and the lane removes its reply socket there, its readers keeping to memory after;
+a write that came later would meet `ErrNoLease` rather than land.
 
 ## One build per room
 

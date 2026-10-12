@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 )
 
 // The guard of the write seam (docs/v2/stage3-state.md#what-is-a-writer):
@@ -28,11 +29,22 @@ func guard(op string, paths ...string) error {
 	}
 	for _, path := range paths {
 		if !leased(path) {
+			refusedNoLease.Add(1)
 			return &os.PathError{Op: op, Path: path, Err: ErrNoLease}
 		}
 	}
 	return nil
 }
+
+// refusedNoLease counts the writes refused for want of a lease, the
+// refusals a caller swallowed among them.
+var refusedNoLease atomic.Int64
+
+// NoLeaseRefusals is how many writes this process has been refused for want
+// of a lease. Code that meets a refusal may swallow it, as a cleanup does;
+// the count still has it, so a test can prove an invocation made no write
+// outside its lease, its last effect included.
+func NoLeaseRefusals() int64 { return refusedNoLease.Load() }
 
 // leased answers whether path is a room this process holds a lease for, or
 // lies inside one. The comparison is by cleaned path, as the lease names its
