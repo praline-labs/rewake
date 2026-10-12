@@ -178,22 +178,42 @@ func (o openStop) describe(dir, name string) string {
 func stopState(dir, name string) ([]openStop, error) { return live(dir).stopState(name) }
 
 func (w world) stopState(name string) ([]openStop, error) {
+	open, listed, err := w.openOccurrences(name)
+	if err != nil || !listed {
+		return open, err
+	}
+	// An occurrence a valid decision disposes is settled by the decision,
+	// which made no resolution for it (decision_view.go).
+	disposed, err := w.disposals(name)
+	if err != nil {
+		return nil, err
+	}
+	open = slices.DeleteFunc(open, func(stop openStop) bool { return stop.disposedBy(disposed) })
+	return open, nil
+}
+
+// openOccurrences are the occurrences of a mailbox with no resolution that
+// reads, as their records say, before any decision is applied: a decision's
+// own plan looks for the occurrences about its report here, reading no other
+// decision (decision_subject.go). Listed says the mailbox has stop records at
+// all: one that never stopped has nothing a decision could dispose, and its
+// barrier reads no decision for it.
+func (w world) openOccurrences(name string) (open []openStop, listed bool, err error) {
 	root := stopsPath(w.dir, name)
 	keys, err := w.readDir(root)
 	if errors.Is(err, os.ErrNotExist) {
-		return nil, nil
+		return nil, false, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("the stop records %s cannot be listed, so whether %s is stopped is unknown: %w", root, name, err)
+		return nil, false, fmt.Errorf("the stop records %s cannot be listed, so whether %s is stopped is unknown: %w", root, name, err)
 	}
-	var open []openStop
 	for _, key := range keys {
 		if !key.IsDir() || strings.HasPrefix(key.Name(), ".") {
 			continue
 		}
 		entries, err := w.readDir(filepath.Join(root, key.Name()))
 		if err != nil {
-			return nil, fmt.Errorf("the stop records %s cannot be listed, so whether %s is stopped is unknown: %w", filepath.Join(root, key.Name()), name, err)
+			return nil, true, fmt.Errorf("the stop records %s cannot be listed, so whether %s is stopped is unknown: %w", filepath.Join(root, key.Name()), name, err)
 		}
 		names := map[string]bool{}
 		for _, entry := range entries {
@@ -225,15 +245,8 @@ func (w world) stopState(name string) ([]openStop, error) {
 			open = append(open, stop)
 		}
 	}
-	// An occurrence a valid decision disposes is settled by the decision,
-	// which made no resolution for it (decision_view.go).
-	disposed, err := w.disposals(name)
-	if err != nil {
-		return nil, err
-	}
-	open = slices.DeleteFunc(open, func(stop openStop) bool { return stop.disposedBy(disposed) })
 	sort.Slice(open, func(i, j int) bool { return open[i].id < open[j].id })
-	return open, nil
+	return open, true, nil
 }
 
 // RecordedStopError is a stop some earlier call found and recorded.

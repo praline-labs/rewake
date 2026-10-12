@@ -76,6 +76,21 @@ subject's evidence, ordered by r's mailbox lock: incoming letters of unrelated s
 may change a listed directory even while that lock is held. Nothing is kept of what could
 not be read.
 
+**The writer** is `mail.Decide` (`core/mail/decision_write.go`), an internal API of the
+mail package: the verified wrapper's host handler and the person's path call it, and no
+command reaches it until the command lands. The caller holds the build lease and names
+what it found before it asked — the subject `mail.FindSubject` read without a lock — and a
+subject read otherwise under the lock is refused as changed. A verified decider must be
+the run of the process that calls, so only a run's own wrapper writes as that run. Every
+refusal is a `mail.DecisionError` with its outcome: no subject; unauthorized; changed;
+busy, when a lock was not had within its wait; opposite, for the other words on a D that
+stands; proven, when the final evidence settles R; unreadable, for a record, the room's
+main or an observation past its bound; uncertain, D possibly written and kept; effect
+failed, D durable and its resend not installed. Only the last two name a D that may exist,
+and nothing is written under any other. A D made, or found with the same words, answers
+with what the barrier after its installation said and the notes not told yet; a barrier
+that stays stopped on other causes fails nothing the decision fixed.
+
 ## Installing the effects
 
 Each effect is installed by `decide`, right after D's write under the same lock, and by

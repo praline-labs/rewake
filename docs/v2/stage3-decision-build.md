@@ -229,7 +229,12 @@ on accepted S17.
    authority protocol, main-only grants kept; the verified commit owner, peer identity,
    bounded requests and S17's teardown; process and fixture tests of compaction,
    reconnection, run replacement, teardown and authority races. The command stays
-   unavailable.
+   unavailable. Decided October 12, 2026: this part also builds the decision's final
+   transaction — D's one writer with Q1's lock order, Q12's capture, Q4's durability and
+   Q11's notes, then the installation and the barrier of Q13 — as an internal API of the
+   mail package that the wrapper's handler and the person's path call
+   ([the writer](stage3-decision-recovery.md#the-decisions-record)); part 3 puts the
+   command in front of it.
 3. **The command, every view and the end-to-end gate**: the group, table, flags, examples
    and access classification, both forms, errors and JSON, every promised rendering and
    stop hint; then the complete world and crash manifest, the mutants, the real-process
