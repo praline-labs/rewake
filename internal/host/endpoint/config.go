@@ -27,7 +27,7 @@ type Config struct {
 	Check func([]string) ([]string, string)
 	// Tools are the tools a transport offers, from the command table; a
 	// call names one of them.
-	Tools []tool.ToolDescriptor
+	Tools []tool.Descriptor
 	// Executable is the image a transport's call runs in, the wrapper's own
 	// unless a test names another.
 	Executable string

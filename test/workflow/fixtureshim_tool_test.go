@@ -42,7 +42,7 @@ const toolEventKind = "tool"
 // fixtureTools is what the probe offered and the program registered.
 type fixtureTools struct {
 	mu       sync.Mutex
-	offered  []tool.ToolDescriptor
+	offered  []tool.Descriptor
 	endpoint string
 	made     bool
 }

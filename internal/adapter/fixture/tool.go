@@ -30,7 +30,7 @@ const (
 
 // toolOffer is what the wrapper offered and what the probe proved of it.
 type toolOffer struct {
-	tools    []tool.ToolDescriptor
+	tools    []tool.Descriptor
 	endpoint string
 	// serve names the process the endpoint takes calls from; 0 takes none.
 	serve func(pid int, start uint64)
@@ -42,7 +42,7 @@ type toolOffer struct {
 
 // OfferTools hands the backend the tools and the endpoint its program asks to
 // run them, before Start; serve is how the endpoint learns which process asks.
-func (b *backend) OfferTools(tools []tool.ToolDescriptor, endpoint string, serve func(pid int, start uint64)) {
+func (b *backend) OfferTools(tools []tool.Descriptor, endpoint string, serve func(pid int, start uint64)) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.tools.tools, b.tools.endpoint, b.tools.serve = tools, endpoint, serve

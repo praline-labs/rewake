@@ -17,17 +17,17 @@ import (
 // command's words for a call's arguments, the digest of the whole set — is
 // here, so that every transport derives it alike and none imports the CLI.
 
-// ToolDescriptor is one tool: the command it runs, what it does, and what a
+// Descriptor is one tool: the command it runs, what it does, and what a
 // call may give it.
-type ToolDescriptor struct {
+type Descriptor struct {
 	// Name is the command's word, and the tool's name.
-	Name    string      `json:"name"`
-	Summary string      `json:"summary"`
-	Params  []ToolParam `json:"params,omitempty"`
+	Name    string  `json:"name"`
+	Summary string  `json:"summary"`
+	Params  []Param `json:"params,omitempty"`
 }
 
-// ToolParam is a flag or a positional of the command.
-type ToolParam struct {
+// Param is a flag or a positional of the command.
+type Param struct {
 	// Name is the flag without its dashes, or the positional's name.
 	Name string `json:"name"`
 	// Kind is how the call gives it: ParamSwitch, ParamValue or ParamWord.
@@ -53,7 +53,7 @@ const maxArguments = MaxWordsBytes + 4096
 
 // Schema is the JSON Schema of a call's arguments: one property per
 // parameter, nothing else.
-func (d ToolDescriptor) Schema() map[string]any {
+func (d Descriptor) Schema() map[string]any {
 	properties := map[string]any{}
 	var required []string
 	for _, param := range d.Params {
@@ -78,7 +78,7 @@ func (d ToolDescriptor) Schema() map[string]any {
 // then its positionals after --. The arguments are bounded before they are
 // decoded, and anything the descriptor does not name is refused: what runs is
 // what the schema offered, and the CLI checks the words again.
-func (d ToolDescriptor) Words(arguments json.RawMessage) ([]string, error) {
+func (d Descriptor) Words(arguments json.RawMessage) ([]string, error) {
 	if len(arguments) > maxArguments {
 		return nil, fmt.Errorf("the arguments are longer than %d bytes", maxArguments)
 	}
@@ -149,29 +149,29 @@ func (d ToolDescriptor) Words(arguments json.RawMessage) ([]string, error) {
 // flagWord is a flag's word, kept with its name: the CLI sorts flags by name.
 type flagWord struct{ name, word string }
 
-func (d ToolDescriptor) param(name string) (ToolParam, bool) {
+func (d Descriptor) param(name string) (Param, bool) {
 	for _, param := range d.Params {
 		if param.Name == name {
 			return param, true
 		}
 	}
-	return ToolParam{}, false
+	return Param{}, false
 }
 
 // DescriptorsDigest names a set of tools: a transport answers it for the set
 // it registered, and the host compares it with the set it offered.
-func DescriptorsDigest(tools []ToolDescriptor) string {
+func DescriptorsDigest(tools []Descriptor) string {
 	encoded, _ := json.Marshal(tools)
 	sum := sha256.Sum256(encoded)
 	return hex.EncodeToString(sum[:])
 }
 
 // FindTool is the tool of a name in a set.
-func FindTool(tools []ToolDescriptor, name string) (ToolDescriptor, bool) {
+func FindTool(tools []Descriptor, name string) (Descriptor, bool) {
 	for _, tool := range tools {
 		if tool.Name == name {
 			return tool, true
 		}
 	}
-	return ToolDescriptor{}, false
+	return Descriptor{}, false
 }

@@ -109,10 +109,10 @@ type Frame struct {
 
 	// The tool transport's probe offers the tools and the endpoint their
 	// calls go to; its answer names the tools registered and their digest.
-	Tools    []tool.ToolDescriptor `json:"tools,omitempty"`
-	Endpoint string                `json:"endpoint,omitempty"`
-	Names    []string              `json:"names,omitempty"`
-	Digest   string                `json:"digest,omitempty"`
+	Tools    []tool.Descriptor `json:"tools,omitempty"`
+	Endpoint string            `json:"endpoint,omitempty"`
+	Names    []string          `json:"names,omitempty"`
+	Digest   string            `json:"digest,omitempty"`
 
 	// A tool call the program observed, by its own id, and the result it
 	// handed the model for it: its texts, whether it failed, and whether the

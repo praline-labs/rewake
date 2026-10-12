@@ -27,7 +27,7 @@ type MailTool struct {
 	// Check is the CLI's refusal of a transport's call by its words, and
 	// Tools the commands a transport registers as tools.
 	Check func([]string) ([]string, string)
-	Tools []tool.ToolDescriptor
+	Tools []tool.Descriptor
 }
 
 // mailTool is a run's endpoint, or nothing where the run has none: a harness
@@ -48,7 +48,7 @@ type mailTool struct {
 	offered bool
 	// tools and path are what a backend that carries the calls itself is
 	// offered: the tools to register, and the endpoint to ask.
-	tools []tool.ToolDescriptor
+	tools []tool.Descriptor
 	path  string
 }
 
@@ -104,7 +104,7 @@ func startMailTool(request Request, name, epoch string) *mailTool {
 // channel record begins here, before anything can connect: the tool offered,
 // with its hello timer running from now, or no tool and why.
 func (t *mailTool) attach(plan adapter.LaunchPlan) {
-	transport, ok := plan.Service.(adapter.ToolTransport[tool.ToolDescriptor])
+	transport, ok := plan.Service.(adapter.ToolTransport[tool.Descriptor])
 	switch {
 	case t.endpoint == nil:
 		t.keeper.begin(false, "the mail tool could not be served")

@@ -45,31 +45,31 @@ const thread = "conversation"
 
 // frame is one line of the adapter's exchange.
 type frame struct {
-	Op         string                `json:"op"`
-	ID         int64                 `json:"id,omitempty"`
-	Version    string                `json:"version,omitempty"`
-	PID        int                   `json:"pid,omitempty"`
-	Thread     string                `json:"thread,omitempty"`
-	Serves     []string              `json:"serves,omitempty"`
-	Capability string                `json:"capability,omitempty"`
-	OK         bool                  `json:"ok,omitempty"`
-	Error      string                `json:"error,omitempty"`
-	State      string                `json:"state,omitempty"`
-	Turn       string                `json:"turn,omitempty"`
-	End        string                `json:"end,omitempty"`
-	Outcome    string                `json:"outcome,omitempty"`
-	At         int64                 `json:"at,omitempty"`
-	Tools      []tool.ToolDescriptor `json:"tools,omitempty"`
-	Endpoint   string                `json:"endpoint,omitempty"`
-	Names      []string              `json:"names,omitempty"`
-	Digest     string                `json:"digest,omitempty"`
-	Call       string                `json:"call,omitempty"`
-	Tool       string                `json:"tool,omitempty"`
-	Arguments  json.RawMessage       `json:"arguments,omitempty"`
-	Nested     bool                  `json:"nested,omitempty"`
-	Texts      []string              `json:"texts,omitempty"`
-	IsError    bool                  `json:"isError,omitempty"`
-	Shortened  bool                  `json:"shortened,omitempty"`
+	Op         string            `json:"op"`
+	ID         int64             `json:"id,omitempty"`
+	Version    string            `json:"version,omitempty"`
+	PID        int               `json:"pid,omitempty"`
+	Thread     string            `json:"thread,omitempty"`
+	Serves     []string          `json:"serves,omitempty"`
+	Capability string            `json:"capability,omitempty"`
+	OK         bool              `json:"ok,omitempty"`
+	Error      string            `json:"error,omitempty"`
+	State      string            `json:"state,omitempty"`
+	Turn       string            `json:"turn,omitempty"`
+	End        string            `json:"end,omitempty"`
+	Outcome    string            `json:"outcome,omitempty"`
+	At         int64             `json:"at,omitempty"`
+	Tools      []tool.Descriptor `json:"tools,omitempty"`
+	Endpoint   string            `json:"endpoint,omitempty"`
+	Names      []string          `json:"names,omitempty"`
+	Digest     string            `json:"digest,omitempty"`
+	Call       string            `json:"call,omitempty"`
+	Tool       string            `json:"tool,omitempty"`
+	Arguments  json.RawMessage   `json:"arguments,omitempty"`
+	Nested     bool              `json:"nested,omitempty"`
+	Texts      []string          `json:"texts,omitempty"`
+	IsError    bool              `json:"isError,omitempty"`
+	Shortened  bool              `json:"shortened,omitempty"`
 }
 
 // command is one request of the rig over the control socket.
@@ -113,7 +113,7 @@ type program struct {
 	waiting  map[int64]chan frame
 	endpoint string
 	// offered are the descriptors the probe offered.
-	offered []tool.ToolDescriptor
+	offered []tool.Descriptor
 	faults  *transportFaults
 }
 

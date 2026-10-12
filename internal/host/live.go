@@ -245,7 +245,7 @@ func plannedLive(offer adapter.Offer, plan adapter.LaunchPlan, controlDir string
 	if offer.Control.Any() && controlDir != "" {
 		live = append(live, adapter.ControlCapability)
 	}
-	if _, ok := plan.Service.(adapter.ToolTransport[tool.ToolDescriptor]); ok && offer.ToolTransport != "" {
+	if _, ok := plan.Service.(adapter.ToolTransport[tool.Descriptor]); ok && offer.ToolTransport != "" {
 		live = append(live, adapter.ToolTransportCapability)
 	}
 	return live

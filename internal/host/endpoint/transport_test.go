@@ -18,7 +18,7 @@ import (
 // The transport's side of a call (transport.go): the harness's own process
 // asks, the endpoint runs the call in a child of its own image and answers.
 
-var inboxTool = tool.ToolDescriptor{Name: "inbox", Summary: "read", Params: []tool.ToolParam{
+var inboxTool = tool.Descriptor{Name: "inbox", Summary: "read", Params: []tool.Param{
 	{Name: "peek", Kind: tool.ParamSwitch, Description: "preview"},
 	{Name: "text", Kind: tool.ParamWord, Description: "a word"},
 }}
@@ -28,7 +28,7 @@ var inboxTool = tool.ToolDescriptor{Name: "inbox", Summary: "read", Params: []to
 func transportEndpoint(t *testing.T, change ...func(*Config)) (*Endpoint, string) {
 	t.Helper()
 	served, path := testEndpoint(t, testTransport, append([]func(*Config){func(c *Config) {
-		c.Tools = []tool.ToolDescriptor{inboxTool}
+		c.Tools = []tool.Descriptor{inboxTool}
 		c.Check = func(words []string) ([]string, string) { return words, "" }
 		c.Executable = os.Args[0]
 	}}, change...)...)

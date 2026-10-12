@@ -25,16 +25,16 @@ var toolPositionals = map[string][]string{
 }
 
 // ToolDescriptors are the tools of the surface, in the order they are offered.
-func ToolDescriptors() []tool.ToolDescriptor { return surfaceTable().toolDescriptors() }
+func ToolDescriptors() []tool.Descriptor { return surfaceTable().toolDescriptors() }
 
-func (t *table) toolDescriptors() []tool.ToolDescriptor {
-	tools := make([]tool.ToolDescriptor, 0, len(toolOrder))
+func (t *table) toolDescriptors() []tool.Descriptor {
+	tools := make([]tool.Descriptor, 0, len(toolOrder))
 	for _, name := range toolOrder {
 		command := t.findCommand(name)
 		if command == nil {
 			continue
 		}
-		descriptor := tool.ToolDescriptor{Name: name, Summary: command.Summary}
+		descriptor := tool.Descriptor{Name: name, Summary: command.Summary}
 		for _, flag := range toolFlags[name] {
 			option, ok := t.lookupOption(command, flag)
 			if !ok {
@@ -44,14 +44,14 @@ func (t *table) toolDescriptors() []tool.ToolDescriptor {
 			if option.Value != "" {
 				kind = tool.ParamValue
 			}
-			descriptor.Params = append(descriptor.Params, tool.ToolParam{Name: flag, Kind: kind, Description: option.Summary})
+			descriptor.Params = append(descriptor.Params, tool.Param{Name: flag, Kind: kind, Description: option.Summary})
 		}
 		for index, placeholder := range positionalNames(command) {
 			description := ""
 			if index < len(toolPositionals[name]) {
 				description = toolPositionals[name][index]
 			}
-			descriptor.Params = append(descriptor.Params, tool.ToolParam{Name: placeholder, Kind: tool.ParamWord, Description: description, Required: true})
+			descriptor.Params = append(descriptor.Params, tool.Param{Name: placeholder, Kind: tool.ParamWord, Description: description, Required: true})
 		}
 		tools = append(tools, descriptor)
 	}

@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-var sendTool = ToolDescriptor{Name: "send", Summary: "tell a session", Params: []ToolParam{
+var sendTool = Descriptor{Name: "send", Summary: "tell a session", Params: []Param{
 	{Name: "notify", Kind: ParamSwitch, Description: "a heads-up"},
 	{Name: "wait", Kind: ParamValue, Description: "seconds"},
 	{Name: "json", Kind: ParamSwitch, Description: "as JSON"},
@@ -43,7 +43,7 @@ func TestACallsArgumentsBecomeTheCommandsWords(t *testing.T) {
 	if want := []string{"send", "--notify", "--wait=2", "--", "web", "look -- here"}; !slices.Equal(words, want) {
 		t.Fatalf("%q, want %q", words, want)
 	}
-	if words, err := (ToolDescriptor{Name: "whoami"}).Words(nil); err != nil || !slices.Equal(words, []string{"whoami"}) {
+	if words, err := (Descriptor{Name: "whoami"}).Words(nil); err != nil || !slices.Equal(words, []string{"whoami"}) {
 		t.Fatalf("no arguments: %q %v", words, err)
 	}
 	for _, refused := range []struct{ arguments, says string }{
@@ -64,19 +64,19 @@ func TestACallsArgumentsBecomeTheCommandsWords(t *testing.T) {
 // The digest of a set names the set: another order, another summary, another
 // parameter is another set.
 func TestTheDigestNamesTheSet(t *testing.T) {
-	whoami := ToolDescriptor{Name: "whoami", Summary: "who"}
-	base := DescriptorsDigest([]ToolDescriptor{sendTool, whoami})
-	if base != DescriptorsDigest([]ToolDescriptor{sendTool, whoami}) {
+	whoami := Descriptor{Name: "whoami", Summary: "who"}
+	base := DescriptorsDigest([]Descriptor{sendTool, whoami})
+	if base != DescriptorsDigest([]Descriptor{sendTool, whoami}) {
 		t.Fatal("one set digests two ways")
 	}
 	changed := whoami
 	changed.Summary = "who this is"
-	for _, other := range [][]ToolDescriptor{{whoami, sendTool}, {sendTool, changed}, {sendTool}} {
+	for _, other := range [][]Descriptor{{whoami, sendTool}, {sendTool, changed}, {sendTool}} {
 		if DescriptorsDigest(other) == base {
 			t.Fatalf("%v digests as the set", other)
 		}
 	}
-	if tool, ok := FindTool([]ToolDescriptor{sendTool, whoami}, "whoami"); !ok || tool.Summary != "who" {
+	if tool, ok := FindTool([]Descriptor{sendTool, whoami}, "whoami"); !ok || tool.Summary != "who" {
 		t.Fatal("whoami is not found")
 	}
 }

@@ -18,8 +18,8 @@ import (
 // which process the endpoint is told to serve, and what the program's reports
 // of its calls become in the neutral input.
 
-var programTools = []tool.ToolDescriptor{
-	{Name: "inbox", Summary: "read", Params: []tool.ToolParam{{Name: "peek", Kind: tool.ParamSwitch, Description: "preview"}}},
+var programTools = []tool.Descriptor{
+	{Name: "inbox", Summary: "read", Params: []tool.Param{{Name: "peek", Kind: tool.ParamSwitch, Description: "preview"}}},
 	{Name: "whoami", Summary: "who"},
 }
 

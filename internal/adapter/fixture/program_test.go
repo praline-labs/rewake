@@ -177,7 +177,7 @@ func speak(socket string, pid int, drop bool) error {
 
 // registered is a tool transport's answer to its probe: the tools it
 // registered, by name and digest, and whether it can show its results.
-func registered(reply Frame, tools []tool.ToolDescriptor) Frame {
+func registered(reply Frame, tools []tool.Descriptor) Frame {
 	if os.Getenv(switchOther) != "" {
 		tools = tools[1:]
 	}

@@ -247,7 +247,7 @@ func (r *rig) start() {
 	if err != nil {
 		r.t.Fatal(err)
 	}
-	offer, ok := plan.Service.(adapter.ToolTransport[tool.ToolDescriptor])
+	offer, ok := plan.Service.(adapter.ToolTransport[tool.Descriptor])
 	if !ok || plan.TurnBoundary == nil {
 		r.t.Fatal("the fixture's run carries no tools or reports no turns")
 	}
