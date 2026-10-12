@@ -41,7 +41,11 @@ func TestEveryWritePrimitiveRefusesInViewMode(t *testing.T) {
 			return WithMailboxLock(context.Background(), dir, "api", nothing)
 		},
 		"Bootstrap":     func() error { _, err := Bootstrap(base, "blue"); return err },
-		"OpenLeaseLock": func() error { _, err := OpenLeaseLock(filepath.Join(base, "v2", "rooms", "blue")); return err },
+		"OpenLeaseLock": func() error { _, err := OpenLeaseLock(dir); return err },
+		"CreateLeaseLock": func() error {
+			_, err := CreateLeaseLock(filepath.Join(base, "v2", "rooms", "blue"))
+			return err
+		},
 	}
 	before := tree(t, base)
 	for name, write := range writes {

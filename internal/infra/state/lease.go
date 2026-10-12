@@ -39,39 +39,65 @@ var ErrLeaseBusy = errors.New("the room's build lease is busy")
 // established a build there.
 var ErrNoBuildRecord = errors.New("the room has no build record")
 
+// ErrNoLeaseLock means the room has no build.lock: no launch completed the
+// room, and only a launch creates it.
+var ErrNoLeaseLock = errors.New("the room has no build lease")
+
 // LeaseLock is the open build.lock of one room and how it is held.
 type LeaseLock struct {
 	room string
 	file *os.File
+	// create says the lock may be created when missing: a launch's.
+	create bool
 	// exclusive is set while the lock is held exclusive.
 	exclusive bool
 	held      bool
 }
 
-// OpenLeaseLock opens the room's build.lock, creating it with mode 0600 when
-// missing. The descriptor is close-on-exec, as every file Go opens: a child
-// takes its own lease, never its parent's. Nothing is locked yet.
+// OpenLeaseLock opens the room's build.lock, which a launch made, never
+// creating it: a room without one is a room no launch completed, which a
+// writer refuses as it found it, ErrNoLeaseLock. The descriptor is
+// close-on-exec, as every file Go opens: a child takes its own lease, never
+// its parent's. Nothing is locked yet.
 func OpenLeaseLock(room string) (*LeaseLock, error) {
+	return openLease(room, false)
+}
+
+// CreateLeaseLock opens the room's build.lock as OpenLeaseLock does, creating
+// it with mode 0600 when missing — a launch's, the one acquisition that makes
+// a room. Opened again after a replacement, it is created again too.
+func CreateLeaseLock(room string) (*LeaseLock, error) {
+	return openLease(room, true)
+}
+
+func openLease(room string, create bool) (*LeaseLock, error) {
 	if err := viewWrite(opLock, filepath.Join(room, leaseLockName)); err != nil {
 		return nil, err
 	}
-	file, err := openLeaseFile(room)
+	file, err := openLeaseFile(room, create)
 	if err != nil {
 		return nil, err
 	}
-	return &LeaseLock{room: filepath.Clean(room), file: file}, nil
+	return &LeaseLock{room: filepath.Clean(room), file: file, create: create}, nil
 }
 
-func openLeaseFile(room string) (*os.File, error) {
+func openLeaseFile(room string, create bool) (*os.File, error) {
 	path := filepath.Join(room, leaseLockName)
-	if _, err := os.Lstat(path); errors.Is(err, os.ErrNotExist) {
-		// Creating it is a write a fault plan may end or fail; opening the
-		// one there is not.
-		if err := fault(OpWrite, path); err != nil {
-			return nil, err
+	flags := os.O_RDWR | syscall.O_CLOEXEC | syscall.O_NOFOLLOW
+	if create {
+		if _, err := os.Lstat(path); errors.Is(err, os.ErrNotExist) {
+			// Creating it is a write a fault plan may end or fail; opening
+			// the one there is not.
+			if err := fault(OpWrite, path); err != nil {
+				return nil, err
+			}
 		}
+		flags |= os.O_CREATE
 	}
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|syscall.O_CLOEXEC|syscall.O_NOFOLLOW, 0o600)
+	file, err := os.OpenFile(path, flags, 0o600)
+	if !create && errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("%w: %s", ErrNoLeaseLock, path)
+	}
 	if err != nil {
 		return nil, noteReach(fmt.Errorf("could not open the build lease of %s: %w", room, err), false)
 	}
@@ -132,7 +158,7 @@ func (l *LeaseLock) take(how int, wait time.Duration) error {
 			return fmt.Errorf("the build lease of %s was replaced %d times while it was taken", l.room, leaseLockAttempts)
 		}
 		_ = l.file.Close()
-		file, err := openLeaseFile(l.room)
+		file, err := openLeaseFile(l.room, l.create)
 		if err != nil {
 			return err
 		}

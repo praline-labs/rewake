@@ -233,3 +233,48 @@ func TestAStalledSwitchBoundsItsWriters(t *testing.T) {
 		t.Fatal("a refused writer left the room authorized")
 	}
 }
+
+// A launch that stopped after the room's directories and before build.lock
+// leaves an incomplete room, which the next launch completes. A writer that
+// meets it refuses — no build yet — and makes no part of it: not the lock
+// either, which only a launch creates.
+func TestIncompleteRoomWriterCreatesNothing(t *testing.T) {
+	base := newBase(t)
+	room := roomOf(base, "default")
+	for _, dir := range []string{room, filepath.Join(room, "sessions"), filepath.Join(room, "inbox"), filepath.Join(room, "sock")} {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	before := tree(t, base)
+	lease, err := Acquire(base, "default")
+	refused := refusal(t, lease, err, "a writer of an incomplete room")
+	if !errors.Is(refused.Record, state.ErrNoBuildRecord) {
+		t.Fatalf("refused for %v, not for a missing build", refused.Record)
+	}
+	if after := tree(t, base); after != before {
+		t.Fatalf("the refused writer changed the room:\nbefore %s\nafter  %s", before, after)
+	}
+}
+
+// A writer's lock that disappears while it waits is opened again without
+// being created: the room lost what made it a room, and the writer refuses
+// rather than making a new lock file.
+func TestRemovedLeaseLockIsNotRecreatedByAWriter(t *testing.T) {
+	base := newBase(t)
+	room := established(t, base, "default")
+	lock, err := state.OpenLeaseLock(room)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lock.Close()
+	if err := os.Remove(leaseLockPath(room)); err != nil {
+		t.Fatal(err)
+	}
+	if err := lock.Share(time.Second); !errors.Is(err, state.ErrNoLeaseLock) {
+		t.Fatalf("taking a removed lock: %v", err)
+	}
+	if _, err := os.Lstat(leaseLockPath(room)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("the writer made the lock again: %v", err)
+	}
+}

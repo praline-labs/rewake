@@ -287,7 +287,7 @@ publication of S3 stays.
 ### The bootstrap
 
 The lease lives in the room, so establishing it writes before any lease exists. These
-writes are three primitives of `infra/state`, the only ones that work without a lease — in
+writes are primitives of `infra/state`, the only ones that work without a lease — in
 view mode they refuse like every other — and `build.Acquire` is their one caller. A test
 over the module fails on any other reference to them, not only a call written where they
 are named: a function value, an argument, a dot import, a second import name, a variable
@@ -299,9 +299,13 @@ paths:
    never repaired by `chmod`; each new level is synced into its parent, and a failed sync
    stops the launch before its claim. It is idempotent: a crash may leave an incomplete
    empty skeleton, which the next launch completes.
-2. `state.OpenLeaseLock(room)`: `build.lock`, opened with `O_CREAT|O_CLOEXEC`, mode 0600,
-   and locked; after the lock is taken, the open file and the path must be the same file
-   (as `receipt.Lock` checks), or it is opened again. Release never unlinks it.
+2. `state.CreateLeaseLock(room)`, a launch's: `build.lock`, opened with
+   `O_CREAT|O_CLOEXEC`, mode 0600, and locked; after the lock is taken, the open file and
+   the path must be the same file (as `receipt.Lock` checks), or it is opened again — and
+   created again. Release never unlinks it. A writer's `state.OpenLeaseLock(room)` opens
+   the same file without `O_CREAT`, the first time and every time again: a room a launch
+   left before its lock, or whose lock is gone, is a room without a build, and the writer
+   refuses it as it found it.
 3. `state.WriteBuildRecord(room, id)`: `build`, written by rename and sync, only under the
    exclusive lock.
 
@@ -337,7 +341,7 @@ goroutines sharing one process's lease.
 | Area | Tests |
 |---|---|
 | identity (commit 2) | `TestBuildIDIsExecutableContent` (a copy equal, a changed byte different, the installed path replaced or removed still hashes the running image); `TestUnreadableImageHasNoEffects`; `TestVersionJSONCarriesBuildID`, the human line unchanged |
-| lease (commit 2) | `TestSharedWritersExcludeBuildSwitch`, `TestLaunchReplacesMissingOrInvalidBuildOnlyExclusively`, `TestDowngradeRechecksBuild`, `TestReplacedLeaseLockIsReopened`, `TestHolderDiagnosticsUseDeviceAndInode`, `TestLeaseDescriptorsAreNotInherited`; every contention bounded, a writer beside a stalled switch refused after its bound (`TestAStalledSwitchBoundsItsWriters`) |
+| lease (commit 2) | `TestSharedWritersExcludeBuildSwitch`, `TestLaunchReplacesMissingOrInvalidBuildOnlyExclusively`, `TestDowngradeRechecksBuild`, `TestReplacedLeaseLockIsReopened`, `TestRemovedLeaseLockIsNotRecreatedByAWriter`, `TestIncompleteRoomWriterCreatesNothing`, `TestHolderDiagnosticsUseDeviceAndInode`, `TestLeaseDescriptorsAreNotInherited`; every contention bounded, a writer beside a stalled switch refused after its bound (`TestAStalledSwitchBoundsItsWriters`) |
 | process races (commit 2, `test/leaserig`) | `TestDifferentImagesWithSameVersionCannotShareRoom` (one tree built twice, the second with a build time passed in by `-ldflags`: the same version, different ids, the second refused while a session of the first runs), `TestArtifactCopyCanJoinRoomAndUseTools` (the tool's peer takes a copy too: `TestPeerCheckIsTheBuildsContent`), `TestOldCommandBlocksNewBuildUntilExitOrKill`, `TestOrphanChildRefusesAfterBuildSwitch`, `TestConcurrentLaunchesOfOneBuildAllTakeTheRoom` (D4a: launches of one build held together after reading a missing record, or another build's with nothing holding it, then let go at once, all take the room, repeated); `TestHostLeaseOutlivesCleanup` in `host`, the lease taken before the claim and released after the record and the socket are gone |
 | both routes (commit 2) | `TestBothRoutesRefuseAnotherBuildsRoom` (the shell and the tool refused in a room of another build, the tool before its ticket is confirmed), `TestChangeFormsOnAnEmptyBaseCreateNothing` |
 | bootstrap (commit 2) | `TestBootstrapRecoversAfterEveryStep`, `TestBootstrapRefusesUnsafeExistingComponents`, `TestBootstrapSyncFailureStopsBeforeClaim`, `TestOnlyAcquireCallsBootstrapPrimitives` with `TestBootstrapCallerCheckSeesEveryReference`: a kill or a failure at each create, lock and record step, and no session record after one |

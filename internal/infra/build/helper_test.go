@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -199,3 +200,24 @@ func established(t *testing.T, base, room string) string {
 
 // leaseLockPath is the room's build.lock.
 func leaseLockPath(room string) string { return filepath.Join(room, "build.lock") }
+
+// tree is every path below dir with its kind and mode.
+func tree(t *testing.T, dir string) string {
+	t.Helper()
+	var lines []string
+	err := filepath.WalkDir(dir, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		lines = append(lines, strings.TrimPrefix(path, dir)+" "+info.Mode().String())
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return strings.Join(lines, "; ")
+}

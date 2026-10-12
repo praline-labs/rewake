@@ -123,16 +123,30 @@ func acquire(base, roomName string, launch bool) (*Lease, error) {
 	if err != nil {
 		return nil, err
 	}
-	lock, err := state.OpenLeaseLock(room)
+	open := state.OpenLeaseLock
+	if launch {
+		open = state.CreateLeaseLock
+	}
+	lock, err := open(room)
 	if err != nil {
-		return nil, err
+		return nil, noBuild(room, own, err)
 	}
 	lease, err := hold(lock, room, own, launch)
 	if err != nil {
 		lock.Close()
-		return nil, err
+		return nil, noBuild(room, own, err)
 	}
 	return lease, nil
+}
+
+// noBuild turns a room without its lock — never made, or gone while the lease
+// was taken — into the refusal of a room without a build: no launch completed
+// it, and a writer completes nothing.
+func noBuild(room, own string, err error) error {
+	if errors.Is(err, state.ErrNoLeaseLock) {
+		return &RefusedError{Room: room, Own: own, Record: state.ErrNoBuildRecord}
+	}
+	return err
 }
 
 // enter gives the room a lease is taken in. A launch makes what is missing
