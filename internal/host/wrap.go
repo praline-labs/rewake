@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"syscall"
 
 	"github.com/praline-labs/rewake/internal/adapter"
@@ -23,6 +24,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/host/delivery"
 	"github.com/praline-labs/rewake/internal/host/launch"
+	"github.com/praline-labs/rewake/internal/infra/build"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -58,12 +60,25 @@ type Request struct {
 	// harness is planned: whatever was prepared for the launch learns whose
 	// it is. An error ends the launch.
 	OnClaimed func(registry.Session) error
+	// Lease is the room's build lease the caller took for this launch and
+	// keeps until Run returns; nil has Run take its own.
+	Lease *build.Lease
 }
 
 // Run starts the harness, serves its mailbox until it exits, and returns the
 // exit code of the harness itself: rewake is in the middle, and a caller
 // scripting around it should see what the program said.
 func Run(ctx context.Context, request Request) (int, error) {
+	// The build lease comes first and goes last: every lock, callback and
+	// cleanup of the run is inside it. A caller hands over the one it took
+	// rather than holding it shared while this asks for it exclusive.
+	if request.Lease == nil {
+		lease, err := build.AcquireLaunch(state.RootForRoom(request.Dir), filepath.Base(request.Dir))
+		if err != nil {
+			return 0, err
+		}
+		defer lease.Release()
+	}
 	self := os.Getpid()
 	selfStart, err := proc.StartTime(self)
 	if err != nil {

@@ -14,6 +14,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/host"
 	"github.com/praline-labs/rewake/internal/host/launch"
+	"github.com/praline-labs/rewake/internal/infra/build"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -32,25 +33,36 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 		if err != nil {
 			return err
 		}
-		root, err := state.Root()
+		base, err := state.Base()
 		if err != nil {
 			// An unusable state directory is something about this call and its
 			// environment, not about a target that refused: code 2, so a caller
 			// branching on the code tries to fix the call.
 			return &UsageError{Message: err.Error()}
 		}
-
-		dir, err := state.RoomDir(root, call.Flag("room", state.DefaultRoom))
-		if err != nil {
-			return &UsageError{Command: call.Command, Message: err.Error()}
-		}
-
 		part, err := chosenRole(call)
 		if err != nil {
 			return err
 		}
 		if err := refuseReportingRole(h, part); err != nil {
 			return err
+		}
+		// The build lease before anything of the room is made or locked, and
+		// before the worktree; held until the wrapper and its cleanup are done
+		// (docs/v2/stage3-state.md#one-build-per-room).
+		room := call.Flag("room", state.DefaultRoom)
+		lease, err := leaseError(call.Command, func() (*build.Lease, error) { return build.AcquireLaunch(base, room) })
+		if err != nil {
+			return err
+		}
+		defer lease.Release()
+		root, err := state.Root()
+		if err != nil {
+			return &UsageError{Message: err.Error()}
+		}
+		dir, err := state.RoomDir(root, room)
+		if err != nil {
+			return &UsageError{Command: call.Command, Message: err.Error()}
 		}
 		// Last of the preparations: every refusal above leaves no checkout
 		// behind.
@@ -85,6 +97,7 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 			MailTool: &host.MailTool{Words: ctx.table.toolWords, Acknowledge: AcknowledgeRead, Check: ctx.table.toolCheck, Tools: ctx.table.toolDescriptors()},
 
 			OnClaimed: onClaimed,
+			Lease:     lease,
 		})
 		if checkout != nil {
 			checkout.settle(err != nil || code != 0)

@@ -6,6 +6,8 @@ import (
 	"net"
 	"os"
 	"syscall"
+
+	"github.com/praline-labs/rewake/internal/infra/build"
 )
 
 // Who is at the other end of a connection: its credentials, and whether it
@@ -28,21 +30,35 @@ func peerOf(conn *net.UnixConn) (*syscall.Ucred, error) {
 	return cred, credErr
 }
 
-// sameBuild says whether a process runs the file this one runs: the same
-// device and inode behind /proc/<pid>/exe. A file replaced on disk since is
-// another inode, so a child started from a newer install is
-// refused, however its version reads.
+// sameBuild says whether a process runs the build this one runs: the same
+// content behind /proc/<pid>/exe, the identity a room's lease compares
+// (docs/v2/stage3-state.md#one-build-per-room). A byte-identical copy is the
+// same build; a file replaced on disk since is another one, however its
+// version reads. The same file is the same content — a running image cannot
+// be written — so only another file is read.
 func sameBuild(pid int) error {
-	own, err := os.Stat("/proc/self/exe")
+	theirs := fmt.Sprintf("/proc/%d/exe", pid)
+	ownFile, err := os.Stat("/proc/self/exe")
 	if err != nil {
 		return err
 	}
-	theirs, err := os.Stat(fmt.Sprintf("/proc/%d/exe", pid))
+	theirFile, err := os.Stat(theirs)
 	if err != nil {
 		return err
 	}
-	if !os.SameFile(own, theirs) {
-		return errors.New("its executable is another file")
+	if os.SameFile(ownFile, theirFile) {
+		return nil
+	}
+	own, err := build.ID()
+	if err != nil {
+		return err
+	}
+	their, err := build.FileID(theirs)
+	if err != nil {
+		return err
+	}
+	if their != own {
+		return errors.New("its executable is another build")
 	}
 	return nil
 }

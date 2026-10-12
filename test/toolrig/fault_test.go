@@ -56,7 +56,7 @@ func parseLog(t *testing.T, path, root string) []step {
 func durable(steps []step, role string) []step {
 	var kept []step
 	for _, s := range steps {
-		if s.role == role && s.op != state.OpRead {
+		if s.role == role && s.op != state.OpRead && s.op != state.OpNote {
 			kept = append(kept, s)
 		}
 	}
@@ -144,7 +144,7 @@ func casesOf(t *testing.T, s faultScenario) []faultCase {
 		switch op {
 		case state.OpStep:
 			endpointSteps = append(endpointSteps, step{"wrapper", op, path.Base(at)})
-		case state.OpRead:
+		case state.OpRead, state.OpNote:
 		default:
 			acknowledgment++
 		}
@@ -187,13 +187,15 @@ func journalPath(rest string) *regexp.Regexp {
 }
 
 // beforeBinding are the only durable steps a child may take before its
-// binding, none of them an effect: the step after the wrapper confirmed its
-// ticket, the record's opening and its index, and the record dropped when
-// another call's index landed first.
+// binding, none of them an effect: the step after it took the room's build
+// lease, the step after the wrapper confirmed its ticket, the record's opening
+// and its index, and the record dropped when another call's index landed
+// first.
 var beforeBinding = []struct {
 	op   string
 	path *regexp.Regexp
 }{
+	{state.OpStep, regexp.MustCompile(`^leased$`)},
 	{state.OpStep, regexp.MustCompile(`^confirmed$`)},
 	{state.OpPublish, journalPath(`[0-9a-f]{24}\.json`)},
 	{state.OpPublish, journalPath(`key-[0-9a-f]{32}`)},

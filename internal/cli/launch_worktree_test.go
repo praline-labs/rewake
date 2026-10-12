@@ -92,6 +92,7 @@ func newWorktreeLab(t *testing.T) worktreeLab {
 	}
 	t.Setenv(state.DirEnv, lab.state)
 	t.Setenv(worktree.RootEnv, lab.root)
+	launched(t, lab.state, state.CurrentRoom())
 	return lab
 }
 

@@ -4,6 +4,8 @@ import (
 	"runtime/debug"
 	"sync"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/infra/build"
 )
 
 // Build says which build of rewake is running. The version alone is the same
@@ -28,6 +30,10 @@ type Build struct {
 	// Modified is set when the working tree differed from the revision, so
 	// the binary is not that revision alone.
 	Modified bool `json:"modified,omitempty"`
+	// ID is the SHA-256 of the executable, the identity a room's build lease
+	// compares (docs/v2/stage3-state.md#one-build-per-room); empty when the
+	// executable could not be read. The line leaves it out.
+	ID string `json:"build,omitempty"`
 }
 
 // built is the build time the build command passes in, in RFC 3339:
@@ -38,7 +44,9 @@ var built string
 // nothing it prints depends on how the test binary was built.
 var thisBuild = sync.OnceValue(func() Build {
 	info, ok := debug.ReadBuildInfo()
-	return buildFrom(info, ok, built)
+	this := buildFrom(info, ok, built)
+	this.ID, _ = build.ID()
+	return this
 })
 
 // buildFrom reads the VCS stamp Go puts into a binary built in a checkout,

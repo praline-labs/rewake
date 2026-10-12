@@ -1,5 +1,13 @@
 package cli
 
+import (
+	"errors"
+
+	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/infra/build"
+	"github.com/praline-labs/rewake/internal/infra/state"
+)
+
 // What a parsed form does to the room's state
 // (docs/v2/stage3-state.md#what-is-a-writer). Forms, not commands, are
 // classified: inbox and inbox --owed are two forms, and only one of them
@@ -79,8 +87,71 @@ func worktreeAccess(call Call) access {
 // within runs one invocation's scope for its class: from the class through
 // the handler, the shell's observation and the printing of the answer, or
 // through a tool call's bounded output. Nothing of the invocation that can
-// write runs outside it.
-func (ctx *Context) within(class access, run func() int) int {
+// write runs outside it. A change holds the build lease of its room for the
+// whole scope (docs/v2/stage3-state.md#one-build-per-room), taken before any
+// other lock; a launch takes its own, for the room its --room names, and
+// holds it for the wrapper's life. A lease refused ends the scope before the
+// handler, which then has had no effect, and is answered by refused the way
+// its route answers.
+func (ctx *Context) within(class access, call Call, run func() int, refused func(error) int) int {
 	ctx.access = class
+	if class != accessChange || (call.Command != nil && call.Command.Harness != nil) {
+		return run()
+	}
+	lease, err := acquireCurrent(call.Command)
+	if err != nil {
+		return refused(err)
+	}
+	defer lease.Release()
 	return run()
+}
+
+// acquireCurrent takes the build lease of the room this invocation's
+// environment names, as a writer.
+func acquireCurrent(command *Command) (*build.Lease, error) {
+	base, err := state.Base()
+	if err != nil {
+		return nil, &UsageError{Command: command, Message: err.Error()}
+	}
+	room := state.CurrentRoom()
+	return leaseError(command, func() (*build.Lease, error) { return build.Acquire(base, room) })
+}
+
+// leaseError runs one acquisition and gives its refusal the CLI's shape: an
+// unusable state directory is about the call (code 2), a room held by
+// another build is a refusal (code 1), its holders named by session where
+// the room's records say whose they are.
+func leaseError(command *Command, acquire func() (*build.Lease, error)) (*build.Lease, error) {
+	lease, err := acquire()
+	if err == nil {
+		return lease, nil
+	}
+	var unusable *build.UnusableError
+	if errors.As(err, &unusable) {
+		return nil, &UsageError{Command: command, Message: unusable.Error()}
+	}
+	var refused *build.RefusedError
+	if errors.As(err, &refused) {
+		nameHolders(refused)
+	}
+	return nil, &FailedError{Message: err.Error()}
+}
+
+// nameHolders adds the session each holder serves, from the room's records
+// read without a write.
+func nameHolders(refused *build.RefusedError) {
+	if len(refused.Holders) == 0 {
+		return
+	}
+	sessions, err := registry.ListReadOnly(refused.Room)
+	if err != nil {
+		return
+	}
+	for index, holder := range refused.Holders {
+		for _, session := range sessions {
+			if session.ServicePID == holder.Pid {
+				refused.Holders[index].Session = session.Name
+			}
+		}
+	}
 }

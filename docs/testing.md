@@ -36,6 +36,13 @@ tests take their cases from the logged steps of clean runs rather than from a li
 by hand ([mail-bridge-checks.md](mail-bridge-checks.md#how-the-checks-are-built)). A
 release build never reads the variable.
 
+The lease rig (`test/leaserig`) builds rewake twice the same way, the second with a build
+time passed in, so the two builds share a version and differ in content, and races the
+room's build lease between them and a byte-identical copy: each process held at a named
+step of the lease ([stage3-state.md](v2/stage3-state.md#one-build-per-room)), released or
+killed by the test. It runs in every test run of the five checks, untagged, since a launch
+it starts never gets past its lease.
+
 The tag also admits one narrow kind of test code into a production package. When a fault
 schedule must cross a package boundary and neither an exported operation, a file
 fixture nor `state.Fault` can build it, the package that owns the step may carry exported

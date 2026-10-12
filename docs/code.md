@@ -11,6 +11,7 @@ cmd/rewake/                                   entry point, top-level parsing
 internal/                                     the layout test of 2.0: the import rule, harness names outside the adapters, no registry
 internal/cli/                                 command table, parsing, overview, help, failures, printing
 internal/infra/state/                         directory: checks, paths, atomic writes
+internal/infra/build/                         the build id (SHA-256 of the image) and the room's build lease
 internal/infra/buildtime/                     durations a build may shorten through -ldflags, for the suite
 internal/core/registry/                       session record, name publishing, liveness and listing
 internal/core/registry/registrytest/          for tests: the boot a session of this build carries
@@ -42,6 +43,7 @@ docs/                                         the documentation, and the tests t
 test/workflow/                                the workflow suite: end-to-end scenarios against fixtures
 test/workflow/record/                         the record format a suite run prints and the summarizer reads
 test/toolrig/                                 the neutral rig: the tool path's oracles on the fixture's program and the host endpoint; the delivery server against the fixture's reservation, the test playing the program
+test/leaserig/                                the room's build lease raced between real builds of rewake, each paused at a named step
 tools/checksummary/                           summarizes a suite run into a few lines and summary.json
 tools/release/                                the release gate: checks, builds with pack.sh, publishes only when told
 ```

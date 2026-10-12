@@ -48,7 +48,7 @@ func TestAnAcknowledgmentCutMidway(t *testing.T) {
 			t.Cleanup(free)
 			plan, writes := &wrapperPlan{}, 0
 			plan.pause = func(op, _ string) {
-				if op == state.OpRead || op == state.OpStep {
+				if op == state.OpRead || op == state.OpStep || op == state.OpNote {
 					return
 				}
 				writes++

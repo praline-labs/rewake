@@ -20,6 +20,10 @@ const (
 	// OpStep is a step of a call's path that is no file operation: the
 	// server asking for a ticket, starting a child, writing an answer.
 	OpStep = "step"
+	// OpNote marks a point a test observes in its own process, which a
+	// fault plan logs and never counts: the lease's release, after the last
+	// step of every invocation, where ending the process is no new case.
+	OpNote = "note"
 )
 
 func fault(op, path string) error {
@@ -62,3 +66,7 @@ func AskRead(path string) error { return fault(OpRead, path) }
 // Step names a step of a call's path that touches no file, so a fault plan
 // can end the process there as it ends it before a write. It cannot fail.
 func Step(name string) { _ = fault(OpStep, name) }
+
+// Note marks a point of a call's path for a test to observe (OpNote). It
+// cannot fail and is no durable step.
+func Note(name string) { _ = fault(OpNote, name) }

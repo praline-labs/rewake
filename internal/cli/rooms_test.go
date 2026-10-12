@@ -20,6 +20,7 @@ func TestCommandsCannotSeeAnotherRoom(t *testing.T) {
 	}
 	rawUnread(t, red, "api", map[string]any{"text": "red secret", "toEpoch": session.Epoch()})
 	t.Setenv("REWAKE_ROOM", "blue")
+	launched(t, os.Getenv(state.DirEnv), "blue")
 	if code, out, errOut := run("list"); code != 0 || strings.Contains(out, agentID) && !strings.Contains(out, "No sessions") {
 		t.Errorf("foreign list: %d %s %s", code, out, errOut)
 	}
@@ -41,6 +42,7 @@ func TestSameNamesInDifferentRoomsKeepSeparateMail(t *testing.T) {
 	red := liveSession(t, "api")
 	session, _ := registry.Lookup(red, "api")
 	t.Setenv("REWAKE_ROOM", "blue")
+	launched(t, os.Getenv(state.DirEnv), "blue")
 	blue, err := state.Dir()
 	if err != nil {
 		t.Fatal(err)

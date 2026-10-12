@@ -33,7 +33,7 @@ func TestAnEndCapturedDuringAnAcknowledgmentIncludesIt(t *testing.T) {
 	t.Cleanup(free)
 	var once sync.Once
 	r.plan(&wrapperPlan{pause: func(op, _ string) {
-		if op == state.OpRead || op == state.OpStep {
+		if op == state.OpRead || op == state.OpStep || op == state.OpNote {
 			return
 		}
 		once.Do(func() {

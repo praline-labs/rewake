@@ -70,7 +70,7 @@ func (f *faultTable) apply(op, path string) error {
 	if failed {
 		plan.readFailed++
 	}
-	if op != state.OpRead && op != state.OpStep {
+	if op != state.OpRead && op != state.OpStep && op != state.OpNote {
 		plan.steps++
 		failed = plan.steps == plan.fail
 	}

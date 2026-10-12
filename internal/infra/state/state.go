@@ -46,14 +46,24 @@ var nameShape = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,31}$`)
 // ValidName reports whether a name may address a session.
 func ValidName(name string) bool { return nameShape.MatchString(name) }
 
-// Root returns the shared state root, without reading legacy records there.
-func Root() (string, error) {
+// Base is the state directory as the environment names it, checked and made
+// nowhere: the build lease is taken from it before anything is created.
+func Base() (string, error) {
 	path := os.Getenv(DirEnv)
 	if path == "" {
 		path = filepath.Join(os.TempDir(), "rewake-"+strconv.Itoa(os.Getuid()))
 	}
 	if !filepath.IsAbs(path) {
 		return "", fmt.Errorf("%s must be an absolute path, got %q", DirEnv, path)
+	}
+	return path, nil
+}
+
+// Root returns the shared state root, without reading legacy records there.
+func Root() (string, error) {
+	path, err := Base()
+	if err != nil {
+		return "", err
 	}
 	if err := ensureDir(path); err != nil {
 		return "", err

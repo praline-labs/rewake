@@ -213,7 +213,9 @@ stays. The probe holder writes no room state.
   callback; a change form for its scope ([above](#what-is-a-writer)); each child that
   writes, its own — take it shared, then read `build`: their own id goes on; another id,
   or a missing, unreadable or malformed record, refuses, exit 1, naming the room's build
-  and the way past it (end the room's sessions, or `--room`).
+  and the way past it (end the room's sessions, or `--room`). Only a launch establishes
+  a build, so a writer makes nothing of a room no launch completed: it refuses there and
+  leaves the base as it found it.
 - **Changing the build.** A launch whose id differs from `build`, or that finds it
   missing, unreadable or malformed, asks for the lock exclusive without waiting, without
   keeping a shared descriptor of its own beside the request. Refused: exit 1, naming the
@@ -227,6 +229,12 @@ stays. The probe holder writes no room state.
   the diagnostic poorer and never permit the exclusive lock.
 - **Views** take no lock; when `build` differs from their own id they add one line, and
   say "unknown" when it cannot be read.
+- **Named steps** of the fault seam order a process against another at the lease:
+  `bootstrap <level>` before each level is made, `lease exclusive` once a launch holds it
+  exclusive, `lease downgrade` before it turns shared, `leased` once the lease is held
+  and authorized; and a note, which a fault plan logs and never counts, `lease release`
+  before it goes — after an invocation's last effect, where ending the process is no new
+  case.
 - **What a wrapper runs for itself** is started from `/proc/self/exe`, never from a path
   looked up again.
 
@@ -307,8 +315,9 @@ goroutines sharing one process's lease.
 | Area | Tests |
 |---|---|
 | identity (commit 2) | `TestBuildIDIsExecutableContent` (a copy equal, a changed byte different, the installed path replaced or removed still hashes the running image); `TestUnreadableImageHasNoEffects`; `TestVersionJSONCarriesBuildID`, the human line unchanged |
-| lease (commit 2) | `TestSharedWritersExcludeBuildSwitch`, `TestLaunchReplacesMissingOrInvalidBuildOnlyExclusively`, `TestDowngradeRechecksBuild`, `TestReplacedLeaseLockIsReopened`, `TestHolderDiagnosticsUseDeviceAndInode`, `TestLeaseDescriptorsAreNotInherited`; every contention bounded |
-| process races (commit 2) | `TestDifferentImagesWithSameVersionCannotShareRoom` (one revision built twice, one string literal changed by an overlay: the same `--version` line, different ids, the second refused while a session of the first runs), `TestArtifactCopyCanJoinRoomAndUseTools`, `TestOldCommandBlocksNewBuildUntilExitOrKill`, `TestOrphanChildRefusesAfterBuildSwitch`, `TestHostLeaseOutlivesCleanup` |
+| lease (commit 2) | `TestSharedWritersExcludeBuildSwitch`, `TestLaunchReplacesMissingOrInvalidBuildOnlyExclusively`, `TestDowngradeRechecksBuild`, `TestReplacedLeaseLockIsReopened`, `TestHolderDiagnosticsUseDeviceAndInode`, `TestLeaseDescriptorsAreNotInherited`; every contention bounded, a writer beside a stalled switch refused after its bound (`TestAStalledSwitchBoundsItsWriters`) |
+| process races (commit 2, `test/leaserig`) | `TestDifferentImagesWithSameVersionCannotShareRoom` (one tree built twice, the second with a build time passed in by `-ldflags`: the same version, different ids, the second refused while a session of the first runs), `TestArtifactCopyCanJoinRoomAndUseTools` (the tool's peer takes a copy too: `TestPeerCheckIsTheBuildsContent`), `TestOldCommandBlocksNewBuildUntilExitOrKill`, `TestOrphanChildRefusesAfterBuildSwitch`; `TestHostLeaseOutlivesCleanup` in `host`, the lease taken before the claim and released after the record and the socket are gone |
+| both routes (commit 2) | `TestBothRoutesRefuseAnotherBuildsRoom` (the shell and the tool refused in a room of another build, the tool before its ticket is confirmed), `TestChangeFormsOnAnEmptyBaseCreateNothing` |
 | bootstrap (commit 2) | `TestBootstrapRecoversAfterEveryStep`, `TestBootstrapRefusesUnsafeExistingComponents`, `TestBootstrapSyncFailureStopsBeforeClaim`, `TestOnlyAcquireCallsBootstrapPrimitives`: a kill or a failure at each create, lock and record step, and no session record after one |
 | roots (commit 3) | `TestTwoRoomsUseOnlyV2`, `TestChildBaseRoundTripAndGrantAuthority` (a shell of the session and a tool call's child read the exported base; their `Dir()` is the wrapper's room byte for byte, one `v2` in it; a grant reaches the authority), `TestRootInverseRejectsLegacyOrMalformedRoom` (a worktree owner of another base too), `TestResolversNeverCreate`, `TestOrdinaryCommandsNeverTouchLegacyTree` |
 | views and forms (commits 1 and 3) | `TestEveryParsedFormHasAccessClass`, `TestEveryViewLeavesMissingAndExistingStateUnchanged`, `TestForeignBuildViewsWarnOnce`, `TestViewWriteAttemptFailsEvenIfIgnored`, `TestToolOutputContinuationHoldsLease`: guide, help and version, `--json`, aliases, unknown flags, dead and unknown records, long output, a stalled exclusive holder |

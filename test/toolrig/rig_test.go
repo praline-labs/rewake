@@ -32,14 +32,15 @@ import (
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/host/endpoint"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
+	"github.com/praline-labs/rewake/internal/infra/build"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // binary is cmd/rewake built with the fault seam: every call's child, and the
-// shell.
-var binary string
+// shell; binaryID is its build id, the build of every room the rig makes.
+var binary, binaryID string
 
 func TestMain(m *testing.M) {
 	if os.Getenv(controlEnv) != "" {
@@ -53,11 +54,16 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	binary = filepath.Join(dir, "rewake")
-	build := exec.Command("go", "build", "-tags", "rewakefault", "-o", binary, "../../cmd/rewake")
-	build.Stdout, build.Stderr = os.Stderr, os.Stderr
-	if err := build.Run(); err != nil {
+	compile := exec.Command("go", "build", "-tags", "rewakefault", "-o", binary, "../../cmd/rewake")
+	compile.Stdout, compile.Stderr = os.Stderr, os.Stderr
+	if err := compile.Run(); err != nil {
 		_ = os.RemoveAll(dir)
 		fmt.Fprintln(os.Stderr, "the test binary does not build:", err)
+		os.Exit(1)
+	}
+	if binaryID, err = build.FileID(binary); err != nil {
+		_ = os.RemoveAll(dir)
+		fmt.Fprintln(os.Stderr, "the test binary cannot be read:", err)
 		os.Exit(1)
 	}
 	state.Fault = wrapperFaults.apply
@@ -113,6 +119,15 @@ func newRig(t *testing.T, change ...func(*endpoint.Config)) *rig {
 	_ = os.Chmod(root, 0o700)
 	dir, err := state.RoomDir(root, "default")
 	if err != nil {
+		t.Fatal(err)
+	}
+	// The room is the built binary's, its lease file and record as its launch
+	// would have left them: the rig's own process plays the wrapper and takes
+	// no lease.
+	if err := os.WriteFile(filepath.Join(dir, "build.lock"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "build"), []byte(binaryID+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	r := &rig{t: t, root: root, dir: dir, acknowledged: make(chan error, 64), completed: map[string]bool{}}

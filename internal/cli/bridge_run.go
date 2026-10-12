@@ -56,7 +56,9 @@ func runBridge(t *table, argv []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return answer(report(ctx, err))
 	}
-	return ctx.within(toolAccess, func() int { return answer(bridgeCall(ctx, result)) })
+	return ctx.within(toolAccess, result.Call, func() int { return answer(bridgeCall(ctx, result)) }, func(err error) int {
+		return answer(report(ctx, err))
+	})
 }
 
 func bridgeCall(ctx *Context, result parsed) int {

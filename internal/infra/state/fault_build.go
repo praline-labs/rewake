@@ -37,7 +37,8 @@ import (
 //	                 outlives SIGKILL to its group
 //
 // A durable step is a write, a publication, a removal, a rename or a named step of a
-// call's path (Step); a step cannot fail, so fail=<n> on one does nothing.
+// call's path (Step); a step cannot fail, so fail=<n> on one does nothing. A note
+// (Note) is logged and never counted.
 
 const faultEnv = "REWAKE_FAULT"
 
@@ -109,6 +110,9 @@ func (p *faultPlan) apply(op, path string) error {
 			_, _ = fmt.Fprintf(file, "%s %s %s\n", p.role, op, path)
 			_ = file.Close()
 		}
+	}
+	if op == OpNote {
+		return nil
 	}
 	if op == OpRead {
 		if p.readFail != "" && strings.Contains(path, p.readFail) {

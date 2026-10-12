@@ -1,0 +1,220 @@
+package build
+
+import (
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/praline-labs/rewake/internal/infra/state"
+)
+
+// shareWait bounds a writer's wait for the shared lease: an exclusive holder
+// keeps it for a write and a sync, and one that stalls refuses its writers
+// rather than holding them.
+var shareWait = 10 * time.Second
+
+// Lease is a room's build lease this process holds shared, its build checked.
+// Release ends it; until then the room is authorized for this process's
+// writes.
+type Lease struct {
+	lock *state.LeaseLock
+	room string
+}
+
+// Room is the room the lease holds.
+func (l *Lease) Room() string { return l.room }
+
+// Release ends the lease and the room's authorization for this process. A
+// nil lease releases nothing.
+func (l *Lease) Release() {
+	if l == nil || l.lock == nil {
+		return
+	}
+	l.lock.Close()
+	l.lock = nil
+}
+
+// UnusableError is a state directory the lease cannot be taken in: a base
+// that is not absolute, a room name that is not one, a level somebody else
+// could write. It is about the call's environment, not about the room's
+// build.
+type UnusableError struct{ Err error }
+
+func (e *UnusableError) Error() string { return e.Err.Error() }
+func (e *UnusableError) Unwrap() error { return e.Err }
+
+// RefusedError is an acquisition the room's build refused: another build's
+// writers, a record that is missing or cannot be used, holders of the lease a
+// launch had to take exclusive, or an exclusive holder that did not let go.
+type RefusedError struct {
+	Room string
+	// Own is this process's id, Theirs the room's: empty when the record is
+	// missing or cannot be used, and Record then says which.
+	Own, Theirs string
+	Record      error
+	// Holders hold the lease a launch asked for exclusive.
+	Holders []Holder
+	// Busy says the shared lease was not taken within its bound.
+	Busy bool
+}
+
+// way is how past a refusal: the room's build stays while anything holds it.
+const way = "end the room's sessions, or launch into another room with --room"
+
+func (e *RefusedError) Error() string {
+	room := filepath.Base(e.Room)
+	switch {
+	case e.Busy:
+		return fmt.Sprintf("Rewake: a launch is changing the build of room %s and has not finished within %s, so nothing was changed; run it again.", room, shareWait)
+	case len(e.Holders) > 0:
+		names := make([]string, 0, len(e.Holders))
+		for _, holder := range e.Holders {
+			names = append(names, holder.String())
+		}
+		return fmt.Sprintf("Rewake: room %s is held by build %s and this is build %s, so nothing was changed; it is held by %s. To launch this build, %s.", room, e.theirs(), Short(e.Own), strings.Join(names, ", "), way)
+	case errors.Is(e.Record, state.ErrNoBuildRecord):
+		return fmt.Sprintf("Rewake: room %s has no build yet — no session was launched in it — so nothing was changed; launch a session there first.", room)
+	case e.Record != nil:
+		return fmt.Sprintf("Rewake: the build of room %s cannot be read (%v), and this is build %s, so nothing was changed; launching a session there sets it once nothing holds the room.", room, e.Record, Short(e.Own))
+	}
+	return fmt.Sprintf("Rewake: room %s belongs to build %s of rewake and this is build %s, so nothing was changed; %s.", room, Short(e.Theirs), Short(e.Own), way)
+}
+
+// theirs is the room's build as a holder diagnostic names it.
+func (e *RefusedError) theirs() string {
+	switch {
+	case e.Theirs != "":
+		return Short(e.Theirs)
+	case errors.Is(e.Record, state.ErrNoBuildRecord):
+		return "none"
+	}
+	return "unknown"
+}
+
+// Acquire takes the room's lease for a writer: shared, then the build
+// checked. The writer's own id goes on; another id, or a record that is
+// missing, unreadable or malformed, refuses before the first effect. Only a
+// launch establishes a room's build, so a room no launch has written is no
+// room this build may write, and a writer makes no room.
+func Acquire(base, room string) (*Lease, error) {
+	return acquire(base, room, false)
+}
+
+// AcquireLaunch takes the room's lease for a launch: as a writer, except
+// that a room whose record is missing, unreadable or another build's is
+// switched to this build — the lock taken exclusive without waiting, which any
+// holder refuses, the record written, the lock turned shared and the record
+// read again like any writer's, since flock does not promise the conversion
+// is atomic.
+func AcquireLaunch(base, room string) (*Lease, error) {
+	return acquire(base, room, true)
+}
+
+func acquire(base, roomName string, launch bool) (*Lease, error) {
+	own, err := ID()
+	if err != nil {
+		return nil, err
+	}
+	room, err := enter(base, roomName, launch)
+	if err != nil {
+		return nil, err
+	}
+	lock, err := state.OpenLeaseLock(room)
+	if err != nil {
+		return nil, err
+	}
+	lease, err := hold(lock, room, own, launch)
+	if err != nil {
+		lock.Close()
+		return nil, err
+	}
+	return lease, nil
+}
+
+// enter gives the room a lease is taken in. A launch makes what is missing
+// of it; a writer makes nothing — a room no launch has completed has no build
+// it could write under, and its refusal leaves the base as it found it.
+func enter(base, roomName string, launch bool) (string, error) {
+	if launch {
+		room, err := state.Bootstrap(base, roomName)
+		if err != nil {
+			return "", &UnusableError{Err: err}
+		}
+		return room, nil
+	}
+	room, err := state.RoomPath(base, roomName)
+	if err != nil {
+		return "", &UnusableError{Err: err}
+	}
+	if _, err := os.Lstat(room); errors.Is(err, os.ErrNotExist) {
+		return "", &RefusedError{Room: room, Record: state.ErrNoBuildRecord}
+	}
+	if err := state.Verify(room); err != nil {
+		return "", &UnusableError{Err: err}
+	}
+	return room, nil
+}
+
+func hold(lock *state.LeaseLock, room, own string, launch bool) (*Lease, error) {
+	if err := share(lock, room, own); err != nil {
+		return nil, err
+	}
+	theirs, err := state.ReadBuildRecord(room)
+	switch {
+	case err == nil && theirs == own:
+		return grant(lock, room)
+	case launch:
+		return switchBuild(lock, room, own, theirs, err)
+	}
+	return nil, &RefusedError{Room: room, Own: own, Theirs: theirs, Record: err}
+}
+
+// switchBuild makes this launch's id the room's build, under the exclusive
+// lock, and holds the lease shared afterwards.
+func switchBuild(lock *state.LeaseLock, room, own, theirs string, record error) (*Lease, error) {
+	taken, err := lock.TryExclusive()
+	if err != nil {
+		return nil, err
+	}
+	if !taken {
+		holders := holdersOf(lock)
+		return nil, &RefusedError{Room: room, Own: own, Theirs: theirs, Record: record, Holders: holders}
+	}
+	state.Step("lease exclusive")
+	// Read again under the exclusive lock: a launch of this same build may
+	// have written it meanwhile.
+	if current, err := state.ReadBuildRecord(room); err != nil || current != own {
+		if err := state.WriteBuildRecord(lock, own); err != nil {
+			return nil, err
+		}
+	}
+	state.Step("lease downgrade")
+	if err := share(lock, room, own); err != nil {
+		return nil, err
+	}
+	// Whoever took the lock exclusive between the conversion's release and its
+	// shared lock may have written another build.
+	if after, err := state.ReadBuildRecord(room); err != nil || after != own {
+		return nil, &RefusedError{Room: room, Own: own, Theirs: after, Record: err}
+	}
+	return grant(lock, room)
+}
+
+func share(lock *state.LeaseLock, room, own string) error {
+	err := lock.Share(shareWait)
+	if errors.Is(err, state.ErrLeaseBusy) {
+		return &RefusedError{Room: room, Own: own, Busy: true}
+	}
+	return err
+}
+
+func grant(lock *state.LeaseLock, room string) (*Lease, error) {
+	if err := state.Authorize(lock); err != nil {
+		return nil, err
+	}
+	state.Step("leased")
+	return &Lease{lock: lock, room: room}, nil
+}
