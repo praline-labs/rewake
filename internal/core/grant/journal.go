@@ -157,7 +157,7 @@ func sweep(dir string) {
 			continue
 		}
 		if info, err := file.Info(); err == nil && time.Since(info.ModTime()) > sweepGrace {
-			_ = os.Remove(filepath.Join(dir, "grants", file.Name()))
+			_ = state.Discard(filepath.Join(dir, "grants", file.Name()))
 		}
 	}
 }

@@ -10,7 +10,7 @@ import (
 
 // removeWaiting drops the waiting copy of an announced message; replaceable in
 // tests, which need that step to fail.
-var removeWaiting = os.Remove
+var removeWaiting = state.Discard
 
 // SettleLocked takes a message with an outcome out of the waiting set. One the harness
 // was told about stays readable in unread/ — or has been read already — so only

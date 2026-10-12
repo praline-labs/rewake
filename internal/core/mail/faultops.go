@@ -7,6 +7,8 @@ import (
 	"os"
 	"sync"
 	"sync/atomic"
+
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // The operations of this file let the delivery server's tests, in another
@@ -27,7 +29,7 @@ func init() {
 			attempts.(*atomic.Int64).Add(1)
 			return os.ErrPermission
 		}
-		return os.Remove(path)
+		return state.Discard(path)
 	}
 }
 

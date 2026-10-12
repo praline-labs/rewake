@@ -105,7 +105,7 @@ func Publish(dir string, session Session) error {
 			return loadErr
 		}
 
-		if removeErr := os.Remove(path); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+		if removeErr := state.Discard(path); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
 			return removeErr
 		}
 		if err := state.PublishExclusive(path, encoded); err != nil {
@@ -168,7 +168,7 @@ func Remove(dir, name string) error {
 		return nil
 	}
 	return state.WithNameLock(dir, name, func() error {
-		err := os.Remove(state.SessionPath(dir, name))
+		err := state.Discard(state.SessionPath(dir, name))
 		if errors.Is(err, os.ErrNotExist) {
 			return nil
 		}
@@ -224,7 +224,7 @@ func removeIfOwned(dir, name, epoch string, removed *bool) func() error {
 		if existing.Epoch() != epoch {
 			return nil
 		}
-		err = os.Remove(state.SessionPath(dir, name))
+		err = state.Discard(state.SessionPath(dir, name))
 		if errors.Is(err, os.ErrNotExist) {
 			return nil
 		}

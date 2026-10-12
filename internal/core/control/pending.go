@@ -115,7 +115,7 @@ func Forget(dir, asker, id string) error {
 	if !ValidID.MatchString(id) || !state.ValidName(asker) {
 		return fmt.Errorf("invalid pending compaction")
 	}
-	err := os.Remove(filepath.Join(state.LettersPath(dir, asker), id+".json"))
+	err := state.Discard(filepath.Join(state.LettersPath(dir, asker), id+".json"))
 	if errors.Is(err, os.ErrNotExist) {
 		return nil
 	}
