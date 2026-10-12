@@ -220,10 +220,13 @@ on October 12, 2026 ([stage3-s17-evidence.md](stage3-s17-evidence.md#the-live-ga
   return, beside the refusal that stopped it later.
 - Recorded counts are read field by field: a record missing or unreadable, a count absent
   or null, or anything but a whole number from zero is unknown, never zero (D9).
-- Every file the clearing opens — a record, a letter, a 1.x lock, the clear lock — must be
-  a regular file: a special file is refused by `lstat` before the open, the open does not
-  wait (`O_NONBLOCK`) and the descriptor is checked again, so a FIFO cannot hold the
-  clearing, and the locks it holds, until a writer comes.
+- Every file the clearing opens — a record, a letter, a 1.x lock, the clear lock, the
+  counts recorded under `v2/` — must be a regular file: a special file is refused by
+  `lstat` before the open, the open follows no link and does not wait (`O_NONBLOCK`), and
+  the descriptor is checked again, so a FIFO cannot hold the clearing, and the locks it
+  holds, until a writer comes. Recorded counts that are no regular file are unknown, not a
+  refusal. A directory is listed by one open that takes only a directory and follows no
+  link (`state.ReadPlainDir`), so a link put where a directory was checked is not followed.
 - The steps a fault plan pauses or ends the clearing at, besides its durable steps, are
   `legacy found` — after the first read of the base, before the clear lock is asked for —
   `legacy admitted`, `legacy set aside` and `legacy validated`, and `launch cleared` once

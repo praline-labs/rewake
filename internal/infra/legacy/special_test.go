@@ -8,6 +8,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // A file of the 1.x tree or of the clearing that is not a regular file — a
@@ -87,4 +89,170 @@ func releaseFIFOs(base string) {
 		}
 		return nil
 	})
+}
+
+// The counts a validated tree's clearer recorded are read as every other file
+// of the clearing: anything but a regular file in their place — a FIFO there
+// from the start, or a FIFO or a link put there between the check and the open
+// — is unknown counts, read without waiting and never followed; the tree it
+// counted is deleted all the same.
+func TestASpecialSummaryIsUnknownWithoutWaiting(t *testing.T) {
+	const unknownAll = "unknown rooms, unknown unread letters, unknown undelivered reports"
+	const counts = `{"rooms":7,"unread":7,"undelivered":7}`
+	cases := []struct {
+		name  string
+		setup func(s *scene, summary string, hold func(*os.File))
+	}{
+		{"a FIFO", func(s *scene, summary string, _ func(*os.File)) {
+			mustFIFO(s.t, summary)
+		}},
+		{"a FIFO put in its place after its check", func(s *scene, summary string, _ func(*os.File)) {
+			mustWrite(s.t, summary, counts)
+			atSummaryRead(s, summary, func() { mustFIFO(s.t, summary) })
+		}},
+		{"a FIFO holding counts put in its place after its check", func(s *scene, summary string, hold func(*os.File)) {
+			mustWrite(s.t, summary, counts)
+			atSummaryRead(s, summary, func() {
+				mustFIFO(s.t, summary)
+				// Both ends held by the test: the counts wait in the pipe,
+				// for a reader that takes the FIFO for the record.
+				writer, err := os.OpenFile(summary, os.O_RDWR|syscall.O_NONBLOCK, 0)
+				if err != nil {
+					s.t.Fatal(err)
+				}
+				hold(writer)
+				if _, err := writer.WriteString(counts); err != nil {
+					s.t.Fatal(err)
+				}
+			})
+		}},
+		{"a link put in its place after its check", func(s *scene, summary string, _ func(*os.File)) {
+			mustWrite(s.t, summary, counts)
+			elsewhere := filepath.Join(s.t.TempDir(), "counts.json")
+			mustWrite(s.t, elsewhere, counts)
+			atSummaryRead(s, summary, func() { mustSymlink(s.t, elsewhere, summary) })
+		}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			s := newScene(t)
+			s.letter(s.room(s.validated(leftID), "old"), "web", "m1")
+			var held []*os.File
+			letGo := func() {
+				for _, file := range held {
+					_ = file.Close()
+				}
+				held = nil
+			}
+			t.Cleanup(letGo)
+			c.setup(s, s.summary(leftID), func(file *os.File) { held = append(held, file) })
+			done := make(chan error, 1)
+			go func() { done <- s.launch() }()
+			select {
+			case err := <-done:
+				if err != nil {
+					t.Fatalf("a special summary refused the clearing: %v", err)
+				}
+			case <-time.After(3 * time.Second):
+				letGo()
+				for released := false; !released; {
+					releaseFIFOs(s.base)
+					select {
+					case <-done:
+						released = true
+					case <-time.After(20 * time.Millisecond):
+					}
+				}
+				t.Fatal("the clearing waited on its recorded counts for a writer")
+			}
+			if want := "rewake: removed the state of rewake 1.x (" + unknownAll + ").\n"; s.said.String() != want {
+				t.Fatalf("the launch said %q, want %q", s.said.String(), want)
+			}
+			s.wantTrees()
+		})
+	}
+}
+
+// A mailbox put back as a link or a FIFO between its check and its listing is
+// neither followed nor waited on: its letters are an unknown count, the
+// letters a link names are left where they are, and the tree is deleted.
+func TestAMailboxSwappedAfterItsCheckIsNeitherFollowedNorWaitedOn(t *testing.T) {
+	for _, kind := range []string{"a link", "a FIFO"} {
+		t.Run(kind, func(t *testing.T) {
+			s := newScene(t)
+			outside := t.TempDir()
+			s.letter(s.room(outside, "x"), "web", "foreign")
+			foreign := filepath.Join(outside, "x", "inbox", "web")
+			s.letter(s.room(s.rooms(), "old"), "web", "m1")
+			setAside, swapped := false, false
+			faults(t, func(op, path string) error {
+				switch {
+				case op == state.OpStep && path == "legacy set aside":
+					setAside = true
+				case setAside && !swapped && op == state.OpRead && strings.HasSuffix(path, "/old/inbox/web"):
+					swapped = true
+					if err := os.Rename(path, filepath.Join(outside, "moved")); err != nil {
+						t.Fatal(err)
+					}
+					if kind == "a link" {
+						mustSymlink(t, foreign, path)
+					} else {
+						mustFIFO(t, path)
+					}
+				}
+				return nil
+			})
+			done := make(chan error, 1)
+			go func() { done <- s.launch() }()
+			select {
+			case err := <-done:
+				if err != nil || !swapped {
+					t.Fatalf("swapped %v: %v", swapped, err)
+				}
+			case <-time.After(3 * time.Second):
+				for released := false; !released; {
+					releaseFIFOs(s.base)
+					select {
+					case <-done:
+						released = true
+					case <-time.After(20 * time.Millisecond):
+					}
+				}
+				t.Fatal("the clearing waited on a mailbox for a writer")
+			}
+			if !strings.Contains(s.said.String(), "unknown unread letters") {
+				t.Fatalf("a mailbox swapped after its check was counted: %q", s.said.String())
+			}
+			if !exists(filepath.Join(foreign, "foreign.json")) {
+				t.Fatal("the clearing removed what a link named")
+			}
+			s.wantTrees()
+		})
+	}
+}
+
+// atSummaryRead runs swap once, when the clearing asks to read summary: after
+// the check before the open, before the open itself.
+func atSummaryRead(s *scene, summary string, swap func()) {
+	swapped := false
+	faults(s.t, func(op, path string) error {
+		if op == state.OpRead && path == summary && !swapped {
+			swapped = true
+			if err := os.Remove(path); err != nil {
+				s.t.Fatal(err)
+			}
+			swap()
+		}
+		return nil
+	})
+}
+
+func mustFIFO(t *testing.T, path string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := syscall.Mkfifo(path, 0o600); err != nil {
+		t.Fatal(err)
+	}
 }

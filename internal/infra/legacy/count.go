@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // Counts is what a clearing says it removed: rooms, unread letters and
@@ -278,14 +280,12 @@ func plainDirs(dir string) ([]string, error) {
 	return names, nil
 }
 
-// listDir reads a directory that is one itself, not a link to one.
+// listDir reads a directory that is one itself, not a link to one, and not a
+// FIFO put in its place, which the open would wait on: the open itself takes
+// nothing else, whatever was checked before it.
 func listDir(dir string) ([]os.DirEntry, error) {
-	info, err := os.Lstat(dir)
-	if err != nil {
+	if err := state.AskRead(dir); err != nil {
 		return nil, err
 	}
-	if !info.IsDir() {
-		return nil, fmt.Errorf("%s is not a directory", dir)
-	}
-	return os.ReadDir(dir)
+	return state.ReadPlainDir(dir)
 }

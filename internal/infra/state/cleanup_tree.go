@@ -3,6 +3,7 @@ package state
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -136,7 +137,7 @@ func (c *Cleanup) Delete(id string) error {
 	if err := plainDir(tree); err != nil {
 		return err
 	}
-	entries, err := os.ReadDir(tree)
+	entries, err := ReadPlainDir(tree)
 	if err != nil {
 		return fmt.Errorf("could not read %s: %w", tree, err)
 	}
@@ -175,12 +176,35 @@ func (c *Cleanup) WriteSummary(id string, data []byte) error {
 }
 
 // ReadSummary reads the counts recorded for the tree of id; a missing one is
-// os.ErrNotExist.
+// os.ErrNotExist. Like every file the clearing opens, the record must be a
+// regular file, refused before the open and checked on the descriptor: the
+// open follows no link and does not wait, so a FIFO in its place cannot hold
+// the clear lock until a writer comes.
 func (c *Cleanup) ReadSummary(id string) ([]byte, error) {
 	if !ValidTreeID(id) {
 		return nil, fmt.Errorf("%q is no tree id", id)
 	}
-	return ReadFile(c.summary(id))
+	path := c.summary(id)
+	if info, err := os.Lstat(path); err != nil {
+		return nil, noteReach(err, false)
+	} else if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("%s is not a regular file", path)
+	}
+	if err := fault(OpRead, path); err != nil {
+		return nil, err
+	}
+	file, err := os.OpenFile(path, os.O_RDONLY|syscall.O_CLOEXEC|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		return nil, noteReach(err, false)
+	}
+	defer func() { _ = file.Close() }()
+	if info, err := file.Stat(); err != nil {
+		return nil, err
+	} else if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("%s is not a regular file", path)
+	}
+	data, err := io.ReadAll(file)
+	return data, noteReach(err, false)
 }
 
 // DiscardSummary removes the counts of a tree whose deletion is complete.
