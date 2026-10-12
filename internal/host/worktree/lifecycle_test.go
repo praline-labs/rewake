@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/infra/proc"
-	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // liveProcess starts a process that outlives the test's looks and names it
@@ -56,7 +55,7 @@ func launchedBy(t *testing.T, record Record, launcher *Launch) Record {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := state.WriteAtomic(recordPath(record), data); err != nil {
+	if err := replaceRecord(recordPath(record), data); err != nil {
 		t.Fatal(err)
 	}
 	return record

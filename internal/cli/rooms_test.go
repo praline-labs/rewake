@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/registry/registrytest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -106,7 +107,7 @@ func TestLegacyRootRecordsAreIgnored(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "sessions", "bad.json"), []byte("not json"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	otherRun(t, root, "legacy-only")
+	registrytest.Legacy(t, root, otherSession(t, root, "legacy-only"))
 	code, out, errOut := run("list")
 	if code != 0 || !strings.Contains(out, "No sessions") {
 		t.Errorf("legacy state: %d %s %s", code, out, errOut)

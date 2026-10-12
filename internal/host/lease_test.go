@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -15,7 +16,13 @@ import (
 // and socket are gone, so a launch of another build never switches a room
 // while a run of the old one still writes there.
 func TestHostLeaseOutlivesCleanup(t *testing.T) {
-	dir := stateDir(t)
+	base := t.TempDir()
+	if err := os.Chmod(base, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(state.DirEnv, base)
+	// Made and let go: the run's own lease is the only one.
+	dir := buildtest.Established(t, base, state.DefaultRoom)
 	var claimed registry.Session
 	leasedAtClaim := false
 	releases := 0

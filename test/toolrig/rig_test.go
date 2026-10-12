@@ -108,6 +108,26 @@ type rig struct {
 
 const capability = "rig-capability"
 
+// leaseRoom holds the room's lease, shared, until the test ends: the rig's
+// process writes the room as the wrapper does, and no write of a room passes
+// without its lease.
+func leaseRoom(t *testing.T, dir string) {
+	t.Helper()
+	lock, err := state.OpenLeaseLock(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := lock.Share(time.Second); err != nil {
+		lock.Close()
+		t.Fatal(err)
+	}
+	if err := state.Authorize(lock); err != nil {
+		lock.Close()
+		t.Fatal(err)
+	}
+	t.Cleanup(lock.Close)
+}
+
 func newRig(t *testing.T, change ...func(*endpoint.Config)) *rig {
 	t.Helper()
 	// A short directory of its own: a socket path has a bound.
@@ -119,7 +139,7 @@ func newRig(t *testing.T, change ...func(*endpoint.Config)) *rig {
 	_ = os.Chmod(root, 0o700)
 	// The room is the built binary's, made, its lease file and record as its
 	// launch would have left them: the rig's own process plays the wrapper and
-	// takes no lease.
+	// holds the lease shared, as the wrapper does.
 	dir, err := state.Bootstrap(root, "default")
 	if err != nil {
 		t.Fatal(err)
@@ -130,6 +150,7 @@ func newRig(t *testing.T, change ...func(*endpoint.Config)) *rig {
 	if err := os.WriteFile(filepath.Join(dir, "build"), []byte(binaryID+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	leaseRoom(t, dir)
 	r := &rig{t: t, root: root, dir: dir, acknowledged: make(chan error, 64), completed: map[string]bool{}}
 	r.self = publish(t, dir, "api", os.Getpid())
 	sleeper := exec.Command("sleep", "120")
@@ -257,7 +278,7 @@ func (r *rig) start() {
 	}
 	plan, err := fixture.New().Launch(adapter.LaunchRequest{
 		Name: "api", Dir: r.dir, Room: "default", Role: role.Write, Epoch: r.self.Epoch(),
-		Socket: filepath.Join(r.root, "f"+n+".sock"), Command: launcher,
+		Socket: filepath.Join(r.dir, "f"+n+".sock"), Command: launcher,
 	})
 	if err != nil {
 		r.t.Fatal(err)

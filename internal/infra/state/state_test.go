@@ -54,7 +54,7 @@ func TestVerifyRefusesASymlink(t *testing.T) {
 }
 
 func TestWriteAtomicReplacesContent(t *testing.T) {
-	dir := t.TempDir()
+	dir := leasedDir(t)
 	path := filepath.Join(dir, "record.json")
 
 	if err := WriteAtomic(path, []byte("first")); err != nil {
@@ -77,7 +77,7 @@ func TestWriteAtomicReplacesContent(t *testing.T) {
 }
 
 func TestPublishExclusiveRefusesATakenName(t *testing.T) {
-	dir := t.TempDir()
+	dir := leasedDir(t)
 	path := filepath.Join(dir, "api.json")
 
 	if err := PublishExclusive(path, []byte("first")); err != nil {
@@ -110,7 +110,7 @@ func TestValidName(t *testing.T) {
 // plain one passes every sequential test and fails this one, because a reader
 // looking at the same moment catches the partial content.
 func TestWriteAtomicIsNeverSeenPartially(t *testing.T) {
-	dir := t.TempDir()
+	dir := leasedDir(t)
 	path := filepath.Join(dir, "record.json")
 
 	first := []byte(strings.Repeat("a", 1<<20))
@@ -162,7 +162,7 @@ func TestWriteAtomicIsNeverSeenPartially(t *testing.T) {
 // Two processes claiming one name must not both succeed. Sequentially a check
 // followed by a write looks exclusive; concurrently it is not.
 func TestPublishExclusiveHasOneWinnerUnderRace(t *testing.T) {
-	dir := t.TempDir()
+	dir := leasedDir(t)
 	path := filepath.Join(dir, "api.json")
 
 	var group sync.WaitGroup
@@ -198,6 +198,7 @@ func TestNameLockSerialisesClaims(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Bootstrap: %v", err)
 	}
+	leaseRoom(t, dir)
 
 	var inside, peak int
 	var guard sync.Mutex

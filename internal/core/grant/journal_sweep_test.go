@@ -8,6 +8,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/registry/registrytest"
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -16,7 +17,7 @@ import (
 // enough that no run could be between its registration and its record; the
 // journal of a live run stays, however old.
 func TestSavingSweepsTheJournalsOfEndedRuns(t *testing.T) {
-	dir := t.TempDir()
+	dir := buildtest.Dir(t)
 	start, err := proc.StartTime(os.Getpid())
 	if err != nil {
 		t.Fatal(err)

@@ -20,7 +20,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/host/delivery"
-	"github.com/praline-labs/rewake/internal/infra/state"
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 )
 
 // relayEnv names the socket of a test that plays the fixture's program
@@ -112,7 +112,7 @@ func relayRun(t *testing.T, dir, epoch string) (adapter.LaunchPlan, relayed) {
 	}
 	plan, err := fixture.New().Launch(adapter.LaunchRequest{
 		Name: "api", Dir: dir, Room: "default", Role: role.Write, Epoch: epoch,
-		Socket: filepath.Join(root, "f.sock"), Command: launcher,
+		Socket: filepath.Join(dir, "f.sock"), Command: launcher,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -158,10 +158,7 @@ func TestNoNoticePrecedesAReservedLettersReadability(t *testing.T) {
 	if err := os.Chmod(root, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	dir, err := state.Bootstrap(root, "default")
-	if err != nil {
-		t.Fatal(err)
-	}
+	dir := buildtest.Room(t, root, "default")
 	plan, p := relayRun(t, dir, "1.1")
 	reserving, ok := plan.Wake.(adapter.Reserver)
 	if !ok || plan.Thread == nil {

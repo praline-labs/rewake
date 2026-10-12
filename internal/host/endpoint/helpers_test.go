@@ -11,11 +11,13 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/receipt"
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/tool"
 )
 
-// testEndpoint serves a run in a temporary state directory, as the wrapper
-// does, with the build check stood in for: the test is the only process.
+// testEndpoint serves a run in a room of a temporary state directory, its
+// lease held, as the wrapper does, with the build check stood in for: the test is the only process.
 func testEndpoint(t *testing.T, transport string, change ...func(*Config)) (*Endpoint, string) {
 	t.Helper()
 	dir, err := os.MkdirTemp("", "ep")
@@ -24,6 +26,8 @@ func testEndpoint(t *testing.T, transport string, change ...func(*Config)) (*End
 	}
 	_ = os.Chmod(dir, 0o700)
 	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+	// A base of a short name keeps the socket's path inside its limit.
+	dir = buildtest.Room(t, dir, state.DefaultRoom)
 	cfg := Config{
 		Dir: dir, Name: "api", Epoch: "e1", Transport: transport, Capability: "secret",
 		Span:      25 * time.Second,

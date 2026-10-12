@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // The shell observations (docs/mail-bridge-channel.md#the-shell-observation):
@@ -133,10 +135,12 @@ func TestEveryErrorHasItsClass(t *testing.T) {
 // A state the CLI cannot write loses the observation and leaves nothing.
 func TestAnUnwritableStateLosesTheObservation(t *testing.T) {
 	dir := journalDir(t)
-	if err := os.Chmod(dir, 0o500); err != nil {
+	// The room comes with its inbox made: the mailboxes go there.
+	inbox := filepath.Dir(state.InboxPath(dir, "api"))
+	if err := os.Chmod(inbox, 0o500); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+	t.Cleanup(func() { _ = os.Chmod(inbox, 0o700) })
 	WriteShell(dir, "api", "e1", ShellNote{OK: true, Boot: 1})
 	if notes := TakeShell(dir, "api", "e1"); len(notes) != 0 {
 		t.Fatalf("took %v", notes)

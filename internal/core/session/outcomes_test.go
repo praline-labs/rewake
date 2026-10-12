@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 )
 
 // A snapshot at its worst — every compaction event a main's, with the longest
@@ -12,7 +14,7 @@ import (
 // over the snapshot's limit would stop the whole telemetry. The newest
 // outcome is always kept, and each detail is cut.
 func TestAWorstCaseSnapshotStillSaves(t *testing.T) {
-	dir := t.TempDir()
+	dir := buildtest.Dir(t)
 	now := time.Now()
 	name := strings.Repeat("m", 32)
 	request := strings.Repeat("f", 32)

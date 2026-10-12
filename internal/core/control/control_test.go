@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 )
 
 var fast = Limits{Pickup: 300 * time.Millisecond, Outcome: 300 * time.Millisecond, Poll: 5 * time.Millisecond}
@@ -45,7 +47,7 @@ func serve(t *testing.T, dir string, reply func(Request) string) <-chan Request 
 
 func prepared(t *testing.T) string {
 	t.Helper()
-	dir := filepath.Join(t.TempDir(), "control", "worker.1.2")
+	dir := filepath.Join(buildtest.Dir(t), "control", "worker.1.2")
 	if err := Prepare(dir); err != nil {
 		t.Fatal(err)
 	}
@@ -349,7 +351,7 @@ func TestAnAskerCutShortWithdrawsTheRequest(t *testing.T) {
 // path that is not a private directory of this user rather than repairing it:
 // a directory another can write is a way to answer for the session.
 func TestPrepareRefusesWhatItDidNotMakePrivate(t *testing.T) {
-	base := t.TempDir()
+	base := buildtest.Dir(t)
 	open := filepath.Join(base, "open")
 	if err := os.Mkdir(open, 0o700); err != nil {
 		t.Fatal(err)

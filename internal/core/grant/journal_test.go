@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 )
 
 func TestJournalIsPerRun(t *testing.T) {
-	dir := t.TempDir()
+	dir := buildtest.Dir(t)
 	at := time.Date(2026, 9, 27, 12, 0, 0, 0, time.UTC)
 	entries := []Entry{{Path: "/w/a", Message: "m1", At: at, Outcome: Granted}}
 	if err := Save(dir, "writer", "e1", entries); err != nil {
@@ -29,7 +31,7 @@ func TestJournalIsPerRun(t *testing.T) {
 // one: nine grants of eight directories each once lost the first grant here,
 // and with it the way to take it back.
 func TestJournalNeverDropsALiveEntry(t *testing.T) {
-	dir := t.TempDir()
+	dir := buildtest.Dir(t)
 	ended := time.Now()
 	var entries []Entry
 	for i := range maxEnded + 3 {

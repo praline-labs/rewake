@@ -101,7 +101,7 @@ func TestTheShellEvidenceKeepsTheTimeOfItsWrite(t *testing.T) {
 	state.ResetReach()
 	t.Cleanup(state.ResetReach)
 	if err := state.WithMailboxLock(t.Context(), dir, "api", func() error {
-		return state.WriteAtomic(filepath.Join(t.TempDir(), "written"), []byte("x"))
+		return state.WriteAtomic(filepath.Join(dir, "written"), []byte("x"))
 	}); err != nil {
 		t.Fatal(err)
 	}

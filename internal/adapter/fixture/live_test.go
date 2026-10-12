@@ -14,6 +14,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/control"
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 )
 
 // heardLive records each live set the run reported, in order.
@@ -74,7 +75,7 @@ func TestTheFirstReportLeavesOutWhatTheExchangeDidNotProve(t *testing.T) {
 func TestTheBriefingFollowsTheLiveTool(t *testing.T) {
 	for _, withTool := range []bool{true, false} {
 		t.Run(strconv.FormatBool(withTool), func(t *testing.T) {
-			file := filepath.Join(t.TempDir(), "brief")
+			file := filepath.Join(buildtest.Dir(t), "brief")
 			switches := []string{switchBrief + "=" + file}
 			if !withTool {
 				switches = append(switches, switchNo+"="+ToolTransport)
@@ -101,7 +102,7 @@ func TestControlIsCarriedOnlyWhileLive(t *testing.T) {
 	limits := control.Limits{Pickup: 3 * time.Second, Outcome: 3 * time.Second, Poll: 10 * time.Millisecond}
 	for _, withControl := range []bool{true, false} {
 		t.Run(strconv.FormatBool(withControl), func(t *testing.T) {
-			dir := filepath.Join(t.TempDir(), "control")
+			dir := filepath.Join(buildtest.Dir(t), "control")
 			if err := control.Prepare(dir); err != nil {
 				t.Fatal(err)
 			}

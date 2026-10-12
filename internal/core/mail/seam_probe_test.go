@@ -14,6 +14,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // seamRead is one read through the seam: its operation and its path under
@@ -318,7 +320,40 @@ func fresh(t *testing.T, src, dst string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
+	leaseCopy(t, dst)
 	return dst
+}
+
+// copyLeases are the leases the copies of a room hold, one per copy's path.
+var copyLeases sync.Map
+
+// leaseCopy holds the lease of a copy of a room, as a session holds its
+// room's: the copy carries the room's build.lock, and its writes are a room's
+// writes. The lease of the copy made before at the same path goes first: its
+// lock is on a file the copy replaced.
+func leaseCopy(t *testing.T, dst string) {
+	t.Helper()
+	if old, ok := copyLeases.LoadAndDelete(dst); ok {
+		old.(*state.LeaseLock).Close()
+	}
+	lock, err := state.OpenLeaseLock(dst)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := lock.Share(time.Second); err != nil {
+		lock.Close()
+		t.Fatal(err)
+	}
+	if err := state.Authorize(lock); err != nil {
+		lock.Close()
+		t.Fatal(err)
+	}
+	copyLeases.Store(dst, lock)
+	t.Cleanup(func() {
+		if copyLeases.CompareAndDelete(dst, lock) {
+			lock.Close()
+		}
+	})
 }
 
 // snapshot is every file of a state directory with its content, and every

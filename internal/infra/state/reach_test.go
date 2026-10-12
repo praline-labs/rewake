@@ -17,7 +17,7 @@ import (
 func TestTheReachKeepsTheTimeItHappened(t *testing.T) {
 	ResetReach()
 	t.Cleanup(ResetReach)
-	dir := t.TempDir()
+	dir := leasedDir(t)
 	before := boottime.Now()
 	if err := WriteAtomic(filepath.Join(dir, "first"), []byte("x")); err != nil {
 		t.Fatal(err)

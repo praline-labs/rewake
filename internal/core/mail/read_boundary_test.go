@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -120,7 +121,13 @@ func TestReadClockProcessWriter(t *testing.T) {
 	if dir == "" {
 		return
 	}
-	err := state.WithMailboxLock(context.Background(), dir, "api", func() error {
+	// Another process writes under its own lease, as every writer does.
+	base, err := state.BaseForRoom(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	buildtest.Room(t, base, filepath.Base(dir))
+	err = state.WithMailboxLock(context.Background(), dir, "api", func() error {
 		return markScopedAwaiting(dir, "api", "1.1", Message{ID: "from-process", From: "peer", FromEpoch: "2.2"}, 0)
 	})
 	if err != nil {

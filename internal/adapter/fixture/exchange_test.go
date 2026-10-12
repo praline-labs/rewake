@@ -15,6 +15,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 )
 
 // startProgram starts the scripted program under a backend with the given
@@ -30,11 +31,16 @@ func startConfigured(t *testing.T, setup func(*backend), switches ...string) (*b
 	t.Helper()
 	// A short directory of its own: a socket path has a bound, and a test
 	// name under the system's temporary directory can pass it.
-	dir, err := os.MkdirTemp("", "fx")
+	base, err := os.MkdirTemp("", "fx")
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+	t.Cleanup(func() { _ = os.RemoveAll(base) })
+	if err := os.Chmod(base, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	// The run writes its room as a session does, under the room's lease.
+	dir := buildtest.Room(t, base, "default")
 	exe, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)

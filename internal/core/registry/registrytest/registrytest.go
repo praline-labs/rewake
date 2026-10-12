@@ -2,6 +2,9 @@
 package registrytest
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/core/registry"
@@ -17,4 +20,23 @@ func Boot(t testing.TB) string {
 		t.Fatalf("the boot id cannot be read: %v", err)
 	}
 	return boot
+}
+
+// Legacy leaves a session's record in a room of 1.x, or in a root of the
+// layout before rooms, as that build wrote it. 2.0 writes neither: no lease
+// covers a 1.x room, so the record is written past the state's seam, as the
+// fixture of a tree only 2.0's reads may meet.
+func Legacy(t testing.TB, dir string, session registry.Session) {
+	t.Helper()
+	encoded, err := json.MarshalIndent(session, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sessions := filepath.Join(dir, "sessions")
+	if err := os.MkdirAll(sessions, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sessions, session.Name+".json"), append(encoded, '\n'), 0o600); err != nil {
+		t.Fatal(err)
+	}
 }

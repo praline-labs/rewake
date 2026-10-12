@@ -19,6 +19,7 @@ func TestEveryWritePrimitiveRefusesInViewMode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	leaseRoom(t, dir)
 	file := filepath.Join(dir, "file")
 	if err := WriteAtomic(file, []byte("before")); err != nil {
 		t.Fatal(err)
@@ -154,7 +155,7 @@ func TestEveryWritePrimitiveRefusesInViewMode(t *testing.T) {
 // false before opening the file, and the attempt is kept as evidence although
 // the bool carries no error — leaving the mode reports it.
 func TestTryHoldRefusesInViewMode(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "held")
+	path := filepath.Join(leasedDir(t), "held")
 	writer, err := WriteAtomicHeld(path, []byte("pending"))
 	if err != nil {
 		t.Fatal(err)

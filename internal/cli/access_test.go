@@ -169,7 +169,7 @@ func TestAViewIsNeverObserved(t *testing.T) {
 	t.Setenv(state.SessionEnv, "api")
 	state.ResetReach()
 	t.Cleanup(state.ResetReach)
-	if err := state.WriteAtomic(filepath.Join(t.TempDir(), "written"), []byte("x")); err != nil {
+	if err := state.WriteAtomic(filepath.Join(dir, "written"), []byte("x")); err != nil {
 		t.Fatal(err)
 	}
 	call := Call{Command: &Command{Name: "send"}}

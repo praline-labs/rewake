@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 )
 
@@ -38,7 +39,7 @@ func endedRun(t *testing.T) string {
 // that journaled them; a grant over, or one in another conversation, is not
 // among them.
 func TestHintsNameTheGrantsOfAConversation(t *testing.T) {
-	dir := t.TempDir()
+	dir := buildtest.Dir(t)
 	main := ownRun(t)
 	first := []Entry{
 		{Path: "/w/lib", Message: "m1", Outcome: Granted, Thread: "t1", From: "lead", FromEpoch: main},
@@ -78,7 +79,7 @@ func TestHintsNameTheGrantsOfAConversation(t *testing.T) {
 // The copy of an ended run stays while it names a grant its main could still
 // confirm again, and goes once that main has ended too.
 func TestTheCopyOfAnEndedRunStaysWhileItsMainCouldConfirm(t *testing.T) {
-	dir := t.TempDir()
+	dir := buildtest.Dir(t)
 	restorable := []Entry{{Path: "/w/a", Message: "m1", Outcome: Granted, Thread: "t1", From: "lead", FromEpoch: ownRun(t)}}
 	orphaned := []Entry{{Path: "/w/b", Message: "m2", Outcome: Granted, Thread: "t1", From: "lead", FromEpoch: endedRun(t)}}
 	unthreaded := []Entry{{Path: "/w/c", Message: "m3", Outcome: Granted, From: "lead", FromEpoch: ownRun(t)}}

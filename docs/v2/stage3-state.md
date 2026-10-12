@@ -89,10 +89,12 @@ wrapper exported — so they agree; the round trip below proves it.
 **The tests that build a state directory** set the base (`REWAKE_DIR`) as today; the paths
 they spell gain `v2/` in commit 3 through one helper per package, not by hand. A test that
 writes a room has it made by `buildtest.Room` (`internal/infra/build/buildtest`): the
-acquisition of a launch of the test binary, its lease taken and released, since no
-resolver makes a room any more; the tool rig, whose room belongs to the binary it built,
-bootstraps the room and records that binary's id itself, and the workflow suite names
-its rooms through `Isolation.Room`. A source
+acquisition of a launch of the test binary, since no resolver makes a room any more, and
+the test holds that lease shared until it ends, as a session holds its room's
+(`buildtest.Established` releases it at once, `buildtest.Release` before a switch); the
+tool rig, whose room belongs to the binary it built, bootstraps the room, records that
+binary's id and holds the lease itself, and the workflow suite names its rooms through
+`Isolation.Room`. A source
 scan at the review found 17 lines in 11 internal test files and 20 under `test/`; it is no
 completeness count. `test/toolrig/fault_test.go:86,186` normalizes and matches
 `/rooms/default/...`, and its fault oracle stops matching without `v2`; the suite's

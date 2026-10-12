@@ -28,6 +28,18 @@ const epochEnv = "REWAKE_EPOCH"
 // own, so it is a different run from the test process.
 func otherRun(t *testing.T, dir, name string) registry.Session {
 	t.Helper()
+	session := otherSession(t, dir, name)
+	_ = os.Remove(state.SessionPath(dir, name))
+	if err := registry.Publish(dir, session); err != nil {
+		t.Fatalf("publish: %v", err)
+	}
+	return session
+}
+
+// otherSession describes a live run of name in dir, a process of its own,
+// without publishing it.
+func otherSession(t *testing.T, dir, name string) registry.Session {
+	t.Helper()
 	child := exec.Command("sleep", "60")
 	if err := child.Start(); err != nil {
 		t.Fatalf("start: %v", err)
@@ -40,10 +52,6 @@ func otherRun(t *testing.T, dir, name string) registry.Session {
 	session := registry.Session{
 		Name: name, Harness: agentID, ServicePID: child.Process.Pid, ServiceStart: start, Boot: registrytest.Boot(t),
 		PIDNamespace: proc.Namespace(), CWD: dir, StartedAt: time.Now(), Live: allLive(),
-	}
-	_ = os.Remove(state.SessionPath(dir, name))
-	if err := registry.Publish(dir, session); err != nil {
-		t.Fatalf("publish: %v", err)
 	}
 	return session
 }

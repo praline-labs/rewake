@@ -10,6 +10,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/registry/registrytest"
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 )
 
@@ -33,12 +34,13 @@ func TestTheStateRulesCoverTheBaseAndTheRootsSessions(t *testing.T) {
 	base := realDir(t)
 	root := filepath.Join(base, "v2")
 	legacy := filepath.Join(base, "rooms", "default")
-	room := filepath.Join(root, "rooms", "default")
-	for _, dir := range []string{filepath.Join(legacy, "sessions"), filepath.Join(room, "sessions")} {
-		if err := os.MkdirAll(dir, 0o700); err != nil {
-			t.Fatal(err)
-		}
+	if err := os.MkdirAll(filepath.Join(legacy, "sessions"), 0o700); err != nil {
+		t.Fatal(err)
 	}
+	if err := os.Chmod(base, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	room := buildtest.Room(t, base, "default")
 	start, err := proc.StartTime(os.Getpid())
 	if err != nil {
 		t.Fatal(err)

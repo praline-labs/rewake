@@ -13,7 +13,6 @@ import (
 
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/proc"
-	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // Claim writes the session a checkout was made for into its record.
@@ -23,7 +22,7 @@ func Claim(record Record, owner Owner) (Record, error) {
 	if err != nil {
 		return record, err
 	}
-	return record, state.WriteAtomic(recordPath(record), data)
+	return record, replaceRecord(recordPath(record), data)
 }
 
 // keepIncluded writes what .worktreeinclude copied into the record at once,
@@ -34,7 +33,7 @@ func Claim(record Record, owner Owner) (Record, error) {
 func keepIncluded(record Record) Record {
 	if len(record.Included) > 0 {
 		if data, err := encode(record); err == nil {
-			_ = state.WriteAtomic(recordPath(record), data)
+			_ = replaceRecord(recordPath(record), data)
 		}
 	}
 	return record

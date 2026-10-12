@@ -12,6 +12,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 )
 
 func launch(t *testing.T, args []string, socket string) adapter.LaunchPlan {
@@ -115,7 +116,7 @@ func TestLiveSocketIsNeverRemoved(t *testing.T) {
 }
 
 func TestStaleSocketIsReplaced(t *testing.T) {
-	socket := filepath.Join(t.TempDir(), "stale.sock")
+	socket := filepath.Join(buildtest.Dir(t), "stale.sock")
 	listener, err := net.Listen("unix", socket)
 	if err != nil {
 		t.Fatalf("listen: %v", err)

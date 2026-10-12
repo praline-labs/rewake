@@ -12,6 +12,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -123,10 +124,11 @@ func TestLateMainDiscoversExistingWorkersInItsRoomOnly(t *testing.T) {
 	if err := registry.Update(dir, main); err != nil {
 		t.Fatal(err)
 	}
-	other := filepath.Join(filepath.Dir(dir), "other")
-	if err := state.EnsureSubdir(other); err != nil {
+	base, err := state.BaseForRoom(dir)
+	if err != nil {
 		t.Fatal(err)
 	}
+	other := buildtest.Room(t, base, "other")
 	_ = availabilityPeer(t, other, "foreign", role.Write.ID, 3, true)
 	if err := announceAvailable(context.Background(), dir, main, map[string]registry.Session{}); err != nil {
 		t.Fatal(err)

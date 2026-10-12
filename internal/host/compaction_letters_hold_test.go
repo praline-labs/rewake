@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
@@ -12,6 +13,8 @@ import (
 
 	"github.com/praline-labs/rewake/internal/core/control"
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // A worker that leaves while its command still asks — during the pickup,
@@ -104,6 +107,12 @@ func TestHelperHoldsARecord(t *testing.T) {
 	if dir == "" {
 		t.Skip("run by TestAKilledCommandsRecordIsClosed")
 	}
+	// The command writes under its own lease, as every writer does.
+	base, err := state.BaseForRoom(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	buildtest.Room(t, base, filepath.Base(dir))
 	var pending control.Pending
 	if err := json.Unmarshal([]byte(os.Getenv("REWAKE_TEST_HOLD_PENDING")), &pending); err != nil {
 		t.Fatal(err)

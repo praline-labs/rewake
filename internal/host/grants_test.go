@@ -14,6 +14,7 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/grant/authority"
 	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -142,7 +143,7 @@ func TestMainHoldsTheConversationTheLetterWasPinnedTo(t *testing.T) {
 // for its reader is, one done is not, and its grant goes rather than being
 // confirmed again after the report.
 func TestMainsAuthorityAsksTheMailboxWhetherATaskIsOpen(t *testing.T) {
-	dir := unmadeRoom(t)
+	dir := buildtest.Dir(t)
 	server := listenAuthority(dir, ownEpoch(t), os.Getpid())
 	if server == nil {
 		t.Fatal("main's wrapper did not bind its address")

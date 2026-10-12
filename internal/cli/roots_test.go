@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/registry/registrytest"
 	"github.com/praline-labs/rewake/internal/host/worktree"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -187,12 +188,7 @@ func TestWorktreeOwnerRootIsChecked(t *testing.T) {
 		t.Fatal(err)
 	}
 	legacy := filepath.Join(t.TempDir(), "rooms", "default")
-	if err := os.MkdirAll(state.SessionsPath(legacy), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := registry.Publish(legacy, self); err != nil {
-		t.Fatal(err)
-	}
+	registrytest.Legacy(t, legacy, self)
 	t.Setenv(state.DirEnv, filepath.Join(t.TempDir(), "elsewhere"))
 	record := func(dir string) worktree.Record {
 		return worktree.Record{Path: t.TempDir(), Session: &worktree.Owner{Name: "api", Room: "default", Epoch: self.Epoch(), Dir: dir}}

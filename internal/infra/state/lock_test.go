@@ -26,8 +26,17 @@ func TestMain(m *testing.M) {
 
 // holdLock takes the name lock, writes a marker while inside, and releases it.
 func holdLock(dir string) int {
+	// Each process holds the room's lease, as every writer does.
+	lease, err := state.CreateLeaseLock(dir)
+	if err != nil {
+		return 5
+	}
+	defer lease.Close()
+	if lease.Share(time.Second) != nil || state.Authorize(lease) != nil {
+		return 5
+	}
 	code := 0
-	err := state.WithNameLock(dir, "api", func() error {
+	err = state.WithNameLock(dir, "api", func() error {
 		marker := filepath.Join(dir, "inside")
 		if _, err := os.Stat(marker); err == nil {
 			// Somebody else is inside the lock at the same time.

@@ -14,6 +14,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/grant"
 	"github.com/praline-labs/rewake/internal/core/grant/authority"
 	"github.com/praline-labs/rewake/internal/core/grant/authority/authoritytest"
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -32,7 +33,7 @@ func realDir(t *testing.T) string {
 // confirms again, and nothing a copy only claims: a grant main never made, one
 // whose task is closed, one whose main has ended.
 func TestAResumedRunKeepsOnlyWhatMainConfirmsAgain(t *testing.T) {
-	dir := unmadeRoom(t)
+	dir := buildtest.Dir(t)
 	main := ownEpoch(t)
 	lib, doc, forged := realDir(t), realDir(t), realDir(t)
 

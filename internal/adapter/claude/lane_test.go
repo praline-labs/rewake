@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 )
 
 // receiver stands in for a Claude Code session: it reads each line on its
@@ -110,7 +111,7 @@ func nextReceipt(t *testing.T, l *lane) mail.Receipt {
 }
 
 func TestLaneSilenceIsDelivered(t *testing.T) {
-	dir := t.TempDir()
+	dir := buildtest.Dir(t)
 	r := startReceiver(t, dir)
 	l := startLane(t, dir)
 	result := deliver(l, r, "m1")
@@ -124,7 +125,7 @@ func TestLaneSilenceIsDelivered(t *testing.T) {
 }
 
 func TestLaneHeldThenReleased(t *testing.T) {
-	dir := t.TempDir()
+	dir := buildtest.Dir(t)
 	r := startReceiver(t, dir, "held")
 	l := startLane(t, dir)
 	result := deliver(l, r, "m1")
@@ -142,7 +143,7 @@ func TestLaneHeldThenReleased(t *testing.T) {
 // first: each comes on its own connection, so their order is not kept, and the
 // final one wins either way.
 func TestLaneCloseWordsEndWithTheFinalOne(t *testing.T) {
-	dir := t.TempDir()
+	dir := buildtest.Dir(t)
 	r := startReceiver(t, dir, "held", "expired")
 	l := startLane(t, dir)
 	switch result := deliver(l, r, "m1"); result.State {
@@ -157,7 +158,7 @@ func TestLaneCloseWordsEndWithTheFinalOne(t *testing.T) {
 }
 
 func TestLaneRefusalFails(t *testing.T) {
-	dir := t.TempDir()
+	dir := buildtest.Dir(t)
 	r := startReceiver(t, dir, "refused")
 	l := startLane(t, dir)
 	result := deliver(l, r, "m1")
@@ -172,7 +173,7 @@ func TestLaneRefusalFails(t *testing.T) {
 // A word after the window still reaches the server, which takes the delivery
 // back: a hold is never counted as delivered for long.
 func TestLaneLateWordReachesTheServer(t *testing.T) {
-	dir := t.TempDir()
+	dir := buildtest.Dir(t)
 	r := startReceiver(t, dir)
 	l := startLane(t, dir)
 	if result := deliver(l, r, "m1"); result.State != mail.Delivered {
@@ -197,7 +198,7 @@ func TestLaneLateWordReachesTheServer(t *testing.T) {
 // Past the window the server keeps, a late word is dropped, and so are lines
 // beyond the number kept.
 func TestLaneForgetsSilentLines(t *testing.T) {
-	dir := t.TempDir()
+	dir := buildtest.Dir(t)
 	r := startReceiver(t, dir)
 	l := startLane(t, dir)
 	if result := deliver(l, r, "m1"); result.State != mail.Delivered {
@@ -231,7 +232,7 @@ func TestLaneForgetsSilentLines(t *testing.T) {
 // A reply socket nobody listens on is a killed wrapper's and goes; a live
 // one, a young one, and anything that is not a reply socket, stays.
 func TestLaneSweepsDeadReplySockets(t *testing.T) {
-	dir := t.TempDir()
+	dir := buildtest.Dir(t)
 	dead := filepath.Join(dir, "gone.old.reply.sock")
 	listener, err := net.ListenUnix("unix", &net.UnixAddr{Name: dead, Net: "unix"})
 	if err != nil {
@@ -280,7 +281,7 @@ func TestLaneSweepsDeadReplySockets(t *testing.T) {
 }
 
 func TestLaneWithoutReplySocketWritesPlainly(t *testing.T) {
-	dir := t.TempDir()
+	dir := buildtest.Dir(t)
 	r := startReceiver(t, dir)
 	l := newLane(r.socket, "", false)
 	noted := ""
@@ -328,7 +329,7 @@ func TestLaneOpens(t *testing.T) {
 }
 
 func TestLaneMakesItsOwnDirectory(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "sock")
+	dir := filepath.Join(buildtest.Dir(t), "replies")
 	l := newLane(filepath.Join(dir, "a.sock"), filepath.Join(dir, "a.reply.sock"), true)
 	defer l.Close()
 	if err := l.Start(context.Background(), func(note string) { t.Fatal(note) }); err != nil {

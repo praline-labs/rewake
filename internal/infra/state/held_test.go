@@ -7,7 +7,7 @@ import (
 )
 
 func TestTryHoldWaitsForTheWriter(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "record.json")
+	path := filepath.Join(leasedDir(t), "record.json")
 	writer, err := WriteAtomicHeld(path, []byte("{}"))
 	if err != nil {
 		t.Fatal(err)
@@ -28,7 +28,7 @@ func TestTryHoldWaitsForTheWriter(t *testing.T) {
 // lock: the lock is free, on a file no name leads to, and holding it would
 // pass a closed record for an open one.
 func TestTryHoldRefusesAFileRemovedBeforeItsLock(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "record.json")
+	path := filepath.Join(leasedDir(t), "record.json")
 	writer, err := WriteAtomicHeld(path, []byte("{}"))
 	if err != nil {
 		t.Fatal(err)
@@ -50,7 +50,7 @@ func TestTryHoldRefusesAFileRemovedBeforeItsLock(t *testing.T) {
 // The same, with another file under the name by the time of the lock: the
 // lock taken is not that file's.
 func TestTryHoldRefusesAFileReplacedBeforeItsLock(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "record.json")
+	path := filepath.Join(leasedDir(t), "record.json")
 	writer, err := WriteAtomicHeld(path, []byte("{}"))
 	if err != nil {
 		t.Fatal(err)

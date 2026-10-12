@@ -5,12 +5,13 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 )
 
 // Hold hands over the record as it is under the hold, not as it was listed:
 // a record closed in between is not held at all.
 func TestHoldReadsTheRecordUnderItsHold(t *testing.T) {
-	dir := t.TempDir()
+	dir := buildtest.Dir(t)
 	pending := Pending{ID: NewID(), Worker: registry.Session{Name: "worker"}, AskerEpoch: "1.2", AskedAt: time.Now().UTC()}
 	release, err := Remember(dir, "lead", pending)
 	if err != nil {

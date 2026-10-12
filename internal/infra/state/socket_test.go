@@ -10,7 +10,7 @@ import (
 // A socket of the state is private, removed when it closes, and removed
 // once: a second close leaves the socket the next run of the name bound.
 func TestASocketIsRemovedOnceByItsOwnClose(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "api.sock")
+	path := filepath.Join(leasedDir(t), "api.sock")
 	first, err := Listen(path)
 	if err != nil {
 		t.Fatal(err)
@@ -41,7 +41,7 @@ func TestASocketIsRemovedOnceByItsOwnClose(t *testing.T) {
 // A close in view mode closes the listener and leaves its file: the removal
 // is the write the mode refuses.
 func TestAClosedSocketStaysWhenItsRemovalIsRefused(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "api.sock")
+	path := filepath.Join(leasedDir(t), "api.sock")
 	listener, err := Listen(path)
 	if err != nil {
 		t.Fatal(err)

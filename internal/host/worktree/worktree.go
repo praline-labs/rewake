@@ -33,8 +33,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // RootEnv moves the directory rewake keeps its worktrees in.
@@ -277,8 +275,8 @@ func claim(record Record) error {
 	if err != nil {
 		return err
 	}
-	if err := state.PublishExclusive(recordPath(record), data); err != nil {
-		if errors.Is(err, state.ErrNameTaken) {
+	if err := publishRecord(recordPath(record), data); err != nil {
+		if errors.Is(err, errRecordTaken) {
 			if held, readErr := read(recordPath(record)); readErr == nil {
 				record = held
 			}

@@ -11,6 +11,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/build"
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -92,6 +93,8 @@ func TestEveryViewLeavesMissingAndExistingStateUnchanged(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Setenv(state.SessionEnv, "api")
+		// The scene is set; the views run while a switch holds the lease.
+		buildtest.Release(dir)
 		holder := holdExclusive(t, dir)
 		defer holder()
 		check(t, os.Getenv(state.DirEnv))
@@ -169,7 +172,7 @@ func TestViewWriteAttemptFailsEvenIfIgnored(t *testing.T) {
 	var stdout, stderr strings.Builder
 	ctx := &Context{Stdout: &stdout, Stderr: &stderr}
 	t.Setenv(state.DirEnv, filepath.Join(t.TempDir(), "state"))
-	path := filepath.Join(t.TempDir(), "written")
+	path := filepath.Join(buildtest.Dir(t), "written")
 	code := ctx.within(accessView, Call{}, func() int {
 		_ = state.WriteAtomic(path, []byte("x"))
 		return ExitOK

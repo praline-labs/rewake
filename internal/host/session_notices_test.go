@@ -13,6 +13,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/session"
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -319,10 +320,11 @@ func TestObservedCompactionSurvivesDepartureBeforeNextScan(t *testing.T) {
 func TestStateNoticeObserverStaysInRoomAndDoesNotNotifyItself(t *testing.T) {
 	dir := stateDir(t)
 	main := availabilityPeer(t, dir, "main-fixture", role.Main.ID, 1, true)
-	other := filepath.Join(filepath.Dir(dir), "other")
-	if err := state.EnsureSubdir(other); err != nil {
+	base, err := state.BaseForRoom(dir)
+	if err != nil {
 		t.Fatal(err)
 	}
+	other := buildtest.Room(t, base, "other")
 	foreign := availabilityPeer(t, other, "foreign-worker", role.General.ID, 2, true)
 	noticeState(t, other, foreign, "idle", 1, []session.CompactionEvent{{Sequence: 1, ObservedAt: time.Now()}})
 	noticeState(t, dir, main, "idle", 1, []session.CompactionEvent{{Sequence: 1, ObservedAt: time.Now()}})
