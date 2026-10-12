@@ -2,11 +2,13 @@ package legacy_test
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
 
+	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -131,6 +133,28 @@ func TestLegacyClearNeverFollowsForeignPaths(t *testing.T) {
 			record := s.liveSession(s.room(outside, "x"), "web")
 			mustSymlink(s.t, record, filepath.Join(room, "sessions", "web.json"))
 		}, "web.json cannot be checked"},
+		{"a record swapped for a link after its check", func(s *scene, outside string) {
+			// The record names a wrapper that ended, so admission passes; at
+			// validation, between its check and its open, a link to another
+			// record of an ended wrapper takes its place.
+			pid, start, namespace := endedPid(s.t)
+			s.session(s.room(s.rooms(), "old"), "web", pid, start, namespace)
+			ended := s.session(s.room(outside, "x"), "web", pid, start, namespace)
+			setAside := false
+			faults(s.t, func(op, path string) error {
+				switch {
+				case op == state.OpStep && path == "legacy set aside":
+					setAside = true
+				case setAside && op == state.OpRead && strings.HasSuffix(path, "/old/sessions/web.json"):
+					setAside = false
+					if err := os.Remove(path); err != nil {
+						s.t.Fatal(err)
+					}
+					mustSymlink(s.t, ended, path)
+				}
+				return nil
+			})
+		}, "web.json cannot be checked"},
 		{"a link inside a tree that passes", func(s *scene, outside string) {
 			mustSymlink(s.t, outside, filepath.Join(s.room(s.rooms(), "old"), "sock", "elsewhere"))
 		}, ""},
@@ -157,6 +181,22 @@ func TestLegacyClearNeverFollowsForeignPaths(t *testing.T) {
 			}
 		})
 	}
+}
+
+// endedPid is a process that ran and was reaped: its pid, start and
+// namespace, which /proc shows gone.
+func endedPid(t *testing.T) (int, uint64, string) {
+	t.Helper()
+	child := exec.Command("/bin/true")
+	if err := child.Start(); err != nil {
+		t.Fatal(err)
+	}
+	start, err := proc.StartTime(child.Process.Pid)
+	_ = child.Wait()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return child.Process.Pid, start, proc.Namespace()
 }
 
 func mustSymlink(t *testing.T, target, link string) {

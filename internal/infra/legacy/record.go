@@ -51,15 +51,15 @@ func readWrapper(path string) (wrapper, error) {
 // of it and without waiting on a special file: a FIFO at a record's name
 // would hold the open, and with it the clear lock and the room locks, until
 // a writer came. It is refused before the open, and the descriptor checked
-// after it.
+// after it; a link put in its place between the two is not followed.
 func readFile(path string) ([]byte, error) {
-	if err := state.AskRead(path); err != nil {
-		return nil, err
-	}
 	if info, err := os.Lstat(path); err != nil {
 		return nil, err
 	} else if !info.Mode().IsRegular() {
 		return nil, errors.New("it is not a regular file")
+	}
+	if err := state.AskRead(path); err != nil {
+		return nil, err
 	}
 	file, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_CLOEXEC|syscall.O_NONBLOCK, 0)
 	if err != nil {
