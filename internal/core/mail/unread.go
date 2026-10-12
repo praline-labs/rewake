@@ -28,7 +28,7 @@ func LinkUnread(dir, to, id string) error {
 	if err := state.EnsureSubdir(unread); err != nil {
 		return err
 	}
-	err := os.Link(filepath.Join(state.InboxPath(dir, to), id+".json"), filepath.Join(unread, id+".json"))
+	err := state.Link(filepath.Join(state.InboxPath(dir, to), id+".json"), filepath.Join(unread, id+".json"))
 	if err != nil && !errors.Is(err, os.ErrExist) {
 		return err
 	}
@@ -224,7 +224,7 @@ func move(id, from, into string) error {
 	// The age that matters is the age of the move: an old message refused at
 	// startup would otherwise be swept away in the same breath.
 	now := time.Now()
-	_ = os.Chtimes(target, now, now)
+	_ = state.Touch(target, now)
 	// Both ends are flushed: after a crash the message must be in one of the two
 	// places, never in both and never in neither.
 	_ = state.SyncDir(from)

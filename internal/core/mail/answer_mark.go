@@ -32,7 +32,7 @@ func markContent(boot int64) []byte {
 // still printing it, and a mark written back then would hide that report from
 // everyone else.
 func touchMark(path string) {
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_TRUNC, 0)
+	file, err := state.OpenFile(path, os.O_WRONLY|os.O_TRUNC, 0)
 	if err != nil {
 		return
 	}

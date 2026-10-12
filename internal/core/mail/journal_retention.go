@@ -41,7 +41,7 @@ func sweepTurnRecords(dir, name, live string, cutoff time.Time) {
 			case !ok:
 				// Nothing is removed on a guess.
 			case epoch == live:
-				_ = os.Chtimes(path, now, now)
+				_ = state.Touch(path, now)
 			default:
 				_ = state.Remove(path)
 			}

@@ -47,7 +47,7 @@ func (s *Server) answerExpired(message mail.Message, reserved bool) (bool, error
 			return false, err
 		}
 		unread := filepath.Join(state.UnreadPath(s.Dir, s.Name), message.ID+".json")
-		_ = os.Chtimes(unread, lifetime.ReleasedAt, lifetime.ReleasedAt)
+		_ = state.Touch(unread, lifetime.ReleasedAt)
 	}
 	return s.expired(mail.Message{CreatedAt: lifetime.ReleasedAt}), nil
 }

@@ -42,7 +42,7 @@ func RecordTurnStart(dir, name, epoch string, started int64) error {
 		return err
 	}
 	reading := strconv.FormatInt(started, 10)
-	file, err := os.OpenFile(filepath.Join(path, reading), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+	file, err := state.OpenFile(filepath.Join(path, reading), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 	if err == nil {
 		err = file.Close()
 	} else if errors.Is(err, os.ErrExist) {
@@ -54,7 +54,7 @@ func RecordTurnStart(dir, name, epoch string, started int64) error {
 	entries, _ := os.ReadDir(path)
 	for _, entry := range entries {
 		if value, parsed := strconv.ParseInt(entry.Name(), 10, 64); parsed == nil && value < started {
-			_ = os.Remove(filepath.Join(path, entry.Name()))
+			_ = state.Discard(filepath.Join(path, entry.Name()))
 		}
 	}
 	return nil

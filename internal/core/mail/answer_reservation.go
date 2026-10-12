@@ -2,7 +2,6 @@ package mail
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -19,7 +18,7 @@ func ReserveAnswer(dir, name, question string) (func(), error) {
 		return nil, err
 	}
 	mark := filepath.Join(marks, question)
-	if err := os.WriteFile(mark, markContent(boottime.Now()), 0o600); err != nil {
+	if err := state.WriteFile(mark, markContent(boottime.Now()), 0o600); err != nil {
 		return nil, err
 	}
 	stop, done := make(chan struct{}), make(chan struct{})
