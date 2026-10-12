@@ -21,13 +21,17 @@ import (
 // availability publisher here, paused in a write to main's mailbox — keeps
 // the room's lease held until it stops, however long that takes: Run may
 // return first, but no write of the run comes after the lease is released.
-func TestRunKeepsTheLeaseUntilItsWorkersStop(t *testing.T) {
+// The run's directory stays as long, and goes once the worker has stopped,
+// before the lease does.
+func TestRunKeepsTheLeaseAndItsDirectoryUntilItsWorkersStop(t *testing.T) {
 	dir := stateDir(t)
 	_ = availabilityPeer(t, dir, "worker-fixture", role.General.ID, 1, true)
 	signal := filepath.Join(t.TempDir(), "exit-harness")
 	entered, resume, releasedNote := make(chan struct{}), make(chan struct{}), make(chan struct{})
 	var paused, releasedOnce sync.Once
 	var released, resumed atomic.Bool
+	var runDir atomic.Value
+	runDir.Store("")
 	var mu sync.Mutex
 	var wrong []string
 	before := state.Fault
@@ -37,6 +41,13 @@ func TestRunKeepsTheLeaseUntilItsWorkersStop(t *testing.T) {
 				mu.Lock()
 				wrong = append(wrong, "the lease was released while the publisher was paused")
 				mu.Unlock()
+			}
+			if made := runDir.Load().(string); made != "" {
+				if _, err := os.Lstat(made); err == nil {
+					mu.Lock()
+					wrong = append(wrong, "the lease was released before the run directory went")
+					mu.Unlock()
+				}
 			}
 			released.Store(true)
 			releasedOnce.Do(func() { close(releasedNote) })
@@ -83,6 +94,11 @@ func TestRunKeepsTheLeaseUntilItsWorkersStop(t *testing.T) {
 		_ = os.WriteFile(signal, nil, 0o600)
 		t.Fatal("the availability publication did not start")
 	}
+	entries, err := os.ReadDir(state.RunsPath(dir))
+	if err != nil || len(entries) != 1 {
+		t.Fatalf("the run's directory: %v %v", entries, err)
+	}
+	runDir.Store(filepath.Join(state.RunsPath(dir), entries[0].Name()))
 	if err := os.WriteFile(signal, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -90,6 +106,9 @@ func TestRunKeepsTheLeaseUntilItsWorkersStop(t *testing.T) {
 	time.Sleep(1500 * time.Millisecond)
 	if released.Load() {
 		t.Fatal("the lease was released while the publisher was paused")
+	}
+	if _, err := os.Stat(runDir.Load().(string)); err != nil {
+		t.Fatalf("the run directory went while a worker of the run still ran: %v", err)
 	}
 	resumed.Store(true)
 	close(resume)
@@ -105,6 +124,9 @@ func TestRunKeepsTheLeaseUntilItsWorkersStop(t *testing.T) {
 	case <-releasedNote:
 	case <-time.After(5 * time.Second):
 		t.Fatal("the lease was never released")
+	}
+	if _, err := os.Lstat(runDir.Load().(string)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("the run directory outlived the run's workers: %v", err)
 	}
 	mu.Lock()
 	defer mu.Unlock()

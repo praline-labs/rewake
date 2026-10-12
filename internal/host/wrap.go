@@ -144,14 +144,15 @@ func Run(ctx context.Context, request Request) (int, error) {
 			removeSocket(session.Socket)
 		}
 	}()
-	// The run's directory comes before anything is prepared and goes after
-	// everything registered below has stopped, on every path out.
+	// The run's directory comes before anything is prepared and goes at the
+	// run's end, once every worker of the run has stopped and before its hold
+	// on the lease goes (docs/v2/stage3-rundir.md), on every path out.
 	reclaimRuns(request.Dir)
 	runDir, err := makeRunDir(request.Dir, name, epoch)
 	if err != nil {
 		return 0, err
 	}
-	defer func() { _ = state.RemoveAll(runDir) }()
+	life.atEnd(func() { _ = state.RemoveAll(runDir) })
 	if request.OnClaimed != nil {
 		if err := request.OnClaimed(session); err != nil {
 			return 0, err

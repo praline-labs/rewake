@@ -276,7 +276,8 @@ retry among them, are workers of the run, and the run keeps its own hold on the 
 (`build.Lease.Keep`, beside the caller's) until the last of them has returned. Their
 stops wait only so long, so a write stalled in the filesystem does not hold the
 wrapper's exit: `Run` may return first, and the lease then goes when that worker ends,
-or with the process (`TestRunKeepsTheLeaseUntilItsWorkersStop`,
+or with the process, and the run's directory with it ([stage3-rundir.md](stage3-rundir.md);
+`TestRunKeepsTheLeaseAndItsDirectoryUntilItsWorkersStop`,
 `TestALiveSetWritesNothingAfterItsStop`, `TestAStoppedWorkerCountsUntilItsLastWrite`). A
 stopped live set starts no write; the channel keeper's heartbeat, the endpoint, delivery
 and the fixture's backend are joined by their stops. A worktree change form takes
