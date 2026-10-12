@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -239,6 +240,12 @@ func TestDecisionRecoveryRecordsStopWhenUnknown(t *testing.T) {
 		if fileExists(filepath.Join(JournalPath(lab.dir, "api"), "end"+doneSuffix)) {
 			t.Fatal("the journal ran past the installation's unknown")
 		}
+		// The installation met it, not only the plan after it.
+		if !slices.ContainsFunc(stopsOnRecord(t, lab.dir, "api"), func(stop openStop) bool {
+			return stop.record.Kind == causeEffect && stop.record.Op == installOp
+		}) {
+			t.Fatalf("no occurrence of the installation's: %+v", stopsOnRecord(t, lab.dir, "api"))
+		}
 	})
 	t.Run("another journal", func(t *testing.T) {
 		lab := newDecisionLab(t)
@@ -263,6 +270,17 @@ func TestDecisionRecoveryRecordsStopWhenUnknown(t *testing.T) {
 			t.Fatal("the installation wrote over a name it found taken")
 		}
 	})
+	t.Run("a closure of another decision", func(t *testing.T) {
+		lab := newDecisionLab(t)
+		d := lab.decision(t, ChoiceArrived)
+		path := writeDecision(t, lab.dir, d) + closedSuffix
+		writeRecord(t, path, Closure{Decision: NewID(), Journal: "end", Report: lab.report.ID, Waits: []Waiter{}, At: time.Now()})
+		before, _ := os.ReadFile(path)
+		unknownStop(t, lab)
+		if after, _ := os.ReadFile(path); string(after) != string(before) || fileExists(filepath.Join(JournalPath(lab.dir, "api"), "end"+doneSuffix)) {
+			t.Fatal("a closure of another decision was written over or taken for this one's")
+		}
+	})
 	t.Run("summary", func(t *testing.T) {
 		lab := newDecisionLab(t)
 		d := lab.decision(t, ChoiceNotArrived)
@@ -273,8 +291,9 @@ func TestDecisionRecoveryRecordsStopWhenUnknown(t *testing.T) {
 }
 
 // What a decision installed stays installed through retention: once the
-// letters it put are read and swept, a barrier tells no note again, links no
-// resend again and publishes no report again.
+// letters it put are read and swept, and the once marks that proved them with
+// them, a barrier tells no note again, links no resend again and publishes no
+// report again.
 func TestDecisionEffectsAreNotRepeatedAfterRetention(t *testing.T) {
 	lab := newDecisionLab(t)
 	d := lab.decision(t, ChoiceNotArrived)
@@ -293,6 +312,9 @@ func TestDecisionEffectsAreNotRepeatedAfterRetention(t *testing.T) {
 		if err := os.Remove(filepath.Join(state.DonePath(lab.dir, "web"), id+".json")); err != nil {
 			t.Fatal(err)
 		}
+	}
+	if err := os.RemoveAll(filepath.Join(state.InboxPath(lab.dir, "web"), "once")); err != nil {
+		t.Fatal(err)
 	}
 	journals := func() []string {
 		entries, err := os.ReadDir(JournalPath(lab.dir, "api"))

@@ -48,6 +48,13 @@ func TestDecisionInstallationSurvivesEveryBrokenWrite(t *testing.T) {
 			t.Errorf("%s: the barrier did not make it again", label)
 			continue
 		}
+		// A closure says the tail ran, so none is there while a wait it
+		// clears still stands.
+		if fileExists(DecisionPath(dir, "api", lab.report.ID) + closedSuffix) {
+			if waits, err := ReadWaiters(dir, "api", lab.epoch); err != nil || len(waits) != 0 {
+				t.Errorf("%s: a closure is recorded with the waits %v %v", label, waits, err)
+			}
+		}
 		converges(t, dir, label)
 	}
 	for _, read := range sorted(base.applied) {

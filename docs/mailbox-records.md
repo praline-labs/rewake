@@ -179,7 +179,12 @@ paths; once it reads, the occurrence is closed.
   effect's cause, so every call answers it from the record. It is resolved once its
   operation is decided by evidence: a barrier has run that journal through to its
   completion, or the journal is on record as completed. A barrier that was canceled,
-  whose effect failed, or that met another cause has not.
+  whose effect failed, or that met another cause has not. One the installation of
+  operator decisions met (operation `.install`) is resolved once that installation has
+  nothing left it could fail on ([stage3-decision-recovery.md](v2/stage3-decision-recovery.md#installing-the-effects)).
+- An occurrence a valid operator decision disposes — naming it exactly, about its own
+  report — is no longer open, and protects nothing; the decision closes the report's step
+  in its journal ([stage3-decision.md](v2/stage3-decision.md)).
 - An occurrence that could not be recorded is tried once more after the plan that
   explains the failure; the answer names every cause and every failed write, and is
   then the one place the effect's cause is left. Until a later call records it, a

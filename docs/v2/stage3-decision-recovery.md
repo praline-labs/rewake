@@ -90,6 +90,25 @@ on no other decision. Then the plan reads everything, the new journal included, 
 plan that meets no unknown runs the journals. A decision that does not read installs
 nothing; the plan meets it as an undecidable cause.
 
+**The installation's own stop** (S18, `installDecisions`, `core/mail/decision_install.go`).
+What the installation cannot read — the decisions' directory, a decision, a `told` record,
+a resend's name — and a resend it could not link are the effect's failure, all of them
+named, each decision tried on its own: the barrier records the unknowns as occurrences
+of operation `.install` (`failedEffect`, `core/mail/reconcile.go`) and runs no journal
+in that pass. No journal is named so: a name with a dot first is a write that never
+finished. Such an occurrence is resolved once the installation has nothing left it could
+fail on — every decision reads, every resend's name is there in either form, every `told`
+record reads or is not there yet (`installed`) — read as the barrier's own pass reads,
+since the installation ran there. The plan runs the installation again, writing nothing,
+so the gate predicts what the barrier would install and whatever the installation reads
+is read before the first effect; in the barrier the installation has run before the
+plan, and the plan finds it installed. A note that cannot be told is no failure: it stays
+owed and stops nothing, in the plan as in the barrier. Every write of the installation
+broken once, and every read of its effects failing once, ends where the installation
+without the failure ends (`TestDecisionInstallationSurvivesEveryBrokenWrite`); the plan's
+scenes take a decision installed, since an installation that precedes the plan cannot
+meet the rule that nothing changes before the plan's stop.
+
 **1. The resend J'** ("did not arrive"). Its name is fixed by D: `journal/decided-<D>`.
 Under the sender's mailbox lock the barrier looks for `journal/decided-<D>` and
 `journal/decided-<D>.done` and, finding neither, links the bytes of J' from D at
@@ -123,11 +142,12 @@ them.
 run, each when it did not decide verified, one note when they are the same run — and each
 note whole, its id and text included; a later change of role or a later main never
 retargets them. A main that cannot be read refuses a new D; a room positively without a
-live main owes no main's note. Each note is a `Note`, published once through the told
-run's once record (`PublishOnce`, `core/mail/once.go`): idempotent while the run lives,
-since a live run's once marks are not swept (`sweepOnce`), and refused with
-`ErrRecipientEnded` once it has ended. A note to the sender's own mailbox is published
-through the already-held lock, never through `PublishOnce` recursively. After the
+live main owes no main's note. Each note is a `Note`, published once as a report is
+published (`publishWith`, `core/mail/journal_held.go`): in one section of the told run's
+mailbox lock, its run read there, under that run's once marks — idempotent while the run
+lives, since a live run's once marks are not swept (`sweepOnce`), and answered ended,
+writing nothing, once it has ended. A note to the sender's own mailbox is published
+through the already-held lock, never by taking it again. After the
 answer — written now, written before, or the run proven ended — the barrier records
 `decisions/<R-id>.told-recipient` or `.told-main` (write-once), and later barriers stop
 asking; no other error, a failed liveness read included, is taken for an ended run. A

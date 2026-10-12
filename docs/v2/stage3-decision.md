@@ -230,7 +230,7 @@ live paths go on with their ordinary writers in both mailboxes.
 
 | Reader | Consults |
 |---|---|
-| the barrier (`core/mail/reconcile.go`) | first, before the plan and whatever the plan will meet, each decision with an effect not installed — its resend's name in neither form, a note with no `told` record — and installs it; then the plan, each journal reading the decisions for its reports and the open occurrences about them before the liveness check; then, only when the plan meets no unknown, the unfinished journals and their tails; then `stopState` |
+| the barrier (`core/mail/reconcile.go`) | first, before the plan and whatever the plan will meet, each decision with an effect not installed — its resend's name in neither form, a note with no `told` record — and installs it, an installation it cannot read being an occurrence of operation `.install`; then the plan, which runs the installation again read-only, so the gate predicts it, each journal reading the decisions for its reports and the open occurrences about them before the liveness check; then, only when the plan meets no unknown, the unfinished journals and their tails; then `stopState` |
 | `stopState` and every caller of it (S3's list) | occurrences without a resolution and not disposed by a valid decision: one that names the occurrence exactly and is about the occurrence's own report, the occurrence's record and any resolution beside it readable (`disposals`, `core/mail/decision_view.go`) |
 | the mailbox's sweeps | skip the paths open occurrences name; a disposed occurrence protects nothing |
 | the retention of journals (`sweepTurnRecords`) | keeps every journal named `decided-*` in every form, whoever's run ended |

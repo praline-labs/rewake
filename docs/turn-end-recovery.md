@@ -188,6 +188,11 @@ and the sweep changes nothing.
 The barrier runs under the mailbox lock before a turn end reads a wait and before
 adoption takes one over (8-reconcile). In order:
 
+0. Install what the mailbox's operator decisions fixed — a resend's journal, the notes —
+   before everything below, stopped or not: recovery writing its own records and
+   telling, never a report of the stopped mailbox published or a wait cleared
+   ([stage3-decision-recovery.md](v2/stage3-decision-recovery.md#installing-the-effects)).
+   What it cannot read stops the mailbox as an effect's failure, and no journal runs.
 1. Plan before any effect: read every file of the tree against the list of record
    kinds, then run the remaining steps below as a plan that writes nothing, so what each
    decides by is read first ([mailbox-records.md](mailbox-records.md#the-plan-and-the-seam)).
@@ -195,7 +200,9 @@ adoption takes one over (8-reconcile). In order:
    call that would change the mailbox, and each cause is recorded as an occurrence of
    the stop, so a stop found late lets no effect through.
 2. Complete every unfinished journal in turn. Each report the journal has not
-   settled yet is established from the evidence above and settled: published when its
+   settled yet reads its decision first: a decided report's step is closed by the
+   decision and never published. Any other is established from the evidence above and
+   settled: published when its
    recipient's run is the one it was addressed to, recorded moot when that run has ended
    or was replaced, since it can reach nobody. The journal is saved after each report,
    so an earlier report may be out before a later one is found moot. A report an open

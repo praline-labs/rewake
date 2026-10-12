@@ -5,8 +5,9 @@ an unknown stops — in the full wording of [design-rules.md](../v2/design-rules
 from `mail-bridge-cli.md` rules 1–8 without the 1.x migration. Each rule ends with the
 tests that hold it ([README.md](README.md)). The operator decision on an unknown
 outcome, which the last clause of E8 names, joins this file with its rules in S18
-(part B, [stage3-decision-recovery.md](../v2/stage3-decision-recovery.md)); until then
-nothing lifts a stop without returning evidence.
+(part B, [stage3-decision-recovery.md](../v2/stage3-decision-recovery.md)). S18's first
+part builds the decision's readers and recovery and no writer of a decision, so until a
+later part does, nothing lifts a stop without returning evidence.
 
 ## The rules
 

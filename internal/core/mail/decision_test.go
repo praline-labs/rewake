@@ -25,14 +25,6 @@ func newDecisionLab(t *testing.T) decisionLab {
 	return decisionLab{dir: dir, epoch: epoch, report: report, stop: Disposal{Key: strings.Repeat("ab", 16), Occurrence: NewID()}}
 }
 
-func (l decisionLab) subject() Subject {
-	r := l.report
-	return Subject{
-		Sender: r.From, SenderRun: r.FromEpoch, Journal: "end", Report: r.ID, Kind: r.Kind,
-		Recipient: r.To, RecipientRun: r.ToEpoch,
-	}
-}
-
 // decision is a decision on the lab's report: choice, by the person, its
 // observations what a capture read of the journal.
 func (l decisionLab) decision(t *testing.T, choice string) Decision {
