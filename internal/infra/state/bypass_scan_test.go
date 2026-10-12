@@ -31,8 +31,8 @@ var bypassEffects = map[string]map[string]bool{
 // whatever it was opened for: fchmod and fchown work on a read-only one. A
 // content write needs a writable descriptor, which only an open counted here
 // or a guarded one gives. Without type information every method of these
-// names counts, whatever its receiver — a package's function aside — the safe
-// side again.
+// names counts, whatever its receiver — the safe side again. A package's
+// function aside: a selector on an import's name the file binds nowhere else.
 var descriptorEffects = set("Chmod", "Chown")
 
 // readFlags are the open flags, in os's spelling and syscall's, a read is
@@ -89,6 +89,7 @@ func bypassRefs(t *testing.T, path string) []bypassRef {
 			aliases[spec.Name.Name] = value
 		}
 	}
+	bound := boundNames(file)
 	effect := func(expr ast.Expr) string {
 		switch expr := expr.(type) {
 		case *ast.SelectorExpr:
@@ -118,7 +119,7 @@ func bypassRefs(t *testing.T, path string) []bypassRef {
 		case *ast.SelectorExpr:
 			if name := effect(node); name != "" && !reads[node] {
 				found = append(found, bypassRef{name, fset.Position(node.Pos()).Line})
-			} else if x, ok := node.X.(*ast.Ident); descriptorEffects[node.Sel.Name] && (!ok || !imported[x.Name]) {
+			} else if x, ok := node.X.(*ast.Ident); descriptorEffects[node.Sel.Name] && (!ok || !imported[x.Name] || bound[x.Name]) {
 				found = append(found, bypassRef{"descriptor." + node.Sel.Name, fset.Position(node.Pos()).Line})
 			}
 			// What is selected from anything but a package is a field or a
@@ -134,6 +135,53 @@ func bypassRefs(t *testing.T, path string) []bypassRef {
 	}
 	ast.Inspect(file, visit)
 	return found
+}
+
+// boundNames lists every name a file declares but its imports: a local, a
+// parameter, a range or switch variable, a field, a function, a type. A
+// selector on one of them may be a value's, whatever import shares its name,
+// so its package is not taken for granted; where a name is bound matters not,
+// the safe side. Nothing outside the file can shadow an import: a name of the
+// package block may not be an import's of one of its files.
+func boundNames(file *ast.File) map[string]bool {
+	bound := map[string]bool{}
+	add := func(names ...*ast.Ident) {
+		for _, name := range names {
+			if name != nil {
+				bound[name.Name] = true
+			}
+		}
+	}
+	ast.Inspect(file, func(node ast.Node) bool {
+		switch node := node.(type) {
+		case *ast.AssignStmt:
+			if node.Tok == token.DEFINE {
+				for _, lhs := range node.Lhs {
+					if name, ok := lhs.(*ast.Ident); ok {
+						add(name)
+					}
+				}
+			}
+		case *ast.RangeStmt:
+			if node.Tok == token.DEFINE {
+				for _, side := range []ast.Expr{node.Key, node.Value} {
+					if name, ok := side.(*ast.Ident); ok {
+						add(name)
+					}
+				}
+			}
+		case *ast.ValueSpec:
+			add(node.Names...)
+		case *ast.Field:
+			add(node.Names...)
+		case *ast.FuncDecl:
+			add(node.Name)
+		case *ast.TypeSpec:
+			add(node.Name)
+		}
+		return true
+	})
+	return bound
 }
 
 // onlyNames answers whether an argument is spelled from the names allowed

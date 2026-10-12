@@ -46,7 +46,9 @@ unless its flag is spelled from read flags alone, `os.Remove`, `os.RemoveAll`, `
 `os.CopyFS`, `os.OpenRoot`, the `syscall` forms of the same, the owners, times, extended
 attributes and nodes among them, with `syscall.Open` read by its flag and `syscall.Mmap` by its
 protection, `syscall.Flock`, any method named `Chmod` or `Chown` but a package's function — a
-descriptor changes its file's mode and owner whatever it was opened for, a read-only one too —
+descriptor changes its file's mode and owner whatever it was opened for, a read-only one too;
+a selector counts as a package's only on an import's name the file binds nowhere else, so a
+local, a parameter or a range variable that shadows an import is a descriptor's —
 and a listener whose address is not proven abstract: only a string literal beginning with `@`,
 a concatenation whose first operand is one, or a `UnixAddr` whose `Name` is one; a variable or
 a call may be a path, whatever literal it holds. Its table

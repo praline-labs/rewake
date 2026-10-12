@@ -132,16 +132,21 @@ func TestTheBypassCheckSeesEveryWrite(t *testing.T) {
 
 // A descriptor changes its file's mode or owner whatever it was opened for: a
 // read-only open gives one that can chmod. Its Chmod and Chown count wherever
-// they are reached, called, kept or named by method expression; a function of
-// the same name in another package is that package's, and a content write
-// needs a writable descriptor, which only a counted or guarded open gives.
+// they are reached, called, kept or named by method expression, and under a
+// name that shadows an import; a function of the same name in another package
+// is that package's, and a content write needs a writable descriptor, which
+// only a counted or guarded open gives.
 func TestTheBypassCheckSeesADescriptorsMetadataChange(t *testing.T) {
 	writes := map[string]string{
-		"a read-opened chmod": "import \"os\"\nfunc f(path string) error { file, err := os.Open(path); if err != nil { return err }; defer file.Close(); return file.Chmod(0o600) }",
-		"a chown":             "import \"os\"\nfunc f(file *os.File) { _ = file.Chown(0, 0) }",
-		"a method value":      "import \"os\"\nfunc f(file *os.File) func(os.FileMode) error { return file.Chmod }",
-		"a method expression": "import \"os\"\nvar chmod = (*os.File).Chmod",
-		"a nested receiver":   "import \"os\"\nfunc f(s struct{ F *os.File }) { _ = s.F.Chmod(0) }",
+		"a read-opened chmod":               "import \"os\"\nfunc f(path string) error { file, err := os.Open(path); if err != nil { return err }; defer file.Close(); return file.Chmod(0o600) }",
+		"a chown":                           "import \"os\"\nfunc f(file *os.File) { _ = file.Chown(0, 0) }",
+		"a method value":                    "import \"os\"\nfunc f(file *os.File) func(os.FileMode) error { return file.Chmod }",
+		"a method expression":               "import \"os\"\nvar chmod = (*os.File).Chmod",
+		"a nested receiver":                 "import \"os\"\nfunc f(s struct{ F *os.File }) { _ = s.F.Chmod(0) }",
+		"a descriptor shadowing an import":  "import (\"os\"; \"io\")\nvar _ io.Reader\nfunc f(path string) error { io, err := os.Open(path); if err != nil { return err }; defer io.Close(); return io.Chmod(0o600) }",
+		"a parameter shadowing an import":   "import (\"os\"; \"io\")\nvar _ io.Reader\nfunc f(io *os.File) { _ = io.Chown(0, 0) }",
+		"a range value shadowing an import": "import (\"os\"; \"io\")\nvar _ io.Reader\nfunc f(files []*os.File) { for _, io := range files { _ = io.Chmod(0) } }",
+		"a var shadowing an alias":          "import (\"os\"; fs \"io/fs\")\nvar _ fs.FileMode\nfunc f(file *os.File) { var fs = file; _ = fs.Chmod(0) }",
 	}
 	for name, body := range writes {
 		if found := bypassRefs(t, writeSource(t, body)); len(found) == 0 {
