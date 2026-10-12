@@ -130,6 +130,7 @@ func TestCrashedRunIsReclaimedOnlyAfterProvenDeath(t *testing.T) {
 	}
 }
 
+// liveEpoch names a run whose wrapper is the given process, this one by default.
 func liveEpoch(t *testing.T, pid ...int) string {
 	t.Helper()
 	process := os.Getpid()

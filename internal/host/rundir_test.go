@@ -211,5 +211,3 @@ func TestRunSocketsFitAtMaximumNames(t *testing.T) {
 		t.Fatalf("a socket in the run directory would fit (%d bytes): the case does not test the limit", len(run))
 	}
 }
-
-// liveEpoch names a run whose wrapper is the given process, this one by default.
