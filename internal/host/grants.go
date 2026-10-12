@@ -99,15 +99,25 @@ func confirmGrant(dir, name, epoch, thread string, message mail.Message) error {
 	return nil
 }
 
-// listenAuthority binds, for a main run, the address that answers for the
-// grants its commands register; any other role has none to answer for, and
-// no socket. It binds before the run's record is written: from then on the
-// address can be computed, and a listener there first would take main's
-// registrations. Nil when it cannot bind, and the session is told why.
-func listenAuthority(dir, epoch string, self int) *authority.Authority {
-	server, err := authority.Listen(state.AuthorityAddress(dir, epoch), self, grantLifetime)
+// listenAuthority binds the run's address: every wrapper answers there for
+// the decisions on reports addressed to its run, and a main's for the grants
+// its commands register as well; no other role holds any. It binds before
+// the run's record is written: from then on the address can be computed, and
+// a listener there first would take what was meant for this run. Nil when it
+// cannot bind, and the session is told why.
+func listenAuthority(dir, epoch string, self int, main bool) *authority.Authority {
+	address := state.AuthorityAddress(dir, epoch)
+	if !main {
+		server, err := authority.ListenDecisions(address, self)
+		if err != nil {
+			_, _ = fmt.Fprintln(os.Stderr, "rewake: no command of this session can decide a report addressed to it, verified: "+err.Error())
+			return nil
+		}
+		return server
+	}
+	server, err := authority.Listen(address, self, grantLifetime)
 	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, "rewake: this session cannot grant directories or Git access: "+err.Error())
+		_, _ = fmt.Fprintln(os.Stderr, "rewake: this session cannot grant directories or Git access, nor decide a report addressed to it, verified: "+err.Error())
 		return nil
 	}
 	server.Open = func(held authority.Grant) (bool, bool) { return mail.TaskOpen(dir, held.To, held.ID) }

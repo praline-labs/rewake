@@ -116,11 +116,10 @@ func Run(ctx context.Context, request Request) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	if request.Role.ID == role.Main.ID {
-		if authority := listenAuthority(request.Dir, registry.RunEpoch(self, selfStart, boot), self); authority != nil {
-			defer authority.Close()
-			go authority.Serve(ctx)
-		}
+	authority := listenAuthority(request.Dir, registry.RunEpoch(self, selfStart, boot), self, request.Role.ID == role.Main.ID)
+	if authority != nil {
+		defer authority.Close()
+		go authority.Serve(ctx)
 	}
 
 	// The name is claimed before anything is prepared. Preparing first means a
@@ -144,6 +143,11 @@ func Run(ctx context.Context, request Request) (int, error) {
 			removeSocket(session.Socket)
 		}
 	}()
+	// Decisions on this run's reports are taken from here until it begins to end (decide.go).
+	if authority != nil {
+		authority.HandleDecide(decideHandler(request.Dir, name, epoch, life))
+		defer life.closeAdmission()
+	}
 	// The run's directory comes before anything is prepared and goes at the
 	// run's end, once every worker of the run has stopped and before its hold
 	// on the lease goes (docs/v2/stage3-rundir.md), on every path out.

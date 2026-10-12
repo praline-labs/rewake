@@ -16,6 +16,13 @@ moment the address can be worked out it is taken; a `rewake send` registers only
 listener that runs above it, so a listener there first would not take a grant and have
 send report it as registered.
 
+Since S18 every wrapper binds its run's address, whatever its role: there it answers for
+the decisions on reports addressed to its run
+([stage3-decision.md](v2/stage3-decision.md#authority)). Only a main's wrapper holds
+grants; any other refuses each grant operation — registration, carry, confirmation —
+with "this session is not a main and holds no grants", so a letter naming a worker's run
+as its granting main is refused at delivery as before.
+
 1. **At send.** `rewake send` with a grant registers it with its own session's wrapper
    before the letter is written. `rewake edit` asks the wrapper, from the same callers,
    to carry over to the replacement what it holds for the task replaced; the letter's

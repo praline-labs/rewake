@@ -82,8 +82,8 @@ caller, makes the decision's final transaction (Q2 of
    the grant scheme's, [grants-authority.md](../grants-authority.md#the-scheme)). Before
    S18 only a main's wrapper listens there (`host/wrap.go`, set up in `host/grants.go`);
    from S18 every wrapper does, offering a non-main run the decision request only, never
-   a grant's registration, carry or confirmation. A run whose wrapper has ended has no
-   listener: refused.
+   a grant's registration, carry or confirmation (`authority.ListenDecisions`). A run
+   whose wrapper has ended has no listener: refused.
 3. The wrapper checks the caller as the grant scheme's step 1 does: the caller's uid and
    pid from `SO_PEERCRED`, its chain of parents up to the wrapper, each no younger than
    its child, the same mount, user and PID namespaces. The caller checks the wrapper in
@@ -96,6 +96,10 @@ caller, makes the decision's final transaction (Q2 of
    shutting down refuses new requests, and a transaction it took finishes before its
    last write, as every host callback does under S17. So no verified decision is written
    after the recipient run ended: the run that vouches is the process that writes.
+   The asker is `authority.Decide`, the wrapper's side `host/decide.go` over
+   `mail.Decide`; a wrapper runs at most four decisions at once and refuses the rest
+   busy, the answer carries no observations — the record on disk does — and a question
+   that went out with no answer back is uncertain, naming the record that may exist.
 
 **A compaction does not take the authority away** — the owner's condition. The run is
 the wrapper's: `registry.Session.Epoch()` is the wrapper's pid, its process start and

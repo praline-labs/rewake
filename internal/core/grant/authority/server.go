@@ -43,8 +43,13 @@ type Authority struct {
 	Owns func(name, epoch string) bool
 
 	listener *net.UnixListener
+	// grants says this wrapper is a main's and holds grants; every other
+	// answers for decisions only (decide.go).
+	grants   bool
 	mu       sync.Mutex
 	held     map[string]heldGrant
+	decide   DecideHandler
+	deciding int
 	done     chan struct{}
 	once     sync.Once
 }
@@ -69,7 +74,7 @@ func Listen(address string, self int, lifetime time.Duration) (*Authority, error
 	if err != nil {
 		return nil, err
 	}
-	return &Authority{Self: self, Lifetime: lifetime, listener: listener, held: map[string]heldGrant{}, done: make(chan struct{})}, nil
+	return &Authority{Self: self, Lifetime: lifetime, listener: listener, grants: true, held: map[string]heldGrant{}, done: make(chan struct{})}, nil
 }
 
 // Serve answers until the context ends or Close is called.
@@ -121,9 +126,15 @@ func (a *Authority) answer(conn *net.UnixConn) {
 	}
 	var asked request
 	var answer response
-	if json.Unmarshal(line, &asked) != nil {
+	switch {
+	case json.Unmarshal(line, &asked) != nil:
 		answer.Error = "a request that does not parse"
-	} else {
+	case asked.Op == opDecide:
+		reply := a.answerDecide(conn, asked.Decide)
+		answer.Decided = &reply
+	case !a.grants:
+		answer.Error = "this session is not a main and holds no grants"
+	default:
 		switch asked.Op {
 		case opRegister:
 			if err := a.register(conn, asked.Grant); err != nil {
@@ -198,7 +209,8 @@ func (a *Authority) carry(conn *net.UnixConn, replaced string, replacement Grant
 }
 
 // fromBelow refuses a caller that is not a command this wrapper's session
-// runs, outside any sandbox.
+// runs, outside any sandbox: the grants' registrations and the decisions on
+// this run's reports alike.
 func (a *Authority) fromBelow(conn *net.UnixConn) error {
 	peer, err := peerOf(conn)
 	if err != nil {
@@ -208,10 +220,10 @@ func (a *Authority) fromBelow(conn *net.UnixConn) error {
 		return errors.New("asked by another user")
 	}
 	if err := proc.Default.Descends(int(peer.Pid), a.Self); err != nil {
-		return fmt.Errorf("only a command this session runs registers its grants: %v", err)
+		return fmt.Errorf("only a command this session runs registers its grants or asks for its decisions: %v", err)
 	}
 	if err := sameNamespaces(int(peer.Pid)); err != nil {
-		return fmt.Errorf("a command in a sandbox of its own does not register a grant, even one this session started: %v", err)
+		return fmt.Errorf("a command in a sandbox of its own does not register a grant or ask for a decision, even one this session started: %v", err)
 	}
 	return nil
 }

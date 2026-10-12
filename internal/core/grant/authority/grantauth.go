@@ -73,11 +73,14 @@ type request struct {
 	Thread string `json:"thread,omitempty"`
 	// Replaces is the message whose grant a carry takes.
 	Replaces string `json:"replaces,omitempty"`
+	// Decide is a decision asked of the recipient run's wrapper (decide.go).
+	Decide *decideAsk `json:"decide,omitempty"`
 }
 
 type response struct {
-	Grant *Grant `json:"grant,omitempty"`
-	Error string `json:"error,omitempty"`
+	Grant   *Grant   `json:"grant,omitempty"`
+	Decided *decided `json:"decided,omitempty"`
+	Error   string   `json:"error,omitempty"`
 }
 
 // Errors a caller tells apart.

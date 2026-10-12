@@ -287,6 +287,9 @@ wrapper's exit: `Run` may return first, and the lease then goes when that worker
 or with the process, and the run's directory with it ([stage3-rundir.md](stage3-rundir.md);
 `TestRunKeepsTheLeaseAndItsDirectoryUntilItsWorkersStop`,
 `TestALiveSetWritesNothingAfterItsStop`, `TestAStoppedWorkerCountsUntilItsLastWrite`). A
+decision a command below the wrapper asks for (S18) is a worker admitted under the same
+count, none once the run begins to end, and finishes before the hold goes
+(`host/decide.go`; `TestAnAdmittedTransactionKeepsTheLeaseUntilItFinishes`). A
 stopped live set starts no write; the channel keeper's heartbeat, the endpoint, delivery
 and the fixture's backend are joined by their stops. A worktree change form takes
 the selected room's lease; its Git locks still protect the checkout. Looking at sessions

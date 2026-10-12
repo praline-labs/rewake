@@ -144,7 +144,7 @@ func TestMainHoldsTheConversationTheLetterWasPinnedTo(t *testing.T) {
 // confirmed again after the report.
 func TestMainsAuthorityAsksTheMailboxWhetherATaskIsOpen(t *testing.T) {
 	dir := buildtest.Dir(t)
-	server := listenAuthority(dir, ownEpoch(t), os.Getpid())
+	server := listenAuthority(dir, ownEpoch(t), os.Getpid(), true)
 	if server == nil {
 		t.Fatal("main's wrapper did not bind its address")
 	}

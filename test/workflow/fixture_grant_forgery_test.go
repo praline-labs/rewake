@@ -16,6 +16,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/grant/authority"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -136,7 +137,14 @@ func playGrantForgery(t *testing.T, c *Case, iso *Isolation) []telemetryFinding 
 	raw := mail.Message{ID: mail.NewID(), From: lead.name, FromEpoch: leadRun, To: worker.name, ToEpoch: workerRun, Kind: mail.Task, Text: rawRegisterText, GrantDirs: []string{granted[obsRawRegister]}, CreatedAt: time.Now()}
 	registered, registerErr := registerRaw(room, raw)
 	hand := mail.Message{ID: mail.NewID(), From: lead.name, FromEpoch: leadRun, To: worker.name, ToEpoch: workerRun, Kind: mail.Task, Text: handLetterText, GrantDirs: []string{granted[obsHandLetter]}, CreatedAt: time.Now()}
-	foreign := mail.Message{ID: mail.NewID(), From: lead.name, FromEpoch: workerRun, To: worker.name, ToEpoch: workerRun, Kind: mail.Task, Text: foreignAnswerText, GrantDirs: []string{granted[obsForeignAnswer]}, CreatedAt: time.Now()}
+	// The other listener answers at the address of a live run that is no
+	// wrapper: this test's parent. A wrapper's own address is its own, a
+	// worker's too, since every wrapper answers for decisions there.
+	stranger, strangerErr := strangerRun()
+	if strangerErr != nil {
+		return append(out, unjudgedAll([]string{obsRawRegister, obsHandLetter, obsForeignAnswer}, "no live run to answer in place of: %v", strangerErr)...)
+	}
+	foreign := mail.Message{ID: mail.NewID(), From: lead.name, FromEpoch: stranger, To: worker.name, ToEpoch: workerRun, Kind: mail.Task, Text: foreignAnswerText, GrantDirs: []string{granted[obsForeignAnswer]}, CreatedAt: time.Now()}
 	letters := []string{obsRawRegister, obsHandLetter, obsForeignAnswer}
 	if registerErr != nil {
 		return append(out, unjudgedAll(letters, "main's address could not be asked: %v", registerErr)...)
@@ -209,6 +217,21 @@ func answerInMainsPlace(room string, letter mail.Message) (func(), error) {
 		return nil, fmt.Errorf("registering with it: %w", err)
 	}
 	return stop, nil
+}
+
+// strangerRun is the run of this test's parent: alive, of this user and
+// these namespaces, and serving no address.
+func strangerRun() (string, error) {
+	pid := os.Getppid()
+	start, err := proc.StartTime(pid)
+	if err != nil {
+		return "", err
+	}
+	boot, err := registry.CurrentBoot()
+	if err != nil {
+		return "", err
+	}
+	return registry.RunEpoch(pid, start, boot), nil
 }
 
 // registerRaw writes a registration of a letter's grant straight to the

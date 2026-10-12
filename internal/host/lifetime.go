@@ -16,6 +16,10 @@ import (
 type lifetime struct {
 	workers sync.WaitGroup
 	keep    func()
+	// mu orders admit against closeAdmission, so no worker admitted is
+	// counted after end began to wait.
+	mu     sync.Mutex
+	closed bool
 	// last are the run's cleanups that wait for its workers: they run once
 	// the last has stopped, before the hold goes, latest first.
 	last []func()
@@ -36,6 +40,7 @@ func (l *lifetime) atEnd(cleanup func()) { l.last = append(l.last, cleanup) }
 // run, as after a kill, and a later launch reclaims what they would have
 // removed once the run is proven dead.
 func (l *lifetime) end() {
+	l.closeAdmission()
 	done := make(chan struct{})
 	go func() {
 		l.workers.Wait()
@@ -56,6 +61,31 @@ func (l *lifetime) end() {
 			finish()
 		}()
 	}
+}
+
+// admit counts a transaction a caller outside the run asked for — a decision
+// on a report to this run — among its workers, unless the run has stopped
+// taking them; it says whether it did. A run that is ending refuses new ones
+// and finishes those it took before its hold on the lease goes.
+func (l *lifetime) admit() bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.closed {
+		return false
+	}
+	l.workers.Add(1)
+	return true
+}
+
+// dismiss ends what admit counted.
+func (l *lifetime) dismiss() { l.workers.Done() }
+
+// closeAdmission stops admit taking more, from the moment the run begins to
+// end; end calls it too, before it waits.
+func (l *lifetime) closeAdmission() {
+	l.mu.Lock()
+	l.closed = true
+	l.mu.Unlock()
 }
 
 // spawn runs work as a worker of the run; with no workers to count in, as a

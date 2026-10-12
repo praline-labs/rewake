@@ -32,6 +32,8 @@ func TestMain(m *testing.M) {
 const (
 	helperRegister = "REWAKE_GRANTAUTH_REGISTER"
 	helperListen   = "REWAKE_GRANTAUTH_LISTEN"
+	// helperDecisions listens as a run that is no main, taking decisions.
+	helperDecisions = "REWAKE_GRANTAUTH_DECISIONS"
 )
 
 // TestHelperProcess is not a test: it is what a helper runs.
@@ -55,6 +57,18 @@ func TestHelperProcess(t *testing.T) {
 		fmt.Print(string(line))
 		os.Exit(0)
 	}
+	if address := os.Getenv(helperDecisions); address != "" {
+		authority, err := ListenDecisions(address, os.Getpid())
+		if err != nil {
+			fmt.Println("listen:", err)
+			os.Exit(0)
+		}
+		authority.HandleDecide(answerAll)
+		fmt.Println("ready")
+		go authority.Serve(t.Context())
+		time.Sleep(30 * time.Second)
+		os.Exit(0)
+	}
 	if address := os.Getenv(helperListen); address != "" {
 		authority, err := Listen(address, os.Getpid(), time.Minute)
 		if err != nil {
@@ -66,6 +80,24 @@ func TestHelperProcess(t *testing.T) {
 		time.Sleep(30 * time.Second)
 		os.Exit(0)
 	}
+}
+
+// startHelper starts a helper that listens and waits until it does.
+func startHelper(t *testing.T, env string) *exec.Cmd {
+	t.Helper()
+	command := helper(t, nil, env)
+	stdout, err := command.StdoutPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := command.Start(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = command.Process.Kill(); _ = command.Wait() })
+	if line, _ := bufio.NewReader(stdout).ReadString('\n'); strings.TrimSpace(line) != "ready" {
+		t.Fatalf("the helper did not listen: %q", line)
+	}
+	return command
 }
 
 func helper(t *testing.T, wrap []string, env string) *exec.Cmd {
