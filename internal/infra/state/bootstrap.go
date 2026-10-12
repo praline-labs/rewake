@@ -19,7 +19,7 @@ import (
 // Bootstrap makes the base, the root, the room and the room's sessions, inbox
 // and sock, each when missing, and verifies each that exists without repairing
 // its mode: a directory somebody else could write is refused, not chmodded. Each
-// level it makes is synced into its parent, and a failed sync fails the
+// level, made or found, is synced into its parent, and a failed sync fails the
 // bootstrap, so a launch never claims a name in a room a crash could take
 // away. It may stop after any level; the next call completes what is missing.
 func Bootstrap(base, room string) (string, error) {
@@ -57,27 +57,38 @@ func RoomPath(base, room string) (string, error) {
 // syncLevel flushes a new level into its parent; a test makes it fail.
 var syncLevel = syncDir
 
-// makeLevel makes one directory of the bootstrap, or verifies the one there.
+// makeLevel makes one directory of the bootstrap, or verifies the one there,
+// and flushes it into its parent either way. A level that exists is no proof
+// that its name is durable: a launch that made it may have failed to flush
+// it, and a concurrent one may not have flushed it yet, so the flush is this
+// launch's to make or fail on, every time.
 func makeLevel(path string) error {
-	if _, err := os.Lstat(path); err == nil {
-		return Verify(path)
-	} else if !errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Lstat(path); errors.Is(err, os.ErrNotExist) {
+		if err := createLevel(path); err != nil {
+			return err
+		}
+	} else if err != nil {
 		return noteReach(fmt.Errorf("could not read the state directory %s: %w", path, err), false)
 	}
-	Step("bootstrap " + filepath.Base(path))
-	err := os.Mkdir(path, dirMode)
-	if errors.Is(err, os.ErrExist) {
-		// Made by another process meanwhile: verified like any other.
-		return Verify(path)
-	}
-	if err != nil {
-		return noteReach(fmt.Errorf("could not create the state directory %s: %w", path, err), false)
-	}
-	if err := fault(OpWrite, path); err != nil {
+	if err := Verify(path); err != nil {
 		return err
 	}
 	if err := syncLevel(filepath.Dir(path)); err != nil {
 		return noteReach(fmt.Errorf("could not flush the state directory %s: %w", filepath.Dir(path), err), false)
 	}
-	return Verify(path)
+	return nil
+}
+
+// createLevel makes a missing level. One another process made meanwhile is
+// left for the caller to verify like any other.
+func createLevel(path string) error {
+	Step("bootstrap " + filepath.Base(path))
+	err := os.Mkdir(path, dirMode)
+	if errors.Is(err, os.ErrExist) {
+		return nil
+	}
+	if err != nil {
+		return noteReach(fmt.Errorf("could not create the state directory %s: %w", path, err), false)
+	}
+	return fault(OpWrite, path)
 }
