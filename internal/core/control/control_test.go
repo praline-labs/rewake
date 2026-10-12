@@ -344,3 +344,37 @@ func TestAnAskerCutShortWithdrawsTheRequest(t *testing.T) {
 		t.Fatalf("left behind %v", names)
 	}
 }
+
+// The control directory is made by the state's own primitive, which refuses a
+// path that is not a private directory of this user rather than repairing it:
+// a directory another can write is a way to answer for the session.
+func TestPrepareRefusesWhatItDidNotMakePrivate(t *testing.T) {
+	base := t.TempDir()
+	open := filepath.Join(base, "open")
+	if err := os.Mkdir(open, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(open, 0o770); err != nil {
+		t.Fatal(err)
+	}
+	if err := Prepare(open); err == nil {
+		t.Error("a directory open to the group was taken")
+	}
+	if info, err := os.Stat(open); err != nil || info.Mode().Perm() != 0o770 {
+		t.Errorf("the refused directory was changed: %v, %v", info.Mode(), err)
+	}
+	linked := filepath.Join(base, "linked")
+	if err := os.Symlink(t.TempDir(), linked); err != nil {
+		t.Fatal(err)
+	}
+	if err := Prepare(linked); err == nil {
+		t.Error("a symlink was taken for the control directory")
+	}
+	made := filepath.Join(base, "control", "worker.1.2")
+	if err := Prepare(made); err != nil {
+		t.Fatal(err)
+	}
+	if info, err := os.Stat(made); err != nil || info.Mode().Perm() != 0o700 {
+		t.Errorf("a fresh control directory: %v, %v", info.Mode(), err)
+	}
+}

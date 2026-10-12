@@ -21,6 +21,8 @@ import (
 	"regexp"
 	"syscall"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // Actions a request may carry.
@@ -114,10 +116,7 @@ var ValidID = regexp.MustCompile(`^[0-9a-f]{32}$`)
 // only. The wrapper calls it before the harness starts and removes the
 // directory when the session ends.
 func Prepare(dir string) error {
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return err
-	}
-	return os.Chmod(dir, 0o700)
+	return state.EnsureSubdir(dir)
 }
 
 // Limits bounds a request: Pickup is how long the served side has to take it
@@ -144,15 +143,15 @@ func Ask(ctx context.Context, dir string, request Request, limits Limits) (Answe
 	if _, err := os.Stat(dir); err != nil {
 		return Answer{}, ErrNoControl
 	}
-	lock, err := os.OpenFile(filepath.Join(dir, lockFile), os.O_CREATE|os.O_RDWR, 0o600)
+	lock, err := state.OpenFile(filepath.Join(dir, lockFile), os.O_CREATE|os.O_RDWR, 0o600)
 	if err != nil {
 		return Answer{}, err
 	}
 	defer func() { _ = lock.Close() }()
-	if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+	if err := state.Flock(lock, syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
 		return Answer{Outcome: Refused, Reason: Busy, Detail: "another rewake compact or interrupt is waiting on this session"}, nil
 	}
-	defer func() { _ = syscall.Flock(int(lock.Fd()), syscall.LOCK_UN) }()
+	defer func() { _ = state.Flock(lock, syscall.LOCK_UN) }()
 	clearStale(dir)
 
 	if request.ID == "" {
@@ -162,8 +161,8 @@ func Ask(ctx context.Context, dir string, request Request, limits Limits) (Answe
 		return Answer{}, err
 	}
 	defer func() {
-		_ = os.Remove(RequestPath(dir))
-		_ = os.Remove(TakenPath(dir, request.ID))
+		_ = state.Discard(RequestPath(dir))
+		_ = state.Discard(TakenPath(dir, request.ID))
 	}()
 
 	if !waitFile(ctx, limits.Pickup, limits.Poll, TakenPath(dir, request.ID), AnswerPath(dir, request.ID)) {
@@ -172,7 +171,7 @@ func Ask(ctx context.Context, dir string, request Request, limits Limits) (Answe
 		// always sees the other. A mark found now belongs to a side that either
 		// saw the request still in place and carries it out, or saw it gone
 		// and answers that it was withdrawn (docs/remote-control.md).
-		_ = os.Remove(RequestPath(dir))
+		_ = state.Discard(RequestPath(dir))
 		lastLook(dir, request.ID)
 		if !exists(TakenPath(dir, request.ID)) && !exists(AnswerPath(dir, request.ID)) {
 			// The asker's own call was interrupted: nothing is known about
@@ -190,7 +189,7 @@ func Ask(ctx context.Context, dir string, request Request, limits Limits) (Answe
 	deadline := time.Now().Add(limits.Outcome)
 	for {
 		if answer, ok := readAnswer(dir, request.ID); ok {
-			_ = os.Remove(AnswerPath(dir, request.ID))
+			_ = state.Discard(AnswerPath(dir, request.ID))
 			return answer, nil
 		}
 		if !time.Now().Before(deadline) || ctx.Err() != nil {
@@ -228,11 +227,11 @@ func writeRequest(dir string, request Request) error {
 		return err
 	}
 	temporary := filepath.Join(dir, "."+request.ID+".tmp")
-	if err := os.WriteFile(temporary, encoded, 0o600); err != nil {
+	if err := state.WriteFile(temporary, encoded, 0o600); err != nil {
 		return err
 	}
-	if err := os.Rename(temporary, RequestPath(dir)); err != nil {
-		_ = os.Remove(temporary)
+	if err := state.Move(temporary, RequestPath(dir)); err != nil {
+		_ = state.Discard(temporary)
 		return err
 	}
 	return nil
@@ -267,7 +266,7 @@ func clearStale(dir string) {
 	}
 	for _, entry := range entries {
 		if entry.Name() != lockFile {
-			_ = os.Remove(filepath.Join(dir, entry.Name()))
+			_ = state.Discard(filepath.Join(dir, entry.Name()))
 		}
 	}
 }

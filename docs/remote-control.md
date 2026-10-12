@@ -130,8 +130,10 @@ the next holder of the name:
 The wrapper makes the directory before the harness starts and removes it when the
 session ends, only for a harness that offers a Control verb (`Offer.Control`): a directory
 nobody serves would say `not answering` where the true next step is a restart. If it
-cannot be made the launch goes on without one, and every request to that run is refused
-as `no control directory`. The id is 32 lowercase hex
+cannot be made, or the path found there is not a private directory of this user — a
+symlink, another user's, one open to the group or the world, which the wrapper refuses
+rather than repairs — the launch goes on without one, and every request to that run is
+refused as `no control directory`. The id is 32 lowercase hex
 characters, and the served side refuses any other: it builds file names from it.
 
 The served side — in 1.x rewake's module in a Claude Code session, and in this build the

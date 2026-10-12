@@ -265,7 +265,7 @@ func Lock(ctx context.Context, dir, name, epoch, token string) (func(), error) {
 	}
 	path := lockPath(journal, token)
 	for {
-		file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
+		file, err := state.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
 		if err != nil {
 			return nil, state.NoteReach(err)
 		}
@@ -276,11 +276,11 @@ func Lock(ctx context.Context, dir, name, epoch, token string) (func(), error) {
 		same, err := samePath(file, path)
 		if same {
 			return func() {
-				_ = syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
+				_ = state.Flock(file, syscall.LOCK_UN)
 				_ = file.Close()
 			}, nil
 		}
-		_ = syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
+		_ = state.Flock(file, syscall.LOCK_UN)
 		_ = file.Close()
 		if err != nil {
 			return nil, err
@@ -293,7 +293,7 @@ func lockPath(journal, token string) string { return filepath.Join(journal, "."+
 // flock takes an exclusive lock on file, polling until ctx ends.
 func flock(ctx context.Context, file *os.File) error {
 	for {
-		err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+		err := state.Flock(file, syscall.LOCK_EX|syscall.LOCK_NB)
 		if err == nil {
 			return nil
 		}

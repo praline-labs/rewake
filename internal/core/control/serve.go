@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // Serve answers the requests put into a run's control directory until ctx
@@ -45,7 +47,7 @@ func serveOnce(ctx context.Context, dir, last string, act func(context.Context, 
 	if exists(TakenPath(dir, asked.ID)) {
 		return asked.ID
 	}
-	if os.WriteFile(TakenPath(dir, asked.ID), nil, 0o600) != nil {
+	if state.WriteFile(TakenPath(dir, asked.ID), nil, 0o600) != nil {
 		return asked.ID
 	}
 	afterMark(dir, asked.ID)
@@ -87,10 +89,10 @@ func writeAnswer(dir string, answer Answer) {
 		return
 	}
 	temporary := filepath.Join(dir, "."+answer.ID+".result.tmp")
-	if os.WriteFile(temporary, encoded, 0o600) != nil {
+	if state.WriteFile(temporary, encoded, 0o600) != nil {
 		return
 	}
-	if os.Rename(temporary, AnswerPath(dir, answer.ID)) != nil {
-		_ = os.Remove(temporary)
+	if state.Move(temporary, AnswerPath(dir, answer.ID)) != nil {
+		_ = state.Discard(temporary)
 	}
 }
