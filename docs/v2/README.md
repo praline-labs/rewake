@@ -98,6 +98,9 @@ accepted in review round 7:
   decisions by area and commit, the concurrent ones among them, and the oracles kept.
 - [stage3-upgrade.md](stage3-upgrade.md) — clearing the state of 1.x: what 1.x does,
   the supported upgrade, the exclusion protocol, its tests against a stand-in of 1.x.
+- [stage3-s17-evidence.md](stage3-s17-evidence.md) — records of October 12, 2026: the live
+  gate of the clearing against a real 1.x and the timing of the build id's hash, with the
+  raw samples. Open it for what the clearing and the hash were seen to do and cost.
 - [stage3-decision-model.md](stage3-decision-model.md) — part B, the operator decision as
   an abstract model: historical landing, evidence, the sender's disposition, choice, run
   lifetimes and the mailbox's admission kept apart, the excluded combinations, the transitions, the expected outcome of each world, what a

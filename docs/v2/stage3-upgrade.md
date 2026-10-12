@@ -184,6 +184,14 @@ A writer's acquisition and the tests' rooms (`build.AcquireLaunch`, `buildtest`)
 clear. The first read is `Cleanup.Trees`, which refuses a tree's name that is no directory
 of its own; with nothing there the launch pays one read of the base.
 
+A refused launch leaves the root its lease made: the room's skeleton under `v2/`, its
+`build.lock` and `build` record, and `v2/.clear.lock`. That is the order this protocol
+sets — the clearing runs under the lease, after its bootstrap, and its lock lives in the
+root — and it is meant: the skeleton holds no session and no mail, the build record names
+the build that tried, and the next launch completes or switches it as the bootstrap does
+for any room ([stage3-state.md](stage3-state.md#the-bootstrap)). Observed at the live gate
+on October 12, 2026 ([stage3-s17-evidence.md](stage3-s17-evidence.md#the-live-gate)).
+
 - Admission takes the launch locks of `rooms/` and keeps them; those of a candidate are
   let go after its checks. Validation checks the held ones with `TreeLock.At` at the
   renamed path, takes a fresh lock without waiting for a room that appeared in the tree,

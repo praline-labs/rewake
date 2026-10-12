@@ -74,6 +74,9 @@ unread letters and undelivered reports went, "unknown" where a count cannot be
 established. The launch has to see the pid namespace the 1.x sessions ran in — the same
 machine, outside a sandbox that hides other processes — or it refuses rather than guess.
 Nothing is stopped automatically, and nothing outside the base is touched: worktrees stay.
+A refused launch has already made the empty 2.0 root beside the 1.x tree — the room's
+directories, its build lock and build record, and the clear lock — since its lease and the
+clear lock live there; it holds no session and no mail, and the next launch uses it.
 
 ## Releasing to npm
 

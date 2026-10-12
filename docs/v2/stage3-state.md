@@ -362,7 +362,7 @@ commit, and the oracles kept are in [stage3-state-tests.md](stage3-state-tests.m
 
 ## The cost of the hash
 
-**Measured in S17, before commit 7**, on an idle machine (`AGENTS.md`: no timing under
+**Measured in S17**, on an idle machine (`AGENTS.md`: no timing under
 another heavy run), on a binary built as `scripts/pack.sh` builds the release
 (`CGO_ENABLED=0`, `-trimpath`, the version and time `-ldflags`, not stripped): the
 streamed SHA-256 warm, and with the executable's pages advised away with
@@ -373,8 +373,13 @@ call succeeds — over 100 separate processes with the hash and 100 with only th
 disabled in a test build, the lease and the I/O otherwise equal, the two builds in
 separate rooms: median and 95th percentile, exit codes checked, the raw samples kept, with
 the artifact's size, id and build flags and whether the advice succeeded. No production
-flag turns the hash off. A first look, not evidence: on October 5, 2026 a 14.3 MB build
-hashed warm in under 10 ms with `sha256sum`, under a load average of 2.6.
+flag turns the hash off. Measured on October 12, 2026 on commit `8e4d46b`
+([stage3-s17-evidence.md](stage3-s17-evidence.md#the-cost-of-the-hash), raw samples
+there): the hash of the 8.6 MB build took a median of 2.76 ms warm (p95 3.79 ms) and
+4.02 ms with none of its pages resident (p95 4.85 ms); `rewake pending` took a median of
+20.62 ms with it and 18.66 ms without, warm, and 28.38 ms and 25.22 ms with the binaries'
+pages advised away. The directory flushes a launch's bootstrap runs on every level cost a
+median of 13 µs in all on an existing room, and a writer runs none.
 
 **The id stays the SHA-256 of the image whatever the numbers say.** Nothing here
 switches to another identity on a threshold. If the cost is judged too high, the numbers
