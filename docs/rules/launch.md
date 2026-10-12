@@ -22,7 +22,9 @@ What rewake adds to a harness's launch, in the full wording of
   - `internal/host/launch/version_test.go` `TestAVersionRefusalNeverCarriesWhatTheProgramPrinted`
 
 - **L3. Nothing persists past the run**: what a launch writes lives in the run's
-  directory and goes with it. (Rule 8.)
+  directory and goes with it; after a kill, a later launch removes it once the run is
+  proven dead ([the qualified guarantee](../v2/stage3-state.md#the-run-directory)).
+  (Rule 8.)
   Tests:
   - `internal/host/control_test.go` `TestTheControlDirectoryLivesAsLongAsTheSession`
   - `internal/host/control_test.go` `TestAHarnessThatServesNoRequestsGetsNoDirectory`
@@ -31,7 +33,11 @@ What rewake adds to a harness's launch, in the full wording of
   - `internal/host/ownership_test.go` `TestEachRunCleansOnlyItsOwnSocket`
   - `internal/adapter/claude/claude_test.go` `TestLiveSocketIsNeverRemoved`
   - `internal/adapter/claude/claude_test.go` `TestStaleSocketIsReplaced`
-  - Gap: the run directory `run/<name>.<epoch>/` removed with the run, after a kill by a later launch once the run is proven dead ([the qualified guarantee](../v2/stage3-state.md#the-run-directory)) — closed in S17.
+  - `internal/host/rundir_test.go` `TestRunDirectoryDiesWithRun`
+  - `internal/host/rundir_test.go` `TestFailedLaunchRemovesOnlyItsRunDirectory`
+  - `internal/host/rundir_test.go` `TestOldRunCleanupPreservesNewOwner`
+  - `internal/host/rundir_test.go` `TestCrashedRunIsReclaimedOnlyAfterProvenDeath`
+  - `internal/host/rundir_test.go` `TestRunSocketsFitAtMaximumNames`
 
 ## What returns with the Codex adapter
 

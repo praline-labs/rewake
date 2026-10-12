@@ -14,6 +14,7 @@ const (
 	inboxDir     = "inbox"
 	socketsDir   = "sock"
 	controlDir   = "control"
+	runDir       = "run"
 	lettersDir   = "letters"
 	doneDir      = "done"
 	unreadDir    = "unread"
@@ -87,6 +88,19 @@ func AuthorityAddress(dir, run string) string {
 func ControlPath(dir, name, run string) string {
 	return filepath.Join(dir, controlDir, name+"."+run)
 }
+
+// ControlsPath is the directory holding every run's control directory.
+func ControlsPath(dir string) string { return filepath.Join(dir, controlDir) }
+
+// RunPath is the directory of one run (docs/v2/stage3-state.md#the-run-directory):
+// what an adapter writes for that run alone, handed to it at launch and
+// removed with the run. It is no socket, so its length does not matter.
+func RunPath(dir, name, run string) string {
+	return filepath.Join(dir, runDir, name+"."+run)
+}
+
+// RunsPath is the directory holding every run's directory.
+func RunsPath(dir string) string { return filepath.Join(dir, runDir) }
 
 // LettersPath holds the compactions a main asked for with rewake compact whose
 // letter has not gone yet (docs/remote-control.md). It is kept by name, not by

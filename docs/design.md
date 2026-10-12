@@ -109,6 +109,7 @@ only looks leaves no state behind. [Optional primary observations](session-state
     sock/<name>.<epoch>.ctx    the wrapper's context endpoint for the mail tool's server or transport and its children (mail-bridge-server.md, mail-bridge-transport.md)
     sock/<name>.<epoch>.mcp.json the mail tool's server entry handed to Claude Code for one run, removed with it (mail-bridge-launch.md)
     control/<name>.<epoch>/    a main's compact or interrupt request and its answer (remote-control.md)
+    run/<name>.<epoch>/        what an adapter writes for one run, removed with the run or, after a kill, by a later launch once the run is proven dead (v2/stage3-state.md)
     letters/<name>/<id>.json   a compaction this main asked for, held by the command while it asks, kept on an answer that leaves the outcome open until its letter goes (remote-control-letter.md)
 ```
 

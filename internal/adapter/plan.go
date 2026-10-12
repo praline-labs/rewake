@@ -39,6 +39,14 @@ type LaunchRequest struct {
 	// wrapper before the launch and removed after it; empty when it could not
 	// be made (docs/remote-control.md).
 	ControlDir string
+	// RunDir is this run's own directory, made by the wrapper after the
+	// claim and removed — with everything in it — once the run's services,
+	// children and sockets have stopped, or by a later launch once the run
+	// is proven dead (docs/v2/stage3-state.md#the-run-directory). What the
+	// adapter writes for this run alone goes here; mail, grants, receipts and
+	// journals do not. No socket goes here: its path could pass the limit a
+	// unix socket allows, so Socket keeps its short form.
+	RunDir string
 	// GrantDirs are directories main confirmed again for the conversation
 	// this launch resumes (Resumer); a harness that takes a directory at
 	// launch is started with them.

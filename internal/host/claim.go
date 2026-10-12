@@ -3,6 +3,7 @@ package host
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -78,4 +79,17 @@ func claimName(request Request, self int, selfStart uint64, boot, cwd string) (r
 		return fmt.Errorf("could not claim a name for this session: every candidate was taken while starting")
 	})
 	return session, err
+}
+
+// removeSocket clears the socket file of a session that has ended. The harness
+// removes its own on a clean exit; this covers the rest.
+func removeSocket(path string) {
+	if path == "" {
+		return
+	}
+	info, err := os.Lstat(path)
+	if err != nil || info.Mode()&os.ModeSocket == 0 {
+		return
+	}
+	_ = os.Remove(path)
 }

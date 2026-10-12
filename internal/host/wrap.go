@@ -144,6 +144,14 @@ func Run(ctx context.Context, request Request) (int, error) {
 			removeSocket(session.Socket)
 		}
 	}()
+	// The run's directory comes before anything is prepared and goes after
+	// everything registered below has stopped, on every path out.
+	reclaimRuns(request.Dir)
+	runDir, err := makeRunDir(request.Dir, name, epoch)
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = state.RemoveAll(runDir) }()
 	if request.OnClaimed != nil {
 		if err := request.OnClaimed(session); err != nil {
 			return 0, err
@@ -159,7 +167,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 		made := registry.ControlFor(request.Dir, name, epoch)
 		if control.Prepare(made) == nil {
 			controlDir = made
-			defer func() { _ = os.RemoveAll(made) }()
+			defer func() { _ = state.RemoveAll(made) }()
 		}
 	}
 
@@ -186,6 +194,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 		Role:       role.Of(session.Role),
 
 		ControlDir: controlDir,
+		RunDir:     runDir,
 		GrantDirs:  restored.dirs(),
 		Version:    version,
 	}
@@ -378,17 +387,4 @@ func current(dir, name string, fallback registry.Session) registry.Session {
 		return fallback
 	}
 	return session
-}
-
-// removeSocket clears the socket file of a session that has ended. The harness
-// removes its own on a clean exit; this covers the rest.
-func removeSocket(path string) {
-	if path == "" {
-		return
-	}
-	info, err := os.Lstat(path)
-	if err != nil || info.Mode()&os.ModeSocket == 0 {
-		return
-	}
-	_ = os.Remove(path)
 }

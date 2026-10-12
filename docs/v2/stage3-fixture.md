@@ -57,8 +57,9 @@ the launch. Its version is read with `fixture --version` before the claim; the m
 The offered set is the catalogue's and fixed. What is **live** for a run is what the
 program has proven, and only that; a test switches liveness, never the offered set.
 
-1. **Hello.** The adapter listens on a socket in the run directory and passes its path
-   to the program as a flag. The program connects and sends one hello: its version, its
+1. **Hello.** The adapter listens on the run's socket — in `sock/`, in the short form
+   that fits a unix socket path, not in the run directory — and passes its path to the
+   program as a flag. The program connects and sends one hello: its version, its
    pid, and the capabilities it serves (Wake, TurnBoundary, Telemetry, Control, and from
    S7 ToolTransport). The adapter accepts it only from the process it started — the
    peer's credentials must give the program's pid and start time — and only once.
