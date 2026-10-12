@@ -205,7 +205,12 @@ kinds (`core/mail/records.go`), and one strict reader per kind serves every read
 [stage3-decision-build.md](stage3-decision-build.md#q6-validity-disposal-and-unknown-records)).
 A strict reader takes one JSON value, refuses a field its record has no place for, and
 refuses anything after the value but JSON's own whitespace — a closing delimiter left
-there included (`strictJSON`, `core/mail/decision_records.go`). A decision's observation
+there included (`strictJSON`, `core/mail/decision_records.go`). Every record of the
+mailbox is read as a regular file and nothing else (`state.ReadRegular`): the
+installation runs before the reading that refuses other types, so a link in a record's
+place is not followed, a FIFO is not waited on under the mailbox lock, and the type is
+checked on the file opened, so a name swapped after its listing is read as it is then;
+`decisions/` itself is looked at with `lstat` and never followed. A decision's observation
 of a listing keeps its entries even when there are none: an empty listing is kept apart
 from none.
 

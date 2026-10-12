@@ -3,6 +3,7 @@ package mail
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -48,11 +49,7 @@ type ToldView struct {
 
 // Decisions are the decisions of name's mailbox, by report.
 func Decisions(dir, name string) ([]DecisionView, error) {
-	root := filepath.Dir(DecisionPath(dir, name, "x"))
-	entries, err := os.ReadDir(root)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil, nil
-	}
+	root, entries, err := world{dir: dir, files: osAccess{}}.decisionsOf(name)
 	if err != nil {
 		return nil, fmt.Errorf("the decisions %s cannot be listed, so which reports were decided is unknown: %w", root, err)
 	}
@@ -65,6 +62,28 @@ func Decisions(dir, name string) ([]DecisionView, error) {
 	}
 	sort.Slice(views, func(i, j int) bool { return views[i].Report < views[j].Report })
 	return views, nil
+}
+
+// decisionsOf lists the decisions of name's mailbox. None there is no
+// decision; a link, or anything but a directory, in that place is an unknown
+// and is never followed: what it leads to is no record of this mailbox.
+func (w world) decisionsOf(name string) (string, []fs.DirEntry, error) {
+	root := filepath.Dir(DecisionPath(w.dir, name, "x"))
+	info, err := w.lstat(root)
+	if errors.Is(err, os.ErrNotExist) {
+		return root, nil, nil
+	}
+	if err != nil {
+		return root, nil, err
+	}
+	if !info.IsDir() {
+		return root, nil, unknownRecord(root, fmt.Errorf("%s, where the decisions belong, is no directory: %s", root, info.Mode().Type()))
+	}
+	entries, err := w.readDir(root)
+	if errors.Is(err, os.ErrNotExist) {
+		return root, nil, nil
+	}
+	return root, entries, err
 }
 
 // isDecisionRecord says a name under decisions/ is a decision rather than a
@@ -162,11 +181,7 @@ func readClosure(files fileAccess, path string, d Decision) (Closure, error) {
 // every occurrence a gate holds. A decision that does not read disposes
 // nothing; the reading stops the mailbox on it on its own.
 func (w world) disposals(name string) (map[Disposal]string, error) {
-	root := filepath.Dir(DecisionPath(w.dir, name, "x"))
-	entries, err := w.readDir(root)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil, nil
-	}
+	root, entries, err := w.decisionsOf(name)
 	if err != nil {
 		return nil, fmt.Errorf("the decisions %s cannot be listed, so what they dispose is unknown: %w", root, err)
 	}

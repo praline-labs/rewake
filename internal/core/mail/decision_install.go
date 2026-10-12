@@ -36,11 +36,7 @@ const installOp = ".install"
 // cause of its own. A note that could not be told is no error: it stays owed
 // and stops nothing, since a note answers no wait.
 func (w world) installDecisions(ctx context.Context, name string) error {
-	root := filepath.Dir(DecisionPath(w.dir, name, "x"))
-	entries, err := w.readDir(root)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
+	root, entries, err := w.decisionsOf(name)
 	if err != nil {
 		return inOp(installOp, fmt.Errorf("the decisions %s cannot be listed, so what they install is unknown: %w", root, err))
 	}
@@ -158,10 +154,9 @@ func (w world) publishNote(ctx context.Context, name string, note Message) (stri
 // It is the evidence that resolves an occurrence about the installation, and
 // the plan reads through it what the installation reads.
 func (w world) installed(name string) bool {
-	root := filepath.Dir(DecisionPath(w.dir, name, "x"))
-	entries, err := w.readDir(root)
+	root, entries, err := w.decisionsOf(name)
 	if err != nil {
-		return errors.Is(err, os.ErrNotExist)
+		return false
 	}
 	done := true
 	for _, entry := range entries {

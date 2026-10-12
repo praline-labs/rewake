@@ -1,6 +1,12 @@
 package state
 
-import "os"
+import (
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"syscall"
+)
 
 // Fault is the one test hook of the state directory's file operations
 // (docs/mail-bridge-checks.md#testing-without-a-live-harness). Every write,
@@ -40,6 +46,50 @@ func ReadFile(path string) ([]byte, error) {
 	}
 	data, err := os.ReadFile(path)
 	return data, noteReach(err, false)
+}
+
+// ErrNotRegular is a read of a path that is no regular file: a link, a
+// directory, a FIFO, a device or a socket.
+var ErrNotRegular = errors.New("not a regular file")
+
+// ReadRegular reads a regular file of the state directory, of at most limit
+// bytes, and nothing else. A link is not followed, a FIFO is not waited on
+// for a writer and a file past limit is not read whole: each is an error,
+// ErrNotRegular or the bound, apart from a missing file, which is
+// os.ErrNotExist as for ReadFile. The type is checked on the file opened, so
+// a name swapped between a listing and the read is refused as it is now.
+func ReadRegular(path string, limit int64) ([]byte, error) {
+	if err := fault(OpRead, path); err != nil {
+		return nil, err
+	}
+	data, err := readRegular(path, limit)
+	return data, noteReach(err, false)
+}
+
+func readRegular(path string, limit int64) ([]byte, error) {
+	file, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK|syscall.O_CLOEXEC, 0)
+	if errors.Is(err, syscall.ELOOP) {
+		return nil, &os.PathError{Op: "open", Path: path, Err: fmt.Errorf("%w: a link", ErrNotRegular)}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = file.Close() }()
+	info, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if !info.Mode().IsRegular() {
+		return nil, &os.PathError{Op: "read", Path: path, Err: fmt.Errorf("%w: %s", ErrNotRegular, info.Mode().Type())}
+	}
+	if info.Size() > limit {
+		return nil, &os.PathError{Op: "read", Path: path, Err: fmt.Errorf("%d bytes, past the bound of %d", info.Size(), limit)}
+	}
+	data, err := io.ReadAll(io.LimitReader(file, limit+1))
+	if err == nil && int64(len(data)) > limit {
+		err = &os.PathError{Op: "read", Path: path, Err: fmt.Errorf("more than the bound of %d bytes", limit)}
+	}
+	return data, err
 }
 
 // Remove removes a file of the state directory.

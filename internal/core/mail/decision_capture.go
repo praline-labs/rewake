@@ -36,9 +36,9 @@ const (
 type Observation struct {
 	Op string `json:"op"`
 	// Path is under the state directory, as a stop record names one.
-	Path    string          `json:"path"`
-	Bytes   []byte          `json:"bytes,omitempty"`
-	SHA256  string          `json:"sha256,omitempty"`
+	Path   string `json:"path"`
+	Bytes  []byte `json:"bytes,omitempty"`
+	SHA256 string `json:"sha256,omitempty"`
 	// Entries is set for a listing alone, empty when it listed nothing:
 	// omitzero keeps an empty listing apart from none.
 	Entries []ObservedEntry `json:"entries,omitzero"`
