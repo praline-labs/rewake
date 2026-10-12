@@ -63,13 +63,19 @@ func (r Reader) Descends(pid, ancestor int) error {
 
 // Namespaces names the mount, user and pid namespaces of a process. A
 // sandbox that confines a process with namespaces gives it other ones than
-// the processes outside it, and nothing it runs can take them off.
+// the processes outside it, and nothing it runs can take them off. The kernel
+// answers a link of another user's process with an empty name and no error;
+// that is a namespace not read, never one to compare.
 func (r Reader) Namespaces(pid string) (string, error) {
 	var names []string
 	for _, kind := range []string{"mnt", "user", "pid"} {
-		link, err := os.Readlink(filepath.Join(r.Root, pid, "ns", kind))
+		path := filepath.Join(r.Root, pid, "ns", kind)
+		link, err := os.Readlink(path)
 		if err != nil {
 			return "", err
+		}
+		if link == "" {
+			return "", &os.PathError{Op: "readlink", Path: path, Err: os.ErrPermission}
 		}
 		names = append(names, link)
 	}

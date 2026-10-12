@@ -17,7 +17,7 @@ internal/infra/buildtime/                     durations a build may shorten thro
 internal/infra/legacy/                        clearing the state of 1.x at a launch: admission, set aside, validation, deletion and its counts
 internal/core/registry/                       session record, name publishing, liveness and listing
 internal/core/registry/registrytest/          for tests: the boot a session of this build carries
-internal/infra/proc/                          /proc: identity, liveness, job-control state, lineage and namespaces
+internal/infra/proc/                          /proc: identity, liveness, job-control state, lineage, namespaces, owner and initial environment
 internal/infra/boottime/                      the boot clock, comparable across processes and never set back
 internal/core/mail/                           message, status, sender-side write, the locked sweep and settlement, turn ends and the read's acknowledgment
 internal/core/mail/decisionmodel/             the operator decision's worlds and their expected outcomes, apart from the code (docs/v2/stage3-decision-manifest.md)
@@ -30,6 +30,7 @@ internal/core/grant/                          which directories a task may grant
 internal/core/grant/authority/                main's wrapper holding the grants its commands registered, and confirming them
 internal/core/grant/authority/authoritytest/  for tests: a helper process that is a recipient's run, confirms its grants at delivery and ends
 internal/core/control/                        a main's control request to a run and its answer, as files
+internal/core/person/                         whether a process runs outside every session and may decide as the person: the strict scan
 internal/core/role/                           the role catalogue: flag, briefing line, reporting duty
 internal/core/brief/                          text injected into an agent, independent of transport
 internal/core/session/                        optional, epoch-scoped observations of a harness (telemetry)

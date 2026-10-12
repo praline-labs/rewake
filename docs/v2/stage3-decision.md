@@ -124,6 +124,21 @@ every check positively finds it outside every session:
   exit 1, naming what could not be read. Failing to find a session is not proof of the
   person.
 
+Decided by main on October 12, 2026, for the processes of another user: the kernel keeps
+their `environ` and namespace links from this user — PID 1 is root's on every ordinary
+machine, and so are a login daemon and `sudo` — so read literally the rule above would
+refuse every caller and leave no person's path at all. An ancestor of the caller's user
+has its `stat`, its namespaces and its initial environment read, and one that does not
+read refuses. An ancestor of another user has its `stat` and its real and effective user
+(`/proc/<pid>/status`) read positively, and one that does not read refuses; its
+environment and namespaces are not required. The variable and the wrapper reach a chain
+only through processes of the user who started the session — the wrapper runs as that
+user and is matched by its pid and start, the harness it starts is given the variable —
+and those are read: a root process below a session, `sudo` say, still has the session's
+harness above it. The limit: a session started wholly under another user keeps another
+state directory and is not in the selected root. The scan is `person.Classify`
+(`core/person`).
+
 The checks read a strict inventory, not the forgiving views (Q3 of
 [stage3-decision-build.md](stage3-decision-build.md#q3-the-persons-path)):
 `registry.ListReadOnly` skips a record that does not load and `WorkDirs` discards its

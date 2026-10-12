@@ -103,3 +103,28 @@ func RoomDirs(root string) ([]string, error) {
 	sort.Strings(dirs)
 	return dirs, nil
 }
+
+// AllRoomDirs lists every room of a root and refuses what it cannot take
+// for one: an entry that is not a directory of a valid name — a link, a file,
+// a name rewake never makes — is an error, as is a listing that fails. A
+// check that must find a process outside every session cannot pass over an
+// entry it did not understand; RoomDirs, for views, does.
+func AllRoomDirs(root string) ([]string, error) {
+	rooms := filepath.Join(root, "rooms")
+	entries, err := os.ReadDir(rooms)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	dirs := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		path := filepath.Join(rooms, entry.Name())
+		if !entry.IsDir() || !ValidName(entry.Name()) {
+			return nil, fmt.Errorf("%s is no room", path)
+		}
+		dirs = append(dirs, path)
+	}
+	return dirs, nil
+}

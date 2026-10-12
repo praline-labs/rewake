@@ -100,7 +100,10 @@ ancestry observations detected, an unstable scan restarted within a bound and th
 refused. Not `ListReadOnly` or `WorkDirs`, no lock or lease in another room, no 1.x
 repair. A failed request to a wrapper is no proof of being outside the sessions. **Chosen**:
 unreadable identity is exit 1; positively unauthorized is exit 2; the clean double-fork
-escape stays an explicitly unverified, accepted limit.
+escape stays an explicitly unverified, accepted limit. Decided by main on October 12, 2026:
+an ancestor of another user has its `stat` and its user read positively, and its
+environment and namespace links, which the kernel keeps from this user, are not required
+([the person](stage3-decision.md#authority)).
 
 ### Q4. The commit point, durability and retry
 
