@@ -291,9 +291,14 @@ launches that both read the record missing, or another build's with nothing hold
 room, both ask for the lock exclusive, and flock's conversion lets one through. The other
 takes the lock shared again within the writers' bound and reads the record: its own build
 means the winner switched the room, and the lease is granted. Otherwise it lets go, waits a
-short random pause, and asks again, for at most two seconds in all; past them it is refused
-naming the holders, so a room held by another build's sessions answers after about two
-seconds rather than at once. The mailbox and name discipline is unchanged: no
+short random pause, and asks again. Two budgets bound this, and they are separate. The
+retries have two seconds (`switchWait`), checked after each shared reacquisition and only
+once the record is not the launch's own: past them the launch is refused naming the
+holders, so a room held by another build's sessions answers after about two seconds rather
+than at once. Each shared reacquisition has the writers' own bound (`shareWait`, ten
+seconds), which a competing switch that stalls while holding the lock exclusive uses up:
+then the launch is refused as busy, after up to that bound past the two seconds. Two
+seconds is the budget against shared holders, not an end-to-end bound. The mailbox and name discipline is unchanged: no
 pruning and no name lock inside a mailbox section, and the bounded cross-mailbox
 publication of S3 stays.
 

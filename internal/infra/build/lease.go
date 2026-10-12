@@ -222,10 +222,12 @@ func hold(lock *state.LeaseLock, room, own string, launch bool) (*Lease, error) 
 	return nil, &RefusedError{Room: room, Own: own, Theirs: theirs, Record: err}
 }
 
-// switchWait bounds a launch's attempts to switch the room's build (D4a): a
-// holder that is another launch of this build switching the same room lets go
-// within it, and a holder still there after it — a session of another build —
-// is refused.
+// switchWait bounds a launch's retries to switch the room's build against
+// shared holders (D4a): a holder that is another launch of this build
+// switching the same room lets go within it, and a holder still there after
+// it — a session of another build — is refused. It is checked after each
+// shared reacquisition, which shareWait bounds on its own, so it is no bound
+// on the whole switch.
 var switchWait = 2 * time.Second
 
 // switchBuild makes this launch's id the room's build, under the exclusive

@@ -109,7 +109,8 @@ writers, and `build.lock`, a file locked with `flock`:
   holder — a live session, a running command, an orphaned child — makes the request
   fail. A failed request reads `build` again under the shared lock and is granted when it
   now holds the launch's own id, which another launch of the same build wrote; otherwise it
-  asks again after a short random pause, for at most two seconds (D4a in
+  asks again after a short random pause, for two seconds of retries against shared
+  holders, each shared reacquisition bounded on its own by the writers' wait (D4a in
   [stage3-state.md](stage3-state.md#one-build-per-room)). Then the launch refuses, exit 1,
   naming the holders `/proc/locks` shows, by pid
   and a safe label, never a command line: end them, or launch into another room
