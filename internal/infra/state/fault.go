@@ -44,7 +44,7 @@ func ReadFile(path string) ([]byte, error) {
 
 // Remove removes a file of the state directory.
 func Remove(path string) error {
-	if err := viewWrite(OpRemove, path); err != nil {
+	if err := guard(OpRemove, path); err != nil {
 		return err
 	}
 	if err := fault(OpRemove, path); err != nil {
@@ -55,7 +55,7 @@ func Remove(path string) error {
 
 // Rename moves a file of the state directory to another name in it.
 func Rename(from, to string) error {
-	if err := viewWrite(OpRename, to); err != nil {
+	if err := guard(OpRename, from, to); err != nil {
 		return err
 	}
 	if err := fault(OpRename, to); err != nil {

@@ -94,7 +94,7 @@ func verifyPresent(path string) error {
 // A new directory is flushed to its parent: a mailbox that exists only in the
 // page cache takes messages that a crash then takes away.
 func ensureDir(path string) error {
-	if err := viewWrite(OpWrite, path); err != nil {
+	if err := guard(OpWrite, path); err != nil {
 		return err
 	}
 	return noteReach(makeDir(path), false)
@@ -148,9 +148,15 @@ func WriteAtomic(path string, data []byte) error {
 }
 
 func writeAtomic(path string, data []byte) error {
-	if err := viewWrite(OpWrite, path); err != nil {
+	if err := guard(OpWrite, path); err != nil {
 		return err
 	}
+	return replace(path, data)
+}
+
+// replace is writeAtomic past the guard: the build record's write, which a
+// launch makes under the exclusive lock before any lease authorizes the room.
+func replace(path string, data []byte) error {
 	if err := fault(OpWrite, path); err != nil {
 		return err
 	}
@@ -215,7 +221,7 @@ var ErrNameTaken = errors.New("name taken")
 // file and links it into place: link fails when the target exists, so two
 // processes claiming one name cannot both believe they won.
 func PublishExclusive(path string, data []byte) error {
-	if err := viewWrite(OpPublish, path); err != nil {
+	if err := guard(OpPublish, path); err != nil {
 		return err
 	}
 	if err := fault(OpPublish, path); err != nil {
@@ -288,7 +294,7 @@ func WithMailboxLock(ctx context.Context, dir, name string, fn func() error) err
 
 // WithMailboxLockAt is WithMailboxLock for a mailbox named by its path.
 func WithMailboxLockAt(ctx context.Context, mailbox string, fn func() error) error {
-	if err := viewWrite(opLock, mailbox); err != nil {
+	if err := guard(opLock, mailbox); err != nil {
 		return err
 	}
 	if err := EnsureSubdir(mailbox); err != nil {
@@ -332,7 +338,7 @@ var LockWait func(mailbox string)
 const lockPoll = 10 * time.Millisecond
 
 func tryLock(path, what string, fn func() error) (bool, error) {
-	if err := viewWrite(opLock, path); err != nil {
+	if err := guard(opLock, path); err != nil {
 		return false, err
 	}
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
@@ -353,7 +359,7 @@ func tryLock(path, what string, fn func() error) (bool, error) {
 }
 
 func withLock(path, what string, fn func() error) error {
-	if err := viewWrite(opLock, path); err != nil {
+	if err := guard(opLock, path); err != nil {
 		return err
 	}
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)

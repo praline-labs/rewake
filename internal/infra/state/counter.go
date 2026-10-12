@@ -29,7 +29,7 @@ const counterSize = 8
 // path that is not a regular file of one word is refused rather than
 // repaired: it is not a counter this package wrote.
 func OpenCounter(path string) (*Counter, error) {
-	if err := viewWrite(OpWrite, path); err != nil {
+	if err := guard(OpWrite, path); err != nil {
 		return nil, err
 	}
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0o600)
@@ -74,7 +74,7 @@ func (c *Counter) Load() uint64 { return atomic.LoadUint64(c.word()) }
 // Store publishes v through the word. It is a write of the room, guarded as
 // one; a refused store leaves the word as it was.
 func (c *Counter) Store(v uint64) error {
-	if err := viewWrite(OpWrite, c.path); err != nil {
+	if err := guard(OpWrite, c.path); err != nil {
 		return err
 	}
 	atomic.StoreUint64(c.word(), v)
@@ -83,7 +83,7 @@ func (c *Counter) Store(v uint64) error {
 
 // Sync flushes the stores made through the mapping to the file.
 func (c *Counter) Sync() error {
-	if err := viewWrite(OpWrite, c.path); err != nil {
+	if err := guard(OpWrite, c.path); err != nil {
 		return err
 	}
 	return c.file.Sync()

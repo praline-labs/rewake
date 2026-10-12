@@ -11,7 +11,7 @@ import (
 // lives. The lock stays until the returned file is closed, and the kernel
 // drops it when the writer dies, however it dies.
 func WriteAtomicHeld(path string, data []byte) (*os.File, error) {
-	if err := viewWrite(OpWrite, path); err != nil {
+	if err := guard(OpWrite, path); err != nil {
 		return nil, err
 	}
 	name, err := writeTemp(filepath.Dir(path), data)
@@ -46,7 +46,7 @@ func WriteAtomicHeld(path string, data []byte) (*os.File, error) {
 // Holding orders writers, so a view gets false before the file is opened,
 // and its attempt is kept for leaving the mode to report.
 func TryHold(path string) (*os.File, bool) {
-	if viewWrite(opLock, path) != nil {
+	if guard(opLock, path) != nil {
 		return nil, false
 	}
 	held, err := os.Open(path)

@@ -33,8 +33,7 @@ an installed 1.x writer that does not honour the lease is no safe coexistence.
 5. **Ordinary writes through the seam**: files, the name, mailbox, receipt and control
    locks, the tagged callbacks, with S3's and S15's lock and publication order kept.
 6. **Mapped counters and sockets through guarded resources**; `ErrNoLease` and the
-   static test on, once every path is covered. Commits 5 and 6 may split further by
-   kind of effect.
+   static test on, once every path is covered. Commits 5 and 6 split by kind of effect.
 7. **The clearing of 1.x** with its scoped cleanup authority
    ([stage3-upgrade.md](stage3-upgrade.md)), its crash and concurrency matrix, the live
    gate and the timing record.
@@ -94,9 +93,7 @@ the test holds that lease shared until it ends, as a session holds its room's
 (`buildtest.Established` releases it at once, `buildtest.Release` before a switch); the
 tool rig, whose room belongs to the binary it built, bootstraps the room, records that
 binary's id and holds the lease itself, and the workflow suite names its rooms through
-`Isolation.Room`. A source
-scan at the review found 17 lines in 11 internal test files and 20 under `test/`; it is no
-completeness count. `test/toolrig/fault_test.go:86,186` normalizes and matches
+`Isolation.Room`. `test/toolrig/fault_test.go` normalizes and matches
 `/rooms/default/...`, and its fault oracle stops matching without `v2`; the suite's
 mutation paths are proved to fail again after the change.
 
@@ -163,7 +160,9 @@ precedence over a missing lease.
 `infra/state` — `WriteAtomic`, `WriteAtomicHeld`, `PublishExclusive`, `Remove`, `Rename`,
 `EnsureSubdir`, the locks (`WithRoomLock`, `WithNameLock`, `TryWithNameLock`,
 `WithMailboxLock`, `WithMailboxLockAt`, `TryHold`) — refuse with `ErrNoLease` when the process holds
-no lease for that room. The writes under the room that bypass them are each routed
+no lease for that room: one guard (`guard.go`) checks view mode on every path first, then
+whether each lies in a room `Authorize` recorded, by cleaned prefix, so a write of another
+room refuses like one outside every room and a lease's `Close` ends it. The writes under the room that bypass them are each routed
 through a primitive, a new one where none fits: `OpenFile` (a write only with a write flag),
 `WriteFile`, `Link`, `Move`, `Chmod`, `Touch`, `Discard`, `RemoveAll`, `Flock` (taking a
 lock is a write, letting it go is not), each the os call it names behind the same guard and

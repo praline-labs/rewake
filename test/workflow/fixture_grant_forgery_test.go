@@ -146,6 +146,13 @@ func playGrantForgery(t *testing.T, c *Case, iso *Isolation) []telemetryFinding 
 		return append(out, unjudgedAll(letters, "the other listener could not start: %v", listenErr)...)
 	}
 	defer stop()
+	// The letters are written as any writer of the room writes, under its
+	// lease: what is forged is the grant, not the right to write.
+	release, leaseErr := holdLease(room)
+	if leaseErr != nil {
+		return append(out, unjudgedAll(letters, "cannot take the room's lease: %v", leaseErr)...)
+	}
+	defer release()
 	for _, letter := range []mail.Message{raw, hand, foreign} {
 		if err := mail.Put(room, letter); err != nil {
 			return append(out, unjudgedAll(letters, "cannot write the letter: %v", err)...)
@@ -164,6 +171,24 @@ func playGrantForgery(t *testing.T, c *Case, iso *Isolation) []telemetryFinding 
 			statusState(iso, worker, letter.message.ID), reached, statusDetail(iso, worker, letter.message.ID), registered, events, err))
 	}
 	return out
+}
+
+// holdLease takes the room's lease shared for this process until release,
+// as a session of the room holds it.
+func holdLease(room string) (func(), error) {
+	lock, err := state.OpenLeaseLock(room)
+	if err != nil {
+		return nil, err
+	}
+	if err := lock.Share(5 * time.Second); err != nil {
+		lock.Close()
+		return nil, err
+	}
+	if err := state.Authorize(lock); err != nil {
+		lock.Close()
+		return nil, err
+	}
+	return lock.Close, nil
 }
 
 // answerInMainsPlace starts a listener that confirms a letter's grant, at

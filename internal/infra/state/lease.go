@@ -256,7 +256,11 @@ func WriteBuildRecord(l *LeaseLock, id string) error {
 	if !buildShape.MatchString(id) {
 		return fmt.Errorf("%q is no build id", id)
 	}
-	return writeAtomic(filepath.Join(l.room, buildRecordName), []byte(id+"\n"))
+	path := filepath.Join(l.room, buildRecordName)
+	if err := viewWrite(OpWrite, path); err != nil {
+		return err
+	}
+	return replace(path, []byte(id+"\n"))
 }
 
 // The rooms this process holds a lease for. A write of a room asks here

@@ -23,7 +23,7 @@ const writeFlags = os.O_WRONLY | os.O_RDWR | os.O_CREATE | os.O_TRUNC | os.O_APP
 // close inside its scope. A read-only open passes.
 func OpenFile(path string, flag int, perm os.FileMode) (*os.File, error) {
 	if flag&writeFlags != 0 {
-		if err := viewWrite(OpWrite, path); err != nil {
+		if err := guard(OpWrite, path); err != nil {
 			return nil, err
 		}
 	}
@@ -34,7 +34,7 @@ func OpenFile(path string, flag int, perm os.FileMode) (*os.File, error) {
 // does: for content whose reader tolerates a partial write, a mark or a
 // temporary file renamed afterwards.
 func WriteFile(path string, data []byte, perm os.FileMode) error {
-	if err := viewWrite(OpWrite, path); err != nil {
+	if err := guard(OpWrite, path); err != nil {
 		return err
 	}
 	return os.WriteFile(path, data, perm)
@@ -43,7 +43,7 @@ func WriteFile(path string, data []byte, perm os.FileMode) error {
 // Link gives a file of the state directory a second name. Both ends are the
 // state's: the name it gets and the file it names.
 func Link(from, to string) error {
-	if err := viewWrite(OpPublish, to); err != nil {
+	if err := guard(OpPublish, from, to); err != nil {
 		return err
 	}
 	return os.Link(from, to)
@@ -53,7 +53,7 @@ func Link(from, to string) error {
 // a fault plan counts: the rename of a temporary file its caller wrote in
 // place, where a crash leaves only that temporary file.
 func Move(from, to string) error {
-	if err := viewWrite(OpRename, to); err != nil {
+	if err := guard(OpRename, from, to); err != nil {
 		return err
 	}
 	return os.Rename(from, to)
@@ -61,7 +61,7 @@ func Move(from, to string) error {
 
 // Chmod sets the mode of a file or directory of the state directory.
 func Chmod(path string, mode os.FileMode) error {
-	if err := viewWrite(OpWrite, path); err != nil {
+	if err := guard(OpWrite, path); err != nil {
 		return err
 	}
 	return os.Chmod(path, mode)
@@ -70,7 +70,7 @@ func Chmod(path string, mode os.FileMode) error {
 // Touch sets a file's access and modification times, which some of the state
 // reads as a heartbeat or a release time.
 func Touch(path string, at time.Time) error {
-	if err := viewWrite(OpWrite, path); err != nil {
+	if err := guard(OpWrite, path); err != nil {
 		return err
 	}
 	return os.Chtimes(path, at, at)
@@ -81,7 +81,7 @@ func Touch(path string, at time.Time) error {
 // crash before it leaves what the next caller discards again. Remove is the
 // durable removal a fault plan counts.
 func Discard(path string) error {
-	if err := viewWrite(OpRemove, path); err != nil {
+	if err := guard(OpRemove, path); err != nil {
 		return err
 	}
 	return os.Remove(path)
@@ -91,7 +91,7 @@ func Discard(path string) error {
 // as cleanup: a run's own as its run ends or once a later launch has proven
 // it dead, the records of runs that ended.
 func RemoveAll(path string) error {
-	if err := viewWrite(OpRemove, path); err != nil {
+	if err := guard(OpRemove, path); err != nil {
 		return err
 	}
 	return os.RemoveAll(path)
@@ -102,7 +102,7 @@ func RemoveAll(path string) error {
 // always passes.
 func Flock(file *os.File, how int) error {
 	if how&syscall.LOCK_UN == 0 {
-		if err := viewWrite(opLock, file.Name()); err != nil {
+		if err := guard(opLock, file.Name()); err != nil {
 			return err
 		}
 	}

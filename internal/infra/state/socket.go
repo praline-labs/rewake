@@ -23,7 +23,7 @@ type Listener struct {
 // the path is the caller's to clear first: a dead run's socket is removed
 // with Discard.
 func Listen(path string) (*Listener, error) {
-	if err := viewWrite(OpWrite, path); err != nil {
+	if err := guard(OpWrite, path); err != nil {
 		return nil, err
 	}
 	listener, err := net.ListenUnix("unix", &net.UnixAddr{Name: path, Net: "unix"})
@@ -47,7 +47,7 @@ func (l *Listener) Close() error {
 	closed := l.UnixListener.Close()
 	var removed error
 	l.remove.Do(func() {
-		if removed = viewWrite(OpRemove, l.path); removed != nil {
+		if removed = guard(OpRemove, l.path); removed != nil {
 			return
 		}
 		if err := os.Remove(l.path); err != nil && !errors.Is(err, os.ErrNotExist) {
