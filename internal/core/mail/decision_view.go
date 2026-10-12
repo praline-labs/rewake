@@ -155,7 +155,8 @@ func readDecision(files fileAccess, path string) (Decision, error) {
 }
 
 // readClosure reads the closure at path and holds it to the decision it is
-// beside: one that names another decision or journal closed nothing of it.
+// beside: one that names another decision, journal or operation, or a wait
+// of another run than the report's recipient, closed nothing of it.
 func readClosure(files fileAccess, path string, d Decision) (Closure, error) {
 	raw, err := files.ReadFile(path)
 	if err != nil {
@@ -165,8 +166,16 @@ func readClosure(files fileAccess, path string, d Decision) (Closure, error) {
 	if err != nil {
 		return Closure{}, err
 	}
-	if closure.Decision != d.ID || closure.Journal != d.Subject.Journal {
-		return Closure{}, fmt.Errorf("the closure %s names decision %s of journal %s, not %s of %s", path, closure.Decision, closure.Journal, d.ID, d.Subject.Journal)
+	s := d.Subject
+	if closure.Decision != d.ID || closure.Journal != s.Journal || closure.Op != s.Op {
+		return Closure{}, fmt.Errorf("the closure %s names decision %s of journal %s, operation %q, not %s of %s, operation %q", path, closure.Decision, closure.Journal, closure.Op, d.ID, s.Journal, s.Op)
+	}
+	// J may be gone, and with it the tail to compare with; what the report
+	// answers is the waits of its recipient's run, and no other.
+	for _, wait := range closure.Waits {
+		if wait.Name != s.Recipient || wait.Epoch != s.RecipientRun || len(wait.Messages) == 0 {
+			return Closure{}, fmt.Errorf("the closure %s names a wait of %s's run %s, where the report answers %s's run %s", path, wait.Name, wait.Epoch, s.Recipient, s.RecipientRun)
+		}
 	}
 	return closure, nil
 }

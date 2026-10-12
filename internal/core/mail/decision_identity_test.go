@@ -55,3 +55,57 @@ func TestDecisionToldRecordsOfAnotherNoteTellNothing(t *testing.T) {
 		})
 	}
 }
+
+// A closure records what this journal's tail closed: the decision, the
+// journal and its operation, and exactly the waits the tail clears that the
+// report answers. One with another operation, waits of another run or not
+// the tail's waits is not this tail's: the barrier stops on it and leaves it
+// as it is, and the view — which may outlive J and its tail — rejects the
+// operation and a wait of any run but the report's recipient's.
+func TestDecisionClosureNamesItsOperationAndItsTail(t *testing.T) {
+	cases := map[string]struct {
+		edit       func(*Closure, TurnJournal)
+		viewRefuse bool
+	}{
+		"another operation": {func(c *Closure, _ TurnJournal) { c.Op = "foreign-operation" }, true},
+		"a wait of another run": {func(c *Closure, _ TurnJournal) {
+			c.Waits = []Waiter{{Name: "other", Epoch: "foreign-run", Messages: []string{"x"}}}
+		}, true},
+		"none of the tail's waits":  {func(c *Closure, _ TurnJournal) { c.Waits = []Waiter{} }, false},
+		"the tail's waits, changed": {func(c *Closure, _ TurnJournal) { c.Waits[0].Messages = []string{"another"} }, false},
+	}
+	for name, mismatch := range cases {
+		t.Run(name, func(t *testing.T) {
+			lab := newDecisionLab(t)
+			d := lab.decision(t, ChoiceArrived)
+			path := writeDecision(t, lab.dir, d) + closedSuffix
+			j, err := readJournalFile(filepath.Join(JournalPath(lab.dir, "api"), "end"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			c := Closure{Decision: d.ID, Journal: "end", Op: j.Op, Report: lab.report.ID, Waits: closedWaits(j, lab.report.ID), At: time.Now()}
+			if len(c.Waits) != 1 {
+				t.Fatalf("the tail clears %v", c.Waits)
+			}
+			mismatch.edit(&c, j)
+			writeRecord(t, path, c)
+			before, _ := os.ReadFile(path)
+			if err := finishAll(t, lab.dir); err == nil {
+				t.Fatal("a closure that is not this tail's was taken for its own")
+			}
+			if fileExists(filepath.Join(JournalPath(lab.dir, "api"), "end"+doneSuffix)) {
+				t.Fatal("the journal finished beside it")
+			}
+			if after, _ := os.ReadFile(path); string(after) != string(before) {
+				t.Fatal("the closure was written over")
+			}
+			views, err := Decisions(lab.dir, "api")
+			if err != nil || len(views) != 1 {
+				t.Fatalf("the views: %v %+v", err, views)
+			}
+			if refused := views[0].ClosureErr != nil; refused != mismatch.viewRefuse || refused == (views[0].Closure != nil) {
+				t.Fatalf("the view says %+v, %v", views[0].Closure, views[0].ClosureErr)
+			}
+		})
+	}
+}

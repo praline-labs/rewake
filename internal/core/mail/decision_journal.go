@@ -57,7 +57,7 @@ func (w world) closeDecided(name, id string, journal TurnJournal) error {
 		raw, err := w.readFile(path)
 		switch {
 		case err == nil:
-			if err := closureOf(path, raw, step, id); err != nil {
+			if err := closureOf(path, raw, step, id, journal); err != nil {
 				return inOp(step.Report, err)
 			}
 			continue
@@ -76,16 +76,35 @@ func (w world) closeDecided(name, id string, journal TurnJournal) error {
 	return nil
 }
 
-// closureOf holds a closure found written to the step it closes.
-func closureOf(path string, raw []byte, step DecidedStep, journal string) error {
+// closureOf holds a closure found written to the step it closes: the
+// decision, the journal and its operation, and exactly the waits of the
+// journal's tail the report answers. One that says other waits records a
+// closure this tail did not make.
+func closureOf(path string, raw []byte, step DecidedStep, id string, journal TurnJournal) error {
 	closure, err := parseClosure(path, raw)
 	if err != nil {
 		return unknownRecord(path, err)
 	}
-	if closure.Decision != step.Decision || closure.Journal != journal {
-		return unknownRecord(path, fmt.Errorf("the closure %s names decision %s of journal %s, not %s of %s", path, closure.Decision, closure.Journal, step.Decision, journal))
+	if closure.Decision != step.Decision || closure.Journal != id || closure.Op != journal.Op {
+		return unknownRecord(path, fmt.Errorf("the closure %s names decision %s of journal %s, operation %q, not %s of %s, operation %q", path, closure.Decision, closure.Journal, closure.Op, step.Decision, id, journal.Op))
+	}
+	if !sameWaits(closure.Waits, closedWaits(journal, step.Report)) {
+		return unknownRecord(path, fmt.Errorf("the closure %s names waits the tail of %s does not clear for its report", path, id))
 	}
 	return nil
+}
+
+// sameWaits says two lists name the same waits, in the same order.
+func sameWaits(a, b []Waiter) bool {
+	if len(a) == 0 || len(b) == 0 {
+		return len(a) == len(b)
+	}
+	left, err := json.Marshal(a)
+	if err != nil {
+		return false
+	}
+	right, err := json.Marshal(b)
+	return err == nil && string(left) == string(right)
 }
 
 // closedWaits are the waits of the journal's tail the report answers: those
