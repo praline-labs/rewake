@@ -67,3 +67,32 @@ func TestEveryWritePrimitiveRefusesInViewMode(t *testing.T) {
 		t.Fatalf("a view without writes: %v", err)
 	}
 }
+
+// TryHold takes an exclusive flock, so a view never gets one: it answers
+// false before opening the file, and the attempt is kept as evidence although
+// the bool carries no error — leaving the mode reports it.
+func TestTryHoldRefusesInViewMode(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "held")
+	writer, err := WriteAtomicHeld(path, []byte("pending"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = writer.Close()
+	opened := false
+	beforeHold = func(string) { opened = true }
+	t.Cleanup(func() { beforeHold = func(string) {} })
+	leave := EnterView()
+	held, ok := TryHold(path)
+	if held != nil {
+		_ = held.Close()
+	}
+	err = leave()
+	if ok || opened || !errors.Is(err, ErrViewWrite) {
+		t.Fatalf("in view mode: held %v, opened %v, leaving reported %v", ok, opened, err)
+	}
+	held, ok = TryHold(path)
+	if !ok {
+		t.Fatal("outside view mode the free lock was not taken")
+	}
+	_ = held.Close()
+}

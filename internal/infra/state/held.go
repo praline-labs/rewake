@@ -43,7 +43,12 @@ func WriteAtomicHeld(path string, data []byte) (*os.File, error) {
 // includes gone between the open and the lock: a writer that removes its file
 // and lets go in that instant leaves the lock free on a file no name leads to
 // any more, and holding that would pass a closed record for an open one.
+// Holding orders writers, so a view gets false before the file is opened,
+// and its attempt is kept for leaving the mode to report.
 func TryHold(path string) (*os.File, bool) {
+	if viewWrite(opLock, path) != nil {
+		return nil, false
+	}
 	held, err := os.Open(path)
 	if err != nil {
 		return nil, false
