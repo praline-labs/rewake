@@ -51,7 +51,7 @@ func TestEveryViewLeavesMissingAndExistingStateUnchanged(t *testing.T) {
 			started := time.Now()
 			code, _, errOut := run(argv...)
 			if elapsed := time.Since(started); elapsed > 5*time.Second {
-				t.Errorf("%q waited %s", argv, elapsed)
+				t.Fatalf("%q waited %s", argv, elapsed)
 			}
 			if strings.Contains(errOut, "internal error") || strings.Contains(errOut, state.ErrViewWrite.Error()) {
 				t.Errorf("%q tried to write: %d %s", argv, code, errOut)
