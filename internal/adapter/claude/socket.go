@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // The socket path of delivery: the notice written to the session's messaging
@@ -101,5 +102,5 @@ func removeStaleSocket(path string) error {
 	if !errors.Is(err, syscall.ECONNREFUSED) {
 		return fmt.Errorf("%s exists and could not be checked (%v); leaving it alone", path, err)
 	}
-	return os.Remove(path)
+	return state.Discard(path)
 }

@@ -179,8 +179,8 @@ guarded resources:
   `state.Counter`, a guarded resource, the order reserve the high-water mark, persist the
   waiter, publish the word kept, and `Snapshot` free of filesystem access and blocking locks;
 - commit 6: the sockets — the endpoint's (creation, removal, mode), the wrapper's
-  (`host/claim.go`), the fixture's `backend.go` and `lifecycle.go` and the adapters';
-  closing a `UnixListener` may unlink its path, so the guard covers the close;
+  (`host/claim.go`), the fixture's and the adapters' — bound by `state.Listen`, whose
+  close removes the path once, behind the guard, in place of Go's own unlink;
 - the lock files themselves (`state.go`), opened inside the primitives.
 
 Both ends of a link or a rename, mapped and open handles, listener creation and the

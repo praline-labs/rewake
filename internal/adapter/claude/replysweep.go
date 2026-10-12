@@ -8,6 +8,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // replySuffix ends every reply socket rewake makes beside a session's own.
@@ -43,7 +45,7 @@ func sweepReplies(dir string) {
 			continue
 		}
 		if errors.Is(err, syscall.ECONNREFUSED) {
-			_ = os.Remove(path)
+			_ = state.Discard(path)
 		}
 	}
 }

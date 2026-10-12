@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // receiptLine is a receipt as Claude Code writes it, read on 2.1.280 from the
@@ -118,7 +119,7 @@ const maxReceipt = 64 << 10
 // which would otherwise be retried at once, and again, on a whole core.
 const acceptPause = time.Second
 
-func (l *lane) accept(listener *net.UnixListener) {
+func (l *lane) accept(listener *state.Listener) {
 	var pause time.Duration
 	for {
 		connection, err := listener.AcceptUnix()

@@ -4,10 +4,11 @@ package fixture
 
 import (
 	"errors"
-	"os"
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // errClosing is a call into the wrapper's handler refused because the
@@ -106,7 +107,7 @@ func (b *backend) Close() {
 		b.stopProgram()
 		b.routines.Wait()
 		b.users.Wait()
-		_ = os.Remove(b.socket)
+		_ = state.Discard(b.socket)
 	})
 }
 

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/infra/proc"
+	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/tool"
 )
 
@@ -27,7 +28,7 @@ const (
 // Endpoint serves one run's context socket.
 type Endpoint struct {
 	cfg      Config
-	listener *net.UnixListener
+	listener *state.Listener
 	path     string
 	calls    *calls
 	acks     sync.WaitGroup
@@ -74,13 +75,11 @@ func Listen(path string, cfg Config) (*Endpoint, error) {
 	if cfg.Gate == nil {
 		cfg.Gate = tool.NewGate(nil)
 	}
-	_ = os.Remove(path)
-	listener, err := net.ListenUnix("unix", &net.UnixAddr{Name: path, Net: "unix"})
+	_ = state.Discard(path)
+	listener, err := state.Listen(path)
 	if err != nil {
 		return nil, err
 	}
-	listener.SetUnlinkOnClose(true)
-	_ = os.Chmod(path, 0o600)
 	e := &Endpoint{cfg: cfg, listener: listener, path: path, calls: newCalls(), conns: map[*net.UnixConn]bool{}, slots: make(chan struct{}, maxChildren), done: make(chan struct{})}
 	go e.accept()
 	return e, nil

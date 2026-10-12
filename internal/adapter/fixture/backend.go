@@ -18,6 +18,7 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/infra/proc"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // readinessBound is how long the program has to say hello, and each probe to
@@ -121,13 +122,12 @@ func (b *backend) Start(ctx context.Context, note func(string)) error {
 		b.note = func(string) {}
 	}
 	b.ctx, b.cancel = context.WithCancel(ctx)
-	_ = os.Remove(b.socket)
-	listener, err := net.Listen("unix", b.socket)
+	_ = state.Discard(b.socket)
+	listener, err := state.Listen(b.socket)
 	if err != nil {
 		b.cancel()
 		return err
 	}
-	_ = os.Chmod(b.socket, 0o600)
 	b.listener = listener
 	if err := b.spawn(); err != nil {
 		_ = listener.Close()

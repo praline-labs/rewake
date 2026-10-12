@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -60,7 +59,7 @@ type lane struct {
 	limit  time.Duration
 
 	mu       sync.Mutex
-	listener *net.UnixListener
+	listener *state.Listener
 	// sent maps a line's msg_id to what Deliver is waiting on, or to a held
 	// notice whose later words go to the inbox server.
 	sent map[string]*sentNotice
@@ -144,15 +143,10 @@ func (l *lane) listen(ctx context.Context) error {
 			return fmt.Errorf("not hearing back about held messages: %s is taken by something that is not a socket", l.reply)
 		}
 		// The path names this run, so a leftover belongs to a wrapper that died.
-		_ = os.Remove(l.reply)
+		_ = state.Discard(l.reply)
 	}
-	listener, err := net.ListenUnix("unix", &net.UnixAddr{Name: l.reply, Net: "unix"})
+	listener, err := state.Listen(l.reply)
 	if err != nil {
-		return fmt.Errorf("not hearing back about held messages: %w", err)
-	}
-	if err := os.Chmod(l.reply, 0o600); err != nil {
-		_ = listener.Close()
-		_ = os.Remove(l.reply)
 		return fmt.Errorf("not hearing back about held messages: %w", err)
 	}
 	l.mu.Lock()
@@ -181,7 +175,6 @@ func (l *lane) Close() {
 		defer l.mu.Unlock()
 		if l.listener != nil {
 			_ = l.listener.Close()
-			_ = os.Remove(l.reply)
 		}
 	})
 }

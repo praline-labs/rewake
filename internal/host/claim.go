@@ -91,5 +91,5 @@ func removeSocket(path string) {
 	if err != nil || info.Mode()&os.ModeSocket == 0 {
 		return
 	}
-	_ = os.Remove(path)
+	_ = state.Discard(path)
 }

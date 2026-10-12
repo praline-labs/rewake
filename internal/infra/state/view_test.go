@@ -37,6 +37,11 @@ func TestEveryWritePrimitiveRefusesInViewMode(t *testing.T) {
 	if err := counter.Store(3); err != nil {
 		t.Fatal(err)
 	}
+	listening, err := Listen(filepath.Join(dir, "listening.sock"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = listening.Close() }()
 	writes := map[string]func() error{
 		"WriteAtomic":      func() error { return WriteAtomic(file, []byte("view")) },
 		"PublishExclusive": func() error { return PublishExclusive(filepath.Join(dir, "new"), nil) },
@@ -87,8 +92,16 @@ func TestEveryWritePrimitiveRefusesInViewMode(t *testing.T) {
 		},
 		"Counter.Store": func() error { return counter.Store(7) },
 		"Counter.Sync":  func() error { return counter.Sync() },
-		"Bootstrap":     func() error { _, err := Bootstrap(base, "blue"); return err },
-		"OpenLeaseLock": func() error { _, err := OpenLeaseLock(dir); return err },
+		"Listen": func() error {
+			listener, err := Listen(filepath.Join(dir, "another.sock"))
+			if listener != nil {
+				_ = listener.Close()
+			}
+			return err
+		},
+		"Listener.Close": func() error { return listening.Close() },
+		"Bootstrap":      func() error { _, err := Bootstrap(base, "blue"); return err },
+		"OpenLeaseLock":  func() error { _, err := OpenLeaseLock(dir); return err },
 		"CreateLeaseLock": func() error {
 			_, err := CreateLeaseLock(filepath.Join(base, "v2", "rooms", "blue"))
 			return err
