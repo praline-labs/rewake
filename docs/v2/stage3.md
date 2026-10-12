@@ -25,6 +25,8 @@ there one reviewable commit at a time.
 | [stage3-decision-model.md](stage3-decision-model.md) | part B: the operator decision as an abstract model — the world, its outcomes, what a decision is answerable for, correction 9 |
 | [stage3-decision.md](stage3-decision.md) | part B: subject, authority with correction 8, command, records, what every reader consults |
 | [stage3-decision-recovery.md](stage3-decision-recovery.md) | part B: the decision's record, installing its effects, composition, the rules D1–D8 and their tests |
+| [stage3-decision-build.md](stage3-decision-build.md) | part B as S18 builds it: what drifted since part B, the decisions Q1–Q14, the three parts, the acceptance bar |
+| [stage3-decision-manifest.md](stage3-decision-manifest.md) | part B's worlds: the dimensions, the excluded combinations, the schedule partitions and their counts |
 
 Citations of 1.x code are to the tree at `b6ed4ed`. **[unverified]** marks what was
 inferred from names, comments or a grep rather than read through. Of the inventories
@@ -36,10 +38,11 @@ Every inventory is retaken with `go/types` at its step
 
 ## What holds in every step
 
-- **Each step is one commit with the five checks green** (`AGENTS.md`, "Checks"), unless
-  it lists numbered commits, each of which keeps them green. `internal/layout_test.go`
-  and `docs/rules_test.go` are green from S1 on. A step that cannot keep them green is
-  split, never landed red.
+- **A step lands with the five checks green on its last commit** (`AGENTS.md`,
+  "Checks"); its intermediate commits build and vet, the tagged variants included. A step
+  accepted in parts, as S18 is, runs the five checks and the workflow suite on the last
+  commit of each part. `internal/layout_test.go` and `docs/rules_test.go` are green from
+  S1 on. A step that cannot land green is split, never landed red.
 - **A move is a rename only when its inventory says so.** Before a package or file group
   moves, its declarations and their consumers, tests included, are listed; every
   receiver, private helper, value owned by a lower layer and input the core must define
@@ -94,7 +97,7 @@ One line per step; S1–S6 are detailed in [stage3-steps.md](stage3-steps.md), S
 | S15 | the delivery server leaves `core/mail` for `host/delivery`: preparatory commits by subject, one move | yes | review [codex] |
 | S16 | `tool` and `host` move | yes | review |
 | S17 | the forms classified, the build id and the room's lease with its bootstrap, then the state root `v2/`, read-only views, the run directory, the write seam, clearing 1.x ([seven commits](stage3-state.md#the-sequence)) | yes | review [codex] |
-| S18 | the operator decision (part B) | yes | review [codex] |
+| S18 | the operator decision (part B), in three parts each accepted on its own ([stage3-decision-build.md](stage3-decision-build.md#q14-acceptance-in-three-parts)) | yes, on each part's last commit | review [codex] per part |
 | S19 | closing: every gap closed, the tables empty, `AGENTS.md` and the documents, the stage acceptance | yes, with the crosswise check | review, then the stage [codex] |
 
 **Why this order.** The removals and the behaviour changes come before the moves, so the
@@ -130,7 +133,9 @@ accepted in review round 7.
   [stage3-decision-model.md](stage3-decision-model.md),
   [stage3-decision.md](stage3-decision.md) and
   [stage3-decision-recovery.md](stage3-decision-recovery.md). It is accepted before S18
-  is built.
+  is built; what drifted since, and the build's fourteen decisions, are in
+  [stage3-decision-build.md](stage3-decision-build.md), its worlds in
+  [stage3-decision-manifest.md](stage3-decision-manifest.md).
 
 **What part A relies on from part B: nothing**, with one qualification: S19's rules are
 accepted with part A, but S19 cannot run or close the stage before S18 is built. S1–S17

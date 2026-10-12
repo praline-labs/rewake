@@ -47,9 +47,9 @@ from the fault seam's log of writes, never from the files left in r's mailbox.
 | Evidence | What it reads | Consistent with |
 |---|---|---|
 | none | inside the publication's section that admitted the attempt by reading r live, the lock still held: the step open, no letter and no mark — r may have ended since that read | not landed: no sweep can retire the proof of a landing while the section holds the lock, and none retired it before a section that reads r live ([stage3-publication.md](stage3-publication.md#why-it-is-enough)) |
-| absence proven | an intent mark without its letter, which the sweep never leaves behind for a written letter (`inbox/once.go:14-21`) | not landed, at that read |
+| absence proven | an intent mark without its letter, which the sweep never leaves behind for a written letter (`core/mail/once.go`) | not landed, at that read |
 | published | the letter, or its published mark | landed |
-| unknown | a read that failed, a mark of no known meaning, a mailbox that cannot be searched; **or every read succeeding with no letter and no mark without that admission** — outside a section that read r live and still holds the lock — the proof of a landing may have been retired once r ended (`PublicationOf`, `once.go:165-200`, answers `PublicationUnknown` there) | either |
+| unknown | a read that failed, a mark of no known meaning, a mailbox that cannot be searched; **or every read succeeding with no letter and no mark without that admission** — outside a section that read r live and still holds the lock — the proof of a landing may have been retired once r ended (`PublicationOf`, `core/mail/once.go`, answers `PublicationUnknown` there) | either |
 
 `none` is the one row whose absence is evidence, and only where the protocol still proves
 it: a step whose earlier attempt may have written, read without a still-held section that
@@ -77,8 +77,8 @@ what happened to it.
 | closed by D | a decision on an unknown copy | nothing: delivery unproven |
 
 **Moot is a lifetime disposition, not evidence.** An attempt reads r's run before it reads
-any evidence and records `Moot` when it finds r ended (`journal_held.go:24-35`,
-`:145-161`), whether or not an earlier attempt wrote the letter. Moot is recorded by that
+any evidence and records `Moot` when it finds r ended (`deliverReport` and `publishAdmitted`,
+`core/mail/journal_held.go`), whether or not an earlier attempt wrote the letter. Moot is recorded by that
 observation, never by r's end alone: an attempt that read r live and wrote across r's end
 records `Published` if it survives to save it, and only a later attempt, after that save
 was lost, records the landed copy moot. A copy that landed while r lived, with the sender
@@ -109,16 +109,22 @@ the sender's saves; after a resend's outcome turned unknown. A later launch of a
 a different run.
 
 **6. Admission.** E8 lets an operation's effects run only in a barrier whose plan meets
-no unknown anywhere in the mailbox (`reconcile.go:39-49,105-114,138-149`): an unknown
-copy, an unrelated unreadable journal or any open occurrence keeps every journal of the
-mailbox where it is, ready or not. An operation is **ready** when its own steps let it go
-on; it **runs** when it is ready and the mailbox is admitted. The two are kept apart, and
-E8's mailbox-wide rule wins: a decision makes a step ready, never the mailbox admitted.
+no unknown anywhere in the mailbox (`Reconcile`, `lookAtStop` and `holdsEffects`,
+`core/mail/reconcile.go` and `core/mail/stop_look.go`): an unknown copy, an unrelated
+unreadable journal, or an open occurrence the plan found keeps every journal of the
+mailbox where it is, ready or not. One kind of open occurrence does not: an unknown an
+effect met, which the plan did not show, lets a clean barrier run the effects through,
+since only completing its operation resolves it (S3's carried E8 recovery,
+`TestAnUnknownOnlyAnEffectMetStopsUntilTheBarrier`) — unless its record or resolution does
+not read or a path it names was removed. An operation is **ready** when its own steps let
+it go on; it **runs** when it is ready and the mailbox is admitted. The two are kept
+apart, and E8's mailbox-wide rule wins: a decision makes a step ready, never the mailbox
+admitted.
 
 **7. Progress and retention of effects.** What a decision causes is progressed and
 retired by ordinary owners: the resend saves its steps, completes, takes its done form
 and meets the retention of journals; a note's once record is swept with the run it was
-written for (`once.go:205-216`). These transitions change no outcome.
+written for (`sweepOnce`, `core/mail/once.go`). These transitions change no outcome.
 
 **Excluded combinations** — never built by a test, never accepted by the oracle:
 
@@ -252,7 +258,7 @@ of three kinds, and only the first can keep that promise:
 |---|---|---|
 | taken on D's authority | R's step closed in J; the tail clearing R's waits; R' and its operation; the notes; every rendering of these | yes |
 | the sender's recovery | J's barrier; a retried turn end | it reads D before R's live evidence and closes R's step by it; it never publishes R, changes D or cancels R' |
-| ordinary activity in r's mailbox | r reading R (`inbox/unread.go:181-188`); the sweep promoting R's intent before removing its letter (`once.go:133-149`); a new run dropping old once marks (`once.go:205-216`); r's own proof of publication | no |
+| ordinary activity in r's mailbox | r reading R (`core/mail/unread.go`); the sweep promoting R's intent before removing its letter (`settleOnce`, `core/mail/once.go`); a new run dropping old once marks (`sweepOnce`); r's own proof of publication | no |
 
 The third kind follows its owners exactly as it does without a decision, derives no
 authority from D, and need not know it exists. Its records may say R was published: that

@@ -113,6 +113,16 @@ accepted in review round 7:
   derived from the model: the decision's record and observations, installing its effects
   with proofs that outlive them, composition, the rules D1–D8 and their tests with the
   model as the oracle.
+- [stage3-decision-build.md](stage3-decision-build.md) — part B as S18 builds it, decided
+  by main on October 12, 2026: what drifted since part B was written, the decisions
+  Q1–Q14 (the final plan's locks, authority at the commit, the person's path, durability,
+  subjects, disposal, installation, the resend, closure, the listing, notes,
+  observations, the host, the three parts), the acceptance bar. Open it before any S18
+  work: where part B and it disagree, it wins.
+- [stage3-decision-manifest.md](stage3-decision-manifest.md) — part B's worlds, defined
+  apart from the code: the dimensions and their values, the excluded combinations, the
+  independent schedule partitions, the clean and fault-cut counts, and the generated
+  pair-covering set the ordinary checks run.
 
 Not scheduled:
 

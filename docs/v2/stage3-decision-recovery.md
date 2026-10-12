@@ -4,7 +4,9 @@ Part B of stage 3, built in S18: the records and steps derived from
 [the model](stage3-decision-model.md), how decisions compose, the rules D1–D8, and the
 tests whose oracle is the model. The subject, the authority, the command and the record
 kinds are in [stage3-decision.md](stage3-decision.md); its running example — `api`'s
-report R to `lead`'s run r, outcome unknown — continues here. Citations are to `b6ed4ed`.
+report R to `lead`'s run r, outcome unknown — continues here. Citations name current symbols, under `internal/`; the build brief as
+adopted, Q1–Q14, is [stage3-decision-build.md](stage3-decision-build.md), and where this
+file and it disagree it wins.
 
 The contract: **the resend is an independent, ordinary operation**; **a decision keeps
 the observations it was made on**, and the live originals stay with their owners
@@ -18,75 +20,137 @@ is E8's; nothing keeps a live path from its own writers.
 
 ## The decision's record
 
-**The linearization point** is D's write. Under the sender's mailbox lock the plan runs
-again — reading R's mark and letter under r's mailbox lock with the bounded wait it
-already uses — and D is written only if R is still unknown. Other unknowns the plan
-meets elsewhere in the mailbox do not stop the write: D needs R's evidence, not
-admission. Evidence before that point
-resolves the occurrence by S3's rule, and `decide` answers exit 1, "proven published" or
-"proven not published". Evidence after it is M5: the decision stands, as the accepted
-contract trades ([design-rules.md](design-rules.md#an-operator-decision-on-an-unknown-outcome):
-decided wrongly, the report reaches r twice, or an obligation closes with nothing
-delivered).
+**The linearization point** is D's write, made by the process that holds the authority
+— the recipient run's wrapper, or the person's own process (Q2). It takes, in this
+order: the room's build lease, outermost and held through the answer (S17's
+`Context.within`, an ordinary `build.Acquire`); the sender's mailbox lock with a bounded
+wait; then, under that lock, D if it exists, and otherwise the subject read on its own —
+J's bytes, R's step and *every* open occurrence about R — never through the mailbox-wide
+plan, which can stop at an unrelated unreadable journal before it reaches R (Q1, Q5).
+For a new D it takes r's mailbox lock with S3's bounded wait, unless r's mailbox is the
+sender's own, which is already held and never taken twice; reads R's mark and letter
+there — the final evidence, through the capture below — and keeps that section until D
+is published, so evidence cannot return between the read and the record. D is written
+only if R is still unknown. A planning pass, which takes no recipient lock
+(`core/mail/access.go`, `world.lock`), is never this observation. No name lock, pruning
+lookup, recipient barrier or lease acquisition happens inside the locks; a lock not had
+within its wait is exit 1 with no D, never a reason to decide "unknown". Other unknowns
+in the mailbox do not stop the write: D needs R's evidence, not admission. Evidence before
+that point resolves the occurrence by S3's rule, and `decide` answers exit 1, "proven
+published" or "proven not published". Evidence after it is M5: the decision stands, as
+the accepted contract trades
+([design-rules.md](design-rules.md#an-operator-decision-on-an-unknown-outcome): decided
+wrongly, the report reaches r twice, or an obligation closes with nothing delivered). r's
+lock is released before notes are installed or a barrier runs; the sender's is kept for
+those.
 
-**The record**, `decisions/<R-id>` in the sender's mailbox, write-once (`PublishExclusive`,
-the link and the directory synced): the id (a fresh `inbox.NewID()`), the choice, who
-decided and whether verified, the time, `delivery: "unproven"`, the subject (J's
-operation, R's id, the recipient's name and run, the waits R answers), the open
-occurrences it disposes (S3, by occurrence id), the parent decision when R is itself a
-resend, the runs to tell, the observations below, and for "did not arrive" **J' whole** —
-its bytes as they will be written.
+**The record**, `decisions/<R-id>` in the sender's mailbox, write-once
+(`state.PublishExclusive`): the id (a fresh `mail.NewID()`), the choice, who decided and
+whether verified, the time, `delivery: "unproven"`, the subject (J's name and operation,
+R's id, the sender's run, the recipient's name and run), the exact (key, occurrence)
+pairs it disposes (S3), the parent decision when R is itself a resend, the notes to tell
+whole, the observations below, and for "did not arrive" **J' whole** — its bytes as they
+will be written. Nothing in D is ever generated again: its id, observations, resend and
+notes are fixed when it is written.
 
-**The observations** are the plan's own reads, kept as the plan returned them, not read
-again: J's bytes; every occurrence about R and its bytes; for every path an occurrence
-names — R's `published` or `intent` mark (`inbox/once.go`), its letter in `unread/` or
-`done/`, r's mailbox directory — the bytes or listing when the read returned, or the
-error and whatever `lstat` returned when it failed; the SHA-256 of every byte string. A
-letter is bounded by the message size cap, a record by its own; the observations by their
-sum. Nothing is kept of what could not be read.
+**Durability before effects (Q4).** A link that succeeded is a concurrent winner, not a
+durable record: D's bytes, its link and the directories down to it are flushed before
+any effect is installed on it. When the link or a flush is uncertain the answer is exit
+1 naming the path that may now exist, and D is neither removed nor replaced. A later
+writer reads and validates that exact D, makes it durable again, and installs its fixed
+effects; the same words work from D after J's retention, the opposite words never replace
+it, and a same-word retry that would mutate checks the authority again. A D that is
+missing, does not read or does not validate is never taken for a free name.
+
+**The observations** are the plan's own reads, captured as the plan consumes them through
+the seam (`core/mail/access.go`), not read again and not the ordinary plan's audit
+strings (Q12): J's bytes; every occurrence about R and its bytes; for every path an
+occurrence names — R's `published` or `intent` mark (`core/mail/once.go`), its letter in
+`unread/` or `done/`, r's mailbox directory — the bytes or listing when the read
+returned, or the error and whatever `lstat` returned when it failed; the SHA-256 of every
+byte string. Repeated reads stay distinct, bytes that failed to parse are kept, and
+`lstat`'s own success or failure is recorded. The bounds are 16 MiB per read, 64 MiB in
+all and 65,536 entries per listing; a plan past one refuses before D, and nothing
+accepted is truncated. The promise that no observation mixes two states is scoped to the
+subject's evidence, ordered by r's mailbox lock: incoming letters of unrelated senders
+may change a listed directory even while that lock is held. Nothing is kept of what could
+not be read.
 
 ## Installing the effects
 
 Each effect is installed by `decide`, right after D's write under the same lock, and by
 any barrier that finds it not installed, and each is recognised by an identity that its
-progress and retention never change. **Installation does not wait for admission.** The
-barrier installs first, under the sender's mailbox lock and before its plan: a link of
-bytes D fixed, at a name D fixed, and notes to other mailboxes — recovery writing its own
+progress and retention never change. **Installation does not wait for admission (Q7).**
+Recovery of valid decisions runs first, in `Reconcile` under the sender's mailbox lock and
+before the stop gate and the plan — also when the sender run s has ended: a link of bytes
+D fixed, at a name D fixed, and notes to other mailboxes — recovery writing its own
 records and telling, which E8 allows in a stopped mailbox, never a publication of the
-stopped mailbox's reports or a wait cleared. Then the plan reads everything, the new
-journal included, and only a plan that meets no unknown runs the journals.
+stopped mailbox's reports or a wait cleared. Each effect is installed on its own, waiting
+on no other decision. Then the plan reads everything, the new journal included, and only a
+plan that meets no unknown runs the journals. A decision that does not read installs
+nothing; the plan meets it as an undecidable cause.
 
 **1. The resend J'** ("did not arrive"). Its name is fixed by D: `journal/decided-<D>`.
-Under the sender's mailbox lock the barrier looks for `journal/decided-<D>.done` and, not
-finding it, links the bytes of J' from D at `journal/decided-<D>` with `PublishExclusive`; the
-name existing in either form is installation, whatever the bytes inside it say now. J'
-then runs, in an admitted barrier, as every journal does: it saves its steps
-(`Published`, `Moot`, `journal_held.go:24-35`), writes its done form in place and is
-renamed to `.done` (`journal.go:157-167,223-227`) — under the same lock, so the barrier
-never sees it between names. Its `Moot` is the lifetime disposition of
+Under the sender's mailbox lock the barrier looks for `journal/decided-<D>` and
+`journal/decided-<D>.done` and, finding neither, links the bytes of J' from D at
+`journal/decided-<D>` with `state.PublishExclusive`; the name existing in either form is
+installation — not validity, completion or delivery — whatever the bytes inside it say
+now: a J' of the wrong kind or that does not read stops its own operation as any journal
+does and is never written over from D. J' then runs, in an admitted barrier, as every
+journal does: it saves its steps (`Published`, `Moot`, `Decided`; `deliverReport`,
+`core/mail/journal_held.go`), writes its done form in place and is renamed to `.done`
+(`finishJournal`, `core/mail/journal.go`) — under the same lock, so the barrier never sees
+it between names. Its `Moot` is the lifetime disposition of
 [the model](stage3-decision-model.md#the-world): an attempt of J' read r ended inside its
-publication's section (M10), not R' proven absent. **Retention**: `sweepTurnRecords` (`turn_records.go:23-58`) removes done journals of
-ended runs on the premise that only the originating run retries; a decision breaks that
-premise, since D can install J' again at any later barrier. So a done journal named
-`decided-*` is kept while the mailbox lives, as 1.x kept its conversion journal for good
-(`:27-28`). With install and proof one atomic link, a crash leaves J' installed or not, never
-installed without its proof. A `stat` of either name that fails with anything but "no
-such file" is an occurrence about the effect (S3), never an install.
+publication's section (M10), not R' proven absent. **Retention**: `sweepTurnRecords`
+(`core/mail/journal_retention.go`) removes done journals of ended runs on the premise
+that only the originating run retries; a decision breaks that premise, since D can
+install J' again at any later barrier. So a journal named `decided-*` is kept in every
+form while the mailbox lives, after every run concerned has ended — a rule of its own,
+since S2 removed the 1.x conversion journal's exception. With install and proof one atomic
+link, a crash leaves J' installed or not, never installed without its proof. A `stat` of
+either name that fails with anything but "no such file" is an unknown the effect met, an
+occurrence about the effect (S3), never an install; a lookup or link that fails is a
+named effect failure, J' is not installed, and no journal runs in that pass.
 
-**2. The notes.** To each run D names to tell — r and main's run, each when it did not
-decide — one note, published once through that run's once record keyed by D's id
-(`PublishOnce`, `once.go`): idempotent while the run lives, since a live run's once marks
-are not swept (`sweepOnce`, `:205-216`), and refused as moot once it has ended. After the
-answer — written now, written before, or moot — the barrier records
+**J' is the original report sent again, and nothing of J's tail (Q8).** Its one report
+carries R's text, kind, addressed runs and `InReplyTo`, with a fresh fixed-length id,
+`resends: R` and `decision: D`; its journal has a fresh operation and no `Clear`, `Kept`,
+`Held`, `Mark`, `Interim`, `Settles` or turn end time: those are J's, and J's tail keeps
+them.
+
+**2. The notes (Q11).** D freezes, when it is written, the runs to tell — r and main's
+run, each when it did not decide verified, one note when they are the same run — and each
+note whole, its id and text included; a later change of role or a later main never
+retargets them. A main that cannot be read refuses a new D; a room positively without a
+live main owes no main's note. Each note is a `Note`, published once through the told
+run's once record (`PublishOnce`, `core/mail/once.go`): idempotent while the run lives,
+since a live run's once marks are not swept (`sweepOnce`), and refused with
+`ErrRecipientEnded` once it has ended. A note to the sender's own mailbox is published
+through the already-held lock, never through `PublishOnce` recursively. After the
+answer — written now, written before, or the run proven ended — the barrier records
 `decisions/<R-id>.told-recipient` or `.told-main` (write-once), and later barriers stop
-asking. A crash before that record repeats a `PublishOnce` that answers "written before",
-or moot. A mailbox that cannot be searched leaves the note owed to a later barrier and
-stops nothing: a note answers no wait.
+asking; no other error, a failed liveness read included, is taken for an ended run. A
+crash before that record repeats a publication that answers "written before", or ended.
+A mailbox that cannot be searched leaves the note owed to a later barrier and stops
+nothing: a note answers no wait, and an owed note is never an E8 unknown. A `told` record
+that does not read is an undecidable cause of its own; it is never taken for told, nor
+written over.
 
 **3. J goes on** at its next admitted barrier, as any unfinished journal does: it reads
-`decisions/<R-id>` before R's live evidence, records R in a new list of the journal,
-`Decided`, beside `Published` and `Moot`, and runs its tail by M4. This is J's own
-progress, not an effect D installs.
+`decisions/<R-id>` before R's live evidence, records `{R, D}` in a new list of the
+journal, `Decided`, beside `Published` and `Moot`, and runs its tail by M4. This is J's
+own progress, not an effect D installs. A decision that does not read, or names another
+journal or run than the one reading it, is an unknown for J's step, never an absence.
+
+**The closure (Q9).** After its tail's effects and before its done rewrite, J writes, for
+each step it recorded `Decided`, `decisions/<R-id>.closed`, write-once: D, J's name and
+operation, R, and the waits of J's `Clear` that R answers — those of R's recipient run.
+It records that J's tail closed the obligation by D, delivery unproven, for as long as D
+lives, after J itself is done and swept; it is never a record of delivery or a second
+installation marker for J'. A crash replays the tail, which is idempotent, and finds the
+closure written; no new wait is cleared by the replay. While J's tail has not run, the
+views say decided and still owed; afterwards, closed by D and unproven.
 
 No progress marks: each effect is found installed by its own identity, and none depends on
 another's being done. "Did not arrive" closes R's step in J at once; R's waits are cleared
@@ -96,14 +160,15 @@ the guarantee an unfinished report has today. While the mailbox is not admitted,
 ready and waits, its waits standing, as every ready journal of a stopped mailbox does.
 
 **The completion summary.** A name proves J' was installed, not what came of R': the done
-rewrite keeps only `Epoch`, `Op`, `Ended` and `Done` (`journal.go:164`), and D holds J'
-as planned. So the done rewrite of a journal named `decided-*` keeps, beside those, one
-bounded summary: the id of R', its disposition — published, moot or closed by a decision —
-the installing decision D, and for the last the child decision's id. The open form is
-read for its fields as they stand. A reader renders only what the form it finds keeps:
-the summary from a done form; "installed, in progress" from an open one; "completed,
-outcome not kept" from a done form without a readable summary. A name in done form is
-never read as published.
+rewrite keeps only `Epoch`, `Op`, `Ended`, `Held` and `Done` (`finishJournal`), and D
+holds J' as planned. So the done rewrite of a journal named `decided-*` keeps, beside
+those, one bounded summary: the id of R', its disposition — published, moot or closed by
+a decision — the installing decision D, and for the last the child decision's id. The
+open form is read for its fields as they stand. A reader renders only what the form it
+finds keeps: the summary from a done form; "installed, in progress" from an open one;
+"completed, outcome not kept" from a done form without a readable summary, while a done
+form whose envelope does not read stays an unknown. A name in done form is never read as
+published, and a stat that succeeds is never a summary.
 
 ## Composition
 
@@ -262,14 +327,21 @@ of R': the disposition from the summary, unchanged; a done form whose summary do
 read renders "completed, outcome not kept"; no form renders published without a summary
 saying so.
 
-**Crashes.** Every world runs clean in the five checks; every world also runs with a
-crash at each durable write of its clean run's log, as `bridge/server/fault_test.go`
+**Crashes.** The worlds are those of the manifest
+([stage3-decision-manifest.md](stage3-decision-manifest.md)), which enumerates the valid
+worlds before any matrix is coded, names the excluded combinations and the independent
+schedule partitions, and publishes the exact clean and fault-cut counts. Every world runs
+with a crash at each durable write of its clean run's log, as `test/toolrig/fault_test.go`
 does — a clean run with the seam's log (`rewakefault`), then one case per write, the
-process killed there, the barrier run again, the oracle checked: in the five checks for
-the worlds covering every pair of dimension values, for every world at S18's commit and
-at the stage's acceptance. The writes include D's link and directory sync, the link of J',
-each note's once record and each `told` record, each of J's saves, every write of J' as
-an ordinary journal, its done rewrite with the summary, and its rename. The chain of 40 asserts every path's length is that
+process killed there, the barrier run again, the oracle checked: in the five checks for a
+generated, verified set of worlds covering every pair of dimension values, and for every
+world before S18's final acceptance and at the stage's. If the full matrix cannot fit
+where it is required, the measured cost and a proposed partition go to main before the
+gate changes; a sample is never called exhaustive. The writes include D's link and its
+directory flushes, the link of J', each note's once record and each `told` record, each
+of J's saves, the closure, every write of J' as an ordinary journal, its done rewrite
+with the summary, and its rename; a link that succeeded with its directory flush failed
+is cut as well as a process killed. The chain of 40 asserts every path's length is that
 of the first generation.
 
 **The observations.** A test seam hands the test the plan's reads as the plan returned
@@ -293,16 +365,17 @@ environment, so its real ancestry to PID 1 is read; it decides as the person,
 unverified, recipient and main told once — or, where the test's own read of that chain
 finds an ancestor it cannot read, it is refused naming it. That refusal proves the path
 fails closed, not that it succeeds, so the test logs which outcome ran and S18's review
-reports it; the successful person's path is exercised in any case on `grantauthtest`'s
+reports it; the successful person's path is exercised in any case on `authoritytest`'s
 process fixtures with every ancestor readable. Refused, each naming why: a process below
 another session's wrapper with `REWAKE_SESSION` set to the recipient; one with the
 variable unset in its own shell; the recipient run ended; the room's main for a report to
 another session; an ancestor's `stat` or `environ` unreadable, the registry unlistable, a
-session record unreadable — each produced on purpose with `grantauthtest`'s fixtures
+session record unreadable — each produced on purpose with `authoritytest`'s fixtures
 beside the real-chain case; other namespaces.
 
 **Races.** Two `decide` calls at once, same and opposite words: one record, the other
-answered or refused by it. `decide` against a turn end's barrier and against a `retry`,
+answered or refused by it. `decide` against a turn end's barrier (`mail.EndTurn`, `CompleteTurn`, `Reconcile`)
+and against a receipt's recovery by `rewake retry`,
 in both orders. `decide` against the evidence returning: either the decision refuses as
 proven, or it stands and the evidence changes nothing — the oracle accepts both and
 nothing else.
