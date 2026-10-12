@@ -15,7 +15,7 @@ Codex sandbox writes `/tmp` by default (`docs/design.md`, "State directory"). In
 records for its own — the property the cutover had to prove with run records, successor
 bindings and a scan of processes (`docs/protocol-cutover.md`), now held by a path.
 
-The tree below `v2/rooms/<room>/` is the 1.x tree (`docs/design.md:77-111`) less what the
+The tree below `v2/rooms/<room>/` is the 1.x tree ([design.md](../design.md#state-directory)) less what the
 migration and the Claude Code MCP injection needed:
 
 - gone: `runs/` (run records and successors), `inbox/<name>/turns/` (earlier-build

@@ -75,7 +75,7 @@ func playTurnStart(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 // latestTurnStart is the latest turn start a session's mailbox records, 0 when
 // none: the largest reading under its runs' .turn-starts.
 func latestTurnStart(iso *Isolation, name string) int64 {
-	readings, _ := filepath.Glob(filepath.Join(iso.StateDir, "rooms", "default", "inbox", name, "awaiting", "*", ".turn-starts", "*"))
+	readings, _ := filepath.Glob(filepath.Join(iso.Room("default"), "inbox", name, "awaiting", "*", ".turn-starts", "*"))
 	var latest int64
 	for _, reading := range readings {
 		if value, err := strconv.ParseInt(filepath.Base(reading), 10, 64); err == nil && value > latest {

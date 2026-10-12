@@ -56,7 +56,7 @@ func TestDeadlineBoundsDescendantsToo(t *testing.T) {
 // one file that most reliably means a session is still up.
 func TestLiveUpstreamSocketIsCaught(t *testing.T) {
 	iso := &Isolation{StateDir: t.TempDir()}
-	dir := filepath.Join(iso.StateDir, "rooms", "default", "sock")
+	dir := filepath.Join(iso.Room("default"), "sock")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Fatal(err)
 	}

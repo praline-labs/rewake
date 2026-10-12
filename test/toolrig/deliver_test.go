@@ -158,7 +158,7 @@ func TestNoNoticePrecedesAReservedLettersReadability(t *testing.T) {
 	if err := os.Chmod(root, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	dir, err := state.RoomDir(root, "default")
+	dir, err := state.Bootstrap(root, "default")
 	if err != nil {
 		t.Fatal(err)
 	}

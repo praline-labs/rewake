@@ -128,7 +128,7 @@ func newWorld(t *testing.T) *world {
 	return &world{t: t, base: filepath.Join(parent, "state"), home: t.TempDir()}
 }
 
-func (w *world) room(name string) string { return filepath.Join(w.base, "rooms", name) }
+func (w *world) room(name string) string { return filepath.Join(w.base, "v2", "rooms", name) }
 
 // record is the room's build record, or "missing".
 func (w *world) record(room string) string {

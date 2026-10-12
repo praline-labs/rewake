@@ -15,6 +15,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/mail/mailtest"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/registry/registrytest"
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -100,10 +101,7 @@ func stateDir(t *testing.T) string {
 		t.Fatalf("chmod: %v", err)
 	}
 	t.Setenv(state.DirEnv, dir)
-	resolved, err := state.Dir()
-	if err != nil {
-		t.Fatalf("state.Dir: %v", err)
-	}
+	resolved := buildtest.Current(t)
 	checkRecordKinds(t, resolved)
 	return resolved
 }

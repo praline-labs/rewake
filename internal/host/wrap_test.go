@@ -14,6 +14,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -86,10 +87,7 @@ func stateDir(t *testing.T) string {
 		t.Fatalf("chmod: %v", err)
 	}
 	t.Setenv(state.DirEnv, dir)
-	resolved, err := state.Dir()
-	if err != nil {
-		t.Fatalf("state.Dir: %v", err)
-	}
+	resolved := buildtest.Current(t)
 	return resolved
 }
 
@@ -234,7 +232,7 @@ func TestSessionEnvironmentReachesTheHarness(t *testing.T) {
 		t.Fatalf("read: %v", err)
 	}
 	// The run is this wrapper's: its pid, start time and boot.
-	want := fmt.Sprintf("api-fake %s %s", state.RootForRoom(dir), registry.RunEpoch(os.Getpid(), selfStart(t), thisBoot(t)))
+	want := fmt.Sprintf("api-fake %s %s", os.Getenv(state.DirEnv), registry.RunEpoch(os.Getpid(), selfStart(t), thisBoot(t)))
 	if got := string(content); got != want {
 		t.Errorf("environment = %q, want %q", got, want)
 	}

@@ -10,6 +10,7 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/channel"
 	"github.com/praline-labs/rewake/internal/host/endpoint"
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 	"github.com/praline-labs/rewake/internal/tool"
@@ -108,9 +109,5 @@ func shortStateDir(t *testing.T) string {
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(dir) })
 	t.Setenv(state.DirEnv, dir)
-	resolved, err := state.Dir()
-	if err != nil {
-		t.Fatal(err)
-	}
-	return resolved
+	return buildtest.Current(t)
 }

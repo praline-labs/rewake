@@ -157,7 +157,7 @@ func newBase(t *testing.T) string {
 }
 
 // roomOf is a room's directory on the layout Bootstrap makes.
-func roomOf(base, room string) string { return filepath.Join(base, "rooms", room) }
+func roomOf(base, room string) string { return filepath.Join(base, "v2", "rooms", room) }
 
 // record reads a room's build record, its raw bytes or "missing".
 func record(t *testing.T, room string) string {

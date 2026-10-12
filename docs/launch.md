@@ -121,7 +121,7 @@ rewake --main --name lead --command my-claude claude
   exception: a `--help` written first asks rewake for the command's help page
   instead of starting the harness. `rewake claude --model x --help` still reaches
   the harness.
-- Add `--messaging-socket-path <root>/rooms/<room>/sock/<name>.<epoch>.sock` unless the user passed
+- Add `--messaging-socket-path <base>/v2/rooms/<room>/sock/<name>.<epoch>.sock` unless the user passed
   their own; before launch, remove a stale socket file at the same path.
 - Add `--append-system-prompt <intro>` (turned off by `--no-intro`).
 - Allow the tool's own commands without confirmation:

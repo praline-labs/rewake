@@ -23,7 +23,7 @@ import (
 // before main is asked: the check with this session's view comes first, and
 // a main that has not answered yet would otherwise only hold the task back.
 func TestAGrantWhoseDirectoryBecameALinkIsRefusedBeforeMainIsAsked(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "rooms", "default")
+	dir := unmadeRoom(t)
 	target, root := realDir(t), realDir(t)
 	swapped := filepath.Join(root, "lib")
 	if err := os.Symlink(target, swapped); err != nil {
@@ -118,7 +118,7 @@ func TestAResumedLaunchStartsTheHarnessWithTheGrantsConfirmedAgain(t *testing.T)
 // and the task fails naming that main, to be sent again from the current one
 // (docs/grants-authority.md#the-scheme).
 func TestAGrantWhoseMainHasEndedFailsNamingThatMain(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "rooms", "default")
+	dir := unmadeRoom(t)
 	lib := realDir(t)
 	message := mail.Message{ID: "m1", From: "lead", FromEpoch: ownEpoch(t), To: "worker", ToEpoch: "9.9", Kind: mail.Task, GrantDirs: []string{lib}}
 	check := checkGrant(dir, "worker", "9.9", adapter.Protected{})
@@ -136,4 +136,11 @@ func TestAGrantWhoseMainHasEndedFailsNamingThatMain(t *testing.T) {
 			t.Errorf("the failure %q does not say %q", err, said)
 		}
 	}
+}
+
+// unmadeRoom is a room directory of a base nobody made: where a grant's
+// check is asked about a room whose files it never reads, the path still has
+// to be a room's, since the check derives the base and the root from it.
+func unmadeRoom(t *testing.T) string {
+	return filepath.Join(t.TempDir(), "v2", "rooms", "default")
 }

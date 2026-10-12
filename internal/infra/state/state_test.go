@@ -11,24 +11,6 @@ import (
 	"time"
 )
 
-func TestDirHonoursTheEnvironment(t *testing.T) {
-	base := filepath.Join(t.TempDir(), "state")
-	t.Setenv(DirEnv, base)
-
-	dir, err := Dir()
-	if err != nil {
-		t.Fatalf("Dir: %v", err)
-	}
-	if dir != filepath.Join(base, "rooms", DefaultRoom) {
-		t.Fatalf("Dir = %q, want the default room under %q", dir, base)
-	}
-	for _, sub := range []string{"sessions", "inbox", "sock"} {
-		if _, err := os.Stat(filepath.Join(dir, sub)); err != nil {
-			t.Errorf("missing %s: %v", sub, err)
-		}
-	}
-}
-
 func TestDirRefusesRelativePath(t *testing.T) {
 	t.Setenv(DirEnv, "relative/path")
 	if _, err := Dir(); err == nil {
@@ -212,10 +194,9 @@ func TestPublishExclusiveHasOneWinnerUnderRace(t *testing.T) {
 
 func TestNameLockSerialisesClaims(t *testing.T) {
 	base := filepath.Join(t.TempDir(), "state")
-	t.Setenv(DirEnv, base)
-	dir, err := Dir()
+	dir, err := Bootstrap(base, DefaultRoom)
 	if err != nil {
-		t.Fatalf("Dir: %v", err)
+		t.Fatalf("Bootstrap: %v", err)
 	}
 
 	var inside, peak int

@@ -64,7 +64,11 @@ func handleList(ctx *Context, _ Call) error {
 		}
 		views = append(views, view)
 	}
-	return printValue(ctx, listModel{Directory: state.RootForRoom(dir), Room: room, Sessions: views, Unknown: unknown}, func() []string {
+	base, err := state.BaseForRoom(dir)
+	if err != nil {
+		return failf("%v", err)
+	}
+	return printValue(ctx, listModel{Directory: base, Room: room, Sessions: views, Unknown: unknown}, func() []string {
 		var lines []string
 		switch {
 		case len(sessions) > 0:
@@ -107,8 +111,12 @@ func handleWhoami(ctx *Context, _ Call) error {
 		return &UsageError{Message: err.Error()}
 	}
 
+	base, err := state.BaseForRoom(dir)
+	if err != nil {
+		return failf("%v", err)
+	}
 	name := os.Getenv(state.SessionEnv)
-	model := whoamiModel{Name: name, Room: filepath.Base(dir), Directory: state.RootForRoom(dir), Managed: name != ""}
+	model := whoamiModel{Name: name, Room: filepath.Base(dir), Directory: base, Managed: name != ""}
 	if name != "" {
 		own, _, err := ownRunIn(ctx.access, dir)
 		if err != nil {

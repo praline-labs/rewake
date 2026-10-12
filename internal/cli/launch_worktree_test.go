@@ -170,7 +170,7 @@ func TestAWorktreeLaunchStartsInTheCheckout(t *testing.T) {
 		t.Errorf("harness got %q, want %q", probe.request.Args, want)
 	}
 	owner := record.Session
-	roomDir, _ := state.RoomDir(lab.state, "trees")
+	roomDir := launched(t, lab.state, "trees")
 	if owner == nil || owner.Name != "tree-"+probe.ID() || owner.Room != "trees" || owner.Dir != roomDir || owner.Epoch == "" || owner.Harness != probe.ID() {
 		t.Errorf("owner %+v", owner)
 	}

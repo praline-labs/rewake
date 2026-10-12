@@ -32,7 +32,7 @@ func realDir(t *testing.T) string {
 // confirms again, and nothing a copy only claims: a grant main never made, one
 // whose task is closed, one whose main has ended.
 func TestAResumedRunKeepsOnlyWhatMainConfirmsAgain(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "rooms", "default")
+	dir := unmadeRoom(t)
 	main := ownEpoch(t)
 	lib, doc, forged := realDir(t), realDir(t), realDir(t)
 

@@ -72,8 +72,15 @@ func Run(ctx context.Context, request Request) (int, error) {
 	// The build lease comes first and goes last: every lock, callback and
 	// cleanup of the run is inside it. A caller hands over the one it took
 	// rather than holding it shared while this asks for it exclusive.
+	// The base the room belongs to, checked: it is what the children are
+	// told, and a directory that is no room of a base is refused rather than
+	// read two levels up.
+	base, err := state.BaseForRoom(request.Dir)
+	if err != nil {
+		return 0, err
+	}
 	if request.Lease == nil {
-		lease, err := build.AcquireLaunch(state.RootForRoom(request.Dir), filepath.Base(request.Dir))
+		lease, err := build.AcquireLaunch(base, filepath.Base(request.Dir))
 		if err != nil {
 			return 0, err
 		}
@@ -159,7 +166,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 
 	launchRequest := adapter.LaunchRequest{
 		Name:       name,
-		Dir:        state.RootForRoom(request.Dir),
+		Dir:        base,
 		RoomDir:    request.Dir,
 		Room:       session.Room,
 		RoleReason: session.RoleReason,

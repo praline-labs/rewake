@@ -34,7 +34,7 @@ func TestRoomNamesCannotCollideWithLegacyMailboxes(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if dir != filepath.Join(root, "rooms", room) {
+		if dir != filepath.Join(root, "v2", "rooms", room) {
 			t.Errorf("ambiguous room directory %s", dir)
 		}
 	}

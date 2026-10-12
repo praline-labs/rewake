@@ -83,7 +83,7 @@ func playFixtureGrantDir(t *testing.T, c *Case, iso *Isolation) []telemetryFindi
 	lead := startHarnessSession(t, c, iso, col, "lead", "--main", shimInboxJSON+"=1", asks.env())
 	defer stopSession(t, c, lead)
 
-	room := filepath.Join(iso.StateDir, "rooms", "default")
+	room := iso.Room("default")
 	var leadRun, workerRun string
 	if !waitFor(c, 20*time.Second, func() bool {
 		leadRecord, leadErr := registry.Load(room, lead.name)

@@ -40,17 +40,21 @@ type Env struct {
 // them aside.
 var TempRoots = func() []string { return []string{"/tmp", os.TempDir()} }
 
-// CurrentEnv reads the environment of this process. harnessDirs come from
-// the harness catalog, which this package does not import.
-func CurrentEnv(stateRoot string, harnessDirs, shielded []string) Env {
-	env := Env{PATH: os.Getenv("PATH"), StateRoot: stateRoot, Harness: harnessDirs, Shielded: shielded}
+// CurrentEnv reads the environment of this process. base is the state
+// directory no grant may reach — the whole of it, 1.x's rooms and the trees
+// its clearing leaves included — and root the 2.0 root whose rooms' sessions
+// work in the directories a grant must not take
+// (docs/v2/stage3-state.md#the-roots). harnessDirs come from the harness
+// catalog, which this package does not import.
+func CurrentEnv(base, root string, harnessDirs, shielded []string) Env {
+	env := Env{PATH: os.Getenv("PATH"), StateRoot: base, Harness: harnessDirs, Shielded: shielded}
 	env.Home, _ = os.UserHomeDir()
 	if executable, err := os.Executable(); err == nil {
 		env.Executable = executable
 	}
 	env.Mounts = mountPoints("/proc/self/mountinfo")
-	if stateRoot != "" {
-		env.Sessions = registry.WorkDirs(stateRoot)
+	if root != "" {
+		env.Sessions = registry.WorkDirs(root)
 	}
 	env.Temp = TempRoots()
 	for _, name := range []string{"GOMODCACHE", "GOCACHE"} {

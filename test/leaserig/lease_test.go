@@ -123,7 +123,7 @@ func TestBootstrapRecoversAfterEveryStep(t *testing.T) {
 				if got := w.record("default"); got != buildA.id {
 					t.Fatalf("the next launch left %q", got)
 				}
-				for _, level := range []string{"", "rooms", "rooms/default", "rooms/default/sessions", "rooms/default/inbox", "rooms/default/sock"} {
+				for _, level := range []string{"", "v2", "v2/rooms", "v2/rooms/default", "v2/rooms/default/sessions", "v2/rooms/default/inbox", "v2/rooms/default/sock"} {
 					info, err := os.Lstat(filepath.Join(w.base, level))
 					if err != nil || !info.IsDir() || info.Mode().Perm() != 0o700 {
 						t.Fatalf("level %q after recovery: %v, %v", level, info, err)
@@ -164,7 +164,7 @@ func acquireSteps(t *testing.T) []string {
 	for _, s := range steps {
 		made = made || strings.HasPrefix(s, "step bootstrap")
 		locked = locked || strings.HasSuffix(s, "/build.lock")
-		published = published || s == "write /rooms/default/build"
+		published = published || s == "write /v2/rooms/default/build"
 	}
 	if !made || !locked || !published || steps[len(steps)-1] != "step leased" {
 		t.Fatalf("the clean launch's steps are not an empty base's acquisition: %v", steps)

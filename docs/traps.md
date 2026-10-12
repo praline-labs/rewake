@@ -86,7 +86,7 @@ given a private HOME would still write into the person's directory. Unset
 ### `pgrep -x codex` finds somebody else's Codex
 
 Take the harness process from the session record — `harnessPid` in
-`<state>/rooms/<room>/sessions/<name>.json` — not from a search by name: the owner's
+`<state>/v2/rooms/<room>/sessions/<name>.json` — not from a search by name: the owner's
 own Codex runs on the same machine.
 
 *September 16, 2026.*
@@ -171,7 +171,7 @@ A Claude Code launch with `REWAKE_DIR` inside a case folder of a live check exit
 before the harness started: `the socket path <path> is longer than the 103 bytes a unix
 socket allows; use a shorter session name or REWAKE_DIR`. A unix socket's path is
 bounded, and the session's messaging socket lies under the state directory, in
-`rooms/<room>/sock/`. A long name already falls back to a digest of name and epoch, so
+`v2/rooms/<room>/sock/`. A long name already falls back to a digest of name and epoch, so
 the path that failed was mostly the state directory's own; a shorter session name does
 not help then. Put the state directory on a short path — a directory under `/tmp`,
 linked from the case folder if the case wants it there — and pass that as `REWAKE_DIR`.

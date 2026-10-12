@@ -22,8 +22,9 @@ func CurrentRoom() string {
 	return DefaultRoom
 }
 
-// Dir returns only this command's room. Legacy records in the root are ignored;
-// no compatibility fallback can accidentally join isolated conversations.
+// Dir returns only this command's room, made nowhere. Legacy records are
+// ignored; no compatibility fallback can accidentally join isolated
+// conversations.
 func Dir() (string, error) {
 	root, err := Root()
 	if err != nil {
@@ -32,24 +33,20 @@ func Dir() (string, error) {
 	return RoomDir(root, CurrentRoom())
 }
 
-// RoomDir validates a room and opens its independent sessions and mailboxes.
+// RoomDir is where a room of the root lives and its sessions and mailboxes
+// with it. It creates nothing — a launch's bootstrap does — and verifies
+// each level that exists.
 func RoomDir(root, room string) (string, error) {
 	if !ValidName(room) {
 		return "", fmt.Errorf("invalid room name %q; use lower-case letters, digits, dot, dash or underscore, up to 32 characters", room)
 	}
-	if err := Verify(root); err != nil {
-		return "", err
-	}
-	rooms := filepath.Join(root, "rooms")
-	if err := EnsureSubdir(rooms); err != nil {
-		return "", err
-	}
-	path := filepath.Join(rooms, room)
-	if err := EnsureSubdir(path); err != nil {
-		return "", err
-	}
+	path := filepath.Join(root, "rooms", room)
+	levels := []string{root, filepath.Dir(path), path}
 	for _, sub := range []string{sessionsDir, inboxDir, socketsDir} {
-		if err := EnsureSubdir(filepath.Join(path, sub)); err != nil {
+		levels = append(levels, filepath.Join(path, sub))
+	}
+	for _, level := range levels {
+		if err := verifyPresent(level); err != nil {
 			return "", err
 		}
 	}
@@ -62,9 +59,30 @@ func WithRoomLock(dir string, fn func() error) error {
 	return withLock(filepath.Join(dir, ".launch.lock"), "the room launch", fn)
 }
 
-// RootForRoom reverses the rooms/<name> namespace without consulting ambient
-// environment, so a wrapper always passes its original root to children.
-func RootForRoom(directory string) string { return filepath.Dir(filepath.Dir(directory)) }
+// RootForRoom is the root a room belongs to, without consulting the ambient
+// environment, so a wrapper always passes its own root to its children. The
+// inverse is checked, never counted: a directory that is not
+// <root>/rooms/<room> under a root named v2 — a 1.x room, a path from another
+// layout — is an error, never another directory two levels up.
+func RootForRoom(directory string) (string, error) {
+	rooms := filepath.Dir(directory)
+	root := filepath.Dir(rooms)
+	if !filepath.IsAbs(directory) || filepath.Clean(directory) != directory ||
+		!ValidName(filepath.Base(directory)) || filepath.Base(rooms) != "rooms" || filepath.Base(root) != rootName {
+		return "", fmt.Errorf("%s is not a room of a rewake state directory (<base>/%s/rooms/<room>)", directory, rootName)
+	}
+	return root, nil
+}
+
+// BaseForRoom is the base a room belongs to, what REWAKE_DIR names for it:
+// the parent of its checked root.
+func BaseForRoom(directory string) (string, error) {
+	root, err := RootForRoom(directory)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Dir(root), nil
+}
 
 // RoomDirs lists the rooms a state directory already has, making none: a
 // command looking for sessions everywhere must not leave rooms behind.

@@ -54,7 +54,7 @@ func TestFailureReportedBeforeClassificationCannotKeepPass(t *testing.T) {
 // stop catching the half-written record an interrupted session leaves behind.
 func TestUnfinishedSessionRecordIsNotAcceptedAsClean(t *testing.T) {
 	iso := &Isolation{StateDir: t.TempDir()}
-	dir := filepath.Join(iso.StateDir, "rooms", "default", "sessions")
+	dir := filepath.Join(iso.Room("default"), "sessions")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +92,7 @@ func TestUnfinishedSessionRecordIsNotAcceptedAsClean(t *testing.T) {
 // called them leftovers would fail a working scenario over nothing.
 func TestOrdinaryServerArtifactsAreNotLiveSockets(t *testing.T) {
 	iso := &Isolation{StateDir: t.TempDir()}
-	dir := filepath.Join(iso.StateDir, "rooms", "default", "sock")
+	dir := filepath.Join(iso.Room("default"), "sock")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Fatal(err)
 	}

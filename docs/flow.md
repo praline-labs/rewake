@@ -20,7 +20,7 @@ from the code.
 There is no daemon. Each wrapper services exactly one mailbox: its own
 session's. Everything the processes share is files under the state directory,
 `REWAKE_DIR`, 0700, checked on every open. Each room has its own subdirectory;
-the paths below are relative to `<REWAKE_DIR>/rooms/<room>/`:
+the paths below are relative to `<REWAKE_DIR>/v2/rooms/<room>/`:
 
 ```
 sessions/<name>.json             who is running: room, role, reason, pids, cwd, harness details
@@ -51,11 +51,12 @@ with `rewake --main --name lead claude`, becoming lead-claude. The owner runs bo
 terminals outside any session: a launch from a shell inside a rewake session is refused
 with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-session)).
 
-1. **The directory.** The wrapper opens the `REWAKE_DIR` root and the room
-   selected by `--room`, or `default` when omitted. Both are 0700; a symlink,
-   foreign owner or loose permissions is refused. Legacy root-level records
-   are ignored. Before anything of the room is made or locked, it takes the room's build
-   lease for its whole life: the room's `build` names the content of the rewake
+1. **The directory.** The wrapper resolves the `REWAKE_DIR` base, its root `v2/` and
+   the room selected by `--room`, or `default` when omitted, creating nothing. Each
+   that exists is 0700; a symlink, foreign owner or loose permissions is refused.
+   1.x's rooms beside the root are not read. Before anything of the room is made or
+   locked, it takes the room's build lease for its whole life — the lease's bootstrap
+   makes whatever level is missing, and nothing else makes any — the room's `build` names the content of the rewake
    executable whose sessions write there, a launch of another build switches it only
    while nothing holds the room, and every change form of a shell or a tool call holds the
    lease too, refused in a room of another build
@@ -117,7 +118,7 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
      compares the version its `initialize` answer names with the launch's read; one not
      confirmed starts the server again without the leaves unless assumed gates keep it.
 6. **The environment.** `REWAKE_SESSION=<name>`, `REWAKE_EPOCH=<epoch>`,
-   `REWAKE_DIR=<root>` and `REWAKE_ROOM=<room>`; inherited Claude Code markers are stripped, so the harness
+   `REWAKE_DIR=<base>` and `REWAKE_ROOM=<room>`; inherited Claude Code markers are stripped, so the harness
    never borrows another session's socket. A launch from inside a session never gets
    here; the stripping stays for a shell that carries such markers without rewake's.
 7. **Launch.** The harness starts with the wrapper's terminal and process

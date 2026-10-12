@@ -66,7 +66,12 @@ func requestedDirGrants(catalog adapter.Catalog, call Call, sender, target regis
 		return dirGrants{}, failf("--grant-dir: cannot read the current directory to resolve a relative path: %v", err)
 	}
 	protected := catalog.Protected()
-	rules := grant.CurrentEnv(state.RootForRoom(dir), protected.Dirs, protected.Names).Rules()
+	base, err := state.BaseForRoom(dir)
+	if err != nil {
+		return dirGrants{}, failf("--grant-dir: %v", err)
+	}
+	root, _ := state.RootForRoom(dir)
+	rules := grant.CurrentEnv(base, root, protected.Dirs, protected.Names).Rules()
 	workspace, _ := filepath.EvalSymlinks(target.CWD)
 	var resolved, confirmed []string
 	check := func(flag, given string, confirm bool) error {

@@ -36,9 +36,13 @@ const grantLifetime = delivery.DefaultTTL + 5*time.Minute
 // names, not a guess. pinGrant tells it the one the letter is pinned to, and
 // again at each pin of a delivery tried again.
 func checkGrant(dir, name, epoch string, protected adapter.Protected) func(mail.Message) error {
-	root := state.RootForRoom(dir)
+	base, baseErr := state.BaseForRoom(dir)
+	root, rootErr := state.RootForRoom(dir)
 	return func(message mail.Message) error {
-		rules := grant.CurrentEnv(root, protected.Dirs, protected.Names).Rules()
+		if err := errors.Join(baseErr, rootErr); err != nil {
+			return err
+		}
+		rules := grant.CurrentEnv(base, root, protected.Dirs, protected.Names).Rules()
 		for _, directory := range message.GrantDirs {
 			if err := rules.Recheck(directory, slices.Contains(message.GrantBroad, directory)); err != nil {
 				return err

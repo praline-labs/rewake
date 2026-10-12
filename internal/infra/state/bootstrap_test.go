@@ -11,9 +11,9 @@ import (
 
 // bootstrapLevels are the directories Bootstrap makes, from the base down.
 func bootstrapLevels(base string) []string {
-	room := filepath.Join(base, "rooms", "default")
+	room := filepath.Join(base, "v2", "rooms", "default")
 	return []string{
-		base, filepath.Join(base, "rooms"), room,
+		base, filepath.Join(base, "v2"), filepath.Join(base, "v2", "rooms"), room,
 		filepath.Join(room, sessionsDir), filepath.Join(room, inboxDir), filepath.Join(room, socketsDir),
 	}
 }
@@ -106,7 +106,7 @@ func TestBootstrapSyncFailureStopsBeforeClaim(t *testing.T) {
 			}
 			syncLevel = before
 			room, err := Bootstrap(base, "default")
-			if err != nil || room != levels[2] {
+			if err != nil || room != levels[3] {
 				t.Fatalf("the next bootstrap: %q, %v", room, err)
 			}
 			for _, level := range levels {

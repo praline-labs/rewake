@@ -63,7 +63,12 @@ func resumeGrants(dir, name, epoch string, h adapter.Harness, args []string, pro
 // keeps those confirmed whose directories pass this session's rules again. It
 // says in a note what it restored and what it did not.
 func confirmedAgain(dir, name, epoch, thread string, protected adapter.Protected) (confirmed []authority.Restored, notes []string) {
-	rules := grant.CurrentEnv(state.RootForRoom(dir), protected.Dirs, protected.Names).Rules()
+	base, err := state.BaseForRoom(dir)
+	if err != nil {
+		return nil, []string{"no grant was restored: " + err.Error()}
+	}
+	root, _ := state.RootForRoom(dir)
+	rules := grant.CurrentEnv(base, root, protected.Dirs, protected.Names).Rules()
 	for _, restored := range authority.Restore(dir, name, epoch, thread) {
 		err := restored.Err
 		if err == nil {

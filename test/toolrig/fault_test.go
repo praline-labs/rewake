@@ -83,7 +83,7 @@ var idSegment = regexp.MustCompile(`[0-9a-f.-]{12,}`)
 
 // shape names a path without the ids of one run.
 func shape(path string) string {
-	return idSegment.ReplaceAllString(strings.TrimPrefix(path, "/rooms/default/inbox/"), "*")
+	return idSegment.ReplaceAllString(strings.TrimPrefix(path, "/v2/rooms/default/inbox/"), "*")
 }
 
 // faultCase is one fault: the plan of the program and its children, and the
@@ -183,7 +183,7 @@ func casesOf(t *testing.T, s faultScenario) []faultCase {
 
 // journalPath is a path of api's receipt journal of this run, rest a pattern.
 func journalPath(rest string) *regexp.Regexp {
-	return regexp.MustCompile(`^/rooms/default/inbox/api/receipts/[^/]+/` + rest + `$`)
+	return regexp.MustCompile(`^/v2/rooms/default/inbox/api/receipts/[^/]+/` + rest + `$`)
 }
 
 // beforeBinding are the only durable steps a child may take before its

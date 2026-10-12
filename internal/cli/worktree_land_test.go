@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/host/worktree"
-	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // commitIn adds a file to a checkout and commits it, returning the new HEAD.
@@ -67,7 +66,7 @@ func TestWorktreeFinishLandsAndRemoves(t *testing.T) {
 	record := lab.made(t, "fix")
 	tip := lab.commitIn(t, record.Path, "one")
 
-	roomDir, _ := state.RoomDir(lab.state, "trees")
+	roomDir := launched(t, lab.state, "trees")
 	session := otherRun(t, roomDir, "busy-worker")
 	if _, err := worktree.Claim(record, worktree.Owner{Name: session.Name, Room: "trees", Epoch: session.Epoch(), Harness: session.Harness, Dir: roomDir}); err != nil {
 		t.Fatal(err)

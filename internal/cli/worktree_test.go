@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/host/worktree"
-	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // made is one checkout of the lab's repository, owned by nobody yet.
@@ -32,7 +31,7 @@ func TestWorktreeLsReportsOwnerAndState(t *testing.T) {
 		t.Fatal(err)
 	}
 	live := lab.made(t, "live")
-	roomDir, _ := state.RoomDir(lab.state, "trees")
+	roomDir := launched(t, lab.state, "trees")
 	session := otherRun(t, roomDir, "busy-worker")
 	if _, err := worktree.Claim(live, worktree.Owner{Name: session.Name, Room: "trees", Epoch: session.Epoch(), Harness: session.Harness, Dir: roomDir}); err != nil {
 		t.Fatal(err)
@@ -80,7 +79,7 @@ func TestWorktreeRmRefusesWhatHoldsWork(t *testing.T) {
 	lab.git(t, detached.Path, "switch", "-q", "--detach")
 	lab.git(t, detached.Path, "commit", "-q", "--allow-empty", "-m", "Only here")
 	running := lab.made(t, "running")
-	roomDir, _ := state.RoomDir(lab.state, "trees")
+	roomDir := launched(t, lab.state, "trees")
 	session := otherRun(t, roomDir, "busy-worker")
 	if _, err := worktree.Claim(running, worktree.Owner{Name: session.Name, Room: "trees", Epoch: session.Epoch(), Harness: session.Harness, Dir: roomDir}); err != nil {
 		t.Fatal(err)
@@ -113,7 +112,7 @@ func TestWorktreeRmRefusesWhatHoldsWork(t *testing.T) {
 func TestWorktreeRmRemovesAnEndedSessionsCheckout(t *testing.T) {
 	lab := newWorktreeLab(t)
 	record := lab.made(t, "done")
-	roomDir, _ := state.RoomDir(lab.state, "trees")
+	roomDir := launched(t, lab.state, "trees")
 	otherRun(t, roomDir, "busy-worker")
 	if _, err := worktree.Claim(record, worktree.Owner{Name: "busy-worker", Room: "trees", Epoch: "1.1", Harness: "harness", Dir: roomDir}); err != nil {
 		t.Fatal(err)

@@ -15,9 +15,9 @@ import (
 // observation: making a room or taking its lease is no mail operation, and a
 // refused call must not leave evidence that the state was written.
 
-// Bootstrap makes the base, the room and the room's sessions, inbox and sock,
-// each when missing, and verifies each that exists without repairing its
-// mode: a directory somebody else could write is refused, not chmodded. Each
+// Bootstrap makes the base, the root, the room and the room's sessions, inbox
+// and sock, each when missing, and verifies each that exists without repairing
+// its mode: a directory somebody else could write is refused, not chmodded. Each
 // level it makes is synced into its parent, and a failed sync fails the
 // bootstrap, so a launch never claims a name in a room a crash could take
 // away. It may stop after any level; the next call completes what is missing.
@@ -26,11 +26,8 @@ func Bootstrap(base, room string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := makeLevel(base); err != nil {
-		return "", err
-	}
 	rooms := filepath.Dir(dir)
-	levels := []string{rooms, dir}
+	levels := []string{base, filepath.Dir(rooms), rooms, dir}
 	for _, sub := range []string{sessionsDir, inboxDir, socketsDir} {
 		levels = append(levels, filepath.Join(dir, sub))
 	}
@@ -50,7 +47,7 @@ func RoomPath(base, room string) (string, error) {
 	if !ValidName(room) {
 		return "", fmt.Errorf("invalid room name %q; use lower-case letters, digits, dot, dash or underscore, up to 32 characters", room)
 	}
-	return filepath.Join(base, "rooms", room), nil
+	return filepath.Join(base, rootName, "rooms", room), nil
 }
 
 // syncLevel flushes a new level into its parent; a test makes it fail.

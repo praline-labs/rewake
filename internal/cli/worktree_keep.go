@@ -97,7 +97,9 @@ func keepReasonsAndCheck(record worktree.Record) ([]string, worktree.Check, erro
 // checkout: the one it was made for, and any started there since — after the
 // first ended, or by hand in its directory, as a taken name's refusal
 // suggests. It looks in every room of the current state directory and of the
-// one the owner registered in. A process rewake did not start is not seen.
+// one the owner registered in. A process rewake did not start is not seen, nor
+// a session of 1.x: an owner record naming a room of another layout fails the
+// root's check and is skipped.
 func runningIn(record worktree.Record) ([]string, error) {
 	var roots []string
 	if root, err := state.Root(); err == nil {
@@ -105,7 +107,7 @@ func runningIn(record worktree.Record) ([]string, error) {
 	}
 	owner := record.Session
 	if owner != nil && owner.Dir != "" {
-		if root := state.RootForRoom(owner.Dir); !slices.Contains(roots, root) {
+		if root, err := state.RootForRoom(owner.Dir); err == nil && !slices.Contains(roots, root) {
 			roots = append(roots, root)
 		}
 	}

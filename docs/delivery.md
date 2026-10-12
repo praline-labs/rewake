@@ -8,9 +8,9 @@ primary TUI; losing that row never retries mail or changes its delivered status.
 [Back to the design](design.md).
 
 Every path and lookup below is relative to the current room's state directory,
-`<REWAKE_DIR>/rooms/<REWAKE_ROOM>/` (`default` when the room variable is absent).
+`<REWAKE_DIR>/v2/rooms/<REWAKE_ROOM>/` (`default` when the room variable is absent).
 Send, read, identity and turn reports never fall back to another room or to
-legacy records directly under the state root.
+1.x's records beside the root.
 
 ## Delivery
 

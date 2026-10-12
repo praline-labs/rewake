@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -22,10 +23,7 @@ func stateDir(t *testing.T, living map[int]uint64) string {
 		t.Fatalf("chmod: %v", err)
 	}
 	t.Setenv(state.DirEnv, dir)
-	resolved, err := state.Dir()
-	if err != nil {
-		t.Fatalf("state.Dir: %v", err)
-	}
+	resolved := buildtest.Current(t)
 
 	previous := alive
 	alive = func(pid int, start uint64) bool {

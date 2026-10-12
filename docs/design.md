@@ -75,11 +75,16 @@ different `TMPDIR` still finds the same directory.
 
 Checked on every open: it's a directory, not a symlink, owned by the current
 uid, with no group or other access; otherwise it fails with an explanation.
-Created with 0700. [Optional primary observations](session-state.md) are collected asynchronously; only verified main callers see them.
+Created with 0700, by a launch only: resolving the directory creates nothing, and
+the base, the root `v2/` and the room are made by the bootstrap of the room's build
+lease ([v2/stage3-state.md](v2/stage3-state.md#the-bootstrap)), so a command that
+only looks leaves no state behind. [Optional primary observations](session-state.md) are collected asynchronously; only verified main callers see them.
 
 ```
-<REWAKE_DIR>/
-  rooms/<room>/
+<REWAKE_DIR>/                   the base
+  v2/rooms/<room>/              2.0's root, then the room
+    build.lock                 the room's build lease, flock(2): writers shared, a launch changing the build exclusive
+    build                      the room's build id, the SHA-256 of the executable a launch established
     .launch.lock              serializes role choice and name publication
     sessions/<name>.json       session record
     observations/<digest>.json latest bounded state for one name/epoch
@@ -124,18 +129,21 @@ they live in the user's data directory, `~/.local/share/rewake/worktrees` by def
 **Owner decision, September 16, 2026:** `--room <name>` selects a room at launch.
 Without the flag, a launch uses `default`, including when invoked from a session
 in another room. Commands inherit `REWAKE_ROOM`; a shell without it uses
-`default`. `REWAKE_DIR` always remains the shared root passed to children.
+`default`. `REWAKE_DIR` always remains the base passed to children, never the root
+or the room below it.
 
 Room names use the session-name syntax. Names are unique within a room and can
 repeat in different rooms. List, send, inbox, whoami, turn reports and delivery
-open only that room's state tree below `rooms/`. There is no cross-room address and no `--room`
+open only that room's state tree below `v2/rooms/`. There is no cross-room address and no `--room`
 option on messaging or identity commands. List shows room and role on every
 row; its JSON records include both. Whoami includes the room and verifies its
 session epoch before describing a registered identity.
 
-The `rooms/` namespace keeps even rooms named `inbox`, `sessions` or `sock`
-separate from old root-level state. Old entries directly in the shared root are
-ignored. Registry readers also reject JSON without a process pid and start time;
+The `v2/rooms/` namespace keeps even rooms named `inbox`, `sessions` or `sock`
+separate from old state. 1.x's `rooms/` beside `v2/` in the base, and older entries
+directly in the base, are neither read nor written by ordinary commands; the
+inverse from a room to its root is checked and refuses a 1.x room
+([v2/stage3-state.md](v2/stage3-state.md#the-roots)). Registry readers also reject JSON without a process pid and start time;
 such files are neither treated as sessions nor pruned. There is no compatibility scan or fallback: the owner restarts those
 sessions, and an old record must not appear in a new room by accident.
 
@@ -156,7 +164,7 @@ in [roles.md](roles.md), with the owner decisions that set them.
 - `REWAKE_EPOCH=<epoch>` — which run of that name I am. A process left over
   from an ended run keeps its environment; with this, it can neither read the
   next run's mail nor sign or report for it.
-- `REWAKE_DIR=<root>` — the shared state root, not the room subdirectory.
+- `REWAKE_DIR=<base>` — the shared base, not its root `v2/` nor the room below it.
 - `REWAKE_ROOM=<room>` — the room for every child command. Inherited room,
   session and epoch markers are replaced with this launch's values.
 - Inherited Claude Code markers are stripped (list in research): otherwise

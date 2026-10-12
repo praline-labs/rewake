@@ -171,7 +171,7 @@ func playTurnReasons(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 // or not: a session no one wakes has read nothing, so only its mailbox shows
 // what reached it.
 func mailboxFrom(iso *Isolation, reader, sender string) []string {
-	mailbox := filepath.Join(iso.StateDir, "rooms", "default", "inbox", reader)
+	mailbox := filepath.Join(iso.Room("default"), "inbox", reader)
 	files, _ := filepath.Glob(filepath.Join(mailbox, "*.json"))
 	unread, _ := filepath.Glob(filepath.Join(mailbox, "unread", "*.json"))
 	var kinds []string

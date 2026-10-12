@@ -224,7 +224,7 @@ func playLive(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 
 	epoch := rows[full.name].Epoch()
 	stopSession(t, c, full)
-	last := session.Load(filepath.Join(iso.StateDir, "rooms", "default"), full.name, epoch).Channel
+	last := session.Load(iso.Room("default"), full.name, epoch).Channel
 	finding(obsChannelFrozen, last != nil && last.Frozen && last.Category() != channel.CategoryFailing, "the last snapshot's channel %s", showChannel(last))
 	return out
 }
@@ -262,7 +262,7 @@ func playDropped(w liveWorld, dropper *scenarioSession) []telemetryFinding {
 
 // inboxHolds says whether any letter in a session's inbox carries the text.
 func inboxHolds(iso *Isolation, name, text string) bool {
-	found, _ := filepath.Glob(filepath.Join(iso.StateDir, "rooms", "default", "inbox", name, "*.json"))
+	found, _ := filepath.Glob(filepath.Join(iso.Room("default"), "inbox", name, "*.json"))
 	for _, path := range found {
 		if raw, err := os.ReadFile(path); err == nil && strings.Contains(string(raw), text) {
 			return true
@@ -309,7 +309,7 @@ func refusedLaunch(t *testing.T, c *Case, iso *Isolation, harness, name, role st
 // session reads it, and whether the promise holds once the run's server has tried it: the
 // letter readable in the inbox, its stored status still waiting.
 func (w *liveWorld) unwoken(session *scenarioSession, epoch string) (bool, string) {
-	room := filepath.Join(w.iso.StateDir, "rooms", "default")
+	room := w.iso.Room("default")
 	held, details := true, []string{}
 	for _, text := range []string{liveNote, liveTask} {
 		args := []string{"send", session.name, text, "--json"}

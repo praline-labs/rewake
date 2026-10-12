@@ -53,7 +53,7 @@ may never record an outcome: a worker killed mid-compaction, a served side that 
 wait — in 1.x a module reloaded, a report to the collector that failed, a Codex wrapper
 whose background wait died with it. So
 `rewake compact` leaves a record in main's state
-(`<REWAKE_DIR>/rooms/<room>/letters/<main>/<id>.json`: the request, the worker's
+(`<REWAKE_DIR>/v2/rooms/<room>/letters/<main>/<id>.json`: the request, the worker's
 registry record, main's run, the time) before it writes the request, with the request's
 id chosen beforehand; a command killed after the worker took the request leaves it too.
 The command removes the record itself on every answer main already has in full: a

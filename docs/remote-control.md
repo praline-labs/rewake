@@ -119,7 +119,7 @@ One per run, like the sockets, so a request written for a run that ended never r
 the next holder of the name:
 
 ```
-<REWAKE_DIR>/rooms/<room>/control/<name>.<epoch>/     0700
+<REWAKE_DIR>/v2/rooms/<room>/control/<name>.<epoch>/  0700
   lock                    flock of the asker; a second asker is refused, not queued
   request.json            {id, action, focus, from, conversation}, 0600, put in place by rename
   <id>.taken              written by the served side the moment it picks the request up

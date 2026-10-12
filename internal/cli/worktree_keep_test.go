@@ -27,9 +27,9 @@ func runningAt(t *testing.T, dir, name, cwd string) {
 func TestASessionStartedInACheckoutHoldsIt(t *testing.T) {
 	lab := newWorktreeLab(t)
 	record := lab.made(t, "visited")
-	elsewhere, _ := state.RoomDir(lab.state, "elsewhere")
+	elsewhere := launched(t, lab.state, "elsewhere")
 	runningAt(t, elsewhere, "visitor", filepath.Join(record.Path, "src"))
-	trees, _ := state.RoomDir(lab.state, "trees")
+	trees := launched(t, lab.state, "trees")
 	runningAt(t, trees, "neighbor", record.Path+"-copy")
 
 	code, _, errOut := run("worktree", "rm", "visited")
@@ -150,7 +150,7 @@ func TestAnErrorExitTakesAnUntouchedCheckoutBack(t *testing.T) {
 // there.
 func TestATakenSessionNameLeavesNoCheckout(t *testing.T) {
 	lab := newWorktreeLab(t)
-	trees, _ := state.RoomDir(lab.state, "trees")
+	trees := launched(t, lab.state, "trees")
 	otherRun(t, trees, "tree-"+aWorktreeProbe(t).ID())
 	told, err := lab.launchTold(t, aWorktreeProbe(t), lab.repo, "--worktree=late")
 	var usage *UsageError

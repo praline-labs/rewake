@@ -147,7 +147,7 @@ func continueHeld() string {
 // kept while the run lives; one that named no event has a drawn name
 // (docs/turn-end-recovery.md#the-operation).
 func eventEnds(iso *Isolation, name string) int {
-	found, _ := filepath.Glob(filepath.Join(iso.StateDir, "rooms", "default", "inbox", name, "journal", "*"))
+	found, _ := filepath.Glob(filepath.Join(iso.Room("default"), "inbox", name, "journal", "*"))
 	count := 0
 	for _, path := range found {
 		if eventNamed.MatchString(strings.TrimSuffix(filepath.Base(path), ".done")) {

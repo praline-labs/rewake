@@ -64,7 +64,7 @@ func TestTheCurrentRulesKnowTheTemporaryDirectory(t *testing.T) {
 		t.Fatal(err)
 	}
 	var refusal *Refusal
-	if err := CurrentEnv("", nil, nil).Rules().Check(path, path, false); !errors.As(err, &refusal) || !strings.Contains(refusal.Message, "temporary directory") {
+	if err := CurrentEnv("", "", nil, nil).Rules().Check(path, path, false); !errors.As(err, &refusal) || !strings.Contains(refusal.Message, "temporary directory") {
 		t.Fatalf("%s: %v", path, err)
 	}
 }

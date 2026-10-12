@@ -59,17 +59,35 @@ func Base() (string, error) {
 	return path, nil
 }
 
-// Root returns the shared state root, without reading legacy records there.
+// rootName is the level of the base that holds 2.0's state
+// (docs/v2/stage3-state.md#the-roots): 1.x keeps its rooms beside it, in the
+// base itself, and neither reads the other's.
+const rootName = "v2"
+
+// Root is the state root, <base>/v2, made nowhere: only a launch's bootstrap
+// creates it. Each level that exists is verified.
 func Root() (string, error) {
-	path, err := Base()
+	base, err := Base()
 	if err != nil {
 		return "", err
 	}
-	if err := ensureDir(path); err != nil {
-		return "", err
+	root := filepath.Join(base, rootName)
+	for _, level := range []string{base, root} {
+		if err := verifyPresent(level); err != nil {
+			return "", err
+		}
 	}
+	return root, nil
+}
 
-	return path, nil
+// verifyPresent verifies a level of the state that exists and passes one that
+// does not: a resolver says where the state is, and a missing level is the
+// state nobody made yet, not an error.
+func verifyPresent(path string) error {
+	if _, err := os.Lstat(path); errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	return noteReach(Verify(path), false)
 }
 
 // ensureDir creates a directory and refuses one that somebody else could write.

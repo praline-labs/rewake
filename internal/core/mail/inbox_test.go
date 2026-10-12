@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -15,10 +16,7 @@ func stateDir(t *testing.T) string {
 		t.Fatalf("chmod: %v", err)
 	}
 	t.Setenv(state.DirEnv, dir)
-	resolved, err := state.Dir()
-	if err != nil {
-		t.Fatalf("state.Dir: %v", err)
-	}
+	resolved := buildtest.Current(t)
 	checkRecordKinds(t, resolved)
 	return resolved
 }

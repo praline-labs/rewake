@@ -117,13 +117,13 @@ func newRig(t *testing.T, change ...func(*endpoint.Config)) *rig {
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(root) })
 	_ = os.Chmod(root, 0o700)
-	dir, err := state.RoomDir(root, "default")
+	// The room is the built binary's, made, its lease file and record as its
+	// launch would have left them: the rig's own process plays the wrapper and
+	// takes no lease.
+	dir, err := state.Bootstrap(root, "default")
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The room is the built binary's, its lease file and record as its launch
-	// would have left them: the rig's own process plays the wrapper and takes
-	// no lease.
 	if err := os.WriteFile(filepath.Join(dir, "build.lock"), nil, 0o600); err != nil {
 		t.Fatal(err)
 	}

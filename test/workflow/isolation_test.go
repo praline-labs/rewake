@@ -205,7 +205,14 @@ func (iso *Isolation) inEveryRoomByType(sub string, matches func(os.FileInfo) bo
 	})
 }
 
-// inEveryRoom collects the entries of <state>/rooms/*/<sub> whose name matches.
+// rooms is the directory of the rooms rewake keeps in the case's state: the
+// root v2 of the base (docs/v2/stage3-state.md#the-roots).
+func (iso *Isolation) rooms() string { return filepath.Join(iso.StateDir, "v2", "rooms") }
+
+// Room is one room's directory in the case's state.
+func (iso *Isolation) Room(name string) string { return filepath.Join(iso.rooms(), name) }
+
+// inEveryRoom collects the entries of <state>/v2/rooms/*/<sub> whose name matches.
 func (iso *Isolation) inEveryRoom(sub string, matches func(string) bool) ([]string, error) {
 	return iso.collect(sub, func(entry os.DirEntry) (bool, error) {
 		return matches(entry.Name()), nil
@@ -213,7 +220,7 @@ func (iso *Isolation) inEveryRoom(sub string, matches func(string) bool) ([]stri
 }
 
 func (iso *Isolation) collect(sub string, matches func(os.DirEntry) (bool, error)) ([]string, error) {
-	rooms, err := os.ReadDir(filepath.Join(iso.StateDir, "rooms"))
+	rooms, err := os.ReadDir(iso.rooms())
 	if os.IsNotExist(err) {
 		return nil, nil
 	}
@@ -225,7 +232,7 @@ func (iso *Isolation) collect(sub string, matches func(os.DirEntry) (bool, error
 		if !room.IsDir() {
 			continue
 		}
-		dir := filepath.Join(iso.StateDir, "rooms", room.Name(), sub)
+		dir := filepath.Join(iso.Room(room.Name()), sub)
 		entries, err := os.ReadDir(dir)
 		if os.IsNotExist(err) {
 			continue

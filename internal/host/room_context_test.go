@@ -11,6 +11,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/brief"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -37,7 +38,7 @@ func TestTheHarnessReceivesItsRoomAndDefaultGeneral(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(raw) != state.RootForRoom(dir)+"\nred\n" {
+	if string(raw) != os.Getenv(state.DirEnv)+"\nred\n" {
 		t.Errorf("child environment=%q", raw)
 	}
 	if fake.launch.Room != "red" || fake.launch.Role.ID != "general" || fake.launch.Role.Silent || fake.launch.Role.GitWrite {
@@ -69,10 +70,7 @@ func TestEachRoomHasItsOwnMain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	other, err := state.RoomDir(state.RootForRoom(dir), "other")
-	if err != nil {
-		t.Fatal(err)
-	}
+	other := buildtest.Room(t, os.Getenv(state.DirEnv), "other")
 	second, err := claimRole(t, other, "api", role.Main)
 	if err != nil || second.Role != "main" || first.Room == second.Room {
 		t.Errorf("independent mains=%+v %+v err=%v", first, second, err)

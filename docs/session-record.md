@@ -20,7 +20,7 @@ in is described [there](design.md#state-directory).
   "cwd": "/home/u/code/x",
   "startedAt": "2026-09-16T00:08:03Z",
   "messagingReadyAt": "2026-09-16T00:08:05Z",
-  "socket": "/tmp/rewake-1000/rooms/default/sock/3f5a9c0e7d21b84c6a0f93e2.sock",
+  "socket": "/tmp/rewake-1000/v2/rooms/default/sock/3f5a9c0e7d21b84c6a0f93e2.sock",
   "ownsSocket": true,
   "pidNamespace": "pid:[4026531836]"
 }

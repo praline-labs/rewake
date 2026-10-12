@@ -102,7 +102,7 @@ func TestAGrantIsConfirmedWithTheMainThatSentIt(t *testing.T) {
 // recipient had when it first checked the grant: only that one may take the
 // grant again after a resume. This process stands for both wrappers.
 func TestMainHoldsTheConversationTheLetterWasPinnedTo(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "rooms", "default")
+	dir := unmadeRoom(t)
 	run := ownEpoch(t)
 	lib, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
@@ -142,7 +142,7 @@ func TestMainHoldsTheConversationTheLetterWasPinnedTo(t *testing.T) {
 // for its reader is, one done is not, and its grant goes rather than being
 // confirmed again after the report.
 func TestMainsAuthorityAsksTheMailboxWhetherATaskIsOpen(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "rooms", "default")
+	dir := unmadeRoom(t)
 	server := listenAuthority(dir, ownEpoch(t), os.Getpid())
 	if server == nil {
 		t.Fatal("main's wrapper did not bind its address")

@@ -10,6 +10,7 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -54,10 +55,7 @@ func TestExplicitPrefixControlsNameButNotRole(t *testing.T) {
 	if !errors.As(err, &taken) || taken.Name != "megamozg-fake" {
 		t.Fatalf("explicit conflict=%v", err)
 	}
-	other, err := state.RoomDir(state.RootForRoom(dir), "other")
-	if err != nil {
-		t.Fatal(err)
-	}
+	other := buildtest.Room(t, os.Getenv(state.DirEnv), "other")
 	if session, err := claimRole(t, other, "megamozg", role.Write); err != nil || session.Name != "megamozg-fake" {
 		t.Fatalf("other room=%+v err=%v", session, err)
 	}

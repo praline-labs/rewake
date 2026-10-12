@@ -49,9 +49,9 @@ func holdLock(dir string) int {
 func TestNameLockHoldsBetweenProcesses(t *testing.T) {
 	base := filepath.Join(t.TempDir(), "state")
 	t.Setenv(state.DirEnv, base)
-	dir, err := state.Dir()
+	dir, err := state.Bootstrap(base, state.DefaultRoom)
 	if err != nil {
-		t.Fatalf("Dir: %v", err)
+		t.Fatalf("Bootstrap: %v", err)
 	}
 
 	executable, err := os.Executable()

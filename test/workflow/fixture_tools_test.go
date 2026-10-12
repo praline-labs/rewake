@@ -60,7 +60,7 @@ func (r toolRun) from() []reportView {
 
 // owed lists the worker's open obligations to the lead.
 func (r toolRun) owed() []string {
-	found, _ := filepath.Glob(filepath.Join(r.iso.StateDir, "rooms", "default", "inbox", r.worker.name, "awaiting", "*", toolLead+"-*"))
+	found, _ := filepath.Glob(filepath.Join(r.iso.Room("default"), "inbox", r.worker.name, "awaiting", "*", toolLead+"-*"))
 	return found
 }
 
