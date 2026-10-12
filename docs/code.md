@@ -48,6 +48,7 @@ test/workflow/                                the workflow suite: end-to-end sce
 test/workflow/record/                         the record format a suite run prints and the summarizer reads
 test/toolrig/                                 the neutral rig: the tool path's oracles on the fixture's program and the host endpoint; the delivery server against the fixture's reservation, the test playing the program
 test/leaserig/                                the room's build lease raced between real builds of rewake, each paused at a named step
+test/decisionrig/                             decisions asked of real sessions' wrappers by real processes below them and outside, each wrapper paused or killed at a named step
 test/upgraderig/                              the clearing of 1.x between real processes: its crash and concurrency matrices over a fault build
 test/upgraderig/standin/                      the stand-in of 1.x the rig runs: rooms, launch locks, records and letters made as 1.x makes them
 tools/checksummary/                           summarizes a suite run into a few lines and summary.json

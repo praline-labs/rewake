@@ -16,7 +16,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"syscall"
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/control"
@@ -143,7 +142,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 			removeSocket(session.Socket)
 		}
 	}()
-	// Decisions on this run's reports are taken from here until it begins to end (decide.go).
+	// Decisions on this run's reports are taken from here until its harness ends (decide.go).
 	if authority != nil {
 		authority.HandleDecide(decideHandler(request.Dir, name, epoch, life))
 		defer life.closeAdmission()
@@ -344,6 +343,8 @@ func Run(ctx context.Context, request Request) (int, error) {
 	}()
 
 	code := waitForHarness(command.Process.Pid)
+	// The run begins to end with its harness: no decision is taken from here.
+	life.closeAdmission()
 	tool.keeper.exited()
 
 	// Stop serving before the record goes away, and let the server refuse what
@@ -353,37 +354,6 @@ func Run(ctx context.Context, request Request) (int, error) {
 	<-served
 
 	return code, nil
-}
-
-// waitForHarness waits for the harness and follows it into a stop.
-//
-// A harness that stops itself — Ctrl+Z reaches it through the group, but it can
-// also do it on its own — would leave the shell waiting on a wrapper that is
-// still running, with no prompt and no way to bring the job back. So the wrapper
-// stops with it and continues with it, which is what a shell expects of a job.
-func waitForHarness(pid int) int {
-	for {
-		var status syscall.WaitStatus
-		_, err := syscall.Wait4(pid, &status, syscall.WUNTRACED|syscall.WCONTINUED, nil)
-		if err == syscall.EINTR {
-			continue
-		}
-		if err != nil {
-			return 1
-		}
-
-		switch {
-		case status.Stopped():
-			followStop(pid, stillStopped, stopSelf)
-		case status.Continued():
-			// Both are running again; nothing to do.
-		case status.Signaled():
-			// No exit code of its own: report what a shell would.
-			return 128 + int(status.Signal())
-		case status.Exited():
-			return status.ExitStatus()
-		}
-	}
 }
 
 // current re-reads the session record so delivery sees the latest one. The

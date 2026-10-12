@@ -11,6 +11,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/proc"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // The decision on a report whose outcome is unknown, verified, is made by the
@@ -138,6 +139,7 @@ func (a *Authority) answerDecide(conn *net.UnixConn, ask *decideAsk) decided {
 		}
 		return decided{Outcome: refusal.Outcome, Recorded: refusal.Recorded, Path: refusal.Path, Error: refusal.Error()}
 	}
+	state.Step("decision answered")
 	d := answer.Decision
 	reply := decided{ID: d.ID, Choice: d.Choice, Subject: d.Subject, By: d.By, Path: answer.Path, Before: answer.Before, Owed: answer.Owed}
 	if answer.Barrier != nil {
@@ -190,6 +192,7 @@ func Decide(address string, run Run, ask mail.DecideRequest, path string) (mail.
 		return mail.DecideAnswer{}, err
 	}
 	_ = conn.SetDeadline(time.Now().Add(decideLimit))
+	state.Step("decision asked")
 	// The answer is the checked wrapper's: the connection's peer is fixed when
 	// it is made, and the listener's socket is no child's to inherit.
 	answer, err := exchange(conn, request{Op: opDecide, Decide: &decideAsk{Sender: ask.Sender, Report: ask.Report, Choice: ask.Choice, Expect: ask.Expect}})

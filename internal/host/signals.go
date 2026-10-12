@@ -114,3 +114,34 @@ func forward(incoming chan os.Signal, process *os.Process, alive func() bool, en
 		_ = process.Signal(signalValue)
 	}
 }
+
+// waitForHarness waits for the harness and follows it into a stop.
+//
+// A harness that stops itself — Ctrl+Z reaches it through the group, but it can
+// also do it on its own — would leave the shell waiting on a wrapper that is
+// still running, with no prompt and no way to bring the job back. So the wrapper
+// stops with it and continues with it, which is what a shell expects of a job.
+func waitForHarness(pid int) int {
+	for {
+		var status syscall.WaitStatus
+		_, err := syscall.Wait4(pid, &status, syscall.WUNTRACED|syscall.WCONTINUED, nil)
+		if err == syscall.EINTR {
+			continue
+		}
+		if err != nil {
+			return 1
+		}
+
+		switch {
+		case status.Stopped():
+			followStop(pid, stillStopped, stopSelf)
+		case status.Continued():
+			// Both are running again; nothing to do.
+		case status.Signaled():
+			// No exit code of its own: report what a shell would.
+			return 128 + int(status.Signal())
+		case status.Exited():
+			return status.ExitStatus()
+		}
+	}
+}

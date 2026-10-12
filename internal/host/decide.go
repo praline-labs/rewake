@@ -7,6 +7,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/core/grant/authority"
 	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // decideHandler is the transaction this wrapper runs for a decision a command
@@ -20,6 +21,7 @@ func decideHandler(dir, name, epoch string, life *lifetime) authority.DecideHand
 			return mail.DecideAnswer{}, &mail.DecisionError{Outcome: mail.DecisionBusy, Err: errors.New("this session is ending and takes no decision")}
 		}
 		defer life.dismiss()
+		state.Step("decision admitted")
 		if ask.Expect.Recipient != name || ask.Expect.RecipientRun != epoch {
 			return mail.DecideAnswer{}, &mail.DecisionError{Outcome: mail.DecisionUnauthorized, Err: fmt.Errorf(
 				"report %s of %s was addressed to %s (run %s), and this wrapper decides only for its own run, %s of %s",

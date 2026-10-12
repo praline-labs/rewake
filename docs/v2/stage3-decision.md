@@ -93,13 +93,25 @@ caller, makes the decision's final transaction (Q2 of
 4. The wrapper then runs the decision's final transaction itself, through a handler the
    host supplies, under its own lease and lifetime: the locked plan, the record and its
    effects (Q1, Q4). The shell holds no mailbox lock while it asks. A wrapper that is
-   shutting down refuses new requests, and a transaction it took finishes before its
-   last write, as every host callback does under S17. So no verified decision is written
-   after the recipient run ended: the run that vouches is the process that writes.
+   shutting down refuses new requests — from the moment its harness ends, before any of
+   its teardown — and a transaction it took finishes before its last write, as every
+   host callback does under S17. So no verified decision is written after the recipient
+   run ended: the run that vouches is the process that writes.
    The asker is `authority.Decide`, the wrapper's side `host/decide.go` over
    `mail.Decide`; a wrapper runs at most four decisions at once and refuses the rest
    busy, the answer carries no observations — the record on disk does — and a question
    that went out with no answer back is uncertain, naming the record that may exist.
+   `test/decisionrig` holds this between real processes: the recipient's command is
+   answered whatever its environment says; another worker's, with the recipient's
+   variables or without, through the client or straight at the address, the
+   recipient's own in a user namespace of its own, a listener the run does not name, a
+   grant at a worker's address and the run's successor under its name are refused with
+   nothing written; and a wrapper killed at the client's step after it checked the
+   wrapper, at `decision admitted`, waiting for the sender's mailbox, or at
+   `decision answered` leaves the asker uncertain and a record only if it wrote one
+   before it died. A harness that ends during an admitted decision gets a later
+   question refused busy, and the run keeps the room's lease until the admitted one is
+   done.
 
 **A compaction does not take the authority away** — the owner's condition. The run is
 the wrapper's: `registry.Session.Epoch()` is the wrapper's pid, its process start and
@@ -108,6 +120,9 @@ process or a tool call. A compaction replaces none of these, so the run that com
 is the same run and its shells and tool children still decide, verified. Nor does a
 capability lost and reconnected (S11): liveness is a property of the run, not its
 identity. Only the wrapper's end ends the run; a later launch of the name is a new run.
+`test/decisionrig` asks after a compaction the fixture's program reported and the
+wrapper counted, and after the program's link dropped and came back, and the run
+decides both, verified.
 
 `REWAKE_SESSION` is never trusted: a worker that sets it to `lead` runs below its own
 wrapper and is refused, where 1.x `settle`, removed in S2, trusted the variable.
@@ -158,7 +173,12 @@ The decision is then recorded as the person's, **unverified**, and both the reci
 run and the room's main are told once. The accepted limit: a process that left a
 session's tree through `setsid` and a double fork, with a clean environment, passes these
 checks and is taken for the person; without the path a room whose recipient run is gone
-would have no way out.
+would have no way out. `test/decisionrig` shows both sides on real processes: a
+session's command is below it with its variables unset, in a group of its own, and with
+a clean environment there too — its harness places it — while the double fork with a
+clean environment classified as the person on October 12, 2026, adopted by a process
+outside every session; the rig logs what it classifies as, since that depends on the
+adopter.
 
 Every process of the user can write the state directory, so a decision record written by
 hand is no more prevented than a forged letter. The authority keeps an honest worker —

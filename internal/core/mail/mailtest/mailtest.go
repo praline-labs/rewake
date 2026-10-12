@@ -1,9 +1,10 @@
 // Package mailtest gives tests outside core/mail the paths and bytes of mail's
-// records that its exported API does not hand out: where a status or a claim
-// lies, what a delivery-thread record says, whether a copy is a tombstone, a
-// wait written as mail writes one. They are fixtures, not a second mail: each
-// is checked by a test in core/mail against mail's own reader or writer
-// (mailtest_check_test.go), and nothing here settles, delivers or decides.
+// records that its exported API does not hand out: where a status, a claim or
+// a letter's publish-once mark lies, what a delivery-thread record says,
+// whether a copy is a tombstone, a wait written as mail writes one. They are
+// fixtures, not a second mail: each is checked by a test in core/mail against
+// mail's own reader or writer (mailtest_check_test.go), and nothing here
+// settles, delivers or decides.
 //
 // The package imports no mail, so mail's own tests may use it too.
 package mailtest
@@ -31,6 +32,12 @@ const StaleAnswering = 6 * time.Second
 // StatusPath is where a message's status lies.
 func StatusPath(dir, name, id string) string {
 	return filepath.Join(state.InboxPath(dir, name), id+".status")
+}
+
+// OncePath is where the mark lies that a letter to a run was published once:
+// a test damages it to leave a report's outcome unknown.
+func OncePath(dir, to, epoch, id string) string {
+	return filepath.Join(state.InboxPath(dir, to), "once", epoch, id)
 }
 
 // ClaimsPath is the directory of a mailbox's reads in parts.

@@ -19,6 +19,9 @@ func TestTheMailtestFixturesAreMailsRecords(t *testing.T) {
 	if got, want := mailtest.StatusPath(dir, "api", "m1"), statusPath(dir, "api", "m1"); got != want {
 		t.Errorf("StatusPath = %s, want %s", got, want)
 	}
+	if want, _ := oncePath(dir, "web", "40.4", "m1"); mailtest.OncePath(dir, "web", "40.4", "m1") != want {
+		t.Errorf("OncePath = %s, want %s", mailtest.OncePath(dir, "web", "40.4", "m1"), want)
+	}
 	if got, want := mailtest.ClaimsPath(dir, "api"), claimsPath(dir, "api"); got != want {
 		t.Errorf("ClaimsPath = %s, want %s", got, want)
 	}

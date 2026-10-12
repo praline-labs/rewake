@@ -57,6 +57,16 @@ through `REWAKE_FAULT_PROC`, which only a build with the tag reads
 (`internal/infra/legacy/proc_fault.go`): the machine's `/proc` cannot be made to show
 those cases without privilege, and nothing of it changes.
 
+The decision rig (`test/decisionrig`) builds rewake with the tag and the fixture harness,
+and launches sessions whose harness is the rig's own test binary as the fixture's program
+([stage3-decision.md](v2/stage3-decision.md#authority)). The program's two halves start
+askers on command — below the wrapper, in a group or a user namespace of their own, with
+the session's variables changed or cleared, or through a double fork that leaves the tree
+— each asking for a decision through the client, straight at the address, or classifying
+itself as the person. A wrapper is held at the named steps of a decision's way and killed
+or ended there, an asker at the client's step after it checked the wrapper. It runs only
+with the fixture's tag, as the toolrig does, since a launch needs the fixture harness.
+
 The tag also admits one narrow kind of test code into a production package. When a fault
 schedule must cross a package boundary and neither an exported operation, a file
 fixture nor `state.Fault` can build it, the package that owns the step may carry exported
