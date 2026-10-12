@@ -37,3 +37,27 @@ func TestClearLockTimeoutRefuses(t *testing.T) {
 		t.Fatalf("the second launch again: %s %q", end, said)
 	}
 }
+
+// A launch that read the trees before the clear lock acts on what it finds
+// once it holds the lock: the first read only chose the slow path. Behind a
+// clearer that removes rooms/ while it waits, it goes on and says nothing.
+func TestTheClearingActsOnWhatItFindsUnderTheLock(t *testing.T) {
+	w := newWorld(t)
+	w.standin("letter", filepath.Join(w.base, "rooms"), "old", "web", "m1")
+	first := w.launch("r1", "other:holdat=legacy admitted,launch cleared@PAUSE")
+	if step := first.heldAt(); step != "legacy admitted" {
+		t.Fatalf("the first launch held at %q: %s", step, first.stderr.String())
+	}
+	second := w.launch("r2", "other:holdat=launch cleared@PAUSE")
+	// Well inside the clear bound: the second has read rooms/ and waits for
+	// the lock; on a machine slow enough that it has not, the test proves
+	// less, never fails wrongly.
+	time.Sleep(clearWait / 3)
+	first.resume()
+	if end, said := first.end(); end != went || !strings.Contains(said, "removed the state of rewake 1.x") {
+		t.Fatalf("the first launch: %s %q", end, said)
+	}
+	if end, said := second.end(); end != went || said != "" {
+		t.Fatalf("the second launch, behind the first: %s %q", end, said)
+	}
+}

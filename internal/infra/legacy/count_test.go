@@ -49,6 +49,9 @@ func TestTheCounterCountsEachThingOnceAndNeverGuesses(t *testing.T) {
 			mustWrite(t, filepath.Join(box, "done", "m6.json"), `{"id":"m6"}`)
 			mustWrite(t, filepath.Join(box, ".tmp-m7.json"), `{`)
 		}, want{1, 1, 0}},
+		{"a mailbox directory that cannot be listed", func(t *testing.T, room string) {
+			mustWrite(t, filepath.Join(mailbox(room, "web"), "unread"), "")
+		}, want{1, legacy.Unknown, 0}},
 		{"a letter that does not parse", func(t *testing.T, room string) {
 			mustWrite(t, filepath.Join(mailbox(room, "web"), "m1.json"), `{`)
 		}, want{1, legacy.Unknown, 0}},

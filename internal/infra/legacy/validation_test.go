@@ -87,8 +87,9 @@ func contains(log []string, prefix string) bool {
 
 // Validation of the launch's own candidate checks the launch locks admission
 // took at their renamed paths rather than locking them again — which would
-// contend with itself — and refuses a lock file replaced meanwhile; a
-// candidate another clearer left gets fresh locks, taken without waiting.
+// contend with itself — and refuses a lock file replaced meanwhile or a
+// room gone from the tree; a candidate another clearer left gets fresh locks,
+// taken without waiting.
 func TestValidationReusesOwnedLocks(t *testing.T) {
 	t.Run("its own locks", func(t *testing.T) {
 		s := newScene(t)
@@ -109,6 +110,18 @@ func TestValidationReusesOwnedLocks(t *testing.T) {
 			mustWrite(t, lock, "")
 		})
 		s.refused(".launch.lock cannot be checked", "is not the file this launch locked")
+		s.wantTrees("rooms")
+	})
+	t.Run("a room that went", func(t *testing.T) {
+		s := newScene(t)
+		s.room(s.rooms(), "a")
+		s.room(s.rooms(), "b")
+		onStep(t, "legacy set aside", func() {
+			if err := os.RemoveAll(filepath.Join(s.only("candidate"), "b")); err != nil {
+				t.Fatal(err)
+			}
+		})
+		s.refused("cannot be checked: it went while the tree was set aside")
 		s.wantTrees("rooms")
 	})
 	t.Run("a left candidate's lock", func(t *testing.T) {
@@ -200,5 +213,24 @@ func mustMkdir(t *testing.T, path string) {
 	t.Helper()
 	if err := os.MkdirAll(path, 0o700); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// A candidate's name is drawn, never assumed free: a name another clearer's
+// tree holds is passed by for the next draw, and both trees go through whole.
+// The draws differ within a process, so a pid and a start recurring after a
+// boot do not make a name recur.
+func TestASetAsideDrawsAgainOnATakenName(t *testing.T) {
+	s := newScene(t)
+	s.letter(s.room(s.rooms(), "old"), "web", "m1")
+	s.letter(s.room(s.candidate(leftID), "left"), "web", "m-left")
+	legacy.SetDraws(t, leftID, "5.6.0123456789abcdef")
+	s.went()
+	s.wantTrees()
+	if want := "rewake: removed the state of rewake 1.x (2 rooms, 2 unread letters, 0 undelivered reports).\n"; s.said.String() != want {
+		t.Fatalf("it said %q, want %q", s.said.String(), want)
+	}
+	if first, second := legacy.NewTreeID(), legacy.NewTreeID(); first == second || !state.ValidTreeID(first) {
+		t.Fatalf("two draws %q and %q", first, second)
 	}
 }

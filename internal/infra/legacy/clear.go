@@ -154,7 +154,7 @@ func (r run) scanner() *scanner {
 // when the name is taken. A failed rename or flush stops the clearing.
 func (r run) setAside() (string, error) {
 	for range 3 {
-		id := newTreeID(r.reader)
+		id := drawTreeID(r.reader)
 		err := r.cleanup.SetAside(id)
 		if errors.Is(err, state.ErrTreeExists) {
 			continue
@@ -166,6 +166,9 @@ func (r run) setAside() (string, error) {
 	}
 	return "", errors.New("could not set the state of rewake 1.x aside: every name drawn was taken, so nothing was removed")
 }
+
+// drawTreeID draws the id of a tree set aside; tests make it collide.
+var drawTreeID = newTreeID
 
 // newTreeID is this clearer's pid, its start and a random part, so that it
 // cannot recur across boots.

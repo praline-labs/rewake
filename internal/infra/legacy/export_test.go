@@ -24,5 +24,20 @@ func SetWaits(t testing.TB, clearing, room time.Duration) {
 // Waits are the clearing's bounds as built.
 func Waits() (time.Duration, time.Duration) { return clearWait, roomWait }
 
+// SetDraws makes the ids a clearing draws for its candidate those given, in
+// order, for one test.
+func SetDraws(t testing.TB, ids ...string) {
+	old := drawTreeID
+	drawTreeID = func(proc.Reader) string {
+		id := ids[0]
+		ids = ids[1:]
+		return id
+	}
+	t.Cleanup(func() { drawTreeID = old })
+}
+
+// NewTreeID draws an id as a clearing does.
+func NewTreeID() string { return newTreeID(procReader) }
+
 // Count is the counter over one tree.
 var Count = count
