@@ -122,7 +122,10 @@ lease and writes nothing.
 **One scope per invocation.** In the shell it runs from the class through the handler,
 `observeShell` and the printing of the answer or the refusal; through the tool, from the
 class through the ticket's confirmation, the handler and `boundedAnswer`, which may write
-after the handler returned. From commit 2 the lease is held for exactly that scope.
+after the handler returned. From commit 2 the lease is held for exactly that scope. A
+lease refused ends it before the handler and before `observeShell`: the refusal is
+printed and nothing is written, no shell note either — the note is a write of a room the
+call could not acquire.
 
 **Views stop pruning**, at the places the inventory found them writing:
 
@@ -364,7 +367,7 @@ These keep their oracles: `TestAdmissionIsInsideTheSection`,
 `TestEveryTextPartNamesItself`, `TestCleanupLeavesTheNextOwnerAlone`,
 `TestEachRunCleansOnlyItsOwnSocket`; the read clock's order against a held end, a
 mailbox's stop, T5–T8 and the shell channel's evidence too. The bootstrap and the lease
-never manufacture a successful shell observation for a refused call. The workflow suite
+never manufacture a shell observation for a refused call, a failure no more than a success (`TestAFailedLeaseLeavesNoShellObservation`). The workflow suite
 and the tool rig pass on the new roots with their controls still failing their mutants;
 the crosswise check runs when a control changes.
 

@@ -93,7 +93,7 @@ func worktreeAccess(call Call) access {
 // other lock; a launch takes its own, for the room its --room names, and
 // holds it for the wrapper's life. A lease refused ends the scope before the
 // handler, which then has had no effect, and is answered by refused the way
-// its route answers.
+// its route answers — with no write at all, the shell's observation included.
 func (ctx *Context) within(class access, call Call, run func() int, refused func(error) int) int {
 	ctx.access = class
 	if class == accessView {

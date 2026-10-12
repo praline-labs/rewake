@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/infra/build"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -79,5 +80,35 @@ func TestBothRoutesRefuseAnotherBuildsRoom(t *testing.T) {
 	}
 	if files, _ := filepath.Glob(filepath.Join(state.InboxPath(dir, web.Name), "*.json")); len(files) != 0 {
 		t.Fatalf("a message was written: %v", files)
+	}
+}
+
+// A change whose lease could not be taken is refused before its scope, and
+// leaves no shell observation in the room it could not acquire: not even the
+// failure to reach the state, though the receipts are writable — the lock
+// that refused it is unreadable, in a room of this build or another's.
+func TestAFailedLeaseLeavesNoShellObservation(t *testing.T) {
+	for _, foreign := range []bool{false, true} {
+		dir := liveSession(t, "api")
+		epoch := epochOf(t, dir, "api")
+		t.Setenv(state.SessionEnv, "api")
+		t.Setenv(state.EpochEnv, epoch)
+		if foreign {
+			if err := os.WriteFile(filepath.Join(dir, "build"), []byte(strings.Repeat("ab", 32)+"\n"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		lock := filepath.Join(dir, "build.lock")
+		if err := os.Chmod(lock, 0); err != nil {
+			t.Fatal(err)
+		}
+		code, _, errOut := run("pending", "the review")
+		_ = os.Chmod(lock, 0o600)
+		if code != ExitFailed || !strings.Contains(errOut, "could not open the build lease") {
+			t.Fatalf("foreign %v: the lease was not refused: %d %s", foreign, code, errOut)
+		}
+		if notes := receipt.TakeShell(dir, "api", epoch); len(notes) != 0 {
+			t.Fatalf("foreign %v: the refused call wrote shell notes: %+v", foreign, notes)
+		}
 	}
 }

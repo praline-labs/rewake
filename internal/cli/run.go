@@ -45,9 +45,9 @@ func Run(catalog adapter.Catalog, argv []string, stdout, stderr io.Writer) int {
 	}
 	ctx.JSON = result.Call.Switch("json")
 	class := formAccess(result)
+	// A refused lease is answered and nothing more: the shell's observation
+	// is a write of the room, and the call holds no lease to make it under.
 	return ctx.within(class, result.Call, func() int { return runParsed(ctx, result) }, func(err error) int {
-		// A state that could not be reached is the shell's evidence too.
-		observeShell(class, result.Call, err)
 		return report(ctx, err)
 	})
 }

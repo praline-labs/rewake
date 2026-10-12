@@ -194,7 +194,7 @@ folded.
 |---|---|---|
 | a write under the mailbox's or receipts' lock completed | **success** | `inbox` that moved a letter it showed, `pending` that marked, `send` that wrote a message, `retry` that wrote |
 | the run's mailbox or receipts could not be reached: `EROFS`, `EACCES`, `EPERM`, an I/O error on the lock or the file | **failure**, its class | a sandbox that turned the state directory read-only |
-| anything else | nothing | `inbox --peek`, which writes nothing; a view — `inbox --owed`, `--awaited`, `guide`, `--help` — which is never observed ([stage3-state.md](v2/stage3-state.md#what-is-a-writer)); exit 2, a refusal by the target, a delivery hold, a lock wait that timed out |
+| anything else | nothing | `inbox --peek`, which writes nothing; a view — `inbox --owed`, `--awaited`, `guide`, `--help` — which is never observed ([stage3-state.md](v2/stage3-state.md#what-is-a-writer)); a change whose build lease was refused, unreadable lock included, which writes nothing in a room it did not acquire; exit 2, a refusal by the target, a delivery hold, a lock wait that timed out |
 
 The CLI writes an observation only while the channel is not working — the tool
 starting, failing, blocked, or no tool — which it learns from the run's
