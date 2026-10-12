@@ -10,7 +10,7 @@ import (
 // code: whether it goes on, what it says, and which trees it leaves.
 type expectation struct {
 	end   string
-	says  string
+	says  []string
 	trees []string
 }
 
@@ -46,15 +46,35 @@ func expect(s scenario) expectation {
 		entry = append(entry, "validated")
 	}
 	if says, ok := atAdmission[s.old]; ok {
-		return expectation{end: refused, says: says, trees: sorted(entry)}
+		return expectation{end: refused, says: []string{says}, trees: sorted(entry)}
 	}
 
 	var left []string
 	var removed []treeCounts
 	deferred, failed := false, ""
 	failOnce := s.old == "delete fails"
+	// What the launch says it removed and deferred, on every end after
+	// admission: beside a refusal too.
+	summary := func(says ...string) []string {
+		if len(removed) > 0 {
+			total := treeCounts{}
+			for _, c := range removed {
+				total.rooms, total.unread = total.rooms+c.rooms, total.unread+c.unread
+			}
+			says = append(says, fmt.Sprintf("removed the state of rewake 1.x (%s, %s, 0 undelivered reports)",
+				plural(total.rooms, "room"), plural(total.unread, "unread letter")))
+		}
+		if deferred {
+			says = append(says, "1 validated tree of rewake 1.x could not be deleted yet")
+		}
+		return says
+	}
 	// Step 4: a validated tree is deleted after admission, its counts the
-	// ones recorded before.
+	// ones recorded before, once the base is flushed: a validated name
+	// proves no flush.
+	if s.hasValidated() && s.old == "sync fails" {
+		return expectation{end: refused, says: []string{"so no validated tree of rewake 1.x was deleted"}, trees: sorted(entry)}
+	}
 	if s.hasValidated() {
 		if failOnce {
 			failOnce, deferred = false, true
@@ -72,9 +92,9 @@ func expect(s scenario) expectation {
 	if s.hasRooms() {
 		switch s.old {
 		case "rename fails":
-			return expectation{end: refused, says: "nothing was removed", trees: sorted(append(left, entryOf(s, "rooms")...))}
+			return expectation{end: refused, says: summary("aside, so nothing in it was removed"), trees: sorted(append(left, entryOf(s, "rooms")...))}
 		case "sync fails":
-			return expectation{end: refused, says: "nothing was removed", trees: sorted(append(left, entryOf(s, "candidate")...))}
+			return expectation{end: refused, says: summary("aside, so nothing in it was removed"), trees: sorted(append(left, entryOf(s, "candidate")...))}
 		}
 		own := tree{counts: treeCounts{1, 1}, evidence: atValidation[s.old]}
 		switch s.old {
@@ -123,11 +143,11 @@ func expect(s scenario) expectation {
 		}
 		switch s.old {
 		case "rename fails":
-			failed = "nothing was removed"
+			failed = "validated, so nothing in it was removed"
 			left = append(left, "candidate")
 			continue
 		case "sync fails":
-			failed = "nothing was removed"
+			failed = "validated, so nothing in it was removed"
 			left = append(left, "validated")
 			continue
 		}
@@ -140,23 +160,11 @@ func expect(s scenario) expectation {
 	}
 	switch {
 	case says != "":
-		return expectation{end: refused, says: says, trees: sorted(left)}
+		return expectation{end: refused, says: summary(says), trees: sorted(left)}
 	case failed != "":
-		return expectation{end: refused, says: failed, trees: sorted(left)}
+		return expectation{end: refused, says: summary(failed), trees: sorted(left)}
 	}
-	line := ""
-	if len(removed) > 0 {
-		total := treeCounts{}
-		for _, c := range removed {
-			total.rooms, total.unread = total.rooms+c.rooms, total.unread+c.unread
-		}
-		line = fmt.Sprintf("removed the state of rewake 1.x (%s, %s, 0 undelivered reports)",
-			plural(total.rooms, "room"), plural(total.unread, "unread letter"))
-	}
-	if deferred {
-		line = "1 validated tree of rewake 1.x could not be deleted yet"
-	}
-	return expectation{end: went, says: line, trees: sorted(left)}
+	return expectation{end: went, says: summary(), trees: sorted(left)}
 }
 
 // entryOf is the trees a refusal at set-aside leaves: rooms/ as it was, or

@@ -123,9 +123,12 @@ descriptors of `rooms/` stay open and locked for the clearing; the rest are rele
 
 **Clearing — what may be deleted.** Still under the clear lock, after admission:
 
-4. **Finish validated trees.** Each `.rooms-1x-validated-*` is deleted. A deletion that
-   fails part way is finished by the next launch; only a validated tree is ever deleted
-   in part.
+4. **Finish validated trees.** The base is flushed first: a validated name proves no
+   flush, since the clearer that renamed it may have failed its flush and refused, and a
+   launch that bootstrapped — flushing the base — before that rename cannot vouch for it.
+   A flush that fails refuses the launch and deletes nothing. Then each
+   `.rooms-1x-validated-*` is deleted. A deletion that fails part way is finished by the
+   next launch; only a validated tree is ever deleted in part.
 5. **Set `rooms/` aside**, if present: rename it to `.rooms-1x-candidate-<id>` while its
    room locks are held, and sync the base. A failed rename or sync stops the clearing: a
    rename whose durability is unknown is no ground to delete, and the launch refuses with
@@ -210,7 +213,11 @@ on October 12, 2026 ([stage3-s17-evidence.md](stage3-s17-evidence.md#the-live-ga
   unknown reports, a turn record of the build before, or anything it cannot read makes
   that count unknown.
 - A refusal's message names each finding on a line of its own; a failure to rename, flush
-  or record says that nothing was removed.
+  or record names the tree it failed on and says that nothing in it was removed. Once the
+  clearing is past admission, what it removed and deferred is said on stderr on every
+  return, beside the refusal that stopped it later.
+- Recorded counts are read field by field: a record missing or unreadable, a count absent
+  or null, or anything but a whole number from zero is unknown, never zero (D9).
 - Every file the clearing opens — a record, a letter, a 1.x lock, the clear lock — must be
   a regular file: a special file is refused by `lstat` before the open, the open does not
   wait (`O_NONBLOCK`) and the descriptor is checked again, so a FIFO cannot hold the
@@ -236,10 +243,10 @@ finds only the trees and their names. Where a clearer can stop, and what follows
 | after the rename of step 5, before its sync | `rooms/` or a candidate, whichever the disk kept | admission over what is there |
 | after the rename of step 5 | a candidate | admits over it (steps 1–3 include candidates), then validates it in step 6 |
 | during validation | a candidate | validates it again from its contents |
-| after the rename to validated | a validated tree | deletes it in step 4 |
+| after the rename to validated | a validated tree, its flush perhaps failed | flushes the base, then deletes it in step 4; refuses, deleting nothing, if the flush fails |
 | during deletion | part of a validated tree, and its counts under `v2/` | finishes it in step 4, reporting the recorded counts |
 | a read fails, a lock is held or a wrapper is alive in step 6 | a candidate, or `rooms/` again | this launch has refused; the next launch's admission refuses while the finding holds, and validation runs again once it does not |
-| a rename or a sync fails | the tree as the disk kept it | this launch has refused; nothing was deleted on it |
+| a rename or a sync fails | the tree as the disk kept it | this launch has refused, saying what it removed before; nothing was deleted on that tree |
 | a deletion fails after validation | part of a validated tree | this launch went on; the next one finishes it in step 4 |
 
 A kill proves recovery from a crash of the process; a failed sync is injected through

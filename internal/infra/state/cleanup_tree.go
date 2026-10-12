@@ -73,6 +73,22 @@ func (c *Cleanup) transition(from, to, id string) error {
 	return c.flush()
 }
 
+// Settle flushes the base so that every transition already made in it is
+// durable, by whichever clearer made it: a validated name another clearer
+// left may be one whose flush failed, and seeing the name proves nothing
+// about the disk. A clearing settles before it deletes a validated tree it
+// did not just validate itself — the tree of id — and deletes nothing when it
+// cannot.
+func (c *Cleanup) Settle(id string) error {
+	if !ValidTreeID(id) {
+		return fmt.Errorf("%q is no tree id", id)
+	}
+	if err := c.check(OpSync, c.Validated(id)); err != nil {
+		return err
+	}
+	return c.flush()
+}
+
 // flush syncs the base after a rename: until it succeeds the rename may not
 // be durable, and nothing is deleted on it.
 func (c *Cleanup) flush() error {

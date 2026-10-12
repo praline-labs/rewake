@@ -54,7 +54,9 @@ func TestValidatedDeletionFailureDefersOnlyDeletion(t *testing.T) {
 
 // The counts are recorded under v2/ before the deletion, so a launch
 // finishing a partial deletion reports what the tree held, not what is left;
-// counts that were never recorded or cannot be read are unknown.
+// counts that were never recorded or cannot be read are unknown, and so is
+// each count the record leaves absent or null or that is no whole number
+// from zero: nobody recorded it, and it is not zero.
 func TestLegacySummarySurvivesPartialDeletion(t *testing.T) {
 	t.Run("recorded", func(t *testing.T) {
 		s := newScene(t)
@@ -81,16 +83,28 @@ func TestLegacySummarySurvivesPartialDeletion(t *testing.T) {
 			t.Fatal("the counts outlived their tree")
 		}
 	})
-	for name, summary := range map[string]string{"never recorded": "", "unreadable": "{"} {
-		t.Run(name, func(t *testing.T) {
+	const unknownAll = "unknown rooms, unknown unread letters, unknown undelivered reports"
+	cases := []struct{ name, summary, says string }{
+		{"never recorded", "", unknownAll},
+		{"unreadable", "{", unknownAll},
+		{"an empty object", "{}", unknownAll},
+		{"null", "null", unknownAll},
+		{"a count absent", `{"rooms":2,"unread":1}`, "2 rooms, 1 unread letter, unknown undelivered reports"},
+		{"a count null", `{"rooms":null,"unread":1,"undelivered":0}`, "unknown rooms, 1 unread letter, 0 undelivered reports"},
+		{"counts no whole number from zero", `{"rooms":-5,"unread":1.5,"undelivered":"1"}`, unknownAll},
+		{"counts recorded unknown", `{"rooms":2,"unread":-1,"undelivered":-1}`, "2 rooms, unknown unread letters, unknown undelivered reports"},
+		{"zeros recorded", `{"rooms":0,"unread":0,"undelivered":0}`, "0 rooms, 0 unread letters, 0 undelivered reports"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
 			s := newScene(t)
 			s.room(s.validated(leftID), "a")
-			if summary != "" {
-				mustWrite(t, s.summary(leftID), summary)
+			if c.summary != "" {
+				mustWrite(t, s.summary(leftID), c.summary)
 			}
 			s.went()
-			if got := s.said.String(); got != "rewake: removed the state of rewake 1.x (unknown rooms, unknown unread letters, unknown undelivered reports).\n" {
-				t.Fatalf("the launch said %q", got)
+			if got, want := s.said.String(), "rewake: removed the state of rewake 1.x ("+c.says+").\n"; got != want {
+				t.Fatalf("the launch said %q, want %q", got, want)
 			}
 		})
 	}

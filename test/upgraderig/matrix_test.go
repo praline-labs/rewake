@@ -234,7 +234,7 @@ func TestLegacyClearConcurrentMatrix(t *testing.T) {
 				return
 			}
 			want := expect(s)
-			if end != want.end || !strings.Contains(said, want.says) {
+			if end != want.end || !saysAll(said, want.says) {
 				t.Fatalf("the launch %s, saying:\n%s\nwant %s, saying %q", end, said, want.end, want.says)
 			}
 			if got := w.trees(); strings.Join(got, ",") != strings.Join(want.trees, ",") {
@@ -243,6 +243,16 @@ func TestLegacyClearConcurrentMatrix(t *testing.T) {
 			w.lettersKept()
 		})
 	}
+}
+
+// saysAll says whether said holds every one of want.
+func saysAll(said string, want []string) bool {
+	for _, text := range want {
+		if !strings.Contains(said, text) {
+			return false
+		}
+	}
+	return true
 }
 
 // holds is the fault plan's holds for a world: at its condition's step, at

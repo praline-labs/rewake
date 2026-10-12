@@ -75,7 +75,27 @@ func (r run) clear() error {
 		return refusal
 	}
 	state.Step("legacy admitted")
+	// From here the clearing has effects, and whatever it removed or
+	// deferred is said on every return, beside what stopped it.
 	var done summary
+	refusal = r.sweep(trees, held, &done)
+	done.say(r.say)
+	if refusal != nil {
+		return refusal
+	}
+	return nil
+}
+
+// sweep runs steps 4–6 over what admission let through.
+func (r run) sweep(trees state.Trees, held map[string]*state.TreeLock, done *summary) *Refusal {
+	if len(trees.Validated) > 0 {
+		// A validated name proves no flush: the clearer that made it may have
+		// failed its flush and refused. Settled here or not deleted at all.
+		if err := r.cleanup.Settle(trees.Validated[0]); err != nil {
+			closeAll(held)
+			return &Refusal{failure: fmt.Errorf("could not flush %s, so no validated tree of rewake 1.x was deleted: %w", r.cleanup.Validated(trees.Validated[0]), err)}
+		}
+	}
 	for _, id := range trees.Validated {
 		done.finish(r.cleanup, id, r.recorded(id))
 	}
@@ -94,12 +114,7 @@ func (r run) clear() error {
 	if own != "" {
 		candidates = append([]string{own}, candidates...)
 	}
-	refusal = r.validate(candidates, own, held, &done)
-	done.say(r.say)
-	if refusal != nil {
-		return refusal
-	}
-	return nil
+	return r.validate(candidates, own, held, done)
 }
 
 // admit runs steps 1–3 over rooms/ and every candidate. The launch locks of
@@ -160,11 +175,11 @@ func (r run) setAside() (string, error) {
 			continue
 		}
 		if err != nil {
-			return "", fmt.Errorf("could not set the state of rewake 1.x aside, so nothing was removed: %w", err)
+			return "", fmt.Errorf("could not set %s aside, so nothing in it was removed: %w", r.cleanup.Rooms(), err)
 		}
 		return id, nil
 	}
-	return "", errors.New("could not set the state of rewake 1.x aside: every name drawn was taken, so nothing was removed")
+	return "", fmt.Errorf("could not set %s aside: every name drawn was taken, so nothing in it was removed", r.cleanup.Rooms())
 }
 
 // drawTreeID draws the id of a tree set aside; tests make it collide.
@@ -232,10 +247,10 @@ func (r run) markValidated(id, tree string) error {
 		return err
 	}
 	if err := r.cleanup.WriteSummary(id, data); err != nil {
-		return fmt.Errorf("could not record what the state of rewake 1.x holds, so nothing was removed: %w", err)
+		return fmt.Errorf("could not record what %s holds, so nothing in it was removed: %w", tree, err)
 	}
 	if err := r.cleanup.MarkValidated(id); err != nil {
-		return fmt.Errorf("could not mark the state of rewake 1.x validated, so nothing was removed: %w", err)
+		return fmt.Errorf("could not mark %s validated, so nothing in it was removed: %w", tree, err)
 	}
 	return nil
 }
@@ -252,17 +267,25 @@ func (r run) keep(id string, refusal *Refusal) {
 	}
 }
 
-// recorded reads the counts written before a tree was validated; missing or
-// unreadable, each is unknown — what is left of a tree is not what it held.
+// recorded reads the counts written before a tree was validated. A record
+// missing or unreadable, a count absent, null or no count at all — anything
+// but a whole number from zero — is unknown: what is left of a tree is not
+// what it held, and a count nobody recorded is not zero (D9).
 func (r run) recorded(id string) Counts {
-	unknownCounts := Counts{Rooms: Unknown, Unread: Unknown, Undelivered: Unknown}
+	counts := Counts{Rooms: Unknown, Unread: Unknown, Undelivered: Unknown}
 	data, err := r.cleanup.ReadSummary(id)
 	if err != nil {
-		return unknownCounts
+		return counts
 	}
-	var counts Counts
-	if err := json.Unmarshal(data, &counts); err != nil {
-		return unknownCounts
+	var record map[string]json.RawMessage
+	if err := json.Unmarshal(data, &record); err != nil {
+		return counts
+	}
+	for key, count := range map[string]*int{"rooms": &counts.Rooms, "unread": &counts.Unread, "undelivered": &counts.Undelivered} {
+		var n *int
+		if raw, ok := record[key]; ok && json.Unmarshal(raw, &n) == nil && n != nil && *n >= 0 {
+			*count = *n
+		}
 	}
 	return counts
 }
