@@ -173,7 +173,10 @@ none asking the fault plan, so a call's fault schedule counts the steps it count
 lies outside every room by the harness's protocol: a reply socket beside a socket the caller
 named. `state.ClaimSocket` gives the run authority over that one path, no directory — clearing
 a dead socket there, binding, the close-time unlink — checked at each act against view mode
-and the room's lease; inside the base it widens nothing. Then the guarded resources:
+and the room's lease. It widens nothing of any state: a path in a state directory, as written
+or where its directory's links lead — a base of any root, a root with rooms, a room of either
+layout by what it holds — is guarded by the lease of the room it lies in, which the claiming
+room's lease is not. Then the guarded resources:
 
 - commit 5: the registry's removals; `core/control`'s lock, request, mark and answer files
   and `serve.go`; in `core/mail` a direct write, a truncate without create, a hard link,

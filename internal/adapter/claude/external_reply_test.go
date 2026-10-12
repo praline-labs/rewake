@@ -80,6 +80,35 @@ func TestALaneOutsideTheRoomBindsNothingWithoutTheLease(t *testing.T) {
 	}
 }
 
+// A caller's socket in a room of another base is in a state, not outside
+// every one: the room's lease the lane holds clears nothing there and binds
+// nothing, and the lane says why; the gate still opens.
+func TestALaneBesideAnotherBasesRoomWritesNothingThere(t *testing.T) {
+	room := buildtest.Dir(t)
+	foreign := buildtest.Established(t, outsideDir(t), state.DefaultRoom)
+	sock := state.SocketPath(foreign, "api", "1.2")
+	l := newLane(sock, strings.TrimSuffix(sock, ".sock")+".reply.sock", false)
+	l.room, l.limit = room, 50*time.Millisecond
+	defer l.Close()
+	deadSocket(t, l.reply)
+	before := state.NoLeaseRefusals()
+	var noted string
+	if err := l.Start(context.Background(), func(note string) { noted = note }); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(noted, state.ErrNoLease.Error()) || state.NoLeaseRefusals() == before {
+		t.Fatalf("a lane beside another base's room: noted %q", noted)
+	}
+	if info, err := os.Lstat(l.reply); err != nil || info.Mode()&os.ModeSocket == 0 {
+		t.Fatalf("the dead socket in another base's room was not left: %v", err)
+	}
+	select {
+	case <-l.Opened():
+	case <-l.done:
+		t.Fatal("closed before it opened")
+	}
+}
+
 // A file at the reply path that is no socket is not the run's to remove.
 func TestALaneOutsideTheRoomLeavesWhatIsNoSocket(t *testing.T) {
 	room := buildtest.Dir(t)

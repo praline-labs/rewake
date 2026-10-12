@@ -2,6 +2,7 @@ package state
 
 import (
 	"errors"
+	"net"
 	"os"
 	"path/filepath"
 	"testing"
@@ -90,4 +91,100 @@ func TestASocketClaimCoversOnePathWhileTheLeaseHolds(t *testing.T) {
 	if _, err := ClaimSocket(outside, path); err == nil {
 		t.Fatal("a directory that is no room claimed a socket")
 	}
+}
+
+// A claim outside its own base is no proof the path is outside every state:
+// a path in a room of another base, in its sock directory, in that base or
+// its root beside the rooms, reached through a link into it, or in a room of
+// 1.x, belongs to a state, and only the lease of the room it lies in binds,
+// clears or unlinks it. The claiming room's lease writes nothing there, and
+// refuses counted.
+func TestASocketClaimNeverWritesAnotherBase(t *testing.T) {
+	_, own := bootstrapped(t)
+	heldLease(t, own)
+	foreignBase, foreign := bootstrapped(t)
+	outside, err := os.MkdirTemp("", "claim")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(outside) })
+	link := filepath.Join(outside, "link")
+	if err := os.Symlink(foreign, link); err != nil {
+		t.Fatal(err)
+	}
+	legacy := filepath.Join(outside, "old", "rooms", DefaultRoom)
+	for _, sub := range []string{sessionsDir, inboxDir, socketsDir} {
+		if err := os.MkdirAll(filepath.Join(legacy, sub), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	places := map[string]string{
+		"a room of another base":             filepath.Join(foreign, "reply.sock"),
+		"its sock directory":                 filepath.Join(foreign, socketsDir, "reply.sock"),
+		"the root of another base":           filepath.Join(foreignBase, rootName, "reply.sock"),
+		"another base beside its root":       filepath.Join(foreignBase, "reply.sock"),
+		"a link into a room of another base": filepath.Join(link, "reply.sock"),
+		"a room of 1.x":                      filepath.Join(legacy, socketsDir, "reply.sock"),
+	}
+	for name, path := range places {
+		t.Run(name, func(t *testing.T) {
+			claim, err := ClaimSocket(own, path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			before := NoLeaseRefusals()
+			listener, err := claim.Listen(path)
+			if listener != nil {
+				_ = listener.Close()
+			}
+			if !errors.Is(err, ErrNoLease) {
+				t.Fatalf("the own room's claim bound an unleased room in another base: %v", err)
+			}
+			if _, err := os.Lstat(path); !os.IsNotExist(err) {
+				t.Fatalf("a refused bind left a file: %v", err)
+			}
+			deadSocket(t, path)
+			if err := claim.Discard(path); !errors.Is(err, ErrNoLease) {
+				t.Fatalf("the own room's claim cleared a socket in another base: %v", err)
+			}
+			if _, err := os.Lstat(path); err != nil {
+				t.Fatalf("a refused clearing removed the socket: %v", err)
+			}
+			if NoLeaseRefusals()-before != 2 {
+				t.Fatalf("%d refusals counted, want 2", NoLeaseRefusals()-before)
+			}
+			_ = os.Remove(path)
+		})
+	}
+
+	// With that room's own lease the path is that room's to write, and its
+	// close-time unlink goes with that lease, whatever the claiming room holds.
+	path := filepath.Join(foreign, "reply.sock")
+	claim, err := ClaimSocket(own, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	theirs := heldLease(t, foreign)
+	listener, err := claim.Listen(path)
+	if err != nil {
+		t.Fatalf("binding under the lease of the room the path lies in: %v", err)
+	}
+	theirs.Close()
+	if err := listener.Close(); !errors.Is(err, ErrNoLease) {
+		t.Fatalf("the close-time unlink in another base without its lease: %v", err)
+	}
+	if _, err := os.Lstat(path); err != nil {
+		t.Fatalf("a refused unlink removed the socket: %v", err)
+	}
+}
+
+// deadSocket leaves a socket at path, as a run that died bound would.
+func deadSocket(t *testing.T, path string) {
+	t.Helper()
+	listener, err := net.ListenUnix("unix", &net.UnixAddr{Name: path, Net: "unix"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	listener.SetUnlinkOnClose(false)
+	_ = listener.Close()
 }
