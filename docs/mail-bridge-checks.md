@@ -163,7 +163,7 @@ own process plays the wrapper, and its writes go through the same seam in-proces
   acknowledgment, one call across two servers, an acknowledgment cut midway (its writes
   landing or failing) and an Esc nobody heard; `order_marks_test.go` holds a child and a
   shell pending mark before and inside the mailbox lock while the end is captured and
-  journaled. `endpoint/gate_test.go` proves the capture never samples again after it
+  journaled. `bridge/gate_test.go` proves the capture never samples again after it
   waited; `endpoint/tickets_end_test.go` covers a capture on Codex before the turn's
   completion and an interruption on Claude Code against tickets, a capture still waiting
   for a writer, and the run's limit on the calls it remembers, whose last ticket two

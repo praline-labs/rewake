@@ -19,8 +19,8 @@ internal/infra/boottime/                      the boot clock, comparable across 
 internal/core/mail/                           message, status, sender-side write, the locked sweep and settlement, turn ends and the read's acknowledgment
 internal/core/mail/mailtest/                  for tests outside mail: the paths and bytes of its records, each checked against mail
 internal/core/receipt/                        the journal of mail operations run through the tool's words: keys, records, frozen reads
-internal/bridge/                              what the CLI and the context endpoint share: the ticket, result bounds, cutting parts
-internal/bridge/endpoint/                     the wrapper's context endpoint: hellos, tickets, completions, the gate against a turn's end, a transport's calls
+internal/bridge/                              what the CLI and the context endpoint share: the ticket, result bounds, cutting parts, the gate against a turn's end
+internal/bridge/endpoint/                     the wrapper's context endpoint: hellos, tickets, completions, a transport's calls
 internal/core/channel/                        the run's mail channel: tool and shell observations, the block, display and notices
 internal/core/grant/                          which directories a task may grant, and the journal of what was granted
 internal/core/grant/authority/                main's wrapper holding the grants its commands registered, and confirming them

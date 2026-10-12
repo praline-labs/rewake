@@ -139,7 +139,7 @@ func newRig(t *testing.T, change ...func(*endpoint.Config)) *rig {
 	cfg := endpoint.Config{
 		Dir: dir, Name: "api", Epoch: r.self.Epoch(), Transport: fixture.Transport, Capability: capability,
 		Span: 25 * time.Second, Words: cli.ToolWords, Check: cli.ToolCheck, Tools: cli.ToolDescriptors(),
-		Executable: launcher, Gate: endpoint.NewGate(r.clock.Snapshot),
+		Executable: launcher, Gate: bridge.NewGate(r.clock.Snapshot),
 		Acknowledge: func(dir, name, epoch, token string, evidence bridge.Exposure, gate bridge.EndGate) error {
 			err := cli.AcknowledgeRead(dir, name, epoch, token, evidence, gate)
 			r.acknowledged <- err

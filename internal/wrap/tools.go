@@ -60,7 +60,7 @@ func (t *mailTool) config(request Request, name, epoch, transport string, clock 
 		Capability: t.capability, Span: span, Refusal: refusal,
 		Words: request.MailTool.Words, Acknowledge: request.MailTool.Acknowledge,
 		Check: request.MailTool.Check, Tools: request.MailTool.Tools,
-		Gate:    endpoint.NewGate(clock.Snapshot),
+		Gate:    bridge.NewGate(clock.Snapshot),
 		Channel: t.keeper.tell,
 	}
 }

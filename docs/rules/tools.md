@@ -171,7 +171,7 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
     counts it for `prompt_id`.
   The carried test includes a lost end with a `retry` from another turn.
   Tests:
-  - `internal/bridge/endpoint/gate_test.go` `TestAnAcknowledgmentAfterANotedEndWritesNothing`
+  - `internal/bridge/gate_test.go` `TestAnAcknowledgmentAfterANotedEndWritesNothing`
   - `internal/bridge/endpoint/tickets_end_test.go` `TestACapturedTurnIssuesNoMoreTickets`
   - `internal/bridge/endpoint/tickets_end_test.go` `TestARunPastTheTicketsItRemembersRefuses`
   - `internal/bridge/endpoint/tickets_end_test.go` `TestTheLastTicketARunRemembersIsIssuedOnce`
@@ -207,10 +207,10 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   the acknowledgment takes after its last write under the lock. Each acknowledgment is
   applied once.
   Tests:
-  - `internal/bridge/endpoint/gate_test.go` `TestACaptureTakesTheClosingSnapshotOfTheWritingAcknowledgment`
-  - `internal/bridge/endpoint/gate_test.go` `TestACaptureThatWaitedDoesNotSampleAgain`
-  - `internal/bridge/endpoint/gate_test.go` `TestACaptureWithNothingWritingSamplesUnderTheMutex`
-  - `internal/bridge/endpoint/gate_test.go` `TestOnlyOneAcknowledgmentWrites`
+  - `internal/bridge/gate_test.go` `TestACaptureTakesTheClosingSnapshotOfTheWritingAcknowledgment`
+  - `internal/bridge/gate_test.go` `TestACaptureThatWaitedDoesNotSampleAgain`
+  - `internal/bridge/gate_test.go` `TestACaptureWithNothingWritingSamplesUnderTheMutex`
+  - `internal/bridge/gate_test.go` `TestOnlyOneAcknowledgmentWrites`
   - `internal/cli/turn_scope_test.go` `TestARetryWhoseFirstAttemptRecordedNothingKeepsItsScope`
   - `internal/cli/turn_scope_test.go` `TestARetryTakesOnlyTheAnswerItsFirstAttemptSaw`
   - `internal/cli/turn_scope_test.go` `TestAnEndWithNothingOwedKeepsItsScopeOnRetry`
@@ -240,7 +240,7 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   Tests:
   - `internal/bridge/endpoint/tickets_test.go` `TestTheDeadlineFollowsTheTransportsTimeout`
   - `internal/bridge/endpoint/tickets_test.go` `TestTheObservationWaitIsTwoSeconds`
-  - `internal/bridge/endpoint/gate_test.go` `TestOnlyOneAcknowledgmentWrites`
+  - `internal/bridge/gate_test.go` `TestOnlyOneAcknowledgmentWrites`
   - `internal/bridge/endpoint/tickets_end_test.go` `TestNoTicketWhileACaptureWaitsForAWriter`
   - `internal/core/receipt/receipt_test.go` `TestTheLockHoldsOneCallAtATime`
   - `internal/core/receipt/receipt_test.go` `TestTheSweepRespectsAHeldLock`

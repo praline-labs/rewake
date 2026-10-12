@@ -35,7 +35,7 @@ type Config struct {
 	// the CLI's AcknowledgeRead.
 	Acknowledge func(dir, name, epoch, token string, evidence bridge.Exposure, gate bridge.EndGate) error
 	// Gate orders acknowledgments against this run's captured ends.
-	Gate *Gate
+	Gate *bridge.Gate
 	// Channel takes the channel events the endpoint observes; nil drops
 	// them.
 	Channel func(channel.Event)
