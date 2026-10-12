@@ -108,7 +108,7 @@ transport with the declaration made and withheld.
   `mcp_test.go:186`. Codex later: `mcp_test.go:138` (the MCP server's cap on calls).
 - **T10 — one build per room.** Carry: `endpoint/hello_test.go:40` (another build's
   hello refused, through the `SameBuild` seam). Gap: the build id and the room's lease —
-  closed in S17 ([stage3-state.md](stage3-state.md#the-tests)).
+  closed in S17 ([stage3-state-tests.md](stage3-state-tests.md)).
 - **T11 — a failing tool never weakens the mail.** Carry:
   `cli/bridge_read_test.go:165`, `cli/bridge_rules_test.go:218`,
   `cli/shell_channel_test.go:24,96`, `receipt/shell_test.go:19,92,109,134`,
