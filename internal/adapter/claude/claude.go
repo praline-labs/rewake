@@ -205,6 +205,7 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 	args = grantDirs(args, request.GrantDirs)
 
 	wake := newLane(socket, reply, owns)
+	wake.room = request.RoomDir
 	return adapter.LaunchPlan{
 		Command:    request.Program("claude"),
 		Args:       args,

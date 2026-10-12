@@ -15,7 +15,10 @@ import (
 // unlink is a write like the bind.
 type Listener struct {
 	*net.UnixListener
-	path   string
+	path string
+	// check is the guard of this socket's writes: the room's, or a
+	// SocketClaim's for one outside it.
+	check  func(op string) error
 	remove sync.Once
 }
 
@@ -23,7 +26,11 @@ type Listener struct {
 // the path is the caller's to clear first: a dead run's socket is removed
 // with Discard.
 func Listen(path string) (*Listener, error) {
-	if err := guard(OpWrite, path); err != nil {
+	return listen(path, func(op string) error { return guard(op, path) })
+}
+
+func listen(path string, check func(op string) error) (*Listener, error) {
+	if err := check(OpWrite); err != nil {
 		return nil, err
 	}
 	listener, err := net.ListenUnix("unix", &net.UnixAddr{Name: path, Net: "unix"})
@@ -36,7 +43,7 @@ func Listen(path string) (*Listener, error) {
 		_ = os.Remove(path)
 		return nil, err
 	}
-	return &Listener{UnixListener: listener, path: path}, nil
+	return &Listener{UnixListener: listener, path: path, check: check}, nil
 }
 
 // Close stops listening and removes the socket's file, once: a second close
@@ -47,7 +54,7 @@ func (l *Listener) Close() error {
 	closed := l.UnixListener.Close()
 	var removed error
 	l.remove.Do(func() {
-		if removed = guard(OpRemove, l.path); removed != nil {
+		if removed = l.check(OpRemove); removed != nil {
 			return
 		}
 		if err := os.Remove(l.path); err != nil && !errors.Is(err, os.ErrNotExist) {

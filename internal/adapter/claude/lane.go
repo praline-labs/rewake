@@ -55,6 +55,9 @@ type lane struct {
 	// the session has not made it yet; beside a socket the caller named it is
 	// left as it is.
 	ownDir bool
+	// room is the run's room, whose lease covers a reply socket beside a
+	// socket the caller named outside it (state.ClaimSocket).
+	room   string
 	window time.Duration
 	limit  time.Duration
 
@@ -138,14 +141,24 @@ func (l *lane) listen(ctx context.Context) error {
 		}
 		sweepReplies(filepath.Dir(l.reply))
 	}
+	bind, discard := state.Listen, state.Discard
+	if !l.ownDir {
+		// Beside the caller's socket, wherever they put it: the run's one
+		// path there, under its room's lease, as the receipt protocol wants.
+		claim, err := state.ClaimSocket(l.room, l.reply)
+		if err != nil {
+			return fmt.Errorf("not hearing back about held messages: %w", err)
+		}
+		bind, discard = claim.Listen, claim.Discard
+	}
 	if info, err := os.Lstat(l.reply); err == nil {
 		if info.Mode()&os.ModeSocket == 0 {
 			return fmt.Errorf("not hearing back about held messages: %s is taken by something that is not a socket", l.reply)
 		}
 		// The path names this run, so a leftover belongs to a wrapper that died.
-		_ = state.Discard(l.reply)
+		_ = discard(l.reply)
 	}
-	listener, err := state.Listen(l.reply)
+	listener, err := bind(l.reply)
 	if err != nil {
 		return fmt.Errorf("not hearing back about held messages: %w", err)
 	}

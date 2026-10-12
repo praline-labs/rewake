@@ -29,11 +29,16 @@ func guard(op string, paths ...string) error {
 	}
 	for _, path := range paths {
 		if !leased(path) {
-			refusedNoLease.Add(1)
-			return &os.PathError{Op: op, Path: path, Err: ErrNoLease}
+			return refuseNoLease(op, path)
 		}
 	}
 	return nil
+}
+
+// refuseNoLease counts a refusal for want of a lease and gives its error.
+func refuseNoLease(op, path string) error {
+	refusedNoLease.Add(1)
+	return &os.PathError{Op: op, Path: path, Err: ErrNoLease}
 }
 
 // refusedNoLease counts the writes refused for want of a lease, the

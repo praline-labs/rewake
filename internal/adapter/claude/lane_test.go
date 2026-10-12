@@ -81,6 +81,7 @@ func answer(t *testing.T, reply, id, status string) {
 func startLane(t *testing.T, dir string) *lane {
 	t.Helper()
 	l := newLane(filepath.Join(dir, "session.sock"), filepath.Join(dir, "session.reply.sock"), false)
+	l.room = dir
 	l.window, l.limit = 200*time.Millisecond, 100*time.Millisecond
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(func() { cancel(); l.Close() })

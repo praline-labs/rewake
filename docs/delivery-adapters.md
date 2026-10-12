@@ -37,7 +37,11 @@ same pid, uid and start time. That is why the wrapper both writes and listens:
 `rewake send` only puts a file in a mailbox and has exited long before a hold ends.
 The reply socket is the session socket's name with `.reply` before `.sock`, mode
 0600; beside a socket the caller named with `--messaging-socket-path` it is
-`rewake-<hash>.reply.sock` in that socket's directory.
+`rewake-<hash>.reply.sock` in that socket's directory. That directory may lie outside
+the room, where no lease of the state reaches, so the lane binds there under a
+`state.SocketClaim`: the run's authority over that one path — clearing a dead run's
+socket, binding, the close-time unlink — while this process holds the room's lease
+([stage3-state.md](v2/stage3-state.md#what-is-a-writer)).
 
 Each receipt is one line on a new connection, quoting the line's id in
 `orig_msg_id`. After a write the adapter waits 300 ms for the first one — a held line

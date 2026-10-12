@@ -169,8 +169,11 @@ through a primitive, a new one where none fits: `OpenFile` (a write only with a 
 `WriteFile`, `Link`, `Move`, `Chmod`, `Touch`, `Discard`, `RemoveAll`, `Flock` (taking a
 lock is a write, letting it go is not), each the os call it names behind the same guard and
 none asking the fault plan, so a call's fault schedule counts the steps it counted before
-(`Discard` and `Move` are cleanup; `Remove` and `Rename` stay the counted ones); then the
-guarded resources:
+(`Discard` and `Move` are cleanup; `Remove` and `Rename` stay the counted ones). One write
+lies outside every room by the harness's protocol: a reply socket beside a socket the caller
+named. `state.ClaimSocket` gives the run authority over that one path, no directory — clearing
+a dead socket there, binding, the close-time unlink — checked at each act against view mode
+and the room's lease; inside the base it widens nothing. Then the guarded resources:
 
 - commit 5: the registry's removals; `core/control`'s lock, request, mark and answer files
   and `serve.go`; in `core/mail` a direct write, a truncate without create, a hard link,
