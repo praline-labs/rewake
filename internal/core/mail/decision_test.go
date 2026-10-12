@@ -304,6 +304,20 @@ func TestDecisionRecordsBesideItReadStrictly(t *testing.T) {
 			t.Errorf("a summary with %s holds", name)
 		}
 	}
+	journals := JournalPath(lab.dir, "api")
+	done, _ := json.Marshal(TurnJournal{Epoch: lab.epoch, Done: true, Summary: &summary})
+	if _, err := parseJournal(filepath.Join(journals, ResendJournal(summary.Decision)+doneSuffix), done); err != nil {
+		t.Fatalf("a resend's done journal with its summary does not read: %v", err)
+	}
+	for _, name := range []string{"end", "end" + doneSuffix, ResendJournal(NewID())} {
+		if _, err := parseJournal(filepath.Join(journals, name), done); err == nil {
+			t.Errorf("the journal %s reads with a summary of decision %s", name, summary.Decision)
+		}
+	}
+	stray, _ := json.Marshal(TurnJournal{Epoch: lab.epoch, Decided: []DecidedStep{{Report: lab.report.ID, Decision: "nobody"}}})
+	if _, err := parseJournal(filepath.Join(journals, "end"), stray); err == nil {
+		t.Error("a journal reads with a step decided by no decision")
+	}
 }
 
 // decidedRecords are the records a decision on a report of the journal old

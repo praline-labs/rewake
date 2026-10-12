@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -124,7 +125,25 @@ func parseJournal(path string, raw []byte) (TurnJournal, error) {
 	if err := json.Unmarshal(raw, &journal); err != nil {
 		return TurnJournal{}, unknownRecord(path, fmt.Errorf("the turn journal %s is not readable: %w", path, err))
 	}
+	if err := journal.checkDecided(strings.TrimSuffix(filepath.Base(path), doneSuffix)); err != nil {
+		return TurnJournal{}, unknownRecord(path, fmt.Errorf("the turn journal %s does not hold together: %w", path, err))
+	}
 	return journal, nil
+}
+
+// checkDecided holds what a journal says of decisions to its name: a summary
+// only in a journal a decision installed, and a decided step only for a
+// decision.
+func (j TurnJournal) checkDecided(name string) error {
+	for _, step := range j.Decided {
+		if !freshID.MatchString(step.Decision) || !boundedID(step.Report) {
+			return fmt.Errorf("it names a step decided by %q", step.Decision)
+		}
+	}
+	if j.Summary == nil {
+		return nil
+	}
+	return j.Summary.check(name)
 }
 
 // doneSuffix names a completed journal.

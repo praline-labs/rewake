@@ -15,7 +15,10 @@ import (
 // of a turn end comes only from the run that heard it, and however late it
 // comes it must find its end completed, and the next end's window must open
 // after it. A live run's journal is looked at again a day later, not every
-// sweep. An unfinished journal is an obligation and stays, whoever's.
+// sweep. An unfinished journal is an obligation and stays, whoever's. A
+// journal a decision installed stays as long as the decision, in every form
+// and whoever's run ended: its name is what proves the resend installed, and
+// its done form what came of it (docs/v2/stage3-decision-build.md, Q8).
 func sweepTurnRecords(dir, name, live string, cutoff time.Time) {
 	now := time.Now()
 	directory := JournalPath(dir, name)
@@ -34,6 +37,7 @@ func sweepTurnRecords(dir, name, live string, cutoff time.Time) {
 		case strings.HasPrefix(entry.Name(), "."):
 			// A write that never finished.
 			_ = state.Remove(path)
+		case strings.HasPrefix(entry.Name(), resendPrefix):
 		case !strings.HasSuffix(entry.Name(), doneSuffix):
 		default:
 			epoch, ok := recordEpoch(path)

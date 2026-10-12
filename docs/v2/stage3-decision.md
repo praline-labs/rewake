@@ -231,9 +231,9 @@ live paths go on with their ordinary writers in both mailboxes.
 | Reader | Consults |
 |---|---|
 | the barrier (`core/mail/reconcile.go`) | first, before the plan and whatever the plan will meet, each decision with an effect not installed — its resend's name in neither form, a note with no `told` record — and installs it; then the plan, each journal reading the decisions for its reports and the open occurrences about them before the liveness check; then, only when the plan meets no unknown, the unfinished journals and their tails; then `stopState` |
-| `stopState` and every caller of it (S3's list) | occurrences without a resolution and not named by a decision |
+| `stopState` and every caller of it (S3's list) | occurrences without a resolution and not disposed by a valid decision: one that names the occurrence exactly and is about the occurrence's own report, the occurrence's record and any resolution beside it readable (`disposals`, `core/mail/decision_view.go`) |
 | the mailbox's sweeps | skip the paths open occurrences name; a disposed occurrence protects nothing |
-| the retention of journals (`sweepTurnRecords`) | keeps every journal named `decided-*` in its done form |
+| the retention of journals (`sweepTurnRecords`) | keeps every journal named `decided-*` in every form, whoever's run ended |
 | a journal's recovery — publishing a report, or writing a letter again for an intent with none (`core/mail/journal_held.go`, `publishMarked`) | the decision for that report first: a decided report's step is closed, never published |
-| `inbox`, `awaited`, `owed`, `list` | decisions, closures, resend fields and the completion summary, to say "decided, still owed" while J's tail has not run, "closed by decision D, delivery unproven" once its closure is recorded, "sent again by decision of lead" and the resend's disposition as its form keeps it — moot never as "not delivered", a missing wait never as delivered |
+| `inbox`, `awaited`, `owed`, `list`, through one read-only model (`Decisions`, `core/mail/decision_view.go`) that takes no lock and changes nothing | decisions, closures, resend fields and the completion summary, to say "decided, still owed" while J's tail has not run, "closed by decision D, delivery unproven" once its closure is recorded, "sent again by decision of lead" and the resend's disposition as its form keeps it — moot never as "not delivered", a missing wait never as delivered |
 | `decide` | journals, occurrences, decisions |
