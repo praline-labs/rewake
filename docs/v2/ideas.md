@@ -222,20 +222,21 @@ sessions prove unworkable for some use. No stage holds it.
 
 ## 5. A worktree made on the Claude Code side, a Codex worker seated in it
 
-**What.** A main on Claude Code makes a worktree with Claude Code's own means — its
-`--worktree`, or from the mod — and rewake seats a worker of any harness, Codex
-included, in it. The mod sees the creation (`classic.WorktreeCreate`) and tells the host
-the path and the name; the host records it as a resource of the room; a later
-`rewake codex` launches in that directory. Landing and finishing stay rewake's (`rewake
-worktree land`, `finish`).
+**What.** The worktree's whole life is Claude Code's: a main on Claude Code makes it with
+Claude Code's own means — its `--worktree`, or from the mod — and Claude Code removes it
+(`claude rm`, when safe). rewake only seats a worker of any harness, Codex included, in
+it: the mod sees the creation (`classic.WorktreeCreate`) and tells the host the path and
+the name, and a later `rewake codex` launches in that directory. rewake's own worktree
+commands (`land`, `finish`) take no part; the branch is merged with Git or Claude Code's
+means. The owner's aim: use Claude Code's mechanism whole rather than carry rewake's own.
 
-**To settle.** The worktree's Git metadata lives in the main repository's
-`.git/worktrees/<name>`, so a Codex worker that commits there needs the Git grant
-(`--grant-git`). Claude Code's removal (`claude rm`, when safe) must not take a worktree a
-rewake session still works in: rewake holds it while one of its sessions does. Claude
-Code's own worktree lies inside the repository and rewake's outside it; the creation hook
-can move it if the place matters.
+**To settle.** Claude Code's removal judges safety by what it knows, and it does not know
+a rewake worker works in the directory: whether the mod, seeing `classic.WorktreeRemove`,
+can defer or refuse the removal while a rewake session is there is for the probe to show.
+The worktree's Git metadata lives in the main repository's `.git/worktrees/<name>`, so a
+Codex worker that commits there needs the Git grant (`--grant-git`). Claude Code's own
+worktree lies inside the repository.
 
 **Stage.** 4 for the Claude Code side (the audit of
-[design-claude.md](design-claude.md#before-the-probe-what-claude-code-already-does) decides
-how the worktree is made), 5 for seating a Codex worker. Owner's idea, October 12, 2026.
+[design-claude.md](design-claude.md#before-the-probe-what-claude-code-already-does) and
+the probe), 5 for seating a Codex worker. Owner's idea, October 12, 2026.
