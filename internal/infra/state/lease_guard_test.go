@@ -183,3 +183,51 @@ func heldLease(t *testing.T, dir string) *LeaseLock {
 	t.Cleanup(lock.Close)
 	return lock
 }
+
+// An authorization lives no longer than the lock it names, however it was
+// recorded and however the lock stopped being held: a second Authorize of the
+// same lock adds nothing its Close leaves behind, an Unlock voids it as a
+// Close does, and so does a conversion refused, which may lose the shared
+// lock it started from.
+func TestAnAuthorizationDiesWithItsLock(t *testing.T) {
+	ends := map[string]func(t *testing.T, dir string, lock *LeaseLock){
+		"closed after a repeated Authorize": func(t *testing.T, _ string, lock *LeaseLock) {
+			if err := Authorize(lock); err != nil {
+				t.Fatal(err)
+			}
+			lock.Close()
+		},
+		"unlocked": func(t *testing.T, _ string, lock *LeaseLock) {
+			if err := lock.Unlock(); err != nil {
+				t.Fatal(err)
+			}
+		},
+		"refused a conversion": func(t *testing.T, dir string, lock *LeaseLock) {
+			other, err := OpenLeaseLock(dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer other.Close()
+			if err := other.Share(time.Second); err != nil {
+				t.Fatal(err)
+			}
+			if took, err := lock.TryExclusive(); took || err != nil {
+				t.Fatalf("the conversion beside a shared holder: %v %v", took, err)
+			}
+		},
+	}
+	for name, end := range ends {
+		t.Run(name, func(t *testing.T) {
+			_, dir := bootstrapped(t)
+			lock := heldLease(t, dir)
+			end(t, dir, lock)
+			before := NoLeaseRefusals()
+			if err := WriteFile(filepath.Join(dir, "after"), nil, 0o600); !errors.Is(err, ErrNoLease) {
+				t.Fatalf("a lock no longer held still authorizes a write: %v", err)
+			}
+			if NoLeaseRefusals() == before {
+				t.Fatal("the refusal was not counted")
+			}
+		})
+	}
+}

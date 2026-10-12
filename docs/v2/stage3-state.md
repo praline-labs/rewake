@@ -162,7 +162,9 @@ precedence over a missing lease.
 `WithMailboxLock`, `WithMailboxLockAt`, `TryHold`) — refuse with `ErrNoLease` when the process holds
 no lease for that room: one guard (`guard.go`) checks view mode on every path first, then
 whether each lies in a room `Authorize` recorded, by cleaned prefix, so a write of another
-room refuses like one outside every room and a lease's `Close` ends it. The writes under the room that bypass them are each routed
+room refuses like one outside every room. A lock is recorded once however often it is
+authorized, and its authorization ends the moment it may hold nothing: its `Close`, its
+`Unlock`, a conversion refused or any failed take, which may drop the lock it had. The writes under the room that bypass them are each routed
 through a primitive, a new one where none fits: `OpenFile` (a write only with a write flag),
 `WriteFile`, `Link`, `Move`, `Chmod`, `Touch`, `Discard`, `RemoveAll`, `Flock` (taking a
 lock is a write, letting it go is not), each the os call it names behind the same guard and

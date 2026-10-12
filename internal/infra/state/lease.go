@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sync"
 	"syscall"
 	"time"
@@ -127,18 +128,25 @@ func (l *LeaseLock) Share(wait time.Duration) error {
 
 // TryExclusive takes the lock exclusive without waiting and says whether it
 // did. It converts the lock this descriptor holds; flock does not promise the
-// conversion keeps the shared lock if it fails, so a refusal leaves the lock
-// to be taken again or closed.
+// conversion keeps the shared lock if it fails, so a refusal leaves the lock,
+// and its authorization, to be taken again or closed.
 func (l *LeaseLock) TryExclusive() (bool, error) {
 	err := l.take(syscall.LOCK_EX, 0)
 	if errors.Is(err, ErrLeaseBusy) {
-		l.held = false
 		return false, nil
 	}
 	return err == nil, err
 }
 
-func (l *LeaseLock) take(how int, wait time.Duration) error {
+// take locks the descriptor as how asks. A failure counts the lock lost,
+// whatever it held before: a conversion may drop the old lock before it
+// refuses, and a replaced file is closed with its lock.
+func (l *LeaseLock) take(how int, wait time.Duration) (err error) {
+	defer func() {
+		if err != nil {
+			l.lose()
+		}
+	}()
 	deadline := time.Now().Add(wait)
 	for attempt := 0; ; attempt++ {
 		if err := l.lockBy(how, deadline); err != nil {
@@ -202,11 +210,19 @@ func (l *LeaseLock) atPath() (bool, error) {
 // the lock again: a launch that lost the race to switch the build waits
 // unlocked, so the winner can take the lock exclusive.
 func (l *LeaseLock) Unlock() error {
+	// Whether or not the unlock answers, the lock is no longer one to write by.
+	l.lose()
 	if err := syscall.Flock(int(l.file.Fd()), syscall.LOCK_UN); err != nil {
 		return noteReach(fmt.Errorf("could not unlock the build lease of %s: %w", l.room, err), false)
 	}
-	l.held, l.exclusive = false, false
 	return nil
+}
+
+// lose marks the lock not held and voids its authorization: no write is let
+// through by a lock that may hold nothing.
+func (l *LeaseLock) lose() {
+	l.held, l.exclusive = false, false
+	revoke(l)
 }
 
 // Close releases the lock and its authorization. The file stays: removing it
@@ -214,12 +230,11 @@ func (l *LeaseLock) Unlock() error {
 // old one.
 func (l *LeaseLock) Close() {
 	Note("lease release")
-	revoke(l)
+	l.lose()
 	if l.file != nil {
 		_ = l.file.Close()
 		l.file = nil
 	}
-	l.held, l.exclusive = false, false
 }
 
 // buildShape is a build record: a SHA-256 in lower-case hex.
@@ -273,7 +288,8 @@ var leases struct {
 
 // Authorize records that this process holds the room's lease through this
 // lock, shared, with its build checked. infra/build calls it once the id
-// matched.
+// matched. A lock is recorded once, however often it is authorized, so the
+// one revocation its release makes leaves nothing of it behind.
 func Authorize(l *LeaseLock) error {
 	if !l.held {
 		return fmt.Errorf("the build lease of %s is not held", l.room)
@@ -283,7 +299,9 @@ func Authorize(l *LeaseLock) error {
 	if leases.held == nil {
 		leases.held = map[string][]*LeaseLock{}
 	}
-	leases.held[l.room] = append(leases.held[l.room], l)
+	if !slices.Contains(leases.held[l.room], l) {
+		leases.held[l.room] = append(leases.held[l.room], l)
+	}
 	return nil
 }
 
