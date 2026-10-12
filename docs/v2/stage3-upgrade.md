@@ -207,6 +207,11 @@ of its own; with nothing there the launch pays one read of the base.
   `legacy admitted`, `legacy set aside` and `legacy validated`, and `launch cleared` once
   the launch may go on. The bounds are built in (`builtClearWait`, `builtRoomWait`), which a
   test build may shorten (package `buildtime`).
+- The stand-in of 1.x and the matrices are `test/upgraderig`. A world's expected end, its
+  message and the trees it leaves are read from this document in `oracle_test.go`, not
+  from the clearing; the fault plan holds a launch at a list of named steps in order
+  (`holdat`) and fails the first step of an operation on a path (`failat`), which is how
+  a rename, a flush or a deletion is made to fail.
 
 ## Every crash and every failed read
 

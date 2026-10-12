@@ -43,6 +43,16 @@ step of the lease ([stage3-state.md](v2/stage3-state.md#one-build-per-room)), re
 killed by the test. It runs in every test run of the five checks, untagged, since a launch
 it starts never gets past its lease.
 
+The upgrade rig (`test/upgraderig`) builds rewake with the tag and with the clearing's
+bounds shortened, and runs the clearing of 1.x against a stand-in of 1.x whose sessions
+and commands are processes of their own ([stage3-upgrade.md](v2/stage3-upgrade.md#the-tests)).
+Each launch is held at the clearing's named steps and at its leave to go on, where the
+test kills it, so no harness starts. The crash matrix kills the clearing before each
+durable step a clean run of the same world logged; the concurrency matrix pauses it at a
+named step while a second launch runs. The five checks run the worlds that cover every
+pair of values; `REWAKE_UPGRADE_MATRIX=full` runs every feasible world, and the log names
+how many of how many ran and how many pairs they cover.
+
 The tag also admits one narrow kind of test code into a production package. When a fault
 schedule must cross a package boundary and neither an exported operation, a file
 fixture nor `state.Fault` can build it, the package that owns the step may carry exported

@@ -30,7 +30,13 @@ import (
 //	hold=<n>@<dir>   just before the n-th durable step create <dir>/held and
 //	                 wait, at most a minute, until <dir>/go exists: a test
 //	                 orders a step of another process against its own
-//	holdat=<name>@<dir>  the same, before the first named step <name>
+//	holdat=<name>@<dir>  the same, before the first named step <name>, writing
+//	                 the name into <dir>/held; with names separated by commas,
+//	                 before each it reaches in their order, a name passed by
+//	                 dropped, the process removing <dir>/held, then <dir>/go,
+//	                 when it goes on to wait for the next
+//	failat=<op>:<text>  fail the first durable step of the operation <op> whose
+//	                 path contains <text>, with an I/O error
 //	orphan=<s>@<dir> the first process of the role to start leaves behind a
 //	                 process of its own session, holding its stdout for <s>
 //	                 seconds: to whoever reads that stdout, a process that
@@ -81,7 +87,10 @@ func init() {
 			plan.hold, _ = strconv.Atoi(step)
 			plan.held = held
 		case "holdat":
-			plan.holdAt, plan.held, _ = strings.Cut(argument, "@")
+			names, held, _ := strings.Cut(argument, "@")
+			plan.holdAt, plan.held = strings.Split(names, ","), held
+		case "failat":
+			plan.failOp, plan.failAt, _ = strings.Cut(argument, ":")
 		case "orphan":
 			seconds, dir, _ := strings.Cut(argument, "@")
 			orphan(seconds, dir)
@@ -98,8 +107,10 @@ type faultPlan struct {
 	readFail    string
 	steps       int
 	hold        int
-	holdAt      string
+	holdAt      []string
 	held        string
+	failOp      string
+	failAt      string
 }
 
 func (p *faultPlan) apply(op, path string) error {
@@ -122,17 +133,27 @@ func (p *faultPlan) apply(op, path string) error {
 	}
 	p.steps++
 	if p.steps == p.hold {
-		p.wait()
+		p.wait("")
 	}
-	if op == OpStep && p.holdAt != "" && path == p.holdAt {
-		p.holdAt = ""
-		p.wait()
+	if at := p.holdingAt(op, path); at >= 0 {
+		p.holdAt = p.holdAt[at+1:]
+		p.wait(path)
+		if len(p.holdAt) > 0 {
+			// held first: a test that sees go gone knows a held it sees
+			// next is the next step's.
+			_ = os.Remove(filepath.Join(p.held, "held"))
+			_ = os.Remove(filepath.Join(p.held, "go"))
+		}
 	}
 	if p.steps == p.crash {
 		_ = syscall.Kill(os.Getpid(), syscall.SIGKILL)
 		select {}
 	}
 	if p.steps == p.fail && op != OpStep {
+		return &os.PathError{Op: op, Path: path, Err: syscall.EIO}
+	}
+	if p.failOp != "" && op == p.failOp && strings.Contains(path, p.failAt) {
+		p.failOp = ""
 		return &os.PathError{Op: op, Path: path, Err: syscall.EIO}
 	}
 	return nil
@@ -152,9 +173,27 @@ func orphan(seconds, dir string) {
 	_ = lingering.Start()
 }
 
-// wait signals that the process is held and waits for leave to go on.
-func (p *faultPlan) wait() {
-	_ = os.WriteFile(filepath.Join(p.held, "held"), nil, 0o600)
+// holdingAt is the index of a named step in the steps left to hold at, or -1.
+func (p *faultPlan) holdingAt(op, path string) int {
+	if op != OpStep {
+		return -1
+	}
+	for index, name := range p.holdAt {
+		if name == path {
+			return index
+		}
+	}
+	return -1
+}
+
+// wait signals that the process is held, at the named step if any, and waits
+// for leave to go on. The name is published by a rename, so a test reading
+// held never sees it half written.
+func (p *faultPlan) wait(step string) {
+	staged := filepath.Join(p.held, ".held")
+	if os.WriteFile(staged, []byte(step), 0o600) == nil {
+		_ = os.Rename(staged, filepath.Join(p.held, "held"))
+	}
 	for deadline := time.Now().Add(time.Minute); time.Now().Before(deadline); time.Sleep(5 * time.Millisecond) {
 		if _, err := os.Stat(filepath.Join(p.held, "go")); err == nil {
 			return
