@@ -263,9 +263,38 @@ which lock and which sweep belong to whom.
 
 `bridge` (the ticket, the parts, `ResultCap`) and the end gate (`bridge/endpoint/gate.go`)
 to `tool`; the rest of `bridge/endpoint` to `host/endpoint`; `wrap` to `host`; `alias` to
-`host/launch`; `worktree` to `host/worktree`. **Inventory**: the end gate's one method is
+`host/launch`; `worktree` to `host/worktree`. **Inventory** (taken at `27cc2b5`, its
+parts S15 changed retaken on S15's tree, October 11, 2026): the end gate's one method is
 already declared again in core (S4), so `tool` imports no host; `bridge/endpoint`'s
-neutral input (S7) leaves no adapter parser behind. **String consumers**: the mutations
-of `wrap` (11) and `worktree` (5); the build values `wrap.builtLetterWait` and
-`wrap.builtNoticeScan`. The review files renamed by subject (answer 9;
-[design-docs-tests.md](design-docs-tests.md#the-review-files)).
+neutral input (S7) leaves no adapter parser behind. Every import of the moving packages
+is allowed at its 2.0 place, no declaration collides where packages merge (`alias` joins
+the existing `host/launch`), and the gate's files reach nothing else of the endpoint, which
+reaches the gate only through exported names.
+
+**The preparation**, in place, each commit behaviour-unchanged (decided October 11, 2026):
+
+1. The ten locals named `tool` that the package's new name would shadow are renamed, and
+   the text of the refusal mutations that quotes one of them.
+2. The end gate (`gate.go`, `gate_test.go`) moves into `bridge` first, its five qualifiers
+   and the paths of [rules/tools.md](../rules/tools.md) with it, so the move takes whole
+   directories.
+3. `bridge`, `wrap` and `alias` are imported under their 2.0 names (`tool`, `host`,
+   `launch`), as S13 did, so the move changes import paths, package clauses and string
+   consumers and nothing else.
+4. The review files are renamed by subject with their `TestReview…` functions (answer 9;
+   [design-docs-tests.md](design-docs-tests.md#the-review-files), whose table is corrected
+   in the same commit): the two of `cli`, `wrap`'s, and the two S15 moved as they were to
+   `host/delivery`. The file names that would read wrong in the new packages —
+   `bridge/bridge.go`, `alias/file.go` — are renamed by subject in place too.
+
+**The move**: package clauses, import paths. **String consumers**: the mutations of
+`wrap` (12), `bridge/endpoint` (7, five through `toolRefusedFile`) and `worktree` (5); the
+build values `wrap.builtLetterWait` and `wrap.builtNoticeScan`; the layout test's
+transition table, which empties, and the paths of its name exceptions; the path
+`core/channel/table_doc_test.go` builds from components; [legacy.md](../legacy.md),
+[code.md](../code.md), the paths of [rules/](../rules/README.md) and of the living
+documents, with three of them stale since S8 corrected where they stand.
+
+**Left for S19**: `bridge.EndGate` declares again the one method of `mail.EndGate`, and
+the tool path still takes it; the move keeps it, legal in `tool`, and S19's clean-up
+decides whether the tool path takes the core's declaration.
