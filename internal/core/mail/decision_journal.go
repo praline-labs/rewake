@@ -24,27 +24,59 @@ func (j TurnJournal) decided(report string) bool {
 }
 
 // decisionOn is the decision on a report of journal id, empty when there is
-// none. A decision that does not read, or that names another journal, run,
-// recipient or kind than the step reading it, is an unknown for the step,
-// never an absence: the report is not published on it.
+// none. A decision that does not read is an unknown for the step, never an
+// absence: the report is not published on it.
 func (w world) decisionOn(name, id string, journal TurnJournal, report Message) (string, error) {
-	path := DecisionPath(w.dir, name, report.ID)
-	raw, err := w.readFile(path)
+	d, err := w.decisionOf(name, id, journal, report)
 	if errors.Is(err, os.ErrNotExist) {
 		return "", nil
 	}
+	return d.ID, err
+}
+
+// decisionOf reads the decision on a report of journal id and holds it to
+// the step reading it: one about another journal, operation, run, recipient
+// or kind decides nothing of this step and is an unknown. None there is
+// os.ErrNotExist.
+func (w world) decisionOf(name, id string, journal TurnJournal, report Message) (Decision, error) {
+	path := DecisionPath(w.dir, name, report.ID)
+	raw, err := w.readFile(path)
 	if err != nil {
-		return "", err
+		return Decision{}, err
 	}
 	d, err := parseDecision(path, raw)
 	if err != nil {
-		return "", unknownRecord(path, err)
+		return Decision{}, unknownRecord(path, err)
 	}
 	s := d.Subject
-	if s.Journal != id || s.SenderRun != journal.Epoch || s.Recipient != report.To || s.RecipientRun != report.ToEpoch || s.Kind != report.Kind {
-		return "", unknownRecord(path, fmt.Errorf("the decision %s is about report %s of journal %s on run %s, which is not the step of journal %s reading it", path, s.Report, s.Journal, s.SenderRun, id))
+	if s.Journal != id || s.Op != journal.Op || s.SenderRun != journal.Epoch || s.Recipient != report.To || s.RecipientRun != report.ToEpoch || s.Kind != report.Kind {
+		return Decision{}, unknownRecord(path, fmt.Errorf("the decision %s is about report %s of journal %s, operation %q, on run %s, which is not the step of journal %s, operation %q, reading it", path, s.Report, s.Journal, s.Op, s.SenderRun, id, journal.Op))
 	}
-	return d.ID, nil
+	return d, nil
+}
+
+// decidedBy holds a step the journal saved as decided to the decision it
+// names: that decision is there, reads, is the one named and is about this
+// step of this journal. A saved step without it is an unknown, never
+// progress, and the tail that would clear the report's waits does not run on
+// it.
+func (w world) decidedBy(name, id string, journal TurnJournal, step DecidedStep) error {
+	path := DecisionPath(w.dir, name, step.Report)
+	at := slices.IndexFunc(journal.Reports, func(m Message) bool { return m.ID == step.Report })
+	if at < 0 {
+		return unknownRecord(path, fmt.Errorf("the journal %s says decision %s closed report %s, which it does not carry", id, step.Decision, step.Report))
+	}
+	d, err := w.decisionOf(name, id, journal, journal.Reports[at])
+	if errors.Is(err, os.ErrNotExist) {
+		return unknownRecord(path, fmt.Errorf("the journal %s says decision %s closed report %s, and no decision on it is there", id, step.Decision, step.Report))
+	}
+	if err != nil {
+		return err
+	}
+	if d.ID != step.Decision {
+		return unknownRecord(path, fmt.Errorf("the journal %s says decision %s closed report %s, and the decision on it is %s", id, step.Decision, step.Report, d.ID))
+	}
+	return nil
 }
 
 // closeDecided records, for each step of journal id a decision closed, that

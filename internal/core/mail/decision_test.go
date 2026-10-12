@@ -40,7 +40,12 @@ func (l decisionLab) decision(t *testing.T, choice string) Decision {
 func newDecision(t *testing.T, dir, id, epoch string, report Message, choice string) Decision {
 	t.Helper()
 	files := newCapture(osAccess{}, dir)
-	if _, err := files.ReadFile(filepath.Join(JournalPath(dir, report.From), id)); err != nil {
+	raw, err := files.ReadFile(filepath.Join(JournalPath(dir, report.From), id))
+	if err != nil {
+		t.Fatal(err)
+	}
+	journal, err := parseJournal(filepath.Join(JournalPath(dir, report.From), id), raw)
+	if err != nil {
 		t.Fatal(err)
 	}
 	observations, err := files.Observations()
@@ -50,7 +55,7 @@ func newDecision(t *testing.T, dir, id, epoch string, report Message, choice str
 	d := Decision{
 		ID: NewID(), Choice: choice, By: DecidedBy{Kind: ByPerson}, At: time.Now(), Delivery: deliveryUnproven,
 		Subject: Subject{
-			Sender: report.From, SenderRun: epoch, Journal: id, Report: report.ID, Kind: report.Kind,
+			Sender: report.From, SenderRun: epoch, Journal: id, Op: journal.Op, Report: report.ID, Kind: report.Kind,
 			Recipient: report.To, RecipientRun: report.ToEpoch,
 		},
 		Disposes: []Disposal{{Key: strings.Repeat("ef", 16), Occurrence: NewID()}}, Observations: observations,

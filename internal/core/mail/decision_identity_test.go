@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // A told record says one note was told to one run. One that names another
@@ -107,5 +109,68 @@ func TestDecisionClosureNamesItsOperationAndItsTail(t *testing.T) {
 				t.Fatalf("the view says %+v, %v", views[0].Closure, views[0].ClosureErr)
 			}
 		})
+	}
+}
+
+// A journal closes a report's step on a decision only while that decision
+// stands behind it: a step saved as decided with no decision there, with
+// another decision there, or for a report the journal does not carry, and a
+// decision about another operation of the journal, are unknowns. The tail
+// that would clear the report's waits does not run on them, and no closure
+// is written.
+func TestDecisionStepsStandOnTheirDecision(t *testing.T) {
+	cases := map[string]func(t *testing.T, lab decisionLab){
+		"a saved step with no decision": func(t *testing.T, lab decisionLab) {
+			saveDecided(t, lab, DecidedStep{Report: lab.report.ID, Decision: NewID()})
+		},
+		"a saved step naming another decision": func(t *testing.T, lab decisionLab) {
+			writeDecision(t, lab.dir, lab.decision(t, ChoiceArrived))
+			saveDecided(t, lab, DecidedStep{Report: lab.report.ID, Decision: NewID()})
+		},
+		"a saved step for a report the journal does not carry": func(t *testing.T, lab decisionLab) {
+			saveDecided(t, lab, DecidedStep{Report: NewID(), Decision: NewID()})
+		},
+		"a decision about another operation": func(t *testing.T, lab decisionLab) {
+			d := lab.decision(t, ChoiceArrived)
+			d.Subject.Op = "a-different-operation"
+			writeDecision(t, lab.dir, d)
+		},
+	}
+	for name, setup := range cases {
+		t.Run(name, func(t *testing.T) {
+			lab := newDecisionLab(t)
+			if err := state.EnsureSubdir(filepath.Dir(DecisionPath(lab.dir, "api", lab.report.ID))); err != nil {
+				t.Fatal(err)
+			}
+			setup(t, lab)
+			for range 2 {
+				if err := finishAll(t, lab.dir); err == nil {
+					t.Fatal("the journal closed its step on no decision of its own")
+				}
+			}
+			if waits, err := ReadWaiters(lab.dir, "api", lab.epoch); err != nil || len(waits) != 1 {
+				t.Fatalf("the tail ran: waits %v %v", waits, err)
+			}
+			if fileExists(DecisionPath(lab.dir, "api", lab.report.ID)+closedSuffix) || fileExists(filepath.Join(JournalPath(lab.dir, "api"), "end"+doneSuffix)) {
+				t.Fatal("a closure was written, or the journal finished")
+			}
+			if lettersOf(t, lab.dir, "web")[lab.report.ID] != 0 {
+				t.Fatal("the report was published")
+			}
+		})
+	}
+}
+
+// saveDecided saves the lab's journal with step as decided, as a barrier that
+// read a decision would have.
+func saveDecided(t *testing.T, lab decisionLab, step DecidedStep) {
+	t.Helper()
+	journal, err := readJournalFile(filepath.Join(JournalPath(lab.dir, "api"), "end"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	journal.Decided = append(journal.Decided, step)
+	if err := WriteJournal(lab.dir, "api", "end", journal); err != nil {
+		t.Fatal(err)
 	}
 }

@@ -135,10 +135,12 @@ func parseJournal(path string, raw []byte) (TurnJournal, error) {
 // only in a journal a decision installed, and a decided step only for a
 // decision.
 func (j TurnJournal) checkDecided(name string) error {
+	seen := map[string]bool{}
 	for _, step := range j.Decided {
-		if !freshID.MatchString(step.Decision) || !boundedID(step.Report) {
-			return fmt.Errorf("it names a step decided by %q", step.Decision)
+		if !freshID.MatchString(step.Decision) || !boundedID(step.Report) || seen[step.Report] {
+			return fmt.Errorf("it names a step decided by %q, or one step twice", step.Decision)
 		}
+		seen[step.Report] = true
 	}
 	if j.Summary == nil {
 		return nil
@@ -217,9 +219,15 @@ func (w world) finishJournal(ctx context.Context, name, id string) error {
 }
 
 // completeJournal runs every step of a journal not done yet, saving its
-// progress after each report. A decided report's closure is written after the tail and before the done
+// progress after each report. A step saved as decided is held to its
+// decision first, in the plan as in the effects. A decided report's closure is written after the tail and before the done
 // rewrite, so it records only a tail that ran.
 func (w world) completeJournal(ctx context.Context, name, id string, journal *TurnJournal, save func() error) error {
+	for _, step := range journal.Decided {
+		if err := w.decidedBy(name, id, *journal, step); err != nil {
+			return inOp(step.Report, err)
+		}
+	}
 	for _, report := range journal.Reports {
 		if slices.Contains(journal.Published, report.ID) || slices.Contains(journal.Moot, report.ID) || journal.decided(report.ID) {
 			continue
