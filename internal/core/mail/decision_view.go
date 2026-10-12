@@ -37,8 +37,12 @@ type DecisionView struct {
 type ResendView struct {
 	Installed bool
 	Done      bool
-	Summary   *ResendSummary
-	Err       error
+	// Summary is its outcome once done; nil while it runs, and nil with
+	// SummaryErr when a done resend's summary does not read: completed,
+	// outcome not kept.
+	Summary    *ResendSummary
+	SummaryErr error
+	Err        error
 }
 
 // ToldView is a note owed, or the record that it was told.
@@ -103,7 +107,7 @@ func decisionView(dir, name, report string) DecisionView {
 	}
 	view.Decision = &d
 	if d.Choice == ChoiceNotArrived {
-		view.Resend = resendView(dir, name, d.ID)
+		view.Resend = resendView(dir, name, d)
 	}
 	for _, note := range d.Notes {
 		told, err := readTold(osAccess{}, toldPath(dir, name, report, note.Told), note)
@@ -127,22 +131,14 @@ func decisionView(dir, name, report string) DecisionView {
 	return view
 }
 
-// resendView looks for the resend open and then done: a journal is renamed
-// from the one to the other and never back, and never swept, so a look in
-// that order that finds neither saw it not installed yet.
-func resendView(dir, name, decision string) ResendView {
-	path := filepath.Join(JournalPath(dir, name), ResendJournal(decision))
-	for _, at := range []string{path, path + doneSuffix} {
-		journal, err := readJournalFile(at)
-		if errors.Is(err, os.ErrNotExist) {
-			continue
-		}
-		if err != nil {
-			return ResendView{Installed: true, Err: err}
-		}
-		return ResendView{Installed: true, Done: journal.Done, Summary: journal.Summary}
+// resendView is how far d's resend has gone, read as the installation reads
+// it (readResend).
+func resendView(dir, name string, d Decision) ResendView {
+	journal, summaryErr, found, err := world{dir: dir, files: osAccess{}}.readResend(name, d)
+	if err != nil {
+		return ResendView{Installed: true, Err: err}
 	}
-	return ResendView{}
+	return ResendView{Installed: found, Done: journal.Done, Summary: journal.Summary, SummaryErr: summaryErr}
 }
 
 // readDecision reads the decision at path through files.

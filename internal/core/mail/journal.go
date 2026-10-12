@@ -121,11 +121,16 @@ func (w world) readJournalFile(path string) (TurnJournal, error) {
 }
 
 func parseJournal(path string, raw []byte) (TurnJournal, error) {
+	name := strings.TrimSuffix(filepath.Base(path), doneSuffix)
+	if strings.HasPrefix(name, resendPrefix) {
+		journal, _, err := parseResend(path, name, raw)
+		return journal, err
+	}
 	var journal TurnJournal
 	if err := json.Unmarshal(raw, &journal); err != nil {
 		return TurnJournal{}, unknownRecord(path, fmt.Errorf("the turn journal %s is not readable: %w", path, err))
 	}
-	if err := journal.checkDecided(strings.TrimSuffix(filepath.Base(path), doneSuffix)); err != nil {
+	if err := journal.checkDecided(name); err != nil {
 		return TurnJournal{}, unknownRecord(path, fmt.Errorf("the turn journal %s does not hold together: %w", path, err))
 	}
 	return journal, nil

@@ -1,6 +1,8 @@
 package mail
 
 import (
+	"errors"
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -67,4 +69,18 @@ func TestDecisionInstallationSurvivesEveryBrokenWrite(t *testing.T) {
 		converges(t, dir, "in the effects, "+fault.label())
 	}
 	t.Logf("%d writes broken once, %d reads failed in the effects", len(base.written), len(base.applied))
+}
+
+// resendNamed says a name is there for a decision's resend, open or done,
+// whatever it holds.
+func (w world) resendNamed(name, decision string) bool {
+	path := filepath.Join(JournalPath(w.dir, name), ResendJournal(decision))
+	for _, at := range []string{path, path + doneSuffix} {
+		if _, err := w.lstat(at); err == nil {
+			return true
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return false
+		}
+	}
+	return false
 }

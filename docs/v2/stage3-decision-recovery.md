@@ -187,8 +187,9 @@ a decision — the installing decision D, and for the last the child decision's 
 open form is read for its fields as they stand. A reader renders only what the form it
 finds keeps: the summary from a done form; "installed, in progress" from an open one;
 "completed, outcome not kept" from a done form without a readable summary, while a done
-form whose envelope does not read stays an unknown. A name in done form is never read as
-published, and a stat that succeeds is never a summary.
+form whose envelope does not read, or holds another resend than D's, stays an unknown and
+is kept. A name in done form is never read as published, and a stat that succeeds is never
+a summary.
 
 ## Composition
 

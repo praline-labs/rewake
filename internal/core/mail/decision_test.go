@@ -321,14 +321,21 @@ func TestDecisionRecordsBesideItReadStrictly(t *testing.T) {
 		}
 	}
 	journals := JournalPath(lab.dir, "api")
-	done, _ := json.Marshal(TurnJournal{Epoch: lab.epoch, Done: true, Summary: &summary})
-	if _, err := parseJournal(filepath.Join(journals, ResendJournal(summary.Decision)+doneSuffix), done); err != nil {
+	done, _ := json.Marshal(TurnJournal{Epoch: lab.epoch, Op: ResendJournal(summary.Decision), Done: true, Summary: &summary})
+	if j, err := parseJournal(filepath.Join(journals, ResendJournal(summary.Decision)+doneSuffix), done); err != nil || j.Summary == nil {
 		t.Fatalf("a resend's done journal with its summary does not read: %v", err)
 	}
-	for _, name := range []string{"end", "end" + doneSuffix, ResendJournal(NewID())} {
+	for _, name := range []string{"end", "end" + doneSuffix} {
 		if _, err := parseJournal(filepath.Join(journals, name), done); err == nil {
 			t.Errorf("the journal %s reads with a summary of decision %s", name, summary.Decision)
 		}
+	}
+	// In another decision's resend the summary is no outcome of it; the
+	// envelope still reads.
+	other := ResendJournal(NewID())
+	elsewhere, _ := json.Marshal(TurnJournal{Epoch: lab.epoch, Op: other, Done: true, Summary: &summary})
+	if j, summaryErr, err := parseResend(filepath.Join(journals, other), other, elsewhere); err != nil || j.Summary != nil || summaryErr == nil {
+		t.Errorf("the resend %s reads a summary of decision %s: %v %v", other, summary.Decision, summaryErr, err)
 	}
 	stray, _ := json.Marshal(TurnJournal{Epoch: lab.epoch, Decided: []DecidedStep{{Report: lab.report.ID, Decision: "nobody"}}})
 	if _, err := parseJournal(filepath.Join(journals, "end"), stray); err == nil {

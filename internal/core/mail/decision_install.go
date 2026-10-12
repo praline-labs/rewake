@@ -66,21 +66,16 @@ func (w world) installDecisions(ctx context.Context, name string) error {
 }
 
 // installResend links the resend a decision holds at journal/decided-<id>,
-// unless that name is there in either form: the name is the installation,
-// whatever the bytes under it say now, and nothing is written over it. A
-// look that fails with anything but "no such file" is an unknown the effect
-// met.
+// unless that name is there in either form: the name is the installation, and
+// nothing is written over it. What is there is held to the decision — bytes
+// of another kind or another resend under its name are an unknown, never
+// taken for installed — and a look that fails with anything but "no such
+// file" is an unknown the effect met.
 func (w world) installResend(name string, d Decision) error {
 	journal := ResendJournal(d.ID)
 	path := filepath.Join(JournalPath(w.dir, name), journal)
-	for _, at := range []string{path, path + doneSuffix} {
-		_, err := w.lstat(at)
-		if err == nil {
-			return nil
-		}
-		if !errors.Is(err, os.ErrNotExist) {
-			return err
-		}
+	if _, _, found, err := w.readResend(name, d); found || err != nil {
+		return err
 	}
 	if err := w.ensureDir(JournalPath(w.dir, name)); err != nil {
 		return fmt.Errorf("the resend of decision %s could not be installed: %w", d.ID, err)
@@ -146,7 +141,7 @@ func (w world) publishNote(ctx context.Context, name string, note Message) (stri
 }
 
 // installed says the installation has nothing left that it could fail on:
-// every decision reads, every resend's name is there in either form, and
+// every decision reads, every resend is there in either form as it holds, and
 // every told record reads or is not there yet — a note owed is no failure.
 // It is the evidence that resolves an occurrence about the installation, and
 // the plan reads through it what the installation reads.
@@ -165,8 +160,10 @@ func (w world) installed(name string) bool {
 			done = false
 			continue
 		}
-		if d.Choice == ChoiceNotArrived && !w.resendNamed(name, d.ID) {
-			done = false
+		if d.Choice == ChoiceNotArrived {
+			if _, _, found, err := w.readResend(name, d); !found || err != nil {
+				done = false
+			}
 		}
 		for _, note := range d.Notes {
 			if _, err := readTold(w.files, toldPath(w.dir, name, d.Subject.Report, note.Told), note); err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -175,17 +172,4 @@ func (w world) installed(name string) bool {
 		}
 	}
 	return done
-}
-
-// resendNamed says a decision's resend is there, open or done.
-func (w world) resendNamed(name, decision string) bool {
-	path := filepath.Join(JournalPath(w.dir, name), ResendJournal(decision))
-	for _, at := range []string{path, path + doneSuffix} {
-		if _, err := w.lstat(at); err == nil {
-			return true
-		} else if !errors.Is(err, os.ErrNotExist) {
-			return false
-		}
-	}
-	return false
 }

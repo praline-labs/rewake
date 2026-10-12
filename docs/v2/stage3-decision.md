@@ -214,6 +214,18 @@ checked on the file opened, so a name swapped after its listing is read as it is
 of a listing keeps its entries even when there are none: an empty listing is kept apart
 from none.
 
+A journal named `decided-*` is read by the same strict rule, open and done
+(`parseResend`, `core/mail/decision_resend.go`): its envelope is the operation its name
+fixes on a run, no turn end's tail, and either the decision's one report with progress
+about that report alone, or done with its steps emptied and only then a summary. What the
+installation, the plan and the views find under a resend's name is held to the decision as
+well — its sender's run, the report it holds while open, that report in a readable summary
+once done. Bytes of another kind or another resend there are an unknown, kept as they
+are: the name stays installed and its bytes are never completed, written over or taken for
+the resend. The summary alone is apart from the envelope: one that does not read leaves a
+done resend done — "completed, outcome not kept", `ResendView.SummaryErr` — and stops
+nothing.
+
 | Record | Path | Written when | Holds |
 |---|---|---|---|
 | a stop occurrence | `stops/<key>/<occurrence>` | a plan finds a key with no open occurrence (S3) | kind, the paths it rests on, the operation, the paths present and absent, the time |

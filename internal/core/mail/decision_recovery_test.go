@@ -213,8 +213,10 @@ func TestDecisionInstallationBeforeAdmission(t *testing.T) {
 
 // What the installation and the tail stand on is read strictly: a told record
 // that does not read, a decision that names another journal, bytes found
-// under the resend's name and a summary that does not read each stop the
-// mailbox as an unknown, publish nothing on it, and are never written over.
+// under the resend's name and a done resend whose envelope does not read each
+// stop the mailbox as an unknown, publish nothing on it, and are never
+// written over. A summary that does not read is no such record
+// (TestDecisionResendSummaryThatDoesNotReadKeepsItsCompletion).
 func TestDecisionRecoveryRecordsStopWhenUnknown(t *testing.T) {
 	unknownStop := func(t *testing.T, lab decisionLab) {
 		t.Helper()
@@ -281,12 +283,19 @@ func TestDecisionRecoveryRecordsStopWhenUnknown(t *testing.T) {
 			t.Fatal("a closure of another decision was written over or taken for this one's")
 		}
 	})
-	t.Run("summary", func(t *testing.T) {
+	t.Run("a done resend that keeps its steps", func(t *testing.T) {
 		lab := newDecisionLab(t)
 		d := lab.decision(t, ChoiceNotArrived)
 		writeDecision(t, lab.dir, d)
-		writeResend(t, lab, d, &ResendSummary{Report: NewID(), Disposition: "lost", Decision: d.ID}, true)
+		held, _ := d.resendJournal()
+		held.Done = true
+		raw, _ := json.Marshal(held)
+		path := filepath.Join(JournalPath(lab.dir, "api"), ResendJournal(d.ID)+doneSuffix)
+		writeRaw(t, path, string(raw))
 		unknownStop(t, lab)
+		if after, _ := os.ReadFile(path); string(after) != string(raw) {
+			t.Fatal("a done resend that does not read was written over")
+		}
 	})
 }
 
