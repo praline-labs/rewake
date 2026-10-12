@@ -25,7 +25,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/adapter/fixture"
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
 	"github.com/praline-labs/rewake/internal/cli"
 	"github.com/praline-labs/rewake/internal/core/mail"
@@ -139,8 +139,8 @@ func newRig(t *testing.T, change ...func(*endpoint.Config)) *rig {
 	cfg := endpoint.Config{
 		Dir: dir, Name: "api", Epoch: r.self.Epoch(), Transport: fixture.Transport, Capability: capability,
 		Span: 25 * time.Second, Words: cli.ToolWords, Check: cli.ToolCheck, Tools: cli.ToolDescriptors(),
-		Executable: launcher, Gate: bridge.NewGate(r.clock.Snapshot),
-		Acknowledge: func(dir, name, epoch, token string, evidence bridge.Exposure, gate bridge.EndGate) error {
+		Executable: launcher, Gate: tool.NewGate(r.clock.Snapshot),
+		Acknowledge: func(dir, name, epoch, token string, evidence tool.Exposure, gate tool.EndGate) error {
 			err := cli.AcknowledgeRead(dir, name, epoch, token, evidence, gate)
 			r.acknowledged <- err
 			return err
@@ -247,7 +247,7 @@ func (r *rig) start() {
 	if err != nil {
 		r.t.Fatal(err)
 	}
-	offer, ok := plan.Service.(adapter.ToolTransport[bridge.ToolDescriptor])
+	offer, ok := plan.Service.(adapter.ToolTransport[tool.ToolDescriptor])
 	if !ok || plan.TurnBoundary == nil {
 		r.t.Fatal("the fixture's run carries no tools or reports no turns")
 	}

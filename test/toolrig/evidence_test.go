@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter/fixture"
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 )
 
@@ -111,7 +111,7 @@ func TestOnlyTheRecordedAnswerItselfIsEvidence(t *testing.T) {
 			[]string{"the body of a result past the bound"},
 			[]string{"inbox"},
 			func(c toolCall, _ []string) recorded {
-				return recorded{texts: append(append([]string(nil), c.result.Texts...), strings.Repeat("x", bridge.ResultCap))}
+				return recorded{texts: append(append([]string(nil), c.result.Texts...), strings.Repeat("x", tool.ResultCap))}
 			},
 		},
 		{
@@ -199,7 +199,7 @@ func TestACompletionWhoseBindingCannotBeReadIsSpent(t *testing.T) {
 	if c.ended || c.result.IsError {
 		t.Fatalf("the first call: %+v", c.result)
 	}
-	token, err := receipt.Bound(r.dir, "api", r.self.Epoch(), bridge.CallKey(fixture.Transport, thread, c.id))
+	token, err := receipt.Bound(r.dir, "api", r.self.Epoch(), tool.CallKey(fixture.Transport, thread, c.id))
 	if err != nil {
 		t.Fatal(err)
 	}

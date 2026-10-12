@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
@@ -245,7 +245,7 @@ func plannedLive(offer adapter.Offer, plan adapter.LaunchPlan, controlDir string
 	if offer.Control.Any() && controlDir != "" {
 		live = append(live, adapter.ControlCapability)
 	}
-	if _, ok := plan.Service.(adapter.ToolTransport[bridge.ToolDescriptor]); ok && offer.ToolTransport != "" {
+	if _, ok := plan.Service.(adapter.ToolTransport[tool.ToolDescriptor]); ok && offer.ToolTransport != "" {
 		live = append(live, adapter.ToolTransportCapability)
 	}
 	return live

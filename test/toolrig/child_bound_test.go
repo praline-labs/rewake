@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter/fixture"
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 )
@@ -168,7 +168,7 @@ func TestAnOutlivedCallWithABindingNamesItsRetry(t *testing.T) {
 		if time.Now().After(until) {
 			t.Fatal("the child never bound its operation")
 		}
-		token, _ = receipt.Bound(r.dir, "api", r.self.Epoch(), bridge.CallKey(fixture.Transport, thread, c.id))
+		token, _ = receipt.Bound(r.dir, "api", r.self.Epoch(), tool.CallKey(fixture.Transport, thread, c.id))
 	}
 	go r.endpoint.Close()
 	select {

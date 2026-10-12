@@ -8,7 +8,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/infra/state"
@@ -72,14 +72,14 @@ func emitReadLocked(ctx *Context, site readSite, record *receipt.Record, letter,
 					break
 				}
 				trial := append(append([]segment{}, segments...), segment{next, 0})
-				if bodyBytes(batch, trial) > bridge.BodyCap || !bridge.Fits(renderRead(batch.JSON, site.self.Name, *record, trial, replay), strings.Repeat("x", readReserve)) {
+				if bodyBytes(batch, trial) > tool.BodyCap || !tool.Fits(renderRead(batch.JSON, site.self.Name, *record, trial, replay), strings.Repeat("x", readReserve)) {
 					break
 				}
 				segments = trial
 			}
 		}
 		text = renderRead(batch.JSON, site.self.Name, *record, segments, replay)
-		if !bridge.Fits(text, "") {
+		if !tool.Fits(text, "") {
 			// Sized when frozen, so this is a defect; a part the bound
 			// would change must not count as shown.
 			return errors.New("the part does not fit one tool result")
@@ -88,7 +88,7 @@ func emitReadLocked(ctx *Context, site readSite, record *receipt.Record, letter,
 			// The whole answer, by digest: a part counts as shown only on a
 			// result that is exactly this text (rule 6). The call prints it
 			// and nothing else.
-			shown.Answer = bridge.AnswerDigest([]byte(text))
+			shown.Answer = tool.AnswerDigest([]byte(text))
 		}
 		for _, segment := range segments {
 			current := &batch.Letters[segment.letter]

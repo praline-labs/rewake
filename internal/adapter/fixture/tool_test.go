@@ -11,15 +11,15 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 )
 
 // The tool transport's side in the adapter (tool.go): what the probe proves,
 // which process the endpoint is told to serve, and what the program's reports
 // of its calls become in the neutral input.
 
-var programTools = []bridge.ToolDescriptor{
-	{Name: "inbox", Summary: "read", Params: []bridge.ToolParam{{Name: "peek", Kind: bridge.ParamSwitch, Description: "preview"}}},
+var programTools = []tool.ToolDescriptor{
+	{Name: "inbox", Summary: "read", Params: []tool.ToolParam{{Name: "peek", Kind: tool.ParamSwitch, Description: "preview"}}},
 	{Name: "whoami", Summary: "who"},
 }
 

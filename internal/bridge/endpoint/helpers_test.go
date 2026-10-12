@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 )
 
@@ -57,13 +57,13 @@ const testTransport = "test-transport"
 // the harness's own thread and turn, declaring that its turn ids are never
 // reused.
 func neutralRequest(thread, turn, call string, words []string) TicketRequest {
-	return TicketRequest{Transport: testTransport, Conversation: thread, Turn: turn, CallID: call, Words: words, Digest: bridge.Digest(words), TurnsNeverReused: true}
+	return TicketRequest{Transport: testTransport, Conversation: thread, Turn: turn, CallID: call, Words: words, Digest: tool.Digest(words), TurnsNeverReused: true}
 }
 
 // ticketFor has the endpoint at path issue the ticket of a call, as it
 // does for a transport's call before running it: the rules of a ticket are
 // the endpoint's, whoever brings the call.
-func ticketFor(t *testing.T, path string, asked TicketRequest) (bridge.Ticket, error) {
+func ticketFor(t *testing.T, path string, asked TicketRequest) (tool.Ticket, error) {
 	t.Helper()
 	served, ok := byPath.Load(path)
 	if !ok {
@@ -80,7 +80,7 @@ func seenCall(served *Endpoint, thread, turn, call string, words []string) {
 	served.CallSeen(adapter.ObservedCall{ID: call, Conversation: thread, Turn: turn, Words: words})
 }
 
-func mustTicket(t *testing.T, path string, asked TicketRequest) bridge.Ticket {
+func mustTicket(t *testing.T, path string, asked TicketRequest) tool.Ticket {
 	t.Helper()
 	ticket, err := ticketFor(t, path, asked)
 	if err != nil {
@@ -103,10 +103,10 @@ func refusedWith(t *testing.T, err error, what string) {
 type acknowledged struct {
 	mu     sync.Mutex
 	tokens []string
-	seen   []bridge.Exposure
+	seen   []tool.Exposure
 }
 
-func (a *acknowledged) record(_, _, _, token string, evidence bridge.Exposure, gate bridge.EndGate) error {
+func (a *acknowledged) record(_, _, _, token string, evidence tool.Exposure, gate tool.EndGate) error {
 	if gate == nil {
 		return errors.New("no gate")
 	}
@@ -129,7 +129,7 @@ func used(t *testing.T, served *Endpoint, path string, asked TicketRequest, toke
 		return
 	}
 	cfg := served.cfg
-	if err := receipt.Bind(cfg.Dir, cfg.Name, cfg.Epoch, bridge.CallKey(ticket.Transport, ticket.Conversation, ticket.CallID), token); err != nil {
+	if err := receipt.Bind(cfg.Dir, cfg.Name, cfg.Epoch, tool.CallKey(ticket.Transport, ticket.Conversation, ticket.CallID), token); err != nil {
 		t.Fatal(err)
 	}
 }

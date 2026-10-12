@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -73,9 +73,9 @@ func freezeOutput(ctx *Context, out string) (string, error) {
 	reserve := strings.Repeat("x", diagnosticCap+100)
 	sizing := receipt.Record{Token: strings.Repeat("0", 24)}
 	for start := 0; start < len(out); {
-		end := bridge.Cut(out, start, func(end int) bool {
+		end := tool.Cut(out, start, func(end int) bool {
 			sizing.Output = &receipt.FrozenText{JSON: frozen.JSON, Text: out, Parts: []receipt.Part{{Start: start, End: end}}}
-			return bridge.Fits(renderOutputPart(sizing, 0, 9999), reserve)
+			return tool.Fits(renderOutputPart(sizing, 0, 9999), reserve)
 		})
 		if end <= start {
 			return "", errors.New("a part would not fit one result")

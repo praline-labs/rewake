@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/proc"
@@ -56,7 +56,7 @@ func (c *capped) Write(data []byte) (int, error) {
 
 // runChild runs one call's child under its ticket and returns its answer, or
 // what the endpoint can say of a child that left none.
-func (e *Endpoint) runChild(ticket bridge.Ticket, words []string) childAnswer {
+func (e *Endpoint) runChild(ticket tool.Ticket, words []string) childAnswer {
 	reader, writer, err := os.Pipe()
 	if err != nil {
 		return substitute(startFailed)
@@ -67,7 +67,7 @@ func (e *Endpoint) runChild(ticket bridge.Ticket, words []string) childAnswer {
 		executable = "/proc/self/exe"
 	}
 	e.mu.Lock()
-	env := append(append([]string(nil), e.childEnv...), bridge.TicketEnv+"=3")
+	env := append(append([]string(nil), e.childEnv...), tool.TicketEnv+"=3")
 	e.mu.Unlock()
 	command := exec.Command(executable, words...)
 	command.Env = env
@@ -162,8 +162,8 @@ const startFailed = "Rewake: the tool could not start its command, so nothing ra
 // afterDeath says what a child that died without an answer left, from its
 // binding: the operation the call held, proof that it held none, or nothing
 // known.
-func (e *Endpoint) afterDeath(ticket bridge.Ticket) childAnswer {
-	token, err := receipt.Bound(e.cfg.Dir, e.cfg.Name, e.cfg.Epoch, bridge.CallKey(ticket.Transport, ticket.Conversation, ticket.CallID))
+func (e *Endpoint) afterDeath(ticket tool.Ticket) childAnswer {
+	token, err := receipt.Bound(e.cfg.Dir, e.cfg.Name, e.cfg.Epoch, tool.CallKey(ticket.Transport, ticket.Conversation, ticket.CallID))
 	switch {
 	case err == nil:
 		return substitute(fmt.Sprintf("Rewake: the call ended before it answered, holding operation %s; its outcome is unknown. Run: rewake retry %s\n", token, token))
@@ -177,8 +177,8 @@ func (e *Endpoint) afterDeath(ticket bridge.Ticket) childAnswer {
 // outlived says what a call whose child outlived its kill left as the
 // endpoint closed: the child may still run, so the outcome is unknown either
 // way, and the journal decides it.
-func (e *Endpoint) outlived(ticket bridge.Ticket) childAnswer {
-	token, err := receipt.Bound(e.cfg.Dir, e.cfg.Name, e.cfg.Epoch, bridge.CallKey(ticket.Transport, ticket.Conversation, ticket.CallID))
+func (e *Endpoint) outlived(ticket tool.Ticket) childAnswer {
+	token, err := receipt.Bound(e.cfg.Dir, e.cfg.Name, e.cfg.Epoch, tool.CallKey(ticket.Transport, ticket.Conversation, ticket.CallID))
 	if err == nil {
 		return substitute(fmt.Sprintf("Rewake: the call's command outlived its kill, holding operation %s; its outcome is unknown. Run: rewake retry %s\n", token, token))
 	}

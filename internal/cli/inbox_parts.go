@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/core/registry"
@@ -214,11 +214,11 @@ func freezeLetter(asJSON bool, view messageView, stored mail.Message) (receipt.L
 	sizing := receipt.Record{Token: strings.Repeat("0", 24), Read: &receipt.ReadBatch{JSON: asJSON}}
 	reserve := strings.Repeat("x", readReserve)
 	for start := 0; start < len(letter.Body) || start == 0; {
-		end := bridge.Cut(letter.Body, start, func(end int) bool {
+		end := tool.Cut(letter.Body, start, func(end int) bool {
 			trial := letter
 			trial.Parts = []receipt.Part{{Start: start, End: end}, {Start: end, End: end}}
 			sizing.Read.Letters = []receipt.Letter{trial, trial}
-			return bridge.Fits(renderRead(asJSON, "", sizing, []segment{{0, 0}}, false), reserve)
+			return tool.Fits(renderRead(asJSON, "", sizing, []segment{{0, 0}}, false), reserve)
 		})
 		if end <= start && len(letter.Body) > 0 {
 			return receipt.Letter{}, errors.New("a part of the letter would not fit one result")
@@ -253,7 +253,7 @@ func lockOperation(ctx *Context, site readSite, token string) (func(), error) {
 	}
 	if ctx.scope != nil {
 		ticket := ctx.scope.ticket
-		if err := receipt.Bind(site.dir, site.self.Name, site.epoch, bridge.CallKey(ticket.Transport, ticket.Conversation, ticket.CallID), token); err != nil {
+		if err := receipt.Bind(site.dir, site.self.Name, site.epoch, tool.CallKey(ticket.Transport, ticket.Conversation, ticket.CallID), token); err != nil {
 			release()
 			return nil, failf("could not record which operation this call holds (%v), so nothing was done; run the same words again", err)
 		}

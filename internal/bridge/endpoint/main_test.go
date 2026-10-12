@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -32,7 +32,7 @@ const helperChildHoldGreeted = "ENDPOINT_TEST_HOLD_GREETED"
 
 func TestMain(m *testing.M) {
 	switch {
-	case os.Getenv(bridge.TicketEnv) != "":
+	case os.Getenv(tool.TicketEnv) != "":
 		os.Exit(runAsChild())
 	case os.Getenv(helperTransport) != "":
 		_, err := CallTool(os.Getenv(helperTransport), ToolCall{Tool: "inbox", CallID: "helper", Conversation: "th", Turn: "t1"}, 5*time.Second)
@@ -45,7 +45,7 @@ func TestMain(m *testing.M) {
 // runAsChild confirms its ticket with the endpoint of its run, as the CLI
 // does, and prints its words.
 func runAsChild() int {
-	ticket, err := bridge.ReadTicket()
+	ticket, err := tool.ReadTicket()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
@@ -66,7 +66,7 @@ func runAsChild() int {
 
 // confirmHeld is Confirm, held between the hello and the request when the
 // test asks for it.
-func confirmHeld(path string, ticket bridge.Ticket) error {
+func confirmHeld(path string, ticket tool.Ticket) error {
 	dir := os.Getenv(helperChildHoldGreeted)
 	if dir == "" {
 		return Confirm(path, ticket)

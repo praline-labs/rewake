@@ -28,7 +28,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 )
 
 // The program's switches. Each withholds one capability from the hello, or
@@ -103,15 +103,15 @@ type fixtureFrame struct {
 	At int64 `json:"at,omitempty"`
 	// The tool transport's fields: the probe's offer, what the program
 	// registered, and a call's report and result.
-	Tools     []bridge.ToolDescriptor `json:"tools,omitempty"`
-	Endpoint  string                  `json:"endpoint,omitempty"`
-	Names     []string                `json:"names,omitempty"`
-	Digest    string                  `json:"digest,omitempty"`
-	Call      string                  `json:"call,omitempty"`
-	Tool      string                  `json:"tool,omitempty"`
-	Arguments json.RawMessage         `json:"arguments,omitempty"`
-	Texts     []string                `json:"texts,omitempty"`
-	IsError   bool                    `json:"isError,omitempty"`
+	Tools     []tool.ToolDescriptor `json:"tools,omitempty"`
+	Endpoint  string                `json:"endpoint,omitempty"`
+	Names     []string              `json:"names,omitempty"`
+	Digest    string                `json:"digest,omitempty"`
+	Call      string                `json:"call,omitempty"`
+	Tool      string                `json:"tool,omitempty"`
+	Arguments json.RawMessage       `json:"arguments,omitempty"`
+	Texts     []string              `json:"texts,omitempty"`
+	IsError   bool                  `json:"isError,omitempty"`
 	// A control request and its answer, and a compaction's end
 	// (fixtureshim_control_test.go).
 	Action       string `json:"action,omitempty"`

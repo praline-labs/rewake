@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 )
 
 // The fixture program's side of the mail tool (docs/v2/stage3-fixture.md#the-tool-transport):
@@ -42,7 +42,7 @@ const toolEventKind = "tool"
 // fixtureTools is what the probe offered and the program registered.
 type fixtureTools struct {
 	mu       sync.Mutex
-	offered  []bridge.ToolDescriptor
+	offered  []tool.ToolDescriptor
 	endpoint string
 	made     bool
 }
@@ -80,7 +80,7 @@ func (s *fixtureSession) registerTools(frame, reply fixtureFrame) fixtureFrame {
 	for _, tool := range frame.Tools {
 		reply.Names = append(reply.Names, tool.Name)
 	}
-	reply.Digest, reply.State = bridge.DescriptorsDigest(frame.Tools), "proven"
+	reply.Digest, reply.State = tool.DescriptorsDigest(frame.Tools), "proven"
 	return reply
 }
 

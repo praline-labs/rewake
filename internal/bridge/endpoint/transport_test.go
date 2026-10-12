@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -18,9 +18,9 @@ import (
 // The transport's side of a call (transport.go): the harness's own process
 // asks, the endpoint runs the call in a child of its own image and answers.
 
-var inboxTool = bridge.ToolDescriptor{Name: "inbox", Summary: "read", Params: []bridge.ToolParam{
-	{Name: "peek", Kind: bridge.ParamSwitch, Description: "preview"},
-	{Name: "text", Kind: bridge.ParamWord, Description: "a word"},
+var inboxTool = tool.ToolDescriptor{Name: "inbox", Summary: "read", Params: []tool.ToolParam{
+	{Name: "peek", Kind: tool.ParamSwitch, Description: "preview"},
+	{Name: "text", Kind: tool.ParamWord, Description: "a word"},
 }}
 
 // transportEndpoint serves a run whose transport is this test process, and
@@ -28,7 +28,7 @@ var inboxTool = bridge.ToolDescriptor{Name: "inbox", Summary: "read", Params: []
 func transportEndpoint(t *testing.T, change ...func(*Config)) (*Endpoint, string) {
 	t.Helper()
 	served, path := testEndpoint(t, testTransport, append([]func(*Config){func(c *Config) {
-		c.Tools = []bridge.ToolDescriptor{inboxTool}
+		c.Tools = []tool.ToolDescriptor{inboxTool}
 		c.Check = func(words []string) ([]string, string) { return words, "" }
 		c.Executable = os.Args[0]
 	}}, change...)...)
@@ -184,7 +184,7 @@ func TestACallTheToolsDoNotOfferRunsNothing(t *testing.T) {
 func TestAnAnswerPastItsBoundIsReplacedWhole(t *testing.T) {
 	served, path := transportEndpoint(t)
 	openTurn(served, "th", "t1")
-	long := strings.Repeat("y", bridge.ResultCap)
+	long := strings.Repeat("y", tool.ResultCap)
 	seenCall(served, "th", "t1", "big", []string{"inbox", "--", long})
 	answer, err := CallTool(path, inboxCall("big", `{"text":"`+long+`"}`), 10*time.Second)
 	if err != nil {
@@ -194,7 +194,7 @@ func TestAnAnswerPastItsBoundIsReplacedWhole(t *testing.T) {
 		t.Fatalf("an answer past its bound: %+v", answer)
 	}
 	encoded, _ := json.Marshal(answer)
-	if len(encoded) > bridge.ResultCap {
+	if len(encoded) > tool.ResultCap {
 		t.Fatalf("the replacement is %d bytes", len(encoded))
 	}
 }

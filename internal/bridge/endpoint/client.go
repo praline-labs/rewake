@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 )
 
@@ -27,7 +27,7 @@ var ErrUnreachable = errors.New("the wrapper's context endpoint does not answer"
 const ConfirmWait = time.Second
 
 // Confirm has the run's wrapper confirm a ticket for this process, once.
-func Confirm(path string, ticket bridge.Ticket) error {
+func Confirm(path string, ticket tool.Ticket) error {
 	conn, err := greet(path, hello{Role: roleChild, Capability: ticket.Capability}, ConfirmWait)
 	if err != nil {
 		return err

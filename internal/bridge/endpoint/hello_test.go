@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 )
 
 // hold says hello on a connection it keeps open, and returns the answer.
@@ -116,7 +116,7 @@ func TestTheConnectionsAreBounded(t *testing.T) {
 // unreachable, which their callers tell from a refusal.
 func TestAMissingEndpointIsUnreachable(t *testing.T) {
 	path := t.TempDir() + "/none.ctx"
-	if err := Confirm(path, bridge.Ticket{}); !errors.Is(err, ErrUnreachable) {
+	if err := Confirm(path, tool.Ticket{}); !errors.Is(err, ErrUnreachable) {
 		t.Fatalf("confirm: %v", err)
 	}
 	if _, err := CallTool(path, ToolCall{Tool: "inbox"}, time.Second); !errors.Is(err, ErrUnreachable) {

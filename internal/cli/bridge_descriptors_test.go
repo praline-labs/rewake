@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 )
 
 // The tools are the allowlist, one per allowed command, and nothing else:
@@ -54,7 +54,7 @@ func TestEachDescriptorParsesBackToItsCommand(t *testing.T) {
 	for _, descriptor := range ToolDescriptors() {
 		base := map[string]any{}
 		for _, param := range descriptor.Params {
-			if param.Kind == bridge.ParamWord {
+			if param.Kind == tool.ParamWord {
 				base[param.Name] = "a " + param.Name
 			}
 		}
@@ -64,9 +64,9 @@ func TestEachDescriptorParsesBackToItsCommand(t *testing.T) {
 				arguments[name] = value
 			}
 			switch param.Kind {
-			case bridge.ParamSwitch:
+			case tool.ParamSwitch:
 				arguments[param.Name] = true
-			case bridge.ParamValue:
+			case tool.ParamValue:
 				arguments[param.Name] = "1"
 			}
 			raw, _ := json.Marshal(arguments)
@@ -81,7 +81,7 @@ func TestEachDescriptorParsesBackToItsCommand(t *testing.T) {
 			if result.Call.Command == nil || result.Call.Command.Name != descriptor.Name {
 				t.Fatalf("%q parses as another command", words)
 			}
-			if param.Kind != bridge.ParamWord {
+			if param.Kind != tool.ParamWord {
 				if _, given := result.Call.Flags[param.Name]; !given {
 					t.Fatalf("%q lost --%s", words, param.Name)
 				}
@@ -109,7 +109,7 @@ func TestADescriptorsWordsAreTheNormalizedWords(t *testing.T) {
 		{"retry", `{"receipt":"0123456789abcdef01234567"}`},
 		{"list", `{"json":true}`},
 	} {
-		tool, ok := bridge.FindTool(tools, call.tool)
+		tool, ok := tool.FindTool(tools, call.tool)
 		if !ok {
 			t.Fatalf("no tool %s", call.tool)
 		}

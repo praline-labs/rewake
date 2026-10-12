@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 )
 
 // The program's side of the mail tool (docs/v2/stage3-fixture.md#the-tool-transport).
@@ -30,7 +30,7 @@ const (
 
 // toolOffer is what the wrapper offered and what the probe proved of it.
 type toolOffer struct {
-	tools    []bridge.ToolDescriptor
+	tools    []tool.ToolDescriptor
 	endpoint string
 	// serve names the process the endpoint takes calls from; 0 takes none.
 	serve func(pid int, start uint64)
@@ -42,7 +42,7 @@ type toolOffer struct {
 
 // OfferTools hands the backend the tools and the endpoint its program asks to
 // run them, before Start; serve is how the endpoint learns which process asks.
-func (b *backend) OfferTools(tools []bridge.ToolDescriptor, endpoint string, serve func(pid int, start uint64)) {
+func (b *backend) OfferTools(tools []tool.ToolDescriptor, endpoint string, serve func(pid int, start uint64)) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.tools.tools, b.tools.endpoint, b.tools.serve = tools, endpoint, serve
@@ -71,7 +71,7 @@ func (b *backend) toolsRegistered(capability string, answer Frame) bool {
 	for _, tool := range b.tools.tools {
 		names = append(names, tool.Name)
 	}
-	if answer.Digest != bridge.DescriptorsDigest(b.tools.tools) || !slices.Equal(answer.Names, names) {
+	if answer.Digest != tool.DescriptorsDigest(b.tools.tools) || !slices.Equal(answer.Names, names) {
 		return false
 	}
 	b.tools.unproven = answer.State == ToolUnproven
@@ -128,7 +128,7 @@ func (b *backend) toolCall(l *link, frame Frame) Frame {
 	tools, thread := b.tools.tools, b.thread
 	b.mu.Unlock()
 	var words []string
-	if tool, ok := bridge.FindTool(tools, frame.Tool); ok {
+	if tool, ok := tool.FindTool(tools, frame.Tool); ok {
 		// Arguments that are no command's words are recorded as such: the
 		// request carries the same and is refused for them.
 		words, _ = tool.Words(frame.Arguments)

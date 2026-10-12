@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 )
 
 // The one encoder of a transport's answers: every answer is checked whole
@@ -59,5 +59,5 @@ func (a childAnswer) encoded() ToolAnswer {
 // fits says whether an answer, encoded, is inside the bound of one result.
 func fits(answer ToolAnswer) bool {
 	encoded, err := json.Marshal(answer)
-	return err == nil && len(encoded) <= bridge.ResultCap
+	return err == nil && len(encoded) <= tool.ResultCap
 }

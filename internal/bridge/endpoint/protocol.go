@@ -14,7 +14,7 @@ each exchange.
 package endpoint
 
 import (
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 )
 
 // The roles a connection says hello as.
@@ -42,9 +42,9 @@ type hello struct {
 // request is one line after the hello. Requests on one connection are
 // answered as each is done, matched by ID.
 type request struct {
-	ID     uint64         `json:"id"`
-	Op     string         `json:"op"`
-	Ticket *bridge.Ticket `json:"ticket,omitempty"`
+	ID     uint64       `json:"id"`
+	Op     string       `json:"op"`
+	Ticket *tool.Ticket `json:"ticket,omitempty"`
 	// Call is a transport's call to run.
 	Call *ToolCall `json:"call,omitempty"`
 }

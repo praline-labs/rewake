@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
 	"github.com/praline-labs/rewake/internal/cli"
 	"github.com/praline-labs/rewake/internal/infra/state"
@@ -32,7 +32,7 @@ func TestTheTransportIsOfferedTheCLIsTools(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := cli.ToolDescriptors()
-	if offered.Raw != bridge.DescriptorsDigest(want) || len(offered.Texts) != len(want) {
+	if offered.Raw != tool.DescriptorsDigest(want) || len(offered.Texts) != len(want) {
 		t.Fatalf("offered %v (%s), the CLI builds %d tools", offered.Texts, offered.Raw, len(want))
 	}
 	for i, tool := range want {
@@ -53,7 +53,7 @@ func TestTheEndpointBoundsWhatComesIn(t *testing.T) {
 	r := newRig(t)
 	r.start()
 	turn := r.nextTurn()
-	long := `{"id":1,"op":"call","call":{"tool":"send","callId":"long","conversation":"` + thread + `","turn":"` + turn + `","arguments":{"text":"` + strings.Repeat("x", bridge.MaxWordsBytes+32<<10) + `"}}}`
+	long := `{"id":1,"op":"call","call":{"tool":"send","callId":"long","conversation":"` + thread + `","turn":"` + turn + `","arguments":{"text":"` + strings.Repeat("x", tool.MaxWordsBytes+32<<10) + `"}}}`
 	for _, raw := range []struct{ line, says string }{
 		{long, "longer than a request can be"},
 		{"not json", "asks only to run a call"},

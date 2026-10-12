@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
@@ -321,13 +321,13 @@ func TestAnEscapedDiagnosticFits(t *testing.T) {
 	out, errOut := boundedAnswer(ctx, strings.Repeat("a", 7000), strings.Repeat("\x00", 1024))
 	// Cut and kept, not given up on: the last resort also fits, and says
 	// nothing.
-	if !bridge.Fits(out, errOut) || out == "" || !strings.Contains(errOut, "cut here") {
-		t.Fatalf("encoded size %d: %.80q", bridge.EncodedSize(out, errOut), errOut)
+	if !tool.Fits(out, errOut) || out == "" || !strings.Contains(errOut, "cut here") {
+		t.Fatalf("encoded size %d: %.80q", tool.EncodedSize(out, errOut), errOut)
 	}
 	caller := newToolCaller(t)
 	got := caller.run("inbox", "--"+strings.Repeat("<", 1000))
-	if got.code != ExitUsage || !bridge.Fits(got.out, got.errOut) || !strings.Contains(got.errOut, "cut here") {
-		t.Fatalf("a parser refusal: %d, encoded %d: %.80q", got.code, bridge.EncodedSize(got.out, got.errOut), got.errOut)
+	if got.code != ExitUsage || !tool.Fits(got.out, got.errOut) || !strings.Contains(got.errOut, "cut here") {
+		t.Fatalf("a parser refusal: %d, encoded %d: %.80q", got.code, tool.EncodedSize(got.out, got.errOut), got.errOut)
 	}
 }
 
@@ -335,8 +335,8 @@ func TestAnEscapedDiagnosticFits(t *testing.T) {
 // the bound, naming the shell.
 func TestAnAnswerThatCannotBeKeptStillFits(t *testing.T) {
 	out, errOut := boundedAnswer(&Context{table: testTable()}, strings.Repeat("a", 7000), strings.Repeat("\x00", 900))
-	if !bridge.Fits(out, errOut) || !strings.Contains(errOut, "shell") {
-		t.Fatalf("encoded size %d: %q", bridge.EncodedSize(out, errOut), errOut)
+	if !tool.Fits(out, errOut) || !strings.Contains(errOut, "shell") {
+		t.Fatalf("encoded size %d: %q", tool.EncodedSize(out, errOut), errOut)
 	}
 }
 

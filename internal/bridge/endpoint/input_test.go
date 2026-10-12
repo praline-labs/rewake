@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 )
 
@@ -25,7 +25,7 @@ func TestOnlyAUsedTicketWithItsBindingIsAcknowledged(t *testing.T) {
 	mustTicket(t, path, neutralRequest("th", "t1", "not-used", words))
 	// Bound all the same, so only the unused ticket keeps it out.
 	cfg := served.cfg
-	if err := receipt.Bind(cfg.Dir, cfg.Name, cfg.Epoch, bridge.CallKey(testTransport, "th", "not-used"), token(1)); err != nil {
+	if err := receipt.Bind(cfg.Dir, cfg.Name, cfg.Epoch, tool.CallKey(testTransport, "th", "not-used"), token(1)); err != nil {
 		t.Fatal(err)
 	}
 	served.CallResult("not-used", result)
@@ -50,8 +50,8 @@ func TestTheWholeResultAndItsSize(t *testing.T) {
 		answer string
 		size   int
 	}{
-		{adapter.ToolResult{Texts: []string{"first", "second"}}, "first", bridge.EncodedSize("first", "second")},
-		{adapter.ToolResult{Texts: []string{"only"}}, "only", bridge.EncodedSize("only", "")},
+		{adapter.ToolResult{Texts: []string{"first", "second"}}, "first", tool.EncodedSize("first", "second")},
+		{adapter.ToolResult{Texts: []string{"only"}}, "only", tool.EncodedSize("only", "")},
 		{adapter.ToolResult{Texts: []string{"first", "second"}, Shortened: true}, "", 0},
 		{adapter.ToolResult{}, "", 0},
 	}

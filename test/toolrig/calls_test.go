@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter/fixture"
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 )
@@ -154,7 +154,7 @@ func (r *rig) report(c toolCall, result command) error {
 func (r *rig) acknowledges(c toolCall) bool {
 	first := !r.completed[c.id]
 	r.completed[c.id] = true
-	_, err := receipt.Bound(r.dir, "api", r.self.Epoch(), bridge.CallKey(fixture.Transport, thread, c.id))
+	_, err := receipt.Bound(r.dir, "api", r.self.Epoch(), tool.CallKey(fixture.Transport, thread, c.id))
 	return first && err == nil
 }
 

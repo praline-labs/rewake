@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/host/launch"
@@ -23,11 +23,11 @@ import (
 // one implementation of the mail.
 type MailTool struct {
 	Words       func([]string) ([]string, error)
-	Acknowledge func(dir, name, epoch, token string, evidence bridge.Exposure, gate bridge.EndGate) error
+	Acknowledge func(dir, name, epoch, token string, evidence tool.Exposure, gate tool.EndGate) error
 	// Check is the CLI's refusal of a transport's call by its words, and
 	// Tools the commands a transport registers as tools.
 	Check func([]string) ([]string, string)
-	Tools []bridge.ToolDescriptor
+	Tools []tool.ToolDescriptor
 }
 
 // mailTool is a run's endpoint, or nothing where the run has none: a harness
@@ -48,7 +48,7 @@ type mailTool struct {
 	offered bool
 	// tools and path are what a backend that carries the calls itself is
 	// offered: the tools to register, and the endpoint to ask.
-	tools []bridge.ToolDescriptor
+	tools []tool.ToolDescriptor
 	path  string
 }
 
@@ -60,7 +60,7 @@ func (t *mailTool) config(request Request, name, epoch, transport string, clock 
 		Capability: t.capability, Span: span, Refusal: refusal,
 		Words: request.MailTool.Words, Acknowledge: request.MailTool.Acknowledge,
 		Check: request.MailTool.Check, Tools: request.MailTool.Tools,
-		Gate:    bridge.NewGate(clock.Snapshot),
+		Gate:    tool.NewGate(clock.Snapshot),
 		Channel: t.keeper.tell,
 	}
 }
@@ -104,7 +104,7 @@ func startMailTool(request Request, name, epoch string) *mailTool {
 // channel record begins here, before anything can connect: the tool offered,
 // with its hello timer running from now, or no tool and why.
 func (t *mailTool) attach(plan adapter.LaunchPlan) {
-	transport, ok := plan.Service.(adapter.ToolTransport[bridge.ToolDescriptor])
+	transport, ok := plan.Service.(adapter.ToolTransport[tool.ToolDescriptor])
 	switch {
 	case t.endpoint == nil:
 		t.keeper.begin(false, "the mail tool could not be served")

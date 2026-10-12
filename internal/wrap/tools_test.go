@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
 	"github.com/praline-labs/rewake/internal/core/channel"
 	"github.com/praline-labs/rewake/internal/infra/proc"
@@ -30,22 +30,22 @@ func (carrierHarness) Offers() adapter.Offer {
 // offeringBackend is a run's service that carries the tool, and records what
 // the wrapper offered it.
 type offeringBackend struct {
-	tools    []bridge.ToolDescriptor
+	tools    []tool.ToolDescriptor
 	endpoint string
 	serve    func(int, uint64)
 }
 
-func (b *offeringBackend) OfferTools(tools []bridge.ToolDescriptor, path string, serve func(int, uint64)) {
+func (b *offeringBackend) OfferTools(tools []tool.ToolDescriptor, path string, serve func(int, uint64)) {
 	b.tools, b.endpoint, b.serve = tools, path, serve
 }
 
-var _ adapter.ToolTransport[bridge.ToolDescriptor] = (*offeringBackend)(nil)
+var _ adapter.ToolTransport[tool.ToolDescriptor] = (*offeringBackend)(nil)
 
 func (*offeringBackend) ToolReadsOff() string                      { return "" }
 func (*offeringBackend) Start(context.Context, func(string)) error { return nil }
 func (*offeringBackend) Close()                                    {}
 
-var carriedTools = []bridge.ToolDescriptor{{Name: "whoami", Summary: "who"}}
+var carriedTools = []tool.ToolDescriptor{{Name: "whoami", Summary: "who"}}
 
 func carrierTool(t *testing.T) *mailTool {
 	t.Helper()

@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 )
 
 // The launcher's variables: the control socket the program serves the rig on,
@@ -45,31 +45,31 @@ const thread = "conversation"
 
 // frame is one line of the adapter's exchange.
 type frame struct {
-	Op         string                  `json:"op"`
-	ID         int64                   `json:"id,omitempty"`
-	Version    string                  `json:"version,omitempty"`
-	PID        int                     `json:"pid,omitempty"`
-	Thread     string                  `json:"thread,omitempty"`
-	Serves     []string                `json:"serves,omitempty"`
-	Capability string                  `json:"capability,omitempty"`
-	OK         bool                    `json:"ok,omitempty"`
-	Error      string                  `json:"error,omitempty"`
-	State      string                  `json:"state,omitempty"`
-	Turn       string                  `json:"turn,omitempty"`
-	End        string                  `json:"end,omitempty"`
-	Outcome    string                  `json:"outcome,omitempty"`
-	At         int64                   `json:"at,omitempty"`
-	Tools      []bridge.ToolDescriptor `json:"tools,omitempty"`
-	Endpoint   string                  `json:"endpoint,omitempty"`
-	Names      []string                `json:"names,omitempty"`
-	Digest     string                  `json:"digest,omitempty"`
-	Call       string                  `json:"call,omitempty"`
-	Tool       string                  `json:"tool,omitempty"`
-	Arguments  json.RawMessage         `json:"arguments,omitempty"`
-	Nested     bool                    `json:"nested,omitempty"`
-	Texts      []string                `json:"texts,omitempty"`
-	IsError    bool                    `json:"isError,omitempty"`
-	Shortened  bool                    `json:"shortened,omitempty"`
+	Op         string                `json:"op"`
+	ID         int64                 `json:"id,omitempty"`
+	Version    string                `json:"version,omitempty"`
+	PID        int                   `json:"pid,omitempty"`
+	Thread     string                `json:"thread,omitempty"`
+	Serves     []string              `json:"serves,omitempty"`
+	Capability string                `json:"capability,omitempty"`
+	OK         bool                  `json:"ok,omitempty"`
+	Error      string                `json:"error,omitempty"`
+	State      string                `json:"state,omitempty"`
+	Turn       string                `json:"turn,omitempty"`
+	End        string                `json:"end,omitempty"`
+	Outcome    string                `json:"outcome,omitempty"`
+	At         int64                 `json:"at,omitempty"`
+	Tools      []tool.ToolDescriptor `json:"tools,omitempty"`
+	Endpoint   string                `json:"endpoint,omitempty"`
+	Names      []string              `json:"names,omitempty"`
+	Digest     string                `json:"digest,omitempty"`
+	Call       string                `json:"call,omitempty"`
+	Tool       string                `json:"tool,omitempty"`
+	Arguments  json.RawMessage       `json:"arguments,omitempty"`
+	Nested     bool                  `json:"nested,omitempty"`
+	Texts      []string              `json:"texts,omitempty"`
+	IsError    bool                  `json:"isError,omitempty"`
+	Shortened  bool                  `json:"shortened,omitempty"`
 }
 
 // command is one request of the rig over the control socket.
@@ -113,7 +113,7 @@ type program struct {
 	waiting  map[int64]chan frame
 	endpoint string
 	// offered are the descriptors the probe offered.
-	offered []bridge.ToolDescriptor
+	offered []tool.ToolDescriptor
 	faults  *transportFaults
 }
 
@@ -198,7 +198,7 @@ func (p *program) handle(f frame) {
 		if os.Getenv(unprovenEnv) != "" {
 			state = "unproven"
 		}
-		p.write(frame{Op: "answer", ID: f.ID, OK: true, State: state, Names: names, Digest: bridge.DescriptorsDigest(f.Tools)})
+		p.write(frame{Op: "answer", ID: f.ID, OK: true, State: state, Names: names, Digest: tool.DescriptorsDigest(f.Tools)})
 	default:
 		p.write(frame{Op: "answer", ID: f.ID, Error: "not served"})
 	}
@@ -264,7 +264,7 @@ func (p *program) run(c command) reply {
 		for _, tool := range p.offered {
 			names = append(names, tool.Name)
 		}
-		return reply{Texts: names, Raw: bridge.DescriptorsDigest(p.offered)}
+		return reply{Texts: names, Raw: tool.DescriptorsDigest(p.offered)}
 	case "request":
 		p.faults.step("request")
 		answer := p.request(c)

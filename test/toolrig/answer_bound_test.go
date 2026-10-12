@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter/fixture"
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 )
 
@@ -67,7 +67,7 @@ func TestATransportThatStopsReading(t *testing.T) {
 			}
 			// The call runs to its end and its answer is written to nobody.
 			for until := time.Now().Add(10 * time.Second); ; time.Sleep(10 * time.Millisecond) {
-				if _, err := receipt.Bound(r.dir, "api", r.self.Epoch(), bridge.CallKey(fixture.Transport, thread, c.id)); err == nil {
+				if _, err := receipt.Bound(r.dir, "api", r.self.Epoch(), tool.CallKey(fixture.Transport, thread, c.id)); err == nil {
 					break
 				}
 				if time.Now().After(until) {
@@ -115,7 +115,7 @@ func TestALostAnswerOfAnEffectIsFoundAgain(t *testing.T) {
 	if n := headsUps(r); n != 1 {
 		t.Fatalf("the send published %d heads-ups", n)
 	}
-	token, err := receipt.Bound(r.dir, "api", r.self.Epoch(), bridge.CallKey(fixture.Transport, thread, c.id))
+	token, err := receipt.Bound(r.dir, "api", r.self.Epoch(), tool.CallKey(fixture.Transport, thread, c.id))
 	if err != nil {
 		t.Fatal(err)
 	}

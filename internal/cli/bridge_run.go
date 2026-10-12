@@ -5,7 +5,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/bridge/endpoint"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/state"
@@ -18,17 +18,17 @@ import (
 
 // validateTicket asks the wrapper of the run whether it issued a ticket;
 // replaceable in tests, which have no wrapper to ask.
-var validateTicket bridge.Validator = confirmTicket
+var validateTicket tool.Validator = confirmTicket
 
 // confirmTicket has the run's wrapper confirm a ticket, once, for this
 // process.
-func confirmTicket(dir, name, epoch string, ticket bridge.Ticket) error {
+func confirmTicket(dir, name, epoch string, ticket tool.Ticket) error {
 	return endpoint.Confirm(state.ContextPath(dir, name, epoch), ticket)
 }
 
 // callScope is a validated tool call.
 type callScope struct {
-	ticket bridge.Ticket
+	ticket tool.Ticket
 	words  []string
 	digest string
 }
@@ -75,12 +75,12 @@ func bridgeCall(ctx *Context, argv []string) int {
 // ticket must have been issued for exactly these words, by this run's wrapper,
 // and its deadline must not have passed.
 func authorize(t *table, result parsed) (*callScope, error) {
-	ticket, err := bridge.ReadTicket()
+	ticket, err := tool.ReadTicket()
 	if err != nil {
 		return nil, failf("Rewake: this tool call carries no usable ticket (%v), so nothing ran; run the same words in the shell: rewake <words>", err)
 	}
 	words := t.normalized(result)
-	digest := bridge.Digest(words)
+	digest := tool.Digest(words)
 	if ticket.WordsDigest != digest {
 		return nil, failf("Rewake: the ticket of this tool call was issued for other words, so nothing ran.")
 	}
@@ -115,11 +115,11 @@ const diagnosticCap = 1024
 // next; and whatever does not fit after that is replaced by one line that
 // does.
 func boundedAnswer(ctx *Context, out, errOut string) (string, string) {
-	if bridge.Fits(out, errOut) {
+	if tool.Fits(out, errOut) {
 		return out, errOut
 	}
 	errOut = cutDiagnostic(errOut)
-	if !bridge.Fits(out, errOut) {
+	if !tool.Fits(out, errOut) {
 		first, err := freezeOutput(ctx, out)
 		if err != nil {
 			out, errOut = "", cutDiagnostic(errOut+"Rewake: the answer is longer than one tool result and could not be kept for continuing ("+err.Error()+"); run the same words in the shell.\n")
@@ -127,7 +127,7 @@ func boundedAnswer(ctx *Context, out, errOut string) (string, string) {
 			out = first
 		}
 	}
-	if !bridge.Fits(out, errOut) {
+	if !tool.Fits(out, errOut) {
 		return "", unfitting
 	}
 	return out, errOut
@@ -144,11 +144,11 @@ func cutDiagnostic(text string) string {
 		return text
 	}
 	budget := diagnosticCap - encodedString(tail)
-	cut := bridge.Cut(text, 0, func(end int) bool { return encodedString(text[:end]) <= budget })
+	cut := tool.Cut(text, 0, func(end int) bool { return encodedString(text[:end]) <= budget })
 	return text[:cut] + tail
 }
 
 // encodedString is the size of text as a JSON string.
 func encodedString(text string) int {
-	return bridge.EncodedSize(text, "") - bridge.EncodedSize("", "")
+	return tool.EncodedSize(text, "") - tool.EncodedSize("", "")
 }

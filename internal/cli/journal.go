@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -59,7 +59,7 @@ func journaled(ctx *Context, call Call, handler func(*Context, Call) error) erro
 	}
 	site := readSite{dir: dir, self: self, epoch: epoch}
 	words := ctx.table.normalized(parsed{Call: call})
-	digest := bridge.Digest(words)
+	digest := tool.Digest(words)
 	key := receipt.Key{Epoch: epoch, Digest: digest}
 	fresh := receipt.Record{Words: words, Transport: receipt.Shell}
 	if scope := ctx.scope; scope != nil {

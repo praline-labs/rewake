@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
@@ -39,14 +39,14 @@ type toolCaller struct {
 	// never reused; by default the tickets carry it.
 	reused bool
 	// tickets are the tickets the stand-in confirmed, in order.
-	tickets []bridge.Ticket
+	tickets []tool.Ticket
 }
 
 func newToolCaller(t *testing.T) *toolCaller {
 	t.Helper()
 	caller := &toolCaller{t: t, conversation: "conversation-1", turn: "turn-1"}
 	previous := validateTicket
-	validateTicket = func(_, _, _ string, ticket bridge.Ticket) error {
+	validateTicket = func(_, _, _ string, ticket tool.Ticket) error {
 		caller.tickets = append(caller.tickets, ticket)
 		return nil
 	}
@@ -72,10 +72,10 @@ func (c *toolCaller) run(words ...string) toolRun {
 	}
 	digest := "refused"
 	if normal, err := ToolWords(digested); err == nil {
-		digest = bridge.Digest(normal)
+		digest = tool.Digest(normal)
 	}
 	now := boottime.Now()
-	ticket := bridge.Ticket{
+	ticket := tool.Ticket{
 		Capability: "capability", Conversation: c.conversation, Turn: c.turn, CallID: callID,
 		CalledBoot: now, DeadlineBoot: now + int64(30*time.Second), WordsDigest: digest, Transport: testTransport, Nonce: "nonce-" + callID,
 		TurnsNeverReused: !c.reused,
@@ -92,8 +92,8 @@ func (c *toolCaller) run(words ...string) toolRun {
 		c.t.Fatal(err)
 	}
 	_ = syscall.Close(fds[1])
-	c.t.Setenv(bridge.TicketEnv, strconv.Itoa(fds[0]))
-	defer func() { _ = os.Unsetenv(bridge.TicketEnv) }()
+	c.t.Setenv(tool.TicketEnv, strconv.Itoa(fds[0]))
+	defer func() { _ = os.Unsetenv(tool.TicketEnv) }()
 	code, out, errOut := run(words...)
 	return toolRun{code: code, out: out, errOut: errOut, callID: callID}
 }
@@ -181,7 +181,7 @@ func TestTheToolSurface(t *testing.T) {
 		{"retry"},
 		{"inbox", "--peek=yes"},
 		{"whoami", "extra"},
-		strings.Fields(strings.Repeat("inbox ", bridge.MaxWords+1)),
+		strings.Fields(strings.Repeat("inbox ", tool.MaxWords+1)),
 	} {
 		if _, err := ToolWords(words); err == nil {
 			t.Errorf("%q allowed", words)
@@ -193,7 +193,7 @@ func TestTheToolSurface(t *testing.T) {
 		t.Errorf("one call normalizes as %q and %q", first, second)
 	}
 	other, _ := ToolWords([]string{"send", "web", "look again", "--notify", "--wait", "2"})
-	if bridge.Digest(first) == bridge.Digest(other) {
+	if tool.Digest(first) == tool.Digest(other) {
 		t.Error("two texts digest alike")
 	}
 }
@@ -206,11 +206,11 @@ func TestAToolCallWithoutAValidTicketRunsNothing(t *testing.T) {
 	id := rawUnread(t, dir, "api", map[string]any{"from": "web", "fromEpoch": web.Epoch(), "toEpoch": self.Epoch(), "text": "rerun"})
 	caller := newToolCaller(t)
 
-	validateTicket = bridge.NoEndpoint
+	validateTicket = tool.NoEndpoint
 	if answer := caller.run("inbox"); answer.code != ExitFailed || answer.out != "" || !strings.Contains(answer.errOut, "did not confirm") {
 		t.Fatalf("with no endpoint: %+v", answer)
 	}
-	validateTicket = func(string, string, string, bridge.Ticket) error { return nil }
+	validateTicket = func(string, string, string, tool.Ticket) error { return nil }
 	caller.forge = []string{"inbox", "--peek"}
 	if answer := caller.run("inbox"); answer.code != ExitFailed || !strings.Contains(answer.errOut, "other words") {
 		t.Fatalf("for other words: %+v", answer)
@@ -265,8 +265,8 @@ func TestALongAnswerComesInParts(t *testing.T) {
 	var text strings.Builder
 	parts := 0
 	for ; ; parts++ {
-		if answer.code != ExitOK || !bridge.Fits(answer.out, answer.errOut) {
-			t.Fatalf("part %d: %d, %d bytes: %s", parts, answer.code, bridge.EncodedSize(answer.out, answer.errOut), answer.errOut)
+		if answer.code != ExitOK || !tool.Fits(answer.out, answer.errOut) {
+			t.Fatalf("part %d: %d, %d bytes: %s", parts, answer.code, tool.EncodedSize(answer.out, answer.errOut), answer.errOut)
 		}
 		var part outputPartModel
 		if err := json.Unmarshal([]byte(answer.out), &part); err != nil {

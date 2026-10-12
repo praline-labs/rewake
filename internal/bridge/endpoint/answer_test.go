@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 )
 
 // The bound test of a transport's answers (answer.go), rebuilt from
@@ -31,10 +31,10 @@ func TestTheEncoderReplacesAnAnswerThatDoesNotFit(t *testing.T) {
 	if !fitting.IsError || len(fitting.Texts) != 3 || fitting.Texts[0] != want[0] || fitting.Texts[1] != want[1] || fitting.Texts[2] != want[2] {
 		t.Fatalf("a fitting answer: %+v", fitting)
 	}
-	for _, size := range []int{bridge.ResultCap, bridge.ResultCap - 20} {
+	for _, size := range []int{tool.ResultCap, tool.ResultCap - 20} {
 		answer := childAnswer{stdout: strings.Repeat("\"", size/2)}.encoded()
 		encoded, _ := json.Marshal(answer)
-		if len(encoded) > bridge.ResultCap || !answer.IsError || len(answer.Texts) != 1 || answer.Texts[0] != overBound {
+		if len(encoded) > tool.ResultCap || !answer.IsError || len(answer.Texts) != 1 || answer.Texts[0] != overBound {
 			t.Fatalf("an answer of %d bytes: %d bytes out: %.200s", size, len(encoded), encoded)
 		}
 	}
@@ -122,8 +122,8 @@ func FuzzEveryAnswerFits(f *testing.F) {
 		{strings.Repeat("🙂", 900), strings.Repeat("🙂", 100), 2, false},
 		{strings.Repeat(`"\`, 1500), "", 0, false},
 		{dense, dense, 3, false},
-		{strings.Repeat("x", bridge.ResultCap-60), "", 0, false},
-		{strings.Repeat("x", bridge.ResultCap), "", 0, false},
+		{strings.Repeat("x", tool.ResultCap-60), "", 0, false},
+		{strings.Repeat("x", tool.ResultCap), "", 0, false},
 		{strings.Repeat("<>&", 800), "  ", 255, false},
 		{"Rewake: the endpoint's own line\n", "", 0, true},
 	} {
@@ -133,7 +133,7 @@ func FuzzEveryAnswerFits(f *testing.F) {
 		child := childAnswer{stdout: stdout, stderr: stderr, code: code, substituted: substituted}
 		answer := child.encoded()
 		encoded, err := json.Marshal(answer)
-		if err != nil || len(encoded) > bridge.ResultCap {
+		if err != nil || len(encoded) > tool.ResultCap {
 			t.Fatalf("an answer of %d bytes: %v", len(encoded), err)
 		}
 		// The whole response line the transport reads carries it too.

@@ -3,7 +3,7 @@ package cli
 import (
 	"strings"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 )
 
 // The tools a harness offers its model, built from the command table and the
@@ -25,33 +25,33 @@ var toolPositionals = map[string][]string{
 }
 
 // ToolDescriptors are the tools of the surface, in the order they are offered.
-func ToolDescriptors() []bridge.ToolDescriptor { return surfaceTable().toolDescriptors() }
+func ToolDescriptors() []tool.ToolDescriptor { return surfaceTable().toolDescriptors() }
 
-func (t *table) toolDescriptors() []bridge.ToolDescriptor {
-	tools := make([]bridge.ToolDescriptor, 0, len(toolOrder))
+func (t *table) toolDescriptors() []tool.ToolDescriptor {
+	tools := make([]tool.ToolDescriptor, 0, len(toolOrder))
 	for _, name := range toolOrder {
 		command := t.findCommand(name)
 		if command == nil {
 			continue
 		}
-		descriptor := bridge.ToolDescriptor{Name: name, Summary: command.Summary}
+		descriptor := tool.ToolDescriptor{Name: name, Summary: command.Summary}
 		for _, flag := range toolFlags[name] {
 			option, ok := t.lookupOption(command, flag)
 			if !ok {
 				continue
 			}
-			kind := bridge.ParamSwitch
+			kind := tool.ParamSwitch
 			if option.Value != "" {
-				kind = bridge.ParamValue
+				kind = tool.ParamValue
 			}
-			descriptor.Params = append(descriptor.Params, bridge.ToolParam{Name: flag, Kind: kind, Description: option.Summary})
+			descriptor.Params = append(descriptor.Params, tool.ToolParam{Name: flag, Kind: kind, Description: option.Summary})
 		}
 		for index, placeholder := range positionalNames(command) {
 			description := ""
 			if index < len(toolPositionals[name]) {
 				description = toolPositionals[name][index]
 			}
-			descriptor.Params = append(descriptor.Params, bridge.ToolParam{Name: placeholder, Kind: bridge.ParamWord, Description: description, Required: true})
+			descriptor.Params = append(descriptor.Params, tool.ToolParam{Name: placeholder, Kind: tool.ParamWord, Description: description, Required: true})
 		}
 		tools = append(tools, descriptor)
 	}

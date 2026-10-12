@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 )
 
 // The package's tests run the adapter against this test binary, started again
@@ -177,14 +177,14 @@ func speak(socket string, pid int, drop bool) error {
 
 // registered is a tool transport's answer to its probe: the tools it
 // registered, by name and digest, and whether it can show its results.
-func registered(reply Frame, tools []bridge.ToolDescriptor) Frame {
+func registered(reply Frame, tools []tool.ToolDescriptor) Frame {
 	if os.Getenv(switchOther) != "" {
 		tools = tools[1:]
 	}
 	for _, tool := range tools {
 		reply.Names = append(reply.Names, tool.Name)
 	}
-	reply.Digest, reply.State = bridge.DescriptorsDigest(tools), ToolProven
+	reply.Digest, reply.State = tool.DescriptorsDigest(tools), ToolProven
 	if os.Getenv(switchProof) != "" {
 		reply.State = ToolUnproven
 	}

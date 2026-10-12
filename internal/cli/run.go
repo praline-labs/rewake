@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/alias"
-	"github.com/praline-labs/rewake/internal/bridge"
+	launch "github.com/praline-labs/rewake/internal/alias"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -17,7 +17,7 @@ import (
 // returns the process exit code.
 func Run(catalog adapter.Catalog, argv []string, stdout, stderr io.Writer) int {
 	t := newTable(catalog)
-	if bridge.Active() {
+	if tool.Active() {
 		// A tool call: its own surface, parser path and bounded answer.
 		return runBridge(t, argv, stdout, stderr)
 	}
@@ -27,7 +27,7 @@ func Run(catalog adapter.Catalog, argv []string, stdout, stderr io.Writer) int {
 
 	// Aliases first: everything downstream sees the arguments the alias stands
 	// for, so nothing else in the CLI has to know that aliases exist.
-	aliases := alias.Load()
+	aliases := launch.Load()
 	for _, note := range aliases.Notes {
 		_, _ = fmt.Fprintln(stderr, "rewake: "+note)
 	}
@@ -208,7 +208,7 @@ func (t *table) singleProgram(argv []string) error {
 			break
 		}
 		name, _, inline := strings.Cut(strings.TrimPrefix(token, "--"), "=")
-		if name == alias.CommandFlag {
+		if name == launch.CommandFlag {
 			count++
 		}
 		if !inline && t.launchFlagTakesValue(name) {

@@ -2,7 +2,7 @@ package endpoint
 
 import (
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/channel"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 )
@@ -45,8 +45,8 @@ func (e *Endpoint) CallDenied(string) { e.tell(channel.Event{Kind: channel.Denie
 // exposure is what a result proves of one call's answer reaching the model:
 // its first text is the answer, and its size is the result's as the encoder
 // frames it. A result with no text, or shortened, proves no answer.
-func exposure(callID string, r adapter.ToolResult) bridge.Exposure {
-	evidence := bridge.Exposure{CallID: callID, Direct: r.Direct, Succeeded: r.Succeeded}
+func exposure(callID string, r adapter.ToolResult) tool.Exposure {
+	evidence := tool.Exposure{CallID: callID, Direct: r.Direct, Succeeded: r.Succeeded}
 	if r.Shortened || len(r.Texts) == 0 {
 		evidence.Shortened = true
 		return evidence
@@ -56,7 +56,7 @@ func exposure(callID string, r adapter.ToolResult) bridge.Exposure {
 		rest += text
 	}
 	evidence.Answer = []byte(r.Texts[0])
-	evidence.ResultBytes = bridge.EncodedSize(r.Texts[0], rest)
+	evidence.ResultBytes = tool.EncodedSize(r.Texts[0], rest)
 	return evidence
 }
 
@@ -66,7 +66,7 @@ func exposure(callID string, r adapter.ToolResult) bridge.Exposure {
 // the attempt is spent before anything is read or waited for, so a repeat
 // cannot retry an acknowledgment the first one dropped
 // (docs/mail-bridge-turns.md#acknowledging-a-read).
-func (e *Endpoint) complete(id string, evidence bridge.Exposure) {
+func (e *Endpoint) complete(id string, evidence tool.Exposure) {
 	c := e.calls
 	c.mu.Lock()
 	entry := c.byCall[id]
@@ -75,7 +75,7 @@ func (e *Endpoint) complete(id string, evidence bridge.Exposure) {
 		return
 	}
 	entry.completed = true
-	var ticket bridge.Ticket
+	var ticket tool.Ticket
 	used := entry.issued != nil && entry.issued.used
 	if used {
 		ticket = entry.issued.ticket
@@ -93,7 +93,7 @@ func (e *Endpoint) complete(id string, evidence bridge.Exposure) {
 	e.mu.Unlock()
 	go func() {
 		defer e.acks.Done()
-		token, err := receipt.Bound(e.cfg.Dir, e.cfg.Name, e.cfg.Epoch, bridge.CallKey(ticket.Transport, ticket.Conversation, ticket.CallID))
+		token, err := receipt.Bound(e.cfg.Dir, e.cfg.Name, e.cfg.Epoch, tool.CallKey(ticket.Transport, ticket.Conversation, ticket.CallID))
 		if err != nil {
 			// Missing or unreadable: which read the call showed is
 			// unknown, and a later call shows the letter under its own.

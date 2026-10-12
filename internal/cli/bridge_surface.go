@@ -9,7 +9,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 )
 
 // The words a tool call may run (docs/mail-bridge.md#one-implementation-and-a-narrow-surface).
@@ -65,8 +65,8 @@ func (t *table) toolCall(words []string) (parsed, error) {
 	for _, word := range words {
 		size += len(word)
 	}
-	if len(words) > bridge.MaxWords || size > bridge.MaxWordsBytes {
-		return parsed{}, &UsageError{Message: fmt.Sprintf("the rewake tool takes at most %d words of %d bytes in all; a long letter goes in parts, not in one call.", bridge.MaxWords, bridge.MaxWordsBytes)}
+	if len(words) > tool.MaxWords || size > tool.MaxWordsBytes {
+		return parsed{}, &UsageError{Message: fmt.Sprintf("the rewake tool takes at most %d words of %d bytes in all; a long letter goes in parts, not in one call.", tool.MaxWords, tool.MaxWordsBytes)}
 	}
 	result, err := t.parse(words)
 	if err != nil {

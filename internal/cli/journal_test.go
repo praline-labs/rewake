@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
@@ -71,8 +71,8 @@ func expiredCall(t *testing.T, words ...string) (Call, *Context, *bytes.Buffer, 
 	now := boottime.Now()
 	var out, errOut bytes.Buffer
 	ctx := &Context{Stdout: &out, Stderr: &errOut, scope: &callScope{
-		ticket: bridge.Ticket{Conversation: "conversation-1", Turn: "turn-1", CallID: "late-" + mail.NewID(), CalledBoot: now - 2, DeadlineBoot: now - 1, Transport: testTransport, TurnsNeverReused: true, Nonce: "nonce-late", WordsDigest: bridge.Digest(normal)},
-		words:  normal, digest: bridge.Digest(normal),
+		ticket: tool.Ticket{Conversation: "conversation-1", Turn: "turn-1", CallID: "late-" + mail.NewID(), CalledBoot: now - 2, DeadlineBoot: now - 1, Transport: testTransport, TurnsNeverReused: true, Nonce: "nonce-late", WordsDigest: tool.Digest(normal)},
+		words:  normal, digest: tool.Digest(normal),
 	}, table: testTable()}
 	return result.Call, ctx, &out, &errOut
 }

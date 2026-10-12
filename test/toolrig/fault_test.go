@@ -14,7 +14,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter/fixture"
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -239,7 +239,7 @@ func faulted(t *testing.T, s faultScenario, fc faultCase) {
 	settledBefore := s.settled(r)
 	c := r.call(words...)
 	answer := c.result.text()
-	key := bridge.CallKey(fixture.Transport, thread, c.id)
+	key := tool.CallKey(fixture.Transport, thread, c.id)
 	token, boundErr := receipt.Bound(r.dir, "api", r.self.Epoch(), key)
 	switch {
 	case c.ended:

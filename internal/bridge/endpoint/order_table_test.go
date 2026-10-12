@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 )
 
 // The table's generated orders (docs/mail-bridge-checks.md, the order test):
@@ -66,7 +66,7 @@ func TestEveryOrderOfTheTableIssuesOneTicketPerCall(t *testing.T) {
 }
 
 type asked struct {
-	ticket bridge.Ticket
+	ticket tool.Ticket
 	err    error
 }
 
@@ -79,7 +79,7 @@ func runTableOrder(t *testing.T, order []string) {
 	openTurn(served, "th", "t1")
 	results := make(chan asked, 2)
 	pending := 0
-	var tickets []bridge.Ticket
+	var tickets []tool.Ticket
 	collect := func() {
 		for ; pending > 0; pending-- {
 			select {

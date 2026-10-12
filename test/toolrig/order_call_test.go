@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter/fixture"
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
@@ -226,7 +226,7 @@ func completeFirst(r *rig, c toolCall, first string) error {
 	r.t.Helper()
 	switch first {
 	case ackBudget:
-		token, err := receipt.Bound(r.dir, "api", r.self.Epoch(), bridge.CallKey(fixture.Transport, thread, c.id))
+		token, err := receipt.Bound(r.dir, "api", r.self.Epoch(), tool.CallKey(fixture.Transport, thread, c.id))
 		if err != nil {
 			r.t.Fatalf("the call's binding: %v", err)
 		}

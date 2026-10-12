@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/state"
@@ -30,8 +30,8 @@ func readAll(t *testing.T, caller *toolCaller, words ...string) []toolRun {
 			t.Fatal("the read does not end")
 		}
 		answer := caller.run(words...)
-		if answer.code != ExitOK || !bridge.Fits(answer.out, answer.errOut) {
-			t.Fatalf("step %d: %d, %d bytes: %s", step, answer.code, bridge.EncodedSize(answer.out, answer.errOut), answer.errOut)
+		if answer.code != ExitOK || !tool.Fits(answer.out, answer.errOut) {
+			t.Fatalf("step %d: %d, %d bytes: %s", step, answer.code, tool.EncodedSize(answer.out, answer.errOut), answer.errOut)
 		}
 		answers = append(answers, answer)
 		words = nextFrom(answer.out)
@@ -43,8 +43,8 @@ func readAll(t *testing.T, caller *toolCaller, words ...string) []toolRun {
 	return answers
 }
 
-func whole(answer toolRun) bridge.Exposure {
-	return bridge.Exposure{CallID: answer.callID, Direct: true, Succeeded: true, ResultBytes: bridge.EncodedSize(answer.out, answer.errOut), Answer: []byte(answer.out)}
+func whole(answer toolRun) tool.Exposure {
+	return tool.Exposure{CallID: answer.callID, Direct: true, Succeeded: true, ResultBytes: tool.EncodedSize(answer.out, answer.errOut), Answer: []byte(answer.out)}
 }
 
 // A letter read through the tool is read once every part of it reached the
@@ -64,7 +64,7 @@ func TestAToolReadIsReadOnlyWhenEveryPartArrived(t *testing.T) {
 		}
 		token = part.Receipt
 		for _, letter := range part.Letters {
-			if letter.End-letter.Start > bridge.BodyCap || letter.Total != len(longText) {
+			if letter.End-letter.Start > tool.BodyCap || letter.Total != len(longText) {
 				t.Fatalf("part %+v", letter)
 			}
 			text.WriteString(letter.Text)

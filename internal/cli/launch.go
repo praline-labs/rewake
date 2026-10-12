@@ -10,11 +10,11 @@ import (
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/alias"
+	launch "github.com/praline-labs/rewake/internal/alias"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/wrap"
+	host "github.com/praline-labs/rewake/internal/wrap"
 )
 
 // handleLaunch starts one harness as a rewake session. It returns only when the
@@ -63,7 +63,7 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 			onClaimed = checkout.claimed(dir)
 		}
 
-		code, err := wrap.Run(context.Background(), wrap.Request{
+		code, err := host.Run(context.Background(), host.Request{
 			OnTurn: func(ctx context.Context, self registry.Session, result adapter.TurnEnd) error {
 				return ReportCompletion(ctx, dir, self, result)
 			},
@@ -82,7 +82,7 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 			Command:   program,
 			// The mail tool's endpoint runs the CLI's own checks
 			// (docs/mail-bridge.md).
-			MailTool: &wrap.MailTool{Words: ctx.table.toolWords, Acknowledge: AcknowledgeRead, Check: ctx.table.toolCheck, Tools: ctx.table.toolDescriptors()},
+			MailTool: &host.MailTool{Words: ctx.table.toolWords, Acknowledge: AcknowledgeRead, Check: ctx.table.toolCheck, Tools: ctx.table.toolDescriptors()},
 
 			OnClaimed: onClaimed,
 		})
@@ -90,7 +90,7 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 			checkout.settle(err != nil || code != 0)
 		}
 		if err != nil {
-			var mainTaken *wrap.MainTakenError
+			var mainTaken *host.MainTakenError
 			if errors.As(err, &mainTaken) {
 				return &UsageError{Command: call.Command, Message: mainTaken.Error()}
 			}
@@ -142,7 +142,7 @@ func refuseNestedLaunch(call Call) error {
 // it claims to be: the harness word says that, and a wrapper need not answer
 // --version.
 func launchProgram(call Call) (string, error) {
-	program, given := call.Flags[alias.CommandFlag]
+	program, given := call.Flags[launch.CommandFlag]
 	if !given {
 		return "", nil
 	}
@@ -215,7 +215,7 @@ func roleFlags() []string {
 // projectForbidden are the rewake flags an alias in a project file may not
 // set: the role flags, and the program a launch starts.
 func projectForbidden() []string {
-	return append(roleFlags(), alias.CommandFlag)
+	return append(roleFlags(), launch.CommandFlag)
 }
 
 // singleUseFlags asks a harness which of its flags it takes at most once. The

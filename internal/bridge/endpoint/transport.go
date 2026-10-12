@@ -8,7 +8,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
@@ -39,7 +39,7 @@ type ToolCall struct {
 
 // maxCall bounds a call's request before it is parsed: the largest arguments
 // a descriptor takes, and the binding beside them.
-const maxCall = bridge.MaxWordsBytes + 16<<10
+const maxCall = tool.MaxWordsBytes + 16<<10
 
 // transportPeer is the process a transport's requests must come from.
 type transportPeer struct {
@@ -119,7 +119,7 @@ func (e *Endpoint) serveCall(conn *net.UnixConn, reader *bufio.Reader, writer *l
 
 // runCall takes one call from its arguments to its answer.
 func (e *Endpoint) runCall(call ToolCall, arrived int64) ToolAnswer {
-	descriptor, ok := bridge.FindTool(e.cfg.Tools, call.Tool)
+	descriptor, ok := tool.FindTool(e.cfg.Tools, call.Tool)
 	if !ok {
 		return substitute("Rewake: this run offers no tool named " + quoted(call.Tool) + ", so nothing ran.\n").encoded()
 	}
@@ -143,7 +143,7 @@ func (e *Endpoint) runCall(call ToolCall, arrived int64) ToolAnswer {
 	e.step("ticket")
 	ticket, err := e.issue(TicketRequest{
 		Transport: e.cfg.Transport, Conversation: call.Conversation, Turn: call.Turn, CallID: call.CallID,
-		TurnsNeverReused: call.TurnsNeverReused, Words: normalized, Digest: bridge.Digest(normalized), Arrived: arrived,
+		TurnsNeverReused: call.TurnsNeverReused, Words: normalized, Digest: tool.Digest(normalized), Arrived: arrived,
 	})
 	if err != nil {
 		return substitute("Rewake: the wrapper issued no ticket for this call (" + err.Error() + "), so nothing ran; run the same words in the shell.\n").encoded()

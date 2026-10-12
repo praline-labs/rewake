@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 )
 
@@ -72,7 +72,7 @@ func Listen(path string, cfg Config) (*Endpoint, error) {
 		cfg.Descends = proc.Default.Descends
 	}
 	if cfg.Gate == nil {
-		cfg.Gate = bridge.NewGate(nil)
+		cfg.Gate = tool.NewGate(nil)
 	}
 	_ = os.Remove(path)
 	listener, err := net.ListenUnix("unix", &net.UnixAddr{Name: path, Net: "unix"})
@@ -116,7 +116,7 @@ func (e *Endpoint) readsOffNow() string {
 }
 
 // Gate is the gate the endpoint's acknowledgments enter.
-func (e *Endpoint) Gate() *bridge.Gate { return e.cfg.Gate }
+func (e *Endpoint) Gate() *tool.Gate { return e.cfg.Gate }
 
 // Close stops taking calls, closes every connection but those it drains, and
 // waits for the transport's calls under way and for the acknowledgments under

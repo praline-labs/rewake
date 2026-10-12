@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 )
 
@@ -80,7 +80,7 @@ func TestTheLastTicketARunRemembersIsIssuedOnce(t *testing.T) {
 	close(start)
 	both.Wait()
 	close(results)
-	var last bridge.Ticket
+	var last tool.Ticket
 	issued := 0
 	for got := range results {
 		switch {

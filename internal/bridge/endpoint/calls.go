@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/channel"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/proc"
@@ -49,7 +49,7 @@ type call struct {
 // was bound to: its proof is that conversation's, whichever the run holds
 // when it is used.
 type issued struct {
-	ticket bridge.Ticket
+	ticket tool.Ticket
 	used   bool
 	pid    int
 	start  uint64
@@ -151,25 +151,25 @@ func (e *Endpoint) observedWords(words []string, ok bool) (string, string) {
 	if err != nil {
 		return "", "the call's words do not run through the tool"
 	}
-	return bridge.Digest(normalized), ""
+	return tool.Digest(normalized), ""
 }
 
 // issue matches a transport's call with the harness's observation of the
 // same call, and issues its one ticket.
-func (e *Endpoint) issue(asked TicketRequest) (bridge.Ticket, error) {
+func (e *Endpoint) issue(asked TicketRequest) (tool.Ticket, error) {
 	thread := asked.Conversation
 	if e.cfg.Refusal != "" {
-		return bridge.Ticket{}, errors.New(e.cfg.Refusal)
+		return tool.Ticket{}, errors.New(e.cfg.Refusal)
 	}
 	if asked.Transport != e.cfg.Transport || asked.CallID == "" {
-		return bridge.Ticket{}, errors.New("the call names another transport or no native call")
+		return tool.Ticket{}, errors.New("the call names another transport or no native call")
 	}
 	c := e.calls
 	c.mu.Lock()
 	entry := c.entry(asked.CallID, c.now())
 	c.mu.Unlock()
 	if entry == nil {
-		return bridge.Ticket{}, errors.New("too many calls are waiting for their tickets")
+		return tool.Ticket{}, errors.New("too many calls are waiting for their tickets")
 	}
 	timer := time.NewTimer(e.cfg.Wait)
 	defer timer.Stop()
@@ -177,20 +177,20 @@ func (e *Endpoint) issue(asked TicketRequest) (bridge.Ticket, error) {
 	case <-entry.ready:
 	case <-timer.C:
 		// The observer is gone: every call is refused until it returns.
-		return bridge.Ticket{}, fmt.Errorf("the harness did not report this call within %s", e.cfg.Wait)
+		return tool.Ticket{}, fmt.Errorf("the harness did not report this call within %s", e.cfg.Wait)
 	case <-e.done:
-		return bridge.Ticket{}, errors.New("the wrapper is closing")
+		return tool.Ticket{}, errors.New("the wrapper is closing")
 	}
 	c.mu.Lock()
 	seen := *entry.observed
 	c.mu.Unlock()
 	turn, err := e.turnOf(asked, seen)
 	if err != nil {
-		return bridge.Ticket{}, err
+		return tool.Ticket{}, err
 	}
 	nonce := make([]byte, 16)
 	if _, err := rand.Read(nonce); err != nil {
-		return bridge.Ticket{}, err
+		return tool.Ticket{}, err
 	}
 	readsOff := e.readsOffNow()
 	c.mu.Lock()
@@ -198,15 +198,15 @@ func (e *Endpoint) issue(asked TicketRequest) (bridge.Ticket, error) {
 	started, open := c.open[seen.turn]
 	switch {
 	case entry.observed.refusal != "":
-		return bridge.Ticket{}, errors.New(entry.observed.refusal)
+		return tool.Ticket{}, errors.New(entry.observed.refusal)
 	case entry.issued != nil || c.spent[asked.CallID]:
-		return bridge.Ticket{}, errors.New("this call already has its ticket")
+		return tool.Ticket{}, errors.New("this call already has its ticket")
 	case len(c.spent) >= maxSpent:
-		return bridge.Ticket{}, errors.New("this run has issued all the tickets it can remember")
+		return tool.Ticket{}, errors.New("this run has issued all the tickets it can remember")
 	case seen.digest != asked.Digest:
-		return bridge.Ticket{}, errors.New("the harness recorded other words for this call")
+		return tool.Ticket{}, errors.New("the harness recorded other words for this call")
 	case !open:
-		return bridge.Ticket{}, errors.New("the call's turn is completed or was never seen to start")
+		return tool.Ticket{}, errors.New("the call's turn is completed or was never seen to start")
 	}
 	// The ticket's time says the call belongs to a turn still open: so it
 	// is taken under the gate, and only while no end was noted since its
@@ -215,9 +215,9 @@ func (e *Endpoint) issue(asked TicketRequest) (bridge.Ticket, error) {
 	// (docs/mail-bridge-turns.md#a-turns-end-meets-its-calls).
 	now, ok := e.cfg.Gate.Stamp(min(seen.at, started))
 	if !ok {
-		return bridge.Ticket{}, errors.New("the call's turn ended before its ticket was issued")
+		return tool.Ticket{}, errors.New("the call's turn ended before its ticket was issued")
 	}
-	ticket := bridge.Ticket{
+	ticket := tool.Ticket{
 		Capability: e.cfg.Capability, Conversation: seen.conversation, Turn: turn, CallID: asked.CallID,
 		CalledBoot: now, DeadlineBoot: now + int64(e.cfg.Span), WordsDigest: seen.digest,
 		Transport: e.cfg.Transport, TurnsNeverReused: asked.TurnsNeverReused, Nonce: hex.EncodeToString(nonce), ReadsOff: readsOff,
@@ -241,7 +241,7 @@ func (e *Endpoint) turnOf(asked TicketRequest, seen observation) (string, error)
 }
 
 // confirm validates a ticket for the child presenting it, once.
-func (e *Endpoint) confirm(conn *net.UnixConn, ticket bridge.Ticket) error {
+func (e *Endpoint) confirm(conn *net.UnixConn, ticket tool.Ticket) error {
 	peer, err := peerOf(conn)
 	if err != nil {
 		return err

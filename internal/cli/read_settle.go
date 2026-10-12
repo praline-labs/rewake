@@ -3,7 +3,7 @@ package cli
 import (
 	"context"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/core/role"
@@ -17,10 +17,10 @@ import (
 // model whole: mail.Acknowledge, given the wrapper's observation in the core's
 // terms. Whether the result is whole is decided first, as before anything is
 // read, and the digest of its text is only compared once the record is.
-func AcknowledgeRead(dir, name, epoch, token string, evidence bridge.Exposure, gate bridge.EndGate) error {
+func AcknowledgeRead(dir, name, epoch, token string, evidence tool.Exposure, gate tool.EndGate) error {
 	read := mail.ReadEvidence{CallID: evidence.CallID, Whole: evidence.Whole()}
 	if evidence.Answer != nil {
-		read.AnswerDigest = bridge.AnswerDigest(evidence.Answer)
+		read.AnswerDigest = tool.AnswerDigest(evidence.Answer)
 	}
 	return mail.Acknowledge(dir, name, epoch, token, read, gate)
 }

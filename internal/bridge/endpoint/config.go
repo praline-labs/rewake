@@ -3,7 +3,7 @@ package endpoint
 import (
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/channel"
 )
 
@@ -27,15 +27,15 @@ type Config struct {
 	Check func([]string) ([]string, string)
 	// Tools are the tools a transport offers, from the command table; a
 	// call names one of them.
-	Tools []bridge.ToolDescriptor
+	Tools []tool.ToolDescriptor
 	// Executable is the image a transport's call runs in, the wrapper's own
 	// unless a test names another.
 	Executable string
 	// Acknowledge acknowledges a read's parts on the evidence of a result;
 	// the CLI's AcknowledgeRead.
-	Acknowledge func(dir, name, epoch, token string, evidence bridge.Exposure, gate bridge.EndGate) error
+	Acknowledge func(dir, name, epoch, token string, evidence tool.Exposure, gate tool.EndGate) error
 	// Gate orders acknowledgments against this run's captured ends.
-	Gate *bridge.Gate
+	Gate *tool.Gate
 	// Channel takes the channel events the endpoint observes; nil drops
 	// them.
 	Channel func(channel.Event)

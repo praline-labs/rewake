@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 
-	"github.com/praline-labs/rewake/internal/alias"
+	launch "github.com/praline-labs/rewake/internal/alias"
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/role"
@@ -224,7 +224,7 @@ const nestedLaunchHelp = "Refused with exit 2 from a shell inside a rewake sessi
 // launchCommand builds the command that starts one harness.
 func launchCommand(h adapter.Harness) *Command {
 	notes := append([]string{}, h.Notes()...)
-	notes = append(notes, nestedLaunchHelp, adapter.SettingsHelp, alias.Help)
+	notes = append(notes, nestedLaunchHelp, adapter.SettingsHelp, launch.Help)
 	return &Command{
 		Name:           h.ID(),
 		Args:           "[" + h.ID() + " args...]",

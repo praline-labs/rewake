@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter/fixture"
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 )
 
@@ -173,7 +173,7 @@ func TestOneSetOfWordsThroughTheToolAndTheShellIsOneOperation(t *testing.T) {
 // boundToken is the receipt c's binding names.
 func boundToken(r *rig, c toolCall) string {
 	r.t.Helper()
-	token, err := receipt.Bound(r.dir, "api", r.self.Epoch(), bridge.CallKey(fixture.Transport, thread, c.id))
+	token, err := receipt.Bound(r.dir, "api", r.self.Epoch(), tool.CallKey(fixture.Transport, thread, c.id))
 	if err != nil {
 		r.t.Fatal(err)
 	}

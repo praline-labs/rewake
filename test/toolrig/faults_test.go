@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/bridge"
+	tool "github.com/praline-labs/rewake/internal/bridge"
 	"github.com/praline-labs/rewake/internal/cli"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
@@ -221,7 +221,7 @@ func toolOf(words []string) (string, json.RawMessage) {
 	if len(words) == 0 {
 		return "", nil
 	}
-	descriptor, ok := bridge.FindTool(cli.ToolDescriptors(), words[0])
+	descriptor, ok := tool.FindTool(cli.ToolDescriptors(), words[0])
 	if !ok {
 		return words[0], nil
 	}
@@ -246,7 +246,7 @@ func toolOf(words []string) (string, json.RawMessage) {
 			}
 		}
 		switch {
-		case kind == "" || kind == bridge.ParamSwitch:
+		case kind == "" || kind == tool.ParamSwitch:
 			arguments[name] = true
 		case inline:
 			arguments[name] = value
@@ -256,7 +256,7 @@ func toolOf(words []string) (string, json.RawMessage) {
 		}
 	}
 	for _, param := range descriptor.Params {
-		if param.Kind == bridge.ParamWord && len(positionals) > 0 {
+		if param.Kind == tool.ParamWord && len(positionals) > 0 {
 			arguments[param.Name], positionals = positionals[0], positionals[1:]
 		}
 	}
