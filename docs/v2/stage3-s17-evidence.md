@@ -1,7 +1,8 @@
 # S17 evidence: the live upgrade gate and the cost of the hash
 
 Records of what was run and seen on October 12, 2026, for S17 of stage 3: the live gate of
-the clearing of 1.x ([stage3-upgrade.md](stage3-upgrade.md#the-tests)) and the timing pass
+the clearing of 1.x ([stage3-upgrade.md](stage3-upgrade.md#the-tests)), run again on the fixed
+candidate after part 3's first review, and the timing pass
 of the build id ([stage3-state.md](stage3-state.md#the-cost-of-the-hash)). They are
 records: not edited afterwards, superseded only by a newer record beside them.
 
@@ -48,6 +49,39 @@ stub, so its record, its unread letter and its sockets stay. The candidate: stde
 `rewake: removed the state of rewake 1.x (1 room, 1 unread letter, 0 undelivered reports).`,
 then a normal start; `rooms/` gone. A record whose wrapper is missing from `/proc` is
 admitted as ended, and its letter is counted.
+
+## The live gate on the fixed candidate
+
+The first review of part 3 found the gate above silent on unrelated files with content and
+on real worktree storage (G1), so it was run again on the fixed candidate, the same day, by
+the orchestrating session on a fresh private base as before.
+
+- **1.x**: the same binary, SHA-256 `ad96c7bc…bdf30`.
+- **2.0 candidate**: commit `e654f0d`, from `git archive` and built as above; SHA-256
+  `1c5c07e32ac4516dfa03f777d25746a301267640b3e301427f498db8794cb188` for the main run and
+  `ca552f004fad6c6c6ea622ba5831bb3c9f88296e47f4e40bb76ea03957801da2` for the variant, built
+  separately in its own base (the `built` time differs).
+
+Added to the run: files with content inside the base beside `rooms/` (`notes/blob.bin`, 4096
+random bytes, and `unrelated.txt`), in `work/` and in `home/`; and a real 1.x worktree — a
+1.x session launched with `--worktree=gate` in a git repository under `work/`, a commit made
+in the worktree while it ran (1.x removes an untouched worktree at the session's end), then
+the session ended. 47 files hashed by SHA-256 before and after: the worktree's files and its
+`.git` file, its record `gate.json`, the storage lock, the repository's
+`.git/worktrees/gate` metadata and the unrelated files.
+
+- While the 1.x session `b` runs: the candidate exits **1** with
+  `Rewake: a rewake 1.x session runs: b-claude in room default.` /
+  `rewake 2.0 does not read the mail of rewake 1.x, so end those sessions and launch again.`;
+  all 47 hashes as before; the 1.x tree as before but for the running wrapper's observation
+  file and its sockets.
+- After `b` ended: `rewake: removed the state of rewake 1.x (1 room, 0 unread letters, 0
+  undelivered reports).`, then `rewake: room default, role main: selected explicitly with
+  --main`; the base holds `notes/`, `unrelated.txt` and `v2/` only; all 47 hashes as before;
+  `git worktree list` exits 0 and still shows the worktree at `[gate]`; the session ended at
+  the stub's kill with exit 143.
+- The variant, a SIGKILLed 1.x wrapper with an unread letter: `rewake: removed the state of
+  rewake 1.x (1 room, 1 unread letter, 0 undelivered reports).`, then a normal start.
 
 ## The cost of the hash
 
