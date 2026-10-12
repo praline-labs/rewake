@@ -203,6 +203,11 @@ S17's write seam under the room's build lease. Each kind joins the one list of r
 kinds (`core/mail/records.go`), and one strict reader per kind serves every reader below
 — recovery, `stopState`, retention and the views (Q6 of
 [stage3-decision-build.md](stage3-decision-build.md#q6-validity-disposal-and-unknown-records)).
+A strict reader takes one JSON value, refuses a field its record has no place for, and
+refuses anything after the value but JSON's own whitespace — a closing delimiter left
+there included (`strictJSON`, `core/mail/decision_records.go`). A decision's observation
+of a listing keeps its entries even when there are none: an empty listing is kept apart
+from none.
 
 | Record | Path | Written when | Holds |
 |---|---|---|---|

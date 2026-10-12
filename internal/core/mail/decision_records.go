@@ -3,7 +3,6 @@ package mail
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -134,15 +133,17 @@ func toldPath(dir, name, report, whom string) string {
 }
 
 // strictJSON decodes one JSON value into v, refusing fields v has no place
-// for and anything after it.
+// for and anything after it but JSON's own whitespace. The decoder's More
+// is no such check: it asks about the next element of an array or object,
+// and answers false on a closing delimiter left after the value.
 func strictJSON(raw []byte, v any) error {
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(v); err != nil {
 		return err
 	}
-	if decoder.More() {
-		return errors.New("more than one record")
+	if rest := bytes.TrimLeft(raw[decoder.InputOffset():], " \t\r\n"); len(rest) > 0 {
+		return fmt.Errorf("%d bytes follow the record", len(rest))
 	}
 	return nil
 }

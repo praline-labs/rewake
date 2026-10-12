@@ -39,7 +39,9 @@ type Observation struct {
 	Path    string          `json:"path"`
 	Bytes   []byte          `json:"bytes,omitempty"`
 	SHA256  string          `json:"sha256,omitempty"`
-	Entries []ObservedEntry `json:"entries,omitempty"`
+	// Entries is set for a listing alone, empty when it listed nothing:
+	// omitzero keeps an empty listing apart from none.
+	Entries []ObservedEntry `json:"entries,omitzero"`
 	Info    *ObservedInfo   `json:"info,omitempty"`
 	Err     *ObservedError  `json:"err,omitempty"`
 	// Lstat is what lstat answered of the path when the read failed.
@@ -147,9 +149,21 @@ func (c *capture) Observations() ([]Observation, error) {
 	for i, o := range c.log {
 		o.Bytes = slices.Clone(o.Bytes)
 		o.Entries = slices.Clone(o.Entries)
+		o.Info, o.Err = clonePtr(o.Info), clonePtr(o.Err)
+		if o.Lstat != nil {
+			o.Lstat = &ObservedStat{Info: clonePtr(o.Lstat.Info), Err: clonePtr(o.Lstat.Err)}
+		}
 		out[i] = o
 	}
 	return out, nil
+}
+
+func clonePtr[T any](p *T) *T {
+	if p == nil {
+		return nil
+	}
+	v := *p
+	return &v
 }
 
 func (c *capture) failed(op, path string, err error) Observation {
