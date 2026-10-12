@@ -143,11 +143,16 @@ run, each when it did not decide verified, one note when they are the same run �
 note whole, its id and text included; a later change of role or a later main never
 retargets them. A main that cannot be read refuses a new D; a room positively without a
 live main owes no main's note. Each note is a `Note`, published once as a report is
-published (`publishWith`, `core/mail/journal_held.go`): in one section of the told run's
+published (`publishNote`, `core/mail/decision_install.go`, in the section
+`recipientSection` of `core/mail/journal_held.go`): in one section of the told run's
 mailbox lock, its run read there, under that run's once marks — idempotent while the run
 lives, since a live run's once marks are not swept (`sweepOnce`), and answered ended,
-writing nothing, once it has ended. A note to the sender's own mailbox is published
-through the already-held lock, never by taking it again. After the
+writing nothing, once it has ended. Its run is read more strictly than a report's
+(`noteRun`): published only when that run's record is there and its session alive;
+answered ended only when its process is proven ended (`registry.ObserveRun`), whatever
+holds the name now or none; anything else — a record that does not read, a liveness that
+cannot be told — leaves the note owed, with nothing recorded. A note to the sender's own
+mailbox is published through the already-held lock, never by taking it again. After the
 answer — written now, written before, or the run proven ended — the barrier records
 `decisions/<R-id>.told-recipient` or `.told-main` (write-once), and later barriers stop
 asking; no other error, a failed liveness read included, is taken for an ended run. A

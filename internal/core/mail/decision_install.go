@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -103,7 +105,7 @@ func (w world) tellNote(ctx context.Context, name string, d Decision, entry Deci
 		return unknownRead(path, err)
 	}
 	answer, err := w.publishNote(ctx, name, entry.Note)
-	if err != nil {
+	if err != nil || answer == "" {
 		return nil
 	}
 	note := entry.Note
@@ -116,28 +118,51 @@ func (w world) tellNote(ctx context.Context, name string, d Decision, entry Deci
 }
 
 // publishNote publishes a note as a report is published — inside its
-// recipient's lock, the run read there, under the once marks, through the
-// held lock when it is to name itself — and answers what came of it.
+// recipient's lock, under the once marks, through the held lock when it is to
+// name itself — and answers what came of it. Its run is read there too, more
+// strictly than a report's (noteRun): "" is a run not known to be running or
+// ended, which leaves the note owed rather than tell it run-ended for good.
 func (w world) publishNote(ctx context.Context, name string, note Message) (string, error) {
-	wrote := false
 	put := world.putOnce
 	if note.To == name {
 		put = world.putLocal
 	}
-	published, err := w.publishWith(ctx, name, note, func(w world, m Message) error {
-		wrote = true
-		return put(w, m)
+	answer := ""
+	err := w.recipientSection(ctx, name, note.To, func() error {
+		switch noteRun(w.dir, note) {
+		case proc.IdentityEnded:
+			answer = ToldEnded
+			return nil
+		case proc.IdentityUnknown:
+			return nil
+		}
+		w.publicationStep(PublicationAdmitted, note)
+		answer = ToldBefore
+		return w.publishMarked(note, func(w world, m Message) error {
+			answer = ToldWritten
+			return put(w, m)
+		})
 	})
-	switch {
-	case err != nil:
+	if err != nil {
 		return "", err
-	case !published:
-		return ToldEnded, nil
-	case wrote:
-		return ToldWritten, nil
-	default:
-		return ToldBefore, nil
 	}
+	return answer, nil
+}
+
+// noteRun is what the run a note is to is found to be, inside its section: a
+// note is told run-ended only on proof (Q11). The record of that run there
+// and its session alive is running; its process proven ended — whatever holds
+// the name now, or none — is ended; anything else, a record that does not
+// read or a liveness that cannot be told among them, is unknown.
+func noteRun(dir string, note Message) proc.IdentityEvidence {
+	session, err := registry.Load(dir, note.To)
+	if err == nil && session.Epoch() == note.ToEpoch && session.Alive() {
+		return proc.IdentityAlive
+	}
+	if (err == nil || errors.Is(err, registry.ErrNotFound)) && registry.ObserveRun(note.ToEpoch) == proc.IdentityEnded {
+		return proc.IdentityEnded
+	}
+	return proc.IdentityUnknown
 }
 
 // installed says the installation has nothing left that it could fail on:

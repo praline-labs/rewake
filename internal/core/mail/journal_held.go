@@ -89,21 +89,28 @@ func (w world) publishReport(ctx context.Context, name string, report Message) (
 
 // publishWith is publishReport's section with the letter put by put.
 func (w world) publishWith(ctx context.Context, name string, report Message, put func(world, Message) error) (bool, error) {
-	if report.To == name {
-		return w.publishAdmitted(report, put)
-	}
-	wait, cancel := context.WithTimeout(ctx, recipientLockWait)
-	defer cancel()
 	published := false
-	err := w.lock(wait, report.To, func() error {
+	err := w.recipientSection(ctx, name, report.To, func() error {
 		var err error
 		published, err = w.publishAdmitted(report, put)
 		return err
 	})
-	if errors.Is(err, state.ErrMailboxBusy) {
-		return false, fmt.Errorf("the mailbox of %s was busy, so the report to it was not published yet: %w", report.To, err)
-	}
 	return published, err
+}
+
+// recipientSection runs fn inside the lock of the mailbox to, or inside the
+// one already held when to is name's own.
+func (w world) recipientSection(ctx context.Context, name, to string, fn func() error) error {
+	if to == name {
+		return fn()
+	}
+	wait, cancel := context.WithTimeout(ctx, recipientLockWait)
+	defer cancel()
+	err := w.lock(wait, to, fn)
+	if errors.Is(err, state.ErrMailboxBusy) {
+		return fmt.Errorf("the mailbox of %s was busy, so the report to it was not published yet: %w", to, err)
+	}
+	return err
 }
 
 // publishAdmitted publishes a report whose recipient's run it reads first,
