@@ -28,6 +28,9 @@ type awaitedView struct {
 	Text      string     `json:"text"`
 	// AddendumTo names the task this one adds to.
 	AddendumTo string `json:"addendumTo,omitempty"`
+	// Decided is the decision on a report that answers it, delivery
+	// unproven: owed until its operation's tail closes the wait, closed after.
+	Decided *awaitedDecision `json:"decided,omitempty"`
 	// nested is an addendum listed under its task.
 	nested bool
 }
@@ -55,8 +58,31 @@ func afterTheirTask(messages []awaitedView) []awaitedView {
 	return ordered
 }
 
+// awaitedDecision is the decision on the report that answers a message.
+type awaitedDecision struct {
+	ID       string       `json:"id"`
+	Report   string       `json:"report"`
+	Choice   string       `json:"choice"`
+	By       deciderModel `json:"by"`
+	Closed   bool         `json:"closed"`
+	Delivery string       `json:"delivery"`
+	Resent   string       `json:"resent,omitempty"`
+}
+
+func awaitedDecisionOf(mark *mail.DecisionMark) *awaitedDecision {
+	if mark == nil {
+		return nil
+	}
+	return &awaitedDecision{
+		ID: mark.Decision, Report: mark.Report, Choice: mark.Choice, Closed: mark.Closed, Delivery: "unproven", Resent: mark.Resent,
+		By: deciderModel{Kind: mark.By.Kind, Name: mark.By.Name, Run: mark.By.Run, Verified: mark.By.Verified},
+	}
+}
+
 // coming says whether a report on it can still arrive.
-func (v awaitedView) coming() bool { return v.Gone == "" && v.State != mail.StageFailed }
+func (v awaitedView) coming() bool {
+	return v.Gone == "" && v.State != mail.StageFailed && v.State != mail.StageClosed
+}
 
 type awaitedRecipient struct {
 	Name     string        `json:"name"`
@@ -122,7 +148,7 @@ func showAwaited(ctx *Context, dir string, session registry.Session, epoch strin
 		view := awaitedView{
 			ID: message.ID, Kind: mail.KindOf(message.Message), CreatedAt: message.CreatedAt,
 			State: message.Stage, Detail: message.Detail, Text: message.Text,
-			Resumable: message.Resumable,
+			Resumable: message.Resumable, Decided: awaitedDecisionOf(message.Decided),
 		}
 		if message.AddendumTo != "" {
 			// Under the task as it is now, an edit's replacement included,
@@ -210,6 +236,14 @@ func awaitedState(recipient string, message awaitedView) string {
 	case "replaced":
 		return "no report coming: " + recipient + " was replaced by a new run"
 	}
+	// A decided report was the run's last word on it: what came before —
+	// pending, stopped — is older than the decision.
+	if d := message.Decided; d != nil && message.State != mail.StageClosed {
+		if d.Resent != "" {
+			return fmt.Sprintf("decided, still owed: report %s %s by decision %s of %s, sent again as %s", d.Report, choiceText(d.Choice), d.ID, deciderText(d.By), d.Resent)
+		}
+		return fmt.Sprintf("decided, still owed: report %s %s by decision %s of %s, delivery unproven", d.Report, choiceText(d.Choice), d.ID, deciderText(d.By))
+	}
 	detail := func(prefix string) string {
 		if line := mail.Preview(message.Detail); line != "" {
 			return prefix + ": " + line
@@ -231,9 +265,10 @@ func awaitedState(recipient string, message awaitedView) string {
 		return detail("stopped")
 	case mail.StageFailed:
 		return detail("not delivered, no report coming")
-	default:
-		return "read, being worked on"
+	case mail.StageClosed:
+		return fmt.Sprintf("closed by decision %s of %s, delivery unproven: no report is proven to have reached you, and none is coming", message.Decided.ID, deciderText(message.Decided.By))
 	}
+	return "read, being worked on"
 }
 
 func plural(count int, noun string) string {

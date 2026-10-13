@@ -271,7 +271,7 @@ func (w world) tellMain(name string, stop openStop) {
 	}
 	note := Message{
 		ID: stop.id, From: name, FromEpoch: from, To: main.Name, ToEpoch: main.Epoch(), Kind: Note, CreatedAt: time.Now(),
-		Text: fmt.Sprintf("%s stopped changing its mailbox: %s. Letters to it still arrive; it reads and reports nothing until evidence settles the cause.", name, stop.describe(w.dir, name)),
+		Text: fmt.Sprintf("%s stopped changing its mailbox: %s. Letters to it still arrive; it reads and reports nothing until evidence settles the cause.", name, stop.describe(w.dir, name)) + w.decideHint(name, stop),
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), recipientLockWait)
 	defer cancel()
@@ -279,6 +279,28 @@ func (w world) tellMain(name string, stop openStop) {
 		return
 	}
 	_ = w.publish(stop.path(w.dir, name)+toldSuffix, []byte(main.Name+" "+main.Epoch()+"\n"))
+}
+
+// decideHint says who can settle an occurrence and with what words, when a
+// decision can (docs/v2/stage3-decision.md#the-command): the report's
+// recipient run, from its own shell or the rewake tool, or the person from
+// outside every session. An occurrence about no report, or one whose report
+// is no subject, no decision settles.
+func (w world) decideHint(name string, stop openStop) string {
+	report := stop.reportOf()
+	switch {
+	case stop.unreadable != nil:
+		return " No decision settles it: its record does not read."
+	case report == "":
+		return " No decision settles it: the record names no one report."
+	}
+	plan, err := w.subjectOf(name, report)
+	if err != nil {
+		return fmt.Sprintf(" No decision settles it: %v.", err)
+	}
+	s := plan.subject
+	return fmt.Sprintf(" %s (run %s) decides whether report %s reached it, from its own shell or the rewake tool, or the person does from outside every session: rewake decide %s %s --arrived, or rewake decide %s %s --not-arrived to send it again.",
+		s.Recipient, s.RecipientRun, report, name, report, name, report)
 }
 
 // roomMainOf is the room's live main, read without the cleanup a lookup does:

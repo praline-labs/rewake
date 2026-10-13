@@ -255,7 +255,7 @@ type RecordedStopError struct {
 }
 
 func (e *RecordedStopError) Error() string {
-	return fmt.Sprintf("%s stopped changing its mailbox: %s; the next turn end looks again", e.Name, e.Cause)
+	return fmt.Sprintf("%s stopped changing its mailbox: %s; the next turn end looks again, and rewake decide %s lists the reports a decision can settle", e.Name, e.Cause, e.Name)
 }
 
 func recordedStopError(dir, name string, open []openStop) error {

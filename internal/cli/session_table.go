@@ -61,7 +61,25 @@ func sessionTable(room string, sessions []sessionView, visible bool) []string {
 			lines = append(lines, fmt.Sprintf("Deliveries to %s wait: %s", session.Name, session.Telemetry.DeliveryHold.Detail))
 		}
 	}
+	for _, session := range sessions {
+		if session.Stopped != nil {
+			lines = append(lines, stoppedLine(session.Name, *session.Stopped))
+		}
+	}
 	return lines
+}
+
+// stoppedLine says a mailbox stopped changing, and what settles it: a
+// decision, listed by rewake decide, or the person's repair.
+func stoppedLine(name string, stopped stoppedView) string {
+	var parts []string
+	if n := len(stopped.Decidable); n > 0 {
+		parts = append(parts, fmt.Sprintf("%s a decision can settle (rewake decide %s)", plural(n, "report"), name))
+	}
+	if stopped.Undecidable > 0 {
+		parts = append(parts, fmt.Sprintf("%s no decision settles", plural(stopped.Undecidable, "cause")))
+	}
+	return fmt.Sprintf("%s stopped changing its mailbox: %s.", name, strings.Join(parts, "; "))
 }
 
 func stateCells(snapshot *session.Snapshot) []string {

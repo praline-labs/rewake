@@ -24,6 +24,7 @@ import (
 type decideLab struct {
 	dir    string
 	web    registry.Session
+	api    registry.Session
 	report mail.Message
 }
 
@@ -34,8 +35,11 @@ func newDecideLab(t *testing.T) decideLab {
 	if err != nil {
 		t.Fatal(err)
 	}
-	epoch := "api-epoch"
-	if err := mailtest.Owe(dir, "api", epoch, "web", web.Epoch(), "question"); err != nil {
+	api := otherRun(t, dir, "api")
+	epoch := api.Epoch()
+	question := mail.Message{ID: questionID, From: "web", FromEpoch: web.Epoch(), To: "api", ToEpoch: epoch, Kind: mail.Question, Text: "is it done?", CreatedAt: time.Now()}
+	putRead(t, dir, question)
+	if err := mailtest.Owe(dir, "api", epoch, "web", web.Epoch(), questionID); err != nil {
 		t.Fatal(err)
 	}
 	waiters, err := mail.ReadWaiters(dir, "api", epoch)
@@ -44,7 +48,7 @@ func newDecideLab(t *testing.T) decideLab {
 	}
 	report := mail.Message{
 		ID: mail.ReportID("api", epoch, waiters[0]), From: "api", FromEpoch: epoch, To: "web", ToEpoch: web.Epoch(),
-		Kind: mail.Finished, Text: "the answer", InReplyTo: []string{"question"}, CreatedAt: time.Now(),
+		Kind: mail.Finished, Text: "the answer", InReplyTo: []string{questionID}, CreatedAt: time.Now(),
 	}
 	if err := mail.WriteJournal(dir, "api", "end", mail.TurnJournal{Epoch: epoch, Reports: []mail.Message{report}, Clear: waiters}); err != nil {
 		t.Fatal(err)
@@ -60,7 +64,28 @@ func newDecideLab(t *testing.T) decideLab {
 	if err := state.WithMailboxLock(ctx, dir, "api", func() error { return mail.Reconcile(ctx, dir, "api") }); err == nil {
 		t.Fatal("the barrier went past an unknown mark")
 	}
-	return decideLab{dir: dir, web: web, report: report}
+	return decideLab{dir: dir, web: web, api: api, report: report}
+}
+
+// questionID is web's question to api, which api read and owes the report on.
+const questionID = "1790370984617481100-00000000000a"
+
+// putRead leaves a letter where its recipient's read leaves it: in done/,
+// its status read.
+func putRead(t *testing.T, dir string, message mail.Message) {
+	t.Helper()
+	for path, value := range map[string]any{
+		filepath.Join(state.DonePath(dir, message.To), message.ID+".json"):    message,
+		filepath.Join(state.InboxPath(dir, message.To), message.ID+".status"): mail.Status{State: mail.Read, At: time.Now()},
+	} {
+		encoded, _ := json.Marshal(value)
+		if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, encoded, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
 }
 
 // route stands in for whom the command asks: below the recipient's wrapper
@@ -128,7 +153,7 @@ func TestDecideListsWhatCanBeDecided(t *testing.T) {
 	before := snapshotTree(t, lab.dir)
 	code, out, errOut := run("decide", "api")
 	if code != ExitOK || !strings.Contains(out, lab.report.ID+" · ") || !strings.Contains(out, "unknown — ") ||
-		!strings.Contains(out, "rewake decide api "+lab.report.ID+" --arrived | --not-arrived") || !strings.Contains(out, "answering question") {
+		!strings.Contains(out, "rewake decide api "+lab.report.ID+" --arrived | --not-arrived") || !strings.Contains(out, "answering "+questionID) {
 		t.Fatalf("exit %d:\n%s%s", code, out, errOut)
 	}
 	code, out, errOut = run("decide", "api", "--json")

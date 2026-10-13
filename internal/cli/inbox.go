@@ -205,6 +205,9 @@ func letterHead(message messageView) []string {
 	lines = append(lines,
 		fmt.Sprintf("from %s · %s · %s%s", message.From, mail.KindOf(message.Message), message.CreatedAt.Local().Format("15:04:05"), relation(message.Message)),
 	)
+	if d := message.ResentBy; d != nil {
+		lines = append(lines, fmt.Sprintf("sent again by decision %s of %s: report %s went unproven, and this copy may repeat what you read already", d.ID, deciderText(d.By), d.Report))
+	}
 	return append(lines, grantLines(message.Message)...)
 }
 

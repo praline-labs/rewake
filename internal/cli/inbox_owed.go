@@ -18,6 +18,10 @@ type owedView struct {
 	// GrantEnded names each directory of the grant rewake has taken back or
 	// found dropped, with the outcome its journal gives.
 	GrantEnded map[string]string `json:"grantEnded,omitempty"`
+	// Decided is the decision on this run's report that answers it: the
+	// report reached nobody provably, and the wait stands until its
+	// operation's tail closes it.
+	Decided *awaitedDecision `json:"decided,omitempty"`
 }
 
 type owedModel struct {
@@ -63,7 +67,11 @@ func showOwed(ctx *Context, call Call, dir string, session registry.Session, epo
 	model := owedModel{Session: session.Name, Messages: make([]owedView, 0, len(owed))}
 	journal := grant.Load(dir, session.Name, epoch)
 	for index, view := range viewedMessages(dir, messages) {
-		model.Messages = append(model.Messages, owedView{messageView: view, Kept: owed[index].Kept, GrantEnded: grantEnded(view.Message, journal)})
+		item := owedView{messageView: view, Kept: owed[index].Kept, GrantEnded: grantEnded(view.Message, journal)}
+		if mark, ok := mail.DecisionOn(dir, session.Name, view.ID, view.From, view.FromEpoch); ok {
+			item.Decided = awaitedDecisionOf(&mark)
+		}
+		model.Messages = append(model.Messages, item)
 	}
 	listed := make(map[string]bool, len(owed))
 	for _, message := range owed {
@@ -112,6 +120,9 @@ func owedLines(messages []owedView) []string {
 			heading = fmt.Sprintf("+ addendum from %s · %s", message.From, message.CreatedAt.Local().Format("15:04:05"))
 		}
 		lines = append(lines, heading)
+		if d := message.Decided; d != nil {
+			lines = append(lines, fmt.Sprintf("decided, still owed: your report %s %s by decision %s of %s, delivery unproven; the wait closes when that turn's tail runs", d.Report, choiceText(d.Choice), d.ID, deciderText(d.By)))
+		}
 		lines = append(lines, owedGrantLines(message.owedView)...)
 		lines = append(lines, message.Text)
 		if message.ThreadChanged {

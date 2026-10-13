@@ -40,11 +40,42 @@ type sessionView struct {
 	// Grants are the directories rewake added to this run's writable roots
 	// for a task, live and ended (docs/grants.md).
 	Grants []grant.Entry `json:"grants,omitempty"`
+	// Stopped is the stop of the session's mailbox, when it has one.
+	Stopped *stoppedView `json:"stopped,omitempty"`
 	registry.Session
+}
+
+// stoppedView is what a session's mailbox is stopped on: the reports a
+// decision can settle, and how many causes none settles.
+type stoppedView struct {
+	Decidable   []string `json:"decidable,omitempty"`
+	Undecidable int      `json:"undecidable,omitempty"`
+}
+
+// stoppedOf reads what a mailbox is stopped on, as decide lists it, without
+// a lock; nil when nothing is open.
+func stoppedOf(dir, name string) *stoppedView {
+	listing, err := mail.ListDecisions(dir, name)
+	if err != nil {
+		return nil
+	}
+	view := stoppedView{Undecidable: len(listing.Undecidable)}
+	for _, subject := range listing.Subjects {
+		if subject.Decided == nil {
+			view.Decidable = append(view.Decidable, subject.Subject.Report)
+		}
+	}
+	if len(view.Decidable) == 0 && view.Undecidable == 0 {
+		return nil
+	}
+	return &view
 }
 
 type messageView struct {
 	Telemetry *session.Snapshot `json:"telemetry,omitempty"`
+	// ResentBy is the decision that sent this report again: the first copy
+	// went unproven, so the same report may have been read already.
+	ResentBy *awaitedDecision `json:"resentBy,omitempty"`
 	mail.Message
 }
 
@@ -61,6 +92,11 @@ func viewedMessages(dir string, messages []mail.Message) []messageView {
 			// leaves the task it was sent to, which is still true.
 			if current, err := mail.CurrentTask(dir, message.To, message.AddendumTo); err == nil {
 				view.AddendumTo = current
+			}
+		}
+		if mail.IsReport(message) {
+			if mark, ok := mail.ResentBy(dir, message.From, message.ID); ok {
+				view.ResentBy = awaitedDecisionOf(&mark)
 			}
 		}
 		if visible {

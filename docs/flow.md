@@ -335,7 +335,11 @@ ignored without changing the parent session's waits.
    `awaiting/<own epoch>/`. A silent role emits no successful reports;
    failure callbacks still route errors. First the barrier completes what an
    earlier end left unfinished (`mail.Reconcile`); an unknown it cannot decide stops the
-   mailbox until a later look finds its cause gone. An identified turn carries its read boundary, and its
+   mailbox until a later look finds its cause gone, or, for a report nobody can prove
+   arrived, until a decision settles it: main's note of the stop names the recipient run,
+   which decides from its own shell or the rewake tool, or the person from outside every
+   session, with `rewake decide <name> <report> --arrived | --not-arrived`; `rewake list`
+   names the stopped session ([stage3-decision.md](v2/stage3-decision.md#the-command)). An identified turn carries its read boundary, and its
    journal records the full report batch and what it clears before any report goes out
    ([delivery-turn-end.md](delivery-turn-end.md#the-end-of-a-turn)).
 2. **The report.** For each waiting run, a `finished` message into that
