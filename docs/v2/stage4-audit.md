@@ -56,7 +56,9 @@ closing main closes its spaces and their workers (decided by the owner, October 
   it is the worker's own wrapper, the detached process of the mod's join (row 1) or a
   process of its own per space was left to stage 4's design, since P15b ran with a helper
   process of the probe's own; this audit calls it by this one name. The design proposes
-  main's wrapper ([stage4-space.md](stage4-space.md#4-the-workers-launch)). It serves its space alone and ends with its worker, and with main (row 16).
+  main's wrapper ([stage4-space.md](stage4-space.md#4-the-workers-launch)), which keeps the
+  terminal's master and starts the worker detached from its own process tree, so the worker
+  is never main's descendant. It serves its space alone and ends with its worker, and with main (row 16).
 - *The tab*: preferably Claude Code's own (owner's idea, October 13, 2026). A subagent gets
   an entry in Claude Code's tasks list, and opening the entry opens that agent's transcript.
   With a subagent of main standing for the space — the worktree's keeper below — the tasks

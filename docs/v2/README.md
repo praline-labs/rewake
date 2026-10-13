@@ -148,7 +148,7 @@ Stage 4, Claude Code's adapter as one mod:
   reports, keys and the screen as styled text, closing, restore, the commands. Open it before
   building any part of the space.
 - [stage4-space-steps.md](stage4-space-steps.md) — its second half: what the tests and the
-  workflow suite can hold and what only a live check shows, the rules SP1–SP8 to write before
+  workflow suite can hold and what only a live check shows, the rules SP1–SP9 to write before
   code, the build steps S4-1 to S4-10 with their acceptance, and the open questions.
 - [stage4-reading-pi.md](stage4-reading-pi.md) — a dated record of October 13, 2026: pi
   read for the audit at 0.85.1 and 1.2.0, capability by capability, its risks and the

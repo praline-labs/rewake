@@ -27,6 +27,10 @@ pseudo-terminal is shown. Decided by the owner the same day: the space's screen 
 styled text in the key surface — full attributes and wide glyphs — not as a cell grid; a
 cell grid is the fallback if text proves too slow. And: no terminal parser of rewake's own;
 a maintained Go library is chosen by the dependency rule ([below](#the-terminal-library)).
+Also decided by the owner that day: how fully the screen fills the window is not settled. The
+probe of Claude Code's external-editor prompt edit, which hands the whole terminal to a program
+and takes it back (P15d), is a probe and not a choice; this design stays on styled text in the
+key surface.
 
 ## 1. The pieces and where they live
 
@@ -60,14 +64,14 @@ Three candidates, read from the module proxy on October 13, 2026:
 | `github.com/hinshun/vt10x` (MIT) | a port of st: CSI, SGR with 256 and direct colours, scroll regions, the alternate screen; no glyph widths, no bracketed-paste mode | none | no: last commit March 2022 |
 | `github.com/micro-editor/terminal` (MIT) | the same st lineage as vt10x, kept by the micro editor; no glyph widths | `creack/pty`, `golang.org/x/sys` | slowly: last commit March 2025 |
 
-None meets both halves of the rule. **Proposed: `charmbracelet/x/vt`, pinned**, because the
-owner's decision to draw full attributes and wide glyphs needs an emulator that tracks widths,
-and it is the only maintained one that does; the st ports would shift every column after a
-wide glyph. The cost is its dependency set, which the rule forbids, so the choice is the
-owner's (open question Q1 in [the steps](stage4-space-steps.md#open-questions)). If the owner
-declines, the fallback is vt10x, accepting unmaintained code and narrow glyphs only. Either
-way the library sits behind `internal/host/terminal`'s interface — write bytes, resize, read
-the screen as styled rows with the cursor — and no other package sees it.
+None meets both halves of the rule. **Decided by the owner, October 13, 2026:
+`charmbracelet/x/vt`, pinned, as an exception to the dependency rule.** The reason: the
+decision to draw full attributes and wide glyphs needs an emulator that tracks widths, and it
+is the only maintained one that does; the st ports would shift every column after a wide
+glyph. The exception covers this library in `internal/host/terminal` only; its build step
+(S4-4) measures what it really brings into the binary with `go list -deps` and records it. The
+library sits behind that package's interface — write bytes, resize, read the screen as styled
+rows with the cursor — and no other package sees it.
 
 ## 2. The protocol
 
@@ -101,7 +105,7 @@ answer at most 96 000 characters, the room a key surface's props allow less a ma
 | `space/screen` | main's mod, while the keeper's row is drawn | the space, the last screen sequence it has | within 20 s, the rows changed since, as styled runs; the size, the cursor, whether the worker lives and its exit |
 | `space/keys` | main's mod, on the key surface's posts | the space, the bytes | done |
 | `space/resize` | main's mod, when the row's size changes | the space, columns and rows | done |
-| `session/end` | main's mod, at `session.end` | nothing | once every space is closed ([section 7](#7-closing)) |
+| `session/closing` | main's mod, at `session.end` when the process exits | the reason | at once: the wrapper takes over the shutdown ([section 7](#7-closing)) |
 
 A styled run is its text, its foreground and background (a palette index or a direct colour)
 and its attributes — bold, dim, italic, underline, inverse, strikethrough — with a wide glyph
@@ -143,17 +147,20 @@ is still waiting; do not call `space_hold` again"; the first call goes on, as `v
 showed. Whether the held call can
 report progress so that no retry starts is open (Q4); the answer above is needed either way.
 
-**Its release.** Closing the space answers the held call `released`; the keeper's turn ends;
-Claude Code removes its checkout if unchanged and keeps it if changed, as P12b saw.
+**Its release.** Closing the space answers the held call `released` once the worker's end is
+observed ([section 7](#7-closing)); the keeper's turn ends; Claude Code removes its checkout if
+unchanged and keeps it if changed, as P12b saw.
 
 **The worktree's base.** Claude Code makes the keeper's checkout from `origin/<default>` on
 a branch `worktree-agent-<id>`, while the work usually continues main's branch. Decided here:
 before seating the worker, the space host moves that branch to the commit main's own checkout
 has at its `HEAD` (`git reset --hard <commit>` inside the keeper's checkout), unless the open
 names another base. The host does it, not the keeper's model: it costs no turn and it is a
-Git operation like those `internal/host/worktree` runs today. Whether Claude Code then judges
-the checkout changed and keeps it at the end is open (Q6); kept, it is reminded like any kept
-checkout. The checkout's path is found by `git worktree list --porcelain`: the one whose lock
+Git operation like those `internal/host/worktree` runs today. Before it, the host proves that
+the checkout is this keeper's — found by its agent id and main's harness pid, as below — and
+that it holds no work: no commit beyond its base, no change, no untracked file; anything else
+and the open fails without a reset. Whether Claude Code then judges the checkout changed and
+keeps it at the end is open (Q6); kept, it is reminded like any kept checkout. The checkout's path is found by `git worktree list --porcelain`: the one whose lock
 reason names the keeper's agent id and main's harness pid; that the id in the path is the
 spawn's `agentId` is checked live (Q5).
 
@@ -164,18 +171,58 @@ rewake refuses to start a harness from a shell inside a session, exit 2
 sessions. The hosted launch is not a session's shell starting one; it is **main's wrapper**
 starting one, on a request the mod made under the peer check.
 
+**The topology: a worker is not main's descendant.** The authority of decisions and grants
+accepts a caller when it descends from the addressed wrapper and shares its namespaces
+(`internal/core/grant/authority/server.go`, `fromBelow`; `decide.go` checks the same on the
+client side), and `proc.Descends` crosses an intervening wrapper. A worker started as main's
+wrapper's child would make every command the worker runs a command of main's for that check.
+Decided by main, October 13, 2026, on the principle the owner set for this step — simplify the
+design rather than extend the authority contract: the worker is started **detached**, so the
+existing proof holds unchanged.
+
 - **Who starts it.** The space host in main's wrapper, which lives exactly as long as main's
-  run and so as long as the space (answer 7, no service beside the sessions). It runs the
-  wrapper's own image, `/proc/self/exe`, so the worker is the room's build (T10).
+  run and so as long as the space (answer 7, no service beside the sessions). It opens the
+  pseudo-terminal, keeps the master, and starts the wrapper's own image, `/proc/self/exe`,
+  under a name of its own as a short-lived launcher — the pattern of the probe holder
+  (`internal/host/launch/probe_holder.go`). The launcher gets the terminal's slave side as its
+  standard streams and the read end of a liveness pipe as an inherited descriptor. It starts
+  the worker's wrapper in a new session with the slave side as its controlling terminal
+  (`Setsid`, `Setctty`), reports that process's pid and start time on a second pipe, and exits.
+  The worker's wrapper is reparented away from main's tree: to the nearest subreaper above
+  main's wrapper, or to init. The image is the room's build (T10).
+- **The check that it left main's tree.** Two parts, both before the worker is seated. Main's
+  wrapper reads its own `PR_GET_CHILD_SUBREAPER` at the open and refuses the open when set:
+  then an orphan would come back to it. rewake sets the flag only in the probe holder, a
+  process of its own; Claude Code is main's wrapper's child, never on the launcher's path, so
+  nothing it sets can take the orphan. And once the launcher has exited, the host asks
+  `proc.Descends(worker wrapper, main's wrapper)` — the very check the authority makes — and
+  requires a refusal; a worker that still descends is stopped and the open fails, naming why.
+  If detaching cannot be guaranteed on a machine, the open is refused there and main decides;
+  no new authority rule is designed for it.
+- **What the authority then sees.** A command of the worker — its shell, its tool children,
+  with or without main's variables copied in — descends from the worker's wrapper, not from
+  main's, so main's decision and grant endpoints refuse it as they refuse any stranger; the
+  worker's own wrapper accepts it as its own. Main's shell and main's tool children still
+  descend from main's wrapper and pass as today.
 - **The command.** `<image> <harness> --name <name> --<role> --room <main's room> --
-  <the harness's new-conversation arguments>`, in a pseudo-terminal of the row's size, with
-  the keeper's checkout as its working directory. It is an ordinary launch from there on: it
+  <the harness's new-conversation arguments>`, with the keeper's checkout as its working
+  directory and the terminal at the row's size. It is an ordinary launch from there on: it
   claims its name, takes the room's lease, writes its own run directory and its own mod.
-- **The environment.** The wrapper's own, less every `REWAKE_` variable and the worker
-  harness's `EnvNotInherited`, plus `TERM=xterm-256color`. The wrapper's environment is the
-  person's terminal's, not main's harness's, so nothing main's harness exports reaches the
-  worker; the scrub is kept anyway, since the refusal of a nested launch reads exactly those
-  variables.
+- **The environment.** The wrapper's own, less what names a session or a transport —
+  `REWAKE_SESSION`, `REWAKE_EPOCH`, `REWAKE_ROOM`, `REWAKE_DIR`, `REWAKE_MOD_SOCKET`, every
+  `REWAKE_BRIDGE_` variable — and less the worker harness's `EnvNotInherited`, as the probe
+  environment drops them today (`internal/host/launch/environment.go`, `ProbeEnv`). Then the
+  host adds values of its own: `REWAKE_DIR` set to the base main's checked room belongs to
+  (`state.BaseForRoom`), so the worker's `--room` names the same room under the same base and
+  never the default one; the liveness descriptor's number; and `TERM=xterm-256color`. The
+  person's preferences (`REWAKE_CLAUDE_MODEL`, `REWAKE_WORKTREES` and the like) stay. The
+  refusal of a nested launch reads `REWAKE_SESSION` and `REWAKE_EPOCH` only, and neither
+  reaches the worker.
+- **The liveness pipe.** Its write end is held by main's wrapper alone: created close-on-exec
+  and passed to no child, so neither main's harness nor the launcher holds it. The worker's
+  wrapper reads the other end; the end of the pipe means main's wrapper is gone or let the
+  worker go, and the worker's wrapper then shuts its run down by itself within a bound
+  ([section 7](#7-closing)).
 - **Its session id.** rewake picks a random UUID before the launch and writes it into the
   space record; the worker's adapter turns it into its harness's arguments. A new optional
   adapter interface, `ConversationNamer`, does that: Claude Code answers `--session-id <id>`
@@ -185,7 +232,7 @@ starting one, on a request the mod made under the peer check.
   `write` by default, any role the worker's harness can serve ([section 5](#5-reports)).
 - **How it registers.** As any launch does: its session record names its run; the space
   record names the worker's name and, once its wrapper runs, its epoch, which the host reads
-  from the child it started.
+  from the record that pid writes, checked against the pid and start time the launcher reported.
 
 ## 5. Reports
 
@@ -198,6 +245,12 @@ mapped to answered, aborted, refused or failed, and its `answer` as the report �
 Claude Code's offer becomes `TurnBoundary{Reports: true, HoldsEnd: false}`, live once the
 run's mod said hello; the core already handles a boundary that cannot hold an end. The
 confirmation through `classic.Stop` with `block` (O1) is a later step of stage 4, with P3.
+
+What reporting without holding costs, accepted for this step: an interim end the worker did not
+mark is not continued by force, and an end lost before the host took it leaves no final answer
+the core can recover. So a `turn/end` is retried with the same end id and boundary until the
+receipt comes; the live capability is withdrawn, as the API contract says, when the mod is lost
+or unloaded — a hello promises reporting for that load only.
 
 Wake stays Claude Code's inbox socket of stage 3; a worker's notices reach it as they reach
 any Claude Code session.
@@ -231,28 +284,55 @@ subagents and the spaces. A click on the row gives it the focus. Paste into a sp
 
 ## 7. Closing
 
-**main ends.** At `session.end` main's mod calls `session/end`. The host closes every space:
-it hangs up each worker's pseudo-terminal — the worker's wrapper is its session leader and
-departs as on a hang-up — waits up to 5 s, then sends SIGTERM and, after 2 s more, SIGKILL to
-what is left of that session; then answers every held call `released`, so each keeper ends
-and Claude Code removes or keeps its checkout; then marks each record closed with what it saw
-of the checkout — gone, or kept with changes or commits. The skill counts a hook's own time
-only, not its waits on `$` calls, and a `space/hold` answer arrives within one poll. Whether
-Claude Code finishes a keeper's removal before the process exits is open (Q7).
+The shutdown belongs to the wrappers, never to a hook: `session.end` has one wall-clock bound
+for its whole chain, 1.5 s by default, its `$` waits included, and at the bound an in-flight
+call is aborted (the skill, `SessionEndInput`, 2.1.296). What a hook starts in that time is a
+signal, not the work.
 
-**main crashes.** With no `session.end`, the wrapper sees its harness end and hangs up the
-workers the same way — and if the wrapper itself is killed, the kernel closes the
-pseudo-terminal's master and the hang-up comes anyway. The keepers die with main's process,
-and their checkouts stay, Git-locked under a dead pid (P12b, runs `tZXlTa` and `SNr8JH`).
-The next launch of a main in that room reads the records still open whose main's run is
-proven dead, marks them closed "main ended without closing", and inspects each checkout:
-present or not, locked by a dead process, with changes or commits. **The reminder of kept
-checkouts covers it** (the owner, October 13, 2026): such a checkout is listed to main at
-its start and by `rewake space list` until it is merged or removed, with the Git commands
-that clear it. rewake removes no checkout itself in this step: what is inside is work, and
-only main or the person knows whether it is wanted.
+**How one worker is stopped.** Main's wrapper closes that worker's liveness pipe. The worker's
+own wrapper sees the end of the pipe — or a hang-up of its terminal, which it takes the same way
+— and runs a bounded shutdown itself: SIGHUP to its harness's process group, SIGTERM after 5 s,
+SIGKILL after 2 s more; then it records its run's end and exits. The worker's wrapper does this,
+not main's, so it happens also when main's wrapper is gone. Main's wrapper observes the end — the
+worker wrapper's pid with its start time gone — and only an observed end counts; one still there
+after the bound and a margin has its session killed by main's wrapper.
 
-**One space closed.** `rewake space close <name>` does the same for one space.
+**A keeper is released only after its worker's end is observed**, so Claude Code never removes a
+checkout a worker still runs in. Then the held call is answered `released`, the keeper's turn
+ends, and Claude Code removes the checkout if unchanged or keeps it if changed, as P12b saw —
+when main's harness is still alive to do it.
+
+**main ends.** At `session.end` with an exit reason, main's mod sends `session/closing`, best
+effort, under the hook's bound; an abort loses nothing, since the wrapper also sees its harness
+exit. On either signal the host writes each open space's record as closing, stops each worker,
+and releases its keeper once the worker's end is observed. A keeper still held when main's
+harness exits dies with it; its checkout stays, Git-locked under a dead pid (P12b, runs
+`tZXlTa` and `SNr8JH`). After the harness has exited the host inspects each checkout — gone,
+kept with changes or commits, kept and locked by a dead process — and marks each record closed
+with what it saw. A record is closed from that observation, never from a release sent. **The
+reminder of kept checkouts covers what stays** (the owner, October 13, 2026): such a checkout is
+listed to main at its start and by `rewake space list` until it is merged or removed, with the
+Git commands that clear it. rewake removes no checkout itself in this step: what is inside is
+work, and only main or the person knows whether it is wanted.
+
+**A conversation ends, the process goes on.** `clear` and `resume` end main's conversation and
+not its process; for `clear` no new `session.start` fires (the skill). Spaces belong to main's
+run, not to its conversation, so these reasons send nothing and close nothing: workers go on,
+and their mail with them. The mod's state starts empty, so the `events` loop and the screen
+state are restored from the classic session start, as the skill advises. Whether a keeper's held
+call survives a `/clear` is a live check of the closing step (Q13); if the hold is lost, the space
+stays open without a view, `rewake space list` says so, and seating a new view is the restore's
+work ([section 8](#8-restore)).
+
+**main's wrapper is killed.** The kernel closes its pipes and the terminal's master: each worker's
+wrapper sees the end of its liveness pipe and the hang-up, and runs the same bounded shutdown on
+its own. The keepers die with main's harness when it goes, and their checkouts stay locked. The
+next launch of a main in that room reads the records still open whose main's run is proven dead,
+marks them closed "main ended without closing" with what it sees of each worker and checkout, and
+the reminder covers the checkouts.
+
+**One space closed.** `rewake space close <name>` does the same for one space: the worker stopped,
+its end observed, then its keeper released, the checkout inspected, the record closed.
 
 ## 8. Restore
 
