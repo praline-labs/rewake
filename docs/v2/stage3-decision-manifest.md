@@ -43,8 +43,9 @@ name; a world is that order with its values. The plays are `playDecision`, `play
   past D's installation; the activity in r's mailbox after D, except that r reads R at
   any time it lives and a new run of its name comes only after r ended; the sender ends
   before D's effects are installed or after, or not at all. Evidence that returns before
-  D's write leaves no D only while r lives: with r ended, S3 resolves nothing, the
-  occurrence stays and the decision is still the way out, so such a world is decided.
+  D's write leaves no D, r alive or ended: S3 reads a held report's evidence without
+  admitting an ended r, so `decide` refuses it as proven and the barrier settles R —
+  published, or moot when r ended before and R was never written.
 - `resend`: R's evidence unknown; the decider writes D "did not arrive" — the person,
   when r ended before it — and the barrier `decide` runs installs and runs J'; r ends at
   the point of J''s path its value names, or not at all; R' is decided only once it is

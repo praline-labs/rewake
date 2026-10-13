@@ -39,7 +39,10 @@ in the mailbox do not stop the write: D needs R's evidence, not admission. Evide
 that point resolves the occurrence by S3's rule, and `decide` answers exit 1, "proven
 published" or "proven not published"; a letter found beside a mark that does not read is
 no such evidence, since the barrier writes nothing over that mark and stops on it, so it
-is decided. Evidence after it is M5: the decision stands, as
+is decided. With r ended the evidence is read as the barrier reads it for a held report,
+without admitting r: the letter or a published mark is "proven published", an intent with
+no letter "proven not published", and no mark at all no proof, so it is decided. Evidence
+after it is M5: the decision stands, as
 the accepted contract trades
 ([design-rules.md](design-rules.md#an-operator-decision-on-an-unknown-outcome): decided
 wrongly, the report reaches r twice, or an obligation closes with nothing delivered). r's

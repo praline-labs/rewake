@@ -51,9 +51,9 @@ func playDecision(t *testing.T, w dm.World, cut matrixCut) []string {
 		s.repair(at, landed, r)
 	}
 
-	// Evidence that returned settles R only while r lives (S3): with r
-	// ended, a decision is still the only way out.
-	decided := later != dm.ReturnsBeforeD || endsBefore
+	// Evidence that returned settles R, read with r alive or ended (S3), so
+	// nothing is decided.
+	decided := later != dm.ReturnsBeforeD
 	var answer DecideAnswer
 	err := s.product(func() error {
 		var err error
@@ -120,7 +120,7 @@ func playDecision(t *testing.T, w dm.World, cut matrixCut) []string {
 	o := s.outcome(t, r)
 	switch {
 	case !decided:
-		s.checkUndecided(t, o, r)
+		s.checkUndecided(t, o, r, endsBefore)
 	default:
 		s.checkDecided(t, o, r, choice, verified, first)
 	}
@@ -199,16 +199,21 @@ func matrixOpposite(choice string) string {
 	return ChoiceArrived
 }
 
-// checkUndecided is a world whose evidence returned while r lived: no
-// decision, R published once — written before or now — and the journal
-// finished.
-func (s *matrixScene) checkUndecided(t *testing.T, o matrixOutcome, r Message) {
+// checkUndecided is a world whose evidence returned before D: no decision,
+// R published once — written before, or by the barrier after the refusal
+// while r lives — or, with r ended before and R never written, moot; and the
+// journal finished.
+func (s *matrixScene) checkUndecided(t *testing.T, o matrixOutcome, r Message, endedBefore bool) {
 	t.Helper()
 	if o.decisions != 0 {
 		t.Errorf("%d decisions on R after its evidence returned", o.decisions)
 	}
-	if n := s.access.written(r.ID); n != 1 {
-		t.Errorf("R was written %d times", n)
+	want := 1
+	if endedBefore && s.initialLanding == 0 {
+		want = 0
+	}
+	if n := s.access.written(r.ID); n != want {
+		t.Errorf("R was written %d times, want %d", n, want)
 	}
 	if o.waits != 0 || len(o.open) != 0 {
 		t.Errorf("waits %d, occurrences open %v", o.waits, o.open)
