@@ -47,7 +47,7 @@ func syntheticWorld(t *testing.T, agents string) (rulesWorld, func(name, text st
 // changes one thing and sees one problem.
 func wholeGroups(skip string) string {
 	var text strings.Builder
-	for _, group := range []string{"E", "O", "T", "C", "L"} {
+	for _, group := range []string{"E", "O", "T", "C", "L", "D"} {
 		for n := 1; n <= ruleGroups[group]; n++ {
 			number := group + strconv.Itoa(n)
 			if number == skip {

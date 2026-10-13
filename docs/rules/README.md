@@ -8,8 +8,10 @@ does it. Created in stage 3's first step, S1 ([stage3.md](../v2/stage3.md#docume
 
 - [effects.md](effects.md) — **E1–E8**, the effects of a mail operation: unknown effects
   never discarded, locks, checks in the critical section, one durable read, the size
-  bound, three outcomes, identity and scope, evidence and the stop. Open it before changing
-  how mail is written, read, published or stopped.
+  bound, three outcomes, identity and scope, evidence and the stop; and **D1–D8**, the
+  operator decision on an unknown outcome: who decides, what it records, its write under
+  the locks, recovery, the resend and its effects installed once. Open it before changing
+  how mail is written, read, published, stopped or decided.
 - [turns.md](turns.md) — **O1–O2**, turn outcomes: an interim wake that must not close a
   task early, failed and interrupted turns.
 - [tools.md](tools.md) — **T1–T11**, what binds every tool transport: bindings, one
@@ -21,8 +23,7 @@ does it. Created in stage 3's first step, S1 ([stage3.md](../v2/stage3.md#docume
   and never what, nothing past the run.
 - [host.md](host.md) — the host's tests and the grant scheme, rules without a number.
 
-Later steps add the operator decision's rules **D1–D8** to `effects.md` (S18, part B),
-and `layout.md`, `adapter-api.md` and `state.md` (S19).
+A later step adds `layout.md`, `adapter-api.md` and `state.md` (S19).
 
 ## How a rule names its tests
 
@@ -51,7 +52,7 @@ A move rewrites the paths in the same commit. Tests that hold only the 1.x migra
 `docs/rules_test.go` runs with the five checks of `AGENTS.md`. It parses these documents
 and the Go files they name, and runs nothing. It fails when:
 
-- a number of E1–E8, T1–T11, C1–C8, L1–L3 or O1–O2, or a section of the host's rules, is
+- a number of E1–E8, D1–D8, T1–T11, C1–C8, L1–L3 or O1–O2, or a section of the host's rules, is
   missing from these documents, or appears twice, or a number no group has appears;
 - a rule has no `Tests:` block, or names no test and no gap, or a `Tests:` block belongs
   to no rule;

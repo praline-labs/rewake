@@ -23,9 +23,8 @@ import (
 // runs nothing, so it costs the five checks almost nothing.
 const rulesDir = "rules"
 
-// ruleGroups are the numbered groups and how many rules each has. The operator
-// decision's D1–D8 join in S18, with part B.
-var ruleGroups = map[string]int{"E": 8, "O": 2, "T": 11, "C": 8, "L": 3}
+// ruleGroups are the numbered groups and how many rules each has.
+var ruleGroups = map[string]int{"E": 8, "D": 8, "O": 2, "T": 11, "C": 8, "L": 3}
 
 // unnumbered are the rules without a number, by document and heading: each such
 // section is one rule and ends with one Tests block. A rule is found by its

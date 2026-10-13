@@ -1,13 +1,13 @@
-# Rules: the effects of a mail operation, E1–E8
+# Rules: the effects of a mail operation, E1–E8, and the operator decision, D1–D8
 
 The rules every mail operation keeps — what proves an effect done or not done, and what
 an unknown stops — in the full wording of [design-rules.md](../v2/design-rules.md#effects-e1e8),
 from `mail-bridge-cli.md` rules 1–8 without the 1.x migration. Each rule ends with the
 tests that hold it ([README.md](README.md)). The operator decision on an unknown
-outcome, which the last clause of E8 names, joins this file with its rules in S18
-(part B, [stage3-decision-recovery.md](../v2/stage3-decision-recovery.md)). S18's first
-part builds the decision's readers and recovery and no writer of a decision, so until a
-later part does, nothing lifts a stop without returning evidence.
+outcome, which the last clause of E8 names, follows them as D1–D8, built in S18
+([stage3-decision-recovery.md](../v2/stage3-decision-recovery.md#its-rules)): when
+evidence cannot return, the subject's recipient run or the person decides, and the
+decision settles the stop without being evidence.
 
 ## The rules
 
@@ -325,7 +325,11 @@ later part does, nothing lifts a stop without returning evidence.
   - `internal/core/mail/stop_unknown_test.go` `TestReleasingAnAnswerKeepsAMarkTheStopNames`
   - `internal/core/mail/stop_unknown_test.go` `TestSettlingKeepsALetterTheStopNames`
   - `internal/core/mail/stop_unknown_test.go` `TestAnEffectsOccurrenceWhoseResolutionDoesNotReadHoldsTheEffects`
-  - Gap: the operator decision — closed in S18 (part B).
+  - `internal/core/mail/stop_ended_evidence_test.go` `TestAHeldReportOfAnEndedRunIsSettledByItsEvidence`
+  - `internal/core/mail/stop_ended_evidence_test.go` `TestEndedEvidenceReadsOnlyProof`
+  - `internal/core/mail/decision_view_test.go` `TestDecisionDisposesOnlyTheOccurrencesItNames`
+  - `internal/core/mail/decision_recovery_test.go` `TestDecisionPrecedesAllRecoveryEvidence`
+  - `internal/core/mail/decision_world_test.go` `TestDecisionCopiesFollowWorldTruth`
 
 ## How E8 lifts a stop
 
@@ -345,3 +349,121 @@ valid bytes closed to reading, where opening them again resolves the cause. The 
 of E8 above is the accepted one: the single record it names, `stopped`, is from S3 one
 record per occurrence, `stops/<key>/<occurrence>`, with its resolution beside it
 ([mailbox-records.md](../mailbox-records.md#the-stop-on-record)).
+
+## The operator decision, D1–D8
+
+When evidence cannot return, the sender's mailbox stays stopped until the subject's
+recipient run or the person decides whether the report arrived. The rules are worded in
+[stage3-decision-recovery.md](../v2/stage3-decision-recovery.md#its-rules), from the model
+of [stage3-decision-model.md](../v2/stage3-decision-model.md); the command that makes a
+decision is `rewake decide` ([stage3-decision.md](../v2/stage3-decision.md#the-command)).
+A decision is no evidence and removes no record: E8 holds beside it, and these rules say
+what a decision may settle instead.
+
+- **D1. A decision is a choice under an unknown outcome, never evidence: nothing derives
+  delivery from it, and every effect taken on its authority carries its id.** Ordinary
+  activity in the recipient's mailbox follows its own owners and needs no knowledge of it.
+  Tests:
+  - `internal/core/mail/decision_world_test.go` `TestDecisionCopiesFollowWorldTruth`
+  - `internal/core/mail/decision_identity_test.go` `TestDecisionStepsStandOnTheirDecision`
+  - `internal/cli/decide_views_test.go` `TestDecidedArrivedClosesTheWait`
+  - `internal/cli/decide_views_test.go` `TestAWaitingQuestionEndsWhenADecisionClosesIt`
+  - `internal/core/mail/decision_final_lock_test.go` `TestDecisionFinalEvidenceIsLockedThroughCommit`
+  - `internal/host/delivery/decision_race_test.go` `TestDecisionRacesWithWrapperAndDelivery`
+
+- **D2. Only the subject's recipient run, vouched for by its wrapper — the same run after
+  a compaction — or the person, once every identity check has read and found no session,
+  decides; the record names who and whether verified; the recipient run and main are told
+  of a decision they did not make.**
+  Tests:
+  - `test/decisionrig/authority_test.go` `TestDecisionAuthorityWithProcesses`
+  - `test/decisionrig/boundary_test.go` `TestDecisionAuthorityEndsAtCommitBoundary`
+  - `internal/core/person/person_test.go` `TestPersonDecisionFailsClosed`
+  - `test/decisionrig/person_test.go` `TestPersonDecisionOnRealProcesses`
+  - `internal/core/grant/authority/decide_test.go` `TestAWrapperTakesADecisionOnlyFromBelow`
+  - `internal/core/grant/authority/decide_test.go` `TestTheAskerBelievesOnlyTheRecipientsWrapper`
+  - `internal/cli/decide_test.go` `TestDecideBelowTheRecipientAsksItsWrapper`
+  - `internal/cli/decide_test.go` `TestDecideRefusesWhoMayNot`
+  - `internal/cli/decide_form_test.go` `TestDecisionFormAccessAndToolExclusion`
+  - `internal/core/mail/decision_decide_notes_test.go` `TestDecideFreezesANoteToTheRoomsMain`
+  - `internal/core/mail/decision_decide_notes_test.go` `TestDecideRefusesWhileTheRoomsMainCannotBeJudged`
+  - `internal/core/mail/decision_liveness_test.go` `TestDecisionNoteToARunNotKnownToHaveEndedStaysOwed`
+
+- **D3. A decision needs a subject read from a readable journal and decides that subject
+  only.** Its write-once record, kept while the mailbox lives, holds the subject's
+  identity and the observations its final plan used — bytes and their hashes for every
+  read that returned, the error and metadata for every read that failed — and nothing of
+  what could not be read.
+  Tests:
+  - `internal/core/mail/decision_subjects_test.go` `TestDecisionFindsSubjectsBehindOtherUnknowns`
+  - `internal/core/mail/decision_view_test.go` `TestDecisionDisposesOnlyTheOccurrencesItNames`
+  - `internal/core/mail/decision_capture_test.go` `TestDecisionObservationsAreTheFinalReads`
+  - `internal/core/mail/decision_strict_test.go` `TestDecisionObservationsShareNothingWithTheCapture`
+  - `internal/core/mail/decision_strict_test.go` `TestDecisionRecordsRefuseBytesAfterTheirValue`
+  - `internal/core/mail/decision_decide_run_test.go` `TestDecideHoldsTheReportToTheJournalsRun`
+  - `internal/core/mail/decision_special_test.go` `TestDecisionSpecialFilesAuthorizeNothing`
+  - `internal/core/mail/decision_matrix_links_test.go` `TestDecisionWorldsBehindLinks`
+
+- **D4. A decision is written once, under the sender's mailbox lock, after the plan finds
+  the subject still unknown there, before any effect, with the whole resend in it; the
+  same words answer it, the opposite words are refused.**
+  Tests:
+  - `internal/core/mail/decision_decide_test.go` `TestDecideRecordsOneDecisionAndFinishesIt`
+  - `internal/core/mail/decision_decide_test.go` `TestDecideAgainKeepsTheFirstDecision`
+  - `internal/core/mail/decision_decide_test.go` `TestDecideRefusesWithNothingWritten`
+  - `internal/core/mail/decision_decide_test.go` `TestDecideOnABusyMailboxWritesNothing`
+  - `internal/core/mail/decision_decide_ended_test.go` `TestDecideOnAHeldReportOfAnEndedRunReadsItsEvidence`
+  - `internal/core/mail/decision_final_lock_test.go` `TestDecisionFinalEvidenceIsLockedThroughCommit`
+  - `internal/cli/decide_lease_test.go` `TestDecisionLeasePrecedesAllLocks`
+  - `internal/core/mail/decision_durable_test.go` `TestDecisionEffectsWaitForTheDecisionToBeDurable`
+  - `internal/core/mail/decision_matrix_test.go` `TestDecisionDurabilityAtEveryCut`
+  - `internal/host/delivery/decision_race_test.go` `TestDecisionRacesWithWrapperAndDelivery`
+
+- **D5. "Arrived" closes the report's step; "did not arrive" closes it and installs the
+  resend.** The sender's recovery reads the decision before the report's live evidence,
+  never publishes the report after either, and never changes the decision or cancels the
+  resend on later proof. The journal's tail runs, as any tail does, in the first barrier
+  whose plan meets no unknown in the mailbox.
+  Tests:
+  - `internal/core/mail/decision_recovery_test.go` `TestDecisionPrecedesAllRecoveryEvidence`
+  - `internal/core/mail/decision_recovery_test.go` `TestDecisionInstallationBeforeAdmission`
+  - `internal/core/mail/decision_recovery_test.go` `TestDecisionRecoveryRecordsStopWhenUnknown`
+  - `internal/core/mail/decision_closure_test.go` `TestDecisionClosureKeepsProvenance`
+  - `internal/core/mail/decision_identity_test.go` `TestDecisionClosureNamesItsOperationAndItsTail`
+
+- **D6. A resend is an ordinary report operation with a fresh, bounded id and its ancestry
+  in fields: its dispositions are E8's, and when unknown it is a subject decided with the
+  first decision as parent.** Moot says only that an attempt found its run ended before
+  another disposition was recorded, never that it did not land; its done form keeps a
+  bounded summary of its disposition and decisions, and nothing renders more than a form
+  keeps.
+  Tests:
+  - `internal/core/mail/decision_resend_contract_test.go` `TestDecisionResendKeepsPublicationContract`
+  - `internal/core/mail/decision_world_test.go` `TestDecisionCopiesFollowWorldTruth`
+  - `internal/core/mail/decision_resend_test.go` `TestDecisionResendOfAnotherKindStaysUnknown`
+  - `internal/core/mail/decision_resend_test.go` `TestDecisionResendSummaryThatDoesNotReadKeepsItsCompletion`
+  - `internal/core/mail/decision_view_test.go` `TestDecisionViewsDuringEveryPhase`
+  - `internal/cli/decide_views_test.go` `TestTheResendSaysItIsOne`
+
+- **D7. Each effect of a decision is installed at most once while the decision lives,
+  recognised by an identity its progress and retention do not change:** the resend by its
+  name in either form, kept while the mailbox lives; a note by the told run's once record,
+  moot once that run has ended. Installation waits on no admission; a progressed,
+  completed or retired effect is never installed again, never a new obligation and never a
+  stop.
+  Tests:
+  - `internal/core/mail/decision_view_test.go` `TestDecisionEffectsSurviveAllRetention`
+  - `internal/core/mail/decision_recovery_test.go` `TestDecisionEffectsAreNotRepeatedAfterRetention`
+  - `internal/core/mail/decision_recovery_test.go` `TestDecisionInstallationBeforeAdmission`
+  - `internal/core/mail/decision_install_test.go` `TestDecisionInstallationSurvivesEveryBrokenWrite`
+  - `internal/core/mail/decision_identity_test.go` `TestDecisionToldRecordsOfAnotherNoteTellNothing`
+  - `internal/core/mail/decision_test.go` `TestDecisionCorruptionNeverAuthorizesEffects`
+  - `internal/core/mail/decision_matrix_test.go` `TestDecisionDurabilityAtEveryCut`
+
+- **D8. Evidence that returns after a decision changes nothing taken or recorded on the
+  sender's side.**
+  Tests:
+  - `internal/core/mail/decision_recovery_test.go` `TestDecisionPrecedesAllRecoveryEvidence`
+  - `internal/core/mail/decision_final_lock_test.go` `TestDecisionFinalEvidenceIsLockedThroughCommit`
+  - `internal/core/mail/decision_world_test.go` `TestDecisionCopiesFollowWorldTruth`
+  - `internal/core/mail/decision_matrix_test.go` `TestDecisionDurabilityAtEveryCut`
