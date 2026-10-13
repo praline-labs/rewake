@@ -172,4 +172,3 @@ Tests:
 - `internal/host/grant_checks_test.go` `TestAGrantWhoseDirectoryBecameALinkIsRefusedBeforeMainIsAsked`
 - `internal/host/grant_checks_test.go` `TestAGrantFromAnInvalidSenderNameIsRefused`
 - `internal/host/grant_checks_test.go` `TestAGrantWhoseMainHasEndedFailsNamingThatMain`
-- Gap: step 3's "the task fails, naming the main that sent it" — closed in S9.

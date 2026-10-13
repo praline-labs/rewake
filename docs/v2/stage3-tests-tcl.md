@@ -207,6 +207,12 @@ the main that sent it" — closed in S9.
 
 ## Gaps and their steps
 
+Every gap below is closed, and since S19 the rules test fails on any gap line
+([stage3-tests.md](stage3-tests.md#docsrules_testgo), step 6). The grants gap was
+closed in S9 and its line removed from the host's rules in S19; T10 names the tests of
+S17 on the tool's side, and the build's identity and the room's lease are rules of their
+own in [state.md](../rules/state.md).
+
 | Rule | Gap | Closed in |
 |---|---|---|
 | T1 | the transport keeps nothing a later call needs | S7 |

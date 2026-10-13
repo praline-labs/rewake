@@ -22,18 +22,26 @@ does it. Created in stage 3's first step, S1 ([stage3.md](../v2/stage3.md#docume
 - [launch.md](launch.md) — **L1–L3**, what a launch adds: the mail and nothing else, where
   and never what, nothing past the run.
 - [host.md](host.md) — the host's tests and the grant scheme, rules without a number.
-
-A later step adds `layout.md`, `adapter-api.md` and `state.md` (S19).
+- [layout.md](layout.md) — the layout, rules without a number: what each layer may
+  import, no harness named outside the adapters, no registry, the exception tables.
+- [adapter-api.md](adapter-api.md) — the adapter API, rules without a number: the
+  capabilities and what the core does without one, the catalogue, minimum versions.
+- [state.md](state.md) — state and builds, rules without a number: the state root, the
+  build's identity, the room's lease, views and changes through the write seam, clearing
+  the state of 1.x.
 
 ## How a rule names its tests
 
 A rule is a list item opening with its number in bold — `- **E4.` — and runs to the next
 rule or heading. It ends with a `Tests:` line and one item per test: the file, from the
 module root, and the function, each in backticks, optionally followed by a dash and what
-happens to the test in a later step. A clause no test holds yet is a `Gap:` item naming
-the step that closes it, `closed in S<n>`. The host's rules, which have no number, use the
-same `Tests:` block; each is a section the rules test knows by its heading, so a section
-or its block cannot disappear unnoticed.
+happens to the test in a later step. During stage 3 a clause no test held yet was a
+`Gap:` item naming the step that closed it, `closed in S<n>`; since S19 closed the stage, a
+gap fails, and a clause no test can hold yet is stated in the rule's text as a known
+limit, dated, with the stage that owns it. The rules without a number — the host's, the
+layout's, the adapter API's and the state's — use the same `Tests:` block; each is a
+section the rules test knows by its heading, so a section or its block cannot disappear
+unnoticed.
 
 ```markdown
 - **E4. A read's completion is one durable fact every channel shares.** ...
@@ -52,8 +60,9 @@ A move rewrites the paths in the same commit. Tests that hold only the 1.x migra
 `docs/rules_test.go` runs with the five checks of `AGENTS.md`. It parses these documents
 and the Go files they name, and runs nothing. It fails when:
 
-- a number of E1–E8, D1–D8, T1–T11, C1–C8, L1–L3 or O1–O2, or a section of the host's rules, is
-  missing from these documents, or appears twice, or a number no group has appears;
+- a number of E1–E8, D1–D8, T1–T11, C1–C8, L1–L3 or O1–O2, or a section of the rules
+  without a number, is missing from these documents, or appears twice, or a number no group
+  has appears;
 - a rule has no `Tests:` block, or names no test and no gap, or a `Tests:` block belongs
   to no rule;
 - a named test does not exist: the path is not inside the module, or the file declares no
@@ -69,9 +78,9 @@ and the Go files they name, and runs nothing. It fails when:
   patterns; or runs other than as `go test`, optionally behind `env -u NAME`: a prefix
   that sets a variable, such as `GOFLAGS=-count=0`, or wraps the command fails rather
   than being read past;
-- a gap names no step, or a step that is not a row of the table under
-  [the build order](../v2/stage3.md#the-build-order); a table or fenced example
-  elsewhere names no step, and a build order that cannot be read fails.
+- a rule has a `Gap:` item, whatever step it names; the build order under
+  [the build order](../v2/stage3.md#the-build-order) is still read, a table or fenced
+  example elsewhere names no step, and a build order that cannot be read fails.
 
 These documents, `AGENTS.md`'s checks, the build order and the map's links are read by
 one Markdown reader (`docs/markdown_test.go`, the same text as

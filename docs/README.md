@@ -48,7 +48,8 @@ everything else.
 - [rules/README.md](rules/README.md) — the numbered rules of 2.0 in their full wording,
   each naming the tests that hold it: the effects E1–E8, the operator decision D1–D8,
   the turn outcomes O1–O2, every tool transport T1–T11, the channel record C1–C8, what a
-  launch adds L1–L3, and the host's tests with the grant scheme; and how
+  launch adds L1–L3, the host's tests with the grant scheme, and the rules without a
+  number of the layout, the adapter API and state and builds; and how
   `docs/rules_test.go` checks that every named test exists and runs. Open it before
   changing a rule's behaviour or the test that holds it.
 - [code.md](code.md) — the source tree, package by package, with the harness interface

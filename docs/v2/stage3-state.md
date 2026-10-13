@@ -389,7 +389,8 @@ switches to another identity on a threshold. If the cost is judged too high, the
 go to the owner with a separate proposal that states its weaker guarantee exactly and
 comes with the adversarial test it would fail — two images with the same embedded
 toolchain build ID and different bytes, for one — and the identity changes only on the
-owner's answer. The numbers are linked from `docs/rules/state.md` in S19.
+owner's answer. The numbers are linked from
+[state.md](../rules/state.md#the-builds-identity).
 
 ## Still unknown
 

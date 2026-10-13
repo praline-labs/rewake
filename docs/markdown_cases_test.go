@@ -31,8 +31,7 @@ const table40 = "| Step | What |\n|---|---|\n| S40 | an example |\n"
 
 // TestAnExampleInAnyFenceNamesNoStep: a fence is closed only by a run of its own
 // character at least as long, so a tilde fence, or a longer backtick fence
-// holding a shorter one, keeps its example out of the build order and the gap
-// it would allow fails.
+// holding a shorter one, keeps its example out of the build order.
 func TestAnExampleInAnyFenceNamesNoStep(t *testing.T) {
 	for _, example := range []string{
 		"~~~markdown\n" + table40 + "~~~\n",
@@ -46,11 +45,6 @@ func TestAnExampleInAnyFenceNamesNoStep(t *testing.T) {
 		if len(problems) > 0 || !slices.Equal(world.steps, []string{"S1"}) {
 			t.Fatalf("%q: got %q %q, want only S1", example, world.steps, problems)
 		}
-		documents := map[string]string{
-			"rules/all.md":  wholeGroups("E2") + "- **E2. A rule.**\n  Tests:\n  - Gap: not tested — closed in S40.\n",
-			"rules/host.md": wholeHost,
-		}
-		oneProblem(t, checkRules(documents, world), "closed in S40, which is no step")
 	}
 }
 
@@ -92,7 +86,7 @@ func TestWhatTheReaderCannotClassifyIsRefused(t *testing.T) {
 		t.Fatalf("AGENTS.md: got %q, want the fence refused", problems)
 	}
 	documents := map[string]string{"rules/all.md": wholeGroups(""), "rules/host.md": wholeHost + "\n<!-- hidden -->\n"}
-	got := checkRules(documents, world)
+	got := checkSynthetic(documents, world)
 	if !slices.ContainsFunc(got, func(p string) bool { return strings.HasPrefix(p, "docs/rules/host.md: line 24: an HTML comment") }) {
 		t.Fatalf("host.md: got %q, want the comment refused", got)
 	}
@@ -106,7 +100,7 @@ func TestAnExampleOfTheRulesIsNoRule(t *testing.T) {
 		"rules/all.md":  wholeGroups(""),
 		"rules/host.md": "~~~markdown\n" + wholeHost + "\n## End of the example\n~~~\n",
 	}
-	got := checkRules(documents, world)
+	got := checkSynthetic(documents, world)
 	if len(got) != 3 || !strings.Contains(got[0], "rules/host.md#Grants is in no document") || !strings.Contains(got[1], "rules/host.md#The live set is in no document") ||
 		!strings.Contains(got[2], "rules/host.md#The wrapper is in no document") {
 		t.Fatalf("got %q, want every host rule missing", got)
@@ -115,11 +109,11 @@ func TestAnExampleOfTheRulesIsNoRule(t *testing.T) {
 		"rules/all.md":  wholeGroups("E2") + "````markdown\n```\n" + held("internal/mail/mail_test.go", "TestHeld") + "```\n````\n",
 		"rules/host.md": wholeHost,
 	}
-	oneProblem(t, checkRules(documents, world), "E2 is in no document")
+	oneProblem(t, checkSynthetic(documents, world), "E2 is in no document")
 	documents["rules/all.md"] = wholeGroups("E2") + "- **E2. A rule.**\n\n      Tests:\n      - `internal/mail/mail_test.go` `TestHeld`\n"
-	oneProblem(t, checkRules(documents, world), "E2 at docs/rules/all.md")
+	oneProblem(t, checkSynthetic(documents, world), "E2 at docs/rules/all.md")
 	documents["rules/all.md"] = wholeGroups("E2") + "- **E2. A rule.**\n  Tests:\n      - `internal/mail/mail_test.go` `TestHeld`\n"
-	oneProblem(t, checkRules(documents, world), "is neither a test nor a gap")
+	oneProblem(t, checkSynthetic(documents, world), "is neither a test nor a gap")
 }
 
 // TestOnlyThePlainGoTestFormIsRead: a prefix other than env -u can change which
@@ -141,7 +135,7 @@ func TestOnlyThePlainGoTestFormIsRead(t *testing.T) {
 		// A sentence about a command is no command.
 		write("AGENTS.md", "## Checks\n\nProse: go test -run X ./... is no check.\n\n```bash\n"+command+"\n```\n")
 		world, problems := readWorld(world.root)
-		got := checkRules(map[string]string{"rules/all.md": wholeGroups(""), "rules/host.md": wholeHost}, world)
+		got := checkSynthetic(map[string]string{"rules/all.md": wholeGroups(""), "rules/host.md": wholeHost}, world)
 		if !refused {
 			if len(problems)+len(got) > 0 {
 				t.Fatalf("%q is the plain form, got %q %q", command, problems, got)

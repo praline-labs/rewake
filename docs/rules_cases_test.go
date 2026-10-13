@@ -63,11 +63,30 @@ const wholeHost = "# The host\n\n## The wrapper\n\nIts run.\n\nTests:\n- `intern
 	"## Grants\n\nThe scheme.\n\nTests:\n- `internal/mail/mail_test.go` `TestHeld`\n\n" +
 	"## The live set\n\nWhat a run proved.\n\nTests:\n- `internal/mail/mail_test.go` `TestHeld`\n"
 
+// checkSynthetic checks documents as checkRules does, with every document of
+// unnumbered rules a case does not give stated whole, each section held, so a
+// case about one document sees only its own problems.
+func checkSynthetic(documents map[string]string, world rulesWorld) []string {
+	all := map[string]string{}
+	for name, sections := range unnumbered {
+		var text strings.Builder
+		text.WriteString("# Rules\n\n")
+		for _, section := range sections {
+			text.WriteString("## " + section + "\n\nA rule.\n\nTests:\n- `internal/mail/mail_test.go` `TestHeld`\n\n")
+		}
+		all[name] = text.String()
+	}
+	for name, text := range documents {
+		all[name] = text
+	}
+	return checkRules(all, world)
+}
+
 func rulesProblems(t *testing.T, extra string, skip string) []string {
 	t.Helper()
 	world, _ := syntheticWorld(t, syntheticAgents)
 	docs := map[string]string{"rules/all.md": wholeGroups(skip) + "## Under test\n\n" + extra, "rules/host.md": wholeHost}
-	return checkRules(docs, world)
+	return checkSynthetic(docs, world)
 }
 
 func oneProblem(t *testing.T, got []string, want string) {
@@ -118,11 +137,11 @@ func TestATestGoTestWouldNotRunFails(t *testing.T) {
 		"ExampleSilent": "an example without an output comment is compiled, never run",
 	} {
 		docs := map[string]string{"rules/all.md": wholeGroups("E2") + held("internal/mail/odd_test.go", name), "rules/host.md": wholeHost}
-		oneProblem(t, checkRules(docs, world), want)
+		oneProblem(t, checkSynthetic(docs, world), want)
 	}
 	for _, name := range []string{"ExampleSays", "TestRenamedImport"} {
 		docs := map[string]string{"rules/all.md": wholeGroups("E2") + held("internal/mail/odd_test.go", name), "rules/host.md": wholeHost}
-		if got := checkRules(docs, world); len(got) > 0 {
+		if got := checkSynthetic(docs, world); len(got) > 0 {
 			t.Fatalf("%s runs, got %q", name, got)
 		}
 	}
@@ -147,7 +166,7 @@ func TestATestNoCheckReachesFails(t *testing.T) {
 		"internal/./mail/x_test.go": "which is no path inside the module",
 	} {
 		docs := map[string]string{"rules/all.md": wholeGroups("E2") + held(file, "TestX"), "rules/host.md": wholeHost}
-		oneProblem(t, checkRules(docs, world), want)
+		oneProblem(t, checkSynthetic(docs, world), want)
 	}
 }
 
@@ -162,7 +181,7 @@ func TestATestUnderATagNoCheckBuildsFails(t *testing.T) {
 		"## Checks\n\n```bash\ngo test ./... && go test -tags=rewakefault ./internal/mail\n```\n": "",
 	} {
 		world, _ := syntheticWorld(t, agents)
-		got := checkRules(docs, world)
+		got := checkSynthetic(docs, world)
 		if want == "" && len(got) > 0 {
 			t.Fatalf("%q runs the test, got %q", agents, got)
 		} else if want != "" {
@@ -203,13 +222,13 @@ func TestANumberTwiceFails(t *testing.T) {
 		"E9 at docs/rules/all.md:")
 }
 
-func TestAGapWithNoStepFails(t *testing.T) {
-	oneProblem(t, rulesProblems(t, "- **E2. A rule.**\n  Tests:\n  - Gap: nothing holds it yet.\n", "E2"), "names no step")
-	oneProblem(t, rulesProblems(t, "- **E2. A rule.**\n  Tests:\n  - Gap: nothing holds it yet — closed in S40.\n", "E2"),
-		"closed in S40, which is no step")
-	if got := rulesProblems(t, "- **E2. A rule.**\n  Tests:\n  - Gap: nothing holds it yet — closed in S3.\n", "E2"); len(got) > 0 {
-		t.Fatal(got)
+// TestAnyGapFails: since S19 closed stage 3 a gap fails whatever step it
+// names, one the build order has, one it has not, or none.
+func TestAnyGapFails(t *testing.T) {
+	for _, gap := range []string{"nothing holds it yet.", "nothing holds it yet — closed in S40.", "nothing holds it yet — closed in S3."} {
+		oneProblem(t, rulesProblems(t, "- **E2. A rule.**\n  Tests:\n  - Gap: "+gap+"\n", "E2"), "E2 rests on a gap")
 	}
+	oneProblem(t, rulesProblems(t, "- **E2. A rule.**\n  Tests:\n  - `internal/mail/mail_test.go` `TestHeld`\n  - Gap: the rest — closed in S3.\n", "E2"), "E2 rests on a gap")
 }
 
 // TestAnUnnumberedRuleCannotLoseItsTests: the host's rules are known by their
@@ -224,7 +243,7 @@ func TestAnUnnumberedRuleCannotLoseItsTests(t *testing.T) {
 		wholeHost + "\n## Notes\n\nTests:\n- `internal/mail/mail_test.go` `TestHeld`\n":                                      "a Tests block in no rule",
 		strings.Replace(wholeHost, "`TestHeld`\n\n## Grants", "`TestHeld`\n- stray words\n\n## Grants", 1):                   "neither a test nor a gap",
 	} {
-		oneProblem(t, checkRules(map[string]string{"rules/all.md": wholeGroups(""), "rules/host.md": host}, world), want)
+		oneProblem(t, checkSynthetic(map[string]string{"rules/all.md": wholeGroups(""), "rules/host.md": host}, world), want)
 	}
 }
 
@@ -255,8 +274,8 @@ func TestARaceConstraintFollowsTheCommand(t *testing.T) {
 		docs := func(name string) map[string]string {
 			return map[string]string{"rules/all.md": wholeGroups("E2") + held(file[name], name), "rules/host.md": wholeHost}
 		}
-		oneProblem(t, checkRules(docs(c.refused), world), "a file no go test of AGENTS.md's checks builds")
-		if got := checkRules(docs(c.runs), world); len(got) > 0 {
+		oneProblem(t, checkSynthetic(docs(c.refused), world), "a file no go test of AGENTS.md's checks builds")
+		if got := checkSynthetic(docs(c.runs), world); len(got) > 0 {
 			t.Fatalf("%q runs %s, got %q", c.command, c.runs, got)
 		}
 	}
@@ -276,7 +295,7 @@ func TestACountThatRunsNoTestFails(t *testing.T) {
 		world, write := syntheticWorld(t, syntheticAgents)
 		write("AGENTS.md", "## Checks\n\n```bash\n"+command+"\n```\n")
 		world, problems := readWorld(world.root)
-		got := checkRules(map[string]string{"rules/all.md": wholeGroups(""), "rules/host.md": wholeHost}, world)
+		got := checkSynthetic(map[string]string{"rules/all.md": wholeGroups(""), "rules/host.md": wholeHost}, world)
 		if !refused {
 			if len(problems)+len(got) > 0 {
 				t.Fatalf("%q runs every test once at least, got %q %q", command, problems, got)
@@ -302,13 +321,6 @@ func TestOnlyTheBuildOrderNamesSteps(t *testing.T) {
 	world, problems := readWorld(world.root)
 	if len(problems) > 0 || !slices.Equal(world.steps, []string{"S1", "S3"}) {
 		t.Fatalf("got %q %q, want the build order's own rows", world.steps, problems)
-	}
-	for _, step := range []string{"S40", "S41", "S42", "S43"} {
-		documents := map[string]string{
-			"rules/all.md":  wholeGroups("E2") + "- **E2. A rule.**\n  Tests:\n  - Gap: none yet — closed in " + step + ".\n",
-			"rules/host.md": wholeHost,
-		}
-		oneProblem(t, checkRules(documents, world), "closed in "+step+", which is no step")
 	}
 	for text, want := range map[string]string{
 		"## Elsewhere\n\n| Step | What |\n|---|---|\n| S1 | tests |\n":                           "no table of steps under the heading The build order",

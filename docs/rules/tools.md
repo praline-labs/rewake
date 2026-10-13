@@ -263,10 +263,19 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
   CLI of every session of a room are one build — one artifact, by the hash of its
   content, not by its version line; every writer holds the room's build lease while it
   acts, and anything of another build is refused before it acts
-  ([design-state.md](../v2/design-state.md#one-build-per-room)).
+  ([design-state.md](../v2/design-state.md#one-build-per-room)). How the build is
+  identified and how the lease holds a room are rules of their own, with their tests, in
+  [state.md](state.md#the-builds-identity); the tests below hold the tool's side of it:
+  the hello and the peer check by the build's content, a copy admitted, a call refused in
+  a room of another build before its ticket is confirmed, an orphaned child refused after
+  a switch, and the lease held through a bounded answer's continuation.
   Tests:
   - `internal/host/endpoint/hello_test.go` `TestAHelloIsChecked`
-  - Gap: the build id and the room's lease — closed in S17.
+  - `internal/host/endpoint/peer_test.go` `TestPeerCheckIsTheBuildsContent`
+  - `test/leaserig/lease_test.go` `TestArtifactCopyCanJoinRoomAndUseTools`
+  - `internal/cli/lease_test.go` `TestBothRoutesRefuseAnotherBuildsRoom`
+  - `test/leaserig/lease_test.go` `TestOrphanChildRefusesAfterBuildSwitch`
+  - `internal/cli/view_test.go` `TestToolOutputContinuationHoldsLease`
 
 - **T11. A failing tool never weakens the mail.** The shell takes the same words under
   the same receipts; the surface, the read boundary and the refusals are the CLI's.

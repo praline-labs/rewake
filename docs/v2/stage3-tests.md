@@ -195,6 +195,9 @@ over a neutral TurnBoundary — closed in S10.
 
 ## Gaps and their steps
 
+Every gap below is closed, and since S19 the rules test fails on any gap line (step 6
+above); the rules name the tests that closed each.
+
 | Rule | Gap | Closed in |
 |---|---|---|
 | E2 | the inbox sweep removes a record only under its lock | S3 |

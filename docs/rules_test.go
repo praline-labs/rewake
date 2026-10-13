@@ -31,13 +31,15 @@ var ruleGroups = map[string]int{"E": 8, "D": 8, "O": 2, "T": 11, "C": 8, "L": 3}
 // heading, not by its Tests line, so deleting the block cannot delete the rule
 // from the check.
 var unnumbered = map[string][]string{
-	"rules/host.md": {"The wrapper", "The live set", "Grants"},
+	"rules/host.md":        {"The wrapper", "The live set", "Grants"},
+	"rules/layout.md":      {"The import rule", "Harness names outside the adapters", "No registry", "The exception tables"},
+	"rules/adapter-api.md": {"The capabilities", "The catalogue", "Minimum versions"},
+	"rules/state.md":       {"The state root", "The build's identity", "The room's lease", "Views and changes", "Clearing the state of 1.x"},
 }
 
 var (
 	ruleStart = regexp.MustCompile(`^- \*\*([A-Z]+)(\d+)\.`)
 	namedTest = regexp.MustCompile("^- `([^`]+)` `([^`]+)`")
-	closedIn  = regexp.MustCompile(`closed in (S\d+)`)
 )
 
 // ruleBlock is one rule, or a Tests block that belongs to none.
@@ -144,15 +146,16 @@ func checkBlock(block ruleBlock, what string, world rulesWorld) []string {
 	} else if len(block.tests)+len(block.gaps) == 0 {
 		problems = append(problems, fmt.Sprintf("%s at %s names no test and no gap", what, block.where))
 	}
+	// Stage 3 closed with S19, so no clause rests on a gap any more, whatever
+	// step it names (docs/v2/stage3-tests.md#docsrules_testgo, step 6): it
+	// names the tests that hold it, or the rule states it as a known limit,
+	// dated, with the stage that owns it.
 	for _, gap := range block.gaps {
-		match := closedIn.FindStringSubmatch(gap)
 		if stray, ok := strings.CutPrefix(gap, "unreadable: "); ok {
 			problems = append(problems, fmt.Sprintf("%s: a line of the Tests block of %s is neither a test nor a gap: %q", block.where, what, stray))
-		} else if match == nil {
-			problems = append(problems, fmt.Sprintf("%s: the gap of %s names no step: write \"closed in S<n>\"", block.where, what))
-		} else if !slices.Contains(world.steps, match[1]) {
-			problems = append(problems, fmt.Sprintf("%s: the gap of %s is closed in %s, which is no step of docs/v2/stage3.md#the-build-order", block.where, what, match[1]))
+			continue
 		}
+		problems = append(problems, fmt.Sprintf("%s: %s rests on a gap, and since S19 no rule does: name the tests that hold the clause, or state it in the rule as a known limit with the stage that owns it", block.where, what))
 	}
 	for _, ref := range block.tests {
 		problems = append(problems, checkTest(ref, what, world)...)
