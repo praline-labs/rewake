@@ -190,13 +190,22 @@ existing proof holds unchanged.
   (`Setsid`, `Setctty`), reports that process's pid and start time on a second pipe, and exits.
   The worker's wrapper is reparented away from main's tree: to the nearest subreaper above
   main's wrapper, or to init. The image is the room's build (T10).
-- **The check that it left main's tree.** Two parts, both before the worker is seated. Main's
+- **The check that it left main's tree.** Two parts, both before any code the worker controls
+  runs. Main's
   wrapper reads its own `PR_GET_CHILD_SUBREAPER` at the open and refuses the open when set:
   then an orphan would come back to it. rewake sets the flag only in the probe holder, a
   process of its own; Claude Code is main's wrapper's child, never on the launcher's path, so
   nothing it sets can take the orphan. And once the launcher has exited, the host asks
   `proc.Descends(worker wrapper, main's wrapper)` — the very check the authority makes — and
-  requires a refusal; a worker that still descends is stopped and the open fails, naming why.
+  requires a refusal proven by the whole chain read up to init; an ancestry that cannot be read
+  is unknown, not a success (today `proc.Descends` reports a read error as "not a descendant",
+  so the check needs that case apart), and a worker that still descends or cannot be shown not
+  to is stopped and the open fails, naming why.
+- **The launch gate.** The launcher and the worker's wrapper are rewake's own code, so they may
+  descend from main for the moment the reparenting takes; nothing the worker controls may. The
+  worker's wrapper therefore waits, before it starts its harness or anything the harness
+  configures to run, for one byte the host writes on the liveness pipe once the check passed;
+  the end of the pipe before that byte aborts the launch.
   If detaching cannot be guaranteed on a machine, the open is refused there and main decides;
   no new authority rule is designed for it.
 - **What the authority then sees.** A command of the worker — its shell, its tool children,
@@ -206,8 +215,23 @@ existing proof holds unchanged.
   descend from main's wrapper and pass as today.
 - **The command.** `<image> <harness> --name <name> --<role> --room <main's room> --
   <the harness's new-conversation arguments>`, with the keeper's checkout as its working
-  directory and the terminal at the row's size. It is an ordinary launch from there on: it
-  claims its name, takes the room's lease, writes its own run directory and its own mod.
+  directory and the terminal at the row's size. It is an ordinary launch from there on, but
+  for its process groups: it claims its name, takes the room's lease, writes its own run
+  directory and its own mod.
+- **Its process groups** (decided by main, October 13, 2026). An ordinary launch keeps the
+  harness in the wrapper's group on purpose, so that a person's shell sees one job
+  (`internal/host/wrap.go`); that stays. A hosted launch has no shell: its wrapper leads the
+  session of a terminal only rewake holds. There the wrapper starts its harness in a process
+  group of its own and makes that group the terminal's foreground group (`tcsetpgrp`); the
+  wrapper stays the session leader in its own group, outside every target of the shutdown in
+  [section 7](#7-closing), so it lives to reap the harness and record the end. The terminal
+  then behaves as for any foreground job: Ctrl+C and Ctrl+Z written into the space reach the
+  harness's group through the terminal's line discipline, and the wrapper gets neither. A
+  harness that stops has no shell to bring it back, so the wrapper continues its group at once
+  and gives it the terminal again. The wrapper, in a background group of its own terminal,
+  catches SIGTTOU and SIGTTIN rather than ignoring them, since an ignored signal would stay
+  ignored in the harness it starts; its own terminal calls are only the handing over of the
+  foreground.
 - **The environment.** The wrapper's own, less what names a session or a transport —
   `REWAKE_SESSION`, `REWAKE_EPOCH`, `REWAKE_ROOM`, `REWAKE_DIR`, `REWAKE_MOD_SOCKET`, every
   `REWAKE_BRIDGE_` variable — and less the worker harness's `EnvNotInherited`, as the probe
@@ -292,7 +316,10 @@ signal, not the work.
 **How one worker is stopped.** Main's wrapper closes that worker's liveness pipe. The worker's
 own wrapper sees the end of the pipe — or a hang-up of its terminal, which it takes the same way
 — and runs a bounded shutdown itself: SIGHUP to its harness's process group, SIGTERM after 5 s,
-SIGKILL after 2 s more; then it records its run's end and exits. The worker's wrapper does this,
+SIGKILL after 2 s more. That group is the harness's own and never holds the wrapper
+([section 4](#4-the-workers-launch)), so the wrapper outlives every signal it sends: it reaps the
+harness, sees no process left in the group, records its run's end from that observation, and
+exits. The worker's wrapper does this,
 not main's, so it happens also when main's wrapper is gone. Main's wrapper observes the end — the
 worker wrapper's pid with its start time gone — and only an observed end counts; one still there
 after the bound and a margin has its session killed by main's wrapper.
