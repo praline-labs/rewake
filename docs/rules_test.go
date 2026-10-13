@@ -23,8 +23,22 @@ import (
 // runs nothing, so it costs the five checks almost nothing.
 const rulesDir = "rules"
 
-// ruleGroups are the numbered groups and how many rules each has.
-var ruleGroups = map[string]int{"E": 8, "D": 8, "O": 2, "T": 11, "C": 8, "L": 3}
+// ruleGroups are the numbered groups and the numbers each has in force. A
+// group of stage 4 enters rule by rule, each in the step that builds the test
+// holding it (rules/space.md), so a group is its numbers, not a count.
+var ruleGroups = map[string][]int{
+	"E": upTo(8), "D": upTo(8), "O": upTo(2), "T": upTo(11), "C": upTo(8), "L": upTo(3),
+	"SP": {3, 4, 9},
+}
+
+// upTo is the numbers of a group whose rules are all in force.
+func upTo(count int) []int {
+	numbers := make([]int, count)
+	for i := range numbers {
+		numbers[i] = i + 1
+	}
+	return numbers
+}
 
 // unnumbered are the rules without a number, by document and heading: each such
 // section is one rule and ends with one Tests block. A rule is found by its
@@ -111,8 +125,8 @@ func checkRules(documents map[string]string, world rulesWorld) []string {
 		}
 	}
 	var expected []string
-	for group, count := range ruleGroups {
-		for n := 1; n <= count; n++ {
+	for group, numbers := range ruleGroups {
+		for _, n := range numbers {
 			expected = append(expected, fmt.Sprintf("%s%d", group, n))
 		}
 	}

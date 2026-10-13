@@ -21,6 +21,10 @@ does it. Created in stage 3's first step, S1 ([stage3.md](../v2/stage3.md#docume
   proves a channel works, silence, event order, notices, policy refusals.
 - [launch.md](launch.md) — **L1–L3**, what a launch adds: the mail and nothing else, where
   and never what, nothing past the run.
+- [space.md](space.md) — **SP1–SP9**, the first working space of stage 4: a hosted worker,
+  its record, its keeper and its closing. A rule enters in the step that builds its test;
+  SP3, SP4 and SP9 are in force from S4-2. Open it before changing how a space or a hosted
+  launch behaves.
 - [host.md](host.md) — the host's tests and the grant scheme, rules without a number.
 - [layout.md](layout.md) — the layout, rules without a number: what each layer may
   import, no harness named outside the adapters, no registry, the exception tables.
@@ -59,8 +63,8 @@ A move rewrites the paths in the same commit. Tests that hold only the 1.x migra
 `docs/rules_test.go` runs with the five checks of `AGENTS.md`. It parses these documents
 and the Go files they name, and runs nothing. It fails when:
 
-- a number of E1–E8, D1–D8, T1–T11, C1–C8, L1–L3 or O1–O2, or a section of the rules
-  without a number, is missing from these documents, or appears twice, or a number no group
+- a number of E1–E8, D1–D8, T1–T11, C1–C8, L1–L3, O1–O2 or the SP rules in force, or a
+  section of the rules without a number, is missing from these documents, or appears twice, or a number no group
   has appears;
 - a rule has no `Tests:` block, or names no test and no gap, or a `Tests:` block belongs
   to no rule;

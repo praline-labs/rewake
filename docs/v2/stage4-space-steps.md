@@ -80,7 +80,10 @@ answer. Main runs them, as in the probe.
 ## Rules before code
 
 A new group, `docs/rules/space.md`, numbered **SP1–SP9**, with `docs/rules_test.go` taught the
-group in the same step. Each rule names its tests as every group does.
+group in S4-2. Each rule names its tests as every group does, so a rule enters the group in the
+step that builds the test holding it (decided by main, October 13, 2026): SP3, SP4 and SP9 at
+S4-2, held in their existing part; SP2 and SP7 at S4-3, SP5 at S4-7, SP6 at S4-8, SP1 and SP8 at
+S4-9. Until then a rule stands here.
 
 - **SP1. A space lives no longer than its main.** When main's run ends — by `session.end`, by
   its harness ending, or by its wrapper being killed — every worker of its spaces is ended
@@ -128,7 +131,7 @@ Each small enough for one review; each closed by its acceptance check, not by it
 | Step | What it builds | Acceptance |
 |---|---|---|
 | S4-1 | P4 and P15c, live, from the probe's kit: the peer of `$.http.fetch` on every request, after a reload and after a keeper's respawn — the kit's existing coverage, not P15b's fetches, which say nothing of their peer — and a shell child's request refused; the screen drawn as styled text in the key surface at 160 by 30, its repaint rate and CPU against P15b's cell grid; a progress signal on the held call, if the skill shows one (Q4); a worker's `turn.complete` and its `answer` | the records in [research-claude-mod.md](../research-claude-mod.md); P4 positive, or the stage stops for a channel design ([design-claude.md](design-claude.md#how-a-tool-call-runs)); P15c picks text or the fallback; P15c also carries the keeper's view cleaned of Claude Code's other rows and the prompt box made useful, since no render site hides it (the owner's questions of October 13, 2026) |
-| S4-2 | the rules SP1–SP9 and the rules test's group; the protocol schema, `tools/protogen` and the drift test | `go test ./docs/` and the drift test green; review of the rules |
+| S4-2 | the rules test's SP group with SP3, SP4 and SP9; the protocol schema, `tools/protogen` and the drift test | `go test ./docs/` and the drift test green; review of the rules |
 | S4-3 | `internal/core/space` and `rewake space list` | the record tests under the lease; the listing on a hand-written record, closed and kept |
 | S4-4 | `internal/host/terminal`, with `charmbracelet/x/vt` (the owner's exception, [section 1](stage4-space.md#the-terminal-library)) | the pseudo-terminal tests above, with `-race`; the layout test with the library only in `host/terminal`; `go list -deps` of the binary before and after, recorded with the exception |
 | S4-5 | the embedded mod's skeleton and `modhost`: written per run, `--plugin-dir`, the mod socket, `hello` with the peer check, `SpacesCapability` live on main; the spaces offer, its live and refused states and `ConversationNamer` written into the API contract ([design-api.md](design-api.md)) and the catalogue's completeness test, not as scattered optional assertions | live: the hello on the installed Claude Code, a shell child's request refused; the validator test |
