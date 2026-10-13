@@ -68,6 +68,17 @@ func TestAPackageThatStaysImportsNothingAStepRemoves(t *testing.T) {
 	oneMessage(t, edgeMessages(found), "imports internal/old (core, goes in S2)")
 }
 
+func TestAConfinedLibraryIsImportedByItsPackageAlone(t *testing.T) {
+	library := "github.com/charmbracelet/x/vt"
+	graph := []variant{{packages: []goPackage{
+		{path: "internal/host/terminal", files: []goFile{{name: "internal/host/terminal/vt.go", imports: []string{library}}}},
+		{path: "internal/host/keeper", files: []goFile{{name: "internal/host/keeper/screen.go", imports: []string{library}}}},
+		{path: "internal/core/mail", files: []goFile{{name: "internal/core/mail/mail.go", imports: []string{"github.com/pelletier/go-toml/v2"}}}},
+	}}}
+	found, _ := judgeImports(graph, nil)
+	oneMessage(t, edgeMessages(found), "internal/host/keeper/screen.go: internal/host/keeper imports github.com/charmbracelet/x/vt, which only internal/host/terminal may import")
+}
+
 func TestAPackageInNoPlaceFails(t *testing.T) {
 	_, unplaced := judgeImports([]variant{{packages: []goPackage{{path: "internal/elsewhere"}}}}, nil)
 	oneMessage(t, unplaced, "internal/elsewhere is neither at a 2.0 path nor in the transition table")

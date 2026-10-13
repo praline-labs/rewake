@@ -60,7 +60,8 @@ an effect found more or fewer times than its entry counts, an entry nothing matc
 entry without a reason. The exceptions, classified by effect and scope, never a whole
 adapter: `host/worktree`, which writes beside a checkout and in the user's data directory,
 outside the state (its records, serial locks, copies, temporary hook files and removal); the
-grant authority's abstract socket; the test helpers that are not `_test.go` files
+grant authority's abstract socket; `host/terminal`'s two opens of a pseudo-terminal's device
+nodes, which make no file (S4-4); the test helpers that are not `_test.go` files
 (`mailtest`, `registrytest`, `buildtest`). Without type information it counts every method
 of those two names, whatever its receiver, the safe side; a content write or a truncate
 through a descriptor needs a writable one, which only an open the check counts or the

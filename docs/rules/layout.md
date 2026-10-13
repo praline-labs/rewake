@@ -27,7 +27,10 @@ may. A layer always imports itself, and an adapter its own parts:
 | `cmd/rewake` | `cli`, `adapter/catalog` |
 
 Every layer but `infra` may import another module's package, each dependency its own
-decision (`AGENTS.md`, "Code"). A forbidden edge fails naming both packages and the file
+decision (`AGENTS.md`, "Code"). A module taken as an exception to that rule may be
+confined to the one package it was taken for: `github.com/charmbracelet/` is imported by
+`internal/host/terminal` alone ([stage4-space.md](../v2/stage4-space.md#the-terminal-library)),
+and an import of it anywhere else fails naming the file and the package that may. A forbidden edge fails naming both packages and the file
 that makes it, and the build tag when only a tagged build has it; a package in no layer
 fails; a directory with a module of its own is no package of this one. The mail
 functions that run under a mailbox lock their caller holds keep the callers the test
@@ -38,6 +41,7 @@ Tests:
 - `internal/layout_test.go` `TestImportsFollowTheLayers`
 - `internal/layout_cases_test.go` `TestAForbiddenEdgeFailsNamingBothPackagesAndTheFile`
 - `internal/layout_cases_test.go` `TestAnEdgeOnlyATagBuildsFailsNamingTheTag`
+- `internal/layout_cases_test.go` `TestAConfinedLibraryIsImportedByItsPackageAlone`
 - `internal/layout_cases_test.go` `TestAPackageInNoPlaceFails`
 - `internal/layout_cases_test.go` `TestOneAdapterMayNotImportAnother`
 - `internal/layout_discovery_test.go` `TestEveryImportReachesTheRule`

@@ -71,7 +71,8 @@ is the only maintained one that does; the st ports would shift every column afte
 glyph. The exception covers this library in `internal/host/terminal` only; its build step
 (S4-4) measures what it really brings into the binary with `go list -deps` and records it. The
 library sits behind that package's interface — write bytes, resize, read the screen as styled
-rows with the cursor — and no other package sees it.
+rows with the cursor — and no other package sees it. What S4-4 measured it to bring in, and
+what it does not do, is [stage4-space-terminal.md](stage4-space-terminal.md).
 
 ## 2. The protocol
 

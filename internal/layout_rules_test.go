@@ -45,6 +45,24 @@ var mayImport = map[string][]string{
 	command:     {cli, catalog, external},
 }
 
+// confined names the modules that one package alone may import, by path
+// prefix: a library taken as an exception to the dependency rule stays behind
+// the package it was taken for, so no other code comes to lean on it
+// (docs/v2/stage4-space.md#the-terminal-library).
+var confined = map[string]string{
+	"github.com/charmbracelet/": "internal/host/terminal",
+}
+
+// confinedTo answers which package alone may import path, when one is named.
+func confinedTo(path string) (string, bool) {
+	for prefix, owner := range confined {
+		if strings.HasPrefix(path, prefix) {
+			return owner, true
+		}
+	}
+	return "", false
+}
+
 // named marks the layers whose files rule 2 reads: everything but the
 // adapters, the catalog and the command, which are where harness names live.
 var named = []string{core, tool, host, cli, infra}
@@ -152,9 +170,16 @@ type edge struct {
 	file, from, to string
 	fromAt, toAt   place
 	builds         []build
+	// owner is set for a confined module's import: the package that alone may
+	// import it.
+	owner string
 }
 
 func (e edge) String() string {
+	if e.owner != "" {
+		return fmt.Sprintf("%s: %s imports %s, which only %s may import (docs/rules/layout.md#the-import-rule)%s",
+			e.file, e.from, e.to, e.owner, underBuilds(e.builds))
+	}
 	return fmt.Sprintf("%s: %s (%s) imports %s (%s%s), which the import rule forbids (docs/v2/design.md#the-import-rule)%s",
 		e.file, e.from, e.fromAt.layer, e.to, e.toAt.layer, describeGoing(e.toAt), underBuilds(e.builds))
 }
@@ -199,6 +224,8 @@ func judgeImports(variants []variant, table map[string]transit) ([]edge, []strin
 					}
 					if forbidden(from, to) {
 						found = addEdge(found, edge{file: file.name, from: pkg.path, to: imported, fromAt: from, toAt: to}, v.build)
+					} else if owner, ok := confinedTo(path); ok && pkg.path != owner {
+						found = addEdge(found, edge{file: file.name, from: pkg.path, to: imported, owner: owner}, v.build)
 					}
 				}
 			}

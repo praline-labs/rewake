@@ -154,6 +154,10 @@ Stage 4, Claude Code's adapter as one mod:
   S4-3 built them: where a record lives, its fields, its states and the steps between them,
   what a close must observe, the kept checkouts' reminder. Open it before writing a space's
   record from the host.
+- [stage4-space-terminal.md](stage4-space-terminal.md) — `internal/host/terminal` as S4-4
+  built it: the pseudo-terminal and the screen as styled runs, what `charmbracelet/x/vt`
+  does not do and how the package covers it, what the library brings into the binary, what
+  the next steps owe. Open it before hosting a program on a terminal or changing the library.
 - [stage4-reading-pi.md](stage4-reading-pi.md) — a dated record of October 13, 2026: pi
   read for the audit at 0.85.1 and 1.2.0, capability by capability, its risks and the
   probe items PI1–PI14 the audit cites. Open it before stage 4b.
