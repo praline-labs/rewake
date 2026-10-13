@@ -44,7 +44,8 @@ refusal on September 17, 2026 cleared after recipient restart.
   reviewed and recorded in [its entry](2026-10-13-stage4-audit.md); the probe's first runs
   — P11's first half, P12b, P15a — and the owner's decisions they led to are in
   [their entry](2026-10-13-stage4-probe-1.md), P15b's real pseudo-terminal in
-  [its own](2026-10-13-stage4-probe-2.md). Then stage 4b, pi's adapter,
+  [its own](2026-10-13-stage4-probe-2.md), the first working space's design and its review in
+  [theirs](2026-10-13-stage4-space-design.md). Then stage 4b, pi's adapter,
   and stage 5, Codex's entry point, by the owner's decision of the same day
   ([the stage plan](../v2/design.md#the-stage-plan-from-here)).
   Stage 3 is closed: [its closing entry](2026-10-13-stage3-s19.md) says what it built.
@@ -159,6 +160,7 @@ without a date. Local installation without publishing is in
 | October 13, 2026 | [Stage 4 of 2.0: the audit before the probe](2026-10-13-stage4-audit.md) | What Claude Code 2.1.296 and a mod already give, weighed feature by feature before the probe: twenty-two verdicts, the mod's join proposed with its three open authority obligations and the wrapper as fallback, probe rows P11–P16 and P12b; the owner's decisions of the day — pi as stage 4b, Codex an entry point before 2.0, the space as stage 4's target with main seating workers, the worktree's lifecycle whole to Claude Code, the tasks-list entry as the space's tab; one review on the Codex side, four blockers corrected and accepted at `feb770c` |
 | October 13, 2026 | [Stage 4 of 2.0: the probe's first runs](2026-10-13-stage4-probe-1.md) | P11's first half, P12b and P15a run live on Claude Code 2.1.296: a detached process the mod starts lives with the harness, the mod spawns and holds a subagent keeper with a worktree, the keeper's tool row carries a grid and takes most keys but Escape, Ctrl+C, Ctrl+X and paste; the owner's decisions of the day — workers close with main and are restored by session id, a room is one main by default, Go with TypeScript only in-harness — and a prefix key and reminders of kept checkouts; open: the join's authority obligations, P15b, the checkout's base and sweep |
 | October 13, 2026 | [Stage 4 of 2.0: P15b](2026-10-13-stage4-probe-2.md) | A real pseudo-terminal drawn in the keeper's row on Claude Code 2.1.296: the keys and the prefix reach it as terminal bytes, 31 ms from key to echo; vi, less and a nested Claude Code work inside, the nested one ended by the prefix's Ctrl+C; the keeper's second call about 30 s after the first answered "already held"; open: the Ctrl keys beyond A and B, paste, the second call's cause, fullscreen |
+| October 13, 2026 | [Stage 4 of 2.0: the first working space designed](2026-10-13-stage4-space-design.md) | The design of stage 4's first end to end, documents only: the mod embedded and written per run, a peer-checked protocol over a Unix socket, the keeper spawned by the mod, the worker started by main's wrapper detached from main's tree under main's state base, styled text in the keeper's row, shutdown owned by the wrappers, rules SP1–SP9 and steps S4-1 to S4-10; five blockers from the review on the Codex side closed over four rounds; the owner's exception for the terminal library; open: P4, P15c and the other live checks, restore |
 
 ## Remaining work — owner decisions, September 19–21, 2026
 
