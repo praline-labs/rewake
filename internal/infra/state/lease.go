@@ -275,7 +275,7 @@ func WriteBuildRecord(l *LeaseLock, id string) error {
 	if err := viewWrite(OpWrite, path); err != nil {
 		return err
 	}
-	return replace(path, []byte(id+"\n"))
+	return replace(path, []byte(id+"\n"), nil)
 }
 
 // The rooms this process holds a lease for. A write of a room asks here

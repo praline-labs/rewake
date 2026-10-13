@@ -425,6 +425,7 @@ what a decision may settle instead.
   - `internal/cli/decide_lease_test.go` `TestDecisionLeasePrecedesAllLocks`
   - `internal/core/mail/decision_durable_test.go` `TestDecisionEffectsWaitForTheDecisionToBeDurable`
   - `internal/core/mail/decision_matrix_test.go` `TestDecisionDurabilityAtEveryCut`
+  - `internal/infra/state/points_test.go` `TestAWriteIsToldEachPointBeforeItIsReached`
   - `internal/host/delivery/decision_race_test.go` `TestDecisionRacesWithWrapperAndDelivery`
 
 - **D5. "Arrived" closes the report's step; "did not arrive" closes it and installs the

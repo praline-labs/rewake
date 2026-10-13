@@ -172,7 +172,7 @@ func (c *Cleanup) WriteSummary(id string, data []byte) error {
 	if err := c.check(OpWrite, path); err != nil {
 		return err
 	}
-	return replace(path, data)
+	return replace(path, data, nil)
 }
 
 // ReadSummary reads the counts recorded for the tree of id; a missing one is

@@ -9,16 +9,20 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // matrixAccess is the file access of one world of the decision's matrix
 // (docs/v2/stage3-decision-manifest.md#clean-runs-and-crash-cuts), put in
 // place for its state directory alone, so worlds run side by side. It logs
 // every durable step the product takes while a step of the schedule is armed
-// — a write, a publication, a rename, a removal or a flush — and makes one of
-// them its cut: killed, that step and every change after it fail as a process
-// stopped there leaves them, until the schedule lifts the cut; flushed, that
-// step's change is made and its flush answers an error. It counts every
+// — a rename, a removal, a flush, and each point inside a write or a
+// publication: its temporary file, that file's flush, its placing under the
+// name and the directory's flush — and makes one of them its cut: killed,
+// that step and every change after it fail as a process stopped there leaves
+// them, until the schedule lifts the cut; flushed, a flush answers an error
+// without being made, and a rename or a removal is made and answers one. It counts every
 // letter written into a mailbox, by id, whether or not the letter is still
 // there, so a copy's landings are counted from the writes and not from what
 // reads and sweeps left; and it plays the faults a world's evidence names,
@@ -76,10 +80,10 @@ func (p matrixPass) Stat(path string) (fs.FileInfo, error) {
 	return p.osAccess.Stat(path)
 }
 
-// durable runs one durable step: logged when armed, and failed as the cut
-// says. change is false for a flush, which a killed process never makes and
-// a failing flush answers without doing.
-func (a *matrixAccess) durable(op, path string, change bool, do func() error) error {
+// before is where a live process reaches a step of its own: a killed one
+// reaches none, and the world's events placed on the step happen here,
+// before any point of it.
+func (a *matrixAccess) before(op, path string) error {
 	a.mu.Lock()
 	hook, killed := a.beforeOp, a.killed
 	a.mu.Unlock()
@@ -87,21 +91,25 @@ func (a *matrixAccess) durable(op, path string, change bool, do func() error) er
 		return &os.PathError{Op: op, Path: path, Err: syscall.EIO}
 	}
 	if hook != nil {
-		if err := hook(op, path); err != nil {
-			return err
-		}
+		return hook(op, path)
 	}
+	return nil
+}
+
+// step logs one durable point when armed and says whether it is the cut and
+// how the cut goes; a killed process reaches no point.
+func (a *matrixAccess) step(op, path string) (cut, flush bool, err error) {
 	a.mu.Lock()
 	if a.killed {
 		a.mu.Unlock()
-		return &os.PathError{Op: op, Path: path, Err: syscall.EIO}
+		return false, false, &os.PathError{Op: op, Path: path, Err: syscall.EIO}
 	}
 	at := 0
 	if a.armed {
 		a.log = append(a.log, op+" "+path)
 		at = len(a.log)
 	}
-	cut := at > 0 && at == a.cut && !a.fired
+	cut = at > 0 && at == a.cut && !a.fired
 	if cut {
 		a.fired, a.pending = true, true
 		a.killed = !a.flush
@@ -111,10 +119,21 @@ func (a *matrixAccess) durable(op, path string, change bool, do func() error) er
 	if cut && onCut != nil {
 		onCut()
 	}
-	if cut && !flush {
-		return &os.PathError{Op: op, Path: path, Err: syscall.EIO}
+	return cut, flush, nil
+}
+
+// durable runs one durable step that is a single call: logged when armed,
+// and failed as the cut says. change is false for a flush, which a killed
+// process never makes and a failing flush answers without doing.
+func (a *matrixAccess) durable(op, path string, change bool, do func() error) error {
+	if err := a.before(op, path); err != nil {
+		return err
 	}
-	if cut && !change {
+	cut, flush, err := a.step(op, path)
+	switch {
+	case err != nil:
+		return err
+	case cut && (!flush || !change):
 		return &os.PathError{Op: op, Path: path, Err: syscall.EIO}
 	}
 	if err := do(); err != nil {
@@ -124,6 +143,56 @@ func (a *matrixAccess) durable(op, path string, change bool, do func() error) er
 		return &os.PathError{Op: op, Path: path, Err: syscall.EIO}
 	}
 	return nil
+}
+
+// placed runs one write of a record point by point (state.Points): the
+// temporary file, its flush, its placing under the name — logged as the
+// write itself — and the directory's flush, each a durable step a cut stops
+// or, for a flush, fails before it is made. Killed, the process leaves its
+// temporary file behind, as a stopped one does.
+func (a *matrixAccess) placed(op, path string, write func(state.Points) error) error {
+	if err := a.before(op, path); err != nil {
+		return err
+	}
+	// The directory's flush is reached only once the file is in place, so a
+	// letter counts from there, whether or not that flush goes through.
+	visible := false
+	err := write(func(point, at string) error {
+		name := op + "-" + point
+		switch point {
+		case state.PointDiscard:
+			return a.changing("discard", at)
+		case state.PointPlace:
+			name = op
+		case state.PointDirSync:
+			visible = true
+		}
+		cut, _, err := a.step(name, at)
+		if err == nil && cut {
+			err = &os.PathError{Op: name, Path: at, Err: syscall.EIO}
+		}
+		return err
+	})
+	if err == nil || visible {
+		a.noteLetter(path)
+	}
+	return err
+}
+
+// flushable says whether a cut at the step may be a failed flush rather
+// than a kill: a flush, or a change made by one call whose own flush is
+// part of it. A point inside a write that is no flush — the temporary file
+// written, the file placed — is only ever stopped; the failed flushes around
+// it are the points of its own.
+func flushable(step string) bool {
+	op, _, _ := strings.Cut(step, " ")
+	switch op {
+	case "sync-dir", "sync-file", "rename", "remove",
+		"write-" + state.PointTempSync, "write-" + state.PointDirSync,
+		"publish-" + state.PointTempSync, "publish-" + state.PointDirSync:
+		return true
+	}
+	return false
 }
 
 // changing fails a change a killed process would not make, without logging
@@ -147,23 +216,11 @@ func (a *matrixAccess) noteLetter(path string) {
 }
 
 func (a *matrixAccess) WriteFile(path string, raw []byte) error {
-	return a.durable("write", path, true, func() error {
-		if err := a.osAccess.WriteFile(path, raw); err != nil {
-			return err
-		}
-		a.noteLetter(path)
-		return nil
-	})
+	return a.placed("write", path, func(points state.Points) error { return state.WriteAtomicWith(path, raw, points) })
 }
 
 func (a *matrixAccess) Publish(path string, raw []byte) error {
-	return a.durable("publish", path, true, func() error {
-		if err := a.osAccess.Publish(path, raw); err != nil {
-			return err
-		}
-		a.noteLetter(path)
-		return nil
-	})
+	return a.placed("publish", path, func(points state.Points) error { return state.PublishExclusiveWith(path, raw, points) })
 }
 
 func (a *matrixAccess) Rename(from, to string) error {

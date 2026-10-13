@@ -100,16 +100,29 @@ Never built, never accepted; each is a clause of a partition's `Feasible`:
 
 ## Clean runs and crash cuts
 
-Every world runs clean, then once per durable step of its clean run: the process killed
-there, and once more with that step's flush failed — the change made, its flush
-answering an error, or, for a flush itself, the error alone. A durable step is a write,
-a publication, a rename, a removal or a directory or file flush of the product, taken
-while a command of the schedule runs. The seam is the file access of the mail package,
-put in place for one world's state directory alone (`matrixAccess`,
+Every world runs clean, then once per durable step of its clean run with the process
+killed there, and once more for each step a flush can fail at, with that flush failed. A
+durable step is a rename, a removal or a directory or file flush of the product, or a
+point inside one of its writes and publications, taken while a command of the schedule
+runs. A write or a publication is four points, each a step of its own
+(`state.Points`, `infra/state/write.go`): its temporary file written, that file's
+contents flushed, the file placed under its name — renamed for a write, linked, failing
+when the name is taken, for a publication — and the directory flushed. A kill at a point
+stops the process before it: at the first three the name stays as it was and the
+temporary file stays behind, as a stopped process leaves it; at the directory's flush the
+record is in place and nobody learns of it. A failed flush answers an error without being
+made: the temporary file's leaves the name as it was, the directory's leaves the record
+visible, the error answered and the name taken. A rename or a removal flushed is made
+and answers an error. The temporary file and the placing are only ever killed — the
+flushes around them are the points that fail. The seam is the file access of the mail
+package, put in place for one world's state directory alone (`matrixAccess`,
 `decision_matrix_access_test.go`) rather than the process-wide fault seam, so worlds run
 side by side; it logs the steps, makes one its cut, counts every letter written into a
-mailbox by id — a letter read or swept still counts — and plays the faults a world's
-evidence names on reads. After a kill the stopped process is gone: every later step of
+mailbox by id from the moment it is in place — a letter read or swept, or whose
+directory's flush failed, still counts — and plays the faults a world's evidence names on
+reads. Every clean log is held to the four points of each write and publication, in
+order and nothing between them (`checkWritePoints`), so a write cut only around the whole
+call fails the run. After a kill the stopped process is gone: every later step of
 it fails until the command runs again in one that is not — the barrier again, or the
 same words of the deciding command — and the rest of the schedule follows. Before it
 does, every decision, record beside one and installed journal in the room is whole or
@@ -117,42 +130,50 @@ absent (`checkWhole`). Each run is then held to the model by the play's checks
 (`TestDecisionDurabilityAtEveryCut`); a chain's every generation has names as long as
 the first's.
 
-The cut count of a world is the number of durable steps its clean log holds, measured on
-the matrix's runs in S18's third part, the feasible worlds by the full run:
+The cuts of a world are its clean log's durable steps killed, and those a flush can fail
+at flushed, measured on the matrix's runs in the fix round of S18's third part, the
+feasible worlds by the full run:
 
-| Partition | Pair-cover worlds | Their cuts | Feasible worlds | Their cuts |
-|---|---|---|---|---|
-| `decision` | 23 | 363 | 3198 | 59717 |
-| `resend` | 41 | 1208 | 219 | 7566 |
-| `mailbox` | 32 | 887 | 52 | 1424 |
-| `generations` | 12 | 1882, of which 1528 the chain of 40 | 12 | 1882 |
+| Partition | Pair-cover worlds | Their kills | Their flushes | Feasible worlds | Their kills | Their flushes |
+|---|---|---|---|---|---|---|
+| `decision` | 23 | 999 | 565 | pending | pending | pending |
+| `resend` | 41 | 3650 | 2022 | pending | pending | pending |
+| `mailbox` | 32 | 2831 | 1535 | pending | pending | pending |
+| `generations` | 12 | 1080 and the chain of 40 clean | 596 | pending | pending | pending |
 
-The full run on the final code of S18's third part, on October 13, 2026: all 3481 feasible
-worlds and their 70589 cuts, each killed and flushed — 148145 passing tests and subtests,
-none failing or skipped, in 41 minutes.
+The feasible worlds' counts come from the full run on the final code of the fix round,
+written here once it has run.
 
-Each cut is run twice, killed and flushed. A world's room is made on the file system in
+Before the internal points, on the code of S18's third part, a step was a whole write or
+publication, killed before it or made with an error answered after it: 3481 feasible
+worlds and 70589 steps, each killed and flushed, 148145 passing tests and subtests in 41
+minutes. That run left the temporary file's flush and the visible record whose
+directory's flush failed out of every world (the review of part 3, G1). A world's room is made on the file system in
 memory when the system has one (`/dev/shm`): every durable write of a room flushes, and
 on a disk the same pair cover took four to six times as long. The flushes the seam logs
 are not made — no world loses power, so they change nothing a world can see. For the same
 reason a flush whose failure were ignored would leave the same outcome, so every run's log
 is also held to the order a decision's durable marker stands on (`checkFlushedMarkers`):
-the marker is published right after the decision's file, its directory and its mailbox
-were flushed, and never right after one of those flushes failed. Worlds and their cuts
+the marker's publication begins right after the decision's file, its directory and its
+mailbox were flushed, and never right after one of those flushes failed. Worlds and their cuts
 run in parallel.
 
-**What the five checks run.** Measured on October 12, 2026 with no other heavy run on
-the machine: the pair cover of `decision`, `resend` and `mailbox` and the ten short
-worlds of `generations`, every cut killed and flushed, takes 20 s, and 98 s under
-`-race`. The chain of 40 takes 2.1 s clean, and its 764 steps are some 3000 cut runs —
-about 13 minutes without `-race`; cutting only its first two generations and its last
-still took 200 s, and under `-race` some 25 minutes for each of the three runs of the
-package the five checks make. Main decided on October 12, 2026: the five checks run the
-pair cover with every cut, except the chain of 40, which runs clean, every copy, decision,
-note and closure checked; `REWAKE_DECISION_MATRIX=full` runs every feasible world and
-every cut, the chain of 40 included, in the background before S18's final acceptance,
-with its log and counts in the report. A clean log past 100 steps is what the runner
-takes for a long chain (`cutsOf`).
+**What the five checks run.** The pair cover with every point of every write: the
+internal points are not narrowed for them. Measured on October 13, 2026 with no other
+heavy run on the machine, the pair cover of `decision`, `resend` and `mailbox` and the
+ten short worlds of `generations`, every cut, takes 40 s, and 197 s under `-race`; before
+the internal points it took 20 s and 98 s. Measured on October 12, 2026, before them: the
+chain of 40 took 2.1 s clean, and its 764 steps were some 3000 cut runs — about 13
+minutes without `-race`; cutting only its first two generations and its last still took
+200 s, and under `-race` some 25 minutes for each of the three runs of the package the
+five checks make. Main decided on October 12, 2026: the five checks run the pair cover
+with every cut, except the chain of 40, which runs clean, every copy, decision, note and
+closure checked; `REWAKE_DECISION_MATRIX=full` runs every feasible world and every cut,
+the chain of 40 included, in the background before S18's final acceptance, with its log
+and counts in the report. That decision chose which worlds the five checks cut, not
+which points. The runner names the chain of 40 as the one world the five checks leave
+uncut (`cleanOnly`) rather than taking a long log for it: with the internal points,
+ordinary worlds pass the length only the chain passed before.
 
 ## Behind a link
 

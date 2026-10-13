@@ -133,7 +133,10 @@ mailbox were made durable when they were created and are not flushed again. The 
 are cut in tests through `state.FlushFault` (`infra/state/flush.go`), asked before every
 flush the state package makes, apart from `state.Fault`, whose steps a fault plan counts
 (`TestDecisionEffectsWaitForTheDecisionToBeDurable`,
-`TestPublishExclusiveAnswersEveryFlushItCouldNotMake`).
+`TestPublishExclusiveAnswersEveryFlushItCouldNotMake`). The decision's matrix cuts inside
+each write instead, through the points one call is told (`state.Points`,
+`TestAWriteIsToldEachPointBeforeItIsReached`), so worlds side by side need no
+process-wide hook.
 
 **The installation's own stop** (S18, `installDecisions`, `core/mail/decision_install.go`).
 What the installation cannot read — the decisions' directory, a decision, a `told` record,

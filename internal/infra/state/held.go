@@ -14,7 +14,7 @@ func WriteAtomicHeld(path string, data []byte) (*os.File, error) {
 	if err := guard(OpWrite, path); err != nil {
 		return nil, err
 	}
-	name, err := writeTemp(filepath.Dir(path), data)
+	name, err := writeTemp(filepath.Dir(path), data, nil, path)
 	if err != nil {
 		return nil, err
 	}

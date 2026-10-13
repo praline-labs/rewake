@@ -269,7 +269,7 @@ process runs below the wrapper of api."
 
 All in the stopped mailbox, `<base>/v2/rooms/<room>/inbox/<name>/`, **write-once**
 unless the row says otherwise: written to a temporary name and linked into place with
-`state.PublishExclusive` (`infra/state/state.go`), which fails if the name exists, through
+`state.PublishExclusive` (`infra/state/write.go`), which fails if the name exists, through
 S17's write seam under the room's build lease. Each kind joins the one list of record
 kinds (`core/mail/records.go`), and one strict reader per kind serves every reader below
 — recovery, `stopState`, retention and the views (Q6 of

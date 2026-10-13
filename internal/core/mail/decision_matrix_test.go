@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	dm "github.com/praline-labs/rewake/internal/core/mail/decisionmodel"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // The decision's worlds (docs/v2/stage3-decision-manifest.md), each run
@@ -46,21 +47,27 @@ func TestDecisionDurabilityAtEveryCut(t *testing.T) {
 // matrixEnv selects the whole matrix rather than its pair cover.
 const matrixEnv = "REWAKE_DECISION_MATRIX"
 
-// longChain is the clean log past which a world is a long chain of
-// decisions, each generation the same durable steps as the one before.
-const longChain = 100
+// cleanOnly says the five checks run a world clean only: the chain of 40,
+// each generation the same durable steps as the one before, whose cuts are
+// thousands of runs of seconds each
+// (docs/v2/stage3-decision-manifest.md#clean-runs-and-crash-cuts). The full
+// matrix cuts every step of it too.
+func cleanOnly(w dm.World, full bool) bool {
+	return !full && w.Value("generations") == dm.ChainOfForty
+}
 
-// cutsOf are the steps a world is cut at: every one, except that the five
-// checks run a long chain clean only — its cuts are thousands of runs of
-// seconds each (docs/v2/stage3-decision-manifest.md#clean-runs-and-crash-cuts)
-// — and the full matrix cuts every step of it too.
-func cutsOf(steps []string, full bool) []int {
-	if !full && len(steps) > longChain {
+// cutsOf are a world's cuts: every step killed, and each one a flush may
+// fail at flushed as well.
+func cutsOf(w dm.World, steps []string, full bool) []matrixCut {
+	if cleanOnly(w, full) {
 		return nil
 	}
-	cuts := make([]int, len(steps))
-	for i := range cuts {
-		cuts[i] = i + 1
+	var cuts []matrixCut
+	for i, step := range steps {
+		cuts = append(cuts, matrixCut{at: i + 1})
+		if flushable(step) {
+			cuts = append(cuts, matrixCut{at: i + 1, flush: true})
+		}
 	}
 	return cuts
 }
@@ -71,26 +78,24 @@ func runWorld(t *testing.T, w dm.World, full bool, play func(*testing.T, dm.Worl
 		var steps []string
 		if !t.Run("clean", func(t *testing.T) {
 			steps = play(t, w, matrixCut{})
+			checkWritePoints(t, steps)
 			checkFlushedMarkers(t, steps, matrixCut{})
 		}) {
 			return
 		}
-		for _, at := range cutsOf(steps, full) {
-			for _, flush := range []bool{false, true} {
-				mode := "kill"
-				if flush {
-					mode = "flush"
-				}
-				t.Run(fmt.Sprintf("%s-%02d", mode, at), func(t *testing.T) {
-					t.Parallel()
-					cut := matrixCut{at: at, flush: flush}
-					got := play(t, w, cut)
-					if len(got) < at {
-						t.Errorf("the cut at %s never came: %d steps", steps[at-1], len(got))
-					}
-					checkFlushedMarkers(t, got, cut)
-				})
+		for _, cut := range cutsOf(w, steps, full) {
+			mode := "kill"
+			if cut.flush {
+				mode = "flush"
 			}
+			t.Run(fmt.Sprintf("%s-%02d", mode, cut.at), func(t *testing.T) {
+				t.Parallel()
+				got := play(t, w, cut)
+				if len(got) < cut.at {
+					t.Errorf("the cut at %s never came: %d steps", steps[cut.at-1], len(got))
+				}
+				checkFlushedMarkers(t, got, cut)
+			})
 		}
 	})
 }
@@ -98,13 +103,13 @@ func runWorld(t *testing.T, w dm.World, full bool, play func(*testing.T, dm.Worl
 // checkFlushedMarkers holds every decision's durable marker to the flushes it
 // stands on (decision_durable.go): a power loss is no world here, so an
 // ignored flush would leave the same outcome, and only the order shows it.
-// The marker is published right after the decision's file, its directory and
-// its mailbox were flushed, in that order, and never right after one of
-// those flushes failed.
+// The marker's publication begins right after the decision's file, its
+// directory and its mailbox were flushed, in that order, and never right
+// after one of those flushes failed.
 func checkFlushedMarkers(t *testing.T, steps []string, cut matrixCut) {
 	t.Helper()
 	for i, step := range steps {
-		path, ok := strings.CutPrefix(step, "publish ")
+		path, ok := strings.CutPrefix(step, "publish-"+state.PointTemp+" ")
 		if !ok || !strings.HasSuffix(path, durableSuffix) {
 			continue
 		}
@@ -118,5 +123,28 @@ func checkFlushedMarkers(t *testing.T, steps []string, cut matrixCut) {
 		if cut.flush && cut.at >= i-len(flushes)+1 && cut.at <= i {
 			t.Errorf("the marker of %s was published right after its flush, step %d, failed", decision, cut.at)
 		}
+	}
+}
+
+// checkWritePoints holds a clean log to the points of every write and
+// publication (state.Points): its temporary file, that file's flush, the
+// placing under its name and the directory's flush, in that order, nothing
+// between them — so the cuts are taken inside each write, not only around it.
+func checkWritePoints(t *testing.T, steps []string) {
+	t.Helper()
+	writes := 0
+	for i, step := range steps {
+		op, path, _ := strings.Cut(step, " ")
+		if op != "write" && op != "publish" {
+			continue
+		}
+		writes++
+		want := []string{op + "-" + state.PointTemp + " " + path, op + "-" + state.PointTempSync + " " + path, step, op + "-" + state.PointDirSync + " " + path}
+		if i < 2 || i+2 > len(steps) || !slices.Equal(steps[i-2:i+2], want) {
+			t.Errorf("%s is not cut at its points: %q", step, steps[max(0, i-2):min(len(steps), i+2)])
+		}
+	}
+	if writes == 0 {
+		t.Error("the clean run wrote nothing")
 	}
 }

@@ -151,7 +151,7 @@ open occurrences, under the sender's lock, then that section.
   every path it rests on and the operation it is about when one is known — for a record
   that names no operation, kind and paths alone. An **occurrence** is one record,
   `inbox/<name>/stops/<key>/<occurrence>`, the occurrence a fresh `inbox.NewID()`,
-  published with `PublishExclusive` (`state/state.go:183`): the key's parts and the time.
+  published with `PublishExclusive` (`state/write.go`): the key's parts and the time.
   A plan that finds the key while an occurrence of it is open finds that occurrence —
   repeated observation adds nothing. A plan that finds it after its last occurrence was
   resolved records a new occurrence, which needs its own resolution: a resolution answers
