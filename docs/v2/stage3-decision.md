@@ -219,9 +219,13 @@ process runs below the wrapper of api."
   command table when S18 adds them ([stage3-state.md](stage3-state.md#what-is-a-writer)).
 - **Naming.** By the stopped session and the report id, as the note prints them; the
   answer adds the operation, so two reports are never confused.
-- **Listing.** One line per subject: the report, its recipient and run, what it answers,
-  the path whose reading failed and why, whether decided, and the parent decision for a
-  resend; then the undecidable occurrences. A decided subject settles exactly what the
+- **Listing.** One line per subject: the report, its recipient and run, its operation
+  named once (a turn journal is named by its operation), what it answers, the path whose
+  reading failed and why, whether decided, and the parent decision for a resend; then the
+  undecidable occurrences. What a decided report answers comes from the records that keep
+  it: the resend a decision on "did not arrive" holds, else the closure its journal's tail
+  wrote, else the journal itself; with none of them left to read it is listed as no longer
+  kept (`answersUnknown`), never as answering nothing. A decided subject settles exactly what the
   stop's reader takes as settled — the occurrences a durable decision names — so an
   occurrence about a decided report recorded after its decision, or any while the decision
   is not durable yet, is listed as undecidable beside the decided subject, and every view

@@ -86,7 +86,7 @@ func markOf(view DecisionView, closed bool) DecisionMark {
 // decision keeps whole, or, for "arrived", from the journal that carries the
 // report, in either form, while it is kept.
 func reportAnswers(dir, sender string, d Decision) []string {
-	if answers := answersOf(d); answers != nil {
+	if answers := resendAnswers(d); answers != nil {
 		return answers
 	}
 	path := filepath.Join(JournalPath(dir, sender), d.Subject.Journal)

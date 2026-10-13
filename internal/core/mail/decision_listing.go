@@ -25,8 +25,11 @@ type DecisionListing struct {
 // SubjectView is one subject: open, with the occurrences about it, or decided.
 type SubjectView struct {
 	Subject Subject
-	// Answers are the messages the report answers.
-	Answers []string
+	// Answers are the messages the report answers. AnswersUnknown says the
+	// records that would name them are gone or do not read, which is not a
+	// report known to answer nothing.
+	Answers        []string
+	AnswersUnknown bool
 	// Causes say, per open occurrence about the report, which path did not
 	// read and why.
 	Causes []string
@@ -60,10 +63,8 @@ func ListDecisions(dir, name string) (DecisionListing, error) {
 			listing.Undecidable = append(listing.Undecidable, Undecidable{Path: path, Why: fmt.Sprintf("the decision does not read, so it settles nothing and nothing can replace it: %v", view.Err)})
 			continue
 		}
-		subject := SubjectView{
-			Subject: view.Decision.Subject, Decided: &view, Durable: w.durable(path, *view.Decision),
-			Answers: answersOf(*view.Decision),
-		}
+		subject := SubjectView{Subject: view.Decision.Subject, Decided: &view, Durable: w.durable(path, *view.Decision)}
+		subject.Answers, subject.AnswersUnknown = w.answersOf(name, view)
 		listing.Subjects = append(listing.Subjects, subject)
 		decided[view.Report] = &subject
 	}
@@ -135,9 +136,42 @@ func undisposedWhy(dir, name string, stop openStop, view SubjectView) string {
 	return fmt.Sprintf("about report %s, whose decision %s does not dispose this occurrence and cannot be replaced, so only evidence resolves it: %s", stop.reportOf(), view.Decided.Decision.ID, stop.describe(dir, name))
 }
 
-// answersOf is what a decided report answers, from the resend the decision
-// keeps whole; a decision on "arrived" keeps no message, so it names none.
-func answersOf(d Decision) []string {
+// answersOf is what a decided report answers, from the records that keep it
+// validated: the resend a decision on "did not arrive" keeps whole; else the
+// closure J's tail wrote, naming the waits it closed; else J itself, in
+// either form, holding the report. A decision on "arrived" keeps no message
+// of its own, so with J gone and no closure that reads, what the report
+// answered is unknown, not none.
+func (w world) answersOf(name string, view DecisionView) ([]string, bool) {
+	d := *view.Decision
+	if answers := resendAnswers(d); answers != nil {
+		return answers, false
+	}
+	if c := view.Closure; c != nil && c.Report == d.Subject.Report {
+		answers := []string{}
+		for _, wait := range c.Waits {
+			answers = append(answers, wait.Messages...)
+		}
+		return answers, false
+	}
+	path := filepath.Join(JournalPath(w.dir, name), d.Subject.Journal)
+	for _, candidate := range []string{path, path + doneSuffix} {
+		journal, err := w.readJournalFile(candidate)
+		if err != nil {
+			continue
+		}
+		for _, report := range journal.Reports {
+			if report.ID == d.Subject.Report {
+				return report.InReplyTo, false
+			}
+		}
+	}
+	return nil, true
+}
+
+// resendAnswers is what the resend a decision keeps whole answers; nil for
+// a decision with no resend that reads.
+func resendAnswers(d Decision) []string {
 	if journal, err := d.resendJournal(); err == nil {
 		return journal.Reports[0].InReplyTo
 	}
