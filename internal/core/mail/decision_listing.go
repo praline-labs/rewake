@@ -1,0 +1,144 @@
+package mail
+
+import (
+	"errors"
+	"fmt"
+	"path/filepath"
+	"sort"
+	"strings"
+)
+
+// What `decide <name>` lists (docs/v2/stage3-decision.md#the-command): the
+// subjects of a mailbox — the reports an open stop is about that a decision
+// can settle, and those decided already, a decision outliving its journal —
+// and the occurrences nothing can decide, each with why. It reads only the
+// sender's mailbox, with no lock, lease or effect, as the decisions' own view
+// does (Q10 of docs/v2/stage3-decision-build.md): a record that does not read
+// is listed as undecidable, never skipped, and hides no subject that reads.
+
+// DecisionListing is one mailbox's subjects and undecidable occurrences.
+type DecisionListing struct {
+	Subjects    []SubjectView
+	Undecidable []Undecidable
+}
+
+// SubjectView is one subject: open, with the occurrences about it, or decided.
+type SubjectView struct {
+	Subject Subject
+	// Answers are the messages the report answers.
+	Answers []string
+	// Causes say, per open occurrence about the report, which path did not
+	// read and why.
+	Causes []string
+	// Decided is the decision on the report and its effects so far; nil for
+	// an open subject.
+	Decided *DecisionView
+	// Durable says the decision may act: false while its record is not yet
+	// made durable, when it disposes nothing yet.
+	Durable bool
+}
+
+// Undecidable is a cause no decision can settle, or a record that does not
+// read: the path to repair and why.
+type Undecidable struct {
+	Path, Why string
+}
+
+// ListDecisions reads what `decide <name>` lists.
+func ListDecisions(dir, name string) (DecisionListing, error) {
+	w := live(dir)
+	var listing DecisionListing
+	decided := map[string]bool{}
+	views, err := Decisions(dir, name)
+	if err != nil {
+		listing.Undecidable = append(listing.Undecidable, Undecidable{Path: decisionsRoot(dir, name), Why: err.Error()})
+	}
+	for _, view := range views {
+		decided[view.Report] = true
+		path := DecisionPath(dir, name, view.Report)
+		if view.Decision == nil {
+			listing.Undecidable = append(listing.Undecidable, Undecidable{Path: path, Why: fmt.Sprintf("the decision does not read, so it settles nothing and nothing can replace it: %v", view.Err)})
+			continue
+		}
+		listing.Subjects = append(listing.Subjects, SubjectView{
+			Subject: view.Decision.Subject, Decided: &view, Durable: w.durable(path, *view.Decision),
+			Answers: answersOf(*view.Decision),
+		})
+	}
+	open, _, err := w.openOccurrences(name)
+	if err != nil {
+		listing.Undecidable = append(listing.Undecidable, Undecidable{Path: stopsPath(dir, name), Why: err.Error()})
+	}
+	byReport := map[string][]openStop{}
+	var reports []string
+	for _, stop := range open {
+		report := stop.reportOf()
+		switch {
+		case stop.unreadable != nil:
+			listing.Undecidable = append(listing.Undecidable, Undecidable{Path: stop.path(dir, name), Why: stop.describe(dir, name)})
+		case report == "":
+			listing.Undecidable = append(listing.Undecidable, Undecidable{Path: stop.path(dir, name), Why: "about no one report, so no decision settles it: " + stop.describe(dir, name)})
+		case decided[report]:
+			// The decision's own entry speaks for the report; one of its
+			// occurrences it does not dispose is found again by the barrier.
+		default:
+			if _, seen := byReport[report]; !seen {
+				reports = append(reports, report)
+			}
+			byReport[report] = append(byReport[report], stop)
+		}
+	}
+	for _, report := range reports {
+		plan, err := w.subjectOf(name, report)
+		if err != nil {
+			path, why := stopsPath(dir, name), err
+			var refusal *DecisionError
+			if errors.As(err, &refusal) {
+				why = refusal.Err
+				if refusal.Path != "" {
+					path = refusal.Path
+				}
+			}
+			listing.Undecidable = append(listing.Undecidable, Undecidable{Path: path, Why: fmt.Sprintf("report %s is no subject: %v", report, why)})
+			continue
+		}
+		view := SubjectView{Subject: plan.subject, Answers: plan.report.InReplyTo}
+		for _, stop := range byReport[report] {
+			view.Causes = append(view.Causes, stop.describe(dir, name))
+		}
+		listing.Subjects = append(listing.Subjects, view)
+	}
+	sort.SliceStable(listing.Subjects, func(i, j int) bool { return listing.Subjects[i].Subject.Report < listing.Subjects[j].Subject.Report })
+	return listing, nil
+}
+
+// answersOf is what a decided report answers, from the resend the decision
+// keeps whole; a decision on "arrived" keeps no message, so it names none.
+func answersOf(d Decision) []string {
+	if journal, err := d.resendJournal(); err == nil {
+		return journal.Reports[0].InReplyTo
+	}
+	return nil
+}
+
+// Resent is the id of the report a decision on "did not arrive" sends again,
+// fixed when the decision was written; empty for "arrived", or for a resend
+// the record does not hold whole.
+func (d Decision) Resent() string {
+	if journal, err := d.resendJournal(); err == nil {
+		return journal.Reports[0].ID
+	}
+	return ""
+}
+
+// Parent is the decision whose resend the report is, from the journal that
+// carries it; empty for a report no decision sent.
+func (s Subject) Parent() string {
+	parent, _ := strings.CutPrefix(s.Journal, resendPrefix)
+	if parent == s.Journal {
+		return ""
+	}
+	return parent
+}
+
+func decisionsRoot(dir, name string) string { return filepath.Dir(DecisionPath(dir, name, "x")) }

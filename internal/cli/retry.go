@@ -18,7 +18,7 @@ func retryCommand() *Command {
 		Name:           "retry",
 		Args:           "<receipt>",
 		MaxPositionals: 1,
-		Summary:        "Finish, or show again, what an earlier call with this receipt began: a heads-up, a pending mark, a read or a long output.",
+		Summary:        "Finish, or show again, what an earlier call with this receipt began: a heads-up, a pending mark, a decision, a read or a long output.",
 		Options:        []Option{jsonOption},
 		Examples:       []string{"rewake retry 0123456789abcdef01234567", "rewake retry 0123456789abcdef01234567 --json"},
 		Notes: []string{
@@ -86,7 +86,7 @@ func handleRetry(ctx *Context, call Call) error {
 	}
 	handler := original.Call.Command.Handler
 	switch original.Call.Command.Name {
-	case "send", "pending":
+	case "send", "pending", "decide":
 	default:
 		return failf("the receipt %s is of %s, which has nothing to finish", token, original.Call.Command.Name)
 	}

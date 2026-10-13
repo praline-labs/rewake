@@ -103,17 +103,17 @@ mutation paths are proved to fail again after the change.
 `change`; a form is the command plus the flags and verbs that change what it does, so
 `inbox` and `inbox --owed` are two forms. The class is read from the parsed call before
 the handler and before anything that can prune; a table test fails on a form without one,
-so S18 classifies `decide`'s two forms when it adds them
-([stage3-decision.md](stage3-decision.md#the-command)). There is no `clear` command:
+`decide`'s two forms included ([stage3-decision.md](stage3-decision.md#the-command),
+classified in S18). There is no `clear` command:
 conversation reset is not built, and no lease entry is added for it or for the hidden
 hook and server commands removed in S8 and S9.
 
 | Class | Forms | Why |
 |---|---|---|
-| change | a launch, with or without `--worktree`; `send` in every kind; `withdraw`; `edit`; `inbox`, `inbox --message`, `inbox --next`; `pending`; `retry`; `compact`, `interrupt`; `worktree rm`, `land`, `finish` | they write the room |
+| change | a launch, with or without `--worktree`; `send` in every kind; `withdraw`; `edit`; `inbox`, `inbox --message`, `inbox --next`; `pending`; `retry`; `compact`, `interrupt`; `worktree rm`, `land`, `finish`; `decide <name> <report>` with one choice | they write the room |
 | change | `inbox --peek` | it takes the mailbox lock (`cli/inbox.go:76`), which orders it against a read in progress; taking the lock is a write, so it holds a lease rather than losing the lock |
 | change | **every authorized tool call**, whatever its words, `--help` included | its binding and its bounded answer may keep a continuation (`freezeOutput` in `cli/output_parts.go`, held by `TestALongAnswerComesInParts`), so it is classified before authorization can prune and holds the lease through the bounded output; no read-only continuation store is designed in S17 |
-| view | bare `rewake`, `guide`, `--help`, `<command> --help`, `--version`, each with `--json`; `list`; `whoami`; `inbox --owed`, `inbox --awaited`; `worktree ls`, and a `worktree` call with no change verb, which its handler refuses before any effect | they answer from what is there |
+| view | bare `rewake`, `guide`, `--help`, `<command> --help`, `--version`, each with `--json`; `list`; `whoami`; `inbox --owed`, `inbox --awaited`; `worktree ls`, and a `worktree` call with no change verb, which its handler refuses before any effect; `decide <name>`, and a `decide` without exactly a report and one choice, refused before any read | they answer from what is there |
 
 A call refused before it parses — an unknown command or flag, a stray argument, an alias
 that does not expand — has no form: it is answered before the state is reached, takes no

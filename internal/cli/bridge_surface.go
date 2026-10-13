@@ -15,8 +15,10 @@ import (
 // The words a tool call may run (docs/mail-bridge.md#one-implementation-and-a-narrow-surface).
 // The mail tool reaches the CLI from outside the harness's sandbox, so it runs
 // the mail and nothing else: reading, the pending mark, a heads-up to a live
-// session, who this is, the sessions of the room, and continuing or
-// reconciling what an earlier call began. A command added to the CLI later stays out until it is reviewed for
+// session, who this is, the sessions of the room, continuing or reconciling
+// what an earlier call began, and a decision on a report addressed to this
+// run, which the wrapper the call's child runs below makes
+// (docs/v2/stage3-decision.md#the-command). A command added to the CLI later stays out until it is reviewed for
 // this surface, which is why the list names what is allowed rather than what
 // is not.
 
@@ -28,6 +30,7 @@ var toolFlags = map[string][]string{
 	"whoami":  {"json"},
 	"retry":   {"json"},
 	"list":    {"json"},
+	"decide":  {"arrived", "not-arrived", "json"},
 }
 
 // maxToolWait bounds send's --wait under the tool: the call has a deadline of
@@ -105,6 +108,9 @@ func toolShape(call Call) error {
 	case "inbox":
 		_, err := inboxSelection(call)
 		return err
+	case "decide":
+		_, _, _, err := decideWords(call)
+		return err
 	case "pending", "retry":
 		if len(call.Positionals) != 1 || strings.TrimSpace(call.Positionals[0]) == "" {
 			return &UsageError{Command: command, Message: command.Name + " needs one word: " + command.Args + "."}
@@ -131,7 +137,7 @@ func toolShape(call Call) error {
 
 // toolRefusal is a refusal that names the shell as the place for the rest.
 func toolRefusal(command *Command, reason string) error {
-	return &UsageError{Command: command, Message: "Rewake: " + reason + ". The tool runs: inbox (--peek, --message, --owed, --awaited, --next), pending, send --notify, whoami, retry and list."}
+	return &UsageError{Command: command, Message: "Rewake: " + reason + ". The tool runs: inbox (--peek, --message, --owed, --awaited, --next), pending, send --notify, whoami, retry, list and decide."}
 }
 
 // normalized is the canonical form of a call: the command, its flags sorted

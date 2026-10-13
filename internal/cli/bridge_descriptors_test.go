@@ -30,8 +30,8 @@ func TestTheToolsAreTheAllowlist(t *testing.T) {
 	}
 	for _, tool := range tools {
 		command := testTable().findCommand(tool.Name)
-		if names := positionalNames(command); len(names) != len(toolPositionals[tool.Name]) {
-			t.Errorf("%s has positionals %q and %d descriptions", tool.Name, names, len(toolPositionals[tool.Name]))
+		if names := positionalsOf(command); len(names) != len(toolPositionals[tool.Name]) {
+			t.Errorf("%s has positionals %v and %d descriptions", tool.Name, names, len(toolPositionals[tool.Name]))
 		}
 		if tool.Summary == "" {
 			t.Errorf("%s has no summary", tool.Name)
@@ -108,6 +108,8 @@ func TestADescriptorsWordsAreTheNormalizedWords(t *testing.T) {
 		{"whoami", `{"json":false}`},
 		{"retry", `{"receipt":"0123456789abcdef01234567"}`},
 		{"list", `{"json":true}`},
+		{"decide", `{"name":"api"}`},
+		{"decide", `{"name":"api","report":"1790370984617481194-8d4ddd85c8f1","not-arrived":true,"json":true}`},
 	} {
 		tool, ok := tool.FindTool(tools, call.tool)
 		if !ok {

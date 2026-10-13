@@ -93,7 +93,9 @@ both, so a tool cannot drift from its command, as the examples cannot today
 
 The surface is an allowlist: a command added later stays off until reviewed. The
 starting set is the owner's (answer 2 of [design.md](design.md#the-owners-answers)):
-`inbox`, `send`, `pending`, `whoami`, `retry`, `list`.
+`inbox`, `send`, `pending`, `whoami`, `retry`, `list`. `decide` joined it in S18 by main's
+decision of October 12, 2026, so a recipient whose shell cannot reach its wrapper decides
+through its tool call ([stage3-decision.md](stage3-decision.md#the-command)).
 
 Each tool's schema declares only the command's flags and positionals, in plain words;
 none declares a property a harness reserves for itself (on Claude Code the reserved part

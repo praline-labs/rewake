@@ -11,7 +11,7 @@ page says where the path differs.
 ## The tools
 
 The CLI builds one descriptor per command its allowlist lets through — `inbox`, `send`,
-`pending`, `whoami`, `retry`, `list` (`cli/bridge_descriptors.go`, from `toolFlags` in
+`pending`, `whoami`, `retry`, `list`, `decide` (`cli/bridge_descriptors.go`, from `toolFlags` in
 `cli/bridge_surface.go` and the command table). A descriptor names the command, its
 summary, and its parameters: a flag that takes no value (a switch), a flag with a value,
 or a positional word. What follows from a descriptor alone lives in

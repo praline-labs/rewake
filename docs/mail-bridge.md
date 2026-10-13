@@ -52,6 +52,7 @@ receipt/continuation. It never implements those operations a second time.
 | `whoami` | This run's identity and observed mail channel. |
 | `retry TOKEN` | Reconcile this run's CLI receipt; a new CLI form. |
 | `list` | The sessions of this room, read only; added in S7 with the transports' tools. |
+| `decide NAME [REPORT] --arrived/--not-arrived` | The decisions of a stopped session's mailbox, or one decision on a report addressed to this run, made by its wrapper; added in S18 ([stage3-decision.md](v2/stage3-decision.md#the-command)). |
 
 Help for these forms and `--json` are allowed. Existing inbox modes remain exclusive;
 `--next` retains the original mode. Send accepts only `--notify`, `--json` and `--wait`
@@ -62,7 +63,8 @@ not paths or authority to another run.
 
 All other commands refuse before a child starts, including launches, plain task send,
 edit/withdraw, grants, accept, compact/interrupt, worktrees, administration and internal
-callbacks. New CLI commands stay denied until reviewed for this surface. Main gets the
+callbacks. New CLI commands stay denied until reviewed for this surface; `decide` was, in
+S18. Main gets the
 same restriction through this tool; its wider commands remain ordinary CLI calls.
 The CLI checks the predicate again in authenticated bridge mode. Argument counts, bytes
 and result size are bounded before effects. A letter containing shell syntax remains

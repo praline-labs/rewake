@@ -200,9 +200,20 @@ process runs below the wrapper of api."
 --arrived | --not-arrived`, and `rewake decide <name>` to list.
 
 - **Its place.** A group of its own after the mail commands, so the guide shows it with
-  its notes; not on the tool surface (answer 2's set is `inbox`, `send`, `pending`,
-  `whoami`, `retry`, `list`). The note that tells of a stop occurrence ends with the two
-  lines to run, addressed to whoever may decide.
+  its notes. The note that tells of a stop occurrence ends with the two lines to run,
+  addressed to whoever may decide.
+- **On the tool surface.** Decided by main on October 12, 2026, as the review answer 2
+  asks for before a command joins the surface: `decide` is a tool, both forms, and
+  `retry` finishes a decision's receipt. A harness that sandboxes its shell keeps it
+  from `connect()`ing to a unix socket, so a recipient's shell there never reaches its
+  wrapper; the tool's child is the wrapper's own child, outside the sandbox, so the
+  recipient decides through its tool call, verified, by the same request and the same
+  peer and run checks as from a shell. A deciding call runs under a receipt bound to the
+  call before the wrapper is asked, so a call that dies holding it names the operation
+  rather than saying nothing ran, and `retry` asks again — the same words find the
+  decision recorded before. A wrapper that cannot be reached is a refusal, exit 1, naming
+  the tool; it is never taken for the person. The wrapper stays the decision's only
+  writer.
 - **Forms.** The list form is a view, the deciding form a change, classified in the
   command table when S18 adds them ([stage3-state.md](stage3-state.md#what-is-a-writer)).
 - **Naming.** By the stopped session and the report id, as the note prints them; the

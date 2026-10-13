@@ -223,7 +223,7 @@ func buildGroups(catalog adapter.Catalog) []Group {
 		},
 	}
 
-	return []Group{run, talk, steer, help}
+	return []Group{run, talk, decideGroup(), steer, help}
 }
 
 // nestedLaunchHelp is refuseNestedLaunch's rule, on every launch page: a

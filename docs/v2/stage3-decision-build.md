@@ -34,8 +34,10 @@ What else changed under part B, and what the build does about it:
 - **The forgiving views are no inventory.** `registry.ListReadOnly` skips a record that
   does not load, and `WorkDirs` discards errors; neither serves the person's path (Q3).
 - **The forms have a home.** `decide`'s two forms join `Command.Access`
-  (`cli/access.go`): the list a view, the choice a change. `decide` stays off the tool
-  surface, retries included.
+  (`cli/access.go`): the list a view, the choice a change. Through the tool every form
+  is a change, as every tool call is; `decide` joined the surface by main's decision of
+  October 12, 2026 ([the command](stage3-decision.md#the-command)), a choice under a
+  receipt that `retry` finishes.
 - **The lease is outermost.** A deciding invocation holds its room's lease through
   `Context.within` from before the handler to after its output; every process that
   writes holds its own, and none is taken inside a name, mailbox or receipt lock.
@@ -252,7 +254,7 @@ close a later read or duplicate a report.
 
 | Test | What it requires |
 |---|---|
-| `TestDecisionFormAccessAndToolExclusion` | the list and help change nothing, a foreign build warns once, choices need the lease, the tool surface and retry refuse |
+| `TestDecisionFormAccessAndToolExclusion` | the list and help change nothing, a foreign build warns once, choices need the lease; through the tool a choice runs under a bound receipt that retry finishes, and a person's path is refused below the wrapper (the name kept from before main's decision of October 12, 2026) |
 | `TestDecisionLeasePrecedesAllLocks` | an incompatible build refuses with no write; an active decision holds the lease through its last effect |
 | `TestDecisionFinalEvidenceIsLockedThroughCommit` | evidence, reads and sweeps on both sides of D; one protected final observation or a proven refusal; self and opposing mailboxes finish bounded |
 | `TestDecisionFindsSubjectsBehindOtherUnknowns` | several reports and occurrences, an unrelated unreadable journal in both orders, interim and self-error subjects; only the named occurrences disposed |
