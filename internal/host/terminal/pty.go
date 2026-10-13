@@ -21,13 +21,22 @@ type Size struct {
 	Rows int `json:"rows"`
 }
 
-// maxSide is the most a side may measure: the kernel's window size holds
-// each side in sixteen bits.
-const maxSide = 1<<16 - 1
+const (
+	// maxSide is the most a side may measure: the kernel's window size holds
+	// each side in sixteen bits.
+	maxSide = 1<<16 - 1
+	// maxCells bounds the grid: the emulator allocates every cell at once, and
+	// two sides the kernel accepts make billions. It is many times the
+	// largest screen a person sits at.
+	maxCells = 1 << 18
+)
 
 func (s Size) check() error {
 	if s.Cols < 1 || s.Rows < 1 || s.Cols > maxSide || s.Rows > maxSide {
 		return fmt.Errorf("a terminal of %dx%d: each side is 1 to %d", s.Cols, s.Rows, maxSide)
+	}
+	if s.Cols*s.Rows > maxCells {
+		return fmt.Errorf("a terminal of %dx%d: more than %d cells", s.Cols, s.Rows, maxCells)
 	}
 	return nil
 }

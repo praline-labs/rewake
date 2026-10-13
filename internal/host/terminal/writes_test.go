@@ -2,44 +2,57 @@ package terminal
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 )
 
-// recorder keeps each write it is given, so a test sees the boundaries the
-// program's side would.
-type recorder struct {
+// syscalls stands in for write(2) on a terminal: it keeps the bytes of each
+// call, and answers it as answer says, or takes the whole call.
+type syscalls struct {
 	mu     sync.Mutex
-	writes []string
+	calls  []string
+	answer func(call int, p []byte) (int, error)
 }
 
-func (r *recorder) Write(p []byte) (int, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.writes = append(r.writes, string(p))
+func (s *syscalls) write(_ int, p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.calls = append(s.calls, string(p))
+	if s.answer != nil {
+		return s.answer(len(s.calls), p)
+	}
 	return len(p), nil
 }
 
-// Every post of keys is one write, whole, and posts sent at once never
-// interleave: ESC O and C written apart read as Alt+O and a stray C.
-func TestEachPostOfKeysIsOneWrite(t *testing.T) {
+// opened is a terminal with no program whose write(2) is s.
+func opened(t *testing.T, s *syscalls) *Terminal {
+	t.Helper()
 	term, err := Open(Size{Cols: 10, Rows: 2})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = term.Close() }()
-	var r recorder
+	t.Cleanup(func() { _ = term.Close() })
 	term.writeMu.Lock()
-	term.out = &r
+	term.write = s.write
 	term.writeMu.Unlock()
+	return term
+}
+
+// Every post of keys is one write(2), whole, and posts sent at once never
+// interleave: ESC O and C written apart read as Alt+O and a stray C.
+func TestEachPostOfKeysIsOneWrite(t *testing.T) {
+	var s syscalls
+	term := opened(t, &s)
 	if err := term.Keys([]byte("\x1bOC")); err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Equal(r.writes, []string{"\x1bOC"}) {
-		t.Fatalf("one key: %q", r.writes)
+	if !slices.Equal(s.calls, []string{"\x1bOC"}) {
+		t.Fatalf("one key: %q", s.calls)
 	}
 	var posts []string
 	var wg sync.WaitGroup
@@ -55,11 +68,73 @@ func TestEachPostOfKeysIsOneWrite(t *testing.T) {
 		}()
 	}
 	wg.Wait()
-	got := slices.Clone(r.writes[1:])
+	got := slices.Clone(s.calls[1:])
 	slices.Sort(got)
 	slices.Sort(posts)
 	if !slices.Equal(got, posts) {
-		t.Fatalf("posts at once were written as %q", r.writes[1:])
+		t.Fatalf("posts at once were written as %q", s.calls[1:])
+	}
+}
+
+// A write(2) that takes part of a post is the only one: the rest is never
+// written after it, and the caller learns how much went.
+func TestAShortWriteIsSaidAndNotFinished(t *testing.T) {
+	s := syscalls{answer: func(int, []byte) (int, error) { return 3, nil }}
+	term := opened(t, &s)
+	err := term.Keys([]byte("hello world"))
+	var short *ShortWrite
+	if !errors.As(err, &short) || *short != (ShortWrite{Written: 3, Of: 11}) {
+		t.Fatalf("a short write answered %v", err)
+	}
+	if !slices.Equal(s.calls, []string{"hello world"}) {
+		t.Fatalf("the rest was written after a short write: %q", s.calls)
+	}
+}
+
+// A write(2) that would block, or is interrupted, before taking a byte is
+// made again with the whole post; one that fails otherwise is not. The call
+// that would block writes to the terminal's side, so the poller sees the
+// terminal again as a full buffer draining would make it.
+func TestAWriteThatTookNothingIsMadeAgain(t *testing.T) {
+	var term *Terminal
+	s := syscalls{answer: func(call int, p []byte) (int, error) {
+		switch call {
+		case 1:
+			if _, err := term.Side().Write([]byte("x")); err != nil {
+				t.Error(err)
+			}
+			return -1, syscall.EAGAIN
+		case 2:
+			return -1, syscall.EINTR
+		}
+		return len(p), nil
+	}}
+	term = opened(t, &s)
+	if err := term.Keys([]byte("abc")); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(s.calls, []string{"abc", "abc", "abc"}) {
+		t.Fatalf("the calls: %q", s.calls)
+	}
+	failing := syscalls{answer: func(int, []byte) (int, error) { return -1, syscall.EIO }}
+	term = opened(t, &failing)
+	if err := term.Keys([]byte("abc")); !errors.Is(err, syscall.EIO) || len(failing.calls) != 1 {
+		t.Fatalf("a failed write: %v after %d calls", err, len(failing.calls))
+	}
+}
+
+// A post over the bound is refused with nothing written.
+func TestAPostOverTheBoundIsRefused(t *testing.T) {
+	var s syscalls
+	term := opened(t, &s)
+	if err := term.Keys(make([]byte, maxKeys)); err != nil {
+		t.Fatalf("a post at the bound: %v", err)
+	}
+	if err := term.Keys(make([]byte, maxKeys+1)); err == nil {
+		t.Fatal("a post over the bound was taken")
+	}
+	if len(s.calls) != 1 {
+		t.Fatalf("%d writes, want the one at the bound", len(s.calls))
 	}
 }
 

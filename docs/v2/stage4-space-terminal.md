@@ -16,8 +16,8 @@ of S4-7 starts the worker on it, and S4-8 maps its screen and keys onto `space/s
 | `Prepare(cmd)` | the program's stdio on the side, a session of its own with the side as its controlling terminal (`Setsid`, `Setctty`), and its environment through `Environ`; `Side` gives the file to a caller that starts the program otherwise |
 | `ReleaseSide()` | closes the parent's copy of the side once the program holds it, so the program's end is seen as the end of the output |
 | `Environ(env)` | `TERM=xterm-256color` and `COLORTERM=truecolor` in place of the caller's, which describe the person's terminal and not this one; `LC_CTYPE=C.UTF-8` when the effective locale is not UTF-8 and `LC_ALL` is unset; a set `LC_ALL` is the person's choice and stays |
-| `Keys(p)` | one `write(2)` of `p`, whole, under the mutex every write to the program takes, within a two-second write deadline |
-| `Resize(size)` | the grid sized first and then the pseudo-terminal, under the lock that feeds the grid; every row published again |
+| `Keys(p)` | one `write(2)` of `p` on the master's raw descriptor, under the mutex every write to the program takes, within a two-second write deadline; a post over 4096 bytes is refused with nothing written, and a short write is a `*ShortWrite` with the count taken, its rest never written |
+| `Resize(size)` | refused past 65 535 a side or 262 144 cells, since the emulator allocates every cell at once; otherwise the grid sized first and then the pseudo-terminal, under the lock that feeds the grid; every row published again |
 | `Screen(ctx, after)` | a long poll: the rows changed since the sequence `after`, at once when there are any, when `after` is 0 or a sequence never given, or when the output is over; otherwise when the screen changes or `ctx` ends, with the same sequence and no rows |
 | `Done()` | closed when the output is over: the program's last process closed the side, or the terminal was closed |
 | `Clipboard()`, `Stats()` | the latest OSC 52 text and how many arrived; the answers and clipboard requests dropped rather than waited on |
@@ -42,6 +42,21 @@ reads its input — a full-screen program in raw mode, flooding `ESC [ c` — lo
 never stops the emulator in the middle of a write. A look walks the cells into runs and
 compares each row with the one published; only rows that differ, the cursor or the modes move
 the sequence.
+
+## One write per post
+
+A key split across two writes reaches the program as two keys — ESC O and C read as Alt+O and
+a stray C — so a post is written with exactly one `write(2)`. `os.File.Write` does not give
+that: it loops over a short write and sends the rest in later calls, and a pseudo-terminal
+whose program reads nothing takes part of a write and refuses the rest (a raw one took 11 776
+of 65 536 bytes in one non-blocking write, seen in review, October 13, 2026). So `Keys` writes
+on the raw descriptor through `SyscallConn`: a call interrupted before taking a byte is made
+again at once, one that would block is made again once the poller sees the terminal writable,
+and one that takes bytes is the only one. A short one is reported with how much went, since
+what reached the program cannot be taken back, and the rest is not sent after it. A post is
+bounded at 4096 bytes, decided by main, October 13, 2026: a post of the key surface is a few
+keys or a line of text, and a larger one is refused before anything is written. The answers to
+the program's queries go out the same way, each read of the reply pipe one post.
 
 ## What the library does not do
 
@@ -116,5 +131,7 @@ All in `internal/host/terminal`, run with `-race`: a program on a real pseudo-te
 test binary as a helper) drawing styled runs, echoing keys, resized through SIGWINCH, hung up
 by `Close`, flooding queries it never reads, and seeing the emulator's terminal; clusters split
 at every byte; the cells-to-runs table; the published diff; the modes; the clipboard's cap; each
-post of keys one write, concurrent posts never interleaved; resizes, reads and keys at once;
-the canary.
+post of keys one write(2) at a seam over the system call, concurrent posts never interleaved, a
+short write reported and not finished, an interrupted or blocked one made again, an oversized
+post refused; a failed open closing what it opened, under a descriptor limit in a child
+process; resizes, reads and keys at once; the canary.

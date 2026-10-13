@@ -3,11 +3,11 @@ package terminal
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 )
 
@@ -52,11 +52,13 @@ type Terminal struct {
 	pubMu sync.Mutex
 	pub   published
 
-	// writeMu makes every write to the program one write, whole, never
+	// writeMu makes every write to the program one write(2), never
 	// interleaved with another: a key split as ESC O and C reads as Alt+O
-	// and a stray C.
+	// and a stray C (keys.go).
 	writeMu sync.Mutex
-	out     io.Writer
+	// write is the system call a write makes, a seam for the tests of a
+	// short write.
+	write func(fd int, p []byte) (int, error)
 
 	chunks  chan []byte
 	answers chan []byte
@@ -82,7 +84,7 @@ func Open(size Size) (*Terminal, error) {
 		return nil, err
 	}
 	t := &Terminal{
-		master: master, side: side, out: master, size: size,
+		master: master, side: side, write: syscall.Write, size: size,
 		wake: make(chan struct{}), chunks: make(chan []byte, 4), answers: make(chan []byte, replyQueue),
 		fed: make(chan struct{}), done: make(chan struct{}),
 	}
@@ -171,7 +173,8 @@ func (t *Terminal) drain() {
 	defer t.wg.Done()
 	defer close(t.answers)
 	r := t.emu.replies()
-	buf := make([]byte, 4<<10)
+	// An answer is written as one post, so a read of them is no larger.
+	buf := make([]byte, maxKeys)
 	for {
 		n, err := r.Read(buf)
 		if n > 0 {
@@ -194,27 +197,6 @@ func (t *Terminal) answer() {
 			t.repliesDropped.Add(1)
 		}
 	}
-}
-
-// send writes p to the program in one write, within writeBound.
-func (t *Terminal) send(p []byte) error {
-	t.writeMu.Lock()
-	defer t.writeMu.Unlock()
-	_ = t.master.SetWriteDeadline(time.Now().Add(writeBound))
-	_, err := t.out.Write(p)
-	return err
-}
-
-// Keys writes keys to the program as one write, whole: what one post of the
-// key surface carries is never split, and never merged with another post.
-func (t *Terminal) Keys(p []byte) error {
-	if len(p) == 0 {
-		return nil
-	}
-	if err := t.send(p); err != nil {
-		return fmt.Errorf("could not write keys to the terminal: %w", err)
-	}
-	return nil
 }
 
 // Resize sizes the grid first and then the pseudo-terminal, under the lock

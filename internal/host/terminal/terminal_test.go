@@ -99,7 +99,7 @@ func TestAResizeReachesTheProgram(t *testing.T) {
 	if g.last.Size != (Size{Cols: 50, Rows: 6}) || len(g.rows) != 6 {
 		t.Fatalf("after the resize: %+v, %d rows", g.last.Size, len(g.rows))
 	}
-	for _, bad := range []Size{{0, 4}, {30, 0}, {70000, 4}} {
+	for _, bad := range []Size{{0, 4}, {30, 0}, {70000, 4}, {maxSide, maxSide}, {1024, 257}} {
 		if err := term.Resize(bad); err == nil {
 			t.Errorf("a size of %+v was taken", bad)
 		}
