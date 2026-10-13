@@ -3,6 +3,8 @@ package mail
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -12,7 +14,8 @@ import (
 // The decision's worlds (docs/v2/stage3-decision-manifest.md), each run
 // clean and then once per durable step of its clean run: killed there, and
 // with that step's flush failed. What a cut leaves is whole or absent before
-// anything runs again, and each run is checked against the model. The
+// anything runs again, each run is checked against the model, and every
+// decision's durable marker against the flushes it stands on. The
 // five checks run the generated pair cover of every partition; with
 // REWAKE_DECISION_MATRIX=full every feasible world runs.
 func TestDecisionDurabilityAtEveryCut(t *testing.T) {
@@ -66,7 +69,10 @@ func runWorld(t *testing.T, w dm.World, full bool, play func(*testing.T, dm.Worl
 	t.Run(strings.Join(w.Values, ","), func(t *testing.T) {
 		t.Parallel()
 		var steps []string
-		if !t.Run("clean", func(t *testing.T) { steps = play(t, w, matrixCut{}) }) {
+		if !t.Run("clean", func(t *testing.T) {
+			steps = play(t, w, matrixCut{})
+			checkFlushedMarkers(t, steps, matrixCut{})
+		}) {
 			return
 		}
 		for _, at := range cutsOf(steps, full) {
@@ -77,11 +83,40 @@ func runWorld(t *testing.T, w dm.World, full bool, play func(*testing.T, dm.Worl
 				}
 				t.Run(fmt.Sprintf("%s-%02d", mode, at), func(t *testing.T) {
 					t.Parallel()
-					if got := play(t, w, matrixCut{at: at, flush: flush}); len(got) < at {
+					cut := matrixCut{at: at, flush: flush}
+					got := play(t, w, cut)
+					if len(got) < at {
 						t.Errorf("the cut at %s never came: %d steps", steps[at-1], len(got))
 					}
+					checkFlushedMarkers(t, got, cut)
 				})
 			}
 		}
 	})
+}
+
+// checkFlushedMarkers holds every decision's durable marker to the flushes it
+// stands on (decision_durable.go): a power loss is no world here, so an
+// ignored flush would leave the same outcome, and only the order shows it.
+// The marker is published right after the decision's file, its directory and
+// its mailbox were flushed, in that order, and never right after one of
+// those flushes failed.
+func checkFlushedMarkers(t *testing.T, steps []string, cut matrixCut) {
+	t.Helper()
+	for i, step := range steps {
+		path, ok := strings.CutPrefix(step, "publish ")
+		if !ok || !strings.HasSuffix(path, durableSuffix) {
+			continue
+		}
+		decision := strings.TrimSuffix(path, durableSuffix)
+		flushes := []string{"sync-file " + decision, "sync-dir " + filepath.Dir(decision), "sync-dir " + filepath.Dir(filepath.Dir(decision))}
+		if i < len(flushes) || !slices.Equal(steps[i-len(flushes):i], flushes) {
+			t.Errorf("the marker of %s was published after %q, not right after its flushes", decision, steps[max(0, i-len(flushes)):i])
+			continue
+		}
+		// steps[k] is step k+1, so the flushes are steps i-2 to i.
+		if cut.flush && cut.at >= i-len(flushes)+1 && cut.at <= i {
+			t.Errorf("the marker of %s was published right after its flush, step %d, failed", decision, cut.at)
+		}
+	}
 }

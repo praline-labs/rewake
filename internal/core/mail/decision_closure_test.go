@@ -23,11 +23,15 @@ func TestDecisionClosureKeepsProvenance(t *testing.T) {
 	t.Run("an old tail retried", func(t *testing.T) {
 		t.Parallel()
 		s, r := newContractScene(t)
-		done := filepath.Join(JournalPath(s.dir, "api"), "end"+doneSuffix)
+		journal := filepath.Join(JournalPath(s.dir, "api"), "end")
+		done := journal + doneSuffix
+		closure := DecisionPath(s.dir, "api", r.ID) + closedSuffix
+		// The crash comes between the closure and J's done form: J then
+		// reads as unfinished, and the next barrier runs its tail again.
 		failed := false
 		s.access.mu.Lock()
 		s.access.beforeOp = func(op, path string) error {
-			if op == "rename" && path == done && !failed {
+			if op == "write" && path == journal && !failed && fileExists(closure) {
 				failed = true
 				return &fs.PathError{Op: op, Path: path, Err: syscall.EIO}
 			}
@@ -38,7 +42,9 @@ func TestDecisionClosureKeepsProvenance(t *testing.T) {
 		if !failed {
 			t.Fatal("J never went to its done rewrite")
 		}
-		closure := DecisionPath(s.dir, "api", r.ID) + closedSuffix
+		if j, err := readJournalFile(journal); err != nil || j.Done {
+			t.Fatalf("J after the crash: done %v, %v", j.Done, err)
+		}
 		first, err := os.ReadFile(closure)
 		if err != nil {
 			t.Fatalf("the tail before the crash wrote no closure: %v", err)

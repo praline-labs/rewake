@@ -130,8 +130,12 @@ the matrix's first run in S18's third part:
 Each cut is run twice, killed and flushed. A world's room is made on the file system in
 memory when the system has one (`/dev/shm`): every durable write of a room flushes, and
 on a disk the same pair cover took four to six times as long. The flushes the seam logs
-are not made — no world loses power, so they change nothing a world can see. Worlds and
-their cuts run in parallel.
+are not made — no world loses power, so they change nothing a world can see. For the same
+reason a flush whose failure were ignored would leave the same outcome, so every run's log
+is also held to the order a decision's durable marker stands on (`checkFlushedMarkers`):
+the marker is published right after the decision's file, its directory and its mailbox
+were flushed, and never right after one of those flushes failed. Worlds and their cuts
+run in parallel.
 
 **What the five checks run.** Measured on October 12, 2026 with no other heavy run on
 the machine: the pair cover of `decision`, `resend` and `mailbox` and the ten short
