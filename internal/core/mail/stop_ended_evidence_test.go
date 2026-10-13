@@ -62,7 +62,7 @@ func TestAHeldReportOfAnEndedRunIsSettledByItsEvidence(t *testing.T) {
 			// What J's saves record of R, read before each step: its done form
 			// keeps none of it.
 			var journal TurnJournal
-			var readErr error = os.ErrNotExist
+			readErr := os.ErrNotExist
 			open := filepath.Join(JournalPath(s.dir, "api"), "end")
 			s.access.mu.Lock()
 			s.access.beforeOp = func(string, string) error {

@@ -24,7 +24,7 @@ func TestDecisionFinalEvidenceIsLockedThroughCommit(t *testing.T) {
 	activities := map[string]func(s *matrixScene, r Message){
 		"evidence returns": func(s *matrixScene, r Message) { s.writeMark(r, onceIntent) },
 		"r reads":          func(s *matrixScene, r Message) { s.readR(r) },
-		"r sweeps": func(s *matrixScene, r Message) {
+		"r sweeps": func(s *matrixScene, _ Message) {
 			SweepFinishedLocked(s.dir, "web", s.r.epoch())
 		},
 	}
