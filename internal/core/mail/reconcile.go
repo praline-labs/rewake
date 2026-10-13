@@ -43,7 +43,9 @@ func Reconcile(ctx context.Context, dir, name string) error {
 	}
 	afterReading()
 	w := live(dir)
-	w.held = heldReports(look.open)
+	// A report whose occurrence the plan's evidence resolved just now is
+	// still settled by that evidence, never made moot by its run's end.
+	w.held = heldReports(append(look.open, look.resolved...))
 	if err := w.reconcileRecords(ctx, name, look.records); err != nil {
 		return failedEffect(dir, name, err)
 	}

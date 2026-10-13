@@ -28,6 +28,9 @@ type stopLook struct {
 	found error
 	keys  map[string]bool
 	open  []openStop
+	// resolved are the occurrences this look resolved from the plan's
+	// evidence: the pass after it must come to what the plan decided.
+	resolved []openStop
 	// failed are the stop's writes that did not go through: the answer is
 	// then the one place left that names what was found.
 	failed []error
@@ -62,6 +65,7 @@ func lookAtStop(dir, name string, open []openStop) stopLook {
 			if decided {
 				err := w.resolveStop(name, stop, evidence)
 				if err == nil {
+					look.resolved = append(look.resolved, stop)
 					continue
 				}
 				look.failed = append(look.failed, err)

@@ -20,7 +20,9 @@ import (
 // evidence for a stop: a report an open occurrence is about is consulted
 // before the run's end can make it moot, and stays where it is, its
 // occurrence open and nothing recorded, until evidence returns (stop.go).
-// Its run still live, the publication reads that evidence in the section.
+// Its run still live, the publication reads that evidence in the section;
+// its run ended, the section reads it without admitting the run, and only
+// what proves the report landed or never did settles it.
 //
 // A decision on the report comes before all of that (decision_journal.go): a
 // report decided is closed by the decision, never published, whatever its
@@ -39,16 +41,16 @@ func (w world) deliverReport(ctx context.Context, name, id string, save func() e
 		return nil
 	}
 	held, isHeld := w.held[report.ID]
-	published, err := w.publishReport(ctx, name, report)
+	published, err := w.publishHeld(ctx, name, report, isHeld)
+	if errors.Is(err, errNoEvidence) {
+		return &heldReportError{stop: held}
+	}
 	if err != nil {
 		return inOp(report.ID, err)
 	}
-	switch {
-	case published:
+	if published {
 		journal.Published = append(journal.Published, report.ID)
-	case isHeld:
-		return &heldReportError{stop: held}
-	default:
+	} else {
 		journal.Moot = append(journal.Moot, report.ID)
 	}
 	if err := save(); err != nil {
@@ -79,20 +81,33 @@ var recipientLockWait = 2 * time.Second
 // reentrant. The plan takes no lock: it predicts, and only the real pass, in
 // the section, decides.
 func (w world) publishReport(ctx context.Context, name string, report Message) (bool, error) {
+	return w.publishHeld(ctx, name, report, false)
+}
+
+// publishHeld is publishReport for a report an open occurrence may be about.
+// Held, a report whose run has ended is settled by its evidence alone, read in
+// the same section, and errNoEvidence says none was left.
+func (w world) publishHeld(ctx context.Context, name string, report Message, held bool) (bool, error) {
 	put := world.putOnce
 	if report.To == name && len(report.InReplyTo) == 0 {
 		// A failed main must not wake itself into another failing turn.
 		put = world.putLocal
 	}
-	return w.publishWith(ctx, name, report, put)
+	return w.publishWith(ctx, name, report, put, held)
 }
 
-// publishWith is publishReport's section with the letter put by put.
-func (w world) publishWith(ctx context.Context, name string, report Message, put func(world, Message) error) (bool, error) {
+// publishWith is publishHeld's section with the letter put by put.
+func (w world) publishWith(ctx context.Context, name string, report Message, put func(world, Message) error, held bool) (bool, error) {
 	published := false
 	err := w.recipientSection(ctx, name, report.To, func() error {
 		var err error
 		published, err = w.publishAdmitted(report, put)
+		if errors.Is(err, errRunEnded) {
+			published, err = false, nil
+			if held {
+				published, err = w.endedEvidence(report)
+			}
+		}
 		return err
 	})
 	return published, err
@@ -114,21 +129,57 @@ func (w world) recipientSection(ctx context.Context, name, to string, fn func() 
 }
 
 // publishAdmitted publishes a report whose recipient's run it reads first,
-// inside the section. The read leaves stale records where they are: the
+// inside the section, and answers errRunEnded, writing nothing, when that run
+// has ended or was replaced. The read leaves stale records where they are: the
 // caller holds a mailbox lock, and the cleanup a lookup does takes the name's.
 func (w world) publishAdmitted(report Message, put func(world, Message) error) (bool, error) {
 	peer, err := registry.LookupReadOnly(w.dir, report.To)
 	if errors.Is(err, registry.ErrNotFound) {
-		return false, nil
+		return false, errRunEnded
 	}
 	if err != nil {
 		return false, err
 	}
 	if peer.Epoch() != report.ToEpoch {
-		return false, nil
+		return false, errRunEnded
 	}
 	w.publicationStep(PublicationAdmitted, report)
 	return true, w.publishMarked(report, put)
+}
+
+// errRunEnded says the report's run has ended or was replaced: nothing was
+// written, and the report can reach nobody.
+var errRunEnded = errors.New("the report's run has ended")
+
+// errNoEvidence says a held report's run has ended and its mailbox keeps
+// nothing that proves the report landed or never did: its occurrence stays.
+var errNoEvidence = errors.New("nothing of the report's publication is left to read")
+
+// endedEvidence settles a held report whose run has ended by what the
+// recipient's mailbox still proves, read without admitting the run, in the
+// section that found it ended: the letter, or a mark that it was published,
+// says it landed; an intent with no letter says it never did, and with the run
+// ended it never will; anything else — no mark, a mark or a letter's place
+// that does not read — leaves it unknown (E8). Nothing is written.
+func (w world) endedEvidence(report Message) (bool, error) {
+	path, ok := oncePath(w.dir, report.To, report.ToEpoch, report.ID)
+	if !ok {
+		return false, errNoEvidence
+	}
+	found, err := w.present(report.To, report.ID)
+	if found {
+		return true, nil
+	}
+	if err != nil {
+		return false, errNoEvidence
+	}
+	switch mark, err := w.readOnceMark(path); {
+	case err != nil || mark == "":
+		return false, errNoEvidence
+	case mark == oncePublished:
+		return true, nil
+	}
+	return false, nil
 }
 
 // publishMarked puts a report under the marks its recipient's mailbox keeps

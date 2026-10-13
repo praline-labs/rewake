@@ -92,7 +92,13 @@ attempt that finds the run live there also finds every earlier landing
 expires the turn end fails as for any busy mailbox: nothing is written, no stop is
 recorded, and the next barrier publishes the report once. A report whose recipient is a
 run that has ended or was replaced, as read inside that section, is moot: the journal
-records it so, and what it answered is cleared.
+records it so, and what it answered is cleared. A report an open occurrence is about is
+the exception: that its run ended says nothing of whether it landed, so the same section
+reads its evidence without admitting the run — the letter in any stage or a published
+mark records it published, an intent with no letter moot, and anything else leaves it
+where it is, its occurrence open ([mailbox-records.md](mailbox-records.md)). A plan that
+reads the same evidence resolves the occurrence, and the pass after it comes to the same
+disposition.
 The fallback target is also fixed before publication, never selected again on retry.
 
 The report's id is derived from the wait — the reporting run, the waiting run,

@@ -194,7 +194,10 @@ paths; once it reads, the occurrence is closed.
   unknown.
 - A report an open occurrence is about stays where it is when its recipient's run
   ends: that the run ended says nothing of whether it landed, so it is not recorded
-  moot and its journal stays unfinished until evidence returns.
+  moot and its journal stays unfinished until evidence returns — read in the
+  recipient's section without admitting the run: the letter or a published mark says it
+  landed, an intent with no letter that it never did; no mark, or one that does not
+  read, keeps it where it is.
 
 Main is told of each occurrence once, by a note published once under the occurrence's
 id, whatever call found it, and `<occurrence>.told` records that it was; a new
