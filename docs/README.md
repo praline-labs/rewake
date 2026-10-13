@@ -412,8 +412,8 @@ the newer document says so.
   operator decision: its model, its records and its recovery), and stage 4's audit of
   what Claude Code and a mod already do, with pi and Codex weighed beside it. Open it
   before any 2.0 work.
-- [work-queue.md](work-queue.md) — what comes next, in the owner's order: the rest of the
-  workflow suite, the arrival-row check on the suite, a named harness version against a
+- [work-queue.md](work-queue.md) — what comes next, in the owner's order: stage 4 of 2.0
+  through the roadmap's open list, then the 1.x queue — the rest of the workflow suite, the arrival-row check on the suite, a named harness version against a
   local responder, a two-way channel for Claude Code, the rest of stage 2 of the plugin
   and a focus for a Codex compaction, the parity queue, and what is
   queued without a date; and what the owner dropped, the todo list sent with a task among

@@ -9,7 +9,15 @@ passed the project's 400-line limit.
 An entry leaves this file when the work is done: the record of it goes to the roadmap,
 and what was learned goes to the research documents.
 
-## Now: the workflow suite
+## Now: stage 4 of 2.0
+
+2.0 is built on the `v2` branch, and what is open there now is in the roadmap's
+[open right now](roadmap/README.md#open-right-now): stage 4, Claude Code's adapter as one
+mod, opened on October 13, 2026 with its audit ([stage4-audit.md](v2/stage4-audit.md)),
+then pi's adapter as stage 4b and Codex's entry point as stage 5. The entries below were
+queued for 1.x; each is taken up again only where 2.0's plan names it.
+
+## Later: the rest of the workflow suite
 
 What exists began with the roadmap's [suite entry](roadmap/2026-09-21-workflow-suite.md)
 and has grown with nearly every change since: `test/workflow` with its isolation, owned
