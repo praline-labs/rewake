@@ -42,14 +42,14 @@ func TestReadDirBelowTakesOnlyAMissingDirectoryForNone(t *testing.T) {
 			t.Fatalf("listed %v, %v", entries, err)
 		}
 	})
-	missing := map[string]func(t *testing.T, base string){
-		"the directory missing": func(t *testing.T, base string) { _ = os.RemoveAll(filepath.Join(base, "sessions")) },
-		"its parent missing":    func(t *testing.T, base string) { _ = os.RemoveAll(base) },
+	missing := map[string]func(base string){
+		"the directory missing": func(base string) { _ = os.RemoveAll(filepath.Join(base, "sessions")) },
+		"its parent missing":    func(base string) { _ = os.RemoveAll(base) },
 	}
 	for name, change := range missing {
 		t.Run(name, func(t *testing.T) {
 			base, _ := setup(t)
-			change(t, base)
+			change(base)
 			if entries, err := ReadDirBelow(base, "sessions"); !errors.Is(err, os.ErrNotExist) {
 				t.Fatalf("listed %v, %v; want absent", entries, err)
 			}
