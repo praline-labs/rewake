@@ -230,7 +230,11 @@ func (w world) commitDecision(seen world, files *capture, plan subjectPlan, path
 // it stays unknown. Every read is made, whatever the earlier ones gave, so
 // the decision keeps them all. S3 holds a report an open occurrence is about,
 // whatever its evidence, until its recipient's run is live: with that run
-// ended nothing but a decision settles it.
+// ended nothing but a decision settles it. It is proof only as the barrier
+// reads it: the occurrences resolved by their paths, the mark read, and the
+// letter found or every stage searched — a letter found beside a mark that
+// does not read is no settlement there, since the barrier writes nothing over
+// that mark and stops on it, so a decision is what settles it.
 func (w world) finalEvidence(plan subjectPlan) string {
 	report := plan.report
 	unknown := false
@@ -252,13 +256,13 @@ func (w world) finalEvidence(plan subjectPlan) string {
 	if err != nil || peer.Epoch() != report.ToEpoch {
 		return ""
 	}
-	switch {
-	case marked && markErr == nil && mark == oncePublished, presentErr == nil && found:
-		return "proven published"
-	case marked && markErr == nil && presentErr == nil && !unknown:
-		return "proven not published"
+	if !marked || markErr != nil || presentErr != nil && !found || unknown {
+		return ""
 	}
-	return ""
+	if found || mark == oncePublished {
+		return "proven published"
+	}
+	return "proven not published"
 }
 
 // resendFor is the resend journal a decision "did not arrive" holds: the

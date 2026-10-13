@@ -32,28 +32,50 @@ written by hand.
 ## The schedules held fixed
 
 Each partition fixes the order of its events, and its dimensions place only what they
-name; a world is that order with its values.
+name; a world is that order with its values. The plays are `playDecision`, `playResend`,
+`playMailbox` and `playGenerations` in `internal/core/mail/decision_matrix_*_test.go`.
 
 - `decision`: J writes R or not; R's evidence turns unknown; r ends, when it ends before
   the decision; the decider writes D at its linearization point, verified by r only while
-  r lives; D is installed in the next barrier, J' with it and not run (the `resend`
-  partition runs it); a second command, when there is one, after D; R's later evidence
-  after D, or before D's write when it returns before it, and then no D; r's end after D,
-  when it ends after it, past D's installation; the activity in r's mailbox after D,
-  except that r reads R at any time it lives and a new run of its name comes only after r
-  ended; the sender ends before D's effects are installed or after, or not at all.
+  r lives; D is installed in the barrier `decide` runs after it, J' with it, and runs
+  there; a second command, when there is one, after D; R's later evidence after D, or
+  before D's write when it returns before it; r's end after D, when it ends after it,
+  past D's installation; the activity in r's mailbox after D, except that r reads R at
+  any time it lives and a new run of its name comes only after r ended; the sender ends
+  before D's effects are installed or after, or not at all. Evidence that returns before
+  D's write leaves no D only while r lives: with r ended, S3 resolves nothing, the
+  occurrence stays and the decision is still the way out, so such a world is decided.
 - `resend`: R's evidence unknown; the decider writes D "did not arrive" — the person,
-  when r ended before it — and the next admitted barrier installs and runs J'; r ends at
+  when r ended before it — and the barrier `decide` runs installs and runs J'; r ends at
   the point of J''s path its value names, or not at all; R' is decided only once it is
-  unknown, the second choice in the barrier after; the sender at its point; R's own
-  evidence stays unknown and r's mailbox sees no activity.
+  unknown, in the barrier after, by r while it lives and by the person once it ended; the
+  sender at its point; R's own evidence stays unknown and r's mailbox sees no activity.
+  Each point is placed on the step the product reaches, not on a count of steps, so a cut
+  before it moves the event with the path: J' installed (r ends before its liveness
+  read), the first liveness `stat` of R' (inside the section), the first write of R''s
+  mark or letter (before its intent), the published mark after the letter, the save of
+  `Published`, the rename of J' to `.done`. An unknown R' is set up as J' is installed —
+  an intent with no letter, a mark that does not read beside the letter or not, an
+  intent beside the letter or not in a mailbox whose stat of that letter fails — or made
+  as the attempt goes: the mark turned unreadable and its write failed, after the letter
+  or at it.
 - `mailbox`: R's evidence unknown; r, verified and alive, writes D; the rest of the
-  mailbox is ordered before or after J as its value names and settled after D or left;
-  r and the sender live throughout; R' publishes on its first attempt unless the rest
-  names it unknown.
-- `generations`: each copy turns unknown at its mark and is decided by r, verified and
-  alive, before the next copy runs in an admitted barrier; r and the sender live
-  throughout.
+  mailbox as its value names, settled after D or left; r and the sender live throughout;
+  R' publishes on its first attempt unless the rest names it unknown. A barrier records
+  the first unknown it meets — a journal that does not read before any step, then the
+  steps by journal name, J' before J — so the unrelated journal turns unreadable, named
+  before J (`aaa`) or after it (`zzz`), once every report the world decides is on record:
+  before D when J holds R alone, after D when it holds a second report too, since that
+  report is met only once R is decided. The second report goes to another run, unknown
+  the same way, decided by the person; an unknown child is R''s mark unreadable as J' is
+  installed, settled by the mark repaired to its intent or by r deciding R' "arrived".
+  The occurrences left open are some of those the world leaves, never one more.
+- `generations`: each copy turns unknown at its mark — one that lands at its published
+  mark after its letter, one that does not at its letter — and is decided by r, verified
+  and alive, before the next copy runs in the barrier `decide` runs; the copy after the
+  last decision publishes on its first attempt; r and the sender live throughout. `one`
+  is R decided "did not arrive" and R' published; each copy of the chain of 40 after R
+  does not land.
 
 ## Excluded combinations
 
@@ -77,12 +99,57 @@ Never built, never accepted; each is a clause of a partition's `Feasible`:
 
 ## Clean runs and crash cuts
 
-Every feasible world runs clean, then once per durable write of its clean run's seam log
-(`rewakefault`), the process killed there and once more with that write's directory
-flush failed, the barrier run again and the oracle checked. The cut count of a world is
-the number of durable writes its clean log holds, so it is measured, not assumed: it is
-published here, per partition, from the matrix's first run in S18's third part, with the
-clean count above as its base. The five checks run the pair cover with its cuts; the full
-set runs before S18's final acceptance and at the stage's. If the full set does not fit
-where it is required, the measured cost and a proposed partition go to main before the
-gate changes.
+Every world runs clean, then once per durable step of its clean run: the process killed
+there, and once more with that step's flush failed — the change made, its flush
+answering an error, or, for a flush itself, the error alone. A durable step is a write,
+a publication, a rename, a removal or a directory or file flush of the product, taken
+while a command of the schedule runs. The seam is the file access of the mail package,
+put in place for one world's state directory alone (`matrixAccess`,
+`decision_matrix_access_test.go`) rather than the process-wide fault seam, so worlds run
+side by side; it logs the steps, makes one its cut, counts every letter written into a
+mailbox by id — a letter read or swept still counts — and plays the faults a world's
+evidence names on reads. After a kill the stopped process is gone: every later step of
+it fails until the command runs again in one that is not — the barrier again, or the
+same words of the deciding command — and the rest of the schedule follows. Each run is
+then held to the model by the play's checks.
+
+The cut count of a world is the number of durable steps its clean log holds, measured on
+the matrix's first run in S18's third part:
+
+| Partition | Pair-cover worlds | Their cuts | Feasible worlds | Their cuts |
+|---|---|---|---|---|
+| `decision` | 23 | 363 | 3198 | measured by the full run |
+| `resend` | 41 | 1208 | 219 | 7566 |
+| `mailbox` | 32 | 887 | 52 | 1424 |
+| `generations` | 12 | 1882, of which 1528 the chain of 40 | 12 | 1882 |
+
+Each cut is run twice, killed and flushed. A world's room is made on the file system in
+memory when the system has one (`/dev/shm`): every durable write of a room flushes, and
+on a disk the same pair cover took four to six times as long. The flushes the seam logs
+are not made — no world loses power, so they change nothing a world can see. Worlds and
+their cuts run in parallel.
+
+**What the five checks run.** Measured on October 12, 2026 with no other heavy run on
+the machine: the pair cover of `decision`, `resend` and `mailbox` and the ten short
+worlds of `generations`, every cut killed and flushed, takes 20 s, and 98 s under
+`-race`. The chain of 40 takes 2.1 s clean, and its 764 steps are some 3000 cut runs —
+about 13 minutes without `-race`; cutting only its first two generations and its last
+still took 200 s, and under `-race` some 25 minutes for each of the three runs of the
+package the five checks make. Main decided on October 12, 2026: the five checks run the
+pair cover with every cut, except the chain of 40, which runs clean, every copy, decision,
+note and closure checked; `REWAKE_DECISION_MATRIX=full` runs every feasible world and
+every cut, the chain of 40 included, in the background before S18's final acceptance,
+with its log and counts in the report. A clean log past 100 steps is what the runner
+takes for a long chain (`cutsOf`).
+
+## Behind a link
+
+A world apart from the partitions (`TestDecisionWorldsBehindLinks`): R's occurrence on
+record, then api's mailbox or its stops moved aside and a link put in its place,
+dangling or to the records themselves, or the directory of every mailbox replaced by a
+dangling link. The stops read as absent — no subject — or as unreadable: `decide`
+refuses, writes no decision on either side of the link and publishes nothing, and with
+the directory back the same words decide. A link above the mailbox to the mailbox's own
+records is not such a world: the lock and the listings refuse a link at the mailbox's own
+level, not at every ancestor, so `decide` then decides on the records the link reaches.
+Nothing promises more (part 2's review); the observation is recorded with S18's report.

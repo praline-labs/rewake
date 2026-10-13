@@ -202,10 +202,11 @@ func TestDecideRefusesWithNothingWritten(t *testing.T) {
 			writeRaw(t, lab.mark, oncePublished)
 			return lab.ask(t, ChoiceArrived, DecidedBy{Kind: ByPerson})
 		}},
-		"the letter found since the stop": {DecisionProven, func(t *testing.T, lab unknownLab) DecideRequest {
+		"the letter found since the stop, beside its intent": {DecisionProven, func(t *testing.T, lab unknownLab) DecideRequest {
 			if err := live(lab.dir).put(lab.report); err != nil {
 				t.Fatal(err)
 			}
+			writeRaw(t, lab.mark, onceIntent)
 			return lab.ask(t, ChoiceNotArrived, DecidedBy{Kind: ByPerson})
 		}},
 		"not published, as proven since the stop": {DecisionProven, func(t *testing.T, lab unknownLab) DecideRequest {
@@ -248,6 +249,31 @@ func TestDecideRefusesWithNothingWritten(t *testing.T) {
 				t.Fatalf("a refused decision wrote: %v", treeDiff(before, after))
 			}
 		})
+	}
+}
+
+// A letter found beside a mark that still does not read settles nothing:
+// the barrier writes nothing over that mark and stays stopped on it, so the
+// decision is taken as asked, and the barrier after it goes through without
+// writing the report again. Refused as proven, it left the mailbox stopped
+// with no way out.
+func TestDecideTakesALetterBesideAnUnreadableMarkForUnknown(t *testing.T) {
+	lab := newUnknownLab(t)
+	if err := live(lab.dir).put(lab.report); err != nil {
+		t.Fatal(err)
+	}
+	if err := finishAll(t, lab.dir); err == nil {
+		t.Fatal("the barrier went past the mark that does not read")
+	}
+	answer, err := lab.decide(t, ChoiceArrived, DecidedBy{Kind: ByPerson})
+	if err != nil || answer.Barrier != nil {
+		t.Fatalf("decided as %+v, %v", answer, err)
+	}
+	if err := finishAll(t, lab.dir); err != nil {
+		t.Fatalf("the decided mailbox stays stopped: %v", err)
+	}
+	if letters := lettersOf(t, lab.dir, "web"); letters[lab.report.ID] != 1 {
+		t.Fatalf("web holds %v", letters)
 	}
 }
 

@@ -37,7 +37,9 @@ lookup, recipient barrier or lease acquisition happens inside the locks; a lock 
 within its wait is exit 1 with no D, never a reason to decide "unknown". Other unknowns
 in the mailbox do not stop the write: D needs R's evidence, not admission. Evidence before
 that point resolves the occurrence by S3's rule, and `decide` answers exit 1, "proven
-published" or "proven not published". Evidence after it is M5: the decision stands, as
+published" or "proven not published"; a letter found beside a mark that does not read is
+no such evidence, since the barrier writes nothing over that mark and stops on it, so it
+is decided. Evidence after it is M5: the decision stands, as
 the accepted contract trades
 ([design-rules.md](design-rules.md#an-operator-decision-on-an-unknown-outcome): decided
 wrongly, the report reaches r twice, or an obligation closes with nothing delivered). r's
