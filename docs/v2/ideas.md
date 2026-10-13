@@ -172,6 +172,14 @@ bound to its main from the start. Open questions for that design:
 - the room as the main's set of tabs, against today's room by directory and name;
 - Codex workers, which have no mod and keep launching through the command line.
 
+Weighed in the stage 4 audit, October 13, 2026
+([stage4-audit-rows.md](stage4-audit-rows.md#16-worker-tabs-and-buttons--split-p15)): the
+pseudo-terminal belongs to the worker's own rewake wrapper, so a tab can host a worker of
+any harness, Codex and pi included, and a button appears when main launches a worker, not
+only on "+"; a reload of the mod or main's exit loses the view, not the worker. Main
+launching workers is a new authority and the owner's decision. The probe above is P15 of
+[design-claude.md](design-claude.md#the-stage-4-probe), proposed beside stage 4's probe.
+
 ## 2. A room panel in the main's screen
 
 **What.** A panel in the main's Claude Code with:
@@ -240,3 +248,13 @@ worktree lies inside the repository.
 **Stage.** 4 for the Claude Code side (the audit of
 [design-claude.md](design-claude.md#before-the-probe-what-claude-code-already-does) and
 the probe), 5 for seating a Codex worker. Owner's idea, October 12, 2026.
+
+Weighed in the stage 4 audit, October 13, 2026
+([stage4-audit-rows.md](stage4-audit-rows.md#13-worktree--split-p12)): a checkout made
+without a hook gets no `classic.WorktreeRemove`, so Claude Code's own checkout has no veto
+for a foreign worker unless its removal respects a `git worktree lock` rewake takes; the
+alternative routes Claude Code's `-w` into rewake's checkout through
+`classic.WorktreeCreate`, where the removal event fires and can block. Either way Claude
+Code drives the life (P12). A worker that commits needs both the private and the common Git
+directory granted, resolved through Git. By the owner's decision of the same day pi comes
+before Codex, so the first worker seated this way is pi's.

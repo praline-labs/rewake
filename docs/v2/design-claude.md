@@ -290,13 +290,31 @@ against the installed Claude Code and the `mods` skill: kept as rewake's, handed
 native feature, or built on a mod event instead. Only what survives the audit is carried
 into the adapter or the probe.
 
-The worktree is the first example found. Claude Code creates a git worktree for a session
-itself (`claude --worktree [name]`, with `claude rm` removing a background session's
-worktree when safe; read in the 2.1.296 help), and a mod sees the creation and removal
-(`classic.WorktreeCreate`, `classic.WorktreeRemove`). rewake's own `--worktree` adds a
-place outside the repository with its record, the land and finish commands, the include
-rules, and the same behaviour on Codex; the audit decides which of these stay rewake's on
-Claude Code. Until then `host/worktree` moves in stage 3 unchanged.
+The audit was written on October 13, 2026, on 2.1.296
+([stage4-audit.md](stage4-audit.md), its rows in [stage4-audit-rows.md](stage4-audit-rows.md)).
+In short, as proposals for main and the owner:
+
+- **Joining** stays open: work between Claude Code sessions could run through the mod
+  alone, with `rewake claude` reduced to a launcher, if a process the mod starts at the
+  first `session.start` detaches, outlives reloads and becomes the run's anchor in the
+  wrapper's place — a core change. P11 decides it and runs first.
+- **Kept as rewake's**: the mail, the registry, the room view, the shell allowance, grant
+  authority, the version gate and the scrubbing of children's variables. Native messaging
+  keeps nothing for a session that is not running and knows no kinds or reports, so it
+  serves as the wake carrier only, which it already is.
+- **Built on the mod**: reading by tool, the turn boundary, telemetry, control, the
+  conversation binding, and a `session.send` guard that keeps a report off native
+  `SendMessage` (P13); `--name` passes rewake's name to Claude Code's own (P13), and the
+  briefing may move to a prompt event if the system prompt's snapshot on resume hides a
+  changed one (P14).
+- **The worktree's life** goes to Claude Code: its own `-w` and `EnterWorktree` are routed
+  into `host/worktree`'s checkout through `classic.WorktreeCreate`, with
+  `classic.WorktreeRemove` keeping a checkout a rewake session of any harness sits in; if
+  Claude Code's removal respects a `git worktree lock` rewake takes, its own checkout is the
+  simpler choice (P12). Either way most of the adapter's own worktree launch goes.
+- **Worker tabs**: the pseudo-terminal belongs to the worker's rewake wrapper, so any
+  harness can be hosted, and the mod draws it and forwards keys (P15).
+- **Background sessions** under Claude Code's supervisor stay unscheduled (P16).
 
 ## The stage 4 probe
 
@@ -316,3 +334,9 @@ part; what it leaves open is named in the row.
 | P8 | Reserved fields under forged arguments; `isDeferred: false` in the registration, and whether the model then calls the tools; a `permissions.deny` rule and `$.tool.check` on a mod tool, with neither an effect nor shell advice after a deny; whether the denial answer reaches the model as an error where the design assumed plain text; a person's MCP server named `rewake` | the tool set's safety; with no reliable check, no tools |
 | P9 | Tools after `/clear`; session ids across `/clear`, resume, branch, and `classic.SessionStart`'s source; are turn ids ever reused across an interrupt, a reload, `/clear`, a resume | the conversation binding; whether a retry may mark (T7) |
 | P10 | A `$.process.spawn` child across turns, reloads and `session.end`, and its environment against the Bash tool's | the control and notice stream; why the endpoint and not a child |
+| P11 | A mod's join without the wrapper: whose child a `$.process.run` child is and whether it may detach and outlive a reload, a worker respawn and `session.end`, ending with the harness process; whether it starts before any model command at the first `session.start`; the inbox socket's path from `$.env.get`; the hello naming the harness's pid and build, checked by the detached process against the peer of the mod's requests (P4) | whether `rewake claude` can become a launcher and the run's anchor the harness process; negative, the wrapper stays as designed |
+| P12 | `classic.WorktreeCreate` answered with a checkout of `host/worktree`, for `--worktree`, `EnterWorktree`, a subagent's isolation and a resume into it; `classic.WorktreeRemove` blocked while a rewake session sits there, at exit, `ExitWorktree`, the clean unnamed exit and `claude rm`; the mod not answering or failing; the isolation checks inside the routed checkout. Then Claude Code's own checkout with a `git worktree lock` rewake took: removal at exit, the clean unnamed exit, `claude rm` and the sweep; how the mod learns the finished path | which way the worktree goes (row 13 of the audit) and that `adapter/claude/worktree.go` goes; with no reliable veto, the explicit keep policy |
+| P13 | Native `SendMessage` from a rewake session to a room member refused by a `session.send` guard, and what the model sees; `ListAgents` beside the room; `--name` as the address and the title; a rename by `/rename` | the guard and the name |
+| P14 | The briefing on resume with `--system-prompt-snapshot` on and off, a role changed between launches; the same text from `prompt.section` | the briefing's carrier |
+| P15 | A pseudo-terminal of a rewake wrapper drawn in a mod pane: Escape and its remapping, Ctrl+C, Ctrl+X, Alt, paste, function keys, focus in and out, a size of 200 by 50, the redraw cost over `$.http.fetch`; a reload of the mod and main's exit with the worker alive. Stage 6 by [ideas.md](ideas.md#1-sessions-as-tabs-inside-claude-code), proposed beside stage 4's probe | whether worker tabs are buildable and the launch of every adapter owns a terminal |
+| P16 | `claude --bg` and `--bg --exec` as the host of a rewake worker: the supervisor's lifetime against the wrapper's, `claude agents --json` fields, `claude rm` and the worktree. Only if the owner takes headless workers up | whether background sessions can carry a worker |

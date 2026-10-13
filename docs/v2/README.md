@@ -45,7 +45,8 @@ Stage 2, the design of 2.0, for review before any code:
   C1–C8, what a launch adds L1–L3, grants.
 - [design-claude.md](design-claude.md) — the Claude Code adapter as one mod: loading,
   what happens when it does not load, the mail tools and how a call runs, the turn
-  boundary, telemetry, control, the wake candidates, and the stage 4 probe P1–P10.
+  boundary, telemetry, control, the wake candidates, the audit's outcome in short, and the
+  stage 4 probe P1–P16.
 - [design-codex.md](design-codex.md) — Codex: the pair a Claude Code main must serve,
   the reserved place, the capabilities expected, and what keeps Codex workers running
   until stage 5.
@@ -123,6 +124,17 @@ accepted in review round 7:
   apart from the code: the dimensions and their values, the excluded combinations, the
   independent schedule partitions, the clean and fault-cut counts, and the generated
   pair-covering set the ordinary checks run.
+
+Stage 4, Claude Code's adapter as one mod:
+
+- [stage4-audit.md](stage4-audit.md) — the audit of October 13, 2026, before the probe: the
+  owner's question whether Claude Code sessions can work through the mod alone without the
+  `rewake claude` wrapper, the verdict on each feature (kept, native, mod, split, open),
+  and the consequences for the stage plan, pi's stage 4b and Codex's entry point among
+  them. Open it before planning stage 4 or 4b.
+- [stage4-audit-rows.md](stage4-audit-rows.md) — the audit's rows argued one by one: why
+  each verdict, what code and documents it removes or keeps, what pi and Codex offer for
+  the same feature, and which property of the project it touches.
 
 Not scheduled:
 
