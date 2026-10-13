@@ -129,7 +129,12 @@ Codex's plan tool in [research-codex.md](research-codex.md#the-plan-tool) and
 
 The remaining entries of [harness-features.md](harness-features.md), in its order.
 
-## Now: what the directory grants and the worktrees left open
+## Later: what the directory grants and the worktrees left open in 1.x
+
+What follows was queued for 1.x. In 2.0 the worktree is weighed in stage 4's audit
+([row 13](v2/stage4-audit-rows.md#13-worktree--split-p12)) and grants are applied by each
+adapter in stage 6 ([the stage plan](v2/design.md#the-stage-plan-from-here)); an item
+here returns only where one of those stages names it.
 
 Both stages of the directory grant landed on September 27, 2026 ([grants.md](grants.md);
 the roadmap entries of that day), and so did the worktree lifecycle
@@ -173,7 +178,10 @@ the roadmap entries of that day), and so did the worktree lifecycle
 ## Now: after 1.0.0
 
 What the day of the 1.0.0 release left, recorded on September 28, 2026 at the owner's word
-("what was not done goes to the debts"). Unordered until the owner orders it.
+("what was not done goes to the debts"). Unordered until the owner orders it. These are
+1.x's debts, and the heading keeps its 1.x name because an archived 1.x document links to
+it; 2.0's work is in [the entry above](#now-stage-4-of-20), and an item here returns to it
+only where 2.0's plan names it.
 
 - **Live checks on the released wrappers.** On September 28, 2026, on 1.0.2, a directory
   grant was seen granted, taken back and refused on Codex, and a Claude Code worktree
