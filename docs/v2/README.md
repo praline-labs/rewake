@@ -35,8 +35,8 @@ Stage 2, the design of 2.0, for review before any code:
 
 - [design.md](design.md) — the overview: what does not change, the layout of 2.0 with
   its import rule and the test that holds it (imports, harness names outside the
-  adapters, no registry), the stage plan with each stage's acceptance, and the questions
-  for the owner. Open it first.
+  adapters, no registry), the stage plan with each stage's acceptance, and the owner's
+  answers, the last three on how a space is shown. Open it first.
 - [design-api.md](design-api.md) — the adapter API: the eight capabilities, offered and
   live, what the core does without each, the catalogue as a value, minimum versions and
   the legacy mark.
@@ -161,6 +161,14 @@ Stage 4, Claude Code's adapter as one mod:
   the Codex side's reading of codex-cli 0.160.1, its schema and source, row by row, seating
   in another harness's worktree, joining without the wrapper, and the probes CX1–CX8 the
   audit cites. Kept for Codex's adapter after 2.0.
+- [agent-deck-ideas.md](agent-deck-ideas.md) — agent-deck read as code on October 13, 2026:
+  what its history teaches for the terminal emulator (S4-4, S4-8) and for handing a terminal
+  between programs (`rewake attach`, the later host mode), what not to take and why, and the
+  open questions for live checks. Open it before S4-4 and S4-8.
+- [agent-deck-ideas-delivery.md](agent-deck-ideas-delivery.md) — its second half: worktrees
+  under the keeper (S4-7, S4-9), delivery to Claude Code's messaging socket (S4-5, S4-6), and
+  testing — screen goldens without tmux, a state-detection corpus, the delivery tests. Open it
+  before S4-5, S4-7 and S4-9.
 
 Not scheduled:
 

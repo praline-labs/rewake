@@ -216,3 +216,23 @@ probe ([research-claude-mod.md](../research-claude-mod.md)):
    extension. That part is small, generated or embedded by the binary for one run and
    versioned with it; the protocol between it and the host is described once, as a JSON
    schema, and the TypeScript types are generated from it.
+
+Three more decisions of the owner, October 13, 2026, on how a space is shown:
+
+10. **The person runs Claude Code, and the harnesses live inside it through the mod**
+    (decided October 13, 2026). The approach is fixed; what stays open is only how a space's
+    pseudo-terminal is shown in full ([stage4-space.md](stage4-space.md)).
+11. **The full screen: a space's Text tab now, the host mode later** (decided October 13,
+    2026). Now a space is drawn in its tab as styled text, and `rewake attach` in a second
+    window gives its whole screen. Later, as a stage of its own and by the owner's decision on
+    the principle of [project.md](../project.md#the-philosophy), a host mode, `rewake claude
+    --host`: rewake holds main's terminal and switches the whole window between main and the
+    workers as a transparent pseudo-terminal relay, with no multiplexer interface of its own.
+    The work is only at a switch — restore the shown program's terminal modes from its
+    emulator, make it redraw — and one reserved prefix key. The person's external editor
+    (Ctrl+G, `EDITOR`) is never taken for this.
+12. **No tmux anywhere in rewake** (decided October 13, 2026): not as the substrate a
+    session runs in, not for screenshots. Screen snapshots for tests come from rewake's own
+    emulator, `charmbracelet/x/vt`, over a pseudo-terminal. What agent-deck, which runs on
+    tmux, teaches for the terminal, the checkouts and screen tests is gathered in
+    [agent-deck-ideas.md](agent-deck-ideas.md).

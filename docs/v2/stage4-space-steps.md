@@ -201,6 +201,6 @@ Each one a step would otherwise guess; the step named decides it or brings it to
   for. It guards the build: if the check sees that removal, an open space without a view is not
   enough, and the result goes to main before the keeping of spaces across a `/clear` is landed
   or claimed.
-- **Q14. The whole window** (the owner, October 13, 2026: not settled). P15d probes whether
-  Claude Code's external-editor prompt edit hands the whole terminal to a program, which could
-  attach to a space's pseudo-terminal and come back; a probe, not a choice.
+- **Q14. The whole window** — decided by the owner, October 13, 2026: `rewake attach` in a
+  second window now, a host mode later as a stage of its own; the external-editor hand-off P15d
+  probed is not taken ([design.md](design.md#the-owners-answers), answer 11).
