@@ -134,15 +134,16 @@ The cuts of a world are its clean log's durable steps killed, and those a flush 
 at flushed, measured on the matrix's runs in the fix round of S18's third part, the
 feasible worlds by the full run:
 
-| Partition | Pair-cover worlds | Their kills | Their flushes | Feasible worlds | Their kills | Their flushes |
-|---|---|---|---|---|---|---|
-| `decision` | 23 | 999 | 565 | pending | pending | pending |
-| `resend` | 41 | 3650 | 2022 | pending | pending | pending |
-| `mailbox` | 32 | 2831 | 1535 | pending | pending | pending |
-| `generations` | 12 | 1080 and the chain of 40 clean | 596 | pending | pending | pending |
+| Partition | Pair-cover worlds | Their cuts | Feasible worlds | Their cuts |
+|---|---|---|---|---|
+| `decision` | 23 | 999 killed, 565 flushed | 3198 | 177902 killed, 99112 flushed |
+| `resend` | 41 | 3650 killed, 2022 flushed | 219 | 23280 killed, 12804 flushed |
+| `mailbox` | 32 | 2831 killed, 1535 flushed | 52 | 4532 killed, 2460 flushed |
+| `generations` | 12 | 1080 killed, 596 flushed; the chain of 40 clean | 12 | 5974 killed, 3246 flushed |
 
-The feasible worlds' counts come from the full run on the final code of the fix round,
-written here once it has run.
+The full run on the final code of the fix round, on October 13, 2026: all 3481 feasible
+worlds, 211688 cuts killed and 117622 flushed — 336277 passing tests and subtests, none
+failing or skipped, in 1 hour 55 minutes.
 
 Before the internal points, on the code of S18's third part, a step was a whole write or
 publication, killed before it or made with an error answered after it: 3481 feasible

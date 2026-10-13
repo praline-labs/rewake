@@ -235,7 +235,10 @@ process runs below the wrapper of api."
   occurrence about a decided report recorded after its decision, or any while the decision
   is not durable yet, is listed as undecidable beside the decided subject, and every view
   derived from the listing (`list`, the answer's `stopped`) calls the mailbox stopped; no
-  second decision is offered, since a decision is never replaced. It reads only the sender's mailbox — a decision included after its
+  second decision is offered, since a decision is never replaced. A known limit, by main's
+  decision of October 13, 2026: an occurrence already resolved whose record no longer reads
+  stops the barrier (`resolvedReports`), which writes nothing past it, yet the listing does
+  not name it, so a mailbox stopped that way can list nothing to decide. It reads only the sender's mailbox — a decision included after its
   journal's retention — and takes no lock, lease or wrapper request, installs nothing and
   runs no barrier: what a decided subject's recipient holds now is not looked up. A
   decision seen before its effects shows as recorded with its resend, tail and notes
