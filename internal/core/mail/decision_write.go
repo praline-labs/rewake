@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -44,6 +45,10 @@ type DecideRequest struct {
 	// Expect is the subject the caller found before it asked (FindSubject):
 	// one read otherwise under the lock is refused.
 	Expect Subject
+	// DeadlineBoot is when the call that asked stops wanting the answer, on
+	// the boot clock; zero for a caller with no such bound. Past it no record
+	// is written (docs/mail-bridge-cli.md, rule 3).
+	DeadlineBoot int64
 }
 
 // DecideAnswer is a decision made, or found made with the same choice.
@@ -89,6 +94,9 @@ func Decide(ctx context.Context, dir string, req DecideRequest) (DecideAnswer, e
 		return DecideAnswer{}, refuseDecision(DecisionNoSubject, "", "a decision names a session and a report")
 	}
 	if err := checkDecider(req.By); err != nil {
+		return DecideAnswer{}, err
+	}
+	if err := req.inTime(); err != nil {
 		return DecideAnswer{}, err
 	}
 	var answer DecideAnswer
@@ -184,7 +192,7 @@ func decideLocked(ctx context.Context, dir string, req DecideRequest) (DecideAns
 		}
 	}
 	err = w.recipientSection(ctx, req.Sender, plan.subject.Recipient, func() error {
-		return w.commitDecision(seen, files, plan, path, &d)
+		return w.commitDecision(seen, files, plan, path, &d, req.inTime)
 	})
 	if err != nil {
 		var refusal *DecisionError
@@ -197,8 +205,9 @@ func decideLocked(ctx context.Context, dir string, req DecideRequest) (DecideAns
 }
 
 // commitDecision runs in the recipient's section: the report's final
-// evidence, then the record, only while the report is still unknown.
-func (w world) commitDecision(seen world, files *capture, plan subjectPlan, path string, d *Decision) error {
+// evidence, then the record, only while the report is still unknown and the
+// asker still wants the answer — checked last, after both lock waits.
+func (w world) commitDecision(seen world, files *capture, plan subjectPlan, path string, d *Decision, inTime func() error) error {
 	if proof := seen.finalEvidence(plan); proof != "" {
 		return refuseDecision(DecisionProven, "", "report %s of %s is %s since its stop, so the barrier settles it by evidence and nothing is decided", plan.subject.Report, plan.subject.Sender, proof)
 	}
@@ -216,6 +225,9 @@ func (w world) commitDecision(seen world, files *capture, plan subjectPlan, path
 	if _, err := parseDecision(path, raw); err != nil {
 		return fmt.Errorf("the decision would not read: %w", err)
 	}
+	if err := inTime(); err != nil {
+		return err
+	}
 	if err := w.ensureDir(filepath.Dir(path)); err != nil {
 		return &DecisionError{Outcome: DecisionUnreadable, Path: path, Err: fmt.Errorf("the decisions of %s cannot be written: %w", plan.subject.Sender, err)}
 	}
@@ -223,6 +235,17 @@ func (w world) commitDecision(seen world, files *capture, plan subjectPlan, path
 		return &DecisionError{Outcome: DecisionUncertain, Path: path, Err: fmt.Errorf("the decision on report %s may or may not be written, and is not removed or replaced: %w", plan.subject.Report, err)}
 	}
 	return nil
+}
+
+// inTime refuses a decision whose asker no longer wants the answer: a record
+// written then is one the asker never learns of, and nothing it fixes may
+// follow from a call that is over. Nothing is written, and the same words
+// again, under a bound of their own, decide.
+func (req DecideRequest) inTime() error {
+	if req.DeadlineBoot == 0 || boottime.Now() < req.DeadlineBoot {
+		return nil
+	}
+	return refuseDecision(DecisionExpired, "", "the call that asked for the decision on report %s stopped waiting for its answer before the record was written, so nothing was decided", req.Report)
 }
 
 // finalEvidence is the proof of the report's outcome the barrier would

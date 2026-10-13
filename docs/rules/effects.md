@@ -57,6 +57,8 @@ decision settles the stop without being evidence.
   - `internal/cli/bridge_rules_test.go` `TestAContinuationRefreshesALetterBeforeAnyPart`
   - `internal/cli/bridge_rules_test.go` `TestAToolRetryKeepsToTheToolSurface`
   - `internal/cli/bridge_rules_test.go` `TestAShellRetryDoesNotReadStdinAgain`
+  - `internal/cli/decide_deadline_test.go` `TestAToolDecisionStopsAtItsDeadline`
+  - `test/decisionrig/deadline_test.go` `TestTheWrapperWritesNoDecisionPastTheCallsDeadline`
   - `internal/cli/addendum_test.go` `TestAnAddendumIsAskedAgainUnderTheLock`
   - `internal/cli/addendum_test.go` `TestAnAddendumsEditIsAskedAgainUnderTheLock`
   - `internal/core/mail/claims_test.go` `TestPublicationOfReadsTheMailbox`

@@ -30,6 +30,10 @@ const (
 	// DecisionProven means the outcome was proven since the stop; the barrier
 	// settles it by evidence.
 	DecisionProven DecisionOutcome = "proven"
+	// DecisionExpired means the call that asked stopped waiting for the answer
+	// before the record was written. Nothing written; the same words again,
+	// under a bound of their own, decide.
+	DecisionExpired DecisionOutcome = "expired"
 	// DecisionUnreadable means something the decision stands on could not be
 	// read — a decision already there, the room's registry, the subject's
 	// records — or its reads pass what a decision may keep. Nothing written.

@@ -46,7 +46,7 @@ func decideGroup() Group {
 				"The name is the stopped session, the report the id its stop note printed. With no report it lists, one line each, the reports that can be decided — the recipient and its run, what each answers, which read failed and why, a decision already made and how far its effects went — then what no decision settles. The list changes nothing.",
 				"Decides only the recipient run of the report, from a command or tool call below its own wrapper — its wrapper writes the decision, verified — or the person, from a process outside every session, unverified. A compaction keeps the run; a restart of the name does not. A shell whose sandbox cannot reach the wrapper decides through the rewake tool's decide: a wrapper that cannot be reached is never taken for the person.",
 				"A decision is final and never replaced: the same words again say it was recorded before and finish what it fixed; the other switch is refused. Delivery stays unproven either way: a task or question it answers is closed by the decision, never marked delivered.",
-				"Exit 0 recorded, now or before, even when the session stays stopped on other reports, which the answer names; 1 the mailbox busy, the subject changed, the outcome proven since, an opposite decision, something it stands on unreadable, the wrapper unreachable or its answer lost, or an effect that failed after the record (recorded: true; the next barrier does it); 2 a wrong call — no switch or both, a report that is no subject, a caller placed in a session that may not decide.",
+				"Exit 0 recorded, now or before, even when the session stays stopped on other reports, which the answer names; 1 the mailbox busy, the tool call's deadline past before the record, the subject changed, the outcome proven since, an opposite decision, something it stands on unreadable, the wrapper unreachable or its answer lost, or an effect that failed after the record (recorded: true; the next barrier does it); 2 a wrong call — no switch or both, a report that is no subject, a caller placed in a session that may not decide.",
 			},
 			Access:  decideAccess,
 			Handler: handleDecide,
@@ -131,6 +131,11 @@ func decideReport(ctx *Context, call Call, dir, name, report, choice string) err
 	path := mail.DecisionPath(dir, name, report)
 	if err := decisionDeadline(ctx); err != nil {
 		return err
+	}
+	// The check above is made before any lock wait; the writer makes it
+	// again after both, just before the record, by the call's own bound.
+	if ctx.scope != nil {
+		ask.DeadlineBoot = ctx.scope.ticket.DeadlineBoot
 	}
 	var answer mail.DecideAnswer
 	if run, ok := authority.RunOf(subject.RecipientRun); ok && runsBelow(run) {

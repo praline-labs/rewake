@@ -342,6 +342,15 @@ replays a finished one; it cannot reach another run's journal.
   count among the waits: their acknowledgment comes before the turn ends. "Nothing is
   owed" is an answer only when every wait record and claim was read; one that could not
   be, or a mark in place that could not, leaves the operation open (rule 6).
+- **A decision** asked through the tool carries the call's deadline with the question
+  to whichever process writes it — the recipient run's wrapper, over its address, or
+  the person's own process — and the writer checks it after the sender's and the
+  recipient's lock waits, just before the decision's record. The check the command
+  makes before it asks is an early answer only: the wrapper's own limit is far longer
+  than a tool call's. Past the deadline nothing is written and the outcome is
+  `expired`: the operation stays open, and `rewake retry <receipt>` asks again under
+  its own deadline. A record already there is found and finished as before, and an
+  answer lost after the record stays uncertain; neither is called undone.
 - **A refusal** is an answer like any other: the same words in the same turn replay it.
   Its effect is proven absent, so the sweep may remove it a day later with the rest.
 - **A deadline** or a busy mailbox before a commit leaves the operation open, the call

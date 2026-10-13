@@ -102,6 +102,11 @@ caller, makes the decision's final transaction (Q2 of
    `mail.Decide`; a wrapper runs at most four decisions at once and refuses the rest
    busy, the answer carries no observations — the record on disk does — and a question
    that went out with no answer back is uncertain, naming the record that may exist.
+   A command run for a tool call sends the call's deadline with the question, and the
+   transaction writes no record past it, checked after both lock waits
+   (`DecideRequest.DeadlineBoot`, rule 3 of
+   [mail-bridge-cli.md](../mail-bridge-cli.md#the-rules-the-code-holds)); the refusal is `expired`, nothing
+   written, and the operation stays open for `rewake retry`.
    `test/decisionrig` holds this between real processes: the recipient's command is
    answered whatever its environment says; another worker's, with the recipient's
    variables or without, through the client or straight at the address, the
@@ -252,7 +257,8 @@ process runs below the wrapper of api."
   remaining, undecidable}`; the list form `{session, subjects: [...], undecidable: [...]}`.
 - **Exit codes.** 0: recorded, or recorded before with the same words — also when the
   mailbox stays stopped on unrelated causes, which the answer names under `stopped`. 1:
-  the mailbox is busy, and no decision was written; a decision with the opposite words
+  the mailbox is busy, or the tool call's deadline came before the record, and no
+  decision was written; a decision with the opposite words
   exists; the outcome was proven since; an identity check could not be read; an effect
   failed after the record (`recorded: true`, the failed effect named, the next barrier
   does it). Notes still owed are named as deferred, never as told, and fail nothing. 2: a

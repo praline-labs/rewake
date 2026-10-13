@@ -206,5 +206,11 @@ func beforeCommit(ctx *Context, token, what string) error {
 	if ctx.scope == nil || ctx.scope.remaining() > 0 {
 		return nil
 	}
+	return beforeCommitRefusal(token, what)
+}
+
+// beforeCommitRefusal is the answer of a call whose deadline came before
+// what it was to do, found here or by the writer that does it.
+func beforeCommitRefusal(token, what string) error {
 	return &unfinishedError{message: fmt.Sprintf("Rewake: this tool call's deadline came before %s, so it was not done; do it with: rewake retry %s", what, token)}
 }

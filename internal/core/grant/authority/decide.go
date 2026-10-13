@@ -42,12 +42,15 @@ const (
 )
 
 // decideAsk is a decision asked for: what the command found, and nothing of
-// who decides, which the wrapper says itself.
+// who decides, which the wrapper says itself. DeadlineBoot is the bound of
+// the tool call the command runs for, if any: the asker restricts only
+// itself by it, and the wrapper writes no record past it.
 type decideAsk struct {
-	Sender string       `json:"sender"`
-	Report string       `json:"report"`
-	Choice string       `json:"choice"`
-	Expect mail.Subject `json:"expect"`
+	Sender       string       `json:"sender"`
+	Report       string       `json:"report"`
+	Choice       string       `json:"choice"`
+	Expect       mail.Subject `json:"expect"`
+	DeadlineBoot int64        `json:"deadlineBoot,omitempty"`
 }
 
 // decided is the answer without the record's observations, which can be
@@ -131,7 +134,7 @@ func (a *Authority) answerDecide(conn *net.UnixConn, ask *decideAsk) decided {
 	_ = conn.SetDeadline(time.Now().Add(decideLimit))
 	ctx, cancel := context.WithTimeout(context.Background(), handlerLimit)
 	defer cancel()
-	answer, err := handler(ctx, mail.DecideRequest{Sender: ask.Sender, Report: ask.Report, Choice: ask.Choice, Expect: ask.Expect})
+	answer, err := handler(ctx, mail.DecideRequest{Sender: ask.Sender, Report: ask.Report, Choice: ask.Choice, Expect: ask.Expect, DeadlineBoot: ask.DeadlineBoot})
 	if err != nil {
 		var refusal *mail.DecisionError
 		if !errors.As(err, &refusal) {
@@ -195,7 +198,7 @@ func Decide(address string, run Run, ask mail.DecideRequest, path string) (mail.
 	state.Step("decision asked")
 	// The answer is the checked wrapper's: the connection's peer is fixed when
 	// it is made, and the listener's socket is no child's to inherit.
-	answer, err := exchange(conn, request{Op: opDecide, Decide: &decideAsk{Sender: ask.Sender, Report: ask.Report, Choice: ask.Choice, Expect: ask.Expect}})
+	answer, err := exchange(conn, request{Op: opDecide, Decide: &decideAsk{Sender: ask.Sender, Report: ask.Report, Choice: ask.Choice, Expect: ask.Expect, DeadlineBoot: ask.DeadlineBoot}})
 	if err != nil {
 		if errors.Is(err, ErrNotConfirmed) {
 			return mail.DecideAnswer{}, &mail.DecisionError{Outcome: mail.DecisionUncertain, Path: path, Err: fmt.Errorf("the wrapper's answer does not read, so whether it decided is unknown: %w", err)}
