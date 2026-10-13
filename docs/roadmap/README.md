@@ -39,9 +39,11 @@ refusal on September 17, 2026 cleared after recipient restart.
 
 - [Milestone 6. Ready for daily use](2026-09-16-milestone-06-ready-for-daily-use.md)
   — the publication is not done; the file keeps what is.
-- Stage 4 of 2.0 — Claude Code's adapter as one mod; it starts on the owner's word with
-  the audit of what Claude Code and a mod already do
-  ([design-claude.md](../v2/design-claude.md#before-the-probe-what-claude-code-already-does)).
+- Stage 4 of 2.0 — Claude Code's adapter as one mod; opened on October 13, 2026 with the
+  audit of what Claude Code and a mod already do ([stage4-audit.md](../v2/stage4-audit.md)),
+  written on branch `s4-audit` and awaiting main's decisions. Then stage 4b, pi's adapter,
+  and stage 5, Codex's entry point, by the owner's decision of the same day
+  ([the stage plan](../v2/design.md#the-stage-plan-from-here)).
   Stage 3 is closed: [its closing entry](2026-10-13-stage3-s19.md) says what it built.
 - [The workflow suite](2026-09-21-workflow-suite.md) — in progress since
   September 21, 2026; what exists and what remains are listed there and in

@@ -10,8 +10,11 @@ skeleton must leave room for. The overview is in [design.md](design.md).
 
 The owner clarified decision 2 on October 5, 2026: in 2.0 a **Claude Code main works
 both ways with Claude Code workers and with Codex workers** — tasks out, reports back —
-in the same room. A Codex main is not a goal now. So the release (stage 7) requires the
-pair live, and the core may not assume that main and workers run on one harness: a task
+in the same room. A Codex main is not a goal now. On October 13, 2026 the owner put pi
+before Codex and moved Codex's adapter after the 2.0 release, keeping only an entry point
+before it ([the stage plan](design.md#the-stage-plan-from-here)); the release (stage 7)
+requires the mixed pair with pi live, and what follows here is the room Codex's adapter
+finds when it comes. Either way the core may not assume that main and workers run on one harness: a task
 from a Claude Code main to a Codex worker, and its report back, go through the same mail
 and the same rules (E1–E8, [design-rules.md](design-rules.md)) as between two Claude
 Code sessions.
@@ -47,9 +50,11 @@ shaped so that this minimum fits without a change to the core.
 
 ## Meanwhile
 
-Until stage 5 lands, the owner works in a **separate 1.x environment**: main and its
+Until stage 7 releases 2.0, the owner works in a **separate 1.x environment**: main and its
 workers, Claude Code and Codex alike, run one chosen 1.x build — one, not a mix of the
-1.0.3 release and an unreleased `main`. 2.0 is not part of that environment. Its
+1.0.3 release and an unreleased `main`. 2.0 is not part of that environment. A 2.0 room
+has no Codex worker until Codex's adapter comes after the release; Codex's models are
+reached through pi there. Its
 experiments run with their **own `REWAKE_DIR`**; on the shared root the first 2.0
 session would refuse while 1.x wrappers live ([design-state.md](design-state.md#clearing-the-state-of-1x)), and
 by design nothing passes between the generations: no bridge, no compatibility through
@@ -58,10 +63,12 @@ and a room holds one build (T10); reaching the state directory from a shell is n
 enough, since a worker also needs registration, Wake and TurnBoundary of the same 2.0
 build.
 
-The sequence: stage 3 gives the core on the fixture, stage 4 the Claude Code pair,
-stage 5 adds Codex workers to the same 2.0 room. **The mixed pair — a Claude Code main
-with Claude Code and Codex workers — is required before the release**: until stage 5 is
-accepted it is not met, and stage 7 cannot release.
+The sequence, as the owner set it on October 13, 2026: stage 3 gives the core on the
+fixture, stage 4 the Claude Code pair, stage 4b adds pi workers to the same 2.0 room, and
+stage 5 gives Codex its entry point; Codex workers join the room with the adapter after
+the release. **The mixed pair — a Claude Code main with Claude Code and pi workers — is
+required before the release**: until stage 4b is accepted it is not met, and stage 7
+cannot release.
 
 The 1.x Codex code stays on `main` and in history as the reference stage 5 reads,
 with its tests: the fixture (`codexshim_*`), the generated selection space and its

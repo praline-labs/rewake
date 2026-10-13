@@ -135,15 +135,24 @@ acceptance, live probe where the stage has one, commit.
 |---|---|---|
 | 3 core | the layout and its test; `core/*`, `tool`, `host`, `cli` with the full vocabulary on the shell; the carried tests with their rules; the state root of 2.0, clearing 1.x and one build per room ([design-state.md](design-state.md)); a fixture adapter for tests | the five checks; a concurrent scenario where a writer of the old build is still running while a new build launches into the room, and two builds of one revision with different trees refused as different; `internal/layout_test.go` green with no stale exception; every carried rule names its tests and they exist ([design-docs-tests.md](design-docs-tests.md)); the workflow suite's neutral scenarios green in a column on the fixture adapter; Codex-side acceptance, since this is transport and process behaviour |
 | 4 Claude Code | the probe first ([design-claude.md](design-claude.md#the-stage-4-probe)), its results written into research with the version; then the adapter and its mod | the probe answered point by point; the suite's Claude column on a mod host; live: a Claude Code main and a Claude Code worker exchange a task, a question, a notify and a report, idle and busy; a read through the tool counted only on proof; the mod not loading is named under `--bare`, `--safe-mode` and `disableAllHooks`; a version below 2.1.287 refused |
-| 5 Codex | a design of the adapter first, reviewed; then the adapter | live: a Claude Code main and Codex workers exchange tasks and reports both ways, beside Claude Code workers in the same room; the tool set with the same schemas, one suite scenario per tool in both columns; G2 by reading manifests (decision 4); a version below the minimum refused |
-| 6 permissions and the person's UI | grants applied by each adapter's Permissions (on Claude Code in the mod, replacing `grant-hook`); PersonUI | live grants on both harnesses; the person's own status line untouched (answer 4) |
+| 4b pi | an audit and a probe of pi's extension API on a pinned version ([stage4-audit.md](stage4-audit.md#consequences-for-the-stage-plan)); then the adapter, an extension loaded for its run | live: a Claude Code main and a pi worker exchange a task, a question, a notify and a report, idle and busy, beside Claude Code workers in the same room; the tool set with the same schemas in the pi column; a version below the minimum refused |
+| 5 Codex entry point | Codex's place in the catalogue before 2.0, without its adapter; the adapter itself after the release, designed afresh ([design-codex.md](design-codex.md)) | the entry point fully described by what it offers, and every capability it does not offer refused by name |
+| 6 permissions and the person's UI | grants applied by each adapter's Permissions (on Claude Code in the mod, replacing `grant-hook`); PersonUI | live grants on Claude Code and pi; the person's own status line untouched (answer 4) |
 | 7 release 2.0.0 | full live checks, briefings, upgrade notes, the npm package | the full workflow suite and crosswise check; the upgrade from a machine running 1.x walked live ([design-state.md](design-state.md#clearing-the-state-of-1x)) |
 
 Until stage 7, the owner works in a separate 1.x environment and the `v2` branch
 releases nothing; 2.0 experiments run with their own `REWAKE_DIR`, and nothing passes
 between the generations ([design-codex.md](design-codex.md#meanwhile)). The mixed pair —
-a Claude Code main with Claude Code and Codex workers in one room — is required before
+a Claude Code main with Claude Code and pi workers in one room — is required before
 the release.
+
+Decided by the owner on October 13, 2026: the next harness after Claude Code is pi, before
+Codex. pi carries the models the room's Claude Code sessions do not already serve, Codex's
+models among them through pi's own subscription provider; Claude Code's work stays on
+Claude Code sessions. Codex gets only an entry point before 2.0, and its full adapter comes
+after the release. Stage 4 is Claude Code with Claude Code, stage 4b Claude Code with pi.
+Whether the Codex entry point stays required for 2.0 is the owner's; it is kept in the
+plan, and the owner may move it after 2.0.
 
 ## The owner's answers
 
