@@ -96,6 +96,45 @@ func TestTheGeneratorRefusesWhatItDoesNotRead(t *testing.T) {
 	}
 }
 
+// An endpoint names its request and its answer by a reference into this
+// schema's definitions. A bare name equal to a definition's is another
+// resource's address, not this definition, and is refused rather than read as
+// the same type, which would leave the generated files unchanged.
+func TestAnEndpointReferenceNamesALocalDefinition(t *testing.T) {
+	const asked = `{"type": "object", "description": "x", "properties": {}, ` + closed + `}`
+	for name, refs := range map[string][2]string{
+		"a bare request":   {"Asked", "#/$defs/Asked"},
+		"a bare answer":    {"#/$defs/Asked", "Asked"},
+		"a foreign answer": {"#/$defs/Asked", "other.json#/$defs/Asked"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			text := strings.Replace(small(asked), `"request": {"$ref": "#/$defs/Asked"}, "answer": {"$ref": "#/$defs/Asked"}`,
+				`"request": {"$ref": "`+refs[0]+`"}, "answer": {"$ref": "`+refs[1]+`"}`, 1)
+			_, err := parseSchema([]byte(text))
+			if err == nil || !strings.Contains(err.Error(), "reference #/$defs/<name>") {
+				t.Fatalf("got %v, want a refusal of the reference that is not local", err)
+			}
+		})
+	}
+	if _, err := parseSchema([]byte(small(asked))); err != nil {
+		t.Fatalf("the local references: %v", err)
+	}
+}
+
+// Nothing may follow the schema's value, not even a stray closing delimiter,
+// which an iteration check inside the decoder would let pass.
+func TestTextAfterTheSchemaIsRefused(t *testing.T) {
+	text := small(`{"type": "object", "description": "x", "properties": {}, ` + closed + `}`)
+	for name, tail := range map[string]string{"a closing brace": "}", "a closing bracket": "]", "a second value": "{}"} {
+		if _, err := parseSchema([]byte(text + tail)); err == nil || !strings.Contains(err.Error(), "text after the value") {
+			t.Errorf("%s after the schema: got %v", name, err)
+		}
+	}
+	if _, err := parseSchema([]byte(text + "\n")); err != nil {
+		t.Errorf("a newline after the schema: %v", err)
+	}
+}
+
 // An optional field stays apart from its zero on both sides: a palette index
 // of 0 is black, not an absent color.
 func TestAnOptionalFieldStaysApartFromItsZero(t *testing.T) {

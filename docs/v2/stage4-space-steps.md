@@ -146,6 +146,18 @@ Each small enough for one review; each closed by its acceptance check, not by it
 
 The restore by session id is the step after S4-10 ([section 8](stage4-space.md#8-restore)).
 
+**What the handlers owe the schema's choices** (the review of S4-2, October 13, 2026). The
+generated types say which fields may be absent, not which combinations are valid, so each
+handler validates its messages:
+
+- S4-5, refusals: a status other than 200 with `Refusal` is an admission refusal; a lost answer or a server error after an effect proves no absence of the effect, and a retry keeps its identity.
+- S4-5, `loadId`: the admitted load is bound to the run the socket and the peer check prove; it never stands in for the peer check of each request.
+- S4-5 and S4-9, `role` and `reason` as strings: a value the host does not know never selects a more permissive action.
+- S4-6, `Receipt`: the end handler takes a retried end only with the matching `endId`; a turn's start time the mod cannot give stays unknown (zero), never the arrival time, and a pending mark that needs it is either served by a contract extended with a reliable start or recorded as a limit.
+- S4-7, `Spawn`: exactly one of `agentId` and `error`; `events` acknowledges only what the mod processed, a spawn's acknowledgement is retried idempotently, and the sequence is scoped to the run.
+- S4-8, `space/screen`: `after` 0 asks for the whole screen, the first answer is a complete baseline, rows and columns stay in range, and a dead worker carries exactly one of `code` and `signal`.
+- S4-8, `space/keys`: the keys are UTF-8 text and control bytes, which is what the key surface sends; raw octets would need another encoding.
+
 ## Open questions
 
 Each one a step would otherwise guess; the step named decides it or brings it to main.

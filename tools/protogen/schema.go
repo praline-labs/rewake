@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"regexp"
 	"slices"
 	"strings"
@@ -296,7 +297,10 @@ func (s schema) parseEndpoint(e rawEndpoint) (endpoint, error) {
 		ref  string
 		into *string
 	}{{e.Request.Ref, &out.request}, {e.Answer.Ref, &out.answer}} {
-		name, _ := strings.CutPrefix(part.ref, refPrefix)
+		name, local := strings.CutPrefix(part.ref, refPrefix)
+		if !local {
+			return endpoint{}, fmt.Errorf("a request and an answer reference %s<name>, not %q", refPrefix, part.ref)
+		}
 		if d, ok := s.find(name); !ok || d.enum != nil {
 			return endpoint{}, fmt.Errorf("a request and an answer reference object definitions, not %q", part.ref)
 		}
@@ -305,15 +309,18 @@ func (s schema) parseEndpoint(e rawEndpoint) (endpoint, error) {
 	return out, nil
 }
 
-// strict decodes one value, refusing words its struct does not name. Nested
-// raw values are decoded strictly by their own call.
+// strict decodes one value, refusing words its struct does not name and
+// anything after the value: a second decode must meet the end of the text,
+// since More answers only inside an array or an object and would pass a stray
+// closing delimiter. Nested raw values are decoded strictly by their own call.
 func strict(text []byte, into any) error {
 	decoder := json.NewDecoder(bytes.NewReader(text))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(into); err != nil {
 		return err
 	}
-	if decoder.More() {
+	var rest json.RawMessage
+	if err := decoder.Decode(&rest); !errors.Is(err, io.EOF) {
 		return errors.New("text after the value")
 	}
 	return nil
