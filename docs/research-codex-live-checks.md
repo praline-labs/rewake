@@ -121,7 +121,7 @@ interrupted without a model response.
 The same day the gateway took the configuration as the terminal's mark
 ([roadmap](roadmap/2026-09-26-codex-0157-recognition.md)). The five recorded paths are
 kept projected — the lifecycle requests with their parameters, the replies' routing
-fields — in `internal/harness/codex/gateway/testdata/tui-paths`, and replayed through a
+fields — in `archive/1.x/codex/internal/harness/codex/gateway/testdata/tui-paths`, and replayed through a
 real gateway: each selects what the terminal selected, on both versions. A fork and a
 `PreserveExistingThread` resume of 0.157.1 were not driven live; the rules for them rest
 on the source above.

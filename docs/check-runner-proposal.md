@@ -39,7 +39,7 @@ under the project's line limit.
 | Layer | What is there | What it proves | Gap |
 | --- | --- | --- | --- |
 | Five required checks | gofumpt, go vet, staticcheck, golangci-lint, `go test -race -shuffle=on` (AGENTS.md) | The tree builds, is formatted, and every unit test passes | Nothing about a real process, a real harness or a real message path |
-| Unit and domain tests | 521 tests, 19 070 lines, across 14 packages; heaviest in `internal/harness/codex/gateway`, `internal/cli`, `internal/core/mail` | Deterministic domain invariants, refusal reasons, receipt accounting, queue bounds | In-process doubles only |
+| Unit and domain tests | 521 tests, 19 070 lines, across 14 packages; heaviest in the Codex gateway (1.x's `internal/harness/codex/gateway`, archived in `archive/1.x/codex/`), `internal/cli`, `internal/core/mail` | Deterministic domain invariants, refusal reasons, receipt accounting, queue bounds | In-process doubles only |
 | In-process integration | `internal/cli/gateway_integration_test.go` wires a real reservation to a real mailbox inside one process | Correlation across components | No process boundary, no harness binary |
 | Cross-process helper | `internal/infra/state/lock_test.go` re-execs the test binary through `TestMain` to prove a file lock holds between processes | That the pattern we need already works here, with no dependency | Used for exactly one invariant |
 | Process fixtures | `internal/host/process_fixture_test.go`, `ownership_test.go`, `scripts/shim_test.go` | Wrapper lifecycle against spawned children | Children are shims, not harnesses |
@@ -100,7 +100,7 @@ fixture builds it into a temporary directory with an ordinary `go build` from
 the harness. Three things follow. The fixture tier stops depending on what happens to
 be installed on the machine. The Stop hook then invokes the binary that was built,
 rather than the test binary that `os.Executable()` would otherwise return
-(`internal/harness/hooks.go`). And the seam stays outside every adapter.
+(1.x's `internal/harness/hooks.go`, removed with the hooks in stage 3). And the seam stays outside every adapter.
 
 Cost, stated plainly: building the binary, writing and maintaining the shims, and the
 isolation below. The summary and `summary.json` are ours too — `go test -json` gives
@@ -155,8 +155,8 @@ price: that path cost milestone 10 and several review rounds, and its gateway is
 most intricate code in the tree. Option A needs nothing from it, because the fixture
 stays outside every adapter — it drives an assembled binary through the CLI, and the
 only interfaces it depends on are the ones both harnesses share, `harness.Harness` and
-`LaunchPlan` (`internal/harness/plan.go`). `harness.Backend` is not one of them:
-`internal/harness/codex/codex.go` is the only place it is constructed, while the
+`LaunchPlan` (1.x's `internal/harness/plan.go`, now `internal/adapter/plan.go`). `harness.Backend` is not one of them:
+`archive/1.x/codex/internal/harness/codex/codex.go` is the only place it is constructed, while the
 Claude Code adapter returns a plan without it and delivers through `Harness.Deliver`
 into its socket. Option B is no cheaper here. Options C and D would likely want new
 observation hooks inside the adapter for a script to assert on; that hidden cost alone
@@ -170,7 +170,7 @@ The pattern to borrow is the conformance suite: write the contract's tests once 
 a factory and run them against every implementation — what `connectrpc/conformance` does
 across Connect/gRPC, and what Go projects do with `contract`-style packages taking a
 `*testing.T` and a constructor. Here the implementations are harnesses, already
-enumerated in `internal/harness/catalog/catalog.go`, exactly as
+enumerated in `internal/adapter/catalog/catalog.go` (1.x's `internal/harness/catalog`), exactly as
 [harness-features.md](harness-features.md) gives each one a column.
 
 Concretely, a scenario never names Codex or Claude Code. It asks its fixture to launch
@@ -244,7 +244,7 @@ no real credentials are nearby, no network is used, and a substituted harness do
 reach outside. The network/mount/PID boundaries remain mandatory for the paid tier,
 where real credentials do live alongside.
 
-**The pinned version.** `internal/harness/codex/server.go` runs `codex` from `PATH` and
+**The pinned version.** `archive/1.x/codex/internal/harness/codex/server.go` runs `codex` from `PATH` and
 compares the output against one constant, warning when it differs. That constant was
 0.154.0 while 0.155.1 was installed, so the note printed on every launch; it moved to
 0.155.1 on September 21, 2026 (below). One consequence stands regardless: the fixture
@@ -374,7 +374,7 @@ Two more were settled the same day:
 **The transport pin moved to 0.155.1** on September 21, 2026, on the owner's decision
 that the pin may be moved, and on two probes of that day: the ordinary path, and
 steer into an active turn. It now lives in one constant, `lastObservedServerVersion` in
-`internal/harness/codex/server_version.go` since October 4, 2026, so the real-harness tier no longer runs the
+`archive/1.x/codex/internal/harness/codex/server_version.go` since October 4, 2026, so the real-harness tier no longer runs the
 mismatch branch. Not observed on that version, and not to be claimed by the suite:
 conversation selection after `/new`, stale-target refusal, `stopped` from an
 interruption, and a group arriving during an active turn.

@@ -44,7 +44,7 @@ experimental methods and fields — which `runtimeWorkspaceRoots` and the thread
 `canAcceptDirectInput` are, so a client using them without declaring the capability
 is asking for something it never negotiated. The adapter reads a conversation id
 from both the request parameters and the reply
-(`internal/harness/codex/gateway/metadata.go`), so it covers either shape; a fixture
+(`archive/1.x/codex/internal/harness/codex/gateway/metadata.go`), so it covers either shape; a fixture
 that sends an id on `thread/start` is the part that is wrong.
 
 **[source: app-server schema of the installed CLI 0.155.1; September 21, 2026]** The
@@ -94,7 +94,7 @@ requires `threadId` and `status`. `ThreadStatus` is a tagged union, and its `act
 variant requires `activeFlags` beside `type` while `idle` requires the type alone —
 so a fixture that reported working with the type alone would be sending a status the
 server cannot produce. The adapter reads exactly this notification for its telemetry
-(`internal/harness/codex/gateway/telemetry_activity.go`), which is why a fixture that
+(`archive/1.x/codex/internal/harness/codex/gateway/telemetry_activity.go`), which is why a fixture that
 never sent one left every session looking idle while it worked.
 
 **[source: reference tree `e29eceb75`; September 21, 2026]** `canAcceptDirectInput`
@@ -102,7 +102,7 @@ is a field of the thread object, not of the reply. It is declared inside `Thread
 (`codex-rs/app-server-protocol/src/protocol/v2/thread_data.rs:274`), beside `source`
 and `thread_source`. The adapter reads `result.thread.canAcceptDirectInput` and only
 falls back to a top-level copy
-(`internal/harness/codex/gateway/metadata.go`), so a fixture that answers on the top
+(`archive/1.x/codex/internal/harness/codex/gateway/metadata.go`), so a fixture that answers on the top
 level exercises the fallback and leaves the main branch untested. Two further fields
 there are distinct: `source` is where the conversation came from (cli, vscode, exec,
 app-server), `thread_source` is an analytics classification — the client sends the
@@ -148,7 +148,7 @@ compacts, so a compaction requested mid-turn cuts that turn short; the terminal 
 `/compact` only while idle.
 
 rewake injects the request itself through the gateway's `callReserved`
-(`internal/harness/codex/gateway/gateway.go`). The gateway marks a thread as being in
+(`archive/1.x/codex/internal/harness/codex/gateway/gateway.go`). The gateway marks a thread as being in
 manual compaction when the terminal asks (the `thread/compact/start` branch of its
 request loop), and since part B of stage 2 also when `rewake compact` does
 ([remote-control-codex.md](archive-1.x/remote-control-codex.md)).

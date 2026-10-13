@@ -145,7 +145,7 @@ together with `--remote`, before it creates a checkout, and rewake always starts
 `--remote` ([research-codex.md](research-codex.md#--worktree-with-a-remote-terminal)).
 The unknown private gitdir, once given as the reason, is not the whole obstacle any
 more: the grant a main's task adds (`taskGitRoots`,
-`internal/harness/codex/server_gitwrite.go`) reads the cwd of the selected conversation,
+`archive/1.x/codex/internal/harness/codex/server_gitwrite.go`) reads the cwd of the selected conversation,
 not the launch directory. Since September 26, 2026, by the owner's decision, the launch
 command takes the flag and makes the checkout itself with a plain `git worktree add` —
 detached until September 27, on a branch of its own since ([worktree.md](worktree.md)) —
