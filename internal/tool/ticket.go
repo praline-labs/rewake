@@ -187,18 +187,6 @@ func AnswerDigest(text []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// EndGate orders a read's acknowledgment against the turn ends the wrapper
-// captures (docs/mail-bridge-turns.md#a-turns-end-meets-its-calls). The
-// acknowledgment calls Enter holding the mailbox lock, before its first
-// write: false says an end at or after calledBoot was noted, and nothing may
-// be written. Otherwise it is registered as writing, and calls leave once,
-// whatever its writes did, before it releases the mailbox lock: leave takes
-// the read clock's snapshot that an end captured meanwhile takes as its
-// boundary.
-type EndGate interface {
-	Enter(calledBoot int64) (leave func(), ok bool)
-}
-
 // Whole says whether the evidence proves the model got the entire result:
 // a direct, successful call whose result is inside the calibrated bound and
 // was not shortened. Anything less acknowledges nothing.

@@ -296,5 +296,6 @@ transition table, which empties, and the paths of its name exceptions; the path
 documents, with three of them stale since S8 corrected where they stand.
 
 **Left for S19**: `bridge.EndGate` declares again the one method of `mail.EndGate`, and
-the tool path still takes it; the move keeps it, legal in `tool`, and S19's clean-up
-decides whether the tool path takes the core's declaration.
+the tool path still takes it; the move keeps it, legal in `tool`. S19 made `tool.EndGate`
+an alias of `mail.EndGate` (`internal/tool/gate.go`), so the tool path takes the core's
+one declaration and its callers keep their spelling.

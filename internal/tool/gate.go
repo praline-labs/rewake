@@ -7,6 +7,10 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 )
 
+// EndGate is the core's declaration, which Gate serves: the tool path takes
+// the one the core keeps rather than repeating its method.
+type EndGate = mail.EndGate
+
 // Gate orders the acknowledgments of reads against the turn ends this
 // wrapper captures (docs/mail-bridge-turns.md#a-turns-end-meets-its-calls).
 // One mutex covers both: an acknowledgment checks for a noted end and

@@ -38,7 +38,8 @@ type ReadEvidence struct {
 // calls Enter holding the mailbox lock, before its first write: false says an
 // end at or after calledBoot was noted, and nothing may be written. Otherwise
 // it is registered as writing, and calls leave once, whatever its writes did,
-// before it releases the mailbox lock.
+// before it releases the mailbox lock: leave takes the read clock's snapshot
+// that an end captured meanwhile takes as its boundary.
 type EndGate interface {
 	Enter(calledBoot int64) (leave func(), ok bool)
 }
