@@ -327,6 +327,9 @@ decision settles the stop without being evidence.
   - `internal/core/mail/stop_unknown_test.go` `TestAnEffectsOccurrenceWhoseResolutionDoesNotReadHoldsTheEffects`
   - `internal/core/mail/stop_ended_evidence_test.go` `TestAHeldReportOfAnEndedRunIsSettledByItsEvidence`
   - `internal/core/mail/stop_ended_evidence_test.go` `TestEndedEvidenceReadsOnlyProof`
+  - `internal/core/mail/stop_settled_test.go` `TestAResolvedOccurrenceKeepsItsReportsDisposition`
+  - `internal/core/mail/stop_settled_test.go` `TestAReportNeverHeldIsMootOnceItsRunEnded`
+  - `internal/core/mail/stop_settled_test.go` `TestAResolvedRecordThatDoesNotReadStopsTheBarrier`
   - `internal/core/mail/decision_view_test.go` `TestDecisionDisposesOnlyTheOccurrencesItNames`
   - `internal/core/mail/decision_recovery_test.go` `TestDecisionPrecedesAllRecoveryEvidence`
   - `internal/core/mail/decision_world_test.go` `TestDecisionCopiesFollowWorldTruth`

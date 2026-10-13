@@ -197,7 +197,11 @@ paths; once it reads, the occurrence is closed.
   moot and its journal stays unfinished until evidence returns — read in the
   recipient's section without admitting the run: the letter or a published mark says it
   landed, an intent with no letter that it never did; no mark, or one that does not
-  read, keeps it where it is.
+  read, keeps it where it is. Once evidence resolves its occurrence, the resolved
+  occurrence holds it the same way until its journal records it, so a resolution made by
+  a call that runs no journal, or followed by a crash, settles it as the evidence says;
+  a resolved occurrence whose record does not read stops the barrier, since it may hold
+  a report.
 
 Main is told of each occurrence once, by a note published once under the occurrence's
 id, whatever call found it, and `<occurrence>.told` records that it was; a new

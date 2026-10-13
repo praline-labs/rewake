@@ -97,8 +97,11 @@ the exception: that its run ended says nothing of whether it landed, so the same
 reads its evidence without admitting the run — the letter in any stage or a published
 mark records it published, an intent with no letter moot, and anything else leaves it
 where it is, its occurrence open ([mailbox-records.md](mailbox-records.md)). A plan that
-reads the same evidence resolves the occurrence, and the pass after it comes to the same
-disposition.
+reads the same evidence resolves the occurrence, and the report stays held by the resolved
+occurrence until its journal records it: a pass that only looked at the stop, or a process
+stopped between the resolution and the journal's save, leaves the next barrier settling it
+by the same evidence, never moot by its run's end. A report no occurrence was ever about
+keeps the ordinary rule.
 The fallback target is also fixed before publication, never selected again on retry.
 
 The report's id is derived from the wait — the reporting run, the waiting run,

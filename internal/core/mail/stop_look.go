@@ -28,9 +28,9 @@ type stopLook struct {
 	found error
 	keys  map[string]bool
 	open  []openStop
-	// resolved are the occurrences this look resolved from the plan's
-	// evidence: the pass after it must come to what the plan decided.
-	resolved []openStop
+	// held are the reports the plan held to their evidence (heldBy): the
+	// pass after it holds the same, whatever this look resolved.
+	held map[string]openStop
 	// failed are the stop's writes that did not go through: the answer is
 	// then the one place left that names what was found.
 	failed []error
@@ -42,8 +42,9 @@ type stopLook struct {
 // caller holds the mailbox lock: the plan is a decision only under it.
 func lookAtStop(dir, name string, open []openStop) stopLook {
 	look := stopLook{dir: dir, name: name, keys: map[string]bool{}}
-	planned := plan(dir, name, heldReports(open))
-	look.records, look.found = planned.records, planned.found
+	held, heldErr := live(dir).heldBy(name, open)
+	planned := plan(dir, name, held)
+	look.records, look.found, look.held = planned.records, errors.Join(planned.found, heldErr), held
 	w := live(dir)
 	for _, cause := range causesOf(dir, planned.found, causeUnreadable) {
 		key := cause.key()
@@ -65,7 +66,6 @@ func lookAtStop(dir, name string, open []openStop) stopLook {
 			if decided {
 				err := w.resolveStop(name, stop, evidence)
 				if err == nil {
-					look.resolved = append(look.resolved, stop)
 					continue
 				}
 				look.failed = append(look.failed, err)
