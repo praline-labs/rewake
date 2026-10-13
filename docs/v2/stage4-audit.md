@@ -119,7 +119,8 @@ place as anchor-side server. A person's own `claude` session with the plugin ins
 joins by command. The cost is one core change (the run's anchor) and the risk is P11: if
 a child of the mod cannot detach and outlive reloads, or its parent is not the harness
 process, the gap at reload stands and the wrapper stays for Claude Code too, exactly as
-designed today. P11 runs first in the probe, since it decides the shape of the adapter.
+designed today. P11 runs first in the probe, since it decides the shape of the adapter
+(decided by main, October 13, 2026); the choice between the paths waits for its answer.
 
 ## The verdicts
 
@@ -154,9 +155,10 @@ Each row is argued in [stage4-audit-rows.md](stage4-audit-rows.md) under its num
 
 ## Consequences for the stage plan
 
-Proposals for [the stage plan](design.md#the-stage-plan-from-here); main decides.
+Written as proposals for [the stage plan](design.md#the-stage-plan-from-here); where main
+or the owner has decided one, the item says so with its date.
 
-- **Stage 4 opens its probe with P11** (row 1). Its answer picks the adapter's shape —
+- **Stage 4 opens its probe with P11** (row 1; decided by main, October 13, 2026). Its answer picks the adapter's shape —
   wrapper plus mod, or thin launcher plus mod plus a detached per-session process — and
   P1–P10 hold under either, P4 most of all. If the mod's join is taken, stage 4 also
   carries the core change of the run's anchor, with its rules and tests before code, and
@@ -174,30 +176,28 @@ Proposals for [the stage plan](design.md#the-stage-plan-from-here); main decides
   join, a worker seated by cwd in a checkout rewake or Claude Code made. The pi reading
   finds every capability native in the extension but two: grants on shell commands need an
   OS sandbox the wrapper starts, and provider limits are not reported. Its probe items
-  PI1–PI14 are stage 4b's probe, under a pinned version. The first mixed acceptance is a
+  PI1–PI14 ([stage4-reading-pi.md](stage4-reading-pi.md)) are stage 4b's probe, under a pinned version. The first mixed acceptance is a
   Claude Code main with a pi worker, in stage 4b.
-- **Stage 5, the Codex entry point**, by the same decision: before 2.0 only an entry point,
-  the full adapter after the release; the Codex column of the rows is kept as the reading
-  for it. A stub meets `AGENTS.md`'s rule that a harness cannot be half-registered. Two
-  shapes, main to choose:
-  - *Recommended*: a catalogue entry fully described with what it offers — Launch alone,
-    its version read and gated, its protected directories (today held by the catalogue's
-    `foreign` list) declared by the entry itself. The capability set then refuses what it
-    cannot serve, exactly as stage 3 refused reporting roles on Claude Code: a Codex worker
-    may be launched into a room, takes no task, and the refusal names the capability. It is
-    fully registered, honestly small.
-  - A command that refuses, naming the stage after 2.0: no catalogue entry, so nothing is
-    half-registered, but `rewake codex` would exist without a harness behind it — the
-    registry, help and guide would carry a command the catalogue does not know, which the
-    rule exists to forbid.
-  The acceptance line for the full adapter, kept for after 2.0: a Codex worker seated in a
-  worktree a Claude Code main made through the mod, under the Git grant, removed only when
-  rewake's checks pass.
+- **Stage 5, the Codex entry point**, by the owner's decision of October 13, 2026: Codex
+  is not built now; before 2.0 it gets an entry point, a stub without a real
+  implementation, and its full adapter comes after the release. The Codex column of the
+  rows and [its reading](stage4-reading-codex.md) wait for that adapter. The stub's shape,
+  decided by main the same day so that it meets `AGENTS.md`'s rule that a harness cannot be
+  half-registered: a catalogue entry fully described by what it offers — Launch alone, its
+  version read and gated, its protected directories (today held by the catalogue's
+  `foreign` list) declared by the entry itself. Every capability it lacks refuses by name,
+  as stage 3 refused reporting roles on Claude Code: a Codex worker may be launched into a
+  room and takes no task. A command that only refuses was weighed and set aside: `rewake
+  codex` would then exist with no harness in the catalogue behind it, which the rule
+  forbids. The acceptance line for the full adapter, kept for after 2.0: a Codex worker
+  seated in a worktree a Claude Code main made through the mod, under the Git grant,
+  removed only when rewake's checks pass.
 - **Stage 6** keeps grants, permissions and the person's UI. The key probe of the worker
-  tabs (P15) is proposed to run beside stage 4's probe, needing only a mod: whether a
+  tabs (P15) runs beside stage 4's probe (decided by main, October 13, 2026), needing only
+  a mod: whether a
   rewake wrapper owns a pseudo-terminal changes every adapter's launch, and stage 4's
   launch should not be built in a way that rules it out.
-- **Headless and background workers** (row 18) stay unscheduled; P16 runs only if the owner
-  takes them up.
+- **Headless and background workers** (row 18) stay unscheduled, and P16 with them
+  (decided by main, October 13, 2026); it runs only if the owner takes them up.
 - **Stage 7** is unchanged but for its mixed pair, which becomes Claude Code with pi, since
   Codex is only an entry point before 2.0.

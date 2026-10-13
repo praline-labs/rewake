@@ -178,7 +178,8 @@ pseudo-terminal belongs to the worker's own rewake wrapper, so a tab can host a 
 any harness, Codex and pi included, and a button appears when main launches a worker, not
 only on "+"; a reload of the mod or main's exit loses the view, not the worker. Main
 launching workers is a new authority and the owner's decision. The probe above is P15 of
-[design-claude.md](design-claude.md#the-stage-4-probe), proposed beside stage 4's probe.
+[design-claude.md](design-claude.md#the-stage-4-probe), which runs beside stage 4's probe by
+main's decision of the same day.
 
 ## 2. A room panel in the main's screen
 

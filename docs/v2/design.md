@@ -149,10 +149,15 @@ the release.
 Decided by the owner on October 13, 2026: the next harness after Claude Code is pi, before
 Codex. pi carries the models the room's Claude Code sessions do not already serve, Codex's
 models among them through pi's own subscription provider; Claude Code's work stays on
-Claude Code sessions. Codex gets only an entry point before 2.0, and its full adapter comes
-after the release. Stage 4 is Claude Code with Claude Code, stage 4b Claude Code with pi.
-Whether the Codex entry point stays required for 2.0 is the owner's; it is kept in the
-plan, and the owner may move it after 2.0.
+Claude Code sessions. Codex is not built now: before 2.0 it gets an entry point, a stub
+without a real implementation, and its full adapter comes after the release. Stage 4 is
+Claude Code with Claude Code, stage 4b Claude Code with pi.
+
+Decided by main the same day, for the stub to meet the rule that a harness cannot be
+half-registered (`AGENTS.md`): Codex's entry point is a catalogue entry fully described by
+what it offers — Launch alone, its version read and gated, its protected directories
+declared by the entry — and every capability it lacks refuses by name
+([stage4-audit.md](stage4-audit.md#consequences-for-the-stage-plan)).
 
 ## The owner's answers
 

@@ -410,7 +410,8 @@ the newer document says so.
   moves with their inventories, where every package goes, each rule with its tests, the
   fixture adapter and its gate, state and builds, clearing 1.x, and apart from them the
   operator decision: its model, its records and its recovery), and stage 4's audit of
-  what Claude Code and a mod already do, with pi and Codex weighed beside it. Open it
+  what Claude Code and a mod already do, with the dated readings of pi and Codex weighed
+  beside it. Open it
   before any 2.0 work.
 - [work-queue.md](work-queue.md) — what comes next, in the owner's order: stage 4 of 2.0
   through the roadmap's open list, then the 1.x queue — the rest of the workflow suite, the arrival-row check on the suite, a named harness version against a

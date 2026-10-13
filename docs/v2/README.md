@@ -135,6 +135,13 @@ Stage 4, Claude Code's adapter as one mod:
 - [stage4-audit-rows.md](stage4-audit-rows.md) — the audit's rows argued one by one: why
   each verdict, what code and documents it removes or keeps, what pi and Codex offer for
   the same feature, and which property of the project it touches.
+- [stage4-reading-pi.md](stage4-reading-pi.md) — a dated record of October 13, 2026: pi
+  read for the audit at 0.85.1 and 1.2.0, capability by capability, its risks and the
+  probe items PI1–PI14 the audit cites. Open it before stage 4b.
+- [stage4-reading-codex.md](stage4-reading-codex.md) — a dated record of October 13, 2026:
+  the Codex side's reading of codex-cli 0.160.1, its schema and source, row by row, seating
+  in another harness's worktree, joining without the wrapper, and the probes CX1–CX8 the
+  audit cites. Kept for Codex's adapter after 2.0.
 
 Not scheduled:
 

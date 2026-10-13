@@ -9,13 +9,14 @@ which property of [project.md](../project.md) it touches. Facts carry the marks 
 Claude Code is pi, and Codex comes after it; each row says what pi offers first, then
 Codex. Two readings made that day are folded in, neither run live:
 
-- *pi reading*: pi's documentation and source at 0.85.1 (a reference tree at `05c6229`)
-  and the documentation and changelog of the npm package 1.2.0, the version installed
-  since that day; *help* on pi means `pi --help` of 0.85.1. Its probe items are cited
-  PI1–PI14 in its numbering.
-- *Codex reading*: a review session's reading of codex-cli 0.160.1 by help, its app-server
-  schema generated that day, and a reference tree at `8c0f701` read as source. Its probes
-  are cited CX1–CX8 in its numbering. Codex is read here for later: by the same day's
+- *pi reading* ([stage4-reading-pi.md](stage4-reading-pi.md)): pi's documentation and
+  source at 0.85.1 (a reference tree at `05c6229`) and the documentation and changelog of
+  the npm package 1.2.0, the version installed since that day; *help* on pi means
+  `pi --help` of 0.85.1. Its probe items are cited PI1–PI14 in its numbering.
+- *Codex reading* ([stage4-reading-codex.md](stage4-reading-codex.md)): a review session's
+  reading of codex-cli 0.160.1 by help, its app-server schema generated that day, and a
+  reference tree at `8c0f701` read as source. Its probes are cited CX1–CX8 in its
+  numbering. Codex is read here for later: by the same day's
   decision, only its entry point is built before 2.0.
 
 ## 1. Joining: wrapper or mod — OPEN, P11
