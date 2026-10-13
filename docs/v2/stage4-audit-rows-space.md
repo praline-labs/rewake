@@ -31,24 +31,32 @@ reports a removal the `WorktreeRemove` hook or Git could not finish (*help*).
 
 - **A Claude Code worker** makes its own, started in its space with `-w`.
 - **A worker of another harness** is seated by cwd in a checkout a Claude Code **keeper**
-  holds. Two candidates:
-  - *a background session*, `claude --bg -w <name>`: the worker sits in its path; closing
-    the space is `claude rm <id>`, with Claude Code's own checks; rewake's mod in the keeper
-    refuses the removal while a rewake worker sits there.
-  - *a subagent of main* whose isolation is "worktree", of an agent type rewake's mod
-    declares with `$.agent.register` (*skill*); spawning it stays the model's own call of
-    the Agent tool. Main observed two such subagents live on Claude Code 2.1.296, October 13,
-    2026: the checkout is made at `.claude/worktrees/agent-<id>` on a new branch
+  holds: *a subagent of main* whose isolation is "worktree", of an agent type rewake's mod
+  declares with `$.agent.register` (*skill*). Main observed two such subagents live on Claude
+  Code 2.1.296, October 13, 2026: the checkout is made at `.claude/worktrees/agent-<id>` on a new branch
     `worktree-agent-<id>`, from `origin/<default>` rather than the current HEAD; it is
     Git-locked while the subagent runs; an unchanged one is removed with its branch when
     the subagent ends; a changed one is kept, unlocked, and its path and branch come back to
     main. A subagent kept alive while its space works holds the checkout under Claude Code's
     lock; when the space closes, the subagent ends and Claude Code removes or keeps the
     checkout by its own rule. The same subagent can stand for the space in the tasks list
-    (row 16).
+    (row 16). The other candidate, a background session started with `claude --bg -w`, is
+    dropped: workers close with main by the owner's decision of the same day
+    ([answer 7](design.md#the-owners-answers)), so a keeper outside main has no purpose.
+
+**P12b's first run**, October 13, 2026 ([the record](../research-claude-mod.md#p12b-a-subagent-of-main-as-the-worktrees-keeper)),
+chose the subagent and how it is held: the mod spawns it itself with `$.agent.spawn`, with no
+turn of main's model, and holds it by its blocking tool as a loop of polls, since one
+`$.http.fetch` gave up after 30 s. The checkout came from `origin/main` and was locked with
+Claude Code's reason; when the keeper ended, the unchanged checkout went with its branch.
+When main exited with the keeper still running and a stand-in worker inside, the checkout
+stayed, still locked under the dead harness pid, and nothing unlocked it; Git keeps one lock
+per worktree, so rewake could not add its own. A named spawn gave an ordinary subagent, no
+teammate. The background session refused to start in an untrusted directory.
 
 **The veto stays conditional on P12.** A worker must not lose its checkout while it sits
-there. The generic result of a classic hook carries `block` (*skill*), and the documentation
+there. Closing a space stops its worker before it releases the keeper, so the veto guards
+the routes the space does not drive. The generic result of a classic hook carries `block` (*skill*), and the documentation
 says a failing command hook fails the removal and leaves the directory (*docs*); neither
 shows that every route that deletes honours a mod's answer — the same documentation says the
 hook's JSON output is discarded, and background deletion distinguishes its routes (*docs*).
@@ -57,13 +65,15 @@ It also says a checkout made without a hook gets no `WorktreeRemove` event, whil
 `ExitWorktree`, the clean unnamed exit, `claude rm`, the sweep — and whether a
 removal respects a `git worktree lock` Claude Code did not take, is P12.
 
-**P12b weighs the two keepers**: can a background session be started as a keeper without
-spending a model turn, and idle cheaply; can a subagent be held alive for a space's life — a
-blocking tool of the mod, the limits on one tool call's length — and at what cost; does
-`claude rm`, or the end of the subagent, refuse while a foreign worker is inside; how rewake
-learns the finished path, since a creation request names no final path (`claude agents
---json` or the session's own directory); the base, fresh against the branch the work needs;
-what removes a kept checkout later; and the seated worker's Git metadata writes.
+**Still open after that run**: the base, fresh against the branch the work needs; what
+sweeps a checkout an exit left locked or a keeper kept with changes; how rewake learns the
+finished path, since a creation request names no final path; the cost of a long hold; and
+the seated worker's Git metadata writes.
+
+**A kept checkout is not forgotten** (the owner, October 13, 2026). Claude Code keeps a
+checkout with changes or commits when its keeper ends; rewake's record of the space keeps it
+too, main is reminded of it at its start and on a restore, and the room view lists it until
+it is merged or removed ([the target](stage4-audit.md#the-target-a-space)).
 
 **If P12b fails**, rewake keeps one worktree lifecycle of its own that follows Claude Code's
 conventions — `.claude/worktrees`, the base reference, `.worktreeinclude` — and a Claude Code
@@ -134,9 +144,10 @@ of the mod's own drawing is the fallback.
 
 **What happens when.** A reload of main's mod loses the view and the key path for a moment;
 the worker and its terminal live on in the space's terminal process, and the redrawn view
-reattaches. Main
-exiting closes the pane; the worker keeps running, reachable by `rewake` and by attaching
-from another terminal — it ends only by its own end or the person's word. The button
+reattaches. Main exiting closes its spaces, by the owner's decision of October 13, 2026
+([answer 7](design.md#the-owners-answers)): the mod stops the workers at `session.end` and
+releases the keepers, and the space's record keeps each worker's session id, so main can
+restore the workers it needs later. The button
 appears when main launches a worker, not only on a "+". A launch by main is a new authority
 (main starting processes); the owner granted it on October 13, 2026 as the target — main
 creates a space and seats a worker in it ([the target](stage4-audit.md#the-target-a-space))
@@ -148,8 +159,13 @@ rewake process that owns a pseudo-terminal changes every adapter's launch, and s
 not build one that rules it out. It now asks first whether a transcript row may carry the
 cell grid and the client element and take keys, its height in the agent's view with
 fullscreen on and off, its repaint by `$.ui.blit`, scroll and focus; then whether the pane
-follows the view switch, may be opened on it, and the size it gets; Escape stays the known
-gap of keys through the client. *pi reading*: interactive pi runs in a pseudo-terminal rewake owns with no
+follows the view switch, may be opened on it, and the size it gets. Its first half, P15a,
+ran on October 13, 2026 ([the record](../research-claude-mod.md#p15a-the-spaces-terminal-in-the-keepers-own-tool-row)):
+the keeper's tool row carried the grid and the client element and was repainted there; the
+client element got letters, Alt, function keys, the arrows and Tab, and not Escape, Ctrl+C,
+Ctrl+X or paste. A prefix key the client element receives carries those to the seated
+harness ([two levels of UI](stage4-audit.md#two-levels-of-ui)); P15b checks it end to end
+with a real pseudo-terminal. *pi reading*: interactive pi runs in a pseudo-terminal rewake owns with no
 cooperation, regular or fullscreen (PI11). *Codex reading*, same conclusion: a pane is not an interactive terminal,
 and a reload must not be assumed to keep the worker (CX7).
 
@@ -162,16 +178,19 @@ ideas §2, unchanged: a pane over `rewake list` and `rewake inbox --owed`, butto
 what main does. **Other harnesses.** pi: widgets above or below its editor (*pi reading*).
 Codex: none.
 
-## 18. Headless and background workers — OPEN, P16
+## 18. Headless and background workers — DROPPED
+
+Dropped by the owner's decision of October 13, 2026 that workers close with main
+([answer 7](design.md#the-owners-answers)): no worker runs under a supervisor that outlives
+it, and P16 goes. The reading that stood before:
 
 Claude Code's background sessions run under a supervisor service (`claude daemon`), each
 its own process, surviving the terminal but not shutdown; `claude agents`, `attach`,
 `logs`, `stop`, `rm` manage them; dispatched ones open a draft pull request (*docs*,
 *help*). A rewake worker's life is its wrapper's, and a supervisor that outlives it breaks
 "lives as long as the session"; `--bg --exec` runs any command as a background task with
-output in memory only (*docs*). Not scheduled; P16 only if the owner takes ideas §4 up. A
-background session as a worktree's keeper, running no worker of its own, is P12b's (row 13),
-not this row's.
+output in memory only (*docs*). A background session as a worktree's keeper, running no
+worker of its own, was P12b's other candidate (row 13), dropped by the same decision.
 **Other harnesses.** pi: `--mode rpc`, JSON lines over stdin and stdout, carries wake,
 steer, abort, compaction, a new session and telemetry, with the extension still loaded for
 tools; a person cannot type into such a worker (*pi reading*; PI13). *Codex reading*: `exec` is one-shot

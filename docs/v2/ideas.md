@@ -131,7 +131,8 @@ For rewake the same shape would be:
   - Ctrl+X is the engine's chord prefix *(docs)*.
   - What happens to Ctrl+C, Ctrl+D, other Ctrl combinations and paste while a `Client`
     has focus is not described.
-  - Key events carry no Alt.
+  - Key events carry no Alt (the 2.1.289 types; on 2.1.296 Alt arrived live as `meta`,
+    below).
 - **Focus.** Focus comes only from a click or `open({focus})` *(types, docs)*.
 - **Rendering fidelity.** `Raster` cells have no bold, italic, underline or dim, and no
   wide or non-BMP glyphs *(types)*. Claude Code's own screen degrades.
@@ -162,24 +163,40 @@ Alongside it:
 - the frame rate `blit` reaches on a 200×50 screen;
 - `$.http.fetch` with a socket path to a Unix socket rewake serves.
 
+**Probed on October 13, 2026** (P15a, Claude Code 2.1.296,
+[the record](../research-claude-mod.md#p15a-the-spaces-terminal-in-the-keepers-own-tool-row)), in the keeper
+subagent's own tool row rather than a pane: a `Raster` grid repainted by `blit` once a
+second, and a `Client` under it. After a click the `Client` got letters, Alt as `meta`, F1 as
+its raw sequence, the arrows and Tab. Escape returned focus to the prompt; Ctrl+C, Ctrl+X and
+a bracketed paste did not reach it, the paste going into the prompt. The owner's direction
+for that gap is a prefix key ([two levels of UI](stage4-audit.md#two-levels-of-ui)); the
+`fetch` over a Unix socket worked, each call ending after 30 s at the latest.
+
 ### Later: workers launched only from a main's tabs
 
-A later direction from the owner, not scheduled: once tabs exist, Claude Code workers are
-launched only from inside a running main, in its tabs, not standalone. Each worker is then
-bound to its main from the start. Open questions for that design:
+First recorded as a later direction from the owner; since October 13, 2026 it is the
+direction stage 4 builds toward: Claude Code workers are launched from inside a running
+main, in its spaces, not standalone, and each worker is bound to its main from the start.
+The questions it raised, as the owner answered them that day
+([the owner's answers](design.md#the-owners-answers)):
 
-- a worker's lifetime when its main ends or restarts;
-- the room as the main's set of tabs, against today's room by directory and name;
-- Codex workers, which have no mod and keep launching through the command line.
+- a worker's lifetime when its main ends: it closes with its main, and its session id is
+  recorded so that main can restore it later (answer 7);
+- the room as the main's set of tabs: a room is one main with its spaces and workers by
+  default, its name following the main, and the room's scheme stays in the core for
+  communication between mains later (answer 8);
+- Codex workers, which have no mod: the space's terminal starts them by their command line,
+  as any harness.
 
 Weighed in the stage 4 audit, October 13, 2026
 ([stage4-audit-rows-space.md](stage4-audit-rows-space.md#16-worker-tabs-and-buttons--split-p15)): the
 pseudo-terminal belongs to a rewake process, the space's terminal process, whose identity
 P11 and P15 decide, so a tab can host a worker of any harness, Codex and pi included, and a
-button appears when main launches a worker, not only on "+"; a reload of the mod or main's
-exit loses the view, not the worker. By the owner's idea of the same day, the tab is
-preferably Claude Code's own: the entry a keeper subagent of main gets in the tasks list,
-with the mod drawing the terminal in that subagent's tool row or in its pane for that view. Main
+button appears when main launches a worker, not only on "+"; a reload of the mod loses the
+view, not the worker, and main's exit closes the space. By the owner's idea of the same day,
+the tab is Claude Code's own: the entry a keeper subagent of main gets in the tasks list,
+with the mod drawing the terminal in that subagent's tool row — which P15a showed carries it
+— or in its pane for that view. Main
 launching workers is a new authority; the owner made it the target the same day — main
 creates a space, a tab over a pseudo-terminal rewake owns, and seats a worker in it
 ([the target](stage4-audit.md#the-target-a-space)). The probe above is P15 of
@@ -232,7 +249,10 @@ Three mechanisms the stage 4 probe could look at beside its own points:
 input open.
 
 **Status.** The owner prefers full sessions. This stays only as a fallback, should full
-sessions prove unworkable for some use. No stage holds it.
+sessions prove unworkable for some use. No stage holds it. Workers close with their main by
+the owner's decision of October 13, 2026 ([answer 7](design.md#the-owners-answers)), so a
+headless worker would too; background workers under Claude Code's supervisor are dropped
+([row 18](stage4-audit-rows-space.md#18-headless-and-background-workers--dropped)).
 
 ## 5. A worktree made on the Claude Code side, a Codex worker seated in it
 
@@ -260,8 +280,12 @@ Weighed in the stage 4 audit, October 13, 2026
 without a hook gets no `classic.WorktreeRemove` by the documentation, so the veto for a foreign worker waits on
 P12. After that day's review the owner directed that the whole lifecycle goes to Claude Code
 even with another harness inside: a Claude Code worker makes its own with `-w`, and a worker
-of another harness is seated in a checkout a Claude Code keeper holds — a background session
-or a subagent of main with worktree isolation, weighed by P12b — with one rewake lifecycle
-following Claude Code's conventions as the fallback. A worker that commits needs both the
+of another harness is seated in a checkout a Claude Code keeper holds, with one rewake
+lifecycle following Claude Code's conventions as the fallback. P12b's first run the same day
+chose the keeper: a subagent of main with worktree isolation that the mod spawns itself and
+holds by its blocking tool; the background session was dropped when the owner decided that
+workers close with main. Claude Code locks the keeper's checkout itself, and Git takes one
+lock per worktree, so rewake cannot add its own; what sweeps a checkout left behind is open
+([the record](../research-claude-mod.md#p12b-a-subagent-of-main-as-the-worktrees-keeper)). A worker that commits needs both the
 private and the common Git directory granted, resolved through Git. By the owner's decision of the same day pi comes
 before Codex, so the first worker seated this way is pi's.

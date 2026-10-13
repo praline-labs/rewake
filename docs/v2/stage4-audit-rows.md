@@ -32,8 +32,10 @@ children die with the module; `$.process.run` is one-shot with a timeout). And t
 decision's proof rests today on one process being both the anchor a caller descends from and
 the final writer it talks to; under the join they split, and the caller-to-final-writer
 proof, a late opt-in and the anchor's death during an admitted decision are obligations no
-contract answers yet. P11 settles the first; the second needs a replacement authority
-contract, and without one the wrapper stays.
+contract answers yet. P11 settles the first — its first run, October 13, 2026, saw such a
+process start before any prompt, detach, outlive a reload and end with the harness, a respawn
+and the harness killed outright unseen ([the record](../research-claude-mod.md#p11-a-process-the-mod-starts)); the
+second needs a replacement authority contract, and without one the wrapper stays.
 
 **Code.** If the mod's join is taken: `internal/host/launch` keeps the launch of a harness
 for the wrappers that remain; the run in `internal/core/registry` names an ancestry anchor

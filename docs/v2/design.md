@@ -5,7 +5,8 @@ before any code. It rests on the owner's decisions of October 5, 2026 — the ni
 plan and the twelve answers to the revision's proposals — and on the accepted revision
 ([revision.md](revision.md), commit `8a20bdd`). Every decision names what it rests on
 and what is still unknown. The owner answered the questions of the first draft on
-October 5, 2026 ([below](#the-owners-answers)); one is still open.
+October 5, 2026 ([below](#the-owners-answers)); one is still open. Three later decisions
+of October 13, 2026 follow them there.
 
 | Document | What it decides |
 |---|---|
@@ -33,9 +34,10 @@ about the mod that still needs a live check says so and names its stage 4 probe.
   operation is a command; a harness with no mod, or a session whose mod did not load,
   works through the shell and the guide. The tools a model sees are a projection of the
   same command table ([design-api.md](design-api.md#tooltransport)).
-- **The boundaries of `AGENTS.md`**: no pseudo-terminal and no typing into a screen; the
+- **The boundaries of [project.md](../project.md#the-philosophy)**: no typing into a
+  screen, and a pseudo-terminal only for a session the person asks rewake to host; the
   person's harness configuration is never edited; transcripts are not read; no daemon —
-  a wrapper lives as long as its session.
+  what serves a session lives as long as it.
 - **What the CLI promises a caller**: one command table, no arguments prints the guide,
   `--json` on every command, an unknown flag is a refusal, exit codes 0/1/2/3.
 
@@ -57,7 +59,7 @@ internal/
     channel/             the channel record of a run: tool, shell or none
   adapter/               the capability interfaces and the values they exchange; no implementation
     catalog/             the one place that names every adapter; a value, not a registry
-    claude/              the Claude Code adapter; mod/ holds the module and its manifest
+    claude/              the Claude Code adapter; mod/ holds the module (TypeScript, answer 9) and its manifest
     codex/               reserved: designed afresh in stage 5 (design-codex.md)
   host/                  the wrapper: launch lifetime, claim, signals, availability,
                          departure, notices, the delivery loop, worktree, launch aliases,
@@ -134,7 +136,7 @@ acceptance, live probe where the stage has one, commit.
 | Stage | What it builds | Acceptance requires |
 |---|---|---|
 | 3 core | the layout and its test; `core/*`, `tool`, `host`, `cli` with the full vocabulary on the shell; the carried tests with their rules; the state root of 2.0, clearing 1.x and one build per room ([design-state.md](design-state.md)); a fixture adapter for tests | the five checks; a concurrent scenario where a writer of the old build is still running while a new build launches into the room, and two builds of one revision with different trees refused as different; `internal/layout_test.go` green with no stale exception; every carried rule names its tests and they exist ([design-docs-tests.md](design-docs-tests.md)); the workflow suite's neutral scenarios green in a column on the fixture adapter; Codex-side acceptance, since this is transport and process behaviour |
-| 4 Claude Code | the probe first ([design-claude.md](design-claude.md#the-stage-4-probe)), its results written into research with the version; then the adapter and its mod | the probe answered point by point; the owner's target met end to end if the probes allow — main creates a space, a pseudo-terminal a rewake process owns shown as a tab in main's Claude Code, and a Claude Code worker started in it with its own worktree exchanges work with main ([stage4-audit.md](stage4-audit.md#the-target-a-space)), or without the tab if P15 fails; the suite's Claude column on a mod host; live: a Claude Code main and a Claude Code worker exchange a task, a question, a notify and a report, idle and busy; a read through the tool counted only on proof; the mod not loading is named under `--bare`, `--safe-mode` and `disableAllHooks`; a version below 2.1.287 refused |
+| 4 Claude Code | the probe first ([design-claude.md](design-claude.md#the-stage-4-probe)), its results written into research with the version (the first, October 13, 2026: [research-claude-mod.md](../research-claude-mod.md)); then the adapter and its mod | the probe answered point by point; the owner's target met end to end if the probes allow — main creates a space, a pseudo-terminal a rewake process owns drawn in the view of the keeper subagent the mod spawns, its entry in Claude Code's tasks list as the tab and its checkout as the worktree, and a Claude Code worker seated in it exchanges work with main ([stage4-audit.md](stage4-audit.md#the-target-a-space)), or without the tab if P15 fails; closing main closes its spaces and their workers, and each worker's session id is in the space's record for a restore (answer 7); the suite's Claude column on a mod host; live: a Claude Code main and a Claude Code worker exchange a task, a question, a notify and a report, idle and busy; a read through the tool counted only on proof; the mod not loading is named under `--bare`, `--safe-mode` and `disableAllHooks`; a version below 2.1.287 refused |
 | 4b pi | an audit and a probe of pi's extension API on a pinned version ([stage4-audit.md](stage4-audit.md#consequences-for-the-stage-plan)); then the adapter, an extension loaded for its run | live: a Claude Code main and a pi worker exchange a task, a question, a notify and a report, idle and busy, beside Claude Code workers in the same room; the tool set with the same schemas in the pi column; a version below the minimum refused |
 | 5 Codex entry point | Codex's place in the catalogue before 2.0, without its adapter; the adapter itself after the release, designed afresh ([design-codex.md](design-codex.md)) | the entry point fully described by what it offers, and every capability it does not offer refused by name |
 | 6 permissions and the person's UI | grants applied by each adapter's Permissions (on Claude Code in the mod, replacing `grant-hook`); PersonUI | live grants on Claude Code and pi; the person's own status line untouched (answer 4) |
@@ -189,3 +191,28 @@ The owner answered the design's questions on October 5, 2026.
 6. **A harness version that cannot be read refuses the launch**, saying how it was
    asked; a mod against an unknown API fails silently, which is worse
    ([design-api.md](design-api.md#minimum-versions)).
+
+Three later decisions of the owner, October 13, 2026, after stage 4's audit and its first
+probe ([research-claude-mod.md](../research-claude-mod.md)):
+
+7. **Workers close with their main** (decided October 13, 2026). No design lets a worker
+   outlive the main that seated it: closing main closes every worker of its spaces, since a
+   worker that outlives its main is a heavy path. What matters instead is bringing them
+   back: rewake records each worker's session id — Claude Code's session id, pi's session
+   id, later Codex's thread — in the space's record, beside the worker's harness, the
+   worktree's path and branch, its role and name, so that main can restore the agents it
+   needs later. The space's keeper may therefore live inside main's process and end with
+   it; a keeper outside it, a background session, and background workers (P16) lose their
+   purpose ([design-claude.md](design-claude.md#the-stage-4-probe)).
+8. **A room is one main by default** (the owner's direction, October 13, 2026). In effect a
+   room is now one main Claude Code session with its spaces and workers. The room is not
+   removed: communication between two mains may need it, far in the future. For stage 4's
+   design the default room follows the main — its name comes from the main, with no flag —
+   and the room's directory-and-name scheme stays in the core
+   ([design-state.md](design-state.md#the-state-root-of-20)).
+9. **Go for the core, TypeScript only where a harness requires it** (decided October 13,
+   2026). The core and the host side of every adapter are Go. TypeScript is written only in
+   an adapter whose part inside the harness must be — the Claude Code mod, the pi
+   extension. That part is small, generated or embedded by the binary for one run and
+   versioned with it; the protocol between it and the host is described once, as a JSON
+   schema, and the TypeScript types are generated from it.

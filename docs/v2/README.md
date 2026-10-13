@@ -46,7 +46,7 @@ Stage 2, the design of 2.0, for review before any code:
 - [design-claude.md](design-claude.md) — the Claude Code adapter as one mod: loading,
   what happens when it does not load, the mail tools and how a call runs, the turn
   boundary, telemetry, control, the wake candidates, the audit's outcome in short, and the
-  stage 4 probe P1–P16.
+  stage 4 probe P1–P16 with what its first runs answered.
 - [design-codex.md](design-codex.md) — Codex: the pair a Claude Code main must serve,
   the reserved place, the capabilities expected, and what keeps Codex workers running
   until stage 5.
@@ -140,7 +140,7 @@ Stage 4, Claude Code's adapter as one mod:
   and Codex readings.
 - [stage4-audit-rows-space.md](stage4-audit-rows-space.md) — rows 13–22 argued the same way:
   the worktree and its keepers, the tabs the space needs, the person's UI, headless workers
-  and the features that stay rewake's. Open it with the target section before designing the
+  (dropped) and the features that stay rewake's. Open it with the target section before designing the
   space.
 - [stage4-reading-pi.md](stage4-reading-pi.md) — a dated record of October 13, 2026: pi
   read for the audit at 0.85.1 and 1.2.0, capability by capability, its risks and the

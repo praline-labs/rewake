@@ -31,7 +31,9 @@ pages on cross-session messaging, worktrees, background sessions and hooks, read
 13, 2026, which are not versioned and name versions up to 2.1.290; *rewake* — this
 repository's own documents and code. The audit's writer ran nothing live: that is the
 probe. The one live fact it cites is main's dated observation of worktree subagents in
-row 13, recorded with its version.
+row 13, recorded with its version. The target, rows 1, 13, 16 and 18 and the consequences
+were brought up to the probe's first run and the owner's decisions of the same day; the
+run's observations are records in [research-claude-mod.md](../research-claude-mod.md).
 
 ## The target: a space
 
@@ -41,15 +43,19 @@ Claude Code. In the space a worktree may be made, and then another session is se
 a Claude Code session first and a session of another harness later. Main creating spaces and
 seating workers in them is the owner's direction; that answers row 16's "a new authority",
 and its limits — which main, how many spaces, which directories, what the person sees and
-may stop — are designed in stage 4 and stage 6.
+may stop — are designed in stage 4 and stage 6. A space lives no longer than its main:
+closing main closes its spaces and their workers (decided by the owner, October 13, 2026;
+[answer 7](design.md#the-owners-answers)).
 
 **What a space is made of.**
 
 - *The terminal*: the **space's terminal process**, a rewake process, owns the
-  pseudo-terminal and runs the worker in it. Whether it is the worker's own wrapper, the
-  detached process of the mod's join (row 1) or a process of its own per space stays open
-  until P11 and P15 decide; this audit calls it by this one name meanwhile. It serves its
-  space alone and lives as long as what runs inside (row 16).
+  pseudo-terminal and runs the worker in it. P11's first run showed that a process the mod
+  starts can detach, outlive a reload and end with the harness
+  ([the record](../research-claude-mod.md#p11-a-process-the-mod-starts)), so such a process can hold it; whether
+  it is the worker's own wrapper, the detached process of the mod's join (row 1) or a
+  process of its own per space stays open until P15b; this audit calls it by this one name
+  meanwhile. It serves its space alone and ends with its worker, and with main (row 16).
 - *The tab*: preferably Claude Code's own (owner's idea, October 13, 2026). A subagent gets
   an entry in Claude Code's tasks list, and opening the entry opens that agent's transcript.
   With a subagent of main standing for the space — the worktree's keeper below — the tasks
@@ -65,19 +71,35 @@ may stop — are designed in stage 4 and stage 6.
     band hooks again with that agent in view, so the mod draws the terminal in its pane
     beside the transcript or in the band above the prompt.
 
-  A tab of the mod's own drawing is the fallback if P15 shows neither carries it. A reload of
-  the mod or main's exit loses the view, not the space (row 16).
+  P15a drew a cell grid and a key surface in the keeper's own tool row and repainted it there
+  ([the record](../research-claude-mod.md#p15a-the-spaces-terminal-in-the-keepers-own-tool-row)). A tab of the
+  mod's own drawing is the fallback if neither place carries it. A reload of the mod loses
+  the view, not the space; main's exit closes the space (row 16).
 - *The worktree*, optional, is made and removed by Claude Code even when another harness
   sits in it (owner's direction, October 13, 2026; row 13). A Claude Code worker makes its
   own with `-w`. A worker of another harness — pi, and later Codex — is seated by cwd in a
-  checkout a Claude Code **keeper** holds: a background session started with
-  `claude --bg -w`, or a subagent of main whose isolation is "worktree". P12b weighs the two;
-  rewake keeps no worktree lifecycle of its own once one of them holds. A Claude Code worker
+  checkout a Claude Code **keeper** holds: a subagent of main whose isolation is
+  "worktree", spawned by the mod with `$.agent.spawn` and held by its blocking tool, chosen
+  after P12b's first run ([the record](../research-claude-mod.md#p12b-a-subagent-of-main-as-the-worktrees-keeper));
+  the background session was the other candidate and was dropped when the owner decided
+  that workers close with main. rewake keeps no worktree lifecycle of its own once the
+  keeper holds. A Claude Code worker
   started with its own `-w` has no subagent behind it, so its space has no entry in the
   tasks list unless one stands for it too; seating it in a keeper's checkout like any other
   harness is the plain answer, weighed with P12b and P15.
 - *The worker*: the program the space's terminal runs — `rewake claude` (a wrapper, or the
   thin launcher of the mod's join, row 1), and in stage 4b `rewake pi`.
+- *The record*: rewake's, one per space (the owner's decisions of October 13, 2026) — the
+  worker's harness and its session id (Claude Code's session id, pi's, later Codex's
+  thread), the worktree's path and branch, the worker's role and name. A restore reads it:
+  main brings back the workers it needs. At main's `session.end` the mod closes its spaces —
+  workers stopped, keepers released — and Claude Code then removes an unchanged checkout and
+  keeps a changed one, as P12b saw. P12b also saw that an exit with the keeper still running
+  leaves its checkout in place, locked under a dead pid, so the release must finish before
+  the harness ends; whether `session.end` leaves time for it is open. A checkout kept with
+  changes or commits is not forgotten: it stays in the record until merged or removed, main
+  is reminded of it at its start and on a restore, and the room view lists it. What a
+  restore does with a kept checkout is stage 4's design.
 
 **rewake on Claude Code is the mod and the binary.** The person sees rewake as a mod: the
 tab's content, the buttons, the tools and the events are the mod's. But a mod cannot hold a
@@ -94,20 +116,25 @@ its wrapper.
 
 - **P11**: a Claude Code session started inside a terminal rewake owns joins the room, by its
   wrapper or by the mod's join; the terminal's owner is not the run's anchor, and a reload of
-  the worker's mod keeps it in the room.
+  the worker's mod keeps it in the room. The first run answered the process half: a process
+  the mod starts detaches, outlives a reload and ends with the harness.
 - **P12**: a `-w` from a Claude Code worker seated in a space: where the checkout lands, how
   rewake learns its path, and whether its removal waits while the worker sits there, on every
   route Claude Code removes by.
 - **P12b**: a keeper holds a checkout for a worker of another harness — started without
   spending a model turn and idling cheaply, its path known to rewake, its removal refused while
-  the worker is inside, the worker's Git writes allowed.
+  the worker is inside, the worker's Git writes allowed. The first run answered the start, the
+  hold and the end for the subagent keeper; the base the work's branch needs, the sweep of a
+  checkout left locked or kept, and the worker's Git writes stay open.
 - **P15**: the space's terminal drawn where the keeper is opened from the tasks list — first
   in the keeper's own tool row, whether a transcript row may carry the cell grid and the
   client element, take keys, get a usable height in the agent's view with fullscreen on and
   off, be repainted by `$.ui.blit`, scroll and hold focus; then in the pane or the band,
   whether it follows the view switch, may be opened on it, and the size it gets — and in
-  either the keys a session needs, Escape among them; a reload of main's mod and main's exit
-  leave the space and its worker running.
+  either the keys a session needs, Escape among them; a reload of main's mod leaves the space
+  and its worker running. P15a answered the row's surface — the grid, its repaint, the keys
+  that reach the client element and those that do not; a real pseudo-terminal, the prefix key
+  and the largest grid with fullscreen on are P15b.
 
 **If a probe fails.** If the tasks list cannot carry the tab, the mod draws a tab of its own.
 If P15 fails as a whole, the minimum path keeps everything but the tab: main still creates the
@@ -132,11 +159,21 @@ inside the other. A proposal for stage 4's design, not a choice:
   folds them into the outer list.
 
 The questions it raises are P15's: which keys the outer level keeps — switching between
-agents, Escape back to main's prompt — and how the inner harness still gets them, by a
-remap or a button; how many rows and columns the inner screen gets under the outer chrome,
+agents, Escape back to main's prompt — and how the inner harness still gets them, by the
+prefix key below; how many rows and columns the inner screen gets under the outer chrome,
 with fullscreen on and off; whether two nested tab bars confuse the person; and what the
 space's entry shows — its name, harness and state — so that the outer list stays readable.
-The choice is stage 4's design, after the probe.
+The choice is stage 4's design, after the probe. P15a measured one layout: at 200 by 50 with
+fullscreen off, about 16 rows go to the outer chrome.
+
+**A prefix key** carries what the client element does not get (the owner's direction,
+October 13, 2026). P15a saw Alt reach it, as `meta`, while Escape, Ctrl+C, Ctrl+X and paste
+did not ([the record](../research-claude-mod.md#p15a-the-spaces-terminal-in-the-keepers-own-tool-row)). So the
+space takes a prefix chord the client element receives — an Alt chord, as tmux has its
+prefix — and then one key: `c` sends Ctrl+C to the seated harness, `e` (or `[`) Escape, `x`
+Ctrl+X, and the prefix twice sends the prefix itself. Paste stays open, since the clipboard
+cannot be read. P15b checks which Ctrl+letter keys reach the client element and the prefix
+end to end.
 
 ## The central question: Claude Code to Claude Code through the mod alone
 
@@ -253,19 +290,22 @@ by command. The cost is a core change — the run's anchor split from its writer
 replacement authority contract that answers the three obligations above — and the risk is
 P11: if a child of the mod cannot detach and outlive reloads, or its parent is not the
 harness process, or no contract answering the obligations is accepted, the wrapper stays
-for Claude Code too, exactly as designed today. P11 runs first in the probe, since it decides the shape of the adapter
+for Claude Code too, exactly as designed today. P11's first run settled the first two —
+the child may detach and outlive a reload, and its parent is the harness process
+([the record](../research-claude-mod.md#p11-a-process-the-mod-starts)); the contract is what remains. P11 runs first in the probe, since it decides the shape of the adapter
 (decided by main, October 13, 2026); the choice between the paths waits for its answer.
 
 ## The verdicts
 
 KEEP is rewake's own, harness-neutral core; NATIVE hands the feature to Claude Code's;
-MOD builds it on a mod event or call; SPLIT divides it; OPEN needs the probe row named.
+MOD builds it on a mod event or call; SPLIT divides it; OPEN needs the probe row named;
+DROPPED is out by a later decision of the owner.
 Each row is argued under its number in [stage4-audit-rows.md](stage4-audit-rows.md), rows 1–12,
 and [stage4-audit-rows-space.md](stage4-audit-rows-space.md), rows 13–22.
 
 | # | Feature | Verdict | In one line |
 |---|---|---|---|
-| 1 | Joining: wrapper or mod | OPEN, P11 | both paths; the mod's join for Claude Code if a detached child outlives reloads and a replacement authority contract is accepted, the wrapper otherwise |
+| 1 | Joining: wrapper or mod | OPEN, P11 | both paths; a detached child outlives reloads (seen October 13, 2026), so the mod's join for Claude Code if a replacement authority contract is accepted, the wrapper otherwise |
 | 2 | Launch: name, room, briefing, plugin, defaults | SPLIT, P13, P14 | the registry stays; the name also goes to `--name`; the briefing may move to a prompt event |
 | 3 | The shell allowance `Bash(rewake:*)` | KEEP | the command line is first-class; the mod's tools need no allowance |
 | 4 | The mail: kinds, inbox, owed, one report, withdraw and edit | KEEP | native messaging keeps nothing for a session that is not running and knows no reports |
@@ -277,12 +317,12 @@ and [stage4-audit-rows-space.md](stage4-audit-rows-space.md), rows 13–22.
 | 10 | Compaction and interrupt | MOD, P7 | `$.session.compact`, `$.turn.abort`; native messages run no command |
 | 11 | /clear and resume binding | MOD, P9 | resume is Claude Code's; the binding follows `session.end` and `classic.SessionStart` |
 | 12 | Grants | SPLIT, stage 6 | the authority stays rewake's; the application moves into the mod |
-| 13 | Worktree | SPLIT, P12, P12b | Claude Code makes and removes every space's checkout, any harness inside; a keeper — a background session or a subagent of main — holds one for a foreign worker; rewake's own lifecycle only as the fallback |
+| 13 | Worktree | SPLIT, P12, P12b | Claude Code makes and removes every space's checkout, any harness inside; a subagent of main the mod spawns keeps it; rewake's own lifecycle only as the fallback |
 | 14 | The room view | KEEP | `rewake list`; activity and context come from the mod, not `claude agents --json` |
 | 15 | Permissions and the person's UI | MOD, stage 6 | as designed |
-| 16 | Worker tabs and buttons | SPLIT, P15 | the pseudo-terminal is rewake's, any harness inside; Claude Code's tasks list is the tab bar, the mod draws the terminal and forwards keys |
+| 16 | Worker tabs and buttons | SPLIT, P15 | the pseudo-terminal is rewake's, any harness inside; Claude Code's tasks list is the tab bar, the mod draws the terminal in the keeper's row and forwards keys, a prefix key for those it does not get |
 | 17 | The room panel | MOD, stage 6 | panes and buttons over `rewake list` and `inbox --owed` |
-| 18 | Headless and background workers | OPEN, P16 | Claude Code's background supervisor does not fit the wrapper's lifetime; not scheduled |
+| 18 | Headless and background workers | DROPPED | workers close with main (the owner, October 13, 2026); P16 dropped |
 | 19 | Timers, monitors, idle notices | KEEP | session-internal tools; rewake's notices stay |
 | 20 | `$.store` as room state | KEEP | per machine, not per room or build |
 | 21 | Variables a session exports to children | KEEP | still scrubbed before a launch |
@@ -303,14 +343,17 @@ or the owner has decided one, the item says so with its date.
   before code, and `rewake claude` shrinks to the launcher. P12b, the worktree's keeper, runs
   with P12.
 - **Stage 4's first end to end is the space with a Claude Code worker**, if the probes allow:
-  main creates a space, the worker is started in it with `-w`, and the pair exchanges a task,
+  main creates a space, the mod spawns its keeper, a Claude Code worker is seated in the
+  keeper's checkout, and the pair exchanges a task,
   a question, a notify and a report — stage 4's live acceptance met inside a space. The tab
   in its least form (the button, the screen, the keys) moves from stage 6 into stage 4 for
-  this — preferably Claude Code's tasks list as the tab bar, the mod drawing the terminal; the
-  rest of the person's UI stays in stage 6. If P15 fails, stage 4 delivers the space without a
+  this — Claude Code's tasks list as the tab bar, the mod drawing the terminal in the keeper's
+  row, a prefix key for the keys its client element does not get; the rest of the person's
+  UI stays in stage 6. The space's record comes into stage 4 with it: each worker's session
+  id for a restore, and the reminder of kept checkouts. If P15 fails, stage 4 delivers the space without a
   tab and an attach from the person's terminal, and the tab waits for stage 6.
 - **Stage 4 also builds what P12–P14 settle**: the worktree's whole life handed to Claude
-  Code, with the keeper P12b picks (row 13), the `SendMessage` guard (row 5), `--name` and the
+  Code, with the subagent keeper P12b chose (row 13), the `SendMessage` guard (row 5), `--name` and the
   briefing's carrier (row 2). Most of `internal/adapter/claude/worktree.go` — the long flag
   taken from Claude Code's arguments and its refusals — goes, since Claude Code's own `-w` then
   works and resumes into its checkout natively; `internal/host/worktree` goes too once a
@@ -346,7 +389,8 @@ or the owner has decided one, the item says so with its date.
   the space's tab beyond its least form, the limits on main creating spaces. P15 has moved
   beside stage 4's probe: whether a rewake process owns a pseudo-terminal changes every
   adapter's launch, and the space needs it in stage 4.
-- **Headless and background workers** (row 18) stay unscheduled, and P16 with them
-  (decided by main, October 13, 2026); it runs only if the owner takes them up.
+- **Headless and background workers** (row 18) are dropped, and P16 with them: workers
+  close with main (decided by the owner, October 13, 2026;
+  [answer 7](design.md#the-owners-answers)).
 - **Stage 7** is unchanged but for its mixed pair, which becomes Claude Code with pi, since
   Codex is only an entry point before 2.0.

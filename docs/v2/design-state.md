@@ -35,6 +35,12 @@ The worktrees and their records stay where they are, in the user's data director
 hold work, so the upgrade never touches them, and 2.0 reads their records as 1.x wrote
 them: `worktree` carries over unchanged (revision).
 
+A room is, by the owner's direction of October 13, 2026, one main and its spaces and
+workers by default ([answer 8](design.md#the-owners-answers)). The tree above does not
+change for it: `v2/rooms/<room>/` and the room's name stay in the core, kept for
+communication between two mains later, and stage 4's design only makes the default room
+follow the main, its name taken from the main without a flag.
+
 ## Clearing the state of 1.x
 
 **When.** At the first launch of a 2.0 session (`rewake claude ...`) that finds a 1.x

@@ -250,6 +250,13 @@ everything else.
   session and takes it out. Open it before changing the module's side of `rewake compact`
   or `rewake interrupt`, before a Stop hook that holds a turn, before touching the grant
   hook, and after a harness update.
+- [research-claude-mod.md](research-claude-mod.md) — the dated records of stage 4's live
+  probe on Claude Code 2.1.296: a process the mod starts detaching and outliving reloads, a
+  subagent with worktree isolation held by a mod tool and what happens to its checkout at
+  its end and at main's exit, a background session refused in an untrusted directory, a
+  cell grid and a key surface in the subagent's own tool row, which keys reach it, and the
+  largest grid tried. Open it before designing the space, the keeper or the mod's join, and
+  re-check it after a harness update.
 - [research-codex.md](research-codex.md) — what only a running Codex session shows,
   split from research.md by subject: `codex queue`, thread identity and terminal events,
   the sandbox as a running session meets it, why `--worktree` cannot go with a remote
