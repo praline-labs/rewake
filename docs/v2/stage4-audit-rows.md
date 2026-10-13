@@ -304,11 +304,13 @@ starts it inside the terminal.
 the worker and its terminal live on in their wrapper, and the redrawn pane reattaches. Main
 exiting closes the pane; the worker keeps running, reachable by `rewake` and by attaching
 from another terminal — it ends only by its own end or the person's word. The button
-appears when main launches a worker, not only on a "+" — a launch by main is a new
-authority (main starting processes), and is the owner's decision.
+appears when main launches a worker, not only on a "+". A launch by main is a new authority
+(main starting processes); the owner granted it on October 13, 2026 as the target — main
+creates a space and seats a worker in it ([the target](stage4-audit.md#the-target-a-space))
+— and its limits are designed in stage 4 and stage 6.
 
-**The probe.** P15 (keys, Escape, focus, paste, size, the redraw cost) is stage 6's by
-ideas.md; proposed to run beside stage 4's probe, because a wrapper that owns a
+**The probe.** P15 (keys, Escape, focus, paste, size, the redraw cost) was stage 6's by
+ideas.md; it runs beside stage 4's probe by main's decision of October 13, 2026, because a wrapper that owns a
 pseudo-terminal changes every adapter's launch, and stage 4 should not build one that
 rules it out. *pi reading*: interactive pi runs in a pseudo-terminal rewake owns with no
 cooperation, regular or fullscreen (PI11). *Codex reading*, same conclusion: a pane is not an interactive terminal,

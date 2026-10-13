@@ -30,6 +30,49 @@ pages on cross-session messaging, worktrees, background sessions and hooks, read
 13, 2026, which are not versioned and name versions up to 2.1.290; *rewake* — this
 repository's own documents and code. Nothing was run live: that is the probe.
 
+## The target: a space
+
+The owner set the target on October 13, 2026, and rows 1, 13 and 16 serve it. Main, a Claude
+Code session, creates a **space**: a pseudo-terminal rewake owns, shown as a button-tab in
+main's Claude Code. In the space a worktree may be made, and then another Claude Code
+session is seated there. Main creating spaces and seating workers in them is the owner's
+direction; that answers row 16's "a new authority", and its limits — which main, how many
+spaces, which directories, what the person sees and may stop — are designed in stage 4 and
+stage 6.
+
+**What a space is made of.**
+
+- *The terminal*: a rewake process per space owns the pseudo-terminal and runs the worker in
+  it. The space lives as long as what runs inside; no rewake process serves more than its
+  space (row 16).
+- *The tab*: main's mod draws the space's screen in a pane and forwards keys; a reload of the
+  mod or main's exit loses the view, not the space (row 16).
+- *The worktree*, optional. The preferred maker is the seated Claude Code itself, started in
+  the space with its own `-w`: Claude Code then owns the checkout's life natively, routed into
+  rewake's checkout or left as its own (row 13). Main's mod may make it instead, before the
+  worker starts. For pi, and later Codex, the checkout is made by Claude Code or by rewake
+  (`host/worktree`), and the worker is seated in it by cwd.
+- *The worker*: the program the space's terminal runs — `rewake claude` (a wrapper, or the
+  thin launcher of the mod's join, row 1), and in stage 4b `rewake pi`.
+
+**What the probes must show for it.**
+
+- **P11**: a Claude Code session started inside a terminal rewake owns joins the room, by its
+  wrapper or by the mod's join; the terminal's owner is not the run's anchor, and a reload of
+  the worker's mod keeps it in the room.
+- **P12**: a `-w` from a session seated in a space lands where rewake sees it, and its
+  removal waits while the worker sits there; a worker seated by cwd in an existing checkout is
+  seen by the same removal check.
+- **P15**: main's pane draws the space's terminal and forwards the keys a Claude Code session
+  needs, Escape among them; a reload of main's mod and main's exit leave the space and its
+  worker running.
+
+**If P15 fails**, the minimum path keeps everything but the tab: main still creates the space,
+the worktree and the worker, rewake still owns the terminal, and the person attaches to it
+from a terminal of their own — a command stage 4 designs. If owning the terminal fails too,
+the path is today's: the person starts the worker in their own terminal with
+`rewake claude`, and main seats nothing.
+
 ## The central question: Claude Code to Claude Code through the mod alone
 
 The owner asked (October 13) whether work between Claude Code sessions could run entirely
@@ -158,17 +201,25 @@ Each row is argued in [stage4-audit-rows.md](stage4-audit-rows.md) under its num
 Written as proposals for [the stage plan](design.md#the-stage-plan-from-here); where main
 or the owner has decided one, the item says so with its date.
 
-- **Stage 4 opens its probe with P11** (row 1; decided by main, October 13, 2026). Its answer picks the adapter's shape —
-  wrapper plus mod, or thin launcher plus mod plus a detached per-session process — and
-  P1–P10 hold under either, P4 most of all. If the mod's join is taken, stage 4 also
-  carries the core change of the run's anchor, with its rules and tests before code, and
-  `rewake claude` shrinks to the launcher.
-- **Stage 4 adds P12–P14** and builds what they settle: the worktree driven by Claude Code
-  (row 13), routed into rewake's checkout or left as Claude Code's own under a Git lock,
-  the `SendMessage` guard (row 5), `--name` and the briefing's carrier (row 2). Either
-  way most of `internal/adapter/claude/worktree.go` — the long flag taken from Claude
-  Code's arguments and its refusals — goes, since Claude Code's own `-w` then works and
-  resumes into its checkout natively.
+- **Stage 4 is ordered to serve the space** (owner's target, October 13, 2026). Its probe
+  opens with P11 (row 1; decided by main, October 13, 2026), with P12 and P15 beside it
+  (P15 by main's decision of the same day): the three the space depends on. P11's answer
+  picks the adapter's shape — wrapper plus mod, or thin launcher plus mod plus a detached
+  per-session process — and P1–P10 hold under either, P4 most of all. If the mod's join is
+  taken, stage 4 also carries the core change of the run's anchor, with its rules and tests
+  before code, and `rewake claude` shrinks to the launcher.
+- **Stage 4's first end to end is the space with a Claude Code worker**, if the probes allow:
+  main creates a space, the worker is started in it with `-w`, and the pair exchanges a task,
+  a question, a notify and a report — stage 4's live acceptance met inside a space. The tab
+  in its least form (the button, the screen, the keys) moves from stage 6 into stage 4 for
+  this; the rest of the person's UI stays in stage 6. If P15 fails, stage 4 delivers the space
+  without a tab and an attach from the person's terminal, and the tab waits for stage 6.
+- **Stage 4 also builds what P12–P14 settle**: the worktree driven by Claude Code (row 13),
+  routed into rewake's checkout or left as Claude Code's own under a Git lock, the
+  `SendMessage` guard (row 5), `--name` and the briefing's carrier (row 2). Either way most
+  of `internal/adapter/claude/worktree.go` — the long flag taken from Claude Code's
+  arguments and its refusals — goes, since Claude Code's own `-w` then works and resumes
+  into its checkout natively.
 - **Stage 4b, the pi adapter**, comes next, before Codex, by the owner's decision of
   October 13, 2026 ([the stage plan](design.md#the-stage-plan-from-here)). pi carries the
   models the room's Claude Code sessions do not already serve. Its rows weigh the same
@@ -176,8 +227,9 @@ or the owner has decided one, the item says so with its date.
   join, a worker seated by cwd in a checkout rewake or Claude Code made. The pi reading
   finds every capability native in the extension but two: grants on shell commands need an
   OS sandbox the wrapper starts, and provider limits are not reported. Its probe items
-  PI1–PI14 ([stage4-reading-pi.md](stage4-reading-pi.md)) are stage 4b's probe, under a pinned version. The first mixed acceptance is a
-  Claude Code main with a pi worker, in stage 4b.
+  PI1–PI14 ([stage4-reading-pi.md](stage4-reading-pi.md)) are stage 4b's probe, under a
+  pinned version. The first mixed acceptance is a Claude Code main with a pi worker seated
+  in a space, by cwd, in a checkout Claude Code or rewake made.
 - **Stage 5, the Codex entry point**, by the owner's decision of October 13, 2026: Codex
   is not built now; before 2.0 it gets an entry point, a stub without a real
   implementation, and its full adapter comes after the release. The Codex column of the
@@ -192,11 +244,10 @@ or the owner has decided one, the item says so with its date.
   forbids. The acceptance line for the full adapter, kept for after 2.0: a Codex worker
   seated in a worktree a Claude Code main made through the mod, under the Git grant,
   removed only when rewake's checks pass.
-- **Stage 6** keeps grants, permissions and the person's UI. The key probe of the worker
-  tabs (P15) runs beside stage 4's probe (decided by main, October 13, 2026), needing only
-  a mod: whether a
-  rewake wrapper owns a pseudo-terminal changes every adapter's launch, and stage 4's
-  launch should not be built in a way that rules it out.
+- **Stage 6** keeps grants, permissions and the rest of the person's UI — the room panel,
+  the space's tab beyond its least form, the limits on main creating spaces. P15 has moved
+  beside stage 4's probe: whether a rewake process owns a pseudo-terminal changes every
+  adapter's launch, and the space needs it in stage 4.
 - **Headless and background workers** (row 18) stay unscheduled, and P16 with them
   (decided by main, October 13, 2026); it runs only if the owner takes them up.
 - **Stage 7** is unchanged but for its mixed pair, which becomes Claude Code with pi, since

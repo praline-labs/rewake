@@ -313,6 +313,10 @@ marked:
   `classic.WorktreeRemove` keeping a checkout a rewake session of any harness sits in; if
   Claude Code's removal respects a `git worktree lock` rewake takes, its own checkout is the
   simpler choice (P12). Either way most of the adapter's own worktree launch goes.
+- **The target** the owner set the same day is a space: main creates a pseudo-terminal rewake
+  owns, shown as a tab in main's Claude Code, a worktree may be made in it, and a worker is
+  seated there; stage 4's first end to end is that flow with a Claude Code worker, if P11,
+  P12 and P15 allow ([the target](stage4-audit.md#the-target-a-space)).
 - **Worker tabs**: the pseudo-terminal belongs to the worker's rewake wrapper, so any
   harness can be hosted, and the mod draws it and forwards keys; P15 runs beside stage 4's
   probe (decided by main).

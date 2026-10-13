@@ -177,7 +177,9 @@ Weighed in the stage 4 audit, October 13, 2026
 pseudo-terminal belongs to the worker's own rewake wrapper, so a tab can host a worker of
 any harness, Codex and pi included, and a button appears when main launches a worker, not
 only on "+"; a reload of the mod or main's exit loses the view, not the worker. Main
-launching workers is a new authority and the owner's decision. The probe above is P15 of
+launching workers is a new authority; the owner made it the target the same day — main
+creates a space, a tab over a pseudo-terminal rewake owns, and seats a worker in it
+([the target](stage4-audit.md#the-target-a-space)). The probe above is P15 of
 [design-claude.md](design-claude.md#the-stage-4-probe), which runs beside stage 4's probe by
 main's decision of the same day.
 
