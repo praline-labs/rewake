@@ -139,10 +139,13 @@ also the plain noun the core's tests use for their fakes (`nameWords` in
 The `go test` line carries two tests of the shape of the code and the documents.
 `internal/layout_test.go` holds the import rule of 2.0 over every build variant, with
 and without `-race`, keeps harness names inside the adapters and forbids a registry of
-adapters; its exception tables shrink as stage 3 moves packages. An entry records how many findings it excuses
-and which, so one added beside them fails, and an entry nothing matches fails.
+adapters ([docs/rules/layout.md](docs/rules/layout.md)). Its exception tables are empty; an
+entry, if one is ever needed, records how many findings it excuses and which, so one added
+beside them fails, and an entry nothing matches fails.
 `docs/rules_test.go` requires every rule in `docs/rules/` to name tests that exist, that
-`go test` would take for tests, and that a `go test` of the five checks reaches and builds.
+`go test` would take for tests, and that a `go test` of the five checks reaches and builds;
+a `Gap:` line fails, so a clause no test can hold yet is stated in its rule as a known
+limit, dated, with the stage that owns it.
 
 And `go test` inherits this session's `REWAKE_*` variables unless they are
 cleared. Clear them: the risk is not a red run but a test writing into the
@@ -223,7 +226,9 @@ evidence: re-measure it, or say it was taken under load.
 
 Live runs happen in a separate `/tmp` directory with its own `REWAKE_DIR`. From a
 session's shell a live launch goes through `env -u REWAKE_SESSION -u REWAKE_EPOCH`,
-since rewake refuses to start a harness inside a session with exit 2. Never
+since rewake refuses to start a harness inside a session with exit 2. A room belongs to
+one build of rewake: a build of the working tree refuses to change a room that sessions of
+another build hold, so a live run of a new build takes a `REWAKE_DIR` or a room of its own. Never
 touch the harness sessions the owner is working in. Codex runs spend
 subscription quota: cheap model, short messages, warn the owner first.
 
@@ -308,6 +313,40 @@ The principles are in `docs/project.md`; where they live in the code:
 - A command builds a model and prints it through `printValue`, which gives the lines
   or that same model under `--json`.
 - Every example in the table is a real invocation; a test parses each of them.
+- Every parsed form carries its class, view or change, in the command table
+  (`internal/cli/access.go`); a form is the command with the flags that change what it
+  does, so `inbox` and `inbox --owed` are two. A table test fails on a form without one.
+  A view writes nothing and takes no lease; a change holds the room's build lease from its
+  build check to its last effect, the printing of its answer included.
+
+## The state directory and builds
+
+The base is `$REWAKE_DIR` (by default `rewake-<uid>` in the system's temporary directory);
+2.0 keeps everything under its root `v2/`, each room at `v2/rooms/<room>`, and reads the
+1.x tree only for the first launch to clear it. No resolver creates a directory: a launch's
+bootstrap makes the room under its lease. The rules, with their tests, are
+[docs/rules/state.md](docs/rules/state.md):
+
+- **One build per room.** The build id is the SHA-256 of the running executable; every
+  writer holds `build.lock` shared and checks `build` before its first effect, and a launch
+  of another build takes it exclusive only when nothing holds it (`internal/infra/build`).
+- **Every write goes through `internal/infra/state`.** Its primitives refuse with
+  `ErrNoLease` when the process holds no lease for the room the path lies in, and with
+  `ErrViewWrite` in a view; a static test (`internal/infra/state/bypass_test.go`) fails on
+  a write anywhere else under `internal/` unless its table names it with a reason. A test
+  that writes a room has it made and leased by `buildtest.Room`
+  (`internal/infra/build/buildtest`), as a launch of the test binary would.
+- **The fault seam** is the `rewakefault` build of `internal/infra/state`: a binary built
+  with the tag takes faults from `REWAKE_FAULT` — a crash, a failure or a hold before the
+  n-th durable step, a failed read — so a test can break a step of a process it does not
+  run itself (`internal/infra/state/fault_build.go`). A release is never built with it.
+
+An outcome rewake cannot prove — a report that may or may not have arrived — stops the
+mailbox until evidence settles it or a decision is recorded:
+`rewake decide <name> <report> --arrived | --not-arrived`, by the recipient's run or the
+person, kept as a decision and never as evidence; deciding "not arrived" sends the report
+again. Its rules are D1–D8 in [docs/rules/effects.md](docs/rules/effects.md), its contract
+[docs/v2/stage3-decision.md](docs/v2/stage3-decision.md).
 
 ## Code
 
