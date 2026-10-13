@@ -221,7 +221,12 @@ process runs below the wrapper of api."
   answer adds the operation, so two reports are never confused.
 - **Listing.** One line per subject: the report, its recipient and run, what it answers,
   the path whose reading failed and why, whether decided, and the parent decision for a
-  resend; then the undecidable occurrences. It reads only the sender's mailbox — a decision included after its
+  resend; then the undecidable occurrences. A decided subject settles exactly what the
+  stop's reader takes as settled — the occurrences a durable decision names — so an
+  occurrence about a decided report recorded after its decision, or any while the decision
+  is not durable yet, is listed as undecidable beside the decided subject, and every view
+  derived from the listing (`list`, the answer's `stopped`) calls the mailbox stopped; no
+  second decision is offered, since a decision is never replaced. It reads only the sender's mailbox — a decision included after its
   journal's retention — and takes no lock, lease or wrapper request, installs nothing and
   runs no barrier: what a decided subject's recipient holds now is not looked up. A
   decision seen before its effects shows as recorded with its resend, tail and notes

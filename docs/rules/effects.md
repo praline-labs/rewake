@@ -331,6 +331,8 @@ decision settles the stop without being evidence.
   - `internal/core/mail/stop_settled_test.go` `TestAReportNeverHeldIsMootOnceItsRunEnded`
   - `internal/core/mail/stop_settled_test.go` `TestAResolvedRecordThatDoesNotReadStopsTheBarrier`
   - `internal/core/mail/decision_view_test.go` `TestDecisionDisposesOnlyTheOccurrencesItNames`
+  - `internal/core/mail/decision_listing_test.go` `TestDecisionListingNamesEveryOccurrenceTheDecisionDoesNotDispose`
+  - `internal/cli/decide_undisposed_test.go` `TestEveryStopViewNamesAnOccurrenceTheDecisionDoesNotDispose`
   - `internal/core/mail/decision_recovery_test.go` `TestDecisionPrecedesAllRecoveryEvidence`
   - `internal/core/mail/decision_world_test.go` `TestDecisionCopiesFollowWorldTruth`
 

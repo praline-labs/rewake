@@ -48,39 +48,48 @@ type Undecidable struct {
 func ListDecisions(dir, name string) (DecisionListing, error) {
 	w := live(dir)
 	var listing DecisionListing
-	decided := map[string]bool{}
+	decided := map[string]*SubjectView{}
 	views, err := Decisions(dir, name)
 	if err != nil {
 		listing.Undecidable = append(listing.Undecidable, Undecidable{Path: decisionsRoot(dir, name), Why: err.Error()})
 	}
 	for _, view := range views {
-		decided[view.Report] = true
 		path := DecisionPath(dir, name, view.Report)
 		if view.Decision == nil {
+			decided[view.Report] = &SubjectView{}
 			listing.Undecidable = append(listing.Undecidable, Undecidable{Path: path, Why: fmt.Sprintf("the decision does not read, so it settles nothing and nothing can replace it: %v", view.Err)})
 			continue
 		}
-		listing.Subjects = append(listing.Subjects, SubjectView{
+		subject := SubjectView{
 			Subject: view.Decision.Subject, Decided: &view, Durable: w.durable(path, *view.Decision),
 			Answers: answersOf(*view.Decision),
-		})
+		}
+		listing.Subjects = append(listing.Subjects, subject)
+		decided[view.Report] = &subject
 	}
 	open, _, err := w.openOccurrences(name)
 	if err != nil {
 		listing.Undecidable = append(listing.Undecidable, Undecidable{Path: stopsPath(dir, name), Why: err.Error()})
+	}
+	// What a decision settles is what the stop's one reader takes as settled
+	// (stopState): the exact occurrences a durable decision names. Any other
+	// occurrence still stops the mailbox, whatever report it is about.
+	disposed, err := w.disposals(name)
+	if err != nil {
+		listing.Undecidable = append(listing.Undecidable, Undecidable{Path: decisionsRoot(dir, name), Why: err.Error()})
 	}
 	byReport := map[string][]openStop{}
 	var reports []string
 	for _, stop := range open {
 		report := stop.reportOf()
 		switch {
+		case stop.disposedBy(disposed):
 		case stop.unreadable != nil:
 			listing.Undecidable = append(listing.Undecidable, Undecidable{Path: stop.path(dir, name), Why: stop.describe(dir, name)})
 		case report == "":
 			listing.Undecidable = append(listing.Undecidable, Undecidable{Path: stop.path(dir, name), Why: "about no one report, so no decision settles it: " + stop.describe(dir, name)})
-		case decided[report]:
-			// The decision's own entry speaks for the report; one of its
-			// occurrences it does not dispose is found again by the barrier.
+		case decided[report] != nil:
+			listing.Undecidable = append(listing.Undecidable, Undecidable{Path: stop.path(dir, name), Why: undisposedWhy(dir, name, stop, *decided[report])})
 		default:
 			if _, seen := byReport[report]; !seen {
 				reports = append(reports, report)
@@ -110,6 +119,20 @@ func ListDecisions(dir, name string) (DecisionListing, error) {
 	}
 	sort.SliceStable(listing.Subjects, func(i, j int) bool { return listing.Subjects[i].Subject.Report < listing.Subjects[j].Subject.Report })
 	return listing, nil
+}
+
+// undisposedWhy says why an occurrence about a decided report still stops
+// the mailbox: the decision is not durable yet, so it disposes nothing yet,
+// or it does not name the occurrence, and no decision replaces it. Evidence
+// resolves it either way, as for any occurrence.
+func undisposedWhy(dir, name string, stop openStop, view SubjectView) string {
+	switch {
+	case view.Decided == nil:
+		return fmt.Sprintf("about report %s, whose decision does not read, so nothing disposes it: %s", stop.reportOf(), stop.describe(dir, name))
+	case !view.Durable:
+		return fmt.Sprintf("about report %s, whose decision %s is not durable yet, so it disposes nothing until the next barrier makes it durable: %s", stop.reportOf(), view.Decided.Decision.ID, stop.describe(dir, name))
+	}
+	return fmt.Sprintf("about report %s, whose decision %s does not dispose this occurrence and cannot be replaced, so only evidence resolves it: %s", stop.reportOf(), view.Decided.Decision.ID, stop.describe(dir, name))
 }
 
 // answersOf is what a decided report answers, from the resend the decision
