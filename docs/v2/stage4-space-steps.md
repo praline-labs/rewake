@@ -36,7 +36,10 @@ the hosted launch, the mod's endpoint, closing — also get the Codex side's acc
   with the same end id and taken once; a failed one reported as failed.
 - `internal/adapter/claude`: the embedded mod written into the run directory and named by
   `--plugin-dir`, the mod socket's path in the environment, `--session-id` from
-  `ConversationNamer`; the protocol's generated files equal to a fresh generation.
+  `ConversationNamer`.
+- `tools/protogen`: the protocol's generated files equal to a fresh generation, and the
+  generator refusing any word of the schema it does not read. The test lives beside the
+  generator, since no layer of `internal/` may import a tool.
 - The mod itself: a Go test runs `claude plugin validate` and `claude plugin test` on the
   written tree when a Claude Code of at least the minimum version is on `PATH`, and skips
   naming why when not; the mod's own tests (`*.test.ts`) drive the keeper's hold, the

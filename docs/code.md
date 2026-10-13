@@ -37,6 +37,7 @@ internal/core/session/                        optional, epoch-scoped observation
 internal/adapter/                             the adapter API: the Harness interface, the catalogue value, launch plans, version gates, flags, defaults, settings
 internal/adapter/catalog/                     the one constructor of the catalogue, which cmd/rewake builds and hands to the CLI
 internal/adapter/claude/                      launch arguments, environment, socket delivery
+internal/adapter/claude/modhost/              the wrapper's end of the mod's protocol; for now the types tools/protogen writes from internal/adapter/claude/mod/protocol.schema.json
 internal/adapter/fixture/                     the test harness behind rewakefixture: a scripted program over a socket, every contract interface
 internal/host/                                wrapper: launch, signals, lifecycle
 internal/host/launch/                         a launch's host side: the run's environment, the version read before the claim, the bounded probe, the aliases a short name expands to
@@ -53,6 +54,7 @@ test/upgraderig/                              the clearing of 1.x between real p
 test/upgraderig/standin/                      the stand-in of 1.x the rig runs: rooms, launch locks, records and letters made as 1.x makes them
 tools/checksummary/                           summarizes a suite run into a few lines and summary.json
 tools/release/                                the release gate: checks, builds with pack.sh, publishes only when told
+tools/protogen/                               writes the mod protocol's Go and TypeScript types from its schema; its test fails when a checked-in file differs
 ```
 
 `cmd/` holds only what the project ships; `tools/` holds development programs that ship
