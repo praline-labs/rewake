@@ -98,7 +98,7 @@ func SetKeeper(dir, id, agent string) (Record, error) {
 // SetCheckout records where the worker will run, before it starts.
 func SetCheckout(dir, id string, checkout Checkout) (Record, error) {
 	return change(dir, id, "recording the checkout", func(r *Record) error {
-		if r.State != Opening || (r.Checkout.Path != "" && r.Checkout != checkout) {
+		if r.State != Opening || checkout.Path == "" || (r.Checkout.Path != "" && r.Checkout != checkout) {
 			return errStep
 		}
 		r.Checkout = checkout

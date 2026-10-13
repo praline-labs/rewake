@@ -121,6 +121,9 @@ func TestTheStatesMoveInTheirOrder(t *testing.T) {
 	if _, err := SetKeeper(dir, record.ID, "agent-1"); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := SetCheckout(dir, record.ID, Checkout{}); !errors.As(err, &step) {
+		t.Fatalf("an empty checkout: %v", err)
+	}
 	checkout := t.TempDir()
 	if _, err := SetCheckout(dir, record.ID, Checkout{Path: checkout, Branch: "worktree-agent-1"}); err != nil {
 		t.Fatal(err)
