@@ -12,7 +12,7 @@ import (
 
 // After an interim turn end, rewake holds the next turn end that carries no
 // mark, once, where the harness can continue a turn, and asks the session
-// whether the work is done (docs/turn-outcomes.md#the-confirmation-on-claude-code). Two records
+// whether the work is done (docs/turn-outcomes.md). Two records
 // serve it, beside the pending marks and like them changed only under the
 // mailbox lock: interim.json (interim.go), which makes an unmarked end worth
 // asking about, and kept.json, which keeps the answer of the turn end that was

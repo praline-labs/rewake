@@ -244,9 +244,9 @@ func (rules ignoreRules) decide(path string, isDir bool) bool {
 
 // opens says whether a wholly ignored directory is worth listing: a pattern
 // names a path in it, or it itself. A pattern that may match at any depth
-// does not open it, as in Claude Code: it matches files in tracked
-// directories, which are listed one by one already, and opening every ignored
-// directory for it would walk a node_modules.
+// does not open it, as in the harness that reads IncludeFile too: it matches
+// files in tracked directories, which are listed one by one already, and
+// opening every ignored directory for it would walk a node_modules.
 func (rules ignoreRules) opens(dir string) bool {
 	if rules.matches(dir, true) {
 		return true

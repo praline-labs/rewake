@@ -32,9 +32,10 @@ type Window struct {
 // Coalescing is the window a wrapper serves its mailbox with. A sender waits
 // five seconds for a status by default, and a letter must be announced inside
 // that wait for its send to answer delivered: the cap, plus the first
-// collection, plus the harness taking the notice — up to 300 ms of silence on
-// Claude Code — has to stay under five. At five the first letter of a stream
-// would come back pending nearly every time; at four it does not. The cap
+// collection, plus the harness taking the notice — up to 300 ms of silence
+// where its gate waits for a word (docs/delivery-adapters.md) — has to stay
+// under five. At five the first letter of a stream would come back pending
+// nearly every time; at four it does not. The cap
 // counts from when the letter was written, not from when this server first saw
 // it: the pass that sees it comes up to a collection later, and a send that
 // began waiting at the write would lose that margin.

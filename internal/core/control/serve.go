@@ -15,7 +15,7 @@ import (
 // itself, holding the harness's connection: the fixture's run since S11,
 // carrying each request to its program while Control is live there; S13 moves
 // the package to the core. It follows
-// the same steps as the Claude Code module (docs/remote-control.md): take a
+// the steps every served side follows (docs/remote-control.md): take a
 // request, mark it taken, check it is still in place, act, and write the answer
 // once. One request at a time: act runs on this goroutine, and the asker's lock
 // lets no second request in meanwhile. withdrawn is given the answer Serve

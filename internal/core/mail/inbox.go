@@ -5,7 +5,7 @@ A sender writes a file into the receiver's mailbox; the process that serves that
 mailbox — the wrapper holding the harness — delivers it and writes back a status
 the sender reads. Files, not a socket, because a sandboxed agent may write into
 /tmp but may not connect to a socket at all. The same path therefore works
-from a plain shell, from a Claude Code tool call and from inside the sandbox.
+from a plain shell, from a harness's tool call and from inside the sandbox.
 */
 package mail
 

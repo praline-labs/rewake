@@ -12,9 +12,10 @@ const MaxName = 250
 
 // ValidName says whether a name may name a checkout and its branch: a branch
 // name git check-ref-format --branch takes, slashes included, written only in
-// ASCII letters, digits, ., _, - and /. The characters are Claude Code's for
-// its own worktree names; they leave out +, which stands for the slash in the
-// directory's name, so two names never share a directory, and whatever a
+// ASCII letters, digits, ., _, - and /. The characters are those a harness
+// takes for its own worktree names (docs/worktree.md); they leave out +,
+// which stands for the slash in the directory's name, so two names never
+// share a directory, and whatever a
 // shell would read, so a name goes into the commands a refusal prints as it
 // is. Beyond git's rules it is not HEAD or forty hex digits, which git reads
 // as something other than a branch, does not end in .json, which would be
@@ -43,7 +44,7 @@ var (
 const NameRule = "a branch name git takes, feat/login say, of ASCII letters, digits, ., _, - and /, at most 250 of them; not HEAD or forty hex digits, which git reads as something other than a branch, and not ending in .json"
 
 // flatName is the name as one path element, for the checkout's directory and
-// its record: a slash becomes +, which no name holds, as Claude Code names
+// its record: a slash becomes +, which no name holds, as that harness names
 // the directory of a worktree whose name has a slash. Nested directories
 // instead would put a checkout inside another's directory when one name is
 // below another, feat and feat/login, and a record among that checkout's

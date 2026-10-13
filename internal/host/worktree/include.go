@@ -14,17 +14,18 @@ import (
 )
 
 // IncludeFile names, at the top of a repository, the ignored files a new
-// checkout gets a copy of: a .env, a local configuration. Claude Code reads
-// the same file for its own worktrees, and one file serves both.
+// checkout gets a copy of: a .env, a local configuration. A harness may read
+// the same file for its own worktrees (docs/worktree.md), and one file serves
+// both.
 const IncludeFile = ".worktreeinclude"
 
 // include copies into a new checkout the files of the source that git ignores
-// and IncludeFile matches, as Claude Code 2.1.280 does for its worktrees: a
+// and IncludeFile matches, as a harness that reads it does for its own: a
 // copy, never a link, of regular files only — a symbolic link is skipped. The
 // copy is best effort: a file that cannot be copied is named in Skipped and
 // the checkout stands without it.
 //
-// The listing follows Claude Code's: the ignored entries of the source with
+// The listing follows that harness's: the ignored entries of the source with
 // wholly ignored directories collapsed, so a node_modules no pattern names is
 // never walked; a collapsed directory is opened only when a pattern names a
 // path in it, or it itself.

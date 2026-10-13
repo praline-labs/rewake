@@ -8,8 +8,8 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-// A harness can take a notice and keep it from the agent: Claude Code parks a
-// cross-session line it will not act on yet and says so to a reply address
+// A harness can take a notice and keep it from the agent: park a
+// cross-session line it will not act on yet and say so to a reply address
 // (docs/delivery-adapters.md). Such a notice is held, not delivered. Its message stays
 // where a delivered one would not — the waiting copy and the readable one both
 // remain — until the harness reports how the hold ended, and only then is the

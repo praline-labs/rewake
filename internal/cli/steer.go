@@ -131,9 +131,9 @@ func steer(ctx *Context, call Call, action string) error {
 		return failf("%s's control is not live: its run has not proven, or has lost, the way to carry a request into it, so a %s would reach nothing; nothing was asked. rewake list --json shows what each run has live.", session.Name, action)
 	}
 
-	// An Esc or Ctrl+C on the calling session ends this shell call with
-	// SIGTERM, and SIGKILL 1.5 s later (docs/research-claude-control.md); the
-	// request is withdrawn on the way out rather than left for a stalled target
+	// An interrupt of the calling session may end this shell call with
+	// SIGTERM, and SIGKILL soon after (docs/remote-control.md, an asker cut
+	// short); the request is withdrawn on the way out rather than left for a stalled target
 	// to carry out later, unseen. SIGKILL cannot be caught.
 	asking, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

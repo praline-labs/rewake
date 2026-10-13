@@ -27,8 +27,8 @@ var builtLetterWait string
 // letterBound bounds how long main's wrapper waits for any word of a
 // compaction main asked for while its worker lives on, and for the end of one
 // its worker last said was still running. It is well past the 10 minutes a
-// worker's wrapper may wait for a compaction's end, and gives a Claude Code
-// compaction — whose host call rewake does not bound — as long; a compaction
+// worker's wrapper may wait for a compaction's end, and gives a compaction
+// whose harness call rewake does not bound as long; a compaction
 // still running past it is shown by rewake list.
 var letterBound = 15 * time.Minute
 
