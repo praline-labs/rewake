@@ -36,6 +36,15 @@ type ProcessService interface {
 	Done() <-chan struct{}
 }
 
+// HarnessWatcher is a service that serves the harness process itself and
+// checks each request by its peer: the host names the process it started,
+// with its start time, as soon as it is running. A request that comes before
+// is held until then or refused; a peer that is not that process is refused
+// (docs/v2/design-api.md#the-harness-process).
+type HarnessWatcher interface {
+	HarnessStarted(RunProcess)
+}
+
 // Wake brings a notice to the running session and says what happened: it
 // delivers, or answers held with the harness's reason, or failed
 // (docs/v2/design-api.md#wake). The host's delivery loop decides what to send

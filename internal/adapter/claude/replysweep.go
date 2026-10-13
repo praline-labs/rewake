@@ -19,8 +19,8 @@ const replySuffix = ".reply.sock"
 // as its owner's death.
 const replyGrace = 5 * time.Second
 
-// sweepReplies removes the reply sockets of wrappers that died without closing
-// their lane — killed, say — which nothing else would ever remove. A socket
+// sweepReplies removes the reply sockets and mod sockets of wrappers that died
+// without closing them — killed, say — which nothing else would ever remove. A socket
 // counts as dead only when a dial is refused: nobody listens there any more.
 // A file that merely exists, or a dial that fails some other way, proves
 // nothing, and that socket stays. So does a young one: a socket is bound before
@@ -32,7 +32,8 @@ func sweepReplies(dir string) {
 		return
 	}
 	for _, entry := range entries {
-		if !strings.HasSuffix(entry.Name(), replySuffix) || entry.Type()&os.ModeSocket == 0 {
+		name := entry.Name()
+		if !strings.HasSuffix(name, replySuffix) && !strings.HasSuffix(name, modSuffix) || entry.Type()&os.ModeSocket == 0 {
 			continue
 		}
 		path := filepath.Join(dir, entry.Name())

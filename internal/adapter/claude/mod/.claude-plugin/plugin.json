@@ -1,0 +1,6 @@
+{
+  "name": "rewake",
+  "version": "2.0.0",
+  "author": { "name": "rewake" },
+  "description": "rewake's part inside the harness: it reports each load to the run's wrapper over the run's mod socket."
+}

@@ -60,12 +60,16 @@ S4-7, SP6 with S4-8, SP1 and SP8 with S4-9.
 - **SP4. Only main's harness process reaches main's space host.** Every request of the mod's
   protocol is checked by its peer on its own, as T2's transport is; a descendant is refused.
 
-  Held today for the endpoint's tool transport, the check the mod's endpoint takes over:
-  only the transport's own process is served, a process below it is refused before anything
-  runs, and the peer is checked again before the answer. Known limit, recorded on October
-  13, 2026, owned by S4-5, which builds the mod's endpoint: the same check on every request of
-  the mod's protocol on the mod socket.
+  Held for the mod's socket since S4-5, October 13, 2026: every request is a connection of its
+  own, its peer read by `SO_PEERCRED`; only the harness process the host started, alive with
+  its start time, is served, a process below it or beside it of the same user is refused
+  whatever it asks, a request before the host names the harness waits within a bound, and the
+  peer is checked again before the answer. Held as well for the endpoint's tool transport.
   Tests:
+  - `internal/adapter/claude/modhost/server_test.go` `TestOnlyTheHarnessesOwnProcessIsServed`
+  - `internal/adapter/claude/modhost/server_test.go` `TestAReplacedHarnessIsNotServed`
+  - `internal/adapter/claude/modhost/server_test.go` `TestARequestBeforeTheHarnessIsNamedWaits`
+  - `internal/adapter/claude/modhost/server_test.go` `TestEveryRequestIsAConnectionOfItsOwn`
   - `internal/host/endpoint/transport_test.go` `TestOnlyTheTransportsOwnProcessIsServed`
   - `internal/host/endpoint/transport_test.go` `TestAnAnswerGoesOnlyToTheTransportThatAsked`
 

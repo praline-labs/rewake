@@ -270,6 +270,9 @@ func Run(ctx context.Context, request Request) (int, error) {
 		_ = registry.Modify(request.Dir, name, epoch, func(record *registry.Session) {
 			record.HarnessPID, record.HarnessStart = session.HarnessPID, session.HarnessStart
 		})
+		if watcher, ok := plan.Service.(adapter.HarnessWatcher); ok {
+			watcher.HarnessStarted(adapter.RunProcess{PID: session.HarnessPID, Start: session.HarnessStart})
+		}
 	}
 	if process != nil {
 		watchCtx, stopWatching := context.WithCancel(ctx)

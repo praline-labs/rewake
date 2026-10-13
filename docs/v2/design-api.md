@@ -60,6 +60,16 @@ Everything the catalogue says about a harness today, less the registry: `ID`, `T
   name no harness ([design.md](design.md#the-test-that-holds-it)).
 - **Resume and worktree**, as `Resumer` and `WorktreeHarness` do today.
 
+### The harness process
+
+A service that serves the harness process itself — an endpoint whose every request is
+checked by its peer — implements `HarnessWatcher`: the host names the process it started,
+with its start time, as soon as `exec` returns, before it waits for anything else. Until
+then a request is held, within a bound, and refused after it; from then on a peer that is
+not that process, alive with that start, is refused. A launch through `--command` names the
+wrapper script it started, so a harness the script runs as a child is not the named process
+and is refused: such a run's mod is never admitted.
+
 ### Wake
 
 Given a notice — its kind line, preview and members — and the run, it delivers and

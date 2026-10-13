@@ -4,9 +4,11 @@ package claude
 
 import (
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/adapter/claude/modhost"
 	"github.com/praline-labs/rewake/internal/core/brief"
 	"github.com/praline-labs/rewake/internal/core/role"
 )
@@ -54,6 +56,9 @@ var childMarkers = []string{
 	"CLAUDE_PLUGIN_DATA",
 	"CLAUDE_EFFORT",
 	"CLAUDE_CODE_SUBAGENT_MODEL",
+	// A run's mod socket is its own: one inherited from the run a session
+	// was started from names a socket that serves another harness.
+	modSocketEnv,
 }
 
 // dialTimeout bounds one delivery attempt. The socket is local, so a connection
@@ -206,14 +211,29 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 
 	wake := newLane(socket, reply, owns)
 	wake.room = request.RoomDir
+	var service adapter.Service = wake
+	env := request.Env
+	modSocket := modSocketPath(request)
+	if len(modSocket) > maxSocketPath {
+		notes = append(notes, "not loading the rewake mod: its socket path "+modSocket+" is longer than a unix socket allows")
+	} else if request.RunDir != "" && request.Socket != "" {
+		// The mod is this run's alone: written into its directory, loaded
+		// by this launch's flag, its socket named in this launch's
+		// environment.
+		args = adapter.AddFlags(args, pluginDirFlag, modDir(request.RunDir))
+		env = withEnv(env, modSocketEnv, modSocket)
+		service = &modRun{lane: wake, dir: modDir(request.RunDir), socket: modSocket, server: modhost.New(modhost.Config{
+			Socket: modSocket, Role: request.Role.ID, Record: filepath.Join(request.RunDir, "hello.json"), Wait: harnessWait,
+		})}
+	}
 	return adapter.LaunchPlan{
 		Command:    request.Program("claude"),
 		Args:       args,
-		Env:        request.Env,
+		Env:        env,
 		Socket:     socket,
 		OwnsSocket: owns,
 		Notes:      notes,
-		Service:    wake,
+		Service:    service,
 		Wake:       wake,
 	}, nil
 }

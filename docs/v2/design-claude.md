@@ -49,9 +49,26 @@ launch only. Nothing in the person's settings changes (L1); the directory goes w
 run (L3) and is one of the adapter's protected directories, so no grant reaches it. The
 environment variable that once switched mods on is not set.
 
-The module is generated or embedded by the binary and kept inside the static-analysis rules of the
-skill; a test runs the validator on the generated module (`claude plugin validate`), as
-the 1.x plugin host test does (`harness/claude/plugin_control_host_test.go`).
+The mod's files are embedded in the binary from `internal/adapter/claude/mod/` — the
+manifest, the hooks file, `hooks/rewake.ts` and the generated `protocol.gen.ts`, each named
+in the `embed` line, since a pattern skips the manifest's dot directory — and written by the
+run's service into `<run dir>/mod` before the harness starts; the launch adds
+`--plugin-dir <run dir>/mod` and names the run's mod socket in the harness's environment,
+`REWAKE_MOD_SOCKET`, replacing any inherited one, which the adapter also lists among the
+variables a run does not inherit. The socket sits beside the run's inbox socket in the room's
+`sock/`, as `<name>.<run>.mod.sock` or a hashed name within the 103 bytes a socket's path may
+take; a killed wrapper's mod socket is swept with the dead reply sockets, by a dial refused.
+Built in S4-5, October 13, 2026.
+
+The module stays inside the skill's static-analysis rules: at `session.start` it reads the
+socket's path, sends `hello` with its load's id, the session's id and the harness's version,
+and keeps the answer; outside a rewake run it reports to nobody. `modhost` answers on the
+socket, checking each request by its peer (SP4), and writes the admitted hello to
+`<run dir>/hello.json`, what a person or a live check reads of the load while the run lives.
+Three tests hold the files: the embedded copy equals the source and every file of the source
+is embedded or named as not shipped (its tests and the schema); the written mod passes
+`claude plugin validate --strict`; the module's own tests pass in `claude plugin test` with
+the kit. The last two skip, naming why, where `claude` is not installed.
 
 The plugin name gives the tools their prefix, `mcp__rewake__<name>`, which no mod can
 avoid (`.scratch/v2-recon/mods-tool-naming.md`). A person's own MCP server named
