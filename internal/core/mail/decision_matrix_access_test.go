@@ -43,6 +43,9 @@ type matrixAccess struct {
 	onStat func(path string, plan bool)
 	// onCut is told when the cut fires, before its step is made or failed.
 	onCut func()
+	// beforeLock is told each mailbox lock a live process asks for, before
+	// it waits for it.
+	beforeLock func(mailbox string)
 }
 
 func newMatrixAccess(dir string) *matrixAccess {
@@ -190,6 +193,12 @@ func (a *matrixAccess) EnsureDir(path string) error {
 }
 
 func (a *matrixAccess) Lock(ctx context.Context, mailbox string, fn func() error) error {
+	a.mu.Lock()
+	hook := a.beforeLock
+	a.mu.Unlock()
+	if hook != nil {
+		hook(mailbox)
+	}
 	return a.osAccess.Lock(ctx, mailbox, fn)
 }
 
