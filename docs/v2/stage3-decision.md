@@ -35,7 +35,8 @@ an interim or stopped one, a failure report to the sender's own name with no wai
 decision closes that report's step only: the journal's tail keeps its own `Clear`, and an
 interim decided is never turned into the work's completion. A subject is named by its
 full report id and checked against the sender's run, the recipient's run and the journal
-operation; two journals naming one report, or a report whose step is already published,
+operation — the report's own sender run included, which must be the journal's: a report
+the journal carries with another sender run, or none, is no subject; two journals naming one report, or a report whose step is already published,
 moot or decided, are no subject (Q5 of
 [stage3-decision-build.md](stage3-decision-build.md#q5-subject-scope)). A subject that
 reads is listed and decidable even while other records of the mailbox do not read.

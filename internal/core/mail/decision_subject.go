@@ -121,8 +121,12 @@ func (w world) subjectIn(name, id, report string, about []openStop) (subjectPlan
 		Sender: name, SenderRun: journal.Epoch, Journal: id, Op: journal.Op, Report: report, Kind: message.Kind,
 		Recipient: message.To, RecipientRun: message.ToEpoch,
 	}
-	if subject.SenderRun == "" || !boundedID(subject.SenderRun) || subject.Kind == "" || !state.ValidName(subject.Recipient) || !boundedID(subject.RecipientRun) || message.From != name {
-		return subjectPlan{}, refuseDecision(DecisionNoSubject, path, "report %s does not name its sender's run, its kind and its recipient's run", report)
+	// The report is the sender run's own only if it says so: one of another
+	// run, or of none, carried in this journal is no step a decision of this
+	// run may dispose.
+	if subject.SenderRun == "" || !boundedID(subject.SenderRun) || subject.Kind == "" || !state.ValidName(subject.Recipient) || !boundedID(subject.RecipientRun) ||
+		message.From != name || message.FromEpoch != journal.Epoch {
+		return subjectPlan{}, refuseDecision(DecisionNoSubject, path, "report %s does not name its sender and the journal's run, its kind and its recipient's run", report)
 	}
 	return subjectPlan{subject: subject, journal: journal, report: message, about: about}, nil
 }
