@@ -63,18 +63,6 @@ func List(dir string) ([]Record, []Problem, error) {
 	return records, problems, nil
 }
 
-// Presence is whether a kept checkout is still there.
-type Presence string
-
-// The presences of a checkout: there, gone, or not to be told.
-const (
-	There Presence = "there"
-	Gone  Presence = "gone"
-	// Unknown is a checkout whose presence cannot be told; it is reminded as
-	// if there, since a kept checkout is never forgotten (SP7).
-	Unknown Presence = "unknown"
-)
-
 // CheckoutPresence looks at the record's checkout now. Only a path that is
 // missing for real is gone: any other failure to look is unknown.
 func CheckoutPresence(r Record) Presence {

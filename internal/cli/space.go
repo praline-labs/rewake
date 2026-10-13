@@ -32,7 +32,7 @@ func spaceGroup() Group {
 			Notes: []string{
 				"Each space shows its main, its worker's name, harness and role, the session id rewake chose for the worker's conversation (none for a harness that takes none), its checkout and branch. A closed space keeps them.",
 				"States: opening — the record is written, the worker not yet seated; open — the worker runs in its checkout; closing; closed — over, no checkout left; kept — over, its checkout left. A space not over whose main has ended reads \"main ended\"; one whose main cannot be told from here reads \"main unknown\".",
-				"A kept checkout is listed with what was found in it — changes, commits, a Git lock its keeper left — and the Git commands that clear it once what is wanted is merged; each refuses rather than lose work. It stays listed until the checkout is gone, and one that cannot be looked at stays too. rewake removes none.",
+				"A kept checkout is listed with what was found in it — changes, commits, a Git lock its keeper left, or that it could not be looked at — and the Git commands that clear it once what is wanted is merged; each refuses rather than lose work. It stays listed until the checkout is gone, and one that cannot be looked at stays too. rewake removes none.",
 				"Exit 0 listed; 1 the spaces could not be read.",
 			},
 			Access:  viewForm,
@@ -160,7 +160,10 @@ func foundLabel(kept space.Reminder) string {
 		}
 	}
 	label := "nothing found in it at the close"
-	if len(found) > 0 {
+	switch {
+	case kept.Found.Presence == space.Unknown:
+		label = "it could not be looked at at the close"
+	case len(found) > 0:
 		label = strings.Join(found, ", ")
 	}
 	if kept.Presence == space.Unknown {

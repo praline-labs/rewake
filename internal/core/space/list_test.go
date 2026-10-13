@@ -25,18 +25,18 @@ func TestAKeptCheckoutIsRemindedUntilItIsGone(t *testing.T) {
 	dir := buildtest.Dir(t)
 	seated(t, dir, "open")
 	gone, goneCheckout := seated(t, dir, "gone")
-	if _, err := Close(dir, gone.ID, observed(WorkerEnded, Seen{})); err != nil {
+	if _, err := Close(dir, gone.ID, observed(WorkerEnded, Seen{Presence: Gone})); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Remove(goneCheckout); err != nil {
 		t.Fatal(err)
 	}
 	kept, keptCheckout := seated(t, dir, "kept")
-	if _, err := Close(dir, kept.ID, observed(WorkerEnded, Seen{Left: true, Changes: true, Commits: true, Locked: true})); err != nil {
+	if _, err := Close(dir, kept.ID, observed(WorkerEnded, Seen{Presence: There, Changes: true, Commits: true, Locked: true})); err != nil {
 		t.Fatal(err)
 	}
 	removed, removedCheckout := seated(t, dir, "removed")
-	if _, err := Close(dir, removed.ID, observed(WorkerEnded, Seen{Left: true, Commits: true})); err != nil {
+	if _, err := Close(dir, removed.ID, observed(WorkerEnded, Seen{Presence: There, Commits: true})); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Remove(removedCheckout); err != nil {
@@ -90,7 +90,7 @@ func TestAnUnknownCheckoutIsReminded(t *testing.T) {
 	if _, err := os.Lstat(checkout); err == nil {
 		t.Skip("this user reads past a directory's mode")
 	}
-	r := Record{State: Kept, Name: "x", Checkout: Checkout{Path: checkout}, End: &End{Checkout: Seen{Left: true}}}
+	r := Record{State: Kept, Name: "x", Checkout: Checkout{Path: checkout}, End: &End{Checkout: Seen{Presence: There}}}
 	if got := Reminders([]Record{r}); len(got) != 1 || got[0].Presence != Unknown {
 		t.Fatalf("reminders %+v, want the checkout unknown and reminded", got)
 	}
@@ -102,7 +102,7 @@ func TestTheCommandsToClearQuoteTheirWords(t *testing.T) {
 	if err := os.MkdirAll(checkout, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	r := Record{State: Kept, Name: "x", Checkout: Checkout{Path: checkout}, End: &End{Checkout: Seen{Left: true}}}
+	r := Record{State: Kept, Name: "x", Checkout: Checkout{Path: checkout}, End: &End{Checkout: Seen{Presence: There}}}
 	quoted := "'" + strings.ReplaceAll(checkout, "'", `'\''`) + "'"
 	if got := Reminders([]Record{r}); len(got) != 1 || !slices.Equal(got[0].Clear, []string{"git worktree remove " + quoted}) {
 		t.Fatalf("reminders %+v, want the path quoted as %s", got, quoted)

@@ -146,11 +146,11 @@ func TestTheStatesMoveInTheirOrder(t *testing.T) {
 	if _, err := Opened(dir, record.ID, "5151.1800"); !errors.As(err, &step) || step.State != Closing {
 		t.Fatalf("open again while closing: %v", err)
 	}
-	got, err := Close(dir, record.ID, observed(WorkerEnded, Seen{Left: true, Changes: true}))
+	got, err := Close(dir, record.ID, observed(WorkerEnded, Seen{Presence: There, Changes: true}))
 	if err != nil || got.State != Kept {
 		t.Fatalf("closed with its checkout left: %+v, %v", got, err)
 	}
-	if _, err := Close(dir, record.ID, observed(WorkerEnded, Seen{})); !errors.As(err, &step) || step.State != Kept {
+	if _, err := Close(dir, record.ID, observed(WorkerEnded, Seen{Presence: Gone})); !errors.As(err, &step) || step.State != Kept {
 		t.Fatalf("closed twice: %v", err)
 	}
 	if _, err := Cleared(dir, record.ID); err == nil || !strings.Contains(err.Error(), "is there, not gone") {
@@ -159,7 +159,7 @@ func TestTheStatesMoveInTheirOrder(t *testing.T) {
 	if err := os.Remove(checkout); err != nil {
 		t.Fatal(err)
 	}
-	if got, err := Cleared(dir, record.ID); err != nil || got.State != Closed || got.End.Cleared == nil || !got.End.Checkout.Left {
+	if got, err := Cleared(dir, record.ID); err != nil || got.State != Closed || got.End.Cleared == nil || got.End.Checkout.Presence != There {
 		t.Fatalf("cleared once gone: %+v, %v", got, err)
 	}
 	if _, err := Cleared(dir, record.ID); !errors.As(err, &step) || step.State != Closed {
@@ -169,7 +169,7 @@ func TestTheStatesMoveInTheirOrder(t *testing.T) {
 	// An open that fails before the worker is seated closes from opening,
 	// its worker never started and no checkout left.
 	failed := created(t, dir, "web")
-	if got, err := Close(dir, failed.ID, observed(WorkerNeverStarted, Seen{})); err != nil || got.State != Closed {
+	if got, err := Close(dir, failed.ID, observed(WorkerNeverStarted, Seen{Presence: Gone})); err != nil || got.State != Closed {
 		t.Fatalf("a failed open: %+v, %v", got, err)
 	}
 }
@@ -189,12 +189,12 @@ func TestARecordClosesOnlyFromAnObservation(t *testing.T) {
 		"nothing observed":            {open.ID, End{}},
 		"no time":                     {open.ID, End{Why: "closed by main", Worker: WorkerEnded}},
 		"no worker's end":             {open.ID, End{At: time.Now(), Why: "closed by main"}},
-		"a worker's end not observed": {open.ID, observed("stopped", Seen{})},
-		"an end without a run":        {unseated.ID, observed(WorkerEnded, Seen{})},
-		"a run that never started":    {open.ID, observed(WorkerNeverStarted, Seen{})},
-		"a checkout never named":      {unseated.ID, observed(WorkerNeverStarted, Seen{Left: true})},
-		"findings in no checkout":     {open.ID, observed(WorkerEnded, Seen{Commits: true})},
-		"cleared at the close":        {open.ID, End{At: time.Now(), Why: "x", Worker: WorkerEnded, Checkout: Seen{Left: true}, Cleared: new(time.Time)}},
+		"a worker's end not observed": {open.ID, observed("stopped", Seen{Presence: Gone})},
+		"an end without a run":        {unseated.ID, observed(WorkerEnded, Seen{Presence: Gone})},
+		"a run that never started":    {open.ID, observed(WorkerNeverStarted, Seen{Presence: Gone})},
+		"a checkout never named":      {unseated.ID, observed(WorkerNeverStarted, Seen{Presence: There})},
+		"findings in no checkout":     {open.ID, observed(WorkerEnded, Seen{Presence: Gone, Commits: true})},
+		"cleared at the close":        {open.ID, End{At: time.Now(), Why: "x", Worker: WorkerEnded, Checkout: Seen{Presence: There}, Cleared: new(time.Time)}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			before := onDisk(t, dir, c.id)
@@ -248,7 +248,7 @@ func TestARecordLeftByACrashBetweenStepsCanBeClosed(t *testing.T) {
 	}
 	// The next start: main is dead, its gate never opened, the checkout is
 	// there with nothing in it.
-	end := observed(WorkerNeverStarted, Seen{Left: true, Locked: true})
+	end := observed(WorkerNeverStarted, Seen{Presence: There, Locked: true})
 	end.Why = "main ended without closing"
 	if got, err := Close(dir, record.ID, end); err != nil || got.State != Kept {
 		t.Fatalf("the next start's close: %+v, %v", got, err)
@@ -264,7 +264,7 @@ func TestANameIsFreeOnlyOnceItsSpaceIsOver(t *testing.T) {
 	if err := Create(dir, opening(t, "api")); !errors.As(err, &taken) || taken.ID != first.ID {
 		t.Fatalf("a second open of the name: %v", err)
 	}
-	if _, err := Close(dir, first.ID, observed(WorkerNeverStarted, Seen{})); err != nil {
+	if _, err := Close(dir, first.ID, observed(WorkerNeverStarted, Seen{Presence: Gone})); err != nil {
 		t.Fatal(err)
 	}
 	created(t, dir, "api")

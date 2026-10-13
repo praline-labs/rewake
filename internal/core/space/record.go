@@ -142,18 +142,32 @@ const (
 	WorkerNeverStarted WorkerEnd = "never-started"
 )
 
-// Seen is a checkout as it was found.
+// Seen is a checkout as closing found it.
 type Seen struct {
-	// Left says the checkout was still there; false, it was gone or never
-	// made.
-	Left bool `json:"left"`
-	// Changes, Commits and Locked are what was found in a checkout left:
+	// Presence is what closing saw of the checkout: there, gone or never
+	// made, or unknown when it could not be looked at. It is always set, so
+	// an observation nobody made never reads as a checkout seen gone (SP2).
+	Presence Presence `json:"presence"`
+	// Changes, Commits and Locked are what was found in a checkout there:
 	// changes or untracked files, commits beyond its base, a Git lock such
 	// as a dead keeper leaves.
 	Changes bool `json:"changes,omitempty"`
 	Commits bool `json:"commits,omitempty"`
 	Locked  bool `json:"locked,omitempty"`
 }
+
+// Presence is whether a checkout is there, as closing found it or as it is
+// looked at later.
+type Presence string
+
+// The presences of a checkout: there, gone, or not to be told.
+const (
+	There Presence = "there"
+	Gone  Presence = "gone"
+	// Unknown is a checkout whose presence cannot be told; it is kept and
+	// reminded as if there, since a kept checkout is never forgotten (SP7).
+	Unknown Presence = "unknown"
+)
 
 var (
 	idShape        = regexp.MustCompile(`^[0-9a-f]{32}$`)

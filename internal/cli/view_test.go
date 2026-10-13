@@ -97,7 +97,7 @@ func TestEveryViewLeavesMissingAndExistingStateUnchanged(t *testing.T) {
 			t.Fatal(err)
 		}
 		kept := spaceRecord(strings.Repeat("a1", 16), "kept", "kept", live.Epoch(), "", t.TempDir(),
-			`, "end": {"at": "2026-10-13T13:00:00Z", "why": "closed by main", "worker": "ended", "checkout": {"left": true, "changes": true}}`)
+			`, "end": {"at": "2026-10-13T13:00:00Z", "why": "closed by main", "worker": "ended", "checkout": {"presence": "there", "changes": true}}`)
 		for name, text := range map[string]string{strings.Repeat("a1", 16): kept, strings.Repeat("b2", 16): "{not json"} {
 			if err := os.WriteFile(state.SpacePath(dir, name), []byte(text), 0o600); err != nil {
 				t.Fatal(err)

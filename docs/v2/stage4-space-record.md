@@ -31,7 +31,7 @@ file in one write, so a crash between two steps leaves the earlier one whole.
 | `checkout` | path and branch where the worker runs |
 | `keeper` | the agent id of the keeper subagent, once its spawn answers |
 | `openedAt`, `closing` | when it opened; why it began to close |
-| `end` | what closing observed: when, why, the worker's end, the checkout as found, and when a checkout left was seen gone |
+| `end` | what closing observed: when, why, the worker's end, the checkout as found — there, gone or unknown, never left out — and when a checkout not seen gone was seen gone |
 
 The session id is a random UUID, the form the worker harness's `--session-id` takes
 ([section 4](stage4-space.md#4-the-workers-launch)). A field a later build adds is read
@@ -51,19 +51,22 @@ naming the state, and every step is written before the act it names is answered 
   names it.
 - **BeginClosing**: `opening` or `open` to `closing`, with why; a second one keeps the
   first, since main's exit is seen both by its mod and by its harness ending.
-- **Close**: any state not over to `kept`, when the checkout was found still there, or to
-  `closed`. It takes only an observation: the worker `ended` (its wrapper, which had a run,
-  seen gone) or `never-started` (no run recorded, so its gate never opened and nothing of its
-  harness ran), and the checkout found gone, never made, or left with what was in it —
-  changes, commits beyond its base, a Git lock such as a dead keeper leaves. An end that says
-  nothing, or contradicts the record, is refused. Any state may close, since the next start
+- **Close**: any state not over to `kept`, when the checkout was found still there or could
+  not be looked at, or to `closed`, when it was seen gone. It takes only an observation: the
+  worker `ended` (its wrapper, which had a run, seen gone) or `never-started` (no run
+  recorded, so its gate never opened and nothing of its harness ran), and the checkout's
+  presence, always stated — `gone` (or never made), `there` with what was in it — changes,
+  commits beyond its base, a Git lock such as a dead keeper leaves — or `unknown`. An end
+  that says nothing of either, or contradicts the record, is refused: an observation left out
+  never reads as a checkout seen gone. Any state may close, since the next start
   closes a record whatever step its dead main reached.
 - **Cleared**: `kept` to `closed`, when the checkout is seen gone at that moment; a checkout
   still there, or one that cannot be looked at, keeps the record kept.
 
 Every record, whatever step wrote it, holds its own invariants, and one read that breaks them
 is unreadable rather than half believed: an end exactly when the state is final, `open` with
-its checkout and its worker's run, `kept` exactly while a checkout left is not seen gone.
+its checkout and its worker's run, `kept` exactly while a checkout not seen gone at the close
+is not seen gone since. A closed record whose end omits the checkout's presence does not read.
 
 ## The listing
 

@@ -136,8 +136,8 @@ func BeginClosing(dir, id, why string) (Record, error) {
 }
 
 // Close records what closing observed: the worker's end and the checkout as
-// found after it. The space is kept when its checkout was left, closed
-// otherwise. A record is closed only from an observation (SP2), so an end
+// found after it. The space is kept when its checkout was found there or
+// could not be looked at, and closed only when it was seen gone. A record is closed only from an observation (SP2), so an end
 // that observed nothing is refused; any state that is not over may close,
 // since the next start closes a record whatever step its dead main reached.
 func Close(dir, id string, end End) (Record, error) {
@@ -146,7 +146,7 @@ func Close(dir, id string, end End) (Record, error) {
 			return errStep
 		}
 		r.State, r.End = Closed, &end
-		if end.Checkout.Left {
+		if end.Checkout.Presence != Gone {
 			r.State = Kept
 		}
 		return nil

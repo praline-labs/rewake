@@ -62,14 +62,18 @@ func (e End) check(r Record) error {
 		return errors.New("a worker with a run did start")
 	case e.Worker != WorkerEnded && e.Worker != WorkerNeverStarted:
 		return fmt.Errorf("%q is no observed end of a worker", e.Worker)
-	case e.Checkout.Left && r.Checkout.Path == "":
-		return errors.New("a checkout left that the record never named")
-	case !e.Checkout.Left && (e.Checkout.Changes || e.Checkout.Commits || e.Checkout.Locked):
-		return errors.New("what was found in a checkout that was not left")
-	case e.Cleared != nil && !e.Checkout.Left:
-		return errors.New("a checkout cleared that was not left")
-	case (r.State == Kept) != (e.Checkout.Left && e.Cleared == nil):
-		return errors.New("kept exactly while a checkout left is not seen gone")
+	case e.Checkout.Presence == "":
+		return errors.New("an end says how the checkout was found: there, gone or unknown")
+	case e.Checkout.Presence != There && e.Checkout.Presence != Gone && e.Checkout.Presence != Unknown:
+		return fmt.Errorf("%q is no presence of a checkout", e.Checkout.Presence)
+	case e.Checkout.Presence != Gone && r.Checkout.Path == "":
+		return errors.New("a checkout found there or unknown that the record never named")
+	case e.Checkout.Presence != There && (e.Checkout.Changes || e.Checkout.Commits || e.Checkout.Locked):
+		return errors.New("what was found in a checkout not seen there")
+	case e.Cleared != nil && e.Checkout.Presence == Gone:
+		return errors.New("a checkout cleared that was gone at the close")
+	case (r.State == Kept) != (e.Checkout.Presence != Gone && e.Cleared == nil):
+		return errors.New("kept exactly while a checkout not seen gone at the close is not seen gone since")
 	}
 	return nil
 }

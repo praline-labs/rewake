@@ -23,8 +23,10 @@ S4-7, SP6 with S4-8, SP1 and SP8 with S4-9.
   Held today in the record itself: it is written only through the state package under the
   room's lease; it begins opening with the worker fixed, takes its checkout before the worker's
   run, and moves through its states in one order, a step out of it refused; a close takes only
-  an observation — the worker seen to end or never started, the checkout found gone or left —
-  and refuses one that says nothing or contradicts the record; and a crash between two steps
+  an observation — the worker seen to end or never started, the checkout found there, gone or
+  not to be looked at — and refuses one that says nothing of either or contradicts the record,
+  and a record on disk whose end omits the checkout's observation does not read; and a crash
+  between two steps
   leaves the earlier one whole, which a later close finishes. Known limit, recorded on October
   13, 2026, owned by S4-7, which builds the open: each step written by main's wrapper before
   the act it names — the worker's launch, its gate, the open's answer; and by S4-9, which builds
@@ -34,6 +36,8 @@ S4-7, SP6 with S4-8, SP1 and SP8 with S4-9.
   - `internal/core/space/store_test.go` `TestTheStatesMoveInTheirOrder`
   - `internal/core/space/store_test.go` `TestARecordClosesOnlyFromAnObservation`
   - `internal/core/space/store_test.go` `TestARecordLeftByACrashBetweenStepsCanBeClosed`
+  - `internal/core/space/observation_test.go` `TestACloseNeedsTheCheckoutObserved`
+  - `internal/core/space/observation_test.go` `TestARecordWithoutTheCheckoutObservedDoesNotRead`
 
 - **SP3. A hosted launch inherits nothing of a session.** Its environment carries no variable
   that names main's session or a transport of main's run, and none of the worker harness's
@@ -69,7 +73,8 @@ S4-7, SP6 with S4-8, SP1 and SP8 with S4-9.
   whose checkout is still there is listed to main at its start and by `rewake space list`
   until the checkout is gone; rewake removes no checkout.
 
-  Held today for the listing: a kept checkout is reminded while it is there, and while it
+  Held today for the listing: a space closes kept when its checkout was found there or could
+  not be looked at; a kept checkout is reminded while it is there, and while it
   cannot be looked at, with what was found in it and the Git commands that clear it; one seen
   gone is not; `rewake space list` shows it beside the open and closed spaces; and the package
   that keeps the records runs no command and removes no file. Known limit, recorded on October
@@ -78,6 +83,7 @@ S4-7, SP6 with S4-8, SP1 and SP8 with S4-9.
   Tests:
   - `internal/core/space/list_test.go` `TestAKeptCheckoutIsRemindedUntilItIsGone`
   - `internal/core/space/list_test.go` `TestAnUnknownCheckoutIsReminded`
+  - `internal/core/space/observation_test.go` `TestAnUnknownCheckoutKeepsTheSpace`
   - `internal/core/space/list_test.go` `TestThePackageRemovesNoCheckout`
   - `internal/cli/space_test.go` `TestSpaceListShowsOpenClosedAndKept`
 

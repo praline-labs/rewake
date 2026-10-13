@@ -53,9 +53,9 @@ func TestSpaceListShowsOpenClosedAndKept(t *testing.T) {
 		"open":   spaceRecord(ids["open"], "open", "open", running, here, "/work/open", ""),
 		"orphan": spaceRecord(ids["orphan"], "orphan", "open", registry.RunEpoch(os.Getpid(), start+1, boot), here, "/work/orphan", ""),
 		"closed": spaceRecord(ids["closed"], "closed", "closed", running, here, "/work/closed",
-			`, "end": {"at": "2026-10-13T13:00:00Z", "why": "closed by main", "worker": "ended", "checkout": {"left": false}}`),
+			`, "end": {"at": "2026-10-13T13:00:00Z", "why": "closed by main", "worker": "ended", "checkout": {"presence": "gone"}}`),
 		"kept": spaceRecord(ids["kept"], "kept", "kept", running, here, kept,
-			`, "end": {"at": "2026-10-13T13:00:00Z", "why": "main ended without closing", "worker": "ended", "checkout": {"left": true, "commits": true, "locked": true}}`),
+			`, "end": {"at": "2026-10-13T13:00:00Z", "why": "main ended without closing", "worker": "ended", "checkout": {"presence": "there", "commits": true, "locked": true}}`),
 	}
 	if err := os.MkdirAll(state.SpacesPath(dir), 0o700); err != nil {
 		t.Fatal(err)
