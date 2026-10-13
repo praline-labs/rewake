@@ -11,10 +11,11 @@ import (
 
 // The decision's worlds (docs/v2/stage3-decision-manifest.md), each run
 // clean and then once per durable step of its clean run: killed there, and
-// with that step's flush failed. Each run is checked against the model. The
+// with that step's flush failed. What a cut leaves is whole or absent before
+// anything runs again, and each run is checked against the model. The
 // five checks run the generated pair cover of every partition; with
 // REWAKE_DECISION_MATRIX=full every feasible world runs.
-func TestDecisionWorlds(t *testing.T) {
+func TestDecisionDurabilityAtEveryCut(t *testing.T) {
 	plays := map[string]func(*testing.T, dm.World, matrixCut) []string{
 		"decision":    playDecision,
 		"resend":      playResend,

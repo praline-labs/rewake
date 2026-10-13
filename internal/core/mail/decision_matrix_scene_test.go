@@ -254,9 +254,41 @@ func (s *matrixScene) product(fn func() error) error {
 	defer s.access.arm(false)
 	err := fn()
 	if s.access.lift() {
+		s.checkWhole()
 		err = fn()
 	}
 	return err
+}
+
+// checkWhole holds what a cut left before anything runs again: every
+// decision, every record beside one and every journal a decision installs is
+// whole or absent — a write cut short is only ever an unfinished temporary.
+func (s *matrixScene) checkWhole() {
+	s.t.Helper()
+	mailboxes := filepath.Dir(state.InboxPath(s.dir, "api"))
+	entries, err := os.ReadDir(mailboxes)
+	if err != nil {
+		s.t.Fatal(err)
+	}
+	for _, mailbox := range entries {
+		for _, pattern := range []string{decisionsDir + "/*", "journal/" + resendPrefix + "*"} {
+			paths, _ := filepath.Glob(filepath.Join(mailboxes, mailbox.Name(), pattern))
+			for _, path := range paths {
+				rel, _ := filepath.Rel(filepath.Join(mailboxes, mailbox.Name()), path)
+				kind, ok := kindOf(rel)
+				if !ok || kind.parse == nil {
+					continue
+				}
+				raw, err := os.ReadFile(path)
+				if err == nil {
+					err = kind.parse(path, raw)
+				}
+				if err != nil {
+					s.t.Errorf("a cut left %s not whole: %v", rel, err)
+				}
+			}
+		}
+	}
 }
 
 // readR has r read report, if it is waiting, and lets enough time pass that

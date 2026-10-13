@@ -157,7 +157,7 @@ func (s *matrixScene) checkGenerations(t *testing.T, w dm.World, g generations, 
 		t.Fatalf("%d copies for %d decisions", len(copies), len(g.choices))
 	}
 	var chain []dm.Copy
-	landings := 0
+	landings, pathLen := 0, 0
 	for i, copied := range copies {
 		landed := i == 0 && w.Value("truth") == dm.Landed || i > 0 && g.landed(i)
 		n := s.access.written(copied.ID)
@@ -173,6 +173,14 @@ func (s *matrixScene) checkGenerations(t *testing.T, w dm.World, g generations, 
 				t.Fatalf("%d decisions on copy %d", o.decisions, i)
 			}
 			s.checkNotes(t, *o.decision, true, "")
+			// Every generation's names are as long as the first's (I7): a
+			// chain of any length never grows a path.
+			journal := len(filepath.Join(JournalPath(s.dir, "api"), ResendJournal(o.decision.ID)))
+			if i == 0 {
+				pathLen = journal
+			} else if journal != pathLen || len(copied.ID) != len(copies[0].ID) {
+				t.Errorf("generation %d: journal path %d long, the first %d; id %q", i, journal, pathLen, copied.ID)
+			}
 		}
 		chain = append(chain, c)
 	}

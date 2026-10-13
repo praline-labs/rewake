@@ -111,8 +111,11 @@ side by side; it logs the steps, makes one its cut, counts every letter written 
 mailbox by id — a letter read or swept still counts — and plays the faults a world's
 evidence names on reads. After a kill the stopped process is gone: every later step of
 it fails until the command runs again in one that is not — the barrier again, or the
-same words of the deciding command — and the rest of the schedule follows. Each run is
-then held to the model by the play's checks.
+same words of the deciding command — and the rest of the schedule follows. Before it
+does, every decision, record beside one and installed journal in the room is whole or
+absent (`checkWhole`). Each run is then held to the model by the play's checks
+(`TestDecisionDurabilityAtEveryCut`); a chain's every generation has names as long as
+the first's.
 
 The cut count of a world is the number of durable steps its clean log holds, measured on
 the matrix's first run in S18's third part:
