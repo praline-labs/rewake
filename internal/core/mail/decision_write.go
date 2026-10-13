@@ -227,22 +227,27 @@ func (w world) commitDecision(seen world, files *capture, plan subjectPlan, path
 
 // finalEvidence is the proof of the report's outcome the barrier would
 // settle it by, read in the recipient's section through the capture; "" while
-// it stays unknown. Every read is made, whatever the earlier ones gave, so
-// the decision keeps them all. With the recipient's run ended it reads them
-// as the barrier reads a held report's (endedEvidence): no mark at all is no
-// proof there, since nothing will write the report now. It is proof only as the barrier
-// reads it: the occurrences resolved by their paths, the mark read, and the
-// letter found or every stage searched — a letter found beside a mark that
-// does not read is no settlement there, since the barrier writes nothing over
-// that mark and stops on it, so a decision is what settles it.
+// it stays unknown. It reads as the barrier does, so the two never disagree: a
+// decision is refused on what the barrier settles, and made on what it cannot.
+// Every read is made, whatever the earlier ones gave, so the decision keeps
+// them all.
+//
+// The occurrences about the report are read as the barrier weighs them
+// (lookAtStop, holdsEffects): one a plan found resolves only on evidence that
+// reads, none of its paths removed; one only an effect met is run through by
+// the barrier unless a path it names was removed, and what the effect will
+// meet is the report's own evidence, read next. The report is then read as
+// the barrier delivers a held one (publishWith): with its run live, as
+// publishMarked reads it — a mark that does not read, or a letter's place that
+// cannot be searched, stops it, since the barrier writes nothing over either;
+// with its run ended, as endedEvidence settles it (endedSettlement), where
+// the letter found is proof whatever the mark says and no mark at all is none.
 func (w world) finalEvidence(plan subjectPlan) string {
 	report := plan.report
 	unknown := false
 	for _, stop := range plan.about {
-		if stop.record.Kind == causeEffect {
-			continue
-		}
-		if _, removed, err := w.evidenceOf(stop); err != nil || removed != nil {
+		_, removed, err := w.evidenceOf(stop)
+		if len(removed) > 0 || err != nil && stop.record.Kind != causeEffect {
 			unknown = true
 		}
 	}
@@ -253,18 +258,24 @@ func (w world) finalEvidence(plan subjectPlan) string {
 	}
 	found, presentErr := w.present(report.To, report.ID)
 	peer, err := registry.LookupReadOnly(w.dir, report.To)
-	if err != nil && !errors.Is(err, registry.ErrNotFound) {
+	if err != nil && !errors.Is(err, registry.ErrNotFound) || !marked || unknown {
 		return ""
 	}
-	ended := err != nil || peer.Epoch() != report.ToEpoch
-	if !marked || markErr != nil || presentErr != nil && !found || unknown {
+	if err != nil || peer.Epoch() != report.ToEpoch {
+		published, err := endedSettlement(found, presentErr, func() (string, error) { return mark, markErr })
+		switch {
+		case err != nil:
+			return ""
+		case published:
+			return "proven published"
+		}
+		return "proven not published"
+	}
+	if presentErr != nil && !found || markErr != nil {
 		return ""
 	}
 	if found || mark == oncePublished {
 		return "proven published"
-	}
-	if ended && mark == "" {
-		return ""
 	}
 	return "proven not published"
 }

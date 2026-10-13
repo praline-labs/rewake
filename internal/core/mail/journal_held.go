@@ -167,13 +167,21 @@ func (w world) endedEvidence(report Message) (bool, error) {
 		return false, errNoEvidence
 	}
 	found, err := w.present(report.To, report.ID)
+	return endedSettlement(found, err, func() (string, error) { return w.readOnceMark(path) })
+}
+
+// endedSettlement is what an ended run's evidence settles, read from the
+// letter's search and its mark, the mark read only when the letter was not
+// found: the one rule endedEvidence settles by and a decision's final read
+// refuses by (finalEvidence).
+func endedSettlement(found bool, searchErr error, readMark func() (string, error)) (bool, error) {
 	if found {
 		return true, nil
 	}
-	if err != nil {
+	if searchErr != nil {
 		return false, errNoEvidence
 	}
-	switch mark, err := w.readOnceMark(path); {
+	switch mark, err := readMark(); {
 	case err != nil || mark == "":
 		return false, errNoEvidence
 	case mark == oncePublished:

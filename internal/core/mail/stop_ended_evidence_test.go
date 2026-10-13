@@ -109,13 +109,14 @@ func TestEndedEvidenceReadsOnlyProof(t *testing.T) {
 		published bool
 		none      bool
 	}{
-		"the letter, no mark":         {func(s *matrixScene, r Message) { s.landDirect(r) }, true, false},
-		"the letter read, no mark":    {func(s *matrixScene, r Message) { s.landDirect(r); s.readR(r) }, true, false},
-		"a published mark":            {func(s *matrixScene, r Message) { s.writeMark(r, oncePublished) }, true, false},
-		"an intent, no letter":        {func(s *matrixScene, r Message) { s.writeMark(r, onceIntent) }, false, false},
-		"nothing":                     {func(*matrixScene, Message) {}, false, true},
-		"a mark that does not read":   {func(s *matrixScene, r Message) { s.writeMark(r, "damaged") }, false, true},
-		"an intent, its place faulty": {func(s *matrixScene, r Message) { s.writeMark(r, onceIntent); s.faultLetter(r.ID) }, false, true},
+		"the letter, no mark":          {func(s *matrixScene, r Message) { s.landDirect(r) }, true, false},
+		"the letter read, no mark":     {func(s *matrixScene, r Message) { s.landDirect(r); s.readR(r) }, true, false},
+		"the letter, its mark damaged": {func(s *matrixScene, r Message) { s.landDirect(r); s.writeMark(r, "damaged") }, true, false},
+		"a published mark":             {func(s *matrixScene, r Message) { s.writeMark(r, oncePublished) }, true, false},
+		"an intent, no letter":         {func(s *matrixScene, r Message) { s.writeMark(r, onceIntent) }, false, false},
+		"nothing":                      {func(*matrixScene, Message) {}, false, true},
+		"a mark that does not read":    {func(s *matrixScene, r Message) { s.writeMark(r, "damaged") }, false, true},
+		"an intent, its place faulty":  {func(s *matrixScene, r Message) { s.writeMark(r, onceIntent); s.faultLetter(r.ID) }, false, true},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {

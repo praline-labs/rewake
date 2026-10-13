@@ -416,6 +416,7 @@ what a decision may settle instead.
   - `internal/core/mail/decision_decide_test.go` `TestDecideRefusesWithNothingWritten`
   - `internal/core/mail/decision_decide_test.go` `TestDecideOnABusyMailboxWritesNothing`
   - `internal/core/mail/decision_decide_ended_test.go` `TestDecideOnAHeldReportOfAnEndedRunReadsItsEvidence`
+  - `internal/core/mail/decision_final_agree_test.go` `TestDecisionFinalReadAgreesWithTheBarrier`
   - `internal/core/mail/decision_final_lock_test.go` `TestDecisionFinalEvidenceIsLockedThroughCommit`
   - `internal/cli/decide_lease_test.go` `TestDecisionLeasePrecedesAllLocks`
   - `internal/core/mail/decision_durable_test.go` `TestDecisionEffectsWaitForTheDecisionToBeDurable`
