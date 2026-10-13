@@ -48,7 +48,6 @@ unnoticed.
   Tests:
   - `internal/cli/bridge_rules_test.go` `TestALateAcknowledgmentOwesNothingTwice`
   - `internal/core/mail/claims_test.go` `TestALetterBeingReadInPartsCannotBeTakenBack`
-  - Gap: one fact across every channel — today tool and shell only — closed in S7.
 ```
 
 A move rewrites the paths in the same commit. Tests that hold only the 1.x migration,
