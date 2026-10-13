@@ -152,3 +152,58 @@ func write(t *testing.T, path, text string) {
 		t.Fatal(err)
 	}
 }
+
+// A registry is absent only when it, or its room, is missing for real: a
+// link at either level, dangling or to a directory elsewhere, is an error,
+// since an empty answer tells a decision that no session runs there.
+func TestInventoryTakesOnlyAMissingRegistryForNone(t *testing.T) {
+	relink := func(t *testing.T, path, target string) {
+		t.Helper()
+		if err := os.Rename(path, path+"-aside"); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(target, path); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cases := map[string]func(t *testing.T, dir string){
+		"the registry a dangling link": func(t *testing.T, dir string) {
+			relink(t, state.SessionsPath(dir), filepath.Join(dir, "gone"))
+		},
+		"the registry a link to a directory": func(t *testing.T, dir string) {
+			relink(t, state.SessionsPath(dir), filepath.Join(dir, "elsewhere"))
+		},
+		"the room a dangling link": func(t *testing.T, dir string) {
+			relink(t, dir, dir+"-gone")
+		},
+		"the room a link to a room": func(t *testing.T, dir string) {
+			relink(t, dir, dir+"-aside")
+		},
+	}
+	for name, change := range cases {
+		t.Run(name, func(t *testing.T) {
+			dir := stateDir(t, map[int]uint64{10: 100})
+			if err := os.MkdirAll(filepath.Join(dir, "elsewhere"), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			if err := Publish(dir, session("lead", 10, 100)); err != nil {
+				t.Fatal(err)
+			}
+			change(t, dir)
+			found, err := Inventory(dir)
+			var inventory *InventoryError
+			if !errors.As(err, &inventory) || errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("read %v, %v; want an inventory error", found, err)
+			}
+		})
+	}
+	t.Run("a room with no registry", func(t *testing.T) {
+		dir := stateDir(t, nil)
+		if err := os.RemoveAll(state.SessionsPath(dir)); err != nil {
+			t.Fatal(err)
+		}
+		if found, err := Inventory(dir); err != nil || len(found) != 0 {
+			t.Fatalf("read %v, %v; want nothing", found, err)
+		}
+	})
+}

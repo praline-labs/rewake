@@ -1,6 +1,7 @@
 package state
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -108,11 +109,13 @@ func RoomDirs(root string) ([]string, error) {
 // for one: an entry that is not a directory of a valid name — a link, a file,
 // a name rewake never makes — is an error, as is a listing that fails. A
 // check that must find a process outside every session cannot pass over an
-// entry it did not understand; RoomDirs, for views, does.
+// entry it did not understand; RoomDirs, for views, does. Only rooms missing
+// for real are no rooms: a link where rooms belongs, dangling or not, is
+// refused rather than followed to nothing or to another tree.
 func AllRoomDirs(root string) ([]string, error) {
 	rooms := filepath.Join(root, "rooms")
-	entries, err := os.ReadDir(rooms)
-	if os.IsNotExist(err) {
+	entries, err := ReadPlainDir(rooms)
+	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
 	}
 	if err != nil {

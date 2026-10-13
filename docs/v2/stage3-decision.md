@@ -162,7 +162,11 @@ state directory and is not in the selected root. The scan is `person.Classify`
 The checks read a strict inventory, not the forgiving views (Q3 of
 [stage3-decision-build.md](stage3-decision-build.md#q3-the-persons-path)):
 `registry.ListReadOnly` skips a record that does not load and `WorkDirs` discards its
-errors, so neither may answer. The chain is read from the caller itself up to PID 1, each
+errors, so neither may answer. Only a registry or a rooms directory missing for real is
+empty: each is listed without following a link at its own level or the room's
+(`state.ReadDirBelow`, `state.ReadPlainDir`), so one put behind a link, dangling or to a
+directory elsewhere, is unreadable — for the person's path and for the main a decision
+freezes its notes from alike. The chain is read from the caller itself up to PID 1, each
 ancestor's identity kept apart as live, ended or unknown; a pid whose start changed
 between reads, or namespaces and parents that disagree between reads, make the scan
 restart, and a scan that does not settle within its bound refuses. It takes no lock or
@@ -250,7 +254,10 @@ mailbox is read as a regular file and nothing else (`state.ReadRegular`): the
 installation runs before the reading that refuses other types, so a link in a record's
 place is not followed, a FIFO is not waited on under the mailbox lock, and the type is
 checked on the file opened, so a name swapped after its listing is read as it is then;
-`decisions/` itself is looked at with `lstat` and never followed. A decision's observation
+`decisions/` itself is looked at with `lstat` and never followed, and every directory of the
+mailbox — the stops a decision disposes of among them — is listed as a directory of its
+own (`state.ReadPlainDir`), so a link in its place is unreadable, not followed to records
+that are not the mailbox's and not read as absent when it dangles. A decision's observation
 of a listing keeps its entries even when there are none: an empty listing is kept apart
 from none.
 

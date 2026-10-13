@@ -48,14 +48,16 @@ type fileAccess interface {
 // (state.ReadRegular): a mailbox holds no other kind, the reading stops on
 // one listed as another type, and a reader that ran before that reading — the
 // installation of decisions — must neither follow a link nor wait on a FIFO
-// under the mailbox lock.
+// under the mailbox lock. It lists a directory of its own alone
+// (state.ReadPlainDir): a link where a directory belongs, dangling or not,
+// is refused, never read as an absent directory or as another tree.
 type osAccess struct{}
 
 // maxRecordRead bounds a read of a record: the largest a decision may be.
 const maxRecordRead = maxDecisionBytes
 
 func (osAccess) ReadFile(path string) ([]byte, error)       { return state.ReadRegular(path, maxRecordRead) }
-func (osAccess) ReadDir(path string) ([]fs.DirEntry, error) { return os.ReadDir(path) }
+func (osAccess) ReadDir(path string) ([]fs.DirEntry, error) { return state.ReadPlainDir(path) }
 func (osAccess) Stat(path string) (fs.FileInfo, error)      { return os.Stat(path) }
 func (osAccess) Lstat(path string) (fs.FileInfo, error)     { return os.Lstat(path) }
 func (osAccess) WriteFile(path string, raw []byte) error    { return state.WriteAtomic(path, raw) }

@@ -53,10 +53,13 @@ func (e *InventoryError) Unwrap() error { return e.Err }
 // a lookup does and without skipping any: a record that does not read, an
 // entry of the registry that is no record, or a registry that cannot be
 // listed is an error. Only a write that never finished — a name with a dot
-// first — and the name locks beside the records are passed over.
+// first — and the name locks beside the records are passed over. A registry
+// is absent only when the room or its registry is missing for real: a link
+// at either level, dangling or not, is an error, since an empty answer would
+// tell a decision that no session runs.
 func Inventory(dir string) ([]Inventoried, error) {
 	root := state.SessionsPath(dir)
-	entries, err := os.ReadDir(root)
+	entries, err := state.ReadDirBelow(dir, filepath.Base(root))
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
 	}
