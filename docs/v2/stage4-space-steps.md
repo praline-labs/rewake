@@ -1,0 +1,137 @@
+# Stage 4: the first working space — tests, rules and build steps
+
+The second half of [stage4-space.md](stage4-space.md), written October 13, 2026: what the
+tests can hold and what only a live check shows, the rules each new behaviour needs before
+code, the build steps in order with their acceptance, and the questions a step would
+otherwise guess. Every step goes through the chain of `AGENTS.md`: the writer writes, a
+review, fixes, and the commit; the steps that touch processes and transport — the terminal,
+the hosted launch, the mod's endpoint, closing — also get the Codex side's acceptance.
+
+## 10. Tests
+
+**What the five checks hold, with no harness.**
+
+- `internal/host/terminal`: a real pseudo-terminal running the test binary itself as a
+  small program (echo, a full-screen draw with colours and wide glyphs, the alternate
+  screen, a resize report); bytes in, the screen read back as styled rows; a resize reaching
+  the program as SIGWINCH and its new size; a hang-up ending the program's session.
+- `internal/core/space`: records written only under the room's lease (`buildtest.Room`), the
+  states and their order, a crash between steps leaving a record the next start can close,
+  the kept-checkout listing.
+- `internal/adapter/claude/modhost`: each endpoint against a peer seam as the endpoint's
+  tests use, a request from another process refused, bounds on bodies and waits, a second
+  hold answered `duplicate` without a second seat.
+- `internal/adapter/claude`: the embedded mod written into the run directory and named by
+  `--plugin-dir`, the mod socket's path in the environment, `--session-id` from
+  `ConversationNamer`; the protocol's generated files equal to a fresh generation.
+- The mod itself: a Go test runs `claude plugin validate` and `claude plugin test` on the
+  written tree when a Claude Code of at least the minimum version is on `PATH`, and skips
+  naming why when not; the mod's own tests (`*.test.ts`) drive the keeper's hold, the
+  duplicate, the screen's redraw and the keys with the skill's test kit, as the probe's kit
+  did.
+
+**What the fixture column and the workflow suite can hold.** The space host is
+harness-neutral, so the fixture's program can be the worker in the pseudo-terminal: a
+fixture main runs `rewake space open --harness fixture`, and the scenario checks that the
+worker starts in the given directory with a scrubbed environment, registers under its name
+in main's room, carries the session id the record holds (the fixture adapter implements
+`ConversationNamer`), exchanges a task and its report with main, and ends when main's run
+ends, the record closed. What stands for the mod is a small program of the suite's,
+`test/spacerig`, speaking the protocol over the mod socket as main's harness process would:
+it spawns no keeper — the scenario hands it a directory as the keeper's checkout — but it
+holds, polls the screen, sends keys and resizes. The fixture adapter offers spaces in the
+fixture build, served through the rig; for the peer check the rig is started as the
+fixture's harness process, so its requests pass for the right reason. Each scenario has its
+control that fails: a worker started with main's variables, a hold seated twice, a worker
+alive after main ends.
+
+**What only a live check shows.** That `$.http.fetch` connects from the harness process (P4);
+the keeper's spawn, its checkout and its removal; the second call's timing; the base reset
+and Claude Code's judgment of the checkout after it; the screen repaint by text and its cost
+(P15c); keys and the prefix through the real key surface; `session.end` long enough for the
+release; a worker's `turn.complete` carrying its answer. Main runs them, as in the probe.
+
+## Rules before code
+
+A new group, `docs/rules/space.md`, numbered **SP1–SP8**, with `docs/rules_test.go` taught the
+group in the same step. Each rule names its tests as every group does.
+
+- **SP1. A space lives no longer than its main.** When main's run ends — by `session.end`, by
+  its harness ending, or by its wrapper being killed — every worker of its spaces is ended
+  and every held keeper released or gone with main.
+- **SP2. The record comes first.** A space's record — the worker's harness, name, role,
+  session id where the harness takes one, the checkout's path and branch — is written before
+  the worker starts, and every later state is written before the act it names is answered.
+- **SP3. A hosted launch inherits nothing of a session.** Its environment carries no `REWAKE_`
+  variable of main's run and none of the worker harness's `EnvNotInherited`; it runs the
+  wrapper's own image and joins main's room.
+- **SP4. Only main's harness process reaches main's space host.** Every request of the mod's
+  protocol is checked by its peer on its own, as T2's transport is; a descendant is refused.
+- **SP5. One seat per space.** The first hold of a space seats its worker; another hold of it
+  is answered at once and seats nothing.
+- **SP6. Keys reach only a hosted worker.** The space host writes keys into the
+  pseudo-terminal it owns and nowhere else; nothing types into a session rewake does not host
+  (the project's boundary).
+- **SP7. A kept checkout is never forgotten and never removed by rewake.** A closed space
+  whose checkout is still there is listed to main at its start and by `rewake space list`
+  until the checkout is gone; rewake removes no checkout.
+- **SP8. A record left open by a dead main is closed by the next start**, once that run is
+  proven dead, with what was seen of its checkout; an unknown liveness leaves it open and
+  says so.
+
+L1 and L3 carry the mod's directory; T10 the worker's build; the existing O2 and the
+reporting refusals carry the worker's reports.
+
+## The build steps
+
+Each small enough for one review; each closed by its acceptance check, not by its code.
+
+| Step | What it builds | Acceptance |
+|---|---|---|
+| S4-1 | P4 and P15c, live, from the probe's kit: the peer of `$.http.fetch` on every request, after a reload, and a shell child's request refused; the screen drawn as styled text in the key surface at 160 by 30, its repaint rate and CPU against P15b's cell grid; a progress signal on the held call, if the skill shows one (Q4); a worker's `turn.complete` and its `answer` | the records in [research-claude-mod.md](../research-claude-mod.md); P4 positive, or the stage stops for a channel design ([design-claude.md](design-claude.md#how-a-tool-call-runs)); P15c picks text or the fallback |
+| S4-2 | the rules SP1–SP8 and the rules test's group; the protocol schema, `tools/protogen` and the drift test | `go test ./docs/` and the drift test green; review of the rules |
+| S4-3 | `internal/core/space` and `rewake space list` | the record tests under the lease; the listing on a hand-written record, closed and kept |
+| S4-4 | `internal/host/terminal`, with the library the owner chose (Q1) | the pseudo-terminal tests above, with `-race`; the layout test with the library only in `host/terminal` |
+| S4-5 | the embedded mod's skeleton and `modhost`: written per run, `--plugin-dir`, the mod socket, `hello` with the peer check, `SpacesCapability` live on main | live: the hello on the installed Claude Code, a shell child's request refused; the validator test |
+| S4-6 | the worker's turn boundary: `turn/start` and `turn/end`, `TurnBoundary{Reports: true}`, the write role admitted on Claude Code when live | live: main sends a task to a worker started by hand with `rewake claude --write` and reads its report; a run without its mod refuses the task as today |
+| S4-7 | opening a space: `rewake space open`, `events`, the keeper's type, its spawn, its hold and the duplicate, the checkout found, the base moved, the hosted launch with its session id, the record | the workflow scenario with the fixture worker and `test/spacerig`; live: the keeper spawned, the worker registered in main's room, its session id in the record |
+| S4-8 | the view: the screen as styled text in the keeper's row, `space/screen`, keys, the prefix and its hint, resize | live: the worker's screen in the keeper's view, a prompt typed there answered, Alt+a c twice ending the worker |
+| S4-9 | closing: `session/end`, `rewake space close`, the hang-up path, the next start's closing of a dead main's records, the reminder | the workflow scenario: main's run ends and its worker is gone, the record closed; live: `/exit` with a worker seated — the worker ended, an unchanged checkout removed, a changed one kept and reminded |
+| S4-10 | the end to end: main opens a space, sends the worker a task, reads its report, closes main | live, written into the roadmap: the whole target above in one run on the installed Claude Code |
+
+The restore by session id is the step after S4-10 ([section 8](stage4-space.md#8-restore)).
+
+## Open questions
+
+Each one a step would otherwise guess; the step named decides it or brings it to main.
+
+- **Q1. The terminal library** (S4-4, the owner). `charmbracelet/x/vt` covers what the
+  owner's drawing decision needs and breaks the dependency rule with its transitive set;
+  vt10x keeps the rule's first half and breaks the second
+  ([the comparison](stage4-space.md#the-terminal-library)).
+- **Q2. P4** (S4-1). If `$.http.fetch` does not connect from the harness process, no request
+  of the mod can be trusted, and the space waits for another trusted channel.
+- **Q3. Text or the cell grid** (S4-1, P15c). The repaint rate and CPU of styled text through
+  props at 160 by 30; the cell grid is the fallback.
+- **Q4. The keeper's second call** (S4-1). The skill says a stalled agent is retried; whether
+  a held call can show progress so that none starts. The `duplicate` answer is built either
+  way.
+- **Q5. Finding the checkout** (S4-7). That the id in `.claude/worktrees/agent-<id>` and in
+  the lock reason is the spawn's `agentId`.
+- **Q6. The base** (S4-7). Whether Claude Code judges a checkout whose branch was moved to
+  main's commit as changed, and keeps it at the end.
+- **Q7. Time at `session.end`** (S4-9). Whether Claude Code removes an unchanged keeper's
+  checkout before its process exits when the release comes from `session.end`.
+- **Q8. The `events` loop** (S4-7). A loop of polls the mod starts at `session.start` and does
+  not await: that it keeps running between hooks, and that a reload's new `session.start`
+  starts it once again.
+- **Q9. The keeper's model** (S4-7). The cheapest one the person's Claude Code offers, named by
+  a launch option rather than in code; or the session's own.
+- **Q10. Paste into a space** (stage 6 unless the skill shows a way).
+- **Q11. The default room** (the owner's direction, October 13, 2026; [answer
+  8](design.md#the-owners-answers)). The worker joins main's room by `--room`; making the
+  default room follow main's name without a flag is its own small step, outside this list.
+- **Q12. pi's interface as the renderer** (the owner's idea, October 13, 2026): pi's terminal
+  interface hosting the pseudo-terminal, with another harness spawned inside it. Recorded as an
+  alternative only, while a separate reading of the harnesses runs; the design above does not
+  depend on it.

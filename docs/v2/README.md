@@ -142,6 +142,14 @@ Stage 4, Claude Code's adapter as one mod:
   the worktree and its keepers, the tabs the space needs, the person's UI, headless workers
   (dropped) and the features that stay rewake's. Open it with the target section before designing the
   space.
+- [stage4-space.md](stage4-space.md) — the design of the first working space, October 13,
+  2026, for review before code: the pieces and where they live, the terminal library
+  weighed, the protocol between the mod and the host, the keeper, the worker's hosted launch,
+  reports, keys and the screen as styled text, closing, restore, the commands. Open it before
+  building any part of the space.
+- [stage4-space-steps.md](stage4-space-steps.md) — its second half: what the tests and the
+  workflow suite can hold and what only a live check shows, the rules SP1–SP8 to write before
+  code, the build steps S4-1 to S4-10 with their acceptance, and the open questions.
 - [stage4-reading-pi.md](stage4-reading-pi.md) — a dated record of October 13, 2026: pi
   read for the audit at 0.85.1 and 1.2.0, capability by capability, its risks and the
   probe items PI1–PI14 the audit cites. Open it before stage 4b.

@@ -334,7 +334,8 @@ marked:
 - **The target** the owner set the same day is a space: main creates a pseudo-terminal rewake
   owns, shown as a tab in main's Claude Code, a worktree may be made in it, and a worker is
   seated there; stage 4's first end to end is that flow with a Claude Code worker, if P11,
-  P12, P12b and P15 allow ([the target](stage4-audit.md#the-target-a-space)). Closing main
+  P12, P12b and P15 allow ([the target](stage4-audit.md#the-target-a-space)); its design is
+  [stage4-space.md](stage4-space.md). Closing main
   closes its spaces; the space's record keeps each worker's session id for a restore
   ([answer 7](design.md#the-owners-answers)) and its kept checkouts for a reminder.
 - **Worker tabs**: the pseudo-terminal belongs to the space's terminal process, a rewake
