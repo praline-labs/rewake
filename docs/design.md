@@ -111,6 +111,7 @@ only looks leaves no state behind. [Optional primary observations](session-state
     control/<name>.<epoch>/    a main's compact or interrupt request and its answer (remote-control.md)
     run/<name>.<epoch>/        what an adapter writes for one run, removed with the run or, after a kill, by a later launch once the run is proven dead (v2/stage3-state.md)
     letters/<name>/<id>.json   a compaction this main asked for, held by the command while it asks, kept on an answer that leaves the outcome open until its letter goes (remote-control-letter.md)
+    spaces/<id>.json           a space a main opened: its worker, checkout, keeper, state and observed end, kept after it closes (v2/stage4-space-record.md)
 ```
 
 All mailbox paths in the delivery specification are relative to the room.

@@ -28,7 +28,7 @@ const rulesDir = "rules"
 // holding it (rules/space.md), so a group is its numbers, not a count.
 var ruleGroups = map[string][]int{
 	"E": upTo(8), "D": upTo(8), "O": upTo(2), "T": upTo(11), "C": upTo(8), "L": upTo(3),
-	"SP": {3, 4, 9},
+	"SP": {2, 3, 4, 7, 9},
 }
 
 // upTo is the numbers of a group whose rules are all in force.

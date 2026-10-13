@@ -150,6 +150,10 @@ Stage 4, Claude Code's adapter as one mod:
 - [stage4-space-steps.md](stage4-space-steps.md) — its second half: what the tests and the
   workflow suite can hold and what only a live check shows, the rules SP1–SP9 and the step each
   enters `docs/rules/` in, the build steps S4-1 to S4-10 with their acceptance, and the open questions.
+- [stage4-space-record.md](stage4-space-record.md) — the space record and `rewake space list` as
+  S4-3 built them: where a record lives, its fields, its states and the steps between them,
+  what a close must observe, the kept checkouts' reminder. Open it before writing a space's
+  record from the host.
 - [stage4-reading-pi.md](stage4-reading-pi.md) — a dated record of October 13, 2026: pi
   read for the audit at 0.85.1 and 1.2.0, capability by capability, its risks and the
   probe items PI1–PI14 the audit cites. Open it before stage 4b.

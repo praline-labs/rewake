@@ -8,10 +8,32 @@ step S4-2, October 13, 2026.
 A rule enters this document in the step that builds the test holding it, as the steps table
 names it ([the build steps](../v2/stage4-space-steps.md#the-build-steps)); until then it
 stands in the design alone. Decided by main, October 13, 2026: SP3, SP4 and SP9 are here
-from S4-2, each held in the part an existing test holds; SP2 and SP7 enter with S4-3, SP5
-with S4-7, SP6 with S4-8, SP1 and SP8 with S4-9.
+from S4-2, each held in the part an existing test holds; SP2 and SP7 entered with S4-3, which
+built the record ([stage4-space-record.md](../v2/stage4-space-record.md)); SP5 enters with
+S4-7, SP6 with S4-8, SP1 and SP8 with S4-9.
 
 ## The rules
+
+- **SP2. The record comes first.** A space's record — the worker's harness, name, role,
+  session id where the harness takes one, the checkout's path and branch — is written before
+  the worker starts, and every later state is written before the act it names is answered. A
+  record is closed only from what was observed — the worker's end, the checkout's state — never
+  from a release or a signal sent.
+
+  Held today in the record itself: it is written only through the state package under the
+  room's lease; it begins opening with the worker fixed, takes its checkout before the worker's
+  run, and moves through its states in one order, a step out of it refused; a close takes only
+  an observation — the worker seen to end or never started, the checkout found gone or left —
+  and refuses one that says nothing or contradicts the record; and a crash between two steps
+  leaves the earlier one whole, which a later close finishes. Known limit, recorded on October
+  13, 2026, owned by S4-7, which builds the open: each step written by main's wrapper before
+  the act it names — the worker's launch, its gate, the open's answer; and by S4-9, which builds
+  closing: the observations a close records made by the host.
+  Tests:
+  - `internal/core/space/store_test.go` `TestTheRecordIsWrittenOnlyUnderTheRoomsLease`
+  - `internal/core/space/store_test.go` `TestTheStatesMoveInTheirOrder`
+  - `internal/core/space/store_test.go` `TestARecordClosesOnlyFromAnObservation`
+  - `internal/core/space/store_test.go` `TestARecordLeftByACrashBetweenStepsCanBeClosed`
 
 - **SP3. A hosted launch inherits nothing of a session.** Its environment carries no variable
   that names main's session or a transport of main's run, and none of the worker harness's
@@ -42,6 +64,22 @@ with S4-7, SP6 with S4-8, SP1 and SP8 with S4-9.
   Tests:
   - `internal/host/endpoint/transport_test.go` `TestOnlyTheTransportsOwnProcessIsServed`
   - `internal/host/endpoint/transport_test.go` `TestAnAnswerGoesOnlyToTheTransportThatAsked`
+
+- **SP7. A kept checkout is never forgotten and never removed by rewake.** A closed space
+  whose checkout is still there is listed to main at its start and by `rewake space list`
+  until the checkout is gone; rewake removes no checkout.
+
+  Held today for the listing: a kept checkout is reminded while it is there, and while it
+  cannot be looked at, with what was found in it and the Git commands that clear it; one seen
+  gone is not; `rewake space list` shows it beside the open and closed spaces; and the package
+  that keeps the records runs no command and removes no file. Known limit, recorded on October
+  13, 2026, owned by S4-9, which builds closing: the reminder to main at its start, and a
+  closing that removes no checkout.
+  Tests:
+  - `internal/core/space/list_test.go` `TestAKeptCheckoutIsRemindedUntilItIsGone`
+  - `internal/core/space/list_test.go` `TestAnUnknownCheckoutIsReminded`
+  - `internal/core/space/list_test.go` `TestThePackageRemovesNoCheckout`
+  - `internal/cli/space_test.go` `TestSpaceListShowsOpenClosedAndKept`
 
 - **SP9. A hosted worker is never main's descendant.** Its wrapper is reparented away from
   main's wrapper before it is seated, checked by the same ancestry test the authority makes; an

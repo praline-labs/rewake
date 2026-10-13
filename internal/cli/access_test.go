@@ -50,6 +50,11 @@ func documentedForms(launch string) []formCase {
 		{[]string{"decide", "api"}, view},
 		{[]string{"decide", "api", "--json"}, view},
 		{[]string{"decide", "--help"}, view},
+		{[]string{"space", "list"}, view},
+		{[]string{"space", "list", "--json"}, view},
+		// Refused by the handler before any read.
+		{[]string{"space"}, view},
+		{[]string{"space", "open"}, view},
 		// Refused by the handler before any read.
 		{[]string{"decide", "api", "--arrived"}, view},
 		{[]string{"decide", "api", "1790370984617481194-8d4ddd85c8f1"}, view},

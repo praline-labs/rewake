@@ -159,6 +159,21 @@ func TryWithNameLock(dir, name string, fn func() error) (bool, error) {
 	return tryLock(filepath.Join(SessionsPath(dir), "."+name+".lock"), "the name "+name, fn)
 }
 
+// WithSpaceLock runs fn while holding the lock of the room's space records.
+// A change of a record reads it, checks the step and writes it again, and the
+// open of a name looks at every record first; two writers between those steps
+// would each act on what the other was replacing. The directory is made
+// when missing, under the same guard as the lock.
+func WithSpaceLock(dir string, fn func() error) error {
+	if err := guard(opLock, SpacesPath(dir)); err != nil {
+		return err
+	}
+	if err := ensureDir(SpacesPath(dir)); err != nil {
+		return err
+	}
+	return withLock(filepath.Join(SpacesPath(dir), ".lock"), "the room's spaces", fn)
+}
+
 // ErrMailboxBusy means the mailbox lock was held by somebody else for longer
 // than the caller was willing to wait.
 var ErrMailboxBusy = errors.New("the mailbox is busy")

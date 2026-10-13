@@ -20,6 +20,7 @@ const (
 	unreadDir    = "unread"
 	awaitingDir  = "awaiting"
 	answeringDir = "answering"
+	spacesDir    = "spaces"
 )
 
 // SessionPath is the record of one session.
@@ -101,6 +102,14 @@ func RunPath(dir, name, run string) string {
 
 // RunsPath is the directory holding every run's directory.
 func RunsPath(dir string) string { return filepath.Join(dir, runDir) }
+
+// SpacesPath is the directory holding every space record of the room
+// (docs/v2/stage4-space.md#1-the-pieces-and-where-they-live).
+func SpacesPath(dir string) string { return filepath.Join(dir, spacesDir) }
+
+// SpacePath is the record of one space, by its id: a name is reused once its
+// space is closed, while the closed record stays for what a restore reads.
+func SpacePath(dir, id string) string { return filepath.Join(dir, spacesDir, id+".json") }
 
 // LettersPath holds the compactions a main asked for with rewake compact whose
 // letter has not gone yet (docs/remote-control.md). It is kept by name, not by
