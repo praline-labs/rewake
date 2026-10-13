@@ -170,7 +170,10 @@ second, and a `Client` under it. After a click the `Client` got letters, Alt as 
 its raw sequence, the arrows and Tab. Escape returned focus to the prompt; Ctrl+C, Ctrl+X and
 a bracketed paste did not reach it, the paste going into the prompt. The owner's direction
 for that gap is a prefix key ([two levels of UI](stage4-audit.md#two-levels-of-ui)); the
-`fetch` over a Unix socket worked, each call ending after 30 s at the latest.
+`fetch` over a Unix socket worked, each call ending after 30 s at the latest. P15b, the
+same day ([the record](../research-claude-mod.md#p15b-a-real-pseudo-terminal-in-the-keepers-row)),
+drew a real pseudo-terminal in that row with its screen kept by a VT emulator: the keys and
+the prefix reached it as terminal bytes, and vi, less and a nested Claude Code worked inside.
 
 ### Later: workers launched only from a main's tabs
 

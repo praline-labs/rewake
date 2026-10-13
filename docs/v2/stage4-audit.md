@@ -54,8 +54,8 @@ closing main closes its spaces and their workers (decided by the owner, October 
   starts can detach, outlive a reload and end with the harness
   ([the record](../research-claude-mod.md#p11-a-process-the-mod-starts)), so such a process can hold it; whether
   it is the worker's own wrapper, the detached process of the mod's join (row 1) or a
-  process of its own per space stays open until P15b; this audit calls it by this one name
-  meanwhile. It serves its space alone and ends with its worker, and with main (row 16).
+  process of its own per space was left to stage 4's design, since P15b ran with a helper
+  process of the probe's own; this audit calls it by this one name. It serves its space alone and ends with its worker, and with main (row 16).
 - *The tab*: preferably Claude Code's own (owner's idea, October 13, 2026). A subagent gets
   an entry in Claude Code's tasks list, and opening the entry opens that agent's transcript.
   With a subagent of main standing for the space — the worktree's keeper below — the tasks
@@ -133,8 +133,10 @@ its wrapper.
   whether it follows the view switch, may be opened on it, and the size it gets — and in
   either the keys a session needs, Escape among them; a reload of main's mod leaves the space
   and its worker running. P15a answered the row's surface — the grid, its repaint, the keys
-  that reach the client element and those that do not; a real pseudo-terminal, the prefix key
-  and the largest grid with fullscreen on are P15b.
+  that reach the client element and those that do not. P15b drew a real pseudo-terminal there,
+  carried the prefix key end to end and ran a nested Claude Code inside
+  ([the record](../research-claude-mod.md#p15b-a-real-pseudo-terminal-in-the-keepers-row)); the
+  largest grid with fullscreen on was not run.
 
 **If a probe fails.** If the tasks list cannot carry the tab, the mod draws a tab of its own.
 If P15 fails as a whole, the minimum path keeps everything but the tab: main still creates the
@@ -172,8 +174,10 @@ did not ([the record](../research-claude-mod.md#p15a-the-spaces-terminal-in-the-
 space takes a prefix chord the client element receives — an Alt chord, as tmux has its
 prefix — and then one key: `c` sends Ctrl+C to the seated harness, `e` (or `[`) Escape, `x`
 Ctrl+X, and the prefix twice sends the prefix itself. Paste stays open, since the clipboard
-cannot be read. P15b checks which Ctrl+letter keys reach the client element and the prefix
-end to end.
+cannot be read. P15b carried the prefix end to end, Escape into vi and Ctrl+C into a nested
+Claude Code among it; of the Ctrl+letter keys only Ctrl+A and Ctrl+B were seen to reach the
+client element before the scan lost the focus
+([the record](../research-claude-mod.md#p15b-a-real-pseudo-terminal-in-the-keepers-row)).
 
 ## The central question: Claude Code to Claude Code through the mod alone
 

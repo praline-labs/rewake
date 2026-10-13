@@ -3,7 +3,8 @@
 The live records of stage 4's probe ([design-claude.md](v2/design-claude.md#the-stage-4-probe)):
 what a mod loaded for one run was seen to do inside an interactive Claude Code session —
 start processes, hold a subagent with a worktree of its own, draw into that subagent's
-transcript and take keys there. Kept apart from
+transcript and take keys there, and show a real pseudo-terminal's screen in it with a
+harness running inside. Kept apart from
 [research-claude-control.md](research-claude-control.md), which records 2.1.280's
 function-hooks plugin, because these are records of the mod API's era and of one probe.
 
@@ -90,6 +91,11 @@ authority obligations of the mod's join ([stage4-audit.md](v2/stage4-audit.md#a-
   `space_hold` call, made 31 s after the first under another agent id that
   `$.agent.list()` never listed, returned on the release itself. The second id is
   unexplained.
+- Found afterwards in the kit, not in Claude Code: in this run each poll asked the kit's
+  server to wait 50 s, longer than the 30 s after which `$.http.fetch` gave up, so every
+  poll failed, and the kit's loop gave up after three failures in a row. That is why the
+  first call ended with "lost its server" at the release. The later runs waited at most
+  25 s per poll and saw no failure.
 - `$.agent.list()` showed the keeper as running, with `spawnedBy` naming the mod's plugin.
 - When the keeper ended, Claude Code removed its unchanged worktree and the branch.
 
@@ -151,4 +157,74 @@ line and the tasks list, about 16 rows. In this layout a space's screen gets the
 height less that chrome.
 
 **Not seen yet**: the largest grid with fullscreen on, the pane and the band as the second
-place, the cost of a redraw at 200 by 50, and a real pseudo-terminal with its screen (P15b).
+place, the cost of a redraw at 200 by 50, and a real pseudo-terminal with its screen; the
+last was P15b, below.
+
+## P15b: a real pseudo-terminal in the keeper's row
+
+October 13, 2026, Claude Code 2.1.296, in a terminal of 200 by 50 with fullscreen off. The
+kit's helper owned a real pseudo-terminal of 160 by 30, ran a program in it and kept its
+screen with a VT emulator as cells. The mod long-polled the screen through `$.http.fetch`,
+each poll under 25 s, and blitted it into the Raster of the keeper's `space_hold` row. The
+Client under it turned each key into the bytes a terminal sends and posted them to the
+helper. The prefix was Alt+a, then one key: `c` for Ctrl+C, `e` or `[` for Escape, `x` for
+Ctrl+X, Alt+a again for Alt+a itself; any other key cancelled it.
+
+### A shell and `cat -v` (`rRg9nU`)
+
+- Every key typed in the Client reached the pseudo-terminal as the right bytes: letters,
+  Alt+x as ESC x, F1 as ESC O P, the arrows, Tab, Shift+Tab as ESC [ Z, Backspace as 0x7f,
+  Enter as CR.
+- The prefix delivered 0x03, ESC, ESC, 0x18 and ESC a for `c`, `e`, `[`, `x` and Alt+a.
+- From a key the driver typed to its echo on the outer screen — through the outer Claude
+  Code, the Client, the mod, the helper, the pseudo-terminal, the emulator, the long poll
+  and the blit — ten samples took 31 ms at the median and 45 ms at most.
+- A scan of the Ctrl keys reached the pseudo-terminal for Ctrl+A and Ctrl+B only; after
+  that the focus left the Client, and the later keys and a paste went into main's prompt,
+  where main's model answered them. Which Ctrl keys reach the Client beyond A and B was not
+  seen.
+
+### vi and less (`R9hqiI`, `lFafj9`)
+
+`vim -u NONE` drew full-screen; `Go`, a line of text, Escape through the prefix and `:wq`
+left the file with the new line, so Escape reached vim through the prefix. In `less`, paging,
+`G`, `g`, a search and `q` worked, and it exited normally.
+
+### A nested Claude Code (`A3TDXM`, then `vI91jc`)
+
+- `claude` started in the pseudo-terminal, in the keeper's worktree, with no folder-trust
+  question: the checkout lies under the repository already trusted. Its own screen
+  ("Claude Code v2.1.296 … agent-<id>") was drawn in the keeper's row on the outer screen.
+  "say ok", typed through the Client, was answered "ok".
+- In `A3TDXM` the outer repaint stopped after the first frames. The keeper called
+  `space_hold` a second time, and the kit's loop followed the second call, whose row was not
+  drawn, so each blit was refused with "no Raster of its own is mounted under key pty". Two
+  prefixed Ctrl+C reached the pseudo-terminal 1.95 s apart and did not end the nested
+  session; it ended only when the kit cleaned up (SIGHUP, exit 129). The outer harness used
+  4.2 % CPU while it drew.
+- In `vI91jc`, with the kit fixed to answer a second call at once and to blit only into the
+  drawn row, it ran end to end. In the keeper's view the outer screen showed the nested
+  session's own screen live — "❯ say ok", "● ok", "✻ Crunched for 1s" — with up to 13 blits
+  in a window of 5 s while the nested session drew. Alt+a c twice, about 0.3 s apart, ended
+  the nested session with exit code 0.
+
+### The keeper's second call
+
+In every run that held the keeper long enough a second `space_hold` call came: 31 s after the
+first in `woP6c8`, 33 s in `A3TDXM`, 31 s in `vI91jc`. Each came under an agent id that
+`$.agent.list()` never listed — the list held the keeper alone — with the same input keys as
+the first (`agentId`, `space`, `tool`, `tool_use_id`). In `vI91jc` the kit answered it at
+once, "space s1 is already held", and the first call went on holding unharmed. Main's
+hypothesis, not proven: Claude Code retries a subagent's tool call that shows no progress for
+about 30 s as a new attempt.
+
+### Fullscreen: not run
+
+Fullscreen has no flag; it is switched by `/tui fullscreen` or by `CLAUDE_CODE_NO_FLICKER=1`
+(the 2.1.296 binary's strings, not run). Its start arms a boot canary, and a fullscreen launch
+that dies before it is healthy disables fullscreen "on this machine"; that record lives in the
+configuration the probe's runs share with the person's own sessions, so the probe did not
+start one. The largest grid with fullscreen on stays unmeasured.
+
+**Not seen**: which Ctrl keys reach the Client beyond A and B; paste through the Client; the
+cause of the keeper's second call; fullscreen; the pane and the band.

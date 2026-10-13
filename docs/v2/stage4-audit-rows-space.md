@@ -164,8 +164,9 @@ ran on October 13, 2026 ([the record](../research-claude-mod.md#p15a-the-spaces-
 the keeper's tool row carried the grid and the client element and was repainted there; the
 client element got letters, Alt, function keys, the arrows and Tab, and not Escape, Ctrl+C,
 Ctrl+X or paste. A prefix key the client element receives carries those to the seated
-harness ([two levels of UI](stage4-audit.md#two-levels-of-ui)); P15b checks it end to end
-with a real pseudo-terminal. *pi reading*: interactive pi runs in a pseudo-terminal rewake owns with no
+harness ([two levels of UI](stage4-audit.md#two-levels-of-ui)); P15b carried it end to end
+with a real pseudo-terminal, a nested Claude Code among the programs inside
+([the record](../research-claude-mod.md#p15b-a-real-pseudo-terminal-in-the-keepers-row)). *pi reading*: interactive pi runs in a pseudo-terminal rewake owns with no
 cooperation, regular or fullscreen (PI11). *Codex reading*, same conclusion: a pane is not an interactive terminal,
 and a reload must not be assumed to keep the worker (CX7).
 
