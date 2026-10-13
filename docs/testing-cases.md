@@ -327,6 +327,26 @@ a denial reaching nothing (`denial-dropped`), the shell's observations never fol
 built as if no tool were live (`brief-toolless`). What it does not prove: that a real
 harness proves or loses a capability as the program does.
 
+## A decision from a sandboxed shell
+
+`fixture-decide-sandboxed` (S18, October 12, 2026) is a recipient whose shell cannot
+`connect()` deciding a report nobody can prove reached it
+([stage3-decision.md](v2/stage3-decision.md#the-command)). Worker api owes main web a
+report; api's end is held (`RW_SHIM_HOLD_END`) while the case makes the report's
+publication mark in web's mailbox unreadable, so the released end meets an unknown and
+api's mailbox stops on it. web's shell then runs `rewake decide api R --arrived` under a
+seccomp filter that answers `connect` with EPERM (a request marked `sandboxed`, run by
+the program re-executed under `RW_SHIM_SANDBOXED`): it exits 1 naming the tool, and no
+decision exists. web's tool call with the same words, made once the case writes R into
+the file the call waits on (`after` in `RW_SHIM_TOOL_CALLS`), is recorded verified as
+web's run, and web's `rewake inbox --awaited` then shows its task closed by that
+decision, with nothing left for api's mailbox to decide. On an architecture the filter is
+not written for, the case is unsupported for `seccomp-connect-filter`. Its three mutants:
+a wrapper out of reach taken for the person (`decide-unreachable-as-person`), a tool call
+that decides as the person without asking the wrapper (`decide-tool-as-person`), and a
+wrapper that writes the decision unverified (`decide-wrapper-unverified`). What it does
+not prove: that a real harness's sandbox refuses as the filter does.
+
 ## Every control
 
 Each scenario's controls by name: the product mutants, built from a `mutation` value in
@@ -366,3 +386,4 @@ switches have no single form in the code to find them by, and the row is kept by
 | fixture-grant-dir | `grant-not-rechecked`, `grant-refusal-untold`, `grant-unregistered`, `grant-held-after-report` | `RW_SHIM_HOLD_RESERVE` |
 | fixture-grant-forgery | `grant-from-anywhere`, `grant-unconfirmed`, `grant-any-listener` | — |
 | fixture-live | `send-unwoken`, `reserve-unguarded`, `thread-unguarded`, `task-unbounded`, `launch-unawaited`, `lost-kept`, `unproven-taken-for-none`, `denial-dropped`, `shell-unread`, `exit-unfrozen`, `brief-toolless` | `RW_SHIM_NO_WAKE`, `RW_SHIM_NO_TOOL`, `RW_SHIM_DROP_AFTER`, `RW_SHIM_NO_BOUNDARY` |
+| fixture-decide-sandboxed | `decide-unreachable-as-person`, `decide-tool-as-person`, `decide-wrapper-unverified` | `RW_SHIM_HOLD_END`, `RW_SHIM_SANDBOXED` |

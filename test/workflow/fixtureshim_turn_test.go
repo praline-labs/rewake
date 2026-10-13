@@ -119,6 +119,7 @@ func (s *fixtureSession) work(id string, notice mailboxNotice) {
 	if reason := os.Getenv(shimEndReason); reason != "" && outcome != "completed" {
 		text = reason
 	}
+	s.awaitEndRelease(id)
 	s.end(id, text, outcome)
 	s.reportActivity("idle")
 	if outcome == "interrupted" {
@@ -159,6 +160,30 @@ func (s *fixtureSession) end(id, text, outcome string) {
 		// with the reason as its input.
 		text, outcome = continueHeld(), "completed"
 	}
+}
+
+// shimHoldEnd names a file: a turn's end waits for it, within
+// holdEndBound, so a scenario can change what the end will meet — a record
+// its publication reads — while the turn has read and not yet ended.
+const shimHoldEnd = "RW_SHIM_HOLD_END"
+
+const holdEndBound = 40 * time.Second
+
+// awaitEndRelease holds the end until the scenario's file exists, recording
+// whether it came.
+func (s *fixtureSession) awaitEndRelease(id string) {
+	path := os.Getenv(shimHoldEnd)
+	if path == "" {
+		return
+	}
+	released := false
+	for until := time.Now().Add(holdEndBound); time.Now().Before(until); time.Sleep(50 * time.Millisecond) {
+		if _, err := os.Stat(path); err == nil {
+			released = true
+			break
+		}
+	}
+	s.recordTurnEvent("end-released", id, strconv.FormatBool(released))
 }
 
 var fixtureDropped sync.Once

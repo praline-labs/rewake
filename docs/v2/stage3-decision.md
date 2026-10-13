@@ -213,7 +213,8 @@ process runs below the wrapper of api."
   rather than saying nothing ran, and `retry` asks again — the same words find the
   decision recorded before. A wrapper that cannot be reached is a refusal, exit 1, naming
   the tool; it is never taken for the person. The wrapper stays the decision's only
-  writer.
+  writer. `fixture-decide-sandboxed` holds this on the fixture column, with a shell that
+  cannot `connect()` ([testing-cases.md](../testing-cases.md#a-decision-from-a-sandboxed-shell)).
 - **Forms.** The list form is a view, the deciding form a change, classified in the
   command table when S18 adds them ([stage3-state.md](stage3-state.md#what-is-a-writer)).
 - **Naming.** By the stopped session and the report id, as the note prints them; the

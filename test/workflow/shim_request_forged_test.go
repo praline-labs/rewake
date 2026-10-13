@@ -13,11 +13,13 @@ import (
 // shimRequest is one command a scenario asks a session to run. Env and
 // Detach let a scenario play a worker that forges main: its variables over
 // the session's own, and a process that leaves the session's tree before it
-// runs rewake.
+// runs rewake. Sandboxed runs it where connect() is refused, as a harness's
+// sandboxed shell runs it (fixtureshim_sandbox_test.go).
 type shimRequest struct {
-	Args   []string `json:"args"`
-	Env    []string `json:"env,omitempty"`
-	Detach bool     `json:"detach,omitempty"`
+	Args      []string `json:"args"`
+	Env       []string `json:"env,omitempty"`
+	Detach    bool     `json:"detach,omitempty"`
+	Sandboxed bool     `json:"sandboxed,omitempty"`
 }
 
 // parseRequest reads a request in either form: a plain list of arguments, or
@@ -42,6 +44,14 @@ const detachWait = 15 * time.Second
 // own parent beside what rewake printed, so a finding can show where it ran.
 func (r shimRequest) run(base string) (int, string) {
 	env := append(os.Environ(), r.Env...)
+	if r.Sandboxed {
+		command, err := sandboxedCommand(env, r.Args...)
+		if err != nil {
+			return -1, "sandbox: " + err.Error()
+		}
+		out, err := command.CombinedOutput()
+		return exitCode(err), string(out)
+	}
 	if !r.Detach {
 		command := exec.Command("rewake", r.Args...)
 		command.Env = env

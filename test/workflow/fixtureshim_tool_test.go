@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -57,7 +58,14 @@ type fixtureToolCall struct {
 	// Denied plays the harness refusing the call for permission: reported,
 	// then denied, and never sent to the endpoint.
 	Denied bool `json:"denied,omitempty"`
+	// AfterFile holds the call until the scenario writes that file, within
+	// afterFileBound; an argument "{after}" is replaced by what it holds —
+	// the words a scenario learns only once the run is under way.
+	AfterFile string `json:"afterFile,omitempty"`
 }
+
+// afterFileBound bounds how long a call waits for its file.
+const afterFileBound = 60 * time.Second
 
 // fixtureToolRecord is what the turn log keeps of a call: what was asked,
 // and what came back to hand the model, or why nothing did.
@@ -134,14 +142,27 @@ func readsThroughTool(calls []fixtureToolCall) bool {
 func (s *fixtureSession) callTools(turn string, calls []fixtureToolCall) string {
 	read, receipt := "", ""
 	for i, call := range calls {
+		after, waited := "", true
+		if call.AfterFile != "" {
+			after, waited = awaitAfterFile(call.AfterFile)
+		}
 		arguments := map[string]any{}
 		for name, value := range call.Arguments {
-			if value == "{receipt}" {
+			switch value {
+			case "{receipt}":
 				value = receipt
+			case "{after}":
+				value = after
 			}
 			arguments[name] = value
 		}
 		id := turn + "-call-" + strconv.Itoa(i+1)
+		if !waited {
+			record := fixtureToolRecord{Call: id, Tool: call.Tool, Arguments: arguments, Error: "the file it waits for never came: " + call.AfterFile}
+			encoded, _ := json.Marshal(record)
+			s.recordTurnEvent(toolEventKind, turn, string(encoded))
+			continue
+		}
 		var record fixtureToolRecord
 		if call.Denied {
 			record = s.denyTool(turn, id, call.Tool, arguments)
@@ -162,6 +183,16 @@ func (s *fixtureSession) callTools(turn string, calls []fixtureToolCall) string 
 		}
 	}
 	return read
+}
+
+// awaitAfterFile waits for a call's file and answers what it holds.
+func awaitAfterFile(path string) (string, bool) {
+	for until := time.Now().Add(afterFileBound); time.Now().Before(until); time.Sleep(50 * time.Millisecond) {
+		if raw, err := os.ReadFile(path); err == nil {
+			return strings.TrimSpace(string(raw)), true
+		}
+	}
+	return "", false
 }
 
 // awaitAcknowledged waits, within toolAckBound, until no letter a tool's

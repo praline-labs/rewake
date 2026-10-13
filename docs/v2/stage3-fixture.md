@@ -131,7 +131,14 @@ the neutral scenarios are written against that protocol, not against a harness:
   reason as its input and the line `RW_SHIM_PENDING_ON_HOLD` names, up to a bound — what
   the Claude Code shim does on a Stop hook's block today (`claudeshim_hook_test.go:279,296`),
   but asked through the contract, so the decision to go on is the product's, not the
-  program's.
+  program's;
+- from S18, an end held until a file appears (`RW_SHIM_HOLD_END`), so a case can change
+  the world between a turn's read and its end; a tool call that waits for a file and
+  takes its words from it (`after` in `RW_SHIM_TOOL_CALLS`); and a request run where
+  `connect()` is refused (`sandboxed`), by the program re-executed under
+  `RW_SHIM_SANDBOXED` installing a seccomp filter before it becomes rewake, as a harness
+  that sandboxes its shell leaves it (`fixture-decide-sandboxed`,
+  [testing-cases.md](../testing-cases.md#a-decision-from-a-sandboxed-shell)).
 
 The files of that protocol that carry a harness's name and serve every column — the
 `RW_SHIM_*` constants, `sendAsAsked`, the session handle `codexSession` — are renamed by

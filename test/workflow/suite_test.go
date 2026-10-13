@@ -40,6 +40,11 @@ func TestMain(m *testing.M) {
 	// Re-executed as a harness by a scenario: be the harness and nothing
 	// else. Checked before anything else because the ordinary path would
 	// otherwise build a binary and run a suite inside the shim.
+	if os.Getenv(fixtureSandboxEnv) != "" {
+		// A shell's command under the sandbox: becomes rewake, recording
+		// nothing as a start of the harness.
+		os.Exit(runSandboxed(os.Args[1:]))
+	}
 	if os.Getenv(shimEnv) != "" {
 		recordShimCall(os.Args)
 		if os.Getenv(shimHarness) == "fixture" {
