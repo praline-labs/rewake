@@ -55,6 +55,18 @@ stage 6.
 - *The worker*: the program the space's terminal runs — `rewake claude` (a wrapper, or the
   thin launcher of the mod's join, row 1), and in stage 4b `rewake pi`.
 
+**rewake on Claude Code is the mod and the binary.** The person sees rewake as a mod: the
+tab, the buttons, the tools and the events are the mod's. But a mod cannot hold a
+pseudo-terminal — `$.process.spawn` gives none and a one-time stdin, there is no Node, and a
+module's children die when it reloads (*skill*; the [pi](stage4-reading-pi.md) and
+[Codex](stage4-reading-codex.md) readings reach the same limit from their side) — so the
+space's terminal lives in a rewake process the mod starts, and the mod draws its screen and
+forwards keys. Whether that process is the detached per-session one P11 asks about or one
+per space is for P11 and P15 to decide. rewake is then the mod, its face inside Claude Code,
+and the rewake binary, which does what a mod cannot: the pseudo-terminal, the endpoint, the
+state under the room's lease, processes that outlive a reload, and every harness without a
+mod — pi through its extension, Codex through its wrapper.
+
 **What the probes must show for it.**
 
 - **P11**: a Claude Code session started inside a terminal rewake owns joins the room, by its
