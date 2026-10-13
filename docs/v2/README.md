@@ -133,9 +133,15 @@ Stage 4, Claude Code's adapter as one mod:
   `rewake claude` wrapper, the verdict on each feature (kept, native, mod, split, open),
   and the consequences for the stage plan, pi's stage 4b and Codex's entry point among
   them. Open it before planning stage 4 or 4b.
-- [stage4-audit-rows.md](stage4-audit-rows.md) — the audit's rows argued one by one: why
+- [stage4-audit-rows.md](stage4-audit-rows.md) — the audit's rows 1–12 argued one by one —
+  joining, launch, the mail and its tools, the turn, wake, control, binding, grants: why
   each verdict, what code and documents it removes or keeps, what pi and Codex offer for
-  the same feature, and which property of the project it touches.
+  the same feature, and which property of the project it touches; its opening keys the pi
+  and Codex readings.
+- [stage4-audit-rows-space.md](stage4-audit-rows-space.md) — rows 13–22 argued the same way:
+  the worktree and its keepers, the tabs the space needs, the person's UI, headless workers
+  and the features that stay rewake's. Open it with the target section before designing the
+  space.
 - [stage4-reading-pi.md](stage4-reading-pi.md) — a dated record of October 13, 2026: pi
   read for the audit at 0.85.1 and 1.2.0, capability by capability, its risks and the
   probe items PI1–PI14 the audit cites. Open it before stage 4b.

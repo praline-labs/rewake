@@ -19,7 +19,8 @@ keep Codex's reading for later.
 
 Everything here is a proposal. The verdicts, the new probe rows and the changes to the
 stage plan are main's to decide, and the owner's where `project.md` is touched. Each row
-is argued in [stage4-audit-rows.md](stage4-audit-rows.md); the pi side's and the Codex
+is argued in [stage4-audit-rows.md](stage4-audit-rows.md) (rows 1–12) and
+[stage4-audit-rows-space.md](stage4-audit-rows-space.md) (rows 13–22); the pi side's and the Codex
 side's own readings of the same rows are folded into each row's paragraph on the other
 harnesses.
 
@@ -28,7 +29,9 @@ harnesses.
 snapshot 2.1.296 (its facts are cited, not copied); *docs* — Claude Code's documentation
 pages on cross-session messaging, worktrees, background sessions and hooks, read October
 13, 2026, which are not versioned and name versions up to 2.1.290; *rewake* — this
-repository's own documents and code. Nothing was run live: that is the probe.
+repository's own documents and code. The audit's writer ran nothing live: that is the
+probe. The one live fact it cites is main's dated observation of worktree subagents in
+row 13, recorded with its version.
 
 ## The target: a space
 
@@ -113,6 +116,27 @@ it from a terminal of their own — a command stage 4 designs. If owning the ter
 the path is today's: the person starts the worker in their own terminal with
 `rewake claude`, and main seats nothing. If P12b fails, rewake keeps one worktree lifecycle of
 its own that follows Claude Code's conventions (row 13).
+
+### Two levels of UI
+
+The owner noted on October 13, 2026 that the interface still needs thought: in Claude Code
+the subagents' entries stay visible even inside one subagent's view, so the person can
+switch, and with a full harness running inside a space the person meets two interfaces, one
+inside the other. A proposal for stage 4's design, not a choice:
+
+- **The outer level is main's Claude Code.** Its tasks list is the list of spaces, beside
+  main's own subagents. rewake controls only what its mod draws there: the space's entry
+  where the mod may shape it, and the terminal in place of the keeper's view.
+- **The inner level is the seated harness's own screen**, unchanged and not rewake's. Its
+  own subagents, tabs, panels and keys stay its own; rewake neither draws over them nor
+  folds them into the outer list.
+
+The questions it raises are P15's: which keys the outer level keeps — switching between
+agents, Escape back to main's prompt — and how the inner harness still gets them, by a
+remap or a button; how many rows and columns the inner screen gets under the outer chrome,
+with fullscreen on and off; whether two nested tab bars confuse the person; and what the
+space's entry shows — its name, harness and state — so that the outer list stays readable.
+The choice is stage 4's design, after the probe.
 
 ## The central question: Claude Code to Claude Code through the mod alone
 
@@ -236,7 +260,8 @@ for Claude Code too, exactly as designed today. P11 runs first in the probe, sin
 
 KEEP is rewake's own, harness-neutral core; NATIVE hands the feature to Claude Code's;
 MOD builds it on a mod event or call; SPLIT divides it; OPEN needs the probe row named.
-Each row is argued in [stage4-audit-rows.md](stage4-audit-rows.md) under its number.
+Each row is argued under its number in [stage4-audit-rows.md](stage4-audit-rows.md), rows 1–12,
+and [stage4-audit-rows-space.md](stage4-audit-rows-space.md), rows 13–22.
 
 | # | Feature | Verdict | In one line |
 |---|---|---|---|

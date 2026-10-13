@@ -173,7 +173,7 @@ bound to its main from the start. Open questions for that design:
 - Codex workers, which have no mod and keep launching through the command line.
 
 Weighed in the stage 4 audit, October 13, 2026
-([stage4-audit-rows.md](stage4-audit-rows.md#16-worker-tabs-and-buttons--split-p15)): the
+([stage4-audit-rows-space.md](stage4-audit-rows-space.md#16-worker-tabs-and-buttons--split-p15)): the
 pseudo-terminal belongs to a rewake process, the space's terminal process, whose identity
 P11 and P15 decide, so a tab can host a worker of any harness, Codex and pi included, and a
 button appears when main launches a worker, not only on "+"; a reload of the mod or main's
@@ -256,7 +256,7 @@ worktree lies inside the repository.
 the probe), 5 for seating a Codex worker. Owner's idea, October 12, 2026.
 
 Weighed in the stage 4 audit, October 13, 2026
-([stage4-audit-rows.md](stage4-audit-rows.md#13-worktree--split-p12-p12b)): a checkout made
+([stage4-audit-rows-space.md](stage4-audit-rows-space.md#13-worktree--split-p12-p12b)): a checkout made
 without a hook gets no `classic.WorktreeRemove` by the documentation, so the veto for a foreign worker waits on
 P12. After that day's review the owner directed that the whole lifecycle goes to Claude Code
 even with another harness inside: a Claude Code worker makes its own with `-w`, and a worker
