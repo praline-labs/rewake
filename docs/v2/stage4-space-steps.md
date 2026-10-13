@@ -20,7 +20,9 @@ the hosted launch, the mod's endpoint, closing — also get the Codex side's acc
   before the gate's byte, and the pipe's end while waiting aborts the launch. The hosted
   wrapper's groups: the harness in a group of its own, the terminal's foreground group, the
   wrapper outside it; Ctrl+C and Ctrl+Z written into the terminal reach the harness and not the
-  wrapper, and a stopped harness is continued.
+  wrapper, and a stopped harness is continued; a handoff made from the already-background
+  wrapper succeeds, its result and the foreground group checked; the harness's signal mask and
+  dispositions hold no blocked or ignored job-control signal.
 - `internal/host/terminal`: a real pseudo-terminal running the test binary itself as a
   small program (echo, a full-screen draw with colours and wide glyphs, the alternate
   screen, a resize report); bytes in, the screen read back as styled rows; a resize reaching

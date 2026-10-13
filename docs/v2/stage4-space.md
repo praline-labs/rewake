@@ -228,10 +228,13 @@ existing proof holds unchanged.
   then behaves as for any foreground job: Ctrl+C and Ctrl+Z written into the space reach the
   harness's group through the terminal's line discipline, and the wrapper gets neither. A
   harness that stops has no shell to bring it back, so the wrapper continues its group at once
-  and gives it the terminal again. The wrapper, in a background group of its own terminal,
-  catches SIGTTOU and SIGTTIN rather than ignoring them, since an ignored signal would stay
-  ignored in the harness it starts; its own terminal calls are only the handing over of the
-  foreground.
+  and gives it the terminal again. After the first handoff the wrapper's own group is an
+  orphaned background group of its terminal, and Linux lets such a group change the foreground
+  only while SIGTTOU is blocked or ignored — a handler is not enough (`tty_check_change` in
+  `drivers/tty/tty_jobctrl.c`, read at v6.12). So the wrapper blocks SIGTTOU around each of its
+  own `tcsetpgrp` calls and nowhere else, and the harness starts with the default signal mask
+  and dispositions, restored before its exec, so it inherits no blocked or ignored job-control
+  signal.
 - **The environment.** The wrapper's own, less what names a session or a transport —
   `REWAKE_SESSION`, `REWAKE_EPOCH`, `REWAKE_ROOM`, `REWAKE_DIR`, `REWAKE_MOD_SOCKET`, every
   `REWAKE_BRIDGE_` variable — and less the worker harness's `EnvNotInherited`, as the probe
