@@ -36,38 +36,40 @@ func (s Size) check() error {
 // program can read its size. The master is opened through os.OpenFile so the
 // runtime polls it: a read blocked on it ends when it is closed, and writes
 // honor a deadline.
-func openPair(size Size) (master, slave *os.File, err error) {
+func openPair(size Size) (*os.File, *os.File, error) {
 	if err := size.check(); err != nil {
 		return nil, nil, err
 	}
-	master, err = os.OpenFile("/dev/ptmx", os.O_RDWR|syscall.O_NOCTTY|syscall.O_CLOEXEC, 0)
+	master, err := os.OpenFile("/dev/ptmx", os.O_RDWR|syscall.O_NOCTTY|syscall.O_CLOEXEC, 0)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not open a pseudo-terminal: %w", err)
 	}
-	defer func() {
-		if err != nil {
-			_ = master.Close()
-		}
-	}()
+	// Every failure below closes what was opened before it returns: a
+	// descriptor left to a finalizer is one a retry under a tight limit
+	// cannot open.
 	var number uint32
 	unlock := int32(0)
 	if err := ioctl(master, syscall.TIOCSPTLCK, unsafe.Pointer(&unlock)); err != nil {
+		_ = master.Close()
 		return nil, nil, fmt.Errorf("could not unlock the pseudo-terminal: %w", err)
 	}
 	if err := ioctl(master, syscall.TIOCGPTN, unsafe.Pointer(&number)); err != nil {
+		_ = master.Close()
 		return nil, nil, fmt.Errorf("could not name the pseudo-terminal: %w", err)
 	}
 	// O_NOCTTY: the side is the program's controlling terminal, never this
 	// process's, which may have none and must not take one.
-	slave, err = os.OpenFile("/dev/pts/"+strconv.FormatUint(uint64(number), 10), os.O_RDWR|syscall.O_NOCTTY|syscall.O_CLOEXEC, 0)
+	side, err := os.OpenFile("/dev/pts/"+strconv.FormatUint(uint64(number), 10), os.O_RDWR|syscall.O_NOCTTY|syscall.O_CLOEXEC, 0)
 	if err != nil {
+		_ = master.Close()
 		return nil, nil, fmt.Errorf("could not open the pseudo-terminal's side: %w", err)
 	}
 	if err := setSize(master, size); err != nil {
-		_ = slave.Close()
+		_ = side.Close()
+		_ = master.Close()
 		return nil, nil, err
 	}
-	return master, slave, nil
+	return master, side, nil
 }
 
 // winsize is struct winsize of <asm-generic/termios.h>.
