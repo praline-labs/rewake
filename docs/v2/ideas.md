@@ -174,9 +174,12 @@ bound to its main from the start. Open questions for that design:
 
 Weighed in the stage 4 audit, October 13, 2026
 ([stage4-audit-rows.md](stage4-audit-rows.md#16-worker-tabs-and-buttons--split-p15)): the
-pseudo-terminal belongs to the worker's own rewake wrapper, so a tab can host a worker of
-any harness, Codex and pi included, and a button appears when main launches a worker, not
-only on "+"; a reload of the mod or main's exit loses the view, not the worker. Main
+pseudo-terminal belongs to a rewake process, the space's terminal process, whose identity
+P11 and P15 decide, so a tab can host a worker of any harness, Codex and pi included, and a
+button appears when main launches a worker, not only on "+"; a reload of the mod or main's
+exit loses the view, not the worker. By the owner's idea of the same day, the tab is
+preferably Claude Code's own: the entry a keeper subagent of main gets in the tasks list,
+with the mod drawing the terminal in that subagent's tool row or in its pane for that view. Main
 launching workers is a new authority; the owner made it the target the same day — main
 creates a space, a tab over a pseudo-terminal rewake owns, and seats a worker in it
 ([the target](stage4-audit.md#the-target-a-space)). The probe above is P15 of
@@ -253,11 +256,12 @@ worktree lies inside the repository.
 the probe), 5 for seating a Codex worker. Owner's idea, October 12, 2026.
 
 Weighed in the stage 4 audit, October 13, 2026
-([stage4-audit-rows.md](stage4-audit-rows.md#13-worktree--split-p12)): a checkout made
-without a hook gets no `classic.WorktreeRemove`, so Claude Code's own checkout has no veto
-for a foreign worker unless its removal respects a `git worktree lock` rewake takes; the
-alternative routes Claude Code's `-w` into rewake's checkout through
-`classic.WorktreeCreate`, where the removal event fires and can block. Either way Claude
-Code drives the life (P12). A worker that commits needs both the private and the common Git
-directory granted, resolved through Git. By the owner's decision of the same day pi comes
+([stage4-audit-rows.md](stage4-audit-rows.md#13-worktree--split-p12-p12b)): a checkout made
+without a hook gets no `classic.WorktreeRemove` by the documentation, so the veto for a foreign worker waits on
+P12. After that day's review the owner directed that the whole lifecycle goes to Claude Code
+even with another harness inside: a Claude Code worker makes its own with `-w`, and a worker
+of another harness is seated in a checkout a Claude Code keeper holds — a background session
+or a subagent of main with worktree isolation, weighed by P12b — with one rewake lifecycle
+following Claude Code's conventions as the fallback. A worker that commits needs both the
+private and the common Git directory granted, resolved through Git. By the owner's decision of the same day pi comes
 before Codex, so the first worker seated this way is pi's.

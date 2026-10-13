@@ -22,15 +22,21 @@ Codex. Two readings made that day are folded in, neither run live:
 ## 1. Joining: wrapper or mod — OPEN, P11
 
 **Why.** Argued in [the central question](stage4-audit.md#the-central-question-claude-code-to-claude-code-through-the-mod-alone):
-the mod can carry everything the wrapper does but one thing, an anchor no model command
-can precede, and that one holds only if a process the mod starts at the first
-`session.start` can detach and outlive reloads (*skill*: `$.process.spawn` children die
-with the module; `$.process.run` is one-shot with a timeout). P11 settles it.
+the mod can carry every job the wrapper does, but not the wrapper's authority. The anchor
+needs a process no model command can precede, which holds only if a process the mod starts
+at the first `session.start` can detach and outlive reloads (*skill*: `$.process.spawn`
+children die with the module; `$.process.run` is one-shot with a timeout). And the
+decision's proof rests today on one process being both the anchor a caller descends from and
+the final writer it talks to; under the join they split, and the caller-to-final-writer
+proof, a late opt-in and the anchor's death during an admitted decision are obligations no
+contract answers yet. P11 settles the first; the second needs a replacement authority
+contract, and without one the wrapper stays.
 
 **Code.** If the mod's join is taken: `internal/host/launch` keeps the launch of a harness
-for the wrappers that remain; the run's anchor in `internal/core/registry` and the final
-writer of [stage3-decision.md](stage3-decision.md) generalise from "the wrapper" to "the
-anchor process"; `internal/adapter/claude/claude.go` shrinks to a launcher that adds
+for the wrappers that remain; the run in `internal/core/registry` names an ancestry anchor
+(the harness process) apart from its final writer (the detached process), and the
+authority of [stage3-decision.md](stage3-decision.md) is restated for that split under a
+contract still to be written; `internal/adapter/claude/claude.go` shrinks to a launcher that adds
 `--plugin-dir` and the join variables. If not: nothing changes beyond the mod.
 
 **Other harnesses.** pi loads in-process TypeScript extensions per run with `-e <path>`,
@@ -57,8 +63,10 @@ there makes the session findable by both. The briefing today goes through
 `--append-system-prompt`; with `--system-prompt-snapshot` on by default, a resume reuses
 the prompt written on the first request even if the new launch passes another text, until
 a compaction (*help*). A briefing changed between launches — a role changed on resume —
-is then not seen; `prompt.section` per request (*skill*) is not snapshotted. P14 checks
-both.
+is then not seen. `prompt.section` and `prompt.context` (*skill*) are candidates, both
+cached: a section's answer until the mod invalidates it, the context once per conversation
+until it is invalidated or re-read. Whether either brings a changed briefing into a resumed
+conversation, and with which invalidation, is P14.
 
 **Code.** Kept: `internal/host/launch` registration, `internal/adapter/settings.go` (rewake's
 own launch defaults, not Claude Code's settings). Added: `--name`. Moved, if P14 shows the
@@ -66,8 +74,8 @@ snapshot bites: the briefing from `claude.go`'s flag to the mod's prompt event.
 
 **Other harnesses.** pi has `--name`, `--append-system-prompt` (repeatable, per run, not
 stored as a message) and `--model` with a thinking suffix or `--thinking` (*help*): the
-same split. `--session-id` lets rewake name the conversation before the first turn,
-which Claude Code has no equivalent of (*pi reading*). *Codex reading*: native
+same split. `--session-id` lets rewake name the conversation before the first turn
+(*pi reading*), as Claude Code's own `--session-id <uuid>` does (*help*). *Codex reading*: native
 execution, rewake's registration kept; a bare binary supplies no identity or report route.
 
 **Property.** The core knows no harness: the name goes to each harness through its adapter.
@@ -217,47 +225,73 @@ grant and revoke open (CX5).
 
 **Property.** Grants scoped by task and revoked at its end.
 
-## 13. Worktree — SPLIT, P12
+## 13. Worktree — SPLIT, P12, P12b
 
-**Why.** The owner's example: Claude Code makes the worktree, any harness sits in it, and
-Claude Code manages its whole life. Two ways, both with Claude Code driving the life:
+**Why.** The owner's direction, October 13, 2026: the trouble is the worktree's lifecycle,
+which every harness does its own way, so the whole lifecycle goes to Claude Code's
+implementation, even when another harness runs in the worktree. rewake keeps no worktree
+lifecycle of its own once that holds.
 
-- **A — Claude Code's own checkout** (ideas §5 literally). `-w` makes
-  `.claude/worktrees/<name>/` on branch `worktree-<name>`, copying what `.worktreeinclude`
-  names, from the origin's default branch by default (`worktree.baseRef`, which a launch
-  can set with `--settings` without editing the person's files); a clean checkout of an
-  unnamed session is removed at exit, a named or dirty one is asked about; a background
-  sweep removes old ones of background sessions (*docs*, *help*). What it lacks for a
-  foreign worker is a veto: a checkout made without a hook gets no `WorktreeRemove` event,
-  and Claude Code holds `git worktree lock` only while its own agent runs (*docs*). rewake
-  could take the same lock itself while a worker of any harness sits there — Git's own
-  guard, one call — if Claude Code's removal respects a lock it did not take (P12). No
-  property of [project.md](../project.md) is lost: "a checkout of its own" holds; `land`
-  and `finish` give way to Git or Claude Code's own means. *Codex reading* finds the same in
-  Codex's native checkouts: ownership metadata is not occupancy, and an explicit keep
-  policy is an honest limited answer.
-- **B — routed into rewake's checkout.** `classic.WorktreeCreate` answers with a path, and
-  when it does Claude Code uses it instead of creating its own; it fires for `--worktree`,
-  `EnterWorktree`, a subagent's isolation and a background session (*skill*, *docs*). The
-  mod answers with a checkout of `internal/host/worktree`. `classic.WorktreeRemove` then
-  fires for every removal of it — at exit, at `ExitWorktree`, at a background session's
-  removal — and its `block` keeps it while a rewake session of any harness sits there
-  (*skill*); a non-zero answer fails the removal while the directory remains (*docs*).
-  Limits: a hook-made path through a symbolic link into the repository, or inside it
-  without Git metadata, is refused (*docs*), which a checkout outside the repository
-  avoids; a guard that fails is skipped (*skill*), so a mod that does not answer lets
-  Claude Code make its own — the fail-open P12 measures.
+**What Claude Code does.** A worktree's life is tied to a Claude Code session: made at its
+start by `-w` or by its `EnterWorktree` tool, removed at its exit, or by `claude rm` for a
+background session (*help*; main's reading of the tool's text, 2.1.296). `-w` makes
+`.claude/worktrees/<name>/` on branch `worktree-<name>`, copying what `.worktreeinclude`
+names. Its base is the origin's default branch, not the current HEAD: `worktree.baseRef`
+is "fresh" by default, and a launch can set another with `--settings` without editing the
+person's files (*docs*, *help*). A clean checkout of an unnamed session is removed at exit,
+a named or dirty one is asked about, and a background sweep removes old ones of background
+sessions (*docs*). `claude rm` refuses a checkout with uncommitted changes or unpushed
+commits unless told otherwise (`--discard-unpushed`, `--force-remove-worktree`), and
+reports a removal the `WorktreeRemove` hook or Git could not finish (*help*).
 
-**Proposal.** B now, A if P12 shows the lock holds. B keeps one checkout mechanism for every
-harness and a veto that does not depend on Git's lock being honoured; pi has no worktree
-of its own, so `host/worktree` is needed for a pi worker launched outside a Claude Code
-main anyway. If P12 shows Claude Code's removal refuses a checkout rewake locked, A is the
-simpler design and matches the owner's aim; `host/worktree` then stays only for launches
-outside Claude Code, and its `land` and `finish` become candidates to drop.
+**Who makes the checkout.**
 
-**Code.** Either way most of `internal/adapter/claude/worktree.go` goes: rewake no longer
+- **A Claude Code worker** makes its own, started in its space with `-w`.
+- **A worker of another harness** is seated by cwd in a checkout a Claude Code **keeper**
+  holds. Two candidates:
+  - *a background session*, `claude --bg -w <name>`: the worker sits in its path; closing
+    the space is `claude rm <id>`, with Claude Code's own checks; rewake's mod in the keeper
+    refuses the removal while a rewake worker sits there.
+  - *a subagent of main* whose isolation is "worktree", of an agent type rewake's mod
+    declares with `$.agent.register` (*skill*); spawning it stays the model's own call of
+    the Agent tool. Main observed two such subagents live on Claude Code 2.1.296, October 13,
+    2026: the checkout is made at `.claude/worktrees/agent-<id>` on a new branch
+    `worktree-agent-<id>`, from `origin/<default>` rather than the current HEAD; it is
+    Git-locked while the subagent runs; an unchanged one is removed with its branch when
+    the subagent ends; a changed one is kept, unlocked, and its path and branch come back to
+    main. A subagent kept alive while its space works holds the checkout under Claude Code's
+    lock; when the space closes, the subagent ends and Claude Code removes or keeps the
+    checkout by its own rule. The same subagent can stand for the space in the tasks list
+    (row 16).
+
+**The veto stays conditional on P12.** A worker must not lose its checkout while it sits
+there. The generic result of a classic hook carries `block` (*skill*), and the documentation
+says a failing command hook fails the removal and leaves the directory (*docs*); neither
+shows that every route that deletes honours a mod's answer — the same documentation says the
+hook's JSON output is discarded, and background deletion distinguishes its routes (*docs*).
+It also says a checkout made without a hook gets no `WorktreeRemove` event, while
+`claude rm`'s help names that hook. Whether the mod's refusal holds on each route — exit,
+`ExitWorktree`, the clean unnamed exit, `claude rm`, the sweep — and whether a
+removal respects a `git worktree lock` Claude Code did not take, is P12.
+
+**P12b weighs the two keepers**: can a background session be started as a keeper without
+spending a model turn, and idle cheaply; can a subagent be held alive for a space's life — a
+blocking tool of the mod, the limits on one tool call's length — and at what cost; does
+`claude rm`, or the end of the subagent, refuse while a foreign worker is inside; how rewake
+learns the finished path, since a creation request names no final path (`claude agents
+--json` or the session's own directory); the base, fresh against the branch the work needs;
+what removes a kept checkout later; and the seated worker's Git metadata writes.
+
+**If P12b fails**, rewake keeps one worktree lifecycle of its own that follows Claude Code's
+conventions — `.claude/worktrees`, the base reference, `.worktreeinclude` — and a Claude Code
+worker shares it by having its `-w` answered through `classic.WorktreeCreate` with that
+checkout, so there is still one lifecycle, not two.
+
+**Code.** Most of `internal/adapter/claude/worktree.go` goes either way: rewake no longer
 takes `--worktree` from Claude Code's arguments or refuses `-w`, `--tmux` and
-continuations. B keeps `host/worktree` whole; A keeps it for the other launches only.
+continuations. `internal/host/worktree` goes once a keeper holds; under the fallback it
+stays, reshaped to Claude Code's conventions, and its `land` and `finish` are candidates to
+drop in favour of Git's and Claude Code's own means.
 
 **Other harnesses.** pi: no worktree of its own; it sits by cwd in a checkout another owner
 made, and loads that checkout's context files (*pi reading*; PI12). *Codex reading* sets
@@ -265,13 +299,13 @@ the seating requirements whoever owns the checkout:
 the actual canonical cwd passed to the process and its registration, both Git metadata
 directories granted for commits, a fresh environment without the parent's identity or
 socket, the worker's own configuration home, and the owner's removal aware of the live
-worker. It warns that a creation event names a request, not a finished path — under B
-the path is the hook's own answer, so the mod knows it; under A the mod learns the
-finished path only after the fact, from the session's own directory (P12) — and that the
-removal veto must be shown on every native removal route, not one synthetic event (CX6).
+worker. It warns that a creation event names a request, not a finished path, which P12b
+asks; that ownership metadata is not occupancy; and that the removal veto must be shown on
+every native removal route, not one synthetic event (CX6) — the condition P12 keeps.
 
 **Property.** The person's configuration unedited (a hook in rewake's own plugin, loaded
-for its run, or a lock in Git's own metadata); the core knows no harness.
+for its run, and Claude Code's checkouts under its own rules); the core knows no harness;
+"a checkout of its own" holds for every worker.
 
 ## 14. The room view — KEEP
 
@@ -294,14 +328,30 @@ loadable pane or render hook; a plain CLI view where needed.
 **Why.** ideas §1 and §2: a worker main launches appears as a button in main's Claude Code,
 and inside it a pseudo-terminal runs the worker. The mod cannot own that terminal:
 `$.process.spawn` gives no pseudo-terminal, a one-time stdin and a child that dies when
-the module unloads (*skill*). So the terminal is rewake's — the worker's own wrapper owns
-a pseudo-terminal and runs the harness in it, while the mod only draws its screen in a
-pane and forwards keys. Any harness can then be hosted, pi and Codex included; ideas §1's
-"Later" note that Codex starts by a command line is the same: the wrapper's command line
-starts it inside the terminal.
+the module unloads (*skill*). So the terminal is rewake's — the space's terminal process
+owns a pseudo-terminal and runs the harness in it, while the mod only draws its screen and
+forwards keys. Whether that process is the worker's own wrapper, the detached process of
+row 1 or one of its own per space is open until P11 and P15 decide
+([the target](stage4-audit.md#the-target-a-space)). Any harness can then be hosted, pi and
+Codex included; ideas §1's "Later" note that Codex starts by a command line is the same: its
+command line starts it inside the terminal.
+
+**The tab is Claude Code's** (owner's idea, October 13, 2026). A subagent gets an entry in
+Claude Code's tasks list, and opening it opens the agent's transcript. With the worktree's
+keeper a subagent of main (row 13), that entry is the space's tab and rewake draws no tab bar
+of its own. Opening it replaces the subagent's view with rewake's own: a pseudo-terminal in
+which the real harness runs with its own screen, not another harness's transcript shown by
+Claude Code's means. The terminal is drawn in one of two places (*skill*, the render sites and
+elements): first, the keeper's own transcript, which holds little but its pending call of
+the mod's blocking tool — the mod redraws that tool's row as a cell grid repainted by
+`$.ui.blit`, with a client element taking keys; second, the pane or the band, whose hooks run
+again with the agent in view when the person switches to it, the pane docked beside the
+transcript in fullscreen from 110 columns, the band taking at most half the terminal. A tab
+of the mod's own drawing is the fallback.
 
 **What happens when.** A reload of main's mod loses the view and the key path for a moment;
-the worker and its terminal live on in their wrapper, and the redrawn pane reattaches. Main
+the worker and its terminal live on in the space's terminal process, and the redrawn view
+reattaches. Main
 exiting closes the pane; the worker keeps running, reachable by `rewake` and by attaching
 from another terminal — it ends only by its own end or the person's word. The button
 appears when main launches a worker, not only on a "+". A launch by main is a new authority
@@ -310,14 +360,18 @@ creates a space and seats a worker in it ([the target](stage4-audit.md#the-targe
 — and its limits are designed in stage 4 and stage 6.
 
 **The probe.** P15 (keys, Escape, focus, paste, size, the redraw cost) was stage 6's by
-ideas.md; it runs beside stage 4's probe by main's decision of October 13, 2026, because a wrapper that owns a
-pseudo-terminal changes every adapter's launch, and stage 4 should not build one that
-rules it out. *pi reading*: interactive pi runs in a pseudo-terminal rewake owns with no
+ideas.md; it runs beside stage 4's probe by main's decision of October 13, 2026, because a
+rewake process that owns a pseudo-terminal changes every adapter's launch, and stage 4 should
+not build one that rules it out. It now asks first whether a transcript row may carry the
+cell grid and the client element and take keys, its height in the agent's view with
+fullscreen on and off, its repaint by `$.ui.blit`, scroll and focus; then whether the pane
+follows the view switch, may be opened on it, and the size it gets; Escape stays the known
+gap of keys through the client. *pi reading*: interactive pi runs in a pseudo-terminal rewake owns with no
 cooperation, regular or fullscreen (PI11). *Codex reading*, same conclusion: a pane is not an interactive terminal,
 and a reload must not be assumed to keep the worker (CX7).
 
 **Property.** A session the person asks rewake to host is allowed; no service beyond the
-worker's own wrapper.
+space's terminal process, which serves its space alone.
 
 ## 17. The room panel — MOD, stage 6
 
@@ -332,7 +386,9 @@ its own process, surviving the terminal but not shutdown; `claude agents`, `atta
 `logs`, `stop`, `rm` manage them; dispatched ones open a draft pull request (*docs*,
 *help*). A rewake worker's life is its wrapper's, and a supervisor that outlives it breaks
 "lives as long as the session"; `--bg --exec` runs any command as a background task with
-output in memory only (*docs*). Not scheduled; P16 only if the owner takes ideas §4 up.
+output in memory only (*docs*). Not scheduled; P16 only if the owner takes ideas §4 up. A
+background session as a worktree's keeper, running no worker of its own, is P12b's (row 13),
+not this row's.
 **Other harnesses.** pi: `--mode rpc`, JSON lines over stdin and stdout, carries wake,
 steer, abort, compaction, a new session and telemetry, with the extension still loaded for
 tools; a person cannot type into such a worker (*pi reading*; PI13). *Codex reading*: `exec` is one-shot

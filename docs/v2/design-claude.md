@@ -296,9 +296,13 @@ In short, as proposals for main and the owner, with main's decisions of the same
 marked:
 
 - **Joining** stays open: work between Claude Code sessions could run through the mod
-  alone, with `rewake claude` reduced to a launcher, if a process the mod starts at the
-  first `session.start` detaches, outlives reloads and becomes the run's anchor in the
-  wrapper's place — a core change. P11 decides it and runs first (decided by main).
+  alone, with `rewake claude` reduced to a launcher, the harness process anchoring the run's
+  ancestry and a process the mod starts at the first `session.start` — detached, outliving
+  reloads — serving it as endpoint, lease and final writer. That split loses the
+  decision's same-process proof; the caller-to-final-writer proof, a late opt-in and the
+  anchor's death during an admitted decision are open obligations of P11, and the wrapper
+  stays unless a replacement authority contract is accepted. P11 runs first (decided by
+  main).
 - **Kept as rewake's**: the mail, the registry, the room view, the shell allowance, grant
   authority, the version gate and the scrubbing of children's variables. Native messaging
   keeps nothing for a session that is not running and knows no kinds or reports, so it
@@ -306,20 +310,24 @@ marked:
 - **Built on the mod**: reading by tool, the turn boundary, telemetry, control, the
   conversation binding, and a `session.send` guard that keeps a report off native
   `SendMessage` (P13); `--name` passes rewake's name to Claude Code's own (P13), and the
-  briefing may move to a prompt event if the system prompt's snapshot on resume hides a
-  changed one (P14).
-- **The worktree's life** goes to Claude Code: its own `-w` and `EnterWorktree` are routed
-  into `host/worktree`'s checkout through `classic.WorktreeCreate`, with
-  `classic.WorktreeRemove` keeping a checkout a rewake session of any harness sits in; if
-  Claude Code's removal respects a `git worktree lock` rewake takes, its own checkout is the
-  simpler choice (P12). Either way most of the adapter's own worktree launch goes.
+  briefing may move to a prompt event, cached as those are, if the system prompt's snapshot
+  on resume hides a changed one (P14).
+- **The worktree's whole life** goes to Claude Code, even with another harness inside (the
+  owner's direction): a Claude Code worker makes its own with `-w`, and a worker of another
+  harness is seated in a checkout a Claude Code keeper holds — a background session started
+  with `claude --bg -w`, or a subagent of main with worktree isolation. The mod's refusal of a
+  removal while a worker sits there is conditional on P12; P12b weighs the keepers; if it
+  fails, rewake keeps one lifecycle that follows Claude Code's conventions. Either way most
+  of the adapter's own worktree launch goes.
 - **The target** the owner set the same day is a space: main creates a pseudo-terminal rewake
   owns, shown as a tab in main's Claude Code, a worktree may be made in it, and a worker is
   seated there; stage 4's first end to end is that flow with a Claude Code worker, if P11,
-  P12 and P15 allow ([the target](stage4-audit.md#the-target-a-space)).
-- **Worker tabs**: the pseudo-terminal belongs to the worker's rewake wrapper, so any
-  harness can be hosted, and the mod draws it and forwards keys; P15 runs beside stage 4's
-  probe (decided by main).
+  P12, P12b and P15 allow ([the target](stage4-audit.md#the-target-a-space)).
+- **Worker tabs**: the pseudo-terminal belongs to the space's terminal process, a rewake
+  process whose identity P11 and P15 decide, so any harness can be hosted. The tab is
+  preferably the keeper subagent's entry in Claude Code's tasks list (the owner's idea): the
+  mod draws the terminal in the keeper's own tool row, or in its pane or band for that view,
+  and forwards keys; P15 runs beside stage 4's probe (decided by main).
 - **Background sessions** under Claude Code's supervisor stay unscheduled, and P16 with
   them (decided by main).
 
@@ -341,9 +349,10 @@ part; what it leaves open is named in the row.
 | P8 | Reserved fields under forged arguments; `isDeferred: false` in the registration, and whether the model then calls the tools; a `permissions.deny` rule and `$.tool.check` on a mod tool, with neither an effect nor shell advice after a deny; whether the denial answer reaches the model as an error where the design assumed plain text; a person's MCP server named `rewake` | the tool set's safety; with no reliable check, no tools |
 | P9 | Tools after `/clear`; session ids across `/clear`, resume, branch, and `classic.SessionStart`'s source; are turn ids ever reused across an interrupt, a reload, `/clear`, a resume | the conversation binding; whether a retry may mark (T7) |
 | P10 | A `$.process.spawn` child across turns, reloads and `session.end`, and its environment against the Bash tool's | the control and notice stream; why the endpoint and not a child |
-| P11 | A mod's join without the wrapper: whose child a `$.process.run` child is and whether it may detach and outlive a reload, a worker respawn and `session.end`, ending with the harness process; whether it starts before any model command at the first `session.start`; the inbox socket's path from `$.env.get`; the hello naming the harness's pid and build, checked by the detached process against the peer of the mod's requests (P4). Runs first (decided by main, October 13, 2026) | whether `rewake claude` can become a launcher and the run's anchor the harness process; negative, the wrapper stays as designed |
-| P12 | `classic.WorktreeCreate` answered with a checkout of `host/worktree`, for `--worktree`, `EnterWorktree`, a subagent's isolation and a resume into it; `classic.WorktreeRemove` blocked while a rewake session sits there, at exit, `ExitWorktree`, the clean unnamed exit and `claude rm`; the mod not answering or failing; the isolation checks inside the routed checkout. Then Claude Code's own checkout with a `git worktree lock` rewake took: removal at exit, the clean unnamed exit, `claude rm` and the sweep; how the mod learns the finished path | which way the worktree goes (row 13 of the audit) and that `adapter/claude/worktree.go` goes; with no reliable veto, the explicit keep policy |
+| P11 | A mod's join without the wrapper: whose child a `$.process.run` child is and whether it may detach and outlive a reload, a worker respawn and `session.end`, ending with the harness process; whether it starts before any model command at the first `session.start`; the inbox socket's path from `$.env.get`; the hello naming the harness's pid and build, checked by the detached process against the peer of the mod's requests (P4). Its open authority obligations, which a replacement contract must answer and which this row does not yet test: the caller-to-final-writer proof, since a caller descends from the harness process while the connection's peer and final writer is the detached one ([stage3-decision.md](stage3-decision.md#authority)); a late opt-in, a join after model commands ran, where the first `session.start`'s ordering does not hold; the harness's death while the detached process holds an admitted decision. Runs first (decided by main, October 13, 2026) | whether `rewake claude` can become a launcher, the harness process anchoring the run's ancestry; negative, or with no replacement authority contract accepted, the wrapper stays as designed |
+| P12 | Claude Code's own checkout from a worker's `-w` and `EnterWorktree`, and a resume into it: where it lands and how the mod learns the finished path; `classic.WorktreeRemove` answered with a refusal while a rewake session sits there, at exit, `ExitWorktree`, the clean unnamed exit, `claude rm` and the sweep, and whether it fires at all for a checkout made without a hook; the mod not answering or failing; a `git worktree lock` Claude Code did not take on each of those routes; the isolation checks inside the checkout. For the fallback: `classic.WorktreeCreate` answered with rewake's checkout | whether the mod's veto holds on every removal route (row 13 of the audit) and that `adapter/claude/worktree.go` goes; with no reliable veto, the explicit keep policy |
+| P12b | The worktree's keeper for a worker of another harness, both candidates: a background session started with `claude --bg -w <name>` without spending a model turn, its idle cost, `claude rm` with a foreign worker inside; a subagent of main with worktree isolation, of an agent type the mod declares, held alive for a space's life (a blocking tool of the mod, the limits on a tool call's length), its cost, its end with a foreign worker inside. For both: the finished path known to rewake (`claude agents --json` or the session's directory), the base (fresh from `origin/<default>` against the branch the work needs), what removes a kept checkout later, the seated worker's Git metadata writes | which keeper holds a space's checkout and that `host/worktree` goes; negative, one rewake lifecycle that follows Claude Code's conventions |
 | P13 | Native `SendMessage` from a rewake session to a room member refused by a `session.send` guard, and what the model sees; `ListAgents` beside the room; `--name` as the address and the title; a rename by `/rename` | the guard and the name |
-| P14 | The briefing on resume with `--system-prompt-snapshot` on and off, a role changed between launches; the same text from `prompt.section` | the briefing's carrier |
-| P15 | A pseudo-terminal of a rewake wrapper drawn in a mod pane: Escape and its remapping, Ctrl+C, Ctrl+X, Alt, paste, function keys, focus in and out, a size of 200 by 50, the redraw cost over `$.http.fetch`; a reload of the mod and main's exit with the worker alive. Stage 6 by [ideas.md](ideas.md#1-sessions-as-tabs-inside-claude-code); runs beside stage 4's probe (decided by main, October 13, 2026) | whether worker tabs are buildable and the launch of every adapter owns a terminal |
+| P14 | The briefing on resume with `--system-prompt-snapshot` on and off, a role changed between launches; the same text from `prompt.section` and from `prompt.context`, both cached by the engine, and the invalidation each needs to show the changed text | the briefing's carrier |
+| P15 | A pseudo-terminal of the space's terminal process drawn by the mod where the keeper subagent is opened from the tasks list: first in the keeper's own tool row in its transcript — may a transcript row carry the cell grid and the client element and take keys, its height in the agent's view with fullscreen on and off, its repaint by `$.ui.blit`, scroll and focus — then in the pane or the band, whether it follows the view switch, may be opened on it, and its size; in either, Escape and its remapping, Ctrl+C, Ctrl+X, Alt, paste, function keys, focus in and out, a size of 200 by 50, the redraw cost over `$.http.fetch`; a reload of the mod and main's exit with the worker alive. Stage 6 by [ideas.md](ideas.md#1-sessions-as-tabs-inside-claude-code); runs beside stage 4's probe (decided by main, October 13, 2026) | whether worker tabs are buildable and the launch of every adapter owns a terminal |
 | P16 | `claude --bg` and `--bg --exec` as the host of a rewake worker: the supervisor's lifetime against the wrapper's, `claude agents --json` fields, `claude rm` and the worktree. Not scheduled (decided by main, October 13, 2026); only if the owner takes headless workers up | whether background sessions can carry a worker |

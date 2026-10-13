@@ -128,7 +128,8 @@ accepted in review round 7:
 Stage 4, Claude Code's adapter as one mod:
 
 - [stage4-audit.md](stage4-audit.md) — the audit of October 13, 2026, before the probe: the
-  owner's question whether Claude Code sessions can work through the mod alone without the
+  owner's target, a space with a worker seated in it and its worktree's life left to Claude
+  Code; the owner's question whether Claude Code sessions can work through the mod alone without the
   `rewake claude` wrapper, the verdict on each feature (kept, native, mod, split, open),
   and the consequences for the stage plan, pi's stage 4b and Codex's entry point among
   them. Open it before planning stage 4 or 4b.

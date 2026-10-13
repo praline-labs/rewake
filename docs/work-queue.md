@@ -132,7 +132,7 @@ The remaining entries of [harness-features.md](harness-features.md), in its orde
 ## Later: what the directory grants and the worktrees left open in 1.x
 
 What follows was queued for 1.x. In 2.0 the worktree is weighed in stage 4's audit
-([row 13](v2/stage4-audit-rows.md#13-worktree--split-p12)) and grants are applied by each
+([row 13](v2/stage4-audit-rows.md#13-worktree--split-p12-p12b)) and grants are applied by each
 adapter in stage 6 ([the stage plan](v2/design.md#the-stage-plan-from-here)); an item
 here returns only where one of those stages names it.
 
