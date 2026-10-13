@@ -118,14 +118,18 @@ absent (`checkWhole`). Each run is then held to the model by the play's checks
 the first's.
 
 The cut count of a world is the number of durable steps its clean log holds, measured on
-the matrix's first run in S18's third part:
+the matrix's runs in S18's third part, the feasible worlds by the full run:
 
 | Partition | Pair-cover worlds | Their cuts | Feasible worlds | Their cuts |
 |---|---|---|---|---|
-| `decision` | 23 | 363 | 3198 | measured by the full run |
+| `decision` | 23 | 363 | 3198 | 59717 |
 | `resend` | 41 | 1208 | 219 | 7566 |
 | `mailbox` | 32 | 887 | 52 | 1424 |
 | `generations` | 12 | 1882, of which 1528 the chain of 40 | 12 | 1882 |
+
+The full run on the final code of S18's third part, on October 13, 2026: all 3481 feasible
+worlds and their 70589 cuts, each killed and flushed — 148145 passing tests and subtests,
+none failing or skipped, in 41 minutes.
 
 Each cut is run twice, killed and flushed. A world's room is made on the file system in
 memory when the system has one (`/dev/shm`): every durable write of a room flushes, and
