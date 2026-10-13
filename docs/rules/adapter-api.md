@@ -41,7 +41,7 @@ Tests:
 - `internal/host/turn_start_test.go` `TestABoundaryWithAToolRecordsItsStartOnceAndOpensItsTurn`
 - `internal/host/turn_start_test.go` `TestABoundaryWithoutAToolRecordsItsStart`
 
-## The catalogue
+## The catalog
 
 `adapter/catalog` has one constructor that returns the catalogue value — the adapters in
 the order the guide shows them — and is the only package that names every adapter;

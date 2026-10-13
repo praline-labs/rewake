@@ -33,7 +33,7 @@ var ruleGroups = map[string]int{"E": 8, "D": 8, "O": 2, "T": 11, "C": 8, "L": 3}
 var unnumbered = map[string][]string{
 	"rules/host.md":        {"The wrapper", "The live set", "Grants"},
 	"rules/layout.md":      {"The import rule", "Harness names outside the adapters", "No registry", "The exception tables"},
-	"rules/adapter-api.md": {"The capabilities", "The catalogue", "Minimum versions"},
+	"rules/adapter-api.md": {"The capabilities", "The catalog", "Minimum versions"},
 	"rules/state.md":       {"The state root", "The build's identity", "The room's lease", "Views and changes", "Clearing the state of 1.x"},
 }
 
