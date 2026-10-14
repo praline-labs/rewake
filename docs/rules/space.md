@@ -64,12 +64,14 @@ S4-7, SP6 with S4-8, SP1 and SP8 with S4-9.
   own, its peer read by `SO_PEERCRED`; only the harness process the host started, alive with
   its start time, is served, a process below it or beside it of the same user is refused
   whatever it asks, a request before the host names the harness waits within a bound, and the
-  peer is checked again before the answer. Held as well for the endpoint's tool transport.
+  peer is checked again before any effect of a hello and again before the answer. Held as well
+  for the endpoint's tool transport.
   Tests:
   - `internal/adapter/claude/modhost/server_test.go` `TestOnlyTheHarnessesOwnProcessIsServed`
   - `internal/adapter/claude/modhost/server_test.go` `TestAReplacedHarnessIsNotServed`
   - `internal/adapter/claude/modhost/server_test.go` `TestARequestBeforeTheHarnessIsNamedWaits`
   - `internal/adapter/claude/modhost/server_test.go` `TestEveryRequestIsAConnectionOfItsOwn`
+  - `internal/adapter/claude/modhost/admission_test.go` `TestAHelloFromAReplacedHarnessHasNoEffect`
   - `internal/host/endpoint/transport_test.go` `TestOnlyTheTransportsOwnProcessIsServed`
   - `internal/host/endpoint/transport_test.go` `TestAnAnswerGoesOnlyToTheTransportThatAsked`
 

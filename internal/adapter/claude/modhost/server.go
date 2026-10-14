@@ -296,16 +296,20 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		refuse(w, http.StatusBadRequest, "a hello names its load, its session and the harness's version")
 		return
 	}
-	if !s.bind(hello) {
-		refuse(w, http.StatusServiceUnavailable, errClosing.Error())
+	if err := s.bind(r.Context(), hello); errors.Is(err, errClosing) {
+		refuse(w, http.StatusServiceUnavailable, err.Error())
 		return
+	} else if err != nil {
+		// The harness was replaced while the body was read: the hello
+		// proves nothing, and nobody is there to take a refusal.
+		panic(http.ErrAbortHandler)
 	}
 	answer := HelloAnswer{Role: s.cfg.Role, HostsSpaces: s.cfg.HostsSpaces}
 	if s.answering != nil {
 		s.answering()
 	}
-	// The peer is checked again before the answer: a harness replaced while
-	// the request ran is not the one that asked, and nobody is there to
+	// The peer is checked again before the answer: a harness replaced since
+	// the hello was bound is not the one that asked, and nobody is there to
 	// take the answer, so the connection is cut with none.
 	if s.fromHarness(r.Context()) != nil {
 		panic(http.ErrAbortHandler)
@@ -313,16 +317,21 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	reply(w, http.StatusOK, answer)
 }
 
-// bind makes hello the run's load, writes its record and tells the run,
-// unless the server closed first: the check comes right before the write, so
-// a handler that outlasted Close's wait writes nothing it had not begun.
-func (s *Server) bind(hello HelloRequest) bool {
+// bind makes hello the run's load, writes its record and tells the run, once
+// the request's peer is checked again and the server is still open, all under
+// one lock: a harness replaced while the body was read gets no effect of its
+// hello — no load, no record, no capability made live — and a handler that
+// outlasted Close's wait writes nothing it had not begun.
+func (s *Server) bind(ctx context.Context, hello HelloRequest) error {
 	s.bindMu.Lock()
 	defer s.bindMu.Unlock()
+	if err := s.fromHarness(ctx); err != nil {
+		return err
+	}
 	s.mu.Lock()
 	if s.closed {
 		s.mu.Unlock()
-		return false
+		return errClosing
 	}
 	s.load = &hello
 	s.mu.Unlock()
@@ -330,7 +339,7 @@ func (s *Server) bind(hello HelloRequest) bool {
 	if s.cfg.Admitted != nil {
 		s.cfg.Admitted(hello)
 	}
-	return true
+	return nil
 }
 
 // record writes the admitted hello where the run keeps it, whole: a
