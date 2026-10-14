@@ -7,10 +7,9 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/core/role"
 )
 
-// launchRequest is a main launch of h in a short private directory, so no
+// launchRequest is a launch of a role that opens spaces, in a short private directory, so no
 // socket path the adapter derives passes the limit a unix socket allows.
 func launchRequest(t *testing.T) adapter.LaunchRequest {
 	t.Helper()
@@ -24,10 +23,14 @@ func launchRequest(t *testing.T) adapter.LaunchRequest {
 	if err := os.Mkdir(run, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	return adapter.LaunchRequest{
+	request := adapter.LaunchRequest{
 		Name: "api", Dir: dir, RoomDir: dir, Room: "default", Epoch: "1-1",
-		Socket: filepath.Join(dir, "api.sock"), Role: role.Main, RunDir: run,
+		Socket: filepath.Join(dir, "api.sock"), RunDir: run,
 	}
+	// A role that opens spaces, set field by field: the catalog sits below
+	// the core and names none of its roles (the import rule).
+	request.Role.ID, request.Role.Spaces, request.Role.Silent = "main", true, true
+	return request
 }
 
 // Every harness answers whether a launch can name its conversation, either
