@@ -183,29 +183,29 @@ an npm upgrade the path the mod would run names a new build (T10). Through the e
 the answer is computed by the wrapper's own build and the acknowledgment comes from
 evidence only the harness emits.
 
-**Telling the mod from a shell command.** Every request to the endpoint is checked on
-its own: the peer of its connection, by `SO_PEERCRED`, must be **the harness process
-itself** — the pid the wrapper started, alive with its start time before and after the
-answer, as the grant authority checks its peer (`docs/grants-authority.md`, steps 1–2).
-A descendant of the harness is never accepted, since a command the model runs is one.
-No secret, token or session carries authority from one request to the next, so a mod
-reload, a respawned hooks worker or a dropped connection changes nothing: each request
-proves its origin again. This holds only if `$.http.fetch` connects from the harness's
-own process: P4 (*to verify*). The skill does not say which process or thread connects,
-and it states that installed mods share one worker thread; the 2.1.280 record says a
-worker process of its own for every plugin
-([research-claude-control.md](../research-claude-control.md)). The two disagree, and the
-live result of P4 settles it. **If it does not hold, there is no fallback**, and more
-than the tools goes: every capability that reaches the host through the mod —
-ToolTransport, TurnBoundary, Telemetry, Control — is not live on that version, since
-its hello, turn events and answers are refused alike. A role that must report then
-refuses to launch (answer 3 of [design.md](design.md#the-owners-answers)); the shell
-carries mail, not a turn's end. So a negative P4 blocks stage 4's working pair until
-another trusted channel of events is designed and reviewed; admitting a helper process
-back is not that channel. A secret the host hands the mod is not one: after the first
-load a shell command may already run, and on a reload it could read and present a
-reissued secret first. The threat is the one 1.x tickets answer — a model's command
-imitating the tool; a process of the same user rewriting the mod's files is outside it.
+**Telling the mod from a shell command.** Every request to the endpoint is checked on its
+own: the peer of its connection, by `SO_PEERCRED`, must be **the harness process itself**
+— the pid the wrapper started, alive with its start time before and after the answer, as
+the grant authority checks its peer (`docs/grants-authority.md`, steps 1–2). A descendant
+of the harness is never accepted, since a command the model runs is one. No secret, token
+or session carries authority from one request to the next, so a mod reload, a respawned
+hooks worker or a dropped connection changes nothing: each request proves its origin
+again. This holds only if `$.http.fetch` connects from the harness's own process: P4,
+**answered positive on October 13, 2026, 2.1.296**
+([the record](../research-claude-mod.md#p4-the-peer-of-the-mods-requests)) — every
+request the probe's mod made, through a reload, the keeper's hold and its polls, named
+the harness process itself, and a model's shell child was refused; rewake's own mod's
+hello was admitted the same way in S4-5. Still open: a hooks worker respawned after a
+crash, and a shell child started before a reload. A negative result on a later version
+has **no fallback**: every capability that reaches the host through the mod —
+ToolTransport, TurnBoundary, Telemetry, Control, Spaces — would not be live, a role that
+must report would refuse to launch (answer 3 of
+[design.md](design.md#the-owners-answers)), and stage 4's working pair would wait for
+another trusted channel of events, designed and reviewed; admitting a helper process back
+is not that channel. A secret the host hands the mod is not one: after the first load a
+shell command may already run, and on a reload it could read and present a reissued
+secret first. The threat is the one 1.x tickets answer — a model's command imitating the
+tool; a process of the same user rewriting the mod's files is outside it.
 
 The same holds for the endpoint's other callers in the mod — the hello, turn events,
 read evidence, control answers. The stream child of [Control](#control) is a descendant,
@@ -384,7 +384,7 @@ part; what it leaves open is named in the row.
 | P1 | Wake: each candidate idle and busy, under `-p` and interactive, after `/clear` and a compaction; steering; how the person and the model see it; identical-text suppression; a held line's outcome | the Wake mechanism, and the fate of the lane and `held.go` |
 | P2 | Does `classic.PostToolUse` or `classic.PostToolBatch` carry the **final** result for a mod-answered call, and does `classic.PostToolUse` fire at all for one the mod answered without passing it on: with a settings hook that replaces a short result after the mod; with a large result turned into a preview; with the event or the host's answer lost; with the turn aborted between the result and the next request. Each case compared with what a stand-in model API received | whether reading tools are live, and the effective bound (T6); the observed order goes into the fixture |
 | P3 | `classic.Stop` with `block`: the turn continues; a second Stop with the repeat mark; one `turn.complete` at the end; an aborted turn; `StopFailure` then `turn.complete` as one end; does a main-loop `tool.call` ever fall outside its turn's start and complete | the confirmation, and the turn a call belongs to |
-| P4 | Which process or thread `$.http.fetch` with `socketPath` connects from (the skill says one shared worker thread, the 2.1.280 record a process per plugin): is it the harness process itself, by `SO_PEERCRED`, on every request; the same after a reload, a worker respawn, a repeated hello, a repeated native call; a shell child started before the reload tries the endpoint and is refused | whether any capability that reaches the host through the mod — ToolTransport, TurnBoundary, Telemetry, Control — can be live; negative, reporting roles refuse to launch and stage 4's pair is blocked |
+| P4 | Which process or thread `$.http.fetch` with `socketPath` connects from (the skill says one shared worker thread, the 2.1.280 record a process per plugin): is it the harness process itself, by `SO_PEERCRED`, on every request; the same after a reload, a worker respawn, a repeated hello, a repeated native call; a shell child started before the reload tries the endpoint and is refused | whether any capability that reaches the host through the mod — ToolTransport, TurnBoundary, Telemetry, Control — can be live; negative, reporting roles refuse to launch and stage 4's pair is blocked. **Answered positive, October 13, 2026** ([the record](../research-claude-mod.md#p4-the-peer-of-the-mods-requests)): every request the probe's mod made was the harness process itself, through a reload, the keeper's hold and its polls, and a model's shell child was refused; still open: a hooks worker respawned after a crash, a shell child started before a reload |
 | P5 | What each cause the skill lists shows when the mod does not load, interactive and `-p`; a same-named installed plugin; does the remote switch reach `--plugin-dir`; what the host sees when a loaded mod is unloaded later, when the whole mod set is unloaded after worker crashes, or when its stream child dies | the preflight, the notice, the withdrawal of a lost capability |
 | P6 | Cadence of `session.measure`; is the breakdown call, which measures against the compaction window, acceptable (the skill says `percent` is not against it) | whether the window parser goes |
 | P7 | `$.session.compact` idle and mid-turn; `$.turn.abort`; does `$.command.run` with the clear command work live, and does it raise `turn.start` and `turn.complete` | Control's verbs |

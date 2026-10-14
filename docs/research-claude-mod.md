@@ -33,6 +33,35 @@ project you created or one you trust?" with "No, exit" preselected: the first ru
 there, and the driver then answered Down, Enter, one second after the text appeared (a
 key sent sooner was lost).
 
+## P4: the peer of the mod's requests
+
+Whether `$.http.fetch` with `socketPath` connects from the harness process itself, which
+every check of the mod's endpoint rests on
+([design-claude.md](v2/design-claude.md#how-a-tool-call-runs)). Two runs, both on October 13,
+2026, Claude Code 2.1.296.
+
+### The probe's kit, extended (`Na99qK`)
+
+The kit's server read `SO_PEERCRED` on every connection and compared its pid and the start
+ticks of that pid with the `claude` process the driver started. **Every** request the mod
+made named the harness process itself, same pid and same start: at `session.start`; in
+turns; before and after a model's Bash call; after `/reload-plugins`, where no new module
+load was observed, so this was not a hooks worker respawned by force; at the keeper's spawn,
+its hold, the duplicate hold about 30 seconds later and every poll of the hold. A model's
+Bash child, `curl --unix-socket` to the same socket, showed its own pid, with `comm` `curl`,
+and was refused.
+
+**Not seen**: a hooks worker that crashed and was respawned; a shell child started before a
+reload, trying the endpoint after it.
+
+### rewake's own mod (S4-5)
+
+Main ran a built rewake with the embedded mod, `rewake --main claude` in `-p` mode with the
+cheapest model, in a private `REWAKE_DIR`. The mod's hello was admitted on the run's mod socket
+with its load's id, the session's id and `harnessVersion` 2.1.296, and `hello.json` in the run
+directory carried it. A model's Bash child sending the same request with `curl` was answered
+403, naming its process as not the harness's own.
+
 ## P11: a process the mod starts
 
 ### `$.process.run`, the child detaching (`nugmw7`)

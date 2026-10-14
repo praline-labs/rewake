@@ -167,7 +167,9 @@ Each one a step would otherwise guess; the step named decides it or brings it to
   [stage4-space-terminal.md](stage4-space-terminal.md#what-it-brings-in)
   ([the comparison](stage4-space.md#the-terminal-library)).
 - **Q2. P4** (S4-1). If `$.http.fetch` does not connect from the harness process, no request
-  of the mod can be trusted, and the space waits for another trusted channel.
+  of the mod can be trusted, and the space waits for another trusted channel. Answered
+  positive on October 13, 2026, 2.1.296
+  ([the record](../research-claude-mod.md#p4-the-peer-of-the-mods-requests)).
 - **Q3. Text or the cell grid** (S4-1, P15c). The repaint rate and CPU of styled text through
   props at 160 by 30; the cell grid is the fallback.
 - **Q4. The keeper's second call** (S4-1). The skill says a stalled agent is retried; whether

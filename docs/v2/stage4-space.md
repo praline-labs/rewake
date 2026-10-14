@@ -88,8 +88,9 @@ A worker's wrapper answers its own mod the same way. Each request is checked on 
 peer of the connection, by `SO_PEERCRED`, must be the harness process the wrapper started,
 alive with its start time before and after the answer — the check the endpoint already makes
 for a transport (`internal/host/endpoint/transport.go`). That `$.http.fetch` connects from the
-harness process is P4, still open; the first build step runs it
-([the steps](stage4-space-steps.md#the-build-steps)).
+harness process is P4, answered positive by the first build step on October 13, 2026, 2.1.296
+([the record](../research-claude-mod.md#p4-the-peer-of-the-mods-requests)); a hooks worker
+respawned after a crash and a shell child started before a reload stay open.
 
 **Bounds.** `$.http.fetch` gave up after 30 s in every probe run, so no request is held
 longer than 20 s; a wait is a loop of polls. A request body is at most 64 KiB, a screen

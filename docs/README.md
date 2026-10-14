@@ -252,7 +252,8 @@ everything else.
   or `rewake interrupt`, before a Stop hook that holds a turn, before touching the grant
   hook, and after a harness update.
 - [research-claude-mod.md](research-claude-mod.md) — the dated records of stage 4's live
-  probe on Claude Code 2.1.296: a process the mod starts detaching and outliving reloads, a
+  probe on Claude Code 2.1.296: the peer of every request the mod makes, the harness process
+  itself (P4), a process the mod starts detaching and outliving reloads, a
   subagent with worktree isolation held by a mod tool and what happens to its checkout at
   its end and at main's exit, a background session refused in an untrusted directory, a
   cell grid and a key surface in the subagent's own tool row, which keys reach it, and the
