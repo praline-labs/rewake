@@ -92,6 +92,9 @@ func (fixtureHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan,
 			}
 		}
 	}
+	if request.Conversation != "" {
+		return adapter.LaunchPlan{}, errors.New("the fixture takes no conversation id; a launch of it names none")
+	}
 	settings, notes := readConfig()
 	description := []string{"--session", request.Name, "--room", room(request), "--role", request.Role.ID}
 	server := append([]string{}, description...)
@@ -151,6 +154,13 @@ func (fixtureHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan,
 // rewake interrupt keep their workflow cases on the gate column. The program
 // takes a focus with a compaction, and ends an interrupted turn with the
 // interrupter's name as its text, which is what the stopped report carries.
+//
+// Spaces: none, said here rather than left to the zero value. Nothing in
+// rewake hosts a space before S4-7 builds the host's neutral seam, and an
+// offer no run could prove would be a capability the CLI admits and the run
+// cannot serve; S4-7 gives the fixture its spaces through that seam, never
+// through another adapter's mod. Conversation: the program takes no id, so a
+// launch that names one is refused.
 func (fixtureHarness) Offers() adapter.Offer {
 	return adapter.Offer{
 		Wake:          true,
@@ -162,6 +172,10 @@ func (fixtureHarness) Offers() adapter.Offer {
 			InterruptTrace: "the fixture ends the turn saying who interrupted it",
 		},
 		Permissions: adapter.PermissionsOffer{Dir: true, ReachesWrapper: true},
+		Spaces:      false,
+		Conversation: adapter.ConversationOffer{
+			Unnamed: "the fixture keeps one conversation per run and takes no id for it",
+		},
 	}
 }
 

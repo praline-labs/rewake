@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
@@ -79,6 +80,42 @@ type modRun struct {
 	dir    string
 	socket string
 	server *modhost.Server
+	// hostsSpaces is the run's role opening spaces: an admitted hello then
+	// proves SpacesCapability.
+	hostsSpaces bool
+
+	// reporting orders the live set's reports, the start's and each
+	// hello's, so the set reported last is the run's.
+	reporting sync.Mutex
+	live      func([]adapter.Capability)
+	spaces    bool
+}
+
+// ReportLive: the inbox lane is live once it starts, as a run that reports
+// nothing would have it; spaces join it with the first admitted hello of a
+// run that hosts them (docs/v2/design-api.md#spaces).
+func (r *modRun) ReportLive(live func([]adapter.Capability)) { r.live = live }
+
+func (r *modRun) report(spaces bool) {
+	r.reporting.Lock()
+	defer r.reporting.Unlock()
+	if r.live == nil {
+		return
+	}
+	r.spaces = r.spaces || spaces
+	set := []adapter.Capability{adapter.WakeCapability}
+	if r.spaces {
+		set = append(set, adapter.SpacesCapability)
+	}
+	r.live(set)
+}
+
+// admitted hears a hello the endpoint bound: from then the mod is loaded,
+// and a run that hosts spaces has them live. A later load's hello keeps them.
+func (r *modRun) admitted(modhost.HelloRequest) {
+	if r.hostsSpaces {
+		r.report(true)
+	}
 }
 
 func (r *modRun) Start(ctx context.Context, note func(string)) error {
@@ -91,7 +128,11 @@ func (r *modRun) Start(ctx context.Context, note func(string)) error {
 		// goes on as one whose mod never reported in.
 		note("the rewake mod will not be heard: " + err.Error())
 	}
-	return r.lane.Start(ctx, note)
+	if err := r.lane.Start(ctx, note); err != nil {
+		return err
+	}
+	r.report(false)
+	return nil
 }
 
 func (r *modRun) Close() {

@@ -22,6 +22,9 @@ type Role struct {
 	// GitWrite permits receiving an explicit main-authorized metadata grant.
 	// Eligibility alone never changes permissions at launch or message delivery.
 	GitWrite bool
+	// Spaces says a session of the role opens spaces and its run hosts them
+	// (docs/v2/stage4-space.md): main alone, which hands the work out.
+	Spaces bool
 	// Play is what this role does, in order: the text of the briefing and of
 	// the guide's own section. Required — a role without one would launch a
 	// session that is told nothing, or, worse, told about another role.
@@ -42,6 +45,7 @@ var Main = Role{
 	Summary:  "Hands out work and reads the reports; its own successful turns go to nobody, so reports never wake each other endlessly. Alone may grant a worker a directory or Git metadata with a task; rewake gives it no write permission of its own.",
 	Silent:   true,
 	GitWrite: true,
+	Spaces:   true,
 	Play:     mainPlaybook,
 }
 

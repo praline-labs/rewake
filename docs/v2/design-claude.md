@@ -25,6 +25,7 @@ version history are the skill's ([where the API facts live](#where-the-api-facts
 | Control | `$.session.compact`, `$.turn.abort`, clear by `$.command.run` | P7 |
 | Permissions | stage 6: `classic.PermissionRequest`, `classic.PreToolUse` | stage 6 |
 | PersonUI | stage 6: `$.ui.status`, panes | stage 6 |
+| Spaces | a main run's hello admitted, answered `hostsSpaces`; a worker named by `--session-id <uuid>` | P4 |
 
 ## Where the API facts live
 
@@ -43,22 +44,19 @@ the probe named beside it decides, and the decision is not changed until then.
 
 ## Loading the mod for one run
 
-The wrapper writes the mod into the run's directory — a plugin manifest named `rewake`,
-a hooks file naming one module, the module — and passes `--plugin-dir <dir>` to that
-launch only. Nothing in the person's settings changes (L1); the directory goes with the
-run (L3) and is one of the adapter's protected directories, so no grant reaches it. The
-environment variable that once switched mods on is not set.
+The wrapper writes the mod into the run's directory and passes `--plugin-dir <dir>` to that
+launch only. Nothing in the person's settings changes (L1); the directory goes with the run
+(L3) and is one of the adapter's protected directories, so no grant reaches it.
 
-The mod's files are embedded in the binary from `internal/adapter/claude/mod/` — the
-manifest, the hooks file, `hooks/rewake.ts` and the generated `protocol.gen.ts`, each named
-in the `embed` line, since a pattern skips the manifest's dot directory — and written by the
-run's service into `<run dir>/mod` before the harness starts; the launch adds
-`--plugin-dir <run dir>/mod` and names the run's mod socket in the harness's environment,
-`REWAKE_MOD_SOCKET`, replacing any inherited one, which the adapter also lists among the
-variables a run does not inherit. The socket sits beside the run's inbox socket in the room's
-`sock/`, as `<name>.<run>.mod.sock` or a hashed name within the 103 bytes a socket's path may
-take; a killed wrapper's mod socket is swept with the dead reply sockets, by a dial refused.
-Built in S4-5, October 13, 2026.
+The mod's files — a manifest named `rewake`, the hooks file, `hooks/rewake.ts` and the
+generated `protocol.gen.ts`, each named in the `embed` line, since a pattern skips the
+manifest's dot directory — are embedded from `internal/adapter/claude/mod/` and written by
+the run's service into `<run dir>/mod` before the harness starts; the launch names the run's
+mod socket in `REWAKE_MOD_SOCKET`, replacing any inherited one, which the adapter also lists
+among the variables a run does not inherit. The socket sits beside the run's inbox socket in
+the room's `sock/`, as `<name>.<run>.mod.sock` or a hashed name within the 103 bytes a
+socket's path may take; a killed wrapper's mod socket is swept with the dead reply sockets,
+by a dial refused (built in S4-5, October 13, 2026).
 
 The module stays inside the skill's static-analysis rules: at `session.start` it reads the
 socket's path, sends `hello` with its load's id, the session's id and the harness's version,
@@ -67,7 +65,9 @@ socket, checking each request by its peer (SP4), and writes the admitted hello t
 `<run dir>/hello.json`, what a person or a live check reads of the load while the run lives.
 Its handlers count among the run's workers ([design-api.md](design-api.md#handlers-that-write-the-room)):
 a closed server begins no record, and a hello's binding and record share one lock, so the
-record holds the load `Load` answers.
+record holds the load `Load` answers. The hello's answer says whether the run hosts spaces —
+a main run does — and an admitted hello of such a run makes Spaces live
+([design-api.md](design-api.md#spaces)).
 Three tests hold the files: the embedded copy equals the source and every file of the source
 is embedded or named as not shipped (its tests and the schema); the written mod passes
 `claude plugin validate --strict`; the module's own tests pass in `claude plugin test` with

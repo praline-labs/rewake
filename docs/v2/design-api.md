@@ -12,7 +12,9 @@ assertion where it is used: `backend.go` (fifteen, from `GitGrantHarness` to
 over the call sites, and the core learns of a harness by asserting its types. 2.0 groups
 them into the eight capabilities of the plan, each optional, each a small interface in
 `internal/adapter` carrying narrow values — never `registry.Session` whole, which
-`Deliver` hands an adapter today (revision, layering faults).
+`Deliver` hands an adapter today (revision, layering faults). Stage 4 adds a ninth, Spaces,
+and states in the offer whether a launch can name its conversation
+([below](#conversation-names)).
 
 Rests on: the plan's architecture direction and decision 7 (the third harness is added
 without touching the core).
@@ -42,6 +44,7 @@ rules 1–4), now applied to every capability.
 | Control | compacts, interrupts, clears | `rewake compact`, `interrupt`, `clear` to that session exit 1 naming the missing verb; `clear` is designed, not built ([conversation-reset.md](../conversation-reset.md)) |
 | Permissions | applies a grant to the run | `send --grant-*` to that session exits 1, as `--grant-git` to Claude Code does in 1.x |
 | PersonUI | shows the person the session's mail state | nothing beyond the notices; stage 6 |
+| Spaces | hosts spaces from a main run: a worker in a pseudo-terminal the wrapper owns, shown inside the harness ([stage4-space.md](stage4-space.md)) | `rewake space open` refuses, naming the missing level; see [below](#spaces) |
 
 ### Launch
 
@@ -183,6 +186,46 @@ capability on both adapters.
 ### PersonUI
 
 The session's mail state shown to the person (a pane, a status). Stage 6 (decision 8).
+
+### Spaces
+
+A main run that hosts spaces: it opens a worker in a pseudo-terminal its wrapper owns and
+shows it inside the harness ([stage4-space.md](stage4-space.md)). Three levels decide it, and
+a refusal names the one that is missing:
+
+- **The role.** `Role.Spaces` says a session of the role opens spaces: main alone. Opening one
+  from another role is a wrong call, exit 2.
+- **The offer.** `Offer.Spaces` says a run of the harness can host them. A harness that does not
+  offer them is a wrong call too, exit 2, naming the harness; so is a session recorded by a build
+  whose catalog has no such harness.
+- **The live set.** Spaces are never planned: a run proves them, so an adapter that offers them
+  has its plan carry a `LiveReporter`, and a catalog test holds it. A run of a role that opens
+  spaces reports `spaces` once it can host them and withdraws it when it loses them. A main
+  session without them live is refused as a target, exit 1: its run has not proven them or has
+  lost them, which a later run may not repeat.
+
+On Claude Code the proof is the mod's hello: an admitted hello on a main run makes Spaces live,
+and its answer says `hostsSpaces`, so the mod serves the spaces' side of the protocol. A mod
+that is lost takes them out of the live set when the host sees the loss — the same signal that
+withdraws its turn boundary, which S4-6 builds; until then the run's end is the only loss
+observed. A run whose mod did not load never has them. The fixture offers none until S4-7 gives
+it spaces through the host's neutral seam, never through another adapter's mod. The refusal is
+`spacesRefusal` in `internal/cli`, which `rewake space open` asks before anything is written;
+the command itself is S4-7's. Built in S4-5, October 13, 2026.
+
+### Conversation names
+
+A space's record keeps its worker's conversation id, so the worker can be found and restored
+([stage4-space.md](stage4-space.md#4-the-workers-launch)). rewake chooses the id, a UUID,
+before the launch and hands it in `LaunchRequest.Conversation`; the adapter's Launch passes it
+with the harness's flag. Every adapter answers in its offer whether it can, either way —
+`ConversationOffer.Flag`, or `Unnamed` with the reason there is none — because the zero value
+would read as both "cannot" and "forgot to say". A catalog test holds the answer: exactly one
+of the two; a flag taken once with a value, carried by Launch with the id; and, without one,
+Launch refusing an id rather than dropping it. Claude Code answers `--session-id <uuid>`
+(`claude --help`, 2.1.296) and refuses rewake's id beside arguments that already name or continue
+a conversation; the fixture answers that it takes no id. Built in S4-5, October 13, 2026; the
+host chooses the id when S4-7 opens a space.
 
 ## The catalogue
 

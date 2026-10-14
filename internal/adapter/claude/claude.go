@@ -152,6 +152,7 @@ func (claudeHarness) SingleUseFlags() []adapter.Flag {
 		{Spellings: []string{"--permission-mode"}, TakesValue: true},
 		{Spellings: []string{"--settings"}, TakesValue: true},
 		{Spellings: []string{"--agent"}, TakesValue: true},
+		{Spellings: []string{sessionIDFlag}, TakesValue: true},
 		// rewake's own, taken before the launch and read only with =<name>, so
 		// a switch here: a typed one replaces an alias's.
 		{Spellings: []string{"--worktree"}},
@@ -162,8 +163,32 @@ func (claudeHarness) SingleUseFlags() []adapter.Flag {
 // mod brings one in stage 4 (docs/v2/stage3-steps-adapters.md, S9). Claude
 // Code runs its commands without a sandbox of its own, so `rewake send`
 // reaches the wrapper's socket to register a grant.
+//
+// Spaces: a main run hosts them once its mod's hello is admitted; a run whose
+// mod did not load has none. Conversation: --session-id <uuid> starts the new
+// conversation under rewake's id (`claude --help`, 2.1.296).
 func (claudeHarness) Offers() adapter.Offer {
-	return adapter.Offer{Wake: true, Permissions: adapter.PermissionsOffer{ReachesWrapper: true}}
+	return adapter.Offer{
+		Wake: true, Permissions: adapter.PermissionsOffer{ReachesWrapper: true},
+		Spaces: true, Conversation: adapter.ConversationOffer{Flag: sessionIDFlag},
+	}
+}
+
+// sessionIDFlag names a new conversation's id; Claude Code refuses one that
+// is not a UUID or is already in use (`claude --help`, 2.1.296).
+const sessionIDFlag = "--session-id"
+
+// conversationRefusal refuses rewake's id for a launch whose arguments
+// already name or continue a conversation: the record would name one the
+// harness never started.
+func conversationRefusal(args []string) error {
+	if adapter.HasFlag(args, sessionIDFlag) {
+		return fmt.Errorf("rewake names this launch's conversation and the arguments name one with %s; remove it", sessionIDFlag)
+	}
+	if word := claudeContinuation(adapter.BeforeTerminator(args)); word != "" {
+		return fmt.Errorf("rewake names this launch's new conversation and %s continues one; remove it", word)
+	}
+	return nil
 }
 
 func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error) {
@@ -209,9 +234,17 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 	}
 	args = grantDirs(args, request.GrantDirs)
 
+	if request.Conversation != "" {
+		if err := conversationRefusal(args); err != nil {
+			return adapter.LaunchPlan{}, err
+		}
+		args = adapter.AddFlags(args, sessionIDFlag, request.Conversation)
+	}
+
 	wake := newLane(socket, reply, owns)
 	wake.room = request.RoomDir
 	var service adapter.Service = wake
+	var live adapter.LiveReporter
 	env := request.Env
 	modSocket := modSocketPath(request)
 	if len(modSocket) > maxSocketPath {
@@ -222,9 +255,12 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 		// environment.
 		args = adapter.AddFlags(args, pluginDirFlag, modDir(request.RunDir))
 		env = withEnv(env, modSocketEnv, modSocket)
-		service = &modRun{lane: wake, dir: modDir(request.RunDir), socket: modSocket, server: modhost.New(modhost.Config{
+		run := &modRun{lane: wake, dir: modDir(request.RunDir), socket: modSocket, hostsSpaces: request.Role.Spaces}
+		run.server = modhost.New(modhost.Config{
 			Socket: modSocket, Role: request.Role.ID, Record: filepath.Join(request.RunDir, "hello.json"), Wait: harnessWait,
-		})}
+			HostsSpaces: request.Role.Spaces, Admitted: run.admitted,
+		})
+		service, live = run, run
 	}
 	return adapter.LaunchPlan{
 		Command:    request.Program("claude"),
@@ -235,6 +271,7 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 		Notes:      notes,
 		Service:    service,
 		Wake:       wake,
+		Live:       live,
 	}, nil
 }
 

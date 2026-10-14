@@ -15,6 +15,9 @@ const (
 	ControlCapability       Capability = "control"
 	PermissionsCapability   Capability = "permissions"
 	PersonUICapability      Capability = "person-ui"
+	// SpacesCapability is a main run that hosts spaces: it is never planned,
+	// only proven by the run (LiveReporter) and withdrawn when lost.
+	SpacesCapability Capability = "spaces"
 )
 
 // Offer is what an adapter offers: static, known from the catalog before any
@@ -36,7 +39,31 @@ type Offer struct {
 	// PersonUI says the session's mail state is shown to the person
 	// (stage 6).
 	PersonUI bool
+	// Spaces says a run of a role that opens spaces can host them once it
+	// proves it: the run reports SpacesCapability live, never its plan
+	// (docs/v2/design-api.md#spaces).
+	Spaces bool
+	// Conversation says whether a launch can start its new conversation
+	// under an id rewake chose, which a space's record keeps to find the
+	// worker's conversation again.
+	Conversation ConversationOffer
 }
+
+// ConversationOffer is an adapter's answer to "can rewake name the
+// conversation a launch starts". It is stated either way, a flag or the
+// reason there is none, because the zero value would otherwise read as both
+// "cannot" and "forgot to say" (docs/v2/design-api.md#conversation-names).
+type ConversationOffer struct {
+	// Flag is the harness's flag that takes the id; the adapter's Launch
+	// adds it with LaunchRequest.Conversation.
+	Flag string
+	// Unnamed says why a launch cannot name its conversation, when Flag is
+	// empty; a space's record then keeps no id and says so.
+	Unnamed string
+}
+
+// Names says the harness takes an id rewake chose.
+func (c ConversationOffer) Names() bool { return c.Flag != "" }
 
 // TurnBoundaryOffer is what an adapter says of its turn ends.
 type TurnBoundaryOffer struct {

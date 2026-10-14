@@ -252,10 +252,12 @@ existing proof holds unchanged.
   worker go, and the worker's wrapper then shuts its run down by itself within a bound
   ([section 7](#7-closing)).
 - **Its session id.** rewake picks a random UUID before the launch and writes it into the
-  space record; the worker's adapter turns it into its harness's arguments. A new optional
-  adapter interface, `ConversationNamer`, does that: Claude Code answers `--session-id <id>`
-  (`claude --help`, 2.1.296), pi `--session-id <id>` later ([the pi reading](stage4-reading-pi.md)).
-  A harness without it gets no id, and its record says so.
+  space record; the worker's adapter turns it into its harness's arguments. Every adapter's
+  offer answers whether it can, a flag or the reason there is none (`ConversationOffer`,
+  [design-api.md](design-api.md#conversation-names), built in S4-5): Claude Code answers
+  `--session-id <id>` (`claude --help`, 2.1.296), pi `--session-id <id>` later
+  ([the pi reading](stage4-reading-pi.md)). A harness without it gets no id, and its record
+  says so.
 - **Its name and role.** Given with the open, or by default `<space name>`; the role is
   `write` by default, any role the worker's harness can serve ([section 5](#5-reports)).
 - **How it registers.** As any launch does: its session record names its run; the space

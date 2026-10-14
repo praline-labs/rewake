@@ -254,6 +254,10 @@ Meant to be one move:
    telemetry — as the interfaces of `internal/adapter` (`docs/code.md`). An offer
    with nothing in the plan behind it is a capability the CLI admits and the run
    cannot serve.
+   The offer answers `Conversation` either way — the flag that names a new
+   conversation with rewake's id, or why there is none — and offers `Spaces` only
+   where the run proves them through its live set; the catalogue tests hold both
+   (`docs/v2/design-api.md`).
 2. One entry in `New` of `internal/adapter/catalog/catalog.go`.
 
 Everything else follows: the launch command, the guide entry, its own `--help`

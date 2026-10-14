@@ -35,8 +35,8 @@ the hosted launch, the mod's endpoint, closing — also get the Codex side's acc
   hold answered `duplicate` without a second seat; a `turn/end` whose receipt was lost retried
   with the same end id and taken once; a failed one reported as failed.
 - `internal/adapter/claude`: the embedded mod written into the run directory and named by
-  `--plugin-dir`, the mod socket's path in the environment, `--session-id` from
-  `ConversationNamer`.
+  `--plugin-dir`, the mod socket's path in the environment, `--session-id` from the offer's
+  `ConversationOffer`.
 - `tools/protogen`: the protocol's generated files equal to a fresh generation, and the
   generator refusing any word of the schema it does not read. The test lives beside the
   generator, since no layer of `internal/` may import a tool.
@@ -50,8 +50,8 @@ the hosted launch, the mod's endpoint, closing — also get the Codex side's acc
 harness-neutral, so the fixture's program can be the worker in the pseudo-terminal: a
 fixture main runs `rewake space open --harness fixture`, and the scenario checks that the
 worker starts in the given directory with a scrubbed environment, registers under its name
-in main's room, carries the session id the record holds (the fixture adapter implements
-`ConversationNamer`), exchanges a task and its report with main, and ends when main's run
+in main's room, carries the session id the record holds (the fixture adapter's `ConversationOffer` names a
+flag by then; until S4-7 it answers that it takes none), exchanges a task and its report with main, and ends when main's run
 ends, the record closed. The scenario runs under a private, non-default base and checks that
 the default base was not touched. The fixture reaches the space host through the neutral seam
 and imports nothing of the Claude Code adapter. What stands for the mod is a small program of the suite's,
@@ -137,7 +137,7 @@ Each small enough for one review; each closed by its acceptance check, not by it
 | S4-2 | the rules test's SP group with SP3, SP4 and SP9; the protocol schema, `tools/protogen` and the drift test | `go test ./docs/` and the drift test green; review of the rules |
 | S4-3 | `internal/core/space` and `rewake space list`; built October 13, 2026 ([the record](stage4-space-record.md)) | the record tests under the lease; the listing on a hand-written record, closed and kept |
 | S4-4 | `internal/host/terminal`, with `charmbracelet/x/vt` (the owner's exception, [section 1](stage4-space.md#the-terminal-library)); built October 13, 2026 ([the terminal](stage4-space-terminal.md)) | the pseudo-terminal tests above, with `-race`; the layout test with the library only in `host/terminal`; `go list -deps` of the binary before and after, recorded with the exception |
-| S4-5 | the embedded mod's skeleton and `modhost`: written per run, `--plugin-dir`, the mod socket, `hello` with the peer check — part A, built October 13, 2026, its handlers counted among the run's workers after review ([loading the mod](design-claude.md#loading-the-mod-for-one-run)); `SpacesCapability` live on main; the spaces offer, its live and refused states and `ConversationNamer` written into the API contract ([design-api.md](design-api.md)) and the catalogue's completeness test, not as scattered optional assertions | live: the hello on the installed Claude Code, a shell child's request refused; the validator test |
+| S4-5 | the embedded mod's skeleton and `modhost`: written per run, `--plugin-dir`, the mod socket, `hello` with the peer check — part A, built October 13, 2026, its handlers counted among the run's workers after review ([loading the mod](design-claude.md#loading-the-mod-for-one-run)); `SpacesCapability` live on main; the spaces offer, its live and refused states and the conversation's name written into the API contract and the catalogue's completeness test, not as scattered optional assertions — part B, built October 13, 2026 ([spaces](design-api.md#spaces), [conversation names](design-api.md#conversation-names)) | live: the hello on the installed Claude Code, a shell child's request refused; the validator test |
 | S4-6 | the worker's turn boundary: `turn/start` and `turn/end`, `TurnBoundary{Reports: true}`, the write role admitted on Claude Code when live; the cost of not holding written down ([section 5](stage4-space.md#5-reports)); the receipt's retry with the same end id; the capability withdrawn when the mod is lost | the tests of a failed end and a lost receipt; live: main sends a task to a worker started by hand with `rewake claude --write` and reads its report; a run without its mod refuses the task as today |
 | S4-7 | opening a space: `rewake space open`, `events`, the keeper's type, its spawn, its hold and the duplicate, the checkout found and proven the keeper's and empty of work, the base moved, the detached launch with its checks and its gate, the hosted wrapper's process groups, its environment and base, its session id, the record | the workflow scenario with the fixture worker and `test/spacerig` under a private base, the default base untouched; the authority across the space (above); live: the keeper spawned, the worker registered in main's room, its session id in the record, its wrapper outside main's tree; the native cleanup compared with the keeper's original base for an untouched reset checkout and for one with the worker's changes and commits, not inferred from Git status |
 | S4-8 | the view: the screen as styled text in the keeper's row, `space/screen`, keys, the prefix and its hint, resize | live: the worker's screen in the keeper's view, a prompt typed there answered, Alt+a c twice ending the worker |

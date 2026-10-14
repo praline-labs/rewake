@@ -32,6 +32,13 @@ type Config struct {
 	// Wait bounds how long a request waits for the host to name the
 	// harness's process; a request that comes before is held, then refused.
 	Wait time.Duration
+	// HostsSpaces is the run's role opening spaces, which a hello is
+	// answered with: the mod then serves the spaces' side of the protocol.
+	HostsSpaces bool
+	// Admitted hears each admitted hello once it is bound and recorded,
+	// before it is answered, so what the run proves by it is in the live
+	// set by the time the mod acts on the answer; nil hears nothing.
+	Admitted func(HelloRequest)
 }
 
 // Server is the wrapper's end of the mod's protocol for one run. Every
@@ -293,7 +300,7 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		refuse(w, http.StatusServiceUnavailable, errClosing.Error())
 		return
 	}
-	answer := HelloAnswer{Role: s.cfg.Role, HostsSpaces: false}
+	answer := HelloAnswer{Role: s.cfg.Role, HostsSpaces: s.cfg.HostsSpaces}
 	if s.answering != nil {
 		s.answering()
 	}
@@ -306,9 +313,9 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	reply(w, http.StatusOK, answer)
 }
 
-// bind makes hello the run's load and writes its record, unless the server
-// closed first: the check comes right before the write, so a handler that
-// outlasted Close's wait writes nothing it had not begun.
+// bind makes hello the run's load, writes its record and tells the run,
+// unless the server closed first: the check comes right before the write, so
+// a handler that outlasted Close's wait writes nothing it had not begun.
 func (s *Server) bind(hello HelloRequest) bool {
 	s.bindMu.Lock()
 	defer s.bindMu.Unlock()
@@ -320,6 +327,9 @@ func (s *Server) bind(hello HelloRequest) bool {
 	s.load = &hello
 	s.mu.Unlock()
 	s.record(hello)
+	if s.cfg.Admitted != nil {
+		s.cfg.Admitted(hello)
+	}
 	return true
 }
 

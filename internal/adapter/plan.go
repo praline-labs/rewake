@@ -55,6 +55,12 @@ type LaunchRequest struct {
 	// claim (VersionGate); its start runs nothing more to learn it. Empty
 	// for an adapter whose gate has no minimum.
 	Version string
+	// Conversation is the id rewake chose for the new conversation this
+	// launch starts, a UUID, set only where the adapter's offer names
+	// conversations (ConversationOffer). Launch passes it with the offer's
+	// flag, or refuses: a launch that dropped it would leave a record naming
+	// a conversation that does not exist.
+	Conversation string
 	// Env is the run's whole environment, built by the host: the current
 	// one less what the adapter's runs must not inherit (EnvNotInherited),
 	// plus the rewake variables that name the run. The adapter starts the

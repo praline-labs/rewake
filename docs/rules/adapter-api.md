@@ -13,7 +13,7 @@ and is known to the rules test by its heading.
 An adapter offers named capabilities, each a small interface in `internal/adapter`
 carrying narrow values, never a session record whole: Launch, which is required — an
 adapter without it is no adapter — and Wake, ToolTransport, TurnBoundary, Telemetry,
-Control, Permissions and PersonUI, each optional. What an adapter offers is static,
+Control, Permissions, PersonUI and Spaces, each optional. What an adapter offers is static,
 read from the catalogue before a launch (`Offers`); what one run serves is the plan its
 `Launch` returns, and a capability is live for the run only where the offer and the plan
 both carry it, so an offer with nothing in the plan behind it is never taken for served.
@@ -21,7 +21,10 @@ The core does without what is missing and says so rather than pretending: a role
 owes reports does not launch on a harness that offers no turn boundary, and says from
 when it will; a compaction or an interrupt of a session whose harness does not offer the
 verb, or its focus, is a wrong call, exit 2, with nothing asked; a task granting a
-directory to a session whose harness takes none fails, exit 1, nothing sent; a clause
+directory to a session whose harness takes none fails, exit 1, nothing sent; opening a space
+from a role that opens none, or on a harness that offers none, is a wrong call, exit 2, and
+on a run that has not proven its spaces, or has lost them, fails, exit 1; spaces are never
+planned, and a main run on Claude Code has them once its mod's hello is admitted; a clause
 about the harnesses that lack a capability agrees with how many lack it. Every turn end
 a boundary reports names its event, with its reason; an end with neither an event nor a
 known reason is refused, each reason reports its own outcome, and a turn's start is
@@ -34,6 +37,8 @@ Tests:
 - `internal/cli/steer_test.go` `TestAHarnessThatCannotTakeItIsAWrongCall`
 - `internal/cli/steer_test.go` `TestAVerbTheHarnessDoesNotOfferIsAWrongCall`
 - `internal/cli/send_dir_test.go` `TestASessionThatTakesNoDirectoryIsSentNoGrant`
+- `internal/cli/space_refusal_test.go` `TestASpaceIsRefusedByTheMissingCapability`
+- `internal/adapter/claude/mod_live_test.go` `TestAMainRunHasItsSpacesLiveOnceItsModSaysHello`
 - `internal/cli/registry_words_test.go` `TestADecliningClauseAgreesWithHowManyDecline`
 - `internal/cli/turn_end_api_test.go` `TestATurnEndWithoutItsEventOrAKnownReasonIsRefused`
 - `internal/cli/turn_end_api_test.go` `TestEachEndReasonReportsItsOutcome`
@@ -52,7 +57,10 @@ is fully described or absent: the launch command, the guide's entry, its help pa
 the `harnesses` field of the machine form all derive from the value; each adapter names
 the flags its harness takes at most once, every spelling of them, and its own
 configuration directories, which no task may grant, and the catalogue protects those of
-the harnesses it has no adapter for as well. The fixture harness is in the catalogue only
+the harnesses it has no adapter for as well. Each adapter answers whether a launch can name
+its conversation — a flag taken once with a value, which its Launch carries with rewake's
+id, or the reason there is none, and then its Launch refuses an id — and one that offers
+spaces has its run report its live set, since spaces are never planned. The fixture harness is in the catalogue only
 in a build with its tag.
 
 Tests:
@@ -60,6 +68,9 @@ Tests:
 - `internal/adapter/catalog/catalog_test.go` `TestEveryHarnessNamesItsProtectedDirs`
 - `internal/adapter/catalog/catalog_test.go` `TestTheCatalogueProtectsTheHarnessesItHasNoAdapterFor`
 - `internal/adapter/catalog/catalog_test.go` `TestEveryWorktreeFlagIsTakenOnce`
+- `internal/adapter/catalog/offers_test.go` `TestEveryHarnessAnswersWhetherItNamesItsConversation`
+- `internal/adapter/catalog/offers_test.go` `TestEveryHarnessThatOffersSpacesHasItsRunProveThem`
+- `internal/adapter/claude/conversation_test.go` `TestAConversationIdIsRefusedBesideOneTheArgumentsName`
 - `internal/adapter/catalog/fixture_absent_test.go` `TestTheFixtureIsAbsentWithoutItsTag`
 - `internal/adapter/catalog/fixture_present_test.go` `TestTheFixtureIsPresentWithItsTag`
 - `internal/cli/send_dir_test.go` `TestAGrantRefusesWhatTheCatalogueProtects`
